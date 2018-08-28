@@ -45,4 +45,7 @@
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox|0x0|UINT64|0x00000001
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|0x0|UINT64|0x00000002
 
+#SDHCI address
+  gNVIDIATokenSpaceGuid.PcdSdhciBaseAddress|0x00000000|UINT64|0x00000003
+
 [Protocols]

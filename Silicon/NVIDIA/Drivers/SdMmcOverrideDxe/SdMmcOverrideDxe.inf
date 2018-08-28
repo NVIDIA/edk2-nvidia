@@ -1,0 +1,40 @@
+#/** @file
+#
+#  SD MMC Override Driver
+#
+#  Copyright (c) 2018, NVIDIA Corporation. All rights reserved.
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SdMmcOverrideDxe
+  FILE_GUID                      = 3629FADA-C42D-4B5F-A117-17EEBBA20A3C
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = SdMmcOverrideInitialize
+
+[Sources.common]
+  SdMmcOverrideDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+
+[Protocols]
+  gEdkiiSdMmcOverrideProtocolGuid
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+
+[Depex]
+  TRUE

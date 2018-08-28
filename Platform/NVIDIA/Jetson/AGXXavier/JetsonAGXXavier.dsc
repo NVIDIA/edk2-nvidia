@@ -53,7 +53,7 @@
   #
   # Tegra SDHCI controller base address
   #
-  #gTegraTokenSpaceGuid.PcdTegraSdhciBaseAddress|0x03460000
+  gNVIDIATokenSpaceGuid.PcdSdhciBaseAddress|0x03460000
 
   ## SBSA Watchdog Count
   gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2

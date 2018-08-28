@@ -156,6 +156,13 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf
   INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
 
+  #SD MMC
+  INF Silicon/NVIDIA/Drivers/SdMmcOverrideDxe/SdMmcOverrideDxe.inf
+  INF MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
+  INF MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
+  INF MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
+  INF Silicon/NVIDIA/Drivers/EmmcDxe/EmmcDxe.inf
+
   #
   # PCI Support
   #
