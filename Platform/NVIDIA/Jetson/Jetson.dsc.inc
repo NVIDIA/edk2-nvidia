@@ -11,28 +11,12 @@
 #  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #
 
-################################################################################
-#
-# Defines Section - statements that will be processed to create a Makefile.
-#
-################################################################################
-[Defines]
-  PLATFORM_NAME                  = ParkerFamily
-  PLATFORM_GUID                  = 7eed17d6-f913-4726-be95-2936593a086b
-  PLATFORM_VERSION               = 0.1
-  DSC_SPECIFICATION              = 0x00010005
-  OUTPUT_DIRECTORY               = Build/ParkerFamily
-  SUPPORTED_ARCHITECTURES        = AARCH64
-  BUILD_TARGETS                  = DEBUG|RELEASE
-  SKUID_IDENTIFIER               = DEFAULT
-  FLASH_DEFINITION               = Platform/NVIDIA/ParkerFamily/ParkerFamily.fdf
-
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
 [LibraryClasses.common]
   ArmLib|ArmPkg/Library/ArmLib/ArmBaseLib.inf
   ArmMmuLib|ArmPkg/Library/ArmMmuLib/ArmMmuBaseLib.inf
-  ArmPlatformLib|Platform/NVIDIA/ParkerFamily/Library/ArmPlatformLib/ArmPlatformLib.inf
+  ArmPlatformLib|Platform/NVIDIA/Jetson/Library/ArmPlatformLib/ArmPlatformLib.inf
   ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
 
   CapsuleLib|MdeModulePkg/Library/DxeCapsuleLibNull/DxeCapsuleLibNull.inf
@@ -79,49 +63,8 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdTurnOffUsbLegacySupport|TRUE
 
 [PcdsFixedAtBuild.common]
-
-  # System Memory (2GB - 16MB of Trusted DRAM at the top of the 32bit address space)
-  gArmTokenSpaceGuid.PcdSystemMemoryBase|0x80000000
-
-  gArmTokenSpaceGuid.PcdSystemMemorySize|0x40000000
-
-  # Juno Dual-Cluster profile
-  gArmPlatformTokenSpaceGuid.PcdCoreCount|8
-  gArmPlatformTokenSpaceGuid.PcdClusterCount|4
-
-  gArmTokenSpaceGuid.PcdVFPEnabled|1
-
-  ## TCUart - Serial Terminal
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate|115200
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialClockRate|407347200
-
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseMmio|TRUE
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x03100000
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterStride|4
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl|TRUE
-
-
-  #
-  # Tegra SDHCI controller base address
-  #
-  #gTegraTokenSpaceGuid.PcdTegraSdhciBaseAddress|0x03460000
-
-  ## SBSA Watchdog Count
-  gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2
-
-  #
-  # ARM Generic Interrupt Controller
-  #
-  gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
-  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
-
-  #
-  # ARM Architectural Timer Frequency
-  #
-  gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz|50000000
-  gEmbeddedTokenSpaceGuid.PcdMetronomeTickPeriod|1000
-
   gEfiMdeModulePkgTokenSpaceGuid.PcdResetOnMemoryTypeInformationChange|FALSE
+
 
   #
   # SMBIOS entry point version

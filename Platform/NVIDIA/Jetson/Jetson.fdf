@@ -26,8 +26,8 @@
 ################################################################################
 
 [FD.BL33_AP_UEFI]
-BaseAddress   = 0x96000000|gArmTokenSpaceGuid.PcdFdBaseAddress  # The base address of the Firmware in NOR Flash.
-Size          = 0x00120000|gArmTokenSpaceGuid.PcdFdSize         # The size in bytes of the FLASH Device
+BaseAddress   = $(FLASH_BASE)|gArmTokenSpaceGuid.PcdFdBaseAddress  # The base address of the Firmware in NOR Flash.
+Size          = $(FLASH_SIZE)|gArmTokenSpaceGuid.PcdFdSize         # The size in bytes of the FLASH Device
 ErasePolarity = 1
 
 # This one is tricky, it must be: BlockSize * NumBlocks = Size
@@ -50,7 +50,7 @@ NumBlocks     = 0x120
 #
 ################################################################################
 
-0x00000000|0x00120000
+0x00000000|$(FLASH_SIZE)
 gArmTokenSpaceGuid.PcdFvBaseAddress|gArmTokenSpaceGuid.PcdFvSize
 FV = FVMAIN_COMPACT
 
