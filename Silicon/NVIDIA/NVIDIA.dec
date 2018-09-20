@@ -1,0 +1,48 @@
+#/** @file
+#
+#  Component description file for PL011SerialPortLib module
+#
+#  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+#
+#  This program and the accompanying materials
+#  are licensed and made available under the terms and conditions of the BSD License
+#  which accompanies this distribution.  The full text of the license may be found at
+#  http://opensource.org/licenses/bsd-license.php
+#
+#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+#**/
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = NVIDIA
+  PACKAGE_GUID                   = ca7b8ebd-d003-43db-8c9e-39e0e59a2e2a
+  PACKAGE_VERSION                = 0.1
+
+################################################################################
+#
+# Include Section - list of Include Paths that are provided by this package.
+#                   Comments are used for Keywords and Module Types.
+#
+# Supported Module Types:
+#  BASE SEC PEI_CORE PEIM DXE_CORE DXE_DRIVER DXE_RUNTIME_DRIVER DXE_SMM_DRIVER DXE_SAL_DRIVER UEFI_DRIVER UEFI_APPLICATION
+#
+################################################################################
+
+[Includes]
+
+
+[Guids.common]
+  gNVIDIATokenSpaceGuid = { 0xed3374ef, 0x767b, 0x42fa, { 0xaf, 0x70, 0xdb, 0x52, 0x0a, 0x39, 0x28, 0x22 } }
+
+[LibraryClasses]
+
+[Protocols]
+
+[PcdsFixedAtBuild.common]
+#Tegra Combined UART mailboxes
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox|0x0|UINT64|0x00000001
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|0x0|UINT64|0x00000002
+
+[Protocols]
