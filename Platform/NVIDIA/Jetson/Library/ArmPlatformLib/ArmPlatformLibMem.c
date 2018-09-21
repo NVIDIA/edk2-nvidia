@@ -63,11 +63,13 @@ ArmPlatformGetVirtualMemoryMap (
       EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE |
       EFI_RESOURCE_ATTRIBUTE_TESTED;
 
-  BuildResourceDescriptorHob (
-    EFI_RESOURCE_SYSTEM_MEMORY,
-    ResourceAttributes,
-    ARM_GALEN_EXTRA_SYSTEM_MEMORY_BASE,
-    ARM_GALEN_EXTRA_SYSTEM_MEMORY_SZ);
+// Disable additional memory resources until carveout support is added.
+
+//  BuildResourceDescriptorHob (
+//    EFI_RESOURCE_SYSTEM_MEMORY,
+//    ResourceAttributes,
+//    ARM_GALEN_EXTRA_SYSTEM_MEMORY_BASE,
+//    ARM_GALEN_EXTRA_SYSTEM_MEMORY_SZ);
 
   VirtualMemoryTable = (ARM_MEMORY_REGION_DESCRIPTOR*)AllocatePages(EFI_SIZE_TO_PAGES (sizeof(ARM_MEMORY_REGION_DESCRIPTOR) * MAX_VIRTUAL_MEMORY_MAP_DESCRIPTORS));
   if (VirtualMemoryTable == NULL) {
@@ -94,11 +96,13 @@ ArmPlatformGetVirtualMemoryMap (
   VirtualMemoryTable[Index].Length          = PcdGet64 (PcdSystemMemorySize);
   VirtualMemoryTable[Index].Attributes      = CacheAttributes;
 
-  // DDR - 6GB
-  VirtualMemoryTable[++Index].PhysicalBase  = ARM_GALEN_EXTRA_SYSTEM_MEMORY_BASE;
-  VirtualMemoryTable[Index].VirtualBase     = ARM_GALEN_EXTRA_SYSTEM_MEMORY_BASE;
-  VirtualMemoryTable[Index].Length          = ARM_GALEN_EXTRA_SYSTEM_MEMORY_SZ;
-  VirtualMemoryTable[Index].Attributes      = CacheAttributes;
+// Disable additional memory resources until carveout support is added.
+
+//  // DDR - 6GB
+//  VirtualMemoryTable[++Index].PhysicalBase  = ARM_GALEN_EXTRA_SYSTEM_MEMORY_BASE;
+//  VirtualMemoryTable[Index].VirtualBase     = ARM_GALEN_EXTRA_SYSTEM_MEMORY_BASE;
+//  VirtualMemoryTable[Index].Length          = ARM_GALEN_EXTRA_SYSTEM_MEMORY_SZ;
+//  VirtualMemoryTable[Index].Attributes      = CacheAttributes;
 
   // End of Table
   VirtualMemoryTable[++Index].PhysicalBase  = 0;
