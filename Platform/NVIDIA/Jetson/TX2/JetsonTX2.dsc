@@ -73,6 +73,6 @@
   #
   # ARM Architectural Timer Frequency
   #
-  gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz|50000000
+  gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz|31250000
   gEmbeddedTokenSpaceGuid.PcdMetronomeTickPeriod|1000
 
