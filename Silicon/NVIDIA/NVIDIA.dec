@@ -31,12 +31,14 @@
 ################################################################################
 
 [Includes]
-
+Include
 
 [Guids.common]
   gNVIDIATokenSpaceGuid = { 0xed3374ef, 0x767b, 0x42fa, { 0xaf, 0x70, 0xdb, 0x52, 0x0a, 0x39, 0x28, 0x22 } }
 
 [LibraryClasses]
+  DramCarveoutLib|Include/Library/DramCarveoutLib.h
+  SystemResourceLib|Include/Library/SystemResourceLib.h
 
 [Protocols]
 
@@ -47,5 +49,11 @@
 
 #SDHCI address
   gNVIDIATokenSpaceGuid.PcdSdhciBaseAddress|0x00000000|UINT64|0x00000003
+
+#Memory size in MiB
+  gNVIDIATokenSpaceGuid.PcdMemorySizeRegister|0x00000000|UINT64|0x00000004
+
+#Address that contains location CPU bootloader information
+  gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress|0x00000000|UINT64|0x00000005
 
 [Protocols]

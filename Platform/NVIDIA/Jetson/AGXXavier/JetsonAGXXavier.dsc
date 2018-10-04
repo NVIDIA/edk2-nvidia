@@ -33,12 +33,12 @@
 
 [LibraryClasses.common]
   SerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
+  SystemResourceLib|Silicon/NVIDIA/T194/Library/SystemResourceLib/SystemResourceLib.inf
 
 [PcdsFixedAtBuild.common]
 
-  # System Memory (2GB - 16MB of Trusted DRAM at the top of the 32bit address space)
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x80000000
-
+  #Size value is not directly used, must be non-zero and cover the firmware volume region at least
   gArmTokenSpaceGuid.PcdSystemMemorySize|0x30000000
 
   gArmPlatformTokenSpaceGuid.PcdCoreCount|8
@@ -54,6 +54,8 @@
   # Tegra SDHCI controller base address
   #
   gNVIDIATokenSpaceGuid.PcdSdhciBaseAddress|0x03460000
+
+  gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress|0x0C3903F8
 
   ## SBSA Watchdog Count
   gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2

@@ -15,15 +15,12 @@
 
 #include <Library/ArmPlatformLib.h>
 #include <Library/DebugLib.h>
+#include <Pi/PiHob.h>
 #include <Library/HobLib.h>
 #include <Library/PcdLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
-
-#include "ArmPlatform.h"
-
-// The total number of descriptors, including the final "end-of-table" descriptor.
-#define MAX_VIRTUAL_MEMORY_MAP_DESCRIPTORS 16
+#include <Library/SystemResourceLib.h>
 
 // DDR attributes
 #define DDR_ATTRIBUTES_CACHED           ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK
@@ -44,73 +41,64 @@ ArmPlatformGetVirtualMemoryMap (
   IN ARM_MEMORY_REGION_DESCRIPTOR** VirtualMemoryMap
   )
 {
-  ARM_MEMORY_REGION_ATTRIBUTES  CacheAttributes;
   UINTN                         Index = 0;
-  ARM_MEMORY_REGION_DESCRIPTOR  *VirtualMemoryTable;
-  EFI_RESOURCE_ATTRIBUTE_TYPE   ResourceAttributes;
+  ARM_MEMORY_REGION_DESCRIPTOR  *VirtualMemoryTable = NULL;
+  UINTN                         ResourcesCount = 0;
+  VOID                          *HobList = NULL;
+  EFI_STATUS                    Status;
 
   ASSERT (VirtualMemoryMap != NULL);
 
-  //
-  // Declared the additional 6GB of memory
-  //
-  ResourceAttributes =
-      EFI_RESOURCE_ATTRIBUTE_PRESENT |
-      EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
-      EFI_RESOURCE_ATTRIBUTE_UNCACHEABLE |
-      EFI_RESOURCE_ATTRIBUTE_WRITE_COMBINEABLE |
-      EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
-      EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE |
-      EFI_RESOURCE_ATTRIBUTE_TESTED;
-
-// Disable additional memory resources until carveout support is added.
-
-//  BuildResourceDescriptorHob (
-//    EFI_RESOURCE_SYSTEM_MEMORY,
-//    ResourceAttributes,
-//    ARM_GALEN_EXTRA_SYSTEM_MEMORY_BASE,
-//    ARM_GALEN_EXTRA_SYSTEM_MEMORY_SZ);
-
-  VirtualMemoryTable = (ARM_MEMORY_REGION_DESCRIPTOR*)AllocatePages(EFI_SIZE_TO_PAGES (sizeof(ARM_MEMORY_REGION_DESCRIPTOR) * MAX_VIRTUAL_MEMORY_MAP_DESCRIPTORS));
-  if (VirtualMemoryTable == NULL) {
-      return;
+  Status = InstallSystemResources (&ResourcesCount);
+  ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status)) {
+    return;
   }
 
-  CacheAttributes = DDR_ATTRIBUTES_CACHED;
+  ASSERT (ResourcesCount != 0);
 
-  // Galen OnChip peripherals
-  VirtualMemoryTable[Index].PhysicalBase    = ARM_GALEN_PERIPHERALS_BASE;
-  VirtualMemoryTable[Index].VirtualBase     = ARM_GALEN_PERIPHERALS_BASE;
-  VirtualMemoryTable[Index].Length          = ARM_GALEN_PERIPHERALS_SZ;
-  VirtualMemoryTable[Index].Attributes      = ARM_MEMORY_REGION_ATTRIBUTE_DEVICE;
+  VirtualMemoryTable = (ARM_MEMORY_REGION_DESCRIPTOR*)AllocatePages(EFI_SIZE_TO_PAGES (sizeof(ARM_MEMORY_REGION_DESCRIPTOR) * (ResourcesCount + 1)));
+  if (VirtualMemoryTable == NULL) {
+    ASSERT (FALSE);
+    return;
+  }
 
-  // Galen SOC peripherals
-  VirtualMemoryTable[++Index].PhysicalBase  = ARM_GALEN_SOC_PERIPHERALS_BASE;
-  VirtualMemoryTable[Index].VirtualBase     = ARM_GALEN_SOC_PERIPHERALS_BASE;
-  VirtualMemoryTable[Index].Length          = ARM_GALEN_SOC_PERIPHERALS_SZ;
-  VirtualMemoryTable[Index].Attributes      = ARM_MEMORY_REGION_ATTRIBUTE_DEVICE;
+  //Walk HOB list for resources
+  HobList = GetHobList ();
+  if (NULL == HobList) {
+    ASSERT (FALSE);
+    return;
+  }
 
-  // DDR - 2GB
-  VirtualMemoryTable[++Index].PhysicalBase  = PcdGet64 (PcdSystemMemoryBase);
-  VirtualMemoryTable[Index].VirtualBase     = PcdGet64 (PcdSystemMemoryBase);
-  VirtualMemoryTable[Index].Length          = PcdGet64 (PcdSystemMemorySize);
-  VirtualMemoryTable[Index].Attributes      = CacheAttributes;
+  HobList = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, HobList);
+  while (NULL != HobList) {
+    EFI_HOB_RESOURCE_DESCRIPTOR *Resource = (EFI_HOB_RESOURCE_DESCRIPTOR *)HobList;
+    DEBUG ((EFI_D_VERBOSE,
+        "ArmPlatformGetVirtualMemoryMap() Resource: Base: 0x%016lx, Size: 0x%016lx, Type: 0x%x\n",
+        Resource->PhysicalStart,
+        Resource->ResourceLength,
+        Resource->ResourceType
+      ));
 
-// Disable additional memory resources until carveout support is added.
-
-//  // DDR - 6GB
-//  VirtualMemoryTable[++Index].PhysicalBase  = ARM_GALEN_EXTRA_SYSTEM_MEMORY_BASE;
-//  VirtualMemoryTable[Index].VirtualBase     = ARM_GALEN_EXTRA_SYSTEM_MEMORY_BASE;
-//  VirtualMemoryTable[Index].Length          = ARM_GALEN_EXTRA_SYSTEM_MEMORY_SZ;
-//  VirtualMemoryTable[Index].Attributes      = CacheAttributes;
+    VirtualMemoryTable[Index].PhysicalBase    = Resource->PhysicalStart;
+    VirtualMemoryTable[Index].VirtualBase     = Resource->PhysicalStart;
+    VirtualMemoryTable[Index].Length          = Resource->ResourceLength;
+    if (Resource->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) {
+      VirtualMemoryTable[Index].Attributes      = DDR_ATTRIBUTES_CACHED;
+    } else {
+      VirtualMemoryTable[Index].Attributes      = ARM_MEMORY_REGION_ATTRIBUTE_DEVICE;
+    }
+    Index++;
+    HobList = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, GET_NEXT_HOB (HobList));
+  };
 
   // End of Table
-  VirtualMemoryTable[++Index].PhysicalBase  = 0;
+  VirtualMemoryTable[Index].PhysicalBase    = 0;
   VirtualMemoryTable[Index].VirtualBase     = 0;
   VirtualMemoryTable[Index].Length          = 0;
   VirtualMemoryTable[Index].Attributes      = (ARM_MEMORY_REGION_ATTRIBUTES)0;
 
-  ASSERT((Index + 1) <= MAX_VIRTUAL_MEMORY_MAP_DESCRIPTORS);
+  ASSERT(Index == ResourcesCount);
 
   *VirtualMemoryMap = VirtualMemoryTable;
 }

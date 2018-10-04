@@ -1,6 +1,5 @@
 #
 #  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
-#  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -13,44 +12,32 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = ArmPlatformLib
-  FILE_GUID                      = 4ff71b0a-e7be-4bf1-a23a-9596780ae4df
+  BASE_NAME                      = SystemResourceLib
+  FILE_GUID                      = 8cc55546-845e-451d-912a-7f3398fe7671
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = ArmPlatformLib
+  LIBRARY_CLASS                  = SystemResourceLib
 
 [Packages]
+  ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
-  EmbeddedPkg/EmbeddedPkg.dec
-  ArmPkg/ArmPkg.dec
-  ArmPlatformPkg/ArmPlatformPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
-  IoLib
-  ArmLib
   HobLib
-  MemoryAllocationLib
-  SerialPortLib
-  SystemResourceLib
+  DebugLib
+  DramCarveoutLib
 
 [Sources.common]
-  ArmPlatformLib.c
-  ArmPlatformLibMem.c
-
-[Sources.AARCH64]
-  AArch64/ArmPlatformHelper.S
+  SystemResourceLib.c
 
 [FixedPcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase
+  gArmTokenSpaceGuid.PcdGicDistributorBase
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
+  gNVIDIATokenSpaceGuid.PcdSdhciBaseAddress
+  gNVIDIATokenSpaceGuid.PcdMemorySizeRegister
+  gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress
   gArmTokenSpaceGuid.PcdSystemMemoryBase
-  gArmTokenSpaceGuid.PcdSystemMemorySize
-  gArmTokenSpaceGuid.PcdFvBaseAddress
-
-  gArmTokenSpaceGuid.PcdArmPrimaryCoreMask
-
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultDataBits
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultStopBits
 

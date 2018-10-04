@@ -18,8 +18,6 @@
 #include <Library/PcdLib.h>
 #include <Ppi/ArmMpCoreInfo.h>
 
-#include <ArmPlatform.h>
-
 /**
   Return the current Boot Mode
 
