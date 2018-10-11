@@ -18,7 +18,7 @@
 ################################################################################
 [Defines]
   PLATFORM_NAME                  = JetsonAGXXavier
-  PLATFORM_GUID                  = 7eed17d6-f913-4726-be95-2936593a086b
+  PLATFORM_GUID                  = 865873a1-b255-46c2-90d2-2e2578c00dbd
   PLATFORM_VERSION               = 0.1
   DSC_SPECIFICATION              = 0x00010005
   OUTPUT_DIRECTORY               = Build/JetsonAGXXavier
