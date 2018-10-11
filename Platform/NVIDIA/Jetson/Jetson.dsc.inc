@@ -130,7 +130,16 @@
   #
   # ACPI Support
   #
-  MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
+  MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf {
+    <LibraryClasses>
+      NULL|EmbeddedPkg/Library/PlatformHasAcpiLib/PlatformHasAcpiLib.inf
+  }
+
+  #
+  # FDT Support
+  #
+  EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+
 
   MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
 
