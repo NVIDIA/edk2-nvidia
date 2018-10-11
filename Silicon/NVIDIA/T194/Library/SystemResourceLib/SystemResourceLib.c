@@ -22,6 +22,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Pi/PiHob.h>
 #include "SystemResourceLibPrivate.h"
+#include <libfdt.h>
 
 STATIC
 EFI_STATUS
@@ -73,14 +74,16 @@ InstallSystemResources (
   OUT UINTN *MemoryRegionsCount
   )
 {
-  EFI_STATUS         Status;
-  NVDA_MEMORY_REGION DramRegion;
-  NVDA_MEMORY_REGION *CarveoutRegions = NULL;
-  UINTN              CarveoutRegionsCount = 0;
-  UINTN              FinalDramRegionsCount = 0;
-  UINTN              CpuBootloaderAddress;
-  TEGRA_CPUBL_PARAMS *CpuBootloaderParams;
-  UINTN              Index;
+  EFI_STATUS           Status;
+  NVDA_MEMORY_REGION   DramRegion;
+  NVDA_MEMORY_REGION   *CarveoutRegions = NULL;
+  UINTN                CarveoutRegionsCount = 0;
+  UINTN                FinalDramRegionsCount = 0;
+  UINTN                CpuBootloaderAddress;
+  TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
+  UINTN                Index;
+  EFI_PHYSICAL_ADDRESS *DeviceTreeHobData = NULL;
+
 
   if (NULL == MemoryRegionsCount) {
     return EFI_INVALID_PARAMETER;
@@ -157,6 +160,24 @@ InstallSystemResources (
     *MemoryRegionsCount += FinalDramRegionsCount;
   }
   FreePool (CarveoutRegions);
+
+  //Register Device Tree
+  if (0 != CpuBootloaderParams->BlDtbLoadAddress) {
+    if (fdt_check_header ((VOID *)CpuBootloaderParams->BlDtbLoadAddress) == 0) {
+      UINTN DtbSize = fdt_totalsize ((VOID *)CpuBootloaderParams->BlDtbLoadAddress);
+      EFI_PHYSICAL_ADDRESS AlignedDtb = CpuBootloaderParams->BlDtbLoadAddress & ~(SIZE_4KB-1);
+      BuildMemoryAllocationHob (
+        AlignedDtb,
+        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize + (CpuBootloaderParams->BlDtbLoadAddress - AlignedDtb))),
+        EfiBootServicesData
+      );
+
+      DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
+      if (NULL != DeviceTreeHobData) {
+        *DeviceTreeHobData = CpuBootloaderParams->BlDtbLoadAddress;
+      }
+    }
+  }
 
   return Status;
 }

@@ -125,6 +125,8 @@
 
   DramCarveoutLib|Silicon/NVIDIA/Library/DramCarveoutLib/DramCarveoutLib.inf
 
+  FdtLib|EmbeddedPkg/Library/FdtLib/FdtLib.inf
+
 [LibraryClasses.common.SEC]
   DebugAgentLib|ArmPkg/Library/DebugAgentSymbolsBaseLib/DebugAgentSymbolsBaseLib.inf
   DefaultExceptionHandlerLib|ArmPkg/Library/DefaultExceptionHandlerLib/DefaultExceptionHandlerLibBase.inf
