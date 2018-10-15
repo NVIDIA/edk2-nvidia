@@ -1,0 +1,53 @@
+#/** @file
+#
+#  SD MMC Controller Driver
+#
+#  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+#  This program and the accompanying materials
+#  are licensed and made available under the terms and conditions of the BSD License
+#  which accompanies this distribution.  The full text of the license may be found at
+#  http://opensource.org/licenses/bsd-license.php
+#
+#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SdMmcControllerDxe
+  FILE_GUID                      = 40f0d306-e558-48bb-ae8a-c8bec233757f
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = SdMmcControllerInitialize
+
+[Sources.common]
+  SdMmcControllerDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  FdtLib
+
+[Protocols]
+  gEdkiiSdMmcOverrideProtocolGuid
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIADeviceTreeCompatibilityProtocolGuid
+
+[Guids]
+  gEdkiiNonDiscoverableSdhciDeviceGuid
+
+[Depex]
+  TRUE

@@ -50,11 +50,6 @@
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox|0x03C10000
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|0x0C168000
 
-  #
-  # Tegra SDHCI controller base address
-  #
-  gNVIDIATokenSpaceGuid.PcdSdhciBaseAddress|0x03460000
-
   gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress|0x0C3903F8
 
   ## SBSA Watchdog Count

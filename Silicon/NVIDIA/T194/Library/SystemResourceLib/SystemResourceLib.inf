@@ -42,7 +42,6 @@
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
   gArmTokenSpaceGuid.PcdGicDistributorBase
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
-  gNVIDIATokenSpaceGuid.PcdSdhciBaseAddress
   gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress
   gArmTokenSpaceGuid.PcdSystemMemoryBase
 

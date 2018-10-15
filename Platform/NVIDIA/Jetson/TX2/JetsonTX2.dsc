@@ -56,11 +56,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl|TRUE
 
 
-  #
-  # Tegra SDHCI controller base address
-  #
-  gNVIDIATokenSpaceGuid.PcdSdhciBaseAddress|0x03460000
-
   ## Register that contains size of DRAM
   gNVIDIATokenSpaceGuid.PcdMemorySizeRegister|0x2c10050
 

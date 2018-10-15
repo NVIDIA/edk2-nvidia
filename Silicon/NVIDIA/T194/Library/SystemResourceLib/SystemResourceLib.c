@@ -36,7 +36,6 @@ InstallMmioRegions (
     { FixedPcdGet64 (PcdTegraCombinedUartTxMailbox),SIZE_4KB },
     { FixedPcdGet64 (PcdGicDistributorBase),        SIZE_4KB },
     { FixedPcdGet64 (PcdGicInterruptInterfaceBase), SIZE_4KB },
-    { FixedPcdGet64 (PcdSdhciBaseAddress),          SIZE_4KB },
   };
   EFI_RESOURCE_ATTRIBUTE_TYPE  ResourceAttribute = (EFI_RESOURCE_ATTRIBUTE_PRESENT |
                                                     EFI_RESOURCE_ATTRIBUTE_INITIALIZED |

@@ -162,11 +162,10 @@
   }
 
   #EMMC
-  Silicon/NVIDIA/Drivers/SdMmcOverrideDxe/SdMmcOverrideDxe.inf
+  Silicon/NVIDIA/Drivers/SdMmcControllerDxe/SdMmcControllerDxe.inf
   MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
   MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
   MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
-  Silicon/NVIDIA/Drivers/EmmcDxe/EmmcDxe.inf
 
   #
   # Semi-hosting filesystem
