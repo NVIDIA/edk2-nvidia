@@ -112,6 +112,11 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
 
   #
+  # Device discovery protocol
+  #
+  INF Silicon/NVIDIA/Drivers/DeviceDiscovery/DeviceDiscoveryDxe.inf
+
+  #
   # ACPI Support
   #
   INF MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf

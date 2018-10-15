@@ -102,6 +102,11 @@
   }
 
   #
+  # Device discovery protocol
+  #
+  Silicon/NVIDIA/Drivers/DeviceDiscovery/DeviceDiscoveryDxe.inf
+
+  #
   # Architectural Protocols
   #
   ArmPkg/Drivers/CpuDxe/CpuDxe.inf
