@@ -107,6 +107,11 @@
   Silicon/NVIDIA/Drivers/DeviceDiscovery/DeviceDiscoveryDxe.inf
 
   #
+  # BPMP-FW IPC protocol
+  #
+  Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
+
+  #
   # Architectural Protocols
   #
   ArmPkg/Drivers/CpuDxe/CpuDxe.inf
