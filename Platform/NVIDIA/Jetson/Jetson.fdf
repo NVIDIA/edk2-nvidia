@@ -120,6 +120,7 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   # BPMP-FW IPC protocol
   #
   INF Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
+  INF Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
 
   #
   # ACPI Support

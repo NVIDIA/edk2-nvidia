@@ -110,6 +110,7 @@
   # BPMP-FW IPC protocol
   #
   Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
+  Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
 
   #
   # Architectural Protocols
