@@ -215,10 +215,10 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF MdeModulePkg/Universal/Network/IScsiDxe/IScsiDxe.inf
 
   #
-  # TFTP Shell command
+  # Shell dynamic commands
   #
   INF ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf
-
+  INF ShellPkg/DynamicCommand/DpDynamicCommand/DpDynamicCommand.inf
 
   #
   # UEFI applications

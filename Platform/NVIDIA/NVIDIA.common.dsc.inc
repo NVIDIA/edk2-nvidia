@@ -325,12 +325,6 @@
   # FileSystem
   #
 
-  # RunAxf support via Dynamic Shell Command protocol
-  # We want to use the Shell Libraries but don't want it to initialise
-  # automatically. We initialise the libraries when the command is called by the
-  # Shell.
-  gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
-
   gEfiMdeModulePkgTokenSpaceGuid.PcdResetOnMemoryTypeInformationChange|FALSE
 
   # use the TTY terminal type
@@ -393,6 +387,8 @@
   # UEFI application (Shell Embedded Boot Loader)
   #
   ShellPkg/Application/Shell/Shell.inf {
+    <PcdsFixedAtBuild>
+      gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
     <LibraryClasses>
       ShellCommandLib|ShellPkg/Library/UefiShellCommandLib/UefiShellCommandLib.inf
       NULL|ShellPkg/Library/UefiShellLevel2CommandsLib/UefiShellLevel2CommandsLib.inf
@@ -407,5 +403,12 @@
       PrintLib|MdePkg/Library/BasePrintLib/BasePrintLib.inf
       BcfgCommandLib|ShellPkg/Library/UefiShellBcfgCommandLib/UefiShellBcfgCommandLib.inf
   }
-  ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf
+  ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf {
+    <PcdsFixedAtBuild>
+      gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
+  }
+  ShellPkg/DynamicCommand/DpDynamicCommand/DpDynamicCommand.inf {
+    <PcdsFixedAtBuild>
+      gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
+  }
 
