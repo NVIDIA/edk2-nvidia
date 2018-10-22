@@ -1,0 +1,74 @@
+/** @file
+  String definitions for the Shell ClockUtil application.
+
+  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+
+  This program and the accompanying materials
+  are licensed and made available under the terms and conditions of the BSD License
+  which accompanies this distribution.  The full text of the license may be found at
+  http://opensource.org/licenses/bsd-license.php.
+
+  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+
+**/
+
+#langdef en-US "English"
+
+#string STR_CLOCK_UTIL_UNKNOWN_OPERATION            #language en-US  "%s: Operation not specified.\n"
+
+#string STR_CLOCK_UTIL_PROTOCOL_NONEXISTENT         #language en-US  "%s: SCMI Clock protocol nonexistent.\n"
+
+#string STR_CLOCK_UTIL_BAD_ID                       #language en-US  "%s: Invalid clock ID.\n"
+
+#string STR_CLOCK_UTIL_TOTAL_CLOCKS_ERROR            #language en-US  "%s: Failed to get total clocks.\n"
+
+#string STR_CLOCK_UTIL_ENABLE_DISABLE                #language en-US  "%s: Can not have both --enable and --disable.\n"
+
+#string STR_CLOCK_UTIL_BAD_NAME                      #language en-US  "%s: Name does not map to id.\n"
+
+#string STR_CLOCK_UTIL_BAD_FREQ                      #language en-US  "%s: Invalid clock frequency.\n"
+
+#string STR_CLOCK_UTIL_NAME_AND_ID                   #language en-US  "%s: Can not have both --name and --id.\n"
+
+#string STR_CLOCK_UTIL_REQUEST_MODIFY_ALL            #language en-US  "%s: Need --id or --name with --enable/disable or --freq.\n"
+
+#string STR_CLOCK_UTIL_UPDATE_CLOCK_STATE            #language en-US  "%s: Failed to update clock state.\n"
+
+#string STR_CLOCK_UTIL_ENABLE_ERROR                  #language en-US  "%s: Failed to enable clock:%r.\n"
+
+#string STR_CLOCK_UTIL_SET_FREQ_ERROR                #language en-US  "%s: Failed to set clock frequency:%r.\n"
+
+#string STR_CLOCK_UTIL_DISABLE_ERROR                 #language en-US  "%s: Failed to disable clock:%r.\n"
+
+#string STR_CLOCK_UTIL_DISPLAY_ENABLED_HZ            #language en-US  "%8d: %16a - Enabled - %16lu Hz\n"
+#string STR_CLOCK_UTIL_DISPLAY_ENABLED_KHZ           #language en-US  "%8d: %16a - Enabled - %15lu KHz\n"
+#string STR_CLOCK_UTIL_DISPLAY_ENABLED_HZ_KHZ        #language en-US  "%8d: %16a - Enabled - %11lu.%03u KHz\n"
+#string STR_CLOCK_UTIL_DISPLAY_ENABLED_MHZ           #language en-US  "%8d: %16a - Enabled - %15lu MHz\n"
+#string STR_CLOCK_UTIL_DISPLAY_ENABLED_HZ_MHZ        #language en-US  "%8d: %16a - Enabled - %8lu.%06u MHz\n"
+#string STR_CLOCK_UTIL_DISPLAY_ENABLED_KHZ_MHZ       #language en-US  "%8d: %16a - Enabled - %11lu.%03u MHz\n"
+
+#string STR_CLOCK_UTIL_DISPLAY_ENABLED_UNKNOWN        #language en-US  "%8d: %16a - Enabled\n"
+
+#string STR_CLOCK_UTIL_DISPLAY_DISABLED               #language en-US  "%8d: %16a - Disabled\n"
+
+#string STR_CLOCK_UTIL_HELP                 #language en-US    ""
+".TH ClockUtil 0 "Displays or modifies the clock configuration."\r\n"
+".SH NAME\r\n"
+"Displays or modifies the clock configuration.\r\n"
+".SH SYNOPSIS\r\n"
+" \r\n"
+"%HClockUtil [--id <clock id>] [--name <clock enable>] [--enable|--disable] [--freq frequency]\r\n"
+".SH OPTIONS\r\n"
+" \r\n"
+"%Hcommand%N:\r\n"
+"  Specifies the clock to display/enable/set frequency
+"  --id clock_id                    Specified clock id\r\n"
+"  --name clock_name                Specified clock name\r\n"
+" \r\n"
+"  --enable                         Enable Clock.\r\n"
+"  --disable                        Disable Clock.\r\n"
+"  --freq freq                      Sets frequency to freq Hz.\r\n"
+" \r\n"
+"  -?                               Displays this help.\r\n"
+" \r\n"

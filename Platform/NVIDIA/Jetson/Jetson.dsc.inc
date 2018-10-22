@@ -112,6 +112,8 @@
   Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
   Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
 
+  Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
+
   #
   # Architectural Protocols
   #
