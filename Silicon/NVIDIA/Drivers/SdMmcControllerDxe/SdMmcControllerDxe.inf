@@ -26,6 +26,7 @@
   SdMmcControllerDxe.c
 
 [Packages]
+  ArmPkg/ArmPkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
@@ -44,10 +45,12 @@
 [Protocols]
   gEdkiiSdMmcOverrideProtocolGuid
   gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIANonDiscoverableDeviceProtocolGuid
   gNVIDIADeviceTreeCompatibilityProtocolGuid
+  gNVIDIAClockNodeProtocolGuid
 
 [Guids]
   gEdkiiNonDiscoverableSdhciDeviceGuid
 
 [Depex]
-  TRUE
+  gArmScmiClockProtocolGuid

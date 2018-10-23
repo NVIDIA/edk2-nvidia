@@ -197,8 +197,212 @@ NVIDIA_DEVICE_TREE_COMPATIBILITY_PROTOCOL gDeviceTreeCompatibilty = {
     DeviceTreeIsSupported
 };
 
-EFI_HANDLE  gSdMmcOverrideHandle = NULL;
+/**
+  Supported function of Driver Binding protocol for this driver.
+  Test to see if this driver supports ControllerHandle.
 
+  @param This                   Protocol instance pointer.
+  @param Controller             Handle of device to test.
+  @param RemainingDevicePath    A pointer to the device path.
+                                it should be ignored by device driver.
+
+  @retval EFI_SUCCESS           This driver supports this device.
+  @retval EFI_ALREADY_STARTED   This driver is already running on this device.
+  @retval other                 This driver does not support this device.
+
+**/
+EFI_STATUS
+EFIAPI
+SdMmcControllerSupported (
+  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
+  IN EFI_HANDLE                     Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL       *RemainingDevicePath
+  )
+{
+  EFI_STATUS            Status;
+  NON_DISCOVERABLE_DEVICE *NonDiscoverableProtocol = NULL;
+
+  //
+  // Attempt to open NonDiscoverable Protocol
+  //
+  Status = gBS->OpenProtocol (
+                  Controller,
+                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                  (VOID **) &NonDiscoverableProtocol,
+                  This->DriverBindingHandle,
+                  Controller,
+                  EFI_OPEN_PROTOCOL_BY_DRIVER
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (CompareGuid (NonDiscoverableProtocol->Type, &gEdkiiNonDiscoverableSdhciDeviceGuid)) {
+    Status = EFI_SUCCESS;
+  } else {
+    Status = EFI_UNSUPPORTED;
+  }
+
+  gBS->CloseProtocol (
+         Controller,
+         &gNVIDIANonDiscoverableDeviceProtocolGuid,
+         This->DriverBindingHandle,
+         Controller
+         );
+
+  return Status;
+
+}
+
+/**
+  This routine is called right after the .Supported() called and
+  Start this driver on ControllerHandle.
+
+  @param This                   Protocol instance pointer.
+  @param Controller             Handle of device to bind driver to.
+  @param RemainingDevicePath    A pointer to the device path.
+                                it should be ignored by device driver.
+
+  @retval EFI_SUCCESS           This driver is added to this device.
+  @retval EFI_ALREADY_STARTED   This driver is already running on this device.
+  @retval other                 Some error occurs when binding this driver to this device.
+
+**/
+EFI_STATUS
+EFIAPI
+SdMmcControllerStart (
+  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
+  IN EFI_HANDLE                     Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL       *RemainingDevicePath
+  )
+{
+  EFI_STATUS                        Status;
+  NON_DISCOVERABLE_DEVICE           *NonDiscoverableProtocol = NULL;
+  NVIDIA_CLOCK_NODE_PROTOCOL        *ClockProtocol = NULL;
+  //
+  // Attempt to open NonDiscoverable Protocol
+  //
+  Status = gBS->OpenProtocol (
+                  Controller,
+                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                  (VOID **) &NonDiscoverableProtocol,
+                  This->DriverBindingHandle,
+                  Controller,
+                  EFI_OPEN_PROTOCOL_BY_DRIVER
+                  );
+
+  if (!CompareGuid (NonDiscoverableProtocol->Type, &gEdkiiNonDiscoverableSdhciDeviceGuid)) {
+    Status = EFI_UNSUPPORTED;
+    goto ErrorExit;
+  }
+
+  Status = gBS->HandleProtocol (Controller, &gNVIDIAClockNodeProtocolGuid, (VOID **)&ClockProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a, no clock node protocol\r\n",__FUNCTION__));
+    goto ErrorExit;
+  }
+  Status = ClockProtocol->EnableAll (ClockProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a, failed to enable clocks %r\r\n",__FUNCTION__,Status));
+    goto ErrorExit;
+  }
+
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &Controller,
+                  &gEdkiiNonDiscoverableDeviceProtocolGuid,
+                  NonDiscoverableProtocol,
+                  NULL
+                  );
+ErrorExit:
+  if (EFI_ERROR (Status)) {
+
+    gBS->CloseProtocol (
+          Controller,
+          &gNVIDIANonDiscoverableDeviceProtocolGuid,
+          This->DriverBindingHandle,
+          Controller
+          );
+  }
+
+  return Status;
+}
+
+/**
+  Stop this driver on ControllerHandle.
+
+  @param This               Protocol instance pointer.
+  @param Controller         Handle of device to stop driver on.
+  @param NumberOfChildren   Not used.
+  @param ChildHandleBuffer  Not used.
+
+  @retval EFI_SUCCESS   This driver is removed from this device.
+  @retval other         Some error occurs when removing this driver from this device.
+
+**/
+EFI_STATUS
+EFIAPI
+SdMmcControllerStop (
+  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
+  IN EFI_HANDLE                     Controller,
+  IN UINTN                          NumberOfChildren,
+  IN EFI_HANDLE                     *ChildHandleBuffer
+  )
+{
+  EFI_STATUS                        Status;
+  NON_DISCOVERABLE_DEVICE           *NonDiscoverableProtocol = NULL;
+
+  //
+  // Attempt to open NonDiscoverable Protocol
+  //
+  Status = gBS->OpenProtocol (
+                  Controller,
+                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                  (VOID **) &NonDiscoverableProtocol,
+                  This->DriverBindingHandle,
+                  Controller,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  if (CompareGuid (NonDiscoverableProtocol->Type, &gEdkiiNonDiscoverableSdhciDeviceGuid)) {
+    Status = gBS->UninstallMultipleProtocolInterfaces (
+                    This->DriverBindingHandle,
+                    &gEdkiiNonDiscoverableDeviceProtocolGuid,
+                    NonDiscoverableProtocol,
+                    NULL
+                    );
+  } else {
+    Status = EFI_UNSUPPORTED;
+  }
+
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  //
+  // Close protocols opened by SdMmc Controller driver
+  //
+  return gBS->CloseProtocol (
+                Controller,
+                &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                This->DriverBindingHandle,
+                Controller
+                );
+}
+
+///
+/// EFI_DRIVER_BINDING_PROTOCOL instance
+///
+EFI_DRIVER_BINDING_PROTOCOL mDriverBindingProtocol = {
+  SdMmcControllerSupported,
+  SdMmcControllerStart,
+  SdMmcControllerStop,
+  0x0,
+  NULL,
+  NULL
+};
 
 /**
   Initialize the SD MMC Controller Protocol Driver
@@ -219,8 +423,19 @@ SdMmcControllerInitialize (
 {
   EFI_STATUS  Status;
 
+  Status = EfiLibInstallDriverBinding (
+             ImageHandle,
+             SystemTable,
+             &mDriverBindingProtocol,
+             ImageHandle);
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to install driver binding protocol: %r\r\n",__FUNCTION__,Status));
+    return Status;
+  }
+
   Status = gBS->InstallMultipleProtocolInterfaces (
-                  &gSdMmcOverrideHandle,
+                  &mDriverBindingProtocol.DriverBindingHandle,
                   &gEdkiiSdMmcOverrideProtocolGuid,
                   &gSdMmcOverride,
                   &gNVIDIADeviceTreeCompatibilityProtocolGuid,
