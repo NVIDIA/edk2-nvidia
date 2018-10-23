@@ -27,6 +27,8 @@
 #include <Library/DxeServicesTableLib.h>
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
+#include <Protocol/ClockNodeProtocol.h>
+#include <Protocol/ArmScmiClockProtocol.h>
 
 #include "DeviceDiscoveryPrivate.h"
 
@@ -199,6 +201,117 @@ GetResources (
 }
 
 /**
+  This function allows for simple enablement of all clock nodes.
+
+  @param[in]     This                The instance of the NVIDIA_CLOCK_NODE_PROTOCOL.
+
+  @return EFI_SUCCESS                All clocks enabled.
+  @return EFI_NOT_READY              Clock control protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to enable all clocks
+**/
+EFI_STATUS
+EnableAllClockNodes (
+  IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This
+  )
+{
+  SCMI_CLOCK_PROTOCOL *ClockProtocol = NULL;
+  EFI_STATUS          Status;
+  UINTN               Index;
+
+  Status = gBS->LocateProtocol (&gArmScmiClockProtocolGuid, NULL, (VOID **)&ClockProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  for (Index = 0; Index < This->Clocks; Index++) {
+    Status = ClockProtocol->Enable (ClockProtocol, This->ClockEntries[Index].ClockId, TRUE);
+    if (EFI_ERROR (Status)) {
+      return EFI_DEVICE_ERROR;
+    }
+  }
+  return EFI_SUCCESS;
+}
+
+
+/**
+  Function builds the clock node protocol if supported but device tree.
+
+  @param[in]  Node                  Pointer to the device tree node
+  @param[out] ClockNodeProtocol     Pointer to where to store the guid fro clock node protocol
+  @param[out] ClockNodeInterface    Pointer to the clock node interface
+
+  @return EFI_SUCCESS               Driver handles this node, protocols installed.
+  @return EFI_UNSUPPORTED           Driver does not support this node.
+  @return others                    Error occured during setup.
+
+**/
+VOID
+GetClockNodeProtocol(
+  IN  NVIDIA_DEVICE_TREE_NODE_PROTOCOL *Node,
+  OUT EFI_GUID                         **ClockNodeProtocol,
+  OUT VOID                             **ClockNodeInterface
+  )
+{
+  CONST CHAR8                *ClockNames = NULL;
+  CONST UINT32               *ClockIds = NULL;
+  INT32                      ClocksLength;
+  INT32                      ClockNamesLength;
+  UINTN                      NumberOfClocks;
+  NVIDIA_CLOCK_NODE_PROTOCOL *ClockNode = NULL;
+  UINTN                      Index;
+
+  if ((NULL == Node) ||
+      (NULL == ClockNodeProtocol) ||
+      (NULL == ClockNodeInterface)) {
+    return;
+  }
+
+  ClockIds = (CONST UINT32*)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "clocks", &ClocksLength);
+
+  if ((ClockIds == 0) ||
+      (ClocksLength == 0)) {
+    return;
+  }
+
+  if ((ClocksLength % (sizeof (UINT32) * 2)) != 0) {
+    DEBUG ((EFI_D_ERROR, "%a, Clock length unexpected %d\r\n", __FUNCTION__, ClocksLength));
+    return;
+  }
+
+  NumberOfClocks = ClocksLength / (sizeof (UINT32) * 2);
+
+  ClockNode = (NVIDIA_CLOCK_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_CLOCK_NODE_PROTOCOL) + (NumberOfClocks * sizeof (NVIDIA_CLOCK_NODE_ENTRY)));
+  if (NULL == ClockNode) {
+    DEBUG ((EFI_D_ERROR, "%a, Failed to allocate clock node\r\n", __FUNCTION__));
+    return;
+  }
+
+  ClockNode->EnableAll = EnableAllClockNodes;
+  ClockNode->Clocks = NumberOfClocks;
+  ClockNames = (CONST CHAR8*)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "clock-names", &ClockNamesLength);
+  if (ClockNamesLength == 0) {
+    ClockNames = NULL;
+  }
+  for (Index = 0; Index < NumberOfClocks; Index++) {
+    ClockNode->ClockEntries[Index].ClockId = SwapBytes32 (ClockIds[2 * Index + 1]);
+    ClockNode->ClockEntries[Index].ClockName = NULL;
+    if (ClockNames != NULL) {
+      INT32 Size = AsciiStrSize (ClockNames);
+      if ((Size <= 0) || (Size > ClockNamesLength)) {
+        ClockNames = NULL;
+        continue;
+      }
+      ClockNode->ClockEntries[Index].ClockName = ClockNames;
+      ClockNames += Size;
+      ClockNamesLength -= Size;
+    }
+  }
+
+  *ClockNodeInterface = (VOID *)ClockNode;
+  *ClockNodeProtocol = &gNVIDIAClockNodeProtocolGuid;
+}
+
+/**
   Function that attempts connecting a device tree node to a driver.
 
   @param[in]  Private               Pointer to the private device discovery data structure.
@@ -230,6 +343,8 @@ ProcessDeviceTreeNodeWithHandle(
   EFI_HANDLE                                DeviceHandle = NULL;
   DEVICE_DISCOVERY_DEVICE_PATH              *DevicePath = NULL;
   EFI_HANDLE                                ConnectHandles[2];
+  EFI_GUID                                  *ClockNodeProtocolGuid = NULL;
+  VOID                                      *ClockNodeInterface = NULL;
 
   NodeProtocol.DeviceTreeBase = Private->DeviceTreeBase;
   NodeProtocol.NodeOffset = NodeOffset;
@@ -296,6 +411,7 @@ ProcessDeviceTreeNodeWithHandle(
   SetDevicePathNodeLength (&DevicePath->MemMap, sizeof (DevicePath->MemMap));
   SetDevicePathEndNode (&DevicePath->End);
 
+  GetClockNodeProtocol (&NodeProtocol, &ClockNodeProtocolGuid, &ClockNodeInterface);
 
   NodeProtocolCopy = AllocateCopyPool (sizeof (NodeProtocol), (VOID *)&NodeProtocol);
   if (NULL == NodeProtocolCopy) {
@@ -320,6 +436,8 @@ ProcessDeviceTreeNodeWithHandle(
                   NodeProtocolCopy,
                   &gEfiDevicePathProtocolGuid,
                   DevicePath,
+                  ClockNodeProtocolGuid,
+                  ClockNodeInterface,
                   NULL
                   );
   if (EFI_ERROR (Status)) {

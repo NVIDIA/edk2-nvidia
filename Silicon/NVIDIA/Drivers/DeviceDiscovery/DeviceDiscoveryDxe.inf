@@ -52,6 +52,8 @@
   gNVIDIANonDiscoverableDeviceProtocolGuid
   gEdkiiNonDiscoverableDeviceProtocolGuid
   gEfiDriverBindingProtocolGuid
+  gArmScmiClockProtocolGuid
+  gNVIDIAClockNodeProtocolGuid
 
 [FixedPcd]
 
