@@ -26,6 +26,7 @@
 #include <Protocol/SdMmcOverride.h>
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
+#include <Protocol/ClockNodeProtocol.h>
 
 #include "SdMmcControllerPrivate.h"
 
