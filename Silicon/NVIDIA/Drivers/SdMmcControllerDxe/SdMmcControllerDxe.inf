@@ -48,9 +48,12 @@
   gNVIDIANonDiscoverableDeviceProtocolGuid
   gNVIDIADeviceTreeCompatibilityProtocolGuid
   gNVIDIAClockNodeProtocolGuid
+  gNVIDIAResetNodeProtocolGuid
 
 [Guids]
   gEdkiiNonDiscoverableSdhciDeviceGuid
 
 [Depex]
   gArmScmiClockProtocolGuid
+  AND
+  gNVIDIABpmpIpcProtocolGuid

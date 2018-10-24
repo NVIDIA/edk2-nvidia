@@ -27,6 +27,7 @@
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
 #include <Protocol/ClockNodeProtocol.h>
+#include <Protocol/ResetNodeProtocol.h>
 
 #include "SdMmcControllerPrivate.h"
 
@@ -163,8 +164,6 @@ DeviceTreeIsSupported (
   OUT NON_DISCOVERABLE_DEVICE_INIT               *PciIoInitialize
   )
 {
-  CONST CHAR8 *NodeName = NULL;
-  INT32 NameLength = 0;
 
   if ((Node == NULL) ||
       (DeviceType == NULL) ||
@@ -174,17 +173,6 @@ DeviceTreeIsSupported (
 
   if ((0 != fdt_node_check_compatible (Node->DeviceTreeBase, Node->NodeOffset, "nvidia,tegra186-sdhci")) &&
       (0 != fdt_node_check_compatible (Node->DeviceTreeBase, Node->NodeOffset, "nvidia,tegra194-sdhci"))) {
-    return EFI_UNSUPPORTED;
-  }
-
-  //Only support particular instance for now
-  NodeName = fdt_get_name (Node->DeviceTreeBase, Node->NodeOffset, &NameLength);
-  if ((NodeName == NULL) ||
-      (NameLength <= 0)) {
-    return EFI_UNSUPPORTED;
-  }
-
-  if (0 != AsciiStrnCmp (NodeName, "sdhci@3460000", (UINTN)NameLength)) {
     return EFI_UNSUPPORTED;
   }
 
@@ -280,6 +268,7 @@ SdMmcControllerStart (
   EFI_STATUS                        Status;
   NON_DISCOVERABLE_DEVICE           *NonDiscoverableProtocol = NULL;
   NVIDIA_CLOCK_NODE_PROTOCOL        *ClockProtocol = NULL;
+  NVIDIA_RESET_NODE_PROTOCOL        *ResetProtocol = NULL;
   //
   // Attempt to open NonDiscoverable Protocol
   //
@@ -305,6 +294,17 @@ SdMmcControllerStart (
   Status = ClockProtocol->EnableAll (ClockProtocol);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a, failed to enable clocks %r\r\n",__FUNCTION__,Status));
+    goto ErrorExit;
+  }
+
+  Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n",__FUNCTION__));
+    goto ErrorExit;
+  }
+  Status = ResetProtocol->DeassertAll (ResetProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a, failed to deassert resets %r\r\n",__FUNCTION__,Status));
     goto ErrorExit;
   }
 
