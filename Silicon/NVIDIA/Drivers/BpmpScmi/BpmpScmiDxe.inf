@@ -40,10 +40,12 @@
   IoLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
+  MemoryAllocationLib
 
 [Protocols]
   gArmScmiClockProtocolGuid
   gNVIDIABpmpIpcProtocolGuid
+  gNVIDIAClockParentsProtocolGuid
 
 [Depex]
   gNVIDIABpmpIpcProtocolGuid

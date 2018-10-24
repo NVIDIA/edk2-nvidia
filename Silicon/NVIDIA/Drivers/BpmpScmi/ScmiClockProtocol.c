@@ -20,8 +20,10 @@
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Protocol/ArmScmiClockProtocol.h>
 #include <Protocol/BpmpIpc.h>
+#include <Protocol/ClockParents.h>
 
 #include "BpmpScmiClockProtocolPrivate.h"
 
@@ -402,6 +404,218 @@ STATIC CONST SCMI_CLOCK_PROTOCOL ScmiClockProtocol = {
   ClockEnable
  };
 
+/**
+  This function checks is the given parent is a parent of the specified clock.
+
+  @param[in]     This                The instance of the NVIDIA_CLOCK_PARENTS_PROTOCOL.
+  @param[in]     ClockId             ClockId to check parent against
+  @param[in]     ParentId            ClockId of the parent
+
+  @return EFI_SUCCESS                Parent is supported by clock
+  @return EFI_NOT_FOUND              Parent is not supported by clock.
+  @return others                     Failed to check if parent is supported
+**/
+EFI_STATUS
+ClockParentsIsParent (
+  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
+  IN  UINT32                        ClockId,
+  IN  UINT32                        ParentId
+  )
+{
+  EFI_STATUS Status;
+  UINT32 NumberOfParents;
+  UINT32 *ParentIds = NULL;
+  UINT32 ParentIndex;
+
+  Status = This->GetParents (This, ClockId, &NumberOfParents, &ParentIds);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  for (ParentIndex = 0; ParentIndex < NumberOfParents; ParentIndex++) {
+    if (ParentIds[ParentIndex] == ParentId) {
+      break;
+    }
+  }
+
+  if (ParentIndex != NumberOfParents) {
+    Status = EFI_SUCCESS;
+  } else {
+    Status = EFI_NOT_FOUND;
+  }
+  FreePool (ParentIds);
+  return Status;
+}
+
+/**
+  This function sets the parent for the specified clock.
+
+  @param[in]     This                The instance of the NVIDIA_CLOCK_PARENTS_PROTOCOL.
+  @param[in]     ClockId             ClockId to set parent for
+  @param[in]     ParentId            ClockId of the parent
+
+  @return EFI_SUCCESS                Parent is set for clock
+  @return EFI_NOT_FOUND              Parent is not supported by clock.
+  @return others                     Failed to set parent
+**/
+EFI_STATUS
+ClockParentsSetParent (
+  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
+  IN  UINT32                        ClockId,
+  IN  UINT32                        ParentId
+  )
+{
+  EFI_STATUS         Status;
+  BPMP_CLOCK_REQUEST Request;
+  INT32              MessageError;
+
+  if (This == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Request.Subcommand = ClockSubcommandSetParent;
+  Request.ClockId    = ClockId;
+  Request.ParentId   = ParentId;
+
+  Status = mBpmpIpcProtocol->Communicate (
+                               mBpmpIpcProtocol,
+                               NULL,
+                               MRQ_CLK,
+                               (VOID *)&Request,
+                               sizeof (BPMP_CLOCK_REQUEST),
+                               NULL,
+                               0,
+                               &MessageError
+                               );
+  if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
+    //Clock is not visible to the MRQ
+    Status = EFI_NOT_FOUND;
+  }
+  return Status;
+}
+
+/**
+  This function gets the current parent of the specified clock.
+
+  @param[in]     This                The instance of the NVIDIA_CLOCK_PARENTS_PROTOCOL.
+  @param[in]     ClockId             ClockId to check parent of
+  @param[out]    ParentId            ClockId of the parent
+
+  @return EFI_SUCCESS                Parent is supported by clock
+  @return others                     Failed to get parent
+**/
+EFI_STATUS
+ClockParentsGetParent (
+  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
+  IN  UINT32                        ClockId,
+  OUT UINT32                        *ParentId
+  )
+{
+  EFI_STATUS         Status;
+  BPMP_CLOCK_REQUEST Request;
+  INT32              MessageError;
+
+  if (This == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Request.Subcommand = ClockSubcommandGetParent;
+  Request.ClockId    = ClockId;
+
+  Status = mBpmpIpcProtocol->Communicate (
+                               mBpmpIpcProtocol,
+                               NULL,
+                               MRQ_CLK,
+                               (VOID *)&Request,
+                               sizeof (BPMP_CLOCK_REQUEST),
+                               ParentId,
+                               sizeof (UINT32),
+                               &MessageError
+                               );
+  if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
+    //Clock is not visible to the MRQ
+    Status = EFI_NOT_FOUND;
+  }
+  return Status;
+}
+
+/**
+  This function gets the supported parents of the specified clock.
+
+  @param[in]     This                The instance of the NVIDIA_CLOCK_PARENTS_PROTOCOL.
+  @param[in]     ClockId             ClockId to check parents of.
+  @param[out]    NumberOfParents     Number of parents supported
+  @param[out]    ParentIds           Array of parent clock IDs supported. The caller should free this buffer.
+
+  @return EFI_SUCCESS                Parent list is retrieved
+  @return others                     Failed to get parent list
+**/
+EFI_STATUS
+ClockParentsGetParents (
+  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
+  IN  UINT32                        ClockId,
+  OUT UINT32                        *NumberOfParents,
+  OUT UINT32                        **ParentIds
+  )
+{
+  EFI_STATUS                       Status;
+  BPMP_CLOCK_REQUEST               Request;
+  BPMP_CLOCK_GET_ALL_INFO_RESPONSE Response;
+  INT32                            MessageError;
+
+  if ((This == NULL) ||
+      (NumberOfParents == NULL) ||
+      (ParentIds == NULL) ||
+      (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Request.Subcommand = ClockSubcommandGetAllInfo;
+  Request.ClockId    = ClockId;
+
+  Status = mBpmpIpcProtocol->Communicate (
+                               mBpmpIpcProtocol,
+                               NULL,
+                               MRQ_CLK,
+                               (VOID *)&Request,
+                               sizeof (UINT32),
+                               (VOID *)&Response,
+                               sizeof (BPMP_CLOCK_GET_ALL_INFO_RESPONSE),
+                               &MessageError
+                               );
+  if (EFI_ERROR (Status)) {
+    if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
+      //Clock is not visible to the MRQ
+      Status = EFI_NOT_FOUND;
+    }
+    return Status;
+  }
+
+  *NumberOfParents = Response.NumberOfParents;
+  *ParentIds = (UINT32 *)AllocateCopyPool (sizeof (UINT32) * Response.NumberOfParents, Response.Parents);
+  if (*ParentIds == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+  }
+
+  return Status;
+}
+
+// Instance of the clock parents protocol.
+STATIC CONST NVIDIA_CLOCK_PARENTS_PROTOCOL mClockParentsProtocol = {
+  ClockParentsIsParent,
+  ClockParentsSetParent,
+  ClockParentsGetParent,
+  ClockParentsGetParents
+ };
+
 /** Initialize clock management protocol and install protocol on a given handle.
 
   @param[in] Handle              Handle to install clock management protocol.
@@ -426,6 +640,8 @@ ScmiClockProtocolInit (
                 Handle,
                 &gArmScmiClockProtocolGuid,
                 &ScmiClockProtocol,
+                &gNVIDIAClockParentsProtocolGuid,
+                &mClockParentsProtocol,
                 NULL
                 );
 }
