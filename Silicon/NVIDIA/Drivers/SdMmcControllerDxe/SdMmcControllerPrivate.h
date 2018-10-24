@@ -21,6 +21,8 @@
 #define SD_MMC_HC_CLOCK_CTRL          0x2C
 #define SD_MMC_CLK_CTRL_SD_CLK_EN     BIT2
 
+#define SD_MMC_MAX_CLOCK              255000000
+
 typedef struct {
   UINT32   TimeoutFreq:6;     // bit 0:5
   UINT32   Reserved:1;        // bit 6

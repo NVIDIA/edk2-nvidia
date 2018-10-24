@@ -49,6 +49,7 @@
   gNVIDIADeviceTreeCompatibilityProtocolGuid
   gNVIDIAClockNodeProtocolGuid
   gNVIDIAResetNodeProtocolGuid
+  gArmScmiClockProtocolGuid
 
 [Guids]
   gEdkiiNonDiscoverableSdhciDeviceGuid

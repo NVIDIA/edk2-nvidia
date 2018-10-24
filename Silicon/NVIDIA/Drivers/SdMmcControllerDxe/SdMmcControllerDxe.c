@@ -28,6 +28,7 @@
 #include <Protocol/DeviceTreeCompatibility.h>
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ResetNodeProtocol.h>
+#include <Protocol/ArmScmiClockProtocol.h>
 
 #include "SdMmcControllerPrivate.h"
 
@@ -51,16 +52,42 @@ SdMmcCapability (
   IN  OUT VOID                            *SdMmcHcSlotCapability
   )
 {
-  SD_MMC_HC_SLOT_CAP *Capability = (SD_MMC_HC_SLOT_CAP *)SdMmcHcSlotCapability;
+  SD_MMC_HC_SLOT_CAP  *Capability = (SD_MMC_HC_SLOT_CAP *)SdMmcHcSlotCapability;
+  EFI_STATUS          Status;
+  SCMI_CLOCK_PROTOCOL *ClockProtocol = NULL;
+  NVIDIA_CLOCK_NODE_PROTOCOL *ClockNodeProtocol = NULL;
+  UINT64              Rate;
+
 
   if (SdMmcHcSlotCapability == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Capability->Sdr104 = FALSE;
+  Status = gBS->LocateProtocol (&gArmScmiClockProtocolGuid, NULL, (VOID **)&ClockProtocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAClockNodeProtocolGuid, (VOID **)&ClockNodeProtocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = ClockProtocol->RateSet (ClockProtocol, ClockNodeProtocol->ClockEntries[0].ClockId, SD_MMC_MAX_CLOCK);
+  if (!EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a failed to set clock rate %r\r\n", __FUNCTION__, Status));
+  }
+
+  Status = ClockProtocol->RateGet (ClockProtocol, ClockNodeProtocol->ClockEntries[0].ClockId, &Rate);
+  if (!EFI_ERROR (Status)) {
+    if (Rate > SD_MMC_MAX_CLOCK) {
+      DEBUG ((EFI_D_ERROR, "%a: Clock rate %llu out of range for SDHCI\r\n",__FUNCTION__,Rate));
+      return EFI_DEVICE_ERROR;
+    }
+    Capability->BaseClkFreq = Rate / 1000000;
+  }
+
   Capability->Ddr50 = FALSE;
-  Capability->HighSpeed = FALSE;
-  Capability->Hs400 = FALSE;
   Capability->SlotType = 0x1; //Embedded slot
 
   return EFI_SUCCESS;
