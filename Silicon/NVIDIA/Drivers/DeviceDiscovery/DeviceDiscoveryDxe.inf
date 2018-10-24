@@ -54,6 +54,8 @@
   gEfiDriverBindingProtocolGuid
   gArmScmiClockProtocolGuid
   gNVIDIAClockNodeProtocolGuid
+  gNVIDIAResetNodeProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
 
 [FixedPcd]
 

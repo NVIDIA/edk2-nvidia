@@ -33,4 +33,14 @@ typedef struct {
 } DEVICE_DISCOVERY_DEVICE_PATH;
 #pragma pack ()
 
+#define NUMBER_OF_OPTIONAL_PROTOCOLS 2
+
+typedef enum {
+  CmdResetAssert = 1,
+  CmdResetDeassert = 2,
+  CmdResetModule = 3,
+  CmdResetGetMaxId = 4,
+  CmdResetMax,
+} MRQ_RESET_COMMANDS;
+
 #endif

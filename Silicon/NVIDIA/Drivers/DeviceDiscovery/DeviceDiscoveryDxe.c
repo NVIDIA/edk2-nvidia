@@ -28,7 +28,9 @@
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
 #include <Protocol/ClockNodeProtocol.h>
+#include <Protocol/ResetNodeProtocol.h>
 #include <Protocol/ArmScmiClockProtocol.h>
+#include <Protocol/BpmpIpc.h>
 
 #include "DeviceDiscoveryPrivate.h"
 
@@ -201,6 +203,244 @@ GetResources (
 }
 
 /**
+  This function processes a reset command.
+
+  @param[in]     BpmpIpcProtocol     The instance of the NVIDIA_BPMP_IPC_PROTOCOL.
+  @param[in]     ResetId             Reset to process
+  @param[in]     Command             Reset command
+
+  @return EFI_SUCCESS                All resets deasserted.
+  @return EFI_DEVICE_ERROR           Failed to deassert all resets
+**/
+EFI_STATUS
+BpmpProcessResetCommand (
+  IN NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol,
+  IN UINT32                   ResetId,
+  IN MRQ_RESET_COMMANDS       Command
+  )
+{
+  EFI_STATUS Status;
+  UINT32 Request[2];
+
+  if (BpmpIpcProtocol == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Request[0] = (UINT32)Command;
+  Request[1] = ResetId;
+  DEBUG ((EFI_D_ERROR, "%a, Cmd: %u, Reset: %x\r\n",__FUNCTION__,Command,ResetId));
+
+  Status = BpmpIpcProtocol->Communicate (
+                              BpmpIpcProtocol,
+                              NULL,
+                              MRQ_RESET,
+                              (VOID *)&Request,
+                              sizeof (Request),
+                              NULL,
+                              0,
+                              NULL
+                              );
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+  return Status;
+}
+
+/**
+  This function allows for deassert of all reset nodes.
+
+  @param[in]     This                The instance of the NVIDIA_RESET_NODE_PROTOCOL.
+
+  @return EFI_SUCCESS                All resets deasserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to deassert all resets
+**/
+EFI_STATUS
+DeassertAllResetNodes (
+  IN  NVIDIA_RESET_NODE_PROTOCOL   *This
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
+  EFI_STATUS               Status;
+  UINTN                    Index;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  for (Index = 0; Index < This->Resets; Index++) {
+    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->ResetEntries[Index], CmdResetDeassert);
+    if (EFI_ERROR (Status)) {
+      return EFI_DEVICE_ERROR;
+    }
+  }
+  return EFI_SUCCESS;
+}
+
+/**
+  This function allows for assert of all reset nodes.
+
+  @param[in]     This                The instance of the NVIDIA_RESET_NODE_PROTOCOL.
+
+  @return EFI_SUCCESS                All resets deasserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to de-assert all resets
+**/
+EFI_STATUS
+AssertAllResetNodes (
+  IN  NVIDIA_RESET_NODE_PROTOCOL   *This
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
+  EFI_STATUS               Status;
+  UINTN                    Index;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  for (Index = 0; Index < This->Resets; Index++) {
+    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->ResetEntries[Index], CmdResetAssert);
+    if (EFI_ERROR (Status)) {
+      return EFI_DEVICE_ERROR;
+    }
+  }
+  return EFI_SUCCESS;
+}
+
+/**
+  This function allows for deassert of specified reset nodes.
+
+  @param[in]     This                The instance of the NVIDIA_RESET_NODE_PROTOCOL.
+  @param[in]     ResetId             Id to de-assert
+
+  @return EFI_SUCCESS                Resets deasserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to deassert resets
+**/
+EFI_STATUS
+DeassertResetNodes (
+  IN  NVIDIA_RESET_NODE_PROTOCOL   *This,
+  IN  UINT32                       ResetId
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
+  EFI_STATUS               Status;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  return BpmpProcessResetCommand (BpmpIpcProtocol, ResetId, CmdResetDeassert);
+}
+
+/**
+  This function allows for assert of specified reset nodes.
+
+  @param[in]     This                The instance of the NVIDIA_RESET_NODE_PROTOCOL.
+  @param[in]     ResetId             Id to assert
+
+  @return EFI_SUCCESS                Resets asserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to assert resets
+**/
+EFI_STATUS
+AssertResetNodes (
+  IN  NVIDIA_RESET_NODE_PROTOCOL   *This,
+  IN  UINT32                       ResetId
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
+  EFI_STATUS               Status;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  return BpmpProcessResetCommand (BpmpIpcProtocol, ResetId, CmdResetAssert);
+}
+
+/**
+  Function builds the reset node protocol if supported but device tree.
+
+  @param[in]  Node                  Pointer to the device tree node
+  @param[out] ClockNodeProtocol     Pointer to where to store the guid for the reset node protocol
+  @param[out] ClockNodeInterface    Pointer to the reset node interface
+  @param[out] ProtocolListSize      Number of entries in the protocol lists
+
+  @return EFI_SUCCESS               Driver handles this node, protocols installed.
+  @return EFI_UNSUPPORTED           Driver does not support this node.
+  @return others                    Error occured during setup.
+
+**/
+VOID
+GetResetNodeProtocol(
+  IN  NVIDIA_DEVICE_TREE_NODE_PROTOCOL *Node,
+  OUT EFI_GUID                         **ResetNodeProtocol,
+  OUT VOID                             **ResetNodeInterface,
+  IN  UINTN                            ProtocolListSize
+  )
+{
+  CONST UINT32               *ResetIds = NULL;
+  INT32                      ResetsLength;
+  UINTN                      NumberOfResets;
+  NVIDIA_RESET_NODE_PROTOCOL *ResetNode = NULL;
+  UINTN                      Index;
+  UINTN                      ListEntry;
+
+  if ((NULL == Node) ||
+      (NULL == ResetNodeProtocol) ||
+      (NULL == ResetNodeInterface)) {
+    return;
+  }
+
+  for (ListEntry = 0; ListEntry < ProtocolListSize; ListEntry++) {
+    if (ResetNodeProtocol[ListEntry] == NULL) {
+      break;
+    }
+  }
+  if (ListEntry == ProtocolListSize) {
+    return;
+  }
+
+  ResetIds = (CONST UINT32*)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "resets", &ResetsLength);
+
+  if ((ResetIds == 0) ||
+      (ResetsLength == 0)) {
+    return;
+  }
+
+  if ((ResetsLength % (sizeof (UINT32) * 2)) != 0) {
+    DEBUG ((EFI_D_ERROR, "%a, Resets length unexpected %d\r\n", __FUNCTION__, ResetsLength));
+    return;
+  }
+
+  NumberOfResets = ResetsLength / (sizeof (UINT32) * 2);
+
+  ResetNode = (NVIDIA_RESET_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_RESET_NODE_PROTOCOL) + (NumberOfResets * sizeof (UINT32)));
+  if (NULL == ResetNode) {
+    DEBUG ((EFI_D_ERROR, "%a, Failed to allocate reset node\r\n", __FUNCTION__));
+    return;
+  }
+
+  ResetNode->DeassertAll = DeassertAllResetNodes;
+  ResetNode->AssertAll   = AssertAllResetNodes;
+  ResetNode->Deassert    = DeassertResetNodes;
+  ResetNode->Assert      = AssertResetNodes;
+  ResetNode->Resets = NumberOfResets;
+  for (Index = 0; Index < NumberOfResets; Index++) {
+    ResetNode->ResetEntries[Index] = SwapBytes32 (ResetIds[2 * Index + 1]);
+  }
+
+  ResetNodeInterface[ListEntry] = (VOID *)ResetNode;
+  ResetNodeProtocol[ListEntry] = &gNVIDIAResetNodeProtocolGuid;
+}
+
+/**
   This function allows for simple enablement of all clock nodes.
 
   @param[in]     This                The instance of the NVIDIA_CLOCK_NODE_PROTOCOL.
@@ -232,13 +472,13 @@ EnableAllClockNodes (
   return EFI_SUCCESS;
 }
 
-
 /**
   Function builds the clock node protocol if supported but device tree.
 
   @param[in]  Node                  Pointer to the device tree node
   @param[out] ClockNodeProtocol     Pointer to where to store the guid fro clock node protocol
   @param[out] ClockNodeInterface    Pointer to the clock node interface
+  @param[out] ProtocolListSize      Number of entries in the protocol lists
 
   @return EFI_SUCCESS               Driver handles this node, protocols installed.
   @return EFI_UNSUPPORTED           Driver does not support this node.
@@ -249,7 +489,8 @@ VOID
 GetClockNodeProtocol(
   IN  NVIDIA_DEVICE_TREE_NODE_PROTOCOL *Node,
   OUT EFI_GUID                         **ClockNodeProtocol,
-  OUT VOID                             **ClockNodeInterface
+  OUT VOID                             **ClockNodeInterface,
+  IN  UINTN                            ProtocolListSize
   )
 {
   CONST CHAR8                *ClockNames = NULL;
@@ -259,10 +500,20 @@ GetClockNodeProtocol(
   UINTN                      NumberOfClocks;
   NVIDIA_CLOCK_NODE_PROTOCOL *ClockNode = NULL;
   UINTN                      Index;
+  UINTN                      ListEntry;
 
   if ((NULL == Node) ||
       (NULL == ClockNodeProtocol) ||
       (NULL == ClockNodeInterface)) {
+    return;
+  }
+
+  for (ListEntry = 0; ListEntry < ProtocolListSize; ListEntry++) {
+    if (ClockNodeProtocol[ListEntry] == NULL) {
+      break;
+    }
+  }
+  if (ListEntry == ProtocolListSize) {
     return;
   }
 
@@ -307,8 +558,8 @@ GetClockNodeProtocol(
     }
   }
 
-  *ClockNodeInterface = (VOID *)ClockNode;
-  *ClockNodeProtocol = &gNVIDIAClockNodeProtocolGuid;
+  ClockNodeInterface[ListEntry] = (VOID *)ClockNode;
+  ClockNodeProtocol[ListEntry] = &gNVIDIAClockNodeProtocolGuid;
 }
 
 /**
@@ -343,8 +594,9 @@ ProcessDeviceTreeNodeWithHandle(
   EFI_HANDLE                                DeviceHandle = NULL;
   DEVICE_DISCOVERY_DEVICE_PATH              *DevicePath = NULL;
   EFI_HANDLE                                ConnectHandles[2];
-  EFI_GUID                                  *ClockNodeProtocolGuid = NULL;
-  VOID                                      *ClockNodeInterface = NULL;
+  EFI_GUID                                  *ProtocolGuidList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL};
+  VOID                                      *InterfaceList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL};
+  UINTN                                     ProtocolIndex;
 
   NodeProtocol.DeviceTreeBase = Private->DeviceTreeBase;
   NodeProtocol.NodeOffset = NodeOffset;
@@ -411,7 +663,8 @@ ProcessDeviceTreeNodeWithHandle(
   SetDevicePathNodeLength (&DevicePath->MemMap, sizeof (DevicePath->MemMap));
   SetDevicePathEndNode (&DevicePath->End);
 
-  GetClockNodeProtocol (&NodeProtocol, &ClockNodeProtocolGuid, &ClockNodeInterface);
+  GetClockNodeProtocol (&NodeProtocol, ProtocolGuidList, InterfaceList, NUMBER_OF_OPTIONAL_PROTOCOLS);
+  GetResetNodeProtocol (&NodeProtocol, ProtocolGuidList, InterfaceList, NUMBER_OF_OPTIONAL_PROTOCOLS);
 
   NodeProtocolCopy = AllocateCopyPool (sizeof (NodeProtocol), (VOID *)&NodeProtocol);
   if (NULL == NodeProtocolCopy) {
@@ -436,13 +689,47 @@ ProcessDeviceTreeNodeWithHandle(
                   NodeProtocolCopy,
                   &gEfiDevicePathProtocolGuid,
                   DevicePath,
-                  ClockNodeProtocolGuid,
-                  ClockNodeInterface,
                   NULL
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to get install protocols: %r.\r\n", __FUNCTION__, Status));
     goto ErrorExit;
+  }
+
+  for (ProtocolIndex = 0; ProtocolIndex < NUMBER_OF_OPTIONAL_PROTOCOLS; ProtocolIndex++) {
+    if (ProtocolGuidList[ProtocolIndex] == NULL) {
+      break;
+    }
+
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                      &DeviceHandle,
+                      ProtocolGuidList[ProtocolIndex],
+                      InterfaceList[ProtocolIndex],
+                      NULL
+                      );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to get install optional protocols: %r.\r\n", __FUNCTION__, Status));
+      UINTN ProtocolUninstallIndex = 0;
+      for (ProtocolUninstallIndex = 0; ProtocolUninstallIndex < ProtocolIndex; ProtocolUninstallIndex++) {
+        gBS->UninstallMultipleProtocolInterfaces (
+               DeviceHandle,
+               ProtocolGuidList[ProtocolUninstallIndex],
+               InterfaceList[ProtocolUninstallIndex],
+               NULL
+               );
+      }
+      gBS->UninstallMultipleProtocolInterfaces (
+             DeviceHandle,
+             DeviceProtocolGuid,
+             Device,
+             &gNVIDIADeviceTreeNodeProtocolGuid,
+             NodeProtocolCopy,
+             &gEfiDevicePathProtocolGuid,
+             DevicePath,
+             NULL
+             );
+      goto ErrorExit;
+    }
   }
 
   //Any errors after here should uninstall protocols.
