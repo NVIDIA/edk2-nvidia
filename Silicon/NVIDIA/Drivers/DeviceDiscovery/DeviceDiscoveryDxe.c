@@ -30,6 +30,7 @@
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ResetNodeProtocol.h>
 #include <Protocol/ArmScmiClockProtocol.h>
+#include <Protocol/ClockParents.h>
 #include <Protocol/BpmpIpc.h>
 
 #include "DeviceDiscoveryPrivate.h"
@@ -444,6 +445,7 @@ GetResetNodeProtocol(
   This function allows for simple enablement of all clock nodes.
 
   @param[in]     This                The instance of the NVIDIA_CLOCK_NODE_PROTOCOL.
+  @param[in]     SetParent           Attempt to set the parent clocks
 
   @return EFI_SUCCESS                All clocks enabled.
   @return EFI_NOT_READY              Clock control protocol is not installed.
@@ -451,20 +453,43 @@ GetResetNodeProtocol(
 **/
 EFI_STATUS
 EnableAllClockNodes (
-  IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This
+  IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This,
+  IN  BOOLEAN                      SetParent
   )
 {
-  SCMI_CLOCK_PROTOCOL *ClockProtocol = NULL;
-  EFI_STATUS          Status;
-  UINTN               Index;
+  SCMI_CLOCK_PROTOCOL           *ClockProtocol = NULL;
+  NVIDIA_CLOCK_PARENTS_PROTOCOL *ClockParents = NULL;
+  EFI_STATUS                    Status;
+  UINTN                         Index;
+  UINTN                         ParentsIndex;
 
   Status = gBS->LocateProtocol (&gArmScmiClockProtocolGuid, NULL, (VOID **)&ClockProtocol);
   if (EFI_ERROR (Status)) {
     return EFI_NOT_READY;
   }
 
+  Status = gBS->LocateProtocol (&gNVIDIAClockParentsProtocolGuid, NULL, (VOID **)&ClockParents);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
   for (Index = 0; Index < This->Clocks; Index++) {
-    Status = ClockProtocol->Enable (ClockProtocol, This->ClockEntries[Index].ClockId, TRUE);
+    UINT32 ClockId = This->ClockEntries[This->Clocks - Index - 1].ClockId;
+    for (ParentsIndex = 0; ParentsIndex < This->Clocks; ParentsIndex++) {
+      if (This->ClockEntries[ParentsIndex].Parent) {
+        UINT32 ParentId = This->ClockEntries[ParentsIndex].ClockId;
+        if (EFI_SUCCESS == ClockParents->IsParent (ClockParents, ClockId, ParentId)) {
+          Status = ClockParents->SetParent (ClockParents, ClockId, ParentId);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((EFI_D_ERROR, "%a: Failed to set parent 0x%x on clock 0x%x\r\n",__FUNCTION__,ParentId,ClockId));
+            return Status;
+          } else {
+            break;
+          }
+        }
+      }
+    }
+    Status = ClockProtocol->Enable (ClockProtocol, ClockId, TRUE);
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
     }
@@ -494,9 +519,11 @@ GetClockNodeProtocol(
   )
 {
   CONST CHAR8                *ClockNames = NULL;
+  CONST CHAR8                *ClockParentNames = NULL;
   CONST UINT32               *ClockIds = NULL;
   INT32                      ClocksLength;
   INT32                      ClockNamesLength;
+  INT32                      ClockParentsLength;
   UINTN                      NumberOfClocks;
   NVIDIA_CLOCK_NODE_PROTOCOL *ClockNode = NULL;
   UINTN                      Index;
@@ -543,9 +570,14 @@ GetClockNodeProtocol(
   if (ClockNamesLength == 0) {
     ClockNames = NULL;
   }
+  ClockParentNames = (CONST CHAR8*)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "pll_source", &ClockParentsLength);
+  if (ClockParentsLength == 0) {
+    ClockParentNames = NULL;
+  }
   for (Index = 0; Index < NumberOfClocks; Index++) {
     ClockNode->ClockEntries[Index].ClockId = SwapBytes32 (ClockIds[2 * Index + 1]);
     ClockNode->ClockEntries[Index].ClockName = NULL;
+    ClockNode->ClockEntries[Index].Parent = FALSE;
     if (ClockNames != NULL) {
       INT32 Size = AsciiStrSize (ClockNames);
       if ((Size <= 0) || (Size > ClockNamesLength)) {
@@ -555,6 +587,25 @@ GetClockNodeProtocol(
       ClockNode->ClockEntries[Index].ClockName = ClockNames;
       ClockNames += Size;
       ClockNamesLength -= Size;
+
+      if ((ClockNode->ClockEntries[Index].ClockName != NULL) &&
+          (ClockParentNames != NULL)) {
+        CONST CHAR8 *ParentScan = ClockParentNames;
+        INT32       ParentScanSize = ClockParentsLength;
+        while (ParentScanSize > 0) {
+          INT32 ParentSize = AsciiStrSize (ParentScan);
+          if ((ParentSize <= 0) || (ParentSize > ParentScanSize)) {
+            break;
+          }
+
+          if (0 == AsciiStrCmp (ClockNode->ClockEntries[Index].ClockName, ParentScan)) {
+            ClockNode->ClockEntries[Index].Parent = TRUE;
+            break;
+          }
+          ParentScan += ParentSize;
+          ParentScanSize -= ParentSize;
+        }
+      }
     }
   }
 

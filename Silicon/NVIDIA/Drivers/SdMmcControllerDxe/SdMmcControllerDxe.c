@@ -318,7 +318,7 @@ SdMmcControllerStart (
     DEBUG ((EFI_D_ERROR, "%a, no clock node protocol\r\n",__FUNCTION__));
     goto ErrorExit;
   }
-  Status = ClockProtocol->EnableAll (ClockProtocol);
+  Status = ClockProtocol->EnableAll (ClockProtocol, TRUE);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a, failed to enable clocks %r\r\n",__FUNCTION__,Status));
     goto ErrorExit;

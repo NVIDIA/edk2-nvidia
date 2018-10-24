@@ -39,12 +39,18 @@ typedef struct {
   ///
   CONST CHAR8             *ClockName;
 
+  ///
+  /// This clock is marked as a parent clock.
+  ///
+  BOOLEAN                 Parent;
+
 } NVIDIA_CLOCK_NODE_ENTRY;
 
 /**
   This function allows for simple enablement of all clock nodes.
 
   @param[in]     This                The instance of the NVIDIA_CLOCK_NODE_PROTOCOL.
+  @param[in]     SetParent           Attempt to set the parent clocks
 
   @return EFI_SUCCESS                All clocks enabled.
   @return EFI_NOT_READY              Clock control protocol is not installed.
@@ -53,7 +59,8 @@ typedef struct {
 typedef
 EFI_STATUS
 (EFIAPI *CLOCK_NODE_ENABLE_ALL) (
-  IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This
+  IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This,
+  IN  BOOLEAN                      SetParent
   );
 
 /// NVIDIA_CLOCK_NODE_PROTOCOL protocol structure.

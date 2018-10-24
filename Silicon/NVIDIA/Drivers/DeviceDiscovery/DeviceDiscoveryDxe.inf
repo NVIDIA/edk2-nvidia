@@ -56,6 +56,7 @@
   gNVIDIAClockNodeProtocolGuid
   gNVIDIAResetNodeProtocolGuid
   gNVIDIABpmpIpcProtocolGuid
+  gNVIDIAClockParentsProtocolGuid
 
 [FixedPcd]
 
