@@ -328,7 +328,7 @@ ClockRateSet (
     Status = EFI_NOT_FOUND;
   }
   if (Rate != NewRate) {
-    DEBUG ((EFI_D_ERROR,
+    DEBUG ((EFI_D_INFO,
             "%a: Clock %d, attempt set to %16ld, was set to %16ld\r\n",
             __FUNCTION__,
             ClockId,
