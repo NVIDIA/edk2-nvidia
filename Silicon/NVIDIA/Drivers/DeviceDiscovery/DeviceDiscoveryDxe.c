@@ -648,9 +648,26 @@ ProcessDeviceTreeNodeWithHandle(
   EFI_GUID                                  *ProtocolGuidList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL};
   VOID                                      *InterfaceList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL};
   UINTN                                     ProtocolIndex;
+  CONST VOID                                *Property = NULL;
+  INT32                                     PropertySize = 0;
+
 
   NodeProtocol.DeviceTreeBase = Private->DeviceTreeBase;
   NodeProtocol.NodeOffset = NodeOffset;
+
+  if (NULL == Private) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Property = fdt_getprop (Private->DeviceTreeBase,
+                          NodeOffset,
+                          "status",
+                          &PropertySize);
+  if (NULL != Property) {
+    if (0 != AsciiStrCmp (Property, "okay")) {
+      return EFI_UNSUPPORTED;
+    }
+  }
 
   Status = gBS->HandleProtocol (DriverHandle,
                                 &gNVIDIADeviceTreeCompatibilityProtocolGuid,
@@ -666,7 +683,6 @@ ProcessDeviceTreeNodeWithHandle(
   if (EFI_ERROR (Status)) {
     goto ErrorExit;
   }
-
 
   Device = (NON_DISCOVERABLE_DEVICE *)AllocatePool (sizeof (NON_DISCOVERABLE_DEVICE));
   if (NULL == Device) {
