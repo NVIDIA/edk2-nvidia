@@ -113,6 +113,8 @@
   Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
 
   Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
+  MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
+  Silicon/NVIDIA/Drivers/BpmpI2c/BpmpI2cDxe.inf
 
   #
   # GPIO driver/utility
