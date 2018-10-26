@@ -609,6 +609,7 @@ BpmpIpcProtocolStart (
   PrivateData->TxChannel = NULL;
   PrivateData->RxChannel = NULL;
   PrivateData->BpmpIpcProtocol.Communicate = BpmpIpcCommunicate;
+  PrivateData->Controller = Controller;
 
   Status = gBS->CreateEvent (
                   EVT_TIMER | EVT_NOTIFY_SIGNAL,
