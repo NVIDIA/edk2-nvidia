@@ -14,13 +14,13 @@
 #**/
 
 [Defines]
-  INF_VERSION                    = 0x00010005
+  INF_VERSION                    = 0x00010019
   BASE_NAME                      = SdMmcControllerDxe
   FILE_GUID                      = 40f0d306-e558-48bb-ae8a-c8bec233757f
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
 
-  ENTRY_POINT                    = SdMmcControllerInitialize
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
 
 [Sources.common]
   SdMmcControllerDxe.c
@@ -41,20 +41,16 @@
   UefiDriverEntryPoint
   IoLib
   FdtLib
+  DeviceDiscoveryDriverLib
 
 [Protocols]
   gEdkiiSdMmcOverrideProtocolGuid
   gEdkiiNonDiscoverableDeviceProtocolGuid
-  gNVIDIANonDiscoverableDeviceProtocolGuid
-  gNVIDIADeviceTreeCompatibilityProtocolGuid
   gNVIDIAClockNodeProtocolGuid
-  gNVIDIAResetNodeProtocolGuid
   gArmScmiClockProtocolGuid
 
 [Guids]
   gEdkiiNonDiscoverableSdhciDeviceGuid
 
 [Depex]
-  gArmScmiClockProtocolGuid
-  AND
-  gNVIDIABpmpIpcProtocolGuid
+  TRUE
