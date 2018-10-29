@@ -115,6 +115,11 @@
   Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
 
   #
+  # GPIO driver/utility
+  #
+  Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf
+
+  #
   # Architectural Protocols
   #
   ArmPkg/Drivers/CpuDxe/CpuDxe.inf
