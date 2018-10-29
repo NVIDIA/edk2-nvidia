@@ -127,6 +127,7 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   # GPIO driver/utility
   #
   INF Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf
+  INF Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
 
   #
   # ACPI Support

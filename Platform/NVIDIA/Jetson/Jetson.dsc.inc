@@ -118,6 +118,7 @@
   # GPIO driver/utility
   #
   Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf
+  Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
 
   #
   # Architectural Protocols
