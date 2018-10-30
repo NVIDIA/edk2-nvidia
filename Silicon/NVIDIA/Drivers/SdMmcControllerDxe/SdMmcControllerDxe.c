@@ -149,10 +149,7 @@ SdMmcNotify (
     return EFI_UNSUPPORTED;
   }
 
-  if (PhaseType == EdkiiSdMmcInitHostPre) {
-    // Scale SDMMC Clock to 102MHz.
-  }
-  else if (PhaseType == EdkiiSdMmcInitHostPost) {
+  if (PhaseType == EdkiiSdMmcInitHostPost) {
     // Enable SDMMC Clock again.
     MmioOr32(SlotBaseAddress + SD_MMC_HC_CLOCK_CTRL, SD_MMC_CLK_CTRL_SD_CLK_EN);
   }
