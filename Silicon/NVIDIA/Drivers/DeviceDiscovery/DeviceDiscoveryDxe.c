@@ -412,15 +412,14 @@ GetResetNodeProtocol(
 
   if ((ResetIds == 0) ||
       (ResetsLength == 0)) {
-    return;
+    NumberOfResets = 0;
+  } else {
+    if ((ResetsLength % (sizeof (UINT32) * 2)) != 0) {
+      DEBUG ((EFI_D_ERROR, "%a, Resets length unexpected %d\r\n", __FUNCTION__, ResetsLength));
+      return;
+    }
+    NumberOfResets = ResetsLength / (sizeof (UINT32) * 2);
   }
-
-  if ((ResetsLength % (sizeof (UINT32) * 2)) != 0) {
-    DEBUG ((EFI_D_ERROR, "%a, Resets length unexpected %d\r\n", __FUNCTION__, ResetsLength));
-    return;
-  }
-
-  NumberOfResets = ResetsLength / (sizeof (UINT32) * 2);
 
   ResetNode = (NVIDIA_RESET_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_RESET_NODE_PROTOCOL) + (NumberOfResets * sizeof (UINT32)));
   if (NULL == ResetNode) {
