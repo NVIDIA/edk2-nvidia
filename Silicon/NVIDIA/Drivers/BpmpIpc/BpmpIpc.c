@@ -314,7 +314,7 @@ BpmpIpcCommunicate (
     return EFI_INVALID_PARAMETER;
   }
 
-  if ((Token != NULL) && (Token->Event)) {
+  if ((Token != NULL) && (Token->Event == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
