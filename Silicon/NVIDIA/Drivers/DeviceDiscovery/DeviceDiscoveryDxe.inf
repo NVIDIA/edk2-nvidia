@@ -15,7 +15,7 @@
 ##
 
 [Defines]
-  INF_VERSION                    = 0x0001001A
+  INF_VERSION                    = 0x00010019
   BASE_NAME                      = DeviceDiscoveryDxe
   FILE_GUID                      = 46ca70f7-1d21-40c9-b6db-248e9009a648
   MODULE_TYPE                    = DXE_DRIVER

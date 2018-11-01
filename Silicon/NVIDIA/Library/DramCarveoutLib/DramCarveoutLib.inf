@@ -11,7 +11,7 @@
 #
 
 [Defines]
-  INF_VERSION                    = 0x00010005
+  INF_VERSION                    = 0x00010019
   BASE_NAME                      = DramCarveoutLib
   FILE_GUID                      = 68786d8d-8f5e-4b58-bffe-c238f0043d7b
   MODULE_TYPE                    = BASE
