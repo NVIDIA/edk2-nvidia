@@ -29,6 +29,8 @@
   PciLib|MdePkg/Library/BasePciLibPciExpress/BasePciLibPciExpress.inf
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
 
+  RealTimeClockLib|Silicon/NVIDIA/Library/MaximRealTimeClockLib/MaximRealTimeClockLib.inf
+
 [LibraryClasses.common.SEC]
   PrePiLib|EmbeddedPkg/Library/PrePiLib/PrePiLib.inf
   ExtractGuidedSectionLib|EmbeddedPkg/Library/PrePiExtractGuidedSectionLib/PrePiExtractGuidedSectionLib.inf

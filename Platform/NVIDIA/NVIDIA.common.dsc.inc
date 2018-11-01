@@ -75,10 +75,8 @@
   ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerPhyCounterLib/ArmGenericTimerPhyCounterLib.inf
   ResetSystemLib|ArmPkg/Library/ArmSmcPsciResetSystemLib/ArmSmcPsciResetSystemLib.inf
 
-  #TODO: Replace with real instance
-  RealTimeClockLib|EmbeddedPkg/Library/TemplateRealTimeClockLib/TemplateRealTimeClockLib.inf
-
   TimerLib|ArmPkg/Library/ArmArchTimerLib/ArmArchTimerLib.inf
+
   #
   # Uncomment (and comment out the next line) For RealView Debugger. The Standard IO window
   # in the debugger will show load and unload commands for symbols. You can cut and paste this
@@ -124,6 +122,8 @@
   ReportStatusCodeLib|MdeModulePkg/Library/DxeReportStatusCodeLib/DxeReportStatusCodeLib.inf
 
   DramCarveoutLib|Silicon/NVIDIA/Library/DramCarveoutLib/DramCarveoutLib.inf
+
+  TimeBaseLib|EmbeddedPkg/Library/TimeBaseLib/TimeBaseLib.inf
 
   FdtLib|EmbeddedPkg/Library/FdtLib/FdtLib.inf
   DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbLoaderLib.inf
