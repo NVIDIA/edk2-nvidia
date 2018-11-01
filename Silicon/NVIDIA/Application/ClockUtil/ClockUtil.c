@@ -1,5 +1,5 @@
 /** @file
-  The main process for IpSecConfig application.
+  The main process for ClockUtil application.
 
   Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
 
