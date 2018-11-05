@@ -31,9 +31,9 @@
 
 #string STR_GPIO_UTIL_DISPLAY_GET_MODE_ERROR         #language en-US  "%s: Failed to get Gpio mode for id 0x%x: %r.\n"
 
-#string STR_GPIO_UTIL_DISPLAY_INPUT                  #language en-US  "%8d: INPUT   - %d\n"
-#string STR_GPIO_UTIL_DISPLAY_OUTPUT                 #language en-US  "%8d: OUTPUT  - %d\n"
-#string STR_GPIO_UTIL_DISPLAY_UNKNOWN_MODE           #language en-US  "%8d: UNKNOWN - %d\n"
+#string STR_GPIO_UTIL_DISPLAY_INPUT                  #language en-US  "0x%08x: INPUT   - %d\n"
+#string STR_GPIO_UTIL_DISPLAY_OUTPUT                 #language en-US  "0x%08x: OUTPUT  - %d\n"
+#string STR_GPIO_UTIL_DISPLAY_UNKNOWN_MODE           #language en-US  "0x%08x: UNKNOWN - %d\n"
 
 #string STR_GPIO_UTIL_HELP                 #language en-US    ""
 ".TH GpioUtil 0 "Displays or modifies the gpio configuration."\r\n"
