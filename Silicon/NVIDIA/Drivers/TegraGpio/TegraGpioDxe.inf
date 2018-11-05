@@ -47,6 +47,7 @@
   gPlatformGpioProtocolGuid
   gEmbeddedGpioProtocolGuid
   gNVIDIANonDiscoverableDeviceProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableT186GpioDeviceGuid

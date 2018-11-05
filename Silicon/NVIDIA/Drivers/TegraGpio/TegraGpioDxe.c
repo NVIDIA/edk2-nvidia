@@ -24,6 +24,7 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Protocol/EmbeddedGpio.h>
+#include <libfdt.h>
 
 #include "TegraGpioPrivate.h"
 
@@ -311,15 +312,35 @@ InstallGpioProtocols (
   IN  EFI_HANDLE ControllerHandle
   )
 {
-  EFI_STATUS               Status;
-  NON_DISCOVERABLE_DEVICE  *Device = NULL;
-  UINTN                    ControllerCount;
-  CONST GPIO_CONTROLLER    *ControllerDefault = NULL;
-  PLATFORM_GPIO_CONTROLLER *GpioController = NULL;
-  UINTN                    GpioBaseAddress = 0;
-  UINTN                    GpioRegionSize = 0;
-  UINTN                    ControllerIndex = 0;
+  EFI_STATUS                       Status;
+  NON_DISCOVERABLE_DEVICE          *Device = NULL;
+  UINTN                            ControllerCount;
+  CONST GPIO_CONTROLLER            *ControllerDefault = NULL;
+  PLATFORM_GPIO_CONTROLLER         *GpioController = NULL;
+  UINTN                            GpioBaseAddress = 0;
+  UINTN                            GpioRegionSize = 0;
+  UINTN                            ControllerIndex = 0;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode = NULL;
+  UINT32                           ControllerDtHandle;
 
+
+  Status = gBS->HandleProtocol (
+                  ControllerHandle,
+                  &gNVIDIADeviceTreeNodeProtocolGuid,
+                  (VOID **)&DeviceTreeNode
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  ControllerDtHandle = fdt_get_phandle (
+                        DeviceTreeNode->DeviceTreeBase,
+                        DeviceTreeNode->NodeOffset
+                        );
+  if ((ControllerDtHandle > MAX_UINT16)) {
+    ASSERT (ControllerDtHandle <= MAX_UINT16);
+    return EFI_UNSUPPORTED;
+  }
 
   Status = gBS->HandleProtocol (
                   ControllerHandle,
@@ -361,6 +382,7 @@ InstallGpioProtocols (
 
   CopyMem (GpioController->GpioController, ControllerDefault, ControllerCount * sizeof (GPIO_CONTROLLER));
   for (ControllerIndex = 0; ControllerIndex < ControllerCount; ControllerIndex++) {
+    GpioController->GpioController[ControllerIndex].GpioIndex = GPIO (ControllerDtHandle, GpioController->GpioController[ControllerIndex].GpioIndex);
     GpioController->GpioController[ControllerIndex].RegisterBase += GpioBaseAddress;
   }
 
