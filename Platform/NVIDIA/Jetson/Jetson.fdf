@@ -32,7 +32,7 @@ ErasePolarity = 1
 
 # This one is tricky, it must be: BlockSize * NumBlocks = Size
 BlockSize     = 0x00001000
-NumBlocks     = 0x120
+NumBlocks     = 0x150
 
 ################################################################################
 #

@@ -26,7 +26,7 @@
   BUILD_TARGETS                  = DEBUG|RELEASE
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_BASE                     = 0x96000000
-  FLASH_SIZE                     = 0x00120000
+  FLASH_SIZE                     = 0x00150000
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
