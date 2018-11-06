@@ -129,6 +129,7 @@
   # Regulator support
   #
   Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
+  Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
 
   #
   # Architectural Protocols

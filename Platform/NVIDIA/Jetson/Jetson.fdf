@@ -135,6 +135,7 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   # Regulator support
   #
   INF Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
+  INF Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
 
   #
   # ACPI Support

@@ -1,0 +1,67 @@
+/** @file
+  String definitions for the Shell RegulatorUtil application.
+
+  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+
+  This program and the accompanying materials
+  are licensed and made available under the terms and conditions of the BSD License
+  which accompanies this distribution.  The full text of the license may be found at
+  http://opensource.org/licenses/bsd-license.php.
+
+  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+
+**/
+
+#langdef en-US "English"
+
+#string STR_REGULATOR_UTIL_UNKNOWN_OPERATION              #language en-US  "%s: Operation not specified.\n"
+
+#string STR_REGULATOR_UTIL_PROTOCOL_NONEXISTENT           #language en-US  "%s: Gpio protocol nonexistent.\n"
+
+#string STR_REGULATOR_UTIL_BAD_ALLOCATION                 #language en-US  "%s: Allocation failed.\n"
+
+#string STR_REGULATOR_UTIL_NAME_LOOKUP_FAIL               #language en-US  "%s: Failed to get name: %r.\n"
+
+#string STR_REGULATOR_UTIL_BAD_VOLTAGE                    #language en-US  "%s: invalid voltage value.\n"
+
+#string STR_REGULATOR_UTIL_ENABLE_DISABLE                 #language en-US  "%s: Can not have both --enable and --disable.\n"
+
+#string STR_REGULATOR_UTIL_MODIFY_NO_ID                   #language en-US  "%s: Must have id to change state.\n"
+
+#string STR_REGULATOR_UTIL_ENABLE_ERROR                   #language en-US  "%s: Failed to enable regulator. (0x%x: %r)\n"
+
+#string STR_REGULATOR_UTIL_DISABLE_ERROR                  #language en-US  "%s: Failed to disable regulator. (0x%x: %r)\n"
+
+#string STR_REGULATOR_UTIL_SET_VOLTAGE_ERROR              #language en-US  "%s: Failed to set voltage. (0x%x - %u: %r)\n"
+
+#string STR_REGULATOR_UTIL_LIST_LOOKUP_ERROR              #language en-US  "%s: Failed to get regulators. (%r)\n"
+
+#string STR_REGULATOR_UTIL_DISPLAY_GET_INFO_ERROR         #language en-US  "%s: Failed to get regulator info. (0x%x: %r)\n"
+
+#string STR_REGULATOR_UTIL_DISPLAY_ALWAYS_ON_INFO         #language en-US  "Regulator 0x%x, Name %a\n\tALWAYS ON\n\tCurr: %u, Min: %u, Max: %u, Step: %u\n"
+
+#string STR_REGULATOR_UTIL_DISPLAY_INFO                   #language en-US  "Regulator 0x%x, Name %a\n\tEnable: %u\n\tCurr: %u, Min: %u, Max: %u, Step: %u\n"
+
+#string STR_REGULATOR_UTIL_DISPLAY_NOT_READY              #language en-US  "Regulator 0x%x, Name %a\n\tNOT READY\n"
+
+#string STR_REGULATOR_UTIL_HELP                 #language en-US    ""
+".TH RegulatorUtil 0 "Displays or modifies the regulator configuration."\r\n"
+".SH NAME\r\n"
+"Displays or modifies the regulator configuration.\r\n"
+".SH SYNOPSIS\r\n"
+" \r\n"
+"%HRegulatorUtil [--id <regulator id>|--name <regulator name>] [--enable|--disable] [--voltage <microvolts]\r\n"
+".SH OPTIONS\r\n"
+" \r\n"
+"%Hcommand%N:\r\n"
+"  Specifies the regulator to display/modify
+"  --id   regulator_id                Specifies regulator id\r\n"
+"  --name regulator_name              Specifies regulator name\r\n"
+" \r\n"
+"  --enable                          Enables regulator output.\r\n"
+"  --disable                         Disables regulator output.\r\n"
+"  --voltage microvolts              Sets voltage to specified microvolts.\r\n"
+" \r\n"
+"  -?                               Displays this help.\r\n"
+" \r\n"
