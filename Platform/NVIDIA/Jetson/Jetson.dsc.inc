@@ -124,6 +124,12 @@
   Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf
   Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
 
+
+  #
+  # Regulator support
+  #
+  Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
+
   #
   # Architectural Protocols
   #
