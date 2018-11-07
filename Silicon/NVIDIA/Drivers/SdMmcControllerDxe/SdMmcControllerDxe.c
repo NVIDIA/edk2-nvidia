@@ -23,6 +23,8 @@
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Protocol/SdMmcOverride.h>
+#include <Protocol/Regulator.h>
+#include <libfdt.h>
 
 #include "SdMmcControllerPrivate.h"
 
@@ -156,6 +158,10 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
   )
 {
+  EFI_STATUS                Status;
+  CONST UINT32              *RegulatorPointer = NULL;
+  NVIDIA_REGULATOR_PROTOCOL *RegulatorProtocol = NULL;
+
   switch (Phase) {
   case DeviceDiscoveryDriverStart:
     return gBS->InstallMultipleProtocolInterfaces (
@@ -166,7 +172,59 @@ DeviceDiscoveryNotify (
                   );
 
   case DeviceDiscoveryDriverBindingStart:
-    return DeviceDiscoverySetClockFreq (ControllerHandle, "sdmmc", SD_MMC_MAX_CLOCK);
+    Status = DeviceDiscoverySetClockFreq (ControllerHandle, "sdmmc", SD_MMC_MAX_CLOCK);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    if (NULL == DeviceTreeNode) {
+      return EFI_SUCCESS;
+    }
+
+    Status = gBS->LocateProtocol (&gNVIDIARegulatorProtocolGuid, NULL, (VOID **)&RegulatorProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, Failed to locate regulator protocol %r\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    RegulatorPointer = (CONST UINT32 *)fdt_getprop (
+                                         DeviceTreeNode->DeviceTreeBase,
+                                         DeviceTreeNode->NodeOffset,
+                                         "vqmmc-supply",
+                                         NULL);
+    if (NULL != RegulatorPointer) {
+      UINTN Microvolts = 1800000;
+      UINT32 MmcRegulator = SwapBytes32 (*RegulatorPointer);
+      if (NULL == fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "only-1-8-v", NULL)) {
+        Microvolts = 3300000;
+      }
+      Status = RegulatorProtocol->SetVoltage (RegulatorProtocol, MmcRegulator, Microvolts);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a, Failed to set regulator voltage %x, %u, %r\r\n", __FUNCTION__, MmcRegulator, Microvolts, Status));
+        return Status;
+      }
+
+      Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+        return Status;
+      }
+    }
+
+    RegulatorPointer = (CONST UINT32 *)fdt_getprop (
+                                         DeviceTreeNode->DeviceTreeBase,
+                                         DeviceTreeNode->NodeOffset,
+                                         "vmmc-supply",
+                                         NULL);
+    if (NULL != RegulatorPointer) {
+      UINT32 MmcRegulator = SwapBytes32 (*RegulatorPointer);
+      Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+        return Status;
+      }
+    }
 
   default:
     return EFI_SUCCESS;
