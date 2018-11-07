@@ -155,7 +155,6 @@
       NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
-  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
 
   #
   # ACPI Support
@@ -227,9 +226,9 @@
   #
 
   #
-  # Variable support
+  # FVB Support
   #
-  MdeModulePkg/Universal/Variable/EmuRuntimeDxe/EmuVariableRuntimeDxe.inf
+  Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
 
   #
   # Usb Support

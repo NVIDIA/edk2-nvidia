@@ -109,7 +109,6 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF EmbeddedPkg/MetronomeDxe/MetronomeDxe.inf
 
   INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf
-  INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
 
   #
   # Device discovery protocol
@@ -210,9 +209,9 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF  MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
 
   #
-  # Variable support
+  # FVB Support
   #
-  INF MdeModulePkg/Universal/Variable/EmuRuntimeDxe/EmuVariableRuntimeDxe.inf
+  INF Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
 
   #
   # Networking stack
