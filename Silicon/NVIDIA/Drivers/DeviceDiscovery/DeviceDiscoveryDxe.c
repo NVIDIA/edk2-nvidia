@@ -55,24 +55,44 @@ AddMemoryRegion (
   EFI_STATUS Status;
   UINT64 AlignedBaseAddress = BaseAddress & ~(SIZE_4KB-1);
   UINT64 AlignedSize = Size + (BaseAddress - AlignedBaseAddress);
+  UINT64 AlignedEnd;
+  UINT64 ScanLocation;
   AlignedSize = ALIGN_VALUE (Size, SIZE_4KB);
+  AlignedEnd = AlignedBaseAddress + AlignedSize;
 
-  Status = gDS->AddMemorySpace (EfiGcdMemoryTypeMemoryMappedIo,
-                                AlignedBaseAddress,
-                                AlignedSize,
-                                EFI_MEMORY_UC | EFI_MEMORY_RUNTIME);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to AddMemorySpace: %r.\r\n", __FUNCTION__, Status));
-    return Status;
+  ScanLocation = AlignedBaseAddress;
+  while (ScanLocation < AlignedEnd) {
+    EFI_GCD_MEMORY_SPACE_DESCRIPTOR MemorySpace;
+    UINT64                          OverlapSize;
+
+    Status = gDS->GetMemorySpaceDescriptor (ScanLocation, &MemorySpace);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to GetMemorySpaceDescriptor (0x%llx): %r.\r\n", __FUNCTION__, ScanLocation, Status));
+      return Status;
+    }
+    OverlapSize = MIN (MemorySpace.BaseAddress + MemorySpace.Length, AlignedEnd) - ScanLocation;
+    if (MemorySpace.GcdMemoryType == EfiGcdMemoryTypeNonExistent) {
+      Status = gDS->AddMemorySpace (EfiGcdMemoryTypeMemoryMappedIo,
+                                    ScanLocation,
+                                    OverlapSize,
+                                    EFI_MEMORY_UC | EFI_MEMORY_RUNTIME);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a: Failed to AddMemorySpace: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
+        return Status;
+      }
+
+      Status = gDS->SetMemorySpaceAttributes (ScanLocation,
+                                              OverlapSize,
+                                              EFI_MEMORY_UC);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a: Failed to SetMemorySpaceAttributes: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
+        return Status;
+      }
+    }
+    ScanLocation += OverlapSize;
   }
 
-  Status = gDS->SetMemorySpaceAttributes (AlignedBaseAddress,
-                                          AlignedSize,
-                                          EFI_MEMORY_UC);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to SetMemorySpaceAttributes: %r.\r\n", __FUNCTION__, Status));
-    return Status;
-  }
+
 
   return EFI_SUCCESS;
 }
