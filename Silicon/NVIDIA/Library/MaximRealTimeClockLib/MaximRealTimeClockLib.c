@@ -63,6 +63,10 @@ LibGetTime (
     return EFI_INVALID_PARAMETER;
   }
 
+  if (EfiAtRuntime ()) {
+    return EFI_UNSUPPORTED;
+  }
+
   if (mI2cIo == NULL) {
     return EFI_DEVICE_ERROR;
   }
@@ -192,6 +196,10 @@ LibSetTime (
   if ((Time->Year < MAXIM_BASE_YEAR) ||
       (Time->Year >= (MAXIM_BASE_YEAR + 100))) {
     return EFI_INVALID_PARAMETER;
+  }
+
+  if (EfiAtRuntime ()) {
+    return EFI_UNSUPPORTED;
   }
 
   if (mI2cIo == NULL) {
