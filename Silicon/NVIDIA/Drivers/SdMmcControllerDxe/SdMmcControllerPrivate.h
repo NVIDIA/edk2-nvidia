@@ -23,6 +23,22 @@
 
 #define SD_MMC_MAX_CLOCK              255000000
 
+/* Tegra SDHOST controller vendor register definitions */
+#define SDHCI_TEGRA_VENDOR_CLOCK_CTRL              0x100
+#define SDHCI_CLOCK_CTRL_TAP_MASK                  0x00ff0000
+#define SDHCI_CLOCK_CTRL_TAP_SHIFT                 16
+#define SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_START 8
+#define SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_END   15
+#define SDHCI_CLOCK_CTRL_SDR50_TUNING_OVERRIDE     5
+#define SDHCI_CLOCK_CTRL_PADPIPE_CLKEN_OVERRIDE    3
+#define SDHCI_CLOCK_CTRL_SPI_MODE_CLKEN_OVERRIDE   2
+
+#define SDHCI_TEGRA_VENDOR_MISC_CTRL               0x120
+#define SDHCI_MISC_CTRL_ENABLE_SDR104_BIT          3
+#define SDHCI_MISC_CTRL_ENABLE_SDR50               4
+#define SDHCI_MISC_CTRL_ENABLE_SDHCI_SPEC_300      5
+#define SDHCI_MISC_CTRL_ENABLE_DDR50               9
+
 typedef struct {
   UINT32   TimeoutFreq:6;     // bit 0:5
   UINT32   Reserved:1;        // bit 6

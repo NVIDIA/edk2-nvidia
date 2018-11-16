@@ -49,24 +49,11 @@ SdMmcCapability (
   )
 {
   SD_MMC_HC_SLOT_CAP  *Capability = (SD_MMC_HC_SLOT_CAP *)SdMmcHcSlotCapability;
-  EFI_STATUS          Status;
-  UINT64              Rate;
-
 
   if (SdMmcHcSlotCapability == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = DeviceDiscoveryGetClockFreq (ControllerHandle, "sdmmc", &Rate);
-  if (!EFI_ERROR (Status)) {
-    if (Rate > SD_MMC_MAX_CLOCK) {
-      DEBUG ((EFI_D_ERROR, "%a: Clock rate %llu out of range for SDHCI\r\n",__FUNCTION__,Rate));
-      return EFI_DEVICE_ERROR;
-    }
-    Capability->BaseClkFreq = Rate / 1000000;
-  }
-
-  Capability->Ddr50 = FALSE;
   Capability->SlotType = 0x1; //Embedded slot
 
   return EFI_SUCCESS;
@@ -161,6 +148,10 @@ DeviceDiscoveryNotify (
   EFI_STATUS                Status;
   CONST UINT32              *RegulatorPointer = NULL;
   NVIDIA_REGULATOR_PROTOCOL *RegulatorProtocol = NULL;
+  UINT64                    Rate;
+  EFI_PHYSICAL_ADDRESS      BaseAddress  = 0;
+  UINTN                     RegionSize;
+
 
   switch (Phase) {
   case DeviceDiscoveryDriverStart:
@@ -172,11 +163,40 @@ DeviceDiscoveryNotify (
                   );
 
   case DeviceDiscoveryDriverBindingStart:
+    Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
+      return EFI_UNSUPPORTED;
+    }
+
     Status = DeviceDiscoverySetClockFreq (ControllerHandle, "sdmmc", SD_MMC_MAX_CLOCK);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
       return Status;
     }
+
+    //Update base clock in capabilities register
+    Status = DeviceDiscoveryGetClockFreq (ControllerHandle, "sdmmc", &Rate);
+    if (!EFI_ERROR (Status)) {
+      if (Rate > SD_MMC_MAX_CLOCK) {
+        DEBUG ((EFI_D_ERROR, "%a: Clock rate %llu out of range for SDHCI\r\n",__FUNCTION__,Rate));
+        return EFI_DEVICE_ERROR;
+      }
+      Rate = Rate / 1000000;
+      MmioBitFieldWrite32 (
+        BaseAddress + SDHCI_TEGRA_VENDOR_CLOCK_CTRL,
+        SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_START,
+        SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_END,
+        Rate
+        );
+    }
+    //DISABLE DDR50
+    MmioBitFieldWrite32 (
+      BaseAddress + SDHCI_TEGRA_VENDOR_MISC_CTRL,
+      SDHCI_MISC_CTRL_ENABLE_DDR50,
+      SDHCI_MISC_CTRL_ENABLE_DDR50,
+      0
+      );
 
     if (NULL == DeviceTreeNode) {
       return EFI_SUCCESS;
