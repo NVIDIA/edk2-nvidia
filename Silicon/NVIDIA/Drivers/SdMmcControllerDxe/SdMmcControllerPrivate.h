@@ -23,6 +23,9 @@
 
 #define SD_MMC_MAX_CLOCK              255000000
 
+#define SDHCI_CLOCK_NAME              "sdhci"
+#define SDHCI_CLOCK_OLD_NAME          "sdmmc"
+
 /* Tegra SDHOST controller vendor register definitions */
 #define SDHCI_TEGRA_VENDOR_CLOCK_CTRL              0x100
 #define SDHCI_CLOCK_CTRL_TAP_MASK                  0x00ff0000

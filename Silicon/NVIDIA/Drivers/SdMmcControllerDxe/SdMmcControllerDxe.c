@@ -151,6 +151,7 @@ DeviceDiscoveryNotify (
   UINT64                    Rate;
   EFI_PHYSICAL_ADDRESS      BaseAddress  = 0;
   UINTN                     RegionSize;
+  CONST CHAR8               *ClockName;
 
 
   switch (Phase) {
@@ -169,14 +170,19 @@ DeviceDiscoveryNotify (
       return EFI_UNSUPPORTED;
     }
 
-    Status = DeviceDiscoverySetClockFreq (ControllerHandle, "sdmmc", SD_MMC_MAX_CLOCK);
+    ClockName = SDHCI_CLOCK_NAME;
+    Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, SD_MMC_MAX_CLOCK);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
-      return Status;
+      ClockName = SDHCI_CLOCK_OLD_NAME;
+      Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, SD_MMC_MAX_CLOCK);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
+        return Status;
+      }
     }
 
     //Update base clock in capabilities register
-    Status = DeviceDiscoveryGetClockFreq (ControllerHandle, "sdmmc", &Rate);
+    Status = DeviceDiscoveryGetClockFreq (ControllerHandle, ClockName, &Rate);
     if (!EFI_ERROR (Status)) {
       if (Rate > SD_MMC_MAX_CLOCK) {
         DEBUG ((EFI_D_ERROR, "%a: Clock rate %llu out of range for SDHCI\r\n",__FUNCTION__,Rate));
