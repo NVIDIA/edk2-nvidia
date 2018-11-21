@@ -643,7 +643,7 @@ I2cIoProtocolReady (
   gBS->CloseEvent (Event);
 
 
-  DEBUG ((EFI_D_ERROR, "%a: Ready!!!\r\n", __FUNCTION__));
+  DEBUG ((EFI_D_VERBOSE, "%a: Ready!!!\r\n", __FUNCTION__));
   ListNode = GetFirstNode (&Private->RegulatorList);
   while (ListNode != &Private->RegulatorList) {
     REGULATOR_LIST_ENTRY *Entry;
@@ -703,7 +703,7 @@ GpioProtocolReady (
 
   gBS->CloseEvent (Event);
 
-  DEBUG ((EFI_D_ERROR, "%a: Ready!!!\r\n",  __FUNCTION__));
+  DEBUG ((EFI_D_VERBOSE, "%a: Ready!!!\r\n",  __FUNCTION__));
   ListNode = GetFirstNode (&Private->RegulatorList);
   while (ListNode != &Private->RegulatorList) {
     REGULATOR_LIST_ENTRY *Entry;
@@ -1003,7 +1003,7 @@ BuildRegulatorNodes (
     Entry = REGULATOR_LIST_FROM_LINK (ListNode);
     if (NULL != Entry) {
       if (Entry->PmicSetting != NULL) {
-        DEBUG ((EFI_D_ERROR,
+        DEBUG ((EFI_D_VERBOSE,
             "%a: Node 0x%04x, Name %a, PMIC Name %a, AlwaysEnabled %u, Available %u, Min %u, Max %u, Step, %u\r\n",
             __FUNCTION__,
             Entry->RegulatorId,
@@ -1016,7 +1016,7 @@ BuildRegulatorNodes (
             Entry->MicrovoltStep
             ));
       } else if (Entry->Gpio != 0) {
-        DEBUG ((EFI_D_ERROR,
+        DEBUG ((EFI_D_VERBOSE,
             "%a: Node 0x%04x, Name %a, Gpio 0x%08x, AlwaysEnabled %u, Available %u, Min %u, Max %u, Step, %u\r\n",
             __FUNCTION__,
             Entry->RegulatorId,
@@ -1029,7 +1029,7 @@ BuildRegulatorNodes (
             Entry->MicrovoltStep
             ));
       } else {
-        DEBUG ((EFI_D_ERROR,
+        DEBUG ((EFI_D_VERBOSE,
             "%a: Node 0x%04x, Name %a, AlwaysEnabled %u, Available %u, Min %u, Max %u, Step, %u\r\n",
             __FUNCTION__,
             Entry->RegulatorId,
