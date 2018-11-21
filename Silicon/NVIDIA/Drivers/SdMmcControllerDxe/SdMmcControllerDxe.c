@@ -152,7 +152,7 @@ DeviceDiscoveryNotify (
   EFI_PHYSICAL_ADDRESS      BaseAddress  = 0;
   UINTN                     RegionSize;
   CONST CHAR8               *ClockName;
-
+  REGULATOR_INFO            RegulatorInfo;
 
   switch (Phase) {
   case DeviceDiscoveryDriverStart:
@@ -225,16 +225,33 @@ DeviceDiscoveryNotify (
       if (NULL == fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "only-1-8-v", NULL)) {
         Microvolts = 3300000;
       }
-      Status = RegulatorProtocol->SetVoltage (RegulatorProtocol, MmcRegulator, Microvolts);
+
+      Status = RegulatorProtocol->GetInfo (RegulatorProtocol, MmcRegulator, &RegulatorInfo);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to set regulator voltage %x, %u, %r\r\n", __FUNCTION__, MmcRegulator, Microvolts, Status));
+        DEBUG ((EFI_D_ERROR, "%a, Failed to get regulator info %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
         return Status;
       }
 
-      Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
-        return Status;
+      //Check if regulator supports 3.3v if not set voltage to 1.8v to support 1.8v devices that do not have
+      //only-1-8-v device tree property
+      if (Microvolts > RegulatorInfo.MaxMicrovolts) {
+        Microvolts = 1800000;
+      }
+
+      if (Microvolts != RegulatorInfo.CurrentMicrovolts) {
+        Status = RegulatorProtocol->SetVoltage (RegulatorProtocol, MmcRegulator, Microvolts);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((EFI_D_ERROR, "%a, Failed to set regulator voltage %x, %u, %r\r\n", __FUNCTION__, MmcRegulator, Microvolts, Status));
+          return Status;
+        }
+      }
+
+      if (!RegulatorInfo.IsEnabled) {
+        Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+          return Status;
+        }
       }
     }
 
