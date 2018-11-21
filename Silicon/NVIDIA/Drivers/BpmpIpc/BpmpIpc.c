@@ -636,9 +636,13 @@ BpmpIpcProtocolStart (
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
-    if (ResourceCount == 1) {
+    //Last two resources are tx and rx, some device trees have 3 nodes and some have 2.
+    if (PrivateData->TxChannel == NULL) {
       PrivateData->TxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
-    } else if (ResourceCount == 2) {
+    } else if (PrivateData->RxChannel == NULL) {
+      PrivateData->RxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
+    } else {
+      PrivateData->TxChannel = PrivateData->RxChannel;
       PrivateData->RxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
     }
     ResourceCount++;
