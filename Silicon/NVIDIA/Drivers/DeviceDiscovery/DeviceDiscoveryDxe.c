@@ -125,11 +125,15 @@ GetResources (
   EFI_STATUS Status;
   INT32 AddressCells  = fdt_address_cells (Private->DeviceTreeBase, NodeOffset);
   INT32 SizeCells     = fdt_size_cells (Private->DeviceTreeBase, NodeOffset);
-  CONST VOID  *Property = NULL;
+  CONST VOID  *RegProperty = NULL;
+  CONST VOID  *SharedMemProperty = NULL;
   UINTN EntrySize     = 0;
   INT32 PropertySize  = 0;
-  UINTN NumberOfRegions;
+  UINTN NumberOfRegions = 0;
+  UINTN NumberOfRegRegions = 0;
+  UINTN NumberOfSharedMemRegions = 0;
   UINTN RegionIndex = 0;
+  UINTN SharedMemoryIndex = 0;
   UINTN AllocationSize;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR   *AllocResources = NULL;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR   *Desc;
@@ -148,18 +152,26 @@ GetResources (
     return EFI_UNSUPPORTED;
   }
 
-  Property = fdt_getprop (Private->DeviceTreeBase,
-                          NodeOffset,
-                          "reg",
-                          &PropertySize);
-  if (NULL == Property) {
-    DEBUG ((EFI_D_ERROR, "%a: No reg property\r\n", __FUNCTION__));
-    return EFI_NOT_FOUND;
+  RegProperty = fdt_getprop (Private->DeviceTreeBase,
+                           NodeOffset,
+                           "reg",
+                           &PropertySize);
+   if (NULL != RegProperty) {
+     EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
+     ASSERT ((PropertySize % EntrySize) == 0);
+     NumberOfRegRegions = PropertySize / EntrySize;
+   }
+
+   SharedMemProperty = fdt_getprop (Private->DeviceTreeBase,
+                            NodeOffset,
+                            "shmem",
+                            &PropertySize);
+  if (NULL != SharedMemProperty) {
+    ASSERT ((PropertySize % sizeof (UINT32)) == 0);
+    NumberOfSharedMemRegions = PropertySize / sizeof (UINT32) ;
   }
 
-  EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
-  ASSERT ((PropertySize % EntrySize) == 0);
-  NumberOfRegions = PropertySize / EntrySize;
+  NumberOfRegions = NumberOfRegRegions + NumberOfSharedMemRegions;
   if (NumberOfRegions == 0) {
     DEBUG ((EFI_D_ERROR, "%a: no regions detected. \r\n", __FUNCTION__));
     return EFI_UNSUPPORTED;
@@ -174,12 +186,12 @@ GetResources (
   }
   *Resources = AllocResources;
 
-  for (RegionIndex = 0; RegionIndex < NumberOfRegions; RegionIndex++) {
+  for (RegionIndex = 0; RegionIndex < NumberOfRegRegions; RegionIndex++) {
     UINT64 AddressBase = 0;
     UINT64 RegionSize  = 0;
 
-    CopyMem ((VOID *)&AddressBase, Property + EntrySize * RegionIndex, AddressCells * sizeof (UINT32));
-    CopyMem ((VOID *)&RegionSize, Property + EntrySize * RegionIndex + (AddressCells * sizeof (UINT32)),  SizeCells * sizeof (UINT32));
+    CopyMem ((VOID *)&AddressBase, RegProperty + EntrySize * RegionIndex, AddressCells * sizeof (UINT32));
+    CopyMem ((VOID *)&RegionSize, RegProperty + EntrySize * RegionIndex + (AddressCells * sizeof (UINT32)),  SizeCells * sizeof (UINT32));
     if (AddressCells == 2) {
       AddressBase = SwapBytes64 (AddressBase);
     } else {
@@ -215,8 +227,115 @@ GetResources (
     }
   }
 
+  for (SharedMemoryIndex = 0; SharedMemoryIndex < NumberOfSharedMemRegions; SharedMemoryIndex++) {
+    UINT32 *HandleArray = (UINT32 *)SharedMemProperty;
+    UINT32 Handle = SwapBytes32 (HandleArray[SharedMemoryIndex]);
+    INT32  SharedMemOffset = fdt_node_offset_by_phandle (Private->DeviceTreeBase, Handle);
+    INT32  ParentOffset;
+    UINT64 ParentAddressBase = 0;
+    UINT64 AddressBase = 0;
+    UINT64 RegionSize  = 0;
 
-  End = (EFI_ACPI_END_TAG_DESCRIPTOR *)&AllocResources [NumberOfRegions];
+
+    if (SharedMemOffset <= 0) {
+      DEBUG ((EFI_D_ERROR, "%a: Unable to locate shared memory handle %u\r\n",
+            __FUNCTION__,
+            Handle));
+      FreePool (AllocResources);
+      *Resources = NULL;
+      return EFI_DEVICE_ERROR;
+    }
+
+    ParentOffset = fdt_parent_offset (Private->DeviceTreeBase, SharedMemOffset);
+    if (ParentOffset > 0) {
+      RegProperty = fdt_getprop (Private->DeviceTreeBase,
+                               ParentOffset,
+                               "reg",
+                               &PropertySize);
+       if ((RegProperty == NULL) || (PropertySize == 0)) {
+         DEBUG ((EFI_D_ERROR, "%a: Invalid reg entry %p, %u, for handle %u\r\n",
+               __FUNCTION__,
+               RegProperty,
+               PropertySize,
+               Handle));
+       } else {
+         EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
+         ASSERT ((PropertySize % EntrySize) == 0);
+         if (PropertySize != EntrySize) {
+           DEBUG ((EFI_D_ERROR, "%a: Ignoring secondary parent regions\r\n", __FUNCTION__));
+         }
+
+        CopyMem ((VOID *)&ParentAddressBase, RegProperty, AddressCells * sizeof (UINT32));
+        if (AddressCells == 2) {
+          ParentAddressBase = SwapBytes64 (ParentAddressBase);
+        } else {
+          ParentAddressBase = SwapBytes32 (ParentAddressBase);
+        }
+      }
+    }
+
+    RegProperty = fdt_getprop (Private->DeviceTreeBase,
+                             SharedMemOffset,
+                             "reg",
+                             &PropertySize);
+     if ((RegProperty == NULL) || (PropertySize == 0)) {
+       DEBUG ((EFI_D_ERROR, "%a: Invalid reg entry %p, %u, for handle %u\r\n",
+             __FUNCTION__,
+             RegProperty,
+             PropertySize,
+             Handle));
+       FreePool (AllocResources);
+       *Resources = NULL;
+       return EFI_DEVICE_ERROR;
+     }
+
+     EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
+     ASSERT ((PropertySize % EntrySize) == 0);
+     if (PropertySize != EntrySize) {
+       DEBUG ((EFI_D_ERROR, "%a: Ignoring secondary smem regions\r\n", __FUNCTION__));
+     }
+
+    CopyMem ((VOID *)&AddressBase, RegProperty, AddressCells * sizeof (UINT32));
+    CopyMem ((VOID *)&RegionSize, RegProperty + (AddressCells * sizeof (UINT32)),  SizeCells * sizeof (UINT32));
+    if (AddressCells == 2) {
+      AddressBase = SwapBytes64 (AddressBase);
+    } else {
+      AddressBase = SwapBytes32 (AddressBase);
+    }
+
+    if (SizeCells == 2) {
+      RegionSize = SwapBytes64 (RegionSize);
+    } else {
+      RegionSize = SwapBytes32 (RegionSize);
+    }
+
+    AddressBase += ParentAddressBase;
+
+    Desc = &AllocResources [RegionIndex];
+    RegionIndex++;
+    Desc->Desc                  = ACPI_ADDRESS_SPACE_DESCRIPTOR;
+    Desc->Len                   = sizeof (*Desc) - 3;
+    Desc->AddrRangeMin          = AddressBase;
+    Desc->AddrLen               = RegionSize;
+    Desc->AddrRangeMax          = AddressBase + RegionSize - 1;
+    Desc->ResType               = ACPI_ADDRESS_SPACE_TYPE_MEM;
+    Desc->AddrSpaceGranularity  = ((EFI_PHYSICAL_ADDRESS)AddressBase + RegionSize > SIZE_4GB) ? 64 : 32;
+    Desc->AddrTranslationOffset = 0;
+
+    Status = AddMemoryRegion (Private, AddressBase, RegionSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to add region 0x%016lx, 0x%016lx: %r.\r\n",
+          __FUNCTION__,
+          AddressBase,
+          RegionSize,
+          Status));
+      FreePool (AllocResources);
+      *Resources = NULL;
+      return EFI_DEVICE_ERROR;
+    }
+  }
+
+  End = (EFI_ACPI_END_TAG_DESCRIPTOR *)&AllocResources [RegionIndex];
   End->Desc     = ACPI_END_TAG_DESCRIPTOR;
   End->Checksum = 0;
 
