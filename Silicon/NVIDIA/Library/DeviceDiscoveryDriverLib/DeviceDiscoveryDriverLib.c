@@ -212,6 +212,10 @@ DeviceDiscoveryBindingStart (
              Controller,
              Node
              );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to start notification\r\n",__FUNCTION__,Status));
+    goto ErrorExit;
+  }
 
   if (!gDeviceDiscoverDriverConfig.SkipEdkiiNondiscoverableInstall) {
     Status = gBS->InstallMultipleProtocolInterfaces (
