@@ -686,7 +686,6 @@ BuildI2cDevices (
   @retval other                 Some error occurs when binding this driver to this device.
 
 **/
-volatile BOOLEAN gHalt = FALSE;
 EFI_STATUS
 EFIAPI
 BpmpI2cStart (
@@ -704,7 +703,6 @@ BpmpI2cStart (
   CONST UINT32                      *Adapter = NULL;
   INT32                             AdapterLength;
 
-  while (gHalt);
   //
   // Attempt to open BpmpI2c Protocol
   //
@@ -796,11 +794,14 @@ BpmpI2cStart (
     goto ErrorExit;
   }
 
-  Adapter = (CONST UINT32*)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "adapter", &AdapterLength);
+  Adapter = (CONST UINT32*)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "nvidia,bpmp-bus-id", &AdapterLength);
   if ((Adapter == NULL) || (AdapterLength != sizeof (UINT32))) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to locate adapter property\r\n",__FUNCTION__));
-    Status = EFI_NOT_FOUND;
-    goto ErrorExit;
+    Adapter = (CONST UINT32*)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "adapter", &AdapterLength);
+    if ((Adapter == NULL) || (AdapterLength != sizeof (UINT32))) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to locate adapter property\r\n",__FUNCTION__));
+      Status = EFI_NOT_FOUND;
+      goto ErrorExit;
+    }
   }
   Private->BusId = SwapBytes32 (*Adapter);
 
