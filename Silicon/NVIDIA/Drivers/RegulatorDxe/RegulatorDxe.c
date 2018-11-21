@@ -248,7 +248,7 @@ RegulatorGetInfo (
   RegulatorInfo->Name          = Entry->Name;
 
   if (RegulatorInfo->IsAvailable) {
-    if (Entry->Gpio != 0) {
+    if ((Entry->Gpio != 0) && !Entry->AlwaysEnabled) {
       EMBEDDED_GPIO_MODE GpioMode;
       RegulatorInfo->CurrentMicrovolts = Entry->MinMicrovolts;
       Status = Private->GpioProtocol->GetMode (
@@ -262,7 +262,7 @@ RegulatorGetInfo (
       } else {
         RegulatorInfo->IsEnabled = (GpioMode == GPIO_MODE_OUTPUT_1);
       }
-    } else if (Entry->PmicSetting != NULL) {
+    } else if ((Entry->PmicSetting != NULL) && !Entry->AlwaysEnabled) {
       UINT8 Data;
       Status = ReadPmicRegister (Private->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, &Data);
       if (EFI_ERROR (Status)) {
@@ -579,7 +579,8 @@ RegulatorSetVoltage (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (Entry->PmicSetting != NULL) {
+  if ((Entry->PmicSetting != NULL) &&
+      (!Entry->AlwaysEnabled)) {
     UINT8 DataOriginal;
     UINT8 DataNew;
     Status = ReadPmicRegister (Private->I2cIoProtocol, Entry->PmicSetting->VoltageRegister, &DataOriginal);
@@ -800,6 +801,9 @@ AddFixedRegulators (
       ListEntry->Gpio = 0;
       ListEntry->IsAvailable = TRUE;
     }
+    if (!ListEntry->IsAvailable) {
+      ListEntry->IsAvailable = ListEntry->AlwaysEnabled;
+    }
     Property = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "regulator-min-microvolt", &PropertySize);
     if ((NULL != Property) && (PropertySize == sizeof (UINT32))) {
       UINT32 Microvolts = SwapBytes32 (*(UINT32 *)Property);
@@ -936,7 +940,7 @@ AddPmicRegulators (
     ListEntry->RegulatorId = fdt_get_phandle (Private->DeviceTreeBase, SubNodeOffset);
     Property = fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-always-on", NULL);
     ListEntry->AlwaysEnabled = (Property != NULL);
-    ListEntry->IsAvailable = FALSE;
+    ListEntry->IsAvailable = ListEntry->AlwaysEnabled;
     Property = fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-min-microvolt", &PropertySize);
     if ((NULL != Property) && (PropertySize == sizeof (UINT32))) {
       UINT32 Microvolts = SwapBytes32 (*(UINT32 *)Property);
