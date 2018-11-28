@@ -38,8 +38,6 @@ NVIDIA_CLOCK_PARENTS_PROTOCOL *gClockParentsProtocol = NULL;
 /**
   Supported function of Driver Binding protocol for this driver.
   Test to see if this driver supports ControllerHandle.
-extern SCMI_CLOCK_PROTOCOL           *gScmiClockProtocol;
-extern NVIDIA_CLOCK_PARENTS_PROTOCOL *gClockParentsProtocol;
 
   @param This                   Protocol instance pointer.
   @param Controller             Handle of device to test.
@@ -170,9 +168,7 @@ DeviceDiscoveryBindingStart (
     if (CompareGuid (NonDiscoverableProtocol->Type, MappingNode->DeviceType)) {
       Status = EFI_SUCCESS;
       break;
-    }extern SCMI_CLOCK_PROTOCOL           *gScmiClockProtocol;
-    extern NVIDIA_CLOCK_PARENTS_PROTOCOL *gClockParentsProtocol;
-
+    }
     MappingNode++;
   }
   if (EFI_ERROR (Status)) {
@@ -341,9 +337,7 @@ DeviceDiscoveryBindingStop (
                 This->DriverBindingHandle,
                 Controller
                 );
-}extern SCMI_CLOCK_PROTOCOL           *gScmiClockProtocol;
-extern NVIDIA_CLOCK_PARENTS_PROTOCOL *gClockParentsProtocol;
-
+}
 
 ///
 /// EFI_DRIVER_BINDING_PROTOCOL instance
@@ -389,8 +383,6 @@ DeviceTreeIsSupported (
       (PciIoInitialize == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
-  extern SCMI_CLOCK_PROTOCOL           *gScmiClockProtocol;
-  extern NVIDIA_CLOCK_PARENTS_PROTOCOL *gClockParentsProtocol;
 
   while (MappingNode->Compatibility != NULL) {
     if (0 == fdt_node_check_compatible (Node->DeviceTreeBase, Node->NodeOffset, MappingNode->Compatibility)) {
