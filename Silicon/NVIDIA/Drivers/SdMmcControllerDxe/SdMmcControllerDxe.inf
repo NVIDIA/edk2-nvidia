@@ -47,7 +47,7 @@
   gEdkiiSdMmcOverrideProtocolGuid
   gEdkiiNonDiscoverableDeviceProtocolGuid
   gNVIDIAClockNodeProtocolGuid
-  gArmScmiClockProtocolGuid
+  gArmScmiClock2ProtocolGuid
   gNVIDIARegulatorProtocolGuid
 
 [Guids]

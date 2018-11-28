@@ -30,7 +30,7 @@
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ResetNodeProtocol.h>
 #include <Protocol/PowerGateNodeProtocol.h>
-#include <Protocol/ArmScmiClockProtocol.h>
+#include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/ClockParents.h>
 #include <Protocol/BpmpIpc.h>
 
@@ -657,13 +657,13 @@ EnableAllClockNodes (
   IN  BOOLEAN                      SetParent
   )
 {
-  SCMI_CLOCK_PROTOCOL           *ClockProtocol = NULL;
+  SCMI_CLOCK2_PROTOCOL          *ClockProtocol = NULL;
   NVIDIA_CLOCK_PARENTS_PROTOCOL *ClockParents = NULL;
   EFI_STATUS                    Status;
   UINTN                         Index;
   UINTN                         ParentsIndex;
 
-  Status = gBS->LocateProtocol (&gArmScmiClockProtocolGuid, NULL, (VOID **)&ClockProtocol);
+  Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&ClockProtocol);
   if (EFI_ERROR (Status)) {
     return EFI_NOT_READY;
   }

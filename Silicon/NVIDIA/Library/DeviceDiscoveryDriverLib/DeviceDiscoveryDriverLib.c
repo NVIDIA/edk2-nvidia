@@ -29,11 +29,11 @@
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ResetNodeProtocol.h>
 #include <Protocol/PowerGateNodeProtocol.h>
-#include <Protocol/ArmScmiClockProtocol.h>
+#include <Protocol/ArmScmiClock2Protocol.h>
 
 #include "DeviceDiscoveryDriverLibPrivate.h"
 
-SCMI_CLOCK_PROTOCOL           *gScmiClockProtocol    = NULL;
+SCMI_CLOCK2_PROTOCOL          *gScmiClockProtocol    = NULL;
 NVIDIA_CLOCK_PARENTS_PROTOCOL *gClockParentsProtocol = NULL;
 
 /**
@@ -445,7 +445,7 @@ DeviceDiscoveryDriverInitialize (
   EFI_STATUS  Status;
   mDriverBindingProtocol.DriverBindingHandle = ImageHandle;
 
-  Status = gBS->LocateProtocol (&gArmScmiClockProtocolGuid, NULL, (VOID **)&gScmiClockProtocol);
+  Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&gScmiClockProtocol);
   if (EFI_ERROR (Status)) {
     return Status;
   }

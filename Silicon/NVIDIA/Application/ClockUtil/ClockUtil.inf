@@ -52,7 +52,7 @@
   UefiLib
 
 [Protocols]
-  gArmScmiClockProtocolGuid                     ##CONSUMES
+  gArmScmiClock2ProtocolGuid                    ##CONSUMES
   gEfiHiiPackageListProtocolGuid                ##CONSUMES
 
 [UserExtensions.TianoCore."ExtraFiles"]

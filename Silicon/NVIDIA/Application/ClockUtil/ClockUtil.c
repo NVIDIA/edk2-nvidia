@@ -23,7 +23,7 @@
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/HiiLib.h>
 
-#include <Protocol/ArmScmiClockProtocol.h>
+#include <Protocol/ArmScmiClock2Protocol.h>
 
 //
 // Used for ShellCommandLineParseEx only
@@ -39,7 +39,7 @@ SHELL_PARAM_ITEM    mClockUtilParamList[] = {
   { NULL,                     TypeMax   },
 };
 
-SCMI_CLOCK_PROTOCOL          *mClockProtocol;
+SCMI_CLOCK2_PROTOCOL         *mClockProtocol;
 EFI_HII_HANDLE               mHiiHandle;
 CHAR16                       mAppName[]          = L"ClockUtil";
 
@@ -270,7 +270,7 @@ InitializeClockUtil (
     goto Done;
   }
 
-  Status = gBS->LocateProtocol (&gArmScmiClockProtocolGuid, NULL, (VOID **) &mClockProtocol);
+  Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **) &mClockProtocol);
   if (EFI_ERROR (Status) || mClockProtocol == NULL) {
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_PROTOCOL_NONEXISTENT), mHiiHandle, mAppName);
     goto Done;

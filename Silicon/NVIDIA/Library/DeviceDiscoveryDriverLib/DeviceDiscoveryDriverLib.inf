@@ -50,12 +50,12 @@
   gNVIDIAClockNodeProtocolGuid
   gNVIDIAResetNodeProtocolGuid
   gNVIDIAPowerGateNodeProtocolGuid
-  gArmScmiClockProtocolGuid
+  gArmScmiClock2ProtocolGuid
   gNVIDIAClockParentsProtocolGuid
 
 [Guids]
 
 [Depex]
-  gArmScmiClockProtocolGuid
+  gArmScmiClock2ProtocolGuid
   AND
   gNVIDIABpmpIpcProtocolGuid

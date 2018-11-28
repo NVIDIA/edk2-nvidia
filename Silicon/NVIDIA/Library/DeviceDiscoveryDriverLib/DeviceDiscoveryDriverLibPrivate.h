@@ -17,10 +17,10 @@
 #define __DEVICE_DISCOVERY_LIBRARY_PRIVATE_H__
 
 #include <PiDxe.h>
-#include <Protocol/ArmScmiClockProtocol.h>
+#include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/ClockParents.h>
 
-extern SCMI_CLOCK_PROTOCOL           *gScmiClockProtocol;
+extern SCMI_CLOCK2_PROTOCOL          *gScmiClockProtocol;
 extern NVIDIA_CLOCK_PARENTS_PROTOCOL *gClockParentsProtocol;
 
 #endif

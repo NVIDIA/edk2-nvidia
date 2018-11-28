@@ -22,6 +22,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Protocol/ArmScmiClockProtocol.h>
+#include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/BpmpIpc.h>
 #include <Protocol/ClockParents.h>
 
@@ -352,7 +353,7 @@ ClockRateSet (
 STATIC
 EFI_STATUS
 ClockEnable (
-  IN SCMI_CLOCK_PROTOCOL  *This,
+  IN SCMI_CLOCK2_PROTOCOL *This,
   IN UINT32               ClockId,
   IN BOOLEAN              Enable
   )
@@ -401,6 +402,17 @@ STATIC CONST SCMI_CLOCK_PROTOCOL ScmiClockProtocol = {
   ClockDescribeRates,
   ClockRateGet,
   ClockRateSet,
+ };
+
+// Instance of the SCMI clock management protocol.
+STATIC CONST SCMI_CLOCK2_PROTOCOL ScmiClock2Protocol = {
+  (SCMI_CLOCK2_GET_VERSION)ClockGetVersion,
+  (SCMI_CLOCK2_GET_TOTAL_CLOCKS)ClockGetTotalClocks,
+  (SCMI_CLOCK2_GET_CLOCK_ATTRIBUTES)ClockGetClockAttributes,
+  (SCMI_CLOCK2_DESCRIBE_RATES)ClockDescribeRates,
+  (SCMI_CLOCK2_RATE_GET)ClockRateGet,
+  (SCMI_CLOCK2_RATE_SET)ClockRateSet,
+  SCMI_CLOCK2_PROTOCOL_VERSION,
   ClockEnable
  };
 
@@ -640,6 +652,8 @@ ScmiClockProtocolInit (
                 Handle,
                 &gArmScmiClockProtocolGuid,
                 &ScmiClockProtocol,
+                &gArmScmiClock2ProtocolGuid,
+                &ScmiClock2Protocol,
                 &gNVIDIAClockParentsProtocolGuid,
                 &mClockParentsProtocol,
                 NULL

@@ -52,7 +52,7 @@
   gNVIDIANonDiscoverableDeviceProtocolGuid
   gEdkiiNonDiscoverableDeviceProtocolGuid
   gEfiDriverBindingProtocolGuid
-  gArmScmiClockProtocolGuid
+  gArmScmiClock2ProtocolGuid
   gNVIDIAClockNodeProtocolGuid
   gNVIDIAResetNodeProtocolGuid
   gNVIDIAPowerGateNodeProtocolGuid
