@@ -29,8 +29,6 @@
   SUPPORTED_ARCHITECTURES        = AARCH64
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
-  FLASH_BASE                     = 0x96000000
-  FLASH_SIZE                     = 0x00150000
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
@@ -46,8 +44,6 @@
 [PcdsFixedAtBuild.common]
 
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x80000000
-  #Size value is not directly used, must be non-zero and cover the firmware volume region at least
-  gArmTokenSpaceGuid.PcdSystemMemorySize|0x30000000
 
   gArmPlatformTokenSpaceGuid.PcdCoreCount|8
   gArmPlatformTokenSpaceGuid.PcdClusterCount|4
@@ -68,6 +64,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl|TRUE
 
   gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress|0x0C3903F8
+  gNVIDIATokenSpaceGuid.PcdBootloaderCarveoutOffset|0x448
 
   ## SBSA Watchdog Count
   gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2

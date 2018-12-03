@@ -82,8 +82,11 @@ Include
 #Address that contains location CPU bootloader information
   gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress|0x00000000|UINT64|0x00000005
 
+#Offset in CPU bootloader info that contains the base, size pair for the cpu bootloader carveout
+  gNVIDIATokenSpaceGuid.PcdBootloaderCarveoutOffset|0x00000000|UINT64|0x00000006
+
 #Timeout in microseconds in hsp doorbell response
-  gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout|1000000|UINT32|0x00000006
+  gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout|1000000|UINT32|0x00000007
 
 #Timeout in microseconds in for bpmp response
-  gNVIDIATokenSpaceGuid.PcdBpmpResponseTimeout|1000000|UINT32|0x00000007
+  gNVIDIATokenSpaceGuid.PcdBpmpResponseTimeout|1000000|UINT32|0x00000008

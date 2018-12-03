@@ -11,49 +11,6 @@
 #  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #
 
-################################################################################
-#
-# FD Section
-# The [FD] Section is made up of the definition statements and a
-# description of what goes into  the Flash Device Image.  Each FD section
-# defines one flash "device" image.  A flash device image may be one of
-# the following: Removable media bootable image (like a boot floppy
-# image,) an Option ROM image (that would be "flashed" into an add-in
-# card,) a System "Flash"  image (that would be burned into a system's
-# flash) or an Update ("Capsule") image that will be used to update and
-# existing system flash.
-#
-################################################################################
-
-[FD.BL33_AP_UEFI]
-BaseAddress   = $(FLASH_BASE)|gArmTokenSpaceGuid.PcdFdBaseAddress  # The base address of the Firmware in NOR Flash.
-Size          = $(FLASH_SIZE)|gArmTokenSpaceGuid.PcdFdSize         # The size in bytes of the FLASH Device
-ErasePolarity = 1
-
-# This one is tricky, it must be: BlockSize * NumBlocks = Size
-BlockSize     = 0x00001000
-NumBlocks     = 0x150
-
-################################################################################
-#
-# Following are lists of FD Region layout which correspond to the locations of different
-# images within the flash device.
-#
-# Regions must be defined in ascending order and may not overlap.
-#
-# A Layout Region start with a eight digit hex offset (leading "0x" required) followed by
-# the pipe "|" character, followed by the size of the region, also in hex with the leading
-# "0x" characters. Like:
-# Offset|Size
-# PcdOffsetCName|PcdSizeCName
-# RegionType <FV, DATA, or FILE>
-#
-################################################################################
-
-0x00000000|$(FLASH_SIZE)
-gArmTokenSpaceGuid.PcdFvBaseAddress|gArmTokenSpaceGuid.PcdFvSize
-FV = FVMAIN_COMPACT
-
 
 ################################################################################
 #
@@ -260,7 +217,8 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   #
   INF MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
 
-[FV.FVMAIN_COMPACT]
+[FV.UEFI_NS]
+FvForceRebase      = TRUE
 FvAlignment        = 8
 ERASE_POLARITY     = 1
 MEMORY_MAPPED      = TRUE
@@ -278,7 +236,7 @@ READ_STATUS        = TRUE
 READ_LOCK_CAP      = TRUE
 READ_LOCK_STATUS   = TRUE
 
-  INF ArmPlatformPkg/PrePi/PeiUniCore.inf
+  INF Silicon/NVIDIA/PrePi/PrePi.inf
 
   FILE FV_IMAGE = 9E21FD93-9C72-4c15-8C4B-E77F1DB2D792 {
     SECTION GUIDED EE4E5898-3914-4259-9D6E-DC7BD79403CF PROCESSING_REQUIRED = TRUE {
