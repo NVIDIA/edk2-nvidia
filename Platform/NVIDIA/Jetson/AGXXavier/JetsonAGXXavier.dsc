@@ -23,7 +23,7 @@
   DSC_SPECIFICATION              = 0x00010005
   OUTPUT_DIRECTORY               = Build/JetsonAGXXavier
   SUPPORTED_ARCHITECTURES        = AARCH64
-  BUILD_TARGETS                  = DEBUG|RELEASE
+  BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_BASE                     = 0x96000000
   FLASH_SIZE                     = 0x00150000
