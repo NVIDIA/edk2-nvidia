@@ -609,6 +609,49 @@ RegulatorSetVoltage (
 }
 
 /**
+ * Checks to see if all regulator present protocol should be installed.
+ * @param Private   - Event that is notified
+ */
+STATIC
+VOID
+CheckForAllRegulators (
+  IN REGULATOR_DXE_PRIVATE *Private
+  )
+{
+  EFI_STATUS            Status;
+  LIST_ENTRY            *ListNode;
+  VOID                  *Interface;
+
+  //Check if protocol is already installed
+  Status = gBS->HandleProtocol (Private->ImageHandle,
+                  &gNVIDIAAllRegulatorsPresentProtocolGuid,
+                  &Interface
+                  );
+  if (!EFI_ERROR (Status)) {
+    return;
+  }
+
+  ListNode = GetFirstNode (&Private->RegulatorList);
+  while (ListNode != &Private->RegulatorList) {
+    REGULATOR_LIST_ENTRY *Entry;
+    Entry = REGULATOR_LIST_FROM_LINK (ListNode);
+    if (NULL != Entry) {
+      if (!Entry->IsAvailable) {
+        return;
+      }
+    }
+    ListNode = GetNextNode (&Private->RegulatorList, ListNode);
+  }
+
+  gBS->InstallMultipleProtocolInterfaces (
+         &Private->ImageHandle,
+         &gNVIDIAAllRegulatorsPresentProtocolGuid,
+         NULL,
+         NULL
+         );
+}
+
+/**
  * Notification when i2cio protocol is installed
  * @param Event   - Event that is notified
  * @param Context - Context that was present when registed.
@@ -664,14 +707,8 @@ I2cIoProtocolReady (
          NULL,
          NULL
          );
-  if (NULL != Private->I2cIoProtocol) {
-    gBS->InstallMultipleProtocolInterfaces (
-           &Private->ImageHandle,
-           &gNVIDIAAllRegulatorsPresentProtocolGuid,
-           NULL,
-           NULL
-           );
-  }
+
+  CheckForAllRegulators (Private);
 }
 
 /**
@@ -724,14 +761,8 @@ GpioProtocolReady (
          NULL,
          NULL
          );
-  if (NULL != Private->I2cIoProtocol) {
-    gBS->InstallMultipleProtocolInterfaces (
-           &Private->ImageHandle,
-           &gNVIDIAAllRegulatorsPresentProtocolGuid,
-           NULL,
-           NULL
-           );
-  }
+
+  CheckForAllRegulators (Private);
 }
 
 /**
@@ -1150,6 +1181,7 @@ RegulatorDxeInitialize (
     goto ErrorExit;
   }
   ProtocolInstalled = TRUE;
+  CheckForAllRegulators (Private);
 
 ErrorExit:
   if (EFI_ERROR (Status)) {
