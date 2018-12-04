@@ -165,16 +165,14 @@ InstallSystemResources (
   if (0 != CpuBootloaderParams->BlDtbLoadAddress) {
     if (fdt_check_header ((VOID *)CpuBootloaderParams->BlDtbLoadAddress) == 0) {
       UINTN DtbSize = fdt_totalsize ((VOID *)CpuBootloaderParams->BlDtbLoadAddress);
-      EFI_PHYSICAL_ADDRESS AlignedDtb = CpuBootloaderParams->BlDtbLoadAddress & ~(SIZE_4KB-1);
-      BuildMemoryAllocationHob (
-        AlignedDtb,
-        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize + (CpuBootloaderParams->BlDtbLoadAddress - AlignedDtb))),
-        EfiBootServicesData
-      );
+      EFI_PHYSICAL_ADDRESS DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize));
+      CopyMem ((VOID *)DtbCopy, (VOID *)CpuBootloaderParams->BlDtbLoadAddress, DtbSize);
 
       DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
       if (NULL != DeviceTreeHobData) {
-        *DeviceTreeHobData = CpuBootloaderParams->BlDtbLoadAddress;
+        *DeviceTreeHobData = DtbCopy;
+      } else {
+        DEBUG ((EFI_D_ERROR, "Failed to build guid hob\r\n"));
       }
     }
   }
