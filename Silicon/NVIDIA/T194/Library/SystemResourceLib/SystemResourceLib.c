@@ -32,6 +32,7 @@ InstallMmioRegions (
 {
   UINTN RegionCount;
   CONST NVDA_MEMORY_REGION MmioRegions[] = {
+    { FixedPcdGet64 (PcdSerialRegisterBase),        SIZE_4KB },
     { FixedPcdGet64 (PcdTegraCombinedUartRxMailbox),SIZE_4KB },
     { FixedPcdGet64 (PcdTegraCombinedUartTxMailbox),SIZE_4KB },
     { FixedPcdGet64 (PcdGicDistributorBase),        SIZE_4KB },
