@@ -908,7 +908,7 @@ AddPmicRegulators (
                    );
   }
   if (NodeOffset <= 0) {
-    DEBUG ((EFI_D_ERROR, "%a, No pmic nodes found.\r\n"));
+    DEBUG ((EFI_D_ERROR, "%a, No pmic nodes found.\r\n", __FUNCTION__));
     return EFI_SUCCESS;
   }
 
