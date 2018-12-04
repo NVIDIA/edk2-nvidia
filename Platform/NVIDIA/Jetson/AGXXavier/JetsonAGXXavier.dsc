@@ -21,7 +21,11 @@
   PLATFORM_GUID                  = 865873a1-b255-46c2-90d2-2e2578c00dbd
   PLATFORM_VERSION               = 0.1
   DSC_SPECIFICATION              = 0x00010005
+!if $(SIM)
+  OUTPUT_DIRECTORY               = Build/JetsonAGXXavierSim
+!else
   OUTPUT_DIRECTORY               = Build/JetsonAGXXavier
+!endif
   SUPPORTED_ARCHITECTURES        = AARCH64
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
@@ -32,7 +36,11 @@
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
 
 [LibraryClasses.common]
+!if $(SIM)
+  SerialPortLib|MdeModulePkg/Library/BaseSerialPortLib16550/BaseSerialPortLib16550.inf
+!else
   SerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
+!endif
   SystemResourceLib|Silicon/NVIDIA/T194/Library/SystemResourceLib/SystemResourceLib.inf
 
 [PcdsFixedAtBuild.common]
@@ -49,6 +57,15 @@
   ## TCUart - Serial Terminal
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox|0x03C10000
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|0x0C168000
+
+  ## UART 16550 parameters
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate|115200
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialClockRate|407347200
+
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseMmio|TRUE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x03100000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterStride|4
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl|TRUE
 
   gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress|0x0C3903F8
 
