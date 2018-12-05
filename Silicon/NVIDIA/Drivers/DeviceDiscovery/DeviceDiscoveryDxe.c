@@ -123,8 +123,8 @@ GetResources (
   )
 {
   EFI_STATUS Status;
-  INT32 AddressCells  = fdt_address_cells (Private->DeviceTreeBase, NodeOffset);
-  INT32 SizeCells     = fdt_size_cells (Private->DeviceTreeBase, NodeOffset);
+  INT32 AddressCells  = fdt_address_cells (Private->DeviceTreeBase, fdt_parent_offset(Private->DeviceTreeBase, NodeOffset));
+  INT32 SizeCells     = fdt_size_cells (Private->DeviceTreeBase, fdt_parent_offset(Private->DeviceTreeBase, NodeOffset));
   CONST VOID  *RegProperty = NULL;
   CONST VOID  *SharedMemProperty = NULL;
   UINTN EntrySize     = 0;
