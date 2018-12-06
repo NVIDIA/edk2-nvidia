@@ -92,6 +92,11 @@ EFI_STATUS
   IN  UINT32                       ResetId
   );
 
+typedef struct {
+  UINT32                  ResetId;
+  CONST CHAR8             *ResetName;
+} NVIDIA_RESET_NODE_ENTRY;
+
 /// NVIDIA_RESET_NODE_PROTOCOL protocol structure.
 struct _NVIDIA_RESET_NODE_PROTOCOL {
 
@@ -100,7 +105,7 @@ struct _NVIDIA_RESET_NODE_PROTOCOL {
   RESET_NODE_DEASSERT     Deassert;
   RESET_NODE_ASSERT       Assert;
   UINTN                   Resets;
-  UINT32                  ResetEntries[0];
+  NVIDIA_RESET_NODE_ENTRY ResetEntries[0];
 };
 
 extern EFI_GUID gNVIDIAResetNodeProtocolGuid;

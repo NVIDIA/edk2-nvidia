@@ -118,6 +118,44 @@ DeviceDiscoveryGetMmioRegion (
   );
 
 /**
+  Retrieves the reset id for the specified reset name
+
+  @param[in]  ControllerHandle         Handle of the controller.
+  @param[in]  ResetkName               String for the reset name.
+  @param[out] ResetId                  Returns the reset id
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval EFI_NOT_FOUND            Reset name not found on controller
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+DeviceDiscoveryGetResetId (
+  IN  EFI_HANDLE           ControllerHandle,
+  IN  CONST CHAR8          *ResetName,
+  OUT UINT32               *ResetId
+);
+
+/**
+  Configures the reset with the specified reset name
+
+  @param[in]  ControllerHandle         Handle of the controller.
+  @param[in]  ResetName                String for the reset name.
+  @param[in]  Enable                   TRUE to enable, FALSE to disable.
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval EFI_NOT_FOUND            Reset name not found on controller
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+DeviceDiscoveryConfigReset (
+  IN  EFI_HANDLE           ControllerHandle,
+  IN  CONST CHAR8          *ResetName,
+  IN  BOOLEAN              Enable
+);
+
+/**
   Retrieves gets the clock id for the specified clock name
 
   @param[in]  ControllerHandle         Handle of the controller.

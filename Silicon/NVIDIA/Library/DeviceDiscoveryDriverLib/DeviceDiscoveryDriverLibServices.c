@@ -152,6 +152,96 @@ DeviceDiscoveryGetMmioRegion (
 }
 
 /**
+  Retrieves the reset id for the specified reset name
+
+  @param[in]  ControllerHandle         Handle of the controller.
+  @param[in]  ResetkName               String for the reset name.
+  @param[out] ResetId                  Returns the reset id
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval EFI_NOT_FOUND            Reset name not found on controller
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+DeviceDiscoveryGetResetId (
+  IN  EFI_HANDLE           ControllerHandle,
+  IN  CONST CHAR8          *ResetName,
+  OUT UINT32               *ResetId
+  )
+{
+  NVIDIA_RESET_NODE_PROTOCOL *ResetNodeProtocol = NULL;
+  UINTN                      Index;
+  EFI_STATUS                 Status;
+
+  if ((NULL == ResetName) || (NULL == ResetId)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetNodeProtocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  for (Index = 0; Index < ResetNodeProtocol->Resets; Index++) {
+    if (0 == AsciiStrCmp (ResetName, ResetNodeProtocol->ResetEntries[Index].ResetName)) {
+      *ResetId = ResetNodeProtocol->ResetEntries[Index].ResetId;
+      return EFI_SUCCESS;
+    }
+  }
+  return EFI_NOT_FOUND;
+}
+
+/**
+  Configures the reset with the specified reset name
+
+  @param[in]  ControllerHandle         Handle of the controller.
+  @param[in]  ResetName                String for the reset name.
+  @param[in]  Enable                   TRUE to enable, FALSE to disable.
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval EFI_NOT_FOUND            Reset name not found on controller
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+DeviceDiscoveryConfigReset (
+  IN  EFI_HANDLE           ControllerHandle,
+  IN  CONST CHAR8          *ResetName,
+  IN  BOOLEAN              Enable
+  )
+{
+  EFI_STATUS          Status;
+  UINT32              ResetId;
+  NVIDIA_RESET_NODE_PROTOCOL *ResetNodeProtocol = NULL;
+
+  Status = DeviceDiscoveryGetResetId (ControllerHandle, ResetName, &ResetId);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetNodeProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n",__FUNCTION__));
+    return Status;
+  }
+  if (Enable) {
+    Status = ResetNodeProtocol->Assert (ResetNodeProtocol, ResetId);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, failed to assert resets %r\r\n",__FUNCTION__,Status));
+      return Status;
+    }
+  } else {
+    Status = ResetNodeProtocol->Deassert (ResetNodeProtocol, ResetId);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, failed to deassert resets %r\r\n",__FUNCTION__,Status));
+      return Status;
+    }
+  }
+  return EFI_SUCCESS;
+}
+
+/**
   Retrieves gets the clock id for the specified clock name
 
   @param[in]  ControllerHandle         Handle of the controller.

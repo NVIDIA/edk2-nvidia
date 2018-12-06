@@ -410,7 +410,7 @@ DeassertAllResetNodes (
   }
 
   for (Index = 0; Index < This->Resets; Index++) {
-    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->ResetEntries[Index], CmdResetDeassert);
+    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->ResetEntries[Index].ResetId, CmdResetDeassert);
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
     }
@@ -442,7 +442,7 @@ AssertAllResetNodes (
   }
 
   for (Index = 0; Index < This->Resets; Index++) {
-    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->ResetEntries[Index], CmdResetAssert);
+    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->ResetEntries[Index].ResetId, CmdResetAssert);
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
     }
@@ -525,6 +525,8 @@ GetResetNodeProtocol(
   IN  UINTN                            ProtocolListSize
   )
 {
+  CONST CHAR8                *ResetNames = NULL;
+  INT32                      ResetNamesLength;
   CONST UINT32               *ResetIds = NULL;
   INT32                      ResetsLength;
   UINTN                      NumberOfResets;
@@ -560,7 +562,7 @@ GetResetNodeProtocol(
     NumberOfResets = ResetsLength / (sizeof (UINT32) * 2);
   }
 
-  ResetNode = (NVIDIA_RESET_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_RESET_NODE_PROTOCOL) + (NumberOfResets * sizeof (UINT32)));
+  ResetNode = (NVIDIA_RESET_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_RESET_NODE_PROTOCOL) + (NumberOfResets * sizeof (NVIDIA_RESET_NODE_ENTRY)));
   if (NULL == ResetNode) {
     DEBUG ((EFI_D_ERROR, "%a, Failed to allocate reset node\r\n", __FUNCTION__));
     return;
@@ -571,8 +573,23 @@ GetResetNodeProtocol(
   ResetNode->Deassert    = DeassertResetNodes;
   ResetNode->Assert      = AssertResetNodes;
   ResetNode->Resets = NumberOfResets;
+  ResetNames = (CONST CHAR8*)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "reset-names", &ResetNamesLength);
+  if (ResetNamesLength == 0) {
+    ResetNames = NULL;
+  }
   for (Index = 0; Index < NumberOfResets; Index++) {
-    ResetNode->ResetEntries[Index] = SwapBytes32 (ResetIds[2 * Index + 1]);
+    ResetNode->ResetEntries[Index].ResetId = SwapBytes32 (ResetIds[2 * Index + 1]);
+    ResetNode->ResetEntries[Index].ResetName = NULL;
+    if (ResetNames != NULL) {
+      INT32 Size = AsciiStrSize (ResetNames);
+      if ((Size <= 0) || (Size > ResetNamesLength)) {
+        ResetNames = NULL;
+        continue;
+      }
+      ResetNode->ResetEntries[Index].ResetName = ResetNames;
+      ResetNames += Size;
+      ResetNamesLength -= Size;
+    }
   }
 
   ResetNodeInterface[ListEntry] = (VOID *)ResetNode;
@@ -783,8 +800,8 @@ ProcessDeviceTreeNodeWithHandle(
   EFI_HANDLE                                DeviceHandle = NULL;
   DEVICE_DISCOVERY_DEVICE_PATH              *DevicePath = NULL;
   EFI_HANDLE                                ConnectHandles[2];
-  EFI_GUID                                  *ProtocolGuidList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL};
-  VOID                                      *InterfaceList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL};
+  EFI_GUID                                  *ProtocolGuidList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL, NULL};
+  VOID                                      *InterfaceList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL, NULL};
   UINTN                                     ProtocolIndex;
   CONST VOID                                *Property = NULL;
   INT32                                     PropertySize = 0;
