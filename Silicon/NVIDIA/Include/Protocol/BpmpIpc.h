@@ -49,6 +49,7 @@
 #define MRQ_ABI_RATCHET   29
 #define MRQ_EMC_DVFS_LATENCY  31
 #define MRQ_TRACE_ITER    64
+#define MRQ_PG            66
 
 #define   BPMP_ENOENT      (-2)   //No such file or directory.
 #define   BPMP_ENOHANDLER  (-3)   //No MRQ handler.

@@ -38,6 +38,7 @@ typedef struct {
   BOOLEAN                AutoEnableClocks;
   BOOLEAN                AutoSetParents;
   BOOLEAN                AutoDeassertReset;
+  BOOLEAN                AutoDeassertPg;
   BOOLEAN                SkipEdkiiNondiscoverableInstall;
 } NVIDIA_DEVICE_DISCOVERY_CONFIG;
 extern NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig;

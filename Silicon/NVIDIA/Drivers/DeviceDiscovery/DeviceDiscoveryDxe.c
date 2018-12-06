@@ -29,6 +29,7 @@
 #include <Protocol/DeviceTreeCompatibility.h>
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ResetNodeProtocol.h>
+#include <Protocol/PowerGateNodeProtocol.h>
 #include <Protocol/ArmScmiClockProtocol.h>
 #include <Protocol/ClockParents.h>
 #include <Protocol/BpmpIpc.h>
@@ -340,6 +341,50 @@ GetResources (
   End->Checksum = 0;
 
   return EFI_SUCCESS;
+}
+
+/**
+  This function processes a power gate command.
+
+  @param[in]     BpmpIpcProtocol     The instance of the NVIDIA_BPMP_IPC_PROTOCOL.
+  @param[in]     PgId                power gate id to process
+  @param[in]     Command             powergate command
+
+  @return EFI_SUCCESS                powergate asserted/deasserted.
+  @return EFI_DEVICE_ERROR           Failed to assert/deassert powergate id
+**/
+EFI_STATUS
+BpmpProcessPgCommand (
+  IN NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol,
+  IN UINT32                   PgId,
+  IN MRQ_PG_COMMANDS          Command
+  )
+{
+  EFI_STATUS Status;
+  UINT32 Request[3];
+
+  if (BpmpIpcProtocol == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Request[0] = (UINT32)1;
+  Request[1] = PgId;
+  Request[2] = Command;
+
+  Status = BpmpIpcProtocol->Communicate (
+                              BpmpIpcProtocol,
+                              NULL,
+                              MRQ_PG,
+                              (VOID *)&Request,
+                              sizeof (Request),
+                              NULL,
+                              0,
+                              NULL
+                              );
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+  return Status;
 }
 
 /**
@@ -769,6 +814,134 @@ GetClockNodeProtocol(
 }
 
 /**
+  This function allows for deassert of specified power gate nodes.
+
+  @param[in]     This                The instance of the NVIDIA_POWER_GATE_NODE_PROTOCOL.
+  @param[in]     PgId                Id to de-assert
+
+  @return EFI_SUCCESS                power gate deasserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to deassert powergate
+**/
+EFI_STATUS
+DeassertPgNodes (
+  IN  NVIDIA_POWER_GATE_NODE_PROTOCOL   *This,
+  IN  UINT32                            PgId
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
+  EFI_STATUS               Status;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  return BpmpProcessPgCommand (BpmpIpcProtocol, PgId, CmdPgDeassert);
+}
+
+/**
+  This function allows for assert of specified power gate nodes.
+
+  @param[in]     This                The instance of the NVIDIA_POWER_GATE_NODE_PROTOCOL.
+  @param[in]     PgId                Id to assert
+
+  @return EFI_SUCCESS                Pg asserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to assert Pg
+**/
+EFI_STATUS
+AssertPgNodes (
+  IN  NVIDIA_POWER_GATE_NODE_PROTOCOL   *This,
+  IN  UINT32                            PgId
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
+  EFI_STATUS               Status;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  return BpmpProcessPgCommand (BpmpIpcProtocol, PgId, CmdPgAssert);
+}
+
+/**
+  Function builds the PowerGate node protocol if supported by device tree.
+
+  @param[in]  Node                  Pointer to the device tree node
+  @param[out] PowerGateNodeProtocol Pointer to where to store the guid for power gate node protocol
+  @param[out] PowerGateNodeInterface    Pointer to the power gate node interface
+  @param[out] ProtocolListSize      Number of entries in the protocol lists
+
+  @return EFI_SUCCESS               Driver handles this node, protocols installed.
+  @return EFI_UNSUPPORTED           Driver does not support this node.
+  @return others                    Error occured during setup.
+
+**/
+VOID
+GetPowerGateNodeProtocol(
+  IN  NVIDIA_DEVICE_TREE_NODE_PROTOCOL *Node,
+  OUT EFI_GUID                         **PowerGateNodeProtocol,
+  OUT VOID                             **PowerGateNodeInterface,
+  IN  UINTN                            ProtocolListSize
+  )
+{
+  CONST UINT32               *PgIds = NULL;
+  INT32                      PgLength;
+  UINTN                      NumberOfPgs;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL *PgNode = NULL;
+  UINTN                      ListEntry;
+
+  if ((NULL == Node) ||
+      (NULL == PowerGateNodeProtocol) ||
+      (NULL == PowerGateNodeInterface)) {
+    return;
+  }
+
+  for (ListEntry = 0; ListEntry < ProtocolListSize; ListEntry++) {
+    if (PowerGateNodeProtocol[ListEntry] == NULL) {
+      break;
+    }
+  }
+  if (ListEntry == ProtocolListSize) {
+    return;
+  }
+
+  PgIds = (CONST UINT32*)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "power-domains", &PgLength);
+
+  if ((PgIds == 0) || (PgLength == 0)) {
+    return;
+  }
+
+  if ((PgLength % (sizeof (UINT32) * 2)) != 0) {
+    DEBUG ((EFI_D_ERROR, "%a, Power Gate length unexpected %d\r\n", __FUNCTION__, PgLength));
+    return;
+  }
+
+  NumberOfPgs = PgLength / (sizeof (UINT32) * 2);
+  if (NumberOfPgs > 1) {
+    DEBUG ((EFI_D_ERROR, "%a, More than one Power domain found - not supported %d\r\n", __FUNCTION__, NumberOfPgs));
+    return;
+  }
+
+  PgNode = (NVIDIA_POWER_GATE_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_POWER_GATE_NODE_PROTOCOL) + (NumberOfPgs * sizeof (UINT32)));
+  if (NULL == PgNode) {
+    DEBUG ((EFI_D_ERROR, "%a, Failed to allocate power gate node\r\n", __FUNCTION__));
+    return;
+  }
+
+  PgNode->Deassert    = DeassertPgNodes;
+  PgNode->Assert      = AssertPgNodes;
+  PgNode->PowerGateId = SwapBytes32 (PgIds[1]);
+  DEBUG ((EFI_D_ERROR, "%a, PowerGateId = %d\r\n", __FUNCTION__, PgNode->PowerGateId));
+
+  PowerGateNodeInterface[ListEntry] = (VOID *)PgNode;
+  PowerGateNodeProtocol[ListEntry] = &gNVIDIAPowerGateNodeProtocolGuid;
+}
+
+/**
   Function that attempts connecting a device tree node to a driver.
 
   @param[in]  Private               Pointer to the private device discovery data structure.
@@ -885,6 +1058,7 @@ ProcessDeviceTreeNodeWithHandle(
   SetDevicePathNodeLength (&DevicePath->MemMap, sizeof (DevicePath->MemMap));
   SetDevicePathEndNode (&DevicePath->End);
 
+  GetPowerGateNodeProtocol (&NodeProtocol, ProtocolGuidList, InterfaceList, NUMBER_OF_OPTIONAL_PROTOCOLS);
   GetClockNodeProtocol (&NodeProtocol, ProtocolGuidList, InterfaceList, NUMBER_OF_OPTIONAL_PROTOCOLS);
   GetResetNodeProtocol (&NodeProtocol, ProtocolGuidList, InterfaceList, NUMBER_OF_OPTIONAL_PROTOCOLS);
 

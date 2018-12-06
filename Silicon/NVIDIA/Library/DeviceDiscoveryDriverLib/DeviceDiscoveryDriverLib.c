@@ -28,6 +28,7 @@
 #include <Protocol/DeviceTreeCompatibility.h>
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ResetNodeProtocol.h>
+#include <Protocol/PowerGateNodeProtocol.h>
 #include <Protocol/ArmScmiClockProtocol.h>
 
 #include "DeviceDiscoveryDriverLibPrivate.h"
@@ -139,6 +140,7 @@ DeviceDiscoveryBindingStart (
   NON_DISCOVERABLE_DEVICE           *NonDiscoverableProtocol = NULL;
   NVIDIA_CLOCK_NODE_PROTOCOL        *ClockProtocol = NULL;
   NVIDIA_RESET_NODE_PROTOCOL        *ResetProtocol = NULL;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL   *PgProtocol = NULL;
   NVIDIA_COMPATIBILITY_MAPPING      *MappingNode = gDeviceCompatibilityMap;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node = NULL;
 
@@ -174,6 +176,19 @@ DeviceDiscoveryBindingStart (
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a, no guid mapping\r\n",__FUNCTION__));
     goto ErrorExit;
+  }
+
+  if (gDeviceDiscoverDriverConfig.AutoDeassertPg) {
+    Status = gBS->HandleProtocol (Controller, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, no Pg node protocol\r\n",__FUNCTION__));
+      goto ErrorExit;
+    }
+    Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, failed to deassert Pg %r\r\n",__FUNCTION__,Status));
+      goto ErrorExit;
+    }
   }
 
   if (gDeviceDiscoverDriverConfig.AutoEnableClocks) {
