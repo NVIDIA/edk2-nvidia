@@ -211,7 +211,8 @@ InitializeGpioUtil (
     DisplayGpioInfo (Gpio);
   } else {
     for (ControllerIndex = 0; ControllerIndex < mGpioController->GpioControllerCount; ControllerIndex++) {
-      for (UINTN GpioIndex = 0;GpioIndex < mGpioController->GpioController[ControllerIndex].InternalGpioCount; GpioIndex++) {
+      UINTN GpioIndex;
+      for (GpioIndex = 0;GpioIndex < mGpioController->GpioController[ControllerIndex].InternalGpioCount; GpioIndex++) {
         DisplayGpioInfo (mGpioController->GpioController[ControllerIndex].GpioIndex + GpioIndex);
       }
     }
