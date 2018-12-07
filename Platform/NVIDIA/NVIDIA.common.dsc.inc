@@ -393,8 +393,9 @@
   MdeModulePkg/Universal/Network/UefiPxeBcDxe/UefiPxeBcDxe.inf
   MdeModulePkg/Universal/Network/IScsiDxe/IScsiDxe.inf
 
-  # FV Filesystem
+  # FV Filesystems
   MdeModulePkg/Universal/FvSimpleFileSystemDxe/FvSimpleFileSystemDxe.inf
+  FatPkg/EnhancedFatDxe/Fat.inf
 
   #
   # UEFI application (Shell Embedded Boot Loader)
