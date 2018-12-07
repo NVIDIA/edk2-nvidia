@@ -35,6 +35,7 @@
   @param[in]      ControllerHandle      The EFI_HANDLE of the controller.
   @param[in]      Slot                  The 0 based slot index.
   @param[in,out]  SdMmcHcSlotCapability The SDHCI capability structure.
+  @param[in,out]  BaseClkFreq           The base clock frequency value that
 
   @retval EFI_SUCCESS           The override function completed successfully.
   @retval EFI_NOT_FOUND         The specified controller or slot does not exist.
@@ -45,7 +46,8 @@ EFI_STATUS
 SdMmcCapability (
   IN      EFI_HANDLE                      ControllerHandle,
   IN      UINT8                           Slot,
-  IN  OUT VOID                            *SdMmcHcSlotCapability
+  IN  OUT VOID                            *SdMmcHcSlotCapability,
+  IN  OUT UINT32                          *BaseClkFreq
   )
 {
   SD_MMC_HC_SLOT_CAP  *Capability = (SD_MMC_HC_SLOT_CAP *)SdMmcHcSlotCapability;
@@ -66,19 +68,20 @@ SdMmcCapability (
   @param[in]      ControllerHandle      The EFI_HANDLE of the controller.
   @param[in]      Slot                  The 0 based slot index.
   @param[in]      PhaseType             The type of operation and whether the
-                     Ok, the access denied is due to the memory already being                    hook is invoked right before (pre) or
+                                        hook is invoked right before (pre) or
                                         right after (post)
+  @param[in,out]  PhaseData             The pointer to a phase-specific data.
 
   @retval EFI_SUCCESS           The override function completed successfully.
   @retval EFI_NOT_FOUND         The specified controller or slot does not exist.
   @retval EFI_INVALID_PARAMETER PhaseType is invalid
-
 **/
 EFI_STATUS
 SdMmcNotify (
   IN      EFI_HANDLE                      ControllerHandle,
   IN      UINT8                           Slot,
-  IN      EDKII_SD_MMC_PHASE_TYPE         PhaseType
+  IN      EDKII_SD_MMC_PHASE_TYPE         PhaseType,
+  IN OUT  VOID                            *PhaseData
   )
 {
   EFI_PHYSICAL_ADDRESS SlotBaseAddress  = 0;
