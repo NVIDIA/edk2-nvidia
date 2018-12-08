@@ -81,4 +81,8 @@
   gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz|31250000
   gEmbeddedTokenSpaceGuid.PcdMetronomeTickPeriod|1000
 
-
+[PcdsFeatureFlag]
+!if $(SIM)
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSdhciDisable26bitSupport|TRUE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSdhciDisableCidSupport|TRUE
+!endif
