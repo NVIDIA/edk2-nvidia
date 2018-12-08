@@ -28,6 +28,7 @@
   PlatformHookLib|MdeModulePkg/Library/BasePlatformHookLibNull/BasePlatformHookLibNull.inf
   PciLib|MdePkg/Library/BasePciLibPciExpress/BasePciLibPciExpress.inf
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
+  PciHostBridgeLib|Silicon/NVIDIA/Library/PciHostBridgeLib/PciHostBridgeLib.inf
 
   RealTimeClockLib|Silicon/NVIDIA/Library/MaximRealTimeClockLib/MaximRealTimeClockLib.inf
 
@@ -208,7 +209,7 @@
   # PCI Support
   #
   MdeModulePkg/Bus/Pci/PciBusDxe/PciBusDxe.inf
-  #MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf
+  MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf
 
   #
   # SATA Controller
