@@ -73,7 +73,6 @@
   gNVIDIATokenSpaceGuid.PcdBootloaderCarveoutOffset
   gArmTokenSpaceGuid.PcdSystemMemoryBase
 
-  gEmbeddedTokenSpaceGuid.PcdPrePiCpuMemorySize
   gEmbeddedTokenSpaceGuid.PcdPrePiCpuIoSize
 
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIReclaimMemory
