@@ -49,6 +49,27 @@ ASM_FUNC(_ModuleEntryPoint)
   b     .Lreloc_loop
 .Lreloc_done:
 
+  EL1_OR_EL2_OR_EL3(x1)
+
+3: MOV32 (w0, FixedPcdGet32(PcdArmNonSecModeTransition))
+   msr spsr_el3, x0
+
+   MOV32 (w0, FixedPcdGet32(PcdArmScr))
+   bl ASM_PFX(ArmWriteScr)
+
+   MOV32 (w0, FixedPcdGet32(PcdArmArchTimerFreqInHz))
+   bl ASM_PFX(ArmWriteCntFrq)
+
+   bl ASM_PFX(ArmGicV3GetControlSystemRegisterEnable)
+   orr x0, x0, #1
+   bl ASM_PFX(ArmGicV3SetControlSystemRegisterEnable)
+
+   adr x0, #12
+   msr elr_el3, x0
+   eret
+
+1:
+2:
   // Do early platform specific actions
   bl    ASM_PFX(ArmPlatformPeiBootAction)
 

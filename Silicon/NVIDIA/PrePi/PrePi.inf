@@ -54,6 +54,7 @@
   HobLib
   PrePiHobListPointerLib
   ArmMmuLib
+  ArmGicLib
 
 [Guids]
   gEfiFirmwarePerformanceGuid
@@ -66,6 +67,10 @@
 
 [FixedPcd]
   gArmTokenSpaceGuid.PcdVFPEnabled
+
+  gArmTokenSpaceGuid.PcdArmNonSecModeTransition
+  gArmTokenSpaceGuid.PcdArmScr
+  gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz
 
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize
 
