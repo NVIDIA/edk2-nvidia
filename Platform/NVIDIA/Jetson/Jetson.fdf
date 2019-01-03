@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -180,10 +180,14 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF MdeModulePkg/Universal/Network/MnpDxe/MnpDxe.inf
   INF MdeModulePkg/Universal/Network/VlanConfigDxe/VlanConfigDxe.inf
   INF MdeModulePkg/Universal/Network/Mtftp4Dxe/Mtftp4Dxe.inf
-  INF MdeModulePkg/Universal/Network/Tcp4Dxe/Tcp4Dxe.inf
+  INF NetworkPkg/TcpDxe/TcpDxe.inf
   INF MdeModulePkg/Universal/Network/Udp4Dxe/Udp4Dxe.inf
-  INF MdeModulePkg/Universal/Network/UefiPxeBcDxe/UefiPxeBcDxe.inf
-  INF MdeModulePkg/Universal/Network/IScsiDxe/IScsiDxe.inf
+  INF NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf
+  INF NetworkPkg/IScsiDxe/IScsiDxe.inf
+  INF NetworkPkg/Ip6Dxe/Ip6Dxe.inf
+  INF NetworkPkg/Dhcp6Dxe/Dhcp6Dxe.inf
+  INF NetworkPkg/Udp6Dxe/Udp6Dxe.inf
+  INF NetworkPkg/Mtftp6Dxe/Mtftp6Dxe.inf
 
   #
   # Shell dynamic commands

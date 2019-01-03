@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2011-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -62,6 +62,7 @@
   DpcLib|MdeModulePkg/Library/DxeDpcLib/DxeDpcLib.inf
   UdpIoLib|MdeModulePkg/Library/DxeUdpIoLib/DxeUdpIoLib.inf
   IpIoLib|MdeModulePkg/Library/DxeIpIoLib/DxeIpIoLib.inf
+  TcpIoLib|MdeModulePkg/Library/DxeTcpIoLib/DxeTcpIoLib.inf
 
   # ARM Architectural Libraries
   CacheMaintenanceLib|ArmPkg/Library/ArmCacheMaintenanceLib/ArmCacheMaintenanceLib.inf
@@ -363,6 +364,11 @@
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00100000
 
+  #
+  # Variable Services PCDs.
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
+
 [PcdsDynamicDefault]
   #
   # NV Storage PCDs.
@@ -388,10 +394,14 @@
   MdeModulePkg/Universal/Network/MnpDxe/MnpDxe.inf
   MdeModulePkg/Universal/Network/VlanConfigDxe/VlanConfigDxe.inf
   MdeModulePkg/Universal/Network/Mtftp4Dxe/Mtftp4Dxe.inf
-  MdeModulePkg/Universal/Network/Tcp4Dxe/Tcp4Dxe.inf
+  NetworkPkg/TcpDxe/TcpDxe.inf
   MdeModulePkg/Universal/Network/Udp4Dxe/Udp4Dxe.inf
-  MdeModulePkg/Universal/Network/UefiPxeBcDxe/UefiPxeBcDxe.inf
-  MdeModulePkg/Universal/Network/IScsiDxe/IScsiDxe.inf
+  NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf
+  NetworkPkg/IScsiDxe/IScsiDxe.inf
+  NetworkPkg/Ip6Dxe/Ip6Dxe.inf
+  NetworkPkg/Dhcp6Dxe/Dhcp6Dxe.inf
+  NetworkPkg/Udp6Dxe/Udp6Dxe.inf
+  NetworkPkg/Mtftp6Dxe/Mtftp6Dxe.inf
 
   # FV Filesystems
   MdeModulePkg/Universal/FvSimpleFileSystemDxe/FvSimpleFileSystemDxe.inf
