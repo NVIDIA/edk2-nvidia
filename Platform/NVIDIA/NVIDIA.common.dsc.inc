@@ -19,6 +19,9 @@
   GCC:*_*_ARM_DLINK_FLAGS = -z common-page-size=0x1000
   GCC:*_*_AARCH64_DLINK_FLAGS = -z common-page-size=0x10000
 
+[BuildOptions.common]
+  GCC:*_*_*_PLATFORM_FLAGS = -fstack-protector-strong
+
 [LibraryClasses.common]
 !if $(TARGET) == RELEASE
   DebugLib|MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
