@@ -221,6 +221,11 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   #
   INF MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
 
+  #
+  # Test Applications
+  #
+  INF Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
+
 [FV.UEFI_NS]
 FvForceRebase      = TRUE
 FvAlignment        = 8

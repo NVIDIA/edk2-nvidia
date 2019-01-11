@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -259,6 +259,11 @@
       NULL|MdeModulePkg/Library/BootManagerUiLib/BootManagerUiLib.inf
       NULL|MdeModulePkg/Library/BootMaintenanceManagerUiLib/BootMaintenanceManagerUiLib.inf
   }
+
+  #
+  # Test Applications
+  #
+  Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
 
 [Components.AARCH64]
   #
