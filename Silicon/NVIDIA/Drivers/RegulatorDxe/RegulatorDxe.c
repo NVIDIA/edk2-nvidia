@@ -231,9 +231,6 @@ RegulatorGetInfo (
     return EFI_INVALID_PARAMETER;
   }
   Private = REGULATOR_PRIVATE_DATA_FROM_THIS (This);
-  if (Private == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
 
   Entry = FindRegulatorEntry (&Private->RegulatorList, RegulatorId, NULL);
   if (Entry == NULL) {
@@ -321,9 +318,6 @@ RegulatorGetIdFromName (
     return EFI_INVALID_PARAMETER;
   }
   Private = REGULATOR_PRIVATE_DATA_FROM_THIS (This);
-  if (Private == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
 
   Entry = FindRegulatorEntry (&Private->RegulatorList, 0, Name);
   if (Entry == NULL) {
@@ -363,9 +357,6 @@ RegulatorGetRegulators (
   }
 
   Private = REGULATOR_PRIVATE_DATA_FROM_THIS (This);
-  if (Private == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
 
   NeededSize = Private->Regulators * sizeof (UINT32);
   if (*BufferSize < NeededSize) {
@@ -421,9 +412,6 @@ RegulatorNotifyStateChange (
     return EFI_INVALID_PARAMETER;
   }
   Private = REGULATOR_PRIVATE_DATA_FROM_THIS (This);
-  if (Private == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
 
   Entry = FindRegulatorEntry (&Private->RegulatorList, RegulatorId, NULL);
   if (Entry == NULL) {
@@ -468,9 +456,6 @@ RegulatorEnable (
     return EFI_INVALID_PARAMETER;
   }
   Private = REGULATOR_PRIVATE_DATA_FROM_THIS (This);
-  if (Private == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
 
   Entry = FindRegulatorEntry (&Private->RegulatorList, RegulatorId, NULL);
   if (Entry == NULL) {
@@ -561,9 +546,6 @@ RegulatorSetVoltage (
     return EFI_INVALID_PARAMETER;
   }
   Private = REGULATOR_PRIVATE_DATA_FROM_THIS (This);
-  if (Private == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
 
   Entry = FindRegulatorEntry (&Private->RegulatorList, RegulatorId, NULL);
   if (Entry == NULL) {

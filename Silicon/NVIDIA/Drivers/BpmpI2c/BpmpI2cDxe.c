@@ -300,9 +300,6 @@ BpmpI2cStartRequest (
   }
 
   Private = BPMP_I2C_PRIVATE_DATA_FROM_MASTER(This);
-  if (NULL == Private) {
-    return EFI_INVALID_PARAMETER;
-  }
 
   if (NULL != Private->RequestPacket) {
     return EFI_ALREADY_STARTED;
@@ -368,9 +365,6 @@ BpmpI2cEnumerate (
     return EFI_INVALID_PARAMETER;
   }
   Private = BPMP_I2C_PRIVATE_DATA_FROM_ENUMERATE(This);
-  if (NULL == Private) {
-    return EFI_INVALID_PARAMETER;
-  }
 
   if (*Device == NULL) {
     Index = 0;
