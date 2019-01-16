@@ -585,9 +585,7 @@ BuildI2cDevices (
 
   fdt_for_each_subnode (Node, Private->DeviceTreeBase, Private->DeviceTreeNodeOffset) {
     INT32 ChildDepth = 0;
-    if (Node < 0) {
-      break;
-    }
+
     ChildDepth = fdt_node_depth (Private->DeviceTreeBase, Node);
     if ((ParentDepth + 1) != ChildDepth) {
       continue;
@@ -619,9 +617,6 @@ BuildI2cDevices (
     UINTN                    AdditionalSlaves = 0;
     UINTN                    SlaveIndex;
 
-    if (Node < 0) {
-      break;
-    }
     ChildDepth = fdt_node_depth (Private->DeviceTreeBase, Node);
     if ((ParentDepth + 1) != ChildDepth) {
       continue;
