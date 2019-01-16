@@ -1,5 +1,6 @@
 /** @file
 *
+*  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  This program and the accompanying materials
@@ -219,9 +220,12 @@ CEntryPoint (
 
   if (PerformanceMeasurementEnabled ()) {
     // Initialize the Timer Library to setup the Timer HW controller
-    TimerConstructor ();
-    // We cannot call yet the PerformanceLib because the HOB List has not been initialized
-    StartTimeStamp = GetPerformanceCounter ();
+    if (!EFI_ERROR (TimerConstructor ())) {
+      // We cannot call yet the PerformanceLib because the HOB List has not been initialized
+      StartTimeStamp = GetPerformanceCounter ();
+    } else {
+      StartTimeStamp = 0;
+    }
   } else {
     StartTimeStamp = 0;
   }
