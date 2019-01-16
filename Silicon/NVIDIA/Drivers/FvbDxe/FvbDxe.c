@@ -2,7 +2,7 @@
 
   Fvb Driver
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   This program and the accompanying materials
@@ -475,6 +475,9 @@ FvbEraseBlocks (
   if (EfiAtRuntime()) {
     return EFI_UNSUPPORTED;
   }
+
+  //If no blocks are passed in return should be invalid parameter.
+  Status = EFI_INVALID_PARAMETER;
 
   BlockSize = Private->BlockIo->Media->BlockSize;
   LastBlock = Private->NumBlocks - 1;
