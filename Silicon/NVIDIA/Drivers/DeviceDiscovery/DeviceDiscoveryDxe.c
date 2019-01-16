@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Device Discovery Driver
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -124,8 +124,8 @@ GetResources (
   )
 {
   EFI_STATUS Status;
-  INT32 AddressCells  = fdt_address_cells (Private->DeviceTreeBase, fdt_parent_offset(Private->DeviceTreeBase, NodeOffset));
-  INT32 SizeCells     = fdt_size_cells (Private->DeviceTreeBase, fdt_parent_offset(Private->DeviceTreeBase, NodeOffset));
+  INT32 AddressCells;
+  INT32 SizeCells;
   CONST VOID  *RegProperty = NULL;
   CONST VOID  *SharedMemProperty = NULL;
   UINTN EntrySize     = 0;
@@ -144,6 +144,9 @@ GetResources (
       (NULL == Resources)) {
     return EFI_INVALID_PARAMETER;
   }
+
+  AddressCells  = fdt_address_cells (Private->DeviceTreeBase, fdt_parent_offset(Private->DeviceTreeBase, NodeOffset));
+  SizeCells     = fdt_size_cells (Private->DeviceTreeBase, fdt_parent_offset(Private->DeviceTreeBase, NodeOffset));
 
   if ((AddressCells > 2) ||
       (AddressCells == 0) ||
@@ -979,13 +982,12 @@ ProcessDeviceTreeNodeWithHandle(
   CONST VOID                                *Property = NULL;
   INT32                                     PropertySize = 0;
 
-
-  NodeProtocol.DeviceTreeBase = Private->DeviceTreeBase;
-  NodeProtocol.NodeOffset = NodeOffset;
-
   if (NULL == Private) {
     return EFI_INVALID_PARAMETER;
   }
+
+  NodeProtocol.DeviceTreeBase = Private->DeviceTreeBase;
+  NodeProtocol.NodeOffset = NodeOffset;
 
   Property = fdt_getprop (Private->DeviceTreeBase,
                           NodeOffset,
@@ -1262,6 +1264,7 @@ DeviceDiscoveryDxeEntryPoint (
     Status = EFI_DEVICE_ERROR;
     goto ErrorExit;
   }
+  EventCreated = TRUE;
 
   //Register protocol to let drivers that do not use driver binding to declare depex.
   Status = gBS->InstallMultipleProtocolInterfaces (
