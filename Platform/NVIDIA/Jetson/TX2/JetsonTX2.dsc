@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -26,6 +26,11 @@
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
+
+  #
+  # Define ESRT GUIDs for Firmware Management Protocol instances
+  #
+  DEFINE SYSTEM_FMP_ESRT_GUID   = d33335fe-a16c-4765-a04d-f3c78999e580
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
 
@@ -74,3 +79,5 @@
   gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz|31250000
   gEmbeddedTokenSpaceGuid.PcdMetronomeTickPeriod|1000
 
+  # System FMP Capsule GUID d33335fe-a16c-4765-a04d-f3c78999e580
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(d33335fe-a16c-4765-a04d-f3c78999e580)}

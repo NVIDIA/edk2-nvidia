@@ -33,6 +33,11 @@
   CHIPSET                        = T234
   DEVICE_TREE_BUILD              = TRUE
 
+  #
+  # Define ESRT GUIDs for Firmware Management Protocol instances
+  #
+  DEFINE SYSTEM_FMP_ESRT_GUID   = bf0d4599-20d4-414e-b2c5-3595b1cda402
+
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
 
 [LibraryClasses.common]
@@ -82,6 +87,9 @@
   #
   gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz|31250000
   gEmbeddedTokenSpaceGuid.PcdMetronomeTickPeriod|1000
+
+  # System FMP Capsule GUID bf0d4599-20d4-414e-b2c5-3595b1cda402
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(bf0d4599-20d4-414e-b2c5-3595b1cda402)}
 
 [PcdsDynamicHii.common.DEFAULT]
 !if $(SIM)
