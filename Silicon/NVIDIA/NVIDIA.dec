@@ -49,9 +49,6 @@ Include
   gNVIDIAI2cMaxim20024                   = { 0xa7f8c208, 0xbe90, 0x4363, { 0x84, 0xc5, 0x1c, 0xc9, 0xed, 0x04, 0xe7, 0x19 } }
   gNVIDIAI2cUnknown                      = { 0xc58c5085, 0xafed, 0x4844, { 0x81, 0x06, 0x2a, 0xc6, 0xf2, 0x5a, 0xf5, 0xd7 } }
 
-  # GPT Partitions
-  gNVIDIAUEFIVariablesGuid               = { 0xde7fcf17, 0xcf41, 0x4152, { 0xbf, 0x94, 0x8e, 0xc0, 0x0b, 0x06, 0xbf, 0x27 } }
-
 [LibraryClasses]
   DramCarveoutLib|Include/Library/DramCarveoutLib.h
   SystemResourceLib|Include/Library/SystemResourceLib.h
@@ -92,3 +89,6 @@ Include
 
 #Timeout in microseconds in for bpmp response, 0 for infinite
   gNVIDIATokenSpaceGuid.PcdBpmpResponseTimeout|0|UINT32|0x00000008
+
+#Name of UEFI variables GPT partition
+  gNVIDIATokenSpaceGuid.PcdUEFIVariablesPartitionName|L"uefi_variables"|VOID*|0x00000009

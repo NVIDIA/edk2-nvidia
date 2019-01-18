@@ -913,6 +913,7 @@ FVBInitialize (
   EFI_PARTITION_INFO_PROTOCOL *PartitionInfo = NULL;
   EFI_HANDLE                  FlashHandle;
   BOOLEAN                     ValidFlash;
+  UINTN                       Index;
 
   Private = NULL;
   Status = gBS->AllocatePool(EfiRuntimeServicesData,
@@ -924,35 +925,47 @@ FVBInitialize (
   }
 
   Status = gBS->LocateHandleBuffer (ByProtocol,
-                                    &gNVIDIAUEFIVariablesGuid,
+                                    &gEfiPartitionInfoProtocolGuid,
                                     NULL,
                                     &NumOfHandles,
                                     &HandleBuffer);
 
-  if (EFI_ERROR(Status) || (NumOfHandles > 1)) {
+  if (EFI_ERROR(Status)) {
     Status = EFI_UNSUPPORTED;
     goto Exit;
   }
 
-  Status = gBS->OpenProtocol (*HandleBuffer,
-                              &gEfiPartitionInfoProtocolGuid,
-                              (VOID **)&PartitionInfo,
-                              ImageHandle,
-                              NULL,
-                              EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+  for (Index = 0; Index < NumOfHandles; Index++) {
+    Status = gBS->OpenProtocol (HandleBuffer[Index],
+                                &gEfiPartitionInfoProtocolGuid,
+                                (VOID **)&PartitionInfo,
+                                ImageHandle,
+                                NULL,
+                                EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
 
-  if (EFI_ERROR(Status) || (PartitionInfo == NULL)) {
+    if (EFI_ERROR(Status) || (PartitionInfo == NULL)) {
+      Status = EFI_NOT_FOUND;
+      goto Exit;
+    }
+
+    if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
+      Status = EFI_PROTOCOL_ERROR;
+      goto Exit;
+    }
+
+    if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
+      continue;
+    }
+
+    if (0 == StrnCmp (PartitionInfo->Info.Gpt.PartitionName,
+                      PcdGetPtr(PcdUEFIVariablesPartitionName),
+                      StrnLenS(PcdGetPtr(PcdUEFIVariablesPartitionName), sizeof(PartitionInfo->Info.Gpt.PartitionName)))) {
+      break;
+    }
+  }
+
+  if (Index == NumOfHandles) {
     Status = EFI_NOT_FOUND;
-    goto Exit;
-  }
-
-  if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
-    Status = EFI_UNSUPPORTED;
-    goto Exit;
-  }
-
-  if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
-    Status = EFI_PROTOCOL_ERROR;
     goto Exit;
   }
 
@@ -960,7 +973,7 @@ FVBInitialize (
   Private->NumBlocks = PartitionInfo->Info.Gpt.EndingLBA -
                          PartitionInfo->Info.Gpt.StartingLBA + 1;
 
-  Status = gBS->HandleProtocol (*HandleBuffer,
+  Status = gBS->HandleProtocol (HandleBuffer[Index],
                                 &gEfiDevicePathProtocolGuid,
                                 (VOID **)&PartitionDevicePath);
 
