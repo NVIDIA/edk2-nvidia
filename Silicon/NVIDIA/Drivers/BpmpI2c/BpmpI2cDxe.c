@@ -2,7 +2,7 @@
 
   Bpmp I2c Driver
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -1032,6 +1032,9 @@ BpmpI2cInitialize (
   )
 {
   EFI_STATUS  Status;
+  EFI_STATUS  HandleStatus;
+  UINTN       NumberOfHandles;
+  EFI_HANDLE  *HandleBuffer;
 
   Status = EfiLibInstallDriverBinding (
              ImageHandle,
@@ -1042,6 +1045,33 @@ BpmpI2cInitialize (
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to install driver binding protocol: %r\r\n",__FUNCTION__,Status));
     return Status;
+  }
+
+  //
+  //Look for existing controllers as I2C subsystem is needed for
+  //variable support and thus prior to BDS.
+  //
+  HandleStatus = gBS->LocateHandleBuffer (
+                        ByProtocol,
+                        &gNVIDIABpmpIpcProtocolGuid,
+                        NULL,
+                        &NumberOfHandles,
+                        &HandleBuffer);
+  if (!EFI_ERROR (HandleStatus)) {
+    EFI_HANDLE DriverHandles[2];
+    UINTN Index;
+
+    DriverHandles[0] = ImageHandle;
+    DriverHandles[1] = NULL;
+    for (Index = 0; Index < NumberOfHandles; Index++) {
+      gBS->ConnectController (
+             HandleBuffer[Index],
+             DriverHandles,
+             NULL,
+             TRUE
+             );
+    }
+	FreePool (HandleBuffer);
   }
 
   return Status;
