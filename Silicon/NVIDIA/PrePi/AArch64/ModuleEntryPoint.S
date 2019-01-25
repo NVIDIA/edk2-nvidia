@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+//  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 //  Copyright (c) 2011-2015, ARM Limited. All rights reserved.
 //
 //  This program and the accompanying materials
@@ -52,21 +52,58 @@ ASM_FUNC(_ModuleEntryPoint)
   EL1_OR_EL2_OR_EL3(x1)
 
 3: MOV32 (w0, FixedPcdGet32(PcdArmNonSecModeTransition))
-   msr spsr_el3, x0
+  msr spsr_el3, x0
 
-   MOV32 (w0, FixedPcdGet32(PcdArmScr))
-   bl ASM_PFX(ArmWriteScr)
+  MOV32 (w0, FixedPcdGet32(PcdArmScr))
+  bl ASM_PFX(ArmWriteScr)
 
-   MOV32 (w0, FixedPcdGet32(PcdArmArchTimerFreqInHz))
-   bl ASM_PFX(ArmWriteCntFrq)
+  MOV32 (w0, FixedPcdGet32(PcdArmArchTimerFreqInHz))
+  bl ASM_PFX(ArmWriteCntFrq)
 
-   bl ASM_PFX(ArmGicV3GetControlSystemRegisterEnable)
-   orr x0, x0, #1
-   bl ASM_PFX(ArmGicV3SetControlSystemRegisterEnable)
+  bl ASM_PFX(ArmGicV3GetControlSystemRegisterEnable)
+  orr x0, x0, #1
+  bl ASM_PFX(ArmGicV3SetControlSystemRegisterEnable)
 
-   adr x0, #12
-   msr elr_el3, x0
-   eret
+  MOV64 (x19, FixedPcdGet64(PcdGicRedistributorsBase))
+  MOV64 (x20, FixedPcdGet64(PcdGicDistributorBase))
+
+  bl ASM_PFX(ArmReadMpidr)
+  mov x4, x0
+
+  mov x0, x19
+
+  MOV64 (x2, 0x10000)
+  MOV32 (w5, 0xFFFFFFFF)
+
+//Find the redistributor for this CPU
+_RedistSearch:
+  ldr x3, [x0, #8]
+  lsr x3, x3, #32
+
+  cmp w3, w4
+  b.eq _FoundRedist
+  add x0, x0, x2
+  add x0, x0, x2
+  b _RedistSearch
+
+_FoundRedist:
+
+  //Set WAKER to indicate CPU is online
+  mov x1, #0
+  str w1, [x0, #20]
+
+  //Set all SGI/PPI to NS Group 1
+  add x0, x0, x2
+  str w5, [x0, #128]
+
+  //Enable distributor ARE and all groups
+  ldr w1, [x20]
+  mov w1, #35
+  str w1, [x20]
+
+  adr x0, #12
+  msr elr_el3, x0
+  eret
 
 1:
 2:
