@@ -751,15 +751,16 @@ GetClockNodeProtocol(
 
   if ((ClockIds == 0) ||
       (ClocksLength == 0)) {
-    return;
-  }
+    NumberOfClocks = 0;
+  } else {
 
-  if ((ClocksLength % (sizeof (UINT32) * 2)) != 0) {
-    DEBUG ((EFI_D_ERROR, "%a, Clock length unexpected %d\r\n", __FUNCTION__, ClocksLength));
-    return;
-  }
+    if ((ClocksLength % (sizeof (UINT32) * 2)) != 0) {
+      DEBUG ((EFI_D_ERROR, "%a, Clock length unexpected %d\r\n", __FUNCTION__, ClocksLength));
+      return;
+    }
 
-  NumberOfClocks = ClocksLength / (sizeof (UINT32) * 2);
+    NumberOfClocks = ClocksLength / (sizeof (UINT32) * 2);
+  }
 
   ClockNode = (NVIDIA_CLOCK_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_CLOCK_NODE_PROTOCOL) + (NumberOfClocks * sizeof (NVIDIA_CLOCK_NODE_ENTRY)));
   if (NULL == ClockNode) {
