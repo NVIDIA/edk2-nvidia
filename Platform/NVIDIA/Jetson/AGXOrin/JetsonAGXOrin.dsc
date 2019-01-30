@@ -81,8 +81,8 @@
   gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz|31250000
   gEmbeddedTokenSpaceGuid.PcdMetronomeTickPeriod|1000
 
-[PcdsFeatureFlag]
+[PcdsDynamicHii.common.DEFAULT]
 !if $(SIM)
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSdhciDisable26bitSupport|TRUE
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSdhciDisableCidSupport|TRUE
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
 !endif
+
