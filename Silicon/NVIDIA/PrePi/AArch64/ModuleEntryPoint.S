@@ -96,6 +96,17 @@ _FoundRedist:
   add x0, x0, x2
   str w5, [x0, #128]
 
+  //Set all SPI to NS Group 1
+  mov x6, #0
+  mov x7, #0x80
+  add x7, x20, x7
+_SpiLoop:
+  str w5, [x7]
+  add x7, x7, #4
+  add x6, x6, #1
+  cmp x6, #32
+  b.ne _SpiLoop
+
   //Enable distributor ARE and all groups
   ldr w1, [x20]
   mov w1, #35
