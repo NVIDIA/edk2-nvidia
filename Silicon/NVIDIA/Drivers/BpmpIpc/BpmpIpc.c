@@ -439,9 +439,11 @@ InitializeIvcChannel (
 
   while (PrivateData->TxChannel->State != IvcStateEstablished) {
     gBS->Stall (TIMEOUT_STALL_US);
-    Timeout--;
-    if (Timeout == 0) {
-      return EFI_TIMEOUT;
+    if (Timeout != 0) {
+      Timeout--;
+      if (Timeout == 0) {
+        return EFI_TIMEOUT;
+      }
     }
 
     RemoteState = PrivateData->RxChannel->State;

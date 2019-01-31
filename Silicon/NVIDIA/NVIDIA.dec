@@ -2,7 +2,7 @@
 #
 #  This Package provides all definitions for NVIDIA silicon
 #
-#  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -87,8 +87,8 @@ Include
 #Offset in CPU bootloader info that contains the base, size pair for the cpu bootloader carveout
   gNVIDIATokenSpaceGuid.PcdBootloaderCarveoutOffset|0x00000000|UINT64|0x00000006
 
-#Timeout in microseconds in hsp doorbell response
-  gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout|1000000|UINT32|0x00000007
+#Timeout in microseconds in hsp doorbell response, 0 for infinite
+  gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout|0|UINT32|0x00000007
 
-#Timeout in microseconds in for bpmp response
-  gNVIDIATokenSpaceGuid.PcdBpmpResponseTimeout|1000000|UINT32|0x00000008
+#Timeout in microseconds in for bpmp response, 0 for infinite
+  gNVIDIATokenSpaceGuid.PcdBpmpResponseTimeout|0|UINT32|0x00000008

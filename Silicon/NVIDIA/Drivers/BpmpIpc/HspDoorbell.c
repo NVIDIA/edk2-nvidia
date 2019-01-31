@@ -2,7 +2,7 @@
 #include "BpmpIpcDxePrivate.h"
   HspDoorbell protocol implementation for BPMP IPC driver.
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -98,18 +98,19 @@ HspDoorbellEnableChannel (
     1
     );
 
-  while ((0 == MmioBitFieldRead32 (
-                 PrivateData->DoorbellLocation[Doorbell] + HSP_DB_REG_ENABLE,
-                 HSP_MASTER_CCPLEX,
-                 HSP_MASTER_CCPLEX)) &&
-         (0 != Timeout)) {
+  while (0 == MmioBitFieldRead32 (
+                PrivateData->DoorbellLocation[Doorbell] + HSP_DB_REG_ENABLE,
+                HSP_MASTER_CCPLEX,
+                HSP_MASTER_CCPLEX)) {
     gBS->Stall (TIMEOUT_STALL_US);
-    Timeout--;
+    if (Timeout != 0) {
+      Timeout--;
+      if (Timeout == 0) {
+        return EFI_NOT_READY;
+      }
+    }
   }
 
-  if (0 == Timeout) {
-    return EFI_NOT_READY;
-  }
   return EFI_SUCCESS;
 }
 
