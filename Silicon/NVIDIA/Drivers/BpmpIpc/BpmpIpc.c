@@ -15,64 +15,75 @@
 #include "BpmpIpcDxePrivate.h"
 #include "BpmpIpcPrivate.h"
 #include <Library/ArmLib.h>
+#include <Library/IoLib.h>
 
 #define BOTH_ALIGNED(a, b, align) ((((UINTN)(a) | (UINTN)(b)) & ((align) - 1)) == 0)
 
 /**
-  Copy Length bytes from Source to Destination, using aligned accesses only.
-  Note that this implementation uses memcpy() semantics rather then memmove()
-  semantics, i.e., SourceBuffer and DestinationBuffer should not overlap.
+  Copy Length bytes from Source to Destination, using mmio accesses for specified direction.
 
-  @param  DestinationBuffer The target of the copy request.
-  @param  SourceBuffer      The place to copy from.
-  @param  Length            The number of bytes to copy.
-
-  @return Destination
+  @param   DestinationBuffer The target of the copy request.
+  @param   SourceBuffer      The place to copy from.
+  @param   Length            The number of bytes to copy.
+  @param   ReadFromMmio      TRUE if SourceBuffer is Mmio bugger
 
 **/
 STATIC
-VOID *
-AlignedCopyMem (
+VOID
+MmioCopyMem (
   OUT     VOID                      *DestinationBuffer,
   IN      CONST VOID                *SourceBuffer,
-  IN      UINTN                     Length
+  IN      UINTN                     Length,
+  IN      BOOLEAN                   ReadFromMmio
   )
 {
-  UINT8             *Destination8;
-  CONST UINT8       *Source8;
-  UINT32            *Destination32;
-  CONST UINT32      *Source32;
-  UINT64            *Destination64;
-  CONST UINT64      *Source64;
+  UINTN             AlignedLength;
 
   if (BOTH_ALIGNED(DestinationBuffer, SourceBuffer, 8) && Length >= 8) {
-    Destination64 = DestinationBuffer;
-    Source64 = SourceBuffer;
-    while (Length >= 8) {
-      *Destination64++ = *Source64++;
-      Length -= 8;
+    AlignedLength = Length & ~0x7;
+    if (ReadFromMmio) {
+      MmioReadBuffer64 ((UINTN)SourceBuffer, AlignedLength, DestinationBuffer);
+    } else {
+      MmioWriteBuffer64 ((UINTN)DestinationBuffer, AlignedLength, SourceBuffer);
     }
+    Length -= AlignedLength;
+    DestinationBuffer += AlignedLength;
+    SourceBuffer += AlignedLength;
+  }
 
-    Destination8 = (UINT8 *)Destination64;
-    Source8 = (CONST UINT8 *)Source64;
-  } else if (BOTH_ALIGNED(DestinationBuffer, SourceBuffer, 4) && Length >= 4) {
-    Destination32 = DestinationBuffer;
-    Source32 = SourceBuffer;
-    while (Length >= 4) {
-      *Destination32++ = *Source32++;
-      Length -= 4;
+  if (BOTH_ALIGNED(DestinationBuffer, SourceBuffer, 4) && Length >= 4) {
+    AlignedLength = Length & ~0x3;
+    if (ReadFromMmio) {
+      MmioReadBuffer32 ((UINTN)SourceBuffer, AlignedLength, DestinationBuffer);
+    } else {
+      MmioWriteBuffer32 ((UINTN)DestinationBuffer, AlignedLength, SourceBuffer);
     }
+    Length -= AlignedLength;
+    DestinationBuffer += AlignedLength;
+    SourceBuffer += AlignedLength;
+  }
 
-    Destination8 = (UINT8 *)Destination32;
-    Source8 = (CONST UINT8 *)Source32;
-  } else {
-    Destination8 = DestinationBuffer;
-    Source8 = SourceBuffer;
+  if (BOTH_ALIGNED(DestinationBuffer, SourceBuffer, 2) && Length >= 2) {
+    AlignedLength = Length & ~0x1;
+    if (ReadFromMmio) {
+      MmioReadBuffer16 ((UINTN)SourceBuffer, AlignedLength, DestinationBuffer);
+    } else {
+      MmioWriteBuffer16 ((UINTN)DestinationBuffer, AlignedLength, SourceBuffer);
+    }
+    Length -= AlignedLength;
+    DestinationBuffer += AlignedLength;
+    SourceBuffer += AlignedLength;
   }
-  while (Length-- != 0) {
-    *Destination8++ = *Source8++;
+
+  if (Length != 0) {
+    if (ReadFromMmio) {
+      MmioReadBuffer8 ((UINTN)SourceBuffer, Length, DestinationBuffer);
+    } else {
+      MmioWriteBuffer8 ((UINTN)DestinationBuffer, Length, SourceBuffer);
+    }
   }
-  return DestinationBuffer;
+
+  return;
 }
 
 /**
@@ -149,7 +160,7 @@ ProcessTransaction (
   //Copy to Tx channel
   PrivateData->TxChannel->MessageRequest = Transaction->MessageRequest;
   PrivateData->TxChannel->Flags = IVC_FLAGS_DO_ACK;
-  AlignedCopyMem ((VOID *)PrivateData->TxChannel->Data, Transaction->TxData, Transaction->TxDataSize);
+  MmioCopyMem ((VOID *)PrivateData->TxChannel->Data, Transaction->TxData, Transaction->TxDataSize, FALSE);
 
   PrivateData->TxChannel->WriteCount++;
   ArmDataMemoryBarrier ();
@@ -247,7 +258,7 @@ BpmpIpcTimerNotify (
   } else {
     Transaction->Token->TransactionStatus = EFI_SUCCESS;
   }
-  AlignedCopyMem (Transaction->RxData, (VOID *)PrivateData->RxChannel->Data, Transaction->RxDataSize);
+  MmioCopyMem (Transaction->RxData, (VOID *)PrivateData->RxChannel->Data, Transaction->RxDataSize, TRUE);
 
   PrivateData->RxChannel->ReadCount++;
 
