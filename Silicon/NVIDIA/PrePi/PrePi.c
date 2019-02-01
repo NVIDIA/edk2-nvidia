@@ -83,7 +83,6 @@ RegisterFirmwareVolume (
   BOOLEAN                      Found;
 
   FvTop = FvBase + FvSize;
-  BuildFvHob (FvBase, FvSize);
   // EDK2 does not have the concept of boot firmware copied into DRAM. To avoid the DXE
   // core to overwrite this area we must create a memory allocation HOB for the region,
   // but this only works if we split off the underlying resource descriptor as well.
@@ -260,6 +259,9 @@ CEntryPoint (
     (VOID*)StackBase  // The top of the UEFI Memory is reserved for the stacks
     );
   PrePeiSetHobList (HobList);
+
+  //Register Firmware volume
+  BuildFvHob ((EFI_PHYSICAL_ADDRESS)FvHeader, FvSize);
 
   // Initialize MMU and Memory HOBs (Resource Descriptor HOBs)
   // Get Virtual Memory Map from the Platform Library

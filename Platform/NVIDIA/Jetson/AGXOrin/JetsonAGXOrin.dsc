@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -30,6 +30,8 @@
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
+  CHIPSET                        = T234
+  DEVICE_TREE_BUILD              = TRUE
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
 

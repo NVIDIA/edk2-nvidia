@@ -266,6 +266,10 @@
   #
   Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
 
+!if $(DEVICE_TREE_BUILD)
+  Silicon/NVIDIA/$(CHIPSET)/DeviceTree/DeviceTree.inf
+!endif
+
 [Components.AARCH64]
   #
   # EBC

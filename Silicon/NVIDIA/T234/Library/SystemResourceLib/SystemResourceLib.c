@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -14,6 +14,8 @@
 
 #include <Uefi.h>
 #include <Pi/PiMultiPhase.h>
+#include <Pi/PiPeiCis.h>
+#include <Library/PrePiLib.h>
 #include <Library/SystemResourceLib.h>
 #include <Library/DramCarveoutLib.h>
 #include <Library/IoLib.h>
@@ -83,6 +85,9 @@ InstallSystemResources (
   TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
   UINTN                Index;
   EFI_PHYSICAL_ADDRESS *DeviceTreeHobData = NULL;
+  VOID                 *Dtb;
+  EFI_PEI_FV_HANDLE    VolumeHandle;
+  EFI_PEI_FILE_HANDLE  FileHandle;
 
   if (NULL == MemoryRegionsCount) {
     return EFI_INVALID_PARAMETER;
@@ -160,14 +165,34 @@ InstallSystemResources (
   }
   FreePool (CarveoutRegions);
 
-  //Register Device Tree
-  if (fdt_check_header ((VOID *)tegra234_sim_vdk_dtb) == 0) {
-    DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
-    if (NULL != DeviceTreeHobData) {
-      *DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS)tegra234_sim_vdk_dtb;
-    } else {
-      DEBUG ((EFI_D_ERROR, "Failed to build guid hob\r\n"));
+  //Register Device Tree, should be in the boot FV
+  Status = FfsFindNextVolume (0, &VolumeHandle);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "Unable to locate boot FV\r\n"));
+    ASSERT (FALSE);
+    return Status;
+  }
+
+  Status = FfsFindFileByName (&gDtPlatformDefaultDtbFileGuid, VolumeHandle, &FileHandle);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "Unable to locate DTB file\r\n"));
+    ASSERT (FALSE);
+    return Status;
+  }
+
+  Status = FfsFindSectionData (EFI_SECTION_RAW, FileHandle, &Dtb);
+  if (!EFI_ERROR (Status)) {
+    if (fdt_check_header ((VOID *)Dtb) == 0) {
+      DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
+      if (NULL != DeviceTreeHobData) {
+        *DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS)Dtb;
+      } else {
+        DEBUG ((EFI_D_ERROR, "Failed to build guid hob\r\n"));
+      }
     }
+  } else {
+    DEBUG ((EFI_D_ERROR, "Unable to locate DTB section\r\n"));
+    ASSERT (FALSE);
   }
 
   return Status;
