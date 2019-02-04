@@ -38,6 +38,9 @@
   SerialPortLib|MdeModulePkg/Library/BaseSerialPortLib16550/BaseSerialPortLib16550.inf
   SystemResourceLib|Silicon/NVIDIA/T186/Library/SystemResourceLib/SystemResourceLib.inf
 
+  #Use non-optimized BaseMemoryLib due to peripherals not being cache coherent
+  BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+
 [PcdsFixedAtBuild.common]
 
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x80000000
