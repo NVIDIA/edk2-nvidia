@@ -1,8 +1,8 @@
 ## @file
+#  Platform ASL Tables
 #
-#  ACPI table data and ASL sources required to boot the platform.
-#
-#  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2019, NVIDIA Corporation. All rights reserved.
+#  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -11,22 +11,24 @@
 #
 #  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
 #  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
-#
 ##
 
 [Defines]
   INF_VERSION                    = 0x00010019
-  BASE_NAME                      = T186AcpiTables
-  FILE_GUID                      = 7E374E25-8E01-4FEE-87F2-390C23C606CD
-  MODULE_TYPE                    = USER_DEFINED
+  BASE_NAME                      = JunoAslTablesLib
+  FILE_GUID                      = ac70235d-2f84-46fa-a833-a69eb54673ed
+  MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PlatformAslTablesLib|DXE_DRIVER
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
 
 [Sources]
   Dsdt.asl
-  Spcr.aslc
-  Fadt.asl
-  Gtdt.asl
-  Madt.asl
 
 [Packages]
   ArmPkg/ArmPkg.dec

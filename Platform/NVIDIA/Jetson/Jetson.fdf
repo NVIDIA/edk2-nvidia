@@ -115,8 +115,20 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   # ACPI Support
   #
   INF MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
-  INF MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
-  INF RuleOverride=ACPITABLE Silicon/NVIDIA/T186/AcpiTables/AcpiTables.inf
+  #INF MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
+
+  # Configuration Manager
+  INF Silicon/NVIDIA/Drivers/CMDxe/CMDxe/CMDxe.inf
+
+  #
+  # Dynamic Table Factory Dxe
+  #
+  INF DynamicTablesPkg/Drivers/DynamicTableFactoryDxe/DynamicTableFactoryDxe.inf
+
+  #
+  # Dynamic Tables Dxe
+  #
+  INF DynamicTablesPkg/Drivers/DynamicTableManagerDxe/DynamicTableManagerDxe.inf
 
   #
   # FDT Support

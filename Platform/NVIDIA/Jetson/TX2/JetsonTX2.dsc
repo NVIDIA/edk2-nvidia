@@ -84,3 +84,9 @@
 
   # System FMP Capsule GUID d33335fe-a16c-4765-a04d-f3c78999e580
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(d33335fe-a16c-4765-a04d-f3c78999e580)}
+
+  #
+  # ACPI
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|0x3638314152474554
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision|0x00000001

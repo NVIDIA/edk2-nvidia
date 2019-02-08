@@ -89,6 +89,12 @@
   # System FMP Capsule GUID be3f5d68-7654-4ed2-838c-2a2faf901a78
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}
 
+  #
+  # ACPI
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|0x3439314152474554
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision|0x00000001
+
 [PcdsFeatureFlag]
 !if $(SIM)
   gEfiMdeModulePkgTokenSpaceGuid.PcdSdhciDisable26bitSupport|TRUE

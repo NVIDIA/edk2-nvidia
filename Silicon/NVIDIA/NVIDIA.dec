@@ -92,3 +92,6 @@ Include
 
 #Name of UEFI variables GPT partition
   gNVIDIATokenSpaceGuid.PcdUEFIVariablesPartitionName|L"uefi_variables"|VOID*|0x00000009
+
+#Tegra UART OEM Table ID
+  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId|0x5241554152474554|UINT64|0x0000000A

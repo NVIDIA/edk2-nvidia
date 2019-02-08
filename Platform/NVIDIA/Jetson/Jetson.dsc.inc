@@ -162,8 +162,6 @@
     <LibraryClasses>
       NULL|EmbeddedPkg/Library/PlatformHasAcpiLib/PlatformHasAcpiLib.inf
   }
-  MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
-  Silicon/NVIDIA/T186/AcpiTables/AcpiTables.inf
 
   #
   # FDT Support

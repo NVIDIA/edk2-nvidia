@@ -22,6 +22,9 @@
 [BuildOptions.common]
   GCC:*_*_*_PLATFORM_FLAGS = -fstack-protector-strong
 
+[BuildOptions]
+  *_*_*_ASL_FLAGS          = -tc -li -so
+
 [LibraryClasses.common]
 !if $(TARGET) == RELEASE
   DebugLib|MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
@@ -141,6 +144,8 @@
   FmpDeviceLib|FmpDevicePkg/Library/FmpDeviceLibNull/FmpDeviceLibNull.inf
   FmpPayloadHeaderLib|FmpDevicePkg/Library/FmpPayloadHeaderLibV1/FmpPayloadHeaderLibV1.inf
   CapsuleUpdatePolicyLib|FmpDevicePkg/Library/CapsuleUpdatePolicyLibNull/CapsuleUpdatePolicyLibNull.inf
+
+  TableHelperLib|DynamicTablesPkg/Library/Common/TableHelperLib/TableHelperLib.inf
 
 [LibraryClasses.common.SEC]
   DebugAgentLib|ArmPkg/Library/DebugAgentSymbolsBaseLib/DebugAgentSymbolsBaseLib.inf
@@ -385,6 +390,13 @@
   #
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageIdName|L"NVIDIA System Firmware"
 
+  #
+  # ACPI PCDs
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId|"NVIDIA"
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId|0x4144564E
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorRevision|1
+
 [PcdsDynamicDefault]
   #
   # NV Storage PCDs.
@@ -466,4 +478,33 @@
       # FILE_GUID is used as ESRT GUID
       #
       FILE_GUID = $(SYSTEM_FMP_ESRT_GUID)
+  }
+
+  #
+  # Dynamic Table Factory Dxe
+  #
+  DynamicTablesPkg/Drivers/DynamicTableFactoryDxe/DynamicTableFactoryDxe.inf {
+    <LibraryClasses>
+      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiRawLibArm/AcpiRawLibArm.inf
+      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiFadtLibArm/AcpiFadtLibArm.inf
+      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiMadtLibArm/AcpiMadtLibArm.inf
+      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiGtdtLibArm/AcpiGtdtLibArm.inf
+      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSpcrLibArm/AcpiSpcrLibArm.inf
+      #NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiDbg2LibArm/AcpiDbg2LibArm.inf
+      #NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiMcfgLibArm/AcpiMcfgLibArm.inf
+      #NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiIortLibArm/AcpiIortLibArm.inf
+  }
+
+  #
+  # Dynamic Tables Manager Dxe
+  #
+  DynamicTablesPkg/Drivers/DynamicTableManagerDxe/DynamicTableManagerDxe.inf
+
+  # Configuration Manager
+  Silicon/NVIDIA/Drivers/CMDxe/CMDxe/CMDxe.inf {
+    <LibraryClasses>
+    # Platform ASL Tables
+    PlatformAslTablesLib|Silicon/NVIDIA/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib.inf
+  <BuildOptions>
+   *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
   }
