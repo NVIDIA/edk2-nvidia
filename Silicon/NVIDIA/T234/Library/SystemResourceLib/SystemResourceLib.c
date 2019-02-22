@@ -24,7 +24,6 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Pi/PiHob.h>
 #include "SystemResourceLibPrivate.h"
-#include <libfdt.h>
 
 STATIC
 EFI_STATUS
@@ -84,10 +83,6 @@ InstallSystemResources (
   UINTN                CpuBootloaderAddress;
   TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
   UINTN                Index;
-  EFI_PHYSICAL_ADDRESS *DeviceTreeHobData = NULL;
-  VOID                 *Dtb;
-  EFI_PEI_FV_HANDLE    VolumeHandle;
-  EFI_PEI_FILE_HANDLE  FileHandle;
 
   if (NULL == MemoryRegionsCount) {
     return EFI_INVALID_PARAMETER;
@@ -164,36 +159,6 @@ InstallSystemResources (
     *MemoryRegionsCount += FinalDramRegionsCount;
   }
   FreePool (CarveoutRegions);
-
-  //Register Device Tree, should be in the boot FV
-  Status = FfsFindNextVolume (0, &VolumeHandle);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Unable to locate boot FV\r\n"));
-    ASSERT (FALSE);
-    return Status;
-  }
-
-  Status = FfsFindFileByName (&gDtPlatformDefaultDtbFileGuid, VolumeHandle, &FileHandle);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Unable to locate DTB file\r\n"));
-    ASSERT (FALSE);
-    return Status;
-  }
-
-  Status = FfsFindSectionData (EFI_SECTION_RAW, FileHandle, &Dtb);
-  if (!EFI_ERROR (Status)) {
-    if (fdt_check_header ((VOID *)Dtb) == 0) {
-      DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
-      if (NULL != DeviceTreeHobData) {
-        *DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS)Dtb;
-      } else {
-        DEBUG ((EFI_D_ERROR, "Failed to build guid hob\r\n"));
-      }
-    }
-  } else {
-    DEBUG ((EFI_D_ERROR, "Unable to locate DTB section\r\n"));
-    ASSERT (FALSE);
-  }
 
   return Status;
 }

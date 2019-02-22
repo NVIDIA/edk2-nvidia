@@ -29,12 +29,8 @@
   HobLib
   DebugLib
   DramCarveoutLib
-  FdtLib
-  PrePiLib
 
 [Guids]
-  gFdtHobGuid
-  gDtPlatformDefaultDtbFileGuid
 
 [Sources.common]
   SystemResourceLib.c

@@ -55,9 +55,12 @@
   PrePiHobListPointerLib
   ArmMmuLib
   ArmGicLib
+  FdtLib
 
 [Guids]
   gEfiFirmwarePerformanceGuid
+  gFdtHobGuid
+  gDtPlatformDefaultDtbFileGuid
 
 [FeaturePcd]
   gEmbeddedTokenSpaceGuid.PcdPrePiProduceMemoryTypeInformationHob

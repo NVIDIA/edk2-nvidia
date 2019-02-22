@@ -27,6 +27,7 @@
 #include <Ppi/GuidedSectionExtraction.h>
 #include <Ppi/SecPerformance.h>
 #include <Pi/PiFirmwareVolume.h>
+#include <libfdt.h>
 
 #include "PrePi.h"
 
@@ -174,6 +175,47 @@ DisplayHobResource ( VOID )
   }
 }
 
+STATIC
+VOID
+LoadFvDeviceTree ( VOID )
+{
+  EFI_STATUS Status;
+  EFI_PHYSICAL_ADDRESS *DeviceTreeHobData = NULL;
+  VOID                 *Dtb;
+  EFI_PEI_FV_HANDLE    VolumeHandle;
+  EFI_PEI_FILE_HANDLE  FileHandle;
+
+  //Register Device Tree, should be in the boot FV
+  Status = FfsFindNextVolume (0, &VolumeHandle);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "Unable to locate boot FV\r\n"));
+    ASSERT (FALSE);
+    return;
+  }
+
+  Status = FfsFindFileByName (&gDtPlatformDefaultDtbFileGuid, VolumeHandle, &FileHandle);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_INFO, "Unable to locate DTB file\r\n"));
+    return;
+  }
+
+  Status = FfsFindSectionData (EFI_SECTION_RAW, FileHandle, &Dtb);
+  if (!EFI_ERROR (Status)) {
+    if (fdt_check_header ((VOID *)Dtb) == 0) {
+      DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
+      if (NULL != DeviceTreeHobData) {
+        *DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS)Dtb;
+      } else {
+        DEBUG ((EFI_D_ERROR, "Failed to build guid hob\r\n"));
+        ASSERT (FALSE);
+      }
+    }
+  } else {
+    DEBUG ((EFI_D_ERROR, "Unable to locate DTB section\r\n"));
+    ASSERT (FALSE);
+  }
+}
+
 VOID
 CEntryPoint (
   IN  UINTN                     MemoryBase,
@@ -293,6 +335,8 @@ CEntryPoint (
   // Register firmware volume
   Status = RegisterFirmwareVolume ((EFI_PHYSICAL_ADDRESS)FvHeader, FvSize);
   ASSERT_EFI_ERROR (Status);
+
+  LoadFvDeviceTree();
 
   // Now, the HOB List has been initialized, we can register performance information
   PERF_START (NULL, "PEI", NULL, StartTimeStamp);
