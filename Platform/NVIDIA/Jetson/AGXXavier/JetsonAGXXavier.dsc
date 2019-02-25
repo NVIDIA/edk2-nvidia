@@ -94,9 +94,3 @@
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|0x3439314152474554
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision|0x00000001
-
-[PcdsFeatureFlag]
-!if $(SIM)
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSdhciDisable26bitSupport|TRUE
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSdhciDisableCidSupport|TRUE
-!endif
