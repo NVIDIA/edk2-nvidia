@@ -118,7 +118,7 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   #INF MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
 
   # Configuration Manager
-  INF Silicon/NVIDIA/Drivers/CMDxe/CMDxe/CMDxe.inf
+  INF Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/CMDxe/CMDxe.inf
 
   #
   # Dynamic Table Factory Dxe

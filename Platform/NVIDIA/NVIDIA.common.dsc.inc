@@ -501,10 +501,10 @@
   DynamicTablesPkg/Drivers/DynamicTableManagerDxe/DynamicTableManagerDxe.inf
 
   # Configuration Manager
-  Silicon/NVIDIA/Drivers/CMDxe/CMDxe/CMDxe.inf {
+  Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/CMDxe/CMDxe.inf {
     <LibraryClasses>
     # Platform ASL Tables
-    PlatformAslTablesLib|Silicon/NVIDIA/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib.inf
+    PlatformAslTablesLib|Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib.inf
   <BuildOptions>
-   *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
+   *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
   }

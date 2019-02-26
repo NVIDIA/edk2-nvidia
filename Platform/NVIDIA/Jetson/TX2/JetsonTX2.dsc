@@ -26,6 +26,7 @@
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
+  CHIPSET                        = T186
 
   #
   # Define ESRT GUIDs for Firmware Management Protocol instances
