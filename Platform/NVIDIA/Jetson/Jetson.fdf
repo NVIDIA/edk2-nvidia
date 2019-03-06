@@ -180,6 +180,16 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
 
   #
+  # QSPI Support
+  #
+  INF Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerDxe.inf
+
+  #
+  # NOR Flash Support
+  #
+  INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
+
+  #
   # PCI Support
   #
   INF MdeModulePkg/Bus/Pci/PciBusDxe/PciBusDxe.inf

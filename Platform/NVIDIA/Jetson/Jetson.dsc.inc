@@ -184,7 +184,19 @@
       LockBoxLib|MdeModulePkg/Library/LockBoxNullLib/LockBoxNullLib.inf
   }
 
-  #EMMC
+  #
+  # QSPI Support
+  #
+  Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerDxe.inf
+
+  #
+  # NOR Flash Support
+  #
+  Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
+
+  #
+  # EMMC/SD
+  #
   Silicon/NVIDIA/Drivers/SdMmcControllerDxe/SdMmcControllerDxe.inf
   MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
   MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
