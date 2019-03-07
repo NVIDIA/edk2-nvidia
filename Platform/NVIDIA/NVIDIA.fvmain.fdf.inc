@@ -104,7 +104,7 @@
   # PCI Support
   #
   INF MdeModulePkg/Bus/Pci/PciBusDxe/PciBusDxe.inf
-  #INF MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf
+  INF MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf
 
   #
   # SATA Controller

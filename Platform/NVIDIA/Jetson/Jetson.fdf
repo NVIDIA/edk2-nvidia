@@ -122,6 +122,12 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
 
   #
+  # PCI Support
+  #
+  INF ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
+  INF Silicon/NVIDIA/Drivers/PcieControllerDxe/PcieControllerDxe.inf
+
+  #
   # FVB Support
   #
   INF Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf

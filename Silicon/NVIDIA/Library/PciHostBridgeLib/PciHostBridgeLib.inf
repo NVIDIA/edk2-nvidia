@@ -47,6 +47,10 @@
 
 [Protocols]
   gNVIDIAPciHostBridgeProtocolGuid          ## CONSUMES
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
 
 [Depex]
   gNVIDIAPciHostBridgeProtocolGuid
+  AND
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+

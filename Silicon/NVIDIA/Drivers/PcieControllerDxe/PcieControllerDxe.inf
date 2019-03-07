@@ -1,0 +1,65 @@
+#/** @file
+#
+#  PCIe Controller Driver
+#
+#  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+#  This program and the accompanying materials
+#  are licensed and made available under the terms and conditions of the BSD License
+#  which accompanies this distribution.  The full text of the license may be found at
+#  http://opensource.org/licenses/bsd-license.php
+#
+#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = PcieControllerDxe
+  FILE_GUID                      = 89815ce0-782d-4c64-96ff-4ce4b68bc0e4
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  PcieControllerDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  TimerLib
+  FdtLib
+  DeviceDiscoveryDriverLib
+  MemoryAllocationLib
+  DxeServicesTableLib
+  DevicePathLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdSkipBPMPPCIeControllerDisable
+
+[Protocols]
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIAPciHostBridgeProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
+
+[Guids]
+  gNVIDIANonDiscoverableT194PcieDeviceGuid
+
+[Depex]
+  gNVIDIAAllRegulatorsPresentProtocolGuid
+
