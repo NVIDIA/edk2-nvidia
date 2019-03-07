@@ -321,7 +321,7 @@ CEntryPoint (
   BuildStackHob (StackBase, StackSize);
 
   //TODO: Call CpuPei as a library
-  BuildCpuHob (ArmGetPhysicalAddressBits (), PcdGet8 (PcdPrePiCpuIoSize));
+  BuildCpuHob (ArmGetPhysicalAddressBits (), ArmGetPhysicalAddressBits ());
 
   // Store timer value logged at the beginning of firmware image execution
   Performance.ResetEnd = GetTimeInNanoSecond (StartTimeStamp);
