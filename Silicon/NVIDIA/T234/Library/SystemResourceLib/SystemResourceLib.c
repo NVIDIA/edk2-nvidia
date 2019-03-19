@@ -111,7 +111,7 @@ InstallSystemResources (
 
   //Build DRAM regions
   DramRegion.MemoryBaseAddress = PcdGet64 (PcdSystemMemoryBase);
-  DramRegion.MemoryLength = 0x20000000;
+  DramRegion.MemoryLength = 0xb5d00000;
   ASSERT (DramRegion.MemoryLength != 0);
 
   //Build Carveout regions
