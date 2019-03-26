@@ -61,6 +61,7 @@ Include
 [LibraryClasses]
   DramCarveoutLib|Include/Library/DramCarveoutLib.h
   SystemResourceLib|Include/Library/SystemResourceLib.h
+  UsbFirmwareLib|Include/Library/UsbFirmwareLib.h
 
 [Protocols]
   gNVIDIADeviceTreeCompatibilityProtocolGuid  = { 0x1e710608, 0x28a3, 0x4c0b, { 0x9b, 0xec, 0x1c, 0x75, 0x49, 0xa7, 0x0d, 0x90 } }

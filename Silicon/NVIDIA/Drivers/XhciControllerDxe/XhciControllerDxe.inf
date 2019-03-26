@@ -1,0 +1,59 @@
+#/** @file
+#
+#  XHCI Controller Driver
+#
+#  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+#  This program and the accompanying materials
+#  are licensed and made available under the terms and conditions of the BSD License
+#  which accompanies this distribution.  The full text of the license may be found at
+#  http://opensource.org/licenses/bsd-license.php
+#
+#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = XhciControllerDxe
+  FILE_GUID                      = 4af0d306-e558-48bb-ae8a-c8bec233757f
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  XhciControllerDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  FdtLib
+  DeviceDiscoveryDriverLib
+  UsbFalconLib
+  UsbFirmwareLib
+
+[Protocols]
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIAClockNodeProtocolGuid
+  gArmScmiClockProtocolGuid
+  gNVIDIARegulatorProtocolGuid
+  gNVIDIAUsbPadCtlProtocolGuid
+
+[Guids]
+  gEdkiiNonDiscoverableXhciDeviceGuid
+
+[Depex]
+  TRUE

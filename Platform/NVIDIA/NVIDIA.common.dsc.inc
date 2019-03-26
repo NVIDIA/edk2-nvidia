@@ -139,6 +139,8 @@
 
   QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
 
+  UsbFalconLib|Silicon/NVIDIA/Library/UsbFalconLib/UsbFalconLib.inf
+
   SafeIntLib|MdePkg/Library/BaseSafeIntLib/BaseSafeIntLib.inf
   BmpSupportLib|MdeModulePkg/Library/BaseBmpSupportLib/BaseBmpSupportLib.inf
 

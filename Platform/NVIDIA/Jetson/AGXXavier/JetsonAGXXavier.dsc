@@ -48,6 +48,8 @@
 !endif
   SystemResourceLib|Silicon/NVIDIA/T194/Library/SystemResourceLib/SystemResourceLib.inf
 
+  UsbFirmwareLib|Silicon/NVIDIA/T194/Library/UsbFirmwareLib/UsbFirmwareLib.inf
+
 [PcdsFixedAtBuild.common]
 
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x80000000

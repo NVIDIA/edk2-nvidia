@@ -39,6 +39,7 @@
 [LibraryClasses.common]
   SerialPortLib|MdeModulePkg/Library/BaseSerialPortLib16550/BaseSerialPortLib16550.inf
   SystemResourceLib|Silicon/NVIDIA/T186/Library/SystemResourceLib/SystemResourceLib.inf
+  UsbFirmwareLib|Silicon/NVIDIA/T186/Library/UsbFirmwareLib/UsbFirmwareLib.inf
 
   #Use non-optimized BaseMemoryLib due to peripherals not being cache coherent
   BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf

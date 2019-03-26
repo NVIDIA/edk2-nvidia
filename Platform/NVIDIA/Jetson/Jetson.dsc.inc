@@ -254,6 +254,7 @@
   MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
   Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf
   Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
+  Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
 
   #
   # SMBIOS/DMI
