@@ -253,6 +253,7 @@
   MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
   MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
   Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf
+  Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
 
   #
   # SMBIOS/DMI
