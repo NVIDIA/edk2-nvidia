@@ -17,9 +17,10 @@
 
   RealTimeClockLib|Silicon/NVIDIA/Library/MaximRealTimeClockLib/MaximRealTimeClockLib.inf
 
+  RngLib|Silicon/NVIDIA/Library/SeRngLib/SeRngLib.inf
+
 [LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
-
 ################################################################################
 #
 # Pcd Section - list of all EDK II PCD Entries defined by this Platform
@@ -96,13 +97,14 @@
   MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
   MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
 
+  #SE RNG
+  Silicon/NVIDIA/Drivers/SeRngDxe/SeRngDxe.inf
   #
   #
   # PCI Support
   #
   ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
   Silicon/NVIDIA/Drivers/PcieControllerDxe/PcieControllerDxe.inf
-
   # FVB Support
   #
   Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
@@ -136,3 +138,7 @@
   #
   Silicon/NVIDIA/Drivers/CvmEepromDxe/CvmEeprom.inf
 
+  #Security drivers
+  SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
+  SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
+  SecurityPkg/Pkcs7Verify/Pkcs7VerifyDxe/Pkcs7VerifyDxe.inf

@@ -1,0 +1,47 @@
+## @file
+#  Instance of RNG (Random Number Generator) Library.
+#
+#  BaseRng Library that uses SE AES operations to provide
+#  high-quality random numbers.
+#
+#  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
+#
+#  This program and the accompanying materials
+#  are licensed and made available under the terms and conditions of the BSD License
+#  which accompanies this distribution. The full text of the license may be found at
+#  http://opensource.org/licenses/bsd-license.php.
+#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BaseRngLib
+  MODULE_UNI_FILE                = SeRngLib.uni
+  FILE_GUID                      = 620a6b42-bbaa-44c2-8349-66e05e62efa2
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = RngLib
+  CONSTRUCTOR                    = SeRngLibConstructor
+
+[Sources]
+  SeRng.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gNVIDIASeRngProtocolGuid
+
+[Depex]
+  gNVIDIASeRngProtocolGuid

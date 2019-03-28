@@ -91,6 +91,7 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   #
   INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
 
+
   #
   # Usb Support
   #
@@ -106,6 +107,8 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
   INF MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
 
+  #SE RNG
+  INF Silicon/NVIDIA/Drivers/SeRngDxe/SeRngDxe.inf
   #
   # QSPI Support
   #
@@ -132,6 +135,9 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   #
   INF Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
 
+  INF SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
+  INF SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
+  INF SecurityPkg/Pkcs7Verify/Pkcs7VerifyDxe/Pkcs7VerifyDxe.inf
 
   #
   # Tegra UART clock driver
