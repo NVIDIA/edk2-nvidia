@@ -399,6 +399,13 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId|0x4144564E
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorRevision|1
 
+!if $(VARIABLES) == EMULATED
+  #
+  # Enable emulated variable NV mode in variable driver.
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|TRUE
+!endif
+
 [PcdsDynamicDefault]
   #
   # NV Storage PCDs.
