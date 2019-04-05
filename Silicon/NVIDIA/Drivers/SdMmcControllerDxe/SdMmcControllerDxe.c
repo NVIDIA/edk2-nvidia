@@ -2,7 +2,7 @@
 
   SD MMC Controller Driver
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -156,6 +156,7 @@ DeviceDiscoveryNotify (
   UINTN                     RegionSize;
   CONST CHAR8               *ClockName;
   REGULATOR_INFO            RegulatorInfo;
+  UINT32                    ClockId;
 
   switch (Phase) {
   case DeviceDiscoveryDriverStart:
@@ -174,14 +175,15 @@ DeviceDiscoveryNotify (
     }
 
     ClockName = SDHCI_CLOCK_NAME;
-    Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, SD_MMC_MAX_CLOCK);
+    Status = DeviceDiscoveryGetClockId (ControllerHandle, ClockName, &ClockId);
     if (EFI_ERROR (Status)) {
       ClockName = SDHCI_CLOCK_OLD_NAME;
-      Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, SD_MMC_MAX_CLOCK);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
-        return Status;
-      }
+    }
+
+    Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, SD_MMC_MAX_CLOCK);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
+      return Status;
     }
 
     //Update base clock in capabilities register
