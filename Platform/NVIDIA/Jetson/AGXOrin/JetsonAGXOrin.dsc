@@ -32,6 +32,7 @@
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
   CHIPSET                        = T234
   DEVICE_TREE_BUILD              = TRUE
+  DEFINE VARIABLES               = "STORAGE"
 
   #
   # Define ESRT GUIDs for Firmware Management Protocol instances
