@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2017-2018, Arm Limited. All rights reserved.
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -41,6 +41,7 @@
 
 #define CLOCK_MAX_PARENTS     16
 #define CLOCK_MAX_NAME_LENGTH 40
+#define MAX_DIVIDER_2         256
 
 #pragma pack (1)
 

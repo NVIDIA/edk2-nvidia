@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2017-2018, Arm Limited. All rights reserved.
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -29,6 +29,13 @@
 #include "BpmpScmiClockProtocolPrivate.h"
 
 STATIC NVIDIA_BPMP_IPC_PROTOCOL *mBpmpIpcProtocol = NULL;
+
+// Instance of the clock parents protocol.
+STATIC NVIDIA_CLOCK_PARENTS_PROTOCOL mClockParentsProtocol;
+// Instance of the SCMI clock management protocol.
+STATIC SCMI_CLOCK_PROTOCOL ScmiClockProtocol;
+// Instance of the SCMI clock management protocol.
+STATIC SCMI_CLOCK2_PROTOCOL ScmiClock2Protocol;
 
 /** Return version of the clock management protocol supported by SCP firmware.
 
@@ -278,6 +285,78 @@ ClockRateGet (
   return Status;
 }
 
+/** Sets the parent clock to closest available parent.
+
+  @param[in]  This        A Pointer to SCMI_CLOCK_PROTOCOL Instance.
+  @param[in]  ClockId     Identifier for the clock device.
+  @param[in]  Rate        Clock rate.
+
+  @retval EFI_SUCCESS          Clock rate set success.
+  @retval EFI_DEVICE_ERROR     SCP returns an SCMI error.
+  @retval !(EFI_SUCCESS)       Other errors.
+**/
+STATIC
+EFI_STATUS
+ClockSetParentByDesiredRate (
+    IN SCMI_CLOCK_PROTOCOL  *This,
+    IN UINT32               ClockId,
+    IN UINT64               Rate
+    )
+{
+  UINT64 ClosestRate = 0;
+  UINT32 ParentIndex;
+  UINT32 ClosestParent;
+  EFI_STATUS Status;
+  UINT32 NumberOfParents;
+  UINT32 *ParentIds;
+
+  Status = mClockParentsProtocol.GetParents (&mClockParentsProtocol, ClockId, &NumberOfParents, &ParentIds);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_INFO, "%a Failed to get parent info for clock %d\r\n", __FUNCTION__, ClockId));
+    return EFI_SUCCESS;
+  }
+
+  ClosestParent = MAX_UINT32;
+  for (ParentIndex = 0; ParentIndex < NumberOfParents; ParentIndex++) {
+    UINT64 ParentRate;
+    UINT64 ParentClosestRate;
+    UINT64 Divider;
+    Status = This->RateGet (This, ParentIds[ParentIndex], &ParentRate);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to get parent rate for parent %d\r\n", __FUNCTION__, ParentIds[ParentIndex]));
+      return Status;
+    }
+    //Find closest rate with half step dividers
+    Divider = MIN (MAX_DIVIDER_2, ((ParentRate * 2) + Rate - 1) / Rate);
+    ParentClosestRate = (ParentRate * 2) / Divider;
+    if (ParentClosestRate > ClosestRate) {
+      ClosestRate = ParentClosestRate;
+      ClosestParent = ParentIds[ParentIndex];
+    }
+  }
+
+  if (ClosestParent == MAX_UINT32) {
+    DEBUG ((EFI_D_VERBOSE, "%a: No available parent\r\n", __FUNCTION__));
+    return EFI_SUCCESS;
+  }
+
+  //Enable and set the parent
+  Status = ScmiClock2Protocol.Enable (&ScmiClock2Protocol, ClosestParent, TRUE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to enable parent %d\r\n", __FUNCTION__, ClosestParent));
+    return Status;
+  }
+
+  Status = mClockParentsProtocol.SetParent (&mClockParentsProtocol, ClockId, ClosestParent);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to set parent %d for clock %d\r\n", __FUNCTION__, ClosestParent, ClockId));
+    return Status;
+  }
+
+  return Status;
+}
+
+
 /** Set clock rate.
 
   @param[in]  This        A Pointer to SCMI_CLOCK_PROTOCOL Instance.
@@ -307,6 +386,12 @@ ClockRateSet (
 
   if (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
     return EFI_INVALID_PARAMETER;
+  }
+
+  Status = ClockSetParentByDesiredRate (This, ClockId, Rate);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to set parent for clock %d, rate %d\r\n", __FUNCTION__, ClockId, Rate));
+    return Status;
   }
 
   Request.Subcommand = ClockSubcommandSetRate;
@@ -372,6 +457,17 @@ ClockEnable (
   }
 
   if (Enable) {
+    UINT32 ParentId;
+    Status = mClockParentsProtocol.GetParent (&mClockParentsProtocol, ClockId, &ParentId);
+    if (!EFI_ERROR (Status)) {
+      Status = ScmiClock2Protocol.Enable (&ScmiClock2Protocol, ParentId, TRUE);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a: Failed to enable parent clock %d for %d: %r\r\n", __FUNCTION__, ParentId, ClockId, Status));
+      }
+    }
+  }
+
+  if (Enable) {
     Request.Subcommand = ClockSubcommandEnable;
   } else {
     Request.Subcommand = ClockSubcommandDisable;
@@ -396,28 +492,6 @@ ClockEnable (
   }
   return Status;
 }
-
-// Instance of the SCMI clock management protocol.
-STATIC CONST SCMI_CLOCK_PROTOCOL ScmiClockProtocol = {
-  ClockGetVersion,
-  ClockGetTotalClocks,
-  ClockGetClockAttributes,
-  ClockDescribeRates,
-  ClockRateGet,
-  ClockRateSet,
- };
-
-// Instance of the SCMI clock management protocol.
-STATIC CONST SCMI_CLOCK2_PROTOCOL ScmiClock2Protocol = {
-  (SCMI_CLOCK2_GET_VERSION)ClockGetVersion,
-  (SCMI_CLOCK2_GET_TOTAL_CLOCKS)ClockGetTotalClocks,
-  (SCMI_CLOCK2_GET_CLOCK_ATTRIBUTES)ClockGetClockAttributes,
-  (SCMI_CLOCK2_DESCRIBE_RATES)ClockDescribeRates,
-  (SCMI_CLOCK2_RATE_GET)ClockRateGet,
-  (SCMI_CLOCK2_RATE_SET)ClockRateSet,
-  SCMI_CLOCK2_PROTOCOL_VERSION,
-  ClockEnable
- };
 
 /**
   This function checks is the given parent is a parent of the specified clock.
@@ -561,6 +635,12 @@ ClockParentsGetParent (
     //Clock is not visible to the MRQ
     Status = EFI_NOT_FOUND;
   }
+
+  Status = This->IsParent (This, ClockId, *ParentId);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_FOUND;
+  }
+
   return Status;
 }
 
@@ -625,14 +705,6 @@ ClockParentsGetParents (
   return Status;
 }
 
-// Instance of the clock parents protocol.
-STATIC CONST NVIDIA_CLOCK_PARENTS_PROTOCOL mClockParentsProtocol = {
-  ClockParentsIsParent,
-  ClockParentsSetParent,
-  ClockParentsGetParent,
-  ClockParentsGetParents
- };
-
 /** Initialize clock management protocol and install protocol on a given handle.
 
   @param[in] Handle              Handle to install clock management protocol.
@@ -652,6 +724,27 @@ ScmiClockProtocolInit (
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
+  ScmiClockProtocol.GetVersion = ClockGetVersion;
+  ScmiClockProtocol.GetTotalClocks = ClockGetTotalClocks;
+  ScmiClockProtocol.GetClockAttributes = ClockGetClockAttributes;
+  ScmiClockProtocol.DescribeRates = ClockDescribeRates;
+  ScmiClockProtocol.RateGet = ClockRateGet;
+  ScmiClockProtocol.RateSet = ClockRateSet;
+
+  ScmiClock2Protocol.GetVersion = (SCMI_CLOCK2_GET_VERSION)ClockGetVersion;
+  ScmiClock2Protocol.GetTotalClocks = (SCMI_CLOCK2_GET_TOTAL_CLOCKS)ClockGetTotalClocks;
+  ScmiClock2Protocol.GetClockAttributes = (SCMI_CLOCK2_GET_CLOCK_ATTRIBUTES)ClockGetClockAttributes;
+  ScmiClock2Protocol.DescribeRates = (SCMI_CLOCK2_DESCRIBE_RATES)ClockDescribeRates;
+  ScmiClock2Protocol.RateGet = (SCMI_CLOCK2_RATE_GET)ClockRateGet;
+  ScmiClock2Protocol.RateSet = (SCMI_CLOCK2_RATE_SET)ClockRateSet;
+  ScmiClock2Protocol.Version = SCMI_CLOCK2_PROTOCOL_VERSION;
+  ScmiClock2Protocol.Enable = ClockEnable;
+
+  mClockParentsProtocol.IsParent = ClockParentsIsParent;
+  mClockParentsProtocol.SetParent = ClockParentsSetParent;
+  mClockParentsProtocol.GetParent = ClockParentsGetParent;
+  mClockParentsProtocol.GetParents = ClockParentsGetParents;
 
   return gBS->InstallMultipleProtocolInterfaces (
                 Handle,
