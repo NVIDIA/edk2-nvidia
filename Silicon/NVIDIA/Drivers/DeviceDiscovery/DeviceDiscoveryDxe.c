@@ -729,6 +729,8 @@ EnableAllClockNodes (
   EFI_STATUS                    Status;
   UINTN                         Index;
   UINTN                         ParentsIndex;
+  UINT32                        ClockId;
+  UINT32                        ParentId;
 
   Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&ClockProtocol);
   if (EFI_ERROR (Status)) {
@@ -741,17 +743,19 @@ EnableAllClockNodes (
   }
 
   for (Index = 0; Index < This->Clocks; Index++) {
-    UINT32 ClockId = This->ClockEntries[This->Clocks - Index - 1].ClockId;
-    for (ParentsIndex = 0; ParentsIndex < This->Clocks; ParentsIndex++) {
-      if (This->ClockEntries[ParentsIndex].Parent) {
-        UINT32 ParentId = This->ClockEntries[ParentsIndex].ClockId;
-        if (EFI_SUCCESS == ClockParents->IsParent (ClockParents, ClockId, ParentId)) {
-          Status = ClockParents->SetParent (ClockParents, ClockId, ParentId);
-          if (EFI_ERROR (Status)) {
-            DEBUG ((EFI_D_ERROR, "%a: Failed to set parent 0x%x on clock 0x%x\r\n",__FUNCTION__,ParentId,ClockId));
-            return Status;
-          } else {
-            break;
+    ClockId = This->ClockEntries[This->Clocks - Index - 1].ClockId;
+    if (SetParent) {
+      for (ParentsIndex = 0; ParentsIndex < This->Clocks; ParentsIndex++) {
+        if (This->ClockEntries[ParentsIndex].Parent) {
+          ParentId = This->ClockEntries[ParentsIndex].ClockId;
+          if (EFI_SUCCESS == ClockParents->IsParent (ClockParents, ClockId, ParentId)) {
+            Status = ClockParents->SetParent (ClockParents, ClockId, ParentId);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((EFI_D_ERROR, "%a: Failed to set parent 0x%x on clock 0x%x\r\n",__FUNCTION__,ParentId,ClockId));
+              return Status;
+            } else {
+              break;
+            }
           }
         }
       }
