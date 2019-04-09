@@ -1,7 +1,7 @@
 /** @file
   The main process for ClockUtil application.
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -24,6 +24,7 @@
 #include <Library/HiiLib.h>
 
 #include <Protocol/ArmScmiClock2Protocol.h>
+#include <Protocol/ClockParents.h>
 
 //
 // Used for ShellCommandLineParseEx only
@@ -39,9 +40,10 @@ SHELL_PARAM_ITEM    mClockUtilParamList[] = {
   { NULL,                     TypeMax   },
 };
 
-SCMI_CLOCK2_PROTOCOL         *mClockProtocol;
-EFI_HII_HANDLE               mHiiHandle;
-CHAR16                       mAppName[]          = L"ClockUtil";
+SCMI_CLOCK2_PROTOCOL          *mClockProtocol;
+NVIDIA_CLOCK_PARENTS_PROTOCOL *mClockParents;
+EFI_HII_HANDLE                mHiiHandle;
+CHAR16                        mAppName[]          = L"ClockUtil";
 
 /**
   This is function enables, sets frequency, and/or disables specified clock
@@ -106,6 +108,7 @@ DisplayClockInfo (
   EFI_STATUS Status;
   CHAR8      ClockName[SCMI_MAX_STR_LEN];
   BOOLEAN    Enabled;
+  UINT32     ParentId;
 
   Status = mClockProtocol->GetClockAttributes (mClockProtocol, ClockId, &Enabled, ClockName);
   if (EFI_ERROR (Status)) {
@@ -115,11 +118,17 @@ DisplayClockInfo (
     return;
   }
 
+  Status = mClockParents->GetParent (mClockParents, ClockId, &ParentId);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "Failed to get parent for clock %d\r\n", ClockId));
+    ParentId = MAX_UINT32;
+  }
+
   if (Enabled) {
     UINT64 ClockRate;
     Status = mClockProtocol->RateGet (mClockProtocol, ClockId, &ClockRate);
     if (EFI_ERROR (Status)) {
-      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_UNKNOWN), mHiiHandle, ClockId, ClockName);
+      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_UNKNOWN), mHiiHandle, ClockId, ClockName, ParentId);
     } else {
       UINT64 MhzPart = ClockRate / 1000000;
       UINT64 KhzPart = (ClockRate % 1000000) / 1000;
@@ -127,25 +136,52 @@ DisplayClockInfo (
       if (MhzPart != 0) {
         if ((KhzPart != 0) || (HzPart != 0)) {
           if (HzPart != 0) {
-            ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_HZ_MHZ), mHiiHandle, ClockId, ClockName, MhzPart, KhzPart, HzPart);
+            ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_HZ_MHZ), mHiiHandle, ClockId, ClockName, MhzPart, KhzPart, HzPart, ParentId);
           } else {
-            ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_KHZ_MHZ), mHiiHandle, ClockId, ClockName, MhzPart, KhzPart);
+            ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_KHZ_MHZ), mHiiHandle, ClockId, ClockName, MhzPart, KhzPart, ParentId);
           }
         } else {
-          ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_MHZ), mHiiHandle, ClockId, ClockName, MhzPart);
+          ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_MHZ), mHiiHandle, ClockId, ClockName, MhzPart, ParentId);
         }
       } else if (KhzPart != 0) {
         if (HzPart != 0) {
-          ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_HZ_KHZ), mHiiHandle, ClockId, ClockName, KhzPart, HzPart);
+          ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_HZ_KHZ), mHiiHandle, ClockId, ClockName, KhzPart, HzPart, ParentId);
         } else {
-          ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_KHZ), mHiiHandle, ClockId, ClockName, KhzPart);
+          ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_KHZ), mHiiHandle, ClockId, ClockName, KhzPart, ParentId);
         }
       } else {
-        ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_HZ), mHiiHandle, ClockId, ClockName, HzPart);
+        ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_ENABLED_HZ), mHiiHandle, ClockId, ClockName, HzPart, ParentId);
       }
     }
   } else {
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_DISABLED), mHiiHandle, ClockId, ClockName);
+    UINT64 ClockRate;
+    Status = mClockProtocol->RateGet (mClockProtocol, ClockId, &ClockRate);
+    if (EFI_ERROR (Status)) {
+      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_DISABLED_UNKNOWN), mHiiHandle, ClockId, ClockName, ParentId);
+    } else {
+      UINT64 MhzPart = ClockRate / 1000000;
+      UINT64 KhzPart = (ClockRate % 1000000) / 1000;
+      UINT64 HzPart = ClockRate % 1000;
+      if (MhzPart != 0) {
+        if ((KhzPart != 0) || (HzPart != 0)) {
+          if (HzPart != 0) {
+            ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_DISABLED_HZ_MHZ), mHiiHandle, ClockId, ClockName, MhzPart, KhzPart, HzPart, ParentId);
+          } else {
+            ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_DISABLED_KHZ_MHZ), mHiiHandle, ClockId, ClockName, MhzPart, KhzPart, ParentId);
+          }
+        } else {
+          ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_DISABLED_MHZ), mHiiHandle, ClockId, ClockName, MhzPart, ParentId);
+        }
+      } else if (KhzPart != 0) {
+        if (HzPart != 0) {
+          ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_DISABLED_HZ_KHZ), mHiiHandle, ClockId, ClockName, KhzPart, HzPart, ParentId);
+        } else {
+          ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_DISABLED_KHZ), mHiiHandle, ClockId, ClockName, KhzPart, ParentId);
+        }
+      } else {
+        ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_DISPLAY_DISABLED_HZ), mHiiHandle, ClockId, ClockName, HzPart, ParentId);
+      }
+    }
   }
 }
 
@@ -272,6 +308,12 @@ InitializeClockUtil (
 
   Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **) &mClockProtocol);
   if (EFI_ERROR (Status) || mClockProtocol == NULL) {
+    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_PROTOCOL_NONEXISTENT), mHiiHandle, mAppName);
+    goto Done;
+  }
+
+  Status = gBS->LocateProtocol (&gNVIDIAClockParentsProtocolGuid, NULL, (VOID **) &mClockParents);
+  if (EFI_ERROR (Status) || mClockParents == NULL) {
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_CLOCK_UTIL_PROTOCOL_NONEXISTENT), mHiiHandle, mAppName);
     goto Done;
   }

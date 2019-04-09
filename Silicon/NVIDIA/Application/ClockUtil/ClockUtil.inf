@@ -3,7 +3,7 @@
 #
 #  This application is used to set and retrieve clock information for the platform.
 #
-#  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -39,6 +39,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   UefiBootServicesTableLib
@@ -54,6 +55,7 @@
 [Protocols]
   gArmScmiClock2ProtocolGuid                    ##CONSUMES
   gEfiHiiPackageListProtocolGuid                ##CONSUMES
+  gNVIDIAClockParentsProtocolGuid
 
 [UserExtensions.TianoCore."ExtraFiles"]
   ClockUtilExtra.uni
