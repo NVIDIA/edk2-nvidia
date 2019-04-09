@@ -32,6 +32,7 @@
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
   CHIPSET                        = T234
   DEVICE_TREE_BUILD              = TRUE
+  ANDROID_BOOT_BUILD             = TRUE
   DEFINE VARIABLES               = "STORAGE"
 
   #
@@ -50,6 +51,12 @@
   SystemResourceLib|Silicon/NVIDIA/T234/Library/SystemResourceLib/SystemResourceLib.inf
 
   UsbFirmwareLib|Silicon/NVIDIA/T234/Library/UsbFirmwareLib/UsbFirmwareLib.inf
+
+[Components.common]
+  #
+  # Android Boot Support
+  #
+  Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
 
 [PcdsFixedAtBuild.common]
 
