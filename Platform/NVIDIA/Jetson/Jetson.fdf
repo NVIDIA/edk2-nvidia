@@ -193,12 +193,10 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   #
   INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
 
-!if $(ANDROID_BOOT_BUILD)
   #
   # Android Boot Support
   #
   INF Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
-!endif
 
   #
   # PCI Support

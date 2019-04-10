@@ -16,7 +16,7 @@
 **/
 
 #include "AndroidBootDxe.h"
-
+#include <Library/PcdLib.h>
 
 INTN
 AndroidBootGetChosenNode (
@@ -157,7 +157,8 @@ Exit:
   block of the Android Boot image and save the important size information when a container
   is provided.
 
-  @param[in]  Interface           BlockIo protocol interface which is already located.
+  @param[in]  BlockIo             BlockIo protocol interface which is already located.
+  @param[in]  DiskIo              DiskIo protocol interface which is already located.
   @param[out] IntDataStructure    A pointer to the internal data structure to retain
                                   the important size data of kernel and initrd images
                                   contained in the Android Boot image header.
@@ -168,33 +169,36 @@ Exit:
 EFI_STATUS
 AndroidBootGetVerify (
   IN  EFI_BLOCK_IO_PROTOCOL       *BlockIo,
+  IN  EFI_DISK_IO_PROTOCOL        *DiskIo,
   OUT ANDROID_BOOT_DATA           *ImgData OPTIONAL
   )
 {
   EFI_STATUS                      Status;
   ANDROID_BOOTIMG_HEADER          *Header;
+  UINT32                          Offset;
+  UINT32                          SignatureHeaderSize;
   UINTN                           PartitionSize;
   UINTN                           ImageSize;
-  UINTN                           BlockSize;
-
 
   // ImgData can be NULL when it needs only for the verification
-  if (BlockIo == NULL) {
+  if ((BlockIo == NULL) || (DiskIo == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  BlockSize = BlockIo->Media->BlockSize;
-
   // Get the image header of Android Boot image
-  Header = AllocatePages (EFI_SIZE_TO_PAGES (sizeof(ANDROID_BOOTIMG_HEADER)));
+  Header = AllocatePool (sizeof(ANDROID_BOOTIMG_HEADER));
   if (Header == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
-  Status = BlockIo->ReadBlocks (
-                  BlockIo,
+
+  SignatureHeaderSize = PcdGet32 (PcdBootImgSigningHeaderSize);
+
+  Offset = 0;
+  Status = DiskIo->ReadDisk (
+                  DiskIo,
                   BlockIo->Media->MediaId,
-                  0,
-                  BlockSize,
+                  Offset,
+                  sizeof (*Header),
                   (VOID *) Header
                   );
   if (EFI_ERROR (Status)) {
@@ -202,10 +206,32 @@ AndroidBootGetVerify (
   }
 
   // Make sure the Android Boot image
-  if (0 != AsciiStrnCmp ((CONST CHAR8 *)Header->BootMagic,
-                  ANDROID_BOOT_MAGIC, ANDROID_BOOT_MAGIC_LENGTH)) {
+  if (AsciiStrnCmp ((CONST CHAR8 *)Header->BootMagic,
+                    ANDROID_BOOT_MAGIC, ANDROID_BOOT_MAGIC_LENGTH) != 0) {
     Status = EFI_NOT_FOUND;
-    goto Exit;
+    if (SignatureHeaderSize != 0) {
+      Offset = SignatureHeaderSize;
+      Status = DiskIo->ReadDisk (
+                      DiskIo,
+                      BlockIo->Media->MediaId,
+                      Offset,
+                      sizeof (*Header),
+                      (VOID *) Header
+                      );
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+
+      // Make sure the Android Boot image
+      if (AsciiStrnCmp ((CONST CHAR8 *)Header->BootMagic,
+                        ANDROID_BOOT_MAGIC, ANDROID_BOOT_MAGIC_LENGTH) != 0) {
+        Status = EFI_NOT_FOUND;
+      }
+    }
+
+    if (EFI_ERROR (Status)) {
+      goto Exit;
+    }
   }
 
   // The page size is not specified, but it should be power of 2 at least
@@ -214,16 +240,9 @@ AndroidBootGetVerify (
     goto Exit;
   }
 
-  // The page size should be equal to/bigger than BlockSize and and multiple of BlockSize
-  // This check is not needed when DiskIo is used in place of BlockIo
-  if ((Header->PageSize < BlockSize) || ((Header->PageSize % BlockSize) != 0)) {
-    Status = EFI_NOT_FOUND;
-    goto Exit;
-  }
-
   // Make sure that the image fits in the partition
-  PartitionSize = (UINTN)(BlockIo->Media->LastBlock - BlockIo->Media->LowestAlignedLba + 1) * BlockSize;
-  ImageSize = Header->PageSize
+  PartitionSize = (UINTN)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
+  ImageSize = Offset + Header->PageSize
                   + ALIGN_VALUE (Header->KernelSize, Header->PageSize)
                   + ALIGN_VALUE (Header->RamdiskSize, Header->PageSize);
   if (ImageSize > PartitionSize) {
@@ -237,7 +256,7 @@ AndroidBootGetVerify (
     // This size will be a reference when boot manger allocates a pool for LoadFile service
     // Kernel image to be loaded to a buffer allocated by boot manager
     // Ramdisk image to be loaded to a buffer allocated by this LoadFile service
-    ImgData->ImgSize     = ALIGN_VALUE (Header->KernelSize, BlockSize);
+    ImgData->Offset      = Offset;
     ImgData->KernelSize  = Header->KernelSize;
     ImgData->RamdiskSize = Header->RamdiskSize;
     ImgData->PageSize    = Header->PageSize;
@@ -246,7 +265,7 @@ AndroidBootGetVerify (
   Status = EFI_SUCCESS;
 
 Exit:
-  FreePages (Header, EFI_SIZE_TO_PAGES (sizeof(ANDROID_BOOTIMG_HEADER)));
+  FreePool (Header);
 
   return Status;
 }
@@ -257,7 +276,8 @@ Exit:
   Allocate pages reserved in BootService for the initrd image to persist until
   the completion of the kernel booting.
 
-  @param[in]  Interface           BlockIo protocol interface which is already located.
+  @param[in]  BlockIo             BlockIo protocol interface which is already located.
+  @param[in]  DiskIo              DiskIo protocol interface which is already located.
   @param[in]  IntDataStruct       A pointer to the internal data structure to retain
                                   the important size data of kernel and initrd images
                                   contained in the Android Boot image header.
@@ -269,25 +289,18 @@ Exit:
 EFI_STATUS
 AndroidBootLoadFile (
   IN EFI_BLOCK_IO_PROTOCOL        *BlockIo,
+  IN EFI_DISK_IO_PROTOCOL         *DiskIo,
   IN ANDROID_BOOT_DATA            *ImgData,
   IN VOID                         *Buffer
   )
 {
   EFI_STATUS                      Status;
-  UINTN                           BlockSize;
-  UINTN                           BlockAddr;
+  UINTN                           Addr;
   UINTN                           BufSize;
   UINTN                           BufBase;
 
 
-  if ((BlockIo == NULL) || (Buffer == NULL) || (ImgData == NULL)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  // The total image size stored in the partition has been already verified
-  // so make sure the buffer size for kernel image
-  BlockSize = BlockIo->Media->BlockSize;
-  if (ImgData->ImgSize != ALIGN_VALUE (ImgData->KernelSize, BlockSize)) {
+  if ((BlockIo == NULL) || (DiskIo == NULL) || (Buffer == NULL) || (ImgData == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -299,28 +312,25 @@ AndroidBootLoadFile (
   // Note: Every image data is aligned in PageSize
 
   // Load the kernel
-  BlockAddr = ImgData->PageSize;
-  BufSize = ImgData->ImgSize;
+  Addr = ImgData->PageSize + ImgData->Offset;
+  BufSize = ImgData->KernelSize;
   BufBase = (UINTN) Buffer;
-  Status = BlockIo->ReadBlocks (
-                  BlockIo,
+  Status = DiskIo->ReadDisk (
+                  DiskIo,
                   BlockIo->Media->MediaId,
-                  (EFI_LBA) (BlockAddr / BlockSize),
+                  Addr,
                   BufSize,
                   (VOID *) BufBase
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: fail to read kernel image from block %x to %09p: %r\n",
-                    __FUNCTION__, (BlockAddr / BlockSize), BufBase, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Unable to read disk for kernel image: from offset %x" \
+                  " to %09p: %r\n", __FUNCTION__, Addr, BufBase, Status));
     return Status;
   }
   DEBUG ((DEBUG_INFO, "%a: Kernel image copied to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
 
-
   // Load the initial ramdisk if needed
   if (ImgData->RamdiskSize != 0) {
-    BlockAddr += ALIGN_VALUE (ImgData->KernelSize, ImgData->PageSize);
-    BufSize = ALIGN_VALUE (ImgData->RamdiskSize, BlockSize);
     // Allocate a buffer reserved in EfiBootServicesData
     // to make this buffer persist until the completion of kernel booting
     Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesData,
@@ -330,16 +340,18 @@ AndroidBootLoadFile (
       DEBUG ((DEBUG_ERROR, "%a: fail to get a buffer for ramdisk: %r\n", __FUNCTION__, Status));
       return Status;
     }
-    Status = BlockIo->ReadBlocks (
-                    BlockIo,
+    Addr += ALIGN_VALUE (ImgData->KernelSize, ImgData->PageSize);
+    BufSize = ImgData->RamdiskSize;
+    Status = DiskIo->ReadDisk (
+                    DiskIo,
                     BlockIo->Media->MediaId,
-                    (EFI_LBA) (BlockAddr / BlockSize),
+                    Addr,
                     BufSize,
                     (VOID *) BufBase
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: fail to read ramdisk from block %x to %09p: %r\n",
-                    __FUNCTION__, (BlockAddr / BlockSize), BufBase, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Unable to read disk for ramdisk from offset %x" \
+                    " to %09p: %r\n", __FUNCTION__, Addr, BufBase, Status));
       goto Exit;
     }
     DEBUG ((DEBUG_INFO, "%a: RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
@@ -431,20 +443,20 @@ AndroidBootDxeLoadFile (
   }
 
   // Verify the image header and set the internal data structure ImgData
-  Status = AndroidBootGetVerify (Private->BlockIo, &ImgData);
+  Status = AndroidBootGetVerify (Private->BlockIo, Private->DiskIo, &ImgData);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   // Check if the given buffer size is big enough
   // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
-  if (*BufferSize < ImgData.ImgSize) {
-    *BufferSize = ImgData.ImgSize;
+  if (*BufferSize < ImgData.KernelSize) {
+    *BufferSize = ImgData.KernelSize;
     return EFI_BUFFER_TOO_SMALL;
   }
 
   // Load Android Boot image
-  Status = AndroidBootLoadFile (Private->BlockIo, &ImgData, Buffer);
+  Status = AndroidBootLoadFile (Private->BlockIo, Private->DiskIo, &ImgData, Buffer);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -513,8 +525,9 @@ AndroidBootDriverBindingSupported (
   )
 {
   EFI_STATUS                      Status;
-  EFI_BLOCK_IO_PROTOCOL           *BlockIo;
   UINT32                          *Id;
+  EFI_BLOCK_IO_PROTOCOL           *BlockIo = NULL;
+  EFI_DISK_IO_PROTOCOL            *DiskIo = NULL;
 
 
   // This driver will be accessed while boot manager attempts to connect
@@ -539,7 +552,6 @@ AndroidBootDriverBindingSupported (
     return Status;
   }
 
-  BlockIo = NULL;
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiBlockIoProtocolGuid,
@@ -549,21 +561,44 @@ AndroidBootDriverBindingSupported (
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto ErrorExit;
+  }
+
+  Status = gBS->OpenProtocol (
+                  ControllerHandle,
+                  &gEfiDiskIoProtocolGuid,
+                  (VOID **)&DiskIo,
+                  This->DriverBindingHandle,
+                  ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
   }
 
   // Examine if the Android Boot image can be found
-  Status = AndroidBootGetVerify (BlockIo, NULL);
+  Status = AndroidBootGetVerify (BlockIo, DiskIo, NULL);
   if (!EFI_ERROR (Status)) {
     DEBUG ((DEBUG_INFO, "%a: AndroidBoot image found\n", __FUNCTION__));
   }
 
-  gBS->CloseProtocol (
-                  ControllerHandle,
-                  &gEfiBlockIoProtocolGuid,
-                  This->DriverBindingHandle,
-                  ControllerHandle
-                  );
+ErrorExit:
+  if (BlockIo != NULL) {
+    gBS->CloseProtocol (
+                    ControllerHandle,
+                    &gEfiBlockIoProtocolGuid,
+                    This->DriverBindingHandle,
+                    ControllerHandle
+                    );
+  }
+  if (DiskIo != NULL) {
+    gBS->CloseProtocol (
+                    ControllerHandle,
+                    &gEfiDiskIoProtocolGuid,
+                    This->DriverBindingHandle,
+                    ControllerHandle
+                    );
+  }
   return Status;
 }
 
@@ -619,7 +654,8 @@ AndroidBootDriverBindingStart (
   )
 {
   EFI_STATUS                      Status;
-  EFI_BLOCK_IO_PROTOCOL           *BlockIo;
+  EFI_BLOCK_IO_PROTOCOL           *BlockIo = NULL;
+  EFI_DISK_IO_PROTOCOL            *DiskIo = NULL;
   EFI_DEVICE_PATH_PROTOCOL        *ParentDevicePath;
   EFI_DEVICE_PATH_PROTOCOL        *AndroidBootDevicePath;
   EFI_DEVICE_PATH_PROTOCOL        *Node;
@@ -657,8 +693,21 @@ AndroidBootDriverBindingStart (
     return Status;
   }
 
+  // Open Disk Io protocol to obtain the access to the flash device
+  Status = gBS->OpenProtocol (
+                  ControllerHandle,
+                  &gEfiDiskIoProtocolGuid,
+                  (VOID **)&DiskIo,
+                  This->DriverBindingHandle,
+                  ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a unable to open DiskIo protocol %r\n", __FUNCTION__, Status));
+    return Status;
+  }
   // Examine if the Android Boot Image can be found
-  Status = AndroidBootGetVerify (BlockIo, NULL);
+  Status = AndroidBootGetVerify (BlockIo, DiskIo, NULL);
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
@@ -684,6 +733,7 @@ AndroidBootDriverBindingStart (
   }
   Private->Signature = ANDROID_BOOT_SIGNATURE;
   Private->BlockIo = BlockIo;
+  Private->DiskIo = DiskIo;
   Private->ParentDevicePath = ParentDevicePath;
   Private->AndroidBootDevicePath = AndroidBootDevicePath;
   Private->ControllerHandle = ControllerHandle;
@@ -773,6 +823,12 @@ Exit:
       FreePool (AndroidBootDevicePath);
     }
 
+    gBS->CloseProtocol (
+                    ControllerHandle,
+                    &gEfiDiskIoProtocolGuid,
+                    This->DriverBindingHandle,
+                    &DiskIo
+                    );
     gBS->CloseProtocol (
                     ControllerHandle,
                     &gEfiBlockIoProtocolGuid,

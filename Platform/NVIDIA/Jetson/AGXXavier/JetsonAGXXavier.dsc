@@ -98,3 +98,9 @@
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|0x3439314152474554
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision|0x00000001
+
+  #
+  # Boot.img signing header size
+  #
+  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
+

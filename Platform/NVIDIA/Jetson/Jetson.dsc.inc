@@ -170,6 +170,8 @@
   #
   EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
 
+  # Boot support for mkbootimg partitions
+  Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
 
   MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
 

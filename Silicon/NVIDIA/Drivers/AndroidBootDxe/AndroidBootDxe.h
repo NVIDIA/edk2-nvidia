@@ -36,6 +36,7 @@
 #include <Protocol/DriverBinding.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
+#include <Protocol/DiskIo.h>
 #include <Protocol/LoadFile.h>
 
 
@@ -46,10 +47,10 @@
 
 // Android Boot Data structure
 typedef struct {
+  UINT32              Offset;
   UINT32              KernelSize;
   UINT32              RamdiskSize;
   UINT32              PageSize;
-  UINT32              ImgSize;
 } ANDROID_BOOT_DATA;
 
 // Private data structure
@@ -59,6 +60,7 @@ typedef struct {
   EFI_LOAD_FILE_PROTOCOL            LoadFile;
   EFI_PARTITION_INFO_PROTOCOL       *PartitionInfo;
   EFI_BLOCK_IO_PROTOCOL             *BlockIo;
+  EFI_DISK_IO_PROTOCOL              *DiskIo;
   EFI_DEVICE_PATH_PROTOCOL          *ParentDevicePath;
   EFI_DEVICE_PATH_PROTOCOL          *AndroidBootDevicePath;
 
