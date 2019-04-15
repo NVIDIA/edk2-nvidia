@@ -37,7 +37,6 @@
   UefiBootServicesTableLib
   DebugLib
   PrintLib
-  UefiDriverEntryPoint
   IoLib
   FdtLib
 

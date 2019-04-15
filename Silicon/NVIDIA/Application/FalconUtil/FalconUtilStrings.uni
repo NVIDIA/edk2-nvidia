@@ -1,0 +1,43 @@
+/** @file
+  String definitions for the Shell FalconUtil application.
+
+  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+
+  This program and the accompanying materials
+  are licensed and made available under the terms and conditions of the BSD License
+  which accompanies this distribution.  The full text of the license may be found at
+  http://opensource.org/licenses/bsd-license.php.
+
+  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+
+**/
+
+#langdef en-US "English"
+
+#string STR_FALCON_UTIL_UNKNOWN_OPERATION            #language en-US  "\n%s: Unknown Operation specified\n\n"
+#string STR_FALCON_UTIL_DISPLAY_READ_INFO            #language en-US  "Read Register 0x%x --> 0x%x\n"
+#string STR_FALCON_UTIL_DISPLAY_WRITE_INFO           #language en-US  "Write Register 0x%x <-- 0x%x\n"
+#string STR_FALCON_UTIL_DISPLAY_DATA                 #language en-US  "0x%08x  "
+#string STR_FALCON_UTIL_DISPLAY_NEW_LINE_OFFSET      #language en-US  "\n0x%08x:  "
+#string STR_FALCON_UTIL_DISPLAY_NEW_LINE             #language en-US  "\n"
+
+
+#string STR_FALCON_UTIL_HELP                 #language en-US    ""
+".TH FalconUtil 0 "Displays or modifies Falcon registers."\r\n"
+".SH NAME\r\n"
+"Displays or modifies Falcon registers.\r\n"
+".SH SYNOPSIS\r\n"
+" \r\n"
+"%HFalconUtil [-r <addr>] [-w <addr> <value>] [-dd <addr> <num_dwords>] [-dm <addr> <num_dwords>] [<addr> [<value>]]\r\n"
+".SH OPTIONS\r\n"
+" \r\n"
+"%Hcommand%N:\r\n"
+"  -r addr                          Specified register address to read\r\n"
+"  -w addr value                    Specified register address and value to write\r\n"
+"  addr                             Specified register address to read\r\n"
+"  addr value                       Specified register address and value to write\r\n"
+"  -dd addr num_dwords              Dump num_dwords from provided DDIRECT address\r\n"
+"  -dm addr num_dwords              Dump num_dwords from provided DMEM offset\r\n"
+"  -?                               Displays this help.\r\n"
+" \r\n"
