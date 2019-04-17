@@ -384,8 +384,10 @@ BpmpProcessPgCommand (
                               0,
                               NULL
                               );
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
+  if (Status == EFI_UNSUPPORTED) {
+    Status = EFI_SUCCESS;
+  } else if (EFI_ERROR (Status)) {
+    Status = EFI_DEVICE_ERROR;
   }
   return Status;
 }
@@ -416,7 +418,6 @@ BpmpProcessResetCommand (
 
   Request[0] = (UINT32)Command;
   Request[1] = ResetId;
-  DEBUG ((EFI_D_ERROR, "%a, Cmd: %u, Reset: %x\r\n",__FUNCTION__,Command,ResetId));
 
   Status = BpmpIpcProtocol->Communicate (
                               BpmpIpcProtocol,
@@ -428,8 +429,10 @@ BpmpProcessResetCommand (
                               0,
                               NULL
                               );
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
+  if (Status == EFI_UNSUPPORTED) {
+    Status = EFI_SUCCESS;
+  } else if (EFI_ERROR (Status)) {
+    Status = EFI_DEVICE_ERROR;
   }
   return Status;
 }

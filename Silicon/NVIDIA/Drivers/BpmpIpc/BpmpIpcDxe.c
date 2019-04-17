@@ -25,6 +25,8 @@
 
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
+#include <Protocol/BpmpIpc.h>
+#include <Library/DtPlatformDtbLoaderLib.h>
 #include "BpmpIpcDxePrivate.h"
 
 /**
@@ -293,6 +295,44 @@ EFI_DRIVER_BINDING_PROTOCOL gBpmpIpcDriverBinding = {
 };
 
 /**
+  This function allows for a remote IPC to the BPMP firmware to be executed.
+  This is a dummy version that is used if BPMP is not present.
+
+  @param[in]     This                The instance of the NVIDIA_BPMP_IPC_PROTOCOL.
+  @param[in,out] Token               Optional pointer to a token structure, if this is NULL
+                                     this API will process IPC in a blocking manner.
+  @param[in]     MessageRequest      Id of the message to send
+  @param[in]     TxData              Pointer to the payload data to send
+  @param[in]     TxDataSize          Size of the TxData buffer
+  @param[out]    RxData              Pointer to the payload data to receive
+  @param[in]     RxDataSize          Size of the RxData buffer
+  @param[out]    MessageError        If not NULL, will contain the BPMP error code on return
+
+  @return EFI_SUCCESS               If Token is not NULL IPC has been queued.
+  @return EFI_SUCCESS               If Token is NULL IPC has been completed.
+  @return EFI_INVALID_PARAMETER     Token is not NULL but Token->Event is NULL
+  @return EFI_INVALID_PARAMETER     TxData or RxData are NULL
+  @return EFI_DEVICE_ERROR          Failed to send IPC
+**/
+EFI_STATUS
+BpmpIpcDummyCommunicate (
+  IN  NVIDIA_BPMP_IPC_PROTOCOL   *This,
+  IN  OUT NVIDIA_BPMP_IPC_TOKEN  *Token, OPTIONAL
+  IN  UINT32                     MessageRequest,
+  IN  VOID                       *TxData,
+  IN  UINTN                      TxDataSize,
+  OUT VOID                       *RxData,
+  IN  UINTN                      RxDataSize,
+  IN  INT32                      *MessageError OPTIONAL
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
+CONST NVIDIA_BPMP_IPC_PROTOCOL mBpmpDummyProtocol = {
+    BpmpIpcDummyCommunicate
+};
+/**
   Initialize the Bpmp Ipc Protocol Driver
 
   @param  ImageHandle   of the loaded driver
@@ -310,6 +350,41 @@ BpmpIpcInitialize (
   )
 {
   EFI_STATUS  Status;
+  VOID        *DeviceTreeBase;
+  UINTN       DeviceTreeSize;
+
+  //If BPMP is disabled on target return dummy ipc protocol
+  Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
+  if (!EFI_ERROR (Status)) {
+    BOOLEAN BpmpPresent = FALSE;
+    INT32 NodeOffset;
+    NodeOffset = fdt_node_offset_by_compatible (DeviceTreeBase, -1, "nvidia,tegra186-bpmp");
+    if (NodeOffset >= 0) {
+      CONST VOID *Property = NULL;
+      INT32      PropertySize = 0;
+      Property = fdt_getprop (DeviceTreeBase,
+                              NodeOffset,
+                              "status",
+                              &PropertySize);
+      if (Property != NULL) {
+        if (AsciiStrCmp (Property, "okay") == 0) {
+          BpmpPresent = TRUE;
+        }
+      }
+    }
+    if (!BpmpPresent) {
+      Status = gBS->InstallMultipleProtocolInterfaces (
+                      &ImageHandle,
+                      &gNVIDIABpmpIpcProtocolGuid,
+                      &mBpmpDummyProtocol,
+                      NULL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
+      }
+      return Status;
+    }
+  }
 
   //
   // Install driver model protocol(s).

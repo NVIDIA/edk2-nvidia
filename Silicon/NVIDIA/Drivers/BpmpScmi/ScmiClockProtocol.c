@@ -327,8 +327,9 @@ ClockRateSet (
   if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
     //Clock is not visible to the MRQ
     Status = EFI_NOT_FOUND;
-  }
-  if (Rate != NewRate) {
+  } else if (Status == EFI_UNSUPPORTED) {
+    Status = EFI_SUCCESS;
+  } else if (Rate != NewRate) {
     DEBUG ((EFI_D_INFO,
             "%a: Clock %d, attempt set to %16ld, was set to %16ld\r\n",
             __FUNCTION__,
@@ -390,6 +391,8 @@ ClockEnable (
   if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
     //Clock is not visible to the MRQ
     Status = EFI_NOT_FOUND;
+  } else if (Status == EFI_UNSUPPORTED) {
+    Status = EFI_SUCCESS;
   }
   return Status;
 }
@@ -506,6 +509,8 @@ ClockParentsSetParent (
   if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
     //Clock is not visible to the MRQ
     Status = EFI_NOT_FOUND;
+  } else if (Status == EFI_UNSUPPORTED) {
+    Status = EFI_SUCCESS;
   }
   return Status;
 }

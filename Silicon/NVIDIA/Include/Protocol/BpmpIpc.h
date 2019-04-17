@@ -103,6 +103,7 @@ typedef struct {
   @return EFI_INVALID_PARAMETER     Token is not NULL but Token->Event is NULL
   @return EFI_INVALID_PARAMETER     TxData or RxData are NULL
   @return EFI_DEVICE_ERROR          Failed to send IPC
+  @return EFI_UNSUPPORTED           BPMP IPC is not supported on this system
 **/
 typedef
 EFI_STATUS
