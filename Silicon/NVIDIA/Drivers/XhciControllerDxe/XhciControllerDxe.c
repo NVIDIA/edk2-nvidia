@@ -81,6 +81,9 @@ DeviceDiscoveryNotify (
   EFI_PHYSICAL_ADDRESS      BaseAddress  = 0;
   EFI_PHYSICAL_ADDRESS      CfgAddress  = 0;
   UINTN                     RegionSize;
+  UINT8                     CapLength;
+  UINT32                    StatusRegister;
+  UINTN                     i;
 
   DEBUG ((EFI_D_ERROR, "%a\r\n",__FUNCTION__));
 
@@ -166,6 +169,25 @@ DeviceDiscoveryNotify (
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a, failed to load falcon firmware %r\r\n",
                                                 __FUNCTION__, Status));
+      goto ErrorExit;
+    }
+
+    /* Wait till HW/FW Clears Controller Not Ready Flag */
+    CapLength = MmioRead8(BaseAddress);
+    for (i = 0; i < 200; i++)
+    {
+      StatusRegister = MmioRead32(BaseAddress + CapLength + XUSB_OP_USBSTS);
+      if (!(StatusRegister & USBSTS_CNR)) {
+        break;
+      }
+      gBS->Stall(1000);
+    }
+
+    /* Return Error if CNR is not cleared or Host Controller Error is set */
+    if (StatusRegister & (USBSTS_CNR | USBSTS_HCE)) {
+      DEBUG ((EFI_D_ERROR, "Usb Host Controller Initialization Failed\n"));
+      DEBUG ((EFI_D_ERROR, "UsbStatus: 0x%x Falcon CPUCTL: 0x%x\n", StatusRegister, FalconRead32(FALCON_CPUCTL_0)));
+      Status = EFI_DEVICE_ERROR;
       goto ErrorExit;
     }
     break;

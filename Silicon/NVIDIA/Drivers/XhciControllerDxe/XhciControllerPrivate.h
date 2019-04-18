@@ -43,10 +43,13 @@
 #define XUSB_CFG_1_0_MEMORY_SPACE_ENABLED       _MK_ENUM_CONST(0x00000001)
 #define XUSB_CFG_1_0_BUS_MASTER_RANGE   2 : 2
 #define XUSB_CFG_1_0_BUS_MASTER_DISABLED        _MK_ENUM_CONST(0x00000000)
-#define XUSB_CFG_1_0_BUS_MASTER_ENABLED _MK_ENUM_CONST(0x00000001)
+#define XUSB_CFG_1_0_BUS_MASTER_ENABLED         _MK_ENUM_CONST(0x00000001)
 
 #define XUSB_CFG_4_0    _MK_ADDR_CONST(0x00000010)
 
+#define XUSB_OP_USBSTS  _MK_ADDR_CONST(0x00000004)
+#define USBSTS_CNR      (1 << 11)
+#define USBSTS_HCE      (1 << 12)
 /* CFG 4 Address shift and Mask Values for T186 only. Later chips might have
  * different values  */
 #define  CFG4_ADDR_SHIFT                   15

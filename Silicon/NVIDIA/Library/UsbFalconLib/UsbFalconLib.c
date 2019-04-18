@@ -18,6 +18,7 @@
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
 #include <Library/UsbFalconLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <string.h>
 
 VOID *
@@ -123,7 +124,6 @@ FalconFirmwareLoad (
     return Status;
   }
 
-  /* Align FW code to 256-byte pages */
   DEBUG ((EFI_D_VERBOSE, "%a: Firmware %p FirmwareSize %x (unaligned)\r\n",__FUNCTION__, Firmware, FirmwareSize));
   FirmwareAlign = 4096 - (((UINTN) &FirmwareBuffer[256]) & 0xfff);
   memset (FirmwareBuffer, 0xdf, sizeof(FirmwareBuffer));
@@ -236,6 +236,7 @@ FalconFirmwareLoad (
     DEBUG ((EFI_D_VERBOSE, "%a: XUSB_CSB_MEMPOOL_L2IMEMOP_RESULT_0 = %x\r\n",__FUNCTION__, Value));
     if (Value & L2IMEMOP_RESULT_VLD)
       break;
+    gBS->Stall(100);
   }
 
   /* program BOOTVEC with Falcon boot code location in IMEM */
