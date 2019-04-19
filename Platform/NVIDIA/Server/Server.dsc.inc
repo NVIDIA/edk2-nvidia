@@ -61,9 +61,6 @@
   #
   EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
 
-  # Boot support for mkbootimg partitions
-  Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
-
   #
   # QSPI Support
   #
@@ -94,4 +91,9 @@
   Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
   Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
   Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
+
+  #
+  # Android Boot Support
+  #
+  Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
 

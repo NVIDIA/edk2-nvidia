@@ -110,14 +110,13 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
 
   #
-  # Android Boot Support
-  #
-  INF Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
-
-  #
   # FVB Support
   #
   INF Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
 
+  #
+  # Android Boot Support
+  #
+  INF Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
 
 !include Platform/NVIDIA/NVIDIA.common.fdf.inc
