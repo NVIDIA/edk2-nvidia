@@ -1233,7 +1233,7 @@
 		};
 	};
 
-	ether_qos@2490000 {
+	ethernet@2490000 {
 		nvidia,changelist = <0x0 0x2ac3049>;
 		compatible = "nvidia,eqos";
 		reg = <0x0 0x2490000 0x0 0x10000>;
@@ -5525,7 +5525,7 @@
 		p2u_17 = "/nvhs_p2u/p2u@03f00000";
 		p2u_18 = "/nvhs_p2u/p2u@03f10000";
 		p2u_19 = "/nvhs_p2u/p2u@03f20000";
-		eqos_cool_dev = "/ether_qos@2490000/eqos-cool-dev";
+		eqos_cool_dev = "/ethernet@2490000/eqos-cool-dev";
 		uartb = "/serial@3110000";
 		uartc = "/serial@c280000";
 		uartd = "/serial@3130000";
