@@ -137,6 +137,8 @@ XhciInitUsb2PadX (
                                                                        RegData);
   RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD0_CTL_0, HS_CURR_LEVEL,
                                                           HsCurrLevel, RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD0_CTL_0, LS_FSLEW, 6, RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD0_CTL_0, LS_RSLEW, 6, RegData);
   NV_XUSB_PADCTL_WRITE(USB2_OTG_PAD0_CTL_0, RegData);
   NV_XUSB_PADCTL_READ(USB2_OTG_PAD0_CTL_1, RegData);
   RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD0_CTL_1, TERM_RANGE_ADJ,
@@ -153,6 +155,8 @@ XhciInitUsb2PadX (
                                                                     RegData);
   RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD1_CTL_0, HS_CURR_LEVEL,
                                                          HsCurrLevel, RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD1_CTL_0, LS_FSLEW, 6, RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD1_CTL_0, LS_RSLEW, 6, RegData);
   NV_XUSB_PADCTL_WRITE(USB2_OTG_PAD1_CTL_0, RegData);
   NV_XUSB_PADCTL_READ(USB2_OTG_PAD1_CTL_1, RegData);
   RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD1_CTL_1, TERM_RANGE_ADJ,
@@ -169,6 +173,8 @@ XhciInitUsb2PadX (
                                                                     RegData);
   RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD2_CTL_0, HS_CURR_LEVEL,
                                                          HsCurrLevel, RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD2_CTL_0, LS_FSLEW, 6, RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD2_CTL_0, LS_RSLEW, 6, RegData);
   NV_XUSB_PADCTL_WRITE(USB2_OTG_PAD2_CTL_0, RegData);
   NV_XUSB_PADCTL_READ(USB2_OTG_PAD2_CTL_1, RegData);
   RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD2_CTL_1, TERM_RANGE_ADJ,
@@ -177,6 +183,24 @@ XhciInitUsb2PadX (
                                                         RpdCtrl, RegData);
   NV_XUSB_PADCTL_WRITE(USB2_OTG_PAD2_CTL_1, RegData);
   NV_XUSB_PADCTL_READ(USB2_OTG_PAD2_CTL_1, RegData);
+  /* PAD 3 */
+  NV_XUSB_PADCTL_READ(USB2_OTG_PAD3_CTL_0, RegData);
+  RegData = NV_FLD_SET_DRF_DEF(XUSB_PADCTL, USB2_OTG_PAD3_CTL_0, PD_ZI,
+                                                  SW_DEFAULT, RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD3_CTL_0, TERM_SEL, 1,
+                                                                    RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD3_CTL_0, HS_CURR_LEVEL,
+                                                         HsCurrLevel, RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD3_CTL_0, LS_FSLEW, 6, RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD3_CTL_0, LS_RSLEW, 6, RegData);
+  NV_XUSB_PADCTL_WRITE(USB2_OTG_PAD3_CTL_0, RegData);
+  NV_XUSB_PADCTL_READ(USB2_OTG_PAD3_CTL_1, RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD3_CTL_1, TERM_RANGE_ADJ,
+                                                         TermRangeAdj, RegData);
+  RegData = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_OTG_PAD3_CTL_1, RPD_CTRL,
+                                                        RpdCtrl, RegData);
+  NV_XUSB_PADCTL_WRITE(USB2_OTG_PAD3_CTL_1, RegData);
+  NV_XUSB_PADCTL_READ(USB2_OTG_PAD3_CTL_1, RegData);
 
   /* USB Pad protection circuit activation for all PADS. Programmed
    * VREG_DIR = HOST(2) instead of Device(1) for all PADS as we dont
@@ -260,6 +284,8 @@ XhciInitBiasPad (
                                        PD, SW_DEFAULT, RegVal);
   RegVal = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_BIAS_PAD_CTL_0,
                    HS_SQUELCH_LEVEL, hs_squelch_level, RegVal);
+  RegVal = NV_FLD_SET_DRF_NUM(XUSB_PADCTL, USB2_BIAS_PAD_CTL_0,
+                   HS_DISCON_LEVEL, 0x7, RegVal);
   NV_XUSB_PADCTL_WRITE(USB2_BIAS_PAD_CTL_0, RegVal);
   NV_XUSB_PADCTL_READ(USB2_BIAS_PAD_CTL_0, RegVal);
 

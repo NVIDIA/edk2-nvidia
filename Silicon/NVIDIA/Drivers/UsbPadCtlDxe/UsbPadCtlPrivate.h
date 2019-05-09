@@ -91,7 +91,7 @@
 /* This is just the old name for CURR_LEVEL */
 #define FUSE_USB_CALIB_0_SETUP_RANGE                                         5 : 0
 #define FUSE_USB_CALIB_0_TERM_RANGE_ADJ_RANGE                                10 : 7
-#define FUSE_USB_CALIB_0_HS_SQUELCH_RANGE                                    2 : 0
+#define FUSE_USB_CALIB_0_HS_SQUELCH_RANGE                                    31 : 29
 #define FUSE_USB_CALIB_EXT_0_RPD_CTRL_RANGE                                  4 : 0
 #define FUSE_USB_CALIB_HS_CURR_LEVEL_MASK                                    0x3F
 #define FUSE_USB_CALIB_TERMRANGEADJ_MASK                                     0x780
@@ -305,6 +305,8 @@
 
 #define XUSB_PADCTL_USB2_OTG_PAD1_CTL_0_0                                    _MK_ADDR_CONST(0xc8)
 #define XUSB_PADCTL_USB2_OTG_PAD1_CTL_0_0_HS_CURR_LEVEL_RANGE                5 : 0
+#define XUSB_PADCTL_USB2_OTG_PAD1_CTL_0_0_LS_RSLEW_RANGE                     20 : 17
+#define XUSB_PADCTL_USB2_OTG_PAD1_CTL_0_0_LS_FSLEW_RANGE                     24 : 21
 #define XUSB_PADCTL_USB2_OTG_PAD1_CTL_0_0_TERM_SEL_RANGE                     25 : 25
 #define XUSB_PADCTL_USB2_OTG_PAD1_CTL_0_0_PD_RANGE                           26 : 26
 #define XUSB_PADCTL_USB2_OTG_PAD1_CTL_0_0_PD_SW_DEFAULT                      _MK_MASK_CONST(0x0)
@@ -319,6 +321,8 @@
 
 #define XUSB_PADCTL_USB2_OTG_PAD2_CTL_0_0                                    _MK_ADDR_CONST(0x108)
 #define XUSB_PADCTL_USB2_OTG_PAD2_CTL_0_0_HS_CURR_LEVEL_RANGE                5 : 0
+#define XUSB_PADCTL_USB2_OTG_PAD2_CTL_0_0_LS_RSLEW_RANGE                     20 : 17
+#define XUSB_PADCTL_USB2_OTG_PAD2_CTL_0_0_LS_FSLEW_RANGE                     24 : 21
 #define XUSB_PADCTL_USB2_OTG_PAD2_CTL_0_0_TERM_SEL_RANGE                     25 : 25
 #define XUSB_PADCTL_USB2_OTG_PAD2_CTL_0_0_PD_RANGE                           26 : 26
 #define XUSB_PADCTL_USB2_OTG_PAD2_CTL_0_0_PD_SW_DEFAULT                      _MK_MASK_CONST(0x0)
@@ -333,6 +337,8 @@
 
 #define XUSB_PADCTL_USB2_OTG_PAD3_CTL_0_0                                    _MK_ADDR_CONST(0x148)
 #define XUSB_PADCTL_USB2_OTG_PAD3_CTL_0_0_HS_CURR_LEVEL_RANGE                5 : 0
+#define XUSB_PADCTL_USB2_OTG_PAD3_CTL_0_0_LS_RSLEW_RANGE                     20 : 17
+#define XUSB_PADCTL_USB2_OTG_PAD3_CTL_0_0_LS_FSLEW_RANGE                     24 : 21
 #define XUSB_PADCTL_USB2_OTG_PAD3_CTL_0_0_TERM_SEL_RANGE                     25 : 25
 #define XUSB_PADCTL_USB2_OTG_PAD3_CTL_0_0_PD_RANGE                           26 : 26
 #define XUSB_PADCTL_USB2_OTG_PAD3_CTL_0_0_PD_SW_DEFAULT                      _MK_MASK_CONST(0x0)
