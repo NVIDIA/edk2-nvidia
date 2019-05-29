@@ -39,6 +39,7 @@
   PrintLib
   IoLib
   FdtLib
+  DmaLib
 
 [Protocols]
 

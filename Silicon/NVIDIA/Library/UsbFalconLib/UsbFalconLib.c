@@ -20,6 +20,7 @@
 #include <Library/UsbFalconLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <string.h>
+#include <Library/DmaLib.h>
 
 VOID *
 FalconMapReg (
@@ -94,8 +95,6 @@ FalconFirmwareLoad (
   IN  UINT32 FirmwareSize
   )
 {
-  static UINT8 FirmwareBuffer[512*1024];
-  UINTN FirmwareAlign;
   struct tegra_xhci_fw_cfgtbl *FirmwareCfg;
   UINTN FirmwareAddress;
   UINTN SIZE;
@@ -112,6 +111,11 @@ FalconFirmwareLoad (
   UINT32 Value;
   UINTN i;
   EFI_STATUS Status = EFI_SUCCESS;
+  UINT32 Pages;
+  UINTN BufferSize;
+  UINT8 *FirmwareBuffer;
+  UINTN FirmwareBufferBusAddress;
+  VOID *FirmwareBufferMapping;
 
   DEBUG ((EFI_D_VERBOSE, "%a\r\n",__FUNCTION__));
 
@@ -124,20 +128,34 @@ FalconFirmwareLoad (
     return Status;
   }
 
+  Pages = EFI_SIZE_TO_PAGES (FirmwareSize);
+  Status  = DmaAllocateAlignedBuffer (EfiBootServicesData, Pages, 256, (void **)&FirmwareBuffer);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: DmaAllocateAlignedBuffer Failed: %r\n",__FUNCTION__, Status));
+    return Status;
+  }
+
+  BufferSize = EFI_PAGES_TO_SIZE (Pages);
+  Status = DmaMap (MapOperationBusMasterCommonBuffer, FirmwareBuffer, &BufferSize,
+             &FirmwareBufferBusAddress, &FirmwareBufferMapping);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: DmaMap Failed: %r\n",__FUNCTION__, Status));
+    return Status;
+  }
+
   DEBUG ((EFI_D_VERBOSE, "%a: Firmware %p FirmwareSize %x (unaligned)\r\n",__FUNCTION__, Firmware, FirmwareSize));
-  FirmwareAlign = 4096 - (((UINTN) &FirmwareBuffer[256]) & 0xfff);
-  memset (FirmwareBuffer, 0xdf, sizeof(FirmwareBuffer));
-  memcpy (FirmwareBuffer + FirmwareAlign, Firmware, FirmwareSize);
+  memset (FirmwareBuffer, 0xdf, BufferSize);
+  memcpy (FirmwareBuffer, Firmware, FirmwareSize);
   for (i = 0; i < FirmwareSize; i++)
   {
-    if (FirmwareBuffer[FirmwareAlign + i] != Firmware[i])
+    if (FirmwareBuffer[i] != Firmware[i])
     {
-        DEBUG ((EFI_D_VERBOSE, "%a: FirmwareBuffer[%d] != Firmware[%d]\r\n",__FUNCTION__, FirmwareAlign + i, Firmware, i));
+        DEBUG ((EFI_D_VERBOSE, "%a: FirmwareBuffer[%d] != Firmware[%d]\r\n",__FUNCTION__, i, i));
         return Status;
     }
   }
   MemoryFence ();
-  Firmware = FirmwareBuffer + FirmwareAlign;
+  Firmware = FirmwareBuffer;
   DEBUG ((EFI_D_VERBOSE, "%a: Firmware %p FirmwareSize %x (aligned)\r\n",__FUNCTION__, Firmware, FirmwareSize));
 
   /* Configure FW */
@@ -155,7 +173,7 @@ FalconFirmwareLoad (
   DEBUG ((EFI_D_VERBOSE, "%a: FirmwareCfg %p fwimg_len %x\r\n",__FUNCTION__, FirmwareCfg, FirmwareCfg->fwimg_len));
 
   /* program system memory address where FW code starts */
-  FirmwareAddress = ((UINTN) Firmware) + sizeof(*FirmwareCfg);
+  FirmwareAddress = FirmwareBufferBusAddress + sizeof(*FirmwareCfg);
   SIZE = FirmwareSize / 256;
   DEBUG ((EFI_D_VERBOSE, "%a: SIZE %x\r\n",__FUNCTION__, SIZE));
   Value = 0;
