@@ -64,11 +64,11 @@
   BaseMemoryLib|MdePkg/Library/BaseMemoryLibOptDxe/BaseMemoryLibOptDxe.inf
 
   # Networking Requirements
-  NetLib|MdeModulePkg/Library/DxeNetLib/DxeNetLib.inf
-  DpcLib|MdeModulePkg/Library/DxeDpcLib/DxeDpcLib.inf
-  UdpIoLib|MdeModulePkg/Library/DxeUdpIoLib/DxeUdpIoLib.inf
-  IpIoLib|MdeModulePkg/Library/DxeIpIoLib/DxeIpIoLib.inf
-  TcpIoLib|MdeModulePkg/Library/DxeTcpIoLib/DxeTcpIoLib.inf
+  NetLib|NetworkPkg/Library/DxeNetLib/DxeNetLib.inf
+  DpcLib|NetworkPkg/Library/DxeDpcLib/DxeDpcLib.inf
+  UdpIoLib|NetworkPkg/Library/DxeUdpIoLib/DxeUdpIoLib.inf
+  IpIoLib|NetworkPkg/Library/DxeIpIoLib/DxeIpIoLib.inf
+  TcpIoLib|NetworkPkg/Library/DxeTcpIoLib/DxeTcpIoLib.inf
 
   # ARM Architectural Libraries
   CacheMaintenanceLib|ArmPkg/Library/ArmCacheMaintenanceLib/ArmCacheMaintenanceLib.inf
@@ -559,15 +559,15 @@
   #
   # Networking stack
   #
-  MdeModulePkg/Universal/Network/DpcDxe/DpcDxe.inf
-  MdeModulePkg/Universal/Network/ArpDxe/ArpDxe.inf
-  MdeModulePkg/Universal/Network/Dhcp4Dxe/Dhcp4Dxe.inf
-  MdeModulePkg/Universal/Network/Ip4Dxe/Ip4Dxe.inf
-  MdeModulePkg/Universal/Network/MnpDxe/MnpDxe.inf
-  MdeModulePkg/Universal/Network/VlanConfigDxe/VlanConfigDxe.inf
-  MdeModulePkg/Universal/Network/Mtftp4Dxe/Mtftp4Dxe.inf
+  NetworkPkg/DpcDxe/DpcDxe.inf
+  NetworkPkg/ArpDxe/ArpDxe.inf
+  NetworkPkg/Dhcp4Dxe/Dhcp4Dxe.inf
+  NetworkPkg/Ip4Dxe/Ip4Dxe.inf
+  NetworkPkg/MnpDxe/MnpDxe.inf
+  NetworkPkg/VlanConfigDxe/VlanConfigDxe.inf
+  NetworkPkg/Mtftp4Dxe/Mtftp4Dxe.inf
   NetworkPkg/TcpDxe/TcpDxe.inf
-  MdeModulePkg/Universal/Network/Udp4Dxe/Udp4Dxe.inf
+  NetworkPkg/Udp4Dxe/Udp4Dxe.inf
   NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf
   NetworkPkg/IScsiDxe/IScsiDxe.inf
   NetworkPkg/Ip6Dxe/Ip6Dxe.inf

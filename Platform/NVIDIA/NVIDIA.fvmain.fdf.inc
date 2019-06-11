@@ -119,15 +119,15 @@
   #
   # Networking stack
   #
-  INF MdeModulePkg/Universal/Network/DpcDxe/DpcDxe.inf
-  INF MdeModulePkg/Universal/Network/ArpDxe/ArpDxe.inf
-  INF MdeModulePkg/Universal/Network/Dhcp4Dxe/Dhcp4Dxe.inf
-  INF MdeModulePkg/Universal/Network/Ip4Dxe/Ip4Dxe.inf
-  INF MdeModulePkg/Universal/Network/MnpDxe/MnpDxe.inf
-  INF MdeModulePkg/Universal/Network/VlanConfigDxe/VlanConfigDxe.inf
-  INF MdeModulePkg/Universal/Network/Mtftp4Dxe/Mtftp4Dxe.inf
+  INF NetworkPkg/DpcDxe/DpcDxe.inf
+  INF NetworkPkg/ArpDxe/ArpDxe.inf
+  INF NetworkPkg/Dhcp4Dxe/Dhcp4Dxe.inf
+  INF NetworkPkg/Ip4Dxe/Ip4Dxe.inf
+  INF NetworkPkg/MnpDxe/MnpDxe.inf
+  INF NetworkPkg/VlanConfigDxe/VlanConfigDxe.inf
+  INF NetworkPkg/Mtftp4Dxe/Mtftp4Dxe.inf
   INF NetworkPkg/TcpDxe/TcpDxe.inf
-  INF MdeModulePkg/Universal/Network/Udp4Dxe/Udp4Dxe.inf
+  INF NetworkPkg/Udp4Dxe/Udp4Dxe.inf
   INF NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf
   INF NetworkPkg/IScsiDxe/IScsiDxe.inf
   INF NetworkPkg/Ip6Dxe/Ip6Dxe.inf
