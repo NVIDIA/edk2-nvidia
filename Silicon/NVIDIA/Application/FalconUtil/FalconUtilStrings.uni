@@ -20,6 +20,9 @@
 #string STR_FALCON_UTIL_DISPLAY_WRITE_INFO           #language en-US  "Write Register 0x%x <-- 0x%x\n"
 #string STR_FALCON_UTIL_DISPLAY_DATA                 #language en-US  "0x%08x  "
 #string STR_FALCON_UTIL_DISPLAY_NEW_LINE_OFFSET      #language en-US  "\n0x%08x:  "
+#string STR_FALCON_UTIL_DISPLAY_TRACE_PC             #language en-US  "TRACEPC[%d] : 0x%08x\n"
+#string STR_FALCON_UTIL_DISPLAY_RSTAT                #language en-US  "RSTAT[%d] : 0x%08x\n"
+#string STR_FALCON_UTIL_DISPLAY_REG_VALUE            #language en-US  "%s : 0x%08x\n"
 #string STR_FALCON_UTIL_DISPLAY_NEW_LINE             #language en-US  "\n"
 
 
@@ -29,7 +32,7 @@
 "Displays or modifies Falcon registers.\r\n"
 ".SH SYNOPSIS\r\n"
 " \r\n"
-"%HFalconUtil [-r <addr>] [-w <addr> <value>] [-dd <addr> <num_dwords>] [-dm <addr> <num_dwords>] [<addr> [<value>]]\r\n"
+"%HFalconUtil [-r <addr>] [-w <addr> <value>] [-dd <addr> <num_dwords>] [-dm <addr> <num_dwords>] [-diag] [<addr> [<value>]]\r\n"
 ".SH OPTIONS\r\n"
 " \r\n"
 "%Hcommand%N:\r\n"
@@ -39,5 +42,6 @@
 "  addr value                       Specified register address and value to write\r\n"
 "  -dd addr num_dwords              Dump num_dwords from provided DDIRECT address\r\n"
 "  -dm addr num_dwords              Dump num_dwords from provided DMEM offset\r\n"
+"  -diag                            Dump diagnostic info for debugging FW Halts\r\n"
 "  -?                               Displays this help.\r\n"
 " \r\n"

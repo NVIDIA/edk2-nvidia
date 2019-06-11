@@ -34,6 +34,18 @@
 #define MEMPOOL_REGACCESS_DEST     0x101A58
 #define DEST_TGT_DDIRECT           0x0
 
+#define TRACEIDX                   0x148
+#define TRACEIDX_MAXINDX_MASK      0xff
+#define TRACEIDX_MAXINDX_SHIFT     16
+#define TRACEPC                    0x14c
+#define ICD_CMD                    0x200
+#define ICD_CMD_OPC_RSTAT          0xe
+#define ICD_CMD_OPC_RREG           0x8
+#define ICD_CMD_IDX_SHIFT          0x8
+#define TOTAL_REG_COUNT            29
+#define TOTAL_RSTAT_COUNT          6
+#define ICD_RDATA                  0x20c
+#define FALCON_CPUCTL              0x100
 
 /* Used for ShellCommandLineParseEx only
  * and to ensure user inputs are in valid format
@@ -43,6 +55,7 @@ SHELL_PARAM_ITEM    mFalconUtilParamList[] = {
   { L"-w",                    TypeValue },
   { L"-dd",                   TypeValue },
   { L"-dm",                   TypeValue },
+  { L"-diag",                 TypeFlag  },
   { L"-?",                    TypeFlag  },
   { NULL,                     TypeMax   },
 };
@@ -83,7 +96,9 @@ InitializeFalconUtil (
   UINT32                        NumDwords;
   UINT32                        Iter;
   UINT32                        PrintAddress;
-
+  UINT32                        MaxIndex;
+  CHAR16 IcdReg[TOTAL_REG_COUNT][5] = {L"R00", L"R01", L"R02", L"R03", L"R04", L"R05", L"R06", L"R07", L"R08", L"R09", L"R10", L"R11", L"R12", L"R13",
+                                 L"R14", L"R15", L"IV0", L"IV1", L"\0", L"EV", L"SP", L"PC", L"IMB", L"DMB", L"CSW", L"CCR", L"SEC", L"CTX", L"EXCI"};
 
   // Retrieve HII package list from ImageHandle
   Status = gBS->OpenProtocol (
@@ -125,6 +140,57 @@ InitializeFalconUtil (
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_FALCON_UTIL_HELP),
                     mHiiHandle, mAppName);
     goto Done;
+  }
+
+  /* Print Diagnostic Info used for debugging Firmware Halts */
+  if (ShellCommandLineGetFlag (ParamPackage, L"-diag")) {
+    /* Print Falcon CPU Status */
+    Value32 = FalconRead32(FALCON_CPUCTL);
+    ShellPrintHiiEx (-1, -1, NULL,
+                  STRING_TOKEN (STR_FALCON_UTIL_DISPLAY_REG_VALUE),
+                  mHiiHandle,
+                  L"FALCON_CPUCTL[0x100]",
+                  Value32
+                  );
+    /* Display In Circuit Debug Registers Information */
+    for (Iter = 0; Iter < TOTAL_REG_COUNT ; Iter++) {
+      if (StrCmp(IcdReg[Iter], L"\0") == 0) {
+        continue;
+      }
+      Value32 = (Iter << ICD_CMD_IDX_SHIFT) | ICD_CMD_OPC_RREG;
+      FalconWrite32 (ICD_CMD, Value32);
+      Value32 = FalconRead32(ICD_RDATA);
+      ShellPrintHiiEx (-1, -1, NULL,
+                  STRING_TOKEN (STR_FALCON_UTIL_DISPLAY_REG_VALUE),
+                  mHiiHandle,
+                  IcdReg[Iter],
+                  Value32
+                  );
+    }
+    for (Iter = 0; Iter < TOTAL_RSTAT_COUNT; Iter++) {
+      Value32 = (Iter << ICD_CMD_IDX_SHIFT) | ICD_CMD_OPC_RSTAT;
+      FalconWrite32 (ICD_CMD, Value32);
+      Value32 = FalconRead32(ICD_RDATA);
+      ShellPrintHiiEx (-1, -1, NULL,
+                  STRING_TOKEN (STR_FALCON_UTIL_DISPLAY_RSTAT),
+                  mHiiHandle,
+                  Iter,
+                  Value32
+                  );
+    }
+    /* Displaying Program Counter Trace */
+    Value32 = FalconRead32 (TRACEIDX);
+    MaxIndex = (Value32 >> TRACEIDX_MAXINDX_SHIFT) & TRACEIDX_MAXINDX_MASK;
+    for (Iter = 0; Iter <= MaxIndex; Iter++) {
+      FalconWrite32 (TRACEIDX, Iter);
+      Value32 = FalconRead32 (TRACEPC);
+      ShellPrintHiiEx (-1, -1, NULL,
+                    STRING_TOKEN (STR_FALCON_UTIL_DISPLAY_TRACE_PC),
+                    mHiiHandle,
+                    Iter,
+                    Value32
+                    );
+    }
   }
 
   if ((ValueStr = ShellCommandLineGetValue (ParamPackage, L"-r")) != NULL) {
@@ -198,7 +264,7 @@ InitializeFalconUtil (
                         );
         PrintAddress+= 0x10;
       }
- 
+
       Value32 = FalconRead32 (FALCON_DMEMD);
       ShellPrintHiiEx (-1, -1, NULL,
                     STRING_TOKEN (STR_FALCON_UTIL_DISPLAY_DATA),
