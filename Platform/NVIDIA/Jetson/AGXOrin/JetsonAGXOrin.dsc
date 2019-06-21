@@ -31,7 +31,6 @@
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
   CHIPSET                        = T234
-  DEVICE_TREE_BUILD              = TRUE
   DEFINE VARIABLES               = "STORAGE"
 
   #
@@ -74,7 +73,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl|TRUE
 
   gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress|0x0C3903F8
-  gNVIDIATokenSpaceGuid.PcdBootloaderCarveoutOffset|0x3b0
+  gNVIDIATokenSpaceGuid.PcdBootloaderCarveoutOffset|0x448
 
   ## SBSA Watchdog Count
   gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2

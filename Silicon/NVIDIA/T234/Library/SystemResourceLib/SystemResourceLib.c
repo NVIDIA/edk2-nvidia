@@ -14,8 +14,6 @@
 
 #include <Uefi.h>
 #include <Pi/PiMultiPhase.h>
-#include <Pi/PiPeiCis.h>
-#include <Library/PrePiLib.h>
 #include <Library/SystemResourceLib.h>
 #include <Library/DramCarveoutLib.h>
 #include <Library/IoLib.h>
@@ -24,6 +22,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Pi/PiHob.h>
 #include "SystemResourceLibPrivate.h"
+#include <libfdt.h>
 
 STATIC
 EFI_STATUS
@@ -83,6 +82,8 @@ InstallSystemResources (
   UINTN                CpuBootloaderAddress;
   TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
   UINTN                Index;
+  EFI_PHYSICAL_ADDRESS *DeviceTreeHobData = NULL;
+
 
   if (NULL == MemoryRegionsCount) {
     return EFI_INVALID_PARAMETER;
@@ -111,7 +112,7 @@ InstallSystemResources (
 
   //Build DRAM regions
   DramRegion.MemoryBaseAddress = PcdGet64 (PcdSystemMemoryBase);
-  DramRegion.MemoryLength = 0xb5d00000;
+  DramRegion.MemoryLength = CpuBootloaderParams->SdramSize;
   ASSERT (DramRegion.MemoryLength != 0);
 
   //Build Carveout regions
@@ -159,6 +160,22 @@ InstallSystemResources (
     *MemoryRegionsCount += FinalDramRegionsCount;
   }
   FreePool (CarveoutRegions);
+
+  //Register Device Tree
+  if (0 != CpuBootloaderParams->BlDtbLoadAddress) {
+    if (fdt_check_header ((VOID *)CpuBootloaderParams->BlDtbLoadAddress) == 0) {
+      UINTN DtbSize = fdt_totalsize ((VOID *)CpuBootloaderParams->BlDtbLoadAddress);
+      EFI_PHYSICAL_ADDRESS DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize));
+      CopyMem ((VOID *)DtbCopy, (VOID *)CpuBootloaderParams->BlDtbLoadAddress, DtbSize);
+
+      DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
+      if (NULL != DeviceTreeHobData) {
+        *DeviceTreeHobData = DtbCopy;
+      } else {
+        DEBUG ((EFI_D_ERROR, "Failed to build guid hob\r\n"));
+      }
+    }
+  }
 
   return Status;
 }

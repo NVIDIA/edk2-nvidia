@@ -29,8 +29,10 @@
   HobLib
   DebugLib
   DramCarveoutLib
+  FdtLib
 
 [Guids]
+  gFdtHobGuid
 
 [Sources.common]
   SystemResourceLib.c
