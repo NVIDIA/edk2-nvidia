@@ -115,3 +115,9 @@ Include
 
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C
+
+#Force disable DDR50 in SDHCi.
+  gNVIDIATokenSpaceGuid.PcdSdhciDDR50Disable|FALSE|BOOLEAN|0x0000000D
+
+#Force disable SDR104 in SDHCi.
+  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|FALSE|BOOLEAN|0x0000000E

@@ -216,12 +216,23 @@ DeviceDiscoveryNotify (
         );
     }
     //DISABLE DDR50
-    MmioBitFieldWrite32 (
-      BaseAddress + SDHCI_TEGRA_VENDOR_MISC_CTRL,
-      SDHCI_MISC_CTRL_ENABLE_DDR50,
-      SDHCI_MISC_CTRL_ENABLE_DDR50,
-      0
-      );
+    if (PcdGetBool(PcdSdhciDDR50Disable)) {
+      MmioBitFieldWrite32 (
+        BaseAddress + SDHCI_TEGRA_VENDOR_MISC_CTRL,
+        SDHCI_MISC_CTRL_ENABLE_DDR50,
+        SDHCI_MISC_CTRL_ENABLE_DDR50,
+        0
+        );
+    }
+    //DISABLE SDR104
+    if (PcdGetBool(PcdSdhciSDR104Disable)) {
+      MmioBitFieldWrite32 (
+        BaseAddress + SDHCI_TEGRA_VENDOR_MISC_CTRL,
+        SDHCI_MISC_CTRL_ENABLE_SDR104,
+        SDHCI_MISC_CTRL_ENABLE_SDR104,
+        0
+        );
+    }
 
     if (NULL == DeviceTreeNode) {
       return EFI_SUCCESS;

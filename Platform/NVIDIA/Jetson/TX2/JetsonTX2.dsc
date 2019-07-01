@@ -99,3 +99,7 @@
   #
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x190
 
+  #
+  # Disable SDR104 in SDHCi
+  #
+  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|TRUE

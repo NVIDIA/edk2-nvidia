@@ -2,7 +2,7 @@
 
   SD MMC Controller Driver private structures
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -41,6 +41,7 @@
 #define SDHCI_MISC_CTRL_ENABLE_SDR50               4
 #define SDHCI_MISC_CTRL_ENABLE_SDHCI_SPEC_300      5
 #define SDHCI_MISC_CTRL_ENABLE_DDR50               9
+#define SDHCI_MISC_CTRL_ENABLE_SDR104              3
 
 typedef struct {
   UINT32   TimeoutFreq:6;     // bit 0:5
