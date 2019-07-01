@@ -113,3 +113,5 @@ Include
 #Size of optional signing data header in boot.img partition.
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B
 
+#Force disable coherent DMA in SDHCi.
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C

@@ -53,5 +53,8 @@
 [Guids]
   gEdkiiNonDiscoverableSdhciDeviceGuid
 
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable
+
 [Depex]
   gNVIDIAAllRegulatorsPresentProtocolGuid

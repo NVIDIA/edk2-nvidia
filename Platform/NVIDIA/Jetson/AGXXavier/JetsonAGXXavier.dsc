@@ -104,3 +104,7 @@
   #
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
 
+  #
+  # Disable coherent DMA in SDHCi
+  #
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE

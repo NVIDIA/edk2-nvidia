@@ -151,6 +151,7 @@ DeviceDiscoveryNotify (
   EFI_STATUS                Status;
   CONST UINT32              *RegulatorPointer = NULL;
   NVIDIA_REGULATOR_PROTOCOL *RegulatorProtocol = NULL;
+  NON_DISCOVERABLE_DEVICE   *Device = NULL;
   UINT64                    Rate;
   EFI_PHYSICAL_ADDRESS      BaseAddress  = 0;
   UINTN                     RegionSize;
@@ -168,6 +169,19 @@ DeviceDiscoveryNotify (
                   );
 
   case DeviceDiscoveryDriverBindingStart:
+    if (PcdGetBool(PcdSdhciCoherentDMADisable)) {
+      Status = gBS->HandleProtocol (
+                      ControllerHandle,
+                      &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                      (VOID **)&Device);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to locate non discoverable device\n", __FUNCTION__));
+        return Status;;
+      }
+
+      Device->DmaType = NonDiscoverableDeviceDmaTypeNonCoherent;
+    }
+
     Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
