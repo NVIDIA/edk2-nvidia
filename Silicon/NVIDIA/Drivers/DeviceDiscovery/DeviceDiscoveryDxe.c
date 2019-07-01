@@ -502,6 +502,38 @@ AssertAllResetNodes (
 }
 
 /**
+  This function allows for module reset of all reset nodes.
+
+  @param[in]     This                The instance of the NVIDIA_RESET_NODE_PROTOCOL.
+
+  @return EFI_SUCCESS                All resets deasserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to reset all modules
+**/
+EFI_STATUS
+ModuleResetAllResetNodes (
+  IN  NVIDIA_RESET_NODE_PROTOCOL   *This
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
+  EFI_STATUS               Status;
+  UINTN                    Index;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  for (Index = 0; Index < This->Resets; Index++) {
+    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->ResetEntries[Index].ResetId, CmdResetModule);
+    if (EFI_ERROR (Status)) {
+      return EFI_DEVICE_ERROR;
+    }
+  }
+  return EFI_SUCCESS;
+}
+
+/**
   This function allows for deassert of specified reset nodes.
 
   @param[in]     This                The instance of the NVIDIA_RESET_NODE_PROTOCOL.
@@ -553,6 +585,33 @@ AssertResetNodes (
   }
 
   return BpmpProcessResetCommand (BpmpIpcProtocol, ResetId, CmdResetAssert);
+}
+
+/**
+  This function allows for module reset of specified reset nodes.
+
+  @param[in]     This                The instance of the NVIDIA_RESET_NODE_PROTOCOL.
+  @param[in]     ResetId             Id to reset
+
+  @return EFI_SUCCESS                Resets asserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to reset module
+**/
+EFI_STATUS
+ModuleResetNodes (
+  IN  NVIDIA_RESET_NODE_PROTOCOL   *This,
+  IN  UINT32                       ResetId
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
+  EFI_STATUS               Status;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  return BpmpProcessResetCommand (BpmpIpcProtocol, ResetId, CmdResetModule);
 }
 
 /**
@@ -619,11 +678,13 @@ GetResetNodeProtocol(
     return;
   }
 
-  ResetNode->DeassertAll = DeassertAllResetNodes;
-  ResetNode->AssertAll   = AssertAllResetNodes;
-  ResetNode->Deassert    = DeassertResetNodes;
-  ResetNode->Assert      = AssertResetNodes;
-  ResetNode->Resets = NumberOfResets;
+  ResetNode->DeassertAll    = DeassertAllResetNodes;
+  ResetNode->AssertAll      = AssertAllResetNodes;
+  ResetNode->ModuleResetAll = ModuleResetAllResetNodes;
+  ResetNode->Deassert       = DeassertResetNodes;
+  ResetNode->Assert         = AssertResetNodes;
+  ResetNode->ModuleReset    = ModuleResetNodes;
+  ResetNode->Resets         = NumberOfResets;
   ResetNames = (CONST CHAR8*)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "reset-names", &ResetNamesLength);
   if (ResetNamesLength == 0) {
     ResetNames = NULL;

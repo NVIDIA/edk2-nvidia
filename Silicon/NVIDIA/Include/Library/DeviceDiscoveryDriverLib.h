@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -38,6 +38,7 @@ typedef struct {
   BOOLEAN                AutoEnableClocks;
   BOOLEAN                AutoSetParents;
   BOOLEAN                AutoDeassertReset;
+  BOOLEAN                AutoResetModule;
   BOOLEAN                AutoDeassertPg;
   BOOLEAN                SkipEdkiiNondiscoverableInstall;
 } NVIDIA_DEVICE_DISCOVERY_CONFIG;

@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -204,7 +204,18 @@ DeviceDiscoveryBindingStart (
     }
   }
 
-  if (gDeviceDiscoverDriverConfig.AutoDeassertReset) {
+  if (gDeviceDiscoverDriverConfig.AutoResetModule) {
+    Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n",__FUNCTION__));
+      goto ErrorExit;
+    }
+    Status = ResetProtocol->ModuleResetAll (ResetProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, failed to reset module%r\r\n",__FUNCTION__,Status));
+      goto ErrorExit;
+    }
+  } else if (gDeviceDiscoverDriverConfig.AutoDeassertReset) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n",__FUNCTION__));

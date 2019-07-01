@@ -1,7 +1,7 @@
 /** @file
   Reset node protocol Protocol
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -19,7 +19,7 @@
 
 #define NVIDIA_RESET_NODE_PROTOCOL_GUID \
   { \
-  0xc1bc3373, 0xeaa5, 0x418f, { 0x91, 0xb2, 0xa3, 0x71, 0xd6, 0xc3, 0x9b, 0xab } \
+  0xf027ceae, 0xa96d, 0x490d, { 0xbe, 0x82, 0x12, 0x35, 0x81, 0xef, 0x11, 0x88 } \
   }
 
 //
@@ -59,6 +59,21 @@ EFI_STATUS
   );
 
 /**
+  This function allows for module reset of all reset nodes.
+
+  @param[in]     This                The instance of the NVIDIA_RESET_NODE_PROTOCOL.
+
+  @return EFI_SUCCESS                All resets deasserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to reset all modules
+**/
+typedef
+EFI_STATUS
+(EFIAPI *RESET_NODE_MODULE_RESET_ALL) (
+  IN  NVIDIA_RESET_NODE_PROTOCOL   *This
+  );
+
+/**
   This function allows for deassert of specified reset nodes.
 
   @param[in]     This                The instance of the NVIDIA_RESET_NODE_PROTOCOL.
@@ -92,6 +107,23 @@ EFI_STATUS
   IN  UINT32                       ResetId
   );
 
+/**
+  This function allows for module reset of specified reset nodes.
+
+  @param[in]     This                The instance of the NVIDIA_RESET_NODE_PROTOCOL.
+  @param[in]     ResetId             Id to reset
+
+  @return EFI_SUCCESS                Resets asserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to reset module
+**/
+typedef
+EFI_STATUS
+(EFIAPI *RESET_NODE_MODULE_RESET) (
+  IN  NVIDIA_RESET_NODE_PROTOCOL   *This,
+  IN  UINT32                       ResetId
+  );
+
 typedef struct {
   UINT32                  ResetId;
   CONST CHAR8             *ResetName;
@@ -100,12 +132,14 @@ typedef struct {
 /// NVIDIA_RESET_NODE_PROTOCOL protocol structure.
 struct _NVIDIA_RESET_NODE_PROTOCOL {
 
-  RESET_NODE_DEASSERT_ALL DeassertAll;
-  RESET_NODE_ASSERT_ALL   AssertAll;
-  RESET_NODE_DEASSERT     Deassert;
-  RESET_NODE_ASSERT       Assert;
-  UINTN                   Resets;
-  NVIDIA_RESET_NODE_ENTRY ResetEntries[0];
+  RESET_NODE_DEASSERT_ALL     DeassertAll;
+  RESET_NODE_ASSERT_ALL       AssertAll;
+  RESET_NODE_MODULE_RESET_ALL ModuleResetAll;
+  RESET_NODE_DEASSERT         Deassert;
+  RESET_NODE_ASSERT           Assert;
+  RESET_NODE_MODULE_RESET     ModuleReset;
+  UINTN                       Resets;
+  NVIDIA_RESET_NODE_ENTRY     ResetEntries[0];
 };
 
 extern EFI_GUID gNVIDIAResetNodeProtocolGuid;
