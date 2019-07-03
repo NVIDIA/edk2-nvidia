@@ -56,6 +56,7 @@
 
 [Protocols]
   gEfiHiiPackageListProtocolGuid                ##CONSUMES
+  gNVIDIAXhciControllerProtocolGuid
 
 [UserExtensions.TianoCore."ExtraFiles"]
   FalconUtilExtra.uni

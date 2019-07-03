@@ -50,9 +50,47 @@
 #define XUSB_OP_USBSTS  _MK_ADDR_CONST(0x00000004)
 #define USBSTS_CNR      (1 << 11)
 #define USBSTS_HCE      (1 << 12)
-/* CFG 4 Address shift and Mask Values for T186 only. Later chips might have
- * different values  */
-#define  CFG4_ADDR_SHIFT                   15
-#define  CFG4_ADDR_MASK                    0x1ffff
+
+#define  XUSB_BASE_ADDR_SHIFT              15
+#define  XUSB_BASE_ADDR_MASK               0x1ffff
+
+#define TEGRA186_RESET_XUSB_DEV                 53
+#define TEGRA186_RESET_XUSB_HOST                54
+#define TEGRA186_RESET_XUSB_PADCTL              55
+#define TEGRA186_RESET_XUSB_SS                  56
+
+/* Stores Platform Specific Information */
+typedef struct {
+  UINT32 Cfg4AddrShift;
+  UINT32 Cfg4AddrMask;
+  UINT32 NumResets;
+  UINT32 *Resets;
+  EFI_PHYSICAL_ADDRESS BaseAddress;
+  EFI_PHYSICAL_ADDRESS CfgAddress;
+} TEGRA_XUSB_SOC;
+
+/* T186 SOC Specific Parameters */
+UINT32 Tegra186Resets[] = {TEGRA186_RESET_XUSB_DEV,
+                           TEGRA186_RESET_XUSB_HOST,
+                           TEGRA186_RESET_XUSB_PADCTL,
+                           TEGRA186_RESET_XUSB_SS};
+
+TEGRA_XUSB_SOC Tegra186Soc = {
+  .Cfg4AddrShift = XUSB_BASE_ADDR_SHIFT,
+  .Cfg4AddrMask = XUSB_BASE_ADDR_MASK,
+  .NumResets = 4,
+  .Resets = Tegra186Resets,
+};
+
+#define XHCICONTROLLER_SIGNATURE SIGNATURE_32('X','H','C','I')
+typedef struct {
+  UINT32                         Signature;
+  NVIDIA_XHCICONTROLLER_PROTOCOL XhciControllerProtocol;
+  TEGRA_XUSB_SOC                 *XusbSoc;
+  EFI_HANDLE                     ImageHandle;
+  NVIDIA_USBPADCTL_PROTOCOL      *mUsbPadCtlProtocol;
+  EFI_EVENT                      mExitBootServicesEvent;
+} XHCICONTROLLER_DXE_PRIVATE;
+#define XHCICONTROLLER_PRIVATE_DATA_FROM_THIS(a) CR(a, XHCICONTROLLER_DXE_PRIVATE, XhciControllerProtocol, XHCICONTROLLER_SIGNATURE)
 
 #endif /* XHCI_CONTROLLER_PRIVATE_H_ */

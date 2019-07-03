@@ -22,17 +22,19 @@
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/UsbFalconLib.h>
 #include <Library/UsbFirmwareLib.h>
 #include <Protocol/ResetNodeProtocol.h>
 #include <Protocol/UsbPadCtl.h>
+#include <Protocol/XhciController.h>
 #include "XhciControllerPrivate.h"
+#include <libfdt.h>
 
 /* Falcon firmware image */
 #define FalconFirmware     xusb_sil_prod_fw
 #define FalconFirmwareSize xusb_sil_prod_fw_len
 
-NVIDIA_USBPADCTL_PROTOCOL *mUsbPadCtlProtocol;
 
 /* Discover driver */
 
@@ -50,6 +52,64 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .AutoDeassertPg = FALSE,
     .SkipEdkiiNondiscoverableInstall = FALSE
 };
+
+/* XhciController Protocol Function used to return the Xhci
+ * Registers Base Address */
+EFI_STATUS
+XhciGetBaseAddr (
+  IN  NVIDIA_XHCICONTROLLER_PROTOCOL *This,
+  OUT EFI_PHYSICAL_ADDRESS *BaseAddress
+  )
+{
+  XHCICONTROLLER_DXE_PRIVATE *Private;
+
+  if (NULL == This)
+    return EFI_INVALID_PARAMETER;
+
+  Private = XHCICONTROLLER_PRIVATE_DATA_FROM_THIS (This);
+
+  *BaseAddress = Private->XusbSoc->BaseAddress;
+  return EFI_SUCCESS;
+}
+
+/* XhciController Protocol Function used to return the Address
+ * of XHCI Configuration Registers
+ */
+EFI_STATUS
+XhciGetCfgAddr (
+  IN  NVIDIA_XHCICONTROLLER_PROTOCOL *This,
+  OUT EFI_PHYSICAL_ADDRESS *CfgAddress
+  )
+{
+  XHCICONTROLLER_DXE_PRIVATE *Private;
+
+  if (NULL == This)
+    return EFI_INVALID_PARAMETER;
+
+  Private = XHCICONTROLLER_PRIVATE_DATA_FROM_THIS (This);
+  *CfgAddress = Private->XusbSoc->CfgAddress;
+  return EFI_SUCCESS;
+}
+
+VOID
+EFIAPI
+NotifyExitBootServices (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  if (NULL == Context)
+    return;
+
+  XHCICONTROLLER_DXE_PRIVATE *Private = (XHCICONTROLLER_DXE_PRIVATE *)Context;
+
+  if (Private->mUsbPadCtlProtocol == NULL) {
+    DEBUG ((EFI_D_ERROR, "Invalid UsbPadCtlProtocol Handle\n"));
+    return;
+  }
+
+  Private->mUsbPadCtlProtocol->DeInitHw(Private->mUsbPadCtlProtocol);
+}
 
 /**
   Callback that will be invoked at various phases of the driver initialization
@@ -78,19 +138,29 @@ DeviceDiscoveryNotify (
   EFI_STATUS Status = EFI_SUCCESS;
   NVIDIA_RESET_NODE_PROTOCOL *ResetProtocol;
   UINT32 reg_val;
-  EFI_PHYSICAL_ADDRESS      BaseAddress  = 0;
-  EFI_PHYSICAL_ADDRESS      CfgAddress  = 0;
+  EFI_PHYSICAL_ADDRESS      BaseAddress = 0;
+  EFI_PHYSICAL_ADDRESS      CfgAddress = 0;
   UINTN                     RegionSize;
   UINT8                     CapLength;
   UINT32                    StatusRegister;
   UINTN                     i;
-
-  DEBUG ((EFI_D_ERROR, "%a\r\n",__FUNCTION__));
+  INTN                      Offset = -1;
+  XHCICONTROLLER_DXE_PRIVATE *Private = NULL;
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingStart:
-    DEBUG ((EFI_D_ERROR, "%a: DeviceDiscoveryDriverBindingStart\r\n",
-                                                      __FUNCTION__));
+
+    Private = AllocatePool (sizeof (XHCICONTROLLER_DXE_PRIVATE));
+    if (NULL == Private) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate memory\r\n", __FUNCTION__));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    /* Assign Platform Specific Parameters */
+    if ((Offset = fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
+                                          "nvidia,tegra186-xhci")) > 0) {
+      Private->XusbSoc = &Tegra186Soc;
+    }
 
     Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress,
                                                                 &RegionSize);
@@ -99,6 +169,8 @@ DeviceDiscoveryNotify (
                                                               __FUNCTION__));
       goto ErrorExit;
     }
+    Private->XusbSoc->BaseAddress = BaseAddress;
+
     Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 1, &CfgAddress,
                                                                 &RegionSize);
     if (EFI_ERROR (Status)) {
@@ -106,11 +178,32 @@ DeviceDiscoveryNotify (
                                                                 __FUNCTION__));
       goto ErrorExit;
     }
+    Private->XusbSoc->CfgAddress = CfgAddress;
+    Private->Signature = XHCICONTROLLER_SIGNATURE;
+    Private->ImageHandle = DriverHandle;
+    Private->XhciControllerProtocol.GetBaseAddr = XhciGetBaseAddr;
+    Private->XhciControllerProtocol.GetCfgAddr =  XhciGetCfgAddr;
+    /* Install the XhciController Protocol */
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                  &DriverHandle,
+                  &gNVIDIAXhciControllerProtocolGuid,
+                  &Private->XhciControllerProtocol,
+                  NULL
+                  );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, Failed to install protocols: %r\r\n",
+                                              __FUNCTION__, Status));
+      goto ErrorExit;
+    }
+
+    /* Pass Xhci Config Address to Falcon Library before using Library's
+     * other functions */
+    FalconSetHostCfgAddr(CfgAddress);
 
     Status = gBS->LocateProtocol (&gNVIDIAUsbPadCtlProtocolGuid, NULL,
-                                                (VOID **)&mUsbPadCtlProtocol);
-    if (EFI_ERROR (Status) || mUsbPadCtlProtocol == NULL) {
-      DEBUG ((EFI_D_ERROR, "%a:Couldnt fine UsbPadCtl Protocol Handle %r\n",
+                                                (VOID **)&(Private->mUsbPadCtlProtocol));
+    if (EFI_ERROR (Status) || Private->mUsbPadCtlProtocol == NULL) {
+      DEBUG ((EFI_D_ERROR, "%a: Couldn't find UsbPadCtl Protocol Handle %r\n",
                                                         __FUNCTION__, Status));
       goto ErrorExit;
     }
@@ -121,39 +214,29 @@ DeviceDiscoveryNotify (
       DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n",__FUNCTION__));
       goto ErrorExit;
     }
-    Status = ResetProtocol->Deassert (ResetProtocol, 53);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to deassert reset 53 %r\r\n",
-                                             __FUNCTION__, Status));
-      goto ErrorExit;
-    }
-    Status = ResetProtocol->Deassert (ResetProtocol, 54);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to deassert reset 54 %r\r\n",
-                                             __FUNCTION__, Status));
-      goto ErrorExit;
-    }
-    Status = ResetProtocol->Deassert (ResetProtocol, 55);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to deassert reset 55 %r\r\n",
-                                             __FUNCTION__, Status));
-      goto ErrorExit;
-    }
-    Status = ResetProtocol->Deassert (ResetProtocol, 56);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to deassert reset 56 %r\r\n",
-                                             __FUNCTION__, Status));
-      goto ErrorExit;
+
+    /* Deassert Resets of Platform Specific USB Blocks */
+    for (i = 0; i < Private->XusbSoc->NumResets; i++) {
+      Status = ResetProtocol->Deassert (ResetProtocol, Private->XusbSoc->Resets[i]);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a, Failed to deassert reset %d: %r\r\n",
+                   __FUNCTION__, Private->XusbSoc->Resets[i], Status));
+        goto ErrorExit;
+      }
     }
 
     /* Initialize USB Pad Registers */
-    mUsbPadCtlProtocol->InitHw(mUsbPadCtlProtocol);
-
+    Status = Private->mUsbPadCtlProtocol->InitHw(Private->mUsbPadCtlProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, Failed to Initailize USB HW: %r\r\n",
+                 __FUNCTION__, Status));
+      goto ErrorExit;
+    }
 
     /* Program Xhci PCI Cfg Registers */
     reg_val = MmioRead32(CfgAddress + XUSB_CFG_4_0);
-    reg_val &= ~(CFG4_ADDR_MASK << CFG4_ADDR_SHIFT);
-    reg_val |= BaseAddress & (CFG4_ADDR_MASK << CFG4_ADDR_SHIFT);
+    reg_val &= ~(Private->XusbSoc->Cfg4AddrMask << Private->XusbSoc->Cfg4AddrShift);
+    reg_val |= BaseAddress & (Private->XusbSoc->Cfg4AddrMask << Private->XusbSoc->Cfg4AddrShift);
     MmioWrite32(CfgAddress + XUSB_CFG_4_0, reg_val);
 
     gBS->Stall(200);
@@ -190,10 +273,24 @@ DeviceDiscoveryNotify (
       Status = EFI_DEVICE_ERROR;
       goto ErrorExit;
     }
+
+     Status = gBS->CreateEvent (
+                  EVT_SIGNAL_EXIT_BOOT_SERVICES,
+                  TPL_NOTIFY,
+                  NotifyExitBootServices,
+                  Private,
+                  &Private->mExitBootServicesEvent
+                  );
+     if (EFI_ERROR(Status))  {
+       DEBUG ((EFI_D_ERROR, "Error occured in creating ExitBootServicesEvent\n"));
+     }
+
     break;
   default:
     break;
   }
+  return EFI_SUCCESS;
 ErrorExit:
-    return Status;
+  FreePool (Private);
+  return Status;
 }

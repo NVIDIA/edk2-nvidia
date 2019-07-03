@@ -38,8 +38,23 @@ EFI_STATUS
   IN  NVIDIA_USBPADCTL_PROTOCOL  *This
   );
 
+/**
+  This function DeInitializes the USB Pads for specific Chip.
+
+  @param[in]     This                Instance of NVIDIA_USBPADCTL_PROTOCOL
+
+  @return EFI_SUCCESS                PADS Successfully Disabled.
+**/
+typedef
+VOID
+(EFIAPI *USBPADCTL_DEINIT_HW) (
+  IN  NVIDIA_USBPADCTL_PROTOCOL  *This
+  );
+
+
 struct _NVIDIA_USBPADCTL_PROTOCOL {
   USBPADCTL_INIT_HW             InitHw;
+  USBPADCTL_DEINIT_HW           DeInitHw;
 };
 
 extern EFI_GUID gNVIDIAUsbPadCtlProtocolGuid;

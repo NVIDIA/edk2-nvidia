@@ -24,6 +24,7 @@
 
 [Sources.common]
   UsbPadCtlDxe.c
+  UsbPadCtlTegra186.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -47,6 +48,8 @@
   gNVIDIAUsbPadCtlProtocolGuid
   gNVIDIARegulatorProtocolGuid
   gNVIDIAEFuseProtocolGuid
+  gNVIDIAPinMuxProtocolGuid
+  gArmScmiClock2ProtocolGuid
   gNVIDIAUsbPadCtlProtocolGuid
 
 [Guids]

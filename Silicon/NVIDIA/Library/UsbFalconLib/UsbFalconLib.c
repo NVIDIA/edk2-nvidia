@@ -22,6 +22,22 @@
 #include <string.h>
 #include <Library/DmaLib.h>
 
+
+/* Base Address of Xhci Controller's Configuration registers. These config
+ * registers are used to access the Falcon Registers and for FW Loading.
+ * This address should be set first by calling FalconSetHostCfgAddr() before
+ * accessing any other functions in the Falcon Library
+ */
+STATIC UINTN XusbHostCfgAddr;
+
+VOID
+FalconSetHostCfgAddr (
+  IN UINTN Address
+  )
+{
+  XusbHostCfgAddr = Address;
+}
+
 VOID *
 FalconMapReg (
   IN  UINTN Address
@@ -32,10 +48,10 @@ FalconMapReg (
   VOID *Register;
 
   /* write page index into XUSB PCI CFG register CSBRANGE */
-  MmioWrite32(XUSB_HOST_CFG + 0x41c /* CSBRANGE */, PageIndex);
+  MmioWrite32(XusbHostCfgAddr + 0x41c /* CSBRANGE */, PageIndex);
 
   /* calculate falcon register address within 512-byte aperture in XUSB PCI CFG space between offsets 0x800 and 0xa00 */
-  Register = (VOID *) (XUSB_HOST_CFG + 0x800 + PageOffset);
+  Register = (VOID *) (XusbHostCfgAddr + 0x800 + PageOffset);
 
   return Register;
 
@@ -46,7 +62,12 @@ FalconRead32 (
   IN  UINTN Address
   )
 {
-  UINT32 *Register32 = (UINT32 *) FalconMapReg (Address);
+  UINT32 *Register32;
+  if (XusbHostCfgAddr == 0) {
+    DEBUG ((EFI_D_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
+    return 0;
+  }
+  Register32 = (UINT32 *) FalconMapReg (Address);
   UINT32 Value = MmioRead32 ((UINTN) Register32);
 
   DEBUG ((EFI_D_VERBOSE, "%a: %x --> %x\r\n", __FUNCTION__, Address, Value));
@@ -61,7 +82,12 @@ FalconWrite32 (
   IN  UINT32 Value
   )
 {
-  UINT32 *Register32 = (UINT32 *) FalconMapReg (Address);
+  UINT32 *Register32;
+  if (XusbHostCfgAddr == 0) {
+    DEBUG ((EFI_D_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
+    return 0;
+  }
+  Register32 = (UINT32 *) FalconMapReg (Address);
 
   DEBUG ((EFI_D_VERBOSE, "%a: %x <-- %x\r\n", __FUNCTION__, Address, Value));
 

@@ -51,6 +51,7 @@
   gArmScmiClockProtocolGuid
   gNVIDIARegulatorProtocolGuid
   gNVIDIAUsbPadCtlProtocolGuid
+  gNVIDIAXhciControllerProtocolGuid
 
 [Guids]
   gEdkiiNonDiscoverableXhciDeviceGuid

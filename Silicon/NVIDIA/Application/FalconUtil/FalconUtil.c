@@ -23,6 +23,7 @@
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/HiiLib.h>
 #include <Library/UsbFalconLib.h>
+#include <Protocol/XhciController.h>
 
 #define AUTO_INCREMENT_ON_READ_DM  0x2000000
 #define AUTO_INCREMENT_ON_READ_DD  0x80000000
@@ -84,21 +85,23 @@ InitializeFalconUtil (
   IN EFI_SYSTEM_TABLE    *SystemTable
   )
 {
-  EFI_STATUS                    Status;
-  EFI_HII_PACKAGE_LIST_HEADER   *PackageList;
-  LIST_ENTRY                    *ParamPackage;
-  CHAR16                        *ProblemParam;
-  UINTN                         Position;
-  CONST CHAR16                  *ValueStr;
-  UINTN                         Address;
-  UINTN                         Value;
-  UINT32                        Value32;
-  UINT32                        NumDwords;
-  UINT32                        Iter;
-  UINT32                        PrintAddress;
-  UINT32                        MaxIndex;
-  CHAR16 IcdReg[TOTAL_REG_COUNT][5] = {L"R00", L"R01", L"R02", L"R03", L"R04", L"R05", L"R06", L"R07", L"R08", L"R09", L"R10", L"R11", L"R12", L"R13",
-                                 L"R14", L"R15", L"IV0", L"IV1", L"\0", L"EV", L"SP", L"PC", L"IMB", L"DMB", L"CSW", L"CCR", L"SEC", L"CTX", L"EXCI"};
+  EFI_STATUS                     Status;
+  EFI_HII_PACKAGE_LIST_HEADER    *PackageList;
+  LIST_ENTRY                     *ParamPackage;
+  CHAR16                         *ProblemParam;
+  UINTN                          Position;
+  CONST CHAR16                   *ValueStr;
+  UINTN                          Address;
+  UINTN                          Value;
+  UINT32                         Value32;
+  UINT32                         NumDwords;
+  UINT32                         Iter;
+  UINT32                         PrintAddress;
+  EFI_PHYSICAL_ADDRESS           CfgAddress = 0;
+  NVIDIA_XHCICONTROLLER_PROTOCOL *mXhciControllerProtocol;
+  UINT32                         MaxIndex;
+  CHAR16                         IcdReg[TOTAL_REG_COUNT][5] = {L"R00", L"R01", L"R02", L"R03", L"R04", L"R05", L"R06", L"R07", L"R08", L"R09", L"R10", L"R11", L"R12",
+                                 L"R13", L"R14", L"R15", L"IV0", L"IV1", L"\0", L"EV", L"SP", L"PC", L"IMB", L"DMB", L"CSW", L"CCR", L"SEC", L"CTX", L"EXCI"};
 
   // Retrieve HII package list from ImageHandle
   Status = gBS->OpenProtocol (
@@ -141,6 +144,26 @@ InitializeFalconUtil (
                     mHiiHandle, mAppName);
     goto Done;
   }
+
+  Status = gBS->LocateProtocol (&gNVIDIAXhciControllerProtocolGuid, NULL,
+                                      (VOID **)&mXhciControllerProtocol);
+  if (EFI_ERROR (Status) || mXhciControllerProtocol == NULL) {
+    DEBUG ((EFI_D_ERROR, "%a: Can't get XhciController Protocol Handle:%r\n",
+                                                      __FUNCTION__, Status));
+    goto Done;
+  }
+
+  /* Get the XHCI Config Registers Base Address */
+  mXhciControllerProtocol->GetCfgAddr(mXhciControllerProtocol, &CfgAddress);
+  if (CfgAddress == 0) {
+    DEBUG ((EFI_D_ERROR, "%a: Invalid Xhci Config Address Received\n"));
+    goto Done;
+  }
+
+  /* Set the XHCI Config Address in Falcon Library before using any other
+   * functions of the Library
+   */
+  FalconSetHostCfgAddr(CfgAddress);
 
   /* Print Diagnostic Info used for debugging Firmware Halts */
   if (ShellCommandLineGetFlag (ParamPackage, L"-diag")) {
@@ -369,5 +392,5 @@ Done:
   ShellCommandLineFreeVarList (ParamPackage);
   HiiRemovePackages (mHiiHandle);
 
-  return EFI_SUCCESS;
+  return Status;
 }

@@ -57,11 +57,6 @@ struct tegra_xhci_fw_cfgtbl {
   UINT8 padding[137]; /* Padding to make 256-bytes cfgtbl */
 };
 
-/* XUSB Registers */
-
-#define XUSB_HOST_BASE                      0x03530000
-#define XUSB_HOST_CFG                       (XUSB_HOST_BASE + 0x8000)
-
 /* Falcon CSB Registers */
 
 #define IMEM_BLOCK_SIZE                     256
@@ -79,6 +74,12 @@ struct tegra_xhci_fw_cfgtbl {
 #define FALCON_DMACTL_0                     0x10c
 #define FALCON_IMFILLRNG1_0                 0x154
 #define FALCON_IMFILLCTL_0                  0x158
+
+
+VOID
+FalconSetHostCfgAddr (
+  IN  UINTN Address
+  );
 
 VOID *
 FalconMapReg (
