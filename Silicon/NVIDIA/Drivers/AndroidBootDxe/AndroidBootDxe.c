@@ -942,7 +942,80 @@ AndroidBootDriverBindingStop (
   return EFI_SUCCESS;
 }
 
+/**
+  Causes the driver to load a specified file.
 
+  @param  This                  Protocol instance pointer.
+  @param  FilePath              The device specific path of the file to load.
+  @param  BootPolicy            If TRUE, indicates that the request originates from the
+                                boot manager is attempting to load FilePath as a boot
+                                selection. If FALSE, then FilePath must match as exact file
+                                to be loaded.
+  @param  BufferSize            On input the size of Buffer in bytes. On output with a return
+                                code of EFI_SUCCESS, the amount of data transferred to
+                                Buffer. On output with a return code of EFI_BUFFER_TOO_SMALL,
+                                the size of Buffer required to retrieve the requested file.
+  @param  Buffer                The memory buffer to transfer the file to. IF Buffer is NULL,
+                                then the size of the requested file is returned in
+                                BufferSize.
+
+  @retval EFI_SUCCESS           The file was loaded.
+  @retval EFI_UNSUPPORTED       The device does not support the provided BootPolicy
+  @retval EFI_INVALID_PARAMETER FilePath is not a valid device path, or
+                                BufferSize is NULL.
+  @retval EFI_NO_MEDIA          No medium was present to load the file.
+  @retval EFI_DEVICE_ERROR      The file was not loaded due to a device error.
+  @retval EFI_NO_RESPONSE       The remote system did not respond.
+  @retval EFI_NOT_FOUND         The file was not found.
+  @retval EFI_ABORTED           The file load process was manually cancelled.
+  @retval EFI_BUFFER_TOO_SMALL  The BufferSize is too small to read the current directory entry.
+                                BufferSize has been updated with the size needed to complete
+                                the request.
+
+**/
+EFI_STATUS
+EFIAPI
+RamloadLoadFile (
+  IN EFI_LOAD_FILE_PROTOCOL     *This,
+  IN EFI_DEVICE_PATH_PROTOCOL   *FilePath,
+  IN BOOLEAN                    BootPolicy,
+  IN OUT UINTN                  *BufferSize,
+  IN VOID                       *Buffer OPTIONAL
+  )
+{
+  // Verify if the valid parameters
+  if (This == NULL || BufferSize == NULL || FilePath == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+  if (*BufferSize != 0 && Buffer == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+  if (!BootPolicy) {
+    return EFI_UNSUPPORTED;
+  }
+
+  // Check if the given buffer size is big enough
+  // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
+  if (*BufferSize < PcdGet64 (PcdRamLoadedKernelSize)) {
+  *BufferSize = PcdGet64 (PcdRamLoadedKernelSize);
+    return EFI_BUFFER_TOO_SMALL;
+  }
+
+  CopyMem (Buffer, (VOID *)(UINTN)PcdGet64 (PcdRamLoadedKernelAddress), PcdGet64 (PcdRamLoadedKernelSize));
+
+  if (PcdGet64 (PcdRamLoadedInitrdSize) != 0) {
+    AndroidBootSetRamdiskInfo (PcdGet64 (PcdRamLoadedInitrdAddress), PcdGet64 (PcdRamLoadedInitrdSize));
+  }
+
+  return EFI_SUCCESS;
+}
+
+///
+/// Ramload LoadFile Protocol instance
+///
+EFI_LOAD_FILE_PROTOCOL mRamloadLoadFile = {
+  RamloadLoadFile
+};
 ///
 /// Driver Binding Protocol instance
 ///
@@ -955,6 +1028,27 @@ EFI_DRIVER_BINDING_PROTOCOL mAndroidBootDriverBinding = {
   NULL
 };
 
+//
+// Device path for the handle that incorporates our ramload load file instance.
+//
+#pragma pack(1)
+typedef struct {
+  VENDOR_DEVICE_PATH       VenHwNode;
+  EFI_DEVICE_PATH_PROTOCOL EndNode;
+} SINGLE_VENHW_NODE_DEVPATH;
+#pragma pack()
+
+STATIC CONST SINGLE_VENHW_NODE_DEVPATH mLoadFileDevicePath = {
+  {
+    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
+    NVIDIA_ANDROID_BOOT_DEVICE_PROTOCOL_GUID
+  },
+
+  {
+    END_DEVICE_PATH_TYPE, END_ENTIRE_DEVICE_PATH_SUBTYPE,
+    { sizeof (EFI_DEVICE_PATH_PROTOCOL) }
+  }
+};
 
 /**
   This is the declaration of an EFI image entry point. This entry point is
@@ -984,6 +1078,18 @@ AndroidBootDxeDriverEntryPoint (
              &mAndroidBootDriverBinding,
              ImageHandle
              );
+
+  if (PcdGetBool(PcdRamLoadedKernelSupport)) {
+    EFI_HANDLE LoadFileHandle = 0;
+
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &LoadFileHandle,
+                    &gEfiLoadFileProtocolGuid,
+                    &mRamloadLoadFile,
+                    &gEfiDevicePathProtocolGuid,
+                    &mLoadFileDevicePath,
+                    NULL);
+  }
 
   return Status;
 }

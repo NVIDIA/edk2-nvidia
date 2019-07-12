@@ -123,7 +123,8 @@ InstallSystemResources (
   }
 
   for (Index = CARVEOUT_NONE; Index < CARVEOUT_NUM; Index++) {
-    if (Index == CARVEOUT_MISC) {
+    if ((Index == CARVEOUT_MISC) ||
+        (Index == CARVEOUT_OS)) {
       //Leave in memory map but marked as used
       BuildMemoryAllocationHob (
         CpuBootloaderParams->CarveoutInfo[Index].Base,
@@ -131,7 +132,6 @@ InstallSystemResources (
         EfiBootServicesData
       );
     } else if ((Index != CARVEOUT_CPUBL) &&
-               (Index != CARVEOUT_OS) &&
                (Index != CARVEOUT_MB2) &&
                (Index != CARVEOUT_RCM_BLOB) &&
                (CpuBootloaderParams->CarveoutInfo[Index].Size != 0)) {

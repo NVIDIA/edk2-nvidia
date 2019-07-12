@@ -55,4 +55,9 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
+  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport
+  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelAddress
+  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSize
+  gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdAddress
+  gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdSize
 

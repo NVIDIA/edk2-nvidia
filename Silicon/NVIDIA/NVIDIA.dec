@@ -128,3 +128,12 @@ Include
 
 #Base address of MISCREG aperture.
   gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00000000|UINT64|0x0000000F
+
+#Pre-ramloaded kernel/initrd info
+  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelAddress|0x0|UINT64|0x00000011
+  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSize|0x0|UINT64|0x00000012
+  gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdAddress|0x0|UINT64|0x00000013
+  gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdSize|0x0|UINT64|0x00000014
+
+[PcdsDynamic.common]
+  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport|FALSE|BOOLEAN|0x00000010

@@ -44,6 +44,11 @@
 
 #define ANDROID_BOOT_SIGNATURE  SIGNATURE_64 ('A','N','D','R','O','I','D','!')
 
+#define NVIDIA_ANDROID_BOOT_DEVICE_PROTOCOL_GUID \
+  { \
+  0x0c7bbfcf, 0x2559, 0x401c, { 0x8d, 0xb1, 0x83, 0x32, 0xb1, 0xae, 0x95, 0x34 } \
+  }
+
 
 // Android Boot Data structure
 typedef struct {
