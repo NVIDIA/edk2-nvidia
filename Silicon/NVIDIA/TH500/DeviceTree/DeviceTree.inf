@@ -1,6 +1,6 @@
 ## @file
 #
-#  Device tree description of the NVIDIA GH100 device
+#  Device tree description of the NVIDIA TH500 device
 #
 #  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
 #
@@ -22,7 +22,7 @@
   VERSION_STRING = 1.0
 
 [Sources]
-  gh100-sim.dts
+  th500-sim.dts
 
 [Packages]
   MdePkg/MdePkg.dec

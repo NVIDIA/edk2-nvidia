@@ -30,7 +30,7 @@
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = Platform/NVIDIA/Server/Server.fdf
-  CHIPSET                        = GH100
+  CHIPSET                        = TH500
   DEVICE_TREE_BUILD              = TRUE
   DEFINE VARIABLES               = "STORAGE"
 
@@ -97,7 +97,7 @@
   #
   # ACPI
   #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'GH100   '
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TH500   '
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision|0x00000001
 
 [PcdsDynamicHii.common.DEFAULT]

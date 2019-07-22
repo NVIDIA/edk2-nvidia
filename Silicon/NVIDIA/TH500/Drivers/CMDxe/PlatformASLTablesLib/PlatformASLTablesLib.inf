@@ -15,7 +15,7 @@
 
 [Defines]
   INF_VERSION                    = 0x00010019
-  BASE_NAME                      = Gh100AslTablesLib
+  BASE_NAME                      = Th500AslTablesLib
   FILE_GUID                      = c5dff05a-613c-4fde-a4c4-2bfb1d114491
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
