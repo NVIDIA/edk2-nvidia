@@ -36,13 +36,14 @@ NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-    L"NVIDIA USB Pad controller driver",   //DriverName
-    TRUE,                                  //UseDriverBinding
-    TRUE,                                  //AutoEnableClocks
-    TRUE,                                  //AutoSetParents
-    TRUE,                                  //AutoDeassertReset
-    FALSE,                                 //AutoDeassertPg
-    TRUE                                   //SkipEdkiiNondiscoverableInstall
+    .DriverName = L"NVIDIA USB Pad controller driver",
+    .UseDriverBinding = TRUE,
+    .AutoEnableClocks = TRUE,
+    .AutoSetParents = TRUE,
+    .AutoDeassertReset = TRUE,
+    .AutoResetModule = FALSE,
+    .AutoDeassertPg = FALSE,
+    .SkipEdkiiNondiscoverableInstall = TRUE
 };
 
 EFI_STATUS

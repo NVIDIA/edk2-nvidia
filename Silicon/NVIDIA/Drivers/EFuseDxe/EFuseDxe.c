@@ -34,13 +34,14 @@ NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-    L"NVIDIA EFuse driver",            //DriverName
-    TRUE,                              //UseDriverBinding
-    TRUE,                              //AutoEnableClocks
-    TRUE,                              //AutoSetParents
-    TRUE,                              //AutoDeassertReset
-    FALSE,                             //AutoDeassertPg
-    TRUE                               //SkipEdkiiNondiscoverableInstall
+    .DriverName = L"NVIDIA EFuse driver",
+    .UseDriverBinding = TRUE,
+    .AutoEnableClocks = TRUE,
+    .AutoSetParents = TRUE,
+    .AutoDeassertReset = TRUE,
+    .AutoResetModule = FALSE,
+    .AutoDeassertPg = FALSE,
+    .SkipEdkiiNondiscoverableInstall = TRUE
 };
 
 /**

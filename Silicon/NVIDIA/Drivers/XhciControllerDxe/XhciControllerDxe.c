@@ -42,13 +42,14 @@ NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-    L"NVIDIA Xhci controller driver",   //DriverName
-    TRUE,                               //UseDriverBinding
-    TRUE,                               //AutoEnableClocks
-    TRUE,                               //AutoSetParents
-    TRUE,                               //AutoDeassertReset
-    FALSE,                              //AutoDeassertPg
-    FALSE                               //SkipEdkiiNondiscoverableInstall
+    .DriverName = L"NVIDIA Xhci controller driver",
+    .UseDriverBinding = TRUE,
+    .AutoEnableClocks = TRUE,
+    .AutoSetParents = TRUE,
+    .AutoDeassertReset = TRUE,
+    .AutoResetModule = FALSE,
+    .AutoDeassertPg = FALSE,
+    .SkipEdkiiNondiscoverableInstall = FALSE
 };
 
 /**
