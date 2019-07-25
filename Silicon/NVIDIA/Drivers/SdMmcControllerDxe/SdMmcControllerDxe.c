@@ -119,7 +119,6 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .DriverName = L"NVIDIA SdMmc controller driver",
     .UseDriverBinding = TRUE,
     .AutoEnableClocks = TRUE,
-    .AutoSetParents = FALSE,
     .AutoResetModule = TRUE,
     .SkipEdkiiNondiscoverableInstall = FALSE
 };

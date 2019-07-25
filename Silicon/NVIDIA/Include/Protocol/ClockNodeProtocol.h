@@ -1,7 +1,7 @@
 /** @file
   Clock node protocol Protocol
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -50,7 +50,6 @@ typedef struct {
   This function allows for simple enablement of all clock nodes.
 
   @param[in]     This                The instance of the NVIDIA_CLOCK_NODE_PROTOCOL.
-  @param[in]     SetParent           Attempt to set the parent clocks
 
   @return EFI_SUCCESS                All clocks enabled.
   @return EFI_NOT_READY              Clock control protocol is not installed.
@@ -59,8 +58,7 @@ typedef struct {
 typedef
 EFI_STATUS
 (EFIAPI *CLOCK_NODE_ENABLE_ALL) (
-  IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This,
-  IN  BOOLEAN                      SetParent
+  IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This
   );
 
 /// NVIDIA_CLOCK_NODE_PROTOCOL protocol structure.

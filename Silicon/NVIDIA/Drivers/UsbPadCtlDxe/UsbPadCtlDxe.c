@@ -39,7 +39,6 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .DriverName = L"NVIDIA USB Pad controller driver",
     .UseDriverBinding = TRUE,
     .AutoEnableClocks = TRUE,
-    .AutoSetParents = TRUE,
     .AutoDeassertReset = TRUE,
     .AutoResetModule = FALSE,
     .AutoDeassertPg = FALSE,

@@ -36,7 +36,6 @@ typedef struct {
   CONST CHAR16           *DriverName;
   BOOLEAN                UseDriverBinding;
   BOOLEAN                AutoEnableClocks;
-  BOOLEAN                AutoSetParents;
   BOOLEAN                AutoDeassertReset;
   BOOLEAN                AutoResetModule;
   BOOLEAN                AutoDeassertPg;

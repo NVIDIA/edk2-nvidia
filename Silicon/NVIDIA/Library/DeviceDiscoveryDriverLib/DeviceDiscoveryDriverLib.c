@@ -197,7 +197,7 @@ DeviceDiscoveryBindingStart (
       DEBUG ((EFI_D_ERROR, "%a, no clock node protocol\r\n",__FUNCTION__));
       goto ErrorExit;
     }
-    Status = ClockProtocol->EnableAll (ClockProtocol, gDeviceDiscoverDriverConfig.AutoSetParents);
+    Status = ClockProtocol->EnableAll (ClockProtocol);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a, failed to enable clocks %r\r\n",__FUNCTION__,Status));
       goto ErrorExit;

@@ -37,7 +37,6 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .DriverName = L"NVIDIA PinMux driver",
     .UseDriverBinding = TRUE,
     .AutoEnableClocks = TRUE,
-    .AutoSetParents = TRUE,
     .AutoDeassertReset = TRUE,
     .AutoResetModule = FALSE,
     .AutoDeassertPg = FALSE,

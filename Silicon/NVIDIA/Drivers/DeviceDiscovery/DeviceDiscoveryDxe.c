@@ -740,7 +740,6 @@ GetResetNodeProtocol(
   This function allows for simple enablement of all clock nodes.
 
   @param[in]     This                The instance of the NVIDIA_CLOCK_NODE_PROTOCOL.
-  @param[in]     SetParent           Attempt to set the parent clocks
 
   @return EFI_SUCCESS                All clocks enabled.
   @return EFI_NOT_READY              Clock control protocol is not installed.
@@ -748,51 +747,27 @@ GetResetNodeProtocol(
 **/
 EFI_STATUS
 EnableAllClockNodes (
-  IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This,
-  IN  BOOLEAN                      SetParent
+  IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This
   )
 {
   SCMI_CLOCK2_PROTOCOL          *ClockProtocol = NULL;
-  NVIDIA_CLOCK_PARENTS_PROTOCOL *ClockParents = NULL;
   EFI_STATUS                    Status;
   UINTN                         Index;
-  UINTN                         ParentsIndex;
   UINT32                        ClockId;
-  UINT32                        ParentId;
 
   Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&ClockProtocol);
   if (EFI_ERROR (Status)) {
     return EFI_NOT_READY;
   }
 
-  Status = gBS->LocateProtocol (&gNVIDIAClockParentsProtocolGuid, NULL, (VOID **)&ClockParents);
-  if (EFI_ERROR (Status)) {
-    return EFI_NOT_READY;
-  }
-
   for (Index = 0; Index < This->Clocks; Index++) {
     ClockId = This->ClockEntries[This->Clocks - Index - 1].ClockId;
-    if (SetParent) {
-      for (ParentsIndex = 0; ParentsIndex < This->Clocks; ParentsIndex++) {
-        if (This->ClockEntries[ParentsIndex].Parent) {
-          ParentId = This->ClockEntries[ParentsIndex].ClockId;
-          if (EFI_SUCCESS == ClockParents->IsParent (ClockParents, ClockId, ParentId)) {
-            Status = ClockParents->SetParent (ClockParents, ClockId, ParentId);
-            if (EFI_ERROR (Status)) {
-              DEBUG ((EFI_D_ERROR, "%a: Failed to set parent 0x%x on clock 0x%x\r\n",__FUNCTION__,ParentId,ClockId));
-              return Status;
-            } else {
-              break;
-            }
-          }
-        }
-      }
-    }
     Status = ClockProtocol->Enable (ClockProtocol, ClockId, TRUE);
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
     }
   }
+
   return EFI_SUCCESS;
 }
 

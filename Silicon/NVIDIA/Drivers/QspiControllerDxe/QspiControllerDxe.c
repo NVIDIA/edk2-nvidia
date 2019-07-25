@@ -48,7 +48,6 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
   .DriverName = L"NVIDIA Qspi controller driver",
   .UseDriverBinding = TRUE,
   .AutoEnableClocks = TRUE,
-  .AutoSetParents = FALSE,
   .AutoDeassertReset = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE
 };
