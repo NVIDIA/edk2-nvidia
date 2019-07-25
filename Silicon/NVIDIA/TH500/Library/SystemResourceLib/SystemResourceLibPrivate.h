@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -17,13 +17,8 @@
 
 #include <Uefi/UefiBaseType.h>
 
-extern CONST UINT8 tegra234_sim_vdk_dtb[];
-extern UINTN tegra234_sim_vdk_dtb_len;
-
 #define TEGRABL_MAX_VERSION_STRING 128 /* chars including null */
 #define NUM_DRAM_BAD_PAGES 1024
-#define MAX_OEM_FW_RATCHET_INDEX              104U
-#define TEGRABL_MAX_STORAGE_DEVICES  8U
 
 /*macro carve_out_type*/
 typedef UINT32 carve_out_type_t;
@@ -116,27 +111,71 @@ typedef struct {
   };
 } TEGRABL_CARVEOUT_INFO;
 
+#pragma pack(1)
 typedef struct {
-  CONST UINT8 Mb2;
-  CONST UINT8 CpuBl;
-  CONST UINT8 BpmpFw;
-  CONST UINT8 Tos;
-  CONST UINT8 TSec;
-  CONST UINT8 NvDec;
-  CONST UINT8 Srm;
-  CONST UINT8 TsecGscUcode;
-  CONST UINT8 EarlySpeFw;
-  CONST UINT8 ExtendedSpeFw;
-  CONST UINT8 XUsb;
-  CONST UINT8 Sce;
-  CONST UINT8 Rce;
-  CONST UINT8 Ape;
-} TEGRABL_RATCHET_INFO;
+  UINT32  MagicHeader;
+  UINT32  ClockSource;
+  UINT32  ClockDivider;
+  UINT32  ClockSourceFrequency;
+  UINT32  InterfaceFrequency;
+  UINT32  MaxBusWidth;
+  BOOLEAN EnableDdrRead;
+  UINT32  DmaType;
+  UINT32  FifoAccessMode;
+  UINT32  ReadDummyCycles;
+  UINT32  Trimmer1Value;
+  UINT32  Rrimmer2Value;
+  UINT8   Reserved[8];
+} TEGRABL_DEVICE_CONFIG_QSPI_FLASH_PARAMS;
+#pragma pack()
 
+#pragma pack(1)
 typedef struct {
-  UINT8 Type;
-  UINT8 Instance;
-} TEGRABL_DEVICE;
+  UINT32  MagicHeader;
+  UINT32  ClockSource;
+  UINT32  ClockFrequency;
+  UINT32  BestMode;
+  UINT32  PdOffset;
+  UINT32  PuOffset;
+  BOOLEAN DqsTrimHs400;
+  BOOLEAN EnableStrobeHs400;
+  UINT8   Reserved[8];
+} TEGRABL_DEVICE_CONFIG_SDMMC_PARAMS;
+#pragma pack()
+
+#pragma pack(1)
+typedef struct {
+  UINT32 MagicHeader;
+  UINT8  TransferSpeed;
+  UINT8  Reserved[8];
+} TEGRABL_DEVICE_CONFIG_SATA_PARAMS;
+#pragma pack()
+
+#pragma pack(1)
+typedef struct {
+  UINT32  MagicHeader;
+  UINT8   MaxHsMode;
+  UINT8   MaxPwmMode;
+  UINT8   MaxActiveLanes;
+  UINT32  PageAlignSize;
+  BOOLEAN EnableHsModes;
+  BOOLEAN EnableFastAutoMode;
+  BOOLEAN EnableHsRateB;
+  BOOLEAN EnableHsRateA;
+  BOOLEAN SkipHsModeSwitch;
+  UINT8   Reserved[8];
+} TEGRABL_DEVICE_CONFIG_UFS_PARAMS;
+#pragma pack()
+
+#pragma pack(1)
+typedef struct  {
+  UINT32 Version;
+  TEGRABL_DEVICE_CONFIG_SDMMC_PARAMS Sdmmc;
+  TEGRABL_DEVICE_CONFIG_QSPI_FLASH_PARAMS QspiFlash;
+  TEGRABL_DEVICE_CONFIG_UFS_PARAMS Ufs;
+  TEGRABL_DEVICE_CONFIG_SATA_PARAMS Sata;
+} TEGRABL_DEVICE_CONFIG_PARAMS;
+#pragma pack()
 
 typedef struct {
   /**< version */
@@ -145,13 +184,13 @@ typedef struct {
   /**< Uart instance */
   UINT32 Uart_Instance;
 
-  /**< Verbose level for logs */
-  UINT32 Verbose;
+  /**< Enable logs */
+  UINT32 EnableLog;
 
   UINT32 Reserved0;
 
-  /**< Address of device params from mb1 bct*/
-  UINT64 DeviceParamsAddresss;
+  /**< device config params from mb1 bct */
+  TEGRABL_DEVICE_CONFIG_PARAMS DeviceConfig;
 
   /**< Address of i2c bus frequecy from mb1 bct */
   UINT64 I2cBusFrequencyAddress;
@@ -162,17 +201,18 @@ typedef struct {
   /**< Total size of controller pad settings */
   UINT64 ControllerProdSettingsSize;
 
-  /**< Address of public keystore address in sysram */
-  UINT64 SysRamKeystoreAddress;
+  /**< Parameters for Secure_OS/TLK passed via GPR */
+  UINT64 SecureOsParams[4];
+  UINT64 SecureOsStart;
 
-  /**< Address of mb2 bct */
-  UINT64 MB2BctAddress;
+  /**< If tos loaded by mb2 has secureos or not. */
+  UINT32 SecureosType;
 
-  /**< Address sdram params copied from mb1 bct */
-  UINT64 SdramParams;
+  /**< SDRAM size in bytes */
+  UINT64 SdramSize;
 
-  /**< Number of sdram params in mb1 bct */
-  UINT64 NumberOfSdramParams;
+  /**< bootloader dtb load address */
+  UINT64 BlDtbLoadAddress;
 
   /**< physical address and size of the carveouts */
   TEGRABL_CARVEOUT_INFO CarveoutInfo[CARVEOUT_NUM];
@@ -184,14 +224,8 @@ typedef struct {
     UINT64 FeatureFlagRaw;
     struct {
       UINT64 EnableDramPageBlacklisting:1;
-      UINT64 SceFwLoaded:1;
-      UINT64 EnableSpe:1;
-      UINT64 SwitchBootchain:1;
-      UINT64 ResetToRecovery:1;
-      UINT64 EnableDramErrorInjection:1;
+      UINT64 EnableCombinedUart:1;
       UINT64 EnableDramStagedScrubbing:1;
-      UINT64 EnableWdt;
-
     };
   };
 
@@ -203,14 +237,20 @@ typedef struct {
    */
   UINT64 DramPageBlacklistInfoAddress;
 
+  /**< Start address of Golden register data region */
+  UINT64 GoldenRegisterAddress;
+
+  /**< Size of Golden register data region */
+  UINT32 GoldenRegisterSize;
+
   /**< Start address of Profiling data */
   UINT64 ProfilingDataAddress;
 
   /**< Size of Profiling data */
   UINT32 ProfilingDataSize;
 
-  /**< Start offset of unallocated/unused data in MB2 carveout */
-  UINT64 MB2CarveoutSafeEndOffset;
+  /**< Start offset of unallocated/unused data in CPUâ€BL carveout */
+  UINT64 CpublCarveoutSafeEndOffset;
 
   /**< Start offset of unallocated/unused data in MISC carveout */
   UINT64 MiscCarveoutSafeStartOffset;
@@ -223,41 +263,24 @@ typedef struct {
   /**< Boot mode can be cold boot, uart, recovery or RCM */
   UINT32 BootType;
 
-  UINT32 Reserved2;
-
   /**< Uart_base Address for debug prints */
   UINT64 EarlyUartAddr;
 
   /**< mb1 bct version information */
-  UINT8 Mb1BctVersion;
+  UINT32 Mb1BctVersion;
 
-  UINT8 Reserved3[7];
+  UINT32 Reserved2;
 
   /**< mb1 version */
   UINT8 Mb1Version[TEGRABL_MAX_VERSION_STRING];
 
+  /**< mb2 version */
+  UINT8 Mb2Version[TEGRABL_MAX_VERSION_STRING];
+
+  UINT8 CpublVersion[TEGRABL_MAX_VERSION_STRING];
+
   /**< Reset reason as read from PMIC */
   UINT32 PmicRstReason;
-
-  UINT32 Reserved4;
-
-  /**< Ratchet level of rollback controlled bins */
-  TEGRABL_RATCHET_INFO MinRatchet;
-
-  /**< Blob address */
-  UINT64 BlobAddress;
-
-  /**< SCR platform config start address */
-  UINT64 ScrPlatDataAddress;
-
-  /**< NV groups to which CSITE is assigned */
-  UINT32 CsiteGroupInfo;
-  UINT32 Reserved5;
-
-  /**< Storage device info */
-  TEGRABL_DEVICE StorageDevices[TEGRABL_MAX_STORAGE_DEVICES];
-
-  UINT8 MinRatchetLevel[MAX_OEM_FW_RATCHET_INDEX];
 
   /**< Pointer to BRBCT location in sdram */
   UINT64 BrbctCarveout;
