@@ -160,16 +160,16 @@ GetResources (
                            NodeOffset,
                            "reg",
                            &PropertySize);
-   if (NULL != RegProperty) {
-     EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
-     ASSERT ((PropertySize % EntrySize) == 0);
-     NumberOfRegRegions = PropertySize / EntrySize;
-   }
+  if (NULL != RegProperty) {
+    EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
+    ASSERT ((PropertySize % EntrySize) == 0);
+    NumberOfRegRegions = PropertySize / EntrySize;
+  }
 
-   SharedMemProperty = fdt_getprop (Private->DeviceTreeBase,
-                            NodeOffset,
-                            "shmem",
-                            &PropertySize);
+  SharedMemProperty = fdt_getprop (Private->DeviceTreeBase,
+                           NodeOffset,
+                           "shmem",
+                           &PropertySize);
   if (NULL != SharedMemProperty) {
     ASSERT ((PropertySize % sizeof (UINT32)) == 0);
     NumberOfSharedMemRegions = PropertySize / sizeof (UINT32) ;
@@ -240,7 +240,6 @@ GetResources (
     UINT64 AddressBase = 0;
     UINT64 RegionSize  = 0;
 
-
     if (SharedMemOffset <= 0) {
       DEBUG ((EFI_D_ERROR, "%a: Unable to locate shared memory handle %u\r\n",
             __FUNCTION__,
@@ -251,53 +250,82 @@ GetResources (
     }
 
     ParentOffset = fdt_parent_offset (Private->DeviceTreeBase, SharedMemOffset);
-    if (ParentOffset > 0) {
-      RegProperty = fdt_getprop (Private->DeviceTreeBase,
-                               ParentOffset,
-                               "reg",
-                               &PropertySize);
-       if ((RegProperty == NULL) || (PropertySize == 0)) {
-         DEBUG ((EFI_D_ERROR, "%a: Invalid reg entry %p, %u, for handle %u\r\n",
-               __FUNCTION__,
-               RegProperty,
-               PropertySize,
-               Handle));
-       } else {
-         EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
-         ASSERT ((PropertySize % EntrySize) == 0);
-         if (PropertySize != EntrySize) {
-           DEBUG ((EFI_D_ERROR, "%a: Ignoring secondary parent regions\r\n", __FUNCTION__));
-         }
+    if (ParentOffset < 0) {
+      DEBUG ((EFI_D_ERROR, "%a: Unable to locate shared memory handle's parent %u\r\n",
+            __FUNCTION__,
+            Handle));
+      FreePool (AllocResources);
+      *Resources = NULL;
+      return EFI_DEVICE_ERROR;
+    }
 
-        CopyMem ((VOID *)&ParentAddressBase, RegProperty, AddressCells * sizeof (UINT32));
-        if (AddressCells == 2) {
-          ParentAddressBase = SwapBytes64 (ParentAddressBase);
-        } else {
-          ParentAddressBase = SwapBytes32 (ParentAddressBase);
-        }
+    AddressCells  = fdt_address_cells (Private->DeviceTreeBase, fdt_parent_offset(Private->DeviceTreeBase, NodeOffset));
+    SizeCells     = fdt_size_cells (Private->DeviceTreeBase, fdt_parent_offset(Private->DeviceTreeBase, NodeOffset));
+
+    if ((AddressCells > 2) ||
+        (AddressCells == 0) ||
+        (SizeCells > 2) ||
+        (SizeCells == 0)) {
+      DEBUG ((EFI_D_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
+      return EFI_UNSUPPORTED;
+    }
+
+    RegProperty = fdt_getprop (Private->DeviceTreeBase,
+                             ParentOffset,
+                             "reg",
+                             &PropertySize);
+    if ((RegProperty == NULL) || (PropertySize == 0)) {
+      DEBUG ((EFI_D_ERROR, "%a: Invalid reg entry %p, %u, for handle %u\r\n",
+             __FUNCTION__,
+             RegProperty,
+             PropertySize,
+             Handle));
+    } else {
+      EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
+      ASSERT ((PropertySize % EntrySize) == 0);
+      if (PropertySize != EntrySize) {
+        DEBUG ((EFI_D_ERROR, "%a: Ignoring secondary parent regions\r\n", __FUNCTION__));
       }
+
+      CopyMem ((VOID *)&ParentAddressBase, RegProperty, AddressCells * sizeof (UINT32));
+      if (AddressCells == 2) {
+        ParentAddressBase = SwapBytes64 (ParentAddressBase);
+      } else {
+        ParentAddressBase = SwapBytes32 (ParentAddressBase);
+      }
+    }
+
+    AddressCells  = fdt_address_cells (Private->DeviceTreeBase, ParentOffset);
+    SizeCells     = fdt_size_cells (Private->DeviceTreeBase, ParentOffset);
+
+    if ((AddressCells > 2) ||
+        (AddressCells == 0) ||
+        (SizeCells > 2) ||
+        (SizeCells == 0)) {
+      DEBUG ((EFI_D_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
+      return EFI_UNSUPPORTED;
     }
 
     RegProperty = fdt_getprop (Private->DeviceTreeBase,
                              SharedMemOffset,
                              "reg",
                              &PropertySize);
-     if ((RegProperty == NULL) || (PropertySize == 0)) {
-       DEBUG ((EFI_D_ERROR, "%a: Invalid reg entry %p, %u, for handle %u\r\n",
-             __FUNCTION__,
-             RegProperty,
-             PropertySize,
-             Handle));
-       FreePool (AllocResources);
-       *Resources = NULL;
-       return EFI_DEVICE_ERROR;
-     }
+    if ((RegProperty == NULL) || (PropertySize == 0)) {
+      DEBUG ((EFI_D_ERROR, "%a: Invalid reg entry %p, %u, for handle %u\r\n",
+              __FUNCTION__,
+              RegProperty,
+              PropertySize,
+              Handle));
+      FreePool (AllocResources);
+      *Resources = NULL;
+      return EFI_DEVICE_ERROR;
+    }
 
-     EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
-     ASSERT ((PropertySize % EntrySize) == 0);
-     if (PropertySize != EntrySize) {
-       DEBUG ((EFI_D_ERROR, "%a: Ignoring secondary smem regions\r\n", __FUNCTION__));
-     }
+    EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
+    ASSERT ((PropertySize % EntrySize) == 0);
+    if (PropertySize != EntrySize) {
+      DEBUG ((EFI_D_ERROR, "%a: Ignoring secondary smem regions\r\n", __FUNCTION__));
+    }
 
     CopyMem ((VOID *)&AddressBase, RegProperty, AddressCells * sizeof (UINT32));
     CopyMem ((VOID *)&RegionSize, RegProperty + (AddressCells * sizeof (UINT32)),  SizeCells * sizeof (UINT32));
