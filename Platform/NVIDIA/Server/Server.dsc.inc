@@ -17,6 +17,9 @@
 
   RealTimeClockLib|Silicon/NVIDIA/Library/MaximRealTimeClockLib/MaximRealTimeClockLib.inf
 
+[LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
+  PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
+
 ################################################################################
 #
 # Pcd Section - list of all EDK II PCD Entries defined by this Platform
@@ -101,4 +104,9 @@
   # Tegra Platform Configuration
   #
   Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
+  #
+  # PCI Support
+  #
+  ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
+  Silicon/NVIDIA/Drivers/PcieControllerDxe/Th500PcieControllerDxe.inf
 
