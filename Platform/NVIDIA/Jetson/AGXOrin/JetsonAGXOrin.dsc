@@ -75,6 +75,9 @@
   gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress|0x0C3903F8
   gNVIDIATokenSpaceGuid.PcdBootloaderCarveoutOffset|0x448
 
+  ## Base address of MISCREG aperture
+  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00100000
+
   ## SBSA Watchdog Count
   gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2
 
@@ -103,6 +106,15 @@
   # Boot.img signing header size
   #
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
+
+  #Ramloaded kernel info
+  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelAddress|0x80080000
+  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSize|0x04000000
+  gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdAddress|0x85280000
+  gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdSize|0x04000000
+
+[PcdsDynamicDefault.common]
+  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport|FALSE
 
 [PcdsDynamicHii.common.DEFAULT]
 !if $(SIM)

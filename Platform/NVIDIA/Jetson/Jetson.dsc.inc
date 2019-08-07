@@ -96,3 +96,8 @@
   Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
   Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 
+  #
+  # Tegra Platform Configuration
+  #
+  Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
+

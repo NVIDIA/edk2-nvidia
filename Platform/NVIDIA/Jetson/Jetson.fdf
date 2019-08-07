@@ -46,6 +46,7 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
 
   APRIORI DXE {
     INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
+    INF Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
     INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
     INF ArmPkg/Drivers/CpuDxe/CpuDxe.inf
     INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
@@ -58,6 +59,11 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
     }
 
 !include Platform/NVIDIA/NVIDIA.fvmain.fdf.inc
+
+  #
+  # Tegra Platform Configuration
+  #
+  INF Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
 
   #
   # BPMP-FW IPC protocol
