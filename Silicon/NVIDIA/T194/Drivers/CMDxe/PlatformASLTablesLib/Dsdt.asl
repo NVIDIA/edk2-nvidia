@@ -5,7 +5,7 @@
  *
  * Template for [DSDT] ACPI Table (AML byte code table)
  */
-DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA186", 0x00000001)
+DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
 {
   Device(CPU0) {
     Name(_HID, "ACPI0007")
@@ -43,8 +43,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA186", 0x00000001)
     Name (_CCA, ZERO)
 
     Name(_CRS, ResourceTemplate() {
-      Memory32Fixed(ReadWrite, 0x03100000, 0x40)
-      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x90 }
+      Memory32Fixed(ReadWrite, 0xc280000, 0x10000)
+      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x72 }
     })
 
     Name (_DSD, Package () {

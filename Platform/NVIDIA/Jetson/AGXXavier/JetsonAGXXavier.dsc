@@ -68,7 +68,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialClockRate|407347200
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseMmio|TRUE
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x03100000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0c280000
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterStride|4
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl|TRUE
 
