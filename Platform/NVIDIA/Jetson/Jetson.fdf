@@ -89,6 +89,7 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   # Usb Support
   #
   INF Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf
+  INF Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf
   INF Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
   INF Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
   INF Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
