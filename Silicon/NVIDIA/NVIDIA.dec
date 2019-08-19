@@ -125,3 +125,6 @@ Include
 
 #Force disable SDR104 in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|FALSE|BOOLEAN|0x0000000E
+
+#Base address of MISCREG aperture.
+  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00000000|UINT64|0x0000000F
