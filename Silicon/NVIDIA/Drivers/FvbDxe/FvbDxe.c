@@ -923,172 +923,172 @@ FVBInitialize (
   if (EFI_ERROR(Status) || (Private == NULL)) {
     return EFI_OUT_OF_RESOURCES;
   }
+  if (!PcdGetBool(PcdEmuVariableNvModeEnable)) {
+    Status = gBS->LocateHandleBuffer (ByProtocol,
+                                      &gEfiPartitionInfoProtocolGuid,
+                                      NULL,
+                                      &NumOfHandles,
+                                      &HandleBuffer);
 
-  Status = gBS->LocateHandleBuffer (ByProtocol,
-                                    &gEfiPartitionInfoProtocolGuid,
-                                    NULL,
-                                    &NumOfHandles,
-                                    &HandleBuffer);
+    if (EFI_ERROR(Status)) {
+      Status = EFI_UNSUPPORTED;
+      goto Exit;
+    }
 
-  if (EFI_ERROR(Status)) {
-    Status = EFI_UNSUPPORTED;
-    goto Exit;
-  }
+    for (Index = 0; Index < NumOfHandles; Index++) {
+      Status = gBS->OpenProtocol (HandleBuffer[Index],
+                                  &gEfiPartitionInfoProtocolGuid,
+                                  (VOID **)&PartitionInfo,
+                                  ImageHandle,
+                                  NULL,
+                                  EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
 
-  for (Index = 0; Index < NumOfHandles; Index++) {
-    Status = gBS->OpenProtocol (HandleBuffer[Index],
-                                &gEfiPartitionInfoProtocolGuid,
-                                (VOID **)&PartitionInfo,
-                                ImageHandle,
-                                NULL,
-                                EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+      if (EFI_ERROR(Status) || (PartitionInfo == NULL)) {
+        Status = EFI_NOT_FOUND;
+        goto Exit;
+      }
 
-    if (EFI_ERROR(Status) || (PartitionInfo == NULL)) {
+      if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
+        Status = EFI_PROTOCOL_ERROR;
+        goto Exit;
+      }
+
+      if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
+        continue;
+      }
+
+      if (0 == StrnCmp (PartitionInfo->Info.Gpt.PartitionName,
+                        PcdGetPtr(PcdUEFIVariablesPartitionName),
+                        StrnLenS(PcdGetPtr(PcdUEFIVariablesPartitionName), sizeof(PartitionInfo->Info.Gpt.PartitionName)))) {
+        break;
+      }
+    }
+
+    if (Index == NumOfHandles) {
       Status = EFI_NOT_FOUND;
       goto Exit;
     }
 
-    if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
-      Status = EFI_PROTOCOL_ERROR;
+    Private->PartitionStartingLBA = PartitionInfo->Info.Gpt.StartingLBA;
+    Private->NumBlocks = PartitionInfo->Info.Gpt.EndingLBA -
+                           PartitionInfo->Info.Gpt.StartingLBA + 1;
+
+    Status = gBS->HandleProtocol (HandleBuffer[Index],
+                                  &gEfiDevicePathProtocolGuid,
+                                  (VOID **)&PartitionDevicePath);
+
+    if (EFI_ERROR(Status) || (PartitionDevicePath == NULL) || IsDevicePathEnd(PartitionDevicePath)) {
+      Status = EFI_NOT_FOUND;
       goto Exit;
     }
 
-    if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
-      continue;
+    ValidFlash = FALSE;
+    CurrentDevicePath = PartitionDevicePath;
+    while (IsDevicePathEnd (CurrentDevicePath) == FALSE) {
+      if (CurrentDevicePath->SubType == MSG_EMMC_DP) {
+        ValidFlash = TRUE;
+        break;
+      }
+      CurrentDevicePath = NextDevicePathNode (CurrentDevicePath);
     }
 
-    if (0 == StrnCmp (PartitionInfo->Info.Gpt.PartitionName,
-                      PcdGetPtr(PcdUEFIVariablesPartitionName),
-                      StrnLenS(PcdGetPtr(PcdUEFIVariablesPartitionName), sizeof(PartitionInfo->Info.Gpt.PartitionName)))) {
-      break;
+    if (ValidFlash != TRUE) {
+      Status = EFI_UNSUPPORTED;
+      goto Exit;
     }
-  }
 
-  if (Index == NumOfHandles) {
-    Status = EFI_NOT_FOUND;
-    goto Exit;
-  }
+    FlashDevicePath = DuplicateDevicePath (PartitionDevicePath);
 
-  Private->PartitionStartingLBA = PartitionInfo->Info.Gpt.StartingLBA;
-  Private->NumBlocks = PartitionInfo->Info.Gpt.EndingLBA -
-                         PartitionInfo->Info.Gpt.StartingLBA + 1;
-
-  Status = gBS->HandleProtocol (HandleBuffer[Index],
-                                &gEfiDevicePathProtocolGuid,
-                                (VOID **)&PartitionDevicePath);
-
-  if (EFI_ERROR(Status) || (PartitionDevicePath == NULL) || IsDevicePathEnd(PartitionDevicePath)) {
-    Status = EFI_NOT_FOUND;
-    goto Exit;
-  }
-
-  ValidFlash = FALSE;
-  CurrentDevicePath = PartitionDevicePath;
-  while (IsDevicePathEnd (CurrentDevicePath) == FALSE) {
-    if (CurrentDevicePath->SubType == MSG_EMMC_DP) {
-      ValidFlash = TRUE;
-      break;
+    if (FlashDevicePath == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
     }
-    CurrentDevicePath = NextDevicePathNode (CurrentDevicePath);
-  }
 
-  if (ValidFlash != TRUE) {
-    Status = EFI_UNSUPPORTED;
-    goto Exit;
-  }
+    CurrentDevicePath = FlashDevicePath;
+    NextDevicePath = NextDevicePathNode (CurrentDevicePath);
 
-  FlashDevicePath = DuplicateDevicePath (PartitionDevicePath);
+    while (IsDevicePathEnd (NextDevicePath) == FALSE) {
+      CurrentDevicePath = NextDevicePath;
+      NextDevicePath = NextDevicePathNode (NextDevicePath);
+    }
 
-  if (FlashDevicePath == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Exit;
-  }
+    SetDevicePathEndNode(CurrentDevicePath);
 
-  CurrentDevicePath = FlashDevicePath;
-  NextDevicePath = NextDevicePathNode (CurrentDevicePath);
+    Status = gBS->LocateDevicePath (&gEfiBlockIoProtocolGuid,
+                                    &FlashDevicePath,
+                                    &FlashHandle);
 
-  while (IsDevicePathEnd (NextDevicePath) == FALSE) {
-    CurrentDevicePath = NextDevicePath;
-    NextDevicePath = NextDevicePathNode (NextDevicePath);
-  }
+    if (EFI_ERROR(Status) || (FlashHandle == NULL)) {
+      Status = EFI_NOT_FOUND;
+      goto Exit;
+    }
 
-  SetDevicePathEndNode(CurrentDevicePath);
+    Status = gBS->OpenProtocol (FlashHandle,
+                                &gEfiBlockIoProtocolGuid,
+                                (VOID **)&Private->BlockIo,
+                                ImageHandle,
+                                NULL,
+                                EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
 
-  Status = gBS->LocateDevicePath (&gEfiBlockIoProtocolGuid,
-                                  &FlashDevicePath,
-                                  &FlashHandle);
+    if (EFI_ERROR(Status) || (Private->BlockIo == NULL)) {
+      Status = EFI_NOT_FOUND;
+      goto Exit;
+    }
 
-  if (EFI_ERROR(Status) || (FlashHandle == NULL)) {
-    Status = EFI_NOT_FOUND;
-    goto Exit;
-  }
+    BlockSize = Private->BlockIo->Media->BlockSize;
+    Size = MultU64x32 (Private->NumBlocks, BlockSize);
 
-  Status = gBS->OpenProtocol (FlashHandle,
-                              &gEfiBlockIoProtocolGuid,
-                              (VOID **)&Private->BlockIo,
-                              ImageHandle,
-                              NULL,
-                              EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+    if (Size != PcdGet32(PcdFlashNvStorageVariableSize)) {
+      DEBUG ((EFI_D_ERROR, "UEFI variables not supported.\n"));
+      Status = EFI_UNSUPPORTED;
+      goto Exit;
+    }
 
-  if (EFI_ERROR(Status) || (Private->BlockIo == NULL)) {
-    Status = EFI_NOT_FOUND;
-    goto Exit;
-  }
+    Private->VariablePartition = NULL;
+    Status = gBS->AllocatePool (EfiRuntimeServicesData,
+                                Size,
+                                (VOID **)&Private->VariablePartition);
 
-  BlockSize = Private->BlockIo->Media->BlockSize;
-  Size = MultU64x32 (Private->NumBlocks, BlockSize);
+    if (EFI_ERROR(Status) || (Private->VariablePartition == NULL)) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
 
-  if (Size != PcdGet32(PcdFlashNvStorageVariableSize)) {
-    DEBUG ((EFI_D_ERROR, "UEFI variables not supported.\n"));
-    Status = EFI_UNSUPPORTED;
-    goto Exit;
-  }
+    PcdSet64(PcdFlashNvStorageVariableBase64, (UINT64)Private->VariablePartition);
 
-  Private->VariablePartition = NULL;
-  Status = gBS->AllocatePool (EfiRuntimeServicesData,
-                              Size,
-                              (VOID **)&Private->VariablePartition);
-
-  if (EFI_ERROR(Status) || (Private->VariablePartition == NULL)) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Exit;
-  }
-
-  PcdSet64(PcdFlashNvStorageVariableBase64, (UINT64)Private->VariablePartition);
-
-  Status = Private->BlockIo->ReadBlocks (Private->BlockIo,
-                                         Private->BlockIo->Media->MediaId,
-                                         Private->PartitionStartingLBA,
-                                         Size,
-                                         Private->VariablePartition);
-  if (EFI_ERROR(Status)) {
-    goto Exit;
-  }
-
-  Status = ValidateFvHeader((EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition);
-
-  if (EFI_ERROR(Status)) {
-    DEBUG ((EFI_D_INFO, "%a: The FVB Header is not valid.\n", __FUNCTION__));
-    DEBUG ((EFI_D_INFO, "%a: Installing a correct one for this volume.\n", __FUNCTION__));
-
-    gBS->SetMem (Private->VariablePartition, Size, 0xFF);
-
-    Status = Private->BlockIo->WriteBlocks (Private->BlockIo,
-                                            Private->BlockIo->Media->MediaId,
-                                            Private->PartitionStartingLBA,
-                                            Size,
-                                            Private->VariablePartition);
+    Status = Private->BlockIo->ReadBlocks (Private->BlockIo,
+                                           Private->BlockIo->Media->MediaId,
+                                           Private->PartitionStartingLBA,
+                                           Size,
+                                           Private->VariablePartition);
     if (EFI_ERROR(Status)) {
       goto Exit;
     }
 
-    // Install all appropriate headers
-    Status = InitializeFvAndVariableStoreHeaders ((EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition);
+    Status = ValidateFvHeader((EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition);
+
     if (EFI_ERROR(Status)) {
-      goto Exit;
+      DEBUG ((EFI_D_INFO, "%a: The FVB Header is not valid.\n", __FUNCTION__));
+      DEBUG ((EFI_D_INFO, "%a: Installing a correct one for this volume.\n", __FUNCTION__));
+
+      gBS->SetMem (Private->VariablePartition, Size, 0xFF);
+
+      Status = Private->BlockIo->WriteBlocks (Private->BlockIo,
+                                              Private->BlockIo->Media->MediaId,
+                                              Private->PartitionStartingLBA,
+                                              Size,
+                                              Private->VariablePartition);
+      if (EFI_ERROR(Status)) {
+        goto Exit;
+      }
+
+      // Install all appropriate headers
+      Status = InitializeFvAndVariableStoreHeaders ((EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition);
+      if (EFI_ERROR(Status)) {
+        goto Exit;
+      }
     }
   }
-
   //
   // The driver implementing the variable read service can now be dispatched;
   // the varstore headers are in place.
@@ -1098,7 +1098,7 @@ FVBInitialize (
                                           EFI_NATIVE_INTERFACE,
                                           NULL);
 
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR(Status) || PcdGetBool(PcdEmuVariableNvModeEnable)) {
     goto Exit;
   }
 

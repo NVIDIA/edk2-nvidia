@@ -40,8 +40,12 @@
   PcdLib
   TegraPlatformInfoLib
 
+[Protocols]
+  gNVIDIAEmuVariableNvModeEnableProtocolGuid
+
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
 
 [Depex]
   TRUE

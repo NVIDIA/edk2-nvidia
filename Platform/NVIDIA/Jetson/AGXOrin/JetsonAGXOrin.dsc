@@ -31,7 +31,6 @@
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
   CHIPSET                        = T234
-  DEFINE VARIABLES               = "STORAGE"
 
   #
   # Define ESRT GUIDs for Firmware Management Protocol instances

@@ -19,7 +19,9 @@
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
 #include <Library/PcdLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+
 
 /**
   Runtime Configuration Of Tegra Platform.
@@ -31,6 +33,7 @@ TegraPlatformInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
+  EFI_STATUS Status;
   DEBUG ((DEBUG_INFO, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, TegraGetChipID()));
   switch (TegraGetPlatform()) {
     case TEGRA_PLATFORM_VDK:
@@ -39,6 +42,17 @@ TegraPlatformInitialize (
     case TEGRA_PLATFORM_SYSTEM_FPGA:
       DEBUG ((DEBUG_INFO, "%a: Tegra Platform:  System FPGA\n", __FUNCTION__));
       PcdSetBool(PcdRamLoadedKernelSupport, TRUE);
+      // Enable emulated variable NV mode in variable driver.
+      PcdSetBool(PcdEmuVariableNvModeEnable, TRUE);
+      Status = gBS->InstallMultipleProtocolInterfaces (
+                 &ImageHandle,
+                 &gNVIDIAEmuVariableNvModeEnableProtocolGuid,
+                 NULL,
+                 NULL
+                 );
+      if (EFI_ERROR(Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error installing EmuVariableNvModeEnableProtocol\n", __FUNCTION__));
+      }
       break;
     default:
       break;

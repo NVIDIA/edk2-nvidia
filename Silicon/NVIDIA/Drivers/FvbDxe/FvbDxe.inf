@@ -45,11 +45,13 @@
   gEfiFirmwareVolumeBlockProtocolGuid
   gEfiFaultTolerantWriteProtocolGuid
   gEfiDevicePathProtocolGuid
+  gNVIDIAEmuVariableNvModeEnableProtocolGuid
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
   gNVIDIATokenSpaceGuid.PcdUEFIVariablesPartitionName
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
 
 [Guids]
   gEfiSystemNvDataFvGuid
@@ -59,3 +61,5 @@
 
 [Depex]
   gEfiPartitionInfoProtocolGuid
+  OR
+  gNVIDIAEmuVariableNvModeEnableProtocolGuid
