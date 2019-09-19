@@ -108,3 +108,7 @@
   # Disable coherent DMA in SDHCi
   #
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
+
+[PcdsDynamicDefault.common]
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
+

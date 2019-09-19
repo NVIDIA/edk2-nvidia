@@ -451,6 +451,9 @@
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0
 
+  #default state of floor sweeping
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|FALSE
+
 [PcdsDynamicHii.common.DEFAULT]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|10
 

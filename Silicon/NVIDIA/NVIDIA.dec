@@ -138,3 +138,6 @@ Include
 
 [PcdsDynamic.common]
   gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport|FALSE|BOOLEAN|0x00000010
+
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|FALSE|BOOLEAN|0x00000015
+
