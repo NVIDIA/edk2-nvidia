@@ -366,10 +366,8 @@ BpmpIpcInitialize (
                               NodeOffset,
                               "status",
                               &PropertySize);
-      if (Property != NULL) {
-        if (AsciiStrCmp (Property, "okay") == 0) {
+      if ((Property == NULL) || (AsciiStrCmp (Property, "okay") == 0)) {
           BpmpPresent = TRUE;
-        }
       }
     }
     if (!BpmpPresent) {
