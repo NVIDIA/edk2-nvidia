@@ -59,7 +59,10 @@
   #
   # FDT Support
   #
-  EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+  EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf {
+    <LibraryClasses>
+      DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbKernelLoaderLib.inf
+  }
 
   # Boot support for mkbootimg partitions
   Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf

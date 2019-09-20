@@ -1,0 +1,59 @@
+/** @file
+*
+*  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
+*
+*  This program and the accompanying materials
+*  are licensed and made available under the terms and conditions of the BSD License
+*  which accompanies this distribution.  The full text of the license may be found at
+*  http://opensource.org/licenses/bsd-license.php
+*
+*  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+*
+**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = DxeDtPlatformDtbKernelLoaderLib
+  FILE_GUID                      = a0200024-59dc-4b40-904e-93e4fc96ca8c
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DtPlatformDtbLoaderLib|DXE_DRIVER
+
+[Sources]
+  DxeDtPlatformDtbKernelLoaderLib.c
+  FloorSweep.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  HobLib
+  FdtLib
+  PrintLib
+  PcdLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gEfiPartitionInfoProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gNVIDIAEmuVariableNvModeEnableProtocolGuid
+
+[Guids]
+  gFdtHobGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus
+  gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
+
+[Depex]
+  gEfiPartitionInfoProtocolGuid
+  OR
+  gNVIDIAEmuVariableNvModeEnableProtocolGuid

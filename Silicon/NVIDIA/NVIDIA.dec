@@ -130,6 +130,9 @@ Include
 #Base address of MISCREG aperture.
   gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00000000|UINT64|0x0000000F
 
+#Name of Kernel DTB partition
+  gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName|L"kernel-dtb"|VOID*|0x00000016
+
 #Pre-ramloaded kernel/initrd info
   gNVIDIATokenSpaceGuid.PcdRamLoadedKernelAddress|0x0|UINT64|0x00000011
   gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSize|0x0|UINT64|0x00000012
