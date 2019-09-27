@@ -664,7 +664,7 @@
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiGtdtLibArm/AcpiGtdtLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSpcrLibArm/AcpiSpcrLibArm.inf
       #NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiDbg2LibArm/AcpiDbg2LibArm.inf
-      #NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiMcfgLibArm/AcpiMcfgLibArm.inf
+      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiMcfgLibArm/AcpiMcfgLibArm.inf
       #NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiIortLibArm/AcpiIortLibArm.inf
   }
 
@@ -678,8 +678,8 @@
     <LibraryClasses>
     # Platform ASL Tables
     PlatformAslTablesLib|Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib.inf
-  <BuildOptions>
-   *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
+    <BuildOptions>
+    *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
   }
 
 [Components.AARCH64]

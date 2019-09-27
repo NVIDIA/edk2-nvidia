@@ -114,6 +114,13 @@
   #
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
 
+  #
+  # PCI Root Complex
+  #
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x30000000
+  gArmTokenSpaceGuid.PcdPciBusMin|160
+  gArmTokenSpaceGuid.PcdPciBusMax|161
+
 [PcdsDynamicDefault.common]
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
 

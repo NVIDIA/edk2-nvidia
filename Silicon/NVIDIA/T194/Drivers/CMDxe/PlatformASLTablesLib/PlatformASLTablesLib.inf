@@ -29,6 +29,7 @@
 
 [Sources]
   Dsdt.asl
+  SsdtPci.asl
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -37,6 +38,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
 
-[FixedPcd]
+[Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
+  gArmTokenSpaceGuid.PcdPciBusMin
+  gArmTokenSpaceGuid.PcdPciBusMax

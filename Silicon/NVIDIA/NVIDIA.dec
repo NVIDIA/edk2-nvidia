@@ -136,7 +136,7 @@ Include
   gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|FALSE|BOOLEAN|0x0000000E
 
 #Base address of MISCREG aperture.
-  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00000000|UINT64|0x0000000F
+  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x0|UINT64|0x0000000F
 
 #Name of Kernel DTB partition
   gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName|L"kernel-dtb"|VOID*|0x00000016
@@ -149,6 +149,9 @@ Include
 
 #Explicit PCIe Controller Enable
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|FALSE|BOOLEAN|0x00000017
+
+#PCIe Segment Base Address
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x0|UINT64|0x00000018
 
 [PcdsDynamic.common]
   gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport|FALSE|BOOLEAN|0x00000010

@@ -49,7 +49,7 @@
 [Protocols]
   gEdkiiConfigurationManagerProtocolGuid
 
-[FixedPcd]
+[Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
@@ -65,7 +65,9 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
 
-[Pcd]
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
+  gArmTokenSpaceGuid.PcdPciBusMin
+  gArmTokenSpaceGuid.PcdPciBusMax
 
 [Depex]
   TRUE
