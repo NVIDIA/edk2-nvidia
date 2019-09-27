@@ -394,6 +394,10 @@ BpmpProcessPgCommand (
   EFI_STATUS Status;
   UINT32 Request[3];
 
+  if (PgId == MAX_UINT32) {
+    return EFI_SUCCESS;
+  }
+
   if (BpmpIpcProtocol == NULL) {
     return EFI_INVALID_PARAMETER;
   }
@@ -986,8 +990,8 @@ GetPowerGateNodeProtocol(
 
   PgIds = (CONST UINT32*)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "power-domains", &PgLength);
 
-  if ((PgIds == 0) || (PgLength == 0)) {
-    return;
+  if (PgIds == NULL) {
+    PgLength = 0;
   }
 
   if ((PgLength % (sizeof (UINT32) * 2)) != 0) {
@@ -1009,8 +1013,13 @@ GetPowerGateNodeProtocol(
 
   PgNode->Deassert    = DeassertPgNodes;
   PgNode->Assert      = AssertPgNodes;
-  PgNode->PowerGateId = SwapBytes32 (PgIds[1]);
-  DEBUG ((EFI_D_ERROR, "%a, PowerGateId = %d\r\n", __FUNCTION__, PgNode->PowerGateId));
+  if (PgIds == NULL) {
+    PgNode->PowerGateId = MAX_UINT32;
+  } else {
+    PgNode->PowerGateId = SwapBytes32 (PgIds[1]);
+  }
+
+  DEBUG ((EFI_D_INFO, "%a, PowerGateId = %d\r\n", __FUNCTION__, PgNode->PowerGateId));
 
   PowerGateNodeInterface[ListEntry] = (VOID *)PgNode;
   PowerGateNodeProtocol[ListEntry] = &gNVIDIAPowerGateNodeProtocolGuid;
