@@ -48,6 +48,7 @@
 
 [Guids]
   gNVIDIANonDiscoverableT186EFuseDeviceGuid
+  gNVIDIANonDiscoverableT194EFuseDeviceGuid
 
 [Depex]
   TRUE

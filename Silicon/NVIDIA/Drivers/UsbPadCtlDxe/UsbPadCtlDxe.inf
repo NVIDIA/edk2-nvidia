@@ -25,6 +25,7 @@
 [Sources.common]
   UsbPadCtlDxe.c
   UsbPadCtlTegra186.c
+  UsbPadCtlTegra194.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -54,6 +55,7 @@
 
 [Guids]
   gNVIDIANonDiscoverableT186UsbPadDeviceGuid
+  gNVIDIANonDiscoverableT194UsbPadDeviceGuid
 
 [Depex]
   TRUE

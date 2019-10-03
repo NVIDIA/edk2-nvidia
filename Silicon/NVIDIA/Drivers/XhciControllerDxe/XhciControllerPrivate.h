@@ -18,18 +18,19 @@
 
 #include <PiDxe.h>
 
-#define NV_FIELD_MASK(x)        (0xFFFFFFFFUL>>(31-((1 ? x)%32)+((0 ? x)%32)))
-#define NV_FIELD_SHIFT(x)          ((0 ? x)%32)
+#define NV_FIELD_MASK(x)                    (0xFFFFFFFFUL>>(31-((1 ? x)%32)+((0 ? x)%32)))
+#define NV_FIELD_SHIFT(x)                   ((0 ? x)%32)
 
 #ifndef _MK_ENUM_CONST
-#define _MK_ENUM_CONST(_constant_) (_constant_ ## UL)
+#define _MK_ENUM_CONST(_constant_)          (_constant_ ## UL)
 #endif
 
 #ifndef _MK_ADDR_CONST
-#define _MK_ADDR_CONST(_constant_) _constant_
+#define _MK_ADDR_CONST(_constant_)          _constant_
 #endif
 
-#define NV_FIELD_SHIFTMASK(x)   (NV_FIELD_MASK(x) << (NV_FIELD_SHIFT(x)))
+#define NV_FIELD_SHIFTMASK(x) \
+        (NV_FIELD_MASK(x) << (NV_FIELD_SHIFT(x)))
 
 #define NV_DRF_DEF(d, r, f, c) \
         ((d##_##r##_0_##f##_##c) << NV_FIELD_SHIFT(d##_##r##_0_##f##_RANGE))
@@ -37,49 +38,63 @@
 #define NV_FLD_SET_DRF_DEF(d, r, f, c, v) \
         (((v) & ~NV_FIELD_SHIFTMASK(d##_##r##_0_##f##_RANGE)) | \
         NV_DRF_DEF(d, r, f, c))
-#define XUSB_CFG_1_0    _MK_ADDR_CONST(0x00000004)
-#define XUSB_CFG_1_0_MEMORY_SPACE_RANGE 1 : 1
-#define XUSB_CFG_1_0_MEMORY_SPACE_DISABLED      _MK_ENUM_CONST(0x00000000)
-#define XUSB_CFG_1_0_MEMORY_SPACE_ENABLED       _MK_ENUM_CONST(0x00000001)
-#define XUSB_CFG_1_0_BUS_MASTER_RANGE   2 : 2
-#define XUSB_CFG_1_0_BUS_MASTER_DISABLED        _MK_ENUM_CONST(0x00000000)
-#define XUSB_CFG_1_0_BUS_MASTER_ENABLED         _MK_ENUM_CONST(0x00000001)
 
-#define XUSB_CFG_4_0    _MK_ADDR_CONST(0x00000010)
+#define XUSB_CFG_1_0                        _MK_ADDR_CONST(0x00000004)
+#define XUSB_CFG_1_0_MEMORY_SPACE_RANGE     1 : 1
+#define XUSB_CFG_1_0_MEMORY_SPACE_DISABLED  _MK_ENUM_CONST(0x00000000)
+#define XUSB_CFG_1_0_MEMORY_SPACE_ENABLED   _MK_ENUM_CONST(0x00000001)
+#define XUSB_CFG_1_0_BUS_MASTER_RANGE       2 : 2
+#define XUSB_CFG_1_0_BUS_MASTER_DISABLED    _MK_ENUM_CONST(0x00000000)
+#define XUSB_CFG_1_0_BUS_MASTER_ENABLED     _MK_ENUM_CONST(0x00000001)
 
-#define XUSB_OP_USBSTS  _MK_ADDR_CONST(0x00000004)
-#define USBSTS_CNR      (1 << 11)
-#define USBSTS_HCE      (1 << 12)
+#define XUSB_CFG_4_0                        _MK_ADDR_CONST(0x00000010)
 
-#define  XUSB_BASE_ADDR_SHIFT              15
-#define  XUSB_BASE_ADDR_MASK               0x1ffff
+#define XUSB_OP_USBSTS                      _MK_ADDR_CONST(0x00000004)
+#define USBSTS_CNR                          (1 << 11)
+#define USBSTS_HCE                          (1 << 12)
 
-#define TEGRA186_RESET_XUSB_DEV                 53
-#define TEGRA186_RESET_XUSB_HOST                54
-#define TEGRA186_RESET_XUSB_PADCTL              55
-#define TEGRA186_RESET_XUSB_SS                  56
+#define  XUSB_BASE_ADDR_SHIFT               15
+#define  XUSB_BASE_ADDR_MASK                0x1ffff
+
+#define TEGRA186_POWER_DOMAIN_XUSBA         13
+#define TEGRA186_POWER_DOMAIN_XUSBC         15
+
+#define  XUSB_T194_BASE_ADDR_SHIFT          18
+#define  XUSB_T194_BASE_ADDR_MASK           0x3fff
+
+#define TEGRA194_POWER_DOMAIN_XUSBA         14
+#define TEGRA194_POWER_DOMAIN_XUSBC         16
 
 /* Stores Platform Specific Information */
 typedef struct {
   UINT32 Cfg4AddrShift;
   UINT32 Cfg4AddrMask;
-  UINT32 NumResets;
-  UINT32 *Resets;
+  UINT32 NumPowerDomains;
+  UINT32 *PowerDomainIds;
   EFI_PHYSICAL_ADDRESS BaseAddress;
   EFI_PHYSICAL_ADDRESS CfgAddress;
 } TEGRA_XUSB_SOC;
 
 /* T186 SOC Specific Parameters */
-UINT32 Tegra186Resets[] = {TEGRA186_RESET_XUSB_DEV,
-                           TEGRA186_RESET_XUSB_HOST,
-                           TEGRA186_RESET_XUSB_PADCTL,
-                           TEGRA186_RESET_XUSB_SS};
+UINT32 Tegra186PowerDomains[] = { TEGRA186_POWER_DOMAIN_XUSBA,
+                                  TEGRA186_POWER_DOMAIN_XUSBC};
 
 TEGRA_XUSB_SOC Tegra186Soc = {
   .Cfg4AddrShift = XUSB_BASE_ADDR_SHIFT,
   .Cfg4AddrMask = XUSB_BASE_ADDR_MASK,
-  .NumResets = 4,
-  .Resets = Tegra186Resets,
+  .NumPowerDomains = 2,
+  .PowerDomainIds = Tegra186PowerDomains,
+};
+
+/* T194 SOC Specific Parameters */
+UINT32 Tegra194PowerDomains[] = {TEGRA194_POWER_DOMAIN_XUSBA,
+                                 TEGRA194_POWER_DOMAIN_XUSBC};
+
+TEGRA_XUSB_SOC Tegra194Soc = {
+  .Cfg4AddrShift = XUSB_T194_BASE_ADDR_SHIFT,
+  .Cfg4AddrMask = XUSB_T194_BASE_ADDR_MASK,
+  .NumPowerDomains = 2,
+  .PowerDomainIds = Tegra194PowerDomains,
 };
 
 #define XHCICONTROLLER_SIGNATURE SIGNATURE_32('X','H','C','I')

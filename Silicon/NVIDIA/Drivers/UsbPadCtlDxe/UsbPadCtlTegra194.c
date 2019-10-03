@@ -137,14 +137,14 @@
 #define UART_USB_SF_SEL_HSIO                  (0x1 << 10)
 
 /* Number of USB Pads on the Platform */
-#define TEGRA186_USB3_PHYS                    (3)
-#define TEGRA186_UTMI_PHYS                    (3)
-#define TEGRA186_OC_PIN_NUM                   (2)
+#define TEGRA194_USB3_PHYS                    (4)
+#define TEGRA194_UTMI_PHYS                    (4)
+#define TEGRA194_OC_PIN_NUM                   (2)
 
-PADCTL_PLAT_CONFIG Tegra186UsbConfig = {
-  .NumHsPhys = TEGRA186_UTMI_PHYS,
-  .NumSsPhys = TEGRA186_USB3_PHYS,
-  .NumOcPins = TEGRA186_OC_PIN_NUM,
+PADCTL_PLAT_CONFIG Tegra194UsbConfig = {
+  .NumHsPhys = TEGRA194_UTMI_PHYS,
+  .NumSsPhys = TEGRA194_USB3_PHYS,
+  .NumOcPins = TEGRA194_OC_PIN_NUM,
 };
 
 STATIC
@@ -523,7 +523,7 @@ SelectVbusEnableTriState (
   if (Enable) {
     RegVal &= ~UART_USB_PM_MASK;
     RegVal |= UART_USB_PM_USB | UART_USB_E_IO_HV_ENABLE | UART_USB_E_INPUT_ENABLE
-	                    | UART_USB_VBUS_EN_TRISTATE | UART_USB_SF_SEL_HSIO;
+                              | UART_USB_VBUS_EN_TRISTATE | UART_USB_SF_SEL_HSIO;
     mPmux->WriteReg(mPmux, PADCTL_UART_USB_VBUS_EN(Pin), RegVal);
     mPmux->ReadReg(mPmux, PADCTL_UART_USB_VBUS_EN(Pin), &RegVal);
   } else {
@@ -567,7 +567,7 @@ DisableVbus (
         DEBUG ((EFI_D_ERROR, "%a: Couldn't Disable Regulator: %d for USB Port: %d\n",
                                           __FUNCTION__, Usb2Ports[i].VbusSupply, i));
         /* Printing the Error and continuing here to do maximum clean up */
-	continue;
+        continue;
       }
    }
   }
@@ -604,10 +604,10 @@ EnableVbus (
         DEBUG ((EFI_D_ERROR, "Couldn't Enable Regulator: %d for USB Port: %d\n",
                                                    Usb2Ports[i].VbusSupply, i));
         /* Printing the Error and continuing here so that other Ports will
-	 * still keep working and USB is not disabled completely
-	 */
-	Usb2Ports[i].PortEnabled = FALSE;
-	continue;
+         * still keep working and USB is not disabled completely
+         */
+        Usb2Ports[i].PortEnabled = FALSE;
+        continue;
       }
     }
   }
@@ -876,7 +876,7 @@ ReadFuseCalibration (
   @return EFI_DEVICE_ERROR           Other error occured.
 **/
 EFI_STATUS
-InitUsbHw186 (
+InitUsbHw194 (
   IN  NVIDIA_USBPADCTL_PROTOCOL  *This
   )
 {
@@ -940,7 +940,7 @@ InitUsbHw186 (
   @param[in]     This              The instance of NVIDIA_USBPADCTL_PROTOCOL.
 **/
 VOID
-DeInitUsbHw186 (
+DeInitUsbHw194 (
   IN  NVIDIA_USBPADCTL_PROTOCOL  *This
   )
 {

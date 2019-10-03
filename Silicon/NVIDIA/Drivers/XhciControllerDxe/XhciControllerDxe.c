@@ -25,9 +25,9 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UsbFalconLib.h>
 #include <Library/UsbFirmwareLib.h>
-#include <Protocol/ResetNodeProtocol.h>
 #include <Protocol/UsbPadCtl.h>
 #include <Protocol/XhciController.h>
+#include <Protocol/BpmpIpc.h>
 #include "XhciControllerPrivate.h"
 #include <libfdt.h>
 
@@ -40,6 +40,7 @@
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra186-xhci", &gEdkiiNonDiscoverableXhciDeviceGuid },
+    { "nvidia,tegra194-xhci", &gEdkiiNonDiscoverableXhciDeviceGuid },
     { NULL, NULL }
 };
 
@@ -135,17 +136,18 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS Status = EFI_SUCCESS;
-  NVIDIA_RESET_NODE_PROTOCOL *ResetProtocol;
-  UINT32 reg_val;
-  EFI_PHYSICAL_ADDRESS      BaseAddress = 0;
-  EFI_PHYSICAL_ADDRESS      CfgAddress = 0;
-  UINTN                     RegionSize;
-  UINT8                     CapLength;
-  UINT32                    StatusRegister;
-  UINTN                     i;
-  INTN                      Offset = -1;
-  XHCICONTROLLER_DXE_PRIVATE *Private = NULL;
+  EFI_STATUS                 Status;
+  UINT32                     reg_val;
+  EFI_PHYSICAL_ADDRESS       BaseAddress;
+  EFI_PHYSICAL_ADDRESS       CfgAddress;
+  UINTN                      RegionSize;
+  UINT8                      CapLength;
+  UINT32                     StatusRegister;
+  UINTN                      i;
+  INTN                       Offset;
+  XHCICONTROLLER_DXE_PRIVATE *Private;
+  NVIDIA_BPMP_IPC_PROTOCOL   *BpmpIpcProtocol;
+  UINT32                     Request[3];
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingStart:
@@ -160,6 +162,9 @@ DeviceDiscoveryNotify (
     if ((Offset = fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
                                           "nvidia,tegra186-xhci")) > 0) {
       Private->XusbSoc = &Tegra186Soc;
+    } else if ((Offset = fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
+                                          "nvidia,tegra194-xhci")) > 0) {
+      Private->XusbSoc = &Tegra194Soc;
     }
 
     Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress,
@@ -208,19 +213,36 @@ DeviceDiscoveryNotify (
       goto ErrorExit;
     }
 
-    Status = gBS->HandleProtocol (ControllerHandle,
-                       &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
+    /* From T194 onwards, BPMP blocked access to deasserting resets of XUSB Partitions
+     * (XUSB_DEV, XUSB_HOST, XUSB_SS) causing ResetNodeProtocol->Deassert to fail (Bug
+     * 2016574). Instead Using BpmpIpcProtocol's PgDeassert cmd to Unpowergate Partiti
+     * ns which will deassert reset as well. Unpowergating Host and SS Partitions here
+     * Padctl partition is still exposed and will be deasserted by DeviceDiscoveryLib
+     * when bringing up UsbPadCtlDxe
+     */
+    Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n",__FUNCTION__));
+      DEBUG ((EFI_D_ERROR, "%a: Unable to Locate BPMPIpc Protocol\n", __FUNCTION__));
       goto ErrorExit;
     }
 
-    /* Deassert Resets of Platform Specific USB Blocks */
-    for (i = 0; i < Private->XusbSoc->NumResets; i++) {
-      Status = ResetProtocol->Deassert (ResetProtocol, Private->XusbSoc->Resets[i]);
+    for (i = 0; i < Private->XusbSoc->NumPowerDomains; i++) {
+      Request[0] = (UINT32)1;
+      Request[1] = Private->XusbSoc->PowerDomainIds[i];
+      Request[2] = 1;  /* Command for PgDeassert */
+      Status = BpmpIpcProtocol->Communicate (
+                                BpmpIpcProtocol,
+                                NULL,
+                                MRQ_PG,
+                                (VOID *)&Request,
+                                sizeof (Request),
+                                NULL,
+                                0,
+                                NULL
+                                );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to deassert reset %d: %r\r\n",
-                   __FUNCTION__, Private->XusbSoc->Resets[i], Status));
+        DEBUG ((EFI_D_ERROR, "%a, Failed to Unpowergate Partition %d: %r\r\n",
+                   __FUNCTION__, Private->XusbSoc->PowerDomainIds[i], Status));
         goto ErrorExit;
       }
     }
@@ -274,17 +296,16 @@ DeviceDiscoveryNotify (
       goto ErrorExit;
     }
 
-     Status = gBS->CreateEvent (
+    Status = gBS->CreateEvent (
                   EVT_SIGNAL_EXIT_BOOT_SERVICES,
                   TPL_NOTIFY,
                   NotifyExitBootServices,
                   Private,
                   &Private->mExitBootServicesEvent
                   );
-     if (EFI_ERROR(Status))  {
-       DEBUG ((EFI_D_ERROR, "Error occured in creating ExitBootServicesEvent\n"));
-     }
-
+    if (EFI_ERROR(Status)) {
+      DEBUG ((EFI_D_ERROR, "Error occured in creating ExitBootServicesEvent\n"));
+    }
     break;
   default:
     break;

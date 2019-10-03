@@ -30,6 +30,7 @@
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra186-pinmux", &gNVIDIANonDiscoverableT186PinMuxDeviceGuid },
+    { "nvidia,tegra194-pinmux", &gNVIDIANonDiscoverableT194PinMuxDeviceGuid },
     { NULL, NULL }
 };
 
