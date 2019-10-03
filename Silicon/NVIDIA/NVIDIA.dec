@@ -144,8 +144,8 @@ Include
   gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdAddress|0x0|UINT64|0x00000013
   gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdSize|0x0|UINT64|0x00000014
 
-#Skip explicit PCIe Controller Enable
-  gNVIDIATokenSpaceGuid.PcdSkipBPMPPCIeControllerDisable|FALSE|BOOLEAN|0x00000017
+#Explicit PCIe Controller Enable
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|FALSE|BOOLEAN|0x00000017
 
 [PcdsDynamic.common]
   gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport|FALSE|BOOLEAN|0x00000010

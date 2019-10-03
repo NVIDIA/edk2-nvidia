@@ -512,6 +512,7 @@ DeviceDiscoveryNotify (
   INT32                     PciAddressCells;
   INT32                     SizeCells;
   INT32                     RangeSize;
+  CONST VOID                *SegmentNumber = NULL;
   PCIE_CONTROLLER_PRIVATE   *Private = NULL;
 
   Status = EFI_SUCCESS;
@@ -531,11 +532,6 @@ DeviceDiscoveryNotify (
       Status = EFI_OUT_OF_RESOURCES;
       break;
     }
-
-    Private->Signature = PCIE_CONTROLLER_SIGNATURE;
-    Private->PcieRootBridgeConfigurationIo.Read  = PcieConfigurationRead;
-    Private->PcieRootBridgeConfigurationIo.Write = PcieConfigurationWrite;
-    Private->PcieRootBridgeConfigurationIo.SegmentNumber = 0;
 
     Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &Private->ApplSpace, &Private->ApplSize);
     if (EFI_ERROR (Status)) {
@@ -557,6 +553,23 @@ DeviceDiscoveryNotify (
       Status = EFI_UNSUPPORTED;
       break;
     }
+
+    Private->Signature = PCIE_CONTROLLER_SIGNATURE;
+    Private->PcieRootBridgeConfigurationIo.Read  = PcieConfigurationRead;
+    Private->PcieRootBridgeConfigurationIo.Write = PcieConfigurationWrite;
+    Private->PcieRootBridgeConfigurationIo.SegmentNumber = 0;
+
+    SegmentNumber = fdt_getprop (DeviceTreeNode->DeviceTreeBase,
+                                 DeviceTreeNode->NodeOffset,
+                                 "linux,pci-domain",
+                                 &PropertySize);
+    if ((SegmentNumber == NULL) || (PropertySize != sizeof(UINT32))) {
+        DEBUG ((DEBUG_ERROR, "Failed to read segment number\n"));
+    } else {
+        CopyMem (&Private->PcieRootBridgeConfigurationIo.SegmentNumber, SegmentNumber, sizeof (UINT32));
+        Private->PcieRootBridgeConfigurationIo.SegmentNumber = SwapBytes32 (Private->PcieRootBridgeConfigurationIo.SegmentNumber);
+    }
+    DEBUG ((DEBUG_ERROR, "Segment Number = %u\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
 
     BusProperty = fdt_getprop (DeviceTreeNode->DeviceTreeBase,
                                DeviceTreeNode->NodeOffset,
@@ -592,7 +605,7 @@ DeviceDiscoveryNotify (
             return EFI_NOT_READY;
         }
 
-        if (!PcdGetBool(PcdSkipBPMPPCIeControllerDisable)) {
+        if (PcdGetBool(PcdBPMPPCIeControllerEnable)) {
           Status = BpmpProcessSetCtrlState (BpmpIpcProtocol, Private->CtrlId, 1);
           if (EFI_ERROR (Status)) {
               DEBUG ((DEBUG_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));

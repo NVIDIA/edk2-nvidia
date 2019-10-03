@@ -110,9 +110,9 @@
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
 
   #
-  # Skip explicit PCIe Controller Enable
+  # Explicit PCIe Controller Enable
   #
-  gNVIDIATokenSpaceGuid.PcdSkipBPMPPCIeControllerDisable|TRUE
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
 
 [PcdsDynamicDefault.common]
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE

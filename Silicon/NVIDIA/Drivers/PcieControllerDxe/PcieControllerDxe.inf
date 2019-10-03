@@ -48,7 +48,7 @@
   DevicePathLib
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdSkipBPMPPCIeControllerDisable
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
