@@ -107,6 +107,29 @@ ChannelFree (
 }
 
 /**
+  Free up the transaction memory
+
+  @param Transaction                   Pointer to Transaction.
+
+**/
+VOID
+EFIAPI
+TransactionFree (
+  IN BPMP_PENDING_TRANSACTION *Transaction
+  )
+{
+  if (Transaction == NULL) {
+    return;
+  }
+
+  // Blocking call uses local pending transaction structure off of
+  // the stack. No need to free that.
+  if (!Transaction->Blocking) {
+    FreePool (Transaction);
+  }
+}
+
+/**
   This processes the next entry in the list
 
   @param PrivateData                    Pointer to private data.
@@ -149,8 +172,9 @@ ProcessTransaction (
     ListEmpty = IsListEmpty (&PrivateData->TransactionList);
     gBS->RestoreTPL (OldTpl);
 
-    Transaction->Token->TransactionStatus = EFI_DEVICE_ERROR;
     gBS->SignalEvent (Transaction->Token->Event);
+    TransactionFree (Transaction);
+
     if (!ListEmpty) {
       ProcessTransaction (PrivateData);
     }
@@ -171,32 +195,29 @@ ProcessTransaction (
                                    );
 
   //Wait for done
-  if (Transaction->Blocking) {
-    TimerTick = 0;
-  } else {
+  if (!Transaction->Blocking) {
     TimerTick = BPMP_POLL_INTERVAL;
-  }
+    Status = gBS->SetTimer (
+                    PrivateData->TimerEvent,
+                    TimerPeriodic,
+                    TimerTick
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to set timer:%r\r\n", __FUNCTION__, Status));
 
-  Status = gBS->SetTimer (
-                  PrivateData->TimerEvent,
-                  TimerPeriodic,
-                  TimerTick
-                  );
+      OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
+      RemoveEntryList (List);
+      ListEmpty = IsListEmpty (&PrivateData->TransactionList);
+      gBS->RestoreTPL (OldTpl);
 
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to set timer:%r\r\n", __FUNCTION__, Status));
+      gBS->SignalEvent (Transaction->Token->Event);
+      TransactionFree (Transaction);
 
-    OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
-    RemoveEntryList (List);
-    ListEmpty = IsListEmpty (&PrivateData->TransactionList);
-    gBS->RestoreTPL (OldTpl);
-
-    Transaction->Token->TransactionStatus = EFI_DEVICE_ERROR;
-    gBS->SignalEvent (Transaction->Token->Event);
-    if (!ListEmpty) {
-      ProcessTransaction (PrivateData);
+      if (!ListEmpty) {
+        ProcessTransaction (PrivateData);
+      }
+      return;
     }
-    return;
   }
 }
 
@@ -270,6 +291,7 @@ BpmpIpcTimerNotify (
   gBS->RestoreTPL (OldTpl);
 
   gBS->SignalEvent (Transaction->Token->Event);
+  TransactionFree (Transaction);
 
   if (!ListEmpty) {
     ProcessTransaction (PrivateData);
@@ -308,6 +330,7 @@ BpmpIpcCommunicate (
   )
 {
   NVIDIA_BPMP_IPC_TOKEN        LocalToken;
+  BPMP_PENDING_TRANSACTION     LocalPendingTransaction;
   BOOLEAN                      Blocking = FALSE;
   EFI_STATUS                   Status;
   EFI_TPL                      OldTpl;
@@ -336,6 +359,7 @@ BpmpIpcCommunicate (
 
   if (Token == NULL) {
     Blocking = TRUE;
+    PendingTransaction = &LocalPendingTransaction;
     Token = &LocalToken;
     Status = gBS->CreateEvent (
                     0,
@@ -347,11 +371,11 @@ BpmpIpcCommunicate (
     if (EFI_ERROR (Status)) {
       return Status;
     }
-  }
-
-  PendingTransaction = (BPMP_PENDING_TRANSACTION *) AllocatePool(sizeof (BPMP_PENDING_TRANSACTION));
-  if (NULL == PendingTransaction) {
-    return EFI_OUT_OF_RESOURCES;
+  } else {
+    PendingTransaction = (BPMP_PENDING_TRANSACTION *) AllocatePool(sizeof (BPMP_PENDING_TRANSACTION));
+    if (NULL == PendingTransaction) {
+      return EFI_OUT_OF_RESOURCES;
+    }
   }
 
   PendingTransaction->Signature = BPMP_PENDING_TRANSACTION_SIGNATURE;
@@ -374,8 +398,14 @@ BpmpIpcCommunicate (
   }
 
   if (Blocking) {
+    gBS->SetTimer (
+           PrivateData->TimerEvent,
+           TimerCancel,
+           0
+           );
     Status = EFI_NOT_READY;
     while (Status == EFI_NOT_READY) {
+      BpmpIpcTimerNotify (NULL, PrivateData);
       Status = gBS->CheckEvent (Token->Event);
       if (Status != EFI_NOT_READY) {
         break;

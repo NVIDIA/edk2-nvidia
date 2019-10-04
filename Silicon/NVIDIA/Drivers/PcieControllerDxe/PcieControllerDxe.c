@@ -435,6 +435,51 @@ InitializeController (
   return EFI_SUCCESS;
 }
 
+STATIC
+EFI_STATUS
+EFIAPI
+UninitializeController (
+    IN  EFI_HANDLE ControllerHandle
+    )
+{
+  EFI_STATUS Status;
+
+  /* Assert reset to CORE */
+  Status = DeviceDiscoveryConfigReset (ControllerHandle, "core", 1);
+  if (EFI_ERROR (Status)) {
+    Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_rst", 1);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, " Failed to assert Core reset\r\n"));
+      return Status;
+    }
+  }
+  DEBUG ((EFI_D_ERROR, "Asserted Core reset\r\n"));
+
+  /* Assert reset to CORE_APB */
+  Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb", 1);
+  if (EFI_ERROR (Status)) {
+    Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb_rst", 1);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "Failed to assert Core APB reset\r\n"));
+      return Status;
+    }
+  }
+  DEBUG ((EFI_D_ERROR, "Asserted Core APB reset\r\n"));
+
+  /* Disable core clock */
+  Status = DeviceDiscoveryEnableClock (ControllerHandle, "core", 0);
+  if (EFI_ERROR (Status)) {
+    Status = DeviceDiscoveryEnableClock (ControllerHandle, "core_clk", 0);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "Failed to disable core_clk\r\n"));
+      return Status;
+    }
+  }
+  DEBUG ((EFI_D_ERROR, "Disabled Core clock\r\n"));
+
+  return EFI_SUCCESS;
+}
+
 struct cmd_uphy_pcie_controller_state_request {
     /** @brief PCIE controller number, valid: 0, 1, 2, 3, 4 */
     uint8_t pcie_controller;
@@ -490,6 +535,25 @@ BpmpProcessSetCtrlState (
 }
 
 /**
+  Exit Boot Services Event notification handler.
+
+  Notify PCIe driver about the event.
+
+  @param[in]  Event     Event whose notification function is being invoked.
+  @param[in]  Context   Pointer to the notification function's context.
+
+**/
+VOID
+EFIAPI
+OnExitBootServices (
+  IN      EFI_EVENT                         Event,
+  IN      VOID                              *Context
+  )
+{
+  UninitializeController ((EFI_HANDLE) Context);
+}
+
+/**
   Callback that will be invoked at various phases of the driver initialization
 
   This function allows for modification of system behavior at various points in
@@ -525,6 +589,7 @@ DeviceDiscoveryNotify (
   INT32                     RangeSize;
   CONST VOID                *SegmentNumber = NULL;
   PCIE_CONTROLLER_PRIVATE   *Private = NULL;
+  EFI_EVENT                 ExitBootServiceEvent;
 
   Status = EFI_SUCCESS;
 
@@ -621,6 +686,19 @@ DeviceDiscoveryNotify (
     Status = InitializeController(Private, ControllerHandle);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
+      break;
+    }
+
+    Status = gBS->CreateEventEx (
+                    EVT_NOTIFY_SIGNAL,
+                    TPL_NOTIFY,
+                    OnExitBootServices,
+                    ControllerHandle,
+                    &gEfiEventExitBootServicesGuid,
+                    &ExitBootServiceEvent
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Unable to setup exit boot services uninitialize. (%r)\r\n", __FUNCTION__, Status));
       break;
     }
 

@@ -59,6 +59,7 @@
 
 [Guids]
   gNVIDIANonDiscoverableT194PcieDeviceGuid
+  gEfiEventExitBootServicesGuid
 
 [Depex]
   gNVIDIAAllRegulatorsPresentProtocolGuid
