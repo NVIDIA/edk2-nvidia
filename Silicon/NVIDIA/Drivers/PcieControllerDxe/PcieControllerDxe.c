@@ -293,21 +293,26 @@ InitializeController (
   UINT32 val;
 
   /* Enable core clock */
-  Status = DeviceDiscoveryEnableClock (ControllerHandle, "core_clk", 1);
+  Status = DeviceDiscoveryEnableClock (ControllerHandle, "core", 1);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Failed to enable core_clk\r\n"));
-    return Status;
+    Status = DeviceDiscoveryEnableClock (ControllerHandle, "core_clk", 1);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "Failed to enable core_clk\r\n"));
+      return Status;
+    }
   }
-  DEBUG ((EFI_D_ERROR, "Enabled core_clk\r\n"));
-
+  DEBUG ((EFI_D_ERROR, "Enabled Core clock\r\n"));
 
   /* De-assert reset to CORE_APB */
-  Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb_rst", 0);
+  Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb", 0);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Failed to de-assert core_apb_rst\r\n"));
-    return Status;
+    Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb_rst", 0);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "Failed to de-assert Core APB reset\r\n"));
+      return Status;
+    }
   }
-  DEBUG ((EFI_D_ERROR, "De-asserted core_apb_rst\r\n"));
+  DEBUG ((EFI_D_ERROR, "De-asserted Core APB reset\r\n"));
 
   /* Program APPL */
 
@@ -338,12 +343,15 @@ InitializeController (
   DEBUG ((EFI_D_ERROR, "Programming APPL registers is done\r\n"));
 
   /* De-assert reset to CORE */
-  Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_rst", 0);
+  Status = DeviceDiscoveryConfigReset (ControllerHandle, "core", 0);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, " Failed to de-assert core_apb_rst\r\n"));
-    return Status;
+    Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_rst", 0);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, " Failed to de-assert Core reset\r\n"));
+      return Status;
+    }
   }
-  DEBUG ((EFI_D_ERROR, "De-asserted core_rst\r\n"));
+  DEBUG ((EFI_D_ERROR, "De-asserted Core reset\r\n"));
 
   /* Program CORE (i.e. DBI) */
 
@@ -418,8 +426,11 @@ InitializeController (
 
   MicroSecondDelay(100000);
 
-  val = MmioRead32 (Private->ConfigurationSpace + 0x80);
-  DEBUG ((EFI_D_ERROR, "CFG_LINK_STATUS_CONTROL = 0x%08X\r\n", val));
+  val = MmioRead32 (Private->ConfigurationSpace + PCI_EXP_LNKCTL_STATUS);
+  if (val & PCI_EXP_LNKCTL_STATUS_DLL_ACTIVE)
+    DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is UP\r\n", Private->CtrlId));
+  else
+    DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is DOWN\r\n", Private->CtrlId));
 
   return EFI_SUCCESS;
 }
@@ -571,16 +582,8 @@ DeviceDiscoveryNotify (
     }
     DEBUG ((DEBUG_ERROR, "Segment Number = %u\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
 
-    BusProperty = fdt_getprop (DeviceTreeNode->DeviceTreeBase,
-                               DeviceTreeNode->NodeOffset,
-                               "nvidia,controller-id",
-                               &PropertySize);
-    if ((BusProperty == NULL) || (PropertySize != 2 * sizeof(UINT32))) {
-        DEBUG ((DEBUG_ERROR, "Failed to read Controller-ID\n"));
-    } else {
-        CopyMem (&Private->CtrlId, BusProperty + sizeof (UINT32), sizeof (UINT32));
-        Private->CtrlId = SwapBytes32 (Private->CtrlId);
-    }
+    /* Currently Segment number is nothing but the controller-ID  */
+    Private->CtrlId = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
     DEBUG ((DEBUG_ERROR, "Controller-ID = %u\n", Private->CtrlId));
 
     if (Private->CtrlId == 5) {

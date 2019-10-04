@@ -120,6 +120,9 @@ typedef struct {
 #define PCI_EXP_LNKCAP          0x7C
 #define  PCI_EXP_LNKCAP_SLS     0x0000000f /* Supported Link Speeds */
 
+#define PCI_EXP_LNKCTL_STATUS   0x80
+#define PCI_EXP_LNKCTL_STATUS_DLL_ACTIVE   BIT(29)
+
 #define PCI_EXP_LNKCTL_STS_2    0xa0
 
 #define PCIE_MISC_CONTROL_1_OFF   0x8BC

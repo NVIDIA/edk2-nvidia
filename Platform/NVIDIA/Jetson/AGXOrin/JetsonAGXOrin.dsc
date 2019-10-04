@@ -112,6 +112,11 @@
   gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdAddress|0x85280000
   gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdSize|0x04000000
 
+  #
+  # Explicit PCIe Controller Enable
+  #
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
+
 [PcdsDynamicDefault.common]
   gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport|FALSE
 
