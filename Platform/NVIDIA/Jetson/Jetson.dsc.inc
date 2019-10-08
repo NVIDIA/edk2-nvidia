@@ -125,3 +125,8 @@
   # Tegra UART clock driver
   #
   Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
+
+  #
+  # Tegra I2C Support
+  #
+  Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf

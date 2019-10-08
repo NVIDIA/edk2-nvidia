@@ -1,0 +1,59 @@
+#/** @file
+#
+#  Tegra I2c Controller Driver
+#
+#  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+#  This program and the accompanying materials
+#  are licensed and made available under the terms and conditions of the BSD License
+#  which accompanies this distribution.  The full text of the license may be found at
+#  http://opensource.org/licenses/bsd-license.php
+#
+#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TegraI2cDxe
+  FILE_GUID                      = e733ecc5-2ee4-4ee4-82c4-81f69433f22d
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  TegraI2cDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  TimerLib
+  UefiDriverEntryPoint
+  FdtLib
+  DeviceDiscoveryDriverLib
+
+[Protocols]
+  gEfiI2cMasterProtocolGuid
+  gEfiI2cEnumerateProtocolGuid
+  gEfiI2cBusConfigurationManagementProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
+
+[Guids]
+  gNVIDIAI2cUnknown
+  gNVIDIACvmEeprom
+  gNVIDIANonDiscoverableT186I2cDeviceGuid
+  gNVIDIANonDiscoverableT194I2cDeviceGuid
+
+[Depex]
+  TRUE

@@ -420,4 +420,97 @@ DeviceDiscoverySetClockParent (
   return gClockParentsProtocol->SetParent (gClockParentsProtocol, ClockId, ParentClockId);
 }
 
+/**
+  Enable device tree based prod settings
+
+  @param[in]  ControllerHandle         Handle of the controller.
+  @param[in]  DeviceTreeNode           Device tree information
+  @param[in]  ProdSetting              String for the prod settings.
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval EFI_NOT_FOUND            Prod setting not found on controller
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+DeviceDiscoverySetProd (
+  IN  EFI_HANDLE                             ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode,
+  IN  CONST CHAR8                            *ProdSetting
+  )
+{
+  EFI_STATUS           Status;
+  EFI_PHYSICAL_ADDRESS RegionBase = 0;
+  UINTN                RegionSize = 0;
+  UINT32               LastRegion;
+  CONST UINT32         *Property;
+  INT32                PropertySize;
+  UINTN                Index = 0;
+  UINT32               ProdCells;
+
+  INT32                ProdParentOffset;
+  INT32                ProdSettingOffset;
+
+  ProdParentOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "prod-settings");
+  if (ProdParentOffset < 0) {
+    return EFI_NOT_FOUND;
+  }
+
+  Property = (CONST UINT32*)fdt_getprop (DeviceTreeNode->DeviceTreeBase, ProdParentOffset, "#prod-cells", NULL);
+  if (NULL != Property) {
+    ProdCells = SwapBytes32 (*Property);
+  } else {
+    ProdCells = 3;
+  }
+
+  ProdSettingOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, ProdParentOffset, ProdSetting);
+  if (ProdSettingOffset < 0) {
+    return EFI_NOT_FOUND;
+  }
+
+  Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, ProdSettingOffset, "prod", &PropertySize);
+  if (Property == NULL) {
+    return EFI_NOT_FOUND;
+  }
+  if ((PropertySize % (ProdCells * sizeof(UINT32))) != 0) {
+    DEBUG ((DEBUG_ERROR, "Invalid prod size (%d)\r\n", PropertySize));
+    return EFI_DEVICE_ERROR;
+  }
+
+  LastRegion = 0;
+  Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, LastRegion, &RegionBase, &RegionSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %d\r\n", LastRegion));
+    return Status;
+  }
+
+  while (Index < (PropertySize/sizeof(UINT32))) {
+    UINTN IndexOffset = 0;
+    if (ProdCells == 4) {
+      UINT32 Region = SwapBytes32 (Property[Index]);
+      if (Region == MAX_UINT32) {
+        DEBUG ((DEBUG_ERROR, "Invalid region in prod settings\r\n"));
+        return EFI_DEVICE_ERROR;
+      }
+      if (Region != LastRegion) {
+        Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, Region, &RegionBase, &RegionSize);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %d\r\n", Region));
+          return Status;
+        }
+        LastRegion = Region;
+      }
+      IndexOffset = 1;
+    }
+
+    if (SwapBytes32 (Property[Index+IndexOffset]) >= RegionSize) {
+      DEBUG ((DEBUG_ERROR, "Bad offset value %x >= %x\r\n", SwapBytes32 (Property[Index+IndexOffset]), RegionSize));
+      return EFI_DEVICE_ERROR;
+    }
+    MmioAndThenOr32 (RegionBase + SwapBytes32 (Property[Index+IndexOffset]), ~SwapBytes32 (Property[Index+IndexOffset+1]), SwapBytes32 (Property[Index+IndexOffset+2]));
+    Index += ProdCells;
+  }
+  return EFI_SUCCESS;
+}
+
 

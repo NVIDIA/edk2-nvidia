@@ -253,6 +253,25 @@ DeviceDiscoverySetClockParent (
 
 
 /**
+  Enable device tree based prod settings
+
+  @param[in]  ControllerHandle         Handle of the controller.
+  @param[in]  DeviceTreeNode           Device tree information
+  @param[in]  ProdSetting              String for the prod settings.
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval EFI_NOT_FOUND            Prod setting not found on controller
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+DeviceDiscoverySetProd (
+  IN  EFI_HANDLE                             ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode,
+  IN  CONST CHAR8                            *ProdSetting
+  );
+
+/**
   Initialize the Device Discovery Driver
 
   @param  ImageHandle   of the loaded driver
