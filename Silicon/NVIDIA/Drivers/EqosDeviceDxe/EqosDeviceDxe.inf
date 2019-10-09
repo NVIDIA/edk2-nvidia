@@ -69,6 +69,8 @@
   gArmScmiClock2ProtocolGuid
   gEmbeddedGpioProtocolGuid
   gNVIDIACvmEepromProtocolGuid
+  gEfiAcpiTableProtocolGuid                     # PROTOCOL ALWAYS_CONSUMED
+  gEfiAcpiSdtProtocolGuid                       # PROTOCOL ALWAYS_CONSUMED
 
 [Guids]
   gDwEqosNetNonDiscoverableDeviceGuid

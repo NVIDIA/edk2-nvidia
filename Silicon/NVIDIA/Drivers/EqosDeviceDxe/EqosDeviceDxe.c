@@ -35,6 +35,7 @@
 #include "DtAcpiMacUpdate.h"
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
+    { "nvidia,eqos", &gDwEqosNetNonDiscoverableDeviceGuid },
     { "nvidia,nveqos", &gDwEqosNetNonDiscoverableDeviceGuid },
     { "nvidia,tegra186-eqos", &gDwEqosNetNonDiscoverableDeviceGuid },
     { "nvidia,tegra194-eqos", &gDwEqosNetT194NonDiscoverableDeviceGuid },
