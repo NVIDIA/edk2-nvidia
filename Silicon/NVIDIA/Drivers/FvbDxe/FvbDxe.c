@@ -923,6 +923,9 @@ FVBInitialize (
   if (EFI_ERROR(Status) || (Private == NULL)) {
     return EFI_OUT_OF_RESOURCES;
   }
+
+  gBS->SetMem (Private, sizeof (NVIDIA_FVB_PRIVATE_DATA), 0);
+
   if (!PcdGetBool(PcdEmuVariableNvModeEnable)) {
     Status = gBS->LocateHandleBuffer (ByProtocol,
                                       &gEfiPartitionInfoProtocolGuid,
@@ -932,7 +935,7 @@ FVBInitialize (
 
     if (EFI_ERROR(Status)) {
       Status = EFI_UNSUPPORTED;
-      goto Exit;
+      goto NoFlashExit;
     }
 
     for (Index = 0; Index < NumOfHandles; Index++) {
@@ -945,12 +948,12 @@ FVBInitialize (
 
       if (EFI_ERROR(Status) || (PartitionInfo == NULL)) {
         Status = EFI_NOT_FOUND;
-        goto Exit;
+        goto NoFlashExit;
       }
 
       if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
         Status = EFI_PROTOCOL_ERROR;
-        goto Exit;
+        goto NoFlashExit;
       }
 
       if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
@@ -966,7 +969,7 @@ FVBInitialize (
 
     if (Index == NumOfHandles) {
       Status = EFI_NOT_FOUND;
-      goto Exit;
+      goto NoFlashExit;
     }
 
     Private->PartitionStartingLBA = PartitionInfo->Info.Gpt.StartingLBA;
@@ -979,7 +982,7 @@ FVBInitialize (
 
     if (EFI_ERROR(Status) || (PartitionDevicePath == NULL) || IsDevicePathEnd(PartitionDevicePath)) {
       Status = EFI_NOT_FOUND;
-      goto Exit;
+      goto NoFlashExit;
     }
 
     ValidFlash = FALSE;
@@ -994,14 +997,14 @@ FVBInitialize (
 
     if (ValidFlash != TRUE) {
       Status = EFI_UNSUPPORTED;
-      goto Exit;
+      goto NoFlashExit;
     }
 
     FlashDevicePath = DuplicateDevicePath (PartitionDevicePath);
 
     if (FlashDevicePath == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
-      goto Exit;
+      goto NoFlashExit;
     }
 
     CurrentDevicePath = FlashDevicePath;
@@ -1020,7 +1023,7 @@ FVBInitialize (
 
     if (EFI_ERROR(Status) || (FlashHandle == NULL)) {
       Status = EFI_NOT_FOUND;
-      goto Exit;
+      goto NoFlashExit;
     }
 
     Status = gBS->OpenProtocol (FlashHandle,
@@ -1032,7 +1035,7 @@ FVBInitialize (
 
     if (EFI_ERROR(Status) || (Private->BlockIo == NULL)) {
       Status = EFI_NOT_FOUND;
-      goto Exit;
+      goto NoFlashExit;
     }
 
     BlockSize = Private->BlockIo->Media->BlockSize;
@@ -1041,7 +1044,7 @@ FVBInitialize (
     if (Size != PcdGet32(PcdFlashNvStorageVariableSize)) {
       DEBUG ((EFI_D_ERROR, "UEFI variables not supported.\n"));
       Status = EFI_UNSUPPORTED;
-      goto Exit;
+      goto NoFlashExit;
     }
 
     Private->VariablePartition = NULL;
@@ -1051,7 +1054,7 @@ FVBInitialize (
 
     if (EFI_ERROR(Status) || (Private->VariablePartition == NULL)) {
       Status = EFI_OUT_OF_RESOURCES;
-      goto Exit;
+      goto NoFlashExit;
     }
 
     PcdSet64(PcdFlashNvStorageVariableBase64, (UINT64)Private->VariablePartition);
@@ -1062,7 +1065,7 @@ FVBInitialize (
                                            Size,
                                            Private->VariablePartition);
     if (EFI_ERROR(Status)) {
-      goto Exit;
+      goto NoFlashExit;
     }
 
     Status = ValidateFvHeader((EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition);
@@ -1079,16 +1082,27 @@ FVBInitialize (
                                               Size,
                                               Private->VariablePartition);
       if (EFI_ERROR(Status)) {
-        goto Exit;
+        goto NoFlashExit;
       }
 
       // Install all appropriate headers
       Status = InitializeFvAndVariableStoreHeaders ((EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition);
       if (EFI_ERROR(Status)) {
-        goto Exit;
+        goto NoFlashExit;
       }
     }
   }
+
+NoFlashExit:
+  //
+  // If reached here because of an error and not using emukated variables,
+  // switch to use emulated variables.
+  //
+  if (EFI_ERROR(Status) && !PcdGetBool(PcdEmuVariableNvModeEnable)) {
+    DEBUG ((EFI_D_ERROR, "%a: FVB Initialization Failed. Switching to Emulated Variables.\n", __FUNCTION__));
+    PcdSetBool(PcdEmuVariableNvModeEnable, TRUE);
+  }
+
   //
   // The driver implementing the variable read service can now be dispatched;
   // the varstore headers are in place.
@@ -1098,49 +1112,50 @@ FVBInitialize (
                                           EFI_NATIVE_INTERFACE,
                                           NULL);
 
-  if (EFI_ERROR(Status) || PcdGetBool(PcdEmuVariableNvModeEnable)) {
-    goto Exit;
+  if (!EFI_ERROR(Status) && PcdGetBool(PcdEmuVariableNvModeEnable)) {
+    Status = EFI_UNSUPPORTED;
   }
 
-  //
-  // Register for the virtual address change event
-  //
-  FvbVirtualAddrChangeEvent = (EFI_EVENT)NULL;
-  Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
-                               TPL_NOTIFY,
-                               FVBVirtualNotifyEvent,
-                               NULL,
-                               &gEfiEventVirtualAddressChangeGuid,
-                               &FvbVirtualAddrChangeEvent);
+  if (!EFI_ERROR(Status)) {
+    //
+    // Register for the virtual address change event
+    //
+    FvbVirtualAddrChangeEvent = (EFI_EVENT)NULL;
+    Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                                 TPL_NOTIFY,
+                                 FVBVirtualNotifyEvent,
+                                 NULL,
+                                 &gEfiEventVirtualAddressChangeGuid,
+                                 &FvbVirtualAddrChangeEvent);
 
-  if (EFI_ERROR(Status) || FvbVirtualAddrChangeEvent == NULL) {
-    goto Exit;
+    if (!EFI_ERROR(Status) && FvbVirtualAddrChangeEvent != NULL) {
+      Private->FvbInstance.GetAttributes = FvbGetAttributes;
+      Private->FvbInstance.SetAttributes = FvbSetAttributes;
+      Private->FvbInstance.GetPhysicalAddress = FvbGetPhysicalAddress;
+      Private->FvbInstance.GetBlockSize = FvbGetBlockSize;
+      Private->FvbInstance.Read = FvbRead;
+      Private->FvbInstance.Write = FvbWrite;
+      Private->FvbInstance.EraseBlocks = FvbEraseBlocks;
+      Private->FvbInstance.ParentHandle = NULL;
+
+      Private->FtwInstance.GetMaxBlockSize = FtwGetMaxBlockSize;
+      Private->FtwInstance.Allocate = FtwAllocate;
+      Private->FtwInstance.Write = FtwWrite;
+      Private->FtwInstance.Restart = FtwRestart;
+      Private->FtwInstance.Abort = FtwAbort;
+      Private->FtwInstance.GetLastWrite = FtwGetLastWrite;
+
+      Status = gBS->InstallMultipleProtocolInterfaces(&ImageHandle,
+                                                      &gEfiFirmwareVolumeBlockProtocolGuid,
+                                                      &Private->FvbInstance,
+                                                      &gEfiFaultTolerantWriteProtocolGuid,
+                                                      &Private->FtwInstance,
+                                                      NULL);
+    } else {
+      Status = EFI_OUT_OF_RESOURCES;
+    }
   }
 
-  Private->FvbInstance.GetAttributes = FvbGetAttributes;
-  Private->FvbInstance.SetAttributes = FvbSetAttributes;
-  Private->FvbInstance.GetPhysicalAddress = FvbGetPhysicalAddress;
-  Private->FvbInstance.GetBlockSize = FvbGetBlockSize;
-  Private->FvbInstance.Read = FvbRead;
-  Private->FvbInstance.Write = FvbWrite;
-  Private->FvbInstance.EraseBlocks = FvbEraseBlocks;
-  Private->FvbInstance.ParentHandle = NULL;
-
-  Private->FtwInstance.GetMaxBlockSize = FtwGetMaxBlockSize;
-  Private->FtwInstance.Allocate = FtwAllocate;
-  Private->FtwInstance.Write = FtwWrite;
-  Private->FtwInstance.Restart = FtwRestart;
-  Private->FtwInstance.Abort = FtwAbort;
-  Private->FtwInstance.GetLastWrite = FtwGetLastWrite;
-
-  Status = gBS->InstallMultipleProtocolInterfaces(&ImageHandle,
-                                                  &gEfiFirmwareVolumeBlockProtocolGuid,
-                                                  &Private->FvbInstance,
-                                                  &gEfiFaultTolerantWriteProtocolGuid,
-                                                  &Private->FtwInstance,
-                                                  NULL);
-
-Exit:
   if (EFI_ERROR(Status)) {
     if (Private != NULL) {
       if (Private->VariablePartition != NULL) {
