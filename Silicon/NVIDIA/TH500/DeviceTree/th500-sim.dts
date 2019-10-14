@@ -2794,34 +2794,6 @@
             nvidia,hsp-shared-mailbox-names = "ivc-pair", "cmd-pair";
         };
     };
-    rtcpu@bc00000 {
-        nvidia,changelist = <0x00000000 0x02b09b91>;
-        compatible = "nvidia,tegra194-rce";
-        nvidia,cpu-name = "rce";
-        reg = <0x00000000 0x0bc00000 0x00000000 0x00001000 0x00000000 0x0b9f0000 0x00000000 0x00040000 0x00000000 0x0b840000 0x00000000 0x00010000 0x00000000 0x0b850000 0x00000000 0x00010000>;
-        reg-names = "rce-evp", "rce-pm", "ast-cpu", "ast-dma";
-        clocks = <0x00000004 0x00000071 0x00000004 0x00000072>;
-        clock-names = "rce-cpu-nic", "rce-nic";
-        nvidia,clock-rates = <0x06ddd000 0x23dbb000 0x06ddd000 0x23dbb000>;
-        reset-names = "rce-all";
-        interrupts = <0x00000000 0x00000013 0x00000004>;
-        interrupt-names = "wdt-remote";
-        iommus = <0x00000002 0x00000023>;
-        dma-coherent;
-        nvidia,trace = <0x0000001f 0x00000004 0x70100000 0x00100000>;
-        nvidia,ivc-channels = <0x00000020 0x00000002 0x90000000 0x00010000>;
-        nvidia,autosuspend-delay-ms = <0x00001388>;
-        status = "disabled";
-        nvidia,cmd-timeout = <0x000007d0>;
-        linux,phandle = <0x00000022>;
-        phandle = <0x00000022>;
-        hsp {
-            nvidia,changelist = <0x00000000 0x02b09b91>;
-            compatible = "nvidia,tegra186-hsp-mailbox";
-            nvidia,hsp-shared-mailbox = <0x00000021 0x00000001 0x00000021 0x00000006>;
-            nvidia,hsp-shared-mailbox-names = "ivc-pair", "cmd-pair";
-        };
-    };
     camera-ivc-channels {
         nvidia,changelist = <0x00000000 0x02b09b91>;
         linux,phandle = <0x00000020>;
@@ -2875,14 +2847,6 @@
             nvidia,frame-count = <0x00000200>;
             nvidia,frame-size = <0x00000040>;
         };
-    };
-    tegra-rtcpu-trace {
-        nvidia,changelist = <0x00000000 0x02b09b91>;
-        nvidia,enable-printk;
-        nvidia,interval-ms = <0x00000032>;
-        nvidia,log-prefix = "[RCE]";
-        linux,phandle = <0x0000001f>;
-        phandle = <0x0000001f>;
     };
     actmon@d230000 {
         nvidia,changelist = <0x00000000 0x02b09b91>;
@@ -3457,28 +3421,6 @@
         status = "okay";
         linux,phandle = <0x000000b9>;
         phandle = <0x000000b9>;
-    };
-    tegra-hsp@b150000 {
-        nvidia,changelist = <0x00000000 0x02b09b91>;
-        compatible = "nvidia,tegra186-hsp";
-        reg = <0x00000000 0x0b150000 0x00000000 0x00090000>;
-        interrupts = <0x00000000 0x0000008d 0x00000004 0x00000000 0x0000008e 0x00000004 0x00000000 0x0000008f 0x00000004 0x00000000 0x00000090 0x00000004>;
-        interrupt-names = "shared1", "shared2", "shared3", "shared4";
-        nvidia,mbox-ie;
-        status = "disabled";
-        linux,phandle = <0x0000001e>;
-        phandle = <0x0000001e>;
-    };
-    tegra-hsp@b950000 {
-        nvidia,changelist = <0x00000000 0x02b09b91>;
-        compatible = "nvidia,tegra186-hsp";
-        reg = <0x00000000 0x0b950000 0x00000000 0x00090000>;
-        interrupts = <0x00000000 0x000000b6 0x00000004 0x00000000 0x000000b7 0x00000004 0x00000000 0x000000b8 0x00000004 0x00000000 0x000000b9 0x00000004>;
-        nvidia,mbox-ie;
-        interrupt-names = "shared1", "shared2", "shared3", "shared4";
-        status = "okay";
-        linux,phandle = <0x00000021>;
-        phandle = <0x00000021>;
     };
     efuse@3810000 {
         nvidia,changelist = <0x00000000 0x02b09b91>;
@@ -4639,20 +4581,6 @@
         interrupts = <0x00000000 0x00000106 0x00000004 0x00000000 0x000000ae 0x00000004>;
         status = "disabled";
     };
-    rce-noc@BE00000 {
-        nvidia,changelist = <0x00000000 0x02b09b91>;
-        compatible = "nvidia,tegra194-RCE-NOC";
-        reg = <0x00000000 0x0be00000 0x00000000 0x00001000>;
-        interrupts = <0x00000000 0x00000103 0x00000004 0x00000000 0x000000af 0x00000004>;
-        status = "disabled";
-    };
-    sce-noc@B600000 {
-        nvidia,changelist = <0x00000000 0x02b09b91>;
-        compatible = "nvidia,tegra194-SCE-NOC";
-        reg = <0x00000000 0x0b600000 0x00000000 0x00001000>;
-        interrupts = <0x00000000 0x00000105 0x00000004 0x00000000 0x000000ad 0x00000004>;
-        status = "disabled";
-    };
     axi2apb@2390000 {
         nvidia,changelist = <0x00000000 0x02b09b91>;
         compatible = "nvidia,tegra194-AXI2APB-bridge";
@@ -5005,8 +4933,6 @@
         tegra_dspk2 = "/aconnect@2a41000/ahub/dspk@2905100";
         tegra_adsp_audio = "/aconnect@2a41000/adsp_audio";
         tegra_safety_ivc = "/tegra_safety_ivc";
-        tegra_safety = "/sce@b000000";
-        tegra_rce = "/rtcpu@bc00000";
         aon = "/aon@c000000";
         CPU_CORE_POWER_STATES = "/cpus/cpu_core_power_states";
         C1 = "/cpus/cpu_core_power_states/c1";
@@ -5033,8 +4959,6 @@
         tegra_rtc = "/rtc@c2a0000";
         aon_hsp = "/tegra-hsp@c150000";
         hsp_top = "/tegra-hsp@3c00000";
-        sce_hsp = "/tegra-hsp@b150000";
-        hsp_rce = "/tegra-hsp@b950000";
         se = "/se_elp@3ad0000";
         host1x = "/host1x";
         host1x_ctx0 = "/host1x/ctx0";
