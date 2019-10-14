@@ -81,11 +81,6 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
 
   #
-  # FDT Support
-  #
-  INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
-
-  #
   # Usb Support
   #
   INF Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf

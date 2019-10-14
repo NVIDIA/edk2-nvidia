@@ -57,9 +57,9 @@
   Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
 
   #
-  # FDT Support
+  # ACPI Support
   #
-  EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+  MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
 
   #
   # QSPI Support
