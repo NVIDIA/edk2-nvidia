@@ -104,7 +104,6 @@ typedef struct {
   TEGRA_XUSB_SOC                 *XusbSoc;
   EFI_HANDLE                     ImageHandle;
   NVIDIA_USBPADCTL_PROTOCOL      *mUsbPadCtlProtocol;
-  EFI_EVENT                      mExitBootServicesEvent;
 } XHCICONTROLLER_DXE_PRIVATE;
 #define XHCICONTROLLER_PRIVATE_DATA_FROM_THIS(a) CR(a, XHCICONTROLLER_DXE_PRIVATE, XhciControllerProtocol, XHCICONTROLLER_SIGNATURE)
 

@@ -92,26 +92,6 @@ XhciGetCfgAddr (
   return EFI_SUCCESS;
 }
 
-VOID
-EFIAPI
-NotifyExitBootServices (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
-  )
-{
-  if (NULL == Context)
-    return;
-
-  XHCICONTROLLER_DXE_PRIVATE *Private = (XHCICONTROLLER_DXE_PRIVATE *)Context;
-
-  if (Private->mUsbPadCtlProtocol == NULL) {
-    DEBUG ((EFI_D_ERROR, "Invalid UsbPadCtlProtocol Handle\n"));
-    return;
-  }
-
-  Private->mUsbPadCtlProtocol->DeInitHw(Private->mUsbPadCtlProtocol);
-}
-
 /**
   Callback that will be invoked at various phases of the driver initialization
 
@@ -294,17 +274,6 @@ DeviceDiscoveryNotify (
       DEBUG ((EFI_D_ERROR, "UsbStatus: 0x%x Falcon CPUCTL: 0x%x\n", StatusRegister, FalconRead32(FALCON_CPUCTL_0)));
       Status = EFI_DEVICE_ERROR;
       goto ErrorExit;
-    }
-
-    Status = gBS->CreateEvent (
-                  EVT_SIGNAL_EXIT_BOOT_SERVICES,
-                  TPL_NOTIFY,
-                  NotifyExitBootServices,
-                  Private,
-                  &Private->mExitBootServicesEvent
-                  );
-    if (EFI_ERROR(Status)) {
-      DEBUG ((EFI_D_ERROR, "Error occured in creating ExitBootServicesEvent\n"));
     }
     break;
   default:
