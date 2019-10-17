@@ -56,13 +56,10 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
       Memory32Fixed(ReadWrite, FixedPcdGet64 (PcdSerialRegisterBase), 0x10000)
       Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x92 }
     })
-
     Name (_DSD, Package () {
       ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
       Package () {
-        Package () {"clock-frequency", 408000000},
-        Package () {"reg-shift", 2},
-        Package () {"reg-io-width", 4},
+        Package () {"clock-frequency", 1843200}
       }
     })
   }
