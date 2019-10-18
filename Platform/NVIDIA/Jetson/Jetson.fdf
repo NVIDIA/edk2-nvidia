@@ -133,4 +133,9 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
 
 
+  #
+  # Tegra UART clock driver
+  #
+  INF Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
+
 !include Platform/NVIDIA/NVIDIA.common.fdf.inc

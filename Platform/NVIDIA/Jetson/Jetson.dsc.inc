@@ -121,3 +121,7 @@
   #
   Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
 
+  #
+  # Tegra UART clock driver
+  #
+  Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
