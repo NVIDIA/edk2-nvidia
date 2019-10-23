@@ -604,7 +604,14 @@ OnExitBootServices (
   IN      VOID                              *Context
   )
 {
-  UninitializeController ((EFI_HANDLE) Context);
+  EFI_STATUS Status;
+  VOID       *Rsdp = NULL;
+
+  //Only Uninitialize if ACPI is not installed.
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &Rsdp);
+  if (EFI_ERROR (Status)) {
+    UninitializeController ((EFI_HANDLE) Context);
+  }
 }
 
 /**
