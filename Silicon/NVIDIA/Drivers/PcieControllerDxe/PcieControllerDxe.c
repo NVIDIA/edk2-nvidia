@@ -340,6 +340,16 @@ InitializeController (
   /* Setup DBI region */
   MmioWrite32 (Private->ApplSpace + APPL_CFG_IATU_DMA_BASE_ADDR, Private->AtuBase & APPL_CFG_IATU_DMA_BASE_ADDR_MASK);
 
+  /* Enable interrupt generation for PCIe legacy interrupts (INTx) */
+  val = MmioRead32(Private->ApplSpace + APPL_INTR_EN_L0_0);
+  val |= APPL_INTR_EN_L0_0_INT_INT_EN;
+  val |= APPL_INTR_EN_L0_0_SYS_INTR_EN;
+  MmioWrite32 (Private->ApplSpace + APPL_INTR_EN_L0_0, val);
+
+  val = MmioRead32(Private->ApplSpace + APPL_INTR_EN_L1_8_0);
+  val |= APPL_INTR_EN_L1_8_INTX_EN;
+  MmioWrite32 (Private->ApplSpace + APPL_INTR_EN_L1_8_0, val);
+
   DEBUG ((EFI_D_ERROR, "Programming APPL registers is done\r\n"));
 
   /* De-assert reset to CORE */

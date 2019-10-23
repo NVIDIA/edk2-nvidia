@@ -88,6 +88,16 @@ typedef struct {
 #define APPL_CTRL_SYS_PRE_DET_STATE             BIT(6)
 #define APPL_CTRL_LTSSM_EN                      BIT(7)
 
+#define APPL_INTR_EN_L0_0                       0x8
+#define APPL_INTR_EN_L0_0_MSI_RCV_INT_EN        BIT(4)
+#define APPL_INTR_EN_L0_0_INT_INT_EN            BIT(8)
+#define APPL_INTR_EN_L0_0_SYS_INTR_EN           BIT(30)
+#define APPL_INTR_EN_L0_0_SYS_MSI_INTR_EN       BIT(31)
+
+#define APPL_INTR_EN_L1_8_0                     0x44
+#define APPL_INTR_EN_L1_8_INTX_EN               BIT(11)
+#define APPL_INTR_EN_L1_8_AER_INT_EN            BIT(15)
+
 #define APPL_DM_TYPE                            0x100
 #define APPL_DM_TYPE_MASK                       0xF
 #define APPL_DM_TYPE_RP                         0x4
