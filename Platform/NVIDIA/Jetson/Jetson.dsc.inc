@@ -130,3 +130,9 @@
   # Tegra I2C Support
   #
   Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
+
+  #
+  # Tegra EEPROM Support
+  #
+  Silicon/NVIDIA/Drivers/CvmEepromDxe/CvmEeprom.inf
+
