@@ -20,6 +20,7 @@
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Pi/PiHob.h>
 #include "SystemResourceLibPrivate.h"
 #include <libfdt.h>
@@ -99,7 +100,7 @@ InstallSystemResources (
   }
 
 
-  CpuBootloaderAddress = (UINTN)MmioRead32 (PcdGet64 (PcdBootloaderInfoLocationAddress));
+  CpuBootloaderAddress = (UINTN)MmioRead32 (TegraGetBLInfoLocationAddress(TegraGetChipID()));
   //Address may be encoded as number of 64KiB pages from 0.
   if (CpuBootloaderAddress < PcdGet64 (PcdSystemMemoryBase)) {
     CpuBootloaderAddress <<= 16;

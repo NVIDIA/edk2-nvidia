@@ -120,9 +120,13 @@ _SpiLoop:
 2:
   // Do early platform specific actions
   bl    ASM_PFX(ArmPlatformPeiBootAction)
-
-  MOV64 (x5, FixedPcdGet64(PcdBootloaderInfoLocationAddress))
-  MOV64 (x6, FixedPcdGet64(PcdBootloaderCarveoutOffset))
+  bl ASM_PFX(TegraGetChipID)
+  mov w9, w0
+  bl ASM_PFX(TegraGetBLInfoLocationAddress)
+  mov x5, x0
+  mov w0, w9
+  bl ASM_PFX(TegraGetBLCarveoutOffset)
+  mov x6, x0
   MOV64 (x7, FixedPcdGet64(PcdSystemMemoryBase))
   ldr   w5, [x5]
   cmp   x5, x7

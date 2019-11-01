@@ -31,5 +31,8 @@
 [Sources.common]
   TegraPlatformInfoLib.c
 
+[Sources.AARCH64]
+  AArch64/TegraPlatformInfo.S
+
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress

@@ -29,6 +29,7 @@
   HobLib
   DebugLib
   DramCarveoutLib
+  TegraPlatformInfoLib
 
 [Guids]
 
@@ -41,6 +42,5 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase
   gArmTokenSpaceGuid.PcdGicDistributorBase
   gArmTokenSpaceGuid.PcdGicRedistributorsBase
-  gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress
   gArmTokenSpaceGuid.PcdSystemMemoryBase
 

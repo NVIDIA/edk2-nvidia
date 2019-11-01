@@ -30,6 +30,7 @@
   DebugLib
   DramCarveoutLib
   FdtLib
+  TegraPlatformInfoLib
 
 [Guids]
   gFdtHobGuid
@@ -42,6 +43,5 @@
   gArmTokenSpaceGuid.PcdGicDistributorBase
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
   gNVIDIATokenSpaceGuid.PcdMemorySizeRegister
-  gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress
   gArmTokenSpaceGuid.PcdSystemMemoryBase
 

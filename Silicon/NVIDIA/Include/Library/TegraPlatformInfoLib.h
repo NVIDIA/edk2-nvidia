@@ -36,10 +36,27 @@ typedef enum {
   @retval MAX_UINT32  ERROR
   @retval <MAX_UINT32 Tegra Chip ID
 **/
-UINT32
-TegraGetChipID (
-  VOID
-  );
+extern UINT32 TegraGetChipID (VOID);
+
+/**
+  Returns bootloader info location address for a given chip.
+
+  @param[in] ChipID    Tegra Chip ID
+
+  @retval              Address of bootloader info location.
+
+**/
+extern UINT64 TegraGetBLInfoLocationAddress (UINT32 ChipID);
+
+/**
+  Returns bootloader carveout offset for a given chip.
+
+  @param[in] ChipID    Tegra Chip ID
+
+  @retval              Bootloader carveout offset.
+
+**/
+extern UINT64 TegraGetBLCarveoutOffset (UINT32 ChipID);
 
 /**
   Returns tegra platform type.
@@ -53,4 +70,5 @@ TEGRA_PLATFORM_TYPE
 TegraGetPlatform (
   VOID
   );
+
 #endif //__TEGRA_PLATFORM_INFO_LIB_H__

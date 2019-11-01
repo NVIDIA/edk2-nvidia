@@ -66,10 +66,6 @@
   ## Register that contains size of DRAM
   gNVIDIATokenSpaceGuid.PcdMemorySizeRegister|0x2c10050
 
-  gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress|0x0C39096C
-  #Carve out array is at 64 bytes and CPU bootloader is index 39 (64+39*16)
-  gNVIDIATokenSpaceGuid.PcdBootloaderCarveoutOffset|0x2B0
-
   ## SBSA Watchdog Count
   gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2
 

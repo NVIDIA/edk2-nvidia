@@ -71,12 +71,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterStride|4
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl|TRUE
 
-  gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress|0x0C3903F8
-  gNVIDIATokenSpaceGuid.PcdBootloaderCarveoutOffset|0x448
-
-  ## Base address of MISCREG aperture
-  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00100000
-
   ## SBSA Watchdog Count
   gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2
 

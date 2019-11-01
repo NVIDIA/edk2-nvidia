@@ -37,19 +37,6 @@ TegraReadHidrevReg (
   return (MmioRead32(MiscRegBaseAddr + HIDREV_OFFSET));
 }
 
-UINT32
-TegraGetChipID (
-  VOID
-  )
-{
-  UINT32 Hidrev = TegraReadHidrevReg();
-  if (Hidrev == MAX_UINT32) {
-    return MAX_UINT32;
-  } else {
-    return ((Hidrev >> HIDREV_CHIPID_SHIFT) & HIDREV_CHIPID_MASK);
-  }
-}
-
 TEGRA_PLATFORM_TYPE
 TegraGetPlatform (
   VOID

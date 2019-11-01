@@ -108,12 +108,6 @@ Include
 #Memory size in MiB
   gNVIDIATokenSpaceGuid.PcdMemorySizeRegister|0x00000000|UINT64|0x00000004
 
-#Address that contains location CPU bootloader information
-  gNVIDIATokenSpaceGuid.PcdBootloaderInfoLocationAddress|0x00000000|UINT64|0x00000005
-
-#Offset in CPU bootloader info that contains the base, size pair for the cpu bootloader carveout
-  gNVIDIATokenSpaceGuid.PcdBootloaderCarveoutOffset|0x00000000|UINT64|0x00000006
-
 #Timeout in microseconds in hsp doorbell response, 0 for infinite
   gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout|0|UINT32|0x00000007
 
@@ -139,7 +133,7 @@ Include
   gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|FALSE|BOOLEAN|0x0000000E
 
 #Base address of MISCREG aperture.
-  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x0|UINT64|0x0000000F
+  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00100000|UINT64|0x0000000F
 
 #Name of Kernel DTB partition
   gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName|L"kernel-dtb"|VOID*|0x00000016
