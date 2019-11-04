@@ -303,6 +303,8 @@
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdTurnOffUsbLegacySupport|TRUE
 
+  gEfiMdeModulePkgTokenSpaceGuid.PcdInstallAcpiSdtProtocol|TRUE
+
 [PcdsFixedAtBuild.common]
 !ifdef $(FIRMWARE_VER)
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(FIRMWARE_VER)"
