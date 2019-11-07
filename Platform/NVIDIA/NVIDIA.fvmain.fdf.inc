@@ -172,3 +172,8 @@
   #
   INF Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
 
+  #
+  # Tegra Platform Boot Manager driver
+  #
+  INF Silicon/NVIDIA/Drivers/TegraPlatBMDxe/TegraPlatBMDxe.inf
+

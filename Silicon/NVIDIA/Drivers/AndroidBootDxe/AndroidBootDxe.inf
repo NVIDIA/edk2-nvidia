@@ -36,7 +36,6 @@
   UefiLib
   UefiDriverEntryPoint
   UefiBootServicesTableLib
-  UefiBootManagerLib
   MemoryAllocationLib
   FdtLib
   DebugLib

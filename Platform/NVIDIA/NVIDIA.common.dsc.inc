@@ -684,6 +684,11 @@
     *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
   }
 
+  #
+  # Tegra Platform Boot Manager
+  #
+  Silicon/NVIDIA/Drivers/TegraPlatBMDxe/TegraPlatBMDxe.inf
+
 [Components.AARCH64]
   #
   # EBC

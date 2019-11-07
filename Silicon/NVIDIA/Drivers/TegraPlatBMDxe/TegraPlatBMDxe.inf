@@ -1,0 +1,39 @@
+#
+#  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x0001001a
+  BASE_NAME                      = TegraPlatBMDxe
+  FILE_GUID                      = a15e9b33-47d0-4a32-b516-85c89566a945
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = PlatformBootManagerEntryPoint
+
+[Sources.common]
+  TegraPlatBMDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  DtPlatformDtbLoaderLib
+  UefiBootManagerLib
+  UefiDriverEntryPoint
+  FdtLib
+
+[Protocols]
+  gEfiLoadFileProtocolGuid
+  gPlatformBootManagerProtocolGuid
+
+[Guids]
+  gFdtTableGuid
+
+[Depex]
+  TRUE

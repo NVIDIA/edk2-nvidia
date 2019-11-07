@@ -22,7 +22,6 @@
 #include <libfdt.h>
 
 #include <Library/UefiBootServicesTableLib.h>
-#include <Library/UefiBootManagerLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/BaseMemoryLib.h>
