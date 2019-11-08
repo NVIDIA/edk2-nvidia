@@ -21,8 +21,8 @@
   PLATFORM_GUID                  = 865873a1-b255-46c2-90d2-2e2578c00dbd
   PLATFORM_VERSION               = 0.1
   DSC_SPECIFICATION              = 0x00010005
-!if $(SIM)
-  OUTPUT_DIRECTORY               = Build/JetsonAGXXavierSim
+!if $(SIDECAR)
+  OUTPUT_DIRECTORY               = Build/JetsonAGXXavierSidecar
 !else
   OUTPUT_DIRECTORY               = Build/JetsonAGXXavier
 !endif
@@ -41,7 +41,7 @@
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
 
 [LibraryClasses.common]
-!if $(SIM)
+!if $(SIDECAR)
   SerialPortLib|MdeModulePkg/Library/BaseSerialPortLib16550/BaseSerialPortLib16550.inf
 !else
   SerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
@@ -120,6 +120,13 @@
   gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x30000000
   gArmTokenSpaceGuid.PcdPciBusMin|160
   gArmTokenSpaceGuid.PcdPciBusMax|161
+
+!if $(SIDECAR)
+  #
+  # Default to ACPI
+  #
+  gEmbeddedTokenSpaceGuid.PcdDefaultDtPref|FALSE
+!endif
 
 [PcdsDynamicDefault.common]
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE

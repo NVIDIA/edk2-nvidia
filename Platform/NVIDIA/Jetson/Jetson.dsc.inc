@@ -26,14 +26,6 @@
 #
 ################################################################################
 
-[PcdsFixedAtBuild.common]
-!if $(DEFAULT_ACPI_BOOT)
-  #
-  # Default to ACPI
-  #
-  gEmbeddedTokenSpaceGuid.PcdDefaultDtPref|FALSE
-!endif
-
 [PcdsPatchableInModule]
   # Console Resolution (Full HD)
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|1920
