@@ -59,6 +59,11 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 1, "NVIDIA", "TEGRA194", 0x00000001) {
         }) // Name(RBUF)
         Return (RBUF)
       } // Method(_CRS)
+
+      // Root complex status
+      Method (_STA, 0, Serialized) {
+        Return (Zero)
+      } // Method(_STA)
     } // PCI0
   } //Scope(_SB)
 }
