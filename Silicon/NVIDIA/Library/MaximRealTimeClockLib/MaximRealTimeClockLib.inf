@@ -39,14 +39,24 @@
   TimeBaseLib
 
 [Guids]
+  gEfiEventExitBootServicesGuid
+  gEfiGlobalVariableGuid
   gNVIDIAI2cMaxim77620
   gNVIDIAI2cMaxim20024
   gNVIDIATokenSpaceGuid
+  gEfiRtPropertiesTableGuid
 
 [Protocols]
   gEfiI2cIoProtocolGuid                       ## CONSUMES
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC|FALSE
 
 [Depex]
   gEfiVariableArchProtocolGuid
   AND
   gEfiVariableWriteArchProtocolGuid
+
+# Current usage of this library expects GCC in a UNIX-like shell environment with the date command
+[BuildOptions]
+  GCC:*_*_*_CC_FLAGS = -DBUILD_EPOCH=`date +%s`

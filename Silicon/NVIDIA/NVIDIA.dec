@@ -246,3 +246,5 @@ Include
 #Option to enable/disable quickboot
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|0x01|UINT8|0x0000002D
 
+ #Option to support virtual RTC
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC|FALSE|BOOLEAN|0x0000002E
