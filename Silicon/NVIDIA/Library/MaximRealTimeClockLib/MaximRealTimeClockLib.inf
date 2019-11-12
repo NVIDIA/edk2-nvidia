@@ -16,7 +16,7 @@
   INF_VERSION                    = 0x00010019
   BASE_NAME                      = MaximRealTimeClockLib
   FILE_GUID                      = 2df9ac10-090c-4fd4-8ddd-2225707761e1
-  MODULE_TYPE                    = DXE_DRIVER
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = RealTimeClockLib
 
@@ -39,12 +39,14 @@
   TimeBaseLib
 
 [Guids]
-  gEfiEventVirtualAddressChangeGuid
   gNVIDIAI2cMaxim77620
   gNVIDIAI2cMaxim20024
+  gNVIDIATokenSpaceGuid
 
 [Protocols]
   gEfiI2cIoProtocolGuid                       ## CONSUMES
 
 [Depex]
-  TRUE
+  gEfiVariableArchProtocolGuid
+  AND
+  gEfiVariableWriteArchProtocolGuid

@@ -23,12 +23,13 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Protocol/I2cIo.h>
 #include <Library/TimeBaseLib.h>
+#include <Guid/GlobalVariable.h>
 
 #include "MaximRealTimeClockLib.h"
 
 STATIC VOID                       *mI2cIoSearchToken = NULL;
 STATIC EFI_I2C_IO_PROTOCOL        *mI2cIo = NULL;
-STATIC EFI_EVENT                  mRtcVirtualAddrChangeEvent = NULL;
+STATIC INT64                      mPerfomanceTimerOffset = MAX_INT64;
 
 /**
   Returns the current time and date information, and the time-keeping
@@ -58,107 +59,118 @@ LibGetTime (
   EFI_I2C_REQUEST_PACKET         *RequestPacket = (EFI_I2C_REQUEST_PACKET *)&RequestData;
   BOOLEAN                        BCDMode = FALSE;
   BOOLEAN                        TwentyFourHourMode = FALSE;
+  UINT64                         PerformanceTimerNanoseconds = 0;
+  UINT32                         RtcEpochSeconds;
+  UINT32                         PerformanceEpochSeconds;
 
   if (Time == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (EfiAtRuntime ()) {
-    return EFI_UNSUPPORTED;
-  }
+  PerformanceTimerNanoseconds = GetTimeInNanoSecond (GetPerformanceCounter ());
 
-  if (mI2cIo == NULL) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  RequestData.OperationCount = 2;
-  RequestData.Operation[0].Buffer = (VOID *)&TimeUpdate.Address;
-  RequestData.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address);
-  RequestData.Operation[0].Flags = 0;
-  TimeUpdate.Address = MAXIC_RTC_CONTROL_ADDRESS;
-  RequestData.Operation[1].Buffer = (VOID *)&TimeUpdate.Control;
-  RequestData.Operation[1].LengthInBytes = sizeof (TimeUpdate.Control);
-  RequestData.Operation[1].Flags = I2C_FLAG_READ;
-  Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get control register: %r.\r\n", __FUNCTION__, Status));
-    return EFI_DEVICE_ERROR;
-  }
-
-  BCDMode = (TimeUpdate.Control.BCD == 1);
-  TwentyFourHourMode = (TimeUpdate.Control.TwentyFourHourMode == 1);
-
-  RequestData.OperationCount = 1;
-  RequestData.Operation[0].Buffer = (VOID *)&TimeUpdate;
-  RequestData.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address) + sizeof (TimeUpdate.Update);
-  RequestData.Operation[0].Flags = 0;
-  TimeUpdate.Address = MAXIM_RTC_UPDATE0_ADDRESS;
-  TimeUpdate.Update.ClearFlagsOnRead = 1;
-  TimeUpdate.Update.UpdateFromWrite = 0;
-  TimeUpdate.Update.FreezeSeconds = 0;
-  TimeUpdate.Update.Reserved1 = 0;
-  TimeUpdate.Update.Reserved2 = 0;
-  TimeUpdate.Update.ReadBufferUpdate = 1;
-  Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to request read update: %r.\r\n", __FUNCTION__, Status));
-    return EFI_DEVICE_ERROR;
-  }
-  MicroSecondDelay (MAXIM_I2C_DELAY_US);
-
-  RequestData.OperationCount = 2;
-  RequestData.Operation[0].Buffer = (VOID *)&TimeUpdate.Address;
-  RequestData.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address);
-  RequestData.Operation[0].Flags = 0;
-  TimeUpdate.Address = MAXIM_RTC_TIME_ADDRESS;
-  RequestData.Operation[1].Buffer = (VOID *)&TimeUpdate.DateTime;
-  RequestData.Operation[1].LengthInBytes = sizeof (TimeUpdate.DateTime);
-  RequestData.Operation[1].Flags = I2C_FLAG_READ;
-  Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get time: %r.\r\n", __FUNCTION__, Status));
-    return EFI_DEVICE_ERROR;
-  }
-
-  if (BCDMode) {
-    Time->Second = BcdToDecimal8 (TimeUpdate.DateTime.Seconds);
-    Time->Minute = BcdToDecimal8 (TimeUpdate.DateTime.Minutes);
-    if (TwentyFourHourMode) {
-      Time->Hour   = BcdToDecimal8 (TimeUpdate.DateTime.Hours & 0x3F);
-    } else {
-      Time->Hour   = BcdToDecimal8 (TimeUpdate.DateTime.Hours & 0x3F);
-      if ((Time->Hour & BIT6) == BIT6) {
-        Time->Hour += 12;
-      }
-    }
-    Time->Day = BcdToDecimal8 (TimeUpdate.DateTime.Day);
-    Time->Month = BcdToDecimal8 (TimeUpdate.DateTime.Month);
-    Time->Year = BcdToDecimal8 (TimeUpdate.DateTime.Years) + MAXIM_BASE_YEAR;
+  if (EfiAtRuntime () || (mPerfomanceTimerOffset != MAX_INT64)) {
+    PerformanceTimerNanoseconds += mPerfomanceTimerOffset;
+    PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000ull;
+    EpochToEfiTime (PerformanceEpochSeconds, Time);
   } else {
-    Time->Second = TimeUpdate.DateTime.Seconds;
-    Time->Minute = TimeUpdate.DateTime.Minutes;
-    if (TwentyFourHourMode) {
-      Time->Hour   = (TimeUpdate.DateTime.Hours & 0x3F);
-    } else {
-      Time->Hour   = (TimeUpdate.DateTime.Hours & 0x3F);
-      if ((Time->Hour & BIT6) == BIT6) {
-        Time->Hour += 12;
-      }
+
+    if (mI2cIo == NULL) {
+      return EFI_DEVICE_ERROR;
     }
-    Time->Day = TimeUpdate.DateTime.Day;
-    Time->Month = TimeUpdate.DateTime.Month;
-    Time->Year = TimeUpdate.DateTime.Years + MAXIM_BASE_YEAR;
+
+    RequestData.OperationCount = 2;
+    RequestData.Operation[0].Buffer = (VOID *)&TimeUpdate.Address;
+    RequestData.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address);
+    RequestData.Operation[0].Flags = 0;
+    TimeUpdate.Address = MAXIC_RTC_CONTROL_ADDRESS;
+    RequestData.Operation[1].Buffer = (VOID *)&TimeUpdate.Control;
+    RequestData.Operation[1].LengthInBytes = sizeof (TimeUpdate.Control);
+    RequestData.Operation[1].Flags = I2C_FLAG_READ;
+    Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to get control register: %r.\r\n", __FUNCTION__, Status));
+      return EFI_DEVICE_ERROR;
+    }
+
+    BCDMode = (TimeUpdate.Control.BCD == 1);
+    TwentyFourHourMode = (TimeUpdate.Control.TwentyFourHourMode == 1);
+
+    RequestData.OperationCount = 1;
+    RequestData.Operation[0].Buffer = (VOID *)&TimeUpdate;
+    RequestData.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address) + sizeof (TimeUpdate.Update);
+    RequestData.Operation[0].Flags = 0;
+    TimeUpdate.Address = MAXIM_RTC_UPDATE0_ADDRESS;
+    TimeUpdate.Update.ClearFlagsOnRead = 1;
+    TimeUpdate.Update.UpdateFromWrite = 0;
+    TimeUpdate.Update.FreezeSeconds = 0;
+    TimeUpdate.Update.Reserved1 = 0;
+    TimeUpdate.Update.Reserved2 = 0;
+    TimeUpdate.Update.ReadBufferUpdate = 1;
+    Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to request read update: %r.\r\n", __FUNCTION__, Status));
+      return EFI_DEVICE_ERROR;
+    }
+    MicroSecondDelay (MAXIM_I2C_DELAY_US);
+
+    RequestData.OperationCount = 2;
+    RequestData.Operation[0].Buffer = (VOID *)&TimeUpdate.Address;
+    RequestData.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address);
+    RequestData.Operation[0].Flags = 0;
+    TimeUpdate.Address = MAXIM_RTC_TIME_ADDRESS;
+    RequestData.Operation[1].Buffer = (VOID *)&TimeUpdate.DateTime;
+    RequestData.Operation[1].LengthInBytes = sizeof (TimeUpdate.DateTime);
+    RequestData.Operation[1].Flags = I2C_FLAG_READ;
+    Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to get time: %r.\r\n", __FUNCTION__, Status));
+      return EFI_DEVICE_ERROR;
+    }
+
+    if (BCDMode) {
+      Time->Second = BcdToDecimal8 (TimeUpdate.DateTime.Seconds);
+      Time->Minute = BcdToDecimal8 (TimeUpdate.DateTime.Minutes);
+      if (TwentyFourHourMode) {
+        Time->Hour   = BcdToDecimal8 (TimeUpdate.DateTime.Hours & 0x3F);
+      } else {
+        Time->Hour   = BcdToDecimal8 (TimeUpdate.DateTime.Hours & 0x3F);
+        if ((Time->Hour & BIT6) == BIT6) {
+          Time->Hour += 12;
+        }
+      }
+      Time->Day = BcdToDecimal8 (TimeUpdate.DateTime.Day);
+      Time->Month = BcdToDecimal8 (TimeUpdate.DateTime.Month);
+      Time->Year = BcdToDecimal8 (TimeUpdate.DateTime.Years) + MAXIM_BASE_YEAR;
+    } else {
+      Time->Second = TimeUpdate.DateTime.Seconds;
+      Time->Minute = TimeUpdate.DateTime.Minutes;
+      if (TwentyFourHourMode) {
+        Time->Hour   = (TimeUpdate.DateTime.Hours & 0x3F);
+      } else {
+        Time->Hour   = (TimeUpdate.DateTime.Hours & 0x3F);
+        if ((Time->Hour & BIT6) == BIT6) {
+          Time->Hour += 12;
+        }
+      }
+      Time->Day = TimeUpdate.DateTime.Day;
+      Time->Month = TimeUpdate.DateTime.Month;
+      Time->Year = TimeUpdate.DateTime.Years + MAXIM_BASE_YEAR;
+    }
+    RtcEpochSeconds = EfiTimeToEpoch (Time);
+
+    PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000ull;
+    mPerfomanceTimerOffset = ((UINT64)RtcEpochSeconds - (UINT64)PerformanceEpochSeconds) * 1000000000ull;
   }
 
-  Time->Daylight = FALSE;
-  Time->TimeZone = EFI_UNSPECIFIED_TIMEZONE;
-  Time->Nanosecond = GetTimeInNanoSecond (GetPerformanceCounter ()) % 1000000000;
+  Time->Nanosecond = PerformanceTimerNanoseconds % 1000000000;
 
   if (Capabilities != NULL) {
     Capabilities->Resolution = 1;
     Capabilities->Accuracy = 0;
     Capabilities->SetsToZero = FALSE;
   }
+
   return EFI_SUCCESS;
 }
 
@@ -183,6 +195,9 @@ LibSetTime (
   EFI_STATUS                  Status;
   MAXIM_RTC_UPDATE_DATA       TimeUpdate;
   EFI_I2C_REQUEST_PACKET      RequestPacket;
+  UINT64                      PerformanceTimerNanoseconds = 0;
+  UINT32                      RtcEpochSeconds;
+  UINT32                      PerformanceEpochSeconds;
 
   if (Time == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -198,80 +213,87 @@ LibSetTime (
     return EFI_INVALID_PARAMETER;
   }
 
+  PerformanceTimerNanoseconds = GetTimeInNanoSecond (GetPerformanceCounter ());
+
   if (EfiAtRuntime ()) {
     return EFI_UNSUPPORTED;
-  }
+  } else {
 
-  if (mI2cIo == NULL) {
-    return EFI_DEVICE_ERROR;
-  }
+    if (mI2cIo == NULL) {
+      return EFI_DEVICE_ERROR;
+    }
 
-  RequestPacket.OperationCount = 1;
-  RequestPacket.Operation[0].Flags = 0;
-  RequestPacket.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address) + sizeof (TimeUpdate.Control);
-  RequestPacket.Operation[0].Buffer = (UINT8 *)&TimeUpdate;
-  TimeUpdate.Address = MAXIC_RTC_CONTROL_ADDRESS;
-  TimeUpdate.Control.BCD = 0;
-  TimeUpdate.Control.TwentyFourHourMode = 1;
-  TimeUpdate.Control.Reserved = 0;
-  Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, &RequestPacket, NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to set control setting: %r.\r\n", __FUNCTION__, Status));
-    return EFI_DEVICE_ERROR;
-  }
+    RequestPacket.OperationCount = 1;
+    RequestPacket.Operation[0].Flags = 0;
+    RequestPacket.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address) + sizeof (TimeUpdate.Control);
+    RequestPacket.Operation[0].Buffer = (UINT8 *)&TimeUpdate;
+    TimeUpdate.Address = MAXIC_RTC_CONTROL_ADDRESS;
+    TimeUpdate.Control.BCD = 0;
+    TimeUpdate.Control.TwentyFourHourMode = 1;
+    TimeUpdate.Control.Reserved = 0;
+    Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, &RequestPacket, NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to set control setting: %r.\r\n", __FUNCTION__, Status));
+      return EFI_DEVICE_ERROR;
+    }
 
-  RequestPacket.OperationCount = 1;
-  RequestPacket.Operation[0].Flags = 0;
-  RequestPacket.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address) + sizeof (TimeUpdate.Update);
-  RequestPacket.Operation[0].Buffer = (UINT8 *)&TimeUpdate;
-  TimeUpdate.Address = MAXIM_RTC_UPDATE0_ADDRESS;
-  TimeUpdate.Update.ClearFlagsOnRead = 1;
-  TimeUpdate.Update.UpdateFromWrite = 1;
-  TimeUpdate.Update.FreezeSeconds = 0;
-  TimeUpdate.Update.Reserved1 = 0;
-  TimeUpdate.Update.Reserved2 = 0;
-  TimeUpdate.Update.ReadBufferUpdate = 0;
-  Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, &RequestPacket, NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to commit control settings: %r.\r\n", __FUNCTION__, Status));
-    return EFI_DEVICE_ERROR;
-  }
+    RequestPacket.OperationCount = 1;
+    RequestPacket.Operation[0].Flags = 0;
+    RequestPacket.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address) + sizeof (TimeUpdate.Update);
+    RequestPacket.Operation[0].Buffer = (UINT8 *)&TimeUpdate;
+    TimeUpdate.Address = MAXIM_RTC_UPDATE0_ADDRESS;
+    TimeUpdate.Update.ClearFlagsOnRead = 1;
+    TimeUpdate.Update.UpdateFromWrite = 1;
+    TimeUpdate.Update.FreezeSeconds = 0;
+    TimeUpdate.Update.Reserved1 = 0;
+    TimeUpdate.Update.Reserved2 = 0;
+    TimeUpdate.Update.ReadBufferUpdate = 0;
+    Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, &RequestPacket, NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to commit control settings: %r.\r\n", __FUNCTION__, Status));
+      return EFI_DEVICE_ERROR;
+    }
 
-  RequestPacket.OperationCount = 1;
-  RequestPacket.Operation[0].Flags = 0;
-  RequestPacket.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address) + sizeof (TimeUpdate.DateTime);
-  RequestPacket.Operation[0].Buffer = (UINT8 *)&TimeUpdate;
-  TimeUpdate.Address = MAXIM_RTC_TIME_ADDRESS;
-  TimeUpdate.DateTime.Day = Time->Day;
-  TimeUpdate.DateTime.DayOfWeek = 1 << EfiTimeToWday (Time);
-  TimeUpdate.DateTime.Hours = Time->Hour;
-  TimeUpdate.DateTime.Minutes = Time->Minute;
-  TimeUpdate.DateTime.Month = Time->Month;
-  TimeUpdate.DateTime.Seconds = Time->Second;
-  TimeUpdate.DateTime.Years = Time->Year - MAXIM_BASE_YEAR;
-  Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, &RequestPacket, NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to store time: %r.\r\n", __FUNCTION__, Status));
-    return EFI_DEVICE_ERROR;
-  }
+    RequestPacket.OperationCount = 1;
+    RequestPacket.Operation[0].Flags = 0;
+    RequestPacket.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address) + sizeof (TimeUpdate.DateTime);
+    RequestPacket.Operation[0].Buffer = (UINT8 *)&TimeUpdate;
+    TimeUpdate.Address = MAXIM_RTC_TIME_ADDRESS;
+    TimeUpdate.DateTime.Day = Time->Day;
+    TimeUpdate.DateTime.DayOfWeek = 1 << EfiTimeToWday (Time);
+    TimeUpdate.DateTime.Hours = Time->Hour;
+    TimeUpdate.DateTime.Minutes = Time->Minute;
+    TimeUpdate.DateTime.Month = Time->Month;
+    TimeUpdate.DateTime.Seconds = Time->Second;
+    TimeUpdate.DateTime.Years = Time->Year - MAXIM_BASE_YEAR;
+    Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, &RequestPacket, NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to store time: %r.\r\n", __FUNCTION__, Status));
+      return EFI_DEVICE_ERROR;
+    }
 
-  RequestPacket.OperationCount = 1;
-  RequestPacket.Operation[0].Flags = 0;
-  RequestPacket.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address) + sizeof (TimeUpdate.Update);
-  RequestPacket.Operation[0].Buffer = (UINT8 *)&TimeUpdate;
-  TimeUpdate.Address = MAXIM_RTC_UPDATE0_ADDRESS;
-  TimeUpdate.Update.ClearFlagsOnRead = 1;
-  TimeUpdate.Update.UpdateFromWrite = 1;
-  TimeUpdate.Update.FreezeSeconds = 0;
-  TimeUpdate.Update.Reserved1 = 0;
-  TimeUpdate.Update.Reserved2 = 0;
-  TimeUpdate.Update.ReadBufferUpdate = 0;
-  Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, &RequestPacket, NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to commit time: %r.\r\n", __FUNCTION__, Status));
-    return EFI_DEVICE_ERROR;
+    RequestPacket.OperationCount = 1;
+    RequestPacket.Operation[0].Flags = 0;
+    RequestPacket.Operation[0].LengthInBytes = sizeof (TimeUpdate.Address) + sizeof (TimeUpdate.Update);
+    RequestPacket.Operation[0].Buffer = (UINT8 *)&TimeUpdate;
+    TimeUpdate.Address = MAXIM_RTC_UPDATE0_ADDRESS;
+    TimeUpdate.Update.ClearFlagsOnRead = 1;
+    TimeUpdate.Update.UpdateFromWrite = 1;
+    TimeUpdate.Update.FreezeSeconds = 0;
+    TimeUpdate.Update.Reserved1 = 0;
+    TimeUpdate.Update.Reserved2 = 0;
+    TimeUpdate.Update.ReadBufferUpdate = 0;
+    Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, &RequestPacket, NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to commit time: %r.\r\n", __FUNCTION__, Status));
+      return EFI_DEVICE_ERROR;
+    }
+    MicroSecondDelay (MAXIM_I2C_DELAY_US);
+
+    RtcEpochSeconds = EfiTimeToEpoch (Time);
+    PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000ull;
+    mPerfomanceTimerOffset = ((UINT64)RtcEpochSeconds - (UINT64)PerformanceEpochSeconds) * 1000000000ull;
   }
-  MicroSecondDelay (MAXIM_I2C_DELAY_US);
   return EFI_SUCCESS;
 }
 
@@ -388,24 +410,6 @@ I2cIoRegistrationEvent (
 }
 
 /**
-  Fixup internal data so that EFI can be call in virtual mode.
-  Call the passed in Child Notify event and convert any pointers in
-  lib to virtual mode.
-
-  @param[in]    Event   The Event that is being processed
-  @param[in]    Context Event Context
-**/
-VOID
-EFIAPI
-LibRtcVirtualNotifyEvent (
-  IN EFI_EVENT        Event,
-  IN VOID             *Context
-  )
-{
-  EfiConvertPointer (0x0, (VOID **)&mI2cIo);
-}
-
-/**
   Library entry point
 
   @param  ImageHandle           Handle that identifies the loaded image.
@@ -421,7 +425,6 @@ LibRtcInitialize (
   IN EFI_SYSTEM_TABLE                      *SystemTable
   )
 {
-  EFI_STATUS          Status;
   EFI_EVENT           Event;
 
   //
@@ -439,22 +442,6 @@ LibRtcInitialize (
   if (Event == NULL) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
-  }
-
-  //
-  // Register for the virtual address change event
-  //
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_NOTIFY,
-                  LibRtcVirtualNotifyEvent,
-                  NULL,
-                  &gEfiEventVirtualAddressChangeGuid,
-                  &mRtcVirtualAddrChangeEvent
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create virtual address change event\r\n", __FUNCTION__));
-    gBS->CloseEvent (Event);
   }
 
   return EFI_SUCCESS;
