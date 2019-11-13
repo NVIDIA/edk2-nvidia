@@ -45,4 +45,5 @@
   gArmTokenSpaceGuid.PcdGicDistributorBase
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
   gArmTokenSpaceGuid.PcdSystemMemoryBase
+  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress
 
