@@ -587,11 +587,6 @@ PlatformBootManagerBeforeConsole (
     (EFI_DEVICE_PATH_PROTOCOL *)&mSerialConsole, NULL);
   EfiBootManagerUpdateConsoleVariable (ErrOut,
     (EFI_DEVICE_PATH_PROTOCOL *)&mSerialConsole, NULL);
-
-  //
-  // Register platform-specific boot options and keyboard shortcuts.
-  //
-  PlatformRegisterOptionsAndKeys ();
 }
 
 STATIC
@@ -713,6 +708,11 @@ PlatformBootManagerAfterConsole (
   // Enumerate all possible boot options.
   //
   EfiBootManagerRefreshAllBootOption ();
+
+  //
+  // Register platform-specific boot options and keyboard shortcuts.
+  //
+  PlatformRegisterOptionsAndKeys ();
 
   //
   // Register UEFI Shell
