@@ -118,25 +118,25 @@ GetPlatformCommandLine (
     FormattedCommandLineLength = StrLen (CommandLine);
     CommandLineOptionStart = NULL;
     CommandLineOptionStart = StrStr (CommandLine, KernelCommandRemove[Count]);
-    if (CommandLineOptionStart == NULL) {
-      continue;
-    }
-    CommandLineOptionEnd = NULL;
-    CommandLineOptionEnd = StrStr (CommandLineOptionStart, L" ");
-    if (CommandLineOptionEnd == NULL) {
-      if (CommandLineOptionStart == CommandLine) {
-        gBS->SetMem (CommandLineOptionStart, CommandLineBytes, 0);
-      } else {
-        CommandLineOptionLength = StrLen (CommandLineOptionStart);
-        gBS->SetMem (CommandLineOptionStart, CommandLineOptionLength * sizeof (CHAR16), 0);
+    while (CommandLineOptionStart != NULL) {
+      CommandLineOptionEnd = NULL;
+      CommandLineOptionEnd = StrStr (CommandLineOptionStart, L" ");
+      if (CommandLineOptionEnd == NULL) {
+        if (CommandLineOptionStart == CommandLine) {
+          gBS->SetMem (CommandLineOptionStart, CommandLineBytes, 0);
+        } else {
+          CommandLineOptionLength = StrLen (CommandLineOptionStart);
+          gBS->SetMem (CommandLineOptionStart, CommandLineOptionLength * sizeof (CHAR16), 0);
+        }
+        break;
       }
-      continue;
+      CommandLineOptionLength = (UINTN)(CommandLineOptionEnd - CommandLineOptionStart) + 1;
+      CommandLineOptionOffset = (UINTN)(CommandLineOptionStart - CommandLine);
+      gBS->CopyMem (CommandLineOptionStart,
+                    CommandLineOptionEnd + 1,
+                    (FormattedCommandLineLength - (CommandLineOptionLength + CommandLineOptionOffset) + 1) * sizeof (CHAR16));
+      CommandLineOptionStart = StrStr (CommandLineOptionStart, KernelCommandRemove[Count]);
     }
-    CommandLineOptionLength = (UINTN)(CommandLineOptionEnd - CommandLineOptionStart) + 1;
-    CommandLineOptionOffset = (UINTN)(CommandLineOptionStart - CommandLine);
-    gBS->CopyMem (CommandLineOptionStart,
-                  CommandLineOptionEnd + 1,
-                  (FormattedCommandLineLength - (CommandLineOptionLength + CommandLineOptionOffset) + 1) * sizeof (CHAR16));
   }
   FormattedCommandLineLength = StrLen (CommandLine);
   gBS->CopyMem ((CHAR8 *)CommandLine + ((FormattedCommandLineLength + 1) * sizeof (CHAR16)),
