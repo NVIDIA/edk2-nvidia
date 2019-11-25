@@ -22,6 +22,7 @@
 #include "FloorSweepPrivate.h"
 
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
 
@@ -53,6 +54,8 @@ DtPlatformLoadDtb (
   UINTN                       Index;
   VOID                        *Hob = NULL;
   EFI_BLOCK_IO_PROTOCOL       *BlockIo;
+  INT32                       NodeOffset;
+  INT32                       DtStatus;
 
 
   *Dtb = NULL;
@@ -161,6 +164,38 @@ DtPlatformLoadDtb (
   }
 
   UpdateCpuFloorsweepingConfig (*Dtb);
+
+  //Disable grid of semaphores as we do not set up memory for this
+  NodeOffset = fdt_path_offset (*Dtb, "/reserved-memory/grid-of-semaphores");
+  if (NodeOffset > 0) {
+    DtStatus = fdt_setprop (*Dtb, NodeOffset, "status", "disabled", sizeof("disabled"));
+    if (DtStatus == -FDT_ERR_NOSPACE) {
+      VOID *NewDt = AllocatePool (fdt_totalsize (*Dtb) + SIZE_4KB);
+      if (NewDt == NULL) {
+        DEBUG ((DEBUG_ERROR, "Failed to reallocate dtb\r\n"));
+      } else {
+        DtStatus = fdt_open_into (*Dtb, NewDt, fdt_totalsize (*Dtb) + SIZE_4KB);
+        if (DtStatus != 0) {
+          DEBUG ((DEBUG_ERROR, "Failed to re-open dtb\r\n"));
+          FreePool (NewDt);
+        } else {
+          *Dtb = NewDt;
+          NodeOffset = fdt_path_offset (*Dtb, "/reserved-memory/grid-of-semaphores");
+          if (NodeOffset <= 0) {
+            DEBUG ((DEBUG_ERROR, "Node offset not found in new devicetree\r\n"));
+          } else {
+            DtStatus = fdt_setprop (*Dtb, NodeOffset, "status", "disabled", sizeof("disabled"));
+            if (DtStatus != 0) {
+              DEBUG ((DEBUG_ERROR, "Failed to disable grid-of-semaphores %d\r\n", DtStatus));
+            }
+          }
+        }
+      }
+    } else if (DtStatus != 0) {
+      DEBUG ((DEBUG_ERROR, "Failed to disable grid-of-semaphores %d\r\n", DtStatus));
+    }
+  }
+
   *DtbSize = fdt_totalsize (*Dtb);
 
   return EFI_SUCCESS;
