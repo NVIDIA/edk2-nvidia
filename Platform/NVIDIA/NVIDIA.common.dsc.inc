@@ -416,7 +416,7 @@
   #
   # NV Storage PCDs.
   #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00100000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
 
   #
   # Variable Services PCDs.

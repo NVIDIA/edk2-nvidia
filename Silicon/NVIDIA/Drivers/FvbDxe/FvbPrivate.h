@@ -2,7 +2,7 @@
 
   Fvb Driver Private Data
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -39,6 +39,7 @@
 typedef struct {
   EFI_BLOCK_IO_PROTOCOL               *BlockIo;
   UINT8                               *VariablePartition;
+  EFI_EVENT                           FvbVirtualAddrChangeEvent;
   EFI_LBA                             PartitionStartingLBA;
   EFI_LBA                             NumBlocks;
   EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL FvbInstance;

@@ -18,7 +18,6 @@
 #include <FvbPrivate.h>
 
 NVIDIA_FVB_PRIVATE_DATA        *Private;
-EFI_EVENT                      FvbVirtualAddrChangeEvent;
 
 /**
   The GetAttributes() function retrieves the attributes and
@@ -906,16 +905,25 @@ FVBInitialize (
   EFI_HANDLE                  *HandleBuffer;
   UINT64                      Size;
   UINT32                      BlockSize;
-  EFI_DEVICE_PATH_PROTOCOL    *PartitionDevicePath = NULL;
-  EFI_DEVICE_PATH_PROTOCOL    *FlashDevicePath = NULL;
-  EFI_DEVICE_PATH_PROTOCOL    *CurrentDevicePath = NULL;
-  EFI_DEVICE_PATH_PROTOCOL    *NextDevicePath = NULL;
-  EFI_PARTITION_INFO_PROTOCOL *PartitionInfo = NULL;
+  EFI_DEVICE_PATH_PROTOCOL    *PartitionDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL    *FlashDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL    *FlashHandleDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL    *CurrentDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL    *NextDevicePath;
+  EFI_PARTITION_INFO_PROTOCOL *PartitionInfo;
   EFI_HANDLE                  FlashHandle;
   BOOLEAN                     ValidFlash;
   UINTN                       Index;
 
+  HandleBuffer = NULL;
+  PartitionDevicePath = NULL;
+  FlashDevicePath = NULL;
+  CurrentDevicePath = NULL;
+  NextDevicePath = NULL;
+  PartitionInfo = NULL;
+
   Private = NULL;
+
   Status = gBS->AllocatePool(EfiRuntimeServicesData,
                              sizeof(NVIDIA_FVB_PRIVATE_DATA),
                              (VOID**)&Private);
@@ -925,6 +933,8 @@ FVBInitialize (
   }
 
   gBS->SetMem (Private, sizeof (NVIDIA_FVB_PRIVATE_DATA), 0);
+  Private->VariablePartition = NULL;
+  Private->FvbVirtualAddrChangeEvent = NULL;
 
   if (!PcdGetBool(PcdEmuVariableNvModeEnable)) {
     Status = gBS->LocateHandleBuffer (ByProtocol,
@@ -1017,8 +1027,9 @@ FVBInitialize (
 
     SetDevicePathEndNode(CurrentDevicePath);
 
+    FlashHandleDevicePath = FlashDevicePath;
     Status = gBS->LocateDevicePath (&gEfiBlockIoProtocolGuid,
-                                    &FlashDevicePath,
+                                    &FlashHandleDevicePath,
                                     &FlashHandle);
 
     if (EFI_ERROR(Status) || (FlashHandle == NULL)) {
@@ -1047,7 +1058,6 @@ FVBInitialize (
       goto NoFlashExit;
     }
 
-    Private->VariablePartition = NULL;
     Status = gBS->AllocatePool (EfiRuntimeServicesData,
                                 Size,
                                 (VOID **)&Private->VariablePartition);
@@ -1120,15 +1130,14 @@ NoFlashExit:
     //
     // Register for the virtual address change event
     //
-    FvbVirtualAddrChangeEvent = (EFI_EVENT)NULL;
     Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
                                  TPL_NOTIFY,
                                  FVBVirtualNotifyEvent,
                                  NULL,
                                  &gEfiEventVirtualAddressChangeGuid,
-                                 &FvbVirtualAddrChangeEvent);
+                                 &Private->FvbVirtualAddrChangeEvent);
 
-    if (!EFI_ERROR(Status) && FvbVirtualAddrChangeEvent != NULL) {
+    if (!EFI_ERROR(Status) && Private->FvbVirtualAddrChangeEvent != NULL) {
       Private->FvbInstance.GetAttributes = FvbGetAttributes;
       Private->FvbInstance.SetAttributes = FvbSetAttributes;
       Private->FvbInstance.GetPhysicalAddress = FvbGetPhysicalAddress;
@@ -1161,14 +1170,18 @@ NoFlashExit:
       if (Private->VariablePartition != NULL) {
         gBS->FreePool(Private->VariablePartition);
       }
+      if (Private->FvbVirtualAddrChangeEvent != NULL) {
+        gBS->CloseEvent(Private->FvbVirtualAddrChangeEvent);
+      }
       gBS->FreePool(Private);
     }
-    if (FlashDevicePath != NULL) {
-      gBS->FreePool(FlashDevicePath);
-    }
-    if (FvbVirtualAddrChangeEvent != NULL) {
-      gBS->CloseEvent(FvbVirtualAddrChangeEvent);
-    }
+  }
+
+  if (FlashDevicePath != NULL) {
+    gBS->FreePool(FlashDevicePath);
+  }
+  if (HandleBuffer != NULL) {
+    gBS->FreePool(HandleBuffer);
   }
 
   return Status;
