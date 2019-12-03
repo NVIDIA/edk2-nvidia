@@ -139,6 +139,13 @@
   INF NetworkPkg/Udp6Dxe/Udp6Dxe.inf
   INF NetworkPkg/Mtftp6Dxe/Mtftp6Dxe.inf
 
+  INF NetworkPkg/TlsDxe/TlsDxe.inf
+  INF NetworkPkg/TlsAuthConfigDxe/TlsAuthConfigDxe.inf
+  INF NetworkPkg/DnsDxe/DnsDxe.inf
+  INF NetworkPkg/HttpDxe/HttpDxe.inf
+  INF NetworkPkg/HttpUtilitiesDxe/HttpUtilitiesDxe.inf
+  INF NetworkPkg/HttpBootDxe/HttpBootDxe.inf
+
   #
   # Shell dynamic commands
   #

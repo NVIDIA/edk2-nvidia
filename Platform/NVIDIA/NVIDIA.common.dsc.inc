@@ -70,6 +70,13 @@
   IpIoLib|NetworkPkg/Library/DxeIpIoLib/DxeIpIoLib.inf
   TcpIoLib|NetworkPkg/Library/DxeTcpIoLib/DxeTcpIoLib.inf
 
+  # HttpLib is used for Http Boot
+  HttpLib|NetworkPkg/Library/DxeHttpLib/DxeHttpLib.inf
+
+  TlsLib|CryptoPkg/Library/TlsLib/TlsLib.inf
+  FileExplorerLib|MdeModulePkg/Library/FileExplorerLib/FileExplorerLib.inf
+
+
   # ARM Architectural Libraries
   CacheMaintenanceLib|ArmPkg/Library/ArmCacheMaintenanceLib/ArmCacheMaintenanceLib.inf
   DefaultExceptionHandlerLib|ArmPkg/Library/DefaultExceptionHandlerLib/DefaultExceptionHandlerLib.inf
@@ -312,6 +319,8 @@
 !ifdef $(FIRMWARE_VER)
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(FIRMWARE_VER)"
 !endif
+
+  gEfiNetworkPkgTokenSpaceGuid.PcdAllowHttpConnections|TRUE
 
   gEfiMdePkgTokenSpaceGuid.PcdMaximumUnicodeStringLength|1000000
   gEfiMdePkgTokenSpaceGuid.PcdMaximumAsciiStringLength|1000000
@@ -573,6 +582,13 @@
   NetworkPkg/Dhcp6Dxe/Dhcp6Dxe.inf
   NetworkPkg/Udp6Dxe/Udp6Dxe.inf
   NetworkPkg/Mtftp6Dxe/Mtftp6Dxe.inf
+
+  NetworkPkg/TlsDxe/TlsDxe.inf
+  NetworkPkg/TlsAuthConfigDxe/TlsAuthConfigDxe.inf
+  NetworkPkg/DnsDxe/DnsDxe.inf
+  NetworkPkg/HttpDxe/HttpDxe.inf
+  NetworkPkg/HttpUtilitiesDxe/HttpUtilitiesDxe.inf
+  NetworkPkg/HttpBootDxe/HttpBootDxe.inf
 
   # FV Filesystems
   MdeModulePkg/Universal/FvSimpleFileSystemDxe/FvSimpleFileSystemDxe.inf
