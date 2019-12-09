@@ -414,11 +414,6 @@
 
 [PcdsFixedAtBuild]
   #
-  # NV Storage PCDs.
-  #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
-
-  #
   # Variable Services PCDs.
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
@@ -443,6 +438,11 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiExposedTableVersions|0x20
 
 [PcdsDynamicDefault]
+  #
+  # NV Storage PCDs.
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
+
   #
   # Enable emulated variable NV mode in variable driver.
   #

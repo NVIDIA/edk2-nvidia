@@ -51,6 +51,8 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
   gNVIDIATokenSpaceGuid.PcdUEFIVariablesPartitionName
+  gNVIDIATokenSpaceGuid.PcdCPUBLCFGAPartitionName
+  gNVIDIATokenSpaceGuid.PcdCPUBLCFGBPartitionName
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
 
 [Guids]

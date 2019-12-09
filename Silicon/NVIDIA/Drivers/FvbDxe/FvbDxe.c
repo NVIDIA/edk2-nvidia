@@ -157,7 +157,7 @@ FvbGetBlockSize (
     return EFI_INVALID_PARAMETER;
   }
 
-  LastBlock = Private->NumBlocks - 1;
+  LastBlock = Private->NumBlocksA + Private->NumBlocksB - 1;
 
   if (Lba > LastBlock) {
     Status = EFI_INVALID_PARAMETER;
@@ -243,7 +243,7 @@ FvbRead (
   }
 
   BlockSize = Private->BlockIo->Media->BlockSize;
-  LastBlock = Private->NumBlocks - 1;
+  LastBlock = Private->NumBlocksA + Private->NumBlocksB - 1;
 
   // The read must not span FV boundaries.
   if (Lba > LastBlock) {
@@ -270,6 +270,30 @@ FvbRead (
   CopyMem(Buffer, Private->VariablePartition + FvbOffset, *NumBytes);
 
   return EFI_SUCCESS;
+}
+
+/**
+  Calculate the LBA on the disk.
+
+  This function takes LBA of cached variable store as input and
+  returns the corresponding LBA on the disk.
+
+  @param Lba      The logical block index of cached variable
+                  store.
+
+**/
+STATIC
+EFI_LBA
+EFIAPI
+FvbCalculateDiskLBA (
+  IN EFI_LBA Lba
+  )
+{
+  if (Lba < Private->NumBlocksA) {
+    return Private->PartitionAStartingLBA + Lba;
+  } else {
+    return Private->PartitionBStartingLBA + (Lba - Private->NumBlocksA);
+  }
 }
 
 /**
@@ -361,7 +385,7 @@ FvbWrite (
   }
 
   BlockSize = Private->BlockIo->Media->BlockSize;
-  LastBlock = Private->NumBlocks - 1;
+  LastBlock = Private->NumBlocksA + Private->NumBlocksB - 1;
 
   // The write must not span FV boundaries.
   if (Lba > LastBlock) {
@@ -391,17 +415,19 @@ FvbWrite (
   FvbOffset = MultU64x32 (Lba, BlockSize);
   Status = Private->BlockIo->WriteBlocks (Private->BlockIo,
                                           Private->BlockIo->Media->MediaId,
-                                          Private->PartitionStartingLBA + Lba,
+                                          FvbCalculateDiskLBA (Lba),
                                           BlockSize,
                                           Private->VariablePartition + FvbOffset);
 
   if (EFI_ERROR(Status)) {
     DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
-    ASSERT_EFI_ERROR(Private->BlockIo->ReadBlocks (Private->BlockIo,
-                                                Private->BlockIo->Media->MediaId,
-                                                Private->PartitionStartingLBA + Lba,
-                                                BlockSize,
-                                                Private->VariablePartition + FvbOffset));
+    ASSERT (FALSE);
+    Private->BlockIo->ReadBlocks (Private->BlockIo,
+                                  Private->BlockIo->Media->MediaId,
+                                  FvbCalculateDiskLBA (Lba),
+                                  BlockSize,
+                                  Private->VariablePartition + FvbOffset);
+    Status = EFI_DEVICE_ERROR;
   }
 
   return Status;
@@ -470,6 +496,7 @@ FvbEraseBlocks (
   EFI_LBA     LastBlock;
   UINT64      FvbOffset;
   UINT64      FvbBufferSize;
+  UINTN       Index;
 
   if (EfiAtRuntime()) {
     return EFI_UNSUPPORTED;
@@ -479,7 +506,7 @@ FvbEraseBlocks (
   Status = EFI_INVALID_PARAMETER;
 
   BlockSize = Private->BlockIo->Media->BlockSize;
-  LastBlock = Private->NumBlocks - 1;
+  LastBlock = Private->NumBlocksA + Private->NumBlocksB - 1;
 
   // Before erasing, check the entire list of parameters to ensure all specified blocks are valid
   VA_START (Args, This);
@@ -529,22 +556,25 @@ FvbEraseBlocks (
     FvbBufferSize = MultU64x32 (NumOfLba, BlockSize);
     SetMem(Private->VariablePartition + FvbOffset, FvbBufferSize, 0xFF);
 
-    Status = Private->BlockIo->WriteBlocks(Private->BlockIo,
-                                           Private->BlockIo->Media->MediaId,
-                                           Private->PartitionStartingLBA + StartingLba,
-                                           FvbBufferSize,
-                                           Private->VariablePartition + FvbOffset);
-    if (EFI_ERROR(Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
-      ASSERT_EFI_ERROR(Private->BlockIo->ReadBlocks(Private->BlockIo,
-                                                 Private->BlockIo->Media->MediaId,
-                                                 Private->PartitionStartingLBA + StartingLba,
-                                                 FvbBufferSize,
-                                                 Private->VariablePartition + FvbOffset));
-      break;
+    for (Index = 0; Index < NumOfLba; Index++) {
+      Status = Private->BlockIo->WriteBlocks (Private->BlockIo,
+                                              Private->BlockIo->Media->MediaId,
+                                              FvbCalculateDiskLBA (StartingLba + Index),
+                                              BlockSize,
+                                              Private->VariablePartition + FvbOffset + (Index * BlockSize));
+      if (EFI_ERROR(Status)) {
+        DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
+        ASSERT (FALSE);
+        Private->BlockIo->ReadBlocks(Private->BlockIo,
+                                     Private->BlockIo->Media->MediaId,
+                                     FvbCalculateDiskLBA (StartingLba + Index),
+                                     BlockSize,
+                                     Private->VariablePartition + FvbOffset + (Index * BlockSize));
+        Status = EFI_DEVICE_ERROR;
+        break;
+      }
     }
-
-  } while (TRUE);
+  } while (!EFI_ERROR(Status));
   VA_END (Args);
 
   return Status;
@@ -593,7 +623,7 @@ InitializeFvAndVariableStoreHeaders (
                                       );
   FirmwareVolumeHeader->HeaderLength = sizeof(EFI_FIRMWARE_VOLUME_HEADER) + sizeof(EFI_FV_BLOCK_MAP_ENTRY);
   FirmwareVolumeHeader->Revision = EFI_FVH_REVISION;
-  FirmwareVolumeHeader->BlockMap[0].NumBlocks = Private->NumBlocks;
+  FirmwareVolumeHeader->BlockMap[0].NumBlocks = Private->NumBlocksA + Private->NumBlocksB;
   FirmwareVolumeHeader->BlockMap[0].Length = Private->BlockIo->Media->BlockSize;
   FirmwareVolumeHeader->BlockMap[1].NumBlocks = 0;
   FirmwareVolumeHeader->BlockMap[1].Length = 0;
@@ -613,7 +643,7 @@ InitializeFvAndVariableStoreHeaders (
   // Write the combined super-header in the flash
   return Private->BlockIo->WriteBlocks (Private->BlockIo,
                                         Private->BlockIo->Media->MediaId,
-                                        Private->PartitionStartingLBA,
+                                        Private->PartitionAStartingLBA,
                                         Private->BlockIo->Media->BlockSize,
                                         FirmwareVolumeHeader);
 }
@@ -888,6 +918,57 @@ FtwGetLastWrite(
 }
 
 /**
+  Check partition media to be valid
+
+  @param[in]  Handle   Handle with partition protocol
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+FvbCheckPartitionFlash(
+  IN EFI_HANDLE         Handle
+  )
+{
+  EFI_STATUS               Status;
+  EFI_DEVICE_PATH_PROTOCOL *PartitionDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL *CurrentDevicePath;
+  BOOLEAN                  ValidFlash;
+
+  PartitionDevicePath = NULL;
+  CurrentDevicePath = NULL;
+
+  // Query for Device Path on the handle
+  Status = gBS->HandleProtocol (Handle,
+                                &gEfiDevicePathProtocolGuid,
+                                (VOID **)&PartitionDevicePath);
+
+  if (EFI_ERROR(Status) || (PartitionDevicePath == NULL) || IsDevicePathEnd(PartitionDevicePath)) {
+    Status = EFI_UNSUPPORTED;
+    goto Exit;
+  }
+
+  // Check if any node on device path is of EMMC type
+  ValidFlash = FALSE;
+  CurrentDevicePath = PartitionDevicePath;
+  while (IsDevicePathEnd (CurrentDevicePath) == FALSE) {
+    if (CurrentDevicePath->SubType == MSG_EMMC_DP) {
+      ValidFlash = TRUE;
+      break;
+    }
+    CurrentDevicePath = NextDevicePathNode (CurrentDevicePath);
+  }
+
+  if (ValidFlash != TRUE) {
+    Status = EFI_UNSUPPORTED;
+    goto Exit;
+  }
+
+Exit:
+  return Status;
+}
+
+/**
   Initialize the FVB Driver
 
   @param[in]  ImageHandle   of the loaded driver
@@ -912,8 +993,10 @@ FVBInitialize (
   EFI_DEVICE_PATH_PROTOCOL    *NextDevicePath;
   EFI_PARTITION_INFO_PROTOCOL *PartitionInfo;
   EFI_HANDLE                  FlashHandle;
-  BOOLEAN                     ValidFlash;
   UINTN                       Index;
+  UINTN                       PrimaryIndex;
+  UINTN                       SecondaryIndex;
+
 
   HandleBuffer = NULL;
   PartitionDevicePath = NULL;
@@ -921,6 +1004,9 @@ FVBInitialize (
   CurrentDevicePath = NULL;
   NextDevicePath = NULL;
   PartitionInfo = NULL;
+
+  PrimaryIndex = MAX_UINTN;
+  SecondaryIndex = MAX_UINTN;
 
   Private = NULL;
 
@@ -937,6 +1023,7 @@ FVBInitialize (
   Private->FvbVirtualAddrChangeEvent = NULL;
 
   if (!PcdGetBool(PcdEmuVariableNvModeEnable)) {
+    // Locate all handles with partition info protocol
     Status = gBS->LocateHandleBuffer (ByProtocol,
                                       &gEfiPartitionInfoProtocolGuid,
                                       NULL,
@@ -949,12 +1036,10 @@ FVBInitialize (
     }
 
     for (Index = 0; Index < NumOfHandles; Index++) {
-      Status = gBS->OpenProtocol (HandleBuffer[Index],
-                                  &gEfiPartitionInfoProtocolGuid,
-                                  (VOID **)&PartitionInfo,
-                                  ImageHandle,
-                                  NULL,
-                                  EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+      // Get partition info protocol from handle and validate
+      Status = gBS->HandleProtocol (HandleBuffer[Index],
+                                    &gEfiPartitionInfoProtocolGuid,
+                                    (VOID **)&PartitionInfo);
 
       if (EFI_ERROR(Status) || (PartitionInfo == NULL)) {
         Status = EFI_NOT_FOUND;
@@ -970,42 +1055,81 @@ FVBInitialize (
         continue;
       }
 
+      // Check for partition name to be uefi variables
       if (0 == StrnCmp (PartitionInfo->Info.Gpt.PartitionName,
                         PcdGetPtr(PcdUEFIVariablesPartitionName),
-                        StrnLenS(PcdGetPtr(PcdUEFIVariablesPartitionName), sizeof(PartitionInfo->Info.Gpt.PartitionName)))) {
-        break;
+                        StrnLenS(PcdGetPtr(PcdUEFIVariablesPartitionName),
+                                 sizeof(PartitionInfo->Info.Gpt.PartitionName)))) {
+        if (!EFI_ERROR(FvbCheckPartitionFlash (HandleBuffer[Index]))) {
+          PrimaryIndex = Index;
+          SecondaryIndex = MAX_UINTN;
+          break;
+        }
+      } else if ((PrimaryIndex == MAX_UINTN) &&
+                 // Check for partition name to be configuration partition
+                 (0 == StrnCmp (PartitionInfo->Info.Gpt.PartitionName,
+                                PcdGetPtr(PcdCPUBLCFGAPartitionName),
+                                StrnLenS(PcdGetPtr(PcdCPUBLCFGAPartitionName),
+                                         sizeof(PartitionInfo->Info.Gpt.PartitionName))))) {
+        if (!EFI_ERROR(FvbCheckPartitionFlash (HandleBuffer[Index]))) {
+          PrimaryIndex = Index;
+        }
+      } else {
+        // Check for partition name to be secondary configuration partition
+        if ((SecondaryIndex == MAX_UINTN) &&
+            (0 == StrnCmp (PartitionInfo->Info.Gpt.PartitionName,
+                           PcdGetPtr(PcdCPUBLCFGBPartitionName),
+                           StrnLenS(PcdGetPtr(PcdCPUBLCFGBPartitionName),
+                                    sizeof(PartitionInfo->Info.Gpt.PartitionName))))) {
+          if (!EFI_ERROR(FvbCheckPartitionFlash (HandleBuffer[Index]))) {
+            SecondaryIndex = Index;
+          }
+        }
       }
     }
 
-    if (Index == NumOfHandles) {
+    // Return if neither uefi variables partition is found nor
+    // configuration partition
+    if (PrimaryIndex == MAX_UINTN) {
       Status = EFI_NOT_FOUND;
       goto NoFlashExit;
     }
 
-    Private->PartitionStartingLBA = PartitionInfo->Info.Gpt.StartingLBA;
-    Private->NumBlocks = PartitionInfo->Info.Gpt.EndingLBA -
-                           PartitionInfo->Info.Gpt.StartingLBA + 1;
+    Status = gBS->HandleProtocol (HandleBuffer[PrimaryIndex],
+                                  &gEfiPartitionInfoProtocolGuid,
+                                  (VOID **)&PartitionInfo);
 
-    Status = gBS->HandleProtocol (HandleBuffer[Index],
+    if (EFI_ERROR(Status) || (PartitionInfo == NULL)) {
+      Status = EFI_NOT_FOUND;
+      goto NoFlashExit;
+    }
+
+    Private->PartitionAStartingLBA = PartitionInfo->Info.Gpt.StartingLBA;
+    Private->NumBlocksA = PartitionInfo->Info.Gpt.EndingLBA -
+                          PartitionInfo->Info.Gpt.StartingLBA + 1;
+
+    if (SecondaryIndex != MAX_UINTN) {
+      Status = gBS->HandleProtocol (HandleBuffer[SecondaryIndex],
+                                    &gEfiPartitionInfoProtocolGuid,
+                                    (VOID **)&PartitionInfo);
+
+      if (EFI_ERROR(Status) || (PartitionInfo == NULL)) {
+        Status = EFI_NOT_FOUND;
+        goto NoFlashExit;
+      }
+
+      Private->PartitionBStartingLBA = PartitionInfo->Info.Gpt.StartingLBA;
+      Private->NumBlocksB = PartitionInfo->Info.Gpt.EndingLBA -
+                            PartitionInfo->Info.Gpt.StartingLBA + 1;
+    }
+
+    // Get the device path from handle to retrieve block IO protocol
+    // on parent
+    Status = gBS->HandleProtocol (HandleBuffer[PrimaryIndex],
                                   &gEfiDevicePathProtocolGuid,
                                   (VOID **)&PartitionDevicePath);
 
     if (EFI_ERROR(Status) || (PartitionDevicePath == NULL) || IsDevicePathEnd(PartitionDevicePath)) {
-      Status = EFI_NOT_FOUND;
-      goto NoFlashExit;
-    }
-
-    ValidFlash = FALSE;
-    CurrentDevicePath = PartitionDevicePath;
-    while (IsDevicePathEnd (CurrentDevicePath) == FALSE) {
-      if (CurrentDevicePath->SubType == MSG_EMMC_DP) {
-        ValidFlash = TRUE;
-        break;
-      }
-      CurrentDevicePath = NextDevicePathNode (CurrentDevicePath);
-    }
-
-    if (ValidFlash != TRUE) {
       Status = EFI_UNSUPPORTED;
       goto NoFlashExit;
     }
@@ -1037,25 +1161,21 @@ FVBInitialize (
       goto NoFlashExit;
     }
 
-    Status = gBS->OpenProtocol (FlashHandle,
-                                &gEfiBlockIoProtocolGuid,
-                                (VOID **)&Private->BlockIo,
-                                ImageHandle,
-                                NULL,
-                                EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+    Status = gBS->HandleProtocol (FlashHandle,
+                                  &gEfiBlockIoProtocolGuid,
+                                  (VOID **)&Private->BlockIo);
 
     if (EFI_ERROR(Status) || (Private->BlockIo == NULL)) {
       Status = EFI_NOT_FOUND;
       goto NoFlashExit;
     }
 
+    // Initialize the variable store cache
     BlockSize = Private->BlockIo->Media->BlockSize;
-    Size = MultU64x32 (Private->NumBlocks, BlockSize);
+    Size = MultU64x32 (Private->NumBlocksA + Private->NumBlocksB, BlockSize);
 
     if (Size != PcdGet32(PcdFlashNvStorageVariableSize)) {
-      DEBUG ((EFI_D_ERROR, "UEFI variables not supported.\n"));
-      Status = EFI_UNSUPPORTED;
-      goto NoFlashExit;
+      PcdSet32(PcdFlashNvStorageVariableSize, Size);
     }
 
     Status = gBS->AllocatePool (EfiRuntimeServicesData,
@@ -1071,13 +1191,25 @@ FVBInitialize (
 
     Status = Private->BlockIo->ReadBlocks (Private->BlockIo,
                                            Private->BlockIo->Media->MediaId,
-                                           Private->PartitionStartingLBA,
-                                           Size,
+                                           Private->PartitionAStartingLBA,
+                                           MultU64x32 (Private->NumBlocksA, BlockSize),
                                            Private->VariablePartition);
     if (EFI_ERROR(Status)) {
       goto NoFlashExit;
     }
 
+    if (Private->NumBlocksB > 0) {
+      Status = Private->BlockIo->ReadBlocks (Private->BlockIo,
+                                             Private->BlockIo->Media->MediaId,
+                                             Private->PartitionBStartingLBA,
+                                             MultU64x32 (Private->NumBlocksB, BlockSize),
+                                             Private->VariablePartition + MultU64x32 (Private->NumBlocksA, BlockSize));
+      if (EFI_ERROR(Status)) {
+        goto NoFlashExit;
+      }
+    }
+
+    // Validate the FV data
     Status = ValidateFvHeader((EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition);
 
     if (EFI_ERROR(Status)) {
@@ -1088,11 +1220,22 @@ FVBInitialize (
 
       Status = Private->BlockIo->WriteBlocks (Private->BlockIo,
                                               Private->BlockIo->Media->MediaId,
-                                              Private->PartitionStartingLBA,
-                                              Size,
+                                              Private->PartitionAStartingLBA,
+                                              MultU64x32 (Private->NumBlocksA, BlockSize),
                                               Private->VariablePartition);
       if (EFI_ERROR(Status)) {
         goto NoFlashExit;
+      }
+
+      if (Private->NumBlocksB > 0) {
+        Status = Private->BlockIo->WriteBlocks (Private->BlockIo,
+                                                Private->BlockIo->Media->MediaId,
+                                                Private->PartitionBStartingLBA,
+                                                MultU64x32 (Private->NumBlocksB, BlockSize),
+                                                Private->VariablePartition + MultU64x32 (Private->NumBlocksA, BlockSize));
+        if (EFI_ERROR(Status)) {
+          goto NoFlashExit;
+        }
       }
 
       // Install all appropriate headers
@@ -1105,7 +1248,7 @@ FVBInitialize (
 
 NoFlashExit:
   //
-  // If reached here because of an error and not using emukated variables,
+  // If reached here because of an error and not using emulated variables,
   // switch to use emulated variables.
   //
   if (EFI_ERROR(Status) && !PcdGetBool(PcdEmuVariableNvModeEnable)) {
