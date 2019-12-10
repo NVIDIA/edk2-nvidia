@@ -304,12 +304,15 @@ InitializeController (
   DEBUG ((EFI_D_ERROR, "Enabled Core clock\r\n"));
 
   /* De-assert reset to CORE_APB */
-  Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb", 0);
+  Status = DeviceDiscoveryConfigReset (ControllerHandle, "apb", 0);
   if (EFI_ERROR (Status)) {
-    Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb_rst", 0);
+    Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb", 0);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "Failed to de-assert Core APB reset\r\n"));
-      return Status;
+      Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb_rst", 0);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "Failed to de-assert Core APB reset\r\n"));
+        return Status;
+      }
     }
   }
   DEBUG ((EFI_D_ERROR, "De-asserted Core APB reset\r\n"));
