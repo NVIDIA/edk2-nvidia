@@ -64,6 +64,17 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .SkipEdkiiNondiscoverableInstall = TRUE
 };
 
+CHAR8 CoreClockNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
+  "core",
+  "core_clk"
+};
+
+CHAR8 CoreAPBResetNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
+  "apb",
+  "core_apb",
+  "core_apb_rst"
+};
+
 STATIC
 VOID
 AtuWrite (
@@ -291,31 +302,36 @@ InitializeController (
 {
   EFI_STATUS Status;
   UINT32 val;
+  UINT32 Index;
+  UINT32 Count;
 
   /* Enable core clock */
-  Status = DeviceDiscoveryEnableClock (ControllerHandle, "core", 1);
-  if (EFI_ERROR (Status)) {
-    Status = DeviceDiscoveryEnableClock (ControllerHandle, "core_clk", 1);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "Failed to enable core_clk\r\n"));
-      return Status;
+  Count = sizeof (CoreClockNames)/sizeof (CoreClockNames[0]);
+  for (Index = 0; Index < Count; Index++) {
+    Status = DeviceDiscoveryEnableClock (ControllerHandle, CoreClockNames[Index], 1);
+    if (!EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "Enabled Core clock\r\n"));
+      break;
     }
   }
-  DEBUG ((EFI_D_ERROR, "Enabled Core clock\r\n"));
+  if (Index == Count) {
+    DEBUG ((EFI_D_ERROR, "Failed to enable core_clk\r\n"));
+    return Status;
+  }
 
   /* De-assert reset to CORE_APB */
-  Status = DeviceDiscoveryConfigReset (ControllerHandle, "apb", 0);
-  if (EFI_ERROR (Status)) {
-    Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb", 0);
-    if (EFI_ERROR (Status)) {
-      Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb_rst", 0);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "Failed to de-assert Core APB reset\r\n"));
-        return Status;
-      }
+  Count = sizeof (CoreAPBResetNames)/sizeof (CoreAPBResetNames[0]);
+  for (Index = 0; Index < Count; Index++) {
+    Status = DeviceDiscoveryConfigReset (ControllerHandle, CoreAPBResetNames[Index], 0);
+    if (!EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "De-asserted Core APB reset\r\n"));
+      break;
     }
   }
-  DEBUG ((EFI_D_ERROR, "De-asserted Core APB reset\r\n"));
+  if (Index == Count) {
+    DEBUG ((EFI_D_ERROR, "Failed to de-assert Core APB reset\r\n"));
+    return Status;
+  }
 
   /* Program APPL */
 

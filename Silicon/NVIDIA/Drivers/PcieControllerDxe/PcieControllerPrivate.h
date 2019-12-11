@@ -21,6 +21,8 @@
 
 #define BIT(x)   (1 << (x))
 
+#define PCIE_CLOCK_RESET_NAME_LENGTH 16
+
 #define PCIE_CONTROLLER_SIGNATURE SIGNATURE_32('P','C','I','E')
 typedef struct {
   //
