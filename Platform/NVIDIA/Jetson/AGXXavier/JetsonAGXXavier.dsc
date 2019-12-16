@@ -114,9 +114,14 @@
   #
   # PCI Root Complex
   #
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x30000000
-  gArmTokenSpaceGuid.PcdPciBusMin|160
-  gArmTokenSpaceGuid.PcdPciBusMax|161
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_0|0x38000000
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_1|0x30000000
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_2|0x32000000
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_3|0x34000000
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_4|0x36000000
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_5|0x3a000000
+  gArmTokenSpaceGuid.PcdPciBusMin|0
+  gArmTokenSpaceGuid.PcdPciBusMax|31
 
 !if $(SIDECAR)
   #

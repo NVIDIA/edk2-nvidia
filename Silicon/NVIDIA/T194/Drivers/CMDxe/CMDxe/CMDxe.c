@@ -196,9 +196,64 @@ STATIC
 CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfo[] = {
   {
     // The physical base address for the PCI segment
-    FixedPcdGet64 (PcdPciConfigurationSpaceBaseAddress),
+    FixedPcdGet64 (PcdPciConfigurationSpaceBaseAddress_0),
     // The PCI segment group number
     0,
+    // The start bus number
+    FixedPcdGet32 (PcdPciBusMin),
+    // The end bus number
+    FixedPcdGet32 (PcdPciBusMax),
+  },
+
+  {
+    // The physical base address for the PCI segment
+    FixedPcdGet64 (PcdPciConfigurationSpaceBaseAddress_1),
+    // The PCI segment group number
+    1,
+    // The start bus number
+    FixedPcdGet32 (PcdPciBusMin),
+    // The end bus number
+    FixedPcdGet32 (PcdPciBusMax),
+  },
+
+  {
+    // The physical base address for the PCI segment
+    FixedPcdGet64 (PcdPciConfigurationSpaceBaseAddress_2),
+    // The PCI segment group number
+    2,
+    // The start bus number
+    FixedPcdGet32 (PcdPciBusMin),
+    // The end bus number
+    FixedPcdGet32 (PcdPciBusMax),
+  },
+
+  {
+    // The physical base address for the PCI segment
+    FixedPcdGet64 (PcdPciConfigurationSpaceBaseAddress_3),
+    // The PCI segment group number
+    3,
+    // The start bus number
+    FixedPcdGet32 (PcdPciBusMin),
+    // The end bus number
+    FixedPcdGet32 (PcdPciBusMax),
+  },
+
+  {
+    // The physical base address for the PCI segment
+    FixedPcdGet64 (PcdPciConfigurationSpaceBaseAddress_4),
+    // The PCI segment group number
+    4,
+    // The start bus number
+    FixedPcdGet32 (PcdPciBusMin),
+    // The end bus number
+    FixedPcdGet32 (PcdPciBusMax),
+  },
+
+  {
+    // The physical base address for the PCI segment
+    FixedPcdGet64 (PcdPciConfigurationSpaceBaseAddress_5),
+    // The PCI segment group number
+    5,
     // The start bus number
     FixedPcdGet32 (PcdPciBusMin),
     // The end bus number
