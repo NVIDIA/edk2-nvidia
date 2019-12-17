@@ -16,8 +16,8 @@
   TegraPlatBMDxe.c
 
 [Packages]
-  EmbeddedPkg/EmbeddedPkg.dec
   MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
@@ -30,7 +30,7 @@
 
 [Protocols]
   gEfiLoadFileProtocolGuid
-  gPlatformBootManagerProtocolGuid
+  gEdkiiPlatformBootManagerProtocolGuid
 
 [Guids]
   gFdtTableGuid
