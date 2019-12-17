@@ -712,6 +712,10 @@
   #
   Silicon/NVIDIA/Drivers/TegraPlatBMDxe/TegraPlatBMDxe.inf
 
+  #
+  # HTTP boot support requires RamDiskDxe
+  MdeModulePkg/Universal/Disk/RamDiskDxe/RamDiskDxe.inf
+
 [Components.AARCH64]
   #
   # EBC

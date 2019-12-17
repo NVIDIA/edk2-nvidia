@@ -65,6 +65,11 @@
   INF MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
 
   #
+  # HTTP Boot support
+  #
+  INF MdeModulePkg/Universal/Disk/RamDiskDxe/RamDiskDxe.inf
+
+  #
   # Multiple Console IO support
   #
   INF MdeModulePkg/Universal/Console/ConPlatformDxe/ConPlatformDxe.inf
