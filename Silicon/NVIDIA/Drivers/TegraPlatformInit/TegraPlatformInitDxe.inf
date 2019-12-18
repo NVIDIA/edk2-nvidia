@@ -47,6 +47,8 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport
+  gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase
+  gNVIDIATokenSpaceGuid.PcdTegraPwmFanT194Base
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
   gArmTokenSpaceGuid.PcdSystemMemoryBase
   gArmTokenSpaceGuid.PcdGicDistributorBase

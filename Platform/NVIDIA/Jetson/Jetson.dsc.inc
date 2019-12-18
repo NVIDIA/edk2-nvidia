@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -127,6 +127,11 @@
   # Tegra UART clock driver
   #
   Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
+
+  #
+  # Tegra Pwm clock driver
+  #
+  Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
 
   #
   # Tegra I2C Support

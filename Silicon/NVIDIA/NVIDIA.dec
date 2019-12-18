@@ -81,6 +81,9 @@ Include
    #Direct kernel boot device
    gNVIDIARamloadKernelGuid = { 0x0c7bbfcf, 0x2559, 0x401c, { 0x8d, 0xb1, 0x83, 0x32, 0xb1, 0xae, 0x95, 0x34 } }
 
+  #PWM device
+  gNVIDIANonDiscoverablePwmDeviceGuid = { 0xdff598b2, 0x77b7, 0x42f6, { 0xaa, 0x68, 0x75, 0xc2, 0xb8, 0x78, 0xa1, 0x7f } }
+
 [LibraryClasses]
   DramCarveoutLib|Include/Library/DramCarveoutLib.h
   SystemResourceLib|Include/Library/SystemResourceLib.h
@@ -180,8 +183,13 @@ Include
 #Tegra 16550 UART TH500 Base
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseTH500|0x0C280000|UINT64|0x0000001F
 
+#Tegra PWM FAN T194 Base
+  gNVIDIATokenSpaceGuid.PcdTegraPwmFanT194Base|0x0C340000|UINT64|0x00000021
+
 [PcdsDynamic.common]
   gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport|FALSE|BOOLEAN|0x00000010
 
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|FALSE|BOOLEAN|0x00000015
 
+#Tegra PWM FAN Base for all chips
+  gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase|0x0|UINT64|0x00000020

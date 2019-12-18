@@ -42,12 +42,19 @@ TegraPlatformInitialize (
   // Set chip specific dynamic Pcds.
   PcdSet64S(PcdSystemMemoryBase, TegraGetSystemMemoryBaseAddress(ChipID));
   PcdSet64S(PcdGicDistributorBase, TegraGetGicDistributorBaseAddress(ChipID));
+
+  // Set GIC specific PCDs
   if (ChipID == T186_CHIP_ID || ChipID == T194_CHIP_ID) {
     // Used in GICv2
     PcdSet64S(PcdGicInterruptInterfaceBase, TegraGetGicInterruptInterfaceBaseAddress(ChipID));
   } else if (ChipID == T234_CHIP_ID || ChipID == TH500_CHIP_ID) {
     // Used in GICv3
     PcdSet64S(PcdGicRedistributorsBase, TegraGetGicRedistributorBaseAddress(ChipID));
+  }
+
+  // Set PWM specific PCDs
+  if (ChipID == T194_CHIP_ID) {
+    PcdSet64S(PcdTegraPwmFanBase, FixedPcdGet64 (PcdTegraPwmFanT194Base));
   }
 
   switch (TegraGetPlatform()) {
