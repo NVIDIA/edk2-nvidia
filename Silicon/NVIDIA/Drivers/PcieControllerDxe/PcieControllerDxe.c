@@ -191,7 +191,7 @@ PcieConfigurationAccess (
       }
     } else {
 
-      ConfigAddress = Private->ConfigurationSpace;
+      ConfigAddress = Private->DbiBase;
       if (PciAddress.Bus != This->MinBusNumber) {
         //Setup ATU
         UINT8 AtuType;
@@ -200,13 +200,13 @@ PcieConfigurationAccess (
         } else {
           AtuType = TEGRA_PCIE_ATU_TYPE_CFG1;
         }
-        ConfigAddress += Private->ConfigurationSize/2;
+        ConfigAddress = Private->ConfigurationSpace;
         ConfigureAtu (Private,
                       PCIE_ATU_REGION_INDEX0,
                       AtuType,
                       ConfigAddress,
                       PCIE_ATU_BUS (PciAddress.Bus) | PCIE_ATU_DEV (PciAddress.Device) | PCIE_ATU_FUNC (PciAddress.Function),
-                      Private->ConfigurationSize/2);
+                      Private->ConfigurationSize);
       }
 
       if (Read) {
@@ -336,7 +336,7 @@ InitializeController (
   /* Program APPL */
 
   /* Setup DBI region */
-  MmioWrite32 (Private->ApplSpace + APPL_CFG_BASE_ADDR, Private->ConfigurationSpace & APPL_CFG_BASE_ADDR_MASK);
+  MmioWrite32 (Private->ApplSpace + APPL_CFG_BASE_ADDR, Private->DbiBase & APPL_CFG_BASE_ADDR_MASK);
 
   /* configure this core for RP mode operation */
   MmioWrite32 (Private->ApplSpace + APPL_DM_TYPE, APPL_DM_TYPE_RP);
@@ -384,52 +384,52 @@ InitializeController (
 
   /* Program CORE (i.e. DBI) */
 
-  val = MmioRead32(Private->ConfigurationSpace + PCI_IO_BASE);
+  val = MmioRead32(Private->DbiBase + PCI_IO_BASE);
   val &= ~(IO_BASE_IO_DECODE | IO_BASE_IO_DECODE_BIT8);
-  MmioWrite32 (Private->ConfigurationSpace + PCI_IO_BASE, val);
+  MmioWrite32 (Private->DbiBase + PCI_IO_BASE, val);
 
-  val = MmioRead32(Private->ConfigurationSpace + PCI_PREF_MEMORY_BASE);
+  val = MmioRead32(Private->DbiBase + PCI_PREF_MEMORY_BASE);
   val |= CFG_PREF_MEM_LIMIT_BASE_MEM_DECODE;
   val |= CFG_PREF_MEM_LIMIT_BASE_MEM_LIMIT_DECODE;
-  MmioWrite32 (Private->ConfigurationSpace + PCI_PREF_MEMORY_BASE, val);
+  MmioWrite32 (Private->DbiBase + PCI_PREF_MEMORY_BASE, val);
 
   /* setup RC BARs */
-  MmioWrite32 (Private->ConfigurationSpace + PCI_BASE_ADDRESS_0, 0);
-  MmioWrite32 (Private->ConfigurationSpace + PCI_BASE_ADDRESS_1, 0);
+  MmioWrite32 (Private->DbiBase + PCI_BASE_ADDRESS_0, 0);
+  MmioWrite32 (Private->DbiBase + PCI_BASE_ADDRESS_1, 0);
 
   /* Configure Max Speed to Gen-1 */
-  val = MmioRead32(Private->ConfigurationSpace + PCI_EXP_LNKCAP);
+  val = MmioRead32(Private->DbiBase + PCI_EXP_LNKCAP);
   val &= ~PCI_EXP_LNKCAP_SLS;
   val |= 0x1; /* Limit the speed to Gen-1 for now */
-  MmioWrite32 (Private->ConfigurationSpace + PCI_EXP_LNKCAP, val);
+  MmioWrite32 (Private->DbiBase + PCI_EXP_LNKCAP, val);
 
-  val = MmioRead32 (Private->ConfigurationSpace + PCI_EXP_LNKCTL_STS_2);
+  val = MmioRead32 (Private->DbiBase + PCI_EXP_LNKCTL_STS_2);
   val &= ~PCI_EXP_LNKCAP_SLS;
   val |= 0x1;
-  MmioWrite32 (Private->ConfigurationSpace + PCI_EXP_LNKCTL_STS_2, val);
+  MmioWrite32 (Private->DbiBase + PCI_EXP_LNKCTL_STS_2, val);
 
   /* setup interrupt pins */
-  MmioAndThenOr32 (Private->ConfigurationSpace + PCI_INT_LINE_OFFSET, 0xffff00ff, 0x00000100);
+  MmioAndThenOr32 (Private->DbiBase + PCI_INT_LINE_OFFSET, 0xffff00ff, 0x00000100);
 
   /* setup bus numbers */
-  MmioAndThenOr32 (Private->ConfigurationSpace + PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET, 0xff000000, 0x00ff0100);
+  MmioAndThenOr32 (Private->DbiBase + PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET, 0xff000000, 0x00ff0100);
 
   /* setup command register */
-  MmioAndThenOr32 (Private->ConfigurationSpace + PCI_COMMAND_OFFSET,
+  MmioAndThenOr32 (Private->DbiBase + PCI_COMMAND_OFFSET,
                    0xffff0000,
                    EFI_PCI_COMMAND_IO_SPACE|EFI_PCI_COMMAND_MEMORY_SPACE|EFI_PCI_COMMAND_BUS_MASTER|EFI_PCI_COMMAND_SERR
                    );
 
   /* program correct class for RC */
-  MmioWrite32(Private->ConfigurationSpace + PCI_REVISION_ID_OFFSET,
+  MmioWrite32(Private->DbiBase + PCI_REVISION_ID_OFFSET,
               (PCI_CLASS_BRIDGE << 24) | (PCI_CLASS_BRIDGE_P2P << 16) | (PCI_IF_BRIDGE_P2P << 8) | 0x1
               );
 
   //Program Vendor/DeviceID
-  MmioWrite32 (Private->ConfigurationSpace + PCI_VENDOR_ID_OFFSET, 0x10DE1AD1);
+  MmioWrite32 (Private->DbiBase + PCI_VENDOR_ID_OFFSET, 0x10DE1AD1);
 
   /* Disable write permission to DBI_RO_WR_EN protected registers */
-  MmioAnd32 (Private->ConfigurationSpace + PCIE_MISC_CONTROL_1_OFF, ~PCIE_DBI_RO_WR_EN);
+  MmioAnd32 (Private->DbiBase + PCIE_MISC_CONTROL_1_OFF, ~PCIE_DBI_RO_WR_EN);
 
   DEBUG ((EFI_D_ERROR, "Programming CORE registers is done\r\n"));
 
@@ -455,7 +455,7 @@ InitializeController (
 
   MicroSecondDelay(100000);
 
-  val = MmioRead32 (Private->ConfigurationSpace + PCI_EXP_LNKCTL_STATUS);
+  val = MmioRead32 (Private->DbiBase + PCI_EXP_LNKCTL_STATUS);
   if (val & PCI_EXP_LNKCTL_STATUS_DLL_ACTIVE)
     DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is UP\r\n", Private->CtrlId));
   else
@@ -659,6 +659,13 @@ DeviceDiscoveryNotify (
       break;
     }
 
+    Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 3, &Private->DbiBase, &Private->DbiSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to locate DBI address range\n", __FUNCTION__));
+      Status = EFI_UNSUPPORTED;
+      break;
+    }
+
     Private->Signature = PCIE_CONTROLLER_SIGNATURE;
     Private->PcieRootBridgeConfigurationIo.Read  = PcieConfigurationRead;
     Private->PcieRootBridgeConfigurationIo.Write = PcieConfigurationWrite;
@@ -681,7 +688,7 @@ DeviceDiscoveryNotify (
     DEBUG ((DEBUG_ERROR, "Controller-ID = %u\n", Private->CtrlId));
 
     if (Private->CtrlId == 5) {
-        Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 3, &Private->PexCtlBase, &Private->PexCtlSize);
+        Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 4, &Private->PexCtlBase, &Private->PexCtlSize);
         if (EFI_ERROR (Status)) {
             DEBUG ((DEBUG_ERROR, "%a: Unable to locate Pex_Ctl address range\n", __FUNCTION__));
             Status = EFI_UNSUPPORTED;

@@ -38,6 +38,8 @@ typedef struct {
   UINT64                                           ConfigurationSize;
   UINT64                                           AtuBase;
   UINT64                                           AtuSize;
+  UINT64                                           DbiBase;
+  UINT64                                           DbiSize;
   UINT64                                           PexCtlBase;
   UINT64                                           PexCtlSize;
   UINT32                                           CtrlId;
