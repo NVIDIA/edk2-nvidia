@@ -1,7 +1,7 @@
 /** @file
   The main process for ClockUtil application.
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -215,7 +215,7 @@ GetIdFromName (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  UnicodeStrToAsciiStr (ClockName, AsciiClockName);
+  UnicodeStrToAsciiStrS (ClockName, AsciiClockName, StrLen (ClockName) + 1);
 
   for (ClockIndex = 0; ClockIndex < TotalClocks; ClockIndex++) {
 

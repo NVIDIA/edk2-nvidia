@@ -2,7 +2,7 @@
 
   Tegra Platform Init Driver.
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -41,9 +41,9 @@ TegraPlatformInitialize (
       break;
     case TEGRA_PLATFORM_SYSTEM_FPGA:
       DEBUG ((DEBUG_INFO, "%a: Tegra Platform:  System FPGA\n", __FUNCTION__));
-      PcdSetBool(PcdRamLoadedKernelSupport, TRUE);
+      PcdSetBoolS(PcdRamLoadedKernelSupport, TRUE);
       // Enable emulated variable NV mode in variable driver.
-      PcdSetBool(PcdEmuVariableNvModeEnable, TRUE);
+      PcdSetBoolS(PcdEmuVariableNvModeEnable, TRUE);
       Status = gBS->InstallMultipleProtocolInterfaces (
                  &ImageHandle,
                  &gNVIDIAEmuVariableNvModeEnableProtocolGuid,

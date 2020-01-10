@@ -1,7 +1,7 @@
 /** @file
   The main process for RegulatorUtil application.
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018, 2020, NVIDIA CORPORATION. All rights reserved.
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -202,7 +202,7 @@ InitializeRegulatorUtil (
       ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_REGULATOR_UTIL_BAD_ALLOCATION), mHiiHandle, mAppName);
       goto Done;
     }
-    UnicodeStrToAsciiStr (ValueStr, AsciiRegulatorName);
+    UnicodeStrToAsciiStrS (ValueStr, AsciiRegulatorName, StrLen (ValueStr) + 1);
     Status = mRegulator->GetIdFromName (mRegulator, AsciiRegulatorName, &RegulatorId);
     FreePool (AsciiRegulatorName);
     if (EFI_ERROR (Status)) {

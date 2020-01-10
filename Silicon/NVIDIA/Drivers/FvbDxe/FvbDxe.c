@@ -2,7 +2,7 @@
 
   Fvb Driver
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   This program and the accompanying materials
@@ -1175,7 +1175,7 @@ FVBInitialize (
     Size = MultU64x32 (Private->NumBlocksA + Private->NumBlocksB, BlockSize);
 
     if (Size != PcdGet32(PcdFlashNvStorageVariableSize)) {
-      PcdSet32(PcdFlashNvStorageVariableSize, Size);
+      PcdSet32S(PcdFlashNvStorageVariableSize, Size);
     }
 
     Status = gBS->AllocatePool (EfiRuntimeServicesData,
@@ -1187,7 +1187,7 @@ FVBInitialize (
       goto NoFlashExit;
     }
 
-    PcdSet64(PcdFlashNvStorageVariableBase64, (UINT64)Private->VariablePartition);
+    PcdSet64S(PcdFlashNvStorageVariableBase64, (UINT64)Private->VariablePartition);
 
     Status = Private->BlockIo->ReadBlocks (Private->BlockIo,
                                            Private->BlockIo->Media->MediaId,
@@ -1253,7 +1253,7 @@ NoFlashExit:
   //
   if (EFI_ERROR(Status) && !PcdGetBool(PcdEmuVariableNvModeEnable)) {
     DEBUG ((EFI_D_ERROR, "%a: FVB Initialization Failed. Switching to Emulated Variables.\n", __FUNCTION__));
-    PcdSetBool(PcdEmuVariableNvModeEnable, TRUE);
+    PcdSetBoolS(PcdEmuVariableNvModeEnable, TRUE);
   }
 
   //
