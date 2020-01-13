@@ -1,7 +1,7 @@
 /** @file
   The main process for FalconUtil application.
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -63,6 +63,8 @@ SHELL_PARAM_ITEM    mFalconUtilParamList[] = {
 
 EFI_HII_HANDLE               mHiiHandle;
 CHAR16                       mAppName[]          = L"FalconUtil";
+CONST CHAR16                 mIcdReg[TOTAL_REG_COUNT][5] = {L"R00", L"R01", L"R02", L"R03", L"R04", L"R05", L"R06", L"R07", L"R08", L"R09", L"R10", L"R11", L"R12",
+                               L"R13", L"R14", L"R15", L"IV0", L"IV1", L"\0", L"EV", L"SP", L"PC", L"IMB", L"DMB", L"CSW", L"CCR", L"SEC", L"CTX", L"EXCI"};
 
 /**
   This is the declaration of an EFI image entry point. This entry point is
@@ -100,8 +102,7 @@ InitializeFalconUtil (
   EFI_PHYSICAL_ADDRESS           CfgAddress = 0;
   NVIDIA_XHCICONTROLLER_PROTOCOL *mXhciControllerProtocol;
   UINT32                         MaxIndex;
-  CHAR16                         IcdReg[TOTAL_REG_COUNT][5] = {L"R00", L"R01", L"R02", L"R03", L"R04", L"R05", L"R06", L"R07", L"R08", L"R09", L"R10", L"R11", L"R12",
-                                 L"R13", L"R14", L"R15", L"IV0", L"IV1", L"\0", L"EV", L"SP", L"PC", L"IMB", L"DMB", L"CSW", L"CCR", L"SEC", L"CTX", L"EXCI"};
+
 
   // Retrieve HII package list from ImageHandle
   Status = gBS->OpenProtocol (
@@ -177,7 +178,7 @@ InitializeFalconUtil (
                   );
     /* Display In Circuit Debug Registers Information */
     for (Iter = 0; Iter < TOTAL_REG_COUNT ; Iter++) {
-      if (StrCmp(IcdReg[Iter], L"\0") == 0) {
+      if (StrCmp(mIcdReg[Iter], L"\0") == 0) {
         continue;
       }
       Value32 = (Iter << ICD_CMD_IDX_SHIFT) | ICD_CMD_OPC_RREG;
@@ -186,7 +187,7 @@ InitializeFalconUtil (
       ShellPrintHiiEx (-1, -1, NULL,
                   STRING_TOKEN (STR_FALCON_UTIL_DISPLAY_REG_VALUE),
                   mHiiHandle,
-                  IcdReg[Iter],
+                  mIcdReg[Iter],
                   Value32
                   );
     }
