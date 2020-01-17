@@ -65,12 +65,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
 
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_0
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_1
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_2
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_3
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_4
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress_5
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
   gArmTokenSpaceGuid.PcdPciBusMin
   gArmTokenSpaceGuid.PcdPciBusMax
 
