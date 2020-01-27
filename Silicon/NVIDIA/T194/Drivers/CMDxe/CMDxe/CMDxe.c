@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Dxe
 
-  Copyright (c) 2019, NVIDIA Corporation. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA Corporation. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   This program and the accompanying materials
@@ -183,7 +183,7 @@ CM_ARM_GENERIC_TIMER_INFO GenericTimerInfo = {
 */
 STATIC
 CM_ARM_SERIAL_PORT_INFO SpcrSerialPort = {
-  FixedPcdGet64 (PcdSerialRegisterBase),
+  FixedPcdGet64 (PcdTegra16550UartBaseT194),
   0x92,
   FixedPcdGet64 (PcdUartDefaultBaudRate),
   0,

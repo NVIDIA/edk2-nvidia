@@ -1,6 +1,7 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
+ * Copyright (c) 2020, NVIDIA Corporation. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * Template for [DSDT] ACPI Table (AML byte code table)
@@ -43,7 +44,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA186", 0x00000001)
     Name (_CCA, ZERO)
 
     Name(_CRS, ResourceTemplate() {
-      Memory32Fixed(ReadWrite, 0x03100000, 0x40)
+      Memory32Fixed(ReadWrite, FixedPcdGet64 (PcdTegra16550UartBaseT234), 0x40)
       Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x90 }
     })
 

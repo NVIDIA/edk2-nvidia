@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -33,7 +33,7 @@ InstallMmioRegions (
 {
   UINTN RegionCount;
   CONST NVDA_MEMORY_REGION MmioRegions[] = {
-    { FixedPcdGet64 (PcdSerialRegisterBase),        SIZE_4KB },
+    { FixedPcdGet64 (PcdTegra16550UartBaseT186),    SIZE_4KB },
     { FixedPcdGet64 (PcdGicDistributorBase),        SIZE_4KB },
     { FixedPcdGet64 (PcdGicInterruptInterfaceBase), SIZE_4KB },
     { FixedPcdGet64 (PcdMiscRegBaseAddress),        SIZE_4KB },

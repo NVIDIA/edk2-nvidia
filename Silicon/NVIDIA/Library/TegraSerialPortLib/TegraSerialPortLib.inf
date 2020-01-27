@@ -1,9 +1,8 @@
 #/** @file
 #
-#  Component description file for PL011SerialPortLib module
+#  Component description file for TegraSerialPortLib module
 #
-#  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
-#  Copyright (c) 2011-2016, ARM Ltd. All rights reserved.<BR>
+#  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -17,25 +16,25 @@
 
 [Defines]
   INF_VERSION                    = 0x00010019
-  BASE_NAME                      = TegraCombinedSerialPortLib
-  FILE_GUID                      = f7ed5487-2411-49f1-883a-b8cec26a8919
+  BASE_NAME                      = TegraSerialPortLib
+  FILE_GUID                      = 94602bc2-4140-42ac-89a6-a0437dc7b3d4
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = TegraCombinedSerialPortLib
+  LIBRARY_CLASS                  = SerialPortLib
 
 [Sources.common]
-  TegraCombinedSerialPortLib.c
+  TegraSerialPortLib.c
 
 [LibraryClasses]
   PcdLib
-  IoLib
+  Tegra16550SerialPortLib
+  TegraCombinedSerialPortLib
+  TegraPlatformInfoLib
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdSidecarVariant
 
 [Packages]
-  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
-
-[FixedPcd]
-  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
-  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox

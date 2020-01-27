@@ -2,7 +2,7 @@
 
   TegraUart Controller Driver
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -23,6 +23,7 @@
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/TegraSerialPortLib.h>
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra20-uart", &gNVIDIANonDiscoverableUartDeviceGuid },
@@ -116,11 +117,11 @@ DeviceDiscoveryNotify (
       DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
       return EFI_UNSUPPORTED;
     }
-   if (PcdGet64 (PcdSerialRegisterBase) != BaseAddress) {
-     return EFI_UNSUPPORTED;
-   }
+    if (Tegra16550SerialPortGetBaseAddress () != BaseAddress) {
+      return EFI_UNSUPPORTED;
+    }
 
-   return EFI_SUCCESS;
+    return EFI_SUCCESS;
 
   case DeviceDiscoveryDriverBindingStart:
     Private = (TEGRA_UART_PRIVATE_DATA *)AllocateZeroPool (sizeof (TEGRA_UART_PRIVATE_DATA));
@@ -128,7 +129,7 @@ DeviceDiscoveryNotify (
       return EFI_OUT_OF_RESOURCES;
     }
 
-    Private->BaseAddress = PcdGet64 (PcdSerialRegisterBase);
+    Private->BaseAddress = Tegra16550SerialPortGetBaseAddress ();
     Private->RegisterStride = PcdGet32 (PcdSerialRegisterStride);
     Private->ControllerHandle = ControllerHandle;
     Status = gBS->CreateEvent (

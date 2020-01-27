@@ -1,0 +1,43 @@
+## @file
+#  SerialPortLib instance for 16550 UART.
+#
+#  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = Tegra16550SerialPortLib
+  FILE_GUID                      = 588BA3C9-A4A6-48DA-9104-273F8C7F0A77
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.1
+  LIBRARY_CLASS                  = Tegra16550SerialPortLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  PcdLib
+  IoLib
+  TegraPlatformInfoLib
+
+[Sources]
+  Tegra16550SerialPortLib.c
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186                 ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194                 ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234                 ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseTH500                ## SOMETIMES_CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl  ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialDetectCable             ## SOMETIMES_CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialBaudRate                ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialLineControl             ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialFifoControl             ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialClockRate               ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialExtendedTxFifoSize      ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterStride          ## CONSUMES

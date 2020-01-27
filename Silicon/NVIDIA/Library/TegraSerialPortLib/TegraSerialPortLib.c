@@ -1,10 +1,7 @@
 /** @file
-  Serial I/O Port library functions with no library constructor/destructor
+  Serial I/O Port wrapper library
 
-  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
-  Copyright (c) 2008 - 2010, Apple Inc. All rights reserved.<BR>
-  Copyright (c) 2012 - 2016, ARM Ltd. All rights reserved.<BR>
-  Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -17,51 +14,43 @@
 **/
 
 #include <Base.h>
-
-#include <Library/TegraSerialPortLib.h>
-#include <Library/IoLib.h>
 #include <Library/PcdLib.h>
+#include <Library/TegraPlatformInfoLib.h>
+#include <Library/TegraSerialPortLib.h>
 #include <Library/SerialPortLib.h>
-#include <Library/DebugLib.h>
 
-typedef struct {
-  UINT8   Data[3];
-  UINT8   NumberOfBytes:2;
-  BOOLEAN Flush:1;
-  UINT8   Reserved:3;
-  BOOLEAN DmaMode:1;
-  BOOLEAN Interrupt:1;
-} TEGRA_COMBINED_UART_PIO;
+/** Identify the serial device hardware
 
-typedef union {
-  UINT32                  RawValue;
-  TEGRA_COMBINED_UART_PIO Pio;
-} TEGRA_COMBINED_UART;
-
-/**
-  Check to see if any data is currently pending on the mailbox.
-
-  @param  MailboxAddress Address of the mailbox to check
-
-  @retval TRUE       At least one byte of data is present
-  @retval FALSE      No data is present
-
-**/
-STATIC
-BOOLEAN
+ **/
+TEGRA_UART_OBJ *
 EFIAPI
-IsDataPresent (
-  UINTN MailboxAddress
+SerialPortIdentify (
+  VOID
   )
 {
-  TEGRA_COMBINED_UART CombinedUartData;
+  UINT32              ChipID;
+  TEGRA_PLATFORM_TYPE PlatformType;
 
-  CombinedUartData.RawValue = MmioRead32 (MailboxAddress);
+  ChipID = TegraGetChipID();
+  PlatformType = TegraGetPlatform();
 
-  return CombinedUartData.Pio.Interrupt;
+  if (ChipID == T186_CHIP_ID) {
+    return Tegra16550SerialPortGetObject();
+  } else {
+    // If running on JetsonTX2 and variant is Sidecar, or
+    // running on any silicon other than JetsonTX2 but
+    // platform type is VDK, use Tegra 16550 UART. Otherwise,
+    // use Tegra Combined UART.
+    if ((FixedPcdGetBool (PcdSidecarVariant) && ChipID == T194_CHIP_ID) ||
+        PlatformType == TEGRA_PLATFORM_VDK) {
+      return Tegra16550SerialPortGetObject();
+    } else {
+      return TegraCombinedSerialPortGetObject();
+    }
+  }
 }
 
-/** Initialise the serial device hardware with default settings.
+/** Initialize the serial device hardware with default settings.
 
   @retval RETURN_SUCCESS            The serial device was initialised.
   @retval RETURN_INVALID_PARAMETER  One or more of the default settings
@@ -69,11 +58,11 @@ IsDataPresent (
  **/
 RETURN_STATUS
 EFIAPI
-TegraCombinedSerialPortInitialize (
+SerialPortInitialize (
   VOID
   )
 {
-  return EFI_SUCCESS;
+  return SerialPortIdentify()->SerialPortInitialize ();
 }
 
 /**
@@ -88,38 +77,12 @@ TegraCombinedSerialPortInitialize (
 **/
 UINTN
 EFIAPI
-TegraCombinedSerialPortWrite (
+SerialPortWrite (
   IN UINT8     *Buffer,
   IN UINTN     NumberOfBytes
   )
 {
-  UINT8* CONST Final = &Buffer[NumberOfBytes];
-  UINTN TxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
-  TEGRA_COMBINED_UART CombinedUartData;
-  CombinedUartData.RawValue = 0;
-
-  while (Buffer < Final) {
-    //Wait until all prior data is sent
-    while (IsDataPresent(TxMailbox) == TRUE);
-
-    CombinedUartData.Pio.NumberOfBytes = 0;
-    CombinedUartData.Pio.DmaMode = FALSE;
-    CombinedUartData.Pio.Reserved = 0;
-    CombinedUartData.Pio.Flush = FALSE;
-
-    while ((Buffer < Final) &&
-           (CombinedUartData.Pio.NumberOfBytes < 3)) {
-      CombinedUartData.Pio.Data[CombinedUartData.Pio.NumberOfBytes] = *Buffer;
-      CombinedUartData.Pio.NumberOfBytes++;
-      Buffer++;
-    }
-
-    CombinedUartData.Pio.Interrupt = TRUE;
-
-    MmioWrite32 (TxMailbox, CombinedUartData.RawValue);
-  };
-
-  return NumberOfBytes;
+  return SerialPortIdentify()->SerialPortWrite (Buffer, NumberOfBytes);
 }
 
 /**
@@ -134,57 +97,12 @@ TegraCombinedSerialPortWrite (
 **/
 UINTN
 EFIAPI
-TegraCombinedSerialPortRead (
+SerialPortRead (
   OUT UINT8     *Buffer,
   IN  UINTN     NumberOfBytes
 )
 {
-  UINTN Count     = 0;
-  UINTN RxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox);
-  TEGRA_COMBINED_UART CombinedUartData;
-  CombinedUartData.RawValue = 0;
-
-  for (Count = 0; Count < NumberOfBytes; Count++, Buffer++) {
-    //Wait until data is ready
-    while (IsDataPresent (RxMailbox) == FALSE);
-
-    CombinedUartData.RawValue = MmioRead32 (RxMailbox);
-
-    ASSERT (CombinedUartData.Pio.NumberOfBytes != 0);
-    while (CombinedUartData.Pio.NumberOfBytes == 0) {
-      //Clear this and try again
-      CombinedUartData.RawValue = 0;
-      MmioWrite32 (RxMailbox, CombinedUartData.RawValue);
-      while (IsDataPresent (RxMailbox) == FALSE);
-      CombinedUartData.RawValue = MmioRead32 (RxMailbox);
-    }
-
-    *Buffer = CombinedUartData.Pio.Data[0];
-    CombinedUartData.Pio.NumberOfBytes--;
-
-    switch (CombinedUartData.Pio.NumberOfBytes) {
-      case 0:
-        CombinedUartData.RawValue = 0;
-        break;
-
-      case 1:
-        CombinedUartData.Pio.Data[0] = CombinedUartData.Pio.Data[1];
-        break;
-
-      case 2:
-        CombinedUartData.Pio.Data[0] = CombinedUartData.Pio.Data[1];
-        CombinedUartData.Pio.Data[1] = CombinedUartData.Pio.Data[2];
-        break;
-
-      default:
-        //This can never occur as we have a check for this above
-        ASSERT(FALSE);
-    }
-
-    MmioWrite32 (RxMailbox, CombinedUartData.RawValue);
-  }
-
-  return NumberOfBytes;
+  return SerialPortIdentify()->SerialPortRead (Buffer, NumberOfBytes);
 }
 
 /**
@@ -196,11 +114,11 @@ TegraCombinedSerialPortRead (
 **/
 BOOLEAN
 EFIAPI
-TegraCombinedSerialPortPoll (
+SerialPortPoll (
   VOID
   )
 {
-  return IsDataPresent ((UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox));
+  return SerialPortIdentify()->SerialPortPoll ();
 }
 
 /**
@@ -231,11 +149,11 @@ TegraCombinedSerialPortPoll (
 **/
 RETURN_STATUS
 EFIAPI
-TegraCombinedSerialPortSetControl (
+SerialPortSetControl (
   IN UINT32  Control
   )
 {
-  return EFI_UNSUPPORTED;
+  return SerialPortIdentify()->SerialPortSetControl (Control);
 }
 
 /**
@@ -272,25 +190,11 @@ TegraCombinedSerialPortSetControl (
 **/
 RETURN_STATUS
 EFIAPI
-TegraCombinedSerialPortGetControl (
+SerialPortGetControl (
   OUT UINT32  *Control
   )
 {
-  UINTN RxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox);
-  UINTN TxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
-  if (NULL == Control) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  *Control = 0;
-  if (IsDataPresent (RxMailbox) == FALSE) {
-    *Control |= EFI_SERIAL_INPUT_BUFFER_EMPTY;
-  }
-  if (IsDataPresent (TxMailbox) == FALSE) {
-    *Control |= EFI_SERIAL_OUTPUT_BUFFER_EMPTY;
-  }
-
-  return EFI_SUCCESS;
+  return SerialPortIdentify()->SerialPortGetControl (Control);
 }
 
 /**
@@ -326,7 +230,7 @@ TegraCombinedSerialPortGetControl (
 **/
 RETURN_STATUS
 EFIAPI
-TegraCombinedSerialPortSetAttributes (
+SerialPortSetAttributes (
   IN OUT UINT64              *BaudRate,
   IN OUT UINT32              *ReceiveFifoDepth,
   IN OUT UINT32              *Timeout,
@@ -335,31 +239,6 @@ TegraCombinedSerialPortSetAttributes (
   IN OUT EFI_STOP_BITS_TYPE  *StopBits
   )
 {
-  return EFI_UNSUPPORTED;
-}
-
-TEGRA_UART_OBJ TegraCombinedUart = {
-  TegraCombinedSerialPortInitialize,
-  TegraCombinedSerialPortWrite,
-  TegraCombinedSerialPortRead,
-  TegraCombinedSerialPortPoll,
-  TegraCombinedSerialPortSetControl,
-  TegraCombinedSerialPortGetControl,
-  TegraCombinedSerialPortSetAttributes
-};
-
-/**
-
-  Retrieve the object of tegra combined serial port library.
-
-  @param[out]  Tegra combined uart library object
-
-**/
-TEGRA_UART_OBJ *
-EFIAPI
-TegraCombinedSerialPortGetObject (
-  VOID
-  )
-{
-  return &TegraCombinedUart;
+  return SerialPortIdentify()->SerialPortSetAttributes (BaudRate, ReceiveFifoDepth, Timeout,
+                                 Parity, DataBits, StopBits);
 }

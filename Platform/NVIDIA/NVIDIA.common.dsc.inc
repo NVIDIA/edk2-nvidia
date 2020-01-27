@@ -33,6 +33,10 @@
 !endif
   DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
 
+  TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
+  Tegra16550SerialPortLib|Silicon/NVIDIA/Library/Tegra16550SerialPortLib/Tegra16550SerialPortLib.inf
+  SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraSerialPortLib.inf
+
   BaseLib|MdePkg/Library/BaseLib/BaseLib.inf
   SynchronizationLib|MdePkg/Library/BaseSynchronizationLib/BaseSynchronizationLib.inf
   PerformanceLib|MdePkg/Library/BasePerformanceLibNull/BasePerformanceLibNull.inf
@@ -169,7 +173,6 @@
 
   CustomizedDisplayLib|MdeModulePkg/Library/CustomizedDisplayLib/CustomizedDisplayLib.inf
 
-  PlatformHookLib|MdeModulePkg/Library/BasePlatformHookLibNull/BasePlatformHookLibNull.inf
   PciLib|MdePkg/Library/BasePciLibPciExpress/BasePciLibPciExpress.inf
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
   PciHostBridgeLib|Silicon/NVIDIA/Library/PciHostBridgeLib/PciHostBridgeLib.inf
@@ -426,6 +429,23 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSetNxForStack|TRUE
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdResetOnMemoryTypeInformationChange|FALSE
+
+  #
+  # TCUart - Serial Terminal
+  #
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox|0x03C10000
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|0x0C168000
+
+  #
+  # UART 16550 parameters
+  #
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate|115200
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialClockRate|407347200
+
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterStride|4
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl|TRUE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialFifoControl|0x27
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialExtendedTxFifoSize|1
 
 [PcdsFixedAtBuild]
   #

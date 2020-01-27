@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -37,7 +37,6 @@
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
 
 [LibraryClasses.common]
-  SerialPortLib|MdeModulePkg/Library/BaseSerialPortLib16550/BaseSerialPortLib16550.inf
   SystemResourceLib|Silicon/NVIDIA/T186/Library/SystemResourceLib/SystemResourceLib.inf
   UsbFirmwareLib|Silicon/NVIDIA/T186/Library/UsbFirmwareLib/UsbFirmwareLib.inf
 
@@ -52,16 +51,6 @@
   gArmPlatformTokenSpaceGuid.PcdClusterCount|4
 
   gArmTokenSpaceGuid.PcdVFPEnabled|1
-
-  ## UART 16550 parameters
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate|115200
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialClockRate|407347200
-
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseMmio|TRUE
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x03100000
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterStride|4
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl|TRUE
-
 
   ## Register that contains size of DRAM
   gNVIDIATokenSpaceGuid.PcdMemorySizeRegister|0x2c10050
