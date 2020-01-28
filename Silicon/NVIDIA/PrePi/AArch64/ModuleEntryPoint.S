@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+//  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
 //  Copyright (c) 2011-2015, ARM Limited. All rights reserved.
 //
 //  This program and the accompanying materials
@@ -49,6 +49,9 @@ ASM_FUNC(_ModuleEntryPoint)
   b     .Lreloc_loop
 .Lreloc_done:
 
+  bl ASM_PFX(TegraGetChipID)
+  mov w28, w0
+
   EL1_OR_EL2_OR_EL3(x1)
 
 3: MOV32 (w0, FixedPcdGet32(PcdArmNonSecModeTransition))
@@ -64,8 +67,12 @@ ASM_FUNC(_ModuleEntryPoint)
   orr x0, x0, #1
   bl ASM_PFX(ArmGicV3SetControlSystemRegisterEnable)
 
-  MOV64 (x19, FixedPcdGet64(PcdGicRedistributorsBase))
-  MOV64 (x20, FixedPcdGet64(PcdGicDistributorBase))
+  mov w0, w28
+  bl ASM_PFX(TegraGetGicRedistributorBaseAddress)
+  mov x19, x0
+  mov w0, w28
+  bl ASM_PFX(TegraGetGicDistributorBaseAddress)
+  mov x20, x0
 
   bl ASM_PFX(ArmReadMpidr)
   mov x4, x0
@@ -120,14 +127,15 @@ _SpiLoop:
 2:
   // Do early platform specific actions
   bl    ASM_PFX(ArmPlatformPeiBootAction)
-  bl ASM_PFX(TegraGetChipID)
-  mov w9, w0
+  mov w0, w28
   bl ASM_PFX(TegraGetBLInfoLocationAddress)
   mov x5, x0
-  mov w0, w9
+  mov w0, w28
   bl ASM_PFX(TegraGetBLCarveoutOffset)
   mov x6, x0
-  MOV64 (x7, FixedPcdGet64(PcdSystemMemoryBase))
+  mov w0, w28
+  bl ASM_PFX(TegraGetSystemMemoryBaseAddress)
+  mov x7, x0
   ldr   w5, [x5]
   cmp   x5, x7
   b.ge _BootloaderAddressGood

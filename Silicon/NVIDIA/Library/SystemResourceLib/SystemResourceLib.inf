@@ -37,13 +37,18 @@
 
 [Sources.common]
   SystemResourceLib.c
+  T186ResourceConfig.c
+  T194ResourceConfig.c
+  T234ResourceConfig.c
+  TH500ResourceConfig.c
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
-  gArmTokenSpaceGuid.PcdGicDistributorBase
-  gArmTokenSpaceGuid.PcdGicRedistributorsBase
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseTH500
   gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress
-  gArmTokenSpaceGuid.PcdSystemMemoryBase
+  gNVIDIATokenSpaceGuid.PcdMemorySizeRegister
 

@@ -143,6 +143,8 @@
 
   ReportStatusCodeLib|MdeModulePkg/Library/DxeReportStatusCodeLib/DxeReportStatusCodeLib.inf
 
+  SystemResourceLib|Silicon/NVIDIA/Library/SystemResourceLib/SystemResourceLib.inf
+
   DramCarveoutLib|Silicon/NVIDIA/Library/DramCarveoutLib/DramCarveoutLib.inf
 
   TimeBaseLib|EmbeddedPkg/Library/TimeBaseLib/TimeBaseLib.inf
@@ -490,6 +492,16 @@
 
   #default state of floor sweeping
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|FALSE
+
+[PcdsDynamicDefault.common]
+  gArmTokenSpaceGuid.PcdSystemMemoryBase|0x00000000
+
+  #
+  # ARM Generic Interrupt Controller
+  #
+  gArmTokenSpaceGuid.PcdGicDistributorBase|0x00000000
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase|0x00000000
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x00000000
 
 [PcdsDynamicHii.common.DEFAULT]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|10

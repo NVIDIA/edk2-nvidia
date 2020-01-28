@@ -37,15 +37,12 @@
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
 
 [LibraryClasses.common]
-  SystemResourceLib|Silicon/NVIDIA/T186/Library/SystemResourceLib/SystemResourceLib.inf
   UsbFirmwareLib|Silicon/NVIDIA/T186/Library/UsbFirmwareLib/UsbFirmwareLib.inf
 
   #Use non-optimized BaseMemoryLib due to peripherals not being cache coherent
   BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
 
 [PcdsFixedAtBuild.common]
-
-  gArmTokenSpaceGuid.PcdSystemMemoryBase|0x80000000
 
   gArmPlatformTokenSpaceGuid.PcdCoreCount|8
   gArmPlatformTokenSpaceGuid.PcdClusterCount|4
@@ -57,12 +54,6 @@
 
   ## SBSA Watchdog Count
   gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2
-
-  #
-  # ARM Generic Interrupt Controller
-  #
-  gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
-  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
 
   #
   # ARM Architectural Timer Frequency

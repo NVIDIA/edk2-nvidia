@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -12,8 +12,8 @@
 *
 **/
 
-#ifndef __SYSTEM_RESOURCE_LIB_PRIVATE_H__
-#define __SYSTEM_RESOURCE_LIB_PRIVATE_H__
+#ifndef __T186_RESOURCE_CONFIG_PRIVATE_H__
+#define __T186_RESOURCE_CONFIG_PRIVATE_H__
 
 #include <Uefi/UefiBaseType.h>
 #include <Library/DramCarveoutLib.h>
@@ -202,4 +202,4 @@ typedef struct {
 } TEGRA_CPUBL_PARAMS;
 
 
-#endif //__SYSTEM_RESOURCE_LIB_PRIVATE_H__
+#endif //__T186_RESOURCE_CONFIG_PRIVATE_H__

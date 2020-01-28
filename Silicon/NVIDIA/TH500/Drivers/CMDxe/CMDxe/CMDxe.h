@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2019, NVIDIA Corporation. All rights reserved.
+  Copyright (c) 2019 - 2020, NVIDIA Corporation. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   This program and the accompanying materials
@@ -42,9 +42,7 @@
     0,                        /* UINT32  ParkingProtocolVersion       */ \
     PmuIrq,                   /* UINT32  PerformanceInterruptGsiv     */ \
     0,                        /* UINT64  ParkedAddress                */ \
-    FixedPcdGet64 (                                                      \
-      PcdGicInterruptInterfaceBase                                       \
-      ),                      /* UINT64  PhysicalBaseAddress          */ \
+    0,                        /* UINT64  PhysicalBaseAddress          */ \
     0,                        /* UINT64  GICV                         */ \
     0,                        /* UINT64  GICH                         */ \
     VGicIrq,                  /* UINT32  VGICMaintenanceInterrupt     */ \

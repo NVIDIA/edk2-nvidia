@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Dxe
 
-  Copyright (c) 2019-2020, NVIDIA Corporation. All rights reserved.
+  Copyright (c) 2019 - 2020, NVIDIA Corporation. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   This program and the accompanying materials
@@ -135,7 +135,7 @@ CM_ARM_GICC_INFO GicCInfo[] = {
 */
 STATIC
 CM_ARM_GICD_INFO GicDInfo = {
-  FixedPcdGet64 (PcdGicDistributorBase),
+  0,
   0,
   2
 };
@@ -177,6 +177,9 @@ InitializePlatformRepository (
   VOID
   )
 {
+  UINTN Index;
+  UINTN GicInterruptInterfaceBase;
+
   ZeroMem(NVIDIAPlatformRepositoryInfo, sizeof (NVIDIAPlatformRepositoryInfo));
 
   NVIDIAPlatformRepositoryInfo[0].CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjCfgMgrInfo);
@@ -199,11 +202,16 @@ InitializePlatformRepository (
   NVIDIAPlatformRepositoryInfo[3].CmObjectCount = sizeof (PmProfileInfo) / sizeof (CM_ARM_POWER_MANAGEMENT_PROFILE_INFO);
   NVIDIAPlatformRepositoryInfo[3].CmObjectPtr = &PmProfileInfo;
 
+  GicInterruptInterfaceBase = PcdGet64(PcdGicInterruptInterfaceBase);
   NVIDIAPlatformRepositoryInfo[4].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
   NVIDIAPlatformRepositoryInfo[4].CmObjectSize = sizeof (GicCInfo);
   NVIDIAPlatformRepositoryInfo[4].CmObjectCount = sizeof (GicCInfo) / sizeof (CM_ARM_GICC_INFO);
   NVIDIAPlatformRepositoryInfo[4].CmObjectPtr = &GicCInfo;
+  for(Index=0; Index<NVIDIAPlatformRepositoryInfo[4].CmObjectCount; Index++) {
+    GicCInfo[Index].PhysicalBaseAddress =  GicInterruptInterfaceBase;
+  }
 
+  GicDInfo.PhysicalBaseAddress = PcdGet64 (PcdGicDistributorBase);
   NVIDIAPlatformRepositoryInfo[5].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicDInfo);
   NVIDIAPlatformRepositoryInfo[5].CmObjectSize = sizeof (GicDInfo);
   NVIDIAPlatformRepositoryInfo[5].CmObjectCount = sizeof (GicDInfo) / sizeof (CM_ARM_GICD_INFO);

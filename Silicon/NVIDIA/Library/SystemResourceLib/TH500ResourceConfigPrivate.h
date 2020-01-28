@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -12,8 +12,8 @@
 *
 **/
 
-#ifndef __SYSTEM_RESOURCE_LIB_PRIVATE_H__
-#define __SYSTEM_RESOURCE_LIB_PRIVATE_H__
+#ifndef __TH500_RESOURCE_CONFIG_PRIVATE_H__
+#define __TH500_RESOURCE_CONFIG_PRIVATE_H__
 
 #include <Uefi/UefiBaseType.h>
 
@@ -286,4 +286,4 @@ typedef struct {
   UINT64 BrbctCarveout;
 } TEGRA_CPUBL_PARAMS;
 
-#endif //__SYSTEM_RESOURCE_LIB_PRIVATE_H__
+#endif //__TH500_RESOURCE_CONFIG_PRIVATE_H__

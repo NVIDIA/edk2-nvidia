@@ -42,13 +42,10 @@
 !include Platform/NVIDIA/Server/Server.dsc.inc
 
 [LibraryClasses.common]
-  SystemResourceLib|Silicon/NVIDIA/TH500/Library/SystemResourceLib/SystemResourceLib.inf
 
   UsbFirmwareLib|Silicon/NVIDIA/TH500/Library/UsbFirmwareLib/UsbFirmwareLib.inf
 
 [PcdsFixedAtBuild.common]
-
-  gArmTokenSpaceGuid.PcdSystemMemoryBase|0x80000000
 
   gArmPlatformTokenSpaceGuid.PcdCoreCount|8
   gArmPlatformTokenSpaceGuid.PcdClusterCount|4
@@ -57,12 +54,6 @@
 
   ## SBSA Watchdog Count
   gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2
-
-  #
-  # ARM Generic Interrupt Controller
-  #
-  gArmTokenSpaceGuid.PcdGicDistributorBase|0x0f400000
-  gArmTokenSpaceGuid.PcdGicRedistributorsBase|0x0f440000
 
   #
   # ARM Architectural Timer Frequency

@@ -34,7 +34,22 @@ TegraPlatformInitialize (
   )
 {
   EFI_STATUS Status;
-  DEBUG ((DEBUG_INFO, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, TegraGetChipID()));
+  UINTN ChipID;
+
+  ChipID = TegraGetChipID();
+  DEBUG ((DEBUG_INFO, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, ChipID));
+
+  // Set chip specific dynamic Pcds.
+  PcdSet64S(PcdSystemMemoryBase, TegraGetSystemMemoryBaseAddress(ChipID));
+  PcdSet64S(PcdGicDistributorBase, TegraGetGicDistributorBaseAddress(ChipID));
+  if (ChipID == T186_CHIP_ID || ChipID == T194_CHIP_ID) {
+    // Used in GICv2
+    PcdSet64S(PcdGicInterruptInterfaceBase, TegraGetGicInterruptInterfaceBaseAddress(ChipID));
+  } else if (ChipID == T234_CHIP_ID || ChipID == TH500_CHIP_ID) {
+    // Used in GICv3
+    PcdSet64S(PcdGicRedistributorsBase, TegraGetGicRedistributorBaseAddress(ChipID));
+  }
+
   switch (TegraGetPlatform()) {
     case TEGRA_PLATFORM_VDK:
       DEBUG ((DEBUG_INFO, "%a: Tegra Platform:  Simulation/VDK\n", __FUNCTION__));

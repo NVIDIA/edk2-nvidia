@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -59,11 +59,6 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
     }
 
 !include Platform/NVIDIA/NVIDIA.fvmain.fdf.inc
-
-  #
-  # Tegra Platform Configuration
-  #
-  INF Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
 
   #
   # BPMP-FW IPC protocol

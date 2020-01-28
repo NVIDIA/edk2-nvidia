@@ -1,6 +1,6 @@
 #/** @file
 #
-#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
 #  (C) Copyright 2015 Hewlett-Packard Development Company, L.P.<BR>
 #  Copyright (c) 2011-2017, ARM Ltd. All rights reserved.<BR>
 #
@@ -71,17 +71,11 @@
 
 [FixedPcd]
   gArmTokenSpaceGuid.PcdVFPEnabled
-
   gArmTokenSpaceGuid.PcdArmNonSecModeTransition
   gArmTokenSpaceGuid.PcdArmScr
   gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz
-
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize
-
-  gArmTokenSpaceGuid.PcdSystemMemoryBase
-
   gEmbeddedTokenSpaceGuid.PcdPrePiCpuIoSize
-
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIReclaimMemory
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIMemoryNVS
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiReservedMemoryType
@@ -91,9 +85,6 @@
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesData
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderCode
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderData
-
-  gArmTokenSpaceGuid.PcdGicRedistributorsBase
-  gArmTokenSpaceGuid.PcdGicDistributorBase
 
 [BuildOptions]
   GCC:*_*_*_DLINK_FLAGS = -pie -Wl,-T,$(MODULE_DIR)/Scripts/PrePi-PIE.lds

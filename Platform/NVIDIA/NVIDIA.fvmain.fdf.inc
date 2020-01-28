@@ -213,3 +213,8 @@
   #
   INF Silicon/NVIDIA/Drivers/TegraPlatBMDxe/TegraPlatBMDxe.inf
 
+  #
+  # Tegra Platform Configuration
+  #
+  INF Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
+
