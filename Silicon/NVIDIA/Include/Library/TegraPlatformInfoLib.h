@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -14,6 +14,13 @@
 
 #ifndef __TEGRA_PLATFORM_INFO_LIB_H__
 #define __TEGRA_PLATFORM_INFO_LIB_H__
+
+#define T186_CHIP_ID      0x18
+#define T194_CHIP_ID      0x19
+#define T234_CHIP_ID      0x23
+#define TH500_CHIP_ID     0x24
+
+#ifndef __ASSEMBLY__
 
 typedef enum {
   TEGRA_PLATFORM_SILICON = 0,
@@ -39,6 +46,16 @@ typedef enum {
 extern UINT32 TegraGetChipID (VOID);
 
 /**
+  Returns system memory base address for a given chip.
+
+  @param[in] ChipID    Tegra Chip ID
+
+  @retval              System memory base address.
+
+**/
+extern UINT64 TegraGetSystemMemoryBaseAddress (UINT32 ChipID);
+
+/**
   Returns bootloader info location address for a given chip.
 
   @param[in] ChipID    Tegra Chip ID
@@ -59,6 +76,36 @@ extern UINT64 TegraGetBLInfoLocationAddress (UINT32 ChipID);
 extern UINT64 TegraGetBLCarveoutOffset (UINT32 ChipID);
 
 /**
+  Returns gic distributor base address for a given chip.
+
+  @param[in] ChipID    Tegra Chip ID
+
+  @retval              Gic distributor base address.
+
+**/
+extern UINT64 TegraGetGicDistributorBaseAddress (UINT32 ChipID);
+
+/**
+  Returns gic redistributor base address for a given chip.
+
+  @param[in] ChipID    Tegra Chip ID
+
+  @retval              Gic redistributor base address.
+
+**/
+extern UINT64 TegraGetGicRedistributorBaseAddress (UINT32 ChipID);
+
+/**
+  Returns gic interrupt interface base address for a given chip.
+
+  @param[in] ChipID    Tegra Chip ID
+
+  @retval              Gic interrupt interface base address.
+
+**/
+extern UINT64 TegraGetGicInterruptInterfaceBaseAddress (UINT32 ChipID);
+
+/**
   Returns tegra platform type.
 
   This Function returns the type of the underlying tegra platform.
@@ -70,5 +117,7 @@ TEGRA_PLATFORM_TYPE
 TegraGetPlatform (
   VOID
   );
+
+#endif /* !__ASSEMBLY */
 
 #endif //__TEGRA_PLATFORM_INFO_LIB_H__
