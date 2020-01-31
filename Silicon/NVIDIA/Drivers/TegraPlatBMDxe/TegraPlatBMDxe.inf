@@ -34,6 +34,7 @@
 
 [Guids]
   gFdtTableGuid
+  gNVIDIARamloadKernelGuid
 
 [Depex]
   TRUE

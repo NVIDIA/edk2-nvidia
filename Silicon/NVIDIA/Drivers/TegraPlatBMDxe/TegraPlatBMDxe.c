@@ -342,6 +342,12 @@ RefreshAutoEnumeratedBootOptions (
           if (CurrentDevicePath->SubType == MSG_EMMC_DP) {
             ValidBootMedia = TRUE;
             break;
+          } else if (CurrentDevicePath->SubType == HW_VENDOR_DP) {
+            VENDOR_DEVICE_PATH *VendorPath = (VENDOR_DEVICE_PATH *)CurrentDevicePath;
+            if (CompareGuid (&VendorPath->Guid, &gNVIDIARamloadKernelGuid)) {
+              ValidBootMedia = TRUE;
+              break;
+            }
           }
           CurrentDevicePath = NextDevicePathNode (CurrentDevicePath);
         }

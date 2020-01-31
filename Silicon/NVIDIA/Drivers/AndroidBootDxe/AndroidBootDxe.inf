@@ -51,6 +51,7 @@
 
 [Guids]
   gFdtTableGuid
+  gNVIDIARamloadKernelGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize

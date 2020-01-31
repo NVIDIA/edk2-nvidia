@@ -1038,10 +1038,10 @@ typedef struct {
 } SINGLE_VENHW_NODE_DEVPATH;
 #pragma pack()
 
-STATIC CONST SINGLE_VENHW_NODE_DEVPATH mLoadFileDevicePath = {
+STATIC SINGLE_VENHW_NODE_DEVPATH mLoadFileDevicePath = {
   {
     { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
-    NVIDIA_ANDROID_BOOT_DEVICE_PROTOCOL_GUID
+    { 0 }
   },
 
   {
@@ -1081,6 +1081,8 @@ AndroidBootDxeDriverEntryPoint (
 
   if (PcdGetBool(PcdRamLoadedKernelSupport)) {
     EFI_HANDLE LoadFileHandle = 0;
+
+    CopyMem (&mLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARamloadKernelGuid, sizeof (EFI_GUID));
 
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &LoadFileHandle,

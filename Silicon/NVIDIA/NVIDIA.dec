@@ -78,6 +78,9 @@ Include
   #UART device
   gNVIDIANonDiscoverableUartDeviceGuid = { 0x2bf75281, 0xf836, 0x47e2, { 0x86, 0xc3, 0xa8, 0xde, 0x1b, 0x11, 0xb3, 0x1b } }
 
+   #Direct kernel boot device
+   gNVIDIARamloadKernelGuid = { 0x0c7bbfcf, 0x2559, 0x401c, { 0x8d, 0xb1, 0x83, 0x32, 0xb1, 0xae, 0x95, 0x34 } }
+
 [LibraryClasses]
   DramCarveoutLib|Include/Library/DramCarveoutLib.h
   SystemResourceLib|Include/Library/SystemResourceLib.h
