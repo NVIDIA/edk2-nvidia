@@ -122,6 +122,70 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
       }
     }
 
+    Device (GPI0) {
+        Name (_HID, "NVDA0308")
+        Name (_UID, 0)
+
+        Name (_CRS, ResourceTemplate () {
+            Memory32Fixed(ReadWrite, 0x2210000, 0x10000)
+            Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x140,
+                                                                        0x141,
+                                                                        0x142,
+                                                                        0x143,
+                                                                        0x144,
+                                                                        0x145,
+                                                                        0x146,
+                                                                        0x147,
+                                                                        0x148,
+                                                                        0x149,
+                                                                        0x14a,
+                                                                        0x14b,
+                                                                        0x14c,
+                                                                        0x14e,
+                                                                        0x14f,
+                                                                        0x150,
+                                                                        0x151,
+                                                                        0x152,
+                                                                        0x153,
+                                                                        0x154,
+                                                                        0x155,
+                                                                        0x156,
+                                                                        0x157,
+                                                                        0x158,
+                                                                        0x159,
+                                                                        0x15a,
+                                                                        0x15b,
+                                                                        0x15c,
+                                                                        0x15e,
+                                                                        0x15f,
+                                                                        0x160,
+                                                                        0x161,
+                                                                        0x162,
+                                                                        0x163,
+                                                                        0x164,
+                                                                        0x165,
+                                                                        0x166,
+                                                                        0x167,
+                                                                        0x168,
+                                                                        0x169,
+                                                                        0x16a,
+                                                                        0x16b,
+                                                                        0x16c,
+                                                                        0x16e,
+                                                                        0x16f}
+        })
+    }
+
+    Device (GPI1) {
+        Name (_HID, "NVDA0408")
+        Name (_UID, 0)
+
+        Name (_CRS, ResourceTemplate () {
+            Memory32Fixed(ReadWrite, 0xc2f1000, 0x1000)
+            Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x58, 0x59, 0x5a, 0x5b}
+        })
+    }
+
     Device(SDC0) {
       Name (_HID, EISAID("PNP0D40")) // SDA Standard Compliant SD Host Controller
       Name (_UID, 0)
