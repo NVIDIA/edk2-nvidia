@@ -42,7 +42,7 @@ SerialPortIdentify (
     // platform type is VDK, use Tegra 16550 UART. Otherwise,
     // use Tegra Combined UART.
     if ((FixedPcdGetBool (PcdSidecarVariant) && ChipID == T194_CHIP_ID) ||
-        PlatformType == TEGRA_PLATFORM_VDK) {
+        PlatformType != TEGRA_PLATFORM_SILICON) {
       return Tegra16550SerialPortGetObject();
     } else {
       return TegraCombinedSerialPortGetObject();
