@@ -53,11 +53,8 @@
 
 /* TH500 - BEGIN */
 #define TH500_SERIAL_REGISTER_BASE               0X0C280000
-#define TH500_GIC_DISTRIBUTOR_BASE               0X0F400000
-#define TH500_GIC_REDISTRIBUTOR_BASE             0X0F440000
-/* TODO: Update gic amap once the model changes are available */
-//#define TH500_GIC_DISTRIBUTOR_BASE             0X0F800000
-//#define TH500_GIC_REDISTRIBUTOR_BASE           0X0F850000
+#define TH500_GIC_DISTRIBUTOR_BASE               0X0F800000
+#define TH500_GIC_REDISTRIBUTOR_BASE             0X0F850000
 /* TH500 - End */
 
 #endif // __EFI_TEGRA_PLATFORM_INFO_LIB_PRIVATE_H__
