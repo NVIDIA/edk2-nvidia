@@ -34,6 +34,7 @@
 
 [Guids]
   gFdtHobGuid
+  gNVIDIAOSCarveoutHob
 
 [Sources.common]
   SystemResourceLib.c

@@ -46,7 +46,6 @@
   gNVIDIAEmuVariableNvModeEnableProtocolGuid
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanT194Base
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable

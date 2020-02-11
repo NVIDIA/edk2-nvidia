@@ -63,7 +63,6 @@ TegraPlatformInitialize (
       break;
     case TEGRA_PLATFORM_SYSTEM_FPGA:
       DEBUG ((DEBUG_INFO, "%a: Tegra Platform:  System FPGA\n", __FUNCTION__));
-      PcdSetBoolS(PcdRamLoadedKernelSupport, TRUE);
       // Enable emulated variable NV mode in variable driver.
       PcdSetBoolS(PcdEmuVariableNvModeEnable, TRUE);
       Status = gBS->InstallMultipleProtocolInterfaces (

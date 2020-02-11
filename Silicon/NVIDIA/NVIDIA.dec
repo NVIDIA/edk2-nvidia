@@ -78,8 +78,9 @@ Include
   #UART device
   gNVIDIANonDiscoverableUartDeviceGuid = { 0x2bf75281, 0xf836, 0x47e2, { 0x86, 0xc3, 0xa8, 0xde, 0x1b, 0x11, 0xb3, 0x1b } }
 
-   #Direct kernel boot device
-   gNVIDIARamloadKernelGuid = { 0x0c7bbfcf, 0x2559, 0x401c, { 0x8d, 0xb1, 0x83, 0x32, 0xb1, 0xae, 0x95, 0x34 } }
+  #Direct kernel boot device
+  gNVIDIARamloadKernelGuid = { 0x0c7bbfcf, 0x2559, 0x401c, { 0x8d, 0xb1, 0x83, 0x32, 0xb1, 0xae, 0x95, 0x34 } }
+  gNVIDIAOSCarveoutHob = { 0x3f27b235, 0x3305, 0x413a, { 0xbd, 0xbb, 0x3a, 0x49, 0x19, 0x31, 0x6a, 0x5c } }
 
   #PWM device
   gNVIDIANonDiscoverablePwmDeviceGuid = { 0xdff598b2, 0x77b7, 0x42f6, { 0xaa, 0x68, 0x75, 0xc2, 0xb8, 0x78, 0xa1, 0x7f } }
@@ -156,12 +157,6 @@ Include
 #Name of Kernel DTB partition
   gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName|L"kernel-dtb"|VOID*|0x00000016
 
-#Pre-ramloaded kernel/initrd info
-  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelAddress|0x0|UINT64|0x00000011
-  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSize|0x0|UINT64|0x00000012
-  gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdAddress|0x0|UINT64|0x00000013
-  gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdSize|0x0|UINT64|0x00000014
-
 #Explicit PCIe Controller Enable
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|FALSE|BOOLEAN|0x00000017
 
@@ -187,8 +182,6 @@ Include
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanT194Base|0x0C340000|UINT64|0x00000021
 
 [PcdsDynamic.common]
-  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport|FALSE|BOOLEAN|0x00000010
-
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|FALSE|BOOLEAN|0x00000015
 
 #Tegra PWM FAN Base for all chips

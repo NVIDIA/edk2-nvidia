@@ -17,6 +17,13 @@
 
 #include "AndroidBootDxe.h"
 #include <Library/PcdLib.h>
+#include <PiDxe.h>
+#include <Library/HobLib.h>
+#include <Protocol/LoadedImage.h>
+
+STATIC EFI_PHYSICAL_ADDRESS mRamLoadedBaseAddress = 0;
+STATIC UINT64               mRamLoadedSize = 0;
+#define KERNEL_OFFSET       0x80000
 
 INTN
 AndroidBootGetChosenNode (
@@ -995,16 +1002,12 @@ RamloadLoadFile (
 
   // Check if the given buffer size is big enough
   // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
-  if (*BufferSize < PcdGet64 (PcdRamLoadedKernelSize)) {
-  *BufferSize = PcdGet64 (PcdRamLoadedKernelSize);
+  if (*BufferSize < mRamLoadedSize) {
+  *BufferSize = mRamLoadedSize;
     return EFI_BUFFER_TOO_SMALL;
   }
 
-  CopyMem (Buffer, (VOID *)(UINTN)PcdGet64 (PcdRamLoadedKernelAddress), PcdGet64 (PcdRamLoadedKernelSize));
-
-  if (PcdGet64 (PcdRamLoadedInitrdSize) != 0) {
-    AndroidBootSetRamdiskInfo (PcdGet64 (PcdRamLoadedInitrdAddress), PcdGet64 (PcdRamLoadedInitrdSize));
-  }
+  CopyMem (Buffer, (VOID *)(UINTN)mRamLoadedBaseAddress, mRamLoadedSize);
 
   return EFI_SUCCESS;
 }
@@ -1069,6 +1072,7 @@ AndroidBootDxeDriverEntryPoint (
   )
 {
   EFI_STATUS            Status;
+  VOID                  *Hob;
 
   // Install UEFI Driver Model protocol(s).
   Status = EfiLibInstallDriverBinding (
@@ -1077,20 +1081,53 @@ AndroidBootDxeDriverEntryPoint (
              &mAndroidBootDriverBinding,
              ImageHandle
              );
-
-  if (PcdGetBool(PcdRamLoadedKernelSupport)) {
-    EFI_HANDLE LoadFileHandle = 0;
-
-    CopyMem (&mLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARamloadKernelGuid, sizeof (EFI_GUID));
-
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &LoadFileHandle,
-                    &gEfiLoadFileProtocolGuid,
-                    &mRamloadLoadFile,
-                    &gEfiDevicePathProtocolGuid,
-                    &mLoadFileDevicePath,
-                    NULL);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
-  return Status;
+  Hob = GetFirstGuidHob (&gNVIDIAOSCarveoutHob);
+  if (Hob != NULL) {
+    EFI_MEMORY_DESCRIPTOR *Descriptor;
+    EFI_HANDLE            LoadedImageHandle = 0;
+    EFI_HANDLE            LoadFileHandle = 0;
+
+    Descriptor = (EFI_MEMORY_DESCRIPTOR *)GET_GUID_HOB_DATA (Hob);
+    DEBUG ((DEBUG_INFO, "%a: Got descriptor %x, %x\r\n", __FUNCTION__, Descriptor->PhysicalStart, Descriptor->NumberOfPages));
+    CopyMem (&mLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARamloadKernelGuid, sizeof (EFI_GUID));
+
+    Status = gBS->LoadImage (FALSE,
+                             ImageHandle,
+                             NULL,
+                             (VOID *)(UINTN)Descriptor->PhysicalStart + KERNEL_OFFSET,
+                             EFI_PAGES_TO_SIZE (Descriptor->NumberOfPages) - KERNEL_OFFSET,
+                             &LoadedImageHandle);
+    if (!EFI_ERROR (Status)) {
+      EFI_LOADED_IMAGE_PROTOCOL *ImageProtocol;
+      Status = gBS->HandleProtocol (LoadedImageHandle,
+                                    &gEfiLoadedImageProtocolGuid,
+                                    (VOID **)&ImageProtocol);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to get loaded image protocol (%r)\r\n", __FUNCTION__, Status));
+      } else {
+        DEBUG ((DEBUG_INFO, "%a: Located at 0x%016x 0x%016x\r\n", Descriptor->PhysicalStart, ImageProtocol->ImageSize));
+        mRamLoadedBaseAddress = Descriptor->PhysicalStart + KERNEL_OFFSET;
+        mRamLoadedSize = ImageProtocol->ImageSize;
+        gBS->UnloadImage (LoadedImageHandle);
+        Status = gBS->InstallMultipleProtocolInterfaces (
+                        &LoadFileHandle,
+                        &gEfiLoadFileProtocolGuid,
+                        &mRamloadLoadFile,
+                        &gEfiDevicePathProtocolGuid,
+                        &mLoadFileDevicePath,
+                        NULL);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Failed to image Load File Protocol (%r)\r\n", __FUNCTION__, Status));
+        }
+      }
+    } else {
+      DEBUG ((DEBUG_INFO, "%a: LoadImage failed (%r)\r\n", __FUNCTION__, Status));
+    }
+  }
+
+  return EFI_SUCCESS;
 }

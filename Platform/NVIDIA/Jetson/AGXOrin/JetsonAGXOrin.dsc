@@ -73,19 +73,12 @@
   #
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
 
-  #Ramloaded kernel info
-  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelAddress|0x80080000
-  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSize|0x04000000
-  gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdAddress|0x85280000
-  gNVIDIATokenSpaceGuid.PcdRamLoadedInitrdSize|0x04000000
 
   #
   # Explicit PCIe Controller Enable
   #
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
 
-[PcdsDynamicDefault.common]
-  gNVIDIATokenSpaceGuid.PcdRamLoadedKernelSupport|FALSE
 
 [PcdsDynamicHii.common.DEFAULT]
 !if $(SIM)

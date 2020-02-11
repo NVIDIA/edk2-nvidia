@@ -65,6 +65,15 @@ T234ResourceConfig (
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
         EfiBootServicesData
       );
+      if (Index == CARVEOUT_OS) {
+        EFI_MEMORY_DESCRIPTOR Descriptor;
+        Descriptor.Type = EfiBootServicesData;
+        Descriptor.PhysicalStart = CpuBootloaderParams->CarveoutInfo[Index].Base;
+        Descriptor.VirtualStart = CpuBootloaderParams->CarveoutInfo[Index].Base;
+        Descriptor.NumberOfPages = EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size);
+        Descriptor.Attribute = 0;
+        BuildGuidDataHob (&gNVIDIAOSCarveoutHob, &Descriptor, sizeof (Descriptor));
+      }
     } else if ((Index != CARVEOUT_CPUBL) &&
                (Index != CARVEOUT_MB2) &&
                (Index != CARVEOUT_RCM_BLOB) &&
