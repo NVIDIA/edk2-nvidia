@@ -66,6 +66,62 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
       })
     }
 
+    Device(FAN) {
+      Name (_HID, "PNP0C0B")
+      Name (_UID, 0)
+      Name (_CCA, ZERO)
+
+      Name (_FIF, Package () {
+        0,  // revision
+        0,  // fine grain control off
+        5,  // step size
+        0   // no notification on low speed
+      })
+
+      /*
+       * Fan states. Need to update rpm & noise data in table.
+       * TripPoint disabled till we have thermal support
+       */
+      Name (_FPS, Package () {
+        0,  //revision
+        Package () {   0, 0x0FFFFFFFF,    0, 0xFFFFFFFF, 0xFFFFFFFF },
+        Package () {  64, 0x0FFFFFFFF, 1250, 0xFFFFFFFF, 0xFFFFFFFF },
+        Package () { 128, 0x0FFFFFFFF, 2500, 0xFFFFFFFF, 0xFFFFFFFF },
+        Package () { 192, 0x0FFFFFFFF, 3750, 0xFFFFFFFF, 0xFFFFFFFF },
+        Package () { 256, 0x0FFFFFFFF, 5000, 0xFFFFFFFF, 0xFFFFFFFF }
+      })
+
+      /* PWM4 FAN register fields */
+      OperationRegion(FANR, SystemMemory, 0xC340000, 4)
+      Field(FANR, DWordAcc, NoLock, Preserve) {
+        PFM0, 13,
+        , 3,
+        PWM0, 9,
+        , 6,
+        PMON, 1,
+      }
+
+      Method (_FSL, 1) {
+        If (Arg0)
+        {
+          Store (Arg0, PWM0)
+          Store (1, PMON)
+        }
+        Else
+        {
+          Store (0, PWM0)
+          Store (0, PMON)
+        }
+      }
+
+      Method (_FST) {
+        Name (PCTR, 0xff)
+        Store(PWM0, PCTR)
+        Name (FST0, Package() { 0, PCTR, 0xFFFFFFFF })
+        Return (FST0)
+      }
+    }
+
     Device(SDC0) {
       Name (_HID, EISAID("PNP0D40")) // SDA Standard Compliant SD Host Controller
       Name (_UID, 0)
