@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro. All rights reserved.
   This program and the accompanying materials
@@ -82,12 +82,11 @@ AndroidBootSetRamdiskInfo (
   VOID                        *FdtBase;
   INTN                        ChosenNode, Err, NewFdtSize;
 
-
   // Retrieve FdtBase via EFI service and verify its header
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &FdtBase);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: fail to get Device Tree base: %r\n", __FUNCTION__, Status));
-    return Status;
+    // Return Success as we are booting with ACPI.
+    return EFI_SUCCESS;
   }
   Err = fdt_check_header (FdtBase);
   if (Err != 0) {
