@@ -18,7 +18,7 @@
 **/
 #include <ConfigurationManagerObject.h>
 
-#include "CMDxe.h"
+#include "ConfigurationManagerDxe.h"
 
 #include <IndustryStandard/DebugPort2Table.h>
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
@@ -38,7 +38,7 @@
 #include <Dsdt.hex>
 #include <SsdtPci.hex>
 
-#include "../CMDxe/Platform.h"
+#include "Platform.h"
 
 
 /** The platform configuration repository information.

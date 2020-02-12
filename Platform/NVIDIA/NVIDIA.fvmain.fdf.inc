@@ -52,7 +52,7 @@
   #INF MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
 
   # Configuration Manager
-  INF Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/CMDxe/CMDxe.inf
+  INF Silicon/NVIDIA/$(CHIPSET)/Drivers/ConfigurationManager/ConfigurationManagerDxe/ConfigurationManagerDxe.inf
 
   #
   # Dynamic Table Factory Dxe
@@ -211,7 +211,7 @@
   #
   # Tegra Platform Boot Manager driver
   #
-  INF Silicon/NVIDIA/Drivers/TegraPlatBMDxe/TegraPlatBMDxe.inf
+  INF Silicon/NVIDIA/Drivers/TegraPlatformBootManager/TegraPlatformBootManagerDxe.inf
 
   #
   # Tegra Platform Configuration

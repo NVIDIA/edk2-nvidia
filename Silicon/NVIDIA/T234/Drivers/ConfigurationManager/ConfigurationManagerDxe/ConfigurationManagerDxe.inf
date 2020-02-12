@@ -28,7 +28,7 @@
 #
 
 [Sources]
-  CMDxe.c
+  ConfigurationManagerDxe.c
 
 [Packages]
   ArmPkg/ArmPkg.dec

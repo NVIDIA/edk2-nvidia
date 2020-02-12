@@ -16,7 +16,7 @@
 [Defines]
   INF_VERSION                    = 0x00010019
   BASE_NAME                      = ConfigurationManagerDxe
-  FILE_GUID                      = 03232901-d2f9-41d8-8bae-553d6b63c1a1
+  FILE_GUID                      = 5f74d26c-eb8f-4007-8183-2dbea7b2280d
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = ConfigurationManagerDxeInitialize
@@ -28,7 +28,7 @@
 #
 
 [Sources]
-  CMDxe.c
+  ConfigurationManagerDxe.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -58,8 +58,8 @@
   gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum
   gArmTokenSpaceGuid.PcdArmArchTimerHypIntrNum
   gArmTokenSpaceGuid.PcdGicDistributorBase
-  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseTH500
   gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
 

@@ -18,7 +18,7 @@
 **/
 #include <ConfigurationManagerObject.h>
 
-#include "CMDxe.h"
+#include "ConfigurationManagerDxe.h"
 
 #include <IndustryStandard/DebugPort2Table.h>
 #include <Library/IoLib.h>
@@ -35,7 +35,7 @@
 
 #include <Dsdt.hex>
 
-#include "../CMDxe/Platform.h"
+#include "Platform.h"
 
 
 /** The platform configuration repository information.
@@ -89,7 +89,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSpcr),
     NULL,
     FixedPcdGet64(PcdAcpiTegraUartOemTableId),
-    0
+    FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
   // DSDT Table
   {
@@ -168,7 +168,7 @@ CM_ARM_GENERIC_TIMER_INFO GenericTimerInfo = {
 /** The platform SPCR serial port information.
 */
 CM_ARM_SERIAL_PORT_INFO SpcrSerialPort = {
-  FixedPcdGet64 (PcdTegra16550UartBaseTH500),
+  FixedPcdGet64 (PcdTegra16550UartBaseT234),
   0x90,
   FixedPcdGet64 (PcdUartDefaultBaudRate),
   0,

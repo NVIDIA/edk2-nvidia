@@ -755,18 +755,18 @@
   DynamicTablesPkg/Drivers/DynamicTableManagerDxe/DynamicTableManagerDxe.inf
 
   # Configuration Manager
-  Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/CMDxe/CMDxe.inf {
+  Silicon/NVIDIA/$(CHIPSET)/Drivers/ConfigurationManager/ConfigurationManagerDxe/ConfigurationManagerDxe.inf {
     <LibraryClasses>
     # Platform ASL Tables
-    PlatformAslTablesLib|Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib.inf
+    PlatformAslTablesLib|Silicon/NVIDIA/$(CHIPSET)/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
     <BuildOptions>
-    *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/$(CHIPSET)/Drivers/CMDxe/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
+    *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/$(CHIPSET)/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
   }
 
   #
   # Tegra Platform Boot Manager
   #
-  Silicon/NVIDIA/Drivers/TegraPlatBMDxe/TegraPlatBMDxe.inf
+  Silicon/NVIDIA/Drivers/TegraPlatformBootManager/TegraPlatformBootManagerDxe.inf
 
   #
   # HTTP boot support requires RamDiskDxe
