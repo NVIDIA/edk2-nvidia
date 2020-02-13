@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -22,8 +22,6 @@
 
 extern EFI_GUID mBmAutoCreateBootOptionGuid;
 EFI_GUID mNVIDIABmBootOptionGuid  = { 0xfaa91113, 0x6cfa, 0x4c14, { 0xad, 0xd7, 0x3e, 0x25, 0x4b, 0x93, 0x38, 0xae } };
-
-CHAR16 Description[] = { L"UEFI NVIDIA L4T" };
 
 CHAR16 KernelCommandRemove[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
   L"console="
@@ -273,13 +271,10 @@ RefreshAutoEnumeratedBootOptions (
   UINTN                        HandleCount;
   EFI_BOOT_MANAGER_LOAD_OPTION *LoadOption;
   EFI_BOOT_MANAGER_LOAD_OPTION *UpdatedLoadOption;
-  UINTN                        BootOptionCount;
   UINTN                        Index;
   UINTN                        Count;
   EFI_DEVICE_PATH_PROTOCOL     *CurrentDevicePath;
   BOOLEAN                      ValidBootMedia;
-  UINT32                       Track;
-  UINTN                        MaxSuffixSize;
 
   if (BootOptions == NULL ||
       BootOptionsCount == 0 ||
@@ -327,7 +322,6 @@ RefreshAutoEnumeratedBootOptions (
     }
   }
 
-  BootOptionCount = 0;
   UpdatedLoadOption = *UpdatedBootOptions;
   for (Index = 0; Index < HandleCount; Index++) {
     for (Count = 0; Count < *UpdatedBootOptionsCount; Count++) {
@@ -363,27 +357,6 @@ RefreshAutoEnumeratedBootOptions (
           goto Error;
         }
         gBS->CopyMem (UpdatedLoadOption[Count].OptionalData, CmdLine, CmdLen);
-        gBS->FreePool (UpdatedLoadOption[Count].Description);
-        MaxSuffixSize = sizeof (CHAR16);
-        for (Track = BootOptionCount; Track != 0; Track = Track / 10) {
-          MaxSuffixSize += sizeof (CHAR16);
-        }
-        Status = gBS->AllocatePool (EfiBootServicesData,
-                                    sizeof (Description) + MaxSuffixSize,
-                                    (VOID **)&UpdatedLoadOption[Count].Description);
-        if (EFI_ERROR (Status)) {
-          goto Error;
-        }
-        if (BootOptionCount == 0) {
-          gBS->CopyMem (UpdatedLoadOption[Count].Description, Description, sizeof (Description));
-        } else {
-          UnicodeSPrint (UpdatedLoadOption[Count].Description,
-                         sizeof (Description) + MaxSuffixSize,
-                         L"%s %d",
-                         Description,
-                         BootOptionCount + 1);
-        }
-        BootOptionCount++;
       }
     }
   }
