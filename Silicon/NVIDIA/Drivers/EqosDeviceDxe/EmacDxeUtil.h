@@ -18,6 +18,8 @@
 #define EMAC_DXE_UTIL_H__
 
 #include <Protocol/SimpleNetwork.h>
+#include "osi_core.h"
+#include "osi_dma.h"
 
 // Most common CRC32 Polynomial for little endian machines
 #define CRC_POLYNOMIAL                                            0xEDB88320
@@ -457,6 +459,15 @@ typedef struct {
   UINT32                      TxRecycledBufferNum;
   UINT32                      RxCurrentDescriptorNum;
   UINT32                      RxNextDescriptorNum;
+  struct osi_core_priv_data   *osi_core;
+  struct osi_dma_priv_data    *osi_dma;
+  struct osi_hw_features      hw_feat;
+  void                        *tx_ring_dma_mapping;
+  void                        *rx_ring_dma_mapping;
+  void                        *rx_buffer_dma_mapping[RX_DESC_CNT];
+  void                        *tx_buffer_dma_mapping[TX_DESC_CNT];
+  void                        *tx_buffers[TX_DESC_CNT];
+  void                        *tx_buffers_phy_addr[TX_DESC_CNT];
 } EMAC_DRIVER;
 
 VOID

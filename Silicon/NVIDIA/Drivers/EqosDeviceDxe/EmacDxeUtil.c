@@ -19,8 +19,12 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DmaLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
+
+#include "osi_core.h"
+#include "osi_dma.h"
 
 VOID
 EFIAPI
@@ -261,20 +265,176 @@ EmacDxeInitialization (
   )
 {
   EFI_STATUS Status;
+  struct osi_core_priv_data *osi_core;
+  struct osi_dma_priv_data *osi_dma;
+  struct osi_hw_features hw_feat;
+  int ret;
+  unsigned int i;
+  UINTN tx_desc_size, tx_swcx_size;
+  UINTN rx_desc_size, rx_swcx_size, rx_buf_len;
+
   DEBUG ((DEBUG_INFO, "SNP:MAC: %a ()\r\n", __FUNCTION__));
 
+  // Allocate OSI resources
+  osi_core = AllocateZeroPool (sizeof (*osi_core));
+  if (osi_core == NULL) {
+    DEBUG ((DEBUG_ERROR, "unable to allocate osi_core\n"));
+    return EFI_UNSUPPORTED;
+  } else {
+    EmacDriver->osi_core = osi_core;
+  }
+
+  osi_dma = AllocateZeroPool (sizeof (*osi_dma));
+  if (osi_dma == NULL) {
+    DEBUG ((DEBUG_ERROR, "unable to allocate osi_dma\n"));
+    return EFI_UNSUPPORTED;
+  } else {
+    EmacDriver->osi_dma = osi_dma;
+  }
+
+  osi_core->osd = EmacDriver;
+  osi_dma->osd = EmacDriver;
+
+  //Initialize the variables of osi_core
+  osi_core->mac = OSI_MAC_HW_EQOS;
+  osi_core->num_mtl_queues = 1;
+  osi_core->mtl_queues[0] = 0;
+  osi_core->dcs_en = OSI_DISABLE;
+  osi_core->pause_frames = OSI_PAUSE_FRAMES_DISABLE;
+  osi_core->rxq_prio[0] = 0;
+  osi_core->rxq_ctrl[0] = 2;
+
+  //Initialize the variables of osi_dma
+  osi_dma->num_dma_chans = 1;
+  osi_dma->dma_chans[0] = 0;
+  osi_dma->mac = OSI_MAC_HW_EQOS;
+  osi_dma->mtu = OSI_DFLT_MTU_SIZE;
+
+  if (osi_init_core_ops(osi_core) != 0) {
+    DEBUG ((DEBUG_ERROR, "unable to get osi_core ops\n"));
+  }
+
+  if (osi_init_dma_ops(osi_dma) != 0) {
+    DEBUG ((DEBUG_ERROR, "unable to get osi_dma ops\n"));
+  }
+
+  osi_set_rx_buf_len(osi_dma);
+  osi_core->base = (void *)MacBaseAddress;
+  osi_dma->base = (void *)MacBaseAddress;
+
+  osi_get_hw_features(osi_core->base, &hw_feat);
+  EmacDriver->hw_feat = hw_feat;
+
+  //Allocate TX DMA resources
+  tx_desc_size = sizeof(struct osi_tx_desc) * (unsigned long)TX_DESC_CNT;
+  tx_swcx_size = sizeof(struct osi_tx_swcx) * (unsigned long)TX_DESC_CNT;
+
+  osi_dma->tx_ring[0] = AllocateZeroPool(sizeof(struct osi_tx_ring));
+  if (osi_dma->tx_ring[0] == NULL) {
+    DEBUG((DEBUG_ERROR, "ENOMEM for tx_ring\n"));
+    return EFI_OUT_OF_RESOURCES;
+  }
+  osi_dma->tx_ring[0]->tx_swcx = AllocateZeroPool(tx_swcx_size);
+  if (osi_dma->tx_ring[0]->tx_swcx == NULL) {
+    DEBUG ((DEBUG_ERROR, "ENOMEM for tx_ring[0]->swcx\n"));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = DmaAllocateBuffer (EfiBootServicesData, tx_desc_size, (VOID *)&osi_dma->tx_ring[0]->tx_desc);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to DMA alloc for Tx desc ring\n"));
+    return Status;
+  }
+
+  Status = DmaMap (MapOperationBusMasterCommonBuffer, osi_dma->tx_ring[0]->tx_desc,
+                   &tx_desc_size, (EFI_PHYSICAL_ADDRESS *)&osi_dma->tx_ring[0]->tx_desc_phy_addr, &EmacDriver->tx_ring_dma_mapping);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to DMA Map for Tx desc ring\n"));
+    return Status;
+  }
+
+  //Allocate RX DMA resources
+  rx_desc_size = sizeof(struct osi_rx_desc) * (unsigned long)RX_DESC_CNT;
+  rx_swcx_size = sizeof(struct osi_rx_swcx) * (unsigned long)RX_DESC_CNT;
+
+  osi_dma->rx_ring[0] = AllocateZeroPool(sizeof(struct osi_rx_ring));
+  if (osi_dma->rx_ring[0] == NULL) {
+    DEBUG ((DEBUG_ERROR, "ENOMEM for rx_ring\n"));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  osi_dma->rx_ring[0]->rx_swcx = AllocateZeroPool(rx_swcx_size);
+  if (osi_dma->rx_ring[0]->rx_swcx == NULL) {
+    DEBUG ((DEBUG_ERROR, "ENOMEM for rx_ring[0]->swcx\n"));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = DmaAllocateBuffer (EfiBootServicesData, rx_desc_size, (VOID *)&osi_dma->rx_ring[0]->rx_desc);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to DMA alloc for Rx desc ring\n"));
+    return Status;
+  }
+
+  Status = DmaMap (MapOperationBusMasterCommonBuffer, osi_dma->rx_ring[0]->rx_desc,
+                   &rx_desc_size, (EFI_PHYSICAL_ADDRESS *)&osi_dma->rx_ring[0]->rx_desc_phy_addr, &EmacDriver->rx_ring_dma_mapping);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to DMA Map for Rx desc ring\n"));
+    return Status;
+  }
+
+  //Allocate Rx buffers
+  struct osi_rx_swcx *rx_swcx;
+  rx_buf_len = osi_dma->rx_buf_len;
+  for (i = 0; i < RX_DESC_CNT; i++) {
+    rx_swcx = osi_dma->rx_ring[0]->rx_swcx + i;
+    Status = DmaAllocateBuffer (EfiBootServicesData, rx_buf_len, (VOID *)&rx_swcx->buf_virt_addr);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to DMA alloc Rx buffers\n"));
+      return Status;
+    }
+
+    Status = DmaMap (MapOperationBusMasterCommonBuffer, rx_swcx->buf_virt_addr, &rx_buf_len,
+                     (EFI_PHYSICAL_ADDRESS *)&rx_swcx->buf_phy_addr, &EmacDriver->rx_buffer_dma_mapping[i]);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to DMA map Rx buffers\n"));
+      return Status;
+    }
+  }
+
+  //Allocate Tx buffers
+  struct osi_tx_swcx *tx_swcx;
+  UINTN tx_buf_len = CONFIG_ETH_BUFSIZE;
+  for (i = 0; i < TX_DESC_CNT; i++) {
+    tx_swcx = osi_dma->tx_ring[0]->tx_swcx + i;
+    Status = DmaAllocateBuffer (EfiBootServicesData, tx_buf_len, (VOID *)&EmacDriver->tx_buffers[i]);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to DMA alloc Tx buffers\n"));
+      return Status;
+    }
+
+    Status = DmaMap (MapOperationBusMasterCommonBuffer, EmacDriver->tx_buffers[i],
+                     &tx_buf_len, (EFI_PHYSICAL_ADDRESS *)&EmacDriver->tx_buffers_phy_addr[i],
+                     &EmacDriver->tx_buffer_dma_mapping[i]);
+
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to DMA map Tx buffers\n"));
+      return Status;
+    }
+  }
+
   // Init EMAC DMA
-  Status = EmacDmaInit (EmacDriver, MacBaseAddress);
-  if (!EFI_ERROR (Status)) {
-    Status = EmacMtlInit (EmacDriver, MacBaseAddress);
-  }
-  if (!EFI_ERROR (Status)) {
-    Status = EmacMacInit (EmacDriver, MacBaseAddress);
+  ret = osi_hw_dma_init(osi_dma);
+  if (ret < 0) {
+    DEBUG ((DEBUG_ERROR, "Failed to initialize MAC DMA\n"));
+  } else {
+    ret = osi_hw_core_init(osi_core, hw_feat.tx_fifo_size, hw_feat.rx_fifo_size);
+    if (ret < 0) {
+      DEBUG ((DEBUG_ERROR, "Failed to initialize MAC Core: %d\n", ret));
+    }
   }
 
-  return Status;
+  return EFI_SUCCESS;
 }
-
 
 EFI_STATUS
 EFIAPI

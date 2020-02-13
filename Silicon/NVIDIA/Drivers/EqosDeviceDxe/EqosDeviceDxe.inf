@@ -31,6 +31,14 @@
   DwEqosSnpDxe.h
   EmacDxeUtil.h
   PhyDxeUtil.h
+  nvethernetrm/eqos_core.c
+  nvethernetrm/eqos_dma.c
+  nvethernetrm/eqos_mmc.c
+  nvethernetrm/osd.c
+  nvethernetrm/osi_common.c
+  nvethernetrm/osi_core.c
+  nvethernetrm/osi_dma.c
+  nvethernetrm/osi_dma_txrx.c
 
 [Packages]
   ArmPkg/ArmPkg.dec

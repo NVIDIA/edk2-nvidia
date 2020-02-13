@@ -210,7 +210,7 @@ SnpInitialize (
     return EFI_DEVICE_ERROR;
   }
 
-  EmacStartTransmission (Snp->MacBase);
+  osi_start_mac(Snp->MacDriver.osi_core);
 
   // Declare the driver as initialized
   Snp->SnpMode.State = EfiSimpleNetworkInitialized;
@@ -872,7 +872,7 @@ SnpGetStatus (
 {
   EFI_STATUS                 Status;
   SIMPLE_NETWORK_DRIVER      *Snp;
-  DESIGNWARE_HW_DESCRIPTOR   *TxDescriptor;
+  struct osi_dma_priv_data   *osi_dma;
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
@@ -885,6 +885,10 @@ SnpGetStatus (
   } else if (Snp->SnpMode.State == EfiSimpleNetworkStarted) {
     return EFI_DEVICE_ERROR;
   }
+
+  // Check DMA irq status
+  EmacGetDmaStatus (IrqStat, Snp->MacBase);
+  osi_dma = Snp->MacDriver.osi_dma;
 
   // Update the media status
   Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
@@ -899,26 +903,11 @@ SnpGetStatus (
     EfiAcquireLock (&Snp->Lock);
     // Get a recycled buf from list
     *TxBuff = NULL;
-    if (Snp->MacDriver.TxBuffers[Snp->MacDriver.TxRecycledBufferNum] != NULL) {
-      //Check that DMA does not own buffer
-      TxDescriptor = &Snp->MacDriver.TxdescRing[Snp->MacDriver.TxRecycledBufferNum];
-      if ((TxDescriptor->Des3 & TDES_3_WB_OWN) == 0) {
-        *TxBuff = Snp->MacDriver.TxBuffers[Snp->MacDriver.TxRecycledBufferNum];
-        Snp->MacDriver.TxBuffers[Snp->MacDriver.TxRecycledBufferNum] = NULL;
-        if (Snp->MacDriver.TxBufferRingMap[Snp->MacDriver.TxRecycledBufferNum].Mapping != NULL) {
-          DmaUnmap (Snp->MacDriver.TxBufferRingMap[Snp->MacDriver.TxRecycledBufferNum].Mapping);
-        }
-        Snp->MacDriver.TxRecycledBufferNum++;
-        if (Snp->MacDriver.TxRecycledBufferNum >= CONFIG_TX_DESCR_NUM) {
-          Snp->MacDriver.TxRecycledBufferNum = 0;
-        }
-      }
+    if (osi_process_tx_completions(osi_dma, 0, 1) != 0) {
+      *TxBuff = osi_dma->tx_buff;
     }
     EfiReleaseLock (&Snp->Lock);
   }
-
-  // Check DMA Irq status
-  EmacGetDmaStatus (IrqStat, Snp->MacBase);
 
   return EFI_SUCCESS;
 }
@@ -995,13 +984,14 @@ SnpTransmit (
   )
 {
   SIMPLE_NETWORK_DRIVER      *Snp;
-  UINT32                     DescNum;
-  DESIGNWARE_HW_DESCRIPTOR   *TxDescriptor;
   UINT8                      *EthernetPacket;
   EFI_STATUS                 Status;
   UINTN                      BufferSizeBuf;
-  EFI_PHYSICAL_ADDRESS       TxBuffer;
   BOOLEAN                    LockAcquired;
+  struct osi_dma_priv_data   *osi_dma;
+  struct osi_tx_ring         *tx_ring;
+  struct osi_tx_swcx         *tx_swcx;
+  struct osi_tx_pkt_cx       *tx_pkt_cx;
 
   BufferSizeBuf = ETH_BUFSIZE;
   EthernetPacket = Data;
@@ -1014,6 +1004,10 @@ SnpTransmit (
     Status = EFI_INVALID_PARAMETER;
     goto Exit;
   }
+
+  osi_dma = Snp->MacDriver.osi_dma;
+  tx_ring = osi_dma->tx_ring[0];
+  tx_pkt_cx = &tx_ring->tx_pkt_cx;
 
   if (EFI_ERROR (EfiAcquireLockOrFail (&Snp->Lock))) {
     DEBUG ((DEBUG_ERROR, "%a: Bad Lock\r\n", __FUNCTION__));
@@ -1030,15 +1024,16 @@ SnpTransmit (
     goto Exit;
   }
 
-  Snp->MacDriver.TxCurrentDescriptorNum = Snp->MacDriver.TxNextDescriptorNum;
-  DescNum = Snp->MacDriver.TxCurrentDescriptorNum;
-  TxDescriptor = &Snp->MacDriver.TxdescRing[DescNum];
-
-  //Make sure slot is free
-  if ((Snp->MacDriver.TxBuffers[DescNum] != NULL) ||
-      ((TxDescriptor->Des3 & TDES_3_READ_OWN) != 0)) {
+  //Make sure slot is free i.e, current shadow desc. len should be 0
+  tx_swcx = tx_ring->tx_swcx + tx_ring->cur_tx_idx;
+  if (tx_swcx->len != 0) {
     Status = EFI_NOT_READY;
     goto Exit;
+  }
+
+  if (BuffSize > CONFIG_ETH_BUFSIZE) {
+    DEBUG((DEBUG_ERROR, "Tx buffer size > 2KB\n"));
+    Status = EFI_UNSUPPORTED;
   }
 
   // Ensure header is correct size if non-zero
@@ -1080,39 +1075,15 @@ SnpTransmit (
     EthernetPacket[12] = (*Protocol & 0xFF00) >> 8;
   }
 
-  if ((UINTN)Data > Snp->MaxAddress) {
-    EFI_PHYSICAL_ADDRESS HostTxBuffer;
-    HostTxBuffer = (UINTN)Snp->MacDriver.TxCopyBuffer + (DescNum * BufferSizeBuf);;
-    TxBuffer = Snp->MacDriver.TxCopyBufferRingMap.AddrMap + (DescNum * BufferSizeBuf);
-    Snp->MacDriver.TxBufferRingMap[DescNum].Mapping = NULL;
-    CopyMem ((VOID *)HostTxBuffer, Data, BuffSize);
-  } else {
-    Status = DmaMap (MapOperationBusMasterRead, Data,
-               &BufferSizeBuf, &Snp->MacDriver.TxBufferRingMap[DescNum].AddrMap, &Snp->MacDriver.TxBufferRingMap[DescNum].Mapping);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a Map Error for Txbuffer: %r\n", __FUNCTION__, Status));
-      goto Exit;
-    }
-    TxBuffer = Snp->MacDriver.TxBufferRingMap[DescNum].AddrMap;
-  }
+  CopyMem ((VOID *)Snp->MacDriver.tx_buffers[tx_ring->cur_tx_idx], Data, BuffSize);
+  tx_swcx->buf_phy_addr = (UINTN)Snp->MacDriver.tx_buffers_phy_addr[tx_ring->cur_tx_idx];
 
-  TxDescriptor->Des0 = TxBuffer & 0xFFFFFFFF;
-  TxDescriptor->Des1 = (TxBuffer & 0xFFFFFFFF00000000) >> 32;
-  TxDescriptor->Des2 = TDES_2_READ_IOC | (BuffSize << TDES_2_READ_B1L_SHIFT);
-  TxDescriptor->Des3 = TDES_3_READ_OWN|TDES_3_READ_FD|TDES_3_READ_LD|TDES_3_READ_CPC_CRC_PAD_INSERT|(BuffSize & TDES_3_READ_FL_TPL_MASK);
-  Snp->MacDriver.TxBuffers[DescNum] = Data;
+  tx_pkt_cx->flags |= OSI_PKT_CX_CSUM;
+  tx_pkt_cx->desc_cnt = 1;
+  tx_swcx->buf_virt_addr = Data;
+  tx_swcx->len = BuffSize;
 
-  // Increase descriptor number
-  DescNum++;
-
-  if (DescNum >= CONFIG_TX_DESCR_NUM) {
-    DescNum = 0;
-  }
-
-  Snp->MacDriver.TxNextDescriptorNum = DescNum;
-
-  // Resume the transmission if suspended
-  EmacDmaResume (&Snp->MacDriver, Snp->MacBase, TRUE);
+  osi_hw_transmit(osi_dma, 0);
   Status = EFI_SUCCESS;
 
 Exit:
@@ -1184,22 +1155,11 @@ SnpReceive (
   )
 {
   SIMPLE_NETWORK_DRIVER      *Snp;
+  UINT32                     received;
   EFI_MAC_ADDRESS            Dst;
   EFI_MAC_ADDRESS            Src;
-  UINT32                     Length;
-  UINT8                      *RawData;
-  UINT32                     DescNum;
-  DESIGNWARE_HW_DESCRIPTOR   *RxDescriptor;
-  UINTN                      BufferSizeBuf;
-  VOID                       *HostRxBufferAddr;
-  EFI_PHYSICAL_ADDRESS       RxBufferAddr;
-  EFI_STATUS                 Status = EFI_SUCCESS;
-  BOOLEAN                    FinishPacket = FALSE;
-  //UINTN                      Index;
-  UINT32                     CurrentDescNum;
-  UINT32                     CurrentOffset;
-
-  BufferSizeBuf = ETH_BUFSIZE;
+  EFI_STATUS                 Status;
+  UINT8                      *u_char_data = Data;
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
@@ -1219,182 +1179,66 @@ SnpReceive (
     return EFI_ACCESS_DENIED;
   }
 
-  DescNum = Snp->MacDriver.RxNextDescriptorNum;
+  struct osi_dma_priv_data *osi_dma = Snp->MacDriver.osi_dma;
+  osi_dma->data = Data;
+  osi_dma->buffsize = *BuffSize;
+  received = osi_process_rx_completions(Snp->MacDriver.osi_dma, 0, 1);
 
-  RawData = (UINT8 *) Data;
-  FinishPacket = TRUE;
-
-  CurrentDescNum = DescNum;
-  do {
-    UINT32 ActiveAddress;
-    ActiveAddress = MmioRead32 (Snp->MacBase + 0x114c);
-    RxDescriptor = &Snp->MacDriver.RxdescRing[CurrentDescNum];
-    if ((RxDescriptor->Des3 & RDES_3_WB_OWN) != 0) {
-      ASSERT (ActiveAddress == (UINT32)(UINTN)(VOID*)RxDescriptor);
-      Status = EFI_NOT_READY;
-      FinishPacket = FALSE;
-      goto Exit;
-    }
-
-    if ((RxDescriptor->Des3 & RDES_3_WB_RS2V) == 0) {
-      RxDescriptor->Des2 = 0;
-    }
-    if ((RxDescriptor->Des3 & RDES_3_WB_RS1V) == 0) {
-      RxDescriptor->Des1 = 0;
-    }
-    if ((RxDescriptor->Des3 & RDES_3_WB_RS0V) == 0) {
-      RxDescriptor->Des0 = 0;
-    }
-    if ((RxDescriptor->Des2 & RDES_2_WB_SAF) != 0) {
-      DEBUG ((DEBUG_WARN, "SNP:DXE: Rx Descriptor Status Error: Source Address Filter Fail\n"));
-      Status = EFI_DEVICE_ERROR;
-      goto Exit;
-    }
-
-    if ((RxDescriptor->Des2 & RDES_2_WB_DAF) != 0) {
-      DEBUG ((DEBUG_WARN, "SNP:DXE: Rx Descriptor Status Error: Destination Address Filter Fail\n"));
-      Status = EFI_DEVICE_ERROR;
-      goto Exit;
-
-    }
-
-    if ((RxDescriptor->Des3 & RDES_3_WB_ES) != 0) {
-      // Check for errors
-      if ((RxDescriptor->Des3 & RDES_3_WB_RE) != 0) {
-        DEBUG ((DEBUG_WARN, "SNP:DXE: Rx Descriptor Status Error: Receive Error\n"));
-      }
-      if ((RxDescriptor->Des3 & RDES_3_WB_CE) != 0) {
-        DEBUG ((DEBUG_WARN, "SNP:DXE: Rx Descriptor Status Error: CRC Error\n"));
-      }
-      if ((RxDescriptor->Des3 & RDES_3_WB_RWT) != 0) {
-        DEBUG ((DEBUG_WARN, "SNP:DXE: Rx Descriptor Status Error: Watchdog Timeout\n"));
-      }
-      if ((RxDescriptor->Des3 & RDES_3_WB_GP) != 0) {
-        DEBUG ((DEBUG_WARN, "SNP:DXE: Rx Descriptor Status Error: Giant Frame\n"));
-      }
-      if ((RxDescriptor->Des3 & RDES_3_WB_OE) != 0) {
-        DEBUG ((DEBUG_WARN, "SNP:DXE: Rx Descriptor Status Error: Overflow Error\n"));
-      }
-      if ((RxDescriptor->Des3 & RDES_3_WB_DE) != 0) {
-        DEBUG ((DEBUG_WARN, "SNP:DXE: Rx Descriptor Status Error: Dribble Bit Error\n"));
-      }
-      Status = EFI_DEVICE_ERROR;
-      goto Exit;
-    }
-
-    if ((RxDescriptor->Des3 & RDES_3_WB_LD) != 0) {
-      Length = (RxDescriptor->Des3 >> RDES_3_WB_PL_SHIFT) & RDES_3_WB_PL_MASK;
-      if (Length == 0) {
-        DEBUG ((DEBUG_WARN, "SNP:DXE: Error: Invalid Frame Packet length \r\n"));
-        Status = EFI_NOT_READY;
-        goto Exit;
-      }
-    }
-    // Increase descriptor number
-    CurrentDescNum++;
-
-    if (CurrentDescNum >= CONFIG_RX_DESCR_NUM) {
-      CurrentDescNum = 0;
-    }
-  } while ((RxDescriptor->Des3 & RDES_3_WB_LD) == 0);
-
-  // Check buffer size
-  if (*BuffSize < Length) {
-    DEBUG ((DEBUG_INFO, "SNP:DXE: Error: Buffer size is too small\n"));
-    FinishPacket = FALSE;
-    Status = EFI_BUFFER_TOO_SMALL;
+  if (osi_dma->buffsize == -1) {
+    Status = EFI_DEVICE_ERROR;
     goto Exit;
   }
-  *BuffSize = Length;
+
+  /* osi_dma->buffsize will be updated to length of Rx packet. If Rx packet is
+   * larger than buffer size, then osi_dma->buffsize will be set to actual buf
+   * length needed.
+   */
+  if (*BuffSize < osi_dma->buffsize) {
+    DEBUG((DEBUG_ERROR, "Rx buffer %u < packet length %ld\n", *BuffSize, osi_dma->buffsize));
+    Status = EFI_BUFFER_TOO_SMALL;
+    /* Indicate the needed buffer size to the stack */
+    *BuffSize = osi_dma->buffsize;
+    goto Exit;
+  }
+
+  if (received == 0) {
+    Status = EFI_NOT_READY;
+    goto Exit;
+  }
 
   if (HdrSize != NULL) {
     *HdrSize = Snp->SnpMode.MediaHeaderSize;
   }
 
-  CurrentOffset = 0;
-  CurrentDescNum = DescNum;
-  while (CurrentOffset < Length) {
-    UINT32 CurrentLength;
-
-    HostRxBufferAddr = (VOID *)Snp->MacDriver.RxBuffer + (CurrentDescNum * BufferSizeBuf);
-    RxDescriptor = &Snp->MacDriver.RxdescRing[CurrentDescNum];
-
-    CurrentLength = (RxDescriptor->Des3 >> RDES_3_WB_PL_SHIFT) & RDES_3_WB_PL_MASK;
-
-    CopyMem (RawData + CurrentOffset, HostRxBufferAddr, CurrentLength - CurrentOffset);
-    CurrentOffset = CurrentLength;
-
-    // Increase descriptor number
-    CurrentDescNum++;
-
-    if (CurrentDescNum >= CONFIG_RX_DESCR_NUM) {
-      CurrentDescNum = 0;
-    }
-  }
-
   if (DstAddr != NULL) {
-    Dst.Addr[0] = RawData[0];
-    Dst.Addr[1] = RawData[1];
-    Dst.Addr[2] = RawData[2];
-    Dst.Addr[3] = RawData[3];
-    Dst.Addr[4] = RawData[4];
-    Dst.Addr[5] = RawData[5];
+    Dst.Addr[0] = u_char_data[0];
+    Dst.Addr[1] = u_char_data[1];
+    Dst.Addr[2] = u_char_data[2];
+    Dst.Addr[3] = u_char_data[3];
+    Dst.Addr[4] = u_char_data[4];
+    Dst.Addr[5] = u_char_data[5];
     CopyMem (DstAddr, &Dst, NET_ETHER_ADDR_LEN);
-    DEBUG ((DEBUG_INFO, "received from source address %x %x\r\n", DstAddr, &Dst));
   }
 
   // Get the source address
   if (SrcAddr != NULL) {
-    Src.Addr[0] = RawData[6];
-    Src.Addr[1] = RawData[7];
-    Src.Addr[2] = RawData[8];
-    Src.Addr[3] = RawData[9];
-    Src.Addr[4] = RawData[10];
-    Src.Addr[5] = RawData[11];
-    DEBUG ((DEBUG_INFO, "received from source address %x %x\r\n", SrcAddr, &Src));
+    Src.Addr[0] = u_char_data[6];
+    Src.Addr[1] = u_char_data[7];
+    Src.Addr[2] = u_char_data[8];
+    Src.Addr[3] = u_char_data[9];
+    Src.Addr[4] = u_char_data[10];
+    Src.Addr[5] = u_char_data[11];
     CopyMem (SrcAddr, &Src, NET_ETHER_ADDR_LEN);
   }
 
   // Get the protocol
   if (Protocol != NULL) {
-    *Protocol = NTOHS (RawData[12] | (RawData[13] >> 8) | (RawData[14] >> 16) | (RawData[15] >> 24));
+    *Protocol = NTOHS (u_char_data[12] | (u_char_data[13] >> 8) | (u_char_data[14] >> 16) | (u_char_data[15] >> 24));
   }
 
   Status = EFI_SUCCESS;
 
 Exit:
-
-  if (FinishPacket) {
-    UINT32                      HighAddress;
-    UINT32                      LowAddress;
-    BOOLEAN                     LastDescriptor = FALSE;
-
-    while (!LastDescriptor) {
-      RxBufferAddr = Snp->MacDriver.RxBufferRingMap.AddrMap + (DescNum * BufferSizeBuf);
-      RxDescriptor = &Snp->MacDriver.RxdescRing[DescNum];
-      if ((RxDescriptor->Des3 & RDES_3_WB_LD) != 0) {
-        Snp->MacDriver.RxCurrentDescriptorNum = DescNum;
-        LastDescriptor = TRUE;
-      }
-
-      HighAddress = ((RxBufferAddr & 0xFFFFFFFF00000000) >> 32);
-      LowAddress = (RxBufferAddr & 0xFFFFFFFF);
-
-      Snp->MacDriver.RxdescRing[DescNum].Des0 = LowAddress;
-      Snp->MacDriver.RxdescRing[DescNum].Des1 = HighAddress;
-      Snp->MacDriver.RxdescRing[DescNum].Des2 = 0;
-      Snp->MacDriver.RxdescRing[DescNum].Des3 = RDES_3_READ_OWN | RDES_3_READ_IOC | RDES_3_READ_BUF1V;
-
-      // Increase descriptor number
-      DescNum++;
-
-      if (DescNum >= CONFIG_RX_DESCR_NUM) {
-        DescNum = 0;
-      }
-    }
-    Snp->MacDriver.RxNextDescriptorNum = DescNum;
-    EmacDmaResume (&Snp->MacDriver, Snp->MacBase, FALSE);
-  }
 
   EfiReleaseLock (&Snp->Lock);
   return Status;
