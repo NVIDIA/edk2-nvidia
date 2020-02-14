@@ -23,6 +23,30 @@
 #include <Library/TegraPlatformInfoLib.h>
 
 
+STATIC
+EFI_STATUS
+EFIAPI
+UseEmulatedVariableStore (
+  IN EFI_HANDLE        ImageHandle
+  )
+{
+  EFI_STATUS Status;
+
+  PcdSetBoolS(PcdEmuVariableNvModeEnable, TRUE);
+  Status = gBS->InstallMultipleProtocolInterfaces (
+             &ImageHandle,
+             &gNVIDIAEmuVariableNvModeEnableProtocolGuid,
+             NULL,
+             NULL
+             );
+  if (EFI_ERROR(Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error installing EmuVariableNvModeEnableProtocol\n", __FUNCTION__));
+  }
+
+  return Status;
+}
+
+
 /**
   Runtime Configuration Of Tegra Platform.
 **/
@@ -33,8 +57,12 @@ TegraPlatformInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS Status;
-  UINTN ChipID;
+  EFI_STATUS          Status;
+  UINTN               ChipID;
+  TEGRA_PLATFORM_TYPE PlatformType;
+  BOOLEAN             SupportEmulatedVariables;
+
+  SupportEmulatedVariables = FALSE;
 
   ChipID = TegraGetChipID();
   DEBUG ((DEBUG_INFO, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, ChipID));
@@ -57,27 +85,21 @@ TegraPlatformInitialize (
     PcdSet64S(PcdTegraPwmFanBase, FixedPcdGet64 (PcdTegraPwmFanT194Base));
   }
 
-  switch (TegraGetPlatform()) {
-    case TEGRA_PLATFORM_VDK:
-      DEBUG ((DEBUG_INFO, "%a: Tegra Platform:  Simulation/VDK\n", __FUNCTION__));
-      break;
-    case TEGRA_PLATFORM_SYSTEM_FPGA:
-      DEBUG ((DEBUG_INFO, "%a: Tegra Platform:  System FPGA\n", __FUNCTION__));
-      // Enable emulated variable NV mode in variable driver.
-      PcdSetBoolS(PcdEmuVariableNvModeEnable, TRUE);
-      Status = gBS->InstallMultipleProtocolInterfaces (
-                 &ImageHandle,
-                 &gNVIDIAEmuVariableNvModeEnableProtocolGuid,
-                 NULL,
-                 NULL
-                 );
-      if (EFI_ERROR(Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Error installing EmuVariableNvModeEnableProtocol\n", __FUNCTION__));
-      }
-      break;
-    default:
-      break;
-  };
+  PlatformType = TegraGetPlatform();
+  if (PlatformType == TEGRA_PLATFORM_VDK) {
+    DEBUG ((DEBUG_INFO, "%a: Tegra Platform:  Simulation/VDK\n", __FUNCTION__));
+  } else if (PlatformType == TEGRA_PLATFORM_SYSTEM_FPGA) {
+    DEBUG ((DEBUG_INFO, "%a: Tegra Platform:  System FPGA\n", __FUNCTION__));
+    // On FPGA, enable emulated variable NV mode in variable driver.
+    SupportEmulatedVariables = TRUE;
+  }
+
+  if (SupportEmulatedVariables) {
+    Status = UseEmulatedVariableStore (ImageHandle);
+    if (EFI_ERROR(Status)) {
+      return Status;
+    }
+  }
 
   return EFI_SUCCESS;
 }
