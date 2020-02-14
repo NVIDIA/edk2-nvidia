@@ -68,6 +68,7 @@
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString
 
 [FixedPcd]
   gArmTokenSpaceGuid.PcdVFPEnabled

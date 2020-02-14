@@ -181,6 +181,9 @@ Include
 #Tegra PWM FAN T194 Base
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanT194Base|0x0C340000|UINT64|0x00000021
 
+#Tegra Firmware Date Time
+  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString|L""|VOID*|0x00010022
+
 [PcdsDynamic.common]
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|FALSE|BOOLEAN|0x00000015
 

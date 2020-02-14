@@ -328,6 +328,10 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(FIRMWARE_VER)"
 !endif
 
+!ifdef $(BUILD_DATE_TIME)
+  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
+!endif
+
   gEfiNetworkPkgTokenSpaceGuid.PcdAllowHttpConnections|TRUE
 
   gEfiMdePkgTokenSpaceGuid.PcdMaximumUnicodeStringLength|1000000

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  This program and the accompanying materials
@@ -285,8 +285,9 @@ CEntryPoint (
 
   // Initialize the Serial Port
   SerialPortInitialize ();
-  CharCount = AsciiSPrint (Buffer,sizeof (Buffer),"UEFI firmware (version %s built at %a on %a)\n\r",
-    (CHAR16*)PcdGetPtr(PcdFirmwareVersionString), __TIME__, __DATE__);
+  CharCount = AsciiSPrint (Buffer,sizeof (Buffer),"UEFI firmware (version %s built on %s)\n\r",
+    (CHAR16*)PcdGetPtr(PcdFirmwareVersionString),
+    (CHAR16*)PcdGetPtr(PcdFirmwareDateTimeBuiltString));
   SerialPortWrite ((UINT8 *) Buffer, CharCount);
 
   // Initialize the Debug Agent for Source Level Debugging
