@@ -21,7 +21,7 @@
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
-
+#include "TegraPlatformInitDxePrivate.h"
 
 STATIC
 EFI_STATUS
@@ -61,6 +61,7 @@ TegraPlatformInitialize (
   UINTN               ChipID;
   TEGRA_PLATFORM_TYPE PlatformType;
   BOOLEAN             SupportEmulatedVariables;
+  UINTN               EmmcMagic;
 
   SupportEmulatedVariables = FALSE;
 
@@ -86,12 +87,13 @@ TegraPlatformInitialize (
   }
 
   PlatformType = TegraGetPlatform();
-  if (PlatformType == TEGRA_PLATFORM_VDK) {
-    DEBUG ((DEBUG_INFO, "%a: Tegra Platform:  Simulation/VDK\n", __FUNCTION__));
-  } else if (PlatformType == TEGRA_PLATFORM_SYSTEM_FPGA) {
-    DEBUG ((DEBUG_INFO, "%a: Tegra Platform:  System FPGA\n", __FUNCTION__));
-    // On FPGA, enable emulated variable NV mode in variable driver.
-    SupportEmulatedVariables = TRUE;
+  if (PlatformType != TEGRA_PLATFORM_SILICON) {
+    EmmcMagic = * ((UINTN *) (TegraGetSystemMemoryBaseAddress(ChipID) + SYSIMG_EMMC_MAGIC_OFFSET));
+    if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {
+      // Enable emulated variable NV mode in variable driver when ram loading images and emmc
+      // is not enabled.
+      SupportEmulatedVariables = TRUE;
+    }
   }
 
   if (SupportEmulatedVariables) {
