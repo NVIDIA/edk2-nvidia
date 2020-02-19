@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -33,6 +33,7 @@
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <IndustryStandard/Pci.h>
 #include <Protocol/BpmpIpc.h>
+#include <Protocol/Regulator.h>
 
 #include "PcieControllerPrivate.h"
 
@@ -619,6 +620,9 @@ DeviceDiscoveryNotify (
   CONST VOID                *SegmentNumber = NULL;
   PCIE_CONTROLLER_PRIVATE   *Private = NULL;
   EFI_EVENT                 ExitBootServiceEvent;
+  NVIDIA_REGULATOR_PROTOCOL *Regulator = NULL;
+  CONST VOID                *Property = NULL;
+  UINT32                    Val;
 
   Status = EFI_SUCCESS;
 
@@ -686,6 +690,40 @@ DeviceDiscoveryNotify (
     /* Currently Segment number is nothing but the controller-ID  */
     Private->CtrlId = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
     DEBUG ((DEBUG_ERROR, "Controller-ID = %u\n", Private->CtrlId));
+
+    /* Enable slot supplies */
+    Status = gBS->LocateProtocol (&gNVIDIARegulatorProtocolGuid, NULL, (VOID **)&Regulator);
+    if (EFI_ERROR (Status) || Regulator == NULL) {
+      DEBUG ((EFI_D_ERROR, "%a: Couldn't get gNVIDIARegulatorProtocolGuid Handle: %r\n", __FUNCTION__, Status));
+      Status = EFI_UNSUPPORTED;
+      break;
+    }
+
+    /* Get the 3v3 supply */
+    Property = fdt_getprop(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
+                           "vpcie3v3-supply", &PropertySize);
+    if ((Property != NULL) && (PropertySize == sizeof (UINT32))) {
+      Val = SwapBytes32 (*(UINT32 *)Property);
+      /* Enable the 3v3 supply */
+      if EFI_ERROR(Regulator-> Enable(Regulator, Val, TRUE)) {
+        DEBUG ((EFI_D_ERROR, "Failed to Enable 3v3 Regulator\n"));
+      }
+    } else {
+      DEBUG ((EFI_D_INFO, "Failed to find 3v3 slot supply regulator\n"));
+    }
+
+    /* Get the 12v supply */
+    Property = fdt_getprop(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
+                           "vpcie12v-supply", &PropertySize);
+    if ((Property != NULL) && (PropertySize == sizeof (UINT32))) {
+      Val = SwapBytes32 (*(UINT32 *)Property);
+      /* Enable the 12v supply */
+      if EFI_ERROR(Regulator-> Enable(Regulator, Val, TRUE)) {
+        DEBUG ((EFI_D_ERROR, "Failed to Enable 12v Regulator\n"));
+      }
+    } else {
+      DEBUG ((EFI_D_INFO, "Failed to find 12v slot supply regulator\n"));
+    }
 
     if (Private->CtrlId == 5) {
         Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 4, &Private->PexCtlBase, &Private->PexCtlSize);
