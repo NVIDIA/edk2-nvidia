@@ -2,7 +2,7 @@
 
   Regulator Driver
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -476,10 +476,15 @@ RegulatorEnable (
 
   if (Entry->Gpio != 0) {
     EMBEDDED_GPIO_MODE GpioMode;
-    if (Enable) {
+    if (Enable && !Entry->ActiveLow) {
       GpioMode = GPIO_MODE_OUTPUT_1;
     } else {
       GpioMode = GPIO_MODE_OUTPUT_0;
+    }
+    if (Enable && Entry->ActiveLow) {
+      GpioMode = GPIO_MODE_OUTPUT_0;
+    } else {
+      GpioMode = GPIO_MODE_OUTPUT_1;
     }
     Status = Private->GpioProtocol->Set (
                Private->GpioProtocol,
@@ -803,6 +808,8 @@ AddFixedRegulators (
     ListEntry->RegulatorId = fdt_get_phandle (Private->DeviceTreeBase, NodeOffset);
     Property = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "regulator-always-on", NULL);
     ListEntry->AlwaysEnabled = (Property != NULL);
+    Property = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "enable-active-low", NULL);
+    ListEntry->ActiveLow = (Property != NULL);
     Property = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "gpio", &PropertySize);
     if ((NULL != Property) && (PropertySize == (3 * sizeof (UINT32)))) {
       CONST UINT32 *Data = (CONST UINT32 *)Property;

@@ -2,7 +2,7 @@
 
   Regulator Driver private structures
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -51,6 +51,7 @@ typedef struct {
   UINT32                     RegulatorId;
   UINTN                      Gpio;
   BOOLEAN                    AlwaysEnabled;
+  BOOLEAN                    ActiveLow;
   BOOLEAN                    IsAvailable;
   UINTN                      MinMicrovolts;
   UINTN                      MaxMicrovolts;
