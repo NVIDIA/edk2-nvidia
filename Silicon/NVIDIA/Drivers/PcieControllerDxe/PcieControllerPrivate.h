@@ -142,4 +142,7 @@ typedef struct {
 #define PCIE_MISC_CONTROL_1_OFF   0x8BC
 #define PCIE_DBI_RO_WR_EN         (0x1 << 0)
 
+#define PADCTL_PEX_RST    0x14008
+#define PADCTL_PEX_RST_E_INPUT  BIT(6)
+
 #endif

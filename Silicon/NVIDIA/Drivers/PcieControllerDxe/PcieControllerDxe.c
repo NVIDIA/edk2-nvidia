@@ -34,6 +34,7 @@
 #include <IndustryStandard/Pci.h>
 #include <Protocol/BpmpIpc.h>
 #include <Protocol/Regulator.h>
+#include <Protocol/PinMux.h>
 
 #include "PcieControllerPrivate.h"
 
@@ -75,6 +76,29 @@ CHAR8 CoreAPBResetNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
   "core_apb",
   "core_apb_rst"
 };
+
+STATIC
+VOID
+ConfigureSidebandSignals (
+    IN PCIE_CONTROLLER_PRIVATE  *Private
+    )
+{
+    NVIDIA_PINMUX_PROTOCOL       *mPmux = NULL;
+    UINT32 RegVal;
+    EFI_STATUS Status = EFI_SUCCESS;
+
+  Status = gBS->LocateProtocol (&gNVIDIAPinMuxProtocolGuid, NULL,
+                (VOID **)&mPmux);
+  if (EFI_ERROR (Status) || mPmux == NULL) {
+    DEBUG ((EFI_D_ERROR,
+    "%a: Couldn't get gNVIDIAPinMuxProtocolGuid Handle: %r\n",
+    __FUNCTION__, Status));
+  }
+
+  mPmux->ReadReg(mPmux, PADCTL_PEX_RST, &RegVal);
+  RegVal &= ~PADCTL_PEX_RST_E_INPUT;
+  mPmux->WriteReg(mPmux, PADCTL_PEX_RST, RegVal);
+}
 
 STATIC
 VOID
@@ -690,7 +714,6 @@ DeviceDiscoveryNotify (
     /* Currently Segment number is nothing but the controller-ID  */
     Private->CtrlId = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
     DEBUG ((DEBUG_ERROR, "Controller-ID = %u\n", Private->CtrlId));
-
     /* Enable slot supplies */
     Status = gBS->LocateProtocol (&gNVIDIARegulatorProtocolGuid, NULL, (VOID **)&Regulator);
     if (EFI_ERROR (Status) || Regulator == NULL) {
@@ -726,17 +749,7 @@ DeviceDiscoveryNotify (
     }
 
     if (Private->CtrlId == 5) {
-        Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 4, &Private->PexCtlBase, &Private->PexCtlSize);
-        if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "%a: Unable to locate Pex_Ctl address range\n", __FUNCTION__));
-            Status = EFI_UNSUPPORTED;
-            break;
-        }
-        DEBUG ((EFI_D_ERROR, "Private->PexCtlBase = 0x%08X\r\n", Private->PexCtlBase));
-
-        /* Configure C5's PEX_RST as output signal */
-        MmioWrite32 (Private->PexCtlBase + 0x8, 0x520);
-        DEBUG ((DEBUG_ERROR, "Configured Pex_rst for C5 controller\n"));
+      ConfigureSidebandSignals(Private);
     } else {
         NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
         EFI_STATUS Status;

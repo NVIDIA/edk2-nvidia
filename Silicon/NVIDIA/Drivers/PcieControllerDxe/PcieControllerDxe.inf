@@ -57,6 +57,7 @@
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
   gNVIDIABpmpIpcProtocolGuid
   gNVIDIARegulatorProtocolGuid
+  gNVIDIAPinMuxProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableT194PcieDeviceGuid
