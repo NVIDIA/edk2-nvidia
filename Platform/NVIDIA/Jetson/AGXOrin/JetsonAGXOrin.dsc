@@ -79,9 +79,3 @@
   #
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
 
-
-[PcdsDynamicHii.common.DEFAULT]
-!if $(SIM)
-  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
-!endif
-

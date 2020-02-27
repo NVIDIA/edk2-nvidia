@@ -49,6 +49,7 @@
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanT194Base
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
   gArmTokenSpaceGuid.PcdSystemMemoryBase
   gArmTokenSpaceGuid.PcdGicDistributorBase
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
