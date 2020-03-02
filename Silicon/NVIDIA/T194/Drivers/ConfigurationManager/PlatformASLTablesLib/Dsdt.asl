@@ -331,6 +331,26 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
         })
     }
 
+    Device(SPI0) {
+      Name (_HID, "NVDA0513")
+      Name (_UID, 0)
+      Name (_CCA, ZERO)
+
+      Name (_CRS, ResourceTemplate () {
+        Memory32Fixed(ReadWrite, 0x03210000, 0x10000)
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x44 }
+        FixedDMA (0x0F, 0x0001, Width32bit, )
+        FixedDMA (0x0F, 0x0002, Width32bit, )
+      })
+
+      Name (_DSD, Package () {
+        ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
+        Package () {
+          Package (2) {"spi-max-frequency", 65000000},
+        }
+      })
+    }
+
     Device(SDC0) {
       Name (_HID, EISAID("PNP0D40")) // SDA Standard Compliant SD Host Controller
       Name (_UID, 0)
