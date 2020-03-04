@@ -340,7 +340,7 @@ EmacDxeInitialization (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Status = DmaAllocateBuffer (EfiBootServicesData, tx_desc_size, (VOID *)&osi_dma->tx_ring[0]->tx_desc);
+  Status = DmaAllocateBuffer (EfiBootServicesData, EFI_SIZE_TO_PAGES(tx_desc_size), (VOID *)&osi_dma->tx_ring[0]->tx_desc);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to DMA alloc for Tx desc ring\n"));
     return Status;
@@ -369,7 +369,7 @@ EmacDxeInitialization (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Status = DmaAllocateBuffer (EfiBootServicesData, rx_desc_size, (VOID *)&osi_dma->rx_ring[0]->rx_desc);
+  Status = DmaAllocateBuffer (EfiBootServicesData, EFI_SIZE_TO_PAGES(rx_desc_size), (VOID *)&osi_dma->rx_ring[0]->rx_desc);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to DMA alloc for Rx desc ring\n"));
     return Status;
@@ -387,7 +387,7 @@ EmacDxeInitialization (
   rx_buf_len = osi_dma->rx_buf_len;
   for (i = 0; i < RX_DESC_CNT; i++) {
     rx_swcx = osi_dma->rx_ring[0]->rx_swcx + i;
-    Status = DmaAllocateBuffer (EfiBootServicesData, rx_buf_len, (VOID *)&rx_swcx->buf_virt_addr);
+    Status = DmaAllocateBuffer (EfiBootServicesData, EFI_SIZE_TO_PAGES(rx_buf_len), (VOID *)&rx_swcx->buf_virt_addr);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Failed to DMA alloc Rx buffers\n"));
       return Status;
@@ -406,7 +406,7 @@ EmacDxeInitialization (
   UINTN tx_buf_len = CONFIG_ETH_BUFSIZE;
   for (i = 0; i < TX_DESC_CNT; i++) {
     tx_swcx = osi_dma->tx_ring[0]->tx_swcx + i;
-    Status = DmaAllocateBuffer (EfiBootServicesData, tx_buf_len, (VOID *)&EmacDriver->tx_buffers[i]);
+    Status = DmaAllocateBuffer (EfiBootServicesData, EFI_SIZE_TO_PAGES(tx_buf_len), (VOID *)&EmacDriver->tx_buffers[i]);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Failed to DMA alloc Tx buffers\n"));
       return Status;
