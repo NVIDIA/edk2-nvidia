@@ -1,5 +1,6 @@
 /** @file
 
+  Copyright (c) 2020, NVIDIA Corporation. All rights reserved.
   Copyright (c) 2017, ARM Limited. All rights reserved.
 
   This program and the accompanying materials
@@ -32,8 +33,8 @@
 #else
 #define GTDT_GLOBAL_FLAGS             (GTDT_GLOBAL_FLAGS_NOT_MAPPED | \
                                          GTDT_GLOBAL_FLAGS_LEVEL)
-#define SYSTEM_COUNTER_BASE_ADDRESS   0
-#define SYSTEM_COUNTER_READ_BASE      0
+#define SYSTEM_COUNTER_BASE_ADDRESS   0xFFFFFFFFFFFFFFFF
+#define SYSTEM_COUNTER_READ_BASE      0xFFFFFFFFFFFFFFFF
 #endif
 
 #define GTDT_TIMER_EDGE_TRIGGERED   \
