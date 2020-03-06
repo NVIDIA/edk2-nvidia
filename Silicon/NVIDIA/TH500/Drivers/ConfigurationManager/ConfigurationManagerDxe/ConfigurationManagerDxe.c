@@ -21,6 +21,8 @@
 #include "ConfigurationManagerDxe.h"
 
 #include <IndustryStandard/DebugPort2Table.h>
+#include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
+#include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>
 #include <Library/IoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/ArmLib.h>
@@ -34,6 +36,7 @@
 #include <Protocol/ConfigurationManagerProtocol.h>
 
 #include <Dsdt.hex>
+#include <SsdtPci.hex>
 
 #include "Platform.h"
 
@@ -85,21 +88,39 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
   // SPCR Table
   {
     EFI_ACPI_6_2_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE,
-    2,
+    EFI_ACPI_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSpcr),
     NULL,
     FixedPcdGet64(PcdAcpiTegraUartOemTableId),
-    0
+    FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
   // DSDT Table
   {
     EFI_ACPI_6_2_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
-    2,
+    0,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDsdt),
     (EFI_ACPI_DESCRIPTION_HEADER*)dsdt_aml_code,
     FixedPcdGet64(PcdAcpiDefaultOemTableId),
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
-  }
+  },
+  // SSDT table describing the PCI root complex
+  {
+    EFI_ACPI_6_2_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
+    0,
+    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt),
+    (EFI_ACPI_DESCRIPTION_HEADER*)ssdtpci_aml_code,
+    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    FixedPcdGet64(PcdAcpiDefaultOemRevision)
+  },
+  // PCI MCFG Table
+  {
+    EFI_ACPI_6_2_PCI_EXPRESS_MEMORY_MAPPED_CONFIGURATION_SPACE_BASE_ADDRESS_DESCRIPTION_TABLE_SIGNATURE,
+    EFI_ACPI_MEMORY_MAPPED_CONFIGURATION_SPACE_ACCESS_TABLE_REVISION,
+    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMcfg),
+    NULL,
+    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    FixedPcdGet64(PcdAcpiDefaultOemRevision)
+  },
 };
 
 /** The platform boot architecture information.
@@ -167,6 +188,7 @@ CM_ARM_GENERIC_TIMER_INFO GenericTimerInfo = {
 // SPCR Serial Port
 /** The platform SPCR serial port information.
 */
+STATIC
 CM_ARM_SERIAL_PORT_INFO SpcrSerialPort = {
   FixedPcdGet64 (PcdTegra16550UartBaseTH500),
   0x90,
@@ -174,6 +196,23 @@ CM_ARM_SERIAL_PORT_INFO SpcrSerialPort = {
   0,
   EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550
 };
+
+/** PCI Configuration Space Info
+*/
+STATIC
+CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfo[] = {
+  {
+    // The physical base address for the PCI segment
+    FixedPcdGet64 (PcdPciConfigurationSpaceBaseAddress),
+    // The PCI segment group number
+    0,
+    // The start bus number
+    FixedPcdGet32 (PcdPciBusMin),
+    // The end bus number
+    FixedPcdGet32 (PcdPciBusMax),
+  },
+};
+
 
 /** Initialize the platform configuration repository.
   @retval EFI_SUCCESS   Success
@@ -233,6 +272,11 @@ InitializePlatformRepository (
   NVIDIAPlatformRepositoryInfo[8].CmObjectSize = sizeof (SpcrSerialPort);
   NVIDIAPlatformRepositoryInfo[8].CmObjectCount = sizeof (SpcrSerialPort) / sizeof (CM_ARM_SERIAL_PORT_INFO);
   NVIDIAPlatformRepositoryInfo[8].CmObjectPtr = &SpcrSerialPort;
+
+  NVIDIAPlatformRepositoryInfo[9].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
+  NVIDIAPlatformRepositoryInfo[9].CmObjectSize = sizeof (PciConfigInfo);
+  NVIDIAPlatformRepositoryInfo[9].CmObjectCount = sizeof (PciConfigInfo) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);
+  NVIDIAPlatformRepositoryInfo[9].CmObjectPtr = PciConfigInfo;
 
   return EFI_SUCCESS;
 }

@@ -70,3 +70,15 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TH500   '
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision|0x00000001
 
+  #
+  # Explicit PCIe Controller Enable
+  #
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
+
+  #
+  # PCI Root Complex
+  #
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x2c800000
+  gArmTokenSpaceGuid.PcdPciBusMin|0
+  gArmTokenSpaceGuid.PcdPciBusMax|1
+

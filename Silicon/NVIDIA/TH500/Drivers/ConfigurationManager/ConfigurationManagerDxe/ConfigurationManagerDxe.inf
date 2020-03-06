@@ -63,5 +63,9 @@
   gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
 
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
+  gArmTokenSpaceGuid.PcdPciBusMin
+  gArmTokenSpaceGuid.PcdPciBusMax
+
 [Depex]
   TRUE

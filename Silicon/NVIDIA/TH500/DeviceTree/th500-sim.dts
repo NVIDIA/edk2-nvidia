@@ -774,9 +774,9 @@
     };
     pcie@14180000 {
         nvidia,changelist = <0x00000000 0x02b09b91>;
-        compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
-        reg = <0x00000000 0x14180000 0x00000000 0x00020000 0x00000000 0x38000000 0x00000000 0x00040000 0x00000000 0x38040000 0x00000000 0x00040000>;
-        reg-names = "appl", "config", "atu_dma";
+        compatible = "nvidia,th500-pcie";
+        reg = <0x00000000 0x14180000 0x00000000 0x00020000 0x00000000 0x2c800000 0x00000000 0x00200000>;
+        reg-names = "appl", "config";
         status = "okay";
         #address-cells = <0x00000003>;
         #size-cells = <0x00000002>;
@@ -802,8 +802,10 @@
         nvidia,aspm-cmrt = <0x0000003c>;
         nvidia,aspm-pwr-on-t = <0x00000014>;
         nvidia,aspm-l0s-entrance-latency = <0x00000003>;
-        bus-range = <0x00000000 0x000000ff>;
-        ranges = <0x81000000 0x00000000 0x38100000 0x00000000 0x38100000 0x00000000 0x00100000 0x82000000 0x00000000 0x38200000 0x00000000 0x38200000 0x00000000 0x01e00000 0xc2000000 0x00000026 0x80000000 0x00000026 0x80000000 0x00000004 0x00000000>;
+        bus-range = <0x00000000 0x00000001>;
+        ranges = <0x81000000 0x00000000 0x34a00000 0x00000000 0x34a00000 0x00000000 0x00100000		/* Downstream IO (1MB)*/
+		  0x82000000 0x00000000 0x2ca00000 0x00000000 0x2ca00000 0x00000000 0x08000000		/* Non-Prefetchable memory (128MB) */
+		  0xc3000000 0x00000026 0x80000000 0x00000026 0x80000000 0x00000004 0x00000000>; 	/* Prefetchable memory (16GB) */
         nvidia,cfg-link-cap-l1sub = <0x000001c4>;
         nvidia,cap-pl16g-status = <0x00000174>;
         nvidia,cap-pl16g-cap-off = <0x00000188>;
