@@ -135,6 +135,11 @@
   Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
 
   #
+  # Tegra Controller Enable Driver
+  #
+  Silicon/NVIDIA/Drivers/TegraControllerEnableDxe/TegraControllerEnableDxe.inf
+
+  #
   # Tegra I2C Support
   #
   Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf

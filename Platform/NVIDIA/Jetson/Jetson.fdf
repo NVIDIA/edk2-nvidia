@@ -145,6 +145,11 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
   INF Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
 
   #
+  # Tegra Controller Enable Driver
+  #
+  INF Silicon/NVIDIA/Drivers/TegraControllerEnableDxe/TegraControllerEnableDxe.inf
+
+  #
   # Tegra I2C Support
   #
   INF Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
