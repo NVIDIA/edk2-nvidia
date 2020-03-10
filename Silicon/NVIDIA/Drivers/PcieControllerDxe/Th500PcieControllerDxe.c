@@ -75,7 +75,7 @@ CHAR8 CoreAPBResetNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
   "core_apb",
   "core_apb_rst"
 };
-
+#if 0
 STATIC
 EFI_STATUS
 EFIAPI
@@ -175,7 +175,7 @@ PcieConfigurationAccess (
   }
   return Status;
 }
-
+#endif
 /**
   Allows read from PCI configuration space.
 
@@ -198,7 +198,9 @@ PcieConfigurationRead (
   IN OUT VOID                                             *Buffer
   )
 {
-  return PcieConfigurationAccess (This, TRUE, Width, Address, Buffer);
+  //return PcieConfigurationAccess (This, TRUE, Width, Address, Buffer);
+  SetMem (Buffer, (1 << Width), 0xFF);
+  return EFI_SUCCESS;
 }
 
 /**
@@ -223,7 +225,8 @@ PcieConfigurationWrite (
   IN OUT VOID                                             *Buffer
   )
 {
-  return PcieConfigurationAccess (This, FALSE, Width, Address, Buffer);
+  //return PcieConfigurationAccess (This, FALSE, Width, Address, Buffer);
+  return EFI_SUCCESS;
 }
 
 STATIC
