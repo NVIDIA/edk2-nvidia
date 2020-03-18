@@ -15,6 +15,7 @@
 
 #include <PiPei.h>
 
+#include <Library/CacheMaintenanceLib.h>
 #include <Library/DebugAgentLib.h>
 #include <Library/PrePiLib.h>
 #include <Library/PrintLib.h>
@@ -273,12 +274,13 @@ CEntryPoint (
 
   // Data Cache enabled on Primary core when MMU is enabled.
   ArmDisableDataCache ();
-  // Invalidate Data cache
-  ArmInvalidateDataCache ();
   // Invalidate instruction cache
   ArmInvalidateInstructionCache ();
   // Enable Instruction Caches on all cores.
   ArmEnableInstructionCache ();
+
+  // Invalidate HOB data range in data cache.
+  InvalidateDataCacheRange ((VOID *)HobBase, HobSize);
 
   // Initialize the architecture specific bits
   ArchInitialize ();
