@@ -3923,7 +3923,7 @@
 		};
 	};
 
-	host1x {
+	host1x@13e00000 {
 		nvidia,changelist = <0x0 0x2ac3049>;
 		compatible = "nvidia,tegra234-host1x", "simple-bus";
 		reg = <0x0 0x13e40000 0x0 0x10000 0x0 0x13e10000 0x0 0x10000 0x0 0x13ef0000 0x0 0x40000 0x0 0x60000000 0x0 0x400000 0x0 0x13e00000 0x0 0x10000>;
@@ -5296,7 +5296,7 @@
 		status = "okay";
 	};
 
-	nvdisplay@13800000 {
+	display@13800000 {
 		nvidia,changelist = <0x0 0x2ac3049>;
 		compatible = "nvidia,tegra234-display";
 		reg = <0x0 0x13800000 0x0 0xeffff>;
@@ -5646,25 +5646,25 @@
 		hsp_rce = "/tegra-hsp@b950000";
 		se = "/se_elp@3ad0000";
 		host1x = "/host1x";
-		host1x_ctx0 = "/host1x/ctx0";
-		host1x_ctx1 = "/host1x/ctx1";
-		host1x_ctx2 = "/host1x/ctx2";
-		host1x_ctx3 = "/host1x/ctx3";
-		host1x_ctx4 = "/host1x/ctx4";
-		host1x_ctx5 = "/host1x/ctx5";
-		host1x_ctx6 = "/host1x/ctx6";
-		host1x_ctx7 = "/host1x/ctx7";
-		nvdla0 = "/host1x/nvdla0@15880000";
-		nvdla1 = "/host1x/nvdla1@158c0000";
-		tegra_cec = "/host1x/tegra_cec";
-		vi0 = "/host1x/vi0@15c00000";
-		vi1 = "/host1x/vi1@14c00000";
-		vi_thi = "/host1x/vi-thi@15f00000";
-		isp = "/host1x/isp@14800000";
-		isp_thi = "/host1x/isp-thi@14b00000";
-		nvcsi = "/host1x/nvcsi@15a00000";
-		pva0 = "/host1x/pva0";
-		pva1 = "/host1x/pva1";
+		host1x_ctx0 = "/host1x@13e00000/ctx0";
+		host1x_ctx1 = "/host1x@13e00000/ctx1";
+		host1x_ctx2 = "/host1x@13e00000/ctx2";
+		host1x_ctx3 = "/host1x@13e00000/ctx3";
+		host1x_ctx4 = "/host1x@13e00000/ctx4";
+		host1x_ctx5 = "/host1x@13e00000/ctx5";
+		host1x_ctx6 = "/host1x@13e00000/ctx6";
+		host1x_ctx7 = "/host1x@13e00000/ctx7";
+		nvdla0 = "/host1x@13e00000/nvdla0@15880000";
+		nvdla1 = "/host1x@13e00000/nvdla1@158c0000";
+		tegra_cec = "/host1x@13e00000/tegra_cec";
+		vi0 = "/host1x@13e00000/vi0@15c00000";
+		vi1 = "/host1x@13e00000/vi1@14c00000";
+		vi_thi = "/host1x@13e00000/vi-thi@15f00000";
+		isp = "/host1x@13e00000/isp@14800000";
+		isp_thi = "/host1x@13e00000/isp-thi@14b00000";
+		nvcsi = "/host1x@13e00000/nvcsi@15a00000";
+		pva0 = "/host1x@13e00000/pva0";
+		pva1 = "/host1x@13e00000/pva1";
 		gpcdma = "/dma@2600000";
 		tegra_main_gpio = "/gpio@2200000";
 		tegra_aon_gpio = "/gpio@c2f0000";
