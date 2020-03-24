@@ -212,11 +212,12 @@ Tegra16550SerialPortGetObject (
 /**
   Retrieve the base address of tegra 16650 serial port.
 
+  @param ConsolePort        Console port if TRUE, Debug port otherwise.
 **/
 EFI_PHYSICAL_ADDRESS
 EFIAPI
 Tegra16550SerialPortGetBaseAddress (
-  VOID
+  IN BOOLEAN ConsolePort
   );
 
 #endif //__TEGRA_SERIAL_PORT_LIB_H__

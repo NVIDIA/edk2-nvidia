@@ -24,9 +24,11 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraSerialPortLib.h>
+#include <libfdt.h>
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra20-uart", &gNVIDIANonDiscoverableUartDeviceGuid },
+    { "nvidia,tegra186-combined-uart", &gNVIDIANonDiscoverableUartDeviceGuid },
     { NULL, NULL }
 };
 
@@ -38,48 +40,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .SkipEdkiiNondiscoverableInstall = FALSE
 };
 
-typedef struct {
-  EFI_PHYSICAL_ADDRESS BaseAddress;
-  UINT32               RegisterStride;
-  EFI_EVENT            OnExitEvent;
-  EFI_HANDLE           ControllerHandle;
-} TEGRA_UART_PRIVATE_DATA;
-
 #define UART_CLOCK_NAME "serial"
 #define UART_CLOCK_RATE (115200 * 16)
-
-#define R_UART_BAUD_LOW       0   // LCR_DLAB = 1
-#define R_UART_BAUD_HIGH      1   // LCR_DLAB = 1
-#define R_UART_LCR            3
-#define B_UART_LCR_DLAB       BIT7
-
-STATIC
-VOID
-EFIAPI
-NotifyExitBootServices (
-  IN EFI_EVENT Event,
-  IN VOID      *Context
-  )
-{
-  EFI_STATUS Status;
-  UINT8      Lcr;
-
-  TEGRA_UART_PRIVATE_DATA *Private = (TEGRA_UART_PRIVATE_DATA *)Context;
-  Status = DeviceDiscoverySetClockFreq (Private->ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
-    return;
-  }
-
-  //
-  // Configure baud rate, divisor should be 1 now
-  //
-  Lcr = MmioRead8 (Private->BaseAddress + R_UART_LCR * Private->RegisterStride);
-  MmioWrite8 (Private->BaseAddress + R_UART_LCR * Private->RegisterStride, Lcr | B_UART_LCR_DLAB);
-  MmioWrite8 (Private->BaseAddress + R_UART_BAUD_HIGH * Private->RegisterStride, 0);
-  MmioWrite8 (Private->BaseAddress + R_UART_BAUD_LOW * Private->RegisterStride, 1);
-  MmioWrite8 (Private->BaseAddress + R_UART_LCR * Private->RegisterStride, Lcr);
-}
 
 /**
   Callback that will be invoked at various phases of the driver initialization
@@ -108,67 +70,41 @@ DeviceDiscoveryNotify (
   EFI_STATUS                Status;
   EFI_PHYSICAL_ADDRESS      BaseAddress  = 0;
   UINTN                     RegionSize;
-  TEGRA_UART_PRIVATE_DATA   *Private;
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingSupported:
-    Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
-      return EFI_UNSUPPORTED;
+    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,tegra20-uart") == 0) {
+      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
+        return EFI_UNSUPPORTED;
+      }
+      if (Tegra16550SerialPortGetBaseAddress (TRUE) != BaseAddress) {
+        return EFI_UNSUPPORTED;
+      }
     }
-    if (Tegra16550SerialPortGetBaseAddress () != BaseAddress) {
-      return EFI_UNSUPPORTED;
-    }
-
     return EFI_SUCCESS;
 
   case DeviceDiscoveryDriverBindingStart:
-    Private = (TEGRA_UART_PRIVATE_DATA *)AllocateZeroPool (sizeof (TEGRA_UART_PRIVATE_DATA));
-    if (Private == NULL) {
-      return EFI_OUT_OF_RESOURCES;
+    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,tegra20-uart") == 0) {
+      Status = DeviceDiscoverySetClockFreq (ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
     }
-
-    Private->BaseAddress = Tegra16550SerialPortGetBaseAddress ();
-    Private->RegisterStride = PcdGet32 (PcdSerialRegisterStride);
-    Private->ControllerHandle = ControllerHandle;
-    Status = gBS->CreateEvent (
-                    EVT_SIGNAL_EXIT_BOOT_SERVICES,
-                    TPL_NOTIFY,
-                    NotifyExitBootServices,
-                    Private,
-                    &Private->OnExitEvent
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to create event (%r)\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &ControllerHandle,
-                    &gEfiCallerIdGuid,
-                    Private,
+                    &gNVIDIAConsoleEnabledProtocolGuid,
+                    NULL,
                     NULL
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to install private data\r\n", __FUNCTION__));
-      gBS->CloseEvent (Private->OnExitEvent);
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install console enabled protocol\r\n", __FUNCTION__));
     }
-
     return Status;
 
   case DeviceDiscoveryDriverBindingStop:
-    Status = gBS->HandleProtocol (ControllerHandle, &gEfiCallerIdGuid, (VOID **)&Private);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get private data\r\n", __FUNCTION__));
-      return Status;
-    }
-
-    gBS->CloseEvent (Private->OnExitEvent);
     Status = gBS->UninstallMultipleProtocolInterfaces (
                     ControllerHandle,
-                    &gEfiCallerIdGuid,
-                    Private,
+                    &gNVIDIAConsoleEnabledProtocolGuid,
+                    NULL,
                     NULL
                     );
     if (EFI_ERROR (Status)) {
@@ -176,7 +112,6 @@ DeviceDiscoveryNotify (
       return Status;
     }
 
-    FreePool (Private);
     return Status;
 
   default:

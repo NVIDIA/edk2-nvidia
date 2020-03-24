@@ -127,6 +127,7 @@ Include
   gNVIDIACvmEepromProtocolGuid                    = { 0x3f465b0c, 0x05c4, 0x418b, { 0xa2, 0x51, 0xc7, 0x55, 0xb0, 0xbc, 0x6f, 0xd7 } }
   gNVIDIASeRngProtocolGuid                        = { 0xbb34a29d, 0x0d3c, 0x43c9, { 0x8c, 0xc7, 0x64, 0x73, 0x80, 0x24, 0xd6, 0x57 } }
   gNVIDIAConfigurationManagerDataProtocolGuid     = { 0x1a8fd893, 0x4752, 0x40b9, { 0x9b, 0xc7, 0x75, 0x94, 0x04, 0xff, 0xcd, 0xff } }
+  gNVIDIAConsoleEnabledProtocolGuid               = { 0xc2e9ce19, 0xe760, 0x45e2, { 0x8e, 0x3b, 0x55, 0x64, 0xaa, 0x41, 0xc3, 0x54 } }
 
 [PcdsFixedAtBuild.common]
 #Tegra Combined UART mailboxes
@@ -177,8 +178,11 @@ Include
 #Tegra 16550 UART T186 Base
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186|0x03100000|UINT64|0x0000001C
 
-#Tegra 16550 UART T194 Base
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194|0x0C280000|UINT64|0x0000001D
+#Tegra 16550 UARTB T194 Base
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194B|0x03110000|UINT64|0x0001001D
+
+#Tegra 16550 UARTC T194 Base
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194C|0x0C280000|UINT64|0x0000001D
 
 #Tegra 16550 UART T234 Base
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234|0x03100000|UINT64|0x0000001E
@@ -191,6 +195,9 @@ Include
 
 #Tegra Firmware Date Time
   gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString|L""|VOID*|0x00010022
+
+#Tegra Console Port
+  gNVIDIATokenSpaceGuid.PcdConsolePort|FALSE|BOOLEAN|0x00000023
 
 [PcdsDynamic.common]
 # Default state of floor sweeping

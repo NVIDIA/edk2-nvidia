@@ -54,7 +54,7 @@
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
   gArmTokenSpaceGuid.PcdPciBusMin
   gArmTokenSpaceGuid.PcdPciBusMax
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194B
   gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
   gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate

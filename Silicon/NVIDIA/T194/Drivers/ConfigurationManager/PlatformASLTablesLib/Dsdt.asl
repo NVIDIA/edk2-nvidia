@@ -58,8 +58,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
       Name (_CCA, ZERO)
 
       Name(_CRS, ResourceTemplate() {
-        Memory32Fixed(ReadWrite, T194_UARTC_BASE_ADDR, T194_UARTC_CAR_SIZE)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T194_UARTC_INTR }
+        Memory32Fixed(ReadWrite, T194_UARTB_BASE_ADDR, T194_UARTB_CAR_SIZE)
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T194_UARTB_INTR }
       })
       Name (_DSD, Package () {
         ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),

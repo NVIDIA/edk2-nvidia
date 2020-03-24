@@ -15,7 +15,12 @@
 #ifndef __T194_DEFINES_H__
 #define __T194_DEFINES_H__
 
-// UARTA
+// UARTB
+#define T194_UARTB_BASE_ADDR    0x03110000
+#define T194_UARTB_CAR_SIZE     0x00010000
+#define T194_UARTB_INTR         0x91
+
+// UARTC
 #define T194_UARTC_BASE_ADDR    0x0C280000
 #define T194_UARTC_CAR_SIZE     0x00010000
 #define T194_UARTC_INTR         0x92
@@ -42,6 +47,5 @@
 #define T194_PCIE_CFG_BASE_ADDR 0x30000000
 #define T194_PCIE_BUS_MIN       160
 #define T194_PCIE_BUS_MAX       161
-
 
 #endif //__T194_DEFINES_H__

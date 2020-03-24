@@ -158,7 +158,7 @@ InstallMmioRegions (
     SerialRegisterBase = FixedPcdGet64(PcdTegra16550UartBaseT186);
     break;
   case T194_CHIP_ID:
-    SerialRegisterBase = FixedPcdGet64(PcdTegra16550UartBaseT194);
+    SerialRegisterBase = FixedPcdGet64(PcdTegra16550UartBaseT194C);
     break;
   case T234_CHIP_ID:
     SerialRegisterBase = FixedPcdGet64(PcdTegra16550UartBaseT234);

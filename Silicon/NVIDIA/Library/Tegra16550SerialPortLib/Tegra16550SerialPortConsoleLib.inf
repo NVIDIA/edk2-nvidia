@@ -10,7 +10,7 @@
 [Defines]
   INF_VERSION                    = 0x00010005
   BASE_NAME                      = Tegra16550SerialPortLib
-  FILE_GUID                      = 588BA3C9-A4A6-48DA-9104-273F8C7F0A77
+  FILE_GUID                      = ce84f002-dd5e-4d79-b490-8c21fdc48a8f
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.1
   LIBRARY_CLASS                  = Tegra16550SerialPortLib
@@ -43,3 +43,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialExtendedTxFifoSize      ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterStride          ## CONSUMES
   gNVIDIATokenSpaceGuid.PcdConsolePort                            ## CONSUMES
+
+ [Depex]
+   gNVIDIAConsoleEnabledProtocolGuid

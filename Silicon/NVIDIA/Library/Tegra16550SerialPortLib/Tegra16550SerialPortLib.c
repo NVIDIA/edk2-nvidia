@@ -52,8 +52,12 @@ UART_16550_PROPS Uart16650PropsT186 = {
   FixedPcdGet64 (PcdTegra16550UartBaseT186)
 };
 
-UART_16550_PROPS Uart16650PropsT194 = {
-  FixedPcdGet64 (PcdTegra16550UartBaseT194)
+UART_16550_PROPS Uart16650PropsT194B = {
+  FixedPcdGet64 (PcdTegra16550UartBaseT194B)
+};
+
+UART_16550_PROPS Uart16650PropsT194C = {
+  FixedPcdGet64 (PcdTegra16550UartBaseT194C)
 };
 
 UART_16550_PROPS Uart16650PropsT234 = {
@@ -111,7 +115,7 @@ SerialPortWriteRegister (
 STATIC
 UART_16550_PROPS *
 GetSerialProperties (
-  VOID
+  IN BOOLEAN ConsolePort
   )
 {
   UINT32              ChipID;
@@ -121,7 +125,11 @@ GetSerialProperties (
   if (ChipID == T186_CHIP_ID) {
     return &Uart16650PropsT186;
   } else if (ChipID == T194_CHIP_ID) {
-    return &Uart16650PropsT194;
+    if (ConsolePort) {
+      return &Uart16650PropsT194B;
+    } else {
+      return &Uart16650PropsT194C;
+    }
   } else if (ChipID == T234_CHIP_ID) {
     return &Uart16650PropsT234;
   } else if (ChipID == TH500_CHIP_ID) {
@@ -213,7 +221,7 @@ Tegra16550SerialPortInitialize (
   //
   // Get the base address of the serial port in either I/O or MMIO space
   //
-  SerialRegisterBase = GetSerialProperties()->SerialRegisterBase;
+  SerialRegisterBase = GetSerialProperties(PcdGetBool (PcdConsolePort))->SerialRegisterBase;
   if (SerialRegisterBase ==0) {
     return RETURN_DEVICE_ERROR;
   }
@@ -310,7 +318,7 @@ Tegra16550SerialPortWrite (
     return 0;
   }
 
-  SerialRegisterBase = GetSerialProperties()->SerialRegisterBase;
+  SerialRegisterBase = GetSerialProperties(PcdGetBool (PcdConsolePort))->SerialRegisterBase;
   if (SerialRegisterBase ==0) {
     return 0;
   }
@@ -397,7 +405,7 @@ Tegra16550SerialPortRead (
     return 0;
   }
 
-  SerialRegisterBase = GetSerialProperties()->SerialRegisterBase;
+  SerialRegisterBase = GetSerialProperties(PcdGetBool (PcdConsolePort))->SerialRegisterBase;
   if (SerialRegisterBase ==0) {
     return 0;
   }
@@ -452,7 +460,7 @@ Tegra16550SerialPortPoll (
 {
   UINTN  SerialRegisterBase;
 
-  SerialRegisterBase = GetSerialProperties()->SerialRegisterBase;
+  SerialRegisterBase = GetSerialProperties(PcdGetBool (PcdConsolePort))->SerialRegisterBase;
   if (SerialRegisterBase ==0) {
     return FALSE;
   }
@@ -507,7 +515,7 @@ Tegra16550SerialPortSetControl (
     return RETURN_UNSUPPORTED;
   }
 
-  SerialRegisterBase = GetSerialProperties()->SerialRegisterBase;
+  SerialRegisterBase = GetSerialProperties (PcdGetBool (PcdConsolePort))->SerialRegisterBase;
   if (SerialRegisterBase ==0) {
     return RETURN_UNSUPPORTED;
   }
@@ -555,7 +563,7 @@ Tegra16550SerialPortGetControl (
   UINT8 Mcr;
   UINT8 Lsr;
 
-  SerialRegisterBase = GetSerialProperties()->SerialRegisterBase;
+  SerialRegisterBase = GetSerialProperties (PcdGetBool (PcdConsolePort))->SerialRegisterBase;
   if (SerialRegisterBase ==0) {
     return RETURN_UNSUPPORTED;
   }
@@ -668,7 +676,7 @@ Tegra16550SerialPortSetAttributes (
   UINT8     LcrParity;
   UINT8     LcrStop;
 
-  SerialRegisterBase = GetSerialProperties()->SerialRegisterBase;
+  SerialRegisterBase = GetSerialProperties (PcdGetBool (PcdConsolePort))->SerialRegisterBase;
   if (SerialRegisterBase ==0) {
     return RETURN_UNSUPPORTED;
   }
@@ -836,12 +844,14 @@ Tegra16550SerialPortGetObject (
 /**
   Retrieve the base address of tegra 16650 serial port.
 
+  @param ConsolePort        Console port if TRUE, Debug port otherwise.
+
 **/
 EFI_PHYSICAL_ADDRESS
 EFIAPI
 Tegra16550SerialPortGetBaseAddress (
-  VOID
+  IN BOOLEAN ConsolePort
   )
 {
-  return (EFI_PHYSICAL_ADDRESS)GetSerialProperties()->SerialRegisterBase;
+  return (EFI_PHYSICAL_ADDRESS)GetSerialProperties(ConsolePort)->SerialRegisterBase;
 }

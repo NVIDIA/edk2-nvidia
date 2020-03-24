@@ -175,8 +175,8 @@ CM_ARM_GENERIC_TIMER_INFO GenericTimerInfo = {
 */
 STATIC
 CM_ARM_SERIAL_PORT_INFO SpcrSerialPort = {
-  FixedPcdGet64 (PcdTegra16550UartBaseT194),
-  0x92,
+  FixedPcdGet64 (PcdTegra16550UartBaseT194B),
+  0x91,
   FixedPcdGet64 (PcdUartDefaultBaudRate),
   0,
   EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550

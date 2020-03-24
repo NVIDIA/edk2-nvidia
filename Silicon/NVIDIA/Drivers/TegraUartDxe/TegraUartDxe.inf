@@ -43,12 +43,14 @@
   IoLib
   MemoryAllocationLib
   Tegra16550SerialPortLib
+  FdtLib
 
 [Protocols]
   gEdkiiSdMmcOverrideProtocolGuid
   gEdkiiNonDiscoverableDeviceProtocolGuid
   gNVIDIAClockNodeProtocolGuid
   gArmScmiClock2ProtocolGuid
+  gNVIDIAConsoleEnabledProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableUartDeviceGuid
