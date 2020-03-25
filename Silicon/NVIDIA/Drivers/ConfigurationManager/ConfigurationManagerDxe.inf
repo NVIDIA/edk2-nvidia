@@ -16,7 +16,7 @@
 [Defines]
   INF_VERSION                    = 0x00010019
   BASE_NAME                      = ConfigurationManagerDxe
-  FILE_GUID                      = bf8444b1-fd73-4f1c-b763-c3117356b40a
+  FILE_GUID                      = c2074f9b-16a8-4d26-ab01-707be02a49fb
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = ConfigurationManagerDxeInitialize
@@ -31,37 +31,18 @@
   ConfigurationManagerDxe.c
 
 [Packages]
-  ArmPkg/ArmPkg.dec
-  ArmPlatformPkg/ArmPlatformPkg.dec
   MdePkg/MdePkg.dec
-  MdeModulePkg/MdeModulePkg.dec
-  Platform/ARM/JunoPkg/ArmJuno.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
-  ArmPlatformLib
-  PlatformAslTablesLib
-  PrintLib
+  DebugLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
-  UefiRuntimeServicesTableLib
 
 [Protocols]
+  gNVIDIAConfigurationManagerDataProtocolGuid
   gEdkiiConfigurationManagerProtocolGuid
 
-[Pcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
-  gArmTokenSpaceGuid.PcdArmArchTimerSecIntrNum
-  gArmTokenSpaceGuid.PcdArmArchTimerIntrNum
-  gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum
-  gArmTokenSpaceGuid.PcdArmArchTimerHypIntrNum
-  gArmTokenSpaceGuid.PcdGicDistributorBase
-  gArmTokenSpaceGuid.PcdGicRedistributorsBase
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
-  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
-
 [Depex]
-  TRUE
+  gNVIDIAConfigurationManagerDataProtocolGuid

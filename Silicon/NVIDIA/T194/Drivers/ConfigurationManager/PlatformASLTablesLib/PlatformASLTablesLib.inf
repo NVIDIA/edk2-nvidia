@@ -15,7 +15,7 @@
 
 [Defines]
   INF_VERSION                    = 0x00010019
-  BASE_NAME                      = JunoAslTablesLib
+  BASE_NAME                      = TegraAslTablesLib
   FILE_GUID                      = a51731c6-51d9-4342-bd9f-08bc80862743
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
@@ -33,10 +33,7 @@
 
 [Packages]
   ArmPkg/ArmPkg.dec
-  ArmPlatformPkg/ArmPlatformPkg.dec
-  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
-  MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [Pcd]

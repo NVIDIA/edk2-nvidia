@@ -6,7 +6,7 @@
  *
  * Template for [DSDT] ACPI Table (AML byte code table)
  */
-DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA186", 0x00000001)
+DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA186", 0x00000001)
 {
   Device(CPU0) {
     Name(_HID, "ACPI0007")

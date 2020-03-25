@@ -16,8 +16,13 @@
     - Obj or OBJ - Object
 **/
 
-#ifndef CONFIGURATION_MANAGER_H__
-#define CONFIGURATION_MANAGER_H__
+#ifndef CONFIGURATION_MANAGER_DATA_PROTOCOL_H__
+#define CONFIGURATION_MANAGER_DATA_PROTOCOL_H__
+
+#define NVIDIA_CONFIGURATION_MANAGER_DATA_PROTOCOL_GUID \
+  { \
+  0x1a8fd893, 0x4752, 0x40b9, { 0x9b, 0xc7, 0x75, 0x94, 0x04, 0xff, 0xcd, 0xff } \
+  }
 
 /** The configuration manager version
 */
@@ -68,4 +73,6 @@ typedef struct PlatformRepositoryInfo {
   VOID         * CmObjectPtr;
 } EDKII_PLATFORM_REPOSITORY_INFO;
 
-#endif // CONFIGURATION_MANAGER_H__
+extern EFI_GUID gNVIDIAConfigurationManagerDataProtocolGuid;
+
+#endif // CONFIGURATION_MANAGER_DATA_PROTOCOL_H__

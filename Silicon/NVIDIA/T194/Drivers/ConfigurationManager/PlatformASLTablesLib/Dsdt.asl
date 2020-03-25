@@ -384,47 +384,47 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
         Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xc3 }
       })
     }
-  }
 
-  //---------------------------------------------------------------------
-  // ethernet@2490000
-  //---------------------------------------------------------------------
-  Device(ETH0) {
-    Name (_HID, "PRP0001")
-    Name (_UID, 0)
-    Name (_CCA, ZERO)
+    //---------------------------------------------------------------------
+    // ethernet@2490000
+    //---------------------------------------------------------------------
+    Device(ETH0) {
+      Name (_HID, "PRP0001")
+      Name (_UID, 0)
+      Name (_CCA, ZERO)
 
-    Name(_CRS, ResourceTemplate() {
-      Memory32Fixed(ReadWrite, 0x2490000, 0x10000)
-      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xe2 }
-    })
+      Name(_CRS, ResourceTemplate() {
+        Memory32Fixed(ReadWrite, 0x2490000, 0x10000)
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xe2 }
+      })
 
-    Name (_DSD, Package () {
-      ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
-      Package () {
-        Package () {"mac-address", Package () { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }},
-        Package () {"compatible", Package () {"nvidia,tegra186-eqos"}},
-        Package () {"nvidia,num-dma-chans", 0x1},
-        Package () {"nvidia,dma-chans", 0x0},
-        Package () {"nvidia,num-mtl-queues", 0x1},
-        Package () {"nvidia,mtl-queues", 0x0},
-        Package () {"nvidia,rx-queue-prio", 0x2},
-        Package () {"nvidia,dcs-enable", 0},
-        Package () {"nvidia,tx-queue-prio", 0x0},
-        Package () {"nvidia,rx_riwt", 0x200},
-        Package () {"nvidia,ptp_ref_clock_speed", 0x12a05f20},
-        Package () {"nvidia,queue_prio", Package () {0x0, 0x1, 0x2, 0x3}},
-        Package () {"nvidia,rxq_enable_ctrl", 0x2},
-        Package () {"nvidia,pause_frames", 0x0},
-        Package () {"phy-mode", "rgmii"},
-        Package () {"nvidia,max-platform-mtu", 0x2328},
-        Package () {"snps,write-requests", 0x1},
-        Package () {"snps,read-requests", 0x3},
-        Package () {"snps,burst-map ", 0x7},
-        Package () {"snps,txpbl", 0x10},
-        Package () {"snps,rxpbl", 0x8}
-      }
-    })
+      Name (_DSD, Package () {
+        ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
+        Package () {
+          Package () {"mac-address", Package () { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }},
+          Package () {"compatible", Package () {"nvidia,tegra186-eqos"}},
+          Package () {"nvidia,num-dma-chans", 0x1},
+          Package () {"nvidia,dma-chans", 0x0},
+          Package () {"nvidia,num-mtl-queues", 0x1},
+          Package () {"nvidia,mtl-queues", 0x0},
+          Package () {"nvidia,rx-queue-prio", 0x2},
+          Package () {"nvidia,dcs-enable", 0},
+          Package () {"nvidia,tx-queue-prio", 0x0},
+          Package () {"nvidia,rx_riwt", 0x200},
+          Package () {"nvidia,ptp_ref_clock_speed", 0x12a05f20},
+          Package () {"nvidia,queue_prio", Package () {0x0, 0x1, 0x2, 0x3}},
+          Package () {"nvidia,rxq_enable_ctrl", 0x2},
+          Package () {"nvidia,pause_frames", 0x0},
+          Package () {"phy-mode", "rgmii"},
+          Package () {"nvidia,max-platform-mtu", 0x2328},
+          Package () {"snps,write-requests", 0x1},
+          Package () {"snps,read-requests", 0x3},
+          Package () {"snps,burst-map ", 0x7},
+          Package () {"snps,txpbl", 0x10},
+          Package () {"snps,rxpbl", 0x8}
+        }
+      })
+    }
   }
 }
 

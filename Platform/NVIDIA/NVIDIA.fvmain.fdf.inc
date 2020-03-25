@@ -52,8 +52,16 @@
   #INF MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
 
   # Configuration Manager
-  INF Silicon/NVIDIA/$(CHIPSET)/Drivers/ConfigurationManager/ConfigurationManagerDxe/ConfigurationManagerDxe.inf
-
+  INF Silicon/NVIDIA/Drivers/ConfigurationManager/ConfigurationManagerDxe.inf
+!if $(CHIPSET) == T186
+  INF Silicon/NVIDIA/T186/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+!elseif $(CHIPSET) == T194
+  INF Silicon/NVIDIA/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+!elseif $(CHIPSET) == T234
+  INF Silicon/NVIDIA/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+!elseif $(CHIPSET) == TH500
+  INF Silicon/NVIDIA/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+!endif
   #
   # Dynamic Table Factory Dxe
   #

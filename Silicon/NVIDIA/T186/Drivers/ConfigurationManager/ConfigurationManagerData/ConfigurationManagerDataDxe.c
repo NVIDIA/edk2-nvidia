@@ -1,5 +1,5 @@
 /** @file
-  Configuration Manager Dxe
+  Configuration Manager Data Dxe
 
   Copyright (c) 2019 - 2020, NVIDIA Corporation. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
@@ -18,25 +18,19 @@
 **/
 #include <ConfigurationManagerObject.h>
 
-#include "ConfigurationManagerDxe.h"
+#include <Library/ArmLib.h>
+#include <Library/TegraPlatformInfoLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 
 #include <IndustryStandard/DebugPort2Table.h>
-#include <Library/IoLib.h>
-#include <Library/UefiBootServicesTableLib.h>
-#include <Library/ArmLib.h>
-#include <Library/DebugLib.h>
-#include <Library/PcdLib.h>
-#include <Library/BaseMemoryLib.h>
-#include <Protocol/AcpiTable.h>
+#include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
+#include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>
 
-#include <ArmPlatform.h>
-#include <AcpiTableGenerator.h>
-#include <Protocol/ConfigurationManagerProtocol.h>
-
-#include <Dsdt.hex>
+#include <Protocol/ConfigurationManagerDataProtocol.h>
 
 #include "Platform.h"
 
+#include "Dsdt.hex"
 
 /** The platform configuration repository information.
 */
@@ -124,11 +118,11 @@ CM_ARM_GICC_INFO GicCInfo[] = {
     GIC_ENTRY (CPUInterfaceNumber, Mpidr, PmuIrq, VGicIrq, EnergyEfficiency)
   */
   GICC_ENTRY (0, GET_MPID (0, 0), 0x140, 0,     0),
-  /*GICC_ENTRY (1, GET_MPID (0, 1), 0x141, 0,     0),
+  GICC_ENTRY (1, GET_MPID (0, 1), 0x141, 0,     0),
   GICC_ENTRY (2, GET_MPID (1, 0), 0,     0x128, 0),
   GICC_ENTRY (3, GET_MPID (1, 1), 0x129, 0,     0),
   GICC_ENTRY (4, GET_MPID (1, 2), 0x12A, 0,     0),
-  GICC_ENTRY (5, GET_MPID (1, 3), 0x12B, 0,     0)*/
+  GICC_ENTRY (5, GET_MPID (1, 3), 0x12B, 0,     0)
 };
 
 /** The platform GIC distributor information.
@@ -137,15 +131,7 @@ STATIC
 CM_ARM_GICD_INFO GicDInfo = {
   0,
   0,
-  3
-};
-
-/** The platform GIC redistributor information.
-*/
-STATIC
-CM_ARM_GIC_REDIST_INFO GicRedistInfo = {
-  0,
-  SIZE_64KB * 3
+  2
 };
 
 /** The platform generic timer information.
@@ -168,7 +154,7 @@ CM_ARM_GENERIC_TIMER_INFO GenericTimerInfo = {
 /** The platform SPCR serial port information.
 */
 CM_ARM_SERIAL_PORT_INFO SpcrSerialPort = {
-  FixedPcdGet64 (PcdTegra16550UartBaseT234),
+  FixedPcdGet64 (PcdTegra16550UartBaseT186),
   0x90,
   FixedPcdGet64 (PcdUartDefaultBaudRate),
   0,
@@ -185,7 +171,8 @@ InitializePlatformRepository (
   VOID
   )
 {
-  ZeroMem(NVIDIAPlatformRepositoryInfo, sizeof (NVIDIAPlatformRepositoryInfo));
+  UINTN Index;
+  UINTN GicInterruptInterfaceBase;
 
   NVIDIAPlatformRepositoryInfo[0].CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjCfgMgrInfo);
   NVIDIAPlatformRepositoryInfo[0].CmObjectSize = sizeof (CmInfo);
@@ -207,10 +194,14 @@ InitializePlatformRepository (
   NVIDIAPlatformRepositoryInfo[3].CmObjectCount = sizeof (PmProfileInfo) / sizeof (CM_ARM_POWER_MANAGEMENT_PROFILE_INFO);
   NVIDIAPlatformRepositoryInfo[3].CmObjectPtr = &PmProfileInfo;
 
+  GicInterruptInterfaceBase = PcdGet64(PcdGicInterruptInterfaceBase);
   NVIDIAPlatformRepositoryInfo[4].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
   NVIDIAPlatformRepositoryInfo[4].CmObjectSize = sizeof (GicCInfo);
   NVIDIAPlatformRepositoryInfo[4].CmObjectCount = sizeof (GicCInfo) / sizeof (CM_ARM_GICC_INFO);
   NVIDIAPlatformRepositoryInfo[4].CmObjectPtr = &GicCInfo;
+  for(Index=0; Index<NVIDIAPlatformRepositoryInfo[4].CmObjectCount; Index++) {
+    GicCInfo[Index].PhysicalBaseAddress =  GicInterruptInterfaceBase;
+  }
 
   GicDInfo.PhysicalBaseAddress = PcdGet64 (PcdGicDistributorBase);
   NVIDIAPlatformRepositoryInfo[5].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicDInfo);
@@ -218,137 +209,21 @@ InitializePlatformRepository (
   NVIDIAPlatformRepositoryInfo[5].CmObjectCount = sizeof (GicDInfo) / sizeof (CM_ARM_GICD_INFO);
   NVIDIAPlatformRepositoryInfo[5].CmObjectPtr = &GicDInfo;
 
-  GicRedistInfo.DiscoveryRangeBaseAddress = PcdGet64 (PcdGicRedistributorsBase);
-  NVIDIAPlatformRepositoryInfo[6].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicRedistributorInfo);
-  NVIDIAPlatformRepositoryInfo[6].CmObjectSize = sizeof (GicRedistInfo);
-  NVIDIAPlatformRepositoryInfo[6].CmObjectCount = sizeof (GicRedistInfo) / sizeof (CM_ARM_GIC_REDIST_INFO);
-  NVIDIAPlatformRepositoryInfo[6].CmObjectPtr = &GicRedistInfo;
+  NVIDIAPlatformRepositoryInfo[6].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGenericTimerInfo);
+  NVIDIAPlatformRepositoryInfo[6].CmObjectSize = sizeof (GenericTimerInfo);
+  NVIDIAPlatformRepositoryInfo[6].CmObjectCount = sizeof (GenericTimerInfo) / sizeof (CM_ARM_GENERIC_TIMER_INFO);
+  NVIDIAPlatformRepositoryInfo[6].CmObjectPtr = &GenericTimerInfo;
 
-  NVIDIAPlatformRepositoryInfo[7].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGenericTimerInfo);
-  NVIDIAPlatformRepositoryInfo[7].CmObjectSize = sizeof (GenericTimerInfo);
-  NVIDIAPlatformRepositoryInfo[7].CmObjectCount = sizeof (GenericTimerInfo) / sizeof (CM_ARM_GENERIC_TIMER_INFO);
-  NVIDIAPlatformRepositoryInfo[7].CmObjectPtr = &GenericTimerInfo;
-
-  NVIDIAPlatformRepositoryInfo[8].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
-  NVIDIAPlatformRepositoryInfo[8].CmObjectSize = sizeof (SpcrSerialPort);
-  NVIDIAPlatformRepositoryInfo[8].CmObjectCount = sizeof (SpcrSerialPort) / sizeof (CM_ARM_SERIAL_PORT_INFO);
-  NVIDIAPlatformRepositoryInfo[8].CmObjectPtr = &SpcrSerialPort;
+  NVIDIAPlatformRepositoryInfo[7].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
+  NVIDIAPlatformRepositoryInfo[7].CmObjectSize = sizeof (SpcrSerialPort);
+  NVIDIAPlatformRepositoryInfo[7].CmObjectCount = sizeof (SpcrSerialPort) / sizeof (CM_ARM_SERIAL_PORT_INFO);
+  NVIDIAPlatformRepositoryInfo[7].CmObjectPtr = &SpcrSerialPort;
 
   return EFI_SUCCESS;
 }
 
-/** The GetObject function defines the interface implemented by the
-    Configuration Manager Protocol for returning the Configuration
-    Manager Objects.
-
-  @param [in]      This        Pointer to the Configuration Manager Protocol.
-  @param [in]      CmObjectId  The Configuration Manager Object ID.
-  @param [in]      Token       An optional token identifying the object. If
-                               unused this must be CM_NULL_TOKEN.
-  @param [in, out] CmObject    Pointer to the Configuration Manager Object
-                               descriptor describing the requested Object.
-
-  @retval EFI_SUCCESS           Success.
-  @retval EFI_INVALID_PARAMETER A parameter is invalid.
-  @retval EFI_NOT_FOUND         The required object information is not found.
-**/
-EFI_STATUS
-EFIAPI
-NVIDIAPlatformGetObject (
-  IN  CONST EDKII_CONFIGURATION_MANAGER_PROTOCOL  * CONST This,
-  IN  CONST CM_OBJECT_ID                                  CmObjectId,
-  IN  CONST CM_OBJECT_TOKEN                               Token OPTIONAL,
-  IN  OUT   CM_OBJ_DESCRIPTOR                     * CONST CmObject
-  )
-{
-  EFI_STATUS  Status;
-  UINT32      Index;
-  BOOLEAN     DataFound;
-
-  if ((This == NULL) || (CmObject == NULL)) {
-    ASSERT (This != NULL);
-    ASSERT (CmObject != NULL);
-    return EFI_INVALID_PARAMETER;
-  }
-
-  DataFound = FALSE;
-
-  for (Index = 0; Index < EStdObjMax + EArmObjMax; Index++) {
-    if (NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr == NULL) {
-      break;
-    }
-
-    if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CmObjectId) {
-      DataFound = TRUE;
-      break;
-    }
-  }
-
-  if (DataFound) {
-    Status = EFI_SUCCESS;
-    CmObject->Size = NVIDIAPlatformRepositoryInfo[Index].CmObjectSize;
-    CmObject->Data = NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr;
-    CmObject->ObjectId = NVIDIAPlatformRepositoryInfo[Index].CmObjectId;
-    CmObject->Count = NVIDIAPlatformRepositoryInfo[Index].CmObjectCount;
-    DEBUG ((
-      DEBUG_INFO,
-      "CmObject: ID = %d, Ptr = 0x%p, Size = %d, Count = %d\n",
-      CmObject->ObjectId,
-      CmObject->Data,
-      CmObject->Size,
-      CmObject->Count
-      ));
-  } else {
-    Status = EFI_NOT_FOUND;
-    DEBUG ((
-      DEBUG_ERROR,
-      "ERROR: Not Found CmObject = 0x%x. Status = %r\n",
-      CmObjectId,
-      Status
-      ));
-  }
-
-  return Status;
-}
-
-/** The SetObject function defines the interface implemented by the
-    Configuration Manager Protocol for updating the Configuration
-    Manager Objects.
-
-  @param [in]      This        Pointer to the Configuration Manager Protocol.
-  @param [in]      CmObjectId  The Configuration Manager Object ID.
-  @param [in]      Token       An optional token identifying the object. If
-                               unused this must be CM_NULL_TOKEN.
-  @param [in]      CmObject    Pointer to the Configuration Manager Object
-                               descriptor describing the Object.
-
-  @retval EFI_UNSUPPORTED  This operation is not supported.
-**/
-EFI_STATUS
-EFIAPI
-NVIDIAPlatformSetObject (
-  IN  CONST EDKII_CONFIGURATION_MANAGER_PROTOCOL  * CONST This,
-  IN  CONST CM_OBJECT_ID                                  CmObjectId,
-  IN  CONST CM_OBJECT_TOKEN                               Token OPTIONAL,
-  IN        CM_OBJ_DESCRIPTOR                     * CONST CmObject
-  )
-{
-  return EFI_UNSUPPORTED;
-}
-
-/** A structure describing the configuration manager protocol interface.
-*/
-STATIC
-CONST
-EDKII_CONFIGURATION_MANAGER_PROTOCOL NVIDIAPlatformConfigManagerProtocol = {
-  CREATE_REVISION (1, 0),
-  NVIDIAPlatformGetObject,
-  NVIDIAPlatformSetObject,
-  NVIDIAPlatformRepositoryInfo
-};
-
 /**
-  Entrypoint of Configuration Manager Dxe.
+  Entrypoint of Configuration Manager Data Dxe.
 
   @param  ImageHandle
   @param  SystemTable
@@ -360,39 +235,26 @@ EDKII_CONFIGURATION_MANAGER_PROTOCOL NVIDIAPlatformConfigManagerProtocol = {
 **/
 EFI_STATUS
 EFIAPI
-ConfigurationManagerDxeInitialize (
+ConfigurationManagerDataDxeInitialize (
   IN EFI_HANDLE          ImageHandle,
   IN EFI_SYSTEM_TABLE  * SystemTable
   )
 {
-  EFI_STATUS  Status;
+  UINTN      ChipID;
+  EFI_STATUS Status;
 
-  Status = gBS->InstallProtocolInterface (
-                  &ImageHandle,
-                  &gEdkiiConfigurationManagerProtocolGuid,
-                  EFI_NATIVE_INTERFACE,
-                  (VOID*)&NVIDIAPlatformConfigManagerProtocol
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "ERROR: Failed to get Install Configuration Manager Protocol." \
-      " Status = %r\n",
-      Status
-      ));
-    goto error_handler;
+  ChipID = TegraGetChipID();
+  if (ChipID != T186_CHIP_ID) {
+    return EFI_SUCCESS;
   }
 
   Status = InitializePlatformRepository ();
   if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "ERROR: Failed to initialize the Platform Configuration Repository." \
-      " Status = %r\n",
-      Status
-      ));
+    return Status;
   }
 
-error_handler:
-  return Status;
+  return gBS->InstallProtocolInterface (&ImageHandle,
+                                        &gNVIDIAConfigurationManagerDataProtocolGuid,
+                                        EFI_NATIVE_INTERFACE,
+                                        (VOID*)NVIDIAPlatformRepositoryInfo);
 }

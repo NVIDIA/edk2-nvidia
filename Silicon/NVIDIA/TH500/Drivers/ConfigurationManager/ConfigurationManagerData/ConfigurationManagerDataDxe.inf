@@ -1,5 +1,5 @@
 ## @file
-#  Configuration Manager Dxe
+#  Configuration Manager Data Dxe
 #
 #  Copyright (c) 2020, NVIDIA Corporation. All rights reserved.
 #  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
@@ -15,11 +15,11 @@
 
 [Defines]
   INF_VERSION                    = 0x00010019
-  BASE_NAME                      = ConfigurationManagerDxe
+  BASE_NAME                      = ConfigurationManagerDataDxe
   FILE_GUID                      = 5f74d26c-eb8f-4007-8183-2dbea7b2280d
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
-  ENTRY_POINT                    = ConfigurationManagerDxeInitialize
+  ENTRY_POINT                    = ConfigurationManagerDataDxeInitialize
 
 #
 # The following information is for reference only and not required by the build tools.
@@ -28,27 +28,20 @@
 #
 
 [Sources]
-  ConfigurationManagerDxe.c
+  ConfigurationManagerDataDxe.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
-  ArmPlatformPkg/ArmPlatformPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
-  Platform/ARM/JunoPkg/ArmJuno.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
-  ArmPlatformLib
+  TegraPlatformInfoLib
   PlatformAslTablesLib
-  PrintLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
-  UefiRuntimeServicesTableLib
-
-[Protocols]
-  gEdkiiConfigurationManagerProtocolGuid
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
@@ -59,13 +52,15 @@
   gArmTokenSpaceGuid.PcdArmArchTimerHypIntrNum
   gArmTokenSpaceGuid.PcdGicDistributorBase
   gArmTokenSpaceGuid.PcdGicRedistributorsBase
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseTH500
-  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
-
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
   gArmTokenSpaceGuid.PcdPciBusMin
   gArmTokenSpaceGuid.PcdPciBusMax
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseTH500
+  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
+
+[Protocols]
+  gNVIDIAConfigurationManagerDataProtocolGuid
 
 [Depex]
   TRUE
