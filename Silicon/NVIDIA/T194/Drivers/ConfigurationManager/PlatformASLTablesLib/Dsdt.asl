@@ -6,6 +6,9 @@
  *
  * Template for [DSDT] ACPI Table (AML byte code table)
  */
+
+#include <T194/T194Definitions.h>
+
 DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
 {
   Scope(_SB) {
@@ -55,8 +58,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
       Name (_CCA, ZERO)
 
       Name(_CRS, ResourceTemplate() {
-        Memory32Fixed(ReadWrite, FixedPcdGet64 (PcdTegra16550UartBaseT194), 0x10000)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x92 }
+        Memory32Fixed(ReadWrite, T194_UARTC_BASE_ADDR, T194_UARTC_CAR_SIZE)
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T194_UARTC_INTR }
       })
       Name (_DSD, Package () {
         ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
@@ -357,8 +360,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
       Name (_CCA, ZERO)
 
       Name(_CRS, ResourceTemplate () {
-        Memory32Fixed(ReadWrite, 0x03460000, 0x20000)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x61 }
+        Memory32Fixed(ReadWrite, T194_SDMMC4_BASE_ADDR, T194_SDMMC4_CAR_SIZE)
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T194_SDMMC4_INTR }
       })
     }
 
@@ -368,8 +371,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
       Name (_CCA, ZERO)
 
       Name(_CRS, ResourceTemplate () {
-        Memory32Fixed(ReadWrite, 0x03400000, 0x20000)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x5e }
+        Memory32Fixed(ReadWrite, T194_SDMMC1_BASE_ADDR, T194_SDMMC1_CAR_SIZE)
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T194_SDMMC1_INTR }
       })
     }
 
@@ -394,8 +397,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
       Name (_CCA, ZERO)
 
       Name(_CRS, ResourceTemplate() {
-        Memory32Fixed(ReadWrite, 0x2490000, 0x10000)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xe2 }
+        Memory32Fixed(ReadWrite, T194_ETHERNET_BASE_ADDR, T194_ETHERNET_CAR_SIZE)
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T194_ETHERNET_INTR }
       })
 
       Name (_DSD, Package () {

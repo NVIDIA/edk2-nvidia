@@ -35,8 +35,3 @@
   ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
-
-[Pcd]
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
-  gArmTokenSpaceGuid.PcdPciBusMin
-  gArmTokenSpaceGuid.PcdPciBusMax

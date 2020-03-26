@@ -38,6 +38,17 @@
 ################################################################################
 [Components.common]
   #
+  # Platform Comfiguration Manager Data
+  #
+  Silicon/NVIDIA/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
+    <LibraryClasses>
+      # Platform ASL Tables
+      PlatformAslTablesLib|Silicon/NVIDIA/TH500/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/TH500/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
+  }
+
+  #
   # BPMP-FW IPC protocol
   #
   Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf

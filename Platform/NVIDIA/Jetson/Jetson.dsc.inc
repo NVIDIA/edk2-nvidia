@@ -39,6 +39,28 @@
 ################################################################################
 [Components.common]
   #
+  # Platform Comfiguration Manager Data
+  #
+  Silicon/NVIDIA/T186/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
+    <LibraryClasses>
+      PlatformAslTablesLib|Silicon/NVIDIA/T186/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/T186/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
+  }
+  Silicon/NVIDIA/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
+    <LibraryClasses>
+      PlatformAslTablesLib|Silicon/NVIDIA/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
+  }
+  Silicon/NVIDIA/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
+    <LibraryClasses>
+      PlatformAslTablesLib|Silicon/NVIDIA/T234/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/T234/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
+  }
+
+  #
   # BPMP-FW IPC protocol
   #
   Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf

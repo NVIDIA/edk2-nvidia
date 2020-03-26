@@ -767,41 +767,6 @@
   #
   Silicon/NVIDIA/Drivers/ConfigurationManager/ConfigurationManagerDxe.inf
 
-  # Platform Comfiguration Manager Data
-!if $(CHIPSET) == T186
-  Silicon/NVIDIA/T186/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
-    <LibraryClasses>
-      # Platform ASL Tables
-      PlatformAslTablesLib|Silicon/NVIDIA/T186/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
-    <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/T186/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
-  }
-!elseif $(CHIPSET) == T194
-  Silicon/NVIDIA/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
-    <LibraryClasses>
-      # Platform ASL Tables
-      PlatformAslTablesLib|Silicon/NVIDIA/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
-    <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
-  }
-!elseif $(CHIPSET) == T234
-  Silicon/NVIDIA/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
-    <LibraryClasses>
-      # Platform ASL Tables
-      PlatformAslTablesLib|Silicon/NVIDIA/T234/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
-    <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/T234/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
-  }
-!elseif $(CHIPSET) == TH500
-  Silicon/NVIDIA/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
-    <LibraryClasses>
-      # Platform ASL Tables
-      PlatformAslTablesLib|Silicon/NVIDIA/TH500/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
-    <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/TH500/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
-  }
-!endif
-
   #
   # Tegra Platform Boot Manager
   #

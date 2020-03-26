@@ -33,7 +33,3 @@
 [Packages]
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
-
-[FixedPcd]
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate

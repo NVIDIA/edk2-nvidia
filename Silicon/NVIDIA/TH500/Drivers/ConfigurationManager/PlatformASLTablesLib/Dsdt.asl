@@ -6,6 +6,9 @@
  *
  * Template for [DSDT] ACPI Table (AML byte code table)
  */
+
+#include <TH500/TH500Definitions.h>
+
 DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TH500", 0x00000001)
 {
   Device(CPU0) {
@@ -44,8 +47,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TH500", 0x00000001)
     Name (_CCA, ZERO)
 
     Name(_CRS, ResourceTemplate() {
-      Memory32Fixed(ReadWrite, FixedPcdGet64 (PcdTegra16550UartBaseTH500), 0x1000)
-      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x92 }
+      Memory32Fixed(ReadWrite, TH500_UARTC_BASE_ADDR, TH500_UARTC_CAR_SIZE)
+      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { TH500_UARTC_INTR }
     })
 
     Name (_DSD, Package () {
@@ -63,8 +66,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TH500", 0x00000001)
     Name(_UID, 0)
     Name (_CCA, ONE)
     Name(_CRS, ResourceTemplate () {
-      Memory32Fixed(ReadWrite, 0x03460000, 0x210)
-      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x61 }
+      Memory32Fixed(ReadWrite, TH500_SDMMC4_BASE_ADDR, TH500_SDMMC4_CAR_SIZE)
+      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { TH500_SDMMC4_INTR }
     })
   }
 
@@ -78,8 +81,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TH500", 0x00000001)
 		Name (_CCA, 0) /* Non-Coherent DMA */
 
 		Name(_CRS, ResourceTemplate() {
-			Memory32Fixed(ReadWrite, 0x03B40000, 0x100)
-			Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xFA } /* SPI[218] == 250 */
+			Memory32Fixed(ReadWrite, TH500_ETHERNET_BASE_ADDR, TH500_ETHERNET_CAR_SIZE)
+			Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { TH500_ETHERNET_INTR } /* SPI[218] == 250 */
 		})
 
 		Name (_DSD, Package () {
