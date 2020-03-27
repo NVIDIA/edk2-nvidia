@@ -61,6 +61,11 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
 !include Platform/NVIDIA/NVIDIA.fvmain.fdf.inc
 
   #
+  # Platform Comfiguration Manager Data
+  #
+  INF Silicon/NVIDIA/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+
+  #
   # BPMP-FW IPC protocol
   #
   INF Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
