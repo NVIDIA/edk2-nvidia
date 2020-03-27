@@ -55,7 +55,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     EFI_ACPI_6_2_FIXED_ACPI_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdFadt),
     NULL,
-    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
   // GTDT Table
@@ -64,7 +64,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     EFI_ACPI_6_2_GENERIC_TIMER_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdGtdt),
     NULL,
-    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
   // MADT Table
@@ -73,7 +73,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     EFI_ACPI_6_2_MULTIPLE_APIC_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMadt),
     NULL,
-    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
   // SPCR Table
@@ -91,7 +91,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     2,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDsdt),
     (EFI_ACPI_DESCRIPTION_HEADER*)dsdt_aml_code,
-    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   }
 };
@@ -179,6 +179,8 @@ InitializePlatformRepository (
   VOID
   )
 {
+  UINTN Index;
+
   NVIDIAPlatformRepositoryInfo[0].CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjCfgMgrInfo);
   NVIDIAPlatformRepositoryInfo[0].CmObjectSize = sizeof (CmInfo);
   NVIDIAPlatformRepositoryInfo[0].CmObjectCount = sizeof (CmInfo) / sizeof (CM_STD_OBJ_CONFIGURATION_MANAGER_INFO);
@@ -188,6 +190,11 @@ InitializePlatformRepository (
   NVIDIAPlatformRepositoryInfo[1].CmObjectSize = sizeof (CmAcpiTableList);
   NVIDIAPlatformRepositoryInfo[1].CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
   NVIDIAPlatformRepositoryInfo[1].CmObjectPtr = &CmAcpiTableList;
+  for(Index=0; Index<NVIDIAPlatformRepositoryInfo[1].CmObjectCount; Index++) {
+    if (CmAcpiTableList[Index].AcpiTableSignature != EFI_ACPI_6_2_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE) {
+      CmAcpiTableList[Index].OemTableId =  PcdGet64(PcdAcpiDefaultOemTableId);
+    }
+  }
 
   NVIDIAPlatformRepositoryInfo[2].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjBootArchInfo);
   NVIDIAPlatformRepositoryInfo[2].CmObjectSize = sizeof (BootArchInfo);

@@ -148,7 +148,7 @@ Include
   gNVIDIATokenSpaceGuid.PcdCPUBLCFGBPartitionName|L"CPUBL-CFG_b"|VOID*|0x0000001A
 
 #Tegra UART OEM Table ID
-  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId|0x5241554152474554|UINT64|0x0000000A
+  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId|'TEGRAUAR'|UINT64|0x0000000A
 
 #Size of optional signing data header in boot.img partition.
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B
@@ -170,9 +170,6 @@ Include
 
 #Explicit PCIe Controller Enable
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|FALSE|BOOLEAN|0x00000017
-
-#PCIe Segment Base Address
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x0|UINT64|0x00000018
 
 # Sidecar Variant
   gNVIDIATokenSpaceGuid.PcdSidecarVariant|FALSE|BOOLEAN|0x0000001B
@@ -196,7 +193,11 @@ Include
   gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString|L""|VOID*|0x00010022
 
 [PcdsDynamic.common]
+# Default state of floor sweeping
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|FALSE|BOOLEAN|0x00000015
+
+#PCIe Segment Base Address
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x0|UINT64|0x00000018
 
 #Tegra PWM FAN Base for all chips
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase|0x0|UINT64|0x00000020

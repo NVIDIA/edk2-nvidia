@@ -64,12 +64,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}
 
   #
-  # ACPI
-  #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|0x3439314152474554
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision|0x00000001
-
-  #
   # Boot.img signing header size
   #
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
@@ -83,13 +77,6 @@
   # Explicit PCIe Controller Enable
   #
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
-
-  #
-  # PCI Root Complex
-  #
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x30000000
-  gArmTokenSpaceGuid.PcdPciBusMin|160
-  gArmTokenSpaceGuid.PcdPciBusMax|161
 
 !if $(SIDECAR)
   #

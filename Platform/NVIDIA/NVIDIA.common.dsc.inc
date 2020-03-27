@@ -474,6 +474,7 @@
   # ACPI PCDs
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId|"NVIDIA"
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision|1
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId|0x4144564E
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorRevision|1
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiExposedTableVersions|0x20
@@ -494,8 +495,16 @@
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0
 
-  #default state of floor sweeping
-  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|FALSE
+  #
+  # Default OEM Table ID
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|0x0
+
+  #
+  # PCI Root Complex
+  #
+  gArmTokenSpaceGuid.PcdPciBusMin|0
+  gArmTokenSpaceGuid.PcdPciBusMax|0
 
 [PcdsDynamicDefault.common]
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x00000000

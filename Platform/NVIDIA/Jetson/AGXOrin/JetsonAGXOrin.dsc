@@ -63,12 +63,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(bf0d4599-20d4-414e-b2c5-3595b1cda402)}
 
   #
-  # ACPI
-  #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|0x3433324152474554
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision|0x00000001
-
-  #
   # Boot.img signing header size
   #
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000

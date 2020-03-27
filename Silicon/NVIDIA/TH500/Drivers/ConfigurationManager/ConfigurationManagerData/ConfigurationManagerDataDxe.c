@@ -56,7 +56,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     EFI_ACPI_6_2_FIXED_ACPI_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdFadt),
     NULL,
-    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
   // GTDT Table
@@ -65,7 +65,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     EFI_ACPI_6_2_GENERIC_TIMER_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdGtdt),
     NULL,
-    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
   // MADT Table
@@ -74,7 +74,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     EFI_ACPI_6_2_MULTIPLE_APIC_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMadt),
     NULL,
-    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
   // SPCR Table
@@ -92,7 +92,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     0,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDsdt),
     (EFI_ACPI_DESCRIPTION_HEADER*)dsdt_aml_code,
-    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
   // SSDT table describing the PCI root complex
@@ -101,7 +101,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     0,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt),
     (EFI_ACPI_DESCRIPTION_HEADER*)ssdtpci_aml_code,
-    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
   // PCI MCFG Table
@@ -110,7 +110,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     EFI_ACPI_MEMORY_MAPPED_CONFIGURATION_SPACE_ACCESS_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMcfg),
     NULL,
-    FixedPcdGet64(PcdAcpiDefaultOemTableId),
+    0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
 };
@@ -192,17 +192,15 @@ CM_ARM_SERIAL_PORT_INFO SpcrSerialPort = {
 /** PCI Configuration Space Info
 */
 STATIC
-CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfo[] = {
-  {
-    // The physical base address for the PCI segment
-    FixedPcdGet64 (PcdPciConfigurationSpaceBaseAddress),
-    // The PCI segment group number
-    0,
-    // The start bus number
-    FixedPcdGet32 (PcdPciBusMin),
-    // The end bus number
-    FixedPcdGet32 (PcdPciBusMax),
-  },
+CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfo = {
+  // The physical base address for the PCI segment
+  0,
+  // The PCI segment group number
+  0,
+  // The start bus number
+  0,
+  // The end bus number
+  0
 };
 
 
@@ -216,6 +214,8 @@ InitializePlatformRepository (
   VOID
   )
 {
+  UINTN Index;
+
   NVIDIAPlatformRepositoryInfo[0].CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjCfgMgrInfo);
   NVIDIAPlatformRepositoryInfo[0].CmObjectSize = sizeof (CmInfo);
   NVIDIAPlatformRepositoryInfo[0].CmObjectCount = sizeof (CmInfo) / sizeof (CM_STD_OBJ_CONFIGURATION_MANAGER_INFO);
@@ -225,6 +225,11 @@ InitializePlatformRepository (
   NVIDIAPlatformRepositoryInfo[1].CmObjectSize = sizeof (CmAcpiTableList);
   NVIDIAPlatformRepositoryInfo[1].CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
   NVIDIAPlatformRepositoryInfo[1].CmObjectPtr = &CmAcpiTableList;
+  for(Index=0; Index<NVIDIAPlatformRepositoryInfo[1].CmObjectCount; Index++) {
+    if (CmAcpiTableList[Index].AcpiTableSignature != EFI_ACPI_6_2_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE) {
+      CmAcpiTableList[Index].OemTableId =  PcdGet64(PcdAcpiDefaultOemTableId);
+    }
+  }
 
   NVIDIAPlatformRepositoryInfo[2].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjBootArchInfo);
   NVIDIAPlatformRepositoryInfo[2].CmObjectSize = sizeof (BootArchInfo);
@@ -263,10 +268,13 @@ InitializePlatformRepository (
   NVIDIAPlatformRepositoryInfo[8].CmObjectCount = sizeof (SpcrSerialPort) / sizeof (CM_ARM_SERIAL_PORT_INFO);
   NVIDIAPlatformRepositoryInfo[8].CmObjectPtr = &SpcrSerialPort;
 
+  PciConfigInfo.BaseAddress = PcdGet64 (PcdPciConfigurationSpaceBaseAddress);
+  PciConfigInfo.StartBusNumber = PcdGet32 (PcdPciBusMin);
+  PciConfigInfo.EndBusNumber = PcdGet32 (PcdPciBusMax);
   NVIDIAPlatformRepositoryInfo[9].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
   NVIDIAPlatformRepositoryInfo[9].CmObjectSize = sizeof (PciConfigInfo);
   NVIDIAPlatformRepositoryInfo[9].CmObjectCount = sizeof (PciConfigInfo) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);
-  NVIDIAPlatformRepositoryInfo[9].CmObjectPtr = PciConfigInfo;
+  NVIDIAPlatformRepositoryInfo[9].CmObjectPtr = &PciConfigInfo;
 
   return EFI_SUCCESS;
 }
