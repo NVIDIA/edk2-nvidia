@@ -144,7 +144,12 @@
   #
   # Tegra Platform Configuration
   #
-  Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
+  Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/T186/Library/PlatformInitializationLib/PlatformInitializationLib.inf
+      NULL|Silicon/NVIDIA/T194/Library/PlatformInitializationLib/PlatformInitializationLib.inf
+      NULL|Silicon/NVIDIA/T234/Library/PlatformInitializationLib/PlatformInitializationLib.inf
+  }
 
   #
   # Tegra UART clock driver

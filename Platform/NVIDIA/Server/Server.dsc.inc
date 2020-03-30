@@ -114,7 +114,11 @@
   #
   # Tegra Platform Configuration
   #
-  Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
+  Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/TH500/Library/PlatformInitializationLib/PlatformInitializationLib.inf
+  }
+
   #
   # PCI Support
   #

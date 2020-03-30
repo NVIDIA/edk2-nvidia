@@ -1,0 +1,34 @@
+## @file
+#  Implementation for PlatformInitializationLib library class interfaces.
+#
+#  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PlatformInitializationLib
+  FILE_GUID                      = 12fb91cd-73d4-4140-9bb4-2c7e7e6593f4
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = NULL|DXE_DRIVER
+  CONSTRUCTOR                    = TH500PlatformInitializationLibConstructor
+  DESTRUCTOR                     = TH500PlatformInitializationLibDestructor
+
+[Sources]
+  PlatformInitializationLib.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase
+  gArmTokenSpaceGuid.PcdPciBusMin
+  gArmTokenSpaceGuid.PcdPciBusMax

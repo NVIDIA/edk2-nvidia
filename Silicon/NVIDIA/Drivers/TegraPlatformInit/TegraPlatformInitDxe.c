@@ -72,50 +72,6 @@ TegraPlatformInitialize (
   PcdSet64S(PcdSystemMemoryBase, TegraGetSystemMemoryBaseAddress(ChipID));
   PcdSet64S(PcdGicDistributorBase, TegraGetGicDistributorBaseAddress(ChipID));
 
-  // Set GIC specific PCDs
-  if (ChipID == T186_CHIP_ID || ChipID == T194_CHIP_ID) {
-    // Used in GICv2
-    PcdSet64S(PcdGicInterruptInterfaceBase, TegraGetGicInterruptInterfaceBaseAddress(ChipID));
-  } else if (ChipID == T234_CHIP_ID || ChipID == TH500_CHIP_ID) {
-    // Used in GICv3
-    PcdSet64S(PcdGicRedistributorsBase, TegraGetGicRedistributorBaseAddress(ChipID));
-  } else {
-    return EFI_UNSUPPORTED;
-  }
-
-  // Set PCI specific PCDs
-  if (ChipID == T194_CHIP_ID) {
-    PcdSet64S(PcdPciConfigurationSpaceBaseAddress, 0x30000000);
-    PcdSet32S(PcdPciBusMin, 160);
-    PcdSet32S(PcdPciBusMax, 161);
-  } else if (ChipID == TH500_CHIP_ID) {
-    PcdSet64S(PcdPciConfigurationSpaceBaseAddress, 0x2c800000);
-    PcdSet32S(PcdPciBusMin, 0);
-    PcdSet32S(PcdPciBusMax, 1);
-  } else {
-    // PCI is not supported on all targets. Do not return any error.
-  }
-
-  // Set Default OEM Table ID specific PCDs
-  if (ChipID == T186_CHIP_ID) {
-    PcdSet64S(PcdAcpiDefaultOemTableId, 0x2020202036383154);
-  } else if (ChipID == T194_CHIP_ID) {
-    PcdSet64S(PcdAcpiDefaultOemTableId, 0x2020202034393154);
-  } else if (ChipID == T234_CHIP_ID) {
-    PcdSet64S(PcdAcpiDefaultOemTableId, 0x2020202034333254);
-  } else if (ChipID == TH500_CHIP_ID) {
-    PcdSet64S(PcdAcpiDefaultOemTableId, 0x2020203030354854);
-  } else {
-    return EFI_UNSUPPORTED;
-  }
-
-  // Set Tegra PWM Fan Base
-  if (ChipID == T194_CHIP_ID) {
-    PcdSet64S(PcdTegraPwmFanBase, FixedPcdGet64 (PcdTegraPwmFanT194Base));
-  } else {
-    // PWM is not supported on all targets. Do not return any error.
-  }
-
   PlatformType = TegraGetPlatform();
   if (PlatformType != TEGRA_PLATFORM_SILICON) {
     // Override boot timeout for pre-si platforms

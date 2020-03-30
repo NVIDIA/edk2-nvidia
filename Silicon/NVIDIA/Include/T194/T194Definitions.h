@@ -39,6 +39,7 @@
 #define T194_ETHERNET_INTR      0xE2
 
 // PCIE
+#define T194_PCIE_CFG_BASE_ADDR 0x30000000
 #define T194_PCIE_BUS_MIN       160
 #define T194_PCIE_BUS_MAX       161
 
