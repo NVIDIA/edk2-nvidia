@@ -506,6 +506,11 @@
   gArmTokenSpaceGuid.PcdPciBusMin|0
   gArmTokenSpaceGuid.PcdPciBusMax|0
 
+  #
+  # Default to DT
+  #
+  gEmbeddedTokenSpaceGuid.PcdDefaultDtPref|TRUE
+
 [PcdsDynamicDefault.common]
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x00000000
 

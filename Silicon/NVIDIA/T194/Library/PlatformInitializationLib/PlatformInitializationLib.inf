@@ -20,11 +20,19 @@
 [Sources]
   PlatformInitializationLib.c
 
+[LibraryClasses]
+  HobLib
+  FdtLib
+
 [Packages]
   ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+
+[Guids]
+  gFdtHobGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase
@@ -34,3 +42,4 @@
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
   gArmTokenSpaceGuid.PcdPciBusMin
   gArmTokenSpaceGuid.PcdPciBusMax
+  gEmbeddedTokenSpaceGuid.PcdDefaultDtPref

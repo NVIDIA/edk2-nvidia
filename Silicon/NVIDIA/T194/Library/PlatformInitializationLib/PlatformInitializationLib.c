@@ -8,8 +8,44 @@
 **/
 
 #include <Library/PcdLib.h>
+#include <Library/HobLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <T194/T194Definitions.h>
+#include <libfdt.h>
+
+BOOLEAN
+EFIAPI
+T194CheckOSACPIBoot (
+  VOID
+  )
+{
+  VOID        *Hob;
+  VOID        *Dtb;
+  INT32       NodeOffset;
+
+  Hob = NULL;
+
+  Hob = GetFirstGuidHob (&gFdtHobGuid);
+  if (Hob == NULL || GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (UINT64)) {
+    return TRUE;
+  }
+  Dtb = (VOID *)(UINTN)*(UINT64 *)GET_GUID_HOB_DATA (Hob);
+
+  if (fdt_check_header (Dtb) != 0) {
+    return TRUE;
+  }
+
+  NodeOffset = fdt_path_offset (Dtb, "/chosen");
+  if (NodeOffset < 0) {
+    return TRUE;
+  }
+
+  if (NULL != fdt_get_property (Dtb, NodeOffset, "os-default-to-acpi", NULL)) {
+    return TRUE;
+  } else {
+    return FALSE;
+  }
+}
 
 /**
 
@@ -47,6 +83,10 @@ T194PlatformInitializationLibConstructor (
 
     // Set Tegra PWM Fan Base
     PcdSet64S(PcdTegraPwmFanBase, FixedPcdGet64 (PcdTegraPwmFanT194Base));
+
+    if (T194CheckOSACPIBoot ()) {
+      PcdSetBoolS(PcdDefaultDtPref, FALSE);
+    }
   }
 
   return EFI_SUCCESS;

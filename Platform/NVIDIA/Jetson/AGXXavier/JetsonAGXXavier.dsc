@@ -80,11 +80,6 @@
 
 !if $(SIDECAR)
   #
-  # Default to ACPI
-  #
-  gEmbeddedTokenSpaceGuid.PcdDefaultDtPref|FALSE
-
-  #
   # Sidecar Variant
   #
   gNVIDIATokenSpaceGuid.PcdSidecarVariant|TRUE
