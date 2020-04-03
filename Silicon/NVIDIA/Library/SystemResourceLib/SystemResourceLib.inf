@@ -19,10 +19,8 @@
   LIBRARY_CLASS                  = SystemResourceLib
 
 [Packages]
-  ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
-  MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
@@ -30,18 +28,14 @@
   DebugLib
   DramCarveoutLib
   FdtLib
+  PlatformResourceLib
   TegraPlatformInfoLib
 
 [Guids]
   gFdtHobGuid
-  gNVIDIAOSCarveoutHob
 
 [Sources.common]
   SystemResourceLib.c
-  T186ResourceConfig.c
-  T194ResourceConfig.c
-  T234ResourceConfig.c
-  TH500ResourceConfig.c
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
@@ -51,5 +45,4 @@
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseTH500
   gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress
-  gNVIDIATokenSpaceGuid.PcdMemorySizeRegister
 

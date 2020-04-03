@@ -80,3 +80,18 @@ T194ResourceConfig (
 
   return EFI_SUCCESS;
 }
+
+/**
+  Retrieve DTB Address
+
+**/
+UINT64
+T194GetDTBBaseAddress (
+  IN UINTN CpuBootloaderAddress
+  )
+{
+  TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  return CpuBootloaderParams->BlDtbLoadAddress;
+}

@@ -12,26 +12,15 @@
 *
 **/
 
-#include <Uefi.h>
 #include <libfdt.h>
-#include <Uefi/UefiBaseType.h>
 #include <Library/DramCarveoutLib.h>
-#include <Pi/PiMultiPhase.h>
 #include <Pi/PiPeiCis.h>
-#include <Library/PrePiLib.h>
-#include <Library/DramCarveoutLib.h>
-#include <Library/IoLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Pi/PiHob.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/SystemResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
-#include "SystemResourceLibPrivate.h"
-#include "T234ResourceConfig.h"
-#include "TH500ResourceConfig.h"
-#include "T194ResourceConfig.h"
-#include "T186ResourceConfig.h"
 
 
 /**
@@ -138,8 +127,14 @@ InstallMmioRegions (
   OUT UINTN *MmioRegionsCount
 )
 {
-  UINTN SerialRegisterBase=0;
+  UINTN SerialRegisterBase;
 
+  if (ChipID == T194_CHIP_ID) {
+    *MmioRegionsCount += InstallMmioRegion(
+                           (TegraGetBLInfoLocationAddress(ChipID) & ~EFI_PAGE_MASK), SIZE_4KB);
+    *MmioRegionsCount += InstallMmioRegion(
+                           (GetCPUBLBaseAddress ()  & ~EFI_PAGE_MASK), SIZE_4KB);
+  }
   *MmioRegionsCount += InstallMmioRegion(
                          FixedPcdGet64(PcdTegraCombinedUartRxMailbox), SIZE_4KB);
   *MmioRegionsCount += InstallMmioRegion(
@@ -153,6 +148,7 @@ InstallMmioRegions (
   *MmioRegionsCount += InstallMmioRegion(
                          TegraGetGicRedistributorBaseAddress(ChipID), SIZE_128KB);
 
+  SerialRegisterBase = 0;
   switch (ChipID) {
   case T186_CHIP_ID:
     SerialRegisterBase = FixedPcdGet64(PcdTegra16550UartBaseT186);
@@ -194,9 +190,7 @@ InstallSystemResources (
   UINTN                ChipID;
   NVDA_MEMORY_REGION   DramRegion;
   TEGRA_RESOURCE_INFO  PlatformInfo;
-  UINTN                FinalDramRegionsCount = 0;
-  UINTN                CpuBootloaderAddress;
-  UINTN                TegraSystemMemoryBase;
+  UINTN                FinalDramRegionsCount;
 
   if (NULL == MemoryRegionsCount) {
     return EFI_INVALID_PARAMETER;
@@ -213,41 +207,19 @@ InstallSystemResources (
     return Status;
   }
 
-  TegraSystemMemoryBase = TegraGetSystemMemoryBaseAddress(ChipID);
-  CpuBootloaderAddress = (UINTN)MmioRead32 (TegraGetBLInfoLocationAddress(ChipID));
-  //Address may be encoded as number of 64KiB pages from 0.
-  if (CpuBootloaderAddress < TegraSystemMemoryBase) {
-    CpuBootloaderAddress <<= 16;
-  }
-  ASSERT (((VOID *) CpuBootloaderAddress) != NULL);
-  if (((VOID *) CpuBootloaderAddress) == NULL) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  switch (ChipID) {
-  case T186_CHIP_ID:
-    Status = T186ResourceConfig(CpuBootloaderAddress, &PlatformInfo);
-    break;
-  case T194_CHIP_ID:
-    Status = T194ResourceConfig(CpuBootloaderAddress, &PlatformInfo);
-    break;
-  case T234_CHIP_ID:
-    Status = T234ResourceConfig(CpuBootloaderAddress, &PlatformInfo);
-    break;
-  case TH500_CHIP_ID:
-    Status = TH500ResourceConfig(CpuBootloaderAddress,&PlatformInfo);
-    break;
-  default:
-    break;
+  Status = GetResourceConfig (&PlatformInfo);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   //Build DRAM regions
-  DramRegion.MemoryBaseAddress = TegraSystemMemoryBase;
+  DramRegion.MemoryBaseAddress = TegraGetSystemMemoryBaseAddress(ChipID);
   DramRegion.MemoryLength = PlatformInfo.SdramSize;
   ASSERT (DramRegion.MemoryLength != 0);
 
   AlignCarveoutRegions64KiB(PlatformInfo.CarveoutRegions, PlatformInfo.CarveoutRegionsCount);
 
+  FinalDramRegionsCount = 0;
   Status = InstallDramWithCarveouts (
              &DramRegion,
              1,

@@ -15,9 +15,45 @@
 
 #include <Base.h>
 #include <Library/PcdLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/TegraSerialPortLib.h>
 #include <Library/SerialPortLib.h>
+#include <libfdt.h>
+
+/** Is combined UART supported
+
+ **/
+BOOLEAN
+EFIAPI
+UseCombinedUART (
+  VOID
+  )
+{
+  UINT64         DTBBaseAddress;
+  INT32          NodeOffset;
+  CONST VOID     *Property;
+
+  DTBBaseAddress = GetDTBBaseAddress ();
+
+  if (fdt_check_header ((VOID *)DTBBaseAddress) != 0) {
+    return FALSE;
+  }
+
+  NodeOffset = fdt_path_offset ((VOID *)DTBBaseAddress, "/combined-uart");
+  if (NodeOffset < 0) {
+    return FALSE;
+  }
+
+  Property = fdt_getprop ((VOID *)DTBBaseAddress, NodeOffset, "status", NULL);
+  if (NULL != Property) {
+    if (0 != AsciiStrCmp (Property, "okay")) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
 
 /** Identify the serial device hardware
 
@@ -36,17 +72,14 @@ SerialPortIdentify (
 
   if (ChipID == T186_CHIP_ID) {
     return Tegra16550SerialPortGetObject();
-  } else {
-    // If running on JetsonTX2 and variant is Sidecar, or
-    // running on any silicon other than JetsonTX2 but
-    // platform type is VDK, use Tegra 16550 UART. Otherwise,
-    // use Tegra Combined UART.
-    if ((FixedPcdGetBool (PcdSidecarVariant) && ChipID == T194_CHIP_ID) ||
-        PlatformType != TEGRA_PLATFORM_SILICON) {
-      return Tegra16550SerialPortGetObject();
-    } else {
+  } else if (ChipID == T194_CHIP_ID) {
+    if (UseCombinedUART ()) {
       return TegraCombinedSerialPortGetObject();
+    } else {
+      return Tegra16550SerialPortGetObject();
     }
+  } else {
+    return Tegra16550SerialPortGetObject();
   }
 }
 

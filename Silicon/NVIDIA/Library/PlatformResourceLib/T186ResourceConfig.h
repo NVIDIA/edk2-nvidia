@@ -12,15 +12,20 @@
 *
 **/
 
-#ifndef __TH500_RESOURCE_CONFIG_H__
-#define __TH500_RESOURCE_CONFIG_H__
+#ifndef __T186_RESOURCE_CONFIG_H__
+#define __T186_RESOURCE_CONFIG_H__
 
-#include "SystemResourceLibPrivate.h"
+#include <Library/PlatformResourceLib.h>
 
 EFI_STATUS
-TH500ResourceConfig (
+T186ResourceConfig (
   IN UINTN                 CpuBootloaderAddress,
   OUT TEGRA_RESOURCE_INFO  *PlatformInfo
 );
 
-#endif //__TH500_RESOURCE_CONFIG_H__
+UINT64
+T186GetDTBBaseAddress (
+  IN UINTN CpuBootloaderAddress
+);
+
+#endif //__T186_RESOURCE_CONFIG_H__

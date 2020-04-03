@@ -172,9 +172,6 @@ Include
 #Explicit PCIe Controller Enable
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|FALSE|BOOLEAN|0x00000017
 
-# Sidecar Variant
-  gNVIDIATokenSpaceGuid.PcdSidecarVariant|FALSE|BOOLEAN|0x0000001B
-
 #Tegra 16550 UART T186 Base
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186|0x03100000|UINT64|0x0000001C
 

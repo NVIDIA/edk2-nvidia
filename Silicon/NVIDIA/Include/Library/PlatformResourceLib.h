@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -12,8 +12,8 @@
 *
 **/
 
-#ifndef __SYSTEM_RESOURCE_LIB_PRIVATE_H__
-#define __SYSTEM_RESOURCE_LIB_PRIVATE_H__
+#ifndef __PLATFORM_RESOURCE_LIB_H__
+#define __PLATFORM_RESOURCE_LIB_H__
 
 #include <Uefi/UefiBaseType.h>
 #include <Library/DramCarveoutLib.h>
@@ -25,4 +25,34 @@ typedef struct {
   UINTN                DtbLoadAddress;
 } TEGRA_RESOURCE_INFO;
 
-#endif //__SYSTEM_RESOURCE_LIB_PRIVATE_H__
+/**
+  Retrieve CPU BL Address
+
+**/
+UINTN
+EFIAPI
+GetCPUBLBaseAddress (
+  VOID
+);
+
+/**
+  Retrieve DTB Address
+
+**/
+UINT64
+EFIAPI
+GetDTBBaseAddress (
+  VOID
+);
+
+/**
+  Retrieve Resource Config
+
+**/
+EFI_STATUS
+EFIAPI
+GetResourceConfig (
+  OUT TEGRA_RESOURCE_INFO *PlatformInfo
+);
+
+#endif //__PLATFORM_RESOURCE_LIB_H__

@@ -21,11 +21,7 @@
   PLATFORM_GUID                  = 865873a1-b255-46c2-90d2-2e2578c00dbd
   PLATFORM_VERSION               = 0.1
   DSC_SPECIFICATION              = 0x00010005
-!if $(SIDECAR)
-  OUTPUT_DIRECTORY               = Build/JetsonAGXXavierSidecar
-!else
   OUTPUT_DIRECTORY               = Build/JetsonAGXXavier
-!endif
   SUPPORTED_ARCHITECTURES        = AARCH64
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
@@ -77,13 +73,6 @@
   # Explicit PCIe Controller Enable
   #
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
-
-!if $(SIDECAR)
-  #
-  # Sidecar Variant
-  #
-  gNVIDIATokenSpaceGuid.PcdSidecarVariant|TRUE
-!endif
 
 [PcdsDynamicDefault.common]
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE

@@ -1,6 +1,3 @@
-#/** @file
-#
-#  Component description file for TegraSerialPortLib module
 #
 #  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
 #
@@ -12,32 +9,34 @@
 #  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
 #  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #
-#**/
 
 [Defines]
-  INF_VERSION                    = 0x00010019
-  BASE_NAME                      = TegraSerialPortLib
-  FILE_GUID                      = 94602bc2-4140-42ac-89a6-a0437dc7b3d4
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PlatformResourceLib
+  FILE_GUID                      = 5f0725e2-8394-4654-9fe7-b15d790f92fc
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = SerialPortLib
-
-[Sources.common]
-  TegraSerialPortLib.c
-
-[LibraryClasses]
-  PcdLib
-  Tegra16550SerialPortLib
-  TegraCombinedSerialPortLib
-  TegraPlatformInfoLib
-  PlatformResourceLib
-  FdtLib
-
-[Guids]
-  gFdtHobGuid
+  LIBRARY_CLASS                  = PlatformResourceLib
 
 [Packages]
-  EmbeddedPkg/EmbeddedPkg.dec
+  #ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
-  MdeModulePkg/MdeModulePkg.dec
+  #EmbeddedPkg/EmbeddedPkg.dec
+  #MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  TegraPlatformInfoLib
+
+[Guids]
+  gNVIDIAOSCarveoutHob
+
+[Sources.common]
+  PlatformResourceLib.c
+  T186ResourceConfig.c
+  T194ResourceConfig.c
+  T234ResourceConfig.c
+  TH500ResourceConfig.c
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdMemorySizeRegister
