@@ -21,6 +21,9 @@
 #include <Library/SerialPortLib.h>
 #include <libfdt.h>
 
+STATIC
+TEGRA_UART_OBJ *TegraUartObj = NULL;
+
 /** Is combined UART supported
 
  **/
@@ -67,20 +70,26 @@ SerialPortIdentify (
   UINT32              ChipID;
   TEGRA_PLATFORM_TYPE PlatformType;
 
+  if (TegraUartObj != NULL) {
+    return  TegraUartObj;
+  }
+
   ChipID = TegraGetChipID();
   PlatformType = TegraGetPlatform();
 
   if (ChipID == T186_CHIP_ID) {
-    return Tegra16550SerialPortGetObject();
+    TegraUartObj = Tegra16550SerialPortGetObject();
   } else if (ChipID == T194_CHIP_ID) {
     if (UseCombinedUART ()) {
-      return TegraCombinedSerialPortGetObject();
+      TegraUartObj = TegraCombinedSerialPortGetObject();
     } else {
-      return Tegra16550SerialPortGetObject();
+      TegraUartObj = Tegra16550SerialPortGetObject();
     }
   } else {
-    return Tegra16550SerialPortGetObject();
+    TegraUartObj = Tegra16550SerialPortGetObject();
   }
+
+  return TegraUartObj;
 }
 
 /** Initialize the serial device hardware with default settings.
