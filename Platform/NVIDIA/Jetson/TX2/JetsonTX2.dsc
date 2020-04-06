@@ -49,9 +49,6 @@
 
   gArmTokenSpaceGuid.PcdVFPEnabled|1
 
-  ## Register that contains size of DRAM
-  gNVIDIATokenSpaceGuid.PcdMemorySizeRegister|0x2c10050
-
   ## SBSA Watchdog Count
   gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2
 
@@ -63,13 +60,3 @@
 
   # System FMP Capsule GUID d33335fe-a16c-4765-a04d-f3c78999e580
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(d33335fe-a16c-4765-a04d-f3c78999e580)}
-
-  #
-  # Boot.img signing header size
-  #
-  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x190
-
-  #
-  # Disable SDR104 in SDHCi
-  #
-  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|TRUE

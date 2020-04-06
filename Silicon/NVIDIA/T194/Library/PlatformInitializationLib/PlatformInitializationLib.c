@@ -84,6 +84,19 @@ T194PlatformInitializationLibConstructor (
     // Set Tegra PWM Fan Base
     PcdSet64S(PcdTegraPwmFanBase, FixedPcdGet64 (PcdTegraPwmFanT194Base));
 
+    // Set Boot Image Signing Header Size PCD
+    PcdSet32S(PcdBootImgSigningHeaderSize, 0x1000);
+
+    // Set SDHCi Coherent DMA Disable PCD
+    PcdSetBoolS(PcdSdhciCoherentDMADisable, TRUE);
+
+    // Set BPMP PCIe Controller Enable PCD
+    PcdSetBoolS(PcdBPMPPCIeControllerEnable, TRUE);
+
+    // Set Floor Sweep CPUs PCD
+    PcdSetBoolS(PcdFloorsweepCpus, TRUE);
+
+    // Set Default DT Use PCD
     if (T194CheckOSACPIBoot ()) {
       PcdSetBoolS(PcdDefaultDtPref, FALSE);
     }

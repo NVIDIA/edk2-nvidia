@@ -58,21 +58,3 @@
 
   # System FMP Capsule GUID be3f5d68-7654-4ed2-838c-2a2faf901a78
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}
-
-  #
-  # Boot.img signing header size
-  #
-  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
-
-  #
-  # Disable coherent DMA in SDHCi
-  #
-  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
-
-  #
-  # Explicit PCIe Controller Enable
-  #
-  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
-
-[PcdsDynamicDefault.common]
-  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE

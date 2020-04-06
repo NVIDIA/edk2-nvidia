@@ -29,3 +29,5 @@
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
+  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
+  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable

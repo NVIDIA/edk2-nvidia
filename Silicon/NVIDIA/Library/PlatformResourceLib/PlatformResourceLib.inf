@@ -39,4 +39,4 @@
   TH500ResourceConfig.c
 
 [FixedPcd]
-  gNVIDIATokenSpaceGuid.PcdMemorySizeRegister
+  gNVIDIATokenSpaceGuid.PcdMemorySizeRegisterT186

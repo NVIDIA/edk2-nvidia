@@ -28,6 +28,7 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gArmTokenSpaceGuid.PcdGicRedistributorsBase
   gArmTokenSpaceGuid.PcdPciBusMin

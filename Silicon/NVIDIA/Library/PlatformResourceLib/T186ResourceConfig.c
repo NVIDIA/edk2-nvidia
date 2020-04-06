@@ -48,7 +48,7 @@ T186ResourceConfig (
   UINTN                Index;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  PlatformInfo->SdramSize = (UINTN)MmioRead32 (PcdGet64 (PcdMemorySizeRegister)) << 20;
+  PlatformInfo->SdramSize = (UINTN)MmioRead32 (PcdGet64 (PcdMemorySizeRegisterT186)) << 20;
   PlatformInfo->DtbLoadAddress = CpuBootloaderParams->DtbLoadAddress;
   TegraSystemMemoryBase = TegraGetSystemMemoryBaseAddress(T186_CHIP_ID);
 

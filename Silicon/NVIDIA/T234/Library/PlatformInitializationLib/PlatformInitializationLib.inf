@@ -29,3 +29,5 @@
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gArmTokenSpaceGuid.PcdGicRedistributorsBase
+  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable

@@ -38,6 +38,12 @@ T186PlatformInitializationLibConstructor (
 
     // Set Default OEM Table ID specific PCDs
     PcdSet64S(PcdAcpiDefaultOemTableId, 0x2020202036383154);
+
+    // Set Boot Image Signing Header Size PCD
+    PcdSet32S(PcdBootImgSigningHeaderSize, 0x190);
+
+    // Set SDHCi SDR104 Disable PCD
+    PcdSetBoolS(PcdSdhciSDR104Disable, TRUE);
   }
 
   return EFI_SUCCESS;

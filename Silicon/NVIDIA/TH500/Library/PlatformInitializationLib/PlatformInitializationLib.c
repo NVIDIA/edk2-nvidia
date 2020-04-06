@@ -44,6 +44,9 @@ TH500PlatformInitializationLibConstructor (
 
     // Set Default OEM Table ID specific PCDs
     PcdSet64S(PcdAcpiDefaultOemTableId, 0x2020203030354854);
+
+    // Set BPMP PCIe Controller Enable PCD
+    PcdSetBoolS(PcdBPMPPCIeControllerEnable, TRUE);
   }
 
   return EFI_SUCCESS;

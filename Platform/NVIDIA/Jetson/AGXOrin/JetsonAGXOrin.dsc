@@ -61,15 +61,3 @@
 
   # System FMP Capsule GUID bf0d4599-20d4-414e-b2c5-3595b1cda402
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(bf0d4599-20d4-414e-b2c5-3595b1cda402)}
-
-  #
-  # Boot.img signing header size
-  #
-  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
-
-
-  #
-  # Explicit PCIe Controller Enable
-  #
-  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
-

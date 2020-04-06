@@ -38,6 +38,10 @@
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanT194Base
   gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
+  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
   gArmTokenSpaceGuid.PcdPciBusMin

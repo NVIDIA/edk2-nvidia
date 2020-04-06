@@ -38,6 +38,12 @@ T234PlatformInitializationLibConstructor (
 
     // Set Default OEM Table ID specific PCDs
     PcdSet64S(PcdAcpiDefaultOemTableId, 0x2020202034333254);
+
+    // Set Boot Image Signing Header Size PCD
+    PcdSet32S(PcdBootImgSigningHeaderSize, 0x1000);
+
+    // Set BPMP PCIe Controller Enable PCD
+    PcdSetBoolS(PcdBPMPPCIeControllerEnable, TRUE);
   }
 
   return EFI_SUCCESS;

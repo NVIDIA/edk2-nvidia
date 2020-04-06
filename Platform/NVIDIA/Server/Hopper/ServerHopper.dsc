@@ -63,8 +63,3 @@
 
   # System FMP Capsule GUID bf0d4599-20d4-414e-b2c5-3595b1cda402
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(bf0d4599-20d4-414e-b2c5-3595b1cda402)}
-
-  #
-  # Explicit PCIe Controller Enable
-  #
-  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE

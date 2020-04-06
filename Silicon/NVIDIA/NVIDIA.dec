@@ -135,7 +135,7 @@ Include
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|0x0|UINT64|0x00000002
 
 #Memory size in MiB
-  gNVIDIATokenSpaceGuid.PcdMemorySizeRegister|0x00000000|UINT64|0x00000004
+  gNVIDIATokenSpaceGuid.PcdMemorySizeRegisterT186|0x2c10050|UINT64|0x00000004
 
 #Timeout in microseconds in hsp doorbell response, 0 for infinite
   gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout|0|UINT32|0x00000007
@@ -151,26 +151,14 @@ Include
 #Tegra UART OEM Table ID
   gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId|'TEGRAUAR'|UINT64|0x0000000A
 
-#Size of optional signing data header in boot.img partition.
-  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B
-
-#Force disable coherent DMA in SDHCi.
-  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C
-
 #Force disable DDR50 in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciDDR50Disable|FALSE|BOOLEAN|0x0000000D
-
-#Force disable SDR104 in SDHCi.
-  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|FALSE|BOOLEAN|0x0000000E
 
 #Base address of MISCREG aperture.
   gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00100000|UINT64|0x0000000F
 
 #Name of Kernel DTB partition
   gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName|L"kernel-dtb"|VOID*|0x00000016
-
-#Explicit PCIe Controller Enable
-  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|FALSE|BOOLEAN|0x00000017
 
 #Tegra 16550 UART T186 Base
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186|0x03100000|UINT64|0x0000001C
@@ -197,8 +185,20 @@ Include
   gNVIDIATokenSpaceGuid.PcdConsolePort|FALSE|BOOLEAN|0x00000023
 
 [PcdsDynamic.common]
+#Size of optional signing data header in boot.img partition.
+  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B
+
+#Force disable coherent DMA in SDHCi.
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C
+
+#Force disable SDR104 in SDHCi.
+  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|FALSE|BOOLEAN|0x0000000E
+
 # Default state of floor sweeping
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|FALSE|BOOLEAN|0x00000015
+
+#Explicit PCIe Controller Enable
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|FALSE|BOOLEAN|0x00000017
 
 #PCIe Segment Base Address
   gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x0|UINT64|0x00000018
