@@ -32,12 +32,6 @@
   FLASH_DEFINITION               = Platform/NVIDIA/Server/Server.fdf
   CHIPSET                        = TH500
   DEVICE_TREE_BUILD              = TRUE
-  DEFINE VARIABLES               = "STORAGE"
-
-  #
-  # Define ESRT GUIDs for Firmware Management Protocol instances
-  #
-  DEFINE SYSTEM_FMP_ESRT_GUID   = fa4dedfc-7582-4fa2-ab5e-ac11ba1719ba
 
 !include Platform/NVIDIA/Server/Server.dsc.inc
 
@@ -51,9 +45,6 @@
   gArmPlatformTokenSpaceGuid.PcdClusterCount|4
 
   gArmTokenSpaceGuid.PcdVFPEnabled|1
-
-  ## SBSA Watchdog Count
-  gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2
 
   #
   # ARM Architectural Timer Frequency

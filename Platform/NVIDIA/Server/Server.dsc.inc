@@ -11,6 +11,12 @@
 #  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #
 
+[Defines]
+  #
+  # Define ESRT GUIDs for Firmware Management Protocol instances
+  #
+  DEFINE SYSTEM_FMP_ESRT_GUID = 92597B71-0ABE-48F3-9F06-93D3E8CD7EDF
+
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
 [LibraryClasses.common]

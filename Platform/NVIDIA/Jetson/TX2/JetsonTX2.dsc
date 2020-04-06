@@ -27,12 +27,6 @@
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
   CHIPSET                        = T186
-  DEFINE VARIABLES               = "STORAGE"
-
-  #
-  # Define ESRT GUIDs for Firmware Management Protocol instances
-  #
-  DEFINE SYSTEM_FMP_ESRT_GUID   = d33335fe-a16c-4765-a04d-f3c78999e580
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
 
@@ -48,9 +42,6 @@
   gArmPlatformTokenSpaceGuid.PcdClusterCount|4
 
   gArmTokenSpaceGuid.PcdVFPEnabled|1
-
-  ## SBSA Watchdog Count
-  gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2
 
   #
   # ARM Architectural Timer Frequency

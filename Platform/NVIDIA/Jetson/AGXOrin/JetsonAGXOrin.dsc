@@ -32,11 +32,6 @@
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
   CHIPSET                        = T234
 
-  #
-  # Define ESRT GUIDs for Firmware Management Protocol instances
-  #
-  DEFINE SYSTEM_FMP_ESRT_GUID   = bf0d4599-20d4-414e-b2c5-3595b1cda402
-
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
 
 [LibraryClasses.common]
@@ -49,9 +44,6 @@
   gArmPlatformTokenSpaceGuid.PcdClusterCount|4
 
   gArmTokenSpaceGuid.PcdVFPEnabled|1
-
-  ## SBSA Watchdog Count
-  gArmPlatformTokenSpaceGuid.PcdWatchdogCount|2
 
   #
   # ARM Architectural Timer Frequency
