@@ -44,19 +44,14 @@
   MemoryAllocationLib
   Tegra16550SerialPortLib
   FdtLib
+  DtPlatformDtbLoaderLib
 
 [Protocols]
-  gEdkiiSdMmcOverrideProtocolGuid
   gEdkiiNonDiscoverableDeviceProtocolGuid
-  gNVIDIAClockNodeProtocolGuid
-  gArmScmiClock2ProtocolGuid
   gNVIDIAConsoleEnabledProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableUartDeviceGuid
-
-[Pcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterStride          ## CONSUMES
 
 [Depex]
   TRUE

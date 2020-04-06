@@ -25,10 +25,10 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraSerialPortLib.h>
 #include <libfdt.h>
+#include <Library/DtPlatformDtbLoaderLib.h>
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra20-uart", &gNVIDIANonDiscoverableUartDeviceGuid },
-    { "nvidia,tegra186-combined-uart", &gNVIDIANonDiscoverableUartDeviceGuid },
     { NULL, NULL }
 };
 
@@ -42,6 +42,46 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
 
 #define UART_CLOCK_NAME "serial"
 #define UART_CLOCK_RATE (115200 * 16)
+
+/** Is combined UART supported
+
+ **/
+STATIC
+BOOLEAN
+EFIAPI
+UseCombinedUART (
+  VOID
+  )
+{
+  VOID           *DTBBaseAddress;
+  UINTN          DeviceTreeSize;
+  INT32          NodeOffset;
+  CONST VOID     *Property;
+  EFI_STATUS     Status;
+
+  Status = DtPlatformLoadDtb (&DTBBaseAddress, &DeviceTreeSize);
+  if (EFI_ERROR (Status)) {
+    return FALSE;
+  }
+
+  if (fdt_check_header (DTBBaseAddress) != 0) {
+    return FALSE;
+  }
+
+  NodeOffset = fdt_path_offset (DTBBaseAddress, "/combined-uart");
+  if (NodeOffset < 0) {
+    return FALSE;
+  }
+
+  Property = fdt_getprop (DTBBaseAddress, NodeOffset, "status", NULL);
+  if (NULL != Property) {
+    if (0 != AsciiStrCmp (Property, "okay")) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
 
 /**
   Callback that will be invoked at various phases of the driver initialization
@@ -72,23 +112,33 @@ DeviceDiscoveryNotify (
   UINTN                     RegionSize;
 
   switch (Phase) {
-  case DeviceDiscoveryDriverBindingSupported:
-    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,tegra20-uart") == 0) {
-      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
+  case DeviceDiscoveryDriverStart:
+    if (UseCombinedUART ()) {
+      Status = gBS->InstallMultipleProtocolInterfaces (
+                      &ControllerHandle,
+                      &gNVIDIAConsoleEnabledProtocolGuid,
+                      NULL,
+                      NULL
+                      );
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
-        return EFI_UNSUPPORTED;
-      }
-      if (Tegra16550SerialPortGetBaseAddress (TRUE) != BaseAddress) {
-        return EFI_UNSUPPORTED;
+        DEBUG ((DEBUG_ERROR, "%a: Failed to install console enabled protocol\r\n", __FUNCTION__));
       }
     }
     return EFI_SUCCESS;
 
-  case DeviceDiscoveryDriverBindingStart:
-    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,tegra20-uart") == 0) {
-      Status = DeviceDiscoverySetClockFreq (ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
+  case DeviceDiscoveryDriverBindingSupported:
+    Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
+      return EFI_UNSUPPORTED;
     }
+    if (Tegra16550SerialPortGetBaseAddress (TRUE) != BaseAddress) {
+      return EFI_UNSUPPORTED;
+    }
+    return EFI_SUCCESS;
+
+  case DeviceDiscoveryDriverBindingStart:
+    Status = DeviceDiscoverySetClockFreq (ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &ControllerHandle,
                     &gNVIDIAConsoleEnabledProtocolGuid,
