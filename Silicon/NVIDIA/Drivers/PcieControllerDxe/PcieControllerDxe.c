@@ -16,25 +16,31 @@
 #include <PiDxe.h>
 
 #include <Library/BaseLib.h>
-#include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
-#include <Library/UefiBootServicesTableLib.h>
+#include <Library/DebugLib.h>
 #include <Library/DxeServicesTableLib.h>
-#include <Library/UefiLib.h>
-#include <Library/IoLib.h>
-#include <Library/TimerLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
-#include <Library/PciHostBridgeLib.h>
-#include <Protocol/PciHostBridgeResourceAllocation.h>
-#include <Protocol/PciRootBridgeIo.h>
-#include <libfdt.h>
-#include <Library/MemoryAllocationLib.h>
 #include <Library/DevicePathLib.h>
-#include <Protocol/PciRootBridgeConfigurationIo.h>
-#include <IndustryStandard/Pci.h>
+#include <Library/IoLib.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Library/PciHostBridgeLib.h>
+#include <Library/TimerLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiLib.h>
+
 #include <Protocol/BpmpIpc.h>
-#include <Protocol/Regulator.h>
+#include <Protocol/PciHostBridgeResourceAllocation.h>
+#include <Protocol/PciRootBridgeConfigurationIo.h>
+#include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PinMux.h>
+#include <Protocol/Regulator.h>
+#include <Protocol/TegraP2U.h>
+
+#include <libfdt.h>
+
+#include <IndustryStandard/Pci.h>
+#include <IndustryStandard/Pci30.h>
+#include <IndustryStandard/PciExpress31.h>
 
 #include "PcieControllerPrivate.h"
 
@@ -76,6 +82,143 @@ CHAR8 CoreAPBResetNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
   "core_apb",
   "core_apb_rst"
 };
+
+/*
+ * These interfaces resemble the pci_find_*capability() interfaces, but these
+ * are for configuring host controllers, which are bridges *to* PCI devices but
+ * are not PCI devices themselves.
+ */
+STATIC
+UINT8
+__dw_pcie_find_next_cap(UINT64 DbiBase, UINT8 cap_ptr, UINT8 cap)
+{
+  UINT8 cap_id, next_cap_ptr;
+  UINT16 reg;
+
+  if (!cap_ptr)
+    return 0;
+
+  reg = MmioRead16(DbiBase + cap_ptr);
+  cap_id = (reg & 0x00ff);
+
+  if (cap_id > 0x14)
+    return 0;
+
+  if (cap_id == cap)
+    return cap_ptr;
+
+  next_cap_ptr = (reg & 0xff00) >> 8;
+
+  return __dw_pcie_find_next_cap(DbiBase, next_cap_ptr, cap);
+}
+
+STATIC
+UINT8
+dw_pcie_find_capability(UINT64 DbiBase, UINT8 cap)
+{
+  UINT8 next_cap_ptr;
+  UINT16 reg;
+
+  reg = MmioRead16(DbiBase + PCI_CAPBILITY_POINTER_OFFSET);
+  next_cap_ptr = (reg & 0x00ff);
+
+  return __dw_pcie_find_next_cap(DbiBase, next_cap_ptr, cap);
+}
+
+STATIC
+UINT16
+dw_pcie_find_next_ext_capability(UINT64 DbiBase, UINT16 start, UINT8 cap)
+{
+  INT32 pos = PCI_CFG_SPACE_SIZE;
+  UINT32 header;
+  INT32 ttl;
+
+  /* minimum 8 bytes per capability */
+  ttl = (PCI_CFG_SPACE_EXP_SIZE - PCI_CFG_SPACE_SIZE) / 8;
+
+  if (start)
+    pos = start;
+
+  header = MmioRead32(DbiBase + pos);
+  /*
+   * If we have no capabilities, this is indicated by cap ID,
+   * cap version and next pointer all being 0.
+   */
+  if (header == 0)
+    return 0;
+
+  while (ttl-- > 0) {
+    if (PCI_EXT_CAP_ID(header) == cap && pos != start)
+      return pos;
+
+    pos = PCI_EXT_CAP_NEXT(header);
+    if (pos < PCI_CFG_SPACE_SIZE)
+      break;
+
+    header = MmioRead32(DbiBase + pos);
+  }
+
+  return 0;
+}
+
+STATIC
+UINT16
+dw_pcie_find_ext_capability(UINT64 DbiBase, UINT8 cap)
+{
+  return dw_pcie_find_next_ext_capability(DbiBase, 0, cap);
+}
+
+STATIC VOID config_gen3_gen4_eq_presets(PCIE_CONTROLLER_PRIVATE *Private)
+{
+  UINT32 val, offset, i;
+
+  /* Program init preset */
+  for (i = 0; i < Private->NumLanes; i++) {
+    val = MmioRead16(Private->DbiBase + CAP_SPCIE_CAP_OFF + (i * 2));
+    val &= ~CAP_SPCIE_CAP_OFF_DSP_TX_PRESET0_MASK;
+    val |= GEN3_GEN4_EQ_PRESET_INIT;
+    val &= ~CAP_SPCIE_CAP_OFF_USP_TX_PRESET0_MASK;
+    val |= (GEN3_GEN4_EQ_PRESET_INIT <<
+         CAP_SPCIE_CAP_OFF_USP_TX_PRESET0_SHIFT);
+    MmioWrite16(Private->DbiBase + CAP_SPCIE_CAP_OFF + (i * 2), val);
+
+    offset = dw_pcie_find_ext_capability(Private->DbiBase,
+                 PCI_EXT_CAP_ID_PL_16GT) +
+        PCI_PL_16GT_LE_CTRL;
+    val = MmioRead8(Private->DbiBase + offset + i);
+    val &= ~PCI_PL_16GT_LE_CTRL_DSP_TX_PRESET_MASK;
+    val |= GEN3_GEN4_EQ_PRESET_INIT;
+    val &= ~PCI_PL_16GT_LE_CTRL_USP_TX_PRESET_MASK;
+    val |= (GEN3_GEN4_EQ_PRESET_INIT <<
+      PCI_PL_16GT_LE_CTRL_USP_TX_PRESET_SHIFT);
+    MmioWrite8(Private->DbiBase + offset + i, val);
+  }
+
+  val = MmioRead32(Private->DbiBase + GEN3_RELATED_OFF);
+  val &= ~GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK;
+  MmioWrite32(Private->DbiBase + GEN3_RELATED_OFF, val);
+
+  val = MmioRead32(Private->DbiBase + GEN3_EQ_CONTROL_OFF);
+  val &= ~GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_MASK;
+  val |= (0x3ff << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
+  val &= ~GEN3_EQ_CONTROL_OFF_FB_MODE_MASK;
+  MmioWrite32(Private->DbiBase + GEN3_EQ_CONTROL_OFF, val);
+
+  val = MmioRead32(Private->DbiBase + GEN3_RELATED_OFF);
+  val &= ~GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK;
+  val |= (0x1 << GEN3_RELATED_OFF_RATE_SHADOW_SEL_SHIFT);
+  MmioWrite32(Private->DbiBase + GEN3_RELATED_OFF, val);
+
+  val = MmioRead32(Private->DbiBase + GEN3_EQ_CONTROL_OFF);
+  val &= ~GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_MASK;
+  val |= (0x360 << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
+  val &= ~GEN3_EQ_CONTROL_OFF_FB_MODE_MASK;
+  MmioWrite32(Private->DbiBase + GEN3_EQ_CONTROL_OFF, val);
+
+  val = MmioRead32(Private->DbiBase + GEN3_RELATED_OFF);
+  val &= ~GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK;
+  MmioWrite32(Private->DbiBase + GEN3_RELATED_OFF, val);
+}
 
 STATIC
 VOID
@@ -322,20 +465,24 @@ EFI_STATUS
 EFIAPI
 InitializeController (
     PCIE_CONTROLLER_PRIVATE   *Private,
-    IN  EFI_HANDLE ControllerHandle
+    IN  EFI_HANDLE ControllerHandle,
+    IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
     )
 {
   EFI_STATUS Status;
   UINT32 val;
   UINT32 Index;
   UINT32 Count;
+  NVIDIA_TEGRAP2U_PROTOCOL *P2U = NULL;
+  CONST VOID               *Property = NULL;
+  INT32                     PropertySize  = 0;
 
   /* Enable core clock */
   Count = sizeof (CoreClockNames)/sizeof (CoreClockNames[0]);
   for (Index = 0; Index < Count; Index++) {
     Status = DeviceDiscoveryEnableClock (ControllerHandle, CoreClockNames[Index], 1);
     if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "Enabled Core clock\r\n"));
+      DEBUG ((EFI_D_INFO, "Enabled Core clock\r\n"));
       break;
     }
   }
@@ -349,13 +496,38 @@ InitializeController (
   for (Index = 0; Index < Count; Index++) {
     Status = DeviceDiscoveryConfigReset (ControllerHandle, CoreAPBResetNames[Index], 0);
     if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "De-asserted Core APB reset\r\n"));
+      DEBUG ((EFI_D_INFO, "De-asserted Core APB reset\r\n"));
       break;
     }
   }
   if (Index == Count) {
     DEBUG ((EFI_D_ERROR, "Failed to de-assert Core APB reset\r\n"));
     return Status;
+  }
+
+  /* Configure P2U */
+  Status = gBS->LocateProtocol (&gNVIDIATegraP2UProtocolGuid, NULL, (VOID **)&P2U);
+  if (EFI_ERROR (Status) || P2U == NULL) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to get gNVIDIATegraP2UProtocolGuid Handle: %r\n", __FUNCTION__, Status));
+    return EFI_UNSUPPORTED;
+  }
+
+  Property = fdt_getprop(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
+                         "phys", &PropertySize);
+  if (Property == NULL) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to get P2U PHY entries\n", __FUNCTION__));
+    return EFI_UNSUPPORTED;
+  }
+
+  for (Index = 0; Index < PropertySize; Index += sizeof (UINT32)) {
+    UINT32 P2UId;
+
+    CopyMem ((VOID *)&P2UId, Property + Index, sizeof (UINT32));
+    P2UId = SwapBytes32 (P2UId);
+
+    if EFI_ERROR(P2U->Init(P2U, P2UId)) {
+      DEBUG ((EFI_D_ERROR, "Failed to Initialize P2U\n"));
+    }
   }
 
   /* Program APPL */
@@ -394,7 +566,7 @@ InitializeController (
   val |= APPL_INTR_EN_L1_8_INTX_EN;
   MmioWrite32 (Private->ApplSpace + APPL_INTR_EN_L1_8_0, val);
 
-  DEBUG ((EFI_D_ERROR, "Programming APPL registers is done\r\n"));
+  DEBUG ((EFI_D_INFO, "Programming APPL registers is done\r\n"));
 
   /* De-assert reset to CORE */
   Status = DeviceDiscoveryConfigReset (ControllerHandle, "core", 0);
@@ -405,9 +577,22 @@ InitializeController (
       return Status;
     }
   }
-  DEBUG ((EFI_D_ERROR, "De-asserted Core reset\r\n"));
+  DEBUG ((EFI_D_INFO, "De-asserted Core reset\r\n"));
 
-  /* Program CORE (i.e. DBI) */
+  /* Program Core Registers (i.e. DBI) */
+
+  Private->PcieCapOffset = dw_pcie_find_capability(Private->DbiBase,
+                                                   EFI_PCI_CAPABILITY_ID_PCIEXP);
+
+  val = dw_pcie_find_ext_capability(Private->DbiBase,
+                                    PCI_EXPRESS_EXTENDED_CAPABILITY_L1_PM_SUBSTATES_ID);
+  Private->ASPML1SSCapOffset = val + PCI_L1SS_CAP;
+
+  /* Disable ASPM sub-states (L1.1 & L1.2) as we have removed dependency on CLKREQ signal */
+  val = MmioRead32(Private->DbiBase + Private->ASPML1SSCapOffset);
+  val &= ~PCI_L1SS_CAP_ASPM_L1_1;
+  val &= ~PCI_L1SS_CAP_ASPM_L1_2;
+  MmioWrite32(Private->DbiBase + Private->ASPML1SSCapOffset, val);
 
   val = MmioRead32(Private->DbiBase + PCI_IO_BASE);
   val &= ~(IO_BASE_IO_DECODE | IO_BASE_IO_DECODE_BIT8);
@@ -418,20 +603,62 @@ InitializeController (
   val |= CFG_PREF_MEM_LIMIT_BASE_MEM_LIMIT_DECODE;
   MmioWrite32 (Private->DbiBase + PCI_PREF_MEMORY_BASE, val);
 
-  /* setup RC BARs */
+  /* Setup RC BARs */
   MmioWrite32 (Private->DbiBase + PCI_BASE_ADDRESS_0, 0);
   MmioWrite32 (Private->DbiBase + PCI_BASE_ADDRESS_1, 0);
 
-  /* Configure Max Speed to Gen-1 */
+  /* Configure FTS */
+  val = MmioRead32(Private->DbiBase + PORT_LOGIC_ACK_F_ASPM_CTRL);
+  val &= ~(N_FTS_MASK << N_FTS_SHIFT);
+  val |= N_FTS_VAL << N_FTS_SHIFT;
+  MmioWrite32(Private->DbiBase + PORT_LOGIC_ACK_F_ASPM_CTRL, val);
+
+  val = MmioRead32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL);
+  val &= ~FTS_MASK;
+  val |= FTS_VAL;
+  MmioWrite32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL, val);
+
+  /* Enable as 0xFFFF0001 response for CRS */
+  val = MmioRead32(Private->DbiBase + PORT_LOGIC_AMBA_ERROR_RESPONSE_DEFAULT);
+  val &= ~(AMBA_ERROR_RESPONSE_CRS_MASK << AMBA_ERROR_RESPONSE_CRS_SHIFT);
+  val |= (AMBA_ERROR_RESPONSE_CRS_OKAY_FFFF0001 << AMBA_ERROR_RESPONSE_CRS_SHIFT);
+  MmioWrite32(Private->DbiBase + PORT_LOGIC_AMBA_ERROR_RESPONSE_DEFAULT, val);
+
+  /* Configure Max speed from DT */
   val = MmioRead32(Private->DbiBase + PCI_EXP_LNKCAP);
   val &= ~PCI_EXP_LNKCAP_SLS;
-  val |= 0x1; /* Limit the speed to Gen-1 for now */
-  MmioWrite32 (Private->DbiBase + PCI_EXP_LNKCAP, val);
+  val |= Private->MaxLinkSpeed;
+  MmioWrite32(Private->DbiBase + PCI_EXP_LNKCAP, val);
 
-  val = MmioRead32 (Private->DbiBase + PCI_EXP_LNKCTL_STS_2);
+  val = MmioRead32(Private->DbiBase + PCI_EXP_LNKCTL_STS_2);
   val &= ~PCI_EXP_LNKCAP_SLS;
-  val |= 0x1;
-  MmioWrite32 (Private->DbiBase + PCI_EXP_LNKCTL_STS_2, val);
+  val |= Private->MaxLinkSpeed;
+  MmioWrite32(Private->DbiBase + PCI_EXP_LNKCTL_STS_2, val);
+
+  /* Configure Max lane width from DT */
+  val = MmioRead32(Private->DbiBase + PCI_EXP_LNKCAP);
+  val &= ~PCI_EXP_LNKCAP_MLW;
+  val |= (Private->NumLanes << PCI_EXP_LNKSTA_NLW_SHIFT);
+  MmioWrite32(Private->DbiBase + PCI_EXP_LNKCAP, val);
+
+  config_gen3_gen4_eq_presets(Private);
+
+  val = MmioRead32(Private->DbiBase + GEN3_RELATED_OFF);
+  val &= ~GEN3_RELATED_OFF_GEN3_ZRXDC_NONCOMPL;
+  MmioWrite32(Private->DbiBase + GEN3_RELATED_OFF, val);
+
+  if (Private->UpdateFCFixUp) {
+    val = MmioRead32(Private->DbiBase + CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF);
+    val |= 0x1 << CFG_TIMER_CTRL_ACK_NAK_SHIFT;
+    MmioWrite32(Private->DbiBase + CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF, val);
+  }
+
+  /*
+   * NOTE: Linux programs following regiesters which is not really required
+   * PCIE_PORT_LINK_CONTROL & PCIE_LINK_WIDTH_SPEED_CONTROL
+   * It also programs PCIE_PL_CHK_REG_CONTROL_STATUS to enable CDM check but
+   * that configuration is not required just yet
+   */
 
   /* setup interrupt pins */
   MmioAndThenOr32 (Private->DbiBase + PCI_INT_LINE_OFFSET, 0xffff00ff, 0x00000100);
@@ -445,22 +672,34 @@ InitializeController (
                    EFI_PCI_COMMAND_IO_SPACE|EFI_PCI_COMMAND_MEMORY_SPACE|EFI_PCI_COMMAND_BUS_MASTER|EFI_PCI_COMMAND_SERR
                    );
 
-  /* program correct class for RC */
+  /* Program correct class for RC */
   MmioWrite32(Private->DbiBase + PCI_REVISION_ID_OFFSET,
               (PCI_CLASS_BRIDGE << 24) | (PCI_CLASS_BRIDGE_P2P << 16) | (PCI_IF_BRIDGE_P2P << 8) | 0x1
               );
 
-  //Program Vendor/DeviceID
-  MmioWrite32 (Private->DbiBase + PCI_VENDOR_ID_OFFSET, 0x10DE1AD1);
+  /* Enable Direct Speed Change */
+  val = MmioRead32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL);
+  val |= PORT_LOGIC_GEN2_CTRL_DIRECT_SPEED_CHANGE;
+  MmioWrite32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL, val);
 
   /* Disable write permission to DBI_RO_WR_EN protected registers */
   MmioAnd32 (Private->DbiBase + PCIE_MISC_CONTROL_1_OFF, ~PCIE_DBI_RO_WR_EN);
 
-  DEBUG ((EFI_D_ERROR, "Programming CORE registers is done\r\n"));
+  DEBUG ((EFI_D_INFO, "Programming CORE registers is done\r\n"));
+
+  for (Index = 0; Index < Count; Index++) {
+    Status = DeviceDiscoverySetClockFreq (ControllerHandle, CoreClockNames[Index], 500000000);
+    if (!EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_INFO, "Core clock is set\r\n"));
+      break;
+    }
+  }
+  if (Index == Count) {
+    DEBUG ((EFI_D_ERROR, "Failed to set core_clk\r\n"));
+    return Status;
+  }
 
   /* Apply PERST# to endpoint and go for link up */
-  DEBUG ((EFI_D_ERROR, "Private->ApplSpace = 0x%08X\r\n", Private->ApplSpace));
-
   /* Assert PEX_RST */
   val = MmioRead32 (Private->ApplSpace + 0x0);
   val &= ~(0x1);
@@ -482,7 +721,8 @@ InitializeController (
 
   val = MmioRead32 (Private->DbiBase + PCI_EXP_LNKCTL_STATUS);
   if (val & PCI_EXP_LNKCTL_STATUS_DLL_ACTIVE)
-    DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is UP\r\n", Private->CtrlId));
+    DEBUG ((EFI_D_INFO, "PCIe Controller-%d Link is UP (Speed: %d)\r\n",
+           Private->CtrlId, (val & 0xf0000) >> 16));
   else
     DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is DOWN\r\n", Private->CtrlId));
 
@@ -716,11 +956,45 @@ DeviceDiscoveryNotify (
         CopyMem (&Private->PcieRootBridgeConfigurationIo.SegmentNumber, SegmentNumber, sizeof (UINT32));
         Private->PcieRootBridgeConfigurationIo.SegmentNumber = SwapBytes32 (Private->PcieRootBridgeConfigurationIo.SegmentNumber);
     }
-    DEBUG ((DEBUG_ERROR, "Segment Number = %u\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
+    DEBUG ((EFI_D_INFO, "Segment Number = %u\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
 
     /* Currently Segment number is nothing but the controller-ID  */
     Private->CtrlId = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
-    DEBUG ((DEBUG_ERROR, "Controller-ID = %u\n", Private->CtrlId));
+    DEBUG ((EFI_D_INFO, "Controller-ID = %u\n", Private->CtrlId));
+
+    Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase,
+                            DeviceTreeNode->NodeOffset,
+                            "max-link-speed",
+                            &PropertySize);
+    if (Property != NULL) {
+      CopyMem (&Private->MaxLinkSpeed, Property, sizeof (UINT32));
+      Private->MaxLinkSpeed = SwapBytes32(Private->MaxLinkSpeed);
+    }
+    if (Private->MaxLinkSpeed <= 0 || Private->MaxLinkSpeed > 4)
+      Private->MaxLinkSpeed = 4;
+    DEBUG ((EFI_D_INFO, "Max Link Speed = %u\n", Private->MaxLinkSpeed));
+
+    Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase,
+                            DeviceTreeNode->NodeOffset,
+                            "num-lanes",
+                            &PropertySize);
+    if (Property != NULL) {
+      CopyMem (&Private->NumLanes, Property, sizeof (UINT32));
+      Private->NumLanes = SwapBytes32(Private->NumLanes);
+    }
+    if (Private->NumLanes != 1 && ((Private->NumLanes % 2) != 0) && Private->NumLanes > 16)
+      Private->NumLanes = 1;
+    DEBUG ((EFI_D_INFO, "Number of lanes = %u\n", Private->NumLanes));
+
+    if (NULL != fdt_get_property (DeviceTreeNode->DeviceTreeBase,
+                                  DeviceTreeNode->NodeOffset,
+                                  "nvidia,update-fc-fixup",
+                                  NULL)) {
+      Private->UpdateFCFixUp = TRUE;
+    } else {
+      Private->UpdateFCFixUp = FALSE;
+    }
+
     /* Enable slot supplies */
     Status = gBS->LocateProtocol (&gNVIDIARegulatorProtocolGuid, NULL, (VOID **)&Regulator);
     if (EFI_ERROR (Status) || Regulator == NULL) {
@@ -755,6 +1029,9 @@ DeviceDiscoveryNotify (
       DEBUG ((EFI_D_INFO, "Failed to find 12v slot supply regulator\n"));
     }
 
+    /* Spec defined T_PVPERL delay (100ms) after enabling power to the slot */
+    MicroSecondDelay(100000);
+
     if (Private->CtrlId == 5) {
       ConfigureSidebandSignals(Private);
     } else {
@@ -773,11 +1050,11 @@ DeviceDiscoveryNotify (
               DEBUG ((DEBUG_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));
               return EFI_NOT_READY;
           }
-          DEBUG ((DEBUG_ERROR, "Enabled Controller-%u through BPMP-FW\n", Private->CtrlId));
+          DEBUG ((DEBUG_INFO, "Enabled Controller-%u through BPMP-FW\n", Private->CtrlId));
         }
     }
 
-    Status = InitializeController(Private, ControllerHandle);
+    Status = InitializeController(Private, ControllerHandle, DeviceTreeNode);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
       break;
