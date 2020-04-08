@@ -1,6 +1,7 @@
 ## @file
 #  Implementation for PlatformBootManagerLib library class interfaces.
 #
+#  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (C) 2015-2016, Red Hat, Inc.
 #  Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
 #  Copyright (c) 2007 - 2014, Intel Corporation. All rights reserved.<BR>
@@ -33,6 +34,7 @@
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
   ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   BaseLib
@@ -50,6 +52,7 @@
   UefiBootServicesTableLib
   UefiLib
   UefiRuntimeServicesTableLib
+  PlatformBootOrderLib
 
 [FeaturePcd]
   gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport

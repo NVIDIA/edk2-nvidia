@@ -1,6 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
+  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -19,6 +20,7 @@
 #include <Library/UefiBootManagerLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Library/PlatformBootOrderLib.h>
 #include <Protocol/DevicePath.h>
 #include <Protocol/EsrtManagement.h>
 #include <Protocol/GraphicsOutput.h>
@@ -720,6 +722,11 @@ PlatformBootManagerAfterConsole (
   PlatformRegisterFvBootOption (
     &gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE
     );
+
+  //
+  // Set Boot Order
+  //
+  SetBootOrder ();
 }
 
 /**

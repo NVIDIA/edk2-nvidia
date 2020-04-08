@@ -21,7 +21,6 @@
 #define NVIDIA_KERNEL_COMMAND_MAX_LEN   25
 
 extern EFI_GUID mBmAutoCreateBootOptionGuid;
-EFI_GUID mNVIDIABmBootOptionGuid  = { 0xfaa91113, 0x6cfa, 0x4c14, { 0xad, 0xd7, 0x3e, 0x25, 0x4b, 0x93, 0x38, 0xae } };
 
 CHAR16 KernelCommandRemove[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
   L"console="
@@ -163,7 +162,7 @@ GetPlatformCommandLine (
 
   AsciiStrToUnicodeStrS (CommandLineEntry, CommandLineDT, CommandLineLength * sizeof (CHAR16));
   gBS->CopyMem ((CHAR8 *)CommandLineDT + (CommandLineLength * sizeof (CHAR16)),
-                &mNVIDIABmBootOptionGuid, sizeof (EFI_GUID));
+                &gNVIDIABmBootOptionGuid, sizeof (EFI_GUID));
   DEBUG ((DEBUG_INFO, "%a: Kernel Command Line in DT: %s\n", __FUNCTION__, CommandLineDT));
 
   if (DTBoot) {
@@ -209,7 +208,7 @@ GetPlatformCommandLine (
   }
   FormattedCommandLineLength = StrLen (CommandLine);
   gBS->CopyMem ((CHAR8 *)CommandLine + ((FormattedCommandLineLength + 1) * sizeof (CHAR16)),
-                &mNVIDIABmBootOptionGuid, sizeof (EFI_GUID));
+                &gNVIDIABmBootOptionGuid, sizeof (EFI_GUID));
   DEBUG ((DEBUG_INFO, "%a: Formatted Kernel Command Line: %s\n", __FUNCTION__, CommandLine));
 
 Error:
@@ -399,7 +398,7 @@ IsTegraBootOption (
 
   if ((BootOption->OptionalDataSize == ((Length + 1) * sizeof (CHAR16)) + sizeof (EFI_GUID)) &&
       CompareGuid ((EFI_GUID *)((UINT8 *)BootOption->OptionalData + ((Length + 1) * sizeof (CHAR16))),
-                   &mNVIDIABmBootOptionGuid)) {
+                   &gNVIDIABmBootOptionGuid)) {
     return TRUE;
   }
 

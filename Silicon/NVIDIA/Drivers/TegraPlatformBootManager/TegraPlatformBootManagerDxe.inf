@@ -35,6 +35,7 @@
 [Guids]
   gFdtTableGuid
   gNVIDIARamloadKernelGuid
+  gNVIDIABmBootOptionGuid
 
 [Depex]
   TRUE
