@@ -16,7 +16,7 @@
 #include <Library/IoLib.h>
 #include <Library/BaseLib.h>
 #include <Library/TegraSerialPortLib.h>
-#include <Library/TegraPlatformInfoLib.h>
+#include <Library/PlatformResourceLib.h>
 
 //
 // 16550 UART register offsets and bitfields
@@ -43,30 +43,6 @@
 #define   B_UART_MSR_DSR      BIT5
 #define   B_UART_MSR_RI       BIT6
 #define   B_UART_MSR_DCD      BIT7
-
-typedef struct {
-  UINTN SerialRegisterBase;
-} UART_16550_PROPS;
-
-UART_16550_PROPS Uart16650PropsT186 = {
-  FixedPcdGet64 (PcdTegra16550UartBaseT186)
-};
-
-UART_16550_PROPS Uart16650PropsT194B = {
-  FixedPcdGet64 (PcdTegra16550UartBaseT194B)
-};
-
-UART_16550_PROPS Uart16650PropsT194C = {
-  FixedPcdGet64 (PcdTegra16550UartBaseT194C)
-};
-
-UART_16550_PROPS Uart16650PropsT234 = {
-  FixedPcdGet64 (PcdTegra16550UartBaseT234)
-};
-
-UART_16550_PROPS Uart16650PropsTH500 = {
-  FixedPcdGet64 (PcdTegra16550UartBaseTH500)
-};
 
 /**
   Read an 8-bit 16550 register. The parameter Offset is added to the base address of the 16550
@@ -113,30 +89,12 @@ SerialPortWriteRegister (
 
 **/
 STATIC
-UART_16550_PROPS *
-GetSerialProperties (
+UINTN
+GetSerialBaseAddress (
   IN BOOLEAN ConsolePort
   )
 {
-  UINT32              ChipID;
-
-  ChipID = TegraGetChipID();
-
-  if (ChipID == T186_CHIP_ID) {
-    return &Uart16650PropsT186;
-  } else if (ChipID == T194_CHIP_ID) {
-    if (ConsolePort) {
-      return &Uart16650PropsT194B;
-    } else {
-      return &Uart16650PropsT194C;
-    }
-  } else if (ChipID == T234_CHIP_ID) {
-    return &Uart16650PropsT234;
-  } else if (ChipID == TH500_CHIP_ID) {
-    return &Uart16650PropsTH500;
-  } else {
-    return NULL;
-  }
+  return GetTegraUARTBaseAddress (ConsolePort);
 }
 
 /**
@@ -221,7 +179,7 @@ Tegra16550SerialPortInitialize (
   //
   // Get the base address of the serial port in either I/O or MMIO space
   //
-  SerialRegisterBase = GetSerialProperties(PcdGetBool (PcdConsolePort))->SerialRegisterBase;
+  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return RETURN_DEVICE_ERROR;
   }
@@ -318,7 +276,7 @@ Tegra16550SerialPortWrite (
     return 0;
   }
 
-  SerialRegisterBase = GetSerialProperties(PcdGetBool (PcdConsolePort))->SerialRegisterBase;
+  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return 0;
   }
@@ -405,7 +363,7 @@ Tegra16550SerialPortRead (
     return 0;
   }
 
-  SerialRegisterBase = GetSerialProperties(PcdGetBool (PcdConsolePort))->SerialRegisterBase;
+  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return 0;
   }
@@ -460,7 +418,7 @@ Tegra16550SerialPortPoll (
 {
   UINTN  SerialRegisterBase;
 
-  SerialRegisterBase = GetSerialProperties(PcdGetBool (PcdConsolePort))->SerialRegisterBase;
+  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return FALSE;
   }
@@ -515,7 +473,7 @@ Tegra16550SerialPortSetControl (
     return RETURN_UNSUPPORTED;
   }
 
-  SerialRegisterBase = GetSerialProperties (PcdGetBool (PcdConsolePort))->SerialRegisterBase;
+  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return RETURN_UNSUPPORTED;
   }
@@ -563,7 +521,7 @@ Tegra16550SerialPortGetControl (
   UINT8 Mcr;
   UINT8 Lsr;
 
-  SerialRegisterBase = GetSerialProperties (PcdGetBool (PcdConsolePort))->SerialRegisterBase;
+  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return RETURN_UNSUPPORTED;
   }
@@ -676,7 +634,7 @@ Tegra16550SerialPortSetAttributes (
   UINT8     LcrParity;
   UINT8     LcrStop;
 
-  SerialRegisterBase = GetSerialProperties (PcdGetBool (PcdConsolePort))->SerialRegisterBase;
+  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return RETURN_UNSUPPORTED;
   }
@@ -853,5 +811,5 @@ Tegra16550SerialPortGetBaseAddress (
   IN BOOLEAN ConsolePort
   )
 {
-  return (EFI_PHYSICAL_ADDRESS)GetSerialProperties(ConsolePort)->SerialRegisterBase;
+  return (EFI_PHYSICAL_ADDRESS)GetSerialBaseAddress (ConsolePort);
 }

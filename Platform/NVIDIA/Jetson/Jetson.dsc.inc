@@ -18,6 +18,9 @@
   DEFINE SYSTEM_FMP_ESRT_GUID = 7C374309-1649-4682-8BEE-04F3A8399414
 
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
+!ifdef $(BUILD_PRIVATE)
+  !include Platform/NVIDIA/Jetson/Jetson-Private.dsc.inc
+!endif
 
 [LibraryClasses.common]
 
@@ -44,6 +47,17 @@
 #
 ################################################################################
 [Components.common]
+!ifndef $(BUILD_PRIVATE)
+  #
+  # Tegra Platform Configuration
+  #
+  Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/T186/Library/PlatformInitializationLib/PlatformInitializationLib.inf
+      NULL|Silicon/NVIDIA/T194/Library/PlatformInitializationLib/PlatformInitializationLib.inf
+  }
+!endif
+
   #
   # Platform Comfiguration Manager Data
   #
@@ -58,12 +72,6 @@
       PlatformAslTablesLib|Silicon/NVIDIA/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
     <BuildOptions>
       *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
-  }
-  Silicon/NVIDIA/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
-    <LibraryClasses>
-      PlatformAslTablesLib|Silicon/NVIDIA/T234/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
-    <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/T234/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
   }
 
   #
@@ -146,16 +154,6 @@
   Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
   Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
   Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
-
-  #
-  # Tegra Platform Configuration
-  #
-  Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf {
-    <LibraryClasses>
-      NULL|Silicon/NVIDIA/T186/Library/PlatformInitializationLib/PlatformInitializationLib.inf
-      NULL|Silicon/NVIDIA/T194/Library/PlatformInitializationLib/PlatformInitializationLib.inf
-      NULL|Silicon/NVIDIA/T234/Library/PlatformInitializationLib/PlatformInitializationLib.inf
-  }
 
   #
   # Tegra UART clock driver

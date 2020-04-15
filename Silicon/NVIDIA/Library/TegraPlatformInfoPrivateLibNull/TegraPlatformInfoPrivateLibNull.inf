@@ -11,28 +11,22 @@
 #
 
 [Defines]
-  INF_VERSION                    = 0x00010005
-  BASE_NAME                      = PlatformResourceLib
-  FILE_GUID                      = 5f0725e2-8394-4654-9fe7-b15d790f92fc
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TegraPlatformInfoPrivateLib
+  FILE_GUID                      = 20d41d67-f008-4f4f-adce-6a4072330404
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = PlatformResourceLib
+  LIBRARY_CLASS                  = TegraPlatformInfoPrivateLib
 
 [Packages]
+  ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
-  TegraPlatformInfoLib
-  PlatformResourcePrivateLib
+  DebugLib
+  PcdLib
 
-[Sources.common]
-  PlatformResourceLib.c
-  T186ResourceConfig.c
-  T194ResourceConfig.c
-
-[FixedPcd]
-  gNVIDIATokenSpaceGuid.PcdMemorySizeRegisterT186
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194B
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194C
+[Sources.AARCH64]
+  AArch64/TegraPlatformInfoPrivate.S

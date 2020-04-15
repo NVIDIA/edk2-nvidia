@@ -12,48 +12,49 @@
 *
 **/
 
-#ifndef __PLATFORM_RESOURCE_LIB_H__
-#define __PLATFORM_RESOURCE_LIB_H__
+#include <Library/PlatformResourceLib.h>
+#include <Library/PlatformResourcePrivateLib.h>
 
-#include <Uefi/UefiBaseType.h>
-#include <Library/DramCarveoutLib.h>
-
-typedef struct {
-  NVDA_MEMORY_REGION   *CarveoutRegions;
-  UINTN                CarveoutRegionsCount;
-  UINTN                SdramSize;
-  UINTN                DtbLoadAddress;
-} TEGRA_RESOURCE_INFO;
 
 /**
   Retrieve Tegra UART Base Address
 
 **/
-UINTN
+BOOLEAN
 EFIAPI
-GetTegraUARTBaseAddress (
-  IN  BOOLEAN ConsolePort
-);
+GetTegraUARTBaseAddressPrivate (
+  IN  BOOLEAN ConsolePort,
+  OUT UINTN   *TegraUARTBaseAddress
+)
+{
+  return FALSE;
+}
 
 /**
   Retrieve CPU BL Address
 
 **/
-UINTN
+BOOLEAN
 EFIAPI
-GetCPUBLBaseAddress (
-  VOID
-);
+GetCPUBLBaseAddressPrivate (
+  OUT UINTN *CpuBootloaderAddress
+)
+{
+  return FALSE;
+}
 
 /**
   Retrieve DTB Address
 
 **/
-UINT64
+BOOLEAN
 EFIAPI
-GetDTBBaseAddress (
-  VOID
-);
+GetDTBBaseAddressPrivate (
+  OUT UINT64 *DTBBaseAddress
+)
+{
+  return FALSE;
+}
 
 /**
   Retrieve Resource Config
@@ -61,8 +62,10 @@ GetDTBBaseAddress (
 **/
 EFI_STATUS
 EFIAPI
-GetResourceConfig (
+GetResourceConfigPrivate (
+  IN  UINTN               CpuBootloaderAddress,
   OUT TEGRA_RESOURCE_INFO *PlatformInfo
-);
-
-#endif //__PLATFORM_RESOURCE_LIB_H__
+)
+{
+  return EFI_UNSUPPORTED;
+}

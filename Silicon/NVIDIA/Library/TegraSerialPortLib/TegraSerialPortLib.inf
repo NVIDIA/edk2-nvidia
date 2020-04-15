@@ -33,9 +33,6 @@
   PlatformResourceLib
   FdtLib
 
-[Guids]
-  gFdtHobGuid
-
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec

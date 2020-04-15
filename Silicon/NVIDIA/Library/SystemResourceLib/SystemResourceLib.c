@@ -127,8 +127,6 @@ InstallMmioRegions (
   OUT UINTN *MmioRegionsCount
 )
 {
-  UINTN SerialRegisterBase;
-
   if (ChipID == T194_CHIP_ID) {
     *MmioRegionsCount += InstallMmioRegion(
                            (TegraGetBLInfoLocationAddress(ChipID) & ~EFI_PAGE_MASK), SIZE_4KB);
@@ -148,24 +146,10 @@ InstallMmioRegions (
   *MmioRegionsCount += InstallMmioRegion(
                          TegraGetGicRedistributorBaseAddress(ChipID), SIZE_128KB);
 
-  SerialRegisterBase = 0;
-  switch (ChipID) {
-  case T186_CHIP_ID:
-    SerialRegisterBase = FixedPcdGet64(PcdTegra16550UartBaseT186);
-    break;
-  case T194_CHIP_ID:
-    SerialRegisterBase = FixedPcdGet64(PcdTegra16550UartBaseT194C);
-    break;
-  case T234_CHIP_ID:
-    SerialRegisterBase = FixedPcdGet64(PcdTegra16550UartBaseT234);
-    break;
-  case TH500_CHIP_ID:
-    SerialRegisterBase = FixedPcdGet64(PcdTegra16550UartBaseTH500);
-    break;
-  default:
-    break;
-  }
-  *MmioRegionsCount += InstallMmioRegion(SerialRegisterBase, SIZE_4KB);
+  *MmioRegionsCount += InstallMmioRegion(GetTegraUARTBaseAddress (FALSE), SIZE_4KB);
+
+  *MmioRegionsCount += InstallMmioRegion(GetTegraUARTBaseAddress (TRUE), SIZE_4KB);
+
   return EFI_SUCCESS;
 }
 
@@ -233,8 +217,7 @@ InstallSystemResources (
   }
   FreePool (PlatformInfo.CarveoutRegions);
 
-  if (ChipID != TH500_CHIP_ID)
-      RegisterDeviceTree(PlatformInfo.DtbLoadAddress);
+  RegisterDeviceTree(PlatformInfo.DtbLoadAddress);
 
   return Status;
 }

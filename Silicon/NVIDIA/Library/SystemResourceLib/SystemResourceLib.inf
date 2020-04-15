@@ -40,9 +40,5 @@
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194C
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseTH500
   gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress
 

@@ -17,8 +17,6 @@
 
 #define T186_CHIP_ID      0x18
 #define T194_CHIP_ID      0x19
-#define T234_CHIP_ID      0x23
-#define TH500_CHIP_ID     0x24
 
 #ifndef __ASSEMBLY__
 

@@ -13,6 +13,7 @@
 
 #include <AsmMacroIoLibV8.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/TegraPlatformInfoPrivateLib.h>
 #include "TegraPlatformInfoLibPrivate.h"
 
 ASM_FUNC(TegraGetChipID)
@@ -55,26 +56,22 @@ _ReturnBLInfo:
   ret
 
 ASM_FUNC(TegraGetGicDistributorBaseAddress)
-
-  cmp w0, #T234_CHIP_ID
-  bne _TH500GicDAddr
-  MOV64 (x0, T234_GIC_DISTRIBUTOR_BASE)
-  b _ReturnGicDAddr
-
-_TH500GicDAddr:
-  cmp w0, #TH500_CHIP_ID
-  bne _T194GicDAddr
-  MOV64 (x0, TH500_GIC_DISTRIBUTOR_BASE)
+  mov w1, w0
+  mov x2, x30
+  bl TegraGetGicDistributorBaseAddressPrivate
+  mov x30, x2
+  cmp x0, #0
+  beq _T194GicDAddr
   b _ReturnGicDAddr
 
 _T194GicDAddr:
-  cmp w0, #T194_CHIP_ID
+  cmp w1, #T194_CHIP_ID
   bne _T186GicDAddr
   MOV64 (x0, T194_GIC_DISTRIBUTOR_BASE)
   b _ReturnGicDAddr
 
 _T186GicDAddr:
-  cmp w0, #T186_CHIP_ID
+  cmp w1, #T186_CHIP_ID
   bne _DefaultGicDAddr
   MOV64 (x0, T186_GIC_DISTRIBUTOR_BASE)
   b _ReturnGicDAddr
@@ -86,20 +83,10 @@ _ReturnGicDAddr:
   ret
 
 ASM_FUNC(TegraGetGicRedistributorBaseAddress)
-
-  cmp w0, #T234_CHIP_ID
-  bne _TH500GicRAddr
-  MOV64 (x0, T234_GIC_REDISTRIBUTOR_BASE)
+  mov x1, x30
+  bl TegraGetGicRedistributorBaseAddressPrivate
+  mov x30, x1
   b _ReturnGicRAddr
-
-_TH500GicRAddr:
-  cmp w0, #TH500_CHIP_ID
-  bne _DefaultGicRAddr
-  MOV64 (x0, TH500_GIC_REDISTRIBUTOR_BASE)
-  b _ReturnGicRAddr
-
-_DefaultGicRAddr:
-  MOV64 (x0, 0)
 
 _ReturnGicRAddr:
   ret

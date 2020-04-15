@@ -23,17 +23,12 @@
 [LibraryClasses]
   PcdLib
   IoLib
-  TegraPlatformInfoLib
+  PlatformResourceLib
 
 [Sources]
   Tegra16550SerialPortLib.c
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186                 ## SOMETIMES_CONSUMES
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194B                ## SOMETIMES_CONSUMES
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194C                ## SOMETIMES_CONSUMES
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234                 ## SOMETIMES_CONSUMES
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseTH500                ## SOMETIMES_CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl  ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialDetectCable             ## SOMETIMES_CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialBaudRate                ## CONSUMES
