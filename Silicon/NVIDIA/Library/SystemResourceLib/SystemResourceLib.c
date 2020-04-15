@@ -21,7 +21,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/SystemResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
-
+#include <Library/TegraDeviceTreeOverlayLib.h>
 
 /**
   Register device tree.
@@ -37,16 +37,28 @@ RegisterDeviceTree (
   )
 {
   EFI_PHYSICAL_ADDRESS *DeviceTreeHobData = NULL;
+  UINT64                        DtbNext;
+  EFI_STATUS                    Status;
+  CHAR8                         SWModule[] = "uefi";
+
   //Register Device Tree
   if (0 != BlDtbLoadAddress) {
     if (fdt_check_header ((VOID *)BlDtbLoadAddress) == 0) {
       UINTN DtbSize = fdt_totalsize ((VOID *)BlDtbLoadAddress);
-      EFI_PHYSICAL_ADDRESS DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize));
-      CopyMem ((VOID *)DtbCopy, (VOID *)BlDtbLoadAddress, DtbSize);
 
-      INT32 NodeOffset = fdt_path_offset ((VOID *)DtbCopy, "/plugin-manager");
-      if (NodeOffset >= 0) {
-        fdt_del_node ((VOID *)DtbCopy, NodeOffset);
+      EFI_PHYSICAL_ADDRESS DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize * 2));
+      if (fdt_open_into ( (VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 2 * DtbSize) != 0) {
+        DEBUG ((EFI_D_ERROR, "%a: Failed to increase device tree size\r\n", __FUNCTION__));
+        return;
+      }
+
+      DtbNext = ALIGN_VALUE(BlDtbLoadAddress + DtbSize, SIZE_4KB);
+      if (fdt_check_header((VOID *)DtbNext) == 0) {
+        Status = ApplyTegraDeviceTreeOverlay((VOID *)DtbCopy, (VOID *)DtbNext, SWModule);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((EFI_D_ERROR, "DTB Overlay failed. Using base DTB.\n"));
+          fdt_open_into ( (VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 2 * DtbSize);
+        }
       }
 
       DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));

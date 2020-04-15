@@ -85,4 +85,13 @@ T234GetCvmEepromData (
   OUT UINT8 **Data
 );
 
+/**
+  Retrieve Board Information
+
+**/
+BOOLEAN
+T234GetBoardInfo(
+  OUT TEGRA_BOARD_INFO *BoardInfo
+);
+
 #endif //__T234_RESOURCE_CONFIG_H__

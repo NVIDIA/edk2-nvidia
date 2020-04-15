@@ -16,6 +16,8 @@
 
 #include <Uefi.h>
 #include <Pi/PiMultiPhase.h>
+#include <Library/BaseLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/DramCarveoutLib.h>
@@ -49,6 +51,15 @@ TEGRA_MMIO_INFO T234MmioInfo[] = {
     0,
     0
   }
+};
+
+TEGRA_FUSE_INFO T234FloorsweepingFuseList[] = {
+  {"fuse-disable-isp",   FUSE_OPT_ISP_DISABLE,   BIT(0) },
+  {"fuse-disable-nvenc", FUSE_OPT_NVENC_DISABLE, BIT(0)|BIT(1) },
+  {"fuse-disable-pva",   FUSE_OPT_PVA_DISABLE,   BIT(0)|BIT(1) },
+  {"fuse-disable-dla",   FUSE_OPT_DLA_DISABLE,   BIT(0)|BIT(1) },
+  {"fuse-disable-cv",    FUSE_OPT_CV_DISABLE,    BIT(0) },
+  {"fuse-disable-nvdec", FUSE_OPT_NVDEC_DISABLE, BIT(0)|BIT(1) }
 };
 
 /**
@@ -348,4 +359,22 @@ T234GetCvmEepromData (
   *Data = CpuBootloaderParams->Eeprom.CvmEepromData;
 
   return CpuBootloaderParams->Eeprom.CvmEepromDataSize;
+}
+
+/**
+  Retrieve Board Information
+
+**/
+BOOLEAN
+T234GetBoardInfo(
+  OUT TEGRA_BOARD_INFO *BoardInfo
+)
+{
+  CHAR8 *id = "3360-1099-100"; //TODO: Remove
+  BoardInfo->FuseBaseAddr = TEGRA_FUSE_BASE_ADDRESS;
+  BoardInfo->FuseList = T234FloorsweepingFuseList;
+  BoardInfo->FuseCount = sizeof(T234FloorsweepingFuseList) / sizeof(T234FloorsweepingFuseList[0]);
+  // T234ReadBoardId(BoardInfo->BoardId); TODO: Read Board Id from BCT EEPROM data.
+  AsciiStrCpyS(BoardInfo->BoardId, TEGRA_BOARD_ID_LEN+1, id);
+  return TRUE;
 }

@@ -28,6 +28,8 @@
 #define TEGRA_UART_TYPE_TCU       0xFE
 #define TEGRA_UART_TYPE_NONE      0xFF
 
+#define TEGRA_BOARD_ID_LEN        13
+
 #define BIT(x)   (1 << (x))
 
 typedef enum {
@@ -48,6 +50,20 @@ typedef struct {
   EFI_PHYSICAL_ADDRESS Base;
   UINTN                Size;
 } TEGRA_MMIO_INFO;
+
+typedef struct {
+  CHAR8               *Name;
+  UINT32              Offset;
+  UINT32              Value;
+} TEGRA_FUSE_INFO;
+
+typedef struct {
+  UINTN           FuseBaseAddr;
+  TEGRA_FUSE_INFO *FuseList;
+  UINTN           FuseCount;
+  CHAR8           BoardId[TEGRA_BOARD_ID_LEN + 1];
+
+} TEGRA_BOARD_INFO;
 
 /**
   Set Tegra UART Base Address
@@ -182,6 +198,16 @@ UINT32
 EFIAPI
 GetCvmEepromData (
   OUT UINT8 **Data
+);
+
+/**
+  Retrieve Board Information
+
+**/
+EFI_STATUS
+EFIAPI
+GetBoardInfo (
+  OUT TEGRA_BOARD_INFO *BoardInfo
 );
 
 #endif //__PLATFORM_RESOURCE_LIB_H__

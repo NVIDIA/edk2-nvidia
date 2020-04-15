@@ -30,6 +30,7 @@
   FdtLib
   PlatformResourceLib
   TegraPlatformInfoLib
+  TegraDeviceTreeOverlayLib
 
 [Guids]
   gFdtHobGuid

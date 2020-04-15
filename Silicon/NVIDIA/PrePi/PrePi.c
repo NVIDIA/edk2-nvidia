@@ -202,6 +202,7 @@ CEntryPoint (
   UINT64                        DtbBase;
   UINT64                        DtbSize;
   UINT64                        DtbOffset;
+  UINT64                        DtbNext;
 
   while (FvOffset < MemorySize) {
     FvHeader = (EFI_FIRMWARE_VOLUME_HEADER *)(VOID *)(MemoryBase + FvOffset);
@@ -223,6 +224,19 @@ CEntryPoint (
   DtbBase = GetDTBBaseAddress ();
   ASSERT ((VOID *) DtbBase != NULL);
   DtbSize = fdt_totalsize ((VOID *)DtbBase);
+
+  // Find the end of overlay DTB region.
+  // Overlay DTBs are aligned to 4KB
+  DtbNext = ALIGN_VALUE(DtbBase + DtbSize, SIZE_4KB);
+  while (DtbNext < MemoryBase + MemorySize) {
+    if (fdt_check_header((VOID *)DtbNext) != 0) {
+      break;
+    }
+    DtbNext += fdt_totalsize((VOID *)DtbNext);
+    DtbNext = ALIGN_VALUE(DtbNext, SIZE_4KB);
+  }
+  DtbSize = DtbNext - DtbBase;
+
   // DTB Base may not be aligned to page boundary. Add overlay to size.
   DtbSize += (DtbBase & EFI_PAGE_MASK);
   DtbSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize));

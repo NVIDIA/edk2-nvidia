@@ -130,4 +130,14 @@ GetMmioBaseAndSizeInternal (
   VOID
 );
 
+/**
+  Retrieve Board Information
+
+**/
+BOOLEAN
+EFIAPI
+GetBoardInfoInternal (
+  OUT TEGRA_BOARD_INFO *BoardInfo
+);
+
 #endif //__PLATFORM_RESOURCE_INTERNAL_LIB_H__

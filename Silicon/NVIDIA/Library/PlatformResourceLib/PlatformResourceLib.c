@@ -453,3 +453,33 @@ GetCvmEepromData (
       return 0;
   }
 }
+
+/**
+  Retrieve Board Information
+
+**/
+EFI_STATUS
+EFIAPI
+GetBoardInfo (
+  OUT TEGRA_BOARD_INFO *BoardInfo
+)
+{
+  UINTN           ChipID;
+  BOOLEAN         ValidPrivatePlatform;
+
+  ValidPrivatePlatform = GetBoardInfoInternal(BoardInfo);
+  if (ValidPrivatePlatform) {
+    return EFI_SUCCESS;
+  }
+
+  ChipID = TegraGetChipID();
+
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      return T234GetBoardInfo(BoardInfo);
+    case T194_CHIP_ID:
+      return EFI_UNSUPPORTED;
+    default:
+      return EFI_UNSUPPORTED;
+  }
+}

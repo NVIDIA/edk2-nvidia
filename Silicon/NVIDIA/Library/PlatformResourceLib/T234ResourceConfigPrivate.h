@@ -40,6 +40,18 @@
                                            BRBCT_SIGNED_CUSTOMER_DATA_SIZE)
 #define MAX_EEPROM_DATA_SIZE              256
 
+#define TEGRA_FUSE_BASE_ADDRESS     0x03810000
+#define FUSE_OPT_ISP_DISABLE        0x4d8
+#define FUSE_OPT_NVENC_DISABLE      0x4e0
+#define FUSE_OPT_PVA_DISABLE        0x4e8
+#define FUSE_OPT_DLA_DISABLE        0x4f0
+#define FUSE_OPT_CV_DISABLE         0x4f8
+#define FUSE_OPT_NVDEC_DISABLE      0x5f0
+
+#define TEGRABL_MAX_VERSION_STRING 128 /* chars including null */
+#define NUM_DRAM_BAD_PAGES 1024
+#define TEGRABL_MAX_STORAGE_DEVICES 8
+
 /*macro carve_out_type*/
 #define CARVEOUT_NONE                     0
 #define CARVEOUT_NVDEC                    1

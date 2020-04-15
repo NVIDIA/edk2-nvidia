@@ -161,3 +161,16 @@ GetMmioBaseAndSizeInternal (
 {
   return NULL;
 }
+
+/**
+  Retrieve Board Information
+
+**/
+BOOLEAN
+EFIAPI
+GetBoardInfoInternal (
+  OUT TEGRA_BOARD_INFO *BoardInfo
+)
+{
+  return FALSE;
+}
