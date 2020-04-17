@@ -2,7 +2,7 @@
 
   SE RNG Controller Driver
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -15,9 +15,7 @@
 
 #include <PiDxe.h>
 
-#include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
-#include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
@@ -31,13 +29,12 @@
 #include "SeRngPrivate.h"
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-    { "nvidia,tegra234-se", &gNVIDIANonDiscoverableT234SeDeviceGuid },
     { "nvidia,tegra194-se-elp", &gNVIDIANonDiscoverableT194SeDeviceGuid },
     { NULL, NULL }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-    .DriverName = L"NVIDIA SE RNG controller driver",
+    .DriverName = L"NVIDIA T194 SE RNG controller driver",
     .UseDriverBinding = TRUE,
     .AutoEnableClocks = TRUE,
     .AutoDeassertReset = TRUE,
@@ -233,93 +230,6 @@ SeRngRng1GetRandom128 (
 }
 
 /**
-  Gets 128-bits of random data from SE.
-
-  @param[in]     This                The instance of the NVIDIA_SE_RNG_PROTOCOL.
-  @param[in]     Buffer              Buffer to place data into
-
-  @return EFI_SUCCESS               The data was returned.
-  @return EFI_INVALID_PARAMETER     Buffer is NULL.
-  @return EFI_DEVICE_ERROR          Failed to get random data.
-**/
-STATIC
-EFI_STATUS
-SeRngGetRandom128 (
-  IN  NVIDIA_SE_RNG_PROTOCOL   *This,
-  IN  UINT64                   *Buffer
-  )
-{
-  SE_RNG_PRIVATE_DATA *Private;
-  EFI_STATUS          Status;
-  UINT32              UpperAddress;
-  UINT32              MaxPollCount = SE_MAX_POLL_COUNT;
-  UINT32              AesStatus;
-
-  if ((This == NULL) ||
-      (Buffer == NULL)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  Private = SE_RNG_PRIVATE_DATA_FROM_THIS (This);
-
-  MmioWrite32 (Private->BaseAddress + SE0_AES0_CONFIG_0,
-               SE0_AES0_CONFIG_0_DST_MEMORY |
-               SE0_AES0_CONFIG_0_DEC_ALG_NOP |
-               SE0_AES0_CONFIG_0_ENC_ALG_RNG |
-               SE0_AES0_CONFIG_0_ENC_MODE__KEY256
-              );
-
-  MmioWrite32 (Private->BaseAddress + SE0_AES0_CRYPTO_CONFIG_0,
-               SE0_AES0_CRYPTO_CONFIG_0_XOR_POS_BYPASS |
-               SE0_AES0_CRYPTO_CONFIG_0_INPUT_SEL_RANDOM |
-               SE0_AES0_CRYPTO_CONFIG_0_CORE_SEL_ENCRYPT |
-               SE0_AES0_CRYPTO_CONFIG_0_HASH_ENB_DISABLE
-              );
-/*
-  MmioWrite32 (Private->BaseAddress + SE0_AES0_RNG_CONFIG_0,
-               SE0_AES0_RNG_CONFIG_0_SRC_ENTROPY |
-               SE0_AES0_RNG_CONFIG_0_MODE_FORCE_RESEED
-              );
-
-  MmioWrite32 (Private->BaseAddress + SE0_AES0_RNG_RESEED_INTERVAL_0, RANDOM_BYTES);
-
-*/
-  WriteBackDataCacheRange (Buffer, RANDOM_BYTES);
-
-  MmioWrite32 (Private->BaseAddress + SE0_AES0_OUT_ADDR_0, (UINT32)(UINTN)Buffer);
-
-  UpperAddress = (((UINTN)(VOID *)Buffer >> 32) << SE0_AES0_OUT_ADDR_HI_0_MSB_SHIFT) & SE0_AES0_OUT_ADDR_HI_0_MSB_MASK;
-  UpperAddress |= (RANDOM_BYTES << SE0_AES0_OUT_ADDR_HI_0_SZ_SHIFT) & SE0_AES0_OUT_ADDR_HI_0_SZ_MASK;
-  MmioWrite32 (Private->BaseAddress + SE0_AES0_OUT_ADDR_HI_0, UpperAddress);
-
-  //Always support 1 block
-  MmioWrite32 (Private->BaseAddress + SE0_AES0_CRYPTO_LAST_BLOCK_0, 0);
-
-  MmioWrite32 (Private->BaseAddress + SE0_AES0_OPERATION_0,
-               SE0_AES0_OPERATION_0_LASTBUF_FIELD |
-               SE_UNIT_OPERATION_PKT_OP_START );
-
-  do {
-    AesStatus = MmioRead32 (Private->BaseAddress + SE0_AES0_STATUS_0);
-    MaxPollCount--;
-  } while ((MaxPollCount > 0) && (AesStatus != 0));
-
-  if (AesStatus != 0) {
-    DEBUG ((EFI_D_ERROR, "%a, Timeout waiting for random\r\n", __FUNCTION__));
-    Status = EFI_DEVICE_ERROR;
-    goto ErrorExit;
-  }
-
-  InvalidateDataCacheRange (Buffer, RANDOM_BYTES);
-
-  Status = EFI_SUCCESS;
-
-ErrorExit:
-
-  return Status;
-}
-
-/**
   Callback that will be invoked at various phases of the driver initialization
 
   This function allows for modification of system behavior at various points in
@@ -367,25 +277,14 @@ DeviceDiscoveryNotify (
     }
 
     Private->Signature = SE_RNG_SIGNATURE;
-    if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234SeDeviceGuid)) {
-      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &Private->BaseAddress, &RegionSize);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "SeRngDxe: Failed to get region location (%r)\r\n", Status));
-        FreePool (Private);
-        break;
-      }
-
-      Private->SeRngProtocol.GetRandom128 = SeRngGetRandom128;
-    } else {
-      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 1, &Private->BaseAddress, &RegionSize);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "SeRngDxe: Failed to get region location (%r)\r\n", Status));
-        FreePool (Private);
-        break;
-      }
-
-      Private->SeRngProtocol.GetRandom128 = SeRngRng1GetRandom128;
+    Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 1, &Private->BaseAddress, &RegionSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "SeRngDxe: Failed to get region location (%r)\r\n", Status));
+      FreePool (Private);
+      break;
     }
+
+    Private->SeRngProtocol.GetRandom128 = SeRngRng1GetRandom128;
 
     Status = gBS->InstallMultipleProtocolInterfaces (&ControllerHandle,
                                                      &gEfiCallerIdGuid,

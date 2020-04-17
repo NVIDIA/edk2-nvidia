@@ -133,9 +133,11 @@
   MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
   MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
 
-  #SE RNG
-  Silicon/NVIDIA/Drivers/SeRngDxe/SeRngDxe.inf
   #
+  # SE RNG
+  #
+  Silicon/NVIDIA/T194/Drivers/SeRngDxe/SeRngDxe.inf
+
   #
   # PCI Support
   #
