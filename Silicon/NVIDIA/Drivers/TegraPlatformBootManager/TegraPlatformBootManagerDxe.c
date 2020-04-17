@@ -588,8 +588,8 @@ PlatformBootManagerEntryPoint (
   IN EFI_SYSTEM_TABLE   *SystemTable
   )
 {
-  return gBS->InstallProtocolInterface (&ImageHandle,
-                                        &gEdkiiPlatformBootManagerProtocolGuid,
-                                        EFI_NATIVE_INTERFACE,
-                                        &mPlatformBootManager);
+  return gBS->InstallMultipleProtocolInterfaces (&ImageHandle,
+                                                 &gEdkiiPlatformBootManagerProtocolGuid,
+                                                 &mPlatformBootManager,
+                                                 NULL);
 }

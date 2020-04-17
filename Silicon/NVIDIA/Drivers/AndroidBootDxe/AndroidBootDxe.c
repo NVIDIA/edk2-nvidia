@@ -762,11 +762,11 @@ AndroidBootDriverBindingStart (
   Private->ProtocolsInstalled = TRUE;
 
   // Install and open CallerId to link the Private data structure
-  Status = gBS->InstallProtocolInterface (
+  Status = gBS->InstallMultipleProtocolInterfaces (
                   &ControllerHandle,
                   &gEfiCallerIdGuid,
-                  EFI_NATIVE_INTERFACE,
-                  &Private->Id
+                  &Private->Id,
+                  NULL
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: fail to install CallerId: %r\n", __FUNCTION__, Status));
@@ -808,10 +808,11 @@ Exit:
                       This->DriverBindingHandle,
                       Private->AndroidBootHandle
                       );
-      gBS->UninstallProtocolInterface (
+      gBS->UninstallMultipleProtocolInterfaces (
                       ControllerHandle,
                       &gEfiCallerIdGuid,
-                      &Private->Id
+                      &Private->Id,
+                      NULL
                       );
       if (Private->ProtocolsInstalled) {
         gBS->UninstallMultipleProtocolInterfaces (
@@ -927,10 +928,11 @@ AndroidBootDriverBindingStop (
                   This->DriverBindingHandle,
                   &Private->Id
                   );
-  gBS->UninstallProtocolInterface (
+  gBS->UninstallMultipleProtocolInterfaces (
                   ControllerHandle,
                   &gEfiCallerIdGuid,
-                  &Private->Id
+                  &Private->Id,
+                  NULL
                   );
   gBS->UninstallMultipleProtocolInterfaces (
                   Private->AndroidBootHandle,

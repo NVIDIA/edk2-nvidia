@@ -1260,10 +1260,10 @@ NoFlashExit:
   // The driver implementing the variable read service can now be dispatched;
   // the varstore headers are in place.
   //
-  Status = gBS->InstallProtocolInterface (&gImageHandle,
-                                          &gEdkiiNvVarStoreFormattedGuid,
-                                          EFI_NATIVE_INTERFACE,
-                                          NULL);
+  Status = gBS->InstallMultipleProtocolInterfaces (&gImageHandle,
+                                                   &gEdkiiNvVarStoreFormattedGuid,
+                                                   NULL,
+                                                   NULL);
 
   if (!EFI_ERROR(Status) && PcdGetBool(PcdEmuVariableNvModeEnable)) {
     Status = EFI_UNSUPPORTED;

@@ -171,11 +171,11 @@ ConfigurationManagerDxeInitialize (
     goto error_handler;
   }
 
-  Status = gBS->InstallProtocolInterface (
+  Status = gBS->InstallMultipleProtocolInterfaces (
                   &ImageHandle,
                   &gEdkiiConfigurationManagerProtocolGuid,
-                  EFI_NATIVE_INTERFACE,
-                  (VOID*)&NVIDIAPlatformConfigManagerProtocol
+                  (VOID*)&NVIDIAPlatformConfigManagerProtocol,
+                  NULL
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((

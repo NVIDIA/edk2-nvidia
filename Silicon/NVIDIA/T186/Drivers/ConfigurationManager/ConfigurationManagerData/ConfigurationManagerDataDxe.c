@@ -259,8 +259,8 @@ ConfigurationManagerDataDxeInitialize (
     return Status;
   }
 
-  return gBS->InstallProtocolInterface (&ImageHandle,
-                                        &gNVIDIAConfigurationManagerDataProtocolGuid,
-                                        EFI_NATIVE_INTERFACE,
-                                        (VOID*)NVIDIAPlatformRepositoryInfo);
+  return gBS->InstallMultipleProtocolInterfaces (&ImageHandle,
+                                                 &gNVIDIAConfigurationManagerDataProtocolGuid,
+                                                 (VOID*)NVIDIAPlatformRepositoryInfo,
+                                                 NULL);
 }
