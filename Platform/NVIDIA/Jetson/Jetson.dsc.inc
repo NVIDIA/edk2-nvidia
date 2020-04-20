@@ -12,15 +12,17 @@
 #
 
 [Defines]
+  PLATFORM_VERSION            = 0.1
+  DSC_SPECIFICATION           = 0x00010005
+  SUPPORTED_ARCHITECTURES     = AARCH64
+  BUILD_TARGETS               = DEBUG|RELEASE|NOOPT
+
   #
   # Define ESRT GUIDs for Firmware Management Protocol instances
   #
   DEFINE SYSTEM_FMP_ESRT_GUID = 7C374309-1649-4682-8BEE-04F3A8399414
 
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
-!ifdef $(BUILD_PRIVATE)
-  !include Platform/NVIDIA/Jetson/Jetson-Private.dsc.inc
-!endif
 
 [LibraryClasses.common]
 
@@ -47,7 +49,6 @@
 #
 ################################################################################
 [Components.common]
-!ifndef $(BUILD_PRIVATE)
   #
   # Tegra Platform Configuration
   #
@@ -56,7 +57,6 @@
       NULL|Silicon/NVIDIA/T186/Library/PlatformInitializationLib/PlatformInitializationLib.inf
       NULL|Silicon/NVIDIA/T194/Library/PlatformInitializationLib/PlatformInitializationLib.inf
   }
-!endif
 
   #
   # Platform Comfiguration Manager Data

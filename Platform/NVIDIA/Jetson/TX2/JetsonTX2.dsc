@@ -19,11 +19,7 @@
 [Defines]
   PLATFORM_NAME                  = JetsonTX2
   PLATFORM_GUID                  = 7eed17d6-f913-4726-be95-2936593a086b
-  PLATFORM_VERSION               = 0.1
-  DSC_SPECIFICATION              = 0x00010005
   OUTPUT_DIRECTORY               = Build/JetsonTX2
-  SUPPORTED_ARCHITECTURES        = AARCH64
-  BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
   CHIPSET                        = T186

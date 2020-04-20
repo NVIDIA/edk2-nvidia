@@ -145,10 +145,8 @@
 
   ReportStatusCodeLib|MdeModulePkg/Library/DxeReportStatusCodeLib/DxeReportStatusCodeLib.inf
 
-!ifndef $(BUILD_PRIVATE)
   TegraPlatformInfoPrivateLib|Silicon/NVIDIA/Library/TegraPlatformInfoPrivateLibNull/TegraPlatformInfoPrivateLibNull.inf
   PlatformResourcePrivateLib|Silicon/NVIDIA/Library/PlatformResourcePrivateLibNull/PlatformResourcePrivateLibNull.inf
-!endif
   TegraPlatformInfoLib|Silicon/NVIDIA/Library/TegraPlatformInfoLib/TegraPlatformInfoLib.inf
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/PlatformResourceLib.inf
   SystemResourceLib|Silicon/NVIDIA/Library/SystemResourceLib/SystemResourceLib.inf
@@ -808,6 +806,3 @@
   #
   MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
 
-!ifdef $(BUILD_PRIVATE)
-  !include Platform/NVIDIA/NVIDIA-Private.common.dsc.inc
-!endif

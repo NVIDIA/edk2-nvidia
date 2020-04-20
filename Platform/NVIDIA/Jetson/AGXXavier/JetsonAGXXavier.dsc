@@ -19,11 +19,7 @@
 [Defines]
   PLATFORM_NAME                  = JetsonAGXXavier
   PLATFORM_GUID                  = 865873a1-b255-46c2-90d2-2e2578c00dbd
-  PLATFORM_VERSION               = 0.1
-  DSC_SPECIFICATION              = 0x00010005
   OUTPUT_DIRECTORY               = Build/JetsonAGXXavier
-  SUPPORTED_ARCHITECTURES        = AARCH64
-  BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
   CHIPSET                        = T194
