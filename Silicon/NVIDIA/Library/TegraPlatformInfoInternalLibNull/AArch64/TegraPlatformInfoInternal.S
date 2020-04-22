@@ -12,14 +12,14 @@
 //
 
 #include <AsmMacroIoLibV8.h>
-#include <Library/TegraPlatformInfoPrivateLib.h>
+#include <Library/TegraPlatformInfoInternalLib.h>
 
-ASM_FUNC(TegraGetGicDistributorBaseAddressPrivate)
+ASM_FUNC(TegraGetGicDistributorBaseAddressInternal)
 
   MOV64 (x0, 0)
   ret
 
-ASM_FUNC(TegraGetGicRedistributorBaseAddressPrivate)
+ASM_FUNC(TegraGetGicRedistributorBaseAddressInternal)
 
   MOV64 (x0, 0)
   ret

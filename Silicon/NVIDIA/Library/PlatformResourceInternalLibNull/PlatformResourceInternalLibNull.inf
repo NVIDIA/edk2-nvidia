@@ -12,15 +12,15 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = PlatformResourcePrivateLib
+  BASE_NAME                      = PlatformResourceInternalLib
   FILE_GUID                      = d39246b3-7871-4f34-b72e-c1da2c4b1fdc
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = PlatformResourcePrivateLib
+  LIBRARY_CLASS                  = PlatformResourceInternalLib
 
 [Packages]
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [Sources.common]
-  PlatformResourcePrivateLibNull.c
+  PlatformResourceInternalLibNull.c

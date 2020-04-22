@@ -15,7 +15,7 @@
 #include <Library/IoLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PlatformResourceLib.h>
-#include <Library/PlatformResourcePrivateLib.h>
+#include <Library/PlatformResourceInternalLib.h>
 #include "T194ResourceConfig.h"
 #include "T186ResourceConfig.h"
 
@@ -35,7 +35,7 @@ GetTegraUARTBaseAddress (
   BOOLEAN ValidPrivatePlatform;
 
   ValidPrivatePlatform = FALSE;
-  ValidPrivatePlatform = GetTegraUARTBaseAddressPrivate (ConsolePort, &TegraUARTBase);
+  ValidPrivatePlatform = GetTegraUARTBaseAddressInternal (ConsolePort, &TegraUARTBase);
   if (ValidPrivatePlatform) {
     return TegraUARTBase;
   }
@@ -72,7 +72,7 @@ GetCPUBLBaseAddress (
   BOOLEAN ValidPrivatePlatform;
 
   ValidPrivatePlatform = FALSE;
-  ValidPrivatePlatform = GetCPUBLBaseAddressPrivate (&CpuBootloaderAddress);
+  ValidPrivatePlatform = GetCPUBLBaseAddressInternal (&CpuBootloaderAddress);
   if (ValidPrivatePlatform) {
     return CpuBootloaderAddress;
   }
@@ -104,7 +104,7 @@ GetDTBBaseAddress (
   BOOLEAN ValidPrivatePlatform;
 
   ValidPrivatePlatform = FALSE;
-  ValidPrivatePlatform = GetDTBBaseAddressPrivate (&DTBBaseAddress);
+  ValidPrivatePlatform = GetDTBBaseAddressInternal (&DTBBaseAddress);
   if (ValidPrivatePlatform) {
     return DTBBaseAddress;
   }
@@ -138,9 +138,9 @@ GetResourceConfig (
   BOOLEAN ValidPrivatePlatform;
 
   ValidPrivatePlatform = FALSE;
-  ValidPrivatePlatform = GetCPUBLBaseAddressPrivate (&CpuBootloaderAddress);
+  ValidPrivatePlatform = GetCPUBLBaseAddressInternal (&CpuBootloaderAddress);
   if (ValidPrivatePlatform) {
-    return GetResourceConfigPrivate (CpuBootloaderAddress, PlatformInfo);;
+    return GetResourceConfigInternal (CpuBootloaderAddress, PlatformInfo);;
   }
 
   ChipID = TegraGetChipID();

@@ -12,11 +12,11 @@
 
 [Defines]
   INF_VERSION                    = 0x00010019
-  BASE_NAME                      = TegraPlatformInfoPrivateLib
+  BASE_NAME                      = TegraPlatformInfoInternalLib
   FILE_GUID                      = 20d41d67-f008-4f4f-adce-6a4072330404
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = TegraPlatformInfoPrivateLib
+  LIBRARY_CLASS                  = TegraPlatformInfoInternalLib
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -29,4 +29,4 @@
   PcdLib
 
 [Sources.AARCH64]
-  AArch64/TegraPlatformInfoPrivate.S
+  AArch64/TegraPlatformInfoInternal.S

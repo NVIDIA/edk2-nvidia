@@ -25,7 +25,7 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
-  TegraPlatformInfoPrivateLib
+  TegraPlatformInfoInternalLib
   DebugLib
   PcdLib
 

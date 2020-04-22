@@ -13,7 +13,7 @@
 **/
 
 #include <Library/PlatformResourceLib.h>
-#include <Library/PlatformResourcePrivateLib.h>
+#include <Library/PlatformResourceInternalLib.h>
 
 
 /**
@@ -22,7 +22,7 @@
 **/
 BOOLEAN
 EFIAPI
-GetTegraUARTBaseAddressPrivate (
+GetTegraUARTBaseAddressInternal (
   IN  BOOLEAN ConsolePort,
   OUT UINTN   *TegraUARTBaseAddress
 )
@@ -36,7 +36,7 @@ GetTegraUARTBaseAddressPrivate (
 **/
 BOOLEAN
 EFIAPI
-GetCPUBLBaseAddressPrivate (
+GetCPUBLBaseAddressInternal (
   OUT UINTN *CpuBootloaderAddress
 )
 {
@@ -49,7 +49,7 @@ GetCPUBLBaseAddressPrivate (
 **/
 BOOLEAN
 EFIAPI
-GetDTBBaseAddressPrivate (
+GetDTBBaseAddressInternal (
   OUT UINT64 *DTBBaseAddress
 )
 {
@@ -62,7 +62,7 @@ GetDTBBaseAddressPrivate (
 **/
 EFI_STATUS
 EFIAPI
-GetResourceConfigPrivate (
+GetResourceConfigInternal (
   IN  UINTN               CpuBootloaderAddress,
   OUT TEGRA_RESOURCE_INFO *PlatformInfo
 )

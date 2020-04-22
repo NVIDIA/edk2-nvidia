@@ -12,8 +12,8 @@
 *
 **/
 
-#ifndef __TEGRA_PLATFORM_INFO_PRIVATE_LIB_H__
-#define __TEGRA_PLATFORM_INFO_PRIVATE_LIB_H__
+#ifndef __TEGRA_PLATFORM_INFO_INTERNAL_LIB_H__
+#define __TEGRA_PLATFORM_INFO_INTERNAL_LIB_H__
 
 #ifndef __ASSEMBLY__
 
@@ -25,7 +25,7 @@
   @retval              Gic distributor base address.
 
 **/
-extern UINT64 TegraGetGicDistributorBaseAddressPrivate (UINT32 ChipID);
+extern UINT64 TegraGetGicDistributorBaseAddressInternal (UINT32 ChipID);
 
 /**
   Returns gic redistributor base address for a given chip.
@@ -35,8 +35,8 @@ extern UINT64 TegraGetGicDistributorBaseAddressPrivate (UINT32 ChipID);
   @retval              Gic redistributor base address.
 
 **/
-extern UINT64 TegraGetGicRedistributorBaseAddressPrivate (UINT32 ChipID);
+extern UINT64 TegraGetGicRedistributorBaseAddressInternal (UINT32 ChipID);
 
 #endif /* !__ASSEMBLY */
 
-#endif //__TEGRA_PLATFORM_INFO_PRIVATE_LIB_H__
+#endif //__TEGRA_PLATFORM_INFO_INTERNAL_LIB_H__

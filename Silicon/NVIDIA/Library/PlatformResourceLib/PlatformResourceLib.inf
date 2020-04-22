@@ -24,7 +24,7 @@
 
 [LibraryClasses]
   TegraPlatformInfoLib
-  PlatformResourcePrivateLib
+  PlatformResourceInternalLib
 
 [Sources.common]
   PlatformResourceLib.c

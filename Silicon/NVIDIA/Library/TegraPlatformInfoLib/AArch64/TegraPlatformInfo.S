@@ -13,7 +13,7 @@
 
 #include <AsmMacroIoLibV8.h>
 #include <Library/TegraPlatformInfoLib.h>
-#include <Library/TegraPlatformInfoPrivateLib.h>
+#include <Library/TegraPlatformInfoInternalLib.h>
 #include "TegraPlatformInfoLibPrivate.h"
 
 ASM_FUNC(TegraGetChipID)
@@ -58,7 +58,7 @@ _ReturnBLInfo:
 ASM_FUNC(TegraGetGicDistributorBaseAddress)
   mov w1, w0
   mov x2, x30
-  bl TegraGetGicDistributorBaseAddressPrivate
+  bl TegraGetGicDistributorBaseAddressInternal
   mov x30, x2
   cmp x0, #0
   beq _T194GicDAddr
@@ -84,7 +84,7 @@ _ReturnGicDAddr:
 
 ASM_FUNC(TegraGetGicRedistributorBaseAddress)
   mov x1, x30
-  bl TegraGetGicRedistributorBaseAddressPrivate
+  bl TegraGetGicRedistributorBaseAddressInternal
   mov x30, x1
   b _ReturnGicRAddr
 

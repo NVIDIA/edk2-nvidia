@@ -12,8 +12,8 @@
 *
 **/
 
-#ifndef __PLATFORM_RESOURCE_PRIVATE_LIB_H__
-#define __PLATFORM_RESOURCE_PRIVATE_LIB_H__
+#ifndef __PLATFORM_RESOURCE_INTERNAL_LIB_H__
+#define __PLATFORM_RESOURCE_INTERNAL_LIB_H__
 
 #include <Uefi/UefiBaseType.h>
 
@@ -23,7 +23,7 @@
 **/
 BOOLEAN
 EFIAPI
-GetTegraUARTBaseAddressPrivate (
+GetTegraUARTBaseAddressInternal (
   IN  BOOLEAN ConsolePort,
   OUT UINTN   *TegraUARTBaseAddress
 );
@@ -34,7 +34,7 @@ GetTegraUARTBaseAddressPrivate (
 **/
 BOOLEAN
 EFIAPI
-GetCPUBLBaseAddressPrivate (
+GetCPUBLBaseAddressInternal (
   OUT UINTN *CpuBootloaderAddress
 );
 
@@ -44,7 +44,7 @@ GetCPUBLBaseAddressPrivate (
 **/
 BOOLEAN
 EFIAPI
-GetDTBBaseAddressPrivate (
+GetDTBBaseAddressInternal (
   OUT UINT64 *DTBBaseAddress
 );
 
@@ -54,9 +54,9 @@ GetDTBBaseAddressPrivate (
 **/
 EFI_STATUS
 EFIAPI
-GetResourceConfigPrivate (
+GetResourceConfigInternal (
   IN  UINTN               CpuBootloaderAddress,
   OUT TEGRA_RESOURCE_INFO *PlatformInfo
 );
 
-#endif //__PLATFORM_RESOURCE_PRIVATE_LIB_H__
+#endif //__PLATFORM_RESOURCE_INTERNAL_LIB_H__
