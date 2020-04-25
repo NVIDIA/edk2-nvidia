@@ -30,6 +30,8 @@
 
 #include "Platform.h"
 
+#include <T194/T194Definitions.h>
+
 #include "Dsdt.hex"
 #include <SsdtPci.hex>
 
@@ -185,15 +187,52 @@ CM_ARM_SERIAL_PORT_INFO SpcrSerialPort = {
 /** PCI Configuration Space Info
 */
 STATIC
-CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfo = {
-  // The physical base address for the PCI segment
-  0,
-  // The PCI segment group number
-  0,
-  // The start bus number
-  0,
-  // The end bus number
-  0
+CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfo[] = {
+
+  {
+    // The physical base address for the PCI segment
+    T194_PCIE_C0_CFG_BASE_ADDR,
+    // The PCI segment group number
+    0,
+    // The start bus number
+    T194_PCIE_BUS_MIN,
+    // The end bus number
+    T194_PCIE_BUS_MAX,
+  },
+
+  {
+    // The physical base address for the PCI segment
+    T194_PCIE_C1_CFG_BASE_ADDR,
+    // The PCI segment group number
+    1,
+    // The start bus number
+    T194_PCIE_BUS_MIN,
+    // The end bus number
+    T194_PCIE_BUS_MAX,
+  },
+
+  {
+    // The physical base address for the PCI segment
+    T194_PCIE_C3_CFG_BASE_ADDR,
+    // The PCI segment group number
+    3,
+    // The start bus number
+    T194_PCIE_BUS_MIN,
+    // The end bus number
+    T194_PCIE_BUS_MAX,
+  },
+
+  {
+    // The physical base address for the PCI segment
+    T194_PCIE_C5_CFG_BASE_ADDR,
+    // The PCI segment group number
+    5,
+    // The start bus number
+    T194_PCIE_BUS_MIN,
+    // The end bus number
+    T194_PCIE_BUS_MAX,
+  },
+
 };
 
 
@@ -258,9 +297,6 @@ InitializePlatformRepository ()
   NVIDIAPlatformRepositoryInfo[7].CmObjectCount = sizeof (SpcrSerialPort) / sizeof (CM_ARM_SERIAL_PORT_INFO);
   NVIDIAPlatformRepositoryInfo[7].CmObjectPtr = &SpcrSerialPort;
 
-  PciConfigInfo.BaseAddress = PcdGet64 (PcdPciConfigurationSpaceBaseAddress);
-  PciConfigInfo.StartBusNumber = PcdGet32 (PcdPciBusMin);
-  PciConfigInfo.EndBusNumber = PcdGet32 (PcdPciBusMax);
   NVIDIAPlatformRepositoryInfo[8].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
   NVIDIAPlatformRepositoryInfo[8].CmObjectSize = sizeof (PciConfigInfo);
   NVIDIAPlatformRepositoryInfo[8].CmObjectCount = sizeof (PciConfigInfo) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);

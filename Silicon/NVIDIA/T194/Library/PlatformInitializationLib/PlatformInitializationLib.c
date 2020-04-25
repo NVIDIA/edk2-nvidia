@@ -73,11 +73,6 @@ T194PlatformInitializationLibConstructor (
     // Used in GICv2
     PcdSet64S(PcdGicInterruptInterfaceBase, TegraGetGicInterruptInterfaceBaseAddress(ChipID));
 
-    // Set PCI specific PCDs
-    PcdSet64S(PcdPciConfigurationSpaceBaseAddress, T194_PCIE_CFG_BASE_ADDR);
-    PcdSet32S(PcdPciBusMin, T194_PCIE_BUS_MIN);
-    PcdSet32S(PcdPciBusMax, T194_PCIE_BUS_MAX);
-
     // Set Default OEM Table ID specific PCDs
     PcdSet64S(PcdAcpiDefaultOemTableId, 0x2020202034393154);
 
