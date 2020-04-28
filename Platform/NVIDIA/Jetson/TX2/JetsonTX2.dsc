@@ -31,19 +31,3 @@
 
   #Use non-optimized BaseMemoryLib due to peripherals not being cache coherent
   BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
-
-[PcdsFixedAtBuild.common]
-
-  gArmPlatformTokenSpaceGuid.PcdCoreCount|8
-  gArmPlatformTokenSpaceGuid.PcdClusterCount|4
-
-  gArmTokenSpaceGuid.PcdVFPEnabled|1
-
-  #
-  # ARM Architectural Timer Frequency
-  #
-  gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz|31250000
-  gEmbeddedTokenSpaceGuid.PcdMetronomeTickPeriod|1000
-
-  # System FMP Capsule GUID d33335fe-a16c-4765-a04d-f3c78999e580
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(d33335fe-a16c-4765-a04d-f3c78999e580)}

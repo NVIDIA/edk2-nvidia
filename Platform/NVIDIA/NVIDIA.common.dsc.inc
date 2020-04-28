@@ -89,7 +89,6 @@
   ArmDisassemblerLib|ArmPkg/Library/ArmDisassemblerLib/ArmDisassemblerLib.inf
   ArmGicLib|ArmPkg/Drivers/ArmGic/ArmGicLib.inf
   ArmGicArchLib|ArmPkg/Library/ArmGicArchLib/ArmGicArchLib.inf
-  ArmPlatformStackLib|ArmPlatformPkg/Library/ArmPlatformStackLib/ArmPlatformStackLib.inf
   ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
   ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerPhyCounterLib/ArmGenericTimerPhyCounterLib.inf
   ResetSystemLib|ArmPkg/Library/ArmSmcPsciResetSystemLib/ArmSmcPsciResetSystemLib.inf
@@ -482,6 +481,16 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorRevision|1
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiExposedTableVersions|0x20
 
+  #
+  # ARM VFP PCDs
+  #
+  gArmTokenSpaceGuid.PcdVFPEnabled|1
+
+  #
+  # Pltaform's Tick Period in 100 nS units
+  #
+  gEmbeddedTokenSpaceGuid.PcdMetronomeTickPeriod|1000
+
 [PcdsDynamicDefault]
   #
   # NV Storage PCDs.
@@ -513,6 +522,11 @@
   # Default to DT
   #
   gEmbeddedTokenSpaceGuid.PcdDefaultDtPref|TRUE
+
+  #
+  # System FMP ImageTypeId GUIDs
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{0x0}
 
 [PcdsDynamicDefault.common]
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x00000000

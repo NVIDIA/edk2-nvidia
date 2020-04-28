@@ -29,19 +29,3 @@
 [LibraryClasses.common]
 
   UsbFirmwareLib|Silicon/NVIDIA/T194/Library/UsbFirmwareLib/UsbFirmwareLib.inf
-
-[PcdsFixedAtBuild.common]
-
-  gArmPlatformTokenSpaceGuid.PcdCoreCount|8
-  gArmPlatformTokenSpaceGuid.PcdClusterCount|4
-
-  gArmTokenSpaceGuid.PcdVFPEnabled|1
-
-  #
-  # ARM Architectural Timer Frequency
-  #
-  gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz|31250000
-  gEmbeddedTokenSpaceGuid.PcdMetronomeTickPeriod|1000
-
-  # System FMP Capsule GUID be3f5d68-7654-4ed2-838c-2a2faf901a78
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}

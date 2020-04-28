@@ -29,6 +29,8 @@ T186PlatformInitializationLibConstructor (
   )
 {
   UINTN ChipID;
+  VOID  *SystemFmpCapsuleImageTypeIdGuid;
+  UINTN GuidSize;
 
   ChipID = TegraGetChipID();
 
@@ -44,6 +46,10 @@ T186PlatformInitializationLibConstructor (
 
     // Set SDHCi SDR104 Disable PCD
     PcdSetBoolS(PcdSdhciSDR104Disable, TRUE);
+
+    SystemFmpCapsuleImageTypeIdGuid = PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuidT186);
+    GuidSize = sizeof (EFI_GUID);
+    PcdSetPtrS (PcdSystemFmpCapsuleImageTypeIdGuid, &GuidSize, SystemFmpCapsuleImageTypeIdGuid);
   }
 
   return EFI_SUCCESS;

@@ -50,7 +50,6 @@
   DebugAgentLib
   PrePiLib
   ArmPlatformLib
-  ArmPlatformStackLib
   MemoryAllocationLib
   HobLib
   PrePiHobListPointerLib
@@ -75,7 +74,7 @@
   gArmTokenSpaceGuid.PcdVFPEnabled
   gArmTokenSpaceGuid.PcdArmNonSecModeTransition
   gArmTokenSpaceGuid.PcdArmScr
-  gArmTokenSpaceGuid.PcdArmArchTimerFreqInHz
+  gNVIDIATokenSpaceGuid.PcdTegraArchTimerFreqInHz
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize
   gEmbeddedTokenSpaceGuid.PcdPrePiCpuIoSize
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIReclaimMemory

@@ -60,7 +60,7 @@ ASM_FUNC(_ModuleEntryPoint)
   MOV32 (w0, FixedPcdGet32(PcdArmScr))
   bl ASM_PFX(ArmWriteScr)
 
-  MOV32 (w0, FixedPcdGet32(PcdArmArchTimerFreqInHz))
+  MOV32 (w0, FixedPcdGet32(PcdTegraArchTimerFreqInHz))
   bl ASM_PFX(ArmWriteCntFrq)
 
   bl ASM_PFX(ArmGicV3GetControlSystemRegisterEnable)

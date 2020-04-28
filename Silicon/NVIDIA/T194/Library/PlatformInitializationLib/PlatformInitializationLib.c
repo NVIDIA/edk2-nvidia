@@ -66,6 +66,8 @@ T194PlatformInitializationLibConstructor (
   )
 {
   UINTN ChipID;
+  VOID  *SystemFmpCapsuleImageTypeIdGuid;
+  UINTN GuidSize;
 
   ChipID = TegraGetChipID();
 
@@ -95,6 +97,10 @@ T194PlatformInitializationLibConstructor (
     if (T194CheckOSACPIBoot ()) {
       PcdSetBoolS(PcdDefaultDtPref, FALSE);
     }
+
+    SystemFmpCapsuleImageTypeIdGuid = PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuidT194);
+    GuidSize = sizeof (EFI_GUID);
+    PcdSetPtrS (PcdSystemFmpCapsuleImageTypeIdGuid, &GuidSize, SystemFmpCapsuleImageTypeIdGuid);
   }
 
   return EFI_SUCCESS;

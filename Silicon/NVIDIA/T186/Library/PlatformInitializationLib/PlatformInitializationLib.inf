@@ -28,6 +28,8 @@
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
   gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable
+  gNVIDIATokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuidT186

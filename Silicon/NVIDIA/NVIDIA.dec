@@ -179,6 +179,15 @@ Include
 #Tegra Console Port
   gNVIDIATokenSpaceGuid.PcdConsolePort|FALSE|BOOLEAN|0x00000023
 
+# Tegra Architectural Timer Frequency
+  gNVIDIATokenSpaceGuid.PcdTegraArchTimerFreqInHz|31250000|UINT32|0x00000024
+
+# Tegra T186 System FMP Capsule GUID
+  gNVIDIATokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuidT186|{GUID(d33335fe-a16c-4765-a04d-f3c78999e580)}|VOID*|0x00000025
+
+# Tegra T194 System FMP Capsule GUID
+  gNVIDIATokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuidT194|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}|VOID*|0x00000026
+
 [PcdsDynamic.common]
 #Size of optional signing data header in boot.img partition.
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B

@@ -42,6 +42,8 @@
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus
+  gNVIDIATokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuidT194
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
   gArmTokenSpaceGuid.PcdPciBusMin
