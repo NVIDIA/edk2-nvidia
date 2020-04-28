@@ -74,7 +74,7 @@ T194PlatformInitializationLibConstructor (
     PcdSet64S(PcdGicInterruptInterfaceBase, TegraGetGicInterruptInterfaceBaseAddress(ChipID));
 
     // Set Default OEM Table ID specific PCDs
-    PcdSet64S(PcdAcpiDefaultOemTableId, 0x2020202034393154);
+    PcdSet64S(PcdAcpiDefaultOemTableId, SIGNATURE_64 ('T','E','G','R','A','1','9','4'));
 
     // Set Tegra PWM Fan Base
     PcdSet64S(PcdTegraPwmFanBase, FixedPcdGet64 (PcdTegraPwmFanT194Base));

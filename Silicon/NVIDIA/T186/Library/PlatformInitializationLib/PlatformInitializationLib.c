@@ -37,7 +37,7 @@ T186PlatformInitializationLibConstructor (
     PcdSet64S(PcdGicInterruptInterfaceBase, TegraGetGicInterruptInterfaceBaseAddress(ChipID));
 
     // Set Default OEM Table ID specific PCDs
-    PcdSet64S(PcdAcpiDefaultOemTableId, 0x2020202036383154);
+    PcdSet64S(PcdAcpiDefaultOemTableId, SIGNATURE_64 ('T','E','G','R','A','1','8','6'));
 
     // Set Boot Image Signing Header Size PCD
     PcdSet32S(PcdBootImgSigningHeaderSize, 0x190);
