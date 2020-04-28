@@ -2,7 +2,7 @@
 
   Usb Pad Control Driver
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -32,6 +32,7 @@
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra18x-xusb-padctl", &gNVIDIANonDiscoverableT186UsbPadDeviceGuid },
     { "nvidia,tegra19x-xusb-padctl", &gNVIDIANonDiscoverableT194UsbPadDeviceGuid },
+    { "nvidia,tegra194-xusb-padctl", &gNVIDIANonDiscoverableT194UsbPadDeviceGuid },
     { NULL, NULL }
 };
 
@@ -146,8 +147,10 @@ DeviceDiscoveryNotify (
       Private->UsbPadCtlProtocol.InitHw = InitUsbHw186;
       Private->UsbPadCtlProtocol.DeInitHw = DeInitUsbHw186;
       Private->PlatConfig = Tegra186UsbConfig;
-    } else if (fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase,
-                               0, "nvidia,tegra19x-xusb-padctl") > 0) {
+    } else if ((fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase,
+                                0, "nvidia,tegra19x-xusb-padctl") > 0) ||
+               (fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase,
+                                0, "nvidia,tegra194-xusb-padctl") > 0)) {
       Private->UsbPadCtlProtocol.InitHw = InitUsbHw194;
       Private->UsbPadCtlProtocol.DeInitHw = DeInitUsbHw194;
       Private->PlatConfig = Tegra194UsbConfig;
