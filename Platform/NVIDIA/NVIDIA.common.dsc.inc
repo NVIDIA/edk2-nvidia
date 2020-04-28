@@ -724,7 +724,10 @@
   #
   MdeModulePkg/Bus/Pci/UhciDxe/UhciDxe.inf
   MdeModulePkg/Bus/Pci/EhciDxe/EhciDxe.inf
-  MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf
+  MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf {
+      <LibraryClasses>
+      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  }
   MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf
   MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf
   MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf

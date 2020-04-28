@@ -28,6 +28,3 @@
 
 [LibraryClasses.common]
   UsbFirmwareLib|Silicon/NVIDIA/T186/Library/UsbFirmwareLib/UsbFirmwareLib.inf
-
-  #Use non-optimized BaseMemoryLib due to peripherals not being cache coherent
-  BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
