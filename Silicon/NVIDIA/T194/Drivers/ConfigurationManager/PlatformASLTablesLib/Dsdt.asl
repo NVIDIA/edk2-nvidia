@@ -392,7 +392,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
     // ethernet@2490000
     //---------------------------------------------------------------------
     Device(ETH0) {
-      Name (_HID, "PRP0001")
+      Name (_HID, "NVDA1160")
+      Name (_CID, "PRP0001")
       Name (_UID, 0)
       Name (_CCA, ZERO)
 
@@ -418,7 +419,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
           Package () {"nvidia,queue_prio", Package () {0x0, 0x1, 0x2, 0x3}},
           Package () {"nvidia,rxq_enable_ctrl", 0x2},
           Package () {"nvidia,pause_frames", 0x0},
-          Package () {"phy-mode", "rgmii"},
+          Package () {"phy-mode", "rgmiii-id"},
           Package () {"nvidia,max-platform-mtu", 0x2328},
           Package () {"snps,write-requests", 0x1},
           Package () {"snps,read-requests", 0x3},
