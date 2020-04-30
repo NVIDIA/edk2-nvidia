@@ -23,6 +23,7 @@
 #include <Library/TimerLib.h>
 #include <Library/PerformanceLib.h>
 #include <Library/ArmMmuLib.h>
+#include <Library/PlatformResourceLib.h>
 
 
 #include <Ppi/GuidedSectionExtraction.h>
@@ -237,6 +238,10 @@ CEntryPoint (
   UINT64                        FvOffset = 0;
   UINT64                        HobBase;
   UINT64                        HobSize;
+  UINT64                        HobFree;
+  UINT64                        DtbBase;
+  UINT64                        DtbSize;
+  UINT64                        DtbOffset;
 
   while (FvOffset < MemorySize) {
     FvHeader = (EFI_FIRMWARE_VOLUME_HEADER *)(VOID *)(MemoryBase + FvOffset);
@@ -248,13 +253,92 @@ CEntryPoint (
   ASSERT (FvOffset < MemorySize);
   FvSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (FvHeader->FvLength));
 
-  //Default to hob after the FV
-  HobBase = MemoryBase + FvOffset + FvSize;
-  HobSize = MemorySize - FvSize - FvOffset;
-  //Unless area before FV is larger
-  if (FvOffset > HobSize) {
-    HobBase = MemoryBase;
-    HobSize = FvOffset;
+  DtbBase = GetDTBBaseAddress ();
+  DtbSize = fdt_totalsize ((VOID *)DtbBase);
+  // DTB Base may not be aligned to page boundary. Add overlay to size.
+  DtbSize += (DtbBase & EFI_PAGE_MASK);
+  DtbSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize));
+  // Align DTB Base to page boundary.
+  DtbBase &= ~(EFI_PAGE_MASK);
+  DtbOffset = DtbBase - MemoryBase;
+
+  if (DtbBase >= MemoryBase && DtbBase < (MemoryBase + MemorySize)) {
+    // Find out where HOB region should be depending on the biggest available
+    // memory chunk in memory. Memory has stack at the very end and FV and DTB
+    // somewhere in the middle. FV and DTB could be present in any order.
+    DtbOffset = DtbBase - MemoryBase;
+    if (DtbOffset > FvOffset) {
+      // If DTB is loaded after FV
+      if (FvOffset > (DtbOffset - FvOffset - FvSize)) {
+        // Available space between Memory Base and FV is bigger than
+        // available space between FV and DTB
+        if (FvOffset > (MemorySize - DtbOffset - DtbSize - StackSize)) {
+          // Available space between Memory Base and FV is bigger than
+          // available space after DTB
+          HobBase = MemoryBase;
+          HobSize = FvOffset;
+        } else {
+          // Available space between Memory Base and FV is smaller than
+          // available space after DTB
+          HobBase = DtbBase + DtbSize;
+          HobSize = MemorySize - DtbOffset - DtbSize - StackSize;
+        }
+      } else {
+        // Available space between Memory Base and FV is smaller than
+        // available space between FV and DTB
+        if ((DtbOffset - FvOffset - FvSize) > (MemorySize - DtbOffset - DtbSize - StackSize)) {
+          // Available space between FV and DTB is bigger than
+          // available space after DTB
+          HobBase = MemoryBase + FvOffset + FvSize;
+          HobSize = DtbOffset - FvOffset - FvSize;
+        } else {
+          // Available space between FV and DTB is smaller than
+          // available space after DTB
+          HobBase = DtbBase + DtbSize;
+          HobSize = MemorySize - DtbOffset - DtbSize - StackSize;
+        }
+      }
+    } else {
+      // If DTB is loaded before FV
+      if (DtbOffset > (FvOffset - DtbOffset - DtbSize)) {
+        // Available space between Memory Base and DTB is bigger than
+        // available space between DTB and FV
+        if (DtbOffset > (MemorySize - FvOffset - FvSize - StackSize)) {
+          // Available space between Memory Base and DTB is bigger than
+          // available space after FV
+          HobBase = MemoryBase;
+          HobSize = DtbOffset;
+        } else {
+          // Available space between Memory Base and DTB is smaller than
+          // available space after FV
+          HobBase = MemoryBase + FvOffset + FvSize;
+          HobSize = MemorySize - FvOffset - FvSize - StackSize;
+        }
+      } else {
+        // Available space between Memory Base and DTB is smaller than
+        // available space between DTB and FV
+        if ((FvOffset - DtbOffset - DtbSize) > (MemorySize - FvOffset - FvSize - StackSize)) {
+          // Available space between DTB and FV is bigger than
+          // available space after FV
+          HobBase = MemoryBase + DtbOffset + DtbSize;
+          HobSize = FvOffset - DtbOffset - DtbSize;
+        } else {
+          // Available space between DTB and FV is smaller than
+          // available space after FV
+          HobBase = MemoryBase + FvOffset + FvSize;
+          HobSize = MemorySize - FvOffset - FvSize - StackSize;
+        }
+      }
+    }
+  } else {
+    //Default to hob after the FV
+    HobBase = MemoryBase + FvOffset + FvSize;
+    HobSize = MemorySize - FvSize - FvOffset - StackSize;
+    //Unless area before FV is larger
+    if (FvOffset > HobSize) {
+      HobBase = MemoryBase;
+      HobSize = FvOffset;
+    }
   }
 
   // Initialize the platform specific controllers
@@ -297,11 +381,12 @@ CEntryPoint (
   SaveAndSetDebugTimerInterrupt (TRUE);
 
   // Declare the PI/UEFI memory region
+  HobFree = HobBase + HobSize;
   HobList = HobConstructor (
     (VOID*)HobBase,
     HobSize,
     (VOID*)HobBase,
-    (VOID*)StackBase  // The top of the UEFI Memory is reserved for the stacks
+    (VOID*)HobFree
     );
   PrePeiSetHobList (HobList);
 
@@ -319,6 +404,9 @@ CEntryPoint (
     // Optional feature that helps prevent EFI memory map fragmentation.
     BuildMemoryTypeInformationHob ();
   }
+
+  // Create DTB memory allocation HOB
+  BuildMemoryAllocationHob (DtbBase, DtbSize, EfiBootServicesData);
 
   // Create the Stacks HOB (reserve the memory for all stacks)
   BuildStackHob (StackBase, StackSize);
