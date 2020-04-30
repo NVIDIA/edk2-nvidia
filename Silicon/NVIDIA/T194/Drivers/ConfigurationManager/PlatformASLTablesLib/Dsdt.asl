@@ -377,7 +377,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
     }
 
     Device(USB0) {
-      Name (_HID, "ARMH0D10")
+      Name (_HID, "NVDA0214")
       Name (_CID, "PNP0D10")
       Name (_UID, 0)
       Name (_CCA, ZERO)
