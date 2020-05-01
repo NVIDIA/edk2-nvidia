@@ -21,6 +21,7 @@
 #include <Library/ArmLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 
 #include <IndustryStandard/DebugPort2Table.h>
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
@@ -33,7 +34,8 @@
 #include <T194/T194Definitions.h>
 
 #include "Dsdt.hex"
-#include <SsdtPci.hex>
+#include "SsdtPci.hex"
+#include "SsdtPciEmpty.hex"
 
 /** The platform configuration repository information.
 */
@@ -102,7 +104,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     EFI_ACPI_6_2_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
     0,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt),
-    (EFI_ACPI_DESCRIPTION_HEADER*)ssdtpci_aml_code,
+    (EFI_ACPI_DESCRIPTION_HEADER*)ssdtpciempty_aml_code,
     0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
@@ -235,6 +237,63 @@ CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfo[] = {
 
 };
 
+/** Empty PCI Configuration Space Info
+*/
+STATIC
+CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfoEmpty[] = {0};
+
+
+/** Check if Pcie is enabled is kernel.
+  @retval TRUE  - Enabled
+  @retval FALSE - Disabled
+ */
+STATIC
+BOOLEAN
+EFIAPI
+IsPcieEnabled ()
+{
+  EFI_STATUS Status;
+  BOOLEAN    VariableData;
+  UINTN      VariableSize;
+  UINT32     VariableAttributes;
+
+  Status = gRT->GetVariable (L"EnablePcieInOS", &gNVIDIATokenSpaceGuid,
+                             &VariableAttributes, &VariableSize, (VOID *)&VariableData);
+  if (EFI_ERROR (Status) || (VariableSize != sizeof (BOOLEAN))) {
+    return FALSE;
+  }
+
+  return VariableData;
+}
+
+/** Apply platform specific CM overrides.
+ */
+STATIC
+VOID
+EFIAPI
+ApplyConfigurationManagerOverrides ()
+{
+  UINT32 Count;
+
+  if (IsPcieEnabled ()) {
+    for (Count = 0; Count < sizeof (CmAcpiTableList)/sizeof (CmAcpiTableList[0]); Count++) {
+      if (CmAcpiTableList[Count].AcpiTableSignature == EFI_ACPI_6_2_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE &&
+          CmAcpiTableList[Count].AcpiTableData == (EFI_ACPI_DESCRIPTION_HEADER*)ssdtpciempty_aml_code) {
+        CmAcpiTableList[Count].AcpiTableData = (EFI_ACPI_DESCRIPTION_HEADER*)ssdtpci_aml_code;
+        break;
+      }
+    }
+
+    for (Count = 0; Count < sizeof (NVIDIAPlatformRepositoryInfo)/sizeof (NVIDIAPlatformRepositoryInfo[0]); Count++) {
+      if (NVIDIAPlatformRepositoryInfo[Count].CmObjectId == CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo)) {
+        NVIDIAPlatformRepositoryInfo[Count].CmObjectSize = sizeof (PciConfigInfo);
+        NVIDIAPlatformRepositoryInfo[Count].CmObjectCount = sizeof (PciConfigInfo) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);
+        NVIDIAPlatformRepositoryInfo[Count].CmObjectPtr = &PciConfigInfo;
+        break;
+      }
+    }
+  }
+}
 
 /** Initialize the platform configuration repository.
   @retval EFI_SUCCESS   Success
@@ -298,9 +357,11 @@ InitializePlatformRepository ()
   NVIDIAPlatformRepositoryInfo[7].CmObjectPtr = &SpcrSerialPort;
 
   NVIDIAPlatformRepositoryInfo[8].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
-  NVIDIAPlatformRepositoryInfo[8].CmObjectSize = sizeof (PciConfigInfo);
-  NVIDIAPlatformRepositoryInfo[8].CmObjectCount = sizeof (PciConfigInfo) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);
-  NVIDIAPlatformRepositoryInfo[8].CmObjectPtr = &PciConfigInfo;
+  NVIDIAPlatformRepositoryInfo[8].CmObjectSize = sizeof (PciConfigInfoEmpty);
+  NVIDIAPlatformRepositoryInfo[8].CmObjectCount = sizeof (PciConfigInfoEmpty) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);
+  NVIDIAPlatformRepositoryInfo[8].CmObjectPtr = &PciConfigInfoEmpty;
+
+  ApplyConfigurationManagerOverrides ();
 
   return EFI_SUCCESS;
 }

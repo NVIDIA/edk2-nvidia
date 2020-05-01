@@ -171,6 +171,8 @@ ConfigurationManagerDxeInitialize (
     goto error_handler;
   }
 
+  NVIDIAPlatformConfigManagerProtocol.PlatRepoInfo = mNVIDIAPlatformRepositoryInfo;
+
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &ImageHandle,
                   &gEdkiiConfigurationManagerProtocolGuid,

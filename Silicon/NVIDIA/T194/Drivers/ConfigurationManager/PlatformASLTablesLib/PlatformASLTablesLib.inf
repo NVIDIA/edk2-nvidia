@@ -30,6 +30,7 @@
 [Sources]
   Dsdt.asl
   SsdtPci.asl
+  SsdtPciEmpty.asl
 
 [Packages]
   ArmPkg/ArmPkg.dec

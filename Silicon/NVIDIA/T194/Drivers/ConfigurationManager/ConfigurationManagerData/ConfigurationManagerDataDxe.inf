@@ -41,6 +41,7 @@
   TegraPlatformInfoLib
   PlatformAslTablesLib
   UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
   UefiDriverEntryPoint
 
 [Pcd]
@@ -59,8 +60,11 @@
   gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
 
+[Guids]
+  gNVIDIATokenSpaceGuid
+
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
 
 [Depex]
-  TRUE
+  gEfiVariableArchProtocolGuid
