@@ -149,6 +149,7 @@
   # PCI Support
   #
   ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
+  Silicon/NVIDIA/Drivers/TegraP2UDxe/TegraP2UDxe.inf
   Silicon/NVIDIA/Drivers/PcieControllerDxe/PcieControllerDxe.inf
 
   # FVB Support

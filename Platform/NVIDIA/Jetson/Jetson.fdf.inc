@@ -91,6 +91,7 @@
   # PCI Support
   #
   INF ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
+  INF Silicon/NVIDIA/Drivers/TegraP2UDxe/TegraP2UDxe.inf
   INF Silicon/NVIDIA/Drivers/PcieControllerDxe/PcieControllerDxe.inf
 
   #
