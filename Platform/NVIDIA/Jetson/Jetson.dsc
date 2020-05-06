@@ -17,11 +17,14 @@
 #
 ################################################################################
 [Defines]
-  PLATFORM_NAME                  = JetsonTX2
-  PLATFORM_GUID                  = 7eed17d6-f913-4726-be95-2936593a086b
-  OUTPUT_DIRECTORY               = Build/JetsonTX2
-  SKUID_IDENTIFIER               = DEFAULT
-  FLASH_DEFINITION               = Platform/NVIDIA/Jetson/Jetson.fdf
-  CHIPSET                        = T186
+  PLATFORM_NAME               = Jetson
+  PLATFORM_GUID               = b175f7b7-0cb0-446e-b338-0e0d0f688de8
+  OUTPUT_DIRECTORY            = Build/Jetson
+  FLASH_DEFINITION            = Platform/NVIDIA/Jetson/Jetson.fdf
+
+  #
+  # Define ESRT GUIDs for Firmware Management Protocol instances
+  #
+  DEFINE SYSTEM_FMP_ESRT_GUID = 7C374309-1649-4682-8BEE-04F3A8399414
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc

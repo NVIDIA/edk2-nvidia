@@ -635,10 +635,6 @@
   #
   Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
 
-!if $(DEVICE_TREE_BUILD)
-  Silicon/NVIDIA/$(CHIPSET)/DeviceTree/DeviceTree.inf
-!endif
-
   MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
 
   ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
