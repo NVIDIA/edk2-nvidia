@@ -18,6 +18,12 @@
   INF Silicon/NVIDIA/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
 
   #
+  # Platform USB FW
+  #
+  INF Silicon/NVIDIA/T186/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  INF Silicon/NVIDIA/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+
+  #
   # BPMP-FW IPC protocol
   #
   INF Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf

@@ -2,7 +2,7 @@
 
   XHCI Controller Driver private structures
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -104,6 +104,7 @@ typedef struct {
   TEGRA_XUSB_SOC                 *XusbSoc;
   EFI_HANDLE                     ImageHandle;
   NVIDIA_USBPADCTL_PROTOCOL      *mUsbPadCtlProtocol;
+  NVIDIA_USBFW_PROTOCOL          *mUsbFwProtocol;
 } XHCICONTROLLER_DXE_PRIVATE;
 #define XHCICONTROLLER_PRIVATE_DATA_FROM_THIS(a) CR(a, XHCICONTROLLER_DXE_PRIVATE, XhciControllerProtocol, XHCICONTROLLER_SIGNATURE)
 

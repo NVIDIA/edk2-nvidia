@@ -25,7 +25,3 @@
   CHIPSET                        = T194
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
-
-[LibraryClasses.common]
-
-  UsbFirmwareLib|Silicon/NVIDIA/T194/Library/UsbFirmwareLib/UsbFirmwareLib.inf

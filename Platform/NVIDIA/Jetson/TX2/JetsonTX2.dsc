@@ -25,6 +25,3 @@
   CHIPSET                        = T186
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
-
-[LibraryClasses.common]
-  UsbFirmwareLib|Silicon/NVIDIA/T186/Library/UsbFirmwareLib/UsbFirmwareLib.inf

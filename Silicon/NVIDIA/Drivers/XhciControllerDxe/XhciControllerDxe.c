@@ -2,7 +2,7 @@
 
   XHCI Controller Driver
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -24,17 +24,12 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UsbFalconLib.h>
-#include <Library/UsbFirmwareLib.h>
 #include <Protocol/UsbPadCtl.h>
+#include <Protocol/UsbFwProtocol.h>
 #include <Protocol/XhciController.h>
 #include <Protocol/BpmpIpc.h>
 #include "XhciControllerPrivate.h"
 #include <libfdt.h>
-
-/* Falcon firmware image */
-#define FalconFirmware     xusb_sil_prod_fw
-#define FalconFirmwareSize xusb_sil_prod_fw_len
-
 
 /* Discover driver */
 
@@ -250,7 +245,15 @@ DeviceDiscoveryNotify (
     MmioWrite32(CfgAddress + XUSB_CFG_1_0, reg_val);
 
     /* Load xusb Firmware */
-    Status = FalconFirmwareLoad (FalconFirmware, FalconFirmwareSize);
+    Status = gBS->LocateProtocol (&gNVIDIAUsbFwProtocolGuid, NULL,
+                                                (VOID **)&(Private->mUsbFwProtocol));
+    if (EFI_ERROR (Status) || Private->mUsbFwProtocol == NULL) {
+      DEBUG ((EFI_D_ERROR, "%a: Couldn't find UsbFw Protocol Handle %r\n",
+                                                        __FUNCTION__, Status));
+      goto ErrorExit;
+    }
+
+    Status = FalconFirmwareLoad (Private->mUsbFwProtocol->UsbFwBase, Private->mUsbFwProtocol->UsbFwSize);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a, failed to load falcon firmware %r\r\n",
                                                 __FUNCTION__, Status));

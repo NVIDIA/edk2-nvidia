@@ -43,7 +43,6 @@
   FdtLib
   DeviceDiscoveryDriverLib
   UsbFalconLib
-  UsbFirmwareLib
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
@@ -53,9 +52,12 @@
   gNVIDIAUsbPadCtlProtocolGuid
   gNVIDIAXhciControllerProtocolGuid
   gNVIDIABpmpIpcProtocolGuid
+  gNVIDIAUsbFwProtocolGuid
 
 [Guids]
   gEdkiiNonDiscoverableXhciDeviceGuid
 
 [Depex]
   gNVIDIAUsbPadCtlProtocolGuid
+  AND
+  gNVIDIAUsbFwProtocolGuid

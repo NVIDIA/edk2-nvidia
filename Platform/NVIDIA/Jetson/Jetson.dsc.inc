@@ -59,7 +59,7 @@
   }
 
   #
-  # Platform Comfiguration Manager Data
+  # Platform Configuration Manager Data
   #
   Silicon/NVIDIA/T186/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
     <LibraryClasses>
@@ -73,6 +73,12 @@
     <BuildOptions>
       *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
   }
+
+  #
+  # Platform USB FW
+  #
+  Silicon/NVIDIA/T186/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  Silicon/NVIDIA/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #
   # BPMP-FW IPC protocol
