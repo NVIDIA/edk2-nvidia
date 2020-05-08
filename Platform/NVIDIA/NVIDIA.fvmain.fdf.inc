@@ -220,3 +220,8 @@
   # Custom HII Support
   #
   INF Silicon/NVIDIA/Drivers/ResourceConfigDxe/ResourceConfigDxe.inf
+
+  #
+  # Secure Boot Support
+  #
+  INF SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
