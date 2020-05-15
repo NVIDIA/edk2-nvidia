@@ -419,7 +419,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
           Package () {"nvidia,queue_prio", Package () {0x0, 0x1, 0x2, 0x3}},
           Package () {"nvidia,rxq_enable_ctrl", 0x2},
           Package () {"nvidia,pause_frames", 0x0},
-          Package () {"phy-mode", "rgmiii-id"},
+          Package () {"phy-mode", "rgmii-id"},
           Package () {"nvidia,max-platform-mtu", 0x2328},
           Package () {"snps,write-requests", 0x1},
           Package () {"snps,read-requests", 0x3},
