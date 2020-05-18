@@ -83,6 +83,11 @@ CHAR8 CoreAPBResetNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
   "core_apb_rst"
 };
 
+CHAR8 CoreResetNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
+  "core",
+  "core_rst"
+};
+
 /*
  * These interfaces resemble the pci_find_*capability() interfaces, but these
  * are for configuring host controllers, which are bridges *to* PCI devices but
@@ -569,15 +574,19 @@ InitializeController (
   DEBUG ((EFI_D_INFO, "Programming APPL registers is done\r\n"));
 
   /* De-assert reset to CORE */
-  Status = DeviceDiscoveryConfigReset (ControllerHandle, "core", 0);
-  if (EFI_ERROR (Status)) {
-    Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_rst", 0);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, " Failed to de-assert Core reset\r\n"));
-      return Status;
+  Count = sizeof (CoreResetNames)/sizeof (CoreResetNames[0]);
+  for (Index = 0; Index < Count; Index++) {
+    Status = DeviceDiscoveryConfigReset (Private->ControllerHandle,
+                                         CoreResetNames[Index], 0);
+    if (!EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_INFO, "De-asserted Core reset\r\n"));
+      break;
     }
   }
-  DEBUG ((EFI_D_INFO, "De-asserted Core reset\r\n"));
+  if (Index == Count) {
+    DEBUG ((EFI_D_ERROR, "Failed to De-assert Core reset\r\n"));
+    return Status;
+  }
 
   /* Program Core Registers (i.e. DBI) */
 
@@ -720,56 +729,144 @@ InitializeController (
   MicroSecondDelay(100000);
 
   val = MmioRead32 (Private->DbiBase + PCI_EXP_LNKCTL_STATUS);
-  if (val & PCI_EXP_LNKCTL_STATUS_DLL_ACTIVE)
+  if (val & PCI_EXP_LNKCTL_STATUS_DLL_ACTIVE) {
+    Private->LinkUp = TRUE;
     DEBUG ((EFI_D_INFO, "PCIe Controller-%d Link is UP (Speed: %d)\r\n",
            Private->CtrlId, (val & 0xf0000) >> 16));
-  else
+  } else {
     DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is DOWN\r\n", Private->CtrlId));
+  }
 
   return EFI_SUCCESS;
+}
+
+STATIC
+BOOLEAN
+TegraPcieTryLinkL2 (PCIE_CONTROLLER_PRIVATE *Private)
+{
+  UINT32 val;
+
+  val = MmioRead32 (Private->ApplSpace + APPL_RADM_STATUS);
+  val |= APPL_PM_XMT_TURNOFF_STATE;
+  MmioWrite32 (Private->ApplSpace + APPL_RADM_STATUS, val);
+
+  MicroSecondDelay(10000);
+
+  val = MmioRead32 (Private->ApplSpace + APPL_DEBUG);
+  if (val & APPL_DEBUG_PM_LINKST_IN_L2_LAT)
+        return 0;
+  else
+        return 1;
+}
+
+STATIC
+VOID
+TegraPciePMETurnOff (PCIE_CONTROLLER_PRIVATE *Private)
+{
+  UINT32 data;
+
+  if (!Private->LinkUp) {
+    DEBUG ((EFI_D_INFO, "PCIe Controller-%d Link is not UP\r\n",
+           Private->CtrlId));
+    return;
+  }
+
+  if (TegraPcieTryLinkL2 (Private)) {
+    DEBUG ((EFI_D_ERROR, "Link didn't transition to L2 state\r\n"));
+
+    /*
+     * TX lane clock freq will reset to Gen1 only if link is in L2
+     * or detect state.
+     * So apply pex_rst to end point to force RP to go into detect
+     * state
+     */
+    data = MmioRead32 (Private->ApplSpace + APPL_PINMUX);
+    data &= ~APPL_PINMUX_PEX_RST;
+    MmioWrite32 (Private->ApplSpace + APPL_PINMUX, data);
+
+    MicroSecondDelay(50000);
+
+    data = MmioRead32 (Private->ApplSpace + APPL_DEBUG);
+    if (((data & APPL_DEBUG_LTSSM_STATE_MASK) >>  APPL_DEBUG_LTSSM_STATE_SHIFT)
+        !=  LTSSM_STATE_PRE_DETECT) {
+      DEBUG ((EFI_D_ERROR, "Link didn't go to detect state as well\r\n"));
+    } else {
+      data = MmioRead32 (Private->ApplSpace + APPL_CTRL);
+      data &= ~APPL_CTRL_LTSSM_EN;
+      MmioWrite32 (Private->ApplSpace + APPL_CTRL, data);
+    }
+  }
+
+  /*
+   * DBI registers may not be accessible after this as PLL-E would be
+   * down depending on how CLKREQ is pulled by end point
+   */
+  data = MmioRead32 (Private->ApplSpace + APPL_PINMUX);
+  data |= (APPL_PINMUX_CLKREQ_OVERRIDE_EN | APPL_PINMUX_CLKREQ_OVERRIDE);
+  /* Cut REFCLK to slot */
+  data |= APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE_EN;
+  data &= ~APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE;
+  MmioWrite32 (Private->ApplSpace + APPL_PINMUX, data);
 }
 
 STATIC
 EFI_STATUS
 EFIAPI
 UninitializeController (
-    IN  EFI_HANDLE ControllerHandle
+    IN  EFI_HANDLE Handle
     )
 {
   EFI_STATUS Status;
+  UINT32 Index;
+  UINT32 Count;
+  PCIE_CONTROLLER_PRIVATE *Private = (PCIE_CONTROLLER_PRIVATE *)Handle;
+
+  TegraPciePMETurnOff (Private);
 
   /* Assert reset to CORE */
-  Status = DeviceDiscoveryConfigReset (ControllerHandle, "core", 1);
-  if (EFI_ERROR (Status)) {
-    Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_rst", 1);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, " Failed to assert Core reset\r\n"));
-      return Status;
+  Count = sizeof (CoreResetNames)/sizeof (CoreResetNames[0]);
+  for (Index = 0; Index < Count; Index++) {
+    Status = DeviceDiscoveryConfigReset (Private->ControllerHandle,
+                                         CoreResetNames[Index], 1);
+    if (!EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_INFO, "Asserted Core reset\r\n"));
+      break;
     }
   }
-  DEBUG ((EFI_D_ERROR, "Asserted Core reset\r\n"));
+  if (Index == Count) {
+    DEBUG ((EFI_D_ERROR, "Failed to assert Core reset\r\n"));
+    return Status;
+  }
 
   /* Assert reset to CORE_APB */
-  Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb", 1);
-  if (EFI_ERROR (Status)) {
-    Status = DeviceDiscoveryConfigReset (ControllerHandle, "core_apb_rst", 1);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "Failed to assert Core APB reset\r\n"));
-      return Status;
+  Count = sizeof (CoreAPBResetNames)/sizeof (CoreAPBResetNames[0]);
+  for (Index = 0; Index < Count; Index++) {
+    Status = DeviceDiscoveryConfigReset (Private->ControllerHandle,
+                                         CoreAPBResetNames[Index], 1);
+    if (!EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_INFO, "Asserted Core APB reset\r\n"));
+      break;
     }
   }
-  DEBUG ((EFI_D_ERROR, "Asserted Core APB reset\r\n"));
+  if (Index == Count) {
+    DEBUG ((EFI_D_ERROR, "Failed to assert Core APB reset\r\n"));
+    return Status;
+  }
 
   /* Disable core clock */
-  Status = DeviceDiscoveryEnableClock (ControllerHandle, "core", 0);
-  if (EFI_ERROR (Status)) {
-    Status = DeviceDiscoveryEnableClock (ControllerHandle, "core_clk", 0);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "Failed to disable core_clk\r\n"));
-      return Status;
+  Count = sizeof (CoreClockNames)/sizeof (CoreClockNames[0]);
+  for (Index = 0; Index < Count; Index++) {
+    Status = DeviceDiscoveryEnableClock (Private->ControllerHandle,
+                                         CoreClockNames[Index], 0);
+    if (!EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_INFO, "Disabled Core clock\r\n"));
+      break;
     }
   }
-  DEBUG ((EFI_D_ERROR, "Disabled Core clock\r\n"));
+  if (Index == Count) {
+    DEBUG ((EFI_D_ERROR, "Failed to Disable core_clk\r\n"));
+    return Status;
+  }
 
   return EFI_SUCCESS;
 }
@@ -912,6 +1009,8 @@ DeviceDiscoveryNotify (
       Status = EFI_OUT_OF_RESOURCES;
       break;
     }
+
+    Private->ControllerHandle = ControllerHandle;
 
     Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &Private->ApplSpace, &Private->ApplSize);
     if (EFI_ERROR (Status)) {
@@ -1064,7 +1163,7 @@ DeviceDiscoveryNotify (
                     EVT_NOTIFY_SIGNAL,
                     TPL_NOTIFY,
                     OnExitBootServices,
-                    ControllerHandle,
+                    Private,
                     &gEfiEventExitBootServicesGuid,
                     &ExitBootServiceEvent
                     );

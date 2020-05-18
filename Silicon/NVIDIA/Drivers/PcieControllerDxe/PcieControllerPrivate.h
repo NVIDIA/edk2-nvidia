@@ -32,6 +32,8 @@ typedef struct {
 
   NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL PcieRootBridgeConfigurationIo;
 
+  EFI_HANDLE                                       ControllerHandle;
+
   UINT64                                           ApplSpace;
   UINT64                                           ApplSize;
   UINT64                                           ConfigurationSpace;
@@ -48,6 +50,7 @@ typedef struct {
   BOOLEAN                                          UpdateFCFixUp;
   UINT32                                           PcieCapOffset;
   UINT32                                           ASPML1SSCapOffset;
+  BOOLEAN                                          LinkUp;
 } PCIE_CONTROLLER_PRIVATE;
 #define PCIE_CONTROLLER_PRIVATE_DATA_FROM_THIS(a) CR(a, PCIE_CONTROLLER_PRIVATE, PcieRootBridgeConfigurationIo, PCIE_CONTROLLER_SIGNATURE)
 
@@ -114,6 +117,16 @@ typedef struct {
 #define APPL_INTR_EN_L1_8_0                     0x44
 #define APPL_INTR_EN_L1_8_INTX_EN               BIT(11)
 #define APPL_INTR_EN_L1_8_AER_INT_EN            BIT(15)
+
+#define APPL_DEBUG                              0xD0
+#define APPL_DEBUG_PM_LINKST_IN_L2_LAT          BIT(21)
+#define APPL_DEBUG_PM_LINKST_IN_L0              0x11
+#define APPL_DEBUG_LTSSM_STATE_MASK             0x1F8
+#define APPL_DEBUG_LTSSM_STATE_SHIFT            3
+#define LTSSM_STATE_PRE_DETECT                  5
+
+#define APPL_RADM_STATUS                        0xE4
+#define APPL_PM_XMT_TURNOFF_STATE               BIT(0)
 
 #define APPL_DM_TYPE                            0x100
 #define APPL_DM_TYPE_MASK                       0xF
