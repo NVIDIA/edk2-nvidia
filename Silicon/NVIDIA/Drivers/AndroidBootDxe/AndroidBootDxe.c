@@ -31,6 +31,7 @@ AndroidBootGetChosenNode (
   )
 {
   INTN                  ChosenNode;
+
   ChosenNode = fdt_subnode_offset ((CONST VOID *)NewFdtBase, 0, "chosen");
   if (ChosenNode < 0) {
     ChosenNode = fdt_add_subnode((VOID *)NewFdtBase, 0, "chosen");
@@ -79,6 +80,72 @@ AndroidBootSetProperty64 (
 }
 
 EFI_STATUS
+AndroidBootCreateDeviceTree (
+  IN  UINTN  RamdiskBase,
+  IN  UINTN  RamdiskSize
+  )
+{
+  EFI_STATUS Status;
+  EFI_PHYSICAL_ADDRESS NewFdtBase;
+  INTN Result;
+  INTN Node;
+
+  Status = gBS->AllocatePages (
+                        AllocateAnyPages,
+                        EfiBootServicesData,
+                        1,
+                        &NewFdtBase
+                        );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Result = fdt_create_empty_tree((VOID *)NewFdtBase, SIZE_4KB);
+  if (Result != 0) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Node = fdt_add_subnode((VOID *)NewFdtBase, 0, "chosen");
+  if (Node < 0) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
+
+  Status = AndroidBootSetProperty64 (
+                  NewFdtBase,
+                  Node,
+                  "linux,initrd-start",
+                  RamdiskBase
+                  );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+  Status = AndroidBootSetProperty64 (
+                  NewFdtBase,
+                  Node,
+                  "linux,initrd-end",
+                  RamdiskBase + RamdiskSize
+                  );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Status = gBS->InstallConfigurationTable (
+                  &gFdtTableGuid,
+                  (VOID *)(UINTN)NewFdtBase
+                  );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  return EFI_SUCCESS;
+
+Exit:
+  gBS->FreePages (NewFdtBase, 1);
+  return Status;
+}
+
+EFI_STATUS
 AndroidBootSetRamdiskInfo (
   IN  UINTN                   RamdiskBase,
   IN  UINTN                   RamdiskSize
@@ -92,8 +159,10 @@ AndroidBootSetRamdiskInfo (
   // Retrieve FdtBase via EFI service and verify its header
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &FdtBase);
   if (EFI_ERROR (Status)) {
-    // Return Success as we are booting with ACPI.
-    return EFI_SUCCESS;
+    // Create a small device tree with initrd and uefi memory map information
+    // which can used in ACPI boot to give kernel initrd location.
+    Status = AndroidBootCreateDeviceTree (RamdiskBase, RamdiskSize);
+    return Status;
   }
   Err = fdt_check_header (FdtBase);
   if (Err != 0) {
@@ -305,7 +374,6 @@ AndroidBootLoadFile (
   UINTN                           BufSize;
   UINTN                           BufBase;
 
-
   if ((BlockIo == NULL) || (DiskIo == NULL) || (Buffer == NULL) || (ImgData == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
@@ -428,7 +496,6 @@ AndroidBootDxeLoadFile (
   ANDROID_BOOT_PRIVATE_DATA     *Private;
   ANDROID_BOOT_DATA             ImgData;
 
-
   DEBUG ((DEBUG_INFO, "%a: buffer %09p in size %08x\n", __FUNCTION__, Buffer, *BufferSize));
 
   // Verify if the valid parameters
@@ -534,7 +601,6 @@ AndroidBootDriverBindingSupported (
   UINT32                          *Id;
   EFI_BLOCK_IO_PROTOCOL           *BlockIo = NULL;
   EFI_DISK_IO_PROTOCOL            *DiskIo = NULL;
-
 
   // This driver will be accessed while boot manager attempts to connect
   // all drivers to the controllers for each partition entry.
@@ -667,7 +733,6 @@ AndroidBootDriverBindingStart (
   EFI_DEVICE_PATH_PROTOCOL        *Node;
   ANDROID_BOOT_PRIVATE_DATA       *Private;
   UINT32                          *Id;
-
 
   // BindingSupported() filters out the unsupported attempts and the multiple attempts
   // from a successful ControllerHandle such that BindingStart() runs only once
@@ -890,7 +955,6 @@ AndroidBootDriverBindingStop (
   EFI_LOAD_FILE_PROTOCOL          *LoadFile;
   ANDROID_BOOT_PRIVATE_DATA       *Private;
   UINT32                          *Id;
-
 
   if (NumberOfChildren != 0) {
     return EFI_UNSUPPORTED;
