@@ -121,16 +121,22 @@ GetPlatformCommandLine (
   UINTN       CommandLineOptionLength;
   UINTN       CommandLineOptionOffset;
   BOOLEAN     DTBoot;
+  VOID        *AcpiBase;
   UINT32      Count;
 
   DeviceTreeBase = NULL;
   DTBoot = FALSE;
-  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DeviceTreeBase);
-  if (!EFI_ERROR (Status)) {
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (EFI_ERROR (Status)) {
     DTBoot = TRUE;
   }
 
-  if (!DTBoot) {
+  if (DTBoot) {
+    Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DeviceTreeBase);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  } else {
     Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
     if (EFI_ERROR (Status)) {
       return Status;
