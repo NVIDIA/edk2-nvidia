@@ -154,16 +154,23 @@ AndroidBootSetRamdiskInfo (
   EFI_STATUS                  Status;
   EFI_PHYSICAL_ADDRESS        NewFdtBase;
   VOID                        *FdtBase;
-  INTN                        ChosenNode, Err, NewFdtSize;
+  VOID                        *AcpiBase;
+  INTN                        ChosenNode;
+  INTN                        Err;
+  INTN                        NewFdtSize;
 
-  // Retrieve FdtBase via EFI service and verify its header
-  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &FdtBase);
-  if (EFI_ERROR (Status)) {
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
     // Create a small device tree with initrd and uefi memory map information
     // which can used in ACPI boot to give kernel initrd location.
-    Status = AndroidBootCreateDeviceTree (RamdiskBase, RamdiskSize);
+    return AndroidBootCreateDeviceTree (RamdiskBase, RamdiskSize);
+  }
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &FdtBase);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
+
   Err = fdt_check_header (FdtBase);
   if (Err != 0) {
     DEBUG ((DEBUG_ERROR, "%a: Device Tree header not valid: Err%d\n", __FUNCTION__, Err));

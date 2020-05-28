@@ -53,6 +53,7 @@
 
 [Guids]
   gFdtTableGuid
+  gEfiAcpiTableGuid
   gNVIDIARamloadKernelGuid
   gNVIDIAOSCarveoutHob
 
