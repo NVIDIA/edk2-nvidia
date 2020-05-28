@@ -5,7 +5,7 @@
 
   The original software modules are licensed as follows:
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
   Copyright (c) 2014, Applied Micro Curcuit Corporation. All rights reserved.<BR>
@@ -498,12 +498,18 @@ UpdateDTACPIMacAddress (
   EFI_STATUS Status;
   SIMPLE_NETWORK_DRIVER *Snp = (SIMPLE_NETWORK_DRIVER *)Context;
   VOID                  *DtBase;
+  VOID                  *AcpiBase;
 
-  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DtBase);
-  if (!EFI_ERROR (Status)) {
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (EFI_ERROR (Status)) {
     INT32 NodeOffset;
     INT32 DtStatus;
 
+    Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DtBase);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to get device tree\r\n"));
+      return;
+    }
     NodeOffset = fdt_path_offset (DtBase, Snp->DeviceTreePath);
     if (NodeOffset < 0) {
       DEBUG ((DEBUG_ERROR, "Failed to get node %a in kernel device tree\r\n", Snp->DeviceTreePath));

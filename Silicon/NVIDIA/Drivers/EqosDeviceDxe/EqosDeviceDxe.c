@@ -2,7 +2,7 @@
 
   DW EQoS device tree binding driver
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -376,6 +376,19 @@ DeviceDiscoveryNotify (
       return Status;
     }
 
+    Status = gBS->CreateEventEx (
+                    EVT_NOTIFY_SIGNAL,
+                    TPL_CALLBACK,
+                    UpdateDTACPIMacAddress,
+                    Snp,
+                    &gEfiAcpiTableGuid,
+                    &Snp->AcpiNotifyEvent
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to register for ACPI installation\r\n"));
+      return Status;
+    }
+
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &ControllerHandle,
                     &gEfiSimpleNetworkProtocolGuid, &(Snp->Snp),
@@ -384,6 +397,7 @@ DeviceDiscoveryNotify (
 
     if (EFI_ERROR(Status)) {
       gBS->CloseEvent (Snp->DeviceTreeNotifyEvent);
+      gBS->CloseEvent (Snp->AcpiNotifyEvent);
       FreePages (Snp, EFI_SIZE_TO_PAGES (sizeof (SIMPLE_NETWORK_DRIVER)));
     } else {
       Snp->ControllerHandle = ControllerHandle;
@@ -404,6 +418,7 @@ DeviceDiscoveryNotify (
 
     Snp = INSTANCE_FROM_SNP_THIS(SnpProtocol);
     gBS->CloseEvent (Snp->DeviceTreeNotifyEvent);
+    gBS->CloseEvent (Snp->AcpiNotifyEvent);
 
     Status = gBS->UninstallMultipleProtocolInterfaces (
                     ControllerHandle,

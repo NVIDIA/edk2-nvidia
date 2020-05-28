@@ -1,5 +1,6 @@
 /** @file
 
+  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -58,6 +59,7 @@ typedef struct {
   EFI_PHYSICAL_ADDRESS                   MaxAddress;
 
   EFI_EVENT                              DeviceTreeNotifyEvent;
+  EFI_EVENT                              AcpiNotifyEvent;
   CHAR8                                  DeviceTreePath[64];
 } SIMPLE_NETWORK_DRIVER;
 
