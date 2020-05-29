@@ -2,7 +2,7 @@
 #
 #  Component description file for the Device Discovery DXE platform driver.
 #
-#  Copyright (c) 2018, NVIDIA Corporation. All rights reserved.
+#  Copyright (c) 2018-2020, NVIDIA Corporation. All rights reserved.
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -43,6 +43,8 @@
   MemoryAllocationLib
   DevicePathLib
   DtPlatformDtbLoaderLib
+  TegraPlatformInfoLib
+  DeviceDiscoveryInternalLib
   FdtLib
 
 [Protocols]

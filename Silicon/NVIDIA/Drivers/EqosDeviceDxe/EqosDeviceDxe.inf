@@ -59,6 +59,7 @@
   IoLib
   FdtLib
   DeviceDiscoveryDriverLib
+  TegraPlatformInfoLib
   NetLib
   DmaLib
   TimerLib

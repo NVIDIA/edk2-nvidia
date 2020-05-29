@@ -35,6 +35,10 @@ PhyReset (
   EFI_STATUS    Status;
   EMBEDDED_GPIO *GpioProtocol = NULL;
 
+  if (PhyDriver->ResetPin == NON_EXISTENT_ON_PRESIL) {
+    return EFI_SUCCESS;
+  }
+
   Status = gBS->LocateProtocol (&gEmbeddedGpioProtocolGuid, NULL, (VOID **)&GpioProtocol);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to locate gpio protocol %r\r\n", Status));
@@ -425,5 +429,3 @@ PhyLinkAdjustEmacConfig (
 
   return Status;
 }
-
-

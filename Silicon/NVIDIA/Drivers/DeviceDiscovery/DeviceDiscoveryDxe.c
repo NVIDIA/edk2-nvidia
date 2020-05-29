@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Device Discovery Driver
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -25,6 +25,7 @@
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <libfdt.h>
 #include <Library/DxeServicesTableLib.h>
+#include <Library/DeviceDiscoveryInternalLib.h>
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
 #include <Protocol/ClockNodeProtocol.h>
@@ -1062,6 +1063,7 @@ ProcessDeviceTreeNodeWithHandle(
   UINTN                                     ProtocolIndex;
   CONST VOID                                *Property = NULL;
   INT32                                     PropertySize = 0;
+  NVIDIA_COMPATIBILITY_INTERNAL             *Override = NULL;
 
   if (NULL == Private) {
     return EFI_INVALID_PARAMETER;
@@ -1070,11 +1072,34 @@ ProcessDeviceTreeNodeWithHandle(
   NodeProtocol.DeviceTreeBase = Private->DeviceTreeBase;
   NodeProtocol.NodeOffset = NodeOffset;
 
+  Status = GetDeviceDiscoveryCompatibleInternal(&Override);
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  if (Override != NULL) {
+    // Check if any compatible props need to be overridden for the pre-silicon platform
+    Property = fdt_getprop (Private->DeviceTreeBase,
+                            NodeOffset,
+                            "compatible",
+                            &PropertySize);
+    while (Override->Compatibility != NULL && Property != NULL) {
+      if (0 == AsciiStrCmp (Property, Override->Compatibility)) {
+        break;
+      }
+      Override++;
+    }
+    // Set NULL if not found
+    if (Override->Compatibility == NULL) {
+      Override = NULL;
+    }
+  }
+
   Property = fdt_getprop (Private->DeviceTreeBase,
                           NodeOffset,
                           "status",
                           &PropertySize);
-  if (NULL != Property) {
+  if (Override == NULL && Property != NULL) {
     if (0 != AsciiStrCmp (Property, "okay")) {
       return EFI_UNSUPPORTED;
     }
@@ -1371,4 +1396,3 @@ ErrorExit:
 
   return Status;
 }
-

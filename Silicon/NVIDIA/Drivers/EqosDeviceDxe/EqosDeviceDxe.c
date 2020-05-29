@@ -27,6 +27,7 @@
 #include <Library/DmaLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NetLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/CvmEeprom.h>
 #include <libfdt.h>
 
@@ -108,8 +109,10 @@ DeviceDiscoveryNotify (
   UINTN                            VariableSize;
   UINT32                           VariableAttributes;
   TEGRA_CVM_EEPROM_PROTOCOL        *CvmEeprom;
+  TEGRA_PLATFORM_TYPE              PlatformType;
 
 
+  PlatformType = TegraGetPlatform();
   switch (Phase) {
 
   case DeviceDiscoveryDriverBindingStart:
@@ -342,17 +345,23 @@ DeviceDiscoveryNotify (
                                            DeviceTreeNode->NodeOffset,
                                            "phy-reset-gpio",
                                            NULL);
-      if (ResetGpioProp == NULL) {
-        return EFI_DEVICE_ERROR;
-      }
     }
-    Snp->PhyDriver.ResetPin = GPIO (SwapBytes32 (ResetGpioProp[0]), SwapBytes32 (ResetGpioProp[1]));
-    if (SwapBytes32 (ResetGpioProp[2]) == 0) {
-      Snp->PhyDriver.ResetMode0 = GPIO_MODE_OUTPUT_0;
-      Snp->PhyDriver.ResetMode1 = GPIO_MODE_OUTPUT_1;
+
+    if (ResetGpioProp != NULL) {
+      // Populate ResetPin from the device tree
+      Snp->PhyDriver.ResetPin = GPIO (SwapBytes32 (ResetGpioProp[0]), SwapBytes32 (ResetGpioProp[1]));
+      if (SwapBytes32 (ResetGpioProp[2]) == 0) {
+        Snp->PhyDriver.ResetMode0 = GPIO_MODE_OUTPUT_0;
+        Snp->PhyDriver.ResetMode1 = GPIO_MODE_OUTPUT_1;
+      } else {
+        Snp->PhyDriver.ResetMode0 = GPIO_MODE_OUTPUT_1;
+        Snp->PhyDriver.ResetMode1 = GPIO_MODE_OUTPUT_0;
+      }
+    } else if (PlatformType != TEGRA_PLATFORM_SILICON) {
+      // Give a fake setting to ResetPin
+      Snp->PhyDriver.ResetPin = NON_EXISTENT_ON_PRESIL;
     } else {
-      Snp->PhyDriver.ResetMode0 = GPIO_MODE_OUTPUT_1;
-      Snp->PhyDriver.ResetMode1 = GPIO_MODE_OUTPUT_0;
+        return EFI_DEVICE_ERROR;
     }
 
     if (fdt_get_path (DeviceTreeNode->DeviceTreeBase,

@@ -31,6 +31,8 @@ typedef struct {
 
 
 /************************************************************************************************************/
+#define NON_EXISTENT_ON_PRESIL                        0xDEADBEEF
+
 #define PAGE_COPPER                                   0
 
 #define REG_COPPER_CONTROL                            0
