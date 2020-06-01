@@ -112,6 +112,8 @@ READ_LOCK_STATUS   = TRUE
     DXE_DEPEX    DXE_DEPEX              Optional $(INF_OUTPUT)/$(MODULE_NAME).depex
     PE32         PE32                   $(INF_OUTPUT)/$(MODULE_NAME).efi
     UI           STRING="$(MODULE_NAME)" Optional
+    RAW          ASL                    Optional    |.aml
+    RAW          ACPI                   Optional    |.acpi
   }
 
 [Rule.Common.DXE_RUNTIME_DRIVER]
