@@ -43,7 +43,7 @@
           ) {                                                            \
     CPUInterfaceNumber,       /* UINT32  CPUInterfaceNumber           */ \
     CPUInterfaceNumber,       /* UINT32  AcpiProcessorUid             */ \
-    EFI_ACPI_6_2_GIC_ENABLED, /* UINT32  Flags                        */ \
+    EFI_ACPI_6_3_GIC_ENABLED, /* UINT32  Flags                        */ \
     0,                        /* UINT32  ParkingProtocolVersion       */ \
     PmuIrq,                   /* UINT32  PerformanceInterruptGsiv     */ \
     0,                        /* UINT64  ParkedAddress                */ \
