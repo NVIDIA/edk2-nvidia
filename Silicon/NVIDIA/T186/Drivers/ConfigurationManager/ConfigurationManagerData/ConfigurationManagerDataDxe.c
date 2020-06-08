@@ -29,6 +29,7 @@
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 
 #include "Platform.h"
+#include <T186/T186Definitions.h>
 
 #include "Dsdt.hex"
 
@@ -155,7 +156,7 @@ CM_ARM_GENERIC_TIMER_INFO GenericTimerInfo = {
 */
 CM_ARM_SERIAL_PORT_INFO SpcrSerialPort = {
   FixedPcdGet64 (PcdTegra16550UartBaseT186),
-  0x90,
+  T186_UARTA_INTR,
   FixedPcdGet64 (PcdUartDefaultBaudRate),
   0,
   EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550
