@@ -254,6 +254,7 @@ CEntryPoint (
   FvSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (FvHeader->FvLength));
 
   DtbBase = GetDTBBaseAddress ();
+  ASSERT ((VOID *) DtbBase != NULL);
   DtbSize = fdt_totalsize ((VOID *)DtbBase);
   // DTB Base may not be aligned to page boundary. Add overlay to size.
   DtbSize += (DtbBase & EFI_PAGE_MASK);
