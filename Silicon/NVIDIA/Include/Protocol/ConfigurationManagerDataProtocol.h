@@ -39,7 +39,8 @@
           Mpidr,                                                         \
           PmuIrq,                                                        \
           VGicIrq,                                                       \
-          EnergyEfficiency                                               \
+          EnergyEfficiency,                                              \
+          ProximityDomain                                                \
           ) {                                                            \
     CPUInterfaceNumber,       /* UINT32  CPUInterfaceNumber           */ \
     CPUInterfaceNumber,       /* UINT32  AcpiProcessorUid             */ \
@@ -53,7 +54,11 @@
     VGicIrq,                  /* UINT32  VGICMaintenanceInterrupt     */ \
     0,                        /* UINT64  GICRBaseAddress              */ \
     Mpidr,                    /* UINT64  MPIDR                        */ \
-    EnergyEfficiency          /* UINT8   ProcessorPowerEfficiencyClass*/ \
+    EnergyEfficiency,         /* UINT8   ProcessorPowerEfficiencyClass*/ \
+    0,                        /* UINT16  SpeOverflowInterrupt         */ \
+    ProximityDomain,          /* UINT32  ProximityDomain              */ \
+    0,                        /* UINT32  ClockDomain                  */ \
+    EFI_ACPI_6_3_GICC_ENABLED /* UINT32  AffinityFlags                */ \
     }
 
 /** A helper macro for populating the Processor Hierarchy Node flags

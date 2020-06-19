@@ -116,14 +116,14 @@ CM_ARM_POWER_MANAGEMENT_PROFILE_INFO PmProfileInfo = {
 STATIC
 CM_ARM_GICC_INFO GicCInfo[] = {
   /*
-    GIC_ENTRY (CPUInterfaceNumber, Mpidr, PmuIrq, VGicIrq, EnergyEfficiency)
+    GICC_ENTRY (CPUInterfaceNumber, Mpidr, PmuIrq, VGicIrq, EnergyEfficiency, ProximityDomain)
   */
-  GICC_ENTRY (0, GET_MPID (0, 0), 0x140, 25,     0),
-  GICC_ENTRY (1, GET_MPID (0, 1), 0x141, 25,     0),
-  GICC_ENTRY (2, GET_MPID (1, 0), 0x128, 25,     0),
-  GICC_ENTRY (3, GET_MPID (1, 1), 0x129, 25,     0),
-  GICC_ENTRY (4, GET_MPID (1, 2), 0x12A, 25,     0),
-  GICC_ENTRY (5, GET_MPID (1, 3), 0x12B, 25,     0)
+  GICC_ENTRY (0, GET_MPID (0, 0), 0x140, 25,     0, 0),
+  GICC_ENTRY (1, GET_MPID (0, 1), 0x141, 25,     0, 0),
+  GICC_ENTRY (2, GET_MPID (1, 0), 0x128, 25,     0, 0),
+  GICC_ENTRY (3, GET_MPID (1, 1), 0x129, 25,     0, 0),
+  GICC_ENTRY (4, GET_MPID (1, 2), 0x12A, 25,     0, 0),
+  GICC_ENTRY (5, GET_MPID (1, 3), 0x12B, 25,     0, 0)
 };
 
 /** The platform GIC distributor information.
