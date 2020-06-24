@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -31,10 +31,6 @@ READ_LOCK_CAP      = TRUE
 READ_LOCK_STATUS   = TRUE
 
   INF Silicon/NVIDIA/PrePi/PrePi.inf
-
-!if $(DEVICE_TREE_BUILD)
-  INF RuleOverride = DTB Silicon/NVIDIA/$(CHIPSET)/DeviceTree/DeviceTree.inf
-!endif
 
   FILE FV_IMAGE = 9E21FD93-9C72-4c15-8C4B-E77F1DB2D792 {
     SECTION GUIDED EE4E5898-3914-4259-9D6E-DC7BD79403CF PROCESSING_REQUIRED = TRUE {
