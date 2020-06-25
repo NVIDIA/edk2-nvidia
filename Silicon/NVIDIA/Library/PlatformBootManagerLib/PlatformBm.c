@@ -21,6 +21,9 @@
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/PlatformBootOrderLib.h>
+#include <Library/BaseCryptLib.h>
+#include <Library/PlatformResourceLib.h>
+#include <Library/PrintLib.h>
 #include <Protocol/DevicePath.h>
 #include <Protocol/EsrtManagement.h>
 #include <Protocol/GraphicsOutput.h>
@@ -31,7 +34,7 @@
 #include <Guid/EventGroup.h>
 #include <Guid/TtyTerm.h>
 #include <Guid/SerialPortLibVendor.h>
-
+#include <libfdt.h>
 #include "PlatformBm.h"
 
 #define DP_NODE_LEN(Type) { (UINT8)sizeof (Type), (UINT8)(sizeof (Type) >> 8) }
@@ -665,6 +668,20 @@ PlatformBootManagerAfterConsole (
   UINTN                         FirmwareVerLength;
   UINTN                         PosX;
   UINTN                         PosY;
+  BOOLEAN                       PlatformConfigured;
+  BOOLEAN                       PlatformConfiguredSetVariable;
+  BOOLEAN                       VariableData;
+  UINTN                         VariableSize;
+  UINT32                        VariableAttributes;
+  UINT64                        DTBBase;
+  UINT64                        DTBSize;
+  UINT8                         CurrentDTBHash[SHA256_DIGEST_SIZE];
+  BOOLEAN                       DTBChanged;
+  UINT8                         HashData[SHA256_DIGEST_SIZE];
+  BOOLEAN                       UEFIChanged;
+  CHAR8                         CurrentUEFIVersion[100];
+  UINTN                         CharCount;
+  CHAR8                         UEFIVersion[100];
 
   FirmwareVerLength = StrLen (PcdGetPtr (PcdFirmwareVersionString));
 
@@ -693,9 +710,130 @@ PlatformBootManagerAfterConsole (
   }
 
   //
-  // Connect the rest of the devices.
+  // If platform has been configured already, do not do it again
   //
-  EfiBootManagerConnectAll ();
+  PlatformConfigured = FALSE;
+  PlatformConfiguredSetVariable = TRUE;
+  VariableData = FALSE;
+  VariableSize = sizeof (BOOLEAN);
+  Status = gRT->GetVariable (L"PlatformConfigured", &gNVIDIATokenSpaceGuid,
+                             &VariableAttributes, &VariableSize, (VOID *)&VariableData);
+  if (!EFI_ERROR (Status) &&
+      (VariableSize == sizeof (BOOLEAN)) &&
+      (VariableData == TRUE)) {
+    PlatformConfigured = TRUE;
+    PlatformConfiguredSetVariable = FALSE;
+  }
+
+  //
+  // Check if DTB has changed
+  //
+  DTBChanged = TRUE;
+  DTBBase = GetDTBBaseAddress ();
+  DTBSize = fdt_totalsize ((VOID *)DTBBase);
+  gBS->SetMem (CurrentDTBHash, SHA256_DIGEST_SIZE, 0);
+  Sha256HashAll ((VOID *)DTBBase, DTBSize, CurrentDTBHash);
+  gBS->SetMem (HashData, SHA256_DIGEST_SIZE, 0);
+  VariableSize = SHA256_DIGEST_SIZE;
+  Status = gRT->GetVariable (L"DTBHash", &gNVIDIATokenSpaceGuid,
+                             &VariableAttributes, &VariableSize, (VOID *)HashData);
+  if (!EFI_ERROR (Status) &&
+      (VariableSize == SHA256_DIGEST_SIZE) &&
+      (CompareMem (HashData, CurrentDTBHash, VariableSize) == 0)) {
+    DTBChanged = FALSE;
+  }
+
+  //
+  // Check if UEFI has changed
+  //
+  UEFIChanged = TRUE;
+  CharCount = AsciiSPrint (CurrentUEFIVersion,sizeof (CurrentUEFIVersion),"%s %s",
+                           (CHAR16*)PcdGetPtr(PcdFirmwareVersionString),
+                           (CHAR16*)PcdGetPtr(PcdFirmwareDateTimeBuiltString));
+  VariableSize = CharCount;
+  Status = gRT->GetVariable (L"UEFIVersion", &gNVIDIATokenSpaceGuid,
+                             &VariableAttributes, &VariableSize, (VOID *)UEFIVersion);
+  if (!EFI_ERROR (Status) &&
+      (VariableSize == CharCount) &&
+      (CompareMem (UEFIVersion, CurrentUEFIVersion, VariableSize) == 0)) {
+    UEFIChanged = FALSE;
+  }
+
+  if (DTBChanged || UEFIChanged) {
+    //
+    // If DTB has changed but platform has already been configured,
+    // configure again but do not set variable again.
+    //
+    if (PlatformConfigured) {
+      PlatformConfigured = FALSE;
+    }
+  }
+
+  if (!PlatformConfigured) {
+    //
+    // Connect the rest of the devices.
+    //
+    EfiBootManagerConnectAll ();
+
+    //
+    // Enumerate all possible boot options.
+    //
+    EfiBootManagerRefreshAllBootOption ();
+
+    //
+    // Register platform-specific boot options and keyboard shortcuts.
+    //
+    PlatformRegisterOptionsAndKeys ();
+
+    //
+    // Register UEFI Shell
+    //
+    PlatformRegisterFvBootOption (
+      &gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE
+      );
+
+    //
+    // Set Boot Order
+    //
+    SetBootOrder ();
+
+    //
+    // Set platform has been configured
+    //
+    if (PlatformConfiguredSetVariable) {
+      VariableData = TRUE;
+      Status = gRT->SetVariable (L"PlatformConfigured", &gNVIDIATokenSpaceGuid,
+                      EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                      sizeof (BOOLEAN), &VariableData);
+      if (EFI_ERROR (Status)) {
+        // TODO: Evaluate what should be done in this case.
+      }
+    }
+
+    //
+    // Update DTB Hash
+    //
+    if (DTBChanged) {
+      Status = gRT->SetVariable (L"DTBHash", &gNVIDIATokenSpaceGuid,
+                      EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                      SHA256_DIGEST_SIZE, CurrentDTBHash);
+      if (EFI_ERROR (Status)) {
+        // TODO: Evaluate what should be done in this case.
+      }
+    }
+
+    //
+    // Update UEFI Version
+    //
+    if (UEFIChanged) {
+      Status = gRT->SetVariable (L"UEFIVersion", &gNVIDIATokenSpaceGuid,
+                      EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                      CharCount, CurrentUEFIVersion);
+      if (EFI_ERROR (Status)) {
+        // TODO: Evaluate what should be done in this case.
+      }
+    }
+  }
 
   //
   // On ARM, there is currently no reason to use the phased capsule
@@ -705,28 +843,6 @@ PlatformBootManagerAfterConsole (
   // feedback about what is going on.
   //
   HandleCapsules ();
-
-  //
-  // Enumerate all possible boot options.
-  //
-  EfiBootManagerRefreshAllBootOption ();
-
-  //
-  // Register platform-specific boot options and keyboard shortcuts.
-  //
-  PlatformRegisterOptionsAndKeys ();
-
-  //
-  // Register UEFI Shell
-  //
-  PlatformRegisterFvBootOption (
-    &gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE
-    );
-
-  //
-  // Set Boot Order
-  //
-  SetBootOrder ();
 }
 
 /**

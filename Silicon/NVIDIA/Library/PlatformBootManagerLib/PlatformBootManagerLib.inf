@@ -35,6 +35,7 @@
   MdePkg/MdePkg.dec
   ShellPkg/ShellPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  CryptoPkg/CryptoPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -53,12 +54,15 @@
   UefiLib
   UefiRuntimeServicesTableLib
   PlatformBootOrderLib
+  BaseCryptLib
+  PlatformResourceLib
 
 [FeaturePcd]
   gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport
 
 [FixedPcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultDataBits
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
@@ -75,6 +79,7 @@
   gEfiEndOfDxeEventGroupGuid
   gEfiTtyTermGuid
   gUefiShellFileGuid
+  gNVIDIATokenSpaceGuid
 
 [Protocols]
   gEfiDevicePathProtocolGuid

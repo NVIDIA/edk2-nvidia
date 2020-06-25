@@ -127,12 +127,8 @@ InstallMmioRegions (
   OUT UINTN *MmioRegionsCount
 )
 {
-  if (ChipID == T194_CHIP_ID) {
-    *MmioRegionsCount += InstallMmioRegion(
-                           (TegraGetBLInfoLocationAddress(ChipID) & ~EFI_PAGE_MASK), SIZE_4KB);
-    *MmioRegionsCount += InstallMmioRegion(
-                           (GetCPUBLBaseAddress ()  & ~EFI_PAGE_MASK), SIZE_4KB);
-  }
+  *MmioRegionsCount += InstallMmioRegion(
+                         (TegraGetBLInfoLocationAddress(ChipID) & ~EFI_PAGE_MASK), SIZE_4KB);
   *MmioRegionsCount += InstallMmioRegion(
                          FixedPcdGet64(PcdTegraCombinedUartRxMailbox), SIZE_4KB);
   *MmioRegionsCount += InstallMmioRegion(

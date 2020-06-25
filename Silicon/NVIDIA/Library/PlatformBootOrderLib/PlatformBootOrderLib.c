@@ -37,6 +37,8 @@ SetBootOrder (
   UINTN                        RemainCnt;
   UINTN                        OptionalDataLength;
 
+  VariableData = FALSE;
+  VariableSize = sizeof (BOOLEAN);
   Status = gRT->GetVariable (L"PlatformBootOrderSet", &gNVIDIATokenSpaceGuid,
                              &VariableAttributes, &VariableSize, (VOID *)&VariableData);
   if (!EFI_ERROR (Status) && (VariableSize == sizeof (BOOLEAN))) {
