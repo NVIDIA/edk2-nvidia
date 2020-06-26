@@ -56,21 +56,59 @@
     EnergyEfficiency          /* UINT8   ProcessorPowerEfficiencyClass*/ \
     }
 
+/** A helper macro for populating the Processor Hierarchy Node flags
+*/
+#define PROC_NODE_FLAGS(                                                \
+          PhysicalPackage,                                              \
+          AcpiProcessorIdValid,                                         \
+          ProcessorIsThread,                                            \
+          NodeIsLeaf,                                                   \
+          IdenticalImplementation                                       \
+          )                                                             \
+  (                                                                     \
+    PhysicalPackage |                                                   \
+    (AcpiProcessorIdValid << 1) |                                       \
+    (ProcessorIsThread << 2) |                                          \
+    (NodeIsLeaf << 3) |                                                 \
+    (IdenticalImplementation << 4)                                      \
+  )
+
+/** A helper macro for populating the Cache Type Structure's attributes
+*/
+#define CACHE_ATTRIBUTES(                                               \
+          AllocationType,                                               \
+          CacheType,                                                    \
+          WritePolicy                                                   \
+          )                                                             \
+  (                                                                     \
+    AllocationType |                                                    \
+    (CacheType << 2) |                                                  \
+    (WritePolicy << 4)                                                  \
+  )
+
+/** A helper macro for mapping a reference token
+*/
+#define REFERENCE_TOKEN(Field)                                           \
+  ((CM_OBJECT_TOKEN)(VOID*)&(Field))
+
 /** A structure describing the platform configuration
     manager repository information
 */
 typedef struct PlatformRepositoryInfo {
   // Configuration Manager Object ID
-  CM_OBJECT_ID   CmObjectId;
+  CM_OBJECT_ID      CmObjectId;
+
+  // Configuration Manager Object Token
+  CM_OBJECT_TOKEN   CmObjectToken;
 
   // Configuration Manager Object Size
-  UINT32         CmObjectSize;
+  UINT32            CmObjectSize;
 
   // Configuration Manager Object Count
-  UINT32         CmObjectCount;
+  UINT32            CmObjectCount;
 
   // Configuration Manager Object Pointer
-  VOID         * CmObjectPtr;
+  VOID              *CmObjectPtr;
 } EDKII_PLATFORM_REPOSITORY_INFO;
 
 extern EFI_GUID gNVIDIAConfigurationManagerDataProtocolGuid;

@@ -116,6 +116,15 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
+  // PPTT Table
+  {
+    EFI_ACPI_6_3_PROCESSOR_PROPERTIES_TOPOLOGY_TABLE_STRUCTURE_SIGNATURE,
+    EFI_ACPI_6_3_PROCESSOR_PROPERTIES_TOPOLOGY_TABLE_REVISION,
+    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdPptt),
+    NULL,
+    0,
+    FixedPcdGet64(PcdAcpiDefaultOemRevision),
+  },
 };
 
 /** The platform boot architecture information.
@@ -241,6 +250,280 @@ CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfo[] = {
 STATIC
 CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfoEmpty[] = {0};
 
+/** Cache Info
+ */
+STATIC
+CM_ARM_CACHE_INFO CacheInfo[] = {
+  // L3 Cache Info
+  {
+    .Token                 = REFERENCE_TOKEN (CacheInfo[0]),
+    .NextLevelOfCacheToken = CM_NULL_TOKEN,
+    .Size                  = 0x400000,
+    .NumberOfSets          = 4096,
+    .Associativity         = 16,
+    .Attributes            = CACHE_ATTRIBUTES (
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_UNIFIED,
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+    ),
+    .LineSize              = 64,
+  },
+  // L2 Cache Info
+  {
+    .Token                 = REFERENCE_TOKEN (CacheInfo[1]),
+    .NextLevelOfCacheToken = CM_NULL_TOKEN,
+    .Size                  = 0x200000,
+    .NumberOfSets          = 2048,
+    .Associativity         = 16,
+    .Attributes            = CACHE_ATTRIBUTES (
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_UNIFIED,
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+    ),
+    .LineSize              = 64,
+  },
+  // L1I Cache Info
+  {
+    .Token                 = REFERENCE_TOKEN (CacheInfo[2]),
+    .NextLevelOfCacheToken = CM_NULL_TOKEN,
+    .Size                  = 0x20000,
+    .NumberOfSets          = 512,
+    .Associativity         = 4,
+    .Attributes            = CACHE_ATTRIBUTES (
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ,
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_INSTRUCTION,
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+    ),
+    .LineSize              = 64,
+  },
+  // L1D Cache Info
+  {
+    .Token                 = REFERENCE_TOKEN (CacheInfo[3]),
+    .NextLevelOfCacheToken = CM_NULL_TOKEN,
+    .Size                  = 0x10000,
+    .NumberOfSets          = 256,
+    .Associativity         = 4,
+    .Attributes            = CACHE_ATTRIBUTES (
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_DATA,
+      EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+    ),
+    .LineSize              = 64,
+  },
+};
+
+/** CCPLEX Resources
+ */
+STATIC
+CM_ARM_OBJ_REF CcplexResources[] = {
+  { .ReferenceToken = REFERENCE_TOKEN (CacheInfo[0]) },
+};
+
+/** Carmel Core Cluster Resources
+ */
+STATIC
+CM_ARM_OBJ_REF CarmelCoreClusterResources[] = {
+  { .ReferenceToken = REFERENCE_TOKEN (CacheInfo[1]) },
+};
+
+/** Carmel Core Resources
+ */
+STATIC
+CM_ARM_OBJ_REF CarmelCoreResources[] = {
+  { .ReferenceToken = REFERENCE_TOKEN (CacheInfo[2]) },
+  { .ReferenceToken = REFERENCE_TOKEN (CacheInfo[3]) },
+};
+
+/** Processor Hierarchy Info
+ */
+STATIC
+CM_ARM_PROC_HIERARCHY_INFO ProcHierarchyInfo[] = {
+  // CCPLEX
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[0]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
+    ),
+    .ParentToken                = CM_NULL_TOKEN,
+    .GicCToken                  = CM_NULL_TOKEN,
+    .NoOfPrivateResources       = 1,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CcplexResources),
+  },
+  // Four Carmel Core Clusters
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[1]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[0]),
+    .GicCToken                  = CM_NULL_TOKEN,
+    .NoOfPrivateResources       = 1,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreClusterResources),
+  },
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[2]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[0]),
+    .GicCToken                  = CM_NULL_TOKEN,
+    .NoOfPrivateResources       = 1,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreClusterResources),
+  },
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[3]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[0]),
+    .GicCToken                  = CM_NULL_TOKEN,
+    .NoOfPrivateResources       = 1,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreClusterResources),
+  },
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[4]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[0]),
+    .GicCToken                  = CM_NULL_TOKEN,
+    .NoOfPrivateResources       = 1,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreClusterResources),
+  },
+  // Eight Carmel Cores
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[5]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[1]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[0]),
+    .NoOfPrivateResources       = 2,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
+  },
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[6]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[1]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[1]),
+    .NoOfPrivateResources       = 2,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
+  },
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[7]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[2]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[2]),
+    .NoOfPrivateResources       = 2,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
+  },
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[8]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[2]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[3]),
+    .NoOfPrivateResources       = 2,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
+  },
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[9]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[3]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[4]),
+    .NoOfPrivateResources       = 2,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
+  },
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[10]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[3]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[5]),
+    .NoOfPrivateResources       = 2,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
+  },
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[11]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[4]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[6]),
+    .NoOfPrivateResources       = 2,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
+  },
+  {
+    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[12]),
+    .Flags                      = PROC_NODE_FLAGS (
+      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
+      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
+      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+    ),
+    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[4]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[7]),
+    .NoOfPrivateResources       = 2,
+    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
+  },
+};
 
 /** Check if Pcie is enabled is kernel.
   @retval TRUE  - Enabled
@@ -306,11 +589,13 @@ InitializePlatformRepository ()
   UINTN GicInterruptInterfaceBase;
 
   NVIDIAPlatformRepositoryInfo[0].CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjCfgMgrInfo);
+  NVIDIAPlatformRepositoryInfo[0].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[0].CmObjectSize = sizeof (CmInfo);
   NVIDIAPlatformRepositoryInfo[0].CmObjectCount = sizeof (CmInfo) / sizeof (CM_STD_OBJ_CONFIGURATION_MANAGER_INFO);
   NVIDIAPlatformRepositoryInfo[0].CmObjectPtr = &CmInfo;
 
   NVIDIAPlatformRepositoryInfo[1].CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
+  NVIDIAPlatformRepositoryInfo[1].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[1].CmObjectSize = sizeof (CmAcpiTableList);
   NVIDIAPlatformRepositoryInfo[1].CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
   NVIDIAPlatformRepositoryInfo[1].CmObjectPtr = &CmAcpiTableList;
@@ -321,17 +606,20 @@ InitializePlatformRepository ()
   }
 
   NVIDIAPlatformRepositoryInfo[2].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjBootArchInfo);
+  NVIDIAPlatformRepositoryInfo[2].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[2].CmObjectSize = sizeof (BootArchInfo);
   NVIDIAPlatformRepositoryInfo[2].CmObjectCount = sizeof (BootArchInfo) / sizeof (CM_ARM_BOOT_ARCH_INFO);
   NVIDIAPlatformRepositoryInfo[2].CmObjectPtr = &BootArchInfo;
 
   NVIDIAPlatformRepositoryInfo[3].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPowerManagementProfileInfo);
+  NVIDIAPlatformRepositoryInfo[3].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[3].CmObjectSize = sizeof (PmProfileInfo);
   NVIDIAPlatformRepositoryInfo[3].CmObjectCount = sizeof (PmProfileInfo) / sizeof (CM_ARM_POWER_MANAGEMENT_PROFILE_INFO);
   NVIDIAPlatformRepositoryInfo[3].CmObjectPtr = &PmProfileInfo;
 
   GicInterruptInterfaceBase = PcdGet64(PcdGicInterruptInterfaceBase);
   NVIDIAPlatformRepositoryInfo[4].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
+  NVIDIAPlatformRepositoryInfo[4].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[4].CmObjectSize = sizeof (GicCInfo);
   NVIDIAPlatformRepositoryInfo[4].CmObjectCount = sizeof (GicCInfo) / sizeof (CM_ARM_GICC_INFO);
   NVIDIAPlatformRepositoryInfo[4].CmObjectPtr = &GicCInfo;
@@ -341,24 +629,58 @@ InitializePlatformRepository ()
 
   GicDInfo.PhysicalBaseAddress = PcdGet64 (PcdGicDistributorBase);
   NVIDIAPlatformRepositoryInfo[5].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicDInfo);
+  NVIDIAPlatformRepositoryInfo[5].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[5].CmObjectSize = sizeof (GicDInfo);
   NVIDIAPlatformRepositoryInfo[5].CmObjectCount = sizeof (GicDInfo) / sizeof (CM_ARM_GICD_INFO);
   NVIDIAPlatformRepositoryInfo[5].CmObjectPtr = &GicDInfo;
 
   NVIDIAPlatformRepositoryInfo[6].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGenericTimerInfo);
+  NVIDIAPlatformRepositoryInfo[6].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[6].CmObjectSize = sizeof (GenericTimerInfo);
   NVIDIAPlatformRepositoryInfo[6].CmObjectCount = sizeof (GenericTimerInfo) / sizeof (CM_ARM_GENERIC_TIMER_INFO);
   NVIDIAPlatformRepositoryInfo[6].CmObjectPtr = &GenericTimerInfo;
 
   NVIDIAPlatformRepositoryInfo[7].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
+  NVIDIAPlatformRepositoryInfo[7].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[7].CmObjectSize = sizeof (SpcrSerialPort);
   NVIDIAPlatformRepositoryInfo[7].CmObjectCount = sizeof (SpcrSerialPort) / sizeof (CM_ARM_SERIAL_PORT_INFO);
   NVIDIAPlatformRepositoryInfo[7].CmObjectPtr = &SpcrSerialPort;
 
   NVIDIAPlatformRepositoryInfo[8].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
+  NVIDIAPlatformRepositoryInfo[8].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[8].CmObjectSize = sizeof (PciConfigInfoEmpty);
   NVIDIAPlatformRepositoryInfo[8].CmObjectCount = sizeof (PciConfigInfoEmpty) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);
   NVIDIAPlatformRepositoryInfo[8].CmObjectPtr = &PciConfigInfoEmpty;
+
+  NVIDIAPlatformRepositoryInfo[9].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo);
+  NVIDIAPlatformRepositoryInfo[9].CmObjectToken = CM_NULL_TOKEN;
+  NVIDIAPlatformRepositoryInfo[9].CmObjectSize = sizeof (CacheInfo);
+  NVIDIAPlatformRepositoryInfo[9].CmObjectCount = ARRAY_SIZE (CacheInfo);
+  NVIDIAPlatformRepositoryInfo[9].CmObjectPtr = &CacheInfo;
+
+  NVIDIAPlatformRepositoryInfo[10].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+  NVIDIAPlatformRepositoryInfo[10].CmObjectToken = REFERENCE_TOKEN (CcplexResources);
+  NVIDIAPlatformRepositoryInfo[10].CmObjectSize = sizeof (CcplexResources);
+  NVIDIAPlatformRepositoryInfo[10].CmObjectCount = ARRAY_SIZE (CcplexResources);
+  NVIDIAPlatformRepositoryInfo[10].CmObjectPtr = &CcplexResources;
+
+  NVIDIAPlatformRepositoryInfo[11].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+  NVIDIAPlatformRepositoryInfo[11].CmObjectToken = REFERENCE_TOKEN (CarmelCoreClusterResources);
+  NVIDIAPlatformRepositoryInfo[11].CmObjectSize = sizeof (CarmelCoreClusterResources);
+  NVIDIAPlatformRepositoryInfo[11].CmObjectCount = ARRAY_SIZE (CarmelCoreClusterResources);
+  NVIDIAPlatformRepositoryInfo[11].CmObjectPtr = &CarmelCoreClusterResources;
+
+  NVIDIAPlatformRepositoryInfo[12].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+  NVIDIAPlatformRepositoryInfo[12].CmObjectToken = REFERENCE_TOKEN (CarmelCoreResources);
+  NVIDIAPlatformRepositoryInfo[12].CmObjectSize = sizeof (CarmelCoreResources);
+  NVIDIAPlatformRepositoryInfo[12].CmObjectCount = ARRAY_SIZE (CarmelCoreResources);
+  NVIDIAPlatformRepositoryInfo[12].CmObjectPtr = &CarmelCoreResources;
+
+  NVIDIAPlatformRepositoryInfo[13].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjProcHierarchyInfo);
+  NVIDIAPlatformRepositoryInfo[13].CmObjectToken = CM_NULL_TOKEN;
+  NVIDIAPlatformRepositoryInfo[13].CmObjectSize = sizeof (ProcHierarchyInfo);
+  NVIDIAPlatformRepositoryInfo[13].CmObjectCount = ARRAY_SIZE (ProcHierarchyInfo);
+  NVIDIAPlatformRepositoryInfo[13].CmObjectPtr = &ProcHierarchyInfo;
 
   ApplyConfigurationManagerOverrides ();
 

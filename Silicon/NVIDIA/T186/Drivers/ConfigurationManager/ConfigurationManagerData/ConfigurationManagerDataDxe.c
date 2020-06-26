@@ -176,12 +176,14 @@ InitializePlatformRepository (
   UINTN GicInterruptInterfaceBase;
 
   NVIDIAPlatformRepositoryInfo[0].CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjCfgMgrInfo);
+  NVIDIAPlatformRepositoryInfo[0].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[0].CmObjectSize = sizeof (CmInfo);
   NVIDIAPlatformRepositoryInfo[0].CmObjectCount = sizeof (CmInfo) / sizeof (CM_STD_OBJ_CONFIGURATION_MANAGER_INFO);
   NVIDIAPlatformRepositoryInfo[0].CmObjectPtr = &CmInfo;
 
 
   NVIDIAPlatformRepositoryInfo[1].CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
+  NVIDIAPlatformRepositoryInfo[1].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[1].CmObjectSize = sizeof (CmAcpiTableList);
   NVIDIAPlatformRepositoryInfo[1].CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
   NVIDIAPlatformRepositoryInfo[1].CmObjectPtr = &CmAcpiTableList;
@@ -192,17 +194,20 @@ InitializePlatformRepository (
   }
 
   NVIDIAPlatformRepositoryInfo[2].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjBootArchInfo);
+  NVIDIAPlatformRepositoryInfo[2].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[2].CmObjectSize = sizeof (BootArchInfo);
   NVIDIAPlatformRepositoryInfo[2].CmObjectCount = sizeof (BootArchInfo) / sizeof (CM_ARM_BOOT_ARCH_INFO);
   NVIDIAPlatformRepositoryInfo[2].CmObjectPtr = &BootArchInfo;
 
   NVIDIAPlatformRepositoryInfo[3].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPowerManagementProfileInfo);
+  NVIDIAPlatformRepositoryInfo[3].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[3].CmObjectSize = sizeof (PmProfileInfo);
   NVIDIAPlatformRepositoryInfo[3].CmObjectCount = sizeof (PmProfileInfo) / sizeof (CM_ARM_POWER_MANAGEMENT_PROFILE_INFO);
   NVIDIAPlatformRepositoryInfo[3].CmObjectPtr = &PmProfileInfo;
 
   GicInterruptInterfaceBase = PcdGet64(PcdGicInterruptInterfaceBase);
   NVIDIAPlatformRepositoryInfo[4].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
+  NVIDIAPlatformRepositoryInfo[4].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[4].CmObjectSize = sizeof (GicCInfo);
   NVIDIAPlatformRepositoryInfo[4].CmObjectCount = sizeof (GicCInfo) / sizeof (CM_ARM_GICC_INFO);
   NVIDIAPlatformRepositoryInfo[4].CmObjectPtr = &GicCInfo;
@@ -212,16 +217,19 @@ InitializePlatformRepository (
 
   GicDInfo.PhysicalBaseAddress = PcdGet64 (PcdGicDistributorBase);
   NVIDIAPlatformRepositoryInfo[5].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicDInfo);
+  NVIDIAPlatformRepositoryInfo[5].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[5].CmObjectSize = sizeof (GicDInfo);
   NVIDIAPlatformRepositoryInfo[5].CmObjectCount = sizeof (GicDInfo) / sizeof (CM_ARM_GICD_INFO);
   NVIDIAPlatformRepositoryInfo[5].CmObjectPtr = &GicDInfo;
 
   NVIDIAPlatformRepositoryInfo[6].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGenericTimerInfo);
+  NVIDIAPlatformRepositoryInfo[6].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[6].CmObjectSize = sizeof (GenericTimerInfo);
   NVIDIAPlatformRepositoryInfo[6].CmObjectCount = sizeof (GenericTimerInfo) / sizeof (CM_ARM_GENERIC_TIMER_INFO);
   NVIDIAPlatformRepositoryInfo[6].CmObjectPtr = &GenericTimerInfo;
 
   NVIDIAPlatformRepositoryInfo[7].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
+  NVIDIAPlatformRepositoryInfo[7].CmObjectToken = CM_NULL_TOKEN;
   NVIDIAPlatformRepositoryInfo[7].CmObjectSize = sizeof (SpcrSerialPort);
   NVIDIAPlatformRepositoryInfo[7].CmObjectCount = sizeof (SpcrSerialPort) / sizeof (CM_ARM_SERIAL_PORT_INFO);
   NVIDIAPlatformRepositoryInfo[7].CmObjectPtr = &SpcrSerialPort;
