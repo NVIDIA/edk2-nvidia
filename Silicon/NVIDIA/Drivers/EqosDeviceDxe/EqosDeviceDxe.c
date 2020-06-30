@@ -398,6 +398,31 @@ DeviceDiscoveryNotify (
       return Status;
     }
 
+    // Init PHY
+    Status = PhyDxeInitialization (&Snp->PhyDriver, Snp->MacBase);
+    if (EFI_ERROR (Status)) {
+      return EFI_DEVICE_ERROR;
+    }
+
+    // Init EMAC
+    Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase);
+    if (EFI_ERROR (Status)) {
+      return EFI_DEVICE_ERROR;
+    }
+
+    // Set MAC Address
+    EmacSetMacAddress (&Snp->SnpMode.PermanentAddress, Snp->MacBase);
+    EmacReadMacAddress (&Snp->SnpMode.CurrentAddress, Snp->MacBase);
+    UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
+
+    // Init Link
+    DEBUG ((DEBUG_INFO, "SNP:DXE: Auto-Negotiating Ethernet PHY Link ...\n"));
+    Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
+    if (EFI_ERROR(Status)) {
+      DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\n"));
+      return EFI_DEVICE_ERROR;
+    }
+
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &ControllerHandle,
                     &gEfiSimpleNetworkProtocolGuid, &(Snp->Snp),

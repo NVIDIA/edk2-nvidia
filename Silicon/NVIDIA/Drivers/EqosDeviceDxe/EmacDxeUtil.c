@@ -1,5 +1,6 @@
 /** @file
 
+  Copyright (c) 2019 - 2020, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -660,85 +661,12 @@ BitReverse (
 VOID
 EFIAPI
 EmacStopTxRx (
-   IN  UINTN   MacBaseAddress
+   IN  EMAC_DRIVER   *MacDriver
   )
 {
-  UINT32 Value;
-  DEBUG ((DEBUG_INFO, "SNP:MAC: %a ()\r\n", __FUNCTION__));
-
-  // Stop DMA TX
-  MmioAnd32 (MacBaseAddress +
-             DMA_CH0_TX_CONTROL_OFFSET,
-             ~DMA_CH0_TX_CONTROL_ST);
-
-  //Wait for transmissions to complete
-  while (TRUE) {
-    Value = MmioRead32 (MacBaseAddress + MTL_TXQ0_DEBUG_OFFSET);
-    if (((Value & MTL_TXQ0_DEBUG_TRCSTS_MASK) != (0x01 << MTL_TXQ0_DEBUG_TRCSTS_SHIFT)) &&
-        ((Value & MTL_TXQ0_DEBUG_TXQSTS) == 0)) {
-      break;
-    }
-  }
-
-  //Disable MAC transmitter and receiver
-  MmioAnd32 (MacBaseAddress +
-             MAC_CONFIGURATION_OFFSET,
-             ~(MAC_CONFIGURATION_RE|MAC_CONFIGURATION_TE));
-
-
-  //Wait for Rx FIFO done
-  while (TRUE) {
-    Value = MmioRead32 (MacBaseAddress + MTL_RXQ0_DEBUG_OFFSET);
-    if (((Value & MTL_RXQ0_DEBUG_PRXQ_MASK) == 0x00) &&
-        ((Value & MTL_RXQ0_DEBUG_RXQSTS_MASK) == 0)) {
-      break;
-    }
-  }
-
-  //Disable Receive DMA
-  MmioAnd32 (MacBaseAddress +
-             DMA_CH0_RX_CONTROL_OFFSET,
-             ~DMA_CH0_RX_CONTROL_SR);
-
-  //Wait for Tx and Rx queue are empty
-  while (TRUE) {
-    Value = MmioRead32 (MacBaseAddress + MTL_TXQ0_DEBUG_OFFSET);
-    if ((Value & MTL_TXQ0_DEBUG_TXQSTS) == 0) {
-      break;
-    }
-  }
-  while (TRUE) {
-    Value = MmioRead32 (MacBaseAddress + MTL_RXQ0_DEBUG_OFFSET);
-    if ((Value & MTL_RXQ0_DEBUG_RXQSTS_MASK) == 0) {
-      break;
-    }
-  }
+  osi_stop_mac (MacDriver->osi_core);
+  osi_hw_dma_deinit (MacDriver->osi_dma);
 }
-
-
-EFI_STATUS
-EFIAPI
-EmacDmaResume (
-  IN  EMAC_DRIVER   *EmacDriver,
-  IN  UINTN   MacBaseAddress,
-  IN  BOOLEAN Transmit
-  )
-{
-  UINT32 LowAddress;
-  UINTN  Address;
-  MemoryFence ();
-  if (Transmit) {
-    Address = EmacDriver->TxdescRingMap.AddrMap + ((CONFIG_TX_DESCR_NUM-1) * sizeof (DESIGNWARE_HW_DESCRIPTOR));
-    LowAddress = (Address & 0xFFFFFFFF);
-    MmioWrite32 (MacBaseAddress + DMA_CH0_TXDESC_TAIL_POINTER_OFFSET, LowAddress);
-  } else {
-    Address = EmacDriver->RxdescRingMap.AddrMap + (EmacDriver->RxCurrentDescriptorNum * sizeof (DESIGNWARE_HW_DESCRIPTOR));
-    LowAddress = (Address & 0xFFFFFFFF);
-    MmioWrite32 (MacBaseAddress + DMA_CH0_RXDESC_TAIL_POINTER_OFFSET, LowAddress);
-  }
-  return EFI_SUCCESS;
-}
-
 
 VOID
 EFIAPI

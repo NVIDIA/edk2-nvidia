@@ -1,6 +1,8 @@
 /** @file
   DW EMAC SNP DXE driver
 
+  Copyright (c) 2019 - 2020, NVIDIA CORPORATION. All rights reserved.
+
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
   The original software modules are licensed as follows:
@@ -109,19 +111,12 @@ SnpStop (
     return EFI_NOT_STARTED;
   }
 
-  // Stop the Tx and Rx
-  EmacStopTxRx (Snp->MacBase);
-  // Change the state
-  switch (Snp->SnpMode.State) {
-    case EfiSimpleNetworkStarted:
-    case EfiSimpleNetworkInitialized:
-      Snp->SnpMode.State = EfiSimpleNetworkStopped;
-      break;
-    default:
-      return EFI_DEVICE_ERROR;
+  if (Snp->SnpMode.State != EfiSimpleNetworkStarted) {
+    return EFI_DEVICE_ERROR;
   }
 
-  // Put the device into a power saving mode
+  Snp->SnpMode.State = EfiSimpleNetworkStopped;
+
   return EFI_SUCCESS;
 }
 
@@ -167,7 +162,6 @@ SnpInitialize (
   IN  UINTN                         ExtraTxBufferSize OPTIONAL
   )
 {
-  EFI_STATUS                  Status;
   SIMPLE_NETWORK_DRIVER       *Snp;
 
   DEBUG ((DEBUG_INFO, "SNP:DXE: %a ()\r\n", __FUNCTION__));
@@ -185,32 +179,8 @@ SnpInitialize (
     return EFI_NOT_STARTED;
   }
 
-  // Init PHY
-  Status = PhyDxeInitialization (&Snp->PhyDriver, Snp->MacBase);
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  // Init EMAC
-  Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase);
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  // Set MAC Address
-  EmacSetMacAddress (&Snp->SnpMode.PermanentAddress, Snp->MacBase);
-  EmacReadMacAddress (&Snp->SnpMode.CurrentAddress, Snp->MacBase);
-  UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
-
-  // Init Link
-  DEBUG ((DEBUG_INFO, "SNP:DXE: Auto-Negotiating Ethernet PHY Link ...\n"));
-  Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
-  if (EFI_ERROR(Status)) {
-    DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\n"));
-    return EFI_DEVICE_ERROR;
-  }
-
-  osi_start_mac(Snp->MacDriver.osi_core);
+  osi_hw_dma_init (Snp->MacDriver.osi_dma);
+  osi_start_mac (Snp->MacDriver.osi_core);
 
   // Declare the driver as initialized
   Snp->SnpMode.State = EfiSimpleNetworkInitialized;
@@ -269,7 +239,7 @@ SnpReset (
     return EFI_NOT_STARTED;
   }
 
-  EmacStopTxRx (Snp->MacBase);
+  EmacStopTxRx (&Snp->MacDriver);
 
   // Initiate a PHY reset
   Status = PhySoftReset (&Snp->PhyDriver, Snp->MacBase);
@@ -324,7 +294,7 @@ SnpShutdown (
     return EFI_NOT_STARTED;
   }
 
-  EmacStopTxRx (Snp->MacBase);
+  EmacStopTxRx (&Snp->MacDriver);
 
   Snp->SnpMode.State = EfiSimpleNetworkStarted;
 

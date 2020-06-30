@@ -1,5 +1,6 @@
 /** @file
 
+  Copyright (c) 2019 - 2020, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -437,7 +438,6 @@ typedef PACKED struct {
 
 #define TDES_3_WB_OWN                                            BIT31
 
-
 typedef struct {
   EFI_PHYSICAL_ADDRESS        AddrMap;
   void                        *Mapping;
@@ -544,7 +544,7 @@ BitReverse (
 VOID
 EFIAPI
 EmacStopTxRx (
-  IN  UINTN                   MacBaseAddress
+  IN  EMAC_DRIVER             *MacDriver
   );
 
 EFI_STATUS
@@ -554,7 +554,6 @@ EmacDmaResume (
   IN  UINTN   MacBaseAddress,
   IN  BOOLEAN Transmit
   );
-
 
 VOID
 EFIAPI
