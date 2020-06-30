@@ -100,6 +100,7 @@ DeviceDiscoveryNotify (
   EFI_SIMPLE_NETWORK_PROTOCOL      *SnpProtocol;
   EFI_SIMPLE_NETWORK_MODE          *SnpMode;
   SIMPLE_NETWORK_DEVICE_PATH       *DevicePath;
+  EFI_DEVICE_PATH_PROTOCOL         *DevicePathOrig;
   CONST UINT32                     *ResetGpioProp;
   NON_DISCOVERABLE_DEVICE          *Device;
   CONST CHAR8                      *NodeName;
@@ -263,8 +264,52 @@ DeviceDiscoveryNotify (
     // Assign fields for device path
     CopyMem (&DevicePath->MacAddrDP.MacAddress, &Snp->Snp.Mode->CurrentAddress, NET_ETHER_ADDR_LEN);
     DevicePath->MacAddrDP.IfType = Snp->Snp.Mode->IfType;
+    //Update the device path to add MAC node
+    Status = gBS->HandleProtocol (
+                    ControllerHandle,
+                    &gEfiDevicePathProtocolGuid,
+                    (VOID **)&DevicePathOrig
+                  );
+    if (!EFI_ERROR (Status)) {
+      BOOLEAN MacPresent = FALSE;
+      EFI_DEVICE_PATH_PROTOCOL *Node = DevicePathOrig;
 
+      //Check to make sure we haven't already added mac address
+      while (!IsDevicePathEnd (Node)) {
+        if ((DevicePathType (Node) == MESSAGING_DEVICE_PATH) &&
+            (DevicePathSubType (Node) == MSG_MAC_ADDR_DP)) {
+          MacPresent = TRUE;
+          break;
+        }
+        Node = NextDevicePathNode (Node);
+      }
 
+      if (!MacPresent) {
+        EFI_DEVICE_PATH_PROTOCOL *NewPath;
+        NewPath = AppendDevicePath (DevicePathOrig, (EFI_DEVICE_PATH_PROTOCOL *)DevicePath);
+        if (NewPath != NULL) {
+          Status = gBS->UninstallMultipleProtocolInterfaces (
+                          ControllerHandle,
+                          &gEfiDevicePathProtocolGuid,
+                          DevicePathOrig,
+                          NULL);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "%a: Failed to uninstall device path (%r)\r\n", __FUNCTION__, Status));
+          } else {
+            Status = gBS->InstallMultipleProtocolInterfaces (
+                            &ControllerHandle,
+                            &gEfiDevicePathProtocolGuid, NewPath,
+                            NULL
+                            );
+            if (EFI_ERROR (Status)) {
+              DEBUG ((DEBUG_ERROR, "%a: Failed to install device path (%r)\r\n", __FUNCTION__, Status));
+            }
+          }
+        } else {
+          DEBUG ((DEBUG_ERROR, "%a: Failed to append device path\r\n", __FUNCTION__));
+        }
+      }
+    }
 
     Snp->PhyDriver.ControllerHandle = ControllerHandle;
     ResetGpioProp = (CONST UINT32 *)fdt_getprop (
