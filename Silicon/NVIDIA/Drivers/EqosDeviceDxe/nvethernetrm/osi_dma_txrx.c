@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,6 +24,7 @@
 #include "osi_dma_local.h"
 #include <osi_dma_txrx.h>
 
+#include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DmaLib.h>
 #include <Library/IoLib.h>
@@ -699,6 +700,9 @@ void osi_hw_transmit(struct osi_dma_priv_data *osi, unsigned int chan)
 		/* Will not hit this case */
 		return;
 	}
+
+	//Make sure descriptors are updated before starting DMA again
+	MemoryFence ();
 
 	ops->update_tx_tailptr(osi->base, chan, tailptr);
 	tx_ring->cur_tx_idx = entry;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,6 +21,7 @@
  */
 
 #include "osd.h"
+#include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NetLib.h>
@@ -133,6 +134,10 @@ void osd_receive_packet(void *priv, void *rxring, unsigned int chan,
 		osi_rx_dma_desc_init(rx_swcx, rx_desc, 0);
 		INCR_RX_DESC_INDEX(rx_ring->refill_idx, 1U);
 	}
+
+	//Make sure descriptors are updated before starting DMA again
+	MemoryFence ();
+
 	osi_update_rx_tailptr(osi_dma, rx_ring, 0);
 }
 
