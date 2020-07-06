@@ -100,8 +100,6 @@ DeviceDiscoveryNotify (
   EFI_SIMPLE_NETWORK_PROTOCOL      *SnpProtocol;
   EFI_SIMPLE_NETWORK_MODE          *SnpMode;
   SIMPLE_NETWORK_DEVICE_PATH       *DevicePath;
-  UINTN                            DescriptorSize;
-  UINTN                            BufferSize;
   CONST UINT32                     *ResetGpioProp;
   NON_DISCOVERABLE_DEVICE          *Device;
   CONST CHAR8                      *NodeName;
@@ -138,73 +136,6 @@ DeviceDiscoveryNotify (
     } else {
       //40-bit address
       Snp->MaxAddress = BIT41 - 1;
-    }
-
-    // Size for transmit and receive buffer
-    BufferSize = ETH_BUFSIZE;
-
-    //DMA TxdescRing allocate buffer and map
-    DescriptorSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (sizeof (DESIGNWARE_HW_DESCRIPTOR)*CONFIG_TX_DESCR_NUM));
-    Status = DmaAllocateBuffer (EfiBootServicesData,
-                                DescriptorSize, (VOID *)&Snp->MacDriver.TxdescRing);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a () for TxdescRing: %r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    Status = DmaMap (MapOperationBusMasterCommonBuffer, Snp->MacDriver.TxdescRing,
-               &DescriptorSize, &Snp->MacDriver.TxdescRingMap.AddrMap, &Snp->MacDriver.TxdescRingMap.Mapping);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a () for TxdescRing: %r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    // DMA RxdescRing allocate buffer and map
-    DescriptorSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (sizeof (DESIGNWARE_HW_DESCRIPTOR)*CONFIG_RX_DESCR_NUM));
-    Status = DmaAllocateBuffer (EfiBootServicesData,
-                                DescriptorSize, (VOID *)&Snp->MacDriver.RxdescRing);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a () for RxdescRing: %r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    Status = DmaMap (MapOperationBusMasterCommonBuffer, Snp->MacDriver.RxdescRing,
-               &DescriptorSize, &Snp->MacDriver.RxdescRingMap.AddrMap, &Snp->MacDriver.RxdescRingMap.Mapping);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a () for RxdescRingMap: %r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    //DMA mapping for receive buffer
-    DescriptorSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (RX_TOTAL_BUFSIZE));
-    Status = DmaAllocateBuffer (EfiBootServicesData,
-                                DescriptorSize, (VOID *)&Snp->MacDriver.RxBuffer);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a () for RxBuffer: %r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    Status = DmaMap (MapOperationBusMasterCommonBuffer, Snp->MacDriver.RxBuffer,
-               &DescriptorSize, &Snp->MacDriver.RxBufferRingMap.AddrMap, &Snp->MacDriver.RxBufferRingMap.Mapping);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a () for RxBufferRingMap: %r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    //DMA mapping for receive buffer
-    DescriptorSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (TX_TOTAL_BUFSIZE));
-    Status = DmaAllocateBuffer (EfiBootServicesData,
-                                DescriptorSize, (VOID *)&Snp->MacDriver.TxCopyBuffer);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a () for TxCopyBuffer: %r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    Status = DmaMap (MapOperationBusMasterCommonBuffer, Snp->MacDriver.TxCopyBuffer,
-               &DescriptorSize, &Snp->MacDriver.TxCopyBufferRingMap.AddrMap, &Snp->MacDriver.TxCopyBufferRingMap.Mapping);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a () for TxCopyBufferRingMap: %r\n", __FUNCTION__, Status));
-      return Status;
     }
 
     DevicePath = (SIMPLE_NETWORK_DEVICE_PATH*)AllocateCopyPool (sizeof (SIMPLE_NETWORK_DEVICE_PATH), &PathTemplate);
@@ -333,6 +264,8 @@ DeviceDiscoveryNotify (
     CopyMem (&DevicePath->MacAddrDP.MacAddress, &Snp->Snp.Mode->CurrentAddress, NET_ETHER_ADDR_LEN);
     DevicePath->MacAddrDP.IfType = Snp->Snp.Mode->IfType;
 
+
+
     Snp->PhyDriver.ControllerHandle = ControllerHandle;
     ResetGpioProp = (CONST UINT32 *)fdt_getprop (
                                          DeviceTreeNode->DeviceTreeBase,
@@ -422,6 +355,7 @@ DeviceDiscoveryNotify (
       DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\n"));
       return EFI_DEVICE_ERROR;
     }
+
 
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &ControllerHandle,

@@ -438,27 +438,8 @@ typedef PACKED struct {
 
 #define TDES_3_WB_OWN                                            BIT31
 
-typedef struct {
-  EFI_PHYSICAL_ADDRESS        AddrMap;
-  void                        *Mapping;
-} MAP_INFO;
 
 typedef struct {
-  DESIGNWARE_HW_DESCRIPTOR    *TxdescRing;
-  DESIGNWARE_HW_DESCRIPTOR    *RxdescRing;
-  CHAR8                       *TxBuffers[CONFIG_TX_DESCR_NUM];
-  CHAR8                       *TxCopyBuffer;
-  CHAR8                       *RxBuffer;
-  MAP_INFO                    TxdescRingMap;
-  MAP_INFO                    RxdescRingMap;
-  MAP_INFO                    TxBufferRingMap[CONFIG_TX_DESCR_NUM];
-  MAP_INFO                    TxCopyBufferRingMap;
-  MAP_INFO                    RxBufferRingMap;
-  UINT32                      TxCurrentDescriptorNum;
-  UINT32                      TxNextDescriptorNum;
-  UINT32                      TxRecycledBufferNum;
-  UINT32                      RxCurrentDescriptorNum;
-  UINT32                      RxNextDescriptorNum;
   struct osi_core_priv_data   *osi_core;
   struct osi_dma_priv_data    *osi_dma;
   struct osi_hw_features      hw_feat;
@@ -493,33 +474,6 @@ EmacDxeInitialization (
 
 EFI_STATUS
 EFIAPI
-EmacDmaInit (
-  IN  EMAC_DRIVER             *EmacDriver,
-  IN  UINTN                   MacBaseAddress
-  );
-
-EFI_STATUS
-EFIAPI
-EmacSetupTxdesc (
-  IN  EMAC_DRIVER             *EmacDriver,
-  IN  UINTN                   MacBaseAddress
- );
-
-EFI_STATUS
-EFIAPI
-EmacSetupRxdesc (
-  IN  EMAC_DRIVER             *EmacDriver,
-  IN  UINTN                   MacBaseAddress
-  );
-
-VOID
-EFIAPI
-EmacStartTransmission (
-  IN  UINTN                   MacBaseAddress
-  );
-
-EFI_STATUS
-EFIAPI
 EmacRxFilters (
   IN  UINT32                  ReceiveFilterSetting,
   IN  BOOLEAN                 Reset,
@@ -545,14 +499,6 @@ VOID
 EFIAPI
 EmacStopTxRx (
   IN  EMAC_DRIVER             *MacDriver
-  );
-
-EFI_STATUS
-EFIAPI
-EmacDmaResume (
-  IN  EMAC_DRIVER   *EmacDriver,
-  IN  UINTN   MacBaseAddress,
-  IN  BOOLEAN Transmit
   );
 
 VOID
