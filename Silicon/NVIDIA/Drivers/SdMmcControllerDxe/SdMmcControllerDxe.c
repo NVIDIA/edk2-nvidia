@@ -2,7 +2,7 @@
 
   SD MMC Controller Driver
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -157,6 +157,8 @@ DeviceDiscoveryNotify (
   CONST CHAR8               *ClockName;
   REGULATOR_INFO            RegulatorInfo;
   UINT32                    ClockId;
+  CONST UINT32              *ClockIds = NULL;
+  INT32                     ClocksLength;
 
   switch (Phase) {
   case DeviceDiscoveryDriverStart:
@@ -187,32 +189,37 @@ DeviceDiscoveryNotify (
       return EFI_UNSUPPORTED;
     }
 
-    ClockName = SDHCI_CLOCK_NAME;
-    Status = DeviceDiscoveryGetClockId (ControllerHandle, ClockName, &ClockId);
-    if (EFI_ERROR (Status)) {
-      ClockName = SDHCI_CLOCK_OLD_NAME;
-    }
-
-    Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, SD_MMC_MAX_CLOCK);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    //Update base clock in capabilities register
-    Status = DeviceDiscoveryGetClockFreq (ControllerHandle, ClockName, &Rate);
-    if (!EFI_ERROR (Status)) {
-      if (Rate > SD_MMC_MAX_CLOCK) {
-        DEBUG ((EFI_D_ERROR, "%a: Clock rate %llu out of range for SDHCI\r\n",__FUNCTION__,Rate));
-        return EFI_DEVICE_ERROR;
+    ClockIds = (CONST UINT32*)fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
+                                           "clocks", &ClocksLength);
+    if ((ClockIds != NULL) &&
+        (ClocksLength != 0)) {
+      ClockName = SDHCI_CLOCK_NAME;
+      Status = DeviceDiscoveryGetClockId (ControllerHandle, ClockName, &ClockId);
+      if (EFI_ERROR (Status)) {
+        ClockName = SDHCI_CLOCK_OLD_NAME;
       }
-      Rate = Rate / 1000000;
-      MmioBitFieldWrite32 (
-        BaseAddress + SDHCI_TEGRA_VENDOR_CLOCK_CTRL,
-        SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_START,
-        SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_END,
-        Rate
-        );
+
+      Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, SD_MMC_MAX_CLOCK);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
+        return Status;
+      }
+
+      //Update base clock in capabilities register
+      Status = DeviceDiscoveryGetClockFreq (ControllerHandle, ClockName, &Rate);
+      if (!EFI_ERROR (Status)) {
+        if (Rate > SD_MMC_MAX_CLOCK) {
+          DEBUG ((EFI_D_ERROR, "%a: Clock rate %llu out of range for SDHCI\r\n",__FUNCTION__,Rate));
+          return EFI_DEVICE_ERROR;
+        }
+        Rate = Rate / 1000000;
+        MmioBitFieldWrite32 (
+          BaseAddress + SDHCI_TEGRA_VENDOR_CLOCK_CTRL,
+          SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_START,
+          SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_END,
+          Rate
+          );
+      }
     }
     //DISABLE DDR50
     if (PcdGetBool(PcdSdhciDDR50Disable)) {
