@@ -488,6 +488,10 @@ DeassertAllResetNodes (
   EFI_STATUS               Status;
   UINTN                    Index;
 
+  if (This->Resets == 0) {
+    return EFI_SUCCESS;
+  }
+
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
     return EFI_NOT_READY;
@@ -520,6 +524,10 @@ AssertAllResetNodes (
   EFI_STATUS               Status;
   UINTN                    Index;
 
+  if (This->Resets == 0) {
+    return EFI_SUCCESS;
+  }
+
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
     return EFI_NOT_READY;
@@ -551,6 +559,10 @@ ModuleResetAllResetNodes (
   NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
   EFI_STATUS               Status;
   UINTN                    Index;
+
+  if (This->Resets == 0) {
+    return EFI_SUCCESS;
+  }
 
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
@@ -585,6 +597,10 @@ DeassertResetNodes (
   NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
   EFI_STATUS               Status;
 
+  if (This->Resets == 0) {
+    return EFI_SUCCESS;
+  }
+
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
     return EFI_NOT_READY;
@@ -612,6 +628,10 @@ AssertResetNodes (
   NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
   EFI_STATUS               Status;
 
+  if (This->Resets == 0) {
+    return EFI_SUCCESS;
+  }
+
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
     return EFI_NOT_READY;
@@ -638,6 +658,10 @@ ModuleResetNodes (
 {
   NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
   EFI_STATUS               Status;
+
+  if (This->Resets == 0) {
+    return EFI_SUCCESS;
+  }
 
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
@@ -759,6 +783,10 @@ EnableAllClockNodes (
   EFI_STATUS                    Status;
   UINTN                         Index;
   UINT32                        ClockId;
+
+  if (This->Clocks == 0) {
+    return EFI_SUCCESS;
+  }
 
   Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&ClockProtocol);
   if (EFI_ERROR (Status)) {
@@ -912,6 +940,10 @@ DeassertPgNodes (
   NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
   EFI_STATUS               Status;
 
+  if (This->PowerGateId == MAX_UINT32) {
+    return EFI_SUCCESS;
+  }
+
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
     return EFI_NOT_READY;
@@ -938,6 +970,10 @@ AssertPgNodes (
 {
   NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
   EFI_STATUS               Status;
+
+  if (This->PowerGateId == MAX_UINT32) {
+    return EFI_SUCCESS;
+  }
 
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
