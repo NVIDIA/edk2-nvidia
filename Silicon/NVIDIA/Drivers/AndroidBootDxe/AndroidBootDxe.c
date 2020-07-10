@@ -241,8 +241,10 @@ Exit:
 
   @param[in]  BlockIo             BlockIo protocol interface which is already located.
   @param[in]  DiskIo              DiskIo protocol interface which is already located.
-  @param[out] IntDataStructure    A pointer to the internal data structure to retain
+  @param[out] ImgData             A pointer to the internal data structure to retain
                                   the important size data of kernel and initrd images
+                                  contained in the Android Boot image header.
+  @param[out] KernelArgs          A pointer to unicode array that stores kernel args
                                   contained in the Android Boot image header.
 
   @retval EFI_SUCCESS             Operation successful.
@@ -252,7 +254,8 @@ EFI_STATUS
 AndroidBootGetVerify (
   IN  EFI_BLOCK_IO_PROTOCOL       *BlockIo,
   IN  EFI_DISK_IO_PROTOCOL        *DiskIo,
-  OUT ANDROID_BOOT_DATA           *ImgData OPTIONAL
+  OUT ANDROID_BOOT_DATA           *ImgData OPTIONAL,
+  OUT CHAR16                      *KernelArgs OPTIONAL
   )
 {
   EFI_STATUS                      Status;
@@ -344,6 +347,10 @@ AndroidBootGetVerify (
     ImgData->PageSize    = Header->PageSize;
   }
 
+  if (KernelArgs != NULL) {
+    AsciiStrToUnicodeStrS (Header->KernelArgs, KernelArgs, ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
+  }
+
   Status = EFI_SUCCESS;
 
 Exit:
@@ -360,7 +367,7 @@ Exit:
 
   @param[in]  BlockIo             BlockIo protocol interface which is already located.
   @param[in]  DiskIo              DiskIo protocol interface which is already located.
-  @param[in]  IntDataStruct       A pointer to the internal data structure to retain
+  @param[in]  ImgData             A pointer to the internal data structure to retain
                                   the important size data of kernel and initrd images
                                   contained in the Android Boot image header.
   @param[in]  Buffer              The memory buffer to transfer the file to.
@@ -523,7 +530,7 @@ AndroidBootDxeLoadFile (
   }
 
   // Verify the image header and set the internal data structure ImgData
-  Status = AndroidBootGetVerify (Private->BlockIo, Private->DiskIo, &ImgData);
+  Status = AndroidBootGetVerify (Private->BlockIo, Private->DiskIo, &ImgData, NULL);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -656,7 +663,7 @@ AndroidBootDriverBindingSupported (
   }
 
   // Examine if the Android Boot image can be found
-  Status = AndroidBootGetVerify (BlockIo, DiskIo, NULL);
+  Status = AndroidBootGetVerify (BlockIo, DiskIo, NULL, NULL);
   if (!EFI_ERROR (Status)) {
     DEBUG ((DEBUG_INFO, "%a: AndroidBoot image found\n", __FUNCTION__));
   }
@@ -740,6 +747,7 @@ AndroidBootDriverBindingStart (
   EFI_DEVICE_PATH_PROTOCOL        *Node;
   ANDROID_BOOT_PRIVATE_DATA       *Private;
   UINT32                          *Id;
+  CHAR16                          *KernelArgs;
 
   // BindingSupported() filters out the unsupported attempts and the multiple attempts
   // from a successful ControllerHandle such that BindingStart() runs only once
@@ -747,6 +755,7 @@ AndroidBootDriverBindingStart (
   Private = NULL;
   BlockIo = NULL;
   ParentDevicePath = NULL;
+  KernelArgs = NULL;
 
   // Get Parent's device path to create a child node and append URI node
   Status = gBS->HandleProtocol (ControllerHandle,
@@ -784,8 +793,16 @@ AndroidBootDriverBindingStart (
     DEBUG ((DEBUG_ERROR, "%a unable to open DiskIo protocol %r\n", __FUNCTION__, Status));
     return Status;
   }
+
+  // Allocate KernelArgs
+  KernelArgs = AllocateZeroPool (sizeof (CHAR16) * ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
+  if (KernelArgs == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
+
   // Examine if the Android Boot Image can be found
-  Status = AndroidBootGetVerify (BlockIo, DiskIo, NULL);
+  Status = AndroidBootGetVerify (BlockIo, DiskIo, NULL, KernelArgs);
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
@@ -816,6 +833,7 @@ AndroidBootDriverBindingStart (
   Private->AndroidBootDevicePath = AndroidBootDevicePath;
   Private->ControllerHandle = ControllerHandle;
   Private->ProtocolsInstalled = FALSE;
+  Private->KernelArgs = KernelArgs;
   CopyMem (&Private->LoadFile, &mAndroidBootDxeLoadFile, sizeof (Private->LoadFile));
 
   // Install LoadFile and AndroidBootDevicePath protocols on child, AndroidBootHandle
@@ -823,6 +841,8 @@ AndroidBootDriverBindingStart (
                   &Private->AndroidBootHandle,
                   &gEfiLoadFileProtocolGuid,
                   &Private->LoadFile,
+                  &gNVIDIALoadfileKernelArgsGuid,
+                  Private->KernelArgs,
                   &gEfiDevicePathProtocolGuid,
                   Private->AndroidBootDevicePath,
                   NULL
@@ -891,10 +911,15 @@ Exit:
                         Private->AndroidBootHandle,
                         &gEfiLoadFileProtocolGuid,
                         &Private->LoadFile,
+                        &gNVIDIALoadfileKernelArgsGuid,
+                        Private->KernelArgs,
                         &gEfiDevicePathProtocolGuid,
                         Private->AndroidBootDevicePath,
                         NULL
                         );
+      }
+      if (Private->KernelArgs != NULL) {
+        FreePool (Private->KernelArgs);
       }
       FreePool (Private);
     }
@@ -1009,10 +1034,15 @@ AndroidBootDriverBindingStop (
                   Private->AndroidBootHandle,
                   &gEfiLoadFileProtocolGuid,
                   &Private->LoadFile,
+                  &gNVIDIALoadfileKernelArgsGuid,
+                  Private->KernelArgs,
                   &gEfiDevicePathProtocolGuid,
                   Private->AndroidBootDevicePath,
                   NULL
                   );
+  if (Private->KernelArgs != NULL) {
+    FreePool (Private->KernelArgs);
+  }
   FreePool (Private->AndroidBootDevicePath);
   FreePool (Private);
 
@@ -1190,6 +1220,8 @@ AndroidBootDxeDriverEntryPoint (
                         &LoadFileHandle,
                         &gEfiLoadFileProtocolGuid,
                         &mRamloadLoadFile,
+                        &gNVIDIALoadfileKernelArgsGuid,
+                        NULL,
                         &gEfiDevicePathProtocolGuid,
                         &mLoadFileDevicePath,
                         NULL);

@@ -26,6 +26,7 @@
   DtPlatformDtbLoaderLib
   UefiBootManagerLib
   UefiDriverEntryPoint
+  TegraPlatformInfoLib
   FdtLib
 
 [Protocols]
@@ -37,6 +38,7 @@
   gEfiAcpiTableGuid
   gNVIDIARamloadKernelGuid
   gNVIDIABmBootOptionGuid
+  gNVIDIALoadfileKernelArgsGuid
 
 [Depex]
   TRUE

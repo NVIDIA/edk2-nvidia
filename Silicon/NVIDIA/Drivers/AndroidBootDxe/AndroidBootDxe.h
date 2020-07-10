@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver's private data structure and interfaces declaration
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro.
   This program and the accompanying materials
@@ -61,6 +61,7 @@ typedef struct {
   EFI_DISK_IO_PROTOCOL              *DiskIo;
   EFI_DEVICE_PATH_PROTOCOL          *ParentDevicePath;
   EFI_DEVICE_PATH_PROTOCOL          *AndroidBootDevicePath;
+  UINT16                            *KernelArgs;
 
   UINT32                            Id;
   BOOLEAN                           ProtocolsInstalled;
