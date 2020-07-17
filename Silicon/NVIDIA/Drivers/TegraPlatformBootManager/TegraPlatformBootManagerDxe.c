@@ -90,15 +90,93 @@ DuplicateLoadOption (
 }
 
 /*
-  Get the kernel command line and its length to be patched in load option.
+  Get the kernel command line from DT.
 
-  @param[out] DestinationLoadOption Destination boot option buffer.
+  @param[out] OutCmdLine Kernel command line from DTB.
 
-  @param[out] SourceLoadOption      Source boot option buffer.
+  @retval EFI_SUCCESS    Command line retrieved correctly.
 
-  @retval EFI_SUCCESS              Command line and its length generated correctly.
+  @retval Others         Failure.
+*/
+STATIC
+EFI_STATUS
+GetDtbCommandLine (
+  OUT CHAR16 **OutCmdLine
+  )
+{
+  EFI_STATUS          Status;
+  VOID                *DeviceTreeBase;
+  UINTN               DeviceTreeSize;
+  INT32               NodeOffset;
+  CONST CHAR8         *CommandLineEntry;
+  INT32               CommandLineLength;
+  INT32               CommandLineBytes;
+  CHAR16              *CmdLineDtb;
+  BOOLEAN             DTBoot;
+  VOID                *AcpiBase;
 
-  @retval EFI_OUT_OF_RESOURCES     Memory allocation failed.
+  DTBoot = FALSE;
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (EFI_ERROR (Status)) {
+    DTBoot = TRUE;
+  }
+
+  DeviceTreeBase = NULL;
+  CmdLineDtb = NULL;
+  if (DTBoot) {
+    Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DeviceTreeBase);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  } else {
+    Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  }
+
+  NodeOffset = fdt_path_offset (DeviceTreeBase, "/chosen");
+  if (NodeOffset < 0) {
+    return EFI_NOT_FOUND;
+  }
+
+  CommandLineEntry = NULL;
+  CommandLineEntry = (CONST CHAR8*)fdt_getprop (DeviceTreeBase, NodeOffset, "bootargs", &CommandLineLength);
+  if (NULL == CommandLineEntry) {
+    return EFI_NOT_FOUND;
+  }
+
+  CommandLineBytes = CommandLineLength * sizeof (CHAR16);
+
+  Status = gBS->AllocatePool (EfiBootServicesData,
+                              CommandLineBytes,
+                              (VOID **)&CmdLineDtb);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  gBS->SetMem (CmdLineDtb, CommandLineBytes, 0);
+
+  AsciiStrToUnicodeStrS (CommandLineEntry, CmdLineDtb, CommandLineBytes);
+
+  DEBUG ((DEBUG_INFO, "%a: DTB Kernel Command Line: %s\n", __FUNCTION__, CmdLineDtb));
+
+  *OutCmdLine = CmdLineDtb;
+  return EFI_SUCCESS;
+}
+
+/*
+  Get the final kernel command line and its length to be patched in load option.
+
+  @param[in]  InCmdLine  Input command line.
+
+  @param[out] OutCmdLine Output command line.
+
+  @param[out] OutCmdLen  Output command line length.
+
+  @retval EFI_SUCCESS    Command line and its length generated correctly.
+
+  @retval Others         Failure.
 */
 STATIC
 EFI_STATUS
@@ -109,123 +187,42 @@ GetPlatformCommandLine (
   )
 {
   EFI_STATUS          Status;
-  VOID                *DeviceTreeBase;
-  UINTN               DeviceTreeSize;
-  INT32               NodeOffset;
-  CONST CHAR8         *CommandLineEntry;
-  INT32               CommandLineLength;
-  INT32               CommandLineBytes;
-  CHAR16              *CommandLineDT;
   CHAR16              *CommandLine;
+  UINTN               CommandLineBytes;
   UINTN               FormattedCommandLineLength;
   CHAR16              *CommandLineOptionStart;
   CHAR16              *CommandLineOptionEnd;
   UINTN               CommandLineOptionLength;
   UINTN               CommandLineOptionOffset;
-  BOOLEAN             DTBoot;
   VOID                *AcpiBase;
   UINT32              Count;
-  UINT16              *CmdLineDtb;
-  TEGRA_PLATFORM_TYPE PlatformType;
-
-  if (InCmdLine != NULL &&
-      StrLen (InCmdLine) != 0) {
-    DEBUG ((DEBUG_INFO, "%a: Image Kernel Command Line: %s\n", __FUNCTION__, InCmdLine));
-  }
-
-  DTBoot = FALSE;
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (EFI_ERROR (Status)) {
-    DTBoot = TRUE;
-  }
-
-  PlatformType = TegraGetPlatform();
-  if (PlatformType != TEGRA_PLATFORM_SILICON ||
-      InCmdLine == NULL ||
-      StrLen (InCmdLine) == 0) {
-    DeviceTreeBase = NULL;
-    CmdLineDtb = NULL;
-    if (DTBoot) {
-      Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DeviceTreeBase);
-      if (EFI_ERROR (Status)) {
-        return Status;
-      }
-    } else {
-      Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
-      if (EFI_ERROR (Status)) {
-        return Status;
-      }
-    }
-
-    NodeOffset = fdt_path_offset (DeviceTreeBase, "/chosen");
-    if (NodeOffset < 0) {
-      return EFI_NOT_FOUND;
-    }
-
-    CommandLineEntry = NULL;
-    CommandLineEntry = (CONST CHAR8*)fdt_getprop (DeviceTreeBase, NodeOffset, "bootargs", &CommandLineLength);
-    if (NULL == CommandLineEntry) {
-      return EFI_NOT_FOUND;
-    }
-
-    CommandLineBytes = CommandLineLength * sizeof (CHAR16);
-
-    Status = gBS->AllocatePool (EfiBootServicesData,
-                                CommandLineBytes,
-                                (VOID **)&CmdLineDtb);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-
-    gBS->SetMem (CmdLineDtb, CommandLineBytes, 0);
-
-    AsciiStrToUnicodeStrS (CommandLineEntry, CmdLineDtb, CommandLineBytes);
-
-    DEBUG ((DEBUG_INFO, "%a: DTB Kernel Command Line: %s\n", __FUNCTION__, CmdLineDtb));
-
-    InCmdLine = CmdLineDtb;
-  }
 
   CommandLineBytes = StrSize (InCmdLine) + sizeof (EFI_GUID);
-
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (EFI_ERROR (Status)) {
-    CommandLineDT = NULL;
-    Status = gBS->AllocatePool (EfiBootServicesData,
-                                CommandLineBytes,
-                                (VOID **)&CommandLineDT);
-    if (EFI_ERROR (Status)) {
-      gBS->FreePool (CmdLineDtb);
-      return Status;
-    }
-
-    gBS->SetMem (CommandLineDT, CommandLineBytes, 0);
-
-    gBS->CopyMem (CommandLineDT, InCmdLine, StrSize (InCmdLine));
-    gBS->CopyMem ((CHAR8 *)CommandLineDT + StrSize (InCmdLine),
-                  &gNVIDIABmBootOptionGuid, sizeof (EFI_GUID));
-
-    DEBUG ((DEBUG_INFO, "%a: DT Boot Kernel Command Line: %s\n", __FUNCTION__, CommandLineDT));
-
-    *OutCmdLine = CommandLineDT;
-    *OutCmdLen = CommandLineBytes;
-
-    gBS->FreePool (CmdLineDtb);
-    return EFI_SUCCESS;
-  }
 
   CommandLine = NULL;
   Status = gBS->AllocatePool (EfiBootServicesData,
                               CommandLineBytes,
                               (VOID **)&CommandLine);
   if (EFI_ERROR (Status)) {
-    gBS->FreePool (CmdLineDtb);
-    return Status;;
+    return Status;
   }
 
   gBS->SetMem (CommandLine, CommandLineBytes, 0);
 
   gBS->CopyMem (CommandLine, InCmdLine, StrSize (InCmdLine));
+
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (EFI_ERROR (Status)) {
+    gBS->CopyMem ((CHAR8 *)CommandLine + StrSize (InCmdLine),
+                  &gNVIDIABmBootOptionGuid, sizeof (EFI_GUID));
+
+    DEBUG ((DEBUG_INFO, "%a: DT Boot Kernel Command Line: %s\n", __FUNCTION__, CommandLine));
+
+    *OutCmdLine = CommandLine;
+    *OutCmdLen = CommandLineBytes;
+
+    return EFI_SUCCESS;
+  }
 
   for (Count = 0; Count < sizeof (KernelCommandRemove)/sizeof (KernelCommandRemove[0]); Count++) {
     FormattedCommandLineLength = 0;
@@ -261,7 +258,6 @@ GetPlatformCommandLine (
   *OutCmdLine = CommandLine;
   *OutCmdLen = FormattedCommandLineLength + sizeof (EFI_GUID);
 
-  gBS->FreePool (CmdLineDtb);
   return EFI_SUCCESS;
 }
 
@@ -303,6 +299,9 @@ RefreshAutoEnumeratedBootOptions (
   )
 {
   EFI_STATUS                   Status;
+  CHAR16                       *ImgKernelArgs;
+  CHAR16                       *DtbKernelArgs;
+  CHAR16                       *InputKernelArgs;
   CHAR16                       *CmdLine;
   UINTN                        CmdLen;
   EFI_HANDLE                   *Handles;
@@ -321,9 +320,10 @@ RefreshAutoEnumeratedBootOptions (
     return EFI_INVALID_PARAMETER;
   }
 
-  CmdLine = NULL;
+  ImgKernelArgs = NULL;
+  DtbKernelArgs = NULL;
   Handles = NULL;
-
+  CmdLine = NULL;
   CmdLen = 0;
 
   HandleCount = 0;
@@ -382,15 +382,30 @@ RefreshAutoEnumeratedBootOptions (
         if (!ValidBootMedia) {
           continue;
         }
-        gBS->HandleProtocol (Handles[Index],
-                             &gNVIDIALoadfileKernelArgsGuid,
-                             (VOID **)&CmdLine);
-        if (EFI_ERROR (Status)) {
-          goto Error;
-        }
-        CmdLen = StrSize (CmdLine);
 
-        Status = GetPlatformCommandLine (CmdLine, &CmdLine, &CmdLen);
+        if (TegraGetPlatform() == TEGRA_PLATFORM_SILICON) {
+          gBS->HandleProtocol (Handles[Index],
+                               &gNVIDIALoadfileKernelArgsGuid,
+                               (VOID **)&ImgKernelArgs);
+          if (EFI_ERROR (Status)) {
+            goto Error;
+          }
+        }
+
+        if (ImgKernelArgs != NULL &&
+            StrLen (ImgKernelArgs) != 0) {
+          DEBUG ((DEBUG_INFO, "%a: Image Kernel Command Line: %s\n", __FUNCTION__, ImgKernelArgs));
+          InputKernelArgs = ImgKernelArgs;
+        } else {
+          Status = GetDtbCommandLine (&DtbKernelArgs);
+          if (EFI_ERROR (Status)) {
+            goto Error;
+          }
+
+          InputKernelArgs = DtbKernelArgs;
+        }
+
+        Status = GetPlatformCommandLine (InputKernelArgs, &CmdLine, &CmdLen);
         if (EFI_ERROR (Status)) {
           goto Error;
         }
@@ -409,6 +424,9 @@ RefreshAutoEnumeratedBootOptions (
   }
 
 Error:
+  if (DtbKernelArgs != NULL) {
+    gBS->FreePool (DtbKernelArgs);
+  }
   if (CmdLine != NULL) {
     gBS->FreePool (CmdLine);
   }

@@ -918,10 +918,10 @@ Exit:
                         NULL
                         );
       }
-      if (Private->KernelArgs != NULL) {
-        FreePool (Private->KernelArgs);
-      }
       FreePool (Private);
+    }
+    if (KernelArgs != NULL) {
+      FreePool (KernelArgs);
     }
     if (AndroidBootDevicePath != NULL) {
       FreePool (AndroidBootDevicePath);

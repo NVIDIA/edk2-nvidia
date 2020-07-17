@@ -35,7 +35,7 @@ SetBootOrder (
   UINTN                        Index;
   UINTN                        SelectCnt;
   UINTN                        RemainCnt;
-  UINTN                        OptionalDataLength;
+  UINTN                        OptionalDataSize;
 
   VariableData = FALSE;
   VariableSize = sizeof (BOOLEAN);
@@ -68,13 +68,13 @@ SetBootOrder (
       continue;
     }
 
-    OptionalDataLength = 0;
+    OptionalDataSize = 0;
     if (Option.OptionalData != NULL) {
-      OptionalDataLength = StrLen ((CONST CHAR16 *)Option.OptionalData);
+      OptionalDataSize = StrSize ((CONST CHAR16 *)Option.OptionalData);
     }
     if (Option.OptionalData == NULL ||
-        Option.OptionalDataSize != ((OptionalDataLength + 1) * sizeof (CHAR16)) + sizeof (EFI_GUID) ||
-        !CompareGuid ((EFI_GUID *)((UINT8 *)Option.OptionalData + ((OptionalDataLength + 1) * sizeof (CHAR16))),
+        Option.OptionalDataSize != OptionalDataSize + sizeof (EFI_GUID) ||
+        !CompareGuid ((EFI_GUID *)((UINT8 *)Option.OptionalData + OptionalDataSize),
                       &gNVIDIABmBootOptionGuid)) {
       RemainBoots[RemainCnt++] = BootOrder[Index];
     } else {

@@ -61,7 +61,7 @@ typedef struct {
   EFI_DISK_IO_PROTOCOL              *DiskIo;
   EFI_DEVICE_PATH_PROTOCOL          *ParentDevicePath;
   EFI_DEVICE_PATH_PROTOCOL          *AndroidBootDevicePath;
-  UINT16                            *KernelArgs;
+  CHAR16                            *KernelArgs;
 
   UINT32                            Id;
   BOOLEAN                           ProtocolsInstalled;
