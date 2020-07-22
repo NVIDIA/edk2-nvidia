@@ -42,6 +42,7 @@
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
   gNVIDIATokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuidT194
   gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusT194Base
   gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusBase

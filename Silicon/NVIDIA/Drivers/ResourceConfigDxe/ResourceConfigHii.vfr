@@ -1,0 +1,85 @@
+/** @file
+*
+*  OEM Config formset.
+*
+*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+#include <Uefi/UefiMultiPhase.h>
+#include "ResourceConfigHii.h"
+
+formset
+  guid      = RESOURCE_CONFIG_FORMSET_GUID,
+  title     = STRING_TOKEN(STR_RESOURCE_CONFIG_TITLE),
+  help      = STRING_TOKEN(STR_RESOURCE_CONFIG_HELP),
+
+  efivarstore NvidiaPcieEnableVariable,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name  = EnablePcieInOS,
+    guid  = NVIDIA_TOKEN_SPACE_GUID;
+
+  efivarstore NvidiaPcieEnableInOsConfiguration,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS,  // EFI variable attributes
+    name  = PCIeInOsConfig,
+    guid  = NVIDIA_TOKEN_SPACE_GUID;
+
+  //
+  // Main form for NVIDIA Resource Configuration
+  //
+  form formid = RESOURCE_CONFIG_FORM_ID,
+    title = STRING_TOKEN(STR_RESOURCE_CONFIG_TITLE);
+
+    subtitle text = STRING_TOKEN(STR_NULL);
+
+    //
+    // Display Enable PCIe in OS
+    //
+    goto PCIE_CONFIGURATION_FORM_ID,
+        prompt = STRING_TOKEN(STR_PCIE_CONFIG_FORM_TITLE),
+        help   = STRING_TOKEN(STR_PCIE_CONFIG_FORM_HELP),
+        flags  = INTERACTIVE,
+        key    = KEY_ENABLE_PCIE_CONFIG;
+
+    //
+    // TODO... for more form ids
+    //
+  endform;
+
+
+  //
+  // Form for Enable PCIe in OS
+  //
+  form formid = PCIE_CONFIGURATION_FORM_ID,
+    title = STRING_TOKEN(STR_PCIE_CONFIG_FORM_TITLE);
+
+    subtitle text = STRING_TOKEN(STR_NULL);
+
+    //
+    // Display of Oneof: 'EnablePcieInOs'
+    //
+    suppressif ideqval PCIeInOsConfig.ConfigEnabled == 0;
+    oneof varid = EnablePcieInOS.Enabled,
+        questionid = KEY_ENABLE_PCIE_IN_OS_CONFIG,
+        prompt = STRING_TOKEN(STR_PCIE_IN_OS_PROMPT),
+        help   = STRING_TOKEN(STR_PCIE_IN_OS_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_DISABLED), value = PCIE_IN_OS_DISABLE, flags = DEFAULT;
+        option text = STRING_TOKEN(STR_ENABLED),  value = PCIE_IN_OS_ENABLE,  flags = 0;
+    endoneof;
+    endif;
+
+    suppressif ideqval PCIeInOsConfig.ConfigEnabled == 1;
+      grayoutif TRUE;
+        text
+            help   = STRING_TOKEN(STR_NO_OPTION_HELP),
+            text   = STRING_TOKEN(STR_NO_OPTION_PROMPT);
+      endif;
+    endif;
+
+  endform;
+
+endformset;

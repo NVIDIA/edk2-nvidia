@@ -99,6 +99,9 @@ Include
   #NVIDIA Loadfile Kernel Args
   gNVIDIALoadfileKernelArgsGuid = { 0x668d5e7e, 0x930a, 0x4b10, { 0xb6, 0xb2, 0xda, 0x0b, 0xfb, 0xe8, 0x2d, 0xfb } }
 
+  #NVIDIA Resource Config Formset
+  gNVIDIAResourceConfigFormsetGuid = { 0x685c0b6e, 0x11af, 0x47cf, { 0xa9, 0xef, 0x95, 0xac, 0x18, 0x68, 0x73, 0xc3 } }
+
 [Protocols]
   gNVIDIADeviceTreeCompatibilityProtocolGuid      = { 0x1e710608, 0x28a3, 0x4c0b, { 0x9b, 0xec, 0x1c, 0x75, 0x49, 0xa7, 0x0d, 0x90 } }
   gNVIDIADeviceTreeNodeProtocolGuid               = { 0x149670c5, 0xb07b, 0x407a, { 0xae, 0x57, 0x39, 0xd0, 0xca, 0x51, 0x37, 0x80 } }
@@ -238,9 +241,14 @@ Include
 
 #Tegra Use Production USB Fw
   gNVIDIATokenSpaceGuid.PcdTegraUseProdUsbFw|TRUE|BOOLEAN|0x00000027
-
 #Tegra CvmEeprom Bus Base
   gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusBase|0x0|UINT64|0x0000002A
 
 #Is SetVariable Supported at runtime
   gNVIDIATokenSpaceGuid.PcdRuntimeVariableServicesSupported|FALSE|BOOLEAN|0x00000032
+
+#Default to make PCIe entry void in ACPI table
+#Need two as the Platform Init Library is invoked prior to variable services being available
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|0x00|UINT8|0x0000002B
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiHii|0x00|UINT8|0x0000002C
+

@@ -21,4 +21,10 @@ typedef struct {
   UINT8 Enabled;
 } NvidiaPcieEnableVariable;
 
+//Volatile option to configure if PCIe option is exposed to Hii
+#define NVIDIA_PCIE_ENABLE_IN_OS_CONFIGURATION_NAME L"PCIeInOsConfig"
+typedef struct {
+  UINT8 ConfigEnabled;
+} NvidiaPcieEnableInOsConfiguration;
+
 #endif //__NVIDIA_CONFIGURATION_H__

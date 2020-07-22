@@ -13,6 +13,7 @@
 #include <T194/T194Definitions.h>
 #include <libfdt.h>
 
+
 /**
 
   Constructor for the library.
@@ -58,6 +59,9 @@ T194PlatformInitializationLibConstructor (
 
     // Set Floor Sweep CPUs PCD
     PcdSetBoolS(PcdFloorsweepCpus, TRUE);
+
+    // Allow PCIe enable in ACPI entry to be visible in Hii
+    PcdSet8S(PcdPcieEntryInAcpi, 0x1);
 
     // Set CvmEeprom Bus Base
     PcdSet64S (PcdTegraCvmEepromBusBase, FixedPcdGet64 (PcdTegraCvmEepromBusT194Base));

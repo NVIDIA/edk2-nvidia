@@ -133,3 +133,7 @@
   #
   INF Silicon/NVIDIA/Drivers/EqosDeviceDxe/EqosDeviceDxe.inf
 
+  #
+  # Custom HII Support
+  #
+  INF Silicon/NVIDIA/Drivers/ResourceConfigDxe/ResourceConfigDxe.inf

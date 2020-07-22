@@ -1,0 +1,30 @@
+/** @file
+*  Resource Configuration Dxe
+*
+*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2017, Linaro Limited. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+#ifndef __RESOURCE_CONFIG_HII_H__
+#define __RESOURCE_CONFIG_HII_H__
+
+#include <Guid/NVIDIATokenSpaceGuid.h>
+#include <NVIDIAConfiguration.h>
+
+#define RESOURCE_CONFIG_FORMSET_GUID  { 0x685c0b6e, 0x11af, 0x47cf, { 0xa9, 0xef, 0x95, 0xac, 0x18, 0x68, 0x73, 0xc3 } }
+
+#define RESOURCE_CONFIG_FORM_ID         0x0001
+#define PCIE_CONFIGURATION_FORM_ID      0x0002
+
+#define KEY_ENABLE_PCIE_CONFIG          0x0100
+#define KEY_ENABLE_PCIE_IN_OS           0x0101
+#define KEY_ENABLE_PCIE_IN_OS_CONFIG    0x0102
+
+
+#define PCIE_IN_OS_DISABLE              0x0
+#define PCIE_IN_OS_ENABLE               0x1
+
+#endif // __RESOURCE_CONFIG_HII_H__
