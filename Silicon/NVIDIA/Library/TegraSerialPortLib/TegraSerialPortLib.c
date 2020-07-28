@@ -45,7 +45,10 @@ UseCombinedUART (
 
   NodeOffset = fdt_path_offset ((VOID *)DTBBaseAddress, "/combined-uart");
   if (NodeOffset < 0) {
-    return FALSE;
+    NodeOffset = fdt_path_offset ((VOID *)DTBBaseAddress, "/tcu");
+    if (NodeOffset < 0) {
+      return FALSE;
+    }
   }
 
   Property = fdt_getprop ((VOID *)DTBBaseAddress, NodeOffset, "status", NULL);
