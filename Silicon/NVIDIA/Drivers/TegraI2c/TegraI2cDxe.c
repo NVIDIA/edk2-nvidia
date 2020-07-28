@@ -2,7 +2,7 @@
 
   Tegra I2c Driver
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -973,8 +973,8 @@ TegraI2CDriverBindingStart (
   }
 
   Private->ProtocolsInstalled = TRUE;
-  //For now only support 1 cvm eeprom on address 0x50 on controller 0
-  if (Private->ControllerId == 0) {
+  //For now only support 1 cvm eeprom on address 0x50
+  if (Private->BaseAddress == PcdGet64 (PcdTegraCvmEepromBusBase)) {
     Private->SlaveAddressArray[0] = 0x50;
     Private->NumberOfI2cDevices  = 1;
     Private->I2cDevices[0].DeviceGuid = &gNVIDIACvmEeprom;

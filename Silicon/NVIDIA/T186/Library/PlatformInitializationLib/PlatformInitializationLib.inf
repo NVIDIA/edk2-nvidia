@@ -33,3 +33,5 @@
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
   gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable
   gNVIDIATokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuidT186
+  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusT186Base
+  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusBase

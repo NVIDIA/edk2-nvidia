@@ -43,6 +43,8 @@
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus
   gNVIDIATokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuidT194
+  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusT194Base
+  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusBase
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase

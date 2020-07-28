@@ -188,6 +188,12 @@ Include
 # Tegra T194 System FMP Capsule GUID
   gNVIDIATokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuidT194|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}|VOID*|0x00000026
 
+# Tegra T186 Cvm Eeprom Bus Base
+  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusT186Base|0x0C250000|UINT64|0x00000028
+
+# Tegra T194 Cvm Eeprom Bus Base
+  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusT194Base|0x03160000|UINT64|0x00000029
+
 [PcdsDynamic.common]
 #Size of optional signing data header in boot.img partition.
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B
@@ -212,3 +218,6 @@ Include
 
 #Tegra Use Production USB Fw
   gNVIDIATokenSpaceGuid.PcdTegraUseProdUsbFw|TRUE|BOOLEAN|0x00000027
+
+#Tegra CvmEeprom Bus Base
+  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusBase|0x0|UINT64|0x0000002A

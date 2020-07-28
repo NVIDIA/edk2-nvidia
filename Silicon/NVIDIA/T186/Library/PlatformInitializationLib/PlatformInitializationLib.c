@@ -47,6 +47,9 @@ T186PlatformInitializationLibConstructor (
     // Set SDHCi SDR104 Disable PCD
     PcdSetBoolS(PcdSdhciSDR104Disable, TRUE);
 
+    // Set CvmEeprom Bus Base
+    PcdSet64S (PcdTegraCvmEepromBusBase, FixedPcdGet64 (PcdTegraCvmEepromBusT186Base));
+
     SystemFmpCapsuleImageTypeIdGuid = PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuidT186);
     GuidSize = sizeof (EFI_GUID);
     PcdSetPtrS (PcdSystemFmpCapsuleImageTypeIdGuid, &GuidSize, SystemFmpCapsuleImageTypeIdGuid);

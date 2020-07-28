@@ -98,6 +98,9 @@ T194PlatformInitializationLibConstructor (
       PcdSetBoolS(PcdDefaultDtPref, FALSE);
     }
 
+    // Set CvmEeprom Bus Base
+    PcdSet64S (PcdTegraCvmEepromBusBase, FixedPcdGet64 (PcdTegraCvmEepromBusT194Base));
+
     SystemFmpCapsuleImageTypeIdGuid = PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuidT194);
     GuidSize = sizeof (EFI_GUID);
     PcdSetPtrS (PcdSystemFmpCapsuleImageTypeIdGuid, &GuidSize, SystemFmpCapsuleImageTypeIdGuid);

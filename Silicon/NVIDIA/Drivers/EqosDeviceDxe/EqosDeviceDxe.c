@@ -109,6 +109,7 @@ DeviceDiscoveryNotify (
   UINT32                           VariableAttributes;
   TEGRA_CVM_EEPROM_PROTOCOL        *CvmEeprom;
   TEGRA_PLATFORM_TYPE              PlatformType;
+  BOOLEAN                          FlipResetMode;
 
 
   PlatformType = TegraGetPlatform();
@@ -312,23 +313,27 @@ DeviceDiscoveryNotify (
     }
 
     Snp->PhyDriver.ControllerHandle = ControllerHandle;
+    FlipResetMode = FALSE;
     ResetGpioProp = (CONST UINT32 *)fdt_getprop (
                                          DeviceTreeNode->DeviceTreeBase,
                                          DeviceTreeNode->NodeOffset,
                                          "nvidia,phy-reset-gpio",
                                          NULL);
     if (ResetGpioProp == NULL) {
+      // TODO: Revert FlipResetMode based changes once upstream DTB has been
+      // updated.
+      FlipResetMode = TRUE;
       ResetGpioProp = (CONST UINT32 *)fdt_getprop (
                                            DeviceTreeNode->DeviceTreeBase,
                                            DeviceTreeNode->NodeOffset,
-                                           "phy-reset-gpio",
+                                           "phy-reset-gpios",
                                            NULL);
     }
 
     if (ResetGpioProp != NULL) {
       // Populate ResetPin from the device tree
       Snp->PhyDriver.ResetPin = GPIO (SwapBytes32 (ResetGpioProp[0]), SwapBytes32 (ResetGpioProp[1]));
-      if (SwapBytes32 (ResetGpioProp[2]) == 0) {
+      if (SwapBytes32 (ResetGpioProp[2]) == FlipResetMode) {
         Snp->PhyDriver.ResetMode0 = GPIO_MODE_OUTPUT_0;
         Snp->PhyDriver.ResetMode1 = GPIO_MODE_OUTPUT_1;
       } else {
