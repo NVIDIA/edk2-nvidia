@@ -274,19 +274,21 @@ DeviceDiscoveryNotify (
         Microvolts = 1800000;
       }
 
-      if (Microvolts != RegulatorInfo.CurrentMicrovolts) {
-        Status = RegulatorProtocol->SetVoltage (RegulatorProtocol, MmcRegulator, Microvolts);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set regulator voltage %x, %u, %r\r\n", __FUNCTION__, MmcRegulator, Microvolts, Status));
-          return Status;
+      if (RegulatorInfo.IsAvailable) {
+        if (Microvolts != RegulatorInfo.CurrentMicrovolts) {
+          Status = RegulatorProtocol->SetVoltage (RegulatorProtocol, MmcRegulator, Microvolts);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((EFI_D_ERROR, "%a, Failed to set regulator voltage %x, %u, %r\r\n", __FUNCTION__, MmcRegulator, Microvolts, Status));
+            return Status;
+          }
         }
-      }
 
-      if (!RegulatorInfo.IsEnabled) {
-        Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
-          return Status;
+        if (!RegulatorInfo.IsEnabled) {
+          Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+            return Status;
+          }
         }
       }
     }
@@ -298,10 +300,19 @@ DeviceDiscoveryNotify (
                                          NULL);
     if (NULL != RegulatorPointer) {
       UINT32 MmcRegulator = SwapBytes32 (*RegulatorPointer);
-      Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
+
+      Status = RegulatorProtocol->GetInfo (RegulatorProtocol, MmcRegulator, &RegulatorInfo);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+        DEBUG ((EFI_D_ERROR, "%a, Failed to get regulator info %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
         return Status;
+      }
+
+      if (RegulatorInfo.IsAvailable) {
+        Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+          return Status;
+        }
       }
     }
 
