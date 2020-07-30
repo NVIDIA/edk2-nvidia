@@ -68,12 +68,9 @@ UseCombinedUART (
     return FALSE;
   }
 
-  NodeOffset = fdt_path_offset (DTBBaseAddress, "/combined-uart");
+  NodeOffset = fdt_node_offset_by_compatible (DTBBaseAddress, -1, "nvidia,tegra194-tcu");
   if (NodeOffset < 0) {
-    NodeOffset = fdt_path_offset ((VOID *)DTBBaseAddress, "/tcu");
-    if (NodeOffset < 0) {
-      return FALSE;
-    }
+    return FALSE;
   }
 
   Property = fdt_getprop (DTBBaseAddress, NodeOffset, "status", NULL);
