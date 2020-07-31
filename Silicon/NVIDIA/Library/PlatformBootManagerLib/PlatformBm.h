@@ -1,6 +1,7 @@
 /** @file
   Head file for BDS Platform specific code
 
+  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2004 - 2008, Intel Corporation. All rights reserved.<BR>
   Copyright (c) 2016, Linaro Ltd. All rights reserved.<BR>
@@ -20,6 +21,21 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+
+#define UEFI_VERSION_STRING_SIZE            100
+
+#define PLATFORM_CONFIG_DATA_VARIABLE_NAME   L"PlatformConfigData"
+
+typedef enum {
+  OS_USE_DT,
+  OS_USE_ACPI
+} OS_HARDWARE_DESCRIPTION;
+
+typedef struct {
+  UINT8                   DtbHash[SHA256_DIGEST_SIZE];
+  CHAR8                   UEFIVersion[UEFI_VERSION_STRING_SIZE];
+  OS_HARDWARE_DESCRIPTION OsHardwareDescription;
+} PLATFORM_CONFIGURATION_DATA;
 
 /**
   Use SystemTable Conout to stop video based Simple Text Out consoles from

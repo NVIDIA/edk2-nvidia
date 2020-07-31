@@ -668,20 +668,14 @@ PlatformBootManagerAfterConsole (
   UINTN                         FirmwareVerLength;
   UINTN                         PosX;
   UINTN                         PosY;
-  BOOLEAN                       PlatformConfigured;
-  BOOLEAN                       PlatformConfiguredSetVariable;
-  BOOLEAN                       VariableData;
+  BOOLEAN                       PlatformConfigurationNeeded;
+  PLATFORM_CONFIGURATION_DATA   CurrentPlatformConfigData;
+  PLATFORM_CONFIGURATION_DATA   StoredPlatformConfigData;
   UINTN                         VariableSize;
-  UINT32                        VariableAttributes;
   UINT64                        DTBBase;
   UINT64                        DTBSize;
-  UINT8                         CurrentDTBHash[SHA256_DIGEST_SIZE];
-  BOOLEAN                       DTBChanged;
-  UINT8                         HashData[SHA256_DIGEST_SIZE];
-  BOOLEAN                       UEFIChanged;
-  CHAR8                         CurrentUEFIVersion[100];
+  VOID                          *AcpiBase;
   UINTN                         CharCount;
-  CHAR8                         UEFIVersion[100];
 
   FirmwareVerLength = StrLen (PcdGetPtr (PcdFirmwareVersionString));
 
@@ -712,64 +706,49 @@ PlatformBootManagerAfterConsole (
   //
   // If platform has been configured already, do not do it again
   //
-  PlatformConfigured = FALSE;
-  PlatformConfiguredSetVariable = TRUE;
-  VariableData = FALSE;
-  VariableSize = sizeof (BOOLEAN);
-  Status = gRT->GetVariable (L"PlatformConfigured", &gNVIDIATokenSpaceGuid,
-                             &VariableAttributes, &VariableSize, (VOID *)&VariableData);
-  if (!EFI_ERROR (Status) &&
-      (VariableSize == sizeof (BOOLEAN)) &&
-      (VariableData == TRUE)) {
-    PlatformConfigured = TRUE;
-    PlatformConfiguredSetVariable = FALSE;
-  }
+  PlatformConfigurationNeeded = FALSE;
+  gBS->SetMem (&CurrentPlatformConfigData, sizeof (CurrentPlatformConfigData), 0);
 
   //
-  // Check if DTB has changed
+  // Get Current DTB Hash
   //
-  DTBChanged = TRUE;
   DTBBase = GetDTBBaseAddress ();
   DTBSize = fdt_totalsize ((VOID *)DTBBase);
-  gBS->SetMem (CurrentDTBHash, SHA256_DIGEST_SIZE, 0);
-  Sha256HashAll ((VOID *)DTBBase, DTBSize, CurrentDTBHash);
-  gBS->SetMem (HashData, SHA256_DIGEST_SIZE, 0);
-  VariableSize = SHA256_DIGEST_SIZE;
-  Status = gRT->GetVariable (L"DTBHash", &gNVIDIATokenSpaceGuid,
-                             &VariableAttributes, &VariableSize, (VOID *)HashData);
-  if (!EFI_ERROR (Status) &&
-      (VariableSize == SHA256_DIGEST_SIZE) &&
-      (CompareMem (HashData, CurrentDTBHash, VariableSize) == 0)) {
-    DTBChanged = FALSE;
-  }
+  Sha256HashAll ((VOID *)DTBBase, DTBSize, CurrentPlatformConfigData.DtbHash);
 
   //
-  // Check if UEFI has changed
+  // Get Current UEFI Version
   //
-  UEFIChanged = TRUE;
-  CharCount = AsciiSPrint (CurrentUEFIVersion,sizeof (CurrentUEFIVersion),"%s %s",
+  CharCount = AsciiSPrint (CurrentPlatformConfigData.UEFIVersion, UEFI_VERSION_STRING_SIZE, "%s %s",
                            (CHAR16*)PcdGetPtr(PcdFirmwareVersionString),
                            (CHAR16*)PcdGetPtr(PcdFirmwareDateTimeBuiltString));
-  VariableSize = CharCount;
-  Status = gRT->GetVariable (L"UEFIVersion", &gNVIDIATokenSpaceGuid,
-                             &VariableAttributes, &VariableSize, (VOID *)UEFIVersion);
-  if (!EFI_ERROR (Status) &&
-      (VariableSize == CharCount) &&
-      (CompareMem (UEFIVersion, CurrentUEFIVersion, VariableSize) == 0)) {
-    UEFIChanged = FALSE;
+
+  //
+  // Get OS Hardware Description
+  //
+  CurrentPlatformConfigData.OsHardwareDescription = OS_USE_DT;
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    CurrentPlatformConfigData.OsHardwareDescription = OS_USE_ACPI;
   }
 
-  if (DTBChanged || UEFIChanged) {
-    //
-    // If DTB has changed but platform has already been configured,
-    // configure again but do not set variable again.
-    //
-    if (PlatformConfigured) {
-      PlatformConfigured = FALSE;
+  //
+  // Get Stored Platform Configuration Data
+  //
+  VariableSize = sizeof (PLATFORM_CONFIGURATION_DATA);
+  Status = gRT->GetVariable (PLATFORM_CONFIG_DATA_VARIABLE_NAME, &gNVIDIATokenSpaceGuid,
+                             NULL, &VariableSize, (VOID *)&StoredPlatformConfigData);
+  if (EFI_ERROR (Status) ||
+      (VariableSize != sizeof (PLATFORM_CONFIGURATION_DATA))) {
+    PlatformConfigurationNeeded = TRUE;
+  } else {
+    if (CompareMem (&StoredPlatformConfigData, &CurrentPlatformConfigData, sizeof (PLATFORM_CONFIGURATION_DATA)) != 0) {
+      PlatformConfigurationNeeded = TRUE;
     }
   }
 
-  if (!PlatformConfigured) {
+
+  if (PlatformConfigurationNeeded) {
     //
     // Connect the rest of the devices.
     //
@@ -800,38 +779,11 @@ PlatformBootManagerAfterConsole (
     //
     // Set platform has been configured
     //
-    if (PlatformConfiguredSetVariable) {
-      VariableData = TRUE;
-      Status = gRT->SetVariable (L"PlatformConfigured", &gNVIDIATokenSpaceGuid,
-                      EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
-                      sizeof (BOOLEAN), &VariableData);
-      if (EFI_ERROR (Status)) {
-        // TODO: Evaluate what should be done in this case.
-      }
-    }
-
-    //
-    // Update DTB Hash
-    //
-    if (DTBChanged) {
-      Status = gRT->SetVariable (L"DTBHash", &gNVIDIATokenSpaceGuid,
-                      EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
-                      SHA256_DIGEST_SIZE, CurrentDTBHash);
-      if (EFI_ERROR (Status)) {
-        // TODO: Evaluate what should be done in this case.
-      }
-    }
-
-    //
-    // Update UEFI Version
-    //
-    if (UEFIChanged) {
-      Status = gRT->SetVariable (L"UEFIVersion", &gNVIDIATokenSpaceGuid,
-                      EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
-                      CharCount, CurrentUEFIVersion);
-      if (EFI_ERROR (Status)) {
-        // TODO: Evaluate what should be done in this case.
-      }
+    Status = gRT->SetVariable (PLATFORM_CONFIG_DATA_VARIABLE_NAME, &gNVIDIATokenSpaceGuid,
+                    EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                    sizeof (PLATFORM_CONFIGURATION_DATA), &CurrentPlatformConfigData);
+    if (EFI_ERROR (Status)) {
+      // TODO: Evaluate what should be done in this case.
     }
   }
 
