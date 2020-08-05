@@ -21,6 +21,8 @@
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Guid/RtPropertiesTable.h>
 #include "TegraPlatformInitDxePrivate.h"
 
 STATIC
@@ -57,11 +59,12 @@ TegraPlatformInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS          Status;
-  UINTN               ChipID;
-  TEGRA_PLATFORM_TYPE PlatformType;
-  BOOLEAN             SupportEmulatedVariables;
-  UINTN               EmmcMagic;
+  EFI_STATUS              Status;
+  UINTN                   ChipID;
+  TEGRA_PLATFORM_TYPE     PlatformType;
+  BOOLEAN                 SupportEmulatedVariables;
+  UINTN                   EmmcMagic;
+  EFI_RT_PROPERTIES_TABLE *RtProperties;
 
   SupportEmulatedVariables = FALSE;
 
@@ -90,6 +93,20 @@ TegraPlatformInitialize (
       return Status;
     }
   }
+
+  RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocatePool (sizeof (EFI_RT_PROPERTIES_TABLE));
+  if (RtProperties == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT properties table\r\n",__FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+  RtProperties->Version = EFI_RT_PROPERTIES_TABLE_VERSION;
+  RtProperties->Length = sizeof (EFI_RT_PROPERTIES_TABLE);
+  if (PcdGetBool (PcdRuntimeVariableServicesSupported)) {
+    RtProperties->RuntimeServicesSupported = PcdGet32 (PcdVariableRtProperties);
+  } else {
+    RtProperties->RuntimeServicesSupported = PcdGet32 (PcdNoVariableRtProperties);
+  }
+  gBS->InstallConfigurationTable (&gEfiRtPropertiesTableGuid, RtProperties);
 
   return EFI_SUCCESS;
 }

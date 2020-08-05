@@ -41,9 +41,13 @@
   IoLib
   PcdLib
   TegraPlatformInfoLib
+  MemoryAllocationLib
 
 [Protocols]
   gNVIDIAEmuVariableNvModeEnableProtocolGuid
+
+[Guids]
+  gEfiRtPropertiesTableGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase
@@ -58,6 +62,9 @@
   gArmTokenSpaceGuid.PcdGicRedistributorsBase
   gArmTokenSpaceGuid.PcdPciBusMin
   gArmTokenSpaceGuid.PcdPciBusMax
+  gNVIDIATokenSpaceGuid.PcdNoVariableRtProperties
+  gNVIDIATokenSpaceGuid.PcdVariableRtProperties
+  gNVIDIATokenSpaceGuid.PcdRuntimeVariableServicesSupported
 
 [Depex]
   TRUE
