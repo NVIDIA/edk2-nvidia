@@ -29,6 +29,8 @@
 
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 
+#include <NVIDIAConfiguration.h>
+
 #include "Platform.h"
 #include <T194/T194Definitions.h>
 
@@ -534,18 +536,19 @@ BOOLEAN
 EFIAPI
 IsPcieEnabled ()
 {
-  EFI_STATUS Status;
-  BOOLEAN    VariableData;
-  UINTN      VariableSize;
-  UINT32     VariableAttributes;
+  EFI_STATUS               Status;
+  NvidiaPcieEnableVariable VariableData;
+  UINTN                    VariableSize;
+  UINT32                   VariableAttributes;
 
-  Status = gRT->GetVariable (L"EnablePcieInOS", &gNVIDIATokenSpaceGuid,
+  VariableSize = sizeof (VariableData);
+  Status = gRT->GetVariable (NVIDIA_PCIE_ENABLE_IN_OS_VARIABLE_NAME, &gNVIDIATokenSpaceGuid,
                              &VariableAttributes, &VariableSize, (VOID *)&VariableData);
-  if (EFI_ERROR (Status) || (VariableSize != sizeof (BOOLEAN))) {
+  if (EFI_ERROR (Status) || (VariableSize != sizeof (VariableData))) {
     return FALSE;
   }
 
-  return VariableData;
+  return (VariableData.Enabled == 1);
 }
 
 /** Apply platform specific CM overrides.
