@@ -50,4 +50,3 @@
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
   gArmTokenSpaceGuid.PcdPciBusMin
   gArmTokenSpaceGuid.PcdPciBusMax
-  gEmbeddedTokenSpaceGuid.PcdDefaultDtPref

@@ -13,40 +13,6 @@
 #include <T194/T194Definitions.h>
 #include <libfdt.h>
 
-BOOLEAN
-EFIAPI
-T194CheckOSACPIBoot (
-  VOID
-  )
-{
-  VOID        *Hob;
-  VOID        *Dtb;
-  INT32       NodeOffset;
-
-  Hob = NULL;
-
-  Hob = GetFirstGuidHob (&gFdtHobGuid);
-  if (Hob == NULL || GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (UINT64)) {
-    return TRUE;
-  }
-  Dtb = (VOID *)(UINTN)*(UINT64 *)GET_GUID_HOB_DATA (Hob);
-
-  if (fdt_check_header (Dtb) != 0) {
-    return TRUE;
-  }
-
-  NodeOffset = fdt_path_offset (Dtb, "/chosen");
-  if (NodeOffset < 0) {
-    return TRUE;
-  }
-
-  if (NULL != fdt_get_property (Dtb, NodeOffset, "os-default-to-acpi", NULL)) {
-    return TRUE;
-  } else {
-    return FALSE;
-  }
-}
-
 /**
 
   Constructor for the library.
@@ -92,11 +58,6 @@ T194PlatformInitializationLibConstructor (
 
     // Set Floor Sweep CPUs PCD
     PcdSetBoolS(PcdFloorsweepCpus, TRUE);
-
-    // Set Default DT Use PCD
-    if (T194CheckOSACPIBoot ()) {
-      PcdSetBoolS(PcdDefaultDtPref, FALSE);
-    }
 
     // Set CvmEeprom Bus Base
     PcdSet64S (PcdTegraCvmEepromBusBase, FixedPcdGet64 (PcdTegraCvmEepromBusT194Base));

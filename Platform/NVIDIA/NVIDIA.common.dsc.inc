@@ -523,11 +523,6 @@
   gArmTokenSpaceGuid.PcdPciBusMax|0
 
   #
-  # Default to DT
-  #
-  gEmbeddedTokenSpaceGuid.PcdDefaultDtPref|TRUE
-
-  #
   # System FMP ImageTypeId GUIDs
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{0x0}
