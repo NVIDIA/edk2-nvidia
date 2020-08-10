@@ -39,58 +39,6 @@
 
 #define DP_NODE_LEN(Type) { (UINT8)sizeof (Type), (UINT8)(sizeof (Type) >> 8) }
 
-#pragma pack (1)
-typedef struct {
-  VENDOR_DEVICE_PATH         SerialDxe;
-  UART_DEVICE_PATH           Uart;
-  VENDOR_DEFINED_DEVICE_PATH TermType;
-  EFI_DEVICE_PATH_PROTOCOL   End;
-} PLATFORM_SERIAL_CONSOLE;
-#pragma pack ()
-
-STATIC PLATFORM_SERIAL_CONSOLE mSerialConsole = {
-  //
-  // VENDOR_DEVICE_PATH SerialDxe
-  //
-  {
-    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, DP_NODE_LEN (VENDOR_DEVICE_PATH) },
-    EDKII_SERIAL_PORT_LIB_VENDOR_GUID
-  },
-
-  //
-  // UART_DEVICE_PATH Uart
-  //
-  {
-    { MESSAGING_DEVICE_PATH, MSG_UART_DP, DP_NODE_LEN (UART_DEVICE_PATH) },
-    0,                                      // Reserved
-    FixedPcdGet64 (PcdUartDefaultBaudRate), // BaudRate
-    FixedPcdGet8 (PcdUartDefaultDataBits),  // DataBits
-    FixedPcdGet8 (PcdUartDefaultParity),    // Parity
-    FixedPcdGet8 (PcdUartDefaultStopBits)   // StopBits
-  },
-
-  //
-  // VENDOR_DEFINED_DEVICE_PATH TermType
-  //
-  {
-    {
-      MESSAGING_DEVICE_PATH, MSG_VENDOR_DP,
-      DP_NODE_LEN (VENDOR_DEFINED_DEVICE_PATH)
-    }
-    //
-    // Guid to be filled in dynamically
-    //
-  },
-
-  //
-  // EFI_DEVICE_PATH_PROTOCOL End
-  //
-  {
-    END_DEVICE_PATH_TYPE, END_ENTIRE_DEVICE_PATH_SUBTYPE,
-    DP_NODE_LEN (EFI_DEVICE_PATH_PROTOCOL)
-  }
-};
-
 
 #pragma pack (1)
 typedef struct {
@@ -123,6 +71,9 @@ STATIC PLATFORM_USB_KEYBOARD mUsbKeyboard = {
     DP_NODE_LEN (EFI_DEVICE_PATH_PROTOCOL)
   }
 };
+
+
+STATIC PLATFORM_CONFIGURATION_DATA   CurrentPlatformConfigData;
 
 
 /**
@@ -487,6 +438,7 @@ GetPlatformOptions (
   FreePool (BootKeys);
 }
 
+
 STATIC
 VOID
 PlatformRegisterOptionsAndKeys (
@@ -526,6 +478,136 @@ PlatformRegisterOptionsAndKeys (
              NULL, (UINT16) BootOption.OptionNumber, 0, &Esc, NULL
              );
   ASSERT (Status == EFI_SUCCESS || Status == EFI_ALREADY_STARTED);
+}
+
+
+STATIC
+BOOLEAN
+IsPlatformConfigurationNeeded (
+  VOID
+  )
+{
+  EFI_STATUS                  Status;
+  BOOLEAN                     PlatformConfigurationNeeded;
+  PLATFORM_CONFIGURATION_DATA StoredPlatformConfigData;
+  UINTN                       VariableSize;
+  UINT64                      DTBBase;
+  UINT64                      DTBSize;
+  VOID                        *AcpiBase;
+  UINTN                       CharCount;
+
+  //
+  // If platform has been configured already, do not do it again
+  //
+  PlatformConfigurationNeeded = FALSE;
+  gBS->SetMem (&CurrentPlatformConfigData, sizeof (CurrentPlatformConfigData), 0);
+
+  //
+  // Get Current DTB Hash
+  //
+  DTBBase = GetDTBBaseAddress ();
+  DTBSize = fdt_totalsize ((VOID *)DTBBase);
+  Sha256HashAll ((VOID *)DTBBase, DTBSize, CurrentPlatformConfigData.DtbHash);
+
+  //
+  // Get Current UEFI Version
+  //
+  CharCount = AsciiSPrint (CurrentPlatformConfigData.UEFIVersion, UEFI_VERSION_STRING_SIZE, "%s %s",
+                           (CHAR16*)PcdGetPtr(PcdFirmwareVersionString),
+                           (CHAR16*)PcdGetPtr(PcdFirmwareDateTimeBuiltString));
+
+  //
+  // Get OS Hardware Description
+  //
+  CurrentPlatformConfigData.OsHardwareDescription = OS_USE_DT;
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    CurrentPlatformConfigData.OsHardwareDescription = OS_USE_ACPI;
+  }
+
+  //
+  // Get Stored Platform Configuration Data
+  //
+  VariableSize = sizeof (PLATFORM_CONFIGURATION_DATA);
+  Status = gRT->GetVariable (PLATFORM_CONFIG_DATA_VARIABLE_NAME, &gNVIDIATokenSpaceGuid,
+                             NULL, &VariableSize, (VOID *)&StoredPlatformConfigData);
+  if (EFI_ERROR (Status) ||
+      (VariableSize != sizeof (PLATFORM_CONFIGURATION_DATA))) {
+    PlatformConfigurationNeeded = TRUE;
+  } else {
+    if (CompareMem (&StoredPlatformConfigData, &CurrentPlatformConfigData, sizeof (PLATFORM_CONFIGURATION_DATA)) != 0) {
+      PlatformConfigurationNeeded = TRUE;
+    }
+  }
+
+  return PlatformConfigurationNeeded;
+}
+
+
+STATIC
+VOID
+PlatformConfigured (
+  VOID
+  )
+{
+  EFI_STATUS Status;
+
+  Status = gRT->SetVariable (PLATFORM_CONFIG_DATA_VARIABLE_NAME, &gNVIDIATokenSpaceGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                  sizeof (PLATFORM_CONFIGURATION_DATA), &CurrentPlatformConfigData);
+  if (EFI_ERROR (Status)) {
+    // TODO: Evaluate what should be done in this case.
+  }
+}
+
+
+STATIC
+VOID
+PlatformRegisterConsoles (
+  VOID
+  )
+{
+  EFI_STATUS               Status;
+  EFI_HANDLE               *Handles;
+  UINTN                    NoHandles;
+  UINTN                    Count;
+  EFI_DEVICE_PATH_PROTOCOL *Interface;
+
+  ASSERT (FixedPcdGet8 (PcdDefaultTerminalType) == 4);
+  Status = gBS->LocateHandleBuffer (ByProtocol,
+                                    &gEfiSimpleTextOutProtocolGuid,
+                                    NULL,
+                                    &NoHandles,
+                                    &Handles);
+  if (!EFI_ERROR (Status)) {
+    for (Count = 0; Count < NoHandles; Count++) {
+      Status = gBS->HandleProtocol (Handles[Count],
+                                    &gEfiDevicePathProtocolGuid,
+                                    (VOID **)&Interface);
+      if (!EFI_ERROR (Status)) {
+        EfiBootManagerUpdateConsoleVariable (ConOut, Interface, NULL);
+        EfiBootManagerUpdateConsoleVariable (ErrOut, Interface, NULL);
+      }
+    }
+    gBS->FreePool (Handles);
+  }
+
+  Status = gBS->LocateHandleBuffer (ByProtocol,
+                                    &gEfiSimpleTextInProtocolGuid,
+                                    NULL,
+                                    &NoHandles,
+                                    &Handles);
+  if (!EFI_ERROR (Status)) {
+    for (Count = 0; Count < NoHandles; Count++) {
+      Status = gBS->HandleProtocol (Handles[Count],
+                                    &gEfiDevicePathProtocolGuid,
+                                    (VOID **)&Interface);
+      if (!EFI_ERROR (Status)) {
+        EfiBootManagerUpdateConsoleVariable (ConIn, Interface, NULL);
+      }
+    }
+    gBS->FreePool (Handles);
+  }
 }
 
 
@@ -574,24 +656,50 @@ PlatformBootManagerBeforeConsole (
   //
   FilterAndProcess (&gEfiGraphicsOutputProtocolGuid, NULL, AddOutput);
 
-  //
-  // Add the hardcoded short-form USB keyboard device path to ConIn.
-  //
-  EfiBootManagerUpdateConsoleVariable (ConIn,
-    (EFI_DEVICE_PATH_PROTOCOL *)&mUsbKeyboard, NULL);
+  if (IsPlatformConfigurationNeeded ()) {
+    //
+    // Connect the rest of the devices.
+    //
+    EfiBootManagerConnectAll ();
 
-  //
-  // Add the hardcoded serial console device path to ConIn, ConOut, ErrOut.
-  //
-  ASSERT (FixedPcdGet8 (PcdDefaultTerminalType) == 4);
-  CopyGuid (&mSerialConsole.TermType.Guid, &gEfiTtyTermGuid);
+    //
+    // Enumerate all possible boot options.
+    //
+    EfiBootManagerRefreshAllBootOption ();
 
-  EfiBootManagerUpdateConsoleVariable (ConIn,
-    (EFI_DEVICE_PATH_PROTOCOL *)&mSerialConsole, NULL);
-  EfiBootManagerUpdateConsoleVariable (ConOut,
-    (EFI_DEVICE_PATH_PROTOCOL *)&mSerialConsole, NULL);
-  EfiBootManagerUpdateConsoleVariable (ErrOut,
-    (EFI_DEVICE_PATH_PROTOCOL *)&mSerialConsole, NULL);
+    //
+    // Register platform-specific boot options and keyboard shortcuts.
+    //
+    PlatformRegisterOptionsAndKeys ();
+
+    //
+    // Register UEFI Shell
+    //
+    PlatformRegisterFvBootOption (
+      &gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE
+      );
+
+    //
+    // Set Boot Order
+    //
+    SetBootOrder ();
+
+    //
+    // Add the hardcoded short-form USB keyboard device path to ConIn.
+    //
+    EfiBootManagerUpdateConsoleVariable (ConIn,
+      (EFI_DEVICE_PATH_PROTOCOL *)&mUsbKeyboard, NULL);
+
+    //
+    // Register all available consoles.
+    //
+    PlatformRegisterConsoles ();
+
+	//
+    // Set platform has been configured
+    //
+    PlatformConfigured ();
+  }
 }
 
 STATIC
@@ -668,14 +776,6 @@ PlatformBootManagerAfterConsole (
   UINTN                         FirmwareVerLength;
   UINTN                         PosX;
   UINTN                         PosY;
-  BOOLEAN                       PlatformConfigurationNeeded;
-  PLATFORM_CONFIGURATION_DATA   CurrentPlatformConfigData;
-  PLATFORM_CONFIGURATION_DATA   StoredPlatformConfigData;
-  UINTN                         VariableSize;
-  UINT64                        DTBBase;
-  UINT64                        DTBSize;
-  VOID                          *AcpiBase;
-  UINTN                         CharCount;
 
   FirmwareVerLength = StrLen (PcdGetPtr (PcdFirmwareVersionString));
 
@@ -700,90 +800,6 @@ PlatformBootManagerAfterConsole (
 
       PrintXY (PosX, PosY, NULL, NULL, VERSION_STRING_PREFIX L"%s",
         PcdGetPtr (PcdFirmwareVersionString));
-    }
-  }
-
-  //
-  // If platform has been configured already, do not do it again
-  //
-  PlatformConfigurationNeeded = FALSE;
-  gBS->SetMem (&CurrentPlatformConfigData, sizeof (CurrentPlatformConfigData), 0);
-
-  //
-  // Get Current DTB Hash
-  //
-  DTBBase = GetDTBBaseAddress ();
-  DTBSize = fdt_totalsize ((VOID *)DTBBase);
-  Sha256HashAll ((VOID *)DTBBase, DTBSize, CurrentPlatformConfigData.DtbHash);
-
-  //
-  // Get Current UEFI Version
-  //
-  CharCount = AsciiSPrint (CurrentPlatformConfigData.UEFIVersion, UEFI_VERSION_STRING_SIZE, "%s %s",
-                           (CHAR16*)PcdGetPtr(PcdFirmwareVersionString),
-                           (CHAR16*)PcdGetPtr(PcdFirmwareDateTimeBuiltString));
-
-  //
-  // Get OS Hardware Description
-  //
-  CurrentPlatformConfigData.OsHardwareDescription = OS_USE_DT;
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (!EFI_ERROR (Status)) {
-    CurrentPlatformConfigData.OsHardwareDescription = OS_USE_ACPI;
-  }
-
-  //
-  // Get Stored Platform Configuration Data
-  //
-  VariableSize = sizeof (PLATFORM_CONFIGURATION_DATA);
-  Status = gRT->GetVariable (PLATFORM_CONFIG_DATA_VARIABLE_NAME, &gNVIDIATokenSpaceGuid,
-                             NULL, &VariableSize, (VOID *)&StoredPlatformConfigData);
-  if (EFI_ERROR (Status) ||
-      (VariableSize != sizeof (PLATFORM_CONFIGURATION_DATA))) {
-    PlatformConfigurationNeeded = TRUE;
-  } else {
-    if (CompareMem (&StoredPlatformConfigData, &CurrentPlatformConfigData, sizeof (PLATFORM_CONFIGURATION_DATA)) != 0) {
-      PlatformConfigurationNeeded = TRUE;
-    }
-  }
-
-
-  if (PlatformConfigurationNeeded) {
-    //
-    // Connect the rest of the devices.
-    //
-    EfiBootManagerConnectAll ();
-
-    //
-    // Enumerate all possible boot options.
-    //
-    EfiBootManagerRefreshAllBootOption ();
-
-    //
-    // Register platform-specific boot options and keyboard shortcuts.
-    //
-    PlatformRegisterOptionsAndKeys ();
-
-    //
-    // Register UEFI Shell
-    //
-    PlatformRegisterFvBootOption (
-      &gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE
-      );
-
-    //
-    // Set Boot Order
-    //
-    SetBootOrder ();
-
-    //
-    // Set platform has been configured
-    //
-    Status = gRT->SetVariable (PLATFORM_CONFIG_DATA_VARIABLE_NAME, &gNVIDIATokenSpaceGuid,
-                    EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
-                    sizeof (PLATFORM_CONFIGURATION_DATA), &CurrentPlatformConfigData);
-    if (EFI_ERROR (Status)) {
-      // TODO: Evaluate what should be done in this case.
     }
   }
 
