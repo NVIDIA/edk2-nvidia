@@ -35,7 +35,9 @@
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra186-xhci", &gEdkiiNonDiscoverableXhciDeviceGuid },
+    { "nvidia,tegra186-xusb", &gEdkiiNonDiscoverableXhciDeviceGuid },
     { "nvidia,tegra194-xhci", &gEdkiiNonDiscoverableXhciDeviceGuid },
+    { "nvidia,tegra194-xusb", &gEdkiiNonDiscoverableXhciDeviceGuid },
     { NULL, NULL }
 };
 
@@ -123,6 +125,7 @@ DeviceDiscoveryNotify (
   XHCICONTROLLER_DXE_PRIVATE *Private;
   NVIDIA_BPMP_IPC_PROTOCOL   *BpmpIpcProtocol;
   UINT32                     Request[3];
+  NON_DISCOVERABLE_DEVICE    *Device;
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingStart:
@@ -133,12 +136,28 @@ DeviceDiscoveryNotify (
       return EFI_OUT_OF_RESOURCES;
     }
 
+    Device = NULL;
+    Status = gBS->HandleProtocol (ControllerHandle,
+                                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                                  (VOID **)&Device);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to locate non discoverable device\n", __FUNCTION__));
+      return Status;
+    }
+
+    // Force coherent DMA type device.
+    Device->DmaType = NonDiscoverableDeviceDmaTypeCoherent;
+
     /* Assign Platform Specific Parameters */
-    if ((Offset = fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
-                                          "nvidia,tegra186-xhci")) > 0) {
+    if (((Offset = fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
+                                          "nvidia,tegra186-xhci")) > 0) ||
+        ((Offset = fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
+                                          "nvidia,tegra186-xusb")) > 0)){
       Private->XusbSoc = &Tegra186Soc;
-    } else if ((Offset = fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
-                                          "nvidia,tegra194-xhci")) > 0) {
+    } else if (((Offset = fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
+                                          "nvidia,tegra194-xhci")) > 0) ||
+               ((Offset = fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
+                                          "nvidia,tegra194-xusb")) > 0)) {
       Private->XusbSoc = &Tegra194Soc;
     }
 
