@@ -34,5 +34,4 @@
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdMemorySizeRegisterT186
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194B
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194C
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194

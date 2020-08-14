@@ -24,7 +24,6 @@
 BOOLEAN
 EFIAPI
 GetTegraUARTBaseAddressInternal (
-  IN  BOOLEAN ConsolePort,
   OUT UINTN   *TegraUARTBaseAddress
 );
 

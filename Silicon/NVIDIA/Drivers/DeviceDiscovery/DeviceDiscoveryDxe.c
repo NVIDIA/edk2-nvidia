@@ -177,18 +177,20 @@ GetResources (
   }
 
   NumberOfRegions = NumberOfRegRegions + NumberOfSharedMemRegions;
-  if (NumberOfRegions == 0) {
-    DEBUG ((EFI_D_ERROR, "%a: no regions detected. \r\n", __FUNCTION__));
-    return EFI_UNSUPPORTED;
+
+  if (NumberOfRegions != 0) {
+    AllocationSize = NumberOfRegions * sizeof (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR) + sizeof (EFI_ACPI_END_TAG_DESCRIPTOR);
+
+    AllocResources = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)AllocateZeroPool (AllocationSize);
+    if (NULL == AllocResources) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate ACPI resources.\r\n", __FUNCTION__));
+      return EFI_OUT_OF_RESOURCES;
+    }
+  } else {
+    *Resources = NULL;
+    return EFI_SUCCESS;
   }
 
-  AllocationSize = NumberOfRegions * sizeof (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR) + sizeof (EFI_ACPI_END_TAG_DESCRIPTOR);
-
-  AllocResources = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)AllocateZeroPool (AllocationSize);
-  if (NULL == AllocResources) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate ACPI resources.\r\n", __FUNCTION__));
-    return EFI_OUT_OF_RESOURCES;
-  }
   *Resources = AllocResources;
 
   for (RegionIndex = 0; RegionIndex < NumberOfRegRegions; RegionIndex++) {
@@ -1092,7 +1094,8 @@ ProcessDeviceTreeNodeWithHandle(
   BOOLEAN                                   SupportsBinding = FALSE;
   EFI_GUID                                  *DeviceProtocolGuid;
   EFI_HANDLE                                DeviceHandle = NULL;
-  DEVICE_DISCOVERY_DEVICE_PATH              *DevicePath = NULL;
+  DEVICE_DISCOVERY_MEMMAP_DEVICE_PATH       *DevicePath = NULL;
+  DEVICE_DISCOVERY_VENDOR_DEVICE_PATH       *VendorDevicePath = NULL;
   EFI_HANDLE                                ConnectHandles[2];
   EFI_GUID                                  *ProtocolGuidList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL, NULL};
   VOID                                      *InterfaceList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL, NULL};
@@ -1178,29 +1181,49 @@ ProcessDeviceTreeNodeWithHandle(
     goto ErrorExit;
   }
 
-  //First resource must be MMIO
-  if ((Device->Resources == NULL) ||
-      (Device->Resources->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
-      (Device->Resources->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM)) {
-    DEBUG ((EFI_D_ERROR, "%a: Invalid node resources.\r\n", __FUNCTION__));
-    goto ErrorExit;
+  if (Device->Resources == NULL) {
+    DevicePath = (DEVICE_DISCOVERY_MEMMAP_DEVICE_PATH *)CreateDeviceNode (
+                                                          HARDWARE_DEVICE_PATH,
+                                                          HW_VENDOR_DP,
+                                                          sizeof (DEVICE_DISCOVERY_VENDOR_DEVICE_PATH));
+    if (NULL == DevicePath) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto ErrorExit;
+    }
+    VendorDevicePath = (DEVICE_DISCOVERY_VENDOR_DEVICE_PATH *)DevicePath;
+    gBS->CopyMem(&VendorDevicePath->Vendor.Guid, &gNVIDIAVendorDeviceDiscoveryGuid, sizeof (EFI_GUID));
+    SetDevicePathNodeLength (&VendorDevicePath->Vendor, sizeof (VendorDevicePath->Vendor));
+
+    VendorDevicePath->Controller.Header.Type = HARDWARE_DEVICE_PATH;
+    VendorDevicePath->Controller.Header.SubType = HW_CONTROLLER_DP;
+    VendorDevicePath->Controller.ControllerNumber = NodeOffset;
+
+    SetDevicePathNodeLength (&VendorDevicePath->Controller, sizeof (VendorDevicePath->Controller));
+    SetDevicePathEndNode (&VendorDevicePath->End);
+  } else {
+    //First resource must be MMIO
+    if ((Device->Resources->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
+        (Device->Resources->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM)) {
+      DEBUG ((EFI_D_ERROR, "%a: Invalid node resources.\r\n", __FUNCTION__));
+      goto ErrorExit;
+    } else {
+      DevicePath = (DEVICE_DISCOVERY_MEMMAP_DEVICE_PATH *)CreateDeviceNode (
+                                                            HARDWARE_DEVICE_PATH,
+                                                            HW_MEMMAP_DP,
+                                                            sizeof (DEVICE_DISCOVERY_MEMMAP_DEVICE_PATH));
+      if (NULL == DevicePath) {
+        Status = EFI_OUT_OF_RESOURCES;
+        goto ErrorExit;
+      }
+
+      DevicePath->MemMap.MemoryType = EfiMemoryMappedIO;
+      DevicePath->MemMap.StartingAddress = Device->Resources->AddrRangeMin;
+      DevicePath->MemMap.EndingAddress = Device->Resources->AddrRangeMax;
+
+      SetDevicePathNodeLength (&DevicePath->MemMap, sizeof (DevicePath->MemMap));
+      SetDevicePathEndNode (&DevicePath->End);
+    }
   }
-
-  DevicePath = (DEVICE_DISCOVERY_DEVICE_PATH *)CreateDeviceNode (
-                                                 HARDWARE_DEVICE_PATH,
-                                                 HW_MEMMAP_DP,
-                                                 sizeof (*DevicePath));
-  if (NULL == DevicePath) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto ErrorExit;
-  }
-
-  DevicePath->MemMap.MemoryType = EfiMemoryMappedIO;
-  DevicePath->MemMap.StartingAddress = Device->Resources->AddrRangeMin;
-  DevicePath->MemMap.EndingAddress = Device->Resources->AddrRangeMax;
-
-  SetDevicePathNodeLength (&DevicePath->MemMap, sizeof (DevicePath->MemMap));
-  SetDevicePathEndNode (&DevicePath->End);
 
   GetPowerGateNodeProtocol (&NodeProtocol, ProtocolGuidList, InterfaceList, NUMBER_OF_OPTIONAL_PROTOCOLS);
   GetClockNodeProtocol (&NodeProtocol, ProtocolGuidList, InterfaceList, NUMBER_OF_OPTIONAL_PROTOCOLS);

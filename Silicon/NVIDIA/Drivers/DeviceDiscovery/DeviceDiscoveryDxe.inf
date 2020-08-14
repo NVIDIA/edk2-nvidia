@@ -47,6 +47,9 @@
   DeviceDiscoveryInternalLib
   FdtLib
 
+[Guids]
+  gNVIDIAVendorDeviceDiscoveryGuid
+
 [Protocols]
   gNVIDIADeviceTreeCompatibilityProtocolGuid
   gNVIDIADeviceTreeNodeProtocolGuid

@@ -31,7 +31,6 @@
   TegraCombinedSerialPortLib
   TegraPlatformInfoLib
   PlatformResourceLib
-  FdtLib
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

@@ -25,15 +25,15 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraSerialPortLib.h>
 #include <libfdt.h>
-#include <Library/DtPlatformDtbLoaderLib.h>
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-    { "nvidia,tegra20-uart", &gNVIDIANonDiscoverableUartDeviceGuid },
+    { "nvidia,tegra20-uart", &gNVIDIANonDiscoverable16550UartDeviceGuid },
+    { "nvidia,tegra194-tcu", &gNVIDIANonDiscoverableCombinedUartDeviceGuid },
     { NULL, NULL }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-    .DriverName = L"NVIDIA uart driver",
+    .DriverName = L"NVIDIA Serial Driver",
     .UseDriverBinding = TRUE,
     .AutoEnableClocks = TRUE,
     .AutoResetModule = TRUE,
@@ -42,46 +42,6 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
 
 #define UART_CLOCK_NAME "serial"
 #define UART_CLOCK_RATE (115200 * 16)
-
-/** Is combined UART supported
-
- **/
-STATIC
-BOOLEAN
-EFIAPI
-UseCombinedUART (
-  VOID
-  )
-{
-  VOID           *DTBBaseAddress;
-  UINTN          DeviceTreeSize;
-  INT32          NodeOffset;
-  CONST VOID     *Property;
-  EFI_STATUS     Status;
-
-  Status = DtPlatformLoadDtb (&DTBBaseAddress, &DeviceTreeSize);
-  if (EFI_ERROR (Status)) {
-    return FALSE;
-  }
-
-  if (fdt_check_header (DTBBaseAddress) != 0) {
-    return FALSE;
-  }
-
-  NodeOffset = fdt_node_offset_by_compatible (DTBBaseAddress, -1, "nvidia,tegra194-tcu");
-  if (NodeOffset < 0) {
-    return FALSE;
-  }
-
-  Property = fdt_getprop (DTBBaseAddress, NodeOffset, "status", NULL);
-  if (NULL != Property) {
-    if (0 != AsciiStrCmp (Property, "okay")) {
-      return FALSE;
-    }
-  }
-
-  return TRUE;
-}
 
 /**
   Callback that will be invoked at various phases of the driver initialization
@@ -110,39 +70,37 @@ DeviceDiscoveryNotify (
   EFI_STATUS                Status;
   EFI_PHYSICAL_ADDRESS      BaseAddress  = 0;
   UINTN                     RegionSize;
+  EFI_SERIAL_IO_PROTOCOL    *Interface;
 
   switch (Phase) {
-  case DeviceDiscoveryDriverStart:
-    if (UseCombinedUART ()) {
-      Status = gBS->InstallMultipleProtocolInterfaces (
-                      &ControllerHandle,
-                      &gNVIDIAConsoleEnabledProtocolGuid,
-                      NULL,
-                      NULL
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Failed to install console enabled protocol\r\n", __FUNCTION__));
-      }
-    }
-    return EFI_SUCCESS;
-
-  case DeviceDiscoveryDriverBindingSupported:
-    Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
-      return EFI_UNSUPPORTED;
-    }
-    if (Tegra16550SerialPortGetBaseAddress (TRUE) != BaseAddress) {
-      return EFI_UNSUPPORTED;
-    }
-    return EFI_SUCCESS;
-
   case DeviceDiscoveryDriverBindingStart:
-    Status = DeviceDiscoverySetClockFreq (ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
+    if ((fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
+                                       "nvidia,tegra20-uart")) == 0) {
+      Status = DeviceDiscoverySetClockFreq (ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to set clock frequency\n", __FUNCTION__));
+        return Status;
+      }
+      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
+        return Status;
+      }
+      Interface = Serial16550IoInitialize (BaseAddress);
+      if (Interface == NULL) {
+        return EFI_NOT_STARTED;
+      }
+    } else {
+      Interface = SerialTCUIoInitialize ();
+    }
+    Status = Interface->Reset (Interface);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &ControllerHandle,
-                    &gNVIDIAConsoleEnabledProtocolGuid,
-                    NULL,
+                    &gEfiSerialIoProtocolGuid,
+                    Interface,
                     NULL
                     );
     if (EFI_ERROR (Status)) {
@@ -151,10 +109,19 @@ DeviceDiscoveryNotify (
     return Status;
 
   case DeviceDiscoveryDriverBindingStop:
+    Status = gBS->HandleProtocol (
+                    ControllerHandle,
+                    &gEfiSerialIoProtocolGuid,
+                    (VOID **)&Interface
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get interface on handle\r\n", __FUNCTION__));
+      return Status;
+    }
     Status = gBS->UninstallMultipleProtocolInterfaces (
                     ControllerHandle,
-                    &gNVIDIAConsoleEnabledProtocolGuid,
-                    NULL,
+                    &gEfiSerialIoProtocolGuid,
+                    Interface,
                     NULL
                     );
     if (EFI_ERROR (Status)) {
@@ -162,6 +129,7 @@ DeviceDiscoveryNotify (
       return Status;
     }
 
+    gBS->FreePool (Interface);
     return Status;
 
   default:

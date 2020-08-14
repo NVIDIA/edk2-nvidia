@@ -27,7 +27,7 @@
 UINTN
 EFIAPI
 GetTegraUARTBaseAddress (
-  IN  BOOLEAN ConsolePort
+  VOID
 )
 {
   UINTN   ChipID;
@@ -35,7 +35,7 @@ GetTegraUARTBaseAddress (
   BOOLEAN ValidPrivatePlatform;
 
   ValidPrivatePlatform = FALSE;
-  ValidPrivatePlatform = GetTegraUARTBaseAddressInternal (ConsolePort, &TegraUARTBase);
+  ValidPrivatePlatform = GetTegraUARTBaseAddressInternal (&TegraUARTBase);
   if (ValidPrivatePlatform) {
     return TegraUARTBase;
   }
@@ -46,11 +46,7 @@ GetTegraUARTBaseAddress (
     case T186_CHIP_ID:
       return FixedPcdGet64(PcdTegra16550UartBaseT186);
     case T194_CHIP_ID:
-      if (ConsolePort) {
-        return FixedPcdGet64(PcdTegra16550UartBaseT194B);
-      } else {
-        return FixedPcdGet64(PcdTegra16550UartBaseT194C);
-      }
+      return FixedPcdGet64(PcdTegra16550UartBaseT194);
     default:
       return 0x0;
   }

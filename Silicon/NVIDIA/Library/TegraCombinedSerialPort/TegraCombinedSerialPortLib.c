@@ -21,7 +21,6 @@
 #include <Library/TegraSerialPortLib.h>
 #include <Library/IoLib.h>
 #include <Library/PcdLib.h>
-#include <Library/SerialPortLib.h>
 #include <Library/DebugLib.h>
 
 typedef struct {
@@ -70,7 +69,7 @@ IsDataPresent (
 RETURN_STATUS
 EFIAPI
 TegraCombinedSerialPortInitialize (
-  VOID
+  IN UINTN SerialBaseAddress
   )
 {
   return EFI_SUCCESS;
@@ -89,6 +88,7 @@ TegraCombinedSerialPortInitialize (
 UINTN
 EFIAPI
 TegraCombinedSerialPortWrite (
+  IN UINTN     SerialBaseAddress,
   IN UINT8     *Buffer,
   IN UINTN     NumberOfBytes
   )
@@ -135,6 +135,7 @@ TegraCombinedSerialPortWrite (
 UINTN
 EFIAPI
 TegraCombinedSerialPortRead (
+  IN  UINTN     SerialBaseAddress,
   OUT UINT8     *Buffer,
   IN  UINTN     NumberOfBytes
 )
@@ -197,7 +198,7 @@ TegraCombinedSerialPortRead (
 BOOLEAN
 EFIAPI
 TegraCombinedSerialPortPoll (
-  VOID
+  IN UINTN SerialBaseAddress
   )
 {
   return IsDataPresent ((UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox));
@@ -232,6 +233,7 @@ TegraCombinedSerialPortPoll (
 RETURN_STATUS
 EFIAPI
 TegraCombinedSerialPortSetControl (
+  IN UINTN   SerialBaseAddress,
   IN UINT32  Control
   )
 {
@@ -273,6 +275,7 @@ TegraCombinedSerialPortSetControl (
 RETURN_STATUS
 EFIAPI
 TegraCombinedSerialPortGetControl (
+  IN  UINTN   SerialBaseAddress,
   OUT UINT32  *Control
   )
 {
@@ -327,6 +330,7 @@ TegraCombinedSerialPortGetControl (
 RETURN_STATUS
 EFIAPI
 TegraCombinedSerialPortSetAttributes (
+  IN     UINTN               SerialBaseAddress,
   IN OUT UINT64              *BaudRate,
   IN OUT UINT32              *ReceiveFifoDepth,
   IN OUT UINT32              *Timeout,

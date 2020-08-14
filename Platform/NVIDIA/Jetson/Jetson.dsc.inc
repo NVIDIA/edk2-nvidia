@@ -166,11 +166,6 @@
   Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 
   #
-  # Tegra UART clock driver
-  #
-  Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
-
-  #
   # Tegra Pwm clock driver
   #
   Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf

@@ -32,7 +32,7 @@
 typedef
 RETURN_STATUS
 (EFIAPI * SERIAL_PORT_INITIALIZE) (
-  VOID
+  IN UINTN SerialBaseAddress
   );
 
 /**
@@ -55,6 +55,7 @@ RETURN_STATUS
 typedef
 UINTN
 (EFIAPI * SERIAL_PORT_WRITE) (
+  IN UINTN     SerialBaseAddress,
   IN UINT8     *Buffer,
   IN UINTN     NumberOfBytes
   );
@@ -78,6 +79,7 @@ UINTN
 typedef
 UINTN
 (EFIAPI * SERIAL_PORT_READ) (
+  IN  UINTN   SerialBaseAddress,
   OUT UINT8   *Buffer,
   IN  UINTN   NumberOfBytes
   );
@@ -96,7 +98,7 @@ UINTN
 typedef
 BOOLEAN
 (EFIAPI * SERIAL_PORT_POLL) (
-  VOID
+  IN UINTN SerialBaseAddress
   );
 
 /**
@@ -112,6 +114,7 @@ BOOLEAN
 typedef
 RETURN_STATUS
 (EFIAPI * SERIAL_PORT_SET_CONTROL) (
+  IN UINTN  SerialBaseAddress,
   IN UINT32 Control
   );
 
@@ -128,6 +131,7 @@ RETURN_STATUS
 typedef
 RETURN_STATUS
 (EFIAPI * SERIAL_PORT_GET_CONTROL) (
+  IN  UINTN  SerialBaseAddress,
   OUT UINT32 *Control
   );
 
@@ -167,6 +171,7 @@ RETURN_STATUS
 typedef
 RETURN_STATUS
 (EFIAPI * SERIAL_PORT_SET_ATTRIBUTES) (
+  IN     UINTN              SerialBaseAddress,
   IN OUT UINT64             *BaudRate,
   IN OUT UINT32             *ReceiveFifoDepth,
   IN OUT UINT32             *Timeout,
@@ -206,18 +211,27 @@ TegraCombinedSerialPortGetObject (
 TEGRA_UART_OBJ *
 EFIAPI
 Tegra16550SerialPortGetObject (
-  VOID
+  OUT UINTN *SerialBaseAddress
   );
 
 /**
-  Retrieve the base address of tegra 16650 serial port.
+  Initialize 16550 Serial Console
 
-  @param ConsolePort        Console port if TRUE, Debug port otherwise.
 **/
-EFI_PHYSICAL_ADDRESS
+EFI_SERIAL_IO_PROTOCOL *
 EFIAPI
-Tegra16550SerialPortGetBaseAddress (
-  IN BOOLEAN ConsolePort
+Serial16550IoInitialize (
+  IN UINTN SerialBaseAddress
+  );
+
+/**
+  Initialize TCU Serial Console
+
+**/
+EFI_SERIAL_IO_PROTOCOL *
+EFIAPI
+SerialTCUIoInitialize (
+  VOID
   );
 
 #endif //__TEGRA_SERIAL_PORT_LIB_H__

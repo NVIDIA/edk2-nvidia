@@ -24,6 +24,8 @@
 
 [Sources.common]
   TegraUartDxe.c
+  Serial16550.c
+  SerialTCU.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -43,15 +45,22 @@
   IoLib
   MemoryAllocationLib
   Tegra16550SerialPortLib
-  FdtLib
-  DtPlatformDtbLoaderLib
+  TegraCombinedSerialPortLib
+
+[Pcd]
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultDataBits
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultStopBits
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultReceiveFifoDepth
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
-  gNVIDIAConsoleEnabledProtocolGuid
+  gEfiSerialIoProtocolGuid
 
 [Guids]
-  gNVIDIANonDiscoverableUartDeviceGuid
+  gNVIDIANonDiscoverable16550UartDeviceGuid
+  gNVIDIANonDiscoverableCombinedUartDeviceGuid
 
 [Depex]
   TRUE

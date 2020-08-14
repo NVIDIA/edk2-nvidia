@@ -19,44 +19,11 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/TegraSerialPortLib.h>
 #include <Library/SerialPortLib.h>
-#include <libfdt.h>
 
 STATIC
 TEGRA_UART_OBJ *TegraUartObj = NULL;
-
-/** Is combined UART supported
-
- **/
-BOOLEAN
-EFIAPI
-UseCombinedUART (
-  VOID
-  )
-{
-  UINT64         DTBBaseAddress;
-  INT32          NodeOffset;
-  CONST VOID     *Property;
-
-  DTBBaseAddress = GetDTBBaseAddress ();
-
-  if (fdt_check_header ((VOID *)DTBBaseAddress) != 0) {
-    return FALSE;
-  }
-
-  NodeOffset = fdt_node_offset_by_compatible ((VOID *)DTBBaseAddress, -1, "nvidia,tegra194-tcu");
-  if (NodeOffset < 0) {
-    return FALSE;
-  }
-
-  Property = fdt_getprop ((VOID *)DTBBaseAddress, NodeOffset, "status", NULL);
-  if (NULL != Property) {
-    if (0 != AsciiStrCmp (Property, "okay")) {
-      return FALSE;
-    }
-  }
-
-  return TRUE;
-}
+STATIC
+UINTN SerialBaseAddress = MAX_UINTN;
 
 /** Identify the serial device hardware
 
@@ -71,22 +38,18 @@ SerialPortIdentify (
   TEGRA_PLATFORM_TYPE PlatformType;
 
   if (TegraUartObj != NULL) {
-    return  TegraUartObj;
+    return TegraUartObj;
   }
 
   ChipID = TegraGetChipID();
   PlatformType = TegraGetPlatform();
 
   if (ChipID == T186_CHIP_ID) {
-    TegraUartObj = Tegra16550SerialPortGetObject();
+    TegraUartObj = Tegra16550SerialPortGetObject(&SerialBaseAddress);
   } else if (ChipID == T194_CHIP_ID) {
-    if (UseCombinedUART ()) {
-      TegraUartObj = TegraCombinedSerialPortGetObject();
-    } else {
-      TegraUartObj = Tegra16550SerialPortGetObject();
-    }
+    TegraUartObj = TegraCombinedSerialPortGetObject();
   } else {
-    TegraUartObj = Tegra16550SerialPortGetObject();
+    TegraUartObj = Tegra16550SerialPortGetObject(&SerialBaseAddress);
   }
 
   return TegraUartObj;
@@ -104,7 +67,7 @@ SerialPortInitialize (
   VOID
   )
 {
-  return SerialPortIdentify()->SerialPortInitialize ();
+  return SerialPortIdentify()->SerialPortInitialize (SerialBaseAddress);
 }
 
 /**
@@ -124,7 +87,7 @@ SerialPortWrite (
   IN UINTN     NumberOfBytes
   )
 {
-  return SerialPortIdentify()->SerialPortWrite (Buffer, NumberOfBytes);
+  return SerialPortIdentify()->SerialPortWrite (SerialBaseAddress, Buffer, NumberOfBytes);
 }
 
 /**
@@ -144,7 +107,7 @@ SerialPortRead (
   IN  UINTN     NumberOfBytes
 )
 {
-  return SerialPortIdentify()->SerialPortRead (Buffer, NumberOfBytes);
+  return SerialPortIdentify()->SerialPortRead (SerialBaseAddress, Buffer, NumberOfBytes);
 }
 
 /**
@@ -160,7 +123,7 @@ SerialPortPoll (
   VOID
   )
 {
-  return SerialPortIdentify()->SerialPortPoll ();
+  return SerialPortIdentify()->SerialPortPoll (SerialBaseAddress);
 }
 
 /**
@@ -195,7 +158,7 @@ SerialPortSetControl (
   IN UINT32  Control
   )
 {
-  return SerialPortIdentify()->SerialPortSetControl (Control);
+  return SerialPortIdentify()->SerialPortSetControl (SerialBaseAddress, Control);
 }
 
 /**
@@ -236,7 +199,7 @@ SerialPortGetControl (
   OUT UINT32  *Control
   )
 {
-  return SerialPortIdentify()->SerialPortGetControl (Control);
+  return SerialPortIdentify()->SerialPortGetControl (SerialBaseAddress, Control);
 }
 
 /**
@@ -281,6 +244,6 @@ SerialPortSetAttributes (
   IN OUT EFI_STOP_BITS_TYPE  *StopBits
   )
 {
-  return SerialPortIdentify()->SerialPortSetAttributes (BaudRate, ReceiveFifoDepth, Timeout,
+  return SerialPortIdentify()->SerialPortSetAttributes (SerialBaseAddress, BaudRate, ReceiveFifoDepth, Timeout,
                                  Parity, DataBits, StopBits);
 }

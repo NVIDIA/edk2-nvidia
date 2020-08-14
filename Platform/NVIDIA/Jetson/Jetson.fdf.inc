@@ -104,11 +104,6 @@
   INF SecurityPkg/Pkcs7Verify/Pkcs7VerifyDxe/Pkcs7VerifyDxe.inf
 
   #
-  # Tegra UART clock driver
-  #
-  INF Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
-
-  #
   # Tegra PWM clock driver
   #
   INF Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf

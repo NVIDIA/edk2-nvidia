@@ -584,13 +584,7 @@
   MdeModulePkg/Universal/Console/ConSplitterDxe/ConSplitterDxe.inf
   MdeModulePkg/Universal/Console/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
   MdeModulePkg/Universal/Console/TerminalDxe/TerminalDxe.inf
-  MdeModulePkg/Universal/SerialDxe/SerialDxe.inf {
-    <LibraryClasses>
-      Tegra16550SerialPortLib|Silicon/NVIDIA/Library/Tegra16550SerialPortLib/Tegra16550SerialPortConsoleLib.inf
-    <PcdsFixedAtBuild>
-      gNVIDIATokenSpaceGuid.PcdConsolePort|TRUE
-      gEfiMdeModulePkgTokenSpaceGuid.PcdSerialClockRate|1843200
-  }
+  Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
   MdeModulePkg/Universal/PrintDxe/PrintDxe.inf
 
   #

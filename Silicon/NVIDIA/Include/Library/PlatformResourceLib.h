@@ -32,7 +32,7 @@ typedef struct {
 UINTN
 EFIAPI
 GetTegraUARTBaseAddress (
-  IN  BOOLEAN ConsolePort
+  VOID
 );
 
 /**

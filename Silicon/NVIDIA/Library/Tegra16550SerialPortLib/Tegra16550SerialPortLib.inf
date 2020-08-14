@@ -37,4 +37,3 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialClockRate               ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialExtendedTxFifoSize      ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterStride          ## CONSUMES
-  gNVIDIATokenSpaceGuid.PcdConsolePort                            ## CONSUMES

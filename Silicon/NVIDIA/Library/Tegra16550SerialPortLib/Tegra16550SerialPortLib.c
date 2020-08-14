@@ -54,6 +54,7 @@
   @return The value read from the 16550 register.
 
 **/
+STATIC
 UINT8
 SerialPortReadRegister (
   UINTN  Base,
@@ -74,6 +75,7 @@ SerialPortReadRegister (
   @return The value written to the 16550 register.
 
 **/
+STATIC
 UINT8
 SerialPortWriteRegister (
   UINTN  Base,
@@ -85,19 +87,6 @@ SerialPortWriteRegister (
 }
 
 /**
-  Retrieve the UART device properties.
-
-**/
-STATIC
-UINTN
-GetSerialBaseAddress (
-  IN BOOLEAN ConsolePort
-  )
-{
-  return GetTegraUARTBaseAddress (ConsolePort);
-}
-
-/**
   Return whether the hardware flow control signal allows writing.
 
   @param  SerialRegisterBase The base address register of UART device.
@@ -105,6 +94,7 @@ GetSerialBaseAddress (
   @retval TRUE  The serial port is writable.
   @retval FALSE The serial port is not writable.
 **/
+STATIC
 BOOLEAN
 SerialPortWritable (
   UINTN  SerialRegisterBase
@@ -159,13 +149,16 @@ SerialPortWritable (
 RETURN_STATUS
 EFIAPI
 Tegra16550SerialPortInitialize (
-  VOID
+  IN UINTN SerialRegisterBase
   )
 {
-  UINTN          SerialRegisterBase;
   UINT32         Divisor;
   UINT32         CurrentDivisor;
   BOOLEAN        Initialized;
+
+  if (SerialRegisterBase ==0) {
+    return RETURN_DEVICE_ERROR;
+  }
 
   //
   // Calculate divisor for baud generator
@@ -174,14 +167,6 @@ Tegra16550SerialPortInitialize (
   Divisor = PcdGet32 (PcdSerialClockRate) / (PcdGet32 (PcdSerialBaudRate) * 16);
   if ((PcdGet32 (PcdSerialClockRate) % (PcdGet32 (PcdSerialBaudRate) * 16)) >= PcdGet32 (PcdSerialBaudRate) * 8) {
     Divisor++;
-  }
-
-  //
-  // Get the base address of the serial port in either I/O or MMIO space
-  //
-  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
-  if (SerialRegisterBase ==0) {
-    return RETURN_DEVICE_ERROR;
   }
 
   //
@@ -263,11 +248,11 @@ Tegra16550SerialPortInitialize (
 UINTN
 EFIAPI
 Tegra16550SerialPortWrite (
+  IN UINTN     SerialRegisterBase,
   IN UINT8     *Buffer,
   IN UINTN     NumberOfBytes
   )
 {
-  UINTN  SerialRegisterBase;
   UINTN  Result;
   UINTN  Index;
   UINTN  FifoSize;
@@ -276,7 +261,6 @@ Tegra16550SerialPortWrite (
     return 0;
   }
 
-  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return 0;
   }
@@ -351,11 +335,11 @@ Tegra16550SerialPortWrite (
 UINTN
 EFIAPI
 Tegra16550SerialPortRead (
+  IN  UINTN     SerialRegisterBase,
   OUT UINT8     *Buffer,
   IN  UINTN     NumberOfBytes
   )
 {
-  UINTN  SerialRegisterBase;
   UINTN  Result;
   UINT8  Mcr;
 
@@ -363,7 +347,6 @@ Tegra16550SerialPortRead (
     return 0;
   }
 
-  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return 0;
   }
@@ -413,12 +396,9 @@ Tegra16550SerialPortRead (
 BOOLEAN
 EFIAPI
 Tegra16550SerialPortPoll (
-  VOID
+  IN UINTN SerialRegisterBase
   )
 {
-  UINTN  SerialRegisterBase;
-
-  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return FALSE;
   }
@@ -459,22 +439,21 @@ Tegra16550SerialPortPoll (
 RETURN_STATUS
 EFIAPI
 Tegra16550SerialPortSetControl (
+  IN UINTN  SerialRegisterBase,
   IN UINT32 Control
   )
 {
-  UINTN SerialRegisterBase;
   UINT8 Mcr;
+
+  if (SerialRegisterBase ==0) {
+    return RETURN_UNSUPPORTED;
+  }
 
   //
   // First determine the parameter is invalid.
   //
   if ((Control & (~(EFI_SERIAL_REQUEST_TO_SEND | EFI_SERIAL_DATA_TERMINAL_READY |
                     EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE))) != 0) {
-    return RETURN_UNSUPPORTED;
-  }
-
-  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
-  if (SerialRegisterBase ==0) {
     return RETURN_UNSUPPORTED;
   }
 
@@ -513,15 +492,14 @@ Tegra16550SerialPortSetControl (
 RETURN_STATUS
 EFIAPI
 Tegra16550SerialPortGetControl (
+  IN  UINTN  SerialRegisterBase,
   OUT UINT32 *Control
   )
 {
-  UINTN SerialRegisterBase;
   UINT8 Msr;
   UINT8 Mcr;
   UINT8 Lsr;
 
-  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return RETURN_UNSUPPORTED;
   }
@@ -618,6 +596,7 @@ Tegra16550SerialPortGetControl (
 RETURN_STATUS
 EFIAPI
 Tegra16550SerialPortSetAttributes (
+  IN     UINTN              SerialRegisterBase,
   IN OUT UINT64             *BaudRate,
   IN OUT UINT32             *ReceiveFifoDepth,
   IN OUT UINT32             *Timeout,
@@ -626,7 +605,6 @@ Tegra16550SerialPortSetAttributes (
   IN OUT EFI_STOP_BITS_TYPE *StopBits
   )
 {
-  UINTN     SerialRegisterBase;
   UINT32    SerialBaudRate;
   UINTN     Divisor;
   UINT8     Lcr;
@@ -634,7 +612,6 @@ Tegra16550SerialPortSetAttributes (
   UINT8     LcrParity;
   UINT8     LcrStop;
 
-  SerialRegisterBase = GetSerialBaseAddress (PcdGetBool (PcdConsolePort));
   if (SerialRegisterBase ==0) {
     return RETURN_UNSUPPORTED;
   }
@@ -793,23 +770,12 @@ TEGRA_UART_OBJ Tegra16550Uart = {
 TEGRA_UART_OBJ *
 EFIAPI
 Tegra16550SerialPortGetObject (
-  VOID
+  IN UINTN *SerialBaseAddress
   )
 {
+  if (SerialBaseAddress != NULL) {
+    *SerialBaseAddress = GetTegraUARTBaseAddress ();
+  }
+
   return &Tegra16550Uart;
-}
-
-/**
-  Retrieve the base address of tegra 16650 serial port.
-
-  @param ConsolePort        Console port if TRUE, Debug port otherwise.
-
-**/
-EFI_PHYSICAL_ADDRESS
-EFIAPI
-Tegra16550SerialPortGetBaseAddress (
-  IN BOOLEAN ConsolePort
-  )
-{
-  return (EFI_PHYSICAL_ADDRESS)GetSerialBaseAddress (ConsolePort);
 }
