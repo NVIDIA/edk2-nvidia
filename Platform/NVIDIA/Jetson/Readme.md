@@ -9,7 +9,7 @@ This software is experimental. It may be incompatible with standard JetPack
 functionality for the Jetson AGX Xavier Developer Kit, including online software
 update functionality for boot firmware. This software is provided for
 experimental purposes, and can be reverted by following standard flashing
-instructions for JetPack software on the Jetson AGX Xavier Developer Kit.
+instructions for JetPack software in the Jetson AGX Xavier Developer Kit.
 
 # Supported Platforms
 - Jetson AGX Xavier
@@ -18,7 +18,7 @@ instructions for JetPack software on the Jetson AGX Xavier Developer Kit.
 - eMMC
 - PCIe (this requires enabling PCIe support if used as boot media with ACPI)
 - NVMe device
-- SATA drive (onboard eSATA POR is a PCIe device)
+- SATA drive (onboard eSATA port is a PCIe device)
 - USB mass storage
 - USB NIC (AX88772b)
 - EQoS NIC on board
@@ -49,9 +49,9 @@ subdirectory.
 Extract the host_overlay_uefi_acpi_partner_R00.0.0.tbz2 package provided over the top of the
 extracted driver package and navigate to the Linux_for_Tegra subdirectory.
 
- $ tar xjf host_overlay_uefi_acpi_partner_R00.0.0.tbz2
- $ cd Linux_for_Tegra
- $ patch -p1 flash.sh < flash.sh.patch
+    $ tar xjf host_overlay_uefi_acpi_partner_R00.0.0.tbz2
+    $ cd Linux_for_Tegra
+    $ patch -p1 flash.sh < flash.sh.patch
 
 Note that if you are not planning to use the L4T root filesystem you may skip this step.
 Extract the root filesystem to the rootfs subdirectory and run the apply_binaries.sh script.
@@ -68,16 +68,16 @@ Please ensure that you have installed the `qemu-user-static` package before runn
 
 The Linux serial console is accessible via the micro-USB connector J501 on the
 Jetson AGX Xavier platform. When you connect a USB cable to the micro-USB connector,
-you should see four serial USB devices and the Linux serial console is available
+you should see four serial USB devices, and the Linux serial console is available
 on the 3rd of the four. When you boot Linux on Jetson AGX Xavier, add the following
 to the Linux kernel command line to direct the kernel output to the serial console.
 
-        console=ttyS0,115200n8
+    console=ttyS0,115200n8
 
 You can enable Linux early console support for Jetson AGX Xavier by adding the
 following string to the Linux kernel command line.
 
-        earlycon=uart8250,mmio32,0x3110000
+    earlycon=uart8250,mmio32,0x3110000
 
 For booting Linux with ACPI on Jetson AGX Xavier the following Tegra 8250 driver
 is required.
@@ -89,7 +89,7 @@ https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/drivers/
 
 If you are planning to boot a UEFI-bootable Linux distribution from external
 media, such as a USB drive, then you may simply place the Jetson AGX Xavier
-Developer Kit in recovery mode and execute the following command to flash the UEFI
+Developer Kit in Recovery Mode and execute the following command to flash the UEFI
 firmware. Otherwise, please refer to the section “Booting L4T with mainline
 Linux."
 
@@ -151,7 +151,7 @@ Update the L4T serial console for booting with the EDK2 firmware:
     $ sudo sed -i 's/ttyTCU0/ttyS0/' "rootfs/etc/systemd/nv-oem-config.sh"
     $ sudo sed -i 's/ttyTCU0/ttyS0/' "rootfs/etc/nv-oem-config.conf.t194"
 
-Put the device into recovery mode and run the following command to flash.
+Put the device into Recovery Mode and run the following command to flash.
 
     $ sudo ./flash.sh -K $KBUILD_OUTPUT/arch/arm64/boot/Image \
       -d $KBUILD_OUTPUT/arch/arm64/boot/dts/nvidia/tegra194-p2972-0000.dtb \
@@ -169,7 +169,7 @@ To change between device tree and ACPI at boot the following steps can be used:
 1. To select ACPI, scroll down and select "ACPI".
 1. Press the Escape key to go back to previous screen.
 1. At the prompt, press "Y"
-1. Press Escape once again to go to UEFI menu.
+1. Press the Escape key once again to go to UEFI menu.
 1. Select "Reset"
 1. Select "Linux" from GRUB menu.
 
