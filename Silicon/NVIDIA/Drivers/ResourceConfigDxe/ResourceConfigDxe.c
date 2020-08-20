@@ -25,6 +25,7 @@
 #include <Library/DevicePathLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiHiiServicesLib.h>
+#include <Library/UefiLib.h>
 #include <NVIDIAConfiguration.h>
 
 #include "ResourceConfigHii.h"
@@ -108,15 +109,59 @@ EFIAPI
 InitializeSettings (
 )
 {
+  EFI_STATUS               Status;
+  VOID                     *AcpiBase;
   NvidiaPcieEnableVariable PcieEnabled = {0};
 
-  PcdSet8S (PcdPcieEntryInAcpiHii, PcdGet8 (PcdPcieEntryInAcpi));
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    PcdSet8S (PcdPcieEntryInAcpiHii, PcdGet8 (PcdPcieEntryInAcpi));
+  } else {
+    PcdSet8S (PcdPcieEntryInAcpiHii, 0);
+  }
 
   SetUnsetVariable (NVIDIA_PCIE_ENABLE_IN_OS_VARIABLE_NAME,
                     &gNVIDIATokenSpaceGuid,
                     EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
                     sizeof (PcieEnabled),
                     (VOID *)&PcieEnabled);
+}
+
+VOID
+EFIAPI
+OnEndOfDxe (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  EFI_STATUS                      Status;
+  EFI_HII_HANDLE                  HiiHandle;
+  EFI_HANDLE                      DriverHandle;
+
+  gBS->CloseEvent (Event);
+
+  InitializeSettings ();
+
+  DriverHandle = NULL;
+  Status = gBS->InstallMultipleProtocolInterfaces (&DriverHandle,
+                  &gEfiDevicePathProtocolGuid,
+                  &mResourceConfigHiiVendorDevicePath,
+                  NULL);
+  if (!EFI_ERROR (Status)) {
+    HiiHandle = HiiAddPackages (&gNVIDIAResourceConfigFormsetGuid,
+                                DriverHandle,
+                                ResourceConfigDxeStrings,
+                                ResourceConfigHiiBin,
+                                NULL
+                                );
+
+    if (HiiHandle == NULL) {
+      gBS->UninstallMultipleProtocolInterfaces (DriverHandle,
+                    &gEfiDevicePathProtocolGuid,
+                    &mResourceConfigHiiVendorDevicePath,
+                    NULL);
+    }
+  }
 }
 
 /**
@@ -137,35 +182,14 @@ ResourceConfigDxeInitialize (
 )
 {
   EFI_STATUS                      Status;
-  EFI_HII_HANDLE                  HiiHandle;
-  EFI_HANDLE                      DriverHandle;
+  EFI_EVENT                       EndOfDxeEvent;
 
-  InitializeSettings ();
-
-  DriverHandle = NULL;
-  Status = gBS->InstallMultipleProtocolInterfaces (&DriverHandle,
-                  &gEfiDevicePathProtocolGuid,
-                  &mResourceConfigHiiVendorDevicePath,
-                  NULL);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  HiiHandle = HiiAddPackages (&gNVIDIAResourceConfigFormsetGuid,
-                              DriverHandle,
-                              ResourceConfigDxeStrings,
-                              ResourceConfigHiiBin,
-                              NULL
-                              );
-
-  if (HiiHandle == NULL) {
-    gBS->UninstallMultipleProtocolInterfaces (DriverHandle,
-                  &gEfiDevicePathProtocolGuid,
-                  &mResourceConfigHiiVendorDevicePath,
-                  NULL);
-    return EFI_OUT_OF_RESOURCES;
-  }
-  return EFI_SUCCESS;
+  Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                               TPL_CALLBACK,
+                               OnEndOfDxe,
+                               NULL,
+                               &gEfiEndOfDxeEventGroupGuid,
+                               &EndOfDxeEvent);
 
   return Status;
 }

@@ -12,7 +12,7 @@
   INF_VERSION               = 0x00010019
   BASE_NAME                 = ResourceConfigDxe
   FILE_GUID                 = 2BCD55FD-99D7-49CE-B15E-57718A071509
-  MODULE_TYPE               = UEFI_DRIVER
+  MODULE_TYPE               = DXE_DRIVER
   VERSION_STRING            = 1.0
   ENTRY_POINT               = ResourceConfigDxeInitialize
 
@@ -44,6 +44,8 @@
   gEfiIfrFrontPageGuid                          ## CONSUMES ## GUID (Indicate the formset in this library need to dispaly in which page)
   gEfiIfrTianoGuid                              ## CONSUMES ## GUID (Extended IFR Guid Opcode)
   gNVIDIAResourceConfigFormsetGuid
+  gEfiEndOfDxeEventGroupGuid
+  gEfiAcpiTableGuid
 
 [Protocols]
   gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
@@ -52,3 +54,5 @@
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiHii
 
+[Depex]
+  TRUE
