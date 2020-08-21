@@ -810,6 +810,11 @@
   # HTTP boot support requires RamDiskDxe
   MdeModulePkg/Universal/Disk/RamDiskDxe/RamDiskDxe.inf
 
+  #
+  # Custom HII Support
+  #
+  Silicon/NVIDIA/Drivers/ResourceConfigDxe/ResourceConfigDxe.inf
+
 [Components.AARCH64]
   #
   # EBC

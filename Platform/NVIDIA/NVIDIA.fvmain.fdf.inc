@@ -221,3 +221,7 @@
   #
   INF Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
 
+  #
+  # Custom HII Support
+  #
+  INF Silicon/NVIDIA/Drivers/ResourceConfigDxe/ResourceConfigDxe.inf
