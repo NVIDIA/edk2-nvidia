@@ -34,10 +34,6 @@
 !endif
   DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
 
-  TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
-  Tegra16550SerialPortLib|Silicon/NVIDIA/Library/Tegra16550SerialPortLib/Tegra16550SerialPortLib.inf
-  SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraSerialPortLib.inf
-
   BaseLib|MdePkg/Library/BaseLib/BaseLib.inf
   SynchronizationLib|MdePkg/Library/BaseSynchronizationLib/BaseSynchronizationLib.inf
   PerformanceLib|MdePkg/Library/BasePerformanceLibNull/BasePerformanceLibNull.inf
@@ -635,7 +631,6 @@ gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
   MdeModulePkg/Universal/Console/ConSplitterDxe/ConSplitterDxe.inf
   MdeModulePkg/Universal/Console/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
   MdeModulePkg/Universal/Console/TerminalDxe/TerminalDxe.inf
-  Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
   MdeModulePkg/Universal/PrintDxe/PrintDxe.inf
 
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf {

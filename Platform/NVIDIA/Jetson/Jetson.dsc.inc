@@ -27,6 +27,10 @@
 
 [LibraryClasses.common]
 
+  TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
+  Tegra16550SerialPortLib|Silicon/NVIDIA/Library/Tegra16550SerialPortLib/Tegra16550SerialPortLib.inf
+  SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraSerialPortLib.inf
+
   RealTimeClockLib|Silicon/NVIDIA/Library/MaximRealTimeClockLib/MaximRealTimeClockLib.inf
 
 [LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
@@ -77,6 +81,11 @@
   # Tegra Platform Configuration
   #
   Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
+
+  #
+  # Tegra UART driver
+  #
+  Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
 
   #
   # Platform Configuration Manager Data

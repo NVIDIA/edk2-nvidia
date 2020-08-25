@@ -86,7 +86,6 @@
   INF MdeModulePkg/Universal/Console/ConSplitterDxe/ConSplitterDxe.inf
   INF MdeModulePkg/Universal/Console/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
   INF MdeModulePkg/Universal/Console/TerminalDxe/TerminalDxe.inf
-  INF Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
   INF MdeModulePkg/Universal/PrintDxe/PrintDxe.inf
 
   #

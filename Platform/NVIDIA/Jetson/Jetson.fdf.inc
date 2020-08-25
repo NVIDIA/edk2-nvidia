@@ -12,6 +12,11 @@
 
 
   #
+  # Tegra UART driver
+  #
+  INF Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
+
+  #
   # Platform Configuration Manager Data
   #
   INF Silicon/NVIDIA/T186/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
