@@ -119,7 +119,7 @@ CvmEepromDxeDriverBindingSupported (
 
     Status = gBS->LocateProtocol (&gEfiRngProtocolGuid, NULL, (VOID **)&RngProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get RNG protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_INFO, "%a: Failed to get RNG protocol\r\n", __FUNCTION__));
     }
   }
 
