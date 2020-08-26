@@ -14,13 +14,15 @@
 #string STR_RESOURCE_CONFIG_TITLE      #language en-US "NVIDIA Resource Configuration"
 #string STR_RESOURCE_CONFIG_HELP       #language en-US "Select Resource Configuration options."
 
-#string STR_PCIE_CONFIG_FORM_TITLE      #language en-US "PCIe Configuration"
-#string STR_PCIE_CONFIG_FORM_HELP       #language en-US "PCIe configuration options"
+#string STR_PCIE_CONFIG_FORM_TITLE     #language en-US "PCIe Configuration"
+#string STR_PCIE_CONFIG_FORM_HELP      #language en-US "PCIe configuration options"
 
-#string STR_PCIE_IN_OS_PROMPT      #language en-US "Enable PCIe in OS"
-#string STR_PCIE_IN_OS_HELP       #language en-US "Enable/Disable PCIe's ACPI Entry to be exposed to the O/S."
-#string STR_NO_OPTION_HELP        #language en-US "No configuration options on this platform."
-#string STR_NO_OPTION_PROMPT      #language en-US "No configuration options on this platform."
+#string STR_PCIE_IN_OS_PROMPT          #language en-US "Enable PCIe in OS"
+#string STR_PCIE_IN_OS_HELP            #language en-US "Enable/Disable PCIe's ACPI Entry to be exposed to the O/S."
+#string STR_NO_OPTION_HELP             #language en-US "No configuration options on this platform."
+#string STR_NO_OPTION_PROMPT           #language en-US "No configuration options on this platform."
+#string STR_QUICK_BOOT_ENABLED_PROMPT  #language en-US "Enable UEFI Quick Boot"
+#string STR_QUICK_BOOT_ENABLED_HELP    #language en-US "Enable/Disable UEFI full device enumeration."
 
 #string STR_NULL                       #language en-US ""
 

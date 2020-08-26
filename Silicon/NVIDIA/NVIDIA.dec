@@ -252,3 +252,6 @@ Include
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|0x00|UINT8|0x0000002B
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiHii|0x00|UINT8|0x0000002C
 
+#Option to enable/disable quickboot
+  gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|0x01|UINT8|0x0000002D
+

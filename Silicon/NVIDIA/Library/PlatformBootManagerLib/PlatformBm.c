@@ -540,6 +540,10 @@ IsPlatformConfigurationNeeded (
     }
   }
 
+  if (PcdGet8 (PcdQuickBootEnabled) == 0) {
+    PlatformConfigurationNeeded = TRUE;
+  }
+
   return PlatformConfigurationNeeded;
 }
 

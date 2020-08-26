@@ -53,6 +53,7 @@
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiHii
+  gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
 
 [Depex]
   TRUE

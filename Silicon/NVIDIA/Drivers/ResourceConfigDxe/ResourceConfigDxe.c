@@ -119,6 +119,7 @@ InitializeSettings (
   } else {
     PcdSet8S (PcdPcieEntryInAcpiHii, 0);
   }
+  PcdSet8S (PcdQuickBootEnabled, PcdGet8 (PcdQuickBootEnabled));
 
   SetUnsetVariable (NVIDIA_PCIE_ENABLE_IN_OS_VARIABLE_NAME,
                     &gNVIDIATokenSpaceGuid,

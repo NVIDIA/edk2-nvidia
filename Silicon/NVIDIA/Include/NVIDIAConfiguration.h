@@ -27,4 +27,9 @@ typedef struct {
   UINT8 ConfigEnabled;
 } NvidiaPcieEnableInOsConfiguration;
 
+#define NVIDIA_PCIE_QUICK_BOOT_ENABLE_NAME L"QuickBootEnable"
+typedef struct {
+  UINT8 Enabled;
+} NVIDIA_QUICK_BOOT_ENABLED;
+
 #endif //__NVIDIA_CONFIGURATION_H__
