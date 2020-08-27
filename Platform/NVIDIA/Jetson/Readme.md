@@ -38,18 +38,18 @@ There are no known issues associated with this feature.
 ## Setup
 
 Download the following software from https://developer.nvidia.com/embedded/downloads
-        L4T Jetson Driver Package, version 32.4.3
-        L4T Sample Root File System, version 32.4.3
+        L4T Jetson Driver Package, version L4T_VERSION
+        L4T Sample Root File System, version L4T_VERSION
 
 Extract the driver package tarball and navigate to the `Linux_for_Tegra`
 subdirectory.
 
-    $ tar xjf Tegra186_Linux_R32.4.3_aarch64.tbz2
+    $ tar xjf Tegra186_Linux_RL4T_VERSION_aarch64.tbz2
 
-Extract the host_overlay_uefi_acpi_partner_R00.0.0.tbz2 package provided over the top of the
+Extract the nvidia-l4t-jetson-uefi-UEFI_PACKAGE_VERSION.tbz2 package provided over the top of the
 extracted driver package and navigate to the Linux_for_Tegra subdirectory.
 
-    $ tar xjf host_overlay_uefi_acpi_partner_R00.0.0.tbz2
+    $ tar xjf nvidia-l4t-jetson-uefi-UEFI_PACKAGE_VERSION.tbz2
     $ cd Linux_for_Tegra
     $ patch -p1 flash.sh < flash.sh.patch
 
@@ -59,7 +59,7 @@ Please ensure that you have installed the `qemu-user-static` package before runn
 `apply_binaries.sh` script.
 
     $ cd Linux_for_Tegra/rootfs/
-    $ sudo tar xjf /path/to/Tegra_Linux_Sample-Root-Filesystem_R32.4.3_aarch64.tbz2
+    $ sudo tar xjf /path/to/Tegra_Linux_Sample-Root-Filesystem_RL4T_VERSION_aarch64.tbz2
     $ cd ..
     $ sudo ./apply_binaries.sh
 
