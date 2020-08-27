@@ -777,6 +777,13 @@ PlatformBootManagerAfterConsole (
   UINTN                         PosX;
   UINTN                         PosY;
 
+  //
+  // Show NVIDIA Internal Banner.
+  //
+  if (PcdGetBool (PcdTegraPrintInternalBanner)) {
+    Print (L"********** FOR NVIDIA INTERNAL USE ONLY **********\n");
+  }
+
   FirmwareVerLength = StrLen (PcdGetPtr (PcdFirmwareVersionString));
 
   //

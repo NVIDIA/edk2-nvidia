@@ -214,6 +214,9 @@ Include
   gNVIDIATokenSpaceGuid.PcdNoVariableRtProperties|0x25B0|UINT32|0x00000030
   gNVIDIATokenSpaceGuid.PcdVariableRtProperties|0x27F3|UINT32|0x00000031
 
+# Tegra Print Internal Banner
+  gNVIDIATokenSpaceGuid.PcdTegraPrintInternalBanner|FALSE|BOOLEAN|0x00000033
+
 [PcdsDynamic.common]
 #Size of optional signing data header in boot.img partition.
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B
