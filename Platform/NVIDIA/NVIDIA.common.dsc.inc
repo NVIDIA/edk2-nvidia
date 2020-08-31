@@ -539,7 +539,7 @@
 
 [PcdsDynamicHii.common.DEFAULT]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|10
-  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiHii|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIATokenSpaceGuid|0x0|1|BS,NV
 
 [Components.common]

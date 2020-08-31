@@ -115,9 +115,9 @@ InitializeSettings (
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
-    PcdSet8S (PcdPcieEntryInAcpiHii, PcdGet8 (PcdPcieEntryInAcpi));
+    PcdSet8S (PcdPcieEntryInAcpi, PcdGet8 (PcdPcieEntryInAcpi));
   } else {
-    PcdSet8S (PcdPcieEntryInAcpiHii, 0);
+    PcdSet8S (PcdPcieEntryInAcpi, 0);
   }
   PcdSet8S (PcdQuickBootEnabled, PcdGet8 (PcdQuickBootEnabled));
 

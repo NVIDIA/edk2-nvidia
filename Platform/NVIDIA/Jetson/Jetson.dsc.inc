@@ -46,7 +46,7 @@
 
 [PcdsDynamicDefault.common.T186]
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
-  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03881000
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA186'
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(d33335fe-a16c-4765-a04d-f3c78999e580)}
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x190
@@ -56,7 +56,7 @@
 
 [PcdsDynamicDefault.common.T194]
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
-  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03881000
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA194'
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
@@ -67,7 +67,9 @@
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
-  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|1
+
+[PcdsDynamicHii.common.T194]
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
 
 
 ################################################################################

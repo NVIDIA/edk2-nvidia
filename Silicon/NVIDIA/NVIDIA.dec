@@ -173,8 +173,6 @@ Include
 #Tegra 16550 UARTB T194 Base
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194|0x03110000|UINT64|0x0000001D
 
-#Tegra PWM FAN T194 Base
-  gNVIDIATokenSpaceGuid.PcdTegraPwmFanT194Base|0x0C340000|UINT64|0x00000021
 
 #Tegra Firmware Date Time
   gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString|L""|VOID*|0x00010022
@@ -182,17 +180,6 @@ Include
 # Tegra Architectural Timer Frequency
   gNVIDIATokenSpaceGuid.PcdTegraArchTimerFreqInHz|31250000|UINT32|0x00000024
 
-# Tegra T186 System FMP Capsule GUID
-  gNVIDIATokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuidT186|{GUID(d33335fe-a16c-4765-a04d-f3c78999e580)}|VOID*|0x00000025
-
-# Tegra T194 System FMP Capsule GUID
-  gNVIDIATokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuidT194|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}|VOID*|0x00000026
-
-# Tegra T186 Cvm Eeprom Bus Base
-  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusT186Base|0x0C250000|UINT64|0x00000028
-
-# Tegra T194 Cvm Eeprom Bus Base
-  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusT194Base|0x03160000|UINT64|0x00000029
 
 # Supported bitmasks for runtime functions
 ## Bitmask of supported runtime services<BR>
@@ -250,7 +237,6 @@ Include
 #Default to make PCIe entry void in ACPI table
 #Need two as the Platform Init Library is invoked prior to variable services being available
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|0x00|UINT8|0x0000002B
-  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiHii|0x00|UINT8|0x0000002C
 
 #Option to enable/disable quickboot
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|0x01|UINT8|0x0000002D
