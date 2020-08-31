@@ -33,6 +33,9 @@ typedef enum {
   TEGRA_PLATFORM_UNKNOWN
 } TEGRA_PLATFORM_TYPE;
 
+#define T186_SKU          1
+#define T194_SKU          2
+
 /**
   Returns chip id of the tegra platform.
 

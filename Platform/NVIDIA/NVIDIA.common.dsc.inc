@@ -527,7 +527,7 @@
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{0x0}
 
-[PcdsDynamicDefault.common]
+[PcdsDynamicDefault.common.DEFAULT]
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x00000000
 
   #

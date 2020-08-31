@@ -50,18 +50,7 @@
   gEfiRtPropertiesTableGuid
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase
-  gNVIDIATokenSpaceGuid.PcdTegraPwmFanT194Base
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
-  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
-  gArmTokenSpaceGuid.PcdSystemMemoryBase
-  gArmTokenSpaceGuid.PcdGicDistributorBase
-  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
-  gArmTokenSpaceGuid.PcdGicRedistributorsBase
-  gArmTokenSpaceGuid.PcdPciBusMin
-  gArmTokenSpaceGuid.PcdPciBusMax
   gNVIDIATokenSpaceGuid.PcdNoVariableRtProperties
   gNVIDIATokenSpaceGuid.PcdVariableRtProperties
   gNVIDIATokenSpaceGuid.PcdRuntimeVariableServicesSupported

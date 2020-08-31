@@ -12,7 +12,7 @@
 #
 
 [Defines]
-  SKUID_IDENTIFIER            = DEFAULT
+  SKUID_IDENTIFIER            = ALL
   PLATFORM_VERSION            = 0.1
   DSC_SPECIFICATION           = 0x00010005
   SUPPORTED_ARCHITECTURES     = AARCH64
@@ -44,6 +44,32 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|1920
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|1080
 
+[PcdsDynamicDefault.common.T186]
+  gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03881000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA186'
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(d33335fe-a16c-4765-a04d-f3c78999e580)}
+  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x190
+  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|TRUE
+  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusBase|0x0C250000
+  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
+
+[PcdsDynamicDefault.common.T194]
+  gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03881000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA194'
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}
+  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
+  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|TRUE
+  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusBase|0x03160000
+  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
+  gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase|0x0C340000
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|1
+
+
 ################################################################################
 #
 # Components Section - list of all EDK II Modules needed by this Platform
@@ -53,11 +79,7 @@
   #
   # Tegra Platform Configuration
   #
-  Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf {
-    <LibraryClasses>
-      NULL|Silicon/NVIDIA/T186/Library/PlatformInitializationLib/PlatformInitializationLib.inf
-      NULL|Silicon/NVIDIA/T194/Library/PlatformInitializationLib/PlatformInitializationLib.inf
-  }
+  Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
 
   #
   # Platform Configuration Manager Data

@@ -22,6 +22,11 @@
   OUTPUT_DIRECTORY            = Build/Jetson
   FLASH_DEFINITION            = Platform/NVIDIA/Jetson/Jetson.fdf
 
+[SkuIds]
+  0|DEFAULT
+  1|T186
+  2|T194
+
   #
   # Define ESRT GUIDs for Firmware Management Protocol instances
   #
