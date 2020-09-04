@@ -648,6 +648,7 @@
   Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
 
 !if $(TARGET) != RELEASE
+  Silicon/NVIDIA/Test/ShellTest/BootOrderTest/BootOrderTestUefiShell.inf
   Silicon/NVIDIA/Test/ShellTest/UefiMemMapTest/UefiMemMapTestUefiShell.inf
 !endif
 
