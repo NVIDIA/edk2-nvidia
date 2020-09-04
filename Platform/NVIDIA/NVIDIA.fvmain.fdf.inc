@@ -57,14 +57,9 @@
   INF Silicon/NVIDIA/Drivers/ConfigurationManager/ConfigurationManagerDxe.inf
 
   #
-  # Dynamic Table Factory Dxe
+  # Dynamic Tables support
   #
-  INF DynamicTablesPkg/Drivers/DynamicTableFactoryDxe/DynamicTableFactoryDxe.inf
-
-  #
-  # Dynamic Tables Dxe
-  #
-  INF DynamicTablesPkg/Drivers/DynamicTableManagerDxe/DynamicTableManagerDxe.inf
+  !include DynamicTablesPkg/DynamicTables.fdf.inc
 
   INF MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
 
@@ -118,7 +113,7 @@
   INF MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf
   INF MdeModulePkg/Bus/Usb/UsbMouseAbsolutePointerDxe/UsbMouseAbsolutePointerDxe.inf
   INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
-  INF Drivers/OptionRomPkg/Bus/Usb/UsbNetworking/Ax88772b/Ax88772b.inf
+  INF Drivers/ASIX/Bus/Usb/UsbNetworking/Ax88772c/Ax88772c.inf
 
   #
   # PCI Support
