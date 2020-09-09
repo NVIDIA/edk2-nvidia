@@ -647,6 +647,10 @@
   #
   Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
 
+!if $(TARGET) != RELEASE
+  Silicon/NVIDIA/Test/ShellTest/UefiMemMapTest/UefiMemMapTestUefiShell.inf
+!endif
+
   MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
 
   ArmPkg/Drivers/ArmGic/ArmGicDxe.inf

@@ -207,6 +207,10 @@
   #
   INF Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
 
+!if $(TARGET) != RELEASE
+  INF Silicon/NVIDIA/Test/ShellTest/UefiMemMapTest/UefiMemMapTestUefiShell.inf
+!endif
+
   #
   # Tegra Platform Boot Manager driver
   #
