@@ -41,6 +41,7 @@
   IoLib
   PcdLib
   TegraPlatformInfoLib
+  PlatformResourceLib
   MemoryAllocationLib
 
 [Protocols]

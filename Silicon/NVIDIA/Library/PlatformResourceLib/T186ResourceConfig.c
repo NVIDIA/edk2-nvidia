@@ -118,3 +118,19 @@ T186GetDTBBaseAddress (
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   return CpuBootloaderParams->DtbLoadAddress;
 }
+
+/**
+  Retrieve Recovery Boot Type
+
+**/
+TEGRA_RECOVERY_BOOT_TYPE
+T186GetRecoveryBootType (
+  IN UINTN CpuBootloaderAddress
+  )
+{
+  TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  return CpuBootloaderParams->GlobalData.RecoveryBootType;
+}

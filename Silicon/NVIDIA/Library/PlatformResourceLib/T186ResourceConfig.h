@@ -28,4 +28,9 @@ T186GetDTBBaseAddress (
   IN UINTN CpuBootloaderAddress
 );
 
+TEGRA_RECOVERY_BOOT_TYPE
+T186GetRecoveryBootType (
+  IN UINTN CpuBootloaderAddress
+);
+
 #endif //__T186_RESOURCE_CONFIG_H__

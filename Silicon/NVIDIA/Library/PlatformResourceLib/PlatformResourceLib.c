@@ -34,7 +34,6 @@ GetTegraUARTBaseAddress (
   UINTN   TegraUARTBase;
   BOOLEAN ValidPrivatePlatform;
 
-  ValidPrivatePlatform = FALSE;
   ValidPrivatePlatform = GetTegraUARTBaseAddressInternal (&TegraUARTBase);
   if (ValidPrivatePlatform) {
     return TegraUARTBase;
@@ -67,7 +66,6 @@ GetCPUBLBaseAddress (
   UINTN   SystemMemoryBaseAddress;
   BOOLEAN ValidPrivatePlatform;
 
-  ValidPrivatePlatform = FALSE;
   ValidPrivatePlatform = GetCPUBLBaseAddressInternal (&CpuBootloaderAddress);
   if (ValidPrivatePlatform) {
     return CpuBootloaderAddress;
@@ -99,7 +97,6 @@ GetDTBBaseAddress (
   UINT64  DTBBaseAddress;
   BOOLEAN ValidPrivatePlatform;
 
-  ValidPrivatePlatform = FALSE;
   ValidPrivatePlatform = GetDTBBaseAddressInternal (&DTBBaseAddress);
   if (ValidPrivatePlatform) {
     return DTBBaseAddress;
@@ -120,6 +117,40 @@ GetDTBBaseAddress (
 }
 
 /**
+  Retrieve Recovery Boot Type
+
+**/
+TEGRA_RECOVERY_BOOT_TYPE
+EFIAPI
+GetRecoveryBootType (
+  VOID
+)
+{
+  UINTN                    ChipID;
+  UINTN                    CpuBootloaderAddress;
+  TEGRA_RECOVERY_BOOT_TYPE RecoveryBootType;
+  BOOLEAN                  ValidPrivatePlatform;
+
+  ValidPrivatePlatform = GetRecoveryBootTypeInternal (&RecoveryBootType);
+  if (ValidPrivatePlatform) {
+    return RecoveryBootType;
+  }
+
+  ChipID = TegraGetChipID();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T186_CHIP_ID:
+      return T186GetRecoveryBootType(CpuBootloaderAddress);
+    case T194_CHIP_ID:
+      return T194GetRecoveryBootType(CpuBootloaderAddress);
+    default:
+      return TegrablBootTypeMax;
+  }
+}
+
+/**
   Retrieve Resource Config
 
 **/
@@ -133,7 +164,6 @@ GetResourceConfig (
   UINTN   CpuBootloaderAddress;
   BOOLEAN ValidPrivatePlatform;
 
-  ValidPrivatePlatform = FALSE;
   ValidPrivatePlatform = GetCPUBLBaseAddressInternal (&CpuBootloaderAddress);
   if (ValidPrivatePlatform) {
     return GetResourceConfigInternal (CpuBootloaderAddress, PlatformInfo);;

@@ -56,6 +56,19 @@ GetDTBBaseAddressInternal (
 }
 
 /**
+  Retrieve Recovery Boot Type
+
+**/
+BOOLEAN
+EFIAPI
+GetRecoveryBootTypeInternal (
+  OUT TEGRA_RECOVERY_BOOT_TYPE *RecoveryBootType
+)
+{
+  return FALSE;
+}
+
+/**
   Retrieve Resource Config
 
 **/

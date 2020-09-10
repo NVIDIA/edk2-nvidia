@@ -22,6 +22,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Guid/RtPropertiesTable.h>
 #include "TegraPlatformInitDxePrivate.h"
 
@@ -77,7 +78,8 @@ TegraPlatformInitialize (
   if (PlatformType != TEGRA_PLATFORM_SILICON) {
     // Override boot timeout for pre-si platforms
     EmmcMagic = * ((UINTN *) (TegraGetSystemMemoryBaseAddress(ChipID) + SYSIMG_EMMC_MAGIC_OFFSET));
-    if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {
+    if (((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) ||
+        (GetRecoveryBootType () == TegrablBootRecovery)) {
       // Enable emulated variable NV mode in variable driver when ram loading images and emmc
       // is not enabled.
       Status = UseEmulatedVariableStore (ImageHandle);
