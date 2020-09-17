@@ -39,6 +39,7 @@
   gNVIDIARamloadKernelGuid
   gNVIDIABmBootOptionGuid
   gNVIDIALoadfileKernelArgsGuid
+  gNVIDIAKernelCmdLineUpdateGuid
 
 [Depex]
   TRUE

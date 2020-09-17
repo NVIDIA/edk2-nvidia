@@ -141,8 +141,9 @@ InstallMmioRegions (
                          TegraGetGicInterruptInterfaceBaseAddress(ChipID), SIZE_4KB);
   *MmioRegionsCount += InstallMmioRegion(
                          TegraGetGicRedistributorBaseAddress(ChipID), SIZE_128KB);
-
   *MmioRegionsCount += InstallMmioRegion(GetTegraUARTBaseAddress (), SIZE_4KB);
+  *MmioRegionsCount += InstallMmioRegion(
+                         FixedPcdGet64(PcdTegraMCBBaseAddress), SIZE_4KB);
 
   return EFI_SUCCESS;
 }

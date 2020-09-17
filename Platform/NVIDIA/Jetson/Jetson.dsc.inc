@@ -218,3 +218,8 @@
   # EQOS NIC Support
   #
   Silicon/NVIDIA/Drivers/EqosDeviceDxe/EqosDeviceDxe.inf
+
+  #
+  # VPR Support
+  #
+  Silicon/NVIDIA/Drivers/VPRDxe/VPRDxe.inf

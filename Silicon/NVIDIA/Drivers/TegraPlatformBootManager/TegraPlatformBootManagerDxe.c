@@ -18,12 +18,13 @@
 #include <libfdt.h>
 
 #include <Protocol/PlatformBootManager.h>
+#include <Protocol/KernelCmdLineUpdate.h>
 
 #define NVIDIA_KERNEL_COMMAND_MAX_LEN   25
 
 extern EFI_GUID mBmAutoCreateBootOptionGuid;
 
-CHAR16 KernelCommandRemove[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
+CHAR16 KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
   L"console="
 };
 
@@ -166,6 +167,156 @@ GetDtbCommandLine (
 }
 
 /*
+  Remove kernel command line.
+
+  @param[in]  InCmdLine  Input Kernel command line.
+  @param[out] DelCmdLine Kernel command option to be deleted.
+
+  @retval EFI_SUCCESS    Command option removed correctly.
+
+  @retval Others         Failure.
+*/
+STATIC
+VOID
+RemoveKernelCommandLine (
+  IN CHAR16 *InCmdLine,
+  IN CHAR16 *DelCmdLine
+  )
+{
+  CHAR16 *ExistingCommandLineArgumentStart;
+  CHAR16 *ExistingCommandLineArgumentEnd;
+  UINTN  Length;
+  CHAR16 *TempBuffer;
+
+  ExistingCommandLineArgumentStart = NULL;
+  ExistingCommandLineArgumentStart = StrStr (InCmdLine, DelCmdLine);
+  while (ExistingCommandLineArgumentStart != NULL) {
+    ExistingCommandLineArgumentEnd = NULL;
+    ExistingCommandLineArgumentEnd = StrStr (ExistingCommandLineArgumentStart, L" ");
+
+    if (ExistingCommandLineArgumentEnd == NULL) {
+      gBS->SetMem (ExistingCommandLineArgumentStart, StrSize (ExistingCommandLineArgumentStart), 0);
+      break;
+    }
+
+    TempBuffer = NULL;
+    Length = StrSize(ExistingCommandLineArgumentEnd + 1);
+
+    gBS->AllocatePool (EfiBootServicesData,
+                       Length,
+                       (VOID **)&TempBuffer);
+
+    gBS->SetMem (TempBuffer, Length, 0);
+
+    gBS->CopyMem (TempBuffer,
+                  ExistingCommandLineArgumentEnd + 1,
+                  Length);
+
+    gBS->SetMem (ExistingCommandLineArgumentStart,
+                 StrSize(ExistingCommandLineArgumentStart),
+                 0);
+
+    gBS->CopyMem (ExistingCommandLineArgumentStart,
+                  TempBuffer,
+                  Length);
+
+    gBS->FreePool (TempBuffer);
+
+    ExistingCommandLineArgumentStart = StrStr (ExistingCommandLineArgumentStart, DelCmdLine);
+  }
+}
+
+/*
+  Update kernel command line.
+
+  @param[in]  InCmdLine  Input Kernel command line.
+  @param[out] OutCmdLine Output Kernel command line.
+
+  @retval EFI_SUCCESS    Command line retrieved correctly.
+
+  @retval Others         Failure.
+*/
+STATIC
+EFI_STATUS
+UpdateKernelCommandLine (
+  IN  CHAR16 *InCmdLine,
+  OUT CHAR16 **OutCmdLine
+  )
+{
+  EFI_STATUS                             Status;
+  UINTN                                  Length;
+  UINTN                                  NumOfHandles;
+  EFI_HANDLE                             *HandleBuffer;
+  UINTN                                  Count;
+  NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL *Interface;
+  CHAR16                                 *CmdLine;
+
+  Length = StrSize (InCmdLine);
+
+  Status = gBS->LocateHandleBuffer (ByProtocol,
+                                    &gNVIDIAKernelCmdLineUpdateGuid,
+                                    NULL,
+                                    &NumOfHandles,
+                                    &HandleBuffer);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  for (Count = 0; Count < NumOfHandles; Count++) {
+    Status = gBS->HandleProtocol (HandleBuffer[Count],
+                                  &gNVIDIAKernelCmdLineUpdateGuid,
+                                  (VOID **)&Interface);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    if (Interface->NewCommandLineArgument != NULL) {
+      Length += StrSize (Interface->NewCommandLineArgument);
+    }
+  }
+
+  Status = gBS->AllocatePool (EfiBootServicesData,
+                              Length,
+                              (VOID **)&CmdLine);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  gBS->SetMem (CmdLine, Length, 0);
+
+  gBS->CopyMem (CmdLine, InCmdLine, StrSize (InCmdLine));
+
+  for (Count = 0; Count < NumOfHandles; Count++) {
+    Status = gBS->HandleProtocol (HandleBuffer[Count],
+                                  &gNVIDIAKernelCmdLineUpdateGuid,
+                                  (VOID **)&Interface);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    if (Interface->ExistingCommandLineArgument != NULL) {
+      RemoveKernelCommandLine (CmdLine, Interface->ExistingCommandLineArgument);
+    }
+  }
+
+  for (Count = 0; Count < NumOfHandles; Count++) {
+    Status = gBS->HandleProtocol (HandleBuffer[Count],
+                                  &gNVIDIAKernelCmdLineUpdateGuid,
+                                  (VOID **)&Interface);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    if (Interface->NewCommandLineArgument != NULL) {
+      UnicodeSPrint (CmdLine, Length, L"%s %s", CmdLine, Interface->NewCommandLineArgument);
+    }
+  }
+
+  *OutCmdLine = CmdLine;
+  return EFI_SUCCESS;
+}
+
+/*
   Get the final kernel command line and its length to be patched in load option.
 
   @param[in]  InCmdLine  Input command line.
@@ -187,33 +338,37 @@ GetPlatformCommandLine (
   )
 {
   EFI_STATUS          Status;
+  CHAR16              *UpdatedCommandLine;
   CHAR16              *CommandLine;
   UINTN               CommandLineBytes;
   UINTN               FormattedCommandLineLength;
-  CHAR16              *CommandLineOptionStart;
-  CHAR16              *CommandLineOptionEnd;
-  UINTN               CommandLineOptionLength;
-  UINTN               CommandLineOptionOffset;
   VOID                *AcpiBase;
   UINT32              Count;
 
-  CommandLineBytes = StrSize (InCmdLine) + sizeof (EFI_GUID);
+  UpdatedCommandLine = NULL;
+  Status = UpdateKernelCommandLine (InCmdLine, &UpdatedCommandLine);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  CommandLineBytes = StrSize (UpdatedCommandLine) + sizeof (EFI_GUID);
 
   CommandLine = NULL;
   Status = gBS->AllocatePool (EfiBootServicesData,
                               CommandLineBytes,
                               (VOID **)&CommandLine);
   if (EFI_ERROR (Status)) {
+    gBS->FreePool (UpdatedCommandLine);
     return Status;
   }
 
   gBS->SetMem (CommandLine, CommandLineBytes, 0);
 
-  gBS->CopyMem (CommandLine, InCmdLine, StrSize (InCmdLine));
+  gBS->CopyMem (CommandLine, UpdatedCommandLine, StrSize (UpdatedCommandLine));
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (EFI_ERROR (Status)) {
-    gBS->CopyMem ((CHAR8 *)CommandLine + StrSize (InCmdLine),
+    gBS->CopyMem ((CHAR8 *)CommandLine + StrSize (UpdatedCommandLine),
                   &gNVIDIABmBootOptionGuid, sizeof (EFI_GUID));
 
     DEBUG ((DEBUG_INFO, "%a: DT Boot Kernel Command Line: %s\n", __FUNCTION__, CommandLine));
@@ -221,34 +376,14 @@ GetPlatformCommandLine (
     *OutCmdLine = CommandLine;
     *OutCmdLen = CommandLineBytes;
 
+    gBS->FreePool (UpdatedCommandLine);
     return EFI_SUCCESS;
   }
 
-  for (Count = 0; Count < sizeof (KernelCommandRemove)/sizeof (KernelCommandRemove[0]); Count++) {
-    FormattedCommandLineLength = 0;
-    FormattedCommandLineLength = StrLen (CommandLine);
-    CommandLineOptionStart = NULL;
-    CommandLineOptionStart = StrStr (CommandLine, KernelCommandRemove[Count]);
-    while (CommandLineOptionStart != NULL) {
-      CommandLineOptionEnd = NULL;
-      CommandLineOptionEnd = StrStr (CommandLineOptionStart, L" ");
-      if (CommandLineOptionEnd == NULL) {
-        if (CommandLineOptionStart == CommandLine) {
-          gBS->SetMem (CommandLineOptionStart, CommandLineBytes, 0);
-        } else {
-          CommandLineOptionLength = StrLen (CommandLineOptionStart);
-          gBS->SetMem (CommandLineOptionStart, CommandLineOptionLength * sizeof (CHAR16), 0);
-        }
-        break;
-      }
-      CommandLineOptionLength = (UINTN)(CommandLineOptionEnd - CommandLineOptionStart) + 1;
-      CommandLineOptionOffset = (UINTN)(CommandLineOptionStart - CommandLine);
-      gBS->CopyMem (CommandLineOptionStart,
-                    CommandLineOptionEnd + 1,
-                    (FormattedCommandLineLength - (CommandLineOptionLength + CommandLineOptionOffset) + 1) * sizeof (CHAR16));
-      CommandLineOptionStart = StrStr (CommandLineOptionStart, KernelCommandRemove[Count]);
-    }
+  for (Count = 0; Count < sizeof (KernelCommandRemoveAcpi)/sizeof (KernelCommandRemoveAcpi[0]); Count++) {
+    RemoveKernelCommandLine (CommandLine, KernelCommandRemoveAcpi[Count]);
   }
+
   FormattedCommandLineLength = StrSize (CommandLine);
   gBS->CopyMem ((CHAR8 *)CommandLine + FormattedCommandLineLength,
                 &gNVIDIABmBootOptionGuid, sizeof (EFI_GUID));
@@ -258,6 +393,7 @@ GetPlatformCommandLine (
   *OutCmdLine = CommandLine;
   *OutCmdLen = FormattedCommandLineLength + sizeof (EFI_GUID);
 
+  gBS->FreePool (UpdatedCommandLine);
   return EFI_SUCCESS;
 }
 

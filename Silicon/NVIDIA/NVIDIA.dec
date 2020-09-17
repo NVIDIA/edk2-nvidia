@@ -106,6 +106,9 @@ Include
   #NVIDIA Vendor Device Discovery Guid
   gNVIDIAVendorDeviceDiscoveryGuid = { 0x1e5a432c, 0x0466, 0x4d31, { 0xb0, 0x09, 0xd4, 0xd9, 0x23, 0x92, 0x71, 0xd3 } }
 
+  #NVIDIA Kernel Command Line Update Guid
+  gNVIDIAKernelCmdLineUpdateGuid = { 0xc61a1a9a, 0x8f92, 0x4e2e, { 0x97, 0x8d, 0x04, 0x8d, 0x81, 0xed, 0xdc, 0x8b } }
+
 [Protocols]
   gNVIDIADeviceTreeCompatibilityProtocolGuid      = { 0x1e710608, 0x28a3, 0x4c0b, { 0x9b, 0xec, 0x1c, 0x75, 0x49, 0xa7, 0x0d, 0x90 } }
   gNVIDIADeviceTreeNodeProtocolGuid               = { 0x149670c5, 0xb07b, 0x407a, { 0xae, 0x57, 0x39, 0xd0, 0xca, 0x51, 0x37, 0x80 } }
@@ -180,7 +183,6 @@ Include
 # Tegra Architectural Timer Frequency
   gNVIDIATokenSpaceGuid.PcdTegraArchTimerFreqInHz|31250000|UINT32|0x00000024
 
-
 # Supported bitmasks for runtime functions
 ## Bitmask of supported runtime services<BR>
   #  BIT0  - GetTime
@@ -203,6 +205,9 @@ Include
 
 # Tegra Print Internal Banner
   gNVIDIATokenSpaceGuid.PcdTegraPrintInternalBanner|FALSE|BOOLEAN|0x00000033
+
+# Tegra Memory Controller Base Address
+  gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress|0x02c10000|UINT64|0x00000034
 
 [PcdsDynamic.common]
 #Size of optional signing data header in boot.img partition.

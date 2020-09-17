@@ -41,4 +41,4 @@
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
   gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress
-
+  gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress
