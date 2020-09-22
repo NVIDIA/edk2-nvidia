@@ -98,6 +98,22 @@ T194GetDTBBaseAddress (
 }
 
 /**
+  Retrieve RCM Blob Address
+
+**/
+UINT64
+T194GetRCMBaseAddress (
+  IN UINTN CpuBootloaderAddress
+  )
+{
+  TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  return CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
+}
+
+/**
   Retrieve Recovery Boot Type
 
 **/

@@ -117,6 +117,40 @@ GetDTBBaseAddress (
 }
 
 /**
+  Retrieve RCM Blob Address
+
+**/
+UINT64
+EFIAPI
+GetRCMBaseAddress (
+  VOID
+)
+{
+  UINTN   ChipID;
+  UINTN   CpuBootloaderAddress;
+  UINT64  RCMBaseAddress;
+  BOOLEAN ValidPrivatePlatform;
+
+  ValidPrivatePlatform = GetDTBBaseAddressInternal (&RCMBaseAddress);
+  if (ValidPrivatePlatform) {
+    return RCMBaseAddress;
+  }
+
+  ChipID = TegraGetChipID();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T186_CHIP_ID:
+      return T186GetRCMBaseAddress(CpuBootloaderAddress);
+    case T194_CHIP_ID:
+      return T194GetRCMBaseAddress(CpuBootloaderAddress);
+    default:
+      return 0x0;
+  }
+}
+
+/**
   Retrieve Recovery Boot Type
 
 **/

@@ -28,6 +28,11 @@ T194GetDTBBaseAddress (
   IN UINTN CpuBootloaderAddress
 );
 
+UINT64
+T194GetRCMBaseAddress (
+  IN UINTN CpuBootloaderAddress
+);
+
 TEGRA_RECOVERY_BOOT_TYPE
 T194GetRecoveryBootType (
   IN UINTN CpuBootloaderAddress

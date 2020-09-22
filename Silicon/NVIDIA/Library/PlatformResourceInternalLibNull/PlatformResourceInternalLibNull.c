@@ -56,6 +56,19 @@ GetDTBBaseAddressInternal (
 }
 
 /**
+  Retrieve RCM Blob Address
+
+**/
+BOOLEAN
+EFIAPI
+GetRCMBaseAddressInternal (
+  OUT UINT64 *DTBBaseAddress
+)
+{
+  return FALSE;
+}
+
+/**
   Retrieve Recovery Boot Type
 
 **/

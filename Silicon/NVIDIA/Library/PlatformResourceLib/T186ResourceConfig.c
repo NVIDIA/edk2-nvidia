@@ -116,7 +116,24 @@ T186GetDTBBaseAddress (
   TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
   return CpuBootloaderParams->DtbLoadAddress;
+}
+
+/**
+  Retrieve RCM Blob Address
+
+**/
+UINT64
+T186GetRCMBaseAddress (
+  IN UINTN CpuBootloaderAddress
+  )
+{
+  TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  return CpuBootloaderParams->GlobalData.RecoveryBlobCarveout;
 }
 
 /**
