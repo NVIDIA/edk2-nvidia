@@ -55,8 +55,11 @@
   gFdtTableGuid
   gEfiAcpiTableGuid
   gNVIDIARamloadKernelGuid
+  gNVIDIARcmKernelGuid
   gNVIDIAOSCarveoutHob
   gNVIDIALoadfileKernelArgsGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
+  gNVIDIATokenSpaceGuid.PcdRcmKernelBase
+  gNVIDIATokenSpaceGuid.PcdRcmKernelSize

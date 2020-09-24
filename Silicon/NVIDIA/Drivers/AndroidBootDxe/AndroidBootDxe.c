@@ -235,6 +235,50 @@ Exit:
 
 
 /**
+  Attempt to read the data from source to destination buffer.
+
+  @param[in]  BlockIo             BlockIo protocol interface which is already located.
+  @param[in]  DiskIo              DiskIo protocol interface which is already located.
+  @param[in]  Offset              Data offset to read from.
+  @param[in]  Buffer              The memory buffer to transfer the data to.
+  @param[in]  BufferSize          Size of the memory buffer to transfer the data to.
+
+  @retval EFI_SUCCESS             Operation successful.
+  @retval others                  Error occurred
+**/
+EFI_STATUS
+AndroidBootRead (
+  IN EFI_BLOCK_IO_PROTOCOL        *BlockIo,
+  IN EFI_DISK_IO_PROTOCOL         *DiskIo,
+  IN UINT32                       Offset,
+  IN VOID                         *Buffer,
+  IN UINTN                        BufferSize
+  )
+{
+  VOID *RcmKernelBase;
+
+  RcmKernelBase = (VOID *) PcdGet64 (PcdRcmKernelBase);
+
+  if ((BlockIo != NULL) && (DiskIo != NULL)) {
+    return DiskIo->ReadDisk (
+                     DiskIo,
+                     BlockIo->Media->MediaId,
+                     Offset,
+                     BufferSize,
+                     Buffer
+                     );
+  }
+
+  if (RcmKernelBase != NULL) {
+    gBS->CopyMem (Buffer, (VOID *) ((UINTN) RcmKernelBase + Offset), BufferSize);
+    return EFI_SUCCESS;
+  }
+
+  return EFI_INVALID_PARAMETER;
+}
+
+
+/**
   Verify if there is the Android Boot image file by reading the magic word at the first
   block of the Android Boot image and save the important size information when a container
   is provided.
@@ -262,13 +306,10 @@ AndroidBootGetVerify (
   ANDROID_BOOTIMG_HEADER          *Header;
   UINT32                          Offset;
   UINT32                          SignatureHeaderSize;
+  VOID                            *RcmKernelBase;
+  UINT64                          RcmKernelSize;
   UINTN                           PartitionSize;
   UINTN                           ImageSize;
-
-  // ImgData can be NULL when it needs only for the verification
-  if ((BlockIo == NULL) || (DiskIo == NULL)) {
-    return EFI_INVALID_PARAMETER;
-  }
 
   // Get the image header of Android Boot image
   Header = AllocatePool (sizeof(ANDROID_BOOTIMG_HEADER));
@@ -277,15 +318,17 @@ AndroidBootGetVerify (
   }
 
   SignatureHeaderSize = PcdGet32 (PcdBootImgSigningHeaderSize);
+  RcmKernelBase = (VOID *) PcdGet64 (PcdRcmKernelBase);
+  RcmKernelSize = PcdGet64 (PcdRcmKernelSize);
 
   Offset = 0;
-  Status = DiskIo->ReadDisk (
-                  DiskIo,
-                  BlockIo->Media->MediaId,
-                  Offset,
-                  sizeof (*Header),
-                  (VOID *) Header
-                  );
+  Status = AndroidBootRead (
+             BlockIo,
+             DiskIo,
+             Offset,
+             (VOID *) Header,
+             sizeof (*Header)
+             );
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
@@ -296,13 +339,13 @@ AndroidBootGetVerify (
     Status = EFI_NOT_FOUND;
     if (SignatureHeaderSize != 0) {
       Offset = SignatureHeaderSize;
-      Status = DiskIo->ReadDisk (
-                      DiskIo,
-                      BlockIo->Media->MediaId,
-                      Offset,
-                      sizeof (*Header),
-                      (VOID *) Header
-                      );
+      Status = AndroidBootRead (
+                 BlockIo,
+                 DiskIo,
+                 Offset,
+                 (VOID *) Header,
+                 sizeof (*Header)
+                 );
       if (EFI_ERROR (Status)) {
         goto Exit;
       }
@@ -326,7 +369,11 @@ AndroidBootGetVerify (
   }
 
   // Make sure that the image fits in the partition
-  PartitionSize = (UINTN)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
+  if ((RcmKernelBase == NULL) && (BlockIo != NULL) && (DiskIo != NULL)) {
+    PartitionSize = (UINTN)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
+  } else {
+    PartitionSize = RcmKernelSize;
+  }
   ImageSize = Offset + Header->PageSize
                   + ALIGN_VALUE (Header->KernelSize, Header->PageSize)
                   + ALIGN_VALUE (Header->RamdiskSize, Header->PageSize);
@@ -388,10 +435,6 @@ AndroidBootLoadFile (
   UINTN                           BufSize;
   UINTN                           BufBase;
 
-  if ((BlockIo == NULL) || (DiskIo == NULL) || (Buffer == NULL) || (ImgData == NULL)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
   // Android Boot image enabled in EFI stub feature consists of:
   // - Header info in PageSize that contains Android Boot image header
   // - Kernel image in EFI format as built in EFI stub feature
@@ -403,13 +446,13 @@ AndroidBootLoadFile (
   Addr = ImgData->PageSize + ImgData->Offset;
   BufSize = ImgData->KernelSize;
   BufBase = (UINTN) Buffer;
-  Status = DiskIo->ReadDisk (
-                  DiskIo,
-                  BlockIo->Media->MediaId,
-                  Addr,
-                  BufSize,
-                  (VOID *) BufBase
-                  );
+  Status = AndroidBootRead (
+             BlockIo,
+             DiskIo,
+             Addr,
+             (VOID *) BufBase,
+             BufSize
+             );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to read disk for kernel image: from offset %x" \
                   " to %09p: %r\n", __FUNCTION__, Addr, BufBase, Status));
@@ -430,13 +473,13 @@ AndroidBootLoadFile (
     }
     Addr += ALIGN_VALUE (ImgData->KernelSize, ImgData->PageSize);
     BufSize = ImgData->RamdiskSize;
-    Status = DiskIo->ReadDisk (
-                    DiskIo,
-                    BlockIo->Media->MediaId,
-                    Addr,
-                    BufSize,
-                    (VOID *) BufBase
-                    );
+    Status = AndroidBootRead (
+               BlockIo,
+               DiskIo,
+               Addr,
+               (VOID *) BufBase,
+               BufSize
+               );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to read disk for ramdisk from offset %x" \
                     " to %09p: %r\n", __FUNCTION__, Addr, BufBase, Status));
@@ -722,13 +765,6 @@ ErrorExit:
   @retval EFI_DEVICE_ERROR         The device could not be started due to a device error.Currently not implemented.
   @retval EFI_OUT_OF_RESOURCES     The request could not be completed due to a lack of resources.
   @retval Others                   The driver failded to start the device.
-
-**/
-/**
-  Initialize the FVB Driver
-
-  @param[in]  ImageHandle   of the loaded driver
-  @param[in]  SystemTable   Pointer to the System Table
 
 **/
 EFI_STATUS
@@ -1106,7 +1142,7 @@ RamloadLoadFile (
   // Check if the given buffer size is big enough
   // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
   if (*BufferSize < mRamLoadedSize) {
-  *BufferSize = mRamLoadedSize;
+    *BufferSize = mRamLoadedSize;
     return EFI_BUFFER_TOO_SMALL;
   }
 
@@ -1118,9 +1154,96 @@ RamloadLoadFile (
 ///
 /// Ramload LoadFile Protocol instance
 ///
+GLOBAL_REMOVE_IF_UNREFERENCED
 EFI_LOAD_FILE_PROTOCOL mRamloadLoadFile = {
   RamloadLoadFile
 };
+
+/**
+  Causes the driver to load a specified file.
+
+  @param  This                  Protocol instance pointer.
+  @param  FilePath              The device specific path of the file to load.
+  @param  BootPolicy            If TRUE, indicates that the request originates from the
+                                boot manager is attempting to load FilePath as a boot
+                                selection. If FALSE, then FilePath must match as exact file
+                                to be loaded.
+  @param  BufferSize            On input the size of Buffer in bytes. On output with a return
+                                code of EFI_SUCCESS, the amount of data transferred to
+                                Buffer. On output with a return code of EFI_BUFFER_TOO_SMALL,
+                                the size of Buffer required to retrieve the requested file.
+  @param  Buffer                The memory buffer to transfer the file to. IF Buffer is NULL,
+                                then the size of the requested file is returned in
+                                BufferSize.
+
+  @retval EFI_SUCCESS           The file was loaded.
+  @retval EFI_UNSUPPORTED       The device does not support the provided BootPolicy
+  @retval EFI_INVALID_PARAMETER FilePath is not a valid device path, or
+                                BufferSize is NULL.
+  @retval EFI_NO_MEDIA          No medium was present to load the file.
+  @retval EFI_DEVICE_ERROR      The file was not loaded due to a device error.
+  @retval EFI_NO_RESPONSE       The remote system did not respond.
+  @retval EFI_NOT_FOUND         The file was not found.
+  @retval EFI_ABORTED           The file load process was manually cancelled.
+  @retval EFI_BUFFER_TOO_SMALL  The BufferSize is too small to read the current directory entry.
+                                BufferSize has been updated with the size needed to complete
+                                the request.
+
+**/
+EFI_STATUS
+EFIAPI
+RcmLoadFile (
+  IN EFI_LOAD_FILE_PROTOCOL     *This,
+  IN EFI_DEVICE_PATH_PROTOCOL   *FilePath,
+  IN BOOLEAN                    BootPolicy,
+  IN OUT UINTN                  *BufferSize,
+  IN VOID                       *Buffer OPTIONAL
+  )
+{
+  EFI_STATUS        Status;
+  ANDROID_BOOT_DATA ImgData;
+
+  // Verify if the valid parameters
+  if (This == NULL || BufferSize == NULL || FilePath == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+  if (*BufferSize != 0 && Buffer == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+  if (!BootPolicy) {
+    return EFI_UNSUPPORTED;
+  }
+
+  // Verify the image header and set the internal data structure ImgData
+  Status = AndroidBootGetVerify (NULL, NULL, &ImgData, NULL);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  // Check if the given buffer size is big enough
+  // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
+  if (*BufferSize < ImgData.KernelSize) {
+    *BufferSize = ImgData.KernelSize;
+    return EFI_BUFFER_TOO_SMALL;
+  }
+
+  // Load Android Boot image
+  Status = AndroidBootLoadFile (NULL, NULL, &ImgData, Buffer);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+///
+/// Rcm LoadFile Protocol instance
+///
+GLOBAL_REMOVE_IF_UNREFERENCED
+EFI_LOAD_FILE_PROTOCOL mRcmLoadFile = {
+  RcmLoadFile
+};
+
 ///
 /// Driver Binding Protocol instance
 ///
@@ -1143,7 +1266,19 @@ typedef struct {
 } SINGLE_VENHW_NODE_DEVPATH;
 #pragma pack()
 
-STATIC SINGLE_VENHW_NODE_DEVPATH mLoadFileDevicePath = {
+STATIC SINGLE_VENHW_NODE_DEVPATH mRamLoadFileDevicePath = {
+  {
+    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
+    { 0 }
+  },
+
+  {
+    END_DEVICE_PATH_TYPE, END_ENTIRE_DEVICE_PATH_SUBTYPE,
+    { sizeof (EFI_DEVICE_PATH_PROTOCOL) }
+  }
+};
+
+STATIC SINGLE_VENHW_NODE_DEVPATH mRcmLoadFileDevicePath = {
   {
     { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
     { 0 }
@@ -1188,49 +1323,75 @@ AndroidBootDxeDriverEntryPoint (
     return Status;
   }
 
-  Hob = GetFirstGuidHob (&gNVIDIAOSCarveoutHob);
-  if (Hob != NULL) {
-    EFI_MEMORY_DESCRIPTOR *Descriptor;
-    EFI_HANDLE            LoadedImageHandle = 0;
-    EFI_HANDLE            LoadFileHandle = 0;
+  if (PcdGet64 (PcdRcmKernelBase) != 0 &&
+      PcdGet64 (PcdRcmKernelSize) != 0) {
+    // Verify the image header and set the internal data structure ImgData
+    Status = AndroidBootGetVerify (NULL, NULL, NULL, NULL);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
 
-    Descriptor = (EFI_MEMORY_DESCRIPTOR *)GET_GUID_HOB_DATA (Hob);
-    DEBUG ((DEBUG_INFO, "%a: Got descriptor %x, %x\r\n", __FUNCTION__, Descriptor->PhysicalStart, Descriptor->NumberOfPages));
-    CopyMem (&mLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARamloadKernelGuid, sizeof (EFI_GUID));
+    // Copy NVIDIA RCM Kernel GUID to device path
+    CopyMem (&mRcmLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARcmKernelGuid, sizeof (EFI_GUID));
 
-    Status = gBS->LoadImage (FALSE,
-                             ImageHandle,
-                             NULL,
-                             (VOID *)(UINTN)Descriptor->PhysicalStart + KERNEL_OFFSET,
-                             EFI_PAGES_TO_SIZE (Descriptor->NumberOfPages) - KERNEL_OFFSET,
-                             &LoadedImageHandle);
-    if (!EFI_ERROR (Status)) {
-      EFI_LOADED_IMAGE_PROTOCOL *ImageProtocol;
-      Status = gBS->HandleProtocol (LoadedImageHandle,
-                                    &gEfiLoadedImageProtocolGuid,
-                                    (VOID **)&ImageProtocol);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Failed to get loaded image protocol (%r)\r\n", __FUNCTION__, Status));
-      } else {
-        DEBUG ((DEBUG_INFO, "%a: Located at 0x%016x 0x%016x\r\n", Descriptor->PhysicalStart, ImageProtocol->ImageSize));
-        mRamLoadedBaseAddress = Descriptor->PhysicalStart + KERNEL_OFFSET;
-        mRamLoadedSize = ImageProtocol->ImageSize;
-        gBS->UnloadImage (LoadedImageHandle);
-        Status = gBS->InstallMultipleProtocolInterfaces (
-                        &LoadFileHandle,
-                        &gEfiLoadFileProtocolGuid,
-                        &mRamloadLoadFile,
-                        &gNVIDIALoadfileKernelArgsGuid,
-                        NULL,
-                        &gEfiDevicePathProtocolGuid,
-                        &mLoadFileDevicePath,
-                        NULL);
+    // Install Rcm Loadfile protocol
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &ImageHandle,
+                    &gEfiLoadFileProtocolGuid,
+                    &mRcmLoadFile,
+                    &gNVIDIALoadfileKernelArgsGuid,
+                    NULL,
+                    &gEfiDevicePathProtocolGuid,
+                    &mRcmLoadFileDevicePath,
+                    NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to image Load File Protocol (%r)\r\n", __FUNCTION__, Status));
+    }
+  } else {
+    Hob = GetFirstGuidHob (&gNVIDIAOSCarveoutHob);
+    if (Hob != NULL) {
+      EFI_MEMORY_DESCRIPTOR *Descriptor;
+      EFI_HANDLE            LoadedImageHandle = 0;
+      EFI_HANDLE            LoadFileHandle = 0;
+
+      Descriptor = (EFI_MEMORY_DESCRIPTOR *)GET_GUID_HOB_DATA (Hob);
+      DEBUG ((DEBUG_INFO, "%a: Got descriptor %x, %x\r\n", __FUNCTION__, Descriptor->PhysicalStart, Descriptor->NumberOfPages));
+      CopyMem (&mRamLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARamloadKernelGuid, sizeof (EFI_GUID));
+
+      Status = gBS->LoadImage (FALSE,
+                               ImageHandle,
+                               NULL,
+                               (VOID *)(UINTN)Descriptor->PhysicalStart + KERNEL_OFFSET,
+                               EFI_PAGES_TO_SIZE (Descriptor->NumberOfPages) - KERNEL_OFFSET,
+                               &LoadedImageHandle);
+      if (!EFI_ERROR (Status)) {
+        EFI_LOADED_IMAGE_PROTOCOL *ImageProtocol;
+        Status = gBS->HandleProtocol (LoadedImageHandle,
+                                      &gEfiLoadedImageProtocolGuid,
+                                      (VOID **)&ImageProtocol);
         if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "%a: Failed to image Load File Protocol (%r)\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a: Failed to get loaded image protocol (%r)\r\n", __FUNCTION__, Status));
+        } else {
+          DEBUG ((DEBUG_INFO, "%a: Located at 0x%016x 0x%016x\r\n", Descriptor->PhysicalStart, ImageProtocol->ImageSize));
+          mRamLoadedBaseAddress = Descriptor->PhysicalStart + KERNEL_OFFSET;
+          mRamLoadedSize = ImageProtocol->ImageSize;
+          gBS->UnloadImage (LoadedImageHandle);
+          Status = gBS->InstallMultipleProtocolInterfaces (
+                          &LoadFileHandle,
+                          &gEfiLoadFileProtocolGuid,
+                          &mRamloadLoadFile,
+                          &gNVIDIALoadfileKernelArgsGuid,
+                          NULL,
+                          &gEfiDevicePathProtocolGuid,
+                          &mRamLoadFileDevicePath,
+                          NULL);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "%a: Failed to image Load File Protocol (%r)\r\n", __FUNCTION__, Status));
+          }
         }
+      } else {
+        DEBUG ((DEBUG_INFO, "%a: LoadImage failed (%r)\r\n", __FUNCTION__, Status));
       }
-    } else {
-      DEBUG ((DEBUG_INFO, "%a: LoadImage failed (%r)\r\n", __FUNCTION__, Status));
     }
   }
 

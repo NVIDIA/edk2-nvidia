@@ -69,6 +69,9 @@ EFIAPI PlatformLoadFileBootDescriptionHandler (
       if (CompareGuid (&VendorPath->Guid, &gNVIDIARamloadKernelGuid)) {
         DescriptionString = HiiGetString(mHiiHandle, STRING_TOKEN(STR_LOAD_FILE_RAMLOADED_BOOT_DESCRIPTION), NULL);
         break;
+      } else if (CompareGuid (&VendorPath->Guid, &gNVIDIARcmKernelGuid)) {
+        DescriptionString = HiiGetString(mHiiHandle, STRING_TOKEN(STR_LOAD_FILE_RCM_BOOT_DESCRIPTION), NULL);
+        break;
       }
     }
     CurrentDevicePath = NextDevicePathNode (CurrentDevicePath);

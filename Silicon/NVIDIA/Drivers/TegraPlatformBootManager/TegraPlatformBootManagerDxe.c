@@ -508,7 +508,8 @@ RefreshAutoEnumeratedBootOptions (
             break;
           } else if (CurrentDevicePath->SubType == HW_VENDOR_DP) {
             VENDOR_DEVICE_PATH *VendorPath = (VENDOR_DEVICE_PATH *)CurrentDevicePath;
-            if (CompareGuid (&VendorPath->Guid, &gNVIDIARamloadKernelGuid)) {
+            if (CompareGuid (&VendorPath->Guid, &gNVIDIARamloadKernelGuid) ||
+                CompareGuid (&VendorPath->Guid, &gNVIDIARcmKernelGuid)) {
               ValidBootMedia = TRUE;
               break;
             }

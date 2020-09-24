@@ -85,6 +85,7 @@ Include
 
   #Direct kernel boot device
   gNVIDIARamloadKernelGuid = { 0x0c7bbfcf, 0x2559, 0x401c, { 0x8d, 0xb1, 0x83, 0x32, 0xb1, 0xae, 0x95, 0x34 } }
+  gNVIDIARcmKernelGuid = { 0x768a084d, 0x7938, 0x4142, { 0xba, 0xc3, 0xfa, 0xdc, 0x9e, 0xbf, 0xec, 0x47 } }
   gNVIDIAOSCarveoutHob = { 0x3f27b235, 0x3305, 0x413a, { 0xbd, 0xbb, 0x3a, 0x49, 0x19, 0x31, 0x6a, 0x5c } }
 
   #PWM device
@@ -246,5 +247,10 @@ Include
 #Option to enable/disable quickboot
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|0x01|UINT8|0x0000002D
 
- #Option to support virtual RTC
+#Option to support virtual RTC
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|FALSE|BOOLEAN|0x0000002E
+
+#Rcm Kernel Base and Size
+  gNVIDIATokenSpaceGuid.PcdRcmKernelBase|0x0|UINT64|0x00000035
+  gNVIDIATokenSpaceGuid.PcdRcmKernelSize|0x0|UINT64|0x00000036
+ 

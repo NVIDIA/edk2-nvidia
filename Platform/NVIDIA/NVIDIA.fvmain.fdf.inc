@@ -225,3 +225,9 @@
   # Secure Boot Support
   #
   INF SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+
+  #
+  # RCM Support
+  #
+  INF Silicon/NVIDIA/Drivers/RcmDxe/RcmDxe.inf
+

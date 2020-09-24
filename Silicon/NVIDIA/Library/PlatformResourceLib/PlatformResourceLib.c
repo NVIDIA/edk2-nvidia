@@ -131,7 +131,7 @@ GetRCMBaseAddress (
   UINT64  RCMBaseAddress;
   BOOLEAN ValidPrivatePlatform;
 
-  ValidPrivatePlatform = GetDTBBaseAddressInternal (&RCMBaseAddress);
+  ValidPrivatePlatform = GetRCMBaseAddressInternal (&RCMBaseAddress);
   if (ValidPrivatePlatform) {
     return RCMBaseAddress;
   }

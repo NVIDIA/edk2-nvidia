@@ -835,9 +835,15 @@
   #
   Silicon/NVIDIA/Drivers/ResourceConfigDxe/ResourceConfigDxe.inf
 
+  #
   # Secure Boot Support
   #
   SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+
+  #
+  # RCM Support
+  #
+  Silicon/NVIDIA/Drivers/RcmDxe/RcmDxe.inf
 
 [Components.AARCH64]
   #

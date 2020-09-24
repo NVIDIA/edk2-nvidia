@@ -37,6 +37,7 @@
   gFdtTableGuid
   gEfiAcpiTableGuid
   gNVIDIARamloadKernelGuid
+  gNVIDIARcmKernelGuid
   gNVIDIABmBootOptionGuid
   gNVIDIALoadfileKernelArgsGuid
   gNVIDIAKernelCmdLineUpdateGuid
