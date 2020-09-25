@@ -68,6 +68,7 @@ DeviceDiscoveryNotify (
   )
 {
   EFI_STATUS                Status;
+  UINT32                    ClockId;
   EFI_PHYSICAL_ADDRESS      BaseAddress  = 0;
   UINTN                     RegionSize;
   EFI_SERIAL_IO_PROTOCOL    *Interface;
@@ -76,10 +77,13 @@ DeviceDiscoveryNotify (
   case DeviceDiscoveryDriverBindingStart:
     if ((fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
                                        "nvidia,tegra20-uart")) == 0) {
-      Status = DeviceDiscoverySetClockFreq (ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to set clock frequency\n", __FUNCTION__));
-        return Status;
+      Status = DeviceDiscoveryGetClockId (ControllerHandle, UART_CLOCK_NAME, &ClockId);
+      if (!EFI_ERROR (Status)) {
+        Status = DeviceDiscoverySetClockFreq (ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Unable to set clock frequency\n", __FUNCTION__));
+          return Status;
+        }
       }
       Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
       if (EFI_ERROR (Status)) {
