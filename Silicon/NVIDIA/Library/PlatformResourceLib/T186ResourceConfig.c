@@ -137,17 +137,13 @@ T186GetRCMBaseAddress (
 }
 
 /**
-  Retrieve Recovery Boot Type
+  Retrieve Boot Type
 
 **/
-TEGRA_RECOVERY_BOOT_TYPE
-T186GetRecoveryBootType (
+TEGRA_BOOT_TYPE
+T186GetBootType (
   IN UINTN CpuBootloaderAddress
   )
 {
-  TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
-
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-
-  return CpuBootloaderParams->GlobalData.RecoveryBootType;
+  return TegrablBootColdBoot;
 }

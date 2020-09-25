@@ -33,8 +33,8 @@ T194GetRCMBaseAddress (
   IN UINTN CpuBootloaderAddress
 );
 
-TEGRA_RECOVERY_BOOT_TYPE
-T194GetRecoveryBootType (
+TEGRA_BOOT_TYPE
+T194GetBootType (
   IN UINTN CpuBootloaderAddress
 );
 

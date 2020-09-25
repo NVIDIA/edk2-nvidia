@@ -36,6 +36,10 @@ RcmDxeInitialize (
   UINT8              BlobMagic[4] = { 'b' , 'l' , 'o' , 'b' };
   UINTN              Count;
 
+  if (GetBootType () != TegrablBootRcm) {
+    return EFI_NOT_FOUND;
+  }
+
   RcmBlobHeader = (TEGRABL_BLOBHEADER *) GetRCMBaseAddress ();
 
   if (RcmBlobHeader == NULL) {

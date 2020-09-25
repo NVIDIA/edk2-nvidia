@@ -58,13 +58,13 @@ GetRCMBaseAddressInternal (
 );
 
 /**
-  Retrieve Recovery Boot Type
+  Retrieve Boot Type
 
 **/
 BOOLEAN
 EFIAPI
-GetRecoveryBootTypeInternal (
-  OUT TEGRA_RECOVERY_BOOT_TYPE *RecoveryBootType
+GetBootTypeInternal (
+  OUT TEGRA_BOOT_TYPE *BootType
 );
 
 /**

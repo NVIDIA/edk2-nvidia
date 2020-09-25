@@ -260,7 +260,7 @@ typedef struct {
 
   UINT32 Reserved1;
 
-  /**< Boot mode can be cold boot, uart, recovery or RCM */
+  /**< Boot mode can be cold boot, or RCM */
   UINT32 BootType;
 
   /**< Uart_base Address for debug prints */

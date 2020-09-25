@@ -151,23 +151,23 @@ GetRCMBaseAddress (
 }
 
 /**
-  Retrieve Recovery Boot Type
+  Retrieve Boot Type
 
 **/
-TEGRA_RECOVERY_BOOT_TYPE
+TEGRA_BOOT_TYPE
 EFIAPI
-GetRecoveryBootType (
+GetBootType (
   VOID
 )
 {
-  UINTN                    ChipID;
-  UINTN                    CpuBootloaderAddress;
-  TEGRA_RECOVERY_BOOT_TYPE RecoveryBootType;
-  BOOLEAN                  ValidPrivatePlatform;
+  UINTN           ChipID;
+  UINTN           CpuBootloaderAddress;
+  TEGRA_BOOT_TYPE BootType;
+  BOOLEAN         ValidPrivatePlatform;
 
-  ValidPrivatePlatform = GetRecoveryBootTypeInternal (&RecoveryBootType);
+  ValidPrivatePlatform = GetBootTypeInternal (&BootType);
   if (ValidPrivatePlatform) {
-    return RecoveryBootType;
+    return BootType;
   }
 
   ChipID = TegraGetChipID();
@@ -176,9 +176,9 @@ GetRecoveryBootType (
 
   switch (ChipID) {
     case T186_CHIP_ID:
-      return T186GetRecoveryBootType(CpuBootloaderAddress);
+      return T186GetBootType(CpuBootloaderAddress);
     case T194_CHIP_ID:
-      return T194GetRecoveryBootType(CpuBootloaderAddress);
+      return T194GetBootType(CpuBootloaderAddress);
     default:
       return TegrablBootTypeMax;
   }

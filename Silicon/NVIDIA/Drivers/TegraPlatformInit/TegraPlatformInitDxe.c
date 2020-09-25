@@ -79,7 +79,7 @@ TegraPlatformInitialize (
     // Override boot timeout for pre-si platforms
     EmmcMagic = * ((UINTN *) (TegraGetSystemMemoryBaseAddress(ChipID) + SYSIMG_EMMC_MAGIC_OFFSET));
     if (((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) ||
-        (GetRecoveryBootType () == TegrablBootRecovery)) {
+        (GetBootType () == TegrablBootRcm)) {
       // Enable emulated variable NV mode in variable driver when ram loading images and emmc
       // is not enabled.
       Status = UseEmulatedVariableStore (ImageHandle);

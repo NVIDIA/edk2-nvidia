@@ -75,22 +75,6 @@ typedef enum {
   CARVEOUT_FORCE32 = 2147483647ULL    /* 0x7FFFFFFF */
 } CARVEOUT_IDS;
 
-typedef enum {
-  /**< Specifies a default (unset) value. */
-  BOOT_TYPE_NONE = 0,
-  /**< Specifies a cold boot */
-  BOOT_TYPE_COLD,
-  /**< Specifies the BR entered RCM */
-  BOOT_TYPE_RECOVERY,
-  /**< Specifies UART boot (only available internal to NVIDIA) */
-  BOOT_TYPE_UART,
-  /**< Specifies that the BR immediately exited for debugging */
-  /**< purposes. This can only occur when NOT in ODM production mode, */
-  /**< and when a special BOOT_SELECT value is set. */
-  BOOT_TYPE_EXITRCM,
-  BOOT_TYPE_FORCE32 = 0x7fffffff
-} TEGRA_BOOT_TYPE;
-
 typedef PACKED struct {
   UINT8 Type;
   UINT8 Instance;
@@ -125,8 +109,8 @@ typedef PACKED struct {
   UINT64 ValidDramBadPageCount;
   UINT64 DramBadPages[NUM_DRAM_BAD_PAGES];
 
-  /**< Boot mode can be cold boot, uart, recovery or RCM */
-  TEGRA_BOOT_TYPE BootType;
+  /**< Boot mode can be cold boot, or RCM */
+  UINT32 BootType;
 
   /**< Boot type set by nv3pserver based on boot command from host. */
   UINT32 RecoveryBootType;

@@ -19,12 +19,11 @@
 #include <Library/DramCarveoutLib.h>
 
 typedef enum {
-  TegrablBootRecovery,
-  TegrablBootRcm,
+  TegrablBootInvalid,
   TegrablBootColdBoot,
-  TegrablBootPlatformDetection,
+  TegrablBootRcm,
   TegrablBootTypeMax,
-} TEGRA_RECOVERY_BOOT_TYPE;
+} TEGRA_BOOT_TYPE;
 
 typedef struct {
   NVDA_MEMORY_REGION   *CarveoutRegions;
@@ -74,12 +73,12 @@ GetRCMBaseAddress (
 );
 
 /**
-  Retrieve Recovery Boot Type
+  Retrieve Boot Type
 
 **/
-TEGRA_RECOVERY_BOOT_TYPE
+TEGRA_BOOT_TYPE
 EFIAPI
-GetRecoveryBootType (
+GetBootType (
   VOID
 );
 
