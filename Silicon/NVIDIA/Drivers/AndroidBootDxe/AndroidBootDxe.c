@@ -369,7 +369,7 @@ AndroidBootGetVerify (
   }
 
   // Make sure that the image fits in the partition
-  if ((RcmKernelBase == NULL) && (BlockIo != NULL) && (DiskIo != NULL)) {
+  if ((BlockIo != NULL) && (DiskIo != NULL)) {
     PartitionSize = (UINTN)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
   } else {
     PartitionSize = RcmKernelSize;
