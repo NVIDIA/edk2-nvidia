@@ -51,7 +51,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(d33335fe-a16c-4765-a04d-f3c78999e580)}
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x190
   gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|TRUE
-  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusBase|0x0C250000
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
 
 [PcdsDynamicDefault.common.T194]
@@ -61,7 +60,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
   gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|TRUE
-  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusBase|0x03160000
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase|0x0C340000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE

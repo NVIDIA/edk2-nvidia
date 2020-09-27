@@ -49,9 +49,6 @@
   gEfiDevicePathProtocolGuid
   gNVIDIADeviceTreeNodeProtocolGuid
 
-[Pcd]
-  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusBase
-
 [Guids]
   gNVIDIAI2cUnknown
   gNVIDIACvmEeprom

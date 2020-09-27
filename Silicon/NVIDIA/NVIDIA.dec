@@ -234,8 +234,6 @@ Include
 
 #Tegra Use Production USB Fw
   gNVIDIATokenSpaceGuid.PcdTegraUseProdUsbFw|TRUE|BOOLEAN|0x00000027
-#Tegra CvmEeprom Bus Base
-  gNVIDIATokenSpaceGuid.PcdTegraCvmEepromBusBase|0x0|UINT64|0x0000002A
 
 #Is SetVariable Supported at runtime
   gNVIDIATokenSpaceGuid.PcdRuntimeVariableServicesSupported|FALSE|BOOLEAN|0x00000032

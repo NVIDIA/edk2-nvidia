@@ -831,6 +831,11 @@ TegraI2CDriverBindingStart (
   UINT32                            Data32;
   UINTN                             Index;
   NON_DISCOVERABLE_DEVICE           *Device;
+  INT32                             EepromNodeOffset;
+  BOOLEAN                           EepromFound;
+  UINT32                            EepromAddress;
+  CONST VOID                        *Property;
+  INT32                             PropertyLen;
 
   Status = gBS->HandleProtocol (
                   ControllerHandle,
@@ -973,9 +978,31 @@ TegraI2CDriverBindingStart (
   }
 
   Private->ProtocolsInstalled = TRUE;
-  //For now only support 1 cvm eeprom on address 0x50
-  if (Private->BaseAddress == PcdGet64 (PcdTegraCvmEepromBusBase)) {
-    Private->SlaveAddressArray[0] = 0x50;
+
+  EepromFound = FALSE;
+  PropertyLen = 0;
+  fdt_for_each_subnode (EepromNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
+    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
+                                   EepromNodeOffset,
+                                   "atmel,24c02") == 0) {
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "label", &PropertyLen);
+      if (Property != NULL && PropertyLen != 0) {
+        if (0 == AsciiStrCmp (Property, "module")) {
+          Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "reg", &PropertyLen);
+          if (Property != NULL && PropertyLen == sizeof (UINT32))  {
+            gBS->CopyMem (&EepromAddress, (VOID *) Property, PropertyLen);
+            EepromAddress = SwapBytes32 (EepromAddress);
+            DEBUG ((DEBUG_INFO, "%a: Cvm Eeprom Found.\n", __FUNCTION__));
+            EepromFound = TRUE;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (EepromFound) {
+    Private->SlaveAddressArray[0] = EepromAddress;
     Private->NumberOfI2cDevices  = 1;
     Private->I2cDevices[0].DeviceGuid = &gNVIDIACvmEeprom;
     Private->I2cDevices[0].DeviceIndex = 1;
