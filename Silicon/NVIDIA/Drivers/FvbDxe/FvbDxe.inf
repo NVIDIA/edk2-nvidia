@@ -63,6 +63,8 @@
   gEfiEventVirtualAddressChangeGuid
 
 [Depex]
+  gNVIDIAStandaloneMmUnavailableGuid
+  AND
   gEfiPartitionInfoProtocolGuid
   OR
   gNVIDIAEmuVariableNvModeEnableProtocolGuid

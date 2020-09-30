@@ -32,6 +32,7 @@
   INF EmbeddedPkg/RealTimeClockRuntimeDxe/RealTimeClockRuntimeDxe.inf
   INF EmbeddedPkg/MetronomeDxe/MetronomeDxe.inf
   INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf
+  INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
   INF MdeModulePkg/Universal/TimestampDxe/TimestampDxe.inf
   INF MdeModulePkg/Universal/StatusCodeHandler/RuntimeDxe/StatusCodeHandlerRuntimeDxe.inf
 
@@ -231,3 +232,7 @@
   #
   INF Silicon/NVIDIA/Drivers/RcmDxe/RcmDxe.inf
 
+  #
+  # MM Communication
+  #
+  INF ArmPkg/Drivers/MmCommunicationDxe/MmCommunication.inf

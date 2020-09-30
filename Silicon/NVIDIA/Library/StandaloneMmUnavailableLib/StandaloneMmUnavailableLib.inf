@@ -1,0 +1,33 @@
+## @file
+# This module installs smm unavailable protocol.
+#
+# Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = StandaloneMmUnavailableLib
+  FILE_GUID                      = 5b275f26-0c4d-447c-bf1a-107d6bb95a1e
+  MODULE_TYPE                    = DXE_DRIVER
+  LIBRARY_CLASS                  = NULL
+  DESTRUCTOR                     = StandaloneMmUnavailableLibDestructor
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = AARCH64
+#
+#
+
+[Sources]
+  StandaloneMmUnavailableLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Protocols]
+  gNVIDIAStandaloneMmUnavailableGuid        ## PRODUCES

@@ -100,7 +100,6 @@
   ArmLib|ArmPkg/Library/ArmLib/ArmBaseLib.inf
   ArmMmuLib|ArmPkg/Library/ArmMmuLib/ArmMmuBaseLib.inf
   ArmPlatformLib|Platform/NVIDIA/Jetson/Library/ArmPlatformLib/ArmPlatformLib.inf
-  ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
 
   TimerLib|ArmPkg/Library/ArmArchTimerLib/ArmArchTimerLib.inf
 
@@ -605,18 +604,19 @@
   Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
   MdeModulePkg/Universal/PrintDxe/PrintDxe.inf
 
-  #
-  # Graphics console support
-  #
-  MdeModulePkg/Logo/LogoDxe.inf
-  MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
-
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf {
     <LibraryClasses>
       NULL|EmbeddedPkg/Library/NvVarStoreFormattedLib/NvVarStoreFormattedLib.inf
       NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
+  MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
+
+  #
+  # Graphics console support
+  #
+  MdeModulePkg/Logo/LogoDxe.inf
+  MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
 
   #
   # SMBIOS/DMI
@@ -844,6 +844,15 @@
   # RCM Support
   #
   Silicon/NVIDIA/Drivers/RcmDxe/RcmDxe.inf
+
+  #
+  # MM Communication
+  #
+  ArmPkg/Drivers/MmCommunicationDxe/MmCommunication.inf {
+    <LibraryClasses>
+      NULL|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
+      NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
+  }
 
 [Components.AARCH64]
   #
