@@ -51,14 +51,13 @@ extracted driver package and navigate to the Linux_for_Tegra subdirectory.
 
     $ tar xjf nvidia-l4t-jetson-uefi-UEFI_PACKAGE_VERSION.tbz2
     $ cd Linux_for_Tegra
-    $ patch -p1 flash.sh < flash.sh.patch
 
 Note that if you are not planning to use the L4T root filesystem you may skip this step.
 Extract the root filesystem to the rootfs subdirectory and run the apply_binaries.sh script.
 Please ensure that you have installed the `qemu-user-static` package before running the
 `apply_binaries.sh` script.
 
-    $ cd Linux_for_Tegra/rootfs/
+    $ cd rootfs/
     $ sudo tar xjf /path/to/Tegra_Linux_Sample-Root-Filesystem_RL4T_VERSION_aarch64.tbz2
     $ cd ..
     $ sudo ./apply_binaries.sh
