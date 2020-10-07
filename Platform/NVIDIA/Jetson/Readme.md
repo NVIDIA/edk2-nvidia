@@ -37,7 +37,7 @@ There are no known issues associated with this feature.
 # Flashing instructions
 ## Setup
 
-Download the following software from https://developer.nvidia.com/embedded/downloads
+Download the following software from the [Jetson Download Center](https://developer.nvidia.com/embedded/downloads)
         L4T Jetson Driver Package, version L4T_VERSION
         L4T Sample Root File System, version L4T_VERSION
 
@@ -46,16 +46,17 @@ subdirectory.
 
     $ tar xjf Tegra186_Linux_RL4T_VERSION_aarch64.tbz2
 
-Extract the nvidia-l4t-jetson-uefi-UEFI_PACKAGE_VERSION.tbz2 package provided over the top of the
-extracted driver package and navigate to the Linux_for_Tegra subdirectory.
+Extract the nvidia-l4t-jetson-uefi-UEFI_PACKAGE_VERSION.tbz2 package provided
+over the top of the extracted driver package and navigate to the Linux_for_Tegra
+subdirectory.
 
     $ tar xjf nvidia-l4t-jetson-uefi-UEFI_PACKAGE_VERSION.tbz2
     $ cd Linux_for_Tegra
 
-Note that if you are not planning to use the L4T root filesystem you may skip this step.
-Extract the root filesystem to the rootfs subdirectory and run the apply_binaries.sh script.
-Please ensure that you have installed the `qemu-user-static` package before running the
-`apply_binaries.sh` script.
+Note that if you are not planning to use the L4T root filesystem you may skip
+this step. Extract the root filesystem to the rootfs subdirectory and run the
+apply_binaries.sh script. Please ensure that you have installed the
+`qemu-user-static` package before running the `apply_binaries.sh` script.
 
     $ cd rootfs/
     $ sudo tar xjf /path/to/Tegra_Linux_Sample-Root-Filesystem_RL4T_VERSION_aarch64.tbz2
@@ -66,10 +67,11 @@ Please ensure that you have installed the `qemu-user-static` package before runn
 ## Linux Serial Console
 
 The Linux serial console is accessible via the micro-USB connector J501 on the
-Jetson AGX Xavier platform. When you connect a USB cable to the micro-USB connector,
-you should see four serial USB devices, and the Linux serial console is available
-on the 3rd of the four. When you boot Linux on Jetson AGX Xavier, add the following
-to the Linux kernel command line to direct the kernel output to the serial console.
+Jetson AGX Xavier platform. When you connect a USB cable to the micro-USB
+connector, you should see four serial USB devices, and the Linux serial console
+is available on the 3rd of the four. When you boot Linux on Jetson AGX Xavier,
+add the following to the Linux kernel command line to direct the kernel output
+to the serial console.
 
     console=ttyS0,115200n8
 
@@ -78,42 +80,36 @@ following string to the Linux kernel command line.
 
     earlycon=uart8250,mmio32,0x3110000
 
-For booting Linux with ACPI on Jetson AGX Xavier the following Tegra 8250 driver
-is required.
-
-https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/drivers/tty/serial/8250/8250_tegra.c
+For booting Linux with ACPI on Jetson AGX Xavier the Tegra 8250 driver (located
+in the Linux kernel source file drivers/tty/serial/8250/8250_tegra.c) is
+required.
 
 
 ## Booting UEFI-bootloadable Linux Distributions
 
 If you are planning to boot a UEFI-bootable Linux distribution from external
 media, such as a USB drive, then you may simply place the Jetson AGX Xavier
-Developer Kit in Recovery Mode and execute the following command to flash the UEFI
-firmware. Otherwise, please refer to the section “Booting L4T with mainline
-Linux."
+Developer Kit in Recovery Mode and execute one of the following commands to
+flash the UEFI firmware. Otherwise, please refer to the section “Booting L4T
+with mainline Linux."
 
-To specify ACPI boot by default:
+To boot Linux with Device-Tree by default execute:
 
-    $ sudo ./flash.sh jetson-xavier-uefi-acpi internal
+    $ sudo ./flash.sh jetson-xavier-uefi-min external
 
-To specify DT boot by default:
+To boot Linux with ACPI by default execute:
 
-    $ sudo ./flash.sh jetson-xavier-uefi internal
+    $ sudo ./flash.sh jetson-xavier-uefi-acpi-min external
 
-The OS hardware description can be changed without flashing the device as well, see “Booting Linux with
-Device-Tree/ACPI”.
+The OS hardware description can be changed without flashing the device as well,
+see “Booting Linux with Device-Tree/ACPI”.
 
 
 ## Booting L4T with mainline Linux
 
-Although it is possible to boot mainline Linux kernels without any out-of-tree
-patches, NVIDIA provides the following Linux v5.4 kernel as an example for use
-with Jetson AGX Xavier. All patches apart from the ACPI PCIe patches have been
-accepted in the mainline Linux kernel.
-
 Clone the Linux kernel tree:
 
-    $ git clone -b tegra/uefi-5.7 https://github.com/jonhunter/linux.git
+    $ git clone git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 
 Configure the Linux kernel:
 
@@ -123,16 +119,10 @@ Configure the Linux kernel:
 
 Adjust the configuration:
 
-    $ scripts/config --file $KBUILD_OUTPUT/.config --disable ARM64_4K_PAGES
-    $ scripts/config --file $KBUILD_OUTPUT/.config --enable ARM64_64K_PAGES
-    $ scripts/config --file $KBUILD_OUTPUT/.config --disable ARM64_VA_BITS_42
-    $ scripts/config --file $KBUILD_OUTPUT/.config --disable ARM64_USER_VA_BITS_52
-    $ scripts/config --file $KBUILD_OUTPUT/.config --enable ARM64_VA_BITS_48
-    $ scripts/config --file $KBUILD_OUTPUT/.config --disable ARM64_PA_BITS_52
-    $ scripts/config --file $KBUILD_OUTPUT/.config --enable ARM64_PA_BITS_48
     $ scripts/config --file $KBUILD_OUTPUT/.config --enable STMMAC_ETH
     $ scripts/config --file $KBUILD_OUTPUT/.config --enable STMMAC_PLATFORM
     $ scripts/config --file $KBUILD_OUTPUT/.config --enable DWMAC_DWC_QOS_ETH
+    $ scripts/config --file $KBUILD_OUTPUT/.config --enable MARVELL_PHY
     $ scripts/config --file $KBUILD_OUTPUT/.config --set-val CMA_SIZE_MBYTES 256
 
 Build the kernel:
@@ -141,16 +131,23 @@ Build the kernel:
 
 Install the modules:
 
-    $ sudo make INSTALL_MOD_PATH=/path/to/rootfs/ modules_install
+    $ sudo make INSTALL_MOD_PATH=/path/to/l4t-rootfs/ modules_install
 
 Update the L4T serial console for booting with the EDK2 firmware:
 
     $ cd Linux_for_Tegra
     $ sudo sed -i 's/^CHIP=.*/CHIP="tegra194"/' "rootfs/etc/systemd/nv-oem-config.sh"
     $ sudo sed -i 's/ttyTCU0/ttyS0/' "rootfs/etc/systemd/nv-oem-config.sh"
-    $ sudo sed -i 's/ttyTCU0/ttyS0/' "rootfs/etc/nv-oem-config.conf.t194"
 
-Put the device into Recovery Mode and run the following command to flash.
+To boot Linux with Device-Tree, put the device into Recovery Mode and run the
+following command to flash.
+
+    $ sudo ./flash.sh -K $KBUILD_OUTPUT/arch/arm64/boot/Image \
+      -d $KBUILD_OUTPUT/arch/arm64/boot/dts/nvidia/tegra194-p2972-0000.dtb \
+      jetson-xavier-uefi internal
+
+To boot Linux with ACPI, put the device into Recovery Mode and run the
+following command to flash.
 
     $ sudo ./flash.sh -K $KBUILD_OUTPUT/arch/arm64/boot/Image \
       -d $KBUILD_OUTPUT/arch/arm64/boot/dts/nvidia/tegra194-p2972-0000.dtb \
@@ -189,9 +186,8 @@ unable to boot. PCIe support can be enabled with the following steps:
 1. Press Escape once again to go to the UEFI menu.
 1. Select "Reset"
 
-The following out-of-tree patches are required for PCIe when booting Linux with
-ACPI.
+The out-of-tree patches are required for PCIe when booting Linux with ACPI can
+be found below. Please note that these may require updating for the latest Linux
+kernel.
 
-- http://patchwork.ozlabs.org/project/linux-pci/patch/20200110191500.9538-2-vidyas@nvidia.com
-- http://patchwork.ozlabs.org/project/linux-pci/patch/20200110191500.9538-3-vidyas@nvidia.com
-
+https://patchwork.kernel.org/project/linux-pci/list/?series=226733&state=*
