@@ -1,7 +1,7 @@
 # Introduction
 
-These instructions explain how to get an edk2/edk2-platforms build running
-on the NVIDIA Jetson platforms.
+These instructions explain how to install and boot Linux on NVIDIA Jetson
+Platforms using UEFI firmware.
 
 # Experimental Feature Notice
 
@@ -17,13 +17,13 @@ instructions for JetPack software in the Jetson AGX Xavier Developer Kit.
 # UEFI features supported
 - eMMC
 - PCIe (this requires enabling PCIe support if used as boot media with ACPI)
-- NVMe device
+- NVMe
 - SATA drive (onboard eSATA port is a PCIe device)
 - USB mass storage
 - USB NIC (AX88772b)
-- EQoS NIC on board
+- Onboard Ethernet controller (EQoS)
 - PXE
-- HTTP boot support
+- HTTP boot
 - Switching between ACPI and device tree
 
 # Limitations
@@ -85,13 +85,13 @@ in the Linux kernel source file drivers/tty/serial/8250/8250_tegra.c) is
 required.
 
 
-## Booting UEFI-bootloadable Linux Distributions
+## Booting UEFI-bootable Linux Distributions
 
 If you are planning to boot a UEFI-bootable Linux distribution from external
-media, such as a USB drive, then you may simply place the Jetson AGX Xavier
-Developer Kit in Recovery Mode and execute one of the following commands to
-flash the UEFI firmware. Otherwise, please refer to the section “Booting L4T
-with mainline Linux."
+media, such as a USB drive, place the Jetson AGX Xavier Developer Kit in
+Recovery Mode and execute one of the following commands to flash the UEFI
+firmware. Otherwise, please refer to the section “Booting L4T with mainline
+Linux."
 
 To boot Linux with Device-Tree by default execute:
 
@@ -172,8 +172,8 @@ To change between device tree and ACPI at boot the following steps can be used:
 
 ## Enabling PCIe Support
 
-PCIe support is disabled by default because when you boot Linux with ACPI, out
-of tree patches are required. If these patches are not present, Linux may be
+PCIe support is disabled by default because when you boot Linux with ACPI,
+out-of-tree patches are required. If these patches are not present, Linux may be
 unable to boot. PCIe support can be enabled with the following steps:
 
 1. Press escape when the console displays "Press ESCAPE for boot options"
