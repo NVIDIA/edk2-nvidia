@@ -231,6 +231,7 @@ FvbRead (
   UINT32        BlockSize;
   UINT64        FvbOffset;
   EFI_LBA       LastBlock;
+  BOOLEAN       LbaBoundaryCrossed;
 
   if ((NumBytes == NULL) ||
       (Buffer == NULL)) {
@@ -247,6 +248,7 @@ FvbRead (
 
   // The read must not span FV boundaries.
   if (Lba > LastBlock) {
+    *NumBytes = 0;
     return EFI_BAD_BUFFER_SIZE;
   }
 
@@ -258,18 +260,21 @@ FvbRead (
   // The read must not span block boundaries.
   // We need to check each variable individually because adding two large values together overflows.
   if (Offset >= BlockSize) {
+    *NumBytes = 0;
     return EFI_BAD_BUFFER_SIZE;
   }
 
+  LbaBoundaryCrossed = FALSE;
   if ((Offset + *NumBytes) >  BlockSize) {
     *NumBytes = BlockSize - Offset;
+    LbaBoundaryCrossed = TRUE;
   }
 
   FvbOffset = MultU64x32 (Lba, BlockSize) + Offset;
 
   CopyMem(Buffer, Private->VariablePartition + FvbOffset, *NumBytes);
 
-  return EFI_SUCCESS;
+  return LbaBoundaryCrossed ? EFI_BAD_BUFFER_SIZE : EFI_SUCCESS;
 }
 
 /**
@@ -369,6 +374,7 @@ FvbWrite (
   UINT32        BlockSize;
   UINT64        FvbOffset;
   EFI_LBA       LastBlock;
+  BOOLEAN       LbaBoundaryCrossed;
 
   if (EfiAtRuntime()) {
     return EFI_UNSUPPORTED;
@@ -389,6 +395,7 @@ FvbWrite (
 
   // The write must not span FV boundaries.
   if (Lba > LastBlock) {
+    *NumBytes = 0;
     return EFI_BAD_BUFFER_SIZE;
   }
 
@@ -400,11 +407,14 @@ FvbWrite (
   // The write must not span block boundaries.
   // We need to check each variable individually because adding two large values together overflows.
   if (Offset >= BlockSize) {
+    *NumBytes = 0;
     return EFI_BAD_BUFFER_SIZE;
   }
 
+  LbaBoundaryCrossed = FALSE;
   if ((Offset + *NumBytes) >  BlockSize) {
     *NumBytes = BlockSize - Offset;
+    LbaBoundaryCrossed = TRUE;
   }
 
   //Modify FVB
@@ -430,7 +440,7 @@ FvbWrite (
     Status = EFI_DEVICE_ERROR;
   }
 
-  return Status;
+  return (!EFI_ERROR(Status) && LbaBoundaryCrossed) ? EFI_BAD_BUFFER_SIZE : Status;
 }
 
 /**
