@@ -41,8 +41,7 @@ Download the following software from the [Jetson Download Center](https://develo
         L4T Jetson Driver Package, version L4T_VERSION
         L4T Sample Root File System, version L4T_VERSION
 
-Extract the driver package tarball and navigate to the `Linux_for_Tegra`
-subdirectory.
+Extract the driver package tarball.
 
     $ tar xjf Tegra186_Linux_RL4T_VERSION_aarch64.tbz2
 
@@ -50,7 +49,7 @@ Extract the nvidia-l4t-jetson-uefi-UEFI_PACKAGE_VERSION.tbz2 package provided
 over the top of the extracted driver package and navigate to the Linux_for_Tegra
 subdirectory.
 
-    $ tar xjf nvidia-l4t-jetson-uefi-UEFI_PACKAGE_VERSION.tbz2
+    $ tar xpf nvidia-l4t-jetson-uefi-UEFI_PACKAGE_VERSION.tbz2
     $ cd Linux_for_Tegra
 
 Note that if you are not planning to use the L4T root filesystem you may skip
