@@ -62,6 +62,7 @@
   gEfiFirmwarePerformanceGuid
   gFdtHobGuid
   gDtPlatformDefaultDtbFileGuid
+  gEfiMemoryTypeInformationGuid
 
 [FeaturePcd]
   gEmbeddedTokenSpaceGuid.PcdPrePiProduceMemoryTypeInformationHob
