@@ -220,6 +220,7 @@ AdjustHobEnd ( VOID )
   EFI_PEI_HOB_POINTERS          Hob;
   EFI_HOB_RESOURCE_DESCRIPTOR   *PhitResourceHob;
   EFI_PHYSICAL_ADDRESS          PhitMemoryResourceTop;
+  UINT64                        MemorySizeNeeded;
 
 
   PhitResourceHob = NULL;
@@ -259,7 +260,9 @@ AdjustHobEnd ( VOID )
   }
 
   //Make sure we have enough memory after hob list
-  ASSERT ((PhitMemoryResourceTop - PhitHob->EfiMemoryTop) > CalculateTotalMemoryBinSizeNeeded ());
+  MemorySizeNeeded = CalculateTotalMemoryBinSizeNeeded ();
+  ASSERT (((PhitMemoryResourceTop - PhitHob->EfiMemoryTop) > MemorySizeNeeded) ||
+          ((PhitHob->EfiFreeMemoryTop - PhitHob->EfiFreeMemoryBottom) > MemorySizeNeeded));
 }
 
 VOID
@@ -480,11 +483,11 @@ CEntryPoint (
 
   DisplayHobResource ();
 
-  AdjustHobEnd ();
-
   // Assume the FV that contains the SEC (our code) also contains a compressed FV.
   Status = DecompressFirstFv ();
   ASSERT_EFI_ERROR (Status);
+
+  AdjustHobEnd ();
 
   // Load the DXE Core and transfer control to it
   Status = LoadDxeCoreFromFv (NULL, 0);
