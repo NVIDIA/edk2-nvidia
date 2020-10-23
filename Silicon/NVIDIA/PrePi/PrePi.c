@@ -25,7 +25,6 @@
 #include <Library/ArmMmuLib.h>
 #include <Library/PlatformResourceLib.h>
 
-#include <Guid/MemoryTypeInformation.h>
 
 #include <Ppi/GuidedSectionExtraction.h>
 #include <Ppi/SecPerformance.h>
@@ -176,93 +175,6 @@ DisplayHobResource ( VOID )
     }
     NextHob.Raw = GET_NEXT_HOB (NextHob);
   }
-}
-
-/**
-  Calculate total memory bin size neeeded.
-
-  @return The total memory bin size neeeded.
-
-**/
-UINT64
-CalculateTotalMemoryBinSizeNeeded (
-  VOID
-  )
-{
-  UINTN                        Index;
-  UINT64                       TotalSize;
-  EFI_MEMORY_TYPE_INFORMATION *MemoryInfo;
-  EFI_HOB_GUID_TYPE           *GuidHob;
-
-  TotalSize = SIZE_64KB;
-  GuidHob = GetFirstGuidHob (&gEfiMemoryTypeInformationGuid);
-  if (GuidHob != NULL) {
-    MemoryInfo = GET_GUID_HOB_DATA (GuidHob);
-    //
-    // Loop through each memory type in the order specified by the gMemoryTypeInformation[] array
-    //
-    for (Index = 0; MemoryInfo[Index].Type != EfiMaxMemoryType; Index++) {
-      TotalSize += LShiftU64 (MemoryInfo[Index].NumberOfPages, EFI_PAGE_SHIFT);
-    }
-  }
-  return TotalSize;
-}
-
-/*
- * Moves EfiMemoryTop to end of allocated memory in same system resource as hob
- * Works around issue in Gcd where there is a case where memory allocations are not checked
- */
-VOID
-EFIAPI
-AdjustHobEnd ( VOID )
-{
-  EFI_HOB_HANDOFF_INFO_TABLE    *PhitHob;
-  EFI_PEI_HOB_POINTERS          Hob;
-  EFI_HOB_RESOURCE_DESCRIPTOR   *PhitResourceHob;
-  EFI_PHYSICAL_ADDRESS          PhitMemoryResourceTop;
-  UINT64                        MemorySizeNeeded;
-
-
-  PhitResourceHob = NULL;
-  PhitHob = (EFI_HOB_HANDOFF_INFO_TABLE*) GetHobList ();
-  Hob.Raw = GetFirstHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR);
-
-  while (Hob.Raw != NULL) {
-    if ((Hob.ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) &&
-        (PhitHob->EfiFreeMemoryBottom >= Hob.ResourceDescriptor->PhysicalStart) &&
-        (PhitHob->EfiFreeMemoryTop <= (Hob.ResourceDescriptor->PhysicalStart + Hob.ResourceDescriptor->ResourceLength))) {
-      //
-      // Cache the resource descriptor HOB for the memory region described by the PHIT HOB
-      //
-      PhitResourceHob = Hob.ResourceDescriptor;
-      break;
-    }
-    Hob.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, GET_NEXT_HOB (Hob));
-  }
-
-  ASSERT (PhitResourceHob != NULL);
-  PhitMemoryResourceTop = PhitResourceHob->PhysicalStart + PhitResourceHob->ResourceLength;
-
-  Hob.Raw = GetFirstHob (EFI_HOB_TYPE_MEMORY_ALLOCATION);
-
-  while (Hob.Raw != NULL) {
-    EFI_PHYSICAL_ADDRESS  MemoryBaseAddress;
-    UINT64                MemoryLength;
-
-    MemoryBaseAddress = Hob.MemoryAllocation->AllocDescriptor.MemoryBaseAddress;
-    MemoryLength = Hob.MemoryAllocation->AllocDescriptor.MemoryLength;
-
-    if ((MemoryBaseAddress > PhitHob->EfiMemoryTop) &&
-        ((MemoryBaseAddress + MemoryLength) <= PhitMemoryResourceTop)) {
-      PhitHob->EfiMemoryTop = MemoryBaseAddress + MemoryLength;
-    }
-    Hob.Raw = GetNextHob (EFI_HOB_TYPE_MEMORY_ALLOCATION, GET_NEXT_HOB (Hob));
-  }
-
-  //Make sure we have enough memory after hob list
-  MemorySizeNeeded = CalculateTotalMemoryBinSizeNeeded ();
-  ASSERT (((PhitMemoryResourceTop - PhitHob->EfiMemoryTop) > MemorySizeNeeded) ||
-          ((PhitHob->EfiFreeMemoryTop - PhitHob->EfiFreeMemoryBottom) > MemorySizeNeeded));
 }
 
 VOID
@@ -486,8 +398,6 @@ CEntryPoint (
   // Assume the FV that contains the SEC (our code) also contains a compressed FV.
   Status = DecompressFirstFv ();
   ASSERT_EFI_ERROR (Status);
-
-  AdjustHobEnd ();
 
   // Load the DXE Core and transfer control to it
   Status = LoadDxeCoreFromFv (NULL, 0);
