@@ -31,7 +31,16 @@ ASM_FUNC(TegraGetSystemMemoryBaseAddress)
 
 ASM_FUNC(TegraGetBLCarveoutOffset)
 
-  cmp w0, #T186_CHIP_ID
+  mov w1, w0
+  mov x2, x30
+  bl TegraGetBLCarveoutOffsetInternal
+  mov x30, x2
+  cmp x0, #0
+  beq _T186Carveout
+  b _ReturnCarveout
+
+_T186Carveout:
+  cmp w1, #T186_CHIP_ID
   bne _DefaultCarveout
   MOV64 (x0, T186_BL_CARVEOUT_OFFSET)
   b _ReturnCarveout

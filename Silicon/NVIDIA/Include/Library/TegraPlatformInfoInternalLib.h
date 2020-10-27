@@ -18,6 +18,16 @@
 #ifndef __ASSEMBLY__
 
 /**
+  Returns CPUBL carveout affset for a given chip.
+
+  @param[in] ChipID    Tegra Chip ID
+
+  @retval              CPUBL carveout offset.
+
+**/
+extern UINT64 TegraGetBLCarveoutOffsetInternal (UINT32 ChipID);
+
+/**
   Returns gic distributor base address for a given chip.
 
   @param[in] ChipID    Tegra Chip ID

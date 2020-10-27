@@ -23,7 +23,6 @@
 #define MAX_OEM_FW_RATCHET_INDEX 104
 
 /*macro carve_out_type*/
-typedef UINT32 carve_out_type_t;
 #define CARVEOUT_NONE 0U
 #define CARVEOUT_GSC1 1U
 #define CARVEOUT_NVDEC CARVEOUT_GSC1

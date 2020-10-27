@@ -14,6 +14,11 @@
 #include <AsmMacroIoLibV8.h>
 #include <Library/TegraPlatformInfoInternalLib.h>
 
+ASM_FUNC(TegraGetBLCarveoutOffsetInternal)
+
+  MOV64 (x0, 0)
+  ret
+
 ASM_FUNC(TegraGetGicDistributorBaseAddressInternal)
 
   MOV64 (x0, 0)
