@@ -87,6 +87,16 @@ NOR_FLASH_ATTRIBUTES FlashAttributes[] = {
     SPANSION_SPI_NOR_INTERFACE_ID, // Memory Interface Type
     SPANSION_FLASH_DENSITY_512,    // Memory Size
     SIZE_256KB,                    // Sector Size
+    256,                           // Number of Sectors
+    SIZE_4KB,                      // Block Size
+    256                            // page Size
+  },
+  {
+    "s25fs256s",                   // Flash name
+    SPANSION_MANUFACTURER_ID,      // Manufacturer ID
+    SPANSION_SPI_NOR_INTERFACE_ID, // Memory Interface Type
+    SPANSION_FLASH_DENSITY_256,    // Memory Size
+    SIZE_256KB,                    // Sector Size
     128,                           // Number of Sectors
     SIZE_4KB,                      // Block Size
     256                            // page Size
@@ -418,7 +428,7 @@ NorFlashGetAttributes(
 
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
-  Attributes = &FlashAttributes[Private->FlashInstance];
+  CopyMem (Attributes, &FlashAttributes[Private->FlashInstance], sizeof (NOR_FLASH_ATTRIBUTES));
 
   return EFI_SUCCESS;
 }
@@ -464,7 +474,7 @@ NorFlashRead(
   FlashDensity = FlashAttributes[Private->FlashInstance].NumSectors *
                  FlashAttributes[Private->FlashInstance].SectorSize;
   if ((Offset > (FlashDensity - 1)) ||
-      ((Offset + Size) > (FlashDensity - 1))) {
+      ((Offset + Size) > (FlashDensity))) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -572,6 +582,7 @@ NorFlashErase(
   QSPI_TRANSACTION_PACKET Packet;
   NOR_FLASH_PRIVATE_DATA  *Private;
   UINT32                  Offset;
+  UINT32                  LastBlock;
 
   if (This == NULL ||
       NumLba == 0) {
@@ -580,8 +591,10 @@ NorFlashErase(
 
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
-  if ((Lba > (FlashAttributes[Private->FlashInstance].NumSectors - 1)) ||
-      ((Lba + NumLba) > (FlashAttributes[Private->FlashInstance].NumSectors - 1))) {
+  LastBlock = ((FlashAttributes[Private->FlashInstance].NumSectors * FlashAttributes[Private->FlashInstance].SectorSize) / FlashAttributes[Private->FlashInstance].BlockSize) - 1;
+
+  if ((Lba > LastBlock) ||
+      ((Lba + NumLba - 1) > LastBlock)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -724,7 +737,7 @@ NorFlashWriteSinglePage(
   FlashDensity = FlashAttributes[Private->FlashInstance].NumSectors *
                  FlashAttributes[Private->FlashInstance].SectorSize;
   if ((Offset > (FlashDensity - 1)) ||
-      ((Offset + Size) > (FlashDensity - 1))) {
+      ((Offset + Size) > (FlashDensity))) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -810,7 +823,7 @@ NorFlashWrite(
   FlashDensity = FlashAttributes[Private->FlashInstance].NumSectors *
                  FlashAttributes[Private->FlashInstance].SectorSize;
   if ((Offset > (FlashDensity - 1)) ||
-      ((Offset + Size) > (FlashDensity - 1))) {
+      ((Offset + Size) > (FlashDensity))) {
     return EFI_INVALID_PARAMETER;
   }
 

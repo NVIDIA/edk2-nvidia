@@ -27,6 +27,7 @@
 #define SPANSION_MANUFACTURER_ID      0x1
 #define SPANSION_SPI_NOR_INTERFACE_ID 0x2
 #define SPANSION_FLASH_DENSITY_512    0x20
+#define SPANSION_FLASH_DENSITY_256    0x19
 
 //
 // NOR Flash attributes
@@ -118,8 +119,8 @@ EFI_STATUS
   Erase data from NOR Flash.
 
   @param[in] This                  Instance to protocol
-  @param[in] Offset                Offset to erase data at
-  @param[in] Size                  Number of bytes to be erased
+  @param[in] Lba                   Logical block to start erasing from
+  @param[in] NumLba                Number of block to be erased
 
   @retval EFI_SUCCESS              Operation successful.
   @retval others                   Error occurred
@@ -129,8 +130,8 @@ typedef
 EFI_STATUS
 (EFIAPI * NOR_FLASH_ERASE)(
   IN NVIDIA_NOR_FLASH_PROTOCOL *This,
-  IN UINT32                    Offset,
-  IN UINT32                    Size
+  IN UINT32                    Lba,
+  IN UINT32                    NumLba
 );
 
 /// NVIDIA_NOR_FLASH_PROTOCOL protocol structure.
