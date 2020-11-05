@@ -98,6 +98,9 @@
   # FVB Support
   #
   INF Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
+  INF Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashDxe.inf
+  INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
+
 
   INF SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
   INF SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf

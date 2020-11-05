@@ -527,6 +527,15 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0
 
   #
+  # FTW PCDs
+  # Base addresses are fake to assist with FTW driver locating FVBs
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase64|0x100000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize|0x20000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase64|0x200000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize|0x10000
+
+  #
   # Default OEM Table ID
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|0x0

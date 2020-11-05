@@ -176,6 +176,8 @@
   # FVB Support
   #
   Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
+  Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashDxe.inf
+  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
 
   #
   # Usb Support
