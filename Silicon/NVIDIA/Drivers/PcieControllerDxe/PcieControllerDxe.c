@@ -784,16 +784,18 @@ TegraPciePMETurnOff (PCIE_CONTROLLER_PRIVATE *Private)
     data &= ~APPL_PINMUX_PEX_RST;
     MmioWrite32 (Private->ApplSpace + APPL_PINMUX, data);
 
-    MicroSecondDelay(50000);
+    MicroSecondDelay(25000);
+
+    data = MmioRead32 (Private->ApplSpace + APPL_CTRL);
+    data &= ~APPL_CTRL_LTSSM_EN;
+    MmioWrite32 (Private->ApplSpace + APPL_CTRL, data);
+
+    MicroSecondDelay(25000);
 
     data = MmioRead32 (Private->ApplSpace + APPL_DEBUG);
     if (((data & APPL_DEBUG_LTSSM_STATE_MASK) >>  APPL_DEBUG_LTSSM_STATE_SHIFT)
         !=  LTSSM_STATE_PRE_DETECT) {
       DEBUG ((EFI_D_ERROR, "Link didn't go to detect state as well\r\n"));
-    } else {
-      data = MmioRead32 (Private->ApplSpace + APPL_CTRL);
-      data &= ~APPL_CTRL_LTSSM_EN;
-      MmioWrite32 (Private->ApplSpace + APPL_CTRL, data);
     }
   }
 
