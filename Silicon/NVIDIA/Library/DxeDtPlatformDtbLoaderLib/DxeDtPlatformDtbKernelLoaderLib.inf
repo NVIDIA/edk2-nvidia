@@ -42,7 +42,6 @@
 [Protocols]
   gEfiPartitionInfoProtocolGuid
   gEfiBlockIoProtocolGuid
-  gNVIDIAEmuVariableNvModeEnableProtocolGuid
 
 [Guids]
   gFdtHobGuid
@@ -54,6 +53,4 @@
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
 
 [Depex]
-  gEfiPartitionInfoProtocolGuid
-  OR
-  gNVIDIAEmuVariableNvModeEnableProtocolGuid
+  gEdkiiNvVarStoreFormattedGuid

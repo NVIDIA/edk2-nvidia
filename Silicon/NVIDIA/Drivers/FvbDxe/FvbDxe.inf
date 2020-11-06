@@ -45,7 +45,6 @@
   gEfiFirmwareVolumeBlockProtocolGuid
   gEfiFaultTolerantWriteProtocolGuid
   gEfiDevicePathProtocolGuid
-  gNVIDIAEmuVariableNvModeEnableProtocolGuid
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
@@ -66,5 +65,3 @@
   gNVIDIAStandaloneMmUnavailableGuid
   AND
   gEfiPartitionInfoProtocolGuid
-  OR
-  gNVIDIAEmuVariableNvModeEnableProtocolGuid

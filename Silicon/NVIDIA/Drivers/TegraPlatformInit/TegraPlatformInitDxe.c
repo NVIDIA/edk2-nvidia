@@ -38,7 +38,7 @@ UseEmulatedVariableStore (
   PcdSetBoolS(PcdEmuVariableNvModeEnable, TRUE);
   Status = gBS->InstallMultipleProtocolInterfaces (
              &ImageHandle,
-             &gNVIDIAEmuVariableNvModeEnableProtocolGuid,
+             &gEdkiiNvVarStoreFormattedGuid,
              NULL,
              NULL
              );

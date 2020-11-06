@@ -31,6 +31,7 @@
   ArmPkg/ArmPkg.dec
   ArmPlatformPkg/ArmPlatformPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -44,11 +45,9 @@
   PlatformResourceLib
   MemoryAllocationLib
 
-[Protocols]
-  gNVIDIAEmuVariableNvModeEnableProtocolGuid
-
 [Guids]
   gEfiRtPropertiesTableGuid
+  gEdkiiNvVarStoreFormattedGuid
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
