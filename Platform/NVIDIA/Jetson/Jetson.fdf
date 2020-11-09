@@ -27,6 +27,7 @@
 ################################################################################
 
 [FD.UEFI_JETSON]
+!if $(TARGET) == RELEASE
 BaseAddress   = 0x00000000|gArmTokenSpaceGuid.PcdFdBaseAddress  # The base address of the Firmware in NOR Flash.
 Size          = 0x00200000|gArmTokenSpaceGuid.PcdFdSize         # The size in bytes of the FLASH Device
 ErasePolarity = 1
@@ -34,6 +35,15 @@ ErasePolarity = 1
 # This one is tricky, it must be: BlockSize * NumBlocks = Size
 BlockSize     = 0x00010000
 NumBlocks     = 0x20
+!else
+BaseAddress   = 0x00000000|gArmTokenSpaceGuid.PcdFdBaseAddress  # The base address of the Firmware in NOR Flash.
+Size          = 0x00220000|gArmTokenSpaceGuid.PcdFdSize         # The size in bytes of the FLASH Device
+ErasePolarity = 1
+
+# This one is tricky, it must be: BlockSize * NumBlocks = Size
+BlockSize     = 0x00010000
+NumBlocks     = 0x22
+!endif
 
 ################################################################################
 #
@@ -51,7 +61,11 @@ NumBlocks     = 0x20
 #
 ################################################################################
 
+!if $(TARGET) == RELEASE
 0x00000000|0x00200000
+!else
+0x00000000|0x00220000
+!endif
 gArmTokenSpaceGuid.PcdFvBaseAddress|gArmTokenSpaceGuid.PcdFvSize
 FV = UEFI_NS
 
