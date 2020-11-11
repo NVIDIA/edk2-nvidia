@@ -34,8 +34,8 @@ instructions for JetPack software in the Jetson AGX Xavier Developer Kit.
 - SetTime is not supported at UEFI runtime
 
 # Known Issues
-
-There are no known issues associated with this feature.
+- USB-C port J512 on Jetson AGX Xavier is not functional. Users may use the
+  USB-C port J513 or eSATA/USB port J507 instead.
 
 # Flashing instructions
 ## Setup
