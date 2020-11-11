@@ -1,7 +1,10 @@
 # Introduction
 
-These instructions explain how to install and boot Linux on NVIDIA Jetson
-Platforms using UEFI firmware.
+These instructions explain how to install and boot Linux on
+NVIDIA Jetson platforms using UEFI firmware.
+
+This software is intended for use with the mainline Linux kernel.
+It is not currently compatible with the L4T kernel.
 
 # Experimental Feature Notice
 
