@@ -829,8 +829,6 @@ HandleCapsules (
 }
 
 
-#define VERSION_STRING_PREFIX    L"Tianocore/EDK2 firmware version "
-
 /**
   Do the platform specific action after the console is ready
   Possible things that can be done in PlatformBootManagerAfterConsole:
@@ -850,7 +848,8 @@ PlatformBootManagerAfterConsole (
 {
   EFI_STATUS                    Status;
   EFI_GRAPHICS_OUTPUT_PROTOCOL  *GraphicsOutput;
-  UINTN                         FirmwareVerLength;
+  CHAR16                        Buffer[100];
+  UINTN                         CharCount;
   UINTN                         PosX;
   UINTN                         PosY;
 
@@ -861,29 +860,27 @@ PlatformBootManagerAfterConsole (
     Print (L"********** FOR NVIDIA INTERNAL USE ONLY **********\n");
   }
 
-  FirmwareVerLength = StrLen (PcdGetPtr (PcdFirmwareVersionString));
+  CharCount = UnicodeSPrint (Buffer,sizeof (Buffer),L"%s UEFI firmware (version %s built on %s)\n\r",
+    (CHAR16*)PcdGetPtr(PcdPlatformFamilyName),
+    (CHAR16*)PcdGetPtr(PcdFirmwareVersionString),
+    (CHAR16*)PcdGetPtr(PcdFirmwareDateTimeBuiltString));
 
   //
   // Show the splash screen.
   //
   Status = BootLogoEnableLogo ();
   if (EFI_ERROR (Status)) {
-    if (FirmwareVerLength > 0) {
-      Print (VERSION_STRING_PREFIX L"%s\n",
-        PcdGetPtr (PcdFirmwareVersionString));
-    }
+    Print (Buffer);
     Print (L"Press ESCAPE for boot options ");
-  } else if (FirmwareVerLength > 0) {
+  } else {
     Status = gBS->HandleProtocol (gST->ConsoleOutHandle,
                     &gEfiGraphicsOutputProtocolGuid, (VOID **)&GraphicsOutput);
     if (!EFI_ERROR (Status)) {
       PosX = (GraphicsOutput->Mode->Info->HorizontalResolution -
-              (StrLen (VERSION_STRING_PREFIX) + FirmwareVerLength) *
-              EFI_GLYPH_WIDTH) / 2;
+              StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
       PosY = 0;
 
-      PrintXY (PosX, PosY, NULL, NULL, VERSION_STRING_PREFIX L"%s",
-        PcdGetPtr (PcdFirmwareVersionString));
+      PrintXY (PosX, PosY, NULL, NULL, Buffer);
     }
   }
 

@@ -33,3 +33,12 @@
   DEFINE SYSTEM_FMP_ESRT_GUID = 7C374309-1649-4682-8BEE-04F3A8399414
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
+
+################################################################################
+#
+# Pcd Section - list of all EDK II PCD Entries defined by this Platform
+#
+################################################################################
+
+[PcdsFixedAtBuild]
+  gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L"Jetson"

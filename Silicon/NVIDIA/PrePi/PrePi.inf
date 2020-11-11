@@ -68,6 +68,7 @@
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gNVIDIATokenSpaceGuid.PcdPlatformFamilyName
   gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString
 
 [FixedPcd]

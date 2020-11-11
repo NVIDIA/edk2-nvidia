@@ -210,6 +210,9 @@ Include
 # Tegra Memory Controller Base Address
   gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress|0x02c10000|UINT64|0x00000034
 
+# Null-terminated Unicode string that describes the platform family name.
+  gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L""|VOID*|0x00000037
+
 [PcdsDynamic.common]
 #Size of optional signing data header in boot.img partition.
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B

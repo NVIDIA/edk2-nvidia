@@ -331,7 +331,8 @@ CEntryPoint (
 
   // Initialize the Serial Port
   SerialPortInitialize ();
-  CharCount = AsciiSPrint (Buffer,sizeof (Buffer),"UEFI firmware (version %s built on %s)\n\r",
+  CharCount = AsciiSPrint (Buffer,sizeof (Buffer),"%s UEFI firmware (version %s built on %s)\n\r",
+    (CHAR16*)PcdGetPtr(PcdPlatformFamilyName),
     (CHAR16*)PcdGetPtr(PcdFirmwareVersionString),
     (CHAR16*)PcdGetPtr(PcdFirmwareDateTimeBuiltString));
   SerialPortWrite ((UINT8 *) Buffer, CharCount);
