@@ -258,20 +258,20 @@ CvmEepromDxeDriverBindingStart (
     Request->Operation[1].Buffer = (UINT8 *)RawData;
     Status = I2cIo->QueueRequest (I2cIo, 0, NULL, Request, NULL);
     if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to read eeprom (%r)\r\n", Status));
-    goto ErrorExit;
+      DEBUG ((DEBUG_ERROR, "Failed to read eeprom (%r)\r\n", Status));
+      goto ErrorExit;
     }
     FreePool (Request);
     Request = NULL;
 
     if ((EepromData->Version != CVM_EEPROM_VERSION) ||
-        ((EepromData->Size + 1) != sizeof (TEGRA_CVM_EEPROM_PROTOCOL))) {
-      DEBUG ((DEBUG_ERROR, "%a: Invalid size/version in eeprom\r\n", __FUNCTION__));
+        (EepromData->Size <= ((UINTN)&EepromData->Reserved2 - (UINTN)EepromData))) {
+      DEBUG ((DEBUG_ERROR, "%a: Invalid size/version in eeprom %x %x\r\n", __FUNCTION__, EepromData->Version, EepromData->Size));
       Status = EFI_DEVICE_ERROR;
       goto ErrorExit;
     }
 
-    Checksum = CalculateCrc8 (RawData, EepromData->Size);
+    Checksum = CalculateCrc8 (RawData, sizeof (TEGRA_CVM_EEPROM_PROTOCOL) - 1);
     if (Checksum != EepromData->Checksum) {
       DEBUG ((DEBUG_ERROR, "%a: CRC mismatch, expected %02x got %02x\r\n", __FUNCTION__, Checksum, EepromData->Checksum));
       Status = EFI_DEVICE_ERROR;
