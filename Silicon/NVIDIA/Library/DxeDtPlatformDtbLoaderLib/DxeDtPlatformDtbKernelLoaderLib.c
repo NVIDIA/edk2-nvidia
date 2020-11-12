@@ -18,6 +18,7 @@
 #include <Library/BaseLib.h>
 #include <Library/HobLib.h>
 #include <Library/DebugLib.h>
+#include <Library/UefiLib.h>
 #include <libfdt.h>
 #include "FloorSweepPrivate.h"
 
@@ -25,6 +26,26 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
+
+EFI_EVENT FdtInstallEvent;
+
+VOID
+EFIAPI
+FdtInstalled (
+    IN EFI_EVENT Event,
+    IN VOID      *Context
+    )
+{
+  EFI_STATUS Status;
+  VOID       *Dtb;
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Dtb);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  UpdateCpuFloorsweepingConfig (Dtb);
+}
 
 /**
   Return a pool allocated copy of the DTB image that is appropriate for
@@ -163,6 +184,8 @@ DtPlatformLoadDtb (
     }
   }
 
+  //Check floorsweeping here in addition to callback to allow for users of this API who
+  //do not install the Dtb into the system table to get correct data.
   UpdateCpuFloorsweepingConfig (*Dtb);
 
   //Disable grid of semaphores as we do not set up memory for this
@@ -197,6 +220,13 @@ DtPlatformLoadDtb (
   }
 
   *DtbSize = fdt_totalsize (*Dtb);
+
+  Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                               TPL_NOTIFY,
+                               FdtInstalled,
+                               NULL,
+                               &gFdtTableGuid,
+                               &FdtInstallEvent);
 
   return EFI_SUCCESS;
 }
