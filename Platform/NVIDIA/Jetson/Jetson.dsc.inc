@@ -61,7 +61,6 @@
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
   gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|TRUE
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
-  gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase|0x0C340000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE

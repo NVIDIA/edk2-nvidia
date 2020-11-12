@@ -23,6 +23,7 @@
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <libfdt.h>
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra194-pwm", &gNVIDIANonDiscoverablePwmDeviceGuid },
@@ -66,6 +67,11 @@ DeviceDiscoveryNotify (
   EFI_STATUS                Status;
   EFI_PHYSICAL_ADDRESS      BaseAddress;
   UINTN                     RegionSize;
+  UINT32                    NodeHandle;
+  INT32                     FanOffset;
+  CONST UINT32              *FanPwm;
+  INT32                     PwmLength;
+  UINT32                    FanPwmHandle;
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingSupported:
@@ -77,7 +83,26 @@ DeviceDiscoveryNotify (
       return EFI_UNSUPPORTED;
     }
 
-    if (BaseAddress ==  PcdGet64(PcdTegraPwmFanBase)) {
+    NodeHandle = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
+
+    //Check that handle of PWM specified by pwm-fan node matches to only support fan pwm.
+    FanOffset = fdt_node_offset_by_compatible (DeviceTreeNode->DeviceTreeBase, 0, "pwm-fan");
+    if (FanOffset < 0) {
+      return EFI_UNSUPPORTED;
+    }
+
+    FanPwm = fdt_getprop (DeviceTreeNode->DeviceTreeBase, FanOffset, "pwms", &PwmLength);
+    if (FanPwm == NULL) {
+      return EFI_UNSUPPORTED;
+    }
+
+    if (PwmLength < sizeof (UINT32)){
+      return EFI_UNSUPPORTED;
+    }
+
+    FanPwmHandle = SwapBytes32 (FanPwm[0]);
+
+    if (NodeHandle == FanPwmHandle) {
       return EFI_SUCCESS;
     }
 

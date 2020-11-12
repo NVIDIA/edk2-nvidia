@@ -232,9 +232,6 @@ Include
 #PCIe Segment Base Address
   gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x0|UINT64|0x00000018
 
-#Tegra PWM FAN Base for all chips
-  gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase|0x0|UINT64|0x00000020
-
 #Tegra Use Production USB Fw
   gNVIDIATokenSpaceGuid.PcdTegraUseProdUsbFw|TRUE|BOOLEAN|0x00000027
 

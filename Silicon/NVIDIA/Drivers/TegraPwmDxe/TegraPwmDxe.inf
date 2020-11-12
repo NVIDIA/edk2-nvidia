@@ -26,6 +26,7 @@
   TegraPwmDxe.c
 
 [Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
@@ -33,12 +34,10 @@
 [LibraryClasses]
   UefiDriverEntryPoint
   DeviceDiscoveryDriverLib
+  FdtLib
 
 [Guids]
   gNVIDIANonDiscoverablePwmDeviceGuid
-
-[Pcd]
-  gNVIDIATokenSpaceGuid.PcdTegraPwmFanBase
 
 [Depex]
   TRUE
