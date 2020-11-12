@@ -85,6 +85,7 @@ UpdateCpuFloorsweepingConfig (
   UINT32 AddressCells;
 
   INT32 NodeOffset;
+  INT32 PrevNodeOffset;
   INT32 ParentOffset = 0;
 
   if (!PcdGetBool (PcdFloorsweepCpus)) {
@@ -105,14 +106,16 @@ UpdateCpuFloorsweepingConfig (
    * disable the DT nodes of the floorswept cores.*/
   NodeOffset = 0;
   Cpu = 0;
+  PrevNodeOffset = 0;
   for (NodeOffset = fdt_first_subnode(Dtb, ParentOffset);
        NodeOffset > 0;
-       NodeOffset = fdt_next_subnode(Dtb, NodeOffset)) {
+       NodeOffset = fdt_next_subnode(Dtb, PrevNodeOffset)) {
     CONST VOID *Property;
     INT32      Length;
 
     Property = fdt_getprop(Dtb, NodeOffset, "device_type", &Length);
     if ((Property == NULL) || (AsciiStrCmp(Property, "cpu") != 0)) {
+      PrevNodeOffset = NodeOffset;
       continue;
     }
 
@@ -140,6 +143,7 @@ UpdateCpuFloorsweepingConfig (
       }
 
       DEBUG ((DEBUG_INFO, "Enabled cpu-%u (mpidr: 0x%x) node in FDT\r\n", Cpu, Mpidr));
+      PrevNodeOffset = NodeOffset;
     } else {
       FdtErr = fdt_del_node(Dtb, NodeOffset);
       if (FdtErr < 0) {
