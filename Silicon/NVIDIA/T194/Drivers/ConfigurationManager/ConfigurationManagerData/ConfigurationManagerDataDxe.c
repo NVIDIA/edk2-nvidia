@@ -19,6 +19,7 @@
 #include <ConfigurationManagerObject.h>
 
 #include <Library/ArmLib.h>
+#include <Library/DebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
@@ -590,102 +591,123 @@ InitializePlatformRepository ()
 {
   UINTN Index;
   UINTN GicInterruptInterfaceBase;
+  EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
+  EDKII_PLATFORM_REPOSITORY_INFO  *RepoEnd;
 
-  NVIDIAPlatformRepositoryInfo[0].CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjCfgMgrInfo);
-  NVIDIAPlatformRepositoryInfo[0].CmObjectToken = CM_NULL_TOKEN;
-  NVIDIAPlatformRepositoryInfo[0].CmObjectSize = sizeof (CmInfo);
-  NVIDIAPlatformRepositoryInfo[0].CmObjectCount = sizeof (CmInfo) / sizeof (CM_STD_OBJ_CONFIGURATION_MANAGER_INFO);
-  NVIDIAPlatformRepositoryInfo[0].CmObjectPtr = &CmInfo;
+  Repo = &NVIDIAPlatformRepositoryInfo[0];
+  RepoEnd = &NVIDIAPlatformRepositoryInfo[EStdObjMax + EArmObjMax];
 
-  NVIDIAPlatformRepositoryInfo[1].CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-  NVIDIAPlatformRepositoryInfo[1].CmObjectToken = CM_NULL_TOKEN;
-  NVIDIAPlatformRepositoryInfo[1].CmObjectSize = sizeof (CmAcpiTableList);
-  NVIDIAPlatformRepositoryInfo[1].CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-  NVIDIAPlatformRepositoryInfo[1].CmObjectPtr = &CmAcpiTableList;
-  for(Index=0; Index<NVIDIAPlatformRepositoryInfo[1].CmObjectCount; Index++) {
+  Repo->CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjCfgMgrInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (CmInfo);
+  Repo->CmObjectCount = sizeof (CmInfo) / sizeof (CM_STD_OBJ_CONFIGURATION_MANAGER_INFO);
+  Repo->CmObjectPtr = &CmInfo;
+  Repo++;
+
+  Repo->CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (CmAcpiTableList);
+  Repo->CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+  Repo->CmObjectPtr = &CmAcpiTableList;
+  for(Index=0; Index<Repo->CmObjectCount; Index++) {
     if (CmAcpiTableList[Index].AcpiTableSignature != EFI_ACPI_6_3_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE) {
       CmAcpiTableList[Index].OemTableId =  PcdGet64(PcdAcpiDefaultOemTableId);
     }
   }
+  Repo++;
 
-  NVIDIAPlatformRepositoryInfo[2].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjBootArchInfo);
-  NVIDIAPlatformRepositoryInfo[2].CmObjectToken = CM_NULL_TOKEN;
-  NVIDIAPlatformRepositoryInfo[2].CmObjectSize = sizeof (BootArchInfo);
-  NVIDIAPlatformRepositoryInfo[2].CmObjectCount = sizeof (BootArchInfo) / sizeof (CM_ARM_BOOT_ARCH_INFO);
-  NVIDIAPlatformRepositoryInfo[2].CmObjectPtr = &BootArchInfo;
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjBootArchInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (BootArchInfo);
+  Repo->CmObjectCount = sizeof (BootArchInfo) / sizeof (CM_ARM_BOOT_ARCH_INFO);
+  Repo->CmObjectPtr = &BootArchInfo;
+  Repo++;
 
-  NVIDIAPlatformRepositoryInfo[3].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPowerManagementProfileInfo);
-  NVIDIAPlatformRepositoryInfo[3].CmObjectToken = CM_NULL_TOKEN;
-  NVIDIAPlatformRepositoryInfo[3].CmObjectSize = sizeof (PmProfileInfo);
-  NVIDIAPlatformRepositoryInfo[3].CmObjectCount = sizeof (PmProfileInfo) / sizeof (CM_ARM_POWER_MANAGEMENT_PROFILE_INFO);
-  NVIDIAPlatformRepositoryInfo[3].CmObjectPtr = &PmProfileInfo;
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPowerManagementProfileInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (PmProfileInfo);
+  Repo->CmObjectCount = sizeof (PmProfileInfo) / sizeof (CM_ARM_POWER_MANAGEMENT_PROFILE_INFO);
+  Repo->CmObjectPtr = &PmProfileInfo;
+  Repo++;
 
   GicInterruptInterfaceBase = PcdGet64(PcdGicInterruptInterfaceBase);
-  NVIDIAPlatformRepositoryInfo[4].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
-  NVIDIAPlatformRepositoryInfo[4].CmObjectToken = CM_NULL_TOKEN;
-  NVIDIAPlatformRepositoryInfo[4].CmObjectSize = sizeof (GicCInfo);
-  NVIDIAPlatformRepositoryInfo[4].CmObjectCount = sizeof (GicCInfo) / sizeof (CM_ARM_GICC_INFO);
-  NVIDIAPlatformRepositoryInfo[4].CmObjectPtr = &GicCInfo;
-  for(Index=0; Index<NVIDIAPlatformRepositoryInfo[4].CmObjectCount; Index++) {
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (GicCInfo);
+  Repo->CmObjectCount = sizeof (GicCInfo) / sizeof (CM_ARM_GICC_INFO);
+  Repo->CmObjectPtr = &GicCInfo;
+  for(Index=0; Index<Repo->CmObjectCount; Index++) {
     GicCInfo[Index].PhysicalBaseAddress =  GicInterruptInterfaceBase;
   }
+  Repo++;
 
   GicDInfo.PhysicalBaseAddress = PcdGet64 (PcdGicDistributorBase);
-  NVIDIAPlatformRepositoryInfo[5].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicDInfo);
-  NVIDIAPlatformRepositoryInfo[5].CmObjectToken = CM_NULL_TOKEN;
-  NVIDIAPlatformRepositoryInfo[5].CmObjectSize = sizeof (GicDInfo);
-  NVIDIAPlatformRepositoryInfo[5].CmObjectCount = sizeof (GicDInfo) / sizeof (CM_ARM_GICD_INFO);
-  NVIDIAPlatformRepositoryInfo[5].CmObjectPtr = &GicDInfo;
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicDInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (GicDInfo);
+  Repo->CmObjectCount = sizeof (GicDInfo) / sizeof (CM_ARM_GICD_INFO);
+  Repo->CmObjectPtr = &GicDInfo;
+  Repo++;
 
-  NVIDIAPlatformRepositoryInfo[6].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGenericTimerInfo);
-  NVIDIAPlatformRepositoryInfo[6].CmObjectToken = CM_NULL_TOKEN;
-  NVIDIAPlatformRepositoryInfo[6].CmObjectSize = sizeof (GenericTimerInfo);
-  NVIDIAPlatformRepositoryInfo[6].CmObjectCount = sizeof (GenericTimerInfo) / sizeof (CM_ARM_GENERIC_TIMER_INFO);
-  NVIDIAPlatformRepositoryInfo[6].CmObjectPtr = &GenericTimerInfo;
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGenericTimerInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (GenericTimerInfo);
+  Repo->CmObjectCount = sizeof (GenericTimerInfo) / sizeof (CM_ARM_GENERIC_TIMER_INFO);
+  Repo->CmObjectPtr = &GenericTimerInfo;
+  Repo++;
 
-  NVIDIAPlatformRepositoryInfo[7].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
-  NVIDIAPlatformRepositoryInfo[7].CmObjectToken = CM_NULL_TOKEN;
-  NVIDIAPlatformRepositoryInfo[7].CmObjectSize = sizeof (SpcrSerialPort);
-  NVIDIAPlatformRepositoryInfo[7].CmObjectCount = sizeof (SpcrSerialPort) / sizeof (CM_ARM_SERIAL_PORT_INFO);
-  NVIDIAPlatformRepositoryInfo[7].CmObjectPtr = &SpcrSerialPort;
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (SpcrSerialPort);
+  Repo->CmObjectCount = sizeof (SpcrSerialPort) / sizeof (CM_ARM_SERIAL_PORT_INFO);
+  Repo->CmObjectPtr = &SpcrSerialPort;
+  Repo++;
 
-  NVIDIAPlatformRepositoryInfo[8].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
-  NVIDIAPlatformRepositoryInfo[8].CmObjectToken = CM_NULL_TOKEN;
-  NVIDIAPlatformRepositoryInfo[8].CmObjectSize = sizeof (PciConfigInfoEmpty);
-  NVIDIAPlatformRepositoryInfo[8].CmObjectCount = sizeof (PciConfigInfoEmpty) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);
-  NVIDIAPlatformRepositoryInfo[8].CmObjectPtr = &PciConfigInfoEmpty;
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (PciConfigInfoEmpty);
+  Repo->CmObjectCount = sizeof (PciConfigInfoEmpty) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);
+  Repo->CmObjectPtr = &PciConfigInfoEmpty;
+  Repo++;
 
-  NVIDIAPlatformRepositoryInfo[9].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo);
-  NVIDIAPlatformRepositoryInfo[9].CmObjectToken = CM_NULL_TOKEN;
-  NVIDIAPlatformRepositoryInfo[9].CmObjectSize = sizeof (CacheInfo);
-  NVIDIAPlatformRepositoryInfo[9].CmObjectCount = ARRAY_SIZE (CacheInfo);
-  NVIDIAPlatformRepositoryInfo[9].CmObjectPtr = &CacheInfo;
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (CacheInfo);
+  Repo->CmObjectCount = ARRAY_SIZE (CacheInfo);
+  Repo->CmObjectPtr = &CacheInfo;
+  Repo++;
 
-  NVIDIAPlatformRepositoryInfo[10].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
-  NVIDIAPlatformRepositoryInfo[10].CmObjectToken = REFERENCE_TOKEN (CcplexResources);
-  NVIDIAPlatformRepositoryInfo[10].CmObjectSize = sizeof (CcplexResources);
-  NVIDIAPlatformRepositoryInfo[10].CmObjectCount = ARRAY_SIZE (CcplexResources);
-  NVIDIAPlatformRepositoryInfo[10].CmObjectPtr = &CcplexResources;
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+  Repo->CmObjectToken = REFERENCE_TOKEN (CcplexResources);
+  Repo->CmObjectSize = sizeof (CcplexResources);
+  Repo->CmObjectCount = ARRAY_SIZE (CcplexResources);
+  Repo->CmObjectPtr = &CcplexResources;
+  Repo++;
 
-  NVIDIAPlatformRepositoryInfo[11].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
-  NVIDIAPlatformRepositoryInfo[11].CmObjectToken = REFERENCE_TOKEN (CarmelCoreClusterResources);
-  NVIDIAPlatformRepositoryInfo[11].CmObjectSize = sizeof (CarmelCoreClusterResources);
-  NVIDIAPlatformRepositoryInfo[11].CmObjectCount = ARRAY_SIZE (CarmelCoreClusterResources);
-  NVIDIAPlatformRepositoryInfo[11].CmObjectPtr = &CarmelCoreClusterResources;
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+  Repo->CmObjectToken = REFERENCE_TOKEN (CarmelCoreClusterResources);
+  Repo->CmObjectSize = sizeof (CarmelCoreClusterResources);
+  Repo->CmObjectCount = ARRAY_SIZE (CarmelCoreClusterResources);
+  Repo->CmObjectPtr = &CarmelCoreClusterResources;
+  Repo++;
 
-  NVIDIAPlatformRepositoryInfo[12].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
-  NVIDIAPlatformRepositoryInfo[12].CmObjectToken = REFERENCE_TOKEN (CarmelCoreResources);
-  NVIDIAPlatformRepositoryInfo[12].CmObjectSize = sizeof (CarmelCoreResources);
-  NVIDIAPlatformRepositoryInfo[12].CmObjectCount = ARRAY_SIZE (CarmelCoreResources);
-  NVIDIAPlatformRepositoryInfo[12].CmObjectPtr = &CarmelCoreResources;
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+  Repo->CmObjectToken = REFERENCE_TOKEN (CarmelCoreResources);
+  Repo->CmObjectSize = sizeof (CarmelCoreResources);
+  Repo->CmObjectCount = ARRAY_SIZE (CarmelCoreResources);
+  Repo->CmObjectPtr = &CarmelCoreResources;
+  Repo++;
 
-  NVIDIAPlatformRepositoryInfo[13].CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjProcHierarchyInfo);
-  NVIDIAPlatformRepositoryInfo[13].CmObjectToken = CM_NULL_TOKEN;
-  NVIDIAPlatformRepositoryInfo[13].CmObjectSize = sizeof (ProcHierarchyInfo);
-  NVIDIAPlatformRepositoryInfo[13].CmObjectCount = ARRAY_SIZE (ProcHierarchyInfo);
-  NVIDIAPlatformRepositoryInfo[13].CmObjectPtr = &ProcHierarchyInfo;
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjProcHierarchyInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (ProcHierarchyInfo);
+  Repo->CmObjectCount = ARRAY_SIZE (ProcHierarchyInfo);
+  Repo->CmObjectPtr = &ProcHierarchyInfo;
+  Repo++;
 
   ApplyConfigurationManagerOverrides ();
+
+  ASSERT ((UINTN)Repo <= (UINTN)RepoEnd);
 
   return EFI_SUCCESS;
 }
