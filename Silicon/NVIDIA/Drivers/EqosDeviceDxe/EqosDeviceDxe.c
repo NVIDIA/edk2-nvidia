@@ -403,7 +403,6 @@ DeviceDiscoveryNotify (
     Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
     if (EFI_ERROR(Status)) {
       DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\n"));
-      return EFI_DEVICE_ERROR;
     }
 
 

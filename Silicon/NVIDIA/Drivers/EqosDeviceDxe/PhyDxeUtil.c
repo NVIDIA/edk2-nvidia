@@ -24,6 +24,23 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
+#include "PhyMarvell.h"
+#include "PhyRealtek.h"
+
+#define PHY_ID                                        0
+#define MAC_MDIO_ADDR_OFFSET                          0x200
+#define MAC_MDIO_ADDR_PA_SHIFT                        21
+#define MAC_MDIO_ADDR_RDA_SHIFT                       16
+#define MAC_MDIO_ADDR_CR_SHIFT                        8
+#define MAC_MDIO_ADDR_CR_20_35                        2
+#define MAC_MDIO_ADDR_GOC_SHIFT                       2
+#define MAC_MDIO_ADDR_GOC_READ                        3
+#define MAC_MDIO_ADDR_GOC_WRITE                       1
+#define MAC_MDIO_ADDR_GB                              BIT0
+
+#define MAC_MDIO_DATA_OFFSET                          0x204
+
+
 STATIC
 EFI_STATUS
 EFIAPI
@@ -73,7 +90,7 @@ PhyMdioWrite (
   UINT32   Count;
 
   // Check it is a valid Reg
-  ASSERT(Reg < 31);
+  ASSERT(Reg <= 31);
 
   MiiConfig = (PHY_ID << MAC_MDIO_ADDR_PA_SHIFT) |
               (Reg << MAC_MDIO_ADDR_RDA_SHIFT) |
@@ -139,7 +156,6 @@ PhyMdioRead (
 }
 
 // Function to read from MII register (PHY Access)
-STATIC
 EFI_STATUS
 EFIAPI
 PhyRead (
@@ -156,7 +172,7 @@ PhyRead (
   CsrClockRange = 4; /* axi_cbb clk rate is 204 Mhz so the value is 4 */
 
   if (PhyDriver->PhyPage != Page) {
-    PhyMdioWrite(REG_PHY_PAGE, Page, CsrClockRange, MacBaseAddress);
+    PhyMdioWrite(PhyDriver->PhyPageSelRegister, Page, CsrClockRange, MacBaseAddress);
     MicroSecondDelay(20);
     PhyDriver->PhyPage = Page;
   }
@@ -166,7 +182,6 @@ PhyRead (
 
 
 // Function to write to the MII register (PHY Access)
-STATIC
 EFI_STATUS
 EFIAPI
 PhyWrite (
@@ -183,7 +198,7 @@ PhyWrite (
   CsrClockRange = 4; /* axi_cbb clk rate is 204 Mhz so the value is 4 */
 
   if (PhyDriver->PhyPage != Page) {
-    PhyMdioWrite(REG_PHY_PAGE, Page, CsrClockRange, MacBaseAddress);
+    PhyMdioWrite(PhyDriver->PhyPageSelRegister, Page, CsrClockRange, MacBaseAddress);
     MicroSecondDelay(20);
     PhyDriver->PhyPage = Page;
   }
@@ -206,18 +221,18 @@ PhySoftReset (
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
   // PHY Basic Control Register reset
-  PhyWrite (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, COPPER_CONTROL_RESET, MacBaseAddress);
+  PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, REG_PHY_CONTROL_RESET, MacBaseAddress);
 
   // Wait for completion
   TimeOut = 0;
   do {
     // Read PHY_BASIC_CTRL register from PHY
-    Status = PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, &Data32, MacBaseAddress);
+    Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, &Data32, MacBaseAddress);
     if (EFI_ERROR(Status)) {
       return Status;
     }
     // Wait until PHYCTRL_RESET become zero
-    if ((Data32 & COPPER_CONTROL_RESET) == 0) {
+    if ((Data32 & REG_PHY_CONTROL_RESET) == 0) {
       break;
     }
     MicroSecondDelay(1);
@@ -230,63 +245,22 @@ PhySoftReset (
   return EFI_SUCCESS;
 }
 
-// Do auto-negotiation
-STATIC
-EFI_STATUS
+UINT32
 EFIAPI
-PhyAutoNego (
-  IN PHY_DRIVER   *PhyDriver,
-  IN UINTN        MacBaseAddress
+PhyGetOui (
+  IN  PHY_DRIVER   *PhyDriver,
+  IN  UINTN        MacBaseAddress
   )
 {
+  UINT32 OuiMsb;
+  UINT32 OuiLsb;
+  UINT32 Oui;
 
-  UINT32        TimeOut;
-  UINT32        Data32;
-  EFI_STATUS    Status;
+  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_IDENTIFIER_1, &OuiMsb, MacBaseAddress);
+  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_IDENTIFIER_2, &OuiLsb, MacBaseAddress);
+  Oui = (OuiMsb << REG_PHY_IDENTIFIER_2_WIDTH) | (OuiLsb >> REG_PHY_IDENTIFIER_2_SHIFT);
 
-  DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
-
-  PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, &Data32, MacBaseAddress);
-  Data32 |= COPPER_CONTROL_ENABLE_AUTO_NEG | COPPER_RESTART_AUTO_NEG | COPPER_CONTROL_RESET;
-  PhyWrite (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, Data32, MacBaseAddress);
-
-  // Wait for completion
-  TimeOut = 0;
-  do {
-    // Read PHY_BASIC_CTRL register from PHY
-    Status = PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, &Data32, MacBaseAddress);
-    if (EFI_ERROR(Status)) {
-      return Status;
-    }
-    // Wait until PHYCTRL_RESET become zero
-    if ((Data32 & COPPER_CONTROL_RESET) == 0) {
-      break;
-    }
-    MicroSecondDelay(1);
-  } while (TimeOut++ < PHY_TIMEOUT);
-  if (TimeOut >= PHY_TIMEOUT) {
-    DEBUG ((DEBUG_INFO, "SNP:PHY: ERROR! PhySoftReset timeout\n"));
-    return EFI_TIMEOUT;
-  }
-
-  TimeOut = 0;
-  do {
-    // Read PHY_BASIC_CTRL register from PHY
-    Status = PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_INTR_STATUS, &Data32, MacBaseAddress);
-    if (EFI_ERROR(Status)) {
-      return Status;
-    }
-    // Wait until PHYCTRL_RESET become zero
-    if ((Data32 & COPPER_INTR_STATUS_AUTO_NEG_COMPLETED) != 0) {
-      break;
-    }
-    MicroSecondDelay(1);
-  } while (TimeOut++ < PHY_TIMEOUT);
-  if (TimeOut >= PHY_TIMEOUT) {
-    DEBUG ((DEBUG_INFO, "SNP:PHY: ERROR! auto-negotiation timeout\n"));
-    return EFI_TIMEOUT;
-  }
-  return EFI_SUCCESS;
+  return Oui;
 }
 
 EFI_STATUS
@@ -296,44 +270,29 @@ PhyConfig (
   IN  UINTN        MacBaseAddress
   )
 {
-  EFI_STATUS  Status;
+  UINT32      Oui;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
+  PhyDriver->PhyPageSelRegister = 0;
+  PhyDriver->PhyPage = MAX_UINT32;
 
-  /* Program Page: 2, Register: 0 */
-  PhyWrite(PhyDriver, PAGE_MAC, REG_COPPER_CONTROL, 0, MacBaseAddress);
-
-  Status = PhySoftReset (PhyDriver, MacBaseAddress);
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
+  Oui = PhyGetOui (PhyDriver, MacBaseAddress);
+  if (Oui == PHY_MARVELL_OUI) {
+    PhyDriver->Config = PhyMarvellConfig;
+    PhyDriver->AutoNeg = PhyMarvellAutoNeg;
+    PhyDriver->DetectLink = PhyMarvellDetectLink;
+  } else if (Oui == PHY_REALTEK_OUI) {
+    PhyDriver->Config = PhyRealtekConfig;
+    PhyDriver->AutoNeg = PhyRealtekAutoNeg;
+    PhyDriver->DetectLink = PhyRealtekDetectLink;
+  } else {
+    return EFI_UNSUPPORTED;
   }
 
-  /* Program Page: 2, Register: 16 */
-  PhyWrite(PhyDriver, PAGE_MAC,
-           REG_MAC_CONTROL1,
-           MAC_CONTROL1_TX_FIFO_DEPTH_24_BITS |
-           MAC_CONTROL1_ENABLE_RX_CLK |
-           MAC_CONTROL1_PASS_ODD_NIBBLE_PREAMBLES |
-           MAC_CONTROL1_RGMII_INTF_POWER_DOWN,
-           MacBaseAddress);
-
-  /* Program Page: 2, Register: 21 */
-  PhyWrite(PhyDriver, PAGE_MAC,
-           REG_MAC_CONTROL2,
-           MAC_CONTROL2_DEFAULT_MAC_INTF_SPEED_1000_MBPS |
-           MAC_CONTROL2_RGMII_RX_TIMING_CTRL |
-           MAC_CONTROL2_RGMII_TX_TIMING_CTRL,
-           MacBaseAddress);
-
-  /* Program Page: 0, Register: 16 */
-  /* Automatically detect whether it needs to crossover between pairs or not */
-  PhyWrite(PhyDriver, PAGE_COPPER,
-           REG_COPPER_CONTROL1,
-           COPPER_CONTROL1_ENABLE_AUTO_CROSSOVER,
-           MacBaseAddress);
+  PhyDriver->Config (PhyDriver, MacBaseAddress);
 
   // Configure AN and Advertise
-  PhyAutoNego (PhyDriver, MacBaseAddress);
+  PhyDriver->AutoNeg (PhyDriver, MacBaseAddress);
 
   return EFI_SUCCESS;
 }
@@ -352,7 +311,7 @@ PhyDxeInitialization (
   Status = PhyReset (PhyDriver, MacBaseAddress);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "SNP:PHY: %a () Failed to reset Phy\r\n", __FUNCTION__));
-    //return Status;
+    return Status;
   }
 
   PhyConfig (PhyDriver, MacBaseAddress);
@@ -367,52 +326,26 @@ PhyLinkAdjustEmacConfig (
   IN UINTN        MacBaseAddress
   )
 {
-  UINT32       Speed;
-  UINT32       Duplex;
-  UINT32       Data32;
   EFI_STATUS   Status;
   UINT64       ClockRate;
 
   Status = EFI_SUCCESS;
-  Speed = SPEED_10;
-  Duplex = DUPLEX_HALF;
 
-  if (PhyDriver->PhyOldLink == LINK_DOWN) {
-    PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_INTR_STATUS, &Data32, MacBaseAddress);
-    if ((Data32 & 0xC00) == 0xC00) {
-      PhyAutoNego (PhyDriver, MacBaseAddress);
-    }
-  }
-
-  PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_STATUS1, &Data32, MacBaseAddress);
-
-  if ((Data32 & COPPER_STATUS1_LINK_STATUS) == 0) {
-    PhyDriver->PhyCurrentLink = LINK_DOWN;
-  } else {
-    PhyDriver->PhyCurrentLink = LINK_UP;
-  }
+  PhyDriver->DetectLink (PhyDriver, MacBaseAddress);
 
   if (PhyDriver->PhyOldLink != PhyDriver->PhyCurrentLink) {
     if (PhyDriver->PhyCurrentLink == LINK_UP) {
       DEBUG ((DEBUG_INFO, "SNP:PHY: Link is up - Network Cable is Plugged\r\n"));
-      if ((Data32 & COPPER_STATUS1_DUPLEX_MODE) == 0) {
-        Duplex = DUPLEX_HALF;
-      } else {
-        Duplex = DUPLEX_FULL;
-      }
-      if ((Data32 & COPPER_STATUS1_SPEED_1000_MBPS) != 0) {
-        Speed = 1000;
+      if (PhyDriver->Speed == SPEED_1000) {
         ClockRate = 125000000;
-      } else if ((Data32 & COPPER_STATUS1_SPEED_100_MBPS) != 0) {
-        Speed = 100;
+      } else if (PhyDriver->Speed == SPEED_100) {
         ClockRate = 25000000;
       } else {
-        Speed = 10;
         ClockRate = 2500000;
       }
-      EmacConfigAdjust (Speed, Duplex, MacBaseAddress);
+      EmacConfigAdjust (PhyDriver->Speed, PhyDriver->Duplex, MacBaseAddress);
 
-      Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "eqos_tx", ClockRate);
+      Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "tx", ClockRate);
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
         Status = EFI_SUCCESS;

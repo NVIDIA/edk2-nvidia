@@ -27,6 +27,8 @@
   DwEqosSnpDxe.c
   EmacDxeUtil.c
   PhyDxeUtil.c
+  PhyMarvell.c
+  PhyRealtek.c
   DtAcpiMacUpdate.c
   DwEqosSnpDxe.h
   EmacDxeUtil.h

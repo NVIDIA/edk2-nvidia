@@ -19,98 +19,74 @@
 
 #include <Protocol/EmbeddedGpio.h>
 
-typedef struct {
-  UINT32             PhyPage;
-  UINT32             PhyCurrentLink;
-  UINT32             PhyOldLink;
-  EFI_HANDLE         ControllerHandle;
-  EMBEDDED_GPIO_PIN  ResetPin;
-  EMBEDDED_GPIO_MODE ResetMode0;
-  EMBEDDED_GPIO_MODE ResetMode1;
-} PHY_DRIVER;
+typedef struct _PHY_DRIVER  PHY_DRIVER;
 
+typedef
+VOID
+(EFIAPI *NVIDIA_EQOS_PHY_CONFIG)(
+    IN  PHY_DRIVER   *PhyDriver,
+    IN  UINTN        MacBaseAddress
+    );
+
+typedef
+EFI_STATUS
+(EFIAPI *NVIDIA_EQOS_PHY_AUTO_NEG)(
+    IN  PHY_DRIVER   *PhyDriver,
+    IN  UINTN        MacBaseAddress
+    );
+
+typedef
+VOID
+(EFIAPI *NVIDIA_EQOS_PHY_DETECT_LINK)(
+    IN  PHY_DRIVER   *PhyDriver,
+    IN  UINTN        MacBaseAddress
+    );
+
+struct _PHY_DRIVER{
+  UINT32                      PhyPage;
+  UINT32                      PhyPageSelRegister;
+  UINT32                      PhyCurrentLink;
+  UINT32                      PhyOldLink;
+  UINT32                      Speed;
+  UINT32                      Duplex;
+  EFI_HANDLE                  ControllerHandle;
+  EMBEDDED_GPIO_PIN           ResetPin;
+  EMBEDDED_GPIO_MODE          ResetMode0;
+  EMBEDDED_GPIO_MODE          ResetMode1;
+  NVIDIA_EQOS_PHY_CONFIG      Config;
+  NVIDIA_EQOS_PHY_AUTO_NEG    AutoNeg;
+  NVIDIA_EQOS_PHY_DETECT_LINK DetectLink;
+};
+
+
+#define PAGE_PHY                                      0
+
+#define REG_PHY_CONTROL                               0
+#define REG_PHY_CONTROL_RESET                         BIT15
+#define REG_PHY_CONTROL_AUTO_NEGOTIATION_ENABLE       BIT12
+#define REG_PHY_CONTROL_RESTART_AUTO_NEGOTIATION      BIT9
+
+#define REG_PHY_STATUS                                1
+#define REG_PHY_STATUS_AUTO_NEGOTIATION_COMPLETED    BIT12
+
+#define REG_PHY_IDENTIFIER_1                          2
+
+#define REG_PHY_IDENTIFIER_2                          3
+#define REG_PHY_IDENTIFIER_2_WIDTH                    ((15 - 10) + 1)
+#define REG_PHY_IDENTIFIER_2_SHIFT                    10
+
+#define REG_PHY_AUTONEG_ADVERTISE                     4
+#define REG_PHY_AUTONEG_ADVERTISE_100_BASE_T4         BIT9
+#define REG_PHY_AUTONEG_ADVERTISE_100_BASE_TX_FULL    BIT8
+#define REG_PHY_AUTONEG_ADVERTISE_100_BASE_TX_HALF    BIT7
+#define REG_PHY_AUTONEG_ADVERTISE_10_BASE_T_FULL      BIT6
+#define REG_PHY_AUTONEG_ADVERTISE_10_BASE_T_HALF      BIT5
+
+#define REG_PHY_GB_CONTROL                            9
+#define REG_PHY_GB_CONTROL_ADVERTISE_1000_BASE_T_FULL BIT9
 
 /************************************************************************************************************/
 #define NON_EXISTENT_ON_PRESIL                        0xDEADBEEF
-
-#define PAGE_COPPER                                   0
-
-#define REG_COPPER_CONTROL                            0
-#define COPPER_CONTROL_RESET                          BIT15
-#define COPPER_CONTROL_ENABLE_AUTO_NEG                BIT12
-#define COPPER_RESTART_AUTO_NEG                       BIT9
-
-#define REG_COPPER_STATUS                             1
-
-#define REG_COPPER_AUTO_NEG_ADVERTISEMENT             4
-
-#define REG_COPPER_LINK_PARTNER_ABILITY               5
-
-#define REG_COPPER_AUTO_NEG_EXPANSION                 6
-
-#define REG_1000_BASE_T_STATUS                        10
-
-#define REG_COPPER_CONTROL1                           16
-#define COPPER_CONTROL1_ENABLE_AUTO_CROSSOVER         (BIT6|BIT5)
-
-#define REG_COPPER_STATUS1                            17
-#define COPPER_STATUS1_SPEED_SHIFT                    14
-#define COPPER_STATUS1_SPEED_MASK                     (BIT14|BIT15)
-/*
- * bits 15, 14
- * 00 = 10 Mbps
- * 01 = 100 Mbps
- * 10 = 1000 Mbps
- */
-#define COPPER_STATUS1_SPEED_10_MBPS                  0
-#define COPPER_STATUS1_SPEED_100_MBPS                 BIT14
-#define COPPER_STATUS1_SPEED_1000_MBPS                BIT15
-#define COPPER_STATUS1_DUPLEX_MODE                    BIT13
-#define COPPER_STATUS1_LINK_STATUS                    BIT10
-
-#define REG_COPPER_INTR_STATUS                        19
-#define COPPER_INTR_STATUS_AUTO_NEG_COMPLETED         BIT11
-
-/************************************************************************************************************/
-#define PAGE_MAC                                      2
-
-#define REG_MAC_CONTROL1                              16
-#define MAC_CONTROL1_ENABLE_RX_CLK                    BIT10
-#define MAC_CONTROL1_PASS_ODD_NIBBLE_PREAMBLES        BIT6
-#define MAC_CONTROL1_RGMII_INTF_POWER_DOWN            BIT3
-#define MAC_CONTROL1_TX_FIFO_DEPTH_16_BITS            0
-#define MAC_CONTROL1_TX_FIFO_DEPTH_24_BITS            BIT14
-#define MAC_CONTROL1_TX_FIFO_DEPTH_32_BITS            BIT15
-#define MAC_CONTROL1_TX_FIFO_DEPTH_40_BITS            (BIT15|BIT14)
-
-#define REG_MAC_CONTROL2                              21
-/*
- * Bits 6, 13
- * 00 = 10 Mbps
- * 01 = 100 Mbps
- * 10 = 1000 Mbps
- */
-#define MAC_CONTROL2_DEFAULT_MAC_INTF_SPEED_10_MBPS   0
-#define MAC_CONTROL2_DEFAULT_MAC_INTF_SPEED_100_MBPS  BIT13
-#define MAC_CONTROL2_DEFAULT_MAC_INTF_SPEED_1000_MBPS BIT6
-#define MAC_CONTROL2_RGMII_RX_TIMING_CTRL             BIT5
-#define MAC_CONTROL2_RGMII_TX_TIMING_CTRL             BIT4
-
-/************************************************************************************************************/
-#define REG_PHY_PAGE                                  22
-
-#define PHY_ID                                        0
-#define MAC_MDIO_ADDR_OFFSET                          0x200
-#define MAC_MDIO_ADDR_PA_SHIFT                        21
-#define MAC_MDIO_ADDR_RDA_SHIFT                       16
-#define MAC_MDIO_ADDR_CR_SHIFT                        8
-#define MAC_MDIO_ADDR_CR_20_35                        2
-#define MAC_MDIO_ADDR_GOC_SHIFT                       2
-#define MAC_MDIO_ADDR_GOC_READ                        3
-#define MAC_MDIO_ADDR_GOC_WRITE                       1
-#define MAC_MDIO_ADDR_GB                              BIT0
-
-#define MAC_MDIO_DATA_OFFSET                          0x204
 
 #define SPEED_1000                            1000
 #define SPEED_100                             100
@@ -119,11 +95,31 @@ typedef struct {
 #define DUPLEX_FULL                           1
 #define DUPLEX_HALF                           0
 
-
 #define LINK_UP                               1
 #define LINK_DOWN                             0
 #define PHY_TIMEOUT                           200000
 
+EFI_STATUS
+EFIAPI
+PhyRead (
+  IN PHY_DRIVER   *PhyDriver,
+  IN  UINT32   Page,
+  IN  UINT32   Reg,
+  OUT UINT32   *Data,
+  IN  UINTN    MacBaseAddress
+  );
+
+
+// Function to write to the MII register (PHY Access)
+EFI_STATUS
+EFIAPI
+PhyWrite (
+  IN PHY_DRIVER   *PhyDriver,
+  IN UINT32   Page,
+  IN UINT32   Reg,
+  IN UINT32   Data,
+  IN UINTN    MacBaseAddress
+  );
 
 EFI_STATUS
 EFIAPI
