@@ -20,51 +20,9 @@
 #include <Library/DebugLib.h>
 #include <Library/PrintLib.h>
 #include <Library/PcdLib.h>
+#include <Library/FloorSweepingLib.h>
 #include <libfdt.h>
 #include "FloorSweepPrivate.h"
-
-STATIC
-UINT32
-GetNumCores (
-  VOID
-  )
-{
-  UINT64 Data;
-
-  WriteNvgChannelIdx(TEGRA_NVG_CHANNEL_NUM_CORES);
-  Data = ReadNvgChannelData();
-
-  return (Data & 0xF);
-}
-
-STATIC
-UINT32
-LogicalToMpidr (
-  IN UINT32 LogicalCore
-  )
-{
-  UINT32 NumCores;
-  UINT32 Mpidr = 0;
-  UINT64 Data = 0;
-
-  NumCores = GetNumCores();
-  if (LogicalCore < NumCores) {
-    WriteNvgChannelIdx (TEGRA_NVG_CHANNEL_LOGICAL_TO_MPIDR);
-
-    /* Write the logical core id */
-    WriteNvgChannelData (LogicalCore);
-
-    /* Read-back the MPIDR */
-    Data = ReadNvgChannelData ();
-    Mpidr = (Data & 0xFFFFFFFF);
-
-    DEBUG ((DEBUG_INFO, "NVG: Logical CPU: %u; MPIDR: 0x%x\n", LogicalCore, Mpidr));
-  } else {
-    DEBUG ((DEBUG_ERROR, "Core: %u is not present\r\n", LogicalCore));
-  }
-
-  return Mpidr;
-}
 
 EFI_STATUS
 UpdateCpuFloorsweepingConfig (
@@ -92,7 +50,7 @@ UpdateCpuFloorsweepingConfig (
     return EFI_SUCCESS;
   }
 
-  NumCores = GetNumCores();
+  NumCores = GetNumberOfEnabledCpuCores();
 
   ParentOffset = fdt_path_offset (Dtb, "/cpus");
   if (ParentOffset < 0) {
@@ -120,7 +78,7 @@ UpdateCpuFloorsweepingConfig (
     }
 
     if (Cpu < NumCores) {
-      Mpidr = LogicalToMpidr(Cpu);
+      Mpidr = ConvertCpuLogicalToMpidr(Cpu);
       Mpidr &= 0x00ffffffUL;
 
       AsciiSPrint (CpuNodeStr, sizeof (CpuNodeStr),"cpu@%x", Mpidr);

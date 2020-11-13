@@ -38,6 +38,7 @@
   PrintLib
   PcdLib
   UefiBootServicesTableLib
+  FloorSweepingLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid

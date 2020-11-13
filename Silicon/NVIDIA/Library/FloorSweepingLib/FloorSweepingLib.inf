@@ -1,7 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
-*  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
+*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -15,31 +14,19 @@
 
 [Defines]
   INF_VERSION                    = 0x00010019
-  BASE_NAME                      = DxeDtPlatformDtbLoaderLib
-  FILE_GUID                      = f9f414ce-d951-4314-b7d9-ef472e9482cd
+  BASE_NAME                      = FloorSweepingLib
+  FILE_GUID                      = 391c80d6-3920-4128-bb19-d640c81c8286
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = DtPlatformDtbLoaderLib|DXE_DRIVER
+  LIBRARY_CLASS                  = FloorSweepingLib
 
 [Sources]
-  DxeDtPlatformDtbLoaderLib.c
-  FloorSweep.c
+  FloorSweepingLib.c
 
 [Packages]
   MdePkg/MdePkg.dec
-  EmbeddedPkg/EmbeddedPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   BaseLib
-  HobLib
-  FdtLib
-  PrintLib
-  PcdLib
-  FloorSweepingLib
-
-[Guids]
-  gFdtHobGuid
-
-[Pcd]
-  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus
+  DebugLib
