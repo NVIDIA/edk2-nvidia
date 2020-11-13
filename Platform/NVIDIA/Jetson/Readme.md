@@ -41,6 +41,7 @@ instructions for JetPack software in the Jetson AGX Xavier Developer Kit.
 ## Setup
 
 Download the following software from the [Jetson Download Center](https://developer.nvidia.com/embedded/downloads)
+
         L4T Jetson Driver Package, version L4T_VERSION
         L4T Sample Root File System, version L4T_VERSION
 
