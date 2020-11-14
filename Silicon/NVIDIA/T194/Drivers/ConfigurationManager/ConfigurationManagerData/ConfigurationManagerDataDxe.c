@@ -20,9 +20,11 @@
 
 #include <Library/ArmLib.h>
 #include <Library/DebugLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Library/FloorSweepingLib.h>
 
 #include <IndustryStandard/DebugPort2Table.h>
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
@@ -142,23 +144,6 @@ CM_ARM_BOOT_ARCH_INFO BootArchInfo = {
 STATIC
 CM_ARM_POWER_MANAGEMENT_PROFILE_INFO PmProfileInfo = {
   EFI_ACPI_6_3_PM_PROFILE_ENTERPRISE_SERVER
-};
-
-/** The platform GIC CPU interface information.
-*/
-STATIC
-CM_ARM_GICC_INFO GicCInfo[] = {
-  /*
-    GICC_ENTRY (CPUInterfaceNumber, Mpidr, PmuIrq, VGicIrq, EnergyEfficiency, ProximityDomain)
-  */
-  GICC_ENTRY (0, GET_MPID (0, 0), 0x180, 25,   0, 0),
-  GICC_ENTRY (1, GET_MPID (0, 1), 0x181, 25,   0, 0),
-  GICC_ENTRY (2, GET_MPID (1, 0), 0x182, 25,   0, 0),
-  GICC_ENTRY (3, GET_MPID (1, 1), 0x183, 25,   0, 0),
-  GICC_ENTRY (4, GET_MPID (2, 0), 0x184, 25,   0, 0),
-  GICC_ENTRY (5, GET_MPID (2, 1), 0x185, 25,   0, 0),
-  GICC_ENTRY (6, GET_MPID (3, 0), 0x186, 25,   0, 0),
-  GICC_ENTRY (7, GET_MPID (3, 1), 0x187, 25,   0, 0),
 };
 
 /** The platform GIC distributor information.
@@ -337,197 +322,6 @@ CM_ARM_OBJ_REF CarmelCoreResources[] = {
   { .ReferenceToken = REFERENCE_TOKEN (CacheInfo[3]) },
 };
 
-/** Processor Hierarchy Info
- */
-STATIC
-CM_ARM_PROC_HIERARCHY_INFO ProcHierarchyInfo[] = {
-  // CCPLEX
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[0]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
-    ),
-    .ParentToken                = CM_NULL_TOKEN,
-    .GicCToken                  = CM_NULL_TOKEN,
-    .NoOfPrivateResources       = 1,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CcplexResources),
-  },
-  // Four Carmel Core Clusters
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[1]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[0]),
-    .GicCToken                  = CM_NULL_TOKEN,
-    .NoOfPrivateResources       = 1,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreClusterResources),
-  },
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[2]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[0]),
-    .GicCToken                  = CM_NULL_TOKEN,
-    .NoOfPrivateResources       = 1,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreClusterResources),
-  },
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[3]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[0]),
-    .GicCToken                  = CM_NULL_TOKEN,
-    .NoOfPrivateResources       = 1,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreClusterResources),
-  },
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[4]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[0]),
-    .GicCToken                  = CM_NULL_TOKEN,
-    .NoOfPrivateResources       = 1,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreClusterResources),
-  },
-  // Eight Carmel Cores
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[5]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[1]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[0]),
-    .NoOfPrivateResources       = 2,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
-  },
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[6]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[1]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[1]),
-    .NoOfPrivateResources       = 2,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
-  },
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[7]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[2]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[2]),
-    .NoOfPrivateResources       = 2,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
-  },
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[8]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[2]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[3]),
-    .NoOfPrivateResources       = 2,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
-  },
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[9]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[3]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[4]),
-    .NoOfPrivateResources       = 2,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
-  },
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[10]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[3]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[5]),
-    .NoOfPrivateResources       = 2,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
-  },
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[11]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[4]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[6]),
-    .NoOfPrivateResources       = 2,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
-  },
-  {
-    .Token                      = REFERENCE_TOKEN (ProcHierarchyInfo[12]),
-    .Flags                      = PROC_NODE_FLAGS (
-      EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
-      EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-      EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
-      EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
-    ),
-    .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[4]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[7]),
-    .NoOfPrivateResources       = 2,
-    .PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources),
-  },
-};
-
 /** Check if Pcie is enabled is kernel.
   @retval TRUE  - Enabled
   @retval FALSE - Disabled
@@ -581,6 +375,168 @@ ApplyConfigurationManagerOverrides ()
   }
 }
 
+/** Initialize the cpu entries in the platform configuration repository.
+ *
+ * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
+ *
+  @retval EFI_SUCCESS   Success
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateCpuInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
+{
+  UINT32 NumCpus;
+  UINT32 Index;
+  UINT32 ProcHierarchyIndex;
+  CM_ARM_GICC_INFO *GicCInfo;
+  CM_ARM_PROC_HIERARCHY_INFO *ProcHierarchyInfo;
+  EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
+  CM_OBJECT_TOKEN *ClusterTokenMap;
+  UINT32 MpIdr;
+
+  Repo = *PlatformRepositoryInfo;
+
+  NumCpus = GetNumberOfEnabledCpuCores ();
+
+  GicCInfo = AllocateZeroPool (sizeof (CM_ARM_GICC_INFO) * NumCpus);
+  if (GicCInfo == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  //Can not have more unique clusters than cpus
+  ProcHierarchyInfo = AllocateZeroPool (sizeof (CM_ARM_PROC_HIERARCHY_INFO) * (NumCpus + NumCpus + 1));
+  if (ProcHierarchyInfo == NULL) {
+    FreePool (GicCInfo);
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  ClusterTokenMap = (CM_OBJECT_TOKEN *)AllocateZeroPool (sizeof (CM_OBJECT_TOKEN) * 0x100);
+  if (ClusterTokenMap == NULL) {
+    FreePool (GicCInfo);
+    FreePool (ProcHierarchyInfo);
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  //Build top level node
+  ProcHierarchyIndex = 0;
+  ProcHierarchyInfo[ProcHierarchyIndex].Token         = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);
+  ProcHierarchyInfo[ProcHierarchyIndex].Flags         = PROC_NODE_FLAGS (
+                                                          EFI_ACPI_6_3_PPTT_PACKAGE_PHYSICAL,
+                                                          EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
+                                                          EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                          EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
+                                                          EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
+                                                        );
+  ProcHierarchyInfo[ProcHierarchyIndex].ParentToken   = CM_NULL_TOKEN;
+  ProcHierarchyInfo[ProcHierarchyIndex].GicCToken     = CM_NULL_TOKEN;
+  ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources = ARRAY_SIZE (CcplexResources);
+  ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = REFERENCE_TOKEN (CcplexResources);
+  ProcHierarchyIndex++;
+
+  for (Index = 0; Index < NumCpus; Index++) {
+    MpIdr = ConvertCpuLogicalToMpidr (Index);
+    if (ClusterTokenMap [GET_CLUSTER_ID (MpIdr)] == 0) {
+      //Build cluster node
+      ProcHierarchyInfo[ProcHierarchyIndex].Token         = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);
+      ProcHierarchyInfo[ProcHierarchyIndex].Flags         = PROC_NODE_FLAGS (
+                                                              EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                              EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
+                                                              EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                              EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
+                                                              EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
+                                                            );
+      ProcHierarchyInfo[ProcHierarchyIndex].ParentToken   = REFERENCE_TOKEN (ProcHierarchyInfo[0]);
+      ProcHierarchyInfo[ProcHierarchyIndex].GicCToken     = CM_NULL_TOKEN;
+      ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources = ARRAY_SIZE (CarmelCoreClusterResources);
+      ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreClusterResources);
+      ClusterTokenMap [GET_CLUSTER_ID (MpIdr)] = ProcHierarchyInfo[ProcHierarchyIndex].Token;
+      ProcHierarchyIndex++;
+    }
+
+    //Build cpu core node
+    ProcHierarchyInfo[ProcHierarchyIndex].Token         = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);
+    ProcHierarchyInfo[ProcHierarchyIndex].Flags         = PROC_NODE_FLAGS (
+                                                            EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                            EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
+                                                            EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                            EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
+                                                            EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+                                                          );
+    ProcHierarchyInfo[ProcHierarchyIndex].ParentToken   = ClusterTokenMap [GET_CLUSTER_ID (MpIdr)];
+    ProcHierarchyInfo[ProcHierarchyIndex].GicCToken     = REFERENCE_TOKEN (GicCInfo[Index]);
+    ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources = ARRAY_SIZE (CarmelCoreResources);
+    ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = REFERENCE_TOKEN (CarmelCoreResources);
+    ProcHierarchyIndex++;
+
+    GicCInfo[Index].CPUInterfaceNumber = Index;
+    GicCInfo[Index].AcpiProcessorUid = Index;
+    GicCInfo[Index].Flags = EFI_ACPI_6_3_GIC_ENABLED;
+    GicCInfo[Index].ParkingProtocolVersion = 0;
+    GicCInfo[Index].PerformanceInterruptGsiv = T194_PMU_BASE_INTERRUPT + Index;
+    GicCInfo[Index].ParkedAddress = 0;
+    GicCInfo[Index].PhysicalBaseAddress = PcdGet64(PcdGicInterruptInterfaceBase);
+    GicCInfo[Index].GICV = 0;
+    GicCInfo[Index].GICH = 0;
+    GicCInfo[Index].VGICMaintenanceInterrupt = T194_VIRT_MAINT_INT;
+    GicCInfo[Index].GICRBaseAddress = 0;
+    //Only bits 23:0 are valid in the ACPI table
+    GicCInfo[Index].MPIDR = MpIdr & 0xFFFFFF;
+    GicCInfo[Index].ProcessorPowerEfficiencyClass = 0;
+    GicCInfo[Index].SpeOverflowInterrupt = 0;
+    GicCInfo[Index].ProximityDomain = 0;
+    GicCInfo[Index].ClockDomain = 0;
+    GicCInfo[Index].AffinityFlags = EFI_ACPI_6_3_GICC_ENABLED;
+  }
+
+  FreePool (ClusterTokenMap);
+
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = NumCpus * sizeof (CM_ARM_GICC_INFO);
+  Repo->CmObjectCount = NumCpus;
+  Repo->CmObjectPtr = GicCInfo;
+  Repo++;
+
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (CacheInfo);
+  Repo->CmObjectCount = ARRAY_SIZE (CacheInfo);
+  Repo->CmObjectPtr = &CacheInfo;
+  Repo++;
+
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+  Repo->CmObjectToken = REFERENCE_TOKEN (CcplexResources);
+  Repo->CmObjectSize = sizeof (CcplexResources);
+  Repo->CmObjectCount = ARRAY_SIZE (CcplexResources);
+  Repo->CmObjectPtr = &CcplexResources;
+  Repo++;
+
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+  Repo->CmObjectToken = REFERENCE_TOKEN (CarmelCoreClusterResources);
+  Repo->CmObjectSize = sizeof (CarmelCoreClusterResources);
+  Repo->CmObjectCount = ARRAY_SIZE (CarmelCoreClusterResources);
+  Repo->CmObjectPtr = &CarmelCoreClusterResources;
+  Repo++;
+
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+  Repo->CmObjectToken = REFERENCE_TOKEN (CarmelCoreResources);
+  Repo->CmObjectSize = sizeof (CarmelCoreResources);
+  Repo->CmObjectCount = ARRAY_SIZE (CarmelCoreResources);
+  Repo->CmObjectPtr = &CarmelCoreResources;
+  Repo++;
+
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjProcHierarchyInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (CM_ARM_PROC_HIERARCHY_INFO) * (ProcHierarchyIndex);
+  Repo->CmObjectCount = ProcHierarchyIndex;
+  Repo->CmObjectPtr = ProcHierarchyInfo;
+  Repo++;
+
+  *PlatformRepositoryInfo = Repo;
+  return EFI_SUCCESS;
+}
+
 /** Initialize the platform configuration repository.
   @retval EFI_SUCCESS   Success
 **/
@@ -589,8 +545,8 @@ EFI_STATUS
 EFIAPI
 InitializePlatformRepository ()
 {
+  EFI_STATUS Status;
   UINTN Index;
-  UINTN GicInterruptInterfaceBase;
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
   EDKII_PLATFORM_REPOSITORY_INFO  *RepoEnd;
 
@@ -630,17 +586,6 @@ InitializePlatformRepository ()
   Repo->CmObjectPtr = &PmProfileInfo;
   Repo++;
 
-  GicInterruptInterfaceBase = PcdGet64(PcdGicInterruptInterfaceBase);
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
-  Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (GicCInfo);
-  Repo->CmObjectCount = sizeof (GicCInfo) / sizeof (CM_ARM_GICC_INFO);
-  Repo->CmObjectPtr = &GicCInfo;
-  for(Index=0; Index<Repo->CmObjectCount; Index++) {
-    GicCInfo[Index].PhysicalBaseAddress =  GicInterruptInterfaceBase;
-  }
-  Repo++;
-
   GicDInfo.PhysicalBaseAddress = PcdGet64 (PcdGicDistributorBase);
   Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicDInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
@@ -670,40 +615,10 @@ InitializePlatformRepository ()
   Repo->CmObjectPtr = &PciConfigInfoEmpty;
   Repo++;
 
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo);
-  Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (CacheInfo);
-  Repo->CmObjectCount = ARRAY_SIZE (CacheInfo);
-  Repo->CmObjectPtr = &CacheInfo;
-  Repo++;
-
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
-  Repo->CmObjectToken = REFERENCE_TOKEN (CcplexResources);
-  Repo->CmObjectSize = sizeof (CcplexResources);
-  Repo->CmObjectCount = ARRAY_SIZE (CcplexResources);
-  Repo->CmObjectPtr = &CcplexResources;
-  Repo++;
-
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
-  Repo->CmObjectToken = REFERENCE_TOKEN (CarmelCoreClusterResources);
-  Repo->CmObjectSize = sizeof (CarmelCoreClusterResources);
-  Repo->CmObjectCount = ARRAY_SIZE (CarmelCoreClusterResources);
-  Repo->CmObjectPtr = &CarmelCoreClusterResources;
-  Repo++;
-
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
-  Repo->CmObjectToken = REFERENCE_TOKEN (CarmelCoreResources);
-  Repo->CmObjectSize = sizeof (CarmelCoreResources);
-  Repo->CmObjectCount = ARRAY_SIZE (CarmelCoreResources);
-  Repo->CmObjectPtr = &CarmelCoreResources;
-  Repo++;
-
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjProcHierarchyInfo);
-  Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (ProcHierarchyInfo);
-  Repo->CmObjectCount = ARRAY_SIZE (ProcHierarchyInfo);
-  Repo->CmObjectPtr = &ProcHierarchyInfo;
-  Repo++;
+  Status = UpdateCpuInfo (&Repo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   ApplyConfigurationManagerOverrides ();
 

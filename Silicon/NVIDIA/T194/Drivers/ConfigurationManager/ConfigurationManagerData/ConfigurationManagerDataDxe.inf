@@ -38,6 +38,8 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  FloorSweepingLib
+  MemoryAllocationLib
   TegraPlatformInfoLib
   PlatformAslTablesLib
   UefiBootServicesTableLib
