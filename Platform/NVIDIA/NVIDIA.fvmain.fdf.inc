@@ -47,6 +47,11 @@
   INF Silicon/NVIDIA/Drivers/DeviceDiscovery/DeviceDiscoveryDxe.inf
 
   #
+  # Aml Patching
+  #
+  INF Silicon/NVIDIA/Drivers/AmlPatchDxe/AmlPatchDxe.inf
+
+  #
   # ACPI Support
   #
   INF MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf

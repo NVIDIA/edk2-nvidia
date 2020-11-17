@@ -582,6 +582,11 @@
   }
 
   #
+  # Aml Patching
+  #
+  Silicon/NVIDIA/Drivers/AmlPatchDxe/AmlPatchDxe.inf
+
+  #
   # Device discovery protocol
   #
   Silicon/NVIDIA/Drivers/DeviceDiscovery/DeviceDiscoveryDxe.inf
