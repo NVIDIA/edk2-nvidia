@@ -50,13 +50,24 @@ SdMmcCapability (
   IN  OUT UINT32                          *BaseClkFreq
   )
 {
+  EFI_STATUS                       Status;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL *Node;
+
   SD_MMC_HC_SLOT_CAP  *Capability = (SD_MMC_HC_SLOT_CAP *)SdMmcHcSlotCapability;
 
   if (SdMmcHcSlotCapability == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Capability->SlotType = 0x1; //Embedded slot
+  Node = NULL;
+  Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (NULL != fdt_get_property (Node->DeviceTreeBase, Node->NodeOffset, "non-removable", NULL)) {
+    Capability->SlotType = 0x1; //Embedded slot
+  }
 
   return EFI_SUCCESS;
 }
