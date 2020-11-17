@@ -55,7 +55,6 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable
-  gNVIDIATokenSpaceGuid.PcdSdhciDDR50Disable
   gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable
 
 [Depex]

@@ -59,7 +59,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA194'
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
-  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|TRUE
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE

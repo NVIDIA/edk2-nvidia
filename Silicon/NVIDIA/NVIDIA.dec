@@ -162,9 +162,6 @@ Include
 #Tegra UART OEM Table ID
   gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId|'TEGRAUAR'|UINT64|0x0000000A
 
-#Force disable DDR50 in SDHCi.
-  gNVIDIATokenSpaceGuid.PcdSdhciDDR50Disable|FALSE|BOOLEAN|0x0000000D
-
 #Base address of MISCREG aperture.
   gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00100000|UINT64|0x0000000F
 
@@ -251,4 +248,3 @@ Include
 #Rcm Kernel Base and Size
   gNVIDIATokenSpaceGuid.PcdRcmKernelBase|0x0|UINT64|0x00000035
   gNVIDIATokenSpaceGuid.PcdRcmKernelSize|0x0|UINT64|0x00000036
- 
