@@ -25,6 +25,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/FloorSweepingLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 
 #include <IndustryStandard/DebugPort2Table.h>
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
@@ -171,16 +172,7 @@ CM_ARM_GENERIC_TIMER_INFO GenericTimerInfo = {
   GTDT_GTIMER_FLAGS
 };
 
-/** The platform SPCR serial port information.
-*/
-STATIC
-CM_ARM_SERIAL_PORT_INFO SpcrSerialPort = {
-  FixedPcdGet64 (PcdTegra16550UartBaseT194),
-  T194_UARTB_INTR,
-  FixedPcdGet64 (PcdUartDefaultBaudRate),
-  0,
-  EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550
-};
+
 
 /** PCI Configuration Space Info
 */
@@ -373,6 +365,84 @@ ApplyConfigurationManagerOverrides ()
       }
     }
   }
+}
+
+/** Initialize the Serial Port entries in the platform configuration repository and patch DSDT (TODO).
+ *
+ * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
+ *
+  @retval EFI_SUCCESS   Success
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
+{
+  EFI_STATUS                        Status;
+  UINT32                            NumberOfSerialPorts;
+  UINT32                            *SerialHandles;
+  EDKII_PLATFORM_REPOSITORY_INFO    *Repo;
+  CM_ARM_SERIAL_PORT_INFO           *SpcrSerialPort;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA  RegisterData;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA InterruptData;
+  UINT32                            Size;
+
+  NumberOfSerialPorts = 0;
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra20-uart", NULL, &NumberOfSerialPorts);
+  if (Status != EFI_BUFFER_TOO_SMALL) {
+    return Status;
+  }
+
+  SerialHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfSerialPorts);
+  if (SerialHandles == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra20-uart", SerialHandles, &NumberOfSerialPorts);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  //Process first entry for SPCR table if there are more than 1
+  //Only one register space is expected
+  Size = 1;
+  Status = GetDeviceTreeRegisters (SerialHandles[0], &RegisterData, &Size);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  //Only one interrupt is expected
+  Size = 1;
+  Status = GetDeviceTreeInterrupts (SerialHandles[0], &InterruptData, &Size);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  FreePool (SerialHandles);
+
+  SpcrSerialPort = (CM_ARM_SERIAL_PORT_INFO *)AllocatePool (sizeof (CM_ARM_SERIAL_PORT_INFO));
+  if (SpcrSerialPort == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  SpcrSerialPort->BaseAddress = RegisterData.BaseAddress;
+  SpcrSerialPort->BaseAddressLength = RegisterData.Size;
+  SpcrSerialPort->Interrupt = InterruptData.Interrupt + DEVICETREE_TO_ACPI_INTERRUPT_OFFSET;
+  SpcrSerialPort->BaudRate = FixedPcdGet64 (PcdUartDefaultBaudRate);
+  SpcrSerialPort->PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550;
+  SpcrSerialPort->Clock = 0;
+
+  Repo = *PlatformRepositoryInfo;
+
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (CM_ARM_SERIAL_PORT_INFO);
+  Repo->CmObjectCount = 1;
+  Repo->CmObjectPtr = SpcrSerialPort;
+  Repo++;
+
+  *PlatformRepositoryInfo = Repo;
+  return EFI_SUCCESS;
 }
 
 /** Initialize the cpu entries in the platform configuration repository.
@@ -601,13 +671,6 @@ InitializePlatformRepository ()
   Repo->CmObjectPtr = &GenericTimerInfo;
   Repo++;
 
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
-  Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (SpcrSerialPort);
-  Repo->CmObjectCount = sizeof (SpcrSerialPort) / sizeof (CM_ARM_SERIAL_PORT_INFO);
-  Repo->CmObjectPtr = &SpcrSerialPort;
-  Repo++;
-
   Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
   Repo->CmObjectSize = sizeof (PciConfigInfoEmpty);
@@ -616,6 +679,11 @@ InitializePlatformRepository ()
   Repo++;
 
   Status = UpdateCpuInfo (&Repo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateSerialPortInfo (&Repo);
   if (EFI_ERROR (Status)) {
     return Status;
   }

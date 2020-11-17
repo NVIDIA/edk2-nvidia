@@ -32,12 +32,14 @@
 
 [Packages]
   ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  DeviceTreeHelperLib
   FloorSweepingLib
   MemoryAllocationLib
   TegraPlatformInfoLib
