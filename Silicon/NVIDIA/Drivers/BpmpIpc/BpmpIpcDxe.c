@@ -61,7 +61,8 @@ DeviceTreeIsSupported (
 
   *PciIoInitialize = NULL;
 
-  if (0 == fdt_node_check_compatible (Node->DeviceTreeBase, Node->NodeOffset, "nvidia,tegra186-hsp")) {
+  if ((0 == fdt_node_check_compatible (Node->DeviceTreeBase, Node->NodeOffset, "nvidia,tegra186-hsp")) ||
+      (0 == fdt_node_check_compatible (Node->DeviceTreeBase, Node->NodeOffset, "nvidia,tegra194-hsp"))){
     //Only support hsp with doorbell
     CONST CHAR8 *InterruptNames;
     INT32       NamesLength;
