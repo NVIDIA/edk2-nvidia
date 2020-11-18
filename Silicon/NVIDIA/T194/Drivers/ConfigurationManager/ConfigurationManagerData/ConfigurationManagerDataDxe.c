@@ -19,6 +19,7 @@
 #include <ConfigurationManagerObject.h>
 
 #include <Library/ArmLib.h>
+#include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -26,6 +27,7 @@
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <libfdt.h>
 
 #include <IndustryStandard/DebugPort2Table.h>
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
@@ -40,12 +42,11 @@
 
 #include "Dsdt.hex"
 #include "SsdtPci.hex"
-#include "SsdtPciEmpty.hex"
 
 /** The platform configuration repository information.
 */
 STATIC
-EDKII_PLATFORM_REPOSITORY_INFO NVIDIAPlatformRepositoryInfo[EStdObjMax + EArmObjMax];
+EDKII_PLATFORM_REPOSITORY_INFO NVIDIAPlatformRepositoryInfo[EStdObjMax + EArmObjMax] = {0};
 
 /** The platform configuration manager information.
 */
@@ -104,24 +105,6 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
-  // SSDT table describing the PCI root complex
-  {
-    EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
-    EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION,
-    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt),
-    (EFI_ACPI_DESCRIPTION_HEADER*)ssdtpciempty_aml_code,
-    0,
-    FixedPcdGet64(PcdAcpiDefaultOemRevision)
-  },
-  // PCI MCFG Table
-  {
-    EFI_ACPI_6_3_PCI_EXPRESS_MEMORY_MAPPED_CONFIGURATION_SPACE_BASE_ADDRESS_DESCRIPTION_TABLE_SIGNATURE,
-    EFI_ACPI_MEMORY_MAPPED_CONFIGURATION_SPACE_ACCESS_TABLE_REVISION,
-    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMcfg),
-    NULL,
-    0,
-    FixedPcdGet64(PcdAcpiDefaultOemRevision)
-  },
   // PPTT Table
   {
     EFI_ACPI_6_3_PROCESSOR_PROPERTIES_TOPOLOGY_TABLE_STRUCTURE_SIGNATURE,
@@ -171,64 +154,6 @@ CM_ARM_GENERIC_TIMER_INFO GenericTimerInfo = {
   FixedPcdGet32 (PcdArmArchTimerHypIntrNum),
   GTDT_GTIMER_FLAGS
 };
-
-
-
-/** PCI Configuration Space Info
-*/
-STATIC
-CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfo[] = {
-
-  {
-    // The physical base address for the PCI segment
-    T194_PCIE_C0_CFG_BASE_ADDR,
-    // The PCI segment group number
-    0,
-    // The start bus number
-    T194_PCIE_BUS_MIN,
-    // The end bus number
-    T194_PCIE_BUS_MAX,
-  },
-
-  {
-    // The physical base address for the PCI segment
-    T194_PCIE_C1_CFG_BASE_ADDR,
-    // The PCI segment group number
-    1,
-    // The start bus number
-    T194_PCIE_BUS_MIN,
-    // The end bus number
-    T194_PCIE_BUS_MAX,
-  },
-
-  {
-    // The physical base address for the PCI segment
-    T194_PCIE_C3_CFG_BASE_ADDR,
-    // The PCI segment group number
-    3,
-    // The start bus number
-    T194_PCIE_BUS_MIN,
-    // The end bus number
-    T194_PCIE_BUS_MAX,
-  },
-
-  {
-    // The physical base address for the PCI segment
-    T194_PCIE_C5_CFG_BASE_ADDR,
-    // The PCI segment group number
-    5,
-    // The start bus number
-    T194_PCIE_BUS_MIN,
-    // The end bus number
-    T194_PCIE_BUS_MAX,
-  },
-
-};
-
-/** Empty PCI Configuration Space Info
-*/
-STATIC
-CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfoEmpty[] = {0};
 
 /** Cache Info
  */
@@ -338,33 +263,170 @@ IsPcieEnabled ()
   return (VariableData.Enabled == 1);
 }
 
-/** Apply platform specific CM overrides.
- */
+/** Initialize the PCIe entries in the platform configuration repository and patch SSDT (TODO).
+ *
+ * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
+ *
+  @retval EFI_SUCCESS   Success
+**/
 STATIC
-VOID
+EFI_STATUS
 EFIAPI
-ApplyConfigurationManagerOverrides ()
+UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 {
-  UINT32 Count;
+  EFI_STATUS                        Status;
+  UINT32                            NumberOfPcieControllers;
+  UINT32                            *PcieHandles;
+  EDKII_PLATFORM_REPOSITORY_INFO    *Repo;
+  UINT32                            Index;
+  CM_ARM_PCI_CONFIG_SPACE_INFO      *PciConfigInfo;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterData;
+  UINT32                            RegisterIndex;
+  UINT32                            RegisterSize;
+  VOID                              *DeviceTreeBase;
+  INT32                             NodeOffset;
+  CONST UINT32                      *SegmentProp;
+  CM_STD_OBJ_ACPI_TABLE_INFO        *NewAcpiTables;
+
+  Status = EFI_SUCCESS;
+  PcieHandles = NULL;
+  RegisterData = NULL;
 
   if (IsPcieEnabled ()) {
-    for (Count = 0; Count < sizeof (CmAcpiTableList)/sizeof (CmAcpiTableList[0]); Count++) {
-      if (CmAcpiTableList[Count].AcpiTableSignature == EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE &&
-          CmAcpiTableList[Count].AcpiTableData == (EFI_ACPI_DESCRIPTION_HEADER*)ssdtpciempty_aml_code) {
-        CmAcpiTableList[Count].AcpiTableData = (EFI_ACPI_DESCRIPTION_HEADER*)ssdtpci_aml_code;
+    NumberOfPcieControllers = 0;
+    Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra194-pcie", NULL, &NumberOfPcieControllers);
+    if (Status == EFI_NOT_FOUND) {
+      DEBUG ((DEBUG_INFO, "No PCIe controller devices found\r\n"));
+      Status = EFI_SUCCESS;
+      goto Exit;
+    } else if (Status != EFI_BUFFER_TOO_SMALL) {
+      Status = EFI_DEVICE_ERROR;
+      goto Exit;
+    }
+
+    PcieHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfPcieControllers);
+    if (PcieHandles == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
+    Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra194-pcie", PcieHandles, &NumberOfPcieControllers);
+    if (EFI_ERROR (Status)) {
+      goto Exit;
+    }
+
+    PciConfigInfo = (CM_ARM_PCI_CONFIG_SPACE_INFO *)AllocatePool (sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO) * NumberOfPcieControllers);
+    if (PciConfigInfo == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
+    RegisterSize = 0;
+    for (Index = 0; Index < NumberOfPcieControllers; Index++) {
+      Status = GetDeviceTreeRegisters (PcieHandles[Index], RegisterData, &RegisterSize);
+      if (Status == EFI_BUFFER_TOO_SMALL) {
+        if (RegisterData != NULL) {
+          FreePool (RegisterData);
+          RegisterData = NULL;
+        }
+        RegisterData = (NVIDIA_DEVICE_TREE_REGISTER_DATA *) AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * RegisterSize);
+        if (RegisterData == NULL) {
+          Status = EFI_OUT_OF_RESOURCES;
+          goto Exit;
+        }
+        Status = GetDeviceTreeRegisters (PcieHandles[Index], RegisterData, &RegisterSize);
+        if (EFI_ERROR (Status)) {
+          goto Exit;
+        }
+      } else if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+
+      for (RegisterIndex = 0; RegisterIndex < RegisterSize; RegisterIndex++) {
+        if ((RegisterData[RegisterIndex].Name != NULL) &&
+            (AsciiStrCmp (RegisterData[RegisterIndex].Name, "config") == 0)) {
+          break;
+        }
+      }
+      if (RegisterIndex == RegisterSize) {
+        Status = EFI_DEVICE_ERROR;
+        goto Exit;
+      }
+
+      Status = GetDeviceTreeNode (PcieHandles[Index], &DeviceTreeBase, &NodeOffset);
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+      SegmentProp = fdt_getprop (DeviceTreeBase, NodeOffset, "linux,pci-domain", NULL);
+      if (SegmentProp == NULL) {
+        Status = EFI_DEVICE_ERROR;
+        goto Exit;
+      }
+
+      PciConfigInfo[Index].BaseAddress = RegisterData[RegisterIndex].BaseAddress;
+      PciConfigInfo[Index].StartBusNumber = T194_PCIE_BUS_MIN;
+      PciConfigInfo[Index].EndBusNumber = T194_PCIE_BUS_MAX;
+      PciConfigInfo[Index].PciSegmentGroupNumber = SwapBytes32 (*SegmentProp);
+    }
+
+    for (Index = 0; Index < (EStdObjMax + EArmObjMax); Index++) {
+      if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
+        NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (NVIDIAPlatformRepositoryInfo[Index].CmObjectSize + (2 * sizeof (CM_STD_OBJ_ACPI_TABLE_INFO)), NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr);
+        if (NewAcpiTables == NULL) {
+          Status = EFI_OUT_OF_RESOURCES;
+          goto Exit;
+        }
+
+        NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
+
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = (EFI_ACPI_DESCRIPTION_HEADER *)ssdtpci_aml_code;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId = PcdGet64(PcdAcpiDefaultOemTableId);
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision = FixedPcdGet64(PcdAcpiDefaultOemRevision);
+        NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
+        NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_3_PCI_EXPRESS_MEMORY_MAPPED_CONFIGURATION_SPACE_BASE_ADDRESS_DESCRIPTION_TABLE_SIGNATURE;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_MEMORY_MAPPED_CONFIGURATION_SPACE_ACCESS_TABLE_REVISION;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMcfg);
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = NULL;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId = PcdGet64(PcdAcpiDefaultOemTableId);
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision = FixedPcdGet64(PcdAcpiDefaultOemRevision);
+        NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
+        NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+
+        break;
+      } else if (NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr == NULL) {
         break;
       }
     }
 
-    for (Count = 0; Count < sizeof (NVIDIAPlatformRepositoryInfo)/sizeof (NVIDIAPlatformRepositoryInfo[0]); Count++) {
-      if (NVIDIAPlatformRepositoryInfo[Count].CmObjectId == CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo)) {
-        NVIDIAPlatformRepositoryInfo[Count].CmObjectSize = sizeof (PciConfigInfo);
-        NVIDIAPlatformRepositoryInfo[Count].CmObjectCount = sizeof (PciConfigInfo) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);
-        NVIDIAPlatformRepositoryInfo[Count].CmObjectPtr = &PciConfigInfo;
-        break;
-      }
+    Repo = *PlatformRepositoryInfo;
+
+    Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
+    Repo->CmObjectToken = CM_NULL_TOKEN;
+    Repo->CmObjectSize = sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO) * NumberOfPcieControllers;
+    Repo->CmObjectCount = NumberOfPcieControllers;
+    Repo->CmObjectPtr = PciConfigInfo;
+    Repo++;
+
+    *PlatformRepositoryInfo = Repo;
+  }
+Exit:
+  if (EFI_ERROR (Status)) {
+    if (PciConfigInfo == NULL) {
+      FreePool (PciConfigInfo);
     }
   }
+  if (PcieHandles != NULL) {
+    FreePool (PcieHandles);
+  }
+  if (RegisterData != NULL) {
+    FreePool (RegisterData);
+  }
+  return Status;
 }
 
 /** Initialize the Serial Port entries in the platform configuration repository and patch DSDT (TODO).
@@ -671,13 +733,6 @@ InitializePlatformRepository ()
   Repo->CmObjectPtr = &GenericTimerInfo;
   Repo++;
 
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
-  Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (PciConfigInfoEmpty);
-  Repo->CmObjectCount = sizeof (PciConfigInfoEmpty) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);
-  Repo->CmObjectPtr = &PciConfigInfoEmpty;
-  Repo++;
-
   Status = UpdateCpuInfo (&Repo);
   if (EFI_ERROR (Status)) {
     return Status;
@@ -688,7 +743,10 @@ InitializePlatformRepository ()
     return Status;
   }
 
-  ApplyConfigurationManagerOverrides ();
+  Status = UpdatePcieInfo (&Repo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   ASSERT ((UINTN)Repo <= (UINTN)RepoEnd);
 

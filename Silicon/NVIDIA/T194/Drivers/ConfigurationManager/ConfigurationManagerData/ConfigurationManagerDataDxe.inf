@@ -39,7 +39,9 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  BaseLib
   DeviceTreeHelperLib
+  FdtLib
   FloorSweepingLib
   MemoryAllocationLib
   TegraPlatformInfoLib
