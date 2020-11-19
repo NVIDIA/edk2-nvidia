@@ -1,10 +1,13 @@
-[
-  {"vendor_guid":"gDtPlatformFormSetGuid",
-  "variables":[
-      {
-          "name":"DtAcpiPref",
-          "type":"UINT32",
-          "data":"0x1"
-      }
-  ]}
-]
+{
+  "includes":[],
+  "definitions":[
+    {"vendor_guid":"gDtPlatformFormSetGuid",
+    "variables":[
+        {
+            "name":"DtAcpiPref",
+            "type":"UINT32",
+            "data":"0x1"
+        }
+    ]}
+  ]
+}
