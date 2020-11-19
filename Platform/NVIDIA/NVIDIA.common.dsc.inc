@@ -23,7 +23,7 @@
   GCC:*_*_*_PLATFORM_FLAGS = -fstack-protector-strong
 
 [BuildOptions]
-  *_*_*_ASL_FLAGS          = -tc -li -so
+  *_*_*_ASL_FLAGS          = -tc -li -so -oi
 
 [LibraryClasses.common]
 !if $(TARGET) == RELEASE
