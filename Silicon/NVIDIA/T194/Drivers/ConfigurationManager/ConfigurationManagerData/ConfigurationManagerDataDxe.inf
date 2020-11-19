@@ -46,6 +46,7 @@
   MemoryAllocationLib
   TegraPlatformInfoLib
   PlatformAslTablesLib
+  PrintLib
   UefiBootServicesTableLib
   UefiRuntimeServicesTableLib
   UefiDriverEntryPoint
@@ -71,6 +72,9 @@
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
+  gNVIDIAAmlPatchProtocolGuid
 
 [Depex]
   gEfiVariableArchProtocolGuid
+  AND
+  gNVIDIAAmlPatchProtocolGuid

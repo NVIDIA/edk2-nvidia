@@ -21,6 +21,7 @@
 #include <Library/ArmLib.h>
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
+#include <Library/PrintLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -33,6 +34,7 @@
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
 #include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>
 
+#include <Protocol/AmlPatchProtocol.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 
 #include <NVIDIAConfiguration.h>
@@ -41,7 +43,27 @@
 #include <T194/T194Definitions.h>
 
 #include "Dsdt.hex"
+#include "Dsdt.offset.h"
 #include "SsdtPci.hex"
+#include "SsdtPci.offset.h"
+
+
+#define ACPI_PATCH_MAX_PATH   255
+#define ACPI_DEVICE_MAX       9
+
+
+//AML Patch protocol
+NVIDIA_AML_PATCH_PROTOCOL *PatchProtocol = NULL;
+
+STATIC EFI_ACPI_DESCRIPTION_HEADER *AcpiTableArray[] = {
+    (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_aml_code,
+    (EFI_ACPI_DESCRIPTION_HEADER *)ssdtpci_aml_code
+};
+
+STATIC AML_OFFSET_TABLE_ENTRY *OffsetTableArray[] = {
+    DSDT_TEGRA194_OffsetTable,
+    SSDT_TEGRA194_OffsetTable
+};
 
 /** The platform configuration repository information.
 */
@@ -263,7 +285,7 @@ IsPcieEnabled ()
   return (VariableData.Enabled == 1);
 }
 
-/** Initialize the PCIe entries in the platform configuration repository and patch SSDT (TODO).
+/** Initialize the PCIe entries in the platform configuration repository and patch SSDT.
  *
  * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
  *
@@ -367,6 +389,7 @@ UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
       PciConfigInfo[Index].StartBusNumber = T194_PCIE_BUS_MIN;
       PciConfigInfo[Index].EndBusNumber = T194_PCIE_BUS_MAX;
       PciConfigInfo[Index].PciSegmentGroupNumber = SwapBytes32 (*SegmentProp);
+
     }
 
     for (Index = 0; Index < (EStdObjMax + EArmObjMax); Index++) {
@@ -429,7 +452,7 @@ Exit:
   return Status;
 }
 
-/** Initialize the Serial Port entries in the platform configuration repository and patch DSDT (TODO).
+/** Initialize the Serial Port entries in the platform configuration repository and patch DSDT.
  *
  * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
  *
@@ -447,6 +470,7 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   CM_ARM_SERIAL_PORT_INFO           *SpcrSerialPort;
   NVIDIA_DEVICE_TREE_REGISTER_DATA  RegisterData;
   NVIDIA_DEVICE_TREE_INTERRUPT_DATA InterruptData;
+  UINT32                            Index;
   UINT32                            Size;
 
   NumberOfSerialPorts = 0;
@@ -465,47 +489,49 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     return Status;
   }
 
-  //Process first entry for SPCR table if there are more than 1
-  //Only one register space is expected
-  Size = 1;
-  Status = GetDeviceTreeRegisters (SerialHandles[0], &RegisterData, &Size);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  //Only one interrupt is expected
-  Size = 1;
-  Status = GetDeviceTreeInterrupts (SerialHandles[0], &InterruptData, &Size);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  FreePool (SerialHandles);
-
-  SpcrSerialPort = (CM_ARM_SERIAL_PORT_INFO *)AllocatePool (sizeof (CM_ARM_SERIAL_PORT_INFO));
+  SpcrSerialPort = (CM_ARM_SERIAL_PORT_INFO *)AllocatePool (sizeof (CM_ARM_SERIAL_PORT_INFO) * NumberOfSerialPorts);
   if (SpcrSerialPort == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  SpcrSerialPort->BaseAddress = RegisterData.BaseAddress;
-  SpcrSerialPort->BaseAddressLength = RegisterData.Size;
-  SpcrSerialPort->Interrupt = InterruptData.Interrupt + DEVICETREE_TO_ACPI_INTERRUPT_OFFSET;
-  SpcrSerialPort->BaudRate = FixedPcdGet64 (PcdUartDefaultBaudRate);
-  SpcrSerialPort->PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550;
-  SpcrSerialPort->Clock = 0;
+  for (Index = 0; Index < NumberOfSerialPorts; Index++) {
+
+    //Only one register space is expected
+    Size = 1;
+    Status = GetDeviceTreeRegisters (SerialHandles[Index], &RegisterData, &Size);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    //Only one interrupt is expected
+    Size = 1;
+    Status = GetDeviceTreeInterrupts (SerialHandles[Index], &InterruptData, &Size);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    SpcrSerialPort[Index].BaseAddress = RegisterData.BaseAddress;
+    SpcrSerialPort[Index].BaseAddressLength = RegisterData.Size;
+    SpcrSerialPort[Index].Interrupt = InterruptData.Interrupt + DEVICETREE_TO_ACPI_INTERRUPT_OFFSET;
+    SpcrSerialPort[Index].BaudRate = FixedPcdGet64 (PcdUartDefaultBaudRate);
+    SpcrSerialPort[Index].PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550;
+    SpcrSerialPort[Index].Clock = 0;
+  }
+  FreePool (SerialHandles);
 
   Repo = *PlatformRepositoryInfo;
 
   Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
   Repo->CmObjectSize = sizeof (CM_ARM_SERIAL_PORT_INFO);
-  Repo->CmObjectCount = 1;
+  Repo->CmObjectCount = NumberOfSerialPorts;
   Repo->CmObjectPtr = SpcrSerialPort;
   Repo++;
 
   *PlatformRepositoryInfo = Repo;
   return EFI_SUCCESS;
 }
+
 
 /** Initialize the cpu entries in the platform configuration repository.
  *
@@ -748,6 +774,7 @@ InitializePlatformRepository ()
     return Status;
   }
 
+
   ASSERT ((UINTN)Repo <= (UINTN)RepoEnd);
 
   return EFI_SUCCESS;
@@ -777,6 +804,20 @@ ConfigurationManagerDataDxeInitialize (
   ChipID = TegraGetChipID();
   if (ChipID != T194_CHIP_ID) {
     return EFI_SUCCESS;
+  }
+
+  Status = gBS->LocateProtocol (&gNVIDIAAmlPatchProtocolGuid, NULL, (VOID **)&PatchProtocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+  Status = PatchProtocol->RegisterAmlTables (
+                            PatchProtocol,
+                            AcpiTableArray,
+                            OffsetTableArray,
+                            ARRAY_SIZE (AcpiTableArray)
+                            );
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   Status = InitializePlatformRepository ();

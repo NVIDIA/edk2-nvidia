@@ -52,23 +52,6 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
       Name(_UID, 7)
     }
 
-    Device(COM0) {
-      Name (_HID, "NVDA0100")
-      Name (_UID, 0)
-      Name (_CCA, ZERO)
-
-      Name(_CRS, ResourceTemplate() {
-        Memory32Fixed(ReadWrite, T194_UARTB_BASE_ADDR, T194_UARTB_CAR_SIZE)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T194_UARTB_INTR }
-      })
-      Name (_DSD, Package () {
-        ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
-        Package () {
-          Package () {"clock-frequency", 1843200}
-        }
-      })
-    }
-
     Device(FAN) {
       Name (_HID, "PNP0C0B")
       Name (_UID, 0)
