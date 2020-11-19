@@ -50,7 +50,7 @@
 
 #define ACPI_PATCH_MAX_PATH   255
 #define ACPI_DEVICE_MAX       9
-
+#define ACPI_PCI_STA_TEMPLATE "_SB_.PCI%d._STA"
 
 //AML Patch protocol
 NVIDIA_AML_PATCH_PROTOCOL *PatchProtocol = NULL;
@@ -309,6 +309,9 @@ UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   INT32                             NodeOffset;
   CONST UINT32                      *SegmentProp;
   CM_STD_OBJ_ACPI_TABLE_INFO        *NewAcpiTables;
+  CHAR8                             AcpiPathString[ACPI_PATCH_MAX_PATH];
+  NVIDIA_AML_NODE_INFO              AcpiNodeInfo;
+  UINT8                             AcpiStatus;
 
   Status = EFI_SUCCESS;
   PcieHandles = NULL;
@@ -389,7 +392,23 @@ UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
       PciConfigInfo[Index].StartBusNumber = T194_PCIE_BUS_MIN;
       PciConfigInfo[Index].EndBusNumber = T194_PCIE_BUS_MAX;
       PciConfigInfo[Index].PciSegmentGroupNumber = SwapBytes32 (*SegmentProp);
+      //Attempt to locate the pcie entry in DSDT
+      AsciiSPrint (AcpiPathString, sizeof (AcpiPathString), ACPI_PCI_STA_TEMPLATE, PciConfigInfo[Index].PciSegmentGroupNumber);
+      Status = PatchProtocol->FindNode (PatchProtocol, AcpiPathString, &AcpiNodeInfo);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to find node %a, skipping patch\r\n", __FUNCTION__, AcpiPathString));
+        continue;
+      }
+      if (AcpiNodeInfo.Size != sizeof (AcpiStatus)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d, skipping patch\r\n", __FUNCTION__, AcpiPathString, AcpiNodeInfo.Size));
+        continue;
+      }
 
+      AcpiStatus = 0xF;
+      Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &AcpiStatus, sizeof (AcpiStatus));
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiPathString, Status));
+      }
     }
 
     for (Index = 0; Index < (EStdObjMax + EArmObjMax); Index++) {
@@ -531,7 +550,6 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   *PlatformRepositoryInfo = Repo;
   return EFI_SUCCESS;
 }
-
 
 /** Initialize the cpu entries in the platform configuration repository.
  *
@@ -773,7 +791,6 @@ InitializePlatformRepository ()
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
 
   ASSERT ((UINTN)Repo <= (UINTN)RepoEnd);
 

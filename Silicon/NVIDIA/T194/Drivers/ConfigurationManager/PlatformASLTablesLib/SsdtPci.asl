@@ -14,6 +14,7 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 1, "NVIDIA", "TEGRA194", 0x00000001) {
       Name (_SEG, 0)                 // PCI Segment Group number
       Name (_BBN, T194_PCIE_BUS_MIN) // PCI Base Bus Number
       Name (_CCA, 1)                 // Initially mark the PCI coherent
+      Name (_STA, 0)
 
       Name (_PRT, Package (){
         Package () {0xFFFF,0,0,104}, // INT_A
@@ -84,6 +85,7 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 1, "NVIDIA", "TEGRA194", 0x00000001) {
       Name (_SEG, 1)                            // PCI Segment Group number
       Name (_BBN, T194_PCIE_BUS_MIN)            // PCI Base Bus Number
       Name (_CCA, 1)                            // Initially mark the PCI coherent
+      Name (_STA, 0)
 
       Name (_PRT, Package (){
         Package () {0xFFFF,0,0,77}, // INT_A
@@ -154,6 +156,7 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 1, "NVIDIA", "TEGRA194", 0x00000001) {
       Name (_SEG, 3)                            // PCI Segment Group number
       Name (_BBN, T194_PCIE_BUS_MIN)            // PCI Base Bus Number
       Name (_CCA, 1)                            // Initially mark the PCI coherent
+      Name (_STA, 0)
 
       Name (_PRT, Package (){
         Package () {0xFFFF,0,0,81}, // INT_A
@@ -217,6 +220,77 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 1, "NVIDIA", "TEGRA194", 0x00000001) {
       } // Method(_CRS)
     } // PCI3
 
+    Device(PCI4) {
+      Name (_HID, EISAID("PNP0A08"))            // PCI Express Root Bridge
+      Name (_UID, 4)
+      Name (_CID, EISAID("PNP0A03"))            // Compatible PCI Root Bridge
+      Name (_SEG, 4)                            // PCI Segment Group number
+      Name (_BBN, T194_PCIE_BUS_MIN)            // PCI Base Bus Number
+      Name (_CCA, 1)                            // Initially mark the PCI coherent
+      Name (_STA, 0)
+
+      Name (_PRT, Package (){
+        Package () {0xFFFF,0,0,83}, // INT_A
+        Package () {0xFFFF,1,0,83}, // INT_B
+        Package () {0xFFFF,2,0,83}, // INT_C
+        Package () {0xFFFF,3,0,83}, // INT_D
+      })
+
+      // Root complex resources
+      Method (_CRS, 0, Serialized) {
+        Name (RBUF, ResourceTemplate () {
+          // Bus numbers assigned to this root
+          WordBusNumber (
+            ResourceProducer,
+            MinFixed, MaxFixed, PosDecode,
+            0,                  // AddressGranularity
+            T194_PCIE_BUS_MIN,  // AddressMinimum - Minimum Bus Number
+            T194_PCIE_BUS_MAX,  // AddressMaximum - Maximum Bus Number
+            0,                  // AddressTranslation - Set to 0
+            32                  // RangeLength - Number of Busses
+          )
+
+          // MCFG region
+          QWordMemory (
+            ResourceProducer, PosDecode,
+            MinFixed, MaxFixed,
+            Cacheable, ReadWrite,
+            0x00000000,           // Granularity
+            0x36000000,           // Min Base Address
+            0x37FFFFFF,           // Max Base Address
+            0x00000000,           // Translate
+            0x02000000            // Length
+          )
+
+          // 64-bit Prefetchable BAR window
+          QWordMemory (
+            ResourceProducer, PosDecode,
+            MinFixed, MaxFixed,
+            Cacheable, ReadWrite,
+            0x00000000,           // Granularity
+            0x1400000000,         // Min Base Address
+            0x173FFFFFFF,         // Max Base Address
+            0x00000000,           // Translate
+            0x340000000           // Length
+          )
+
+          // 32-bit Non-Prefetchable BAR window
+          QWordMemory (
+            ResourceProducer, PosDecode,
+            MinFixed, MaxFixed,
+            Cacheable, ReadWrite,
+            0x00000000,           // Granularity
+            0x40000000,           // Min Base Address
+            0xFFFEFFFF,           // Max Base Address
+            0x1700000000,         // Translate
+            0xBFFF0000            // Length
+          )
+
+        }) // Name(RBUF)
+        Return (RBUF)
+      } // Method(_CRS)
+    } // PCI4
+
     Device(PCI5) {
       Name (_HID, EISAID("PNP0A08"))            // PCI Express Root Bridge
       Name (_UID, 5)
@@ -224,6 +298,7 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 1, "NVIDIA", "TEGRA194", 0x00000001) {
       Name (_SEG, 5)                            // PCI Segment Group number
       Name (_BBN, T194_PCIE_BUS_MIN)            // PCI Base Bus Number
       Name (_CCA, 1)                            // Initially mark the PCI coherent
+      Name (_STA, 0)
 
       Name (_PRT, Package (){
         Package () {0xFFFF,0,0,85}, // INT_A
