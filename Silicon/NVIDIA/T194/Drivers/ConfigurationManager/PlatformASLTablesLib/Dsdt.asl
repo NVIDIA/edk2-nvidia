@@ -56,6 +56,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
       Name (_HID, "PNP0C0B")
       Name (_UID, 0)
       Name (_CCA, ZERO)
+      Name (_STA, 0)
 
       Name (_FIF, Package () {
         0,  // revision
@@ -77,8 +78,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
         Package () { 256, 0x0FFFFFFFF, 5000, 0xFFFFFFFF, 0xFFFFFFFF }
       })
 
-      /* PWM4 FAN register fields */
-      OperationRegion(FANR, SystemMemory, 0xC340000, 4)
+      /* PWM FAN register fields */
+      OperationRegion(FANR, SystemMemory, 0xFFFFFFFF, 4)
       Field(FANR, DWordAcc, NoLock, Preserve) {
         PFM0, 13,
         , 3,

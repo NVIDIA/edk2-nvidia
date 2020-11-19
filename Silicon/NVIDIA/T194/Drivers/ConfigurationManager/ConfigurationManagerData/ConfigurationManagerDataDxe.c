@@ -53,6 +53,8 @@
 #define ACPI_PCI_STA_TEMPLATE "_SB_.PCI%d._STA"
 #define ACPI_SDC_CRS_TEMPLATE "_SB_.SDC%d.REG0"
 #define ACPI_SDC_STA_TEMPLATE "_SB_.SDC%d._STA"
+#define ACPI_FAN_FANR         "_SB_.FAN_.FANR"
+#define ACPI_FAN_STA          "_SB_.FAN_._STA"
 
 //AML Patch protocol
 NVIDIA_AML_PATCH_PROTOCOL *PatchProtocol = NULL;
@@ -647,6 +649,102 @@ UpdateSdhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   return EFI_SUCCESS;
 }
 
+/** patch Fan data in DSDT.
+ *
+ * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
+ *
+  @retval EFI_SUCCESS   Success
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateFanInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
+{
+  EFI_STATUS                        Status;
+  INT32                             FanOffset;
+  UINT32                            FanHandle;
+  INT32                             PwmOffset;
+  CONST UINT32                      *FanPwm;
+  INT32                             PwmLength;
+  UINT32                            FanPwmHandle;
+  VOID                              *DeviceTreeBase;
+  UINT32                            PwmHandle;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA  RegisterData;
+  UINT32                            Size;
+  NVIDIA_AML_NODE_INFO              AcpiNodeInfo;
+  UINT8                             FanStatus;
+
+  Size = 1;
+  Status = GetMatchingEnabledDeviceTreeNodes ("pwm-fan", &FanHandle, &Size);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = GetDeviceTreeNode (FanHandle, &DeviceTreeBase, &FanOffset);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  FanPwm = fdt_getprop (DeviceTreeBase, FanOffset, "pwms", &PwmLength);
+  if (FanPwm == NULL) {
+    return EFI_SUCCESS;
+  }
+
+  if (PwmLength < sizeof (UINT32)){
+    return EFI_SUCCESS;
+  }
+
+  FanPwmHandle = SwapBytes32 (FanPwm[0]);
+  PwmOffset = fdt_node_offset_by_phandle (DeviceTreeBase, FanPwmHandle);
+  if (PwmOffset < 0) {
+    return EFI_UNSUPPORTED;
+  }
+
+  Status = GetDeviceTreeHandle (DeviceTreeBase, PwmOffset, &PwmHandle);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  //Only one register space is expected
+  Size = 1;
+  Status = GetDeviceTreeRegisters (PwmHandle, &RegisterData, &Size);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_FAN_FANR, &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    //If fan node isn't in ACPI return success as there is nothing to patch
+    return EFI_SUCCESS;
+  }
+
+  if (AcpiNodeInfo.Size > sizeof (RegisterData.Size)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &RegisterData.BaseAddress, AcpiNodeInfo.Size);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_FAN_FANR, Status));
+  }
+
+  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_FAN_STA, &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    //If fan node isn't in ACPI return success as there is nothing to patch
+    return EFI_SUCCESS;
+  }
+
+  if (AcpiNodeInfo.Size > sizeof (FanStatus)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  FanStatus = 0xF;
+  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &FanStatus, sizeof(FanStatus));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_FAN_STA, Status));
+  }
+  return Status;
+}
+
 /** Initialize the cpu entries in the platform configuration repository.
  *
  * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
@@ -892,6 +990,9 @@ InitializePlatformRepository ()
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
+  //Don't generate error if fan patching fails
+  UpdateFanInfo (&Repo);
 
   ASSERT ((UINTN)Repo <= (UINTN)RepoEnd);
 
