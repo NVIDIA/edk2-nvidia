@@ -51,6 +51,8 @@
 #define ACPI_PATCH_MAX_PATH   255
 #define ACPI_DEVICE_MAX       9
 #define ACPI_PCI_STA_TEMPLATE "_SB_.PCI%d._STA"
+#define ACPI_SDC_CRS_TEMPLATE "_SB_.SDC%d.REG0"
+#define ACPI_SDC_STA_TEMPLATE "_SB_.SDC%d._STA"
 
 //AML Patch protocol
 NVIDIA_AML_PATCH_PROTOCOL *PatchProtocol = NULL;
@@ -551,6 +553,100 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   return EFI_SUCCESS;
 }
 
+/** patch SDHCI data in DSDT.
+ *
+ * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
+ *
+  @retval EFI_SUCCESS   Success
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateSdhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
+{
+  EFI_STATUS                        Status;
+  UINT32                            NumberOfSdhciPorts;
+  UINT32                            *SdhciHandles;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA  RegisterData;
+  UINT32                            Size;
+  UINT32                            Index;
+  UINT32                            DeviceIndex;
+  CHAR8                             AcpiPathString[ACPI_PATCH_MAX_PATH];
+  NVIDIA_AML_NODE_INFO              AcpiNodeInfo;
+  UINTN                             AcpiSize;
+  EFI_ACPI_32_BIT_FIXED_MEMORY_RANGE_DESCRIPTOR MemoryDescriptor;
+  UINT8                             AcpiStatus;
+
+  NumberOfSdhciPorts = 0;
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra194-sdhci", NULL, &NumberOfSdhciPorts);
+  if (Status == EFI_NOT_FOUND) {
+    return EFI_SUCCESS;
+  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+    return Status;
+  }
+
+  SdhciHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfSdhciPorts);
+  if (SdhciHandles == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra194-sdhci", SdhciHandles, &NumberOfSdhciPorts);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  for (Index = 0; Index < NumberOfSdhciPorts; Index++) {
+
+    //Only one register space is expected
+    Size = 1;
+    Status = GetDeviceTreeRegisters (SdhciHandles[Index], &RegisterData, &Size);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    //Attempt to locate the sdhci entry in DSDT
+    for (DeviceIndex = 0; DeviceIndex < ACPI_DEVICE_MAX; DeviceIndex++) {
+      AsciiSPrint (AcpiPathString, sizeof (AcpiPathString), ACPI_SDC_CRS_TEMPLATE, DeviceIndex);
+      AcpiSize = sizeof (MemoryDescriptor);
+      Status = PatchProtocol->FindNode (PatchProtocol, AcpiPathString, &AcpiNodeInfo);
+      if (EFI_ERROR (Status)) {
+        continue;
+      }
+      if (AcpiNodeInfo.Size != sizeof (MemoryDescriptor)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d, skipping patch\r\n", __FUNCTION__, AcpiPathString, AcpiNodeInfo.Size));
+        continue;
+      }
+
+      Status = PatchProtocol->GetNodeData (PatchProtocol, &AcpiNodeInfo, &MemoryDescriptor, sizeof (MemoryDescriptor));
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to get data for %a, skipping patch\r\n", __FUNCTION__, AcpiPathString));
+        continue;
+      }
+      if (MemoryDescriptor.BaseAddress == RegisterData.BaseAddress) {
+        AsciiSPrint (AcpiPathString, sizeof (AcpiPathString), ACPI_SDC_STA_TEMPLATE, DeviceIndex);
+        Status = PatchProtocol->FindNode (PatchProtocol, AcpiPathString, &AcpiNodeInfo);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Error finding node %a - %r, skipping patch\r\n", __FUNCTION__, AcpiPathString, Status));
+          break;
+        }
+        if (AcpiNodeInfo.Size != sizeof (AcpiStatus)) {
+          DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d, skipping patch\r\n", __FUNCTION__, AcpiPathString, AcpiNodeInfo.Size));
+          break;
+        }
+
+        AcpiStatus = 0xF;
+        Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &AcpiStatus, sizeof (AcpiStatus));
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiPathString, Status));
+        }
+        break;
+      }
+    }
+  }
+  FreePool (SdhciHandles);
+  return EFI_SUCCESS;
+}
+
 /** Initialize the cpu entries in the platform configuration repository.
  *
  * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
@@ -788,6 +884,11 @@ InitializePlatformRepository ()
   }
 
   Status = UpdatePcieInfo (&Repo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateSdhciInfo (&Repo);
   if (EFI_ERROR (Status)) {
     return Status;
   }
