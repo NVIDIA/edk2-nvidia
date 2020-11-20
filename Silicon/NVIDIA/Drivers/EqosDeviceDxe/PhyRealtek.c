@@ -71,9 +71,9 @@ PhyRealtekAutoNeg (
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
   /* Advertise 1000 MBPS full duplex mode */
-  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, &Data32, MacBaseAddress);
+  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, &Data32, MacBaseAddress);
   Data32 |= REG_PHY_GB_CONTROL_ADVERTISE_1000_BASE_T_FULL;
-  PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, Data32, MacBaseAddress);
+  PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, Data32, MacBaseAddress);
 
   /* Advertise 100, 10 MBPS with full and half duplex mode */
   PhyRead (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, &Data32, MacBaseAddress);
@@ -86,9 +86,9 @@ PhyRealtekAutoNeg (
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a: Start auto-negotiation\r\n", __FUNCTION__));
 
-  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, &Data32, MacBaseAddress);
+  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, &Data32, MacBaseAddress);
   Data32 |= REG_PHY_CONTROL_AUTO_NEGOTIATION_ENABLE | REG_PHY_CONTROL_RESTART_AUTO_NEGOTIATION;
-  PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, Data32, MacBaseAddress);
+  PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, Data32, MacBaseAddress);
 
   TimeOut = 0;
   do {
@@ -158,10 +158,6 @@ PhyRealtekDetectLink (
 {
   UINT32       Data32;
 
-  if (PhyDriver->PhyOldLink == LINK_DOWN) {
-    //PhyDriver->AutoNeg (PhyDriver, MacBaseAddress);
-  }
-
   PhyRead (PhyDriver, PAGE_A43, REG_PHYSR, &Data32, MacBaseAddress);
 
   if ((Data32 & PHYSR_LINK) == 0) {
@@ -180,7 +176,7 @@ PhyRealtekDetectLink (
       }
       if ((Data32 & PHYSR_SPEED_MASK) == PHYSR_SPEED_1000) {
         PhyDriver->Speed = SPEED_1000;
-      } else if ((Data32 & PHYSR_SPEED_1000) == PHYSR_SPEED_100) {
+      } else if ((Data32 & PHYSR_SPEED_MASK) == PHYSR_SPEED_100) {
         PhyDriver->Speed = SPEED_100;
       } else {
         PhyDriver->Speed = SPEED_10;

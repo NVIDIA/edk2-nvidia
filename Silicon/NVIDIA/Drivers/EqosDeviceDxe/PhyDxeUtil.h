@@ -67,7 +67,7 @@ struct _PHY_DRIVER{
 #define REG_PHY_CONTROL_RESTART_AUTO_NEGOTIATION      BIT9
 
 #define REG_PHY_STATUS                                1
-#define REG_PHY_STATUS_AUTO_NEGOTIATION_COMPLETED    BIT12
+#define REG_PHY_STATUS_AUTO_NEGOTIATION_COMPLETED     BIT5
 
 #define REG_PHY_IDENTIFIER_1                          2
 
