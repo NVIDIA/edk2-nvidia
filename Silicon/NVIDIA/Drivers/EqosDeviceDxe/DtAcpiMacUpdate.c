@@ -507,7 +507,7 @@ UpdateDTACPIMacAddress (
 
     Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DtBase);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Failed to get device tree\r\n"));
+      DEBUG ((DEBUG_INFO, "Failed to get device tree\r\n"));
       return;
     }
     NodeOffset = fdt_path_offset (DtBase, Snp->DeviceTreePath);
