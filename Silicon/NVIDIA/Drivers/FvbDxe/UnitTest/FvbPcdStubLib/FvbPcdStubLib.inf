@@ -1,0 +1,43 @@
+## @file
+# A simple stub implementation of PCD Library. Only supports the use of one
+# PCD per type at a time (only keeps track of the most recently set PCD).
+#
+# Used in the FvbDxe unit tests.
+#
+# PCD Library that only provides access to Feature Flag, Fixed At Build,
+# and Binary Patch typed PCD entries. Access to Dynamic PCD entries is ignored.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+# property and proprietary rights in and to this material, related
+# documentation and any modifications thereto. Any use, reproduction,
+# disclosure or distribution of this material and related documentation
+# without an express license agreement from NVIDIA CORPORATION or
+# its affiliates is strictly prohibited.
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = FvbPcdStubLib
+  FILE_GUID                      = 9B41D8FD-9C68-D45F-8D1E-21C6138E5D6D
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = FvbPcdStubLib
+
+
+#
+#  VALID_ARCHITECTURES           = IA32 X64 EBC
+#
+
+[Sources]
+  FvbPcdStubLib.c
+
+[LibraryClasses]
+  DebugLib
+  BaseMemoryLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
