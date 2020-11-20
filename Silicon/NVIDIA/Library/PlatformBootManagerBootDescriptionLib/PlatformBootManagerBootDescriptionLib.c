@@ -64,6 +64,9 @@ EFIAPI PlatformLoadFileBootDescriptionHandler (
     if (CurrentDevicePath->SubType == MSG_EMMC_DP) {
       DescriptionString = HiiGetString(mHiiHandle, STRING_TOKEN(STR_LOAD_FILE_EMMC_BOOT_DESCRIPTION), NULL);
       break;
+    } else if (CurrentDevicePath->SubType == MSG_SD_DP) {
+      DescriptionString = HiiGetString(mHiiHandle, STRING_TOKEN(STR_LOAD_FILE_SD_BOOT_DESCRIPTION), NULL);
+      break;
     } else if (CurrentDevicePath->SubType == HW_VENDOR_DP) {
       VENDOR_DEVICE_PATH *VendorPath = (VENDOR_DEVICE_PATH *)CurrentDevicePath;
       if (CompareGuid (&VendorPath->Guid, &gNVIDIARamloadKernelGuid)) {
