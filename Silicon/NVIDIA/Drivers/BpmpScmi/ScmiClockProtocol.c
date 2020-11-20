@@ -557,6 +557,7 @@ ClockParentsSetParent (
   EFI_STATUS         Status;
   BPMP_CLOCK_REQUEST Request;
   INT32              MessageError;
+  UINT32             CurrentParent;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -564,6 +565,16 @@ ClockParentsSetParent (
 
   if (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
     return EFI_INVALID_PARAMETER;
+  }
+
+  Status = This->GetParent (This, ClockId, &CurrentParent);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get current parent (%r)\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  if (CurrentParent == ParentId) {
+    return EFI_SUCCESS;
   }
 
   Request.Subcommand = ClockSubcommandSetParent;
