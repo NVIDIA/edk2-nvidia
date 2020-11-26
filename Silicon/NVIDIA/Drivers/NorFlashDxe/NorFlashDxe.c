@@ -39,10 +39,13 @@
 #define NOR_REG_OFFSET_SIZE           4
 #define NOR_CR3V_REG_OFFSET           0x00800004
 #define NOR_CR3V_PAGE_BUF_WRAP_BMSK   0x10
+#define NOR_CR3V_BLK_SIZE_ERASE_BMSK  0x2
 
 #define NOR_READ_SR1                  0x5
 #define NOR_SR1_WEL_BMSK              0x2
+#define NOR_SR1_WIP_BMSK              0x1
 #define NOR_SR1_WEL_RETRY_CNT         2000
+#define NOR_SR1_WIP_RETRY_CNT         2000
 
 #define NOR_CMD_SIZE                  1
 
@@ -50,7 +53,7 @@
 #define NOR_READ_DATA_CMD             0x3
 #define NOR_WREN_DISABLE              0x4
 #define NOR_WREN_ENABLE               0x6
-#define NOR_ERASE_DATA_CMD            0x20
+#define NOR_ERASE_DATA_CMD            0xD8
 #define NOR_SWITCH_4B_ADDRESS         0xB7
 
 #define NOR_READ_RDID_CMD             0x9f
@@ -88,7 +91,7 @@ NOR_FLASH_ATTRIBUTES FlashAttributes[] = {
     SPANSION_FLASH_DENSITY_512,    // Memory Size
     SIZE_256KB,                    // Sector Size
     256,                           // Number of Sectors
-    SIZE_4KB,                      // Block Size
+    SIZE_64KB,                     // Block Size
     256                            // page Size
   },
   {
@@ -98,7 +101,7 @@ NOR_FLASH_ATTRIBUTES FlashAttributes[] = {
     SPANSION_FLASH_DENSITY_256,    // Memory Size
     SIZE_256KB,                    // Sector Size
     128,                           // Number of Sectors
-    SIZE_4KB,                      // Block Size
+    SIZE_64KB,                     // Block Size
     256                            // page Size
   },
   {
@@ -169,6 +172,55 @@ ReadNorFlashRegister (
     DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash register.\n", __FUNCTION__));
   }
 
+  return Status;
+}
+
+
+/**
+  Wait for Write Complete
+
+  @param[in] Private               Driver's private data
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+**/
+EFI_STATUS
+WaitNorFlashWriteComplete (
+  IN NOR_FLASH_PRIVATE_DATA *Private
+)
+{
+  EFI_STATUS Status;
+  UINT8 RegCmd;
+  UINT8 Resp;
+  UINT32 Count;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  RegCmd = NOR_READ_SR1;
+
+  Count = 0;
+
+  do {
+    // Error out of retry count exceeds NOR_SR1_WEL_RETRY_CNT
+    if (Count == NOR_SR1_WIP_RETRY_CNT) {
+      return EFI_DEVICE_ERROR;
+    }
+
+    gBS->Stall (TIMEOUT);
+
+    // Read WIP status
+    Status = ReadNorFlashRegister (Private, &RegCmd, sizeof (RegCmd), &Resp);
+    if (EFI_ERROR(Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash status 1 register.\n", __FUNCTION__));
+      return Status;
+    }
+
+    Count++;
+  } while ((Resp & NOR_SR1_WIP_BMSK) != 0);
+
+  DEBUG ((EFI_D_INFO, "%a: NOR flash write complete.\n", __FUNCTION__));
   return Status;
 }
 
@@ -394,6 +446,10 @@ UpdateNorFlashParameters (
     FlashAttributes[Private->FlashInstance].PageSize *= 2;
   }
 
+  if ((Resp & NOR_CR3V_BLK_SIZE_ERASE_BMSK) == NOR_CR3V_BLK_SIZE_ERASE_BMSK) {
+    FlashAttributes[Private->FlashInstance].BlockSize = SIZE_256KB;
+  }
+
   DEBUG ((EFI_D_INFO, "%a: NOR flash parameters updated.\n", __FUNCTION__));
 
 ErrorExit:
@@ -612,7 +668,7 @@ NorFlashErase(
     }
 
     AddressShift = 0;
-    Offset = Count * FlashAttributes[Private->FlashInstance].BlockSize;
+    Offset = Block * FlashAttributes[Private->FlashInstance].BlockSize;
     for (Count = (CmdSize - 1); Count > 0; Count--) {
       Cmd[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
       AddressShift += 8;
@@ -627,6 +683,12 @@ NorFlashErase(
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR(Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Could not erase data from NOR flash.\n", __FUNCTION__));
+      goto ErrorExit;
+    }
+
+    Status = WaitNorFlashWriteComplete (Private);
+    if (EFI_ERROR(Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Could not complete NOR flash write.\n", __FUNCTION__));
       goto ErrorExit;
     }
 
@@ -769,6 +831,12 @@ NorFlashWriteSinglePage(
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR(Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Could not write data to NOR flash.\n", __FUNCTION__));
+    goto ErrorExit;
+  }
+
+  Status = WaitNorFlashWriteComplete (Private);
+  if (EFI_ERROR(Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: Could not complete NOR flash write.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
