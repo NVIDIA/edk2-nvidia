@@ -15,6 +15,8 @@
 #ifndef __TEGRA_PLATFORM_INFO_LIB_H__
 #define __TEGRA_PLATFORM_INFO_LIB_H__
 
+#define UEFI_DECLARE_ALIGNED(var, size) var __attribute__ ((aligned (size)))
+
 #define T186_CHIP_ID      0x18
 #define T194_CHIP_ID      0x19
 
