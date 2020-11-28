@@ -19,6 +19,8 @@
 
 #define TEGRABL_MAX_VERSION_STRING 128 /* chars including null */
 #define NUM_DRAM_BAD_PAGES 1024
+#define TEGRABL_MAX_STORAGE_DEVICES 8
+#define MAX_OEM_FW_RATCHET_INDEX 104
 
 /*macro carve_out_type*/
 typedef UINT32 carve_out_type_t;
@@ -113,6 +115,13 @@ typedef struct {
 
 #pragma pack(1)
 typedef struct {
+  UINT8 Type;
+  UINT8 Instance;
+} TEGRABL_DEVICE;
+#pragma pack()
+
+#pragma pack(1)
+typedef struct {
   UINT32  MagicHeader;
   UINT32  ClockSource;
   UINT32  ClockDivider;
@@ -179,111 +188,118 @@ typedef struct  {
 
 typedef struct {
   /**< version */
-  UINT32 Version;
+  UEFI_DECLARE_ALIGNED(UINT32 Version, 4);
 
   /**< Uart instance */
-  UINT32 Uart_Instance;
+  UEFI_DECLARE_ALIGNED(UINT32 Uart_Instance, 4);
 
   /**< Enable logs */
-  UINT32 EnableLog;
-
-  UINT32 Reserved0;
+  UEFI_DECLARE_ALIGNED(UINT32 EnableLog, 4);
 
   /**< device config params from mb1 bct */
-  TEGRABL_DEVICE_CONFIG_PARAMS DeviceConfig;
+  UEFI_DECLARE_ALIGNED(TEGRABL_DEVICE_CONFIG_PARAMS DeviceConfig, 8);
 
   /**< Address of i2c bus frequecy from mb1 bct */
-  UINT64 I2cBusFrequencyAddress;
+  UEFI_DECLARE_ALIGNED(UINT64 I2cBusFrequencyAddress, 8);
 
   /**< Address of controller pad settings */
-  UINT64 ControllerProdSettings;
+  UEFI_DECLARE_ALIGNED(UINT64 ControllerProdSettings, 8);
 
   /**< Total size of controller pad settings */
-  UINT64 ControllerProdSettingsSize;
+  UEFI_DECLARE_ALIGNED(UINT64 ControllerProdSettingsSize, 8);
 
   /**< Parameters for Secure_OS/TLK passed via GPR */
-  UINT64 SecureOsParams[4];
-  UINT64 SecureOsStart;
+  UEFI_DECLARE_ALIGNED(UINT64 SecureOsParams[4], 8);
+  UEFI_DECLARE_ALIGNED(UINT64 SecureOsStart, 8);
 
   /**< If tos loaded by mb2 has secureos or not. */
-  UINT32 SecureosType;
+  UEFI_DECLARE_ALIGNED(UINT32 SecureosType, 4);
 
   /**< SDRAM size in bytes */
-  UINT64 SdramSize;
+  UEFI_DECLARE_ALIGNED(UINT64 SdramSize, 8);
 
   /**< bootloader dtb load address */
-  UINT64 BlDtbLoadAddress;
+  UEFI_DECLARE_ALIGNED(UINT64 BlDtbLoadAddress, 8);
 
   /**< physical address and size of the carveouts */
-  TEGRABL_CARVEOUT_INFO CarveoutInfo[CARVEOUT_NUM];
+  UEFI_DECLARE_ALIGNED(TEGRABL_CARVEOUT_INFO CarveoutInfo[CARVEOUT_NUM], 8);
 
   /**< Indicate whether DRAM ECC page blacklisting feature is enabled
      or not
    */
-  union {
+  UEFI_DECLARE_ALIGNED(union {
     UINT64 FeatureFlagRaw;
     struct {
-      UINT64 EnableDramPageBlacklisting:1;
-      UINT64 EnableCombinedUart:1;
-      UINT64 EnableDramStagedScrubbing:1;
+      UINT32 EnableDramPageBlacklisting:1;
+      UINT32 EnableCombinedUart:1;
+      UINT32 EnableDramStagedScrubbing:1;
+      UINT32 EnableSce:1;
+      UINT32 SwitchBootchain:1;
+      UINT32 ResetToRecovery:1;
+      UINT32 EnableRce:1;
+      UINT32 EnableApe:1;
+      UINT32 Reserved1:24;
+      UINT32 Reserved2;
     };
-  };
+  }, 8);
 
   /**< Start address of SDRAM params used in MB1 as per RAMCODE */
-  UINT64 SdramParamsOffset;
+  UEFI_DECLARE_ALIGNED(UINT64 SdramParamsOffset, 8);
 
   /**< Start address of DRAM ECC page blacklisting information
      structure
    */
-  UINT64 DramPageBlacklistInfoAddress;
+  UEFI_DECLARE_ALIGNED(UINT64 DramPageBlacklistInfoAddress, 8);
 
   /**< Start address of Golden register data region */
-  UINT64 GoldenRegisterAddress;
+  UEFI_DECLARE_ALIGNED(UINT64 GoldenRegisterAddress, 8);
 
   /**< Size of Golden register data region */
-  UINT32 GoldenRegisterSize;
+  UEFI_DECLARE_ALIGNED(UINT32 GoldenRegisterSize, 8);
 
   /**< Start address of Profiling data */
-  UINT64 ProfilingDataAddress;
+  UEFI_DECLARE_ALIGNED(UINT64 ProfilingDataAddress, 8);
 
   /**< Size of Profiling data */
-  UINT32 ProfilingDataSize;
+  UEFI_DECLARE_ALIGNED(UINT32 ProfilingDataSize, 8);
 
   /**< Start offset of unallocated/unused data in CPUâ€BL carveout */
-  UINT64 CpublCarveoutSafeEndOffset;
+  UEFI_DECLARE_ALIGNED(UINT64 CpublCarveoutSafeEndOffset, 8);
 
   /**< Start offset of unallocated/unused data in MISC carveout */
-  UINT64 MiscCarveoutSafeStartOffset;
+  UEFI_DECLARE_ALIGNED(UINT64 MiscCarveoutSafeStartOffset, 8);
 
   /**< Boot type set by nv3pserver based on boot command from host. */
-  UINT32 RecoveryBootType;
-
-  UINT32 Reserved1;
+  UEFI_DECLARE_ALIGNED(UINT32 RecoveryBootType, 8);
 
   /**< Boot mode can be cold boot, or RCM */
-  UINT32 BootType;
+  UEFI_DECLARE_ALIGNED(UINT32 BootType, 8);
 
   /**< Uart_base Address for debug prints */
-  UINT64 EarlyUartAddr;
+  UEFI_DECLARE_ALIGNED(UINT64 EarlyUartAddr, 8);
 
   /**< mb1 bct version information */
-  UINT32 Mb1BctVersion;
-
-  UINT32 Reserved2;
+  UEFI_DECLARE_ALIGNED(UINT32 Mb1BctVersion, 8);
 
   /**< mb1 version */
-  UINT8 Mb1Version[TEGRABL_MAX_VERSION_STRING];
+  UEFI_DECLARE_ALIGNED(UINT8 Mb1Version[TEGRABL_MAX_VERSION_STRING], 8);
 
   /**< mb2 version */
-  UINT8 Mb2Version[TEGRABL_MAX_VERSION_STRING];
+  UEFI_DECLARE_ALIGNED(UINT8 Mb2Version[TEGRABL_MAX_VERSION_STRING], 8);
 
-  UINT8 CpublVersion[TEGRABL_MAX_VERSION_STRING];
+  UEFI_DECLARE_ALIGNED(UINT8 CpublVersion[TEGRABL_MAX_VERSION_STRING], 8);
 
   /**< Reset reason as read from PMIC */
-  UINT32 PmicRstReason;
+  UEFI_DECLARE_ALIGNED(UINT32 PmicRstReason, 8);
 
   /**< Pointer to BRBCT location in sdram */
-  UINT64 BrbctCarveout;
+  UEFI_DECLARE_ALIGNED(UINT64 BrbctCarveout, 8);
+
+  /**< Storage devices to be used */
+  UEFI_DECLARE_ALIGNED(TEGRABL_DEVICE StorageDevices[TEGRABL_MAX_STORAGE_DEVICES], 8);
+
+  /** Minimum ratchet version of OEM-FW bins */
+  UEFI_DECLARE_ALIGNED(UINT8 MinRatchet[MAX_OEM_FW_RATCHET_INDEX], 8);
 } TEGRA_CPUBL_PARAMS;
 
 #endif //__T194_RESOURCE_CONFIG_PRIVATE_H__
