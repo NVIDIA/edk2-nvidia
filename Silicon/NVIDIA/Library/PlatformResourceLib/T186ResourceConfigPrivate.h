@@ -146,43 +146,49 @@ typedef struct {
   /**< Global Data shared across boot-binaries */
   TEGRA_GLOBAL_DATA GlobalData;
 
-  UINT32 Version;
+  UEFI_DECLARE_ALIGNED(UINT32 Version, 4);
 
-  UINT32 UartInstance;
+  UEFI_DECLARE_ALIGNED(UINT32 UartInstance, 4);
 
-  UINT32 EnableLog;
+  UEFI_DECLARE_ALIGNED(UINT32 EnableLog, 4);
 
   /**< Address of device params from mb1 bct */
-  UINT64 DevParamsAddress;
+  UEFI_DECLARE_ALIGNED(UINT64 DevParamsAddress, 8);
 
   /**< Address of i2c bus frequecy from mb1 bct */
-  UINT64 I2cBusFrequencyAddress;
+  UEFI_DECLARE_ALIGNED(UINT64 I2cBusFrequencyAddress, 8);
 
   /**< Address of controller pad settings */
-  UINT64 ControllerProdSettings;
+  UEFI_DECLARE_ALIGNED(UINT64 ControllerProdSettings, 8);
 
   /**< Total size of controller pad settings */
-  UINT64 ControllerProdSettingsSize;
+  UEFI_DECLARE_ALIGNED(UINT64 ControllerProdSettingsSize, 8);
 
   /**< Parameters for Secure_OS/TLK passed via GPR */
-  UINT64 SecureOsParams[4];
-  UINT64 SecureOsStart;
+  UEFI_DECLARE_ALIGNED(UINT64 SecureOsParams[4], 8);
+  UEFI_DECLARE_ALIGNED(UINT64 SecureOsStart, 8);
 
   /**< If tos loaded by mb2 has secureos or not.
    * Added in version 3.
    */
-  UINT32 SecureOsType;
-  UINT64 GoldenRegStart;
+  UEFI_DECLARE_ALIGNED(UINT32 SecureOsType, 4);
+  UEFI_DECLARE_ALIGNED(UINT64 GoldenRegStart, 8);
 
   /**< dtb load address */
-  UINT64 DtbLoadAddress;
+  UEFI_DECLARE_ALIGNED(UINT64 DtbLoadAddress, 8);
 
   /**< rollback data address */
-  UINT64 RollbackDataAddress;
+  UEFI_DECLARE_ALIGNED(UINT64 RollbackDataAddress, 8);
 
   TEGRA_BL_DEVICE StorageDevices[TEGRA_BL_MAX_STORAGE_DEVICES];
 
-  UINT8 Reserved[214];
+  /**< SD card related params */
+  UEFI_DECLARE_ALIGNED(UINT32 BootFromSd, 4);
+  UEFI_DECLARE_ALIGNED(UINT32 SdInstance, 4);
+  UEFI_DECLARE_ALIGNED(UINT32 CdGpio, 4);
+  UEFI_DECLARE_ALIGNED(UINT32 CdGpioPolarity, 4);
+
+  UINT8 Reserved[198];
 } TEGRA_CPUBL_PARAMS;
 
 
