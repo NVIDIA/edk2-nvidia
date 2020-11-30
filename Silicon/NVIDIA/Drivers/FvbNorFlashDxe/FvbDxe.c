@@ -659,8 +659,11 @@ IsErasedFlashBuffer (
   to support variable operations.
 
   @param FirmwareVolumeHeader - A pointer to a firmware volume header
-  @param ExpectedLength - Expected size of firmware volume
-  @param CheckVariableStore - TRUE if the variable data should be checked
+  @param PartitionOffset      - Offset of the variable partition
+  @param PartitionSize        - Size of the partition
+  @param CheckVariableStore   - TRUE if the variable data should be checked
+  @param NorFlashProtocol     - Pointer to nor flash protocol
+  @param FlashAttributes      - Pointer to flash attributes for the nor flash partition is on
 
 **/
 EFI_STATUS
@@ -698,6 +701,7 @@ InitializeFvAndVariableStoreHeaders (
                             PartitionOffset,
                             PartitionSize,
                             FirmwareVolumeHeader);
+    ASSERT (IsErasedFlashBuffer ((UINT8 *)FirmwareVolumeHeader, PartitionSize));
   }
   //
   // EFI_FIRMWARE_VOLUME_HEADER
@@ -760,24 +764,32 @@ InitializeFvAndVariableStoreHeaders (
 /**
   Check the integrity of firmware volume header.
 
-  @param FwVolHeader - A pointer to a firmware volume header
-  @param ExpectedLength - Expected size of firmware volume
-  @param CheckVariableStore - TRUE if the variable data should be checked
+  @param PartitionData      - A pointer to the partition data
+  @param PartitionOffset      - Offset of the variable partition
+  @param PartitionSize        - Size of the partition
+  @param CheckVariableStore   - TRUE if the variable data should be checked
+  @param NorFlashProtocol     - Pointer to nor flash protocol
+  @param FlashAttributes      - Pointer to flash attributes for the nor flash partition is on
 
 **/
 EFI_STATUS
 ValidateFvHeader (
-  IN EFI_FIRMWARE_VOLUME_HEADER *FwVolHeader,
-  IN UINT64                      ExpectedLength,
-  IN BOOLEAN                     CheckVariableStore
+  IN VOID                        *PartitionData,
+  IN UINT64                      PartitionOffset,
+  IN UINT64                      PartitionSize,
+  IN BOOLEAN                     CheckVariableStore,
+  IN NVIDIA_NOR_FLASH_PROTOCOL   *NorFlashProtocol,
+  IN NOR_FLASH_ATTRIBUTES        *FlashAttributes
   )
 {
+  EFI_STATUS                  Status;
+  EFI_FIRMWARE_VOLUME_HEADER  *FwVolHeader;
   UINT16                      Checksum;
   VARIABLE_STORE_HEADER       *VariableStoreHeader;
   UINTN                       VariableStoreLength;
-  UINTN                       FvLength;
+  UINT64                      OriginalLength;
 
-  FvLength = ExpectedLength;
+  FwVolHeader = (EFI_FIRMWARE_VOLUME_HEADER *)PartitionData;
 
   //
   // Verify the header revision, header signature, length
@@ -786,7 +798,7 @@ ValidateFvHeader (
   //
   if ((FwVolHeader->Revision  != EFI_FVH_REVISION)  ||
       (FwVolHeader->Signature != EFI_FVH_SIGNATURE) ||
-      (FwVolHeader->FvLength  != FvLength)) {
+      (FwVolHeader->FvLength  > PartitionSize)) {
     DEBUG ((EFI_D_INFO, "%a: No Firmware Volume header present\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
@@ -814,12 +826,42 @@ ValidateFvHeader (
       return EFI_NOT_FOUND;
     }
 
-    VariableStoreLength = ExpectedLength - FwVolHeader->HeaderLength;
+    VariableStoreLength = FwVolHeader->FvLength - FwVolHeader->HeaderLength;
 
     if (VariableStoreHeader->Size != VariableStoreLength) {
       DEBUG ((EFI_D_INFO, "%a: Variable Store Length does not match\n", __FUNCTION__));
       return EFI_NOT_FOUND;
     }
+  }
+
+  //Resize if everything looks good except the size
+  if ((FwVolHeader->FvLength != PartitionSize) ||
+      (FwVolHeader->BlockMap[0].Length != FlashAttributes->BlockSize)) {
+    OriginalLength = FwVolHeader->FvLength;
+    FwVolHeader->FvLength = PartitionSize;
+    if (CheckVariableStore) {
+      VariableStoreHeader->Size = FwVolHeader->FvLength - FwVolHeader->HeaderLength;
+    }
+    FwVolHeader->BlockMap[0].NumBlocks = PartitionSize / FlashAttributes->BlockSize;
+    FwVolHeader->BlockMap[0].Length = FlashAttributes->BlockSize;
+    FwVolHeader->BlockMap[1].NumBlocks = 0;
+    FwVolHeader->BlockMap[1].Length = 0;
+
+    FwVolHeader->Checksum = 0;
+    FwVolHeader->Checksum = CalculateCheckSum16 ((UINT16*)FwVolHeader,FwVolHeader->HeaderLength);
+
+    Status = NorFlashProtocol->Erase (NorFlashProtocol,
+                                      PartitionOffset / FlashAttributes->BlockSize,
+                                      PartitionSize / FlashAttributes->BlockSize);
+
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to Erase Partition\r\n", __FUNCTION__));
+      return Status;
+    }
+    NorFlashProtocol->Write (NorFlashProtocol,
+                             PartitionOffset,
+                             OriginalLength,
+                             PartitionData);
   }
 
   return EFI_SUCCESS;
@@ -949,10 +991,14 @@ FVBInitialize (
     if (StrnCmp (PartitionEntry->PartitionName, UEFI_VARIABLE_PARTITION_NAME, sizeof (PartitionEntry->PartitionName)/sizeof(CHAR16)) == 0) {
       VariableOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
       VariableSize = (PartitionEntry->EndingLBA - PartitionEntry->StartingLBA + 1) * GPT_PARTITION_BLOCK_SIZE;
+      ASSERT ((VariableOffset % NorFlashAttributes.BlockSize) == 0);
+      ASSERT ((VariableSize % NorFlashAttributes.BlockSize) == 0);
     }
     if (StrnCmp (PartitionEntry->PartitionName, FTW_PARTITION_NAME, sizeof (PartitionEntry->PartitionName)/sizeof(CHAR16)) == 0) {
       FtwOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
       FtwSize = (PartitionEntry->EndingLBA - PartitionEntry->StartingLBA + 1) * GPT_PARTITION_BLOCK_SIZE;
+      ASSERT ((FtwOffset % NorFlashAttributes.BlockSize) == 0);
+      ASSERT ((FtwSize % NorFlashAttributes.BlockSize) == 0);
     }
 
     if ((VariableOffset != 0) && (FtwOffset != 0)) {
@@ -1043,20 +1089,14 @@ FVBInitialize (
     FvpData[Index].FvbProtocol.EraseBlocks = FvbEraseBlocks;
     FvpData[Index].FvbProtocol.ParentHandle = NULL;
 
-    Status = gBS->InstallMultipleProtocolInterfaces(&FvpData[Index].Handle,
-                                                    &gEfiFirmwareVolumeBlockProtocolGuid,
-                                                    &FvpData[Index].FvbProtocol,
-                                                    NULL);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to install FVP protocol\r\n", __FUNCTION__));
-      goto Exit;
-    }
-
     //Validate and initialize content
     if (FvpData[Index].PartitionData != NULL) {
-      Status = ValidateFvHeader ((EFI_FIRMWARE_VOLUME_HEADER *)FvpData[Index].PartitionData,
+      Status = ValidateFvHeader (FvpData[Index].PartitionData,
+                                 FvpData[Index].PartitionOffset,
                                  FvpData[Index].PartitionSize,
-                                 (Index == FVB_VARIABLE_INDEX));
+                                 (Index == FVB_VARIABLE_INDEX),
+                                 NorFlashProtocol,
+                                 &NorFlashAttributes);
       if (EFI_ERROR (Status)) {
         //Re-init partition
         Status = InitializeFvAndVariableStoreHeaders ((EFI_FIRMWARE_VOLUME_HEADER *)FvpData[Index].PartitionData,
@@ -1070,6 +1110,15 @@ FVBInitialize (
           goto Exit;
         }
       }
+    }
+
+    Status = gBS->InstallMultipleProtocolInterfaces(&FvpData[Index].Handle,
+                                                    &gEfiFirmwareVolumeBlockProtocolGuid,
+                                                    &FvpData[Index].FvbProtocol,
+                                                    NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install FVP protocol\r\n", __FUNCTION__));
+      goto Exit;
     }
   }
 
