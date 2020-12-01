@@ -440,14 +440,11 @@ RefreshAutoEnumeratedBootOptions (
   CHAR16                       *InputKernelArgs;
   CHAR16                       *CmdLine;
   UINTN                        CmdLen;
-  EFI_HANDLE                   *Handles;
-  UINTN                        HandleCount;
+  EFI_HANDLE                   Handle;
+  EFI_DEVICE_PATH              *DevicePath;
   EFI_BOOT_MANAGER_LOAD_OPTION *LoadOption;
   EFI_BOOT_MANAGER_LOAD_OPTION *UpdatedLoadOption;
-  UINTN                        Index;
   UINTN                        Count;
-  EFI_DEVICE_PATH_PROTOCOL     *CurrentDevicePath;
-  BOOLEAN                      ValidBootMedia;
 
   if (BootOptions == NULL ||
       BootOptionsCount == 0 ||
@@ -458,19 +455,8 @@ RefreshAutoEnumeratedBootOptions (
 
   ImgKernelArgs = NULL;
   DtbKernelArgs = NULL;
-  Handles = NULL;
   CmdLine = NULL;
   CmdLen = 0;
-
-  HandleCount = 0;
-  Status = gBS->LocateHandleBuffer (ByProtocol,
-                                    &gEfiLoadFileProtocolGuid,
-                                    NULL,
-                                    &HandleCount,
-                                    &Handles);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
 
   Status = gBS->AllocatePool (EfiBootServicesData,
                               BootOptionsCount * sizeof (EFI_BOOT_MANAGER_LOAD_OPTION),
@@ -493,70 +479,49 @@ RefreshAutoEnumeratedBootOptions (
   }
 
   UpdatedLoadOption = *UpdatedBootOptions;
-  for (Index = 0; Index < HandleCount; Index++) {
-    for (Count = 0; Count < *UpdatedBootOptionsCount; Count++) {
-      if ((CompareMem (UpdatedLoadOption[Count].FilePath,
-                       DevicePathFromHandle (Handles[Index]),
-                       GetDevicePathSize (UpdatedLoadOption[Count].FilePath)) == 0) &&
-          (UpdatedLoadOption[Count].OptionalDataSize == sizeof (EFI_GUID)) &&
-          (CompareGuid ((EFI_GUID *)UpdatedLoadOption[Count].OptionalData, &mBmAutoCreateBootOptionGuid))) {
-        CurrentDevicePath = UpdatedLoadOption[Count].FilePath;
-        ValidBootMedia = FALSE;
-        while (IsDevicePathEnd (CurrentDevicePath) == FALSE) {
-          if (CurrentDevicePath->SubType == MSG_EMMC_DP) {
-            ValidBootMedia = TRUE;
-            break;
-          } else if (CurrentDevicePath->SubType == HW_VENDOR_DP) {
-            VENDOR_DEVICE_PATH *VendorPath = (VENDOR_DEVICE_PATH *)CurrentDevicePath;
-            if (CompareGuid (&VendorPath->Guid, &gNVIDIARamloadKernelGuid) ||
-                CompareGuid (&VendorPath->Guid, &gNVIDIARcmKernelGuid)) {
-              ValidBootMedia = TRUE;
-              break;
-            }
-          }
-          CurrentDevicePath = NextDevicePathNode (CurrentDevicePath);
-        }
-        if (!ValidBootMedia) {
-          continue;
-        }
-
-        if (TegraGetPlatform() == TEGRA_PLATFORM_SILICON) {
-          gBS->HandleProtocol (Handles[Index],
-                               &gNVIDIALoadfileKernelArgsGuid,
-                               (VOID **)&ImgKernelArgs);
-          if (EFI_ERROR (Status)) {
-            goto Error;
-          }
-        }
-
-        if (ImgKernelArgs != NULL &&
-            StrLen (ImgKernelArgs) != 0) {
-          DEBUG ((DEBUG_INFO, "%a: Image Kernel Command Line: %s\n", __FUNCTION__, ImgKernelArgs));
-          InputKernelArgs = ImgKernelArgs;
-        } else {
-          Status = GetDtbCommandLine (&DtbKernelArgs);
-          if (EFI_ERROR (Status)) {
-            goto Error;
-          }
-
-          InputKernelArgs = DtbKernelArgs;
-        }
-
-        Status = GetPlatformCommandLine (InputKernelArgs, &CmdLine, &CmdLen);
-        if (EFI_ERROR (Status)) {
-          goto Error;
-        }
-
-        UpdatedLoadOption[Count].OptionalDataSize = CmdLen;
-        gBS->FreePool (UpdatedLoadOption[Count].OptionalData);
-        Status = gBS->AllocatePool (EfiBootServicesData,
-                                    CmdLen,
-                                    (VOID **)&UpdatedLoadOption[Count].OptionalData);
-        if (EFI_ERROR (Status)) {
-          goto Error;
-        }
-        gBS->CopyMem (UpdatedLoadOption[Count].OptionalData, CmdLine, CmdLen);
+  for (Count = 0; Count < *UpdatedBootOptionsCount; Count++) {
+    if (CompareGuid ((EFI_GUID *)UpdatedLoadOption[Count].OptionalData, &mBmAutoCreateBootOptionGuid)) {
+      DevicePath = UpdatedLoadOption[Count].FilePath;
+      Status = gBS->LocateDevicePath (&gNVIDIALoadfileKernelArgsGuid, &DevicePath, &Handle);
+      if (EFI_ERROR (Status)) {
+        Status = EFI_SUCCESS;
+        continue;
       }
+
+      Status = gBS->HandleProtocol (Handle,
+                                    &gNVIDIALoadfileKernelArgsGuid,
+                                    (VOID **)&ImgKernelArgs);
+      ASSERT_EFI_ERROR (Status);
+
+      //Always use DTB arguments on pre-silicon targets
+      if ((TegraGetPlatform() == TEGRA_PLATFORM_SILICON) &&
+          (ImgKernelArgs != NULL) &&
+          (StrLen (ImgKernelArgs) != 0)) {
+        DEBUG ((DEBUG_INFO, "%a: Image Kernel Command Line: %s\n", __FUNCTION__, ImgKernelArgs));
+        InputKernelArgs = ImgKernelArgs;
+      } else {
+        Status = GetDtbCommandLine (&DtbKernelArgs);
+        if (EFI_ERROR (Status)) {
+          goto Error;
+        }
+
+        InputKernelArgs = DtbKernelArgs;
+      }
+
+      Status = GetPlatformCommandLine (InputKernelArgs, &CmdLine, &CmdLen);
+      if (EFI_ERROR (Status)) {
+        goto Error;
+      }
+
+      UpdatedLoadOption[Count].OptionalDataSize = CmdLen;
+      gBS->FreePool (UpdatedLoadOption[Count].OptionalData);
+      Status = gBS->AllocatePool (EfiBootServicesData,
+                                  CmdLen,
+                                  (VOID **)&UpdatedLoadOption[Count].OptionalData);
+      if (EFI_ERROR (Status)) {
+        goto Error;
+      }
+      gBS->CopyMem (UpdatedLoadOption[Count].OptionalData, CmdLine, CmdLen);
     }
   }
 
@@ -566,9 +531,6 @@ Error:
   }
   if (CmdLine != NULL) {
     gBS->FreePool (CmdLine);
-  }
-  if (Handles != NULL) {
-    gBS->FreePool (Handles);
   }
 
   return Status;
