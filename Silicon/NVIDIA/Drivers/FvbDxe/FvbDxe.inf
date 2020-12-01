@@ -34,6 +34,7 @@
 [LibraryClasses]
   BaseLib
   DebugLib
+  MemoryAllocationLib
   UefiLib
   UefiDriverEntryPoint
   UefiBootServicesTableLib
@@ -51,6 +52,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
   gNVIDIATokenSpaceGuid.PcdUEFIVariablesPartitionName
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+  gNVIDIATokenSpaceGuid.PcdNoVariableRtProperties
 
 [Guids]
   gEfiSystemNvDataFvGuid
@@ -58,6 +60,7 @@
   gEfiVariableGuid
   gEdkiiNvVarStoreFormattedGuid
   gEfiEventVirtualAddressChangeGuid
+  gEfiRtPropertiesTableGuid
 
 [Depex]
   gNVIDIAStandaloneMmUnavailableGuid

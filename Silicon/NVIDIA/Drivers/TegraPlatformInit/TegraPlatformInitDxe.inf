@@ -46,14 +46,10 @@
   MemoryAllocationLib
 
 [Guids]
-  gEfiRtPropertiesTableGuid
   gEdkiiNvVarStoreFormattedGuid
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
-  gNVIDIATokenSpaceGuid.PcdNoVariableRtProperties
-  gNVIDIATokenSpaceGuid.PcdVariableRtProperties
-  gNVIDIATokenSpaceGuid.PcdRuntimeVariableServicesSupported
 
 [Depex]
   TRUE

@@ -16,10 +16,11 @@
 
 #include <PiDxe.h>
 
+#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
-#include <Library/UefiBootServicesTableLib.h>
 #include <Library/QspiControllerLib.h>
+#include <Library/TimerLib.h>
 
 #include "QspiControllerLibPrivate.h"
 
@@ -60,7 +61,7 @@ QspiFlushFifo (
       while (QSPI_FIFO_STATUS_0_FIFO_FLUSH == MmioBitFieldRead32 (QspiBaseAddress + QSPI_FIFO_STATUS_0,
                                                                   QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT,
                                                                   QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT)) {
-        gBS->Stall (1);
+        MicroSecondDelay (1);
         if (Timeout != TIMEOUT) {
           Timeout++;
           if (Timeout == TIMEOUT) {
@@ -84,7 +85,7 @@ QspiFlushFifo (
       while (QSPI_FIFO_STATUS_0_FIFO_FLUSH == MmioBitFieldRead32 (QspiBaseAddress + QSPI_FIFO_STATUS_0,
                                                                   QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT,
                                                                   QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT)) {
-        gBS->Stall (1);
+        MicroSecondDelay (1);
         if (Timeout != TIMEOUT) {
           Timeout++;
           if (Timeout == TIMEOUT) {
@@ -181,7 +182,7 @@ QspiWaitTransactionStatusReady (
   while (QSPI_TRANSFER_STATUS_0_RDY_NOT_READY == MmioBitFieldRead32 (QspiBaseAddress + QSPI_TRANSFER_STATUS_0,
                                                                      QSPI_TRANSFER_STATUS_0_RDY_BIT,
                                                                      QSPI_TRANSFER_STATUS_0_RDY_BIT)) {
-    gBS->Stall (1);
+    MicroSecondDelay (1);
     if (Timeout != TIMEOUT) {
       Timeout++;
       if (Timeout == TIMEOUT) {
@@ -307,7 +308,7 @@ QspiPerformReceive (
       // Since we are using packed mode. we always read 4B but discard what we did not request.
       Data = MmioRead32 (QspiBaseAddress + QSPI_RX_FIFO_0);
       Stride = ((Len - Count) >= sizeof (UINT32)) ? sizeof (UINT32) : (Len - Count);
-      gBS->CopyMem (BufferTrack, &Data, Stride);
+      CopyMem (BufferTrack, &Data, Stride);
       BufferTrack += Stride;
       Count += Stride;
     } else if (PacketLen == sizeof (UINT32)) {
@@ -386,7 +387,7 @@ QspiPerformTransmit (
     if (PacketLen == sizeof (UINT8)) {
       // Since we are using packed mode. we always write 4B with dummy bytes if needed.
       Stride = ((Len - Count) >= sizeof (UINT32)) ? sizeof (UINT32) : (Len - Count);
-      gBS->CopyMem (&Data, BufferTrack, Stride);
+      CopyMem (&Data, BufferTrack, Stride);
       MmioWrite32 (QspiBaseAddress + QSPI_TX_FIFO_0, Data);
       BufferTrack += Stride;
       Count += Stride;
@@ -579,7 +580,7 @@ QspiPerformTransaction (
   QspiConfigureCS(QspiBaseAddress, FALSE);
 
   // Wait for the controller to clear state before starting next transaction.
-  gBS->Stall (TIMEOUT);
+  MicroSecondDelay (TIMEOUT);
 
   return EFI_SUCCESS;
 }

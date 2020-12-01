@@ -29,6 +29,7 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  BaseMemoryLib
   IoLib
   DebugLib
-  UefiBootServicesTableLib
+  TimerLib

@@ -17,7 +17,7 @@
   INF_VERSION                    = 0x00010005
   BASE_NAME                      = NorFlashDxe
   FILE_GUID                      = c5e1b811-b319-4d0e-b31a-81e23b29dd2d
-  MODULE_TYPE                    = DXE_DRIVER
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
   VERSION_STRING                 = 1.0
 
   ENTRY_POINT                    = InitializeNorFlashDxe
@@ -35,8 +35,10 @@
   DebugLib
   UefiLib
   FdtLib
+  TimerLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
+  UefiRuntimeLib
 
 [Protocols]
   gNVIDIANorFlashProtocolGuid
@@ -44,6 +46,9 @@
   gEfiEraseBlockProtocolGuid
   gNVIDIAQspiControllerProtocolGuid
   gNVIDIADeviceTreeNodeProtocolGuid
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid
 
 [Depex]
   TRUE

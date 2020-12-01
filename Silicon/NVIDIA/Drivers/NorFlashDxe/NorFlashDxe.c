@@ -20,6 +20,8 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/TimerLib.h>
+#include <Library/UefiRuntimeLib.h>
 
 #include <libfdt.h>
 
@@ -62,6 +64,7 @@
 #define NOR_RDID_MEM_INTF_TYPE_OFFSET 1
 #define NOR_RDID_MEM_DENSITY_OFFSET   2
 
+#define NOR_PAGE_SIZE                 256
 typedef struct {
   UINT32                           Signature;
   UINT32                           FlashInstance;
@@ -74,6 +77,8 @@ typedef struct {
   NVIDIA_QSPI_CONTROLLER_PROTOCOL  *QspiController;
   EFI_DEVICE_PATH_PROTOCOL         *ParentDevicePath;
   EFI_DEVICE_PATH_PROTOCOL         *NorFlashDevicePath;
+  EFI_EVENT                        VirtualAddrChangeEvent;
+  UINT8                            CommandBuffer[NOR_CMD_SIZE + NOR_ADDR_SIZE + NOR_PAGE_SIZE];
 } NOR_FLASH_PRIVATE_DATA;
 
 
@@ -91,7 +96,7 @@ NOR_FLASH_ATTRIBUTES FlashAttributes[] = {
     SIZE_256KB,                    // Sector Size
     256,                           // Number of Sectors
     SIZE_64KB,                     // Block Size
-    256                            // page Size
+    NOR_PAGE_SIZE                  // page Size
   },
   {
     "s25fs256s",                   // Flash name
@@ -101,7 +106,7 @@ NOR_FLASH_ATTRIBUTES FlashAttributes[] = {
     SIZE_256KB,                    // Sector Size
     128,                           // Number of Sectors
     SIZE_64KB,                     // Block Size
-    256                            // page Size
+    NOR_PAGE_SIZE                  // page Size
   },
   {
   }
@@ -207,7 +212,7 @@ WaitNorFlashWriteComplete (
       return EFI_DEVICE_ERROR;
     }
 
-    gBS->Stall (TIMEOUT);
+    MicroSecondDelay (TIMEOUT);
 
     // Read WIP status
     Status = ReadNorFlashRegister (Private, &RegCmd, sizeof (RegCmd), &Resp);
@@ -276,7 +281,7 @@ ConfigureNorFlashWriteEnLatch (
       return Status;
     }
 
-    gBS->Stall (TIMEOUT);
+    MicroSecondDelay (TIMEOUT);
 
     // Read WREN status
     Status = ReadNorFlashRegister (Private, &RegCmd, sizeof (RegCmd), &Resp);
@@ -354,7 +359,6 @@ UpdateNorFlashParameters (
 )
 {
   EFI_STATUS Status;
-  UINT8      *Cmd;
   UINT32     CmdSize;
   UINT32     Offset;
   UINT32     Count;
@@ -366,22 +370,19 @@ UpdateNorFlashParameters (
   }
 
   CmdSize = NOR_CMD_SIZE + NOR_REG_OFFSET_SIZE;
-  Cmd = AllocateZeroPool (CmdSize);
-  if (Cmd == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
+  ZeroMem (Private->CommandBuffer, CmdSize);
 
   // Create command for reading CR3V
   Offset = NOR_CR3V_REG_OFFSET;
   AddressShift = 0;
   for (Count = (CmdSize - 1); Count > 0; Count--) {
-    Cmd[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
+    Private->CommandBuffer[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
     AddressShift += 8;
   }
-  Cmd[0] = NOR_READ_ANY_REG;
+  Private->CommandBuffer[0] = NOR_READ_ANY_REG;
 
   // Read CR3V status
-  Status = ReadNorFlashRegister (Private, Cmd, CmdSize, &Resp);
+  Status = ReadNorFlashRegister (Private, Private->CommandBuffer, CmdSize, &Resp);
   if (EFI_ERROR(Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash CR3V register.\n", __FUNCTION__));
     goto ErrorExit;
@@ -398,7 +399,6 @@ UpdateNorFlashParameters (
   DEBUG ((EFI_D_INFO, "%a: NOR flash parameters updated.\n", __FUNCTION__));
 
 ErrorExit:
-  FreePool (Cmd);
 
   return Status;
 }
@@ -455,7 +455,6 @@ NorFlashRead(
 )
 {
   EFI_STATUS              Status;
-  UINT8                   *Cmd;
   UINT32                  CmdSize;
   UINT32                  Count;
   UINT32                  AddressShift;
@@ -480,19 +479,16 @@ NorFlashRead(
   }
 
   CmdSize = NOR_CMD_SIZE + NOR_ADDR_SIZE;
-  Cmd = AllocateZeroPool (CmdSize);
-  if (Cmd == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
+  ZeroMem (Private->CommandBuffer, CmdSize);
 
   AddressShift = 0;
   for (Count = (CmdSize - 1); Count > 0; Count--) {
-    Cmd[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
+    Private->CommandBuffer[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
     AddressShift += 8;
   }
-  Cmd[0] = NOR_READ_DATA_CMD;
+  Private->CommandBuffer[0] = NOR_READ_DATA_CMD;
 
-  Packet.TxBuf = Cmd;
+  Packet.TxBuf = Private->CommandBuffer;
   Packet.TxLen = CmdSize;
   Packet.RxBuf = Buffer;
   Packet.RxLen = Size;
@@ -506,7 +502,6 @@ NorFlashRead(
   DEBUG ((EFI_D_INFO, "%a: Successfully read data from NOR flash.\n", __FUNCTION__));
 
 ErrorExit:
-  FreePool (Cmd);
 
   return Status;
 }
@@ -575,7 +570,6 @@ NorFlashErase(
 )
 {
   EFI_STATUS              Status;
-  UINT8                   *Cmd;
   UINT32                  CmdSize;
   UINT32                  Count;
   UINT32                  Block;
@@ -600,10 +594,7 @@ NorFlashErase(
   }
 
   CmdSize = NOR_CMD_SIZE + NOR_ADDR_SIZE;
-  Cmd = AllocateZeroPool (CmdSize);
-  if (Cmd == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
+  ZeroMem (Private->CommandBuffer, CmdSize);
 
   for (Block = Lba; Block < (Lba + NumLba); Block++) {
     Status = ConfigureNorFlashWriteEnLatch (Private, TRUE);
@@ -615,12 +606,12 @@ NorFlashErase(
     AddressShift = 0;
     Offset = Block * FlashAttributes[Private->FlashInstance].BlockSize;
     for (Count = (CmdSize - 1); Count > 0; Count--) {
-      Cmd[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
+      Private->CommandBuffer[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
       AddressShift += 8;
     }
-    Cmd[0] = NOR_ERASE_DATA_CMD;
+    Private->CommandBuffer[0] = NOR_ERASE_DATA_CMD;
 
-    Packet.TxBuf = Cmd;
+    Packet.TxBuf = Private->CommandBuffer;
     Packet.TxLen = CmdSize;
     Packet.RxBuf = NULL;
     Packet.RxLen = 0;
@@ -647,7 +638,6 @@ NorFlashErase(
   DEBUG ((EFI_D_INFO, "%a: Successfully erased data from NOR flash.\n", __FUNCTION__));
 
 ErrorExit:
-  FreePool (Cmd);
 
   return Status;
 }
@@ -725,7 +715,6 @@ NorFlashWriteSinglePage(
 )
 {
   EFI_STATUS              Status;
-  UINT8                   *Cmd;
   UINT32                  CmdSize;
   UINT32                  Count;
   UINT32                  AddressShift;
@@ -749,26 +738,22 @@ NorFlashWriteSinglePage(
   }
 
   CmdSize = NOR_CMD_SIZE + NOR_ADDR_SIZE;
-  Cmd = AllocateZeroPool (CmdSize + Size);
-  if (Cmd == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
-
+  ZeroMem (Private->CommandBuffer, CmdSize + Size);
   Status = ConfigureNorFlashWriteEnLatch (Private, TRUE);
   if (EFI_ERROR(Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
-  gBS->CopyMem (&Cmd[CmdSize], Buffer, Size);
+  CopyMem (&Private->CommandBuffer[CmdSize], Buffer, Size);
   AddressShift = 0;
   for (Count = (CmdSize - 1); Count > 0; Count--) {
-    Cmd[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
+    Private->CommandBuffer[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
     AddressShift += 8;
   }
-  Cmd[0] = NOR_WRITE_DATA_CMD;
+  Private->CommandBuffer[0] = NOR_WRITE_DATA_CMD;
 
-  Packet.TxBuf = Cmd;
+  Packet.TxBuf = Private->CommandBuffer;
   Packet.TxLen = CmdSize + Size;
   Packet.RxBuf = NULL;
   Packet.RxLen = 0;
@@ -794,7 +779,6 @@ NorFlashWriteSinglePage(
   DEBUG ((EFI_D_INFO, "%a: Successfully wrote data to NOR flash.\n", __FUNCTION__));
 
 ErrorExit:
-  FreePool (Cmd);
 
   return Status;
 }
@@ -1000,6 +984,28 @@ CheckNorFlashCompatibility(
   }
 }
 
+/**
+  Fixup internal data so that EFI can be call in virtual mode.
+  Call the passed in Child Notify event and convert any pointers in
+  lib to virtual mode.
+
+  @param[in]    Event   The Event that is being processed
+  @param[in]    Context Event Context
+**/
+VOID
+EFIAPI
+NorVirtualNotifyEvent (
+  IN EFI_EVENT        Event,
+  IN VOID             *Context
+  )
+{
+  NOR_FLASH_PRIVATE_DATA *Private;
+
+  Private = (NOR_FLASH_PRIVATE_DATA *)Context;
+  EfiConvertPointer (0x0, (VOID**)&Private->QspiController->PerformTransaction);
+  EfiConvertPointer (0x0, (VOID**)&Private->QspiController);
+  return;
+}
 
 /**
   Tests to see if this driver supports a given controller. If a child device is provided,
@@ -1142,7 +1148,7 @@ NorFlashDxeDriverBindingStart (
   }
 
   // Allocate Private Data
-  Private = AllocateZeroPool (sizeof (NOR_FLASH_PRIVATE_DATA));
+  Private = AllocateRuntimeZeroPool (sizeof (NOR_FLASH_PRIVATE_DATA));
   if (Private == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
@@ -1233,6 +1239,16 @@ NorFlashDxeDriverBindingStart (
   }
   Private->ProtocolsInstalled = TRUE;
 
+  Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                               TPL_NOTIFY,
+                               NorVirtualNotifyEvent,
+                               Private,
+                               &gEfiEventVirtualAddressChangeGuid,
+                               &Private->VirtualAddrChangeEvent);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to create virtual address callback event\r\n",__FUNCTION__));
+    goto ErrorExit;
+  }
   // Open caller ID protocol for child
   Status = gBS->InstallMultipleProtocolInterfaces (&Controller,
                                                    &gEfiCallerIdGuid,
@@ -1264,6 +1280,7 @@ ErrorExit:
                                                 &gEfiCallerIdGuid,
                                                 NULL,
                                                 NULL);
+      gBS->CloseEvent (Private->VirtualAddrChangeEvent);
       if (Private->ProtocolsInstalled) {
         gBS->UninstallMultipleProtocolInterfaces (Private->NorFlashHandle,
                                                   &gNVIDIANorFlashProtocolGuid,
@@ -1341,6 +1358,7 @@ NorFlashDxeDriverBindingStop (
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
     }
+    gBS->CloseEvent (Private->VirtualAddrChangeEvent);
     if (Private->ProtocolsInstalled) {
       Status = gBS->UninstallMultipleProtocolInterfaces (ChildHandleBuffer[Index],
                                                          &gNVIDIANorFlashProtocolGuid,

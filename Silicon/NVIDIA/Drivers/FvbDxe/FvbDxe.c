@@ -1010,6 +1010,7 @@ FVBInitialize (
   EFI_HANDLE                  FlashHandle;
   UINTN                       Index;
   UINTN                       PrimaryIndex;
+  EFI_RT_PROPERTIES_TABLE     *RtProperties;
 
   if (PcdGetBool(PcdEmuVariableNvModeEnable)) {
       return EFI_SUCCESS;
@@ -1245,6 +1246,21 @@ FVBInitialize (
                                                       &gEfiFaultTolerantWriteProtocolGuid,
                                                       &Private->FtwInstance,
                                                       NULL);
+      if (EFI_ERROR (Status)) {
+        goto NoFlashExit;
+      }
+
+      RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocatePool (sizeof (EFI_RT_PROPERTIES_TABLE));
+      if (RtProperties == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT properties table\r\n",__FUNCTION__));
+        Status = EFI_OUT_OF_RESOURCES;
+        goto NoFlashExit;
+      }
+      RtProperties->Version = EFI_RT_PROPERTIES_TABLE_VERSION;
+      RtProperties->Length = sizeof (EFI_RT_PROPERTIES_TABLE);
+      RtProperties->RuntimeServicesSupported = PcdGet32 (PcdNoVariableRtProperties);
+      gBS->InstallConfigurationTable (&gEfiRtPropertiesTableGuid, RtProperties);
+
     } else {
       Status = EFI_OUT_OF_RESOURCES;
     }

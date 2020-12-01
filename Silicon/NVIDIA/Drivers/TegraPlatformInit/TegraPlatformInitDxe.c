@@ -23,7 +23,6 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
-#include <Guid/RtPropertiesTable.h>
 #include "TegraPlatformInitDxePrivate.h"
 
 STATIC
@@ -64,7 +63,6 @@ TegraPlatformInitialize (
   UINTN                   ChipID;
   TEGRA_PLATFORM_TYPE     PlatformType;
   UINTN                   EmmcMagic;
-  EFI_RT_PROPERTIES_TABLE *RtProperties;
 
   ChipID = TegraGetChipID();
   DEBUG ((DEBUG_INFO, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, ChipID));
@@ -88,20 +86,6 @@ TegraPlatformInitialize (
       }
     }
   }
-
-  RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocatePool (sizeof (EFI_RT_PROPERTIES_TABLE));
-  if (RtProperties == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT properties table\r\n",__FUNCTION__));
-    return EFI_OUT_OF_RESOURCES;
-  }
-  RtProperties->Version = EFI_RT_PROPERTIES_TABLE_VERSION;
-  RtProperties->Length = sizeof (EFI_RT_PROPERTIES_TABLE);
-  if (PcdGetBool (PcdRuntimeVariableServicesSupported)) {
-    RtProperties->RuntimeServicesSupported = PcdGet32 (PcdVariableRtProperties);
-  } else {
-    RtProperties->RuntimeServicesSupported = PcdGet32 (PcdNoVariableRtProperties);
-  }
-  gBS->InstallConfigurationTable (&gEfiRtPropertiesTableGuid, RtProperties);
 
   return EFI_SUCCESS;
 }

@@ -231,9 +231,6 @@ Include
 #Tegra Use Production USB Fw
   gNVIDIATokenSpaceGuid.PcdTegraUseProdUsbFw|TRUE|BOOLEAN|0x00000027
 
-#Is SetVariable Supported at runtime
-  gNVIDIATokenSpaceGuid.PcdRuntimeVariableServicesSupported|FALSE|BOOLEAN|0x00000032
-
 #Default to make PCIe entry void in ACPI table
 #Need two as the Platform Init Library is invoked prior to variable services being available
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|0x00|UINT8|0x0000002B

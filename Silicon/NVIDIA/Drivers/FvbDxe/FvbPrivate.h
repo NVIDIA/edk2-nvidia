@@ -28,6 +28,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/MemoryAllocationLib.h>
 
 #include <Protocol/FirmwareVolumeBlock.h>
 #include <Protocol/PartitionInfo.h>
@@ -35,6 +36,7 @@
 #include <Protocol/FaultTolerantWrite.h>
 
 #include <Guid/VariableFormat.h>
+#include <Guid/RtPropertiesTable.h>
 
 typedef struct {
   EFI_BLOCK_IO_PROTOCOL               *BlockIo;

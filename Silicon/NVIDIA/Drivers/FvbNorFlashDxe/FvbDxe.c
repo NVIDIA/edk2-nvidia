@@ -374,10 +374,6 @@ FvbWrite (
   BOOLEAN                 LbaBoundaryCrossed;
   NVIDIA_FVB_PRIVATE_DATA *Private;
 
-  if (EfiAtRuntime()) {
-    return EFI_UNSUPPORTED;
-  }
-
   if ((This == NULL) ||
       (NumBytes == NULL) ||
       (Buffer == NULL)) {
@@ -509,10 +505,6 @@ FvbEraseBlocks (
   UINT64                  FvbBufferSize;
   NVIDIA_FVB_PRIVATE_DATA *Private;
 
-  if (EfiAtRuntime()) {
-    return EFI_UNSUPPORTED;
-  }
-
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
   }
@@ -614,9 +606,14 @@ FVBVirtualNotifyEvent (
   NVIDIA_FVB_PRIVATE_DATA *Private;
 
   Private = (NVIDIA_FVB_PRIVATE_DATA *)Context;
+  EfiConvertPointer (0x0, (VOID**)&Private->NorFlashProtocol->Erase);
+  EfiConvertPointer (0x0, (VOID**)&Private->NorFlashProtocol->GetAttributes);
+  EfiConvertPointer (0x0, (VOID**)&Private->NorFlashProtocol->Read);
+  EfiConvertPointer (0x0, (VOID**)&Private->NorFlashProtocol->Write);
   EfiConvertPointer (0x0, (VOID**)&Private->NorFlashProtocol);
   if (Private->PartitionData != NULL) {
-    EfiConvertPointer (0x0, (VOID**)Private->PartitionData);
+    EfiConvertPointer (0x0, (VOID**)&Private->PartitionData);
+    EfiConvertPointer (0x0, (VOID**)&Private->PartitionAddress);
   }
   EfiConvertPointer (0x0, (VOID**)&Private);
   return;
@@ -895,6 +892,8 @@ FVBInitialize (
   UINT64                      FtwSize;
   NVIDIA_FVB_PRIVATE_DATA     *FvpData;
   VOID                        *FvpBuffers;
+  EFI_RT_PROPERTIES_TABLE     *RtProperties;
+
 
   if (PcdGetBool(PcdEmuVariableNvModeEnable)) {
       return EFI_SUCCESS;
@@ -1126,6 +1125,18 @@ FVBInitialize (
                                                    &gEdkiiNvVarStoreFormattedGuid,
                                                    NULL,
                                                    NULL);
+
+
+  RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocatePool (sizeof (EFI_RT_PROPERTIES_TABLE));
+  if (RtProperties == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT properties table\r\n",__FUNCTION__));
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
+  RtProperties->Version = EFI_RT_PROPERTIES_TABLE_VERSION;
+  RtProperties->Length = sizeof (EFI_RT_PROPERTIES_TABLE);
+  RtProperties->RuntimeServicesSupported = PcdGet32 (PcdVariableRtProperties);
+  gBS->InstallConfigurationTable (&gEfiRtPropertiesTableGuid, RtProperties);
 
 Exit:
 

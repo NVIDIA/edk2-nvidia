@@ -20,7 +20,9 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/DxeServicesTableLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/UefiRuntimeLib.h>
 
 #include <Protocol/QspiController.h>
 
@@ -32,6 +34,7 @@ typedef struct {
   UINT32                          Signature;
   EFI_PHYSICAL_ADDRESS            QspiBaseAddress;
   NVIDIA_QSPI_CONTROLLER_PROTOCOL QspiControllerProtocol;
+  EFI_EVENT                       VirtualAddrChangeEvent;
 } QSPI_CONTROLLER_PRIVATE_DATA;
 
 
@@ -77,6 +80,27 @@ QspiControllerPerformTransaction(
   return QspiPerformTransaction (Private->QspiBaseAddress, Packet);
 }
 
+/**
+  Fixup internal data so that EFI can be call in virtual mode.
+  Call the passed in Child Notify event and convert any pointers in
+  lib to virtual mode.
+
+  @param[in]    Event   The Event that is being processed
+  @param[in]    Context Event Context
+**/
+VOID
+EFIAPI
+VirtualNotifyEvent (
+  IN EFI_EVENT        Event,
+  IN VOID             *Context
+  )
+{
+  QSPI_CONTROLLER_PRIVATE_DATA *Private;
+
+  Private = (QSPI_CONTROLLER_PRIVATE_DATA *)Context;
+  EfiConvertPointer (0x0, (VOID**)&Private->QspiBaseAddress);
+  return;
+}
 
 /**
   Callback that will be invoked at various phases of the driver initialization
@@ -108,6 +132,7 @@ DeviceDiscoveryNotify (
   EFI_PHYSICAL_ADDRESS            BaseAddress;
   UINTN                           RegionSize;
   EFI_DEVICE_PATH_PROTOCOL        *DevicePath;
+  EFI_GCD_MEMORY_SPACE_DESCRIPTOR Descriptor;
 
   Private = NULL;
 
@@ -127,7 +152,21 @@ DeviceDiscoveryNotify (
       DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
       return Status;
     }
-    Private = AllocateZeroPool (sizeof (QSPI_CONTROLLER_PRIVATE_DATA));
+
+    //Convert to runtime memory
+    Status = gDS->GetMemorySpaceDescriptor (BaseAddress, &Descriptor);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to be memory descriptor\r\n", __FUNCTION__));
+      return Status;
+    }
+
+    Status = gDS->SetMemorySpaceAttributes (BaseAddress, RegionSize, Descriptor.Attributes | EFI_MEMORY_RUNTIME);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set memory as runtime\r\n", __FUNCTION__));
+      return Status;
+    }
+
+    Private = AllocateRuntimeZeroPool (sizeof (QSPI_CONTROLLER_PRIVATE_DATA));
     if (Private == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
@@ -139,6 +178,18 @@ DeviceDiscoveryNotify (
       goto ErrorExit;
     }
     Private->QspiControllerProtocol.PerformTransaction = QspiControllerPerformTransaction;
+
+    Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                                 TPL_NOTIFY,
+                                 VirtualNotifyEvent,
+                                 Private,
+                                 &gEfiEventVirtualAddressChangeGuid,
+                                 &Private->VirtualAddrChangeEvent);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "Failed to create virtual address event\r\n"));
+      goto ErrorExit;
+    }
+
     Status = gBS->InstallMultipleProtocolInterfaces (&ControllerHandle,
                                                      &gNVIDIAQspiControllerProtocolGuid,
                                                      &Private->QspiControllerProtocol,
@@ -162,6 +213,8 @@ DeviceDiscoveryNotify (
     if (!EFI_ERROR (Status)) {
       return Status;
     }
+
+    gBS->CloseEvent (Private->VirtualAddrChangeEvent);
     break;
   default:
     return EFI_SUCCESS;
