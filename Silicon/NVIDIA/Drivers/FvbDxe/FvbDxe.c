@@ -649,6 +649,7 @@ ValidateFvHeader (
   VARIABLE_STORE_HEADER       *VariableStoreHeader;
   UINTN                       VariableStoreLength;
   UINTN                       FvLength;
+  UINTN                       UnusedBlocks;
 
   FvLength = PcdGet32(PcdFlashNvStorageVariableSize);
 
@@ -659,7 +660,7 @@ ValidateFvHeader (
   //
   if ((FwVolHeader->Revision  != EFI_FVH_REVISION)  ||
       (FwVolHeader->Signature != EFI_FVH_SIGNATURE) ||
-      (FwVolHeader->FvLength  != FvLength)) {
+      (FwVolHeader->FvLength  > FvLength)) {
     DEBUG ((EFI_D_INFO, "%a: No Firmware Volume header present\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
@@ -686,11 +687,39 @@ ValidateFvHeader (
     return EFI_NOT_FOUND;
   }
 
-  VariableStoreLength = PcdGet32 (PcdFlashNvStorageVariableSize) - FwVolHeader->HeaderLength;
+  VariableStoreLength = FwVolHeader->FvLength - FwVolHeader->HeaderLength;
 
   if (VariableStoreHeader->Size != VariableStoreLength) {
     DEBUG ((EFI_D_INFO, "%a: Variable Store Length does not match\n", __FUNCTION__));
     return EFI_NOT_FOUND;
+  }
+
+  //Resize if everything looks good except the size
+  if ((FwVolHeader->FvLength != FvLength) ||
+      (FwVolHeader->BlockMap[0].Length != Private->BlockIo->Media->BlockSize)) {
+    UnusedBlocks = (FvLength - FwVolHeader->FvLength)/Private->BlockIo->Media->BlockSize;
+    FwVolHeader->FvLength = FvLength;
+    FwVolHeader->BlockMap[0].NumBlocks = FvLength / Private->BlockIo->Media->BlockSize;
+    FwVolHeader->BlockMap[0].Length = Private->BlockIo->Media->BlockSize;
+    FwVolHeader->BlockMap[1].NumBlocks = 0;
+    FwVolHeader->BlockMap[1].Length = 0;
+
+    FwVolHeader->Checksum = 0;
+    FwVolHeader->Checksum = CalculateCheckSum16 ((UINT16*)FwVolHeader,FwVolHeader->HeaderLength);
+
+    VariableStoreHeader->Size = FwVolHeader->FvLength - FwVolHeader->HeaderLength;
+
+    if (UnusedBlocks != 0) {
+      gBS->SetMem ((UINT8 *) FwVolHeader + MultU64x32 (Private->NumBlocks - UnusedBlocks, Private->BlockIo->Media->BlockSize),
+                   MultU64x32 (UnusedBlocks, Private->BlockIo->Media->BlockSize),
+                   0xFF);
+    }
+
+    return Private->BlockIo->WriteBlocks (Private->BlockIo,
+                                          Private->BlockIo->Media->MediaId,
+                                          Private->PartitionStartingLBA,
+                                          MultU64x32 (Private->NumBlocks, Private->BlockIo->Media->BlockSize),
+                                          FwVolHeader);
   }
 
   return EFI_SUCCESS;
