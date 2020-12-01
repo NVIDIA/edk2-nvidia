@@ -157,7 +157,7 @@ FvbGetBlockSize (
     return EFI_INVALID_PARAMETER;
   }
 
-  LastBlock = Private->NumBlocksA + Private->NumBlocksB - 1;
+  LastBlock = Private->NumBlocks - 1;
 
   if (Lba > LastBlock) {
     Status = EFI_INVALID_PARAMETER;
@@ -244,7 +244,7 @@ FvbRead (
   }
 
   BlockSize = Private->BlockIo->Media->BlockSize;
-  LastBlock = Private->NumBlocksA + Private->NumBlocksB - 1;
+  LastBlock = Private->NumBlocks - 1;
 
   // The read must not span FV boundaries.
   if (Lba > LastBlock) {
@@ -275,30 +275,6 @@ FvbRead (
   CopyMem(Buffer, Private->VariablePartition + FvbOffset, *NumBytes);
 
   return LbaBoundaryCrossed ? EFI_BAD_BUFFER_SIZE : EFI_SUCCESS;
-}
-
-/**
-  Calculate the LBA on the disk.
-
-  This function takes LBA of cached variable store as input and
-  returns the corresponding LBA on the disk.
-
-  @param Lba      The logical block index of cached variable
-                  store.
-
-**/
-STATIC
-EFI_LBA
-EFIAPI
-FvbCalculateDiskLBA (
-  IN EFI_LBA Lba
-  )
-{
-  if (Lba < Private->NumBlocksA) {
-    return Private->PartitionAStartingLBA + Lba;
-  } else {
-    return Private->PartitionBStartingLBA + (Lba - Private->NumBlocksA);
-  }
 }
 
 /**
@@ -391,7 +367,7 @@ FvbWrite (
   }
 
   BlockSize = Private->BlockIo->Media->BlockSize;
-  LastBlock = Private->NumBlocksA + Private->NumBlocksB - 1;
+  LastBlock = Private->NumBlocks - 1;
 
   // The write must not span FV boundaries.
   if (Lba > LastBlock) {
@@ -425,7 +401,7 @@ FvbWrite (
   FvbOffset = MultU64x32 (Lba, BlockSize);
   Status = Private->BlockIo->WriteBlocks (Private->BlockIo,
                                           Private->BlockIo->Media->MediaId,
-                                          FvbCalculateDiskLBA (Lba),
+                                          Private->PartitionStartingLBA + Lba,
                                           BlockSize,
                                           Private->VariablePartition + FvbOffset);
 
@@ -434,7 +410,7 @@ FvbWrite (
     ASSERT (FALSE);
     Private->BlockIo->ReadBlocks (Private->BlockIo,
                                   Private->BlockIo->Media->MediaId,
-                                  FvbCalculateDiskLBA (Lba),
+                                  Private->PartitionStartingLBA + Lba,
                                   BlockSize,
                                   Private->VariablePartition + FvbOffset);
     Status = EFI_DEVICE_ERROR;
@@ -516,7 +492,7 @@ FvbEraseBlocks (
   Status = EFI_INVALID_PARAMETER;
 
   BlockSize = Private->BlockIo->Media->BlockSize;
-  LastBlock = Private->NumBlocksA + Private->NumBlocksB - 1;
+  LastBlock = Private->NumBlocks - 1;
 
   // Before erasing, check the entire list of parameters to ensure all specified blocks are valid
   VA_START (Args, This);
@@ -569,7 +545,7 @@ FvbEraseBlocks (
     for (Index = 0; Index < NumOfLba; Index++) {
       Status = Private->BlockIo->WriteBlocks (Private->BlockIo,
                                               Private->BlockIo->Media->MediaId,
-                                              FvbCalculateDiskLBA (StartingLba + Index),
+                                              Private->PartitionStartingLBA + StartingLba + Index,
                                               BlockSize,
                                               Private->VariablePartition + FvbOffset + (Index * BlockSize));
       if (EFI_ERROR(Status)) {
@@ -577,7 +553,7 @@ FvbEraseBlocks (
         ASSERT (FALSE);
         Private->BlockIo->ReadBlocks(Private->BlockIo,
                                      Private->BlockIo->Media->MediaId,
-                                     FvbCalculateDiskLBA (StartingLba + Index),
+                                     Private->PartitionStartingLBA + StartingLba + Index,
                                      BlockSize,
                                      Private->VariablePartition + FvbOffset + (Index * BlockSize));
         Status = EFI_DEVICE_ERROR;
@@ -633,7 +609,7 @@ InitializeFvAndVariableStoreHeaders (
                                       );
   FirmwareVolumeHeader->HeaderLength = sizeof(EFI_FIRMWARE_VOLUME_HEADER) + sizeof(EFI_FV_BLOCK_MAP_ENTRY);
   FirmwareVolumeHeader->Revision = EFI_FVH_REVISION;
-  FirmwareVolumeHeader->BlockMap[0].NumBlocks = Private->NumBlocksA + Private->NumBlocksB;
+  FirmwareVolumeHeader->BlockMap[0].NumBlocks = Private->NumBlocks;
   FirmwareVolumeHeader->BlockMap[0].Length = Private->BlockIo->Media->BlockSize;
   FirmwareVolumeHeader->BlockMap[1].NumBlocks = 0;
   FirmwareVolumeHeader->BlockMap[1].Length = 0;
@@ -653,7 +629,7 @@ InitializeFvAndVariableStoreHeaders (
   // Write the combined super-header in the flash
   return Private->BlockIo->WriteBlocks (Private->BlockIo,
                                         Private->BlockIo->Media->MediaId,
-                                        Private->PartitionAStartingLBA,
+                                        Private->PartitionStartingLBA,
                                         Private->BlockIo->Media->BlockSize,
                                         FirmwareVolumeHeader);
 }
@@ -1005,7 +981,6 @@ FVBInitialize (
   EFI_HANDLE                  FlashHandle;
   UINTN                       Index;
   UINTN                       PrimaryIndex;
-  UINTN                       SecondaryIndex;
 
   if (PcdGetBool(PcdEmuVariableNvModeEnable)) {
       return EFI_SUCCESS;
@@ -1019,7 +994,6 @@ FVBInitialize (
   PartitionInfo = NULL;
 
   PrimaryIndex = MAX_UINTN;
-  SecondaryIndex = MAX_UINTN;
 
   Private = NULL;
 
@@ -1074,28 +1048,7 @@ FVBInitialize (
                                sizeof(PartitionInfo->Info.Gpt.PartitionName)))) {
       if (!EFI_ERROR(FvbCheckPartitionFlash (HandleBuffer[Index]))) {
         PrimaryIndex = Index;
-        SecondaryIndex = MAX_UINTN;
         break;
-      }
-    } else if ((PrimaryIndex == MAX_UINTN) &&
-               // Check for partition name to be configuration partition
-               (0 == StrnCmp (PartitionInfo->Info.Gpt.PartitionName,
-                              PcdGetPtr(PcdCPUBLCFGAPartitionName),
-                              StrnLenS(PcdGetPtr(PcdCPUBLCFGAPartitionName),
-                                       sizeof(PartitionInfo->Info.Gpt.PartitionName))))) {
-      if (!EFI_ERROR(FvbCheckPartitionFlash (HandleBuffer[Index]))) {
-        PrimaryIndex = Index;
-      }
-    } else {
-      // Check for partition name to be secondary configuration partition
-      if ((SecondaryIndex == MAX_UINTN) &&
-          (0 == StrnCmp (PartitionInfo->Info.Gpt.PartitionName,
-                         PcdGetPtr(PcdCPUBLCFGBPartitionName),
-                         StrnLenS(PcdGetPtr(PcdCPUBLCFGBPartitionName),
-                                  sizeof(PartitionInfo->Info.Gpt.PartitionName))))) {
-        if (!EFI_ERROR(FvbCheckPartitionFlash (HandleBuffer[Index]))) {
-          SecondaryIndex = Index;
-        }
       }
     }
   }
@@ -1116,24 +1069,9 @@ FVBInitialize (
     goto NoFlashExit;
   }
 
-  Private->PartitionAStartingLBA = PartitionInfo->Info.Gpt.StartingLBA;
-  Private->NumBlocksA = PartitionInfo->Info.Gpt.EndingLBA -
-                        PartitionInfo->Info.Gpt.StartingLBA + 1;
-
-  if (SecondaryIndex != MAX_UINTN) {
-    Status = gBS->HandleProtocol (HandleBuffer[SecondaryIndex],
-                                  &gEfiPartitionInfoProtocolGuid,
-                                  (VOID **)&PartitionInfo);
-
-    if (EFI_ERROR(Status) || (PartitionInfo == NULL)) {
-      Status = EFI_NOT_FOUND;
-      goto NoFlashExit;
-    }
-
-    Private->PartitionBStartingLBA = PartitionInfo->Info.Gpt.StartingLBA;
-    Private->NumBlocksB = PartitionInfo->Info.Gpt.EndingLBA -
-                          PartitionInfo->Info.Gpt.StartingLBA + 1;
-  }
+  Private->PartitionStartingLBA = PartitionInfo->Info.Gpt.StartingLBA;
+  Private->NumBlocks = PartitionInfo->Info.Gpt.EndingLBA -
+                       PartitionInfo->Info.Gpt.StartingLBA + 1;
 
   // Get the device path from handle to retrieve block IO protocol
   // on parent
@@ -1184,7 +1122,7 @@ FVBInitialize (
 
   // Initialize the variable store cache
   BlockSize = Private->BlockIo->Media->BlockSize;
-  Size = MultU64x32 (Private->NumBlocksA + Private->NumBlocksB, BlockSize);
+  Size = MultU64x32 (Private->NumBlocks, BlockSize);
 
   if (Size != PcdGet32(PcdFlashNvStorageVariableSize)) {
     PcdSet32S(PcdFlashNvStorageVariableSize, Size);
@@ -1203,22 +1141,11 @@ FVBInitialize (
 
   Status = Private->BlockIo->ReadBlocks (Private->BlockIo,
                                          Private->BlockIo->Media->MediaId,
-                                         Private->PartitionAStartingLBA,
-                                         MultU64x32 (Private->NumBlocksA, BlockSize),
+                                         Private->PartitionStartingLBA,
+                                         MultU64x32 (Private->NumBlocks, BlockSize),
                                          Private->VariablePartition);
   if (EFI_ERROR(Status)) {
     goto NoFlashExit;
-  }
-
-  if (Private->NumBlocksB > 0) {
-    Status = Private->BlockIo->ReadBlocks (Private->BlockIo,
-                                           Private->BlockIo->Media->MediaId,
-                                           Private->PartitionBStartingLBA,
-                                           MultU64x32 (Private->NumBlocksB, BlockSize),
-                                           Private->VariablePartition + MultU64x32 (Private->NumBlocksA, BlockSize));
-    if (EFI_ERROR(Status)) {
-      goto NoFlashExit;
-    }
   }
 
   // Validate the FV data
@@ -1232,22 +1159,11 @@ FVBInitialize (
 
     Status = Private->BlockIo->WriteBlocks (Private->BlockIo,
                                             Private->BlockIo->Media->MediaId,
-                                            Private->PartitionAStartingLBA,
-                                            MultU64x32 (Private->NumBlocksA, BlockSize),
+                                            Private->PartitionStartingLBA,
+                                            MultU64x32 (Private->NumBlocks, BlockSize),
                                             Private->VariablePartition);
     if (EFI_ERROR(Status)) {
       goto NoFlashExit;
-    }
-
-    if (Private->NumBlocksB > 0) {
-      Status = Private->BlockIo->WriteBlocks (Private->BlockIo,
-                                              Private->BlockIo->Media->MediaId,
-                                              Private->PartitionBStartingLBA,
-                                              MultU64x32 (Private->NumBlocksB, BlockSize),
-                                              Private->VariablePartition + MultU64x32 (Private->NumBlocksA, BlockSize));
-      if (EFI_ERROR(Status)) {
-        goto NoFlashExit;
-      }
     }
 
     // Install all appropriate headers
