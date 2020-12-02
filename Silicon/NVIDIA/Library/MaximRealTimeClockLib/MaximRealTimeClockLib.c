@@ -35,6 +35,7 @@ STATIC EFI_EVENT                  mRtcExitBootServicesEvent = NULL;
 STATIC INT64                      mRtcOffset = 0;
 STATIC INT64                      mPerfomanceTimerOffset = MAX_INT64;
 STATIC UINT32                     mRuntimeServicesSupported = 0;
+STATIC BOOLEAN                    mVirtualRTC = FALSE;
 
 /**
   Returns the current time and date information, and the time-keeping
@@ -81,7 +82,7 @@ LibGetTime (
     PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000ull;
     EpochToEfiTime (PerformanceEpochSeconds, Time);
   } else {
-    if (PcdGetBool (PcdVirtualRTC)) {
+    if (mVirtualRTC) {
       RtcEpochSeconds = mRtcOffset;
       EpochToEfiTime (RtcEpochSeconds, Time);
       PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000ull;
@@ -243,7 +244,7 @@ LibSetTime (
       RtcEpochSeconds = EfiTimeToEpoch (Time);
       PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000;
       NewPerformanceOffset = (RtcEpochSeconds - PerformanceEpochSeconds);
-      if (PcdGetBool (PcdVirtualRTC)) {
+      if (mVirtualRTC) {
         mRtcOffset += PerformanceEpochSeconds;
       } else {
         mRtcOffset += NewPerformanceOffset - (mPerfomanceTimerOffset / 1000000000);
@@ -254,7 +255,7 @@ LibSetTime (
                       &mRtcOffset);
       mPerfomanceTimerOffset = NewPerformanceOffset * 1000000000;
     }
-  } else if (PcdGetBool (PcdVirtualRTC)) {
+  } else if (mVirtualRTC) {
     RtcEpochSeconds = EfiTimeToEpoch (Time);
     PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000;
     NewPerformanceOffset = (RtcEpochSeconds - PerformanceEpochSeconds);
@@ -504,9 +505,11 @@ LibRtcInitialize (
   EFI_STATUS          Status;
   UINTN               VariableSize = sizeof (mRtcOffset);
 
+  mVirtualRTC = PcdGetBool (PcdVirtualRTC);
+
   Status = EfiGetVariable (L"RTC_OFFSET", &gNVIDIATokenSpaceGuid, NULL, &VariableSize, &mRtcOffset);
   if (EFI_ERROR (Status)) {
-    if (PcdGetBool (PcdVirtualRTC)) {
+    if (mVirtualRTC) {
       mRtcOffset = BUILD_EPOCH;
     } else {
       mRtcOffset = 0;
