@@ -593,6 +593,11 @@ gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
   }
 
   #
+  # Aml Generation
+  #
+  Silicon/NVIDIA/Drivers/AmlGenerationDxe/AmlGenerationDxe.inf
+
+  #
   # Aml Patching
   #
   Silicon/NVIDIA/Drivers/AmlPatchDxe/AmlPatchDxe.inf

@@ -47,6 +47,11 @@
   INF Silicon/NVIDIA/Drivers/DeviceDiscovery/DeviceDiscoveryDxe.inf
 
   #
+  # Aml Generation
+  #
+  INF Silicon/NVIDIA/Drivers/AmlGenerationDxe/AmlGenerationDxe.inf
+
+  #
   # Aml Patching
   #
   INF Silicon/NVIDIA/Drivers/AmlPatchDxe/AmlPatchDxe.inf
