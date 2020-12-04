@@ -48,13 +48,13 @@
 #define NOR_SR1_WIP_RETRY_CNT         2000
 
 #define NOR_CMD_SIZE                  1
+#define NOR_ADDR_SIZE                 4
 
-#define NOR_WRITE_DATA_CMD            0x2
-#define NOR_READ_DATA_CMD             0x3
+#define NOR_WRITE_DATA_CMD            0x12
+#define NOR_READ_DATA_CMD             0x13
 #define NOR_WREN_DISABLE              0x4
 #define NOR_WREN_ENABLE               0x6
-#define NOR_ERASE_DATA_CMD            0xD8
-#define NOR_SWITCH_4B_ADDRESS         0xB7
+#define NOR_ERASE_DATA_CMD            0xDC
 
 #define NOR_READ_RDID_CMD             0x9f
 #define NOR_READ_RDID_RESP_SIZE       3
@@ -65,7 +65,6 @@
 typedef struct {
   UINT32                           Signature;
   UINT32                           FlashInstance;
-  BOOLEAN                          AddressingMode4B;
   EFI_HANDLE                       QspiControllerHandle;
   EFI_HANDLE                       NorFlashHandle;
   BOOLEAN                          ProtocolsInstalled;
@@ -342,60 +341,6 @@ ReadNorFlashDeviceID (
 
 
 /**
-  Switch flash to 4B addressability
-
-  @param[in] Private               Driver's private data
-
-  @retval EFI_SUCCESS              Operation successful.
-  @retval others                   Error occurred
-**/
-EFI_STATUS
-SwitchNorFlashAddressability (
-  IN NOR_FLASH_PRIVATE_DATA *Private
-)
-{
-  EFI_STATUS Status;
-  UINT8 Cmd;
-  QSPI_TRANSACTION_PACKET Packet;
-
-  if (Private == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  Status = ConfigureNorFlashWriteEnLatch (Private, TRUE);
-  if (EFI_ERROR(Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
-    return Status;
-  }
-
-  Cmd = NOR_SWITCH_4B_ADDRESS;
-
-  Packet.TxBuf = &Cmd;
-  Packet.RxBuf = NULL;
-  Packet.TxLen = sizeof(Cmd);
-  Packet.RxLen = 0;
-
-  Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
-  if (EFI_ERROR(Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not switch to 4B addressability.\n", __FUNCTION__));
-    return Status;
-  }
-
-  Status = ConfigureNorFlashWriteEnLatch (Private, FALSE);
-  if (EFI_ERROR(Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not disable NOR flash WREN.\n", __FUNCTION__));
-    return Status;
-  }
-
-  Private->AddressingMode4B = TRUE;
-
-  DEBUG ((EFI_D_INFO, "%a: NOR flash switched to use 4B addressability.\n", __FUNCTION__));
-
-  return Status;
-}
-
-
-/**
   Update NOR Flash's parameters
 
   @param[in] Private               Driver's private data
@@ -534,7 +479,7 @@ NorFlashRead(
     return EFI_INVALID_PARAMETER;
   }
 
-  CmdSize = NOR_CMD_SIZE + (Private->AddressingMode4B ? 4 : 3);
+  CmdSize = NOR_CMD_SIZE + NOR_ADDR_SIZE;
   Cmd = AllocateZeroPool (CmdSize);
   if (Cmd == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -654,7 +599,7 @@ NorFlashErase(
     return EFI_INVALID_PARAMETER;
   }
 
-  CmdSize = NOR_CMD_SIZE + (Private->AddressingMode4B ? 4 : 3);
+  CmdSize = NOR_CMD_SIZE + NOR_ADDR_SIZE;
   Cmd = AllocateZeroPool (CmdSize);
   if (Cmd == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -803,7 +748,7 @@ NorFlashWriteSinglePage(
     return EFI_INVALID_PARAMETER;
   }
 
-  CmdSize = NOR_CMD_SIZE + (Private->AddressingMode4B ? 4 : 3);
+  CmdSize = NOR_CMD_SIZE + NOR_ADDR_SIZE;
   Cmd = AllocateZeroPool (CmdSize + Size);
   if (Cmd == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -1215,12 +1160,6 @@ NorFlashDxeDriverBindingStart (
 
   // Read NOR flash's device ID
   Status = ReadNorFlashDeviceID (Private);
-  if (EFI_ERROR (Status)) {
-    goto ErrorExit;
-  }
-
-  // Switch to 4B addressability
-  Status = SwitchNorFlashAddressability (Private);
   if (EFI_ERROR (Status)) {
     goto ErrorExit;
   }
