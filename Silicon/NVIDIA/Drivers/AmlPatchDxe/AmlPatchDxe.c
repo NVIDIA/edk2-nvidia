@@ -412,7 +412,6 @@ RegisterAmlTables (
   @retval EFI_NOT_FOUND         Could not find the given PathName in any of the
                                 registered offset tables.
   @retval EFI_NOT_READY         AML and offset tables have not been registered yet.
-  @retval EFI_UNSUPPORTED       The opcode of the AML node is not supported.
   @retval EFI_INVALID_PARAMETER This, PathName, or AmlNodeInfo was NULL
 **/
 EFI_STATUS
@@ -451,6 +450,13 @@ FindNode (
       Status = GetAmlNodeSize(AmlNodeInfo, &FoundSize);
       if (!EFI_ERROR(Status)) {
         AmlNodeInfo->Size = FoundSize;
+      } else if (Status == EFI_UNSUPPORTED) {
+        // Unsupported means we can't determine size and Get/Set data.
+        // Still want to return AmlNodeInfo though because it is still
+        // possible to patch the name of the node.
+        // (Get and Set will check again to see if the opcode is supported).
+        AmlNodeInfo->Size = 0;
+        Status = EFI_SUCCESS;
       }
       return Status;
     }
@@ -477,7 +483,7 @@ FindNode (
                                 the size found for the AML node.
   @retval EFI_BUFFER_TOO_SMALL  The given data buffer is too small for the data
                                 of the AML node.
-  @retval EFI_INVALID_PARAMETER This, PathName, or AmlNodeInfo was NULL,
+  @retval EFI_INVALID_PARAMETER This, AmlNodeInfo, or Data was NULL,
                                 or the given AmlNodeInfo opcode did not match
                                 the data's opcode.
 **/
@@ -596,6 +602,49 @@ SetNodeData (
 }
 
 /**
+  Update the name of the AML Node with the given AmlNodeInfo. The name is located
+  using the NamesegOffset of the AML offset entry. Does not update the
+  name stored in the AML offset entry.
+
+  @param[in]  This              Instance of AML patching protocol.
+  @param[in]  AmlNodeInfo       Pointer to the AmlNodeInfo for the node whose
+                                name will be updated.
+  @param[in]  NewName           Pointer to a buffer with the new name. Must have
+                                a length of 4.
+
+  @retval EFI_SUCCESS           The function completed successfully.
+  @retval EFI_BAD_BUFFER_SIZE   The given NewName's length was not 4
+  @retval EFI_INVALID_PARAMETER This, AmlNodeInfo, or NewName was NULL.
+**/
+EFI_STATUS
+EFIAPI
+UpdateNodeName(
+  IN NVIDIA_AML_PATCH_PROTOCOL  *This,
+  IN NVIDIA_AML_NODE_INFO       *AmlNodeInfo,
+  IN CHAR8                      *NewName
+) {
+  VOID  *NameStart;
+  UINTN NewNameLength;
+
+  if (This == NULL || AmlNodeInfo == NULL || NewName == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  NewNameLength = AsciiStrLen(NewName);
+
+  if (NewNameLength != AML_NAME_LENGTH) {
+    return EFI_BAD_BUFFER_SIZE;
+  }
+
+  NameStart = (UINT8*)AmlNodeInfo->AmlTable
+                + AmlNodeInfo->AmlOffsetEntry->NamesegOffset;
+
+  CopyMem(NameStart, NewName, AML_NAME_LENGTH);
+
+  return EFI_SUCCESS;
+}
+
+/**
   Initialize the AML Patch Driver.
 
   @param[in]  ImageHandle   of the loaded driver
@@ -625,6 +674,7 @@ AmlPatchDxeEntryPoint (
   Private->AmlPatchProtocol.FindNode = FindNode;
   Private->AmlPatchProtocol.GetNodeData = GetNodeData;
   Private->AmlPatchProtocol.SetNodeData = SetNodeData;
+  Private->AmlPatchProtocol.UpdateNodeName = UpdateNodeName;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
     &ImageHandle,

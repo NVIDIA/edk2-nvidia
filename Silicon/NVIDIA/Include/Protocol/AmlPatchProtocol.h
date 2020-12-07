@@ -91,7 +91,7 @@ EFI_STATUS
   @param[in]  PathName          Ascii string containing a the path name for the
                                 desired node. The path name must appear in one
                                 of the registered offset tables.
-  @param[out] AmlNodeInfo       Pointer to metdata for the node that will be
+  @param[out] AmlNodeInfo       Pointer to an NVIDIA_AML_NODE_INFO struct that will be
                                 populated with the AML table, offset entry, and
                                 size of the node if found.
 
@@ -99,7 +99,6 @@ EFI_STATUS
   @retval EFI_NOT_FOUND         Could not find the given PathName in any of the
                                 registered offset tables.
   @retval EFI_NOT_READY         AML and offset tables have not been registered yet.
-  @retval EFI_UNSUPPORTED       The opcode of the AML node is not supported.
   @retval EFI_INVALID_PARAMETER This, PathName, or AmlNodeInfo was NULL
 **/
 typedef
@@ -126,7 +125,7 @@ EFI_STATUS
   @retval EFI_UNSUPPORTED       The opcode of the AML node is not supported.
   @retval EFI_BUFFER_TOO_SMALL  The given data buffer is too small for the data
                                 of the AML node.
-  @retval EFI_INVALID_PARAMETER This, PathName, or AmlNodeInfo was NULL,
+  @retval EFI_INVALID_PARAMETER This, AmlNodeInfo, or Data was NULL,
                                 or the given AmlNodeInfo opcode did not match
                                 the data's opcode.
 **/
@@ -170,12 +169,36 @@ EFI_STATUS
   IN UINTN                      Size
 );
 
+/**
+  Set the name of the AML Node with the given AmlNodeInfo. The name is located
+  using the NamesegOffset of the AML offset entry. Does not update the
+  name stored in the AML offset entry.
+
+  @param[in]  This              Instance of AML patching protocol.
+  @param[in]  AmlNodeInfo       Pointer to the AmlNodeInfo for the node whose
+                                name will be set.
+  @param[in]  NewName           Pointer to a buffer with the new name. Must have
+                                a length of 4.
+
+  @retval EFI_SUCCESS           The function completed successfully.
+  @retval EFI_BAD_BUFFER_SIZE   The given NewName's length was not 4
+  @retval EFI_INVALID_PARAMETER This, AmlNodeInfo, or NewName was NULL.
+**/
+typedef
+EFI_STATUS
+(EFIAPI * NVIDIA_AML_PATCH_UPDATE_NODE_NAME) (
+  IN NVIDIA_AML_PATCH_PROTOCOL  *This,
+  IN NVIDIA_AML_NODE_INFO       *AmlNodeInfo,
+  IN CHAR8                      *NewName
+);
+
 // NVIDIA_AML_PATCH_PROTOCOL protocol structure.
 struct _NVIDIA_AML_PATCH_PROTOCOL {
   NVIDIA_AML_PATCH_REGISTER_TABLES  RegisterAmlTables;
   NVIDIA_AML_PATCH_FIND_NODE        FindNode;
   NVIDIA_AML_PATCH_GET_NODE_DATA    GetNodeData;
   NVIDIA_AML_PATCH_SET_NODE_DATA    SetNodeData;
+  NVIDIA_AML_PATCH_UPDATE_NODE_NAME UpdateNodeName;
 };
 
 #endif  /* __AML_PATCH_PROTOCOL_H__ */
