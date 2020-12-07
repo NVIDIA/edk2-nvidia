@@ -2,7 +2,7 @@
 
   QSPI Controller Library
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -196,6 +196,28 @@ QspiWaitTransactionStatusReady (
 
 
 /**
+  Setup Wait Cycles
+
+  Configure controller for transaction based on packet length and
+  width.
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  WaitCycles               Number of wait cycles.
+**/
+STATIC
+VOID
+QspiPerformWaitCycleConfiguration (
+  IN EFI_PHYSICAL_ADDRESS QspiBaseAddress,
+  IN UINT8                WaitCycles
+)
+{
+  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_MISC_0,
+                       QSPI_MISC_0_WAIT_CYCLES_LSB,
+                       QSPI_MISC_0_WAIT_CYCLES_MSB,
+                       WaitCycles);
+}
+
+/**
   Perform transaction configuration
 
   Configure controller for transaction based on packet length and
@@ -213,9 +235,6 @@ QspiPerformTransactionConfiguration (
   IN UINT32               BlockLen
 )
 {
-  // Clear MISC register
-  MmioWrite32 (QspiBaseAddress + QSPI_MISC_0,
-               0);
   // Select Single Data Rate mode.
   MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
                        QSPI_COMMAND_0_SDR_DDR_SEL_BIT,
@@ -536,6 +555,8 @@ QspiPerformTransaction (
     return EFI_INVALID_PARAMETER;
   }
 
+  // Setup Wait Cycles.
+  QspiPerformWaitCycleConfiguration(QspiBaseAddress, Packet->WaitCycles);
   // Enable CS
   QspiConfigureCS(QspiBaseAddress, TRUE);
   // If transmission buffer address valid, start transmission

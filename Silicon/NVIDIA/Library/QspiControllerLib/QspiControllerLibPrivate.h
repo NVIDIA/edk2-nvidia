@@ -2,7 +2,7 @@
 
   QSPI Controller Library Private Structures
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -96,6 +96,8 @@
 
 
 #define QSPI_MISC_0                          0x194
+#define QSPI_MISC_0_WAIT_CYCLES_MSB          7
+#define QSPI_MISC_0_WAIT_CYCLES_LSB          0
 
 
 #define MAX_FIFO_PACKETS                     64

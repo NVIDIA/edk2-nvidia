@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -21,6 +21,7 @@ typedef struct {
   UINT32  TxLen;
   VOID   *RxBuf;
   UINT32  RxLen;
+  UINT8   WaitCycles;
 } QSPI_TRANSACTION_PACKET;
 
 

@@ -2,7 +2,7 @@
 
   NOR Flash Driver
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -170,6 +170,7 @@ ReadNorFlashRegister (
   Packet.RxBuf = Resp;
   Packet.TxLen = CmdSize;
   Packet.RxLen = sizeof (UINT8);
+  Packet.WaitCycles = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR(Status)) {
@@ -263,6 +264,7 @@ ConfigureNorFlashWriteEnLatch (
   Packet.RxBuf = NULL;
   Packet.TxLen = sizeof(Cmd);
   Packet.RxLen = 0;
+  Packet.WaitCycles = 0;
 
   RegCmd = NOR_READ_SR1;
 
@@ -326,6 +328,7 @@ ReadNorFlashDeviceID (
   Packet.RxBuf = DeviceID;
   Packet.TxLen = sizeof(Cmd);
   Packet.RxLen = sizeof(DeviceID);
+  Packet.WaitCycles = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR(Status)) {
@@ -492,6 +495,7 @@ NorFlashRead(
   Packet.TxLen = CmdSize;
   Packet.RxBuf = Buffer;
   Packet.RxLen = Size;
+  Packet.WaitCycles = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR(Status)) {
@@ -615,6 +619,7 @@ NorFlashErase(
     Packet.TxLen = CmdSize;
     Packet.RxBuf = NULL;
     Packet.RxLen = 0;
+    Packet.WaitCycles = 0;
 
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR(Status)) {
@@ -757,6 +762,7 @@ NorFlashWriteSinglePage(
   Packet.TxLen = CmdSize + Size;
   Packet.RxBuf = NULL;
   Packet.RxLen = 0;
+  Packet.WaitCycles = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR(Status)) {
