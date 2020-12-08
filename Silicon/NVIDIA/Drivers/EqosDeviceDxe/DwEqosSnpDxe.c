@@ -24,6 +24,7 @@
 #include <Library/NetLib.h>
 #include <Library/DmaLib.h>
 #include <Library/IoLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 
 /**
   Change the state of a network interface from "stopped" to "started."
@@ -163,6 +164,7 @@ SnpInitialize (
   )
 {
   SIMPLE_NETWORK_DRIVER       *Snp;
+  EFI_STATUS                  Status;
 
   DEBUG ((DEBUG_INFO, "SNP:DXE: %a ()\r\n", __FUNCTION__));
 
@@ -172,6 +174,7 @@ SnpInitialize (
   }
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
+
   // First check that driver has not already been initialized
   if (Snp->SnpMode.State == EfiSimpleNetworkInitialized) {
     return EFI_SUCCESS;
@@ -179,7 +182,22 @@ SnpInitialize (
     return EFI_NOT_STARTED;
   }
 
-  osi_hw_dma_init (Snp->MacDriver.osi_dma);
+  // Check Auto Neg here
+  Snp->PhyDriver.CheckAutoNeg( &Snp->PhyDriver, Snp->MacBase );
+
+  // Init Link
+  DEBUG ((DEBUG_INFO, "SNP:DXE: Auto-Negotiating Ethernet PHY Link\r\n"));
+
+  Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
+  if (EFI_ERROR(Status)) {
+    DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\r\n"));
+  }
+
+  // Prevent calling Auto Neg on Exit Boot Services
+  if (Snp->ExitBootServiceEvent != NULL) {
+    gBS->CloseEvent (Snp->ExitBootServiceEvent);
+  }
+
   osi_start_mac (Snp->MacDriver.osi_core);
 
   // Declare the driver as initialized

@@ -8,7 +8,7 @@
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Limited. All rights reserved.
-  Copyright (c) 2020, NVIDIA Corporation.  All rights reserved.
+  Copyright (c) 2020, NVIDIA Corporation. All rights reserved.
 
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -26,8 +26,10 @@
  *
  * @param PhyDriver PHY object
  * @param MacBaseAddress Base address of MAC
+ *
+ * @return EFI_SUCCESS if success, specific error if fails
  */
-VOID
+EFI_STATUS
 EFIAPI
 PhyRealtekConfig (
   IN  PHY_DRIVER   *PhyDriver,
@@ -44,7 +46,22 @@ PhyRealtekConfig (
  */
 EFI_STATUS
 EFIAPI
-PhyRealtekAutoNeg (
+PhyRealtekStartAutoNeg (
+  IN  PHY_DRIVER   *PhyDriver,
+  IN  UINTN        MacBaseAddress
+  );
+
+/*
+ * @brief Check auto-negotiation completion status from Realtek PHY
+ *
+ * @param PhyDriver PHY object
+ * @param MacBaseAddress Base address of MAC
+ *
+ * @return EFI_SUCCESS if success, specific error if fails
+ */
+EFI_STATUS
+EFIAPI
+PhyRealtekCheckAutoNeg (
   IN  PHY_DRIVER   *PhyDriver,
   IN  UINTN        MacBaseAddress
   );

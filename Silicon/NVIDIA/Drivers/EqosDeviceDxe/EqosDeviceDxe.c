@@ -69,6 +69,51 @@ SIMPLE_NETWORK_DEVICE_PATH PathTemplate = {
   }
 };
 
+/**
+  On Exit Boot Services Event notification handler.
+
+  Invoke Check Auto Negotiation for Eqos Driver.
+  Perform Link Initialization
+
+  @param[in]  Event     Event whose notification function is being invoked.
+  @param[in]  Context   Pointer to the notification function's context.
+
+**/
+
+VOID
+EFIAPI
+OnExitBootServices (
+  IN      EFI_EVENT                         Event,
+  IN      VOID                              *Context
+  )
+{
+  SIMPLE_NETWORK_DRIVER   *Snp;
+  EFI_STATUS              Status;
+
+  Snp = (SIMPLE_NETWORK_DRIVER *) Context;
+
+  // Check Instance
+  if (Snp == NULL) {
+    DEBUG ((DEBUG_INFO, "SNP:DXE: Received NULL context\r\n"));
+    return;
+  }
+
+  // closing event
+  gBS->CloseEvent (Snp->ExitBootServiceEvent);
+
+  // Check for Auto Neg completion
+  Snp->PhyDriver.CheckAutoNeg( &Snp->PhyDriver, Snp->MacBase );
+
+  // Init Link
+  DEBUG ((DEBUG_INFO, "SNP:DXE: Auto-Negotiating Ethernet PHY Link\r\n"));
+
+  Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
+  if (EFI_ERROR(Status)) {
+    DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\r\n"));
+  }
+
+  return;
+}
 
 /**
   Callback that will be invoked at various phases of the driver initialization
@@ -390,6 +435,7 @@ DeviceDiscoveryNotify (
     // Init EMAC
     Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase);
     if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "SNP:DXE: Failed to initialize EMAC\n"));
       return EFI_DEVICE_ERROR;
     }
 
@@ -398,13 +444,19 @@ DeviceDiscoveryNotify (
     EmacReadMacAddress (&Snp->SnpMode.CurrentAddress, Snp->MacBase);
     UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
 
-    // Init Link
-    DEBUG ((DEBUG_INFO, "SNP:DXE: Auto-Negotiating Ethernet PHY Link ...\n"));
-    Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
-    if (EFI_ERROR(Status)) {
-      DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\n"));
+    // Check for Auto Negotiation completion and rest of Phy setup
+    // happens at the exit boot services stage. Creating event for the same.
+    Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                                 TPL_NOTIFY,
+                                 OnExitBootServices,
+                                 Snp,
+                                 &gEfiEventExitBootServicesGuid,
+                                 &Snp->ExitBootServiceEvent
+                                 );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to create event for auto neg completion upon exiting boot services \r\n"));
+      return Status;
     }
-
 
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &ControllerHandle,
@@ -413,8 +465,10 @@ DeviceDiscoveryNotify (
                     );
 
     if (EFI_ERROR(Status)) {
+      DEBUG ((DEBUG_ERROR, "SNP:DXE: Could not install multiple protocol interfaces\n"));
       gBS->CloseEvent (Snp->DeviceTreeNotifyEvent);
       gBS->CloseEvent (Snp->AcpiNotifyEvent);
+      gBS->CloseEvent (Snp->ExitBootServiceEvent);
       FreePages (Snp, EFI_SIZE_TO_PAGES (sizeof (SIMPLE_NETWORK_DRIVER)));
     } else {
       Snp->ControllerHandle = ControllerHandle;
@@ -436,6 +490,7 @@ DeviceDiscoveryNotify (
     Snp = INSTANCE_FROM_SNP_THIS(SnpProtocol);
     gBS->CloseEvent (Snp->DeviceTreeNotifyEvent);
     gBS->CloseEvent (Snp->AcpiNotifyEvent);
+    gBS->CloseEvent (Snp->ExitBootServiceEvent);
 
     Status = gBS->UninstallMultipleProtocolInterfaces (
                     ControllerHandle,

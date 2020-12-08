@@ -8,6 +8,7 @@
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Limited. All rights reserved.
+  Copyright (c) 2020, NVIDIA Corporation. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,7 +23,7 @@
 typedef struct _PHY_DRIVER  PHY_DRIVER;
 
 typedef
-VOID
+EFI_STATUS
 (EFIAPI *NVIDIA_EQOS_PHY_CONFIG)(
     IN  PHY_DRIVER   *PhyDriver,
     IN  UINTN        MacBaseAddress
@@ -54,7 +55,8 @@ struct _PHY_DRIVER{
   EMBEDDED_GPIO_MODE          ResetMode0;
   EMBEDDED_GPIO_MODE          ResetMode1;
   NVIDIA_EQOS_PHY_CONFIG      Config;
-  NVIDIA_EQOS_PHY_AUTO_NEG    AutoNeg;
+  NVIDIA_EQOS_PHY_AUTO_NEG    StartAutoNeg;
+  NVIDIA_EQOS_PHY_AUTO_NEG    CheckAutoNeg;
   NVIDIA_EQOS_PHY_DETECT_LINK DetectLink;
 };
 

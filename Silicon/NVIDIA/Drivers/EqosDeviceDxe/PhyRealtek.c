@@ -55,18 +55,15 @@
 #define REG_EEELCR            17
 
 /************************************************************************************************************/
-// Do auto-negotiation
+// Start auto-negotiation
 EFI_STATUS
 EFIAPI
-PhyRealtekAutoNeg (
+PhyRealtekStartAutoNeg (
   IN  PHY_DRIVER   *PhyDriver,
   IN  UINTN        MacBaseAddress
   )
 {
-
-  UINT32        TimeOut;
   UINT32        Data32;
-  EFI_STATUS    Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
@@ -88,13 +85,31 @@ PhyRealtekAutoNeg (
 
   PhyRead (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, &Data32, MacBaseAddress);
   Data32 |= REG_PHY_CONTROL_AUTO_NEGOTIATION_ENABLE | REG_PHY_CONTROL_RESTART_AUTO_NEGOTIATION;
-  PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, Data32, MacBaseAddress);
+
+  return PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, Data32, MacBaseAddress);
+}
+
+// Check auto-negotiation completion
+EFI_STATUS
+EFIAPI
+PhyRealtekCheckAutoNeg (
+  IN  PHY_DRIVER   *PhyDriver,
+  IN  UINTN        MacBaseAddress
+  )
+{
+
+  UINT32        TimeOut;
+  UINT32        Data32;
+  EFI_STATUS    Status;
+
+  DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
   TimeOut = 0;
   do {
     // Read PHY_BASIC_CTRL register from PHY
     Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_STATUS, &Data32, MacBaseAddress);
     if (EFI_ERROR(Status)) {
+      DEBUG ((DEBUG_INFO, "Failed to read PHY_BASIC_CTRL register\r\n"));
       return Status;
     }
     // Wait until PHYCTRL_RESET become zero
@@ -104,10 +119,11 @@ PhyRealtekAutoNeg (
     MicroSecondDelay(1);
   } while (TimeOut++ < PHY_TIMEOUT);
   if (TimeOut >= PHY_TIMEOUT) {
-    DEBUG ((DEBUG_INFO, "SNP:PHY: ERROR! auto-negotiation timeout\n"));
+    DEBUG ((DEBUG_ERROR, "SNP:PHY: ERROR! auto-negotiation timeout\n"));
     return EFI_TIMEOUT;
   }
-  return EFI_SUCCESS;
+
+  return Status;
 }
 
 /*
@@ -115,32 +131,41 @@ PhyRealtekAutoNeg (
  *
  * @param PhyDriver PHY object
  * @param MacBaseAddress Base address of MAC
+ *
+ * @return EFI_SUCCESS if success, specific error if fails
  */
-VOID
+EFI_STATUS
 EFIAPI
 PhyRealtekConfig (
   IN  PHY_DRIVER   *PhyDriver,
   IN  UINTN        MacBaseAddress
   )
 {
-  UINT32 Data32;
+  UINT32        Data32;
+  EFI_STATUS    Status;
+
   DEBUG ((DEBUG_INFO, "%s(): %u\n", __FUNCTION__, __LINE__));
 
   PhyDriver->PhyPageSelRegister = REG_PHY_PAGE;
 
   /* Enable link and activity indication for all speeds on LED1 and LED0 for GBE */
-  PhyRead (PhyDriver, PAGE_LED, REG_LCR, &Data32, MacBaseAddress);
+  Status = PhyRead (PhyDriver, PAGE_LED, REG_LCR, &Data32, MacBaseAddress);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   Data32 |= LCR_LED1_ACT |
             LCR_LED1_LINK_1000 |
             LCR_LED1_LINK_100  |
             LCR_LED1_LINK_10   |
             LCR_LED0_LINK_1000;
-  PhyWrite (PhyDriver, PAGE_LED, REG_LCR, Data32, MacBaseAddress);
+  Status = PhyWrite (PhyDriver, PAGE_LED, REG_LCR, Data32, MacBaseAddress);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   /* Disable Energy Efficient Ethernet (EEE) LED indication */
-  PhyWrite (PhyDriver, PAGE_LED, REG_EEELCR, 0, MacBaseAddress);
-
-  return;
+  return PhyWrite (PhyDriver, PAGE_LED, REG_EEELCR, 0, MacBaseAddress);
 }
 
 /*

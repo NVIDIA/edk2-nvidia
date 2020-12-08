@@ -26,8 +26,10 @@
  *
  * @param PhyDriver PHY object
  * @param MacBaseAddress Base address of MAC
+ *
+ * @return EFI_SUCCESS if success, specific error if fails
  */
-VOID
+EFI_STATUS
 EFIAPI
 PhyMarvellConfig (
   IN  PHY_DRIVER   *PhyDriver,
@@ -44,7 +46,22 @@ PhyMarvellConfig (
  */
 EFI_STATUS
 EFIAPI
-PhyMarvellAutoNeg (
+PhyMarvellStartAutoNeg (
+  IN  PHY_DRIVER   *PhyDriver,
+  IN  UINTN        MacBaseAddress
+  );
+
+/*
+ * @brief Check auto-negotiation completion status from Marvell PHY
+ *
+ * @param PhyDriver PHY object
+ * @param MacBaseAddress Base address of MAC
+ *
+ * @return EFI_SUCCESS if success, specific error if fails
+ */
+EFI_STATUS
+EFIAPI
+PhyMarvellCheckAutoNeg (
   IN  PHY_DRIVER   *PhyDriver,
   IN  UINTN        MacBaseAddress
   );

@@ -94,24 +94,37 @@
 /************************************************************************************************************/
 #define REG_PHY_PAGE                                  22
 
-// Do auto-negotiation
+// Start auto-negotiation
 EFI_STATUS
 EFIAPI
-PhyMarvellAutoNeg (
+PhyMarvellStartAutoNeg (
   IN  PHY_DRIVER   *PhyDriver,
   IN  UINTN        MacBaseAddress
   )
 {
-
-  UINT32        TimeOut;
   UINT32        Data32;
-  EFI_STATUS    Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
   PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, &Data32, MacBaseAddress);
   Data32 |= COPPER_CONTROL_ENABLE_AUTO_NEG | COPPER_RESTART_AUTO_NEG | COPPER_CONTROL_RESET;
-  PhyWrite (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, Data32, MacBaseAddress);
+
+  return PhyWrite (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, Data32, MacBaseAddress);
+}
+
+// Check auto-negotiation completion
+EFI_STATUS
+EFIAPI
+PhyMarvellCheckAutoNeg (
+  IN  PHY_DRIVER   *PhyDriver,
+  IN  UINTN        MacBaseAddress
+  )
+{
+  UINT32        TimeOut;
+  UINT32        Data32;
+  EFI_STATUS    Status;
+
+  DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
   // Wait for completion
   TimeOut = 0;
@@ -119,6 +132,7 @@ PhyMarvellAutoNeg (
     // Read PHY_BASIC_CTRL register from PHY
     Status = PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, &Data32, MacBaseAddress);
     if (EFI_ERROR(Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to read PHY_BASIC_CTRL register\r\n"));
       return Status;
     }
     // Wait until PHYCTRL_RESET become zero
@@ -128,7 +142,7 @@ PhyMarvellAutoNeg (
     MicroSecondDelay(1);
   } while (TimeOut++ < PHY_TIMEOUT);
   if (TimeOut >= PHY_TIMEOUT) {
-    DEBUG ((DEBUG_INFO, "SNP:PHY: ERROR! PhySoftReset timeout\n"));
+    DEBUG ((DEBUG_INFO , "SNP:PHY: ERROR! PhySoftReset timeout\n"));
     return EFI_TIMEOUT;
   }
 
@@ -137,6 +151,7 @@ PhyMarvellAutoNeg (
     // Read PHY_BASIC_CTRL register from PHY
     Status = PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_INTR_STATUS, &Data32, MacBaseAddress);
     if (EFI_ERROR(Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to read PHY_BASIC_CTRL register\r\n"));
       return Status;
     }
     // Wait until PHYCTRL_RESET become zero
@@ -149,7 +164,7 @@ PhyMarvellAutoNeg (
     DEBUG ((DEBUG_INFO, "SNP:PHY: ERROR! auto-negotiation timeout\n"));
     return EFI_TIMEOUT;
   }
-  return EFI_SUCCESS;
+  return Status;
 }
 
 /*
@@ -157,8 +172,10 @@ PhyMarvellAutoNeg (
  *
  * @param PhyDriver PHY object
  * @param MacBaseAddress Base address of MAC
+ *
+ * @return EFI_SUCCESS if success, specific error if fails
  */
-VOID
+EFI_STATUS
 EFIAPI
 PhyMarvellConfig (
   IN  PHY_DRIVER   *PhyDriver,
@@ -176,34 +193,38 @@ PhyMarvellConfig (
 
   Status = PhySoftReset (PhyDriver, MacBaseAddress);
   if (EFI_ERROR (Status)) {
-    return;
+    return Status;
   }
 
   /* Program Page: 2, Register: 16 */
-  PhyWrite(PhyDriver, PAGE_MAC,
+  Status = PhyWrite(PhyDriver, PAGE_MAC,
            REG_MAC_CONTROL1,
            MAC_CONTROL1_TX_FIFO_DEPTH_24_BITS |
            MAC_CONTROL1_ENABLE_RX_CLK |
            MAC_CONTROL1_PASS_ODD_NIBBLE_PREAMBLES |
            MAC_CONTROL1_RGMII_INTF_POWER_DOWN,
            MacBaseAddress);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   /* Program Page: 2, Register: 21 */
-  PhyWrite(PhyDriver, PAGE_MAC,
+  Status = PhyWrite(PhyDriver, PAGE_MAC,
            REG_MAC_CONTROL2,
            MAC_CONTROL2_DEFAULT_MAC_INTF_SPEED_1000_MBPS |
            MAC_CONTROL2_RGMII_RX_TIMING_CTRL |
            MAC_CONTROL2_RGMII_TX_TIMING_CTRL,
            MacBaseAddress);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   /* Program Page: 0, Register: 16 */
   /* Automatically detect whether it needs to crossover between pairs or not */
-  PhyWrite(PhyDriver, PAGE_COPPER,
-           REG_COPPER_CONTROL1,
-           COPPER_CONTROL1_ENABLE_AUTO_CROSSOVER,
-           MacBaseAddress);
-
-  return;
+  return PhyWrite(PhyDriver, PAGE_COPPER,
+         REG_COPPER_CONTROL1,
+         COPPER_CONTROL1_ENABLE_AUTO_CROSSOVER,
+         MacBaseAddress);
 }
 
 /*
@@ -224,7 +245,8 @@ PhyMarvellDetectLink (
   if (PhyDriver->PhyOldLink == LINK_DOWN) {
     PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_INTR_STATUS, &Data32, MacBaseAddress);
     if ((Data32 & 0xC00) == 0xC00) {
-      PhyDriver->AutoNeg (PhyDriver, MacBaseAddress);
+      PhyDriver->StartAutoNeg (PhyDriver, MacBaseAddress);
+      PhyDriver->CheckAutoNeg (PhyDriver, MacBaseAddress);
     }
   }
 

@@ -81,6 +81,7 @@
   gNVIDIATokenSpaceGuid
   gFdtTableGuid
   gEfiAcpiTableGuid
+  gEfiEventExitBootServicesGuid
 
 [Depex]
   gEmbeddedGpioProtocolGuid

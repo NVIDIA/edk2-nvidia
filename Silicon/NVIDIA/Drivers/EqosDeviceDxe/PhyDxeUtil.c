@@ -8,6 +8,7 @@
 
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
+  Copyright (c) 2020, NVIDIA Corporation.  All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -271,6 +272,7 @@ PhyConfig (
   )
 {
   UINT32      Oui;
+  EFI_STATUS  Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
   PhyDriver->PhyPageSelRegister = 0;
@@ -279,22 +281,31 @@ PhyConfig (
   Oui = PhyGetOui (PhyDriver, MacBaseAddress);
   if (Oui == PHY_MARVELL_OUI) {
     PhyDriver->Config = PhyMarvellConfig;
-    PhyDriver->AutoNeg = PhyMarvellAutoNeg;
+    PhyDriver->StartAutoNeg = PhyMarvellStartAutoNeg;
+    PhyDriver->CheckAutoNeg = PhyMarvellCheckAutoNeg;
     PhyDriver->DetectLink = PhyMarvellDetectLink;
   } else if (Oui == PHY_REALTEK_OUI) {
     PhyDriver->Config = PhyRealtekConfig;
-    PhyDriver->AutoNeg = PhyRealtekAutoNeg;
+    PhyDriver->StartAutoNeg = PhyRealtekStartAutoNeg;
+    PhyDriver->CheckAutoNeg = PhyRealtekCheckAutoNeg;
     PhyDriver->DetectLink = PhyRealtekDetectLink;
   } else {
     return EFI_UNSUPPORTED;
   }
 
-  PhyDriver->Config (PhyDriver, MacBaseAddress);
+  Status = PhyDriver->Config (PhyDriver, MacBaseAddress);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "SNP:PHY: %a () Failed to configure Phy\r\n", __FUNCTION__));
+    return Status;
+  }
 
   // Configure AN and Advertise
-  PhyDriver->AutoNeg (PhyDriver, MacBaseAddress);
+  Status = PhyDriver->StartAutoNeg (PhyDriver, MacBaseAddress);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "SNP:PHY: %a () Failed to Start Auto Neg\r\n", __FUNCTION__));
+  }
 
-  return EFI_SUCCESS;
+  return Status;
 }
 
 EFI_STATUS
@@ -314,9 +325,12 @@ PhyDxeInitialization (
     return Status;
   }
 
-  PhyConfig (PhyDriver, MacBaseAddress);
+  Status = PhyConfig (PhyDriver, MacBaseAddress);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "SNP:PHY: %a () Failed to configure Phy\r\n", __FUNCTION__));
+  }
 
-  return EFI_SUCCESS;
+  return Status;
 }
 
 EFI_STATUS

@@ -60,6 +60,7 @@ typedef struct {
 
   EFI_EVENT                              DeviceTreeNotifyEvent;
   EFI_EVENT                              AcpiNotifyEvent;
+  EFI_EVENT                              ExitBootServiceEvent;
   CHAR8                                  DeviceTreePath[64];
 } SIMPLE_NETWORK_DRIVER;
 
