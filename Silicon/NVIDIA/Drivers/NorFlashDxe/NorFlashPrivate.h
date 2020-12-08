@@ -56,13 +56,18 @@
 #define NOR_READ_DATA_CMD             0x13
 #define NOR_WREN_DISABLE              0x4
 #define NOR_WREN_ENABLE               0x6
-#define NOR_ERASE_DATA_CMD            0xDC
-#define NOR_DEF_ERASE_DATA_CMD        0xD8
 
 #define NOR_READ_SFDP_CMD             0x5A
 #define NOR_SFDP_ADDR_SIZE            3
 #define NOR_SFDP_WAIT_CYCLES          8
+#define NOR_SFDP_PRM_TBL_HDR_MSB      0xFF
+#define NOR_SFDP_PRM_TBL_BSC_HDR_LSB  0x0
+#define NOR_SFDP_PRM_TBL_SEC_HDR_LSB  0x81
+#define NOR_SFDP_PRM_TBL_4BI_HDR_LSB  0x84
 #define NOR_SFDP_PRM_TBL_LEN_JESD216  36
+
+#define NOR_SFDP_4KB_ERS_SUPPORTED    0x1
+#define NOR_SFDP_4KB_ERS_UNSUPPORTED  0xFF
 
 #define NOR_SFDP_ERASE_COUNT          4
 
@@ -96,20 +101,57 @@ typedef struct {
 
 
 typedef struct {
-  UINT32                           Reserved;
+  UINT8                            EraseSupport4KB:2;
+  UINT8                            Reserved:6;
+  UINT8                            EraseInstruction4KB:8;
+  UINT16                           Reserved2;
   UINT32                           MemoryDensity;
-  UINT32                           Reserved2;
   UINT32                           Reserved3;
   UINT32                           Reserved4;
   UINT32                           Reserved5;
   UINT32                           Reserved6;
-  NOR_SFDP_PARAM_ERASE_TYPE        EraseType[NOR_SFDP_ERASE_COUNT];
   UINT32                           Reserved7;
-  UINT8                            Reserved8:4;
+  NOR_SFDP_PARAM_ERASE_TYPE        EraseType[NOR_SFDP_ERASE_COUNT];
+  UINT32                           Reserved8;
+  UINT8                            Reserved9:4;
   UINT8                            PageSize:4;
-  UINT32                           Reserved9:24;
-} NOR_SFDP_PARAM_TBL;
+  UINT32                           Reserved10:24;
+} NOR_SFDP_PARAM_BASIC_TBL;
+
+
+typedef struct {
+  BOOLEAN                          ReadCmd13:1;
+  UINT8                            Reserved:5;
+  BOOLEAN                          WriteCmd12:1;
+  UINT8                            Reserved2:2;
+  UINT8                            EraseTypeSupported:4;
+  UINT32                           Reserved3:19;
+  UINT8                            EraseInstruction[NOR_SFDP_ERASE_COUNT];
+} NOR_SFDP_PARAM_4BI_TBL;
+
+
+typedef struct {
+  BOOLEAN                          EndDescriptor:1;
+  BOOLEAN                          MapDescriptor:1;
+  UINT16                           Reserved:14;
+  UINT8                            RegionCount;
+  UINT8                            Reserved2;
+} NOR_SFDP_PARAM_SECTOR_DESCRIPTOR;
+
+
+typedef struct {
+  UINT8                            EraseTypeSupported:4;
+  UINT8                            Reserved:4;
+  UINT32                           RegionSize:24;
+} NOR_SFDP_PARAM_SECTOR_REGION;
 #pragma pack()
+
+
+typedef struct {
+  NOR_FLASH_ATTRIBUTES             FlashAttributes;
+  UINT8                            EraseCmd;
+  UINT32                           PageSize;
+} NOR_FLASH_PRIVATE_ATTRIBUTES;
 
 
 typedef struct {
@@ -124,7 +166,7 @@ typedef struct {
   NVIDIA_QSPI_CONTROLLER_PROTOCOL  *QspiController;
   EFI_DEVICE_PATH_PROTOCOL         *ParentDevicePath;
   EFI_DEVICE_PATH_PROTOCOL         *NorFlashDevicePath;
-  NOR_FLASH_ATTRIBUTES             FlashAttributes;
+  NOR_FLASH_PRIVATE_ATTRIBUTES     PrivateFlashAttributes;
   EFI_EVENT                        VirtualAddrChangeEvent;
   UINT8                            *CommandBuffer;
 } NOR_FLASH_PRIVATE_DATA;

@@ -27,7 +27,6 @@
 typedef struct {
   UINT64                           MemoryDensity;
   UINT32                           BlockSize;
-  UINT32                           PageSize;
 } NOR_FLASH_ATTRIBUTES;
 
 

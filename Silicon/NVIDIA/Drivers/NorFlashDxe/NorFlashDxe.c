@@ -216,20 +216,28 @@ ReadNorFlashSFDP (
   IN NOR_FLASH_PRIVATE_DATA *Private
 )
 {
-  EFI_STATUS              Status;
-  UINT8                   *Cmd;
-  UINT32                  CmdSize;
-  INT32                   Count;
-  UINT32                  AddressShift;
-  UINT32                  Offset;
-  UINT32                  SFDPSignature;
-  NOR_SFDP_HDR            SFDPHeader;
-  NOR_SFDP_PARAM_TBL_HDR  *SFDPParamTblHeaders;
-  NOR_SFDP_PARAM_TBL_HDR  *SFDPParamTblHeader;
-  NOR_SFDP_PARAM_TBL      *SFDPParamTbl;
-  UINT32                  SFDPParamSize;
-  UINT32                  MemoryDensity;
-  QSPI_TRANSACTION_PACKET Packet;
+  EFI_STATUS                       Status;
+  UINT8                            *Cmd;
+  UINT32                           CmdSize;
+  INT32                            Count;
+  UINT32                           AddressShift;
+  UINT32                           Offset;
+  UINT32                           SFDPSignature;
+  NOR_SFDP_HDR                     SFDPHeader;
+  NOR_SFDP_PARAM_TBL_HDR           *SFDPParamTblHeaders;
+  NOR_SFDP_PARAM_TBL_HDR           *SFDPParamBasicTblHeader;
+  NOR_SFDP_PARAM_TBL_HDR           *SFDPParam4ByteInstructionTblHeader;
+  NOR_SFDP_PARAM_TBL_HDR           *SFDPParamSectorTblHeader;
+  NOR_SFDP_PARAM_BASIC_TBL         *SFDPParamBasicTbl;
+  UINT32                           SFDPParamBasicTblSize;
+  NOR_SFDP_PARAM_4BI_TBL           *SFDPParam4ByteInstructionTbl;
+  UINT32                           SFDPParam4ByteInstructionTblSize;
+  NOR_SFDP_PARAM_SECTOR_DESCRIPTOR *SFDPParamSectorTbl;
+  UINT32                           SFDPParamSectorTblSize;
+  NOR_SFDP_PARAM_SECTOR_REGION     *SFDPParamSectorTblRegion;
+  UINT8                            NumRegions;
+  UINT32                           MemoryDensity;
+  QSPI_TRANSACTION_PACKET          Packet;
 
   if (Private == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -237,7 +245,11 @@ ReadNorFlashSFDP (
 
   Cmd = NULL;
   SFDPParamTblHeaders = NULL;
+  SFDPParamBasicTbl = NULL;
+  SFDPParam4ByteInstructionTbl = NULL;
+  SFDPParamSectorTbl = NULL;
 
+  // Read SFDP Header
   CmdSize = NOR_CMD_SIZE + NOR_SFDP_ADDR_SIZE;
   Cmd = AllocateZeroPool (CmdSize);
   if (Cmd == NULL) {
@@ -260,7 +272,7 @@ ReadNorFlashSFDP (
     goto ErrorExit;
   }
 
-  // Verify the read SFDP signature.
+  // Verify the read SFDP signature
   SFDPSignature = NOR_SFDP_SIGNATURE;
   if (0 != CompareMem (&SFDPHeader.SFDPSignature, &SFDPSignature, sizeof (SFDPHeader.SFDPSignature))) {
     DEBUG ((EFI_D_ERROR, "%a: NOR flash's SFDP signature invalid.\n", __FUNCTION__));
@@ -268,6 +280,7 @@ ReadNorFlashSFDP (
     goto ErrorExit;
   }
 
+  // Read all parameter table headers
   Offset = sizeof (SFDPHeader);
   AddressShift = 0;
   for (Count = (CmdSize - 1); Count > 0; Count--) {
@@ -294,9 +307,10 @@ ReadNorFlashSFDP (
     goto ErrorExit;
   }
 
+  // Find the last basic parameter table header
   for (Count = SFDPHeader.NumParamHdrs; Count >= 0; Count--) {
-    if (SFDPParamTblHeaders[Count].ParamIDLSB == 0x0 &&
-        SFDPParamTblHeaders[Count].ParamIDMSB == 0xFF) {
+    if (SFDPParamTblHeaders[Count].ParamIDLSB == NOR_SFDP_PRM_TBL_BSC_HDR_LSB &&
+        SFDPParamTblHeaders[Count].ParamIDMSB == NOR_SFDP_PRM_TBL_HDR_MSB) {
       break;
     }
   }
@@ -307,9 +321,10 @@ ReadNorFlashSFDP (
     goto ErrorExit;
   }
 
-  SFDPParamTblHeader = &SFDPParamTblHeaders[Count];
+  SFDPParamBasicTblHeader = &SFDPParamTblHeaders[Count];
 
-  Offset = SFDPParamTblHeader->ParamTblOffset;
+  // Use this basic parameter table header to load the full table
+  Offset = SFDPParamBasicTblHeader->ParamTblOffset;
   AddressShift = 0;
   for (Count = (CmdSize - 1); Count > 0; Count--) {
     Cmd[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
@@ -317,17 +332,17 @@ ReadNorFlashSFDP (
   }
   Cmd[0] = NOR_READ_SFDP_CMD;
 
-  SFDPParamSize = SFDPParamTblHeader->ParamTblLen * sizeof (UINT32);
-  SFDPParamTbl = AllocateZeroPool (SFDPParamSize);
-  if (SFDPParamTbl == NULL) {
+  SFDPParamBasicTblSize = SFDPParamBasicTblHeader->ParamTblLen * sizeof (UINT32);
+  SFDPParamBasicTbl = AllocateZeroPool (SFDPParamBasicTblSize);
+  if (SFDPParamBasicTbl == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;;
   }
 
   Packet.TxBuf = Cmd;
-  Packet.RxBuf = SFDPParamTbl;
+  Packet.RxBuf = SFDPParamBasicTbl;
   Packet.TxLen = CmdSize;
-  Packet.RxLen = SFDPParamSize;
+  Packet.RxLen = SFDPParamBasicTblSize;
   Packet.WaitCycles  = NOR_SFDP_WAIT_CYCLES;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
@@ -336,7 +351,59 @@ ReadNorFlashSFDP (
     goto ErrorExit;
   }
 
-  MemoryDensity = SFDPParamTbl->MemoryDensity;
+  // Find the 4 byte instruction parameter table header
+  for (Count = SFDPHeader.NumParamHdrs; Count >= 0; Count--) {
+    if (SFDPParamTblHeaders[Count].ParamIDLSB == NOR_SFDP_PRM_TBL_4BI_HDR_LSB &&
+        SFDPParamTblHeaders[Count].ParamIDMSB == NOR_SFDP_PRM_TBL_HDR_MSB) {
+      break;
+    }
+  }
+
+  if (Count < 0) {
+    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP 4 byte instruction parameter table header.\n", __FUNCTION__));
+    Status = EFI_UNSUPPORTED;
+    goto ErrorExit;
+  }
+
+  SFDPParam4ByteInstructionTblHeader = &SFDPParamTblHeaders[Count];
+
+  // Use this 4 byte instruction parameter table header to load the full table
+  Offset = SFDPParam4ByteInstructionTblHeader->ParamTblOffset;
+  AddressShift = 0;
+  for (Count = (CmdSize - 1); Count > 0; Count--) {
+    Cmd[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
+    AddressShift += 8;
+  }
+  Cmd[0] = NOR_READ_SFDP_CMD;
+
+  SFDPParam4ByteInstructionTblSize = SFDPParam4ByteInstructionTblHeader->ParamTblLen * sizeof (UINT32);
+  SFDPParam4ByteInstructionTbl = AllocateZeroPool (SFDPParam4ByteInstructionTblSize);
+  if (SFDPParam4ByteInstructionTbl == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ErrorExit;;
+  }
+
+  Packet.TxBuf = Cmd;
+  Packet.RxBuf = SFDPParam4ByteInstructionTbl;
+  Packet.TxLen = CmdSize;
+  Packet.RxLen = SFDPParam4ByteInstructionTblSize;
+  Packet.WaitCycles  = NOR_SFDP_WAIT_CYCLES;
+
+  Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
+  if (EFI_ERROR(Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP 4 byte instruction parameters.\n", __FUNCTION__));
+    goto ErrorExit;
+  }
+
+  if (SFDPParam4ByteInstructionTbl->ReadCmd13 == FALSE ||
+      SFDPParam4ByteInstructionTbl->WriteCmd12 == FALSE) {
+    DEBUG ((EFI_D_ERROR, "%a: NOR flash's memory density unsupported.\n", __FUNCTION__));
+    Status = EFI_UNSUPPORTED;
+    goto ErrorExit;
+  }
+
+  // Calculate memory density in bytes.
+  MemoryDensity = SFDPParamBasicTbl->MemoryDensity;
 
   if (MemoryDensity & BIT31) {
     MemoryDensity &= ~BIT31;
@@ -345,43 +412,145 @@ ReadNorFlashSFDP (
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
-    Private->FlashAttributes.MemoryDensity = (UINT64)1 << (MemoryDensity - 3);
+    Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity = (UINT64)1 << (MemoryDensity - 3);
   } else {
     MemoryDensity++;
     MemoryDensity >>= 3;
-    Private->FlashAttributes.MemoryDensity = MemoryDensity;
+    Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity = MemoryDensity;
   }
 
-  for (Count = 0; Count < NOR_SFDP_ERASE_COUNT; Count++) {
-    if (SFDPParamTbl->EraseType[Count].Size == 0 ||
-        SFDPParamTbl->EraseType[Count].Command == 0) {
-      continue;
+  // If uniform 4K erase is supported, use that mode.
+  if (SFDPParamBasicTbl->EraseSupport4KB == NOR_SFDP_4KB_ERS_SUPPORTED &&
+      SFDPParamBasicTbl->EraseInstruction4KB != NOR_SFDP_4KB_ERS_UNSUPPORTED) {
+    Private->PrivateFlashAttributes.FlashAttributes.BlockSize = SIZE_4KB;
+  } else {
+    // Find the sector map parameter table header
+    for (Count = SFDPHeader.NumParamHdrs; Count >= 0; Count--) {
+      if (SFDPParamTblHeaders[Count].ParamIDLSB == NOR_SFDP_PRM_TBL_SEC_HDR_LSB &&
+          SFDPParamTblHeaders[Count].ParamIDMSB == NOR_SFDP_PRM_TBL_HDR_MSB) {
+        break;
+      }
     }
-    if (SFDPParamTbl->EraseType[Count].Command == NOR_ERASE_DATA_CMD ||
-        SFDPParamTbl->EraseType[Count].Command == NOR_DEF_ERASE_DATA_CMD) {
+
+    if (Count < 0) {
+      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter table header.\n", __FUNCTION__));
+      Status = EFI_UNSUPPORTED;
+      goto ErrorExit;
+    }
+
+    SFDPParamSectorTblHeader = &SFDPParamTblHeaders[Count];
+
+    // Use this sector map parameter table header to load the full table
+    Offset = SFDPParamSectorTblHeader->ParamTblOffset;
+    AddressShift = 0;
+    for (Count = (CmdSize - 1); Count > 0; Count--) {
+      Cmd[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
+      AddressShift += 8;
+    }
+    Cmd[0] = NOR_READ_SFDP_CMD;
+
+    SFDPParamSectorTblSize = SFDPParamSectorTblHeader->ParamTblLen * sizeof (UINT32);
+    SFDPParamSectorTbl = AllocateZeroPool (SFDPParamSectorTblSize);
+    if (SFDPParamSectorTbl == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto ErrorExit;;
+    }
+
+    Packet.TxBuf = Cmd;
+    Packet.RxBuf = SFDPParamSectorTbl;
+    Packet.TxLen = CmdSize;
+    Packet.RxLen = SFDPParamSectorTblSize;
+    Packet.WaitCycles  = NOR_SFDP_WAIT_CYCLES;
+
+    Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
+    if (EFI_ERROR(Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP sector parameters.\n", __FUNCTION__));
+      goto ErrorExit;
+    }
+
+    // From sector map parameter table, locate the map descriptor
+    Count = 0;
+    while (Count < SFDPParamSectorTblHeader->ParamTblLen) {
+      if (!SFDPParamSectorTbl[Count].MapDescriptor) {
+        // If not map descriptor, it is command descriptor which if followed by
+        // data which is same size as descriptor.
+        Count += 2;
+        continue;
+      } else {
+        // If map descriptor, find number of regions in the map.
+        NumRegions = SFDPParamSectorTbl[Count].RegionCount;
+        Count++;
+        break;
+      }
+    }
+
+    if (Count >=  SFDPParamSectorTblHeader->ParamTblLen) {
+      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter mapping table.\n", __FUNCTION__));
+      Status = EFI_UNSUPPORTED;
+      goto ErrorExit;
+    }
+
+    // Out of the regions found in the map, find the region with biggest size.
+    SFDPParamSectorTblRegion = (NOR_SFDP_PARAM_SECTOR_REGION *) &SFDPParamSectorTbl[Count++];
+    while (NumRegions > 0) {
+      if (((NOR_SFDP_PARAM_SECTOR_REGION *) &SFDPParamSectorTbl[Count])->RegionSize >
+          SFDPParamSectorTblRegion->RegionSize) {
+        SFDPParamSectorTblRegion = (NOR_SFDP_PARAM_SECTOR_REGION *) &SFDPParamSectorTbl[Count];
+      }
+      Count++;
+      NumRegions--;
+    }
+
+    for (Count = 0; Count < NOR_SFDP_ERASE_COUNT; Count++) {
+      if (SFDPParamSectorTblRegion->EraseTypeSupported & (1 << Count)) {
+        break;
+      }
+    }
+
+    if (Count >=  NOR_SFDP_ERASE_COUNT) {
+      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter erase table.\n", __FUNCTION__));
+      Status = EFI_UNSUPPORTED;
+      goto ErrorExit;
+    }
+
+    Private->PrivateFlashAttributes.FlashAttributes.BlockSize = 1 << SFDPParamBasicTbl->EraseType[Count].Size;
+  }
+
+  // Look up 4 byte erase command based on the block size.
+  for (Count = 0; Count < NOR_SFDP_ERASE_COUNT; Count++) {
+    if (Private->PrivateFlashAttributes.FlashAttributes.BlockSize ==
+         (1 << SFDPParamBasicTbl->EraseType[Count].Size)) {
       break;
     }
   }
 
-  if (Count < NOR_SFDP_ERASE_COUNT) {
-    Private->FlashAttributes.BlockSize = 1 << SFDPParamTbl->EraseType[Count].Size;
-  } else {
-    DEBUG ((EFI_D_ERROR, "%a: NOR flash's block size not found.\n", __FUNCTION__));
+  if (Count >=  NOR_SFDP_ERASE_COUNT) {
+    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's block size in SFDP sector parameter erase table.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
 
-  if (SFDPParamSize > NOR_SFDP_PRM_TBL_LEN_JESD216) {
-    Private->FlashAttributes.PageSize = 1 << SFDPParamTbl->PageSize;
+  if (!(SFDPParam4ByteInstructionTbl->EraseTypeSupported & (1 << Count))) {
+    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's erase table supported in SFDP.\n", __FUNCTION__));
+    Status = EFI_UNSUPPORTED;
+    goto ErrorExit;
+  }
+
+  Private->PrivateFlashAttributes.EraseCmd = SFDPParam4ByteInstructionTbl->EraseInstruction[Count];
+
+  // If basic parameter table size is more than NOR_SFDP_PRM_TBL_LEN_JESD216,
+  // read page size from the table. Otherwise default to NOR_SFDP_WRITE_DEF_PAGE
+  if (SFDPParamBasicTblSize > NOR_SFDP_PRM_TBL_LEN_JESD216) {
+    Private->PrivateFlashAttributes.PageSize = 1 << SFDPParamBasicTbl->PageSize;
     // Override page size for newer flashes
-    if (Private->FlashAttributes.PageSize > NOR_SFDP_WRITE_DEF_PAGE) {
+    if (Private->PrivateFlashAttributes.PageSize > NOR_SFDP_WRITE_DEF_PAGE) {
       // If page size if more then 256, default back to 256
       // to avoid any vendor specific configurations needed
       // to support higher page sizes.
-      Private->FlashAttributes.PageSize = NOR_SFDP_WRITE_DEF_PAGE;
+      Private->PrivateFlashAttributes.PageSize = NOR_SFDP_WRITE_DEF_PAGE;
     }
   } else {
-    Private->FlashAttributes.PageSize = NOR_SFDP_WRITE_DEF_PAGE;
+    Private->PrivateFlashAttributes.PageSize = NOR_SFDP_WRITE_DEF_PAGE;
   }
 
   Private->FlashInstance = NOR_SFDP_SIGNATURE;
@@ -393,6 +562,17 @@ ErrorExit:
 
   if (SFDPParamTblHeaders != NULL) {
     FreePool (SFDPParamTblHeaders);
+  }
+
+  if (SFDPParamBasicTbl != NULL) {
+    FreePool (SFDPParamBasicTbl);
+  }
+
+  if (SFDPParam4ByteInstructionTbl != NULL) {
+    FreePool (SFDPParam4ByteInstructionTbl);
+  }
+  if (SFDPParamSectorTbl != NULL) {
+    FreePool (SFDPParamSectorTbl);
   }
 
   return Status;
@@ -424,7 +604,7 @@ NorFlashGetAttributes(
 
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
-  CopyMem (Attributes, &Private->FlashAttributes, sizeof (NOR_FLASH_ATTRIBUTES));
+  CopyMem (Attributes, &Private->PrivateFlashAttributes, sizeof (NOR_FLASH_ATTRIBUTES));
 
   return EFI_SUCCESS;
 }
@@ -466,7 +646,7 @@ NorFlashRead(
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
   // Validate that read start and end offsets are within range.
-  FlashDensity = Private->FlashAttributes.MemoryDensity;
+  FlashDensity = Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity;
   if ((Offset > (FlashDensity - 1)) ||
       ((Offset + Size) > (FlashDensity))) {
     return EFI_INVALID_PARAMETER;
@@ -539,7 +719,7 @@ NorFlashReadBlock(
   }
 
   Status = NorFlashRead (&Private->NorFlashProtocol,
-                         (Lba * Private->FlashAttributes.BlockSize),
+                         (Lba * Private->PrivateFlashAttributes.FlashAttributes.BlockSize),
                          BufferSize,
                          Buffer);
 
@@ -581,7 +761,8 @@ NorFlashErase(
 
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
-  LastBlock = (Private->FlashAttributes.MemoryDensity / Private->FlashAttributes.BlockSize) - 1;
+  LastBlock = (Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity /
+                Private->PrivateFlashAttributes.FlashAttributes.BlockSize) - 1;
 
   if ((Lba > LastBlock) ||
       ((Lba + NumLba - 1) > LastBlock)) {
@@ -599,12 +780,12 @@ NorFlashErase(
     }
 
     AddressShift = 0;
-    Offset = Block * Private->FlashAttributes.BlockSize;
+    Offset = Block * Private->PrivateFlashAttributes.FlashAttributes.BlockSize;
     for (Count = (CmdSize - 1); Count > 0; Count--) {
       Private->CommandBuffer[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
       AddressShift += 8;
     }
-    Private->CommandBuffer[0] = NOR_ERASE_DATA_CMD;
+    Private->CommandBuffer[0] = Private->PrivateFlashAttributes.EraseCmd;
 
     Packet.TxBuf = Private->CommandBuffer;
     Packet.TxLen = CmdSize;
@@ -679,7 +860,7 @@ NorFlashEraseBlock(
 
   Status = NorFlashErase (&Private->NorFlashProtocol,
                           LBA,
-                          Size / Private->FlashAttributes.BlockSize);
+                          Size / Private->PrivateFlashAttributes.FlashAttributes.BlockSize);
 
   if (Token->Event != NULL) {
     Token->TransactionStatus = Status;
@@ -726,7 +907,7 @@ NorFlashWriteSinglePage(
 
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
-  FlashDensity = Private->FlashAttributes.MemoryDensity;
+  FlashDensity = Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity;
   if ((Offset > (FlashDensity - 1)) ||
       ((Offset + Size) > (FlashDensity))) {
     return EFI_INVALID_PARAMETER;
@@ -813,14 +994,14 @@ NorFlashWrite(
 
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
-  FlashDensity = Private->FlashAttributes.MemoryDensity;
+  FlashDensity = Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity;
   if ((Offset > (FlashDensity - 1)) ||
       ((Offset + Size) > (FlashDensity))) {
     return EFI_INVALID_PARAMETER;
   }
 
   // Writes need to be confined in a page.
-  PageSize = Private->FlashAttributes.PageSize;
+  PageSize = Private->PrivateFlashAttributes.PageSize;
   while (Size > 0) {
     // Calculate offset and size within the page
     BytesToWrite = PageSize - (Offset & (PageSize - 1));
@@ -885,17 +1066,17 @@ NorFlashWriteBlock(
 
   Status = NorFlashErase (&Private->NorFlashProtocol,
                           Lba,
-                          BufferSize / Private->FlashAttributes.BlockSize);
+                          BufferSize / Private->PrivateFlashAttributes.FlashAttributes.BlockSize);
 
-  BlockSize = Private->FlashAttributes.BlockSize;
-  PageSize = Private->FlashAttributes.PageSize;
+  BlockSize = Private->PrivateFlashAttributes.FlashAttributes.BlockSize;
+  PageSize = Private->PrivateFlashAttributes.PageSize;
   StartPage = (BlockSize / PageSize) * Lba;
   NumPages = BufferSize / PageSize;
 
   Data = Buffer;
   while (NumPages > 0) {
     Status = NorFlashWriteSinglePage (&Private->NorFlashProtocol,
-                                      StartPage *  BufferSize / Private->FlashAttributes.PageSize,
+                                      StartPage *  BufferSize / Private->PrivateFlashAttributes.PageSize,
                                       PageSize,
                                       Data);
     if (EFI_ERROR(Status)) {
@@ -1132,7 +1313,7 @@ NorFlashDxeDriverBindingStart (
 
   // Allocate Command Buffer
   Private->CommandBuffer = AllocateRuntimeZeroPool (NOR_CMD_SIZE + NOR_ADDR_SIZE +
-                                                    Private->FlashAttributes.PageSize);
+                                                    Private->PrivateFlashAttributes.PageSize);
   if (Private->CommandBuffer == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
@@ -1182,8 +1363,9 @@ NorFlashDxeDriverBindingStart (
 
   if (PcdGetBool (PcdTegraNorBlockProtocols)) {
     Media.MediaId = Private->FlashInstance;
-    Media.BlockSize = Private->FlashAttributes.BlockSize;
-    Media.LastBlock = (Private->FlashAttributes.MemoryDensity / Private->FlashAttributes.BlockSize) - 1;
+    Media.BlockSize = Private->PrivateFlashAttributes.FlashAttributes.BlockSize;
+    Media.LastBlock = (Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity /
+                        Private->PrivateFlashAttributes.FlashAttributes.BlockSize) - 1;
 
     Private->BlockIoProtocol.Reset = NULL;
     Private->BlockIoProtocol.ReadBlocks = NorFlashReadBlock;
