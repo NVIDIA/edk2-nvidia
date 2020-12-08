@@ -40,6 +40,9 @@
   UefiDriverEntryPoint
   UefiRuntimeLib
 
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraNorBlockProtocols
+
 [Protocols]
   gNVIDIANorFlashProtocolGuid
   gEfiBlockIoProtocolGuid

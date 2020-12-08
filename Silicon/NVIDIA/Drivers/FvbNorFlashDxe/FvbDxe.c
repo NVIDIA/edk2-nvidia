@@ -916,7 +916,7 @@ FVBInitialize (
 
   //Validate GPT and get table entries, always 512 bytes from the end
   Status = NorFlashProtocol->Read (NorFlashProtocol,
-                                  (NorFlashAttributes.NumSectors * NorFlashAttributes.SectorSize) - GPT_PARTITION_BLOCK_SIZE,
+                                   NorFlashAttributes.MemoryDensity - GPT_PARTITION_BLOCK_SIZE,
                                    sizeof (PartitionHeader),
                                    &PartitionHeader);
   if (EFI_ERROR (Status)) {

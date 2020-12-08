@@ -146,6 +146,9 @@ Include
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox|0x0|UINT64|0x00000001
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|0x0|UINT64|0x00000002
 
+#Tegra SPI FLASH Block Protocols Available
+  gNVIDIATokenSpaceGuid.PcdTegraNorBlockProtocols|FALSE|BOOLEAN|0x00000003
+
 #Memory size in MiB
   gNVIDIATokenSpaceGuid.PcdMemorySizeRegisterT186|0x2c10050|UINT64|0x00000004
 
