@@ -1,3 +1,5 @@
+NVIDIA Jetson UEFI/ACPI Experimental Firmware Version 1.1.0
+
 # Introduction
 
 These instructions explain how to install and boot Linux on
@@ -9,33 +11,46 @@ It is not currently compatible with the L4T kernel.
 # Experimental Feature Notice
 
 This software is experimental. It may be incompatible with standard JetPack
-functionality for the Jetson AGX Xavier Developer Kit, including online software
-update functionality for boot firmware. This software is provided for
-experimental purposes, and can be reverted by following standard flashing
-instructions for JetPack software in the Jetson AGX Xavier Developer Kit.
+functionality including online software update functionality for boot firmware.
+This software is provided for experimental purposes, and can be reverted by
+following standard flashing instructions for JetPack software provided with
+the Jetson Developer Kit.
 
 # Supported Platforms
 - Jetson AGX Xavier
+- Jetson Xavier NX
 
-# UEFI features supported
+# UEFI features available for all supported platforms
 - eMMC
-- PCIe (this requires enabling PCIe support if used as boot media with ACPI)
-- NVMe
-- SATA drive (onboard eSATA port is a PCIe device)
-- USB mass storage
-- USB NIC (AX88772b)
-- Onboard Ethernet controller (EQoS)
-- PXE
+- Ethernet (on-board EQoS controller)
 - HTTP boot
+- NVMe (disabled by default, see 'Enabling PCIe Support')
+- PCIe (disabled by default, see 'Enabling PCIe Support')
+- PXE boot
+- SD-card (see 'Limitations')
 - Switching between ACPI and device tree
+- USB Mass Storage
+- USB Ethernet (AX88772b)
+
+# UEFI features supported only on Jetson AGX Xavier
+- SATA (disabled by default, see 'Enabling PCIe Support')
 
 # Limitations
-- SetVariable is not supported at UEFI runtime
-- SetTime is not supported at UEFI runtime
+- SetVariable is not supported at UEFI runtime for Jetson AGX Xavier
+- SetTime is not supported at UEFI runtime for Jetson AGX Xavier
+- Only SDR25 is supported for SD-cards when booting Linux with ACPI
+  Users may use alternative storage devices, such as USB mass storage,
+  for better performance
+- Graphics Output Protocol (GOP) is not supported and so only serial
+  console support is available
 
 # Known Issues
 - USB-C port J512 on Jetson AGX Xavier is not functional. Users may use the
   USB-C port J513 or eSATA/USB port J507 instead.
+
+# Version History
+- 1.0.0: Initial release supporting Jetson AGX Xavier
+- 1.1.0: Add support for SD-cards and Jetson Xavier NX
 
 # Flashing instructions
 ## Setup
@@ -171,14 +186,19 @@ To change between device tree and ACPI at boot the following steps can be used:
 1. At the prompt, press "Y"
 1. Press the Escape key once again to go to UEFI menu.
 1. Select "Reset"
-1. Select "Linux" from GRUB menu.
 
 
 ## Enabling PCIe Support
 
 PCIe support is disabled by default because when you boot Linux with ACPI,
-out-of-tree patches are required. If these patches are not present, Linux may be
-unable to boot. PCIe support can be enabled with the following steps:
+out-of-tree patches are required for the Linux PCIe driver. If these patches
+are not present, Linux may be unable to boot.
+
+Please note that for the Jetson AGX Xavier Developer Kit, the SATA interface
+is a PCIe device and so to use this interface, it is also necessary to enable
+PCIe support.
+
+PCIe support can be enabled with the following steps:
 
 1. Press escape when the console displays "Press ESCAPE for boot options"
 1. Select "Device Manager" from the menu.
