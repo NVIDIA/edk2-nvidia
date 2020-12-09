@@ -29,6 +29,39 @@ CHAR16 KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
 };
 
 /*
+  Checks whether the auto-enumerated boot option is valid for the platform.
+
+  @param[in] LoadOption            Load option buffer.
+
+  @retval TRUE                     Load option valid.
+
+  @retval FALSE                    Load option invalid.
+*/
+STATIC
+BOOLEAN
+IsValidLoadOption (
+  IN  EFI_BOOT_MANAGER_LOAD_OPTION *LoadOption
+  )
+{
+  EFI_STATUS      Status;
+  EFI_HANDLE      Handle;
+  EFI_DEVICE_PATH *DevicePath;
+
+  if (CompareGuid ((EFI_GUID *)LoadOption->OptionalData, &mBmAutoCreateBootOptionGuid)) {
+    DevicePath = LoadOption->FilePath;
+
+    // Load options with FirmwareVolume2 protocol are not supported
+    // on the platform.
+    Status = gBS->LocateDevicePath (&gEfiFirmwareVolume2ProtocolGuid, &DevicePath, &Handle);
+    if (!EFI_ERROR (Status)) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+/*
   Duplicates boot option. The caller is supposed to allocate buffer for destination boot
   option.
 
@@ -467,18 +500,19 @@ RefreshAutoEnumeratedBootOptions (
 
   gBS->SetMem (*UpdatedBootOptions, BootOptionsCount * sizeof (EFI_BOOT_MANAGER_LOAD_OPTION), 0);
 
-  *UpdatedBootOptionsCount = BootOptionsCount;
   LoadOption = (EFI_BOOT_MANAGER_LOAD_OPTION *)BootOptions;
   UpdatedLoadOption = *UpdatedBootOptions;
-
-  for (Count = 0; Count < *UpdatedBootOptionsCount; Count++) {
-    Status = DuplicateLoadOption (&UpdatedLoadOption[Count], &LoadOption[Count]);
-    if (EFI_ERROR (Status)) {
-      return Status;
+  *UpdatedBootOptionsCount = 0;
+  for (Count = 0; Count < BootOptionsCount; Count++) {
+    if (IsValidLoadOption (&LoadOption[Count])){
+      Status = DuplicateLoadOption (&UpdatedLoadOption[*UpdatedBootOptionsCount], &LoadOption[Count]);
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+      (*UpdatedBootOptionsCount)++;
     }
   }
 
-  UpdatedLoadOption = *UpdatedBootOptions;
   for (Count = 0; Count < *UpdatedBootOptionsCount; Count++) {
     if (CompareGuid ((EFI_GUID *)UpdatedLoadOption[Count].OptionalData, &mBmAutoCreateBootOptionGuid)) {
       DevicePath = UpdatedLoadOption[Count].FilePath;

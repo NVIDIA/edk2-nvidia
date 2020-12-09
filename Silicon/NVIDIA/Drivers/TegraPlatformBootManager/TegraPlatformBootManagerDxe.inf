@@ -31,6 +31,7 @@
 
 [Protocols]
   gEfiLoadFileProtocolGuid
+  gEfiFirmwareVolume2ProtocolGuid
   gEdkiiPlatformBootManagerProtocolGuid
 
 [Guids]
