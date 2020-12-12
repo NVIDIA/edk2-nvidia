@@ -84,19 +84,27 @@ apply_binaries.sh script. Please ensure that you have installed the
 
 ## Linux Serial Console
 
-The Linux serial console is accessible via the micro-USB connector J501 on the
-Jetson AGX Xavier platform. When you connect a USB cable to the micro-USB
+For the Jetson AGX Xavier platform, the Linux serial console is accessible via
+the micro-USB connector J501. When you connect a USB cable to the micro-USB
 connector, you should see four serial USB devices, and the Linux serial console
-is available on the 3rd of the four. When you boot Linux on Jetson AGX Xavier,
-add the following to the Linux kernel command line to direct the kernel output
-to the serial console.
+is available on the 3rd of the four.
+
+For the Jetson Xavier NX platform, the Linux serial console is accessible via
+pins 8 (UART TX) and 10 (UART RX) on the 40-pin expansion header J12.
+
+When you boot Linux, add the following to the Linux kernel command line to
+direct the kernel output to the serial console.
 
     console=ttyS0,115200n8
 
-You can enable Linux early console support for Jetson AGX Xavier by adding the
-following string to the Linux kernel command line.
+You can enable Linux early console support by adding the 'earlycon' parameter
+to the Linux kernel command line. For Jetson AGX Xavier add:
 
     earlycon=uart8250,mmio32,0x3110000
+
+For Jetson Xavier NX add:
+
+    earlycon=uart8250,mmio32,0x3100000
 
 For booting Linux with ACPI on Jetson AGX Xavier the Tegra 8250 driver (located
 in the Linux kernel source file drivers/tty/serial/8250/8250_tegra.c) is
@@ -107,23 +115,26 @@ required.
 
 If you are planning to boot a UEFI-bootable Linux distribution from external
 media, such as a USB drive, place the Jetson AGX Xavier Developer Kit in
-Recovery Mode and execute one of the following commands to flash the UEFI
-firmware. Otherwise, please refer to the section “Booting L4T with mainline
-Linux."
+Recovery Mode and execute the following command with the appropriate
+configuration to flash the UEFI firmware. Otherwise, please refer to the
+section “Booting L4T with mainline Linux."
 
-To boot Linux with Device-Tree by default execute:
+    $ sudo ./flash.sh <config> external
 
-    $ sudo ./flash.sh jetson-xavier-uefi-min external
-
-To boot Linux with ACPI by default execute:
-
-    $ sudo ./flash.sh jetson-xavier-uefi-acpi-min external
+Where <config> is:
+ - jetson-xavier-uefi-min               For Jetson AGX Xavier with Device-Tree
+ - jetson-xavier-uefi-acpi-min          For Jetson AGX Xavier with ACPI
+ - jetson-xavier-nx-uefi-devkit         For Jetson Xavier NX with Device-Tree
+ - jetson-xavier-nx-uefi-acpi-devkit    For Jetson Xavier NX with ACPI
 
 The OS hardware description can be changed without flashing the device as well,
 see “Booting Linux with Device-Tree/ACPI”.
 
 
-## Booting L4T with mainline Linux
+## Booting L4T with mainline Linux (Jetson AGX Xavier only)
+
+Booting L4T with mainline Linux using the UEFI bootloader is currently only
+supported for Jetson AGX Xavier.
 
 Clone the Linux kernel tree:
 
