@@ -1,6 +1,7 @@
 /** @file
   SSDT Serial Template
 
+  Copyright (c) 2021, NVIDIA Corporation. All rights reserved.
   Copyright (c) 2019 - 2020, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -12,7 +13,7 @@
     - {template} - Data fixed up using AML Fixup APIs.
 **/
 
-DefinitionBlock ("SsdtSerialPortTemplate.aml", "SSDT", 2, "ARMLTD", "SERIAL", 1) {
+DefinitionBlock ("SsdtSerialPortTemplate.aml", "SSDT", 1, "NVIDIA", "SERIAL", 1) {
   Scope (_SB) {
     // UART PL011
     Device (COM0) {                                       // {template}

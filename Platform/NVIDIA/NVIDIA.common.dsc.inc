@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2011-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -261,6 +261,7 @@
   PerformanceLib|MdeModulePkg/Library/DxePerformanceLib/DxePerformanceLib.inf
   MemoryAllocationLib|MdePkg/Library/UefiMemoryAllocationLib/UefiMemoryAllocationLib.inf
   ExtractGuidedSectionLib|MdePkg/Library/DxeExtractGuidedSectionLib/DxeExtractGuidedSectionLib.inf
+  AslTemplateTablesLib|Silicon/NVIDIA/Library/ASLTemplateTablesLib/ASLTemplateTablesLib.inf
 
 [LibraryClasses.common.UEFI_APPLICATION]
   PerformanceLib|MdeModulePkg/Library/DxePerformanceLib/DxePerformanceLib.inf

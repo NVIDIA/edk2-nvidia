@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe
 
-  Copyright (c) 2019 - 2020, NVIDIA Corporation. All rights reserved.
+  Copyright (c) 2019 - 2021, NVIDIA Corporation. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   This program and the accompanying materials
@@ -16,57 +16,22 @@
     - Cm or CM   - Configuration Manager
     - Obj or OBJ - Object
 **/
-#include <ConfigurationManagerObject.h>
-
-#include <Library/ArmLib.h>
-#include <Library/BaseLib.h>
-#include <Library/DebugLib.h>
-#include <Library/PrintLib.h>
-#include <Library/MemoryAllocationLib.h>
-#include <Library/TegraPlatformInfoLib.h>
-#include <Library/UefiBootServicesTableLib.h>
-#include <Library/UefiRuntimeServicesTableLib.h>
-#include <Library/FloorSweepingLib.h>
-#include <Library/DeviceTreeHelperLib.h>
-#include <libfdt.h>
-
-#include <IndustryStandard/DebugPort2Table.h>
-#include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
-#include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>
-
-#include <Protocol/AmlPatchProtocol.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
-
-#include <NVIDIAConfiguration.h>
-
-#include "Platform.h"
-#include <T194/T194Definitions.h>
-
-#include "Dsdt.hex"
-#include "Dsdt.offset.h"
-#include "SsdtPci.hex"
-#include "SsdtPci.offset.h"
-
-
-#define ACPI_PATCH_MAX_PATH   255
-#define ACPI_DEVICE_MAX       9
-#define ACPI_PCI_STA_TEMPLATE "_SB_.PCI%d._STA"
-#define ACPI_SDC_CRS_TEMPLATE "_SB_.SDC%d.REG0"
-#define ACPI_SDC_STA_TEMPLATE "_SB_.SDC%d._STA"
-#define ACPI_FAN_FANR         "_SB_.FAN_.FANR"
-#define ACPI_FAN_STA          "_SB_.FAN_._STA"
+#include <ConfigurationManagerDataDxePrivate.h>
 
 //AML Patch protocol
-NVIDIA_AML_PATCH_PROTOCOL *PatchProtocol = NULL;
+NVIDIA_AML_PATCH_PROTOCOL      *PatchProtocol = NULL;
+NVIDIA_AML_GENERATION_PROTOCOL *GenerationProtocol = NULL;
 
 STATIC EFI_ACPI_DESCRIPTION_HEADER *AcpiTableArray[] = {
     (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_aml_code,
-    (EFI_ACPI_DESCRIPTION_HEADER *)ssdtpci_aml_code
+    (EFI_ACPI_DESCRIPTION_HEADER *)ssdtpci_aml_code,
+    (EFI_ACPI_DESCRIPTION_HEADER *)sdctemplate_aml_code
 };
 
 STATIC AML_OFFSET_TABLE_ENTRY *OffsetTableArray[] = {
     DSDT_TEGRA194_OffsetTable,
-    SSDT_TEGRA194_OffsetTable
+    SSDT_TEGRA194_OffsetTable,
+    SSDT_SDCTEMP_OffsetTable
 };
 
 /** The platform configuration repository information.
@@ -560,29 +525,111 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   return EFI_SUCCESS;
 }
 
-/** patch SDHCI data in DSDT.
- *
- * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
- *
+/** Initialize new SSDT table.
+
   @retval EFI_SUCCESS   Success
+
 **/
 STATIC
 EFI_STATUS
 EFIAPI
-UpdateSdhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
+InitializeSsdtTable ()
 {
-  EFI_STATUS                        Status;
-  UINT32                            NumberOfSdhciPorts;
-  UINT32                            *SdhciHandles;
-  NVIDIA_DEVICE_TREE_REGISTER_DATA  RegisterData;
-  UINT32                            Size;
-  UINT32                            Index;
-  UINT32                            DeviceIndex;
-  CHAR8                             AcpiPathString[ACPI_PATCH_MAX_PATH];
-  NVIDIA_AML_NODE_INFO              AcpiNodeInfo;
-  UINTN                             AcpiSize;
+  EFI_STATUS                  Status;
+  EFI_ACPI_DESCRIPTION_HEADER SsdtTableHeader;
+
+  SsdtTableHeader.Signature = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+  SsdtTableHeader.Length = sizeof(EFI_ACPI_DESCRIPTION_HEADER);
+  SsdtTableHeader.Revision = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+  SsdtTableHeader.Checksum = 0;
+  CopyMem(SsdtTableHeader.OemId, PcdGetPtr(PcdAcpiDefaultOemId), sizeof(SsdtTableHeader.OemId));
+  SsdtTableHeader.OemTableId = PcdGet64(PcdAcpiDefaultOemTableId);
+  SsdtTableHeader.OemRevision = FixedPcdGet64(PcdAcpiDefaultOemRevision);
+  SsdtTableHeader.CreatorId = FixedPcdGet32(PcdAcpiDefaultCreatorId);
+  SsdtTableHeader.CreatorRevision = FixedPcdGet32(PcdAcpiDefaultCreatorRevision);
+
+  Status = GenerationProtocol->InitializeTable(GenerationProtocol, &SsdtTableHeader);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return GenerationProtocol->StartScope(GenerationProtocol, "_SB");
+}
+
+/** Finalize new SSDT table.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+FinalizeSsdtTable ()
+{
+  EFI_STATUS                  Status;
+  UINT32                      Index;
+  EFI_ACPI_DESCRIPTION_HEADER *TestTable;
+  CM_STD_OBJ_ACPI_TABLE_INFO  *NewAcpiTables;
+
+  Status = GenerationProtocol->EndScope(GenerationProtocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = GenerationProtocol->GetTable(GenerationProtocol, &TestTable);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  for (Index = 0; Index < (EStdObjMax + EArmObjMax); Index++) {
+    if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
+      NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (NVIDIAPlatformRepositoryInfo[Index].CmObjectSize + sizeof (CM_STD_OBJ_ACPI_TABLE_INFO), NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr);
+      if (NewAcpiTables == NULL) {
+        return EFI_OUT_OF_RESOURCES;
+      }
+
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
+
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = TestTable->Signature;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = TestTable->Revision;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = (EFI_ACPI_DESCRIPTION_HEADER *)TestTable;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId = TestTable->OemTableId;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision = TestTable->OemRevision;
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+      Status = EFI_SUCCESS;
+      break;
+    } else if (NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr == NULL) {
+      Status = EFI_UNSUPPORTED;
+      break;
+    }
+  }
+
+  return Status;
+}
+
+/** Find SDHCI data in the DeviceTree and add to a new SSDT table.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateSdhciInfo ()
+{
+  EFI_STATUS                                    Status;
+  UINT32                                        NumberOfSdhciPorts;
+  UINT32                                        *SdhciHandles;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA              RegisterData;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA             InterruptData;
+  UINT32                                        Size;
+  UINT32                                        Index;
+  CHAR8                                         SdcPathString[ACPI_PATCH_MAX_PATH];
+  NVIDIA_AML_NODE_INFO                          AcpiNodeInfo;
   EFI_ACPI_32_BIT_FIXED_MEMORY_RANGE_DESCRIPTOR MemoryDescriptor;
-  UINT8                             AcpiStatus;
+  EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR        InterruptDescriptor;
 
   NumberOfSdhciPorts = 0;
   Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra194-sdhci", NULL, &NumberOfSdhciPorts);
@@ -592,6 +639,7 @@ UpdateSdhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     return Status;
   }
 
+  SdhciHandles = NULL;
   SdhciHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfSdhciPorts);
   if (SdhciHandles == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -599,71 +647,112 @@ UpdateSdhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 
   Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra194-sdhci", SdhciHandles, &NumberOfSdhciPorts);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto ErrorExit;
   }
 
   for (Index = 0; Index < NumberOfSdhciPorts; Index++) {
-
-    //Only one register space is expected
+    // Only one register space is expected
     Size = 1;
     Status = GetDeviceTreeRegisters (SdhciHandles[Index], &RegisterData, &Size);
     if (EFI_ERROR (Status)) {
-      return Status;
+      goto ErrorExit;
     }
 
-    //Attempt to locate the sdhci entry in DSDT
-    for (DeviceIndex = 0; DeviceIndex < ACPI_DEVICE_MAX; DeviceIndex++) {
-      AsciiSPrint (AcpiPathString, sizeof (AcpiPathString), ACPI_SDC_CRS_TEMPLATE, DeviceIndex);
-      AcpiSize = sizeof (MemoryDescriptor);
-      Status = PatchProtocol->FindNode (PatchProtocol, AcpiPathString, &AcpiNodeInfo);
-      if (EFI_ERROR (Status)) {
-        continue;
-      }
-      if (AcpiNodeInfo.Size != sizeof (MemoryDescriptor)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d, skipping patch\r\n", __FUNCTION__, AcpiPathString, AcpiNodeInfo.Size));
-        continue;
-      }
+    // Only one interrupt is expected
+    Size = 1;
+    Status = GetDeviceTreeInterrupts (SdhciHandles[Index], &InterruptData, &Size);
+    if (EFI_ERROR (Status)) {
+      goto ErrorExit;
+    }
 
-      Status = PatchProtocol->GetNodeData (PatchProtocol, &AcpiNodeInfo, &MemoryDescriptor, sizeof (MemoryDescriptor));
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Failed to get data for %a, skipping patch\r\n", __FUNCTION__, AcpiPathString));
-        continue;
-      }
-      if (MemoryDescriptor.BaseAddress == RegisterData.BaseAddress) {
-        AsciiSPrint (AcpiPathString, sizeof (AcpiPathString), ACPI_SDC_STA_TEMPLATE, DeviceIndex);
-        Status = PatchProtocol->FindNode (PatchProtocol, AcpiPathString, &AcpiNodeInfo);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "%a: Error finding node %a - %r, skipping patch\r\n", __FUNCTION__, AcpiPathString, Status));
-          break;
-        }
-        if (AcpiNodeInfo.Size != sizeof (AcpiStatus)) {
-          DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d, skipping patch\r\n", __FUNCTION__, AcpiPathString, AcpiNodeInfo.Size));
-          break;
-        }
+    Status = PatchProtocol->FindNode(PatchProtocol, ACPI_SDCT_REG0, &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_SDCT_REG0));
+      goto ErrorExit;
+    }
+    if (AcpiNodeInfo.Size != sizeof (MemoryDescriptor)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d\n", __FUNCTION__, ACPI_SDCT_REG0, AcpiNodeInfo.Size));
+      goto ErrorExit;
+    }
 
-        AcpiStatus = 0xF;
-        Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &AcpiStatus, sizeof (AcpiStatus));
-        if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiPathString, Status));
-        }
-        break;
-      }
+    Status = PatchProtocol->GetNodeData(PatchProtocol, &AcpiNodeInfo, &MemoryDescriptor, sizeof (MemoryDescriptor));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get data for %a\n", __FUNCTION__, ACPI_SDCT_REG0));
+      goto ErrorExit;
+    }
+
+
+    MemoryDescriptor.BaseAddress = RegisterData.BaseAddress;
+    MemoryDescriptor.Length = RegisterData.Size;
+
+    Status = PatchProtocol->SetNodeData(PatchProtocol, &AcpiNodeInfo, &MemoryDescriptor, sizeof (MemoryDescriptor));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_SDCT_REG0));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->FindNode(PatchProtocol, ACPI_SDCT_INT0, &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_SDCT_INT0));
+      goto ErrorExit;
+    }
+    if (AcpiNodeInfo.Size != sizeof (InterruptDescriptor)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d\n", __FUNCTION__, ACPI_SDCT_INT0, AcpiNodeInfo.Size));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->GetNodeData(PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get data for %a\n", __FUNCTION__, ACPI_SDCT_INT0));
+      goto ErrorExit;
+    }
+
+    // Interrupts in the device tree are encoded relative to a starting address of 0x20
+    InterruptDescriptor.InterruptNumber[0] = InterruptData.Interrupt + 0x20;
+
+    Status = PatchProtocol->SetNodeData(PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_SDCT_INT0));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->FindNode(PatchProtocol, "SDCT", &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, "SDCT"));
+      goto ErrorExit;
+    }
+
+    AsciiSPrint (SdcPathString, sizeof (SdcPathString), "SDC%d", Index);
+    Status = PatchProtocol->UpdateNodeName(PatchProtocol, &AcpiNodeInfo, SdcPathString);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to update name to %a\n", __FUNCTION__, SdcPathString));
+      goto ErrorExit;
+    }
+
+    Status = GenerationProtocol->AppendDevice(GenerationProtocol, (EFI_ACPI_DESCRIPTION_HEADER *)sdctemplate_aml_code);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to append device %a\n", __FUNCTION__, SdcPathString));
+      goto ErrorExit;
     }
   }
-  FreePool (SdhciHandles);
-  return EFI_SUCCESS;
+
+ErrorExit:
+  if (SdhciHandles != NULL) {
+    FreePool (SdhciHandles);
+  }
+
+  return Status;
 }
 
 /** patch Fan data in DSDT.
- *
- * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
- *
+
   @retval EFI_SUCCESS   Success
+
 **/
 STATIC
 EFI_STATUS
 EFIAPI
-UpdateFanInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
+UpdateFanInfo ()
 {
   EFI_STATUS                        Status;
   INT32                             FanOffset;
@@ -993,7 +1082,17 @@ InitializePlatformRepository ()
     }
   }
 
-  Status = UpdateSdhciInfo (&Repo);
+  Status = InitializeSsdtTable ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateSdhciInfo ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = FinalizeSsdtTable ();
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -1036,6 +1135,12 @@ ConfigurationManagerDataDxeInitialize (
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
+  Status = gBS->LocateProtocol (&gNVIDIAAmlGenerationProtocolGuid, NULL, (VOID **)&GenerationProtocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   Status = PatchProtocol->RegisterAmlTables (
                             PatchProtocol,
                             AcpiTableArray,

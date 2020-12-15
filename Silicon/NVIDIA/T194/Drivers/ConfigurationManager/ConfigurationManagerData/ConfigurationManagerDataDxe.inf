@@ -1,7 +1,7 @@
 ## @file
 #  Configuration Manager Data Dxe
 #
-#  Copyright (c) 2020, NVIDIA Corporation. All rights reserved.
+#  Copyright (c) 2020 - 2021, NVIDIA Corporation. All rights reserved.
 #  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -40,12 +40,14 @@
 
 [LibraryClasses]
   BaseLib
+  BaseMemoryLib
   DeviceTreeHelperLib
   FdtLib
   FloorSweepingLib
   MemoryAllocationLib
   TegraPlatformInfoLib
   PlatformAslTablesLib
+  AslTemplateTablesLib
   PrintLib
   UefiBootServicesTableLib
   UefiRuntimeServicesTableLib
@@ -54,6 +56,9 @@
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorRevision
   gArmTokenSpaceGuid.PcdArmArchTimerSecIntrNum
   gArmTokenSpaceGuid.PcdArmArchTimerIntrNum
   gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum
@@ -73,8 +78,11 @@
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
   gNVIDIAAmlPatchProtocolGuid
+  gNVIDIAAmlGenerationProtocolGuid
 
 [Depex]
   gEfiVariableArchProtocolGuid
   AND
   gNVIDIAAmlPatchProtocolGuid
+  AND
+  gNVIDIAAmlGenerationProtocolGuid

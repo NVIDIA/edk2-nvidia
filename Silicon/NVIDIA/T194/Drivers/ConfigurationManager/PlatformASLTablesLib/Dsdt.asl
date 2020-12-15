@@ -1,7 +1,7 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * Copyright (c) 2020, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2020 - 2021, NVIDIA Corporation. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * Template for [DSDT] ACPI Table (AML byte code table)
@@ -335,30 +335,6 @@ DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
         Package () {
           Package (2) {"spi-max-frequency", 65000000},
         }
-      })
-    }
-
-    Device(SDC0) {
-      Name (_HID, EISAID("PNP0D40")) // SDA Standard Compliant SD Host Controller
-      Name (_UID, 0)
-      Name (_CCA, ZERO)
-      Name (_STA, 0)
-
-      Name(_CRS, ResourceTemplate () {
-        Memory32Fixed(ReadWrite, T194_SDMMC4_BASE_ADDR, T194_SDMMC4_CAR_SIZE, REG0)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T194_SDMMC4_INTR }
-      })
-    }
-
-    Device(SDC1) {
-      Name (_HID, EISAID("PNP0D40")) // SDA Standard Compliant SD Host Controller
-      Name (_UID, 1)
-      Name (_CCA, ZERO)
-      Name (_STA, 0)
-
-      Name(_CRS, ResourceTemplate () {
-        Memory32Fixed(ReadWrite, T194_SDMMC1_BASE_ADDR, T194_SDMMC1_CAR_SIZE, REG0)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T194_SDMMC1_INTR }
       })
     }
 
