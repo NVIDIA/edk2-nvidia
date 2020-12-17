@@ -336,13 +336,13 @@ ErrorExit:
       gBS->CloseProtocol (Controller,
                           &gEfiI2cIoProtocolGuid,
                           This->DriverBindingHandle,
-                          I2cIo);
+                          Controller);
     }
     if (RngProtocol != NULL) {
       gBS->CloseProtocol (Controller,
                           &gEfiRngProtocolGuid,
                           This->DriverBindingHandle,
-                          RngProtocol);
+                          Controller);
     }
   }
 
@@ -416,9 +416,9 @@ CvmEepromDxeDriverBindingStop (
 
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     Status = gBS->CloseProtocol (Controller,
-                                &gEfiI2cIoProtocolGuid,
-                                This->DriverBindingHandle,
-                                I2cIo);
+                                 &gEfiI2cIoProtocolGuid,
+                                 This->DriverBindingHandle,
+                                 Controller);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to close i2cio protocol (%r)\r\n", __FUNCTION__, Status));
       return Status;
