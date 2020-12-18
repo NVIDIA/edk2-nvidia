@@ -170,19 +170,26 @@ EFI_STATUS
 );
 
 /**
-  Set the name of the AML Node with the given AmlNodeInfo. The name is located
+  Update the name of the AML Node with the given AmlNodeInfo. The name is located
   using the NamesegOffset of the AML offset entry. Does not update the
   name stored in the AML offset entry.
 
   @param[in]  This              Instance of AML patching protocol.
   @param[in]  AmlNodeInfo       Pointer to the AmlNodeInfo for the node whose
-                                name will be set.
+                                name will be updated.
   @param[in]  NewName           Pointer to a buffer with the new name. Must have
-                                a length of 4.
+                                a length between 1 and 4. If the length is < 4,
+                                then the name will be padded to 4 bytes using
+                                the '_' character. The first character in the
+                                given name must be inclusive of 'A'-'Z' and '_'.
+                                The rest of the characters must be inclusive of
+                                'A'-'Z', '0'-'9', and '_'.
 
   @retval EFI_SUCCESS           The function completed successfully.
-  @retval EFI_BAD_BUFFER_SIZE   The given NewName's length was not 4
-  @retval EFI_INVALID_PARAMETER This, AmlNodeInfo, or NewName was NULL.
+  @retval EFI_BAD_BUFFER_SIZE   The given NewName's length was not between 1-4
+  @retval EFI_INVALID_PARAMETER This, AmlNodeInfo, or NewName was NULL,
+                                or NewName's characters do not follow the
+                                AML spec guidelines.
 **/
 typedef
 EFI_STATUS

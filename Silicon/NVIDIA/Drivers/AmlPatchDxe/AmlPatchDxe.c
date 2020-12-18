@@ -610,11 +610,18 @@ SetNodeData (
   @param[in]  AmlNodeInfo       Pointer to the AmlNodeInfo for the node whose
                                 name will be updated.
   @param[in]  NewName           Pointer to a buffer with the new name. Must have
-                                a length of 4.
+                                a length between 1 and 4. If the length is < 4,
+                                then the name will be padded to 4 bytes using
+                                the '_' character. The first character in the
+                                given name must be inclusive of 'A'-'Z' and '_'.
+                                The rest of the characters must be inclusive of
+                                'A'-'Z', '0'-'9', and '_'.
 
   @retval EFI_SUCCESS           The function completed successfully.
-  @retval EFI_BAD_BUFFER_SIZE   The given NewName's length was not 4
-  @retval EFI_INVALID_PARAMETER This, AmlNodeInfo, or NewName was NULL.
+  @retval EFI_BAD_BUFFER_SIZE   The given NewName's length was not between 1-4
+  @retval EFI_INVALID_PARAMETER This, AmlNodeInfo, or NewName was NULL,
+                                or NewName's characters do not follow the
+                                AML spec guidelines.
 **/
 EFI_STATUS
 EFIAPI
@@ -623,8 +630,9 @@ UpdateNodeName(
   IN NVIDIA_AML_NODE_INFO       *AmlNodeInfo,
   IN CHAR8                      *NewName
 ) {
-  VOID  *NameStart;
+  UINT8 *NameStart;
   UINTN NewNameLength;
+  CHAR8 *CurrChar;
 
   if (This == NULL || AmlNodeInfo == NULL || NewName == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -632,14 +640,29 @@ UpdateNodeName(
 
   NewNameLength = AsciiStrLen(NewName);
 
-  if (NewNameLength != AML_NAME_LENGTH) {
+  if (NewNameLength > AML_NAME_LENGTH || NewNameLength == 0) {
     return EFI_BAD_BUFFER_SIZE;
+  }
+
+  if ((*NewName < 'A' || *NewName > 'Z') && *NewName != '_') {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  for (CurrChar = NewName + 1; CurrChar < NewName + NewNameLength; CurrChar++) {
+    if ((*CurrChar < 'A' || *CurrChar > 'Z')
+        && (*CurrChar < '0' || *CurrChar > '9')
+        && *CurrChar != '_') {
+      return EFI_INVALID_PARAMETER;
+    }
   }
 
   NameStart = (UINT8*)AmlNodeInfo->AmlTable
                 + AmlNodeInfo->AmlOffsetEntry->NamesegOffset;
 
-  CopyMem(NameStart, NewName, AML_NAME_LENGTH);
+  CopyMem(NameStart, NewName, NewNameLength);
+  if (NewNameLength < AML_NAME_LENGTH) {
+    SetMem(NameStart + NewNameLength, AML_NAME_LENGTH - NewNameLength, '_');
+  }
 
   return EFI_SUCCESS;
 }

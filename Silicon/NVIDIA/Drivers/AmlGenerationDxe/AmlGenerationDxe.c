@@ -334,14 +334,20 @@ GetTable(
 
   @param[in]  This              Instance of AML generation protocol.
   @param[in]  ScopeName         Buffer containing name of the scope section.
-                                Length of the string must be 4
+                                Must have a length between 1 and 4. If the
+                                length is < 4, then the name will be padded
+                                to 4 bytes using the '_' character. The first
+                                character in the given name must be inclusive of
+                                'A'-'Z' and '_'. The rest of the characters must
+                                be inclusive of 'A'-'Z', '0'-'9', and '_'.
 
   @retval EFI_SUCCESS           The function completed successfully.
-  @retval EFI_BAD_BUFFER_SIZE   The given ScopeName's length was not 4.
+  @retval EFI_BAD_BUFFER_SIZE   The given ScopeName's length was not between 1-4
   @retval EFI_NOT_READY         There is not an AML table being generated,
                                 or a scope section has already been started.
   @retval EFI_OUT_OF_RESOURCES  Not enough memory to add a scope section.
-  @retval EFI_INVALID_PARAMETER This or ScopeName was NULL.
+  @retval EFI_INVALID_PARAMETER This or ScopeName was NULL, or ScopeName's
+                                characters do not follow the AML spec guidelines.
 **/
 EFI_STATUS
 EFIAPI
@@ -355,6 +361,7 @@ StartScope(
   EFI_ACPI_DESCRIPTION_HEADER         *NewTable;
   AML_SCOPE_HEADER                    *ScopeHeader;
   UINTN                               ScopeNameLength;
+  CHAR8                               *CurrChar;
 
   if (This == NULL || ScopeName == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -368,8 +375,20 @@ StartScope(
 
   ScopeNameLength = AsciiStrLen(ScopeName);
 
-  if (ScopeNameLength != AML_NAME_LENGTH) {
+  if (ScopeNameLength > AML_NAME_LENGTH || ScopeNameLength == 0) {
     return EFI_BAD_BUFFER_SIZE;
+  }
+
+  if ((*ScopeName < 'A' || *ScopeName > 'Z') && *ScopeName != '_') {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  for (CurrChar = ScopeName + 1; CurrChar < ScopeName + ScopeNameLength; CurrChar++) {
+    if ((*CurrChar < 'A' || *CurrChar > 'Z')
+        && (*CurrChar < '0' || *CurrChar > '9')
+        && *CurrChar != '_') {
+      return EFI_INVALID_PARAMETER;
+    }
   }
 
   NewLength = Private->CurrentTable->Length + sizeof(AML_SCOPE_HEADER);
@@ -385,8 +404,10 @@ StartScope(
   ScopeHeader = (AML_SCOPE_HEADER*) ((UINT8*)NewTable + NewTable->Length);
 
   ScopeHeader->OpCode = AML_SCOPE_OP;
-  CopyMem(ScopeHeader->Name, ScopeName, AML_NAME_LENGTH);
-  // Scope Length should include package bytes and name bytes but not opcode
+  CopyMem(ScopeHeader->Name, ScopeName, ScopeNameLength);
+  if (ScopeNameLength < AML_NAME_LENGTH) {
+    SetMem(ScopeHeader->Name + ScopeNameLength, AML_NAME_LENGTH - ScopeNameLength, '_');
+  }  // Scope Length should include package bytes and name bytes but not opcode
   SetScopePackageLength(ScopeHeader, sizeof(AML_SCOPE_HEADER) - 1);
 
   Private->ScopeStart = ScopeHeader;
