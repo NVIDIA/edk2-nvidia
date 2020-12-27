@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -93,4 +93,30 @@ GetResourceConfigInternal (
 )
 {
   return EFI_UNSUPPORTED;
+}
+
+/**
+  Retrieve GR Blob Address
+
+**/
+BOOLEAN
+EFIAPI
+GetGRBlobBaseAddressInternal (
+  OUT UINT64 *GRBlobBaseAddress
+)
+{
+  return FALSE;
+}
+
+/**
+  Retrieve GR Output Base and Size
+
+**/
+BOOLEAN
+GetGROutputBaseAndSizeInternal (
+  OUT UINTN *Base,
+  OUT UINTN *Size
+)
+{
+  return FALSE;
 }

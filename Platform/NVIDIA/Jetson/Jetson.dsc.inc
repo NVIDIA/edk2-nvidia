@@ -220,3 +220,8 @@
   # VPR Support
   #
   Silicon/NVIDIA/Drivers/VPRDxe/VPRDxe.inf
+
+  #
+  # Golden Register Support
+  #
+  Silicon/NVIDIA/Drivers/GoldenRegisterDxe/GoldenRegisterDxe.inf

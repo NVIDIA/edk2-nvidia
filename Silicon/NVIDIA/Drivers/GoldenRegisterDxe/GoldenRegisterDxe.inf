@@ -1,0 +1,39 @@
+## @file
+#  Golden Register Dxe
+#
+#  Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION               = 0x00010019
+  BASE_NAME                 = GoldenRegisterDxe
+  FILE_GUID                 = 08f78a42-2430-4dbd-9e51-c02c173451e7
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = GoldenRegisterDxeInitialize
+
+[Sources]
+  GoldenRegisterDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  PlatformResourceLib
+  DxeServicesTableLib
+  GoldenRegisterLib
+
+[Guids]
+  gEfiEventExitBootServicesGuid
+  gNVIDIAKernelCmdLineUpdateGuid
+
+[Depex]
+  TRUE

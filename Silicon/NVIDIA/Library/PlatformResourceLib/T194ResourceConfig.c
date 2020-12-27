@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -19,6 +19,7 @@
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/GoldenRegisterLib.h>
 #include "T194ResourceConfigPrivate.h"
 #include "T194ResourceConfig.h"
 
@@ -62,7 +63,7 @@ T194ResourceConfig (
       BuildMemoryAllocationHob (
         CpuBootloaderParams->CarveoutInfo[Index].Base,
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
-        EfiBootServicesData
+        (ValidateGrBlobHeader(GetGRBlobBaseAddress ()) == EFI_SUCCESS) ? EfiReservedMemoryType : EfiBootServicesData
       );
     } else if ((Index != CARVEOUT_CPUBL) &&
                (Index != CARVEOUT_OS) &&
@@ -123,4 +124,60 @@ T194GetBootType (
   )
 {
   return TegrablBootColdBoot;
+}
+
+/**
+  Retrieve GR Blob Address
+
+**/
+UINT64
+T194GetGRBlobBaseAddress (
+  IN UINTN CpuBootloaderAddress
+  )
+{
+  TEGRA_CPUBL_PARAMS         *CpuBootloaderParams;
+  UINT64                     MemoryBase;
+  UINT64                     MemorySize;
+  EFI_FIRMWARE_VOLUME_HEADER *FvHeader;
+  UINT64                     FvOffset;
+  UINT64                     FvSize;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  MemoryBase = CpuBootloaderParams->CarveoutInfo[CARVEOUT_CPUBL].Base;
+  MemorySize = CpuBootloaderParams->CarveoutInfo[CARVEOUT_CPUBL].Size;
+  FvOffset = 0;
+
+  while (FvOffset < MemorySize) {
+    FvHeader = (EFI_FIRMWARE_VOLUME_HEADER *)(VOID *)(MemoryBase + FvOffset);
+    if (FvHeader->Signature == EFI_FVH_SIGNATURE) {
+      break;
+    }
+    FvOffset += SIZE_64KB;
+  }
+  ASSERT (FvOffset < MemorySize);
+  FvSize = FvHeader->FvLength;
+  // Make UEFI FV size aligned to 64KB.
+  FvSize = ALIGN_VALUE (FvSize, SIZE_64KB);
+
+  return (UINT64)FvHeader + FvSize;
+}
+
+/**
+  Retrieve GR Output Base and Size
+
+**/
+BOOLEAN
+T194GetGROutputBaseAndSize (
+  IN  UINTN CpuBootloaderAddress,
+  OUT UINTN *Base,
+  OUT UINTN *Size
+  )
+{
+  TEGRA_CPUBL_PARAMS *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  *Base = CpuBootloaderParams->GoldenRegisterAddress;
+  *Size = CpuBootloaderParams->GoldenRegisterSize;
+
+  return TRUE;
 }

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -76,6 +76,26 @@ EFIAPI
 GetResourceConfigInternal (
   IN  UINTN               CpuBootloaderAddress,
   OUT TEGRA_RESOURCE_INFO *PlatformInfo
+);
+
+/**
+  Retrieve GR Blob Address
+
+**/
+BOOLEAN
+EFIAPI
+GetGRBlobBaseAddressInternal (
+  OUT UINT64 *DTBBaseAddress
+);
+
+/**
+  Retrieve GR Output Base and Size
+
+**/
+BOOLEAN
+GetGROutputBaseAndSizeInternal (
+  OUT UINTN *Base,
+  OUT UINTN *Size
 );
 
 #endif //__PLATFORM_RESOURCE_INTERNAL_LIB_H__

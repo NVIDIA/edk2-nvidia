@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -213,5 +213,69 @@ GetResourceConfig (
     default:
       PlatformInfo = NULL;
       return EFI_UNSUPPORTED;
+  }
+}
+
+/**
+  Retrieve GR Blob Address
+
+**/
+UINT64
+EFIAPI
+GetGRBlobBaseAddress (
+  VOID
+)
+{
+  UINTN   ChipID;
+  UINTN   CpuBootloaderAddress;
+  UINT64  GRBlobBaseAddress;
+  BOOLEAN ValidPrivatePlatform;
+
+  ValidPrivatePlatform = GetGRBlobBaseAddressInternal (&GRBlobBaseAddress);
+  if (ValidPrivatePlatform) {
+    return GRBlobBaseAddress;
+  }
+
+  ChipID = TegraGetChipID();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T194_CHIP_ID:
+      return T194GetGRBlobBaseAddress(CpuBootloaderAddress);
+    default:
+      return 0x0;
+  }
+}
+
+/**
+  Retrieve GR Output Base and Size
+
+**/
+BOOLEAN
+EFIAPI
+GetGROutputBaseAndSize (
+  OUT UINTN *Base,
+  OUT UINTN *Size
+)
+{
+  UINTN   ChipID;
+  UINTN   CpuBootloaderAddress;
+  BOOLEAN ValidPrivatePlatform;
+
+  ValidPrivatePlatform = GetGROutputBaseAndSizeInternal (Base, Size);
+  if (ValidPrivatePlatform) {
+    return ValidPrivatePlatform;
+  }
+
+  ChipID = TegraGetChipID();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T194_CHIP_ID:
+      return T194GetGROutputBaseAndSize(CpuBootloaderAddress, Base, Size);
+    default:
+      return FALSE;
   }
 }

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -90,6 +90,27 @@ EFI_STATUS
 EFIAPI
 GetResourceConfig (
   OUT TEGRA_RESOURCE_INFO *PlatformInfo
+);
+
+/**
+  Retrieve GR Blob Address
+
+**/
+UINT64
+EFIAPI
+GetGRBlobBaseAddress (
+  VOID
+);
+
+/**
+  Retrieve GR Output Base and Size
+
+**/
+BOOLEAN
+EFIAPI
+GetGROutputBaseAndSize (
+  OUT UINTN *Base,
+  OUT UINTN *Size
 );
 
 #endif //__PLATFORM_RESOURCE_LIB_H__

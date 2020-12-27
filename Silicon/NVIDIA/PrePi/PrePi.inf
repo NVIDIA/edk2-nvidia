@@ -1,6 +1,6 @@
 #/** @file
 #
-#  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 #  (C) Copyright 2015 Hewlett-Packard Development Company, L.P.<BR>
 #  Copyright (c) 2011-2017, ARM Ltd. All rights reserved.<BR>
 #
@@ -57,6 +57,7 @@
   ArmGicLib
   FdtLib
   TegraPlatformInfoLib
+  GoldenRegisterLib
 
 [Guids]
   gEfiFirmwarePerformanceGuid

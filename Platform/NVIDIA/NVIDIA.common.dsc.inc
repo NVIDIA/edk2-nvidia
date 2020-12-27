@@ -157,6 +157,7 @@
   TegraPlatformInfoLib|Silicon/NVIDIA/Library/TegraPlatformInfoLib/TegraPlatformInfoLib.inf
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/PlatformResourceLib.inf
   SystemResourceLib|Silicon/NVIDIA/Library/SystemResourceLib/SystemResourceLib.inf
+  GoldenRegisterLib|Silicon/NVIDIA/Library/GoldenRegisterLib/GoldenRegisterLib.inf
 
   DramCarveoutLib|Silicon/NVIDIA/Library/DramCarveoutLib/DramCarveoutLib.inf
 

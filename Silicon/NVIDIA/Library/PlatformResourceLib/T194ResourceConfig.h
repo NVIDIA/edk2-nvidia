@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -36,6 +36,22 @@ T194GetRCMBaseAddress (
 TEGRA_BOOT_TYPE
 T194GetBootType (
   IN UINTN CpuBootloaderAddress
+);
+
+UINT64
+T194GetGRBlobBaseAddress (
+  IN UINTN CpuBootloaderAddress
+);
+
+/**
+  Retrieve GR Output Base and Size
+
+**/
+BOOLEAN
+T194GetGROutputBaseAndSize (
+  IN  UINTN CpuBootloaderAddress,
+  OUT UINTN *Base,
+  OUT UINTN *Size
 );
 
 #endif //__T194_RESOURCE_CONFIG_H__

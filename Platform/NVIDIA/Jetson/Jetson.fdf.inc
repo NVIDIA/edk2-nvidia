@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -135,3 +135,8 @@
   # VPR Support
   #
   INF Silicon/NVIDIA/Drivers/VPRDxe/VPRDxe.inf
+
+  #
+  # Golden Register Support
+  #
+  INF Silicon/NVIDIA/Drivers/GoldenRegisterDxe/GoldenRegisterDxe.inf

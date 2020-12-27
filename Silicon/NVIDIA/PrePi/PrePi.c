@@ -24,6 +24,7 @@
 #include <Library/PerformanceLib.h>
 #include <Library/ArmMmuLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/GoldenRegisterLib.h>
 
 
 #include <Ppi/GuidedSectionExtraction.h>
@@ -211,9 +212,12 @@ CEntryPoint (
   }
   ASSERT (FvOffset < MemorySize);
   FvSize = FvHeader->FvLength;
-  // Check if UEFI FV is size aligned to 64KB or not.
-  if (FvSize % SIZE_64KB != 0) {
-    FvSize += SIZE_64KB - (FvSize % SIZE_64KB);
+  // Make UEFI FV size aligned to 64KB.
+  FvSize = ALIGN_VALUE (FvSize, SIZE_64KB);
+
+  if (GetGRBlobBaseAddress () != 0 &&
+      ValidateGrBlobHeader (GetGRBlobBaseAddress ()) == EFI_SUCCESS) {
+    FvSize += GrBlobBinarySize (GetGRBlobBaseAddress ());
   }
 
   DtbBase = GetDTBBaseAddress ();
