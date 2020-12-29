@@ -81,6 +81,7 @@ CvmEepromDxeDriverBindingSupported (
 {
   EFI_STATUS                       Status;
   EFI_I2C_IO_PROTOCOL              *I2cIo;
+  EFI_RNG_PROTOCOL                 *RngProtocol;
   BOOLEAN                          SupportedDevice;
   TEGRA_PLATFORM_TYPE              PlatformType;
 
@@ -112,14 +113,23 @@ CvmEepromDxeDriverBindingSupported (
     } else {
       Status = EFI_UNSUPPORTED;
     }
-
   } else {
-    // Use RNG to get a random MAC address instead
-    EFI_RNG_PROTOCOL *RngProtocol;
-
-    Status = gBS->LocateProtocol (&gEfiRngProtocolGuid, NULL, (VOID **)&RngProtocol);
+    Status = gBS->OpenProtocol (Controller,
+                                &gEfiRngProtocolGuid,
+                                (VOID**) &RngProtocol,
+                                This->DriverBindingHandle,
+                                Controller,
+                                EFI_OPEN_PROTOCOL_BY_DRIVER);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_INFO, "%a: Failed to get RNG protocol\r\n", __FUNCTION__));
+      return Status;
+    }
+
+    Status = gBS->CloseProtocol (Controller,
+                                &gEfiI2cIoProtocolGuid,
+                                This->DriverBindingHandle,
+                                Controller);
+    if (EFI_ERROR (Status)) {
+      return Status;
     }
   }
 
@@ -277,7 +287,6 @@ CvmEepromDxeDriverBindingStart (
       Status = EFI_DEVICE_ERROR;
       goto ErrorExit;
     }
-
   } else {
     // Use RNG to generate a random MAC address instead
     Status = gBS->OpenProtocol (Controller,
@@ -385,18 +394,8 @@ CvmEepromDxeDriverBindingStop (
 )
 {
   EFI_STATUS                Status;
-  EFI_I2C_IO_PROTOCOL       *I2cIo = NULL;
   TEGRA_CVM_EEPROM_PROTOCOL *EepromData = NULL;
   TEGRA_PLATFORM_TYPE       PlatformType;
-
-  PlatformType = TegraGetPlatform();
-  if (PlatformType == TEGRA_PLATFORM_SILICON) {
-    Status = gBS->HandleProtocol (Controller, &gEfiI2cIoProtocolGuid, (VOID **)&I2cIo);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get i2cio protocol (%r)\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-  }
 
   Status = gBS->HandleProtocol (Controller, &gNVIDIACvmEepromProtocolGuid, (VOID **)&EepromData);
   if (EFI_ERROR (Status)) {
@@ -414,6 +413,7 @@ CvmEepromDxeDriverBindingStop (
   }
   FreePool (EepromData);
 
+  PlatformType = TegraGetPlatform();
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     Status = gBS->CloseProtocol (Controller,
                                  &gEfiI2cIoProtocolGuid,
@@ -421,6 +421,15 @@ CvmEepromDxeDriverBindingStop (
                                  Controller);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to close i2cio protocol (%r)\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+  } else {
+    Status = gBS->CloseProtocol (Controller,
+                                 &gEfiRngProtocolGuid,
+                                 This->DriverBindingHandle,
+                                 Controller);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to close rng protocol (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
   }
