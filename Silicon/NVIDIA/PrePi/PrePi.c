@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  This program and the accompanying materials
@@ -210,7 +210,11 @@ CEntryPoint (
     FvOffset += SIZE_64KB;
   }
   ASSERT (FvOffset < MemorySize);
-  FvSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (FvHeader->FvLength));
+  FvSize = FvHeader->FvLength;
+  // Check if UEFI FV is size aligned to 64KB or not.
+  if (FvSize % SIZE_64KB != 0) {
+    FvSize += SIZE_64KB - (FvSize % SIZE_64KB);
+  }
 
   DtbBase = GetDTBBaseAddress ();
   ASSERT ((VOID *) DtbBase != NULL);
