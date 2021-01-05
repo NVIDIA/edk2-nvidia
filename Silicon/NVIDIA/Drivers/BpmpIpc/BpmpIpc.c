@@ -1,7 +1,7 @@
 /** @file
   BpmpIpc protocol implementation for BPMP IPC driver.
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -521,7 +521,7 @@ InitializeIvcChannel (
 }
 
 /**
-  This routine is called to notify system that HspDoorbell protocol is availible.
+  This routine is called to notify system that HspDoorbell protocol is available.
 
   @param Event                      Event that was notified
   @param Context                    Pointer to private data.
@@ -711,6 +711,7 @@ BpmpIpcProtocolStart (
                   &gEfiCallerIdGuid,
                   PrivateData,
                   NULL);
+
 ErrorExit:
   if (EFI_ERROR (Status)) {
     if (NULL != PrivateData) {
@@ -771,6 +772,19 @@ BpmpIpcProtocolStop (
     return EFI_DEVICE_ERROR;
   }
 
+  // Closing protocol
+  Status = gBS->CloseProtocol (
+                  Controller,
+                  &gEfiCallerIdGuid,
+                  This->DriverBindingHandle,
+                  Controller
+                  );
+
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  // Uninstall BpmpIpcProtocol if it been installed during BpmpIpcProtocolStart()
   if (PrivateData->ProtocolInstalled) {
     Status = gBS->UninstallMultipleProtocolInterfaces (
                     Controller,
@@ -781,6 +795,16 @@ BpmpIpcProtocolStop (
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
     }
+  }
+
+  Status = gBS->UninstallMultipleProtocolInterfaces (
+                  Controller,
+                  &gEfiCallerIdGuid,
+                  PrivateData,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
   }
 
   if (NULL != PrivateData->RegisterNotifyEvent) {
