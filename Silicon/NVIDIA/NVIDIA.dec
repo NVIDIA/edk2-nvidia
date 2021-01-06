@@ -2,7 +2,7 @@
 #
 #  This Package provides all definitions for NVIDIA silicon
 #
-#  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -46,6 +46,7 @@ Include
 
   #PCIe
   gNVIDIANonDiscoverableT194PcieDeviceGuid   = { 0xc1a8204a, 0xd79d, 0x42cc, { 0xa4, 0x60, 0x79, 0x8c, 0xf4, 0xab, 0x0a, 0xba } }
+  gNVIDIANonDiscoverableT234PcieDeviceGuid   = { 0xdd787153, 0x8883, 0x4c3a, { 0xb0, 0xb6, 0x32, 0xc9, 0x92, 0xff, 0xf8, 0xe1 } }
 
   #I2C device types
   gNVIDIAI2cMaxim77620                   = { 0x1fa60dc3, 0x0ecd, 0x4345, { 0x9b, 0xbd, 0x50, 0xf4, 0x5b, 0x55, 0x35, 0x06 } }
