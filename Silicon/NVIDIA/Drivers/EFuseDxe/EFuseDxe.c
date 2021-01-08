@@ -2,7 +2,7 @@
 
   EFUSE Driver
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -62,8 +62,10 @@ EfuseReadRegister (
   OUT UINT32    *RegisterValue
   )
 {
-  EFI_STATUS Status = EFI_SUCCESS;
+  EFI_STATUS        Status;
   EFUSE_DXE_PRIVATE *Private;
+
+  Status = EFI_SUCCESS;
 
   Private = EFUSE_PRIVATE_DATA_FROM_THIS (This);
   if ((RegisterOffset > (Private->RegionSize - sizeof(UINT32))) ||
@@ -101,10 +103,15 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS Status = EFI_SUCCESS;
-  EFI_PHYSICAL_ADDRESS      BaseAddress  = 0;
+  EFI_STATUS                Status;
+  EFI_PHYSICAL_ADDRESS      BaseAddress;
   UINTN                     RegionSize;
-  EFUSE_DXE_PRIVATE *Private = NULL;
+  NVIDIA_EFUSE_PROTOCOL     *EFuseProtocol;
+  EFUSE_DXE_PRIVATE         *Private;
+
+  Status = EFI_SUCCESS;
+  BaseAddress = 0;
+  Private = NULL;
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingStart:
@@ -114,14 +121,14 @@ DeviceDiscoveryNotify (
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR,
         "%a: Couldn't find Efuse address range\n", __FUNCTION__));
-      goto ErrorExit;
+      return Status;
     }
 
     Private = AllocatePool (sizeof (EFUSE_DXE_PRIVATE));
     if (NULL == Private) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Memory\r\n", __FUNCTION__));
       Status = EFI_OUT_OF_RESOURCES;
-      goto ErrorExit;
+      return Status;
     }
 
     Private->Signature = EFUSE_SIGNATURE;
@@ -137,14 +144,41 @@ DeviceDiscoveryNotify (
                   NULL
                   );
     if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, Failed to install protocols: %r\r\n",
+                                                    __FUNCTION__, Status));
       FreePool (Private);
-      Status = EFI_PROTOCOL_ERROR;
-      goto ErrorExit;
+      return Status;
     }
     break;
+
+  case DeviceDiscoveryDriverBindingStop:
+
+    Status = gBS->HandleProtocol (
+                  DriverHandle,
+                  &gNVIDIAEFuseProtocolGuid,
+                  (VOID **)&EFuseProtocol);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    Private = EFUSE_PRIVATE_DATA_FROM_PROTOCOL (EFuseProtocol);
+
+    Status =  gBS->UninstallMultipleProtocolInterfaces (
+                   DriverHandle,
+                   &gNVIDIAEFuseProtocolGuid,
+                   &Private->EFuseProtocol,
+                   NULL);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    FreePool (Private);
+    break;
+
   default:
     break;
   }
-ErrorExit:
-    return Status;
+
+  return Status;
+
 }
