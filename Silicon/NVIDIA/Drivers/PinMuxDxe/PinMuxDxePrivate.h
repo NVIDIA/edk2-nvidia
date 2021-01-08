@@ -2,7 +2,7 @@
 
   PINMUX Driver private structures
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -27,6 +27,7 @@ typedef struct {
   UINTN                      RegionSize;
   EFI_HANDLE                 ImageHandle;
 } PINMUX_DXE_PRIVATE;
-#define PINMUX_PRIVATE_DATA_FROM_THIS(a) CR(a, PINMUX_DXE_PRIVATE, PinMuxProtocol, PINMUX_SIGNATURE)
+#define PINMUX_PRIVATE_DATA_FROM_THIS(a)      CR(a, PINMUX_DXE_PRIVATE, PinMuxProtocol, PINMUX_SIGNATURE)
+#define PINMUX_PRIVATE_DATA_FROM_PROTOCOL(a)  PINMUX_PRIVATE_DATA_FROM_THIS(a)
 
 #endif /* PINMUXDXE_PRIVATE_H_ */
