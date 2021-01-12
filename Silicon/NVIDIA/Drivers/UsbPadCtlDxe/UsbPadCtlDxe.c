@@ -2,7 +2,7 @@
 
   Usb Pad Control Driver
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -69,15 +69,23 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS Status = EFI_SUCCESS;
-  USBPADCTL_DXE_PRIVATE *Private = NULL;
-  NVIDIA_REGULATOR_PROTOCOL    *mRegulator = NULL;
-  NVIDIA_EFUSE_PROTOCOL        *mEfuse = NULL;
-  NVIDIA_PINMUX_PROTOCOL       *mPmux = NULL;
-  SCMI_CLOCK2_PROTOCOL         *mClockProtocol = NULL;
+  EFI_STATUS                   Status;
+  USBPADCTL_DXE_PRIVATE        *Private;
+  NVIDIA_REGULATOR_PROTOCOL    *mRegulator;
+  NVIDIA_EFUSE_PROTOCOL        *mEfuse;
+  NVIDIA_PINMUX_PROTOCOL       *mPmux;
+  SCMI_CLOCK2_PROTOCOL         *mClockProtocol;
+  NVIDIA_USBPADCTL_PROTOCOL    *mUsbPadCtlProtocol;
+  EFI_PHYSICAL_ADDRESS         BaseAddress;
+  UINTN                        RegionSize;
 
-  EFI_PHYSICAL_ADDRESS      BaseAddress = 0;
-  UINTN                     RegionSize;
+  Status = EFI_SUCCESS;
+  Private = NULL;
+  mRegulator = NULL;
+  mEfuse = NULL;
+  mPmux = NULL;
+  mClockProtocol = NULL;
+  BaseAddress = 0;
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingStart:
@@ -144,35 +152,65 @@ DeviceDiscoveryNotify (
     /* Assign Platform Specific Parameters */
     if (fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
                                   "nvidia,tegra18x-xusb-padctl") > 0) {
-      Private->UsbPadCtlProtocol.InitHw = InitUsbHw186;
-      Private->UsbPadCtlProtocol.DeInitHw = DeInitUsbHw186;
+      Private->mUsbPadCtlProtocol.InitHw = InitUsbHw186;
+      Private->mUsbPadCtlProtocol.DeInitHw = DeInitUsbHw186;
       Private->PlatConfig = Tegra186UsbConfig;
     } else if ((fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase,
                                 0, "nvidia,tegra19x-xusb-padctl") > 0) ||
                (fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase,
                                 0, "nvidia,tegra194-xusb-padctl") > 0)) {
-      Private->UsbPadCtlProtocol.InitHw = InitUsbHw194;
-      Private->UsbPadCtlProtocol.DeInitHw = DeInitUsbHw194;
+      Private->mUsbPadCtlProtocol.InitHw = InitUsbHw194;
+      Private->mUsbPadCtlProtocol.DeInitHw = DeInitUsbHw194;
       Private->PlatConfig = Tegra194UsbConfig;
     }
 
     Status = gBS->InstallMultipleProtocolInterfaces (
                   &DriverHandle,
                   &gNVIDIAUsbPadCtlProtocolGuid,
-                  &Private->UsbPadCtlProtocol,
+                  &Private->mUsbPadCtlProtocol,
                   NULL
                   );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to install protocols: %r\r\n",
-                                              __FUNCTION__, Status));
-      goto ErrorExit;
+    if (!EFI_ERROR (Status)) {
+      return Status;
     }
+
+ErrorExit:
+    if (Private != NULL) {
+      FreePool (Private);
+    }
+
     break;
+
+  case DeviceDiscoveryDriverBindingStop:
+
+    Status = gBS->HandleProtocol (
+                  DriverHandle,
+                  &gNVIDIAUsbPadCtlProtocolGuid,
+                  (VOID **)&mUsbPadCtlProtocol);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    Private = PADCTL_PRIVATE_DATA_FROM_PROTOCOL (mUsbPadCtlProtocol);
+
+    Status =  gBS->UninstallMultipleProtocolInterfaces (
+                   DriverHandle,
+                   &gNVIDIAUsbPadCtlProtocolGuid,
+                   &Private->mUsbPadCtlProtocol,
+                   NULL);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    if (Private != NULL) {
+      FreePool (Private);
+    }
+
+    break;
+
   default:
     break;
   }
-  return EFI_SUCCESS;
-ErrorExit:
-  FreePool (Private);
+
   return Status;
 }

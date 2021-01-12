@@ -2,7 +2,7 @@
 
   USB Pad Control Driver private structures
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -98,7 +98,7 @@ typedef struct {
 #define PADCTL_SIGNATURE SIGNATURE_32('P','D','C','L')
 typedef struct {
   UINT32                     Signature;
-  NVIDIA_USBPADCTL_PROTOCOL  UsbPadCtlProtocol;
+  NVIDIA_USBPADCTL_PROTOCOL  mUsbPadCtlProtocol;
   PADCTL_PLAT_CONFIG         PlatConfig; /* Platform specific Config information */
   CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode;
   EFI_HANDLE                 ImageHandle;
@@ -110,7 +110,8 @@ typedef struct {
   EFI_PHYSICAL_ADDRESS       BaseAddress;
   BOOLEAN                    HandleOverCurrent;
 } USBPADCTL_DXE_PRIVATE;
-#define PADCTL_PRIVATE_DATA_FROM_THIS(a) CR(a, USBPADCTL_DXE_PRIVATE, UsbPadCtlProtocol, PADCTL_SIGNATURE)
+#define PADCTL_PRIVATE_DATA_FROM_THIS(a)     CR(a, USBPADCTL_DXE_PRIVATE, mUsbPadCtlProtocol, PADCTL_SIGNATURE)
+#define PADCTL_PRIVATE_DATA_FROM_PROTOCOL(a) PADCTL_PRIVATE_DATA_FROM_THIS(a)
 
 EFI_STATUS InitUsbHw186 (IN  NVIDIA_USBPADCTL_PROTOCOL  *This);
 VOID DeInitUsbHw186 (IN  NVIDIA_USBPADCTL_PROTOCOL  *This);
