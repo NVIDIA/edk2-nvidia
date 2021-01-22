@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro. All rights reserved.
   This program and the accompanying materials
@@ -21,9 +21,45 @@
 #include <Library/HobLib.h>
 #include <Protocol/LoadedImage.h>
 
-STATIC EFI_PHYSICAL_ADDRESS mRamLoadedBaseAddress = 0;
-STATIC UINT64               mRamLoadedSize = 0;
-#define KERNEL_OFFSET       0x80000
+STATIC EFI_PHYSICAL_ADDRESS      mRamLoadedBaseAddress = 0;
+STATIC UINT64                    mRamLoadedSize = 0;
+STATIC EFI_PHYSICAL_ADDRESS      mInitRdBaseAddress = 0;
+STATIC UINT64                    mInitRdSize = 0;
+STATIC SINGLE_VENHW_NODE_DEVPATH mRamLoadFileDevicePath = {
+  {
+    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
+    { 0 }
+  },
+
+  {
+    END_DEVICE_PATH_TYPE, END_ENTIRE_DEVICE_PATH_SUBTYPE,
+    { sizeof (EFI_DEVICE_PATH_PROTOCOL) }
+  }
+};
+
+STATIC SINGLE_VENHW_NODE_DEVPATH mRcmLoadFileDevicePath = {
+  {
+    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
+    { 0 }
+  },
+
+  {
+    END_DEVICE_PATH_TYPE, END_ENTIRE_DEVICE_PATH_SUBTYPE,
+    { sizeof (EFI_DEVICE_PATH_PROTOCOL) }
+  }
+};
+
+STATIC INITRD_DEVICE_PATH        mInitrdDevicePath = {
+  {
+    { MEDIA_DEVICE_PATH, MEDIA_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
+    LINUX_EFI_INITRD_MEDIA_GUID
+  },
+  {
+    END_DEVICE_PATH_TYPE, END_ENTIRE_DEVICE_PATH_SUBTYPE,
+    { sizeof (EFI_DEVICE_PATH_PROTOCOL) }
+  }
+};
+
 
 INTN
 AndroidBootGetChosenNode (
@@ -42,6 +78,7 @@ AndroidBootGetChosenNode (
   }
   return ChosenNode;
 }
+
 
 EFI_STATUS
 AndroidBootSetProperty64 (
@@ -78,6 +115,7 @@ AndroidBootSetProperty64 (
   }
   return EFI_SUCCESS;
 }
+
 
 EFI_STATUS
 AndroidBootCreateDeviceTree (
@@ -144,6 +182,7 @@ Exit:
   gBS->FreePages (NewFdtBase, 1);
   return Status;
 }
+
 
 EFI_STATUS
 AndroidBootSetRamdiskInfo (
@@ -435,6 +474,9 @@ AndroidBootLoadFile (
   UINTN                           BufSize;
   UINTN                           BufBase;
 
+  mInitRdBaseAddress = 0;
+  mInitRdSize = 0;
+
   // Android Boot image enabled in EFI stub feature consists of:
   // - Header info in PageSize that contains Android Boot image header
   // - Kernel image in EFI format as built in EFI stub feature
@@ -443,6 +485,9 @@ AndroidBootLoadFile (
   // Note: Every image data is aligned in PageSize
 
   // Load the kernel
+  if (ImgData->KernelSize == 0) {
+    return EFI_NOT_FOUND;
+  }
   Addr = ImgData->PageSize + ImgData->Offset;
   BufSize = ImgData->KernelSize;
   BufBase = (UINTN) Buffer;
@@ -460,49 +505,59 @@ AndroidBootLoadFile (
   }
   DEBUG ((DEBUG_INFO, "%a: Kernel image copied to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
 
-  // Load the initial ramdisk if needed
-  if (ImgData->RamdiskSize != 0) {
-    // Allocate a buffer reserved in EfiBootServicesData
-    // to make this buffer persist until the completion of kernel booting
-    Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesData,
-                    EFI_SIZE_TO_PAGES (ImgData->RamdiskSize),
-                    (EFI_PHYSICAL_ADDRESS *) &BufBase);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: fail to get a buffer for ramdisk: %r\n", __FUNCTION__, Status));
-      return Status;
-    }
-    Addr += ALIGN_VALUE (ImgData->KernelSize, ImgData->PageSize);
-    BufSize = ImgData->RamdiskSize;
-    Status = AndroidBootRead (
-               BlockIo,
-               DiskIo,
-               Addr,
-               (VOID *) BufBase,
-               BufSize
-               );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Unable to read disk for ramdisk from offset %x" \
-                    " to %09p: %r\n", __FUNCTION__, Addr, BufBase, Status));
-      goto Exit;
-    }
-    DEBUG ((DEBUG_INFO, "%a: RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
-
-    // Update FDT to set up the start and end address of the ram disk image
-    BufSize = ImgData->RamdiskSize;
-    Status = AndroidBootSetRamdiskInfo (
-                    BufBase,  // Ramdisk Base address
-                    BufSize   // Ramdisk Size
-                    );
-    if (EFI_ERROR (Status)) {
-      goto Exit;
-    }
-    DEBUG ((DEBUG_INFO, "%a: FDT updated for ramdisk info, %09p++%08x\n", __FUNCTION__, BufBase, BufSize));
+  // Load the initial ramdisk
+  if (ImgData->RamdiskSize == 0) {
+    mInitRdBaseAddress = 0;
+    mInitRdSize = 0;
+    return Status;
   }
 
-  return EFI_SUCCESS;
+  // Allocate a buffer reserved in EfiBootServicesData
+  // to make this buffer persist until the completion of kernel booting
+  Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesData,
+                  EFI_SIZE_TO_PAGES (ImgData->RamdiskSize),
+                  (EFI_PHYSICAL_ADDRESS *) &BufBase);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: fail to get a buffer for ramdisk: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
 
-Exit:
+  Addr += ALIGN_VALUE (ImgData->KernelSize, ImgData->PageSize);
+  BufSize = ImgData->RamdiskSize;
+  Status = AndroidBootRead (
+             BlockIo,
+             DiskIo,
+             Addr,
+             (VOID *) BufBase,
+             BufSize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to read disk for ramdisk from offset %x" \
+                  " to %09p: %r\n", __FUNCTION__, Addr, BufBase, Status));
+    goto ErrorExit;
+  }
+  DEBUG ((DEBUG_INFO, "%a: RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
+
+  // Update FDT to set up the start and end address of the ram disk image
+  BufSize = ImgData->RamdiskSize;
+  Status = AndroidBootSetRamdiskInfo (
+             BufBase,  // Ramdisk Base address
+             BufSize   // Ramdisk Size
+             );
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+  DEBUG ((DEBUG_INFO, "%a: FDT updated for ramdisk info, %09p++%08x\n", __FUNCTION__, BufBase, BufSize));
+
+  mInitRdBaseAddress = BufBase;
+  mInitRdSize = BufSize;
+
+  return Status;
+
+ErrorExit:
   gBS->FreePages ((EFI_PHYSICAL_ADDRESS) BufBase, EFI_SIZE_TO_PAGES (ImgData->RamdiskSize));
+  mInitRdBaseAddress = 0;
+  mInitRdSize = 0;
   return Status;
 }
 
@@ -556,12 +611,10 @@ AndroidBootDxeLoadFile (
   DEBUG ((DEBUG_INFO, "%a: buffer %09p in size %08x\n", __FUNCTION__, Buffer, *BufferSize));
 
   // Verify if the valid parameters
-  if (This == NULL || BufferSize == NULL || FilePath == NULL) {
+  if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
     return EFI_INVALID_PARAMETER;
   }
-  if (*BufferSize != 0 && Buffer == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
+
   if (!BootPolicy) {
     return EFI_UNSUPPORTED;
   }
@@ -580,7 +633,10 @@ AndroidBootDxeLoadFile (
 
   // Check if the given buffer size is big enough
   // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
-  if (*BufferSize < ImgData.KernelSize) {
+  if (ImgData.KernelSize == 0) {
+    return EFI_NOT_FOUND;
+  }
+  if (Buffer == NULL || *BufferSize < ImgData.KernelSize) {
     *BufferSize = ImgData.KernelSize;
     return EFI_BUFFER_TOO_SMALL;
   }
@@ -887,6 +943,7 @@ AndroidBootDriverBindingStart (
     DEBUG ((DEBUG_ERROR, "%a: fail to install the prot intf: %r\n", __FUNCTION__, Status));
     goto Exit;
   }
+
   Private->ProtocolsInstalled = TRUE;
 
   // Install and open CallerId to link the Private data structure
@@ -1087,6 +1144,90 @@ AndroidBootDriverBindingStop (
   return EFI_SUCCESS;
 }
 
+
+/**
+  Causes the driver to load a specified file.
+
+  @param  This       Protocol instance pointer.
+  @param  FilePath   The device specific path of the file to load.
+  @param  BootPolicy Should always be FALSE.
+  @param  BufferSize On input the size of Buffer in bytes. On output with a return
+                     code of EFI_SUCCESS, the amount of data transferred to
+                     Buffer. On output with a return code of EFI_BUFFER_TOO_SMALL,
+                     the size of Buffer required to retrieve the requested file.
+  @param  Buffer     The memory buffer to transfer the file to. IF Buffer is NULL,
+                     then no the size of the requested file is returned in
+                     BufferSize.
+
+  @retval EFI_SUCCESS           The file was loaded.
+  @retval EFI_UNSUPPORTED       BootPolicy is TRUE.
+  @retval EFI_INVALID_PARAMETER FilePath is not a valid device path, or
+                                BufferSize is NULL.
+  @retval EFI_NO_MEDIA          No medium was present to load the file.
+  @retval EFI_DEVICE_ERROR      The file was not loaded due to a device error.
+  @retval EFI_NO_RESPONSE       The remote system did not respond.
+  @retval EFI_NOT_FOUND         The file was not found
+  @retval EFI_ABORTED           The file load process was manually canceled.
+  @retval EFI_BUFFER_TOO_SMALL  The BufferSize is too small to read the current
+                                directory entry. BufferSize has been updated with
+                                the size needed to complete the request.
+
+
+**/
+EFI_STATUS
+EFIAPI
+AndroidBootDxeLoadFile2 (
+  IN EFI_LOAD_FILE2_PROTOCOL    *This,
+  IN EFI_DEVICE_PATH_PROTOCOL   *FilePath,
+  IN BOOLEAN                    BootPolicy,
+  IN OUT UINTN                  *BufferSize,
+  IN VOID                       *Buffer OPTIONAL
+  )
+
+{
+  DEBUG ((DEBUG_INFO, "%a: buffer %09p in size %08x\n", __FUNCTION__, Buffer, *BufferSize));
+
+  //volatile BOOLEAN Debug = TRUE;
+  //while (Debug);
+  // Verify if the valid parameters
+  if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (BootPolicy) {
+    return EFI_UNSUPPORTED;
+  }
+
+  // Check if the given buffer size is big enough
+  // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
+  if (mInitRdBaseAddress == 0) {
+    return EFI_NOT_FOUND;
+  }
+  if (Buffer == NULL || *BufferSize < mInitRdBaseAddress) {
+    *BufferSize = mInitRdBaseAddress;
+    return EFI_BUFFER_TOO_SMALL;
+  }
+
+  // Copy InitRd
+  gBS->CopyMem (Buffer, (VOID *)mInitRdBaseAddress, mInitRdSize);
+
+  gBS->FreePages (mInitRdBaseAddress, EFI_SIZE_TO_PAGES (mInitRdSize));
+  mInitRdBaseAddress = 0;
+  mInitRdSize = 0;
+
+  return EFI_SUCCESS;
+}
+
+
+///
+/// Load File Protocol instance
+///
+GLOBAL_REMOVE_IF_UNREFERENCED
+EFI_LOAD_FILE2_PROTOCOL  mAndroidBootDxeLoadFile2 = {
+  AndroidBootDxeLoadFile2
+};
+
+
 /**
   Causes the driver to load a specified file.
 
@@ -1129,19 +1270,20 @@ RamloadLoadFile (
   )
 {
   // Verify if the valid parameters
-  if (This == NULL || BufferSize == NULL || FilePath == NULL) {
+  if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
     return EFI_INVALID_PARAMETER;
   }
-  if (*BufferSize != 0 && Buffer == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
+
   if (!BootPolicy) {
     return EFI_UNSUPPORTED;
   }
 
   // Check if the given buffer size is big enough
   // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
-  if (*BufferSize < mRamLoadedSize) {
+  if (mRamLoadedSize == 0) {
+    return EFI_NOT_FOUND;
+  }
+  if (Buffer == NULL || *BufferSize < mRamLoadedSize) {
     *BufferSize = mRamLoadedSize;
     return EFI_BUFFER_TOO_SMALL;
   }
@@ -1151,6 +1293,7 @@ RamloadLoadFile (
   return EFI_SUCCESS;
 }
 
+
 ///
 /// Ramload LoadFile Protocol instance
 ///
@@ -1158,6 +1301,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED
 EFI_LOAD_FILE_PROTOCOL mRamloadLoadFile = {
   RamloadLoadFile
 };
+
 
 /**
   Causes the driver to load a specified file.
@@ -1204,12 +1348,10 @@ RcmLoadFile (
   ANDROID_BOOT_DATA ImgData;
 
   // Verify if the valid parameters
-  if (This == NULL || BufferSize == NULL || FilePath == NULL) {
+  if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
     return EFI_INVALID_PARAMETER;
   }
-  if (*BufferSize != 0 && Buffer == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
+
   if (!BootPolicy) {
     return EFI_UNSUPPORTED;
   }
@@ -1222,7 +1364,10 @@ RcmLoadFile (
 
   // Check if the given buffer size is big enough
   // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
-  if (*BufferSize < ImgData.KernelSize) {
+  if (ImgData.KernelSize == 0) {
+    return EFI_NOT_FOUND;
+  }
+  if (Buffer == NULL || *BufferSize < ImgData.KernelSize) {
     *BufferSize = ImgData.KernelSize;
     return EFI_BUFFER_TOO_SMALL;
   }
@@ -1236,6 +1381,7 @@ RcmLoadFile (
   return EFI_SUCCESS;
 }
 
+
 ///
 /// Rcm LoadFile Protocol instance
 ///
@@ -1243,6 +1389,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED
 EFI_LOAD_FILE_PROTOCOL mRcmLoadFile = {
   RcmLoadFile
 };
+
 
 ///
 /// Driver Binding Protocol instance
@@ -1256,39 +1403,6 @@ EFI_DRIVER_BINDING_PROTOCOL mAndroidBootDriverBinding = {
   NULL
 };
 
-//
-// Device path for the handle that incorporates our ramload load file instance.
-//
-#pragma pack(1)
-typedef struct {
-  VENDOR_DEVICE_PATH       VenHwNode;
-  EFI_DEVICE_PATH_PROTOCOL EndNode;
-} SINGLE_VENHW_NODE_DEVPATH;
-#pragma pack()
-
-STATIC SINGLE_VENHW_NODE_DEVPATH mRamLoadFileDevicePath = {
-  {
-    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
-    { 0 }
-  },
-
-  {
-    END_DEVICE_PATH_TYPE, END_ENTIRE_DEVICE_PATH_SUBTYPE,
-    { sizeof (EFI_DEVICE_PATH_PROTOCOL) }
-  }
-};
-
-STATIC SINGLE_VENHW_NODE_DEVPATH mRcmLoadFileDevicePath = {
-  {
-    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
-    { 0 }
-  },
-
-  {
-    END_DEVICE_PATH_TYPE, END_ENTIRE_DEVICE_PATH_SUBTYPE,
-    { sizeof (EFI_DEVICE_PATH_PROTOCOL) }
-  }
-};
 
 /**
   This is the declaration of an EFI image entry point. This entry point is
@@ -1311,6 +1425,7 @@ AndroidBootDxeDriverEntryPoint (
 {
   EFI_STATUS            Status;
   VOID                  *Hob;
+  EFI_HANDLE            InitrdHandle;
 
   // Install UEFI Driver Model protocol(s).
   Status = EfiLibInstallDriverBinding (
@@ -1319,6 +1434,19 @@ AndroidBootDxeDriverEntryPoint (
              &mAndroidBootDriverBinding,
              ImageHandle
              );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  InitrdHandle = NULL;
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &InitrdHandle,
+                  &gEfiLoadFile2ProtocolGuid,
+                  &mAndroidBootDxeLoadFile2,
+                  &gEfiDevicePathProtocolGuid,
+                  &mInitrdDevicePath,
+                  NULL
+                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }
