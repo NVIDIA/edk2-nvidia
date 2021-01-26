@@ -43,6 +43,7 @@ typedef struct {
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
   { "nvidia,tegra186-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
+  { "nvidia,tegra194-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
   { NULL, NULL }
 };
 

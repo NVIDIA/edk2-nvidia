@@ -1123,6 +1123,12 @@ CheckNorFlashCompatibility(
 
   if (fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase,
                           DeviceTreeNode->NodeOffset,
+                          "flash@0") >= 0) {
+    return EFI_SUCCESS;
+  }
+
+  if (fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase,
+                          DeviceTreeNode->NodeOffset,
                           "spiflash@0") >= 0) {
     return EFI_SUCCESS;
   }
