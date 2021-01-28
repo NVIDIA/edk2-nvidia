@@ -947,6 +947,8 @@ OnExitBootServices (
   EFI_STATUS Status;
   VOID       *Rsdp = NULL;
 
+  gBS->CloseEvent (Event);
+
   //Only Uninitialize if ACPI is not installed.
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &Rsdp);
   if (EFI_ERROR (Status)) {
@@ -1003,14 +1005,14 @@ DeviceDiscoveryNotify (
     if (RootBridge == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate device bridge structure\r\n", __FUNCTION__));
       Status = EFI_OUT_OF_RESOURCES;
-      break;
+      goto ErrorExit;
     }
 
     Private = AllocateZeroPool (sizeof (PCIE_CONTROLLER_PRIVATE));
     if (Private == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate private structure\r\n", __FUNCTION__));
       Status = EFI_OUT_OF_RESOURCES;
-      break;
+      goto ErrorExit;
     }
 
     Private->ControllerHandle = ControllerHandle;
@@ -1019,28 +1021,28 @@ DeviceDiscoveryNotify (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to locate appl address range\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
-      break;
+      goto ErrorExit;
     }
 
     Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 1, &Private->ConfigurationSpace, &Private->ConfigurationSize);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to locate configuration address range\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
-      break;
+      goto ErrorExit;
     }
 
     Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 2, &Private->AtuBase, &Private->AtuSize);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to locate ATU address range\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
-      break;
+      goto ErrorExit;
     }
 
     Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 3, &Private->DbiBase, &Private->DbiSize);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to locate DBI address range\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
-      break;
+      goto ErrorExit;
     }
 
     Private->Signature = PCIE_CONTROLLER_SIGNATURE;
@@ -1102,7 +1104,7 @@ DeviceDiscoveryNotify (
     if (EFI_ERROR (Status) || Regulator == NULL) {
       DEBUG ((EFI_D_ERROR, "%a: Couldn't get gNVIDIARegulatorProtocolGuid Handle: %r\n", __FUNCTION__, Status));
       Status = EFI_UNSUPPORTED;
-      break;
+      goto ErrorExit;
     }
 
     /* Get the 3v3 supply */
@@ -1143,14 +1145,16 @@ DeviceDiscoveryNotify (
         Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
         if (EFI_ERROR (Status)) {
             DEBUG ((DEBUG_ERROR, "Failed to get BPMP-FW handle\n"));
-            return EFI_NOT_READY;
+            Status = EFI_NOT_READY;
+            goto ErrorExit;
         }
 
         if (PcdGetBool(PcdBPMPPCIeControllerEnable)) {
           Status = BpmpProcessSetCtrlState (BpmpIpcProtocol, Private->CtrlId, 1);
           if (EFI_ERROR (Status)) {
               DEBUG ((DEBUG_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));
-              return EFI_NOT_READY;
+              Status = EFI_NOT_READY;
+              goto ErrorExit;
           }
           DEBUG ((DEBUG_INFO, "Enabled Controller-%u through BPMP-FW\n", Private->CtrlId));
         }
@@ -1159,7 +1163,7 @@ DeviceDiscoveryNotify (
     Status = InitializeController(Private, ControllerHandle, DeviceTreeNode);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
-      break;
+      goto ErrorExit;
     }
 
     Status = gBS->CreateEventEx (
@@ -1172,7 +1176,7 @@ DeviceDiscoveryNotify (
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Unable to setup exit boot services uninitialize. (%r)\r\n", __FUNCTION__, Status));
-      break;
+      goto ErrorExit;
     }
 
     RootBridge->Segment = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
@@ -1208,7 +1212,7 @@ DeviceDiscoveryNotify (
     if (PciAddressCells != 3) {
       DEBUG ((EFI_D_ERROR, "PCIe Controller, size 3 is required for address-cells, got %d\r\n", PciAddressCells));
       Status = EFI_DEVICE_ERROR;
-      break;
+      goto ErrorExit;
     }
 
     RangesProperty = fdt_getprop (DeviceTreeNode->DeviceTreeBase,
@@ -1225,7 +1229,7 @@ DeviceDiscoveryNotify (
     if ((RangesProperty == NULL) || ((PropertySize % RangeSize) != 0)) {
       DEBUG ((EFI_D_ERROR, "PCIe Controller: Unsupported ranges configuration\r\n"));
       Status = EFI_UNSUPPORTED;
-      break;
+      goto ErrorExit;
     }
 
     while (PropertySize != 0) {
@@ -1265,7 +1269,7 @@ DeviceDiscoveryNotify (
       } else {
         DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
         Status = EFI_DEVICE_ERROR;
-        break;
+        goto ErrorExit;
       }
 
       Space = Flags & PCIE_DEVICETREE_SPACE_CODE;
@@ -1313,7 +1317,7 @@ DeviceDiscoveryNotify (
         DEBUG ((EFI_D_ERROR, "PCIe Controller: Unknown region 0x%08x 0x%016llx-0x%016llx T 0x%016llx\r\n", Flags, DeviceAddress, Limit, Translation));
         ASSERT (FALSE);
         Status = EFI_DEVICE_ERROR;
-        break;
+        goto ErrorExit;
       }
 
       RangesProperty += RangeSize;
@@ -1321,7 +1325,7 @@ DeviceDiscoveryNotify (
     }
 
     if (EFI_ERROR (Status)) {
-      break;
+      goto ErrorExit;
     }
 
     if ((RootBridge->PMem.Base == MAX_UINT64) && (RootBridge->PMemAbove4G.Base == MAX_UINT64)) {
@@ -1335,7 +1339,7 @@ DeviceDiscoveryNotify (
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to get device path (%r)\r\n", __FUNCTION__, Status));
-      break;
+      goto ErrorExit;
     }
 
     RootBridge->DevicePath = AppendDevicePathNode (
@@ -1353,22 +1357,28 @@ DeviceDiscoveryNotify (
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to install root bridge info (%r)\r\n", __FUNCTION__, Status));
-      break;
     }
 
+  ErrorExit:
+    if (EFI_ERROR (Status)) {
+      if (RootBridge != NULL) {
+        FreePool (RootBridge);
+      }
+      if (Private != NULL) {
+        FreePool (Private);
+      }
+    }
     break;
+
+  case DeviceDiscoveryDriverBindingStop:
+
+      Status = EFI_PROTOCOL_ERROR;
+      DEBUG ((DEBUG_ERROR, "%a: Rejecting Driver Binding Stop (%r)\r\n", __FUNCTION__, Status));
+      break;
 
   default:
-    break;
+      break;
   }
 
-  if (EFI_ERROR (Status)) {
-    if (RootBridge == NULL) {
-      FreePool (RootBridge);
-    }
-    if (Private == NULL) {
-      FreePool (Private);
-    }
-  }
   return Status;
 }
