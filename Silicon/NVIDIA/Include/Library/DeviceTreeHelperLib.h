@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -30,6 +30,21 @@ typedef struct {
   HARDWARE_INTERRUPT_SOURCE Interrupt;
   CONST CHAR8               *Name;
 } NVIDIA_DEVICE_TREE_INTERRUPT_DATA;
+
+/**
+  Set the base address and size of the device tree
+
+  This is to support the use cases when the HOB list is not populated.
+
+  @param  DeviceTree        - Pointer to base Address of the device tree.
+  @param  DeviceTreeSize    - Pointer to size of the device tree.
+
+**/
+VOID
+SetDeviceTreePointer (
+  IN  VOID      *DeviceTree,
+  IN  UINTN     DeviceTreeSize
+);
 
 /**
   Returns the enabled nodes that match the compatible string

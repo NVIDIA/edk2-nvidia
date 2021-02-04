@@ -24,7 +24,18 @@
 BOOLEAN
 EFIAPI
 GetTegraUARTBaseAddressInternal (
-  OUT UINTN   *TegraUARTBaseAddress
+  OUT EFI_PHYSICAL_ADDRESS  *TegraUARTBaseAddress
+);
+
+/**
+  Retrieve the type and address of UART based on the instance Number
+
+**/
+BOOLEAN
+EFIAPI
+GetUARTInstanceInfoInternal (
+  OUT UINT32                *UARTInstanceType,
+  OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
 );
 
 /**

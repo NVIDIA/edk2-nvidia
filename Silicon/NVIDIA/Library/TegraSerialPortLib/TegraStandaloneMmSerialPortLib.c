@@ -1,7 +1,7 @@
 /** @file
-  Serial I/O Port wrapper library
+  Serial I/O Port wrapper library for StandaloneMm
 
-  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -14,53 +14,15 @@
 **/
 
 #include <Base.h>
-#include <Library/PcdLib.h>
-#include <Library/DebugLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/TegraSerialPortLib.h>
 #include <Library/SerialPortLib.h>
-#include <Library/DeviceTreeHelperLib.h>
-#include <libfdt.h>
-
-#include "TegraSerialPortLibPrivate.h"
 
 STATIC
 TEGRA_UART_OBJ *TegraUartObj = NULL;
 STATIC
-TEGRA_UART_INFO TegraUartInfo;
-
-SERIAL_MAPPING gSerialCompatibilityMap[] = {
-  { TEGRA_UART_TYPE_TCU, TegraCombinedSerialPortGetObject, "nvidia,tegra194-tcu" },
-  { TEGRA_UART_TYPE_16550, Tegra16550SerialPortGetObject, "nvidia,tegra20-uart" },
-  { TEGRA_UART_TYPE_NONE, NULL, NULL },
-};
-
-/** Identify the serial device hardware
-
- **/
-STATIC
-VOID
-GetRawDeviceTreePointer (
-  OUT VOID      **DeviceTree,
-  OUT UINTN     *DeviceTreeSize
-)
-{
-  UINT64        DtbBase;
-  UINT64        DtbSize;
-
-  DtbBase = GetDTBBaseAddress ();
-  ASSERT ((VOID *) DtbBase != NULL);
-  DtbSize = fdt_totalsize ((VOID *)DtbBase);
-  // DTB Base may not be aligned to page boundary. Add overlay to size.
-  DtbSize += (DtbBase & EFI_PAGE_MASK);
-  DtbSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize));
-  // Align DTB Base to page boundary.
-  DtbBase &= ~(EFI_PAGE_MASK);
-
-  *DeviceTree = (VOID *)DtbBase;
-  *DeviceTreeSize = (UINTN)DtbSize;
-}
+EFI_PHYSICAL_ADDRESS SerialBaseAddress = MAX_UINTN;
 
 /** Identify the serial device hardware
 
@@ -71,15 +33,10 @@ SerialPortIdentify (
   VOID
   )
 {
-  EFI_STATUS                          Status;
-  UINT32                              Handles;
-  UINT32                              NumberOfUart;
-  SERIAL_MAPPING                      *Mapping;
-  UINT32                              Size;
-  VOID                                *DeviceTree;
-  UINTN                               DeviceTreeSize;
-  NVIDIA_DEVICE_TREE_REGISTER_DATA    RegData;
-  NVIDIA_DEVICE_TREE_INTERRUPT_DATA   IntData;
+  EFI_STATUS            Status;
+  UINT32                ChipID;
+  UINT32                UARTInstanceType;
+  EFI_PHYSICAL_ADDRESS  UARTInstanceAddress;
 
   if (TegraUartObj != NULL) {
     return TegraUartObj;
@@ -88,60 +45,34 @@ SerialPortIdentify (
   // Ensure the fallback resource ready
   SetTegraUARTBaseAddress (0);
 
-  // Get the pointer to the raw DTB and set them to DTB helper prior to using the helper
-  GetRawDeviceTreePointer (&DeviceTree, &DeviceTreeSize);
-  SetDeviceTreePointer (DeviceTree, DeviceTreeSize);
-
-  Mapping = &gSerialCompatibilityMap[0];
-  while (Mapping->Compatibility != NULL) {
-    // Only one UART controller is expected
-    NumberOfUart = 1;
-    Status = GetMatchingEnabledDeviceTreeNodes (Mapping->Compatibility, &Handles, &NumberOfUart);
-    if (Status == EFI_SUCCESS || Status == EFI_BUFFER_TOO_SMALL) {
-      Status = EFI_SUCCESS;
-      break;
+  // Retrieve the type and address based on UART instance
+  Status = GetUARTInstanceInfo (&UARTInstanceType, &UARTInstanceAddress);
+  if (EFI_ERROR(Status) || (UARTInstanceType == TEGRA_UART_TYPE_NONE)) {
+    // Try the legacy fallback mode to select the SerialPort
+    SerialBaseAddress = GetTegraUARTBaseAddress ();
+    ChipID = TegraGetChipID();
+    if (ChipID == T186_CHIP_ID) {
+      TegraUartObj = Tegra16550SerialPortGetObject();
+    } else if (ChipID == T194_CHIP_ID) {
+      TegraUartObj = TegraCombinedSerialPortGetObject();
+    } else {
+      TegraUartObj = Tegra16550SerialPortGetObject();
     }
-    Mapping++;
-  }
-  if (EFI_ERROR (Status)) {
-    goto Exit;
+    return TegraUartObj;
   }
 
-  TegraUartInfo.Type = Mapping->Type;
-  if (TegraUartInfo.Type != TEGRA_UART_TYPE_TCU) {
-    // Retreive UART register space
-    Size = 1;
-    Status = GetDeviceTreeRegisters (Handles, &RegData, &Size);
-    if (EFI_ERROR (Status)) {
-      goto Exit;
-    }
-    TegraUartInfo.BaseAddress = RegData.BaseAddress;
-
-    // Retrieve UART interrupt space
-    Size = 1;
-    Status = GetDeviceTreeInterrupts (Handles, &IntData, &Size);
-    if (EFI_ERROR (Status)) {
-      goto Exit;
-    }
-    TegraUartInfo.Interrupt = (UINT32)IntData.Interrupt + DEVICETREE_TO_ACPI_INTERRUPT_OFFSET;
+  // Select the SerialPort based on the retrieved UART instance info
+  SerialBaseAddress = UARTInstanceAddress;
+  SetTegraUARTBaseAddress (UARTInstanceAddress);
+  if (UARTInstanceType == TEGRA_UART_TYPE_16550) {
+      TegraUartObj = Tegra16550SerialPortGetObject();
+  } else if (UARTInstanceType == TEGRA_UART_TYPE_TCU) {
+      TegraUartObj = TegraCombinedSerialPortGetObject();
+  } else {
+      TegraUartObj = Tegra16550SerialPortGetObject();
   }
-
-  // Update UART base address and get UART object
-  SetTegraUARTBaseAddress (TegraUartInfo.BaseAddress);
-  TegraUartObj = Mapping->GetObject();
-
-Exit:
-  if (EFI_ERROR (Status)) {
-    // Fall back when it fails to retrieve a compatible UART type from DT
-    TegraUartInfo.Type = TEGRA_UART_TYPE_16550;
-    TegraUartInfo.BaseAddress = GetTegraUARTBaseAddress ();
-    TegraUartObj = Tegra16550SerialPortGetObject();
-  }
-
-  // Zero initialize to help the DTB helper get them from the HOB list
-  SetDeviceTreePointer (NULL, 0);
-
   return TegraUartObj;
+
 }
 
 /** Initialize the serial device hardware with default settings.
@@ -156,7 +87,7 @@ SerialPortInitialize (
   VOID
   )
 {
-  return SerialPortIdentify()->SerialPortInitialize (TegraUartInfo.BaseAddress);
+  return SerialPortIdentify()->SerialPortInitialize (SerialBaseAddress);
 }
 
 /**
@@ -176,7 +107,7 @@ SerialPortWrite (
   IN UINTN     NumberOfBytes
   )
 {
-  return SerialPortIdentify()->SerialPortWrite (TegraUartInfo.BaseAddress, Buffer, NumberOfBytes);
+  return SerialPortIdentify()->SerialPortWrite (SerialBaseAddress, Buffer, NumberOfBytes);
 }
 
 /**
@@ -196,7 +127,7 @@ SerialPortRead (
   IN  UINTN     NumberOfBytes
 )
 {
-  return SerialPortIdentify()->SerialPortRead (TegraUartInfo.BaseAddress, Buffer, NumberOfBytes);
+  return SerialPortIdentify()->SerialPortRead (SerialBaseAddress, Buffer, NumberOfBytes);
 }
 
 /**
@@ -212,7 +143,7 @@ SerialPortPoll (
   VOID
   )
 {
-  return SerialPortIdentify()->SerialPortPoll (TegraUartInfo.BaseAddress);
+  return SerialPortIdentify()->SerialPortPoll (SerialBaseAddress);
 }
 
 /**
@@ -247,7 +178,7 @@ SerialPortSetControl (
   IN UINT32  Control
   )
 {
-  return SerialPortIdentify()->SerialPortSetControl (TegraUartInfo.BaseAddress, Control);
+  return SerialPortIdentify()->SerialPortSetControl (SerialBaseAddress, Control);
 }
 
 /**
@@ -288,7 +219,7 @@ SerialPortGetControl (
   OUT UINT32  *Control
   )
 {
-  return SerialPortIdentify()->SerialPortGetControl (TegraUartInfo.BaseAddress, Control);
+  return SerialPortIdentify()->SerialPortGetControl (SerialBaseAddress, Control);
 }
 
 /**
@@ -333,7 +264,6 @@ SerialPortSetAttributes (
   IN OUT EFI_STOP_BITS_TYPE  *StopBits
   )
 {
-  return SerialPortIdentify()->SerialPortSetAttributes (TegraUartInfo.BaseAddress,
-                                 BaudRate, ReceiveFifoDepth, Timeout,
+  return SerialPortIdentify()->SerialPortSetAttributes (SerialBaseAddress, BaudRate, ReceiveFifoDepth, Timeout,
                                  Parity, DataBits, StopBits);
 }

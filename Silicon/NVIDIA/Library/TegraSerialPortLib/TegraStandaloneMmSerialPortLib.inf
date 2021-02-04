@@ -1,8 +1,8 @@
 #/** @file
 #
-#  Component description file for TegraSerialPortLib module
+#  Component description file for TegraSerialPortLib module for StandaloneMm
 #
-#  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -16,23 +16,20 @@
 
 [Defines]
   INF_VERSION                    = 0x00010019
-  BASE_NAME                      = TegraSerialPortLib
-  FILE_GUID                      = 94602bc2-4140-42ac-89a6-a0437dc7b3d4
+  BASE_NAME                      = TegraStandaloneMmSerialPortLib
+  FILE_GUID                      = 2d1ac7bf-3e12-42ff-9fe2-6009f6d24dd1
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = SerialPortLib
 
 [Sources.common]
-  TegraSerialPortLib.c
+  TegraStandaloneMmSerialPortLib.c
 
 [LibraryClasses]
-  PcdLib
-  DebugLib
   Tegra16550SerialPortLib
   TegraCombinedSerialPortLib
   TegraPlatformInfoLib
   PlatformResourceLib
-  DeviceTreeHelperLib
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

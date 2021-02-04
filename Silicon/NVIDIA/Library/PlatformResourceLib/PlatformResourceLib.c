@@ -20,19 +20,38 @@
 #include "T186ResourceConfig.h"
 
 
+STATIC
+EFI_PHYSICAL_ADDRESS  TegraUARTBaseAddress = 0x0;
+
+/**
+  Set Tegra UART Base Address
+**/
+VOID
+EFIAPI
+SetTegraUARTBaseAddress (
+  IN EFI_PHYSICAL_ADDRESS   UartBaseAddress
+)
+{
+  TegraUARTBaseAddress = UartBaseAddress;
+}
+
 /**
   Retrieve Tegra UART Base Address
 
 **/
-UINTN
+EFI_PHYSICAL_ADDRESS
 EFIAPI
 GetTegraUARTBaseAddress (
   VOID
 )
 {
-  UINTN   ChipID;
-  UINTN   TegraUARTBase;
-  BOOLEAN ValidPrivatePlatform;
+  UINTN                 ChipID;
+  EFI_PHYSICAL_ADDRESS  TegraUARTBase;
+  BOOLEAN               ValidPrivatePlatform;
+
+  if (TegraUARTBaseAddress != 0x0) {
+    return TegraUARTBaseAddress;
+  }
 
   ValidPrivatePlatform = GetTegraUARTBaseAddressInternal (&TegraUARTBase);
   if (ValidPrivatePlatform) {
@@ -48,6 +67,43 @@ GetTegraUARTBaseAddress (
       return FixedPcdGet64(PcdTegra16550UartBaseT194);
     default:
       return 0x0;
+  }
+}
+
+/**
+  Retrieve the type and address of UART based on the instance Number
+
+**/
+EFI_STATUS
+EFIAPI
+GetUARTInstanceInfo (
+  OUT UINT32                *UARTInstanceType,
+  OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
+)
+{
+  UINTN   ChipID;
+  BOOLEAN ValidPrivatePlatform;
+
+  *UARTInstanceType = TEGRA_UART_TYPE_NONE;
+  *UARTInstanceAddress = 0x0;
+
+  ValidPrivatePlatform = GetUARTInstanceInfoInternal (UARTInstanceType, UARTInstanceAddress);
+  if (ValidPrivatePlatform) {
+    return EFI_SUCCESS;
+  }
+
+  ChipID = TegraGetChipID ();
+  switch (ChipID) {
+    case T186_CHIP_ID:
+      *UARTInstanceType = TEGRA_UART_TYPE_16550;
+      *UARTInstanceAddress = (EFI_PHYSICAL_ADDRESS)FixedPcdGet64(PcdTegra16550UartBaseT186);
+      return EFI_SUCCESS;
+    case T194_CHIP_ID:
+      *UARTInstanceType = TEGRA_UART_TYPE_TCU;
+      *UARTInstanceAddress = (EFI_PHYSICAL_ADDRESS)FixedPcdGet64(PcdTegra16550UartBaseT194);
+      return EFI_SUCCESS;
+    default:
+      return EFI_UNSUPPORTED;
   }
 }
 

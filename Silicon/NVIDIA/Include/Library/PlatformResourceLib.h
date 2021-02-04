@@ -18,6 +18,18 @@
 #include <Uefi/UefiBaseType.h>
 #include <Library/DramCarveoutLib.h>
 
+/**
+ * @ingroup TEGRA_UART_TYPE
+ * @name Tegra UART TYPE
+ * These are the UARTs available on the Tegra platform
+ */
+#define TEGRA_UART_TYPE_16550     0x00
+#define TEGRA_UART_TYPE_SBSA      0x01
+#define TEGRA_UART_TYPE_TCU       0xFE
+#define TEGRA_UART_TYPE_NONE      0xFF
+
+#define BIT(x)   (1 << (x))
+
 typedef enum {
   TegrablBootInvalid,
   TegrablBootColdBoot,
@@ -33,13 +45,36 @@ typedef struct {
 } TEGRA_RESOURCE_INFO;
 
 /**
+  Set Tegra UART Base Address
+
+  @param[in]    UART base address
+
+**/
+VOID
+EFIAPI
+SetTegraUARTBaseAddress (
+  IN EFI_PHYSICAL_ADDRESS   UartBaseAddress
+);
+
+/**
   Retrieve Tegra UART Base Address
 
 **/
-UINTN
+EFI_PHYSICAL_ADDRESS
 EFIAPI
 GetTegraUARTBaseAddress (
   VOID
+);
+
+/**
+  Retrieve the type and address of UART based on the instance Number
+
+**/
+EFI_STATUS
+EFIAPI
+GetUARTInstanceInfo (
+  OUT UINT32                *UARTInstanceType,
+  OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
 );
 
 /**

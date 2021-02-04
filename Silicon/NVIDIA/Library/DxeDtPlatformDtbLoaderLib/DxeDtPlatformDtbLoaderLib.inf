@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  This program and the accompanying materials
@@ -19,7 +19,7 @@
   FILE_GUID                      = f9f414ce-d951-4314-b7d9-ef472e9482cd
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = DtPlatformDtbLoaderLib|DXE_DRIVER
+  LIBRARY_CLASS                  = DtPlatformDtbLoaderLib
 
 [Sources]
   DxeDtPlatformDtbLoaderLib.c

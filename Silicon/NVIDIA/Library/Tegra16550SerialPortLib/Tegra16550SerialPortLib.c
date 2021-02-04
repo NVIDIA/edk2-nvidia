@@ -1,7 +1,7 @@
 /** @file
   16550 UART Serial Port library functions
 
-  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
   (C) Copyright 2014 Hewlett-Packard Development Company, L.P.<BR>
   Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
   Copyright (c) 2018, AMD Incorporated. All rights reserved.<BR>
@@ -770,12 +770,8 @@ TEGRA_UART_OBJ Tegra16550Uart = {
 TEGRA_UART_OBJ *
 EFIAPI
 Tegra16550SerialPortGetObject (
-  IN UINTN *SerialBaseAddress
+  VOID
   )
 {
-  if (SerialBaseAddress != NULL) {
-    *SerialBaseAddress = GetTegraUARTBaseAddress ();
-  }
-
   return &Tegra16550Uart;
 }

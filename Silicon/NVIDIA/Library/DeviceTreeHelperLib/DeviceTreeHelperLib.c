@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -19,6 +19,54 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <libfdt.h>
+
+STATIC VOID   *LocalDeviceTree = NULL;
+STATIC UINTN  LocalDeviceTreeSize = 0;
+
+/**
+  Set the base address and size of the device tree
+
+  This is to support the use cases when the HOB list is not populated.
+
+  @param  DeviceTree        - Pointer to base Address of the device tree.
+  @param  DeviceTreeSize    - Pointer to size of the device tree.
+
+**/
+VOID
+SetDeviceTreePointer (
+  IN  VOID      *DeviceTree,
+  IN  UINTN     DeviceTreeSize
+)
+{
+  LocalDeviceTree = DeviceTree;
+  LocalDeviceTreeSize = DeviceTreeSize;
+}
+
+/**
+  Return the base address and size of the device tree
+
+  @param  DeviceTree        - Pointer to base Address of the device tree.
+  @param  DeviceTreeSize    - Pointer to size of the device tree.
+
+  @return EFI_SUCCESS       - Operation successful
+  @return others            - Failed to get device tree base or tree size
+
+**/
+STATIC
+EFI_STATUS
+GetDeviceTreePointer (
+  OUT VOID      **DeviceTree,
+  OUT UINTN     *DeviceTreeSize
+)
+{
+  if ((LocalDeviceTree == NULL) || (LocalDeviceTreeSize == 0)) {
+    return DtPlatformLoadDtb (DeviceTree, DeviceTreeSize);
+  }
+
+  *DeviceTree = LocalDeviceTree;
+  *DeviceTreeSize = LocalDeviceTreeSize;
+  return EFI_SUCCESS;
+}
 
 /**
   Returns the enabled nodes that match the compatible string
@@ -58,7 +106,7 @@ GetMatchingEnabledDeviceTreeNodes (
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = DtPlatformLoadDtb (&DeviceTree, &DeviceTreeSize);
+  Status = GetDeviceTreePointer (&DeviceTree, &DeviceTreeSize);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to load DTB (%r)\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
@@ -124,7 +172,7 @@ GetDeviceTreeNode (
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = DtPlatformLoadDtb (&DeviceTree, &DeviceTreeSize);
+  Status = GetDeviceTreePointer (&DeviceTree, &DeviceTreeSize);
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
   }
@@ -168,7 +216,7 @@ GetDeviceTreeHandle (
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = DtPlatformLoadDtb (&DeviceTree, &DeviceTreeSize);
+  Status = GetDeviceTreePointer (&DeviceTree, &DeviceTreeSize);
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
   }
@@ -389,4 +437,3 @@ GetDeviceTreeInterrupts (
   *NumberOfInterrupts = IntPropertyEntries;
   return EFI_SUCCESS;
 }
-
