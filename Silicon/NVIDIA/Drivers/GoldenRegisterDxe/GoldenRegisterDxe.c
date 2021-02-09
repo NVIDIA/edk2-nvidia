@@ -166,7 +166,11 @@ GoldenRegisterDxeInitialize (
 
   Handle = NULL;
   mGrCmdLine.ExistingCommandLineArgument = NULL;
-  UnicodeSPrintAsciiFormat (mGrNewCommandLineArgument, GR_CMD_MAX_LEN, "bl_debug_data=0x%lx", Private->GrOutBase);
+  UnicodeSPrintAsciiFormat (mGrNewCommandLineArgument,
+                            GR_CMD_MAX_LEN,
+                            "bl_debug_data=%lu@0x%lx",
+                            Private->GrOutSize,
+                            Private->GrOutBase);
   mGrCmdLine.NewCommandLineArgument = mGrNewCommandLineArgument;
   Status = gBS->InstallMultipleProtocolInterfaces (&Handle,
                                                    &gNVIDIAKernelCmdLineUpdateGuid,
