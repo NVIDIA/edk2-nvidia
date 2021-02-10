@@ -30,6 +30,7 @@
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra20-uart", &gNVIDIANonDiscoverable16550UartDeviceGuid },
     { "nvidia,tegra194-tcu", &gNVIDIANonDiscoverableCombinedUartDeviceGuid },
+    { "arm,sbsa-uart", &gNVIDIANonDiscoverableSbsaUartDeviceGuid },
     { NULL, NULL }
 };
 
@@ -103,6 +104,18 @@ DeviceDiscoveryNotify (
         return EFI_NOT_STARTED;
       }
       InstallSerialIO = (SerialConfig != NVIDIA_SERIAL_PORT_DBG2_TEGRA);
+    } else if ((fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
+                                       "arm,sbsa-uart")) == 0) {
+      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Sbsa Unable to locate address range\n", __FUNCTION__));
+        return Status;
+      }
+      Interface = SerialSbsaIoInitialize (BaseAddress);
+      if (Interface == NULL) {
+        return EFI_NOT_STARTED;
+      }
+      InstallSerialIO = TRUE;
     } else {
       Interface = SerialTCUIoInitialize ();
       InstallSerialIO = TRUE;

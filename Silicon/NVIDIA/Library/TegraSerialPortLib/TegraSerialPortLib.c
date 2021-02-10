@@ -32,6 +32,7 @@ TEGRA_UART_INFO TegraUartInfo;
 
 SERIAL_MAPPING gSerialCompatibilityMap[] = {
   { TEGRA_UART_TYPE_TCU, TegraCombinedSerialPortGetObject, "nvidia,tegra194-tcu" },
+  { TEGRA_UART_TYPE_SBSA, TegraSbsaSerialPortGetObject, "arm,sbsa-uart" },
   { TEGRA_UART_TYPE_16550, Tegra16550SerialPortGetObject, "nvidia,tegra20-uart" },
   { TEGRA_UART_TYPE_NONE, NULL, NULL },
 };

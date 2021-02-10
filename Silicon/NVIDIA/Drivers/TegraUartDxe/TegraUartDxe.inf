@@ -25,6 +25,7 @@
 [Sources.common]
   TegraUartDxe.c
   Serial16550.c
+  SerialSbsa.c
   SerialTCU.c
 
 [Packages]
@@ -44,6 +45,7 @@
   DeviceDiscoveryDriverLib
   IoLib
   MemoryAllocationLib
+  TegraSbsaSerialPortLib
   Tegra16550SerialPortLib
   TegraCombinedSerialPortLib
 
@@ -60,6 +62,7 @@
   gEfiSerialIoProtocolGuid
 
 [Guids]
+  gNVIDIANonDiscoverableSbsaUartDeviceGuid
   gNVIDIANonDiscoverable16550UartDeviceGuid
   gNVIDIANonDiscoverableCombinedUartDeviceGuid
 

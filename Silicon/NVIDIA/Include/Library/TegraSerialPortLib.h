@@ -191,6 +191,18 @@ typedef struct {
   } TEGRA_UART_OBJ;
 
 /**
+  Retrieve the object of tegra SBSA serial port library.
+
+  @param[out]  Tegra SBSA uart library object
+
+**/
+TEGRA_UART_OBJ *
+EFIAPI
+TegraSbsaSerialPortGetObject (
+  VOID
+  );
+
+/**
   Retrieve the object of tegra combined serial port library.
 
   @param[out]  Tegra combined uart library object
@@ -213,6 +225,16 @@ EFIAPI
 Tegra16550SerialPortGetObject (
   VOID
   );
+
+/**
+  Initialize SBSA Serial Console
+
+**/
+EFI_SERIAL_IO_PROTOCOL *
+EFIAPI
+SerialSbsaIoInitialize (
+  IN UINTN SerialBaseAddress
+   );
 
 /**
   Initialize 16550 Serial Console

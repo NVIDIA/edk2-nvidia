@@ -484,6 +484,14 @@ gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialFifoControl|0x27
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialExtendedTxFifoSize|1
 
+  #
+  # PL011 UART Parameters
+  #
+  gArmPlatformTokenSpaceGuid.PL011UartClkInHz|1843200
+  gArmPlatformTokenSpaceGuid.PL011UartInteger|0
+  gArmPlatformTokenSpaceGuid.PL011UartFractional|0
+  gArmPlatformTokenSpaceGuid.PL011UartRegOffsetVariant|0
+
 [PcdsFixedAtBuild]
   #
   # Variable Services PCDs.

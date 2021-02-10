@@ -28,6 +28,7 @@
 [LibraryClasses]
   PcdLib
   DebugLib
+  TegraSbsaSerialPortLib
   Tegra16550SerialPortLib
   TegraCombinedSerialPortLib
   TegraPlatformInfoLib
