@@ -225,3 +225,8 @@
   # Golden Register Support
   #
   Silicon/NVIDIA/Drivers/GoldenRegisterDxe/GoldenRegisterDxe.inf
+
+  #
+  # FSI Support
+  #
+  Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf

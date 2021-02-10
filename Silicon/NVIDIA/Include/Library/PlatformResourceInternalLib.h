@@ -98,4 +98,15 @@ GetGROutputBaseAndSizeInternal (
   OUT UINTN *Size
 );
 
+/**
+  Retrieve FSI NS Base and Size
+
+**/
+BOOLEAN
+EFIAPI
+GetFsiNsBaseAndSizeInternal (
+  OUT UINTN *Base,
+  OUT UINTN *Size
+);
+
 #endif //__PLATFORM_RESOURCE_INTERNAL_LIB_H__

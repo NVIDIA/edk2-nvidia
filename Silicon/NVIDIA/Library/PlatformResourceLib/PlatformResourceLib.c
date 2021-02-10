@@ -279,3 +279,17 @@ GetGROutputBaseAndSize (
       return FALSE;
   }
 }
+
+/**
+  Retrieve FSI NS Base and Size
+
+**/
+BOOLEAN
+EFIAPI
+GetFsiNsBaseAndSize (
+  OUT UINTN *Base,
+  OUT UINTN *Size
+)
+{
+  return GetFsiNsBaseAndSizeInternal (Base, Size);
+}

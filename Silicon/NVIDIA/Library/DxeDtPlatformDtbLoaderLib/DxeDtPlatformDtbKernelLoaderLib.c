@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  This program and the accompanying materials
@@ -71,14 +71,17 @@ DtPlatformLoadDtb (
   EFI_HANDLE                  *HandleBuffer = NULL;
   UINT64                      Size;
   EFI_PARTITION_INFO_PROTOCOL *PartitionInfo = NULL;
-  BOOLEAN                     ValidFlash = FALSE;
+  BOOLEAN                     ValidFlash;
+  BOOLEAN                     DtbLocAdjusted;
   UINTN                       Index;
   VOID                        *Hob = NULL;
   EFI_BLOCK_IO_PROTOCOL       *BlockIo;
   INT32                       NodeOffset;
   INT32                       DtStatus;
+  VOID                        *DtbCopy;
 
-
+  ValidFlash = FALSE;
+  DtbLocAdjusted = FALSE;
   *Dtb = NULL;
 
   if (!PcdGetBool(PcdEmuVariableNvModeEnable)) {
@@ -176,11 +179,25 @@ DtPlatformLoadDtb (
   if (fdt_check_header (*Dtb) != 0) {
     if (ValidFlash) {
       *Dtb += PcdGet32 (PcdBootImgSigningHeaderSize);
+      DtbLocAdjusted = TRUE;
     }
     if (fdt_check_header (*Dtb) != 0) {
       DEBUG ((DEBUG_ERROR, "%a: No DTB found @ 0x%p\n", __FUNCTION__,
         *Dtb));
       return EFI_NOT_FOUND;
+    }
+  }
+
+  if (ValidFlash) {
+    //Double the size taken by DTB to have enough buffer to accommodate
+    //any runtime additions made to it.
+    DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (*Dtb)));
+    if (fdt_open_into (*Dtb, DtbCopy, 2 * fdt_totalsize (*Dtb)) != 0) {
+      return EFI_NOT_FOUND;
+    }
+    if (*Dtb != NULL) {
+      gBS->FreePool (DtbLocAdjusted ? *Dtb - PcdGet32 (PcdBootImgSigningHeaderSize) : *Dtb);
+      *Dtb = DtbCopy;
     }
   }
 
@@ -192,29 +209,7 @@ DtPlatformLoadDtb (
   NodeOffset = fdt_path_offset (*Dtb, "/reserved-memory/grid-of-semaphores");
   if (NodeOffset > 0) {
     DtStatus = fdt_setprop (*Dtb, NodeOffset, "status", "disabled", sizeof("disabled"));
-    if (DtStatus == -FDT_ERR_NOSPACE) {
-      VOID *NewDt = AllocatePool (fdt_totalsize (*Dtb) + SIZE_4KB);
-      if (NewDt == NULL) {
-        DEBUG ((DEBUG_ERROR, "Failed to reallocate dtb\r\n"));
-      } else {
-        DtStatus = fdt_open_into (*Dtb, NewDt, fdt_totalsize (*Dtb) + SIZE_4KB);
-        if (DtStatus != 0) {
-          DEBUG ((DEBUG_ERROR, "Failed to re-open dtb\r\n"));
-          FreePool (NewDt);
-        } else {
-          *Dtb = NewDt;
-          NodeOffset = fdt_path_offset (*Dtb, "/reserved-memory/grid-of-semaphores");
-          if (NodeOffset <= 0) {
-            DEBUG ((DEBUG_ERROR, "Node offset not found in new devicetree\r\n"));
-          } else {
-            DtStatus = fdt_setprop (*Dtb, NodeOffset, "status", "disabled", sizeof("disabled"));
-            if (DtStatus != 0) {
-              DEBUG ((DEBUG_ERROR, "Failed to disable grid-of-semaphores %d\r\n", DtStatus));
-            }
-          }
-        }
-      }
-    } else if (DtStatus != 0) {
+    if (DtStatus != 0) {
       DEBUG ((DEBUG_ERROR, "Failed to disable grid-of-semaphores %d\r\n", DtStatus));
     }
   }
