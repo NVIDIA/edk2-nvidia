@@ -60,7 +60,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
 
       Name (_FIF, Package () {
         0,  // revision
-        0,  // fine grain control off
+        0,  // fine grain control on
         5,  // step size
         0   // no notification on low speed
       })
@@ -71,11 +71,11 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
        */
       Name (_FPS, Package () {
         0,  //revision
-        Package () {   0, 0x0FFFFFFFF,    0, 0xFFFFFFFF, 0xFFFFFFFF },
-        Package () {  64, 0x0FFFFFFFF, 1250, 0xFFFFFFFF, 0xFFFFFFFF },
-        Package () { 128, 0x0FFFFFFFF, 2500, 0xFFFFFFFF, 0xFFFFFFFF },
-        Package () { 192, 0x0FFFFFFFF, 3750, 0xFFFFFFFF, 0xFFFFFFFF },
-        Package () { 256, 0x0FFFFFFFF, 5000, 0xFFFFFFFF, 0xFFFFFFFF }
+        Package () { 0x00, 0x0FFFFFFFF,    0, 0xFFFFFFFF, 0xFFFFFFFF },
+        Package () { 0x40, 0,           1250, 0xFFFFFFFF, 0xFFFFFFFF },
+        Package () { 0x80, 0x0FFFFFFFF, 2500, 0xFFFFFFFF, 0xFFFFFFFF },
+        Package () { 0xc0, 0x0FFFFFFFF, 3750, 0xFFFFFFFF, 0xFFFFFFFF },
+        Package () { 0xff, 0x0FFFFFFFF, 5000, 0xFFFFFFFF, 0xFFFFFFFF }
       })
 
       /* PWM FAN register fields */
@@ -91,6 +91,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
       Method (_FSL, 1) {
         If (Arg0)
         {
+          Store (0, PMON)
           Store (Arg0, PWM0)
           Store (1, PMON)
         }
@@ -102,11 +103,80 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
       }
 
       Method (_FST) {
-        Name (PCTR, 0xff)
-        Store(PWM0, PCTR)
-        Name (FST0, Package() { 0, PCTR, 0xFFFFFFFF })
-        Return (FST0)
+        Return (Package() { 0, PWM0, 0xFFFFFFFF })
       }
+    }
+
+    Device (BPMP) {
+      OperationRegion (BPTX, SystemMemory, BPMP_TX_MAILBOX, 0x1000)
+      Field (BPTX, AnyAcc, NoLock, Preserve) {
+        TWCT, 32,
+        TSTA, 32,
+        Offset (64),
+        TRCT, 32,
+        Offset (128),
+        TMRQ, 32,
+        TFLA, 32,
+        TDAT, 31680
+      }
+
+      OperationRegion (BPRX, SystemMemory, BPMP_RX_MAILBOX, 0x1000)
+      Field (BPRX, AnyAcc, NoLock, Preserve) {
+        RWCT, 32,
+        RSTA, 32,
+        Offset (64),
+        RRCT, 32,
+        Offset (128),
+        RERR, 32,
+        RFLG, 32,
+        RDAT, 31680
+      }
+
+      OperationRegion (DRBL, SystemMemory, 0x03C90300, 0x100)
+      Field (DRBL, AnyAcc, NoLock, Preserve) {
+        TRIG, 4,
+        ENA,  4,
+        RAW,  4,
+        PEND, 4
+      }
+
+      Method (BIPC, 2, Serialized, 0, PkgObj, {IntObj, BuffObj}) {
+        TMRQ = Arg0
+        TFLA = One
+        TDAT = Arg1
+        Increment (TWCT)
+        Store (One, TRIG)
+
+        While (RWCT == RRCT) {
+          Sleep (10)
+        }
+        Increment (RRCT)
+        Return (Package() {RERR, RDAT})
+      }
+
+      Method (TEMP, 1, Serialized, 0, IntObj, IntObj) {
+        Local0 = Buffer(8){}
+        CreateDWordField (Local0, 0x00, CMD)
+        CreateDWordField (Local0, 0x04, ZONE)
+        CMD = ZONE_TEMP
+        ZONE = Arg0
+        Local1 = \_SB.BPMP.BIPC (MRQ_THERMAL, Local0)
+        CreateDWordField (DerefOf (Index (Local1, 1)), 0x00, TEMP)
+        Local3 = TEMP / 100
+        Local4 = 2732
+        Add (Local3, Local4, Local3)
+        Return (Local3)
+      }
+    }
+
+    ThermalZone (TCPU) {
+      Method(_TMP) { Return (\_SB.BPMP.TEMP (CPU_TEMP_ZONE) )} // get current temp
+      Method(_AC0) { Return (500 + 2732) } // fan active temp 50c
+      Name(_AL0, Package(){\_SB.FAN}) // fan is act cool dev
+      Method(_CRT) { Return (965 + 2732) } // get critical temp 96.5c
+      Method(_HOT) { Return (700 + 2732) } // get hot temp 70c
+      Name(_TZP, TEMP_POLL_TIME)
+      Name (_STR, Unicode ("System thermal zone"))
     }
 
     Device (DMA0) {

@@ -44,4 +44,12 @@
 // BL CARVEOUT OFFSET
 #define T194_BL_CARVEOUT_OFFSET           0x448
 
+// BPMP Info
+#define BPMP_TX_MAILBOX                   0x4004E000
+#define BPMP_RX_MAILBOX                   0x4004F000
+#define MRQ_THERMAL                       27
+#define ZONE_TEMP                         1
+#define CPU_TEMP_ZONE                     2
+#define TEMP_POLL_TIME                    50 //5s
+
 #endif //__T194_DEFINES_H__
