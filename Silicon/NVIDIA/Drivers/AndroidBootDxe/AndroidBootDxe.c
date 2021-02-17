@@ -964,8 +964,6 @@ AndroidBootDxeLoadFile2 (
 {
   DEBUG ((DEBUG_INFO, "%a: buffer %09p in size %08x\n", __FUNCTION__, Buffer, *BufferSize));
 
-  //volatile BOOLEAN Debug = TRUE;
-  //while (Debug);
   // Verify if the valid parameters
   if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
     return EFI_INVALID_PARAMETER;
@@ -980,8 +978,8 @@ AndroidBootDxeLoadFile2 (
   if (mInitRdBaseAddress == 0) {
     return EFI_NOT_FOUND;
   }
-  if (Buffer == NULL || *BufferSize < mInitRdBaseAddress) {
-    *BufferSize = mInitRdBaseAddress;
+  if (Buffer == NULL || *BufferSize < mInitRdSize) {
+    *BufferSize = mInitRdSize;
     return EFI_BUFFER_TOO_SMALL;
   }
 
