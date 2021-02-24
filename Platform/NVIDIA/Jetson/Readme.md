@@ -45,12 +45,14 @@ the Jetson Developer Kit.
   console support is available
 
 # Known Issues
-- USB-C port J512 on Jetson AGX Xavier is not functional. Users may use the
-  USB-C port J513 or eSATA/USB port J507 instead.
+- None
 
 # Version History
-- 1.0.0: Initial release supporting Jetson AGX Xavier
-- 1.1.0: Add support for SD-cards and Jetson Xavier NX
+- 1.1.0:
+    - Added support for SD-cards and Jetson Xavier NX
+    - Fixed support for USB-C port J512 on Jetson AGX Xavier
+- 1.0.0:
+    - Initial release supporting Jetson AGX Xavier
 
 # Flashing instructions
 ## Setup
@@ -106,26 +108,27 @@ For Jetson Xavier NX add:
 
     earlycon=uart8250,mmio32,0x3100000
 
-For booting Linux with ACPI on Jetson AGX Xavier the Tegra 8250 driver (located
-in the Linux kernel source file drivers/tty/serial/8250/8250_tegra.c) is
-required.
+For booting Linux with ACPI, the Tegra 8250 driver (located in the Linux kernel
+source file drivers/tty/serial/8250/8250_tegra.c) is required for the serial
+console.
 
 
 ## Booting UEFI-bootable Linux Distributions
 
 If you are planning to boot a UEFI-bootable Linux distribution from external
-media, such as a USB drive, place the Jetson AGX Xavier Developer Kit in
-Recovery Mode and execute the following command with the appropriate
-configuration to flash the UEFI firmware. Otherwise, please refer to the
-section “Booting L4T with mainline Linux."
+media, such as a USB drive, place the Jetson Developer Kit in Recovery Mode
+and execute the following command with the appropriate configuration to flash
+the UEFI firmware. Otherwise, please refer to the section “Booting L4T with
+mainline Linux."
 
     $ sudo ./flash.sh <config> external
 
-Where <config> is:
- - jetson-xavier-uefi-min               For Jetson AGX Xavier with Device-Tree
- - jetson-xavier-uefi-acpi-min          For Jetson AGX Xavier with ACPI
- - jetson-xavier-nx-uefi-devkit         For Jetson Xavier NX with Device-Tree
- - jetson-xavier-nx-uefi-acpi-devkit    For Jetson Xavier NX with ACPI
+Where `<config>` is:
+
+- `jetson-xavier-uefi-min` for Jetson AGX Xavier with Device-Tree
+- `jetson-xavier-uefi-acpi-min` for Jetson AGX Xavier with ACPI
+- `jetson-xavier-nx-uefi-devkit` for Jetson Xavier NX with Device-Tree
+- `jetson-xavier-nx-uefi-acpi-devkit` for Jetson Xavier NX with ACPI
 
 The OS hardware description can be changed without flashing the device as well,
 see “Booting Linux with Device-Tree/ACPI”.
