@@ -91,7 +91,7 @@
   #
   # Graphics console support
   #
-  INF MdeModulePkg/Logo/LogoDxe.inf
+  INF Silicon/NVIDIA/Drivers/Logo/LogoDxe.inf
   INF MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
 
   INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
@@ -250,3 +250,15 @@
   # MM Communication
   #
   INF ArmPkg/Drivers/MmCommunicationDxe/MmCommunication.inf
+
+  #
+  # Logo Files
+  #
+  FILE FREEFORM = gNVIDIAPlatformLogoGuid {
+    SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray480.bmp
+    SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray720.bmp
+    SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray1080.bmp
+  }
+  FILE FREEFORM = gNVIDIAPlatformLogoNoSDGuid {
+    SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray1080noSD.bmp
+  }

@@ -646,7 +646,7 @@ gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
   #
   # Graphics console support
   #
-  MdeModulePkg/Logo/LogoDxe.inf
+  Silicon/NVIDIA/Drivers/Logo/LogoDxe.inf
   MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
 
   #
