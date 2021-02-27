@@ -25,6 +25,7 @@ OnEndOfDxe (
   EFI_STATUS Status;
   VOID       *AcpiBase;
   VOID       *FdtBase;
+  VOID       *NewFdt;
   INTN       NodeOffset;
   UINTN      FsiBase;
   UINTN      FsiSize;
@@ -59,7 +60,6 @@ OnEndOfDxe (
       (AddressCells == 0) ||
       (SizeCells > 2) ||
       (SizeCells == 0)) {
-    DEBUG ((EFI_D_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
     return;
   }
 
@@ -95,7 +95,29 @@ OnEndOfDxe (
     *(UINT32*)&Data[AddressCells * sizeof (UINT32)] = SwapBytes32 (FsiSize);
   }
 
-  fdt_setprop (FdtBase, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
+  Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesCode, EFI_SIZE_TO_PAGES (fdt_totalsize (FdtBase)), (EFI_PHYSICAL_ADDRESS *)NewFdt);
+  if (EFI_ERROR (Status)) {
+    gBS->FreePool (Data);
+    return;
+  }
+
+  gBS->CopyMem (NewFdt, FdtBase, fdt_totalsize (FdtBase));
+
+  if (0 != fdt_setprop (NewFdt, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32))) {
+    gBS->FreePool (Data);
+    gBS->FreePages ((EFI_PHYSICAL_ADDRESS)NewFdt, EFI_SIZE_TO_PAGES (fdt_totalsize (NewFdt)));
+    return;
+  }
+
+  gBS->FreePool (Data);
+
+  Status = gBS->InstallConfigurationTable (&gFdtTableGuid, NewFdt);
+  if (EFI_ERROR (Status)) {
+    gBS->FreePages ((EFI_PHYSICAL_ADDRESS)NewFdt, EFI_SIZE_TO_PAGES (fdt_totalsize (NewFdt)));
+    return;
+  }
+
+  gBS->FreePages ((EFI_PHYSICAL_ADDRESS)FdtBase, EFI_SIZE_TO_PAGES (fdt_totalsize (FdtBase)));
 
   return;
 }

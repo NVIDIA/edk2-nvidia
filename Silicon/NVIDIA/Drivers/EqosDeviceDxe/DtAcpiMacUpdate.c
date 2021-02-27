@@ -499,6 +499,7 @@ UpdateDTACPIMacAddress (
   SIMPLE_NETWORK_DRIVER *Snp = (SIMPLE_NETWORK_DRIVER *)Context;
   VOID                  *DtBase;
   VOID                  *AcpiBase;
+  VOID                  *NewFdt;
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (EFI_ERROR (Status)) {
@@ -515,11 +516,25 @@ UpdateDTACPIMacAddress (
       DEBUG ((DEBUG_ERROR, "Failed to get node %a in kernel device tree\r\n", Snp->DeviceTreePath));
       return;
     }
-    DtStatus = fdt_setprop (DtBase, NodeOffset, "mac-address", Snp->SnpMode.CurrentAddress.Addr, NET_ETHER_ADDR_LEN);
-    if (DtStatus != 0) {
-      DEBUG ((DEBUG_ERROR, "Failed to set mac-address in kernel device tree %a\r\n", fdt_strerror(DtStatus)));;
+    Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesCode, EFI_SIZE_TO_PAGES (fdt_totalsize (DtBase)), (EFI_PHYSICAL_ADDRESS *)NewFdt);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to allocate new device tree\r\n"));
       return;
     }
+    gBS->CopyMem (NewFdt, DtBase, fdt_totalsize (DtBase));
+    DtStatus = fdt_setprop (NewFdt, NodeOffset, "mac-address", Snp->SnpMode.CurrentAddress.Addr, NET_ETHER_ADDR_LEN);
+    if (DtStatus != 0) {
+      DEBUG ((DEBUG_ERROR, "Failed to set mac-address in kernel device tree %a\r\n", fdt_strerror(DtStatus)));;
+      gBS->FreePages ((EFI_PHYSICAL_ADDRESS)NewFdt, EFI_SIZE_TO_PAGES (fdt_totalsize (NewFdt)));
+      return;
+    }
+    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, NewFdt);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to install new device tree\r\n"));
+      gBS->FreePages ((EFI_PHYSICAL_ADDRESS)NewFdt, EFI_SIZE_TO_PAGES (fdt_totalsize (NewFdt)));
+      return;
+    }
+    gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtBase, EFI_SIZE_TO_PAGES (fdt_totalsize (DtBase)));
   } else {
     //Try ACPI update
     EthMacInit (Snp->SnpMode.CurrentAddress.Addr, 0);
