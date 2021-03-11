@@ -26,6 +26,7 @@
   TegraStandaloneMmSerialPortLib.c
 
 [LibraryClasses]
+  TegraSbsaSerialPortLib
   Tegra16550SerialPortLib
   TegraCombinedSerialPortLib
   TegraPlatformInfoLib

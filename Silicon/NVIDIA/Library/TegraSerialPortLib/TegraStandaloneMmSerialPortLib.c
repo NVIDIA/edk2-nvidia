@@ -68,6 +68,8 @@ SerialPortIdentify (
       TegraUartObj = Tegra16550SerialPortGetObject();
   } else if (UARTInstanceType == TEGRA_UART_TYPE_TCU) {
       TegraUartObj = TegraCombinedSerialPortGetObject();
+  } else if (UARTInstanceType == TEGRA_UART_TYPE_SBSA) {
+      TegraUartObj = TegraSbsaSerialPortGetObject();
   } else {
       TegraUartObj = Tegra16550SerialPortGetObject();
   }
