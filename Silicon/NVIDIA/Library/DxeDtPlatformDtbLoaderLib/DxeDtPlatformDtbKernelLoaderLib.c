@@ -174,6 +174,13 @@ DtPlatformLoadDtb (
       return EFI_NOT_FOUND;
     }
     *Dtb = (VOID *)(UINTN)*(UINT64 *)GET_GUID_HOB_DATA (Hob);
+    //Double the size taken by DTB to have enough buffer to accommodate
+    //any runtime additions made to it.
+    DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (*Dtb)));
+    if (fdt_open_into (*Dtb, DtbCopy, 2 * fdt_totalsize (*Dtb)) != 0) {
+      return EFI_NOT_FOUND;
+    }
+    *Dtb = DtbCopy;
   }
 
   if (fdt_check_header (*Dtb) != 0) {

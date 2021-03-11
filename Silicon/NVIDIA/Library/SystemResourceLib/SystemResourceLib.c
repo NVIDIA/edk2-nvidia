@@ -41,13 +41,8 @@ RegisterDeviceTree (
   if (0 != BlDtbLoadAddress) {
     if (fdt_check_header ((VOID *)BlDtbLoadAddress) == 0) {
       UINTN DtbSize = fdt_totalsize ((VOID *)BlDtbLoadAddress);
-      //Double the size taken by DTB to have enough buffer to accommodate
-      //any runtime additions made to it.
-      DtbSize *= 2;
       EFI_PHYSICAL_ADDRESS DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize));
-      if (fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, DtbSize) != 0) {
-        return;
-      }
+      CopyMem ((VOID *)DtbCopy, (VOID *)BlDtbLoadAddress, DtbSize);
 
       DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
       if (NULL != DeviceTreeHobData) {
