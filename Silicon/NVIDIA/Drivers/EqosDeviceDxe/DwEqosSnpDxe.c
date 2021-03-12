@@ -198,6 +198,8 @@ SnpInitialize (
     gBS->CloseEvent (Snp->ExitBootServiceEvent);
   }
 
+  osi_hw_dma_init (Snp->MacDriver.osi_dma);
+
   osi_start_mac (Snp->MacDriver.osi_core);
 
   // Declare the driver as initialized
