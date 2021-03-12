@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Device Discovery Driver
 
-  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -1094,8 +1094,7 @@ ProcessDeviceTreeNodeWithHandle(
   BOOLEAN                                   SupportsBinding = FALSE;
   EFI_GUID                                  *DeviceProtocolGuid;
   EFI_HANDLE                                DeviceHandle = NULL;
-  DEVICE_DISCOVERY_MEMMAP_DEVICE_PATH       *DevicePath = NULL;
-  DEVICE_DISCOVERY_VENDOR_DEVICE_PATH       *VendorDevicePath = NULL;
+  DEVICE_DISCOVERY_DEVICE_PATH              *DevicePath = NULL;
   EFI_HANDLE                                ConnectHandles[2];
   EFI_GUID                                  *ProtocolGuidList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL, NULL};
   VOID                                      *InterfaceList[NUMBER_OF_OPTIONAL_PROTOCOLS] = {NULL, NULL, NULL};
@@ -1181,25 +1180,25 @@ ProcessDeviceTreeNodeWithHandle(
     goto ErrorExit;
   }
 
+  DevicePath = (DEVICE_DISCOVERY_DEVICE_PATH *)  AllocateZeroPool (sizeof (DEVICE_DISCOVERY_DEVICE_PATH));
+  if (DevicePath == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ErrorExit;
+  }
+
+  //All paths start with vendor device path node.
+  DevicePath->MemMap.Vendor.Header.Type = HARDWARE_DEVICE_PATH;
+  DevicePath->MemMap.Vendor.Header.SubType = HW_VENDOR_DP;
+  gBS->CopyMem(&DevicePath->MemMap.Vendor.Guid, &gNVIDIAVendorDeviceDiscoveryGuid, sizeof (EFI_GUID));
+  SetDevicePathNodeLength (&DevicePath->MemMap.Vendor, sizeof (DevicePath->MemMap.Vendor));
+
   if (Device->Resources == NULL) {
-    DevicePath = (DEVICE_DISCOVERY_MEMMAP_DEVICE_PATH *)CreateDeviceNode (
-                                                          HARDWARE_DEVICE_PATH,
-                                                          HW_VENDOR_DP,
-                                                          sizeof (DEVICE_DISCOVERY_VENDOR_DEVICE_PATH));
-    if (NULL == DevicePath) {
-      Status = EFI_OUT_OF_RESOURCES;
-      goto ErrorExit;
-    }
-    VendorDevicePath = (DEVICE_DISCOVERY_VENDOR_DEVICE_PATH *)DevicePath;
-    gBS->CopyMem(&VendorDevicePath->Vendor.Guid, &gNVIDIAVendorDeviceDiscoveryGuid, sizeof (EFI_GUID));
-    SetDevicePathNodeLength (&VendorDevicePath->Vendor, sizeof (VendorDevicePath->Vendor));
+    DevicePath->Controller.Controller.Header.Type = HARDWARE_DEVICE_PATH;
+    DevicePath->Controller.Controller.Header.SubType = HW_CONTROLLER_DP;
+    DevicePath->Controller.Controller.ControllerNumber = NodeOffset;
 
-    VendorDevicePath->Controller.Header.Type = HARDWARE_DEVICE_PATH;
-    VendorDevicePath->Controller.Header.SubType = HW_CONTROLLER_DP;
-    VendorDevicePath->Controller.ControllerNumber = NodeOffset;
-
-    SetDevicePathNodeLength (&VendorDevicePath->Controller, sizeof (VendorDevicePath->Controller));
-    SetDevicePathEndNode (&VendorDevicePath->End);
+    SetDevicePathNodeLength (&DevicePath->Controller.Controller, sizeof (DevicePath->Controller.Controller));
+    SetDevicePathEndNode (&DevicePath->Controller.End);
   } else {
     //First resource must be MMIO
     if ((Device->Resources->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
@@ -1207,21 +1206,14 @@ ProcessDeviceTreeNodeWithHandle(
       DEBUG ((EFI_D_ERROR, "%a: Invalid node resources.\r\n", __FUNCTION__));
       goto ErrorExit;
     } else {
-      DevicePath = (DEVICE_DISCOVERY_MEMMAP_DEVICE_PATH *)CreateDeviceNode (
-                                                            HARDWARE_DEVICE_PATH,
-                                                            HW_MEMMAP_DP,
-                                                            sizeof (DEVICE_DISCOVERY_MEMMAP_DEVICE_PATH));
-      if (NULL == DevicePath) {
-        Status = EFI_OUT_OF_RESOURCES;
-        goto ErrorExit;
-      }
+      DevicePath->MemMap.MemMap.Header.Type = HARDWARE_DEVICE_PATH;
+      DevicePath->MemMap.MemMap.Header.SubType = HW_MEMMAP_DP;
+      DevicePath->MemMap.MemMap.MemoryType = EfiMemoryMappedIO;
+      DevicePath->MemMap.MemMap.StartingAddress = Device->Resources->AddrRangeMin;
+      DevicePath->MemMap.MemMap.EndingAddress = Device->Resources->AddrRangeMax;
+      SetDevicePathNodeLength (&DevicePath->MemMap.MemMap, sizeof (DevicePath->MemMap.MemMap));
 
-      DevicePath->MemMap.MemoryType = EfiMemoryMappedIO;
-      DevicePath->MemMap.StartingAddress = Device->Resources->AddrRangeMin;
-      DevicePath->MemMap.EndingAddress = Device->Resources->AddrRangeMax;
-
-      SetDevicePathNodeLength (&DevicePath->MemMap, sizeof (DevicePath->MemMap));
-      SetDevicePathEndNode (&DevicePath->End);
+      SetDevicePathEndNode (&DevicePath->MemMap.End);
     }
   }
 

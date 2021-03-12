@@ -2,7 +2,7 @@
 
   Device discovery driver private data structures
 
-  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -28,6 +28,7 @@ typedef struct {
 
 #pragma pack (1)
 typedef struct {
+  VENDOR_DEVICE_PATH                  Vendor;
   MEMMAP_DEVICE_PATH                  MemMap;
   EFI_DEVICE_PATH_PROTOCOL            End;
 } DEVICE_DISCOVERY_MEMMAP_DEVICE_PATH;
@@ -35,7 +36,11 @@ typedef struct {
   VENDOR_DEVICE_PATH                  Vendor;
   CONTROLLER_DEVICE_PATH              Controller;
   EFI_DEVICE_PATH_PROTOCOL            End;
-} DEVICE_DISCOVERY_VENDOR_DEVICE_PATH;
+} DEVICE_DISCOVERY_CONTROLLER_DEVICE_PATH;
+typedef union {
+  DEVICE_DISCOVERY_MEMMAP_DEVICE_PATH     MemMap;
+  DEVICE_DISCOVERY_CONTROLLER_DEVICE_PATH Controller;
+} DEVICE_DISCOVERY_DEVICE_PATH;
 #pragma pack ()
 
 #define NUMBER_OF_OPTIONAL_PROTOCOLS 3
