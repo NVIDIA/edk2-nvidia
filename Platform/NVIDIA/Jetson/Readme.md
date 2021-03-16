@@ -127,8 +127,8 @@ Where `<config>` is:
 
 - `jetson-xavier-uefi-min` for Jetson AGX Xavier with Device-Tree
 - `jetson-xavier-uefi-acpi-min` for Jetson AGX Xavier with ACPI
-- `jetson-xavier-nx-uefi-devkit` for Jetson Xavier NX with Device-Tree
-- `jetson-xavier-nx-uefi-acpi-devkit` for Jetson Xavier NX with ACPI
+- `jetson-xavier-nx-uefi` for Jetson Xavier NX with Device-Tree
+- `jetson-xavier-nx-uefi-acpi` for Jetson Xavier NX with ACPI
 
 The OS hardware description can be changed without flashing the device as well,
 see “Booting Linux with Device-Tree/ACPI”.
