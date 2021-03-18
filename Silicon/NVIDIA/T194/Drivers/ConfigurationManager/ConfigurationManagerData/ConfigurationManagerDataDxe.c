@@ -665,6 +665,19 @@ UpdateSdhciInfo ()
       goto ErrorExit;
     }
 
+    Status = PatchProtocol->FindNode(PatchProtocol, ACPI_SDCT_UID, &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_SDCT_UID));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->SetNodeData(PatchProtocol, &AcpiNodeInfo, &Index, AcpiNodeInfo.Size);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_SDCT_UID));
+      goto ErrorExit;
+    }
+
+
     Status = PatchProtocol->FindNode(PatchProtocol, ACPI_SDCT_REG0, &AcpiNodeInfo);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_SDCT_REG0));

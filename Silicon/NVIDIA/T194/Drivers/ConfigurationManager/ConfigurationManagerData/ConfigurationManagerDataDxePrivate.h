@@ -54,6 +54,7 @@
 #define ACPI_DEVICE_MAX       9
 #define ACPI_PCI_STA_TEMPLATE "_SB_.PCI%d._STA"
 #define ACPI_SDCT_REG0        "SDCT.REG0"
+#define ACPI_SDCT_UID         "SDCT._UID"
 #define ACPI_SDCT_INT0        "SDCT.INT0"
 #define ACPI_FAN_FANR         "_SB_.FAN_.FANR"
 #define ACPI_FAN_STA          "_SB_.FAN_._STA"
