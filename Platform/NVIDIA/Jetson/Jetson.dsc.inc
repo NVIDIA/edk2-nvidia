@@ -44,8 +44,8 @@
 
 [PcdsPatchableInModule]
   # Console Resolution (Full HD)
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|1920
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|1080
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|0
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|0
 
 [PcdsDynamicDefault.common.T186]
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
