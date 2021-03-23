@@ -2,7 +2,7 @@
 
   TegraPwmDxe Controller Driver
 
-  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -39,6 +39,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
 };
 
 #define PWM_FAN_HIGH 0x81000000
+#define PWM_FAN_MED  0x80800000
+#define PWM_CLOCK_FREQ 19200000
 
 /**
   Callback that will be invoked at various phases of the driver initialization
@@ -117,7 +119,8 @@ DeviceDiscoveryNotify (
       return EFI_UNSUPPORTED;
     }
 
-    MmioWrite32 (BaseAddress, PWM_FAN_HIGH);
+    DeviceDiscoverySetClockFreq (ControllerHandle, "pwm", PWM_CLOCK_FREQ);
+    MmioWrite32 (BaseAddress, PWM_FAN_MED);
 
     return Status;
 
