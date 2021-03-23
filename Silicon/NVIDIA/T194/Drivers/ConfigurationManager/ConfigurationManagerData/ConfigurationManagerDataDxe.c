@@ -78,15 +78,6 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
-  // SPCR Table
-  {
-    EFI_ACPI_6_3_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE,
-    EFI_ACPI_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_REVISION,
-    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSpcr),
-    NULL,
-    FixedPcdGet64(PcdAcpiTegraUartOemTableId),
-    FixedPcdGet64(PcdAcpiDefaultOemRevision)
-  },
   // DSDT Table
   {
     EFI_ACPI_6_3_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
@@ -465,6 +456,14 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   NVIDIA_DEVICE_TREE_INTERRUPT_DATA InterruptData;
   UINT32                            Index;
   UINT32                            Size;
+  UINT8                             SerialPortConfig;
+  CM_STD_OBJ_ACPI_TABLE_INFO        *NewAcpiTables;
+
+
+  SerialPortConfig = PcdGet8 (PcdSerialPortConfig);
+  if (SerialPortConfig == NVIDIA_SERIAL_PORT_DISABLED) {
+    return EFI_SUCCESS;
+  }
 
   NumberOfSerialPorts = 0;
   Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra20-uart", NULL, &NumberOfSerialPorts);
@@ -507,14 +506,54 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     SpcrSerialPort[Index].BaseAddressLength = RegisterData.Size;
     SpcrSerialPort[Index].Interrupt = InterruptData.Interrupt + DEVICETREE_TO_ACPI_INTERRUPT_OFFSET;
     SpcrSerialPort[Index].BaudRate = FixedPcdGet64 (PcdUartDefaultBaudRate);
-    SpcrSerialPort[Index].PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550;
+    if (SerialPortConfig == NVIDIA_SERIAL_PORT_SPCR_16550) {
+      SpcrSerialPort[Index].PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550;
+    } else {
+      SpcrSerialPort[Index].PortSubtype = NVIDIA_ACPI_DBG2_PORT_SUBTYPE_SERIAL_RESERVED_TEGRA_UART;
+    }
     SpcrSerialPort[Index].Clock = 0;
   }
   FreePool (SerialHandles);
 
+  for (Index = 0; Index < (EStdObjMax + EArmObjMax); Index++) {
+    if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
+      NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (NVIDIAPlatformRepositoryInfo[Index].CmObjectSize + (sizeof (CM_STD_OBJ_ACPI_TABLE_INFO)), NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr);
+      if (NewAcpiTables == NULL) {
+        Status = EFI_OUT_OF_RESOURCES;
+        return Status;
+      }
+
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
+
+      if (SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_TEGRA) {
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_3_DEBUG_PORT_2_TABLE_SIGNATURE;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_DEBUG_PORT_2_TABLE_REVISION;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDbg2);
+      } else {
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_3_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_REVISION;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSpcr);
+      }
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = NULL;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId = PcdGet64(PcdAcpiTegraUartOemTableId);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision = FixedPcdGet64(PcdAcpiDefaultOemRevision);
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+
+      break;
+    } else if (NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr == NULL) {
+      break;
+    }
+  }
+
+
   Repo = *PlatformRepositoryInfo;
 
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
+  if (SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_TEGRA) {
+    Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialDebugPortInfo);
+  } else {
+    Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
+  }
   Repo->CmObjectToken = CM_NULL_TOKEN;
   Repo->CmObjectSize = sizeof (CM_ARM_SERIAL_PORT_INFO);
   Repo->CmObjectCount = NumberOfSerialPorts;

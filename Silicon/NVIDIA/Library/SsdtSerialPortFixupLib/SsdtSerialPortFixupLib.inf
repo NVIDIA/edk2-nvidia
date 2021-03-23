@@ -2,6 +2,7 @@
 #  SSDT Serial Port fixup Library
 #
 #  Copyright (c) 2020, Arm Limited. All rights reserved.<BR>
+#  Copyright (c) 2021, NVIDIA Corporation. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
@@ -23,6 +24,7 @@
   MdeModulePkg/MdeModulePkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   AmlLib

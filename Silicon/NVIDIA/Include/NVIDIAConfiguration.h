@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -31,5 +31,15 @@ typedef struct {
 typedef struct {
   UINT8 Enabled;
 } NVIDIA_QUICK_BOOT_ENABLED;
+
+#define NVIDIA_SERIAL_PORT_CONFIG_NAME L"SerialPortConfig"
+typedef struct {
+  UINT8 Configuration;
+} NVIDIA_SERIAL_PORT_CONFIG;
+
+#define NVIDIA_SERIAL_PORT_SPCR_16550 0
+#define NVIDIA_SERIAL_PORT_SPCR_TEGRA 1
+#define NVIDIA_SERIAL_PORT_DBG2_TEGRA 2
+#define NVIDIA_SERIAL_PORT_DISABLED   3
 
 #endif //__NVIDIA_CONFIGURATION_H__

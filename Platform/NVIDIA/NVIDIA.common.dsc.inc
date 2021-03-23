@@ -575,6 +575,7 @@ gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|10
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIATokenSpaceGuid|0x0|1|BS,NV
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS,NV
 
 [Components.common]
   #

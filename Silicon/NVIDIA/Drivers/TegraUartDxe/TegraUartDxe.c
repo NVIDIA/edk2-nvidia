@@ -2,7 +2,7 @@
 
   TegraUart Controller Driver
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -25,6 +25,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraSerialPortLib.h>
 #include <libfdt.h>
+#include <NVIDIAConfiguration.h>
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra20-uart", &gNVIDIANonDiscoverable16550UartDeviceGuid },
@@ -72,11 +73,18 @@ DeviceDiscoveryNotify (
   EFI_PHYSICAL_ADDRESS      BaseAddress  = 0;
   UINTN                     RegionSize;
   EFI_SERIAL_IO_PROTOCOL    *Interface;
+  UINT8                     SerialConfig;
+  BOOLEAN                   InstallSerialIO;
+
+  SerialConfig = PcdGet8 (PcdSerialPortConfig);
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingStart:
     if ((fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
                                        "nvidia,tegra20-uart")) == 0) {
+      if (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED) {
+        return EFI_UNSUPPORTED;
+      }
       Status = DeviceDiscoveryGetClockId (ControllerHandle, UART_CLOCK_NAME, &ClockId);
       if (!EFI_ERROR (Status)) {
         Status = DeviceDiscoverySetClockFreq (ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
@@ -94,21 +102,26 @@ DeviceDiscoveryNotify (
       if (Interface == NULL) {
         return EFI_NOT_STARTED;
       }
+      InstallSerialIO = (SerialConfig != NVIDIA_SERIAL_PORT_DBG2_TEGRA);
     } else {
       Interface = SerialTCUIoInitialize ();
+      InstallSerialIO = TRUE;
     }
     Status = Interface->Reset (Interface);
     if (EFI_ERROR (Status)) {
       return Status;
     }
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &ControllerHandle,
-                    &gEfiSerialIoProtocolGuid,
-                    Interface,
-                    NULL
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to install console enabled protocol\r\n", __FUNCTION__));
+
+    if (InstallSerialIO) {
+      Status = gBS->InstallMultipleProtocolInterfaces (
+                      &ControllerHandle,
+                      &gEfiSerialIoProtocolGuid,
+                      Interface,
+                      NULL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to install console enabled protocol\r\n", __FUNCTION__));
+      }
     }
     return Status;
 

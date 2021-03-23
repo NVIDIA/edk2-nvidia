@@ -71,6 +71,7 @@
   gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
   gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
 
 [Guids]
   gNVIDIATokenSpaceGuid

@@ -1,7 +1,7 @@
 ## @file
 #  Resource Configuration Dxe
 #
-#  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2017, Linaro, Ltd. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -53,6 +53,7 @@
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
 
 [Depex]
   TRUE

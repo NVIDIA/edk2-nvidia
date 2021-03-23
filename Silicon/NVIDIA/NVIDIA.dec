@@ -246,6 +246,9 @@ Include
 #Option to support virtual RTC
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|FALSE|BOOLEAN|0x0000002E
 
+#Option to configure serial port
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig|0x00|UINT8|0x0000002F
+
 #Rcm Kernel Base and Size
   gNVIDIATokenSpaceGuid.PcdRcmKernelBase|0x0|UINT64|0x00000035
   gNVIDIATokenSpaceGuid.PcdRcmKernelSize|0x0|UINT64|0x00000036

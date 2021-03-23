@@ -1,7 +1,7 @@
 /** @file
 *  Resource Configuration Dxe
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -119,6 +119,7 @@ InitializeSettings (
   } else {
     PcdSet8S (PcdPcieEntryInAcpi, 0);
   }
+  PcdSet8S (PcdSerialPortConfig, PcdGet8 (PcdSerialPortConfig));
   PcdSet8S (PcdQuickBootEnabled, PcdGet8 (PcdQuickBootEnabled));
 
   SetUnsetVariable (NVIDIA_PCIE_ENABLE_IN_OS_VARIABLE_NAME,

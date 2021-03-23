@@ -2,7 +2,7 @@
 *
 *  String definitions for the OEM Config.
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -23,11 +23,18 @@
 #string STR_NO_OPTION_PROMPT           #language en-US "No configuration options on this platform."
 #string STR_QUICK_BOOT_ENABLED_PROMPT  #language en-US "Enable UEFI Quick Boot"
 #string STR_QUICK_BOOT_ENABLED_HELP    #language en-US "Enable/Disable UEFI full device enumeration."
+#string STR_SERIAL_PORT_CONFIG_PROMPT  #language en-US "Serial Port Configuration"
+#string STR_SERIAL_PORT_CONFIG_HELP    #language en-US "Used to select serial port configuration."
 
 #string STR_NULL                       #language en-US ""
 
 #string STR_DISABLED                   #language en-US  "Disabled"
 #string STR_ENABLED                    #language en-US  "Enabled"
+
+#string STR_SP_DISABLED                #language en-US  "Port Disabled"
+#string STR_SP_ENABLED_SPCR_16550      #language en-US  "Console Enabled - 16550"
+#string STR_SP_ENABLED_SPCR_TEGRA      #language en-US  "Console Enabled - TEGRA"
+#string STR_SP_ENABLED_DBG2_TEGRA      #language en-US  "Serial Debug Enabled - TEGRA"
 
 #string STR_EXIT_STRING                #language en-US  "Press ESC to exit."
 

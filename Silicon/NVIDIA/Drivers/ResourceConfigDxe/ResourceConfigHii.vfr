@@ -2,7 +2,7 @@
 *
 *  OEM Config formset.
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -32,6 +32,11 @@ formset
     name  = QuickBootEnabled,
     guid  = NVIDIA_TOKEN_SPACE_GUID;
 
+  efivarstore NVIDIA_SERIAL_PORT_CONFIG,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name  = SerialPortConfig,
+    guid  = NVIDIA_TOKEN_SPACE_GUID;
+
   //
   // Main form for NVIDIA Resource Configuration
   //
@@ -47,6 +52,17 @@ formset
         flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
         option text = STRING_TOKEN(STR_DISABLED), value = QUICK_BOOT_DISABLE, flags = 0;
         option text = STRING_TOKEN(STR_ENABLED),  value = QUICK_BOOT_ENABLE,  flags = DEFAULT;
+    endoneof;
+
+    oneof varid = SerialPortConfig.Configuration,
+        questionid = KEY_SERIAL_PORT_CONFIG,
+        prompt = STRING_TOKEN(STR_SERIAL_PORT_CONFIG_PROMPT),
+        help   = STRING_TOKEN(STR_SERIAL_PORT_CONFIG_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_SP_ENABLED_SPCR_16550), value = NVIDIA_SERIAL_PORT_SPCR_16550, flags = DEFAULT;
+        option text = STRING_TOKEN(STR_SP_ENABLED_SPCR_TEGRA), value = NVIDIA_SERIAL_PORT_SPCR_TEGRA, flags = 0;
+        option text = STRING_TOKEN(STR_SP_ENABLED_DBG2_TEGRA), value = NVIDIA_SERIAL_PORT_DBG2_TEGRA, flags = 0;
+        option text = STRING_TOKEN(STR_SP_DISABLED), value = NVIDIA_SERIAL_PORT_DISABLED, flags = 0;
     endoneof;
 
     //

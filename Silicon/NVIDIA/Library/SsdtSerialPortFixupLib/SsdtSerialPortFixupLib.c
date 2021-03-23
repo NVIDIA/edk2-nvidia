@@ -2,6 +2,7 @@
   SSDT Serial Port Fixup Library.
 
   Copyright (c) 2019 - 2020, Arm Limited. All rights reserved.<BR>
+  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,6 +12,7 @@
 **/
 
 #include <IndustryStandard/DebugPort2Table.h>
+#include <IndustryStandard/NVIDIADebugPort2Table.h>
 #include <Library/AcpiLib.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
@@ -80,6 +82,8 @@ ValidateSerialPortInfo (
         (SerialPortInfo->PortSubtype !=
          EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_ARM_SBSA_GENERIC_UART_2X) &&
         (SerialPortInfo->PortSubtype !=
+         NVIDIA_ACPI_DBG2_PORT_SUBTYPE_SERIAL_RESERVED_TEGRA_UART) &&
+        (SerialPortInfo->PortSubtype !=
          EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_ARM_SBSA_GENERIC_UART) &&
         (SerialPortInfo->PortSubtype !=
          EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_DCC) &&
@@ -143,6 +147,7 @@ FixupIds (
   // Get the _CID and _HID value to write.
   switch (SerialPortInfo->PortSubtype) {
     case EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550:
+    case NVIDIA_ACPI_DBG2_PORT_SUBTYPE_SERIAL_RESERVED_TEGRA_UART:
     {
       HidString = "NVDA0100";
       CidString = "";

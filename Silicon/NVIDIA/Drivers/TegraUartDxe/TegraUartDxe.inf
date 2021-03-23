@@ -2,7 +2,7 @@
 #
 #  TegraUart Driver
 #
-#  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
 #  which accompanies this distribution.  The full text of the license may be found at
@@ -17,7 +17,7 @@
   INF_VERSION                    = 0x00010019
   BASE_NAME                      = TegraUartDxe
   FILE_GUID                      = ef353fa8-674c-465d-ab56-a4e53d1a713f
-  MODULE_TYPE                    = DXE_DRIVER
+  MODULE_TYPE                    = UEFI_DRIVER
   VERSION_STRING                 = 1.0
 
   ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
@@ -53,6 +53,7 @@
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultStopBits
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultReceiveFifoDepth
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
@@ -62,5 +63,3 @@
   gNVIDIANonDiscoverable16550UartDeviceGuid
   gNVIDIANonDiscoverableCombinedUartDeviceGuid
 
-[Depex]
-  TRUE
