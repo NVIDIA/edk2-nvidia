@@ -214,7 +214,7 @@ InstallDramWithCarveouts (
     //No more carveouts or carveout is after dram region
     if ((CarveoutRegionsCount == CarveoutIndex) ||
         ((DramRegions[DramIndex].MemoryBaseAddress + DramRegions[DramIndex].MemoryLength) <= CarveoutRegions[CarveoutIndex].MemoryBaseAddress)) {
-      DEBUG ((DEBUG_ERROR, "Region Dram: %016x, %016x\r\n", DramRegions[DramIndex].MemoryBaseAddress, DramRegions[DramIndex].MemoryLength));
+      DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", DramRegions[DramIndex].MemoryBaseAddress, DramRegions[DramIndex].MemoryLength));
       BuildResourceDescriptorHob (
         EFI_RESOURCE_SYSTEM_MEMORY,
         ResourceAttributes,
@@ -229,10 +229,10 @@ InstallDramWithCarveouts (
       DramIndex++;
       InstalledRegions++;
     } else {
-      UINTN CarveoutEnd = CarveoutRegions[CarveoutIndex].MemoryBaseAddress + CarveoutRegions[CarveoutIndex].MemoryLength;
-      UINTN DramEnd = DramRegions[DramIndex].MemoryBaseAddress + DramRegions[DramIndex].MemoryLength;
+      EFI_PHYSICAL_ADDRESS CarveoutEnd = CarveoutRegions[CarveoutIndex].MemoryBaseAddress + CarveoutRegions[CarveoutIndex].MemoryLength;
+      EFI_PHYSICAL_ADDRESS DramEnd = DramRegions[DramIndex].MemoryBaseAddress + DramRegions[DramIndex].MemoryLength;
       if (DramRegions[DramIndex].MemoryBaseAddress < CarveoutRegions[CarveoutIndex].MemoryBaseAddress) {
-        DEBUG ((DEBUG_ERROR, "Region: %016x, %016x\r\n", DramRegions[DramIndex].MemoryBaseAddress, CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress));
+        DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", DramRegions[DramIndex].MemoryBaseAddress, CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress));
         BuildResourceDescriptorHob (
                 EFI_RESOURCE_SYSTEM_MEMORY,
                 ResourceAttributes,
