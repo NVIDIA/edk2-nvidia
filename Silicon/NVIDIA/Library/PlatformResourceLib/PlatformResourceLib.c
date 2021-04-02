@@ -349,3 +349,33 @@ GetFsiNsBaseAndSize (
 {
   return GetFsiNsBaseAndSizeInternal (Base, Size);
 }
+
+/**
+  Retrieve MMIO Base and Size
+
+**/
+TEGRA_MMIO_INFO*
+EFIAPI
+GetMmioBaseAndSize (
+  VOID
+)
+{
+  UINTN           ChipID;
+  TEGRA_MMIO_INFO *MmioInfo;
+
+  MmioInfo = GetMmioBaseAndSizeInternal ();
+  if (MmioInfo != NULL) {
+    return MmioInfo;
+  }
+
+  ChipID = TegraGetChipID();
+
+  switch (ChipID) {
+    case T186_CHIP_ID:
+      return T186GetMmioBaseAndSize();
+    case T194_CHIP_ID:
+      return T194GetMmioBaseAndSize();
+    default:
+      return NULL;
+  }
+}

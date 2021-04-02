@@ -148,3 +148,16 @@ GetFsiNsBaseAndSizeInternal (
 {
   return FALSE;
 }
+
+/**
+  Retrieve MMIO Base and Size
+
+**/
+TEGRA_MMIO_INFO*
+EFIAPI
+GetMmioBaseAndSizeInternal (
+  VOID
+)
+{
+  return NULL;
+}

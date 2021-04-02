@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -22,6 +22,17 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include "T186ResourceConfigPrivate.h"
 #include "T186ResourceConfig.h"
+
+TEGRA_MMIO_INFO T186MmioInfo[] = {
+  {
+    FixedPcdGet64(PcdTegraMCBBaseAddress),
+    SIZE_4KB
+  },
+  {
+    0,
+    0
+  }
+};
 
 /**
   Installs resources into the HOB list
@@ -146,4 +157,17 @@ T186GetBootType (
   )
 {
   return TegrablBootColdBoot;
+}
+
+/**
+  Retrieve MMIO Base and Size
+
+**/
+TEGRA_MMIO_INFO*
+EFIAPI
+T186GetMmioBaseAndSize (
+  VOID
+)
+{
+  return T186MmioInfo;
 }

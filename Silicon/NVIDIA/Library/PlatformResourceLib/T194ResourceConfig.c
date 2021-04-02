@@ -23,6 +23,25 @@
 #include "T194ResourceConfigPrivate.h"
 #include "T194ResourceConfig.h"
 
+TEGRA_MMIO_INFO T194MmioInfo[] = {
+  {
+    FixedPcdGet64(PcdTegraCombinedUartTxMailbox),
+    SIZE_4KB
+  },
+  {
+    FixedPcdGet64(PcdTegraCombinedUartRxMailbox),
+    SIZE_4KB
+  },
+  {
+    FixedPcdGet64(PcdTegraMCBBaseAddress),
+    SIZE_4KB
+  },
+  {
+    0,
+    0
+  }
+};
+
 /**
   Installs resources into the HOB list
 
@@ -180,4 +199,17 @@ T194GetGROutputBaseAndSize (
   *Size = CpuBootloaderParams->GoldenRegisterSize;
 
   return TRUE;
+}
+
+/**
+  Retrieve MMIO Base and Size
+
+**/
+TEGRA_MMIO_INFO*
+EFIAPI
+T194GetMmioBaseAndSize (
+  VOID
+)
+{
+  return T194MmioInfo;
 }

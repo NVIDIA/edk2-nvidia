@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -35,3 +35,6 @@
   gNVIDIATokenSpaceGuid.PcdMemorySizeRegisterT186
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
+  gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress

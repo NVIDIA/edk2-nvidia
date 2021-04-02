@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -36,6 +36,16 @@ T186GetRCMBaseAddress (
 TEGRA_BOOT_TYPE
 T186GetBootType (
   IN UINTN CpuBootloaderAddress
+);
+
+/**
+  Retrieve MMIO Base and Size
+
+**/
+TEGRA_MMIO_INFO*
+EFIAPI
+T186GetMmioBaseAndSize (
+  VOID
 );
 
 #endif //__T186_RESOURCE_CONFIG_H__

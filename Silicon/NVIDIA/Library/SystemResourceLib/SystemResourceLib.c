@@ -127,12 +127,10 @@ InstallMmioRegions (
   OUT UINTN *MmioRegionsCount
 )
 {
+  TEGRA_MMIO_INFO *MmioInfo;
+
   *MmioRegionsCount += InstallMmioRegion(
                          (TegraGetBLInfoLocationAddress(ChipID) & ~EFI_PAGE_MASK), SIZE_4KB);
-  *MmioRegionsCount += InstallMmioRegion(
-                         FixedPcdGet64(PcdTegraCombinedUartRxMailbox), SIZE_4KB);
-  *MmioRegionsCount += InstallMmioRegion(
-                         FixedPcdGet64(PcdTegraCombinedUartTxMailbox), SIZE_4KB);
   *MmioRegionsCount += InstallMmioRegion(
                          FixedPcdGet64(PcdMiscRegBaseAddress), SIZE_4KB);
   *MmioRegionsCount += InstallMmioRegion(
@@ -142,8 +140,16 @@ InstallMmioRegions (
   *MmioRegionsCount += InstallMmioRegion(
                          TegraGetGicRedistributorBaseAddress(ChipID), SIZE_128KB);
   *MmioRegionsCount += InstallMmioRegion(GetTegraUARTBaseAddress (), SIZE_4KB);
-  *MmioRegionsCount += InstallMmioRegion(
-                         FixedPcdGet64(PcdTegraMCBBaseAddress), SIZE_4KB);
+
+  MmioInfo = GetMmioBaseAndSize ();
+  if (MmioInfo != NULL) {
+    while (MmioInfo->Base != 0 &&
+           MmioInfo->Size != 0) {
+      *MmioRegionsCount += InstallMmioRegion(
+                             MmioInfo->Base, MmioInfo->Size);
+      MmioInfo++;
+    }
+  }
 
   return EFI_SUCCESS;
 }

@@ -54,4 +54,14 @@ T194GetGROutputBaseAndSize (
   OUT UINTN *Size
 );
 
+/**
+  Retrieve MMIO Base and Size
+
+**/
+TEGRA_MMIO_INFO*
+EFIAPI
+T194GetMmioBaseAndSize (
+  VOID
+);
+
 #endif //__T194_RESOURCE_CONFIG_H__

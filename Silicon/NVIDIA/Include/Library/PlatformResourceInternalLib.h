@@ -120,4 +120,14 @@ GetFsiNsBaseAndSizeInternal (
   OUT UINTN *Size
 );
 
+/**
+  Retrieve MMIO Base and Size
+
+**/
+TEGRA_MMIO_INFO*
+EFIAPI
+GetMmioBaseAndSizeInternal (
+  VOID
+);
+
 #endif //__PLATFORM_RESOURCE_INTERNAL_LIB_H__

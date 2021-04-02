@@ -44,6 +44,11 @@ typedef struct {
   UINTN                DtbLoadAddress;
 } TEGRA_RESOURCE_INFO;
 
+typedef struct {
+  EFI_PHYSICAL_ADDRESS Base;
+  UINTN                Size;
+} TEGRA_MMIO_INFO;
+
 /**
   Set Tegra UART Base Address
 
@@ -157,6 +162,16 @@ EFIAPI
 GetFsiNsBaseAndSize (
   OUT UINTN *Base,
   OUT UINTN *Size
+);
+
+/**
+  Retrieve MMIO Base and Size
+
+**/
+TEGRA_MMIO_INFO*
+EFIAPI
+GetMmioBaseAndSize (
+  VOID
 );
 
 #endif //__PLATFORM_RESOURCE_LIB_H__
