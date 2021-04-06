@@ -899,6 +899,11 @@ gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
       NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
   }
 
+  #
+  # Platform To Driver Configuration Support
+  #
+  Silicon/NVIDIA/Drivers/PlatformToDriverConfiguration/PlatformToDriverConfiguration.inf
+
 [Components.AARCH64]
   #
   # EBC
