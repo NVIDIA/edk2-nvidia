@@ -331,6 +331,8 @@ CEntryPoint (
   // Enable Instruction Caches on all cores.
   ArmEnableInstructionCache ();
 
+  // Invalidate stack data range in data cache.
+  InvalidateDataCacheRange ((VOID *)StackBase, StackSize);
   // Invalidate HOB data range in data cache.
   InvalidateDataCacheRange ((VOID *)HobBase, HobSize);
 

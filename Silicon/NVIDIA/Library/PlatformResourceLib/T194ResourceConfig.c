@@ -20,6 +20,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/GoldenRegisterLib.h>
+#include <Library/CacheMaintenanceLib.h>
 #include "T194ResourceConfigPrivate.h"
 #include "T194ResourceConfig.h"
 
@@ -92,6 +93,13 @@ T194ResourceConfig (
       CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
       CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
       CarveoutRegionsCount++;
+    }
+
+    if (Index == CARVEOUT_MISC ||
+        Index == CARVEOUT_CPUBL ||
+        Index == CARVEOUT_OS) {
+      InvalidateDataCacheRange ((VOID *) CpuBootloaderParams->CarveoutInfo[Index].Base,
+                                CpuBootloaderParams->CarveoutInfo[Index].Size);
     }
   }
 

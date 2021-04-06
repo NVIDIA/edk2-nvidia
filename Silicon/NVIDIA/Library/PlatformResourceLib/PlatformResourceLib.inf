@@ -25,6 +25,7 @@
 [LibraryClasses]
   TegraPlatformInfoLib
   PlatformResourceInternalLib
+  CacheMaintenanceLib
 
 [Sources.common]
   PlatformResourceLib.c
