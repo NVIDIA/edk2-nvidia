@@ -26,14 +26,25 @@
 
 [Packages]
   MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
 
 [LibraryClasses]
+  FdtLib
   DebugLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
+  MemoryAllocationLib
 
 [Protocols]
   gEfiPlatformToDriverConfigurationProtocolGuid
+  gNVIDIANonDiscoverableDeviceProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
+
+[Guids]
+  gEdkiiNonDiscoverableSdhciDeviceGuid
+  gEfiEventExitBootServicesGuid
 
 [Depex]
   TRUE
