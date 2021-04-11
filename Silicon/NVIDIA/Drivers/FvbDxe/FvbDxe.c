@@ -2,7 +2,7 @@
 
   Fvb Driver
 
-  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   This program and the accompanying materials
@@ -1154,9 +1154,7 @@ FVBInitialize (
   BlockSize = Private->BlockIo->Media->BlockSize;
   Size = MultU64x32 (Private->NumBlocks, BlockSize);
 
-  if (Size != PcdGet32(PcdFlashNvStorageVariableSize)) {
-    PcdSet32S(PcdFlashNvStorageVariableSize, Size);
-  }
+  PcdSet32S(PcdFlashNvStorageVariableSize, Size);
 
   Status = gBS->AllocatePool (EfiRuntimeServicesData,
                               Size,

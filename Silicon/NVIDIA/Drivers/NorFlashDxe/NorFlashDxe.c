@@ -2,7 +2,7 @@
 
   NOR Flash Driver
 
-  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -604,7 +604,7 @@ NorFlashGetAttributes(
 
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
-  CopyMem (Attributes, &Private->PrivateFlashAttributes, sizeof (NOR_FLASH_ATTRIBUTES));
+  CopyMem (Attributes, &Private->PrivateFlashAttributes.FlashAttributes, sizeof (NOR_FLASH_ATTRIBUTES));
 
   return EFI_SUCCESS;
 }
