@@ -185,7 +185,10 @@
   #
   Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
   Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashDxe.inf
-  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
+  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf {
+    <LibraryClasses>
+      NULL|EmbeddedPkg/Library/NvVarStoreFormattedLib/NvVarStoreFormattedLib.inf
+  }
 
   #
   # Usb Support

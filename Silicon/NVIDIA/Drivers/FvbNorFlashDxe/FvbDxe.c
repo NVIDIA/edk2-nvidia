@@ -891,7 +891,9 @@ FVBInitialize (
   UINT64                      FtwOffset;
   UINT64                      FtwSize;
   NVIDIA_FVB_PRIVATE_DATA     *FvpData;
-  VOID                        *FvpBuffers;
+  VOID                        *VarStoreBuffer;
+  VOID                        *FtwSpareBuffer;
+  VOID                        *FtwWorkingBuffer;
   EFI_RT_PROPERTIES_TABLE     *RtProperties;
 
 
@@ -1014,43 +1016,54 @@ FVBInitialize (
   ASSERT (FtwSize > VariableSize);
 
   //Build FVB instances
-  FvpBuffers = NULL;
+  FvpData = NULL;
   FvpData = AllocateRuntimeZeroPool (sizeof (NVIDIA_FVB_PRIVATE_DATA) * FVB_TO_CREATE);
   if (FvpData == NULL) {
     DEBUG ((DEBUG_ERROR, "Failed to create FvpData\r\n"));
     goto Exit;
   }
 
-  FvpBuffers = AllocateRuntimePages (EFI_SIZE_TO_PAGES (VariableSize));
-  if (FvpBuffers == NULL) {
-    DEBUG ((DEBUG_ERROR, "Failed to create FvpBuffers\r\n"));
+  VarStoreBuffer = NULL;
+  VarStoreBuffer = AllocateRuntimePages (EFI_SIZE_TO_PAGES (VariableSize));
+  if (VarStoreBuffer == NULL) {
+    DEBUG ((DEBUG_ERROR, "Failed to create VarStoreBuffer\r\n"));
     goto Exit;
   }
 
   FvpData[FVB_VARIABLE_INDEX].PartitionOffset = VariableOffset;
   FvpData[FVB_VARIABLE_INDEX].PartitionSize = VariableSize;
-  FvpData[FVB_VARIABLE_INDEX].PartitionData = FvpBuffers;
+  FvpData[FVB_VARIABLE_INDEX].PartitionData = VarStoreBuffer;
   FvpData[FVB_VARIABLE_INDEX].PartitionAddress = (UINTN)FvpData[FVB_VARIABLE_INDEX].PartitionData;
   PcdSet64S(PcdFlashNvStorageVariableBase64, FvpData[FVB_VARIABLE_INDEX].PartitionAddress);
   PcdSet32S(PcdFlashNvStorageVariableSize, FvpData[FVB_VARIABLE_INDEX].PartitionSize);
-  FvpData[FVB_FTW_SPARE_INDEX].PartitionOffset = FtwOffset;
-  FvpData[FVB_FTW_SPARE_INDEX].PartitionSize = PcdGet32(PcdFlashNvStorageFtwSpareSize);
-  FvpData[FVB_FTW_SPARE_INDEX].PartitionData = NULL;
-  FvpData[FVB_FTW_SPARE_INDEX].PartitionAddress = PcdGet64(PcdFlashNvStorageFtwSpareBase64);
-  FvpData[FVB_FTW_WORK_INDEX].PartitionOffset = FtwOffset + PcdGet32(PcdFlashNvStorageFtwSpareSize);
-  FvpData[FVB_FTW_WORK_INDEX].PartitionSize = PcdGet32(PcdFlashNvStorageFtwWorkingSize);
-  FvpData[FVB_FTW_WORK_INDEX].PartitionData = NULL;
-  FvpData[FVB_FTW_WORK_INDEX].PartitionAddress = PcdGet64(PcdFlashNvStorageFtwWorkingBase64);
 
-  //Spare needs to hold at least the full variable partition
-  ASSERT (FvpData[FVB_FTW_SPARE_INDEX].PartitionSize >= VariableSize);
-
-  //Verify partitions are big enough
-  if ((FvpData[FVB_FTW_WORK_INDEX].PartitionSize + FvpData[FVB_FTW_SPARE_INDEX].PartitionSize) > FtwSize) {
-    DEBUG ((DEBUG_ERROR, "%a: FTW partition not large enough to fit working and spare\r\n", __FUNCTION__));
-    ASSERT (FALSE);
-    return EFI_DEVICE_ERROR;
+  FtwSpareBuffer = NULL;
+  FtwSpareBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (VariableSize), NorFlashAttributes.BlockSize);
+  if (FtwSpareBuffer == NULL) {
+    DEBUG ((DEBUG_ERROR, "Failed to create FtwSpareBuffer\r\n"));
+    goto Exit;
   }
+
+  FvpData[FVB_FTW_SPARE_INDEX].PartitionOffset = FtwOffset;
+  FvpData[FVB_FTW_SPARE_INDEX].PartitionSize = VariableSize;
+  FvpData[FVB_FTW_SPARE_INDEX].PartitionData = NULL;
+  FvpData[FVB_FTW_SPARE_INDEX].PartitionAddress = (UINTN)FtwSpareBuffer;
+  PcdSet64S(PcdFlashNvStorageFtwSpareBase64, FvpData[FVB_FTW_SPARE_INDEX].PartitionAddress);
+  PcdSet32S(PcdFlashNvStorageFtwSpareSize, FvpData[FVB_FTW_SPARE_INDEX].PartitionSize);
+
+  FtwWorkingBuffer = NULL;
+  FtwWorkingBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (FtwSize - VariableSize), NorFlashAttributes.BlockSize);
+  if (FtwWorkingBuffer == NULL) {
+    DEBUG ((DEBUG_ERROR, "Failed to create FtwWorkingBuffer\r\n"));
+    goto Exit;
+  }
+
+  FvpData[FVB_FTW_WORK_INDEX].PartitionOffset = FtwOffset + PcdGet32(PcdFlashNvStorageFtwSpareSize);
+  FvpData[FVB_FTW_WORK_INDEX].PartitionSize = FtwSize - VariableSize;
+  FvpData[FVB_FTW_WORK_INDEX].PartitionData = NULL;
+  FvpData[FVB_FTW_WORK_INDEX].PartitionAddress = (UINTN)FtwWorkingBuffer;
+  PcdSet64S(PcdFlashNvStorageFtwWorkingBase64, FvpData[FVB_FTW_WORK_INDEX].PartitionAddress);
+  PcdSet32S(PcdFlashNvStorageFtwWorkingSize, FvpData[FVB_FTW_WORK_INDEX].PartitionSize);
 
   for (Index = 0; Index < FVB_TO_CREATE; Index++) {
     FvpData[Index].Signature = NVIDIA_FVB_SIGNATURE;
@@ -1153,8 +1166,14 @@ Exit:
     if (FvpData != NULL) {
       FreePool (FvpData);
     }
-    if (FvpBuffers != NULL) {
-      FreePages (FvpBuffers, EFI_SIZE_TO_PAGES (FtwSize + VariableSize));
+    if (VarStoreBuffer != NULL) {
+      FreePages (VarStoreBuffer, EFI_SIZE_TO_PAGES (VariableSize));
+    }
+    if (FtwSpareBuffer != NULL) {
+      FreePages (FtwSpareBuffer, EFI_SIZE_TO_PAGES (VariableSize));
+    }
+    if (FtwWorkingBuffer != NULL) {
+      FreePages (FtwWorkingBuffer, EFI_SIZE_TO_PAGES (FtwSize - VariableSize));
     }
   }
   return Status;
