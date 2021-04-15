@@ -23,6 +23,7 @@
 
 [Sources]
   PlatformToDriverConfiguration.c
+  SdMmcConfigurationData.c
 
 [Packages]
   MdePkg/MdePkg.dec
