@@ -2,7 +2,7 @@
 
   BPMP IPC Driver
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -62,7 +62,8 @@ DeviceTreeIsSupported (
   *PciIoInitialize = NULL;
 
   if ((0 == fdt_node_check_compatible (Node->DeviceTreeBase, Node->NodeOffset, "nvidia,tegra186-hsp")) ||
-      (0 == fdt_node_check_compatible (Node->DeviceTreeBase, Node->NodeOffset, "nvidia,tegra194-hsp"))){
+      (0 == fdt_node_check_compatible (Node->DeviceTreeBase, Node->NodeOffset, "nvidia,tegra194-hsp")) ||
+      (0 == fdt_node_check_compatible (Node->DeviceTreeBase, Node->NodeOffset, "nvidia,tegra234-hsp"))){
     //Only support hsp with doorbell
     CONST CHAR8 *InterruptNames;
     INT32       NamesLength;
