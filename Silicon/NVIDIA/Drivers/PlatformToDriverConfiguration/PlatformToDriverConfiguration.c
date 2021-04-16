@@ -13,12 +13,12 @@
 **/
 
 #include <libfdt.h>
-#include <PlatformToDriverConfigurationPrivate.h>
+#include <Library/PlatformToDriverConfiguration.h>
 #include <Library/DebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 
-#include "SdMmcConfigurationData.h"
+#include "SdMmc/SdMmcConfigurationData.h"
 
 BOOLEAN IsResponseNeeded;
 
@@ -65,7 +65,6 @@ Query (
     return EFI_OUT_OF_RESOURCES;
   }
   DtNode = NULL;
-  GuidMapper = GuidDeviceFuncPtrMap;
 
   if((ControllerHandle == NULL) ||
      (Instance == NULL) ||
@@ -94,12 +93,24 @@ Query (
     return Status;
   }
 
-  // Iterate over the list of known clients
+  // Get GUID map for internal targets
+  GuidMapper = GetInternalGuidMap ();;
   while (GuidMapper->DeviceGuid != NULL) {
     if (CompareGuid (Device->Type, GuidMapper->DeviceGuid)) {
       break;
     }
     GuidMapper++;
+  }
+
+  // Iterate over the list of known clients
+  if (GuidMapper->DeviceGuid == NULL) {
+    GuidMapper = GuidDeviceFuncPtrMap;
+    while (GuidMapper->DeviceGuid != NULL) {
+      if (CompareGuid (Device->Type, GuidMapper->DeviceGuid)) {
+        break;
+      }
+      GuidMapper++;
+    }
   }
 
   if (GuidMapper->DeviceGuid != NULL) {
@@ -138,8 +149,6 @@ Response (
     return EFI_DEVICE_ERROR;
   }
 
-  GuidMapper = GuidDeviceFuncPtrMap;
-
   if((ControllerHandle == NULL) ||
      (Instance == NULL) ||
      (ParameterTypeGuid == NULL) ||
@@ -148,12 +157,24 @@ Response (
     return EFI_INVALID_PARAMETER;
   }
 
-  // Iterate over the list of known clients
+  // Get GUID map for internal targets
+  GuidMapper = GetInternalGuidMap ();;
   while (GuidMapper->DeviceGuid != NULL) {
     if (CompareGuid (ParameterTypeGuid, GuidMapper->DeviceGuid)) {
       break;
     }
     GuidMapper++;
+  }
+
+  // Iterate over the list of known clients
+  if (GuidMapper->DeviceGuid == NULL) {
+    GuidMapper = GuidDeviceFuncPtrMap;
+    while (GuidMapper->DeviceGuid != NULL) {
+      if (CompareGuid (ParameterTypeGuid, GuidMapper->DeviceGuid)) {
+        break;
+      }
+      GuidMapper++;
+    }
   }
 
   if (GuidMapper->DeviceGuid != NULL) {

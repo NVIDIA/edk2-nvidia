@@ -151,6 +151,7 @@
 
   TegraPlatformInfoInternalLib|Silicon/NVIDIA/Library/TegraPlatformInfoInternalLibNull/TegraPlatformInfoInternalLibNull.inf
   PlatformResourceInternalLib|Silicon/NVIDIA/Library/PlatformResourceInternalLibNull/PlatformResourceInternalLibNull.inf
+  PlatformToDriverConfigurationInternalLib|Silicon/NVIDIA/Library/PlatformToDriverConfigurationInternalLibNull/PlatformToDriverConfigurationInternalLibNull.inf
   DeviceDiscoveryInternalLib|Silicon/NVIDIA/Library/DeviceDiscoveryInternalLibNull/DeviceDiscoveryInternalLibNull.inf
   TegraPlatformInfoLib|Silicon/NVIDIA/Library/TegraPlatformInfoLib/TegraPlatformInfoLib.inf
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/PlatformResourceLib.inf

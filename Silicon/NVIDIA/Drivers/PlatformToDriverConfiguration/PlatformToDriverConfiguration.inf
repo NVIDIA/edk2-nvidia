@@ -23,7 +23,7 @@
 
 [Sources]
   PlatformToDriverConfiguration.c
-  SdMmcConfigurationData.c
+  SdMmc/SdMmcConfigurationData.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -37,6 +37,7 @@
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   MemoryAllocationLib
+  PlatformToDriverConfigurationInternalLib
 
 [Protocols]
   gEfiPlatformToDriverConfigurationProtocolGuid

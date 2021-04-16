@@ -40,4 +40,14 @@ typedef struct {
   RESPONSE  Response;
 } GUID_DEVICEFUNCPTR_MAPPING;
 
+/**
+  Retrieve Internal Guid Device Funtion Map
+
+**/
+GUID_DEVICEFUNCPTR_MAPPING*
+EFIAPI
+GetInternalGuidMap (
+  VOID
+  );
+
 #endif /* PLATFORMTODRIVERCONFIG_H_ */
