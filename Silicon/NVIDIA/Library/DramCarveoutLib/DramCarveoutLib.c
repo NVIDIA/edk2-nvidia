@@ -44,11 +44,6 @@ MigrateHobList (
   EFI_HOB_HANDOFF_INFO_TABLE  *NewHob;
   EFI_HOB_MEMORY_ALLOCATION   *Allocation;
 
-  //Keep Hob list on one side of 32-bit
-  if ((RegionStart < MAX_UINT32) && ((RegionStart + RegionSize) > MAX_UINT32)) {
-    RegionSize = ((UINTN)MAX_UINT32) + 1 - RegionStart;
-  }
-
   OldHob = (EFI_HOB_HANDOFF_INFO_TABLE *)PrePeiGetHobList ();
   OldHobAddress = (EFI_PHYSICAL_ADDRESS)OldHob;
 
@@ -84,6 +79,8 @@ MigrateHobList (
       }
     }
   }
+
+  ASSERT (RegionSize != 0);
 
   if ((RegionStart + RegionSize - OldHob->EfiMemoryTop) <= (OldHob->EfiFreeMemoryTop - OldHobAddress)) {
     //Free area is smaller then current, do not move
