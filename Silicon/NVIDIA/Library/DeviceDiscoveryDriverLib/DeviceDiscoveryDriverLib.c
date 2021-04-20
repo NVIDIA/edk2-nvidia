@@ -143,6 +143,7 @@ DeviceDiscoveryBindingStart (
   NVIDIA_POWER_GATE_NODE_PROTOCOL   *PgProtocol = NULL;
   NVIDIA_COMPATIBILITY_MAPPING      *MappingNode = gDeviceCompatibilityMap;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node = NULL;
+  UINTN                             Index;
 
   //
   // Attempt to open NonDiscoverable Protocol
@@ -184,10 +185,13 @@ DeviceDiscoveryBindingStart (
       DEBUG ((EFI_D_ERROR, "%a, no Pg node protocol\r\n",__FUNCTION__));
       goto ErrorExit;
     }
-    Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to deassert Pg %r\r\n",__FUNCTION__,Status));
-      goto ErrorExit;
+
+    for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+      Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a, failed to deassert Pg %x: %r\r\n",__FUNCTION__,PgProtocol->PowerGateId[Index],Status));
+        goto ErrorExit;
+      }
     }
   }
 

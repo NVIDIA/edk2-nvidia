@@ -1,7 +1,7 @@
 /** @file
   Power Gate node protocol Protocol
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -67,7 +67,8 @@ struct _NVIDIA_POWER_GATE_NODE_PROTOCOL {
 
   POWER_GATE_NODE_DEASSERT     Deassert;
   POWER_GATE_NODE_ASSERT       Assert;
-  UINT32                  PowerGateId;
+  UINT32                       NumberOfPowerGates;
+  UINT32                       PowerGateId[1];
 };
 
 extern EFI_GUID gNVIDIAPowerGateNodeProtocolGuid;

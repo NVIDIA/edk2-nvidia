@@ -942,10 +942,6 @@ DeassertPgNodes (
   NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
   EFI_STATUS               Status;
 
-  if (This->PowerGateId == MAX_UINT32) {
-    return EFI_SUCCESS;
-  }
-
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
     return EFI_NOT_READY;
@@ -972,10 +968,6 @@ AssertPgNodes (
 {
   NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
   EFI_STATUS               Status;
-
-  if (This->PowerGateId == MAX_UINT32) {
-    return EFI_SUCCESS;
-  }
 
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
@@ -1011,6 +1003,7 @@ GetPowerGateNodeProtocol(
   UINTN                      NumberOfPgs;
   NVIDIA_POWER_GATE_NODE_PROTOCOL *PgNode = NULL;
   UINTN                      ListEntry;
+  UINT32                     Index;
 
   if ((NULL == Node) ||
       (NULL == PowerGateNodeProtocol) ||
@@ -1039,10 +1032,6 @@ GetPowerGateNodeProtocol(
   }
 
   NumberOfPgs = PgLength / (sizeof (UINT32) * 2);
-  if (NumberOfPgs > 1) {
-    DEBUG ((EFI_D_ERROR, "%a, More than one Power domain found - not supported %d\r\n", __FUNCTION__, NumberOfPgs));
-    return;
-  }
 
   PgNode = (NVIDIA_POWER_GATE_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_POWER_GATE_NODE_PROTOCOL) + (NumberOfPgs * sizeof (UINT32)));
   if (NULL == PgNode) {
@@ -1052,13 +1041,10 @@ GetPowerGateNodeProtocol(
 
   PgNode->Deassert    = DeassertPgNodes;
   PgNode->Assert      = AssertPgNodes;
-  if (PgIds == NULL) {
-    PgNode->PowerGateId = MAX_UINT32;
-  } else {
-    PgNode->PowerGateId = SwapBytes32 (PgIds[1]);
+  PgNode->NumberOfPowerGates = NumberOfPgs;
+  for (Index = 0; Index < PgNode->NumberOfPowerGates; Index++) {
+    PgNode->PowerGateId[Index] = SwapBytes32 (PgIds[(Index *2) + 1]);
   }
-
-  DEBUG ((EFI_D_INFO, "%a, PowerGateId = %d\r\n", __FUNCTION__, PgNode->PowerGateId));
 
   PowerGateNodeInterface[ListEntry] = (VOID *)PgNode;
   PowerGateNodeProtocol[ListEntry] = &gNVIDIAPowerGateNodeProtocolGuid;
