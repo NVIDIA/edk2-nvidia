@@ -2,7 +2,7 @@
 
   XHCI Controller Driver private structures
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -56,45 +56,25 @@
 #define  XUSB_BASE_ADDR_SHIFT               15
 #define  XUSB_BASE_ADDR_MASK                0x1ffff
 
-#define TEGRA186_POWER_DOMAIN_XUSBA         13
-#define TEGRA186_POWER_DOMAIN_XUSBC         15
-
 #define  XUSB_T194_BASE_ADDR_SHIFT          18
 #define  XUSB_T194_BASE_ADDR_MASK           0x3fff
-
-#define TEGRA194_POWER_DOMAIN_XUSBA         14
-#define TEGRA194_POWER_DOMAIN_XUSBC         16
 
 /* Stores Platform Specific Information */
 typedef struct {
   UINT32 Cfg4AddrShift;
   UINT32 Cfg4AddrMask;
-  UINT32 NumPowerDomains;
-  UINT32 *PowerDomainIds;
   EFI_PHYSICAL_ADDRESS BaseAddress;
   EFI_PHYSICAL_ADDRESS CfgAddress;
 } TEGRA_XUSB_SOC;
 
-/* T186 SOC Specific Parameters */
-UINT32 Tegra186PowerDomains[] = { TEGRA186_POWER_DOMAIN_XUSBA,
-                                  TEGRA186_POWER_DOMAIN_XUSBC};
-
 TEGRA_XUSB_SOC Tegra186Soc = {
   .Cfg4AddrShift = XUSB_BASE_ADDR_SHIFT,
   .Cfg4AddrMask = XUSB_BASE_ADDR_MASK,
-  .NumPowerDomains = 2,
-  .PowerDomainIds = Tegra186PowerDomains,
 };
-
-/* T194 SOC Specific Parameters */
-UINT32 Tegra194PowerDomains[] = {TEGRA194_POWER_DOMAIN_XUSBA,
-                                 TEGRA194_POWER_DOMAIN_XUSBC};
 
 TEGRA_XUSB_SOC Tegra194Soc = {
   .Cfg4AddrShift = XUSB_T194_BASE_ADDR_SHIFT,
   .Cfg4AddrMask = XUSB_T194_BASE_ADDR_MASK,
-  .NumPowerDomains = 2,
-  .PowerDomainIds = Tegra194PowerDomains,
 };
 
 #define XHCICONTROLLER_SIGNATURE SIGNATURE_32('X','H','C','I')

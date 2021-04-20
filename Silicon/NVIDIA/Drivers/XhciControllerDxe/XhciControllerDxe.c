@@ -2,7 +2,7 @@
 
   XHCI Controller Driver
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -47,7 +47,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .AutoEnableClocks = TRUE,
     .AutoDeassertReset = TRUE,
     .AutoResetModule = FALSE,
-    .AutoDeassertPg = FALSE,
+    .AutoDeassertPg = TRUE,
     .SkipEdkiiNondiscoverableInstall = FALSE
 };
 
@@ -123,8 +123,6 @@ DeviceDiscoveryNotify (
   UINTN                      i;
   INTN                       Offset;
   XHCICONTROLLER_DXE_PRIVATE *Private;
-  NVIDIA_BPMP_IPC_PROTOCOL   *BpmpIpcProtocol;
-  UINT32                     Request[3];
   NON_DISCOVERABLE_DEVICE    *Device;
 
   switch (Phase) {
@@ -205,40 +203,6 @@ DeviceDiscoveryNotify (
       DEBUG ((EFI_D_ERROR, "%a: Couldn't find UsbPadCtl Protocol Handle %r\n",
                                                         __FUNCTION__, Status));
       goto ErrorExit;
-    }
-
-    /* From T194 onwards, BPMP blocked access to deasserting resets of XUSB Partitions
-     * (XUSB_DEV, XUSB_HOST, XUSB_SS) causing ResetNodeProtocol->Deassert to fail (Bug
-     * 2016574). Instead Using BpmpIpcProtocol's PgDeassert cmd to Unpowergate Partiti
-     * ns which will deassert reset as well. Unpowergating Host and SS Partitions here
-     * Padctl partition is still exposed and will be deasserted by DeviceDiscoveryLib
-     * when bringing up UsbPadCtlDxe
-     */
-    Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Unable to Locate BPMPIpc Protocol\n", __FUNCTION__));
-      goto ErrorExit;
-    }
-
-    for (i = 0; i < Private->XusbSoc->NumPowerDomains; i++) {
-      Request[0] = (UINT32)1;
-      Request[1] = Private->XusbSoc->PowerDomainIds[i];
-      Request[2] = 1;  /* Command for PgDeassert */
-      Status = BpmpIpcProtocol->Communicate (
-                                BpmpIpcProtocol,
-                                NULL,
-                                MRQ_PG,
-                                (VOID *)&Request,
-                                sizeof (Request),
-                                NULL,
-                                0,
-                                NULL
-                                );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to Unpowergate Partition %d: %r\r\n",
-                   __FUNCTION__, Private->XusbSoc->PowerDomainIds[i], Status));
-        goto ErrorExit;
-      }
     }
 
     /* Initialize USB Pad Registers */
