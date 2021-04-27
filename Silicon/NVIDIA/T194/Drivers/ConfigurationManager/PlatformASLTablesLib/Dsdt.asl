@@ -9,7 +9,7 @@
 
 #include <T194/T194Definitions.h>
 
-DefinitionBlock ("dsdt.aml", "DSDT", 1, "NVIDIA", "TEGRA194", 0x00000001)
+DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
 {
   Scope(_SB) {
     Device(CPU0) {

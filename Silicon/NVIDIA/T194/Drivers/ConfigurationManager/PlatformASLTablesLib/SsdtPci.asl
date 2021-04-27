@@ -4,7 +4,7 @@
 
 #include <T194/T194Definitions.h>
 
-DefinitionBlock("SsdtPci.aml", "SSDT", 1, "NVIDIA", "TEGRA194", 0x00000001) {
+DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
   Scope(_SB) {
 
     Device(PCI0) {
