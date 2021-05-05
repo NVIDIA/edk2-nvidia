@@ -510,13 +510,12 @@ UpdateDTACPIMacAddress (
       return;
     }
     NodeOffset = fdt_path_offset (DtBase, Snp->DeviceTreePath);
-    if (NodeOffset < 0) {
-      DEBUG ((DEBUG_ERROR, "Failed to get node %a in kernel device tree\r\n", Snp->DeviceTreePath));
-      return;
+    if (NodeOffset >= 0) {
+      fdt_setprop (DtBase, NodeOffset, "mac-address", Snp->SnpMode.CurrentAddress.Addr, NET_ETHER_ADDR_LEN);
     }
-    if (0 != fdt_setprop (DtBase, NodeOffset, "mac-address", Snp->SnpMode.CurrentAddress.Addr, NET_ETHER_ADDR_LEN)) {
-      DEBUG ((DEBUG_ERROR, "Failed to set mac-address in kernel device tree\r\n"));
-      return;
+    NodeOffset = fdt_path_offset (DtBase, "/chosen");
+    if (NodeOffset >= 0) {
+      fdt_setprop (DtBase, NodeOffset, "nvidia,ether-mac", Snp->SnpMode.CurrentAddress.Addr, NET_ETHER_ADDR_LEN);
     }
   } else {
     //Try ACPI update
