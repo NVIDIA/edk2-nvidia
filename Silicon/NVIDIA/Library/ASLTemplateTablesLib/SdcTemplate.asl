@@ -1,4 +1,4 @@
-DefinitionBlock("SdcTemplate.aml", "SSDT", 1, "NVIDIA", "SDCTEMP", 0x00000001) {
+DefinitionBlock("SdcTemplate.aml", "SSDT", 2, "NVIDIA", "SDCTEMP", 0x00000001) {
   Device(SDCT) {
     Name (_HID, EISAID("PNP0D40")) // SDA Standard Compliant SD Host Controller
     Name (_UID, 0)

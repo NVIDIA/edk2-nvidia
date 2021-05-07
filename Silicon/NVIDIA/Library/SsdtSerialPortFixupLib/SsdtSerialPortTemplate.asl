@@ -13,7 +13,7 @@
     - {template} - Data fixed up using AML Fixup APIs.
 **/
 
-DefinitionBlock ("SsdtSerialPortTemplate.aml", "SSDT", 1, "NVIDIA", "SERIAL", 1) {
+DefinitionBlock ("SsdtSerialPortTemplate.aml", "SSDT", 2, "NVIDIA", "SERIAL", 1) {
   Scope (_SB) {
     // UART PL011
     Device (COM0) {                                       // {template}
