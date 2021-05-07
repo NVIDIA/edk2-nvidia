@@ -2,7 +2,7 @@
 
   Fvb Driver
 
-  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   This program and the accompanying materials
@@ -881,10 +881,8 @@ FVBInitialize (
   NVIDIA_NOR_FLASH_PROTOCOL   *NorFlashProtocol;
   NOR_FLASH_ATTRIBUTES        NorFlashAttributes;
   EFI_PARTITION_TABLE_HEADER  PartitionHeader;
-  UINT32                      OriginalCrc;
-  UINT32                      CalculatedCrc;
   VOID                        *PartitionEntryArray;
-  EFI_PARTITION_ENTRY         *PartitionEntry;
+  CONST EFI_PARTITION_ENTRY   *PartitionEntry;
   UINTN                       Index;
   UINT64                      VariableOffset;
   UINT64                      VariableSize;
@@ -926,41 +924,23 @@ FVBInitialize (
     return Status;
   }
 
-  OriginalCrc = PartitionHeader.Header.CRC32;
-  PartitionHeader.Header.CRC32 = 0;
-  Status = gBS->CalculateCrc32 ((UINT8 *) &PartitionHeader, PartitionHeader.Header.HeaderSize, &CalculatedCrc);
+  Status = GptValidateHeader (&PartitionHeader);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to calculate CRC32 for PartitionHeader\r\n"));
-    return Status;
-  }
-  PartitionHeader.Header.CRC32 = OriginalCrc;
-
-  if ((PartitionHeader.Header.Signature != EFI_PTAB_HEADER_ID) ||
-      (OriginalCrc != CalculatedCrc) ||
-      (PartitionHeader.SizeOfPartitionEntry < sizeof (EFI_PARTITION_ENTRY))
-      ) {
     DEBUG ((DEBUG_ERROR, "Invalid efi partition table header\n"));
-    return EFI_DEVICE_ERROR;
-  }
-
-  //
-  // Ensure the NumberOfPartitionEntries * SizeOfPartitionEntry doesn't overflow.
-  //
-  if (PartitionHeader.NumberOfPartitionEntries > DivU64x32 (MAX_UINTN, PartitionHeader.SizeOfPartitionEntry)) {
     return EFI_DEVICE_ERROR;
   }
 
   //
   // Read the partition Entries;
   //
-  PartitionEntryArray = AllocateZeroPool (PartitionHeader.NumberOfPartitionEntries * PartitionHeader.SizeOfPartitionEntry);
+  PartitionEntryArray = AllocateZeroPool (GptPartitionTableSizeInBytes (&PartitionHeader));
   if (PartitionEntryArray == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
   Status = NorFlashProtocol->Read (NorFlashProtocol,
                                    PartitionHeader.PartitionEntryLBA * GPT_PARTITION_BLOCK_SIZE,
-                                   PartitionHeader.NumberOfPartitionEntries * PartitionHeader.SizeOfPartitionEntry,
+                                   GptPartitionTableSizeInBytes (&PartitionHeader),
                                    PartitionEntryArray);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to read GPT partition array (%r)\r\n", __FUNCTION__, Status));
@@ -968,15 +948,9 @@ FVBInitialize (
     return Status;
   }
 
-  Status = gBS->CalculateCrc32 ((UINT8 *) PartitionEntryArray, PartitionHeader.NumberOfPartitionEntries * PartitionHeader.SizeOfPartitionEntry, &CalculatedCrc);
+  Status = GptValidatePartitionTable (&PartitionHeader, PartitionEntryArray);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to calculate CRC32 for PartitionEntryArray\r\n"));
-    FreePool (PartitionEntryArray);
-    return Status;
-  }
-
-  if (PartitionHeader.PartitionEntryArrayCRC32 != CalculatedCrc) {
-    DEBUG ((DEBUG_ERROR, "Incorrect partition entry CRC\r\n"));
+    DEBUG ((DEBUG_ERROR, "Invalid PartitionEntryArray\r\n"));
     FreePool (PartitionEntryArray);
     return Status;
   }
@@ -985,26 +959,25 @@ FVBInitialize (
   VariableSize = 0;
   FtwOffset = 0;
   FtwSize = 0;
-  //Find variable and FTW partitions
-  for (Index = 0; Index < PartitionHeader.NumberOfPartitionEntries; Index++) {
-    PartitionEntry = (EFI_PARTITION_ENTRY *) ((UINT8 *) PartitionEntryArray + Index * PartitionHeader.SizeOfPartitionEntry);
+  // Find variable and FTW partitions
+  PartitionEntry = GptFindPartitionByName (&PartitionHeader,
+                                           PartitionEntryArray,
+                                           UEFI_VARIABLE_PARTITION_NAME);
+  if (PartitionEntry != NULL) {
+    VariableOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
+    VariableSize = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
+    ASSERT ((VariableOffset % NorFlashAttributes.BlockSize) == 0);
+    ASSERT ((VariableSize % NorFlashAttributes.BlockSize) == 0);
+  }
 
-    if (StrnCmp (PartitionEntry->PartitionName, UEFI_VARIABLE_PARTITION_NAME, sizeof (PartitionEntry->PartitionName)/sizeof(CHAR16)) == 0) {
-      VariableOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
-      VariableSize = (PartitionEntry->EndingLBA - PartitionEntry->StartingLBA + 1) * GPT_PARTITION_BLOCK_SIZE;
-      ASSERT ((VariableOffset % NorFlashAttributes.BlockSize) == 0);
-      ASSERT ((VariableSize % NorFlashAttributes.BlockSize) == 0);
-    }
-    if (StrnCmp (PartitionEntry->PartitionName, FTW_PARTITION_NAME, sizeof (PartitionEntry->PartitionName)/sizeof(CHAR16)) == 0) {
-      FtwOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
-      FtwSize = (PartitionEntry->EndingLBA - PartitionEntry->StartingLBA + 1) * GPT_PARTITION_BLOCK_SIZE;
-      ASSERT ((FtwOffset % NorFlashAttributes.BlockSize) == 0);
-      ASSERT ((FtwSize % NorFlashAttributes.BlockSize) == 0);
-    }
-
-    if ((VariableOffset != 0) && (FtwOffset != 0)) {
-      break;
-    }
+  PartitionEntry = GptFindPartitionByName (&PartitionHeader,
+                                           PartitionEntryArray,
+                                           FTW_PARTITION_NAME);
+  if (PartitionEntry != NULL) {
+    FtwOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
+    FtwSize = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
+    ASSERT ((FtwOffset % NorFlashAttributes.BlockSize) == 0);
+    ASSERT ((FtwSize % NorFlashAttributes.BlockSize) == 0);
   }
   FreePool (PartitionEntryArray);
 

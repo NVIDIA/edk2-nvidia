@@ -2,7 +2,7 @@
 
   Fvb Driver Private Data
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -29,6 +29,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/GptLib.h>
 
 #include <Protocol/FirmwareVolumeBlock.h>
 #include <Protocol/NorFlash.h>
