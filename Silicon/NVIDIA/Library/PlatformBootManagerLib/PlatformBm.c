@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
-  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -762,21 +762,21 @@ PlatformBootManagerBeforeConsole (
     SetBootOrder ();
 
     //
-    // Add the hardcoded short-form USB keyboard device path to ConIn.
-    //
-    EfiBootManagerUpdateConsoleVariable (ConIn,
-      (EFI_DEVICE_PATH_PROTOCOL *)&mUsbKeyboard, NULL);
-
-    //
-    // Register all available consoles.
-    //
-    PlatformRegisterConsoles ();
-
-    //
     // Set platform has been configured
     //
     PlatformConfigured ();
   }
+
+  //
+  // Add the hardcoded short-form USB keyboard device path to ConIn.
+  //
+  EfiBootManagerUpdateConsoleVariable (ConIn,
+    (EFI_DEVICE_PATH_PROTOCOL *)&mUsbKeyboard, NULL);
+
+  //
+  // Register all available consoles.
+  //
+  PlatformRegisterConsoles ();
 }
 
 STATIC

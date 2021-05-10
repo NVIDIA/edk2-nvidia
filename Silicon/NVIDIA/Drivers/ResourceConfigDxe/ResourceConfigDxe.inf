@@ -51,8 +51,11 @@
   gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
 
 [Pcd]
+  gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig
 
 [Depex]

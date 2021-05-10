@@ -234,7 +234,9 @@
 
 #Default to make PCIe entry void in ACPI table
 #Need two as the Platform Init Library is invoked prior to variable services being available
-  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|0x00|UINT8|0x0000002B
+  gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|0x00|UINT8|0x0000002B
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded|0x00|UINT8|0x0000002C
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|0x00|UINT8|0x0000002F
 
 #Option to enable/disable quickboot
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|0x01|UINT8|0x0000002D
@@ -243,7 +245,19 @@
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|FALSE|BOOLEAN|0x0000002E
 
 #Option to configure serial port
-  gNVIDIATokenSpaceGuid.PcdSerialPortConfig|0x00|UINT8|0x0000002F
+##Supported UART Type Values
+  #0   - 16550 UART
+  #1   - SBSA UART
+  #255 - Undefined
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|0xFF|UINT8|0x00000038
+##Supported UART Port Values
+  #0   - SPCR Full 16550 UART
+  #1   - SPCR NVIDIA 16550 UART
+  #3   - DBG2 NVIDIA 16550 UART
+  #4   - SPCR SBSA UART
+  #5   - DBG2 SBSA UART
+  #255 - Disabled
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig|0xFF|UINT8|0x00000039
 
 #Rcm Kernel Base and Size
   gNVIDIATokenSpaceGuid.PcdRcmKernelBase|0x0|UINT64|0x00000035

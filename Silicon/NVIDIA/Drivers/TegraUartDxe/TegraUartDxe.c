@@ -86,7 +86,8 @@ DeviceDiscoveryNotify (
                                        "nvidia,tegra20-uart")) == 0 ||
         (fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
                                        "nvidia,tegra186-hsuart")) == 0) {
-      if (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED) {
+      if (PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_16550 ||
+          SerialConfig == NVIDIA_SERIAL_PORT_DISABLED) {
         return EFI_UNSUPPORTED;
       }
       Status = DeviceDiscoveryGetClockId (ControllerHandle, UART_CLOCK_NAME, &ClockId);
@@ -106,9 +107,13 @@ DeviceDiscoveryNotify (
       if (Interface == NULL) {
         return EFI_NOT_STARTED;
       }
-      InstallSerialIO = (SerialConfig != NVIDIA_SERIAL_PORT_DBG2_TEGRA);
+      InstallSerialIO = (SerialConfig != NVIDIA_SERIAL_PORT_DBG2_NVIDIA_16550);
     } else if ((fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
                                        "arm,sbsa-uart")) == 0) {
+      if (PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_SBSA ||
+          SerialConfig == NVIDIA_SERIAL_PORT_DISABLED) {
+        return EFI_UNSUPPORTED;
+      }
       Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Sbsa Unable to locate address range\n", __FUNCTION__));
@@ -118,7 +123,7 @@ DeviceDiscoveryNotify (
       if (Interface == NULL) {
         return EFI_NOT_STARTED;
       }
-      InstallSerialIO = TRUE;
+      InstallSerialIO = (SerialConfig != NVIDIA_SERIAL_PORT_DBG2_SBSA);
     } else {
       Interface = SerialTCUIoInitialize ();
       InstallSerialIO = TRUE;

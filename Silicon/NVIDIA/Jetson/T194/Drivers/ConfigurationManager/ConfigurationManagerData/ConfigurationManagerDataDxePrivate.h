@@ -30,7 +30,6 @@
 #include <libfdt.h>
 
 #include <IndustryStandard/DebugPort2Table.h>
-#include <IndustryStandard/NVIDIADebugPort2Table.h>
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
 #include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>
 

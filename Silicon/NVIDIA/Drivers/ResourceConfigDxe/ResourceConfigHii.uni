@@ -11,30 +11,30 @@
 
 #langdef   en-US "English"
 
-#string STR_RESOURCE_CONFIG_TITLE      #language en-US "NVIDIA Resource Configuration"
-#string STR_RESOURCE_CONFIG_HELP       #language en-US "Select Resource Configuration options."
+#string STR_RESOURCE_CONFIG_TITLE        #language en-US "NVIDIA Resource Configuration"
+#string STR_RESOURCE_CONFIG_HELP         #language en-US "Select Resource Configuration options."
 
-#string STR_PCIE_CONFIG_FORM_TITLE     #language en-US "PCIe Configuration"
-#string STR_PCIE_CONFIG_FORM_HELP      #language en-US "PCIe configuration options"
+#string STR_PCIE_CONFIG_FORM_TITLE       #language en-US "PCIe Configuration"
+#string STR_PCIE_CONFIG_FORM_HELP        #language en-US "PCIe configuration options"
 
-#string STR_PCIE_IN_OS_PROMPT          #language en-US "Enable PCIe in OS"
-#string STR_PCIE_IN_OS_HELP            #language en-US "Enable/Disable PCIe's ACPI Entry to be exposed to the O/S."
-#string STR_NO_OPTION_HELP             #language en-US "No configuration options on this platform."
-#string STR_NO_OPTION_PROMPT           #language en-US "No configuration options on this platform."
-#string STR_QUICK_BOOT_ENABLED_PROMPT  #language en-US "Enable UEFI Quick Boot"
-#string STR_QUICK_BOOT_ENABLED_HELP    #language en-US "Enable/Disable UEFI full device enumeration."
-#string STR_SERIAL_PORT_CONFIG_PROMPT  #language en-US "Serial Port Configuration"
-#string STR_SERIAL_PORT_CONFIG_HELP    #language en-US "Used to select serial port configuration."
+#string STR_PCIE_IN_OS_PROMPT            #language en-US "Enable PCIe in OS"
+#string STR_PCIE_IN_OS_HELP              #language en-US "Enable/Disable PCIe's ACPI Entry to be exposed to the O/S."
+#string STR_QUICK_BOOT_ENABLED_PROMPT    #language en-US "Enable UEFI Quick Boot"
+#string STR_QUICK_BOOT_ENABLED_HELP      #language en-US "Enable/Disable UEFI full device enumeration."
+#string STR_SERIAL_PORT_CONFIG_PROMPT    #language en-US "Serial Port Configuration"
+#string STR_SERIAL_PORT_CONFIG_HELP      #language en-US "Used to select serial port configuration."
 
-#string STR_NULL                       #language en-US ""
+#string STR_NULL                         #language en-US ""
 
-#string STR_DISABLED                   #language en-US  "Disabled"
-#string STR_ENABLED                    #language en-US  "Enabled"
+#string STR_DISABLED                     #language en-US  "Disabled"
+#string STR_ENABLED                      #language en-US  "Enabled"
 
-#string STR_SP_DISABLED                #language en-US  "Port Disabled"
-#string STR_SP_ENABLED_SPCR_16550      #language en-US  "Console Enabled - 16550"
-#string STR_SP_ENABLED_SPCR_TEGRA      #language en-US  "Console Enabled - TEGRA"
-#string STR_SP_ENABLED_DBG2_TEGRA      #language en-US  "Serial Debug Enabled - TEGRA"
+#string STR_SP_DISABLED                  #language en-US  "Port Disabled"
+#string STR_SP_ENABLED_SPCR_FULL_16550   #language en-US  "Console Enabled - 16550"
+#string STR_SP_ENABLED_SPCR_NVIDIA_16550 #language en-US  "Console Enabled - NVIDIA 16550"
+#string STR_SP_ENABLED_SPCR_SBSA         #language en-US  "Console Enabled - SBSA"
+#string STR_SP_ENABLED_DBG2_NVIDIA_16550 #language en-US  "Serial Debug Enabled - NVIDIA 16550"
+#string STR_SP_ENABLED_DBG2_SBSA         #language en-US  "Serial Debug Enabled - SBSA"
 
-#string STR_EXIT_STRING                #language en-US  "Press ESC to exit."
+#string STR_EXIT_STRING                  #language en-US  "Press ESC to exit."
 

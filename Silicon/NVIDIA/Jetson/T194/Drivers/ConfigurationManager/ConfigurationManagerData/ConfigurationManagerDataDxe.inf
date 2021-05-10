@@ -72,6 +72,8 @@
   gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
 
 [Guids]
   gNVIDIATokenSpaceGuid

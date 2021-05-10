@@ -22,6 +22,11 @@ formset
     name  = EnablePcieInOS,
     guid  = NVIDIA_TOKEN_SPACE_GUID;
 
+  efivarstore NvidiaPcieResourceConfiguration,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS,  // EFI variable attributes
+    name  = PCIeResourceConfig,
+    guid  = NVIDIA_TOKEN_SPACE_GUID;
+
   efivarstore NvidiaPcieEnableInOsConfiguration,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS,  // EFI variable attributes
     name  = PCIeInOsConfig,
@@ -30,6 +35,11 @@ formset
   efivarstore NVIDIA_QUICK_BOOT_ENABLED,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
     name  = QuickBootEnabled,
+    guid  = NVIDIA_TOKEN_SPACE_GUID;
+
+  efivarstore NVIDIA_SERIAL_TYPE_CONFIG,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS,  // EFI variable attributes
+    name  = SerialTypeConfig,
     guid  = NVIDIA_TOKEN_SPACE_GUID;
 
   efivarstore NVIDIA_SERIAL_PORT_CONFIG,
@@ -51,7 +61,7 @@ formset
         help   = STRING_TOKEN(STR_QUICK_BOOT_ENABLED_HELP),
         flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
         option text = STRING_TOKEN(STR_DISABLED), value = QUICK_BOOT_DISABLE, flags = 0;
-        option text = STRING_TOKEN(STR_ENABLED),  value = QUICK_BOOT_ENABLE,  flags = DEFAULT;
+        option text = STRING_TOKEN(STR_ENABLED),  value = QUICK_BOOT_ENABLE, flags = 0;
     endoneof;
 
     oneof varid = SerialPortConfig.Configuration,
@@ -59,20 +69,28 @@ formset
         prompt = STRING_TOKEN(STR_SERIAL_PORT_CONFIG_PROMPT),
         help   = STRING_TOKEN(STR_SERIAL_PORT_CONFIG_HELP),
         flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
-        option text = STRING_TOKEN(STR_SP_ENABLED_SPCR_16550), value = NVIDIA_SERIAL_PORT_SPCR_16550, flags = DEFAULT;
-        option text = STRING_TOKEN(STR_SP_ENABLED_SPCR_TEGRA), value = NVIDIA_SERIAL_PORT_SPCR_TEGRA, flags = 0;
-        option text = STRING_TOKEN(STR_SP_ENABLED_DBG2_TEGRA), value = NVIDIA_SERIAL_PORT_DBG2_TEGRA, flags = 0;
         option text = STRING_TOKEN(STR_SP_DISABLED), value = NVIDIA_SERIAL_PORT_DISABLED, flags = 0;
+        suppressif NOT ideqval NVIDIA_SERIAL_TYPE_CONFIG.Type == NVIDIA_SERIAL_PORT_TYPE_16550;
+            option text = STRING_TOKEN(STR_SP_ENABLED_SPCR_FULL_16550), value = NVIDIA_SERIAL_PORT_SPCR_FULL_16550, flags = 0;
+            option text = STRING_TOKEN(STR_SP_ENABLED_SPCR_NVIDIA_16550), value = NVIDIA_SERIAL_PORT_SPCR_NVIDIA_16550, flags = 0;
+            option text = STRING_TOKEN(STR_SP_ENABLED_DBG2_NVIDIA_16550), value = NVIDIA_SERIAL_PORT_DBG2_NVIDIA_16550, flags = 0;
+        endif;
+        suppressif NOT ideqval NVIDIA_SERIAL_TYPE_CONFIG.Type == NVIDIA_SERIAL_PORT_TYPE_SBSA;
+            option text = STRING_TOKEN(STR_SP_ENABLED_SPCR_SBSA), value = NVIDIA_SERIAL_PORT_SPCR_SBSA, flags = 0;
+            option text = STRING_TOKEN(STR_SP_ENABLED_DBG2_SBSA), value = NVIDIA_SERIAL_PORT_DBG2_SBSA, flags = 0;
+        endif;
     endoneof;
 
     //
     // Display Enable PCIe in OS
     //
+    suppressif ideqval PCIeResourceConfig.ConfigEnabled == 0;
     goto PCIE_CONFIGURATION_FORM_ID,
         prompt = STRING_TOKEN(STR_PCIE_CONFIG_FORM_TITLE),
         help   = STRING_TOKEN(STR_PCIE_CONFIG_FORM_HELP),
         flags  = INTERACTIVE,
         key    = KEY_ENABLE_PCIE_CONFIG;
+    endif;
 
     //
     // TODO... for more form ids
@@ -97,17 +115,9 @@ formset
         prompt = STRING_TOKEN(STR_PCIE_IN_OS_PROMPT),
         help   = STRING_TOKEN(STR_PCIE_IN_OS_HELP),
         flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
-        option text = STRING_TOKEN(STR_DISABLED), value = PCIE_IN_OS_DISABLE, flags = DEFAULT;
-        option text = STRING_TOKEN(STR_ENABLED),  value = PCIE_IN_OS_ENABLE,  flags = 0;
+        option text = STRING_TOKEN(STR_DISABLED), value = PCIE_IN_OS_DISABLE, flags = 0;
+        option text = STRING_TOKEN(STR_ENABLED),  value = PCIE_IN_OS_ENABLE, flags = 0;
     endoneof;
-    endif;
-
-    suppressif ideqval PCIeInOsConfig.ConfigEnabled == 1;
-      grayoutif TRUE;
-        text
-            help   = STRING_TOKEN(STR_NO_OPTION_HELP),
-            text   = STRING_TOKEN(STR_NO_OPTION_PROMPT);
-      endif;
     endif;
 
   endform;

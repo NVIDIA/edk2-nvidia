@@ -26,7 +26,6 @@
 #include <Library/PcdLib.h>
 #include <Library/UefiHiiServicesLib.h>
 #include <Library/UefiLib.h>
-#include <NVIDIAConfiguration.h>
 
 #include "ResourceConfigHii.h"
 
@@ -70,37 +69,6 @@ HII_VENDOR_DEVICE_PATH mResourceConfigHiiVendorDevicePath = {
 };
 
 /**
- * Sets Variable if not currently set
- */
-VOID
-EFIAPI
-SetUnsetVariable (
-    IN  CHAR16                       *VariableName,
-    IN  EFI_GUID                     *VendorGuid,
-    IN  UINT32                       Attributes,
-    IN  UINTN                        DataSize,
-    IN  VOID                         *Data
-    ) {
-  EFI_STATUS Status;
-  UINTN CurrentSize = 0;
-  UINT32 CurrentAttributes;
-
-  Status = gRT->GetVariable (VariableName, VendorGuid, &CurrentAttributes, &CurrentSize, NULL);
-
-  //Delete the variable if the current contents are unexpected.
-  if ((Status == EFI_BUFFER_TOO_SMALL) &&
-      ((DataSize != CurrentSize) ||
-       (Attributes != CurrentAttributes))) {
-    gRT->SetVariable (VariableName, VendorGuid, CurrentAttributes, 0, NULL);
-    Status = EFI_NOT_FOUND;
-  }
-
-  if (Status == EFI_NOT_FOUND) {
-    gRT->SetVariable (VariableName, VendorGuid, Attributes, DataSize, Data);
-  }
-}
-
-/**
   Initializes any variables to current or default settings
 
 **/
@@ -109,24 +77,27 @@ EFIAPI
 InitializeSettings (
 )
 {
-  EFI_STATUS               Status;
-  VOID                     *AcpiBase;
-  NvidiaPcieEnableVariable PcieEnabled = {0};
+  EFI_STATUS                Status;
+  VOID                      *AcpiBase;
 
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (!EFI_ERROR (Status)) {
-    PcdSet8S (PcdPcieEntryInAcpi, PcdGet8 (PcdPcieEntryInAcpi));
-  } else {
-    PcdSet8S (PcdPcieEntryInAcpi, 0);
+  // Initialize PCIe Form Settings
+  PcdSet8S (PcdPcieResourceConfigNeeded, PcdGet8 (PcdPcieResourceConfigNeeded));
+  PcdSet8S (PcdPcieEntryInAcpiConfigNeeded, PcdGet8 (PcdPcieEntryInAcpiConfigNeeded));
+  PcdSet8S (PcdPcieEntryInAcpi, PcdGet8 (PcdPcieEntryInAcpi));
+  if (PcdGet8 (PcdPcieResourceConfigNeeded) == 1) {
+    Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+    if (EFI_ERROR (Status)) {
+      PcdSet8S (PcdPcieResourceConfigNeeded, 0);
+      PcdSet8S (PcdPcieEntryInAcpiConfigNeeded, 0);
+    }
   }
-  PcdSet8S (PcdSerialPortConfig, PcdGet8 (PcdSerialPortConfig));
-  PcdSet8S (PcdQuickBootEnabled, PcdGet8 (PcdQuickBootEnabled));
 
-  SetUnsetVariable (NVIDIA_PCIE_ENABLE_IN_OS_VARIABLE_NAME,
-                    &gNVIDIATokenSpaceGuid,
-                    EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
-                    sizeof (PcieEnabled),
-                    (VOID *)&PcieEnabled);
+  // Initialize UART Form Settings
+  PcdSet8S (PcdSerialTypeConfig, PcdGet8 (PcdSerialTypeConfig));
+  PcdSet8S (PcdSerialPortConfig, PcdGet8 (PcdSerialPortConfig));
+
+  // Initialize Quick Boot Form Settings
+  PcdSet8S (PcdQuickBootEnabled, PcdGet8 (PcdQuickBootEnabled));
 }
 
 VOID

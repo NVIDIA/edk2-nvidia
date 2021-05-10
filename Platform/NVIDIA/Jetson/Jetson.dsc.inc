@@ -60,7 +60,10 @@
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
 
 [PcdsDynamicHii.common.T194]
-  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
+  gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS,NV
 
 
 ################################################################################

@@ -577,9 +577,12 @@ gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
 
 [PcdsDynamicHii.common.DEFAULT]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|10
-  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
+  gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|L"EnablePcieInOS"|gNVIDIATokenSpaceGuid|0x0|0|BS,NV
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIATokenSpaceGuid|0x0|1|BS,NV
-  gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS,NV
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0xFF|BS
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0xFF|BS,NV
 
 [Components.common]
   #
