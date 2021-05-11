@@ -134,10 +134,7 @@ The OS hardware description can be changed without flashing the device as well,
 see “Booting Linux with Device-Tree/ACPI”.
 
 
-## Booting L4T with mainline Linux (Jetson AGX Xavier only)
-
-Booting L4T with mainline Linux using the UEFI bootloader is currently only
-supported for Jetson AGX Xavier.
+## Booting L4T with mainline Linux
 
 Clone the Linux kernel tree:
 
@@ -169,22 +166,34 @@ Install the modules:
 Update the L4T serial console for booting with the EDK2 firmware:
 
     $ cd Linux_for_Tegra
-    $ sudo sed -i 's/^CHIP=.*/CHIP="tegra194"/' "rootfs/etc/systemd/nv-oem-config.sh"
-    $ sudo sed -i 's/ttyTCU0/ttyS0/' "rootfs/etc/systemd/nv-oem-config.sh"
+    $ sudo sed -i 's/nv-oem-config-uart-port=ttyGS0/nv-oem-config-uart-port=ttyS0/' \
+      "rootfs/etc/nv-oem-config.conf"
 
 To boot Linux with Device-Tree, put the device into Recovery Mode and run the
 following command to flash.
 
     $ sudo ./flash.sh -K $KBUILD_OUTPUT/arch/arm64/boot/Image \
-      -d $KBUILD_OUTPUT/arch/arm64/boot/dts/nvidia/tegra194-p2972-0000.dtb \
-      jetson-xavier-uefi internal
+      -d $KBUILD_OUTPUT/arch/arm64/boot/dts/nvidia/<dtb> <config> internal
+
+Where `<config>` is:
+- `jetson-xavier-uefi` for Jetson AGX Xavier
+- `jetson-xavier-nx-uefi-emmc` for Jetson Xavier NX (eMMC)
+- `jetson-xavier-nx-uefi-sd` for Jetson Xavier NX (SD-card)
+
+Where `<dtb>` is:
+- `tegra194-p2972-0000.dtb` for Jetson AGX Xavier
+- `tegra194-p3509-0000+p3668-0001.dtb` for Jetson Xavier NX (eMMC)
+- `tegra194-p3509-0000+p3668-0000.dtb` for Jetson Xavier NX (SD-card)
 
 To boot Linux with ACPI, put the device into Recovery Mode and run the
 following command to flash.
 
-    $ sudo ./flash.sh -K $KBUILD_OUTPUT/arch/arm64/boot/Image \
-      -d $KBUILD_OUTPUT/arch/arm64/boot/dts/nvidia/tegra194-p2972-0000.dtb \
-      jetson-xavier-uefi-acpi internal
+    $ sudo ./flash.sh -K $KBUILD_OUTPUT/arch/arm64/boot/Image <config> internal
+
+Where `<config>` is:
+- `jetson-xavier-uefi-acpi` for Jetson AGX Xavier
+- `jetson-xavier-nx-uefi-acpi-emmc` for Jetson Xavier NX (eMMC)
+- `jetson-xavier-nx-uefi-acpi-sd` for Jetson Xavier NX (SD-card)
 
 
 ## Booting Linux with Device-Tree/ACPI
