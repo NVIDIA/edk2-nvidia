@@ -2,7 +2,7 @@
 #
 #  USB Pad Control Driver
 #
-#  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
 #  which accompanies this distribution.  The full text of the license may be found at
@@ -24,7 +24,6 @@
 
 [Sources.common]
   UsbPadCtlDxe.c
-  UsbPadCtlTegra186.c
   UsbPadCtlTegra194.c
 
 [Packages]
@@ -54,7 +53,6 @@
   gNVIDIAUsbPadCtlProtocolGuid
 
 [Guids]
-  gNVIDIANonDiscoverableT186UsbPadDeviceGuid
   gNVIDIANonDiscoverableT194UsbPadDeviceGuid
 
 [Depex]

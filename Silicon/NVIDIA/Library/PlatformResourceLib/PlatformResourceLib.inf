@@ -29,12 +29,9 @@
 
 [Sources.common]
   PlatformResourceLib.c
-  T186ResourceConfig.c
   T194ResourceConfig.c
 
 [FixedPcd]
-  gNVIDIATokenSpaceGuid.PcdMemorySizeRegisterT186
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT186
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox

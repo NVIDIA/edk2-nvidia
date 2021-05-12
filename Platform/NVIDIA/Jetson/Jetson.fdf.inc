@@ -19,13 +19,11 @@
   #
   # Platform Configuration Manager Data
   #
-  INF Silicon/NVIDIA/Jetson/T186/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
   INF Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
 
   #
   # Platform USB FW
   #
-  INF Silicon/NVIDIA/Jetson/T186/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
   INF Silicon/NVIDIA/Jetson/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #

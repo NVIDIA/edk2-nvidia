@@ -30,10 +30,8 @@
 #include <libfdt.h>
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-    { "nvidia,tegra18x-xusb-padctl", &gNVIDIANonDiscoverableT186UsbPadDeviceGuid },
-    { "nvidia,tegra19x-xusb-padctl", &gNVIDIANonDiscoverableT194UsbPadDeviceGuid },
-    { "nvidia,tegra194-xusb-padctl", &gNVIDIANonDiscoverableT194UsbPadDeviceGuid },
-    { NULL, NULL }
+  { "nvidia,tegra194-xusb-padctl", &gNVIDIANonDiscoverableT194UsbPadDeviceGuid },
+  { NULL, NULL }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
@@ -150,15 +148,8 @@ DeviceDiscoveryNotify (
     Private->mPmux = mPmux;
     Private->mClockProtocol = mClockProtocol;
     /* Assign Platform Specific Parameters */
-    if (fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
-                                  "nvidia,tegra18x-xusb-padctl") > 0) {
-      Private->mUsbPadCtlProtocol.InitHw = InitUsbHw186;
-      Private->mUsbPadCtlProtocol.DeInitHw = DeInitUsbHw186;
-      Private->PlatConfig = Tegra186UsbConfig;
-    } else if ((fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase,
-                                0, "nvidia,tegra19x-xusb-padctl") > 0) ||
-               (fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase,
-                                0, "nvidia,tegra194-xusb-padctl") > 0)) {
+    if (fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase,
+                                      0, "nvidia,tegra194-xusb-padctl") > 0) {
       Private->mUsbPadCtlProtocol.InitHw = InitUsbHw194;
       Private->mUsbPadCtlProtocol.DeInitHw = DeInitUsbHw194;
       Private->PlatConfig = Tegra194UsbConfig;

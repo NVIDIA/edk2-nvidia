@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -17,7 +17,6 @@
 
 #define UEFI_DECLARE_ALIGNED(var, size) var __attribute__ ((aligned (size)))
 
-#define T186_CHIP_ID      0x18
 #define T194_CHIP_ID      0x19
 
 #ifndef __ASSEMBLY__
@@ -35,8 +34,7 @@ typedef enum {
   TEGRA_PLATFORM_UNKNOWN
 } TEGRA_PLATFORM_TYPE;
 
-#define T186_SKU          1
-#define T194_SKU          2
+#define T194_SKU          1
 
 /**
   Returns chip id of the tegra platform.

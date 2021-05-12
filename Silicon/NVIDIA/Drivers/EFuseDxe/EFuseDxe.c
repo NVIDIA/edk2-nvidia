@@ -29,8 +29,7 @@
 #include "EFuseDxePrivate.h"
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-    { "nvidia,tegra186-efuse", &gNVIDIANonDiscoverableT186EFuseDeviceGuid },
-    { "nvidia,tegra194-efuse", &gNVIDIANonDiscoverableT194EFuseDeviceGuid },
+    { "nvidia,tegra194-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
     { NULL, NULL }
 };
 

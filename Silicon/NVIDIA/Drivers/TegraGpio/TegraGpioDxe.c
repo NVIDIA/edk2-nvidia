@@ -2,7 +2,7 @@
 
   SD MMC Controller Driver
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -86,9 +86,8 @@ STATIC CONST GPIO_CONTROLLER Tegra194GpioControllers [] = {
 };
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-    { "nvidia,tegra186-gpio", &gNVIDIANonDiscoverableT186GpioDeviceGuid },
-    { "nvidia,tegra194-gpio", &gNVIDIANonDiscoverableT194GpioDeviceGuid },
-    { NULL, NULL }
+  { "nvidia,tegra194-gpio", &gNVIDIANonDiscoverableT194GpioDeviceGuid },
+  { NULL, NULL }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
@@ -350,10 +349,7 @@ InstallGpioProtocols (
     return Status;
   }
 
-  if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT186GpioDeviceGuid)) {
-    ControllerCount = ARRAY_SIZE (Tegra186GpioControllers);
-    ControllerDefault = Tegra186GpioControllers;
-  } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT194GpioDeviceGuid)) {
+  if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT194GpioDeviceGuid)) {
     ControllerCount = ARRAY_SIZE (Tegra194GpioControllers);
     ControllerDefault = Tegra194GpioControllers;
   } else {

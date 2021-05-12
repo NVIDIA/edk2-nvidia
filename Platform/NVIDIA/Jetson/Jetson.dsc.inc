@@ -48,15 +48,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|0
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|0
 
-[PcdsDynamicDefault.common.T186]
-  gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
-  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA186'
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(d33335fe-a16c-4765-a04d-f3c78999e580)}
-  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x190
-  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|TRUE
-  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
-
 [PcdsDynamicDefault.common.T194]
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
@@ -91,12 +82,6 @@
   #
   # Platform Configuration Manager Data
   #
-  Silicon/NVIDIA/Jetson/T186/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
-    <LibraryClasses>
-      PlatformAslTablesLib|Silicon/NVIDIA/Jetson/T186/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
-    <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Jetson/T186/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
-  }
   Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
     <LibraryClasses>
       PlatformAslTablesLib|Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
@@ -107,7 +92,6 @@
   #
   # Platform USB FW
   #
-  Silicon/NVIDIA/Jetson/T186/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
   Silicon/NVIDIA/Jetson/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #

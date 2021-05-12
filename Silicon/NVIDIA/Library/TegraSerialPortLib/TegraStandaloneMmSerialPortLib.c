@@ -51,9 +51,7 @@ SerialPortIdentify (
     // Try the legacy fallback mode to select the SerialPort
     SerialBaseAddress = GetTegraUARTBaseAddress ();
     ChipID = TegraGetChipID();
-    if (ChipID == T186_CHIP_ID) {
-      TegraUartObj = Tegra16550SerialPortGetObject();
-    } else if (ChipID == T194_CHIP_ID) {
+    if (ChipID == T194_CHIP_ID) {
       TegraUartObj = TegraCombinedSerialPortGetObject();
     } else {
       TegraUartObj = Tegra16550SerialPortGetObject();

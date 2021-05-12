@@ -17,7 +17,6 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/PlatformResourceInternalLib.h>
 #include "T194ResourceConfig.h"
-#include "T186ResourceConfig.h"
 
 
 STATIC
@@ -61,8 +60,6 @@ GetTegraUARTBaseAddress (
   ChipID = TegraGetChipID();
 
   switch (ChipID) {
-    case T186_CHIP_ID:
-      return FixedPcdGet64(PcdTegra16550UartBaseT186);
     case T194_CHIP_ID:
       return FixedPcdGet64(PcdTegra16550UartBaseT194);
     default:
@@ -94,10 +91,6 @@ GetUARTInstanceInfo (
 
   ChipID = TegraGetChipID ();
   switch (ChipID) {
-    case T186_CHIP_ID:
-      *UARTInstanceType = TEGRA_UART_TYPE_16550;
-      *UARTInstanceAddress = (EFI_PHYSICAL_ADDRESS)FixedPcdGet64(PcdTegra16550UartBaseT186);
-      return EFI_SUCCESS;
     case T194_CHIP_ID:
       *UARTInstanceType = TEGRA_UART_TYPE_TCU;
       *UARTInstanceAddress = (EFI_PHYSICAL_ADDRESS)FixedPcdGet64(PcdTegra16550UartBaseT194);
@@ -163,8 +156,6 @@ GetDTBBaseAddress (
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   switch (ChipID) {
-    case T186_CHIP_ID:
-      return T186GetDTBBaseAddress(CpuBootloaderAddress);
     case T194_CHIP_ID:
       return T194GetDTBBaseAddress(CpuBootloaderAddress);
     default:
@@ -197,8 +188,6 @@ GetRCMBaseAddress (
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   switch (ChipID) {
-    case T186_CHIP_ID:
-      return T186GetRCMBaseAddress(CpuBootloaderAddress);
     case T194_CHIP_ID:
       return T194GetRCMBaseAddress(CpuBootloaderAddress);
     default:
@@ -231,8 +220,6 @@ GetBootType (
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   switch (ChipID) {
-    case T186_CHIP_ID:
-      return T186GetBootType(CpuBootloaderAddress);
     case T194_CHIP_ID:
       return T194GetBootType(CpuBootloaderAddress);
     default:
@@ -262,8 +249,6 @@ GetResourceConfig (
   ChipID = TegraGetChipID();
 
   switch (ChipID) {
-    case T186_CHIP_ID:
-      return T186ResourceConfig(GetCPUBLBaseAddress (), PlatformInfo);
     case T194_CHIP_ID:
       return T194ResourceConfig(GetCPUBLBaseAddress (), PlatformInfo);
     default:
@@ -371,8 +356,6 @@ GetMmioBaseAndSize (
   ChipID = TegraGetChipID();
 
   switch (ChipID) {
-    case T186_CHIP_ID:
-      return T186GetMmioBaseAndSize();
     case T194_CHIP_ID:
       return T194GetMmioBaseAndSize();
     default:

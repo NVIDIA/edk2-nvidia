@@ -2,7 +2,7 @@
 
   Tegra Controller Enable Driver
 
-  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -16,9 +16,9 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-    { "nvidia,tegra186-spi", &gNVIDIANonDiscoverableT186SpiDeviceGuid },
-    { "nvidia,tegra194-spi", &gNVIDIANonDiscoverableT194SpiDeviceGuid },
-    { NULL, NULL }
+  { "nvidia,tegra186-spi", &gNVIDIANonDiscoverableSpiDeviceGuid },
+  { "nvidia,tegra194-spi", &gNVIDIANonDiscoverableSpiDeviceGuid },
+  { NULL, NULL }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {

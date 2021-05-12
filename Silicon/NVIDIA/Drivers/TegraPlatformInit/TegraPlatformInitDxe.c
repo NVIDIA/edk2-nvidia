@@ -2,7 +2,7 @@
 
   Tegra Platform Init Driver.
 
-  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -66,9 +66,7 @@ TegraPlatformInitialize (
 
   ChipID = TegraGetChipID();
   DEBUG ((DEBUG_INFO, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, ChipID));
-  if (ChipID == T186_CHIP_ID) {
-    LibPcdSetSku (T186_SKU);
-  } else if (ChipID == T194_CHIP_ID) {
+  if (ChipID == T194_CHIP_ID) {
     LibPcdSetSku (T194_SKU);
   }
 

@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -24,8 +24,7 @@
 
 [SkuIds]
   0|DEFAULT
-  1|T186
-  2|T194
+  1|T194
 
   #
   # Define ESRT GUIDs for Firmware Management Protocol instances

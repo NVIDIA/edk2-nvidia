@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+//  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
 //
 //  This program and the accompanying materials
 //  are licensed and made available under the terms and conditions of the BSD License
@@ -36,13 +36,7 @@ ASM_FUNC(TegraGetBLCarveoutOffset)
   bl TegraGetBLCarveoutOffsetInternal
   mov x30, x2
   cmp x0, #0
-  beq _T186Carveout
-  b _ReturnCarveout
-
-_T186Carveout:
-  cmp w1, #T186_CHIP_ID
-  bne _DefaultCarveout
-  MOV64 (x0, T186_BL_CARVEOUT_OFFSET)
+  beq _DefaultCarveout
   b _ReturnCarveout
 
 _DefaultCarveout:
@@ -53,15 +47,7 @@ _ReturnCarveout:
 
 ASM_FUNC(TegraGetBLInfoLocationAddress)
 
-  cmp w0, #T186_CHIP_ID
-  bne _DefaultBLInfo
-  MOV64 (x0, T186_BLINFO_LOCATION_ADDRESS)
-  b _ReturnBLInfo
-
-_DefaultBLInfo:
   MOV64 (x0, DEFAULT_BLINFO_LOCATION_ADDRESS)
-
-_ReturnBLInfo:
   ret
 
 ASM_FUNC(TegraGetGicDistributorBaseAddress)
@@ -75,14 +61,8 @@ ASM_FUNC(TegraGetGicDistributorBaseAddress)
 
 _T194GicDAddr:
   cmp w1, #T194_CHIP_ID
-  bne _T186GicDAddr
-  MOV64 (x0, T194_GIC_DISTRIBUTOR_BASE)
-  b _ReturnGicDAddr
-
-_T186GicDAddr:
-  cmp w1, #T186_CHIP_ID
   bne _DefaultGicDAddr
-  MOV64 (x0, T186_GIC_DISTRIBUTOR_BASE)
+  MOV64 (x0, T194_GIC_DISTRIBUTOR_BASE)
   b _ReturnGicDAddr
 
 _DefaultGicDAddr:
@@ -102,12 +82,6 @@ _ReturnGicRAddr:
 
 ASM_FUNC(TegraGetGicInterruptInterfaceBaseAddress)
 
-  cmp w0, #T186_CHIP_ID
-  bne _T194GicIAddr
-  MOV64 (x0, T186_GIC_INTERRUPT_INTERFACE_BASE)
-  b _ReturnGicIAddr
-
-_T194GicIAddr:
   cmp w0, #T194_CHIP_ID
   bne _DefaultGicIAddr
   MOV64 (x0, T194_GIC_INTERRUPT_INTERFACE_BASE)
