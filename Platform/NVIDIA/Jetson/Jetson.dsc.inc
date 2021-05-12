@@ -91,24 +91,24 @@
   #
   # Platform Configuration Manager Data
   #
-  Silicon/NVIDIA/T186/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
+  Silicon/NVIDIA/Jetson/T186/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
     <LibraryClasses>
-      PlatformAslTablesLib|Silicon/NVIDIA/T186/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
+      PlatformAslTablesLib|Silicon/NVIDIA/Jetson/T186/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
     <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/T186/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
+      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Jetson/T186/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
   }
-  Silicon/NVIDIA/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
+  Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
     <LibraryClasses>
-      PlatformAslTablesLib|Silicon/NVIDIA/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
+      PlatformAslTablesLib|Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
     <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT -I$(BIN_DIR)/Silicon/NVIDIA/Library/ASLTemplateTablesLib/ASLTemplateTablesLib/OUTPUT
+      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT -I$(BIN_DIR)/Silicon/NVIDIA/Library/ASLTemplateTablesLib/ASLTemplateTablesLib/OUTPUT
   }
 
   #
   # Platform USB FW
   #
-  Silicon/NVIDIA/T186/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
-  Silicon/NVIDIA/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  Silicon/NVIDIA/Jetson/T186/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  Silicon/NVIDIA/Jetson/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #
   # BPMP-FW IPC protocol
@@ -172,7 +172,7 @@
   #
   # SE RNG
   #
-  Silicon/NVIDIA/T194/Drivers/SeRngDxe/SeRngDxe.inf
+  Silicon/NVIDIA/Jetson/T194/Drivers/SeRngDxe/SeRngDxe.inf
 
   #
   # PCI Support

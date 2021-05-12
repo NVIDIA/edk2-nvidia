@@ -19,14 +19,14 @@
   #
   # Platform Configuration Manager Data
   #
-  INF Silicon/NVIDIA/T186/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
-  INF Silicon/NVIDIA/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+  INF Silicon/NVIDIA/Jetson/T186/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+  INF Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
 
   #
   # Platform USB FW
   #
-  INF Silicon/NVIDIA/T186/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
-  INF Silicon/NVIDIA/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  INF Silicon/NVIDIA/Jetson/T186/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  INF Silicon/NVIDIA/Jetson/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #
   # BPMP-FW IPC protocol
@@ -75,7 +75,7 @@
   #
   # SE RNG
   #
-  INF Silicon/NVIDIA/T194/Drivers/SeRngDxe/SeRngDxe.inf
+  INF Silicon/NVIDIA/Jetson/T194/Drivers/SeRngDxe/SeRngDxe.inf
 
   #
   # QSPI Support
