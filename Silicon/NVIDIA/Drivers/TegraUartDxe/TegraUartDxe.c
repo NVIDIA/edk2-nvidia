@@ -29,6 +29,7 @@
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra20-uart", &gNVIDIANonDiscoverable16550UartDeviceGuid },
+    { "nvidia,tegra186-hsuart", &gNVIDIANonDiscoverable16550UartDeviceGuid },
     { "nvidia,tegra194-tcu", &gNVIDIANonDiscoverableCombinedUartDeviceGuid },
     { "arm,sbsa-uart", &gNVIDIANonDiscoverableSbsaUartDeviceGuid },
     { NULL, NULL }
@@ -82,7 +83,9 @@ DeviceDiscoveryNotify (
   switch (Phase) {
   case DeviceDiscoveryDriverBindingStart:
     if ((fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
-                                       "nvidia,tegra20-uart")) == 0) {
+                                       "nvidia,tegra20-uart")) == 0 ||
+        (fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
+                                       "nvidia,tegra186-hsuart")) == 0) {
       if (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED) {
         return EFI_UNSUPPORTED;
       }
