@@ -1,0 +1,32 @@
+## @file
+#  Provides firmware device specific services to support updates of a firmware
+#  image stored in a firmware device.
+#
+#  Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2016, Microsoft Corporation. All rights reserved.<BR>
+#  Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION     = 0x00010005
+  BASE_NAME       = FmpDeviceLib
+  MODULE_UNI_FILE = FmpDeviceLib.uni
+  FILE_GUID       = c5db8569-0db5-4b3c-b8e2-cc5ad56082b3
+  MODULE_TYPE     = DXE_DRIVER
+  VERSION_STRING  = 1.0
+  LIBRARY_CLASS   = FmpDeviceLib|DXE_DRIVER UEFI_DRIVER
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64 ARM AARCH64
+#
+
+[Sources]
+  FmpDeviceLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  FmpDevicePkg/FmpDevicePkg.dec
