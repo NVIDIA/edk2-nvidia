@@ -2,7 +2,7 @@
 
   PCIe Controller Driver private structures
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,6 +15,11 @@
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 
 #define BIT(x)   (1 << (x))
+
+#define upper_32_bits(n) ((UINT32)((n) >> 32))
+#define lower_32_bits(n) ((UINT32)(n))
+
+#define SZ_256M 0x10000000
 
 #define PCIE_CLOCK_RESET_NAME_LENGTH 16
 
@@ -38,6 +43,8 @@ typedef struct {
   UINT64                                           AtuSize;
   UINT64                                           DbiBase;
   UINT64                                           DbiSize;
+  UINT64                                           EcamBase;
+  UINT64                                           EcamSize;
   UINT64                                           PexCtlBase;
   UINT64                                           PexCtlSize;
   UINT32                                           CtrlId;
@@ -159,6 +166,13 @@ typedef struct {
 #define APPL_CFG_MISC_ARCACHE_VAL               3
 
 #define APPL_CFG_SLCG_OVERRIDE    0x114
+
+#define APPL_ECAM_REGION_LOWER_BASE             0x150
+#define APPL_ECAM_REGION_UPPER_BASE             0x154
+#define APPL_ECAM_CONFIG_BASE                   0x158
+#define APPL_ECAM_CONFIG_REGION_EN              BIT(31)
+#define APPL_ECAM_CONFIG_MODE_EN                BIT(30)
+#define APPL_ECAM_CONFIG_LIMIT                  0x0FFFFFFF
 
 #define PCI_BASE_ADDRESS_0        0x10  /* 32 bits */
 #define PCI_BASE_ADDRESS_1        0x14  /* 32 bits */

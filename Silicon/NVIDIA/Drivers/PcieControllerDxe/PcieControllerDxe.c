@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -388,23 +388,29 @@ PcieConfigurationAccess (
         Status = EFI_SUCCESS;
       }
     } else {
-
-      ConfigAddress = Private->DbiBase;
-      if (PciAddress.Bus != This->MinBusNumber) {
-        //Setup ATU
-        UINT8 AtuType;
-        if (PciAddress.Bus == (This->MinBusNumber + 1)) {
-          AtuType = TEGRA_PCIE_ATU_TYPE_CFG0;
-        } else {
-          AtuType = TEGRA_PCIE_ATU_TYPE_CFG1;
+      if (Private->IsT234) {
+        ConfigAddress = (PciAddress.Bus) << 20 |
+                         (PciAddress.Device) << 15 |
+                         (PciAddress.Function) << 12;
+        ConfigAddress = Private->EcamBase + ConfigAddress;
+      } else {
+        ConfigAddress = Private->DbiBase;
+        if (PciAddress.Bus != This->MinBusNumber) {
+          //Setup ATU
+          UINT8 AtuType;
+          if (PciAddress.Bus == (This->MinBusNumber + 1)) {
+            AtuType = TEGRA_PCIE_ATU_TYPE_CFG0;
+          } else {
+            AtuType = TEGRA_PCIE_ATU_TYPE_CFG1;
+          }
+          ConfigAddress = Private->ConfigurationSpace;
+          ConfigureAtu (Private,
+                        PCIE_ATU_REGION_INDEX0,
+                        AtuType,
+                        ConfigAddress,
+                        PCIE_ATU_BUS (PciAddress.Bus) | PCIE_ATU_DEV (PciAddress.Device) | PCIE_ATU_FUNC (PciAddress.Function),
+                        Private->ConfigurationSize);
         }
-        ConfigAddress = Private->ConfigurationSpace;
-        ConfigureAtu (Private,
-                      PCIE_ATU_REGION_INDEX0,
-                      AtuType,
-                      ConfigAddress,
-                      PCIE_ATU_BUS (PciAddress.Bus) | PCIE_ATU_DEV (PciAddress.Device) | PCIE_ATU_FUNC (PciAddress.Function),
-                      Private->ConfigurationSize);
       }
 
       if (Read) {
@@ -826,6 +832,21 @@ InitializeController (
     val |= APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE_EN;
     val &= ~APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE;
     MmioWrite32 (Private->ApplSpace + APPL_PINMUX, val);
+  }
+
+  if (Private->IsT234) {
+    /* Configure ECAM */
+    MmioWrite32 (Private->ApplSpace + APPL_ECAM_REGION_LOWER_BASE, lower_32_bits(Private->EcamBase));
+    MmioWrite32 (Private->ApplSpace + APPL_ECAM_REGION_UPPER_BASE, upper_32_bits(Private->EcamBase));
+    if (Private->EcamSize < SZ_256M) {
+      val = MmioRead32(Private->ApplSpace + APPL_ECAM_CONFIG_BASE);
+      val &= ~APPL_ECAM_CONFIG_LIMIT;
+      val |= Private->EcamSize - 1;
+      MmioWrite32 (Private->ApplSpace + APPL_ECAM_CONFIG_BASE, val);
+    }
+    val = MmioRead32(Private->ApplSpace + APPL_ECAM_CONFIG_BASE);
+    val |= APPL_ECAM_CONFIG_REGION_EN;
+    MmioWrite32 (Private->ApplSpace + APPL_ECAM_CONFIG_BASE, val);
   }
 
   /* Setup DBI region */
@@ -1261,6 +1282,15 @@ DeviceDiscoveryNotify (
       DEBUG ((DEBUG_ERROR, "%a: Unable to locate DBI address range\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
+    }
+
+    if (Private->IsT234) {
+      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 4, &Private->EcamBase, &Private->EcamSize);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to locate ECAM address range\n", __FUNCTION__));
+        Status = EFI_UNSUPPORTED;
+        break;
+      }
     }
 
     Private->Signature = PCIE_CONTROLLER_SIGNATURE;
