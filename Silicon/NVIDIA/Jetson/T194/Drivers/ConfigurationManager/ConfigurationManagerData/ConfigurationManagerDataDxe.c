@@ -470,7 +470,7 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     return Status;
   }
 
-  SpcrSerialPort = (CM_ARM_SERIAL_PORT_INFO *)AllocatePool (sizeof (CM_ARM_SERIAL_PORT_INFO) * NumberOfSerialPorts);
+  SpcrSerialPort = (CM_ARM_SERIAL_PORT_INFO *)AllocateZeroPool (sizeof (CM_ARM_SERIAL_PORT_INFO) * NumberOfSerialPorts);
   if (SpcrSerialPort == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
