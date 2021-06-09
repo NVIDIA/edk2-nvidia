@@ -424,6 +424,64 @@ Exit:
   return Status;
 }
 
+/** Initialize the AHCI entries in the platform configuration repository and patch SSDT.
+ *
+ * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
+ *
+  @retval EFI_SUCCESS   Success
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateAhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
+{
+  EFI_STATUS                        Status;
+  UINT32                            NumberOfPlatformNodes;
+  UINT32                            Index;
+  CM_STD_OBJ_ACPI_TABLE_INFO        *NewAcpiTables;
+
+  NumberOfPlatformNodes = 0;
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
+  if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DEBUG_INFO, "AHCI support not present on this platform\r\n"));
+    Status = EFI_SUCCESS;
+    goto Exit;
+  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+    Status = EFI_DEVICE_ERROR;
+    goto Exit;
+  }
+
+  for (Index = 0; Index < (EStdObjMax + EArmObjMax); Index++) {
+    if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
+      NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (NVIDIAPlatformRepositoryInfo[Index].CmObjectSize + (sizeof (CM_STD_OBJ_ACPI_TABLE_INFO)), NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr);
+      if (NewAcpiTables == NULL) {
+        Status = EFI_OUT_OF_RESOURCES;
+        goto Exit;
+      }
+
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
+
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = (EFI_ACPI_DESCRIPTION_HEADER *)ssdtahci_aml_code;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId = PcdGet64(PcdAcpiDefaultOemTableId);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision = FixedPcdGet64(PcdAcpiDefaultOemRevision);
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+
+      break;
+    } else if (NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr == NULL) {
+      break;
+    }
+  }
+
+  Status = EFI_SUCCESS;
+
+Exit:
+  return Status;
+}
+
 /** Initialize the Serial Port entries in the platform configuration repository and patch DSDT.
  *
  * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
@@ -1118,6 +1176,11 @@ InitializePlatformRepository ()
 
   if (IsPcieEnabled ()) {
     Status = UpdatePcieInfo (&Repo);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  } else {
+    Status = UpdateAhciInfo (&Repo);
     if (EFI_ERROR (Status)) {
       return Status;
     }

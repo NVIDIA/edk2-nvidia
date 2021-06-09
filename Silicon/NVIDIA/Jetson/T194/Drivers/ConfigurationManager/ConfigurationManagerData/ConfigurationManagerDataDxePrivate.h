@@ -46,6 +46,8 @@
 #include "Dsdt.offset.h"
 #include "SsdtPci.hex"
 #include "SsdtPci.offset.h"
+#include "SsdtAhci.hex"
+#include "SsdtAhci.offset.h"
 #include "SdcTemplate.hex"
 #include "SdcTemplate.offset.h"
 
