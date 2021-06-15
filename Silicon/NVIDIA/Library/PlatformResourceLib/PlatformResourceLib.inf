@@ -26,13 +26,19 @@
   TegraPlatformInfoLib
   PlatformResourceInternalLib
   CacheMaintenanceLib
+  GoldenRegisterLib
 
 [Sources.common]
   PlatformResourceLib.c
   T194ResourceConfig.c
+  T234ResourceConfig.c
+
+[Guids]
+  gNVIDIAOSCarveoutHob
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress

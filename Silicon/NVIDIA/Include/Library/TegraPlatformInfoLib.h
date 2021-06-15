@@ -18,6 +18,10 @@
 #define UEFI_DECLARE_ALIGNED(var, size) var __attribute__ ((aligned (size)))
 
 #define T194_CHIP_ID      0x19
+#define T234_CHIP_ID      0x23
+
+#define T194_SKU          1
+#define T234_SKU          2
 
 #ifndef __ASSEMBLY__
 
@@ -33,8 +37,6 @@ typedef enum {
   TEGRA_PLATFORM_VDK,
   TEGRA_PLATFORM_UNKNOWN
 } TEGRA_PLATFORM_TYPE;
-
-#define T194_SKU          1
 
 /**
   Returns chip id of the tegra platform.

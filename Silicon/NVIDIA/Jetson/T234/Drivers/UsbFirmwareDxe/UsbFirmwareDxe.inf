@@ -1,0 +1,42 @@
+#
+#  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
+#
+#  This program and the accompanying materials
+#  are licensed and made available under the terms and conditions of the BSD License
+#  which accompanies this distribution.  The full text of the license may be found at
+#  http://opensource.org/licenses/bsd-license.php
+#
+#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = UsbFirmwareDxe
+  FILE_GUID                      = d7e14939-2c9b-4830-9ede-2b849517c61b
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UsbFirmwareDxeInitialize
+
+[Sources.common]
+  UsbSilFw.c
+  UsbSilRelFw.c
+  UsbSilProdFw.c
+
+[LibraryClasses]
+  TegraPlatformInfoLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraUseProdUsbFw
+
+[Protocols]
+  gNVIDIAUsbFwProtocolGuid
+
+[Depex]
+  TRUE

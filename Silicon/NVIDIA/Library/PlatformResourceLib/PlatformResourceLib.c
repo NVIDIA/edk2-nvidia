@@ -17,6 +17,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/PlatformResourceInternalLib.h>
 #include "T194ResourceConfig.h"
+#include "T234ResourceConfig.h"
 
 
 STATIC
@@ -62,8 +63,32 @@ GetTegraUARTBaseAddress (
   switch (ChipID) {
     case T194_CHIP_ID:
       return FixedPcdGet64(PcdTegra16550UartBaseT194);
+    case T234_CHIP_ID:
+      return FixedPcdGet64(PcdTegra16550UartBaseT234);
     default:
       return 0x0;
+  }
+}
+
+/**
+  It's to get the UART instance number that the trust-firmware hands over.
+  Currently that chain is broken so temporarily override the UART instance number
+  to the fixed known id based on the chip id.
+
+**/
+STATIC
+BOOLEAN
+GetSharedUARTInstanceId (
+  IN  UINTN     ChipID,
+  OUT UINT32    *UARTInstanceNumber
+)
+{
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      *UARTInstanceNumber = 1; // UART_A
+      return TRUE;
+    default:
+      return FALSE;
   }
 }
 
@@ -79,6 +104,7 @@ GetUARTInstanceInfo (
 )
 {
   UINTN   ChipID;
+  UINT32  SharedUARTInstanceId;
   BOOLEAN ValidPrivatePlatform;
 
   *UARTInstanceType = TEGRA_UART_TYPE_NONE;
@@ -90,11 +116,17 @@ GetUARTInstanceInfo (
   }
 
   ChipID = TegraGetChipID ();
+
   switch (ChipID) {
     case T194_CHIP_ID:
       *UARTInstanceType = TEGRA_UART_TYPE_TCU;
       *UARTInstanceAddress = (EFI_PHYSICAL_ADDRESS)FixedPcdGet64(PcdTegra16550UartBaseT194);
       return EFI_SUCCESS;
+    case T234_CHIP_ID:
+   	  if (!GetSharedUARTInstanceId (T234_CHIP_ID, &SharedUARTInstanceId)) {
+   	    return EFI_UNSUPPORTED;
+   	  }
+      return T234UARTInstanceInfo (SharedUARTInstanceId, UARTInstanceType, UARTInstanceAddress);
     default:
       return EFI_UNSUPPORTED;
   }
@@ -158,6 +190,8 @@ GetDTBBaseAddress (
   switch (ChipID) {
     case T194_CHIP_ID:
       return T194GetDTBBaseAddress(CpuBootloaderAddress);
+    case T234_CHIP_ID:
+      return T234GetDTBBaseAddress(CpuBootloaderAddress);
     default:
       return 0x0;
   }
@@ -190,6 +224,8 @@ GetRCMBaseAddress (
   switch (ChipID) {
     case T194_CHIP_ID:
       return T194GetRCMBaseAddress(CpuBootloaderAddress);
+    case T234_CHIP_ID:
+      return T234GetRCMBaseAddress(CpuBootloaderAddress);
     default:
       return 0x0;
   }
@@ -222,6 +258,8 @@ GetBootType (
   switch (ChipID) {
     case T194_CHIP_ID:
       return T194GetBootType(CpuBootloaderAddress);
+    case T234_CHIP_ID:
+      return T234GetBootType(CpuBootloaderAddress);
     default:
       return TegrablBootTypeMax;
   }
@@ -248,9 +286,13 @@ GetResourceConfig (
 
   ChipID = TegraGetChipID();
 
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
   switch (ChipID) {
     case T194_CHIP_ID:
-      return T194ResourceConfig(GetCPUBLBaseAddress (), PlatformInfo);
+      return T194ResourceConfig(CpuBootloaderAddress, PlatformInfo);
+    case T234_CHIP_ID:
+      return T234ResourceConfig(CpuBootloaderAddress, PlatformInfo);
     default:
       PlatformInfo = NULL;
       return EFI_UNSUPPORTED;
@@ -284,6 +326,8 @@ GetGRBlobBaseAddress (
   switch (ChipID) {
     case T194_CHIP_ID:
       return T194GetGRBlobBaseAddress(CpuBootloaderAddress);
+    case T234_CHIP_ID:
+      return T234GetGRBlobBaseAddress(CpuBootloaderAddress);
     default:
       return 0x0;
   }
@@ -316,6 +360,8 @@ GetGROutputBaseAndSize (
   switch (ChipID) {
     case T194_CHIP_ID:
       return T194GetGROutputBaseAndSize(CpuBootloaderAddress, Base, Size);
+    case T234_CHIP_ID:
+      return T234GetGROutputBaseAndSize(CpuBootloaderAddress, Base, Size);
     default:
       return FALSE;
   }
@@ -333,6 +379,25 @@ GetFsiNsBaseAndSize (
 )
 {
   return GetFsiNsBaseAndSizeInternal (Base, Size);
+  UINTN   ChipID;
+  UINTN   CpuBootloaderAddress;
+  BOOLEAN ValidPrivatePlatform;
+
+  ValidPrivatePlatform = GetFsiNsBaseAndSizeInternal (Base, Size);
+  if (ValidPrivatePlatform) {
+    return ValidPrivatePlatform;
+  }
+
+  ChipID = TegraGetChipID();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      return T234GetFsiNsBaseAndSize(CpuBootloaderAddress, Base, Size);
+    default:
+      return FALSE;
+  }
 }
 
 /**
@@ -358,6 +423,8 @@ GetMmioBaseAndSize (
   switch (ChipID) {
     case T194_CHIP_ID:
       return T194GetMmioBaseAndSize();
+    case T234_CHIP_ID:
+      return T234GetMmioBaseAndSize();
     default:
       return NULL;
   }

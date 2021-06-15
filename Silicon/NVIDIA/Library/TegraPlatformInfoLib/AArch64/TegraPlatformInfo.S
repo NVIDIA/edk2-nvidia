@@ -14,6 +14,8 @@
 #include <AsmMacroIoLibV8.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/TegraPlatformInfoInternalLib.h>
+#include <T194/T194Definitions.h>
+#include <T234/T234Definitions.h>
 #include "TegraPlatformInfoLibPrivate.h"
 
 ASM_FUNC(TegraGetChipID)
@@ -36,11 +38,23 @@ ASM_FUNC(TegraGetBLCarveoutOffset)
   bl TegraGetBLCarveoutOffsetInternal
   mov x30, x2
   cmp x0, #0
-  beq _DefaultCarveout
+  beq _T194Carveout
+  b _ReturnCarveout
+
+_T194Carveout:
+  cmp w1, #T194_CHIP_ID
+  bne _T234Carveout
+  MOV64 (x0, T194_BL_CARVEOUT_OFFSET)
+  b _ReturnCarveout
+
+_T234Carveout:
+  cmp w1, #T234_CHIP_ID
+  bne _DefaultCarveout
+  MOV64 (x0, T234_BL_CARVEOUT_OFFSET)
   b _ReturnCarveout
 
 _DefaultCarveout:
-  MOV64 (x0, DEFAULT_BL_CARVEOUT_OFFSET)
+  MOV64 (x0, 0)
 
 _ReturnCarveout:
   ret
@@ -61,8 +75,14 @@ ASM_FUNC(TegraGetGicDistributorBaseAddress)
 
 _T194GicDAddr:
   cmp w1, #T194_CHIP_ID
-  bne _DefaultGicDAddr
+  bne _T234GicDAddr
   MOV64 (x0, T194_GIC_DISTRIBUTOR_BASE)
+  b _ReturnGicDAddr
+
+_T234GicDAddr:
+  cmp w1, #T234_CHIP_ID
+  bne _DefaultGicDAddr
+  MOV64 (x0, T234_GIC_DISTRIBUTOR_BASE)
   b _ReturnGicDAddr
 
 _DefaultGicDAddr:
@@ -72,10 +92,22 @@ _ReturnGicDAddr:
   ret
 
 ASM_FUNC(TegraGetGicRedistributorBaseAddress)
-  mov x1, x30
+  mov w1, w0
+  mov x2, x30
   bl TegraGetGicRedistributorBaseAddressInternal
-  mov x30, x1
+  mov x30, x2
+  cmp x0, #0
+  beq _T234GicRAddr
   b _ReturnGicRAddr
+
+_T234GicRAddr:
+  cmp w1, #T234_CHIP_ID
+  bne _DefaultGicRAddr
+  MOV64 (x0, T234_GIC_REDISTRIBUTOR_BASE)
+  b _ReturnGicDAddr
+
+_DefaultGicRAddr:
+  MOV64 (x0, 0)
 
 _ReturnGicRAddr:
   ret

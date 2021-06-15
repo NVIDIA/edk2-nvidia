@@ -66,12 +66,16 @@ TegraPlatformInitialize (
 
   ChipID = TegraGetChipID();
   DEBUG ((DEBUG_INFO, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, ChipID));
-  if (ChipID == T194_CHIP_ID) {
-    LibPcdSetSku (T194_SKU);
-  }
 
   PlatformType = TegraGetPlatform();
-  if (PlatformType != TEGRA_PLATFORM_SILICON) {
+
+  if (PlatformType == TEGRA_PLATFORM_SILICON) {
+    if (ChipID == T194_CHIP_ID) {
+      LibPcdSetSku (T194_SKU);
+    } else if (ChipID == T234_CHIP_ID) {
+      LibPcdSetSku (T234_SKU);
+    }
+  } else {
     // Override boot timeout for pre-si platforms
     EmmcMagic = * ((UINTN *) (TegraGetSystemMemoryBaseAddress(ChipID) + SYSIMG_EMMC_MAGIC_OFFSET));
     if (((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) ||

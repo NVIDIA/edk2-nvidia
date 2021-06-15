@@ -65,6 +65,19 @@
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS,NV
 
+[PcdsDynamicDefault.common.T234]
+  gArmTokenSpaceGuid.PcdGicDistributorBase|0X0F400000
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase|0X0F440000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA234'
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(bf0d4599-20d4-414e-b2c5-3595b1cda402)}
+  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
+  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
+
+[PcdsDynamicHii.common.T234]
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS,NV
+
 
 ################################################################################
 #
@@ -91,11 +104,18 @@
     <BuildOptions>
       *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT -I$(BIN_DIR)/Silicon/NVIDIA/Library/ASLTemplateTablesLib/ASLTemplateTablesLib/OUTPUT
   }
+  Silicon/NVIDIA/Jetson/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
+    <LibraryClasses>
+      PlatformAslTablesLib|Silicon/NVIDIA/Jetson/T234/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Jetson/T234/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
+  }
 
   #
   # Platform USB FW
   #
   Silicon/NVIDIA/Jetson/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  Silicon/NVIDIA/Jetson/T234/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #
   # BPMP-FW IPC protocol
@@ -160,6 +180,7 @@
   # SE RNG
   #
   Silicon/NVIDIA/Jetson/T194/Drivers/SeRngDxe/SeRngDxe.inf
+  Silicon/NVIDIA/Jetson/T234/Drivers/SeRngDxe/SeRngDxe.inf
 
   #
   # PCI Support

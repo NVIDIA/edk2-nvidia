@@ -28,32 +28,6 @@
 
 #include "TegraGpioPrivate.h"
 
-STATIC CONST GPIO_CONTROLLER Tegra186GpioControllers [] = {
-    TEGRA_GPIO_ENTRY (0,  2, 0, 7),
-    TEGRA_GPIO_ENTRY (1,  3, 0, 7),
-    TEGRA_GPIO_ENTRY (2,  3, 1, 7),
-    TEGRA_GPIO_ENTRY (3,  3, 2, 6),
-    TEGRA_GPIO_ENTRY (4,  2, 1, 8),
-    TEGRA_GPIO_ENTRY (5,  2, 2, 6),
-    TEGRA_GPIO_ENTRY (6,  4, 1, 6),
-    TEGRA_GPIO_ENTRY (7,  1, 0, 7),
-    TEGRA_GPIO_ENTRY (8,  0, 4, 8),
-    TEGRA_GPIO_ENTRY (9,  5, 0, 8),
-    TEGRA_GPIO_ENTRY (10, 5, 1, 1),
-    TEGRA_GPIO_ENTRY (11, 1, 1, 8),
-    TEGRA_GPIO_ENTRY (12, 5, 3, 6),
-    TEGRA_GPIO_ENTRY (13, 0, 0, 7),
-    TEGRA_GPIO_ENTRY (14, 0, 1, 4),
-    TEGRA_GPIO_ENTRY (15, 4, 0, 7),
-    TEGRA_GPIO_ENTRY (16, 0, 2, 6),
-    TEGRA_GPIO_ENTRY (17, 0, 5, 6),
-    TEGRA_GPIO_ENTRY (18, 0, 3, 4),
-    TEGRA_GPIO_ENTRY (19, 1, 2, 8),
-    TEGRA_GPIO_ENTRY (20, 1, 3, 7),
-    TEGRA_GPIO_ENTRY (21, 2, 3, 2),
-    TEGRA_GPIO_ENTRY (22, 5, 2, 4),
-};
-
 STATIC CONST GPIO_CONTROLLER Tegra194GpioControllers [] = {
     TEGRA_GPIO_ENTRY (0,  1, 2, 8),
     TEGRA_GPIO_ENTRY (1,  4, 7, 2),
@@ -85,8 +59,45 @@ STATIC CONST GPIO_CONTROLLER Tegra194GpioControllers [] = {
     TEGRA_GPIO_ENTRY (27, 0, 0, 2)
 };
 
+STATIC CONST GPIO_CONTROLLER Tegra234GpioControllers [] = {
+    TEGRA_GPIO_ENTRY (0,  0, 0, 8),
+    TEGRA_GPIO_ENTRY (1,  0, 3, 1),
+    TEGRA_GPIO_ENTRY (2,  5, 1, 8),
+    TEGRA_GPIO_ENTRY (3,  5, 2, 4),
+    TEGRA_GPIO_ENTRY (4,  5, 3, 8),
+    TEGRA_GPIO_ENTRY (5,  5, 4, 6),
+    TEGRA_GPIO_ENTRY (6,  4, 0, 8),
+    TEGRA_GPIO_ENTRY (7,  4, 1, 8),
+    TEGRA_GPIO_ENTRY (8,  4, 2, 7),
+    TEGRA_GPIO_ENTRY (9,  5, 0, 6),
+    TEGRA_GPIO_ENTRY (10, 3, 0, 8),
+    TEGRA_GPIO_ENTRY (11, 3, 1, 4),
+    TEGRA_GPIO_ENTRY (12, 2, 0, 8),
+    TEGRA_GPIO_ENTRY (13, 2, 1, 8),
+    TEGRA_GPIO_ENTRY (14,-1,-1, 0),
+    TEGRA_GPIO_ENTRY (15, 2, 2, 8),
+    TEGRA_GPIO_ENTRY (16, 2, 3, 8),
+    TEGRA_GPIO_ENTRY (17, 2, 4, 6),
+    TEGRA_GPIO_ENTRY (18, 3, 4, 8),
+    TEGRA_GPIO_ENTRY (19, 3, 5, 8),
+    TEGRA_GPIO_ENTRY (20, 3, 6, 1),
+    TEGRA_GPIO_ENTRY (21, 4, 3, 7),
+    TEGRA_GPIO_ENTRY (22,-1,-1, 0),
+    TEGRA_GPIO_ENTRY (23, 1, 0, 8),
+    TEGRA_GPIO_ENTRY (24, 1, 1, 8),
+    TEGRA_GPIO_ENTRY (25, 1, 2, 8),
+    TEGRA_GPIO_ENTRY (26,-1,-1, 0),
+    TEGRA_GPIO_ENTRY (27, 0, 1, 8),
+    TEGRA_GPIO_ENTRY (28, 0, 2, 4),
+    TEGRA_GPIO_ENTRY (29, 3, 3, 2),
+    TEGRA_GPIO_ENTRY (30, 2, 5, 4),
+    TEGRA_GPIO_ENTRY (31, 3, 2, 8),
+    TEGRA_GPIO_ENTRY (32,-1,-1, 0),
+};
+
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-gpio", &gNVIDIANonDiscoverableT194GpioDeviceGuid },
+  { "nvidia,tegra234-gpio", &gNVIDIANonDiscoverableT234GpioDeviceGuid },
   { NULL, NULL }
 };
 
@@ -290,10 +301,10 @@ SetGpioPull (
 }
 
 STATIC CONST EMBEDDED_GPIO mGpioEmbeddedProtocol = {
-    .Get = GetGpioState,
-    .Set = SetGpioState,
-    .GetMode = GetGpioMode,
-    .SetPull = SetGpioPull
+  .Get = GetGpioState,
+  .Set = SetGpioState,
+  .GetMode = GetGpioMode,
+  .SetPull = SetGpioPull
 };
 
 /**
@@ -352,6 +363,9 @@ InstallGpioProtocols (
   if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT194GpioDeviceGuid)) {
     ControllerCount = ARRAY_SIZE (Tegra194GpioControllers);
     ControllerDefault = Tegra194GpioControllers;
+  } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234GpioDeviceGuid)) {
+    ControllerCount = ARRAY_SIZE (Tegra234GpioControllers);
+    ControllerDefault = Tegra234GpioControllers;
   } else {
     return EFI_UNSUPPORTED;
   }
