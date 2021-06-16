@@ -36,6 +36,8 @@
 #string STR_QUICK_BOOT_ENABLED_HELP      #language en-US "Enable/Disable UEFI full device enumeration."
 #string STR_SERIAL_PORT_CONFIG_PROMPT    #language en-US "Serial Port Configuration"
 #string STR_SERIAL_PORT_CONFIG_HELP      #language en-US "Used to select serial port configuration."
+#string STR_KERNEL_CMDLINE_PROMPT        #language en-US "Append to Kernel Command Line"
+#string STR_KERNEL_CMDLINE_HELP          #language en-US "Used to append command line to default kernel command line."
 
 #string STR_NULL                         #language en-US ""
 

@@ -90,8 +90,10 @@ EFIAPI
 InitializeSettings (
 )
 {
-  EFI_STATUS                Status;
-  VOID                      *AcpiBase;
+  EFI_STATUS                 Status;
+  VOID                       *AcpiBase;
+  NVIDIA_KERNEL_COMMAND_LINE CmdLine;
+  UINTN                      KernelCmdLineLen;
 
   // Initialize PCIe Form Settings
   PcdSet8S (PcdPcieResourceConfigNeeded, PcdGet8 (PcdPcieResourceConfigNeeded));
@@ -111,6 +113,25 @@ InitializeSettings (
 
   // Initialize Quick Boot Form Settings
   PcdSet8S (PcdQuickBootEnabled, PcdGet8 (PcdQuickBootEnabled));
+
+  // Initialize Kernel Command Line Form Setting
+  KernelCmdLineLen = 0;
+  Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIATokenSpaceGuid, NULL, &KernelCmdLineLen, NULL);
+  if (Status == EFI_NOT_FOUND) {
+    KernelCmdLineLen = 0;
+  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+    DEBUG ((DEBUG_ERROR, "%a: Error Requesting command line variable %r\r\n", __FUNCTION__, Status));
+    KernelCmdLineLen = 0;
+  }
+
+  if (KernelCmdLineLen < sizeof (CmdLine)) {
+    KernelCmdLineLen = sizeof (CmdLine);
+    ZeroMem (&CmdLine, KernelCmdLineLen);
+    Status = gRT->SetVariable (L"KernelCommandLine", &gNVIDIATokenSpaceGuid, EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS, KernelCmdLineLen, (VOID *)&CmdLine);
+    if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error setting command line variable %r\r\n", __FUNCTION__, Status));
+    }
+  }
 }
 
 VOID

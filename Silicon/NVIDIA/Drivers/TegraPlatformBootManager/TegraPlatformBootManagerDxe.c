@@ -27,11 +27,14 @@
 #include <Library/DevicePathLib.h>
 #include <Library/UefiBootManagerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <libfdt.h>
 
 #include <Protocol/PlatformBootManager.h>
 #include <Protocol/KernelCmdLineUpdate.h>
+
+#include <NVIDIAConfiguration.h>
 
 #define NVIDIA_KERNEL_COMMAND_MAX_LEN   25
 
@@ -296,8 +299,17 @@ UpdateKernelCommandLine (
   UINTN                                  Count;
   NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL *Interface;
   CHAR16                                 *CmdLine;
+  NVIDIA_KERNEL_COMMAND_LINE             AddlCmdLine;
+  UINTN                                  AddlCmdLen;
 
-  Length = StrSize (InCmdLine);
+  AddlCmdLen = sizeof (AddlCmdLine);
+  Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIATokenSpaceGuid, NULL, &AddlCmdLen, &AddlCmdLine);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get additional command line - %r\r\n", __FUNCTION__, Status));
+    ZeroMem (&AddlCmdLine, sizeof (AddlCmdLine));
+  }
+
+  Length = StrSize (InCmdLine) + StrSize (AddlCmdLine.KernelCommand);
 
   Status = gBS->LocateHandleBuffer (ByProtocol,
                                     &gNVIDIAKernelCmdLineUpdateGuid,
@@ -357,6 +369,8 @@ UpdateKernelCommandLine (
       UnicodeSPrint (CmdLine, Length, L"%s %s", CmdLine, Interface->NewCommandLineArgument);
     }
   }
+
+  UnicodeSPrint (CmdLine, Length, L"%s %s", CmdLine, AddlCmdLine.KernelCommand);
 
   *OutCmdLine = CmdLine;
   return EFI_SUCCESS;

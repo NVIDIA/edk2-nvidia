@@ -50,6 +50,7 @@
 #include <Guid/SerialPortLibVendor.h>
 #include <libfdt.h>
 #include "PlatformBm.h"
+#include <NVIDIAConfiguration.h>
 
 #define DP_NODE_LEN(Type) { (UINT8)sizeof (Type), (UINT8)(sizeof (Type) >> 8) }
 
@@ -581,6 +582,12 @@ IsPlatformConfigurationNeeded (
   UINT64                      DTBSize;
   VOID                        *AcpiBase;
   UINTN                       CharCount;
+  NVIDIA_KERNEL_COMMAND_LINE  AddlCmdLine;
+  UINTN                       AddlCmdLen;
+  NVIDIA_KERNEL_COMMAND_LINE  AddlCmdLineLast;
+  UINTN                       AddlCmdLenLast;
+  UINT32                      AddlCmdLineAttributes;
+
 
   //
   // If platform has been configured already, do not do it again
@@ -628,6 +635,29 @@ IsPlatformConfigurationNeeded (
 
   if (PcdGet8 (PcdQuickBootEnabled) == 0) {
     PlatformConfigurationNeeded = TRUE;
+  }
+
+  if (!PlatformConfigurationNeeded) {
+    AddlCmdLen = sizeof (AddlCmdLine);
+    Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIATokenSpaceGuid, &AddlCmdLineAttributes, &AddlCmdLen, &AddlCmdLine);
+    if (EFI_ERROR (Status)) {
+      AddlCmdLineAttributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS;
+      ZeroMem (&AddlCmdLine, sizeof (AddlCmdLine));
+    }
+    AddlCmdLenLast = sizeof (AddlCmdLineLast);
+    Status = gRT->GetVariable (L"KernelCommandLineLast", &gNVIDIATokenSpaceGuid, NULL, &AddlCmdLenLast, &AddlCmdLineLast);
+    if (EFI_ERROR (Status)) {
+      ZeroMem (&AddlCmdLenLast, sizeof (AddlCmdLineLast));
+    }
+
+    if (CompareMem (&AddlCmdLine, &AddlCmdLineLast, sizeof (AddlCmdLine)) != 0) {
+      PlatformConfigurationNeeded = TRUE;
+      AddlCmdLenLast = sizeof (AddlCmdLineLast);
+      Status = gRT->SetVariable (L"KernelCommandLineLast", &gNVIDIATokenSpaceGuid, AddlCmdLineAttributes, AddlCmdLenLast, &AddlCmdLineLast);
+      if(EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to update stored command line %r\r\n", __FUNCTION__, Status));
+      }
+    }
   }
 
   return PlatformConfigurationNeeded;

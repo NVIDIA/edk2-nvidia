@@ -59,6 +59,7 @@
   gNVIDIAResourceConfigFormsetGuid
   gEfiEndOfDxeEventGroupGuid
   gEfiAcpiTableGuid
+  gNVIDIATokenSpaceGuid
 
 [Protocols]
   gEfiHiiConfigAccessProtocolGuid               ## CONSUMES

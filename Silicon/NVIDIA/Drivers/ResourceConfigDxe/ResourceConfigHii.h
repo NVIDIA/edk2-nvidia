@@ -36,6 +36,7 @@
 #define KEY_ENABLE_PCIE_IN_OS_CONFIG    0x0101
 #define KEY_ENABLE_QUICK_BOOT           0x0102
 #define KEY_SERIAL_PORT_CONFIG          0x0103
+#define KEY_KERNEL_CMDLINE              0x0104
 
 #define PCIE_IN_OS_DISABLE              0x0
 #define PCIE_IN_OS_ENABLE               0x1
