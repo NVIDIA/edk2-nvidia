@@ -308,14 +308,39 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
         })
     }
 
-    Device (GPI1) {
-        Name (_HID, "NVDA0408")
-        Name (_UID, 0)
+    Device (GED1) {
+      Name (_HID, "ACPI0013")
+      Name (_UID, 0)
 
-        Name (_CRS, ResourceTemplate () {
-            Memory32Fixed(ReadWrite, 0xc2f1000, 0x1000)
-            Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x58, 0x59, 0x5a, 0x5b}
-        })
+      Name (_CRS, ResourceTemplate () {
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x58 }
+      })
+      OperationRegion (GP24, SystemMemory, 0xc2f1080, 0x20)
+      Field (GP24, DWordAcc, NoLock, Preserve)
+      {
+        ENAC,   32,
+        DBCT,   32,
+        IVAL,   32,
+        OCTL,   32,
+        OVAL,   32,
+        INTC,   32,
+      }
+
+      Method (_INI) {
+        ENAC = 0x6D //Debounce, Interrupt enabled, both edges, input
+        DBCT = 0x0A //Debounce value
+      }
+
+      Method (_EVT, 0x1) {
+        INTC = 0x1 //Clear Interrupt
+        If (ToInteger (IVAL) == 0) {
+          Notify (\_SB.PWRB, 0x80)
+        }
+      }
+    }
+
+    Device (PWRB) {
+      Name (_HID, "PNP0C0C")
     }
 
     Device(SPI0) {
