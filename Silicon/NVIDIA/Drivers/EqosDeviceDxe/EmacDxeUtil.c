@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2019 - 2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019 - 2021, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -451,27 +451,27 @@ EmacGetStatistic (
 {
   DEBUG ((DEBUG_INFO, "SNP:MAC: %a ()\r\n", __FUNCTION__));
 
-  Statistic->RxTotalFrames     = MmioRead32 (MacBaseAddress + RX_PACKETS_COUNT_GOOD_BAD_OFFSET);
-  Statistic->RxUndersizeFrames = MmioRead32 (MacBaseAddress + RX_UNDERSIZE_PACKETS_GOOD_OFFSET);
-  Statistic->RxOversizeFrames  = MmioRead32 (MacBaseAddress + RX_OVERSIZE_PACKETS_GOOD_OFFSET);
-  Statistic->RxUnicastFrames   = MmioRead32 (MacBaseAddress + RX_UNICAST_PACKETS_GOOD_OFFSET);
-  Statistic->RxBroadcastFrames = MmioRead32 (MacBaseAddress + RX_BROADCAST_PACKETS_GOOD_OFFSET);
-  Statistic->RxMulticastFrames = MmioRead32 (MacBaseAddress + RX_MULTICAST_PACKETS_GOOD_OFFSET);
-  Statistic->RxCrcErrorFrames  = MmioRead32 (MacBaseAddress + RX_CRC_ERROR_PACKETS_OFFSET);
-  Statistic->RxTotalBytes      = MmioRead32 (MacBaseAddress + RX_OCTET_COUNT_GOOD_BAD_OFFSET);
-  Statistic->RxGoodFrames      = Statistic->RxUnicastFrames +
-                                 Statistic->RxBroadcastFrames +
-                                 Statistic->RxMulticastFrames;
+  Statistic->RxTotalFrames     += MmioRead32 (MacBaseAddress + RX_PACKETS_COUNT_GOOD_BAD_OFFSET);
+  Statistic->RxUndersizeFrames += MmioRead32 (MacBaseAddress + RX_UNDERSIZE_PACKETS_GOOD_OFFSET);
+  Statistic->RxOversizeFrames  += MmioRead32 (MacBaseAddress + RX_OVERSIZE_PACKETS_GOOD_OFFSET);
+  Statistic->RxUnicastFrames   += MmioRead32 (MacBaseAddress + RX_UNICAST_PACKETS_GOOD_OFFSET);
+  Statistic->RxBroadcastFrames += MmioRead32 (MacBaseAddress + RX_BROADCAST_PACKETS_GOOD_OFFSET);
+  Statistic->RxMulticastFrames += MmioRead32 (MacBaseAddress + RX_MULTICAST_PACKETS_GOOD_OFFSET);
+  Statistic->RxCrcErrorFrames  += MmioRead32 (MacBaseAddress + RX_CRC_ERROR_PACKETS_OFFSET);
+  Statistic->RxTotalBytes      += MmioRead32 (MacBaseAddress + RX_OCTET_COUNT_GOOD_BAD_OFFSET);
+  Statistic->RxGoodFrames       = Statistic->RxUnicastFrames +
+                                  Statistic->RxBroadcastFrames +
+                                  Statistic->RxMulticastFrames;
 
-  Statistic->TxTotalFrames     = MmioRead32 (MacBaseAddress + TX_PACKETS_COUNT_GOOD_BAD_OFFSET);
-  Statistic->TxGoodFrames      = MmioRead32 (MacBaseAddress + TX_PACKET_COUNT_GOOD_OFFSET);
-  Statistic->TxOversizeFrames  = MmioRead32 (MacBaseAddress + TX_OVERSIZE_PACKETS_GOOD_OFFSET);
-  Statistic->TxUnicastFrames   = MmioRead32 (MacBaseAddress + TX_UNICAST_PACKETS_GOOD_OFFSET);
-  Statistic->TxBroadcastFrames = MmioRead32 (MacBaseAddress + TX_BROADCAST_PACKETS_GOOD_OFFSET);
-  Statistic->TxMulticastFrames = MmioRead32 (MacBaseAddress + TX_MULTICAST_PACKETS_GOOD_OFFSET);
-  Statistic->TxTotalBytes      = MmioRead32 (MacBaseAddress + TX_OCTET_COUNT_GOOD_BAD_OFFSET);
-  Statistic->Collisions        = MmioRead32 (MacBaseAddress + TX_LATE_COLLISION_PACKETS_OFFSET) +
-                                 MmioRead32 (MacBaseAddress + TX_EXCESSIVE_COLLISION_PACKETS_OFFSET);
+  Statistic->TxTotalFrames     += MmioRead32 (MacBaseAddress + TX_PACKETS_COUNT_GOOD_BAD_OFFSET);
+  Statistic->TxGoodFrames      += MmioRead32 (MacBaseAddress + TX_PACKET_COUNT_GOOD_OFFSET);
+  Statistic->TxOversizeFrames  += MmioRead32 (MacBaseAddress + TX_OVERSIZE_PACKETS_GOOD_OFFSET);
+  Statistic->TxUnicastFrames   += MmioRead32 (MacBaseAddress + TX_UNICAST_PACKETS_GOOD_OFFSET);
+  Statistic->TxBroadcastFrames += MmioRead32 (MacBaseAddress + TX_BROADCAST_PACKETS_GOOD_OFFSET);
+  Statistic->TxMulticastFrames += MmioRead32 (MacBaseAddress + TX_MULTICAST_PACKETS_GOOD_OFFSET);
+  Statistic->TxTotalBytes      += MmioRead32 (MacBaseAddress + TX_OCTET_COUNT_GOOD_BAD_OFFSET);
+  Statistic->Collisions        += MmioRead32 (MacBaseAddress + TX_LATE_COLLISION_PACKETS_OFFSET) +
+                                  MmioRead32 (MacBaseAddress + TX_EXCESSIVE_COLLISION_PACKETS_OFFSET);
 }
 
 

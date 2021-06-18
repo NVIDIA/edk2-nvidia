@@ -1,7 +1,7 @@
 /** @file
   DW EMAC SNP DXE driver
 
-  Copyright (c) 2019 - 2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019 - 2021, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -612,8 +612,8 @@ SnpStatistics (
       OUT  EFI_NETWORK_STATISTICS        *Statistics
   )
 {
-
   SIMPLE_NETWORK_DRIVER   *Snp;
+  EFI_STATUS Status;
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
@@ -636,24 +636,24 @@ SnpStatistics (
     return EFI_INVALID_PARAMETER;
   }
 
-  // Do a reset if required
+  EmacGetStatistic (&Snp->Stats, Snp->MacBase);
   if (Reset) {
     ZeroMem (&Snp->Stats, sizeof(EFI_NETWORK_STATISTICS));
   }
 
-  // Check buffer size
-  if (*StatSize < sizeof(EFI_NETWORK_STATISTICS)) {
+  Status = EFI_SUCCESS;
+  if (Statistics != NULL) {
+    // Fill in the statistics
+    CopyMem (Statistics, &Snp->Stats, MIN (*StatSize, sizeof(EFI_NETWORK_STATISTICS)));
+
+    // Check buffer size
+    if (*StatSize < sizeof(EFI_NETWORK_STATISTICS)) {
+      Status =  EFI_BUFFER_TOO_SMALL;
+    }
     *StatSize = sizeof(EFI_NETWORK_STATISTICS);
-    return EFI_BUFFER_TOO_SMALL;
   }
 
-  // read statistic counters
-  EmacGetStatistic (&Snp->Stats, Snp->MacBase);
-
-  // Fill in the statistics
-  CopyMem (Statistics, &Snp->Stats, sizeof(EFI_NETWORK_STATISTICS));
-
-  return EFI_SUCCESS;
+  return Status;
 }
 
 /**
