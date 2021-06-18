@@ -268,6 +268,10 @@ SnpReset (
     return EFI_NOT_STARTED;
   }
 
+  osi_hw_dma_init (Snp->MacDriver.osi_dma);
+
+  osi_start_mac (Snp->MacDriver.osi_core);
+
   return EFI_SUCCESS;
 }
 

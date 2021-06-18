@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
-  Copyright (c) 2020, NVIDIA Corporation.  All rights reserved.
+  Copyright (c) 2020 - 2021, NVIDIA Corporation.  All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -106,6 +106,7 @@ PhyMarvellStartAutoNeg (
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
+  PhyDriver->AutoNegInProgress = TRUE;
   PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, &Data32, MacBaseAddress);
   Data32 |= COPPER_CONTROL_ENABLE_AUTO_NEG | COPPER_RESTART_AUTO_NEG | COPPER_CONTROL_RESET;
 
@@ -125,6 +126,10 @@ PhyMarvellCheckAutoNeg (
   EFI_STATUS    Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
+
+  if (!PhyDriver->AutoNegInProgress) {
+    return EFI_SUCCESS;
+  }
 
   // Wait for completion
   TimeOut = 0;
@@ -163,6 +168,9 @@ PhyMarvellCheckAutoNeg (
   if (TimeOut >= PHY_TIMEOUT) {
     DEBUG ((DEBUG_INFO, "SNP:PHY: ERROR! auto-negotiation timeout\n"));
     return EFI_TIMEOUT;
+  }
+  if (!EFI_ERROR (Status)) {
+    PhyDriver->AutoNegInProgress = FALSE;
   }
   return Status;
 }

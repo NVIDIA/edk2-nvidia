@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
-  Copyright (c) 2020, NVIDIA Corporation.  All rights reserved.
+  Copyright (c) 2020 - 2021, NVIDIA Corporation.  All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -66,6 +66,7 @@ PhyRealtekStartAutoNeg (
   UINT32        Data32;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
+  PhyDriver->AutoNegInProgress = TRUE;
 
   /* Advertise 1000 MBPS full duplex mode */
   PhyRead (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, &Data32, MacBaseAddress);
@@ -103,6 +104,9 @@ PhyRealtekCheckAutoNeg (
   EFI_STATUS    Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
+  if (!PhyDriver->AutoNegInProgress) {
+    return EFI_SUCCESS;
+  }
 
   TimeOut = 0;
   do {
@@ -123,6 +127,9 @@ PhyRealtekCheckAutoNeg (
     return EFI_TIMEOUT;
   }
 
+  if (!EFI_ERROR (Status)) {
+    PhyDriver->AutoNegInProgress = FALSE;
+  }
   return Status;
 }
 

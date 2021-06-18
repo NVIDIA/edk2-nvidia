@@ -8,7 +8,7 @@
 
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
-  Copyright (c) 2020, NVIDIA Corporation.  All rights reserved.
+  Copyright (c) 2020 - 2021, NVIDIA Corporation.  All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -243,6 +243,8 @@ PhySoftReset (
     return EFI_TIMEOUT;
   }
 
+  PhyDriver->StartAutoNeg (PhyDriver, MacBaseAddress);
+
   return EFI_SUCCESS;
 }
 
@@ -277,6 +279,7 @@ PhyConfig (
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
   PhyDriver->PhyPageSelRegister = 0;
   PhyDriver->PhyPage = MAX_UINT32;
+  PhyDriver->AutoNegInProgress = FALSE;
 
   Oui = PhyGetOui (PhyDriver, MacBaseAddress);
   if (Oui == PHY_MARVELL_OUI) {
@@ -345,6 +348,7 @@ PhyLinkAdjustEmacConfig (
 
   Status = EFI_SUCCESS;
 
+  PhyDriver->CheckAutoNeg (PhyDriver, MacBaseAddress);
   PhyDriver->DetectLink (PhyDriver, MacBaseAddress);
 
   if (PhyDriver->PhyOldLink != PhyDriver->PhyCurrentLink) {
