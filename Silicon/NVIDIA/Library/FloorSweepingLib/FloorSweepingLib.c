@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -12,50 +12,103 @@
 *
 **/
 
+#include <ArmMpidr.h>
 #include <PiDxe.h>
 
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
-#include "FloorSweepingLibPrivate.h"
+#include <Library/FloorSweepingLib.h>
+#include <Library/MceAriLib.h>
+#include <Library/NvgLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 UINT32
 GetNumberOfEnabledCpuCores (
   VOID
   )
 {
-  UINT64 Data;
+  UINT32    Count;
+  UINTN     ChipId;
 
-  WriteNvgChannelIdx(TEGRA_NVG_CHANNEL_NUM_CORES);
-  Data = ReadNvgChannelData();
+  ChipId = TegraGetChipID ();
 
-  return (Data & 0xF);
+  switch (ChipId) {
+    case T194_CHIP_ID:
+      Count = NvgGetNumberOfEnabledCpuCores ();
+      break;
+    case T234_CHIP_ID:
+      Count = MceAriNumCores ();
+      break;
+    default:
+      ASSERT (FALSE);
+      Count = 1;
+      break;
+  }
+  DEBUG ((DEBUG_INFO, "%a: ChipId=0x%x, Count=%u\n", __FUNCTION__, ChipId, Count));
+
+  return Count;
 }
 
-UINT32
-ConvertCpuLogicalToMpidr (
-  IN UINT32 LogicalCore
+EFI_STATUS
+EFIAPI
+CheckAndRemapCpu (
+  IN UINT32         LogicalCore,
+  IN OUT UINT64     *Mpidr,
+  OUT CONST CHAR8   **DtCpuFormat,
+  OUT UINTN         *DtCpuId
   )
 {
-  UINT32 NumCores;
-  UINT32 Mpidr = 0;
-  UINT64 Data = 0;
+  UINTN         ChipId;
+  EFI_STATUS    Status;
 
-  NumCores = GetNumberOfEnabledCpuCores();
-  if (LogicalCore < NumCores) {
-    WriteNvgChannelIdx (TEGRA_NVG_CHANNEL_LOGICAL_TO_MPIDR);
+  ChipId = TegraGetChipID ();
 
-    /* Write the logical core id */
-    WriteNvgChannelData (LogicalCore);
-
-    /* Read-back the MPIDR */
-    Data = ReadNvgChannelData ();
-    Mpidr = (Data & 0xFFFFFFFF);
-
-    DEBUG ((DEBUG_INFO, "NVG: Logical CPU: %u; MPIDR: 0x%x\n", LogicalCore, Mpidr));
-  } else {
-    DEBUG ((DEBUG_ERROR, "Core: %u is not present\r\n", LogicalCore));
+  switch (ChipId) {
+    case T194_CHIP_ID:
+      Status = NvgConvertCpuLogicalToMpidr (LogicalCore, Mpidr);
+      *Mpidr &= MPIDR_AFFINITY_MASK;
+      *DtCpuFormat = "cpu@%x";
+      *DtCpuId = *Mpidr;
+      break;
+    case T234_CHIP_ID:
+      Status = MceAriCheckCoreEnabled (Mpidr, DtCpuId);
+      *DtCpuFormat = "cpu@%u";
+      break;
+    default:
+      ASSERT (FALSE);
+      *Mpidr = 0;
+      break;
   }
+  DEBUG ((DEBUG_INFO, "%a: ChipId=0x%x, Mpidr=0x%llx Status=%r\n", __FUNCTION__, ChipId, *Mpidr, Status));
 
-  return Mpidr;
+  return Status;
 }
 
+BOOLEAN
+EFIAPI
+ClusterIsPresent (
+  IN  UINTN ClusterId
+  )
+{
+  UINTN         ChipId;
+  BOOLEAN       Present;
+
+  ChipId = TegraGetChipID ();
+
+  switch (ChipId) {
+    case T194_CHIP_ID:
+      Present = NvgClusterIsPresent (ClusterId);
+      break;
+    case T234_CHIP_ID:
+      Present = MceAriClusterIsPresent (ClusterId);
+      break;
+    default:
+      ASSERT (FALSE);
+      Present = FALSE;
+      break;
+  }
+  DEBUG ((DEBUG_INFO, "%a: ChipId=0x%x, ClusterId=%u, Present=%d\n",
+          __FUNCTION__, ChipId, ClusterId, Present));
+
+  return Present;
+}

@@ -1026,11 +1026,11 @@ UpdateCpuInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   CM_ARM_PROC_HIERARCHY_INFO *ProcHierarchyInfo;
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
   CM_OBJECT_TOKEN *ClusterTokenMap;
-  UINT32 MpIdr;
+  UINT64 MpIdr;
 
   Repo = *PlatformRepositoryInfo;
 
-  NumCpus = GetNumberOfEnabledCpuCores ();
+  NumCpus = NvgGetNumberOfEnabledCpuCores ();
 
   GicCInfo = AllocateZeroPool (sizeof (CM_ARM_GICC_INFO) * NumCpus);
   if (GicCInfo == NULL) {
@@ -1068,7 +1068,10 @@ UpdateCpuInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   ProcHierarchyIndex++;
 
   for (Index = 0; Index < NumCpus; Index++) {
-    MpIdr = ConvertCpuLogicalToMpidr (Index);
+    EFI_STATUS Status;
+
+    Status = NvgConvertCpuLogicalToMpidr (Index, &MpIdr);
+    ASSERT (!EFI_ERROR (Status));
     if (ClusterTokenMap [GET_CLUSTER_ID (MpIdr)] == 0) {
       //Build cluster node
       ProcHierarchyInfo[ProcHierarchyIndex].Token         = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);

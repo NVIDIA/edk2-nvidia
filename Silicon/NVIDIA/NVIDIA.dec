@@ -215,6 +215,9 @@
 # Null-terminated Unicode string that describes the platform family name.
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L""|VOID*|0x00000037
 
+# Tegra MCE ARI Aperture Base Address
+  gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress|0x0E100000|UINT64|0x0000003A
+
 [PcdsDynamic.common]
 #Size of optional signing data header in boot.img partition.
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B
@@ -267,3 +270,7 @@
 #Rcm Kernel Base and Size
   gNVIDIATokenSpaceGuid.PcdRcmKernelBase|0x0|UINT64|0x00000035
   gNVIDIATokenSpaceGuid.PcdRcmKernelSize|0x0|UINT64|0x00000036
+
+#Cpu configuration
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster|1|UINT32|0x0000003B
+  gNVIDIATokenSpaceGuid.PcdPcdTegraMaxClusters|1|UINT32|0x0000003C

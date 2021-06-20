@@ -43,7 +43,7 @@
   BaseMemoryLib
   DeviceTreeHelperLib
   FdtLib
-  FloorSweepingLib
+  NvgLib
   MemoryAllocationLib
   TegraPlatformInfoLib
   PlatformAslTablesLib

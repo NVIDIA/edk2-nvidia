@@ -58,6 +58,8 @@
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster|2
+  gNVIDIATokenSpaceGuid.PcdPcdTegraMaxClusters|4
 
 [PcdsDynamicHii.common.T194]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
@@ -73,6 +75,9 @@
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster|4
+  gNVIDIATokenSpaceGuid.PcdPcdTegraMaxClusters|3
 
 [PcdsDynamicHii.common.T234]
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS

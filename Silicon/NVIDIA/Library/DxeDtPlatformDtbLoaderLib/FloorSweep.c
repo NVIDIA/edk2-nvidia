@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  This program and the accompanying materials
@@ -31,7 +31,7 @@ UpdateCpuFloorsweepingConfig (
 {
   UINTN Cpu;
   UINT32 Cluster;
-  UINT32 Mpidr;
+  UINT64 Mpidr;
   INT32 CpuMapOffset;
   INT32 FdtErr;
   UINT64 Tmp64;
@@ -39,7 +39,6 @@ UpdateCpuFloorsweepingConfig (
   CHAR8  CpuNodeStr[] = "cpu@ffffffff";
   CHAR8  ClusterNodeStr[] = "cluster10";
   BOOLEAN NodePresent;
-  UINT32 NumCores;
   UINT32 AddressCells;
 
   INT32 NodeOffset;
@@ -49,8 +48,6 @@ UpdateCpuFloorsweepingConfig (
   if (!PcdGetBool (PcdFloorsweepCpus)) {
     return EFI_SUCCESS;
   }
-
-  NumCores = GetNumberOfEnabledCpuCores();
 
   ParentOffset = fdt_path_offset (Dtb, "/cpus");
   if (ParentOffset < 0) {
@@ -68,8 +65,11 @@ UpdateCpuFloorsweepingConfig (
   for (NodeOffset = fdt_first_subnode(Dtb, ParentOffset);
        NodeOffset > 0;
        NodeOffset = fdt_next_subnode(Dtb, PrevNodeOffset)) {
-    CONST VOID *Property;
-    INT32      Length;
+    CONST VOID  *Property;
+    INT32       Length;
+    EFI_STATUS  Status;
+    UINTN       DtCpuId;
+    CONST CHAR8 *DtCpuFormat;
 
     Property = fdt_getprop(Dtb, NodeOffset, "device_type", &Length);
     if ((Property == NULL) || (AsciiStrCmp(Property, "cpu") != 0)) {
@@ -77,11 +77,24 @@ UpdateCpuFloorsweepingConfig (
       continue;
     }
 
-    if (Cpu < NumCores) {
-      Mpidr = ConvertCpuLogicalToMpidr(Cpu);
-      Mpidr &= 0x00ffffffUL;
+    // retrieve mpidr for this cpu node
+    Property = fdt_getprop (Dtb, NodeOffset, "reg", &Length);
+    if ((Property == NULL) || ((Length != sizeof (Tmp64)) && (Length != sizeof (Tmp32)))) {
+      DEBUG ((DEBUG_ERROR, "Failed to get MPIDR for /cpus/%a, len=%u\n",
+              fdt_get_name (Dtb, NodeOffset, NULL), Length));
+      return EFI_DEVICE_ERROR;
+    }
+    if (Length == sizeof (Tmp64)) {
+      Tmp64 = *(CONST UINT64 *)Property;
+      Mpidr = fdt64_to_cpu (Tmp64);
+    } else {
+      Tmp32 = *(CONST UINT32 *)Property;
+      Mpidr = fdt32_to_cpu (Tmp32);
+    }
 
-      AsciiSPrint (CpuNodeStr, sizeof (CpuNodeStr),"cpu@%x", Mpidr);
+    Status = CheckAndRemapCpu (Cpu, &Mpidr, &DtCpuFormat, &DtCpuId);
+    if (!EFI_ERROR (Status)) {
+      AsciiSPrint (CpuNodeStr, sizeof (CpuNodeStr), DtCpuFormat, DtCpuId);
       FdtErr = fdt_set_name (Dtb, NodeOffset, CpuNodeStr);
       if (FdtErr < 0) {
         DEBUG ((DEBUG_ERROR, "Failed to set name to %a: %a\r\n", CpuNodeStr, fdt_strerror (FdtErr)));
@@ -100,7 +113,8 @@ UpdateCpuFloorsweepingConfig (
         return EFI_DEVICE_ERROR;
       }
 
-      DEBUG ((DEBUG_INFO, "Enabled cpu-%u (mpidr: 0x%x) node in FDT\r\n", Cpu, Mpidr));
+      DEBUG ((DEBUG_INFO, "Enabled %a, index=%u, (mpidr: 0x%llx) node in FDT\r\n",
+              CpuNodeStr, Cpu, Mpidr));
       PrevNodeOffset = NodeOffset;
     } else {
       FdtErr = fdt_del_node(Dtb, NodeOffset);
@@ -121,7 +135,7 @@ UpdateCpuFloorsweepingConfig (
     return EFI_DEVICE_ERROR;
   }
 
-  Cluster = (NumCores + 1)/2;
+  Cluster = 0;
   while (TRUE) {
     AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr),"cluster%u", Cluster);
     NodeOffset = fdt_subnode_offset(Dtb, CpuMapOffset, ClusterNodeStr);
@@ -129,14 +143,15 @@ UpdateCpuFloorsweepingConfig (
     NodePresent = (NodeOffset >= 0);
 
     if (NodePresent) {
-      FdtErr = fdt_del_node(Dtb, NodeOffset);
-      if (FdtErr < 0) {
-        DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu-map/%a node: %a\r\n",
-              ClusterNodeStr, fdt_strerror(FdtErr)));
-        return EFI_DEVICE_ERROR;
+      if (!ClusterIsPresent (Cluster)) {
+        FdtErr = fdt_del_node(Dtb, NodeOffset);
+        if (FdtErr < 0) {
+          DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu-map/%a node: %a\r\n",
+                  ClusterNodeStr, fdt_strerror(FdtErr)));
+          return EFI_DEVICE_ERROR;
+        }
+        DEBUG ((DEBUG_INFO, "Deleted cluster%u node in FDT\r\n", Cluster));
       }
-
-      DEBUG ((DEBUG_INFO, "Deleted cluster%u node in FDT\r\n", Cluster));
       Cluster++;
     } else {
       break;

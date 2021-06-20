@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -29,16 +29,41 @@ GetNumberOfEnabledCpuCores (
   );
 
 /**
-  Returns the Mpidr for a specified logical CPU
+  Checks if CPU is enabled and remaps MPIDR for Device Tree, if needed.
+  MPIDR for Device Tree only has affinity bits.
 
-  @param LogicalCore Logical CPU core ID
+  @param[in]     LogicalCore        Logical CPU core ID
+  @param[in/out] Mpidr              In: MPIDR from cpu DT node
+                                    Out: MPIDR to use in cpu DT node
+  @param[out]    DtCpuFormat        Format specification string for DT cpu label
+  @param[out]    DtCpuId            Dt Cpu Id value to print using DtCpuFormat 
 
-  @return Mpidr of the CPU
+  @return       EFI_SUCCESS         CPU enabled and other values returned
+  @return       EFI_NOT_FOUND       CPU not enabled
 
 **/
-UINT32
-ConvertCpuLogicalToMpidr (
-  IN UINT32 LogicalCore
+EFI_STATUS
+EFIAPI
+CheckAndRemapCpu (
+  IN UINT32         LogicalCore,
+  IN OUT UINT64     *Mpidr,
+  OUT CONST CHAR8   **DtCpuFormat,
+  OUT UINTN         *DtCpuId
+  );
+
+/**
+  Returns flag indicating presence of cluster after CPU floorsweeping
+
+  @param[in]    Cluster         Cluster ID
+
+  @return       TRUE            Cluster is present
+  @return       FALSE           Cluster is not present
+
+**/
+BOOLEAN
+EFIAPI
+ClusterIsPresent (
+  IN  UINTN ClusterId
   );
 
 #endif //__FLOOR_SWEEPING_LIB_H__

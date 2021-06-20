@@ -199,6 +199,8 @@
 
   PL011UartLib|ArmPlatformPkg/Library/PL011UartLib/PL011UartLib.inf
 
+  MceAriLib|Silicon/NVIDIA/Library/MceAriLib/MceAriLib.inf
+  NvgLib|Silicon/NVIDIA/Library/NvgLib/NvgLib.inf
   FloorSweepingLib|Silicon/NVIDIA/Library/FloorSweepingLib/FloorSweepingLib.inf
   DeviceTreeHelperLib|Silicon/NVIDIA/Library/DeviceTreeHelperLib/DeviceTreeHelperLib.inf
 

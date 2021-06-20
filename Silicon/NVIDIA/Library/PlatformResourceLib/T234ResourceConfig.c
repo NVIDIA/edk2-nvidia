@@ -23,7 +23,10 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/GoldenRegisterLib.h>
 #include <Library/CacheMaintenanceLib.h>
+#include <Library/MceAriLib.h>
 #include "T234ResourceConfigPrivate.h"
+
+#define T234_MAX_CPUS       12
 
 TEGRA_MMIO_INFO T234MmioInfo[] = {
   {
@@ -37,6 +40,10 @@ TEGRA_MMIO_INFO T234MmioInfo[] = {
   {
     FixedPcdGet64(PcdTegraMCBBaseAddress),
     SIZE_4KB
+  },
+  {
+    FixedPcdGet64(PcdTegraMceAriApertureBaseAddress),
+    MCE_ARI_APERTURE_OFFSET (T234_MAX_CPUS)
   },
   {
     0,

@@ -25,7 +25,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
-#include <Library/FloorSweepingLib.h>
+#include <Library/NvgLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <libfdt.h>
 
