@@ -19,6 +19,71 @@
 DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
   Scope(_SB) {
 
+    //MCFG resources
+    Device(RES0) {
+      Name (_HID, EISAID("PNP0C02")) // Motherboard resources
+      Name (_UID, 0)
+      Method (_CRS, 0, Serialized) {
+        Name (RBUF, ResourceTemplate () {
+          // MCFG PCI0 region
+          QWordMemory (
+            ResourceProducer, PosDecode,
+            MinFixed, MaxFixed,
+            Cacheable, ReadWrite,
+            0x00000000,           // Granularity
+            0x38000000,           // Min Base Address
+            0x39FFFFFF,           // Max Base Address
+            0x00000000,           // Translate
+            0x02000000            // Length
+          )
+          // MCFG PCI1 region
+          QWordMemory (
+            ResourceProducer, PosDecode,
+            MinFixed, MaxFixed,
+            Cacheable, ReadWrite,
+            0x00000000,           // Granularity
+            0x30000000,           // Min Base Address
+            0x31FFFFFF,           // Max Base Address
+            0x00000000,           // Translate
+            0x02000000            // Length
+          )
+          // MCFG PCI3 region
+          QWordMemory (
+            ResourceProducer, PosDecode,
+            MinFixed, MaxFixed,
+            Cacheable, ReadWrite,
+            0x00000000,           // Granularity
+            0x34000000,           // Min Base Address
+            0x35FFFFFF,           // Max Base Address
+            0x00000000,           // Translate
+            0x02000000            // Length
+          )
+          // MCFG PCI4 region
+          QWordMemory (
+            ResourceProducer, PosDecode,
+            MinFixed, MaxFixed,
+            Cacheable, ReadWrite,
+            0x00000000,           // Granularity
+            0x36000000,           // Min Base Address
+            0x37FFFFFF,           // Max Base Address
+            0x00000000,           // Translate
+            0x02000000            // Length
+          )
+          // MCFG PCI5 region
+          QWordMemory (
+            ResourceProducer, PosDecode,
+            MinFixed, MaxFixed,
+            Cacheable, ReadWrite,
+            0x00000000,           // Granularity
+            0x3A000000,           // Min Base Address
+            0x3BFFFFFF,           // Max Base Address
+            0x00000000,           // Translate
+            0x02000000            // Length
+          )
+        }) // Name(RBUF)
+        Return (RBUF)
+      } // Method(_CRS)
+    }
     Device(PCI0) {
       Name (_HID, EISAID("PNP0A08")) // PCI Express Root Bridge
       Name (_UID, 0)
@@ -47,18 +112,6 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
             T194_PCIE_BUS_MAX,  // AddressMaximum - Maximum Bus Number
             0,                  // AddressTranslation - Set to 0
             32                  // RangeLength - Number of Busses
-          )
-
-          // MCFG region
-          QWordMemory (
-            ResourceProducer, PosDecode,
-            MinFixed, MaxFixed,
-            Cacheable, ReadWrite,
-            0x00000000,           // Granularity
-            0x38000000,           // Min Base Address
-            0x39FFFFFF,           // Max Base Address
-            0x00000000,           // Translate
-            0x02000000            // Length
           )
 
           // 64-bit Prefetchable BAR window
@@ -120,18 +173,6 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
             32                  // RangeLength - Number of Busses
           )
 
-          // MCFG region
-          QWordMemory (
-            ResourceProducer, PosDecode,
-            MinFixed, MaxFixed,
-            Cacheable, ReadWrite,
-            0x00000000,           // Granularity
-            0x30000000,           // Min Base Address
-            0x31FFFFFF,           // Max Base Address
-            0x00000000,           // Translate
-            0x02000000            // Length
-          )
-
           // 64-bit Prefetchable BAR window
           QWordMemory (
             ResourceProducer, PosDecode,
@@ -189,18 +230,6 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
             T194_PCIE_BUS_MAX,  // AddressMaximum - Maximum Bus Number
             0,                  // AddressTranslation - Set to 0
             32                  // RangeLength - Number of Busses
-          )
-
-          // MCFG region
-          QWordMemory (
-            ResourceProducer, PosDecode,
-            MinFixed, MaxFixed,
-            Cacheable, ReadWrite,
-            0x00000000,           // Granularity
-            0x34000000,           // Min Base Address
-            0x35FFFFFF,           // Max Base Address
-            0x00000000,           // Translate
-            0x02000000            // Length
           )
 
           // 64-bit Prefetchable BAR window
@@ -262,18 +291,6 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
             32                  // RangeLength - Number of Busses
           )
 
-          // MCFG region
-          QWordMemory (
-            ResourceProducer, PosDecode,
-            MinFixed, MaxFixed,
-            Cacheable, ReadWrite,
-            0x00000000,           // Granularity
-            0x36000000,           // Min Base Address
-            0x37FFFFFF,           // Max Base Address
-            0x00000000,           // Translate
-            0x02000000            // Length
-          )
-
           // 64-bit Prefetchable BAR window
           QWordMemory (
             ResourceProducer, PosDecode,
@@ -331,18 +348,6 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
             T194_PCIE_BUS_MAX,  // AddressMaximum - Maximum Bus Number
             0,                  // AddressTranslation - Set to 0
             32                  // RangeLength - Number of Busses
-          )
-
-          // MCFG region
-          QWordMemory (
-            ResourceProducer, PosDecode,
-            MinFixed, MaxFixed,
-            Cacheable, ReadWrite,
-            0x00000000,           // Granularity
-            0x3A000000,           // Min Base Address
-            0x3BFFFFFF,           // Max Base Address
-            0x00000000,           // Translate
-            0x02000000            // Length
           )
 
           // 64-bit Prefetchable BAR window
