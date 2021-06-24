@@ -138,6 +138,19 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
             0xBFFF0000            // Length
           )
 
+          QWordIO (
+            ResourceProducer,
+            MinFixed,
+            MaxFixed,
+            PosDecode,
+            EntireRange,
+            0x0,          // Granularity
+            0x00000000,   // Min Base Address
+            0x0000FFFF,   // Max Base Address
+            0x1BFFFF0000, // Translate
+            0x10000       // Length
+          )
+
         }) // Name(RBUF)
         Return (RBUF)
       } // Method(_CRS)
@@ -195,6 +208,19 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
             0x4FFEFFFF,           // Max Base Address
             0x11F0000000,         // Translate
             0x0FFF0000            // Length
+          )
+
+          QWordIO (
+            ResourceProducer,
+            MinFixed,
+            MaxFixed,
+            PosDecode,
+            EntireRange,
+            0x0,          // Granularity
+            0x00000000,   // Min Base Address
+            0x0000FFFF,   // Max Base Address
+            0x123FFF0000, // Translate
+            0x10000       // Length
           )
 
         }) // Name(RBUF)
@@ -256,6 +282,19 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
             0x0FFF0000            // Length
           )
 
+          QWordIO (
+            ResourceProducer,
+            MinFixed,
+            MaxFixed,
+            PosDecode,
+            EntireRange,
+            0x0,          // Granularity
+            0x00000000,   // Min Base Address
+            0x0000FFFF,   // Max Base Address
+            0x12BFFF0000, // Translate
+            0x10000       // Length
+          )
+
         }) // Name(RBUF)
         Return (RBUF)
       } // Method(_CRS)
@@ -315,6 +354,19 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
             0xBFFF0000            // Length
           )
 
+          QWordIO (
+            ResourceProducer,
+            MinFixed,
+            MaxFixed,
+            PosDecode,
+            EntireRange,
+            0x0,          // Granularity
+            0x00000000,   // Min Base Address
+            0x0000FFFF,   // Max Base Address
+            0x17FFFF0000, // Translate
+            0x10000       // Length
+          )
+
         }) // Name(RBUF)
         Return (RBUF)
       } // Method(_CRS)
@@ -372,6 +424,19 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
             0xFFFEFFFF,           // Max Base Address
             0x1F00000000,         // Translate
             0xBFFF0000            // Length
+          )
+
+          QWordIO (
+            ResourceProducer,
+            MinFixed,
+            MaxFixed,
+            PosDecode,
+            EntireRange,
+            0x0,          // Granularity
+            0x00000000,   // Min Base Address
+            0x0000FFFF,   // Max Base Address
+            0x1FFFFF0000, // Translate
+            0x10000       // Length
           )
 
         }) // Name(RBUF)
