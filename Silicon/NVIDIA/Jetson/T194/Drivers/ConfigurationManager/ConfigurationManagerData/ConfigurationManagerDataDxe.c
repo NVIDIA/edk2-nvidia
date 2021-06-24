@@ -18,6 +18,10 @@
 **/
 #include <ConfigurationManagerDataDxePrivate.h>
 
+//Callback for AHCI controller connection
+EFI_EVENT  EndOfDxeEvent;
+EFI_HANDLE PciControllerHandle = 0;
+
 //AML Patch protocol
 NVIDIA_AML_PATCH_PROTOCOL      *PatchProtocol = NULL;
 NVIDIA_AML_GENERATION_PROTOCOL *GenerationProtocol = NULL;
@@ -430,6 +434,19 @@ Exit:
   return Status;
 }
 
+//Callback to connect PCIe controller as this is needed if exposed as direct ACPI node and we didn't boot off it
+STATIC
+VOID
+EFIAPI
+OnEndOfDxe (
+  EFI_EVENT           Event,
+  VOID                *Context
+  )
+{
+  gBS->ConnectController (PciControllerHandle, NULL, NULL, TRUE);
+}
+
+
 /** Initialize the AHCI entries in the platform configuration repository and patch SSDT.
  *
  * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
@@ -445,6 +462,10 @@ UpdateAhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   UINT32                            NumberOfPlatformNodes;
   UINT32                            Index;
   CM_STD_OBJ_ACPI_TABLE_INFO        *NewAcpiTables;
+  UINTN                             NumOfHandles;
+  EFI_HANDLE                        *HandleBuffer = NULL;
+  EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL   *RootBridgeIo;
+  BOOLEAN                           PciControllerConnected = FALSE;
 
   NumberOfPlatformNodes = 0;
   Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
@@ -454,6 +475,46 @@ UpdateAhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     goto Exit;
   } else if (Status != EFI_BUFFER_TOO_SMALL) {
     Status = EFI_DEVICE_ERROR;
+    goto Exit;
+  }
+
+  Status = gBS->LocateHandleBuffer (ByProtocol,
+                                    &gEfiPciRootBridgeIoProtocolGuid,
+                                    NULL,
+                                    &NumOfHandles,
+                                    &HandleBuffer);
+  if (EFI_ERROR (Status) || (NumOfHandles == 0)) {
+    DEBUG ((DEBUG_ERROR, "%a, Failed to LocateHandleBuffer %r\r\n", __FUNCTION__, Status));
+    Status = EFI_SUCCESS;
+    goto Exit;
+  }
+
+  for (Index = 0; Index < NumOfHandles; Index++) {
+    Status = gBS->HandleProtocol (HandleBuffer[Index],
+                                  &gEfiPciRootBridgeIoProtocolGuid,
+                                  (VOID **)&RootBridgeIo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a, Failed to handle protocol %r\r\n", __FUNCTION__, Status));
+      continue;
+    }
+
+    if (RootBridgeIo->SegmentNumber == AHCI_PCIE_SEGMENT) {
+      PciControllerHandle = HandleBuffer[Index];
+      Status = gBS->CreateEventEx (
+                      EVT_NOTIFY_SIGNAL,
+                      TPL_CALLBACK,
+                      OnEndOfDxe,
+                      NULL,
+                      &gEfiEndOfDxeEventGroupGuid,
+                      &EndOfDxeEvent);
+      ASSERT_EFI_ERROR (Status);
+      PciControllerConnected = TRUE;
+      break;
+    }
+  }
+
+  if (!PciControllerConnected) {
+    Status = EFI_SUCCESS;
     goto Exit;
   }
 
@@ -485,6 +546,9 @@ UpdateAhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   Status = EFI_SUCCESS;
 
 Exit:
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+  }
   return Status;
 }
 

@@ -36,6 +36,7 @@
 #include <Protocol/AmlPatchProtocol.h>
 #include <Protocol/AmlGenerationProtocol.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
+#include <Protocol/PciRootBridgeIo.h>
 
 #include <NVIDIAConfiguration.h>
 
@@ -60,5 +61,7 @@
 #define ACPI_SDCT_INT0        "SDCT.INT0"
 #define ACPI_FAN_FANR         "_SB_.FAN_.FANR"
 #define ACPI_FAN_STA          "_SB_.FAN_._STA"
+
+#define AHCI_PCIE_SEGMENT     1
 
 #endif // __CONFIGURATION_MANAGER_DXE_PRIVATE_H__
