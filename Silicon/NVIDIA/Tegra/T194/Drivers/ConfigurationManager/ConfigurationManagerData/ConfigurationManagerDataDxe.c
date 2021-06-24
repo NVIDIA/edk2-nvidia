@@ -268,7 +268,9 @@ EFIAPI
 UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 {
   EFI_STATUS                        Status;
+  UINT32                            NumberOfPlatformNodes;
   UINT32                            NumberOfPcieControllers;
+  UINT32                            NumberOfPcieEntries;
   UINT32                            *PcieHandles;
   EDKII_PLATFORM_REPOSITORY_INFO    *Repo;
   UINT32                            Index;
@@ -289,6 +291,7 @@ UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   RegisterData = NULL;
 
   NumberOfPcieControllers = 0;
+  NumberOfPcieEntries = 0;
   Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra194-pcie", NULL, &NumberOfPcieControllers);
   if (Status == EFI_NOT_FOUND) {
     DEBUG ((DEBUG_INFO, "No PCIe controller devices found\r\n"));
@@ -364,12 +367,20 @@ UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
       goto Exit;
     }
 
-    PciConfigInfo[Index].BaseAddress = RegisterData[RegisterIndex].BaseAddress;
-    PciConfigInfo[Index].StartBusNumber = T194_PCIE_BUS_MIN;
-    PciConfigInfo[Index].EndBusNumber = T194_PCIE_BUS_MAX;
-    PciConfigInfo[Index].PciSegmentGroupNumber = SwapBytes32 (*SegmentProp);
+    PciConfigInfo[NumberOfPcieEntries].BaseAddress = RegisterData[RegisterIndex].BaseAddress;
+    PciConfigInfo[NumberOfPcieEntries].StartBusNumber = T194_PCIE_BUS_MIN;
+    PciConfigInfo[NumberOfPcieEntries].EndBusNumber = T194_PCIE_BUS_MAX;
+    PciConfigInfo[NumberOfPcieEntries].PciSegmentGroupNumber = SwapBytes32 (*SegmentProp);
+    if (PciConfigInfo[NumberOfPcieEntries].PciSegmentGroupNumber == AHCI_PCIE_SEGMENT) {
+      NumberOfPlatformNodes = 0;
+      Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
+      //Check to make sure there are nodes, will return buffer to small if there is a match
+      if (Status == EFI_BUFFER_TOO_SMALL) {
+        continue;
+      }
+    }
     //Attempt to locate the pcie entry in DSDT
-    AsciiSPrint (AcpiPathString, sizeof (AcpiPathString), ACPI_PCI_STA_TEMPLATE, PciConfigInfo[Index].PciSegmentGroupNumber);
+    AsciiSPrint (AcpiPathString, sizeof (AcpiPathString), ACPI_PCI_STA_TEMPLATE, PciConfigInfo[NumberOfPcieEntries].PciSegmentGroupNumber);
     Status = PatchProtocol->FindNode (PatchProtocol, AcpiPathString, &AcpiNodeInfo);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to find node %a, skipping patch\r\n", __FUNCTION__, AcpiPathString));
@@ -385,6 +396,7 @@ UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiPathString, Status));
     }
+    NumberOfPcieEntries++;
   }
 
   for (Index = 0; Index < (EStdObjMax + EArmObjMax); Index++) {
@@ -425,8 +437,8 @@ UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 
   Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO) * NumberOfPcieControllers;
-  Repo->CmObjectCount = NumberOfPcieControllers;
+  Repo->CmObjectSize = sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO) * NumberOfPcieEntries;
+  Repo->CmObjectCount = NumberOfPcieEntries;
   Repo->CmObjectPtr = PciConfigInfo;
   Repo++;
 
@@ -1272,11 +1284,10 @@ InitializePlatformRepository ()
     if (EFI_ERROR (Status)) {
       return Status;
     }
-  } else {
-    Status = UpdateAhciInfo (&Repo);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
+  }
+  Status = UpdateAhciInfo (&Repo);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   Status = InitializeSsdtTable ();
