@@ -105,6 +105,12 @@ CM_ARM_BOOT_ARCH_INFO BootArchInfo = {
   EFI_ACPI_6_3_ARM_PSCI_COMPLIANT
 };
 
+/** The platform boot architecture information.
+*/
+CM_ARM_FIXED_FEATURE_FLAGS            FixedFeatureFlags = {
+  EFI_ACPI_6_3_PWR_BUTTON
+};
+
 /** The platform power management profile information.
 */
 STATIC
@@ -1140,6 +1146,13 @@ InitializePlatformRepository ()
   Repo->CmObjectSize = sizeof (BootArchInfo);
   Repo->CmObjectCount = sizeof (BootArchInfo) / sizeof (CM_ARM_BOOT_ARCH_INFO);
   Repo->CmObjectPtr = &BootArchInfo;
+  Repo++;
+
+  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjFixedFeatureFlags);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
+  Repo->CmObjectSize = sizeof (FixedFeatureFlags);
+  Repo->CmObjectCount = sizeof (FixedFeatureFlags) / sizeof (CM_ARM_FIXED_FEATURE_FLAGS);
+  Repo->CmObjectPtr = &FixedFeatureFlags;
   Repo++;
 
   Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPowerManagementProfileInfo);
