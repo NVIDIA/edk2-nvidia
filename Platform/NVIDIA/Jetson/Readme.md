@@ -24,8 +24,8 @@ the Jetson Developer Kit.
 - eMMC
 - Ethernet (on-board EQoS controller)
 - HTTP boot
-- NVMe (disabled by default, see 'Enabling PCIe Support')
-- PCIe (disabled by default, see 'Enabling PCIe Support')
+- NVMe (disabled by default for ACPI, see 'Enabling PCIe Support for ACPI')
+- PCIe (disabled by default for ACPI, see 'Enabling PCIe Support for ACPI')
 - PXE boot
 - SD-card (see 'Limitations')
 - Switching between ACPI and device tree
@@ -33,7 +33,7 @@ the Jetson Developer Kit.
 - USB Ethernet (AX88772b)
 
 # UEFI features supported only on Jetson AGX Xavier
-- SATA (disabled by default, see 'Enabling PCIe Support')
+- SATA (disabled by default for ACPI, see 'Enabling PCIe Support for ACPI')
 
 # Limitations
 - SetVariable is not supported at UEFI runtime for Jetson AGX Xavier
@@ -211,17 +211,22 @@ To change between device tree and ACPI at boot the following steps can be used:
 1. Select "Reset"
 
 
-## Enabling PCIe Support
+## Enabling PCIe Support for ACPI
 
-PCIe support is disabled by default because when you boot Linux with ACPI,
-out-of-tree patches are required for the Linux PCIe driver. If these patches
-are not present, Linux may be unable to boot.
+PCIe support is disabled by default because prior to Linux v5.13, the PCIe
+driver does not include the necessary changes to enable ACPI support. If these
+change are not present, then Linux may be unable to boot. The patches required
+for enabling PCIe with ACPI when booting pre-v5.13 Linux kernels, are found
+below.
+
+https://lore.kernel.org/linux-acpi/20210416134537.19474-1-vidyas@nvidia.com/
+https://lore.kernel.org/linux-pci/20210610064134.336781-1-jonathanh@nvidia.com/
 
 Please note that for the Jetson AGX Xavier Developer Kit, the SATA interface
 is a PCIe device and so to use this interface, it is also necessary to enable
 PCIe support.
 
-PCIe support can be enabled with the following steps:
+PCIe support for ACPI can be enabled with the following steps:
 
 1. Press escape when the console displays "Press ESCAPE for boot options"
 1. Select "Device Manager" from the menu.
@@ -232,9 +237,3 @@ PCIe support can be enabled with the following steps:
 1. At the prompt, press "Y".
 1. Press Escape once again to go to the UEFI menu.
 1. Select "Reset"
-
-The out-of-tree patches are required for PCIe when booting Linux with ACPI can
-be found below. Please note that these may require updating for the latest Linux
-kernel.
-
-https://patchwork.kernel.org/project/linux-pci/list/?series=226733&state=*
