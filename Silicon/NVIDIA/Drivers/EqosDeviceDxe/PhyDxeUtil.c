@@ -279,7 +279,8 @@ PhyConfig (
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
   PhyDriver->PhyPageSelRegister = 0;
   PhyDriver->PhyPage = MAX_UINT32;
-  PhyDriver->AutoNegInProgress = FALSE;
+  PhyDriver->AutoNegState = PHY_AUTONEG_IDLE;
+  PhyDriver->PhyOldLink = LINK_DOWN;
 
   Oui = PhyGetOui (PhyDriver, MacBaseAddress);
   if (Oui == PHY_MARVELL_OUI) {

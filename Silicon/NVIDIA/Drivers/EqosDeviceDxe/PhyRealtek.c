@@ -66,7 +66,7 @@ PhyRealtekStartAutoNeg (
   UINT32        Data32;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
-  PhyDriver->AutoNegInProgress = TRUE;
+  PhyDriver->AutoNegState = PHY_AUTONEG_RUNNING;
 
   /* Advertise 1000 MBPS full duplex mode */
   PhyRead (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, &Data32, MacBaseAddress);
@@ -99,37 +99,47 @@ PhyRealtekCheckAutoNeg (
   )
 {
 
-  UINT32        TimeOut;
+  UINT64        TimeoutNS;
   UINT32        Data32;
   EFI_STATUS    Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
-  if (!PhyDriver->AutoNegInProgress) {
+  if (PhyDriver->AutoNegState == PHY_AUTONEG_IDLE) {
     return EFI_SUCCESS;
   }
 
-  TimeOut = 0;
+  //Only check once if we are in timeout state
+  if (PhyDriver->AutoNegState == PHY_AUTONEG_TIMEOUT) {
+    TimeoutNS = GetTimeInNanoSecond (GetPerformanceCounter ());
+  } else {
+    TimeoutNS = GetTimeInNanoSecond (GetPerformanceCounter ()) + (PHY_TIMEOUT * 1000);
+  }
+
+
   do {
     // Read PHY_BASIC_CTRL register from PHY
     Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_STATUS, &Data32, MacBaseAddress);
     if (EFI_ERROR(Status)) {
       DEBUG ((DEBUG_INFO, "Failed to read PHY_BASIC_CTRL register\r\n"));
-      return Status;
+      goto Exit;
     }
     // Wait until PHYCTRL_RESET become zero
     if ((Data32 & REG_PHY_STATUS_AUTO_NEGOTIATION_COMPLETED) != 0) {
       break;
     }
-    MicroSecondDelay(1);
-  } while (TimeOut++ < PHY_TIMEOUT);
-  if (TimeOut >= PHY_TIMEOUT) {
-    DEBUG ((DEBUG_ERROR, "SNP:PHY: ERROR! auto-negotiation timeout\n"));
-    return EFI_TIMEOUT;
+  } while (TimeoutNS > GetTimeInNanoSecond (GetPerformanceCounter ()));
+  if ((Data32 & REG_PHY_STATUS_AUTO_NEGOTIATION_COMPLETED) == 0) {
+    DEBUG ((DEBUG_INFO, "SNP:PHY: ERROR! auto-negotiation timeout\n"));
+    Status = EFI_TIMEOUT;
   }
 
+Exit:
   if (!EFI_ERROR (Status)) {
-    PhyDriver->AutoNegInProgress = FALSE;
+    PhyDriver->AutoNegState = PHY_AUTONEG_RUNNING;
+  } else if (Status == EFI_TIMEOUT) {
+    PhyDriver->AutoNegState = PHY_AUTONEG_TIMEOUT;
   }
+
   return Status;
 }
 

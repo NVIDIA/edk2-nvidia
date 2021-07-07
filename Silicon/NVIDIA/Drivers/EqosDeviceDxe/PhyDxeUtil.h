@@ -58,9 +58,12 @@ struct _PHY_DRIVER{
   NVIDIA_EQOS_PHY_AUTO_NEG    StartAutoNeg;
   NVIDIA_EQOS_PHY_AUTO_NEG    CheckAutoNeg;
   NVIDIA_EQOS_PHY_DETECT_LINK DetectLink;
-  BOOLEAN                     AutoNegInProgress;
+  UINT8                       AutoNegState;
 };
 
+#define PHY_AUTONEG_IDLE      0
+#define PHY_AUTONEG_RUNNING   1
+#define PHY_AUTONEG_TIMEOUT   2
 
 #define PAGE_PHY                                      0
 

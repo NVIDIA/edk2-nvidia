@@ -106,7 +106,7 @@ PhyMarvellStartAutoNeg (
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
-  PhyDriver->AutoNegInProgress = TRUE;
+  PhyDriver->AutoNegState = PHY_AUTONEG_RUNNING;
   PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, &Data32, MacBaseAddress);
   Data32 |= COPPER_CONTROL_ENABLE_AUTO_NEG | COPPER_RESTART_AUTO_NEG | COPPER_CONTROL_RESET;
 
@@ -121,57 +121,73 @@ PhyMarvellCheckAutoNeg (
   IN  UINTN        MacBaseAddress
   )
 {
-  UINT32        TimeOut;
+  UINT64        TimeoutNS;
   UINT32        Data32;
   EFI_STATUS    Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
-  if (!PhyDriver->AutoNegInProgress) {
+  if (PhyDriver->AutoNegState == PHY_AUTONEG_IDLE) {
     return EFI_SUCCESS;
   }
 
+  //Only check once if we are in timeout state
+  if (PhyDriver->AutoNegState == PHY_AUTONEG_TIMEOUT) {
+    TimeoutNS = GetTimeInNanoSecond (GetPerformanceCounter ());
+  } else {
+    TimeoutNS = GetTimeInNanoSecond (GetPerformanceCounter ()) + (PHY_TIMEOUT * 1000);
+  }
+
   // Wait for completion
-  TimeOut = 0;
   do {
     // Read PHY_BASIC_CTRL register from PHY
     Status = PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, &Data32, MacBaseAddress);
     if (EFI_ERROR(Status)) {
       DEBUG ((DEBUG_ERROR, "Failed to read PHY_BASIC_CTRL register\r\n"));
-      return Status;
+      goto Exit;
     }
     // Wait until PHYCTRL_RESET become zero
     if ((Data32 & COPPER_CONTROL_RESET) == 0) {
       break;
     }
-    MicroSecondDelay(1);
-  } while (TimeOut++ < PHY_TIMEOUT);
-  if (TimeOut >= PHY_TIMEOUT) {
+  } while (TimeoutNS > GetTimeInNanoSecond (GetPerformanceCounter ()));
+  if ((Data32 & COPPER_CONTROL_RESET) != 0) {
     DEBUG ((DEBUG_INFO , "SNP:PHY: ERROR! PhySoftReset timeout\n"));
-    return EFI_TIMEOUT;
+    Status = EFI_TIMEOUT;
+    goto Exit;
   }
 
-  TimeOut = 0;
+  //Only check once if we are in timeout state
+  if (PhyDriver->AutoNegState == PHY_AUTONEG_TIMEOUT) {
+    TimeoutNS = GetTimeInNanoSecond (GetPerformanceCounter ());
+  } else {
+    TimeoutNS = GetTimeInNanoSecond (GetPerformanceCounter ()) + (PHY_TIMEOUT * 1000);
+  }
   do {
     // Read PHY_BASIC_CTRL register from PHY
     Status = PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_INTR_STATUS, &Data32, MacBaseAddress);
     if (EFI_ERROR(Status)) {
       DEBUG ((DEBUG_ERROR, "Failed to read PHY_BASIC_CTRL register\r\n"));
-      return Status;
+      goto Exit;
     }
     // Wait until PHYCTRL_RESET become zero
     if ((Data32 & COPPER_INTR_STATUS_AUTO_NEG_COMPLETED) != 0) {
       break;
     }
-    MicroSecondDelay(1);
-  } while (TimeOut++ < PHY_TIMEOUT);
-  if (TimeOut >= PHY_TIMEOUT) {
+  } while (TimeoutNS > GetTimeInNanoSecond (GetPerformanceCounter ()));
+  if ((Data32 & COPPER_INTR_STATUS_AUTO_NEG_COMPLETED) == 0) {
     DEBUG ((DEBUG_INFO, "SNP:PHY: ERROR! auto-negotiation timeout\n"));
-    return EFI_TIMEOUT;
+    Status = EFI_TIMEOUT;
+    goto Exit;
   }
+
+Exit:
   if (!EFI_ERROR (Status)) {
-    PhyDriver->AutoNegInProgress = FALSE;
+    PhyDriver->AutoNegState = PHY_AUTONEG_RUNNING;
+  } else if (Status == EFI_TIMEOUT) {
+    PhyDriver->AutoNegState = PHY_AUTONEG_TIMEOUT;
   }
+
   return Status;
 }
 
