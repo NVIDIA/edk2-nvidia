@@ -23,6 +23,7 @@
 
 [Sources]
   PrePi.c
+  PrePiMemory.c
 
 [Sources.AArch64]
   AArch64/ArchPrePi.c
@@ -49,7 +50,6 @@
   LzmaDecompressLib
   DebugAgentLib
   PrePiLib
-  ArmPlatformLib
   MemoryAllocationLib
   HobLib
   PrePiHobListPointerLib
@@ -58,6 +58,7 @@
   FdtLib
   TegraPlatformInfoLib
   GoldenRegisterLib
+  SystemResourceLib
 
 [Guids]
   gEfiFirmwarePerformanceGuid

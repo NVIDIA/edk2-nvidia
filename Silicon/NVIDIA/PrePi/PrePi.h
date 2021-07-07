@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2011-2015, ARM Limited. All rights reserved.
 *
 *  This program and the accompanying materials
@@ -26,7 +26,6 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/HobLib.h>
 #include <Library/SerialPortLib.h>
-#include <Library/ArmPlatformLib.h>
 
 #define SerialPrint(txt)  SerialPortWrite (txt, AsciiStrLen(txt)+1);
 
@@ -58,6 +57,21 @@ VOID
 EFIAPI
 ProcessLibraryConstructorList (
   VOID
+  );
+
+/**
+  Return the Virtual Memory Map of your platform
+
+  This Virtual Memory Map is used by MemoryInitPei Module to initialize the MMU on your platform.
+
+  @param[out]   VirtualMemoryMap    Array of ARM_MEMORY_REGION_DESCRIPTOR describing a Physical-to-
+                                    Virtual Memory mapping. This array must be ended by a zero-filled
+                                    entry
+
+**/
+VOID
+GetVirtualMemoryMap (
+  IN ARM_MEMORY_REGION_DESCRIPTOR** VirtualMemoryMap
   );
 
 #endif /* _PREPI_H_ */

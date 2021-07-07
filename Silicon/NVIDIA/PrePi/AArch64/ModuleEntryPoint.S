@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+//  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 //  Copyright (c) 2011-2015, ARM Limited. All rights reserved.
 //
 //  This program and the accompanying materials
@@ -125,9 +125,7 @@ _SpiLoop:
 
 1:
 2:
-  // Do early platform specific actions
-  bl    ASM_PFX(ArmPlatformPeiBootAction)
-  mov w0, w28
+  //Get memory locations
   bl ASM_PFX(TegraGetBLInfoLocationAddress)
   mov x5, x0
   mov w0, w28

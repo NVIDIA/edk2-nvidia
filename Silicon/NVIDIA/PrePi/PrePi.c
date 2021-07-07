@@ -309,9 +309,6 @@ CEntryPoint (
     }
   }
 
-  // Initialize the platform specific controllers
-  ArmPlatformInitialize (ArmReadMpidr ());
-
   if (PerformanceMeasurementEnabled ()) {
     // Initialize the Timer Library to setup the Timer HW controller
     if (!EFI_ERROR (TimerConstructor ())) {
@@ -366,7 +363,7 @@ CEntryPoint (
 
   // Initialize MMU and Memory HOBs (Resource Descriptor HOBs)
   // Get Virtual Memory Map from the Platform Library
-  ArmPlatformGetVirtualMemoryMap (&MemoryTable);
+  GetVirtualMemoryMap (&MemoryTable);
 
   // Build Memory Allocation Hob
   InitMmu (MemoryTable);
@@ -392,7 +389,7 @@ CEntryPoint (
   BuildGuidDataHob (&gEfiFirmwarePerformanceGuid, &Performance, sizeof (Performance));
 
   // Set the Boot Mode
-  SetBootMode (ArmPlatformGetBootMode ());
+  SetBootMode (BOOT_WITH_FULL_CONFIGURATION);
 
   // Register firmware volume
   Status = RegisterFirmwareVolume ((EFI_PHYSICAL_ADDRESS)FvHeader, FvSize);

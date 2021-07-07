@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2013-2015, ARM Limited. All rights reserved.
 *
 *  This program and the accompanying materials
@@ -37,7 +37,7 @@
 
 **/
 VOID
-ArmPlatformGetVirtualMemoryMap (
+GetVirtualMemoryMap (
   IN ARM_MEMORY_REGION_DESCRIPTOR** VirtualMemoryMap
   )
 {
