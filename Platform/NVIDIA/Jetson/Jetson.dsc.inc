@@ -105,11 +105,11 @@
   #
   # Platform Configuration Manager Data
   #
-  Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
+  Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
     <LibraryClasses>
-      PlatformAslTablesLib|Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
+      PlatformAslTablesLib|Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
     <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT -I$(BIN_DIR)/Silicon/NVIDIA/Library/ASLTemplateTablesLib/ASLTemplateTablesLib/OUTPUT
+      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT -I$(BIN_DIR)/Silicon/NVIDIA/Library/ASLTemplateTablesLib/ASLTemplateTablesLib/OUTPUT
   }
   Silicon/NVIDIA/Jetson/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
     <LibraryClasses>
@@ -121,7 +121,7 @@
   #
   # Platform USB FW
   #
-  Silicon/NVIDIA/Jetson/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  Silicon/NVIDIA/Tegra/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
   Silicon/NVIDIA/Jetson/T234/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #
@@ -186,7 +186,7 @@
   #
   # SE RNG
   #
-  Silicon/NVIDIA/Jetson/T194/Drivers/SeRngDxe/SeRngDxe.inf
+  Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
   Silicon/NVIDIA/Jetson/T234/Drivers/SeRngDxe/SeRngDxe.inf
 
   #

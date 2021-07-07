@@ -19,13 +19,13 @@
   #
   # Platform Configuration Manager Data
   #
-  INF Silicon/NVIDIA/Jetson/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+  INF Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
   INF Silicon/NVIDIA/Jetson/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
 
   #
   # Platform USB FW
   #
-  INF Silicon/NVIDIA/Jetson/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  INF Silicon/NVIDIA/Tegra/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
   INF Silicon/NVIDIA/Jetson/T234/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #
@@ -75,7 +75,7 @@
   #
   # SE RNG
   #
-  INF Silicon/NVIDIA/Jetson/T194/Drivers/SeRngDxe/SeRngDxe.inf
+  INF Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
   INF Silicon/NVIDIA/Jetson/T234/Drivers/SeRngDxe/SeRngDxe.inf
 
   #
