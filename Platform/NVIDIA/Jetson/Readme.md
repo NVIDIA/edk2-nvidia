@@ -33,7 +33,7 @@ the Jetson Developer Kit.
 - USB Ethernet (AX88772b)
 
 # UEFI features supported only on Jetson AGX Xavier
-- SATA (disabled by default for ACPI, see 'Enabling PCIe Support for ACPI')
+- SATA
 
 # Limitations
 - SetVariable is not supported at UEFI runtime for Jetson AGX Xavier
@@ -48,6 +48,16 @@ the Jetson Developer Kit.
 - None
 
 # Version History
+- 1.1.1:
+    - Added support for configuring SPCR/DBG2 and added support for sub-type 5
+      entries for Operating Systems that support that.
+    - Corrected issue where SDHCI ACPI entries had same UID
+    - Corrected issue where 12v PCIe supply would not be enabled
+    - Updated ACPI DSDT/SSDT compliance revision to 2
+    - Reserve USB firmware region to prevent issues where Operating Systems
+      could corrupt data
+    - Added AHCI support for ACPI boot when PCIe is not enabled in OS
+    - Added Power Button support in ACPI
 - 1.1.0:
     - Added support for SD-cards and Jetson Xavier NX
     - Fixed support for USB-C port J512 on Jetson AGX Xavier
@@ -221,10 +231,6 @@ below.
 
 https://lore.kernel.org/linux-acpi/20210416134537.19474-1-vidyas@nvidia.com/
 https://lore.kernel.org/linux-pci/20210610064134.336781-1-jonathanh@nvidia.com/
-
-Please note that for the Jetson AGX Xavier Developer Kit, the SATA interface
-is a PCIe device and so to use this interface, it is also necessary to enable
-PCIe support.
 
 PCIe support for ACPI can be enabled with the following steps:
 
