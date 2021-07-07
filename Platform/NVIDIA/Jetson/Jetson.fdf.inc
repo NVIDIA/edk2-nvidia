@@ -20,13 +20,13 @@
   # Platform Configuration Manager Data
   #
   INF Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
-  INF Silicon/NVIDIA/Jetson/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+  INF Silicon/NVIDIA/Tegra/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
 
   #
   # Platform USB FW
   #
   INF Silicon/NVIDIA/Tegra/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
-  INF Silicon/NVIDIA/Jetson/T234/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  INF Silicon/NVIDIA/Tegra/T234/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #
   # BPMP-FW IPC protocol
@@ -76,7 +76,7 @@
   # SE RNG
   #
   INF Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
-  INF Silicon/NVIDIA/Jetson/T234/Drivers/SeRngDxe/SeRngDxe.inf
+  INF Silicon/NVIDIA/Tegra/T234/Drivers/SeRngDxe/SeRngDxe.inf
 
   #
   # QSPI Support
