@@ -140,8 +140,7 @@
   BaseCryptLib|CryptoPkg/Library/BaseCryptLib/BaseCryptLib.inf
   RngLib|MdePkg/Library/BaseRngLibTimerLib/BaseRngLibTimerLib.inf
 
-  # re-use the UserPhysicalPresent() dummy implementation from the ovmf tree
-  PlatformSecureLib|OvmfPkg/Library/PlatformSecureLib/PlatformSecureLib.inf
+  PlatformSecureLib|SecurityPkg/Library/PlatformSecureLibNull/PlatformSecureLibNull.inf
   VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
   VariablePolicyHelperLib|MdeModulePkg/Library/VariablePolicyHelperLib/VariablePolicyHelperLib.inf
 
@@ -575,6 +574,11 @@ gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x00000000
   gArmTokenSpaceGuid.PcdGicRedistributorsBase|0x00000000
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x00000000
+
+  #
+  # Allow physical presence activities
+  #
+  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
 
 [PcdsDynamicHii.common.DEFAULT]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|10
