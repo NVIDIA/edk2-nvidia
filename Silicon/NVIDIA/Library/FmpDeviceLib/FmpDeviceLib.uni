@@ -2,6 +2,7 @@
 // Provides firmware device specific services to support updates of a firmware
 // image stored in a firmware device.
 //
+// Copyright (c) 2021, NVIDIA Corporation. All rights reserved.
 // Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
 //
 // SPDX-License-Identifier: BSD-2-Clause-Patent

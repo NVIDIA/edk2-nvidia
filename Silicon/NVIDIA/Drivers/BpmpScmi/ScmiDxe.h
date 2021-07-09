@@ -1,5 +1,6 @@
 /** @file
 
+  Copyright (c) 2021, NVIDIA Corporation. All rights reserved.
   Copyright (c) 2017-2018, Arm Limited. All rights reserved.
 
   This program and the accompanying materials

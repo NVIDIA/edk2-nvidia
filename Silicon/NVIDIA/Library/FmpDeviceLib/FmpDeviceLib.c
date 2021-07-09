@@ -2,6 +2,7 @@
   Provides firmware device specific services to support updates of a firmware
   image stored in a firmware device.
 
+  Copyright (c) 2021, NVIDIA Corporation. All rights reserved.
   Copyright (c) Microsoft Corporation.<BR>
   Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
 
