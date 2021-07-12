@@ -952,3 +952,52 @@ PlatformBootManagerUnableToBoot (
 {
   return;
 }
+
+/**
+BDS Entry  - DXE phase complete, BDS Entered.
+**/
+VOID
+EFIAPI
+PlatformBootManagerBdsEntry (
+  VOID
+)
+{
+  return;
+}
+
+/**
+ HardKeyBoot
+**/
+VOID
+EFIAPI
+PlatformBootManagerPriorityBoot (
+  UINT16 **BootNext
+  )
+{
+  return;
+}
+
+/**
+ This is called from BDS right before going into front page
+ when no bootable devices/options found
+**/
+VOID
+EFIAPI
+PlatformBootManagerProcessBootCompletion (
+  IN EFI_BOOT_MANAGER_LOAD_OPTION *BootOption
+)
+{
+  return;
+}
+
+/**
+  OnDemandConInConnect
+**/
+VOID
+EFIAPI
+PlatformBootManagerOnDemandConInConnect (
+  VOID
+  )
+{
+  return;
+}
