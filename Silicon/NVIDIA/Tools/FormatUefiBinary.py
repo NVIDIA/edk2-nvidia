@@ -69,9 +69,7 @@ def parse_command_line_args():
         args.alignment
     )
 
-def main():
-    (input_filename, output_filename, alignment) = parse_command_line_args()
-
+def FormatUefiBinary (input_filename, output_filename, alignment=DEFAULT_ALIGNMENT):
     with io.open(input_filename, 'rb') as input_file:
         output_bytes = input_file.read()
 
@@ -79,9 +77,17 @@ def main():
     if unaligned_bytes!= 0:
         output_bytes += bytearray(b'\xFF'*(alignment - unaligned_bytes))
 
+    if (not os.path.isdir(os.path.dirname(output_filename))):
+        os.mkdir(os.path.dirname(output_filename))
+
     with io.open(output_filename, 'wb') as output_file:
         output_file.write(output_bytes)
 
+
+def main():
+    (input_filename, output_filename, alignment) = parse_command_line_args()
+
+    FormatUefiBinary (input_filename, output_filename, alignment)
     print("Successfully formatted uefi binary to {}".format(output_filename))
 
 if __name__ == '__main__':

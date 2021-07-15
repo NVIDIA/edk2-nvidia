@@ -786,8 +786,7 @@ def get_variable_bytes_from_json_file(json_filename):
 
     return output_bytes
 
-
-def main():
+def GenVariableStore (input_filename, output_filename, pcd_database_filename=None, size=FVH_FV_LENGTH, block_size=FVH_BLOCKMAP0_BLOCK_SIZE):
     # Only support little endian hosts. Target alignment is little endian,
     # so by enforcing that host endian matches, then we can make use of the
     # struct module's auto-alignment and not have to manually implement it.
@@ -798,9 +797,6 @@ def main():
         print("Error: Script currently can only "
               "be run on little endian machines.")
         sys.exit(1)
-
-    (input_filename, output_filename, pcd_database_filename,
-        size, block_size) = parse_command_line_args()
 
     output_bytes = (get_firmware_volume_header(size, block_size)
                     + get_variable_store_header(size)
@@ -817,8 +813,17 @@ def main():
 
     output_bytes += bytearray(b'\xFF'*(size - len(output_bytes)))
 
+    if (not os.path.isdir(os.path.dirname(output_filename))):
+        os.mkdir(os.path.dirname(output_filename))
+
     with io.open(output_filename, 'wb') as output_file:
         output_file.write(output_bytes)
+
+def main():
+    (input_filename, output_filename, pcd_database_filename,
+        size, block_size) = parse_command_line_args()
+
+    GenVariableStore(input_filename, output_filename, pcd_database_filename, size, block_size)
 
     print("Successfully wrote variable store to {}".format(output_filename))
 
