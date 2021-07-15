@@ -48,6 +48,8 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|0
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|0
 
+  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid|{GUID("$(SYSTEM_FMP_ESRT_GUID)")}
+
 [PcdsDynamicDefault.common.T194]
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
