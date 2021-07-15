@@ -372,8 +372,8 @@
 !endif
 
 [PcdsFixedAtBuild.common]
-!ifdef $(FIRMWARE_VER)
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(FIRMWARE_VER)"
+!ifdef $(BUILDID_STRING)
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
 !endif
 
 !ifdef $(BUILD_DATE_TIME)
