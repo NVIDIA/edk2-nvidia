@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020 - 2021, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -55,6 +55,7 @@ typedef struct {
   EFI_LOCK                               Lock;
 
   UINTN                                  MacBase;
+  UINT32                                 NumMacs;
 
   EFI_PHYSICAL_ADDRESS                   MaxAddress;
 

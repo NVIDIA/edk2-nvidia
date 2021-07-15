@@ -378,7 +378,6 @@ GetFsiNsBaseAndSize (
   OUT UINTN *Size
 )
 {
-  return GetFsiNsBaseAndSizeInternal (Base, Size);
   UINTN   ChipID;
   UINTN   CpuBootloaderAddress;
   BOOLEAN ValidPrivatePlatform;
@@ -427,5 +426,30 @@ GetMmioBaseAndSize (
       return T234GetMmioBaseAndSize();
     default:
       return NULL;
+  }
+}
+
+/**
+  Retrieve CVM EEPROM Data
+
+**/
+UINT32
+EFIAPI
+GetCvmEepromData (
+  OUT UINT8 **Data
+)
+{
+  UINTN   ChipID;
+  UINTN   CpuBootloaderAddress;
+
+  ChipID = TegraGetChipID();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      return T234GetCvmEepromData(CpuBootloaderAddress, Data);
+    default:
+      return 0;
   }
 }

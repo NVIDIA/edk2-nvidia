@@ -174,4 +174,14 @@ GetMmioBaseAndSize (
   VOID
 );
 
+/**
+  Retrieve CVM EEPROM Data
+
+**/
+UINT32
+EFIAPI
+GetCvmEepromData (
+  OUT UINT8 **Data
+);
+
 #endif //__PLATFORM_RESOURCE_LIB_H__

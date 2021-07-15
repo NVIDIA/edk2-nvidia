@@ -31,9 +31,14 @@
 #define TEGRA_UART_ADDRESS_I        0x031d0000
 #define TEGRA_UART_ADDRESS_J        0x0c270000
 
-#define TEGRABL_MAX_VERSION_STRING 128 /* chars including null */
-#define NUM_DRAM_BAD_PAGES 1024
-#define TEGRABL_MAX_STORAGE_DEVICES 8
+#define TEGRABL_MAX_VERSION_STRING        128 /* chars including null */
+#define NUM_DRAM_BAD_PAGES                1024
+#define TEGRABL_MAX_STORAGE_DEVICES       8
+#define BRBCT_UNSIGNED_CUSTOMER_DATA_SIZE 1024
+#define BRBCT_SIGNED_CUSTOMER_DATA_SIZE   1024
+#define BRBCT_CUSTOMER_DATA_SIZE          (BRBCT_UNSIGNED_CUSTOMER_DATA_SIZE + \
+                                           BRBCT_SIGNED_CUSTOMER_DATA_SIZE)
+#define MAX_EEPROM_DATA_SIZE              256
 
 /*macro carve_out_type*/
 #define CARVEOUT_NONE                     0
@@ -127,13 +132,6 @@ typedef struct {
 
 #pragma pack(1)
 typedef struct {
-  UINT8 Type;
-  UINT8 Instance;
-} TEGRABL_DEVICE;
-#pragma pack()
-
-#pragma pack(1)
-typedef struct {
   UINT32  MagicHeader;
   UINT32  ClockSource;
   UINT32  ClockDivider;
@@ -196,6 +194,15 @@ typedef struct  {
   TEGRABL_DEVICE_CONFIG_UFS_PARAMS Ufs;
   TEGRABL_DEVICE_CONFIG_SATA_PARAMS Sata;
 } TEGRABL_DEVICE_CONFIG_PARAMS;
+#pragma pack()
+
+#pragma pack(1)
+typedef struct  {
+  UINT8  CvmEepromData[MAX_EEPROM_DATA_SIZE];
+  UINT8  CvbEepromData[MAX_EEPROM_DATA_SIZE];
+  UINT32 CvmEepromDataSize;
+  UINT32 CvbEepromDataSize;
+} TEGRABL_EEPROM_DATA;
 #pragma pack()
 
 typedef struct {
@@ -290,14 +297,20 @@ typedef struct {
   /**< Reset reason as read from PMIC */
   UEFI_DECLARE_ALIGNED(UINT32 PmicRstReason, 8);
 
-  /**< Pointer to BRBCT location in sdram */
-  UEFI_DECLARE_ALIGNED(UINT64 BrbctCarveout, 8);
+  /**< BRBCT unsigned and signed customer data */
+  UEFI_DECLARE_ALIGNED(UINT8 BrbctCustomerData[BRBCT_CUSTOMER_DATA_SIZE], 8);
 
-  /**< Storage devices to be used */
-  UEFI_DECLARE_ALIGNED(TEGRABL_DEVICE StorageDevices[TEGRABL_MAX_STORAGE_DEVICES], 8);
+  /** <BRBCT unsigned customer data valid */
+  UEFI_DECLARE_ALIGNED(UINT8 BrbctUnsignedCustomerDataValid, 8);
 
-  /**< SDRAM base address */
+  /** <BRBCT signed customer data valid */
+  UEFI_DECLARE_ALIGNED(UINT8 BrbctSignedCustomerDataValid, 8);
+
+  /**< SDRAM base address*/
   UEFI_DECLARE_ALIGNED(UINT64 SdramBase, 8);
+
+  /**< EEPROM data*/
+  UEFI_DECLARE_ALIGNED(TEGRABL_EEPROM_DATA Eeprom, 8);
 } TEGRA_CPUBL_PARAMS;
 
 #endif //__T234_RESOURCE_CONFIG_PRIVATE_H__

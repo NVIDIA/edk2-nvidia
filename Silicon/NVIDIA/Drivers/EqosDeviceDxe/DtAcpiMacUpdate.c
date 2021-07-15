@@ -36,6 +36,7 @@
 #include <Library/PrintLib.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <IndustryStandard/Acpi.h>
 #include <IndustryStandard/AcpiAml.h>
@@ -60,6 +61,8 @@
 #define D03_ACPI_ETH_ID                 "PRP0001"
 
 #define ACPI_ETH_MAC_KEY                "mac-address"
+
+#define MAC_INCREMENT_VALUE             0x10000
 
 EFI_STATUS _SearchReplacePackageMACAddress(
   IN EFI_ACPI_SDT_PROTOCOL  *AcpiTableProtocol,
@@ -499,6 +502,11 @@ UpdateDTACPIMacAddress (
   SIMPLE_NETWORK_DRIVER *Snp = (SIMPLE_NETWORK_DRIVER *)Context;
   VOID                  *DtBase;
   VOID                  *AcpiBase;
+  UINTN                 ChipID;
+  UINT32                Count;
+  UINTN                 CharCount;
+  CHAR8                 Buffer[32];
+  UINT64                MacData;
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (EFI_ERROR (Status)) {
@@ -513,9 +521,21 @@ UpdateDTACPIMacAddress (
     if (NodeOffset >= 0) {
       fdt_setprop (DtBase, NodeOffset, "mac-address", Snp->SnpMode.CurrentAddress.Addr, NET_ETHER_ADDR_LEN);
     }
+
     NodeOffset = fdt_path_offset (DtBase, "/chosen");
     if (NodeOffset >= 0) {
       fdt_setprop (DtBase, NodeOffset, "nvidia,ether-mac", Snp->SnpMode.CurrentAddress.Addr, NET_ETHER_ADDR_LEN);
+      ChipID = TegraGetChipID();
+      if (ChipID == T234_CHIP_ID) {
+        MacData = SwapBytes64 (*(UINT64 *)Snp->SnpMode.CurrentAddress.Addr);
+        for (Count = 0; Count < Snp->NumMacs; Count++) {
+          CharCount = AsciiSPrint (Buffer, sizeof (Buffer),"nvidia,ether-mac%d", Count);
+          MacData = SwapBytes64 (MacData);
+          fdt_setprop (DtBase, NodeOffset, Buffer, &MacData, NET_ETHER_ADDR_LEN);
+          MacData = SwapBytes64 (MacData);
+          MacData += MAC_INCREMENT_VALUE;
+        }
+      }
     }
   } else {
     //Try ACPI update

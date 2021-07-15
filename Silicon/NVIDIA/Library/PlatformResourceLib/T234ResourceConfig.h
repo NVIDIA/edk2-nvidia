@@ -74,4 +74,15 @@ T234GetMmioBaseAndSize (
   VOID
 );
 
+/**
+  Retrieve CVM EEPROM Data
+
+**/
+UINT32
+EFIAPI
+T234GetCvmEepromData (
+  IN  UINTN CpuBootloaderAddress,
+  OUT UINT8 **Data
+);
+
 #endif //__T234_RESOURCE_CONFIG_H__

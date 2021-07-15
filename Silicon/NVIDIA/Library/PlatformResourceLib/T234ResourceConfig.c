@@ -323,3 +323,22 @@ T234GetMmioBaseAndSize (
 {
   return T234MmioInfo;
 }
+
+/**
+  Retrieve CVM EEPROM Data
+
+**/
+UINT32
+EFIAPI
+T234GetCvmEepromData (
+  IN  UINTN CpuBootloaderAddress,
+  OUT UINT8 **Data
+)
+{
+  TEGRA_CPUBL_PARAMS *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  *Data = CpuBootloaderParams->Eeprom.CvmEepromData;
+
+  return CpuBootloaderParams->Eeprom.CvmEepromDataSize;
+}

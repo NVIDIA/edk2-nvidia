@@ -2,7 +2,7 @@
 
   CVM EEPROM Driver
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -22,6 +22,7 @@
 #include <Library/DevicePathLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/PlatformResourceLib.h>
 
 #include <Protocol/DriverBinding.h>
 #include <Protocol/I2cIo.h>
@@ -221,16 +222,16 @@ CvmEepromDxeDriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL      *RemainingDevicePath
 )
 {
-  EFI_STATUS                       Status;
-  EFI_I2C_IO_PROTOCOL              *I2cIo = NULL;
-  EFI_RNG_PROTOCOL                 *RngProtocol = NULL;
-  TEGRA_CVM_EEPROM_PROTOCOL        *EepromData = NULL;
-  BOOLEAN                          ProtocolsInstalled = FALSE;
-  EFI_I2C_REQUEST_PACKET           *Request = NULL;
-  UINT8                            Address = 0;
-  UINT8                            *RawData;
-  UINT8                            Checksum;
-  TEGRA_PLATFORM_TYPE              PlatformType;
+  EFI_STATUS              Status;
+  EFI_I2C_IO_PROTOCOL     *I2cIo = NULL;
+  EFI_RNG_PROTOCOL        *RngProtocol = NULL;
+  T194_CVM_EEPROM_DATA    *EepromData = NULL;
+  BOOLEAN                 ProtocolsInstalled = FALSE;
+  EFI_I2C_REQUEST_PACKET  *Request = NULL;
+  UINT8                   Address = 0;
+  UINT8                   *RawData;
+  UINT8                   Checksum;
+  TEGRA_PLATFORM_TYPE     PlatformType;
 
   PlatformType = TegraGetPlatform();
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
@@ -247,7 +248,7 @@ CvmEepromDxeDriverBindingStart (
     }
 
     // Allocate EEPROM Data
-    EepromData = (TEGRA_CVM_EEPROM_PROTOCOL *)AllocateZeroPool (sizeof (TEGRA_CVM_EEPROM_PROTOCOL));
+    EepromData = (T194_CVM_EEPROM_DATA *)AllocateZeroPool (sizeof (T194_CVM_EEPROM_DATA));
     if (EepromData == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       goto ErrorExit;
@@ -264,7 +265,7 @@ CvmEepromDxeDriverBindingStart (
     Request->Operation[0].LengthInBytes = sizeof (Address);
     Request->Operation[0].Buffer = &Address;
     Request->Operation[1].Flags = I2C_FLAG_READ;
-    Request->Operation[1].LengthInBytes = sizeof (TEGRA_CVM_EEPROM_PROTOCOL);
+    Request->Operation[1].LengthInBytes = sizeof (T194_CVM_EEPROM_DATA);
     Request->Operation[1].Buffer = (UINT8 *)RawData;
     Status = I2cIo->QueueRequest (I2cIo, 0, NULL, Request, NULL);
     if (EFI_ERROR (Status)) {
@@ -274,14 +275,14 @@ CvmEepromDxeDriverBindingStart (
     FreePool (Request);
     Request = NULL;
 
-    if ((EepromData->Version != CVM_EEPROM_VERSION) ||
+    if ((EepromData->Version != T194_CVM_EEPROM_VERSION) ||
         (EepromData->Size <= ((UINTN)&EepromData->Reserved2 - (UINTN)EepromData))) {
       DEBUG ((DEBUG_ERROR, "%a: Invalid size/version in eeprom %x %x\r\n", __FUNCTION__, EepromData->Version, EepromData->Size));
       Status = EFI_DEVICE_ERROR;
       goto ErrorExit;
     }
 
-    Checksum = CalculateCrc8 (RawData, sizeof (TEGRA_CVM_EEPROM_PROTOCOL) - 1);
+    Checksum = CalculateCrc8 (RawData, sizeof (T194_CVM_EEPROM_DATA) - 1);
     if (Checksum != EepromData->Checksum) {
       DEBUG ((DEBUG_ERROR, "%a: CRC mismatch, expected %02x got %02x\r\n", __FUNCTION__, Checksum, EepromData->Checksum));
       Status = EFI_DEVICE_ERROR;
@@ -300,7 +301,7 @@ CvmEepromDxeDriverBindingStart (
     }
 
     // Allocate EEPROM Data
-    EepromData = (TEGRA_CVM_EEPROM_PROTOCOL *)AllocateZeroPool (sizeof (TEGRA_CVM_EEPROM_PROTOCOL));
+    EepromData = (T194_CVM_EEPROM_DATA *)AllocateZeroPool (sizeof (T194_CVM_EEPROM_DATA));
     if (EepromData == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       goto ErrorExit;
@@ -393,9 +394,9 @@ CvmEepromDxeDriverBindingStop (
   IN  EFI_HANDLE                      *ChildHandleBuffer
 )
 {
-  EFI_STATUS                Status;
-  TEGRA_CVM_EEPROM_PROTOCOL *EepromData = NULL;
-  TEGRA_PLATFORM_TYPE       PlatformType;
+  EFI_STATUS            Status;
+  T194_CVM_EEPROM_DATA  *EepromData = NULL;
+  TEGRA_PLATFORM_TYPE   PlatformType;
 
   Status = gBS->HandleProtocol (Controller, &gNVIDIACvmEepromProtocolGuid, (VOID **)&EepromData);
   if (EFI_ERROR (Status)) {
@@ -464,9 +465,47 @@ InitializeCvmEepromDxe (
   IN EFI_SYSTEM_TABLE     *SystemTable
 )
 {
-  // TODO: Add component name support.
-  return EfiLibInstallDriverBinding (ImageHandle,
-                                     SystemTable,
-                                     &gCvmEepromDxeDriverBinding,
-                                     ImageHandle);
+  UINTN                 ChipID;
+  EFI_HANDLE            Handle;
+  UINT32                DataSize;
+  T234_CVM_EEPROM_DATA  *EepromData;
+  UINT8                 Checksum;
+  EFI_STATUS            Status;
+
+  ChipID = TegraGetChipID();
+
+  if (ChipID == T234_CHIP_ID) {
+    DataSize = GetCvmEepromData ((UINT8**) &EepromData);
+    if (DataSize == 0) {
+      return EFI_DEVICE_ERROR;
+    }
+
+    if ((EepromData->Version != T234_CVM_EEPROM_VERSION) ||
+        (EepromData->Size <= ((UINTN)&EepromData->Reserved2 - (UINTN)EepromData))) {
+      DEBUG ((DEBUG_ERROR, "%a: Invalid size/version in eeprom %x %x\r\n", __FUNCTION__, EepromData->Version, EepromData->Size));
+      return EFI_DEVICE_ERROR;
+    }
+
+    Checksum = CalculateCrc8 ((UINT8 *) EepromData, sizeof (T234_CVM_EEPROM_DATA) - 1);
+    if (Checksum != EepromData->Checksum) {
+      DEBUG ((DEBUG_ERROR, "%a: CRC mismatch, expected %02x got %02x\r\n", __FUNCTION__, Checksum, EepromData->Checksum));
+      return EFI_DEVICE_ERROR;
+    }
+
+    Status = gBS->InstallMultipleProtocolInterfaces (&Handle,
+                                                     &gNVIDIACvmEepromProtocolGuid,
+                                                     EepromData,
+                                                     NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install EEPROM protocols\n", __FUNCTION__));
+    }
+  } else {
+    // TODO: Add component name support.
+    return EfiLibInstallDriverBinding (ImageHandle,
+                                       SystemTable,
+                                       &gCvmEepromDxeDriverBinding,
+                                       ImageHandle);
+  }
+
+  return Status;
 }
