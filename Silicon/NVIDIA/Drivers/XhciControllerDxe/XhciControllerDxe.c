@@ -23,11 +23,15 @@
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/TegraPlatformInfoLib.h>
+#include <Library/DeviceTreeHelperLib.h>
+#include <Library/DxeServicesTableLib.h>
 #include <Library/UsbFalconLib.h>
 #include <Protocol/UsbPadCtl.h>
 #include <Protocol/UsbFwProtocol.h>
 #include <Protocol/XhciController.h>
 #include <Protocol/BpmpIpc.h>
+#include <Protocol/PowerGateNodeProtocol.h>
 #include "XhciControllerPrivate.h"
 #include <libfdt.h>
 
@@ -50,6 +54,44 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .AutoDeassertPg = TRUE,
     .SkipEdkiiNondiscoverableInstall = FALSE
 };
+
+STATIC
+VOID
+EFIAPI
+OnExitBootServices (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  EFI_STATUS                       Status;
+  XHCICONTROLLER_DXE_PRIVATE       *Private;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgProtocol;
+  UINT32                           Index;
+
+  Private = (XHCICONTROLLER_DXE_PRIVATE *) Context;
+  PgProtocol = NULL;
+
+  MmioBitFieldWrite32 (Private->XudcBaseAddress + XUSB_DEV_XHCI_CTRL_0_OFFSET,
+                       XUSB_DEV_XHCI_CTRL_0_RUN_BIT,
+                       XUSB_DEV_XHCI_CTRL_0_RUN_BIT,
+                       0);
+
+  Status = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "No Pg node protocol\n"));
+    return;
+  }
+
+  for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+    Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "Failed to assert Pg %x: %r\n", PgProtocol->PowerGateId[Index], Status));
+      return;
+    }
+  }
+
+  return;
+}
 
 /* XhciController Protocol Function used to return the Xhci
  * Registers Base Address */
@@ -113,17 +155,24 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                 Status;
-  UINT32                     reg_val;
-  EFI_PHYSICAL_ADDRESS       BaseAddress;
-  EFI_PHYSICAL_ADDRESS       CfgAddress;
-  UINTN                      RegionSize;
-  UINT8                      CapLength;
-  UINT32                     StatusRegister;
-  UINTN                      i;
-  INTN                       Offset;
-  XHCICONTROLLER_DXE_PRIVATE *Private;
-  NON_DISCOVERABLE_DEVICE    *Device;
+  EFI_STATUS                      Status;
+  UINT32                          reg_val;
+  EFI_PHYSICAL_ADDRESS            BaseAddress;
+  EFI_PHYSICAL_ADDRESS            CfgAddress;
+  UINTN                           RegionSize;
+  UINT8                           CapLength;
+  UINT32                          StatusRegister;
+  UINTN                           i;
+  INTN                            Offset;
+  XHCICONTROLLER_DXE_PRIVATE      *Private;
+  NON_DISCOVERABLE_DEVICE         *Device;
+  UINTN                           ChipID;
+  VOID                            *AcpiBase;
+  UINT32                           Handles;
+  UINT32                           NumberOfNodes;
+  UINT32                           Size;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA RegData;
+  EFI_EVENT                        ExitBootServicesEvent;
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingStart:
@@ -178,6 +227,7 @@ DeviceDiscoveryNotify (
     Private->XusbSoc->CfgAddress = CfgAddress;
     Private->Signature = XHCICONTROLLER_SIGNATURE;
     Private->ImageHandle = DriverHandle;
+    Private->ControllerHandle = ControllerHandle;
     Private->XhciControllerProtocol.GetBaseAddr = XhciGetBaseAddr;
     Private->XhciControllerProtocol.GetCfgAddr =  XhciGetCfgAddr;
     /* Install the XhciController Protocol */
@@ -260,6 +310,54 @@ DeviceDiscoveryNotify (
       DEBUG ((EFI_D_ERROR, "UsbStatus: 0x%x Falcon CPUCTL: 0x%x\n", StatusRegister, FalconRead32(FALCON_CPUCTL_0)));
       Status = EFI_DEVICE_ERROR;
       goto ErrorExit;
+    }
+
+    ChipID = TegraGetChipID();
+    Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+    if (EFI_ERROR (Status) &&
+        ChipID == T234_CHIP_ID) {
+      NumberOfNodes = 1;
+      Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra194-xudc", &Handles, &NumberOfNodes);
+      if (Status == EFI_SUCCESS || Status == EFI_BUFFER_TOO_SMALL) {
+        Status = EFI_SUCCESS;
+      }
+      if (EFI_ERROR (Status)) {
+        goto ErrorExit;;
+      }
+
+      Size = 1;
+      Status = GetDeviceTreeRegisters (Handles, &RegData, &Size);
+      if (EFI_ERROR (Status)) {
+        goto ErrorExit;
+      }
+
+      Status = gDS->AddMemorySpace (EfiGcdMemoryTypeMemoryMappedIo,
+                                    RegData.BaseAddress & ~EFI_PAGE_MASK,
+                                    SIZE_4KB,
+                                    EFI_MEMORY_UC);
+      if (Status != EFI_ACCESS_DENIED &&
+          EFI_ERROR (Status)) {
+        goto ErrorExit;
+      }
+
+      Status = gDS->SetMemorySpaceAttributes (RegData.BaseAddress & ~EFI_PAGE_MASK,
+                                              SIZE_4KB,
+                                              EFI_MEMORY_UC);
+      if (EFI_ERROR (Status)) {
+        goto ErrorExit;
+      }
+
+      Private->XudcBaseAddress = RegData.BaseAddress;
+
+      Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                                   TPL_NOTIFY,
+                                   OnExitBootServices,
+                                   Private,
+                                   &gEfiEventExitBootServicesGuid,
+                                   &ExitBootServicesEvent);
+      if (EFI_ERROR (Status)) {
+        goto ErrorExit;
+      }
     }
     break;
   default:

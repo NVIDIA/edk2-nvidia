@@ -59,6 +59,9 @@
 #define  XUSB_T194_BASE_ADDR_SHIFT          18
 #define  XUSB_T194_BASE_ADDR_MASK           0x3fff
 
+#define XUSB_DEV_XHCI_CTRL_0_OFFSET         0x30
+#define XUSB_DEV_XHCI_CTRL_0_RUN_BIT        0
+
 /* Stores Platform Specific Information */
 typedef struct {
   UINT32 Cfg4AddrShift;
@@ -79,12 +82,14 @@ TEGRA_XUSB_SOC Tegra194Soc = {
 
 #define XHCICONTROLLER_SIGNATURE SIGNATURE_32('X','H','C','I')
 typedef struct {
-  UINT32                         Signature;
-  NVIDIA_XHCICONTROLLER_PROTOCOL XhciControllerProtocol;
-  TEGRA_XUSB_SOC                 *XusbSoc;
-  EFI_HANDLE                     ImageHandle;
-  NVIDIA_USBPADCTL_PROTOCOL      *mUsbPadCtlProtocol;
-  NVIDIA_USBFW_PROTOCOL          *mUsbFwProtocol;
+  UINT32                           Signature;
+  NVIDIA_XHCICONTROLLER_PROTOCOL   XhciControllerProtocol;
+  TEGRA_XUSB_SOC                   *XusbSoc;
+  EFI_HANDLE                       ImageHandle;
+  EFI_HANDLE                       ControllerHandle;
+  NVIDIA_USBPADCTL_PROTOCOL        *mUsbPadCtlProtocol;
+  NVIDIA_USBFW_PROTOCOL            *mUsbFwProtocol;
+  EFI_PHYSICAL_ADDRESS             XudcBaseAddress;
 } XHCICONTROLLER_DXE_PRIVATE;
 #define XHCICONTROLLER_PRIVATE_DATA_FROM_THIS(a) CR(a, XHCICONTROLLER_DXE_PRIVATE, XhciControllerProtocol, XHCICONTROLLER_SIGNATURE)
 

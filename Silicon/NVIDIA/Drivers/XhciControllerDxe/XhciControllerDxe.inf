@@ -2,7 +2,7 @@
 #
 #  XHCI Controller Driver
 #
-#  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
 #  which accompanies this distribution.  The full text of the license may be found at
@@ -42,6 +42,9 @@
   IoLib
   FdtLib
   DeviceDiscoveryDriverLib
+  TegraPlatformInfoLib
+  DeviceTreeHelperLib
+  DxeServicesTableLib
   UsbFalconLib
 
 [Protocols]
@@ -56,6 +59,8 @@
 
 [Guids]
   gEdkiiNonDiscoverableXhciDeviceGuid
+  gEfiEventExitBootServicesGuid
+  gEfiAcpiTableGuid
 
 [Depex]
   gNVIDIAUsbPadCtlProtocolGuid
