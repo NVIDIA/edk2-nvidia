@@ -36,7 +36,7 @@ GetNumberOfEnabledCpuCores (
   @param[in/out] Mpidr              In: MPIDR from cpu DT node
                                     Out: MPIDR to use in cpu DT node
   @param[out]    DtCpuFormat        Format specification string for DT cpu label
-  @param[out]    DtCpuId            Dt Cpu Id value to print using DtCpuFormat 
+  @param[out]    DtCpuId            Dt Cpu Id value to print using DtCpuFormat
 
   @return       EFI_SUCCESS         CPU enabled and other values returned
   @return       EFI_NOT_FOUND       CPU not enabled

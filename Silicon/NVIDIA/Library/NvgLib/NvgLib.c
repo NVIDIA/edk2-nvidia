@@ -17,8 +17,8 @@
 #include <Library/NvgLib.h>
 #include <Library/PcdLib.h>
 
-#define TEGRA_NVG_CHANNEL_NUM_CORES        20
-#define TEGRA_NVG_CHANNEL_LOGICAL_TO_MPIDR 23
+#define TEGRA_NVG_CHANNEL_NUM_CORES_CMD        20
+#define TEGRA_NVG_CHANNEL_LOGICAL_TO_MPIDR_CMD 23
 
 #define AA64_MRS(reg, var)  do { \
   asm volatile ("mrs %0, "#reg : "=r"(var) : : "memory", "cc"); \
@@ -49,7 +49,7 @@ NvgGetNumberOfEnabledCpuCores (
 {
   UINT64 Data;
 
-  WriteNvgChannelIdx(TEGRA_NVG_CHANNEL_NUM_CORES);
+  WriteNvgChannelIdx(TEGRA_NVG_CHANNEL_NUM_CORES_CMD);
   Data = ReadNvgChannelData();
 
   return (Data & 0xF);
@@ -67,7 +67,7 @@ NvgConvertCpuLogicalToMpidr (
 
   NumCores = NvgGetNumberOfEnabledCpuCores();
   if (LogicalCore < NumCores) {
-    WriteNvgChannelIdx (TEGRA_NVG_CHANNEL_LOGICAL_TO_MPIDR);
+    WriteNvgChannelIdx (TEGRA_NVG_CHANNEL_LOGICAL_TO_MPIDR_CMD);
 
     /* Write the logical core id */
     WriteNvgChannelData (LogicalCore);

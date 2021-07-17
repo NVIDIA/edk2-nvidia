@@ -22,37 +22,37 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/TimerLib.h>
 
-#define BIT(Number)                 (1U << (Number))
+#define BIT(Number)                 (1 << (Number))
 
 // ARI Version numbers
-#define TEGRA_ARI_VERSION_MAJOR     8UL
-#define TEGRA_ARI_VERSION_MINOR     1UL
+#define TEGRA_ARI_VERSION_MAJOR     8
+#define TEGRA_ARI_VERSION_MINOR     1
 
 // ARI Request IDs
-#define TEGRA_ARI_VERSION           0UL
-#define TEGRA_ARI_ECHO              1UL
-#define TEGRA_ARI_NUM_CORES         2UL
+#define TEGRA_ARI_VERSION_CMD       0
+#define TEGRA_ARI_ECHO_CMD          1
+#define TEGRA_ARI_NUM_CORES_CMD     2
 
 // Register offsets for ARI request/results
-#define ARI_REQUEST                 0x00U
-#define ARI_REQUEST_EVENT_MASK      0x08U
-#define ARI_STATUS                  0x10U
-#define ARI_REQUEST_DATA_LO         0x18U
-#define ARI_REQUEST_DATA_HI         0x20U
-#define ARI_RESPONSE_DATA_LO        0x28U
-#define ARI_RESPONSE_DATA_HI        0x30U
+#define ARI_REQUEST_OFFS            0x00
+#define ARI_REQUEST_EVENT_MASK_OFFS 0x08
+#define ARI_STATUS_OFFS             0x10
+#define ARI_REQUEST_DATA_LO_OFFS    0x18
+#define ARI_REQUEST_DATA_HI_OFFS    0x20
+#define ARI_RESPONSE_DATA_LO_OFFS   0x28
+#define ARI_RESPONSE_DATA_HI_OFFS   0x30
 
 // Status values for the current request
-#define ARI_REQ_PENDING             1U
-#define ARI_REQ_ONGOING             2U
+#define ARI_REQ_PENDING             1
+#define ARI_REQ_ONGOING             2
 
 // Request completion status values
-#define ARI_REQ_ERROR_STATUS_MASK   0xFCU
+#define ARI_REQ_ERROR_STATUS_MASK   0xFC
 #define ARI_REQ_ERROR_STATUS_SHIFT  2
-#define ARI_REQ_NO_ERROR            0U
-#define ARI_REQ_REQUEST_KILLED      1U
-#define ARI_REQ_NS_ERROR            2U
-#define ARI_REQ_EXECUTION_ERROR     0x3FU
+#define ARI_REQ_NO_ERROR            0
+#define ARI_REQ_REQUEST_KILLED      1
+#define ARI_REQ_NS_ERROR            2
+#define ARI_REQ_EXECUTION_ERROR     0x3F
 
 // Software request completion status values
 #define ARI_REQ_TIMEOUT             0x100U
@@ -161,7 +161,7 @@ AriGetResponseLow (
   IN  UINTN     AriBase
   )
 {
-  return AriRead32 (AriBase, ARI_RESPONSE_DATA_LO);
+  return AriRead32 (AriBase, ARI_RESPONSE_DATA_LO_OFFS);
 }
 
 /**
@@ -178,7 +178,7 @@ AriGetResponseHigh (
   IN  UINTN     AriBase
   )
 {
-  return AriRead32 (AriBase, ARI_RESPONSE_DATA_HI);
+  return AriRead32 (AriBase, ARI_RESPONSE_DATA_HI_OFFS);
 }
 
 /**
@@ -194,8 +194,8 @@ EFIAPI
 AriClobberResponse (
   IN  UINTN     AriBase)
 {
-  AriWrite32 (AriBase, 0, ARI_RESPONSE_DATA_LO);
-  AriWrite32 (AriBase, 0, ARI_RESPONSE_DATA_HI);
+  AriWrite32 (AriBase, 0, ARI_RESPONSE_DATA_LO_OFFS);
+  AriWrite32 (AriBase, 0, ARI_RESPONSE_DATA_HI_OFFS);
 }
 
 /**
@@ -220,10 +220,10 @@ AriSendRequest (
   IN  UINT32    Hi
   )
 {
-  AriWrite32 (AriBase, Lo, ARI_REQUEST_DATA_LO);
-  AriWrite32 (AriBase, Hi, ARI_REQUEST_DATA_HI);
-  AriWrite32 (AriBase, EventMask, ARI_REQUEST_EVENT_MASK);
-  AriWrite32 (AriBase, (Request | ARI_REQUEST_VALID_BIT), ARI_REQUEST);
+  AriWrite32 (AriBase, Lo, ARI_REQUEST_DATA_LO_OFFS);
+  AriWrite32 (AriBase, Hi, ARI_REQUEST_DATA_HI_OFFS);
+  AriWrite32 (AriBase, EventMask, ARI_REQUEST_EVENT_MASK_OFFS);
+  AriWrite32 (AriBase, (Request | ARI_REQUEST_VALID_BIT), ARI_REQUEST_OFFS);
 }
 
 /**
@@ -268,7 +268,7 @@ AriRequestWait (
   if (EventMask == 0) {
     Retries = ARI_MAX_RETRY_US;
     while (Retries != 0) {
-      Status = AriRead32 (AriBase, ARI_STATUS);
+      Status = AriRead32 (AriBase, ARI_STATUS_OFFS);
       if ((Status & (ARI_REQ_ONGOING | ARI_REQ_PENDING |
                      ARI_REQ_ERROR_STATUS_MASK)) == 0) {
         break;
@@ -320,7 +320,7 @@ AriGetVersion(
   UINT32        Status;
   UINT64        Version;
 
-  Status = AriRequestWait (AriBase, 0, TEGRA_ARI_VERSION, 0, 0);
+  Status = AriRequestWait (AriBase, 0, TEGRA_ARI_VERSION_CMD, 0, 0);
 
   if (Status == ARI_REQ_NO_ERROR) {
     Version = AriGetResponseLow (AriBase);
@@ -353,7 +353,7 @@ AriGetCoresEnabledBitMask (
   UINT32        Status;
   UINT32        CoreBitMask;
 
-  Status = AriRequestWait (AriBase, 0, TEGRA_ARI_NUM_CORES, 0, 0);
+  Status = AriRequestWait (AriBase, 0, TEGRA_ARI_NUM_CORES_CMD, 0, 0);
 
   if (Status == ARI_REQ_NO_ERROR) {
     CoreBitMask = AriGetResponseLow (AriBase);
