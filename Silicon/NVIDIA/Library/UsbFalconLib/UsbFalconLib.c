@@ -29,6 +29,7 @@
  * accessing any other functions in the Falcon Library
  */
 STATIC UINTN XusbHostCfgAddr;
+STATIC UINTN XusbHostBase2Addr;
 
 VOID
 FalconSetHostCfgAddr (
@@ -36,6 +37,14 @@ FalconSetHostCfgAddr (
   )
 {
   XusbHostCfgAddr = Address;
+}
+
+VOID
+FalconSetHostBase2Addr (
+  IN UINTN Address
+  )
+{
+  XusbHostBase2Addr = Address;
 }
 
 VOID *
@@ -46,6 +55,13 @@ FalconMapReg (
   UINTN PageIndex = Address / 0x200;
   UINTN PageOffset = Address % 0x200;
   VOID *Register;
+
+  if (XusbHostBase2Addr != 0)
+  {
+    MmioWrite32(XusbHostBase2Addr + XUSB_BAR2_ARU_C11_CSBRANGE /* BAR2 CSBRANGE */, PageIndex);
+    Register = (VOID *) (XusbHostBase2Addr + XUSB_BAR2_CSB_BASE_ADDR + PageOffset);
+    return Register;
+  }
 
   /* write page index into XUSB PCI CFG register CSBRANGE */
   MmioWrite32(XusbHostCfgAddr + 0x41c /* CSBRANGE */, PageIndex);
@@ -97,6 +113,46 @@ FalconWrite32 (
 
 }
 
+UINT32
+Fpci2Read32 (
+  IN  UINTN Address
+  )
+{
+  UINT32 *Register32;
+  if (XusbHostBase2Addr == 0) {
+    DEBUG ((EFI_D_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
+    return 0;
+  }
+  Register32 = (UINT32 *) (XusbHostBase2Addr + Address);
+  UINT32 Value = MmioRead32 ((UINTN) Register32);
+
+  DEBUG ((EFI_D_VERBOSE, "%a: %x --> %x\r\n", __FUNCTION__, Address, Value));
+
+  return Value;
+
+}
+
+UINT32
+Fpci2Write32 (
+  IN  UINTN Address,
+  IN  UINT32 Value
+  )
+{
+  UINT32 *Register32;
+  if (XusbHostBase2Addr == 0) {
+    DEBUG ((EFI_D_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
+    return 0;
+  }
+
+  Register32 = (UINT32 *)(XusbHostBase2Addr + Address);
+  DEBUG ((EFI_D_VERBOSE, "%a: %x <-- %x\r\n", __FUNCTION__, Address, Value));
+
+  MmioWrite32((UINTN) Register32, Value);
+
+  return Value;
+
+}
+
 static VOID
 FalconDumpDMEM (
   VOID
@@ -116,9 +172,82 @@ FalconDumpDMEM (
 }
 
 EFI_STATUS
-FalconFirmwareLoad (
+FalconFirmwareIfrLoad (
   IN  UINT8 *Firmware,
   IN  UINT32 FirmwareSize
+  )
+{
+  EFI_STATUS Status;
+  UINT32     Value;
+  UINT32     Pages;
+  UINT32     RegVal, i;
+  UINTN      BufferSize;
+  UINT8      *FirmwareBuffer;
+  UINT64     FirmwareBufferBusAddress;
+  VOID       *FirmwareBufferMapping;
+
+  Status = EFI_SUCCESS;
+  Value = 0;
+
+  Value = FalconRead32 (XUSB_CSB_MEMPOOL_IDIRECT_PC);
+  if (Value != 0) {
+    DEBUG ((EFI_D_ERROR, "%a: XUSB FW is loaded before, Failed: %r\n",__FUNCTION__, Status));
+    return Status;
+  }
+
+  Pages = EFI_SIZE_TO_PAGES (FirmwareSize);
+  Status  = DmaAllocateAlignedBuffer (EfiRuntimeServicesData, Pages, 256, (void **)&FirmwareBuffer);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: DmaAllocateAlignedBuffer Failed: %r\n",__FUNCTION__, Status));
+    return Status;
+  }
+
+  BufferSize = EFI_PAGES_TO_SIZE (Pages);
+  Status = DmaMap (MapOperationBusMasterCommonBuffer, FirmwareBuffer, &BufferSize,
+             &FirmwareBufferBusAddress, &FirmwareBufferMapping);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: DmaMap Failed: %r\n",__FUNCTION__, Status));
+    return Status;
+  }
+
+  DEBUG ((EFI_D_VERBOSE, "%a: Firmware %p FirmwareSize %x (unaligned)\r\n",__FUNCTION__, Firmware, FirmwareSize));
+  memset (FirmwareBuffer, 0xdf, BufferSize);
+  memcpy (FirmwareBuffer, Firmware, FirmwareSize);
+  for (i = 0; i < FirmwareSize; i++)
+  {
+    if (FirmwareBuffer[i] != Firmware[i])
+    {
+      DEBUG ((EFI_D_ERROR, "%a: FirmwareBuffer[%d] != Firmware[%d]\r\n",__FUNCTION__, i, i));
+      return Status;
+    }
+  }
+
+  MemoryFence ();
+  Firmware = FirmwareBuffer;
+  DEBUG ((EFI_D_VERBOSE, "%a: Firmware %p FirmwareSize %x (aligned)\r\n",__FUNCTION__, Firmware, FirmwareSize));
+
+#define XUSB_BAR2_ARU_IFRDMA_CFG0               0x0e0
+#define XUSB_BAR2_ARU_IFRDMA_CFG1               0x0e4
+#define XUSB_BAR2_ARU_IFRDMA_STREAMID_FIELD     0x0e8
+
+  /* set IFRDMA address */
+  Fpci2Write32(XUSB_BAR2_ARU_IFRDMA_CFG0, (UINT32)(FirmwareBufferBusAddress & 0xffffffff));
+  Fpci2Write32(XUSB_BAR2_ARU_IFRDMA_CFG1, (UINT32)((FirmwareBufferBusAddress >> 32) & 0xff));
+
+  /* set streamid */
+  RegVal = Fpci2Read32(XUSB_BAR2_ARU_IFRDMA_STREAMID_FIELD);
+  RegVal &= ~((UINT32) 0xff);
+  RegVal |= 0x7F;
+  Fpci2Write32(XUSB_BAR2_ARU_IFRDMA_STREAMID_FIELD, RegVal);
+
+  return Status;
+}
+
+EFI_STATUS
+FalconFirmwareLoad (
+  IN  UINT8 *Firmware,
+  IN  UINT32 FirmwareSize,
+  IN  BOOLEAN LoadIfrRom
   )
 {
   struct tegra_xhci_fw_cfgtbl *FirmwareCfg;
@@ -144,6 +273,12 @@ FalconFirmwareLoad (
   VOID *FirmwareBufferMapping;
 
   DEBUG ((EFI_D_VERBOSE, "%a\r\n",__FUNCTION__));
+
+  if (LoadIfrRom == TRUE)
+  {
+    Status = FalconFirmwareIfrLoad(Firmware, FirmwareSize);
+    return Status;
+  }
 
   /* check if firmware already running */
   Value = FalconRead32 (XUSB_CSB_MEMPOOL_ILOAD_BASE_LO_0);

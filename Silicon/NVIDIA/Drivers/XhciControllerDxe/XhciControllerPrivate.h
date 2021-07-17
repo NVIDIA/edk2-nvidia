@@ -49,15 +49,20 @@
 
 #define XUSB_CFG_4_0                        _MK_ADDR_CONST(0x00000010)
 
+#define XUSB_CFG_7_0                        _MK_ADDR_CONST(0x0000001C)
+
 #define XUSB_OP_USBSTS                      _MK_ADDR_CONST(0x00000004)
 #define USBSTS_CNR                          (1 << 11)
 #define USBSTS_HCE                          (1 << 12)
 
-#define  XUSB_BASE_ADDR_SHIFT               15
-#define  XUSB_BASE_ADDR_MASK                0x1ffff
+#define XUSB_BASE_ADDR_SHIFT                15
+#define XUSB_BASE_ADDR_MASK                 0x1ffff
 
-#define  XUSB_T194_BASE_ADDR_SHIFT          18
-#define  XUSB_T194_BASE_ADDR_MASK           0x3fff
+#define XUSB_T194_BASE_ADDR_SHIFT           18
+#define XUSB_T194_BASE_ADDR_MASK            0x3fff
+
+#define XUSB_T234_BASE2_ADDR_SHIFT          16
+#define XUSB_T234_BASE2_ADDR_MASK           0xffff
 
 #define XUSB_DEV_XHCI_CTRL_0_OFFSET         0x30
 #define XUSB_DEV_XHCI_CTRL_0_RUN_BIT        0
@@ -66,8 +71,11 @@
 typedef struct {
   UINT32 Cfg4AddrShift;
   UINT32 Cfg4AddrMask;
+  UINT32 Cfg7AddrShift;
+  UINT32 Cfg7AddrMask;
   EFI_PHYSICAL_ADDRESS BaseAddress;
   EFI_PHYSICAL_ADDRESS CfgAddress;
+  EFI_PHYSICAL_ADDRESS Base2Address;
 } TEGRA_XUSB_SOC;
 
 TEGRA_XUSB_SOC Tegra186Soc = {
@@ -78,6 +86,13 @@ TEGRA_XUSB_SOC Tegra186Soc = {
 TEGRA_XUSB_SOC Tegra194Soc = {
   .Cfg4AddrShift = XUSB_T194_BASE_ADDR_SHIFT,
   .Cfg4AddrMask = XUSB_T194_BASE_ADDR_MASK,
+};
+
+TEGRA_XUSB_SOC Tegra234Soc = {
+  .Cfg4AddrShift = XUSB_BASE_ADDR_SHIFT,
+  .Cfg4AddrMask = XUSB_BASE_ADDR_MASK,
+  .Cfg7AddrShift = XUSB_T234_BASE2_ADDR_SHIFT,
+  .Cfg7AddrMask = XUSB_T234_BASE2_ADDR_MASK,
 };
 
 #define XHCICONTROLLER_SIGNATURE SIGNATURE_32('X','H','C','I')

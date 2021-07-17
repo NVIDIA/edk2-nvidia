@@ -25,6 +25,7 @@
 [Sources.common]
   UsbPadCtlDxe.c
   UsbPadCtlTegra194.c
+  UsbPadCtlTegra234.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -43,6 +44,7 @@
   IoLib
   FdtLib
   DeviceDiscoveryDriverLib
+  TegraPlatformInfoLib
 
 [Protocols]
   gNVIDIAUsbPadCtlProtocolGuid
@@ -54,6 +56,7 @@
 
 [Guids]
   gNVIDIANonDiscoverableT194UsbPadDeviceGuid
+  gNVIDIANonDiscoverableT234UsbPadDeviceGuid
 
 [Depex]
   gNVIDIARegulatorProtocolGuid

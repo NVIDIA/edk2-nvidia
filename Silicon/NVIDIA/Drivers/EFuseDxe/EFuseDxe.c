@@ -30,6 +30,7 @@
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
     { "nvidia,tegra194-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
+    { "nvidia,tegra234-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
     { NULL, NULL }
 };
 

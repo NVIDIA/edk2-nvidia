@@ -46,6 +46,7 @@
   DeviceTreeHelperLib
   DxeServicesTableLib
   UsbFalconLib
+  TegraPlatformInfoLib
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid

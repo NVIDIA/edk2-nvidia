@@ -2,7 +2,7 @@
 
   Falcon Register Access
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -67,17 +67,25 @@ struct tegra_xhci_fw_cfgtbl {
 #define XUSB_CSB_MEMPOOL_L2IMEMOP_SIZE_0    0x0101a10
 #define XUSB_CSB_MEMPOOL_L2IMEMOP_TRIG_0    0x0101a14
 #define XUSB_CSB_MEMPOOL_L2IMEMOP_RESULT_0  0x0101a18
-#define   L2IMEMOP_RESULT_VLD               (1 << 31)
+#define L2IMEMOP_RESULT_VLD                 (1 << 31)
 #define XUSB_CSB_MEMPOOL_APMAP_0            0x010181c
+#define XUSB_CSB_MEMPOOL_IDIRECT_PC         0x0101814
 #define FALCON_CPUCTL_0                     0x100
 #define FALCON_BOOTVEC_0                    0x104
 #define FALCON_DMACTL_0                     0x10c
 #define FALCON_IMFILLRNG1_0                 0x154
 #define FALCON_IMFILLCTL_0                  0x158
+#define XUSB_BAR2_ARU_C11_CSBRANGE          0x9c
+#define XUSB_BAR2_CSB_BASE_ADDR             0x2000
 
 
 VOID
 FalconSetHostCfgAddr (
+  IN  UINTN Address
+  );
+
+VOID
+FalconSetHostBase2Addr (
   IN  UINTN Address
   );
 
@@ -100,7 +108,8 @@ FalconWrite32 (
 EFI_STATUS
 FalconFirmwareLoad (
   IN  UINT8 *Firmware,
-  IN  UINT32 FirmwareSize
+  IN  UINT32 FirmwareSize,
+  IN  BOOLEAN LoadIfrRom
   );
 
 #endif /* USB_FALCON_LIB_H_ */

@@ -31,6 +31,7 @@
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-xusb-padctl", &gNVIDIANonDiscoverableT194UsbPadDeviceGuid },
+  { "nvidia,tegra234-xusb-padctl", &gNVIDIANonDiscoverableT234UsbPadDeviceGuid },
   { NULL, NULL }
 };
 
@@ -76,6 +77,7 @@ DeviceDiscoveryNotify (
   NVIDIA_USBPADCTL_PROTOCOL    *mUsbPadCtlProtocol;
   EFI_PHYSICAL_ADDRESS         BaseAddress;
   UINTN                        RegionSize;
+  BOOLEAN                      T234Platform;
 
   Status = EFI_SUCCESS;
   Private = NULL;
@@ -84,6 +86,7 @@ DeviceDiscoveryNotify (
   mPmux = NULL;
   mClockProtocol = NULL;
   BaseAddress = 0;
+  T234Platform = FALSE;
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingStart:
@@ -113,15 +116,6 @@ DeviceDiscoveryNotify (
       goto ErrorExit;
     }
 
-    Status = gBS->LocateProtocol (&gNVIDIAPinMuxProtocolGuid, NULL,
-                                                (VOID **)&mPmux);
-    if (EFI_ERROR (Status) || mPmux == NULL) {
-      DEBUG ((EFI_D_ERROR,
-      "%a: Couldn't get gNVIDIAPinMuxProtocolGuid Handle: %r\n",
-      __FUNCTION__, Status));
-      goto ErrorExit;
-    }
-
     Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL,
                                          (VOID **) &mClockProtocol);
     if (EFI_ERROR (Status) || mClockProtocol == NULL) {
@@ -129,6 +123,31 @@ DeviceDiscoveryNotify (
       "%a: Couldn't get gArmScmiClock2ProtocolGuid Handle: %r\n",
       __FUNCTION__, Status));
       goto ErrorExit;
+    }
+
+    /* Assign Platform Specific Parameters */
+    if (fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase,
+                                      0, "nvidia,tegra194-xusb-padctl") > 0) {
+      Private->mUsbPadCtlProtocol.InitHw = InitUsbHw194;
+      Private->mUsbPadCtlProtocol.DeInitHw = DeInitUsbHw194;
+      Private->PlatConfig = Tegra194UsbConfig;
+    } else if (fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase,
+                                             0, "nvidia,tegra234-xusb-padctl") > 0) {
+      Private->mUsbPadCtlProtocol.InitHw = InitUsbHw234;
+      Private->mUsbPadCtlProtocol.DeInitHw = DeInitUsbHw234;
+      Private->PlatConfig = Tegra234UsbConfig;
+      T234Platform = TRUE;
+    }
+
+    Status = gBS->LocateProtocol (&gNVIDIAPinMuxProtocolGuid, NULL,
+                                                (VOID **)&mPmux);
+    if (EFI_ERROR (Status) || mPmux == NULL) {
+      DEBUG ((EFI_D_ERROR,
+      "%a: Couldn't get gNVIDIAPinMuxProtocolGuid Handle: %r\n",
+      __FUNCTION__, Status));
+      if (T234Platform == FALSE) {
+        goto ErrorExit;
+      }
     }
 
     Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress,
@@ -147,13 +166,6 @@ DeviceDiscoveryNotify (
     Private->mEfuse = mEfuse;
     Private->mPmux = mPmux;
     Private->mClockProtocol = mClockProtocol;
-    /* Assign Platform Specific Parameters */
-    if (fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase,
-                                      0, "nvidia,tegra194-xusb-padctl") > 0) {
-      Private->mUsbPadCtlProtocol.InitHw = InitUsbHw194;
-      Private->mUsbPadCtlProtocol.DeInitHw = DeInitUsbHw194;
-      Private->PlatConfig = Tegra194UsbConfig;
-    }
 
     Status = gBS->InstallMultipleProtocolInterfaces (
                   &DriverHandle,
