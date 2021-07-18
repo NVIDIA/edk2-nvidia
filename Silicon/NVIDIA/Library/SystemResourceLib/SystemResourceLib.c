@@ -74,6 +74,11 @@ RegisterDeviceTree (
         }
       }
 
+      INT32 NodeOffset = fdt_path_offset ((VOID *)DtbCopy, "/plugin-manager");
+      if (NodeOffset >= 0) {
+        fdt_del_node ((VOID *)DtbCopy, NodeOffset);
+      }
+
       DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
       if (NULL != DeviceTreeHobData) {
         *DeviceTreeHobData = DtbCopy;

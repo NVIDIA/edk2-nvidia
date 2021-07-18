@@ -45,8 +45,7 @@
 #define TEGRA_UART_ADDRESS_J        0x0c270000
 
 #define TEGRABL_MAX_VERSION_STRING        128 /* chars including null */
-#define NUM_DRAM_BAD_PAGES                1024
-#define TEGRABL_MAX_STORAGE_DEVICES       8
+
 #define BRBCT_UNSIGNED_CUSTOMER_DATA_SIZE 1024
 #define BRBCT_SIGNED_CUSTOMER_DATA_SIZE   1024
 #define BRBCT_CUSTOMER_DATA_SIZE          (BRBCT_UNSIGNED_CUSTOMER_DATA_SIZE + \
@@ -60,10 +59,6 @@
 #define FUSE_OPT_DLA_DISABLE        0x4f0
 #define FUSE_OPT_CV_DISABLE         0x4f8
 #define FUSE_OPT_NVDEC_DISABLE      0x5f0
-
-#define TEGRABL_MAX_VERSION_STRING 128 /* chars including null */
-#define NUM_DRAM_BAD_PAGES 1024
-#define TEGRABL_MAX_STORAGE_DEVICES 8
 
 /*macro carve_out_type*/
 #define CARVEOUT_NONE                     0
