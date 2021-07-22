@@ -56,3 +56,4 @@
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress
   gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress
+  gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem

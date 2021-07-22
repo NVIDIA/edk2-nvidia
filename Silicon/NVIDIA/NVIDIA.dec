@@ -232,6 +232,9 @@
 # Tegra MCE ARI Aperture Base Address
   gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress|0x0E100000|UINT64|0x0000003A
 
+# Expose CCPLEX_INTERWORLD_SHMEM Carveout To OS
+  gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem|FALSE|BOOLEAN|0x0000003D
+
 [PcdsDynamic.common]
 #Size of optional signing data header in boot.img partition.
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B
