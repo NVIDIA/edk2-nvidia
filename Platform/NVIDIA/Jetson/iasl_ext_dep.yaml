@@ -1,0 +1,33 @@
+## @file
+# Download iasl executable tool from a nuget package
+# - package contains different binaries based on host
+# Add the folder with the tool to the path
+#
+# This is only downloaded for scope jetson thus
+# should have no impact on the asl compiler used by any
+# other given platform to build.
+#
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+# Portions provided under the following terms:
+# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+# property and proprietary rights in and to this material, related
+# documentation and any modifications thereto. Any use, reproduction,
+# disclosure or distribution of this material and related documentation
+# without an express license agreement from NVIDIA CORPORATION or
+# its affiliates is strictly prohibited.
+##
+{
+  "override_id": "iasl-ci-1",
+  "id": "iasl-jetson-1",
+  "scope": "jetson",
+  "type": "nuget",
+  "name": "edk2-acpica-iasl",
+  "source": "https://pkgs.dev.azure.com/projectmu/acpica/_packaging/mu_iasl/nuget/v3/index.json",
+  "version": "20200717.0.0",
+  "flags": ["set_path", "host_specific"],
+}
