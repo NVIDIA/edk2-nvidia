@@ -1,12 +1,12 @@
 /** @file
 *  RCM Boot Dxe
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2020 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -15,7 +15,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
@@ -56,10 +56,12 @@ RcmDxeInitialize (
   RcmBlobHeader = (TEGRABL_BLOBHEADER *) GetRCMBaseAddress ();
 
   if (RcmBlobHeader == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: RCM blob not found\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   if (CompareMem (RcmBlobHeader->BlobMagic, BlobMagic, sizeof (BlobMagic)) != 0) {
+    DEBUG ((DEBUG_ERROR, "%a: RCM blob corrupt\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
@@ -70,6 +72,7 @@ RcmDxeInitialize (
   }
 
   if (Count == RcmBlobHeader->BlobEntries) {
+    DEBUG ((DEBUG_ERROR, "%a: OS image not found in RCM blob\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 

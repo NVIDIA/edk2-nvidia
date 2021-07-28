@@ -1,12 +1,12 @@
 /** @file
 *  Rcm Dxe
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2020 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -15,7 +15,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
@@ -25,7 +25,7 @@
 
 
 #define MAX_BLOB_INFO     64
-#define IMAGE_TYPE_KERNEL 37
+#define IMAGE_TYPE_KERNEL 45
 
 
 typedef struct {
