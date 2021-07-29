@@ -57,6 +57,7 @@
   DevicePathLib
   PcdLib
   HobLib
+  TegraPlatformInfoLib
 
 [Protocols]
   gEfiBlockIoProtocolGuid

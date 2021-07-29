@@ -36,7 +36,6 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
-#include "TegraPlatformInitDxePrivate.h"
 
 STATIC
 EFI_STATUS

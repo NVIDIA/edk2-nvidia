@@ -36,6 +36,10 @@
 #define T194_SKU          1
 #define T234_SKU          2
 
+#define SYSIMG_EMMC_MAGIC_OFFSET 0x4
+#define SYSIMG_EMMC_MAGIC 0xEAAAAAAC
+#define SYSIMG_DEFAULT_MAGIC 0xE0000000
+
 #ifndef __ASSEMBLY__
 
 typedef enum {
