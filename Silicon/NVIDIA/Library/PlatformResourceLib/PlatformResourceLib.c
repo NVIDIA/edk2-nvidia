@@ -478,6 +478,7 @@ GetBoardInfo (
 )
 {
   UINTN           ChipID;
+  UINTN           CpuBootloaderAddress;
   BOOLEAN         ValidPrivatePlatform;
 
   ValidPrivatePlatform = GetBoardInfoInternal(BoardInfo);
@@ -487,9 +488,11 @@ GetBoardInfo (
 
   ChipID = TegraGetChipID();
 
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
   switch (ChipID) {
     case T234_CHIP_ID:
-      return T234GetBoardInfo(BoardInfo);
+      return T234GetBoardInfo(CpuBootloaderAddress, BoardInfo);
     case T194_CHIP_ID:
       return EFI_UNSUPPORTED;
     default:

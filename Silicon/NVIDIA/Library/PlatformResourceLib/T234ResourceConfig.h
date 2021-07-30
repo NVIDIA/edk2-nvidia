@@ -104,6 +104,7 @@ T234GetCvmEepromData (
 **/
 BOOLEAN
 T234GetBoardInfo(
+  IN  UINTN            CpuBootloaderAddress,
   OUT TEGRA_BOARD_INFO *BoardInfo
 );
 

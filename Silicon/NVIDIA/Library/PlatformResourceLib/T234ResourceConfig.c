@@ -39,7 +39,10 @@
 #include <Library/GoldenRegisterLib.h>
 #include <Library/CacheMaintenanceLib.h>
 #include <Library/MceAriLib.h>
+#include <Library/PrintLib.h>
 #include "T234ResourceConfigPrivate.h"
+
+#include <Protocol/CvmEeprom.h>
 
 #define T234_MAX_CPUS       12
 
@@ -400,14 +403,25 @@ T234GetCvmEepromData (
 **/
 BOOLEAN
 T234GetBoardInfo(
+  IN  UINTN            CpuBootloaderAddress,
   OUT TEGRA_BOARD_INFO *BoardInfo
 )
 {
-  CHAR8 *id = "3360-1099-100"; //TODO: Remove
+  T234_CVM_EEPROM_DATA *EepromData;
+  UINT32               DataLen;
+  UINTN                CharCount;
+
+
+  DataLen = T234GetCvmEepromData (CpuBootloaderAddress, (UINT8 **)&EepromData);
+
   BoardInfo->FuseBaseAddr = TEGRA_FUSE_BASE_ADDRESS;
   BoardInfo->FuseList = T234FloorsweepingFuseList;
   BoardInfo->FuseCount = sizeof(T234FloorsweepingFuseList) / sizeof(T234FloorsweepingFuseList[0]);
-  // T234ReadBoardId(BoardInfo->BoardId); TODO: Read Board Id from BCT EEPROM data.
-  AsciiStrCpyS(BoardInfo->BoardId, TEGRA_BOARD_ID_LEN+1, id);
+  CharCount = AsciiSPrint (BoardInfo->BoardId, sizeof (BoardInfo->BoardId),"%04d-%04d-%01d%c%01d",
+    EepromData->BoardNumber,
+    EepromData->Sku,
+    EepromData->Fab,
+    EepromData->Revision,
+    EepromData->MinorRevision);
   return TRUE;
 }
