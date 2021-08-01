@@ -75,6 +75,9 @@ TegraPlatformInitialize (
   UINTN                   ChipID;
   TEGRA_PLATFORM_TYPE     PlatformType;
   UINTN                   EmmcMagic;
+  BOOLEAN                 EmulatedVariablesUsed;
+
+  EmulatedVariablesUsed = FALSE;
 
   ChipID = TegraGetChipID();
   DEBUG ((DEBUG_INFO, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, ChipID));
@@ -90,14 +93,21 @@ TegraPlatformInitialize (
   } else {
     // Override boot timeout for pre-si platforms
     EmmcMagic = * ((UINTN *) (TegraGetSystemMemoryBaseAddress(ChipID) + SYSIMG_EMMC_MAGIC_OFFSET));
-    if (((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) ||
-        (GetBootType () == TegrablBootRcm)) {
-      // Enable emulated variable NV mode in variable driver when ram loading images and emmc
-      // is not enabled.
-      Status = UseEmulatedVariableStore (ImageHandle);
-      if (EFI_ERROR(Status)) {
-        return Status;
-      }
+    if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {
+      EmulatedVariablesUsed = TRUE;
+    }
+  }
+
+  if (GetBootType () == TegrablBootRcm) {
+    EmulatedVariablesUsed = TRUE;
+  }
+
+  if (EmulatedVariablesUsed) {
+    // Enable emulated variable NV mode in variable driver when ram loading images and emmc
+    // is not enabled.
+    Status = UseEmulatedVariableStore (ImageHandle);
+    if (EFI_ERROR(Status)) {
+      return Status;
     }
   }
 

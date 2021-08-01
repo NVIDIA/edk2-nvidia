@@ -1215,6 +1215,7 @@ AndroidBootDxeDriverEntryPoint (
   VOID                  *Hob;
   EFI_HANDLE            InitrdHandle;
   UINTN                 EmmcMagic;
+  CHAR16                *KernelArgs;
 
   // Install UEFI Driver Model protocol(s).
   Status = EfiLibInstallDriverBinding (
@@ -1242,8 +1243,16 @@ AndroidBootDxeDriverEntryPoint (
 
   if (PcdGet64 (PcdRcmKernelBase) != 0 &&
       PcdGet64 (PcdRcmKernelSize) != 0) {
+
+    // Allocate KernelArgs
+    KernelArgs = AllocateZeroPool (sizeof (CHAR16) * ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
+    if (KernelArgs == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      return Status;
+    }
+
     // Verify the image header and set the internal data structure ImgData
-    Status = AndroidBootGetVerify (NULL, NULL, NULL, NULL);
+    Status = AndroidBootGetVerify (NULL, NULL, NULL, KernelArgs);
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -1257,7 +1266,7 @@ AndroidBootDxeDriverEntryPoint (
                     &gEfiLoadFileProtocolGuid,
                     &mRcmLoadFile,
                     &gNVIDIALoadfileKernelArgsGuid,
-                    NULL,
+                    KernelArgs,
                     &gEfiDevicePathProtocolGuid,
                     &mRcmLoadFileDevicePath,
                     NULL);
