@@ -29,7 +29,7 @@
 [Defines]
   INF_VERSION                    = 0x00010019
   BASE_NAME                      = SdMmcControllerDxe
-  FILE_GUID                      = 40f0d306-e558-48bb-ae8a-c8bec233757f
+  FILE_GUID                      = 22872060-3c13-4a64-928f-777df19aaebf
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
 

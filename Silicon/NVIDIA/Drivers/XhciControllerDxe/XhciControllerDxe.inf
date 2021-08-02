@@ -29,7 +29,7 @@
 [Defines]
   INF_VERSION                    = 0x0001001b
   BASE_NAME                      = XhciControllerDxe
-  FILE_GUID                      = 4af0d306-e558-48bb-ae8a-c8bec233757f
+  FILE_GUID                      = bf74bc54-1e78-4c06-bdaf-f76fda006cc5
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
 
