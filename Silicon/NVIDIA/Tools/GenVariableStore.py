@@ -737,9 +737,16 @@ def get_variable_bytes(vendor_guid_list, name, attribute_value, data_bytes):
 
     vendor_guid_bytes = get_guid_bytes(vendor_guid_list)
 
-    return (start_id + state + reserved + attribute_bytes + monotonic_count
+    data = (start_id + state + reserved + attribute_bytes + monotonic_count
             + time_stamp + public_key_index + name_size_bytes + data_size_bytes
             + vendor_guid_bytes + name_bytes + data_bytes)
+
+    #Pad variable data to 4 bytes alignment
+    data_extra = len(data) % 4
+    if (data_extra > 0):
+        data += bytes(4 - data_extra)
+
+    return data
 
 def get_variable_bytes_from_json_file(json_filename):
     output_bytes = bytearray()
