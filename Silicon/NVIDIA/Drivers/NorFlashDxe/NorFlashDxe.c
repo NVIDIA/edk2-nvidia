@@ -127,7 +127,8 @@ WaitNorFlashWriteComplete (
   do {
     // Error out of retry count exceeds NOR_SR1_WEL_RETRY_CNT
     if (Count == NOR_SR1_WIP_RETRY_CNT) {
-      return EFI_DEVICE_ERROR;
+      Count = 0;
+      DEBUG ((EFI_D_ERROR, "%a: NOR flash write complete timed out.\n", __FUNCTION__));
     }
 
     MicroSecondDelay (TIMEOUT);
@@ -190,7 +191,8 @@ ConfigureNorFlashWriteEnLatch (
   do {
     // Error out of retry count exceeds NOR_SR1_WEL_RETRY_CNT
     if (Count == NOR_SR1_WEL_RETRY_CNT) {
-      return EFI_DEVICE_ERROR;
+      Count = 0;
+      DEBUG ((EFI_D_ERROR, "%a: NOR flash write enable latch timed out.\n", __FUNCTION__));
     }
 
     // Configure WREN

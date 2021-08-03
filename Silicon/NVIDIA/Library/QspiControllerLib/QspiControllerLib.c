@@ -78,8 +78,8 @@ QspiFlushFifo (
         if (Timeout != TIMEOUT) {
           Timeout++;
           if (Timeout == TIMEOUT) {
+            Timeout = 0;
             DEBUG ((EFI_D_ERROR, "%a QSPI Tx FIFO Flush Timed Out.\n", __FUNCTION__));
-            return EFI_NOT_READY;
           }
         }
       }
@@ -102,8 +102,8 @@ QspiFlushFifo (
         if (Timeout != TIMEOUT) {
           Timeout++;
           if (Timeout == TIMEOUT) {
+            Timeout = 0;
             DEBUG ((EFI_D_ERROR, "%a QSPI Rx FIFO Flush Timed Out.\n", __FUNCTION__));
-            return EFI_NOT_READY;
           }
         }
       }
@@ -199,8 +199,8 @@ QspiWaitTransactionStatusReady (
     if (Timeout != TIMEOUT) {
       Timeout++;
       if (Timeout == TIMEOUT) {
+        Timeout = 0;
         DEBUG ((EFI_D_ERROR, "%a QSPI Wait For Transaction Status Ready Timed Out.\n", __FUNCTION__));
-        return EFI_NOT_READY;
       }
     }
   }
