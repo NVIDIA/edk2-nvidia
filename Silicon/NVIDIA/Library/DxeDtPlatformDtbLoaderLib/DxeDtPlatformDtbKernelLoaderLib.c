@@ -91,11 +91,14 @@ DtPlatformLoadDtb (
   EFI_BLOCK_IO_PROTOCOL       *BlockIo;
   INT32                       NodeOffset;
   INT32                       DtStatus;
+  VOID                        *DtbAllocated;
   VOID                        *DtbCopy;
 
   ValidFlash = FALSE;
   DtbLocAdjusted = FALSE;
   *Dtb = NULL;
+  DtbAllocated = NULL;
+  DtbCopy = NULL;
 
   if (!PcdGetBool(PcdEmuVariableNvModeEnable)) {
     do {
@@ -154,12 +157,13 @@ DtPlatformLoadDtb (
       *Dtb = NULL;
       Status = gBS->AllocatePool (EfiBootServicesData,
                                   Size,
-                                  (VOID **)Dtb);
+                                  (VOID **)&DtbAllocated);
 
-      if (EFI_ERROR(Status) || (*Dtb == NULL)) {
+      if (EFI_ERROR(Status) || (DtbAllocated == NULL)) {
         ValidFlash = FALSE;
         break;
       }
+      *Dtb = DtbAllocated;
       Status = BlockIo->ReadBlocks (BlockIo,
                                     BlockIo->Media->MediaId,
                                     0,
@@ -169,57 +173,44 @@ DtPlatformLoadDtb (
         ValidFlash = FALSE;
         break;
       }
+
+      if(fdt_check_header (*Dtb) != 0) {
+        *Dtb += PcdGet32 (PcdBootImgSigningHeaderSize);
+        if(fdt_check_header (*Dtb) != 0) {
+          DEBUG ((DEBUG_ERROR, "%a: DTB on partition was corrupted, attempt use to UEFI DTB\r\n", __FUNCTION__));
+          ValidFlash = FALSE;
+          break;
+        }
+      }
     } while (FALSE);
   }
 
-  if (HandleBuffer != NULL) {
-    gBS->FreePool (HandleBuffer);
-    HandleBuffer = NULL;
-  }
-
   if (!ValidFlash) {
-    if (*Dtb != NULL) {
-      gBS->FreePool (*Dtb);
-      *Dtb = NULL;
-    }
+    DEBUG ((DEBUG_INFO, "%a: Using UEFI DTB\r\n", __FUNCTION__));
     Hob = GetFirstGuidHob (&gFdtHobGuid);
     if (Hob == NULL || GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (UINT64)) {
-      return EFI_NOT_FOUND;
+      Status = EFI_NOT_FOUND;
+      goto Exit;
     }
     *Dtb = (VOID *)(UINTN)*(UINT64 *)GET_GUID_HOB_DATA (Hob);
-    //Double the size taken by DTB to have enough buffer to accommodate
-    //any runtime additions made to it.
-    DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (*Dtb)));
-    if (fdt_open_into (*Dtb, DtbCopy, 2 * fdt_totalsize (*Dtb)) != 0) {
-      return EFI_NOT_FOUND;
-    }
-    *Dtb = DtbCopy;
-  }
-
-  if (fdt_check_header (*Dtb) != 0) {
-    if (ValidFlash) {
-      *Dtb += PcdGet32 (PcdBootImgSigningHeaderSize);
-      DtbLocAdjusted = TRUE;
-    }
-    if (fdt_check_header (*Dtb) != 0) {
-      DEBUG ((DEBUG_ERROR, "%a: No DTB found @ 0x%p\n", __FUNCTION__,
-        *Dtb));
-      return EFI_NOT_FOUND;
+    if(fdt_check_header (*Dtb) != 0) {
+      DEBUG ((DEBUG_ERROR, "%a: UEFI DTB corrupted\r\n", __FUNCTION__));
+      Status = EFI_NOT_FOUND;
+      goto Exit;
+    } else {
+      DEBUG ((DEBUG_INFO, "%a: Using Parititon DTB\r\n", __FUNCTION__));
     }
   }
 
-  if (ValidFlash) {
-    //Double the size taken by DTB to have enough buffer to accommodate
-    //any runtime additions made to it.
-    DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (*Dtb)));
-    if (fdt_open_into (*Dtb, DtbCopy, 2 * fdt_totalsize (*Dtb)) != 0) {
-      return EFI_NOT_FOUND;
-    }
-    if (*Dtb != NULL) {
-      gBS->FreePool (DtbLocAdjusted ? *Dtb - PcdGet32 (PcdBootImgSigningHeaderSize) : *Dtb);
-      *Dtb = DtbCopy;
-    }
+  //Double the size taken by DTB to have enough buffer to accommodate
+  //any runtime additions made to it.
+  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (*Dtb)));
+  if (fdt_open_into (*Dtb, DtbCopy, 2 * fdt_totalsize (*Dtb)) != 0) {
+    Status = EFI_NOT_FOUND;
+    goto Exit;
   }
+
+  *Dtb = DtbCopy;
 
   //Check floorsweeping here in addition to callback to allow for users of this API who
   //do not install the Dtb into the system table to get correct data.
@@ -243,5 +234,25 @@ DtPlatformLoadDtb (
                                &gFdtTableGuid,
                                &FdtInstallEvent);
 
-  return EFI_SUCCESS;
+Exit:
+  if (DtbAllocated != NULL) {
+    gBS->FreePool (DtbAllocated);
+    DtbAllocated = NULL;
+  }
+
+  if (HandleBuffer != NULL) {
+    gBS->FreePool (HandleBuffer);
+    HandleBuffer = NULL;
+  }
+
+  if (EFI_ERROR (Status)) {
+    if (DtbCopy != NULL) {
+      gBS->FreePool (DtbCopy);
+      DtbCopy = NULL;
+    }
+    *Dtb = NULL;
+    *DtbSize = 0;
+  }
+
+  return Status;
 }
