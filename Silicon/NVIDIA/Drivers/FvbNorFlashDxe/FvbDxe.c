@@ -878,6 +878,92 @@ ValidateFvHeader (
 }
 
 /**
+  Initialize a work space header.
+
+  Since Signature and WriteQueueSize have been known, Crc can be calculated out,
+  then the work space header will be fixed.
+**/
+VOID
+InitializeWorkSpaceHeader (
+    IN UINT64                      PartitionOffset,
+    IN UINT64                      PartitionSize,
+    IN NVIDIA_NOR_FLASH_PROTOCOL   *NorFlashProtocol,
+    IN NOR_FLASH_ATTRIBUTES        *FlashAttributes
+  )
+{
+  EFI_STATUS                              Status;
+  EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER WorkingBlockHeader;
+
+  Status = NorFlashProtocol->Read (NorFlashProtocol,
+                                   PartitionOffset,
+                                   sizeof (EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER),
+                                   &WorkingBlockHeader);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read the working area\r\n", __FUNCTION__));
+    return;
+  }
+
+  //
+  // Check signature with gEdkiiWorkingBlockSignatureGuid.
+  //
+  if (CompareGuid (&gEdkiiWorkingBlockSignatureGuid, &WorkingBlockHeader.Signature)) {
+    //
+    // The work space header has been initialized.
+    //
+    return;
+  }
+
+  if (!IsErasedFlashBuffer ((UINT8 *)&WorkingBlockHeader, sizeof (WorkingBlockHeader))) {
+    Status = NorFlashProtocol->Erase (NorFlashProtocol,
+                                      PartitionOffset / FlashAttributes->BlockSize,
+                                      PartitionSize / FlashAttributes->BlockSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to erase working block\r\n", __FUNCTION__));
+    }
+  }
+
+  SetMem (
+    &WorkingBlockHeader,
+    sizeof (EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER),
+    FVB_ERASED_BYTE
+    );
+
+  //
+  // Here using gEdkiiWorkingBlockSignatureid as the signature.
+  //
+  CopyMem (
+    &WorkingBlockHeader.Signature,
+    &gEdkiiWorkingBlockSignatureGuid,
+    sizeof (EFI_GUID)
+    );
+  WorkingBlockHeader.WriteQueueSize = PartitionSize - sizeof (EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER);
+
+  //
+  // Crc is calculated with all the fields except Crc and STATE, so leave them as FTW_ERASED_BYTE.
+  //
+
+  //
+  // Calculate the Crc of working block header
+  //
+  Status = gBS->CalculateCrc32 (&WorkingBlockHeader, sizeof (EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER), &WorkingBlockHeader.Crc);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to calculate CRC\r\n", __FUNCTION__));
+  }
+
+  WorkingBlockHeader.WorkingBlockValid    = FTW_VALID_STATE;
+  WorkingBlockHeader.WorkingBlockInvalid  = FTW_INVALID_STATE;
+
+  Status = NorFlashProtocol->Write (NorFlashProtocol,
+                                   PartitionOffset,
+                                   sizeof (EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER),
+                                   &WorkingBlockHeader);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to write the working area\r\n", __FUNCTION__));
+    return;
+  }
+}
+
+/**
   Initialize the FVB Driver
 
   @param[in]  ImageHandle   of the loaded driver
@@ -1088,7 +1174,7 @@ FVBInitialize (
     FvpData[Index].FvbProtocol.ParentHandle = NULL;
 
     //Validate and initialize content
-    if (FvpData[Index].PartitionData != NULL) {
+    if (Index == FVB_VARIABLE_INDEX) {
       Status = ValidateFvHeader (FvpData[Index].PartitionData,
                                  FvpData[Index].PartitionOffset,
                                  FvpData[Index].PartitionSize,
@@ -1108,6 +1194,12 @@ FVBInitialize (
           goto Exit;
         }
       }
+    } else if (Index == FVB_FTW_WORK_INDEX) {
+      //Init work partition if needed
+      InitializeWorkSpaceHeader (FvpData[Index].PartitionOffset,
+                                 FvpData[Index].PartitionSize,
+                                 NorFlashProtocol,
+                                 &NorFlashAttributes);
     }
 
     Status = gBS->InstallMultipleProtocolInterfaces(&FvpData[Index].Handle,

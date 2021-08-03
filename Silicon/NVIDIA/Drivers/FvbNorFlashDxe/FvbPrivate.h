@@ -50,6 +50,7 @@
 
 #include <Guid/VariableFormat.h>
 #include <Guid/RtPropertiesTable.h>
+#include <Guid/SystemNvDataGuid.h>
 
 #define UEFI_VARIABLE_PARTITION_NAME L"uefi_variables"
 #define FTW_PARTITION_NAME L"uefi_ftw"

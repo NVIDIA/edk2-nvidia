@@ -76,6 +76,7 @@
   gEdkiiNvVarStoreFormattedGuid
   gEfiEventVirtualAddressChangeGuid
   gEfiRtPropertiesTableGuid
+  gEdkiiWorkingBlockSignatureGuid
 
 [Depex]
   gNVIDIAStandaloneMmUnavailableGuid
