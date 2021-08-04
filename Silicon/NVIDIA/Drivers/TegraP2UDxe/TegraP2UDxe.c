@@ -35,6 +35,7 @@
 #include <Library/DxeServicesTableLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 
@@ -43,6 +44,10 @@
 #include "TegraP2UDxePrivate.h"
 
 #define BIT(x)   (1 << (x))
+
+#define P2U_CONTROL_CMN                                     0x74
+#define P2U_CONTROL_CMN_ENABLE_L2_EXIT_RATE_CHANGE          BIT(13)
+#define P2U_CONTROL_CMN_SKP_SIZE_PROTECTION_EN              BIT(20)
 
 #define P2U_PERIODIC_EQ_CTRL_GEN3                           0xc0
 #define P2U_PERIODIC_EQ_CTRL_GEN3_PERIODIC_EQ_EN            BIT(0)
@@ -53,6 +58,9 @@
 #define P2U_RX_DEBOUNCE_TIME                                0xa4
 #define P2U_RX_DEBOUNCE_TIME_DEBOUNCE_TIMER_MASK            0xffff
 #define P2U_RX_DEBOUNCE_TIME_DEBOUNCE_TIMER_VAL             160
+
+#define P2U_DIR_SEARCH_CTRL                                 0xd4
+#define P2U_DIR_SEARCH_CTRL_GEN4_FINE_GRAIN_SEARCH_TWICE    BIT(18)
 
 /**
   Function map region into GCD and MMU
@@ -168,6 +176,9 @@ TegraP2UInit (
   TEGRAP2U_DXE_PRIVATE *Private;
   TEGRAP2U_LIST_ENTRY  *Entry;
   UINT32 val;
+  UINTN ChipID;
+
+  ChipID = TegraGetChipID();
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -183,6 +194,12 @@ TegraP2UInit (
   DEBUG ((EFI_D_VERBOSE, "%a: P2U Base Addr = 0x%08X\r\n", __FUNCTION__,
          Entry->BaseAddr));
 
+  if (Entry->SkipSizeProtectionEn) {
+    val = MmioRead32(Entry->BaseAddr + P2U_CONTROL_CMN);
+    val |= P2U_CONTROL_CMN_SKP_SIZE_PROTECTION_EN;
+    MmioWrite32 (Entry->BaseAddr + P2U_CONTROL_CMN, val);
+  }
+
   val = MmioRead32(Entry->BaseAddr + P2U_PERIODIC_EQ_CTRL_GEN3);
   val &= ~P2U_PERIODIC_EQ_CTRL_GEN3_PERIODIC_EQ_EN;
   val |= P2U_PERIODIC_EQ_CTRL_GEN3_INIT_PRESET_EQ_TRAIN_EN;
@@ -196,6 +213,12 @@ TegraP2UInit (
   val &= ~P2U_RX_DEBOUNCE_TIME_DEBOUNCE_TIMER_MASK;
   val |= P2U_RX_DEBOUNCE_TIME_DEBOUNCE_TIMER_VAL;
   MmioWrite32 (Entry->BaseAddr + P2U_RX_DEBOUNCE_TIME, val);
+
+  if (ChipID == T234_CHIP_ID ) {
+    val = MmioRead32(Entry->BaseAddr + P2U_DIR_SEARCH_CTRL);
+    val &= ~P2U_DIR_SEARCH_CTRL_GEN4_FINE_GRAIN_SEARCH_TWICE;
+    MmioWrite32 (Entry->BaseAddr + P2U_DIR_SEARCH_CTRL, val);
+  }
 
   return EFI_SUCCESS;
 }
@@ -214,11 +237,14 @@ AddP2UEntries (
   IN TEGRAP2U_DXE_PRIVATE *Private
   )
 {
-  INT32      NodeOffset = -1;
+  INT32 NodeOffset = -1;
+  UINTN ChipID;
 
   if (NULL == Private) {
     return EFI_INVALID_PARAMETER;
   }
+
+  ChipID = TegraGetChipID();
 
   do {
     TEGRAP2U_LIST_ENTRY *ListEntry = NULL;
@@ -227,15 +253,23 @@ AddP2UEntries (
     EFI_STATUS           Status;
 
     /*
-     * Since all the P2U entries (total 20 i.e. HSIO-12 + NVHS-8 in Tegra194)
-     * in the device tree have the same compatibility string, we attempt to
-     * find all of them and create a list.
+     * Since all the P2U entries have the same compatibility string,
+     * we attempt to find all of them and create a list.
      */
-    NodeOffset = fdt_node_offset_by_compatible (Private->DeviceTreeBase,
-                                                NodeOffset,
-                                                "nvidia,tegra194-p2u");
-    if (NodeOffset <= 0) {
-      break;
+    if (ChipID == T194_CHIP_ID) {
+      NodeOffset = fdt_node_offset_by_compatible (Private->DeviceTreeBase,
+                                                  NodeOffset,
+                                                  "nvidia,tegra194-p2u");
+      if (NodeOffset <= 0) {
+        break;
+      }
+    } else if (ChipID == T234_CHIP_ID) {
+      NodeOffset = fdt_node_offset_by_compatible (Private->DeviceTreeBase,
+                                                  NodeOffset,
+                                                  "nvidia,tegra234-p2u");
+      if (NodeOffset <= 0) {
+        break;
+        }
     }
 
     ListEntry = AllocateZeroPool (sizeof (TEGRAP2U_LIST_ENTRY));
@@ -270,6 +304,16 @@ AddP2UEntries (
              Status));
       return EFI_DEVICE_ERROR;
     }
+
+    if (NULL != fdt_get_property (Private->DeviceTreeBase,
+                                  NodeOffset,
+                                  "nvidia,skip-sz-protect-en",
+                                  NULL)) {
+      ListEntry->SkipSizeProtectionEn = TRUE;
+    } else {
+      ListEntry->SkipSizeProtectionEn = FALSE;
+    }
+
   } while (1);
 
   return EFI_SUCCESS;
