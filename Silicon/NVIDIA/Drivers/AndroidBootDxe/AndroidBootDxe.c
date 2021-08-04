@@ -75,6 +75,83 @@ STATIC INITRD_DEVICE_PATH        mInitrdDevicePath = {
 
 
 /**
+  Causes the driver to load a specified file.
+
+  @param  This       Protocol instance pointer.
+  @param  FilePath   The device specific path of the file to load.
+  @param  BootPolicy Should always be FALSE.
+  @param  BufferSize On input the size of Buffer in bytes. On output with a return
+                     code of EFI_SUCCESS, the amount of data transferred to
+                     Buffer. On output with a return code of EFI_BUFFER_TOO_SMALL,
+                     the size of Buffer required to retrieve the requested file.
+  @param  Buffer     The memory buffer to transfer the file to. IF Buffer is NULL,
+                     then no the size of the requested file is returned in
+                     BufferSize.
+
+  @retval EFI_SUCCESS           The file was loaded.
+  @retval EFI_UNSUPPORTED       BootPolicy is TRUE.
+  @retval EFI_INVALID_PARAMETER FilePath is not a valid device path, or
+                                BufferSize is NULL.
+  @retval EFI_NO_MEDIA          No medium was present to load the file.
+  @retval EFI_DEVICE_ERROR      The file was not loaded due to a device error.
+  @retval EFI_NO_RESPONSE       The remote system did not respond.
+  @retval EFI_NOT_FOUND         The file was not found
+  @retval EFI_ABORTED           The file load process was manually canceled.
+  @retval EFI_BUFFER_TOO_SMALL  The BufferSize is too small to read the current
+                                directory entry. BufferSize has been updated with
+                                the size needed to complete the request.
+
+
+**/
+EFI_STATUS
+EFIAPI
+AndroidBootDxeLoadFile2 (
+  IN EFI_LOAD_FILE2_PROTOCOL    *This,
+  IN EFI_DEVICE_PATH_PROTOCOL   *FilePath,
+  IN BOOLEAN                    BootPolicy,
+  IN OUT UINTN                  *BufferSize,
+  IN VOID                       *Buffer OPTIONAL
+  )
+
+{
+  DEBUG ((DEBUG_INFO, "%a: buffer %09p in size %08x\n", __FUNCTION__, Buffer, *BufferSize));
+
+  // Verify if the valid parameters
+  if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (BootPolicy) {
+    return EFI_UNSUPPORTED;
+  }
+
+  // Check if the given buffer size is big enough
+  // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
+  if (mInitRdBaseAddress == 0) {
+    return EFI_NOT_FOUND;
+  }
+  if (Buffer == NULL || *BufferSize < mInitRdSize) {
+    *BufferSize = mInitRdSize;
+    return EFI_BUFFER_TOO_SMALL;
+  }
+
+  // Copy InitRd
+  gBS->CopyMem (Buffer, (VOID *)mInitRdBaseAddress, mInitRdSize);
+
+  return EFI_SUCCESS;
+}
+
+
+///
+/// Load File Protocol instance
+///
+GLOBAL_REMOVE_IF_UNREFERENCED
+EFI_LOAD_FILE2_PROTOCOL  mAndroidBootDxeLoadFile2 = {
+  AndroidBootDxeLoadFile2
+};
+
+
+/**
   Attempt to read the data from source to destination buffer.
 
   @param[in]  BlockIo             BlockIo protocol interface which is already located.
@@ -271,6 +348,7 @@ AndroidBootLoadFile (
   )
 {
   EFI_STATUS                      Status;
+  EFI_HANDLE                      InitrdHandle;
   UINTN                           Addr;
   UINTN                           BufSize;
   UINTN                           BufBase;
@@ -341,6 +419,18 @@ AndroidBootLoadFile (
 
   mInitRdBaseAddress = BufBase;
   mInitRdSize = BufSize;
+
+  if (mInitRdSize != 0) {
+    InitrdHandle = NULL;
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &InitrdHandle,
+                    &gEfiLoadFile2ProtocolGuid,
+                    &mAndroidBootDxeLoadFile2,
+                    &gEfiDevicePathProtocolGuid,
+                    &mInitrdDevicePath,
+                    NULL
+                    );
+  }
 
   return Status;
 
@@ -938,87 +1028,6 @@ AndroidBootDriverBindingStop (
 /**
   Causes the driver to load a specified file.
 
-  @param  This       Protocol instance pointer.
-  @param  FilePath   The device specific path of the file to load.
-  @param  BootPolicy Should always be FALSE.
-  @param  BufferSize On input the size of Buffer in bytes. On output with a return
-                     code of EFI_SUCCESS, the amount of data transferred to
-                     Buffer. On output with a return code of EFI_BUFFER_TOO_SMALL,
-                     the size of Buffer required to retrieve the requested file.
-  @param  Buffer     The memory buffer to transfer the file to. IF Buffer is NULL,
-                     then no the size of the requested file is returned in
-                     BufferSize.
-
-  @retval EFI_SUCCESS           The file was loaded.
-  @retval EFI_UNSUPPORTED       BootPolicy is TRUE.
-  @retval EFI_INVALID_PARAMETER FilePath is not a valid device path, or
-                                BufferSize is NULL.
-  @retval EFI_NO_MEDIA          No medium was present to load the file.
-  @retval EFI_DEVICE_ERROR      The file was not loaded due to a device error.
-  @retval EFI_NO_RESPONSE       The remote system did not respond.
-  @retval EFI_NOT_FOUND         The file was not found
-  @retval EFI_ABORTED           The file load process was manually canceled.
-  @retval EFI_BUFFER_TOO_SMALL  The BufferSize is too small to read the current
-                                directory entry. BufferSize has been updated with
-                                the size needed to complete the request.
-
-
-**/
-EFI_STATUS
-EFIAPI
-AndroidBootDxeLoadFile2 (
-  IN EFI_LOAD_FILE2_PROTOCOL    *This,
-  IN EFI_DEVICE_PATH_PROTOCOL   *FilePath,
-  IN BOOLEAN                    BootPolicy,
-  IN OUT UINTN                  *BufferSize,
-  IN VOID                       *Buffer OPTIONAL
-  )
-
-{
-  DEBUG ((DEBUG_INFO, "%a: buffer %09p in size %08x\n", __FUNCTION__, Buffer, *BufferSize));
-
-  // Verify if the valid parameters
-  if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  if (BootPolicy) {
-    return EFI_UNSUPPORTED;
-  }
-
-  // Check if the given buffer size is big enough
-  // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
-  if (mInitRdBaseAddress == 0) {
-    return EFI_NOT_FOUND;
-  }
-  if (Buffer == NULL || *BufferSize < mInitRdSize) {
-    *BufferSize = mInitRdSize;
-    return EFI_BUFFER_TOO_SMALL;
-  }
-
-  // Copy InitRd
-  gBS->CopyMem (Buffer, (VOID *)mInitRdBaseAddress, mInitRdSize);
-
-  gBS->FreePages (mInitRdBaseAddress, EFI_SIZE_TO_PAGES (mInitRdSize));
-  mInitRdBaseAddress = 0;
-  mInitRdSize = 0;
-
-  return EFI_SUCCESS;
-}
-
-
-///
-/// Load File Protocol instance
-///
-GLOBAL_REMOVE_IF_UNREFERENCED
-EFI_LOAD_FILE2_PROTOCOL  mAndroidBootDxeLoadFile2 = {
-  AndroidBootDxeLoadFile2
-};
-
-
-/**
-  Causes the driver to load a specified file.
-
   @param  This                  Protocol instance pointer.
   @param  FilePath              The device specific path of the file to load.
   @param  BootPolicy            If TRUE, indicates that the request originates from the
@@ -1213,7 +1222,6 @@ AndroidBootDxeDriverEntryPoint (
 {
   EFI_STATUS            Status;
   VOID                  *Hob;
-  EFI_HANDLE            InitrdHandle;
   UINTN                 EmmcMagic;
   CHAR16                *KernelArgs;
 
@@ -1224,19 +1232,6 @@ AndroidBootDxeDriverEntryPoint (
              &mAndroidBootDriverBinding,
              ImageHandle
              );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  InitrdHandle = NULL;
-  Status = gBS->InstallMultipleProtocolInterfaces (
-                  &InitrdHandle,
-                  &gEfiLoadFile2ProtocolGuid,
-                  &mAndroidBootDxeLoadFile2,
-                  &gEfiDevicePathProtocolGuid,
-                  &mInitrdDevicePath,
-                  NULL
-                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }
