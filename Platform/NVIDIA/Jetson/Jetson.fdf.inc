@@ -165,3 +165,9 @@
   # FSI Support
   #
   INF Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
+
+  #
+  # SMBIOS support
+  #
+  INF ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
+  INF ArmPkg/Universal/Smbios/SmbiosMiscDxe/SmbiosMiscDxe.inf

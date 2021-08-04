@@ -1,0 +1,74 @@
+#/** @file
+#    OemMiscLib.inf
+#
+#    Copyright (c) 2021, NVIDIA Corporation. All rights reserved.
+#    Copyright (c) 2021, NUVIA Inc. All rights reserved.
+#    Copyright (c) 2018, Hisilicon Limited. All rights reserved.
+#    Copyright (c) 2018, Linaro Limited. All rights reserved.
+#
+#    SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#    Portions provided under the following terms:
+#    Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#    NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+#    property and proprietary rights in and to this material, related
+#    documentation and any modifications thereto. Any use, reproduction,
+#    disclosure or distribution of this material and related documentation
+#    without an express license agreement from NVIDIA CORPORATION or
+#    its affiliates is strictly prohibited.
+#
+#    SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+#    SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = OemMiscLib
+  FILE_GUID                      = 70c6df25-7cbd-4873-860b-bd3d4e5df0b2
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = OemMiscLib
+  CONSTRUCTOR                    = OemMiscLibConstructor
+
+[Sources.common]
+  OemMiscLib.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  PrintLib
+
+[Protocols]
+  gNVIDIASmbiosCpuDataProtocolGuid           # PROTOCOL ALWAYS_CONSUMED
+  gNVIDIASmbiosMiscDataProtocolGuid         # PROTOCOL ALWAYS_CONSUMED
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdBoardChassisLocation
+  gNVIDIATokenSpaceGuid.PcdBoardManufacturer
+  gNVIDIATokenSpaceGuid.PcdSystemSerialNum
+  gNVIDIATokenSpaceGuid.PcdSystemManufacturer
+  gNVIDIATokenSpaceGuid.PcdSystemSku
+  gNVIDIATokenSpaceGuid.PcdSystemFamilyType
+  gNVIDIATokenSpaceGuid.PcdBoardVersion
+  gNVIDIATokenSpaceGuid.PcdChassisSku
+  gNVIDIATokenSpaceGuid.PcdChassisManufacturer
+  gNVIDIATokenSpaceGuid.PcdChassisSerialNumber
+  gNVIDIATokenSpaceGuid.PcdChassisAssetTag
+  gNVIDIATokenSpaceGuid.PcdChassisVersion
+  gNVIDIATokenSpaceGuid.PcdType3Info
+  gNVIDIATokenSpaceGuid.PcdType32Info
+
+
+[Depex]
+  gNVIDIASmbiosCpuDataProtocolGuid
+  AND
+  gNVIDIASmbiosMiscDataProtocolGuid
