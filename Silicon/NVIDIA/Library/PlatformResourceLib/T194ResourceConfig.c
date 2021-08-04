@@ -36,6 +36,7 @@
 #include <Library/CacheMaintenanceLib.h>
 #include "T194ResourceConfigPrivate.h"
 #include "T194ResourceConfig.h"
+#include <T194/T194Definitions.h>
 
 TEGRA_MMIO_INFO T194MmioInfo[] = {
   {
@@ -48,6 +49,10 @@ TEGRA_MMIO_INFO T194MmioInfo[] = {
   },
   {
     FixedPcdGet64(PcdTegraMCBBaseAddress),
+    SIZE_4KB
+  },
+  {
+    T194_GIC_INTERRUPT_INTERFACE_BASE,
     SIZE_4KB
   },
   {

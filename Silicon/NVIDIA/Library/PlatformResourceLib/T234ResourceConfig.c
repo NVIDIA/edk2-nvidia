@@ -41,7 +41,7 @@
 #include <Library/MceAriLib.h>
 #include <Library/PrintLib.h>
 #include "T234ResourceConfigPrivate.h"
-
+#include <T234/T234Definitions.h>
 #include <Protocol/CvmEeprom.h>
 
 #define T234_MAX_CPUS       12
@@ -58,6 +58,10 @@ TEGRA_MMIO_INFO T234MmioInfo[] = {
   {
     FixedPcdGet64(PcdTegraMCBBaseAddress),
     SIZE_4KB
+  },
+  {
+    T234_GIC_REDISTRIBUTOR_BASE,
+    T234_GIC_REDISTRIBUTOR_INSTANCES * SIZE_128KB
   },
   {
     FixedPcdGet64(PcdTegraMceAriApertureBaseAddress),
