@@ -42,7 +42,38 @@
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
 
+typedef struct {
+  CONST CHAR8 *Compatibility;
+} QSPI_COMPATIBILITY;
+
 EFI_EVENT FdtInstallEvent;
+QSPI_COMPATIBILITY gQspiCompatibilityMap[] = {
+  { "nvidia,tegra186-qspi" },
+  { "nvidia,tegra194-qspi" },
+  { "nvidia,tegra23x-qspi" },
+  { NULL }
+};
+
+VOID
+EFIAPI
+RemoveQspiNodes (
+  IN VOID *Dtb
+  )
+{
+  QSPI_COMPATIBILITY *Map;
+  INT32              NodeOffset;
+
+  Map = gQspiCompatibilityMap;
+
+  while (Map->Compatibility != NULL) {
+    NodeOffset = fdt_node_offset_by_compatible(Dtb, 0, Map->Compatibility);
+    while (NodeOffset >= 0) {
+      fdt_del_node (Dtb, NodeOffset);
+      NodeOffset = fdt_node_offset_by_compatible(Dtb, 0, Map->Compatibility);
+    }
+    Map++;
+  }
+}
 
 VOID
 EFIAPI
@@ -60,6 +91,7 @@ FdtInstalled (
   }
 
   UpdateCpuFloorsweepingConfig (Dtb);
+  RemoveQspiNodes (Dtb);
 }
 
 /**
@@ -230,6 +262,9 @@ DtPlatformLoadDtb (
   //Check floorsweeping here in addition to callback to allow for users of this API who
   //do not install the Dtb into the system table to get correct data.
   UpdateCpuFloorsweepingConfig (*Dtb);
+
+  //QSPI flash is not supposed to be accessed by OS.
+  RemoveQspiNodes (Dtb);
 
   //Disable grid of semaphores as we do not set up memory for this
   NodeOffset = fdt_path_offset (*Dtb, "/reserved-memory/grid-of-semaphores");
