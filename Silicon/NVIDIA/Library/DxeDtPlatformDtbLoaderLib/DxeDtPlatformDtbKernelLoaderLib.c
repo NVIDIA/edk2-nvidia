@@ -37,6 +37,8 @@
 
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PlatformResourceLib.h>
+#include <Library/TegraDeviceTreeOverlayLib.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
 
@@ -87,12 +89,13 @@ DtPlatformLoadDtb (
   BOOLEAN                     ValidFlash;
   BOOLEAN                     DtbLocAdjusted;
   UINTN                       Index;
-  VOID                        *Hob = NULL;
   EFI_BLOCK_IO_PROTOCOL       *BlockIo;
   INT32                       NodeOffset;
   INT32                       DtStatus;
   VOID                        *DtbAllocated;
   VOID                        *DtbCopy;
+  UINT64                      DtbNext;
+  CHAR8                       SWModule[] = "kernel";
 
   ValidFlash = FALSE;
   DtbLocAdjusted = FALSE;
@@ -187,12 +190,7 @@ DtPlatformLoadDtb (
 
   if (!ValidFlash) {
     DEBUG ((DEBUG_INFO, "%a: Using UEFI DTB\r\n", __FUNCTION__));
-    Hob = GetFirstGuidHob (&gFdtHobGuid);
-    if (Hob == NULL || GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (UINT64)) {
-      Status = EFI_NOT_FOUND;
-      goto Exit;
-    }
-    *Dtb = (VOID *)(UINTN)*(UINT64 *)GET_GUID_HOB_DATA (Hob);
+    *Dtb = (VOID *)(UINTN)GetDTBBaseAddress ();
     if(fdt_check_header (*Dtb) != 0) {
       DEBUG ((DEBUG_ERROR, "%a: UEFI DTB corrupted\r\n", __FUNCTION__));
       Status = EFI_NOT_FOUND;
@@ -208,6 +206,23 @@ DtPlatformLoadDtb (
   if (fdt_open_into (*Dtb, DtbCopy, 2 * fdt_totalsize (*Dtb)) != 0) {
     Status = EFI_NOT_FOUND;
     goto Exit;
+  }
+
+  DtbNext = ALIGN_VALUE ((UINTN)*Dtb + fdt_totalsize (*Dtb), SIZE_4KB);
+  if (fdt_check_header((VOID *)DtbNext) == 0) {
+    Status = ApplyTegraDeviceTreeOverlay((VOID *)DtbCopy, (VOID *)DtbNext, SWModule);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "DTB Overlay failed. Using base DTB.\n"));
+      if (fdt_open_into (*Dtb, DtbCopy, 2 * fdt_totalsize (*Dtb)) != 0) {
+        Status = EFI_NOT_FOUND;
+        goto Exit;
+      }
+    }
+  }
+
+  NodeOffset = fdt_path_offset ((VOID *)DtbCopy, "/plugin-manager");
+  if (NodeOffset >= 0) {
+    fdt_del_node ((VOID *)DtbCopy, NodeOffset);
   }
 
   *Dtb = DtbCopy;

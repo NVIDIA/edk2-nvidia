@@ -52,13 +52,14 @@
   PcdLib
   UefiBootServicesTableLib
   FloorSweepingLib
+  PlatformResourceLib
+  TegraDeviceTreeOverlayLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid
   gEfiBlockIoProtocolGuid
 
 [Guids]
-  gFdtHobGuid
   gFdtTableGuid
 
 [Pcd]
