@@ -74,6 +74,7 @@
   INF Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf
   INF Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
   INF Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
+  INF Silicon/NVIDIA/Drivers/XudcControllerDxe/XudcControllerDxe.inf
   INF Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 
   #

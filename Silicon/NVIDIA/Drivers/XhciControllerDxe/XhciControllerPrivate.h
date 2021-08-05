@@ -77,9 +77,6 @@
 #define XUSB_T234_BASE2_ADDR_SHIFT          16
 #define XUSB_T234_BASE2_ADDR_MASK           0xffff
 
-#define XUSB_DEV_XHCI_CTRL_0_OFFSET         0x30
-#define XUSB_DEV_XHCI_CTRL_0_RUN_BIT        0
-
 /* Stores Platform Specific Information */
 typedef struct {
   UINT32 Cfg4AddrShift;
@@ -114,10 +111,8 @@ typedef struct {
   NVIDIA_XHCICONTROLLER_PROTOCOL   XhciControllerProtocol;
   TEGRA_XUSB_SOC                   *XusbSoc;
   EFI_HANDLE                       ImageHandle;
-  EFI_HANDLE                       ControllerHandle;
   NVIDIA_USBPADCTL_PROTOCOL        *mUsbPadCtlProtocol;
   NVIDIA_USBFW_PROTOCOL            *mUsbFwProtocol;
-  EFI_PHYSICAL_ADDRESS             XudcBaseAddress;
 } XHCICONTROLLER_DXE_PRIVATE;
 #define XHCICONTROLLER_PRIVATE_DATA_FROM_THIS(a) CR(a, XHCICONTROLLER_DXE_PRIVATE, XhciControllerProtocol, XHCICONTROLLER_SIGNATURE)
 

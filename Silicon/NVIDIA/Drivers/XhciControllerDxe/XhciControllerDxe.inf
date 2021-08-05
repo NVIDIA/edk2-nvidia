@@ -55,9 +55,6 @@
   IoLib
   FdtLib
   DeviceDiscoveryDriverLib
-  TegraPlatformInfoLib
-  DeviceTreeHelperLib
-  DxeServicesTableLib
   UsbFalconLib
   TegraPlatformInfoLib
 
@@ -73,8 +70,6 @@
 
 [Guids]
   gEdkiiNonDiscoverableXhciDeviceGuid
-  gEfiEventExitBootServicesGuid
-  gEfiAcpiTableGuid
 
 [Depex]
   gNVIDIAUsbPadCtlProtocolGuid
