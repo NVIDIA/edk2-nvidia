@@ -188,3 +188,4 @@
   # SMBIOS support
   #
   INF Silicon/NVIDIA/Tegra/T194/Drivers/SmbiosDataDxe/SmbiosDataDxe.inf
+  INF Silicon/NVIDIA/Tegra/T234/Drivers/SmbiosDataDxe/SmbiosDataDxe.inf

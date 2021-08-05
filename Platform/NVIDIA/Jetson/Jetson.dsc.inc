@@ -347,3 +347,4 @@
   # SMBIOS
   #
   Silicon/NVIDIA/Tegra/T194/Drivers/SmbiosDataDxe/SmbiosDataDxe.inf
+  Silicon/NVIDIA/Tegra/T234/Drivers/SmbiosDataDxe/SmbiosDataDxe.inf
