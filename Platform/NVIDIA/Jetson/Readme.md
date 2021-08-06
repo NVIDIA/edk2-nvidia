@@ -38,6 +38,9 @@ the Jetson Developer Kit.
 # Limitations
 - SetVariable is not supported at UEFI runtime for Jetson AGX Xavier
 - SetTime is not supported at UEFI runtime for Jetson AGX Xavier
+- On Jetson Xavier NX, when booting in device tree mode the kernel by default
+  will disable the clocks needed for runtime variable operation, this can be
+  disabled by passing "clk_ignore_unused" as a command line option to the kernel.
 - Only SDR25 is supported for SD-cards when booting Linux with ACPI
   Users may use alternative storage devices, such as USB mass storage,
   for better performance
