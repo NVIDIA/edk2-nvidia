@@ -45,6 +45,7 @@
 STATIC BPMP_I2C_DEVICE_TYPE_MAP mDeviceTypeMap[] = {
     { "maxim,max20024", &gNVIDIAI2cMaxim20024, 1, { { 0x22, 0x48 } } },
     { "maxim,max77620", &gNVIDIAI2cMaxim77620, 1, { { 0x22, 0x48 } } },
+    { "nvidia,vrs-pseq", &gNVIDIAI2cVrsPseq, 0, { { 0x00, 0x00 } } },
     { NULL, NULL, 0, { { 0x00, 0x00 } } }
 };
 
@@ -657,6 +658,7 @@ BuildI2cDevices (
     Private->I2cDevices[Index].DeviceGuid = &gNVIDIAI2cUnknown;
     while (MapEntry->Compatibility != NULL) {
       if (0 == fdt_node_check_compatible (Private->DeviceTreeBase, Node, MapEntry->Compatibility)) {
+        DEBUG ((DEBUG_ERROR, "%a: %a detected\r\n", __FUNCTION__, MapEntry->Compatibility));
         Private->I2cDevices[Index].DeviceGuid = MapEntry->DeviceType;
         AdditionalSlaves = MapEntry->AdditionalSlaves;
         break;
@@ -676,6 +678,7 @@ BuildI2cDevices (
       Private->I2cDevices[Index].SlaveAddressCount = 1;
       Private->I2cDevices[Index].SlaveAddressArray = &Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)];
       Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)] = SwapBytes32 (*RegEntry);
+      DEBUG ((DEBUG_ERROR, "%a: Address %02x\r\n", __FUNCTION__, Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)]));
     }
 
     for (SlaveIndex = 0; SlaveIndex < AdditionalSlaves; SlaveIndex++) {

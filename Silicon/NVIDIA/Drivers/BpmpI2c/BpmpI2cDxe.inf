@@ -65,6 +65,7 @@
 [Guids]
   gNVIDIAI2cMaxim20024
   gNVIDIAI2cMaxim77620
+  gNVIDIAI2cVrsPseq
   gNVIDIAI2cUnknown
 
 [Depex]
