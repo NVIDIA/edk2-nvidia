@@ -72,6 +72,10 @@ BpmpIpcProcess (
   UINT32                       RequestSize;
   UINT32                       ResponseSize;
   VOID                         *ResponseData;
+  UINT8                        Crc8;
+  UINTN                        OperationIndex;
+  UINTN                        BufferLocation = 0;
+  BPMP_I2C_REQUEST_OP          *I2cRequest;
 
 
   if (NULL == Private) {
@@ -84,12 +88,11 @@ BpmpIpcProcess (
     Token = &Private->BpmpIpcToken;
   }
 
-  if (Private->CurrentOperation != 0) {
-    Operation = &Private->RequestPacket->Operation[Private->CurrentOperation-1];
-    //Sync failures are handled after return of BpmpIpc->Communicate
+  if (Private->TransferInProgress) {
+    Private->TransferInProgress = FALSE;
     if (NULL != Token) {
       if (EFI_ERROR (Token->TransactionStatus)) {
-        DEBUG ((EFI_D_INFO, "%a: I2C transfer failed: %r\r\n",__FUNCTION__,Token->TransactionStatus));
+        DEBUG ((EFI_D_ERROR, "%a: I2C transfer failed async: %r, %08x\r\n",__FUNCTION__,Token->TransactionStatus, Private->MessageError));
         *Private->TransactionStatus = EFI_DEVICE_ERROR;
         Private->RequestPacket = NULL;
         if (Private->TransactionEvent != NULL) {
@@ -97,13 +100,17 @@ BpmpIpcProcess (
         }
         return;
       }
+    }
+    BufferLocation = 0;
+    for (OperationIndex = 0; OperationIndex < Private->RequestPacket->OperationCount; OperationIndex++) {
+      Operation = &Private->RequestPacket->Operation[OperationIndex];
+      //Sync failures are handled after return of BpmpIpc->Communicate
       if (Operation->Flags == I2C_FLAG_READ) {
-        CopyMem (Operation->Buffer, Private->Response.Data, MIN(Operation->LengthInBytes, Private->Response.DataSize));
+        CopyMem (Operation->Buffer, Private->Response.Data + BufferLocation, MIN(Operation->LengthInBytes, Private->Response.DataSize));
+        BufferLocation += MIN(Operation->LengthInBytes, Private->Response.DataSize);
       }
     }
-  }
 
-  if (Private->CurrentOperation == Private->RequestPacket->OperationCount) {
     *Private->TransactionStatus = EFI_SUCCESS;
     Private->RequestPacket = NULL;
     if (Private->TransactionEvent != NULL) {
@@ -112,39 +119,54 @@ BpmpIpcProcess (
     return;
   }
 
-  Operation = &Private->RequestPacket->Operation[Private->CurrentOperation];
+  BufferLocation = 0;
   Private->Request.Command = BPMP_I2C_CMD_TRANSFER;
   Private->Request.BusId = Private->BusId;
-  Private->Request.SlaveAddress = Private->SlaveAddress;
-  Private->Request.Length = Operation->LengthInBytes;
+  ResponseSize = sizeof (UINT32);
+  ResponseData = &Private->Response;
+  for (OperationIndex = 0; OperationIndex < Private->RequestPacket->OperationCount; OperationIndex++) {
+    Operation = &Private->RequestPacket->Operation[OperationIndex];
+    I2cRequest = (BPMP_I2C_REQUEST_OP *)&Private->Request.Data [BufferLocation];
 
-  if (Operation->Flags == I2C_FLAG_READ) {
-    Private->Request.DataSize = BPMP_I2C_HEADER_LENGTH;
-    Private->Request.Flags = BPMP_I2C_READ;
-    RequestSize = BPMP_I2C_FULL_HEADER_LENGTH;
-    ResponseSize = sizeof (UINT32) + Operation->LengthInBytes;
-    ResponseData = &Private->Response;
-  } else if (Operation->Flags == 0) {
-    //Write
-    Private->Request.DataSize = BPMP_I2C_HEADER_LENGTH + Private->Request.Length;
-    CopyMem (Private->Request.Data, Operation->Buffer, Private->Request.Length);
-    Private->Request.Flags = 0;
-    RequestSize = BPMP_I2C_FULL_HEADER_LENGTH + Operation->LengthInBytes;
-    ResponseSize = 0;
-    ResponseData = NULL;
-  } else {
-    //Unsupported
-    *Private->TransactionStatus = EFI_UNSUPPORTED;
-    if (Private->TransactionEvent != NULL) {
-      gBS->SignalEvent (Private->TransactionEvent);
+    I2cRequest->SlaveAddress = Private->SlaveAddress;
+    I2cRequest->Length = Operation->LengthInBytes;
+    I2cRequest->Flags = 0;
+
+    if (Operation->Flags == I2C_FLAG_READ) {
+      I2cRequest->Flags |= BPMP_I2C_READ;
+      ResponseSize += Operation->LengthInBytes;
+      BufferLocation += sizeof (BPMP_I2C_REQUEST_OP);
+    } else if (Operation->Flags == I2C_FLAG_SMBUS_PEC) {
+      //Write with PEC
+      CopyMem (I2cRequest->Data, Operation->Buffer, Operation->LengthInBytes);
+
+      I2cRequest->Length++;
+      //Calculate PEC
+      Crc8 = (Private->SlaveAddress << 1);
+      Crc8 = CalculateCrc8 (&Crc8, 1, 0, TYPE_CRC8);
+      I2cRequest->Data[Operation->LengthInBytes] = CalculateCrc8 (Operation->Buffer, Operation->LengthInBytes, Crc8, TYPE_CRC8);
+      BufferLocation += sizeof (BPMP_I2C_REQUEST_OP) + I2cRequest->Length;
+    } else if (Operation->Flags == 0) {
+      //Write
+      CopyMem (I2cRequest->Data, Operation->Buffer, Operation->LengthInBytes);
+      BufferLocation += sizeof (BPMP_I2C_REQUEST_OP) + I2cRequest->Length;
+    } else {
+      //Unsupported
+      *Private->TransactionStatus = EFI_UNSUPPORTED;
+      if (Private->TransactionEvent != NULL) {
+        gBS->SignalEvent (Private->TransactionEvent);
+      }
+      return;
     }
-    return;
+
+    if (OperationIndex == (Private->RequestPacket->OperationCount - 1)) {
+      I2cRequest->Flags |= BPMP_I2C_STOP;
+    }
   }
 
-  Private->CurrentOperation++;
-  if (Private->CurrentOperation == Private->RequestPacket->OperationCount) {
-    Private->Request.Flags |= BPMP_I2C_STOP;
-  }
+  Private->Request.DataSize = BufferLocation;
+  //3 UINT32s in header (Command, BusId, DataSize) before buffer
+  RequestSize = (3 * sizeof (UINT32)) + BufferLocation;
 
   Status = Private->BpmpIpc->Communicate (
                                Private->BpmpIpc,
@@ -154,10 +176,10 @@ BpmpIpcProcess (
                                RequestSize,
                                ResponseData,
                                ResponseSize,
-                               NULL
+                               &Private->MessageError
                                );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_INFO, "%a: I2C transfer failed: %r\r\n",__FUNCTION__,Status));
+    DEBUG ((EFI_D_ERROR, "%a: I2C transfer failed sync: %r, %08x\r\n",__FUNCTION__,Status, Private->MessageError));
     *Private->TransactionStatus = EFI_DEVICE_ERROR;
     Private->RequestPacket = NULL;
     if (Private->TransactionEvent != NULL) {
@@ -165,6 +187,8 @@ BpmpIpcProcess (
     }
     return;
   }
+
+  Private->TransferInProgress = TRUE;
 
   if (Event == NULL) {
     BpmpIpcProcess (Event, Context);
@@ -327,7 +351,7 @@ BpmpI2cStartRequest (
   } else {
     Private->TransactionStatus = I2cStatus;
   }
-  Private->CurrentOperation = 0;
+  Private->TransferInProgress = FALSE;
 
   if (NULL == Event) {
     BpmpIpcProcess (NULL, (VOID *)Private);
@@ -830,7 +854,7 @@ BpmpI2cStart (
     goto ErrorExit;
   }
 
-  Private->CurrentOperation = 0;
+  Private->TransferInProgress = FALSE;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &Private->Child,
