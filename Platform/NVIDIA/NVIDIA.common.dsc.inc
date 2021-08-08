@@ -218,6 +218,8 @@
   FloorSweepingLib|Silicon/NVIDIA/Library/FloorSweepingLib/FloorSweepingLib.inf
   DeviceTreeHelperLib|Silicon/NVIDIA/Library/DeviceTreeHelperLib/DeviceTreeHelperLib.inf
 
+  Crc8Lib|Silicon/NVIDIA/Library/Crc8Lib/Crc8Lib.inf
+
 !if $(BUILD_PROJECT_TYPE) == PROJECT_MU
   BaseBinSecurityLib|MdePkg/Library/BaseBinSecurityLibNull/BaseBinSecurityLibNull.inf
   MemoryProtectionLib|MdeModulePkg/Library/BaseMemoryProtectionLibNull/BaseMemoryProtectionLibNull.inf

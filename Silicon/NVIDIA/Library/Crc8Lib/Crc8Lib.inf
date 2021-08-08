@@ -1,8 +1,8 @@
 #/** @file
 #
-#  CVM EEPROM Driver
+#  CRC8 Library, calculates different type of CRC updates
 #
-#  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
 #  which accompanies this distribution.  The full text of the license may be found at
@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #
 # Portions provided under the following terms:
-# Copyright (c) 2019-2020 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 # property and proprietary rights in and to this material, related
@@ -21,46 +21,26 @@
 # without an express license agreement from NVIDIA CORPORATION or
 # its affiliates is strictly prohibited.
 #
-# SPDX-FileCopyrightText: Copyright (c) 2019-2020 NVIDIA CORPORATION & AFFILIATES
+# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
 # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 #
 #**/
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = CvmEepromDxe
-  FILE_GUID                      = 6430cdb4-a6b5-4326-95ba-97c4445dfe4e
-  MODULE_TYPE                    = DXE_DRIVER
+  BASE_NAME                      = Crc8Lib
+  FILE_GUID                      = 9bcca3ca-2895-4424-8a85-418746812642
+  MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-
-  ENTRY_POINT                    = InitializeCvmEepromDxe
+  LIBRARY_CLASS                  = Crc8Lib
 
 [Sources.common]
-  CvmEeprom.c
+  Crc8Lib.c
 
 [Packages]
-  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
-  MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
-  DebugLib
-  UefiLib
-  FdtLib
-  UefiBootServicesTableLib
-  UefiDriverEntryPoint
-  TegraPlatformInfoLib
-  PlatformResourceLib
-  Crc8Lib
+  BaseLib
 
-[Guids]
-  gNVIDIACvmEeprom
-
-[Protocols]
-  gEfiI2cIoProtocolGuid                       ## CONSUMES
-  gEfiRngProtocolGuid                         ## CONSUMES
-  gNVIDIACvmEepromProtocolGuid                ## SOMETIMES_PRODUCES
-
-[Depex]
-  TRUE
