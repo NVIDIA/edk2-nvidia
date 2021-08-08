@@ -505,6 +505,7 @@ InitializeCvmEepromDxe (
       return EFI_DEVICE_ERROR;
     }
 
+    Handle = NULL;
     Status = gBS->InstallMultipleProtocolInterfaces (&Handle,
                                                      &gNVIDIACvmEepromProtocolGuid,
                                                      EepromData,
