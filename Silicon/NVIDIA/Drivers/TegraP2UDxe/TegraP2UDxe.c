@@ -2,7 +2,7 @@
 
   Tegra P2U (PIPE to UPHY) Driver
 
-  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -12,7 +12,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
   Portions provided under the following terms:
-  Copyright (c) 2020 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -21,7 +21,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -37,6 +37,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 #include <libfdt.h>
 
@@ -327,8 +328,14 @@ TegraP2UDxeInitialize (
   IN EFI_SYSTEM_TABLE   *SystemTable
   )
 {
-  EFI_STATUS            Status;
+  EFI_STATUS           Status;
+  UINTN                ChipID;
   TEGRAP2U_DXE_PRIVATE *Private = NULL;
+
+  ChipID = TegraGetChipID();
+  if (ChipID == T234_CHIP_ID) {
+    return EFI_UNSUPPORTED;
+  }
 
   Private = AllocatePool (sizeof (TEGRAP2U_DXE_PRIVATE));
   if (NULL == Private) {
