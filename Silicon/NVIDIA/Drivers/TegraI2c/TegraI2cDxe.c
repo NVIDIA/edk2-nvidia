@@ -815,6 +815,51 @@ TegraI2cEnableI2cBusConfiguration (
 }
 
 /**
+  This routine is called to check whether the driver is supported
+  on ControllerHandle.
+
+  @param[in] DeviceTreeNode           Pointer to the device tree node protocol is available.
+
+  @retval EFI_SUCCESS           This driver is added to this device.
+  @retval other                 Some error occurs when binding this driver to this device.
+
+**/
+EFI_STATUS
+EFIAPI
+TegraI2CDriverBindingSupported (
+    IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
+  )
+{
+  INT32                             EepromNodeOffset;
+  CONST VOID                        *Property;
+  INT32                             PropertyLen;
+
+  if (DeviceTreeNode == NULL) {
+    return EFI_UNSUPPORTED;
+  }
+
+  // Check for EEPROM subnnode in I2C node.
+  PropertyLen = 0;
+  fdt_for_each_subnode (EepromNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
+    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
+                                   EepromNodeOffset,
+                                   "atmel,24c02") == 0) {
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "label", &PropertyLen);
+      if (Property != NULL && PropertyLen != 0) {
+        if (0 == AsciiStrCmp (Property, "module")) {
+          Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "reg", &PropertyLen);
+          if (Property != NULL && PropertyLen == sizeof (UINT32))  {
+            return EFI_SUCCESS;
+          }
+        }
+      }
+    }
+  }
+
+  return EFI_UNSUPPORTED;
+}
+
+/**
   This routine is called right after the .Supported() called and
   Start this driver on ControllerHandle.
 
@@ -1134,6 +1179,10 @@ DeviceDiscoveryNotify (
   EFI_STATUS              Status;
 
   switch (Phase) {
+  case DeviceDiscoveryDriverBindingSupported:
+    Status = TegraI2CDriverBindingSupported (DeviceTreeNode);
+    break;
+
   case DeviceDiscoveryDriverBindingStart:
     Status = TegraI2CDriverBindingStart (DriverHandle, ControllerHandle, DeviceTreeNode);
     break;
