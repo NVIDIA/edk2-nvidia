@@ -34,6 +34,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Protocol/PowerGateNodeProtocol.h>
 
 
@@ -78,10 +79,12 @@ OnExitBootServices (
 
   PgProtocol = NULL;
 
-  MmioBitFieldWrite32 (Private->XudcBaseAddress + XUSB_DEV_XHCI_CTRL_0_OFFSET,
-                       XUSB_DEV_XHCI_CTRL_0_RUN_BIT,
-                       XUSB_DEV_XHCI_CTRL_0_RUN_BIT,
-                       0);
+  if (GetBootType () == TegrablBootRcm) {
+    MmioBitFieldWrite32 (Private->XudcBaseAddress + XUSB_DEV_XHCI_CTRL_0_OFFSET,
+                         XUSB_DEV_XHCI_CTRL_0_RUN_BIT,
+                         XUSB_DEV_XHCI_CTRL_0_RUN_BIT,
+                         0);
+  }
 
   Status = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
   if (EFI_ERROR (Status)) {

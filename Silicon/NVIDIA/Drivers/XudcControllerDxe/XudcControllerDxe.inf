@@ -49,6 +49,7 @@
   UefiBootServicesTableLib
   DeviceDiscoveryDriverLib
   MemoryAllocationLib
+  PlatformResourceLib
 
 [Protocols]
   gNVIDIAPowerGateNodeProtocolGuid
