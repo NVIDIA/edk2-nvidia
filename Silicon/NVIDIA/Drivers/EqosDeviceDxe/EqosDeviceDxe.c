@@ -469,6 +469,8 @@ DeviceDiscoveryNotify (
       return Status;
     }
 
+    UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
+
     // Init PHY
     Status = PhyDxeInitialization (&Snp->PhyDriver, Snp->MacBase);
     if (EFI_ERROR (Status)) {
