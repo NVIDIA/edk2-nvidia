@@ -68,8 +68,11 @@ RemoveQspiNodes (
   while (Map->Compatibility != NULL) {
     NodeOffset = fdt_node_offset_by_compatible(Dtb, 0, Map->Compatibility);
     while (NodeOffset >= 0) {
-      fdt_del_node (Dtb, NodeOffset);
-      NodeOffset = fdt_node_offset_by_compatible(Dtb, 0, Map->Compatibility);
+      if ((fdt_subnode_offset (Dtb, NodeOffset, "flash@0") >= 0) ||
+          (fdt_subnode_offset (Dtb, NodeOffset, "spiflash@0") >= 0)) {
+        fdt_del_node (Dtb, NodeOffset);
+      }
+      NodeOffset = fdt_node_offset_by_compatible(Dtb, NodeOffset, Map->Compatibility);
     }
     Map++;
   }
