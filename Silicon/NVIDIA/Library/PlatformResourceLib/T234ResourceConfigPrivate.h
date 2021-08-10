@@ -304,8 +304,6 @@ typedef struct {
   /**< mb1 bct version information */
   UEFI_DECLARE_ALIGNED(UINT32 Mb1BctVersion, 8);
 
-  UEFI_DECLARE_ALIGNED(UINT32 Reserved2, 8);
-
   /**< mb1 version */
   UEFI_DECLARE_ALIGNED(UINT8 Mb1Version[TEGRABL_MAX_VERSION_STRING], 8);
 
