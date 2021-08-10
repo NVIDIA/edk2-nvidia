@@ -490,6 +490,7 @@ InitializeCvmEepromDxe (
   if (ChipID == T234_CHIP_ID) {
     DataSize = GetCvmEepromData ((UINT8**) &EepromData);
     if (DataSize == 0) {
+      DEBUG ((DEBUG_ERROR, "%a: Eeprom data size received is 0\r\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
