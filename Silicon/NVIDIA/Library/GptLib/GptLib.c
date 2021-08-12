@@ -39,6 +39,10 @@ GptValidateHeader (
   UINT32                        OriginalCrc;
   UINT32                        Crc;
 
+  if (Header->Header.HeaderSize != sizeof (EFI_PARTITION_TABLE_HEADER)) {
+    return EFI_VOLUME_CORRUPTED;
+  }
+
   // save off original crc and set to 0 for calculation, then put it back
   OriginalCrc = Header->Header.CRC32;
   Header->Header.CRC32 = 0;
