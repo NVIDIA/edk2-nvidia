@@ -171,9 +171,6 @@ InstallMmioRegions (
   *MmioRegionsCount += InstallMmioRegion(
                          TegraGetGicDistributorBaseAddress(ChipID), SIZE_64KB);
   *MmioRegionsCount += InstallMmioRegion(GetTegraUARTBaseAddress (), SIZE_4KB);
-  //TODO: Remove this. This is added to work around a NULL pointer
-  //exception in ArmCpuDxe.
-  *MmioRegionsCount += InstallMmioRegion(0x0, SIZE_4KB);
 
   MmioInfo = GetMmioBaseAndSize ();
   if (MmioInfo != NULL) {
