@@ -350,6 +350,8 @@ DeviceDiscoveryNotify (
       CopyMem (&SnpMode->CurrentAddress, &SnpMode->PermanentAddress, sizeof (EFI_MAC_ADDRESS));
     }
 
+    UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
+
     // Assign fields for device path
     CopyMem (&DevicePath->MacAddrDP.MacAddress, &Snp->Snp.Mode->CurrentAddress, NET_ETHER_ADDR_LEN);
     DevicePath->MacAddrDP.IfType = Snp->Snp.Mode->IfType;
@@ -468,8 +470,6 @@ DeviceDiscoveryNotify (
       DEBUG ((DEBUG_ERROR, "Failed to register for ACPI installation\r\n"));
       return Status;
     }
-
-    UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
 
     // Init PHY
     Status = PhyDxeInitialization (&Snp->PhyDriver, Snp->MacBase);
