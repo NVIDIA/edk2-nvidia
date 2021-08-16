@@ -519,6 +519,7 @@ UpdateDTACPIMacAddress (
   UINT32                Count;
   UINTN                 CharCount;
   CHAR8                 Buffer[32];
+  CHAR8                 MacBuffer[NET_ETHER_ADDR_LEN_DS];
   UINT64                MacData;
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
@@ -541,12 +542,14 @@ UpdateDTACPIMacAddress (
       ChipID = TegraGetChipID();
       if (ChipID == T234_CHIP_ID) {
         MacData = SwapBytes64 (*(UINT64 *)Snp->SnpMode.CurrentAddress.Addr);
+        MacData >>= 16;
         for (Count = 0; Count < Snp->NumMacs; Count++) {
           CharCount = AsciiSPrint (Buffer, sizeof (Buffer),"nvidia,ether-mac%d", Count);
-          MacData = SwapBytes64 (MacData);
-          fdt_setprop (DtBase, NodeOffset, Buffer, &MacData, NET_ETHER_ADDR_LEN);
-          MacData = SwapBytes64 (MacData);
-          MacData += MAC_INCREMENT_VALUE;
+          CharCount = AsciiSPrint (MacBuffer, sizeof (MacBuffer),"%02x:%02x:%02x:%02x:%02x:%02x",
+                                   BYTE (MacData, 5), BYTE (MacData, 4), BYTE (MacData, 3),
+                                   BYTE (MacData, 2), BYTE (MacData, 1), BYTE (MacData, 0));
+          fdt_setprop (DtBase, NodeOffset, Buffer, MacBuffer, sizeof (MacBuffer));
+          MacData++;
         }
       }
     }
