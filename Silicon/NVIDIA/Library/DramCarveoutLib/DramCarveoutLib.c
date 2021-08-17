@@ -224,16 +224,26 @@ InstallDramWithCarveouts (
     //No more carveouts or carveout is after dram region
     if ((CarveoutRegionsCount == CarveoutIndex) ||
         ((DramRegions[DramIndex].MemoryBaseAddress + DramRegions[DramIndex].MemoryLength) <= CarveoutRegions[CarveoutIndex].MemoryBaseAddress)) {
-      DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", DramRegions[DramIndex].MemoryBaseAddress, DramRegions[DramIndex].MemoryLength));
-      BuildResourceDescriptorHob (
-        EFI_RESOURCE_SYSTEM_MEMORY,
-        ResourceAttributes,
-        DramRegions[DramIndex].MemoryBaseAddress,
-        DramRegions[DramIndex].MemoryLength
-      );
       if (DramRegions[DramIndex].MemoryLength > MaxSize) {
+        if (LargestRegionStart != 0) {
+          DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", LargestRegionStart, MaxSize));
+          BuildResourceDescriptorHob (
+            EFI_RESOURCE_SYSTEM_MEMORY,
+            ResourceAttributes,
+            LargestRegionStart,
+            MaxSize
+          );
+        }
         LargestRegionStart = DramRegions[DramIndex].MemoryBaseAddress;
         MaxSize = DramRegions[DramIndex].MemoryLength;
+      } else {
+        DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", DramRegions[DramIndex].MemoryBaseAddress, DramRegions[DramIndex].MemoryLength));
+        BuildResourceDescriptorHob (
+          EFI_RESOURCE_SYSTEM_MEMORY,
+          ResourceAttributes,
+          DramRegions[DramIndex].MemoryBaseAddress,
+          DramRegions[DramIndex].MemoryLength
+        );
       }
 
       DramIndex++;
@@ -242,16 +252,26 @@ InstallDramWithCarveouts (
       EFI_PHYSICAL_ADDRESS CarveoutEnd = CarveoutRegions[CarveoutIndex].MemoryBaseAddress + CarveoutRegions[CarveoutIndex].MemoryLength;
       EFI_PHYSICAL_ADDRESS DramEnd = DramRegions[DramIndex].MemoryBaseAddress + DramRegions[DramIndex].MemoryLength;
       if (DramRegions[DramIndex].MemoryBaseAddress < CarveoutRegions[CarveoutIndex].MemoryBaseAddress) {
-        DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", DramRegions[DramIndex].MemoryBaseAddress, CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress));
-        BuildResourceDescriptorHob (
-                EFI_RESOURCE_SYSTEM_MEMORY,
-                ResourceAttributes,
-                DramRegions[DramIndex].MemoryBaseAddress,
-                CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress
-              );
         if ((CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress) > MaxSize) {
+          if (LargestRegionStart != 0) {
+            DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", LargestRegionStart, MaxSize));
+            BuildResourceDescriptorHob (
+              EFI_RESOURCE_SYSTEM_MEMORY,
+              ResourceAttributes,
+              LargestRegionStart,
+              MaxSize
+            );
+          }
           LargestRegionStart = DramRegions[DramIndex].MemoryBaseAddress;
           MaxSize = CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress;
+        } else {
+          DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", DramRegions[DramIndex].MemoryBaseAddress, CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress));
+          BuildResourceDescriptorHob (
+                  EFI_RESOURCE_SYSTEM_MEMORY,
+                  ResourceAttributes,
+                  DramRegions[DramIndex].MemoryBaseAddress,
+                  CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress
+                );
         }
 
         InstalledRegions++;
@@ -274,6 +294,13 @@ InstallDramWithCarveouts (
       }
     }
   }
+
+  BuildResourceDescriptorHob (
+    EFI_RESOURCE_SYSTEM_MEMORY,
+    ResourceAttributes,
+    LargestRegionStart,
+    MaxSize
+  );
 
   MigrateHobList (LargestRegionStart, MaxSize);
   *FinalRegionsCount = InstalledRegions;
