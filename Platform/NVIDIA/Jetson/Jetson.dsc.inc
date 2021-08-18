@@ -224,7 +224,7 @@
   Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf
   Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
   Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
-  Silicon/NVIDIA/Drivers/XudcControllerDxe/XudcControllerDxe.inf
+  Silicon/NVIDIA/Drivers/XusbControllerDxe/XusbControllerDxe.inf
   Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 
   #

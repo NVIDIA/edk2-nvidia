@@ -35,6 +35,7 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Protocol/PowerGateNodeProtocol.h>
 
 
@@ -52,6 +53,8 @@ typedef struct {
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-xudc", &gNVIDIANonDiscoverableXudcDeviceGuid },
   { "nvidia,tegra234-xudc", &gNVIDIANonDiscoverableXudcDeviceGuid },
+  { "nvidia,tegra234-xhci", &gEdkiiNonDiscoverableXhciDeviceGuid },
+  { "nvidia,tegra234-xusb", &gEdkiiNonDiscoverableXhciDeviceGuid },
   { NULL, NULL }
 };
 
@@ -79,7 +82,8 @@ OnExitBootServices (
 
   PgProtocol = NULL;
 
-  if (GetBootType () == TegrablBootRcm) {
+  if (GetBootType () == TegrablBootRcm &&
+      Private->XudcBaseAddress != 0) {
     MmioBitFieldWrite32 (Private->XudcBaseAddress + XUSB_DEV_XHCI_CTRL_0_OFFSET,
                          XUSB_DEV_XHCI_CTRL_0_RUN_BIT,
                          XUSB_DEV_XHCI_CTRL_0_RUN_BIT,
@@ -134,15 +138,27 @@ DeviceDiscoveryNotify (
 )
 {
   EFI_STATUS                      Status;
+  NON_DISCOVERABLE_DEVICE         *Device;
   EFI_PHYSICAL_ADDRESS            BaseAddress;
   UINTN                           RegionSize;
   XUDC_CONTROLLER_PRIVATE_DATA    *Private;
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingStart:
-    Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
+    Status = gBS->HandleProtocol (ControllerHandle,
+                                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                                  (VOID **)&Device
+                                  );
     if (EFI_ERROR (Status)) {
       return Status;
+    }
+
+    BaseAddress = 0;
+    if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableXudcDeviceGuid)) {
+      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
     }
 
     Private = NULL;

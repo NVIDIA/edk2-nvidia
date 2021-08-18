@@ -28,7 +28,7 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = XudcControllerDxe
+  BASE_NAME                      = XusbControllerDxe
   FILE_GUID                      = b418034f-346b-4027-82e4-64a391e500b5
   MODULE_TYPE                    = UEFI_DRIVER
   VERSION_STRING                 = 1.0
@@ -36,7 +36,7 @@
   ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
 
 [Sources.common]
-  XudcControllerDxe.c
+  XusbControllerDxe.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -50,10 +50,12 @@
   DeviceDiscoveryDriverLib
   MemoryAllocationLib
   PlatformResourceLib
+  BaseMemoryLib
 
 [Protocols]
   gNVIDIAPowerGateNodeProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableXudcDeviceGuid
+  gEdkiiNonDiscoverableXhciDeviceGuid
   gEfiEventExitBootServicesGuid
