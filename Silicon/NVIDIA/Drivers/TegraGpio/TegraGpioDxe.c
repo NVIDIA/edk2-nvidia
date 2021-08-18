@@ -115,6 +115,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
 };
 
 STATIC PLATFORM_GPIO_CONTROLLER *mGpioController = NULL;
+STATIC EMBEDDED_GPIO            *mI2cExpanderGpio = NULL;
 
 STATIC
 EFI_STATUS
@@ -135,8 +136,12 @@ GetGpioAddress (
         (Gpio >= (mGpioController->GpioController[Index].GpioIndex + mGpioController->GpioController[Index].InternalGpioCount))) {
       continue;
     }
-    RegisterOffset = (Gpio - mGpioController->GpioController[Index].GpioIndex) * GPIO_REGISTER_SPACING;
-    *GpioAddress = mGpioController->GpioController[Index].RegisterBase + RegisterOffset;
+    if (mGpioController->GpioController[Index].RegisterBase == 0) {
+      *GpioAddress = 0;
+    } else {
+      RegisterOffset = (Gpio - mGpioController->GpioController[Index].GpioIndex) * GPIO_REGISTER_SPACING;
+      *GpioAddress = mGpioController->GpioController[Index].RegisterBase + RegisterOffset;
+    }
     return EFI_SUCCESS;
   }
   return EFI_NOT_FOUND;
@@ -170,6 +175,10 @@ GetGpioState (
   Status = GetGpioAddress (Gpio, &Address);
   if (EFI_ERROR (Status)) {
     return Status;
+  }
+
+  if (Address == 0) {
+    return mI2cExpanderGpio->Get (mI2cExpanderGpio, Gpio, Value);
   }
 
   Mode = MmioRead32 (Address + GPIO_ENABLE_CONFIG_OFFSET);
@@ -209,6 +218,10 @@ SetGpioState (
   Status = GetGpioAddress (Gpio, &Address);
   if (EFI_ERROR (Status)) {
     return Status;
+  }
+
+  if (Address == 0) {
+    return mI2cExpanderGpio->Set (mI2cExpanderGpio, Gpio, Mode);
   }
 
   switch (Mode) {
@@ -272,6 +285,10 @@ GetGpioMode (
     return Status;
   }
 
+  if (Address == 0) {
+    return mI2cExpanderGpio->GetMode (mI2cExpanderGpio, Gpio, Mode);
+  }
+
   EnableConfig = MmioRead32 (Address + GPIO_ENABLE_CONFIG_OFFSET);
   if ((EnableConfig & GPIO_OUTPUT_BIT_VALUE) == 0) {
     *Mode = GPIO_MODE_INPUT;
@@ -331,6 +348,7 @@ InstallGpioProtocols (
   UINTN                            ControllerCount;
   CONST GPIO_CONTROLLER            *ControllerDefault = NULL;
   PLATFORM_GPIO_CONTROLLER         *GpioController = NULL;
+  PLATFORM_GPIO_CONTROLLER         *I2cExpanderGpioController = NULL;
   UINTN                            GpioBaseAddress = 0;
   UINTN                            GpioRegionSize = 0;
   UINTN                            ControllerIndex = 0;
@@ -385,13 +403,25 @@ InstallGpioProtocols (
     return Status;
   }
 
-  GpioController = (PLATFORM_GPIO_CONTROLLER *)AllocatePool (sizeof (PLATFORM_GPIO_CONTROLLER) + ControllerCount * sizeof (GPIO_CONTROLLER));
+  Status = gBS->LocateProtocol (&gNVIDIAI2cExpanderGpioProtocolGuid, NULL, (VOID **) &mI2cExpanderGpio);
+  if (EFI_ERROR (Status) || mI2cExpanderGpio == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: No I2C expander protocol found\r\n", __FUNCTION__));
+    return EFI_UNSUPPORTED;
+  }
+
+  Status = gBS->LocateProtocol (&gNVIDIAI2cExpanderPlatformGpioProtocolGuid, NULL, (VOID **) &I2cExpanderGpioController);
+  if (EFI_ERROR (Status) || I2cExpanderGpioController == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: No I2C expander platform protocol found\r\n", __FUNCTION__));
+    return EFI_UNSUPPORTED;
+  }
+
+  GpioController = (PLATFORM_GPIO_CONTROLLER *)AllocatePool (sizeof (PLATFORM_GPIO_CONTROLLER) + (ControllerCount +  I2cExpanderGpioController->GpioControllerCount) * sizeof (GPIO_CONTROLLER));
   if (NULL == GpioController) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  GpioController->GpioControllerCount = ControllerCount;
-  GpioController->GpioCount = ControllerCount * GPIO_PINS_PER_CONTROLLER;
+  GpioController->GpioControllerCount = ControllerCount + I2cExpanderGpioController->GpioControllerCount;
+  GpioController->GpioCount = ControllerCount * GPIO_PINS_PER_CONTROLLER + I2cExpanderGpioController->GpioCount;
   GpioController->GpioController = (GPIO_CONTROLLER *)((UINTN) GpioController + sizeof (PLATFORM_GPIO_CONTROLLER));
 
   CopyMem (GpioController->GpioController, ControllerDefault, ControllerCount * sizeof (GPIO_CONTROLLER));
@@ -399,6 +429,7 @@ InstallGpioProtocols (
     GpioController->GpioController[ControllerIndex].GpioIndex = GPIO (ControllerDtHandle, GpioController->GpioController[ControllerIndex].GpioIndex);
     GpioController->GpioController[ControllerIndex].RegisterBase += GpioBaseAddress;
   }
+  CopyMem (GpioController->GpioController + ControllerCount, I2cExpanderGpioController->GpioController, I2cExpanderGpioController->GpioControllerCount * sizeof (GPIO_CONTROLLER));
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &ControllerHandle,

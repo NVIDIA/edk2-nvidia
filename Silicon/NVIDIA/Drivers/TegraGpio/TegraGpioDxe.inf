@@ -61,10 +61,14 @@
   gEmbeddedGpioProtocolGuid
   gNVIDIANonDiscoverableDeviceProtocolGuid
   gNVIDIADeviceTreeNodeProtocolGuid
+  gNVIDIAI2cExpanderGpioProtocolGuid
+  gNVIDIAI2cExpanderPlatformGpioProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableT194GpioDeviceGuid
   gNVIDIANonDiscoverableT234GpioDeviceGuid
 
 [Depex]
-  TRUE
+  gNVIDIAI2cExpanderGpioProtocolGuid
+  AND
+  gNVIDIAI2cExpanderPlatformGpioProtocolGuid
