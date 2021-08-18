@@ -65,6 +65,7 @@
 [Guids]
   gNVIDIAI2cUnknown
   gNVIDIACvmEeprom
+  gNVIDIAI2cTca9539
   gNVIDIANonDiscoverableT194I2cDeviceGuid
 
 [Depex]

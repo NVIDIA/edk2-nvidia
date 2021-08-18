@@ -2,7 +2,7 @@
 
   Tegra I2c Controller Driver private structures
 
-  Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -12,7 +12,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
   Portions provided under the following terms:
-  Copyright (c) 2018 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -21,7 +21,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2018 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2018-2021 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -36,8 +36,8 @@
 
 #define TEGRA_I2C_SIGNATURE SIGNATURE_32('T','I','2','C')
 
-//Currently only support enumerating 1 device per controller
-#define MAX_I2C_DEVICES 1
+//Currently only support enumerating 16 device per controller
+#define MAX_I2C_DEVICES 16
 #define MAX_SLAVES_PER_DEVICE 1
 
 typedef struct {
