@@ -111,6 +111,7 @@ HspDoorbellEnableChannel (
     1
     );
 
+  DEBUG ((EFI_D_ERROR, "%a: Waiting for HSP Doorbell Channel Enabled.\r\n", __FUNCTION__));
   while (0 == MmioBitFieldRead32 (
                 PrivateData->DoorbellLocation[Doorbell] + HSP_DB_REG_ENABLE,
                 HSP_MASTER_CCPLEX,
@@ -123,6 +124,7 @@ HspDoorbellEnableChannel (
       }
     }
   }
+  DEBUG ((EFI_D_ERROR, "%a: HSP Doorbell Channel Enabled.\r\n", __FUNCTION__));
 
   return EFI_SUCCESS;
 }
