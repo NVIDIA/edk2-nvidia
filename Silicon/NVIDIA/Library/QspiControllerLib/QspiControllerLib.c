@@ -38,6 +38,9 @@
 #include "QspiControllerLibPrivate.h"
 
 
+BOOLEAN TimeOutMessage = FALSE;
+
+
 /**
   Flush QSPI Controller FIFO.
 
@@ -79,7 +82,10 @@ QspiFlushFifo (
           Timeout++;
           if (Timeout == TIMEOUT) {
             Timeout = 0;
-            DEBUG ((EFI_D_ERROR, "%a QSPI Tx FIFO Flush Timed Out.\n", __FUNCTION__));
+            if (TimeOutMessage == FALSE) {
+              DEBUG ((EFI_D_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
+              TimeOutMessage = TRUE;
+            }
           }
         }
       }
@@ -103,7 +109,10 @@ QspiFlushFifo (
           Timeout++;
           if (Timeout == TIMEOUT) {
             Timeout = 0;
-            DEBUG ((EFI_D_ERROR, "%a QSPI Rx FIFO Flush Timed Out.\n", __FUNCTION__));
+            if (TimeOutMessage == FALSE) {
+              DEBUG ((EFI_D_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
+              TimeOutMessage = TRUE;
+            }
           }
         }
       }
@@ -200,7 +209,10 @@ QspiWaitTransactionStatusReady (
       Timeout++;
       if (Timeout == TIMEOUT) {
         Timeout = 0;
-        DEBUG ((EFI_D_ERROR, "%a QSPI Wait For Transaction Status Ready Timed Out.\n", __FUNCTION__));
+        if (TimeOutMessage == FALSE) {
+          DEBUG ((EFI_D_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
+          TimeOutMessage = TRUE;
+        }
       }
     }
   }

@@ -56,6 +56,9 @@ VENDOR_DEVICE_PATH VendorDevicePath = {
 };
 
 
+BOOLEAN TimeOutMessage = FALSE;
+
+
 /**
   Read a register in the NOR Flash
 
@@ -128,7 +131,10 @@ WaitNorFlashWriteComplete (
     // Error out of retry count exceeds NOR_SR1_WEL_RETRY_CNT
     if (Count == NOR_SR1_WIP_RETRY_CNT) {
       Count = 0;
-      DEBUG ((EFI_D_ERROR, "%a: NOR flash write complete timed out.\n", __FUNCTION__));
+      if (TimeOutMessage == FALSE) {
+        DEBUG ((EFI_D_ERROR, "%a: NOR flash write transactions slower than usual.\n", __FUNCTION__));
+        TimeOutMessage = TRUE;
+      }
     }
 
     MicroSecondDelay (TIMEOUT);
@@ -192,7 +198,10 @@ ConfigureNorFlashWriteEnLatch (
     // Error out of retry count exceeds NOR_SR1_WEL_RETRY_CNT
     if (Count == NOR_SR1_WEL_RETRY_CNT) {
       Count = 0;
-      DEBUG ((EFI_D_ERROR, "%a: NOR flash write enable latch timed out.\n", __FUNCTION__));
+      if (TimeOutMessage == FALSE) {
+        DEBUG ((EFI_D_ERROR, "%a: NOR flash write enable latch slower than usual.\n", __FUNCTION__));
+        TimeOutMessage = TRUE;
+      }
     }
 
     // Configure WREN
