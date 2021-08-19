@@ -150,6 +150,7 @@
   # GPIO driver/utility
   #
   Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf
+  Silicon/NVIDIA/Drivers/I2cExpanderGpio/I2cExpanderGpio.inf
   Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
 
   #
