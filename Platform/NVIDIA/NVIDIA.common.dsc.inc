@@ -171,6 +171,7 @@
   GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
   DramCarveoutLib|Silicon/NVIDIA/Library/DramCarveoutLib/DramCarveoutLib.inf
   BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoLib/BootChainInfoLib.inf
+  ConfigurationManagerLib|Silicon/NVIDIA/Library/ConfigurationManagerLib/ConfigurationManagerLib.inf
 
   TimeBaseLib|EmbeddedPkg/Library/TimeBaseLib/TimeBaseLib.inf
 

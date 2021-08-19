@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -49,6 +49,25 @@ EFIAPI
 GetUARTInstanceInfoInternal (
   OUT UINT32                *UARTInstanceType,
   OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
+);
+
+/**
+  Retrieve number of enabled CPUs for each platform
+
+**/
+BOOLEAN
+GetNumberOfEnabledCpuCoresInternal (
+  OUT UINT32 *NumCpus
+);
+
+/**
+  Retrieve chip specific info for GIC
+
+**/
+BOOLEAN
+EFIAPI
+GetGicInfoInternal (
+  OUT TEGRA_GIC_INFO *GicInfo
 );
 
 /**

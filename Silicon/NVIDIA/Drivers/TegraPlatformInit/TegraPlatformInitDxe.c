@@ -2,7 +2,7 @@
 
   Tegra Platform Init Driver.
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -37,6 +37,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <libfdt.h>
 
 STATIC
@@ -128,6 +129,114 @@ UseEmulatedVariableStore (
   return Status;
 }
 
+/**
+  Set up PCDs for multiple Platforms based on DT info
+**/
+STATIC
+VOID
+EFIAPI
+SetGicInfoPcdsFromDtb (
+  IN UINTN ChipID
+  )
+{
+  UINT32                            NumGicControllers;
+  UINT32                            GicHandle;
+  TEGRA_GIC_INFO                    *GicInfo;
+  EFI_STATUS                        Status;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterData;
+  UINT32                            RegisterSize;
+
+  GicHandle = 0;
+  Status = EFI_SUCCESS;
+  RegisterData = NULL;
+  GicInfo = NULL;
+
+  GicInfo = (TEGRA_GIC_INFO *) AllocatePool ( sizeof (TEGRA_GIC_INFO));
+  if (GicInfo == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
+
+  if (!GetGicInfo (GicInfo)) {
+    Status = EFI_D_ERROR;
+    goto Exit;
+  }
+
+  // To set PCDs, begin with a single GIC controller in the DT
+  NumGicControllers = 1;
+
+  // Obtain Gic Handle Info
+  Status = GetMatchingEnabledDeviceTreeNodes (GicInfo->GicCompatString, &GicHandle, &NumGicControllers);
+  if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DEBUG_INFO, "No GIC controllers found %r\r\n", Status));
+    goto Exit;
+  }
+
+  // Obtain Register Info using the Gic Handle
+  RegisterSize = 0;
+  Status = GetDeviceTreeRegisters (GicHandle, RegisterData, &RegisterSize);
+  if (Status == EFI_BUFFER_TOO_SMALL) {
+    if (RegisterData != NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+    RegisterData = (NVIDIA_DEVICE_TREE_REGISTER_DATA *) AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * RegisterSize);
+    if (RegisterData == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+    Status = GetDeviceTreeRegisters (GicHandle, RegisterData, &RegisterSize);
+    if (EFI_ERROR (Status)) {
+      goto Exit;
+    }
+  } else if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  if (RegisterData == NULL) {
+    ASSERT (FALSE);
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
+
+  // Set Pcd values by looping through the RegisterSize for each platform
+
+  if (ChipID == T194_CHIP_ID) {
+    // RegisterData[0] has Gic Distributor Base and Size
+    PcdSet64S (PcdGicDistributorBase, RegisterData[0].BaseAddress);
+
+    // RegisterData[1] has Interrupt Interface Base and Size
+    PcdSet64S (PcdGicInterruptInterfaceBase, RegisterData[1].BaseAddress);
+
+    DEBUG ((EFI_D_INFO, "Found GIC distributor and Interrupt Interface Base@ 0x%Lx (0x%Lx)\n",
+       PcdGet64 (PcdGicDistributorBase), PcdGet64 (PcdGicInterruptInterfaceBase)));
+  } else {
+    // RegisterData[0] has Gic Distributor Base and Size
+    PcdSet64S (PcdGicDistributorBase, RegisterData[0].BaseAddress);
+
+    // RegisterData[1] has GIC Redistributor Base and Size
+    PcdSet64S (PcdGicRedistributorsBase, RegisterData[1].BaseAddress);
+
+    // RegisterData[2] has GicH Base and Size
+    // RegisterData[3] has GicV Base and Size
+
+    DEBUG ((EFI_D_INFO, "Found GIC distributor and (re)distributor Base @ 0x%Lx (0x%Lx)\n",
+       PcdGet64 (PcdGicDistributorBase), PcdGet64 (PcdGicRedistributorsBase)));
+  }
+
+Exit:
+  if (RegisterData != NULL) {
+    FreePool (RegisterData);
+    RegisterData = NULL;
+  }
+  if (GicInfo != NULL) {
+    FreePool (GicInfo);
+    GicInfo = NULL;
+  }
+
+  return;
+
+}
 
 /**
   Runtime Configuration Of Tegra Platform.
@@ -195,6 +304,9 @@ TegraPlatformInitialize (
       return Status;
     }
   }
+
+  // Set Pcds
+  SetGicInfoPcdsFromDtb (ChipID);
 
   return EFI_SUCCESS;
 }

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -28,38 +28,41 @@
 #include <ArmMpidr.h>
 #include <PiDxe.h>
 
+#include <Library/ArmLib.h>
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/MceAriLib.h>
 #include <Library/NvgLib.h>
+#include <Library/PcdLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
-UINT32
-GetNumberOfEnabledCpuCores (
-  VOID
-  )
+// Platform CPU configuration
+#define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
+#define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdTegraMaxClusters))
+
+UINT64
+EFIAPI
+GetMpidrFromLinearCoreID (
+  IN UINT32 LinearCoreId
+)
 {
-  UINT32    Count;
-  UINTN     ChipId;
+  UINTN         Cluster;
+  UINTN         Core;
+  UINT64        Mpidr;
 
-  ChipId = TegraGetChipID ();
+  Cluster = LinearCoreId / PLATFORM_MAX_CORES_PER_CLUSTER;
+  ASSERT (Cluster < PLATFORM_MAX_CLUSTERS);
 
-  switch (ChipId) {
-    case T194_CHIP_ID:
-      Count = NvgGetNumberOfEnabledCpuCores ();
-      break;
-    case T234_CHIP_ID:
-      Count = MceAriNumCores ();
-      break;
-    default:
-      ASSERT (FALSE);
-      Count = 1;
-      break;
-  }
-  DEBUG ((DEBUG_INFO, "%a: ChipId=0x%x, Count=%u\n", __FUNCTION__, ChipId, Count));
+  Core = LinearCoreId % PLATFORM_MAX_CORES_PER_CLUSTER;
+  ASSERT (Core < PLATFORM_MAX_CORES_PER_CLUSTER);
 
-  return Count;
+  Mpidr = (UINT64) GET_MPID(Cluster, Core);
+
+  DEBUG ((DEBUG_INFO, "%a:LinearCoreId=%u Cluster=%u, Core=%u, Mpidr=0x%llx \n",
+          __FUNCTION__, LinearCoreId , Cluster, Core, Mpidr));
+
+  return Mpidr;
 }
 
 EFI_STATUS

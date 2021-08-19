@@ -92,6 +92,12 @@ typedef struct  {
   UINT32 CvbEepromDataSize;
 } TEGRABL_EEPROM_DATA;
 
+typedef struct {
+  CHAR8              *GicCompatString;
+  CHAR8              *ItsCompatString;
+  UINT32              Version;
+} TEGRA_GIC_INFO;
+
 /**
   Set Tegra UART Base Address
 
@@ -123,6 +129,26 @@ EFIAPI
 GetUARTInstanceInfo (
   OUT UINT32                *UARTInstanceType,
   OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
+);
+
+/**
+  Retrieve number of enabled CPUs for each platform
+
+**/
+
+UINT32
+GetNumberOfEnabledCpuCores (
+  VOID
+);
+
+/**
+  Retrieve chip specific info for GIC
+
+**/
+BOOLEAN
+EFIAPI
+GetGicInfo (
+  OUT TEGRA_GIC_INFO *GicInfo
 );
 
 /**

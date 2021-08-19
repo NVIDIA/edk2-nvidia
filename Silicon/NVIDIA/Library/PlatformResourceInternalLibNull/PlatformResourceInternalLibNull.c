@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -28,6 +28,30 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/PlatformResourceInternalLib.h>
 
+/**
+  Retrieve number of CPUs for each platform
+
+**/
+BOOLEAN
+GetNumberOfEnabledCpuCoresInternal (
+  OUT UINT32 *NumCpus
+)
+{
+  return FALSE;
+}
+
+/**
+  Retrieve chip specific version for GIC
+
+**/
+BOOLEAN
+EFIAPI
+GetGicInfoInternal (
+  OUT TEGRA_GIC_INFO *GicInfo
+)
+{
+  return FALSE;
+}
 
 /**
   Retrieve Tegra UART Base Address

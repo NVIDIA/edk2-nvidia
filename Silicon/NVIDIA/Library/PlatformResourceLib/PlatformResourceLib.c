@@ -26,12 +26,14 @@
 **/
 
 #include <Library/IoLib.h>
+#include <Library/DebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/MceAriLib.h>
+#include <Library/NvgLib.h>
 #include <Library/PlatformResourceInternalLib.h>
 #include "T194ResourceConfig.h"
 #include "T234ResourceConfig.h"
-
 
 STATIC
 EFI_PHYSICAL_ADDRESS  TegraUARTBaseAddress = 0x0;
@@ -144,6 +146,85 @@ GetUARTInstanceInfo (
       return EFI_UNSUPPORTED;
   }
 }
+
+/**
+  Retrieve number of enabled CPUs for each platform
+
+**/
+UINT32
+GetNumberOfEnabledCpuCores (
+  VOID
+  )
+{
+  UINT32    Count;
+  UINTN     ChipId;
+  BOOLEAN   ValidPrivatePlatform;
+  UINT32    NumCpus;
+
+  NumCpus = 0;
+
+  ValidPrivatePlatform = GetNumberOfEnabledCpuCoresInternal ( &NumCpus );
+  if (ValidPrivatePlatform) {
+    return NumCpus;
+  }
+
+  ChipId = TegraGetChipID ();
+
+  switch (ChipId) {
+    case T194_CHIP_ID:
+      Count = NvgGetNumberOfEnabledCpuCores ();
+      break;
+    case T234_CHIP_ID:
+      Count = MceAriNumCores ();
+      break;
+    default:
+      ASSERT (FALSE);
+      Count = 1;
+      break;
+  }
+
+  return Count;
+}
+
+/**
+  Retrieve chip specific info for GIC
+
+**/
+BOOLEAN
+EFIAPI
+GetGicInfo (
+  OUT TEGRA_GIC_INFO *GicInfo
+)
+{
+  UINTN           ChipID;
+  BOOLEAN         ValidPrivatePlatform;
+
+  ValidPrivatePlatform = GetGicInfoInternal (GicInfo);
+  if (ValidPrivatePlatform) {
+    return TRUE;
+  }
+
+  ChipID = TegraGetChipID();
+
+  switch (ChipID) {
+     case T194_CHIP_ID:
+       //*CompatString = "arm,gic-v2";
+       GicInfo->GicCompatString = "arm,gic-400";
+       GicInfo->ItsCompatString = "";
+       GicInfo->Version = 2;
+       break;
+     case T234_CHIP_ID:
+       GicInfo->GicCompatString = "arm,gic-v3";
+       GicInfo->ItsCompatString = "arm,gic-v3-its";
+       GicInfo->Version = 3;
+       break;
+     default:
+       return FALSE;
+   }
+
+  return TRUE;
+}
+
 
 /**
   Retrieve CPU BL Address

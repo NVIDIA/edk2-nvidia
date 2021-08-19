@@ -26,7 +26,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
-#include <Library/FloorSweepingLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/SmbiosData.h>

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -31,15 +31,17 @@
 #include <Uefi/UefiBaseType.h>
 
 /**
-  Returns number of CPU cores supported on the system
+  Returns the MPIDR given the Linear Core ID
 
-  @return Number of CPU cores
+  @param[in]    UINT32          Linear Core ID
 
+  @return       UINT64          Mpidr
 **/
-UINT32
-GetNumberOfEnabledCpuCores (
-  VOID
-  );
+UINT64
+EFIAPI
+GetMpidrFromLinearCoreID (
+  IN UINT32 LinearCoreId
+);
 
 /**
   Checks if CPU is enabled and remaps MPIDR for Device Tree, if needed.
