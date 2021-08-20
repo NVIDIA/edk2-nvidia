@@ -49,6 +49,8 @@
 [LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
 
+  AndroidBootImgLib|EmbeddedPkg/Library/AndroidBootImgLib/AndroidBootImgLib.inf
+
 ################################################################################
 #
 # Pcd Section - list of all EDK II PCD Entries defined by this Platform
@@ -103,6 +105,8 @@
 [PcdsDynamicHii.common.T234SLT]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|0
 
+[PcdsFeatureFlag.common]
+  gEmbeddedTokenSpaceGuid.PcdAndroidBootLoadFile2|TRUE
 
 ################################################################################
 #
@@ -278,3 +282,8 @@
   # FSI Support
   #
   Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
+
+  #
+  # L4T launcher
+  #
+  Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf

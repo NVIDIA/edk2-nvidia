@@ -23,6 +23,7 @@ import logging
 import io
 import sys
 import datetime
+import shutil
 
 from edk2toolext.environment import shell_environment
 from edk2toolext.environment.uefi_build import UefiBuilder
@@ -55,6 +56,7 @@ class CommonPlatform():
     FirmwareVolume="FV/UEFI_NS.Fv"
     VariableJson = os.path.join(WorkspaceRoot, "Platform/NVIDIA/Jetson/JetsonVariablesDesc.json")
     PcdDataBase = "AARCH64/MdeModulePkg/Universal/PCD/Dxe/Pcd/OUTPUT/DXEPcdDataBase.raw"
+    GrubLaunch = "AARCH64/L4TLauncher.efi"
 
     ReportTypes ="PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH EXECUTION_ORDER"
     RevisionBase = "v1.1.2"
@@ -67,6 +69,9 @@ class CommonPlatform():
         '''
         dsc = f"Platform/NVIDIA/Jetson/Jetson.dsc"
         return dsc
+
+    def GetOutputLauncher(self):
+        return os.path.join(self.GetWorkspaceRoot(), "images/BOOTAA64.efi")
 
     def GetOutputBinary(self):
         return os.path.join(self.GetWorkspaceRoot(), "images/uefi_jetson.bin")
@@ -283,6 +288,8 @@ class PlatformBuilder( UefiBuilder, BuildSettingsManager):
             if (not os.path.isfile(PcdDataBase)):
                 PcdDataBase = None
             GenVariableStore (CommonPlatform.VariableJson, CommonPlatform.GetVariableBinary(self), PcdDataBase)
+
+        shutil.copyfile (os.path.join(shell_environment.GetBuildVars().GetValue("BUILD_OUTPUT_BASE"),CommonPlatform.GrubLaunch), CommonPlatform.GetOutputLauncher(self))
         return 0
 
     def FlashRomImage(self):

@@ -1,0 +1,67 @@
+## @file
+#  Application to launch L4T A/B.
+#
+# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+# property and proprietary rights in and to this material, related
+# documentation and any modifications thereto. Any use, reproduction,
+# disclosure or distribution of this material and related documentation
+# without an express license agreement from NVIDIA CORPORATION or
+# its affiliates is strictly prohibited.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = L4TLauncher
+  FILE_GUID                      = cbf481fb-b373-4e78-aa7e-8631858e0217
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = L4TLauncher
+  MODULE_UNI_FILE                = L4TLauncher.uni
+
+
+[Sources]
+  L4TLauncher.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiApplicationEntryPoint
+  BaseMemoryLib
+  DebugLib
+  DevicePathLib
+  UefiLib
+  HandleParsingLib
+  PrintLib
+  FileHandleLib
+  UefiRuntimeServicesTableLib
+  AndroidBootImgLib
+
+[Guids]
+  gNVIDIATokenSpaceGuid
+
+[Protocols]
+  gEfiLoadedImageProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gEfiPartitionInfoProtocolGuid
+  gAndroidBootImgProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiDiskIoProtocolGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  L4TLauncherExtra.uni
+
