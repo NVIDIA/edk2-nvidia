@@ -1,11 +1,11 @@
 /** @file
 *
-*  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2019-2020 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -14,7 +14,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2019-2020 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
@@ -29,6 +29,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <libfdt.h>
 
 #include <Protocol/PlatformBootManager.h>
@@ -40,9 +41,21 @@
 
 extern EFI_GUID mBmAutoCreateBootOptionGuid;
 
+EFI_EVENT mEndOfDxeEvent;
 CHAR16 KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
   L"console="
 };
+
+STATIC
+VOID
+EFIAPI
+OnEndOfDxe (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  ValidateActiveBootChain ();
+}
 
 /*
   Checks whether the auto-enumerated boot option is valid for the platform.
@@ -814,6 +827,18 @@ PlatformBootManagerEntryPoint (
   IN EFI_SYSTEM_TABLE   *SystemTable
   )
 {
+  EFI_STATUS Status;
+
+  Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                               TPL_CALLBACK,
+                               OnEndOfDxe,
+                               NULL,
+                               &gEfiEndOfDxeEventGroupGuid,
+                               &mEndOfDxeEvent);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   return gBS->InstallMultipleProtocolInterfaces (&ImageHandle,
                                                  &gEdkiiPlatformBootManagerProtocolGuid,
                                                  &mPlatformBootManager,

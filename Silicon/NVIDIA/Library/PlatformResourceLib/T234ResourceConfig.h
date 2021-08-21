@@ -103,9 +103,31 @@ T234GetCvmEepromData (
 
 **/
 BOOLEAN
+EFIAPI
 T234GetBoardInfo(
   IN  UINTN            CpuBootloaderAddress,
   OUT TEGRA_BOARD_INFO *BoardInfo
+);
+
+/**
+  Retrieve Active Boot Chain Information
+
+**/
+EFI_STATUS
+EFIAPI
+T234GetActiveBootChain(
+  IN  UINTN   CpuBootloaderAddress,
+  OUT UINT32  *BootChain
+);
+
+/**
+  Validate Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+T234ValidateActiveBootChain(
+  IN  UINTN   CpuBootloaderAddress
 );
 
 #endif //__T234_RESOURCE_CONFIG_H__

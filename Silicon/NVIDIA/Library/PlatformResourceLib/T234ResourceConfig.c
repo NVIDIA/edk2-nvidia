@@ -39,7 +39,7 @@
 #include <Library/GoldenRegisterLib.h>
 #include <Library/CacheMaintenanceLib.h>
 #include <Library/MceAriLib.h>
-#include <Library/PrintLib.h>
+#include <Library/IoLib.h>
 #include "T234ResourceConfigPrivate.h"
 #include <T234/T234Definitions.h>
 #include <Protocol/CvmEeprom.h>
@@ -423,4 +423,50 @@ T234GetBoardInfo(
   CopyMem ((VOID *) BoardInfo->ProductId, (VOID *) &EepromData->PartNumber, sizeof (BoardInfo->ProductId));
 
   return TRUE;
+}
+
+/**
+  Retrieve Active Boot Chain Information
+
+**/
+EFI_STATUS
+T234GetActiveBootChain(
+  IN  UINTN   CpuBootloaderAddress,
+  OUT UINT32  *BootChain
+)
+{
+  *BootChain = MmioBitFieldRead32 (FixedPcdGet64(PcdBootChainRegisterBaseAddressT234),
+                                   BOOT_CHAIN_BIT_FIELD_LO,
+                                   BOOT_CHAIN_BIT_FIELD_HI);
+
+  if (*BootChain >= BOOT_CHAIN_MAX) {
+    return EFI_UNSUPPORTED;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Validate Active Boot Chain
+
+**/
+EFI_STATUS
+T234ValidateActiveBootChain(
+  IN  UINTN   CpuBootloaderAddress
+)
+{
+  EFI_STATUS Status;
+  UINT32     BootChain;
+
+  Status = T234GetActiveBootChain (CpuBootloaderAddress, &BootChain);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  MmioBitFieldWrite32 (FixedPcdGet64(PcdBootChainRegisterBaseAddressT234),
+                       BootChain,
+                       BootChain,
+                       BOOT_CHAIN_GOOD);
+
+  return EFI_SUCCESS;
 }

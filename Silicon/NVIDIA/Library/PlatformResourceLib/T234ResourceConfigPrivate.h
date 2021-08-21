@@ -30,6 +30,14 @@
 
 #include <Uefi/UefiBaseType.h>
 
+#define BOOT_CHAIN_MAX              2
+#define BOOT_CHAIN_BIT_FIELD_LO     4
+#define BOOT_CHAIN_BIT_FIELD_HI     5
+#define BOOT_CHAIN_STATUS_LO        0
+#define BOOT_CHAIN_STATUS_HI        3
+#define BOOT_CHAIN_GOOD             0
+#define BOOT_CHAIN_BAD              1
+
 #define TEGRA_UART_SUPPORT_FLAG     0x77E // UART_A..J except _G
 #define TEGRA_UART_SUPPORT_SBSA     0x600
 

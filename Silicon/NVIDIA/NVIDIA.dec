@@ -245,6 +245,12 @@
 # Expose CCPLEX_INTERWORLD_SHMEM Carveout To OS
   gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem|FALSE|BOOLEAN|0x0000003D
 
+# Tegra Boot Chain Selection Register Address
+  gNVIDIATokenSpaceGuid.PcdBootChainRegisterBaseAddressT234|0x0C3903CC|UINT64|0x0000003E
+
+# Name of kernel GPT partition
+  gNVIDIATokenSpaceGuid.PcdKernelPartitionName|L"kernel"|VOID*|0x0000003F
+
 [PcdsDynamic.common]
 #Size of optional signing data header in boot.img partition.
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B

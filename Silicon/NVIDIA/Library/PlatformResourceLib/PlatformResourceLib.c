@@ -505,3 +505,69 @@ GetBoardInfo (
       return EFI_UNSUPPORTED;
   }
 }
+
+/**
+  Retrieve Active Boot Chain Information
+
+**/
+EFI_STATUS
+EFIAPI
+GetActiveBootChain (
+  OUT UINT32 *BootChain
+)
+{
+  UINTN           ChipID;
+  UINTN           CpuBootloaderAddress;
+  BOOLEAN         ValidPrivatePlatform;
+
+  ValidPrivatePlatform = GetActiveBootChainInternal(BootChain);
+  if (ValidPrivatePlatform) {
+    return EFI_SUCCESS;
+  }
+
+  ChipID = TegraGetChipID();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      return T234GetActiveBootChain(CpuBootloaderAddress, BootChain);
+    case T194_CHIP_ID:
+      return EFI_UNSUPPORTED;
+    default:
+      return EFI_UNSUPPORTED;
+  }
+}
+
+/**
+  Validate Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+ValidateActiveBootChain (
+  VOID
+)
+{
+  UINTN           ChipID;
+  UINTN           CpuBootloaderAddress;
+  BOOLEAN         ValidPrivatePlatform;
+
+  ValidPrivatePlatform = ValidateActiveBootChainInternal();
+  if (ValidPrivatePlatform) {
+    return EFI_SUCCESS;
+  }
+
+  ChipID = TegraGetChipID();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      return T234ValidateActiveBootChain(CpuBootloaderAddress);
+    case T194_CHIP_ID:
+      return EFI_UNSUPPORTED;
+    default:
+      return EFI_UNSUPPORTED;
+  }
+}

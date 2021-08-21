@@ -224,4 +224,24 @@ GetBoardInfo (
   OUT TEGRA_BOARD_INFO *BoardInfo
 );
 
+/**
+  Retrieve Active Boot Chain Information
+
+**/
+EFI_STATUS
+EFIAPI
+GetActiveBootChain (
+  OUT UINT32 *BootChain
+);
+
+/**
+  Validate Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+ValidateActiveBootChain (
+  VOID
+);
+
 #endif //__PLATFORM_RESOURCE_LIB_H__
