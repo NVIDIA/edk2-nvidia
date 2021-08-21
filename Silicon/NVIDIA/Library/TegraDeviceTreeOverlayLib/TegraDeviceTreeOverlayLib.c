@@ -327,6 +327,7 @@ ReadBoardInfo (
   INT32 BoardIdLen;
   CONST CHAR8 *BoardId;
 
+  ZeroMem (&BoardInfo, sizeof (BoardInfo));
   GetBoardInfo(&BoardInfo);
   DEBUG((DEBUG_INFO, "Board Id (BCT/EEPROM): %a \n", (CHAR8*)BoardInfo.BoardId));
 

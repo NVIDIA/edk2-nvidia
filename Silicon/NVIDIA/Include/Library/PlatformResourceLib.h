@@ -42,6 +42,7 @@
 #define TEGRA_UART_TYPE_NONE      0xFF
 
 #define TEGRA_BOARD_ID_LEN        13
+#define PRODUCT_ID_LEN            29
 
 #define BIT(x)   (1 << (x))
 
@@ -75,7 +76,7 @@ typedef struct {
   TEGRA_FUSE_INFO *FuseList;
   UINTN           FuseCount;
   CHAR8           BoardId[TEGRA_BOARD_ID_LEN + 1];
-
+  CHAR8           ProductId[PRODUCT_ID_LEN + 1];
 } TEGRA_BOARD_INFO;
 
 /**

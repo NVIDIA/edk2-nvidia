@@ -413,19 +413,14 @@ T234GetBoardInfo(
 {
   T234_CVM_EEPROM_DATA *EepromData;
   UINT32               DataLen;
-  UINTN                CharCount;
-
 
   DataLen = T234GetCvmEepromData (CpuBootloaderAddress, (UINT8 **)&EepromData);
 
   BoardInfo->FuseBaseAddr = TEGRA_FUSE_BASE_ADDRESS;
   BoardInfo->FuseList = T234FloorsweepingFuseList;
   BoardInfo->FuseCount = sizeof(T234FloorsweepingFuseList) / sizeof(T234FloorsweepingFuseList[0]);
-  CharCount = AsciiSPrint (BoardInfo->BoardId, sizeof (BoardInfo->BoardId),"%04d-%04d-%01d%c%01d",
-    EepromData->BoardNumber,
-    EepromData->Sku,
-    EepromData->Fab,
-    EepromData->Revision,
-    EepromData->MinorRevision);
+  CopyMem ((VOID *) BoardInfo->BoardId, (VOID *) EepromData->PartNumber.Id, TEGRA_BOARD_ID_LEN);
+  CopyMem ((VOID *) BoardInfo->ProductId, (VOID *) &EepromData->PartNumber, sizeof (BoardInfo->ProductId));
+
   return TRUE;
 }

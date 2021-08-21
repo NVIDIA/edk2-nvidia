@@ -56,6 +56,28 @@ QSPI_COMPATIBILITY gQspiCompatibilityMap[] = {
 
 VOID
 EFIAPI
+AddSkuProperties (
+  IN VOID *Dtb
+  )
+{
+  EFI_STATUS       Status;
+  TEGRA_BOARD_INFO BoardInfo;
+  INTN             NodeOffset;
+
+  ZeroMem (&BoardInfo, sizeof (BoardInfo));
+  Status = GetBoardInfo (&BoardInfo);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  NodeOffset = fdt_path_offset (Dtb, "/chosen");
+  if (NodeOffset >= 0) {
+    fdt_setprop (Dtb, NodeOffset, "nvidia,sku", &BoardInfo.ProductId, sizeof (BoardInfo.ProductId));
+  }
+}
+
+VOID
+EFIAPI
 RemoveQspiNodes (
   IN VOID *Dtb
   )
@@ -95,6 +117,7 @@ FdtInstalled (
 
   UpdateCpuFloorsweepingConfig (Dtb);
   RemoveQspiNodes (Dtb);
+  AddSkuProperties (Dtb);
 }
 
 /**
@@ -268,6 +291,9 @@ DtPlatformLoadDtb (
 
   //QSPI flash is not supposed to be accessed by OS.
   RemoveQspiNodes (Dtb);
+
+  //Add SKU information to be accessed by OS.
+  AddSkuProperties (Dtb);
 
   //Disable grid of semaphores as we do not set up memory for this
   NodeOffset = fdt_path_offset (*Dtb, "/reserved-memory/grid-of-semaphores");
