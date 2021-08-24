@@ -66,7 +66,7 @@
 #define NOR_ADDR_SIZE                 4
 
 #define NOR_WRITE_DATA_CMD            0x12
-#define NOR_READ_DATA_CMD             0x13
+#define NOR_FAST_READ_DATA_CMD        0x0C
 #define NOR_WREN_DISABLE              0x4
 #define NOR_WREN_ENABLE               0x6
 
@@ -82,10 +82,13 @@
 #define NOR_SFDP_4KB_ERS_SUPPORTED    0x1
 #define NOR_SFDP_4KB_ERS_UNSUPPORTED  0xFF
 
+#define NOR_DUAL_IO_UNSUPPORTED       0xFF
+
 #define NOR_SFDP_ERASE_COUNT          4
 
 #define NOR_SFDP_WRITE_DEF_PAGE       256
 
+#define NOR_SFDP_FAST_READ_DEF_WAIT   8
 
 #pragma pack(1)
 typedef struct {
@@ -116,11 +119,14 @@ typedef struct {
 typedef struct {
   UINT8                            EraseSupport4KB:2;
   UINT8                            Reserved:6;
-  UINT8                            EraseInstruction4KB:8;
+  UINT8                            EraseInstruction4KB;
   UINT16                           Reserved2;
   UINT32                           MemoryDensity;
   UINT32                           Reserved3;
-  UINT32                           Reserved4;
+  UINT16                           Reserved4;
+  UINT8                            DualIODummyCycles:5;
+  UINT8                            DualIOModeCycles:3;
+  UINT8                            DualIOInstruction;
   UINT32                           Reserved5;
   UINT32                           Reserved6;
   UINT32                           Reserved7;
@@ -133,12 +139,13 @@ typedef struct {
 
 
 typedef struct {
-  BOOLEAN                          ReadCmd13:1;
-  UINT8                            Reserved:5;
+  BOOLEAN                          Reserved:1;
+  BOOLEAN                          ReadCmd0C:1;
+  UINT8                            Reserved2:4;
   BOOLEAN                          WriteCmd12:1;
-  UINT8                            Reserved2:2;
+  UINT8                            Reserved3:2;
   UINT8                            EraseTypeSupported:4;
-  UINT32                           Reserved3:19;
+  UINT32                           Reserved4:19;
   UINT8                            EraseInstruction[NOR_SFDP_ERASE_COUNT];
 } NOR_SFDP_PARAM_4BI_TBL;
 
@@ -164,6 +171,7 @@ typedef struct {
   NOR_FLASH_ATTRIBUTES             FlashAttributes;
   UINT8                            EraseCmd;
   UINT32                           PageSize;
+  UINT8                            ReadWaitCycles;
 } NOR_FLASH_PRIVATE_ATTRIBUTES;
 
 

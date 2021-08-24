@@ -360,7 +360,7 @@ ReadNorFlashSFDP (
   SFDPParamBasicTbl = AllocateZeroPool (SFDPParamBasicTblSize);
   if (SFDPParamBasicTbl == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
-    goto ErrorExit;;
+    goto ErrorExit;
   }
 
   Packet.TxBuf = Cmd;
@@ -419,9 +419,9 @@ ReadNorFlashSFDP (
     goto ErrorExit;
   }
 
-  if (SFDPParam4ByteInstructionTbl->ReadCmd13 == FALSE ||
+  if (SFDPParam4ByteInstructionTbl->ReadCmd0C == FALSE ||
       SFDPParam4ByteInstructionTbl->WriteCmd12 == FALSE) {
-    DEBUG ((EFI_D_ERROR, "%a: NOR flash's memory density unsupported.\n", __FUNCTION__));
+    DEBUG ((EFI_D_ERROR, "%a: NOR flash's single bit RW unsupported.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -441,6 +441,13 @@ ReadNorFlashSFDP (
     MemoryDensity++;
     MemoryDensity >>= 3;
     Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity = MemoryDensity;
+  }
+
+  // Find fast read dummy cycles.
+  if (SFDPParamBasicTbl->DualIOInstruction != NOR_DUAL_IO_UNSUPPORTED) {
+    Private->PrivateFlashAttributes.ReadWaitCycles = SFDPParamBasicTbl->DualIODummyCycles;
+  } else {
+    Private->PrivateFlashAttributes.ReadWaitCycles = NOR_SFDP_FAST_READ_DEF_WAIT;
   }
 
   // If uniform 4K erase is supported, use that mode.
@@ -684,13 +691,13 @@ NorFlashRead(
     Private->CommandBuffer[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
     AddressShift += 8;
   }
-  Private->CommandBuffer[0] = NOR_READ_DATA_CMD;
+  Private->CommandBuffer[0] = NOR_FAST_READ_DATA_CMD;
 
   Packet.TxBuf = Private->CommandBuffer;
   Packet.TxLen = CmdSize;
   Packet.RxBuf = Buffer;
   Packet.RxLen = Size;
-  Packet.WaitCycles = 0;
+  Packet.WaitCycles = Private->PrivateFlashAttributes.ReadWaitCycles;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR(Status)) {
