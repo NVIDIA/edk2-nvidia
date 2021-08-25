@@ -121,6 +121,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
     }
 
     Device (BPMP) {
+      Name (_HID, EISAID("PNP0C02")) // Motherboard resources
+      Name (_UID, 0)
       OperationRegion (BPTX, SystemMemory, BPMP_TX_MAILBOX, 0x1000)
       Field (BPTX, AnyAcc, NoLock, Preserve) {
         TWCT, 32,
