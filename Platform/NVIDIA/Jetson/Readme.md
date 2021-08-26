@@ -1,4 +1,4 @@
-NVIDIA Jetson UEFI/ACPI Experimental Firmware Version 1.1.0
+NVIDIA Jetson UEFI/ACPI Experimental Firmware Version 1.1.1
 
 # Introduction
 
@@ -77,7 +77,7 @@ Download the following software from the [Jetson Download Center](https://develo
 
 Extract the driver package tarball.
 
-    $ tar xjf Tegra186_Linux_RL4T_VERSION_aarch64.tbz2
+    $ tar xjf Jetson_Linux_RL4T_VERSION_aarch64.tbz2
 
 Extract the nvidia-l4t-jetson-uefi-UEFI_PACKAGE_VERSION.tbz2 package provided
 over the top of the extracted driver package and navigate to the Linux_for_Tegra
