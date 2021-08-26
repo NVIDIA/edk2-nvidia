@@ -2,7 +2,7 @@
 
   Tegra Controller Enable Driver
 
-  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,6 +11,7 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
+  { "nvidia,gv11b", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { NULL, NULL }
 };
 
@@ -19,7 +20,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
   .UseDriverBinding = TRUE,
   .AutoEnableClocks = TRUE,
   .AutoResetModule = TRUE,
-  .SkipEdkiiNondiscoverableInstall = FALSE,
+   .AutoDeassertPg = TRUE,
+  .SkipEdkiiNondiscoverableInstall = TRUE,
   .SkipAutoDeinitControllerOnExitBootServices = TRUE
 };
 

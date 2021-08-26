@@ -286,6 +286,21 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
         }
       })
     }
+
+    //---------------------------------------------------------------------
+    // gpu@17000000
+    //---------------------------------------------------------------------
+    Device(GPU0) {
+      Name (_HID, "NVDA1080")
+      Name (_UID, 0)
+      Name (_CCA, ZERO)
+
+      Name(_CRS, ResourceTemplate() {
+        Memory32Fixed(ReadWrite, 0x17000000, 0x1000000)
+        Memory32Fixed(ReadWrite, 0x18000000, 0x1000000)
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x66, 0x67 }
+      })
+    }
   }
 }
 
