@@ -22,7 +22,7 @@ DefinitionBlock("SsdtPci.aml", "SSDT", 2, "NVIDIA", "TEGRA194", 0x00000001) {
     //MCFG resources
     Device(RES0) {
       Name (_HID, EISAID("PNP0C02")) // Motherboard resources
-      Name (_UID, 0)
+      Name (_UID, 1)
       Method (_CRS, 0, Serialized) {
         Name (RBUF, ResourceTemplate () {
           // MCFG PCI0 region
