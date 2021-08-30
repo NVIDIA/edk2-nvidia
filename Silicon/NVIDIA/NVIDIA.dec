@@ -251,6 +251,9 @@
 # Name of kernel GPT partition
   gNVIDIATokenSpaceGuid.PcdKernelPartitionName|L"kernel"|VOID*|0x0000003F
 
+# Indicates the default timeouts for reset after an assert in seconds.
+  gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue|0|UINT32|0x00000040
+
 [PcdsDynamic.common]
 #Size of optional signing data header in boot.img partition.
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0|UINT32|0x0000000B

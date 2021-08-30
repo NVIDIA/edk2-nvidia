@@ -7,8 +7,22 @@
   being blocked.  This may occur if a key(s) are pressed in a terminal emulator
   used to monitor the DEBUG() and ASSERT() messages.
 
+  Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
+
+  Portions provided under the following terms:
+  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+  property and proprietary rights in and to this material, related
+  documentation and any modifications thereto. Any use, reproduction,
+  disclosure or distribution of this material and related documentation
+  without an express license agreement from NVIDIA CORPORATION or
+  its affiliates is strictly prohibited.
+
+  SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
 
@@ -20,11 +34,18 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/SerialPortLib.h>
 #include <Library/DebugPrintErrorLevelLib.h>
+#include <Library/TimerLib.h>
+#include <Library/ResetSystemLib.h>
 
 //
 // Define the maximum debug and assert message length that this library supports
 //
 #define MAX_DEBUG_MESSAGE_LENGTH  0x100
+
+//
+// Declare reset required on assert bit for PcdDebugPropertyMask
+//
+#define DEBUG_PROPERTY_ASSERT_RESET_ENABLED       0x40
 
 //
 // VA_LIST can not initialize to NULL for all compiler, so we use this to
@@ -219,6 +240,7 @@ DebugAssert (
   )
 {
   CHAR8  Buffer[MAX_DEBUG_MESSAGE_LENGTH];
+  UINT32 ResetDelay;
 
   //
   // Generate the ASSERT() message in Ascii format
@@ -231,12 +253,20 @@ DebugAssert (
   SerialPortWrite ((UINT8 *)Buffer, AsciiStrLen (Buffer));
 
   //
-  // Generate a Breakpoint, DeadLoop, or NOP based on PCD settings
+  // Generate a Breakpoint, DeadLoop, Reset or NOP based on PCD settings
   //
   if ((PcdGet8(PcdDebugPropertyMask) & DEBUG_PROPERTY_ASSERT_BREAKPOINT_ENABLED) != 0) {
     CpuBreakpoint ();
   } else if ((PcdGet8(PcdDebugPropertyMask) & DEBUG_PROPERTY_ASSERT_DEADLOOP_ENABLED) != 0) {
     CpuDeadLoop ();
+  } else if ((PcdGet8(PcdDebugPropertyMask) & DEBUG_PROPERTY_ASSERT_RESET_ENABLED) != 0) {
+    ResetDelay = PcdGet32(PcdAssertResetTimeoutValue);
+    if (ResetDelay > 0) {
+      AsciiSPrint (Buffer, sizeof (Buffer), "\nResetting the system in %d seconds.\n", ResetDelay);
+      SerialPortWrite ((UINT8 *)Buffer, AsciiStrLen (Buffer));
+      MicroSecondDelay (ResetDelay * 1000000);
+    }
+    ResetCold ();
   }
 }
 
