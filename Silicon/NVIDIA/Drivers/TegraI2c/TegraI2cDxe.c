@@ -46,7 +46,8 @@
 
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-i2c", &gNVIDIANonDiscoverableT194I2cDeviceGuid },
+  { "nvidia,tegra194-i2c", &gNVIDIANonDiscoverableI2cDeviceGuid },
+  { "nvidia,tegra234-i2c", &gNVIDIANonDiscoverableI2cDeviceGuid },
   { NULL, NULL }
 };
 
@@ -256,29 +257,16 @@ TegraI2cReset (
 
   Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER(This);
 
-  if (Private->MstRegistersPresent) {
-    MmioWrite32 (Private->BaseAddress + I2C_MST_FIFO_CONTROL_0_OFFSET,
-                  (7 << TX_FIFO_TRIG_SHIFT) |
-                  (0 << RX_FIFO_TRIG_SHIFT) |
-                  TX_FIFO_FLUSH |
-                  RX_FIFO_FLUSH);
-  } else {
-    MmioWrite32 (Private->BaseAddress + I2C_FIFO_CONTROL_0_OFFSET,
-                  (7 << I2C_FIFO_CONTROL_0_TX_FIFO_TRIG_SHIFT) |
-                  (0 << I2C_FIFO_CONTROL_0_RX_FIFO_TRIG_SHIFT) |
-                  I2C_FIFO_CONTROL_0_TX_FIFO_FLUSH |
-                  I2C_FIFO_CONTROL_0_RX_FIFO_FLUSH);
-  }
+  MmioWrite32 (Private->BaseAddress + I2C_MST_FIFO_CONTROL_0_OFFSET,
+                (7 << TX_FIFO_TRIG_SHIFT) |
+                (0 << RX_FIFO_TRIG_SHIFT) |
+                TX_FIFO_FLUSH |
+                RX_FIFO_FLUSH);
 
   Timeout = I2C_TIMEOUT;
   do {
-    if (Private->MstRegistersPresent) {
-      Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_CONTROL_0_OFFSET);
-      Data32 = (Data32 & (TX_FIFO_FLUSH|RX_FIFO_FLUSH));
-    } else {
-      Data32 = MmioRead32 (Private->BaseAddress + I2C_FIFO_CONTROL_0_OFFSET);
-      Data32 = (Data32 & (I2C_FIFO_CONTROL_0_TX_FIFO_FLUSH|I2C_FIFO_CONTROL_0_RX_FIFO_FLUSH));
-    }
+    Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_CONTROL_0_OFFSET);
+    Data32 = (Data32 & (TX_FIFO_FLUSH|RX_FIFO_FLUSH));
     if (Data32 != 0) {
      MicroSecondDelay (1);
      Timeout--;
@@ -512,13 +500,8 @@ TegraI2cStartRequest (
           UINT32 WriteSize = MIN (sizeof(UINT32), PayloadSize);
           Timeout = I2C_TIMEOUT;
           do {
-            if (Private->MstRegistersPresent) {
-              Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_STATUS_0_OFFSET);
-              Data32 = (Data32 & TX_FIFO_EMPTY_CNT_MASK) >> TX_FIFO_EMPTY_CNT_SHIFT;
-            } else {
-              Data32 = MmioRead32 (Private->BaseAddress + I2C_FIFO_STATUS_0_OFFSET);
-              Data32 = (Data32 & I2C_FIFO_STATUS_0_TX_FIFO_EMPTY_CNT_MASK) >> I2C_FIFO_STATUS_0_TX_FIFO_EMPTY_CNT_SHIFT;
-            }
+            Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_STATUS_0_OFFSET);
+            Data32 = (Data32 & TX_FIFO_EMPTY_CNT_MASK) >> TX_FIFO_EMPTY_CNT_SHIFT;
             if (Data32 != 0) {
               MicroSecondDelay (1);
               Timeout--;
@@ -555,13 +538,8 @@ TegraI2cStartRequest (
           UINT32 ReadSize = MIN (sizeof(UINT32), ReadPacketSize);
           Timeout = I2C_TIMEOUT;
           do {
-            if (Private->MstRegistersPresent) {
-              Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_STATUS_0_OFFSET);
-              Data32 = (Data32 & RX_FIFO_FULL_CNT_MASK) >> RX_FIFO_FULL_CNT_SHIFT;
-            } else {
-              Data32 = MmioRead32 (Private->BaseAddress + I2C_FIFO_STATUS_0_OFFSET);
-              Data32 = (Data32 & I2C_FIFO_STATUS_0_RX_FIFO_EMPTY_CNT_MASK) >> I2C_FIFO_STATUS_0_RX_FIFO_EMPTY_CNT_SHIFT;
-            }
+            Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_STATUS_0_OFFSET);
+            Data32 = (Data32 & RX_FIFO_FULL_CNT_MASK) >> RX_FIFO_FULL_CNT_SHIFT;
             if (Data32 == 0) {
               MicroSecondDelay (1);
               Timeout--;
@@ -939,11 +917,6 @@ TegraI2CDriverBindingStart (
   Private->DeviceTreeNode                                 = DeviceTreeNode;
   Private->PacketId                                       = 0;
   Private->HighSpeed                                      = FALSE;
-  Private->MstRegistersPresent                            = FALSE;
-
-  if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT194I2cDeviceGuid)) {
-    Private->MstRegistersPresent = TRUE;
-  }
 
   DtControllerId = (CONST UINT32*)fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,hw-instance-id", NULL);
   if (NULL != DtControllerId) {

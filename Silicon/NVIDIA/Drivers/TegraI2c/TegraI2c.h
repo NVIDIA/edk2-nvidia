@@ -72,8 +72,6 @@ typedef struct {
   UINT32                                        ControllerId;
   UINTN                                         BusClockHertz;
 
-  BOOLEAN                                       MstRegistersPresent;
-
   UINT32                                        BusId;
   VOID                                          *DeviceTreeBase;
   INT32                                         DeviceTreeNodeOffset;
@@ -148,19 +146,6 @@ typedef struct {
 
 
 #define I2C_I2C_RX_FIFO_0_OFFSET                  0x54
-#define I2C_FIFO_CONTROL_0_OFFSET                 0x5c
-#define I2C_FIFO_CONTROL_0_TX_FIFO_TRIG_SHIFT     5
-#define I2C_FIFO_CONTROL_0_TX_FIFO_TRIG_MASK      0xe0
-#define I2C_FIFO_CONTROL_0_RX_FIFO_TRIG_SHIFT     2
-#define I2C_FIFO_CONTROL_0_RX_FIFO_TRIG_MASK      0x1c
-#define I2C_FIFO_CONTROL_0_TX_FIFO_FLUSH          BIT1
-#define I2C_FIFO_CONTROL_0_RX_FIFO_FLUSH          BIT0
-
-#define I2C_FIFO_STATUS_0_OFFSET                  0x60
-#define I2C_FIFO_STATUS_0_TX_FIFO_EMPTY_CNT_SHIFT 4
-#define I2C_FIFO_STATUS_0_TX_FIFO_EMPTY_CNT_MASK  0xf0
-#define I2C_FIFO_STATUS_0_RX_FIFO_EMPTY_CNT_SHIFT 4
-#define I2C_FIFO_STATUS_0_RX_FIFO_EMPTY_CNT_MASK  0x0f
 
 #define I2C_INTERRUPT_STATUS_REGISTER_0_OFFSET    0x68
 #define INTERRUPT_STATUS_BUS_CLEAR_DONE           BIT11
