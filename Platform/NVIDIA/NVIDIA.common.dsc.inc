@@ -42,7 +42,7 @@
 !if $(TARGET) == RELEASE
   DebugLib|MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
 !else
-  DebugLib|MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
+  DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
 !endif
   DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
 
