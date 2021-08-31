@@ -72,9 +72,11 @@ IsValidLoadOption (
   IN  EFI_BOOT_MANAGER_LOAD_OPTION *LoadOption
   )
 {
-  EFI_STATUS      Status;
-  EFI_HANDLE      Handle;
-  EFI_DEVICE_PATH *DevicePath;
+  EFI_STATUS              Status;
+  EFI_HANDLE              Handle;
+  EFI_DEVICE_PATH         *DevicePath;
+  VOID                    *DevicePathNode;
+  CONTROLLER_DEVICE_PATH  *Controller;
 
   if (CompareGuid ((EFI_GUID *)LoadOption->OptionalData, &mBmAutoCreateBootOptionGuid)) {
     DevicePath = LoadOption->FilePath;
@@ -84,6 +86,25 @@ IsValidLoadOption (
     Status = gBS->LocateDevicePath (&gEfiFirmwareVolume2ProtocolGuid, &DevicePath, &Handle);
     if (!EFI_ERROR (Status)) {
       return FALSE;
+    }
+
+    DevicePathNode = DevicePath;
+    while (!IsDevicePathEndType (DevicePathNode)) {
+
+      //Look for eMMC and ignore the non-user partitions
+      if ((DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) &&
+          (DevicePathSubType (DevicePathNode) == MSG_EMMC_DP)) {
+        DevicePathNode = NextDevicePathNode (DevicePathNode);
+        if ((DevicePathType (DevicePathNode) == HARDWARE_DEVICE_PATH) &&
+            (DevicePathSubType (DevicePathNode) == HW_CONTROLLER_DP)) {
+          Controller = (CONTROLLER_DEVICE_PATH *)DevicePathNode;
+          if (Controller->ControllerNumber != 0) {
+            return FALSE;
+          }
+        }
+        break;
+      }
+      DevicePathNode = NextDevicePathNode (DevicePathNode);
     }
   }
 
