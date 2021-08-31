@@ -67,7 +67,6 @@
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA194'
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}
-  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
@@ -86,7 +85,6 @@
   gArmTokenSpaceGuid.PcdGicRedistributorsBase|0X0F440000
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA234'
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(bf0d4599-20d4-414e-b2c5-3595b1cda402)}
-  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
