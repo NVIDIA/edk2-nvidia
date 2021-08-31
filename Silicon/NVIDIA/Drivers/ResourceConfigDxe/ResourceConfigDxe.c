@@ -114,6 +114,9 @@ InitializeSettings (
   // Initialize Quick Boot Form Settings
   PcdSet8S (PcdQuickBootEnabled, PcdGet8 (PcdQuickBootEnabled));
 
+  // Initialize OS Selection Form Settings
+  PcdSet8S (PcdOsChainOverride, PcdGet8 (PcdOsChainOverride));
+
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;
   Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIATokenSpaceGuid, NULL, &KernelCmdLineLen, NULL);

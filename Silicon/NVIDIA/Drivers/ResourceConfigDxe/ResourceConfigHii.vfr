@@ -65,6 +65,11 @@ formset
     name  = KernelCommandLine,
     guid  = NVIDIA_TOKEN_SPACE_GUID;
 
+  efivarstore NVIDIA_OS_OVERRIDE,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
+    name  = BootChainOsOverride,
+    guid  = NVIDIA_TOKEN_SPACE_GUID;
+
   //
   // Main form for NVIDIA Resource Configuration
   //
@@ -107,6 +112,16 @@ formset
             minsize = KERNEL_CMD_STR_MIN_SIZE,
             maxsize = KERNEL_CMD_STR_MAX_SIZE,
     endstring;
+
+    oneof varid = BootChainOsOverride.Chain,
+        questionid = KEY_OS_CHAIN_OVERRIDE,
+        prompt = STRING_TOKEN(STR_OS_OVERRIDE_PROMPT),
+        help   = STRING_TOKEN(STR_OS_OVERRIDE_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1,
+        option text = STRING_TOKEN(STR_OS_PART_DEFAULT), value = NVIDIA_OS_OVERRIDE_DEFAULT, flags = 0;
+        option text = STRING_TOKEN(STR_OS_PART_A), value = NVIDIA_OS_OVERRIDE_A, flags = 0;
+        option text = STRING_TOKEN(STR_OS_PART_B), value = NVIDIA_OS_OVERRIDE_B, flags = 0;
+    endoneof;
 
     //
     // Display Enable PCIe in OS

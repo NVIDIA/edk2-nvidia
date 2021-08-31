@@ -632,6 +632,7 @@
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIATokenSpaceGuid|0x0|1|BS,NV
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0xFF|BS
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0xFF|BS,NV
+  gNVIDIATokenSpaceGuid.PcdOsChainOverride|L"BootChainOsOverride"|gNVIDIATokenSpaceGuid|0x00|0xFF|BS,NV,RT
 
 [Components.common]
   #

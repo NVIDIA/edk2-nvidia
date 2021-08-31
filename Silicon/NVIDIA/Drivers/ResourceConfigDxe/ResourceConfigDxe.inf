@@ -71,6 +71,7 @@
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig
+  gNVIDIATokenSpaceGuid.PcdOsChainOverride
 
 [Depex]
   TRUE

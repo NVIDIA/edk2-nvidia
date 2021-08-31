@@ -316,3 +316,9 @@
 
 #SPI clock frequency.
   gNVIDIATokenSpaceGuid.PcdSpiClockFrequency|10000000|UINT32|0x00000041
+
+#OS partition override
+  #0   - Force A Partition
+  #1   - Force B Partition
+  #255 - Use firmware version
+  gNVIDIATokenSpaceGuid.PcdOsChainOverride|0xFF|UINT8|0x00000042

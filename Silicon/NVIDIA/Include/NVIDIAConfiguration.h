@@ -39,6 +39,10 @@
 #define NVIDIA_SERIAL_PORT_DBG2_SBSA         0x4
 #define NVIDIA_SERIAL_PORT_DISABLED          0xFF
 
+#define NVIDIA_OS_OVERRIDE_A                 0x0
+#define NVIDIA_OS_OVERRIDE_B                 0x1
+#define NVIDIA_OS_OVERRIDE_DEFAULT           0xFF
+
 #define KERNEL_CMD_STR_MIN_SIZE              0
 #define KERNEL_CMD_STR_MAX_SIZE              255
 
@@ -69,5 +73,9 @@ typedef struct {
 typedef struct {
   CHAR16 KernelCommand[KERNEL_CMD_STR_MAX_SIZE];
 } NVIDIA_KERNEL_COMMAND_LINE;
+
+typedef struct {
+  UINT8 Chain;
+} NVIDIA_OS_OVERRIDE;
 
 #endif //__NVIDIA_CONFIGURATION_H__
