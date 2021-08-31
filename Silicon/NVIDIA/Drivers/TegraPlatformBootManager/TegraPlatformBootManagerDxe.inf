@@ -48,6 +48,7 @@
   gEfiLoadFileProtocolGuid
   gEfiFirmwareVolume2ProtocolGuid
   gEdkiiPlatformBootManagerProtocolGuid
+  gAndroidBootImgProtocolGuid
 
 [Guids]
   gFdtTableGuid

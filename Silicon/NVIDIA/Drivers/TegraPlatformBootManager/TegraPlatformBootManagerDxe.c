@@ -34,6 +34,7 @@
 
 #include <Protocol/PlatformBootManager.h>
 #include <Protocol/KernelCmdLineUpdate.h>
+#include <Protocol/AndroidBootImg.h>
 
 #include <NVIDIAConfiguration.h>
 
@@ -491,6 +492,34 @@ GetPlatformCommandLine (
   return EFI_SUCCESS;
 }
 
+//Append platform specific commands
+EFI_STATUS
+EFIAPI
+AndroidBootImgAppendKernelArgs (
+  IN CHAR16            *Args,
+  IN UINTN              Size
+  )
+{
+  EFI_STATUS Status;
+  CHAR16     *NewArgs;
+
+  Status = UpdateKernelCommandLine (Args, &NewArgs);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (StrSize (NewArgs) > Size) {
+    DEBUG ((DEBUG_ERROR, "%a: New command line too long: %d\r\n", __FUNCTION__, StrSize (NewArgs)));
+    Status = EFI_DEVICE_ERROR;
+  } else {
+    Status = StrCpyS (Args, Size / sizeof(CHAR16), NewArgs);
+  }
+
+  gBS->FreePool (NewArgs);
+  NewArgs = NULL;
+  return Status;
+}
+
 /*
   This function parses the input auto enumerated boot options and makes platform specific
   customizations to it. This function needs to allocate new boot options buffer that has the
@@ -841,6 +870,8 @@ EDKII_PLATFORM_BOOT_MANAGER_PROTOCOL mPlatformBootManager = {
   RefreshAllBootOptions
 };
 
+STATIC ANDROID_BOOTIMG_PROTOCOL mAndroidBootImgProtocol = {AndroidBootImgAppendKernelArgs, NULL};
+
 EFI_STATUS
 EFIAPI
 PlatformBootManagerEntryPoint (
@@ -863,5 +894,7 @@ PlatformBootManagerEntryPoint (
   return gBS->InstallMultipleProtocolInterfaces (&ImageHandle,
                                                  &gEdkiiPlatformBootManagerProtocolGuid,
                                                  &mPlatformBootManager,
+                                                 &gAndroidBootImgProtocolGuid,
+                                                 &mAndroidBootImgProtocol,
                                                  NULL);
 }
