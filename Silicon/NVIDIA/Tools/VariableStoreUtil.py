@@ -13,7 +13,12 @@
 # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 # Uefi Sub-directories to search for included JSON files in
-UEFI_SUBDIRS = ["edk2", "edk2-platforms", "edk2-platforms-private"]
+UEFI_SUBDIRS = [
+    "edk2",
+    "edk2-nvidia", "edk2-nvidia-private", "edk2-non-osi",
+    # TODO: Remove the following line after we've transitioned our directory structure.
+    "edk2-platforms", "edk2-platforms-private"
+]
 
 # List of supported integer types
 INT_TYPES = ["UINT8", "UINT16", "UINT32", "UINT64"]
