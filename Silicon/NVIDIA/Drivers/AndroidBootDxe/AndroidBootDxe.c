@@ -33,6 +33,8 @@
 #include <PiDxe.h>
 #include <Library/HobLib.h>
 #include <Protocol/LoadedImage.h>
+#include <Library/HandleParsingLib.h>
+
 
 STATIC EFI_PHYSICAL_ADDRESS      mRamLoadedBaseAddress = 0;
 STATIC UINT64                    mRamLoadedSize = 0;
@@ -594,6 +596,14 @@ AndroidBootDriverBindingSupported (
   UINT32                          *Id;
   EFI_BLOCK_IO_PROTOCOL           *BlockIo = NULL;
   EFI_DISK_IO_PROTOCOL            *DiskIo = NULL;
+  EFI_HANDLE                      *ParentHandles = NULL;
+  UINTN                           ParentCount;
+  UINTN                           ParentIndex;
+  EFI_HANDLE                      *ChildHandles = NULL;
+  UINTN                           ChildCount;
+  UINTN                           ChildIndex;
+  VOID                            *Protocol;
+
 
   // This driver will be accessed while boot manager attempts to connect
   // all drivers to the controllers for each partition entry.
@@ -641,6 +651,30 @@ AndroidBootDriverBindingSupported (
     goto ErrorExit;
   }
 
+  //Check if there is an efi system partition on this disk
+  //If so use that to boot the device
+  Status = PARSE_HANDLE_DATABASE_PARENTS (ControllerHandle, &ParentCount, &ParentHandles);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find parents - %r\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+  for (ParentIndex = 0; ParentIndex < ParentCount; ParentIndex++) {
+    Status = ParseHandleDatabaseForChildControllers (ParentHandles[ParentIndex], &ChildCount, &ChildHandles);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find child controllers - %r\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    for (ChildIndex = 0; ChildIndex < ChildCount; ChildIndex++) {
+      Status = gBS->HandleProtocol (ChildHandles[ChildIndex], &gEfiPartTypeSystemPartGuid, (VOID **)&Protocol);
+      //Found ESP return unsupported
+      if (!EFI_ERROR (Status)) {
+        Status = EFI_UNSUPPORTED;
+        goto ErrorExit;
+      }
+    }
+  }
+
   // Examine if the Android Boot image can be found
   Status = AndroidBootGetVerify (BlockIo, DiskIo, NULL, NULL);
   if (!EFI_ERROR (Status)) {
@@ -648,6 +682,14 @@ AndroidBootDriverBindingSupported (
   }
 
 ErrorExit:
+  if (ParentHandles != NULL) {
+    FreePool (ParentHandles);
+    ParentHandles = NULL;
+  }
+  if (ChildHandles != NULL) {
+    FreePool (ChildHandles);
+    ChildHandles = NULL;
+  }
   if (BlockIo != NULL) {
     gBS->CloseProtocol (
                     ControllerHandle,

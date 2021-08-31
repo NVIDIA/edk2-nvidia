@@ -38,7 +38,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
-  OvmfPkg/OvmfPkg.dec
+  ShellPkg/ShellPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [Sources]
@@ -58,6 +58,7 @@
   PcdLib
   HobLib
   TegraPlatformInfoLib
+  HandleParsingLib
 
 [Protocols]
   gEfiBlockIoProtocolGuid
@@ -74,6 +75,7 @@
   gNVIDIARcmKernelGuid
   gNVIDIAOSCarveoutHob
   gNVIDIALoadfileKernelArgsGuid
+  gEfiPartTypeSystemPartGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
