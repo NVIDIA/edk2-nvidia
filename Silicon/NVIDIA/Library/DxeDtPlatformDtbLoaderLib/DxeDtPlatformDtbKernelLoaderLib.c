@@ -152,7 +152,8 @@ DtPlatformLoadDtb (
   INT32                       DtStatus;
   VOID                        *DtbAllocated;
   VOID                        *DtbCopy;
-  UINT64                      DtbNext;
+  VOID                        *CpublDtb;
+  VOID                        *OverlayDtb;
   CHAR8                       SWModule[] = "kernel";
 
   ValidFlash = FALSE;
@@ -266,9 +267,10 @@ DtPlatformLoadDtb (
     goto Exit;
   }
 
-  DtbNext = ALIGN_VALUE ((UINTN)*Dtb + fdt_totalsize (*Dtb), SIZE_4KB);
-  if (fdt_check_header((VOID *)DtbNext) == 0) {
-    Status = ApplyTegraDeviceTreeOverlay((VOID *)DtbCopy, (VOID *)DtbNext, SWModule);
+  CpublDtb = (VOID *)(UINTN)GetDTBBaseAddress ();
+  OverlayDtb = (VOID *)ALIGN_VALUE ((UINTN)CpublDtb + fdt_totalsize (CpublDtb), SIZE_4KB);
+  if (fdt_check_header(OverlayDtb) == 0) {
+    Status = ApplyTegraDeviceTreeOverlay((VOID *)DtbCopy, OverlayDtb, SWModule);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "DTB Overlay failed. Using base DTB.\n"));
       if (fdt_open_into (*Dtb, DtbCopy, 2 * fdt_totalsize (*Dtb)) != 0) {
