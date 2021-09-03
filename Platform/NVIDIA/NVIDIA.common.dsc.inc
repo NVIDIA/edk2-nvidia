@@ -633,6 +633,7 @@
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0xFF|BS
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0xFF|BS,NV
   gNVIDIATokenSpaceGuid.PcdOsChainOverride|L"BootChainOsOverride"|gNVIDIATokenSpaceGuid|0x00|0xFF|BS,NV,RT
+  gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode|L"L4TDefaultBootMode"|gNVIDIATokenSpaceGuid|0x00|0xFF|BS,NV,RT
 
 [Components.common]
   #

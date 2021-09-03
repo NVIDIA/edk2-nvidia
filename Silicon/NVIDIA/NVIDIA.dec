@@ -322,3 +322,11 @@
   #1   - Force B Partition
   #255 - Use firmware version
   gNVIDIATokenSpaceGuid.PcdOsChainOverride|0xFF|UINT8|0x00000042
+
+#L4T default boot mode
+  #0   - Boot using grub
+  #1   - Boot using extlinux via filesystem
+  #2   - Boot using boot.img
+  #3   - Boot recovery image
+  #255 - Use application default
+  gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode|0xFF|UINT8|0x00000043

@@ -43,6 +43,13 @@
 #define NVIDIA_OS_OVERRIDE_B                 0x1
 #define NVIDIA_OS_OVERRIDE_DEFAULT           0xFF
 
+#define NVIDIA_L4T_BOOTMODE_GRUB             0x0
+#define NVIDIA_L4T_BOOTMODE_DIRECT           0x1
+#define NVIDIA_L4T_BOOTMODE_BOOTIMG          0x2
+#define NVIDIA_L4T_BOOTMODE_RECOVERY         0x3
+#define NVIDIA_L4T_BOOTMODE_DEFAULT          0xFF
+
+
 #define KERNEL_CMD_STR_MIN_SIZE              0
 #define KERNEL_CMD_STR_MAX_SIZE              255
 
@@ -77,5 +84,9 @@ typedef struct {
 typedef struct {
   UINT8 Chain;
 } NVIDIA_OS_OVERRIDE;
+
+typedef struct {
+  UINT8 BootMode;
+} NVIDIA_L4T_BOOT_MODE;
 
 #endif //__NVIDIA_CONFIGURATION_H__

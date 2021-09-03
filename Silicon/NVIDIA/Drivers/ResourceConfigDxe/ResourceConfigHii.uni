@@ -40,6 +40,8 @@
 #string STR_KERNEL_CMDLINE_HELP          #language en-US "Used to append command line to default kernel command line."
 #string STR_OS_OVERRIDE_PROMPT           #language en-US "Override OS selection"
 #string STR_OS_OVERRIDE_HELP             #language en-US "Used to override selection of A/B partitions."
+#string STR_L4T_BOOTMODE_PROMPT          #language en-US "L4T Boot Mode"
+#string STR_L4T_BOOTMODE_HELP            #language en-US "Used to override boot mode of l4t launcher."
 
 #string STR_NULL                         #language en-US ""
 
@@ -56,6 +58,12 @@
 #string STR_OS_PART_A                    #language en-US  "A Partition"
 #string STR_OS_PART_B                    #language en-US  "B Partition"
 #string STR_OS_PART_DEFAULT              #language en-US  "Link with firmware"
+
+#string STR_L4T_BOOTMODE_GRUB            #language en-US  "GRUB"
+#string STR_L4T_BOOTMODE_DIRECT          #language en-US  "ExtLinux"
+#string STR_L4T_BOOTMODE_BOOTIMG         #language en-US  "Kernel Partition"
+#string STR_L4T_BOOTMODE_RECOVERY        #language en-US  "Recovery Partition"
+#string STR_L4T_BOOTMODE_DEFAULT         #language en-US  "Application Default"
 
 #string STR_EXIT_STRING                  #language en-US  "Press ESC to exit."
 

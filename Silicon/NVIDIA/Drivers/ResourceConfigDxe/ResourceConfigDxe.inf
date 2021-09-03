@@ -72,6 +72,7 @@
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig
   gNVIDIATokenSpaceGuid.PcdOsChainOverride
+  gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode
 
 [Depex]
   TRUE

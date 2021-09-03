@@ -117,6 +117,9 @@ InitializeSettings (
   // Initialize OS Selection Form Settings
   PcdSet8S (PcdOsChainOverride, PcdGet8 (PcdOsChainOverride));
 
+  // Initialize L4T boot mode form settings
+  PcdSet8S (PcdL4TDefaultBootMode, PcdGet8 (PcdL4TDefaultBootMode));
+
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;
   Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIATokenSpaceGuid, NULL, &KernelCmdLineLen, NULL);
