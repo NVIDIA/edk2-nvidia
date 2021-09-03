@@ -50,6 +50,7 @@
 
 [Guids]
   gNVIDIATokenSpaceGuid
+  gFdtTableGuid
 
 [Protocols]
   gEfiLoadedImageProtocolGuid
@@ -58,6 +59,7 @@
   gAndroidBootImgProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiDiskIoProtocolGuid
+  gEfiLoadFile2ProtocolGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
