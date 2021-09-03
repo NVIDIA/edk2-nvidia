@@ -45,6 +45,8 @@
   SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraSerialPortLib.inf
 
   RealTimeClockLib|Silicon/NVIDIA/Library/MaximRealTimeClockLib/MaximRealTimeClockLib.inf
+  OrderedCollectionLib|MdePkg/Library/BaseOrderedCollectionRedBlackTreeLib/BaseOrderedCollectionRedBlackTreeLib.inf
+  BaseUcs2Utf8Lib|RedfishPkg/Library/BaseUcs2Utf8Lib/BaseUcs2Utf8Lib.inf
 
 [LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
@@ -284,3 +286,10 @@
   # L4T launcher
   #
   Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf
+
+  # Ext4 filesystem support
+  #
+  Features/Ext4Pkg/Ext4Dxe/Ext4Dxe.inf {
+    <PcdsFixedAtBuild>
+      gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x80000007
+  }
