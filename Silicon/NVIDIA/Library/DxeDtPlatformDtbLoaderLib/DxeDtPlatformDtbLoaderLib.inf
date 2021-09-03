@@ -36,7 +36,6 @@
 
 [Sources]
   DxeDtPlatformDtbLoaderLib.c
-  FloorSweep.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -47,9 +46,6 @@
   BaseLib
   HobLib
   FdtLib
-  PrintLib
-  PcdLib
-  FloorSweepingLib
 
 [Guids]
   gFdtHobGuid

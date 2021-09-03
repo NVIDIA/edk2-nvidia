@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  This program and the accompanying materials
@@ -32,7 +32,6 @@
 #include <Library/HobLib.h>
 #include <Library/DebugLib.h>
 #include <libfdt.h>
-#include "FloorSweepPrivate.h"
 
 /**
   Return a pool allocated copy of the DTB image that is appropriate for
@@ -67,7 +66,6 @@ DtPlatformLoadDtb (
     return EFI_NOT_FOUND;
   }
 
-  UpdateCpuFloorsweepingConfig (*Dtb);
   *DtbSize = fdt_totalsize (*Dtb);
 
   return EFI_SUCCESS;

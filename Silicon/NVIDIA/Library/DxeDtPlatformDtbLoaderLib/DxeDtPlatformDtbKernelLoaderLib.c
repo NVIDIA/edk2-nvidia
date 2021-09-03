@@ -109,10 +109,36 @@ FdtInstalled (
 {
   EFI_STATUS Status;
   VOID       *Dtb;
+  VOID       *CpublDtb;
+  VOID       *OverlayDtb;
+  INT32      NodeOffset;
+  CHAR8      SWModule[] = "kernel";
 
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Dtb);
   if (EFI_ERROR (Status)) {
     return;
+  }
+
+  //Apply kernel-dtb overlays
+  CpublDtb = (VOID *)(UINTN)GetDTBBaseAddress ();
+  OverlayDtb = (VOID *)ALIGN_VALUE ((UINTN)CpublDtb + fdt_totalsize (CpublDtb), SIZE_4KB);
+  if (fdt_check_header(OverlayDtb) == 0) {
+    Status = ApplyTegraDeviceTreeOverlay(Dtb, OverlayDtb, SWModule);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+  }
+
+  //Remove plugin-manager node for device trees.
+  NodeOffset = fdt_path_offset (Dtb, "/plugin-manager");
+  if (NodeOffset >= 0) {
+    fdt_del_node ((VOID *)Dtb, NodeOffset);
+  }
+
+  //Remove grid of semaphores as we do not set up memory for this
+  NodeOffset = fdt_path_offset (Dtb, "/reserved-memory/grid-of-semaphores");
+  if (NodeOffset > 0) {
+    fdt_del_node (Dtb, NodeOffset);
   }
 
   UpdateCpuFloorsweepingConfig (Dtb);
@@ -148,13 +174,8 @@ DtPlatformLoadDtb (
   BOOLEAN                     DtbLocAdjusted;
   UINTN                       Index;
   EFI_BLOCK_IO_PROTOCOL       *BlockIo;
-  INT32                       NodeOffset;
-  INT32                       DtStatus;
   VOID                        *DtbAllocated;
   VOID                        *DtbCopy;
-  VOID                        *CpublDtb;
-  VOID                        *OverlayDtb;
-  CHAR8                       SWModule[] = "kernel";
 
   ValidFlash = FALSE;
   DtbLocAdjusted = FALSE;
@@ -267,45 +288,7 @@ DtPlatformLoadDtb (
     goto Exit;
   }
 
-  CpublDtb = (VOID *)(UINTN)GetDTBBaseAddress ();
-  OverlayDtb = (VOID *)ALIGN_VALUE ((UINTN)CpublDtb + fdt_totalsize (CpublDtb), SIZE_4KB);
-  if (fdt_check_header(OverlayDtb) == 0) {
-    Status = ApplyTegraDeviceTreeOverlay((VOID *)DtbCopy, OverlayDtb, SWModule);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "DTB Overlay failed. Using base DTB.\n"));
-      if (fdt_open_into (*Dtb, DtbCopy, 2 * fdt_totalsize (*Dtb)) != 0) {
-        Status = EFI_NOT_FOUND;
-        goto Exit;
-      }
-    }
-  }
-
-  NodeOffset = fdt_path_offset ((VOID *)DtbCopy, "/plugin-manager");
-  if (NodeOffset >= 0) {
-    fdt_del_node ((VOID *)DtbCopy, NodeOffset);
-  }
-
   *Dtb = DtbCopy;
-
-  //Check floorsweeping here in addition to callback to allow for users of this API who
-  //do not install the Dtb into the system table to get correct data.
-  UpdateCpuFloorsweepingConfig (*Dtb);
-
-  //QSPI flash is not supposed to be accessed by OS.
-  RemoveQspiNodes (Dtb);
-
-  //Add SKU information to be accessed by OS.
-  AddSkuProperties (Dtb);
-
-  //Disable grid of semaphores as we do not set up memory for this
-  NodeOffset = fdt_path_offset (*Dtb, "/reserved-memory/grid-of-semaphores");
-  if (NodeOffset > 0) {
-    DtStatus = fdt_setprop (*Dtb, NodeOffset, "status", "disabled", sizeof("disabled"));
-    if (DtStatus != 0) {
-      DEBUG ((DEBUG_ERROR, "Failed to disable grid-of-semaphores %d\r\n", DtStatus));
-    }
-  }
-
   *DtbSize = fdt_totalsize (*Dtb);
 
   Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,

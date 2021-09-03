@@ -29,9 +29,8 @@
 STATIC
 VOID
 EFIAPI
-OnEndOfDxe (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+ConfigureFSICarveout (
+  IN VOID
   )
 {
   EFI_STATUS Status;
@@ -43,8 +42,6 @@ OnEndOfDxe (
   INT32      AddressCells;
   INT32      SizeCells;
   UINT8      *Data;
-
-  gBS->CloseEvent (Event);
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
@@ -114,6 +111,20 @@ OnEndOfDxe (
 }
 
 
+STATIC
+VOID
+EFIAPI
+FdtInstalled (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  gBS->CloseEvent (Event);
+
+  ConfigureFSICarveout ();
+}
+
+
 /**
   Install FSI driver.
 
@@ -131,12 +142,20 @@ FSIDxeInitialize (
   IN EFI_SYSTEM_TABLE         *SystemTable
 )
 {
-  EFI_EVENT  EndOfDxeEvent;
+  EFI_STATUS Status;
+  EFI_EVENT  FdtInstallEvent;
 
-  return gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
-                             TPL_CALLBACK,
-                             OnEndOfDxe,
-                             NULL,
-                             &gEfiEndOfDxeEventGroupGuid,
-                             &EndOfDxeEvent);
+  Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                               TPL_CALLBACK,
+                               FdtInstalled,
+                               NULL,
+                               &gFdtTableGuid,
+                               &FdtInstallEvent);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  ConfigureFSICarveout ();
+
+  return Status;
 }

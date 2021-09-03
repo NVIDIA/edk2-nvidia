@@ -45,7 +45,6 @@
   PlatformResourceLib
 
 [Guids]
-  gEfiEndOfDxeEventGroupGuid
   gEfiAcpiTableGuid
   gFdtTableGuid
 
