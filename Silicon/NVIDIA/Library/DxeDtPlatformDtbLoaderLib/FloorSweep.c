@@ -51,9 +51,7 @@ UpdateCpuFloorsweepingConfig (
   UINT32 Tmp32;
   CHAR8  CpuNodeStr[] = "cpu@ffffffff";
   CHAR8  ClusterNodeStr[] = "cluster10";
-  BOOLEAN NodePresent;
   UINT32 AddressCells;
-
   INT32 NodeOffset;
   INT32 PrevNodeOffset;
   INT32 ParentOffset = 0;
@@ -152,10 +150,7 @@ UpdateCpuFloorsweepingConfig (
   while (TRUE) {
     AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr),"cluster%u", Cluster);
     NodeOffset = fdt_subnode_offset(Dtb, CpuMapOffset, ClusterNodeStr);
-
-    NodePresent = (NodeOffset >= 0);
-
-    if (NodePresent) {
+    if (NodeOffset >= 0) {
       if (!ClusterIsPresent (Cluster)) {
         FdtErr = fdt_del_node(Dtb, NodeOffset);
         if (FdtErr < 0) {
@@ -164,6 +159,28 @@ UpdateCpuFloorsweepingConfig (
           return EFI_DEVICE_ERROR;
         }
         DEBUG ((DEBUG_INFO, "Deleted cluster%u node in FDT\r\n", Cluster));
+      } else {
+        INT32       ClusterCpuNodeOffset;
+        INT32       PrevClusterCpuNodeOffset;
+        CONST VOID  *Property;
+        CONST CHAR8 *NodeName;
+        PrevClusterCpuNodeOffset = 0;
+        fdt_for_each_subnode (ClusterCpuNodeOffset, Dtb, NodeOffset) {
+          Property = fdt_getprop(Dtb, ClusterCpuNodeOffset, "cpu", NULL);
+          if (Property != NULL) {
+            if (fdt_node_offset_by_phandle (Dtb, fdt32_to_cpu(*(UINT32 *)Property)) < 0) {
+              NodeName = fdt_get_name (Dtb, ClusterCpuNodeOffset, NULL);
+              FdtErr = fdt_del_node(Dtb, ClusterCpuNodeOffset);
+              if (FdtErr < 0) {
+                DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu-map/%a/%a node: %a\r\n",
+                        ClusterNodeStr, NodeName, fdt_strerror(FdtErr)));
+                return EFI_DEVICE_ERROR;
+              }
+              ClusterCpuNodeOffset = PrevClusterCpuNodeOffset;
+            }
+          }
+          PrevClusterCpuNodeOffset = ClusterCpuNodeOffset;
+        }
       }
       Cluster++;
     } else {
