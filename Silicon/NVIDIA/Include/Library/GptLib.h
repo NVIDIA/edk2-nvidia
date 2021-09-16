@@ -104,7 +104,7 @@ GptFindPartitionByName (
 UINT64
 EFIAPI
 GptPartitionSizeInBlocks(
-  CONST EFI_PARTITION_ENTRY *Partition;
+  CONST EFI_PARTITION_ENTRY *Partition
   );
 
 #endif
