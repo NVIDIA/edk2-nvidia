@@ -42,9 +42,15 @@
 
 STATIC CHAR8 *SWModule;
 
+typedef enum {
+  MATCH_OR=0,
+  MATCH_AND
+} MATCH_OPERATOR;
+
 typedef struct {
   CHAR8   Name[16];
   UINT32  Count;
+  MATCH_OPERATOR MatchOp;
   BOOLEAN (*IsMatch)(VOID *Fdt, CONST CHAR8 *Item, VOID *Param);
 } DT_MATCH_INFO;
 
@@ -65,18 +71,22 @@ STATIC BOOLEAN MatchFuseInfo (VOID *, CONST CHAR8 *, VOID *);
 DT_MATCH_INFO MatchInfoArray[] = {
   {
     .Name = "ids",
+    .MatchOp = MATCH_OR,
     .IsMatch = MatchId,
   },
   {
     .Name = "odm-data",
+    .MatchOp = MATCH_AND,
     .IsMatch = MatchOdmData,
   },
   {
     .Name = "sw-modules",
+    .MatchOp = MATCH_OR,
     .IsMatch = MatchSWModule,
   },
   {
     .Name = "fuse-info",
+    .MatchOp = MATCH_AND,
     .IsMatch = MatchFuseInfo,
   },
 };
@@ -413,8 +423,11 @@ ProcessOverlayDeviceTree (
                MatchIter->Name, PropStr, FrName));
 
           Found = MatchIter->IsMatch(FdtBase, PropStr, &Data);
-          if (Found) {
+          if (!Found && (MatchIter->MatchOp == MATCH_AND)) {
             break;
+          }
+          if (Found && (MatchIter->MatchOp == MATCH_OR)) {
+             break;
           }
         }
         if(!Found) {
