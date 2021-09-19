@@ -497,7 +497,7 @@ ApplyTegraDeviceTreeOverlay (
     }
 
     SWModule = ModuleStr;
-    Status = ProcessOverlayDeviceTree(FdtBase, FdtOverlay, FdtBuf);
+    Status = ProcessOverlayDeviceTree(FdtBase, FdtNext, FdtBuf);
     if (EFI_SUCCESS == Status) {
       Err = fdt_overlay_apply(FdtBase, FdtBuf);
       if (Err != 0) {
