@@ -30,14 +30,17 @@
 #include <PiDxe.h>
 
 #include <Library/DebugLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/DxeServicesTableLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/UefiRuntimeLib.h>
-
+#include <Protocol/ClockNodeProtocol.h>
+#include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/QspiController.h>
+#include <libfdt.h>
 
 
 #define QSPI_CONTROLLER_SIGNATURE SIGNATURE_32('Q','S','P','I')
@@ -48,6 +51,7 @@ typedef struct {
   EFI_PHYSICAL_ADDRESS            QspiBaseAddress;
   NVIDIA_QSPI_CONTROLLER_PROTOCOL QspiControllerProtocol;
   EFI_EVENT                       VirtualAddrChangeEvent;
+  BOOLEAN                         WaitCyclesSupported;
 } QSPI_CONTROLLER_PRIVATE_DATA;
 
 
@@ -55,6 +59,9 @@ typedef struct {
 
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
+  { "nvidia,tegra186-spi", &gNVIDIANonDiscoverableSpiDeviceGuid },
+  { "nvidia,tegra194-spi", &gNVIDIANonDiscoverableSpiDeviceGuid },
+  { "nvidia,tegra23x-spi", &gNVIDIANonDiscoverableSpiDeviceGuid },
   { "nvidia,tegra186-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
   { "nvidia,tegra194-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
   { "nvidia,tegra23x-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
@@ -92,8 +99,13 @@ QspiControllerPerformTransaction(
 
   Private = QSPI_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL (This);
 
+  if (!Private->WaitCyclesSupported && Packet->WaitCycles != 0) {
+    return EFI_UNSUPPORTED;
+  }
+
   return QspiPerformTransaction (Private->QspiBaseAddress, Packet);
 }
+
 
 /**
   Fixup internal data so that EFI can be call in virtual mode.
@@ -116,6 +128,69 @@ VirtualNotifyEvent (
   EfiConvertPointer (0x0, (VOID**)&Private->QspiBaseAddress);
   return;
 }
+
+
+/**
+  Setup clock frequency for the spi controller.
+
+  @param[in]    DeviceTreeNode  Interface to controller's DTB entry
+  @param[in]    Controller      Controller handle
+  @param[in]    ClockFreq       Frequency to be setup
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+SetSpiFrequency (
+  IN CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode,
+  IN EFI_HANDLE Controller,
+  IN UINT32 ClockFreq
+)
+{
+  EFI_STATUS                 Status;
+  CONST UINT32               *DtClockIds;
+  INT32                      ClocksLength;
+  CONST CHAR8                *ClockName;
+  NVIDIA_CLOCK_NODE_PROTOCOL *ClockNodeProtocol;
+  UINTN                      Index;
+  UINT32                     ClockId;
+  SCMI_CLOCK2_PROTOCOL       *ScmiClockProtocol;
+
+  Status = EFI_SUCCESS;
+
+  DtClockIds = (CONST UINT32*)fdt_getprop (DeviceTreeNode->DeviceTreeBase,
+                                           DeviceTreeNode->NodeOffset,
+                                           "clocks", &ClocksLength);
+  if ((DtClockIds != NULL) && (ClocksLength != 0)) {
+    ClockName = "spi";
+    ClockNodeProtocol = NULL;
+    Status = gBS->HandleProtocol (Controller,
+                                  &gNVIDIAClockNodeProtocolGuid,
+                                  (VOID **)&ClockNodeProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to locate Clock Protocol\n", __FUNCTION__));
+      return Status;
+    }
+    for (Index = 0; Index < ClockNodeProtocol->Clocks; Index++) {
+      if (0 == AsciiStrCmp (ClockName, ClockNodeProtocol->ClockEntries[Index].ClockName)) {
+        ClockId = ClockNodeProtocol->ClockEntries[Index].ClockId;
+        Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid,
+                                      NULL,
+                                      (VOID **)&ScmiClockProtocol);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Failed to locate ARM SCMI Clock2 Protocol\n", __FUNCTION__));
+          return Status;
+        }
+        Status = ScmiClockProtocol->RateSet (ScmiClockProtocol, ClockId, ClockFreq);
+      }
+    }
+  }
+
+  return Status;
+}
+
 
 /**
   Callback that will be invoked at various phases of the driver initialization
@@ -142,6 +217,9 @@ DeviceDiscoveryNotify (
 )
 {
   EFI_STATUS                      Status;
+  NON_DISCOVERABLE_DEVICE         *Device;
+  BOOLEAN                         WaitCyclesSupported;
+  UINT32                          SpiClockFreq;
   QSPI_CONTROLLER_PRIVATE_DATA    *Private;
   NVIDIA_QSPI_CONTROLLER_PROTOCOL *QspiControllerProtocol;
   EFI_PHYSICAL_ADDRESS            BaseAddress;
@@ -149,10 +227,37 @@ DeviceDiscoveryNotify (
   EFI_DEVICE_PATH_PROTOCOL        *DevicePath;
   EFI_GCD_MEMORY_SPACE_DESCRIPTOR Descriptor;
 
+  Device = NULL;
   Private = NULL;
 
   switch (Phase) {
   case DeviceDiscoveryDriverBindingStart:
+    Status = gBS->HandleProtocol (ControllerHandle,
+                                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                                  (VOID **)&Device);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to locate non discoverable device\n", __FUNCTION__));
+      return Status;
+    }
+
+    if (CompareMem (Device->Type, &gNVIDIANonDiscoverableSpiDeviceGuid, sizeof (EFI_GUID)) == 0) {
+      WaitCyclesSupported = FALSE;
+      // SPI controller is usually going to be used for non flash
+      // peripherals. Because of this reason, it would not be set
+      // to its default clock rate by previous stage bootloaders.
+      // Set the clock rate here based on the PCD value.
+      SpiClockFreq = PcdGet32 (PcdSpiClockFrequency);
+      if (SpiClockFreq > 0) {
+        Status = SetSpiFrequency (DeviceTreeNode, ControllerHandle, SpiClockFreq);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Failed to Set Clock Frequency %r\n", __FUNCTION__, Status));
+          return Status;
+        }
+      }
+    } else {
+      WaitCyclesSupported = TRUE;
+    }
+
     Status = gBS->HandleProtocol (ControllerHandle,
                                   &gEfiDevicePathProtocolGuid,
                                   (VOID **)&DevicePath);
@@ -187,6 +292,7 @@ DeviceDiscoveryNotify (
     }
     Private->Signature = QSPI_CONTROLLER_SIGNATURE;
     Private->QspiBaseAddress = BaseAddress;
+    Private->WaitCyclesSupported = WaitCyclesSupported;
     Status = QspiInitialize (Private->QspiBaseAddress);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "QSPI Initialization Failed.\n"));

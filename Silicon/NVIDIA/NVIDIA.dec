@@ -310,3 +310,6 @@
 #Cpu configuration
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster|1|UINT32|0x0000003B
   gNVIDIATokenSpaceGuid.PcdPcdTegraMaxClusters|1|UINT32|0x0000003C
+
+#SPI clock frequency.
+  gNVIDIATokenSpaceGuid.PcdSpiClockFrequency|10000000|UINT32|0x00000041

@@ -29,8 +29,6 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra186-spi", &gNVIDIANonDiscoverableSpiDeviceGuid },
-  { "nvidia,tegra194-spi", &gNVIDIANonDiscoverableSpiDeviceGuid },
   { NULL, NULL }
 };
 
