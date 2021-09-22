@@ -793,6 +793,43 @@ TegraI2cEnableI2cBusConfiguration (
 }
 
 /**
+  This routine is called to add an I2C device to the controller.
+
+  @param[in] Private            Driver's private data.
+  @param[in] I2cAddress         Address of the device.
+  @param[in] DeviceGuid         GUID to identify the device type.
+  @param[in] DeviceIndex        Index of the device derived from device tree.
+
+  @retval EFI_SUCCESS           Device added.
+  @retval other                 Some error occurs when device is being added.
+
+**/
+EFI_STATUS
+TegraI2cAddDevice (
+  IN NVIDIA_TEGRA_I2C_PRIVATE_DATA     *Private,
+  IN UINT32                            I2cAddress,
+  IN EFI_GUID                          *DeviceGuid,
+  IN UINT32                            DeviceIndex
+  )
+{
+  if (Private->NumberOfI2cDevices >= MAX_I2C_DEVICES) {
+    DEBUG ((DEBUG_ERROR, "%a: Too many i2c devices detected, increase limit\r\n", __FUNCTION__));
+    ASSERT (FALSE);
+    return EFI_OUT_OF_RESOURCES;
+  }
+  Private->SlaveAddressArray[Private->NumberOfI2cDevices * MAX_SLAVES_PER_DEVICE] = I2cAddress;
+  Private->I2cDevices[Private->NumberOfI2cDevices].DeviceGuid = DeviceGuid;
+  Private->I2cDevices[Private->NumberOfI2cDevices].DeviceIndex = DeviceIndex;
+  Private->I2cDevices[Private->NumberOfI2cDevices].HardwareRevision = 1;
+  Private->I2cDevices[Private->NumberOfI2cDevices].I2cBusConfiguration = 0;
+  Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressCount = 1;
+  Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressArray = &Private->SlaveAddressArray[Private->NumberOfI2cDevices * MAX_SLAVES_PER_DEVICE];
+  Private->NumberOfI2cDevices++;
+
+  return EFI_SUCCESS;
+}
+
+/**
   This routine is called to check whether the driver is supported
   on ControllerHandle.
 
@@ -808,9 +845,16 @@ TegraI2CDriverBindingSupported (
     IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
   )
 {
-  INT32                             EepromNodeOffset;
+  INT32                             I2cNodeOffset;
   CONST VOID                        *Property;
   INT32                             PropertyLen;
+  INT32                             EepromManagerNodeOffset;
+  UINT32                            I2cNodeHandle;
+  INT32                             EepromManagerBusNodeOffset;
+  CONST UINT32                      *I2cBusProperty;
+  INT32                             I2cBusHandleLength;
+  UINT32                            I2cBusHandle;
+  INT32                             EepromNodeOffset;
 
   if (DeviceTreeNode == NULL) {
     return EFI_UNSUPPORTED;
@@ -818,14 +862,14 @@ TegraI2CDriverBindingSupported (
 
   // Check for EEPROM subnnode in I2C node.
   PropertyLen = 0;
-  fdt_for_each_subnode (EepromNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
+  fdt_for_each_subnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
     if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
-                                   EepromNodeOffset,
+                                   I2cNodeOffset,
                                    "atmel,24c02") == 0) {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "label", &PropertyLen);
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "label", &PropertyLen);
       if (Property != NULL && PropertyLen != 0) {
         if (0 == AsciiStrCmp (Property, "module")) {
-          Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "reg", &PropertyLen);
+          Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
           if (Property != NULL && PropertyLen == sizeof (UINT32))  {
             return EFI_SUCCESS;
           }
@@ -833,14 +877,41 @@ TegraI2CDriverBindingSupported (
       }
     }
     if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
-                                   EepromNodeOffset,
+                                   I2cNodeOffset,
                                    "ti,tca9539") == 0) {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "reg", &PropertyLen);
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if (Property != NULL && PropertyLen == sizeof (UINT32))  {
         return EFI_SUCCESS;
       }
     }
   }
+
+  I2cNodeHandle = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
+  EepromManagerNodeOffset = fdt_path_offset (DeviceTreeNode->DeviceTreeBase, "/eeprom-manager");
+  if (EepromManagerNodeOffset >= 0) {
+    fdt_for_each_subnode (EepromManagerBusNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerNodeOffset) {
+      I2cBusProperty = NULL;
+      I2cBusHandleLength = 0;
+      I2cBusProperty = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset, "i2c-bus", &I2cBusHandleLength);
+      if (I2cBusProperty == NULL || I2cBusHandleLength != sizeof (UINT32)) {
+        continue;
+      }
+      gBS->CopyMem (&I2cBusHandle, (VOID *) I2cBusProperty, I2cBusHandleLength);
+      I2cBusHandle = SwapBytes32 (I2cBusHandle);
+      if (I2cNodeHandle != I2cBusHandle) {
+        continue;
+      }
+      fdt_for_each_subnode (EepromNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset) {
+        Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "label", &PropertyLen);
+        if (Property != NULL && PropertyLen != 0) {
+          if (0 == AsciiStrCmp (Property, "cvm")) {
+            return EFI_SUCCESS;
+          }
+        }
+      }
+    }
+  }
+
   return EFI_UNSUPPORTED;
 }
 
@@ -875,9 +946,15 @@ TegraI2CDriverBindingStart (
   NON_DISCOVERABLE_DEVICE           *Device;
   INT32                             I2cNodeOffset;
   UINT32                            I2cAddress;
+  INT32                             EepromManagerNodeOffset;
+  UINT32                            I2cNodeHandle;
+  INT32                             EepromManagerBusNodeOffset;
+  CONST UINT32                      *I2cBusProperty;
+  INT32                             I2cBusHandleLength;
+  UINT32                            I2cBusHandle;
+  INT32                             EepromNodeOffset;
   CONST VOID                        *Property;
   INT32                             PropertyLen;
-  BOOLEAN                           ValidNode;
   EFI_GUID                          *DeviceGuid;
 
   Status = gBS->HandleProtocol (
@@ -1021,7 +1098,6 @@ TegraI2CDriverBindingStart (
   Private->NumberOfI2cDevices  = 0;
 
   fdt_for_each_subnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
-    ValidNode = FALSE;
     if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
                                    I2cNodeOffset,
                                    "atmel,24c02") == 0) {
@@ -1034,7 +1110,13 @@ TegraI2CDriverBindingStart (
             I2cAddress = SwapBytes32 (I2cAddress);
             DEBUG ((DEBUG_INFO, "%a: Cvm Eeprom Found.\n", __FUNCTION__));
             DeviceGuid = &gNVIDIACvmEeprom;
-            ValidNode = TRUE;
+            Status = TegraI2cAddDevice (Private,
+                                        I2cAddress,
+                                        DeviceGuid,
+                                        fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset));
+            if (EFI_ERROR (Status)) {
+              goto ErrorExit;
+            }
           }
         }
       }
@@ -1048,26 +1130,55 @@ TegraI2CDriverBindingStart (
         I2cAddress = SwapBytes32 (I2cAddress);
         DEBUG ((DEBUG_INFO, "%a: TCA9539 Found.\n", __FUNCTION__));
         DeviceGuid = &gNVIDIAI2cTca9539;
-        ValidNode = TRUE;
+        Status = TegraI2cAddDevice (Private,
+                                    I2cAddress,
+                                    DeviceGuid,
+                                    fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset));
+        if (EFI_ERROR (Status)) {
+          goto ErrorExit;
+        }
       }
     }
+  }
 
-    if (ValidNode) {
-      if (Private->NumberOfI2cDevices >= MAX_I2C_DEVICES) {
-        DEBUG ((DEBUG_ERROR, "%a: Too many i2c devices detected, increase limit\r\n", __FUNCTION__));
-        ASSERT (FALSE);
-        break;
+  I2cNodeHandle = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
+  EepromManagerNodeOffset = fdt_path_offset (DeviceTreeNode->DeviceTreeBase, "/eeprom-manager");
+  if (EepromManagerNodeOffset >= 0) {
+    fdt_for_each_subnode (EepromManagerBusNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerNodeOffset) {
+      I2cBusProperty = NULL;
+      I2cBusHandleLength = 0;
+      I2cBusProperty = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset, "i2c-bus", &I2cBusHandleLength);
+      if (I2cBusProperty == NULL || I2cBusHandleLength != sizeof (UINT32)) {
+        continue;
       }
-      Private->SlaveAddressArray[Private->NumberOfI2cDevices * MAX_SLAVES_PER_DEVICE] = I2cAddress;
-      Private->I2cDevices[Private->NumberOfI2cDevices].DeviceGuid = DeviceGuid;
-      Private->I2cDevices[Private->NumberOfI2cDevices].DeviceIndex = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset);
-      Private->I2cDevices[Private->NumberOfI2cDevices].HardwareRevision = 1;
-      Private->I2cDevices[Private->NumberOfI2cDevices].I2cBusConfiguration = 0;
-      Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressCount = 1;
-      Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressArray = &Private->SlaveAddressArray[Private->NumberOfI2cDevices * MAX_SLAVES_PER_DEVICE];
-      Private->NumberOfI2cDevices++;
+      gBS->CopyMem (&I2cBusHandle, (VOID *) I2cBusProperty, I2cBusHandleLength);
+      I2cBusHandle = SwapBytes32 (I2cBusHandle);
+      if (I2cNodeHandle != I2cBusHandle) {
+        continue;
+      }
+      fdt_for_each_subnode (EepromNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset) {
+        Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "label", &PropertyLen);
+        if (Property != NULL && PropertyLen != 0) {
+          if (0 == AsciiStrCmp (Property, "cvm")) {
+            Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "slave-address", &PropertyLen);
+            if (Property != NULL && PropertyLen == sizeof (UINT32))  {
+              gBS->CopyMem (&I2cAddress, (VOID *) Property, PropertyLen);
+              I2cAddress = SwapBytes32 (I2cAddress);
+              DEBUG ((DEBUG_INFO, "%a: Cvm Eeprom Found In Eeprom Manager.\n", __FUNCTION__));
+              DeviceGuid = &gNVIDIACvmEeprom;
+              Status = TegraI2cAddDevice (Private,
+                                          I2cAddress,
+                                          DeviceGuid,
+                                          fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset));
+              if (EFI_ERROR (Status)) {
+                goto ErrorExit;
+              }
+              break;
+            }
+          }
+        }
+      }
     }
-
   }
 
 ErrorExit:
