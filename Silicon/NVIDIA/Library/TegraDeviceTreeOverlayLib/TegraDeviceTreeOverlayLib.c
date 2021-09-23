@@ -372,6 +372,8 @@ ProcessOverlayDeviceTree (
   VOID *FdtBuf
   )
 {
+  CONST VOID    *Property;
+  INT32         PropertyLen;
   INTN          FrNode;
   INTN          BufNode;
   CONST CHAR8   *FrName;
@@ -383,6 +385,7 @@ ProcessOverlayDeviceTree (
   DT_MATCH_INFO *MatchIter;
   UINT32        Index;
   UINT32        Count;
+  UINT32        NumberSubnodes;
 
   Status = ReadBoardInfo(FdtBase);
   if (EFI_ERROR(Status)) {
@@ -390,8 +393,17 @@ ProcessOverlayDeviceTree (
     return Status;
   }
 
+  Property = fdt_getprop (FdtOverlay, 0, "overlay-name", &PropertyLen);
+  if (Property != NULL && PropertyLen != 0) {
+    DEBUG((DEBUG_ERROR, "Processing \"%a\" DTB overlay\n", Property));
+  }
+
   fdt_for_each_subnode(FrNode, FdtOverlay, 0) {
     FrName = fdt_get_name(FdtOverlay, FrNode, NULL);
+    if (AsciiStrCmp (FrName, "__fixups__") == 0) {
+      continue;
+    }
+
     DEBUG((DEBUG_INFO, "Processing node %a for overlay\n", FrName));
     ConfigNode = fdt_subnode_offset(FdtOverlay, FrNode, "board_config");
 
@@ -453,6 +465,25 @@ delete_fragment:
       }
     }
   }
+
+  NumberSubnodes = 0;
+  fdt_for_each_subnode(FrNode, FdtBuf, 0) {
+    NumberSubnodes++;
+  }
+
+  if (NumberSubnodes == 1) {
+    fdt_for_each_subnode(FrNode, FdtBuf, 0) {
+      FrName = fdt_get_name(FdtBuf, FrNode, NULL);
+      if (AsciiStrCmp (FrName, "__fixups__") == 0) {
+        FdtErr = fdt_del_node(FdtBuf, FrNode);
+        if (FdtErr < 0) {
+          DEBUG((DEBUG_ERROR, "Error deleting fragment %a\n", FrName));
+          return EFI_DEVICE_ERROR;
+        }
+      }
+    }
+  }
+
   return EFI_SUCCESS;
 }
 
@@ -464,7 +495,7 @@ ApplyTegraDeviceTreeOverlay (
   CHAR8 *ModuleStr
   )
 {
-  EFI_STATUS  Status=EFI_SUCCESS;
+  EFI_STATUS  Status;
   INTN        Err;
   VOID        *FdtNext;
   VOID        *FdtBuf;
@@ -485,6 +516,7 @@ ApplyTegraDeviceTreeOverlay (
     return EFI_DEVICE_ERROR;
   }
 
+  Status = EFI_SUCCESS;
   FdtNext = FdtOverlay;
   while (fdt_check_header((VOID *)FdtNext) == 0) {
     /* Process and apply overlay */
