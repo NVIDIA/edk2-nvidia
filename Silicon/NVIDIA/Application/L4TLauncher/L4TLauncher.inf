@@ -26,6 +26,7 @@
   MdeModulePkg/MdeModulePkg.dec
   ShellPkg/ShellPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
   UefiBootServicesTableLib
@@ -39,10 +40,12 @@
   FileHandleLib
   UefiRuntimeServicesTableLib
   AndroidBootImgLib
+  SecureBootVariableLib
 
 [Guids]
   gNVIDIAPublicVariableGuid
   gFdtTableGuid
+  gEfiSecureBootEnableDisableGuid
 
 [Protocols]
   gEfiLoadedImageProtocolGuid
@@ -52,6 +55,7 @@
   gEfiBlockIoProtocolGuid
   gEfiDiskIoProtocolGuid
   gEfiLoadFile2ProtocolGuid
+  gEfiPkcs7VerifyProtocolGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
