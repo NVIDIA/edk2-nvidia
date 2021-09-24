@@ -138,22 +138,9 @@ _SpiLoop:
 1:
 2:
   //Get memory locations
-  bl ASM_PFX(TegraGetBLInfoLocationAddress)
+  bl ASM_PFX(TegraGetBLCarveoutInfoLocationAddress)
   mov x5, x0
-  mov w0, w28
-  bl ASM_PFX(TegraGetBLCarveoutOffset)
-  mov x6, x0
-  mov w0, w28
-  bl ASM_PFX(TegraGetSystemMemoryBaseAddress)
-  mov x7, x0
-  ldr   w5, [x5]
-  cmp   x5, x7
-  b.ge _BootloaderAddressGood
-  lsl   x5, x5, #16
-_BootloaderAddressGood:
-  add   x5, x5, x6
-
-  ldp   x0, x1, [x5], #8
+  ldp x0, x1, [x5], #8
   add sp, x0, x1
 
   // x2 = The top of the Stack

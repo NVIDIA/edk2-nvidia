@@ -87,14 +87,14 @@ extern UINT64 TegraGetSystemMemoryBaseAddress (UINT32 ChipID);
 extern UINT64 TegraGetBLInfoLocationAddress (UINT32 ChipID);
 
 /**
-  Returns bootloader carveout offset for a given chip.
+  Returns bootloader carveout info location address for a given chip.
 
   @param[in] ChipID    Tegra Chip ID
 
-  @retval              Bootloader carveout offset.
+  @retval              Address of bootloader carveout info location.
 
 **/
-extern UINT64 TegraGetBLCarveoutOffset (UINT32 ChipID);
+extern UINT64 TegraGetBLCarveoutInfoLocationAddress (UINT32 ChipID);
 
 /**
   Returns gic distributor base address for a given chip.
