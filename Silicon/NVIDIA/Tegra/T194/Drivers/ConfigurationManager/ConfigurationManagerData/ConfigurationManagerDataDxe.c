@@ -30,6 +30,7 @@
     - Obj or OBJ - Object
 **/
 #include <ConfigurationManagerDataDxePrivate.h>
+#include <Library/MemoryAllocationLib.h>
 
 //Callback for AHCI controller connection
 EFI_EVENT  EndOfDxeEvent;
@@ -54,7 +55,7 @@ STATIC AML_OFFSET_TABLE_ENTRY *OffsetTableArray[] = {
 /** The platform configuration repository information.
 */
 STATIC
-EDKII_PLATFORM_REPOSITORY_INFO NVIDIAPlatformRepositoryInfo[EStdObjMax + EArmObjMax] = {0};
+EDKII_PLATFORM_REPOSITORY_INFO *NVIDIAPlatformRepositoryInfo;
 
 /** The platform configuration manager information.
 */
@@ -399,7 +400,7 @@ UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     NumberOfPcieEntries++;
   }
 
-  for (Index = 0; Index < (EStdObjMax + EArmObjMax); Index++) {
+  for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
     if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
       NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (NVIDIAPlatformRepositoryInfo[Index].CmObjectSize + (2 * sizeof (CM_STD_OBJ_ACPI_TABLE_INFO)), NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr);
       if (NewAcpiTables == NULL) {
@@ -543,7 +544,7 @@ UpdateAhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     goto Exit;
   }
 
-  for (Index = 0; Index < (EStdObjMax + EArmObjMax); Index++) {
+  for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
     if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
       NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (NVIDIAPlatformRepositoryInfo[Index].CmObjectSize + (sizeof (CM_STD_OBJ_ACPI_TABLE_INFO)), NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr);
       if (NewAcpiTables == NULL) {
@@ -657,7 +658,7 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   }
   FreePool (SerialHandles);
 
-  for (Index = 0; Index < (EStdObjMax + EArmObjMax); Index++) {
+  for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
     if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
       NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (NVIDIAPlatformRepositoryInfo[Index].CmObjectSize + (sizeof (CM_STD_OBJ_ACPI_TABLE_INFO)), NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr);
       if (NewAcpiTables == NULL) {
@@ -762,7 +763,7 @@ FinalizeSsdtTable ()
     return Status;
   }
 
-  for (Index = 0; Index < (EStdObjMax + EArmObjMax); Index++) {
+  for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
     if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
       NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (NVIDIAPlatformRepositoryInfo[Index].CmObjectSize + sizeof (CM_STD_OBJ_ACPI_TABLE_INFO), NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr);
       if (NewAcpiTables == NULL) {
@@ -1211,8 +1212,13 @@ InitializePlatformRepository ()
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
   EDKII_PLATFORM_REPOSITORY_INFO  *RepoEnd;
 
-  Repo = &NVIDIAPlatformRepositoryInfo[0];
-  RepoEnd = &NVIDIAPlatformRepositoryInfo[EStdObjMax + EArmObjMax];
+  NVIDIAPlatformRepositoryInfo = (EDKII_PLATFORM_REPOSITORY_INFO *) AllocateZeroPool (sizeof (EDKII_PLATFORM_REPOSITORY_INFO) * PcdGet32 (PcdConfigMgrObjMax));
+  if (NVIDIAPlatformRepositoryInfo == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Repo = NVIDIAPlatformRepositoryInfo;
+  RepoEnd = Repo + PcdGet32 (PcdConfigMgrObjMax);
 
   Repo->CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjCfgMgrInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;

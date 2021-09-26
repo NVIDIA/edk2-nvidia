@@ -35,6 +35,7 @@
 #include <Library/ArmGicLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/MemoryAllocationLib.h>
 
 #include <IndustryStandard/DebugPort2Table.h>
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
@@ -51,7 +52,7 @@
 /** The platform configuration repository information.
 */
 STATIC
-EDKII_PLATFORM_REPOSITORY_INFO NVIDIAPlatformRepositoryInfo[EStdObjMax + EArmObjMax];
+EDKII_PLATFORM_REPOSITORY_INFO *NVIDIAPlatformRepositoryInfo;
 
 /** The platform configuration manager information.
 */
@@ -383,6 +384,11 @@ InitializePlatformRepository (
   )
 {
   UINTN Index;
+
+  NVIDIAPlatformRepositoryInfo = (EDKII_PLATFORM_REPOSITORY_INFO *) AllocateZeroPool (sizeof (EDKII_PLATFORM_REPOSITORY_INFO) * PcdGet32 (PcdConfigMgrObjMax));
+  if (NVIDIAPlatformRepositoryInfo == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
 
   NVIDIAPlatformRepositoryInfo[0].CmObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjCfgMgrInfo);
   NVIDIAPlatformRepositoryInfo[0].CmObjectToken = CM_NULL_TOKEN;

@@ -69,6 +69,7 @@
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
   gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid

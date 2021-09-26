@@ -88,6 +88,7 @@
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
 
 [Guids]
   gNVIDIATokenSpaceGuid

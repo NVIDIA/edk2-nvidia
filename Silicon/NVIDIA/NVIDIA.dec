@@ -257,6 +257,9 @@
 # Indicates the default timeouts for reset after an assert in seconds.
   gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue|0|UINT32|0x00000040
 
+#Configuration Manager Objects.
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x28|UINT32|0x00000042
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C

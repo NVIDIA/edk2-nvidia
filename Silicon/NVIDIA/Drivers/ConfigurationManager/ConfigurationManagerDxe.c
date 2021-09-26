@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Dxe
 
-  Copyright (c) 2019 - 2020, NVIDIA Corporation. All rights reserved.
+  Copyright (c) 2019 - 2021, NVIDIA Corporation. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   This program and the accompanying materials
@@ -75,7 +75,7 @@ NVIDIAPlatformGetObject (
   PlatRepoInfo = This->PlatRepoInfo;
   ASSERT (PlatRepoInfo != NULL);
 
-  for (Index = 0; Index < EStdObjMax + EArmObjMax; Index++) {
+  for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
     // If CmObjectPtr is NULL, we have reached the end of valid
     // entries, so stop looking.
     if (PlatRepoInfo[Index].CmObjectPtr == NULL) {
