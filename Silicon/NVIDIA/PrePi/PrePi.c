@@ -38,6 +38,7 @@
 #include <Library/ArmMmuLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/GoldenRegisterLib.h>
+#include <Library/SystemResourceLib.h>
 
 
 #include <Ppi/GuidedSectionExtraction.h>
@@ -394,6 +395,9 @@ CEntryPoint (
 
   // Build Memory Allocation Hob
   InitMmu (MemoryTable);
+
+  // Register UEFI DTB
+  RegisterDeviceTree(DtbBase);
 
   if (FeaturePcdGet (PcdPrePiProduceMemoryTypeInformationHob)) {
     // Optional feature that helps prevent EFI memory map fragmentation.

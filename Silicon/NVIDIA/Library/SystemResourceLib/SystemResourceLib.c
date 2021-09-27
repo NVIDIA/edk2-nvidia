@@ -43,7 +43,6 @@
 
   @param  Physical address of device tree location.
 **/
-STATIC
 VOID
 RegisterDeviceTree (
   IN UINTN BlDtbLoadAddress
@@ -248,8 +247,6 @@ InstallSystemResources (
     *MemoryRegionsCount += FinalDramRegionsCount;
   }
   FreePool (PlatformInfo.CarveoutRegions);
-
-  RegisterDeviceTree(PlatformInfo.DtbLoadAddress);
 
   return Status;
 }
