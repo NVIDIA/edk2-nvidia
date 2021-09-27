@@ -36,6 +36,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <libfdt.h>
 
 STATIC
 EFI_STATUS
@@ -74,6 +75,10 @@ TegraPlatformInitialize (
   EFI_STATUS              Status;
   UINTN                   ChipID;
   TEGRA_PLATFORM_TYPE     PlatformType;
+  UINT64                  DtbBase;
+  CONST VOID              *Property;
+  INT32                   Length;
+  BOOLEAN                 T234SkuSet;
   UINTN                   EmmcMagic;
   BOOLEAN                 EmulatedVariablesUsed;
 
@@ -88,7 +93,18 @@ TegraPlatformInitialize (
     if (ChipID == T194_CHIP_ID) {
       LibPcdSetSku (T194_SKU);
     } else if (ChipID == T234_CHIP_ID) {
-      LibPcdSetSku (T234_SKU);
+      T234SkuSet = FALSE;
+      DtbBase = GetDTBBaseAddress ();
+      Property = fdt_getprop ((CONST VOID*) DtbBase, 0, "model", &Length);
+      if (Property != NULL && Length != 0) {
+        if (AsciiStrStr (Property, "SLT") != NULL) {
+          LibPcdSetSku (T234SLT_SKU);
+          T234SkuSet = TRUE;
+        }
+      }
+      if (T234SkuSet == FALSE) {
+        LibPcdSetSku (T234_SKU);
+      }
     }
   } else {
     // Override boot timeout for pre-si platforms

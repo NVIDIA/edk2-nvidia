@@ -35,6 +35,7 @@
 
 #define T194_SKU          1
 #define T234_SKU          2
+#define T234SLT_SKU       3
 
 #define SYSIMG_EMMC_MAGIC_OFFSET 0x4
 #define SYSIMG_EMMC_MAGIC 0xEAAAAAAC

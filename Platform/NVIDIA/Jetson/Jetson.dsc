@@ -38,6 +38,7 @@
   0|DEFAULT
   1|T194
   2|T234
+  3|T234SLT|T234
 
   #
   # Define ESRT GUIDs for Firmware Management Protocol instances
