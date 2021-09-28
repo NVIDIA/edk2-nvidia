@@ -1,7 +1,7 @@
 /** @file
   Clock node protocol Protocol
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -11,7 +11,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
   Portions provided under the following terms:
-  Copyright (c) 2018-2019 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -20,7 +20,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2019 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2018-2021 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -32,7 +32,7 @@
 
 #define NVIDIA_CLOCK_NODE_PROTOCOL_GUID \
   { \
-  0x50b572fb, 0x13bc, 0x4897, { 0xa6, 0x47, 0x9f, 0x14, 0xbb, 0xad, 0x22, 0x6b } \
+  0x6fa542ef, 0xec08, 0x4450, { 0xb1, 0x7b, 0xf6, 0x31, 0x5d, 0x32, 0xc5, 0x40 } \
   }
 
 //
@@ -74,10 +74,26 @@ EFI_STATUS
   IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This
   );
 
+/**
+  This function allows for simple disablement of all clock nodes.
+
+  @param[in]     This                The instance of the NVIDIA_CLOCK_NODE_PROTOCOL.
+
+  @return EFI_SUCCESS                All clocks disabled.
+  @return EFI_NOT_READY              Clock control protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to disable all clocks
+**/
+typedef
+EFI_STATUS
+(EFIAPI *CLOCK_NODE_DISABLE_ALL) (
+  IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This
+  );
+
 /// NVIDIA_CLOCK_NODE_PROTOCOL protocol structure.
 struct _NVIDIA_CLOCK_NODE_PROTOCOL {
 
   CLOCK_NODE_ENABLE_ALL   EnableAll;
+  CLOCK_NODE_DISABLE_ALL  DisableAll;
   UINTN                   Clocks;
   NVIDIA_CLOCK_NODE_ENTRY ClockEntries[0];
 };

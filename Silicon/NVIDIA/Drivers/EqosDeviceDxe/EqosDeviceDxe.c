@@ -63,7 +63,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .UseDriverBinding = TRUE,
     .AutoEnableClocks = TRUE,
     .AutoResetModule = TRUE,
-    .SkipEdkiiNondiscoverableInstall = TRUE
+    .SkipEdkiiNondiscoverableInstall = TRUE,
+    .AutoDeinitControllerOnExitBootServices = TRUE
 };
 
 STATIC
@@ -103,6 +104,7 @@ OnExitBootServices (
 {
   SIMPLE_NETWORK_DRIVER   *Snp;
   EFI_STATUS              Status;
+  VOID                    *AcpiBase;
 
   Snp = (SIMPLE_NETWORK_DRIVER *) Context;
 
@@ -115,15 +117,17 @@ OnExitBootServices (
   // closing event
   gBS->CloseEvent (Snp->ExitBootServiceEvent);
 
-  // Check for Auto Neg completion
-  Snp->PhyDriver.CheckAutoNeg( &Snp->PhyDriver, Snp->MacBase );
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    // Check for Auto Neg completion
+    Snp->PhyDriver.CheckAutoNeg( &Snp->PhyDriver, Snp->MacBase );
 
-  // Init Link
-  DEBUG ((DEBUG_INFO, "SNP:DXE: Auto-Negotiating Ethernet PHY Link\r\n"));
-
-  Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
-  if (EFI_ERROR(Status)) {
-    DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\r\n"));
+    // Init Link
+    DEBUG ((DEBUG_INFO, "SNP:DXE: Auto-Negotiating Ethernet PHY Link\r\n"));
+    Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
+    if (EFI_ERROR(Status)) {
+      DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\r\n"));
+    }
   }
 
   return;

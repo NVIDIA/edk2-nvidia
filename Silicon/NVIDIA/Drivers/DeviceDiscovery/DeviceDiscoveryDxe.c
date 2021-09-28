@@ -820,6 +820,45 @@ EnableAllClockNodes (
 }
 
 /**
+  This function allows for simple disablement of all clock nodes.
+
+  @param[in]     This                The instance of the NVIDIA_CLOCK_NODE_PROTOCOL.
+
+  @return EFI_SUCCESS                All clocks disabled.
+  @return EFI_NOT_READY              Clock control protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to disable all clocks
+**/
+EFI_STATUS
+DisableAllClockNodes (
+  IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This
+  )
+{
+  SCMI_CLOCK2_PROTOCOL          *ClockProtocol = NULL;
+  EFI_STATUS                    Status;
+  UINTN                         Index;
+  UINT32                        ClockId;
+
+  if (This->Clocks == 0) {
+    return EFI_SUCCESS;
+  }
+
+  Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&ClockProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  for (Index = 0; Index < This->Clocks; Index++) {
+    ClockId = This->ClockEntries[This->Clocks - Index - 1].ClockId;
+    Status = ClockProtocol->Enable (ClockProtocol, ClockId, FALSE);
+    if (EFI_ERROR (Status)) {
+      return EFI_DEVICE_ERROR;
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Function builds the clock node protocol if supported but device tree.
 
   @param[in]  Node                  Pointer to the device tree node
@@ -888,6 +927,7 @@ GetClockNodeProtocol(
   }
 
   ClockNode->EnableAll = EnableAllClockNodes;
+  ClockNode->DisableAll = DisableAllClockNodes;
   ClockNode->Clocks = NumberOfClocks;
   ClockNames = (CONST CHAR8*)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "clock-names", &ClockNamesLength);
   if (ClockNamesLength == 0) {

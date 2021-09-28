@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -12,7 +12,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
   Portions provided under the following terms:
-  Copyright (c) 2018-2019 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -21,7 +21,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2019 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2018-2021 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -48,6 +48,85 @@
 
 SCMI_CLOCK2_PROTOCOL          *gScmiClockProtocol    = NULL;
 NVIDIA_CLOCK_PARENTS_PROTOCOL *gClockParentsProtocol = NULL;
+EFI_EVENT                     DeviceDiscoveryOnExitBootServicesEvent = NULL;
+
+VOID
+EFIAPI
+DeviceDiscoveryOnExitBootServices (
+  IN EFI_EVENT    Event,
+  IN VOID         *Context
+  )
+{
+  EFI_STATUS                        Status;
+  VOID                              *AcpiBase;
+  EFI_HANDLE                        Controller;
+  NVIDIA_CLOCK_NODE_PROTOCOL        *ClockProtocol = NULL;
+  NVIDIA_RESET_NODE_PROTOCOL        *ResetProtocol = NULL;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL   *PgProtocol = NULL;
+  UINTN                             Index;
+
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    return;
+  }
+
+  Controller = Context;
+
+  if (gDeviceDiscoverDriverConfig.AutoDeassertPg) {
+    Status = gBS->HandleProtocol (Controller, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, no Pg node protocol\r\n",__FUNCTION__));
+      return;
+    }
+
+    for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+      Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a, failed to assert Pg %x: %r\r\n",__FUNCTION__,PgProtocol->PowerGateId[Index],Status));
+        return;
+      }
+    }
+  }
+
+  if (gDeviceDiscoverDriverConfig.AutoEnableClocks) {
+    Status = gBS->HandleProtocol (Controller, &gNVIDIAClockNodeProtocolGuid, (VOID **)&ClockProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, no clock node protocol\r\n",__FUNCTION__));
+      return;
+    }
+    Status = ClockProtocol->DisableAll (ClockProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, failed to disable clocks %r\r\n",__FUNCTION__,Status));
+      return;
+    }
+  }
+
+  if (gDeviceDiscoverDriverConfig.AutoResetModule) {
+    Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n",__FUNCTION__));
+      return;
+    }
+    Status = ResetProtocol->ModuleResetAll (ResetProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, failed to reset module%r\r\n",__FUNCTION__,Status));
+      return;
+    }
+  } else if (gDeviceDiscoverDriverConfig.AutoDeassertReset) {
+    Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n",__FUNCTION__));
+      return;
+    }
+    Status = ResetProtocol->AssertAll (ResetProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, failed to assert resets %r\r\n",__FUNCTION__,Status));
+      return;
+    }
+  }
+
+  return;
+}
 
 /**
   Supported function of Driver Binding protocol for this driver.
@@ -242,6 +321,20 @@ DeviceDiscoveryBindingStart (
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a, failed to deassert resets %r\r\n",__FUNCTION__,Status));
       goto ErrorExit;
+    }
+  }
+
+  if (gDeviceDiscoverDriverConfig.AutoDeinitControllerOnExitBootServices) {
+    Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                                 TPL_NOTIFY,
+                                 DeviceDiscoveryOnExitBootServices,
+                                 Controller,
+                                 &gEfiEventExitBootServicesGuid,
+                                 &DeviceDiscoveryOnExitBootServicesEvent
+                                 );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, driver returned %r to create event callback\r\n",__FUNCTION__,Status));
+      return Status;
     }
   }
 
