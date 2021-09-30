@@ -37,7 +37,6 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/GoldenRegisterLib.h>
-#include <Library/CacheMaintenanceLib.h>
 #include <Library/MceAriLib.h>
 #include <Library/IoLib.h>
 #include "T234ResourceConfigPrivate.h"
@@ -223,14 +222,6 @@ T234ResourceConfig (
         CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
         CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
         CarveoutRegionsCount++;
-      }
-
-      if (Index == CARVEOUT_CCPLEX_INTERWORLD_SHMEM ||
-          Index == CARVEOUT_RCM_BLOB ||
-          Index == CARVEOUT_OS ||
-          Index == CARVEOUT_UEFI) {
-        InvalidateDataCacheRange ((VOID *) CpuBootloaderParams->CarveoutInfo[Index].Base,
-                                  CpuBootloaderParams->CarveoutInfo[Index].Size);
       }
     }
   }

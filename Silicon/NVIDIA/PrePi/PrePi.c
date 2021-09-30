@@ -28,7 +28,6 @@
 
 #include <PiPei.h>
 
-#include <Library/CacheMaintenanceLib.h>
 #include <Library/DebugAgentLib.h>
 #include <Library/PrePiLib.h>
 #include <Library/PrintLib.h>
@@ -355,11 +354,6 @@ CEntryPoint (
   ArmInvalidateInstructionCache ();
   // Enable Instruction Caches on all cores.
   ArmEnableInstructionCache ();
-
-  // Invalidate stack data range in data cache.
-  InvalidateDataCacheRange ((VOID *)StackBase, StackSize);
-  // Invalidate HOB data range in data cache.
-  InvalidateDataCacheRange ((VOID *)HobBase, HobSize);
 
   // Initialize the architecture specific bits
   ArchInitialize ();
