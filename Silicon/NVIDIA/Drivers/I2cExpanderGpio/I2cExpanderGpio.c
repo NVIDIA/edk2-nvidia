@@ -330,9 +330,9 @@ GetGpioMode (
     return EFI_DEVICE_ERROR;
   }
 
-  if ((Config & (1 << (Pin % 8))) == 1) {
+  if ((Config & (1 << (Pin % 8))) != 0) {
     *Mode = GPIO_MODE_INPUT;
-  } else if ((Data & (1 << (Pin % 8))) == 1) {
+  } else if ((Data & (1 << (Pin % 8))) != 0) {
     *Mode = GPIO_MODE_OUTPUT_1;
   } else {
     *Mode = GPIO_MODE_OUTPUT_0;
