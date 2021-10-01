@@ -408,13 +408,11 @@ ProcessOverlayDeviceTree (
     ConfigNode = fdt_subnode_offset(FdtOverlay, FrNode, "board_config");
 
     if (ConfigNode < 0) {
-      DEBUG((DEBUG_WARN, "board_config node not found in %a\n", FrName));
-      goto delete_fragment;
+      continue;
     }
 
     if(0 > fdt_first_property_offset(FdtOverlay, ConfigNode)) {
-      DEBUG((DEBUG_WARN, "board_config node empty in %a\n", FrName));
-      goto delete_fragment;
+      continue;
     }
 
     Status = PMGetPropertyCount(FdtOverlay, ConfigNode);
