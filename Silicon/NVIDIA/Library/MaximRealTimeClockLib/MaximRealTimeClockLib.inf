@@ -63,7 +63,7 @@
   gEfiI2cIoProtocolGuid                       ## CONSUMES
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdVirtualRTC|FALSE
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC
 
 [Depex]
   gEfiVariableArchProtocolGuid

@@ -55,6 +55,9 @@
 #
 ################################################################################
 
+[PcdsFeatureFlag]
+  gArmTokenSpaceGuid.PcdArmGicV3WithV2Legacy|TRUE
+
 [PcdsPatchableInModule]
   # Console Resolution (Full HD)
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|0
@@ -90,10 +93,12 @@
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster|4
   gNVIDIATokenSpaceGuid.PcdPcdTegraMaxClusters|3
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
 
 [PcdsDynamicHii.common.T234]
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS,NV
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|0
 
 [PcdsDynamicHii.common.T234SLT]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|0
