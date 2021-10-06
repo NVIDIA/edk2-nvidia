@@ -1,4 +1,4 @@
-NVIDIA Jetson UEFI/ACPI Experimental Firmware Version 1.1.1
+NVIDIA Jetson UEFI/ACPI Experimental Firmware Version 1.1.2
 
 # Introduction
 
@@ -51,6 +51,9 @@ the Jetson Developer Kit.
 - None
 
 # Version History
+- 1.1.2:
+    - Fixed issue where SMMU faults from the ethernet controller may occur
+      when booting Linux with the SMMU enabled.
 - 1.1.1:
     - Added support for configuring SPCR/DBG2 and added support for sub-type 5
       entries for Operating Systems that support that.

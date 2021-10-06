@@ -57,7 +57,7 @@ class CommonPlatform():
     PcdDataBase = "AARCH64/MdeModulePkg/Universal/PCD/Dxe/Pcd/OUTPUT/DXEPcdDataBase.raw"
 
     ReportTypes ="PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH EXECUTION_ORDER"
-    RevisionBase = "v1.1.1"
+    RevisionBase = "v1.1.2"
 
     @classmethod
     def GetDscName(cls, InternalBuild: bool) -> str:
