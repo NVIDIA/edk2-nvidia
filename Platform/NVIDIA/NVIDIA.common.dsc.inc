@@ -393,6 +393,8 @@
   gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
 !endif
 
+  gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize|0x20000
+
   gEfiNetworkPkgTokenSpaceGuid.PcdAllowHttpConnections|TRUE
 
   gEfiMdePkgTokenSpaceGuid.PcdMaximumUnicodeStringLength|1000000
