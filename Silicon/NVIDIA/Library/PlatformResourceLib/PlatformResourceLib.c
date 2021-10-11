@@ -575,3 +575,24 @@ ValidateActiveBootChain (
       return EFI_UNSUPPORTED;
   }
 }
+
+/**
+  Get Ramloaded OS Base and Size
+
+**/
+BOOLEAN
+EFIAPI
+GetRamdiskOSBaseAndSize (
+  OUT UINTN *Base,
+  OUT UINTN *Size
+)
+{
+  BOOLEAN ValidPrivatePlatform;
+
+  ValidPrivatePlatform = GetRamdiskOSBaseAndSizeInternal (Base, Size);
+  if (ValidPrivatePlatform) {
+    return ValidPrivatePlatform;
+  }
+
+  return FALSE;
+}

@@ -244,4 +244,15 @@ ValidateActiveBootChain (
   VOID
 );
 
+/**
+  Get Ramloaded OS Base and Size
+
+**/
+BOOLEAN
+EFIAPI
+GetRamdiskOSBaseAndSize (
+  OUT UINTN *Base,
+  OUT UINTN *Size
+);
+
 #endif //__PLATFORM_RESOURCE_LIB_H__

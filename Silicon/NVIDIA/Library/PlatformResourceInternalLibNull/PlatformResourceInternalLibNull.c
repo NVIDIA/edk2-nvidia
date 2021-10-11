@@ -213,3 +213,17 @@ ValidateActiveBootChainInternal (
 {
   return FALSE;
 }
+
+/**
+  Get Ramloaded OS Base and Size
+
+**/
+BOOLEAN
+EFIAPI
+GetRamdiskOSBaseAndSizeInternal (
+  OUT UINTN *Base,
+  OUT UINTN *Size
+)
+{
+  return FALSE;
+}
