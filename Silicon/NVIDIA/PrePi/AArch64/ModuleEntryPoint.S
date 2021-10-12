@@ -141,6 +141,7 @@ _SpiLoop:
   bl ASM_PFX(TegraGetBLCarveoutInfoLocationAddress)
   mov x5, x0
   ldp x0, x1, [x5], #8
+  sub x1, x1, #SIZE_4KB
   add sp, x0, x1
 
   // x2 = The top of the Stack
@@ -152,7 +153,7 @@ _SpiLoop:
   //    x0 = MemoryBase
   //    x1 = MemorySize
   //    x2 = StackBase
-  //    x2 = StackSize
+  //    x3 = StackSize
   bl    ASM_PFX(CEntryPoint)
 
 _NeverReturn:

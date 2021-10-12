@@ -390,6 +390,9 @@ CEntryPoint (
   // Build Memory Allocation Hob
   InitMmu (MemoryTable);
 
+  Status = ArmSetMemoryRegionReadOnly (StackBase + StackSize, SIZE_4KB);
+  ASSERT_EFI_ERROR (Status);
+
   // Register UEFI DTB
   RegisterDeviceTree(DtbBase);
 

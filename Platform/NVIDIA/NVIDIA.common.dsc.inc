@@ -393,7 +393,8 @@
   gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
 !endif
 
-  gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize|0x20000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdCpuStackGuard|TRUE
+  gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize|0x22000
 
   gEfiNetworkPkgTokenSpaceGuid.PcdAllowHttpConnections|TRUE
 
