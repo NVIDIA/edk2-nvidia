@@ -60,6 +60,15 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .AutoDeinitControllerOnExitBootServices = TRUE
 };
 
+STATIC
+CONTROLLER_DEVICE_PATH ControllerNode = {
+  {
+    HARDWARE_DEVICE_PATH, HW_CONTROLLER_DP,
+    {(UINT8)(sizeof (CONTROLLER_DEVICE_PATH)), (UINT8)((sizeof (CONTROLLER_DEVICE_PATH)) >> 8)}
+  },
+  0
+};
+
 /**
   Transfers the register settings from shadow registers to actual controller registers.
 
@@ -871,6 +880,9 @@ TegraI2CDriverBindingStart (
   CONST VOID                        *Property;
   INT32                             PropertyLen;
   EFI_GUID                          *DeviceGuid;
+  EFI_DEVICE_PATH                   *OldDevicePath;
+  EFI_DEVICE_PATH                   *NewDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL          *DevicePathNode;
 
   Status = gBS->HandleProtocol (
                   ControllerHandle,
@@ -938,6 +950,46 @@ TegraI2CDriverBindingStart (
 
     if (Private->ControllerId == 0xf) {
       DEBUG ((DEBUG_WARN, "%a: no nvidia,hw-instance-id in dt or alias, defaulting to %d\r\n", __FUNCTION__, Private->ControllerId));
+    }
+  }
+
+  //Add controller device node
+  Status = gBS->HandleProtocol (
+                ControllerHandle,
+                &gEfiDevicePathProtocolGuid,
+                (VOID **)&OldDevicePath
+              );
+  if (!EFI_ERROR (Status)) {
+
+    DevicePathNode = OldDevicePath;
+    //Check to make sure we haven't already added controller
+    while (!IsDevicePathEnd (DevicePathNode)) {
+      if ((DevicePathType (DevicePathNode) == HARDWARE_DEVICE_PATH) &&
+          (DevicePathSubType (DevicePathNode) == HW_CONTROLLER_DP)) {
+        break;
+      }
+      DevicePathNode = NextDevicePathNode (DevicePathNode);
+    }
+
+    if (IsDevicePathEnd (DevicePathNode)) {
+      ControllerNode.ControllerNumber = Private->ControllerId;
+      NewDevicePath = AppendDevicePathNode (OldDevicePath, (EFI_DEVICE_PATH_PROTOCOL *)&ControllerNode);
+      if (NewDevicePath == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to create new device path\r\n", __FUNCTION__));
+        Status = EFI_OUT_OF_RESOURCES;
+        goto ErrorExit;
+      }
+
+      Status = gBS->ReinstallProtocolInterface (
+                      ControllerHandle,
+                      &gEfiDevicePathProtocolGuid,
+                      OldDevicePath,
+                      NewDevicePath
+                    );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to update device path, %r\r\n", __FUNCTION__, Status));
+        goto ErrorExit;
+      }
     }
   }
 
