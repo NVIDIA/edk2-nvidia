@@ -56,7 +56,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .UseDriverBinding = TRUE,
     .AutoEnableClocks = TRUE,
     .AutoResetModule = TRUE,
-    .SkipEdkiiNondiscoverableInstall = TRUE
+    .SkipEdkiiNondiscoverableInstall = TRUE,
+    .AutoDeinitControllerOnExitBootServices = TRUE
 };
 
 /**
@@ -830,92 +831,6 @@ TegraI2cAddDevice (
 }
 
 /**
-  This routine is called to check whether the driver is supported
-  on ControllerHandle.
-
-  @param[in] DeviceTreeNode           Pointer to the device tree node protocol is available.
-
-  @retval EFI_SUCCESS           This driver is added to this device.
-  @retval other                 Some error occurs when binding this driver to this device.
-
-**/
-EFI_STATUS
-EFIAPI
-TegraI2CDriverBindingSupported (
-    IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
-  )
-{
-  INT32                             I2cNodeOffset;
-  CONST VOID                        *Property;
-  INT32                             PropertyLen;
-  INT32                             EepromManagerNodeOffset;
-  UINT32                            I2cNodeHandle;
-  INT32                             EepromManagerBusNodeOffset;
-  CONST UINT32                      *I2cBusProperty;
-  INT32                             I2cBusHandleLength;
-  UINT32                            I2cBusHandle;
-  INT32                             EepromNodeOffset;
-
-  if (DeviceTreeNode == NULL) {
-    return EFI_UNSUPPORTED;
-  }
-
-  // Check for EEPROM subnnode in I2C node.
-  PropertyLen = 0;
-  fdt_for_each_subnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
-    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
-                                   I2cNodeOffset,
-                                   "atmel,24c02") == 0) {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "label", &PropertyLen);
-      if (Property != NULL && PropertyLen != 0) {
-        if (0 == AsciiStrCmp (Property, "module")) {
-          Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
-          if (Property != NULL && PropertyLen == sizeof (UINT32))  {
-            return EFI_SUCCESS;
-          }
-        }
-      }
-    }
-    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
-                                   I2cNodeOffset,
-                                   "ti,tca9539") == 0) {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
-      if (Property != NULL && PropertyLen == sizeof (UINT32))  {
-        return EFI_SUCCESS;
-      }
-    }
-  }
-
-  I2cNodeHandle = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
-  EepromManagerNodeOffset = fdt_path_offset (DeviceTreeNode->DeviceTreeBase, "/eeprom-manager");
-  if (EepromManagerNodeOffset >= 0) {
-    fdt_for_each_subnode (EepromManagerBusNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerNodeOffset) {
-      I2cBusProperty = NULL;
-      I2cBusHandleLength = 0;
-      I2cBusProperty = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset, "i2c-bus", &I2cBusHandleLength);
-      if (I2cBusProperty == NULL || I2cBusHandleLength != sizeof (UINT32)) {
-        continue;
-      }
-      gBS->CopyMem (&I2cBusHandle, (VOID *) I2cBusProperty, I2cBusHandleLength);
-      I2cBusHandle = SwapBytes32 (I2cBusHandle);
-      if (I2cNodeHandle != I2cBusHandle) {
-        continue;
-      }
-      fdt_for_each_subnode (EepromNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset) {
-        Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "label", &PropertyLen);
-        if (Property != NULL && PropertyLen != 0) {
-          if (0 == AsciiStrCmp (Property, "cvm")) {
-            return EFI_SUCCESS;
-          }
-        }
-      }
-    }
-  }
-
-  return EFI_UNSUPPORTED;
-}
-
-/**
   This routine is called right after the .Supported() called and
   Start this driver on ControllerHandle.
 
@@ -1289,10 +1204,6 @@ DeviceDiscoveryNotify (
   EFI_STATUS              Status;
 
   switch (Phase) {
-  case DeviceDiscoveryDriverBindingSupported:
-    Status = TegraI2CDriverBindingSupported (DeviceTreeNode);
-    break;
-
   case DeviceDiscoveryDriverBindingStart:
     Status = TegraI2CDriverBindingStart (DriverHandle, ControllerHandle, DeviceTreeNode);
     break;
