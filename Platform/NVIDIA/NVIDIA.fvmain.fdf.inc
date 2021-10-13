@@ -281,3 +281,8 @@
   FILE FREEFORM = gNVIDIAPlatformLogoNoSDGuid {
     SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray1080noSD.bmp
   }
+
+  #
+  # FW Partition
+  #
+  INF Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf

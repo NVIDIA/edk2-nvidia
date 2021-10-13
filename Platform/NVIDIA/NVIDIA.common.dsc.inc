@@ -198,6 +198,8 @@
   FmpDependencyLib|FmpDevicePkg/Library/FmpDependencyLib/FmpDependencyLib.inf
   FmpDependencyCheckLib|FmpDevicePkg/Library/FmpDependencyCheckLib/FmpDependencyCheckLib.inf
   FmpDependencyDeviceLib|FmpDevicePkg/Library/FmpDependencyDeviceLibNull/FmpDependencyDeviceLibNull.inf
+  FwPartitionDeviceLib|Silicon/NVIDIA/Library/FwPartitionDeviceLib/FwPartitionDeviceLib.inf
+  BrBctUpdateDeviceLib|Silicon/NVIDIA/Library/BrBctUpdateDeviceLib/BrBctUpdateDeviceLib.inf
 
   AmlLib|DynamicTablesPkg/Library/Common/AmlLib/AmlLib.inf
   SsdtSerialPortFixupLib|Silicon/NVIDIA/Library/SsdtSerialPortFixupLib/SsdtSerialPortFixupLib.inf
@@ -956,6 +958,11 @@
   # Platform To Driver Configuration Support
   #
   Silicon/NVIDIA/Drivers/PlatformToDriverConfiguration/PlatformToDriverConfiguration.inf
+
+  #
+  # FW Partition
+  #
+  Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
 
 [Components.AARCH64]
   #

@@ -78,6 +78,7 @@
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
+  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x8000
 
 [PcdsDynamicHii.common.T194]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
@@ -95,6 +96,7 @@
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
+  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x10000
 
 [PcdsDynamicHii.common.T234]
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
