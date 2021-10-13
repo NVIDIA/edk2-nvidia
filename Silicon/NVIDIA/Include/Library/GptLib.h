@@ -33,6 +33,8 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
+#define NVIDIA_GPT_BLOCK_SIZE       512
+
 /**
   Validate GPT header structure
 
@@ -45,6 +47,21 @@ EFI_STATUS
 EFIAPI
 GptValidateHeader (
   IN EFI_PARTITION_TABLE_HEADER *Header
+  );
+
+/**
+  Get the partition table starting LBA
+
+  @param[in]    Header          Pointer to GPT header structure
+  @param[in]    DeviceBytes     Size of the device in bytes
+
+  @retval       EFI_LBA         LBA of the partition table
+**/
+EFI_LBA
+EFIAPI
+GptPartitionTableLba (
+  IN EFI_PARTITION_TABLE_HEADER *Header,
+  IN UINT64                     DeviceBytes
   );
 
 /**
@@ -63,11 +80,12 @@ GptPartitionTableSizeInBytes (
 /**
   Validate the partition table CRC
 
-  @param[in]    Header          Pointer to GPT header structure
-  @param[in]    PartitionTable  Pointer to GPT partition table first entry
+  @param[in]    Header                  Pointer to GPT header structure
+  @param[in]    PartitionTable          Pointer to GPT partition table first entry
 
-  @retval       EFI_SUCCESS     Partition table is valid
-  @retval       EFI_CRC_ERROR   Partition table has invalid CRC
+  @retval       EFI_SUCCESS             Partition table is valid
+  @retval       EFI_CRC_ERROR           Partition table has invalid CRC
+  @retval       EFI_VOLUME_CORRUPTED    Partition table entry had invalid LBA range
 **/
 EFI_STATUS
 EFIAPI

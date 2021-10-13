@@ -63,6 +63,27 @@ GptValidateHeader (
   return EFI_SUCCESS;
 }
 
+EFI_LBA
+EFIAPI
+GptPartitionTableLba (
+  IN EFI_PARTITION_TABLE_HEADER *Header,
+  IN UINT64                     DeviceBytes
+  )
+{
+  UINT64    DeviceSizeInBlocks;
+  EFI_LBA   PartitionTableLba;
+
+  DeviceSizeInBlocks    = DeviceBytes / NVIDIA_GPT_BLOCK_SIZE;
+  PartitionTableLba     = Header->PartitionEntryLBA;
+
+  // secondary GPT on boot flash has PartitionEntryLBA value beyond end of device
+  if (PartitionTableLba > DeviceSizeInBlocks) {
+    PartitionTableLba -= DeviceSizeInBlocks;
+  }
+
+  return PartitionTableLba;
+}
+
 UINTN
 EFIAPI
 GptPartitionTableSizeInBytes (
@@ -79,12 +100,33 @@ GptValidatePartitionTable (
   IN VOID                             *PartitionTable
   )
 {
-  UINT32        Crc;
+  UINT32                        Crc;
+  UINTN                         Index;
+  CONST EFI_PARTITION_ENTRY     *Partition;
+  EFI_LBA                       FirstBlock;
+  EFI_LBA                       LastBlock;
 
   Crc = CalculateCrc32 (PartitionTable,
                         GptPartitionTableSizeInBytes (Header));
   if (Header->PartitionEntryArrayCRC32 != Crc) {
     return EFI_CRC_ERROR;
+  }
+
+  FirstBlock    = Header->FirstUsableLBA;
+  LastBlock     = Header->LastUsableLBA;
+  Partition     = (CONST EFI_PARTITION_ENTRY *) PartitionTable;
+  for (Index = 0; Index < Header->NumberOfPartitionEntries; Index++, Partition++) {
+    // skip unused partitions
+    if (StrLen (Partition->PartitionName) == 0) {
+      continue;
+    }
+
+    if ((Partition->StartingLBA > LastBlock) ||
+        (Partition->EndingLBA > LastBlock) ||
+        (Partition->StartingLBA < FirstBlock) ||
+        (Partition->EndingLBA < FirstBlock)) {
+      return EFI_VOLUME_CORRUPTED;
+    }
   }
 
   return EFI_SUCCESS;
