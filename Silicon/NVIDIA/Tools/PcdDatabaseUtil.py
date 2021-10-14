@@ -120,7 +120,7 @@ class PcdDatabase(object):
         """
         offset = self.header.str_table_offset + string_index
         index = offset
-        while self.pcd_db[index] is not 0 or self.pcd_db[index + 1] is not 0:
+        while self.pcd_db[index] != 0 or self.pcd_db[index + 1] != 0:
             index += 2
         name = self.pcd_db[offset:index]
         return name.decode('utf-16')
