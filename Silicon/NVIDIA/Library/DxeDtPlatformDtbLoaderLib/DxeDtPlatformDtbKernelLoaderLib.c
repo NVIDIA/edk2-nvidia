@@ -39,6 +39,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
+#include <Library/OpteeLib.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/Eeprom.h>
@@ -75,6 +76,30 @@ AddBoardProperties (
   NodeOffset = fdt_path_offset (Dtb, "/chosen");
   if (NodeOffset >= 0) {
     fdt_setprop (Dtb, NodeOffset, "nvidia,sku", &CvmEeprom->ProductId, sizeof (CvmEeprom->ProductId));
+  }
+}
+
+STATIC
+VOID
+EnableOpteeNode (
+  IN VOID *Dtb
+ )
+{
+  INT32 OpteeNodeOffset;
+  INT32 Ret;
+
+  OpteeNodeOffset = fdt_path_offset (Dtb, "/firmware/optee");
+  if (OpteeNodeOffset < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Optee Node not found %d\n", __FUNCTION__,
+              OpteeNodeOffset));
+    return;
+  }
+
+  Ret = fdt_setprop (Dtb, OpteeNodeOffset, "status", "okay", sizeof("okay"));
+  if (Ret != 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to add status Property %d\n",
+              __FUNCTION__, Ret));
+    return;
   }
 }
 
@@ -146,6 +171,9 @@ FdtInstalled (
   UpdateCpuFloorsweepingConfig (Dtb);
   RemoveQspiNodes (Dtb);
   AddBoardProperties (Dtb);
+  if (IsOpteePresent ()) {
+    EnableOpteeNode (Dtb);
+  }
 }
 
 /**

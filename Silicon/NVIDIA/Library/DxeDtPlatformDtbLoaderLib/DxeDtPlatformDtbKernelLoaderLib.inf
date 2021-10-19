@@ -39,6 +39,7 @@
   FloorSweep.c
 
 [Packages]
+  ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
@@ -54,6 +55,7 @@
   FloorSweepingLib
   PlatformResourceLib
   TegraDeviceTreeOverlayLib
+  OpteeLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid
