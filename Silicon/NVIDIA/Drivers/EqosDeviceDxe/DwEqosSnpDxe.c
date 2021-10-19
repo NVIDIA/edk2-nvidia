@@ -196,12 +196,12 @@ SnpInitialize (
   }
 
   // Check Auto Neg here
-  Snp->PhyDriver.CheckAutoNeg( &Snp->PhyDriver, Snp->MacBase );
+  Snp->PhyDriver.CheckAutoNeg( &Snp->PhyDriver);
 
   // Init Link
   DEBUG ((DEBUG_INFO, "SNP:DXE: Auto-Negotiating Ethernet PHY Link\r\n"));
 
-  Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
+  Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver);
   if (EFI_ERROR(Status)) {
     DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\r\n"));
   }
@@ -272,10 +272,12 @@ SnpReset (
     return EFI_NOT_STARTED;
   }
 
-  EmacStopTxRx (&Snp->MacDriver);
+  osi_stop_mac (Snp->MacDriver.osi_core);
+
+  osi_hw_dma_deinit (Snp->MacDriver.osi_dma);
 
   // Initiate a PHY reset
-  Status = PhySoftReset (&Snp->PhyDriver, Snp->MacBase);
+  Status = PhySoftReset (&Snp->PhyDriver);
   if (EFI_ERROR (Status)) {
     Snp->SnpMode.State = EfiSimpleNetworkStopped;
     return EFI_NOT_STARTED;
@@ -331,13 +333,108 @@ SnpShutdown (
     return EFI_NOT_STARTED;
   }
 
-  EmacStopTxRx (&Snp->MacDriver);
+  osi_stop_mac (Snp->MacDriver.osi_core);
+
+  osi_hw_dma_deinit (Snp->MacDriver.osi_dma);
 
   Snp->SnpMode.State = EfiSimpleNetworkStarted;
 
   return EFI_SUCCESS;
 }
 
+STATIC
+VOID
+EFIAPI
+RegisterFilterIndex (
+  IN EMAC_DRIVER              *EmacDriver,
+  IN EFI_MAC_ADDRESS          *MacAddress,
+  IN BOOLEAN                  Enable,
+  IN UINT32                   Index,
+  IN UINT32                   BaseMode
+  )
+{
+  struct osi_filter filter;
+
+  ZeroMem (&filter, sizeof(filter));
+  filter.oper_mode = BaseMode;
+
+  if (Enable) {
+    filter.oper_mode |= OSI_OPER_ADDR_UPDATE;
+  } else {
+    filter.oper_mode |= OSI_OPER_ADDR_DEL;
+  }
+
+  filter.index = Index;
+  CopyMem (filter.mac_address, MacAddress->Addr, OSI_ETH_ALEN);
+  filter.dma_routing = EmacDriver->osi_core->dcs_en;
+  filter.dma_chan = EmacDriver->osi_dma->dma_chans[0];
+  filter.addr_mask = OSI_AMASK_DISABLE;
+  filter.src_dest = OSI_DA_MATCH;
+  osi_l2_filter(EmacDriver->osi_core, &filter);
+}
+
+/**
+  This function commits the current filters to the OSI layer
+
+  @param Snp              A pointer to the SIMPLE_NETWORK_DRIVER instance.
+  @param UpdateMac        Boolean that indicates if the MAC address may have changed
+  @param UpdateMCast      Boolean that indicates the multicast list may have changed.
+
+  @retval EFI_SUCCESS            The receive filter settings wer updated.
+
+**/
+EFI_STATUS
+EFIAPI
+SnpCommitFilters (
+  IN SIMPLE_NETWORK_DRIVER *Snp,
+  IN BOOLEAN               UpdateMac,
+  IN BOOLEAN               UpdateMCast
+  )
+{
+  UINT32 BaseMode;
+  UINT32 Index;
+  BOOLEAN BroadcastEnabled;
+
+  BaseMode = OSI_OPER_EN_PERFECT;
+
+  if ((Snp->SnpMode.ReceiveFilterSetting & EFI_SIMPLE_NETWORK_RECEIVE_PROMISCUOUS) != 0) {
+    BaseMode |=  OSI_OPER_EN_PROMISC;
+  }
+
+  if ((Snp->SnpMode.ReceiveFilterSetting & EFI_SIMPLE_NETWORK_RECEIVE_PROMISCUOUS_MULTICAST) != 0) {
+    BaseMode |= OSI_OPER_EN_ALLMULTI;
+  }
+
+  BroadcastEnabled = (Snp->SnpMode.ReceiveFilterSetting & EFI_SIMPLE_NETWORK_RECEIVE_BROADCAST) != 0;
+  if (BroadcastEnabled != Snp->BroadcastEnabled) {
+    RegisterFilterIndex (&Snp->MacDriver,
+                         &Snp->SnpMode.BroadcastAddress,
+                         BroadcastEnabled,
+                         ETHERNET_MAC_BROADCAST_INDEX,
+                         BaseMode);
+    Snp->BroadcastEnabled = BroadcastEnabled;
+  }
+
+  if (UpdateMac) {
+    RegisterFilterIndex (&Snp->MacDriver,
+                         &Snp->SnpMode.CurrentAddress,
+                         TRUE,
+                         ETHERNET_MAC_ADDRESS_INDEX,
+                         BaseMode);
+  }
+
+  if (UpdateMCast) {
+    for (Index = 0; Index < MAX (Snp->MulticastFiltersEnabled, Snp->SnpMode.MCastFilterCount); Index++) {
+      RegisterFilterIndex (&Snp->MacDriver,
+                           &Snp->SnpMode.MCastFilter[Index],
+                           Index < Snp->SnpMode.MCastFilterCount,
+                           ETHERNET_MAC_MULTICAST_INDEX + Index,
+                           BaseMode);
+    }
+    Snp->MulticastFiltersEnabled = Snp->SnpMode.MCastFilterCount;
+  }
+  return EFI_SUCCESS;
+}
 
 /**
   Manages the multicast receive filters of a network interface.
@@ -484,10 +581,9 @@ SnpReceiveFilters (
    }
 
   // Get the filter mask bits that are set in Enable parameter or Disable Parameter
-  // Same bits that are set in Enable/Disable parameters, then bits in the Disable parameter takes precedance
+  // Same bits that are set in Enable/Disable parameters,
+  // then bits in the Disable parameter takes precedence
   ReceiveFilterSetting = (Snp->SnpMode.ReceiveFilterSetting | Enable) & (~Disable);
-
-  EmacRxFilters (ReceiveFilterSetting, ResetMCastFilter, MCastFilterCnt, MCastFilter, Snp->MacBase);
 
   if (ResetMCastFilter) {
     Snp->SnpMode.MCastFilterCount = 0;
@@ -498,7 +594,7 @@ SnpReceiveFilters (
 
   Snp->SnpMode.ReceiveFilterSetting = ReceiveFilterSetting;
 
-  return EFI_SUCCESS;
+  return SnpCommitFilters (Snp, FALSE, ResetMCastFilter | EnablingMulticast);
 }
 
 
@@ -543,6 +639,7 @@ SnpStationAddress (
 )
 {
   SIMPLE_NETWORK_DRIVER     *Snp;
+  EFI_STATUS                 Status;
 
   // Check Snp Instance
   if (This == NULL) {
@@ -562,13 +659,14 @@ SnpStationAddress (
   }
 
   if (Reset) {
-    EmacSetMacAddress (&Snp->SnpMode.PermanentAddress, Snp->MacBase);
+    CopyMem (&Snp->SnpMode.CurrentAddress, &Snp->SnpMode.PermanentAddress, sizeof (Snp->SnpMode.CurrentAddress));
   } else {
-    EmacSetMacAddress (NewMac, Snp->MacBase);
+    CopyMem (&Snp->SnpMode.CurrentAddress, NewMac, sizeof (Snp->SnpMode.CurrentAddress));
   }
-  EmacReadMacAddress (&Snp->SnpMode.CurrentAddress, Snp->MacBase);
+  Status = SnpCommitFilters (Snp, TRUE, FALSE);
+
   UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
-  return EFI_SUCCESS;
+  return Status;
 }
 
 
@@ -630,7 +728,10 @@ SnpStatistics (
   )
 {
   SIMPLE_NETWORK_DRIVER   *Snp;
-  EFI_STATUS Status;
+  EFI_STATUS               Status;
+  struct osi_ioctl         ioctl_data;
+  EFI_NETWORK_STATISTICS   LocalStats;
+
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
@@ -653,15 +754,39 @@ SnpStatistics (
     return EFI_INVALID_PARAMETER;
   }
 
-  EmacGetStatistic (&Snp->Stats, Snp->MacBase);
   if (Reset) {
-    ZeroMem (&Snp->Stats, sizeof(EFI_NETWORK_STATISTICS));
+    ioctl_data.cmd = OSI_CMD_RESET_MMC;
+    osi_hal_handle_ioctl (Snp->MacDriver.osi_core, &ioctl_data);
   }
 
   Status = EFI_SUCCESS;
   if (Statistics != NULL) {
+    osi_read_mmc (Snp->MacDriver.osi_core);
+
+    //Populate local copy of data structure to allow for partial read
+    LocalStats.RxTotalFrames     = Snp->MacDriver.osi_core->mmc.mmc_rx_framecount_gb;
+    LocalStats.RxUndersizeFrames = Snp->MacDriver.osi_core->mmc.mmc_rx_undersize_g;
+    LocalStats.RxOversizeFrames  = Snp->MacDriver.osi_core->mmc.mmc_rx_oversize_g;
+    LocalStats.RxUnicastFrames   = Snp->MacDriver.osi_core->mmc.mmc_rx_unicast_g;
+    LocalStats.RxBroadcastFrames = Snp->MacDriver.osi_core->mmc.mmc_rx_broadcastframe_g;
+    LocalStats.RxMulticastFrames = Snp->MacDriver.osi_core->mmc.mmc_rx_multicastframe_g;
+    LocalStats.RxCrcErrorFrames  = Snp->MacDriver.osi_core->mmc.mmc_rx_crc_error;
+    LocalStats.RxTotalBytes      = Snp->MacDriver.osi_core->mmc.mmc_rx_octetcount_gb;
+    LocalStats.RxGoodFrames      = LocalStats.RxUnicastFrames +
+                                   LocalStats.RxBroadcastFrames +
+                                   LocalStats.RxMulticastFrames;
+
+    LocalStats.TxTotalFrames     = Snp->MacDriver.osi_core->mmc.mmc_tx_framecount_gb;
+    LocalStats.TxGoodFrames      = Snp->MacDriver.osi_core->mmc.mmc_tx_framecount_g;
+    LocalStats.TxOversizeFrames  = Snp->MacDriver.osi_core->mmc.mmc_tx_osize_frame_g;
+    LocalStats.TxUnicastFrames   = Snp->MacDriver.osi_core->mmc.mmc_tx_unicast_gb;
+    LocalStats.TxBroadcastFrames = Snp->MacDriver.osi_core->mmc.mmc_tx_broadcastframe_g;
+    LocalStats.TxMulticastFrames = Snp->MacDriver.osi_core->mmc.mmc_tx_multicastframe_g;
+    LocalStats.TxTotalBytes      = Snp->MacDriver.osi_core->mmc.mmc_tx_octetcount_gb;
+    LocalStats.Collisions        = Snp->MacDriver.osi_core->mmc.mmc_tx_latecol +
+                                   Snp->MacDriver.osi_core->mmc.mmc_tx_exesscol;
     // Fill in the statistics
-    CopyMem (Statistics, &Snp->Stats, MIN (*StatSize, sizeof(EFI_NETWORK_STATISTICS)));
+    CopyMem (Statistics, &LocalStats, MIN (*StatSize, sizeof(EFI_NETWORK_STATISTICS)));
 
     // Check buffer size
     if (*StatSize < sizeof(EFI_NETWORK_STATISTICS)) {
@@ -879,7 +1004,7 @@ SnpGetStatus (
 {
   EFI_STATUS                 Status;
   SIMPLE_NETWORK_DRIVER      *Snp;
-  struct osi_dma_priv_data   *osi_dma;
+  UINT32                     more_data_avail;
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
@@ -894,11 +1019,26 @@ SnpGetStatus (
   }
 
   // Check DMA irq status
-  EmacGetDmaStatus (IrqStat, Snp->MacBase);
-  osi_dma = Snp->MacDriver.osi_dma;
+  if(IrqStat != NULL) {
+    EfiAcquireLock (&Snp->Lock);
+    *IrqStat = 0;
+    if ((osi_txring_empty(Snp->MacDriver.osi_dma, 0) == 0) &&
+        (Snp->MacDriver.tx_completed_buffer == NULL)) {
+      osi_process_tx_completions(Snp->MacDriver.osi_dma, 0, 1);
+    }
+    if (Snp->MacDriver.tx_completed_buffer != NULL) {
+      *IrqStat |= EFI_SIMPLE_NETWORK_TRANSMIT_INTERRUPT;
+    }
+
+    osi_process_rx_completions(Snp->MacDriver.osi_dma, 0, 0, &more_data_avail);
+    if (more_data_avail == OSI_ENABLE) {
+       *IrqStat |= EFI_SIMPLE_NETWORK_RECEIVE_INTERRUPT;
+    }
+    EfiReleaseLock (&Snp->Lock);
+  }
 
   // Update the media status
-  Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
+  Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver);
   if (EFI_ERROR(Status)) {
     Snp->SnpMode.MediaPresent = FALSE;
   } else {
@@ -908,11 +1048,12 @@ SnpGetStatus (
   // TxBuff
   if (TxBuff != NULL) {
     EfiAcquireLock (&Snp->Lock);
-    // Get a recycled buf from list
-    *TxBuff = NULL;
-    if (osi_process_tx_completions(osi_dma, 0, 1) != 0) {
-      *TxBuff = osi_dma->tx_buff;
+    if ((osi_txring_empty(Snp->MacDriver.osi_dma, 0) == 0) &&
+        (Snp->MacDriver.tx_completed_buffer == NULL)) {
+      osi_process_tx_completions(Snp->MacDriver.osi_dma, 0, 1);
     }
+    *TxBuff = Snp->MacDriver.tx_completed_buffer;
+    Snp->MacDriver.tx_completed_buffer = NULL;
     EfiReleaseLock (&Snp->Lock);
   }
 
@@ -993,14 +1134,12 @@ SnpTransmit (
   SIMPLE_NETWORK_DRIVER      *Snp;
   UINT8                      *EthernetPacket;
   EFI_STATUS                 Status;
-  UINTN                      BufferSizeBuf;
   BOOLEAN                    LockAcquired;
   struct osi_dma_priv_data   *osi_dma;
   struct osi_tx_ring         *tx_ring;
   struct osi_tx_swcx         *tx_swcx;
   struct osi_tx_pkt_cx       *tx_pkt_cx;
 
-  BufferSizeBuf = ETH_BUFSIZE;
   EthernetPacket = Data;
   LockAcquired = FALSE;
 
@@ -1038,8 +1177,8 @@ SnpTransmit (
     goto Exit;
   }
 
-  if (BuffSize > CONFIG_ETH_BUFSIZE) {
-    DEBUG((DEBUG_ERROR, "Tx buffer size > 2KB\n"));
+  if (BuffSize > Snp->SnpMode.MaxPacketSize) {
+    DEBUG((DEBUG_ERROR, "Tx buffer size > %d\r\n", Snp->SnpMode.MaxPacketSize));
     Status = EFI_UNSUPPORTED;
   }
 
@@ -1083,7 +1222,7 @@ SnpTransmit (
   }
 
   CopyMem ((VOID *)Snp->MacDriver.tx_buffers[tx_ring->cur_tx_idx], Data, BuffSize);
-  tx_swcx->buf_phy_addr = (UINTN)Snp->MacDriver.tx_buffers_phy_addr[tx_ring->cur_tx_idx];
+  tx_swcx->buf_phy_addr = (UINTN)Snp->MacDriver.tx_buffers[tx_ring->cur_tx_idx];
 
   tx_pkt_cx->flags |= OSI_PKT_CX_CSUM;
   tx_pkt_cx->desc_cnt = 1;
@@ -1167,6 +1306,8 @@ SnpReceive (
   EFI_MAC_ADDRESS            Src;
   EFI_STATUS                 Status;
   UINT8                      *u_char_data = Data;
+  UINT32                     more_data_avail;
+
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
@@ -1186,25 +1327,24 @@ SnpReceive (
     return EFI_ACCESS_DENIED;
   }
 
-  struct osi_dma_priv_data *osi_dma = Snp->MacDriver.osi_dma;
-  osi_dma->data = Data;
-  osi_dma->buffsize = *BuffSize;
-  received = osi_process_rx_completions(Snp->MacDriver.osi_dma, 0, 1);
+  Snp->MacDriver.rx_user_buffer = Data;
+  Snp->MacDriver.rx_user_buffer_size = *BuffSize;
+  received = osi_process_rx_completions(Snp->MacDriver.osi_dma, 0, 1, &more_data_avail);
 
-  if (osi_dma->buffsize == -1) {
+  if (Snp->MacDriver.rx_user_buffer_size == -1) {
     Status = EFI_DEVICE_ERROR;
     goto Exit;
   }
 
-  /* osi_dma->buffsize will be updated to length of Rx packet. If Rx packet is
+  /* Snp->EmacDriver->rx_user_buffer_size will be updated to length of Rx packet. If Rx packet is
    * larger than buffer size, then osi_dma->buffsize will be set to actual buf
    * length needed.
    */
-  if (*BuffSize < osi_dma->buffsize) {
-    DEBUG((DEBUG_ERROR, "Rx buffer %u < packet length %ld\n", *BuffSize, osi_dma->buffsize));
+  if (*BuffSize < Snp->MacDriver.rx_user_buffer_size) {
+    DEBUG((DEBUG_ERROR, "Rx buffer %u < packet length %ld\n", *BuffSize, Snp->MacDriver.rx_user_buffer_size));
     Status = EFI_BUFFER_TOO_SMALL;
     /* Indicate the needed buffer size to the stack */
-    *BuffSize = osi_dma->buffsize;
+    *BuffSize = Snp->MacDriver.rx_user_buffer_size;
     goto Exit;
   }
 

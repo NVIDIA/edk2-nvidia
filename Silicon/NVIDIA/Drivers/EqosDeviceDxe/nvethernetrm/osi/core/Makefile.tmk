@@ -1,0 +1,58 @@
+################################### tell Emacs this is a -*- makefile-gmake -*-
+#
+# Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+#
+###############################################################################
+
+ifdef NV_COMPONENT_FLAG_SHARED_LIBRARY_SECTION
+include $(NV_BUILD_START_COMPONENT)
+
+NV_COMPONENT_STRICT_WARNINGS_qnx_64 := 1
+
+NV_COMPONENT_NAME              := nvethernetrm
+NV_COMPONENT_OWN_INTERFACE_DIR := .
+NV_COMPONENT_SOURCES           := \
+	eqos_core.c \
+	eqos_mmc.c \
+	osi_core.c \
+	vlan_filter.c \
+	osi_hal.c \
+	ivc_core.c \
+	frp.c \
+	mgbe_core.c \
+	xpcs.c \
+	mgbe_mmc.c \
+	$(NV_SOURCE)/nvethernetrm/osi/common/osi_common.c \
+	$(NV_SOURCE)/nvethernetrm/osi/common/eqos_common.c \
+	$(NV_SOURCE)/nvethernetrm/osi/common/mgbe_common.c
+
+NV_COMPONENT_INCLUDES          := \
+	$(NV_SOURCE)/nvethernetrm/include \
+	$(NV_SOURCE)/nvethernetrm/osi/common/include
+
+include $(NV_BUILD_SHARED_LIBRARY)
+endif
+
+# Local Variables:
+# indent-tabs-mode: t
+# tab-width: 8
+# End:
+# vi: set tabstop=8 noexpandtab:

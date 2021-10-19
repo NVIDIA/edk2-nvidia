@@ -120,11 +120,11 @@ OnExitBootServices (
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
     // Check for Auto Neg completion
-    Snp->PhyDriver.CheckAutoNeg( &Snp->PhyDriver, Snp->MacBase );
+    Snp->PhyDriver.CheckAutoNeg( &Snp->PhyDriver);
 
     // Init Link
     DEBUG ((DEBUG_INFO, "SNP:DXE: Auto-Negotiating Ethernet PHY Link\r\n"));
-    Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver, Snp->MacBase);
+    Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver);
     if (EFI_ERROR(Status)) {
       DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\r\n"));
     }
@@ -247,7 +247,6 @@ DeviceDiscoveryNotify (
     SnpMode->State = EfiSimpleNetworkStopped;
     SnpMode->HwAddressSize = NET_ETHER_ADDR_LEN;    // HW address is 6 bytes
     SnpMode->MediaHeaderSize = sizeof (ETHER_HEAD);
-    SnpMode->MaxPacketSize = EFI_PAGE_SIZE;         // Preamble + SOF + Ether Frame (with VLAN tag +4bytes)
     SnpMode->NvRamSize = 0;                         // No NVRAM with this device
     SnpMode->NvRamAccessSize = 0;                   // No NVRAM with this device
 
@@ -282,6 +281,9 @@ DeviceDiscoveryNotify (
 
     // Set broadcast address
     SetMem (&SnpMode->BroadcastAddress, sizeof (EFI_MAC_ADDRESS), 0xFF);
+
+    Snp->BroadcastEnabled = FALSE;
+    Snp->MulticastFiltersEnabled = 0;
 
     //Set current address
     ///TODO: Read from EEPROM
@@ -435,11 +437,9 @@ DeviceDiscoveryNotify (
         Snp->PhyDriver.ResetMode0 = GPIO_MODE_OUTPUT_1;
         Snp->PhyDriver.ResetMode1 = GPIO_MODE_OUTPUT_0;
       }
-    } else if (PlatformType != TEGRA_PLATFORM_SILICON) {
+    } else {
       // Give a fake setting to ResetPin
       Snp->PhyDriver.ResetPin = NON_EXISTENT_ON_PRESIL;
-    } else {
-        return EFI_DEVICE_ERROR;
     }
 
     if (fdt_get_path (DeviceTreeNode->DeviceTreeBase,
@@ -476,22 +476,28 @@ DeviceDiscoveryNotify (
       return Status;
     }
 
-    // Init PHY
-    Status = PhyDxeInitialization (&Snp->PhyDriver, Snp->MacBase);
-    if (EFI_ERROR (Status)) {
-      return EFI_DEVICE_ERROR;
-    }
-
     // Init EMAC
-    Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase);
+    if (CompareGuid (Device->Type, &gDwMgbeNetNonDiscoverableDeviceGuid)) {
+      Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase, OSI_MAC_HW_MGBE);
+    } else {
+      Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase, OSI_MAC_HW_EQOS);
+    }
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "SNP:DXE: Failed to initialize EMAC\n"));
       return EFI_DEVICE_ERROR;
     }
 
+    SnpMode->MaxPacketSize = Snp->MacDriver.osi_dma->rx_buf_len;         // Preamble + SOF + Ether Frame (with VLAN tag +4bytes)
+
+    // Init PHY
+    Status = PhyDxeInitialization (&Snp->PhyDriver, &Snp->MacDriver);
+    if (EFI_ERROR (Status)) {
+      return EFI_DEVICE_ERROR;
+    }
+
     // Set MAC Address
-    EmacSetMacAddress (&Snp->SnpMode.PermanentAddress, Snp->MacBase);
-    EmacReadMacAddress (&Snp->SnpMode.CurrentAddress, Snp->MacBase);
+    CopyMem (&Snp->SnpMode.CurrentAddress, &Snp->SnpMode.PermanentAddress, sizeof (Snp->SnpMode.CurrentAddress));
+    SnpCommitFilters (Snp, TRUE, FALSE);
     UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
 
     // Check for Auto Negotiation completion and rest of Phy setup

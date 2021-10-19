@@ -32,28 +32,26 @@
 #define _PHY_DXE_H__
 
 #include <Protocol/EmbeddedGpio.h>
+#include "EmacDxeUtil.h"
 
 typedef struct _PHY_DRIVER  PHY_DRIVER;
 
 typedef
 EFI_STATUS
 (EFIAPI *NVIDIA_EQOS_PHY_CONFIG)(
-    IN  PHY_DRIVER   *PhyDriver,
-    IN  UINTN        MacBaseAddress
+    IN  PHY_DRIVER   *PhyDriver
     );
 
 typedef
 EFI_STATUS
 (EFIAPI *NVIDIA_EQOS_PHY_AUTO_NEG)(
-    IN  PHY_DRIVER   *PhyDriver,
-    IN  UINTN        MacBaseAddress
+    IN  PHY_DRIVER   *PhyDriver
     );
 
 typedef
 VOID
 (EFIAPI *NVIDIA_EQOS_PHY_DETECT_LINK)(
-    IN  PHY_DRIVER   *PhyDriver,
-    IN  UINTN        MacBaseAddress
+    IN  PHY_DRIVER   *PhyDriver
     );
 
 struct _PHY_DRIVER{
@@ -72,6 +70,7 @@ struct _PHY_DRIVER{
   NVIDIA_EQOS_PHY_AUTO_NEG    CheckAutoNeg;
   NVIDIA_EQOS_PHY_DETECT_LINK DetectLink;
   UINT8                       AutoNegState;
+  EMAC_DRIVER                *MacDriver;
 };
 
 #define PHY_AUTONEG_IDLE      0
@@ -122,10 +121,9 @@ EFI_STATUS
 EFIAPI
 PhyRead (
   IN PHY_DRIVER   *PhyDriver,
-  IN  UINT32   Page,
-  IN  UINT32   Reg,
-  OUT UINT32   *Data,
-  IN  UINTN    MacBaseAddress
+  IN  UINT32       Page,
+  IN  UINT32       Reg,
+  OUT UINT32      *Data
   );
 
 
@@ -134,31 +132,28 @@ EFI_STATUS
 EFIAPI
 PhyWrite (
   IN PHY_DRIVER   *PhyDriver,
-  IN UINT32   Page,
-  IN UINT32   Reg,
-  IN UINT32   Data,
-  IN UINTN    MacBaseAddress
+  IN UINT32        Page,
+  IN UINT32        Reg,
+  IN UINT32        Data
   );
 
 EFI_STATUS
 EFIAPI
 PhyDxeInitialization (
   IN  PHY_DRIVER     *PhyDriver,
-  IN  UINTN          MacBaseAddress
+  IN  EMAC_DRIVER    *MacDriver
   );
 
 EFI_STATUS
 EFIAPI
 PhySoftReset (
-  IN  PHY_DRIVER    *PhyDriver,
-  IN  UINTN         MacBaseAddress
+  IN  PHY_DRIVER  *PhyDriver
   );
 
 EFI_STATUS
 EFIAPI
 PhyLinkAdjustEmacConfig (
-  IN  PHY_DRIVER    *PhyDriver,
-  IN  UINTN         MacBaseAddress
+  IN  PHY_DRIVER    *PhyDriver
   );
 
 #endif /* _PHY_DXE_H__ */

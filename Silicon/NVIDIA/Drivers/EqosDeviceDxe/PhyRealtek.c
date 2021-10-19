@@ -72,8 +72,7 @@
 EFI_STATUS
 EFIAPI
 PhyRealtekStartAutoNeg (
-  IN  PHY_DRIVER   *PhyDriver,
-  IN  UINTN        MacBaseAddress
+  IN  PHY_DRIVER   *PhyDriver
   )
 {
   UINT32        Data32;
@@ -82,33 +81,32 @@ PhyRealtekStartAutoNeg (
   PhyDriver->AutoNegState = PHY_AUTONEG_RUNNING;
 
   /* Advertise 1000 MBPS full duplex mode */
-  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, &Data32, MacBaseAddress);
+  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, &Data32);
   Data32 |= REG_PHY_GB_CONTROL_ADVERTISE_1000_BASE_T_FULL;
-  PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, Data32, MacBaseAddress);
+  PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, Data32);
 
   /* Advertise 100, 10 MBPS with full and half duplex mode */
-  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, &Data32, MacBaseAddress);
+  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, &Data32);
   Data32 |= REG_PHY_AUTONEG_ADVERTISE_100_BASE_T4      |
             REG_PHY_AUTONEG_ADVERTISE_100_BASE_TX_FULL |
             REG_PHY_AUTONEG_ADVERTISE_100_BASE_TX_HALF |
             REG_PHY_AUTONEG_ADVERTISE_10_BASE_T_FULL   |
             REG_PHY_AUTONEG_ADVERTISE_10_BASE_T_HALF;
-  PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, Data32, MacBaseAddress);
+  PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, Data32);
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a: Start auto-negotiation\r\n", __FUNCTION__));
 
-  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, &Data32, MacBaseAddress);
+  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, &Data32);
   Data32 |= REG_PHY_CONTROL_AUTO_NEGOTIATION_ENABLE | REG_PHY_CONTROL_RESTART_AUTO_NEGOTIATION;
 
-  return PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, Data32, MacBaseAddress);
+  return PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, Data32);
 }
 
 // Check auto-negotiation completion
 EFI_STATUS
 EFIAPI
 PhyRealtekCheckAutoNeg (
-  IN  PHY_DRIVER   *PhyDriver,
-  IN  UINTN        MacBaseAddress
+  IN  PHY_DRIVER   *PhyDriver
   )
 {
 
@@ -131,7 +129,7 @@ PhyRealtekCheckAutoNeg (
 
   do {
     // Read PHY_BASIC_CTRL register from PHY
-    Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_STATUS, &Data32, MacBaseAddress);
+    Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_STATUS, &Data32);
     if (EFI_ERROR(Status)) {
       DEBUG ((DEBUG_INFO, "Failed to read PHY_BASIC_CTRL register\r\n"));
       goto Exit;
@@ -148,7 +146,7 @@ PhyRealtekCheckAutoNeg (
 
 Exit:
   if (!EFI_ERROR (Status)) {
-    PhyDriver->AutoNegState = PHY_AUTONEG_RUNNING;
+    PhyDriver->AutoNegState = PHY_AUTONEG_IDLE;
   } else if (Status == EFI_TIMEOUT) {
     PhyDriver->AutoNegState = PHY_AUTONEG_TIMEOUT;
   }
@@ -160,15 +158,13 @@ Exit:
  * @brief Configure Realtek PHY
  *
  * @param PhyDriver PHY object
- * @param MacBaseAddress Base address of MAC
  *
  * @return EFI_SUCCESS if success, specific error if fails
  */
 EFI_STATUS
 EFIAPI
 PhyRealtekConfig (
-  IN  PHY_DRIVER   *PhyDriver,
-  IN  UINTN        MacBaseAddress
+  IN  PHY_DRIVER   *PhyDriver
   )
 {
   UINT32        Data32;
@@ -179,7 +175,7 @@ PhyRealtekConfig (
   PhyDriver->PhyPageSelRegister = REG_PHY_PAGE;
 
   /* Enable link and activity indication for all speeds on LED1 and LED0 for GBE */
-  Status = PhyRead (PhyDriver, PAGE_LED, REG_LCR, &Data32, MacBaseAddress);
+  Status = PhyRead (PhyDriver, PAGE_LED, REG_LCR, &Data32);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -189,31 +185,29 @@ PhyRealtekConfig (
             LCR_LED1_LINK_100  |
             LCR_LED1_LINK_10   |
             LCR_LED0_LINK_1000;
-  Status = PhyWrite (PhyDriver, PAGE_LED, REG_LCR, Data32, MacBaseAddress);
+  Status = PhyWrite (PhyDriver, PAGE_LED, REG_LCR, Data32);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   /* Disable Energy Efficient Ethernet (EEE) LED indication */
-  return PhyWrite (PhyDriver, PAGE_LED, REG_EEELCR, 0, MacBaseAddress);
+  return PhyWrite (PhyDriver, PAGE_LED, REG_EEELCR, 0);
 }
 
 /*
  * @brief Detect link between Realtek PHY and MAC
  *
  * @param phy PHY object
- * @param MacBaseAddress Base address of MAC
  */
 VOID
 EFIAPI
 PhyRealtekDetectLink (
-  IN  PHY_DRIVER   *PhyDriver,
-  IN  UINTN        MacBaseAddress
+  IN  PHY_DRIVER   *PhyDriver
   )
 {
   UINT32       Data32;
 
-  PhyRead (PhyDriver, PAGE_A43, REG_PHYSR, &Data32, MacBaseAddress);
+  PhyRead (PhyDriver, PAGE_A43, REG_PHYSR, &Data32);
 
   if ((Data32 & PHYSR_LINK) == 0) {
     PhyDriver->PhyCurrentLink = LINK_DOWN;

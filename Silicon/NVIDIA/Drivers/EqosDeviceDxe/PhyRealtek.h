@@ -38,58 +38,50 @@
  * @brief Configure Realtek PHY
  *
  * @param PhyDriver PHY object
- * @param MacBaseAddress Base address of MAC
  *
  * @return EFI_SUCCESS if success, specific error if fails
  */
 EFI_STATUS
 EFIAPI
 PhyRealtekConfig (
-  IN  PHY_DRIVER   *PhyDriver,
-  IN  UINTN        MacBaseAddress
+  IN  PHY_DRIVER   *PhyDriver
   );
 
 /*
  * @brief Start auto-negotiation from Realtek PHY
  *
  * @param PhyDriver PHY object
- * @param MacBaseAddress Base address of MAC
  *
  * @return EFI_SUCCESS if success, specific error if fails
  */
 EFI_STATUS
 EFIAPI
 PhyRealtekStartAutoNeg (
-  IN  PHY_DRIVER   *PhyDriver,
-  IN  UINTN        MacBaseAddress
+  IN  PHY_DRIVER   *PhyDriver
   );
 
 /*
  * @brief Check auto-negotiation completion status from Realtek PHY
  *
  * @param PhyDriver PHY object
- * @param MacBaseAddress Base address of MAC
  *
  * @return EFI_SUCCESS if success, specific error if fails
  */
 EFI_STATUS
 EFIAPI
 PhyRealtekCheckAutoNeg (
-  IN  PHY_DRIVER   *PhyDriver,
-  IN  UINTN        MacBaseAddress
+  IN  PHY_DRIVER   *PhyDriver
   );
 
 /*
  * @brief Detect link between Realtek PHY and MAC
  *
  * @param phy PHY object
- * @param MacBaseAddress Base address of MAC
  */
 VOID
 EFIAPI
 PhyRealtekDetectLink (
-  IN  PHY_DRIVER   *PhyDriver,
-  IN  UINTN        MacBaseAddress
+  IN  PHY_DRIVER   *PhyDriver
   );
 
 #endif /* _PHY_REALTEK_H__ */

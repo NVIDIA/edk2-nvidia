@@ -59,9 +59,6 @@ typedef struct {
   EFI_SIMPLE_NETWORK_PROTOCOL            Snp;
   EFI_SIMPLE_NETWORK_MODE                SnpMode;
 
-  // EFI Snp statistics instance
-  EFI_NETWORK_STATISTICS                 Stats;
-
   EMAC_DRIVER                            MacDriver;
   PHY_DRIVER                             PhyDriver;
 
@@ -71,6 +68,9 @@ typedef struct {
   UINT32                                 NumMacs;
 
   EFI_PHYSICAL_ADDRESS                   MaxAddress;
+
+  BOOLEAN                                BroadcastEnabled;
+  UINT32                                 MulticastFiltersEnabled;
 
   EFI_EVENT                              DeviceTreeNotifyEvent;
   EFI_EVENT                              AcpiNotifyEvent;
@@ -83,10 +83,10 @@ extern EFI_COMPONENT_NAME2_PROTOCOL      gSnpComponentName2;
 
 #define SNP_DRIVER_SIGNATURE             SIGNATURE_32('A', 'S', 'N', 'P')
 #define INSTANCE_FROM_SNP_THIS(a)        CR(a, SIMPLE_NETWORK_DRIVER, Snp, SNP_DRIVER_SIGNATURE)
-#define SNP_TX_BUFFER_INCREASE           32
-#define SNP_MAX_TX_BUFFER_NUM            65536
-#define DESC_NUM                         10
-#define ETH_BUFSIZE                      0x800
+
+#define ETHERNET_MAC_BROADCAST_INDEX                               0
+#define ETHERNET_MAC_ADDRESS_INDEX                                 1
+#define ETHERNET_MAC_MULTICAST_INDEX                               2
 
 /*---------------------------------------------------------------------------------------------------------------------
 
@@ -206,6 +206,25 @@ SnpReceive (
       OUT  EFI_MAC_ADDRESS             *SrcAddr      OPTIONAL,
       OUT  EFI_MAC_ADDRESS             *DstAddr      OPTIONAL,
       OUT  UINT16                      *Protocol     OPTIONAL
+  );
+
+//Internal helper functions
+/**
+  This function commits the current filters to the OSI layer
+
+  @param Snp              A pointer to the SIMPLE_NETWORK_DRIVER instance.
+  @param UpdateMac        Boolean that indicates if the MAC address may have changed
+  @param UpdateMCast      Boolean that indicates the multicast list may have changed.
+
+  @retval EFI_SUCCESS            The receive filter settings wer updated.
+
+**/
+EFI_STATUS
+EFIAPI
+SnpCommitFilters (
+  IN SIMPLE_NETWORK_DRIVER *Snp,
+  IN BOOLEAN               UpdateMac,
+  IN BOOLEAN               UpdateMCast
   );
 
 #endif // DWEMAC_SNP_DXE_H__
