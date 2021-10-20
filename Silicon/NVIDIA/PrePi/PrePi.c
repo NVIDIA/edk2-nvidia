@@ -405,7 +405,7 @@ CEntryPoint (
   BuildMemoryAllocationHob (DtbBase, DtbSize, EfiBootServicesData);
 
   // Create the Stacks HOB (reserve the memory for all stacks)
-  BuildStackHob (StackBase, StackSize);
+  BuildStackHob (StackBase, StackSize + SIZE_4KB);
 
   //TODO: Call CpuPei as a library
   BuildCpuHob (ArmGetPhysicalAddressBits (), ArmGetPhysicalAddressBits ());
