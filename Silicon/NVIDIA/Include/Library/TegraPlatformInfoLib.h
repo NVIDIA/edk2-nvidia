@@ -139,6 +139,16 @@ TegraGetPlatform (
   VOID
   );
 
+/**
+  Returns major version of the tegra platform.
+
+  This function returns the major version of the underlying tegra platform.
+**/
+UINT32
+TegraGetMajorVersion (
+  VOID
+  );
+
 #endif /* !__ASSEMBLY */
 
 #endif //__TEGRA_PLATFORM_INFO_LIB_H__

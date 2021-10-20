@@ -33,6 +33,8 @@
 #define HIDREV_OFFSET                            0x4
 #define HIDREV_CHIPID_SHIFT                      8
 #define HIDREV_CHIPID_MASK                       0xff
+#define HIDREV_MAJORVER_SHIFT                    4
+#define HIDREV_MAJORVER_MASK                     0xf
 #define HIDREV_PRE_SI_PLAT_SHIFT                 0x14
 #define HIDREV_PRE_SI_PLAT_MASK                  0xf
 #define HIDREV_ADDRESS (NV_ADDRESS_MAP_MISC_BASE + HIDREV_OFFSET)
