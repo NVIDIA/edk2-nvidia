@@ -71,6 +71,9 @@ struct _PHY_DRIVER{
   NVIDIA_EQOS_PHY_DETECT_LINK DetectLink;
   UINT8                       AutoNegState;
   EMAC_DRIVER                *MacDriver;
+  UINT32                      PhyAddress;
+  UINT32                      ResetDelay;
+  UINT32                      PostResetDelay;
 };
 
 #define PHY_AUTONEG_IDLE      0
@@ -104,7 +107,7 @@ struct _PHY_DRIVER{
 #define REG_PHY_GB_CONTROL_ADVERTISE_1000_BASE_T_FULL BIT9
 
 /************************************************************************************************************/
-#define NON_EXISTENT_ON_PRESIL                        0xDEADBEEF
+#define NON_EXISTENT_ON_PLATFORM               0xDEADBEEF
 
 #define SPEED_1000                            1000
 #define SPEED_100                             100
@@ -116,6 +119,11 @@ struct _PHY_DRIVER{
 #define LINK_UP                               1
 #define LINK_DOWN                             0
 #define PHY_TIMEOUT                           200000
+
+#define PHY_DEFAULT_ADDRESS                   0
+#define PHY_DEFAULT_RESET_DELAY_USEC          0
+#define PHY_DEFAULT_POST_RESET_DELAY_USEC     0
+#define PHY_PAGE_SWITCH_DELAY_USEC            20
 
 EFI_STATUS
 EFIAPI

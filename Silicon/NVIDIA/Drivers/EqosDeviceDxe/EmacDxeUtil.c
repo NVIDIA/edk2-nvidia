@@ -188,16 +188,20 @@ EmacDxeInitialization (
     EmacDriver->tx_buffers[Index] = TxFullBuffer + (MaxPacketSize * Index);
   }
 
+  osi_poll_for_mac_reset_complete ( EmacDriver->osi_core );
+
   // Init EMAC DMA
   OsiReturn = osi_hw_dma_init( EmacDriver->osi_dma);
   if (OsiReturn < 0) {
     DEBUG ((DEBUG_ERROR, "Failed to initialize MAC DMA\n"));
+    Status = EFI_DEVICE_ERROR;
   } else {
     OsiReturn = osi_hw_core_init( EmacDriver->osi_core, hw_feat.tx_fifo_size, hw_feat.rx_fifo_size);
     if (OsiReturn < 0) {
       DEBUG ((DEBUG_ERROR, "Failed to initialize MAC Core: %d\n", OsiReturn));
+      Status = EFI_DEVICE_ERROR;
     }
   }
 
-  return EFI_SUCCESS;
+  return Status;
 }

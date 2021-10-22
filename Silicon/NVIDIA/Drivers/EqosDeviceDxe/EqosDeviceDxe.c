@@ -133,6 +133,39 @@ OnExitBootServices (
   return;
 }
 
+//Helper function for getting fdt values as UINT32
+//As swapping is needed based on size
+STATIC
+EFI_STATUS
+GetFdtProperty (
+  VOID        *DeviceTreeBase,
+  INT32        NodeOffset,
+  CONST CHAR8 *PropertyName,
+  UINT32      *PropertyValue
+  )
+{
+  CONST VOID *Property;
+  INT32       PropertySize;
+
+  Property = fdt_getprop (DeviceTreeBase, NodeOffset, PropertyName, &PropertySize);
+
+  if (Property == NULL) {
+    return EFI_NOT_FOUND;
+  }
+
+  if (PropertySize == 1) {
+    *PropertyValue = *(UINT8 *)Property;
+  } else if (PropertySize == 2) {
+    *PropertyValue = SwapBytes16 (*(UINT16 *)Property);
+  } else if (PropertySize == 4) {
+    *PropertyValue = SwapBytes32 (*(UINT32 *)Property);
+  } else {
+    return EFI_DEVICE_ERROR;
+  }
+
+  return EFI_SUCCESS;
+}
+
 /**
   Callback that will be invoked at various phases of the driver initialization
 
@@ -176,6 +209,8 @@ DeviceDiscoveryNotify (
   TEGRA_PLATFORM_TYPE              PlatformType;
   BOOLEAN                          FlipResetMode;
   UINTN                            ChipID;
+  UINT32                           PhyNodeHandle;
+  INT32                            PhyNodeOffset;
 
   PlatformType = TegraGetPlatform();
   switch (Phase) {
@@ -196,6 +231,8 @@ DeviceDiscoveryNotify (
     if (Snp == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
+
+    ZeroMem (Snp, sizeof (SIMPLE_NETWORK_DRIVER));
 
     if (CompareGuid (Device->Type, &gDwEqosNetT194NonDiscoverableDeviceGuid)) {
       //Bit 39 is in use set to max of 38-bit
@@ -439,7 +476,7 @@ DeviceDiscoveryNotify (
       }
     } else {
       // Give a fake setting to ResetPin
-      Snp->PhyDriver.ResetPin = NON_EXISTENT_ON_PRESIL;
+      Snp->PhyDriver.ResetPin = NON_EXISTENT_ON_PLATFORM;
     }
 
     if (fdt_get_path (DeviceTreeNode->DeviceTreeBase,
@@ -488,6 +525,26 @@ DeviceDiscoveryNotify (
     }
 
     SnpMode->MaxPacketSize = Snp->MacDriver.osi_dma->rx_buf_len;         // Preamble + SOF + Ether Frame (with VLAN tag +4bytes)
+
+    //Set PHY driver defaults will override as needed
+    Snp->PhyDriver.PhyAddress = PHY_DEFAULT_ADDRESS;
+    Snp->PhyDriver.ResetDelay = PHY_DEFAULT_RESET_DELAY_USEC;
+    Snp->PhyDriver.PostResetDelay = PHY_DEFAULT_POST_RESET_DELAY_USEC;
+
+    Status = GetFdtProperty (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "phy-handle", &PhyNodeHandle);
+    if (!EFI_ERROR (Status)) {
+      PhyNodeOffset = fdt_node_offset_by_phandle (DeviceTreeNode->DeviceTreeBase, PhyNodeHandle);
+      if (PhyNodeOffset > 0) {
+        //Get values can ignore status as we already setup defaults and these nodes are optional.
+        GetFdtProperty (DeviceTreeNode->DeviceTreeBase, PhyNodeOffset, "reg", &Snp->PhyDriver.PhyAddress);
+        GetFdtProperty (DeviceTreeNode->DeviceTreeBase, PhyNodeOffset, "nvidia,phy-rst-duration-usec", &Snp->PhyDriver.ResetDelay);
+        Status = GetFdtProperty (DeviceTreeNode->DeviceTreeBase, PhyNodeOffset, "nvidia,phy-rst-pdelay-msec", &Snp->PhyDriver.PostResetDelay);
+        if (!EFI_ERROR (Status)) {
+          //Convert to usec from msec
+          Snp->PhyDriver.PostResetDelay *= 1000;
+        }
+      }
+    }
 
     // Init PHY
     Status = PhyDxeInitialization (&Snp->PhyDriver, &Snp->MacDriver);

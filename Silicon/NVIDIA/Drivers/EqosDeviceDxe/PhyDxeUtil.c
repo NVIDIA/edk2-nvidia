@@ -41,8 +41,6 @@
 #include "PhyMarvell.h"
 #include "PhyRealtek.h"
 
-#define PHY_ID                                        0
-
 STATIC
 EFI_STATUS
 EFIAPI
@@ -53,7 +51,7 @@ PhyReset (
   EFI_STATUS    Status;
   EMBEDDED_GPIO *GpioProtocol = NULL;
 
-  if (PhyDriver->ResetPin == NON_EXISTENT_ON_PRESIL) {
+  if (PhyDriver->ResetPin == NON_EXISTENT_ON_PLATFORM) {
     return EFI_SUCCESS;
   }
 
@@ -68,12 +66,15 @@ PhyReset (
     DEBUG ((DEBUG_ERROR, "Failed to set gpio %x to %d %r\r\n", PhyDriver->ResetPin, PhyDriver->ResetMode0, Status));
     return Status;
   }
+  MicroSecondDelay(PhyDriver->ResetDelay);
+
   Status = GpioProtocol->Set (GpioProtocol, PhyDriver->ResetPin, PhyDriver->ResetMode1);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to set gpio %x to %d %r\r\n", PhyDriver->ResetPin, PhyDriver->ResetMode1, Status));
     return Status;
   }
-  return Status;
+  MicroSecondDelay(PhyDriver->PostResetDelay);
+  return PhySoftReset (PhyDriver);
 }
 
 // Function to read from MII register (PHY Access)
@@ -88,13 +89,14 @@ PhyRead (
 {
   INT32 OsiStatus;
 
-  if (PhyDriver->PhyPage != Page) {
-    osi_write_phy_reg(PhyDriver->MacDriver->osi_core, PHY_ID, PhyDriver->PhyPageSelRegister, Page);
-    MicroSecondDelay(20);
+  if ((PhyDriver->PhyPage != Page) &&
+      (PhyDriver->PhyPageSelRegister != 0)) {
+    osi_write_phy_reg(PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, PhyDriver->PhyPageSelRegister, Page);
+    MicroSecondDelay(PHY_PAGE_SWITCH_DELAY_USEC);
     PhyDriver->PhyPage = Page;
   }
 
-  OsiStatus = osi_read_phy_reg(PhyDriver->MacDriver->osi_core, PHY_ID, Reg);
+  OsiStatus = osi_read_phy_reg(PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, Reg);
   if (OsiStatus == -1) {
     return EFI_DEVICE_ERROR;
   }
@@ -114,13 +116,14 @@ PhyWrite (
   )
 {
   INT32 OsiStatus;
-  if (PhyDriver->PhyPage != Page) {
-    osi_write_phy_reg(PhyDriver->MacDriver->osi_core, PHY_ID, PhyDriver->PhyPageSelRegister, Page);
-    MicroSecondDelay(20);
+  if ((PhyDriver->PhyPage != Page) &&
+      (PhyDriver->PhyPageSelRegister != 0)) {
+    osi_write_phy_reg(PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, PhyDriver->PhyPageSelRegister, Page);
+    MicroSecondDelay(PHY_PAGE_SWITCH_DELAY_USEC);
     PhyDriver->PhyPage = Page;
   }
 
-  OsiStatus = osi_write_phy_reg(PhyDriver->MacDriver->osi_core, PHY_ID, Reg, Data);
+  OsiStatus = osi_write_phy_reg(PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, Reg, Data);
   if (OsiStatus != 0) {
     return EFI_DEVICE_ERROR;
   }
@@ -162,7 +165,9 @@ PhySoftReset (
     return EFI_TIMEOUT;
   }
 
-  PhyDriver->StartAutoNeg (PhyDriver);
+  if (PhyDriver->StartAutoNeg != NULL) {
+    PhyDriver->StartAutoNeg (PhyDriver);
+  }
 
   return EFI_SUCCESS;
 }
@@ -200,18 +205,23 @@ PhyConfig (
   PhyDriver->PhyOldLink = LINK_DOWN;
 
   Oui = PhyGetOui (PhyDriver);
-  if (Oui == PHY_MARVELL_OUI) {
-    PhyDriver->Config = PhyMarvellConfig;
-    PhyDriver->StartAutoNeg = PhyMarvellStartAutoNeg;
-    PhyDriver->CheckAutoNeg = PhyMarvellCheckAutoNeg;
-    PhyDriver->DetectLink = PhyMarvellDetectLink;
-  } else if (Oui == PHY_REALTEK_OUI) {
-    PhyDriver->Config = PhyRealtekConfig;
-    PhyDriver->StartAutoNeg = PhyRealtekStartAutoNeg;
-    PhyDriver->CheckAutoNeg = PhyRealtekCheckAutoNeg;
-    PhyDriver->DetectLink = PhyRealtekDetectLink;
-  } else {
-    return EFI_UNSUPPORTED;
+  switch (Oui) {
+    case PHY_MARVELL_OUI:
+      PhyDriver->Config = PhyMarvellConfig;
+      PhyDriver->StartAutoNeg = PhyMarvellStartAutoNeg;
+      PhyDriver->CheckAutoNeg = PhyMarvellCheckAutoNeg;
+      PhyDriver->DetectLink = PhyMarvellDetectLink;
+      break;
+
+    case PHY_REALTEK_OUI:
+      PhyDriver->Config = PhyRealtekConfig;
+      PhyDriver->StartAutoNeg = PhyRealtekStartAutoNeg;
+      PhyDriver->CheckAutoNeg = PhyRealtekCheckAutoNeg;
+      PhyDriver->DetectLink = PhyRealtekDetectLink;
+      break;
+
+    default:
+      return EFI_UNSUPPORTED;
   }
 
   Status = PhyDriver->Config (PhyDriver);
