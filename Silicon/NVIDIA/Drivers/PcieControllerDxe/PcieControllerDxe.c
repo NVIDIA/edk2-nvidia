@@ -39,7 +39,6 @@
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
-#include <Library/TegraPlatformInfoLib.h>
 
 #include <Protocol/BpmpIpc.h>
 #include <Protocol/PciHostBridgeResourceAllocation.h>
@@ -1009,18 +1008,10 @@ DeviceDiscoveryNotify (
   NVIDIA_REGULATOR_PROTOCOL *Regulator = NULL;
   CONST VOID                *Property = NULL;
   UINT32                    Val;
-  UINTN                     ChipID;
 
   Status = EFI_SUCCESS;
 
   switch (Phase) {
-  case DeviceDiscoveryDriverStart:
-    ChipID = TegraGetChipID();
-    if (ChipID == T234_CHIP_ID) {
-      Status = EFI_UNSUPPORTED;
-    }
-    break;
-
   case DeviceDiscoveryDriverBindingStart:
     RootBridge = AllocateZeroPool (sizeof (PCI_ROOT_BRIDGE));
     if (RootBridge == NULL) {

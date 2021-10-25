@@ -59,7 +59,6 @@
   MemoryAllocationLib
   DxeServicesTableLib
   DevicePathLib
-  TegraPlatformInfoLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable
