@@ -2,7 +2,7 @@
 
   PCIe Controller Driver private structures
 
-  Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -12,7 +12,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
   Portions provided under the following terms:
-  Copyright (c) 2019 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -21,7 +21,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2019 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 **/
 
@@ -63,6 +63,8 @@ typedef struct {
   UINT32                                           PcieCapOffset;
   UINT32                                           ASPML1SSCapOffset;
   BOOLEAN                                          LinkUp;
+  BOOLEAN                                          IsT194;
+  BOOLEAN                                          IsT234;
 } PCIE_CONTROLLER_PRIVATE;
 #define PCIE_CONTROLLER_PRIVATE_DATA_FROM_THIS(a) CR(a, PCIE_CONTROLLER_PRIVATE, PcieRootBridgeConfigurationIo, PCIE_CONTROLLER_SIGNATURE)
 

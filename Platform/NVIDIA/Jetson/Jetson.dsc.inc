@@ -92,6 +92,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(bf0d4599-20d4-414e-b2c5-3595b1cda402)}
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster|4
   gNVIDIATokenSpaceGuid.PcdPcdTegraMaxClusters|3

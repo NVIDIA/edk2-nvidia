@@ -36,6 +36,7 @@
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PciHostBridgeLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -665,9 +666,11 @@ InitializeController (
 
   config_gen3_gen4_eq_presets(Private);
 
-  val = MmioRead32(Private->DbiBase + GEN3_RELATED_OFF);
-  val &= ~GEN3_RELATED_OFF_GEN3_ZRXDC_NONCOMPL;
-  MmioWrite32(Private->DbiBase + GEN3_RELATED_OFF, val);
+  if (Private->IsT194) {
+    val = MmioRead32(Private->DbiBase + GEN3_RELATED_OFF);
+    val &= ~GEN3_RELATED_OFF_GEN3_ZRXDC_NONCOMPL;
+    MmioWrite32(Private->DbiBase + GEN3_RELATED_OFF, val);
+  }
 
   if (Private->UpdateFCFixUp) {
     val = MmioRead32(Private->DbiBase + CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF);
@@ -1008,6 +1011,7 @@ DeviceDiscoveryNotify (
   NVIDIA_REGULATOR_PROTOCOL *Regulator = NULL;
   CONST VOID                *Property = NULL;
   UINT32                    Val;
+  UINTN                     ChipID;
 
   Status = EFI_SUCCESS;
 
@@ -1025,6 +1029,13 @@ DeviceDiscoveryNotify (
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate private structure\r\n", __FUNCTION__));
       Status = EFI_OUT_OF_RESOURCES;
       goto ErrorExit;
+    }
+
+    ChipID = TegraGetChipID();
+    if (ChipID == T234_CHIP_ID) {
+      Private->IsT234 = TRUE;
+    } else if (ChipID == T194_CHIP_ID) {
+      Private->IsT194 = TRUE;
     }
 
     Private->ControllerHandle = ControllerHandle;
@@ -1080,11 +1091,20 @@ DeviceDiscoveryNotify (
 
     Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase,
                             DeviceTreeNode->NodeOffset,
-                            "max-link-speed",
+                            "nvidia,max-speed",
                             &PropertySize);
     if (Property != NULL) {
       CopyMem (&Private->MaxLinkSpeed, Property, sizeof (UINT32));
       Private->MaxLinkSpeed = SwapBytes32(Private->MaxLinkSpeed);
+    } else {
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase,
+                              DeviceTreeNode->NodeOffset,
+                              "max-link-speed",
+                              &PropertySize);
+      if (Property != NULL) {
+        CopyMem (&Private->MaxLinkSpeed, Property, sizeof (UINT32));
+        Private->MaxLinkSpeed = SwapBytes32(Private->MaxLinkSpeed);
+      }
     }
     if (Private->MaxLinkSpeed <= 0 || Private->MaxLinkSpeed > 4)
       Private->MaxLinkSpeed = 4;
@@ -1148,7 +1168,7 @@ DeviceDiscoveryNotify (
     /* Spec defined T_PVPERL delay (100ms) after enabling power to the slot */
     MicroSecondDelay(100000);
 
-    if (Private->CtrlId == 5) {
+    if (Private->CtrlId == 5 && Private->IsT194) {
       ConfigureSidebandSignals(Private);
     } else {
         NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
