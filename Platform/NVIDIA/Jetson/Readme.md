@@ -38,9 +38,6 @@ the Jetson Developer Kit.
 # Limitations
 - SetVariable is not supported at UEFI runtime for Jetson AGX Xavier
 - SetTime is not supported at UEFI runtime for Jetson AGX Xavier
-- On Jetson Xavier NX, when booting in device tree mode the kernel by default
-  will disable the clocks needed for runtime variable operation, this can be
-  disabled by passing "clk_ignore_unused" as a command line option to the kernel.
 - Only SDR25 is supported for SD-cards when booting Linux with ACPI
   Users may use alternative storage devices, such as USB mass storage,
   for better performance
@@ -54,6 +51,8 @@ the Jetson Developer Kit.
 - 1.1.2:
     - Fixed issue where SMMU faults from the ethernet controller may occur
       when booting Linux with the SMMU enabled.
+    - Fixed issue where SPI controller clocks were getting disabled at
+      runtime causing runtime variable services to crash.
 - 1.1.1:
     - Added support for configuring SPCR/DBG2 and added support for sub-type 5
       entries for Operating Systems that support that.
