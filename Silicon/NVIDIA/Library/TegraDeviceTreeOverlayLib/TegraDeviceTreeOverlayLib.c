@@ -387,15 +387,14 @@ ProcessOverlayDeviceTree (
   UINT32        Count;
   UINT32        NumberSubnodes;
 
-  Status = ReadBoardInfo(FdtBase);
-  if (EFI_ERROR(Status)) {
-    DEBUG((DEBUG_ERROR, "Error reading board config."));
-    return Status;
-  }
-
   Property = fdt_getprop (FdtOverlay, 0, "overlay-name", &PropertyLen);
   if (Property != NULL && PropertyLen != 0) {
     DEBUG((DEBUG_ERROR, "Processing \"%a\" DTB overlay\n", Property));
+  }
+
+  Status = ReadBoardInfo(FdtBase);
+  if (EFI_ERROR(Status)) {
+    DEBUG((DEBUG_INFO, "Warning: Failed to read board config.\n"));
   }
 
   fdt_for_each_subnode(FrNode, FdtOverlay, 0) {
