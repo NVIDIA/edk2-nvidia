@@ -123,41 +123,9 @@ void osd_receive_packet(void *priv, struct osi_rx_ring *rxring, unsigned int cha
 			unsigned int dma_buf_len, struct osi_rx_pkt_cx *rxpkt_cx,
 			struct osi_rx_swcx *rx_pkt_swcx){
 	EMAC_DRIVER *EmacDriver = (EMAC_DRIVER *)priv;
-	struct osi_rx_desc *rx_desc;
-
-	if ((rxpkt_cx->flags & OSI_PKT_CX_VALID) != OSI_PKT_CX_VALID) {
-		/* If packet is not valid, set the EmacDriver->rx_user_buffer_size = -1 so
-		 * that UEFI OSD can handle it.
-		 */
-		EmacDriver->rx_user_buffer_size = -1;
-		return;
-	}
-
-	if (EmacDriver->rx_user_buffer_size < rxpkt_cx->pkt_len) {
-		/* Buffer size is too small, we have to restore the cur_rx_idx
-		 * so that the same rx packet will be served when UEFI stack
-		 * polls with a larger buffer that can accomodate this packet.
-		 * Set EmacDriver->rx_user_buffer_size length to be length of
-		 * rx packet, to indicate buffer size needed to the SNP stack.
-		 */
-		EmacDriver->rx_user_buffer_size = rxpkt_cx->pkt_len;
-		DECR_RX_DESC_INDEX(rxring->cur_rx_idx, 1U);
-		return;
-	}
-
-	CopyMem((unsigned char *)EmacDriver->rx_user_buffer, (unsigned char *)rx_pkt_swcx->buf_virt_addr, rxpkt_cx->pkt_len);
-	EmacDriver->rx_user_buffer_size = rxpkt_cx->pkt_len;
-
-	while (rxring->refill_idx != rxring->cur_rx_idx) {
-		rx_desc = rxring->rx_desc + rxring->refill_idx;
-		rx_pkt_swcx = rxring->rx_swcx + rxring->refill_idx;
-		//TODO: Set OSI_PKT_CX_FLAGS_BUF_VALID here.
-		osi_rx_dma_desc_init(EmacDriver->osi_dma, rxring, 0);
-		INCR_RX_DESC_INDEX(rxring->refill_idx, 1U);
-	}
-
-	//Make sure descriptors are updated before starting DMA again
-	MemoryFence ();
+	EmacDriver->rx_pkt_swcx = rx_pkt_swcx;
+	rx_pkt_swcx->flags |= OSI_RX_SWCX_PROCESSED;
+	EmacDriver->rxpkt_cx = rxpkt_cx;
 }
 
 /**

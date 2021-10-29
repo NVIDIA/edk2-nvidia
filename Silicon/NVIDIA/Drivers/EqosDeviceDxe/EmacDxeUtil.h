@@ -40,9 +40,9 @@ typedef struct {
   struct osi_dma_priv_data    *osi_dma;
   void                        *tx_buffers[TX_DESC_CNT];
   void                        *tx_completed_buffer;
-  void                        *rx_user_buffer;
-  long                        rx_user_buffer_size;
-} EMAC_DRIVER;
+  struct osi_rx_pkt_cx        *rxpkt_cx;
+  struct osi_rx_swcx          *rx_pkt_swcx;
+  } EMAC_DRIVER;
 
 EFI_STATUS
 EFIAPI

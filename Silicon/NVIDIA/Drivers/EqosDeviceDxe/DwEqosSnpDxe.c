@@ -1030,9 +1030,13 @@ SnpGetStatus (
       *IrqStat |= EFI_SIMPLE_NETWORK_TRANSMIT_INTERRUPT;
     }
 
-    osi_process_rx_completions(Snp->MacDriver.osi_dma, 0, 0, &more_data_avail);
-    if (more_data_avail == OSI_ENABLE) {
-       *IrqStat |= EFI_SIMPLE_NETWORK_RECEIVE_INTERRUPT;
+    if (Snp->MacDriver.rx_pkt_swcx != NULL) {
+      *IrqStat |= EFI_SIMPLE_NETWORK_RECEIVE_INTERRUPT;
+    } else {
+      osi_process_rx_completions(Snp->MacDriver.osi_dma, 0, 0, &more_data_avail);
+      if (more_data_avail == OSI_ENABLE) {
+        *IrqStat |= EFI_SIMPLE_NETWORK_RECEIVE_INTERRUPT;
+      }
     }
     EfiReleaseLock (&Snp->Lock);
   }
@@ -1301,14 +1305,15 @@ SnpReceive (
   )
 {
   SIMPLE_NETWORK_DRIVER      *Snp;
-  UINT32                     received;
   EFI_MAC_ADDRESS            Dst;
   EFI_MAC_ADDRESS            Src;
   EFI_STATUS                 Status;
   UINT8                      *u_char_data = Data;
   UINT32                     more_data_avail;
+  BOOLEAN                    ReleasePacket;
 
 
+  ReleasePacket = FALSE;
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
   // Check preliminaries
@@ -1327,31 +1332,31 @@ SnpReceive (
     return EFI_ACCESS_DENIED;
   }
 
-  Snp->MacDriver.rx_user_buffer = Data;
-  Snp->MacDriver.rx_user_buffer_size = *BuffSize;
-  received = osi_process_rx_completions(Snp->MacDriver.osi_dma, 0, 1, &more_data_avail);
-
-  if (Snp->MacDriver.rx_user_buffer_size == -1) {
-    Status = EFI_DEVICE_ERROR;
-    goto Exit;
+  if (Snp->MacDriver.rx_pkt_swcx == NULL) {
+    osi_process_rx_completions(Snp->MacDriver.osi_dma, 0, 1, &more_data_avail);
   }
 
-  /* Snp->EmacDriver->rx_user_buffer_size will be updated to length of Rx packet. If Rx packet is
-   * larger than buffer size, then osi_dma->buffsize will be set to actual buf
-   * length needed.
-   */
-  if (*BuffSize < Snp->MacDriver.rx_user_buffer_size) {
-    DEBUG((DEBUG_ERROR, "Rx buffer %u < packet length %ld\n", *BuffSize, Snp->MacDriver.rx_user_buffer_size));
-    Status = EFI_BUFFER_TOO_SMALL;
-    /* Indicate the needed buffer size to the stack */
-    *BuffSize = Snp->MacDriver.rx_user_buffer_size;
-    goto Exit;
-  }
-
-  if (received == 0) {
+  if (Snp->MacDriver.rx_pkt_swcx == NULL) {
     Status = EFI_NOT_READY;
     goto Exit;
   }
+
+  if ((Snp->MacDriver.rxpkt_cx->flags & OSI_PKT_CX_VALID) == 0) {
+    Status = EFI_DEVICE_ERROR;
+    ReleasePacket = TRUE;
+    goto Exit;
+  }
+
+  if (*BuffSize < Snp->MacDriver.rxpkt_cx->pkt_len) {
+    DEBUG((DEBUG_ERROR, "Rx buffer %u < packet length %ld\n", *BuffSize, Snp->MacDriver.rxpkt_cx->pkt_len));
+    Status = EFI_BUFFER_TOO_SMALL;
+    /* Indicate the needed buffer size to the stack */
+    *BuffSize = Snp->MacDriver.rxpkt_cx->pkt_len;
+    goto Exit;
+  }
+
+  ReleasePacket = TRUE;
+  CopyMem (Data, Snp->MacDriver.rx_pkt_swcx->buf_virt_addr ,Snp->MacDriver.rxpkt_cx->pkt_len);
 
   if (HdrSize != NULL) {
     *HdrSize = Snp->SnpMode.MediaHeaderSize;
@@ -1386,7 +1391,12 @@ SnpReceive (
   Status = EFI_SUCCESS;
 
 Exit:
-
+  if (ReleasePacket) {
+    Snp->MacDriver.rx_pkt_swcx->flags |= OSI_RX_SWCX_BUF_VALID;
+    Snp->MacDriver.rx_pkt_swcx = NULL;
+    Snp->MacDriver.rxpkt_cx = NULL;
+    osi_rx_dma_desc_init (Snp->MacDriver.osi_dma, Snp->MacDriver.osi_dma->rx_ring[0], 0);
+  }
   EfiReleaseLock (&Snp->Lock);
   return Status;
 }

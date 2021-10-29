@@ -60,6 +60,8 @@ EmacDxeInitialization (
   DEBUG ((DEBUG_INFO, "SNP:MAC: %a ()\r\n", __FUNCTION__));
 
   EmacDriver->tx_completed_buffer = NULL;
+  EmacDriver->rxpkt_cx = NULL;
+  EmacDriver->rx_pkt_swcx = NULL;
 
   EmacDriver->osi_core = osi_get_core ();
   if (EmacDriver->osi_core == NULL) {
