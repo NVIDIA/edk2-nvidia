@@ -52,4 +52,4 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
-  gNVIDIATokenSpaceGuid.PcdPcdTegraMaxClusters
+  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters

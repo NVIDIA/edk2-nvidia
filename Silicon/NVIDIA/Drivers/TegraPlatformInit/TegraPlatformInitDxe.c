@@ -32,11 +32,78 @@
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <libfdt.h>
+
+STATIC
+VOID
+EFIAPI
+SetCpuInfoPcdsFromDtb (
+  VOID
+  )
+{
+  CONST VOID    *Dtb;
+  UINTN         MaxClusters;
+  UINTN         MaxCoresPerCluster;
+  INT32         CpuMapOffset;
+  INT32         Cluster0Offset;
+  INT32         NodeOffset;
+  CHAR8         ClusterNodeStr[] = "clusterxx";
+  CHAR8         CoreNodeStr[] = "corexx";
+
+  Dtb = (CONST VOID *) GetDTBBaseAddress ();
+
+  CpuMapOffset = fdt_path_offset (Dtb, "/cpus/cpu-map");
+  if (CpuMapOffset < 0) {
+    DEBUG ((DEBUG_ERROR,
+            "/cpus/cpu-map missing in DTB, using Clusters=%u, CoresPerCluster=%u\n",
+            PcdGet32 (PcdTegraMaxClusters),
+            PcdGet32 (PcdTegraMaxCoresPerCluster)));
+    return;
+  }
+
+  MaxClusters = 1;
+  while (TRUE) {
+    AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", MaxClusters);
+    NodeOffset = fdt_subnode_offset(Dtb, CpuMapOffset, ClusterNodeStr);
+    if (NodeOffset < 0) {
+      break;
+    }
+
+    MaxClusters++;
+    ASSERT (MaxClusters < 100);     // "clusterxx" max
+  }
+  DEBUG ((DEBUG_INFO, "MaxClusters=%u\n", MaxClusters));
+  PcdSet32S (PcdTegraMaxClusters, MaxClusters);
+
+  // Use cluster0 node to find max core subnode
+  Cluster0Offset = fdt_subnode_offset(Dtb, CpuMapOffset, "cluster0");
+  if (Cluster0Offset < 0) {
+    DEBUG ((DEBUG_ERROR,
+            "No cluster0 in DTB, using Clusters=%u, CoresPerCluster=%u\n",
+            PcdGet32 (PcdTegraMaxClusters),
+            PcdGet32 (PcdTegraMaxCoresPerCluster)));
+    return;
+  }
+
+  MaxCoresPerCluster = 1;
+  while (TRUE) {
+    AsciiSPrint (CoreNodeStr, sizeof (CoreNodeStr), "core%u", MaxCoresPerCluster);
+    NodeOffset = fdt_subnode_offset(Dtb, Cluster0Offset, CoreNodeStr);
+    if (NodeOffset < 0) {
+      break;
+    }
+
+    MaxCoresPerCluster++;
+    ASSERT (MaxCoresPerCluster < 100);     // "corexx" max
+  }
+  DEBUG ((DEBUG_INFO, "MaxCoresPerCluster=%u\n", MaxCoresPerCluster));
+  PcdSet32S (PcdTegraMaxCoresPerCluster, MaxCoresPerCluster);
+}
 
 STATIC
 EFI_STATUS
@@ -113,6 +180,8 @@ TegraPlatformInitialize (
       EmulatedVariablesUsed = TRUE;
     }
   }
+
+  SetCpuInfoPcdsFromDtb ();
 
   if (GetBootType () == TegrablBootRcm) {
     EmulatedVariablesUsed = TRUE;

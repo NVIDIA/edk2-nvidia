@@ -80,7 +80,7 @@
 
 // Platform CPU configuration
 #define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
-#define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdPcdTegraMaxClusters))
+#define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdTegraMaxClusters))
 #define PLATFORM_MAX_CPUS               (PLATFORM_MAX_CLUSTERS * \
                                          PLATFORM_MAX_CORES_PER_CLUSTER)
 /**

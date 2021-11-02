@@ -65,6 +65,8 @@
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
+  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
 
 [Depex]
   TRUE

@@ -76,8 +76,6 @@
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
-  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster|2
-  gNVIDIATokenSpaceGuid.PcdPcdTegraMaxClusters|4
 
 [PcdsDynamicHii.common.T194]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
@@ -94,8 +92,6 @@
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
-  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster|4
-  gNVIDIATokenSpaceGuid.PcdPcdTegraMaxClusters|3
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
 
 [PcdsDynamicHii.common.T234]
