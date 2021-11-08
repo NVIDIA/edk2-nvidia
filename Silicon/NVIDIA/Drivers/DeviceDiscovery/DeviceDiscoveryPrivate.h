@@ -67,9 +67,16 @@ typedef enum {
 } MRQ_RESET_COMMANDS;
 
 typedef enum {
-  CmdPgAssert = 0,
-  CmdPgDeassert = 1,
+  CmdPgQueryAbi = 0,
+  CmdPgSetState = 1,
+  CmdPgGetState = 2,
   CmdPgMax,
 } MRQ_PG_COMMANDS;
+
+typedef struct {
+  UINT32 Command;
+  UINT32 PgId;
+  UINT32 Argument;
+} MRQ_PG_COMMAND_PACKET;
 
 #endif

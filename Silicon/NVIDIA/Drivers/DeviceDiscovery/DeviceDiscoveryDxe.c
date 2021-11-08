@@ -396,21 +396,23 @@ GetResources (
   @param[in]     BpmpIpcProtocol     The instance of the NVIDIA_BPMP_IPC_PROTOCOL.
   @param[in]     PgId                power gate id to process
   @param[in]     Command             powergate command
+  @param[out]    Response            powergate response
+  @param[in]     ResponseSize        powergate response size
 
   @return EFI_SUCCESS                powergate asserted/deasserted.
   @return EFI_DEVICE_ERROR           Failed to assert/deassert powergate id
 **/
 EFI_STATUS
 BpmpProcessPgCommand (
-  IN NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol,
-  IN UINT32                   PgId,
-  IN MRQ_PG_COMMANDS          Command
+  IN  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol,
+  IN  MRQ_PG_COMMAND_PACKET    *Request,
+  OUT VOID                     *Response,
+  IN  UINTN                    ResponseSize
   )
 {
   EFI_STATUS Status;
-  UINT32 Request[3];
 
-  if (PgId == MAX_UINT32) {
+  if (Request->PgId == MAX_UINT32) {
     return EFI_SUCCESS;
   }
 
@@ -418,18 +420,14 @@ BpmpProcessPgCommand (
     return EFI_INVALID_PARAMETER;
   }
 
-  Request[0] = (UINT32)1;
-  Request[1] = PgId;
-  Request[2] = Command;
-
   Status = BpmpIpcProtocol->Communicate (
                               BpmpIpcProtocol,
                               NULL,
                               MRQ_PG,
-                              (VOID *)&Request,
-                              sizeof (Request),
-                              NULL,
-                              0,
+                              (VOID *)Request,
+                              sizeof (MRQ_PG_COMMAND_PACKET),
+                              Response,
+                              ResponseSize,
                               NULL
                               );
   if (Status == EFI_UNSUPPORTED) {
@@ -994,13 +992,18 @@ DeassertPgNodes (
 {
   NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
   EFI_STATUS               Status;
+  MRQ_PG_COMMAND_PACKET    Request;
 
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
     return EFI_NOT_READY;
   }
 
-  return BpmpProcessPgCommand (BpmpIpcProtocol, PgId, CmdPgDeassert);
+  Request.Command = CmdPgSetState;
+  Request.PgId = PgId;
+  Request.Argument = CmdPgStateOn;
+
+  return BpmpProcessPgCommand (BpmpIpcProtocol, &Request, NULL, 0);
 }
 
 /**
@@ -1021,13 +1024,52 @@ AssertPgNodes (
 {
   NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
   EFI_STATUS               Status;
+  MRQ_PG_COMMAND_PACKET    Request;
 
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
     return EFI_NOT_READY;
   }
 
-  return BpmpProcessPgCommand (BpmpIpcProtocol, PgId, CmdPgAssert);
+  Request.Command = CmdPgSetState;
+  Request.PgId = PgId;
+  Request.Argument = CmdPgStateOff;
+
+  return BpmpProcessPgCommand (BpmpIpcProtocol, &Request, NULL, 0);
+}
+
+/**
+  This function allows for getting state of specified power gate nodes.
+
+  @param[in]     This                The instance of the NVIDIA_POWER_GATE_NODE_PROTOCOL.
+  @param[in]     PgId                Id to get state of
+  @param[out]    PowerGateState      State of PgId
+
+  @return EFI_SUCCESS                Pg asserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to get Pg state
+**/
+EFI_STATUS
+GetStatePgNodes (
+  IN  NVIDIA_POWER_GATE_NODE_PROTOCOL   *This,
+  IN  UINT32                            PgId,
+  OUT UINT32                            *PowerGateState
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
+  EFI_STATUS               Status;
+  MRQ_PG_COMMAND_PACKET    Request;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  Request.Command = CmdPgGetState;
+  Request.PgId = PgId;
+  Request.Argument = MAX_UINT32;
+
+  return BpmpProcessPgCommand (BpmpIpcProtocol, &Request, PowerGateState, 4);
 }
 
 /**
@@ -1094,6 +1136,7 @@ GetPowerGateNodeProtocol(
 
   PgNode->Deassert    = DeassertPgNodes;
   PgNode->Assert      = AssertPgNodes;
+  PgNode->GetState    = GetStatePgNodes;
   PgNode->NumberOfPowerGates = NumberOfPgs;
   for (Index = 0; Index < PgNode->NumberOfPowerGates; Index++) {
     PgNode->PowerGateId[Index] = SwapBytes32 (PgIds[(Index *2) + 1]);
