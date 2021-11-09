@@ -159,12 +159,6 @@
   INF  MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
 
   #
-  # UFS support
-  #
-  INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
-  INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
-
-  #
   # Networking stack
   #
   INF NetworkPkg/DpcDxe/DpcDxe.inf

@@ -172,6 +172,14 @@
   INF ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
   INF ArmPkg/Universal/Smbios/SmbiosMiscDxe/SmbiosMiscDxe.inf
 
+  #
   # Ext4 filesystem support
   #
   INF Features/Ext4Pkg/Ext4Dxe/Ext4Dxe.inf
+
+  #
+  # UFS support
+  #
+  INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
+  INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
+

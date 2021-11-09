@@ -61,8 +61,10 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
     INF ArmPkg/Drivers/CpuDxe/CpuDxe.inf
     INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
     INF MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
+    INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
     INF MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
     INF MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
+    INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
     INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
     INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
     INF MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf

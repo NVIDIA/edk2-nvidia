@@ -289,9 +289,17 @@
   #
   Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf
 
+  #
   # Ext4 filesystem support
   #
   Features/Ext4Pkg/Ext4Dxe/Ext4Dxe.inf {
     <PcdsFixedAtBuild>
       gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x80000007
   }
+
+  #
+  # UFS support
+  #
+  MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
+  MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
+

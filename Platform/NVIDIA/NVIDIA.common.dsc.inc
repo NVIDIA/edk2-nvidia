@@ -822,12 +822,6 @@
   MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
 
   #
-  # UFS support
-  #
-  MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
-  MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
-
-  #
   # Usb Support
   #
   MdeModulePkg/Bus/Pci/UhciDxe/UhciDxe.inf
