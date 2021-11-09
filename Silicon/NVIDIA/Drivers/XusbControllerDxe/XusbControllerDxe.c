@@ -77,22 +77,34 @@ OnExitBootServices (
   EFI_STATUS                      Status;
   NVIDIA_POWER_GATE_NODE_PROTOCOL *PgProtocol;
   UINT32                          Index;
+  UINT32                          PgState;
 
   Private = (XUDC_CONTROLLER_PRIVATE_DATA *)Context;
 
   PgProtocol = NULL;
+  PgState    = CmdPgStateOff;
+  Status = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+    Status = PgProtocol->GetState (PgProtocol, PgProtocol->PowerGateId[Index], &PgState);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+    if (PgState == CmdPgStateOn) {
+      break;
+    }
+  }
 
   if (GetBootType () == TegrablBootRcm &&
-      Private->XudcBaseAddress != 0) {
+      Private->XudcBaseAddress != 0 &&
+      PgState == CmdPgStateOn) {
     MmioBitFieldWrite32 (Private->XudcBaseAddress + XUSB_DEV_XHCI_CTRL_0_OFFSET,
                          XUSB_DEV_XHCI_CTRL_0_RUN_BIT,
                          XUSB_DEV_XHCI_CTRL_0_RUN_BIT,
                          0);
-  }
-
-  Status = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
-  if (EFI_ERROR (Status)) {
-    return;
   }
 
   for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
