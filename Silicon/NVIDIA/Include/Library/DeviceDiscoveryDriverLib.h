@@ -53,7 +53,7 @@ typedef struct {
   BOOLEAN                AutoResetModule;
   BOOLEAN                AutoDeassertPg;
   BOOLEAN                SkipEdkiiNondiscoverableInstall;
-  BOOLEAN                AutoDeinitControllerOnExitBootServices;
+  BOOLEAN                SkipAutoDeinitControllerOnExitBootServices;
 } NVIDIA_DEVICE_DISCOVERY_CONFIG;
 extern NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig;
 

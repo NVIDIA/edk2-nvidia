@@ -324,7 +324,7 @@ DeviceDiscoveryBindingStart (
     }
   }
 
-  if (gDeviceDiscoverDriverConfig.AutoDeinitControllerOnExitBootServices) {
+  if (!gDeviceDiscoverDriverConfig.SkipAutoDeinitControllerOnExitBootServices) {
     Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
                                  TPL_NOTIFY,
                                  DeviceDiscoveryOnExitBootServices,

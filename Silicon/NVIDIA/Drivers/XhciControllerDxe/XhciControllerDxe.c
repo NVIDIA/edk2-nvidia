@@ -65,7 +65,6 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .AutoResetModule = FALSE,
     .AutoDeassertPg = TRUE,
     .SkipEdkiiNondiscoverableInstall = FALSE,
-    .AutoDeinitControllerOnExitBootServices = TRUE
 };
 
 /* XhciController Protocol Function used to return the Xhci
