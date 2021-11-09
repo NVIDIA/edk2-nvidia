@@ -980,7 +980,8 @@ FvbCheckPartitionFlash(
   ValidFlash = FALSE;
   CurrentDevicePath = PartitionDevicePath;
   while (IsDevicePathEnd (CurrentDevicePath) == FALSE) {
-    if (CurrentDevicePath->SubType == MSG_EMMC_DP) {
+    if ((CurrentDevicePath->SubType == MSG_EMMC_DP) ||
+        (CurrentDevicePath->SubType == MSG_UFS_DP)) {
       ValidFlash = TRUE;
       break;
     }

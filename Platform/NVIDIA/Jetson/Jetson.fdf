@@ -68,6 +68,8 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
     INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
     INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
     INF MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
+    INF MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
+    INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
     }
 
 !include Platform/NVIDIA/NVIDIA.fvmain.fdf.inc

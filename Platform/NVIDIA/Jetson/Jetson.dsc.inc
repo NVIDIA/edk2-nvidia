@@ -295,6 +295,9 @@
   #
   # UFS support
   #
+  Silicon/NVIDIA/Drivers/UfsControllerDxe/UfsControllerDxe.inf
   MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
-  MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
-
+  MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf {
+      <LibraryClasses>
+      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  }

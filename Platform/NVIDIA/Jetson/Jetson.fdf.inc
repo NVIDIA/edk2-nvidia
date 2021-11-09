@@ -180,6 +180,7 @@
   #
   # UFS support
   #
+  INF Silicon/NVIDIA/Drivers/UfsControllerDxe/UfsControllerDxe.inf
   INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
   INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
 
