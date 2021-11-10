@@ -40,9 +40,12 @@ else
   . venv/bin/activate
 fi
 
-
-_msg "Setting up build environment ($PLATFORM_BUILD)."
-stuart_setup -c $PLATFORM_BUILD
+if [ -d .git ]; then
+  _msg "Updating submodules ($PLATFORM_BUILD)."
+  stuart_setup -c $PLATFORM_BUILD
+else
+  _msg "Building from tarball"
+fi
 
 _msg "Updating build environment ($PLATFORM_BUILD)."
 # Requires mono to be installed following the instructions here:
