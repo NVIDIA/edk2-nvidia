@@ -550,7 +550,8 @@ CleanExtLinuxLine (
   }
 
   CurrentString = InputString;
-  while (*CurrentString == L' ') {
+  while ((*CurrentString == L' ') ||
+         (*CurrentString == L'\t')) {
     CurrentString++;
   }
 
@@ -558,7 +559,8 @@ CleanExtLinuxLine (
   EndSearch = CurrentString;
   if (*LastNonSpace != CHAR_NULL) {
     while (*EndSearch != CHAR_NULL) {
-      if (*EndSearch != L' ') {
+      if ((*EndSearch != L' ') &&
+          (*EndSearch != L'\t')) {
         LastNonSpace = EndSearch;
       }
       EndSearch++;
