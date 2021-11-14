@@ -264,6 +264,9 @@
 #Configuration Manager Objects.
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x28|UINT32|0x00000042
 
+#Signature of optional signed image header
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSignature|"NVDA"|VOID*|0x00000055
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C

@@ -290,6 +290,7 @@ UsbFirmwareDxeInitialize (
   EFI_PARTITION_TABLE_HEADER  PartitionHeader;
   VOID                        *PartitionEntryArray;
   CONST EFI_PARTITION_ENTRY   *PartitionEntry;
+  CHAR8                       *UsbFwBuffer;
 
   ChipID = TegraGetChipID();
   if (ChipID != T194_CHIP_ID) {
@@ -374,7 +375,8 @@ UsbFirmwareDxeInitialize (
                                            L"xusb-fw");
   if (PartitionEntry != NULL) {
     mUsbFwData.UsbFwSize = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
-    mUsbFwData.UsbFwBase = AllocateZeroPool (mUsbFwData.UsbFwSize);
+    UsbFwBuffer = AllocateZeroPool (mUsbFwData.UsbFwSize);
+    mUsbFwData.UsbFwBase = UsbFwBuffer;
     Status = ReadStorageData (StorageHandle,
                               PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE,
                               mUsbFwData.UsbFwBase,
@@ -382,6 +384,12 @@ UsbFirmwareDxeInitialize (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Failed to read Partition\r\n"));
     } else {
+      if (0 == AsciiStrnCmp ((CONST CHAR8 *) mUsbFwData.UsbFwBase,
+                             (CONST CHAR8 *) PcdGetPtr (PcdSignedImageHeaderSignature),
+                             sizeof (UINT32))) {
+        mUsbFwData.UsbFwSize -= PcdGet32 (PcdBootImgSigningHeaderSize);
+        mUsbFwData.UsbFwBase = UsbFwBuffer + PcdGet32 (PcdBootImgSigningHeaderSize);
+      }
       Status = gBS->InstallMultipleProtocolInterfaces (&ImageHandle,
                                                        &gNVIDIAUsbFwProtocolGuid,
                                                        (VOID*)&mUsbFwData,

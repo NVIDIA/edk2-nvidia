@@ -52,5 +52,9 @@
   gEfiBlockIoProtocolGuid
   gNVIDIANorFlashProtocolGuid
 
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSignature
+
 [Depex]
   gEdkiiNvVarStoreFormattedGuid
