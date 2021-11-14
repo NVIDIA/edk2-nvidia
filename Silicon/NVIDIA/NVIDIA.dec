@@ -196,8 +196,8 @@
 #Tegra UART OEM Table ID
   gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId|'TEGRAUAR'|UINT64|0x0000000A
 
-#Size of optional signing data header in boot.img partition.
-  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize|0x1000|UINT32|0x0000000B
+#Size of optional signed image header
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize|0x1000|UINT32|0x0000000B
 
 #Base address of MISCREG aperture.
   gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00100000|UINT64|0x0000000F

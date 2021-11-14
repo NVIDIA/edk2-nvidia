@@ -387,8 +387,8 @@ UsbFirmwareDxeInitialize (
       if (0 == AsciiStrnCmp ((CONST CHAR8 *) mUsbFwData.UsbFwBase,
                              (CONST CHAR8 *) PcdGetPtr (PcdSignedImageHeaderSignature),
                              sizeof (UINT32))) {
-        mUsbFwData.UsbFwSize -= PcdGet32 (PcdBootImgSigningHeaderSize);
-        mUsbFwData.UsbFwBase = UsbFwBuffer + PcdGet32 (PcdBootImgSigningHeaderSize);
+        mUsbFwData.UsbFwSize -= PcdGet32 (PcdSignedImageHeaderSize);
+        mUsbFwData.UsbFwBase = UsbFwBuffer + PcdGet32 (PcdSignedImageHeaderSize);
       }
       Status = gBS->InstallMultipleProtocolInterfaces (&ImageHandle,
                                                        &gNVIDIAUsbFwProtocolGuid,

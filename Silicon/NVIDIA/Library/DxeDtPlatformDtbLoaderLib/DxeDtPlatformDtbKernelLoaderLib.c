@@ -258,7 +258,7 @@ DtPlatformLoadDtb (
       }
 
       if(fdt_check_header (*Dtb) != 0) {
-        *Dtb += PcdGet32 (PcdBootImgSigningHeaderSize);
+        *Dtb += PcdGet32 (PcdSignedImageHeaderSize);
         if(fdt_check_header (*Dtb) != 0) {
           DEBUG ((DEBUG_ERROR, "%a: DTB on partition was corrupted, attempt use to UEFI DTB\r\n", __FUNCTION__));
           ValidFlash = FALSE;

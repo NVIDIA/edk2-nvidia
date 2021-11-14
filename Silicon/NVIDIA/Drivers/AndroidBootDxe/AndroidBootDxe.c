@@ -236,7 +236,7 @@ AndroidBootGetVerify (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  SignatureHeaderSize = PcdGet32 (PcdBootImgSigningHeaderSize);
+  SignatureHeaderSize = PcdGet32 (PcdSignedImageHeaderSize);
   RcmKernelBase = (VOID *) PcdGet64 (PcdRcmKernelBase);
   RcmKernelSize = PcdGet64 (PcdRcmKernelSize);
 

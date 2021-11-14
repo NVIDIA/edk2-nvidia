@@ -1224,7 +1224,7 @@ BootAndroidStylePartition (
 
   Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageSize);
   if (EFI_ERROR (Status)) {
-    Offset = FixedPcdGet32 (PcdBootImgSigningHeaderSize);
+    Offset = FixedPcdGet32 (PcdSignedImageHeaderSize);
     Status = DiskIo->ReadDisk (
                       DiskIo,
                       BlockIo->Media->MediaId,

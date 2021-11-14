@@ -53,7 +53,7 @@
   gNVIDIANorFlashProtocolGuid
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSignature
 
 [Depex]

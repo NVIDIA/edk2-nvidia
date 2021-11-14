@@ -78,6 +78,6 @@
   gEfiPartTypeSystemPartGuid
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
   gNVIDIATokenSpaceGuid.PcdRcmKernelBase
   gNVIDIATokenSpaceGuid.PcdRcmKernelSize

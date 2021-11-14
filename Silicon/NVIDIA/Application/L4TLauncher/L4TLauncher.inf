@@ -62,7 +62,7 @@
   gEfiLoadFile2ProtocolGuid
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdBootImgSigningHeaderSize
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
 
 [UserExtensions.TianoCore."ExtraFiles"]
   L4TLauncherExtra.uni
