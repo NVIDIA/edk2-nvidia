@@ -72,13 +72,15 @@ GetDTBBaseAddressInternal (
 );
 
 /**
-  Retrieve RCM Blob Address
+  Retrieve Carveout Info
 
 **/
-BOOLEAN
+EFI_STATUS
 EFIAPI
-GetRCMBaseAddressInternal (
-  OUT UINT64 *DTBBaseAddress
+GetCarveoutInfoInternal (
+  IN TEGRA_CARVEOUT_TYPE Type,
+  IN UINTN               *Base,
+  IN UINT32              *Size
 );
 
 /**

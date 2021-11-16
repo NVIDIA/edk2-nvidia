@@ -221,23 +221,24 @@ GetDTBBaseAddress (
 }
 
 /**
-  Retrieve RCM Blob Address
+  Retrieve Carveout Info
 
 **/
-UINT64
+EFI_STATUS
 EFIAPI
-GetRCMBaseAddress (
-  VOID
+GetCarveoutInfo (
+  IN TEGRA_CARVEOUT_TYPE Type,
+  IN UINTN               *Base,
+  IN UINT32              *Size
 )
 {
-  UINTN   ChipID;
-  UINTN   CpuBootloaderAddress;
-  UINT64  RCMBaseAddress;
-  BOOLEAN ValidPrivatePlatform;
+  EFI_STATUS Status;
+  UINTN      ChipID;
+  UINTN      CpuBootloaderAddress;
 
-  ValidPrivatePlatform = GetRCMBaseAddressInternal (&RCMBaseAddress);
-  if (ValidPrivatePlatform) {
-    return RCMBaseAddress;
+  Status = GetCarveoutInfoInternal (Type, Base, Size);
+  if (!EFI_ERROR (Status)) {
+    return Status;
   }
 
   ChipID = TegraGetChipID();
@@ -246,11 +247,11 @@ GetRCMBaseAddress (
 
   switch (ChipID) {
     case T194_CHIP_ID:
-      return T194GetRCMBaseAddress(CpuBootloaderAddress);
+      return T194GetCarveoutInfo(CpuBootloaderAddress, Type, Base, Size);
     case T234_CHIP_ID:
-      return T234GetRCMBaseAddress(CpuBootloaderAddress);
+      return T234GetCarveoutInfo(CpuBootloaderAddress, Type, Base, Size);
     default:
-      return 0x0;
+      return EFI_UNSUPPORTED;
   }
 }
 

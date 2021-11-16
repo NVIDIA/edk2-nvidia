@@ -45,7 +45,9 @@ RcmDxeInitialize (
   IN EFI_SYSTEM_TABLE         *SystemTable
 )
 {
+  EFI_STATUS         Status;
   TEGRABL_BLOBHEADER *RcmBlobHeader;
+  UINT32             RcmBlobSize;
   UINT8              BlobMagic[4] = { 'b' , 'l' , 'o' , 'b' };
   UINTN              Count;
 
@@ -53,11 +55,10 @@ RcmDxeInitialize (
     return EFI_NOT_FOUND;
   }
 
-  RcmBlobHeader = (TEGRABL_BLOBHEADER *) GetRCMBaseAddress ();
-
-  if (RcmBlobHeader == NULL) {
+  Status = GetCarveoutInfo (TegraRcmCarveout, (UINTN *)RcmBlobHeader, &RcmBlobSize);
+  if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: RCM blob not found\n", __FUNCTION__));
-    return EFI_NOT_FOUND;
+    return Status;
   }
 
   if (CompareMem (RcmBlobHeader->BlobMagic, BlobMagic, sizeof (BlobMagic)) != 0) {

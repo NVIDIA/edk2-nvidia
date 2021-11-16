@@ -136,19 +136,36 @@ T194GetDTBBaseAddress (
 }
 
 /**
-  Retrieve RCM Blob Address
+  Retrieve Carveout Info
 
 **/
-UINT64
-T194GetRCMBaseAddress (
-  IN UINTN CpuBootloaderAddress
+EFI_STATUS
+EFIAPI
+T194GetCarveoutInfo (
+  IN UINTN               CpuBootloaderAddress,
+  IN TEGRA_CARVEOUT_TYPE Type,
+  IN UINTN               *Base,
+  IN UINT32              *Size
   )
 {
   TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  return CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
+  switch (Type) {
+    case TegraRcmCarveout:
+      *Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
+      *Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;
+      break;
+    case TegraBpmpFwCarveout:
+      *Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BPMP].Base;
+      *Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BPMP].Size;
+      break;
+    default:
+      return EFI_UNSUPPORTED;
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
