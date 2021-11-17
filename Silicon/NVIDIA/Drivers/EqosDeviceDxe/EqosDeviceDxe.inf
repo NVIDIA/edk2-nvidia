@@ -2,7 +2,7 @@
 #
 #  DW EQoS device tree binding driver
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -34,6 +34,7 @@
   PhyDxeUtil.c
   PhyMarvell.c
   PhyRealtek.c
+  PhyMgbe.c
   DtAcpiMacUpdate.c
 
   nvethernetrm/osd.c
@@ -78,6 +79,7 @@
   IoLib
   FdtLib
   DeviceDiscoveryDriverLib
+  DeviceTreeHelperLib
   TegraPlatformInfoLib
   NetLib
   DmaLib

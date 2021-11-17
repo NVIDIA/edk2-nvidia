@@ -2,7 +2,7 @@
 
   DW EQoS device tree binding driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -195,10 +195,19 @@ DeviceDiscoveryNotify (
   INT32                        PhyNodeOffset;
   INT32                        OsiReturn;
   struct osi_hw_features       hw_feat;
+  INT32                        MacRegionIndex;
+  INT32                        XpcsRegionIndex;
 
   PlatformType = TegraGetPlatform ();
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
+
+      if ((DeviceTreeNode == NULL) ||
+          (DeviceTreeNode->NodeOffset < 0))
+      {
+        return EFI_INVALID_PARAMETER;
+      }
+
       Status = gBS->HandleProtocol (
                       ControllerHandle,
                       &gNVIDIANonDiscoverableDeviceProtocolGuid,
@@ -239,8 +248,20 @@ DeviceDiscoveryNotify (
       SnpMode       = &Snp->SnpMode;
       Snp->Snp.Mode = SnpMode;
 
+      MacRegionIndex = fdt_stringlist_search (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "reg-names", "mac");
+      if (MacRegionIndex < 0) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to retrieve mac region details from node at offset 0x%x: %a assuming 0\r\n",
+          __FUNCTION__,
+          (UINTN)DeviceTreeNode->NodeOffset,
+          fdt_strerror (MacRegionIndex)
+          ));
+        MacRegionIndex = 0;
+      }
+
       // Get MAC controller base address
-      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &Snp->MacBase, &RegionSize);
+      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, (UINTN)MacRegionIndex, &Snp->MacBase, &RegionSize);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
         return EFI_UNSUPPORTED;
@@ -470,11 +491,32 @@ DeviceDiscoveryNotify (
         return Status;
       }
 
+      Snp->PhyDriver.MgbeDevice = CompareGuid (Device->Type, &gDwMgbeNetNonDiscoverableDeviceGuid);
+
       // Init EMAC
-      if (CompareGuid (Device->Type, &gDwMgbeNetNonDiscoverableDeviceGuid)) {
-        Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase, OSI_MAC_HW_MGBE);
+      if (Snp->PhyDriver.MgbeDevice) {
+        // Get XPCS base address
+        XpcsRegionIndex = fdt_stringlist_search (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "reg-names", "xpcs");
+        if (XpcsRegionIndex < 0) {
+          DEBUG ((
+            DEBUG_ERROR,
+            "%a: failed to retrieve xpcs region details from node at offset 0x%x: %a\r\n",
+            __FUNCTION__,
+            (UINTN)DeviceTreeNode->NodeOffset,
+            fdt_strerror (XpcsRegionIndex)
+            ));
+          return EFI_UNSUPPORTED;
+        }
+
+        Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, (UINTN)XpcsRegionIndex, &Snp->XpcsBase, &RegionSize);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
+          return EFI_UNSUPPORTED;
+        }
+
+        Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase, Snp->XpcsBase, OSI_MAC_HW_MGBE);
       } else {
-        Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase, OSI_MAC_HW_EQOS);
+        Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase, 0, OSI_MAC_HW_EQOS);
       }
 
       if (EFI_ERROR (Status)) {
@@ -482,7 +524,7 @@ DeviceDiscoveryNotify (
         return EFI_DEVICE_ERROR;
       }
 
-      SnpMode->MaxPacketSize = Snp->MacDriver.osi_dma->rx_buf_len;       // Preamble + SOF + Ether Frame (with VLAN tag +4bytes)
+      SnpMode->MaxPacketSize = Snp->MacDriver.osi_dma->mtu;
 
       // Set PHY driver defaults will override as needed
       Snp->PhyDriver.PhyAddress     = PHY_DEFAULT_ADDRESS;
@@ -520,7 +562,8 @@ DeviceDiscoveryNotify (
       if (OsiReturn < 0) {
         DEBUG ((DEBUG_ERROR, "Failed to initialize MAC DMA\n"));
       } else {
-        OsiReturn = osi_hw_core_init (Snp->MacDriver.osi_core, hw_feat.tx_fifo_size, hw_feat.rx_fifo_size);
+        Snp->DmaInitialized = TRUE;
+        OsiReturn           = osi_hw_core_init (Snp->MacDriver.osi_core, hw_feat.tx_fifo_size, hw_feat.rx_fifo_size);
         if (OsiReturn < 0) {
           DEBUG ((DEBUG_ERROR, "Failed to initialize MAC Core: %d\n", OsiReturn));
         }

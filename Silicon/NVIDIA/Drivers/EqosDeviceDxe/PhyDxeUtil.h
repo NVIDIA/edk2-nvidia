@@ -3,7 +3,7 @@
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Limited. All rights reserved.
-  Copyright (c) 2020 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -55,6 +55,7 @@ struct _PHY_DRIVER {
   UINT32                         PhyAddress;
   UINT32                         ResetDelay;
   UINT32                         PostResetDelay;
+  BOOLEAN                        MgbeDevice;
 };
 
 #define PHY_AUTONEG_IDLE     0
@@ -90,9 +91,10 @@ struct _PHY_DRIVER {
 /************************************************************************************************************/
 #define NON_EXISTENT_ON_PLATFORM  0xDEADBEEF
 
-#define SPEED_1000  1000
-#define SPEED_100   100
-#define SPEED_10    10
+#define SPEED_10000  10000
+#define SPEED_1000   1000
+#define SPEED_100    100
+#define SPEED_10     10
 
 #define DUPLEX_FULL  1
 #define DUPLEX_HALF  0
@@ -105,6 +107,26 @@ struct _PHY_DRIVER {
 #define PHY_DEFAULT_RESET_DELAY_USEC       0
 #define PHY_DEFAULT_POST_RESET_DELAY_USEC  0
 #define PHY_PAGE_SWITCH_DELAY_USEC         20
+
+// Clocks section
+#define TX_CLK_RATE_1G    125000000
+#define TX_CLK_RATE_100M  25000000
+#define TX_CLK_RATE_10M   2500000
+
+#define ETHER_MGBE_TX_CLK_USXGMII_10G      644531250UL
+#define ETHER_MGBE_TX_PCS_CLK_USXGMII_10G  156250000UL
+#define ETHER_MGBE_MAC_DIV_RATE_10G        312500000UL
+
+#define ETHER_MGBE_RX_PCS_CLK_USXGMII_10G  156250000UL
+#define ETHER_RX_INPUT_CLK_RATE            125000000UL
+#define ETHER_MGBE_RX_PCS_CLK_USXGMII_10G  156250000UL
+
+// need this?
+#define ETHER_MGBE_RX_CLK_USXGMII_10G  644531250UL
+
+#define ETHER_EEE_PCS_CLK_RATE      102000000UL
+#define ETHER_MGBE_APP_CLK_RATE     480000000UL
+#define ETHER_MGBE_PTP_REF_CLK_10G  312500000UL
 
 EFI_STATUS
 EFIAPI
