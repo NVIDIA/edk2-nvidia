@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2019 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
@@ -28,6 +28,7 @@ EFIAPI
 EmacDxeInitialization (
   IN  EMAC_DRIVER  *EmacDriver,
   IN  UINTN        MacBaseAddress,
+  IN  UINTN        XpcsBaseAddress,
   IN  UINT32       MacType
   )
 {
@@ -60,6 +61,7 @@ EmacDxeInitialization (
 
   // Initialize the variables of osi_core
   EmacDriver->osi_core->base                 = (void *)MacBaseAddress;
+  EmacDriver->osi_core->xpcs_base            = (void *)XpcsBaseAddress;
   EmacDriver->osi_core->mac                  = MacType;
   EmacDriver->osi_core->num_mtl_queues       = 1;
   EmacDriver->osi_core->mtl_queues[0]        = 0;
@@ -98,7 +100,7 @@ EmacDxeInitialization (
   }
 
   osi_set_rx_buf_len (EmacDriver->osi_dma);
-  MaxPacketSize = EmacDriver->osi_dma->rx_buf_len;
+  MaxPacketSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (EmacDriver->osi_dma->rx_buf_len));
 
   // Allocate TX DMA resources
   EmacDriver->osi_dma->tx_ring[0] = AllocateZeroPool (sizeof (struct osi_tx_ring));

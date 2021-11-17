@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2020 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2012-2014, ARM Limited. All rights reserved.
 
@@ -48,8 +48,11 @@ typedef struct {
   UINTN                          MacBase;
   UINT32                         NumMacs;
 
+  UINTN                          XpcsBase;
+
   EFI_PHYSICAL_ADDRESS           MaxAddress;
 
+  BOOLEAN                        DmaInitialized;
   BOOLEAN                        BroadcastEnabled;
   UINT32                         MulticastFiltersEnabled;
 

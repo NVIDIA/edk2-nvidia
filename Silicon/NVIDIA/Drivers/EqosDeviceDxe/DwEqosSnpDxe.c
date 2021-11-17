@@ -1,7 +1,7 @@
 /** @file
   DW EMAC SNP DXE driver
 
-  Copyright (c) 2019 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
 
@@ -192,7 +192,10 @@ SnpInitialize (
     gBS->CloseEvent (Snp->ExitBootServiceEvent);
   }
 
-  osi_hw_dma_init (Snp->MacDriver.osi_dma);
+  if (!Snp->DmaInitialized) {
+    osi_hw_dma_init (Snp->MacDriver.osi_dma);
+    Snp->DmaInitialized = TRUE;
+  }
 
   osi_start_mac (Snp->MacDriver.osi_core);
 
@@ -255,6 +258,7 @@ SnpReset (
   osi_stop_mac (Snp->MacDriver.osi_core);
 
   osi_hw_dma_deinit (Snp->MacDriver.osi_dma);
+  Snp->DmaInitialized = FALSE;
 
   // Initiate a PHY reset
   Status = PhySoftReset (&Snp->PhyDriver);
@@ -264,6 +268,7 @@ SnpReset (
   }
 
   osi_hw_dma_init (Snp->MacDriver.osi_dma);
+  Snp->DmaInitialized = TRUE;
 
   osi_start_mac (Snp->MacDriver.osi_core);
 
@@ -315,6 +320,7 @@ SnpShutdown (
   osi_stop_mac (Snp->MacDriver.osi_core);
 
   osi_hw_dma_deinit (Snp->MacDriver.osi_dma);
+  Snp->DmaInitialized = FALSE;
 
   Snp->SnpMode.State = EfiSimpleNetworkStarted;
 
@@ -1345,6 +1351,7 @@ SnpReceive (
 
   ReleasePacket = TRUE;
   CopyMem (Data, Snp->MacDriver.rx_pkt_swcx->buf_virt_addr, Snp->MacDriver.rxpkt_cx->pkt_len);
+  *BuffSize = Snp->MacDriver.rxpkt_cx->pkt_len;
 
   if (HdrSize != NULL) {
     *HdrSize = Snp->SnpMode.MediaHeaderSize;

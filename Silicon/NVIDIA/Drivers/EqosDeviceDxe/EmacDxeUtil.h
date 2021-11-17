@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2019 - 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Limited. All rights reserved.
@@ -30,6 +30,7 @@ EFIAPI
 EmacDxeInitialization (
   IN  EMAC_DRIVER  *EmacDriver,
   IN  UINTN        MacBaseAddress,
+  IN  UINTN        XpcsBaseAddress,
   IN  UINT32       MacType
   );
 
