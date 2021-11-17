@@ -43,6 +43,7 @@ typedef struct {
   UINT32                                           Signature;
 
   NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL PcieRootBridgeConfigurationIo;
+  NVIDIA_BPMP_IPC_PROTOCOL                         *BpmpIpcProtocol;
 
   EFI_HANDLE                                       ControllerHandle;
 
@@ -65,6 +66,8 @@ typedef struct {
   BOOLEAN                                          LinkUp;
   BOOLEAN                                          IsT194;
   BOOLEAN                                          IsT234;
+  BOOLEAN                                          EnableSRNS;
+  BOOLEAN                                          EnableExtREFCLK;
 } PCIE_CONTROLLER_PRIVATE;
 #define PCIE_CONTROLLER_PRIVATE_DATA_FROM_THIS(a) CR(a, PCIE_CONTROLLER_PRIVATE, PcieRootBridgeConfigurationIo, PCIE_CONTROLLER_SIGNATURE)
 
@@ -117,10 +120,16 @@ typedef struct {
 #define APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE      BIT(5)
 #define APPL_PINMUX_CLKREQ_OUT_OVRD_EN          BIT(9)
 #define APPL_PINMUX_CLKREQ_OUT_OVRD             BIT(10)
+#define APPL_PINMUX_CLKREQ_DEFAULT_VALUE        BIT(13)
 
-#define APPL_CTRL                               0x4
-#define APPL_CTRL_SYS_PRE_DET_STATE             BIT(6)
-#define APPL_CTRL_LTSSM_EN                      BIT(7)
+#define APPL_CTRL                                       0x4
+#define APPL_CTRL_SYS_PRE_DET_STATE                     BIT(6)
+#define APPL_CTRL_LTSSM_EN                              BIT(7)
+#define APPL_CTRL_HW_HOT_RST_EN                         BIT(20)
+#define APPL_CTRL_HW_HOT_RST_MODE_MASK                  0x3
+#define APPL_CTRL_HW_HOT_RST_MODE_SHIFT                 22
+#define APPL_CTRL_HW_HOT_RST_MODE_IMDT_RST              0x1
+#define APPL_CTRL_HW_HOT_RST_MODE_IMDT_RST_LTSSM_EN     0x2
 
 #define APPL_INTR_EN_L0_0                       0x8
 #define APPL_INTR_EN_L0_0_MSI_RCV_INT_EN        BIT(4)
@@ -132,12 +141,20 @@ typedef struct {
 #define APPL_INTR_EN_L1_8_INTX_EN               BIT(11)
 #define APPL_INTR_EN_L1_8_AER_INT_EN            BIT(15)
 
+#define APPL_LINK_STATUS                        0xCC
+#define APPL_LINK_STATUS_RDLH_LINK_UP           BIT(0)
+
 #define APPL_DEBUG                              0xD0
 #define APPL_DEBUG_PM_LINKST_IN_L2_LAT          BIT(21)
 #define APPL_DEBUG_PM_LINKST_IN_L0              0x11
 #define APPL_DEBUG_LTSSM_STATE_MASK             0x1F8
 #define APPL_DEBUG_LTSSM_STATE_SHIFT            3
 #define LTSSM_STATE_PRE_DETECT                  5
+#define LTSSM_STATE_DETECT_QUIET                0x00
+#define LTSSM_STATE_DETECT_ACT                  0x08
+#define LTSSM_STATE_PRE_DETECT_QUIET            0x28
+#define LTSSM_STATE_DETECT_WAIT                 0x30
+#define LTSSM_STATE_L2_IDLE                     0xa8
 
 #define APPL_RADM_STATUS                        0xE4
 #define APPL_PM_XMT_TURNOFF_STATE               BIT(0)
@@ -177,6 +194,7 @@ typedef struct {
 #define  PCI_EXP_LNKSTA_NLW_SHIFT 4        /* start of NLW mask in link status */
 
 #define PCI_EXP_LNKCTL_STATUS   0x80
+#define PCI_EXP_LNKCTL_STATUS_SLOT_CLOCK_CONFIG BIT(28)
 #define PCI_EXP_LNKCTL_STATUS_DLL_ACTIVE   BIT(29)
 
 #define PCI_EXP_LNKCTL_STS_2    0xa0
@@ -193,11 +211,20 @@ typedef struct {
 #define L0S_ENTRANCE_LAT_MASK                             0x07000000
 #define L1_ENTRANCE_LAT_SHIFT                             27
 #define L1_ENTRANCE_LAT_MASK                              0x38000000
+#define CC_N_FTS_SHIFT                                    16
 #define N_FTS_SHIFT                                       8
 #define N_FTS_MASK                                        0xff
 #define N_FTS_VAL                                         52
 
+#define PCIE_PORT_LINK_CONTROL                            0x710
+#define PORT_LINK_CAP_MASK                                0x3f0000
+#define PORT_LINK_CAP_SHIFT                               16
+#define PORT_LINK_DLL_LINK_EN                             BIT(5)
+#define PORT_LINK_FAST_LINK_MODE                          BIT(7)
+
 #define PORT_LOGIC_GEN2_CTRL                              0x80C
+#define PORT_LOGIC_LINK_WIDTH_MASK                        0x1f00
+#define PORT_LOGIC_LINK_WIDTH_SHIFT                       8
 #define PORT_LOGIC_GEN2_CTRL_DIRECT_SPEED_CHANGE          BIT(17)
 #define FTS_MASK                                          0xff
 #define FTS_VAL                                           52
@@ -236,6 +263,11 @@ typedef struct {
 #define CAP_SPCIE_CAP_OFF_USP_TX_PRESET0_SHIFT 8
 
 #define GEN3_GEN4_EQ_PRESET_INIT    5
+
+#define PCI_EXT_CAP_ID_DLF            0x25  /* Data Link Feature */
+/* Data Link Feature */
+#define PCI_DLF_CAP                   0x04        /* Capabilities Register */
+#define  PCI_DLF_EXCHANGE_ENABLE      0x80000000  /* Data Link Feature Exchange Enable */
 
 #define PCI_EXT_CAP_ID_PL_16GT        0x26  /* Physical Layer 16.0 GT/s */
 /* Physical Layer 16.0 GT/s */

@@ -102,6 +102,29 @@ CHAR8 CoreResetNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
   "core_rst"
 };
 
+#pragma pack (1)
+struct cmd_uphy_pcie_controller_state_request {
+    /*
+     * @brief PCIE controller number
+     * Valid numbers for T194: 0, 1, 2, 3, 4
+     * Valid numbers for T234: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+     */
+    uint8_t pcie_controller;
+    uint8_t enable;
+};
+
+struct mrq_uphy_request {
+    /** @brief Lane number. */
+    uint16_t lane;
+    /** @brief Sub-command id. */
+    uint16_t cmd;
+
+    union {
+        struct cmd_uphy_pcie_controller_state_request controller_state;
+    };
+};
+#pragma pack ()
+
 /*
  * These interfaces resemble the pci_find_*capability() interfaces, but these
  * are for configuring host controllers, which are bridges *to* PCI devices but
@@ -230,7 +253,12 @@ STATIC VOID config_gen3_gen4_eq_presets(PCIE_CONTROLLER_PRIVATE *Private)
 
   val = MmioRead32(Private->DbiBase + GEN3_EQ_CONTROL_OFF);
   val &= ~GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_MASK;
-  val |= (0x360 << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
+  if (Private->IsT194) {
+    val |= (0x360 << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
+  }
+  if (Private->IsT234) {
+    val |= (0x340 << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
+  }
   val &= ~GEN3_EQ_CONTROL_OFF_FB_MODE_MASK;
   MmioWrite32(Private->DbiBase + GEN3_EQ_CONTROL_OFF, val);
 
@@ -482,6 +510,227 @@ PcieConfigurationWrite (
 STATIC
 EFI_STATUS
 EFIAPI
+PrepareHost (
+    PCIE_CONTROLLER_PRIVATE   *Private,
+    IN EFI_HANDLE ControllerHandle,
+    IN CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
+    )
+{
+  EFI_STATUS Status;
+  UINT32 val;
+  UINT32 Index;
+  UINT32 Count;
+
+  val = MmioRead32(Private->DbiBase + PCI_IO_BASE);
+  val &= ~(IO_BASE_IO_DECODE | IO_BASE_IO_DECODE_BIT8);
+  MmioWrite32 (Private->DbiBase + PCI_IO_BASE, val);
+
+  val = MmioRead32(Private->DbiBase + PCI_PREF_MEMORY_BASE);
+  val |= CFG_PREF_MEM_LIMIT_BASE_MEM_DECODE;
+  val |= CFG_PREF_MEM_LIMIT_BASE_MEM_LIMIT_DECODE;
+  MmioWrite32 (Private->DbiBase + PCI_PREF_MEMORY_BASE, val);
+
+  /* Enable as 0xFFFF0001 response for CRS */
+  val = MmioRead32(Private->DbiBase + PORT_LOGIC_AMBA_ERROR_RESPONSE_DEFAULT);
+  val &= ~(AMBA_ERROR_RESPONSE_CRS_MASK << AMBA_ERROR_RESPONSE_CRS_SHIFT);
+  val |= (AMBA_ERROR_RESPONSE_CRS_OKAY_FFFF0001 << AMBA_ERROR_RESPONSE_CRS_SHIFT);
+  MmioWrite32(Private->DbiBase + PORT_LOGIC_AMBA_ERROR_RESPONSE_DEFAULT, val);
+
+  /* Configure Max lane width from DT */
+  val = MmioRead32(Private->DbiBase + PCI_EXP_LNKCAP);
+  val &= ~PCI_EXP_LNKCAP_MLW;
+  val |= (Private->NumLanes << PCI_EXP_LNKSTA_NLW_SHIFT);
+  MmioWrite32(Private->DbiBase + PCI_EXP_LNKCAP, val);
+
+  /* Clear Slot Clock Configuration bit if SRNS configuration */
+  if (Private->EnableSRNS) {
+    val = MmioRead32(Private->DbiBase + PCI_EXP_LNKCTL_STATUS);
+    val &= PCI_EXP_LNKCTL_STATUS_SLOT_CLOCK_CONFIG;
+    MmioWrite32(Private->DbiBase + PCI_EXP_LNKCTL_STATUS, val);
+  }
+
+  config_gen3_gen4_eq_presets(Private);
+
+  /* Disable ASPM sub-states (L1.1 & L1.2) as we have removed dependency on CLKREQ signal */
+  val = MmioRead32(Private->DbiBase + Private->ASPML1SSCapOffset);
+  val &= ~PCI_L1SS_CAP_ASPM_L1_1;
+  val &= ~PCI_L1SS_CAP_ASPM_L1_2;
+  MmioWrite32(Private->DbiBase + Private->ASPML1SSCapOffset, val);
+
+  if (Private->UpdateFCFixUp) {
+    val = MmioRead32(Private->DbiBase + CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF);
+    val |= 0x1 << CFG_TIMER_CTRL_ACK_NAK_SHIFT;
+    MmioWrite32(Private->DbiBase + CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF, val);
+  }
+
+  /* Configure Max speed from DT */
+  val = MmioRead32(Private->DbiBase + PCI_EXP_LNKCAP);
+  val &= ~PCI_EXP_LNKCAP_SLS;
+  val |= Private->MaxLinkSpeed;
+  MmioWrite32(Private->DbiBase + PCI_EXP_LNKCAP, val);
+
+  val = MmioRead32(Private->DbiBase + PCI_EXP_LNKCTL_STS_2);
+  val &= ~PCI_EXP_LNKCAP_SLS;
+  val |= Private->MaxLinkSpeed;
+  MmioWrite32(Private->DbiBase + PCI_EXP_LNKCTL_STS_2, val);
+
+  /* Configure Gen1 N_FTS */
+  val = MmioRead32(Private->DbiBase + PORT_LOGIC_ACK_F_ASPM_CTRL);
+  val &= ~((N_FTS_MASK << N_FTS_SHIFT) | (N_FTS_MASK << CC_N_FTS_SHIFT));
+  val |= ((N_FTS_VAL << N_FTS_SHIFT) | (N_FTS_VAL << CC_N_FTS_SHIFT));
+  MmioWrite32(Private->DbiBase + PORT_LOGIC_ACK_F_ASPM_CTRL, val);
+
+  /* Configure Gen2+ N_FTS */
+  val = MmioRead32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL);
+  val &= ~FTS_MASK;
+  if (Private->IsT194) {
+    val |= 52;
+  }
+  if (Private->IsT234) {
+    val |= 80;
+  }
+  MmioWrite32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL, val);
+
+  val = MmioRead32(Private->DbiBase + PCIE_PORT_LINK_CONTROL);
+  val &= ~PORT_LINK_FAST_LINK_MODE;
+  val |= PORT_LINK_DLL_LINK_EN;
+  /* Set number of lanes */
+  val &= ~PORT_LINK_CAP_MASK;
+  switch (Private->NumLanes) {
+  case 1:
+    val |= (0x1 << PORT_LINK_CAP_SHIFT);
+    break;
+  case 2:
+    val |= (0x3 << PORT_LINK_CAP_SHIFT);
+    break;
+  case 4:
+    val |= (0x7 << PORT_LINK_CAP_SHIFT);
+    break;
+  case 8:
+    val |= (0xF << PORT_LINK_CAP_SHIFT);
+    break;
+  default:
+    DEBUG ((EFI_D_ERROR, "Invalid num-lanes %u, Setting default to '1'\r\n", Private->NumLanes));
+    val |= (0x1 << PORT_LINK_CAP_SHIFT);
+  }
+  MmioWrite32(Private->DbiBase + PCIE_PORT_LINK_CONTROL, val);
+
+  val = MmioRead32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL);
+  val &= ~PORT_LOGIC_LINK_WIDTH_MASK;
+  switch (Private->NumLanes) {
+  case 1:
+    val |= (0x1 << PORT_LOGIC_LINK_WIDTH_SHIFT);
+    break;
+  case 2:
+    val |= (0x2 << PORT_LOGIC_LINK_WIDTH_SHIFT);
+    break;
+  case 4:
+    val |= (0x4 << PORT_LOGIC_LINK_WIDTH_SHIFT);
+    break;
+  case 8:
+    val |= (0x8 << PORT_LOGIC_LINK_WIDTH_SHIFT);
+    break;
+  default:
+    val |= (0x1 << PORT_LOGIC_LINK_WIDTH_SHIFT);
+  }
+  MmioWrite32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL, val);
+
+  /* Setup RC BARs */
+  MmioWrite32 (Private->DbiBase + PCI_BASE_ADDRESS_0, 0);
+  MmioWrite32 (Private->DbiBase + PCI_BASE_ADDRESS_1, 0);
+
+  /* setup interrupt pins */
+  MmioAndThenOr32 (Private->DbiBase + PCI_INT_LINE_OFFSET, 0xffff00ff, 0x00000100);
+
+  /* setup bus numbers */
+  MmioAndThenOr32 (Private->DbiBase + PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET, 0xff000000, 0x00ff0100);
+
+  /* setup command register */
+  MmioAndThenOr32 (Private->DbiBase + PCI_COMMAND_OFFSET, 0xffff0000,
+                   EFI_PCI_COMMAND_IO_SPACE |
+                   EFI_PCI_COMMAND_MEMORY_SPACE |
+                   EFI_PCI_COMMAND_BUS_MASTER |
+                   EFI_PCI_COMMAND_SERR
+                   );
+
+  /* Program correct class for RC */
+  MmioWrite32(Private->DbiBase + PCI_REVISION_ID_OFFSET,
+              (PCI_CLASS_BRIDGE << 24) |
+              (PCI_CLASS_BRIDGE_P2P << 16) |
+              (PCI_IF_BRIDGE_P2P << 8) |
+              0xa1
+             );
+
+  /* Enable Direct Speed Change */
+  val = MmioRead32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL);
+  val |= PORT_LOGIC_GEN2_CTRL_DIRECT_SPEED_CHANGE;
+  MmioWrite32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL, val);
+
+  /* Disable write permission to DBI_RO_WR_EN protected registers */
+  MmioAnd32 (Private->DbiBase + PCIE_MISC_CONTROL_1_OFF, ~PCIE_DBI_RO_WR_EN);
+
+  DEBUG ((EFI_D_INFO, "Programming CORE registers is done\r\n"));
+
+  Count = sizeof (CoreClockNames)/sizeof (CoreClockNames[0]);
+  for (Index = 0; Index < Count; Index++) {
+    Status = DeviceDiscoverySetClockFreq (ControllerHandle, CoreClockNames[Index], 500000000);
+    if (!EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_INFO, "Core clock is set\r\n"));
+      break;
+    }
+  }
+  if (Index == Count) {
+    DEBUG ((EFI_D_ERROR, "Failed to set core_clk\r\n"));
+    return Status;
+  }
+
+  /* Apply PERST# to endpoint and go for link up */
+  /* Assert PEX_RST */
+  val = MmioRead32 (Private->ApplSpace + 0x0);
+  val &= ~(0x1);
+  MmioWrite32 (Private->ApplSpace + 0x0, val);
+
+  MicroSecondDelay(1000);
+
+  /* enable LTSSM */
+  val = MmioRead32 (Private->ApplSpace + 0x4);
+  val |= (0x1 << 7);
+  MmioWrite32 (Private->ApplSpace + 0x4, val);
+
+  /* de-assert RST */
+  val = MmioRead32 (Private->ApplSpace + 0x0);
+  val |= (0x1);
+  MmioWrite32 (Private->ApplSpace + 0x0, val);
+
+  MicroSecondDelay(200000);
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+BOOLEAN
+EFIAPI
+CheckLinkUp(
+    PCIE_CONTROLLER_PRIVATE   *Private)
+{
+  UINT32 val;
+
+  val = MmioRead32 (Private->DbiBase + PCI_EXP_LNKCTL_STATUS);
+  if (val & PCI_EXP_LNKCTL_STATUS_DLL_ACTIVE) {
+    Private->LinkUp = TRUE;
+    DEBUG ((EFI_D_INFO, "PCIe Controller-%d Link is UP (Speed: %d)\r\n",
+           Private->CtrlId, (val & 0xf0000) >> 16));
+  } else {
+    Private->LinkUp = FALSE;
+    DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is DOWN\r\n", Private->CtrlId));
+  }
+
+  return Private->LinkUp;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
 InitializeController (
     PCIE_CONTROLLER_PRIVATE   *Private,
     IN  EFI_HANDLE ControllerHandle,
@@ -551,6 +800,17 @@ InitializeController (
 
   /* Program APPL */
 
+  if (Private->IsT234) {
+    /* Enable HW_HOT_RST mode */
+    val = MmioRead32(Private->ApplSpace + APPL_CTRL);
+    val &= ~(APPL_CTRL_HW_HOT_RST_MODE_MASK <<
+           APPL_CTRL_HW_HOT_RST_MODE_SHIFT);
+    val |= (APPL_CTRL_HW_HOT_RST_MODE_IMDT_RST_LTSSM_EN <<
+           APPL_CTRL_HW_HOT_RST_MODE_SHIFT);
+    val |= APPL_CTRL_HW_HOT_RST_EN;
+    MmioWrite32 (Private->ApplSpace + APPL_CTRL, val);
+  }
+
   /* Setup DBI region */
   MmioWrite32 (Private->ApplSpace + APPL_CFG_BASE_ADDR, Private->DbiBase & APPL_CFG_BASE_ADDR_MASK);
 
@@ -571,6 +831,19 @@ InitializeController (
   val |= APPL_PINMUX_CLKREQ_OVERRIDE_EN;
   val &= ~APPL_PINMUX_CLKREQ_OVERRIDE;
   MmioWrite32 (Private->ApplSpace + APPL_PINMUX, val);
+
+  if (Private->EnableSRNS || Private->EnableExtREFCLK) {
+    /*
+     * When Tegra PCIe RP is using external clock, it cannot
+     * supply same clock back to EP, which makes it separate clock.
+     * Gate PCIe RP REFCLK out pads when RP & EP are using separate
+     * clock or RP is using external REFCLK.
+     */
+    val = MmioRead32(Private->ApplSpace + APPL_PINMUX);
+    val |= APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE_EN;
+    val &= ~APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE;
+    MmioWrite32 (Private->ApplSpace + APPL_PINMUX, val);
+  }
 
   /* Setup DBI region */
   MmioWrite32 (Private->ApplSpace + APPL_CFG_IATU_DMA_BASE_ADDR, Private->AtuBase & APPL_CFG_IATU_DMA_BASE_ADDR_MASK);
@@ -611,149 +884,124 @@ InitializeController (
                                     PCI_EXPRESS_EXTENDED_CAPABILITY_L1_PM_SUBSTATES_ID);
   Private->ASPML1SSCapOffset = val + PCI_L1SS_CAP;
 
-  /* Disable ASPM sub-states (L1.1 & L1.2) as we have removed dependency on CLKREQ signal */
-  val = MmioRead32(Private->DbiBase + Private->ASPML1SSCapOffset);
-  val &= ~PCI_L1SS_CAP_ASPM_L1_1;
-  val &= ~PCI_L1SS_CAP_ASPM_L1_2;
-  MmioWrite32(Private->DbiBase + Private->ASPML1SSCapOffset, val);
-
-  val = MmioRead32(Private->DbiBase + PCI_IO_BASE);
-  val &= ~(IO_BASE_IO_DECODE | IO_BASE_IO_DECODE_BIT8);
-  MmioWrite32 (Private->DbiBase + PCI_IO_BASE, val);
-
-  val = MmioRead32(Private->DbiBase + PCI_PREF_MEMORY_BASE);
-  val |= CFG_PREF_MEM_LIMIT_BASE_MEM_DECODE;
-  val |= CFG_PREF_MEM_LIMIT_BASE_MEM_LIMIT_DECODE;
-  MmioWrite32 (Private->DbiBase + PCI_PREF_MEMORY_BASE, val);
-
-  /* Setup RC BARs */
-  MmioWrite32 (Private->DbiBase + PCI_BASE_ADDRESS_0, 0);
-  MmioWrite32 (Private->DbiBase + PCI_BASE_ADDRESS_1, 0);
-
-  /* Configure FTS */
-  val = MmioRead32(Private->DbiBase + PORT_LOGIC_ACK_F_ASPM_CTRL);
-  val &= ~(N_FTS_MASK << N_FTS_SHIFT);
-  val |= N_FTS_VAL << N_FTS_SHIFT;
-  MmioWrite32(Private->DbiBase + PORT_LOGIC_ACK_F_ASPM_CTRL, val);
-
-  val = MmioRead32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL);
-  val &= ~FTS_MASK;
-  val |= FTS_VAL;
-  MmioWrite32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL, val);
-
-  /* Enable as 0xFFFF0001 response for CRS */
-  val = MmioRead32(Private->DbiBase + PORT_LOGIC_AMBA_ERROR_RESPONSE_DEFAULT);
-  val &= ~(AMBA_ERROR_RESPONSE_CRS_MASK << AMBA_ERROR_RESPONSE_CRS_SHIFT);
-  val |= (AMBA_ERROR_RESPONSE_CRS_OKAY_FFFF0001 << AMBA_ERROR_RESPONSE_CRS_SHIFT);
-  MmioWrite32(Private->DbiBase + PORT_LOGIC_AMBA_ERROR_RESPONSE_DEFAULT, val);
-
-  /* Configure Max speed from DT */
-  val = MmioRead32(Private->DbiBase + PCI_EXP_LNKCAP);
-  val &= ~PCI_EXP_LNKCAP_SLS;
-  val |= Private->MaxLinkSpeed;
-  MmioWrite32(Private->DbiBase + PCI_EXP_LNKCAP, val);
-
-  val = MmioRead32(Private->DbiBase + PCI_EXP_LNKCTL_STS_2);
-  val &= ~PCI_EXP_LNKCAP_SLS;
-  val |= Private->MaxLinkSpeed;
-  MmioWrite32(Private->DbiBase + PCI_EXP_LNKCTL_STS_2, val);
-
-  /* Configure Max lane width from DT */
-  val = MmioRead32(Private->DbiBase + PCI_EXP_LNKCAP);
-  val &= ~PCI_EXP_LNKCAP_MLW;
-  val |= (Private->NumLanes << PCI_EXP_LNKSTA_NLW_SHIFT);
-  MmioWrite32(Private->DbiBase + PCI_EXP_LNKCAP, val);
-
-  config_gen3_gen4_eq_presets(Private);
-
-  if (Private->IsT194) {
-    val = MmioRead32(Private->DbiBase + GEN3_RELATED_OFF);
-    val &= ~GEN3_RELATED_OFF_GEN3_ZRXDC_NONCOMPL;
-    MmioWrite32(Private->DbiBase + GEN3_RELATED_OFF, val);
-  }
-
-  if (Private->UpdateFCFixUp) {
-    val = MmioRead32(Private->DbiBase + CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF);
-    val |= 0x1 << CFG_TIMER_CTRL_ACK_NAK_SHIFT;
-    MmioWrite32(Private->DbiBase + CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF, val);
-  }
-
-  /*
-   * NOTE: Linux programs following regiesters which is not really required
-   * PCIE_PORT_LINK_CONTROL & PCIE_LINK_WIDTH_SPEED_CONTROL
-   * It also programs PCIE_PL_CHK_REG_CONTROL_STATUS to enable CDM check but
-   * that configuration is not required just yet
-   */
-
-  /* setup interrupt pins */
-  MmioAndThenOr32 (Private->DbiBase + PCI_INT_LINE_OFFSET, 0xffff00ff, 0x00000100);
-
-  /* setup bus numbers */
-  MmioAndThenOr32 (Private->DbiBase + PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET, 0xff000000, 0x00ff0100);
-
-  /* setup command register */
-  MmioAndThenOr32 (Private->DbiBase + PCI_COMMAND_OFFSET,
-                   0xffff0000,
-                   EFI_PCI_COMMAND_IO_SPACE|EFI_PCI_COMMAND_MEMORY_SPACE|EFI_PCI_COMMAND_BUS_MASTER|EFI_PCI_COMMAND_SERR
-                   );
-
-  /* Program correct class for RC */
-  MmioWrite32(Private->DbiBase + PCI_REVISION_ID_OFFSET,
-              (PCI_CLASS_BRIDGE << 24) | (PCI_CLASS_BRIDGE_P2P << 16) | (PCI_IF_BRIDGE_P2P << 8) | 0x1
-              );
-
-  /* Enable Direct Speed Change */
-  val = MmioRead32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL);
-  val |= PORT_LOGIC_GEN2_CTRL_DIRECT_SPEED_CHANGE;
-  MmioWrite32(Private->DbiBase + PORT_LOGIC_GEN2_CTRL, val);
-
-  /* Disable write permission to DBI_RO_WR_EN protected registers */
-  MmioAnd32 (Private->DbiBase + PCIE_MISC_CONTROL_1_OFF, ~PCIE_DBI_RO_WR_EN);
-
-  DEBUG ((EFI_D_INFO, "Programming CORE registers is done\r\n"));
-
-  for (Index = 0; Index < Count; Index++) {
-    Status = DeviceDiscoverySetClockFreq (ControllerHandle, CoreClockNames[Index], 500000000);
-    if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_INFO, "Core clock is set\r\n"));
-      break;
-    }
-  }
-  if (Index == Count) {
-    DEBUG ((EFI_D_ERROR, "Failed to set core_clk\r\n"));
+  Status = PrepareHost(Private, ControllerHandle, DeviceTreeNode);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "Unable to Prepare Host controller (%r)\r\n", Status));
     return Status;
   }
 
-  /* Apply PERST# to endpoint and go for link up */
-  /* Assert PEX_RST */
-  val = MmioRead32 (Private->ApplSpace + 0x0);
-  val &= ~(0x1);
-  MmioWrite32 (Private->ApplSpace + 0x0, val);
+  if (!CheckLinkUp(Private)) {
+    UINT32 tmp;
+    UINT32 offset;
 
-  MicroSecondDelay(100);
+    /*
+    * There are some endpoints which can't get the link up if
+    * root port has Data Link Feature (DLF) enabled.
+    * Refer Spec rev 4.0 ver 1.0 sec 3.4.2 & 7.7.4 for more info
+    * on Scaled Flow Control and DLF.
+    * So, need to confirm that is indeed the case here and attempt
+    * link up once again with DLF disabled.
+    */
+    val = MmioRead32(Private->ApplSpace + APPL_DEBUG);
+    val &= APPL_DEBUG_LTSSM_STATE_MASK;
+    val >>= APPL_DEBUG_LTSSM_STATE_SHIFT;
+    tmp = MmioRead32(Private->ApplSpace + APPL_LINK_STATUS);
+    tmp &= APPL_LINK_STATUS_RDLH_LINK_UP;
+    if (!(val == 0x11 && !tmp)) {
+      /* Link is down for all good reasons */
+      goto exit;
+    }
 
-  /* enable LTSSM */
-  val = MmioRead32 (Private->ApplSpace + 0x4);
-  val |= (0x1 << 7);
-  MmioWrite32 (Private->ApplSpace + 0x4, val);
+    DEBUG ((EFI_D_INFO, "Link is down in DLL"));
+    DEBUG ((EFI_D_INFO, "Trying again with DLFE disabled\n"));
 
-  /* de-assert RST */
-  val = MmioRead32 (Private->ApplSpace + 0x0);
-  val |= (0x1);
-  MmioWrite32 (Private->ApplSpace + 0x0, val);
+    /* Disable LTSSM */
+    val = MmioRead32(Private->ApplSpace + APPL_CTRL);
+    val &= ~APPL_CTRL_LTSSM_EN;
+    MmioWrite32 (Private->ApplSpace + APPL_CTRL, val);
 
-  MicroSecondDelay(100000);
+    /* Assert reset to CORE */
+    Count = sizeof (CoreResetNames)/sizeof (CoreResetNames[0]);
+    for (Index = 0; Index < Count; Index++) {
+      Status = DeviceDiscoveryConfigReset (Private->ControllerHandle,
+                                           CoreResetNames[Index], 1);
+      if (!EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_INFO, "Asserted Core reset\r\n"));
+        break;
+      }
+    }
+    if (Index == Count) {
+      DEBUG ((EFI_D_ERROR, "Failed to Assert Core reset\r\n"));
+      return Status;
+    }
 
-  val = MmioRead32 (Private->DbiBase + PCI_EXP_LNKCTL_STATUS);
-  if (val & PCI_EXP_LNKCTL_STATUS_DLL_ACTIVE) {
-    Private->LinkUp = TRUE;
-    DEBUG ((EFI_D_INFO, "PCIe Controller-%d Link is UP (Speed: %d)\r\n",
-           Private->CtrlId, (val & 0xf0000) >> 16));
-  } else {
-    DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is DOWN\r\n", Private->CtrlId));
+    /* De-assert reset to CORE */
+    Count = sizeof (CoreResetNames)/sizeof (CoreResetNames[0]);
+    for (Index = 0; Index < Count; Index++) {
+      Status = DeviceDiscoveryConfigReset (Private->ControllerHandle,
+                                           CoreResetNames[Index], 0);
+      if (!EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_INFO, "De-asserted Core reset\r\n"));
+        break;
+      }
+    }
+    if (Index == Count) {
+      DEBUG ((EFI_D_ERROR, "Failed to De-assert Core reset\r\n"));
+      return Status;
+    }
+
+    offset = dw_pcie_find_ext_capability(Private->DbiBase, PCI_EXT_CAP_ID_DLF);
+    val = MmioRead32(Private->DbiBase + offset + PCI_DLF_CAP);
+    val &= ~PCI_DLF_EXCHANGE_ENABLE;
+    MmioWrite32 (Private->DbiBase + offset + PCI_DLF_CAP, val);
+
+    Status = PrepareHost(Private, ControllerHandle, DeviceTreeNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "Unable to Prepare Host controller (%r)\r\n", Status));
+      return Status;
+    }
+
+    CheckLinkUp(Private);
   }
 
+exit:
   return EFI_SUCCESS;
+}
+
+EFI_STATUS
+BpmpProcessSetCtrlState (
+  IN NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol,
+  IN UINT32                   CtrlId,
+  IN BOOLEAN                  State
+  )
+{
+  EFI_STATUS Status;
+  struct mrq_uphy_request Request;
+
+  if (BpmpIpcProtocol == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Request.cmd = 4;
+  Request.controller_state.pcie_controller = CtrlId;
+  Request.controller_state.enable = State;
+
+  Status = BpmpIpcProtocol->Communicate (
+                              BpmpIpcProtocol,
+                              NULL,
+                              69,
+                              (VOID *)&Request,
+                              sizeof (Request),
+                              NULL,
+                              0,
+                              NULL
+                              );
+  if (Status == EFI_UNSUPPORTED) {
+    Status = EFI_SUCCESS;
+  } else if (EFI_ERROR (Status)) {
+    Status = EFI_DEVICE_ERROR;
+  }
+  return Status;
 }
 
 STATIC
@@ -784,6 +1032,11 @@ TegraPciePMETurnOff (PCIE_CONTROLLER_PRIVATE *Private)
   if (!Private->LinkUp) {
     DEBUG ((EFI_D_INFO, "PCIe Controller-%d Link is not UP\r\n",
            Private->CtrlId));
+
+    data = MmioRead32 (Private->ApplSpace + APPL_CTRL);
+    data &= ~APPL_CTRL_LTSSM_EN;
+    MmioWrite32 (Private->ApplSpace + APPL_CTRL, data);
+
     return;
   }
 
@@ -800,19 +1053,21 @@ TegraPciePMETurnOff (PCIE_CONTROLLER_PRIVATE *Private)
     data &= ~APPL_PINMUX_PEX_RST;
     MmioWrite32 (Private->ApplSpace + APPL_PINMUX, data);
 
-    MicroSecondDelay(25000);
+    MicroSecondDelay(120000);
+
+    data = MmioRead32 (Private->ApplSpace + APPL_DEBUG);
+    if (!(
+          ((data & APPL_DEBUG_LTSSM_STATE_MASK) == LTSSM_STATE_DETECT_QUIET) ||
+          ((data & APPL_DEBUG_LTSSM_STATE_MASK) == LTSSM_STATE_DETECT_ACT) ||
+          ((data & APPL_DEBUG_LTSSM_STATE_MASK) == LTSSM_STATE_PRE_DETECT_QUIET) ||
+          ((data & APPL_DEBUG_LTSSM_STATE_MASK) == LTSSM_STATE_DETECT_WAIT))
+         ) {
+            DEBUG ((EFI_D_ERROR, "Link didn't go to detect state as well\r\n"));
+    }
 
     data = MmioRead32 (Private->ApplSpace + APPL_CTRL);
     data &= ~APPL_CTRL_LTSSM_EN;
     MmioWrite32 (Private->ApplSpace + APPL_CTRL, data);
-
-    MicroSecondDelay(25000);
-
-    data = MmioRead32 (Private->ApplSpace + APPL_DEBUG);
-    if (((data & APPL_DEBUG_LTSSM_STATE_MASK) >>  APPL_DEBUG_LTSSM_STATE_SHIFT)
-        !=  LTSSM_STATE_PRE_DETECT) {
-      DEBUG ((EFI_D_ERROR, "Link didn't go to detect state as well\r\n"));
-    }
   }
 
   /*
@@ -886,61 +1141,18 @@ UninitializeController (
     return Status;
   }
 
+  if (!(Private->CtrlId == 5 && Private->IsT194)) {
+    if (PcdGetBool(PcdBPMPPCIeControllerEnable)) {
+      Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->CtrlId, 0);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "Failed to disable Controller-%u\n", Private->CtrlId));
+        return Status;
+      }
+      DEBUG ((EFI_D_INFO, "Disabled Controller-%u through BPMP-FW\n", Private->CtrlId));
+    }
+  }
+
   return EFI_SUCCESS;
-}
-
-struct cmd_uphy_pcie_controller_state_request {
-    /** @brief PCIE controller number, valid: 0, 1, 2, 3, 4 */
-    uint8_t pcie_controller;
-    uint8_t enable;
-} __attribute__((packed));
-
-struct mrq_uphy_request {
-    /** @brief Lane number. */
-    uint16_t lane;
-    /** @brief Sub-command id. */
-    uint16_t cmd;
-
-    union {
-        struct cmd_uphy_pcie_controller_state_request controller_state;
-    };
-} __attribute__((packed));
-
-
-EFI_STATUS
-BpmpProcessSetCtrlState (
-  IN NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol,
-  IN UINT32                   CtrlId,
-  IN BOOLEAN                  State
-  )
-{
-  EFI_STATUS Status;
-  struct mrq_uphy_request Request;
-
-  if (BpmpIpcProtocol == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  Request.cmd = 4;
-  Request.controller_state.pcie_controller = CtrlId;
-  Request.controller_state.enable = State;
-
-  Status = BpmpIpcProtocol->Communicate (
-                              BpmpIpcProtocol,
-                              NULL,
-                              69,
-                              (VOID *)&Request,
-                              sizeof (Request),
-                              NULL,
-                              0,
-                              NULL
-                              );
-  if (Status == EFI_UNSUPPORTED) {
-    Status = EFI_SUCCESS;
-  } else if (EFI_ERROR (Status)) {
-    Status = EFI_DEVICE_ERROR;
-  }
-  return Status;
 }
 
 /**
@@ -1139,6 +1351,19 @@ DeviceDiscoveryNotify (
       goto ErrorExit;
     }
 
+    /* Get the vddio-pex-ctl supply */
+    Property = fdt_getprop(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
+                           "vddio-pex-ctl-supply", &PropertySize);
+    if ((Property != NULL) && (PropertySize == sizeof (UINT32))) {
+      Val = SwapBytes32 (*(UINT32 *)Property);
+      /* Enable the vddio-pex-ctl supply */
+      if EFI_ERROR(Regulator-> Enable(Regulator, Val, TRUE)) {
+        DEBUG ((EFI_D_ERROR, "Failed to Enable vddio-pex-ctl supply regulator\n"));
+      }
+    } else {
+      DEBUG ((EFI_D_INFO, "Failed to find vddio-pex-ctl supply regulator\n"));
+    }
+
     /* Get the 3v3 supply */
     Property = fdt_getprop(DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
                            "vpcie3v3-supply", &PropertySize);
@@ -1171,25 +1396,44 @@ DeviceDiscoveryNotify (
     if (Private->CtrlId == 5 && Private->IsT194) {
       ConfigureSidebandSignals(Private);
     } else {
-        NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
         EFI_STATUS Status;
 
-        Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+        Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&Private->BpmpIpcProtocol);
         if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "Failed to get BPMP-FW handle\n"));
+            DEBUG ((EFI_D_ERROR, "Failed to get BPMP-FW handle\n"));
             Status = EFI_NOT_READY;
             goto ErrorExit;
         }
 
         if (PcdGetBool(PcdBPMPPCIeControllerEnable)) {
-          Status = BpmpProcessSetCtrlState (BpmpIpcProtocol, Private->CtrlId, 1);
+          Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->CtrlId, 1);
           if (EFI_ERROR (Status)) {
-              DEBUG ((DEBUG_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));
+              DEBUG ((EFI_D_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));
               Status = EFI_NOT_READY;
               goto ErrorExit;
           }
-          DEBUG ((DEBUG_INFO, "Enabled Controller-%u through BPMP-FW\n", Private->CtrlId));
+          DEBUG ((EFI_D_INFO, "Enabled Controller-%u through BPMP-FW\n", Private->CtrlId));
         }
+    }
+
+    if (NULL != fdt_get_property (DeviceTreeNode->DeviceTreeBase,
+                                  DeviceTreeNode->NodeOffset,
+                                  "nvidia,enable-srns",
+                                  NULL)) {
+      Private->EnableSRNS = TRUE;
+    } else {
+      Private->EnableSRNS = FALSE;
+    }
+
+    if (Private->IsT194) {
+        Private->EnableExtREFCLK = FALSE;
+    } else if (NULL != fdt_get_property (DeviceTreeNode->DeviceTreeBase,
+                                         DeviceTreeNode->NodeOffset,
+                                         "nvidia,enable-ext-refclk",
+                                         NULL)) {
+      Private->EnableExtREFCLK = TRUE;
+    } else {
+      Private->EnableExtREFCLK = FALSE;
     }
 
     Status = InitializeController(Private, ControllerHandle, DeviceTreeNode);
