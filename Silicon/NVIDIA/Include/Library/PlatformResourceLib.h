@@ -55,7 +55,6 @@ typedef enum {
 
 typedef enum {
   TegraRcmCarveout,
-  TegraBpmpFwCarveout,
   TegraCarveoutMax,
 } TEGRA_CARVEOUT_TYPE;
 

@@ -274,10 +274,6 @@ T234GetCarveoutInfo (
       *Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
       *Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;
       break;
-    case TegraBpmpFwCarveout:
-      *Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BPMP].Base;
-      *Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BPMP].Size;
-      break;
     default:
       return EFI_UNSUPPORTED;
   }
