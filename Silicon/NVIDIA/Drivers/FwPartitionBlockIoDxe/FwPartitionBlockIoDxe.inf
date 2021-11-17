@@ -1,0 +1,53 @@
+## @file
+#  FW Partition Protocol BlockIo Dxe
+#
+#  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+#  property and proprietary rights in and to this material, related
+#  documentation and any modifications thereto. Any use, reproduction,
+#  disclosure or distribution of this material and related documentation
+#  without an express license agreement from NVIDIA CORPORATION or
+#  its affiliates is strictly prohibited.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+#  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = FwPartitionBlockIoDxe
+  FILE_GUID                      = 8a8508cf-b026-49f7-844e-d6a91b8450d6
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = FwPartitionBlockIoDxeInitialize
+
+[Sources.common]
+  FwPartitionBlockIoDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BrBctUpdateDeviceLib
+  DebugLib
+  FwPartitionDeviceLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  UefiRuntimeLib
+
+[Protocols]
+  gNVIDIAFwPartitionProtocolGuid            ## PRODUCES
+  gNVIDIABrBctUpdateProtocolGuid            ## PRODUCES
+  gEfiBlockIoProtocolGuid                   ## CONSUMES
+  gEfiDevicePathProtocolGuid                ## CONSUMES
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid
+
+[Depex]
+  gEfiBlockIoProtocolGuid
