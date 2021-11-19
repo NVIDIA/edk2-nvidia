@@ -53,6 +53,7 @@
   RealTimeClockLib|Silicon/NVIDIA/Library/MaximRealTimeClockLib/MaximRealTimeClockLib.inf
   OrderedCollectionLib|MdePkg/Library/BaseOrderedCollectionRedBlackTreeLib/BaseOrderedCollectionRedBlackTreeLib.inf
   BaseUcs2Utf8Lib|RedfishPkg/Library/BaseUcs2Utf8Lib/BaseUcs2Utf8Lib.inf
+  TegraCpuFreqHelperLib|Silicon/NVIDIA/Library/TegraCpuFreqHelperLib/TegraCpuFreqHelper.inf
 
 [LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
@@ -89,6 +90,33 @@
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|TRUE
   gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
   gNVIDIATokenSpaceGuid.PcdFmpTegraVersion|0x0
+  # SMBIOS for T194
+  ## Type 2 Table (Board Information)
+  gNVIDIATokenSpaceGuid.PcdBoardChassisLocation|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdBoardVersion|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdBoardManufacturer|L"Unknown"
+  ## Type 1 Table (System Information)
+  gNVIDIATokenSpaceGuid.PcdSystemSerialNum|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdSystemManufacturer|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdSystemSku|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdSystemFamilyType|L"Unknown"
+  ## Type 3 Table (Chassis Information)
+  gNVIDIATokenSpaceGuid.PcdType3Info|{ 0 }
+  gNVIDIATokenSpaceGuid.PcdType3Info.BootupState|ChassisStateUnknown
+  gNVIDIATokenSpaceGuid.PcdType3Info.PowerSupplyState|ChassisStateUnknown
+  gNVIDIATokenSpaceGuid.PcdType3Info.ThermalState|ChassisStateUnknown
+  gNVIDIATokenSpaceGuid.PcdType3Info.SecurityStatus|ChassisSecurityStatusUnknown
+  gNVIDIATokenSpaceGuid.PcdType3Info.Height|1
+  gNVIDIATokenSpaceGuid.PcdType3Info.NumberofPowerCords|1
+  gNVIDIATokenSpaceGuid.PcdType3Info.Type|1
+  gNVIDIATokenSpaceGuid.PcdChassisSku|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdChassisManufacturer|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdChassisSerialNumber|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdChassisAssetTag|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdChassisVersion|L"Unknown"
+  ##Type 32 (Boot Information)
+  gNVIDIATokenSpaceGuid.PcdType32Info|{ 0 }
+  gNVIDIATokenSpaceGuid.PcdType32Info.BootStatus|BootInformationStatusNoError
 
 [PcdsDynamicHii.common.T194]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
@@ -314,3 +342,8 @@
       <LibraryClasses>
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
+
+  #
+  # SMBIOS
+  #
+  Silicon/NVIDIA/Tegra/T194/Drivers/SmbiosDataDxe/SmbiosDataDxe.inf

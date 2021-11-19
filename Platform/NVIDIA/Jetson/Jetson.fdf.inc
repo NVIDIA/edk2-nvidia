@@ -184,3 +184,7 @@
   INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
   INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
 
+  #
+  # SMBIOS support
+  #
+  INF Silicon/NVIDIA/Tegra/T194/Drivers/SmbiosDataDxe/SmbiosDataDxe.inf

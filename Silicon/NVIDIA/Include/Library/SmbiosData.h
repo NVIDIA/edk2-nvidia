@@ -40,6 +40,7 @@ typedef struct {
   CHAR16  *BoardSerialNumber;
   CHAR16  *BoardVersion;
   CHAR16  *BoardAssetTag;
+  CHAR16  *BoardProductName;
 } SmbiosMiscData;
 
 typedef struct {

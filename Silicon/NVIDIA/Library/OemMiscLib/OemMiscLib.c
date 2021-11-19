@@ -26,7 +26,6 @@
 **/
 
 #include <Uefi.h>
-#include <string.h>
 
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
@@ -34,8 +33,10 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/OemMiscLib.h>
 #include <Library/PrintLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/SmbiosData.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <libfdt.h>
 
 static SmbiosMiscData *SmMiscData;
 static SmbiosCpuData *SmCpuData;
@@ -204,6 +205,36 @@ OemIsProcessorPresent (
   return FALSE;
 }
 
+STATIC
+CHAR16 *
+OemGetProductName (
+  VOID
+)
+{
+  UINT64                  DtbBase;
+  CONST VOID              *Property;
+  INT32                   Length;
+
+  if (SmMiscData == NULL) {
+    return NULL;
+  }
+
+  if (SmMiscData->BoardProductName == NULL) {
+    DtbBase = GetDTBBaseAddress ();
+    Property = fdt_getprop ((CONST VOID*) DtbBase, 0, "model", &Length);
+    if (Property != NULL && Length != 0) {
+      SmMiscData->BoardProductName = AllocateZeroPool (Length * sizeof (CHAR16));
+      if (SmMiscData->BoardProductName == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
+        return NULL;
+      }
+      AsciiStrToUnicodeStrS (Property, SmMiscData->BoardProductName,
+                             (Length * sizeof (CHAR16)));
+    }
+  }
+  return SmMiscData->BoardProductName;
+}
+
 /** Updates the HII string for the specified field.
 
   @param HiiHandle     The HII handle.
@@ -247,6 +278,12 @@ OemUpdateSmbiosInfo (
     case SerialNumberType02:
       if (SmMiscData) {
         HiiString = SmMiscData->BoardSerialNumber;
+      }
+      break;
+    case ProductNameType02:
+    case ProductNameType01:
+      if (SmMiscData) {
+        HiiString =  OemGetProductName();
       }
       break;
     case VersionType03:

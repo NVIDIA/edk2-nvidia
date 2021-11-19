@@ -46,6 +46,8 @@
   BaseMemoryLib
   DebugLib
   PrintLib
+  PlatformResourceLib
+  FdtLib
 
 [Protocols]
   gNVIDIASmbiosCpuDataProtocolGuid           # PROTOCOL ALWAYS_CONSUMED
@@ -59,6 +61,7 @@
   gNVIDIATokenSpaceGuid.PcdSystemSku
   gNVIDIATokenSpaceGuid.PcdSystemFamilyType
   gNVIDIATokenSpaceGuid.PcdBoardVersion
+  gNVIDIATokenSpaceGuid.PcdBoardProductName
   gNVIDIATokenSpaceGuid.PcdChassisSku
   gNVIDIATokenSpaceGuid.PcdChassisManufacturer
   gNVIDIATokenSpaceGuid.PcdChassisSerialNumber
