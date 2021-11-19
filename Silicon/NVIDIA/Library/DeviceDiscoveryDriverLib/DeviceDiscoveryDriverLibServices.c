@@ -87,13 +87,15 @@ DeviceDiscoveryGetMmioRegionCount (
     }
   }
 
-  for (Desc = Device->Resources; Desc->Desc != ACPI_END_TAG_DESCRIPTOR;
-       Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3)) {
-    if (Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR ||
-        Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM) {
-      continue;
+  if (Device->Resources != NULL) {
+    for (Desc = Device->Resources; Desc->Desc != ACPI_END_TAG_DESCRIPTOR;
+        Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3)) {
+      if (Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR ||
+          Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM) {
+        continue;
+      }
+      CurrentResource++;
     }
-    CurrentResource++;
   }
 
   *RegionCount = CurrentResource;
@@ -146,19 +148,21 @@ DeviceDiscoveryGetMmioRegion (
     }
   }
 
-  for (Desc = Device->Resources; Desc->Desc != ACPI_END_TAG_DESCRIPTOR;
-       Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3)) {
-    if (Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR ||
-        Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM) {
-      continue;
-    }
+  if (Device->Resources != NULL) {
+    for (Desc = Device->Resources; Desc->Desc != ACPI_END_TAG_DESCRIPTOR;
+        Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3)) {
+      if (Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR ||
+          Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM) {
+        continue;
+      }
 
-    if (CurrentResource == Region) {
-      *RegionBase = Desc->AddrRangeMin;
-      *RegionSize = Desc->AddrLen;
-      return EFI_SUCCESS;
+      if (CurrentResource == Region) {
+        *RegionBase = Desc->AddrRangeMin;
+        *RegionSize = Desc->AddrLen;
+        return EFI_SUCCESS;
+      }
+      CurrentResource++;
     }
-    CurrentResource++;
   }
 
   return EFI_NOT_FOUND;
