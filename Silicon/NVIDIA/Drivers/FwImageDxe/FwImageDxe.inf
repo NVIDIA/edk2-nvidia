@@ -1,0 +1,53 @@
+## @file
+#  FW Image Protocol Dxe
+#
+#  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+#  property and proprietary rights in and to this material, related
+#  documentation and any modifications thereto. Any use, reproduction,
+#  disclosure or distribution of this material and related documentation
+#  without an express license agreement from NVIDIA CORPORATION or
+#  its affiliates is strictly prohibited.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+#  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = FwImageDxe
+  FILE_GUID                      = 30df5a51-535c-4ff7-acf2-ef9140166991
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = FwImageDxeInitialize
+
+[Sources.common]
+  FwImageDxe.c
+  FwImageNames.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BootChainInfoLib
+  DebugLib
+  MemoryAllocationLib
+  PlatformResourceLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  UefiRuntimeLib
+
+[Protocols]
+  gNVIDIAFwImageProtocolGuid                ## PRODUCES
+  gNVIDIAFwPartitionProtocolGuid            ## CONSUMES
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid
+
+[Depex]
+  gNVIDIAFwPartitionProtocolGuid

@@ -33,6 +33,8 @@
 #include <Uefi/UefiSpec.h>
 
 #define MAX_PARTITION_NAME_LEN      36
+#define BOOT_CHAIN_A                0
+#define BOOT_CHAIN_B                1
 
 /**
   Retrieve Active Boot Chain Partition Name

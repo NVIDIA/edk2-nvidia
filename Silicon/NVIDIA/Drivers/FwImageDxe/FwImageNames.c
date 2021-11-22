@@ -1,0 +1,164 @@
+/** @file
+  FW Image Protocol Image Names support
+
+  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+  property and proprietary rights in and to this material, related
+  documentation and any modifications thereto. Any use, reproduction,
+  disclosure or distribution of this material and related documentation
+  without an express license agreement from NVIDIA CORPORATION or
+  its affiliates is strictly prohibited.
+
+  SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+
+**/
+
+#include <Library/BaseMemoryLib.h>
+#include <Library/DebugLib.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Library/TegraPlatformInfoLib.h>
+
+STATIC CONST CHAR16 *SystemFwImageNamesCommon[] = {
+  L"BCT",
+  L"bpmp-fw",
+  L"bpmp-fw-dtb",
+  L"cpu-bootloader",
+  L"eks",
+  L"mb1",
+  L"MB1_BCT",
+  L"mb2",
+  L"MEM_BCT",
+  L"mts-mce",
+  L"rce-fw",
+  L"sc7",
+  L"secure-os",
+  L"spe-fw",
+  NULL
+};
+
+STATIC CONST CHAR16 *SystemFwImageNamesT194[] = {
+  L"adsp-fw",
+  L"bootloader-dtb",
+  L"mts-preboot",
+  L"mts-proper",
+  L"sce-fw",
+  L"VER",
+  L"xusb-fw",
+  NULL
+};
+
+STATIC CONST CHAR16 *SystemFwImageNamesT234[] = {
+  L"dce-fw",
+  L"nvdec",
+  L"psc_bl1",
+  L"psc-fw",
+  L"tsec-fw",
+  NULL
+};
+
+/**
+  Get count of entries in NULL-terminated list.
+
+  @param[in]   List                 Pointer to list of image names
+
+  @retval UINTN                     Number of entries in list
+
+**/
+STATIC
+UINTN
+GetListCount (
+  IN  CONST CHAR16 **List
+  )
+{
+  UINTN Count;
+
+  for (Count = 0; *List != NULL; Count++, List++);
+
+  return Count;
+}
+
+/**
+  Combine two NULL-terminated lists of FW image names.
+
+  @param[in]   L1                   Pointer to first list of image names
+  @param[in]   L2                   Pointer to second list of image names
+  @param[out]  Count                Number of images names in combined list
+
+  @retval CONST CHAR16**            Pointer to NULL-terminated combined
+                                    list of image names, caller must free
+                                    with FreePool()
+  @retval NULL                      Error allocating combined name list
+
+**/
+STATIC
+CONST CHAR16 **
+EFIAPI
+CombineLists (
+  IN  CONST CHAR16 **L1,
+  IN  CONST CHAR16 **L2,
+  OUT UINTN         *Count
+  )
+{
+  UINTN L1Count;
+  UINTN L2Count;
+  CONST CHAR16 **CombinedList;
+
+  L1Count = GetListCount (L1);
+  L2Count = GetListCount (L2);
+  *Count = L1Count + L2Count;
+
+  CombinedList = (CONST CHAR16 **) AllocateZeroPool ((*Count + 1) *
+                                                     sizeof (CHAR16 *));
+  if (CombinedList == NULL) {
+    return NULL;
+  }
+
+  CopyMem (CombinedList, L1, L1Count * sizeof (CHAR16 *));
+  CopyMem (&CombinedList[L1Count], L2, L2Count * sizeof (CHAR16 *));
+  CombinedList[*Count] = NULL;
+
+  return CombinedList;
+}
+
+/**
+  Get list of FW image names for the platform.
+
+  @param[out]  ImageCount           Number of images in list
+
+  @retval CONST CHAR16**            Pointer to array of image names,
+                                    caller must free with FreePool()
+  @retval NULL                      Error determining image name list
+
+**/
+CONST CHAR16 **
+EFIAPI
+FwImageGetList (
+  OUT UINTN             *ImageCount
+  )
+{
+  CONST CHAR16          **ImageList;
+  UINTN                 ChipId;
+
+  ChipId = TegraGetChipID ();
+  switch (ChipId) {
+    case T194_CHIP_ID:
+      ImageList = CombineLists (SystemFwImageNamesT194,
+                                SystemFwImageNamesCommon,
+                                ImageCount);
+      break;
+    case T234_CHIP_ID:
+      ImageList = CombineLists (SystemFwImageNamesT234,
+                                SystemFwImageNamesCommon,
+                                ImageCount);
+      break;
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: Unknown ChipId=%u\n", __FUNCTION__, ChipId));
+      ImageList     = NULL;
+      *ImageCount   = 0;
+      break;
+  }
+
+  return ImageList;
+}
