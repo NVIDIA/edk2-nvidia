@@ -50,6 +50,11 @@
   INF MdeModulePkg/Universal/StatusCodeHandler/RuntimeDxe/StatusCodeHandlerRuntimeDxe.inf
 
   #
+  # Esrt - EFI System Resource Table
+  #
+  INF MdeModulePkg/Universal/EsrtFmpDxe/EsrtFmpDxe.inf
+
+  #
   # Fmp
   #
   INF FILE_GUID = $(SYSTEM_FMP_ESRT_GUID) FmpDevicePkg/FmpDxe/FmpDxe.inf
@@ -280,3 +285,5 @@
   # FW Partition
   #
   INF Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
+  INF Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
+  INF Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf

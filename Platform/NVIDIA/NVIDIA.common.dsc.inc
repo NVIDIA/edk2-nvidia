@@ -200,6 +200,7 @@
   FmpDependencyDeviceLib|FmpDevicePkg/Library/FmpDependencyDeviceLibNull/FmpDependencyDeviceLibNull.inf
   FwPartitionDeviceLib|Silicon/NVIDIA/Library/FwPartitionDeviceLib/FwPartitionDeviceLib.inf
   BrBctUpdateDeviceLib|Silicon/NVIDIA/Library/BrBctUpdateDeviceLib/BrBctUpdateDeviceLib.inf
+  FwImageLib|Silicon/NVIDIA/Library/FwImageLib/FwImageLib.inf
 
   AmlLib|DynamicTablesPkg/Library/Common/AmlLib/AmlLib.inf
   SsdtSerialPortFixupLib|Silicon/NVIDIA/Library/SsdtSerialPortFixupLib/SsdtSerialPortFixupLib.inf
@@ -550,6 +551,7 @@
   # FMP PCDs.
   #
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageIdName|L"NVIDIA System Firmware"
+  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion|0x0
 
   #
   # SMBIOS entry point version
@@ -606,11 +608,6 @@
   #
   gArmTokenSpaceGuid.PcdPciBusMin|0
   gArmTokenSpaceGuid.PcdPciBusMax|0
-
-  #
-  # System FMP ImageTypeId GUIDs
-  #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{0x0}
 
 [PcdsDynamicDefault.common.DEFAULT]
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x00000000
@@ -876,6 +873,11 @@
   MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf
 
   #
+  # Esrt - EFI System Resource Table
+  #
+  MdeModulePkg/Universal/EsrtFmpDxe/EsrtFmpDxe.inf
+
+  #
   # Fmp
   #
   FmpDevicePkg/FmpDxe/FmpDxe.inf {
@@ -954,9 +956,11 @@
   Silicon/NVIDIA/Drivers/PlatformToDriverConfiguration/PlatformToDriverConfiguration.inf
 
   #
-  # FW Partition
+  # FW Partition and FW Image
   #
   Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
+  Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
+  Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
 
 [Components.AARCH64]
   #
