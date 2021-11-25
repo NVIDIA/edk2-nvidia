@@ -292,7 +292,7 @@ DtPlatformLoadDtb (
   *DtbSize = fdt_totalsize (*Dtb);
 
   Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
-                               TPL_NOTIFY,
+                               TPL_CALLBACK,
                                FdtInstalled,
                                NULL,
                                &gFdtTableGuid,
