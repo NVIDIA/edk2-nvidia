@@ -18,24 +18,24 @@ from edk2toolext.invocables.edk2_setup import (
 )
 from edk2toolext.invocables.edk2_pr_eval import PrEvalSettingsManager
 from edk2toolext.invocables.edk2_platform_build import BuildSettingsManager
+from edk2toolext.invocables.edk2_ci_setup import CiSetupSettingsManager
+from edk2toolext.invocables.edk2_ci_build import CiBuildSettingsManager
 from edk2toollib.utility_functions import RunCmd
-from edk2toolext.environment.shell_environment import Singleton
+from edk2toolext.environment import shell_environment
 
 
 __all__ = [
     "NVIDIASettingsManager",
+    "NVIDIACiSettingsManager",
 ]
 
 
-class NVIDIASettingsManager(UpdateSettingsManager, SetupSettingsManager,
-                            PrEvalSettingsManager, BuildSettingsManager,
-                            metaclass=Singleton):
-    ''' Base SettingsManager for various stuart build steps.
+reason_setman = "Set in platform CiSettingsManager"
 
-        Implements the SettingsManager for update, setup, pr-eval, and build
-        steps for portions common to all NVIDIA platforms.  Platforms must
-        provide a subclass in their PlatformBuid.py.
-    '''
+
+class AbstractNVIDIASettingsManager(UpdateSettingsManager,
+                                    SetupSettingsManager):
+    ''' Abstract stuart SettingsManager. '''
 
     def GetName(self):
         ''' Get the name of the platform being built. '''
@@ -67,7 +67,9 @@ class NVIDIASettingsManager(UpdateSettingsManager, SetupSettingsManager,
             This is the list of directories, relative to the workspace, where
             the build will look for packages.
         '''
-        return ["edk2/BaseTools", "edk2", "edk2-nvidia"]
+        # NOTE: These paths must use a trailing slash to ensure stuart treats
+        # them properly when computing relative paths.
+        return ["edk2/BaseTools/", "edk2/", "edk2-nvidia/"]
 
     def GetActiveScopes(self):
         ''' List of scopes we need for this platform. '''
@@ -121,6 +123,17 @@ class NVIDIASettingsManager(UpdateSettingsManager, SetupSettingsManager,
             RequiredSubmodule("edk2"),
             RequiredSubmodule("edk2-nvidia"),
         ]
+
+
+class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
+                            PrEvalSettingsManager, BuildSettingsManager,
+                            metaclass=shell_environment.Singleton):
+    ''' Base SettingsManager for various stuart build steps.
+
+        Implements the SettingsManager for update, setup, pr-eval, and build
+        steps for portions common to all NVIDIA platforms.  Platforms must
+        provide a subclass in their PlatformBuid.py.
+    '''
 
     #######################################
     # Edk2InvocableSettingsInterface
@@ -319,3 +332,53 @@ class NVIDIASettingsManager(UpdateSettingsManager, SetupSettingsManager,
         platform_name = self.GetName()
         target = self.GetTarget()
         return f"images/BOOTAA64_{platform_name}_{target}.efi"
+
+
+class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
+                              CiSetupSettingsManager, CiBuildSettingsManager,
+                              metaclass=shell_environment.Singleton):
+    ''' Base SettingsManager for various stuart CI steps.
+
+        Implement some sane defaults for CI steps.
+    '''
+    def __init__(self, *args, **kwargs):
+        ''' Initialize the SettingsManager and set up build environment.
+
+        This is the best opportunity we have to set the build environment.
+        Unlike the "build" step, the "ci_build" step doesn't provide a callback
+        like SetPlatformEnv().
+        '''
+        super().__init__(*args, **kwargs)
+        env = shell_environment.GetBuildVars()
+
+        # TOOL_CHAIN_TAG
+        # - If not provided by the SettingsManager, the value in target.txt
+        # will be taken.
+        toolchain_tag = self.GetToolchainTag()
+        if toolchain_tag:
+            env.SetValue("TOOL_CHAIN_TAG", toolchain_tag, reason_setman)
+
+    def GetArchitecturesSupported(self):
+        ''' return iterable of edk2 architectures supported by this build '''
+        return ("X64",)
+
+    def GetTargetsSupported(self):
+        ''' return iterable of edk2 target tags supported by this build '''
+        return ("NOOPT",)
+
+    def GetActiveScopes(self):
+        # Add the "host-based-test" scope, which will trigger the plugin that
+        # runs the unittests after the build.
+        return super().GetActiveScopes() + ["cibuild", "host-based-test"]
+
+    #######################################
+    # NVIDIA settings
+
+    def GetToolchainTag(self):
+        ''' Return the toolchain identifier.
+
+            At this time, we only support CI runs with the GCC5 toolchain.
+
+            This will be used to set TOOL_CHAIN_TAG.
+        '''
+        return "GCC5"

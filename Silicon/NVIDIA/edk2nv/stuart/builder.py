@@ -17,9 +17,6 @@ from edk2toolext.environment.uefi_build import UefiBuilder
 from edk2toolext.environment import shell_environment
 from edk2toolext.environment.conf_mgmt import ConfMgmt
 
-from FormatUefiBinary import FormatUefiBinary
-from GenVariableStore import GenVariableStore
-
 
 __all__ = [
     "NVIDIAPlatformBuilder",
@@ -224,8 +221,7 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         # will be taken.
         toolchain_tag = self.settings.GetToolchainTag()
         if toolchain_tag:
-            self.env.SetValue("TOOL_CHAIN_TAG",
-                              self.settings.GetToolchainTag(), reason_setman)
+            self.env.SetValue("TOOL_CHAIN_TAG", toolchain_tag, reason_setman)
 
         # Set additional build variables
         cur_time = datetime.datetime.now()
@@ -263,6 +259,9 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
     def PlatformPostBuild(self):
         ''' Additional build steps for NVIDIA platforms. '''
+        from FormatUefiBinary import FormatUefiBinary
+        from GenVariableStore import GenVariableStore
+
         ws_dir = Path(self.settings.GetWorkspaceRoot())
         build_dir = Path(self.env.GetValue("BUILD_OUTPUT_BASE"))
 
