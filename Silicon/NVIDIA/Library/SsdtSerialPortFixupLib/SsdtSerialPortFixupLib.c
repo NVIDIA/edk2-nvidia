@@ -1,7 +1,7 @@
 /** @file
   SSDT Serial Port Fixup Library.
 
-  Copyright (c) 2019 - 2020, Arm Limited. All rights reserved.<BR>
+  Copyright (c) 2019 - 2021, Arm Limited. All rights reserved.<BR>
   Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -30,15 +30,14 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/AcpiTable.h>
 
 // Module specific include files.
 #include <AcpiTableGenerator.h>
 #include <ConfigurationManagerObject.h>
 #include <ConfigurationManagerHelper.h>
+#include <Library/AcpiHelperLib.h>
 #include <Library/AmlLib/AmlLib.h>
-#include <Library/TableHelperLib.h>
 #include <Protocol/ConfigurationManagerProtocol.h>
 
 /** C array containing the compiled AML template.
@@ -146,9 +145,9 @@ STATIC
 EFI_STATUS
 EFIAPI
 FixupIds (
-  IN  OUT       AML_ROOT_NODE_HANDLE        RootNodeHandle,
-  IN      CONST UINT64                      Uid,
-  IN      CONST CM_ARM_SERIAL_PORT_INFO   * SerialPortInfo
+  IN        AML_ROOT_NODE_HANDLE        RootNodeHandle,
+  IN  CONST UINT64                      Uid,
+  IN  CONST CM_ARM_SERIAL_PORT_INFO   * SerialPortInfo
   )
 {
   EFI_STATUS                Status;
@@ -260,8 +259,8 @@ STATIC
 EFI_STATUS
 EFIAPI
 FixupCrs (
-  IN  OUT       AML_ROOT_NODE_HANDLE        RootNodeHandle,
-  IN      CONST CM_ARM_SERIAL_PORT_INFO   * SerialPortInfo
+  IN        AML_ROOT_NODE_HANDLE        RootNodeHandle,
+  IN  CONST CM_ARM_SERIAL_PORT_INFO   * SerialPortInfo
   )
 {
   EFI_STATUS                Status;
@@ -280,7 +279,7 @@ FixupCrs (
   }
 
   // Get the first Rd node in the "_CRS" object.
-  Status = AmlNameOpCrsGetFirstRdNode (NameOpCrsNode, &QWordRdNode);
+  Status = AmlNameOpGetFirstRdNode (NameOpCrsNode, &QWordRdNode);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -303,7 +302,7 @@ FixupCrs (
   // Get the Interrupt node.
   // It is the second Resource Data element in the NameOpCrsNode's
   // variable list of arguments.
-  Status = AmlNameOpCrsGetNextRdNode (QWordRdNode, &InterruptRdNode);
+  Status = AmlNameOpGetNextRdNode (QWordRdNode, &InterruptRdNode);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -335,9 +334,9 @@ STATIC
 EFI_STATUS
 EFIAPI
 FixupName (
-  IN  OUT       AML_ROOT_NODE_HANDLE        RootNodeHandle,
-  IN      CONST CM_ARM_SERIAL_PORT_INFO   * SerialPortInfo,
-  IN      CONST CHAR8                     * Name
+  IN        AML_ROOT_NODE_HANDLE        RootNodeHandle,
+  IN  CONST CM_ARM_SERIAL_PORT_INFO   * SerialPortInfo,
+  IN  CONST CHAR8                     * Name
   )
 {
   EFI_STATUS                Status;
@@ -379,7 +378,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 FixupSerialPortInfo (
-  IN  OUT       AML_ROOT_NODE_HANDLE              RootNodeHandle,
+  IN            AML_ROOT_NODE_HANDLE              RootNodeHandle,
   IN      CONST CM_ARM_SERIAL_PORT_INFO         * SerialPortInfo,
   IN      CONST CHAR8                           * Name,
   IN      CONST UINT64                            Uid,
