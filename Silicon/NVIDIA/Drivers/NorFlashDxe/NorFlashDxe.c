@@ -259,6 +259,7 @@ ReadNorFlashSFDP (
   NOR_SFDP_PARAM_SECTOR_DESCRIPTOR *SFDPParamSectorTbl;
   UINT32                           SFDPParamSectorTblSize;
   NOR_SFDP_PARAM_SECTOR_REGION     *SFDPParamSectorTblRegion;
+  NOR_SFDP_PARAM_SECTOR_REGION     *SFDPParamSectorTblFirstRegion;
   UINT8                            NumRegions;
   UINT32                           MemoryDensity;
   QSPI_TRANSACTION_PACKET          Packet;
@@ -436,11 +437,11 @@ ReadNorFlashSFDP (
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
-    Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity = (UINT64)1 << (MemoryDensity - 3);
+    Private->PrivateFlashAttributes.FlashAttributes.UniformMemoryDensity = (UINT64)1 << (MemoryDensity - 3);
   } else {
     MemoryDensity++;
     MemoryDensity >>= 3;
-    Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity = MemoryDensity;
+    Private->PrivateFlashAttributes.FlashAttributes.UniformMemoryDensity = MemoryDensity;
   }
 
   // Find fast read dummy cycles.
@@ -453,7 +454,7 @@ ReadNorFlashSFDP (
   // If uniform 4K erase is supported, use that mode.
   if (SFDPParamBasicTbl->EraseSupport4KB == NOR_SFDP_4KB_ERS_SUPPORTED &&
       SFDPParamBasicTbl->EraseInstruction4KB != NOR_SFDP_4KB_ERS_UNSUPPORTED) {
-    Private->PrivateFlashAttributes.FlashAttributes.BlockSize = SIZE_4KB;
+    Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize = SIZE_4KB;
   } else {
     // Find the sector map parameter table header
     for (Count = SFDPHeader.NumParamHdrs; Count >= 0; Count--) {
@@ -523,6 +524,7 @@ ReadNorFlashSFDP (
 
     // Out of the regions found in the map, find the region with biggest size.
     SFDPParamSectorTblRegion = (NOR_SFDP_PARAM_SECTOR_REGION *) &SFDPParamSectorTbl[Count++];
+    SFDPParamSectorTblFirstRegion = SFDPParamSectorTblRegion;
     while (NumRegions > 0) {
       if (((NOR_SFDP_PARAM_SECTOR_REGION *) &SFDPParamSectorTbl[Count])->RegionSize >
           SFDPParamSectorTblRegion->RegionSize) {
@@ -544,30 +546,72 @@ ReadNorFlashSFDP (
       goto ErrorExit;
     }
 
-    Private->PrivateFlashAttributes.FlashAttributes.BlockSize = 1 << SFDPParamBasicTbl->EraseType[Count].Size;
+    Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize = 1 << SFDPParamBasicTbl->EraseType[Count].Size;
+
+    // Out of the regions found in the map, first region is the one used for hybrid.
+    for (Count = 0; Count < NOR_SFDP_ERASE_COUNT; Count++) {
+      if (SFDPParamSectorTblFirstRegion->EraseTypeSupported & (1 << Count)) {
+        break;
+      }
+    }
+
+    if (Count >=  NOR_SFDP_ERASE_COUNT) {
+      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP first sector parameter erase table.\n", __FUNCTION__));
+      Status = EFI_UNSUPPORTED;
+      goto ErrorExit;
+    }
+
+    Private->PrivateFlashAttributes.FlashAttributes.HybridMemoryDensity = (SFDPParamSectorTblFirstRegion->RegionSize + 1) *
+                                                                          NOR_SFDP_ERASE_REGION_SIZE;
+    Private->PrivateFlashAttributes.FlashAttributes.HybridBlockSize = 1 << SFDPParamBasicTbl->EraseType[Count].Size;
   }
 
-  // Look up 4 byte erase command based on the block size.
+  // Look up 4 byte uniform erase command based on the block size.
   for (Count = 0; Count < NOR_SFDP_ERASE_COUNT; Count++) {
-    if (Private->PrivateFlashAttributes.FlashAttributes.BlockSize ==
+    if (Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize ==
          (1 << SFDPParamBasicTbl->EraseType[Count].Size)) {
       break;
     }
   }
 
   if (Count >=  NOR_SFDP_ERASE_COUNT) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's block size in SFDP sector parameter erase table.\n", __FUNCTION__));
+    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's uniform block size in SFDP sector parameter erase table.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
 
   if (!(SFDPParam4ByteInstructionTbl->EraseTypeSupported & (1 << Count))) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's erase table supported in SFDP.\n", __FUNCTION__));
+    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's uniform erase table supported in SFDP.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
 
-  Private->PrivateFlashAttributes.EraseCmd = SFDPParam4ByteInstructionTbl->EraseInstruction[Count];
+  Private->PrivateFlashAttributes.UniformEraseCmd = SFDPParam4ByteInstructionTbl->EraseInstruction[Count];
+
+  // Look up 4 byte hybrid erase command based on the block size if uniform block size
+  // is not already 4KB.
+  if (Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize != SIZE_4KB) {
+    for (Count = 0; Count < NOR_SFDP_ERASE_COUNT; Count++) {
+      if (Private->PrivateFlashAttributes.FlashAttributes.HybridBlockSize ==
+           (1 << SFDPParamBasicTbl->EraseType[Count].Size)) {
+        break;
+      }
+    }
+
+    if (Count >=  NOR_SFDP_ERASE_COUNT) {
+      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's hybrid block size in SFDP sector parameter erase table.\n", __FUNCTION__));
+      Status = EFI_UNSUPPORTED;
+      goto ErrorExit;
+    }
+
+    if (!(SFDPParam4ByteInstructionTbl->EraseTypeSupported & (1 << Count))) {
+      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's hybrid erase table supported in SFDP.\n", __FUNCTION__));
+      Status = EFI_UNSUPPORTED;
+      goto ErrorExit;
+    }
+
+    Private->PrivateFlashAttributes.HybridEraseCmd = SFDPParam4ByteInstructionTbl->EraseInstruction[Count];
+  }
 
   // If basic parameter table size is more than NOR_SFDP_PRM_TBL_LEN_JESD216,
   // read page size from the table. Otherwise default to NOR_SFDP_WRITE_DEF_PAGE
@@ -677,7 +721,7 @@ NorFlashRead(
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
   // Validate that read start and end offsets are within range.
-  FlashDensity = Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity;
+  FlashDensity = Private->PrivateFlashAttributes.FlashAttributes.UniformMemoryDensity;
   if ((Offset > (FlashDensity - 1)) ||
       ((Offset + Size) > (FlashDensity))) {
     return EFI_INVALID_PARAMETER;
@@ -750,7 +794,7 @@ NorFlashReadBlock(
   }
 
   Status = NorFlashRead (&Private->NorFlashProtocol,
-                         (Lba * Private->PrivateFlashAttributes.FlashAttributes.BlockSize),
+                         (Lba * Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize),
                          BufferSize,
                          Buffer);
 
@@ -764,6 +808,7 @@ NorFlashReadBlock(
   @param[in] This                  Instance to protocol
   @param[in] Offset                Logical block to start erasing from
   @param[in] NumLba                Number of block to be erased
+  @param[in] Hybrid                Use hybrid region
 
   @retval EFI_SUCCESS              Operation successful.
   @retval others                   Error occurred
@@ -772,7 +817,8 @@ EFI_STATUS
 NorFlashErase(
   IN NVIDIA_NOR_FLASH_PROTOCOL *This,
   IN UINT32                    Lba,
-  IN UINT32                    NumLba
+  IN UINT32                    NumLba,
+  IN BOOLEAN                   Hybrid
 )
 {
   EFI_STATUS              Status;
@@ -784,6 +830,9 @@ NorFlashErase(
   NOR_FLASH_PRIVATE_DATA  *Private;
   UINT32                  Offset;
   UINT32                  LastBlock;
+  UINT64                  MemoryDensity;
+  UINT32                  BlockSize;
+  UINT8                   EraseCmd;
 
   if (This == NULL ||
       NumLba == 0) {
@@ -792,8 +841,20 @@ NorFlashErase(
 
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
-  LastBlock = (Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity /
-                Private->PrivateFlashAttributes.FlashAttributes.BlockSize) - 1;
+  if (Hybrid) {
+    MemoryDensity = Private->PrivateFlashAttributes.FlashAttributes.HybridMemoryDensity;
+    BlockSize = Private->PrivateFlashAttributes.FlashAttributes.HybridBlockSize;
+    EraseCmd = Private->PrivateFlashAttributes.HybridEraseCmd;
+    if (MemoryDensity == 0 || BlockSize == 0 || EraseCmd == 0) {
+      return EFI_UNSUPPORTED;
+    }
+  } else {
+    MemoryDensity = Private->PrivateFlashAttributes.FlashAttributes.UniformMemoryDensity;
+    BlockSize = Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize;
+    EraseCmd = Private->PrivateFlashAttributes.UniformEraseCmd;
+  }
+
+  LastBlock = (MemoryDensity / BlockSize) - 1;
 
   if ((Lba > LastBlock) ||
       ((Lba + NumLba - 1) > LastBlock)) {
@@ -811,12 +872,12 @@ NorFlashErase(
     }
 
     AddressShift = 0;
-    Offset = Block * Private->PrivateFlashAttributes.FlashAttributes.BlockSize;
+    Offset = Block * BlockSize;
     for (Count = (CmdSize - 1); Count > 0; Count--) {
       Private->CommandBuffer[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
       AddressShift += 8;
     }
-    Private->CommandBuffer[0] = Private->PrivateFlashAttributes.EraseCmd;
+    Private->CommandBuffer[0] = EraseCmd;
 
     Packet.TxBuf = Private->CommandBuffer;
     Packet.TxLen = CmdSize;
@@ -891,7 +952,8 @@ NorFlashEraseBlock(
 
   Status = NorFlashErase (&Private->NorFlashProtocol,
                           LBA,
-                          Size / Private->PrivateFlashAttributes.FlashAttributes.BlockSize);
+                          Size / Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize,
+                          FALSE);
 
   if (Token->Event != NULL) {
     Token->TransactionStatus = Status;
@@ -938,7 +1000,7 @@ NorFlashWriteSinglePage(
 
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
-  FlashDensity = Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity;
+  FlashDensity = Private->PrivateFlashAttributes.FlashAttributes.UniformMemoryDensity;
   if ((Offset > (FlashDensity - 1)) ||
       ((Offset + Size) > (FlashDensity))) {
     return EFI_INVALID_PARAMETER;
@@ -1025,7 +1087,7 @@ NorFlashWrite(
 
   Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(This);
 
-  FlashDensity = Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity;
+  FlashDensity = Private->PrivateFlashAttributes.FlashAttributes.UniformMemoryDensity;
   if ((Offset > (FlashDensity - 1)) ||
       ((Offset + Size) > (FlashDensity))) {
     return EFI_INVALID_PARAMETER;
@@ -1097,9 +1159,10 @@ NorFlashWriteBlock(
 
   Status = NorFlashErase (&Private->NorFlashProtocol,
                           Lba,
-                          BufferSize / Private->PrivateFlashAttributes.FlashAttributes.BlockSize);
+                          BufferSize / Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize,
+                          FALSE);
 
-  BlockSize = Private->PrivateFlashAttributes.FlashAttributes.BlockSize;
+  BlockSize = Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize;
   PageSize = Private->PrivateFlashAttributes.PageSize;
   StartPage = (BlockSize / PageSize) * Lba;
   NumPages = BufferSize / PageSize;
@@ -1345,8 +1408,20 @@ NorFlashDxeDriverBindingStart (
   // Read NOR flash's SFDP
   Status = ReadNorFlashSFDP (Private);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: SFDP Read Failed\n", __FUNCTION__));
     goto ErrorExit;
   }
+
+  DEBUG ((DEBUG_INFO, "%a: NOR Flash Uniform Memory Density: 0x%lx\n",
+          __FUNCTION__, Private->PrivateFlashAttributes.FlashAttributes.UniformMemoryDensity));
+  DEBUG ((DEBUG_INFO, "%a: NOR Flash Uniform Block Size: 0x%lx\n",
+          __FUNCTION__, Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize));
+  DEBUG ((DEBUG_INFO, "%a: NOR Flash Hybrid Memory Density: 0x%lx\n",
+          __FUNCTION__, Private->PrivateFlashAttributes.FlashAttributes.HybridMemoryDensity));
+  DEBUG ((DEBUG_INFO, "%a: NOR Flash Hybrid Block Size: 0x%lx\n",
+          __FUNCTION__, Private->PrivateFlashAttributes.FlashAttributes.HybridBlockSize));
+  DEBUG ((DEBUG_INFO, "%a: NOR Flash Write Page Size: 0x%lx\n",
+          __FUNCTION__, Private->PrivateFlashAttributes.PageSize));
 
   // Allocate Command Buffer
   Private->CommandBuffer = AllocateRuntimeZeroPool (NOR_CMD_SIZE + NOR_ADDR_SIZE +
@@ -1400,9 +1475,9 @@ NorFlashDxeDriverBindingStart (
 
   if (PcdGetBool (PcdTegraNorBlockProtocols)) {
     Media.MediaId = Private->FlashInstance;
-    Media.BlockSize = Private->PrivateFlashAttributes.FlashAttributes.BlockSize;
-    Media.LastBlock = (Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity /
-                        Private->PrivateFlashAttributes.FlashAttributes.BlockSize) - 1;
+    Media.BlockSize = Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize;
+    Media.LastBlock = (Private->PrivateFlashAttributes.FlashAttributes.UniformMemoryDensity /
+                        Private->PrivateFlashAttributes.FlashAttributes.UniformBlockSize) - 1;
 
     Private->BlockIoProtocol.Reset = NULL;
     Private->BlockIoProtocol.ReadBlocks = NorFlashReadBlock;

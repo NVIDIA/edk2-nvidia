@@ -101,7 +101,7 @@ FPNorFlashErase (
   DEBUG ((DEBUG_VERBOSE, "%a: erase OffsetLba=%u, LbaCount=%u\n",
           __FUNCTION__, OffsetLba, LbaCount));
 
-  return NorFlash->Erase (NorFlash, OffsetLba, LbaCount);
+  return NorFlash->Erase (NorFlash, OffsetLba, LbaCount, FALSE);
 }
 
 /**
@@ -275,7 +275,7 @@ FPNorFlashInitDevices (
 
     DeviceName = ConvertDevicePathToText (DevicePath, TRUE, TRUE);
     DEBUG ((DEBUG_INFO, "Found NorFlash FW device=%s, BlockSize=%u, MemoryDensity=%llu\n",
-            DeviceName, Attributes.BlockSize, Attributes.MemoryDensity));
+            DeviceName, Attributes.UniformBlockSize, Attributes.UniformMemoryDensity));
 
     if (mNumDevices >= MAX_NOR_FLASH_DEVICES) {
       DEBUG ((DEBUG_ERROR, "%a: Max devices=%u exceeded\n",
@@ -285,8 +285,8 @@ FPNorFlashInitDevices (
 
     NorFlashInfo                    = &mNorFlashInfo[mNumDevices];
     NorFlashInfo->Signature         = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
-    mNorFlashInfo->Bytes            = Attributes.MemoryDensity;
-    mNorFlashInfo->EraseBlockSize   = Attributes.BlockSize;
+    mNorFlashInfo->Bytes            = Attributes.UniformMemoryDensity;
+    mNorFlashInfo->EraseBlockSize   = Attributes.UniformBlockSize;
     mNorFlashInfo->NorFlash         = NorFlash;
 
     DeviceInfo                      = &NorFlashInfo->DeviceInfo;

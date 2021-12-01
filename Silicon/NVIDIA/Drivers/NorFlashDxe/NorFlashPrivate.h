@@ -2,7 +2,7 @@
 
   NOR Flash Driver Private Data
 
-  Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -12,7 +12,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
   Portions provided under the following terms:
-  Copyright (c) 2020 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -21,7 +21,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -87,6 +87,8 @@
 #define NOR_SFDP_ERASE_COUNT          4
 
 #define NOR_SFDP_WRITE_DEF_PAGE       256
+
+#define NOR_SFDP_ERASE_REGION_SIZE    256
 
 #define NOR_SFDP_FAST_READ_DEF_WAIT   8
 
@@ -169,7 +171,8 @@ typedef struct {
 
 typedef struct {
   NOR_FLASH_ATTRIBUTES             FlashAttributes;
-  UINT8                            EraseCmd;
+  UINT8                            UniformEraseCmd;
+  UINT8                            HybridEraseCmd;
   UINT32                           PageSize;
   UINT8                            ReadWaitCycles;
 } NOR_FLASH_PRIVATE_ATTRIBUTES;

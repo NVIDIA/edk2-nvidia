@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Nor Flash Protocol
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -11,7 +11,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
   Portions provided under the following terms:
-  Copyright (c) 2019-2020 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -20,7 +20,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2020 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -34,12 +34,14 @@
 
 #define NVIDIA_NOR_FLASH_PROTOCOL_GUID \
   { \
-  0x39a68587, 0x8252, 0x4e57, { 0x8a, 0x92, 0x86, 0x70, 0x03, 0x68, 0x58, 0x13 } \
+  0x9545a4b9, 0x0e8a, 0x43db, { 0xbe, 0x00, 0xed, 0xc0, 0x6f, 0xe0, 0x81, 0xf7 } \
   }
 
 typedef struct {
-  UINT64                           MemoryDensity;
-  UINT32                           BlockSize;
+  UINT64                           UniformMemoryDensity;
+  UINT32                           UniformBlockSize;
+  UINT64                           HybridMemoryDensity;
+  UINT32                           HybridBlockSize;
 } NOR_FLASH_ATTRIBUTES;
 
 
@@ -117,6 +119,7 @@ EFI_STATUS
   @param[in] This                  Instance to protocol
   @param[in] Lba                   Logical block to start erasing from
   @param[in] NumLba                Number of block to be erased
+  @param[in] Hybrid                Use hybrid region
 
   @retval EFI_SUCCESS              Operation successful.
   @retval others                   Error occurred
@@ -127,7 +130,8 @@ EFI_STATUS
 (EFIAPI * NOR_FLASH_ERASE)(
   IN NVIDIA_NOR_FLASH_PROTOCOL *This,
   IN UINT32                    Lba,
-  IN UINT32                    NumLba
+  IN UINT32                    NumLba,
+  IN BOOLEAN                   Hybrid
 );
 
 /// NVIDIA_NOR_FLASH_PROTOCOL protocol structure.
