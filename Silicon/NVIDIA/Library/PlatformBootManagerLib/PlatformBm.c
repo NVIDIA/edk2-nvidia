@@ -920,6 +920,14 @@ PlatformBootManagerAfterConsole (
   if (EFI_ERROR (Status)) {
     Print (Buffer);
     Print (L"Press ESCAPE for boot options ");
+
+    //
+    // If Timeout is 0, next message comes in same line as previous message.
+    // Add a newline to maintain ordering and readability of logs.
+    //
+    if (PcdGet16 (PcdPlatformBootTimeOut) == 0) {
+      Print (L"\n\r");
+    }
   } else {
     Status = gBS->HandleProtocol (gST->ConsoleOutHandle,
                     &gEfiGraphicsOutputProtocolGuid, (VOID **)&GraphicsOutput);
