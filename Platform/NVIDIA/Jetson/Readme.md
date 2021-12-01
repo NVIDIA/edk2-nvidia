@@ -154,7 +154,7 @@ see “Booting Linux with Device-Tree/ACPI”.
 Clone the Linux kernel tree:
 
     $ git clone git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
-    $ git checkout v5.12
+    $ git checkout v5.14
 
 Configure the Linux kernel:
 
