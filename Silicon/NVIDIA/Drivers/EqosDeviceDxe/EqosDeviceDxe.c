@@ -41,7 +41,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NetLib.h>
 #include <Library/TegraPlatformInfoLib.h>
-#include <Protocol/CvmEeprom.h>
+#include <Protocol/Eeprom.h>
 #include <libfdt.h>
 
 #include "DwEqosSnpDxe.h"
@@ -203,8 +203,8 @@ DeviceDiscoveryNotify (
   UINTN                            VariableSize;
   UINT32                           VariableAttributes;
   UINT8                            *CvmEeprom;
-  T194_CVM_EEPROM_DATA             *T194CvmEeprom;
-  T234_CVM_EEPROM_DATA             *T234CvmEeprom;
+  T194_EEPROM_DATA                 *T194CvmEeprom;
+  T234_EEPROM_DATA                 *T234CvmEeprom;
   TEGRA_PLATFORM_TYPE              PlatformType;
   BOOLEAN                          FlipResetMode;
   UINTN                            ChipID;
@@ -346,9 +346,9 @@ DeviceDiscoveryNotify (
     ChipID = TegraGetChipID();
 
     if (ChipID == T194_CHIP_ID) {
-      T194CvmEeprom = (T194_CVM_EEPROM_DATA *) CvmEeprom;
-      if ((CompareMem (T194CvmEeprom->CustomerBlockSignature, CVM_EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194CvmEeprom->CustomerBlockSignature)) == 0) &&
-          (CompareMem (T194CvmEeprom->CustomerTypeSignature, CVM_EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T194CvmEeprom->CustomerTypeSignature)) == 0)) {
+      T194CvmEeprom = (T194_EEPROM_DATA *) CvmEeprom;
+      if ((CompareMem (T194CvmEeprom->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194CvmEeprom->CustomerBlockSignature)) == 0) &&
+          (CompareMem (T194CvmEeprom->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T194CvmEeprom->CustomerTypeSignature)) == 0)) {
         SnpMode->PermanentAddress.Addr[0] = T194CvmEeprom->CustomerEthernetMacAddress[5];
         SnpMode->PermanentAddress.Addr[1] = T194CvmEeprom->CustomerEthernetMacAddress[4];
         SnpMode->PermanentAddress.Addr[2] = T194CvmEeprom->CustomerEthernetMacAddress[3];
@@ -364,9 +364,9 @@ DeviceDiscoveryNotify (
         SnpMode->PermanentAddress.Addr[5] = T194CvmEeprom->EthernetMacAddress[0];
       }
     } else if (ChipID == T234_CHIP_ID) {
-      T234CvmEeprom = (T234_CVM_EEPROM_DATA *) CvmEeprom;
-      if ((CompareMem (T234CvmEeprom->CustomerBlockSignature, CVM_EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T234CvmEeprom->CustomerBlockSignature)) == 0) &&
-          (CompareMem (T234CvmEeprom->CustomerTypeSignature, CVM_EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T234CvmEeprom->CustomerTypeSignature)) == 0)) {
+      T234CvmEeprom = (T234_EEPROM_DATA *) CvmEeprom;
+      if ((CompareMem (T234CvmEeprom->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T234CvmEeprom->CustomerBlockSignature)) == 0) &&
+          (CompareMem (T234CvmEeprom->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T234CvmEeprom->CustomerTypeSignature)) == 0)) {
         SnpMode->PermanentAddress.Addr[0] = T234CvmEeprom->CustomerEthernetMacAddress[5];
         SnpMode->PermanentAddress.Addr[1] = T234CvmEeprom->CustomerEthernetMacAddress[4];
         SnpMode->PermanentAddress.Addr[2] = T234CvmEeprom->CustomerEthernetMacAddress[3];

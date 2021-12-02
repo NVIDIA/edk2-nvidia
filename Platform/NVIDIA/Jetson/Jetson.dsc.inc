@@ -252,7 +252,7 @@
   #
   # Tegra EEPROM Support
   #
-  Silicon/NVIDIA/Drivers/CvmEepromDxe/CvmEeprom.inf
+  Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf
 
   #Security drivers
   SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf

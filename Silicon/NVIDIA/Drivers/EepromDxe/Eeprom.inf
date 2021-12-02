@@ -1,6 +1,6 @@
 #/** @file
 #
-#  CVM EEPROM Driver
+#  EEPROM Driver
 #
 #  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
 #  This program and the accompanying materials
@@ -28,15 +28,15 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = CvmEepromDxe
+  BASE_NAME                      = EepromDxe
   FILE_GUID                      = 6430cdb4-a6b5-4326-95ba-97c4445dfe4e
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
 
-  ENTRY_POINT                    = InitializeCvmEepromDxe
+  ENTRY_POINT                    = InitializeEepromDxe
 
 [Sources.common]
-  CvmEeprom.c
+  Eeprom.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -56,11 +56,13 @@
 
 [Guids]
   gNVIDIACvmEeprom
+  gNVIDIAIdEeprom
 
 [Protocols]
   gEfiI2cIoProtocolGuid                       ## CONSUMES
   gEfiRngProtocolGuid                         ## CONSUMES
   gNVIDIACvmEepromProtocolGuid                ## SOMETIMES_PRODUCES
+  gNVIDIAIdEepromProtocolGuid                 ## SOMETIMES_PRODUCES
 
 [Depex]
   TRUE

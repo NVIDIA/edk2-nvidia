@@ -38,7 +38,6 @@
 #include <Library/TegraDeviceTreeOverlayLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PlatformResourceLib.h>
-#include <Protocol/CvmEeprom.h>
 
 STATIC CHAR8 *SWModule;
 

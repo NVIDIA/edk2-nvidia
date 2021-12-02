@@ -1,5 +1,5 @@
 /** @file
-  NVIDIA CVM EEPROM Protocol
+  NVIDIA EEPROM Protocol
 
   Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
@@ -25,14 +25,14 @@
 
 **/
 
-#ifndef __NVIDIA_CVM_EEPROM_PROTOCOL_H__
-#define __NVIDIA_CVM_EEPROM_PROTOCOL_H__
+#ifndef __NVIDIA_EEPROM_PROTOCOL_H__
+#define __NVIDIA_EEPROM_PROTOCOL_H__
 
 
-#define T194_CVM_EEPROM_VERSION             1
-#define T234_CVM_EEPROM_VERSION             2
-#define CVM_EEPROM_CUSTOMER_BLOCK_SIGNATURE "NVCB"
-#define CVM_EEPROM_CUSTOMER_TYPE_SIGNATURE  "M1"
+#define T194_EEPROM_VERSION             1
+#define T234_EEPROM_VERSION             2
+#define EEPROM_CUSTOMER_BLOCK_SIGNATURE "NVCB"
+#define EEPROM_CUSTOMER_TYPE_SIGNATURE  "M1"
 /**
  * @brief The Product Part Number structure that is embedded into
  * EEPROM layout structure
@@ -137,7 +137,7 @@ typedef struct {
   UINT8    CustomerEthernetMacAddress[6]; /* 172 */
   UINT8    Reserved2[77];                 /* 178 */
   UINT8    Checksum;                      /* 255 */
-} T194_CVM_EEPROM_DATA;
+} T194_EEPROM_DATA;
 #pragma pack()
 
 /**
@@ -212,7 +212,7 @@ typedef struct {
   UINT8    CustomerNumEthernetMacs;       /* 178 */
   UINT8    Reserved2[76];                 /* 179 */
   UINT8    Checksum;                      /* 255 */
-} T234_CVM_EEPROM_DATA;
+} T234_EEPROM_DATA;
 #pragma pack()
 
 #endif

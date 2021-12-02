@@ -31,7 +31,7 @@
 
 #include <Library/BaseLib.h>
 #include <Library/UefiLib.h>
-#include <Protocol/CvmEeprom.h>
+#include <Protocol/Eeprom.h>
 #include <Library/OemMiscLib.h>
 #include <ConfigurationManagerObject.h>
 

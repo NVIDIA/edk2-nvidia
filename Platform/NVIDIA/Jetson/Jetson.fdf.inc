@@ -144,7 +144,7 @@
   #
   # Tegra EEPROM Support
   #
-  INF Silicon/NVIDIA/Drivers/CvmEepromDxe/CvmEeprom.inf
+  INF Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf
 
   #
   # EQOS NIC Support

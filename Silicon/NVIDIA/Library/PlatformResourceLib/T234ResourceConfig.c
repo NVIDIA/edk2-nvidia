@@ -41,7 +41,7 @@
 #include <Library/IoLib.h>
 #include "T234ResourceConfigPrivate.h"
 #include <T234/T234Definitions.h>
-#include <Protocol/CvmEeprom.h>
+#include <Protocol/Eeprom.h>
 
 #define T234_MAX_CPUS       12
 
@@ -415,8 +415,8 @@ T234GetBoardInfo(
   OUT TEGRA_BOARD_INFO *BoardInfo
 )
 {
-  T234_CVM_EEPROM_DATA *EepromData;
-  UINT32               DataLen;
+  T234_EEPROM_DATA *EepromData;
+  UINT32           DataLen;
 
   DataLen = T234GetCvmEepromData (CpuBootloaderAddress, (UINT8 **)&EepromData);
 

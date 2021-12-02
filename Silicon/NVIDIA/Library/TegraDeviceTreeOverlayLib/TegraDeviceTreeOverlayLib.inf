@@ -49,6 +49,3 @@
   MdeModulePkg/MdeModulePkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
-
-[Protocols]
-  gNVIDIACvmEepromProtocolGuid
