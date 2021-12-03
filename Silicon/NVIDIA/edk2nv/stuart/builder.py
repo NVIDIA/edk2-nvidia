@@ -289,15 +289,8 @@ class NVIDIAPlatformBuilder(UefiBuilder):
             var_img = ws_dir / self.settings.GetVariableImageFile()
             logging.info("Generating variable image %s", var_img)
 
-            # If a PCD DB was generated, include it.
-            pcd_db = build_dir / self.settings.GetPcdDataBaseFile()
-            if pcd_db and pcd_db.exists():
-                logging.info(f"  using PCD DB %s", pcd_db)
-            else:
-                pcd_db = None
-
             var_img.parent.mkdir(parents=True, exist_ok=True)
-            GenVariableStore(variables_desc, str(var_img), str(pcd_db))
+            GenVariableStore(variables_desc, str(var_img))
 
         # Copy the boot app, if appropriate for this platform
         boot_rel = self.settings.GetBootAppName()

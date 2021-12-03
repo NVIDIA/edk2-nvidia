@@ -286,16 +286,6 @@ class NVIDIASettingsManager(UpdateSettingsManager, SetupSettingsManager,
         '''
         return None
 
-    def GetPcdDataBaseFile(self):
-        ''' Return the name of the built PCD DataBase.
-
-            If this file exists, it will be used when building the variable
-            store image.  Returned as a string and must be relative to the
-            build output directory.
-        '''
-        return ("AARCH64/MdeModulePkg/Universal/PCD/Dxe/Pcd/OUTPUT/"
-                "DXEPcdDataBase.raw")
-
     def GetVariableImageFile(self):
         ''' Return the name of the variable store image.
 

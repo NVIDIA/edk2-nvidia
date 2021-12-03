@@ -79,7 +79,6 @@ from VariableStoreUtil import (
     VSH_HEALTHY, VSH_RESERVED, VSH_RESERVED1, VH_START_ID, VH_STATE,
     VH_RESERVED, VH_MONOTONIC_COUNT, VH_PUBLIC_KEY_INDEX, UEFI_SUBDIRS
 )
-from PcdDatabaseUtil import PcdDatabase
 
 def check_file_exists(filename):
     """
@@ -93,77 +92,6 @@ def check_file_exists(filename):
         print("Error: could not find given file:\n"
               "    {}".format(filename))
         sys.exit(1)
-
-def parse_command_line_args():
-    """
-    Parses the command line arguments for the program.
-
-    There are two required positional arguments, the first being the
-    input file name and the second being the output file name.
-
-    There are three optional arguments, one specifying a file name for a pcd
-    database binary that will have the DynamicHii pcds extracted from it and
-    placed in variable store, one specifying the overall size of the
-    variable store, and one specifying the block size of the variable store.
-
-    Size must be a multiple of block size, otherwise an error message is
-    printed and the program exits.
-
-    Returns a tuple of (input_filename, output_filename, size, block_size)
-    """
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "input_file",
-        metavar="INPUT_FILE",
-        help="Input JSON file name."
-    )
-    parser.add_argument(
-        "output_file",
-        metavar="OUTPUT_FILE",
-        help="Output binary variable store file name."
-    )
-    parser.add_argument(
-        "--pcd_database",
-        default=None,
-        help=("Input PCD database binary file name. "
-              "If specified, the script will pull "
-              "non-volatile DynamicHii variables "
-              "from the PCD database into the variable store.")
-    )
-    parser.add_argument(
-        "--size",
-        type=int,
-        default=FVH_FV_LENGTH,
-        help=("Overall size of the variable store to be created, "
-              "given as a decimal value. "
-              "Must be a multiple of the block size used. "
-              "Default value is {}.".format(FVH_FV_LENGTH))
-    )
-    parser.add_argument(
-        "--block_size",
-        type=int,
-        default=FVH_BLOCKMAP0_BLOCK_SIZE,
-        help=("Block size of the variable store to be created, "
-              "given as a decimal value. "
-              "Default value is {}.".format(FVH_BLOCKMAP0_BLOCK_SIZE))
-    )
-    args = parser.parse_args()
-
-    check_file_exists(args.input_file)
-    check_file_exists(args.pcd_database)
-
-    if args.size < args.block_size or args.size % args.block_size:
-        print("Error: Given size must be a multiple of block_size")
-        sys.exit(1)
-
-    return (
-        args.input_file,
-        args.output_file,
-        args.pcd_database,
-        args.size,
-        args.block_size
-    )
 
 def make_key_unique(key, processed_pairs):
     """
@@ -793,7 +721,7 @@ def get_variable_bytes_from_json_file(json_filename):
 
     return output_bytes
 
-def GenVariableStore (input_filename, output_filename, pcd_database_filename=None, size=FVH_FV_LENGTH, block_size=FVH_BLOCKMAP0_BLOCK_SIZE):
+def GenVariableStore (input_filename, output_filename, size=FVH_FV_LENGTH, block_size=FVH_BLOCKMAP0_BLOCK_SIZE):
     # Only support little endian hosts. Target alignment is little endian,
     # so by enforcing that host endian matches, then we can make use of the
     # struct module's auto-alignment and not have to manually implement it.
@@ -809,15 +737,6 @@ def GenVariableStore (input_filename, output_filename, pcd_database_filename=Non
                     + get_variable_store_header(size)
                     + get_variable_bytes_from_json_file(input_filename))
 
-    if pcd_database_filename:
-        pcd_db = PcdDatabase(pcd_database_filename)
-        for hii_variable in pcd_db.get_all_hii_variables():
-            # Attributes should be at index 2 of the tuple.
-            # Need to filter out any variables that don't have
-            # the NV flag set.
-            if hii_variable[2] & ATTRIBUTES["EFI_VARIABLE_NON_VOLATILE"]:
-                output_bytes += get_variable_bytes(*hii_variable)
-
     output_bytes += bytearray(b'\xFF'*(size - len(output_bytes)))
 
     if (not os.path.isdir(os.path.dirname(output_filename))):
@@ -825,14 +744,3 @@ def GenVariableStore (input_filename, output_filename, pcd_database_filename=Non
 
     with io.open(output_filename, 'wb') as output_file:
         output_file.write(output_bytes)
-
-def main():
-    (input_filename, output_filename, pcd_database_filename,
-        size, block_size) = parse_command_line_args()
-
-    GenVariableStore(input_filename, output_filename, pcd_database_filename, size, block_size)
-
-    print("Successfully wrote variable store to {}".format(output_filename))
-
-if __name__ == '__main__':
-    main()
