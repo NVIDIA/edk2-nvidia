@@ -1,10 +1,24 @@
 /** @file
   Provides platform policy services used during a capsule update that uses the
-  services of the EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL.
+  services of the NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL.
 
+  Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
+
+  Portions provided under the following terms:
+  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+  property and proprietary rights in and to this material, related
+  documentation and any modifications thereto. Any use, reproduction,
+  disclosure or distribution of this material and related documentation
+  without an express license agreement from NVIDIA CORPORATION or
+  its affiliates is strictly prohibited.
+
+  SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
 
@@ -23,7 +37,7 @@
 /**
   Determine if the system power state supports a capsule update.
 
-  @param[in]  This  A pointer to the EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL instance.
+  @param[in]  This  A pointer to the NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL instance.
   @param[out] Good  Returns TRUE if system power state supports a capsule
                     update.  Returns FALSE if system power state does not
                     support a capsule update.  Return value is only valid if
@@ -37,14 +51,14 @@
 EFI_STATUS
 EFIAPI
 CapsuleUpdatePolicyCheckSystemPower (
-  IN  EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL  *This,
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This,
   OUT BOOLEAN                               *Good
   );
 
 /**
   Determines if the system thermal state supports a capsule update.
 
-  @param[in]  This  A pointer to the EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL instance.
+  @param[in]  This  A pointer to the NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL instance.
   @param[out] Good  Returns TRUE if system thermal state supports a capsule
                     update.  Returns FALSE if system thermal state does not
                     support a capsule update.  Return value is only valid if
@@ -58,14 +72,14 @@ CapsuleUpdatePolicyCheckSystemPower (
 EFI_STATUS
 EFIAPI
 CapsuleUpdatePolicyCheckSystemThermal (
-  IN  EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL  *This,
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This,
   OUT BOOLEAN                               *Good
   );
 
 /**
   Determines if the system environment state supports a capsule update.
 
-  @param[in]  This  A pointer to the EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL instance.
+  @param[in]  This  A pointer to the NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL instance.
   @param[out] Good  Returns TRUE if system environment state supports a capsule
                     update.  Returns FALSE if system environment state does not
                     support a capsule update.  Return value is only valid if
@@ -79,7 +93,7 @@ CapsuleUpdatePolicyCheckSystemThermal (
 EFI_STATUS
 EFIAPI
 CapsuleUpdatePolicyCheckSystemEnvironment (
-  IN  EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL  *This,
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This,
   OUT BOOLEAN                               *Good
   );
 
@@ -89,7 +103,7 @@ CapsuleUpdatePolicyCheckSystemEnvironment (
   FALSE (e.g. during manufacturing or servicing) to allow a capsule update to a
   version below the current Lowest Supported Version.
 
-  @param[in]  This  A pointer to the EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL instance.
+  @param[in]  This  A pointer to the NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL instance.
 
   @retval TRUE   The lowest supported version check is required.
   @retval FALSE  Do not perform lowest support version check.
@@ -98,7 +112,7 @@ CapsuleUpdatePolicyCheckSystemEnvironment (
 BOOLEAN
 EFIAPI
 CapsuleUpdatePolicyIsLowestSupportedVersionCheckRequired (
-  IN  EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL  *This
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This
   );
 
 /**
@@ -107,7 +121,7 @@ CapsuleUpdatePolicyIsLowestSupportedVersionCheckRequired (
   is TRUE so the FMP device is always locked.  A platform can choose to return
   FALSE (e.g. during manufacturing) to allow FMP devices to remain unlocked.
 
-  @param[in]  This  A pointer to the EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL instance.
+  @param[in]  This  A pointer to the NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL instance.
 
   @retval TRUE   The FMP device lock action is required at lock event guid.
   @retval FALSE  Do not perform FMP device lock at lock event guid.
@@ -116,7 +130,7 @@ CapsuleUpdatePolicyIsLowestSupportedVersionCheckRequired (
 BOOLEAN
 EFIAPI
 CapsuleUpdatePolicyIsLockFmpDeviceAtLockEventGuidRequired (
-  IN  EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL  *This
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This
   );
 
 /**

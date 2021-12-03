@@ -1,24 +1,38 @@
 ## @file
 #  Provides platform policy services used during a capsule update that uses the
-#  services of the EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL.  If the
-#  EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL is not available, then assume the
+#  services of the NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL.  If the
+#  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL is not available, then assume the
 #  platform is in a state that supports a firmware update.
 #
+#  Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2016, Microsoft Corporation. All rights reserved.<BR>
 #  Copyright (c) 2018-2019, Intel Corporation. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
+#  Portions provided under the following terms:
+#  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+#  property and proprietary rights in and to this material, related
+#  documentation and any modifications thereto. Any use, reproduction,
+#  disclosure or distribution of this material and related documentation
+#  without an express license agreement from NVIDIA CORPORATION or
+#  its affiliates is strictly prohibited.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+#  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
 ##
 
 [Defines]
-  INF_VERSION     = 0x00010005
+  INF_VERSION     = 0x00010019
   BASE_NAME       = CapsuleUpdatePolicyLibOnProtocol
-  MODULE_UNI_FILE = CapsuleUpdatePolicyLibOnProtocol.uni
   FILE_GUID       = 3e3264ee-c29c-46b6-a19a-661347f33025
   MODULE_TYPE     = DXE_DRIVER
   VERSION_STRING  = 1.0
-  LIBRARY_CLASS   = CapsuleUpdatePolicyLib
+  LIBRARY_CLASS   = CapsuleUpdatePolicyLib|DXE_DRIVER
+  CONSTRUCTOR     = CapsuleUpdatePolicyLibInit
 
 #
 #  VALID_ARCHITECTURES           = IA32 X64 ARM AARCH64
@@ -30,6 +44,7 @@
 [Packages]
   MdePkg/MdePkg.dec
   FmpDevicePkg/FmpDevicePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   BaseLib
@@ -37,4 +52,4 @@
   UefiBootServicesTableLib
 
 [Protocols]
-  gEdkiiCapsuleUpdatePolicyProtocolGuid  ## CONSUMES
+  gNVIDIACapsuleUpdatePolicyProtocolGuid        ## CONSUMES

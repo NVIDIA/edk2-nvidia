@@ -1,13 +1,27 @@
 /** @file
   Provides platform policy services used during a capsule update that uses the
-  services of the EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL. If the
-  EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL is not available, then assume the
+  services of the NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL. If the
+  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL is not available, then assume the
   platform is in a state that supports a firmware update.
 
+  Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2016, Microsoft Corporation. All rights reserved.<BR>
   Copyright (c) 2018-2019, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
+
+  Portions provided under the following terms:
+  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+  property and proprietary rights in and to this material, related
+  documentation and any modifications thereto. Any use, reproduction,
+  disclosure or distribution of this material and related documentation
+  without an express license agreement from NVIDIA CORPORATION or
+  its affiliates is strictly prohibited.
+
+  SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
 
@@ -18,154 +32,114 @@
 #include <Protocol/CapsuleUpdatePolicy.h>
 
 ///
-/// Pointer to the EDK II Capsule Update Policy Protocol instances that is
+/// Pointer to the Capsule Update Policy Protocol instance that is
 /// optionally installed by a platform.
 ///
-EDKII_CAPSULE_UPDATE_POLICY_PROTOCOL  *mCapsuleUpdatePolicy = NULL;
+NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  *mCapsuleUpdatePolicy = NULL;
 
 /**
-  Lookup the EDK II Capsule Update Policy Protocol.
+  Check if the Capsule Update Policy Protocol pointer is valid
 **/
+STATIC
 BOOLEAN
-LookupCapsuleUpdatePolicyProtocol (
+EFIAPI
+CapsuleUpdatePolicyProtocolIsValid (
   VOID
   )
 {
-  EFI_STATUS  Status;
-
-  if (mCapsuleUpdatePolicy != NULL) {
-    return TRUE;
-  }
-  Status = gBS->LocateProtocol (
-                  &gEdkiiCapsuleUpdatePolicyProtocolGuid,
-                  NULL,
-                  (VOID **)&mCapsuleUpdatePolicy
-                  );
-  if (EFI_ERROR (Status)) {
-    mCapsuleUpdatePolicy = NULL;
-    return FALSE;
-  }
-  return TRUE;
+  return (mCapsuleUpdatePolicy != NULL);
 }
 
-/**
-  Determine if the system power state supports a capsule update.
-
-  @param[out] Good  Returns TRUE if system power state supports a capsule
-                    update.  Returns FALSE if system power state does not
-                    support a capsule update.  Return value is only valid if
-                    return status is EFI_SUCCESS.
-
-  @retval EFI_SUCCESS            Good parameter has been updated with result.
-  @retval EFI_INVALID_PARAMETER  Good is NULL.
-  @retval EFI_DEVICE_ERROR       System power state can not be determined.
-
-**/
 EFI_STATUS
 EFIAPI
 CheckSystemPower (
   OUT BOOLEAN  *Good
   )
 {
-  if (LookupCapsuleUpdatePolicyProtocol ()) {
+  if (CapsuleUpdatePolicyProtocolIsValid ()) {
     return mCapsuleUpdatePolicy->CheckSystemPower (mCapsuleUpdatePolicy, Good);
   }
   *Good = TRUE;
   return EFI_SUCCESS;
 }
 
-/**
-  Determines if the system thermal state supports a capsule update.
-
-  @param[out] Good  Returns TRUE if system thermal state supports a capsule
-                    update.  Returns FALSE if system thermal state does not
-                    support a capsule update.  Return value is only valid if
-                    return status is EFI_SUCCESS.
-
-  @retval EFI_SUCCESS            Good parameter has been updated with result.
-  @retval EFI_INVALID_PARAMETER  Good is NULL.
-  @retval EFI_DEVICE_ERROR       System thermal state can not be determined.
-
-**/
 EFI_STATUS
 EFIAPI
 CheckSystemThermal (
   OUT BOOLEAN   *Good
   )
 {
-  if (LookupCapsuleUpdatePolicyProtocol ()) {
+  if (CapsuleUpdatePolicyProtocolIsValid ()) {
     return mCapsuleUpdatePolicy->CheckSystemThermal (mCapsuleUpdatePolicy, Good);
   }
   *Good = TRUE;
   return EFI_SUCCESS;
 }
 
-/**
-  Determines if the system environment state supports a capsule update.
-
-  @param[out] Good  Returns TRUE if system environment state supports a capsule
-                    update.  Returns FALSE if system environment state does not
-                    support a capsule update.  Return value is only valid if
-                    return status is EFI_SUCCESS.
-
-  @retval EFI_SUCCESS            Good parameter has been updated with result.
-  @retval EFI_INVALID_PARAMETER  Good is NULL.
-  @retval EFI_DEVICE_ERROR       System environment state can not be determined.
-
-**/
 EFI_STATUS
 EFIAPI
 CheckSystemEnvironment (
   OUT BOOLEAN   *Good
   )
 {
-  if (LookupCapsuleUpdatePolicyProtocol ()) {
+  if (CapsuleUpdatePolicyProtocolIsValid ()) {
     return mCapsuleUpdatePolicy->CheckSystemEnvironment (mCapsuleUpdatePolicy, Good);
   }
   *Good = TRUE;
   return EFI_SUCCESS;
 }
 
-/**
-  Determines if the Lowest Supported Version checks should be performed.  The
-  expected result from this function is TRUE.  A platform can choose to return
-  FALSE (e.g. during manufacturing or servicing) to allow a capsule update to a
-  version below the current Lowest Supported Version.
-
-  @retval TRUE   The lowest supported version check is required.
-  @retval FALSE  Do not perform lowest support version check.
-
-**/
 BOOLEAN
 EFIAPI
 IsLowestSupportedVersionCheckRequired (
   VOID
   )
 {
-  if (LookupCapsuleUpdatePolicyProtocol ()) {
+  if (CapsuleUpdatePolicyProtocolIsValid ()) {
     return mCapsuleUpdatePolicy->IsLowestSupportedVersionCheckRequired (mCapsuleUpdatePolicy);
   }
   return TRUE;
 }
 
-/**
-  Determines if the FMP device should be locked when the event specified by
-  PcdFmpDeviceLockEventGuid is signaled. The expected result from this function
-  is TRUE so the FMP device is always locked.  A platform can choose to return
-  FALSE (e.g. during manufacturing) to allow FMP devices to remain unlocked.
-
-  @retval TRUE   The FMP device lock action is required at lock event guid.
-  @retval FALSE  Do not perform FMP device lock at lock event guid.
-
-**/
 BOOLEAN
 EFIAPI
 IsLockFmpDeviceAtLockEventGuidRequired (
   VOID
   )
 {
-  if (LookupCapsuleUpdatePolicyProtocol ()) {
+  if (CapsuleUpdatePolicyProtocolIsValid ()) {
     return mCapsuleUpdatePolicy->IsLockFmpDeviceAtLockEventGuidRequired (mCapsuleUpdatePolicy);
   }
-  return TRUE;
+  // Don't use FmpDxe flash locking, FmpDeviceLib controls flash access
+  return FALSE;
+}
+
+/**
+  Library initialization
+
+  @param[in] ImageHandle  Image handle of this driver.
+  @param[in] SystemTable  Pointer to SystemTable.
+
+**/
+EFI_STATUS
+EFIAPI
+CapsuleUpdatePolicyLibInit (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  EFI_STATUS  Status;
+
+  // find and save the CapsuleUpdatePolicy Protocol pointer
+  Status = gBS->LocateProtocol (&gNVIDIACapsuleUpdatePolicyProtocolGuid,
+                                NULL,
+                                (VOID **)&mCapsuleUpdatePolicy);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "CapsuleUpdatePolicy Protocol Guid=%g not found: %r\n",
+            &gNVIDIACapsuleUpdatePolicyProtocolGuid, Status));
+    // use default policies
+    mCapsuleUpdatePolicy = NULL;
+  }
+
+  return Status;
 }

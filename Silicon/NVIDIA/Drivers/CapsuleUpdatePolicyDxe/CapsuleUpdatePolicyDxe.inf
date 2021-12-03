@@ -1,19 +1,31 @@
 ## @file
-#  Produce the Capsule Update Policy Protocol using the services of the Capsule
-#  Update Policy Library.
+#  Produce the Capsule Update Policy Protocol
 #
+#  Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
+#  Portions provided under the following terms:
+#  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+#  property and proprietary rights in and to this material, related
+#  documentation and any modifications thereto. Any use, reproduction,
+#  disclosure or distribution of this material and related documentation
+#  without an express license agreement from NVIDIA CORPORATION or
+#  its affiliates is strictly prohibited.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+#  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
 ##
 
 [Defines]
-  INF_VERSION     = 0x00010005
+  INF_VERSION     = 0x00010019
   BASE_NAME       = CapsuleUpdatePolicyDxe
-  MODULE_UNI_FILE = CapsuleUpdatePolicyDxe.uni
   FILE_GUID       = 61e328fb-a93a-4c48-be05-b048ba118f05
-  MODULE_TYPE     = DXE_DRIVER
+  MODULE_TYPE     = DXE_RUNTIME_DRIVER
   VERSION_STRING  = 1.0
   ENTRY_POINT     = CapsuleUpdatePolicyInitialize
 
@@ -30,19 +42,16 @@
 [Packages]
   MdePkg/MdePkg.dec
   FmpDevicePkg/FmpDevicePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   UefiDriverEntryPoint
   BaseLib
   DebugLib
   UefiBootServicesTableLib
-  CapsuleUpdatePolicyLib
 
 [Protocols]
-  gEdkiiCapsuleUpdatePolicyProtocolGuid  ## PRODUCES
+  gNVIDIACapsuleUpdatePolicyProtocolGuid        ## PRODUCES
 
 [Depex]
   TRUE
-
-[UserExtensions.TianoCore."ExtraFiles"]
-  CapsuleUpdatePolicyDxeExtra.uni
