@@ -69,9 +69,9 @@ _ReturnCarveout:
   ret
 
 ASM_FUNC(TegraGetBLInfoLocationAddress)
-  cmp w0, #T234_CHIP_ID
+  cmp w0, #T194_CHIP_ID
   bne _DefaultBLInfoAddr
-  MOV64 (x0, T234_BLINFO_LOCATION_ADDRESS)
+  MOV64 (x0, T194_BLINFO_LOCATION_ADDRESS)
   ret
 
 _DefaultBLInfoAddr:

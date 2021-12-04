@@ -173,14 +173,12 @@ GetCPUBLBaseAddress (
   CpuBootloaderAddressHi = (UINTN)MmioRead32 (TegraGetBLInfoLocationAddress(ChipID) + sizeof (UINT32));
   CpuBootloaderAddress = (CpuBootloaderAddressHi << 32) | CpuBootloaderAddressLo;
 
-  if (ChipID == T234_CHIP_ID) {
-    return CpuBootloaderAddress;
-  }
+  if (ChipID == T194_CHIP_ID) {
+    SystemMemoryBaseAddress = TegraGetSystemMemoryBaseAddress(ChipID);
 
-  SystemMemoryBaseAddress = TegraGetSystemMemoryBaseAddress(ChipID);
-
-  if (CpuBootloaderAddress < SystemMemoryBaseAddress) {
-    CpuBootloaderAddress <<= 16;
+    if (CpuBootloaderAddress < SystemMemoryBaseAddress) {
+      CpuBootloaderAddress <<= 16;
+    }
   }
 
   return CpuBootloaderAddress;
