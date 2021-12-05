@@ -796,6 +796,8 @@ EnableAllClockNodes (
   EFI_STATUS                    Status;
   UINTN                         Index;
   UINT32                        ClockId;
+  BOOLEAN                       ClockStatus;
+  CHAR8                         ClockName[SCMI_MAX_STR_LEN];
 
   if (This->Clocks == 0) {
     return EFI_SUCCESS;
@@ -808,9 +810,15 @@ EnableAllClockNodes (
 
   for (Index = 0; Index < This->Clocks; Index++) {
     ClockId = This->ClockEntries[This->Clocks - Index - 1].ClockId;
-    Status = ClockProtocol->Enable (ClockProtocol, ClockId, TRUE);
+    Status = ClockProtocol->GetClockAttributes (ClockProtocol, ClockId, &ClockStatus, ClockName);
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
+    }
+    if (!ClockStatus) {
+      Status = ClockProtocol->Enable (ClockProtocol, ClockId, TRUE);
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
     }
   }
 
@@ -835,6 +843,8 @@ DisableAllClockNodes (
   EFI_STATUS                    Status;
   UINTN                         Index;
   UINT32                        ClockId;
+  BOOLEAN                       ClockStatus;
+  CHAR8                         ClockName[SCMI_MAX_STR_LEN];
 
   if (This->Clocks == 0) {
     return EFI_SUCCESS;
@@ -847,9 +857,15 @@ DisableAllClockNodes (
 
   for (Index = 0; Index < This->Clocks; Index++) {
     ClockId = This->ClockEntries[This->Clocks - Index - 1].ClockId;
-    Status = ClockProtocol->Enable (ClockProtocol, ClockId, FALSE);
+    Status = ClockProtocol->GetClockAttributes (ClockProtocol, ClockId, &ClockStatus, ClockName);
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
+    }
+    if (ClockStatus) {
+      Status = ClockProtocol->Enable (ClockProtocol, ClockId, FALSE);
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
     }
   }
 
@@ -975,70 +991,6 @@ GetClockNodeProtocol(
 }
 
 /**
-  This function allows for deassert of specified power gate nodes.
-
-  @param[in]     This                The instance of the NVIDIA_POWER_GATE_NODE_PROTOCOL.
-  @param[in]     PgId                Id to de-assert
-
-  @return EFI_SUCCESS                power gate deasserted.
-  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
-  @return EFI_DEVICE_ERROR           Failed to deassert powergate
-**/
-EFI_STATUS
-DeassertPgNodes (
-  IN  NVIDIA_POWER_GATE_NODE_PROTOCOL   *This,
-  IN  UINT32                            PgId
-  )
-{
-  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
-  EFI_STATUS               Status;
-  MRQ_PG_COMMAND_PACKET    Request;
-
-  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
-  if (EFI_ERROR (Status)) {
-    return EFI_NOT_READY;
-  }
-
-  Request.Command = CmdPgSetState;
-  Request.PgId = PgId;
-  Request.Argument = CmdPgStateOn;
-
-  return BpmpProcessPgCommand (BpmpIpcProtocol, &Request, NULL, 0);
-}
-
-/**
-  This function allows for assert of specified power gate nodes.
-
-  @param[in]     This                The instance of the NVIDIA_POWER_GATE_NODE_PROTOCOL.
-  @param[in]     PgId                Id to assert
-
-  @return EFI_SUCCESS                Pg asserted.
-  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
-  @return EFI_DEVICE_ERROR           Failed to assert Pg
-**/
-EFI_STATUS
-AssertPgNodes (
-  IN  NVIDIA_POWER_GATE_NODE_PROTOCOL   *This,
-  IN  UINT32                            PgId
-  )
-{
-  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
-  EFI_STATUS               Status;
-  MRQ_PG_COMMAND_PACKET    Request;
-
-  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
-  if (EFI_ERROR (Status)) {
-    return EFI_NOT_READY;
-  }
-
-  Request.Command = CmdPgSetState;
-  Request.PgId = PgId;
-  Request.Argument = CmdPgStateOff;
-
-  return BpmpProcessPgCommand (BpmpIpcProtocol, &Request, NULL, 0);
-}
-
-/**
   This function allows for getting state of specified power gate nodes.
 
   @param[in]     This                The instance of the NVIDIA_POWER_GATE_NODE_PROTOCOL.
@@ -1070,6 +1022,90 @@ GetStatePgNodes (
   Request.Argument = MAX_UINT32;
 
   return BpmpProcessPgCommand (BpmpIpcProtocol, &Request, PowerGateState, 4);
+}
+
+/**
+  This function allows for deassert of specified power gate nodes.
+
+  @param[in]     This                The instance of the NVIDIA_POWER_GATE_NODE_PROTOCOL.
+  @param[in]     PgId                Id to de-assert
+
+  @return EFI_SUCCESS                power gate deasserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to deassert powergate
+**/
+EFI_STATUS
+DeassertPgNodes (
+  IN  NVIDIA_POWER_GATE_NODE_PROTOCOL   *This,
+  IN  UINT32                            PgId
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
+  EFI_STATUS               Status;
+  MRQ_PG_COMMAND_PACKET    Request;
+  UINT32                   PowerGateState;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  Status = GetStatePgNodes (This, PgId, &PowerGateState);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  if (PowerGateState == CmdPgStateOff) {
+    Request.Command = CmdPgSetState;
+    Request.PgId = PgId;
+    Request.Argument = CmdPgStateOn;
+
+    return BpmpProcessPgCommand (BpmpIpcProtocol, &Request, NULL, 0);
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  This function allows for assert of specified power gate nodes.
+
+  @param[in]     This                The instance of the NVIDIA_POWER_GATE_NODE_PROTOCOL.
+  @param[in]     PgId                Id to assert
+
+  @return EFI_SUCCESS                Pg asserted.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to assert Pg
+**/
+EFI_STATUS
+AssertPgNodes (
+  IN  NVIDIA_POWER_GATE_NODE_PROTOCOL   *This,
+  IN  UINT32                            PgId
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL *BpmpIpcProtocol = NULL;
+  EFI_STATUS               Status;
+  MRQ_PG_COMMAND_PACKET    Request;
+  UINT32                   PowerGateState;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  Status = GetStatePgNodes (This, PgId, &PowerGateState);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  if (PowerGateState == CmdPgStateOn) {
+    Request.Command = CmdPgSetState;
+    Request.PgId = PgId;
+    Request.Argument = CmdPgStateOff;
+
+    return BpmpProcessPgCommand (BpmpIpcProtocol, &Request, NULL, 0);
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
