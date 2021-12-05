@@ -47,8 +47,8 @@ NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
 NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
   .DriverName = L"NVIDIA Ufs controller driver",
   .UseDriverBinding = TRUE,
-  .AutoEnableClocks = FALSE,
-  .AutoResetModule = FALSE,
+  .AutoEnableClocks = TRUE,
+  .AutoDeassertReset = TRUE,
   .SkipEdkiiNondiscoverableInstall = FALSE
 };
 
@@ -151,7 +151,7 @@ STATIC UINT32 TxBurstClosureDelay             = 0;
  * UFS AUX Registers
  */
 
-#define UFSHC_AUX_UFSHC_SW_EN_CLK_SLCG_OFFSET 0x10008
+#define UFSHC_AUX_UFSHC_SW_EN_CLK_SLCG_OFFSET 0x8
 #define UFSHC_CLK_OVR_ON                      BIT0
 #define UFSHC_HCLK_OVR_ON                     BIT1
 #define UFSHC_LP_CLK_T_CLK_OVR_ON             BIT2
@@ -160,9 +160,9 @@ STATIC UINT32 TxBurstClosureDelay             = 0;
 #define UFSHC_TX_SYMBOL_CLK_OVR_ON            BIT5
 #define UFSHC_RX_SYMBOLCLKSELECTED_CLK_OVR_ON BIT6
 #define UFSHC_PCLK_OVR_ON                     BIT7
-#define UFSHC_AUX_UFSHC_STATUS_OFFSET         0x10010
+#define UFSHC_AUX_UFSHC_STATUS_OFFSET         0x10
 #define UFSHC_HIBERNATE_STATUS                BIT0
-#define UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET       0x10014
+#define UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET       0x14
 #define UFSHC_DEV_CLK_EN                      BIT0
 #define UFSHC_DEV_RESET                       BIT1
 
@@ -229,6 +229,7 @@ UfsCallback (
   )
 {
   EFI_PHYSICAL_ADDRESS            BaseAddress;
+  EFI_PHYSICAL_ADDRESS            BaseAddressAux;
   UINTN                           Size;
   EFI_STATUS                      Status;
   EDKII_UFS_HC_DRIVER_INTERFACE   *DriverInterface;
@@ -240,21 +241,27 @@ UfsCallback (
     return EFI_UNSUPPORTED;
   }
 
+  Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 1, &BaseAddressAux, &Size);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to locate aux address range\n", __FUNCTION__));
+    return EFI_UNSUPPORTED;
+  }
+
   DriverInterface = (EDKII_UFS_HC_DRIVER_INTERFACE *)CallbackData;
 
   switch (CallbackPhase) {
   case EdkiiUfsHcPreHce:
     DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", TRUE);
     MicroSecondDelay (500);
-    MmioAnd32 (BaseAddress + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
+    MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
     break;
 
   case EdkiiUfsHcPostHce:
-    MmioAnd32 (BaseAddress + UFSHC_AUX_UFSHC_SW_EN_CLK_SLCG_OFFSET, ~UFSHC_CG_SYS_CLK_OVR_ON);
-    MmioAnd32 (BaseAddress + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_CLK_EN);
-    MmioAnd32 (BaseAddress + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
-    MmioOr32 (BaseAddress + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
-    MmioOr32 (BaseAddress + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
+    MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_SW_EN_CLK_SLCG_OFFSET, ~UFSHC_CG_SYS_CLK_OVR_ON);
+    MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_CLK_EN);
+    MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
+    MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
+    MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
     MmioWrite32 (BaseAddress + UFS_VNDR_HCLKDIV_1US_TICK_OFFSET, REG_UFS_VNDR_HCLKDIV);
     DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", FALSE);
     break;
@@ -364,6 +371,7 @@ DeviceDiscoveryNotify (
   UINTN                   RegionCount;
   NON_DISCOVERABLE_DEVICE *Device;
   EFI_PHYSICAL_ADDRESS    BaseAddress;
+  EFI_PHYSICAL_ADDRESS    BaseAddressAux;
   UINTN                   Size;
 
   switch (Phase) {
@@ -376,7 +384,7 @@ DeviceDiscoveryNotify (
                   );
   case DeviceDiscoveryDriverBindingSupported:
     Status = DeviceDiscoveryGetMmioRegionCount (ControllerHandle, &RegionCount);
-    if (EFI_ERROR (Status) || (RegionCount == 0)) {
+    if (EFI_ERROR (Status) || (RegionCount < 2)) {
       return EFI_UNSUPPORTED;
     }
     break;
@@ -393,8 +401,14 @@ DeviceDiscoveryNotify (
     Device->DmaType = NonDiscoverableDeviceDmaTypeNonCoherent;
 
     Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &Size);
-    if (EFI_ERROR (Status) || Size < UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET) {
+    if (EFI_ERROR (Status)) {
       DEBUG((DEBUG_ERROR, "%a: Base region not correct\n", __FUNCTION__));
+      return EFI_UNSUPPORTED;
+    }
+
+    Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 1, &BaseAddressAux, &Size);
+    if (EFI_ERROR (Status)) {
+      DEBUG((DEBUG_ERROR, "%a: Aux region not correct\n", __FUNCTION__));
       return EFI_UNSUPPORTED;
     }
 
@@ -404,10 +418,10 @@ DeviceDiscoveryNotify (
       DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", FALSE);
     }
 
-    MmioAnd32 (BaseAddress + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_CLK_EN);
-    MmioAnd32 (BaseAddress + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
-    MmioOr32 (BaseAddress + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
-    MmioOr32 (BaseAddress + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
+    MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_CLK_EN);
+    MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
+    MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
+    MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
     MmioWrite32 (BaseAddress + UFS_VNDR_HCLKDIV_1US_TICK_OFFSET, REG_UFS_VNDR_HCLKDIV);
     break;
 
