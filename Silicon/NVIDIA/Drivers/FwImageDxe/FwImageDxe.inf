@@ -37,6 +37,7 @@
   DebugLib
   MemoryAllocationLib
   PlatformResourceLib
+  PcdLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   UefiLib
@@ -48,6 +49,9 @@
 
 [Guids]
   gEfiEventVirtualAddressChangeGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions
 
 [Depex]
   gNVIDIAFwPartitionProtocolGuid

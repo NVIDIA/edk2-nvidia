@@ -33,6 +33,7 @@ typedef struct _NVIDIA_FW_PARTITION_PROTOCOL NVIDIA_FW_PARTITION_PROTOCOL;
 // partition attributes structure
 typedef struct {
   UINTN                                 Bytes;
+  UINT32                                BlockSize;
 } FW_PARTITION_ATTRIBUTES;
 
 /**
@@ -40,7 +41,8 @@ typedef struct {
 
   @param[in]  This                 Instance to protocol
   @param[in]  Offset               Offset to read from
-  @param[in]  Bytes                Number of bytes to read
+  @param[in]  Bytes                Number of bytes to read, must be a multiple
+                                   of FW_PARTITION_ATTRIBUTES.BlockSize.
   @param[out] Buffer               Address to read data into
 
   @retval EFI_SUCCESS              Operation successful

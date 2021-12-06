@@ -21,6 +21,7 @@
 #include <Library/BootChainInfoLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -37,6 +38,7 @@ typedef struct FW_IMAGE_PRIVATE_DATA {
   // image info
   CHAR16                            Name[FW_IMAGE_NAME_LENGTH];
   UINTN                             Bytes;
+  UINT32                            BlockSize;
   NVIDIA_FW_PARTITION_PROTOCOL      *FwPartitionA;
   NVIDIA_FW_PARTITION_PROTOCOL      *FwPartitionB;
 
@@ -343,6 +345,7 @@ FwImageGetAttributes (
                 FW_IMAGE_PRIVATE_DATA_SIGNATURE);
 
   Attributes->Bytes = Private->Bytes;
+  Attributes->BlockSize = Private->BlockSize;
 
   return EFI_SUCCESS;
 }
@@ -476,6 +479,9 @@ FwImageGetPartitionAttributes (
     return Status;
   }
 
+  Private->Bytes        = AttributesA.Bytes;
+  Private->BlockSize    = AttributesA.BlockSize;
+
   // if B exists, its attributes must match A
   if (Private->FwPartitionB != NULL) {
     Status = Private->FwPartitionB->GetAttributes (Private->FwPartitionB, &AttributesB);
@@ -488,9 +494,9 @@ FwImageGetPartitionAttributes (
               __FUNCTION__, Private->Name));
       return EFI_UNSUPPORTED;
     }
-  }
 
-  Private->Bytes = AttributesA.Bytes;
+    Private->BlockSize = MAX (AttributesA.BlockSize, AttributesB.BlockSize);
+  }
 
   return EFI_SUCCESS;
 }
@@ -594,10 +600,12 @@ FwImageDxeInitialize (
       Status = EFI_UNSUPPORTED;
       goto Done;
     }
-    Private->FwPartitionB = FwImageFindPartition (Name,
-                                                  ProtocolBuffer,
-                                                  NumHandles,
-                                                  BOOT_CHAIN_B);
+    if (PcdGetBool (PcdFwImageEnableBPartitions)) {
+      Private->FwPartitionB = FwImageFindPartition (Name,
+                                                    ProtocolBuffer,
+                                                    NumHandles,
+                                                    BOOT_CHAIN_B);
+    }
     Status = FwImageGetPartitionAttributes (Private);
     if (EFI_ERROR (Status)) {
       goto Done;

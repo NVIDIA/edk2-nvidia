@@ -91,6 +91,7 @@ struct _FW_PARTITION_DEVICE_INFO {
   CONST CHAR16                      *DeviceName;
   FW_PARTITION_DEVICE_READ          DeviceRead;
   FW_PARTITION_DEVICE_WRITE         DeviceWrite;
+  UINT32                            BlockSize;
 };
 
 // partition information structure

@@ -39,6 +39,7 @@ typedef struct _NVIDIA_FW_IMAGE_PROTOCOL NVIDIA_FW_IMAGE_PROTOCOL;
 // image attributes structure
 typedef struct {
   UINTN                                 Bytes;
+  UINT32                                BlockSize;
 } FW_IMAGE_ATTRIBUTES;
 
 /**
@@ -49,7 +50,8 @@ typedef struct {
 
   @param[in]  This              Instance to protocol
   @param[in]  Offset            Offset to read from
-  @param[in]  Bytes             Number of bytes to read
+  @param[in]  Bytes             Number of bytes to read, must be a multiple
+                                of FW_IMAGE_ATTRIBUTES.BlockSize.
   @param[out] Buffer            Address to read data into
   @param[in]  Flags             Flags for read operation
 

@@ -441,6 +441,7 @@ FPBlockIoInitDevices (
     DeviceInfo->DeviceName          = DeviceName;
     DeviceInfo->DeviceRead          = FPBlockIoRead;
     DeviceInfo->DeviceWrite         = FPBlockIoWrite;
+    DeviceInfo->BlockSize           = BlockIo->Media->BlockSize;
 
     mNumDevices++;
   }
@@ -589,23 +590,23 @@ FwPartitionBlockIoDxeInitialize (
   Status = BrBctUpdateDeviceLibInit (ActiveBootChain,
                                      FPBlockIoErase,
                                      1);
-  if (EFI_ERROR (Status)) {
+  if (Status == EFI_SUCCESS) {
+    BrBctUpdatePrivate = BrBctUpdateGetPrivate ();
+    Status = gBS->InstallMultipleProtocolInterfaces (&BrBctUpdatePrivate->Handle,
+                                                     &gNVIDIABrBctUpdateProtocolGuid,
+                                                     &BrBctUpdatePrivate->Protocol,
+                                                     NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Couldn't install BR-BCT update protocol: %r\n",
+              __FUNCTION__, Status));
+      goto Done;
+    }
+  } else {
     if (Status != EFI_NOT_FOUND) {
       DEBUG ((DEBUG_ERROR, "%a: Error initializing BrBct lib: %r\n",
               __FUNCTION__, Status));
+      goto Done;
     }
-    goto Done;
-  }
-
-  BrBctUpdatePrivate = BrBctUpdateGetPrivate ();
-  Status = gBS->InstallMultipleProtocolInterfaces (&BrBctUpdatePrivate->Handle,
-                                                   &gNVIDIABrBctUpdateProtocolGuid,
-                                                   &BrBctUpdatePrivate->Protocol,
-                                                   NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Couldn't install BR-BCT update protocol: %r\n",
-            __FUNCTION__, Status));
-    goto Done;
   }
 
   Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,

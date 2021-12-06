@@ -82,6 +82,7 @@ FwPartitionGetAttributes (
   PartitionInfo = &Private->PartitionInfo;
 
   Attributes->Bytes = PartitionInfo->Bytes;
+  Attributes->BlockSize = Private->DeviceInfo->BlockSize;
 
   return EFI_SUCCESS;
 }
@@ -172,7 +173,7 @@ FwPartitionWrite (
             PartitionInfo->Name));
     return EFI_WRITE_PROTECTED;
   } else {
-    DEBUG ((DEBUG_WARN, "WARNING: Overwriting active %s partition\n",
+    DEBUG ((DEBUG_INFO, "Overwriting active %s partition\n",
             PartitionInfo->Name));
   }
 
