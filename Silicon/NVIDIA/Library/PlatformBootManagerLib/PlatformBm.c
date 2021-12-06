@@ -37,6 +37,7 @@
 #include <Library/BaseCryptLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
+#include <Library/DxeCapsuleLibFmp/CapsuleOnDisk.h>
 #include <Protocol/DevicePath.h>
 #include <Protocol/EsrtManagement.h>
 #include <Protocol/GenericMemoryTest.h>
@@ -867,6 +868,21 @@ HandleCapsules (
     HobPointer.Raw = GET_NEXT_HOB (HobPointer);
   }
 
+  //
+  // Check for capsules on disk
+  //
+  if (CoDCheckCapsuleOnDiskFlag ()) {
+    NeedReset = TRUE;
+    Status = CoDRelocateCapsule (0);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: CoDRelocateCapsule failed: %r\n",
+              __FUNCTION__, Status));
+    }
+  }
+
+  //
+  // Reset if any capsules installed
+  //
   if (NeedReset) {
       DEBUG ((DEBUG_WARN, "%a: capsule update successful, resetting ...\n",
         __FUNCTION__));
