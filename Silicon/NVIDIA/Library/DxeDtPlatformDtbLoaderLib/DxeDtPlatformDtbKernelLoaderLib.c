@@ -56,6 +56,24 @@ QSPI_COMPATIBILITY gQspiCompatibilityMap[] = {
 
 VOID
 EFIAPI
+AddSerialNumProperties (
+  IN VOID *Dtb
+  )
+{
+  EFI_STATUS       Status;
+  TEGRA_BOARD_INFO BoardInfo;
+
+  ZeroMem (&BoardInfo, sizeof (BoardInfo));
+  Status = GetBoardInfo (&BoardInfo);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  fdt_setprop (Dtb, 0, "serial-number", &BoardInfo.SerialNumber, sizeof (BoardInfo.SerialNumber));
+}
+
+VOID
+EFIAPI
 AddSkuProperties (
   IN VOID *Dtb
   )
@@ -144,6 +162,7 @@ FdtInstalled (
   UpdateCpuFloorsweepingConfig (Dtb);
   RemoveQspiNodes (Dtb);
   AddSkuProperties (Dtb);
+  AddSerialNumProperties (Dtb);
 }
 
 /**

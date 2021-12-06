@@ -423,8 +423,9 @@ T234GetBoardInfo(
   BoardInfo->FuseBaseAddr = TEGRA_FUSE_BASE_ADDRESS;
   BoardInfo->FuseList = T234FloorsweepingFuseList;
   BoardInfo->FuseCount = sizeof(T234FloorsweepingFuseList) / sizeof(T234FloorsweepingFuseList[0]);
-  CopyMem ((VOID *) BoardInfo->BoardId, (VOID *) EepromData->PartNumber.Id, TEGRA_BOARD_ID_LEN);
+  CopyMem ((VOID *) BoardInfo->BoardId, (VOID *) EepromData->PartNumber.Id, BOARD_ID_LEN);
   CopyMem ((VOID *) BoardInfo->ProductId, (VOID *) &EepromData->PartNumber, sizeof (BoardInfo->ProductId));
+  CopyMem ((VOID *) BoardInfo->SerialNumber, (VOID *) &EepromData->SerialNumber, sizeof (BoardInfo->SerialNumber));
 
   return TRUE;
 }

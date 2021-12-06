@@ -340,7 +340,7 @@ ReadBoardInfo (
   GetBoardInfo(&BoardInfo);
   DEBUG((DEBUG_INFO, "Board Id (BCT/EEPROM): %a \n", (CHAR8*)BoardInfo.BoardId));
 
-  if (!AsciiStrnLenS(BoardInfo.BoardId, TEGRA_BOARD_ID_LEN + 1)) {
+  if (!AsciiStrnLenS(BoardInfo.BoardId, BOARD_ID_LEN + 1)) {
     DEBUG((DEBUG_WARN, "%a: Failed to get board_id from BCT \n. Reading from device tree.", __FUNCTION__));
     BoardIdNode = fdt_path_offset(Fdt, "/chosen");
     if (0 > BoardIdNode) {
@@ -353,11 +353,11 @@ ReadBoardInfo (
       DEBUG((DEBUG_ERROR,"%a: Failed to read prop on /chosen/ids\n", __FUNCTION__));
       return EFI_LOAD_ERROR;
     }
-    if (BoardIdLen > TEGRA_BOARD_ID_LEN) {
+    if (BoardIdLen > BOARD_ID_LEN) {
       DEBUG((DEBUG_ERROR,"%a: BoardId length > %ul(max supported)\n", __FUNCTION__));
       return EFI_LOAD_ERROR;
     }
-    AsciiStrCpyS(BoardInfo.BoardId, TEGRA_BOARD_ID_LEN+1, BoardId);
+    AsciiStrCpyS(BoardInfo.BoardId, BOARD_ID_LEN+1, BoardId);
   }
 
   return EFI_SUCCESS;
