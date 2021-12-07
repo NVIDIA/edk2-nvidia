@@ -49,7 +49,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
   .UseDriverBinding = TRUE,
   .AutoEnableClocks = TRUE,
   .AutoDeassertReset = TRUE,
-  .SkipEdkiiNondiscoverableInstall = FALSE
+  .SkipEdkiiNondiscoverableInstall = FALSE,
+  .SkipAutoDeinitControllerOnExitBootServices = TRUE
 };
 
 //
