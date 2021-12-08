@@ -202,12 +202,9 @@ DeviceDiscoveryNotify (
   CHAR16                           VariableName[MAX_ETH_NAME];
   UINTN                            VariableSize;
   UINT32                           VariableAttributes;
-  UINT8                            *CvmEeprom;
-  T194_EEPROM_DATA                 *T194CvmEeprom;
-  T234_EEPROM_DATA                 *T234CvmEeprom;
+  TEGRA_CVMEEPROM_BOARD_INFO       *CvmEeprom;
   TEGRA_PLATFORM_TYPE              PlatformType;
   BOOLEAN                          FlipResetMode;
-  UINTN                            ChipID;
   UINT32                           PhyNodeHandle;
   INT32                            PhyNodeOffset;
 
@@ -343,49 +340,13 @@ DeviceDiscoveryNotify (
     ZeroMem (&SnpMode->PermanentAddress, sizeof(SnpMode->PermanentAddress));
     ZeroMem (&SnpMode->CurrentAddress, sizeof(SnpMode->CurrentAddress));
 
-    ChipID = TegraGetChipID();
-
-    if (ChipID == T194_CHIP_ID) {
-      T194CvmEeprom = (T194_EEPROM_DATA *) CvmEeprom;
-      if ((CompareMem (T194CvmEeprom->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194CvmEeprom->CustomerBlockSignature)) == 0) &&
-          (CompareMem (T194CvmEeprom->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T194CvmEeprom->CustomerTypeSignature)) == 0)) {
-        SnpMode->PermanentAddress.Addr[0] = T194CvmEeprom->CustomerEthernetMacAddress[5];
-        SnpMode->PermanentAddress.Addr[1] = T194CvmEeprom->CustomerEthernetMacAddress[4];
-        SnpMode->PermanentAddress.Addr[2] = T194CvmEeprom->CustomerEthernetMacAddress[3];
-        SnpMode->PermanentAddress.Addr[3] = T194CvmEeprom->CustomerEthernetMacAddress[2];
-        SnpMode->PermanentAddress.Addr[4] = T194CvmEeprom->CustomerEthernetMacAddress[1];
-        SnpMode->PermanentAddress.Addr[5] = T194CvmEeprom->CustomerEthernetMacAddress[0];
-      } else {
-        SnpMode->PermanentAddress.Addr[0] = T194CvmEeprom->EthernetMacAddress[5];
-        SnpMode->PermanentAddress.Addr[1] = T194CvmEeprom->EthernetMacAddress[4];
-        SnpMode->PermanentAddress.Addr[2] = T194CvmEeprom->EthernetMacAddress[3];
-        SnpMode->PermanentAddress.Addr[3] = T194CvmEeprom->EthernetMacAddress[2];
-        SnpMode->PermanentAddress.Addr[4] = T194CvmEeprom->EthernetMacAddress[1];
-        SnpMode->PermanentAddress.Addr[5] = T194CvmEeprom->EthernetMacAddress[0];
-      }
-    } else if (ChipID == T234_CHIP_ID) {
-      T234CvmEeprom = (T234_EEPROM_DATA *) CvmEeprom;
-      if ((CompareMem (T234CvmEeprom->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T234CvmEeprom->CustomerBlockSignature)) == 0) &&
-          (CompareMem (T234CvmEeprom->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T234CvmEeprom->CustomerTypeSignature)) == 0)) {
-        SnpMode->PermanentAddress.Addr[0] = T234CvmEeprom->CustomerEthernetMacAddress[5];
-        SnpMode->PermanentAddress.Addr[1] = T234CvmEeprom->CustomerEthernetMacAddress[4];
-        SnpMode->PermanentAddress.Addr[2] = T234CvmEeprom->CustomerEthernetMacAddress[3];
-        SnpMode->PermanentAddress.Addr[3] = T234CvmEeprom->CustomerEthernetMacAddress[2];
-        SnpMode->PermanentAddress.Addr[4] = T234CvmEeprom->CustomerEthernetMacAddress[1];
-        SnpMode->PermanentAddress.Addr[5] = T234CvmEeprom->CustomerEthernetMacAddress[0];
-        Snp->NumMacs = T234CvmEeprom->CustomerNumEthernetMacs;
-      } else {
-        SnpMode->PermanentAddress.Addr[0] = T234CvmEeprom->EthernetMacAddress[5];
-        SnpMode->PermanentAddress.Addr[1] = T234CvmEeprom->EthernetMacAddress[4];
-        SnpMode->PermanentAddress.Addr[2] = T234CvmEeprom->EthernetMacAddress[3];
-        SnpMode->PermanentAddress.Addr[3] = T234CvmEeprom->EthernetMacAddress[2];
-        SnpMode->PermanentAddress.Addr[4] = T234CvmEeprom->EthernetMacAddress[1];
-        SnpMode->PermanentAddress.Addr[5] = T234CvmEeprom->EthernetMacAddress[0];
-        Snp->NumMacs = T234CvmEeprom->NumEthernetMacs;
-      }
-    } else {
-      return EFI_DEVICE_ERROR;
-    }
+    SnpMode->PermanentAddress.Addr[0] = CvmEeprom->MacAddr[5];
+    SnpMode->PermanentAddress.Addr[1] = CvmEeprom->MacAddr[4];
+    SnpMode->PermanentAddress.Addr[2] = CvmEeprom->MacAddr[3];
+    SnpMode->PermanentAddress.Addr[3] = CvmEeprom->MacAddr[2];
+    SnpMode->PermanentAddress.Addr[4] = CvmEeprom->MacAddr[1];
+    SnpMode->PermanentAddress.Addr[5] = CvmEeprom->MacAddr[0];
+    Snp->NumMacs = CvmEeprom->NumMacs;
 
     VariableSize = sizeof (EFI_MAC_ADDRESS);
     Status = gRT->GetVariable (VariableName, &gNVIDIATokenSpaceGuid, &VariableAttributes, &VariableSize, (VOID *)SnpMode->CurrentAddress.Addr);

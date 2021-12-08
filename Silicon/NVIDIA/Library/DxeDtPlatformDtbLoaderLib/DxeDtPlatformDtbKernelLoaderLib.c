@@ -41,6 +41,7 @@
 #include <Library/TegraDeviceTreeOverlayLib.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
+#include <Protocol/Eeprom.h>
 
 typedef struct {
   CONST CHAR8 *Compatibility;
@@ -56,41 +57,24 @@ QSPI_COMPATIBILITY gQspiCompatibilityMap[] = {
 
 VOID
 EFIAPI
-AddSerialNumProperties (
+AddBoardProperties (
   IN VOID *Dtb
   )
 {
-  EFI_STATUS       Status;
-  TEGRA_BOARD_INFO BoardInfo;
+  EFI_STATUS                  Status;
+  TEGRA_CVMEEPROM_BOARD_INFO  *CvmEeprom;
+  INTN                        NodeOffset;
 
-  ZeroMem (&BoardInfo, sizeof (BoardInfo));
-  Status = GetBoardInfo (&BoardInfo);
+  Status = gBS->LocateProtocol (&gNVIDIACvmEepromProtocolGuid, NULL, (VOID **)&CvmEeprom);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to get eeprom protocol\r\n"));
     return;
   }
 
-  fdt_setprop (Dtb, 0, "serial-number", &BoardInfo.SerialNumber, sizeof (BoardInfo.SerialNumber));
-}
-
-VOID
-EFIAPI
-AddSkuProperties (
-  IN VOID *Dtb
-  )
-{
-  EFI_STATUS       Status;
-  TEGRA_BOARD_INFO BoardInfo;
-  INTN             NodeOffset;
-
-  ZeroMem (&BoardInfo, sizeof (BoardInfo));
-  Status = GetBoardInfo (&BoardInfo);
-  if (EFI_ERROR (Status)) {
-    return;
-  }
-
+  fdt_setprop (Dtb, 0, "serial-number", &CvmEeprom->SerialNumber, sizeof (CvmEeprom->SerialNumber));
   NodeOffset = fdt_path_offset (Dtb, "/chosen");
   if (NodeOffset >= 0) {
-    fdt_setprop (Dtb, NodeOffset, "nvidia,sku", &BoardInfo.ProductId, sizeof (BoardInfo.ProductId));
+    fdt_setprop (Dtb, NodeOffset, "nvidia,sku", &CvmEeprom->ProductId, sizeof (CvmEeprom->ProductId));
   }
 }
 
@@ -161,8 +145,7 @@ FdtInstalled (
 
   UpdateCpuFloorsweepingConfig (Dtb);
   RemoveQspiNodes (Dtb);
-  AddSkuProperties (Dtb);
-  AddSerialNumProperties (Dtb);
+  AddBoardProperties (Dtb);
 }
 
 /**

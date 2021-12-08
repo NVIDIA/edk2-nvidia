@@ -30,6 +30,7 @@
 
 #include <Uefi/UefiBaseType.h>
 #include <Library/DramCarveoutLib.h>
+#include <NVIDIABoardConfiguration.h>
 
 /**
  * @ingroup TEGRA_UART_TYPE
@@ -40,10 +41,6 @@
 #define TEGRA_UART_TYPE_SBSA      0x01
 #define TEGRA_UART_TYPE_TCU       0xFE
 #define TEGRA_UART_TYPE_NONE      0xFF
-
-#define BOARD_ID_LEN              13
-#define PRODUCT_ID_LEN            29
-#define SERIAL_NUM_LEN            15
 
 #define BIT(x)   (1 << (x))
 

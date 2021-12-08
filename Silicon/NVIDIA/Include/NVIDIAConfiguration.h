@@ -49,7 +49,6 @@
 #define NVIDIA_L4T_BOOTMODE_RECOVERY         0x3
 #define NVIDIA_L4T_BOOTMODE_DEFAULT          0xFF
 
-
 #define KERNEL_CMD_STR_MIN_SIZE              0
 #define KERNEL_CMD_STR_MAX_SIZE              255
 

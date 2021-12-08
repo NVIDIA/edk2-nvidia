@@ -28,6 +28,7 @@
 #ifndef __NVIDIA_EEPROM_PROTOCOL_H__
 #define __NVIDIA_EEPROM_PROTOCOL_H__
 
+#include <NVIDIABoardConfiguration.h>
 
 #define T194_EEPROM_VERSION             1
 #define T234_EEPROM_VERSION             2
@@ -214,5 +215,17 @@ typedef struct {
   UINT8    Checksum;                      /* 255 */
 } T234_EEPROM_DATA;
 #pragma pack()
+
+typedef struct {
+  CHAR8    BoardId[BOARD_ID_LEN + 1];
+  CHAR8    ProductId[PRODUCT_ID_LEN + 1];
+  CHAR8    SerialNumber[SERIAL_NUM_LEN];
+  UINT8    MacAddr[EEPROM_LEN];
+  UINT8    NumMacs;
+} TEGRA_CVMEEPROM_BOARD_INFO;
+
+typedef struct {
+  CHAR8    BoardId[BOARD_ID_LEN + 1];
+} TEGRA_IDEEPROM_BOARD_INFO;
 
 #endif

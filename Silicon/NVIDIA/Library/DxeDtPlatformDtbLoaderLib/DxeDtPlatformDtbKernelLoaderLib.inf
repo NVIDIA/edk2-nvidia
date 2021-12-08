@@ -58,6 +58,7 @@
 [Protocols]
   gEfiPartitionInfoProtocolGuid
   gEfiBlockIoProtocolGuid
+  gNVIDIACvmEepromProtocolGuid
 
 [Guids]
   gFdtTableGuid
