@@ -89,6 +89,7 @@ FwImageLibConstructor (
   UINTN                 NumHandles;
   EFI_HANDLE            *HandleBuffer;
 
+  HandleBuffer = NULL;
   Status = gBS->LocateHandleBuffer (ByProtocol,
                                     &gNVIDIAFwImageProtocolGuid,
                                     NULL,
@@ -97,7 +98,7 @@ FwImageLibConstructor (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: LocateHandleBuffer failed for gNVIDIAFwImageProtocolGuid (%r)\n",
             __FUNCTION__, Status));
-    return Status;
+    goto Done;
   }
   DEBUG ((DEBUG_INFO, "%a: got %d FW image handles", __FUNCTION__, NumHandles));
 
@@ -105,6 +106,7 @@ FwImageLibConstructor (
     AllocateRuntimeZeroPool (NumHandles * sizeof (VOID *));
   if (mFwImages == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
+    DEBUG ((DEBUG_ERROR, "%a: mFwImages allocate failed\n", __FUNCTION__));
     goto Done;
   }
 
@@ -116,7 +118,6 @@ FwImageLibConstructor (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to get FW Image Protocol for index=%u: %r\n",
               __FUNCTION__, Index, Status));
-      Status = EFI_NOT_FOUND;
       goto Done;
     }
 
@@ -127,7 +128,10 @@ FwImageLibConstructor (
   }
 
 Done:
-  FreePool (HandleBuffer);
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+    HandleBuffer = NULL;
+  }
 
   if (EFI_ERROR (Status)) {
     if (mFwImages != NULL) {
@@ -137,5 +141,6 @@ Done:
     mNumImages = 0;
   }
 
-  return Status;
+  // If an error occurred above, library API reports no images.
+  return EFI_SUCCESS;
 }
