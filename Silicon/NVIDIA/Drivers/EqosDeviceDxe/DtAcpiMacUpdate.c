@@ -71,7 +71,7 @@
 #define EFI_ACPI_MAX_NUM_TABLES         20
 #define DSDT_SIGNATURE                  0x54445344
 
-#define D03_ACPI_ETH_ID                 "PRP0001"
+#define D03_ACPI_ETH_ID                 "NVDA1160"
 
 #define ACPI_ETH_MAC_KEY                "mac-address"
 
