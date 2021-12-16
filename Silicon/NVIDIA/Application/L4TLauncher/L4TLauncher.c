@@ -852,6 +852,7 @@ ExtLinuxBoot (
   EFI_DEVICE_PATH_PROTOCOL  *FdtDevicePath = NULL;
   EFI_FILE_HANDLE            FdtFileHandle = NULL;
   UINTN                      FdtSize;
+  VOID                      *AcpiBase = NULL;
   VOID                      *OldFdtBase = NULL;
   VOID                      *NewFdtBase = NULL;
   BOOLEAN                    FdtUpdated = FALSE;
@@ -924,7 +925,8 @@ ExtLinuxBoot (
     }
   }
   //Reload fdt if needed
-  if (BootOption->DtbPath != NULL) {
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (EFI_ERROR (Status) && BootOption->DtbPath != NULL) {
     Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &OldFdtBase);
     if (!EFI_ERROR (Status)) {
       OldFdtBase = NULL;
