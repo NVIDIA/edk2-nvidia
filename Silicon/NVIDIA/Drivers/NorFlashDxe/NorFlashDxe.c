@@ -1205,6 +1205,9 @@ CheckNorFlashCompatibility(
 {
   EFI_STATUS                       Status;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode;
+  INTN                             Offset;
+  CONST VOID                       *Property;
+  INT32                            Length;
 
   // Check whether device tree node protocol is available.
   DeviceTreeNode = NULL;
@@ -1215,16 +1218,28 @@ CheckNorFlashCompatibility(
     return Status;
   }
 
-  if (fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase,
-                          DeviceTreeNode->NodeOffset,
-                          "flash@0") >= 0) {
+  Offset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase,
+                               DeviceTreeNode->NodeOffset,
+                               "flash@0");
+  if (Offset >= 0) {
     return EFI_SUCCESS;
   }
 
-  if (fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase,
-                          DeviceTreeNode->NodeOffset,
-                          "spiflash@0") >= 0) {
-    return EFI_SUCCESS;
+  Offset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase,
+                               DeviceTreeNode->NodeOffset,
+                               "spiflash@0");
+  if (Offset >= 0) {
+    Offset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase,
+                                 Offset,
+                                 "partition@0");
+    if (Offset >= 0) {
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, Offset, "label", &Length);
+      if (Property != NULL && Length != 0) {
+        if (AsciiStrStr (Property, "flash") != NULL) {
+          return EFI_SUCCESS;
+        }
+      }
+    }
   }
 
   return EFI_UNSUPPORTED;
