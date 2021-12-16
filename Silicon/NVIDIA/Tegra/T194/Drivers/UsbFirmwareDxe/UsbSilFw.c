@@ -185,7 +185,7 @@ ReadBackupGpt(
       DEBUG ((DEBUG_ERROR, "%a: Failed to get NOR Flash attributes (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
-    StorageSize = NorFlashAttributes.UniformMemoryDensity;
+    StorageSize = NorFlashAttributes.MemoryDensity;
   } else {
     Status = gBS->HandleProtocol (Handle, &gEfiBlockIoProtocolGuid, (VOID **)&BlockIoProtocol);
     if (!EFI_ERROR (Status)) {

@@ -34,14 +34,12 @@
 
 #define NVIDIA_NOR_FLASH_PROTOCOL_GUID \
   { \
-  0x9545a4b9, 0x0e8a, 0x43db, { 0xbe, 0x00, 0xed, 0xc0, 0x6f, 0xe0, 0x81, 0xf7 } \
+  0x989b8be1, 0x18fc, 0x430d, { 0x9a, 0x4c, 0x29, 0x07, 0xf2, 0xa7, 0x28, 0xdd } \
   }
 
 typedef struct {
-  UINT64                           UniformMemoryDensity;
-  UINT32                           UniformBlockSize;
-  UINT64                           HybridMemoryDensity;
-  UINT32                           HybridBlockSize;
+  UINT64                           MemoryDensity;
+  UINT32                           BlockSize;
 } NOR_FLASH_ATTRIBUTES;
 
 
@@ -119,7 +117,6 @@ EFI_STATUS
   @param[in] This                  Instance to protocol
   @param[in] Lba                   Logical block to start erasing from
   @param[in] NumLba                Number of block to be erased
-  @param[in] Hybrid                Use hybrid region
 
   @retval EFI_SUCCESS              Operation successful.
   @retval others                   Error occurred
@@ -130,8 +127,7 @@ EFI_STATUS
 (EFIAPI * NOR_FLASH_ERASE)(
   IN NVIDIA_NOR_FLASH_PROTOCOL *This,
   IN UINT32                    Lba,
-  IN UINT32                    NumLba,
-  IN BOOLEAN                   Hybrid
+  IN UINT32                    NumLba
 );
 
 /// NVIDIA_NOR_FLASH_PROTOCOL protocol structure.

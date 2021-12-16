@@ -175,6 +175,8 @@ typedef struct {
   UINT8                            HybridEraseCmd;
   UINT32                           PageSize;
   UINT8                            ReadWaitCycles;
+  UINT64                           HybridMemoryDensity;
+  UINT32                           HybridBlockSize;
 } NOR_FLASH_PRIVATE_ATTRIBUTES;
 
 

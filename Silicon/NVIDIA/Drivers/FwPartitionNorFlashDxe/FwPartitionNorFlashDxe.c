@@ -82,63 +82,13 @@ FPNorFlashErase (
                       FW_PARTITION_NOR_FLASH_INFO_SIGNATURE);
   NorFlash      = NorFlashInfo->NorFlash;
   Attributes    = &NorFlashInfo->Attributes;
-  EraseBlockSize= Attributes->UniformBlockSize;
+  EraseBlockSize= Attributes->BlockSize;
 
   Status = FwPartitionCheckOffsetAndBytes (NorFlashInfo->Bytes, Offset, Bytes);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: erase offset=%llu, bytes=%u error: %r\n",
             __FUNCTION__, Offset, Bytes, Status));
     return Status;
-  }
-
-  // special case for first erase block with hybrid region
-  if ((Offset < EraseBlockSize) && (Attributes->HybridMemoryDensity > 0)) {
-    if (Offset > Attributes->HybridMemoryDensity) {
-      DEBUG ((DEBUG_ERROR,
-              "%a: invalid first block offset=%llu\n", __FUNCTION__, Offset));
-      return EFI_INVALID_PARAMETER;
-    }
-
-    if (Offset < Attributes->HybridMemoryDensity) {
-      UINTN   HybridBytes;
-
-      if ((Offset % Attributes->HybridBlockSize) != 0) {
-        DEBUG ((DEBUG_ERROR, "%a: unaligned hybrid erase, Offset=%llu\n",
-                __FUNCTION__, Offset));
-        return EFI_INVALID_PARAMETER;
-      }
-
-      HybridBytes = MIN (Bytes, (Attributes->HybridMemoryDensity - Offset));
-      HybridBytes = ALIGN_VALUE (HybridBytes, Attributes->HybridBlockSize);
-      OffsetLba = Offset / Attributes->HybridBlockSize;
-      LbaCount = HybridBytes / Attributes->HybridBlockSize;
-
-      DEBUG ((DEBUG_VERBOSE, "%a: hybrid erase OffsetLba=%u, LbaCount=%u\n",
-              __FUNCTION__, OffsetLba, LbaCount));
-
-      Status = NorFlash->Erase (NorFlash, OffsetLba, LbaCount, TRUE);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: hybrid erase error Lba=%u, LbaCount=%u: %r\n",
-                __FUNCTION__, OffsetLba, LbaCount, Status));
-        return Status;
-      }
-
-      if (Bytes >= HybridBytes) {
-        Bytes -= HybridBytes;
-      } else {
-        Bytes = 0;
-      }
-      Offset += HybridBytes;
-    }
-
-    if (Bytes == 0) {
-      return EFI_SUCCESS;
-    }
-
-    // Adjust offset/bytes if we need to uniform erase rest of first block below
-    ASSERT (Offset == Attributes->HybridMemoryDensity);
-    Offset = 0;
-    Bytes += Attributes->HybridMemoryDensity;
   }
 
   if ((Offset % EraseBlockSize) != 0) {
@@ -153,7 +103,7 @@ FPNorFlashErase (
   DEBUG ((DEBUG_VERBOSE, "%a: erase OffsetLba=%u, LbaCount=%u\n",
           __FUNCTION__, OffsetLba, LbaCount));
 
-  return NorFlash->Erase (NorFlash, OffsetLba, LbaCount, FALSE);
+  return NorFlash->Erase (NorFlash, OffsetLba, LbaCount);
 }
 
 /**
@@ -325,7 +275,7 @@ FPNorFlashInitDevices (
 
     DeviceName = ConvertDevicePathToText (DevicePath, TRUE, TRUE);
     DEBUG ((DEBUG_INFO, "Found NorFlash FW device=%s, BlockSize=%u, MemoryDensity=%llu\n",
-            DeviceName, Attributes.UniformBlockSize, Attributes.UniformMemoryDensity));
+            DeviceName, Attributes.BlockSize, Attributes.MemoryDensity));
 
     if (mNumDevices >= MAX_NOR_FLASH_DEVICES) {
       DEBUG ((DEBUG_ERROR, "%a: Max devices=%u exceeded\n",
@@ -335,7 +285,7 @@ FPNorFlashInitDevices (
 
     NorFlashInfo                    = &mNorFlashInfo[mNumDevices];
     NorFlashInfo->Signature         = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
-    mNorFlashInfo->Bytes            = Attributes.UniformMemoryDensity;
+    mNorFlashInfo->Bytes            = Attributes.MemoryDensity;
     mNorFlashInfo->Attributes       = Attributes;
     mNorFlashInfo->NorFlash         = NorFlash;
 
@@ -430,7 +380,6 @@ FwPartitionNorFlashDxeInitialize (
   UINT32                        ActiveBootChain;
   BR_BCT_UPDATE_PRIVATE_DATA    *BrBctUpdatePrivate;
   FW_PARTITION_PRIVATE_DATA     *FwPartitionPrivate;
-  UINT32                        BrBctEraseSize;
 
   BrBctUpdatePrivate = NULL;
 
@@ -490,12 +439,9 @@ FwPartitionNorFlashDxeInitialize (
 
   // Only one is device supported, use its device erase size for BR-BCT
   ASSERT (mNumDevices == 1);
-  BrBctEraseSize = (mNorFlashInfo[0].Attributes.HybridMemoryDensity == 0) ?
-    mNorFlashInfo[0].Attributes.UniformBlockSize :
-    mNorFlashInfo[0].Attributes.HybridBlockSize;
   Status = BrBctUpdateDeviceLibInit (ActiveBootChain,
                                      FPNorFlashErase,
-                                     BrBctEraseSize );
+                                     mNorFlashInfo[0].Attributes.BlockSize);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error initializing BrBct lib: %r\n",
             __FUNCTION__, Status));

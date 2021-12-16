@@ -186,8 +186,8 @@ FvbGetBlockSize (
   }
 
   Private = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL(This);
-  *BlockSize = Private->FlashAttributes.UniformBlockSize;
-  *NumberOfBlocks = Private->PartitionSize / Private->FlashAttributes.UniformBlockSize;
+  *BlockSize = Private->FlashAttributes.BlockSize;
+  *NumberOfBlocks = Private->PartitionSize / Private->FlashAttributes.BlockSize;
 
   return EFI_SUCCESS;
 }
@@ -268,8 +268,8 @@ FvbRead (
   }
 
   Private = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL(This);
-  BlockSize = Private->FlashAttributes.UniformBlockSize;
-  LastBlock = (Private->PartitionSize / Private->FlashAttributes.UniformBlockSize) - 1;
+  BlockSize = Private->FlashAttributes.BlockSize;
+  LastBlock = (Private->PartitionSize / Private->FlashAttributes.BlockSize) - 1;
 
   // The read must not span FV boundaries.
   if (Lba > LastBlock) {
@@ -399,8 +399,8 @@ FvbWrite (
   }
 
   Private = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL(This);
-  BlockSize = Private->FlashAttributes.UniformBlockSize;
-  LastBlock = (Private->PartitionSize / Private->FlashAttributes.UniformBlockSize) - 1;
+  BlockSize = Private->FlashAttributes.BlockSize;
+  LastBlock = (Private->PartitionSize / Private->FlashAttributes.BlockSize) - 1;
 
   // The write must not span FV boundaries.
   if (Lba > LastBlock) {
@@ -527,8 +527,8 @@ FvbEraseBlocks (
   //If no blocks are passed in return should be invalid parameter.
   Status = EFI_INVALID_PARAMETER;
 
-  BlockSize = Private->FlashAttributes.UniformBlockSize;
-  LastBlock = (Private->PartitionSize / Private->FlashAttributes.UniformBlockSize) - 1;
+  BlockSize = Private->FlashAttributes.BlockSize;
+  LastBlock = (Private->PartitionSize / Private->FlashAttributes.BlockSize) - 1;
 
   // Before erasing, check the entire list of parameters to ensure all specified blocks are valid
   VA_START (Args, This);
@@ -582,8 +582,7 @@ FvbEraseBlocks (
 
     Status = Private->NorFlashProtocol->Erase (Private->NorFlashProtocol,
                                                (FvbOffset + Private->PartitionOffset) / BlockSize,
-                                               NumOfLba,
-                                               FALSE);
+                                               NumOfLba);
     if (EFI_ERROR(Status)) {
       DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
       ASSERT (FALSE);
@@ -701,9 +700,8 @@ InitializeFvAndVariableStoreHeaders (
 
   if (!IsErasedFlashBuffer ((UINT8 *)FirmwareVolumeHeader, PartitionSize)) {
     Status = NorFlashProtocol->Erase (NorFlashProtocol,
-                                      PartitionOffset / FlashAttributes->UniformBlockSize,
-                                      PartitionSize / FlashAttributes->UniformBlockSize,
-                                      FALSE);
+                                      PartitionOffset / FlashAttributes->BlockSize,
+                                      PartitionSize / FlashAttributes->BlockSize);
 
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to Erase Partition\r\n", __FUNCTION__));
@@ -734,8 +732,8 @@ InitializeFvAndVariableStoreHeaders (
                                       );
   FirmwareVolumeHeader->HeaderLength = sizeof(EFI_FIRMWARE_VOLUME_HEADER) + sizeof(EFI_FV_BLOCK_MAP_ENTRY);
   FirmwareVolumeHeader->Revision = EFI_FVH_REVISION;
-  FirmwareVolumeHeader->BlockMap[0].NumBlocks = PartitionSize / FlashAttributes->UniformBlockSize;
-  FirmwareVolumeHeader->BlockMap[0].Length = FlashAttributes->UniformBlockSize;
+  FirmwareVolumeHeader->BlockMap[0].NumBlocks = PartitionSize / FlashAttributes->BlockSize;
+  FirmwareVolumeHeader->BlockMap[0].Length = FlashAttributes->BlockSize;
   FirmwareVolumeHeader->BlockMap[1].NumBlocks = 0;
   FirmwareVolumeHeader->BlockMap[1].Length = 0;
   FirmwareVolumeHeader->Checksum = CalculateCheckSum16 ((UINT16*)FirmwareVolumeHeader,FirmwareVolumeHeader->HeaderLength);
@@ -848,14 +846,14 @@ ValidateFvHeader (
 
   //Resize if everything looks good except the size
   if ((FwVolHeader->FvLength != PartitionSize) ||
-      (FwVolHeader->BlockMap[0].Length != FlashAttributes->UniformBlockSize)) {
+      (FwVolHeader->BlockMap[0].Length != FlashAttributes->BlockSize)) {
     OriginalLength = FwVolHeader->FvLength;
     FwVolHeader->FvLength = PartitionSize;
     if (CheckVariableStore) {
       VariableStoreHeader->Size = FwVolHeader->FvLength - FwVolHeader->HeaderLength;
     }
-    FwVolHeader->BlockMap[0].NumBlocks = PartitionSize / FlashAttributes->UniformBlockSize;
-    FwVolHeader->BlockMap[0].Length = FlashAttributes->UniformBlockSize;
+    FwVolHeader->BlockMap[0].NumBlocks = PartitionSize / FlashAttributes->BlockSize;
+    FwVolHeader->BlockMap[0].Length = FlashAttributes->BlockSize;
     FwVolHeader->BlockMap[1].NumBlocks = 0;
     FwVolHeader->BlockMap[1].Length = 0;
 
@@ -863,9 +861,8 @@ ValidateFvHeader (
     FwVolHeader->Checksum = CalculateCheckSum16 ((UINT16*)FwVolHeader,FwVolHeader->HeaderLength);
 
     Status = NorFlashProtocol->Erase (NorFlashProtocol,
-                                      PartitionOffset / FlashAttributes->UniformBlockSize,
-                                      PartitionSize / FlashAttributes->UniformBlockSize,
-                                      FALSE);
+                                      PartitionOffset / FlashAttributes->BlockSize,
+                                      PartitionSize / FlashAttributes->BlockSize);
 
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to Erase Partition\r\n", __FUNCTION__));
@@ -918,9 +915,8 @@ InitializeWorkSpaceHeader (
 
   if (!IsErasedFlashBuffer ((UINT8 *)&WorkingBlockHeader, sizeof (WorkingBlockHeader))) {
     Status = NorFlashProtocol->Erase (NorFlashProtocol,
-                                      PartitionOffset / FlashAttributes->UniformBlockSize,
-                                      PartitionSize / FlashAttributes->UniformBlockSize,
-                                      FALSE);
+                                      PartitionOffset / FlashAttributes->BlockSize,
+                                      PartitionSize / FlashAttributes->BlockSize);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to erase working block\r\n", __FUNCTION__));
     }
@@ -1019,7 +1015,7 @@ FVBInitialize (
 
   //Validate GPT and get table entries, always 512 bytes from the end
   Status = NorFlashProtocol->Read (NorFlashProtocol,
-                                   NorFlashAttributes.UniformMemoryDensity - GPT_PARTITION_BLOCK_SIZE,
+                                   NorFlashAttributes.MemoryDensity - GPT_PARTITION_BLOCK_SIZE,
                                    sizeof (PartitionHeader),
                                    &PartitionHeader);
   if (EFI_ERROR (Status)) {
@@ -1069,8 +1065,8 @@ FVBInitialize (
   if (PartitionEntry != NULL) {
     VariableOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
     VariableSize = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
-    ASSERT ((VariableOffset % NorFlashAttributes.UniformBlockSize) == 0);
-    ASSERT ((VariableSize % NorFlashAttributes.UniformBlockSize) == 0);
+    ASSERT ((VariableOffset % NorFlashAttributes.BlockSize) == 0);
+    ASSERT ((VariableSize % NorFlashAttributes.BlockSize) == 0);
   }
 
   PartitionEntry = GptFindPartitionByName (&PartitionHeader,
@@ -1079,8 +1075,8 @@ FVBInitialize (
   if (PartitionEntry != NULL) {
     FtwOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
     FtwSize = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
-    ASSERT ((FtwOffset % NorFlashAttributes.UniformBlockSize) == 0);
-    ASSERT ((FtwSize % NorFlashAttributes.UniformBlockSize) == 0);
+    ASSERT ((FtwOffset % NorFlashAttributes.BlockSize) == 0);
+    ASSERT ((FtwSize % NorFlashAttributes.BlockSize) == 0);
   }
   FreePool (PartitionEntryArray);
 
@@ -1114,7 +1110,7 @@ FVBInitialize (
   PcdSet32S(PcdFlashNvStorageVariableSize, FvpData[FVB_VARIABLE_INDEX].PartitionSize);
 
   FtwSpareBuffer = NULL;
-  FtwSpareBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (VariableSize), NorFlashAttributes.UniformBlockSize);
+  FtwSpareBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (VariableSize), NorFlashAttributes.BlockSize);
   if (FtwSpareBuffer == NULL) {
     DEBUG ((DEBUG_ERROR, "Failed to create FtwSpareBuffer\r\n"));
     goto Exit;
@@ -1128,7 +1124,7 @@ FVBInitialize (
   PcdSet32S(PcdFlashNvStorageFtwSpareSize, FvpData[FVB_FTW_SPARE_INDEX].PartitionSize);
 
   FtwWorkingBuffer = NULL;
-  FtwWorkingBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (FtwSize - VariableSize), NorFlashAttributes.UniformBlockSize);
+  FtwWorkingBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (FtwSize - VariableSize), NorFlashAttributes.BlockSize);
   if (FtwWorkingBuffer == NULL) {
     DEBUG ((DEBUG_ERROR, "Failed to create FtwWorkingBuffer\r\n"));
     goto Exit;
