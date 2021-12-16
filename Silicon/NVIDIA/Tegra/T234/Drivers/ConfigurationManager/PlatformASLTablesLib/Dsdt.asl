@@ -54,26 +54,6 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
     Name(_UID, 5)
   }*/
 
-  Device(COM0) {
-    Name (_HID, "NVDA0100")
-    Name (_UID, 0)
-    Name (_CCA, ZERO)
-
-    Name(_CRS, ResourceTemplate() {
-      Memory32Fixed(ReadWrite, T234_UARTA_BASE_ADDR, T234_UARTA_CAR_SIZE)
-      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T234_UARTA_INTR }
-    })
-
-    Name (_DSD, Package () {
-      ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
-      Package () {
-        Package () {"clock-frequency", 408000000},
-        Package () {"reg-shift", 2},
-        Package () {"reg-io-width", 4},
-      }
-    })
-  }
-
   Device(SDC0) {
     Name(_HID, EISAID("PNP0D40")) // SDA Standard Compliant SD Host Controller
     Name(_UID, 0)

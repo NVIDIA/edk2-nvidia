@@ -28,11 +28,6 @@
 #ifndef __T234_DEFINES_H__
 #define __T234_DEFINES_H__
 
-// UARTA
-#define T234_UARTA_BASE_ADDR             0x03100000
-#define T234_UARTA_CAR_SIZE              0x00010000
-#define T234_UARTA_INTR                  0x90
-
 // SDMMC1
 #define T234_SDMMC1_BASE_ADDR            0x03400000
 #define T234_SDMMC1_CAR_SIZE             0x00010000
@@ -42,9 +37,6 @@
 #define T234_SDMMC4_BASE_ADDR            0x03460000
 #define T234_SDMMC4_CAR_SIZE             0x00010000
 #define T234_SDMMC4_INTR                 0x61
-
-// SERIAL
-#define T234_SERIAL_REGISTER_BASE        0X03100000
 
 // GIC
 #define T234_GIC_DISTRIBUTOR_BASE        0X0F400000

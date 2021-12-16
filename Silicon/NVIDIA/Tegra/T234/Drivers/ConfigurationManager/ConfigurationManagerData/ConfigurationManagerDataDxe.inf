@@ -50,12 +50,15 @@
   MdeModulePkg/MdeModulePkg.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
 
 [LibraryClasses]
   TegraPlatformInfoLib
   PlatformAslTablesLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
+  DeviceTreeHelperLib
+  MemoryAllocationLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
@@ -70,9 +73,11 @@
   gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
 
 [Depex]
-  TRUE
+  gEfiVariableArchProtocolGuid
