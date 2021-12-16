@@ -336,6 +336,7 @@ UpdateKernelCommandLine (
   CHAR16                                 *CmdLine;
   NVIDIA_KERNEL_COMMAND_LINE             AddlCmdLine;
   UINTN                                  AddlCmdLen;
+  VOID                                   *AcpiBase;
 
   AddlCmdLen = sizeof (AddlCmdLine);
   Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIATokenSpaceGuid, NULL, &AddlCmdLen, &AddlCmdLine);
@@ -407,6 +408,13 @@ UpdateKernelCommandLine (
 
   UnicodeSPrint (CmdLine, Length, L"%s %s", CmdLine, AddlCmdLine.KernelCommand);
 
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    for (Count = 0; Count < sizeof (KernelCommandRemoveAcpi)/sizeof (KernelCommandRemoveAcpi[0]); Count++) {
+      RemoveKernelCommandLine (CmdLine, KernelCommandRemoveAcpi[Count]);
+    }
+  }
+
   *OutCmdLine = CmdLine;
   return EFI_SUCCESS;
 }
@@ -436,9 +444,6 @@ GetPlatformCommandLine (
   CHAR16              *UpdatedCommandLine;
   CHAR16              *CommandLine;
   UINTN               CommandLineBytes;
-  UINTN               FormattedCommandLineLength;
-  VOID                *AcpiBase;
-  UINT32              Count;
 
   UpdatedCommandLine = NULL;
   Status = UpdateKernelCommandLine (InCmdLine, &UpdatedCommandLine);
@@ -461,32 +466,11 @@ GetPlatformCommandLine (
 
   gBS->CopyMem (CommandLine, UpdatedCommandLine, StrSize (UpdatedCommandLine));
 
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (EFI_ERROR (Status)) {
-    gBS->CopyMem ((CHAR8 *)CommandLine + StrSize (UpdatedCommandLine),
-                  &gNVIDIABmBootOptionGuid, sizeof (EFI_GUID));
-
-    DEBUG ((DEBUG_INFO, "%a: DT Boot Kernel Command Line: %s\n", __FUNCTION__, CommandLine));
-
-    *OutCmdLine = CommandLine;
-    *OutCmdLen = CommandLineBytes;
-
-    gBS->FreePool (UpdatedCommandLine);
-    return EFI_SUCCESS;
-  }
-
-  for (Count = 0; Count < sizeof (KernelCommandRemoveAcpi)/sizeof (KernelCommandRemoveAcpi[0]); Count++) {
-    RemoveKernelCommandLine (CommandLine, KernelCommandRemoveAcpi[Count]);
-  }
-
-  FormattedCommandLineLength = StrSize (CommandLine);
-  gBS->CopyMem ((CHAR8 *)CommandLine + FormattedCommandLineLength,
+  gBS->CopyMem ((CHAR8 *)CommandLine + StrSize (UpdatedCommandLine),
                 &gNVIDIABmBootOptionGuid, sizeof (EFI_GUID));
 
-  DEBUG ((DEBUG_INFO, "%a: ACPI Boot Kernel Command Line: %s\n", __FUNCTION__, CommandLine));
-
   *OutCmdLine = CommandLine;
-  *OutCmdLen = FormattedCommandLineLength + sizeof (EFI_GUID);
+  *OutCmdLen = CommandLineBytes;
 
   gBS->FreePool (UpdatedCommandLine);
   return EFI_SUCCESS;
