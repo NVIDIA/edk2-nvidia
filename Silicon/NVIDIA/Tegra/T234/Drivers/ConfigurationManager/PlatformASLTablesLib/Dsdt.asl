@@ -53,25 +53,5 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
     Name(_HID, "ACPI0007")
     Name(_UID, 5)
   }*/
-
-  Device(SDC0) {
-    Name(_HID, EISAID("PNP0D40")) // SDA Standard Compliant SD Host Controller
-    Name(_UID, 0)
-    Name (_CCA, ZERO)
-    Name(_CRS, ResourceTemplate () {
-      Memory32Fixed(ReadWrite, T234_SDMMC4_BASE_ADDR, T234_SDMMC4_CAR_SIZE)
-      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T234_SDMMC4_INTR }
-    })
-  }
-
-  Device(SDC3) {
-    Name(_HID, EISAID("PNP0D40")) // SDA Standard Compliant SD Host Controller
-    Name(_UID, 0)
-    Name (_CCA, ZERO)
-    Name(_CRS, ResourceTemplate () {
-      Memory32Fixed(ReadWrite, T234_SDMMC1_BASE_ADDR, T234_SDMMC1_CAR_SIZE)
-      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { T234_SDMMC1_INTR }
-    })
-  }
 }
 

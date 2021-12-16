@@ -59,10 +59,14 @@
   UefiDriverEntryPoint
   DeviceTreeHelperLib
   MemoryAllocationLib
+  AslTemplateTablesLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorRevision
   gArmTokenSpaceGuid.PcdArmArchTimerSecIntrNum
   gArmTokenSpaceGuid.PcdArmArchTimerIntrNum
   gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum
@@ -78,6 +82,13 @@
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
+  gNVIDIAAmlPatchProtocolGuid
+  gNVIDIAAmlGenerationProtocolGuid
 
 [Depex]
   gEfiVariableArchProtocolGuid
+  AND
+  gNVIDIAAmlPatchProtocolGuid
+  AND
+  gNVIDIAAmlGenerationProtocolGuid
+

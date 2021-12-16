@@ -28,16 +28,6 @@
 #ifndef __T234_DEFINES_H__
 #define __T234_DEFINES_H__
 
-// SDMMC1
-#define T234_SDMMC1_BASE_ADDR            0x03400000
-#define T234_SDMMC1_CAR_SIZE             0x00010000
-#define T234_SDMMC1_INTR                 0x5E
-
-// SDMMC4
-#define T234_SDMMC4_BASE_ADDR            0x03460000
-#define T234_SDMMC4_CAR_SIZE             0x00010000
-#define T234_SDMMC4_INTR                 0x61
-
 // GIC
 #define T234_GIC_DISTRIBUTOR_BASE        0X0F400000
 #define T234_GIC_REDISTRIBUTOR_BASE      0X0F440000
