@@ -21,6 +21,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 
 STATIC CONST CHAR16 *SystemFwImageNamesCommon[] = {
+  L"adsp-fw",
   L"BCT",
   L"bpmp-fw",
   L"bpmp-fw-dtb",
@@ -39,13 +40,10 @@ STATIC CONST CHAR16 *SystemFwImageNamesCommon[] = {
 };
 
 STATIC CONST CHAR16 *SystemFwImageNamesT194[] = {
-  L"adsp-fw",
   L"bootloader-dtb",
   L"mts-preboot",
   L"mts-proper",
-  L"sce-fw",
   L"VER",
-  L"xusb-fw",
   NULL
 };
 

@@ -839,6 +839,7 @@ HandleCapsules (
   EFI_CAPSULE_HEADER          *CapsuleHeader;
   BOOLEAN                     NeedReset;
   EFI_STATUS                  Status;
+  BOOLEAN                     OsIndicationsAvailable;
 
   DEBUG ((DEBUG_INFO, "%a: processing capsules ...\n", __FUNCTION__));
 
@@ -871,10 +872,15 @@ HandleCapsules (
   //
   // Check for capsules on disk
   //
-  if (CoDCheckCapsuleOnDiskFlag ()) {
+  OsIndicationsAvailable = PcdGetBool (PcdOsIndicationsAvailable);
+  if ((OsIndicationsAvailable && CoDCheckCapsuleOnDiskFlag ()) ||
+      !OsIndicationsAvailable) {
     NeedReset = TRUE;
     Status = CoDRelocateCapsule (0);
-    if (EFI_ERROR (Status)) {
+    if (!OsIndicationsAvailable && (Status == EFI_NOT_FOUND)) {
+      DEBUG ((DEBUG_INFO, "%a: No capsule on disk\n", __FUNCTION__));
+      NeedReset = FALSE;
+    } else if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: CoDRelocateCapsule failed: %r\n",
               __FUNCTION__, Status));
     }

@@ -35,6 +35,12 @@
   #
   DEFINE SYSTEM_FMP_ESRT_GUID = 7C374309-1649-4682-8BEE-04F3A8399414
 
+  #
+  # Define Image Type ID GUIDs for Firmware Management Protocol
+  #
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T194 = be3f5d68-7654-4ed2-838c-2a2faf901a78
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T234 = bf0d4599-20d4-414e-b2c5-3595b1cda402
+
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
 [LibraryClasses.common]
@@ -68,17 +74,23 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|0
 
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid|{GUID("$(SYSTEM_FMP_ESRT_GUID)")}
+  gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleOnDiskSupport|TRUE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleInRamSupport|TRUE
 
 [PcdsDynamicDefault.common.T194]
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA194'
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(be3f5d68-7654-4ed2-838c-2a2faf901a78)}
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T194)")}
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x8000
+  gNVIDIATokenSpaceGuid.PcdOsIndicationsAvailable|FALSE
+  gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|TRUE
+  gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
+  gNVIDIATokenSpaceGuid.PcdFmpTegraVersion|0x0
 
 [PcdsDynamicHii.common.T194]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
@@ -90,7 +102,7 @@
   gArmTokenSpaceGuid.PcdGicDistributorBase|0X0F400000
   gArmTokenSpaceGuid.PcdGicRedistributorsBase|0X0F440000
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA234'
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(bf0d4599-20d4-414e-b2c5-3595b1cda402)}
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T234)")}
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE

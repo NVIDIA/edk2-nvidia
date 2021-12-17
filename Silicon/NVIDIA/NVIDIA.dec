@@ -381,8 +381,16 @@
     MdePkg/MdePkg.dec
   }
 
-#FwPartition overwrite active partition
+#FwPartition and FwImage
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|FALSE|BOOLEAN|0x00000053
+  gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|TRUE|BOOLEAN|0x00000058
 
-#BrBct logical slot size
+#BrBct config and options
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x0|UINT32|0x00000054
+  gNVIDIATokenSpaceGuid.PcdBrBctVerifyUpdateBeforeWrite|TRUE|BOOLEAN|0x00000059
+
+#Fmp options
+  gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate|FALSE|BOOLEAN|0x0000005A
+  gNVIDIATokenSpaceGuid.PcdFmpWriteVerifyImage|TRUE|BOOLEAN|0x0000005B
+  gNVIDIATokenSpaceGuid.PcdFmpTegraVersion|0x0|UINT32|0x0000005C
+  gNVIDIATokenSpaceGuid.PcdOsIndicationsAvailable|TRUE|BOOLEAN|0x0000005D
