@@ -20,10 +20,6 @@
 #include "TegraSerialPortLibPrivate.h"
 
 STATIC
-TEGRA_UART_OBJ *TegraUartObj = NULL;
-STATIC
-TEGRA_UART_INFO TegraUartInfo;
-
 SERIAL_MAPPING gSerialCompatibilityMap[] = {
   { TEGRA_UART_TYPE_TCU, TegraCombinedSerialPortGetObject, "nvidia,tegra194-tcu" },
   { TEGRA_UART_TYPE_TCU, TegraCombinedSerialPortGetObject, "nvidia,tegra186-tcu" },
@@ -61,7 +57,7 @@ GetRawDeviceTreePointer (
 /** Identify the serial device hardware
 
  **/
-TEGRA_UART_OBJ *
+VOID
 EFIAPI
 SerialPortIdentify (
   VOID
@@ -71,15 +67,12 @@ SerialPortIdentify (
   UINT32                              Handles;
   UINT32                              NumberOfUart;
   SERIAL_MAPPING                      *Mapping;
+  BOOLEAN                             UartFound;
+  TEGRA_PLATFORM_TYPE                 Platform;
   UINT32                              Size;
   VOID                                *DeviceTree;
   UINTN                               DeviceTreeSize;
   NVIDIA_DEVICE_TREE_REGISTER_DATA    RegData;
-  NVIDIA_DEVICE_TREE_INTERRUPT_DATA   IntData;
-
-  if (TegraUartObj != NULL) {
-    return TegraUartObj;
-  }
 
   // Ensure the fallback resource ready
   SetTegraUARTBaseAddress (0);
@@ -88,58 +81,40 @@ SerialPortIdentify (
   GetRawDeviceTreePointer (&DeviceTree, &DeviceTreeSize);
   SetDeviceTreePointer (DeviceTree, DeviceTreeSize);
 
-  Mapping = &gSerialCompatibilityMap[0];
-  while (Mapping->Compatibility != NULL) {
+  UartFound = FALSE;
+  Platform = TegraGetPlatform ();
+  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+    if (Platform == TEGRA_PLATFORM_SILICON &&
+        Mapping->Type == TEGRA_UART_TYPE_16550) {
+      continue;
+    }
     // Only one UART controller is expected
     NumberOfUart = 1;
     Status = GetMatchingEnabledDeviceTreeNodes (Mapping->Compatibility, &Handles, &NumberOfUart);
     if (Status == EFI_SUCCESS || Status == EFI_BUFFER_TOO_SMALL) {
-      Status = EFI_SUCCESS;
-      break;
+      UartFound = TRUE;
+      if (Mapping->Type != TEGRA_UART_TYPE_TCU) {
+        // Retreive UART register space
+        Size = 1;
+        Status = GetDeviceTreeRegisters (Handles, &RegData, &Size);
+        if (EFI_ERROR (Status)) {
+          return;
+        }
+        Mapping->BaseAddress = RegData.BaseAddress;
+        // Update UART base address
+        SetTegraUARTBaseAddress (Mapping->BaseAddress);
+      }
+      Mapping->IsFound = TRUE;
     }
-    Mapping++;
   }
-  if (EFI_ERROR (Status)) {
-    goto Exit;
-  }
-
-  TegraUartInfo.Type = Mapping->Type;
-  if (TegraUartInfo.Type != TEGRA_UART_TYPE_TCU) {
-    // Retreive UART register space
-    Size = 1;
-    Status = GetDeviceTreeRegisters (Handles, &RegData, &Size);
-    if (EFI_ERROR (Status)) {
-      goto Exit;
-    }
-    TegraUartInfo.BaseAddress = RegData.BaseAddress;
-
-    // Retrieve UART interrupt space
-    Size = 1;
-    Status = GetDeviceTreeInterrupts (Handles, &IntData, &Size);
-    if (EFI_ERROR (Status)) {
-      goto Exit;
-    }
-    TegraUartInfo.Interrupt = (UINT32)IntData.Interrupt + (IntData.Type == INTERRUPT_SPI_TYPE ?
-                                                             DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                             DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-  }
-
-  // Update UART base address and get UART object
-  SetTegraUARTBaseAddress (TegraUartInfo.BaseAddress);
-  TegraUartObj = Mapping->GetObject();
-
-Exit:
-  if (EFI_ERROR (Status)) {
-    // Fall back when it fails to retrieve a compatible UART type from DT
-    TegraUartInfo.Type = TEGRA_UART_TYPE_16550;
-    TegraUartInfo.BaseAddress = GetTegraUARTBaseAddress ();
-    TegraUartObj = Tegra16550SerialPortGetObject();
+  if (UartFound == FALSE) {
+    return;
   }
 
   // Zero initialize to help the DTB helper get them from the HOB list
   SetDeviceTreePointer (NULL, 0);
 
-  return TegraUartObj;
+  return;
 }
 
 /** Initialize the serial device hardware with default settings.
@@ -154,7 +129,21 @@ SerialPortInitialize (
   VOID
   )
 {
-  return SerialPortIdentify()->SerialPortInitialize (TegraUartInfo.BaseAddress);
+  RETURN_STATUS  Status;
+  SERIAL_MAPPING *Mapping;
+
+  SerialPortIdentify ();
+
+  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+    if (Mapping->IsFound == TRUE) {
+      Status = Mapping->GetObject ()->SerialPortInitialize (Mapping->BaseAddress);
+      if (RETURN_ERROR (Status)) {
+        return RETURN_DEVICE_ERROR;
+      }
+    }
+  }
+
+  return RETURN_SUCCESS;
 }
 
 /**
@@ -174,7 +163,19 @@ SerialPortWrite (
   IN UINTN     NumberOfBytes
   )
 {
-  return SerialPortIdentify()->SerialPortWrite (TegraUartInfo.BaseAddress, Buffer, NumberOfBytes);
+  RETURN_STATUS  Status;
+  SERIAL_MAPPING *Mapping;
+
+  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+    if (Mapping->IsFound == TRUE) {
+      Status = Mapping->GetObject ()->SerialPortWrite (Mapping->BaseAddress, Buffer, NumberOfBytes);
+      if (RETURN_ERROR (Status)) {
+        return 0;
+      }
+    }
+  }
+
+  return NumberOfBytes;
 }
 
 /**
@@ -194,7 +195,19 @@ SerialPortRead (
   IN  UINTN     NumberOfBytes
 )
 {
-  return SerialPortIdentify()->SerialPortRead (TegraUartInfo.BaseAddress, Buffer, NumberOfBytes);
+  SERIAL_MAPPING *Mapping;
+
+  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+    if (Mapping->IsFound == TRUE) {
+      break;
+    }
+  }
+
+  if (Mapping->Compatibility == NULL) {
+    return 0;
+  }
+
+  return Mapping->GetObject ()->SerialPortRead (Mapping->BaseAddress, Buffer, NumberOfBytes);
 }
 
 /**
@@ -210,7 +223,19 @@ SerialPortPoll (
   VOID
   )
 {
-  return SerialPortIdentify()->SerialPortPoll (TegraUartInfo.BaseAddress);
+  SERIAL_MAPPING *Mapping;
+
+  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+    if (Mapping->IsFound == TRUE) {
+      break;
+    }
+  }
+
+  if (Mapping->Compatibility == NULL) {
+    return FALSE;
+  }
+
+  return Mapping->GetObject ()->SerialPortPoll (Mapping->BaseAddress);
 }
 
 /**
@@ -245,7 +270,19 @@ SerialPortSetControl (
   IN UINT32  Control
   )
 {
-  return SerialPortIdentify()->SerialPortSetControl (TegraUartInfo.BaseAddress, Control);
+  SERIAL_MAPPING *Mapping;
+
+  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+    if (Mapping->IsFound == TRUE) {
+      break;
+    }
+  }
+
+  if (Mapping->Compatibility == NULL) {
+    return RETURN_DEVICE_ERROR;
+  }
+
+  return Mapping->GetObject ()->SerialPortSetControl (Mapping->BaseAddress, Control);
 }
 
 /**
@@ -286,7 +323,19 @@ SerialPortGetControl (
   OUT UINT32  *Control
   )
 {
-  return SerialPortIdentify()->SerialPortGetControl (TegraUartInfo.BaseAddress, Control);
+  SERIAL_MAPPING *Mapping;
+
+  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+    if (Mapping->IsFound == TRUE) {
+      break;
+    }
+  }
+
+  if (Mapping->Compatibility == NULL) {
+    return RETURN_DEVICE_ERROR;
+  }
+
+  return Mapping->GetObject ()->SerialPortGetControl (Mapping->BaseAddress, Control);
 }
 
 /**
@@ -331,7 +380,19 @@ SerialPortSetAttributes (
   IN OUT EFI_STOP_BITS_TYPE  *StopBits
   )
 {
-  return SerialPortIdentify()->SerialPortSetAttributes (TegraUartInfo.BaseAddress,
-                                 BaudRate, ReceiveFifoDepth, Timeout,
-                                 Parity, DataBits, StopBits);
+  SERIAL_MAPPING *Mapping;
+
+  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+    if (Mapping->IsFound == TRUE) {
+      break;
+    }
+  }
+
+  if (Mapping->Compatibility == NULL) {
+    return RETURN_DEVICE_ERROR;
+  }
+
+  return Mapping->GetObject ()->SerialPortSetAttributes (Mapping->BaseAddress,
+                                  BaudRate, ReceiveFifoDepth, Timeout,
+                                  Parity, DataBits, StopBits);
 }
