@@ -31,6 +31,8 @@
   MODULE_TYPE     = DXE_DRIVER
   VERSION_STRING  = 1.0
   LIBRARY_CLASS   = FmpDeviceLib|DXE_DRIVER UEFI_DRIVER
+  CONSTRUCTOR     = FmpDeviceLibConstructor
+
 
 #
 # The following information is for reference only and not required by the build tools.
@@ -40,7 +42,37 @@
 
 [Sources]
   FmpDeviceLib.c
+  TegraFmp.c
+  UpdateProgress.c
 
 [Packages]
-  MdePkg/MdePkg.dec
   FmpDevicePkg/FmpDevicePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BootChainInfoLib
+  DisplayUpdateProgressLib
+  FwImageLib
+  FwPackageLib
+  PcdLib
+  PlatformResourceLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
+  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion
+  gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported
+  gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting
+  gNVIDIATokenSpaceGuid.PcdFmpWriteVerifyImage
+  gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate
+  gNVIDIATokenSpaceGuid.PcdFmpTegraVersion
+
+[Protocols]
+  gNVIDIABrBctUpdateProtocolGuid            ## CONSUMES
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid
+  gEfiEventExitBootServicesGuid
+  gNVIDIATokenSpaceGuid

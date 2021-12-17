@@ -25,7 +25,10 @@
 
 #include <PiDxe.h>
 #include <Guid/SystemResourceTable.h>
+#include <Library/BaseLib.h>
 #include <Library/FmpDeviceLib.h>
+#include <Library/MemoryAllocationLib.h>
+#include "TegraFmp.h"
 
 /**
   Provide a function to install the Firmware Management Protocol instance onto a
@@ -172,7 +175,9 @@ FmpDeviceGetImageTypeIdGuidPtr (
   OUT EFI_GUID  **Guid
   )
 {
-  return EFI_UNSUPPORTED;
+  *Guid = PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuid);
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -205,8 +210,10 @@ FmpDeviceGetAttributes (
   if (Supported == NULL || Setting == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-  *Supported = 0;
-  *Setting   = 0;
+
+  *Supported = PcdGet64 (PcdFmpImageAttributesSupported);
+  *Setting   = PcdGet64 (PcdFmpImageAttributesSetting);
+
   return EFI_SUCCESS;
 }
 
@@ -244,7 +251,8 @@ FmpDeviceGetLowestSupportedVersion (
   OUT UINT32  *LowestSupportedVersion
   )
 {
-  return EFI_UNSUPPORTED;
+  *LowestSupportedVersion = PcdGet32 (PcdFmpDeviceBuildTimeLowestSupportedVersion);
+  return EFI_SUCCESS;
 }
 
 /**
@@ -282,8 +290,8 @@ FmpDeviceGetVersionString (
   if (VersionString == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-  *VersionString = NULL;
-  return EFI_UNSUPPORTED;
+
+  return FmpTegraGetVersion (NULL, VersionString);
 }
 
 /**
@@ -318,7 +326,11 @@ FmpDeviceGetVersion (
   OUT UINT32  *Version
   )
 {
-  return EFI_UNSUPPORTED;
+  if (Version == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  return FmpTegraGetVersion (Version, NULL);
 }
 
 /**
@@ -471,9 +483,10 @@ FmpDeviceCheckImageWithStatus (
   OUT UINT32      *LastAttemptStatus
   )
 {
-  *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
-
-  return EFI_SUCCESS;
+  return FmpTegraCheckImage (Image,
+                             ImageSize,
+                             ImageUpdatable,
+                             LastAttemptStatus);
 }
 
 /**
@@ -627,9 +640,13 @@ FmpDeviceSetImageWithStatus (
   OUT UINT32                                         *LastAttemptStatus
   )
 {
-  *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
-
-  return EFI_UNSUPPORTED;
+  return FmpTegraSetImage (Image,
+                           ImageSize,
+                           VendorCode,
+                           Progress,
+                           CapsuleFwVersion,
+                           AbortReason,
+                           LastAttemptStatus);
 }
 
 /**
