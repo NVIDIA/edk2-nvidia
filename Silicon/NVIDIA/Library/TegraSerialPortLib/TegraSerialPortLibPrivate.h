@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -10,15 +10,6 @@
 #define __TEGRA_SERIAL_PORT_LIB_PRIVATE_H__
 
 #include <Library/TegraSerialPortLib.h>
-
-/**
-  Describe Tegra UART info populated based on DT
-**/
-typedef struct {
-  EFI_PHYSICAL_ADDRESS  BaseAddress;
-  UINT32                Interrupt;
-  UINT32                Type;
-} TEGRA_UART_INFO;
 
 /**
   Retrieve the object of tegra serial port library
@@ -37,7 +28,9 @@ TEGRA_UART_OBJ *
 typedef struct {
   UINT32                  Type;
   SERIAL_PORT_GET_OBJECT  GetObject;
-  CONST CHAR8           * Compatibility;
+  CONST CHAR8             *Compatibility;
+  BOOLEAN                 IsFound;
+  EFI_PHYSICAL_ADDRESS    BaseAddress;
 } SERIAL_MAPPING;
 
 #endif //__TEGRA_SERIAL_PORT_LIB_PRIVATE_H__
