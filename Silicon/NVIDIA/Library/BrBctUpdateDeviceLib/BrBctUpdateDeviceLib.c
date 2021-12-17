@@ -30,9 +30,10 @@ typedef enum {
   BR_BCT_SLOT_B1    = 3,
 } BR_BCT_UPDATE_SLOT;
 
-STATIC BR_BCT_UPDATE_PRIVATE_DATA       mPrivate            = {0};
-STATIC UINT32                           mActiveBootChain    = MAX_UINT32;
-STATIC VOID                             *mVerifyBuffer      = NULL;
+STATIC BR_BCT_UPDATE_PRIVATE_DATA   mPrivate                            = {0};
+STATIC UINT32                       mActiveBootChain                    = MAX_UINT32;
+STATIC VOID                         *mVerifyBuffer                      = NULL;
+STATIC BOOLEAN                      mPcdBrBctVerifyUpdateBeforeWrite    = FALSE;
 
 /**
   Get device offset of given BR-BCT slot data.
@@ -78,6 +79,8 @@ BrBctEraseSlot (
   UINT32                            SlotSize;
   UINT64                            Offset;
   EFI_STATUS                        Status;
+
+  DEBUG ((DEBUG_INFO, "%a: Erasing slot %u\n", __FUNCTION__, Slot));
 
   if (Slot != BR_BCT_SLOT_A0) {
     DEBUG ((DEBUG_ERROR, "%a: Slot=%u, can only erase A0\n",
@@ -170,6 +173,7 @@ EFIAPI
 BrBctVerifySlot (
   IN  BR_BCT_UPDATE_PRIVATE_DATA        *Private,
   IN  BR_BCT_UPDATE_SLOT                Slot,
+  IN  UINTN                             Bytes,
   IN  CONST VOID                        *Buffer
   )
 {
@@ -182,7 +186,7 @@ BrBctVerifySlot (
     return Status;
   }
 
-  if (CompareMem (mVerifyBuffer, Buffer, Private->SlotSize) != 0) {
+  if (CompareMem (mVerifyBuffer, Buffer, Bytes) != 0) {
     return EFI_VOLUME_CORRUPTED;
   }
 
@@ -206,6 +210,7 @@ EFIAPI
 BrBctWriteSlot (
   IN  BR_BCT_UPDATE_PRIVATE_DATA        *Private,
   IN  BR_BCT_UPDATE_SLOT                Slot,
+  IN  UINTN                             Bytes,
   IN  CONST VOID                        *Buffer
   )
 {
@@ -231,7 +236,7 @@ BrBctWriteSlot (
     return Status;
   }
 
-  Status = DeviceInfo->DeviceWrite (DeviceInfo, Offset, SlotSize, Buffer);
+  Status = DeviceInfo->DeviceWrite (DeviceInfo, Offset, Bytes, Buffer);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error writing slot=%u: %r\n",
           __FUNCTION__, Slot, Status));
@@ -242,6 +247,8 @@ BrBctWriteSlot (
 
 /**
   Write and verify a slot's data in the BR-BCT partition.
+  If PcdBrBctVerifyUpdateBeforeWrite is TRUE, slot data is verified to need
+  updating before performing a new write/verify.
 
   @param[in]  Private           Pointer to private data structure
   @param[in]  Slot              Slot number
@@ -257,17 +264,27 @@ EFIAPI
 BrBctWriteAndVerifySlot (
   IN  BR_BCT_UPDATE_PRIVATE_DATA        *Private,
   IN  BR_BCT_UPDATE_SLOT                Slot,
+  IN  UINTN                             Bytes,
   IN  CONST VOID                        *Buffer
   )
 {
   EFI_STATUS                            Status;
 
-  Status = BrBctWriteSlot (Private, Slot, Buffer);
+  if (mPcdBrBctVerifyUpdateBeforeWrite) {
+    Status = BrBctVerifySlot (Private, Slot, Bytes, Buffer);
+    if (Status == EFI_SUCCESS) {
+      DEBUG ((DEBUG_INFO, "%a: Slot=%u Bytes=%u no update needed\n",
+              __FUNCTION__, Slot, Bytes));
+      return Status;
+    }
+  }
+
+  Status = BrBctWriteSlot (Private, Slot, Bytes, Buffer);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  Status = BrBctVerifySlot (Private, Slot, Buffer);
+  Status = BrBctVerifySlot (Private, Slot, Bytes, Buffer);
 
   return Status;
 }
@@ -296,6 +313,7 @@ BrBctCopySlot (
   FW_PARTITION_DEVICE_INFO          *DeviceInfo;
   VOID                              *Buffer;
   EFI_STATUS                        Status;
+  UINT32                            SlotSize;
 
   DEBUG ((DEBUG_INFO, "%a: Copying slot %u to slot %u\n",
           __FUNCTION__, InputSlot, OutputSlot));
@@ -308,8 +326,9 @@ BrBctCopySlot (
 
   BrBctPartition    = Private->BrBctPartition;
   DeviceInfo        = BrBctPartition->DeviceInfo;
+  SlotSize          = Private->SlotSize;
 
-  Buffer = AllocateZeroPool (Private->SlotSize);
+  Buffer = AllocateZeroPool (SlotSize);
   if (Buffer == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -319,7 +338,7 @@ BrBctCopySlot (
     goto Done;
   }
 
-  Status = BrBctWriteAndVerifySlot (Private, OutputSlot, Buffer);
+  Status = BrBctWriteAndVerifySlot (Private, OutputSlot, SlotSize, Buffer);
 
 Done:
   FreePool (Buffer);
@@ -334,9 +353,38 @@ BrBctUpdateBct (
   IN  CONST VOID                            *Buffer
   )
 {
+  BR_BCT_UPDATE_PRIVATE_DATA        *Private;
+  EFI_STATUS                        Status;
+  UINT32                            SlotSize;
+
   DEBUG ((DEBUG_INFO, "%a: Bytes=%u\n", __FUNCTION__, Bytes));
 
-  return EFI_UNSUPPORTED;
+  if ((This == NULL) || (Buffer == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Private = CR (This,
+                BR_BCT_UPDATE_PRIVATE_DATA,
+                Protocol,
+                BR_BCT_UPDATE_PRIVATE_DATA_SIGNATURE);
+  SlotSize = Private->SlotSize;
+
+  if ((Bytes > Private->BrBctPartition->PartitionInfo.Bytes) ||
+      (Bytes > SlotSize)) {
+    DEBUG ((DEBUG_ERROR, "%a: invalid Bytes=%u\n", __FUNCTION__, Bytes));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if ((mActiveBootChain == 0) && PcdGetBool (PcdOverwriteActiveFwPartition)) {
+    Status = BrBctWriteAndVerifySlot (Private, BR_BCT_SLOT_A0, Bytes, Buffer);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  } else {
+    Status = EFI_UNSUPPORTED;
+  }
+
+  return Status;
 }
 
 // NVIDIA_BR_BCT_UPDATE_PROTOCOL.UpdateFwChain()
@@ -470,5 +518,6 @@ BrBctUpdateDeviceLibInit (
     return EFI_OUT_OF_RESOURCES;
   }
 
+  mPcdBrBctVerifyUpdateBeforeWrite = PcdGetBool (PcdBrBctVerifyUpdateBeforeWrite);
   return EFI_SUCCESS;
 }

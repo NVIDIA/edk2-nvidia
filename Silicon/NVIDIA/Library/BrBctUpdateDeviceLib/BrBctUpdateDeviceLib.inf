@@ -39,3 +39,5 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize
+  gNVIDIATokenSpaceGuid.PcdBrBctVerifyUpdateBeforeWrite
+  gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition
