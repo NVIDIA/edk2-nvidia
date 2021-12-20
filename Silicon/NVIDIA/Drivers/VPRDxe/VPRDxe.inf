@@ -43,7 +43,6 @@
   UefiLib
   PcdLib
   IoLib
-  PrintLib
   FdtLib
 
 [Pcd]
@@ -52,7 +51,6 @@
 [Guids]
   gEfiAcpiTableGuid
   gFdtTableGuid
-  gNVIDIAKernelCmdLineUpdateGuid
 
 [Depex]
   TRUE

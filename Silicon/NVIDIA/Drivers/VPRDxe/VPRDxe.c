@@ -27,30 +27,32 @@
 #include <Library/UefiLib.h>
 #include <Library/PcdLib.h>
 #include <Library/IoLib.h>
-#include <Library/PrintLib.h>
-#include <Protocol/KernelCmdLineUpdate.h>
 #include <libfdt.h>
 
 
 STATIC
-CHAR16 VPRExistingCommandLineArgument[] = L"vpr=";
-STATIC
-CHAR16 VPRNewCommandLineArgument[VPR_CMDLINE_MAX_LEN];
-STATIC
-NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL VPRCmdLine;
+EFI_EVENT  FdtInstallEvent;
 
 
 STATIC
 VOID
 EFIAPI
-DeleteVprNode (
-  IN VOID
+FdtInstalled (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
   EFI_STATUS Status;
   VOID       *AcpiBase;
   VOID       *FdtBase;
   INTN       NodeOffset;
+  UINT64     VPRBase;
+  UINT64     VPRSize;
+  INT32      AddressCells;
+  INT32      SizeCells;
+  UINT8      *Data;
+
+  gBS->CloseEvent (Event);
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
@@ -71,24 +73,53 @@ DeleteVprNode (
     return;
   }
 
-  fdt_del_node (FdtBase, NodeOffset);
-  DEBUG ((DEBUG_INFO, "%a: VPR Node Deleted\n", __FUNCTION__));
+  VPRBase = ((UINT64) MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_BOM_ADR_HI_0) << 32) |
+              MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_BOM_0);
+
+  VPRSize = MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_SIZE_MB_0);
+  VPRSize <<= 20;
+
+  if (VPRBase == 0 && VPRSize == 0) {
+    fdt_del_node (FdtBase, NodeOffset);
+    DEBUG ((DEBUG_INFO, "%a: VPR Node Deleted\n", __FUNCTION__));
+  } else {
+    AddressCells = fdt_address_cells (FdtBase, fdt_parent_offset(FdtBase, NodeOffset));
+    SizeCells = fdt_size_cells (FdtBase, fdt_parent_offset(FdtBase, NodeOffset));
+    if ((AddressCells > 2) ||
+        (AddressCells == 0) ||
+        (SizeCells > 2) ||
+        (SizeCells == 0)) {
+      DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
+      return;
+    }
+
+    Data = NULL;
+    Status = gBS->AllocatePool (EfiBootServicesData,
+                                (AddressCells + SizeCells) * sizeof (UINT32),
+                                (VOID **)&Data);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    if (AddressCells == 2) {
+      *(UINT64*)Data = SwapBytes64 (VPRBase);
+    } else {
+      *(UINT32*)Data = SwapBytes32 (VPRBase);
+    }
+
+    if (SizeCells == 2) {
+      *(UINT64*)&Data[AddressCells * sizeof (UINT32)] = SwapBytes64 (VPRSize);
+    } else {
+      *(UINT32*)&Data[AddressCells * sizeof (UINT32)] = SwapBytes32 (VPRSize);
+    }
+
+    fdt_setprop (FdtBase, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
+    fdt_setprop (FdtBase, NodeOffset, "status", "okay", sizeof ("okay"));
+
+    gBS->FreePool (Data);
+  }
 
   return;
-}
-
-
-STATIC
-VOID
-EFIAPI
-FdtInstalled (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
-  )
-{
-  gBS->CloseEvent (Event);
-
-  DeleteVprNode ();
 }
 
 
@@ -109,67 +140,10 @@ VPRDxeInitialize (
   IN EFI_SYSTEM_TABLE         *SystemTable
 )
 {
-  EFI_STATUS Status;
-  UINT64     VPRBase;
-  UINT64     VPRSize;
-  UINT32     VPRCtrl;
-  EFI_HANDLE Handle;
-  EFI_EVENT  FdtInstallEvent;
-
-  Handle = NULL;
-
-  VPRBase = ((UINT64) MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_BOM_ADR_HI_0) << 32) |
-              MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_BOM_0);
-
-  VPRSize = MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_SIZE_MB_0);
-  VPRSize <<= 20;
-
-  VPRCtrl = MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_REG_CTRL_0);
-
-  Status = EFI_SUCCESS;
-  if (VPRBase == 0 && VPRSize == 0 &&
-      (VPRCtrl & VIDEO_PROTECT_ALLOW_TZ_WRITE_ACCESS_BMSK)) {
-    UnicodeSPrint (VPRNewCommandLineArgument, VPR_CMDLINE_MAX_LEN, L"vpr_resize");
-
-    VPRCmdLine.ExistingCommandLineArgument = VPRExistingCommandLineArgument;
-    VPRCmdLine.NewCommandLineArgument = VPRNewCommandLineArgument;
-
-    Status = gBS->InstallMultipleProtocolInterfaces (&Handle, &gNVIDIAKernelCmdLineUpdateGuid, &VPRCmdLine, NULL);
-    if (EFI_ERROR(Status)) {
-      return Status;
-    }
-
-    DEBUG ((DEBUG_INFO, "%a: VPR Resize Requested\n", __FUNCTION__));
-
-    return Status;
-  }
-
-  if (VPRSize != 0 &&
-      !(VPRCtrl & VIDEO_PROTECT_ALLOW_TZ_WRITE_ACCESS_BMSK)) {
-    UnicodeSPrintAsciiFormat (VPRNewCommandLineArgument, VPR_CMDLINE_MAX_LEN, "vpr=0x%lx@0x%lx", VPRSize, VPRBase);
-
-    VPRCmdLine.ExistingCommandLineArgument = VPRExistingCommandLineArgument;
-    VPRCmdLine.NewCommandLineArgument = VPRNewCommandLineArgument;
-
-    Status = gBS->InstallMultipleProtocolInterfaces (&Handle, &gNVIDIAKernelCmdLineUpdateGuid, &VPRCmdLine, NULL);
-    if (EFI_ERROR(Status)) {
-      return Status;
-    }
-
-    DEBUG ((DEBUG_INFO, "%a: VPR Region Requested\n", __FUNCTION__));
-
-    Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
-                                 TPL_CALLBACK,
-                                 FdtInstalled,
-                                 NULL,
-                                 &gFdtTableGuid,
-                                 &FdtInstallEvent);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-
-    DeleteVprNode ();
-  }
-
-  return Status;
+  return gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                             TPL_CALLBACK,
+                             FdtInstalled,
+                             NULL,
+                             &gFdtTableGuid,
+                             &FdtInstallEvent);
 }

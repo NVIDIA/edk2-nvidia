@@ -353,7 +353,7 @@ UpdateKernelCommandLine (
                                     &NumOfHandles,
                                     &HandleBuffer);
   if (EFI_ERROR (Status)) {
-    return Status;
+    NumOfHandles = 0;
   }
 
   for (Count = 0; Count < NumOfHandles; Count++) {
