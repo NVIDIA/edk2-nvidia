@@ -43,6 +43,22 @@ the Jetson Developer Kit.
   for better performance
 - Graphics Output Protocol (GOP) is not supported and so only serial
   console support is available
+- Delivery of Capsules via file on Mass Storage device is supported if a
+  capsule is present on the EFI System Partition in the \EFI\UpdateCapsule
+  directory during boot without regard to the OsIndications UEFI variable
+  EFI_OS_INDICATIONS_FILE_CAPSULE_DELIVERY_SUPPORTED bit.
+  Additional limitations for this feature:
+  - Failures during update may cause system not to boot. If the system fails
+    to boot a complete system re-flash is required.
+  - Only primary firmware partitions are supported, backup firmware partitions
+    are ignored.
+  - No support for backup BootRom BCT tables, only the primary table is updated.
+  - Firmware partitions not supported by the capsule update are SCE and XUSB
+    firmware partitions.
+  - Firmware version number set by UEFI PCD PcdFmpTegraVersion instead of VER
+    partition contents.
+  - The firmware images in the capsule are not checked for compatibility with
+    the system, they are assumed to be compatible.
 
 # Known Issues
 - None
