@@ -1,7 +1,7 @@
 /** @file
   Tegra Device Tree Overlay Library
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -21,7 +21,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 **/
 
@@ -29,6 +29,7 @@
 #include <Uefi.h>
 #include <Library/DebugLib.h>
 #include <libfdt.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -43,7 +44,15 @@ ReadBoardInfo (
   OVERLAY_BOARD_INFO *BoardInfo
 )
 {
-  TEGRA_BOARD_INFO TegraBoardInfo;
+  EFI_STATUS                  Status;
+  TEGRA_BOARD_INFO            TegraBoardInfo;
+  TEGRA_EEPROM_BOARD_INFO     *Eeprom;
+  EFI_HANDLE                  *HandleBuffer;
+  UINTN                       ProtocolCount;
+  UINTN                       i=0;
+
+  Eeprom = NULL;
+  HandleBuffer = NULL;
 
   ZeroMem (&TegraBoardInfo, sizeof (TegraBoardInfo));
   GetBoardInfo(&TegraBoardInfo);
@@ -51,17 +60,42 @@ ReadBoardInfo (
   BoardInfo->FuseBaseAddr = TegraBoardInfo.FuseBaseAddr;
   BoardInfo->FuseList = TegraBoardInfo.FuseList;
   BoardInfo->FuseCount = TegraBoardInfo.FuseCount;
-  BoardInfo->IdCount = 2; /*CVM and CVB*/
+  BoardInfo->IdCount = 0;
+
+  Status = gBS->LocateHandleBuffer ( ByProtocol,
+                                     &gNVIDIAEepromProtocolGuid,
+                                     NULL,
+                                     &ProtocolCount,
+                                     &HandleBuffer
+                                   );
+  if (EFI_ERROR(Status) || (ProtocolCount == 0)) {
+    DEBUG ((DEBUG_WARN, "Failed to get ID Eeprom protocol\r\n"));
+    return Status;
+  }
+
+  BoardInfo->IdCount = ProtocolCount;
   BoardInfo->ProductIds = (TEGRA_EEPROM_PART_NUMBER *)AllocateZeroPool(BoardInfo->IdCount * sizeof(TEGRA_EEPROM_PART_NUMBER));
-  CopyMem ((VOID *)&BoardInfo->ProductIds[0], (VOID *) TegraBoardInfo.CvmProductId, PRODUCT_ID_LEN);
-  CopyMem ((VOID *)&BoardInfo->ProductIds[1], (VOID *) TegraBoardInfo.CvbProductId, PRODUCT_ID_LEN);
 
-  DEBUG((DEBUG_INFO, "Cvm Product Id: %a \n", (CHAR8*)TegraBoardInfo.CvmProductId));
-  DEBUG((DEBUG_INFO, "Cvb Product Id: %a \n", (CHAR8*)TegraBoardInfo.CvbProductId));
+  for (i = 0; i < ProtocolCount; i++) {
+    Status = gBS->HandleProtocol (
+                    HandleBuffer[i],
+                    &gNVIDIAEepromProtocolGuid,
+                    (VOID **) &Eeprom);
+    if (EFI_ERROR(Status)) {
+      DEBUG ((DEBUG_WARN, "Failed to get Eeprom protocol\r\n"));
+      return EFI_NOT_FOUND;
+    }
+    CopyMem ((VOID *)(&BoardInfo->ProductIds[i]), (VOID *) &Eeprom->ProductId, PRODUCT_ID_LEN);
+  }
 
-  if (TegraBoardInfo.CvmBoardId == NULL) {
-    DEBUG((DEBUG_WARN, "%a: Failed to get board id from BCT\n.", __FUNCTION__));
+  if (BoardInfo->IdCount == 0) {
+    DEBUG((DEBUG_WARN, "%a: Failed to get board id from EEPROM\n.", __FUNCTION__));
     return EFI_NOT_FOUND;
+  }
+
+  DEBUG((DEBUG_INFO, "Eeprom product Ids: \n"));
+  for (i=0; i < BoardInfo->IdCount; i++) {
+    DEBUG((DEBUG_INFO, "%d. %a \n", i+1, BoardInfo->ProductIds[i]));
   }
 
   return EFI_SUCCESS;

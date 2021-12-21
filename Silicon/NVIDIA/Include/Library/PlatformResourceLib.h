@@ -80,8 +80,10 @@ typedef struct {
   UINTN           FuseBaseAddr;
   TEGRA_FUSE_INFO *FuseList;
   UINTN           FuseCount;
-  CHAR8           BoardId[BOARD_ID_LEN + 1];
-  CHAR8           ProductId[PRODUCT_ID_LEN + 1];
+  CHAR8           CvmBoardId[BOARD_ID_LEN + 1];
+  CHAR8           CvbBoardId[BOARD_ID_LEN + 1];
+  CHAR8           CvmProductId[PRODUCT_ID_LEN + 1];
+  CHAR8           CvbProductId[PRODUCT_ID_LEN + 1];
   CHAR8           SerialNumber[SERIAL_NUM_LEN];
 } TEGRA_BOARD_INFO;
 

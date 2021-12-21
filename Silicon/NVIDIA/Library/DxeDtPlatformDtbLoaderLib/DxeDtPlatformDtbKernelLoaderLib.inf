@@ -55,7 +55,7 @@
   UefiBootServicesTableLib
   FloorSweepingLib
   PlatformResourceLib
-  TegraDeviceTreeOverlayLib
+  TegraDeviceTreeKernelOverlayLib
   OpteeLib
 
 [Protocols]

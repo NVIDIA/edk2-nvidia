@@ -182,6 +182,7 @@
   DeviceDiscoveryDriverLib|Silicon/NVIDIA/Library/DeviceDiscoveryDriverLib/DeviceDiscoveryDriverLib.inf
 
   TegraDeviceTreeOverlayLib|Silicon/NVIDIA/Library/TegraDeviceTreeOverlayLib/TegraDeviceTreeOverlayLib.inf
+  TegraDeviceTreeKernelOverlayLib|Silicon/NVIDIA/Library/TegraDeviceTreeOverlayLib/TegraDeviceTreeKernelOverlayLib.inf
 
   QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
 
