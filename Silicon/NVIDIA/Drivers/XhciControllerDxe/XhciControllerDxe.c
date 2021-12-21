@@ -2,7 +2,7 @@
 
   XHCI Controller Driver
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,6 +24,7 @@
 #include <Protocol/UsbFwProtocol.h>
 #include <Protocol/XhciController.h>
 #include <Protocol/BpmpIpc.h>
+#include <Protocol/PowerGateNodeProtocol.h>
 #include "XhciControllerPrivate.h"
 #include <libfdt.h>
 
@@ -45,7 +46,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
     .AutoEnableClocks = TRUE,
     .AutoDeassertReset = TRUE,
     .AutoResetModule = FALSE,
-    .AutoDeassertPg = TRUE,
+    .AutoDeassertPg = FALSE,
     .SkipEdkiiNondiscoverableInstall = FALSE,
 };
 
@@ -84,43 +85,8 @@ XhciGetCfgAddr (
 
   Private = XHCICONTROLLER_PRIVATE_DATA_FROM_THIS (This);
   *CfgAddress = Private->XusbSoc->CfgAddress;
+
   return EFI_SUCCESS;
-}
-
-VOID
-FpgaClockHacks(
-  IN EFI_PHYSICAL_ADDRESS       CarAddress)
-{
-#define CLK_RST_CONTROLLER_RST_DEV_XUSB_0       (0x0)
-#define   SWR_XUSB_HOST_RST                     (1 << 0)
-#define   SWR_XUSB_DEV_RST                      (1 << 1)
-#define   SWR_XUSB_PADCTL_RST                   (1 << 2)
-#define   SWR_XUSB_SS_RST                       (1 << 3)
-#define CLK_RST_CONTROLLER_CLK_OUT_ENB_XUSB_0   (0x1000)
-#define   CLK_ENB_XUSB                          (1 << 0)
-#define   CLK_ENB_XUSB_DEV                      (1 << 1)
-#define   CLK_ENB_XUSB_HOST                     (1 << 2)
-#define   CLK_ENB_XUSB_SS                       (1 << 3)
-#define CLK_RST_CONTROLLER_CLK_OUT_ENB_XUSB_SET_0       (0x1004)
-#define   SET_CLK_ENB_XUSB                      (1 << 0)
-#define   SET_CLK_ENB_XUSB_DEV                  (1 << 1)
-#define   SET_CLK_ENB_XUSB_HOST                 (1 << 2)
-#define   SET_CLK_ENB_XUSB_SS                   (1 << 3)
-
-  UINT32                     val;
-
-  val = CLK_ENB_XUSB | CLK_ENB_XUSB_DEV | CLK_ENB_XUSB_HOST |
-                CLK_ENB_XUSB_SS;
-  MmioWrite32(CarAddress + CLK_RST_CONTROLLER_CLK_OUT_ENB_XUSB_0, val);
-
-  val = MmioRead32(CarAddress + CLK_RST_CONTROLLER_RST_DEV_XUSB_0);
-  val &= ~(SWR_XUSB_HOST_RST | SWR_XUSB_DEV_RST |
-                        SWR_XUSB_PADCTL_RST | SWR_XUSB_SS_RST);
-  MmioWrite32(CarAddress + CLK_RST_CONTROLLER_RST_DEV_XUSB_0, val);
-
-  val = SET_CLK_ENB_XUSB | SET_CLK_ENB_XUSB_DEV | SET_CLK_ENB_XUSB_HOST |
-                SET_CLK_ENB_XUSB_SS;
-  MmioWrite32(CarAddress + CLK_RST_CONTROLLER_CLK_OUT_ENB_XUSB_SET_0, val);
 }
 
 /**
@@ -151,7 +117,6 @@ DeviceDiscoveryNotify (
   UINT32                          reg_val;
   EFI_PHYSICAL_ADDRESS            BaseAddress;
   EFI_PHYSICAL_ADDRESS            CfgAddress;
-  EFI_PHYSICAL_ADDRESS            CarAddress;
   UINTN                           RegionSize;
   UINT8                           CapLength;
   UINT32                          StatusRegister;
@@ -162,6 +127,9 @@ DeviceDiscoveryNotify (
   BOOLEAN                          T234Platform;
   BOOLEAN                          LoadIfrRom;
   TEGRA_PLATFORM_TYPE              PlatformType;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL *PgProtocol;
+  UINT32                          Index;
+
 
   T234Platform = FALSE;
   LoadIfrRom = FALSE;
@@ -186,8 +154,8 @@ DeviceDiscoveryNotify (
       return Status;
     }
 
-    // Force coherent DMA type device.
-    Device->DmaType = NonDiscoverableDeviceDmaTypeCoherent;
+    // Force non-coherent DMA type device.
+    Device->DmaType = NonDiscoverableDeviceDmaTypeNonCoherent;
 
     /* Assign Platform Specific Parameters */
     if (((Offset = fdt_node_offset_by_compatible(DeviceTreeNode->DeviceTreeBase, 0,
@@ -237,16 +205,6 @@ DeviceDiscoveryNotify (
       }
       Private->XusbSoc->Base2Address = BaseAddress;
 
-      if (PlatformType == TEGRA_PLATFORM_SYSTEM_FPGA) {
-        Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 3, &BaseAddress,
-                                                                  &RegionSize);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a: Unable to locate CAR Base address range\n",
-                                                                __FUNCTION__));
-          goto ErrorExit;
-        }
-        CarAddress = BaseAddress;
-      }
     } else {
       Private->XusbSoc->Base2Address = 0;
     }
@@ -268,6 +226,43 @@ DeviceDiscoveryNotify (
       goto ErrorExit;
     }
 
+    Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "PowerGateNodeProtocol not found\r\n"));
+    }
+
+    //Unpowergate XUSBA/XUSBB/XUSBC partition first
+    for (Index = 0; Index < 3; Index++) {
+      i = Index + 10;
+        DEBUG ((EFI_D_ERROR, "Deassert pg: %d\r\n", i));
+      //Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
+      Status = PgProtocol->Deassert (PgProtocol, i);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "Deassert pg not found\r\n"));
+      }
+    }
+
+    //Powergate XUSBA/XUSBB/XUSBC partition again to make it in default state
+    for (Index = 0; Index < 3; Index++) {
+      i = Index + 10;
+      DEBUG ((EFI_D_ERROR, "assert pg: %d\r\n", i));
+      //Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
+      Status = PgProtocol->Assert (PgProtocol, i);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "assert pg not found\r\n"));
+      }
+    }
+
+     //Only unpowergate XUSBA/XUSBC in XHCI DT
+     for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+       DEBUG ((EFI_D_ERROR, "Deassert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
+       Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
+       if (EFI_ERROR (Status)) {
+         DEBUG ((EFI_D_ERROR, "Deassert pg not found\r\n"));
+       }
+    }
+
+
     /* Pass Xhci Config Address to Falcon Library before using Library's
      * other functions */
     FalconSetHostCfgAddr(CfgAddress);
@@ -281,12 +276,6 @@ DeviceDiscoveryNotify (
       DEBUG ((EFI_D_ERROR, "%a: Couldn't find UsbPadCtl Protocol Handle %r\n",
                                                         __FUNCTION__, Status));
       goto ErrorExit;
-    }
-
-    if (PlatformType == TEGRA_PLATFORM_SYSTEM_FPGA) {
-      if(T234Platform) {
-        FpgaClockHacks(CarAddress);
-      }
     }
 
     /* Initialize USB Pad Registers */
