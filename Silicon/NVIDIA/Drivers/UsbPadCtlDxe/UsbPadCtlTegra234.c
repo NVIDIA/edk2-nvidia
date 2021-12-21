@@ -2,7 +2,7 @@
 
   USB Pad Control Driver Platform Specific Definitions/Functions
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -137,6 +137,8 @@
 #define TEGRA234_UTMI_PHYS                    (4)
 #define TEGRA234_OC_PIN_NUM                   (2)
 
+#define ENABLE_FUSE                           (0)
+
 PADCTL_PLAT_CONFIG Tegra234UsbConfig = {
   .NumHsPhys = TEGRA234_UTMI_PHYS,
   .NumSsPhys = TEGRA234_USB3_PHYS,
@@ -210,20 +212,30 @@ InitUsb2PadX (
     RegData = PadCtlRead(Private, USB2_OTG_PADX_CTL_0(i));
     RegData &= ~USB2_OTG_PD_ZI;
     RegData |= TERM_SEL;
-    RegData &= ~HS_CURR_LEVEL(~0);
-    RegData |= HS_CURR_LEVEL(Usb2Ports[i].FuseHsCurrLevel);
-    RegData &= ~LS_FSLEW(~0);
-    RegData |= LS_FSLEW(6);
-    RegData &= ~LS_RSLEW(~0);
-    RegData |= LS_RSLEW(6);
-    PadCtlWrite(Private, USB2_OTG_PADX_CTL_0(i), RegData);
 
-    RegData = PadCtlRead(Private, USB2_OTG_PADX_CTL_1(i));
-    RegData &= ~TERM_RANGE_ADJ(~0);
-    RegData |= TERM_RANGE_ADJ(PlatConfig->FuseHsTermRangeAdj);
-    RegData &= ~RPD_CTRL(~0);
-    RegData |= RPD_CTRL(PlatConfig->FuseRpdCtrl);
-    PadCtlWrite(Private, USB2_OTG_PADX_CTL_1(i), RegData);
+    if (ENABLE_FUSE) {
+      RegData &= ~HS_CURR_LEVEL(~0);
+      RegData |= HS_CURR_LEVEL(Usb2Ports[i].FuseHsCurrLevel);
+      RegData &= ~LS_FSLEW(~0);
+      RegData |= LS_FSLEW(6);
+      RegData &= ~LS_RSLEW(~0);
+      RegData |= LS_RSLEW(6);
+      PadCtlWrite(Private, USB2_OTG_PADX_CTL_0(i), RegData);
+
+      RegData = PadCtlRead(Private, USB2_OTG_PADX_CTL_1(i));
+      RegData &= ~TERM_RANGE_ADJ(~0);
+      RegData |= TERM_RANGE_ADJ(PlatConfig->FuseHsTermRangeAdj);
+      RegData &= ~RPD_CTRL(~0);
+      RegData |= RPD_CTRL(PlatConfig->FuseRpdCtrl);
+      PadCtlWrite(Private, USB2_OTG_PADX_CTL_1(i), RegData);
+    } else {
+      RegData &= ~LS_FSLEW(~0);
+      RegData |= LS_FSLEW(6);
+      RegData &= ~LS_RSLEW(~0);
+      RegData |= LS_RSLEW(6);
+
+      PadCtlWrite(Private, USB2_OTG_PADX_CTL_0(i), RegData);
+    }
 
     /* USB Pad protection circuit activation for Enabled PADS. Programming
     * Voltage Direction = HOST and Protection level set to 2A.
@@ -512,6 +524,7 @@ SelectVbusEnableTriState (
   BOOLEAN Enable
   )
 {
+#if 0
   UINT32 RegVal;
   NVIDIA_PINMUX_PROTOCOL *mPmux = Private->mPmux;
   mPmux->ReadReg(mPmux, PADCTL_UART_USB_VBUS_EN(Pin), &RegVal);
@@ -528,6 +541,7 @@ SelectVbusEnableTriState (
     RegVal |= UART_USB_PM_RSVD1;
     mPmux->WriteReg(mPmux, PADCTL_UART_USB_VBUS_EN(Pin), RegVal);
   }
+#endif
 }
 
 STATIC
@@ -1019,7 +1033,9 @@ InitUsbHw234 (
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
 
     /* Store the USB Calibration Values read from Fuse Registers */
-    ReadFuseCalibration(Private);
+    if (ENABLE_FUSE) {
+      ReadFuseCalibration(Private);
+    }
 
     /* Initialize bias pad and perform Tracking */
     InitBiasPad(Private);

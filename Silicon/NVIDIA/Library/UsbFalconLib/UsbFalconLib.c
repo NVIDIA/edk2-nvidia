@@ -2,7 +2,7 @@
 
   Falcon Register Access
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -180,6 +180,7 @@ FalconFirmwareIfrLoad (
   UINT8      *FirmwareBuffer;
   UINT64     FirmwareBufferBusAddress;
   VOID       *FirmwareBufferMapping;
+  UINTN      XusbAoAddr;
 
   Status = EFI_SUCCESS;
   Value = 0;
@@ -205,7 +206,7 @@ FalconFirmwareIfrLoad (
     return Status;
   }
 
-  DEBUG ((EFI_D_VERBOSE, "%a: Firmware %p FirmwareSize %x (unaligned)\r\n",__FUNCTION__, Firmware, FirmwareSize));
+  DEBUG ((EFI_D_ERROR, "%a: Firmware %p FirmwareSize %x (unaligned)\r\n",__FUNCTION__, Firmware, FirmwareSize));
   memset (FirmwareBuffer, 0xdf, BufferSize);
   memcpy (FirmwareBuffer, Firmware, FirmwareSize);
   for (i = 0; i < FirmwareSize; i++)
@@ -219,21 +220,21 @@ FalconFirmwareIfrLoad (
 
   MemoryFence ();
   Firmware = FirmwareBuffer;
-  DEBUG ((EFI_D_VERBOSE, "%a: Firmware %p FirmwareSize %x (aligned)\r\n",__FUNCTION__, Firmware, FirmwareSize));
+  DEBUG ((EFI_D_ERROR, "%a: Firmware %p FirmwareSize %x (aligned)\r\n",__FUNCTION__, Firmware, FirmwareSize));
 
-#define XUSB_BAR2_ARU_IFRDMA_CFG0               0x0e0
-#define XUSB_BAR2_ARU_IFRDMA_CFG1               0x0e4
-#define XUSB_BAR2_ARU_IFRDMA_STREAMID_FIELD     0x0e8
+#define XUSB_BAR2_ARU_IFRDMA_CFG0               0x1bc
+#define XUSB_BAR2_ARU_IFRDMA_CFG1               0x1c0
+#define XUSB_BAR2_ARU_IFRDMA_STREAMID_FIELD     0x1c4
 
   /* set IFRDMA address */
-  Fpci2Write32(XUSB_BAR2_ARU_IFRDMA_CFG0, (UINT32)(FirmwareBufferBusAddress & 0xffffffff));
-  Fpci2Write32(XUSB_BAR2_ARU_IFRDMA_CFG1, (UINT32)((FirmwareBufferBusAddress >> 32) & 0xff));
+  MmioWrite32(XusbAoAddr + XUSB_BAR2_ARU_IFRDMA_CFG0, (UINT32)(FirmwareBufferBusAddress & 0xffffffff));
+  MmioWrite32(XusbAoAddr + XUSB_BAR2_ARU_IFRDMA_CFG1, (UINT32)((FirmwareBufferBusAddress >> 32) & 0xff));
 
   /* set streamid */
-  RegVal = Fpci2Read32(XUSB_BAR2_ARU_IFRDMA_STREAMID_FIELD);
+  RegVal = MmioRead32(XusbAoAddr + XUSB_BAR2_ARU_IFRDMA_STREAMID_FIELD);
   RegVal &= ~((UINT32) 0xff);
-  RegVal |= 0x7F;
-  Fpci2Write32(XUSB_BAR2_ARU_IFRDMA_STREAMID_FIELD, RegVal);
+  RegVal |= 0xE;
+  MmioWrite32(XusbAoAddr + XUSB_BAR2_ARU_IFRDMA_STREAMID_FIELD, RegVal);
 
   return Status;
 }
