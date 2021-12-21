@@ -817,6 +817,8 @@
   MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf {
       <LibraryClasses>
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+      <BuildOptions>
+      GCC:*_*_*_CC_FLAGS = -mstrict-align
   }
   MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf
   MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf

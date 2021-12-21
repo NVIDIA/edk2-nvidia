@@ -2,7 +2,7 @@
 #
 #  USB Pad Control Driver
 #
-#  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -57,7 +57,5 @@
   gNVIDIARegulatorProtocolGuid
   AND
   gNVIDIAEFuseProtocolGuid
-  AND
-  gNVIDIAPinMuxProtocolGuid
   AND
   gArmScmiClock2ProtocolGuid
