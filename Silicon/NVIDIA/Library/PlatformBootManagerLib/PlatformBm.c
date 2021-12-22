@@ -890,7 +890,7 @@ HandleCapsules (
   // Reset if any capsules installed
   //
   if (NeedReset) {
-      DEBUG ((DEBUG_WARN, "%a: capsule update successful, resetting ...\n",
+      DEBUG ((DEBUG_WARN, "%a: capsule update complete, resetting ...\n",
         __FUNCTION__));
 
       gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);

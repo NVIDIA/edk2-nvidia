@@ -172,13 +172,6 @@ FwPackageUpdateModeIsOk (
   IN  BOOLEAN                           IsProductionFused
   )
 {
-  if (ImageInfo->UpdateMode != FW_PACKAGE_UPDATE_MODE_ALWAYS) {
-    if ((IsProductionFused && (ImageInfo->UpdateMode != FW_PACKAGE_UPDATE_MODE_PRODUCTION)) ||
-        (!IsProductionFused && (ImageInfo->UpdateMode != FW_PACKAGE_UPDATE_MODE_NON_PRODUCTION))) {
-      return FALSE;
-    }
-  }
-
   return TRUE;
 }
 
