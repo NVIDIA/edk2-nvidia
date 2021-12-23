@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #
 # Portions provided under the following terms:
-# Copyright (c) 2018-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 # property and proprietary rights in and to this material, related
@@ -20,7 +20,7 @@
 # without an express license agreement from NVIDIA CORPORATION or
 # its affiliates is strictly prohibited.
 #
-# SPDX-FileCopyrightText: Copyright (c) 2018-2021 NVIDIA CORPORATION & AFFILIATES
+# SPDX-FileCopyrightText: Copyright (c) 2018-2022 NVIDIA CORPORATION & AFFILIATES
 # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 [Defines]
@@ -65,9 +65,6 @@
 #
 ################################################################################
 
-[PcdsFeatureFlag]
-  gArmTokenSpaceGuid.PcdArmGicV3WithV2Legacy|TRUE
-
 [PcdsPatchableInModule]
   # Console Resolution (Full HD)
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|0
@@ -108,15 +105,13 @@
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x10000
-  gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
 
 [PcdsDynamicHii.common.T234]
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS,NV
-  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|0
 
 [PcdsDynamicHii.common.T234SLT]
-  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|0
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
 
 [PcdsFeatureFlag.common]
   gEmbeddedTokenSpaceGuid.PcdAndroidBootLoadFile2|TRUE
