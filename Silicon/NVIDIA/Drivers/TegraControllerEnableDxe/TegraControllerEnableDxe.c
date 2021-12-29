@@ -12,6 +12,7 @@
 
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
   { "nvidia,gv11b", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra30-hda", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { NULL, NULL }
 };
 

@@ -301,6 +301,26 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
         Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x66, 0x67 }
       })
     }
+
+    //---------------------------------------------------------------------
+    // hda@3510000
+    //---------------------------------------------------------------------
+    Device(HDA0) {
+      Name (_HID, "NVDA010F")
+      Name (_UID, 0)
+      Name (_CCA, ZERO)
+      Name(_CLS, Package (3)
+      {
+        0x04, // Base Class (04h == Multimedia Controller)
+        0x03, // Sub-Class (03h == Multimedia Device)
+        0x00, // Programming Interface
+      })
+
+      Name(_CRS, ResourceTemplate() {
+        Memory32Fixed(ReadWrite, 0x3510000, 0x10000)
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xC1 }
+      })
+    }
   }
 }
 
