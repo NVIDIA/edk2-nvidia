@@ -1,11 +1,11 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * Copyright (c) 2020 - 2021, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2020 - 2022, NVIDIA Corporation. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * Portions provided under the following terms:
- * Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
  * property and proprietary rights in and to this material, related
@@ -14,7 +14,7 @@
  * without an express license agreement from NVIDIA CORPORATION or
  * its affiliates is strictly prohibited.
  *
- * SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
  * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
  *
  * Template for [DSDT] ACPI Table (AML byte code table)
@@ -25,46 +25,6 @@
 DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
 {
   Scope(_SB) {
-    Device(CPU0) {
-      Name(_HID, "ACPI0007")
-      Name(_UID, 0)
-    }
-
-    Device(CPU1) {
-      Name(_HID, "ACPI0007")
-      Name(_UID, 1)
-    }
-
-    Device(CPU2) {
-      Name(_HID, "ACPI0007")
-      Name(_UID, 2)
-    }
-
-    Device(CPU3) {
-      Name(_HID, "ACPI0007")
-      Name(_UID, 3)
-    }
-
-    Device(CPU4) {
-      Name(_HID, "ACPI0007")
-      Name(_UID, 4)
-    }
-
-    Device(CPU5) {
-      Name(_HID, "ACPI0007")
-      Name(_UID, 5)
-    }
-
-    Device(CPU6) {
-      Name(_HID, "ACPI0007")
-      Name(_UID, 6)
-    }
-
-    Device(CPU7) {
-      Name(_HID, "ACPI0007")
-      Name(_UID, 7)
-    }
-
     Device(FAN) {
       Name (_HID, "PNP0C0B")
       Name (_UID, 0)
