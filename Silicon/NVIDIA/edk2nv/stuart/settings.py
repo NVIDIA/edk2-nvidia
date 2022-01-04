@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 #
 # NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
@@ -69,7 +69,7 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         '''
         # NOTE: These paths must use a trailing slash to ensure stuart treats
         # them properly when computing relative paths.
-        return ["edk2/BaseTools/", "edk2/", "edk2-nvidia/"]
+        return ["edk2/BaseTools/", "edk2/", "edk2-platforms/", "edk2-nvidia/"]
 
     def GetActiveScopes(self):
         ''' List of scopes we need for this platform. '''
@@ -121,6 +121,7 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         # top-level package paths and let it load them recursively.
         return [
             RequiredSubmodule("edk2"),
+            RequiredSubmodule("edk2-platforms"),
             RequiredSubmodule("edk2-nvidia"),
         ]
 
