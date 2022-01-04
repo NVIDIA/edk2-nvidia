@@ -245,6 +245,14 @@ CM_ARM_OBJ_REF CarmelCoreResources[] = {
   { .ReferenceToken = REFERENCE_TOKEN (CacheInfo[3]) },
 };
 
+STATIC
+CONST CHAR8 *SerialPortCompatibility[] = {
+  "nvidia,tegra20-uart",
+  "nvidia,tegra186-hsuart",
+  "nvidia,tegra194-hsuart",
+  NULL
+};
+
 /** Check if Pcie is enabled is kernel.
   @retval TRUE  - Enabled
   @retval FALSE - Disabled
@@ -600,7 +608,9 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   UINT32                            Size;
   UINT8                             SerialPortConfig;
   CM_STD_OBJ_ACPI_TABLE_INFO        *NewAcpiTables;
+  CONST CHAR8                       **Map;
 
+  Map = SerialPortCompatibility;
 
   SerialPortConfig = PcdGet8 (PcdSerialPortConfig);
   if (PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_16550 ||
@@ -609,17 +619,25 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   }
 
   NumberOfSerialPorts = 0;
-  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra20-uart", NULL, &NumberOfSerialPorts);
-  if (Status != EFI_BUFFER_TOO_SMALL) {
-    return Status;
+  while (*Map != NULL) {
+    Status = GetMatchingEnabledDeviceTreeNodes (*Map, NULL, &NumberOfSerialPorts);
+    if (Status != EFI_BUFFER_TOO_SMALL) {
+      Map++;
+    } else {
+      break;
+    }
   }
 
+  if (*Map == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: No Matches found \n", __FUNCTION__ ));
+      return Status;
+  }
   SerialHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfSerialPorts);
   if (SerialHandles == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra20-uart", SerialHandles, &NumberOfSerialPorts);
+  Status = GetMatchingEnabledDeviceTreeNodes (*Map, SerialHandles, &NumberOfSerialPorts);
   if (EFI_ERROR (Status)) {
     return Status;
   }
