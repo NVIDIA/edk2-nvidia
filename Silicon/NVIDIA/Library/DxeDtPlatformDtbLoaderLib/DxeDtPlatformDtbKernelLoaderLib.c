@@ -112,6 +112,10 @@ RemoveQspiNodes (
   QSPI_COMPATIBILITY *Map;
   INT32              NodeOffset;
 
+  if (GetBootType () == TegrablBootRcm) {
+    return;
+  }
+
   Map = gQspiCompatibilityMap;
 
   while (Map->Compatibility != NULL) {
