@@ -66,13 +66,14 @@
 ################################################################################
 
 [PcdsPatchableInModule]
-  # Console Resolution (Full HD)
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|0
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|0
-
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid|{GUID("$(SYSTEM_FMP_ESRT_GUID)")}
   gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleOnDiskSupport|TRUE
   gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleInRamSupport|TRUE
+
+[PcdsDynamicDefault.common]
+  # Console Resolution
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|0
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|0
 
 [PcdsDynamicDefault.common.T194]
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
