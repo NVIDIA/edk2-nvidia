@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 #
 # NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
@@ -19,3 +19,10 @@
   UefiBootServicesTableLib|MdePkg/Library/UefiBootServicesTableLib/UefiBootServicesTableLib.inf
   DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
   FlashStubLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/FlashStubLib/FlashStubLib.inf
+
+[BuildOptions.common.EDKII.HOST_APPLICATION]
+!ifdef $(HOSTAPP_STATIC_LINK)
+  # Statically link the host-based executable.  This allows us to easily use
+  # alternate toolchains at build time and not introduce a runtime dependency.
+  GCC:*_*_*_DLINK2_FLAGS = -static -s
+!endif
