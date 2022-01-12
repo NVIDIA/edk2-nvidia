@@ -1,7 +1,7 @@
 /** @file
   EFI Graphics Output Protocol Test
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -45,6 +45,15 @@ typedef struct {
   /// Pointer to a scratch software Blt buffer.
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL *BltBuffer;
 } EFI_GOP_TEST_SUITE_CONTEXT;
+
+
+STATIC CONST CHAR8 *CONST mGraphicsPixelFormatNames[] = {
+  "PixelRedGreenBlueReserved8BitPerColor",
+  "PixelBlueGreenRedReserved8BitPerColor",
+  "PixelBitMask",
+  "PixelBltOnly",
+  "PixelFormatMax"
+};
 
 /// Module-wide test suite context, managed by the test suite setup
 /// and teardown functions.
@@ -253,15 +262,17 @@ EfiGopBltTest (
   IN EFI_GOP_TEST_SUITE_CONTEXT *CONST Context
   )
 {
-  UNIT_TEST_STATUS              TestStatus;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *GopProtocol;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL *BltBuffer;
-  UINT32                        HorizontalResolution;
-  UINT32                        VerticalResolution;
-  UINT32                        Crc32;
+  UNIT_TEST_STATUS                     TestStatus;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL         *GopProtocol;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL        *BltBuffer;
+  EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *GopModeInfo ;
+  UINT32                               HorizontalResolution;
+  UINT32                               VerticalResolution;
+  UINT32                               Crc32;
 
   GopProtocol          = Context->GopProtocol;
   BltBuffer            = Context->BltBuffer;
+  GopModeInfo          = GopProtocol->Mode->Info;
   HorizontalResolution = GopProtocol->Mode->Info->HorizontalResolution;
   VerticalResolution   = GopProtocol->Mode->Info->VerticalResolution;
 
@@ -296,7 +307,22 @@ EfiGopBltTest (
     return TestStatus;
   }
 
-  UT_LOG_INFO ("%a: CRC-32: %08x\r\n", __FUNCTION__, Crc32);
+  UT_LOG_INFO ("CRC-32                   - %08x\r\n", Crc32);
+  UT_LOG_INFO ("HorizontalResolution     - %u\r\n", HorizontalResolution);
+  UT_LOG_INFO ("VerticalResolution       - %u\r\n", VerticalResolution);
+
+  if (GopModeInfo->PixelFormat < ARRAY_SIZE (mGraphicsPixelFormatNames)) {
+    UT_LOG_INFO ("PixelFormat              - %a\r\n", mGraphicsPixelFormatNames[GopModeInfo->PixelFormat]);
+  } else {
+    UT_LOG_INFO ("PixelFormat              - 0x%x (unknown)\r\n", GopModeInfo->PixelFormat);
+  }
+
+  if (GopModeInfo->PixelFormat == PixelBitMask) {
+    UT_LOG_INFO ("PixelInformation.RedMask      - 0x%08x\r\n", GopModeInfo->PixelInformation.RedMask);
+    UT_LOG_INFO ("PixelInformation.GreenMask    - 0x%08x\r\n", GopModeInfo->PixelInformation.GreenMask);
+    UT_LOG_INFO ("PixelInformation.BlueMask     - 0x%08x\r\n", GopModeInfo->PixelInformation.BlueMask);
+    UT_LOG_INFO ("PixelInformation.ReservedMask - 0x%08x\r\n", GopModeInfo->PixelInformation.ReservedMask);
+  }
   return UNIT_TEST_PASSED;
 }
 
@@ -327,7 +353,7 @@ InitTestSuite (
     DEBUG ((
       DEBUG_ERROR,
       "%a: Failed to create the test suite."
-      " Status = %r\n", __FUNCTION__, Status
+      " Status = %r\r\n", __FUNCTION__, Status
     ));
     return Status;
   }
@@ -361,7 +387,7 @@ EfiGopTestDxe (
   EFI_STATUS                  Status;
   UNIT_TEST_FRAMEWORK_HANDLE  Framework;
 
-  DEBUG ((DEBUG_INFO, "%a v%a" "\r\n", UNIT_TEST_NAME, UNIT_TEST_VERSION));
+  DEBUG ((DEBUG_INFO | DEBUG_INIT, "%a v%a" "\r\n", UNIT_TEST_NAME, UNIT_TEST_VERSION));
 
   Status = InitUnitTestFramework (&Framework,
                                   UNIT_TEST_NAME,
@@ -371,13 +397,19 @@ EfiGopTestDxe (
     DEBUG ((
       DEBUG_ERROR,
       "%a: InitUnitTestFramework failed."
-      " Status = %r\n", __FUNCTION__, Status
+      " Status = %r\r\n", __FUNCTION__, Status
     ));
     return Status;
   }
 
   Status = InitTestSuite (Framework);
-  if (!EFI_ERROR (Status)) {
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: InitTestSuite failed."
+      " Status = %r\r\n", __FUNCTION__, Status
+    ));
+  } else {
     Status = RunAllTestSuites (Framework);
   }
 
