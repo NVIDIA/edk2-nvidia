@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -11,7 +11,7 @@
 *  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -20,7 +20,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
@@ -29,6 +29,7 @@
 #define __T234_RESOURCE_CONFIG_PRIVATE_H__
 
 #include <Uefi/UefiBaseType.h>
+#include <Library/PlatformResourceLib.h>
 
 #define BOOT_CHAIN_MAX              2
 #define BOOT_CHAIN_BIT_FIELD_LO     4
@@ -58,7 +59,6 @@
 #define BRBCT_SIGNED_CUSTOMER_DATA_SIZE   1024
 #define BRBCT_CUSTOMER_DATA_SIZE          (BRBCT_UNSIGNED_CUSTOMER_DATA_SIZE + \
                                            BRBCT_SIGNED_CUSTOMER_DATA_SIZE)
-#define MAX_EEPROM_DATA_SIZE              256
 
 #define TEGRA_FUSE_BASE_ADDRESS     0x03810000
 #define FUSE_OPT_ISP_DISABLE        0x4d8
@@ -222,15 +222,6 @@ typedef struct  {
   TEGRABL_DEVICE_CONFIG_UFS_PARAMS Ufs;
   TEGRABL_DEVICE_CONFIG_SATA_PARAMS Sata;
 } TEGRABL_DEVICE_CONFIG_PARAMS;
-#pragma pack()
-
-#pragma pack(1)
-typedef struct  {
-  UINT8  CvmEepromData[MAX_EEPROM_DATA_SIZE];
-  UINT8  CvbEepromData[MAX_EEPROM_DATA_SIZE];
-  UINT32 CvmEepromDataSize;
-  UINT32 CvbEepromDataSize;
-} TEGRABL_EEPROM_DATA;
 #pragma pack()
 
 typedef struct {

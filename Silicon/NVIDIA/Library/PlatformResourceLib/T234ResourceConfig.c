@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -11,7 +11,7 @@
 *  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -20,7 +20,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
@@ -387,22 +387,20 @@ T234GetMmioBaseAndSize (
 }
 
 /**
-  Retrieve CVM EEPROM Data
+  Retrieve EEPROM Data
 
 **/
-UINT32
+TEGRABL_EEPROM_DATA*
 EFIAPI
-T234GetCvmEepromData (
-  IN  UINTN CpuBootloaderAddress,
-  OUT UINT8 **Data
+T234GetEepromData (
+  IN  UINTN CpuBootloaderAddress
 )
 {
   TEGRA_CPUBL_PARAMS *CpuBootloaderParams;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  *Data = CpuBootloaderParams->Eeprom.CvmEepromData;
 
-  return CpuBootloaderParams->Eeprom.CvmEepromDataSize;
+  return &CpuBootloaderParams->Eeprom;
 }
 
 /**
@@ -415,17 +413,18 @@ T234GetBoardInfo(
   OUT TEGRA_BOARD_INFO *BoardInfo
 )
 {
-  T234_EEPROM_DATA *EepromData;
-  UINT32           DataLen;
+  TEGRABL_EEPROM_DATA *EepromData;
+  T234_EEPROM_DATA    *T234EepromData;
 
-  DataLen = T234GetCvmEepromData (CpuBootloaderAddress, (UINT8 **)&EepromData);
+  EepromData = T234GetEepromData (CpuBootloaderAddress);
+  T234EepromData = (T234_EEPROM_DATA *)EepromData->CvmEepromData;
 
   BoardInfo->FuseBaseAddr = TEGRA_FUSE_BASE_ADDRESS;
   BoardInfo->FuseList = T234FloorsweepingFuseList;
   BoardInfo->FuseCount = sizeof(T234FloorsweepingFuseList) / sizeof(T234FloorsweepingFuseList[0]);
-  CopyMem ((VOID *) BoardInfo->BoardId, (VOID *) EepromData->PartNumber.Id, BOARD_ID_LEN);
-  CopyMem ((VOID *) BoardInfo->ProductId, (VOID *) &EepromData->PartNumber, sizeof (EepromData->PartNumber));
-  CopyMem ((VOID *) BoardInfo->SerialNumber, (VOID *) &EepromData->SerialNumber, sizeof (EepromData->SerialNumber));
+  CopyMem ((VOID *) BoardInfo->BoardId, (VOID *) T234EepromData->PartNumber.Id, BOARD_ID_LEN);
+  CopyMem ((VOID *) BoardInfo->ProductId, (VOID *) &T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
+  CopyMem ((VOID *) BoardInfo->SerialNumber, (VOID *) &T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
 
   return TRUE;
 }
