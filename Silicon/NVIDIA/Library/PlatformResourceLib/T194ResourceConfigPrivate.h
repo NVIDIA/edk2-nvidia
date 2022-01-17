@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2022, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -11,7 +11,7 @@
 *  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2018-2020 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -20,7 +20,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2020 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2022 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
@@ -29,11 +29,14 @@
 #define __T194_RESOURCE_CONFIG_PRIVATE_H__
 
 #include <Uefi/UefiBaseType.h>
+#include <Library/PlatformResourceLib.h>
 
 #define TEGRABL_MAX_VERSION_STRING 128 /* chars including null */
 #define NUM_DRAM_BAD_PAGES 1024
 #define TEGRABL_MAX_STORAGE_DEVICES 8
 #define MAX_OEM_FW_RATCHET_INDEX 104
+
+#define T194_FUSE_BASE_ADDRESS 0x03820000
 
 /*macro carve_out_type*/
 #define CARVEOUT_NONE 0U
@@ -312,6 +315,18 @@ typedef struct {
 
   /** Minimum ratchet version of OEM-FW bins */
   UEFI_DECLARE_ALIGNED(UINT8 MinRatchet[MAX_OEM_FW_RATCHET_INDEX], 8);
+
+  /** Enable encryption of OS managed memory */
+  UEFI_DECLARE_ALIGNED(UINT32 EnableOsMemEncryption, 8);
+
+  /** Bit-vector representing which of the GSCs get used for encrypting OS managed memory */
+  UEFI_DECLARE_ALIGNED(UINT32 OsMemEncryptionGscList, 8);
+
+  /** Blob size in rcm mode */
+  UEFI_DECLARE_ALIGNED(UINT32 RcmBlobSize, 8);
+
+  /** EEPROM data*/
+  UEFI_DECLARE_ALIGNED(TEGRABL_EEPROM_DATA Eeprom, 8);
 } TEGRA_CPUBL_PARAMS;
 
 #endif //__T194_RESOURCE_CONFIG_PRIVATE_H__

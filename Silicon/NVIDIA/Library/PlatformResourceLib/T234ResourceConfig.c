@@ -419,7 +419,7 @@ T234GetBoardInfo(
   EepromData = T234GetEepromData (CpuBootloaderAddress);
   T234EepromData = (T234_EEPROM_DATA *)EepromData->CvmEepromData;
 
-  BoardInfo->FuseBaseAddr = TEGRA_FUSE_BASE_ADDRESS;
+  BoardInfo->FuseBaseAddr = T234_FUSE_BASE_ADDRESS;
   BoardInfo->FuseList = T234FloorsweepingFuseList;
   BoardInfo->FuseCount = sizeof(T234FloorsweepingFuseList) / sizeof(T234FloorsweepingFuseList[0]);
   CopyMem ((VOID *) BoardInfo->BoardId, (VOID *) T234EepromData->PartNumber.Id, BOARD_ID_LEN);

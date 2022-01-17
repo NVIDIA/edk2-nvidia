@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -11,7 +11,7 @@
 *  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -20,7 +20,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
@@ -79,6 +79,27 @@ TEGRA_MMIO_INFO*
 EFIAPI
 T194GetMmioBaseAndSize (
   VOID
+);
+
+/**
+  Retrieve EEPROM Data
+
+**/
+TEGRABL_EEPROM_DATA*
+EFIAPI
+T194GetEepromData (
+  IN  UINTN CpuBootloaderAddress
+);
+
+/**
+  Retrieve Board Information
+
+**/
+BOOLEAN
+EFIAPI
+T194GetBoardInfo(
+  IN  UINTN            CpuBootloaderAddress,
+  OUT TEGRA_BOARD_INFO *BoardInfo
 );
 
 #endif //__T194_RESOURCE_CONFIG_H__

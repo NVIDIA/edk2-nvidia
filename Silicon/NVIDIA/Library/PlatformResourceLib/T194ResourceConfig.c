@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2021, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2022, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -11,7 +11,7 @@
 *  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2018-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -20,13 +20,14 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2021 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2022 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
 
 #include <Uefi.h>
 #include <Pi/PiMultiPhase.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/DramCarveoutLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
@@ -36,6 +37,7 @@
 #include "T194ResourceConfigPrivate.h"
 #include "T194ResourceConfig.h"
 #include <T194/T194Definitions.h>
+#include <Protocol/Eeprom.h>
 
 TEGRA_MMIO_INFO T194MmioInfo[] = {
   {
@@ -58,6 +60,9 @@ TEGRA_MMIO_INFO T194MmioInfo[] = {
     0,
     0
   }
+};
+
+TEGRA_FUSE_INFO T194FloorsweepingFuseList[] = {
 };
 
 /**
@@ -243,4 +248,47 @@ T194GetMmioBaseAndSize (
 )
 {
   return T194MmioInfo;
+}
+
+/**
+  Retrieve EEPROM Data
+
+**/
+TEGRABL_EEPROM_DATA*
+EFIAPI
+T194GetEepromData (
+  IN  UINTN CpuBootloaderAddress
+)
+{
+  TEGRA_CPUBL_PARAMS *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  return &CpuBootloaderParams->Eeprom;
+}
+
+/**
+  Retrieve Board Information
+
+**/
+BOOLEAN
+T194GetBoardInfo(
+  IN  UINTN            CpuBootloaderAddress,
+  OUT TEGRA_BOARD_INFO *BoardInfo
+)
+{
+  TEGRABL_EEPROM_DATA *EepromData;
+  T194_EEPROM_DATA    *T194EepromData;
+
+  EepromData = T194GetEepromData (CpuBootloaderAddress);
+  T194EepromData = (T194_EEPROM_DATA *)EepromData->CvmEepromData;
+
+  BoardInfo->FuseBaseAddr = T194_FUSE_BASE_ADDRESS;
+  BoardInfo->FuseList = T194FloorsweepingFuseList;
+  BoardInfo->FuseCount = sizeof(T194FloorsweepingFuseList) / sizeof(T194FloorsweepingFuseList[0]);
+  CopyMem ((VOID *) BoardInfo->BoardId, (VOID *) T194EepromData->PartNumber.Id, BOARD_ID_LEN);
+  CopyMem ((VOID *) BoardInfo->ProductId, (VOID *) &T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
+  CopyMem ((VOID *) BoardInfo->SerialNumber, (VOID *) &T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
+
+  return TRUE;
 }

@@ -55,16 +55,14 @@
   Crc8Lib
 
 [Guids]
-  gNVIDIACvmEeprom
-  gNVIDIACvbEeprom
-  gNVIDIAIdEeprom
+  gNVIDIAEeprom
 
 [Protocols]
   gEfiI2cIoProtocolGuid                       ## CONSUMES
   gEfiRngProtocolGuid                         ## CONSUMES
   gNVIDIACvmEepromProtocolGuid                ## SOMETIMES_PRODUCES
   gNVIDIACvbEepromProtocolGuid                ## SOMETIMES_PRODUCES
-  gNVIDIAIdEepromProtocolGuid                 ## SOMETIMES_PRODUCES
+  gNVIDIAEepromProtocolGuid                   ## SOMETIMES_PRODUCES
 
 [Depex]
   TRUE

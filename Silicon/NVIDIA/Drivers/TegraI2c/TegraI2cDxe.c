@@ -882,6 +882,7 @@ TegraI2CDriverBindingStart (
   EFI_DEVICE_PATH                   *OldDevicePath;
   EFI_DEVICE_PATH                   *NewDevicePath;
   EFI_DEVICE_PATH_PROTOCOL          *DevicePathNode;
+  UINT32                            Count;
 
   Status = gBS->HandleProtocol (
                   ControllerHandle,
@@ -1063,37 +1064,27 @@ TegraI2CDriverBindingStart (
   PropertyLen = 0;
   Private->NumberOfI2cDevices  = 0;
 
+  I2cNodeHandle = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
+  Count = 0;
   fdt_for_each_subnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
     if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
                                    I2cNodeOffset,
                                    "atmel,24c02") == 0) {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "label", &PropertyLen);
-      if (Property != NULL && PropertyLen != 0) {
-        if (0 == AsciiStrCmp (Property, "module")) {
-          DeviceGuid = &gNVIDIACvmEeprom;
-          DEBUG ((DEBUG_INFO, "%a: Cvm Eeprom Found.\n", __FUNCTION__));
-        } else if (0 == AsciiStrCmp (Property, "system")) {
-          DeviceGuid = &gNVIDIACvbEeprom;
-          DEBUG ((DEBUG_INFO, "%a: Cvb Eeprom Found.\n", __FUNCTION__));
-        } else {
-          DeviceGuid = &gNVIDIAIdEeprom;
-          DEBUG ((DEBUG_INFO, "%a: Id Eeprom Found.\n", __FUNCTION__));
-        }
-      } else {
-        DeviceGuid = &gNVIDIAIdEeprom;
-        DEBUG ((DEBUG_INFO, "%a: Id Eeprom Found.\n", __FUNCTION__));
-      }
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if (Property != NULL && PropertyLen == sizeof (UINT32))  {
         gBS->CopyMem (&I2cAddress, (VOID *) Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
+        DEBUG ((DEBUG_INFO, "%a: Eeprom Found.\n", __FUNCTION__));
+        DeviceGuid = &gNVIDIAEeprom;
         Status = TegraI2cAddDevice (Private,
                                     I2cAddress,
                                     DeviceGuid,
-                                    fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset));
+                                    Count);
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
         }
+        Count++;
+        DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, I2cBusHandle));
       }
     }
     if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
@@ -1116,7 +1107,7 @@ TegraI2CDriverBindingStart (
     }
   }
 
-  I2cNodeHandle = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
+  Count = 0;
   EepromManagerNodeOffset = fdt_path_offset (DeviceTreeNode->DeviceTreeBase, "/eeprom-manager");
   if (EepromManagerNodeOffset >= 0) {
     fdt_for_each_subnode (EepromManagerBusNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerNodeOffset) {
@@ -1132,33 +1123,20 @@ TegraI2CDriverBindingStart (
         continue;
       }
       fdt_for_each_subnode (EepromNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset) {
-        Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "label", &PropertyLen);
-        if (Property != NULL && PropertyLen != 0) {
-          if (0 == AsciiStrCmp (Property, "cvm")) {
-            DeviceGuid = &gNVIDIACvmEeprom;
-            DEBUG ((DEBUG_INFO, "%a: Cvm Eeprom Found.\n", __FUNCTION__));
-          } else if (0 == AsciiStrCmp (Property, "cvb")) {
-            DeviceGuid = &gNVIDIACvbEeprom;
-            DEBUG ((DEBUG_INFO, "%a: Cvb Eeprom Found.\n", __FUNCTION__));
-          } else {
-            DeviceGuid = &gNVIDIAIdEeprom;
-            DEBUG ((DEBUG_INFO, "%a: Id Eeprom Found.\n", __FUNCTION__));
-          }
-        } else {
-          DeviceGuid = &gNVIDIAIdEeprom;
-          DEBUG ((DEBUG_INFO, "%a: Id Eeprom Found.\n", __FUNCTION__));
-        }
         Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "slave-address", &PropertyLen);
         if (Property != NULL && PropertyLen == sizeof (UINT32))  {
           gBS->CopyMem (&I2cAddress, (VOID *) Property, PropertyLen);
           I2cAddress = SwapBytes32 (I2cAddress);
+          DEBUG ((DEBUG_INFO, "%a: Eeprom Found.\n", __FUNCTION__));
+          DeviceGuid = &gNVIDIAEeprom;
           Status = TegraI2cAddDevice (Private,
                                       I2cAddress,
                                       DeviceGuid,
-                                      fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset));
+                                      Count);
           if (EFI_ERROR (Status)) {
             goto ErrorExit;
           }
+          Count++;
           DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, I2cBusHandle));
         }
       }

@@ -64,9 +64,7 @@
 
 [Guids]
   gNVIDIAI2cUnknown
-  gNVIDIACvmEeprom
-  gNVIDIACvbEeprom
-  gNVIDIAIdEeprom
+  gNVIDIAEeprom
   gNVIDIAI2cTca9539
   gNVIDIANonDiscoverableI2cDeviceGuid
 

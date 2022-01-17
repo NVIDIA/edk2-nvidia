@@ -60,7 +60,7 @@
 #define BRBCT_CUSTOMER_DATA_SIZE          (BRBCT_UNSIGNED_CUSTOMER_DATA_SIZE + \
                                            BRBCT_SIGNED_CUSTOMER_DATA_SIZE)
 
-#define TEGRA_FUSE_BASE_ADDRESS     0x03810000
+#define T234_FUSE_BASE_ADDRESS      0x03810000
 #define FUSE_OPT_ISP_DISABLE        0x4d8
 #define FUSE_OPT_NVENC_DISABLE      0x4e0
 #define FUSE_OPT_PVA_DISABLE        0x4e8

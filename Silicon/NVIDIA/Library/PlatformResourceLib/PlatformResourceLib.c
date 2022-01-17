@@ -550,6 +550,8 @@ GetEepromData (
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   switch (ChipID) {
+    case T194_CHIP_ID:
+      return T194GetEepromData(CpuBootloaderAddress);
     case T234_CHIP_ID:
       return T234GetEepromData(CpuBootloaderAddress);
     default:
@@ -581,10 +583,10 @@ GetBoardInfo (
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   switch (ChipID) {
+    case T194_CHIP_ID:
+      return T194GetBoardInfo(CpuBootloaderAddress, BoardInfo);
     case T234_CHIP_ID:
       return T234GetBoardInfo(CpuBootloaderAddress, BoardInfo);
-    case T194_CHIP_ID:
-      return EFI_UNSUPPORTED;
     default:
       return EFI_UNSUPPORTED;
   }

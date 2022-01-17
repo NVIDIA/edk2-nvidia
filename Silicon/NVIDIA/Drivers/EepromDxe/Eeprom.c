@@ -82,9 +82,9 @@ PopulateEepromData (
       CopyMem ((VOID *) CvmBoardInfo->SerialNumber, (VOID *) &T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
       if ((CompareMem (T194EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194EepromData->CustomerBlockSignature)) == 0) &&
           (CompareMem (T194EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T194EepromData->CustomerTypeSignature)) == 0)) {
-        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T194EepromData->CustomerEthernetMacAddress, EEPROM_LEN);
+        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T194EepromData->CustomerEthernetMacAddress, MAC_ADDR_LEN);
       } else {
-        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T194EepromData->EthernetMacAddress, EEPROM_LEN);
+        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T194EepromData->EthernetMacAddress, MAC_ADDR_LEN);
       }
     } else if (EepromType == EEPROM_CVB) {
         CvbBoardInfo = (TEGRA_CVBEEPROM_BOARD_INFO *) BoardInfo;
@@ -104,10 +104,10 @@ PopulateEepromData (
       CopyMem ((VOID *) CvmBoardInfo->SerialNumber, (VOID *) &T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
       if ((CompareMem (T234EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T234EepromData->CustomerBlockSignature)) == 0) &&
           (CompareMem (T234EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T234EepromData->CustomerTypeSignature)) == 0)) {
-        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T234EepromData->CustomerEthernetMacAddress, EEPROM_LEN);
+        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T234EepromData->CustomerEthernetMacAddress, MAC_ADDR_LEN);
         CvmBoardInfo->NumMacs = T234EepromData->CustomerNumEthernetMacs;
       } else {
-        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T234EepromData->EthernetMacAddress, EEPROM_LEN);
+        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T234EepromData->EthernetMacAddress, MAC_ADDR_LEN);
         CvmBoardInfo->NumMacs = T234EepromData->NumEthernetMacs;
       }
     } else if (EepromType == EEPROM_CVB) {
@@ -257,9 +257,7 @@ EepromDxeDriverBindingSupported (
       return Status;
     }
 
-    if (CompareGuid (&gNVIDIACvmEeprom, I2cIo->DeviceGuid) ||
-        CompareGuid (&gNVIDIACvbEeprom, I2cIo->DeviceGuid) ||
-        CompareGuid (&gNVIDIAIdEeprom, I2cIo->DeviceGuid)) {
+    if (CompareGuid (&gNVIDIAEeprom, I2cIo->DeviceGuid)) {
       Status = EFI_SUCCESS;
     } else {
       Status = EFI_UNSUPPORTED;
@@ -338,17 +336,13 @@ EepromDxeDriverBindingStart (
   UINT8                       *RawData;
   TEGRA_PLATFORM_TYPE         PlatformType;
   BOOLEAN                     CvmEeprom;
-  BOOLEAN                     CvbEeprom;
   TEGRA_CVMEEPROM_BOARD_INFO  *CvmBoardInfo;
-  TEGRA_CVBEEPROM_BOARD_INFO  *CvbBoardInfo;
   TEGRA_IDEEPROM_BOARD_INFO   *IdBoardInfo;
 
   RawData = NULL;
   CvmBoardInfo = NULL;
-  CvbBoardInfo = NULL;
   IdBoardInfo = NULL;
   CvmEeprom = FALSE;
-  CvbEeprom = FALSE;
 
   PlatformType = TegraGetPlatform();
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
@@ -391,47 +385,21 @@ EepromDxeDriverBindingStart (
     FreePool (Request);
     Request = NULL;
 
-    Status = ValidateEepromData (RawData, CompareGuid (&gNVIDIAIdEeprom, I2cIo->DeviceGuid));
+    Status = ValidateEepromData (RawData, CompareGuid (&gNVIDIAEeprom, I2cIo->DeviceGuid));
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Eeprom data validation failed(%r)\r\n", Status));
       goto ErrorExit;
     }
 
-    if (CompareGuid (&gNVIDIACvmEeprom, I2cIo->DeviceGuid)) {
-      CvmEeprom = TRUE;
-      CvmBoardInfo = (TEGRA_CVMEEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_CVMEEPROM_BOARD_INFO));
-      if (CvmBoardInfo == NULL) {
-        Status = EFI_OUT_OF_RESOURCES;
-        goto ErrorExit;
-      }
-      Status = PopulateEepromData (RawData, EEPROM_CVM, CvmBoardInfo);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Cvm Eeprom data population failed(%r)\r\n", Status));
-        goto ErrorExit;
-      }
-    } else if (CompareGuid (&gNVIDIACvbEeprom, I2cIo->DeviceGuid)) {
-      CvbEeprom = TRUE;
-      CvbBoardInfo = (TEGRA_CVBEEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_CVBEEPROM_BOARD_INFO));
-      if (CvbBoardInfo == NULL) {
-        Status = EFI_OUT_OF_RESOURCES;
-        goto ErrorExit;
-      }
-      Status = PopulateEepromData (RawData, EEPROM_CVB, CvbBoardInfo);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Cvb Eeprom data population failed(%r)\r\n", Status));
-        goto ErrorExit;
-      }
-    } else {
-      IdBoardInfo = (TEGRA_IDEEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_IDEEPROM_BOARD_INFO));
-      if (IdBoardInfo == NULL) {
-        Status = EFI_OUT_OF_RESOURCES;
-        goto ErrorExit;
-      }
-      Status = PopulateEepromData (RawData, EEPROM_ID, IdBoardInfo);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Id Eeprom data population failed(%r)\r\n", Status));
-        goto ErrorExit;
-      }
+    IdBoardInfo = (TEGRA_IDEEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_IDEEPROM_BOARD_INFO));
+    if (IdBoardInfo == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto ErrorExit;
+    }
+    Status = PopulateEepromData (RawData, EEPROM_ID, IdBoardInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Eeprom data population failed(%r)\r\n", Status));
+      goto ErrorExit;
     }
   } else {
     CvmEeprom = TRUE;
@@ -454,7 +422,7 @@ EepromDxeDriverBindingStart (
     }
 
     // Get random EEPROM data
-    Status = RngProtocol->GetRNG (RngProtocol, NULL, EEPROM_LEN, CvmBoardInfo->MacAddr);
+    Status = RngProtocol->GetRNG (RngProtocol, NULL, MAC_ADDR_LEN, CvmBoardInfo->MacAddr);
     if (EFI_ERROR(Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to get RNG for EEPROM\r\n", __FUNCTION__));
       goto ErrorExit;
@@ -463,14 +431,10 @@ EepromDxeDriverBindingStart (
   Status = gBS->InstallMultipleProtocolInterfaces (&Controller,
                                                    CvmEeprom ?
                                                      &gNVIDIACvmEepromProtocolGuid :
-                                                     CvbEeprom ?
-                                                       &gNVIDIACvbEepromProtocolGuid :
-                                                       &gNVIDIAIdEepromProtocolGuid,
+                                                     &gNVIDIAEepromProtocolGuid,
                                                    CvmEeprom ?
                                                      (VOID *)CvmBoardInfo :
-                                                     CvbEeprom ?
-                                                       (VOID *)CvbBoardInfo :
-                                                       (VOID *)IdBoardInfo,
+                                                     (VOID *)IdBoardInfo,
                                                    NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to install EEPROM protocols\n", __FUNCTION__));
@@ -486,16 +450,9 @@ ErrorExit:
                                                 NULL);
       FreePool (CvmBoardInfo);
     }
-    if (CvbBoardInfo != NULL) {
-      gBS->UninstallMultipleProtocolInterfaces (Controller,
-                                                &gNVIDIACvbEepromProtocolGuid,
-                                                CvbBoardInfo,
-                                                NULL);
-      FreePool (CvbBoardInfo);
-    }
     if (IdBoardInfo != NULL) {
       gBS->UninstallMultipleProtocolInterfaces (Controller,
-                                                &gNVIDIAIdEepromProtocolGuid,
+                                                &gNVIDIAEepromProtocolGuid,
                                                 IdBoardInfo,
                                                 NULL);
       FreePool (IdBoardInfo);
@@ -563,58 +520,24 @@ EepromDxeDriverBindingStop (
   TEGRA_PLATFORM_TYPE   PlatformType;
 
   EepromData = NULL;
-  Status = gBS->HandleProtocol (Controller, &gNVIDIACvmEepromProtocolGuid, (VOID **)&EepromData);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get cvm eeprom protocol (%r)\r\n", __FUNCTION__, Status));
-    return Status;
-  }
-
-  Status = gBS->UninstallMultipleProtocolInterfaces (Controller,
-                                                     &gNVIDIACvmEepromProtocolGuid,
-                                                     EepromData,
-                                                     NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to uninstall cvm eeprom protocol (%r)\r\n", __FUNCTION__, Status));
-    return Status;
-  }
-  FreePool (EepromData);
-
-  EepromData = NULL;
-  Status = gBS->HandleProtocol (Controller, &gNVIDIACvbEepromProtocolGuid, (VOID **)&EepromData);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get cvb eeprom protocol (%r)\r\n", __FUNCTION__, Status));
-    return Status;
-  }
-
-  Status = gBS->UninstallMultipleProtocolInterfaces (Controller,
-                                                     &gNVIDIACvbEepromProtocolGuid,
-                                                     EepromData,
-                                                     NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to uninstall cvb eeprom protocol (%r)\r\n", __FUNCTION__, Status));
-    return Status;
-  }
-  FreePool (EepromData);
-
-  EepromData = NULL;
-  Status = gBS->HandleProtocol (Controller, &gNVIDIAIdEepromProtocolGuid, (VOID **)&EepromData);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get id eeprom protocol (%r)\r\n", __FUNCTION__, Status));
-    return Status;
-  }
-
-  Status = gBS->UninstallMultipleProtocolInterfaces (Controller,
-                                                     &gNVIDIAIdEepromProtocolGuid,
-                                                     EepromData,
-                                                     NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to uninstall id eeprom protocol (%r)\r\n", __FUNCTION__, Status));
-    return Status;
-  }
-  FreePool (EepromData);
 
   PlatformType = TegraGetPlatform();
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
+    Status = gBS->HandleProtocol (Controller, &gNVIDIAEepromProtocolGuid, (VOID **)&EepromData);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get eeprom protocol (%r)\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    Status = gBS->UninstallMultipleProtocolInterfaces (Controller,
+                                                       &gNVIDIAEepromProtocolGuid,
+                                                       EepromData,
+                                                       NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to uninstall eeprom protocol (%r)\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+
     Status = gBS->CloseProtocol (Controller,
                                  &gEfiI2cIoProtocolGuid,
                                  This->DriverBindingHandle,
@@ -624,6 +547,21 @@ EepromDxeDriverBindingStop (
       return Status;
     }
   } else {
+    Status = gBS->HandleProtocol (Controller, &gNVIDIACvmEepromProtocolGuid, (VOID **)&EepromData);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get cvm eeprom protocol (%r)\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    Status = gBS->UninstallMultipleProtocolInterfaces (Controller,
+                                                       &gNVIDIACvmEepromProtocolGuid,
+                                                       EepromData,
+                                                       NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to uninstall cvm eeprom protocol (%r)\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+
     Status = gBS->CloseProtocol (Controller,
                                  &gEfiRngProtocolGuid,
                                  This->DriverBindingHandle,
@@ -634,6 +572,7 @@ EepromDxeDriverBindingStop (
     }
   }
 
+  FreePool (EepromData);
   return EFI_SUCCESS;
 }
 
@@ -664,28 +603,17 @@ InitializeEepromDxe (
   IN EFI_SYSTEM_TABLE     *SystemTable
 )
 {
-  UINTN                       ChipID;
   EFI_HANDLE                  Handle;
   TEGRABL_EEPROM_DATA         *EepromData;
   TEGRA_CVMEEPROM_BOARD_INFO  *CvmBoardInfo;
   TEGRA_CVBEEPROM_BOARD_INFO  *CvbBoardInfo;
   EFI_STATUS                  Status;
 
-  ChipID = TegraGetChipID();
-
-  if (ChipID == T234_CHIP_ID) {
-    EepromData = GetEepromData ();
-    if (EepromData->CvmEepromDataSize == 0) {
-      DEBUG ((DEBUG_ERROR, "%a: Cvm Eeprom data size received is 0\r\n", __FUNCTION__));
-      return EFI_DEVICE_ERROR;
-    }
-
-    Status = ValidateEepromData (EepromData->CvmEepromData, FALSE);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Cvm Eeprom data validation failed(%r)\r\n", Status));
-      return Status;
-    }
-
+  EepromData = GetEepromData ();
+  if (EepromData->CvmEepromDataSize == 0 ||
+      EFI_ERROR (ValidateEepromData (EepromData->CvmEepromData, FALSE))) {
+    DEBUG ((DEBUG_ERROR, "Cvm Eeprom data validation failed(%r)\r\n", Status));
+  } else {
     CvmBoardInfo = (TEGRA_CVMEEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_CVMEEPROM_BOARD_INFO));
     if (CvmBoardInfo == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
@@ -707,18 +635,12 @@ InitializeEepromDxe (
       DEBUG ((DEBUG_ERROR, "%a: Failed to install Cvm EEPROM protocols\n", __FUNCTION__));
       return Status;
     }
+  }
 
-    if (EepromData->CvbEepromDataSize == 0) {
-      DEBUG ((DEBUG_ERROR, "%a: Cvb Eeprom data size received is 0\r\n", __FUNCTION__));
-      return EFI_DEVICE_ERROR;
-    }
-
-    Status = ValidateEepromData (EepromData->CvbEepromData, FALSE);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Cvb Eeprom data validation failed(%r)\r\n", Status));
-      return Status;
-    }
-
+  if (EepromData->CvbEepromDataSize == 0 ||
+      EFI_ERROR (ValidateEepromData (EepromData->CvbEepromData, FALSE))) {
+    DEBUG ((DEBUG_ERROR, "Cvb Eeprom data validation failed(%r)\r\n", Status));
+  } else {
     CvbBoardInfo = (TEGRA_CVBEEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_CVBEEPROM_BOARD_INFO));
     if (CvbBoardInfo == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
