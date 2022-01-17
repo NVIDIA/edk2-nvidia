@@ -222,16 +222,6 @@ typedef struct {
   CHAR8    SerialNumber[SERIAL_NUM_LEN];
   UINT8    MacAddr[MAC_ADDR_LEN];
   UINT8    NumMacs;
-} TEGRA_CVMEEPROM_BOARD_INFO;
-
-typedef struct {
-  CHAR8    BoardId[BOARD_ID_LEN + 1];
-  CHAR8    ProductId[PRODUCT_ID_LEN + 1];
-  CHAR8    SerialNumber[SERIAL_NUM_LEN];
-} TEGRA_CVBEEPROM_BOARD_INFO;
-
-typedef struct {
-  CHAR8    BoardId[sizeof (TEGRA_EEPROM_PART_NUMBER)];
-} TEGRA_IDEEPROM_BOARD_INFO;
+} TEGRA_EEPROM_BOARD_INFO;
 
 #endif

@@ -45,79 +45,45 @@
 
 #define EEPROM_DATA_SIZE 256
 
-typedef enum {
-  EEPROM_CVM,
-  EEPROM_CVB,
-  EEPROM_ID,
-  EEPROM_MAX
-} TEGRA_EEPROM_TYPE;
-
 EFI_STATUS
 EFIAPI
 PopulateEepromData (
   IN  UINT8             *EepromData,
-  IN  TEGRA_EEPROM_TYPE EepromType,
   OUT VOID              *BoardInfo
 )
 {
   UINTN                       ChipID;
   T194_EEPROM_DATA            *T194EepromData;
   T234_EEPROM_DATA            *T234EepromData;
-  TEGRA_CVMEEPROM_BOARD_INFO  *CvmBoardInfo;
-  TEGRA_CVBEEPROM_BOARD_INFO  *CvbBoardInfo;
-  TEGRA_IDEEPROM_BOARD_INFO   *IdBoardInfo;
-
-  if (EepromType >= EEPROM_MAX) {
-    return EFI_UNSUPPORTED;
-  }
+  TEGRA_EEPROM_BOARD_INFO     *EepromBoardInfo;
 
   ChipID = TegraGetChipID();
 
   if (ChipID == T194_CHIP_ID) {
     T194EepromData = (T194_EEPROM_DATA *)EepromData;
-    if (EepromType == EEPROM_CVM) {
-      CvmBoardInfo = (TEGRA_CVMEEPROM_BOARD_INFO *) BoardInfo;
-      CopyMem ((VOID *) CvmBoardInfo->BoardId, (VOID *) &T194EepromData->PartNumber.Id, BOARD_ID_LEN);
-      CopyMem ((VOID *) CvmBoardInfo->ProductId, (VOID *) &T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
-      CopyMem ((VOID *) CvmBoardInfo->SerialNumber, (VOID *) &T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
-      if ((CompareMem (T194EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194EepromData->CustomerBlockSignature)) == 0) &&
-          (CompareMem (T194EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T194EepromData->CustomerTypeSignature)) == 0)) {
-        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T194EepromData->CustomerEthernetMacAddress, MAC_ADDR_LEN);
-      } else {
-        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T194EepromData->EthernetMacAddress, MAC_ADDR_LEN);
-      }
-    } else if (EepromType == EEPROM_CVB) {
-        CvbBoardInfo = (TEGRA_CVBEEPROM_BOARD_INFO *) BoardInfo;
-        CopyMem ((VOID *) CvbBoardInfo->BoardId, (VOID *) &T194EepromData->PartNumber.Id, BOARD_ID_LEN);
-        CopyMem ((VOID *) CvbBoardInfo->ProductId, (VOID *) &T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
-        CopyMem ((VOID *) CvbBoardInfo->SerialNumber, (VOID *) &T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
+    EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *) BoardInfo;
+    CopyMem ((VOID *) EepromBoardInfo->BoardId, (VOID *) &T194EepromData->PartNumber.Id, BOARD_ID_LEN);
+    CopyMem ((VOID *) EepromBoardInfo->ProductId, (VOID *) &T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
+    CopyMem ((VOID *) EepromBoardInfo->SerialNumber, (VOID *) &T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
+    if ((CompareMem (T194EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194EepromData->CustomerBlockSignature)) == 0) &&
+        (CompareMem (T194EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T194EepromData->CustomerTypeSignature)) == 0)) {
+      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T194EepromData->CustomerEthernetMacAddress, MAC_ADDR_LEN);
     } else {
-      IdBoardInfo = (TEGRA_IDEEPROM_BOARD_INFO *) BoardInfo;
-      CopyMem ((VOID *) IdBoardInfo->BoardId, (VOID *) &T194EepromData->PartNumber, sizeof (TEGRA_EEPROM_PART_NUMBER));
+      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T194EepromData->EthernetMacAddress, MAC_ADDR_LEN);
     }
   } else if (ChipID == T234_CHIP_ID) {
     T234EepromData = (T234_EEPROM_DATA *)EepromData;
-    if (EepromType == EEPROM_CVM) {
-      CvmBoardInfo = (TEGRA_CVMEEPROM_BOARD_INFO *) BoardInfo;
-      CopyMem ((VOID *) CvmBoardInfo->BoardId, (VOID *) &T234EepromData->PartNumber.Id, BOARD_ID_LEN);
-      CopyMem ((VOID *) CvmBoardInfo->ProductId, (VOID *) &T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
-      CopyMem ((VOID *) CvmBoardInfo->SerialNumber, (VOID *) &T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
-      if ((CompareMem (T234EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T234EepromData->CustomerBlockSignature)) == 0) &&
-          (CompareMem (T234EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T234EepromData->CustomerTypeSignature)) == 0)) {
-        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T234EepromData->CustomerEthernetMacAddress, MAC_ADDR_LEN);
-        CvmBoardInfo->NumMacs = T234EepromData->CustomerNumEthernetMacs;
-      } else {
-        CopyMem ((VOID *) CvmBoardInfo->MacAddr, (VOID *) T234EepromData->EthernetMacAddress, MAC_ADDR_LEN);
-        CvmBoardInfo->NumMacs = T234EepromData->NumEthernetMacs;
-      }
-    } else if (EepromType == EEPROM_CVB) {
-        CvbBoardInfo = (TEGRA_CVBEEPROM_BOARD_INFO *) BoardInfo;
-        CopyMem ((VOID *) CvbBoardInfo->BoardId, (VOID *) &T234EepromData->PartNumber.Id, BOARD_ID_LEN);
-        CopyMem ((VOID *) CvbBoardInfo->ProductId, (VOID *) &T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
-        CopyMem ((VOID *) CvbBoardInfo->SerialNumber, (VOID *) &T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
+    EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *) BoardInfo;
+    CopyMem ((VOID *) EepromBoardInfo->BoardId, (VOID *) &T234EepromData->PartNumber.Id, BOARD_ID_LEN);
+    CopyMem ((VOID *) EepromBoardInfo->ProductId, (VOID *) &T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
+    CopyMem ((VOID *) EepromBoardInfo->SerialNumber, (VOID *) &T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
+    if ((CompareMem (T234EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T234EepromData->CustomerBlockSignature)) == 0) &&
+        (CompareMem (T234EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T234EepromData->CustomerTypeSignature)) == 0)) {
+      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T234EepromData->CustomerEthernetMacAddress, MAC_ADDR_LEN);
+      EepromBoardInfo->NumMacs = T234EepromData->CustomerNumEthernetMacs;
     } else {
-      IdBoardInfo = (TEGRA_IDEEPROM_BOARD_INFO *) BoardInfo;
-      CopyMem ((VOID *) IdBoardInfo->BoardId, (VOID *) &T234EepromData->PartNumber, sizeof (TEGRA_EEPROM_PART_NUMBER));
+      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T234EepromData->EthernetMacAddress, MAC_ADDR_LEN);
+      EepromBoardInfo->NumMacs = T234EepromData->NumEthernetMacs;
     }
   } else {
     return EFI_UNSUPPORTED;
@@ -336,8 +302,8 @@ EepromDxeDriverBindingStart (
   UINT8                       *RawData;
   TEGRA_PLATFORM_TYPE         PlatformType;
   BOOLEAN                     CvmEeprom;
-  TEGRA_CVMEEPROM_BOARD_INFO  *CvmBoardInfo;
-  TEGRA_IDEEPROM_BOARD_INFO   *IdBoardInfo;
+  TEGRA_EEPROM_BOARD_INFO     *CvmBoardInfo;
+  TEGRA_EEPROM_BOARD_INFO     *IdBoardInfo;
 
   RawData = NULL;
   CvmBoardInfo = NULL;
@@ -391,16 +357,17 @@ EepromDxeDriverBindingStart (
       goto ErrorExit;
     }
 
-    IdBoardInfo = (TEGRA_IDEEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_IDEEPROM_BOARD_INFO));
+    IdBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_EEPROM_BOARD_INFO));
     if (IdBoardInfo == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       goto ErrorExit;
     }
-    Status = PopulateEepromData (RawData, EEPROM_ID, IdBoardInfo);
+    Status = PopulateEepromData (RawData, IdBoardInfo);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Eeprom data population failed(%r)\r\n", Status));
       goto ErrorExit;
     }
+    DEBUG ((DEBUG_ERROR, "Id Eeprom Product Id: %a\r\n", IdBoardInfo->ProductId));
   } else {
     CvmEeprom = TRUE;
     // Use RNG to generate a random MAC address instead
@@ -415,7 +382,7 @@ EepromDxeDriverBindingStart (
     }
 
     // Allocate EEPROM Data
-    CvmBoardInfo = (TEGRA_CVMEEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_CVMEEPROM_BOARD_INFO));
+    CvmBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_EEPROM_BOARD_INFO));
     if (CvmBoardInfo == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       goto ErrorExit;
@@ -603,28 +570,29 @@ InitializeEepromDxe (
   IN EFI_SYSTEM_TABLE     *SystemTable
 )
 {
-  EFI_HANDLE                  Handle;
-  TEGRABL_EEPROM_DATA         *EepromData;
-  TEGRA_CVMEEPROM_BOARD_INFO  *CvmBoardInfo;
-  TEGRA_CVBEEPROM_BOARD_INFO  *CvbBoardInfo;
-  EFI_STATUS                  Status;
+  EFI_HANDLE               Handle;
+  TEGRABL_EEPROM_DATA      *EepromData;
+  TEGRA_EEPROM_BOARD_INFO  *CvmBoardInfo;
+  TEGRA_EEPROM_BOARD_INFO  *CvbBoardInfo;
+  EFI_STATUS               Status;
 
   EepromData = GetEepromData ();
   if (EepromData->CvmEepromDataSize == 0 ||
       EFI_ERROR (ValidateEepromData (EepromData->CvmEepromData, FALSE))) {
     DEBUG ((DEBUG_ERROR, "Cvm Eeprom data validation failed(%r)\r\n", Status));
   } else {
-    CvmBoardInfo = (TEGRA_CVMEEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_CVMEEPROM_BOARD_INFO));
+    CvmBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_EEPROM_BOARD_INFO));
     if (CvmBoardInfo == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       return Status;
     }
 
-    Status = PopulateEepromData (EepromData->CvmEepromData, EEPROM_CVM, CvmBoardInfo);
+    Status = PopulateEepromData (EepromData->CvmEepromData, CvmBoardInfo);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Cvm Eeprom data population failed(%r)\r\n", Status));
       return Status;
     }
+    DEBUG ((DEBUG_ERROR, "Cvm Eeprom Product Id: %a\r\n", CvmBoardInfo->ProductId));
 
     Handle = NULL;
     Status = gBS->InstallMultipleProtocolInterfaces (&Handle,
@@ -641,17 +609,18 @@ InitializeEepromDxe (
       EFI_ERROR (ValidateEepromData (EepromData->CvbEepromData, FALSE))) {
     DEBUG ((DEBUG_ERROR, "Cvb Eeprom data validation failed(%r)\r\n", Status));
   } else {
-    CvbBoardInfo = (TEGRA_CVBEEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_CVBEEPROM_BOARD_INFO));
+    CvbBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_EEPROM_BOARD_INFO));
     if (CvbBoardInfo == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       return Status;
     }
 
-    Status = PopulateEepromData (EepromData->CvbEepromData, EEPROM_CVB, CvbBoardInfo);
+    Status = PopulateEepromData (EepromData->CvbEepromData, CvbBoardInfo);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Cvb Eeprom data population failed(%r)\r\n", Status));
       return Status;
     }
+    DEBUG ((DEBUG_ERROR, "Cvb Eeprom Product Id: %a\r\n", CvbBoardInfo->ProductId));
 
     Status = gBS->InstallMultipleProtocolInterfaces (&Handle,
                                                      &gNVIDIACvbEepromProtocolGuid,
