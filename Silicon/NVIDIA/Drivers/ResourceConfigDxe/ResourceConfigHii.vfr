@@ -2,13 +2,13 @@
 *
 *  OEM Config formset.
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -17,7 +17,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
@@ -48,7 +48,7 @@ formset
   efivarstore NVIDIA_QUICK_BOOT_ENABLED,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
     name  = QuickBootEnabled,
-    guid  = NVIDIA_TOKEN_SPACE_GUID;
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
   efivarstore NVIDIA_SERIAL_TYPE_CONFIG,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS,  // EFI variable attributes
@@ -63,17 +63,17 @@ formset
   efivarstore NVIDIA_KERNEL_COMMAND_LINE,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
     name  = KernelCommandLine,
-    guid  = NVIDIA_TOKEN_SPACE_GUID;
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
   efivarstore NVIDIA_OS_OVERRIDE,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
     name  = BootChainOsOverride,
-    guid  = NVIDIA_TOKEN_SPACE_GUID;
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
   efivarstore NVIDIA_L4T_BOOT_MODE,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
     name  = L4TDefaultBootMode,
-    guid  = NVIDIA_TOKEN_SPACE_GUID;
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
   //
   // Main form for NVIDIA Resource Configuration

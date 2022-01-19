@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
-  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -10,7 +10,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
   Portions provided under the following terms:
-  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -19,7 +19,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -640,7 +640,7 @@ IsPlatformConfigurationNeeded (
 
   if (!PlatformConfigurationNeeded) {
     AddlCmdLen = sizeof (AddlCmdLine);
-    Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIATokenSpaceGuid, &AddlCmdLineAttributes, &AddlCmdLen, &AddlCmdLine);
+    Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, &AddlCmdLineAttributes, &AddlCmdLen, &AddlCmdLine);
     if (EFI_ERROR (Status)) {
       AddlCmdLineAttributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS;
       ZeroMem (&AddlCmdLine, sizeof (AddlCmdLine));

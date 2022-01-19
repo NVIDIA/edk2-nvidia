@@ -2,7 +2,7 @@
 
   Tegra Firmware Management Protocol support
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -11,7 +11,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -696,7 +696,7 @@ FmpTegraSetSingleImage (
 
   VariableSize = (MAX_PARTITION_NAME_LEN - 1) * sizeof (CHAR16);
   Status = gRT->GetVariable (FMP_CAPSULE_SINGLE_PARTITION_VARIABLE_NAME,
-                             &gNVIDIATokenSpaceGuid,
+                             &gNVIDIAPublicVariableGuid,
                              NULL,
                              &VariableSize,
                              PartitionName);

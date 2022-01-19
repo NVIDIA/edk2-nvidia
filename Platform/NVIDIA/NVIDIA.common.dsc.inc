@@ -631,15 +631,18 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
 
 [PcdsDynamicHii.common.DEFAULT]
+  # Global variables
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|5
+  # NVIDIA internal variables
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|L"EnablePcieInOS"|gNVIDIATokenSpaceGuid|0x0|0|BS,NV
-  gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIATokenSpaceGuid|0x0|1|BS,NV
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0xFF|BS
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0xFF|BS,NV
-  gNVIDIATokenSpaceGuid.PcdOsChainOverride|L"BootChainOsOverride"|gNVIDIATokenSpaceGuid|0x00|0xFF|BS,NV,RT
-  gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode|L"L4TDefaultBootMode"|gNVIDIATokenSpaceGuid|0x00|0xFF|BS,NV,RT
+  # NVIDIA Publid variables
+  gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIAPublicVariableGuid|0x0|1|BS,NV
+  gNVIDIATokenSpaceGuid.PcdOsChainOverride|L"BootChainOsOverride"|gNVIDIAPublicVariableGuid|0x00|0xFF|BS,NV,RT
+  gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode|L"L4TDefaultBootMode"|gNVIDIAPublicVariableGuid|0x00|0xFF|BS,NV,RT
 
 [Components.common]
   #

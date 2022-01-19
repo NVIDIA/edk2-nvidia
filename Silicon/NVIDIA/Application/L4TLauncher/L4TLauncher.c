@@ -1,7 +1,7 @@
 /** @file
   The main process for L4TLauncher application.
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -10,7 +10,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -1095,13 +1095,13 @@ ProcessBootParams (
   BootParams->BootChain = 0;
 
   DataSize = sizeof (BootParams->BootMode);
-  Status = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIATokenSpaceGuid, NULL, &DataSize, &BootParams->BootMode);
+  Status = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootParams->BootMode);
   if (EFI_ERROR (Status) || (BootParams->BootMode > NVIDIA_L4T_BOOTMODE_RECOVERY)) {
     BootParams->BootMode = NVIDIA_L4T_BOOTMODE_GRUB;
   }
 
   DataSize = sizeof (BootChain);
-  Status = gRT->GetVariable (BOOT_FW_VARIABLE_NAME, &gNVIDIATokenSpaceGuid, NULL, &DataSize, &BootChain);
+  Status = gRT->GetVariable (BOOT_FW_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootChain);
   //If variable does not exist is not 1 byte or have a value larger than 1 boot partition A
   if (!EFI_ERROR (Status) && (BootChain <= 1)) {
     BootParams->BootChain = BootChain;
@@ -1109,7 +1109,7 @@ ProcessBootParams (
 
   //Read override OS boot type
   DataSize = sizeof (BootChain);
-  Status = gRT->GetVariable (BOOT_OS_OVERRIDE_VARIABLE_NAME, &gNVIDIATokenSpaceGuid, NULL, &DataSize, &BootChain);
+  Status = gRT->GetVariable (BOOT_OS_OVERRIDE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootChain);
   //If variable does not exist is not 1 byte or have a value larger than 1 boot partition A
   if (!EFI_ERROR (Status) && (BootChain <= 1)) {
     BootParams->BootChain = BootChain;
@@ -1117,7 +1117,7 @@ ProcessBootParams (
 
   //Read current OS boot type to allow for chaining
   DataSize = sizeof (BootChain);
-  Status = gRT->GetVariable (BOOT_OS_VARIABLE_NAME, &gNVIDIATokenSpaceGuid, NULL, &DataSize, &BootChain);
+  Status = gRT->GetVariable (BOOT_OS_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootChain);
   //If variable does not exist is not 1 byte or have a value larger than 1 boot partition A
   if (!EFI_ERROR (Status) && (BootChain <= 1)) {
     BootParams->BootChain = BootChain;
@@ -1157,7 +1157,7 @@ ProcessBootParams (
   }
 
   //Store the current boot chain in volatile variable to allow chain loading
-  Status = gRT->SetVariable (BOOT_OS_VARIABLE_NAME, &gNVIDIATokenSpaceGuid, EFI_VARIABLE_BOOTSERVICE_ACCESS|EFI_VARIABLE_RUNTIME_ACCESS, sizeof (BootParams->BootChain), &BootParams->BootChain);
+  Status = gRT->SetVariable (BOOT_OS_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, EFI_VARIABLE_BOOTSERVICE_ACCESS|EFI_VARIABLE_RUNTIME_ACCESS, sizeof (BootParams->BootChain), &BootParams->BootChain);
   if (EFI_ERROR (Status)) {
     ErrorPrint (L"Failed to set OS variable: %r\r\n", Status);
   }

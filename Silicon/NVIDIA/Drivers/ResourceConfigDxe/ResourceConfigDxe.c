@@ -1,13 +1,13 @@
 /** @file
 *  Resource Configuration Dxe
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -16,7 +16,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
@@ -122,7 +122,7 @@ InitializeSettings (
 
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;
-  Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIATokenSpaceGuid, NULL, &KernelCmdLineLen, NULL);
+  Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, NULL, &KernelCmdLineLen, NULL);
   if (Status == EFI_NOT_FOUND) {
     KernelCmdLineLen = 0;
   } else if (Status != EFI_BUFFER_TOO_SMALL) {
@@ -133,7 +133,7 @@ InitializeSettings (
   if (KernelCmdLineLen < sizeof (CmdLine)) {
     KernelCmdLineLen = sizeof (CmdLine);
     ZeroMem (&CmdLine, KernelCmdLineLen);
-    Status = gRT->SetVariable (L"KernelCommandLine", &gNVIDIATokenSpaceGuid, EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS, KernelCmdLineLen, (VOID *)&CmdLine);
+    Status = gRT->SetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS, KernelCmdLineLen, (VOID *)&CmdLine);
     if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Error setting command line variable %r\r\n", __FUNCTION__, Status));
     }
