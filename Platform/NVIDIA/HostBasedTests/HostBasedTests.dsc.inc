@@ -26,3 +26,10 @@
   # alternate toolchains at build time and not introduce a runtime dependency.
   GCC:*_*_*_DLINK2_FLAGS = -static -s
 !endif
+
+[BuildOptions]
+!ifdef $(HOSTAPP_GCC_COVERAGE)
+  # Generate coverage data when tests are run.
+  GCC:*_*_*_DLINK2_FLAGS = -fprofile-arcs
+  GCC:*_*_*_CC_FLAGS = -fprofile-arcs -ftest-coverage
+!endif
