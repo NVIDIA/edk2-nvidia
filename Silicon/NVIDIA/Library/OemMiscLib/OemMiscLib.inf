@@ -1,7 +1,7 @@
 #/** @file
 #    OemMiscLib.inf
 #
-#    Copyright (c) 2021, NVIDIA Corporation. All rights reserved.
+#    Copyright (c) 2021-2022, NVIDIA Corporation. All rights reserved.
 #    Copyright (c) 2021, NUVIA Inc. All rights reserved.
 #    Copyright (c) 2018, Hisilicon Limited. All rights reserved.
 #    Copyright (c) 2018, Linaro Limited. All rights reserved.
@@ -9,7 +9,7 @@
 #    SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #    Portions provided under the following terms:
-#    Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#    Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #    NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 #    property and proprietary rights in and to this material, related
 #    documentation and any modifications thereto. Any use, reproduction,
@@ -17,7 +17,7 @@
 #    without an express license agreement from NVIDIA CORPORATION or
 #    its affiliates is strictly prohibited.
 #
-#    SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+#    SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES
 #    SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 #
 #**/
@@ -39,6 +39,7 @@
   EmbeddedPkg/EmbeddedPkg.dec
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
+  NetworkPkg/NetworkPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
 

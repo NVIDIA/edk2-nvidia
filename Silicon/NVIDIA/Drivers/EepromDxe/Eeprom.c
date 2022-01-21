@@ -67,9 +67,9 @@ PopulateEepromData (
     CopyMem ((VOID *) EepromBoardInfo->SerialNumber, (VOID *) &T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
     if ((CompareMem (T194EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194EepromData->CustomerBlockSignature)) == 0) &&
         (CompareMem (T194EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T194EepromData->CustomerTypeSignature)) == 0)) {
-      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T194EepromData->CustomerEthernetMacAddress, MAC_ADDR_LEN);
+      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T194EepromData->CustomerEthernetMacAddress, NET_ETHER_ADDR_LEN);
     } else {
-      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T194EepromData->EthernetMacAddress, MAC_ADDR_LEN);
+      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T194EepromData->EthernetMacAddress, NET_ETHER_ADDR_LEN);
     }
   } else if (ChipID == T234_CHIP_ID) {
     T234EepromData = (T234_EEPROM_DATA *)EepromData;
@@ -79,10 +79,10 @@ PopulateEepromData (
     CopyMem ((VOID *) EepromBoardInfo->SerialNumber, (VOID *) &T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
     if ((CompareMem (T234EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T234EepromData->CustomerBlockSignature)) == 0) &&
         (CompareMem (T234EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T234EepromData->CustomerTypeSignature)) == 0)) {
-      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T234EepromData->CustomerEthernetMacAddress, MAC_ADDR_LEN);
+      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T234EepromData->CustomerEthernetMacAddress, NET_ETHER_ADDR_LEN);
       EepromBoardInfo->NumMacs = T234EepromData->CustomerNumEthernetMacs;
     } else {
-      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T234EepromData->EthernetMacAddress, MAC_ADDR_LEN);
+      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T234EepromData->EthernetMacAddress, NET_ETHER_ADDR_LEN);
       EepromBoardInfo->NumMacs = T234EepromData->NumEthernetMacs;
     }
   } else {
@@ -389,7 +389,7 @@ EepromDxeDriverBindingStart (
     }
 
     // Get random EEPROM data
-    Status = RngProtocol->GetRNG (RngProtocol, NULL, MAC_ADDR_LEN, CvmBoardInfo->MacAddr);
+    Status = RngProtocol->GetRNG (RngProtocol, NULL, NET_ETHER_ADDR_LEN, CvmBoardInfo->MacAddr);
     if (EFI_ERROR(Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to get RNG for EEPROM\r\n", __FUNCTION__));
       goto ErrorExit;

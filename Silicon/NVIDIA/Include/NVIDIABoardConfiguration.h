@@ -31,6 +31,5 @@
 #define BOARD_ID_LEN              13
 #define PRODUCT_ID_LEN            30
 #define SERIAL_NUM_LEN            15
-#define MAC_ADDR_LEN              6
 
 #endif //__NVIDIA_BOARD_CONFIGURATION_H__

@@ -29,6 +29,7 @@
 #define __NVIDIA_EEPROM_PROTOCOL_H__
 
 #include <NVIDIABoardConfiguration.h>
+#include <Library/NetLib.h>
 
 #define T194_EEPROM_VERSION             1
 #define T234_EEPROM_VERSION             2
@@ -220,7 +221,7 @@ typedef struct {
   CHAR8    BoardId[BOARD_ID_LEN + 1];
   CHAR8    ProductId[PRODUCT_ID_LEN + 1];
   CHAR8    SerialNumber[SERIAL_NUM_LEN];
-  UINT8    MacAddr[MAC_ADDR_LEN];
+  UINT8    MacAddr[NET_ETHER_ADDR_LEN];
   UINT8    NumMacs;
 } TEGRA_EEPROM_BOARD_INFO;
 
