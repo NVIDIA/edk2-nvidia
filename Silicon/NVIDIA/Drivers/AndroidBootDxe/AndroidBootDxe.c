@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro. All rights reserved.
   This program and the accompanying materials
@@ -14,7 +14,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
   Portions provided under the following terms:
-  Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -23,7 +23,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2019-2022 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -74,6 +74,54 @@ STATIC INITRD_DEVICE_PATH        mInitrdDevicePath = {
     { sizeof (EFI_DEVICE_PATH_PROTOCOL) }
   }
 };
+
+
+/**
+  Check if loadfile2 protocol is already installed. If yes,
+  uninstall it.
+
+  @param[in]   Event                  Event structure
+  @param[in]   Context                Notification context
+
+**/
+STATIC
+VOID
+EFIAPI
+AndroidBootOnReadyToBootHandler (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  EFI_STATUS    Status;
+  EFI_HANDLE    Handle;
+  VOID          *Interface;
+
+  gBS->CloseEvent (Event);
+
+  Handle = (EFI_HANDLE)Context;
+
+  Status = gBS->HandleProtocol (Handle,
+                  &gEfiLoadFile2ProtocolGuid,
+                  (VOID **)&Interface);
+  if (!EFI_ERROR (Status)) {
+    // If LoadFile2 protocol installed on handle, uninstall it.
+    gBS->UninstallMultipleProtocolInterfaces (Handle,
+           &gEfiLoadFile2ProtocolGuid,
+           Interface,
+           NULL);
+  }
+
+  Status = gBS->HandleProtocol (Handle,
+                  &gEfiDevicePathProtocolGuid,
+                  (VOID **)&Interface);
+  if (!EFI_ERROR (Status)) {
+    // If device path protocol installed on handle, uninstall it.
+    gBS->UninstallMultipleProtocolInterfaces (Handle,
+           &gEfiDevicePathProtocolGuid,
+           Interface,
+           NULL);
+  }
+}
 
 
 /**
@@ -351,6 +399,7 @@ AndroidBootLoadFile (
 {
   EFI_STATUS                      Status;
   EFI_HANDLE                      InitrdHandle;
+  EFI_EVENT                       InitrdEvent;
   UINTN                           Addr;
   UINTN                           BufSize;
   UINTN                           BufBase;
@@ -432,6 +481,22 @@ AndroidBootLoadFile (
                     &mInitrdDevicePath,
                     NULL
                     );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to install initrd: %r\n", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
+
+    InitrdEvent = NULL;
+    Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                    TPL_CALLBACK,
+                    AndroidBootOnReadyToBootHandler,
+                    InitrdHandle,
+                    &gEfiEventReadyToBootGuid,
+                    &InitrdEvent);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to create initrd callback: %r\n", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
   }
 
   return Status;
