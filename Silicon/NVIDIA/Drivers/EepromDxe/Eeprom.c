@@ -367,7 +367,7 @@ EepromDxeDriverBindingStart (
       DEBUG ((DEBUG_ERROR, "Eeprom data population failed(%r)\r\n", Status));
       goto ErrorExit;
     }
-    DEBUG ((DEBUG_ERROR, "Id Eeprom Product Id: %a\r\n", IdBoardInfo->ProductId));
+    DEBUG ((DEBUG_ERROR, "Eeprom Product Id: %a\r\n", IdBoardInfo->ProductId));
   } else {
     CvmEeprom = TRUE;
     // Use RNG to generate a random MAC address instead

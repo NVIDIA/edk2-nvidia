@@ -63,19 +63,41 @@ AddBoardProperties (
   )
 {
   EFI_STATUS                  Status;
-  TEGRA_EEPROM_BOARD_INFO     *CvmEeprom;
+  TEGRA_EEPROM_BOARD_INFO     *Eeprom;
   INTN                        NodeOffset;
+  EFI_HANDLE                  *Handles;
+  UINTN                       NoHandles;
+  UINTN                       Count;
 
-  Status = gBS->LocateProtocol (&gNVIDIACvmEepromProtocolGuid, NULL, (VOID **)&CvmEeprom);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to get eeprom protocol\r\n"));
-    return;
+  Eeprom = NULL;
+  Status = gBS->LocateProtocol (&gNVIDIACvmEepromProtocolGuid, NULL, (VOID **)&Eeprom);
+  if (!EFI_ERROR (Status)) {
+    fdt_setprop (Dtb, 0, "serial-number", &Eeprom->SerialNumber, sizeof (Eeprom->SerialNumber));
+    NodeOffset = fdt_path_offset (Dtb, "/chosen");
+    if (NodeOffset >= 0) {
+      fdt_setprop (Dtb, NodeOffset, "nvidia,sku", &Eeprom->ProductId, sizeof (Eeprom->ProductId));
+    }
   }
 
-  fdt_setprop (Dtb, 0, "serial-number", &CvmEeprom->SerialNumber, sizeof (CvmEeprom->SerialNumber));
+  Handles = NULL;
+  NoHandles = 0;
+  Status = gBS->LocateHandleBuffer (ByProtocol, &gNVIDIAEepromProtocolGuid, NULL, &NoHandles, &Handles);
+  if (!EFI_ERROR (Status)) {
+    for (Count = 0; Count < NoHandles; Count++) {
+      Status = gBS->HandleProtocol (Handles[Count], &gNVIDIAEepromProtocolGuid, (VOID **)&Eeprom);
+      if (!EFI_ERROR (Status)) {
+        NodeOffset = fdt_path_offset (Dtb, "/chosen");
+        if (NodeOffset >= 0) {
+          fdt_appendprop (Dtb, NodeOffset, "ids", Eeprom->BoardId, strlen (Eeprom->BoardId) + 1);
+          fdt_appendprop (Dtb, NodeOffset, "ids", " ", 1);
+        }
+      }
+    }
+  }
+
   NodeOffset = fdt_path_offset (Dtb, "/chosen");
   if (NodeOffset >= 0) {
-    fdt_setprop (Dtb, NodeOffset, "nvidia,sku", &CvmEeprom->ProductId, sizeof (CvmEeprom->ProductId));
+    fdt_appendprop (Dtb, NodeOffset, "ids", "\n", 1);
   }
 }
 
