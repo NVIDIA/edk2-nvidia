@@ -119,6 +119,7 @@ UpdateGicItsInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo, CHAR8
 
   NumberOfItsCtlrs = 0;
   NumberOfItsEntries = 0;
+  ItsHandles = NULL;
   RegisterData = NULL;
   GicItsInfo = NULL;
 
