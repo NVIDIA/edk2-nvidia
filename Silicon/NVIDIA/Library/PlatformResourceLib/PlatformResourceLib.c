@@ -148,45 +148,6 @@ GetUARTInstanceInfo (
 }
 
 /**
-  Retrieve number of enabled CPUs for each platform
-
-**/
-UINT32
-GetNumberOfEnabledCpuCores (
-  VOID
-  )
-{
-  UINT32    Count;
-  UINTN     ChipId;
-  BOOLEAN   ValidPrivatePlatform;
-  UINT32    NumCpus;
-
-  NumCpus = 0;
-
-  ValidPrivatePlatform = GetNumberOfEnabledCpuCoresInternal ( &NumCpus );
-  if (ValidPrivatePlatform) {
-    return NumCpus;
-  }
-
-  ChipId = TegraGetChipID ();
-
-  switch (ChipId) {
-    case T194_CHIP_ID:
-      Count = NvgGetNumberOfEnabledCpuCores ();
-      break;
-    case T234_CHIP_ID:
-      Count = MceAriNumCores ();
-      break;
-    default:
-      ASSERT (FALSE);
-      Count = 1;
-      break;
-  }
-
-  return Count;
-}
-
-/**
   Retrieve chip specific info for GIC
 
 **/

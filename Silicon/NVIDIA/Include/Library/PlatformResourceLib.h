@@ -134,16 +134,6 @@ GetUARTInstanceInfo (
 );
 
 /**
-  Retrieve number of enabled CPUs for each platform
-
-**/
-
-UINT32
-GetNumberOfEnabledCpuCores (
-  VOID
-);
-
-/**
   Retrieve chip specific info for GIC
 
 **/

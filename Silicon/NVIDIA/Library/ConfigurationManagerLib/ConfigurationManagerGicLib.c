@@ -229,7 +229,7 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   UINT32                            CpuIndex;
   UINT32                            RegisterSize;
   UINT32                            RedistStride;
-  CONST UINT64*                     Prop;
+  CONST UINT64                      *Prop;
   VOID                              *DeviceTree;
   INT32                             NodeOffset;
   INT32                             PropertySize;
@@ -238,16 +238,20 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   UINT32                            Size;
   UINTN                             VGicMaintenanceInterrupt;
   UINT32                            NumCpus;
+  UINT32                            EnabledCpuCntr;
 
   NumberOfGicCtlrs = 0;
   NumberOfGicEntries = 0;
-  RegisterData = NULL;
+  GicHandles = NULL;
   GicInfo = NULL;
   GicDInfo = NULL;
   GicCInfo = NULL;
   GicRedistInfo = NULL;
+  RegisterData = NULL;
+  Prop = NULL;
   RedistStride = 0;
   PmuBaseInterrupt = 0;
+  EnabledCpuCntr = 0;
 
   NumCpus = GetNumberOfEnabledCpuCores ();
 
@@ -358,45 +362,55 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
                                                             DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
                                                             DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
 
-    //GICC structure entries
-    for (CpuIndex = 0; CpuIndex < NumCpus; CpuIndex++) {
+    // Populate GICC structures for enabled cpus
+    EnabledCpuCntr = 0;
+    for (CpuIndex = 0; CpuIndex < PLATFORM_MAX_CPUS; CpuIndex++) {
 
-      // Get Mpidr
+      // Check if core enabled
+      if ( !IsCoreEnabled (CpuIndex) ) {
+        continue;
+      }
+
+      // Get Mpidr using cpu index
       MpIdr = GetMpidrFromLinearCoreID (CpuIndex);
 
-      GicCInfo[CpuIndex + Index * NumCpus].CPUInterfaceNumber = CpuIndex;
-      GicCInfo[CpuIndex + Index * NumCpus].AcpiProcessorUid = CpuIndex;
-      GicCInfo[CpuIndex + Index * NumCpus].Flags = EFI_ACPI_6_3_GIC_ENABLED;
-      GicCInfo[CpuIndex + Index * NumCpus].ParkingProtocolVersion = 0;
-      GicCInfo[CpuIndex + Index * NumCpus].PerformanceInterruptGsiv = PmuBaseInterrupt + CpuIndex;
-      GicCInfo[CpuIndex + Index * NumCpus].ParkedAddress = 0;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].CPUInterfaceNumber = CpuIndex;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].AcpiProcessorUid = CpuIndex;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].Flags = EFI_ACPI_6_3_GIC_ENABLED;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].ParkingProtocolVersion = 0;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].PerformanceInterruptGsiv = PmuBaseInterrupt + CpuIndex;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].ParkedAddress = 0;
 
       if (GicInfo->Version < 3) {
-        GicCInfo[CpuIndex + Index * NumCpus].PhysicalBaseAddress = RegisterData[1].BaseAddress;
+        GicCInfo[EnabledCpuCntr + Index * NumCpus].PhysicalBaseAddress = RegisterData[1].BaseAddress;
       }
 
       if (GicInfo->Version < 3) {
         // GICV and GICH for v2
-        GicCInfo[CpuIndex + Index * NumCpus].GICV = RegisterData[2].BaseAddress;
-        GicCInfo[CpuIndex + Index * NumCpus].GICH = RegisterData[3].BaseAddress;
+        GicCInfo[EnabledCpuCntr + Index * NumCpus].GICV = RegisterData[2].BaseAddress;
+        GicCInfo[EnabledCpuCntr + Index * NumCpus].GICH = RegisterData[3].BaseAddress;
       }
 
       // VGIC info
-      GicCInfo[CpuIndex + Index * NumCpus].VGICMaintenanceInterrupt = VGicMaintenanceInterrupt;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].VGICMaintenanceInterrupt = VGicMaintenanceInterrupt;
 
       if (GicInfo->Version >= 3) {
-        GicCInfo[CpuIndex + Index * NumCpus].GICRBaseAddress = RegisterData[1].BaseAddress;
+        GicCInfo[EnabledCpuCntr + Index * NumCpus].GICRBaseAddress = RegisterData[1].BaseAddress;
       }
-      GicCInfo[CpuIndex + Index * NumCpus].MPIDR = MpIdr & 0xFFFFFF;
-      GicCInfo[CpuIndex + Index * NumCpus].ProcessorPowerEfficiencyClass = 0;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].MPIDR = MpIdr & 0xFFFFFF;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].ProcessorPowerEfficiencyClass = 0;
 
       // TODO: check for compat string "arm,statistical-profiling-extension-v1"
-      GicCInfo[CpuIndex + Index * NumCpus].SpeOverflowInterrupt = 0;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].SpeOverflowInterrupt = 0;
 
-      GicCInfo[CpuIndex + Index * NumCpus].ProximityDomain = 0;
-      GicCInfo[CpuIndex + Index * NumCpus].ClockDomain = 0;
-      GicCInfo[CpuIndex + Index * NumCpus].AffinityFlags = EFI_ACPI_6_3_GICC_ENABLED;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].ProximityDomain = 0;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].ClockDomain = 0;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].AffinityFlags = EFI_ACPI_6_3_GICC_ENABLED;
+
+      EnabledCpuCntr++;
     }
+    //Check to ensure space allocated for GICC is enough
+    ASSERT (EnabledCpuCntr == NumCpus);
 
     NumberOfGicEntries++;
   }

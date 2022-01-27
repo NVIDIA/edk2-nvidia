@@ -11,7 +11,7 @@
 *  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2020 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -20,7 +20,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
@@ -29,6 +29,9 @@
 #define __FLOOR_SWEEPING_LIB_H__
 
 #include <Uefi/UefiBaseType.h>
+
+#define GET_AFFINITY_BASED_MPID(Aff3, Aff2, Aff1, Aff0)                         \
+  (((Aff3##ULL) << 32) | ((Aff2) << 16) | ((Aff1) << 8) | (Aff0))
 
 /**
   Returns the MPIDR given the Linear Core ID
@@ -80,5 +83,26 @@ EFIAPI
 ClusterIsPresent (
   IN  UINTN ClusterId
   );
+
+/**
+  Check if given core is enabled
+
+**/
+BOOLEAN
+EFIAPI
+IsCoreEnabled (
+  IN  UINT32  CpuIndex
+);
+
+/**
+  Retrieve number of enabled CPUs for each platform
+
+**/
+
+UINT32
+EFIAPI
+GetNumberOfEnabledCpuCores (
+  VOID
+);
 
 #endif //__FLOOR_SWEEPING_LIB_H__

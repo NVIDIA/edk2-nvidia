@@ -172,6 +172,7 @@
   DramCarveoutLib|Silicon/NVIDIA/Library/DramCarveoutLib/DramCarveoutLib.inf
   BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoLib/BootChainInfoLib.inf
   ConfigurationManagerLib|Silicon/NVIDIA/Library/ConfigurationManagerLib/ConfigurationManagerLib.inf
+  FloorSweepingInternalLib|Silicon/NVIDIA/Library/FloorSweepingInternalLibNull/FloorSweepingInternalLibNull.inf
 
   TimeBaseLib|EmbeddedPkg/Library/TimeBaseLib/TimeBaseLib.inf
 

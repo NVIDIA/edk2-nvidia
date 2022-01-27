@@ -11,7 +11,7 @@
 *  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -20,25 +20,13 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 *
 **/
 
 #include <Library/PlatformResourceLib.h>
 #include <Library/PlatformResourceInternalLib.h>
-
-/**
-  Retrieve number of CPUs for each platform
-
-**/
-BOOLEAN
-GetNumberOfEnabledCpuCoresInternal (
-  OUT UINT32 *NumCpus
-)
-{
-  return FALSE;
-}
 
 /**
   Retrieve chip specific version for GIC

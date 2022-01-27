@@ -48,8 +48,9 @@
   MceAriLib
   NvgLib
   TegraPlatformInfoLib
+  FloorSweepingInternalLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
   gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
-
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported

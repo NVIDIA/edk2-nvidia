@@ -283,6 +283,9 @@
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported|0xf|UINT64|0x00000056
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting|0xf|UINT64|0x00000057
 
+#MPIDR generation
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE|BOOLEAN|0x00000060
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C
