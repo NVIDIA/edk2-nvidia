@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -11,7 +11,7 @@
 *  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -20,7 +20,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 **/
 
@@ -30,7 +30,14 @@
 #include <Uefi/UefiBaseType.h>
 #include <Protocol/HardwareInterrupt.h>
 
-#define DEVICETREE_TO_ACPI_INTERRUPT_OFFSET 0x20
+#define DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET 0x20
+#define DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET 0x10
+
+typedef enum {
+  INTERRUPT_SPI_TYPE,
+  INTERRUPT_PPI_TYPE,
+  INTERRUPT_MAX_TYPE
+} NVIDIA_DEVICE_TREE_INTERRUPT_TYPE;
 
 typedef struct {
   EFI_PHYSICAL_ADDRESS BaseAddress;
@@ -39,8 +46,9 @@ typedef struct {
 } NVIDIA_DEVICE_TREE_REGISTER_DATA;
 
 typedef struct {
-  HARDWARE_INTERRUPT_SOURCE Interrupt;
-  CONST CHAR8               *Name;
+  NVIDIA_DEVICE_TREE_INTERRUPT_TYPE Type;
+  HARDWARE_INTERRUPT_SOURCE         Interrupt;
+  CONST CHAR8                       *Name;
 } NVIDIA_DEVICE_TREE_INTERRUPT_DATA;
 
 /**

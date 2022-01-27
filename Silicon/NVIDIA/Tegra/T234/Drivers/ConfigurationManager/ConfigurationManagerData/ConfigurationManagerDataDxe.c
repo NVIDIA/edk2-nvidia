@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe
 
-  Copyright (c) 2019 - 2021, NVIDIA Corporation. All rights reserved.
+  Copyright (c) 2019 - 2022, NVIDIA Corporation. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   This program and the accompanying materials
@@ -13,7 +13,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
   Portions provided under the following terms:
-  Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -22,7 +22,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2019-2022 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
   @par Glossary:
@@ -451,7 +451,9 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 
     SpcrSerialPort[Index].BaseAddress = RegisterData.BaseAddress;
     SpcrSerialPort[Index].BaseAddressLength = RegisterData.Size;
-    SpcrSerialPort[Index].Interrupt = InterruptData.Interrupt + DEVICETREE_TO_ACPI_INTERRUPT_OFFSET;
+    SpcrSerialPort[Index].Interrupt = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
+                                                                   DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
+                                                                   DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
     SpcrSerialPort[Index].BaudRate = FixedPcdGet64 (PcdUartDefaultBaudRate);
 
     if (SerialPortConfig == NVIDIA_SERIAL_PORT_SPCR_FULL_16550) {
@@ -707,8 +709,9 @@ UpdateSdhciInfo ()
       goto ErrorExit;
     }
 
-    // Interrupts in the device tree are encoded relative to a starting address of 0x20
-    InterruptDescriptor.InterruptNumber[0] = InterruptData.Interrupt + 0x20;
+    InterruptDescriptor.InterruptNumber[0] = (InterruptData.Interrupt + InterruptData.Type == INTERRUPT_SPI_TYPE ?
+                                                DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
+                                                DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
 
     Status = PatchProtocol->SetNodeData(PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
     if (EFI_ERROR (Status)) {

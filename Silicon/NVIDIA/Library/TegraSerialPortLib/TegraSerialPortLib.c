@@ -1,7 +1,7 @@
 /** @file
   Serial I/O Port wrapper library
 
-  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -12,7 +12,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
   Portions provided under the following terms:
-  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -21,7 +21,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -138,7 +138,9 @@ SerialPortIdentify (
     if (EFI_ERROR (Status)) {
       goto Exit;
     }
-    TegraUartInfo.Interrupt = (UINT32)IntData.Interrupt + DEVICETREE_TO_ACPI_INTERRUPT_OFFSET;
+    TegraUartInfo.Interrupt = (UINT32)IntData.Interrupt + (IntData.Type == INTERRUPT_SPI_TYPE ?
+                                                             DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
+                                                             DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
   }
 
   // Update UART base address and get UART object

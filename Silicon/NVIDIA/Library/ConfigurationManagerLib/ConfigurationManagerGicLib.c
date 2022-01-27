@@ -12,7 +12,7 @@
 *  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 *
 *  Portions provided under the following terms:
-*  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
 *  property and proprietary rights in and to this material, related
@@ -21,7 +21,7 @@
 *  without an express license agreement from NVIDIA CORPORATION or
 *  its affiliates is strictly prohibited.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
   @par Glossary:
@@ -92,7 +92,10 @@ GetPmuBaseInterrupt (
     return Status;
   }
 
-  *PmuBaseInterrupt = InterruptData.Interrupt + DEVICETREE_TO_ACPI_INTERRUPT_OFFSET;
+  *PmuBaseInterrupt = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
+                                                   DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
+                                                   DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
+
   return Status;
 }
 
@@ -351,7 +354,9 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     if (EFI_ERROR (Status)) {
       goto Exit;
     }
-    VGicMaintenanceInterrupt = InterruptData.Interrupt + DEVICETREE_TO_ACPI_INTERRUPT_OFFSET;
+    VGicMaintenanceInterrupt = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
+                                                            DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
+                                                            DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
 
     //GICC structure entries
     for (CpuIndex = 0; CpuIndex < NumCpus; CpuIndex++) {
