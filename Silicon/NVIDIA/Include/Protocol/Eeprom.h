@@ -35,6 +35,10 @@
 #define T234_EEPROM_VERSION             2
 #define EEPROM_CUSTOMER_BLOCK_SIGNATURE "NVCB"
 #define EEPROM_CUSTOMER_TYPE_SIGNATURE  "M1"
+
+#define CAMERA_EEPROM_PART_OFFSET       21
+#define CAMERA_EEPROM_PART_NAME         "LPRD"
+
 /**
  * @brief The Product Part Number structure that is embedded into
  * EEPROM layout structure

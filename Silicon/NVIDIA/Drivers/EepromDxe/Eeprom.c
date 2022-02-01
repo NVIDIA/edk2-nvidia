@@ -96,7 +96,8 @@ EFI_STATUS
 EFIAPI
 ValidateEepromData (
   IN UINT8   *EepromData,
-  IN BOOLEAN IgnoreVersionCheck
+  IN BOOLEAN IgnoreVersionCheck,
+  IN BOOLEAN IgnoreCRCCheck
 )
 {
   UINTN             ChipID;
@@ -118,10 +119,12 @@ ValidateEepromData (
       return EFI_DEVICE_ERROR;
     }
 
-    Checksum = CalculateCrc8 (EepromData, EEPROM_DATA_SIZE - 1, 0, TYPE_CRC8_MAXIM);
-    if (Checksum != T194EepromData->Checksum) {
-      DEBUG ((DEBUG_ERROR, "%a: CRC mismatch, expected %02x got %02x\r\n", __FUNCTION__, Checksum, T194EepromData->Checksum));
-      return EFI_DEVICE_ERROR;
+    if (!IgnoreCRCCheck) {
+      Checksum = CalculateCrc8 (EepromData, EEPROM_DATA_SIZE - 1, 0, TYPE_CRC8_MAXIM);
+      if (Checksum != T194EepromData->Checksum) {
+        DEBUG ((DEBUG_ERROR, "%a: CRC mismatch, expected %02x got %02x\r\n", __FUNCTION__, Checksum, T194EepromData->Checksum));
+        return EFI_DEVICE_ERROR;
+      }
     }
   } else if (ChipID == T234_CHIP_ID) {
     T234EepromData = (T234_EEPROM_DATA *)EepromData;
@@ -135,10 +138,12 @@ ValidateEepromData (
       return EFI_DEVICE_ERROR;
     }
 
-    Checksum = CalculateCrc8 (EepromData, EEPROM_DATA_SIZE - 1, 0, TYPE_CRC8_MAXIM);
-    if (Checksum != T234EepromData->Checksum) {
-      DEBUG ((DEBUG_ERROR, "%a: CRC mismatch, expected %02x got %02x\r\n", __FUNCTION__, Checksum, T234EepromData->Checksum));
-      return EFI_DEVICE_ERROR;
+    if (!IgnoreCRCCheck) {
+      Checksum = CalculateCrc8 (EepromData, EEPROM_DATA_SIZE - 1, 0, TYPE_CRC8_MAXIM);
+      if (Checksum != T234EepromData->Checksum) {
+        DEBUG ((DEBUG_ERROR, "%a: CRC mismatch, expected %02x got %02x\r\n", __FUNCTION__, Checksum, T234EepromData->Checksum));
+        return EFI_DEVICE_ERROR;
+      }
     }
   } else {
     return EFI_UNSUPPORTED;
@@ -304,11 +309,13 @@ EepromDxeDriverBindingStart (
   BOOLEAN                     CvmEeprom;
   TEGRA_EEPROM_BOARD_INFO     *CvmBoardInfo;
   TEGRA_EEPROM_BOARD_INFO     *IdBoardInfo;
+  BOOLEAN                     SkipEepromCRC;
 
   RawData = NULL;
   CvmBoardInfo = NULL;
   IdBoardInfo = NULL;
   CvmEeprom = FALSE;
+  SkipEepromCRC = FALSE;
 
   PlatformType = TegraGetPlatform();
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
@@ -351,7 +358,13 @@ EepromDxeDriverBindingStart (
     FreePool (Request);
     Request = NULL;
 
-    Status = ValidateEepromData (RawData, CompareGuid (&gNVIDIAEeprom, I2cIo->DeviceGuid));
+    if (0 == AsciiStrnCmp ((CHAR8 *)&RawData[CAMERA_EEPROM_PART_OFFSET],
+                           CAMERA_EEPROM_PART_NAME,
+                           AsciiStrLen (CAMERA_EEPROM_PART_NAME))) {
+      SkipEepromCRC = TRUE;
+    }
+
+    Status = ValidateEepromData (RawData, TRUE, SkipEepromCRC);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Eeprom data validation failed(%r)\r\n", Status));
       goto ErrorExit;
@@ -578,7 +591,7 @@ InitializeEepromDxe (
 
   EepromData = GetEepromData ();
   if (EepromData->CvmEepromDataSize == 0 ||
-      EFI_ERROR (ValidateEepromData (EepromData->CvmEepromData, FALSE))) {
+      EFI_ERROR (ValidateEepromData (EepromData->CvmEepromData, FALSE, FALSE))) {
     DEBUG ((DEBUG_ERROR, "Cvm Eeprom data validation failed(%r)\r\n", Status));
   } else {
     CvmBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_EEPROM_BOARD_INFO));
@@ -606,7 +619,7 @@ InitializeEepromDxe (
   }
 
   if (EepromData->CvbEepromDataSize == 0 ||
-      EFI_ERROR (ValidateEepromData (EepromData->CvbEepromData, FALSE))) {
+      EFI_ERROR (ValidateEepromData (EepromData->CvbEepromData, FALSE, FALSE))) {
     DEBUG ((DEBUG_ERROR, "Cvb Eeprom data validation failed(%r)\r\n", Status));
   } else {
     CvbBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_EEPROM_BOARD_INFO));
