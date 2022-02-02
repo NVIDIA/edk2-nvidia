@@ -13,6 +13,7 @@
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
@@ -57,8 +58,14 @@ OnExitBootServices (
   NVIDIA_POWER_GATE_NODE_PROTOCOL *PgProtocol;
   UINT32                          Index;
   UINT32                          PgState;
+  VOID                            *AcpiBase;
 
   Private = (XUDC_CONTROLLER_PRIVATE_DATA *)Context;
+
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    return;
+  }
 
   PgProtocol = NULL;
   PgState    = CmdPgStateOff;
