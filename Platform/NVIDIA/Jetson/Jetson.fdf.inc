@@ -145,20 +145,8 @@
   INF Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
 
   #
-  # SMBIOS support
-  #
-  INF ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
-  INF ArmPkg/Universal/Smbios/SmbiosMiscDxe/SmbiosMiscDxe.inf
-
-  #
   # UFS support
   #
   INF Silicon/NVIDIA/Drivers/UfsControllerDxe/UfsControllerDxe.inf
   INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
   INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
-
-  #
-  # SMBIOS support
-  #
-  INF Silicon/NVIDIA/Tegra/T194/Drivers/SmbiosDataDxe/SmbiosDataDxe.inf
-  INF Silicon/NVIDIA/Tegra/T234/Drivers/SmbiosDataDxe/SmbiosDataDxe.inf

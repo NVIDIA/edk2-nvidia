@@ -187,7 +187,8 @@
   # SMBIOS/DMI
   #
   INF MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
-  #TODO Add SMBIOS tables
+  INF ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
+  INF ArmPkg/Universal/Smbios/SmbiosMiscDxe/SmbiosMiscDxe.inf
 
   #
   # Bds

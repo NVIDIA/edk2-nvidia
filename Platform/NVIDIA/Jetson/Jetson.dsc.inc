@@ -34,7 +34,6 @@
 
   RealTimeClockLib|Silicon/NVIDIA/Library/MaximRealTimeClockLib/MaximRealTimeClockLib.inf
   OrderedCollectionLib|MdePkg/Library/BaseOrderedCollectionRedBlackTreeLib/BaseOrderedCollectionRedBlackTreeLib.inf
-  TegraCpuFreqHelperLib|Silicon/NVIDIA/Library/TegraCpuFreqHelperLib/TegraCpuFreqHelper.inf
 
 [LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
@@ -310,9 +309,3 @@
       <LibraryClasses>
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
-
-  #
-  # SMBIOS
-  #
-  Silicon/NVIDIA/Tegra/T194/Drivers/SmbiosDataDxe/SmbiosDataDxe.inf
-  Silicon/NVIDIA/Tegra/T234/Drivers/SmbiosDataDxe/SmbiosDataDxe.inf

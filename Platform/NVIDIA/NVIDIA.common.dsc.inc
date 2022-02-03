@@ -154,9 +154,10 @@
   ConfigurationManagerLib|Silicon/NVIDIA/Library/ConfigurationManagerLib/ConfigurationManagerLib.inf
   FloorSweepingInternalLib|Silicon/NVIDIA/Library/FloorSweepingInternalLibNull/FloorSweepingInternalLibNull.inf
 
+  OemMiscLib|Silicon/NVIDIA/Library/OemMiscLib/OemMiscLib.inf
+  TegraCpuFreqHelperLib|Silicon/NVIDIA/Library/TegraCpuFreqHelperLib/TegraCpuFreqHelper.inf
   TimeBaseLib|EmbeddedPkg/Library/TimeBaseLib/TimeBaseLib.inf
 
-  OemMiscLib|Silicon/NVIDIA/Library/OemMiscLib/OemMiscLib.inf
   FdtLib|EmbeddedPkg/Library/FdtLib/FdtLib.inf
   DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbLoaderLib.inf
 

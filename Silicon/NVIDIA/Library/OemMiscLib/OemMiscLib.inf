@@ -37,10 +37,12 @@
   PrintLib
   PlatformResourceLib
   FdtLib
+  TegraCpuFreqHelperLib
+  FloorSweepingLib
 
 [Protocols]
-  gNVIDIASmbiosCpuDataProtocolGuid           # PROTOCOL ALWAYS_CONSUMED
-  gNVIDIASmbiosMiscDataProtocolGuid         # PROTOCOL ALWAYS_CONSUMED
+  gEdkiiConfigurationManagerProtocolGuid     # PROTOCOL ALWAYS_CONSUMED
+  gNVIDIACvmEepromProtocolGuid               # PROTOCOL ALWAYS_CONSUMED
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBoardChassisLocation
@@ -58,9 +60,11 @@
   gNVIDIATokenSpaceGuid.PcdChassisVersion
   gNVIDIATokenSpaceGuid.PcdType3Info
   gNVIDIATokenSpaceGuid.PcdType32Info
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
+  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
 
 
 [Depex]
-  gNVIDIASmbiosCpuDataProtocolGuid
+  gNVIDIACvmEepromProtocolGuid
   AND
-  gNVIDIASmbiosMiscDataProtocolGuid
+  gEdkiiConfigurationManagerProtocolGuid
