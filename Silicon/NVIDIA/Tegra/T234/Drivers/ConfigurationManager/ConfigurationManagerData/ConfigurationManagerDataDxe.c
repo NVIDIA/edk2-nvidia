@@ -709,9 +709,9 @@ UpdateSdhciInfo ()
       goto ErrorExit;
     }
 
-    InterruptDescriptor.InterruptNumber[0] = (InterruptData.Interrupt + InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
+    InterruptDescriptor.InterruptNumber[0] = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
+                                                                          DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
+                                                                          DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
 
     Status = PatchProtocol->SetNodeData(PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
     if (EFI_ERROR (Status)) {
