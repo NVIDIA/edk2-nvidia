@@ -2,7 +2,7 @@
 
   TegraUart Controller Driver
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -12,7 +12,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
   Portions provided under the following terms:
-  Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -21,7 +21,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2019-2022 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -130,6 +130,14 @@ DeviceDiscoveryNotify (
       if (PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_SBSA ||
           SerialConfig == NVIDIA_SERIAL_PORT_DISABLED) {
         return EFI_UNSUPPORTED;
+      }
+      Status = DeviceDiscoveryGetClockId (ControllerHandle, UART_CLOCK_NAME, &ClockId);
+      if (!EFI_ERROR (Status)) {
+        Status = DeviceDiscoverySetClockFreq (ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Unable to set clock frequency\n", __FUNCTION__));
+          return Status;
+        }
       }
       Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
       if (EFI_ERROR (Status)) {
