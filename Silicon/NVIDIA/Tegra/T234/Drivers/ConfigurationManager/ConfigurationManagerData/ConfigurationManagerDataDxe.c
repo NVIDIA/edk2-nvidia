@@ -220,7 +220,30 @@ CM_ARM_PCI_CONFIG_SPACE_INFO PciConfigInfo[] = {
     T234_PCIE_BUS_MIN,
     // The end bus number
     T234_PCIE_BUS_MAX
+  },
+
+  {
+    // The physical base address for the PCI segment
+    T234_PCIE_C4_CFG_BASE_ADDR,
+    // The PCI segment group number
+    4,
+    // The start bus number
+    T234_PCIE_BUS_MIN,
+    // The end bus number
+    T234_PCIE_BUS_MAX
+  },
+
+  {
+    // The physical base address for the PCI segment
+    T234_PCIE_C5_CFG_BASE_ADDR,
+    // The PCI segment group number
+    5,
+    // The start bus number
+    T234_PCIE_BUS_MIN,
+    // The end bus number
+    T234_PCIE_BUS_MAX
   }
+
 };
 
 /** Cache Info

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -16,6 +16,9 @@
 
 // PCIE
 #define T234_PCIE_C1_CFG_BASE_ADDR       0x20B0000000
+#define T234_PCIE_C4_CFG_BASE_ADDR       0x2430000000
+#define T234_PCIE_C5_CFG_BASE_ADDR       0x2B30000000
+
 #define T234_PCIE_BUS_MIN                0
 #define T234_PCIE_BUS_MAX                255
 
