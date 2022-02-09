@@ -1,7 +1,7 @@
 /** @file
   FW Image Protocol Dxe
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
   property and proprietary rights in and to this material, related
@@ -10,7 +10,7 @@
   without an express license agreement from NVIDIA CORPORATION or
   its affiliates is strictly prohibited.
 
-  SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES
+  SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES
   SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
@@ -659,7 +659,7 @@ Done:
     Private = mPrivate;
     for (Index = 0; Index < mNumFwImages; Index++, Private++) {
       if (Private->Handle != NULL) {
-        gBS->UninstallMultipleProtocolInterfaces (&Private->Handle,
+        gBS->UninstallMultipleProtocolInterfaces (Private->Handle,
                                                   &gNVIDIAFwImageProtocolGuid,
                                                   &Private->Protocol,
                                                   NULL);
