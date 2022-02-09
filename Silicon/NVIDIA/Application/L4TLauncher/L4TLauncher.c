@@ -322,21 +322,25 @@ FindPartitionInfo (
           //See if it is a prefix
           if ((SubString == (PartitionInfo->Info.Gpt.PartitionName + 2)) &&
               (PartitionInfo->Info.Gpt.PartitionName[1] == L'_')) {
-            if (PartitionInfo->Info.Gpt.PartitionName[0] == (L'A' + BootChain)) {
+            if ((PartitionInfo->Info.Gpt.PartitionName[0] == (L'A' + BootChain)) ||
+                (PartitionInfo->Info.Gpt.PartitionName[0] == (L'a' + BootChain))) {
               ASSERT (FoundHandle == 0);
               FoundHandle = ChildHandles[ChildIndex];
             }
-            if (PartitionInfo->Info.Gpt.PartitionName[0] == (L'B' - BootChain)) {
+            if ((PartitionInfo->Info.Gpt.PartitionName[0] == (L'B' - BootChain)) ||
+                (PartitionInfo->Info.Gpt.PartitionName[0] == (L'b' - BootChain))) {
               ASSERT (FoundHandleAlt == 0);
               FoundHandleAlt = ChildHandles[ChildIndex];
             }
           //See if it is a postfix, these are lowercase
           } else if ((SubString == PartitionInfo->Info.Gpt.PartitionName) &&
                      (PartitionInfo->Info.Gpt.PartitionName[PartitionBasenameLen] == L'_')) {
-            if (PartitionInfo->Info.Gpt.PartitionName[PartitionBasenameLen + 1] == (L'a' + BootChain)) {
+            if ((PartitionInfo->Info.Gpt.PartitionName[PartitionBasenameLen + 1] == (L'a' + BootChain)) ||
+                (PartitionInfo->Info.Gpt.PartitionName[PartitionBasenameLen + 1] == (L'A' + BootChain))) {
               ASSERT (FoundHandle == 0);
               FoundHandle = ChildHandles[ChildIndex];
-            } else if (PartitionInfo->Info.Gpt.PartitionName[PartitionBasenameLen + 1] == (L'b' - BootChain)) {
+            } else if ((PartitionInfo->Info.Gpt.PartitionName[PartitionBasenameLen + 1] == (L'b' - BootChain)) ||
+                       (PartitionInfo->Info.Gpt.PartitionName[PartitionBasenameLen + 1] == (L'B' - BootChain))) {
               ASSERT (FoundHandleAlt == 0);
               FoundHandleAlt = ChildHandles[ChildIndex];
             }
