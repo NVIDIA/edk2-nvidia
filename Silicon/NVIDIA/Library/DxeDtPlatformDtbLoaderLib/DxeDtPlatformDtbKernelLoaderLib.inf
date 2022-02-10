@@ -47,6 +47,7 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  ArmSmcLib
   BaseLib
   HobLib
   FdtLib

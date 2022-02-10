@@ -28,6 +28,7 @@
 
 #include <PiDxe.h>
 
+#include <Library/ArmSmcLib.h>
 #include <Library/BaseLib.h>
 #include <Library/HobLib.h>
 #include <Library/DebugLib.h>
@@ -43,6 +44,12 @@
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/Eeprom.h>
+#include <IndustryStandard/ArmStdSmc.h>
+
+#define TRUSTY_OS_UID0          0xf025ee40
+#define TRUSTY_OS_UID1          0x4c30bca2
+#define TRUSTY_OS_UID2          0x73a14c8c
+#define TRUSTY_OS_UID3          0xf18a7dc5
 
 typedef struct {
   CONST CHAR8 *Compatibility;
@@ -100,6 +107,54 @@ AddBoardProperties (
     fdt_appendprop (Dtb, NodeOffset, "ids", "\n", 1);
   }
 }
+
+STATIC
+BOOLEAN
+IsTrustyPresent (
+  VOID
+)
+{
+  ARM_SMC_ARGS ArmSmcArgs;
+
+  ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
+  // Send a Trusted OS Calls UID command
+  ArmSmcArgs.Arg0 = ARM_SMC_ID_TOS_UID;
+  ArmCallSmc (&ArmSmcArgs);
+
+  if ((ArmSmcArgs.Arg0 == TRUSTY_OS_UID0) &&
+      (ArmSmcArgs.Arg1 == TRUSTY_OS_UID1) &&
+      (ArmSmcArgs.Arg2 == TRUSTY_OS_UID2) &&
+      (ArmSmcArgs.Arg3 == TRUSTY_OS_UID3)) {
+    return TRUE;
+  } else {
+    return FALSE;
+  }
+}
+
+STATIC
+VOID
+EnableTrustyNode (
+  IN VOID *Dtb
+ )
+{
+  INT32 TrustyNodeOffset;
+  INT32 Ret;
+
+  TrustyNodeOffset = fdt_path_offset (Dtb, "/trusty");
+  if (TrustyNodeOffset < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Trusty Node not found %d\n", __FUNCTION__,
+              TrustyNodeOffset));
+    return;
+  }
+
+  Ret = fdt_setprop (Dtb, TrustyNodeOffset, "status", "okay", sizeof("okay"));
+  if (Ret != 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to add status Property %d\n",
+              __FUNCTION__, Ret));
+    return;
+  }
+}
+
 
 STATIC
 VOID
@@ -199,6 +254,8 @@ FdtInstalled (
   AddBoardProperties (Dtb);
   if (IsOpteePresent ()) {
     EnableOpteeNode (Dtb);
+  } else if (IsTrustyPresent ()) {
+    EnableTrustyNode (Dtb);
   }
 }
 
