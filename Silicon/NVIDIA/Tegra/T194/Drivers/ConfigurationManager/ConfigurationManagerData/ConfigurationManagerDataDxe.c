@@ -710,7 +710,7 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
   }
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (CM_ARM_SERIAL_PORT_INFO);
+  Repo->CmObjectSize = sizeof (CM_ARM_SERIAL_PORT_INFO) * NumberOfSerialPorts;
   Repo->CmObjectCount = NumberOfSerialPorts;
   Repo->CmObjectPtr = SpcrSerialPort;
   Repo++;
