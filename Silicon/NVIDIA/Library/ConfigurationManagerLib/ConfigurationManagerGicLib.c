@@ -92,6 +92,7 @@ GetPmuBaseInterrupt (
     return Status;
   }
 
+  ASSERT(InterruptData.Type == INTERRUPT_PPI_TYPE);
   *PmuBaseInterrupt = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
                                                    DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
                                                    DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
@@ -378,7 +379,7 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
       GicCInfo[EnabledCpuCntr + Index * NumCpus].AcpiProcessorUid = CpuIndex;
       GicCInfo[EnabledCpuCntr + Index * NumCpus].Flags = EFI_ACPI_6_3_GIC_ENABLED;
       GicCInfo[EnabledCpuCntr + Index * NumCpus].ParkingProtocolVersion = 0;
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].PerformanceInterruptGsiv = PmuBaseInterrupt + CpuIndex;
+      GicCInfo[EnabledCpuCntr + Index * NumCpus].PerformanceInterruptGsiv = PmuBaseInterrupt;
       GicCInfo[EnabledCpuCntr + Index * NumCpus].ParkedAddress = 0;
 
       if (GicInfo->Version < 3) {
