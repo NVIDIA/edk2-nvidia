@@ -11,8 +11,21 @@
 
 #include <Uefi/UefiBaseType.h>
 
-#define GET_AFFINITY_BASED_MPID(Aff3, Aff2, Aff1, Aff0)                         \
+#define GET_AFFINITY_BASED_MPID(Aff3, Aff2, Aff1, Aff0)         \
   (((Aff3##ULL) << 32) | ((Aff2) << 16) | ((Aff1) << 8) | (Aff0))
+
+/**
+  Returns the Cluster ID given the Linear Core ID
+
+  @param[in]    UINT32          Linear Core ID
+
+  @return       UINT32          Cluster ID
+**/
+UINT32
+EFIAPI
+GetClusterIDFromLinearCoreID (
+  IN UINT32 LinearCoreId
+);
 
 /**
   Returns the MPIDR given the Linear Core ID
