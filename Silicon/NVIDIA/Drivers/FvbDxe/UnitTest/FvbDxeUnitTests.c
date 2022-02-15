@@ -19,7 +19,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UnitTestLib.h>
 
-#include <Library/FlashStubLib.h>
+#include <HostBasedTestStubLib/FlashStubLib.h>
 
 #include <FvbDxeTestPrivate.h>
 

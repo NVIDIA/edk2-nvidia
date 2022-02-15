@@ -1,0 +1,40 @@
+## @file
+#
+#  PlatformResourceStubLib unit tests
+#
+#  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010006
+  BASE_NAME                      = PlatformResourceStubLibUnitTests
+  FILE_GUID                      = 1dfe330c-a8c3-4658-beaa-f0f99afbc4d7
+  MODULE_TYPE                    = HOST_APPLICATION
+  VERSION_STRING                 = 1.0
+
+#
+# The following information is for reference only
+# and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = X64
+#
+
+[Sources]
+  PlatformResourceStubLibUnitTests.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  CmockaLib
+  DebugLib
+  MemoryAllocationLib
+  PlatformResourceLib
+  UnitTestLib

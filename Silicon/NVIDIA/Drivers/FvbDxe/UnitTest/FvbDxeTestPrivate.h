@@ -17,7 +17,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UnitTestLib.h>
 
-#include <Library/FlashStubLib.h>
+#include <HostBasedTestStubLib/FlashStubLib.h>
 
 // So that we can reference FvbPrivate declarations
 #include "../FvbPrivate.h"

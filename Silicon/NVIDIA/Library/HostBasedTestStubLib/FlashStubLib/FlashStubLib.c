@@ -2,7 +2,7 @@
 
 Stub implementation of a flash device.
 
-Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -16,7 +16,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/FlashStubLib.h>
+#include <HostBasedTestStubLib/FlashStubLib.h>
 
 #include "FlashStubLibPrivate.h"
 

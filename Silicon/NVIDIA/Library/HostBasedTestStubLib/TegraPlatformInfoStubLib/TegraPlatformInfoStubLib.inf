@@ -1,0 +1,30 @@
+## @file
+#
+#  Tegra Platform Info Lib stubs for host based tests
+#
+#  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = TegraPlatformInfoStubLib
+  FILE_GUID                      = 62a2d0c8-2272-45b5-96ee-ba91b5a29bdd
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = TegraPlatformInfoLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  CmockaLib
+  DebugLib
+
+[Sources.common]
+  TegraPlatformInfoStubLib.c

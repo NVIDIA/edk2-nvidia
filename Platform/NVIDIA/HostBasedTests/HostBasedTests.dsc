@@ -24,6 +24,18 @@
       PcdLib|Silicon/NVIDIA/Drivers/FvbDxe/UnitTest/FvbPcdStubLib/FvbPcdStubLib.inf
   }
 
+  # PlatformResourceStubLib
+  Silicon/NVIDIA/Library/HostBasedTestStubLib/PlatformResourceStubLib/UnitTest/PlatformResourceStubLibUnitTests.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Library/HostBasedTestStubLib/PlatformResourceStubLib/PlatformResourceStubLib.inf
+  }
+
+  # TegraPlatformInfoStubLib
+  Silicon/NVIDIA/Library/HostBasedTestStubLib/TegraPlatformInfoStubLib/UnitTest/TegraPlatformInfoStubLibUnitTests.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Library/HostBasedTestStubLib/TegraPlatformInfoStubLib/TegraPlatformInfoStubLib.inf
+  }
+
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0

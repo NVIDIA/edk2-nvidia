@@ -1,0 +1,30 @@
+## @file
+#
+#  UEFI Runtime Services Table Lib stubs for host based tests
+#
+#  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = UefiRuntimeServicesTableStubLib
+  FILE_GUID                      = 7c0085e7-31eb-4c94-a205-f1796ccd4d33
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = UefiRuntimeServicesTableLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  CmockaLib
+  DebugLib
+
+[Sources.common]
+  UefiRuntimeServicesTableStubLib.c
