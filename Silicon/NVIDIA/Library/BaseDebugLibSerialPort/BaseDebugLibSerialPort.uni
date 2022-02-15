@@ -3,6 +3,7 @@
 //
 // It uses Print Library to produce formatted output strings to seiral port device.
 //
+// Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // Copyright (c) 2006 - 2014, Intel Corporation. All rights reserved.<BR>
 //
 // SPDX-License-Identifier: BSD-2-Clause-Patent

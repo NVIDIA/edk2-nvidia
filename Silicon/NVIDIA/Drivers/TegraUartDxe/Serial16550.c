@@ -1,25 +1,12 @@
 /** @file
   Serial driver that layers on top of a Serial Port Library instance.
 
-  Copyright (c) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
-
-  Portions provided under the following terms:
-  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-
-  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
-  property and proprietary rights in and to this material, related
-  documentation and any modifications thereto. Any use, reproduction,
-  disclosure or distribution of this material and related documentation
-  without an express license agreement from NVIDIA CORPORATION or
-  its affiliates is strictly prohibited.
-
-  SPDX-FileCopyrightText: Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES
-  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
 

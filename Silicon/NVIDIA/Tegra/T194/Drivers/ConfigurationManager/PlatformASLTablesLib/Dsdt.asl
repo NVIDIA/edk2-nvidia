@@ -1,21 +1,10 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * Copyright (c) 2020 - 2022, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2020 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
- * Portions provided under the following terms:
- * Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- *
- * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
- * property and proprietary rights in and to this material, related
- * documentation and any modifications thereto. Any use, reproduction,
- * disclosure or distribution of this material and related documentation
- * without an express license agreement from NVIDIA CORPORATION or
- * its affiliates is strictly prohibited.
- *
- * SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
- * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ * SPDX-License-Identifier: BSD-2-Clause-Patent
  *
  * Template for [DSDT] ACPI Table (AML byte code table)
  */

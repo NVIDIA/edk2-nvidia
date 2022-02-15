@@ -1,26 +1,13 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
   Copyright (c) 2016, Linaro Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
-
-  Portions provided under the following terms:
-  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-
-  NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
-  property and proprietary rights in and to this material, related
-  documentation and any modifications thereto. Any use, reproduction,
-  disclosure or distribution of this material and related documentation
-  without an express license agreement from NVIDIA CORPORATION or
-  its affiliates is strictly prohibited.
-
-  SPDX-FileCopyrightText: Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES
-  SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 **/
 
