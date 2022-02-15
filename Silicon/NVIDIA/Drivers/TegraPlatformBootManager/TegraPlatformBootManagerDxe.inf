@@ -50,7 +50,6 @@
   gNVIDIAKernelCmdLineUpdateGuid
   gNVIDIAPublicVariableGuid
   gNVIDIATokenSpaceGuid
-  gEfiEndOfDxeEventGroupGuid
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

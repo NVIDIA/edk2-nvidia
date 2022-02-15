@@ -34,17 +34,6 @@ CHAR16 KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
   L"console="
 };
 
-STATIC
-VOID
-EFIAPI
-OnEndOfDxe (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
-  )
-{
-  ValidateActiveBootChain ();
-}
-
 /*
   Checks whether the auto-enumerated boot option is valid for the platform.
 
@@ -876,18 +865,6 @@ PlatformBootManagerEntryPoint (
   IN EFI_SYSTEM_TABLE   *SystemTable
   )
 {
-  EFI_STATUS Status;
-
-  Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
-                               TPL_CALLBACK,
-                               OnEndOfDxe,
-                               NULL,
-                               &gEfiEndOfDxeEventGroupGuid,
-                               &mEndOfDxeEvent);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
   return gBS->InstallMultipleProtocolInterfaces (&ImageHandle,
                                                  &gEdkiiPlatformBootManagerProtocolGuid,
                                                  &mPlatformBootManager,

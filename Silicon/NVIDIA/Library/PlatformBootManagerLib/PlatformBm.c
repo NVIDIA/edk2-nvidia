@@ -26,6 +26,7 @@
 #include <Library/PrintLib.h>
 #include <Library/DxeCapsuleLibFmp/CapsuleOnDisk.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Protocol/BootChainProtocol.h>
 #include <Protocol/DevicePath.h>
 #include <Protocol/EsrtManagement.h>
 #include <Protocol/GenericMemoryTest.h>
@@ -1185,6 +1186,28 @@ PrintBmcIpAddresses (
   }
 }
 
+STATIC
+VOID
+EFIAPI
+HandleBootChainUpdate(
+  VOID
+  )
+{
+  NVIDIA_BOOT_CHAIN_PROTOCOL    *BootChainProtocol;
+  EFI_STATUS                    Status;
+
+  Status = gBS->LocateProtocol (&gNVIDIABootChainProtocolGuid,
+                                NULL,
+                                (VOID **)&BootChainProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Boot Chain Protocol Guid=%g not found: %r\n",
+            &gNVIDIABootChainProtocolGuid, Status));
+    return;
+  }
+
+  BootChainProtocol->ExecuteUpdate (BootChainProtocol);
+}
+
 /**
   Do the platform specific action after the console is ready
   Possible things that can be done in PlatformBootManagerAfterConsole:
@@ -1269,6 +1292,8 @@ PlatformBootManagerAfterConsole (
   // feedback about what is going on.
   //
   HandleCapsules ();
+
+  HandleBootChainUpdate ();
 }
 
 /**

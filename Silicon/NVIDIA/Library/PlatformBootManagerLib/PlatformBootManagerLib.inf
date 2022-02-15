@@ -103,3 +103,4 @@
   gEfiDevicePathProtocolGuid
   gEfiGenericMemTestProtocolGuid                ## CONSUMES
   gIpmiTransportProtocolGuid
+  gNVIDIABootChainProtocolGuid

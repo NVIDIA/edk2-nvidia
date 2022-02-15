@@ -1,0 +1,50 @@
+## @file
+#
+#  Boot Chain Protocol Driver
+#
+#  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BootChainDxe
+  FILE_GUID                      = 3465f8c0-9f6c-4084-8077-2a2ec425f544
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = BootChainDxeInitialize
+
+[Sources.common]
+  BootChainDxe.c
+
+[Packages]
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BootChainInfoLib
+  DebugLib
+  HobLib
+  PlatformResourceLib
+  ResetSystemLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+
+[Protocols]
+  gNVIDIABootChainProtocolGuid              ## PRODUCES
+  gNVIDIABrBctUpdateProtocolGuid            ## CONSUMES
+
+[Guids]
+  gEfiEndOfDxeEventGroupGuid
+  gEfiGlobalVariableGuid
+  gNVIDIAPublicVariableGuid
+  gNVIDIATokenSpaceGuid
+  gNVIDIAPlatformResourceDataGuid
+
+[Depex]
+  TRUE

@@ -298,3 +298,8 @@
   # Tegra Pin Control support
   #
   INF Silicon/NVIDIA/Drivers/TegraPinControlDxe/TegraPinControlDxe.inf
+
+  #
+  # Boot Chain Protocol
+  #
+  INF Silicon/NVIDIA/Drivers/BootChainDxe/BootChainDxe.inf

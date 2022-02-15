@@ -998,6 +998,11 @@
   #
   Silicon/NVIDIA/Drivers/TegraPinControlDxe/TegraPinControlDxe.inf
 
+  #
+  # Boot Chain Protocol
+  #
+  Silicon/NVIDIA/Drivers/BootChainDxe/BootChainDxe.inf
+
 [Components.AARCH64]
   #
   # EBC
