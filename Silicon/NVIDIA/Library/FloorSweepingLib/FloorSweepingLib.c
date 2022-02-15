@@ -23,6 +23,23 @@
 #define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
 #define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdTegraMaxClusters))
 
+UINT32
+EFIAPI
+GetClusterIDFromLinearCoreID (
+  IN UINT32 LinearCoreId
+)
+{
+  UINT32        Cluster;
+
+  Cluster = LinearCoreId / PLATFORM_MAX_CORES_PER_CLUSTER;
+  ASSERT (Cluster < PLATFORM_MAX_CLUSTERS);
+
+  DEBUG ((DEBUG_INFO, "%a:LinearCoreId=%u Cluster=%u\n",
+          __FUNCTION__, LinearCoreId , Cluster));
+
+  return Cluster;
+}
+
 UINT64
 EFIAPI
 GetMpidrFromLinearCoreID (
