@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -30,7 +30,6 @@
 
 SCMI_CLOCK2_PROTOCOL          *gScmiClockProtocol    = NULL;
 NVIDIA_CLOCK_PARENTS_PROTOCOL *gClockParentsProtocol = NULL;
-EFI_EVENT                     DeviceDiscoveryOnExitBootServicesEvent = NULL;
 
 VOID
 EFIAPI
@@ -46,6 +45,8 @@ DeviceDiscoveryOnExitBootServices (
   NVIDIA_RESET_NODE_PROTOCOL        *ResetProtocol = NULL;
   NVIDIA_POWER_GATE_NODE_PROTOCOL   *PgProtocol = NULL;
   UINTN                             Index;
+
+  gBS->CloseEvent (Event);
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
@@ -218,6 +219,7 @@ DeviceDiscoveryBindingStart (
   NVIDIA_COMPATIBILITY_MAPPING      *MappingNode = gDeviceCompatibilityMap;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node = NULL;
   UINTN                             Index;
+  NVIDIA_DEVICE_DISCOVERY_CONTEXT   *DeviceDiscoveryContext = NULL;
 
   //
   // Attempt to open NonDiscoverable Protocol
@@ -306,17 +308,29 @@ DeviceDiscoveryBindingStart (
     }
   }
 
+  Status = gBS->AllocatePool (EfiBootServicesData,
+                              sizeof (NVIDIA_DEVICE_DISCOVERY_CONTEXT),
+                              (VOID **)&DeviceDiscoveryContext);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to allocate context\r\n",__FUNCTION__,Status));
+    goto ErrorExit;
+  }
+
+  gBS->SetMem (DeviceDiscoveryContext,
+               sizeof (NVIDIA_DEVICE_DISCOVERY_CONTEXT),
+               0);
+
   if (!gDeviceDiscoverDriverConfig.SkipAutoDeinitControllerOnExitBootServices) {
     Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
                                  TPL_NOTIFY,
                                  DeviceDiscoveryOnExitBootServices,
                                  Controller,
                                  &gEfiEventExitBootServicesGuid,
-                                 &DeviceDiscoveryOnExitBootServicesEvent
+                                 &DeviceDiscoveryContext->OnExitBootServicesEvent
                                  );
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a, driver returned %r to create event callback\r\n",__FUNCTION__,Status));
-      return Status;
+      goto ErrorExit;
     }
   }
 
@@ -328,6 +342,18 @@ DeviceDiscoveryBindingStart (
              );
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a, driver returned %r to start notification\r\n",__FUNCTION__,Status));
+    goto ErrorExit;
+  }
+
+
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &Controller,
+                  &gNVIDIADeviceDiscoveryContextGuid,
+                  DeviceDiscoveryContext,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to install device discovery context guid\r\n",__FUNCTION__,Status));
     goto ErrorExit;
   }
 
@@ -349,6 +375,12 @@ DeviceDiscoveryBindingStart (
   }
 ErrorExit:
   if (EFI_ERROR (Status)) {
+    if (DeviceDiscoveryContext != NULL) {
+      if (DeviceDiscoveryContext->OnExitBootServicesEvent != NULL) {
+        gBS->CloseEvent (DeviceDiscoveryContext->OnExitBootServicesEvent);
+      }
+      gBS->FreePool (DeviceDiscoveryContext);
+    }
 
     gBS->CloseProtocol (
           Controller,
@@ -387,6 +419,7 @@ DeviceDiscoveryBindingStop (
   NON_DISCOVERABLE_DEVICE           *NonDiscoverableProtocol = NULL;
   NVIDIA_COMPATIBILITY_MAPPING      *MappingNode = gDeviceCompatibilityMap;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node = NULL;
+  NVIDIA_DEVICE_DISCOVERY_CONTEXT   *DeviceDiscoveryContext = NULL;
 
   if (NumberOfChildren != 0) {
     return EFI_UNSUPPORTED;
@@ -446,8 +479,33 @@ DeviceDiscoveryBindingStop (
     return Status;
   }
 
+  Status = gBS->HandleProtocol (
+                  Controller,
+                  &gNVIDIADeviceDiscoveryContextGuid,
+                  (VOID **)&DeviceDiscoveryContext
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (!gDeviceDiscoverDriverConfig.SkipAutoDeinitControllerOnExitBootServices) {
+    gBS->CloseEvent (DeviceDiscoveryContext->OnExitBootServicesEvent);
+  }
+
+  Status = gBS->UninstallMultipleProtocolInterfaces (Controller,
+                                                     &gNVIDIADeviceDiscoveryContextGuid,
+                                                     DeviceDiscoveryContext,
+                                                     NULL
+                                                     );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to uninstall device discovery context guid\r\n",__FUNCTION__,Status));
+    return Status;
+  }
+
+  gBS->FreePool (DeviceDiscoveryContext);
+
   //
-  // Close protocols opened by SdMmc Controller driver
+  // Close protocols opened by Controller driver
   //
   return gBS->CloseProtocol (
                 Controller,
