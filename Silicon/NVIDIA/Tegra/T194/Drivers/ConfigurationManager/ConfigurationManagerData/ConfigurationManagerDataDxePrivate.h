@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe Private Definitions
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -46,6 +46,8 @@
 #include "SsdtAhci.offset.h"
 #include "SdcTemplate.hex"
 #include "SdcTemplate.offset.h"
+#include "I2cTemplate.hex"
+#include "I2cTemplate.offset.h"
 
 
 #define ACPI_PATCH_MAX_PATH   255
@@ -54,6 +56,9 @@
 #define ACPI_SDCT_REG0        "SDCT.REG0"
 #define ACPI_SDCT_UID         "SDCT._UID"
 #define ACPI_SDCT_INT0        "SDCT.INT0"
+#define ACPI_I2CT_REG0        "I2CT.REG0"
+#define ACPI_I2CT_UID         "I2CT._UID"
+#define ACPI_I2CT_INT0        "I2CT.INT0"
 #define ACPI_FAN_FANR         "_SB_.FAN_.FANR"
 #define ACPI_FAN_STA          "_SB_.FAN_._STA"
 

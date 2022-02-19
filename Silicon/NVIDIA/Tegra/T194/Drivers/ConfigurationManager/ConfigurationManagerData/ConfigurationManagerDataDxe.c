@@ -24,13 +24,15 @@ NVIDIA_AML_GENERATION_PROTOCOL *GenerationProtocol = NULL;
 STATIC EFI_ACPI_DESCRIPTION_HEADER *AcpiTableArray[] = {
     (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_aml_code,
     (EFI_ACPI_DESCRIPTION_HEADER *)ssdtpci_aml_code,
-    (EFI_ACPI_DESCRIPTION_HEADER *)sdctemplate_aml_code
+    (EFI_ACPI_DESCRIPTION_HEADER *)sdctemplate_aml_code,
+    (EFI_ACPI_DESCRIPTION_HEADER *)i2ctemplate_aml_code
 };
 
 STATIC AML_OFFSET_TABLE_ENTRY *OffsetTableArray[] = {
     DSDT_TEGRA194_OffsetTable,
     SSDT_TEGRA194_OffsetTable,
-    SSDT_SDCTEMP_OffsetTable
+    SSDT_SDCTEMP_OffsetTable,
+    SSDT_I2CTEMP_OffsetTable
 };
 
 /** The platform configuration repository information.
@@ -950,6 +952,155 @@ ErrorExit:
   return Status;
 }
 
+/** Find I@C data in the DeviceTree and add to a new SSDT table.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateI2cInfo ()
+{
+  EFI_STATUS                                    Status;
+  UINT32                                        NumberOfI2cPorts;
+  UINT32                                        *I2cHandles;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA              RegisterData;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA             InterruptData;
+  UINT32                                        Size;
+  UINT32                                        Index;
+  CHAR8                                         I2cPathString[ACPI_PATCH_MAX_PATH];
+  NVIDIA_AML_NODE_INFO                          AcpiNodeInfo;
+  EFI_ACPI_32_BIT_FIXED_MEMORY_RANGE_DESCRIPTOR MemoryDescriptor;
+  EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR        InterruptDescriptor;
+
+  NumberOfI2cPorts = 0;
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra194-i2c", NULL, &NumberOfI2cPorts);
+  if (Status == EFI_NOT_FOUND) {
+    return EFI_SUCCESS;
+  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+    return Status;
+  }
+
+  I2cHandles = NULL;
+  I2cHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfI2cPorts);
+  if (I2cHandles == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra194-i2c", I2cHandles, &NumberOfI2cPorts);
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  for (Index = 0; Index < NumberOfI2cPorts; Index++) {
+    // Only one register space is expected
+    Size = 1;
+    Status = GetDeviceTreeRegisters (I2cHandles[Index], &RegisterData, &Size);
+    if (EFI_ERROR (Status)) {
+      goto ErrorExit;
+    }
+
+    // Only one interrupt is expected
+    Size = 1;
+    Status = GetDeviceTreeInterrupts (I2cHandles[Index], &InterruptData, &Size);
+    if (EFI_ERROR (Status)) {
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->FindNode(PatchProtocol, ACPI_I2CT_UID, &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_I2CT_UID));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->SetNodeData(PatchProtocol, &AcpiNodeInfo, &Index, AcpiNodeInfo.Size);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_I2CT_UID));
+      goto ErrorExit;
+    }
+
+
+    Status = PatchProtocol->FindNode(PatchProtocol, ACPI_I2CT_REG0, &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_I2CT_REG0));
+      goto ErrorExit;
+    }
+    if (AcpiNodeInfo.Size != sizeof (MemoryDescriptor)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d\n", __FUNCTION__, ACPI_I2CT_REG0, AcpiNodeInfo.Size));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->GetNodeData(PatchProtocol, &AcpiNodeInfo, &MemoryDescriptor, sizeof (MemoryDescriptor));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get data for %a\n", __FUNCTION__, ACPI_I2CT_REG0));
+      goto ErrorExit;
+    }
+
+
+    MemoryDescriptor.BaseAddress = RegisterData.BaseAddress;
+    MemoryDescriptor.Length = RegisterData.Size;
+
+    Status = PatchProtocol->SetNodeData(PatchProtocol, &AcpiNodeInfo, &MemoryDescriptor, sizeof (MemoryDescriptor));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_I2CT_REG0));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->FindNode(PatchProtocol, ACPI_I2CT_INT0, &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_I2CT_INT0));
+      goto ErrorExit;
+    }
+    if (AcpiNodeInfo.Size != sizeof (InterruptDescriptor)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d\n", __FUNCTION__, ACPI_I2CT_INT0, AcpiNodeInfo.Size));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->GetNodeData(PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get data for %a\n", __FUNCTION__, ACPI_I2CT_INT0));
+      goto ErrorExit;
+    }
+
+    InterruptDescriptor.InterruptNumber[0] = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
+                                                                          DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
+                                                                          DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
+
+    Status = PatchProtocol->SetNodeData(PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_I2CT_INT0));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->FindNode(PatchProtocol, "I2CT", &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, "I2CT"));
+      goto ErrorExit;
+    }
+
+    AsciiSPrint (I2cPathString, sizeof (I2cPathString), "I2C%d", Index);
+    Status = PatchProtocol->UpdateNodeName(PatchProtocol, &AcpiNodeInfo, I2cPathString);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to update name to %a\n", __FUNCTION__, I2cPathString));
+      goto ErrorExit;
+    }
+
+    Status = GenerationProtocol->AppendDevice(GenerationProtocol, (EFI_ACPI_DESCRIPTION_HEADER *)i2ctemplate_aml_code);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to append device %a\n", __FUNCTION__, I2cPathString));
+      goto ErrorExit;
+    }
+  }
+
+ErrorExit:
+  if (I2cHandles != NULL) {
+    FreePool (I2cHandles);
+  }
+
+  return Status;
+}
+
 /** patch Fan data in DSDT.
 
   @retval EFI_SUCCESS   Success
@@ -1477,6 +1628,11 @@ InitializePlatformRepository ()
   }
 
   Status = UpdateSdhciInfo ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateI2cInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

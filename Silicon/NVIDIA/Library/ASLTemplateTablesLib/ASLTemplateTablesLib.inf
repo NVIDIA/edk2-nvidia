@@ -1,7 +1,7 @@
 ## @file
 #  Platform ASL Tables
 #
-#  Copyright (c) 2019 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2019 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -24,6 +24,7 @@
 
 [Sources]
   SdcTemplate.asl
+  I2cTemplate.asl
 
 [Packages]
   MdePkg/MdePkg.dec
