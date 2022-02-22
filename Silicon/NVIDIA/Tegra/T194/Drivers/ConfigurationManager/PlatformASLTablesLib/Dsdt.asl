@@ -197,6 +197,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
         Name (_UID, 0)
 
         Name (_CRS, ResourceTemplate () {
+            Memory32Fixed(ReadWrite, 0x2200000, 0x10000)
             Memory32Fixed(ReadWrite, 0x2210000, 0x10000)
             Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x140,
                                                                         0x141,
