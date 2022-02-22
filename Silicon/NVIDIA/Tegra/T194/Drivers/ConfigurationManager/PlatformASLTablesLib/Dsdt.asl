@@ -143,55 +143,6 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
       Name (_STR, Unicode ("System thermal zone"))
     }
 
-    Device (DMA0) {
-        Name (_HID, "NVDA0209")
-        Name (_UID, 0)
-
-        Name (_CRS, ResourceTemplate () {
-            Memory32Fixed(ReadWrite, 0x2600000, 0x210000)
-            Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x6B,
-                                                                        0x6C,
-                                                                        0x6D,
-                                                                        0x6E,
-                                                                        0x6F,
-                                                                        0x70,
-                                                                        0x71,
-                                                                        0x72,
-                                                                        0x73,
-                                                                        0x74,
-                                                                        0x75,
-                                                                        0x76,
-                                                                        0x77,
-                                                                        0x78,
-                                                                        0x79,
-                                                                        0x7A,
-                                                                        0x7B,
-                                                                        0x7C,
-                                                                        0x7D,
-                                                                        0x7E,
-                                                                        0x7F,
-                                                                        0x80,
-                                                                        0x81,
-                                                                        0x82,
-                                                                        0x83,
-                                                                        0x84,
-                                                                        0x85,
-                                                                        0x87,
-                                                                        0x88,
-                                                                        0x89,
-                                                                        0x8A,
-                                                                        0x8B}
-        })
-
-        Name (_DSD, Package () {
-          ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
-          Package () {
-            Package (2) {"nvidia,start-dma-channel-index", 1},
-            Package (2) {"dma-channels", 31}
-        }
-      })
-    }
-
     Device (GPI0) {
         Name (_HID, "NVDA0308")
         Name (_UID, 0)
@@ -280,26 +231,6 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
 
     Device (PWRB) {
       Name (_HID, "PNP0C0C")
-    }
-
-    Device(SPI0) {
-      Name (_HID, "NVDA0513")
-      Name (_UID, 0)
-      Name (_CCA, ZERO)
-
-      Name (_CRS, ResourceTemplate () {
-        Memory32Fixed(ReadWrite, 0x03210000, 0x10000)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x44 }
-        FixedDMA (0x0F, 0x0001, Width32bit, )
-        FixedDMA (0x0F, 0x0002, Width32bit, )
-      })
-
-      Name (_DSD, Package () {
-        ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
-        Package () {
-          Package (2) {"spi-max-frequency", 65000000},
-        }
-      })
     }
 
     Device(USB0) {
