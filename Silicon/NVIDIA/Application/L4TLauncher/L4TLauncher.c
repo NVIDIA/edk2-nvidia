@@ -31,6 +31,7 @@
 #include <Guid/LinuxEfiInitrdMedia.h>
 
 #include <NVIDIAConfiguration.h>
+#include <libfdt.h>
 
 #define GRUB_PATH                      L"EFI\\BOOT\\grubaa64.efi"
 #define GRUB_BOOTCONFIG_FILE           L"EFI\\BOOT\\boot.cfg"
@@ -851,6 +852,7 @@ ExtLinuxBoot (
   VOID                      *AcpiBase = NULL;
   VOID                      *OldFdtBase = NULL;
   VOID                      *NewFdtBase = NULL;
+  VOID                      *ExpandedFdtBase = NULL;
   BOOLEAN                    FdtUpdated = FALSE;
   EFI_DEVICE_PATH_PROTOCOL  *KernelDevicePath = NULL;
   EFI_HANDLE                 KernelHandle = NULL;
@@ -920,6 +922,7 @@ ExtLinuxBoot (
       goto Exit;
     }
   }
+
   //Reload fdt if needed
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (EFI_ERROR (Status) && BootOption->DtbPath != NULL) {
@@ -961,7 +964,13 @@ ExtLinuxBoot (
       goto Exit;
     }
 
-    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, NewFdtBase);
+    ExpandedFdtBase = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (NewFdtBase)));
+    if (fdt_open_into (NewFdtBase, ExpandedFdtBase, 2 * fdt_totalsize (NewFdtBase)) != 0) {
+      Status = EFI_NOT_FOUND;
+      goto Exit;
+    }
+
+    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, ExpandedFdtBase);
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"%a: Failed to install fdt\r\n", __FUNCTION__);
       goto Exit;
@@ -1035,6 +1044,10 @@ Exit:
   if (KernelDevicePath != NULL) {
     FreePool (KernelDevicePath);
     KernelDevicePath = NULL;
+  }
+  if (ExpandedFdtBase != NULL) {
+    FreePages (ExpandedFdtBase, EFI_SIZE_TO_PAGES (2 * fdt_totalsize (NewFdtBase)));
+    ExpandedFdtBase = NULL;
   }
   if (NewFdtBase != NULL) {
     FreePool (NewFdtBase);
