@@ -57,6 +57,7 @@ AddBoardProperties (
   EFI_HANDLE                  *Handles;
   UINTN                       NoHandles;
   UINTN                       Count;
+  CHAR8                       *CameraId;
 
   Eeprom = NULL;
   Status = gBS->LocateProtocol (&gNVIDIACvmEepromProtocolGuid, NULL, (VOID **)&Eeprom);
@@ -77,7 +78,12 @@ AddBoardProperties (
       if (!EFI_ERROR (Status)) {
         NodeOffset = fdt_path_offset (Dtb, "/chosen");
         if (NodeOffset >= 0) {
-          fdt_appendprop (Dtb, NodeOffset, "ids", Eeprom->BoardId, strlen (Eeprom->BoardId) + 1);
+          CameraId = AsciiStrStr (Eeprom->ProductId, CAMERA_EEPROM_PART_NAME);
+          if (CameraId == NULL) {
+            fdt_appendprop (Dtb, NodeOffset, "ids", Eeprom->BoardId, strlen (Eeprom->BoardId) + 1);
+          } else {
+            fdt_appendprop (Dtb, NodeOffset, "ids", CameraId, strlen (CameraId) + 1);
+          }
           fdt_appendprop (Dtb, NodeOffset, "ids", " ", 1);
         }
       }
