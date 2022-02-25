@@ -22,6 +22,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
 #include <Library/OpteeLib.h>
+#include <Library/BootChainInfoLib.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/Eeprom.h>
@@ -260,6 +261,7 @@ DtPlatformLoadDtb (
   )
 {
   EFI_STATUS                  Status;
+  CHAR16                      PartitionName[MAX_PARTITION_NAME_LEN];
   UINTN                       NumOfHandles;
   EFI_HANDLE                  *HandleBuffer = NULL;
   UINT64                      Size;
@@ -276,6 +278,11 @@ DtPlatformLoadDtb (
   *Dtb = NULL;
   DtbAllocated = NULL;
   DtbCopy = NULL;
+
+  Status = GetActivePartitionName (PcdGetPtr(PcdKernelDtbPartitionName), PartitionName);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   if (!PcdGetBool(PcdEmuVariableNvModeEnable)) {
     do {
@@ -308,8 +315,8 @@ DtPlatformLoadDtb (
         }
 
         if (0 == StrnCmp (PartitionInfo->Info.Gpt.PartitionName,
-                          PcdGetPtr(PcdKernelDtbPartitionName),
-                          StrnLenS(PcdGetPtr(PcdKernelDtbPartitionName), sizeof(PartitionInfo->Info.Gpt.PartitionName)))) {
+                          PartitionName,
+                          StrnLenS(PartitionName, sizeof(PartitionInfo->Info.Gpt.PartitionName)))) {
           break;
         }
       }
@@ -363,15 +370,15 @@ DtPlatformLoadDtb (
   }
 
   if (!ValidFlash) {
-    DEBUG ((DEBUG_INFO, "%a: Using UEFI DTB\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Using UEFI DTB\r\n", __FUNCTION__));
     *Dtb = (VOID *)(UINTN)GetDTBBaseAddress ();
     if(fdt_check_header (*Dtb) != 0) {
       DEBUG ((DEBUG_ERROR, "%a: UEFI DTB corrupted\r\n", __FUNCTION__));
       Status = EFI_NOT_FOUND;
       goto Exit;
-    } else {
-      DEBUG ((DEBUG_INFO, "%a: Using Parititon DTB\r\n", __FUNCTION__));
     }
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Using Kernel DTB\r\n", __FUNCTION__));
   }
 
   //Double the size taken by DTB to have enough buffer to accommodate

@@ -39,6 +39,7 @@
   PlatformResourceLib
   TegraDeviceTreeKernelOverlayLib
   OpteeLib
+  BootChainInfoLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid
