@@ -236,6 +236,9 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         shell_environment.GetEnvironment().set_shell_var(
             f"{toolchain_tag}_AARCH64_PREFIX",
             self.settings.GetCrossCompilerPrefix())
+        shell_environment.GetEnvironment().set_shell_var(
+            f"DTCPP_PREFIX",
+            self.settings.GetCrossCompilerPrefix())
         # - Required by GenVariableStore.py.
         shell_environment.GetEnvironment().set_shell_var(
             "UEFI_SOURCE", self.settings.GetWorkspaceRoot())
