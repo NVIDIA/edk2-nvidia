@@ -18,6 +18,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/PrintLib.h>
 #include <Library/Crc8Lib.h>
 
 #include <Protocol/DriverBinding.h>
@@ -25,7 +26,10 @@
 #include <Protocol/Eeprom.h>
 #include <Protocol/Rng.h>
 
-#define EEPROM_DATA_SIZE 256
+#define EEPROM_DATA_SIZE        256
+#define EEPROM_DUMMY_BOARDID    "DummyId"
+#define EEPROM_DUMMY_SERIALNUM  "DummySN"
+#define EEPROM_DUMMY_PRODUCTID  "DummyProd"
 
 EFI_STATUS
 EFIAPI
@@ -570,37 +574,59 @@ InitializeEepromDxe (
   TEGRA_EEPROM_BOARD_INFO  *CvmBoardInfo;
   TEGRA_EEPROM_BOARD_INFO  *CvbBoardInfo;
   EFI_STATUS               Status;
+  TEGRA_PLATFORM_TYPE      PlatformType;
+  BOOLEAN                  ValidCvmEepromData;
 
+  PlatformType = TegraGetPlatform();
   EepromData = GetEepromData ();
-  if (EepromData->CvmEepromDataSize == 0 ||
-      EFI_ERROR (ValidateEepromData (EepromData->CvmEepromData, FALSE, FALSE))) {
-    DEBUG ((DEBUG_ERROR, "Cvm Eeprom data validation failed(%r)\r\n", Status));
+  ValidCvmEepromData = TRUE;
+
+  if (PlatformType == TEGRA_PLATFORM_SILICON) {
+    if ((EepromData == NULL) || EepromData->CvmEepromDataSize == 0 ||
+        EFI_ERROR (ValidateEepromData (EepromData->CvmEepromData, FALSE, FALSE))) {
+      DEBUG ((DEBUG_ERROR, "Cvm Eeprom data validation failed(%r)\r\n", Status));
+      ValidCvmEepromData = FALSE;
+    } else {
+      CvmBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_EEPROM_BOARD_INFO));
+      if (CvmBoardInfo == NULL) {
+        Status = EFI_OUT_OF_RESOURCES;
+        return Status;
+      }
+
+      Status = PopulateEepromData (EepromData->CvmEepromData, CvmBoardInfo);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "Cvm Eeprom data population failed(%r)\r\n", Status));
+        return Status;
+      }
+      DEBUG ((DEBUG_ERROR, "Cvm Eeprom Product Id: %a\r\n", CvmBoardInfo->ProductId));
+    }
   } else {
     CvmBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_EEPROM_BOARD_INFO));
     if (CvmBoardInfo == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       return Status;
     }
+    AsciiSPrint (CvmBoardInfo->BoardId, sizeof(CvmBoardInfo->BoardId),
+                 EEPROM_DUMMY_BOARDID);
+    AsciiSPrint (CvmBoardInfo->ProductId, sizeof(CvmBoardInfo->ProductId),
+                 EEPROM_DUMMY_PRODUCTID);
+    AsciiSPrint (CvmBoardInfo->SerialNumber, sizeof(CvmBoardInfo->SerialNumber),
+                 EEPROM_DUMMY_SERIALNUM);
+  }
 
-    Status = PopulateEepromData (EepromData->CvmEepromData, CvmBoardInfo);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Cvm Eeprom data population failed(%r)\r\n", Status));
-      return Status;
-    }
-    DEBUG ((DEBUG_ERROR, "Cvm Eeprom Product Id: %a\r\n", CvmBoardInfo->ProductId));
-
-    Handle = NULL;
-    Status = gBS->InstallMultipleProtocolInterfaces (&Handle,
+  if (ValidCvmEepromData == TRUE) {
+     Handle = NULL;
+     Status = gBS->InstallMultipleProtocolInterfaces (&Handle,
                                                      &gNVIDIACvmEepromProtocolGuid,
                                                      CvmBoardInfo,
                                                      NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to install Cvm EEPROM protocols\n", __FUNCTION__));
-      return Status;
+        DEBUG ((DEBUG_ERROR, "%a: Failed to install Cvm EEPROM protocols\n", __FUNCTION__));
+        return Status;
     }
   }
 
-  if (EepromData->CvbEepromDataSize == 0 ||
+  if ((EepromData == NULL) || EepromData->CvbEepromDataSize == 0 ||
       EFI_ERROR (ValidateEepromData (EepromData->CvbEepromData, FALSE, FALSE))) {
     DEBUG ((DEBUG_ERROR, "Cvb Eeprom data validation failed(%r)\r\n", Status));
   } else {

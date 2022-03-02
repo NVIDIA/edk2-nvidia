@@ -36,6 +36,7 @@
   TegraPlatformInfoLib
   PlatformResourceLib
   Crc8Lib
+  PrintLib
 
 [Guids]
   gNVIDIAEeprom

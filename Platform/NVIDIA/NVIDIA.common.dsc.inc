@@ -958,6 +958,11 @@
   #
   Silicon/NVIDIA/Drivers/CapsuleUpdatePolicyDxe/CapsuleUpdatePolicyDxe.inf
 
+  #
+  # Tegra EEPROM Support
+  #
+  Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf
+
 [Components.AARCH64]
   #
   # EBC

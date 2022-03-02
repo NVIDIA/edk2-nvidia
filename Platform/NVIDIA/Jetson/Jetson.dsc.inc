@@ -271,11 +271,6 @@
   #
   Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
 
-  #
-  # Tegra EEPROM Support
-  #
-  Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf
-
   #Security drivers
   SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
   SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf

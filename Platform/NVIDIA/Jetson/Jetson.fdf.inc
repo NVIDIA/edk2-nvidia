@@ -125,11 +125,6 @@
   INF Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
 
   #
-  # Tegra EEPROM Support
-  #
-  INF Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf
-
-  #
   # EQOS NIC Support
   #
   INF Silicon/NVIDIA/Drivers/EqosDeviceDxe/EqosDeviceDxe.inf

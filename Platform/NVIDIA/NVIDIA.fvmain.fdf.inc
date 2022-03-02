@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -273,3 +273,8 @@
   # Capsule Update Policy Protocol
   #
   INF Silicon/NVIDIA/Drivers/CapsuleUpdatePolicyDxe/CapsuleUpdatePolicyDxe.inf
+
+  #
+  # Tegra EEPROM Support
+  #
+  INF Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf
