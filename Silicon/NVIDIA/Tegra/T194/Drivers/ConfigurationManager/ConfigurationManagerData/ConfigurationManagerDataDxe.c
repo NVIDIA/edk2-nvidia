@@ -257,6 +257,28 @@ IsPcieEnabled ()
   return (PcdGet8 (PcdPcieEntryInAcpi) == 1);
 }
 
+
+STATIC
+BOOLEAN
+EFIAPI
+IsAGXXavier (VOID) {
+  EFI_STATUS Status;
+  UINT32                            NumberOfPlatformNodes;
+
+  NumberOfPlatformNodes = 0;
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
+  if (Status != EFI_NOT_FOUND) {
+    return TRUE;
+  }
+  NumberOfPlatformNodes = 0;
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,galen", NULL, &NumberOfPlatformNodes);
+  if (Status != EFI_NOT_FOUND) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+
 /** Initialize the PCIe entries in the platform configuration repository and patch SSDT.
  *
  * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
@@ -269,7 +291,6 @@ EFIAPI
 UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 {
   EFI_STATUS                        Status;
-  UINT32                            NumberOfPlatformNodes;
   UINT32                            NumberOfPcieControllers;
   UINT32                            NumberOfPcieEntries;
   UINT32                            *PcieHandles;
@@ -372,13 +393,8 @@ UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     PciConfigInfo[NumberOfPcieEntries].StartBusNumber = T194_PCIE_BUS_MIN;
     PciConfigInfo[NumberOfPcieEntries].EndBusNumber = T194_PCIE_BUS_MAX;
     PciConfigInfo[NumberOfPcieEntries].PciSegmentGroupNumber = SwapBytes32 (*SegmentProp);
-    if (PciConfigInfo[NumberOfPcieEntries].PciSegmentGroupNumber == AHCI_PCIE_SEGMENT) {
-      NumberOfPlatformNodes = 0;
-      Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
-      //Check to make sure there are nodes, will return buffer to small if there is a match
-      if (Status == EFI_BUFFER_TOO_SMALL) {
-        continue;
-      }
+    if ((PciConfigInfo[NumberOfPcieEntries].PciSegmentGroupNumber == AHCI_PCIE_SEGMENT) && IsAGXXavier()){
+      continue;
     }
     //Attempt to locate the pcie entry in DSDT
     AsciiSPrint (AcpiPathString, sizeof (AcpiPathString), ACPI_PCI_STA_TEMPLATE, PciConfigInfo[NumberOfPcieEntries].PciSegmentGroupNumber);
@@ -472,7 +488,6 @@ OnEndOfDxe (
   gBS->ConnectController (PciControllerHandle, NULL, NULL, TRUE);
 }
 
-
 /** Initialize the AHCI entries in the platform configuration repository and patch SSDT.
  *
  * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
@@ -485,7 +500,6 @@ EFIAPI
 UpdateAhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 {
   EFI_STATUS                        Status;
-  UINT32                            NumberOfPlatformNodes;
   UINT32                            Index;
   CM_STD_OBJ_ACPI_TABLE_INFO        *NewAcpiTables;
   UINTN                             NumOfHandles;
@@ -493,14 +507,9 @@ UpdateAhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL   *RootBridgeIo;
   BOOLEAN                           PciControllerConnected = FALSE;
 
-  NumberOfPlatformNodes = 0;
-  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
-  if (Status == EFI_NOT_FOUND) {
+  if (!IsAGXXavier ()) {
     DEBUG ((DEBUG_INFO, "AHCI support not present on this platform\r\n"));
     Status = EFI_SUCCESS;
-    goto Exit;
-  } else if (Status != EFI_BUFFER_TOO_SMALL) {
-    Status = EFI_DEVICE_ERROR;
     goto Exit;
   }
 
