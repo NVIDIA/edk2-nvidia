@@ -36,6 +36,7 @@
 
 #define NOR_FLASH_SIGNATURE SIGNATURE_32('N','O','R','F')
 #define NOR_SFDP_SIGNATURE  SIGNATURE_32('S','F','D','P')
+#define QSPI_BASE_ADDRESS 0x3270000
 
 #define TIMEOUT                       100
 
