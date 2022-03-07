@@ -24,6 +24,7 @@
 #include "TegraDeviceTreeOverlayLibCommon.h"
 
 STATIC CHAR8 *SWModule;
+STATIC VOID  *CpublDtb;
 
 typedef enum {
   MATCH_OR=0,
@@ -244,13 +245,13 @@ STATIC BOOLEAN MatchOdmData(VOID *Fdt, CONST CHAR8 *OdmData, VOID *Param)
   BOOLEAN Matched = FALSE;
   INTN    OdmDataNode;
 
-  OdmDataNode = fdt_path_offset(Fdt, "/chosen/odm-data");
+  OdmDataNode = fdt_path_offset(CpublDtb, "/chosen/odm-data");
   if (0 > OdmDataNode) {
     DEBUG((DEBUG_ERROR, "%a: Failed to find node /chosen/odm-data\n", __FUNCTION__));
     goto ret_odm_match;
   }
 
-  if (NULL != fdt_get_property(Fdt, OdmDataNode, OdmData, NULL)) {
+  if (NULL != fdt_get_property(CpublDtb, OdmDataNode, OdmData, NULL)) {
     Matched = TRUE;
   }
 
@@ -474,6 +475,8 @@ ApplyTegraDeviceTreeOverlayCommon (
     }
 
     SWModule = ModuleStr;
+    CpublDtb = (VOID *)GetDTBBaseAddress ();
+    ASSERT (CpublDtb != NULL);
     Status = ProcessOverlayDeviceTree(FdtBase, FdtNext, FdtBuf);
     if (EFI_SUCCESS == Status) {
       Err = fdt_overlay_apply(FdtBase, FdtBuf);
