@@ -1,7 +1,7 @@
 /** @file
 *  Functional Safety Island Dxe
 *
-*  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -107,8 +107,6 @@ FdtInstalled (
   IN VOID       *Context
   )
 {
-  gBS->CloseEvent (Event);
-
   ConfigureFSICarveout ();
 }
 

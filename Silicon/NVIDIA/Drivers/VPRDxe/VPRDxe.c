@@ -1,7 +1,7 @@
 /** @file
 *  Resource Configuration Dxe
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -38,8 +38,6 @@ FdtInstalled (
   INT32      AddressCells;
   INT32      SizeCells;
   UINT8      *Data;
-
-  gBS->CloseEvent (Event);
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
