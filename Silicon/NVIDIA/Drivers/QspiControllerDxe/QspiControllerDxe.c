@@ -2,7 +2,7 @@
 
   QSPI Driver
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -42,9 +42,11 @@ typedef struct {
 NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
   { "nvidia,tegra186-spi", &gNVIDIANonDiscoverableSpiDeviceGuid },
   { "nvidia,tegra194-spi", &gNVIDIANonDiscoverableSpiDeviceGuid },
+  { "nvidia,tegra234-spi", &gNVIDIANonDiscoverableSpiDeviceGuid },
   { "nvidia,tegra23x-spi", &gNVIDIANonDiscoverableSpiDeviceGuid },
   { "nvidia,tegra186-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
   { "nvidia,tegra194-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
+  { "nvidia,tegra234-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
   { "nvidia,tegra23x-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
   { NULL, NULL }
 };
