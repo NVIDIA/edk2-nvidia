@@ -833,6 +833,10 @@ UpdateSdhciInfo ()
   NVIDIA_AML_NODE_INFO                          AcpiNodeInfo;
   EFI_ACPI_32_BIT_FIXED_MEMORY_RANGE_DESCRIPTOR MemoryDescriptor;
   EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR        InterruptDescriptor;
+  VOID                                          *DeviceTreeBase;
+  INT32                                         NodeOffset;
+  UINT32                                        Removable;
+
 
   NumberOfSdhciPorts = 0;
   Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra194-sdhci", NULL, &NumberOfSdhciPorts);
@@ -880,6 +884,24 @@ UpdateSdhciInfo ()
       goto ErrorExit;
     }
 
+    GetDeviceTreeNode (SdhciHandles[Index], &DeviceTreeBase, &NodeOffset);
+    if (NULL != fdt_getprop (DeviceTreeBase, NodeOffset, "non-removable", NULL)) {
+      Removable = 0;
+    } else {
+      Removable = 1;
+    }
+
+    Status = PatchProtocol->FindNode(PatchProtocol, ACPI_SDCT_RMV, &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_SDCT_RMV));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->SetNodeData(PatchProtocol, &AcpiNodeInfo, &Removable, AcpiNodeInfo.Size);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_SDCT_RMV));
+      goto ErrorExit;
+    }
 
     Status = PatchProtocol->FindNode(PatchProtocol, ACPI_SDCT_REG0, &AcpiNodeInfo);
     if (EFI_ERROR (Status)) {
@@ -896,7 +918,6 @@ UpdateSdhciInfo ()
       DEBUG ((DEBUG_ERROR, "%a: Failed to get data for %a\n", __FUNCTION__, ACPI_SDCT_REG0));
       goto ErrorExit;
     }
-
 
     MemoryDescriptor.BaseAddress = RegisterData.BaseAddress;
     MemoryDescriptor.Length = RegisterData.Size;

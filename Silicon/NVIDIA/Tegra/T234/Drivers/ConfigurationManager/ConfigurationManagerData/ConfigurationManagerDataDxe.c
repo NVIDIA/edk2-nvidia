@@ -24,6 +24,7 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <libfdt.h>
 
 #include <IndustryStandard/DebugPort2Table.h>
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
@@ -49,6 +50,7 @@
 #define ACPI_SDCT_REG0        "SDCT.REG0"
 #define ACPI_SDCT_UID         "SDCT._UID"
 #define ACPI_SDCT_INT0        "SDCT.INT0"
+#define ACPI_SDCT_RMV         "SDCT._RMV"
 
 //AML Patch protocol
 NVIDIA_AML_PATCH_PROTOCOL      *PatchProtocol = NULL;
@@ -596,6 +598,9 @@ UpdateSdhciInfo ()
   NVIDIA_AML_NODE_INFO                          AcpiNodeInfo;
   EFI_ACPI_32_BIT_FIXED_MEMORY_RANGE_DESCRIPTOR MemoryDescriptor;
   EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR        InterruptDescriptor;
+  VOID                                          *DeviceTreeBase;
+  INT32                                         NodeOffset;
+  UINT32                                        Removable;
 
   NumberOfSdhciPorts = 0;
   Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra234-sdhci", NULL, &NumberOfSdhciPorts);
@@ -643,6 +648,24 @@ UpdateSdhciInfo ()
       goto ErrorExit;
     }
 
+    GetDeviceTreeNode (SdhciHandles[Index], &DeviceTreeBase, &NodeOffset);
+    if (NULL != fdt_getprop (DeviceTreeBase, NodeOffset, "non-removable", NULL)) {
+      Removable = 0;
+    } else {
+      Removable = 1;
+    }
+
+    Status = PatchProtocol->FindNode(PatchProtocol, ACPI_SDCT_RMV, &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_SDCT_RMV));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->SetNodeData(PatchProtocol, &AcpiNodeInfo, &Removable, AcpiNodeInfo.Size);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_SDCT_RMV));
+      goto ErrorExit;
+    }
 
     Status = PatchProtocol->FindNode(PatchProtocol, ACPI_SDCT_REG0, &AcpiNodeInfo);
     if (EFI_ERROR (Status)) {
