@@ -2,7 +2,7 @@
 
   Fvb Driver Private Data
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -51,6 +51,8 @@ typedef struct {
 } NVIDIA_FVB_PRIVATE_DATA;
 
 #define NVIDIA_FVB_SIGNATURE SIGNATURE_32('N','F','V','B')
+#define NVIDIA_FWB_SIGNATURE SIGNATURE_32('N','F','W','B')
+#define NVIDIA_FSB_SIGNATURE SIGNATURE_32('N','F','S','B')
 #define NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL(a)   CR(a, NVIDIA_FVB_PRIVATE_DATA, FvbProtocol, NVIDIA_FVB_SIGNATURE)
 
 #define GPT_PARTITION_BLOCK_SIZE 512

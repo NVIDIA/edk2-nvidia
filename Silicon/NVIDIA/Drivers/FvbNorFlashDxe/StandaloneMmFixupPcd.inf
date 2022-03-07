@@ -1,0 +1,45 @@
+## @file
+#
+#  PCD Patching module for SPI-NOR Data.
+#
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = StandaloneMmFixupPcdLib
+  FILE_GUID                      = 5099cd4b-fcac-4dc8-ac16-7a4ab1938b7e
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 0.1
+  LIBRARY_CLASS                  = MM_STANDALONE
+  CONSTRUCTOR                    = StandaloneMmFixupPcdConstructor
+
+[Sources]
+  StandaloneMmFixupPcd.c
+
+[Packages]
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  MmServicesTableLib
+  PcdLib
+  GptLib
+  StandaloneMmOpteeLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase64
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase64
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+
+[Protocols]
+  gEfiSmmFirmwareVolumeBlockProtocolGuid          ## CONSUMES
