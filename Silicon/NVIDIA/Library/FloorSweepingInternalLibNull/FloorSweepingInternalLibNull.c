@@ -31,3 +31,16 @@ GetNumberOfEnabledCpuCoresInternal (
 {
   return FALSE;
 }
+
+/**
+  Retrieve number of sockets for each platform
+
+**/
+BOOLEAN
+EFIAPI
+GetNumberOfEnabledSocketsInternal (
+  OUT UINT32 *NumSockets
+)
+{
+  return FALSE;
+}

@@ -30,4 +30,14 @@ GetNumberOfEnabledCpuCoresInternal (
   OUT UINT32 *NumCpus
 );
 
+/**
+  Retrieve number of sockets for each platform
+
+**/
+BOOLEAN
+EFIAPI
+GetNumberOfEnabledSocketsInternal (
+  OUT UINT32 *NumSockets
+);
+
 #endif //__FLOOR_SWEEPING_INTERNAL_LIB_H__

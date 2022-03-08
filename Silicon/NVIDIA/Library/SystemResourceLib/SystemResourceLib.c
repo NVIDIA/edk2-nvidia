@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -11,11 +11,13 @@
 #include <Pi/PiPeiCis.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
+#include <Library/PrintLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/SystemResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
+#include <Library/FloorSweepingLib.h>
 
 /**
   Register device tree.
@@ -33,6 +35,8 @@ RegisterDeviceTree (
   UINT64                        DtbNext;
   EFI_STATUS                    Status;
   CHAR8                         SWModule[] = "uefi";
+  INT32                         NodeOffset;
+  CHAR8                         SocketNodeStr[] = "/socket@9";
 
   //Register Device Tree
   if (0 != BlDtbLoadAddress) {
@@ -54,9 +58,33 @@ RegisterDeviceTree (
         }
       }
 
-      INT32 NodeOffset = fdt_path_offset ((VOID *)DtbCopy, "/plugin-manager");
+      NodeOffset = fdt_path_offset ((VOID *)DtbCopy, "/plugin-manager");
       if (NodeOffset >= 0) {
         fdt_del_node ((VOID *)DtbCopy, NodeOffset);
+      }
+
+      UINT32 NumSockets = GetNumberOfEnabledSockets ();
+      UINT32 MaxSockets = 0;
+      while (TRUE) {
+        AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr),"/socket@%u", MaxSockets);
+        NodeOffset = fdt_path_offset ((VOID *)DtbCopy, SocketNodeStr);
+        if (NodeOffset < 0) {
+          break;
+        } else {
+          MaxSockets++;
+        }
+      }
+
+      if (MaxSockets == 0) {
+        MaxSockets = 1;
+      }
+
+      for (UINT32 Count = NumSockets; Count < MaxSockets; Count++) {
+        AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr),"/socket@%u", Count);
+        NodeOffset = fdt_path_offset ((VOID *)DtbCopy, SocketNodeStr);
+        if (NodeOffset >= 0) {
+          fdt_del_node ((VOID *)DtbCopy, NodeOffset);
+        }
       }
 
       DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));

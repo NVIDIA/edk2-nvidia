@@ -193,3 +193,41 @@ GetNumberOfEnabledCpuCores (
 
   return Count;
 }
+
+/**
+  Retrieve number of enabled sockets for each platform
+
+**/
+UINT32
+GetNumberOfEnabledSockets (
+  VOID
+)
+{
+  UINT32    Count;
+  UINTN     ChipId;
+  BOOLEAN   ValidPrivatePlatform;
+
+  Count = 0;
+
+  ValidPrivatePlatform = GetNumberOfEnabledSocketsInternal ( &Count );
+  if (ValidPrivatePlatform) {
+    return Count;
+  }
+
+  ChipId = TegraGetChipID ();
+
+  switch (ChipId) {
+    case T194_CHIP_ID:
+      Count = 1;
+      break;
+    case T234_CHIP_ID:
+      Count = 1;
+      break;
+    default:
+      ASSERT (FALSE);
+      Count = 1;
+      break;
+  }
+
+  return Count;
+}
