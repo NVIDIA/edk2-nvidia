@@ -26,6 +26,7 @@
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
 [LibraryClasses.common]
+  CacheMaintenanceLib|Silicon/NVIDIA/Library/TegraCacheMaintenanceLib/TegraCacheMaintenanceLib.inf
 
   TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
   Tegra16550SerialPortLib|Silicon/NVIDIA/Library/Tegra16550SerialPortLib/Tegra16550SerialPortLib.inf
