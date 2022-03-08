@@ -79,10 +79,18 @@ IsCoreEnabled (
   Retrieve number of enabled CPUs for each platform
 
 **/
-
 UINT32
 EFIAPI
 GetNumberOfEnabledCpuCores (
+  VOID
+);
+
+/**
+  Retrieve number of enabled sockets for each platform
+
+**/
+UINT32
+GetNumberOfEnabledSockets (
   VOID
 );
 
