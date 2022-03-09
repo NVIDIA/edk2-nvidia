@@ -83,4 +83,29 @@ T194GetBoardInfo(
   OUT TEGRA_BOARD_INFO *BoardInfo
 );
 
+/**
+  Retrieve Active Boot Chain Information
+
+**/
+EFI_STATUS
+T194GetActiveBootChain(
+  IN  UINTN   CpuBootloaderAddress,
+  OUT UINT32  *BootChain
+);
+
+/**
+  Validate Active Boot Chain
+
+**/
+EFI_STATUS
+T194ValidateActiveBootChain(
+  IN  UINTN   CpuBootloaderAddress
+);
+
+/**
+  Validate Boot Chain
+
+**/
+BOOLEAN
+T194BootChainIsValid();
 #endif //__T194_RESOURCE_CONFIG_H__

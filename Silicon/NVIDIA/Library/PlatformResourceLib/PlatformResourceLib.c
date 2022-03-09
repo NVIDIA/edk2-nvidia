@@ -561,8 +561,7 @@ GetActiveBootChain (
     case T234_CHIP_ID:
       return T234GetActiveBootChain(CpuBootloaderAddress, BootChain);
     case T194_CHIP_ID:
-      *BootChain = 0;
-      return EFI_SUCCESS;
+      return T194GetActiveBootChain(CpuBootloaderAddress, BootChain);
     default:
       return EFI_UNSUPPORTED;
   }
@@ -595,7 +594,7 @@ ValidateActiveBootChain (
     case T234_CHIP_ID:
       return T234ValidateActiveBootChain(CpuBootloaderAddress);
     case T194_CHIP_ID:
-      return EFI_UNSUPPORTED;
+      return T194ValidateActiveBootChain(CpuBootloaderAddress);
     default:
       return EFI_UNSUPPORTED;
   }

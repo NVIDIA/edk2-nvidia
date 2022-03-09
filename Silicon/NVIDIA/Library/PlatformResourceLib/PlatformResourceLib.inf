@@ -39,3 +39,5 @@
   gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress
   gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem
   gNVIDIATokenSpaceGuid.PcdBootChainRegisterBaseAddressT234
+  gNVIDIATokenSpaceGuid.PcdBootROMRegisterBaseAddressT194
+  gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT194

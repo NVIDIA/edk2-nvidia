@@ -97,6 +97,34 @@
 #define CARVEOUT_RESERVED5 45U
 #define CARVEOUT_NUM 46U
 
+#define BOOT_CHAIN_MAX                        2
+#define BL_CURRENT_BOOT_CHAIN_BIT_FIELD_LO    16
+#define BL_CURRENT_BOOT_CHAIN_BIT_FIELD_HI    18
+#define BL_BOOT_CHAIN_STATUS_A_BIT_FIELD      22
+#define BL_BOOT_CHAIN_STATUS_B_BIT_FIELD      23
+#define BR_CURRENT_BOOT_CHAIN_BIT_FIELD       0
+#define BOOT_CHAIN_GOOD                       0
+#define BOOT_CHAIN_BAD                        1
+#define BOOT_CHAIN_A                          0
+#define BOOT_CHAIN_B                          1
+
+/*
+ * Bootloader Scratch register
+ *
+ * 00:15 magic '4EF1'
+ * 16:18 slot number
+ * 19:21 max slots
+ * 22:25 boot chain status:
+ *    bit 22: chain 0 status
+ *    bit 23: chain 1 status
+ * 26 update BR-BCT partition
+ * 27:31 reserved
+ */
+#define SR_BL_MAGIC_MASK 0x0000FFFFU
+#define SR_BL_MAGIC 0x4EF1UL         /* '4EF1' */
+#define SR_BL_MAGIC_GET(reg)        ((reg) & SR_BL_MAGIC_MASK)
+#define SR_BL_MAX_SLOTS_GET(reg)    (((reg) >> 19) & 0x07UL)
+
 typedef struct {
   UINT64 Base;
   UINT64 Size;

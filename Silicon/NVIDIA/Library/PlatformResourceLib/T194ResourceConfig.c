@@ -19,6 +19,7 @@
 #include "T194ResourceConfig.h"
 #include <T194/T194Definitions.h>
 #include <Protocol/Eeprom.h>
+#include <Library/IoLib.h>
 
 TEGRA_MMIO_INFO T194MmioInfo[] = {
   {
@@ -291,4 +292,82 @@ T194GetBoardInfo(
   CopyMem ((VOID *) BoardInfo->CvbProductId, (VOID *) &T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
 
   return TRUE;
+}
+
+/**
+  Validate Boot Chain
+
+**/
+BOOLEAN
+T194BootChainIsValid()
+{
+  UINT32     RegisterValue;
+  RegisterValue = MmioRead32 (FixedPcdGet64(PcdBootLoaderRegisterBaseAddressT194));
+  return (BOOLEAN)
+    ((SR_BL_MAGIC_GET(RegisterValue) == SR_BL_MAGIC) &&
+    (SR_BL_MAX_SLOTS_GET(RegisterValue) > 1U));
+}
+
+/**
+  Retrieve Active Boot Chain Information
+
+**/
+EFI_STATUS
+T194GetActiveBootChain(
+  IN  UINTN   CpuBootloaderAddress,
+  OUT UINT32  *BootChain
+)
+{
+  if (T194BootChainIsValid() != TRUE) {
+    // No valid slot number is found in scratch register. Return default slot
+    *BootChain = BOOT_CHAIN_A;
+  } else {
+    *BootChain = MmioBitFieldRead32 (FixedPcdGet64(PcdBootLoaderRegisterBaseAddressT194),
+                                     BL_CURRENT_BOOT_CHAIN_BIT_FIELD_LO,
+                                     BL_CURRENT_BOOT_CHAIN_BIT_FIELD_HI);
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Validate Active Boot Chain
+
+**/
+EFI_STATUS
+T194ValidateActiveBootChain(
+  IN  UINTN   CpuBootloaderAddress
+)
+{
+  EFI_STATUS Status;
+  UINT32     BootChain;
+
+  if (T194BootChainIsValid() != TRUE) {
+    // Default case. No need to modify SR register
+    return EFI_SUCCESS;
+  }
+
+  Status = T194GetActiveBootChain (CpuBootloaderAddress, &BootChain);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  MmioBitFieldWrite32 (FixedPcdGet64(PcdBootROMRegisterBaseAddressT194),
+                       BR_CURRENT_BOOT_CHAIN_BIT_FIELD,
+                       BR_CURRENT_BOOT_CHAIN_BIT_FIELD,
+                       BootChain);
+
+  if (BootChain == BOOT_CHAIN_A) {
+    MmioBitFieldWrite32 (FixedPcdGet64(PcdBootLoaderRegisterBaseAddressT194),
+                         BL_BOOT_CHAIN_STATUS_A_BIT_FIELD,
+                         BL_BOOT_CHAIN_STATUS_A_BIT_FIELD,
+                         BOOT_CHAIN_GOOD);
+  } else {
+    MmioBitFieldWrite32 (FixedPcdGet64(PcdBootLoaderRegisterBaseAddressT194),
+                         BL_BOOT_CHAIN_STATUS_B_BIT_FIELD,
+                         BL_BOOT_CHAIN_STATUS_B_BIT_FIELD,
+                         BOOT_CHAIN_GOOD);
+  }
+
+  return EFI_SUCCESS;
 }

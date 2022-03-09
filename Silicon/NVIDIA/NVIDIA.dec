@@ -240,8 +240,14 @@
 # Expose CCPLEX_INTERWORLD_SHMEM Carveout To OS
   gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem|FALSE|BOOLEAN|0x0000003D
 
-# Tegra Boot Chain Selection Register Address
+# Tegra Boot Chain Selection Register Address T234
   gNVIDIATokenSpaceGuid.PcdBootChainRegisterBaseAddressT234|0x0C3903CC|UINT64|0x0000003E
+
+# Tegra BootROM Selection Register Address T194
+  gNVIDIATokenSpaceGuid.PcdBootROMRegisterBaseAddressT194|0x0C390568|UINT64|0x00000061
+
+# Tegra BootLoader Selection Register Address T194
+  gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT194|0x0C390418|UINT64|0x00000062
 
 # Name of kernel GPT partition
   gNVIDIATokenSpaceGuid.PcdKernelPartitionName|L"kernel"|VOID*|0x0000003F
