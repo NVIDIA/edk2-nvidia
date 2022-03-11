@@ -63,4 +63,5 @@
   gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode
 
 [Depex]
-  TRUE
+  gEfiVariableArchProtocolGuid        AND
+  gEfiVariableWriteArchProtocolGuid
