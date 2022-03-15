@@ -236,7 +236,7 @@ typedef struct {
       UINT32 EnableApe:1;
       UINT32 Reserved1:24;
       UINT32 Reserved2;
-    };
+    } FeatureFlag;
   }, 8);
 
   /**< Start address of SDRAM params used in MB1 as per RAMCODE */

@@ -68,13 +68,15 @@ T194ResourceConfig (
   NVDA_MEMORY_REGION   *CarveoutRegions;
   UINTN                CarveoutRegionsCount=0;
   UINTN                Index;
+  UINT64               *DramPageBlacklistInfo;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   PlatformInfo->SdramSize = CpuBootloaderParams->SdramSize;
   PlatformInfo->DtbLoadAddress = CpuBootloaderParams->BlDtbLoadAddress;
 
   //Build Carveout regions
-  CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_NUM));
+  CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool ((sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_NUM)) +
+                                                        (sizeof (UINT64) * NUM_DRAM_BAD_PAGES));
   ASSERT (CarveoutRegions != NULL);
   if (CarveoutRegions == NULL) {
     return EFI_DEVICE_ERROR;
@@ -96,6 +98,19 @@ T194ResourceConfig (
       CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
       CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
       CarveoutRegionsCount++;
+    }
+  }
+
+  if (CpuBootloaderParams->FeatureFlag.EnableDramPageBlacklisting) {
+    DramPageBlacklistInfo = (UINT64 *)CpuBootloaderParams->DramPageBlacklistInfoAddress;
+    for (Index = 0; Index < NUM_DRAM_BAD_PAGES; Index++) {
+      if (DramPageBlacklistInfo[Index] == 0) {
+        break;
+      } else {
+        CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = DramPageBlacklistInfo[Index];
+        CarveoutRegions[CarveoutRegionsCount].MemoryLength      = SIZE_4KB;
+        CarveoutRegionsCount++;
+      }
     }
   }
 
