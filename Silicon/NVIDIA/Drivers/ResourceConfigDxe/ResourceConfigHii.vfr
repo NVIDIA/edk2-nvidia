@@ -109,7 +109,7 @@ formset
         questionid = KEY_OS_CHAIN_OVERRIDE,
         prompt = STRING_TOKEN(STR_OS_OVERRIDE_PROMPT),
         help   = STRING_TOKEN(STR_OS_OVERRIDE_HELP),
-        flags  = INTERACTIVE | NUMERIC_SIZE_1,
+        flags  = INTERACTIVE | NUMERIC_SIZE_4,
         option text = STRING_TOKEN(STR_OS_PART_DEFAULT), value = NVIDIA_OS_OVERRIDE_DEFAULT, flags = 0;
         option text = STRING_TOKEN(STR_OS_PART_A), value = NVIDIA_OS_OVERRIDE_A, flags = 0;
         option text = STRING_TOKEN(STR_OS_PART_B), value = NVIDIA_OS_OVERRIDE_B, flags = 0;
@@ -119,7 +119,7 @@ formset
         questionid = KEY_L4T_BOOTMODE_DEFAULT,
         prompt = STRING_TOKEN(STR_L4T_BOOTMODE_PROMPT),
         help   = STRING_TOKEN(STR_L4T_BOOTMODE_HELP),
-        flags  = INTERACTIVE | NUMERIC_SIZE_1,
+        flags  = INTERACTIVE | NUMERIC_SIZE_4,
         option text = STRING_TOKEN(STR_L4T_BOOTMODE_DEFAULT), value = NVIDIA_L4T_BOOTMODE_DEFAULT, flags = 0;
         option text = STRING_TOKEN(STR_L4T_BOOTMODE_GRUB), value = NVIDIA_L4T_BOOTMODE_GRUB, flags = 0;
         option text = STRING_TOKEN(STR_L4T_BOOTMODE_DIRECT), value = NVIDIA_L4T_BOOTMODE_DIRECT, flags = 0;

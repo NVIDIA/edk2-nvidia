@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -62,11 +62,11 @@ typedef struct {
 } NVIDIA_KERNEL_COMMAND_LINE;
 
 typedef struct {
-  UINT8 Chain;
+  UINT32 Chain;
 } NVIDIA_OS_OVERRIDE;
 
 typedef struct {
-  UINT8 BootMode;
+  UINT32 BootMode;
 } NVIDIA_L4T_BOOT_MODE;
 
 #endif //__NVIDIA_CONFIGURATION_H__

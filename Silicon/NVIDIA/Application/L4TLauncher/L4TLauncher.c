@@ -80,8 +80,8 @@
 
 #define MAX_EXTLINUX_OPTIONS           10
 typedef struct {
-  UINT8 BootMode;
-  UINT8 BootChain;
+  UINT32 BootMode;
+  UINT32 BootChain;
 } L4T_BOOT_PARAMS;
 
 typedef struct {
@@ -261,7 +261,7 @@ EFIAPI
 FindPartitionInfo (
   IN EFI_HANDLE   DeviceHandle,
   IN CONST CHAR16 *PartitionBasename,
-  IN UINT8        BootChain,
+  IN UINT32       BootChain,
   OUT UINT32      *PartitionIndex OPTIONAL,
   OUT EFI_HANDLE  *PartitionHandle OPTIONAL
 )
@@ -487,7 +487,7 @@ EFI_STATUS
 EFIAPI
 UpdateBootConfig (
   IN EFI_HANDLE DeviceHandle,
-  IN UINT8      BootChain
+  IN UINT32     BootChain
 )
 {
   UINT32     PartitionIndex;
@@ -934,7 +934,7 @@ EFI_STATUS
 EFIAPI
 ProcessExtLinuxConfig (
   IN EFI_HANDLE            DeviceHandle,
-  IN UINT8                 BootChain,
+  IN UINT32                BootChain,
   OUT EXTLINUX_BOOT_CONFIG *BootConfig,
   OUT EFI_HANDLE           *RootFsHandle
 )
@@ -1449,7 +1449,7 @@ ProcessBootParams (
 {
   CONST CHAR16 *CurrentBootOption;
   EFI_STATUS   Status;
-  UINT8        BootChain;
+  UINT32       BootChain;
   UINTN        DataSize;
   UINT64       StringValue;
 
@@ -1467,7 +1467,7 @@ ProcessBootParams (
 
   DataSize = sizeof (BootChain);
   Status = gRT->GetVariable (BOOT_FW_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootChain);
-  //If variable does not exist is not 1 byte or have a value larger than 1 boot partition A
+  //If variable does not exist, is >4 bytes or has a value larger than 1, boot partition A
   if (!EFI_ERROR (Status) && (BootChain <= 1)) {
     BootParams->BootChain = BootChain;
   }
@@ -1475,7 +1475,7 @@ ProcessBootParams (
   //Read override OS boot type
   DataSize = sizeof (BootChain);
   Status = gRT->GetVariable (BOOT_OS_OVERRIDE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootChain);
-  //If variable does not exist is not 1 byte or have a value larger than 1 boot partition A
+  //If variable does not exist, is >4 bytes or has a value larger than 1, boot partition A
   if (!EFI_ERROR (Status) && (BootChain <= 1)) {
     BootParams->BootChain = BootChain;
   }
@@ -1483,7 +1483,7 @@ ProcessBootParams (
   //Read current OS boot type to allow for chaining
   DataSize = sizeof (BootChain);
   Status = gRT->GetVariable (BOOT_OS_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootChain);
-  //If variable does not exist is not 1 byte or have a value larger than 1 boot partition A
+  //If variable does not exist, is >4 bytes or has a value larger than 1, boot partition A
   if (!EFI_ERROR (Status) && (BootChain <= 1)) {
     BootParams->BootChain = BootChain;
   }
@@ -1514,7 +1514,7 @@ ProcessBootParams (
       if (EFI_ERROR (Status)) {
         ErrorPrint (L"Failed to read boot chain override: %r\r\n", Status);
       } else if (StringValue <= 1) {
-        BootParams->BootChain = (UINT8)StringValue;
+        BootParams->BootChain = (UINT32)StringValue;
       } else {
         ErrorPrint (L"Boot chain override value out of range, ignoring\r\n");
       }
@@ -1547,7 +1547,7 @@ EFIAPI
 BootAndroidStylePartition (
   IN EFI_HANDLE   DeviceHandle,
   IN CONST CHAR16 *PartitionBasename,
-  IN UINT8        BootChain
+  IN UINT32       BootChain
 )
 {
   EFI_STATUS             Status;
