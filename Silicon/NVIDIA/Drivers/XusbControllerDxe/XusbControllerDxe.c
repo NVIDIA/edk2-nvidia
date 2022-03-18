@@ -68,7 +68,7 @@ OnExitBootServices (
   }
 
   PgProtocol = NULL;
-  PgState    = CmdPgStateOff;
+  PgState    = CmdPgStateOn;
   Status = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
   if (EFI_ERROR (Status)) {
     return;
@@ -79,7 +79,7 @@ OnExitBootServices (
     if (EFI_ERROR (Status)) {
       return;
     }
-    if (PgState == CmdPgStateOn) {
+    if (PgState != CmdPgStateOn) {
       break;
     }
   }
