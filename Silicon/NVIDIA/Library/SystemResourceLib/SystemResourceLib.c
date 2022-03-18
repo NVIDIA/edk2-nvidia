@@ -219,7 +219,6 @@ InstallSystemResources (
 {
   EFI_STATUS           Status;
   UINTN                ChipID;
-  NVDA_MEMORY_REGION   DramRegion;
   TEGRA_RESOURCE_INFO  PlatformInfo;
   UINTN                FinalDramRegionsCount;
 
@@ -243,17 +242,13 @@ InstallSystemResources (
     return Status;
   }
 
-  //Build DRAM regions
-  DramRegion.MemoryBaseAddress = TegraGetSystemMemoryBaseAddress(ChipID);
-  DramRegion.MemoryLength = PlatformInfo.SdramSize;
-  ASSERT (DramRegion.MemoryLength != 0);
-
   AlignCarveoutRegions64KiB(PlatformInfo.CarveoutRegions, PlatformInfo.CarveoutRegionsCount);
 
   FinalDramRegionsCount = 0;
   Status = InstallDramWithCarveouts (
-             &DramRegion,
-             1,
+             PlatformInfo.DramRegions,
+             PlatformInfo.DramRegionsCount,
+             PlatformInfo.UefiDramRegionsCount,
              PlatformInfo.CarveoutRegions,
              PlatformInfo.CarveoutRegionsCount,
              &FinalDramRegionsCount
