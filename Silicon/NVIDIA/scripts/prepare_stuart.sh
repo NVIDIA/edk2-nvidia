@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,7 +14,7 @@
 
 
 PLATFORM_BUILD=$1
-[ -z "$PLATFORM_BUILD" ] && { echo "$0 <platform_build.py>"; exit 1; }
+[ -z "${PLATFORM_BUILD}" ] && { echo "$0 <platform_build.py>"; exit 1; }
 
 
 # Set common environment variables.
@@ -35,16 +35,16 @@ else
 fi
 
 if [ -d .git ]; then
-  _msg "Updating submodules ($PLATFORM_BUILD)."
-  stuart_setup -c $PLATFORM_BUILD
+  _msg "Updating submodules (${PLATFORM_BUILD})."
+  stuart_setup ${STUART_SETUP_OPTIONS} -c ${PLATFORM_BUILD}
 else
   _msg "Building from tarball"
 fi
 
-_msg "Updating build environment ($PLATFORM_BUILD)."
+_msg "Updating build environment (${PLATFORM_BUILD})."
 # Requires mono to be installed following the instructions here:
 # - https://github.com/tianocore/edk2-pytool-extensions/blob/master/docs/usability/using_extdep.md
-stuart_update -c $PLATFORM_BUILD
+stuart_update ${STUART_UPDATE_OPTIONS} -c ${PLATFORM_BUILD}
 
 _msg "Building basetools."
 python edk2/BaseTools/Edk2ToolsBuild.py -t GCC5

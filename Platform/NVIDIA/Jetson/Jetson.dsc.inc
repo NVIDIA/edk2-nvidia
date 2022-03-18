@@ -23,6 +23,7 @@
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T234 = bf0d4599-20d4-414e-b2c5-3595b1cda402
 
 !include Features/Ext4Pkg/Ext4.dsc.inc
+!include Silicon/NVIDIA/Drivers/NvGopDriver/NvGopDriver.dsc.inc
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
 [LibraryClasses.common]
@@ -323,11 +324,3 @@
   # NV Display Controller Driver
   #
   Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
-
-  #
-  # NV GOP Driver
-  #
-  Silicon/NVIDIA/Drivers/NvGopDriver/nvgop-chips-platform.inf {
-    <LibraryClasses>
-      DispMacroLib|Silicon/NVIDIA/Drivers/NvGopDriver/tools/Library/DispMacroLib/DispMacroLibPlatform.inf
-  }

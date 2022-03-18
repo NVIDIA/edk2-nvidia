@@ -16,7 +16,7 @@
 
 
 PLATFORM_BUILD=$1
-[ -z "$PLATFORM_BUILD" ] && { echo "$0 <platform_build.py>"; exit 1; }
+[ -z "${PLATFORM_BUILD}" ] && { echo "$0 <platform_build.py>"; exit 1; }
 
 
 # Set common environment variables.
@@ -27,12 +27,14 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 _msg "Activating Python virtual environment."
 . venv/bin/activate
 
+STUART_BUILD_OPTIONS=${STUART_BUILD_OPTIONS:---verbose}
+
 if [[ -z "${UEFI_RELEASE_ONLY}" ]]; then
   _msg "Building DEBUG ($PLATFORM_BUILD)."
-  stuart_build -c $PLATFORM_BUILD --verbose --target DEBUG
+  stuart_build -c ${PLATFORM_BUILD} ${STUART_BUILD_OPTIONS} --target DEBUG
 fi
 
 if [[ -z "${UEFI_DEBUG_ONLY}" ]]; then
   _msg "Building RELEASE ($PLATFORM_BUILD)."
-  stuart_build -c $PLATFORM_BUILD --verbose --target RELEASE
+  stuart_build -c ${PLATFORM_BUILD} ${STUART_BUILD_OPTIONS} --target RELEASE
 fi

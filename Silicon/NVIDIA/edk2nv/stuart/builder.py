@@ -1,4 +1,4 @@
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -257,6 +257,12 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
         ws_dir = Path(self.settings.GetWorkspaceRoot())
         build_dir = Path(self.env.GetValue("BUILD_OUTPUT_BASE"))
+
+        # Store the path to the build directory in a place an upstream build
+        # system can find it.
+        builddirfile = ws_dir / self.settings.GetBuildDirFile()
+        builddirfile.parent.mkdir(parents=True, exist_ok=True)
+        builddirfile.write_text(str(build_dir))
 
         # Remove the Conf link we added earlier.  It can cause problems for
         # tools, such as find, that want to spider the build directory.  Since

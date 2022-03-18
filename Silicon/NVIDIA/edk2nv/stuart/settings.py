@@ -62,11 +62,38 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         '''
         # NOTE: These paths must use a trailing slash to ensure stuart treats
         # them properly when computing relative paths.
-        return ["edk2/BaseTools/", "edk2/", "edk2-platforms/", "edk2-nvidia/"]
+        packages_paths = [path + "/" for path in self._insert_pkgs_paths]
+        packages_paths.extend([
+            "edk2/BaseTools/", "edk2/", "edk2-platforms/", "edk2-nvidia/",
+            "edk2-nvidia-non-osi/"
+        ])
+
+        return packages_paths
 
     def GetActiveScopes(self):
         ''' List of scopes we need for this platform. '''
         return ['edk2-build']
+
+    def AddCommandLineOptions(self, parserObj):
+        ''' Add command line options to the argparser '''
+        super().AddCommandLineOptions(parserObj)
+
+        parserObj.add_argument(
+            '--insert-packages-path', dest='nvidia_pkgs_paths', type=str,
+            help='Insert the given path into the beginning of the list of '
+            'package paths.  Allows build time overrides.',
+            action="append", default=[])
+        parserObj.add_argument(
+            '--require-submodule', dest='nvidia_submodules', type=str,
+            help='Add a required submodule.',
+            action="append", default=[])
+
+    def RetrieveCommandLineOptions(self, args):
+        ''' Retrieve command line options from the argparser namespace '''
+        super().RetrieveCommandLineOptions(args)
+
+        self._insert_pkgs_paths = args.nvidia_pkgs_paths
+        self._added_submodules = args.nvidia_submodules
 
     #######################################
     # MultiPkgAwareSettingsInterface
@@ -112,11 +139,18 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         #
         # Given this limitation, the best we can do is tell stuart about our
         # top-level package paths and let it load them recursively.
-        return [
+        submodules = []
+        submodules.extend([
+            RequiredSubmodule(submodule)
+            for submodule in self._added_submodules
+        ])
+        submodules.extend([
             RequiredSubmodule("edk2"),
             RequiredSubmodule("edk2-platforms"),
             RequiredSubmodule("edk2-nvidia"),
-        ]
+            RequiredSubmodule("edk2-nvidia-non-osi"),
+        ])
+        return submodules
 
 
 class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
@@ -134,6 +168,8 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
 
     def RetrieveCommandLineOptions(self, args):
         ''' Retrieve command line options from the argparser namespace '''
+        super().RetrieveCommandLineOptions(args)
+
         if hasattr(args, "nvidia_target"):
             # We're in the build step.  Pick up the target argument we added in
             # builder.py.  See the comments in AddPlatformCommandLineOptions()
@@ -326,6 +362,20 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         platform_name = self.GetName()
         target = self.GetTarget()
         return f"images/BOOTAA64_{platform_name}_{target}.efi"
+
+    def GetBuildDirFile(self):
+        ''' Return the file name of the build dir file.
+
+            This file will contain the full path to the build directory. Useful
+            when an upstream build system needs access to arbitrary build
+            artifacts.  This default implementation will use
+            "images/builddir_{platform_name}_{target}.txt".
+
+            Returns a path relative to the workspace.
+        '''
+        platform_name = self.GetName()
+        target = self.GetTarget()
+        return f"images/builddir_{platform_name}_{target}.txt"
 
 
 class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
