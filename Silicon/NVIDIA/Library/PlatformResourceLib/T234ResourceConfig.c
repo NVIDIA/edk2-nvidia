@@ -138,14 +138,26 @@ T234ResourceConfig (
   )
 {
   TEGRA_CPUBL_PARAMS    *CpuBootloaderParams;
+  NVDA_MEMORY_REGION    *DramRegions;
   NVDA_MEMORY_REGION    *CarveoutRegions;
   UINTN                 CarveoutRegionsCount=0;
   EFI_MEMORY_DESCRIPTOR Descriptor;
   UINTN                 Index;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  PlatformInfo->SdramSize = CpuBootloaderParams->SdramSize;
   PlatformInfo->DtbLoadAddress = T234GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
+
+  //Build dram regions
+  DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION));
+  ASSERT (DramRegions != NULL);
+  if (DramRegions == NULL) {
+    return EFI_DEVICE_ERROR;
+  }
+  DramRegions->MemoryBaseAddress = TegraGetSystemMemoryBaseAddress(T234_CHIP_ID);
+  DramRegions->MemoryLength = CpuBootloaderParams->SdramSize;
+  PlatformInfo->DramRegions = DramRegions;
+  PlatformInfo->DramRegionsCount = 1;
+  PlatformInfo->UefiDramRegionsCount = 1;
 
   //Build Carveout regions
   CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_OEM_COUNT));

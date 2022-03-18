@@ -132,6 +132,7 @@ MemoryRegionCompare (
 
   @param  DramRegions              Sorted list of available DRAM regions
   @param  DramRegionsCount         Number of regions in DramRegions.
+  @param  UefiDramRegionsCount     Number of uefi usable regions in DramRegions.
   @param  CarveoutRegions          Sorted list of carveout regions that will be
                                    removed from DramRegions.
   @param  CarveoutRegionsCount     Number of regions in CarveoutRegions.
@@ -145,6 +146,7 @@ EFI_STATUS
 InstallDramWithCarveouts (
   IN  NVDA_MEMORY_REGION *DramRegions,
   IN  UINTN              DramRegionsCount,
+  IN  UINTN              UefiDramRegionsCount,
   IN  NVDA_MEMORY_REGION *CarveoutRegions,
   IN  UINTN              CarveoutRegionsCount,
   OUT UINTN              *FinalRegionsCount
@@ -201,7 +203,7 @@ InstallDramWithCarveouts (
       EFI_RESOURCE_ATTRIBUTE_READ_ONLY_PROTECTABLE
   );
 
-  while (DramIndex < DramRegionsCount) {
+  while (DramIndex < UefiDramRegionsCount) {
     //No more carveouts or carveout is after dram region
     if ((CarveoutRegionsCount == CarveoutIndex) ||
         ((DramRegions[DramIndex].MemoryBaseAddress + DramRegions[DramIndex].MemoryLength) <= CarveoutRegions[CarveoutIndex].MemoryBaseAddress)) {
@@ -274,6 +276,17 @@ InstallDramWithCarveouts (
         DramIndex++;
       }
     }
+  }
+
+  while (DramIndex < DramRegionsCount) {
+    BuildResourceDescriptorHob (
+      EFI_RESOURCE_SYSTEM_MEMORY,
+      ResourceAttributes,
+      DramRegions[DramIndex].MemoryBaseAddress,
+      DramRegions[DramIndex].MemoryLength
+    );
+    InstalledRegions++;
+    DramIndex++;
   }
 
   BuildResourceDescriptorHob (

@@ -66,14 +66,26 @@ T194ResourceConfig (
   )
 {
   TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
+  NVDA_MEMORY_REGION   *DramRegions;
   NVDA_MEMORY_REGION   *CarveoutRegions;
   UINTN                CarveoutRegionsCount=0;
   UINTN                Index;
   UINT64               *DramPageBlacklistInfo;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  PlatformInfo->SdramSize = CpuBootloaderParams->SdramSize;
   PlatformInfo->DtbLoadAddress = CpuBootloaderParams->BlDtbLoadAddress;
+
+  //Build dram regions
+  DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION));
+  ASSERT (DramRegions != NULL);
+  if (DramRegions == NULL) {
+    return EFI_DEVICE_ERROR;
+  }
+  DramRegions->MemoryBaseAddress = TegraGetSystemMemoryBaseAddress(T194_CHIP_ID);
+  DramRegions->MemoryLength = CpuBootloaderParams->SdramSize;
+  PlatformInfo->DramRegions = DramRegions;
+  PlatformInfo->DramRegionsCount = 1;
+  PlatformInfo->UefiDramRegionsCount = 1;
 
   //Build Carveout regions
   CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool ((sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_NUM)) +

@@ -40,9 +40,11 @@ typedef enum {
 } TEGRA_CARVEOUT_TYPE;
 
 typedef struct {
+  NVDA_MEMORY_REGION   *DramRegions;
+  UINTN                DramRegionsCount;
+  UINTN                UefiDramRegionsCount;
   NVDA_MEMORY_REGION   *CarveoutRegions;
   UINTN                CarveoutRegionsCount;
-  UINTN                SdramSize;
   UINTN                DtbLoadAddress;
 } TEGRA_RESOURCE_INFO;
 
