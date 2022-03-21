@@ -84,6 +84,14 @@ T194ResourceConfig (
   }
 
   for (Index = CARVEOUT_NONE; Index < CARVEOUT_NUM; Index++) {
+    if (CpuBootloaderParams->CarveoutInfo[Index].Base == 0 ||
+        CpuBootloaderParams->CarveoutInfo[Index].Size == 0) {
+      continue;
+    }
+    DEBUG ((EFI_D_ERROR, "Carveout %d Region: Base: 0x%016lx, Size: 0x%016lx\n",
+            Index,
+            CpuBootloaderParams->CarveoutInfo[Index].Base,
+            CpuBootloaderParams->CarveoutInfo[Index].Size));
     if (Index == CARVEOUT_MISC) {
       //Leave in memory map but marked as used
       BuildMemoryAllocationHob (

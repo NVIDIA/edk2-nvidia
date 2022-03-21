@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -164,7 +164,7 @@ InstallDramWithCarveouts (
     MemoryRegionCompare
   );
   for (DramIndex = 0; DramIndex < DramRegionsCount; DramIndex++) {
-    DEBUG ((EFI_D_VERBOSE,
+    DEBUG ((EFI_D_ERROR,
         "InstallDramWithCarveouts() Dram Region: Base: 0x%016lx, Size: 0x%016lx\n",
         DramRegions[DramIndex].MemoryBaseAddress,
         DramRegions[DramIndex].MemoryLength
@@ -179,7 +179,7 @@ InstallDramWithCarveouts (
     MemoryRegionCompare
   );
   for (CarveoutIndex = 0; CarveoutIndex < CarveoutRegionsCount; CarveoutIndex++) {
-    DEBUG ((EFI_D_VERBOSE,
+    DEBUG ((EFI_D_ERROR,
         "InstallDramWithCarveouts() Carveout Region: Base: 0x%016lx, Size: 0x%016lx\n",
         CarveoutRegions[CarveoutIndex].MemoryBaseAddress,
         CarveoutRegions[CarveoutIndex].MemoryLength
