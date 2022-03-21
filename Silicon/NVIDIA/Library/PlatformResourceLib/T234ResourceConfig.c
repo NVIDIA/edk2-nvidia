@@ -155,55 +155,61 @@ T234ResourceConfig (
   }
 
   for (Index = CARVEOUT_NONE; Index < CARVEOUT_OEM_COUNT; Index++) {
-    if (CpuBootloaderParams->CarveoutInfo[Index].Size != 0) {
-      if (Index == CARVEOUT_CCPLEX_INTERWORLD_SHMEM) {
-        //Leave in memory map but marked as used
-        EFI_MEMORY_TYPE MemoryType;
+    if (CpuBootloaderParams->CarveoutInfo[Index].Base == 0 ||
+        CpuBootloaderParams->CarveoutInfo[Index].Size == 0) {
+      continue;
+    }
+    DEBUG ((EFI_D_ERROR, "Carveout %d Region: Base: 0x%016lx, Size: 0x%016lx\n",
+            Index,
+            CpuBootloaderParams->CarveoutInfo[Index].Base,
+            CpuBootloaderParams->CarveoutInfo[Index].Size));
+    if (Index == CARVEOUT_CCPLEX_INTERWORLD_SHMEM) {
+      //Leave in memory map but marked as used
+      EFI_MEMORY_TYPE MemoryType;
 
-        if (FixedPcdGetBool(PcdExposeCcplexInterworldShmem)) {
-          if (ValidateGrBlobHeader(GetGRBlobBaseAddress ()) == EFI_SUCCESS) {
-            MemoryType = EfiReservedMemoryType;
-          } else {
-            MemoryType = EfiBootServicesData;
-          }
-        } else {
+      if (FixedPcdGetBool(PcdExposeCcplexInterworldShmem)) {
+        if (ValidateGrBlobHeader(GetGRBlobBaseAddress ()) == EFI_SUCCESS) {
           MemoryType = EfiReservedMemoryType;
+        } else {
+          MemoryType = EfiBootServicesData;
         }
-
-        BuildMemoryAllocationHob (
-          CpuBootloaderParams->CarveoutInfo[Index].Base,
-          EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
-          MemoryType
-        );
-      } else if (Index == CARVEOUT_RCM_BLOB) {
-        //Leave in memory map but marked as used
-        BuildMemoryAllocationHob (
-          CpuBootloaderParams->CarveoutInfo[Index].Base,
-          EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
-          EfiBootServicesData
-        );
-      } else if (Index == CARVEOUT_OS) {
-        //Leave in memory map but marked as used
-        BuildMemoryAllocationHob (
-          CpuBootloaderParams->CarveoutInfo[Index].Base,
-          EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
-          EfiReservedMemoryType
-        );
-
-        Descriptor.Type = EfiReservedMemoryType;
-        Descriptor.PhysicalStart = CpuBootloaderParams->CarveoutInfo[Index].Base;
-        Descriptor.VirtualStart = CpuBootloaderParams->CarveoutInfo[Index].Base;
-        Descriptor.NumberOfPages = EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size);
-        Descriptor.Attribute = 0;
-        BuildGuidDataHob (&gNVIDIAOSCarveoutHob, &Descriptor, sizeof (Descriptor));
-      } else if ((Index != CARVEOUT_UEFI) &&
-                 (Index != CARVEOUT_TEMP_MB2_LOAD) &&
-                 (Index != CARVEOUT_TEMP_MB2_IO_BUFFERS) &&
-                 (CpuBootloaderParams->CarveoutInfo[Index].Size != 0)) {
-        CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
-        CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
-        CarveoutRegionsCount++;
+      } else {
+        MemoryType = EfiReservedMemoryType;
       }
+
+      BuildMemoryAllocationHob (
+        CpuBootloaderParams->CarveoutInfo[Index].Base,
+        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
+        MemoryType
+      );
+    } else if (Index == CARVEOUT_RCM_BLOB) {
+      //Leave in memory map but marked as used
+      BuildMemoryAllocationHob (
+        CpuBootloaderParams->CarveoutInfo[Index].Base,
+        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
+        EfiBootServicesData
+      );
+    } else if (Index == CARVEOUT_OS) {
+      //Leave in memory map but marked as used
+      BuildMemoryAllocationHob (
+        CpuBootloaderParams->CarveoutInfo[Index].Base,
+        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
+        EfiReservedMemoryType
+      );
+
+      Descriptor.Type = EfiReservedMemoryType;
+      Descriptor.PhysicalStart = CpuBootloaderParams->CarveoutInfo[Index].Base;
+      Descriptor.VirtualStart = CpuBootloaderParams->CarveoutInfo[Index].Base;
+      Descriptor.NumberOfPages = EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size);
+      Descriptor.Attribute = 0;
+      BuildGuidDataHob (&gNVIDIAOSCarveoutHob, &Descriptor, sizeof (Descriptor));
+    } else if ((Index != CARVEOUT_UEFI) &&
+               (Index != CARVEOUT_TEMP_MB2_LOAD) &&
+               (Index != CARVEOUT_TEMP_MB2_IO_BUFFERS) &&
+               (CpuBootloaderParams->CarveoutInfo[Index].Size != 0)) {
+      CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
+      CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
+      CarveoutRegionsCount++;
     }
   }
 
