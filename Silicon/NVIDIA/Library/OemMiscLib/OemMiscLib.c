@@ -21,6 +21,7 @@
 #include <Library/FloorSweepingLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/TimerLib.h>
 #include <Protocol/Eeprom.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
@@ -482,13 +483,18 @@ OemGetProductName (
   VOID
 )
 {
-  UINT64                  DtbBase;
+  VOID                    *DtbBase;
+  UINTN                   DtbSize;
   CONST VOID              *Property;
   INT32                   Length;
+  EFI_STATUS              Status;
 
   if (BoardProductName == NULL) {
-    DtbBase = GetDTBBaseAddress ();
-    Property = fdt_getprop ((CONST VOID*) DtbBase, 0, "model", &Length);
+    Status = DtPlatformLoadDtb(&DtbBase, &DtbSize);
+    if (EFI_ERROR(Status)) {
+      return NULL;
+    }
+    Property = fdt_getprop (DtbBase, 0, "model", &Length);
     if (Property != NULL && Length != 0) {
       BoardProductName = AllocateZeroPool (Length * sizeof (CHAR16));
       if (BoardProductName == NULL) {

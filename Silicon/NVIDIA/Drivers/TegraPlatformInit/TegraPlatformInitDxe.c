@@ -20,6 +20,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <Library/DtPlatformDtbLoaderLib.h>
 #include <libfdt.h>
 
 STATIC
@@ -29,7 +30,8 @@ SetCpuInfoPcdsFromDtb (
   VOID
   )
 {
-  CONST VOID    *Dtb;
+  VOID          *Dtb;
+  UINTN         DtbSize;
   UINTN         MaxClusters;
   UINTN         MaxCoresPerCluster;
   INT32         CpuMapOffset;
@@ -37,8 +39,12 @@ SetCpuInfoPcdsFromDtb (
   INT32         NodeOffset;
   CHAR8         ClusterNodeStr[] = "clusterxx";
   CHAR8         CoreNodeStr[] = "corexx";
+  EFI_STATUS    Status;
 
-  Dtb = (CONST VOID *) GetDTBBaseAddress ();
+  Status = DtPlatformLoadDtb(&Dtb, &DtbSize);
+  if (EFI_ERROR(Status)) {
+    return;
+  }
 
   CpuMapOffset = fdt_path_offset (Dtb, "/cpus/cpu-map");
   if (CpuMapOffset < 0) {
@@ -233,12 +239,14 @@ TegraPlatformInitialize (
   EFI_STATUS              Status;
   UINTN                   ChipID;
   TEGRA_PLATFORM_TYPE     PlatformType;
-  UINT64                  DtbBase;
+  VOID                    *DtbBase;
+  UINTN                   DtbSize;
   CONST VOID              *Property;
   INT32                   Length;
   BOOLEAN                 T234SkuSet;
   UINTN                   EmmcMagic;
   BOOLEAN                 EmulatedVariablesUsed;
+  INTN                    UefiNode;
 
   EmulatedVariablesUsed = FALSE;
 
@@ -246,14 +254,18 @@ TegraPlatformInitialize (
   DEBUG ((DEBUG_INFO, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, ChipID));
 
   PlatformType = TegraGetPlatform();
+  Status = DtPlatformLoadDtb(&DtbBase, &DtbSize);
+  ASSERT_EFI_ERROR(Status);
+  if (EFI_ERROR(Status)) {
+    return Status;
+  }
 
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     if (ChipID == T194_CHIP_ID) {
       LibPcdSetSku (T194_SKU);
     } else if (ChipID == T234_CHIP_ID) {
       T234SkuSet = FALSE;
-      DtbBase = GetDTBBaseAddress ();
-      Property = fdt_getprop ((CONST VOID*) DtbBase, 0, "model", &Length);
+      Property = fdt_getprop (DtbBase, 0, "model", &Length);
       if (Property != NULL && Length != 0) {
         if (AsciiStrStr (Property, "SLT") != NULL) {
           LibPcdSetSku (T234SLT_SKU);
@@ -268,6 +280,14 @@ TegraPlatformInitialize (
     // Override boot timeout for pre-si platforms
     EmmcMagic = * ((UINTN *) (TegraGetSystemMemoryBaseAddress(ChipID) + SYSIMG_EMMC_MAGIC_OFFSET));
     if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {
+      EmulatedVariablesUsed = TRUE;
+    }
+  }
+
+  /*TODO: Retaining above logic for backward compatibility. Remove once all DTBs are updated.*/
+  UefiNode = fdt_path_offset(DtbBase, "/firmware/uefi");
+  if (UefiNode >= 0) {
+    if (NULL != fdt_get_property(DtbBase, UefiNode, "use-emulated-variables", NULL)) {
       EmulatedVariablesUsed = TRUE;
     }
   }

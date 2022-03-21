@@ -39,6 +39,7 @@
   FdtLib
   TegraCpuFreqHelperLib
   FloorSweepingLib
+  DtPlatformDtbLoaderLib
 
 [Protocols]
   gEdkiiConfigurationManagerProtocolGuid     # PROTOCOL ALWAYS_CONSUMED

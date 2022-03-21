@@ -25,6 +25,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
 #include <Library/DxeCapsuleLibFmp/CapsuleOnDisk.h>
+#include <Library/DtPlatformDtbLoaderLib.h>
 #include <Protocol/DevicePath.h>
 #include <Protocol/EsrtManagement.h>
 #include <Protocol/GenericMemoryTest.h>
@@ -566,8 +567,8 @@ IsPlatformConfigurationNeeded (
   BOOLEAN                     PlatformConfigurationNeeded;
   PLATFORM_CONFIGURATION_DATA StoredPlatformConfigData;
   UINTN                       VariableSize;
-  UINT64                      DTBBase;
-  UINT64                      DTBSize;
+  VOID                        *DTBBase;
+  UINTN                       DTBSize;
   VOID                        *AcpiBase;
   UINTN                       CharCount;
   NVIDIA_KERNEL_COMMAND_LINE  AddlCmdLine;
@@ -586,9 +587,10 @@ IsPlatformConfigurationNeeded (
   //
   // Get Current DTB Hash
   //
-  DTBBase = GetDTBBaseAddress ();
-  DTBSize = fdt_totalsize ((VOID *)DTBBase);
-  Sha256HashAll ((VOID *)DTBBase, DTBSize, CurrentPlatformConfigData.DtbHash);
+  Status = DtPlatformLoadDtb(&DTBBase, &DTBSize);
+  if (!EFI_ERROR(Status)) {
+    Sha256HashAll ((VOID *)DTBBase, DTBSize, CurrentPlatformConfigData.DtbHash);
+  }
 
   //
   // Get Current UEFI Version
