@@ -319,19 +319,190 @@ STATIC EFI_STATUS PMGetPropertyCount(VOID *Fdt, INTN Node)
 
 STATIC
 EFI_STATUS
+FdtDeleteProperty (
+  VOID         *FdtBase,
+  CONST CHAR8  *TargetPath,
+  CONST CHAR8  *PropName
+  )
+{
+  INTN  TargetNode;
+  INTN  Err;
+
+  TargetNode = fdt_path_offset(FdtBase, TargetPath);
+  if (TargetNode < 0) {
+    return EFI_DEVICE_ERROR;
+  }
+  Err = fdt_delprop(FdtBase, TargetNode, PropName);
+  if ( 0 != Err) {
+    return EFI_DEVICE_ERROR;
+  }
+  DEBUG((DEBUG_INFO, "Deleted property %a from %a\n", PropName, TargetPath));
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+FdtDeleteSubNode (
+  VOID         *FdtBase,
+  CONST CHAR8  *TargetPath,
+  CONST CHAR8  *NodeName
+  )
+{
+  INTN  TargetNode;
+  INTN  SubNode;
+
+  TargetNode = fdt_path_offset(FdtBase, TargetPath);
+  if (TargetNode < 0) {
+    return EFI_DEVICE_ERROR;
+  }
+  SubNode = fdt_subnode_offset(FdtBase, TargetNode, NodeName);
+  if (SubNode < 0) {
+    return EFI_DEVICE_ERROR;
+  }
+  SubNode = fdt_del_node(FdtBase, SubNode);
+  if (SubNode < 0) {
+    return EFI_DEVICE_ERROR;
+  }
+  DEBUG((DEBUG_INFO, "Deleted subnode %a from %a\n", NodeName, TargetPath));
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+FdtCleanFixups (
+  VOID         *FdtBase,
+  CONST CHAR8  *NodeName
+  )
+{
+  VOID         *FdtBuf;
+  UINTN        FdtSize;
+  UINTN        BufPageCount;
+  INTN         FixupsNode;
+  INTN         FixupsNodeNew;
+  INTN         SubNode;
+  INTN         PropOffset;
+  INT32        PropLen;
+  INT32        PropCount;
+  INT32        PStrLen;
+  CONST CHAR8  *PropName;
+  CONST CHAR8  *PropStr;
+  CONST VOID   *Prop;
+  CHAR8        *NodePath = NULL;
+  UINT32       NodeLen;
+  CONST CHAR8  *NewProp;
+  UINTN        NewPropLen=0;
+  UINT32       Index;
+  BOOLEAN      UpdateProp;
+  EFI_STATUS   Status = EFI_SUCCESS;
+  INTN         Err=0;
+
+  if (NodeName == NULL) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  FixupsNode = fdt_subnode_offset(FdtBase, 0, "__local_fixups__");
+  if (FixupsNode >= 0) {
+    SubNode = fdt_subnode_offset(FdtBase, FixupsNode, NodeName);
+    if (SubNode >= 0) {
+      if (0 > fdt_del_node(FdtBase, SubNode)) {
+        DEBUG((DEBUG_ERROR, "Error deleting fragment %a from __local_fixups__\n", NodeName));
+        return EFI_DEVICE_ERROR;
+      }
+    }
+  }
+
+  FixupsNode = fdt_subnode_offset(FdtBase, 0, "__fixups__");
+  if (FixupsNode < 0) {
+    return Status;
+  }
+
+  FdtSize = fdt_totalsize (FdtBase);
+  BufPageCount = EFI_SIZE_TO_PAGES(FdtSize);
+  FdtBuf = AllocatePages(BufPageCount);
+
+  if (FdtBuf == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for overlay dtb. \n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  if(fdt_open_into (FdtBase, FdtBuf, FdtSize)) {
+    DEBUG ((EFI_D_ERROR, "Failed to copy overlay device tree.\r\n"));
+    Status =  EFI_LOAD_ERROR;
+    goto ExitFixups;
+  }
+
+  NodeLen = strlen(NodeName);
+  NodePath = (CHAR8 *)AllocateZeroPool(NodeLen+2);
+  CopyMem((VOID *)NodePath+1, (VOID *)NodeName, NodeLen);
+  NodePath[0] = '/';
+  DEBUG((DEBUG_INFO, "Removing fixups for fragment: %a\n", NodePath));
+
+  fdt_for_each_property_offset(PropOffset, FdtBuf, FixupsNode) {
+    UpdateProp = FALSE;
+    Prop = fdt_getprop_by_offset(FdtBuf, PropOffset, &PropName, &PropLen);
+    NewProp = (CONST CHAR8 *)AllocateZeroPool(PropLen);
+
+    PropCount = fdt_stringlist_count(FdtBuf, FixupsNode, PropName);
+    if (PropCount > 0) {
+      for (Index = 0; Index < PropCount; Index++) {
+        PropStr = fdt_stringlist_get(FdtBuf, FixupsNode, PropName, Index, &PStrLen);
+        if (PStrLen >= NodeLen+2) {
+          if (0 == CompareMem(NodePath, PropStr, NodeLen+1)) {
+            if ((PropStr[NodeLen+1] == '/') || (PropStr[NodeLen+1] == ':')) {
+              UpdateProp = TRUE;
+              continue;
+            }
+          }
+        }
+        CopyMem((VOID *)(NewProp + NewPropLen), PropStr, PStrLen+1);
+        NewPropLen+=PStrLen+1;
+      }
+    }
+    if (UpdateProp == TRUE) {
+      FixupsNodeNew = fdt_subnode_offset(FdtBase, 0, "__fixups__");
+      if (FixupsNodeNew < 0) {
+        Status = EFI_DEVICE_ERROR;
+        goto ExitFixups;
+      }
+      if (NewPropLen == 0) {
+        Err = fdt_delprop(FdtBase, FixupsNodeNew, PropName);
+      } else {
+        Err = fdt_setprop(FdtBase, FixupsNodeNew, PropName, NewProp, NewPropLen);
+      }
+      if(0 != Err) {
+        DEBUG((DEBUG_ERROR, "Error(%d) updating __fixups__ property: %a.\n", Err, PropName));
+      }
+    }
+    UpdateProp = FALSE;
+    FreePool((VOID *)NewProp);
+    NewPropLen = 0;
+  }
+
+ExitFixups:
+  if(NodePath) {
+    FreePool(NodePath);
+  }
+  FreePages(FdtBuf, BufPageCount);
+  return Status;
+}
+
+STATIC
+EFI_STATUS
 ProcessOverlayDeviceTree (
   VOID *FdtBase,
   VOID *FdtOverlay,
   VOID *FdtBuf
   )
 {
-  CONST VOID    *Property;
-  INT32         PropertyLen;
+  CONST CHAR8   *TargetName;
+  INT32         TargetLen;
   INTN          FrNode;
   INTN          BufNode;
   CONST CHAR8   *FrName;
   CONST CHAR8   *NodeName;
   INTN          ConfigNode;
+  CONST CHAR8   *PropStr;
+  INTN          PropCount;
   INT32         FdtErr;
   EFI_STATUS    Status = EFI_SUCCESS;
   BOOLEAN       Found = FALSE;
@@ -339,27 +510,30 @@ ProcessOverlayDeviceTree (
   UINT32        Index;
   UINT32        Count;
   UINT32        NumberSubnodes;
+  UINT32        FixupNodes=0;
 
-  Property = fdt_getprop (FdtOverlay, 0, "overlay-name", &PropertyLen);
-  if (Property != NULL && PropertyLen != 0) {
-    DEBUG((DEBUG_ERROR, "Processing \"%a\" DTB overlay\n", Property));
+  TargetName = fdt_getprop (FdtOverlay, 0, "overlay-name", &TargetLen);
+  if (TargetName != NULL && TargetLen != 0) {
+    DEBUG((DEBUG_ERROR, "Processing \"%a\" DTB overlay\n", TargetName));
   }
 
   fdt_for_each_subnode(FrNode, FdtOverlay, 0) {
     FrName = fdt_get_name(FdtOverlay, FrNode, NULL);
-    if (AsciiStrCmp (FrName, "__fixups__") == 0) {
+    if (AsciiStrCmp (FrName, "__fixups__") == 0 || AsciiStrCmp (FrName, "__local_fixups__") == 0) {
+      FixupNodes++;
       continue;
     }
 
     DEBUG((DEBUG_INFO, "Processing node %a for overlay\n", FrName));
+
     ConfigNode = fdt_subnode_offset(FdtOverlay, FrNode, "board_config");
 
     if (ConfigNode < 0) {
-      continue;
+      goto process_deletes;
     }
 
     if(0 > fdt_first_property_offset(FdtOverlay, ConfigNode)) {
-      continue;
+      goto process_deletes;
     }
 
     Status = PMGetPropertyCount(FdtOverlay, ConfigNode);
@@ -372,7 +546,6 @@ ProcessOverlayDeviceTree (
     for (Index = 0; Index < ARRAY_SIZE(MatchInfoArray); Index++, MatchIter++) {
       if (MatchIter->Count > 0 && MatchIter->IsMatch) {
         UINT32 Data = 0;
-        CONST CHAR8 *PropStr;
 
         for (Count = 0, Found = FALSE; Count < MatchIter->Count; Count++) {
           PropStr = fdt_stringlist_get(FdtOverlay, ConfigNode, MatchIter->Name, Count, NULL);
@@ -394,10 +567,49 @@ ProcessOverlayDeviceTree (
                MatchIter->Name, PropStr, FrName));
       }
     }
-    continue;
+process_deletes:
+
+    TargetName = fdt_getprop (FdtOverlay, FrNode, "target-path", &TargetLen);
+    if (TargetName == NULL || TargetLen <= 0) {
+      DEBUG((DEBUG_ERROR, "'target-path' not found/empty in fragment %a, skipping deletes\n", FrName));
+    } else {
+      // Delete Nodes
+      PropCount = fdt_stringlist_count(FdtOverlay, FrNode, "delete_node");
+      if (PropCount > 0) {
+        for (Count = 0; Count < PropCount; Count++) {
+          PropStr = fdt_stringlist_get(FdtOverlay, FrNode, "delete_node", Count, NULL);
+          if(EFI_ERROR(FdtDeleteSubNode(FdtBase, TargetName, PropStr))) {
+            DEBUG((DEBUG_ERROR, "Error deleting node: %a from %a\n", PropStr, TargetName));
+            return EFI_DEVICE_ERROR;
+          }
+        }
+      }
+
+      // Delete Properties
+      PropCount = fdt_stringlist_count(FdtOverlay, FrNode, "delete_prop");
+      if (PropCount > 0) {
+        for (Count = 0; Count < PropCount; Count++) {
+          PropStr = fdt_stringlist_get(FdtOverlay, FrNode, "delete_prop", Count, NULL);
+          if(EFI_ERROR(FdtDeleteProperty(FdtBase, TargetName, PropStr))) {
+            DEBUG((DEBUG_ERROR, "Error deleting property: %a from %a\n", PropStr, TargetName));
+            return EFI_DEVICE_ERROR;
+          }
+        }
+      }
+
+    }
+
+    if (fdt_subnode_offset(FdtOverlay, FrNode, "__overlay__") > 0) {
+      continue;
+    }
 
 delete_fragment:
     DEBUG((DEBUG_ERROR, "Deleting fragment %a\n", FrName));
+    // Delete matching __fixups__
+    if(EFI_ERROR(FdtCleanFixups(FdtBuf, FrName))) {
+      DEBUG((DEBUG_ERROR, "Error removing reference to %a in __fixups__.\n", FrName));
+      return EFI_DEVICE_ERROR;
+    }
     fdt_for_each_subnode(BufNode, FdtBuf, 0) {
       NodeName = fdt_get_name(FdtBuf, BufNode, NULL);
       if (0 == AsciiStrCmp(FrName, NodeName)) {
@@ -416,17 +628,9 @@ delete_fragment:
     NumberSubnodes++;
   }
 
-  if (NumberSubnodes == 1) {
-    fdt_for_each_subnode(FrNode, FdtBuf, 0) {
-      FrName = fdt_get_name(FdtBuf, FrNode, NULL);
-      if (AsciiStrCmp (FrName, "__fixups__") == 0) {
-        FdtErr = fdt_del_node(FdtBuf, FrNode);
-        if (FdtErr < 0) {
-          DEBUG((DEBUG_ERROR, "Error deleting fragment %a\n", FrName));
-          return EFI_DEVICE_ERROR;
-        }
-      }
-    }
+  if (NumberSubnodes <= FixupNodes) {
+    DEBUG((DEBUG_INFO, "No matching fragments in the overlay.\n"));
+    return EFI_NOT_FOUND;
   }
 
   return EFI_SUCCESS;
@@ -485,6 +689,9 @@ ApplyTegraDeviceTreeOverlayCommon (
         Status = EFI_DEVICE_ERROR;
         goto Exit;
       }
+    } else {
+        DEBUG ((EFI_D_INFO, "Overlay skipped.\n"));
+        Status = EFI_SUCCESS;
     }
 
     FdtNext = (VOID *)((UINT64)FdtNext + FdtSize);
