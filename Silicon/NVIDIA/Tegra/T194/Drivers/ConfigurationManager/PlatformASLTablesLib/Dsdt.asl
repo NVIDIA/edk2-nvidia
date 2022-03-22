@@ -72,7 +72,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
     Device (BPMP) {
       Name (_HID, EISAID("PNP0C02")) // Motherboard resources
       Name (_UID, 0)
-      OperationRegion (BPTX, SystemMemory, BPMP_TX_MAILBOX, 0x1000)
+      OperationRegion (BPTX, SystemMemory, BPMP_TX_MAILBOX, BPMP_CHANNEL_SIZE)
       Field (BPTX, AnyAcc, NoLock, Preserve) {
         TWCT, 32,
         TSTA, 32,
@@ -81,10 +81,10 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
         Offset (128),
         TMRQ, 32,
         TFLA, 32,
-        TDAT, 31680
+        TDAT, 960
       }
 
-      OperationRegion (BPRX, SystemMemory, BPMP_RX_MAILBOX, 0x1000)
+      OperationRegion (BPRX, SystemMemory, BPMP_RX_MAILBOX, BPMP_CHANNEL_SIZE)
       Field (BPRX, AnyAcc, NoLock, Preserve) {
         RWCT, 32,
         RSTA, 32,
@@ -93,18 +93,18 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
         Offset (128),
         RERR, 32,
         RFLG, 32,
-        RDAT, 31680
-      }
-
-      OperationRegion (DRBL, SystemMemory, 0x03C90300, 0x100)
-      Field (DRBL, AnyAcc, NoLock, Preserve) {
-        TRIG, 4,
-        ENA,  4,
-        RAW,  4,
-        PEND, 4
+        RDAT, 960
       }
 
       Method (BIPC, 2, Serialized, 0, PkgObj, {IntObj, BuffObj}) {
+        OperationRegion (DRBL, SystemMemory, 0x03C90300, 0x100)
+        Field (DRBL, AnyAcc, NoLock, Preserve) {
+          TRIG, 4,
+          ENA,  4,
+          RAW,  4,
+          PEND, 4
+        }
+
         TMRQ = Arg0
         TFLA = One
         TDAT = Arg1
@@ -321,6 +321,26 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
         Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xC1 }
       })
     }
+
+    //PEP and MRQ Temp
+    Device(PEP0) {
+      Name (_HID, "NVDA2000")
+      Name (_UID, 0)
+      Name (_CCA, ZERO)
+    }
+    Device(MRQ0) {
+      Name (_HID, "NVDA2001")
+      Name (_UID, 0)
+      Name (_CCA, ZERO)
+
+      Name(_CRS, ResourceTemplate() {
+        Memory32Fixed (ReadWrite, 0x03C90300, 0x100)
+        Memory32Fixed (ReadWrite, BPMP_TX_MAILBOX+BPMP_CHANNEL_SIZE, 2*BPMP_CHANNEL_SIZE)
+        Memory32Fixed (ReadWrite, BPMP_RX_MAILBOX+BPMP_CHANNEL_SIZE, 2*BPMP_CHANNEL_SIZE)
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xD0 }
+      })
+    }
+
   }
 }
 

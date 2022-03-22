@@ -41,6 +41,7 @@
 // BPMP Info
 #define BPMP_TX_MAILBOX                   0x4004E000
 #define BPMP_RX_MAILBOX                   0x4004F000
+#define BPMP_CHANNEL_SIZE                 0x100
 #define MRQ_THERMAL                       27
 #define ZONE_TEMP                         1
 #define CPU_TEMP_ZONE                     2
