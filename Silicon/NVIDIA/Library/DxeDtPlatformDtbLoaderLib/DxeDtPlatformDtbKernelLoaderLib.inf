@@ -49,6 +49,7 @@
 
 [Guids]
   gFdtTableGuid
+  gEfiEventReadyToBootGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus

@@ -38,6 +38,8 @@ typedef struct {
 } QSPI_COMPATIBILITY;
 
 EFI_EVENT FdtInstallEvent;
+EFI_EVENT ReadyToBootEvent;
+
 QSPI_COMPATIBILITY gQspiCompatibilityMap[] = {
   { "nvidia,tegra186-qspi" },
   { "nvidia,tegra194-qspi" },
@@ -198,7 +200,7 @@ RemoveQspiNodes (
 
 VOID
 EFIAPI
-FdtInstalled (
+UpdateFdt (
     IN EFI_EVENT Event,
     IN VOID      *Context
     )
@@ -400,11 +402,20 @@ DtPlatformLoadDtb (
 
   Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
                                TPL_CALLBACK,
-                               FdtInstalled,
+                               UpdateFdt,
                                NULL,
                                &gFdtTableGuid,
                                &FdtInstallEvent);
 
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+  Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
+                               TPL_CALLBACK,
+                               UpdateFdt,
+                               NULL,
+                               &gEfiEventReadyToBootGuid,
+                               &ReadyToBootEvent);
 Exit:
   if (DtbAllocated != NULL) {
     gBS->FreePool (DtbAllocated);
