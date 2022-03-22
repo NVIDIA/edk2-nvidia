@@ -272,9 +272,6 @@
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported|0xf|UINT64|0x00000056
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting|0xf|UINT64|0x00000057
 
-#MPIDR generation
-  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE|BOOLEAN|0x00000060
-
 #The maximum supported horizontal resolution of the framebuffer
   gNVIDIATokenSpaceGuid.PcdFramebufferHorizontalResolution|0|UINT32|0x00000061
 #The maximum supported vertical resolution of the framebuffer
@@ -403,3 +400,6 @@
   gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate|FALSE|BOOLEAN|0x0000005A
   gNVIDIATokenSpaceGuid.PcdFmpWriteVerifyImage|TRUE|BOOLEAN|0x0000005B
   gNVIDIATokenSpaceGuid.PcdOsIndicationsAvailable|TRUE|BOOLEAN|0x0000005D
+
+#MPIDR generation
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE|BOOLEAN|0x00000060

@@ -98,6 +98,7 @@
   ##Type 32 (Boot Information)
   gNVIDIATokenSpaceGuid.PcdType32Info|{ 0 }
   gNVIDIATokenSpaceGuid.PcdType32Info.BootStatus|BootInformationStatusNoError
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE
 
 [PcdsDynamicHii.common.T194]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
@@ -115,6 +116,7 @@
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x10000
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
 
 [PcdsDynamicHii.common.T234]
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
