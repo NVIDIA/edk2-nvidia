@@ -1,0 +1,40 @@
+#/** @file
+#
+#  Tegra CPU Frequency Driver
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = TegraCpuFreqDxe
+  FILE_GUID                 = ceb5f958-bf94-4f75-8e4b-4feff4ddf723
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = TegraCpuFreqInitialize
+
+[Sources]
+  TegraCpuFreqDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  DebugLib
+  PrintLib
+  TegraPlatformInfoLib
+  PlatformResourceLib
+
+[Protocols]
+  gNVIDIABpmpIpcProtocolGuid
+
+[Depex]
+  gNVIDIABpmpIpcProtocolGuid

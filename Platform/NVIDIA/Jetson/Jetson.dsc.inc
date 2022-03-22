@@ -334,3 +334,8 @@
   # Default Variables Device Tree
   #
   Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree.inf
+
+  #
+  # CPU Frequency support
+  #
+  Silicon/NVIDIA/Drivers/TegraCpuFreqDxe/TegraCpuFreqDxe.inf
