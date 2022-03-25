@@ -10,24 +10,15 @@
 #define __FLOOR_SWEEPING_INTERNAL_LIB_H__
 
 /**
-  Check if the given core is enabled or not
+  Get CPU info for a platform
 
 **/
 BOOLEAN
 EFIAPI
-IsCoreEnabledInternal (
-  IN  UINT32  CpuNum,
-  OUT BOOLEAN *CoreEnabled
-);
-
-/**
-  Retrieve number of CPUs for each platform
-
-**/
-BOOLEAN
-EFIAPI
-GetNumberOfEnabledCpuCoresInternal (
-  OUT UINT32 *NumCpus
-);
+GetCpuInfoInternal (
+  IN  UINTN     EnabledSockets,
+  IN  UINTN     MaxSupportedCores,
+  OUT UINT64    *EnabledCoresBitMap
+  );
 
 #endif //__FLOOR_SWEEPING_INTERNAL_LIB_H__

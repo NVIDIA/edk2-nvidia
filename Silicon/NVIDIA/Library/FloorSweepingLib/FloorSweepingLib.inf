@@ -26,6 +26,7 @@
   ArmLib
   BaseLib
   DebugLib
+  HobLib
   MceAriLib
   NvgLib
   TegraPlatformInfoLib
@@ -35,3 +36,6 @@
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
   gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid

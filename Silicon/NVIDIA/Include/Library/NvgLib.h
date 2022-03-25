@@ -42,33 +42,13 @@ NvgConvertCpuLogicalToMpidr (
   );
 
 /**
-  Returns flag indicating presence of cluster after CPU floorsweeping
-
-  @param[in]    ClusterId       Cluster ID
-
-  @return       TRUE            Cluster is present
-  @return       FALSE           Cluster is not present
+  Fills in bit map of enabled cores
 
 **/
-BOOLEAN
+EFI_STATUS
 EFIAPI
-NvgClusterIsPresent (
-  IN  UINTN ClusterId
-  );
-
-/**
-  Returns flag indicating presence of core after CPU floorsweeping
-
-  @param[in]    CoreId          Core ID
-
-  @return       TRUE            Core is present
-  @return       FALSE           Core is not present
-
-**/
-BOOLEAN
-EFIAPI
-NvgCoreIsPresent (
-  IN  UINTN CoreId
+NvgGetEnabledCoresBitMap (
+  IN  UINT64    *EnabledCoresBitMap
   );
 
 #endif
