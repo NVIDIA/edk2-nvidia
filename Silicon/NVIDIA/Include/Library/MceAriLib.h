@@ -21,17 +21,6 @@
   (MCE_ARI_APERTURE_SIZE * (LinearCoreId))
 
 /**
-  Returns the number of CPU cores enabled on the system
-
-  @return       UINT32          Number of CPU cores enabled
-**/
-UINT32
-EFIAPI
-MceAriNumCores (
-  VOID
-  );
-
-/**
   Returns the MCE ARI interface version.
 
   @return       UINT64          ARI Version: [63:32] Major version,
@@ -60,33 +49,13 @@ MceAriCheckCoreEnabled (
   );
 
 /**
-  Returns flag indicating presence of cluster after CPU floorsweeping
-
-  @param[in]    ClusterId       Cluster ID
-
-  @return       TRUE            Cluster is present
-  @return       FALSE           Cluster is not present
+  Fills in bit map of enabled cores
 
 **/
-BOOLEAN
+EFI_STATUS
 EFIAPI
-MceAriClusterIsPresent (
-  IN  UINTN ClusterId
-  );
-
-/**
-  Returns flag indicating presence of a core after CPU floorsweeping
-
-  @param[in]    CoreId          Core ID
-
-  @return       TRUE            Core is present
-  @return       FALSE           Core is not present
-
-**/
-BOOLEAN
-EFIAPI
-MceAriCoreIsPresent (
-  IN  UINTN     CoreId
+MceAriGetEnabledCoresBitMap (
+  IN  UINT64    *EnabledCoresBitMap
   );
 
 #endif

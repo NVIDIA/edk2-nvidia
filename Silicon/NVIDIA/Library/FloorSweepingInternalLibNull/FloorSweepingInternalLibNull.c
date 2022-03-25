@@ -8,26 +8,17 @@
 
 #include <Library/FloorSweepingInternalLib.h>
 
-
-BOOLEAN
-EFIAPI
-IsCoreEnabledInternal (
-  IN  UINT32  CpuNum,
-  OUT BOOLEAN *CoreEnabled
-)
-{
-  return FALSE;
-}
-
 /**
-  Retrieve number of enabled CPUs for each platform
+  Get CPU info for a platform
 
 **/
 BOOLEAN
 EFIAPI
-GetNumberOfEnabledCpuCoresInternal (
-  OUT UINT32 *NumCpus
-)
+GetCpuInfoInternal (
+  IN  UINTN     EnabledSockets,
+  IN  UINTN     MaxSupportedCores,
+  OUT UINT64    *EnabledCoresBitMap
+  )
 {
   return FALSE;
 }

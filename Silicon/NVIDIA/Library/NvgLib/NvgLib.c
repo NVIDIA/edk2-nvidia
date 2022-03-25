@@ -81,35 +81,22 @@ NvgConvertCpuLogicalToMpidr (
   return EFI_SUCCESS;
 }
 
-BOOLEAN
+/**
+  Fills in bit map of enabled cores
+
+**/
+EFI_STATUS
 EFIAPI
-NvgClusterIsPresent (
-  IN  UINTN ClusterId
-  )
-{
-  UINTN     CpuCount;
-  UINTN     MaxClusters;
-  UINT32    MaxCoresPerCluster;
-
-  CpuCount = NvgGetNumberOfEnabledCpuCores ();
-
-  MaxCoresPerCluster = PcdGet32 (PcdTegraMaxCoresPerCluster);
-  MaxClusters = (CpuCount + MaxCoresPerCluster - 1) / MaxCoresPerCluster;
-
-  DEBUG ((DEBUG_INFO, "%a: MaxClusters=%u\n", __FUNCTION__, MaxClusters));
-
-  return (ClusterId < MaxClusters);
-}
-
-BOOLEAN
-EFIAPI
-NvgCoreIsPresent (
-  IN  UINTN CoreId
+NvgGetEnabledCoresBitMap (
+  IN  UINT64    *EnabledCoresBitMap
   )
 {
   UINTN     CpuCount;
 
   CpuCount = NvgGetNumberOfEnabledCpuCores ();
+  ASSERT (CpuCount <= 64);
 
-  return (CoreId < CpuCount);
+  EnabledCoresBitMap[0] = (1ULL << CpuCount) - 1;
+
+  return EFI_SUCCESS;
 }

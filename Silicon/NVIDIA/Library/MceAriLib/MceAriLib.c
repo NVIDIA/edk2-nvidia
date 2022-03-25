@@ -449,27 +449,6 @@ MceAriGetVersion (
   return AriGetVersion (AriBase);
 }
 
-UINT32
-EFIAPI
-MceAriNumCores (
-  VOID
-  )
-{
-  UINT32        NumCores;
-  UINT32        CorePresentBitmap;
-  UINTN         Index;
-  UINTN         AriBase;
-
-  AriBase = MceAriGetApertureBase ();
-  CorePresentBitmap = AriGetCoresEnabledBitMask (AriBase);
-  NumCores = 0;
-  for (Index = 0; Index < PLATFORM_MAX_CPUS; Index++) {
-    if (CorePresentBitmap & BIT (Index))
-      NumCores++;
-  }
-  return NumCores;
-}
-
 EFI_STATUS
 EFIAPI
 MceAriCheckCoreEnabled (
@@ -494,57 +473,22 @@ MceAriCheckCoreEnabled (
   return EFI_SUCCESS;
 }
 
-BOOLEAN
+/**
+  Fills in bit map of enabled cores
+
+**/
+EFI_STATUS
 EFIAPI
-MceAriClusterIsPresent (
-  IN  UINTN     ClusterId
+MceAriGetEnabledCoresBitMap (
+  IN  UINT64    *EnabledCoresBitMap
   )
 {
   UINTN         AriBase;
-  UINT32        LinearCoreIdBitmap;
-  UINTN         LinearCoreId;
-  BOOLEAN       Present;
 
-  ASSERT (ClusterId < PLATFORM_MAX_CLUSTERS);
+  ASSERT (PLATFORM_MAX_CPUS <= 64);
 
   AriBase = MceAriGetApertureBase ();
-  LinearCoreIdBitmap = AriGetCoresEnabledBitMask (AriBase);
+  EnabledCoresBitMap[0] = AriGetCoresEnabledBitMask (AriBase);
 
-  // look to see if any core in the cluster is present
-  Present = FALSE;
-  for (LinearCoreId = ClusterId * PLATFORM_MAX_CORES_PER_CLUSTER;
-       LinearCoreId < (ClusterId + 1) * PLATFORM_MAX_CORES_PER_CLUSTER;
-       LinearCoreId++)
-  {
-    if (LinearCoreIdBitmap & BIT (LinearCoreId)) {
-      Present = TRUE;
-      break;
-    }
-  }
-
-  return Present;
-}
-
-BOOLEAN
-EFIAPI
-MceAriCoreIsPresent (
-  IN  UINTN     CoreId
-  )
-{
-  UINTN         AriBase;
-  UINT32        LinearCoreIdBitmap;
-  BOOLEAN       Present;
-
-  ASSERT (CoreId < PLATFORM_MAX_CPUS);
-
-  AriBase = MceAriGetApertureBase ();
-  LinearCoreIdBitmap = AriGetCoresEnabledBitMask (AriBase);
-
-  // look to see if given core is present
-  Present = FALSE;
-  if (LinearCoreIdBitmap & BIT (CoreId)) {
-    Present = TRUE;
-  }
-
-  return Present;
+  return EFI_SUCCESS;
 }

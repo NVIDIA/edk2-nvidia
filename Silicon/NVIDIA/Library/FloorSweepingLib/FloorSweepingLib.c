@@ -14,14 +14,150 @@
 #include <Library/DebugLib.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/FloorSweepingInternalLib.h>
+#include <Library/HobLib.h>
 #include <Library/MceAriLib.h>
 #include <Library/NvgLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
 // Platform CPU configuration
 #define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
 #define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdTegraMaxClusters))
+
+#define MAX_SUPPORTED_CORES             1024
+
+typedef struct {
+  UINTN                 MaxClustersPerSocket;
+  UINTN                 MaxCoresPerCluster;
+  UINTN                 MaxCores;
+
+  UINTN                 EnabledSockets;
+  UINTN                 EnabledCores;
+
+  UINT64                EnabledCoresBitMap[ALIGN_VALUE (MAX_SUPPORTED_CORES, 64) / 64];
+
+} PLATFORM_CPU_INFO;
+
+STATIC PLATFORM_CPU_INFO mCpuInfo = {0};
+
+/**
+  Get CPU info for a platform
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+GetCpuInfo (
+  IN  UINTN     EnabledSockets,
+  IN  UINTN     MaxSupportedCores,
+  OUT UINT64    *EnabledCoresBitMap
+  )
+{
+  BOOLEAN       ValidPrivatePlatform;
+  EFI_STATUS    Status;
+
+  Status = EFI_SUCCESS;
+  ValidPrivatePlatform = GetCpuInfoInternal (EnabledSockets,
+                                             MaxSupportedCores,
+                                             EnabledCoresBitMap);
+  if (!ValidPrivatePlatform) {
+    UINTN     ChipId;
+
+    ChipId = TegraGetChipID ();
+
+    switch (ChipId) {
+      case T194_CHIP_ID:
+        Status = NvgGetEnabledCoresBitMap (EnabledCoresBitMap);
+        break;
+      case T234_CHIP_ID:
+        Status = MceAriGetEnabledCoresBitMap (EnabledCoresBitMap);
+        break;
+      default:
+        ASSERT (FALSE);
+        Status = EFI_UNSUPPORTED;
+        break;
+    }
+  }
+
+  return Status;
+}
+
+/**
+  Get floor sweep cpu info
+
+**/
+STATIC
+PLATFORM_CPU_INFO *
+EFIAPI
+FloorSweepCpuInfo (
+  VOID
+  )
+{
+  static BOOLEAN    InfoFilled = FALSE;
+  PLATFORM_CPU_INFO *Info;
+  UINTN             Core;
+  EFI_STATUS        Status;
+
+  Info = &mCpuInfo;
+  if (!InfoFilled) {
+    VOID            *Hob;
+
+    Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+    if ((Hob != NULL) &&
+        (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+      Info->EnabledSockets = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->NumSockets;
+    } else {
+      ASSERT (FALSE);
+      Info->EnabledSockets = 1;
+    }
+
+    Info->MaxClustersPerSocket = PLATFORM_MAX_CLUSTERS;
+    Info->MaxCoresPerCluster = PLATFORM_MAX_CORES_PER_CLUSTER;
+    Status = GetCpuInfo (Info->EnabledSockets,
+                         MAX_SUPPORTED_CORES,
+                         Info->EnabledCoresBitMap);
+    if (EFI_ERROR (Status)) {
+      ASSERT (FALSE);
+
+      Info->MaxClustersPerSocket = 1;
+      Info->MaxCoresPerCluster = 1;
+      Info->EnabledCoresBitMap[0] = 0x1;
+    }
+
+    Info->MaxCores = Info->MaxCoresPerCluster * Info->MaxClustersPerSocket *
+      Info->EnabledSockets;
+
+    Info->EnabledCores = 0;
+    for (Core = 0; Core < Info->MaxCores; Core++) {
+      UINTN Index   = Core / 64;
+      UINTN Bit     = Core % 64;
+
+      if (Info->EnabledCoresBitMap[Index] & (1ULL << Bit)) {
+        Info->EnabledCores++;
+      }
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: MaxClustersPerSocket=%u MaxCoresPerCluster=%u MaxCores=%u\n",
+            __FUNCTION__,  Info->MaxClustersPerSocket, Info->MaxCoresPerCluster,
+            Info->MaxCores));
+    DEBUG ((DEBUG_INFO, "%a: EnabledSockets=%u EnabledCores=%u\n",
+            __FUNCTION__, Info->EnabledSockets, Info->EnabledCores));
+    DEBUG_CODE (
+      for (Core = 0; Core < Info->MaxCores; Core += 64) {
+        UINTN Index = Core / 64;
+
+        DEBUG ((DEBUG_INFO, "EnabledCoresBitMap[%u]=0x%016llx ",
+                Index, Info->EnabledCoresBitMap[Index]));
+      }
+      DEBUG ((DEBUG_INFO, "\n"));
+      );
+
+    InfoFilled = TRUE;
+  }
+
+  return Info;
+}
 
 UINT32
 EFIAPI
@@ -110,27 +246,18 @@ ClusterIsPresent (
   IN  UINTN ClusterId
   )
 {
-  UINTN         ChipId;
-  BOOLEAN       Present;
+  PLATFORM_CPU_INFO *Info;
+  UINTN             Core;
 
-  ChipId = TegraGetChipID ();
+  Info = FloorSweepCpuInfo ();
 
-  switch (ChipId) {
-    case T194_CHIP_ID:
-      Present = NvgClusterIsPresent (ClusterId);
-      break;
-    case T234_CHIP_ID:
-      Present = MceAriClusterIsPresent (ClusterId);
-      break;
-    default:
-      ASSERT (FALSE);
-      Present = FALSE;
-      break;
+  for (Core = 0; Core < Info->MaxCoresPerCluster; Core++) {
+    if (IsCoreEnabled (Core + (ClusterId * Info->MaxCoresPerCluster))) {
+      return TRUE;
+    }
   }
-  DEBUG ((DEBUG_INFO, "%a: ChipId=0x%x, ClusterId=%u, Present=%d\n",
-          __FUNCTION__, ChipId, ClusterId, Present));
 
-  return Present;
+  return FALSE;
 }
 
 /**
@@ -143,70 +270,27 @@ IsCoreEnabled (
   IN  UINT32  CpuIndex
 )
 {
-  UINTN     ChipId;
-  BOOLEAN   ValidPrivatePlatform;
-  BOOLEAN   CoreEnabled;
+  PLATFORM_CPU_INFO *Info;
+  UINTN             Index;
+  UINTN             Bit;
 
-  CoreEnabled = FALSE;
+  Info = FloorSweepCpuInfo ();
 
-  ValidPrivatePlatform = IsCoreEnabledInternal ( CpuIndex, &CoreEnabled );
-  if (ValidPrivatePlatform) {
-    return CoreEnabled;
-  }
+  Index = CpuIndex / 64;
+  Bit   = CpuIndex % 64;
 
-  ChipId = TegraGetChipID ();
-
-  switch (ChipId) {
-  case T194_CHIP_ID:
-    CoreEnabled = NvgCoreIsPresent (CpuIndex);
-    break;
-  case T234_CHIP_ID:
-    CoreEnabled = MceAriCoreIsPresent (CpuIndex);
-    break;
-    default:
-      CoreEnabled = FALSE;
-      ASSERT (FALSE);
-      break;
-  }
-
-  return CoreEnabled;
+  return ((Info->EnabledCoresBitMap[Index] & (1ULL << Bit)) != 0);
 }
-
 
 /**
   Retrieve number of enabled CPUs for each platform
 
 **/
 UINT32
+EFIAPI
 GetNumberOfEnabledCpuCores (
   VOID
 )
 {
-  UINT32    Count;
-  UINTN     ChipId;
-  BOOLEAN   ValidPrivatePlatform;
-
-  Count = 0;
-
-  ValidPrivatePlatform = GetNumberOfEnabledCpuCoresInternal ( &Count );
-  if (ValidPrivatePlatform) {
-    return Count;
-  }
-
-  ChipId = TegraGetChipID ();
-
-  switch (ChipId) {
-    case T194_CHIP_ID:
-      Count = NvgGetNumberOfEnabledCpuCores ();
-      break;
-    case T234_CHIP_ID:
-      Count = MceAriNumCores ();
-      break;
-    default:
-      ASSERT (FALSE);
-      Count = 1;
-      break;
-  }
-
-  return Count;
+  return (UINT32) FloorSweepCpuInfo ()->EnabledCores;
 }
