@@ -379,3 +379,19 @@ T194ValidateActiveBootChain(
 
   return EFI_SUCCESS;
 }
+
+/**
+  Get Platform Resource Information
+
+**/
+EFI_STATUS
+EFIAPI
+T194GetPlatformResourceInformation(
+  IN UINTN                        CpuBootloaderAddress,
+  IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
+)
+{
+  PlatformResourceInfo->NumSockets = 1;
+
+  return EFI_SUCCESS;
+}

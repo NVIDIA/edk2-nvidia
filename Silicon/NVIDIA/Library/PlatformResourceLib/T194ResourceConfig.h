@@ -88,6 +88,7 @@ T194GetBoardInfo(
 
 **/
 EFI_STATUS
+EFIAPI
 T194GetActiveBootChain(
   IN  UINTN   CpuBootloaderAddress,
   OUT UINT32  *BootChain
@@ -98,6 +99,7 @@ T194GetActiveBootChain(
 
 **/
 EFI_STATUS
+EFIAPI
 T194ValidateActiveBootChain(
   IN  UINTN   CpuBootloaderAddress
 );
@@ -107,5 +109,20 @@ T194ValidateActiveBootChain(
 
 **/
 BOOLEAN
-T194BootChainIsValid();
+EFIAPI
+T194BootChainIsValid(
+  VOID
+);
+
+/**
+  Get Platform Resource Information
+
+**/
+EFI_STATUS
+EFIAPI
+T194GetPlatformResourceInformation(
+  IN UINTN                        CpuBootloaderAddress,
+  IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
+);
+
 #endif //__T194_RESOURCE_CONFIG_H__

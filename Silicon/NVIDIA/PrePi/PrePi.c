@@ -197,6 +197,7 @@ CEntryPoint (
   UINT64                        DtbSize;
   UINT64                        DtbOffset;
   UINT64                        DtbNext;
+  TEGRA_PLATFORM_RESOURCE_INFO  PlatformResourceInfo;
 
   while (FvOffset < MemorySize) {
     FvHeader = (EFI_FIRMWARE_VOLUME_HEADER *)(VOID *)(MemoryBase + FvOffset);
@@ -373,6 +374,11 @@ CEntryPoint (
 
   Status = ArmSetMemoryRegionReadOnly (StackBase + StackSize, SIZE_4KB);
   ASSERT_EFI_ERROR (Status);
+
+  // Build Platform Resource Data HOB
+  Status = GetPlatformResourceInformation (&PlatformResourceInfo);
+  ASSERT_EFI_ERROR (Status);
+  BuildGuidDataHob (&gNVIDIAPlatformResourceDataGuid, &PlatformResourceInfo, sizeof (PlatformResourceInfo));
 
   // Register UEFI DTB
   RegisterDeviceTree(DtbBase);
