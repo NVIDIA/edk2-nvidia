@@ -98,13 +98,4 @@ GetNumberOfEnabledCpuCores (
   VOID
 );
 
-/**
-  Retrieve number of enabled sockets for each platform
-
-**/
-UINT32
-GetNumberOfEnabledSockets (
-  VOID
-);
-
 #endif //__FLOOR_SWEEPING_LIB_H__
