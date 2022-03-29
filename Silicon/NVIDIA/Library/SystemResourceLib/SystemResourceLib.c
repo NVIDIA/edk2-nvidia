@@ -17,7 +17,6 @@
 #include <Library/SystemResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
-#include <Library/FloorSweepingLib.h>
 
 /**
   Register device tree.
@@ -37,6 +36,9 @@ RegisterDeviceTree (
   CHAR8                         SWModule[] = "uefi";
   INT32                         NodeOffset;
   CHAR8                         SocketNodeStr[] = "/socket@9";
+  VOID                          *Hob;
+  UINT32                        NumSockets;
+  UINT32                        MaxSockets;
 
   //Register Device Tree
   if (0 != BlDtbLoadAddress) {
@@ -63,8 +65,13 @@ RegisterDeviceTree (
         fdt_del_node ((VOID *)DtbCopy, NodeOffset);
       }
 
-      UINT32 NumSockets = GetNumberOfEnabledSockets ();
-      UINT32 MaxSockets = 0;
+      NumSockets = 0;
+      MaxSockets = 0;
+      Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+      if ((Hob != NULL) && (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+        NumSockets = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->NumSockets;
+      }
+
       while (TRUE) {
         AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr),"/socket@%u", MaxSockets);
         NodeOffset = fdt_path_offset ((VOID *)DtbCopy, SocketNodeStr);

@@ -29,6 +29,7 @@
 
 [Guids]
   gFdtHobGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Sources.common]
   SystemResourceLib.c
