@@ -81,6 +81,10 @@ typedef struct {
   UINT32              Version;
 } TEGRA_GIC_INFO;
 
+typedef struct {
+  UINT32 NumSockets;
+} TEGRA_PLATFORM_RESOURCE_INFO;
+
 /**
   Set Tegra UART Base Address
 
@@ -267,6 +271,16 @@ EFIAPI
 GetRamdiskOSBaseAndSize (
   OUT UINTN *Base,
   OUT UINTN *Size
+);
+
+/**
+  Get Platform Resource Information
+
+**/
+EFI_STATUS
+EFIAPI
+GetPlatformResourceInformation (
+  IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
 );
 
 #endif //__PLATFORM_RESOURCE_LIB_H__

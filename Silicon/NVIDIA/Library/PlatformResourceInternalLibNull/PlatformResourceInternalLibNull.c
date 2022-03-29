@@ -222,3 +222,16 @@ GetRamdiskOSBaseAndSizeInternal (
 {
   return FALSE;
 }
+
+/**
+  Get Platform Resource Information
+
+**/
+BOOLEAN
+EFIAPI
+GetPlatformResourceInformationInternal (
+  IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
+)
+{
+  return FALSE;
+}

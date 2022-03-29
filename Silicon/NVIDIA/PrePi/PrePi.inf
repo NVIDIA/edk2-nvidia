@@ -57,6 +57,7 @@
   gEfiFirmwarePerformanceGuid
   gFdtHobGuid
   gDtPlatformDefaultDtbFileGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [FeaturePcd]
   gEmbeddedTokenSpaceGuid.PcdPrePiProduceMemoryTypeInformationHob

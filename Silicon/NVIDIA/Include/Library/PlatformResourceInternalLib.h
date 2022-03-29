@@ -177,4 +177,14 @@ GetRamdiskOSBaseAndSizeInternal (
   OUT UINTN *Size
 );
 
+/**
+  Get Platform Resource Information
+
+**/
+BOOLEAN
+EFIAPI
+GetPlatformResourceInformationInternal (
+  IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
+);
+
 #endif //__PLATFORM_RESOURCE_INTERNAL_LIB_H__

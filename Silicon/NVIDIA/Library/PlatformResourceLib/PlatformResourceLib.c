@@ -620,3 +620,36 @@ GetRamdiskOSBaseAndSize (
 
   return FALSE;
 }
+
+/**
+  Get Platform Resource Information
+
+**/
+EFI_STATUS
+EFIAPI
+GetPlatformResourceInformation (
+  IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
+)
+{
+  UINTN           ChipID;
+  UINTN           CpuBootloaderAddress;
+  BOOLEAN         ValidPrivatePlatform;
+
+  ValidPrivatePlatform = GetPlatformResourceInformationInternal(PlatformResourceInfo);
+  if (ValidPrivatePlatform) {
+    return EFI_SUCCESS;
+  }
+
+  ChipID = TegraGetChipID();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      return T234GetPlatformResourceInformation(CpuBootloaderAddress, PlatformResourceInfo);
+    case T194_CHIP_ID:
+      return T194GetPlatformResourceInformation(CpuBootloaderAddress, PlatformResourceInfo);
+    default:
+      return EFI_UNSUPPORTED;
+  }
+}
