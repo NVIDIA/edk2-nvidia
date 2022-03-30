@@ -2,7 +2,7 @@
 #
 #  Platform To Driver Configuration Driver
 #
-#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -19,6 +19,7 @@
 [Sources]
   PlatformToDriverConfiguration.c
   SdMmc/SdMmcConfigurationData.c
+  Gop/GopDriverConfigurationData.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -42,6 +43,7 @@
 [Guids]
   gEdkiiNonDiscoverableSdhciDeviceGuid
   gEfiEventExitBootServicesGuid
+  gNVIDIANonDiscoverableT234DisplayDeviceGuid
 
 [Depex]
   TRUE

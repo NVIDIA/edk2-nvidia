@@ -1,7 +1,7 @@
 /** @file
   Platform To Driver Configuration Protocol
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,6 +14,7 @@
 
 
 #include "SdMmc/SdMmcConfigurationData.h"
+#include "Gop/GopDriverConfigurationData.h"
 
 BOOLEAN IsResponseNeeded;
 
@@ -35,6 +36,7 @@ OnExitBootServices (
 // Create a mapping between the Driver GUID and the function pointer that extracts the DT info
 GUID_DEVICEFUNCPTR_MAPPING GuidDeviceFuncPtrMap[] = {
   { &gEdkiiNonDiscoverableSdhciDeviceGuid, QuerySdMmcParameters, ResponseSdMmcParameters },
+  { &gNVIDIANonDiscoverableT234DisplayDeviceGuid, QueryGopParameters, ResponseGopParameters },
   { NULL, NULL, NULL }
 };
 
