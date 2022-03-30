@@ -155,3 +155,8 @@
   # NV Non-Discoverable PCI Device
   #
   INF Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
+
+  #
+  # NV Display Controller Driver
+  #
+  INF Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf

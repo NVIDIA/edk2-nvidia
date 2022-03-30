@@ -1,0 +1,58 @@
+#/** @file
+#
+#  NV Display Controller Driver
+#
+#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = NvDisplayControllerDxe
+  FILE_GUID                      = 7bbc8ce6-bf62-4093-9ce9-71126eb54735
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  NvDisplayControllerDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  IoLib
+  DmaLib
+  MemoryAllocationLib
+  PcdLib
+  UefiDriverEntryPoint
+  DeviceDiscoveryDriverLib
+
+[Guids]
+  gEfiAcpiTableGuid
+  gNVIDIANonDiscoverableT234DisplayDeviceGuid
+
+[Protocols]
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIAClockNodeProtocolGuid
+  gNVIDIANonDiscoverableDeviceProtocolGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdFramebufferHorizontalResolution
+  gNVIDIATokenSpaceGuid.PcdFramebufferVerticalResolution
+  gNVIDIATokenSpaceGuid.PcdFramebufferPixelSize
+  gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex
+
+[Depex]
+  TRUE
