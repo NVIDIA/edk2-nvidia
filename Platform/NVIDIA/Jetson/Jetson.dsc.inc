@@ -324,3 +324,11 @@
   # NV Display Controller Driver
   #
   Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
+
+  #
+  # NV GOP Driver
+  #
+  Silicon/NVIDIA/Drivers/NvGopDriver/nvgop-chips-platform.inf {
+    <LibraryClasses>
+      DispMacroLib|Silicon/NVIDIA/Drivers/NvGopDriver/tools/Library/DispMacroLib/DispMacroLibPlatform.inf
+  }

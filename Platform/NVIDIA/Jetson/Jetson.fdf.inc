@@ -161,3 +161,8 @@
   # NV Display Controller Driver
   #
   INF Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
+
+  #
+  # NV GOP Driver
+  #
+  INF Silicon/NVIDIA/Drivers/NvGopDriver/nvgop-chips-platform.inf
