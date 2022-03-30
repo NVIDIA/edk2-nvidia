@@ -313,3 +313,8 @@
       <LibraryClasses>
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
+
+  #
+  # NV Non-Discoverable PCIe Device DXE
+  #
+  Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
