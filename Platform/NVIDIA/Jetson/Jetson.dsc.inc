@@ -124,6 +124,11 @@
 [PcdsFeatureFlag.common]
   gEmbeddedTokenSpaceGuid.PcdAndroidBootLoadFile2|TRUE
 
+[PcdsFixedAtBuild]
+  gNVIDIATokenSpaceGuid.PcdFramebufferHorizontalResolution|3840
+  gNVIDIATokenSpaceGuid.PcdFramebufferVerticalResolution|2160
+  gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|1
+
 ################################################################################
 #
 # Components Section - list of all EDK II Modules needed by this Platform
