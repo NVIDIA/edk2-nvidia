@@ -17,6 +17,7 @@
 #include <Library/DmaLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
@@ -696,11 +697,19 @@ DeviceDiscoveryNotify (
   )
 {
   EFI_STATUS                            Status;
+  TEGRA_PLATFORM_TYPE                   Platform;
   NON_DISCOVERABLE_DEVICE               *EdkiiNonDiscoverableDevice;
   NVIDIA_DISPLAY_CONTROLLER_CONTEXT     *Context;
   CONST BOOLEAN                         OnExitBootServices = FALSE;
 
   switch (Phase) {
+  case DeviceDiscoveryDriverBindingSupported:
+    Platform = TegraGetPlatform ();
+    if (Platform != TEGRA_PLATFORM_SILICON) {
+      return EFI_UNSUPPORTED;
+    }
+    return EFI_SUCCESS;
+
   case DeviceDiscoveryDriverBindingStart:
     Status = DisplayStart (&Context, DriverHandle, ControllerHandle);
     if (EFI_ERROR (Status)) {

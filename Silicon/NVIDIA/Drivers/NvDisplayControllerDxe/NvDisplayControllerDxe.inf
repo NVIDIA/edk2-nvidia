@@ -36,6 +36,7 @@
   DmaLib
   MemoryAllocationLib
   PcdLib
+  TegraPlatformInfoLib
   UefiDriverEntryPoint
   DeviceDiscoveryDriverLib
 
