@@ -23,6 +23,9 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 
 #include <Protocol/ClockNodeProtocol.h>
+#include <Protocol/EmbeddedGpio.h>
+
+#include <libfdt.h>
 
 #define DISPLAY_SOR_COUNT               8
 #define DISPLAY_FE_SW_SYS_CAP           0x00030000
@@ -38,6 +41,7 @@ typedef struct {
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR     *FramebufferResource;
   BOOLEAN                               ResetsDeasserted;
   BOOLEAN                               ClocksEnabled;
+  BOOLEAN                               OutputGpiosConfigured;
   EFI_EVENT                             OnExitBootServicesEvent;
 } NVIDIA_DISPLAY_CONTROLLER_CONTEXT;
 
@@ -193,6 +197,195 @@ EnableRequiredDisplayClocks (
       DEBUG ((
         DEBUG_ERROR, "%a: failed to disable clocks: %r\r\n",
         __FUNCTION__, Status
+      ));
+      return Status;
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+   Retrieves GPIO pin number from a subnode of the specified node.
+
+   @param [in]  DeviceTreeBase  Base of the Device Tree to read.
+   @param [in]  NodeOffset      Offset of the specified node.
+   @param [in]  SubnodeName     Name of the subnode to look for.
+   @param [out] Pin             Where to store the pin number.
+
+   @retval TRUE     Pin number successfully retrieved.
+   @retval FALSE    An error occurred.
+*/
+STATIC
+BOOLEAN
+GetSubnodeGpioPin (
+  IN  VOID          *CONST DeviceTreeBase,
+  IN  CONST INT32   NodeOffset,
+  IN  CONST CHAR8   *CONST SubnodeName,
+  OUT UINT32        *CONST Pin
+  )
+{
+  INT32         SubnodeOffset;
+  CONST CHAR8   *CONST GpiosPropName = "gpios";
+  CONST VOID    *GpiosProp;
+  INT32         PropSize;
+
+  SubnodeOffset = fdt_subnode_offset (DeviceTreeBase, NodeOffset,
+                                      SubnodeName);
+  if (SubnodeOffset < 0) {
+    if (SubnodeOffset != -FDT_ERR_NOTFOUND) {
+      DEBUG ((
+        DEBUG_ERROR, "%a: could not locate subnode '%a': %a\r\n",
+        __FUNCTION__, SubnodeName, fdt_strerror (SubnodeOffset)
+      ));
+    }
+    return FALSE;
+  }
+
+  GpiosProp = fdt_getprop (DeviceTreeBase, SubnodeOffset,
+                           GpiosPropName, &PropSize);
+  if (GpiosProp == NULL) {
+    DEBUG ((
+      DEBUG_ERROR, "%a: could not locate property '%a': %a\r\n",
+      __FUNCTION__, GpiosPropName, fdt_strerror (PropSize)
+    ));
+    return FALSE;
+  }
+  if (PropSize < sizeof (*Pin)) {
+    DEBUG ((
+      DEBUG_ERROR, "%a: invalid size of property '%a': %d\r\n",
+      __FUNCTION__, GpiosPropName, (INTN) PropSize
+    ));
+    return FALSE;
+  }
+
+  *Pin = SwapBytes32 (*(CONST UINT32*) GpiosProp);
+  return TRUE;
+}
+
+/**
+ configure any GPIOs needed for HDMI/DP output
+ */
+STATIC
+EFI_STATUS
+ConfigureOutputGpios (
+  IN       EFI_HANDLE   ControllerHandle,
+  IN CONST BOOLEAN      Enable,
+  IN CONST BOOLEAN      UseDpOutput
+  )
+{
+  EFI_STATUS                        Status;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode;
+  VOID                              *DeviceTreeBase;
+  EMBEDDED_GPIO                     *EmbeddedGpio;
+  CONST CHAR8                       *CONST GpioCompatible = "ti,tca9539";
+  INT32                             GpioOffset;
+  UINT32                            GpioPhandle;
+  UINT32                            EnVddHdmiPin;
+  UINT32                            Dp0AuxUart6SelPin;
+  UINT32                            HdmiDp0MuxSelPin;
+  UINT32                            Dp0AuxI2c8SelPin;
+  EMBEDDED_GPIO_PIN                 GpioPin;
+  EMBEDDED_GPIO_MODE                GpioMode;
+
+  Status = gBS->HandleProtocol (ControllerHandle,
+                                &gNVIDIADeviceTreeNodeProtocolGuid,
+                                (VOID**) &DeviceTreeNode);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR, "%a: could not retrieve DT node protocol: %r\r\n",
+      __FUNCTION__, Status
+    ));
+    return Status;
+  }
+  DeviceTreeBase = DeviceTreeNode->DeviceTreeBase;
+
+  Status = gBS->LocateProtocol (&gNVIDIAI2cExpanderGpioProtocolGuid,
+                                NULL, (VOID**) &EmbeddedGpio);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR, "%a: could not locate I2C expander GPIO protocol: %r\r\n",
+      __FUNCTION__, Status
+    ));
+    return Status;
+  }
+
+  GpioOffset = -1;
+  while (1) {
+    GpioOffset = fdt_node_offset_by_compatible (DeviceTreeBase, GpioOffset, GpioCompatible);
+    if (GpioOffset == -FDT_ERR_NOTFOUND) {
+      DEBUG ((
+        DEBUG_WARN, "%a: could not find compatible GPIO node in DT: not on SLT board?\r\n",
+        __FUNCTION__
+      ));
+      /* Return success to avoid breaking boot on non-SLT boards. */
+      return EFI_SUCCESS;
+    } else if (GpioOffset < 0) {
+      DEBUG ((
+        DEBUG_ERROR, "%a: failed to lookup node by compatible '%a': %a\r\n",
+        __FUNCTION__, GpioCompatible, fdt_strerror (GpioOffset)
+      ));
+      return EFI_NOT_FOUND;
+    }
+
+    if (GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "en_vdd_hdmi_cvm", &EnVddHdmiPin)
+        && GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "dp0_aux_uart6_sel", &Dp0AuxUart6SelPin)
+        && GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "hdmi_dp0_mux_sel", &HdmiDp0MuxSelPin)
+        && GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "dp0_aux_i2c8_sel", &Dp0AuxI2c8SelPin)) {
+      break;
+    }
+  }
+
+  GpioPhandle = fdt_get_phandle (DeviceTreeBase, GpioOffset);
+  if (0 == GpioPhandle || -1 == GpioPhandle) {
+    DEBUG ((
+      DEBUG_ERROR, "%a: failed to find phandle of node at offset %d\r\n",
+      __FUNCTION__, (INTN) GpioOffset
+    ));
+    return EFI_NOT_FOUND;
+  }
+
+  GpioPin  = GPIO (GpioPhandle, EnVddHdmiPin);
+  GpioMode = Enable ? GPIO_MODE_OUTPUT_1 : GPIO_MODE_OUTPUT_0;
+  Status = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR, "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+      __FUNCTION__, GpioPin, GpioMode, Status
+    ));
+    return Status;
+  }
+
+  if (Enable) {
+    GpioPin  = GPIO (GpioPhandle, Dp0AuxUart6SelPin);
+    GpioMode = GPIO_MODE_OUTPUT_0;
+    Status = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR, "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+        __FUNCTION__, GpioPin, GpioMode, Status
+      ));
+      return Status;
+    }
+
+    GpioPin  = GPIO (GpioPhandle, HdmiDp0MuxSelPin);
+    GpioMode = UseDpOutput ? GPIO_MODE_OUTPUT_1 : GPIO_MODE_OUTPUT_0;
+    Status = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR, "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+        __FUNCTION__, GpioPin, GpioMode, Status
+      ));
+      return Status;
+    }
+
+    GpioPin  = GPIO (GpioPhandle, Dp0AuxI2c8SelPin);
+    GpioMode = GPIO_MODE_OUTPUT_0;
+    Status = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR, "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+        __FUNCTION__, GpioPin, GpioMode, Status
       ));
       return Status;
     }
@@ -406,6 +599,7 @@ DisplayStop (
   EFI_STATUS    Status = EFI_SUCCESS;
   EFI_STATUS    Status1;
   EFI_HANDLE    ControllerHandle = Context->ControllerHandle;
+  CONST BOOLEAN UseDpOutput = FALSE;
 
   if (Context != NULL) {
     if (Context->OnExitBootServicesEvent != NULL) {
@@ -421,6 +615,14 @@ DisplayStop (
         Status = Status1;
       }
       Context->OnExitBootServicesEvent = NULL;
+    }
+
+    if (Context->OutputGpiosConfigured) {
+      Status1 = ConfigureOutputGpios (ControllerHandle, FALSE, UseDpOutput);
+      if (!EFI_ERROR (Status)) {
+        Status = Status1;
+      }
+      Context->OutputGpiosConfigured = FALSE;
     }
 
     if (Context->ClocksEnabled) {
@@ -531,6 +733,7 @@ DisplayStart (
   NON_DISCOVERABLE_DEVICE               *NvNonDiscoverableDevice;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR     FramebufferDescriptor, *FramebufferResource = NULL;
   NVIDIA_DISPLAY_CONTROLLER_CONTEXT     *Result = NULL;
+  CONST BOOLEAN                         UseDpOutput = FALSE;
   CONST BOOLEAN                         OnExitBootServices = FALSE;
 
   CONST UINTN FramebufferHorizontalResolution = (UINTN) PcdGet32 (PcdFramebufferHorizontalResolution);
@@ -636,6 +839,12 @@ DisplayStart (
     goto Exit;
   }
   Result->ClocksEnabled = TRUE;
+
+  Status = ConfigureOutputGpios (ControllerHandle, TRUE, UseDpOutput);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+  Result->OutputGpiosConfigured = TRUE;
 
   /* Install the OnExitBootServices teardown event during non-ACPI
      boot only. */

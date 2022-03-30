@@ -48,6 +48,8 @@
   gEdkiiNonDiscoverableDeviceProtocolGuid
   gNVIDIAClockNodeProtocolGuid
   gNVIDIANonDiscoverableDeviceProtocolGuid
+  gNVIDIAI2cExpanderGpioProtocolGuid            ## CONSUMES
+  gNVIDIADeviceTreeNodeProtocolGuid             ## CONSUMES
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdFramebufferHorizontalResolution
@@ -56,4 +58,4 @@
   gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex
 
 [Depex]
-  TRUE
+  gNVIDIAI2cExpanderGpioProtocolGuid
