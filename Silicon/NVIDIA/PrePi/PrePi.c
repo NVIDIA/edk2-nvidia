@@ -365,6 +365,11 @@ CEntryPoint (
   //Register Firmware volume
   BuildFvHob ((EFI_PHYSICAL_ADDRESS)FvHeader, FvSize);
 
+  // Build Platform Resource Data HOB
+  Status = GetPlatformResourceInformation (&PlatformResourceInfo);
+  ASSERT_EFI_ERROR (Status);
+  BuildGuidDataHob (&gNVIDIAPlatformResourceDataGuid, &PlatformResourceInfo, sizeof (PlatformResourceInfo));
+
   // Initialize MMU and Memory HOBs (Resource Descriptor HOBs)
   // Get Virtual Memory Map from the Platform Library
   GetVirtualMemoryMap (&MemoryTable);
@@ -374,11 +379,6 @@ CEntryPoint (
 
   Status = ArmSetMemoryRegionReadOnly (StackBase + StackSize, SIZE_4KB);
   ASSERT_EFI_ERROR (Status);
-
-  // Build Platform Resource Data HOB
-  Status = GetPlatformResourceInformation (&PlatformResourceInfo);
-  ASSERT_EFI_ERROR (Status);
-  BuildGuidDataHob (&gNVIDIAPlatformResourceDataGuid, &PlatformResourceInfo, sizeof (PlatformResourceInfo));
 
   // Register UEFI DTB
   RegisterDeviceTree(DtbBase);
