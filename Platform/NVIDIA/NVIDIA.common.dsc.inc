@@ -88,7 +88,7 @@
   ResetSystemLib|ArmPkg/Library/ArmSmcPsciResetSystemLib/ArmSmcPsciResetSystemLib.inf
   ArmLib|ArmPkg/Library/ArmLib/ArmBaseLib.inf
   ArmMmuLib|ArmPkg/Library/ArmMmuLib/ArmMmuBaseLib.inf
-  OpteeLib|ArmPkg/Library/OpteeLib/OpteeLib.inf
+  OpteeNvLib|Silicon/NVIDIA/Library/OpteeNvLib/OpteeNvLib.inf
 
   TimerLib|ArmPkg/Library/ArmArchTimerLib/ArmArchTimerLib.inf
 
