@@ -37,7 +37,7 @@
   FloorSweepingLib
   PlatformResourceLib
   TegraDeviceTreeKernelOverlayLib
-  OpteeLib
+  OpteeNvLib
   BootChainInfoLib
 
 [Protocols]
