@@ -376,6 +376,7 @@
 !if $(BUILD_PROJECT_TYPE) == PROJECT_MU
   gEfiMdeModulePkgTokenSpaceGuid.PcdRequireIommu|FALSE
 !endif
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEnableVariableRuntimeCache|FALSE
 
 [PcdsFixedAtBuild.common]
 !ifdef $(BUILDID_STRING)
