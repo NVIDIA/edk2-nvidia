@@ -957,14 +957,6 @@
   #
   Silicon/NVIDIA/Drivers/RcmDxe/RcmDxe.inf
 
-  #
-  # MM Communication
-  #
-  ArmPkg/Drivers/MmCommunicationDxe/MmCommunication.inf {
-    <LibraryClasses>
-      NULL|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
-      NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
-  }
 
   #
   # Platform To Driver Configuration Support

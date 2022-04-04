@@ -254,11 +254,6 @@
   INF Silicon/NVIDIA/Drivers/RcmDxe/RcmDxe.inf
 
   #
-  # MM Communication
-  #
-  INF ArmPkg/Drivers/MmCommunicationDxe/MmCommunication.inf
-
-  #
   # Platform To Driver Configuration Support
   #
   INF Silicon/NVIDIA/Drivers/PlatformToDriverConfiguration/PlatformToDriverConfiguration.inf
