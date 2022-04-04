@@ -10,6 +10,8 @@
 #ifndef OPTEENV_LIB_H_
 #define OPTEENV_LIB_H_
 
+#define ARM_SMC_ID_TOS_CAPABILITIES   0xb2000009
+
 /*
  * The 'Trusted OS Call UID' is supposed to return the following UUID for
  * OP-TEE OS. This is a 128-bit value.
@@ -23,15 +25,41 @@
 #define OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INPUT    0x1
 #define OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_OUTPUT   0x2
 #define OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INOUT    0x3
-#define OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INPUT   0x9
-#define OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_OUTPUT  0xa
-#define OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INOUT   0xb
+#define OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INPUT   0x5
+#define OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_OUTPUT  0x6
+#define OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INOUT   0x7
+#define OPTEE_MESSSGE_ATTR_NONCONTIG                BIT9
+#define OPTEE_MESSAGE_ATTR_TYPE_TMEM_OUTPUT         0xa
+
+#define OPTEE_MESSAGE_COMMAND_OPEN_SESSION      0
+#define OPTEE_MESSAGE_COMMAND_INVOKE_FUNCTION   1
+#define OPTEE_MESSAGE_COMMAND_CLOSE_SESSION     2
+#define OPTEE_MESSAGE_COMMAND_REGISTER_SHM      4
+#define OPTEE_MESSAGE_COMMAND_UNREGISTER_SHM    5
+
+/*
+ * Values sent/obtained as part of the exchange capabilities SMC ID.
+ */
+
+#define OPTEE_SMC_NSEC_CAP_UNIPROCESSOR         BIT0
+#define OPTEE_SMC_SEC_CAP_HAVE_RESERVED_SHM     BIT0
+#define OPTEE_SMC_SEC_CAP_UNREGISTERED_SHM      BIT1
+#define OPTEE_SMC_SEC_CAP_DYNAMIC_SHM           BIT2
+
+#define OPTEE_MESSAGE_FUNCTION_STMM_COMMUNICATE          0
 
 #define OPTEE_MESSAGE_ATTRIBUTE_TYPE_MASK  0xff
 
 #define OPTEE_SUCCESS               0x00000000
 #define OPTEE_ORIGIN_COMMUNICATION  0x00000002
 #define OPTEE_ERROR_COMMUNICATION   0xFFFF000E
+
+
+#define OPTEE_MSG_PAGE_SIZE			0x1000
+#define MAX_PAGELIST_ENTRIES \
+ ((OPTEE_MSG_PAGE_SIZE / sizeof(UINT64)) - 1)
+
+#define IS_ALIGNED(addr, size) (((UINTN) (addr) & (size - 1)) == 0)
 
 typedef struct {
   UINT64    BufferAddress;
@@ -86,6 +114,16 @@ typedef struct {
   OPTEE_MESSAGE_PARAM    Params[OPTEE_MAX_CALL_PARAMS]; // Params for function to be invoked
 } OPTEE_INVOKE_FUNCTION_ARG;
 
+typedef struct {
+  UINT32 Size;
+  VOID *Addr;
+} OPTEE_SHM_COOKIE;
+
+typedef  struct  {
+  UINT64 PagesArray[MAX_PAGELIST_ENTRIES];
+  UINT64 NextPage;
+} OPTEE_SHM_PAGE_LIST;
+
 BOOLEAN
 EFIAPI
 IsOpteePresent (
@@ -115,5 +153,27 @@ EFIAPI
 OpteeInvokeFunction (
   IN OUT OPTEE_INVOKE_FUNCTION_ARG  *InvokeFunctionArg
   );
+
+EFI_STATUS
+EFIAPI
+OpteeRegisterShm (
+  VOID *Buf,
+  UINT64 SharedMemCookie,
+  UINTN Size,
+  OPTEE_SHM_PAGE_LIST *Shm
+  );
+
+BOOLEAN
+EFIAPI
+OpteeExchangeCapabilities (
+  UINT64 *Cap
+  );
+
+EFI_STATUS
+EFIAPI
+OpteeSetMsgBuffer (
+  UINT64 Buf,
+  UINT64 Size
+ );
 
 #endif // OPTEENV_LIB_H_

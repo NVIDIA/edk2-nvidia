@@ -14,12 +14,14 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/OpteeNvLib.h>
+#include <Library/MemoryAllocationLib.h>
 
 #include <IndustryStandard/ArmStdSmc.h>
 #include <OpteeSmc.h>
 #include <Uefi.h>
 
 STATIC OPTEE_SHARED_MEMORY_INFORMATION  OpteeSharedMemoryInformation = { 0 };
+STATIC UINT32 OpteeCallWithArg (IN UINT64  PhysicalArg);
 
 /**
   Check for OP-TEE presence.
@@ -46,6 +48,167 @@ IsOpteePresent (
   } else {
     return FALSE;
   }
+}
+
+
+/*
+ * OpteeExchangeCapabilities
+ * Get the capabilities of the OP-TEE Trusted OS
+ *
+ * @param[in]   Cap       Output Buffer that contains a bitmask of
+                          the capabilities of the OP-TEE image.
+ * @return      TRUE      On successful call to OP-TEE secure OS.
+ *              FALSE     If OP-TEE returns a failure.
+ *
+ */
+BOOLEAN
+EFIAPI
+OpteeExchangeCapabilities (
+  OUT UINT64 *Cap
+  )
+{
+  ARM_SMC_ARGS ArmSmcArgs;
+
+  ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
+  ArmSmcArgs.Arg0 = ARM_SMC_ID_TOS_CAPABILITIES;
+  ArmSmcArgs.Arg1 = OPTEE_SMC_NSEC_CAP_UNIPROCESSOR;
+  ArmCallSmc (&ArmSmcArgs);
+
+  if ((ArmSmcArgs.Arg0 == OPTEE_SMC_RETURN_OK)) {
+    *Cap = ArmSmcArgs.Arg1;
+    return TRUE;
+  } else {
+    return FALSE;
+  }
+}
+
+/*
+ * OpteeRegisterShm
+ * Register a Buffer with OP-TEE if it supports Dynamic Shared Memory
+ *
+ * @param[in]   PageList         Optional PageList to be sent to OP-TEE, this
+                                 should be aligned to a 4k boundary.
+ * @param[in]   UserBuf          User buffer to be shared with OP-TEE, this
+ *                               should also be aliged to a 4k boundary.
+ * @param[in]   BufSize          Size of the buffer
+ * @param[out]  RetPtr           The return pointer contains a pointer to a
+ *                               Page list that is passed to OP-TEE
+ *
+ * @return      TRUE             On successful call to OP-TEE secure OS.
+ *              FALSE            If OP-TEE returns a failure.
+ *
+ */
+
+STATIC
+EFI_STATUS
+OpteeSetupPageList (
+  IN  OPTEE_SHM_PAGE_LIST *PageList OPTIONAL,
+  IN  VOID *UserBuf,
+  IN  UINTN BufSize,
+  OUT UINT64 *RetPtr
+ )
+{
+  EFI_STATUS Status = EFI_SUCCESS;
+  UINTN NumPages = EFI_SIZE_TO_PAGES (BufSize);
+  UINTN Pages = NumPages;
+  UINTN n = 0;
+  VOID *BufBase = UserBuf;
+  OPTEE_SHM_PAGE_LIST *ShmList;
+  UINTN NumPgLists = 0;
+
+  if (!(UserBuf && IS_ALIGNED (UserBuf, OPTEE_MSG_PAGE_SIZE)))  {
+    DEBUG ((DEBUG_ERROR, "UserBuf %p is not valid\n", UserBuf));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  ShmList = PageList;
+  if (ShmList != NULL) {
+    if (!IS_ALIGNED (ShmList, OPTEE_MSG_PAGE_SIZE)) {
+       DEBUG ((DEBUG_ERROR, "Invalid Shm List Buffer\n"));
+       return EFI_INVALID_PARAMETER;
+    }
+  } else  {
+    NumPgLists = (NumPages / MAX_PAGELIST_ENTRIES) + 1;
+    ShmList =
+    AllocateAlignedRuntimePages(EFI_SIZE_TO_PAGES(NumPages * sizeof(OPTEE_SHM_PAGE_LIST)), OPTEE_MSG_PAGE_SIZE);
+    if (ShmList == NULL)
+    {
+      return EFI_OUT_OF_RESOURCES;
+    }
+  }
+
+  while (Pages) {
+    ShmList->PagesArray[n] = (UINT64)BufBase;
+    n++;
+    Pages--;
+    BufBase += OPTEE_MSG_PAGE_SIZE;
+    if (n == MAX_PAGELIST_ENTRIES) {
+      ShmList->NextPage = (UINT64) (ShmList + 1);
+      ShmList++;
+      n = 0;
+    }
+  }
+  *RetPtr = (UINT64)ShmList;
+  return Status;
+}
+
+/*
+ * OpteeRegisterShm
+ * Register a Buffer with OP-TEE if it supports Dynamic Shared Memory
+ *
+ * @param[in]   Buf              Input Buffer[Should be aligned to 4k Boundary]
+ * @param[in]   SharedMemCookie  Cookie to refer to this shared memory segment
+ *                               during future transactions
+ * @param[in]   Size             Size of the buffer
+ * @param[in]   Shm              Optional buffer[Should be aligned to 4k
+ *                               Boundary to be used when sending the message
+ *                               to OP-TEE].
+ *
+ */
+
+EFI_STATUS
+EFIAPI
+OpteeRegisterShm (
+  IN VOID *Buf,
+  IN UINT64 SharedMemCookie,
+  IN UINTN Size,
+  IN OPTEE_SHM_PAGE_LIST *Shm OPTIONAL
+  )
+{
+  EFI_STATUS Status = EFI_SUCCESS;
+  OPTEE_MESSAGE_ARG *MessageArg;
+  UINT64 PageList;
+  UINT32 RetCode;
+
+  if (OpteeSharedMemoryInformation.Base == 0) {
+    DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
+    return EFI_NOT_STARTED;
+  }
+
+  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.Base;
+  ZeroMem (MessageArg, sizeof (OPTEE_MESSAGE_ARG));
+  MessageArg->Command = OPTEE_MESSAGE_COMMAND_REGISTER_SHM;
+
+  Status = OpteeSetupPageList (Shm, Buf, Size, &PageList);
+  if (EFI_ERROR(Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to Setup Page list for OPTEE:%r\n", Status));
+    goto Exit;
+  }
+  MessageArg->Params[0].Attribute = OPTEE_MESSAGE_ATTR_TYPE_TMEM_OUTPUT |
+                                    OPTEE_MESSSGE_ATTR_NONCONTIG;
+  MessageArg->Params[0].Union.Memory.BufferAddress = PageList;
+  MessageArg->Params[0].Union.Memory.Size = Size;
+  MessageArg->Params[0].Union.Memory.SharedMemoryReference = SharedMemCookie;
+  MessageArg->NumParams = 1;
+
+
+  RetCode = OpteeCallWithArg ((UINT64)MessageArg);
+  if (RetCode != 0) {
+    DEBUG ((DEBUG_ERROR, "Error(%u) from OP-TEE REGISTER_SHM\n", RetCode));
+    Status = EFI_ACCESS_DENIED;
+  }
+Exit:
+  return Status;
 }
 
 STATIC
@@ -90,7 +253,7 @@ OpteeSharedMemoryRemap (
     return Status;
   }
 
-  OpteeSharedMemoryInformation.Base = (UINTN)PhysicalAddress;
+  OpteeSharedMemoryInformation.Base = (UINT64)PhysicalAddress;
   OpteeSharedMemoryInformation.Size = Size;
 
   return EFI_SUCCESS;
@@ -228,7 +391,7 @@ OpteeOpenSession (
 
   MessageArg->NumParams = 2;
 
-  if (OpteeCallWithArg ((UINTN)MessageArg) != 0) {
+  if (OpteeCallWithArg ((UINT64)MessageArg) != 0) {
     MessageArg->Return       = OPTEE_ERROR_COMMUNICATION;
     MessageArg->ReturnOrigin = OPTEE_ORIGIN_COMMUNICATION;
   }
@@ -261,7 +424,7 @@ OpteeCloseSession (
   MessageArg->Command = OPTEE_MESSAGE_COMMAND_CLOSE_SESSION;
   MessageArg->Session = Session;
 
-  OpteeCallWithArg ((UINTN)MessageArg);
+  OpteeCallWithArg ((UINT64)MessageArg);
 
   return EFI_SUCCESS;
 }
@@ -432,7 +595,7 @@ OpteeInvokeFunction (
 
   MessageArg->NumParams = OPTEE_MAX_CALL_PARAMS;
 
-  if (OpteeCallWithArg ((UINTN)MessageArg) != 0) {
+  if (OpteeCallWithArg ((UINT64)MessageArg) != 0) {
     MessageArg->Return       = OPTEE_ERROR_COMMUNICATION;
     MessageArg->ReturnOrigin = OPTEE_ORIGIN_COMMUNICATION;
   }
