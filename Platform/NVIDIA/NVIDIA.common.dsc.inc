@@ -535,6 +535,8 @@
   gArmPlatformTokenSpaceGuid.PL011UartFractional|0
   gArmPlatformTokenSpaceGuid.PL011UartRegOffsetVariant|0
 
+  gArmTokenSpaceGuid.PcdMmBufferSize|65536
+
 [PcdsFixedAtBuild]
   #
   # Variable Services PCDs.

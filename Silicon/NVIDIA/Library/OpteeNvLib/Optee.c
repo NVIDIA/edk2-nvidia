@@ -24,7 +24,6 @@
 #include <OpteeSmc.h>
 
 STATIC OPTEE_SHARED_MEMORY_INFORMATION  OpteeSharedMemoryInformation = { 0 };
-STATIC UINT32 OpteeCallWithArg (IN UINT64  PhysicalArg);
 
 /**
   Check for OP-TEE presence.
@@ -463,8 +462,8 @@ IsOpteeSmcReturnRpc (
   @return                   0 on success, secure world return code otherwise
 
 **/
-STATIC
 UINT32
+EFIAPI
 OpteeCallWithArg (
   IN UINT64  PhysicalArg
   )
@@ -793,5 +792,17 @@ OpteeInvokeFunction (
   InvokeFunctionArg->Return       = MessageArg->Return;
   InvokeFunctionArg->ReturnOrigin = MessageArg->ReturnOrigin;
 
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
+OpteeSetMsgBuffer (
+  UINT64 Buf,
+  UINT64 Size
+ )
+{
+  OpteeSharedMemoryInformation.Base = Buf;
+  OpteeSharedMemoryInformation.Size = Size;
   return EFI_SUCCESS;
 }

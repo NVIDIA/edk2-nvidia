@@ -186,6 +186,12 @@ OpteeSetMsgBuffer (
   UINT64 Size
  );
 
+UINT32
+EFIAPI
+OpteeCallWithArg (
+  IN UINT64  PhysicalArg
+);
+
 EFI_STATUS
 EFIAPI
 OpteeSetMsgBuffer (
@@ -205,4 +211,4 @@ HandleCmdRpmb (
   OPTEE_MESSAGE_ARG *Msg
 );
 
-#endif // OPTEE_LIB_H_
+#endif // OPTEENV_LIB_H

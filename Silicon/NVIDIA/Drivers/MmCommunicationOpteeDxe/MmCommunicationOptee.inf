@@ -30,6 +30,8 @@
 [Packages]
   ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
 
 [LibraryClasses]
   ArmLib
@@ -39,6 +41,9 @@
   DxeServicesTableLib
   HobLib
   UefiDriverEntryPoint
+  OpteeNvLib
+  TegraPlatformInfoLib
+  DeviceTreeHelperLib
 
 [Protocols]
   gEfiMmCommunication2ProtocolGuid              ## PRODUCES
@@ -54,3 +59,5 @@
 
 [Depex]
   gEfiCpuArchProtocolGuid
+  AND
+  gEfiSdMmcPassThruProtocolGuid
