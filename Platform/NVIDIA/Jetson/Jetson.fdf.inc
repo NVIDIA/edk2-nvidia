@@ -161,3 +161,8 @@
   # NV Display Controller Driver
   #
   INF Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
+
+  #
+  # T194 Display support
+  #
+  INF Silicon/NVIDIA/Tegra/T194/Drivers/T194GraphicsOutputDxe/T194GraphicsOutputDxe.inf
