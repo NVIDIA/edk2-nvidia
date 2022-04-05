@@ -329,6 +329,9 @@
   gNVIDIATokenSpaceGuid.PcdTegraMaxClusters|1|UINT32|0x0000003C
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets|1|UINT32|0x0000005F
 
+#Interrupts
+  gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum|0x19|UINT32|0x00000063
+
 #SPI clock frequency.
   gNVIDIATokenSpaceGuid.PcdSpiClockFrequency|10000000|UINT32|0x00000041
 
