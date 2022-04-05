@@ -29,6 +29,8 @@
 #define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdTegraMaxClusters))
 #define PLATFORM_MAX_CPUS               (PLATFORM_MAX_CLUSTERS * \
                                          PLATFORM_MAX_CORES_PER_CLUSTER)
+#define PLATFORM_MAX_SOCKETS            (PcdGet32 (PcdTegraMaxSockets))
+#define PLATFORM_CPUS_PER_SOCKET        (PLATFORM_MAX_CPUS / PLATFORM_MAX_SOCKETS)
 
 #define ITSID_FROM_PHYS_ADDR(phys) (((phys) >> 40) & 0x3)
 
@@ -184,7 +186,6 @@ UpdateGicItsInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo, CHAR8
   return Status;
 }
 
-
 /** Initialize the GIC entries in the platform configuration repository and patch MADT.
  *  This function updates GIC structure for all supporting Tegra platforms using the
  *  Device Tree information.
@@ -206,9 +207,8 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   CM_ARM_GICD_INFO                  *GicDInfo;
   CM_ARM_GIC_REDIST_INFO            *GicRedistInfo;
   NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterData;
-  NVIDIA_DEVICE_TREE_INTERRUPT_DATA InterruptData;
   UINT32                            Index;
-  UINT32                            CpuIndex;
+  UINT32                            CoreIndex;
   UINT32                            RegisterSize;
   UINT32                            RedistStride;
   CONST UINT64                      *Prop;
@@ -217,10 +217,8 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   INT32                             PropertySize;
   UINT64                            MpIdr;
   UINT64                            PmuBaseInterrupt;
-  UINT32                            Size;
-  UINTN                             VGicMaintenanceInterrupt;
-  UINT32                            NumCpus;
-  UINT32                            EnabledCpuCntr;
+  UINT32                            NumCores;
+  UINT32                            EnabledCoreCntr;
 
   NumberOfGicCtlrs = 0;
   NumberOfGicEntries = 0;
@@ -233,9 +231,9 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   Prop = NULL;
   RedistStride = 0;
   PmuBaseInterrupt = 0;
-  EnabledCpuCntr = 0;
+  EnabledCoreCntr = 0;
 
-  NumCpus = GetNumberOfEnabledCpuCores ();
+  NumCores = GetNumberOfEnabledCpuCores ();
 
   GicInfo = (TEGRA_GIC_INFO *) AllocatePool ( sizeof (TEGRA_GIC_INFO));
 
@@ -260,13 +258,15 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     goto Exit;
   }
 
-  GicCInfo = (CM_ARM_GICC_INFO *)AllocateZeroPool (sizeof (CM_ARM_GICC_INFO) * NumberOfGicCtlrs * NumCpus);
+  // One GICC per Core
+  GicCInfo = (CM_ARM_GICC_INFO *)AllocateZeroPool (sizeof (CM_ARM_GICC_INFO) * NumCores);
   if (GicCInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
 
-  GicDInfo = (CM_ARM_GICD_INFO *)AllocateZeroPool (sizeof (CM_ARM_GICD_INFO) * NumberOfGicCtlrs);
+  //Only one GICD structure
+  GicDInfo = (CM_ARM_GICD_INFO *)AllocateZeroPool (sizeof (CM_ARM_GICD_INFO));
   if (GicDInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
@@ -310,9 +310,12 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     }
 
     // GICD structure entries
-    GicDInfo[Index].PhysicalBaseAddress = RegisterData[0].BaseAddress;
-    GicDInfo[Index].SystemVectorBase = 0;
-    GicDInfo[Index].GicVersion = GicInfo->Version;
+    // One and only one GICD structure can be present
+    if (Index == 0) {
+      GicDInfo->PhysicalBaseAddress = RegisterData[0].BaseAddress;
+      GicDInfo->SystemVectorBase = 0;
+      GicDInfo->GicVersion = GicInfo->Version;
+    }
 
     // GICR structure entries
     if (GicInfo->Version >= 3) {
@@ -330,79 +333,72 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
       }
 
       GicRedistInfo[Index].DiscoveryRangeBaseAddress = RegisterData[1].BaseAddress;
-      GicRedistInfo[Index].DiscoveryRangeLength = RedistStride * PLATFORM_MAX_CPUS;
+      GicRedistInfo[Index].DiscoveryRangeLength = RedistStride * PLATFORM_CPUS_PER_SOCKET;
     }
-
-    //VGIC Interrupt info for GICC per GIC Ctlr
-    //Only one interrupt is expected
-    Size = 1;
-    Status = GetDeviceTreeInterrupts (GicHandles[Index], &InterruptData, &Size);
-    if (EFI_ERROR (Status)) {
-      goto Exit;
-    }
-    VGicMaintenanceInterrupt = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                            DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                            DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-
-    // Populate GICC structures for enabled cpus
-    EnabledCpuCntr = 0;
-    for (CpuIndex = 0; CpuIndex < PLATFORM_MAX_CPUS; CpuIndex++) {
-
-      // Check if core enabled
-      if ( !IsCoreEnabled (CpuIndex) ) {
-        continue;
-      }
-
-      // Get Mpidr using cpu index
-      MpIdr = GetMpidrFromLinearCoreID (CpuIndex);
-
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].CPUInterfaceNumber = CpuIndex;
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].AcpiProcessorUid = CpuIndex;
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].Flags = EFI_ACPI_6_3_GIC_ENABLED;
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].ParkingProtocolVersion = 0;
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].PerformanceInterruptGsiv = PmuBaseInterrupt;
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].ParkedAddress = 0;
-
-      if (GicInfo->Version < 3) {
-        GicCInfo[EnabledCpuCntr + Index * NumCpus].PhysicalBaseAddress = RegisterData[1].BaseAddress;
-      }
-
-      if (GicInfo->Version < 3) {
-        // GICV and GICH for v2
-        GicCInfo[EnabledCpuCntr + Index * NumCpus].GICV = RegisterData[2].BaseAddress;
-        GicCInfo[EnabledCpuCntr + Index * NumCpus].GICH = RegisterData[3].BaseAddress;
-      }
-
-      // VGIC info
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].VGICMaintenanceInterrupt = VGicMaintenanceInterrupt;
-
-      if (GicInfo->Version >= 3) {
-        GicCInfo[EnabledCpuCntr + Index * NumCpus].GICRBaseAddress = RegisterData[1].BaseAddress;
-      }
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].MPIDR = MpIdr & 0xFFFFFF;
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].ProcessorPowerEfficiencyClass = 0;
-
-      // TODO: check for compat string "arm,statistical-profiling-extension-v1"
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].SpeOverflowInterrupt = 0;
-
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].ProximityDomain = 0;
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].ClockDomain = 0;
-      GicCInfo[EnabledCpuCntr + Index * NumCpus].AffinityFlags = EFI_ACPI_6_3_GICC_ENABLED;
-
-      EnabledCpuCntr++;
-    }
-    //Check to ensure space allocated for GICC is enough
-    ASSERT (EnabledCpuCntr == NumCpus);
 
     NumberOfGicEntries++;
   }
+
+  // Populate GICC structures for all enabled cores
+  EnabledCoreCntr = 0;
+  for (CoreIndex = 0; CoreIndex < PLATFORM_MAX_CPUS; CoreIndex++) {
+
+    // Check if core enabled
+    if ( !IsCoreEnabled (CoreIndex) ) {
+      continue;
+    }
+
+    // Get Mpidr using cpu index
+    MpIdr = GetMpidrFromLinearCoreID (CoreIndex);
+
+    GicCInfo[EnabledCoreCntr].CPUInterfaceNumber = CoreIndex;
+    GicCInfo[EnabledCoreCntr].AcpiProcessorUid = CoreIndex;
+    GicCInfo[EnabledCoreCntr].Flags = EFI_ACPI_6_3_GIC_ENABLED;
+    GicCInfo[EnabledCoreCntr].ParkingProtocolVersion = 0;
+    GicCInfo[EnabledCoreCntr].PerformanceInterruptGsiv = PmuBaseInterrupt;
+    GicCInfo[EnabledCoreCntr].ParkedAddress = 0;
+
+    if (GicInfo->Version < 3) {
+      // Getting socket-wise info
+      GicCInfo[EnabledCoreCntr].PhysicalBaseAddress = GicRedistInfo[CoreIndex/PLATFORM_CPUS_PER_SOCKET].DiscoveryRangeBaseAddress;
+    }
+
+    if (GicInfo->Version < 3) {
+      // GICV and GICH for v2
+      // TODO: Get socket-wise info
+      GicCInfo[EnabledCoreCntr].GICV = 0;
+      GicCInfo[EnabledCoreCntr].GICH = 0;
+    }
+
+    // VGIC info
+    GicCInfo[EnabledCoreCntr].VGICMaintenanceInterrupt = PcdGet32 (PcdArmArchVirtMaintenanceIntrNum);
+
+    if (GicInfo->Version >= 3) {
+      GicCInfo[EnabledCoreCntr].GICRBaseAddress = GicRedistInfo[CoreIndex/PLATFORM_CPUS_PER_SOCKET].DiscoveryRangeBaseAddress;
+    }
+    GicCInfo[EnabledCoreCntr].MPIDR = MpIdr & 0xFFFFFF;
+    GicCInfo[EnabledCoreCntr].ProcessorPowerEfficiencyClass = 0;
+
+    // TODO: check for compat string "arm,statistical-profiling-extension-v1"
+    GicCInfo[EnabledCoreCntr].SpeOverflowInterrupt = 0;
+
+    GicCInfo[EnabledCoreCntr].ProximityDomain = 0;
+    GicCInfo[EnabledCoreCntr].ClockDomain = 0;
+    GicCInfo[EnabledCoreCntr].AffinityFlags = EFI_ACPI_6_3_GICC_ENABLED;
+
+    EnabledCoreCntr++;
+    //Check to ensure space allocated for GICC is enough
+    ASSERT (EnabledCoreCntr <= NumCores);
+  }
+
+  ASSERT (EnabledCoreCntr == NumCores);
 
   Repo = *PlatformRepositoryInfo;
 
   Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicDInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (CM_ARM_GICD_INFO) * NumberOfGicEntries;
-  Repo->CmObjectCount = NumberOfGicEntries;
+  Repo->CmObjectSize = sizeof (CM_ARM_GICD_INFO);
+  Repo->CmObjectCount = 1;
   Repo->CmObjectPtr = GicDInfo;
   Repo++;
 
@@ -422,8 +418,8 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 
   Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (CM_ARM_GICC_INFO) * NumberOfGicEntries * NumCpus;
-  Repo->CmObjectCount = NumberOfGicEntries * NumCpus;
+  Repo->CmObjectSize = sizeof (CM_ARM_GICC_INFO) * NumCores;
+  Repo->CmObjectCount = NumCores;
   Repo->CmObjectPtr = GicCInfo;
 
   Repo++;
@@ -451,6 +447,5 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   if (GicInfo != NULL) {
     FreePool (GicInfo);
   }
-
   return Status;
 }
