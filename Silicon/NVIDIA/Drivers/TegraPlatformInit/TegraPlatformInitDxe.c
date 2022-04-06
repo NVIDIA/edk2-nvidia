@@ -37,7 +37,7 @@ SetCpuInfoPcdsFromDtb (
   INT32         CpuMapOffset;
   INT32         Cluster0Offset;
   INT32         NodeOffset;
-  CHAR8         ClusterNodeStr[] = "clusterxx";
+  CHAR8         ClusterNodeStr[] = "clusterxxx";
   CHAR8         CoreNodeStr[] = "corexx";
   EFI_STATUS    Status;
 
@@ -64,7 +64,7 @@ SetCpuInfoPcdsFromDtb (
     }
 
     MaxClusters++;
-    ASSERT (MaxClusters < 100);     // "clusterxx" max
+    ASSERT (MaxClusters < 1000);    // "clusterxxx" max
   }
   DEBUG ((DEBUG_INFO, "MaxClusters=%u\n", MaxClusters));
   PcdSet32S (PcdTegraMaxClusters, MaxClusters);
