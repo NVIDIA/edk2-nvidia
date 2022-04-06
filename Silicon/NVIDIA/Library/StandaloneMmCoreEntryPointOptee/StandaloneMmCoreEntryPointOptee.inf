@@ -1,0 +1,62 @@
+## @file
+# Module entry point library for StMM.
+#
+# Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = StandaloneMmCoreEntryPoint
+  FILE_GUID                      = a35a506c-1c50-4c54-902b-b236ae04c578
+  MODULE_TYPE                    = MM_CORE_STANDALONE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  LIBRARY_CLASS                  = StandaloneMmCoreEntryPoint|MM_CORE_STANDALONE
+
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+
+[Sources.AARCH64, Sources.ARM]
+  Arm/StandaloneMmCoreEntryPoint.c
+  Arm/SetPermissions.c
+  Arm/CreateHobList.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+
+[Packages.ARM, Packages.AARCH64]
+  ArmPkg/ArmPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+
+[LibraryClasses.ARM, LibraryClasses.AARCH64]
+  StandaloneMmMmuLib
+  ArmSvcLib
+
+[Guids]
+  gMpInformationHobGuid
+  gEfiMmPeiMmramMemoryReserveGuid
+  gEfiStandaloneMmNonSecureBufferGuid
+  gEfiArmTfCpuDriverEpDescriptorGuid
+
+[FeaturePcd.ARM, FeaturePcd.AARCH64]
+  gArmTokenSpaceGuid.PcdFfaEnable
+
+#
+# This configuration fails for CLANGPDB, which does not support PIE in the GCC
+# sense. Such however is required for ARM family StandaloneMmCore
+# self-relocation, and thus the CLANGPDB toolchain is unsupported for ARM and
+# AARCH64 for this module.
+#
+[BuildOptions]
+  GCC:*_*_ARM_CC_FLAGS = -fpie
+  GCC:*_*_AARCH64_CC_FLAGS = -fpie
