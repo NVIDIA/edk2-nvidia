@@ -28,7 +28,7 @@
 #define MAX_SUPPORTED_CORES             1024
 
 typedef struct {
-  UINTN                 MaxClustersPerSocket;
+  UINTN                 MaxClusters;
   UINTN                 MaxCoresPerCluster;
   UINTN                 MaxCores;
 
@@ -112,7 +112,7 @@ FloorSweepCpuInfo (
       Info->EnabledSockets = 1;
     }
 
-    Info->MaxClustersPerSocket = PLATFORM_MAX_CLUSTERS;
+    Info->MaxClusters = PLATFORM_MAX_CLUSTERS;
     Info->MaxCoresPerCluster = PLATFORM_MAX_CORES_PER_CLUSTER;
     Status = GetCpuInfo (Info->EnabledSockets,
                          MAX_SUPPORTED_CORES,
@@ -120,13 +120,12 @@ FloorSweepCpuInfo (
     if (EFI_ERROR (Status)) {
       ASSERT (FALSE);
 
-      Info->MaxClustersPerSocket = 1;
+      Info->MaxClusters = 1;
       Info->MaxCoresPerCluster = 1;
       Info->EnabledCoresBitMap[0] = 0x1;
     }
 
-    Info->MaxCores = Info->MaxCoresPerCluster * Info->MaxClustersPerSocket *
-      Info->EnabledSockets;
+    Info->MaxCores = Info->MaxCoresPerCluster * Info->MaxClusters;
 
     Info->EnabledCores = 0;
     for (Core = 0; Core < Info->MaxCores; Core++) {
@@ -138,8 +137,8 @@ FloorSweepCpuInfo (
       }
     }
 
-    DEBUG ((DEBUG_INFO, "%a: MaxClustersPerSocket=%u MaxCoresPerCluster=%u MaxCores=%u\n",
-            __FUNCTION__,  Info->MaxClustersPerSocket, Info->MaxCoresPerCluster,
+    DEBUG ((DEBUG_INFO, "%a: MaxClusters=%u MaxCoresPerCluster=%u MaxCores=%u\n",
+            __FUNCTION__,  Info->MaxClusters, Info->MaxCoresPerCluster,
             Info->MaxCores));
     DEBUG ((DEBUG_INFO, "%a: EnabledSockets=%u EnabledCores=%u\n",
             __FUNCTION__, Info->EnabledSockets, Info->EnabledCores));
