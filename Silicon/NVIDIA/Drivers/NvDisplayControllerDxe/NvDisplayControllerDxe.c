@@ -416,7 +416,7 @@ CreateFramebufferResource (
 {
   EFI_STATUS    Status;
   VOID          *Address;
-  UINTN         Size, Pages;
+  UINTN         Pitch, Size, Pages;
 
   /* The GOP driver treats bits [25:0] as non-address bits and masks
      them away. Require 64 MB alignment (2^26 B) to make sure the
@@ -426,7 +426,14 @@ CreateFramebufferResource (
 
   ZeroMem (Desc, sizeof (*Desc));
 
-  Size = HorizontalResolution * VerticalResolution * PixelSize;
+  /* Calculate pitch as the size of a framebuffer row, rounded up to
+     the next power of two. */
+  Pitch = HorizontalResolution * PixelSize;
+  if ((Pitch & -Pitch) != Pitch) {
+    Pitch = (UINTN) GetPowerOfTwo32 ((UINT32) Pitch) << 1;
+  }
+
+  Size = VerticalResolution * Pitch;
   /* Since we are allocating the framebuffer memory as
      EfiRuntimeServicesData, make sure the size is a multiple of
      RUNTIME_PAGE_ALLOCATION_GRANULARITY in order to avoid problems
