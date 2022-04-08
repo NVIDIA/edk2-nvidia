@@ -1,7 +1,7 @@
 ## @file
 #  The default logo bitmap picture shown on setup screen.
 #
-#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -40,7 +40,6 @@
 
 [Guids]
   gNVIDIAPlatformLogoGuid
-  gNVIDIAPlatformLogoNoSDGuid
 
 [Protocols]
   gEdkiiPlatformLogoProtocolGuid
