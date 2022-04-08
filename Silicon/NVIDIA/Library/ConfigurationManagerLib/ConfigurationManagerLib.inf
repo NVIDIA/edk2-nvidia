@@ -26,9 +26,11 @@
   FdtLib
   PlatformResourceLib
   FloorSweepingInternalLib
+  UefiLib
 
 [Sources.common]
   ConfigurationManagerGicLib.c
+  ConfigurationManagerProtocolLib.c
 
 [Pcd]
   gArmTokenSpaceGuid.PcdGicDistributorBase
@@ -37,3 +39,9 @@
   gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
   gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum
+
+[Protocols]
+  gNVIDIAConfigurationManagerDataObjectGuid
+
+[Depex]
+  TRUE

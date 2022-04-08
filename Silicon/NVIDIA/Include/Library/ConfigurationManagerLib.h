@@ -16,18 +16,25 @@
 
 // GIC declarations
 
-extern CM_ARM_GICC_INFO *GicCInfo;
+extern CM_ARM_GICC_INFO  *GicCInfo;
 
 CM_OBJECT_TOKEN
 EFIAPI
 GetGicCToken (
   UINTN
-);
+  );
 
 EFI_STATUS
 EFIAPI
 UpdateGicInfo (
-  EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo
-);
+  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo
+  );
+
+EFI_STATUS
+EFIAPI
+RegisterProtocolBasedObjects (
+  EDKII_PLATFORM_REPOSITORY_INFO  *PlatformRepositoryInfo,
+  EDKII_PLATFORM_REPOSITORY_INFO  **CurrentPlatformRepositoryInfo
+  );
 
 #endif /* __CONFIGURATION_MANAGER_LIB_H_ */
