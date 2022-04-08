@@ -44,4 +44,4 @@
   gNVIDIAConfigurationManagerDataObjectGuid
 
 [Depex]
-  TRUE
+  gNVIDIAPcieControllerInitCompleteProtocolGuid

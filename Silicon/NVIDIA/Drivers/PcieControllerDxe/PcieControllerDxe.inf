@@ -22,6 +22,7 @@
 
 [Packages]
   ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
@@ -38,12 +39,16 @@
   TimerLib
   FdtLib
   DeviceDiscoveryDriverLib
+  DeviceTreeHelperLib
   MemoryAllocationLib
   DxeServicesTableLib
   DevicePathLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
@@ -55,6 +60,7 @@
   gNVIDIARegulatorProtocolGuid
   gNVIDIAPinMuxProtocolGuid
   gNVIDIAPcieControllerInitCompleteProtocolGuid
+  gNVIDIAConfigurationManagerDataObjectGuid
 
 [Guids]
   gNVIDIANonDiscoverableT194PcieDeviceGuid
@@ -64,5 +70,5 @@
 
 [Depex]
   gNVIDIAAllRegulatorsPresentProtocolGuid AND
-  gNVIDIATegraP2UProtocolGuid
-
+  gNVIDIATegraP2UProtocolGuid AND
+  gEfiVariableArchProtocolGuid

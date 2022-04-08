@@ -24,7 +24,6 @@
 
 [Sources]
   Dsdt.asl
-  SsdtPci.asl
   SsdtAhci.asl
 
 [Packages]

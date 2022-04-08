@@ -17,6 +17,7 @@
 #include <Library/ArmGicLib.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/ConfigurationManagerLib.h>
 #include <Library/DebugLib.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -28,6 +29,7 @@
 #include <libfdt.h>
 
 #include <IndustryStandard/DebugPort2Table.h>
+
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
 #include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>
 
@@ -42,8 +44,6 @@
 
 #include "Dsdt.hex"
 #include "Dsdt.offset.h"
-#include "SsdtPci.hex"
-#include "SsdtPci.offset.h"
 #include "SdcTemplate.hex"
 #include "SdcTemplate.offset.h"
 
@@ -62,13 +62,11 @@ NVIDIA_AML_GENERATION_PROTOCOL  *GenerationProtocol = NULL;
 
 STATIC EFI_ACPI_DESCRIPTION_HEADER  *AcpiTableArray[] = {
   (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_aml_code,
-  (EFI_ACPI_DESCRIPTION_HEADER *)ssdtpci_aml_code,
   (EFI_ACPI_DESCRIPTION_HEADER *)sdctemplate_aml_code
 };
 
 STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray[] = {
   DSDT_TEGRA234_OffsetTable,
-  SSDT_TEGRA234_OffsetTable,
   SSDT_SDCTEMP_OffsetTable
 };
 
@@ -116,30 +114,12 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     0,
     FixedPcdGet64 (PcdAcpiDefaultOemRevision)
   },
-  // MCFG Table
-  {
-    EFI_ACPI_6_4_PCI_EXPRESS_MEMORY_MAPPED_CONFIGURATION_SPACE_BASE_ADDRESS_DESCRIPTION_TABLE_SIGNATURE,
-    EFI_ACPI_MEMORY_MAPPED_CONFIGURATION_SPACE_ACCESS_TABLE_REVISION,
-    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMcfg),
-    NULL,
-    0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
-  },
   // DSDT Table
   {
     EFI_ACPI_6_4_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
     EFI_ACPI_6_4_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDsdt),
     (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_aml_code,
-    0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
-  },
-  // SSDT Table
-  {
-    EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
-    EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION,
-    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt),
-    (EFI_ACPI_DESCRIPTION_HEADER *)ssdtpci_aml_code,
     0,
     FixedPcdGet64 (PcdAcpiDefaultOemRevision)
   },
@@ -180,7 +160,7 @@ CM_ARM_POWER_MANAGEMENT_PROFILE_INFO  PmProfileInfo = {
 /** The platform GIC CPU interface information.
 */
 STATIC
-CM_ARM_GICC_INFO  GicCInfo[] = {
+CM_ARM_GICC_INFO  GicCInfoArray[] = {
   /*
     GICC_ENTRY (CPUInterfaceNumber, Mpidr, PmuIrq, VGicIrq, EnergyEfficiency, ProximityDomain)
   */
@@ -229,44 +209,6 @@ CM_ARM_GENERIC_TIMER_INFO  GenericTimerInfo = {
   GTDT_GTIMER_FLAGS,
   FixedPcdGet32 (PcdArmArchTimerHypIntrNum),
   GTDT_GTIMER_FLAGS
-};
-
-/** PCI Configuration Space Info
-*/
-STATIC
-CM_ARM_PCI_CONFIG_SPACE_INFO  PciConfigInfo[] = {
-  {
-    // The physical base address for the PCI segment
-    T234_PCIE_C1_CFG_BASE_ADDR,
-    // The PCI segment group number
-    1,
-    // The start bus number
-    T234_PCIE_BUS_MIN,
-    // The end bus number
-    T234_PCIE_BUS_MAX
-  },
-
-  {
-    // The physical base address for the PCI segment
-    T234_PCIE_C4_CFG_BASE_ADDR,
-    // The PCI segment group number
-    4,
-    // The start bus number
-    T234_PCIE_BUS_MIN,
-    // The end bus number
-    T234_PCIE_BUS_MAX
-  },
-
-  {
-    // The physical base address for the PCI segment
-    T234_PCIE_C5_CFG_BASE_ADDR,
-    // The PCI segment group number
-    5,
-    // The start bus number
-    T234_PCIE_BUS_MIN,
-    // The end bus number
-    T234_PCIE_BUS_MAX
-  }
 };
 
 /** Cache Info
@@ -1060,7 +1002,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[1]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[0]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[0]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources00),
   },
@@ -1075,7 +1017,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[1]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[1]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[1]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources01),
   },
@@ -1090,7 +1032,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[1]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[2]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[2]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources02),
   },
@@ -1105,7 +1047,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[1]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[3]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[3]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources03),
   },
@@ -1120,7 +1062,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[2]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[4]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[4]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources10),
   },
@@ -1135,7 +1077,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[2]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[5]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[5]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources11),
   },
@@ -1150,7 +1092,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[2]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[6]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[6]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources12),
   },
@@ -1165,7 +1107,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[2]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[7]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[7]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources13),
   },
@@ -1180,7 +1122,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[3]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[8]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[8]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources20),
   },
@@ -1195,7 +1137,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[3]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[9]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[9]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources21),
   },
@@ -1210,7 +1152,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[3]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[10]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[10]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources22),
   },
@@ -1225,7 +1167,7 @@ CM_ARM_PROC_HIERARCHY_INFO  ProcHierarchyInfo[] = {
                EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                ),
     .ParentToken                = REFERENCE_TOKEN (ProcHierarchyInfo[3]),
-    .GicCToken                  = REFERENCE_TOKEN (GicCInfo[11]),
+    .GicCToken                  = REFERENCE_TOKEN (GicCInfoArray[11]),
     .NoOfPrivateResources       = 3,
     .PrivateResourcesArrayToken = REFERENCE_TOKEN (HerculesCoreResources23),
   },
@@ -2002,9 +1944,9 @@ InitializePlatformRepository (
 
   Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = sizeof (GicCInfo);
-  Repo->CmObjectCount = sizeof (GicCInfo) / sizeof (CM_ARM_GICC_INFO);
-  Repo->CmObjectPtr   = &GicCInfo;
+  Repo->CmObjectSize  = sizeof (GicCInfoArray);
+  Repo->CmObjectCount = sizeof (GicCInfoArray) / sizeof (CM_ARM_GICC_INFO);
+  Repo->CmObjectPtr   = &GicCInfoArray;
   Repo++;
 
   GicDInfo.PhysicalBaseAddress = PcdGet64 (PcdGicDistributorBase);
@@ -2040,12 +1982,10 @@ InitializePlatformRepository (
     return Status;
   }
 
-  Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
-  Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = sizeof (PciConfigInfo);
-  Repo->CmObjectCount = sizeof (PciConfigInfo) / sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO);
-  Repo->CmObjectPtr   = &PciConfigInfo;
-  Repo++;
+  Status = RegisterProtocolBasedObjects (NVIDIAPlatformRepositoryInfo, &Repo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   Status = InitializeSsdtTable ();
   if (EFI_ERROR (Status)) {

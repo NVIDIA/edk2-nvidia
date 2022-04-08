@@ -16,6 +16,7 @@
 #include <Library/DxeServicesTableLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PciHostBridgeLib.h>
@@ -34,11 +35,40 @@
 
 #include <libfdt.h>
 
+#include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>
 #include <IndustryStandard/Pci.h>
 #include <IndustryStandard/Pci30.h>
 #include <IndustryStandard/PciExpress31.h>
 
 #include "PcieControllerPrivate.h"
+#include <T194/T194Definitions.h>
+#include <T234/T234Definitions.h>
+
+STATIC BOOLEAN  mPcieAcpiConfigInstalled = FALSE;
+
+/** The platform ACPI table list.
+*/
+STATIC
+CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
+  // MCFG Table
+  {
+    EFI_ACPI_6_3_PCI_EXPRESS_MEMORY_MAPPED_CONFIGURATION_SPACE_BASE_ADDRESS_DESCRIPTION_TABLE_SIGNATURE,
+    EFI_ACPI_MEMORY_MAPPED_CONFIGURATION_SPACE_ACCESS_TABLE_REVISION,
+    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMcfg),
+    NULL,
+    0,
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+  },
+  // SSDT Table - PCIe
+  {
+    EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
+    EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION,
+    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdtPciExpress),
+    NULL,
+    0,
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+  }
+};
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-pcie", &gNVIDIANonDiscoverableT194PcieDeviceGuid },
@@ -773,6 +803,31 @@ CheckLinkUp (
 }
 
 STATIC
+BOOLEAN
+EFIAPI
+IsAGXXavier (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      NumberOfPlatformNodes;
+
+  NumberOfPlatformNodes = 0;
+  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
+  if (Status != EFI_NOT_FOUND) {
+    return TRUE;
+  }
+
+  NumberOfPlatformNodes = 0;
+  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,galen", NULL, &NumberOfPlatformNodes);
+  if (Status != EFI_NOT_FOUND) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+STATIC
 EFI_STATUS
 EFIAPI
 InitializeController (
@@ -1329,10 +1384,45 @@ DeviceDiscoveryNotify (
   CONST VOID                 *Property  = NULL;
   UINT32                     Val;
   UINTN                      ChipID;
+  UINT32                     DeviceTreeHandle;
+  UINT32                     NumberOfInterrupts;
+  UINT32                     Index;
+  UINT32                     Index2;
+  BOOLEAN                    RegisterConfigurationData;
+  BOOLEAN                    PcieFound;
+  CONST UINT32               *InterruptMap;
 
-  Status = EFI_SUCCESS;
+  NumberOfInterrupts        = 2;
+  RegisterConfigurationData = TRUE;
+  Status                    = EFI_SUCCESS;
+  PcieFound                 = FALSE;
 
   switch (Phase) {
+    case DeviceDiscoveryDriverStart:
+
+      for (Index = 0; Index < (sizeof (gDeviceCompatibilityMap) / sizeof (gDeviceCompatibilityMap[0])); Index++) {
+        if (gDeviceCompatibilityMap[Index].Compatibility != NULL) {
+          Val    = 0;
+          Status = GetMatchingEnabledDeviceTreeNodes (gDeviceCompatibilityMap[Index].Compatibility, NULL, &Val);
+          if (Status == EFI_BUFFER_TOO_SMALL) {
+            PcieFound = TRUE;
+            break;
+          }
+        }
+      }
+
+      Status = EFI_SUCCESS;
+      if (!PcieFound) {
+        Status = gBS->InstallMultipleProtocolInterfaces (
+                        &DriverHandle,
+                        &gNVIDIAConfigurationManagerDataObjectGuid,
+                        NULL,
+                        NULL
+                        );
+      }
+
+      break;
+
     case DeviceDiscoveryDriverBindingStart:
       RootBridge = AllocateZeroPool (sizeof (PCI_ROOT_BRIDGE));
       if (RootBridge == NULL) {
@@ -1674,6 +1764,8 @@ DeviceDiscoveryNotify (
         UINT64   Size          = 0;
         UINT64   Translation   = 0;
 
+        ASSERT (Private->AddressMapCount < PCIE_NUMBER_OF_MAPPING_SPACE);
+
         CopyMem (&Flags, RangesProperty, sizeof (UINT32));
         Flags = SwapBytes32 (Flags);
 
@@ -1722,6 +1814,7 @@ DeviceDiscoveryNotify (
             DeviceAddress,
             Size
             );
+          Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 1;
         } else if ((Space == PCIE_DEVICETREE_SPACE_MEM32) &&
                    (Limit < SIZE_4GB))
         {
@@ -1737,6 +1830,7 @@ DeviceDiscoveryNotify (
             DeviceAddress,
             Size
             );
+          Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 3;
         } else if ((((Space == PCIE_DEVICETREE_SPACE_MEM32) &&
                      (Limit >= SIZE_4GB)) ||
                     (Space == PCIE_DEVICETREE_SPACE_MEM64)))
@@ -1753,6 +1847,7 @@ DeviceDiscoveryNotify (
             DeviceAddress,
             Size
             );
+          Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 3;
         } else {
           DEBUG ((EFI_D_ERROR, "PCIe Controller: Unknown region 0x%08x 0x%016llx-0x%016llx T 0x%016llx\r\n", Flags, DeviceAddress, Limit, Translation));
           ASSERT (FALSE);
@@ -1760,6 +1855,10 @@ DeviceDiscoveryNotify (
           goto ErrorExit;
         }
 
+        Private->AddressMapInfo[Private->AddressMapCount].PciAddress  = DeviceAddress;
+        Private->AddressMapInfo[Private->AddressMapCount].CpuAddress  = HostAddress;
+        Private->AddressMapInfo[Private->AddressMapCount].AddressSize = Size;
+        Private->AddressMapCount++;
         RangesProperty += RangeSize;
         PropertySize   -= RangeSize;
       }
@@ -1787,12 +1886,148 @@ DeviceDiscoveryNotify (
                                  (EFI_DEVICE_PATH_PROTOCOL  *)&mPciRootBridgeDevicePathNode
                                  );
 
+      // Setup configuration structure
+      if (Private->EcamBase != 0) {
+        Private->ConfigSpaceInfo.BaseAddress = Private->EcamBase;
+      } else {
+        Private->ConfigSpaceInfo.BaseAddress = Private->ConfigurationSpace;
+      }
+
+      Private->ConfigSpaceInfo.PciSegmentGroupNumber = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
+      if (Private->IsT194) {
+        Private->ConfigSpaceInfo.StartBusNumber = T194_PCIE_BUS_MIN;
+        Private->ConfigSpaceInfo.EndBusNumber   = T194_PCIE_BUS_MAX;
+      } else if (Private->IsT234) {
+        Private->ConfigSpaceInfo.StartBusNumber = T234_PCIE_BUS_MIN;
+        Private->ConfigSpaceInfo.EndBusNumber   = T234_PCIE_BUS_MAX;
+      } else {
+        Private->ConfigSpaceInfo.StartBusNumber = Private->PcieRootBridgeConfigurationIo.MinBusNumber;
+        Private->ConfigSpaceInfo.EndBusNumber   = Private->PcieRootBridgeConfigurationIo.MaxBusNumber;
+      }
+
+      Private->ConfigSpaceInfo.AddressMapToken   = REFERENCE_TOKEN (Private->AddressMapRefInfo);
+      Private->ConfigSpaceInfo.InterruptMapToken = REFERENCE_TOKEN (Private->InterruptRefInfo);
+
+      Status = GetDeviceTreeHandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, &DeviceTreeHandle);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to get device tree handle\r\n", __FUNCTION__));
+        goto ErrorExit;
+      }
+
+      InterruptMap = (CONST UINT32 *)fdt_getprop (
+                                       DeviceTreeNode->DeviceTreeBase,
+                                       DeviceTreeNode->NodeOffset,
+                                       "interrupt-map",
+                                       &PropertySize
+                                       );
+      if ((InterruptMap == NULL) || ((PropertySize % PCIE_INTERRUPT_MAP_ENTRY_SIZE) != 0)) {
+        Status = EFI_DEVICE_ERROR;
+        DEBUG ((DEBUG_ERROR, "%a: Failed to get pcie interrupts, size = %d\r\n", __FUNCTION__, PropertySize));
+        ASSERT (FALSE);
+        break;
+      }
+
+      NumberOfInterrupts = PropertySize / PCIE_INTERRUPT_MAP_ENTRY_SIZE;
+      if (NumberOfInterrupts == 1) {
+        for (Index = 0; Index < PCIE_NUMBER_OF_INTERUPT_MAP; Index++) {
+          Private->InterruptRefInfo[Index].ReferenceToken          = REFERENCE_TOKEN (Private->InterruptMapInfo[Index]);
+          Private->InterruptMapInfo[Index].PciInterrupt            = Index;
+          Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = SwapBytes32 (InterruptMap[PCIE_PARENT_INTERRUPT_OFFSET]) + SPI_OFFSET;
+          Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = BIT0;
+        }
+      } else if (NumberOfInterrupts == PCIE_NUMBER_OF_INTERUPT_MAP) {
+        for (Index = 0; Index < PCIE_NUMBER_OF_INTERUPT_MAP; Index++) {
+          Private->InterruptRefInfo[Index].ReferenceToken          = REFERENCE_TOKEN (Private->InterruptMapInfo[Index]);
+          Private->InterruptMapInfo[Index].PciInterrupt            = SwapBytes32 (InterruptMap[(Index * PCIE_INTERRUPT_MAP_ENTRIES) + PCIE_CHILD_INT_OFFSET])-1;
+          Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = SwapBytes32 (InterruptMap[(Index * PCIE_INTERRUPT_MAP_ENTRIES) + PCIE_PARENT_INTERRUPT_OFFSET]) + SPI_OFFSET;
+          Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = BIT0;
+        }
+      } else {
+        Status = EFI_DEVICE_ERROR;
+        DEBUG ((DEBUG_ERROR, "%a: Expected %d interrupts, got %d\r\n", __FUNCTION__, PCIE_NUMBER_OF_INTERUPT_MAP, NumberOfInterrupts));
+        break;
+      }
+
+      for (Index = 0; Index < Private->AddressMapCount; Index++) {
+        Private->AddressMapRefInfo[Index].ReferenceToken = REFERENCE_TOKEN (Private->AddressMapInfo[Index]);
+      }
+
+      // Limit configuration manager entries for T194 as it does not support ECAM so needs special OS support
+      if (Private->IsT194) {
+        if (PcdGet8 (PcdPcieEntryInAcpi) != 1) {
+          RegisterConfigurationData = FALSE;
+        }
+
+        // Do not register segment that AHCI controller is on as this is exposed as a native ACPI device
+        if (IsAGXXavier () && (Private->ConfigSpaceInfo.PciSegmentGroupNumber == AGX_XAVIER_AHCI_SEGMENT)) {
+          RegisterConfigurationData = FALSE;
+        }
+      }
+
+      if (RegisterConfigurationData) {
+        Index                                  = 0;
+        Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
+        Private->RepoInfo[Index].CmObjectToken = CM_NULL_TOKEN;
+        Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->ConfigSpaceInfo);
+        Private->RepoInfo[Index].CmObjectCount = 1;
+        Private->RepoInfo[Index].CmObjectPtr   = &Private->ConfigSpaceInfo;
+        Index++;
+
+        Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+        Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->InterruptRefInfo);
+        Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARM_OBJ_REF) * PCIE_NUMBER_OF_INTERUPT_MAP;
+        Private->RepoInfo[Index].CmObjectCount = PCIE_NUMBER_OF_INTERUPT_MAP;
+        Private->RepoInfo[Index].CmObjectPtr   = Private->InterruptRefInfo;
+        Index++;
+
+        Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+        Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->AddressMapRefInfo);
+        Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARM_OBJ_REF) * Private->AddressMapCount;
+        Private->RepoInfo[Index].CmObjectCount = Private->AddressMapCount;
+        Private->RepoInfo[Index].CmObjectPtr   = Private->AddressMapRefInfo;
+        Index++;
+
+        for (Index2 = 0; Index2 < PCIE_NUMBER_OF_MAPPING_SPACE; Index2++) {
+          Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciAddressMapInfo);
+          Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->AddressMapInfo[Index2]);
+          Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->AddressMapInfo[Index2]);
+          Private->RepoInfo[Index].CmObjectCount = 1;
+          Private->RepoInfo[Index].CmObjectPtr   = &Private->AddressMapInfo[Index2];
+          Index++;
+        }
+
+        for (Index2 = 0; Index2 < PCIE_NUMBER_OF_INTERUPT_MAP; Index2++) {
+          Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciInterruptMapInfo);
+          Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->InterruptMapInfo[Index2]);
+          Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->InterruptMapInfo[Index2]);
+          Private->RepoInfo[Index].CmObjectCount = 1;
+          Private->RepoInfo[Index].CmObjectPtr   = &Private->InterruptMapInfo[Index2];
+          Index++;
+        }
+
+        if (!mPcieAcpiConfigInstalled) {
+          mPcieAcpiConfigInstalled               = TRUE;
+          Private->RepoInfo[Index].CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
+          Private->RepoInfo[Index].CmObjectToken = CM_NULL_TOKEN;
+          Private->RepoInfo[Index].CmObjectSize  = sizeof (CmAcpiTableList);
+          Private->RepoInfo[Index].CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+          Private->RepoInfo[Index].CmObjectPtr   = &CmAcpiTableList;
+          for (Index2 = 0; Index2 < Private->RepoInfo[Index].CmObjectCount; Index2++) {
+            CmAcpiTableList[Index2].OemTableId =  PcdGet64 (PcdAcpiDefaultOemTableId);
+          }
+
+          Index++;
+        }
+      }
+
       Status = gBS->InstallMultipleProtocolInterfaces (
                       &ControllerHandle,
                       &gNVIDIAPciHostBridgeProtocolGuid,
                       RootBridge,
                       &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
                       &Private->PcieRootBridgeConfigurationIo,
+                      &gNVIDIAConfigurationManagerDataObjectGuid,
+                      &Private->RepoInfo,
                       NULL
                       );
       if (EFI_ERROR (Status)) {

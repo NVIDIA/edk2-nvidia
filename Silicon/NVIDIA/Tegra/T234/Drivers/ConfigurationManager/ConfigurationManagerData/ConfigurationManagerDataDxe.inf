@@ -43,6 +43,7 @@
   MemoryAllocationLib
   AslTemplateTablesLib
   FloorSweepingLib
+  ConfigurationManagerLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId

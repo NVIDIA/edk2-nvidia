@@ -36,6 +36,7 @@
 [LibraryClasses]
   BaseLib
   BaseMemoryLib
+  ConfigurationManagerLib
   DeviceTreeHelperLib
   FdtLib
   NvgLib
