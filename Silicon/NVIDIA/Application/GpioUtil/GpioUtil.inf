@@ -1,0 +1,55 @@
+## @file
+#  Shell application ClockUtil.
+#
+#  This application is used to set and retrieve clock information for the platform.
+#
+#  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = GpioUtil
+  FILE_GUID                      = 5ae0a993-03fd-4156-857c-5a0390a047b7
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeGpioUtil
+  MODULE_UNI_FILE                = GpioUtil.uni
+
+#
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  GpioUtilStrings.uni
+  GpioUtil.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiApplicationEntryPoint
+  UefiHiiServicesLib
+  BaseMemoryLib
+  ShellLib
+  MemoryAllocationLib
+  DebugLib
+  HiiLib
+  UefiLib
+
+[Protocols]
+  gPlatformGpioProtocolGuid                     ##CONSUMES
+  gEmbeddedGpioProtocolGuid                     ##CONSUMES
+  gEfiHiiPackageListProtocolGuid                ##CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  GpioUtilExtra.uni
+

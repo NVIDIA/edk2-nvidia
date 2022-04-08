@@ -1,0 +1,35 @@
+#/** @file
+#
+#  Tegra Controller Enable Driver
+#
+#  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TegraControllerEnableDxe
+  FILE_GUID                      = 75d141ce-75a6-4bb2-8466-13387d74911d
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  TegraControllerEnableDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DeviceDiscoveryDriverLib
+
+[Guids]
+  gNVIDIANonDiscoverableSpiDeviceGuid
+
+[Depex]
+  TRUE

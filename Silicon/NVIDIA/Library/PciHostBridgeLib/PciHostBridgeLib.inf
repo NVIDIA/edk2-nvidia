@@ -1,0 +1,50 @@
+## @file
+#  PCI Host Bridge Library instance for NVIDIA platforms.
+#
+#  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = PciHostBridgeLib
+  FILE_GUID                      = 602bc350-dcfe-40d9-bd45-8d439211abc7
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PciHostBridgeLib|DXE_DRIVER
+
+#
+# The following information is for reference only and not required by the build
+# tools.
+#
+#  VALID_ARCHITECTURES           = AARCH64 ARM
+#
+
+[Sources]
+  PciHostBridgeLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  DevicePathLib
+  IoLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gNVIDIAPciHostBridgeProtocolGuid          ## CONSUMES
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+
+[Depex]
+  gNVIDIAPciHostBridgeProtocolGuid
+  AND
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+

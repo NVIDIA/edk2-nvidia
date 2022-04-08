@@ -1,0 +1,51 @@
+#/** @file
+#
+#  Tegra SE RNG Driver
+#
+#  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = SeRngDxe
+  FILE_GUID                      = cf195e20-3457-46bc-b952-6efc7e2ad486
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  SeRngDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  FdtLib
+  DeviceDiscoveryDriverLib
+  CacheMaintenanceLib
+  TimerLib
+
+[Protocols]
+  gNVIDIANonDiscoverableDeviceProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
+  gNVIDIASeRngProtocolGuid
+
+[Guids]
+  gNVIDIANonDiscoverableT234SeDeviceGuid
+
+[Depex]
+  TRUE

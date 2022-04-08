@@ -1,0 +1,52 @@
+#/** @file
+#
+#  EEPROM Driver
+#
+#  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = EepromDxe
+  FILE_GUID                      = 6430cdb4-a6b5-4326-95ba-97c4445dfe4e
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = InitializeEepromDxe
+
+[Sources.common]
+  Eeprom.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiLib
+  FdtLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  TegraPlatformInfoLib
+  PlatformResourceLib
+  Crc8Lib
+  PrintLib
+
+[Guids]
+  gNVIDIAEeprom
+
+[Protocols]
+  gEfiI2cIoProtocolGuid                       ## CONSUMES
+  gEfiRngProtocolGuid                         ## CONSUMES
+  gNVIDIACvmEepromProtocolGuid                ## SOMETIMES_PRODUCES
+  gNVIDIACvbEepromProtocolGuid                ## SOMETIMES_PRODUCES
+  gNVIDIAEepromProtocolGuid                   ## SOMETIMES_PRODUCES
+
+[Depex]
+  TRUE

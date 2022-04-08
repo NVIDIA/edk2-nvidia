@@ -1,0 +1,31 @@
+#/** @file
+#
+#  NVG Library
+#
+#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = NvgLib
+  FILE_GUID                      = b40ae691-9a63-4bdd-9a9f-cb3fd17b2695
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = NvgLib
+
+[Sources.common]
+  NvgLib.c
+
+[Packages]
+  Silicon/NVIDIA/NVIDIA.dec
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  DebugLib
+  PcdLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster

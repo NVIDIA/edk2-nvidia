@@ -1,0 +1,18 @@
+/** @file
+  String definitions for PlatformBootManagerBootDescriptionLib library.
+
+  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#langdef en-US "English"
+
+#string STR_LOAD_FILE_EMMC_BOOT_DESCRIPTION       #language en-US  "UEFI NVIDIA eMMC L4T Boot"
+
+#string STR_LOAD_FILE_SD_BOOT_DESCRIPTION         #language en-US  "UEFI NVIDIA SD L4T Boot"
+
+#string STR_LOAD_FILE_RAMLOADED_BOOT_DESCRIPTION  #language en-US  "UEFI NVIDIA Ramloaded L4T Boot"
+
+#string STR_LOAD_FILE_RCM_BOOT_DESCRIPTION        #language en-US  "UEFI NVIDIA Rcm L4T Boot"

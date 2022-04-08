@@ -1,0 +1,37 @@
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = ConfigurationManagerLib
+  FILE_GUID                      = ff094b47-5a23-4432-b12d-87c2d2a1cc32
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = ConfigurationManagerLib
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+
+[LibraryClasses]
+  FloorSweepingLib
+  DeviceTreeHelperLib
+  MemoryAllocationLib
+  FdtLib
+  PlatformResourceLib
+  FloorSweepingInternalLib
+
+[Sources.common]
+  ConfigurationManagerGicLib.c
+
+[Pcd]
+  gArmTokenSpaceGuid.PcdGicDistributorBase
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
+  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters

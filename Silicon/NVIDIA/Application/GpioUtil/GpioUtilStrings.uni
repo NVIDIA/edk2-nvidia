@@ -1,0 +1,49 @@
+/** @file
+  String definitions for the Shell ClockUtil application.
+
+  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#langdef en-US "English"
+
+#string STR_GPIO_UTIL_UNKNOWN_OPERATION              #language en-US  "%s: Operation not specified.\n"
+
+#string STR_GPIO_UTIL_PROTOCOL_NONEXISTENT           #language en-US  "%s: Gpio protocol nonexistent.\n"
+
+#string STR_GPIO_UTIL_PLATFORM_PROTOCOL_NONEXISTENT  #language en-US  "%s: Gpio platform protocol nonexistent.\n"
+
+#string STR_GPIO_UTIL_INPUT_OUTPUT                   #language en-US  "%s: Can not have both --input and --output.\n"
+
+#string STR_GPIO_UTIL_BAD_OUTPUT_VALUE               #language en-US  "%s: Output must be 0 or 1.\n"
+
+#string STR_GPIO_UTIL_MODIFY_NO_ID                   #language en-US  "%s: Must have id to set input or output.\n"
+
+#string STR_GPIO_UTIL_DISPLAY_GET_VALUE_ERROR        #language en-US  "%s: Failed to get Gpio value for id 0x%x: %r.\n"
+
+#string STR_GPIO_UTIL_DISPLAY_GET_MODE_ERROR         #language en-US  "%s: Failed to get Gpio mode for id 0x%x: %r.\n"
+
+#string STR_GPIO_UTIL_DISPLAY_INPUT                  #language en-US  "0x%08x: INPUT   - %d\n"
+#string STR_GPIO_UTIL_DISPLAY_OUTPUT                 #language en-US  "0x%08x: OUTPUT  - %d\n"
+#string STR_GPIO_UTIL_DISPLAY_UNKNOWN_MODE           #language en-US  "0x%08x: UNKNOWN - %d\n"
+
+#string STR_GPIO_UTIL_HELP                 #language en-US    ""
+".TH GpioUtil 0 "Displays or modifies the gpio configuration."\r\n"
+".SH NAME\r\n"
+"Displays or modifies the gpio configuration.\r\n"
+".SH SYNOPSIS\r\n"
+" \r\n"
+"%HGpioUtil [--id <gpio id>] [--input|--output <0|1>]\r\n"
+".SH OPTIONS\r\n"
+" \r\n"
+"%Hcommand%N:\r\n"
+"  Specifies the gpio to display/modify
+"  --id gpio_id                     Specified gpio id\r\n"
+" \r\n"
+"  --input                          Set Gpio as input.\r\n"
+"  --output <value>                 Set Gpio as output with value.\r\n"
+" \r\n"
+"  -?                               Displays this help.\r\n"
+" \r\n"

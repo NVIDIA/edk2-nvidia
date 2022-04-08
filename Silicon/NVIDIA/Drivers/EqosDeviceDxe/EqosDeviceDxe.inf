@@ -1,0 +1,113 @@
+#/** @file
+#
+#  DW EQoS device tree binding driver
+#
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = EqosDeviceDxe
+  FILE_GUID                      = 90b4e63b-b89c-4224-8b06-d039cbdf86da
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  nvethernetrm/osd.h
+  nvethernetrm/include/ivc_core.h
+  nvethernetrm/include/mmc.h
+  nvethernetrm/include/osi_common.h
+  nvethernetrm/include/osi_core.h
+  nvethernetrm/include/osi_dma.h
+  nvethernetrm/include/osi_dma_txrx.h
+  nvethernetrm/include/osi_macsec.h
+  nvethernetrm/osi/common/include/local_common.h
+
+  EqosDeviceDxe.c
+  DwEqosSnpDxe.c
+  EmacDxeUtil.c
+  PhyDxeUtil.c
+  PhyMarvell.c
+  PhyRealtek.c
+  DtAcpiMacUpdate.c
+
+  nvethernetrm/osd.c
+  nvethernetrm/osi/core/debug.c
+  nvethernetrm/osi/core/eqos_core.c
+  nvethernetrm/osi/core/eqos_mmc.c
+  nvethernetrm/osi/core/osi_core.c
+  nvethernetrm/osi/core/vlan_filter.c
+  nvethernetrm/osi/core/osi_hal.c
+  nvethernetrm/osi/core/ivc_core.c
+  nvethernetrm/osi/core/frp.c
+  nvethernetrm/osi/core/mgbe_core.c
+  nvethernetrm/osi/core/xpcs.c
+  nvethernetrm/osi/core/mgbe_mmc.c
+  nvethernetrm/osi/dma/eqos_dma.c
+  nvethernetrm/osi/dma/osi_dma.c
+  nvethernetrm/osi/dma/osi_dma_txrx.c
+  nvethernetrm/osi/dma/mgbe_dma.c
+  nvethernetrm/osi/dma/eqos_desc.c
+  nvethernetrm/osi/dma/mgbe_desc.c
+  nvethernetrm/osi/dma/debug.c
+  nvethernetrm/osi/common/osi_common.c
+  nvethernetrm/osi/common/eqos_common.c
+  nvethernetrm/osi/common/mgbe_common.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  FdtLib
+  DeviceDiscoveryDriverLib
+  TegraPlatformInfoLib
+  NetLib
+  DmaLib
+  TimerLib
+
+[Protocols]
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIAClockNodeProtocolGuid
+  gArmScmiClock2ProtocolGuid
+  gEmbeddedGpioProtocolGuid
+  gNVIDIACvmEepromProtocolGuid
+  gEfiAcpiTableProtocolGuid                     # PROTOCOL ALWAYS_CONSUMED
+  gEfiAcpiSdtProtocolGuid                       # PROTOCOL ALWAYS_CONSUMED
+
+[Guids]
+  gDwEqosNetNonDiscoverableDeviceGuid
+  gDwEqosNetT194NonDiscoverableDeviceGuid
+  gDwMgbeNetNonDiscoverableDeviceGuid
+  gNVIDIATokenSpaceGuid
+  gFdtTableGuid
+  gEfiAcpiTableGuid
+  gEfiEventExitBootServicesGuid
+
+[Depex]
+  gEmbeddedGpioProtocolGuid
+  AND
+  gNVIDIACvmEepromProtocolGuid
+  AND
+  gEfiVariableWriteArchProtocolGuid
+
+[BuildOptions]
+  *_*_*_PP_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT
+  *_*_*_CC_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT

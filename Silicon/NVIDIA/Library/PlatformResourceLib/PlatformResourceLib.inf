@@ -1,0 +1,43 @@
+#
+# Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PlatformResourceLib
+  FILE_GUID                      = 5f0725e2-8394-4654-9fe7-b15d790f92fc
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PlatformResourceLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  TegraPlatformInfoLib
+  PlatformResourceInternalLib
+  GoldenRegisterLib
+
+[Sources.common]
+  PlatformResourceLib.c
+  T194ResourceConfig.c
+  T234ResourceConfig.c
+
+[Guids]
+  gNVIDIAOSCarveoutHob
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
+  gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress
+  gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress
+  gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem
+  gNVIDIATokenSpaceGuid.PcdBootChainRegisterBaseAddressT234
+  gNVIDIATokenSpaceGuid.PcdBootROMRegisterBaseAddressT194
+  gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT194

@@ -1,0 +1,29 @@
+#/** @file
+#
+#  GPT - GUID Partition Table Library
+#        This implementation of GPT uses just the secondary GPT table.
+#
+#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = GptLib
+  FILE_GUID                      = 515188ea-9abd-4b2a-b9a6-e7639a126170
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = GptLib
+
+[Sources.common]
+  GptLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+

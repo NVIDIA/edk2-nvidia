@@ -1,0 +1,52 @@
+#/** @file
+#
+#  Nor Flash Driver
+#
+#  Copyright (c) 2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = NorFlashDxe
+  FILE_GUID                      = c5e1b811-b319-4d0e-b31a-81e23b29dd2d
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = InitializeNorFlashDxe
+
+[Sources.common]
+  NorFlashDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiLib
+  FdtLib
+  TimerLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiRuntimeLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraNorBlockProtocols
+
+[Protocols]
+  gNVIDIANorFlashProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiEraseBlockProtocolGuid
+  gNVIDIAQspiControllerProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid
+
+[Depex]
+  TRUE

@@ -1,0 +1,64 @@
+#/** @file
+#
+#  TegraUart Driver
+#
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TegraUartDxe
+  FILE_GUID                      = ef353fa8-674c-465d-ab56-a4e53d1a713f
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  TegraUartDxe.c
+  Serial16550.c
+  SerialSbsa.c
+  SerialTCU.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  DeviceDiscoveryDriverLib
+  IoLib
+  MemoryAllocationLib
+  TegraSbsaSerialPortLib
+  Tegra16550SerialPortLib
+  TegraCombinedSerialPortLib
+
+[Pcd]
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultDataBits
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultStopBits
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultReceiveFifoDepth
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
+
+[Protocols]
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gEfiSerialIoProtocolGuid
+
+[Guids]
+  gNVIDIANonDiscoverableSbsaUartDeviceGuid
+  gNVIDIANonDiscoverable16550UartDeviceGuid
+  gNVIDIANonDiscoverableCombinedUartDeviceGuid
+

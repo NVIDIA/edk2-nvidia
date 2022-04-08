@@ -1,0 +1,27 @@
+## @file
+#
+#  FwPackageLib - Firmware update package support library
+#
+#  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = FwPackageLib
+  FILE_GUID                      = 17f634b3-9db0-4123-b73a-c16a5ec42b15
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = FwPackageLib
+
+[Sources.common]
+  FwPackageLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib

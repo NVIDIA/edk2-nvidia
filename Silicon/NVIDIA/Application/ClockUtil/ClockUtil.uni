@@ -1,0 +1,15 @@
+// /** @file
+// Shell application ClockUtil.
+//
+// This application is used to set and retrieve clock information for the platform.
+//
+// Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+// **/
+
+
+#string STR_MODULE_ABSTRACT             #language en-US "Shell application ClockUtil"
+
+#string STR_MODULE_DESCRIPTION          #language en-US "This application is used to set and retrieve clock information for the platform."
+

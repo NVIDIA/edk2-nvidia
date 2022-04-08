@@ -1,0 +1,37 @@
+/** @file
+*
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = FloorSweepingLib
+  FILE_GUID                      = 391c80d6-3920-4128-bb19-d640c81c8286
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = FloorSweepingLib
+
+[Sources]
+  FloorSweepingLib.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ArmLib
+  BaseLib
+  DebugLib
+  MceAriLib
+  NvgLib
+  TegraPlatformInfoLib
+  FloorSweepingInternalLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
+  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported

@@ -1,0 +1,36 @@
+#/** @file
+#
+#  Component description file for TegraSerialPortLib module
+#
+#  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TegraSerialPortLib
+  FILE_GUID                      = 94602bc2-4140-42ac-89a6-a0437dc7b3d4
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = SerialPortLib
+
+[Sources.common]
+  TegraSerialPortLib.c
+
+[LibraryClasses]
+  PcdLib
+  DebugLib
+  TegraSbsaSerialPortLib
+  Tegra16550SerialPortLib
+  TegraCombinedSerialPortLib
+  TegraPlatformInfoLib
+  PlatformResourceLib
+  DeviceTreeHelperLib
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec

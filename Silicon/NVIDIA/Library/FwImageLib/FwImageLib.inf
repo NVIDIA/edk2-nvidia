@@ -1,0 +1,35 @@
+## @file
+#
+#  FW Image Library
+#
+#  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = FwImageLib
+  FILE_GUID                      = f4de1123-36f4-4ed6-a871-22673e39b33f
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = FwImageLib|DXE_DRIVER
+  CONSTRUCTOR                    = FwImageLibConstructor
+
+[Sources.common]
+  FwImageLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gNVIDIAFwImageProtocolGuid
+
+[Depex]
+  gNVIDIAFwImageProtocolGuid

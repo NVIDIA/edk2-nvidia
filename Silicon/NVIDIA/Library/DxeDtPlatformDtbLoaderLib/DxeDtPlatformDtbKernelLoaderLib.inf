@@ -1,0 +1,61 @@
+/** @file
+*
+*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = DxeDtPlatformDtbKernelLoaderLib
+  FILE_GUID                      = a0200024-59dc-4b40-904e-93e4fc96ca8c
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DtPlatformDtbLoaderLib|DXE_DRIVER
+
+[Sources]
+  DxeDtPlatformDtbKernelLoaderLib.c
+  FloorSweep.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ArmSmcLib
+  BaseLib
+  HobLib
+  FdtLib
+  PrintLib
+  PcdLib
+  UefiBootServicesTableLib
+  FloorSweepingLib
+  PlatformResourceLib
+  TegraDeviceTreeKernelOverlayLib
+  OpteeLib
+  BootChainInfoLib
+
+[Protocols]
+  gEfiPartitionInfoProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gNVIDIACvmEepromProtocolGuid
+  gNVIDIAEepromProtocolGuid
+
+[Guids]
+  gFdtTableGuid
+  gEfiEventReadyToBootGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus
+  gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
+
+[Depex]
+  gEdkiiNvVarStoreFormattedGuid

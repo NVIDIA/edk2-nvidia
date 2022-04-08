@@ -1,0 +1,57 @@
+## @file
+#  Shell application FalconUtil.
+#
+#  This application is used to set and retrieve Falcon register information for the platform.
+#  This is also used to read Data Structures of USB Firmware stored in Internal Memory.
+#
+#  Copyright (c) 2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = FalconUtil
+  FILE_GUID                      = d911e8b1-0c90-4f79-a0f8-6c60d14ed69b
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeFalconUtil
+  MODULE_UNI_FILE                = FalconUtil.uni
+#
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  FalconUtilStrings.uni
+  FalconUtil.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiApplicationEntryPoint
+  UefiHiiServicesLib
+  BaseMemoryLib
+  ShellLib
+  MemoryAllocationLib
+  DebugLib
+  HiiLib
+  UefiLib
+  IoLib
+  UsbFalconLib
+
+[Protocols]
+  gEfiHiiPackageListProtocolGuid                ##CONSUMES
+  gNVIDIAXhciControllerProtocolGuid
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  FalconUtilExtra.uni
+

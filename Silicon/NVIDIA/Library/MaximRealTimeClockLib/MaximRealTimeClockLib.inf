@@ -1,0 +1,57 @@
+#/** @file
+#
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = MaximRealTimeClockLib
+  FILE_GUID                      = 2df9ac10-090c-4fd4-8ddd-2225707761e1
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = RealTimeClockLib
+
+[Sources.common]
+   MaximRealTimeClockLib.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiLib
+  UefiRuntimeLib
+  TimerLib
+  MemoryAllocationLib
+  TimeBaseLib
+
+[Guids]
+  gEfiEventExitBootServicesGuid
+  gEfiGlobalVariableGuid
+  gNVIDIAI2cMaxim77620
+  gNVIDIAI2cMaxim20024
+  gNVIDIAI2cVrsPseq
+  gNVIDIATokenSpaceGuid
+  gEfiRtPropertiesTableGuid
+
+[Protocols]
+  gEfiI2cIoProtocolGuid                       ## CONSUMES
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC
+
+[Depex]
+  gEfiVariableArchProtocolGuid
+  AND
+  gEfiVariableWriteArchProtocolGuid
+
+# Current usage of this library expects GCC in a UNIX-like shell environment with the date command
+[BuildOptions]
+  GCC:*_*_*_CC_FLAGS = -DBUILD_EPOCH=`date +%s`

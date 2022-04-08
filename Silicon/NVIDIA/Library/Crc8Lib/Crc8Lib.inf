@@ -1,0 +1,28 @@
+#/** @file
+#
+#  CRC8 Library, calculates different type of CRC updates
+#
+#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = Crc8Lib
+  FILE_GUID                      = 9bcca3ca-2895-4424-8a85-418746812642
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = Crc8Lib
+
+[Sources.common]
+  Crc8Lib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+

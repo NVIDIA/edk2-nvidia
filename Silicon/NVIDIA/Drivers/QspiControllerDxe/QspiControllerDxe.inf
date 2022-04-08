@@ -1,0 +1,52 @@
+#/** @file
+#
+#  QSPI Controller Driver
+#
+#  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = QspiControllerDxe
+  FILE_GUID                      = b7d9d393-f955-4cc3-a3ae-1a1ed59a818f
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  QspiControllerDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiBootServicesTableLib
+  DeviceDiscoveryDriverLib
+  DxeServicesTableLib
+  QspiControllerLib
+  UefiRuntimeLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdSpiClockFrequency
+
+[Protocols]
+  gNVIDIANonDiscoverableDeviceProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gNVIDIAQspiControllerProtocolGuid
+
+[Guids]
+  gNVIDIANonDiscoverableSpiDeviceGuid
+  gNVIDIANonDiscoverableQspiDeviceGuid
+  gEfiEventVirtualAddressChangeGuid
+
+[Depex]
+  TRUE

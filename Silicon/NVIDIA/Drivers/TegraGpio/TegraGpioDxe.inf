@@ -1,0 +1,56 @@
+#/** @file
+#
+#  Tegra GPIO Driver
+#
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = TegraGpioDxe
+  FILE_GUID                      = 77d665a4-5078-4773-805c-9001d4078e03
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  TegraGpioDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  FdtLib
+  DeviceDiscoveryDriverLib
+
+[Protocols]
+  gPlatformGpioProtocolGuid
+  gEmbeddedGpioProtocolGuid
+  gNVIDIANonDiscoverableDeviceProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
+  gNVIDIAI2cExpanderGpioProtocolGuid
+  gNVIDIAI2cExpanderPlatformGpioProtocolGuid
+
+[Guids]
+  gNVIDIANonDiscoverableT194GpioDeviceGuid
+  gNVIDIANonDiscoverableT234GpioDeviceGuid
+
+[Depex]
+  gNVIDIAI2cExpanderGpioProtocolGuid
+  AND
+  gNVIDIAI2cExpanderPlatformGpioProtocolGuid

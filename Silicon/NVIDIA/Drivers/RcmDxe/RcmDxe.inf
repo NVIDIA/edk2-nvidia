@@ -1,0 +1,37 @@
+## @file
+#  Rcm Dxe
+#
+#  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION               = 0x00010019
+  BASE_NAME                 = RcmDxe
+  FILE_GUID                 = 23953c5f-3354-4ec6-bc27-ec3f0e1497df
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = RcmDxeInitialize
+
+[Sources]
+  RcmDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiDriverEntryPoint
+  PcdLib
+  PlatformResourceLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdRcmKernelBase
+  gNVIDIATokenSpaceGuid.PcdRcmKernelSize
+
+[Depex]
+  TRUE

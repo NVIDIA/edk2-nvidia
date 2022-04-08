@@ -1,0 +1,34 @@
+# @file
+#
+#  BR-BCT Update Device Library
+#
+#  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BrBctUpdateDeviceLib
+  FILE_GUID                      = 9a15470a-6454-4648-9278-27a33a11104d
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = BrBctUpdateDeviceLib|DXE_DRIVER UEFI_DRIVER DXE_RUNTIME_DRIVER
+
+[Sources.common]
+  BrBctUpdateDeviceLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  FwPartitionDeviceLib
+  GptLib
+  PcdLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize
+  gNVIDIATokenSpaceGuid.PcdBrBctVerifyUpdateBeforeWrite
+  gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition

@@ -1,0 +1,67 @@
+## @file
+#  Resource Configuration Dxe
+#
+#  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2017, Linaro, Ltd. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION               = 0x00010019
+  BASE_NAME                 = ResourceConfigDxe
+  FILE_GUID                 = 2BCD55FD-99D7-49CE-B15E-57718A071509
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = ResourceConfigDxeInitialize
+
+[Sources]
+  ResourceConfigDxe.c
+  ResourceConfigHii.uni
+  ResourceConfigHii.vfr
+
+[Packages]
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  HiiLib
+  DevicePathLib
+  MemoryAllocationLib
+  UefiHiiServicesLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiRuntimeServicesTableLib
+  BaseMemoryLib
+  UefiLib
+
+[Guids]
+  gEfiHiiPlatformSetupFormsetGuid               ## CONSUMES ## GUID (Indicate the formset class guid to be displayed)
+  gEfiIfrFrontPageGuid                          ## CONSUMES ## GUID (Indicate the formset in this library need to dispaly in which page)
+  gEfiIfrTianoGuid                              ## CONSUMES ## GUID (Extended IFR Guid Opcode)
+  gNVIDIAResourceConfigFormsetGuid
+  gEfiEndOfDxeEventGroupGuid
+  gEfiAcpiTableGuid
+  gNVIDIAPublicVariableGuid
+  gNVIDIATokenSpaceGuid
+
+[Protocols]
+  gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
+  gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
+  gNVIDIATokenSpaceGuid.PcdOsChainOverride
+  gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode
+
+[Depex]
+  gEfiVariableArchProtocolGuid        AND
+  gEfiVariableWriteArchProtocolGuid

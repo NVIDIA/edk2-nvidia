@@ -1,0 +1,55 @@
+## @file
+#  Shell application RegulatorUtil.
+#
+#  This application is used to set and retrieve regulator information for the platform.
+#
+# Copyright (c) 2018 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = RegulatorUtil
+  FILE_GUID                      = 022f4c58-a52d-4a97-adcd-6465f0be9206
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeRegulatorUtil
+  MODULE_UNI_FILE                = RegulatorUtil.uni
+
+#
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  RegulatorUtilStrings.uni
+  RegulatorUtil.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiApplicationEntryPoint
+  UefiHiiServicesLib
+  BaseMemoryLib
+  ShellLib
+  MemoryAllocationLib
+  DebugLib
+  HiiLib
+  UefiLib
+
+[Protocols]
+  gNVIDIARegulatorProtocolGuid                  ##CONSUMES
+  gEfiHiiPackageListProtocolGuid                ##CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  RegulatorUtilExtra.uni
+

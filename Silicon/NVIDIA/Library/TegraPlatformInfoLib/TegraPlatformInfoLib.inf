@@ -1,0 +1,35 @@
+#
+#  Copyright (c) 2019-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TegraPlatformInfoLib
+  FILE_GUID                      = 96aa3203-e740-43c5-9321-de9bf50f8593
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = TegraPlatformInfoLib
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  TegraPlatformInfoInternalLib
+  DebugLib
+  PcdLib
+  IoLib
+
+
+[Sources.common]
+  TegraPlatformInfoLib.c
+
+[Sources.AARCH64]
+  AArch64/TegraPlatformInfo.S
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress

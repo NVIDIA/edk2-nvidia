@@ -1,0 +1,29 @@
+/** @file
+*
+*  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = DeviceTreeHelperLib
+  FILE_GUID                      = 7fcdd11e-085b-4899-8f65-26c54d6871c0
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DeviceTreeHelperLib
+
+[Sources]
+  DeviceTreeHelperLib.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  FdtLib
+  DtPlatformDtbLoaderLib

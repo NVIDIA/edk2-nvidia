@@ -1,0 +1,59 @@
+#/** @file
+#
+#  XHCI Controller Driver
+#
+#  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = XhciControllerDxe
+  FILE_GUID                      = bf74bc54-1e78-4c06-bdaf-f76fda006cc5
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  XhciControllerDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  FdtLib
+  DeviceDiscoveryDriverLib
+  UsbFalconLib
+  TegraPlatformInfoLib
+
+[Protocols]
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIAClockNodeProtocolGuid
+  gArmScmiClockProtocolGuid
+  gNVIDIARegulatorProtocolGuid
+  gNVIDIAUsbPadCtlProtocolGuid
+  gNVIDIAXhciControllerProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
+  gNVIDIAUsbFwProtocolGuid
+
+[Guids]
+  gEdkiiNonDiscoverableXhciDeviceGuid
+
+[Depex]
+  gNVIDIAUsbPadCtlProtocolGuid
+  AND
+  gNVIDIAUsbFwProtocolGuid

@@ -1,0 +1,39 @@
+#/** @file
+#
+#  SerialPortLib instance for SBSA UART.
+#
+#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = TegraSbsaSerialPortLib
+  FILE_GUID                      = C486C5BC-9ED7-4B12-A945-247CA1D53ABE
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.1
+  LIBRARY_CLASS                  = TegraSbsaSerialPortLib
+
+[Sources.common]
+  TegraSbsaSerialPortLib.c
+
+[LibraryClasses]
+  PcdLib
+  PL011UartLib
+
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ArmPlatformPkg/ArmPlatformPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Pcd]
+  gArmPlatformTokenSpaceGuid.PL011UartClkInHz
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultDataBits
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultStopBits

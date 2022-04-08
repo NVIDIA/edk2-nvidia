@@ -1,0 +1,42 @@
+#/** @file
+#
+#  AML Generation Protocol
+#
+#  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = AmlGenerationDxe
+  FILE_GUID                      = 94A9AE26-356A-1A8A-B525-D5A4A483A42B
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = AmlGenerationDxeEntryPoint
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Sources]
+  AmlGenerationDxe.c
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  DevicePathLib
+  DebugLib
+  PrintLib
+
+[Protocols]
+  gNVIDIAAmlGenerationProtocolGuid
+
+[Depex]
+  TRUE

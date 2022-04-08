@@ -1,0 +1,102 @@
+## @file
+#  Implementation for PlatformBootManagerLib library class interfaces.
+#
+#  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (C) 2015-2016, Red Hat, Inc.
+#  Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
+#  Copyright (c) 2007 - 2014, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2016, Linaro Ltd. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PlatformBootManagerLib
+  FILE_GUID                      = 499A459E-229F-4E80-9782-624AD53BCA0C
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PlatformBootManagerLib|DXE_DRIVER
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+
+[Sources]
+  PlatformBm.c
+  PlatformBm.h
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  CryptoPkg/CryptoPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  BootLogoLib
+  CapsuleLib
+  DebugLib
+  DevicePathLib
+  DxeServicesLib
+  HobLib
+  MemoryAllocationLib
+  PcdLib
+  PrintLib
+  UefiBootManagerLib
+  UefiBootServicesTableLib
+  UefiLib
+  UefiRuntimeServicesTableLib
+  PlatformBootOrderLib
+  BaseCryptLib
+  PlatformResourceLib
+
+[FeaturePcd]
+  gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport
+
+[FixedPcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gNVIDIATokenSpaceGuid.PcdPlatformFamilyName
+  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString
+  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultDataBits
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultStopBits
+  gEfiMdePkgTokenSpaceGuid.PcdDefaultTerminalType
+  gNVIDIATokenSpaceGuid.PcdTegraPrintInternalBanner
+
+[Pcd]
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
+  gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
+  gNVIDIATokenSpaceGuid.PcdOsIndicationsAvailable
+
+[Guids]
+  gEfiFileInfoGuid
+  gEfiFileSystemInfoGuid
+  gEfiFileSystemVolumeLabelInfoIdGuid
+  gEfiEndOfDxeEventGroupGuid
+  gEfiTtyTermGuid
+  gEfiAcpiTableGuid
+  gUefiShellFileGuid
+  gNVIDIAPublicVariableGuid
+  gNVIDIATokenSpaceGuid
+
+[Protocols]
+  gEfiDevicePathProtocolGuid
+  gEfiGraphicsOutputProtocolGuid
+  gEfiLoadedImageProtocolGuid
+  gEfiPciRootBridgeIoProtocolGuid
+  gEfiSimpleFileSystemProtocolGuid
+  gEsrtManagementProtocolGuid
+  gPlatformBootManagerProtocolGuid
+  gEfiSimpleTextOutProtocolGuid
+  gEfiSimpleTextInProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gEfiGenericMemTestProtocolGuid                ## CONSUMES

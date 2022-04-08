@@ -1,0 +1,41 @@
+#
+#  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = UsbFirmwareDxe
+  FILE_GUID                      = f78be420-1a89-458a-b477-944f1a58219a
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UsbFirmwareDxeInitialize
+
+[Sources.common]
+  UsbSilFw.c
+
+[LibraryClasses]
+  TegraPlatformInfoLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  GptLib
+  BaseMemoryLib
+  DevicePathLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+
+[Protocols]
+  gNVIDIAUsbFwProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gNVIDIANorFlashProtocolGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSignature
+
+[Depex]
+  gEdkiiNvVarStoreFormattedGuid

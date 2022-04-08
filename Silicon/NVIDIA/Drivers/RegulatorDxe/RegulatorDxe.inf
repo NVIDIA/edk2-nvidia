@@ -1,0 +1,52 @@
+#/** @file
+#
+#  Regulator Driver
+#
+#  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = RegulatorDxe
+  FILE_GUID                      = a9162e52-f918-4b2f-9fb1-3a0e6de81643
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = RegulatorDxeInitialize
+
+[Sources.common]
+  RegulatorDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  FdtLib
+  DtPlatformDtbLoaderLib
+
+[Protocols]
+  gEmbeddedGpioProtocolGuid
+  gNVIDIARegulatorProtocolGuid
+  gNVIDIAFixedRegulatorsPresentProtocolGuid
+  gNVIDIAPmicRegulatorsPresentProtocolGuid
+  gNVIDIAAllRegulatorsPresentProtocolGuid
+  gEfiI2cIoProtocolGuid
+
+[Guids]
+  gNVIDIAI2cMaxim77620
+  gNVIDIAI2cMaxim20024
+
+[Depex]
+  TRUE

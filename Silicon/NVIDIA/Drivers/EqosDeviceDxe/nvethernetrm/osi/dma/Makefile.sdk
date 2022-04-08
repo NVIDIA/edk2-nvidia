@@ -1,0 +1,38 @@
+# Copyright (c) 2020 NVIDIA CORPORATION.  All Rights Reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+include $(PDK_TOP)/drive-t186ref-qnx/make/nvdefs.mk
+
+TARGETS = libnvethernetcl.so
+
+CFLAGS += -g -Wall $(NV_PLATFORM_OPT) $(NV_PLATFORM_CFLAGS)
+CPPFLAGS = $(NV_PLATFORM_SDK_INC) $(NV_PLATFORM_CPPFLAGS)  -I../../../include -I../core -I../common/include
+CPPFLAGS += -DNV_IS_SAFETY=$(NV_PLATFORM_SAFETY)
+LDFLAGS  := \
+	$(NV_PLATFORM_SDK_LIB) \
+	$(NV_PLATFORM_LDFLAGS)
+LDFLAGS += -shared
+
+OBJS := eqos_dma.o
+OBJS += osi_dma.o
+OBJS += osi_dma_txrx.o
+OBJS += mgbe_dma.o
+OBJS += eqos_desc.o
+OBJS += mgbe_desc.o
+OBJS += ./../common/osi_common.o
+OBJS += ./../common/eqos_common.o
+OBJS += ./../common/mgbe_common.o
+
+CFLAGS += -D_FILE_OFFSET_BITS=64
+
+$(TARGETS): $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(STRIP) --strip-unneeded -R .comment -R .GCC.command.line $@
+
+clean clobber:
+	rm -rf $(OBJS) $(TARGETS)

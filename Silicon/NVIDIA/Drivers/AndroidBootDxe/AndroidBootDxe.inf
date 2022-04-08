@@ -1,0 +1,66 @@
+#/** @file
+#
+# Android Boot Loader Driver
+#
+# Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = AndroidBootDxe
+  FILE_GUID                 = 93b2206b-7fd7-4424-afe0-f5ca2e3ff899
+  MODULE_TYPE               = UEFI_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = AndroidBootDxeDriverEntryPoint
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Sources]
+  AndroidBootDxe.h
+  AndroidBootDxe.c
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  FdtLib
+  DebugLib
+  PrintLib
+  DevicePathLib
+  PcdLib
+  HobLib
+  TegraPlatformInfoLib
+  HandleParsingLib
+
+[Protocols]
+  gEfiBlockIoProtocolGuid
+  gEfiDiskIoProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gEfiLoadFileProtocolGuid
+  gEfiLoadFile2ProtocolGuid
+  gEfiLoadedImageProtocolGuid
+
+[Guids]
+  gFdtTableGuid
+  gEfiAcpiTableGuid
+  gNVIDIARamloadKernelGuid
+  gNVIDIARcmKernelGuid
+  gNVIDIAOSCarveoutHob
+  gNVIDIALoadfileKernelArgsGuid
+  gEfiPartTypeSystemPartGuid
+  gEfiEventReadyToBootGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
+  gNVIDIATokenSpaceGuid.PcdRcmKernelBase
+  gNVIDIATokenSpaceGuid.PcdRcmKernelSize

@@ -1,0 +1,34 @@
+#/** @file
+#
+#    Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#    SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = PlatformBootOrderLib
+  FILE_GUID                      = 222cef86-6462-4248-a6e5-318e87031416
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PlatformBootOrderLib
+
+[Sources.common]
+  PlatformBootOrderLib.c
+
+[Packages]
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  PrintLib
+  UefiBootManagerLib
+
+[Guids]
+  gEfiGlobalVariableGuid
+  gNVIDIATokenSpaceGuid
+  gNVIDIABmBootOptionGuid

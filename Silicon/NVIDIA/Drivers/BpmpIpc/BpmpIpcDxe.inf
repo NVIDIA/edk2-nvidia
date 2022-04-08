@@ -1,0 +1,61 @@
+#/** @file
+#
+#  SD MMC Controller Driver
+#
+#  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = BpmpIpcDxe
+  FILE_GUID                      = c9692e27-b2e7-45bb-ab05-99197d60a71e
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = BpmpIpcInitialize
+
+[Sources.common]
+  BpmpIpcDxe.c
+  ComponentName.c
+  HspDoorbell.c
+  BpmpIpc.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ArmLib
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  FdtLib
+  DtPlatformDtbLoaderLib
+
+[Protocols]
+  gNVIDIANonDiscoverableDeviceProtocolGuid
+  gNVIDIADeviceTreeCompatibilityProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
+  gNVIDIAHspDoorbellProtocolGuid
+
+[Guids]
+  gNVIDIANonDiscoverableBpmpDeviceGuid
+  gNVIDIANonDiscoverableHspTopDeviceGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout
+  gNVIDIATokenSpaceGuid.PcdBpmpResponseTimeout
+
+[Depex]
+  TRUE

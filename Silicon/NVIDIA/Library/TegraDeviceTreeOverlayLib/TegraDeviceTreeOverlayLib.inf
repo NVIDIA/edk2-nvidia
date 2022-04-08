@@ -1,0 +1,35 @@
+#/** @file
+#
+#  Component description file for TegraDeviceTreeOverlayLib module
+#
+#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TegraDeviceTreeOverlayLib
+  FILE_GUID                      = d87cffaa-3090-41c7-99ad-2de9662e695b
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = TegraDeviceTreeOverlayLib
+
+[Sources.common]
+  TegraDeviceTreeOverlayLib.c
+  TegraDeviceTreeOverlayLibCommon.c
+
+[LibraryClasses]
+  PcdLib
+  TegraPlatformInfoLib
+  FdtLib
+
+[Pcd]
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  NetworkPkg/NetworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec

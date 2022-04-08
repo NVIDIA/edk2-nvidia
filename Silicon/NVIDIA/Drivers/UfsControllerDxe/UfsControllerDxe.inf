@@ -1,0 +1,43 @@
+#/** @file
+#
+#  UFS Controller Driver
+#
+#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = UfsControllerDxe
+  FILE_GUID                      = 9a39f40a-3512-4ed9-bffe-bf3300422f0a
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  UfsControllerDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  DeviceDiscoveryDriverLib
+
+[Protocols]
+  gEdkiiUfsHcPlatformProtocolGuid
+
+[Guids]
+  gEdkiiNonDiscoverableUfsDeviceGuid
+
+[Depex]
+  TRUE

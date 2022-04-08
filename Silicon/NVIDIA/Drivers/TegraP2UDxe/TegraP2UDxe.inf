@@ -1,0 +1,49 @@
+#/** @file
+#
+#  Tegra P2U (PIPE to UPHY) Driver
+#
+#  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TegraP2UDxe
+  FILE_GUID                      = 830dbd80-0ab4-4deb-af11-7316146a0115
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = TegraP2UDxeInitialize
+
+[Sources.common]
+  TegraP2UDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DxeServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  FdtLib
+  DtPlatformDtbLoaderLib
+
+[Protocols]
+  gNVIDIATegraP2UProtocolGuid
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIANonDiscoverableDeviceProtocolGuid
+  gNVIDIADeviceTreeCompatibilityProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
+
+[Depex]
+  TRUE

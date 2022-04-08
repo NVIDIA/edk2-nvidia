@@ -1,0 +1,87 @@
+#/** @file
+#
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  (C) Copyright 2015 Hewlett-Packard Development Company, L.P.<BR>
+#  Copyright (c) 2011-2017, ARM Ltd. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = PrePi
+  FILE_GUID                      = e586f11f-df75-49e0-af14-88ff870078e5
+  MODULE_TYPE                    = SEC
+  VERSION_STRING                 = 1.0
+
+[Sources]
+  PrePi.c
+  PrePiMemory.c
+
+[Sources.AArch64]
+  AArch64/ArchPrePi.c
+  AArch64/ModuleEntryPoint.S
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  ArmPkg/ArmPkg.dec
+  ArmPlatformPkg/ArmPlatformPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  DebugAgentLib
+  ArmLib
+  IoLib
+  TimerLib
+  SerialPortLib
+  ExtractGuidedSectionLib
+  LzmaDecompressLib
+  DebugAgentLib
+  PrePiLib
+  MemoryAllocationLib
+  HobLib
+  PrePiHobListPointerLib
+  ArmMmuLib
+  ArmGicLib
+  FdtLib
+  TegraPlatformInfoLib
+  GoldenRegisterLib
+  SystemResourceLib
+
+[Guids]
+  gEfiFirmwarePerformanceGuid
+  gFdtHobGuid
+  gDtPlatformDefaultDtbFileGuid
+
+[FeaturePcd]
+  gEmbeddedTokenSpaceGuid.PcdPrePiProduceMemoryTypeInformationHob
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gNVIDIATokenSpaceGuid.PcdPlatformFamilyName
+  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString
+
+[FixedPcd]
+  gArmTokenSpaceGuid.PcdVFPEnabled
+  gArmTokenSpaceGuid.PcdArmNonSecModeTransition
+  gArmTokenSpaceGuid.PcdArmScr
+  gNVIDIATokenSpaceGuid.PcdTegraArchTimerFreqInHz
+  gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize
+  gEmbeddedTokenSpaceGuid.PcdPrePiCpuIoSize
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIReclaimMemory
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIMemoryNVS
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiReservedMemoryType
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesData
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesCode
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesCode
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesData
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderCode
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderData
+
+[BuildOptions]
+  GCC:*_*_*_DLINK_FLAGS = -pie -Wl,-T,$(MODULE_DIR)/Scripts/PrePi-PIE.lds

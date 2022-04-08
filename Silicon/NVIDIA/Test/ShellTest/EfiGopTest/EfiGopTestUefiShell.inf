@@ -1,0 +1,39 @@
+#
+#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION           = 0x00010005
+  BASE_NAME             = EfiGopTestUefiShell
+  FILE_GUID             = 508DAC47-F3D5-440B-A1B9-2526898F1836
+  MODULE_TYPE           = UEFI_APPLICATION
+  VERSION_STRING        = 1.0
+  ENTRY_POINT           = EfiGopTestDxe
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+[Sources]
+  EfiGopTest.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  PrintLib
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  UnitTestLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid
+  gNVIDIATestGraphicsOutputProtocolGuid

@@ -1,0 +1,21 @@
+
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = FloorSweepingInternalLib
+  FILE_GUID                      = 51aa38f6-5c48-4e7a-9f20-316d200366c9
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = FloorSweepingInternalLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Sources.common]
+  FloorSweepingInternalLibNull.c

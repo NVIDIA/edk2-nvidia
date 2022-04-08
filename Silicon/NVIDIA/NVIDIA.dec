@@ -1,0 +1,402 @@
+#/** @file
+#
+#  This Package provides all definitions for NVIDIA silicon
+#
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = NVIDIA
+  PACKAGE_GUID                   = ca7b8ebd-d003-43db-8c9e-39e0e59a2e2a
+  PACKAGE_VERSION                = 0.1
+
+################################################################################
+#
+# Include Section - list of Include Paths that are provided by this package.
+#                   Comments are used for Keywords and Module Types.
+#
+# Supported Module Types:
+#  BASE SEC PEI_CORE PEIM DXE_CORE DXE_DRIVER DXE_RUNTIME_DRIVER DXE_SMM_DRIVER DXE_SAL_DRIVER UEFI_DRIVER UEFI_APPLICATION
+#
+################################################################################
+
+[Includes]
+  Include
+  Include/Tegra
+
+[Guids.common]
+  gNVIDIATokenSpaceGuid                  = { 0xed3374ef, 0x767b, 0x42fa, { 0xaf, 0x70, 0xdb, 0x52, 0x0a, 0x39, 0x28, 0x22 } }
+  #Guid for public variables
+  gNVIDIAPublicVariableGuid              = { 0x781e084c, 0xa330, 0x417c, { 0xb6, 0x78, 0x38, 0xe6, 0x96, 0x38, 0x0c, 0xb9 } }
+
+  # Device types for device discovery
+  gNVIDIANonDiscoverableBpmpDeviceGuid        = { 0x0dd0840a, 0x6f64, 0x4ba4, { 0x87, 0x99, 0x75, 0x37, 0xb7, 0x74, 0x82, 0x8e } }
+  gNVIDIANonDiscoverableHspTopDeviceGuid      = { 0xf9c6f44f, 0xa8fe, 0x4771, { 0xa7, 0x13, 0xf6, 0x77, 0xe5, 0xfa, 0x66, 0x38 } }
+  gNVIDIANonDiscoverableT234DisplayDeviceGuid = { 0xeedde751, 0x5c74, 0x41a1, { 0xa3, 0x00, 0xca, 0x82, 0x17, 0x61, 0x35, 0x56 } }
+
+  #GPIO devices
+  gNVIDIANonDiscoverableT194GpioDeviceGuid = { 0x294a3144, 0x5e39, 0x4088, { 0xbd, 0x40, 0x8e, 0x49, 0xe0, 0x9e, 0x9c, 0x3d } }
+  gNVIDIANonDiscoverableT234GpioDeviceGuid = { 0x1d0e1fbb, 0x708b, 0x4539, { 0x89, 0xe5, 0xa3, 0x4a, 0xea, 0xe6, 0xed, 0xfd } }
+
+  #PCIe
+  gNVIDIANonDiscoverableT194PcieDeviceGuid   = { 0xc1a8204a, 0xd79d, 0x42cc, { 0xa4, 0x60, 0x79, 0x8c, 0xf4, 0xab, 0x0a, 0xba } }
+  gNVIDIANonDiscoverableT234PcieDeviceGuid   = { 0xdd787153, 0x8883, 0x4c3a, { 0xb0, 0xb6, 0x32, 0xc9, 0x92, 0xff, 0xf8, 0xe1 } }
+
+  #I2C device types
+  gNVIDIAI2cMaxim77620                   = { 0x1fa60dc3, 0x0ecd, 0x4345, { 0x9b, 0xbd, 0x50, 0xf4, 0x5b, 0x55, 0x35, 0x06 } }
+  gNVIDIAI2cMaxim20024                   = { 0xa7f8c208, 0xbe90, 0x4363, { 0x84, 0xc5, 0x1c, 0xc9, 0xed, 0x04, 0xe7, 0x19 } }
+  gNVIDIAI2cVrsPseq                      = { 0xdfeecb89, 0x3849, 0x4917, { 0xbf, 0xb3, 0xca, 0x02, 0x2b, 0xa2, 0x4a, 0xc1 } }
+  gNVIDIAEeprom                          = { 0xe7da2b8d, 0x25bd, 0x4e6f, { 0xac, 0xfc, 0x3b, 0x62, 0x18, 0x70, 0x73, 0xbd } }
+  gNVIDIAI2cTca9539                      = { 0x640bcec1, 0x2c6a, 0x4be6, { 0x86, 0x59, 0x5a, 0x37, 0xaa, 0x0c, 0xc8, 0x30 } }
+  gNVIDIAI2cUnknown                      = { 0xc58c5085, 0xafed, 0x4844, { 0x81, 0x06, 0x2a, 0xc6, 0xf2, 0x5a, 0xf5, 0xd7 } }
+
+  #I2C controllers
+  gNVIDIANonDiscoverableI2cDeviceGuid = { 0xe550ed9d, 0xb880, 0x4817, { 0xaa, 0xaa, 0x0e, 0x0e, 0xca, 0xf6, 0x57, 0x6c } }
+
+  #Secure Engine
+  gNVIDIANonDiscoverableT194SeDeviceGuid = { 0xd686d1c3, 0x8b05, 0x4eb8, { 0x98, 0x61, 0x69, 0x09, 0x0c, 0xd8, 0x06, 0xfa } }
+  gNVIDIANonDiscoverableT234SeDeviceGuid = { 0x9f21731a, 0x52f0, 0x4e1c, { 0x87, 0x9c, 0x09, 0x7a, 0x70, 0x00, 0xc9, 0x48 } }
+
+  #SPI controllers
+  gNVIDIANonDiscoverableSpiDeviceGuid = { 0xa3aea7c9, 0x7926, 0x4b23, {0xbc, 0x51, 0x69, 0xec, 0x55, 0xa0, 0x26, 0xdd } }
+
+  #QSPI device types
+  gNVIDIANonDiscoverableQspiDeviceGuid   = { 0x448fe9e9, 0x5479, 0x4afa, { 0x91, 0x82, 0xf2, 0x6f, 0x18, 0x78, 0xc1, 0x48 } }
+
+  #EFUSE device
+  gNVIDIANonDiscoverableEFuseDeviceGuid = { 0x824a08df, 0x8951, 0x43c3, { 0xba, 0x53, 0x22, 0x1b, 0x60, 0xac, 0x27, 0x4b } }
+
+  #PINMUX device
+  gNVIDIANonDiscoverablePinMuxDeviceGuid = { 0xcf3d0a91, 0xe309, 0x4f2a, { 0x95, 0xe1, 0xf3, 0x43, 0xca, 0x44, 0x2c, 0x94 } }
+
+  #USBPAD devices
+  gNVIDIANonDiscoverableT194UsbPadDeviceGuid = { 0x35717227, 0x85be, 0x47c9, { 0x98, 0x59, 0x0d, 0x5a, 0xc0, 0xda, 0x14, 0x0b } }
+  gNVIDIANonDiscoverableT234UsbPadDeviceGuid = { 0x718f9436, 0x746a, 0x408d, { 0xbe, 0x45, 0xf6, 0xbf, 0xde, 0xa2, 0x48, 0x71 } }
+
+  #UART device
+  gNVIDIANonDiscoverableSbsaUartDeviceGuid    = { 0x76a54667, 0x2c0e, 0x48e8, { 0x84, 0x36, 0x34, 0xce, 0xba, 0xad, 0x4b, 0x88 } }
+  gNVIDIANonDiscoverable16550UartDeviceGuid    = { 0x2bf75281, 0xf836, 0x47e2, { 0x86, 0xc3, 0xa8, 0xde, 0x1b, 0x11, 0xb3, 0x1b } }
+  gNVIDIANonDiscoverableCombinedUartDeviceGuid = { 0xcdaa1cdd, 0x2fb3, 0x4b5c, { 0x86, 0x2a, 0x58, 0x1d, 0xd7, 0xe0, 0x0c, 0x5a } }
+
+  #Direct kernel boot device
+  gNVIDIARamloadKernelGuid = { 0x0c7bbfcf, 0x2559, 0x401c, { 0x8d, 0xb1, 0x83, 0x32, 0xb1, 0xae, 0x95, 0x34 } }
+  gNVIDIARcmKernelGuid = { 0x768a084d, 0x7938, 0x4142, { 0xba, 0xc3, 0xfa, 0xdc, 0x9e, 0xbf, 0xec, 0x47 } }
+  gNVIDIAOSCarveoutHob = { 0x3f27b235, 0x3305, 0x413a, { 0xbd, 0xbb, 0x3a, 0x49, 0x19, 0x31, 0x6a, 0x5c } }
+
+  #PWM device
+  gNVIDIANonDiscoverablePwmDeviceGuid = { 0xdff598b2, 0x77b7, 0x42f6, { 0xaa, 0x68, 0x75, 0xc2, 0xb8, 0x78, 0xa1, 0x7f } }
+
+  #Synopsys Eqos devices
+  gDwEqosNetNonDiscoverableDeviceGuid     = { 0x3bba7552, 0xf8af, 0x4e10, { 0x98, 0x5f, 0x22, 0x64, 0xf6, 0xd6, 0xfe, 0x3a } }
+  gDwEqosNetT194NonDiscoverableDeviceGuid = { 0xf34f455d, 0x7973, 0x4461, { 0x81, 0xa0, 0x9d, 0x39, 0x5d, 0x00, 0x82, 0xef } }
+
+  #Mgbe devices
+  gDwMgbeNetNonDiscoverableDeviceGuid     = { 0x755326c7, 0x983f, 0x4f6d, { 0xa5, 0xb8, 0x76, 0x4c, 0x33, 0x94, 0x69, 0xf7 } }
+
+  #NVIDIA Boot Manager Boot Option
+  gNVIDIABmBootOptionGuid = { 0xfaa91113, 0x6cfa, 0x4c14, { 0xad, 0xd7, 0x3e, 0x25, 0x4b, 0x93, 0x38, 0xae } }
+
+  #NVIDIA Loadfile Kernel Args
+  gNVIDIALoadfileKernelArgsGuid = { 0x668d5e7e, 0x930a, 0x4b10, { 0xb6, 0xb2, 0xda, 0x0b, 0xfb, 0xe8, 0x2d, 0xfb } }
+
+  #NVIDIA Resource Config Formset
+  gNVIDIAResourceConfigFormsetGuid = { 0x685c0b6e, 0x11af, 0x47cf, { 0xa9, 0xef, 0x95, 0xac, 0x18, 0x68, 0x73, 0xc3 } }
+
+  #NVIDIA Vendor Device Discovery Guid
+  gNVIDIAVendorDeviceDiscoveryGuid = { 0x1e5a432c, 0x0466, 0x4d31, { 0xb0, 0x09, 0xd4, 0xd9, 0x23, 0x92, 0x71, 0xd3 } }
+
+  #NVIDIA Kernel Command Line Update Guid
+  gNVIDIAKernelCmdLineUpdateGuid = { 0xc61a1a9a, 0x8f92, 0x4e2e, { 0x97, 0x8d, 0x04, 0x8d, 0x81, 0xed, 0xdc, 0x8b } }
+
+  #NVIDIA Platform Logo Guid
+  gNVIDIAPlatformLogoGuid = { 0x971F9B1F, 0x217C, 0x4F02, { 0xB5, 0xD5, 0xD5, 0x50, 0xA5, 0xB6, 0xCB, 0x82 } }
+
+  #NVIDIA Platform Logo No SD Guid
+  gNVIDIAPlatformLogoNoSDGuid = { 0xA2B3019F, 0x1F6B, 0x4AC6, { 0x85, 0x2A, 0x0D, 0xB2, 0x21, 0xC8, 0x5C, 0xB4 } }
+
+  #Xudc device types
+  gNVIDIANonDiscoverableXudcDeviceGuid = { 0xb7c195ce, 0x565b, 0x4a4d, { 0xaa, 0x9a, 0xb5, 0x81, 0x27, 0x3d, 0x41, 0xff } }
+
+  #Device Discovery Context Guid
+  gNVIDIADeviceDiscoveryContextGuid = { 0x72d0e8a8, 0x43c0, 0x4206, { 0x94, 0xa3, 0x5a, 0xc5, 0xa5, 0x64, 0x98, 0x35 } }
+
+[Protocols]
+  gNVIDIADeviceTreeCompatibilityProtocolGuid      = { 0x1e710608, 0x28a3, 0x4c0b, { 0x9b, 0xec, 0x1c, 0x75, 0x49, 0xa7, 0x0d, 0x90 } }
+  gNVIDIADeviceTreeNodeProtocolGuid               = { 0x149670c5, 0xb07b, 0x407a, { 0xae, 0x57, 0x39, 0xd0, 0xca, 0x51, 0x37, 0x80 } }
+  gNVIDIADeviceEnumerationPresentProtocolGuid     = { 0xc024b4c9, 0x8317, 0x4206, { 0xad, 0xc5, 0xf4, 0x67, 0xc6, 0x2d, 0x88, 0xd4 } }
+  gNVIDIANonDiscoverableDeviceProtocolGuid        = { 0x6313200a, 0xd78d, 0x4034, { 0x9f, 0x39, 0x7a, 0x61, 0x61, 0x5c, 0x14, 0x8f } }
+  gNVIDIAAmlGenerationProtocolGuid                = { 0x1540db5e, 0x35e0, 0x37e0, { 0xae, 0x52, 0x3c, 0xf9, 0x25, 0x76, 0xc7, 0x34 } }
+  gNVIDIAAmlPatchProtocolGuid                     = { 0xb763a571, 0xd6ca, 0x54cb, { 0x39, 0xa0, 0x34, 0xe8, 0xc2, 0x9a, 0x56, 0x72 } }
+  gNVIDIABpmpIpcProtocolGuid                      = { 0x2b560a1f, 0x8e7b, 0x45a0, { 0x96, 0x8f, 0x7c, 0xa8, 0x2b, 0xd2, 0xb5, 0x99 } }
+  gNVIDIAHspDoorbellProtocolGuid                  = { 0xe72494c2, 0xdb40, 0x4c06, { 0xbe, 0x76, 0xdc, 0x53, 0x01, 0x2f, 0x2c, 0x59 } }
+  gNVIDIAPowerGateNodeProtocolGuid                = { 0xdc05db20, 0x5dde, 0x4e97, { 0xb3, 0xc7, 0x7b, 0x37, 0x4c, 0x40, 0x73, 0xbb } }
+  gNVIDIAClockNodeProtocolGuid                    = { 0x6fa542ef, 0xec08, 0x4450, { 0xb1, 0x7b, 0xf6, 0x31, 0x5d, 0x32, 0xc5, 0x40 } }
+  gNVIDIAResetNodeProtocolGuid                    = { 0xf027ceae, 0xa96d, 0x490d, { 0xbe, 0x82, 0x12, 0x35, 0x81, 0xef, 0x11, 0x88 } }
+  gNVIDIAClockParentsProtocolGuid                 = { 0x26d3a358, 0xa8eb, 0x4f14, { 0x84, 0x0c, 0x09, 0xa2, 0x5b, 0xc4, 0xaa, 0x88 } }
+  gNVIDIARegulatorProtocolGuid                    = { 0x48e74d70, 0x8dd4, 0x43af, { 0xad, 0x0d, 0x8a, 0x52, 0x05, 0x59, 0x81, 0x6b } }
+  gNVIDIAFixedRegulatorsPresentProtocolGuid       = { 0x9f2318e9, 0xbdd8, 0x4063, { 0xbb, 0x23, 0x33, 0xf8, 0xf3, 0x82, 0x30, 0x34 } }
+  gNVIDIAPmicRegulatorsPresentProtocolGuid        = { 0xf97a99b2, 0xb4e6, 0x40d7, { 0x8c, 0xde, 0x35, 0xd9, 0xd9, 0xd4, 0x19, 0xdb } }
+  gNVIDIAAllRegulatorsPresentProtocolGuid         = { 0xbd777ea8, 0x618b, 0x492c, { 0x9d, 0x89, 0xdb, 0xc4, 0xd3, 0x31, 0x80, 0x6e } }
+  gNVIDIAPciHostBridgeProtocolGuid                = { 0xf97849e9, 0x07e9, 0x4162, { 0xbd, 0x02, 0x2f, 0xb2, 0xaf, 0x6d, 0x4d, 0xb0 } }
+  gNVIDIAQspiControllerProtocolGuid               = { 0x112e0323, 0x50e0, 0x418a, { 0x94, 0x4e, 0xe2, 0x25, 0x43, 0x51, 0x56, 0x2a } }
+  gNVIDIANorFlashProtocolGuid                     = { 0x989b8be1, 0x18fc, 0x430d, { 0x9a, 0x4c, 0x29, 0x07, 0xf2, 0xa7, 0x28, 0xdd } }
+  gNVIDIAEFuseProtocolGuid                        = { 0x961c9250, 0x1f49, 0x44a2, { 0x97, 0x41, 0x66, 0x27, 0x4d, 0xbe, 0x65, 0xd0 } }
+  gNVIDIAPinMuxProtocolGuid                       = { 0x284ebb8b, 0x58eb, 0x4dff, { 0xbf, 0x97, 0x2c, 0x95, 0x89, 0xb0, 0x01, 0x0f } }
+  gNVIDIAUsbPadCtlProtocolGuid                    = { 0xce280679, 0xb75a, 0x45c7, { 0xa8, 0x3f, 0xd5, 0xa6, 0xa6, 0x77, 0xd8, 0x36 } }
+  gNVIDIAXhciControllerProtocolGuid               = { 0xe516021f, 0x012a, 0x4b1f, { 0x91, 0x5b, 0x2a, 0x6e, 0x05, 0xb2, 0xe9, 0xe2 } }
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid = { 0xbcb96ec9, 0xa3f3, 0x414f, { 0x9b, 0xc0, 0x9c, 0xd9, 0x68, 0xf2, 0x0a, 0x39 } }
+  gNVIDIACvmEepromProtocolGuid                    = { 0x3f465b0c, 0x05c4, 0x418b, { 0xa2, 0x51, 0xc7, 0x55, 0xb0, 0xbc, 0x6f, 0xd7 } }
+  gNVIDIACvbEepromProtocolGuid                    = { 0x69947f28, 0x0dd1, 0x4635, { 0xbb, 0xe9, 0x04, 0xb1, 0xe5, 0x34, 0x76, 0x9c } }
+  gNVIDIAEepromProtocolGuid                       = { 0xe59c2d73, 0xfb12, 0x4434, { 0xac, 0x52, 0x0c, 0xbb, 0x61, 0xe9, 0x61, 0x15 } }
+  gNVIDIASeRngProtocolGuid                        = { 0xbb34a29d, 0x0d3c, 0x43c9, { 0x8c, 0xc7, 0x64, 0x73, 0x80, 0x24, 0xd6, 0x57 } }
+  gNVIDIAConfigurationManagerDataProtocolGuid     = { 0x1a8fd893, 0x4752, 0x40b9, { 0x9b, 0xc7, 0x75, 0x94, 0x04, 0xff, 0xcd, 0xff } }
+  gNVIDIATegraP2UProtocolGuid                     = { 0x3f9c6949, 0x817a, 0x45f7, { 0xb9, 0xb5, 0x9c, 0x94, 0x83, 0xee, 0xa0, 0x9e } }
+  gNVIDIAUsbFwProtocolGuid                        = { 0xed3b027b, 0x201f, 0x4fe5, { 0xa1, 0x98, 0x42, 0xa0, 0xcf, 0xbf, 0x7f, 0x2e } }
+  gNVIDIAStandaloneMmUnavailableGuid              = { 0x1a2b1790, 0xe50c, 0x4b4c, { 0x85, 0x1b, 0x40, 0x6d, 0xc5, 0x8f, 0xa3, 0xbd } }
+  gNVIDIATestGraphicsOutputProtocolGuid           = { 0xe95a6ab5, 0x9271, 0x4f92, { 0x86, 0xf1, 0x69, 0x9c, 0xf6, 0xa6, 0x61, 0x60 } }
+  gNVIDIAI2cExpanderGpioProtocolGuid              = { 0xbd2ead74, 0x57de, 0x4c9f, { 0x9a, 0x95, 0x53, 0x1e, 0x04, 0x7d, 0x61, 0xbc } }
+  gNVIDIAI2cExpanderPlatformGpioProtocolGuid      = { 0x122f15f3, 0x5810, 0x42fd, { 0x8b, 0xcb, 0xad, 0x76, 0x00, 0xcb, 0x63, 0x54 } }
+  gNVIDIAFwPartitionProtocolGuid                  = { 0x52771b87, 0x204a, 0x4d7b, { 0xab, 0x5c, 0xbe, 0xf8, 0x70, 0x1e, 0x84, 0x16 } }
+  gNVIDIABrBctUpdateProtocolGuid                  = { 0xec60b96c, 0x0796, 0x47a9, { 0xbf, 0xe7, 0x6b, 0x83, 0xf2, 0xe7, 0xd1, 0x5d } }
+  gNVIDIAFwImageProtocolGuid                      = { 0x39a68588, 0x8251, 0x4e57, { 0x8a, 0x92, 0x86, 0x70, 0x03, 0x68, 0x58, 0x13 } }
+  gNVIDIACapsuleUpdatePolicyProtocolGuid          = { 0xe44d080b, 0x87f1, 0x463d, { 0xae, 0x23, 0x19, 0x38, 0x07, 0xa0, 0x3a, 0x5c } }
+
+[PcdsFixedAtBuild.common]
+#Tegra Combined UART mailboxes
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox|0x0|UINT64|0x00000001
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|0x0|UINT64|0x00000002
+
+#Tegra SPI FLASH Block Protocols Available
+  gNVIDIATokenSpaceGuid.PcdTegraNorBlockProtocols|FALSE|BOOLEAN|0x00000003
+
+#Timeout in microseconds in hsp doorbell response, 0 for infinite
+  gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout|0|UINT32|0x00000007
+
+#Timeout in microseconds in for bpmp response, 0 for infinite
+  gNVIDIATokenSpaceGuid.PcdBpmpResponseTimeout|0|UINT32|0x00000008
+
+#Name of UEFI variables GPT partition
+  gNVIDIATokenSpaceGuid.PcdUEFIVariablesPartitionName|L"uefi_variables"|VOID*|0x00000009
+
+#Tegra UART OEM Table ID
+  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId|'TEGRAUAR'|UINT64|0x0000000A
+
+#Size of optional signed image header
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize|0x1000|UINT32|0x0000000B
+
+#Base address of MISCREG aperture.
+  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00100000|UINT64|0x0000000F
+
+#Name of Kernel DTB partition
+  gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName|L"kernel-dtb"|VOID*|0x00000016
+
+#Tegra 16550 UARTB T194 Base
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194|0x03110000|UINT64|0x0000001D
+
+#Tegra 16550 UART T234 Base
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234|0x03100000|UINT64|0x00000001E
+
+#Tegra Firmware Date Time
+  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString|L""|VOID*|0x00010022
+
+# Tegra Architectural Timer Frequency
+  gNVIDIATokenSpaceGuid.PcdTegraArchTimerFreqInHz|31250000|UINT32|0x00000024
+
+# Supported bitmasks for runtime functions
+## Bitmask of supported runtime services<BR>
+  #  BIT0  - GetTime
+  #  BIT1  - SetTime
+  #  BIT2  - GetWakeupTime
+  #  BIT3  - SetWakeupTime
+  #  BIT4  - GetVariable
+  #  BIT5  - GetNextVariableName
+  #  BIT6  - SetVariable
+  #  BIT7  - SetVirtualAddressMap
+  #  BIT8  - ConvertPointer
+  #  BIT9  - GetNextHighMonotonicCount
+  #  BIT10 - ResetSystem
+  #  BIT11 - UpdateCapsule
+  #  BIT12 - QueryCapsuleCapabilites
+  #  BIT13 - QueryVariableInfo
+  # @Prompt Supported Runtime services bitmask.
+  gNVIDIATokenSpaceGuid.PcdNoVariableRtProperties|0x25B0|UINT32|0x00000030
+  gNVIDIATokenSpaceGuid.PcdVariableRtProperties|0x27F3|UINT32|0x00000031
+
+# Tegra Print Internal Banner
+  gNVIDIATokenSpaceGuid.PcdTegraPrintInternalBanner|FALSE|BOOLEAN|0x00000033
+
+# Tegra Memory Controller Base Address
+  gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress|0x02c10000|UINT64|0x00000034
+
+# Null-terminated Unicode string that describes the platform family name.
+  gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L""|VOID*|0x00000037
+
+# Tegra MCE ARI Aperture Base Address
+  gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress|0x0E100000|UINT64|0x0000003A
+
+# Expose CCPLEX_INTERWORLD_SHMEM Carveout To OS
+  gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem|FALSE|BOOLEAN|0x0000003D
+
+# Tegra Boot Chain Selection Register Address T234
+  gNVIDIATokenSpaceGuid.PcdBootChainRegisterBaseAddressT234|0x0C3903CC|UINT64|0x0000003E
+
+# Tegra BootROM Selection Register Address T194
+  gNVIDIATokenSpaceGuid.PcdBootROMRegisterBaseAddressT194|0x0C390568|UINT64|0x00000065
+
+# Tegra BootLoader Selection Register Address T194
+  gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT194|0x0C390418|UINT64|0x00000066
+
+# Name of kernel GPT partition
+  gNVIDIATokenSpaceGuid.PcdKernelPartitionName|L"kernel"|VOID*|0x0000003F
+
+# Indicates the default timeouts for reset after an assert in seconds.
+  gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue|0|UINT32|0x00000040
+
+#Configuration Manager Objects.
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x28|UINT32|0x00000042
+
+#Signature of optional signed image header
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSignature|"NVDA"|VOID*|0x00000055
+
+# Fmp image attribute bits:
+#   IMAGE_ATTRIBUTE_IMAGE_UPDATABLE         0x01
+#   IMAGE_ATTRIBUTE_RESET_REQUIRED          0x02
+#   IMAGE_ATTRIBUTE_AUTHENTICATION_REQUIRED 0x04
+#   IMAGE_ATTRIBUTE_IN_USE                  0x08
+#   IMAGE_ATTRIBUTE_UEFI_IMAGE              0x10
+#   IMAGE_ATTRIBUTE_DEPENDENCY              0x20
+  gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported|0xf|UINT64|0x00000056
+  gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting|0xf|UINT64|0x00000057
+
+#MPIDR generation
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE|BOOLEAN|0x00000060
+
+#The maximum supported horizontal resolution of the framebuffer
+  gNVIDIATokenSpaceGuid.PcdFramebufferHorizontalResolution|0|UINT32|0x00000061
+#The maximum supported vertical resolution of the framebuffer
+  gNVIDIATokenSpaceGuid.PcdFramebufferVerticalResolution|0|UINT32|0x00000062
+#The maximum supported number of bytes per a framebuffer pixel
+  gNVIDIATokenSpaceGuid.PcdFramebufferPixelSize|4|UINT8|0x00000063
+#Index of the PCI BAR register through which the framebuffer should be
+#accessible. The value of -1 (0xFF) means no framebuffer will be
+#allocated.
+  gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|0xFF|UINT8|0x00000064
+
+[PcdsDynamic.common]
+#Force disable coherent DMA in SDHCi.
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C
+
+#Force disable SDR104 in SDHCi.
+  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|FALSE|BOOLEAN|0x0000000E
+
+# Default state of floor sweeping
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|FALSE|BOOLEAN|0x00000015
+
+#Explicit PCIe Controller Enable
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|FALSE|BOOLEAN|0x00000017
+
+#PCIe Segment Base Address
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x0|UINT64|0x00000018
+
+#Tegra Use Production USB Fw
+  gNVIDIATokenSpaceGuid.PcdTegraUseProdUsbFw|TRUE|BOOLEAN|0x00000027
+
+#Default to make PCIe entry void in ACPI table
+#Need two as the Platform Init Library is invoked prior to variable services being available
+  gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|0x00|UINT8|0x0000002B
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded|0x00|UINT8|0x0000002C
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|0x00|UINT8|0x0000002F
+
+#Option to enable/disable quickboot
+  gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|0x01|UINT8|0x0000002D
+
+#Option to support virtual RTC
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC|FALSE|BOOLEAN|0x0000002E
+
+#Option to configure serial port
+##Supported UART Type Values
+  #0   - 16550 UART
+  #1   - SBSA UART
+  #255 - Undefined
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|0xFF|UINT8|0x00000038
+##Supported UART Port Values
+  #0   - SPCR Full 16550 UART
+  #1   - SPCR NVIDIA 16550 UART
+  #3   - DBG2 NVIDIA 16550 UART
+  #4   - SPCR SBSA UART
+  #5   - DBG2 SBSA UART
+  #255 - Disabled
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig|0xFF|UINT8|0x00000039
+
+#Rcm Kernel Base and Size
+  gNVIDIATokenSpaceGuid.PcdRcmKernelBase|0x0|UINT64|0x00000035
+  gNVIDIATokenSpaceGuid.PcdRcmKernelSize|0x0|UINT64|0x00000036
+
+#Cpu configuration
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster|1|UINT32|0x0000003B
+  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters|1|UINT32|0x0000003C
+
+#SPI clock frequency.
+  gNVIDIATokenSpaceGuid.PcdSpiClockFrequency|10000000|UINT32|0x00000041
+
+#OS partition override
+  #0   - Force A Partition
+  #1   - Force B Partition
+  #255 - Use firmware version
+  gNVIDIATokenSpaceGuid.PcdOsChainOverride|0xFF|UINT32|0x00000043
+
+#L4T default boot mode
+  #0   - Boot using grub
+  #1   - Boot using extlinux via filesystem
+  #2   - Boot using boot.img
+  #3   - Boot recovery image
+  #255 - Use application default
+  gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode|0xFF|UINT32|0x00000044
+#SMBIOS Data
+  #Typ02 Data
+  gNVIDIATokenSpaceGuid.PcdBoardChassisLocation|L""|VOID*|0x00000051
+  gNVIDIATokenSpaceGuid.PcdBoardVersion|L""|VOID*|0x00000050
+  gNVIDIATokenSpaceGuid.PcdBoardManufacturer|L""|VOID*|0x00000052
+  gNVIDIATokenSpaceGuid.PcdBoardProductName|L""|VOID*|0x0000005E
+  #Type01 Table Data
+  gNVIDIATokenSpaceGuid.PcdSystemSerialNum|L""|VOID*|0x0000004F
+  gNVIDIATokenSpaceGuid.PcdSystemManufacturer|L""|VOID*|0x00000045
+  gNVIDIATokenSpaceGuid.PcdSystemSku|L""|VOID*|0x00000046
+  gNVIDIATokenSpaceGuid.PcdSystemFamilyType|L""|VOID*|0x00000047
+  #Type03 Table Data
+  gNVIDIATokenSpaceGuid.PcdType3Info|0|SMBIOS_TABLE_TYPE3|0x00000048 {
+  <HeaderFiles>
+    IndustryStandard/SmBios.h
+  <Packages>
+    MdePkg/MdePkg.dec
+  }
+  gNVIDIATokenSpaceGuid.PcdChassisSku|L""|VOID*|0x0000049
+  gNVIDIATokenSpaceGuid.PcdChassisManufacturer|L""|VOID*|0x000004A
+  gNVIDIATokenSpaceGuid.PcdChassisSerialNumber|L""|VOID*|0x000004B
+  gNVIDIATokenSpaceGuid.PcdChassisAssetTag|L""|VOID*|0x000004C
+  gNVIDIATokenSpaceGuid.PcdChassisVersion|L""|VOID*|0x000004D
+  #Type32 Table Data
+  gNVIDIATokenSpaceGuid.PcdType32Info|0|SMBIOS_TABLE_TYPE32|0x0000004E {
+  <HeaderFiles>
+    IndustryStandard/SmBios.h
+  <Packages>
+    MdePkg/MdePkg.dec
+  }
+
+#FwPartition and FwImage
+  gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|FALSE|BOOLEAN|0x00000053
+  gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|TRUE|BOOLEAN|0x00000058
+
+#BrBct config and options
+  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x0|UINT32|0x00000054
+  gNVIDIATokenSpaceGuid.PcdBrBctVerifyUpdateBeforeWrite|TRUE|BOOLEAN|0x00000059
+
+#Fmp options
+  gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate|FALSE|BOOLEAN|0x0000005A
+  gNVIDIATokenSpaceGuid.PcdFmpWriteVerifyImage|TRUE|BOOLEAN|0x0000005B
+  gNVIDIATokenSpaceGuid.PcdFmpTegraVersion|0x0|UINT32|0x0000005C
+  gNVIDIATokenSpaceGuid.PcdOsIndicationsAvailable|TRUE|BOOLEAN|0x0000005D

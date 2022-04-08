@@ -1,0 +1,47 @@
+## @file
+#  FW Partition Protocol NorFlash Dxe
+#
+#  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = FwPartitionNorFlashDxe
+  FILE_GUID                      = e44cdde6-ef19-4a7a-8c90-395747c35f7c
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = FwPartitionNorFlashDxeInitialize
+
+[Sources.common]
+  FwPartitionNorFlashDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BrBctUpdateDeviceLib
+  DebugLib
+  FwPartitionDeviceLib
+  MemoryAllocationLib
+  PlatformResourceLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  UefiRuntimeLib
+
+[Protocols]
+  gNVIDIAFwPartitionProtocolGuid            ## PRODUCES
+  gNVIDIABrBctUpdateProtocolGuid            ## PRODUCES
+  gNVIDIANorFlashProtocolGuid               ## CONSUMES
+  gEfiDevicePathProtocolGuid                ## CONSUMES
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid
+
+[Depex]
+  gNVIDIANorFlashProtocolGuid

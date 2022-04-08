@@ -1,0 +1,63 @@
+#/** @file
+#
+#  USB Pad Control Driver
+#
+#  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = UsbPadCtlDxe
+  FILE_GUID                      = a2d5040b-44b4-4449-9182-6d8956641f65
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  UsbPadCtlDxe.c
+  UsbPadCtlTegra194.c
+  UsbPadCtlTegra234.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  FdtLib
+  DeviceDiscoveryDriverLib
+  TegraPlatformInfoLib
+
+[Protocols]
+  gNVIDIAUsbPadCtlProtocolGuid
+  gNVIDIARegulatorProtocolGuid
+  gNVIDIAEFuseProtocolGuid
+  gNVIDIAPinMuxProtocolGuid
+  gArmScmiClock2ProtocolGuid
+  gNVIDIAUsbPadCtlProtocolGuid
+
+[Guids]
+  gNVIDIANonDiscoverableT194UsbPadDeviceGuid
+  gNVIDIANonDiscoverableT234UsbPadDeviceGuid
+
+[Depex]
+  gNVIDIARegulatorProtocolGuid
+  AND
+  gNVIDIAEFuseProtocolGuid
+  AND
+  gNVIDIAPinMuxProtocolGuid
+  AND
+  gArmScmiClock2ProtocolGuid

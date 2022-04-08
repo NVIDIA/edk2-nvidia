@@ -1,0 +1,58 @@
+#/** @file
+#
+#  Tegra Platform Specific Configuration
+#
+#  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = TegraPlatformInitDxe
+  FILE_GUID                 = d88d7bd0-17a2-49f8-9316-5e9f07209a32
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = TegraPlatformInitialize
+
+[Sources]
+  TegraPlatformInitDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  ArmPkg/ArmPkg.dec
+  ArmPlatformPkg/ArmPlatformPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  DebugLib
+  PrintLib
+  IoLib
+  PcdLib
+  TegraPlatformInfoLib
+  PlatformResourceLib
+  MemoryAllocationLib
+  DeviceTreeHelperLib
+  FdtLib
+
+[Guids]
+  gEdkiiNvVarStoreFormattedGuid
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
+  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
+  gArmTokenSpaceGuid.PcdGicDistributorBase
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
+
+[Depex]
+  TRUE

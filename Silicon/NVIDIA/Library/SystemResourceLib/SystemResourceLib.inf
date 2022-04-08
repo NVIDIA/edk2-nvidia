@@ -1,0 +1,36 @@
+#
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SystemResourceLib
+  FILE_GUID                      = 8a59b8c9-9481-48c4-99cd-38d885a3a701
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = SystemResourceLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  HobLib
+  DebugLib
+  DramCarveoutLib
+  FdtLib
+  PlatformResourceLib
+  TegraPlatformInfoLib
+  TegraDeviceTreeOverlayLib
+
+[Guids]
+  gFdtHobGuid
+
+[Sources.common]
+  SystemResourceLib.c
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress

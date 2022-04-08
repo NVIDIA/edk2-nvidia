@@ -1,0 +1,66 @@
+#/** @file
+#
+#  Fvb Driver
+#
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = FVBNorFlashDxe
+  FILE_GUID                      = 30df5a51-535c-4ff7-acf2-ef914016699b
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = FVBInitialize
+
+[Sources.common]
+  FvbDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  MemoryAllocationLib
+  UefiLib
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeLib
+  GptLib
+
+[Protocols]
+  gNVIDIANorFlashProtocolGuid
+  gEfiFirmwareVolumeBlockProtocolGuid
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase64
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase64
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize
+  gNVIDIATokenSpaceGuid.PcdUEFIVariablesPartitionName
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+  gNVIDIATokenSpaceGuid.PcdVariableRtProperties
+
+[Guids]
+  gEfiSystemNvDataFvGuid
+  gEfiAuthenticatedVariableGuid
+  gEfiVariableGuid
+  gEdkiiNvVarStoreFormattedGuid
+  gEfiEventVirtualAddressChangeGuid
+  gEfiRtPropertiesTableGuid
+  gEdkiiWorkingBlockSignatureGuid
+
+[Depex]
+  gNVIDIAStandaloneMmUnavailableGuid
+  AND
+  gNVIDIANorFlashProtocolGuid

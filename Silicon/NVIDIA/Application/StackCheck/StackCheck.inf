@@ -1,0 +1,42 @@
+## @file
+#  Shell application to check stack check functions.
+#
+#  This application is will purposely overwrite the stack to validate .
+#
+#  Copyright (c) 2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = StackCheck
+  FILE_GUID                      = 80ff8f62-e511-45d6-96ca-00156f40757c
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeStackCheck
+  MODULE_UNI_FILE                = StackCheck.uni
+
+
+[Sources]
+  StackCheck.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiApplicationEntryPoint
+  BaseMemoryLib
+  ShellLib
+  MemoryAllocationLib
+  DebugLib
+  UefiLib
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  StackCheckExtra.uni
+

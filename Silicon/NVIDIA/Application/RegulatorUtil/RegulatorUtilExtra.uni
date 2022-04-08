@@ -1,0 +1,14 @@
+// /** @file
+// RegulatorUtil Localized Strings and Content
+//
+// Copyright (c) 2018 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+//
+// **/
+
+#string STR_PROPERTIES_MODULE_NAME
+#language en-US
+"RegulatorUtil Config App"
+
+

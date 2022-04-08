@@ -1,0 +1,35 @@
+#
+#  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION           = 0x00010005
+  BASE_NAME             = UefiMemMapTestUefiShell
+  FILE_GUID             = DF865E3F-0EA0-43D8-8BD9-2F74F110D30D
+  MODULE_TYPE           = UEFI_APPLICATION
+  VERSION_STRING        = 1.0
+  ENTRY_POINT           = UefiMemMapTestDxe
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+[Sources]
+  UefiMemMapTest.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  HobLib
+  PrintLib
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  UnitTestLib

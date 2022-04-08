@@ -1,0 +1,33 @@
+#
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = DramCarveoutLib
+  FILE_GUID                      = 68786d8d-8f5e-4b58-bffe-c238f0043d7b
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DramCarveoutLib
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  HobLib
+  DebugLib
+  PrePiHobListPointerLib
+  SortLib
+
+[Sources.common]
+  DramCarveoutLib.c
+
+[FixedPcd]
+

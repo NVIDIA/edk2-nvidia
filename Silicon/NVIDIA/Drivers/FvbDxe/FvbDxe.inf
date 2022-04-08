@@ -1,0 +1,63 @@
+#/** @file
+#
+#  Fvb Driver
+#
+#  Copyright (c) 2018-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = FVBDxe
+  FILE_GUID                      = 32dc7535-51ef-445e-bf29-3f6e894d6eb6
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = FVBInitialize
+
+[Sources.common]
+  FvbDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  MemoryAllocationLib
+  UefiLib
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeLib
+
+[Protocols]
+  gEfiPartitionInfoProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiFirmwareVolumeBlockProtocolGuid
+  gEfiFaultTolerantWriteProtocolGuid
+  gEfiDevicePathProtocolGuid
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
+  gNVIDIATokenSpaceGuid.PcdUEFIVariablesPartitionName
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+  gNVIDIATokenSpaceGuid.PcdNoVariableRtProperties
+
+[Guids]
+  gEfiSystemNvDataFvGuid
+  gEfiAuthenticatedVariableGuid
+  gEfiVariableGuid
+  gEdkiiNvVarStoreFormattedGuid
+  gEfiEventVirtualAddressChangeGuid
+  gEfiRtPropertiesTableGuid
+
+[Depex]
+  gNVIDIAStandaloneMmUnavailableGuid
+  AND
+  gEfiPartitionInfoProtocolGuid

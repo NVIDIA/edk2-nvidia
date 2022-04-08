@@ -1,0 +1,35 @@
+/** @file
+*
+*  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = DxeDtPlatformDtbLoaderLib
+  FILE_GUID                      = f9f414ce-d951-4314-b7d9-ef472e9482cd
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DtPlatformDtbLoaderLib
+
+[Sources]
+  DxeDtPlatformDtbLoaderLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  HobLib
+  FdtLib
+
+[Guids]
+  gFdtHobGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus

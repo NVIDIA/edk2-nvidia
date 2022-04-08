@@ -1,0 +1,59 @@
+#/** @file
+#
+#  SD MMC Controller Driver
+#
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = SdMmcControllerDxe
+  FILE_GUID                      = 22872060-3c13-4a64-928f-777df19aaebf
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  SdMmcControllerDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  FdtLib
+  DeviceDiscoveryDriverLib
+
+[Protocols]
+  gEdkiiSdMmcOverrideProtocolGuid
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIAClockNodeProtocolGuid
+  gArmScmiClock2ProtocolGuid
+  gNVIDIARegulatorProtocolGuid
+  gEfiPlatformToDriverConfigurationProtocolGuid
+
+[Guids]
+  gEdkiiNonDiscoverableSdhciDeviceGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable
+  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable
+
+[Depex]
+  gNVIDIAAllRegulatorsPresentProtocolGuid
+  AND
+  gEfiPlatformToDriverConfigurationProtocolGuid

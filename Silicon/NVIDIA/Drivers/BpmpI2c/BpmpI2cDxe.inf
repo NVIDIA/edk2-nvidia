@@ -1,0 +1,54 @@
+#/** @file
+#
+#  Bpmp I2c Controller Driver
+#
+#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = BpmpI2cDxe
+  FILE_GUID                      = c5588b70-da31-44cf-bc06-78384c6f2e66
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = BpmpI2cInitialize
+
+[Sources.common]
+  BpmpI2cDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  FdtLib
+  Crc8Lib
+
+[Protocols]
+  gNVIDIABpmpIpcProtocolGuid
+  gEfiI2cMasterProtocolGuid
+  gEfiI2cEnumerateProtocolGuid
+  gEfiI2cBusConfigurationManagementProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
+
+[Guids]
+  gNVIDIAI2cMaxim20024
+  gNVIDIAI2cMaxim77620
+  gNVIDIAI2cVrsPseq
+  gNVIDIAI2cUnknown
+
+[Depex]
+  TRUE

@@ -1,0 +1,42 @@
+#/** @file
+#
+#  AML Patch Protocol
+#
+#  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = AmlPatchDxe
+  FILE_GUID                      = 308D3764-FD4B-986A-CD8F-740DA5BD86DB
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = AmlPatchDxeEntryPoint
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Sources]
+  AmlPatchDxe.c
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  DevicePathLib
+  DebugLib
+  PrintLib
+
+[Protocols]
+  gNVIDIAAmlPatchProtocolGuid
+
+[Depex]
+  TRUE

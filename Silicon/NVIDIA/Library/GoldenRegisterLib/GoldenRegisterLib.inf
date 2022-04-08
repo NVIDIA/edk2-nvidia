@@ -1,0 +1,27 @@
+#/** @file
+#
+#  Golden register library
+#
+#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = GoldenRegisterLib
+  FILE_GUID                      = 9f338a4c-5624-489e-8450-b23bacdee411
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = GoldenRegisterLib
+
+[Sources.common]
+  GoldenRegisterLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib

@@ -1,0 +1,15 @@
+// /** @file
+//
+// Application to launch L4T A/B.
+//
+// Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+//
+// **/
+
+
+#string STR_MODULE_ABSTRACT             #language en-US "L4T Launcher"
+
+#string STR_MODULE_DESCRIPTION          #language en-US "Application to launch L4T A/B."
+

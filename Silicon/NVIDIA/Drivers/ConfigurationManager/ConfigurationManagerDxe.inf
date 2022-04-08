@@ -1,0 +1,46 @@
+## @file
+#  Configuration Manager Dxe
+#
+#  Copyright (c) 2020 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = ConfigurationManagerDxe
+  FILE_GUID                      = c2074f9b-16a8-4d26-ab01-707be02a49fb
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = ConfigurationManagerDxeInitialize
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+
+[Sources]
+  ConfigurationManagerDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gNVIDIAConfigurationManagerDataProtocolGuid
+  gEdkiiConfigurationManagerProtocolGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
+
+[Depex]
+  gNVIDIAConfigurationManagerDataProtocolGuid

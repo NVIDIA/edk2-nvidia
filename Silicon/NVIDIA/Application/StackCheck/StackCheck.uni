@@ -1,0 +1,16 @@
+// /** @file
+// Shell application StackCheck.
+//
+// This application is used to test stack check behavior.
+//
+// Copyright (c) 2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//
+//  SPDX-License-Identifier: BSD-2-Clause-Patent
+//
+// **/
+
+
+#string STR_MODULE_ABSTRACT             #language en-US "Shell application StackCheck"
+
+#string STR_MODULE_DESCRIPTION          #language en-US "This application is used to test stack check behavior."
+

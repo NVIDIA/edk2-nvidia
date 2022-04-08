@@ -1,0 +1,45 @@
+#/** @file
+#
+#  I2c Expander Gpio Driver
+#
+# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = I2cExpanderGpio
+  FILE_GUID                      = 1fa459f8-81ec-4336-8c3b-431be4b0d0e2
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = InitializeI2cExpanderGpio
+
+[Sources.common]
+  I2cExpanderGpio.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  DeviceTreeHelperLib
+
+[Guids]
+  gNVIDIAI2cTca9539
+
+[Protocols]
+  gEfiI2cIoProtocolGuid                       ## CONSUMES
+  gNVIDIAI2cExpanderGpioProtocolGuid          ## PRODUCES
+  gNVIDIAI2cExpanderPlatformGpioProtocolGuid  ## PRODUCES
+
+[Depex]
+  TRUE

@@ -1,0 +1,44 @@
+## @file
+#  Produce the Capsule Update Policy Protocol
+#
+#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION     = 0x00010019
+  BASE_NAME       = CapsuleUpdatePolicyDxe
+  FILE_GUID       = 61e328fb-a93a-4c48-be05-b048ba118f05
+  MODULE_TYPE     = DXE_RUNTIME_DRIVER
+  VERSION_STRING  = 1.0
+  ENTRY_POINT     = CapsuleUpdatePolicyInitialize
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64 EBC
+#
+
+[Sources]
+  CapsuleUpdatePolicyDxe.c
+  CapsuleUpdatePolicyDxe.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  FmpDevicePkg/FmpDevicePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  BaseLib
+  DebugLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gNVIDIACapsuleUpdatePolicyProtocolGuid        ## PRODUCES
+
+[Depex]
+  TRUE

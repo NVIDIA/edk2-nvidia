@@ -1,0 +1,49 @@
+#/** @file
+#
+#  Platform To Driver Configuration Driver
+#
+#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION               = 0x00010019
+  BASE_NAME                 = PlatformToDriverConfiguration
+  FILE_GUID                 = 3416f232-0dc8-4001-9db4-1081b24e1c0d
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = InitializePlatformToDriverConfigurationProtocol
+
+[Sources]
+  PlatformToDriverConfiguration.c
+  SdMmc/SdMmcConfigurationData.c
+  Gop/GopDriverConfigurationData.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+
+[LibraryClasses]
+  FdtLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  MemoryAllocationLib
+  PlatformToDriverConfigurationInternalLib
+
+[Protocols]
+  gEfiPlatformToDriverConfigurationProtocolGuid
+  gNVIDIANonDiscoverableDeviceProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
+
+[Guids]
+  gEdkiiNonDiscoverableSdhciDeviceGuid
+  gEfiEventExitBootServicesGuid
+  gNVIDIANonDiscoverableT234DisplayDeviceGuid
+
+[Depex]
+  TRUE

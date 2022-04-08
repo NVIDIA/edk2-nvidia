@@ -1,0 +1,64 @@
+## @file
+#
+#  Component description file for the Device Discovery DXE platform driver.
+#
+#  Copyright (c) 2018-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = DeviceDiscoveryDxe
+  FILE_GUID                      = 46ca70f7-1d21-40c9-b6db-248e9009a648
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = DeviceDiscoveryDxeEntryPoint
+
+[Sources]
+  DeviceDiscoveryDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DxeServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  MemoryAllocationLib
+  DevicePathLib
+  DtPlatformDtbLoaderLib
+  TegraPlatformInfoLib
+  DeviceDiscoveryInternalLib
+  FdtLib
+
+[Guids]
+  gNVIDIAVendorDeviceDiscoveryGuid
+
+[Protocols]
+  gNVIDIADeviceTreeCompatibilityProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
+  gNVIDIADeviceEnumerationPresentProtocolGuid
+  gNVIDIANonDiscoverableDeviceProtocolGuid
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gEfiDriverBindingProtocolGuid
+  gArmScmiClock2ProtocolGuid
+  gNVIDIAClockNodeProtocolGuid
+  gNVIDIAResetNodeProtocolGuid
+  gNVIDIAPowerGateNodeProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
+  gNVIDIAClockParentsProtocolGuid
+
+[FixedPcd]
+
+[Depex]
+  gEfiCpuArchProtocolGuid
