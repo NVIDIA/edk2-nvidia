@@ -31,7 +31,6 @@
   DebugLib
   DeviceDiscoveryDriverLib
   HobLib
-  IoLib
   MemoryAllocationLib
   PcdLib
   PlatformResourceLib
@@ -42,8 +41,6 @@
   UefiLib
 
 [Guids]
-  gEfiAcpiTableGuid
-  gEfiEventExitBootServicesGuid
   gEfiEventReadyToBootGuid
   gFdtTableGuid
   gNVIDIAKernelCmdLineUpdateGuid
