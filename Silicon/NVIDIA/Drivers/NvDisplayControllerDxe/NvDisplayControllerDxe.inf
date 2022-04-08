@@ -2,7 +2,7 @@
 #
 #  NV Display Controller Driver
 #
-#  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -32,7 +32,6 @@
   DeviceDiscoveryDriverLib
   DisplayDeviceTreeHelperLib
   HobLib
-  IoLib
   MemoryAllocationLib
   PcdLib
   PlatformResourceLib
@@ -43,8 +42,6 @@
   UefiLib
 
 [Guids]
-  gEfiAcpiTableGuid
-  gEfiEventExitBootServicesGuid
   gEfiEventReadyToBootGuid
   gFdtTableGuid
   gNVIDIAKernelCmdLineUpdateGuid

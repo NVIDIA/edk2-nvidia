@@ -2,7 +2,7 @@
 
   NV Display Controller Driver
 
-  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,7 +16,6 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/DisplayDeviceTreeHelperLib.h>
 #include <Library/HobLib.h>
-#include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
@@ -32,10 +31,6 @@
 
 #include <libfdt.h>
 
-#define DISPLAY_SOR_COUNT      8
-#define DISPLAY_FE_SW_SYS_CAP  0x00030000
-#define DISPLAY_FE_CMGR_CLK_SOR(i)  (0x00002300 + (i) * SIZE_2KB)
-
 #define DISPLAY_CONTROLLER_SIGNATURE  SIGNATURE_32('N','V','D','C')
 
 typedef struct {
@@ -48,7 +43,6 @@ typedef struct {
   BOOLEAN                    OutputGpiosConfigured;
   EFI_EVENT                  OnFdtInstalledEvent;
   EFI_EVENT                  OnReadyToBootEvent;
-  EFI_EVENT                  OnExitBootServicesEvent;
 } NVIDIA_DISPLAY_CONTROLLER_CONTEXT;
 
 #define DISPLAY_CONTROLLER_CONTEXT_FROM_EDKII_DEVICE(a)  CR(\
@@ -66,14 +60,15 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
-  .DriverName                      = L"NV Display Controller Driver",
-  .UseDriverBinding                = FALSE,
-  .AutoEnableClocks                = FALSE,
-  .AutoDeassertReset               = FALSE,
-  .AutoResetModule                 = FALSE,
-  .AutoDeassertPg                  = TRUE,
-  .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE
+  .DriverName                                 = L"NV Display Controller Driver",
+  .UseDriverBinding                           = FALSE,
+  .AutoEnableClocks                           = FALSE,
+  .AutoDeassertReset                          = FALSE,
+  .AutoResetModule                            = FALSE,
+  .AutoDeassertPg                             = TRUE,
+  .SkipEdkiiNondiscoverableInstall            = TRUE,
+  .SkipAutoDeinitControllerOnExitBootServices = TRUE,
+  .DirectEnumerationSupport                   = TRUE,
 };
 
 /* Extra command-line arguments passed to the kernel to disable EFIFB
@@ -640,8 +635,7 @@ CopyAndInsertResource (
 STATIC
 EFI_STATUS
 DisplayStop (
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
-  IN CONST BOOLEAN                             OnExitBootServices
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
   )
 {
   EFI_STATUS     Status = EFI_SUCCESS;
@@ -651,24 +645,6 @@ DisplayStop (
 
   if (Context != NULL) {
     ControllerHandle = Context->ControllerHandle;
-
-    if (Context->OnExitBootServicesEvent != NULL) {
-      Status1 = gBS->CloseEvent (Context->OnExitBootServicesEvent);
-      if (EFI_ERROR (Status1)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to close OnExitBootServices event: %r\r\n",
-          __FUNCTION__,
-          Status1
-          ));
-      }
-
-      if (!EFI_ERROR (Status)) {
-        Status = Status1;
-      }
-
-      Context->OnExitBootServicesEvent = NULL;
-    }
 
     if (Context->OnFdtInstalledEvent != NULL) {
       Status1 = gBS->CloseEvent (Context->OnFdtInstalledEvent);
@@ -729,9 +705,7 @@ DisplayStop (
       Context->ResetsDeasserted = FALSE;
     }
 
-    if (!OnExitBootServices) {
-      FreePool (Context);
-    }
+    FreePool (Context);
   }
 
   return Status;
@@ -943,15 +917,9 @@ DisplayOnReadyToBoot (
   IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
   )
 {
-  VOID        *AcpiBase, *Fdt;
+  VOID        *Fdt;
   EFI_STATUS  Status;
   EFI_HANDLE  GopHandle;
-
-  /* Leave display active for ACPI boot. */
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (!EFI_ERROR (Status)) {
-    return;
-  }
 
   Status = DisplayLocateGopChildHandle (Context, &GopHandle);
   if (!EFI_ERROR (Status)) {
@@ -980,69 +948,6 @@ DisplayOnReadyToBoot (
   }
 }
 
-STATIC
-EFI_STATUS
-DisplayBypassSorClocks (
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *CONST  Context
-  )
-{
-  EFI_STATUS            Status;
-  EFI_PHYSICAL_ADDRESS  DisplayBase;
-  UINTN                 DisplaySize;
-  UINTN                 SorIndex;
-  UINT32                FeSwSysCap, FeCmgrClkSor;
-  CONST UINTN           DisplayRegion = 0;
-
-  Status = DeviceDiscoveryGetMmioRegion (
-             Context->ControllerHandle,
-             DisplayRegion,
-             &DisplayBase,
-             &DisplaySize
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to retrieve display region: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    return Status;
-  }
-
-  FeSwSysCap = MmioRead32 (DisplayBase + DISPLAY_FE_SW_SYS_CAP);
-  for (SorIndex = 0; SorIndex < DISPLAY_SOR_COUNT; ++SorIndex) {
-    if ((FeSwSysCap & (BIT8 << SorIndex)) != 0) {
-      FeCmgrClkSor = MmioRead32 (DisplayBase + DISPLAY_FE_CMGR_CLK_SOR (SorIndex));
-      FeCmgrClkSor = (FeCmgrClkSor & ~BIT16) | BIT17;
-      MmioWrite32 (DisplayBase + DISPLAY_FE_CMGR_CLK_SOR (SorIndex), FeCmgrClkSor);
-    }
-  }
-
-  return EFI_SUCCESS;
-}
-
-STATIC
-VOID
-EFIAPI
-DisplayOnExitBootServices (
-  IN EFI_EVENT                                  Event,
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *CONST  Context
-  )
-{
-  CONST BOOLEAN  OnExitBootServices = TRUE;
-  VOID           *AcpiBase;
-  EFI_STATUS     Status;
-
-  /* Leave display active for ACPI boot. */
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (!EFI_ERROR (Status)) {
-    return;
-  }
-
-  DisplayBypassSorClocks (Context);
-  DisplayStop (Context, OnExitBootServices);
-}
-
 /**
   Performs the necessary initialization of the display hardware.
 
@@ -1064,9 +969,8 @@ DisplayStart (
   UINTN                              ResourcesSize;
   NON_DISCOVERABLE_DEVICE            *NvNonDiscoverableDevice;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  FramebufferDescriptor, *FramebufferResource = NULL;
-  NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *Result            = NULL;
-  CONST BOOLEAN                      UseDpOutput        = FALSE;
-  CONST BOOLEAN                      OnExitBootServices = FALSE;
+  NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *Result     = NULL;
+  CONST BOOLEAN                      UseDpOutput = FALSE;
 
   CONST UINTN  FramebufferResourceIndex = (UINTN)(PcdGet8 (PcdFramebufferBarIndex) + 1) - 1;
 
@@ -1215,30 +1119,11 @@ DisplayStart (
     goto Exit;
   }
 
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_NOTIFY,
-                  (EFI_EVENT_NOTIFY)DisplayOnExitBootServices,
-                  Result,
-                  &gEfiEventExitBootServicesGuid,
-                  &Result->OnExitBootServicesEvent
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to create OnExitBootServices event: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    Result->OnExitBootServicesEvent = NULL;
-    goto Exit;
-  }
-
   *Context = Result;
 
 Exit:
   if (EFI_ERROR (Status)) {
-    DisplayStop (Result, OnExitBootServices);
+    DisplayStop (Result);
   }
 
   return Status;
@@ -1272,7 +1157,6 @@ DeviceDiscoveryNotify (
   TEGRA_PLATFORM_TYPE                Platform;
   NON_DISCOVERABLE_DEVICE            *EdkiiNonDiscoverableDevice;
   NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *Context;
-  CONST BOOLEAN                      OnExitBootServices = FALSE;
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingSupported:
@@ -1302,7 +1186,7 @@ DeviceDiscoveryNotify (
           __FUNCTION__,
           Status
           ));
-        DisplayStop (Context, OnExitBootServices);
+        DisplayStop (Context);
       }
 
       return Status;
@@ -1345,7 +1229,7 @@ DeviceDiscoveryNotify (
       }
 
       Context = DISPLAY_CONTROLLER_CONTEXT_FROM_EDKII_DEVICE (EdkiiNonDiscoverableDevice);
-      return DisplayStop (Context, OnExitBootServices);
+      return DisplayStop (Context);
 
     default:
       return EFI_SUCCESS;
