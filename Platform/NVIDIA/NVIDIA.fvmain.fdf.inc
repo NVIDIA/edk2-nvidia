@@ -259,9 +259,6 @@
     SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray720.bmp
     SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray1080.bmp
   }
-  FILE FREEFORM = gNVIDIAPlatformLogoNoSDGuid {
-    SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray1080noSD.bmp
-  }
 
   #
   # FW Partition
