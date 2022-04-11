@@ -14,6 +14,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/BootChainInfoLib.h>
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <Library/DisplayUpdateProgressLib.h>
 #include <Library/FwImageLib.h>
 #include <Library/FwPackageLib.h>
@@ -1156,6 +1157,7 @@ FmpDeviceLibConstructor (
   )
 {
   EFI_STATUS        Status;
+  VOID              *Hob;
 
   mPcdFmpWriteVerifyImage   = PcdGetBool (PcdFmpWriteVerifyImage);
   mPcdFmpSingleImageUpdate  = PcdGetBool (PcdFmpSingleImageUpdate);
@@ -1168,10 +1170,13 @@ FmpDeviceLibConstructor (
     goto Done;
   }
 
-  Status = GetActiveBootChain (&mActiveBootChain);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error getting active boot chain: %r\n",
-            __FUNCTION__, Status));
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+    mActiveBootChain = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ActiveBootChain;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting active boot chain\n",
+            __FUNCTION__));
     goto Done;
   }
 

@@ -184,19 +184,6 @@ GetBoardInfoInternal (
 }
 
 /**
-  Retrieve Active Boot Chain Information
-
-**/
-BOOLEAN
-EFIAPI
-GetActiveBootChainInternal (
-  OUT UINT32 *BootChain
-)
-{
-  return FALSE;
-}
-
-/**
   Validate Active Boot Chain
 
 **/

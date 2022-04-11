@@ -2,17 +2,20 @@
 
   Boot Chain Information Library
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+#include <PiDxe.h>
+#include <Library/BaseLib.h>
+#include <Library/DebugLib.h>
 #include <Library/BootChainInfoLib.h>
 #include <Library/PrintLib.h>
+#include <Library/HobLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
-#include <Library/BaseLib.h>
 
 #define MAX_BOOT_CHAIN_INFO_MAPPING 2
 #define PARTITION_PREFIX_LENGTH     2
@@ -80,16 +83,21 @@ GetActivePartitionName (
   OUT CHAR16       *ActivePartitionName
 )
 {
-  EFI_STATUS Status;
   UINT32     BootChain;
+  VOID       *Hob;
 
   if ((GeneralPartitionName == NULL) || (ActivePartitionName == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = GetActiveBootChain (&BootChain);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+    BootChain = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ActiveBootChain;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting active boot chain\n",
+            __FUNCTION__));
+    return EFI_UNSUPPORTED;
   }
 
   return GetBootChainPartitionName (GeneralPartitionName,

@@ -535,39 +535,6 @@ GetBoardInfo (
 }
 
 /**
-  Retrieve Active Boot Chain Information
-
-**/
-EFI_STATUS
-EFIAPI
-GetActiveBootChain (
-  OUT UINT32 *BootChain
-)
-{
-  UINTN           ChipID;
-  UINTN           CpuBootloaderAddress;
-  BOOLEAN         ValidPrivatePlatform;
-
-  ValidPrivatePlatform = GetActiveBootChainInternal(BootChain);
-  if (ValidPrivatePlatform) {
-    return EFI_SUCCESS;
-  }
-
-  ChipID = TegraGetChipID();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      return T234GetActiveBootChain(CpuBootloaderAddress, BootChain);
-    case T194_CHIP_ID:
-      return T194GetActiveBootChain(CpuBootloaderAddress, BootChain);
-    default:
-      return EFI_UNSUPPORTED;
-  }
-}
-
-/**
   Validate Active Boot Chain
 
 **/

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -366,6 +366,7 @@ CEntryPoint (
   BuildFvHob ((EFI_PHYSICAL_ADDRESS)FvHeader, FvSize);
 
   // Build Platform Resource Data HOB
+  ZeroMem (&PlatformResourceInfo, sizeof (PlatformResourceInfo));
   Status = GetPlatformResourceInformation (&PlatformResourceInfo);
   ASSERT_EFI_ERROR (Status);
   BuildGuidDataHob (&gNVIDIAPlatformResourceDataGuid, &PlatformResourceInfo, sizeof (PlatformResourceInfo));
