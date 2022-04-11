@@ -1,100 +1,57 @@
 /** @file
-  Serial I/O Port wrapper library for StandaloneMm
+  Serial I/O Port library functions for Combined UART in StMM.
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <Base.h>
-#include <Library/PlatformResourceLib.h>
-#include <Library/TegraPlatformInfoLib.h>
+
 #include <Library/TegraSerialPortLib.h>
-#include <Library/SerialPortLib.h>
-#include <Library/StandaloneMmOpteeDeviceMem.h>
+#include <Library/IoLib.h>
+#include <Library/PcdLib.h>
+#include <Library/DebugLib.h>
 
-STATIC
-TEGRA_UART_OBJ *TegraUartObj = NULL;
-STATIC
-EFI_PHYSICAL_ADDRESS SerialBaseAddress = MAX_UINTN;
-STATIC
-BOOLEAN SerialPortInitialized = FALSE;
+typedef struct {
+  UINT8   Data[3];
+  UINT8   NumberOfBytes:2;
+  BOOLEAN Flush:1;
+  BOOLEAN HwFlush:1;
+  UINT8   Reserved:3;
+  BOOLEAN Interrupt:1;
+} TEGRA_COMBINED_UART_PIO;
 
-/** Identify the serial device hardware
+typedef union {
+  UINT32                  RawValue;
+  TEGRA_COMBINED_UART_PIO Pio;
+} TEGRA_COMBINED_UART;
 
- **/
-TEGRA_UART_OBJ *
+/**
+  Check to see if any data is currently pending on the mailbox.
+
+  @param  MailboxAddress Address of the mailbox to check
+
+  @retval TRUE       At least one byte of data is present
+  @retval FALSE      No data is present
+
+**/
+STATIC
+BOOLEAN
 EFIAPI
-SerialPortIdentify (
-  VOID
+IsDataPresent (
+  UINTN MailboxAddress
   )
 {
-  EFI_STATUS            Status;
-  UINT32                ChipID;
-  UINT32                UARTInstanceType;
-  EFI_PHYSICAL_ADDRESS  UARTInstanceAddress;
+  TEGRA_COMBINED_UART CombinedUartData;
 
-  if (TegraUartObj != NULL) {
-    return TegraUartObj;
-  }
+  CombinedUartData.RawValue = MmioRead32 (MailboxAddress);
 
-  // Ensure the fallback resource ready
-  SetTegraUARTBaseAddress (0);
-
-  /*
-   * In OP-TEE configurations StMM can't access an
-   */
-  if (IsOpteePresent()) {
-    EFI_VIRTUAL_ADDRESS Base;
-    UINTN Size;
-
-    Status = GetDeviceRegion ("combuart-t194", &Base, &Size);
-    if (!EFI_ERROR(Status)) {
-      TegraUartObj = TegraCombinedSerialPortGetObject();
-    } else {
-      Status = GetDeviceRegion ("combuart-t234", &Base, &Size);
-      if (!EFI_ERROR(Status)) {
-        TegraUartObj = Tegra16550SerialPortGetObject();
-      }
-    }
-    if (TegraUartObj != NULL) {
-      SetTegraUARTBaseAddress (Base);
-      SerialBaseAddress = Base;
-      TegraUartObj->SerialPortInitialize (SerialBaseAddress);
-    }
-  } else {
-    // Retrieve the type and address based on UART instance
-    Status = GetUARTInstanceInfo (&UARTInstanceType, &UARTInstanceAddress);
-    if (EFI_ERROR(Status) || (UARTInstanceType == TEGRA_UART_TYPE_NONE)) {
-      // Try the legacy fallback mode to select the SerialPort
-      SerialBaseAddress = GetTegraUARTBaseAddress ();
-      ChipID = TegraGetChipID();
-      if (ChipID == T194_CHIP_ID) {
-        TegraUartObj = TegraCombinedSerialPortGetObject();
-      } else {
-        TegraUartObj = Tegra16550SerialPortGetObject();
-      }
-      return TegraUartObj;
-    }
-
-    // Select the SerialPort based on the retrieved UART instance info
-    SerialBaseAddress = UARTInstanceAddress;
-    SetTegraUARTBaseAddress (UARTInstanceAddress);
-    if (UARTInstanceType == TEGRA_UART_TYPE_16550) {
-        TegraUartObj = Tegra16550SerialPortGetObject();
-    } else if (UARTInstanceType == TEGRA_UART_TYPE_TCU) {
-        TegraUartObj = TegraCombinedSerialPortGetObject();
-    } else if (UARTInstanceType == TEGRA_UART_TYPE_SBSA) {
-        TegraUartObj = TegraSbsaSerialPortGetObject();
-    } else {
-        TegraUartObj = Tegra16550SerialPortGetObject();
-    }
-  }
-  return TegraUartObj;
+  return CombinedUartData.Pio.Interrupt;
 }
 
-/** Initialize the serial device hardware with default settings.
+/** Initialise the serial device hardware with default settings.
 
   @retval RETURN_SUCCESS            The serial device was initialised.
   @retval RETURN_INVALID_PARAMETER  One or more of the default settings
@@ -102,26 +59,32 @@ SerialPortIdentify (
  **/
 RETURN_STATUS
 EFIAPI
-SerialPortInitialize (
-  VOID
+TegraCombinedSerialPortInitialize (
+  IN UINTN SerialBaseAddress
   )
 {
-  /* For OP-TEE configurations, return SUCCESS, since  this function is
-   * called as part of the Library Constructors for Standalone Mm Entry
-   * point at which point the Guided Hob list containing the device Mem
-   * address mappings haven't been setup..
-   */
-  if (IsOpteePresent()) {
-    SerialPortInitialized = TRUE;
-    return RETURN_SUCCESS;
-  } else {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortInitialize (SerialBaseAddress);
-    } else {
-      return RETURN_SUCCESS;
-    }
-  }
+  TEGRA_COMBINED_UART CombinedUartData;
+  UINTN               TxMailbox;
+
+  TxMailbox = SerialBaseAddress;
+
+  //Wait until all prior data is sent
+  while (IsDataPresent(TxMailbox) == TRUE);
+
+  MmioWrite32 (TxMailbox, 0);
+
+  CombinedUartData.Pio.Data[0] = '\n';
+  CombinedUartData.Pio.NumberOfBytes = 1;
+  CombinedUartData.Pio.Flush = TRUE;
+  CombinedUartData.Pio.HwFlush = TRUE;
+  CombinedUartData.Pio.Interrupt = TRUE;
+
+  MmioWrite32 (TxMailbox, CombinedUartData.RawValue);
+
+  //Wait until new data is sent
+  while (IsDataPresent(TxMailbox) == TRUE);
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -136,21 +99,44 @@ SerialPortInitialize (
 **/
 UINTN
 EFIAPI
-SerialPortWrite (
+TegraCombinedSerialPortWrite (
+  IN UINTN     SerialBaseAddress,
   IN UINT8     *Buffer,
   IN UINTN     NumberOfBytes
   )
 {
-  if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortWrite (SerialBaseAddress, Buffer, NumberOfBytes);
-    } else {
-      return NumberOfBytes;
+  UINT8*              Final;
+  UINTN               TxMailbox;
+  TEGRA_COMBINED_UART CombinedUartData;
+
+  Final = &Buffer[NumberOfBytes];
+  TxMailbox = SerialBaseAddress;
+  CombinedUartData.RawValue = 0;
+
+  while (Buffer < Final) {
+    //Wait until all prior data is sent
+    while (IsDataPresent(TxMailbox) == TRUE);
+
+    CombinedUartData.Pio.NumberOfBytes = 0;
+    CombinedUartData.Pio.Reserved = 0;
+    CombinedUartData.Pio.Flush = TRUE;
+
+    while ((Buffer < Final) &&
+           (CombinedUartData.Pio.NumberOfBytes < 3)) {
+      CombinedUartData.Pio.Data[CombinedUartData.Pio.NumberOfBytes] = *Buffer;
+      CombinedUartData.Pio.NumberOfBytes++;
+      Buffer++;
     }
-  } else {
-    return NumberOfBytes;
-  }
+
+    CombinedUartData.Pio.Interrupt = TRUE;
+
+    MmioWrite32 (TxMailbox, CombinedUartData.RawValue);
+
+    //Wait until new data is sent
+    while (IsDataPresent(TxMailbox) == TRUE);
+  };
+
+  return NumberOfBytes;
 }
 
 /**
@@ -165,21 +151,13 @@ SerialPortWrite (
 **/
 UINTN
 EFIAPI
-SerialPortRead (
+TegraCombinedSerialPortRead (
+  IN  UINTN     SerialBaseAddress,
   OUT UINT8     *Buffer,
   IN  UINTN     NumberOfBytes
 )
 {
-  if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortRead (SerialBaseAddress, Buffer, NumberOfBytes);
-    } else {
-      return NumberOfBytes;
-    }
-  } else {
-    return NumberOfBytes;
-  }
+  return 0;
 }
 
 /**
@@ -191,20 +169,11 @@ SerialPortRead (
 **/
 BOOLEAN
 EFIAPI
-SerialPortPoll (
-  VOID
+TegraCombinedSerialPortPoll (
+  IN UINTN SerialBaseAddress
   )
 {
-  if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortPoll (SerialBaseAddress);
-    } else {
-      return FALSE;
-    }
-  } else {
-    return FALSE;
-  }
+  return FALSE;
 }
 
 /**
@@ -235,20 +204,12 @@ SerialPortPoll (
 **/
 RETURN_STATUS
 EFIAPI
-SerialPortSetControl (
+TegraCombinedSerialPortSetControl (
+  IN UINTN   SerialBaseAddress,
   IN UINT32  Control
   )
 {
-  if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortSetControl (SerialBaseAddress, Control);
-    } else {
-      return RETURN_SUCCESS;
-    }
-  } else {
-    return RETURN_SUCCESS;
-  }
+  return EFI_UNSUPPORTED;
 }
 
 /**
@@ -285,20 +246,22 @@ SerialPortSetControl (
 **/
 RETURN_STATUS
 EFIAPI
-SerialPortGetControl (
+TegraCombinedSerialPortGetControl (
+  IN  UINTN   SerialBaseAddress,
   OUT UINT32  *Control
   )
 {
-  if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortGetControl (SerialBaseAddress, Control);
-    } else {
-      return RETURN_SUCCESS;
-    }
-  } else {
-    return RETURN_SUCCESS;
+  UINTN TxMailbox = SerialBaseAddress;
+  if (NULL == Control) {
+    return EFI_INVALID_PARAMETER;
   }
+
+  *Control = 0;
+  if (IsDataPresent (TxMailbox) == FALSE) {
+    *Control |= EFI_SERIAL_OUTPUT_BUFFER_EMPTY;
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -334,7 +297,8 @@ SerialPortGetControl (
 **/
 RETURN_STATUS
 EFIAPI
-SerialPortSetAttributes (
+TegraCombinedSerialPortSetAttributes (
+  IN     UINTN               SerialBaseAddress,
   IN OUT UINT64              *BaudRate,
   IN OUT UINT32              *ReceiveFifoDepth,
   IN OUT UINT32              *Timeout,
@@ -343,15 +307,31 @@ SerialPortSetAttributes (
   IN OUT EFI_STOP_BITS_TYPE  *StopBits
   )
 {
-  if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortSetAttributes (SerialBaseAddress, BaudRate, ReceiveFifoDepth, Timeout,
-                                 Parity, DataBits, StopBits);
-    } else {
-      return RETURN_SUCCESS;
-    }
-  } else {
-    return RETURN_SUCCESS;
-  }
+  return EFI_UNSUPPORTED;
+}
+
+TEGRA_UART_OBJ TegraCombinedUart = {
+  TegraCombinedSerialPortInitialize,
+  TegraCombinedSerialPortWrite,
+  TegraCombinedSerialPortRead,
+  TegraCombinedSerialPortPoll,
+  TegraCombinedSerialPortSetControl,
+  TegraCombinedSerialPortGetControl,
+  TegraCombinedSerialPortSetAttributes
+};
+
+/**
+
+  Retrieve the object of tegra combined serial port library.
+
+  @param[out]  Tegra combined uart library object
+
+**/
+TEGRA_UART_OBJ *
+EFIAPI
+TegraCombinedSerialPortGetObject (
+  VOID
+  )
+{
+  return &TegraCombinedUart;
 }
