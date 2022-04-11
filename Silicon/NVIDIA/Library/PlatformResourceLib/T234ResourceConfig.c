@@ -489,7 +489,14 @@ T234GetPlatformResourceInformation(
   IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
 )
 {
+  EFI_STATUS Status;
+
   PlatformResourceInfo->NumSockets = 1;
+
+  Status = T234GetActiveBootChain (CpuBootloaderAddress, &PlatformResourceInfo->ActiveBootChain);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   return EFI_SUCCESS;
 }

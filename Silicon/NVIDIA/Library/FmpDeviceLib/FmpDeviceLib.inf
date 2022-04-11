@@ -45,6 +45,7 @@
   FwPackageLib
   PcdLib
   PlatformResourceLib
+  HobLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
@@ -63,3 +64,4 @@
   gEfiEventVirtualAddressChangeGuid
   gEfiEventExitBootServicesGuid
   gNVIDIAPublicVariableGuid
+  gNVIDIAPlatformResourceDataGuid

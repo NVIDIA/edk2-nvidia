@@ -1,7 +1,7 @@
 /** @file
   FW Partition Protocol BlockIo Dxe
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,6 +12,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/BrBctUpdateDeviceLib.h>
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/FwPartitionDeviceLib.h>
 #include <Library/GptLib.h>
@@ -522,14 +523,18 @@ FwPartitionBlockIoDxeInitialize (
   UINT32                        ActiveBootChain;
   BR_BCT_UPDATE_PRIVATE_DATA    *BrBctUpdatePrivate;
   FW_PARTITION_PRIVATE_DATA     *FwPartitionPrivate;
+  VOID                          *Hob;
 
   BrBctUpdatePrivate = NULL;
 
-  Status = GetActiveBootChain (&ActiveBootChain);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error getting active boot chain: %r\n",
-            __FUNCTION__, Status));
-    return Status;
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+    ActiveBootChain = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ActiveBootChain;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting active boot chain\n",
+            __FUNCTION__));
+    return EFI_UNSUPPORTED;
   }
 
   Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS);

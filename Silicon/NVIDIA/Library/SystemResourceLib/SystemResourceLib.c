@@ -68,7 +68,8 @@ RegisterDeviceTree (
       NumSockets = 0;
       MaxSockets = 0;
       Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-      if ((Hob != NULL) && (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+      if ((Hob != NULL) &&
+          (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
         NumSockets = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->NumSockets;
       }
 

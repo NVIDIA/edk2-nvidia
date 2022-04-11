@@ -85,6 +85,7 @@ typedef struct {
 
 typedef struct {
   UINT32 NumSockets;
+  UINT32 ActiveBootChain;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
@@ -242,16 +243,6 @@ EFI_STATUS
 EFIAPI
 GetBoardInfo (
   OUT TEGRA_BOARD_INFO *BoardInfo
-);
-
-/**
-  Retrieve Active Boot Chain Information
-
-**/
-EFI_STATUS
-EFIAPI
-GetActiveBootChain (
-  OUT UINT32 *BootChain
 );
 
 /**

@@ -105,7 +105,7 @@ FloorSweepCpuInfo (
 
     Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
     if ((Hob != NULL) &&
-        (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+        (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
       Info->EnabledSockets = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->NumSockets;
     } else {
       ASSERT (FALSE);
