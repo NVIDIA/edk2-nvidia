@@ -319,13 +319,20 @@ T194GetBoardInfo(
 
 **/
 BOOLEAN
-T194BootChainIsValid()
+T194BootChainIsValid(
+  IN UINTN      CpuBootloaderAddress
+  )
 {
   UINT32     RegisterValue;
+
   RegisterValue = MmioRead32 (FixedPcdGet64(PcdBootLoaderRegisterBaseAddressT194));
-  return (BOOLEAN)
-    ((SR_BL_MAGIC_GET(RegisterValue) == SR_BL_MAGIC) &&
-    (SR_BL_MAX_SLOTS_GET(RegisterValue) > 1U));
+  if ((SR_BL_MAGIC_GET (RegisterValue) != SR_BL_MAGIC) ||
+      (SR_BL_MAX_SLOTS_GET (RegisterValue) < BOOT_CHAIN_MAX)) {
+    DEBUG ((DEBUG_ERROR, "Invalid SR_BL=0x%x\n", RegisterValue));
+    return FALSE;
+  }
+
+  return TRUE;
 }
 
 /**
@@ -338,7 +345,7 @@ T194GetActiveBootChain(
   OUT UINT32  *BootChain
 )
 {
-  if (T194BootChainIsValid() != TRUE) {
+  if (T194BootChainIsValid (CpuBootloaderAddress) != TRUE) {
     // No valid slot number is found in scratch register. Return default slot
     *BootChain = BOOT_CHAIN_A;
   } else {
@@ -362,7 +369,7 @@ T194ValidateActiveBootChain(
   EFI_STATUS Status;
   UINT32     BootChain;
 
-  if (T194BootChainIsValid() != TRUE) {
+  if (T194BootChainIsValid (CpuBootloaderAddress) != TRUE) {
     // Default case. No need to modify SR register
     return EFI_SUCCESS;
   }
@@ -393,6 +400,24 @@ T194ValidateActiveBootChain(
 }
 
 /**
+  Get UpdateBrBct flag
+
+**/
+BOOLEAN
+T194GetUpdateBrBct (
+  IN UINTN      CpuBootloaderAddress
+  )
+{
+  if (!T194BootChainIsValid (CpuBootloaderAddress)) {
+    return FALSE;
+  }
+
+  return MmioBitFieldRead32 (FixedPcdGet64(PcdBootLoaderRegisterBaseAddressT194),
+                             BL_UPDATE_BR_BCT_BIT_FIELD,
+                             BL_UPDATE_BR_BCT_BIT_FIELD);
+}
+
+/**
   Get Platform Resource Information
 
 **/
@@ -407,6 +432,7 @@ T194GetPlatformResourceInformation(
   BOOLEAN    Result;
 
   PlatformResourceInfo->NumSockets = 1;
+  PlatformResourceInfo->BrBctUpdateFlag = T194GetUpdateBrBct (CpuBootloaderAddress);
 
   Status = T194GetActiveBootChain (CpuBootloaderAddress, &PlatformResourceInfo->ActiveBootChain);
   if (EFI_ERROR (Status)) {

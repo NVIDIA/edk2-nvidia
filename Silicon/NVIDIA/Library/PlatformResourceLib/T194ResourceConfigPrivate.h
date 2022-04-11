@@ -107,6 +107,7 @@
 #define BOOT_CHAIN_BAD                        1
 #define BOOT_CHAIN_A                          0
 #define BOOT_CHAIN_B                          1
+#define BL_UPDATE_BR_BCT_BIT_FIELD            26
 
 /*
  * Bootloader Scratch register

@@ -68,16 +68,6 @@ T194ValidateActiveBootChain(
 );
 
 /**
-  Validate Boot Chain
-
-**/
-BOOLEAN
-EFIAPI
-T194BootChainIsValid(
-  VOID
-);
-
-/**
   Get Platform Resource Information
 
 **/
