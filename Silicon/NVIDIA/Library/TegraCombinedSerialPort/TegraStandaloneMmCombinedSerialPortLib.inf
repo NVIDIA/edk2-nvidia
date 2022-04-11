@@ -1,0 +1,32 @@
+#/** @file
+#
+#  Component description file for PL011SerialPortLib module
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TegraCombinedSerialPortLib
+  FILE_GUID                      = f7ed5487-2411-49f1-883a-b8cec26a8919
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = TegraCombinedSerialPortLib
+
+[Sources.common]
+  TegraStandaloneMmCombinedSerialPortLib.c
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  PcdLib
+  IoLib
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
