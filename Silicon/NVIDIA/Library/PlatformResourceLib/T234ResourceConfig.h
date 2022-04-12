@@ -63,27 +63,6 @@ T234GetFsiNsBaseAndSize (
 );
 
 /**
-  Retrieve EEPROM Data
-
-**/
-TEGRABL_EEPROM_DATA*
-EFIAPI
-T234GetEepromData (
-  IN  UINTN CpuBootloaderAddress
-);
-
-/**
-  Retrieve Board Information
-
-**/
-BOOLEAN
-EFIAPI
-T234GetBoardInfo(
-  IN  UINTN            CpuBootloaderAddress,
-  OUT TEGRA_BOARD_INFO *BoardInfo
-);
-
-/**
   Retrieve Active Boot Chain Information
 
 **/

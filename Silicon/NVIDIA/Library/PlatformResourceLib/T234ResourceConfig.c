@@ -490,6 +490,7 @@ T234GetPlatformResourceInformation(
 )
 {
   EFI_STATUS Status;
+  BOOLEAN    Result;
 
   PlatformResourceInfo->NumSockets = 1;
 
@@ -499,6 +500,13 @@ T234GetPlatformResourceInformation(
   }
 
   PlatformResourceInfo->MmioInfo = T234GetMmioBaseAndSize ();
+
+  PlatformResourceInfo->EepromData = T234GetEepromData (CpuBootloaderAddress);
+
+  Result = T234GetBoardInfo (CpuBootloaderAddress, PlatformResourceInfo->BoardInfo);
+  if (!Result) {
+    return EFI_DEVICE_ERROR;
+  }
 
   return EFI_SUCCESS;
 }

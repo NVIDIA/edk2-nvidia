@@ -12,6 +12,7 @@
 
 #include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DevicePathLib.h>
@@ -576,10 +577,17 @@ InitializeEepromDxe (
   EFI_STATUS               Status;
   TEGRA_PLATFORM_TYPE      PlatformType;
   BOOLEAN                  ValidCvmEepromData;
+  VOID                     *Hob;
 
   PlatformType = TegraGetPlatform();
-  EepromData = GetEepromData ();
   ValidCvmEepromData = TRUE;
+  EepromData = NULL;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+    EepromData = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->EepromData;
+  }
 
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     if ((EepromData == NULL) || EepromData->CvmEepromDataSize == 0 ||

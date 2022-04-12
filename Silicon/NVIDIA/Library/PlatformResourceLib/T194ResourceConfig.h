@@ -53,27 +53,6 @@ T194GetGROutputBaseAndSize (
 );
 
 /**
-  Retrieve EEPROM Data
-
-**/
-TEGRABL_EEPROM_DATA*
-EFIAPI
-T194GetEepromData (
-  IN  UINTN CpuBootloaderAddress
-);
-
-/**
-  Retrieve Board Information
-
-**/
-BOOLEAN
-EFIAPI
-T194GetBoardInfo(
-  IN  UINTN            CpuBootloaderAddress,
-  OUT TEGRA_BOARD_INFO *BoardInfo
-);
-
-/**
   Retrieve Active Boot Chain Information
 
 **/

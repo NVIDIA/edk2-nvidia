@@ -404,6 +404,7 @@ T194GetPlatformResourceInformation(
 )
 {
   EFI_STATUS Status;
+  BOOLEAN    Result;
 
   PlatformResourceInfo->NumSockets = 1;
 
@@ -413,6 +414,13 @@ T194GetPlatformResourceInformation(
   }
 
   PlatformResourceInfo->MmioInfo = T194GetMmioBaseAndSize ();
+
+  PlatformResourceInfo->EepromData = T194GetEepromData (CpuBootloaderAddress);
+
+  Result = T194GetBoardInfo (CpuBootloaderAddress, PlatformResourceInfo->BoardInfo);
+  if (!Result) {
+    return EFI_DEVICE_ERROR;
+  }
 
   return EFI_SUCCESS;
 }

@@ -30,6 +30,7 @@
 [LibraryClasses]
   DebugLib
   UefiLib
+  HobLib
   FdtLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
@@ -40,6 +41,7 @@
 
 [Guids]
   gNVIDIAEeprom
+  gNVIDIAPlatformResourceDataGuid
 
 [Protocols]
   gEfiI2cIoProtocolGuid                       ## CONSUMES
