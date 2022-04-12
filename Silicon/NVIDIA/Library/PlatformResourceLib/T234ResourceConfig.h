@@ -63,16 +63,6 @@ T234GetFsiNsBaseAndSize (
 );
 
 /**
-  Retrieve MMIO Base and Size
-
-**/
-TEGRA_MMIO_INFO*
-EFIAPI
-T234GetMmioBaseAndSize (
-  VOID
-);
-
-/**
   Retrieve EEPROM Data
 
 **/

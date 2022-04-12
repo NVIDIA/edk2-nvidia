@@ -498,5 +498,7 @@ T234GetPlatformResourceInformation(
     return Status;
   }
 
+  PlatformResourceInfo->MmioInfo = T234GetMmioBaseAndSize ();
+
   return EFI_SUCCESS;
 }

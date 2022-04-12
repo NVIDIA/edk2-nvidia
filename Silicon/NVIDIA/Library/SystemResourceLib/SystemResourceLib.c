@@ -178,6 +178,7 @@ InstallMmioRegions (
   OUT UINTN *MmioRegionsCount
 )
 {
+  VOID            *Hob;
   TEGRA_MMIO_INFO *MmioInfo;
 
   *MmioRegionsCount += InstallMmioRegion(
@@ -188,7 +189,14 @@ InstallMmioRegions (
                          TegraGetGicDistributorBaseAddress(ChipID), SIZE_64KB);
   *MmioRegionsCount += InstallMmioRegion(GetTegraUARTBaseAddress (), SIZE_4KB);
 
-  MmioInfo = GetMmioBaseAndSize ();
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+    MmioInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->MmioInfo;
+  } else {
+    return EFI_DEVICE_ERROR;
+  }
+
   if (MmioInfo != NULL) {
     while (MmioInfo->Base != 0 &&
            MmioInfo->Size != 0) {
