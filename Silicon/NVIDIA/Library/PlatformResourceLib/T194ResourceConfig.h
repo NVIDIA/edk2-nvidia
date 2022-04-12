@@ -53,16 +53,6 @@ T194GetGROutputBaseAndSize (
 );
 
 /**
-  Retrieve MMIO Base and Size
-
-**/
-TEGRA_MMIO_INFO*
-EFIAPI
-T194GetMmioBaseAndSize (
-  VOID
-);
-
-/**
   Retrieve EEPROM Data
 
 **/

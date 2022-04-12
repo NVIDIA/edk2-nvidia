@@ -412,5 +412,7 @@ T194GetPlatformResourceInformation(
     return Status;
   }
 
+  PlatformResourceInfo->MmioInfo = T194GetMmioBaseAndSize ();
+
   return EFI_SUCCESS;
 }

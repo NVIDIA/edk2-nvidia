@@ -84,8 +84,9 @@ typedef struct {
 } TEGRA_GIC_INFO;
 
 typedef struct {
-  UINT32 NumSockets;
-  UINT32 ActiveBootChain;
+  UINT32          NumSockets;
+  UINT32          ActiveBootChain;
+  TEGRA_MMIO_INFO *MmioInfo;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
@@ -213,16 +214,6 @@ EFIAPI
 GetFsiNsBaseAndSize (
   OUT UINTN *Base,
   OUT UINTN *Size
-);
-
-/**
-  Retrieve MMIO Base and Size
-
-**/
-TEGRA_MMIO_INFO*
-EFIAPI
-GetMmioBaseAndSize (
-  VOID
 );
 
 /**
