@@ -132,7 +132,7 @@ T234UARTInstanceInfo(
 
 **/
 EFI_STATUS
-T234ResourceConfig (
+T234GetResourceConfig (
   IN UINTN                 CpuBootloaderAddress,
   OUT TEGRA_RESOURCE_INFO  *PlatformInfo
   )
@@ -495,6 +495,11 @@ T234GetPlatformResourceInformation(
   PlatformResourceInfo->NumSockets = 1;
 
   Status = T234GetActiveBootChain (CpuBootloaderAddress, &PlatformResourceInfo->ActiveBootChain);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = T234GetResourceConfig (CpuBootloaderAddress, PlatformResourceInfo->ResourceInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }

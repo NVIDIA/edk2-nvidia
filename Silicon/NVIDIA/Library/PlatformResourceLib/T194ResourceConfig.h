@@ -11,12 +11,6 @@
 
 #include <Library/PlatformResourceLib.h>
 
-EFI_STATUS
-T194ResourceConfig (
-  IN UINTN                 CpuBootloaderAddress,
-  OUT TEGRA_RESOURCE_INFO  *PlatformInfo
-);
-
 UINT64
 T194GetDTBBaseAddress (
   IN UINTN CpuBootloaderAddress

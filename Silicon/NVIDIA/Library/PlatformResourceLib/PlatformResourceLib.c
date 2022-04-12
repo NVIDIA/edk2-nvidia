@@ -312,40 +312,6 @@ GetBootType (
 }
 
 /**
-  Retrieve Resource Config
-
-**/
-EFI_STATUS
-EFIAPI
-GetResourceConfig (
-  OUT TEGRA_RESOURCE_INFO *PlatformInfo
-)
-{
-  UINTN   ChipID;
-  UINTN   CpuBootloaderAddress;
-  BOOLEAN ValidPrivatePlatform;
-
-  ValidPrivatePlatform = GetCPUBLBaseAddressInternal (&CpuBootloaderAddress);
-  if (ValidPrivatePlatform) {
-    return GetResourceConfigInternal (CpuBootloaderAddress, PlatformInfo);;
-  }
-
-  ChipID = TegraGetChipID();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case T194_CHIP_ID:
-      return T194ResourceConfig(CpuBootloaderAddress, PlatformInfo);
-    case T234_CHIP_ID:
-      return T234ResourceConfig(CpuBootloaderAddress, PlatformInfo);
-    default:
-      PlatformInfo = NULL;
-      return EFI_UNSUPPORTED;
-  }
-}
-
-/**
   Retrieve GR Blob Address
 
 **/
@@ -512,6 +478,11 @@ GetPlatformResourceInformation (
   UINTN           ChipID;
   UINTN           CpuBootloaderAddress;
   BOOLEAN         ValidPrivatePlatform;
+
+  PlatformResourceInfo->ResourceInfo = AllocatePool (sizeof (TEGRA_RESOURCE_INFO));
+  if (PlatformResourceInfo->ResourceInfo == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
 
   PlatformResourceInfo->BoardInfo = AllocatePool (sizeof (TEGRA_BOARD_INFO));
   if (PlatformResourceInfo->BoardInfo == NULL) {
