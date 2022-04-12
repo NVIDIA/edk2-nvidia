@@ -8,6 +8,7 @@
 
 #include <Library/IoLib.h>
 #include <Library/DebugLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/MceAriLib.h>
@@ -445,66 +446,6 @@ GetFsiNsBaseAndSize (
 }
 
 /**
-  Retrieve EEPROM Data
-
-**/
-TEGRABL_EEPROM_DATA*
-EFIAPI
-GetEepromData (
-  VOID
-)
-{
-  UINTN   ChipID;
-  UINTN   CpuBootloaderAddress;
-
-  ChipID = TegraGetChipID();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case T194_CHIP_ID:
-      return T194GetEepromData(CpuBootloaderAddress);
-    case T234_CHIP_ID:
-      return T234GetEepromData(CpuBootloaderAddress);
-    default:
-      return NULL;
-  }
-}
-
-/**
-  Retrieve Board Information
-
-**/
-EFI_STATUS
-EFIAPI
-GetBoardInfo (
-  OUT TEGRA_BOARD_INFO *BoardInfo
-)
-{
-  UINTN           ChipID;
-  UINTN           CpuBootloaderAddress;
-  BOOLEAN         ValidPrivatePlatform;
-
-  ValidPrivatePlatform = GetBoardInfoInternal(BoardInfo);
-  if (ValidPrivatePlatform) {
-    return EFI_SUCCESS;
-  }
-
-  ChipID = TegraGetChipID();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case T194_CHIP_ID:
-      return T194GetBoardInfo(CpuBootloaderAddress, BoardInfo);
-    case T234_CHIP_ID:
-      return T234GetBoardInfo(CpuBootloaderAddress, BoardInfo);
-    default:
-      return EFI_UNSUPPORTED;
-  }
-}
-
-/**
   Validate Active Boot Chain
 
 **/
@@ -571,6 +512,11 @@ GetPlatformResourceInformation (
   UINTN           ChipID;
   UINTN           CpuBootloaderAddress;
   BOOLEAN         ValidPrivatePlatform;
+
+  PlatformResourceInfo->BoardInfo = AllocatePool (sizeof (TEGRA_BOARD_INFO));
+  if (PlatformResourceInfo->BoardInfo == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
 
   ValidPrivatePlatform = GetPlatformResourceInformationInternal(PlatformResourceInfo);
   if (ValidPrivatePlatform) {

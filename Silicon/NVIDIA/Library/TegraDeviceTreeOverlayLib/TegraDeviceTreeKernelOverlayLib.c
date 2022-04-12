@@ -9,7 +9,9 @@
 
 #include <Base.h>
 #include <Uefi.h>
+#include <PiDxe.h>
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <libfdt.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -27,21 +29,25 @@ ReadBoardInfo (
 )
 {
   EFI_STATUS                  Status;
-  TEGRA_BOARD_INFO            TegraBoardInfo;
+  TEGRA_BOARD_INFO            *TegraBoardInfo;
   TEGRA_EEPROM_BOARD_INFO     *Eeprom;
   EFI_HANDLE                  *HandleBuffer;
   UINTN                       ProtocolCount;
   UINTN                       i=0;
+  VOID                        *Hob;
 
   Eeprom = NULL;
   HandleBuffer = NULL;
 
-  ZeroMem (&TegraBoardInfo, sizeof (TegraBoardInfo));
-  GetBoardInfo(&TegraBoardInfo);
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+    (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+    TegraBoardInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->BoardInfo;
+  }
 
-  BoardInfo->FuseBaseAddr = TegraBoardInfo.FuseBaseAddr;
-  BoardInfo->FuseList = TegraBoardInfo.FuseList;
-  BoardInfo->FuseCount = TegraBoardInfo.FuseCount;
+  BoardInfo->FuseBaseAddr = TegraBoardInfo->FuseBaseAddr;
+  BoardInfo->FuseList = TegraBoardInfo->FuseList;
+  BoardInfo->FuseCount = TegraBoardInfo->FuseCount;
   BoardInfo->IdCount = 0;
 
   Status = gBS->LocateHandleBuffer ( ByProtocol,

@@ -84,9 +84,11 @@ typedef struct {
 } TEGRA_GIC_INFO;
 
 typedef struct {
-  UINT32          NumSockets;
-  UINT32          ActiveBootChain;
-  TEGRA_MMIO_INFO *MmioInfo;
+  UINT32              NumSockets;
+  UINT32              ActiveBootChain;
+  TEGRA_MMIO_INFO     *MmioInfo;
+  TEGRABL_EEPROM_DATA *EepromData;
+  TEGRA_BOARD_INFO    *BoardInfo;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
@@ -214,26 +216,6 @@ EFIAPI
 GetFsiNsBaseAndSize (
   OUT UINTN *Base,
   OUT UINTN *Size
-);
-
-/**
-  Retrieve EEPROM Data
-
-**/
-TEGRABL_EEPROM_DATA*
-EFIAPI
-GetEepromData (
-  VOID
-);
-
-/**
-  Retrieve Board Information
-
-**/
-EFI_STATUS
-EFIAPI
-GetBoardInfo (
-  OUT TEGRA_BOARD_INFO *BoardInfo
 );
 
 /**

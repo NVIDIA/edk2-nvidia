@@ -33,3 +33,6 @@
   EmbeddedPkg/EmbeddedPkg.dec
   NetworkPkg/NetworkPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid

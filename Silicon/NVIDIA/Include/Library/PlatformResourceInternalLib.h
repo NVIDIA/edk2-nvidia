@@ -127,16 +127,6 @@ GetFsiNsBaseAndSizeInternal (
 );
 
 /**
-  Retrieve Board Information
-
-**/
-BOOLEAN
-EFIAPI
-GetBoardInfoInternal (
-  OUT TEGRA_BOARD_INFO *BoardInfo
-);
-
-/**
   Validate Active Boot Chain
 
 **/

@@ -9,7 +9,9 @@
 
 #include <Base.h>
 #include <Uefi.h>
+#include <PiPei.h>
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <libfdt.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
@@ -25,23 +27,27 @@ ReadBoardInfo (
   OVERLAY_BOARD_INFO *BoardInfo
 )
 {
-  TEGRA_BOARD_INFO TegraBoardInfo;
+  TEGRA_BOARD_INFO *TegraBoardInfo;
+  VOID             *Hob;
 
-  ZeroMem (&TegraBoardInfo, sizeof (TegraBoardInfo));
-  GetBoardInfo(&TegraBoardInfo);
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+    (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+    TegraBoardInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->BoardInfo;
+  }
 
-  BoardInfo->FuseBaseAddr = TegraBoardInfo.FuseBaseAddr;
-  BoardInfo->FuseList = TegraBoardInfo.FuseList;
-  BoardInfo->FuseCount = TegraBoardInfo.FuseCount;
+  BoardInfo->FuseBaseAddr = TegraBoardInfo->FuseBaseAddr;
+  BoardInfo->FuseList = TegraBoardInfo->FuseList;
+  BoardInfo->FuseCount = TegraBoardInfo->FuseCount;
   BoardInfo->IdCount = 2; /*CVM and CVB*/
   BoardInfo->ProductIds = (TEGRA_EEPROM_PART_NUMBER *)AllocateZeroPool(BoardInfo->IdCount * sizeof(TEGRA_EEPROM_PART_NUMBER));
-  CopyMem ((VOID *)&BoardInfo->ProductIds[0], (VOID *) TegraBoardInfo.CvmProductId, PRODUCT_ID_LEN);
-  CopyMem ((VOID *)&BoardInfo->ProductIds[1], (VOID *) TegraBoardInfo.CvbProductId, PRODUCT_ID_LEN);
+  CopyMem ((VOID *)&BoardInfo->ProductIds[0], (VOID *) TegraBoardInfo->CvmProductId, PRODUCT_ID_LEN);
+  CopyMem ((VOID *)&BoardInfo->ProductIds[1], (VOID *) TegraBoardInfo->CvbProductId, PRODUCT_ID_LEN);
 
-  DEBUG((DEBUG_INFO, "Cvm Product Id: %a \n", (CHAR8*)TegraBoardInfo.CvmProductId));
-  DEBUG((DEBUG_INFO, "Cvb Product Id: %a \n", (CHAR8*)TegraBoardInfo.CvbProductId));
+  DEBUG((DEBUG_INFO, "Cvm Product Id: %a \n", (CHAR8*)TegraBoardInfo->CvmProductId));
+  DEBUG((DEBUG_INFO, "Cvb Product Id: %a \n", (CHAR8*)TegraBoardInfo->CvbProductId));
 
-  if (TegraBoardInfo.CvmBoardId == NULL) {
+  if (TegraBoardInfo->CvmBoardId == NULL) {
     DEBUG((DEBUG_WARN, "%a: Failed to get board id from BCT\n.", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
