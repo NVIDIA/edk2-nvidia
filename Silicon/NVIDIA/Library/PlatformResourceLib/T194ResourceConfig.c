@@ -60,7 +60,7 @@ TEGRA_FUSE_INFO T194FloorsweepingFuseList[] = {
 
 **/
 EFI_STATUS
-T194ResourceConfig (
+T194GetResourceConfig (
   IN UINTN                 CpuBootloaderAddress,
   OUT TEGRA_RESOURCE_INFO  *PlatformInfo
   )
@@ -409,6 +409,11 @@ T194GetPlatformResourceInformation(
   PlatformResourceInfo->NumSockets = 1;
 
   Status = T194GetActiveBootChain (CpuBootloaderAddress, &PlatformResourceInfo->ActiveBootChain);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = T194GetResourceConfig (CpuBootloaderAddress, PlatformResourceInfo->ResourceInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }

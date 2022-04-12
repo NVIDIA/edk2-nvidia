@@ -104,20 +104,6 @@ GetBootTypeInternal (
 }
 
 /**
-  Retrieve Resource Config
-
-**/
-EFI_STATUS
-EFIAPI
-GetResourceConfigInternal (
-  IN  UINTN               CpuBootloaderAddress,
-  OUT TEGRA_RESOURCE_INFO *PlatformInfo
-)
-{
-  return EFI_UNSUPPORTED;
-}
-
-/**
   Retrieve GR Blob Address
 
 **/

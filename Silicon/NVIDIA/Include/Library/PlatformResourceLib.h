@@ -86,6 +86,7 @@ typedef struct {
 typedef struct {
   UINT32              NumSockets;
   UINT32              ActiveBootChain;
+  TEGRA_RESOURCE_INFO *ResourceInfo;
   TEGRA_MMIO_INFO     *MmioInfo;
   TEGRABL_EEPROM_DATA *EepromData;
   TEGRA_BOARD_INFO    *BoardInfo;
@@ -174,16 +175,6 @@ TEGRA_BOOT_TYPE
 EFIAPI
 GetBootType (
   VOID
-);
-
-/**
-  Retrieve Resource Config
-
-**/
-EFI_STATUS
-EFIAPI
-GetResourceConfig (
-  OUT TEGRA_RESOURCE_INFO *PlatformInfo
 );
 
 /**

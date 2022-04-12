@@ -18,12 +18,6 @@ T234UARTInstanceInfo(
   OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
 );
 
-EFI_STATUS
-T234ResourceConfig (
-  IN UINTN                 CpuBootloaderAddress,
-  OUT TEGRA_RESOURCE_INFO  *PlatformInfo
-);
-
 UINT64
 T234GetDTBBaseAddress (
   IN UINTN CpuBootloaderAddress

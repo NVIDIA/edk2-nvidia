@@ -228,8 +228,9 @@ InstallSystemResources (
 {
   EFI_STATUS           Status;
   UINTN                ChipID;
-  TEGRA_RESOURCE_INFO  PlatformInfo;
+  TEGRA_RESOURCE_INFO  *PlatformInfo;
   UINTN                FinalDramRegionsCount;
+  VOID                 *Hob;
 
   if (NULL == MemoryRegionsCount) {
     return EFI_INVALID_PARAMETER;
@@ -246,27 +247,29 @@ InstallSystemResources (
     return Status;
   }
 
-  Status = GetResourceConfig (&PlatformInfo);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+    PlatformInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ResourceInfo;
+  } else {
+    return EFI_DEVICE_ERROR;
   }
 
-  AlignCarveoutRegions64KiB(PlatformInfo.CarveoutRegions, PlatformInfo.CarveoutRegionsCount);
+  AlignCarveoutRegions64KiB(PlatformInfo->CarveoutRegions, PlatformInfo->CarveoutRegionsCount);
 
   FinalDramRegionsCount = 0;
   Status = InstallDramWithCarveouts (
-             PlatformInfo.DramRegions,
-             PlatformInfo.DramRegionsCount,
-             PlatformInfo.UefiDramRegionsCount,
-             PlatformInfo.CarveoutRegions,
-             PlatformInfo.CarveoutRegionsCount,
+             PlatformInfo->DramRegions,
+             PlatformInfo->DramRegionsCount,
+             PlatformInfo->UefiDramRegionsCount,
+             PlatformInfo->CarveoutRegions,
+             PlatformInfo->CarveoutRegionsCount,
              &FinalDramRegionsCount
            );
 
   if (!EFI_ERROR (Status)) {
     *MemoryRegionsCount += FinalDramRegionsCount;
   }
-  FreePool (PlatformInfo.CarveoutRegions);
 
   return Status;
 }
