@@ -1,7 +1,7 @@
 /** @file
   FW Image Protocol Image Names support
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -28,6 +28,7 @@ STATIC CONST CHAR16 *SystemFwImageNamesCommon[] = {
   L"sc7",
   L"secure-os",
   L"spe-fw",
+  L"VER",
   NULL
 };
 
@@ -35,7 +36,6 @@ STATIC CONST CHAR16 *SystemFwImageNamesT194[] = {
   L"bootloader-dtb",
   L"mts-preboot",
   L"mts-proper",
-  L"VER",
   NULL
 };
 

@@ -70,7 +70,6 @@
   gNVIDIATokenSpaceGuid.PcdOsIndicationsAvailable|FALSE
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|TRUE
   gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
-  gNVIDIATokenSpaceGuid.PcdFmpTegraVersion|0x0
   # SMBIOS for T194
   ## Type 2 Table (Board Information)
   gNVIDIATokenSpaceGuid.PcdBoardChassisLocation|L"Unknown"

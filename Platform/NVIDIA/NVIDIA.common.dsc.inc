@@ -187,6 +187,7 @@
   BrBctUpdateDeviceLib|Silicon/NVIDIA/Library/BrBctUpdateDeviceLib/BrBctUpdateDeviceLib.inf
   FwImageLib|Silicon/NVIDIA/Library/FwImageLib/FwImageLib.inf
   FwPackageLib|Silicon/NVIDIA/Library/FwPackageLib/FwPackageLib.inf
+  VerPartitionLib|Silicon/NVIDIA/Library/VerPartitionLib/VerPartitionLib.inf
 
   AmlLib|DynamicTablesPkg/Library/Common/AmlLib/AmlLib.inf
   SsdtSerialPortFixupLib|Silicon/NVIDIA/Library/SsdtSerialPortFixupLib/SsdtSerialPortFixupLib.inf
