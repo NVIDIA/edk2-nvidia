@@ -1,0 +1,46 @@
+## @file
+# Misc Lib for OP-TEE in StandaloneMm
+#
+# Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = StandaloneMmOpteeLib
+  FILE_GUID                      = 6c849757-83ab-4c5c-a179-90ada89db044
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  LIBRARY_CLASS                  = StandaloneMmOpteeLib
+
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+
+[Sources]
+  StandaloneMmOpteeLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  ArmPkg/ArmPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  ArmSvcLib
+  BaseMemoryLib
+  HobLib
+  IoLib
+
+[FeaturePcd]
+  gNVIDIATokenSpaceGuid.PcdOpteePresent
+
+[Guids]
+  gEfiStandaloneMmDeviceMemoryRegions

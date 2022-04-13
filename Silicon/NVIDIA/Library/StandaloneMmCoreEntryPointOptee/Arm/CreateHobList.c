@@ -13,7 +13,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Guid/MmramMemoryReserve.h>
 #include <Guid/MpInformation.h>
 
-#include <Library/Arm/StandaloneMmCoreEntryPoint.h>
+#include <Library/Arm/StandaloneMmCoreEntryPointOptee.h>
 #include <Library/ArmMmuLib.h>
 #include <Library/ArmSvcLib.h>
 #include <Library/DebugLib.h>
@@ -21,6 +21,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/SerialPortLib.h>
+#include <Library/StandaloneMmOpteeDeviceMem.h>
 
 #include <IndustryStandard/ArmStdSmc.h>
 
@@ -68,6 +69,7 @@ CreateHobListFromBootInfo (
   EFI_PROCESSOR_INFORMATION        *ProcInfoBuffer;
   EFI_SECURE_PARTITION_CPU_INFO    *CpuInfo;
   ARM_TF_CPU_DRIVER_EP_DESCRIPTOR  *CpuDriverEntryPointDesc;
+  EFI_MM_DEVICE_REGION             *DeviceRegionData;
 
   // Create a hoblist with a PHIT and EOH
   HobStart = HobConstructor (
@@ -201,5 +203,16 @@ CreateHobListFromBootInfo (
   MmramRanges[5].PhysicalSize  = HobStart->EfiFreeMemoryTop - HobStart->EfiFreeMemoryBottom;
   MmramRanges[5].RegionState   = EFI_CACHEABLE;
 
+  BufferSize = MAX_DEVICE_REGIONS * sizeof (EFI_MM_DEVICE_REGION);
+  DeviceRegionData = BuildGuidHob (&gEfiStandaloneMmDeviceMemoryRegions, BufferSize);
+  for (Index = 0; Index < MAX_DEVICE_REGIONS; Index++) {
+    CopyMem (DeviceRegionData[Index].DeviceRegionName,
+             PayloadBootInfo->DeviceRegions[Index].RegionName,
+             DEVICE_REGION_NAME_MAX_LEN);
+    DeviceRegionData[Index].DeviceRegionStart =
+              PayloadBootInfo->DeviceRegions[Index].RegionVaddr;
+    DeviceRegionData[Index].DeviceRegionSize =
+              PayloadBootInfo->DeviceRegions[Index].RegionSize;
+  }
   return HobStart;
 }
