@@ -9,7 +9,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <PiMm.h>
 
-#include <Library/Arm/StandaloneMmCoreEntryPoint.h>
+#include <Library/Arm/StandaloneMmCoreEntryPointOptee.h>
 
 #include <PiPei.h>
 #include <Guid/MmramMemoryReserve.h>

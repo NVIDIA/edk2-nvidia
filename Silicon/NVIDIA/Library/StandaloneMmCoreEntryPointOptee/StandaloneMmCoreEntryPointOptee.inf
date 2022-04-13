@@ -30,6 +30,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [Packages.ARM, Packages.AARCH64]
   ArmPkg/ArmPkg.dec
@@ -47,6 +48,7 @@
   gEfiMmPeiMmramMemoryReserveGuid
   gEfiStandaloneMmNonSecureBufferGuid
   gEfiArmTfCpuDriverEpDescriptorGuid
+  gEfiStandaloneMmDeviceMemoryRegions
 
 [FeaturePcd.ARM, FeaturePcd.AARCH64]
   gArmTokenSpaceGuid.PcdFfaEnable
