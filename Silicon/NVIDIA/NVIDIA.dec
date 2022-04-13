@@ -342,7 +342,7 @@
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets|1|UINT32|0x0000005F
 
 #Interrupts
-  gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum|0x19|UINT32|0x00000063
+  gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum|0x19|UINT32|0x0000005C
 
 #SPI clock frequency.
   gNVIDIATokenSpaceGuid.PcdSpiClockFrequency|10000000|UINT32|0x00000041
@@ -402,5 +402,4 @@
 #Fmp options
   gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate|FALSE|BOOLEAN|0x0000005A
   gNVIDIATokenSpaceGuid.PcdFmpWriteVerifyImage|TRUE|BOOLEAN|0x0000005B
-  gNVIDIATokenSpaceGuid.PcdFmpTegraVersion|0x0|UINT32|0x0000005C
   gNVIDIATokenSpaceGuid.PcdOsIndicationsAvailable|TRUE|BOOLEAN|0x0000005D

@@ -23,6 +23,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Library/VerPartitionLib.h>
 #include <Protocol/EFuse.h>
 #include <Protocol/FirmwareManagementProgress.h>
 #include <Protocol/FwImageProtocol.h>
@@ -91,6 +92,7 @@ STATIC BOOLEAN          mIsProductionFused          = FALSE;
 STATIC UINT32           mActiveBootChain            = MAX_UINT32;
 STATIC UINT32           mTegraVersion               = 0;
 STATIC CHAR16           *mTegraVersionString        = NULL;
+STATIC EFI_STATUS       mTegraVersionStatus         = EFI_UNSUPPORTED;
 
 STATIC NVIDIA_BR_BCT_UPDATE_PROTOCOL    *mBrBctUpdateProtocol   = NULL;
 STATIC EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS mProgress  = NULL;
@@ -129,11 +131,80 @@ GetVersionInfo (
   VOID
   )
 {
+  EFI_STATUS                Status;
+  CHAR8                     *VerStr;
+  UINTN                     VerStrSize;
+  NVIDIA_FW_IMAGE_PROTOCOL  *Image;
+  FW_IMAGE_ATTRIBUTES       Attributes;
+  UINTN                     BufferSize;
 
-  mTegraVersionString   = (CHAR16 *) PcdGetPtr (PcdFirmwareVersionString);
-  mTegraVersion         = PcdGet32 (PcdFmpTegraVersion);
+  VerStr = NULL;
+  Image = FwImageFindProtocol (VER_PARTITION_NAME);
+  if (Image == NULL) {
+    Status = EFI_NOT_FOUND;
+    goto Done;
+  }
 
-  return EFI_SUCCESS;
+  Status = Image->GetAttributes (Image, &Attributes);
+  if (EFI_ERROR (Status)) {
+    goto Done;
+  }
+
+  BufferSize = MIN (Attributes.Bytes, mFmpDataBufferSize);
+  Status = Image->Read (Image,
+                        0,
+                        BufferSize,
+                        mFmpDataBuffer,
+                        FW_IMAGE_RW_FLAG_NONE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: VER read failed: %r\n",
+            __FUNCTION__, Status));
+    goto Done;
+  }
+  ((CHAR8 *) mFmpDataBuffer)[BufferSize - 1] = '\0';
+
+  Status = VerPartitionGetVersion (mFmpDataBuffer, BufferSize, &mTegraVersion, &VerStr);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to parse version info: %r\n",
+            __FUNCTION__, Status));
+    goto Done;
+  }
+
+  VerStrSize = AsciiStrSize (VerStr);
+  mTegraVersionString = (CHAR16 *)
+    AllocateRuntimeZeroPool (VerStrSize * sizeof (CHAR16));
+  if (mTegraVersionString == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Done;
+  }
+
+  Status = AsciiStrToUnicodeStrS (VerStr,
+                                  mTegraVersionString,
+                                  VerStrSize);
+  if (EFI_ERROR (Status)) {
+    goto Done;
+  }
+
+  mTegraVersionStatus = Status;
+
+Done:
+  if (VerStr != NULL) {
+    FreePool (VerStr);
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Version=0x%x, Str=(%s), Status=%r\n",
+          __FUNCTION__, mTegraVersion, mTegraVersionString, Status));
+
+  if (EFI_ERROR (Status)) {
+    if (mTegraVersionString != NULL) {
+      FreePool (mTegraVersionString);
+      mTegraVersionString = NULL;
+    }
+    mTegraVersion = 0;
+    mTegraVersionStatus = EFI_UNSUPPORTED;
+  }
+
+  return mTegraVersionStatus;
 }
 
 /**
@@ -844,6 +915,10 @@ FmpTegraGetVersion (
   OUT CHAR16        **VersionString
   )
 {
+  if (EFI_ERROR (mTegraVersionStatus)) {
+    return mTegraVersionStatus;
+  }
+
   if (Version != NULL) {
     *Version = mTegraVersion;
   }
@@ -851,7 +926,7 @@ FmpTegraGetVersion (
   if (VersionString != NULL) {
     UINTN   VersionStringSize;
 
-    // version string must be in allocated pool memory
+    // version string must be in allocated pool memory that caller frees
     VersionStringSize = StrSize (mTegraVersionString) * sizeof (CHAR16);
     *VersionString = (CHAR16 *) AllocateRuntimeCopyPool (VersionStringSize,
                                                          mTegraVersionString);
@@ -859,9 +934,6 @@ FmpTegraGetVersion (
       return EFI_OUT_OF_RESOURCES;
     }
   }
-
-  DEBUG ((DEBUG_INFO, "%a: Version=0x%x, Str=%s\n",
-          __FUNCTION__, mTegraVersion, mTegraVersionString));
 
   return EFI_SUCCESS;
 }

@@ -1,0 +1,27 @@
+## @file
+#
+#  VerPartitionLib - VER partition library
+#
+#  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = VerPartitionLib
+  FILE_GUID                      = db1e9b21-9a9c-4519-8961-8a274825614d
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = VerPartitionLib
+
+[Sources.common]
+  VerPartitionLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib

@@ -46,6 +46,7 @@
   PcdLib
   PlatformResourceLib
   HobLib
+  VerPartitionLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
@@ -55,7 +56,6 @@
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting
   gNVIDIATokenSpaceGuid.PcdFmpWriteVerifyImage
   gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate
-  gNVIDIATokenSpaceGuid.PcdFmpTegraVersion
 
 [Protocols]
   gNVIDIABrBctUpdateProtocolGuid            ## CONSUMES
