@@ -76,7 +76,6 @@
 [Pcd]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
-  gNVIDIATokenSpaceGuid.PcdOsIndicationsAvailable
 
 [Guids]
   gEfiFileInfoGuid
@@ -88,6 +87,7 @@
   gUefiShellFileGuid
   gNVIDIAPublicVariableGuid
   gNVIDIATokenSpaceGuid
+  gEfiRtPropertiesTableGuid
 
 [Protocols]
   gEfiDevicePathProtocolGuid

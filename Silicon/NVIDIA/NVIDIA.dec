@@ -247,7 +247,7 @@
   gNVIDIATokenSpaceGuid.PcdBootROMRegisterBaseAddressT194|0x0C390568|UINT64|0x00000061
 
 # Tegra BootLoader Selection Register Address T194
-  gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT194|0x0C390418|UINT64|0x00000062
+  gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT194|0x0C390418|UINT64|0x0000005D
 
 # Name of kernel GPT partition
   gNVIDIATokenSpaceGuid.PcdKernelPartitionName|L"kernel"|VOID*|0x0000003F
@@ -384,7 +384,6 @@
 #Fmp options
   gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate|FALSE|BOOLEAN|0x0000005A
   gNVIDIATokenSpaceGuid.PcdFmpWriteVerifyImage|TRUE|BOOLEAN|0x0000005B
-  gNVIDIATokenSpaceGuid.PcdOsIndicationsAvailable|TRUE|BOOLEAN|0x0000005D
 
 #MPIDR generation
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE|BOOLEAN|0x00000060
