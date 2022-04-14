@@ -67,7 +67,6 @@
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x8000
-  gNVIDIATokenSpaceGuid.PcdOsIndicationsAvailable|FALSE
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|TRUE
   gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
   # SMBIOS for T194
