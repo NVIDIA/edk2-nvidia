@@ -521,6 +521,8 @@ FwImageDxeInitialize (
   NVIDIA_FW_PARTITION_PROTOCOL  **ProtocolBuffer;
   VOID                          *Hob;
 
+  ProtocolBuffer = NULL;
+
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   if ((Hob != NULL) &&
       (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
