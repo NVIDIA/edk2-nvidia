@@ -43,6 +43,10 @@ ReadBoardInfo (
   if ((Hob != NULL) &&
     (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
     TegraBoardInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->BoardInfo;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: No board info hob found\r\n", __FUNCTION__));
+    ASSERT (FALSE);
+    return EFI_DEVICE_ERROR;
   }
 
   BoardInfo->FuseBaseAddr = TegraBoardInfo->FuseBaseAddr;
