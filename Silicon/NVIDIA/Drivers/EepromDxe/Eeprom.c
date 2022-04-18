@@ -592,7 +592,7 @@ InitializeEepromDxe (
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     if ((EepromData == NULL) || EepromData->CvmEepromDataSize == 0 ||
         EFI_ERROR (ValidateEepromData (EepromData->CvmEepromData, FALSE, FALSE))) {
-      DEBUG ((DEBUG_ERROR, "Cvm Eeprom data validation failed(%r)\r\n", Status));
+      DEBUG ((DEBUG_ERROR, "Cvm Eeprom data validation failed\r\n"));
       ValidCvmEepromData = FALSE;
     } else {
       CvmBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_EEPROM_BOARD_INFO));
