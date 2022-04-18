@@ -1066,7 +1066,7 @@ TegraI2CDriverBindingStart (
           goto ErrorExit;
         }
         Count++;
-        DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, I2cBusHandle));
+        DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx.\n", __FUNCTION__, I2cAddress));
       }
     }
     if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
