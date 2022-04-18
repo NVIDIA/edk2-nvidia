@@ -798,6 +798,8 @@ VerifyDetachedCertificateFile (
   EFI_PKCS7_VERIFY_PROTOCOL *PkcsVerifyProtocol;
   UINTN NewFileNameSize;
 
+  FileSigHandle = NULL;
+
   GetVariable2 (EFI_SECURE_BOOT_ENABLE_NAME, &gEfiSecureBootEnableDisableGuid,
                 (VOID**)&SecureBootEnabled, NULL);
   if (SecureBootEnabled && (*SecureBootEnabled == SECURE_BOOT_ENABLE)) {
