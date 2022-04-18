@@ -255,6 +255,22 @@ InstallSystemResources (
     return EFI_DEVICE_ERROR;
   }
 
+  PlatformInfo->InputDramRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * PlatformInfo->DramRegionsCount);
+  ASSERT (PlatformInfo->InputDramRegions != NULL);
+  if (PlatformInfo->InputDramRegions == NULL) {
+    return EFI_DEVICE_ERROR;
+  }
+  CopyMem (PlatformInfo->InputDramRegions, PlatformInfo->DramRegions,
+           sizeof (NVDA_MEMORY_REGION) * PlatformInfo->DramRegionsCount);
+
+  PlatformInfo->InputCarveoutRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * PlatformInfo->CarveoutRegionsCount);
+  ASSERT (PlatformInfo->InputCarveoutRegions != NULL);
+  if (PlatformInfo->InputCarveoutRegions == NULL) {
+    return EFI_DEVICE_ERROR;
+  }
+  CopyMem (PlatformInfo->InputCarveoutRegions, PlatformInfo->CarveoutRegions,
+           sizeof (NVDA_MEMORY_REGION) * PlatformInfo->CarveoutRegionsCount);
+
   AlignCarveoutRegions64KiB(PlatformInfo->CarveoutRegions, PlatformInfo->CarveoutRegionsCount);
 
   FinalDramRegionsCount = 0;
