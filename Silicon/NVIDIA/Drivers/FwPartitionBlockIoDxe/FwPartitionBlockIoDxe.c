@@ -78,7 +78,6 @@ FPBlockIoErase (
   BlockIo       = BlockIoInfo->BlockIo;
 
   if (((Offset % BlockIo->Media->BlockSize) != 0) ||
-      (ALIGN_POINTER (Buffer, BlockIo->Media->IoAlign) != Buffer) ||
       (Bytes % BlockIo->Media->BlockSize) != 0) {
     return EFI_INVALID_PARAMETER;
   }
