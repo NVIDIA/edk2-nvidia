@@ -230,6 +230,7 @@ CheckAndRemapCpu (
       *DtCpuFormat = "cpu@%u";
       break;
     default:
+      Status = EFI_UNSUPPORTED;
       ASSERT (FALSE);
       *Mpidr = 0;
       break;
