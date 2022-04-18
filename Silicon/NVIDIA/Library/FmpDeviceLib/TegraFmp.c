@@ -1249,6 +1249,7 @@ FmpDeviceLibConstructor (
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Error getting active boot chain\n",
             __FUNCTION__));
+    Status = EFI_NOT_FOUND;
     goto Done;
   }
 
