@@ -1673,7 +1673,7 @@ InitializePlatformRepository ()
   }
 
   //Don't generate error if fan patching fails
-  UpdateFanInfo (&Repo);
+  UpdateFanInfo ();
 
   ASSERT ((UINTN)Repo <= (UINTN)RepoEnd);
 
