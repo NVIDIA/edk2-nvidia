@@ -32,8 +32,6 @@
 #define PLATFORM_MAX_SOCKETS            (PcdGet32 (PcdTegraMaxSockets))
 #define PLATFORM_CPUS_PER_SOCKET        (PLATFORM_MAX_CPUS / PLATFORM_MAX_SOCKETS)
 
-#define ITSID_FROM_PHYS_ADDR(phys) (((phys) >> 40) & 0x3)
-
 // GiC variable
 CM_ARM_GICC_INFO                  *GicCInfo;
 
@@ -155,7 +153,10 @@ UpdateGicItsInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo, CHAR8
     }
 
     GicItsInfo[Index].PhysicalBaseAddress = RegisterData[0].BaseAddress;
-    GicItsInfo[Index].GicItsId = ITSID_FROM_PHYS_ADDR (RegisterData[0].BaseAddress);
+    GicItsInfo[Index].GicItsId = Index;
+
+    //Assign socket number
+    GicItsInfo[Index].ProximityDomain = Index;
 
     NumberOfItsEntries++;
   }
@@ -357,11 +358,7 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     GicCInfo[EnabledCoreCntr].ParkingProtocolVersion = 0;
     GicCInfo[EnabledCoreCntr].PerformanceInterruptGsiv = PmuBaseInterrupt;
     GicCInfo[EnabledCoreCntr].ParkedAddress = 0;
-
-    if (GicInfo->Version < 3) {
-      // Getting socket-wise info
-      GicCInfo[EnabledCoreCntr].PhysicalBaseAddress = GicRedistInfo[CoreIndex/PLATFORM_CPUS_PER_SOCKET].DiscoveryRangeBaseAddress;
-    }
+    GicCInfo[EnabledCoreCntr].PhysicalBaseAddress = GicRedistInfo[CoreIndex/PLATFORM_CPUS_PER_SOCKET].DiscoveryRangeBaseAddress;
 
     if (GicInfo->Version < 3) {
       // GICV and GICH for v2
@@ -382,7 +379,9 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     // TODO: check for compat string "arm,statistical-profiling-extension-v1"
     GicCInfo[EnabledCoreCntr].SpeOverflowInterrupt = 0;
 
-    GicCInfo[EnabledCoreCntr].ProximityDomain = 0;
+    // Obtain SocketID
+    GicCInfo[EnabledCoreCntr].ProximityDomain = CoreIndex/PLATFORM_CPUS_PER_SOCKET;
+
     GicCInfo[EnabledCoreCntr].ClockDomain = 0;
     GicCInfo[EnabledCoreCntr].AffinityFlags = EFI_ACPI_6_3_GICC_ENABLED;
 
