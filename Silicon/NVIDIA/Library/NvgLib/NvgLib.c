@@ -19,7 +19,7 @@
   asm volatile ("mrs %0, "#reg : "=r"(var) : : "memory", "cc"); \
 } while (FALSE)
 
-static inline void WriteNvgChannelIdx(UINT32 Channel)
+static inline void WriteNvgChannelIdx(UINT64 Channel)
 {
   asm volatile ("msr s3_0_c15_c1_2, %0" : : "r"(Channel) : "memory", "cc");
 }
