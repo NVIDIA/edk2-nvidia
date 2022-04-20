@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -27,9 +27,12 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 _msg "Activating Python virtual environment."
 . venv/bin/activate
 
+if [[ -z "${UEFI_RELEASE_ONLY}" ]]; then
+  _msg "Building DEBUG ($PLATFORM_BUILD)."
+  stuart_build -c $PLATFORM_BUILD --verbose --target DEBUG
+fi
 
-_msg "Building DEBUG ($PLATFORM_BUILD)."
-stuart_build -c $PLATFORM_BUILD --verbose --target DEBUG
-
-_msg "Building RELEASE ($PLATFORM_BUILD)."
-stuart_build -c $PLATFORM_BUILD --verbose --target RELEASE
+if [[ -z "${UEFI_DEBUG_ONLY}" ]]; then
+  _msg "Building RELEASE ($PLATFORM_BUILD)."
+  stuart_build -c $PLATFORM_BUILD --verbose --target RELEASE
+fi
