@@ -88,15 +88,6 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
-  // PPTT Table
-  {
-    EFI_ACPI_6_3_PROCESSOR_PROPERTIES_TOPOLOGY_TABLE_STRUCTURE_SIGNATURE,
-    EFI_ACPI_6_3_PROCESSOR_PROPERTIES_TOPOLOGY_TABLE_REVISION,
-    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdPptt),
-    NULL,
-    0,
-    FixedPcdGet64(PcdAcpiDefaultOemRevision),
-  },
   // SSDT Table - Cpu Topology
   {
     EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
