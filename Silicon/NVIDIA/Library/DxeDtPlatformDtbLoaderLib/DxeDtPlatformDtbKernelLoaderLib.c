@@ -14,9 +14,7 @@
 #include <Library/HobLib.h>
 #include <Library/DebugLib.h>
 #include <Library/UefiLib.h>
-#include <libfdt.h>
-#include "FloorSweepPrivate.h"
-
+#include <Library/FloorSweepingLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
@@ -27,6 +25,7 @@
 #include <Protocol/BlockIo.h>
 #include <Protocol/Eeprom.h>
 #include <IndustryStandard/ArmStdSmc.h>
+#include <libfdt.h>
 
 #define TRUSTY_OS_UID0          0xf025ee40
 #define TRUSTY_OS_UID1          0x4c30bca2

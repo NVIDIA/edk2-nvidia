@@ -66,7 +66,6 @@
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
-  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x8000
   gNVIDIATokenSpaceGuid.PcdOsIndicationsAvailable|FALSE
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|TRUE
@@ -114,7 +113,6 @@
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
-  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|TRUE
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x10000
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
 

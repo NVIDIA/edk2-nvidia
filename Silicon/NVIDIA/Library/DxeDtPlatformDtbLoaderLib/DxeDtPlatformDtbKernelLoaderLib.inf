@@ -17,7 +17,6 @@
 
 [Sources]
   DxeDtPlatformDtbKernelLoaderLib.c
-  FloorSweep.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -52,7 +51,6 @@
   gEfiEventReadyToBootGuid
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus
   gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
