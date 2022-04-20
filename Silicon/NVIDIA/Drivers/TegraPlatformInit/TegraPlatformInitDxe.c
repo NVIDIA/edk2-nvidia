@@ -21,6 +21,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/FloorSweepingLib.h>
 #include <libfdt.h>
 
 STATIC
@@ -309,6 +310,12 @@ TegraPlatformInitialize (
 
   // Set Pcds
   SetGicInfoPcdsFromDtb (ChipID);
+
+  Status = UpdateCpuFloorsweepingConfig (DtbBase);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "DTB cpu floorsweeping failed.\n"));
+    return Status;
+  }
 
   return EFI_SUCCESS;
 }

@@ -278,9 +278,6 @@
 #Force disable SDR104 in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|FALSE|BOOLEAN|0x0000000E
 
-# Default state of floor sweeping
-  gNVIDIATokenSpaceGuid.PcdFloorsweepCpus|FALSE|BOOLEAN|0x00000015
-
 #Explicit PCIe Controller Enable
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|FALSE|BOOLEAN|0x00000017
 

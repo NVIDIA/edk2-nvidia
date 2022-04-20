@@ -98,4 +98,14 @@ GetNumberOfEnabledCpuCores (
   VOID
 );
 
+/**
+  Floorsweep CPUs in DTB
+
+**/
+EFI_STATUS
+EFIAPI
+UpdateCpuFloorsweepingConfig (
+  IN VOID *Dtb
+);
+
 #endif //__FLOOR_SWEEPING_LIB_H__
