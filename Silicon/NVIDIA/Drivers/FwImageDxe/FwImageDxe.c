@@ -604,6 +604,11 @@ FwImageDxeInitialize (
                                                     ProtocolBuffer,
                                                     NumHandles,
                                                     BOOT_CHAIN_B);
+      if (Private->FwPartitionB == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: missing B partition for %s\n", __FUNCTION__, Name));
+        Status = EFI_UNSUPPORTED;
+        goto Done;
+      }
     }
     Status = FwImageGetPartitionAttributes (Private);
     if (EFI_ERROR (Status)) {

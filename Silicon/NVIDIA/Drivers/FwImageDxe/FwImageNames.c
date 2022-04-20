@@ -29,6 +29,7 @@ STATIC CONST CHAR16 *SystemFwImageNamesCommon[] = {
   L"secure-os",
   L"spe-fw",
   L"VER",
+  L"xusb-fw",
   NULL
 };
 
@@ -36,14 +37,18 @@ STATIC CONST CHAR16 *SystemFwImageNamesT194[] = {
   L"bootloader-dtb",
   L"mts-preboot",
   L"mts-proper",
+  L"sce-fw",
   NULL
 };
 
 STATIC CONST CHAR16 *SystemFwImageNamesT234[] = {
   L"dce-fw",
+  L"mb2rf",
   L"nvdec",
   L"psc_bl1",
   L"psc-fw",
+  L"pscrf",
+  L"smm-fw",
   L"tsec-fw",
   NULL
 };
