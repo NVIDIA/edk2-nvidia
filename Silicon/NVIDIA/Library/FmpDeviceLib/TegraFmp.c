@@ -73,6 +73,12 @@ STATIC CONST CHAR16 *SpecialImageNames[] = {
   NULL
 };
 
+// optional images are only updated if present in capsule
+STATIC CONST CHAR16 *OptionalImageNames[] = {
+  L"sce-fw",
+  NULL
+};
+
 // progress tracking variables
 STATIC UINTN        mTotalBytesToFlash      = 0;
 STATIC UINTN        mTotalBytesFlashed      = 0;
@@ -512,6 +518,10 @@ WriteRegularImages (
                                      mIsProductionFused,
                                      &PkgImageIndex);
     if (EFI_ERROR (Status)) {
+      if (NameIsInList (ImageName, OptionalImageNames)) {
+        continue;
+      }
+
       DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", ImageName, Status));
       return Status;
     }
@@ -668,6 +678,10 @@ VerifyAllImages (
                                      mIsProductionFused,
                                      &PkgImageIndex);
     if (EFI_ERROR (Status)) {
+      if (NameIsInList (ImageName, OptionalImageNames)) {
+        continue;
+      }
+
       DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", ImageName, Status));
       return Status;
     }
@@ -1039,6 +1053,11 @@ FmpTegraCheckImage (
                                      mIsProductionFused,
                                      &PkgImageIndex);
     if (EFI_ERROR (Status)) {
+      if (NameIsInList (ImageName, OptionalImageNames)) {
+        DEBUG ((DEBUG_INFO, "optional %s not in package: %r\n", ImageName, Status));
+        continue;
+      }
+
       DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", ImageName, Status));
       *ImageUpdatable = IMAGE_UPDATABLE_INVALID;
       *LastAttemptStatus = LAS_ERROR_IMAGE_NOT_IN_PACKAGE;
