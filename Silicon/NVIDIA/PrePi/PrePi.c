@@ -19,7 +19,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/GoldenRegisterLib.h>
 #include <Library/SystemResourceLib.h>
-
+#include <Library/DtPlatformDtbLoaderLib.h>
 
 #include <Ppi/GuidedSectionExtraction.h>
 #include <Ppi/SecPerformance.h>
@@ -169,6 +169,36 @@ DisplayHobResource ( VOID )
       return;
     }
     NextHob.Raw = GET_NEXT_HOB (NextHob);
+  }
+}
+
+VOID
+PrintModel ( VOID )
+{
+  EFI_STATUS             Status;
+  VOID                   *Dtb;
+  UINTN                  DtbSize;
+  INT32                  NumProperty;
+  UINT32                 Count;
+  CHAR8                  *Data;
+  INT32                  Length;
+
+  Status = DtPlatformLoadDtb (&Dtb, &DtbSize);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  NumProperty = fdt_stringlist_count (Dtb, 0, "model");
+  if (NumProperty <= 0) {
+    return;
+  }
+
+  for (Count = 0; Count < NumProperty; Count++) {
+    Data = (CHAR8 *)fdt_stringlist_get (Dtb, 0, "model", Count, &Length);
+    if (Length <= 0) {
+      return;
+    }
+    DEBUG ((EFI_D_ERROR, "Model: %a\n", Data));
   }
 }
 
@@ -383,6 +413,9 @@ CEntryPoint (
 
   // Register UEFI DTB
   RegisterDeviceTree(DtbBase);
+
+  // Print platform model info from UEFI DTB
+  PrintModel ();
 
   if (FeaturePcdGet (PcdPrePiProduceMemoryTypeInformationHob)) {
     // Optional feature that helps prevent EFI memory map fragmentation.
