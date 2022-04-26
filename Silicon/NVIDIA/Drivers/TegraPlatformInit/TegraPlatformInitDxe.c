@@ -311,9 +311,9 @@ TegraPlatformInitialize (
   // Set Pcds
   SetGicInfoPcdsFromDtb (ChipID);
 
-  Status = UpdateCpuFloorsweepingConfig (DtbBase);
+  Status = FloorSweepDtb (DtbBase);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "DTB cpu floorsweeping failed.\n"));
+    DEBUG ((EFI_D_ERROR, "DTB floorsweeping failed.\n"));
     return Status;
   }
 

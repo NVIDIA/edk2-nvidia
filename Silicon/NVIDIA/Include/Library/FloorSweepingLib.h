@@ -99,12 +99,12 @@ GetNumberOfEnabledCpuCores (
 );
 
 /**
-  Floorsweep CPUs in DTB
+  Floorsweep DTB
 
 **/
 EFI_STATUS
 EFIAPI
-UpdateCpuFloorsweepingConfig (
+FloorSweepDtb (
   IN VOID *Dtb
 );
 

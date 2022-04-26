@@ -238,7 +238,7 @@ UpdateFdt (
     fdt_del_node (Dtb, NodeOffset);
   }
 
-  UpdateCpuFloorsweepingConfig (Dtb);
+  FloorSweepDtb (Dtb);
   RemoveQspiNodes (Dtb);
   AddBoardProperties (Dtb);
   if (IsOpteePresent ()) {
