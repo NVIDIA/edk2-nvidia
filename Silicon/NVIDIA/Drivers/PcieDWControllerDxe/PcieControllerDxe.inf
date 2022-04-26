@@ -67,6 +67,7 @@
 [Guids]
   gNVIDIANonDiscoverableT194PcieDeviceGuid
   gNVIDIANonDiscoverableT234PcieDeviceGuid
+  gNVIDIAKernelCmdLineUpdateGuid
   gEfiEventExitBootServicesGuid
   gEfiAcpiTableGuid
   gFdtTableGuid
