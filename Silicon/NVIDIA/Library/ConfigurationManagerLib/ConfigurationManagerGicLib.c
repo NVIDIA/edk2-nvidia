@@ -358,13 +358,9 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     GicCInfo[EnabledCoreCntr].ParkingProtocolVersion = 0;
     GicCInfo[EnabledCoreCntr].PerformanceInterruptGsiv = PmuBaseInterrupt;
     GicCInfo[EnabledCoreCntr].ParkedAddress = 0;
-    GicCInfo[EnabledCoreCntr].PhysicalBaseAddress = GicRedistInfo[CoreIndex/PLATFORM_CPUS_PER_SOCKET].DiscoveryRangeBaseAddress;
 
     if (GicInfo->Version < 3) {
-      // GICV and GICH for v2
-      // TODO: Get socket-wise info
-      GicCInfo[EnabledCoreCntr].GICV = 0;
-      GicCInfo[EnabledCoreCntr].GICH = 0;
+      GicCInfo[EnabledCoreCntr].PhysicalBaseAddress = GicRedistInfo[CoreIndex/PLATFORM_CPUS_PER_SOCKET].DiscoveryRangeBaseAddress;
     }
 
     // VGIC info
