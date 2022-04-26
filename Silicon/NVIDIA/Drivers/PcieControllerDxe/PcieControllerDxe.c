@@ -26,6 +26,7 @@
 #include <Library/UefiLib.h>
 
 #include <Protocol/BpmpIpc.h>
+#include <Protocol/KernelCmdLineUpdate.h>
 #include <Protocol/PciHostBridgeResourceAllocation.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <Protocol/PciRootBridgeIo.h>
@@ -91,6 +92,18 @@ STATIC ACPI_HID_DEVICE_PATH  mPciRootBridgeDevicePathNode = {
   },
   EISA_PNP_ID (0x0A03), // PCI
   0
+};
+
+/* Extra command-line arguments passed to the kernel when EFIFB
+   support is enabled.
+
+   They are required to prevent the kernel from cutting power and
+   clocks to the PCIe controller, since it cannot know the connected
+   dGPU is being used to back the EFI framebuffer.
+*/
+STATIC CONST NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL  mEfifbSupportKernelCmdLineUpdateProtocol = {
+  .ExistingCommandLineArgument = NULL,
+  .NewCommandLineArgument      = L"clk_ignore_unused pd_ignore_unused console=tty0",
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
@@ -1873,11 +1886,12 @@ UpdatePcieControllersWithGpuDevice (
   IN VOID *CONST  Fdt
   )
 {
-  EFI_STATUS               Status;
-  EFI_HANDLE               *Handles = NULL;
-  UINTN                    HandleIndex, HandleCount;
-  PCIE_CONTROLLER_PRIVATE  *Private;
-  INT32                    NodeOffset;
+  EFI_STATUS                                    Status;
+  EFI_HANDLE                                    *Handles = NULL;
+  UINTN                                         HandleIndex, HandleCount;
+  PCIE_CONTROLLER_PRIVATE                       *Private;
+  INT32                                         NodeOffset;
+  CONST NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL  *KernelCmdLineUpdateProtocol;
 
   Status = gBS->LocateHandleBuffer (
                   ByProtocol,
@@ -1895,6 +1909,8 @@ UpdatePcieControllersWithGpuDevice (
       ));
     goto Exit;
   }
+
+  KernelCmdLineUpdateProtocol = NULL;
 
   for (HandleIndex = 0; HandleIndex < HandleCount; ++HandleIndex) {
     Status = GetParentPcieControllerPrivate (Handles[HandleIndex], &Private);
@@ -1920,6 +1936,28 @@ UpdatePcieControllersWithGpuDevice (
       }
 
       Private->ExitBootServicesEvent = NULL;
+    }
+
+    KernelCmdLineUpdateProtocol = &mEfifbSupportKernelCmdLineUpdateProtocol;
+  }
+
+  if (KernelCmdLineUpdateProtocol != NULL) {
+    /* Update the kernel command line. Ignore the "protocol already
+       installed" error since UpdatePcieControllersWithGpuDevice can
+       be called repeatedly with different Device Trees. */
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &gImageHandle,
+                    &gNVIDIAKernelCmdLineUpdateGuid,
+                    (VOID **)KernelCmdLineUpdateProtocol,
+                    NULL
+                    );
+    if (EFI_ERROR (Status) && (Status != EFI_INVALID_PARAMETER)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to install the kernel command-line update protocol: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
     }
   }
 
