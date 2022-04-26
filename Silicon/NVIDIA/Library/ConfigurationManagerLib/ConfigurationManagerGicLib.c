@@ -370,9 +370,6 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     // VGIC info
     GicCInfo[EnabledCoreCntr].VGICMaintenanceInterrupt = PcdGet32 (PcdArmArchVirtMaintenanceIntrNum);
 
-    if (GicInfo->Version >= 3) {
-      GicCInfo[EnabledCoreCntr].GICRBaseAddress = GicRedistInfo[CoreIndex/PLATFORM_CPUS_PER_SOCKET].DiscoveryRangeBaseAddress;
-    }
     GicCInfo[EnabledCoreCntr].MPIDR = MpIdr & 0xFFFFFF;
     GicCInfo[EnabledCoreCntr].ProcessorPowerEfficiencyClass = 0;
 
