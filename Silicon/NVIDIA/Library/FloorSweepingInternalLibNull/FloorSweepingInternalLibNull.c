@@ -22,3 +22,17 @@ GetCpuInfoInternal (
 {
   return FALSE;
 }
+
+/**
+  Floorsweep DTB
+
+**/
+BOOLEAN
+EFIAPI
+FloorSweepDtbInternal (
+  IN  UINTN     EnabledSockets,
+  IN  VOID      *Dtb
+  )
+{
+  return FALSE;
+}

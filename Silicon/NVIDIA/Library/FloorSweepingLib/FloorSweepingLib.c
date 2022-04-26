@@ -451,3 +451,26 @@ UpdateCpuFloorsweepingConfig (
 
   return EFI_SUCCESS;
 }
+
+/**
+  Floorsweep DTB
+
+**/
+EFI_STATUS
+EFIAPI
+FloorSweepDtb (
+  IN VOID *Dtb
+  )
+{
+  BOOLEAN               ValidPrivatePlatform;
+  PLATFORM_CPU_INFO     *Info;
+
+  Info = FloorSweepCpuInfo ();
+
+  ValidPrivatePlatform = FloorSweepDtbInternal (Info->EnabledSockets, Dtb);
+  if (ValidPrivatePlatform) {
+    return EFI_SUCCESS;
+  }
+
+  return UpdateCpuFloorsweepingConfig (Dtb);
+}

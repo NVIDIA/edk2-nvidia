@@ -9,6 +9,8 @@
 #ifndef __FLOOR_SWEEPING_INTERNAL_LIB_H__
 #define __FLOOR_SWEEPING_INTERNAL_LIB_H__
 
+#include <Uefi/UefiBaseType.h>
+
 /**
   Get CPU info for a platform
 
@@ -19,6 +21,17 @@ GetCpuInfoInternal (
   IN  UINTN     EnabledSockets,
   IN  UINTN     MaxSupportedCores,
   OUT UINT64    *EnabledCoresBitMap
+  );
+
+/**
+  Floorsweep DTB
+
+**/
+BOOLEAN
+EFIAPI
+FloorSweepDtbInternal (
+  IN  UINTN     EnabledSockets,
+  IN  VOID      *Dtb
   );
 
 #endif //__FLOOR_SWEEPING_INTERNAL_LIB_H__
