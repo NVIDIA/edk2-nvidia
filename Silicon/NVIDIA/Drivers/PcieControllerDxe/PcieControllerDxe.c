@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -30,6 +30,7 @@
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PinMux.h>
+#include <Protocol/PowerGateNodeProtocol.h>
 #include <Protocol/Regulator.h>
 #include <Protocol/TegraP2U.h>
 
@@ -94,7 +95,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = FALSE,
   .AutoDeassertReset               = FALSE,
-  .AutoDeassertPg                  = TRUE,
+  .AutoDeassertPg                  = FALSE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
   .DirectEnumerationSupport        = TRUE
 };
@@ -570,6 +571,55 @@ PcieConfigurationWrite (
 
 STATIC
 EFI_STATUS
+AssertPgNodes (
+  IN CONST EFI_HANDLE  ControllerHandle,
+  IN CONST BOOLEAN     Assert
+  )
+{
+  EFI_STATUS                       Status;
+  UINTN                            Index;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgProtocol;
+
+  Status = gBS->HandleProtocol (
+                  ControllerHandle,
+                  &gNVIDIAPowerGateNodeProtocolGuid,
+                  (VOID **)&PgProtocol
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      EFI_D_ERROR,
+      "%a: failed to retrieve powergate node protocol: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+    if (Assert) {
+      Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
+    } else {
+      Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
+    }
+
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        EFI_D_ERROR,
+        "%a: failed to %a powergate 0x%x: %r\r\n",
+        __FUNCTION__,
+        Assert ? "assert" : "deassert",
+        (UINTN)PgProtocol->PowerGateId[Index],
+        Status
+        ));
+      return Status;
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
 EFIAPI
 PrepareHost (
   PCIE_CONTROLLER_PRIVATE                    *Private,
@@ -856,6 +906,12 @@ InitializeController (
   NVIDIA_TEGRAP2U_PROTOCOL  *P2U         = NULL;
   CONST VOID                *Property    = NULL;
   INT32                     PropertySize = 0;
+
+  /* Deassert powergate nodes */
+  Status = AssertPgNodes (ControllerHandle, FALSE);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   /* Enable core clock */
   Count = sizeof (CoreClockNames)/sizeof (CoreClockNames[0]);
@@ -1335,6 +1391,12 @@ UninitializeController (
 
       DEBUG ((EFI_D_INFO, "Disabled Controller-%u through BPMP-FW\n", Private->CtrlId));
     }
+  }
+
+  /* Assert powergate nodes */
+  Status = AssertPgNodes (Private->ControllerHandle, TRUE);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   return EFI_SUCCESS;
