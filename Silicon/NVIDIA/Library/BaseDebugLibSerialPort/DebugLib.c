@@ -7,7 +7,7 @@
   being blocked.  This may occur if a key(s) are pressed in a terminal emulator
   used to monitor the DEBUG() and ASSERT() messages.
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -27,7 +27,7 @@
 //
 // Define the maximum debug and assert message length that this library supports
 //
-#define MAX_DEBUG_MESSAGE_LENGTH  0x100
+#define MAX_DEBUG_MESSAGE_LENGTH  0x200
 
 //
 // Declare reset required on assert bit for PcdDebugPropertyMask
