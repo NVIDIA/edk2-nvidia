@@ -763,6 +763,7 @@
   NetworkPkg/Dhcp4Dxe/Dhcp4Dxe.inf
   NetworkPkg/Ip4Dxe/Ip4Dxe.inf
   NetworkPkg/MnpDxe/MnpDxe.inf
+  NetworkPkg/SnpDxe/SnpDxe.inf
   NetworkPkg/VlanConfigDxe/VlanConfigDxe.inf
   NetworkPkg/Mtftp4Dxe/Mtftp4Dxe.inf
   NetworkPkg/TcpDxe/TcpDxe.inf
