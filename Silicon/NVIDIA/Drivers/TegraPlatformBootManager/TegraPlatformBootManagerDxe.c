@@ -592,9 +592,10 @@ RefreshAutoEnumeratedBootOptions (
       if ((TegraGetPlatform() == TEGRA_PLATFORM_SILICON) &&
           (ImgKernelArgs != NULL) &&
           (StrLen (ImgKernelArgs) != 0)) {
-        DEBUG ((DEBUG_INFO, "%a: Image Kernel Command Line: %s\n", __FUNCTION__, ImgKernelArgs));
+        DEBUG ((DEBUG_ERROR, "%a: Using Image Kernel Command Line\n", __FUNCTION__));
         InputKernelArgs = ImgKernelArgs;
       } else {
+        DEBUG ((DEBUG_ERROR, "%a: Using DTB Kernel Command Line\n", __FUNCTION__));
         Status = GetDtbCommandLine (&DtbKernelArgs);
         if (EFI_ERROR (Status)) {
           goto Error;
@@ -607,6 +608,9 @@ RefreshAutoEnumeratedBootOptions (
       if (EFI_ERROR (Status)) {
         goto Error;
       }
+
+      DEBUG ((DEBUG_ERROR, "%a: Cmdline: \n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%s", CmdLine));
 
       UpdatedLoadOption[Count].OptionalDataSize = CmdLen;
       gBS->FreePool (UpdatedLoadOption[Count].OptionalData);
