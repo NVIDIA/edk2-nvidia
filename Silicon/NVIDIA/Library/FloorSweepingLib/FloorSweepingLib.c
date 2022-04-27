@@ -227,8 +227,18 @@ CheckAndRemapCpu (
   OUT UINTN         *DtCpuId
   )
 {
+  BOOLEAN       ValidPrivatePlatform;
   UINTN         ChipId;
   EFI_STATUS    Status;
+
+  ValidPrivatePlatform = CheckAndRemapCpuInternal (LogicalCore,
+                                                   Mpidr,
+                                                   DtCpuFormat,
+                                                   DtCpuId,
+                                                   &Status);
+  if (ValidPrivatePlatform) {
+    return Status;
+  }
 
   ChipId = TegraGetChipID ();
 
@@ -316,6 +326,7 @@ GetNumberOfEnabledCpuCores (
 EFI_STATUS
 EFIAPI
 UpdateCpuFloorsweepingConfig (
+  IN INT32 CpusOffset,
   IN VOID *Dtb
 )
 {
@@ -331,22 +342,15 @@ UpdateCpuFloorsweepingConfig (
   UINT32 AddressCells;
   INT32 NodeOffset;
   INT32 PrevNodeOffset;
-  INT32 ParentOffset = 0;
 
-  ParentOffset = fdt_path_offset (Dtb, "/cpus");
-  if (ParentOffset < 0) {
-    DEBUG ((DEBUG_ERROR, "Failed to find cpus subnode\r\n"));
-    return EFI_DEVICE_ERROR;
-  }
-
-  AddressCells  = fdt_address_cells (Dtb, ParentOffset);
+  AddressCells  = fdt_address_cells (Dtb, CpusOffset);
 
   /* Update the correct MPIDR and enable the DT nodes of each enabled CPU;
    * disable the DT nodes of the floorswept cores.*/
   NodeOffset = 0;
   Cpu = 0;
   PrevNodeOffset = 0;
-  for (NodeOffset = fdt_first_subnode(Dtb, ParentOffset);
+  for (NodeOffset = fdt_first_subnode(Dtb, CpusOffset);
        NodeOffset > 0;
        NodeOffset = fdt_next_subnode(Dtb, PrevNodeOffset)) {
     CONST VOID  *Property;
@@ -412,7 +416,7 @@ UpdateCpuFloorsweepingConfig (
     Cpu++;
   }
 
-  CpuMapOffset = fdt_subnode_offset(Dtb, ParentOffset, "cpu-map");
+  CpuMapOffset = fdt_subnode_offset(Dtb, CpusOffset, "cpu-map");
 
   if (CpuMapOffset < 0) {
     DEBUG ((DEBUG_ERROR, "/cpus/cpu-map does not exist\r\n"));
@@ -465,6 +469,74 @@ UpdateCpuFloorsweepingConfig (
 }
 
 /**
+  Floorsweep global cpus
+
+**/
+EFI_STATUS
+EFIAPI
+FloorSweepGlobalCpus (
+  IN VOID *Dtb
+  )
+{
+  INT32                 CpusOffset;
+
+  CpusOffset = fdt_path_offset (Dtb, "/cpus");
+  if (CpusOffset < 0) {
+    DEBUG ((DEBUG_ERROR, "Failed to find /cpus node\n"));
+    return EFI_DEVICE_ERROR;
+  }
+
+  return UpdateCpuFloorsweepingConfig (CpusOffset, Dtb);
+}
+
+/**
+  Floorsweep sockets
+
+**/
+EFI_STATUS
+EFIAPI
+FloorSweepSockets (
+  IN  UINTN     EnabledSockets,
+  IN  VOID      *Dtb
+  )
+{
+  CHAR8                         SocketNodeStr[] = "/socket@xx";
+  UINT32                        NumSockets;
+  UINT32                        MaxSockets;
+  INT32                         NodeOffset;
+
+  NumSockets = 0;
+  MaxSockets = 0;
+
+  while (TRUE) {
+    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr),"/socket@%u", MaxSockets);
+    NodeOffset = fdt_path_offset (Dtb, SocketNodeStr);
+    if (NodeOffset < 0) {
+      break;
+    } else {
+      MaxSockets++;
+    }
+
+    ASSERT (MaxSockets < 100);      // enforce socket@xx string max
+  }
+
+  if (MaxSockets == 0) {
+    MaxSockets = 1;
+  }
+
+  for (UINT32 Count = EnabledSockets; Count < MaxSockets; Count++) {
+    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", Count);
+    NodeOffset = fdt_path_offset (Dtb, SocketNodeStr);
+    if (NodeOffset >= 0) {
+      DEBUG ((DEBUG_INFO, "Deleting socket@%u node\n", Count));
+      fdt_del_node (Dtb, NodeOffset);
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Floorsweep DTB
 
 **/
@@ -476,13 +548,28 @@ FloorSweepDtb (
 {
   BOOLEAN               ValidPrivatePlatform;
   PLATFORM_CPU_INFO     *Info;
+  UINTN                 ChipId;
+  EFI_STATUS            Status;
 
   Info = FloorSweepCpuInfo ();
+  FloorSweepSockets (Info->EnabledSockets, Dtb);
 
   ValidPrivatePlatform = FloorSweepDtbInternal (Info->EnabledSockets, Dtb);
   if (ValidPrivatePlatform) {
     return EFI_SUCCESS;
   }
 
-  return UpdateCpuFloorsweepingConfig (Dtb);
+  ChipId = TegraGetChipID ();
+
+  switch (ChipId) {
+    case T194_CHIP_ID:
+    case T234_CHIP_ID:
+      Status = FloorSweepGlobalCpus (Dtb);
+      break;
+    default:
+      Status = EFI_UNSUPPORTED;
+      break;
+  }
+
+  return Status;
 }

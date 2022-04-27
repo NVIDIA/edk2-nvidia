@@ -36,3 +36,16 @@ FloorSweepDtbInternal (
 {
   return FALSE;
 }
+
+BOOLEAN
+EFIAPI
+CheckAndRemapCpuInternal (
+  IN UINT32         LogicalCore,
+  IN OUT UINT64     *Mpidr,
+  OUT CONST CHAR8   **DtCpuFormat,
+  OUT UINTN         *DtCpuId,
+  OUT EFI_STATUS    *Status
+  )
+{
+  return FALSE;
+}
