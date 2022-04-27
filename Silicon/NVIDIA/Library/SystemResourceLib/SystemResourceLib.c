@@ -35,10 +35,6 @@ RegisterDeviceTree (
   EFI_STATUS                    Status;
   CHAR8                         SWModule[] = "uefi";
   INT32                         NodeOffset;
-  CHAR8                         SocketNodeStr[] = "/socket@9";
-  VOID                          *Hob;
-  UINT32                        NumSockets;
-  UINT32                        MaxSockets;
 
   //Register Device Tree
   if (0 != BlDtbLoadAddress) {
@@ -63,36 +59,6 @@ RegisterDeviceTree (
       NodeOffset = fdt_path_offset ((VOID *)DtbCopy, "/plugin-manager");
       if (NodeOffset >= 0) {
         fdt_del_node ((VOID *)DtbCopy, NodeOffset);
-      }
-
-      NumSockets = 0;
-      MaxSockets = 0;
-      Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-      if ((Hob != NULL) &&
-          (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
-        NumSockets = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->NumSockets;
-      }
-
-      while (TRUE) {
-        AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr),"/socket@%u", MaxSockets);
-        NodeOffset = fdt_path_offset ((VOID *)DtbCopy, SocketNodeStr);
-        if (NodeOffset < 0) {
-          break;
-        } else {
-          MaxSockets++;
-        }
-      }
-
-      if (MaxSockets == 0) {
-        MaxSockets = 1;
-      }
-
-      for (UINT32 Count = NumSockets; Count < MaxSockets; Count++) {
-        AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr),"/socket@%u", Count);
-        NodeOffset = fdt_path_offset ((VOID *)DtbCopy, SocketNodeStr);
-        if (NodeOffset >= 0) {
-          fdt_del_node ((VOID *)DtbCopy, NodeOffset);
-        }
       }
 
       DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
