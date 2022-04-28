@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,7 +12,6 @@
 
 
 from edk2nv.stuart import NVIDIASettingsManager, NVIDIAPlatformBuilder
-from edk2toolext.invocables.edk2_setup import RequiredSubmodule
 
 
 class JetsonSettingsManager(NVIDIASettingsManager):
