@@ -30,11 +30,11 @@ _msg "Activating Python virtual environment."
 STUART_BUILD_OPTIONS=${STUART_BUILD_OPTIONS:---verbose}
 
 if [[ -z "${UEFI_RELEASE_ONLY}" ]]; then
-  _msg "Building DEBUG ($PLATFORM_BUILD)."
+  _msg "Building DEBUG (${PLATFORM_BUILD})."
   stuart_build -c ${PLATFORM_BUILD} ${STUART_BUILD_OPTIONS} --target DEBUG
 fi
 
 if [[ -z "${UEFI_DEBUG_ONLY}" ]]; then
-  _msg "Building RELEASE ($PLATFORM_BUILD)."
+  _msg "Building RELEASE (${PLATFORM_BUILD})."
   stuart_build -c ${PLATFORM_BUILD} ${STUART_BUILD_OPTIONS} --target RELEASE
 fi
