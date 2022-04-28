@@ -252,7 +252,7 @@
   gNVIDIATokenSpaceGuid.PcdBootChainRegisterBaseAddressT234|0x0C3903CC|UINT64|0x0000003E
 
 # Tegra BootROM Selection Register Address T194
-  gNVIDIATokenSpaceGuid.PcdBootROMRegisterBaseAddressT194|0x0C390568|UINT64|0x00000061
+  gNVIDIATokenSpaceGuid.PcdBootROMRegisterBaseAddressT194|0x0C390568|UINT64|0x00000065
 
 # Tegra BootLoader Selection Register Address T194
   gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT194|0x0C390418|UINT64|0x0000005D
@@ -280,15 +280,15 @@
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting|0xf|UINT64|0x00000057
 
 #The maximum supported horizontal resolution of the framebuffer
-  gNVIDIATokenSpaceGuid.PcdFramebufferHorizontalResolution|0|UINT32|0x00000063
+  gNVIDIATokenSpaceGuid.PcdFramebufferHorizontalResolution|0|UINT32|0x00000061
 #The maximum supported vertical resolution of the framebuffer
-  gNVIDIATokenSpaceGuid.PcdFramebufferVerticalResolution|0|UINT32|0x00000064
+  gNVIDIATokenSpaceGuid.PcdFramebufferVerticalResolution|0|UINT32|0x00000062
 #The maximum supported number of bytes per a framebuffer pixel
-  gNVIDIATokenSpaceGuid.PcdFramebufferPixelSize|4|UINT8|0x00000065
+  gNVIDIATokenSpaceGuid.PcdFramebufferPixelSize|4|UINT8|0x00000063
 #Index of the PCI BAR register through which the framebuffer should be
 #accessible. The value of -1 (0xFF) means no framebuffer will be
 #allocated.
-  gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|0xFF|UINT8|0x00000066
+  gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|0xFF|UINT8|0x00000064
 
 [PcdsFeatureFlag]
 #OPTEE presence
