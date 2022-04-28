@@ -32,8 +32,19 @@
 #define TRUSTY_OS_UID2          0x73a14c8c
 #define TRUSTY_OS_UID3          0xf18a7dc5
 
+typedef struct {
+  CONST CHAR8 *Compatibility;
+} QSPI_COMPATIBILITY;
+
 EFI_EVENT FdtInstallEvent;
 EFI_EVENT ReadyToBootEvent;
+
+QSPI_COMPATIBILITY gQspiCompatibilityMap[] = {
+  { "nvidia,tegra186-qspi" },
+  { "nvidia,tegra194-qspi" },
+  { "nvidia,tegra23x-qspi" },
+  { NULL }
+};
 
 VOID
 EFIAPI
@@ -160,6 +171,34 @@ EnableOpteeNode (
 
 VOID
 EFIAPI
+RemoveQspiNodes (
+  IN VOID *Dtb
+  )
+{
+  QSPI_COMPATIBILITY *Map;
+  INT32              NodeOffset;
+
+  if (GetBootType () == TegrablBootRcm) {
+    return;
+  }
+
+  Map = gQspiCompatibilityMap;
+
+  while (Map->Compatibility != NULL) {
+    NodeOffset = fdt_node_offset_by_compatible(Dtb, 0, Map->Compatibility);
+    while (NodeOffset >= 0) {
+      if ((fdt_subnode_offset (Dtb, NodeOffset, "flash@0") >= 0) ||
+          (fdt_subnode_offset (Dtb, NodeOffset, "spiflash@0") >= 0)) {
+        fdt_del_node (Dtb, NodeOffset);
+      }
+      NodeOffset = fdt_node_offset_by_compatible(Dtb, NodeOffset, Map->Compatibility);
+    }
+    Map++;
+  }
+}
+
+VOID
+EFIAPI
 UpdateFdt (
     IN EFI_EVENT Event,
     IN VOID      *Context
@@ -200,6 +239,7 @@ UpdateFdt (
   }
 
   FloorSweepDtb (Dtb);
+  RemoveQspiNodes (Dtb);
   AddBoardProperties (Dtb);
   if (IsOpteePresent ()) {
     EnableOpteeNode (Dtb);
