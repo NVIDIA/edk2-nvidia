@@ -52,6 +52,7 @@
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
   gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
   gArmTokenSpaceGuid.PcdGicDistributorBase
   gArmTokenSpaceGuid.PcdGicRedistributorsBase
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
