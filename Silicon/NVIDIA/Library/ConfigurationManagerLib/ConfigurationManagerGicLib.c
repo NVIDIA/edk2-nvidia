@@ -366,7 +366,7 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     // VGIC info
     GicCInfo[EnabledCoreCntr].VGICMaintenanceInterrupt = PcdGet32 (PcdArmArchVirtMaintenanceIntrNum);
 
-    GicCInfo[EnabledCoreCntr].MPIDR = MpIdr & 0xFFFFFF;
+    GicCInfo[EnabledCoreCntr].MPIDR = MpIdr;
     GicCInfo[EnabledCoreCntr].ProcessorPowerEfficiencyClass = 0;
 
     // TODO: check for compat string "arm,statistical-profiling-extension-v1"
