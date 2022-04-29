@@ -77,6 +77,9 @@ typedef struct {
   BOOLEAN                                             IsT234;
   BOOLEAN                                             EnableSRNS;
   BOOLEAN                                             EnableExtREFCLK;
+  BOOLEAN                                             EnableGicV2m;
+  UINT64                                              GicBase;
+  UINT64                                              MsiBase;
 
   // Configuration data
   CM_ARM_PCI_CONFIG_SPACE_INFO                        ConfigSpaceInfo;
@@ -205,6 +208,13 @@ typedef struct {
 #define APPL_PCIE_MISC0_BASE                0x15c
 #define APPL_PCIE_MISC0_INT_SEGREGATION_EN  BIT1
 #define APPL_PCIE_MISC0_CFG_5G_MODE         BIT0
+
+#define APPL_SEC_EXTERNAL_MSI_ADDR_H  0x10100
+#define APPL_SEC_EXTERNAL_MSI_ADDR_L  0x10104
+#define APPL_SEC_INTERNAL_MSI_ADDR_H  0x10108
+#define APPL_SEC_INTERNAL_MSI_ADDR_L  0x1010c
+
+#define V2M_MSI_SETSPI_NS  0x040
 
 #define PCI_BASE_ADDRESS_0  0x10        /* 32 bits */
 #define PCI_BASE_ADDRESS_1  0x14        /* 32 bits */

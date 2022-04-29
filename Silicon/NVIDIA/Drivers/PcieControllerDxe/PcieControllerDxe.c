@@ -966,6 +966,18 @@ InitializeController (
     MmioWrite32 (Private->ApplSpace + APPL_ECAM_CONFIG_BASE, val);
   }
 
+  if (Private->EnableGicV2m) {
+    val = lower_32_bits (Private->GicBase + V2M_MSI_SETSPI_NS);
+    MmioWrite32 (Private->ApplSpace + APPL_SEC_EXTERNAL_MSI_ADDR_L, val);
+    val = upper_32_bits (Private->GicBase + V2M_MSI_SETSPI_NS);
+    MmioWrite32 (Private->ApplSpace + APPL_SEC_EXTERNAL_MSI_ADDR_H, val);
+
+    val = lower_32_bits (Private->MsiBase);
+    MmioWrite32 (Private->ApplSpace + APPL_SEC_INTERNAL_MSI_ADDR_L, val);
+    val = upper_32_bits (Private->MsiBase);
+    MmioWrite32 (Private->ApplSpace + APPL_SEC_INTERNAL_MSI_ADDR_H, val);
+  }
+
   /* Setup DBI region */
   MmioWrite32 (Private->ApplSpace + APPL_CFG_IATU_DMA_BASE_ADDR, Private->AtuBase & APPL_CFG_IATU_DMA_BASE_ADDR_MASK);
 
@@ -1315,6 +1327,113 @@ UninitializeController (
   return EFI_SUCCESS;
 }
 
+STATIC
+BOOLEAN
+ParseGicMsiBase (
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *CONST  DeviceTreeNode,
+  OUT       UINT64                           *CONST  GicBase,
+  OUT       UINT64                           *CONST  MsiBase
+  )
+{
+  CONST VOID  *Property;
+  INT32       PropertySize;
+  UINT32      MsiParentPhandle;
+  INTN        MsiParentOffset;
+
+  Property = fdt_getprop (
+               DeviceTreeNode->DeviceTreeBase,
+               DeviceTreeNode->NodeOffset,
+               "msi-parent",
+               &PropertySize
+               );
+  if (Property == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: cannot retrieve property 'msi-parent': %a\r\n",
+      __FUNCTION__,
+      fdt_strerror (PropertySize)
+      ));
+    return FALSE;
+  } else if (PropertySize != 2 * sizeof (UINT32)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: invalid size of property 'msi-parent': expected %u, got %d\r\n",
+      __FUNCTION__,
+      (UINTN)2 * sizeof (UINT32),
+      (INTN)PropertySize
+      ));
+    return FALSE;
+  }
+
+  MsiParentPhandle = SwapBytes32 (*(UINT32 *)Property);
+
+  MsiParentOffset = fdt_node_offset_by_phandle (
+                      DeviceTreeNode->DeviceTreeBase,
+                      MsiParentPhandle
+                      );
+  if (MsiParentOffset < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to locate GICv2m node by phandle 0x%x: %a\r\n",
+      __FUNCTION__,
+      (UINTN)MsiParentPhandle,
+      fdt_strerror (MsiParentOffset)
+      ));
+    return FALSE;
+  }
+
+  PropertySize = fdt_node_check_compatible (
+                   DeviceTreeNode->DeviceTreeBase,
+                   MsiParentOffset,
+                   "arm,gic-v2m-frame"
+                   );
+  if (PropertySize < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to check GICv2m compatibility: %a\r\n",
+      __FUNCTION__,
+      fdt_strerror (PropertySize)
+      ));
+    return FALSE;
+  } else if (PropertySize != 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: GICv2m not compatible\r\n",
+      __FUNCTION__
+      ));
+    return FALSE;
+  }
+
+  Property = fdt_getprop (
+               DeviceTreeNode->DeviceTreeBase,
+               MsiParentOffset,
+               "reg",
+               &PropertySize
+               );
+  if (Property == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: cannot retrieve GICv2m property 'reg': %a\r\n",
+      __FUNCTION__,
+      fdt_strerror (PropertySize)
+      ));
+    return FALSE;
+  } else if (PropertySize != 4 * sizeof (UINT64)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: invalid size of GICv2m property 'reg': expected %u, got %d\r\n",
+      __FUNCTION__,
+      (UINTN)4 * sizeof (UINT64),
+      (INTN)PropertySize
+      ));
+    return FALSE;
+  }
+
+  *GicBase = SwapBytes64 (*(UINT64 *)Property);
+  *MsiBase = SwapBytes64 (*((UINT64 *)Property + 2));
+  return TRUE;
+}
+
 /**
   Exit Boot Services Event notification handler.
 
@@ -1535,6 +1654,13 @@ DeviceDiscoveryNotify (
       }
 
       DEBUG ((EFI_D_INFO, "Max Link Speed = %u\n", Private->MaxLinkSpeed));
+
+      Private->EnableGicV2m = ParseGicMsiBase (DeviceTreeNode, &Private->GicBase, &Private->MsiBase);
+      if (Private->EnableGicV2m) {
+        DEBUG ((DEBUG_INFO, "Enabling GICv2m\r\n"));
+        DEBUG ((DEBUG_INFO, "GIC base = 0x%lx\r\n", Private->GicBase));
+        DEBUG ((DEBUG_INFO, "MSI base = 0x%lx\r\n", Private->MsiBase));
+      }
 
       Property = fdt_getprop (
                    DeviceTreeNode->DeviceTreeBase,
