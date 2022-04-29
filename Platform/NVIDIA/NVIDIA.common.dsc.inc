@@ -707,6 +707,7 @@
   #
   MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
   Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
+  Silicon/NVIDIA/Drivers/I2cIoBmcSsifDxe/I2cIoBmcSsifDxe.inf
 
   #
   # Graphics console support

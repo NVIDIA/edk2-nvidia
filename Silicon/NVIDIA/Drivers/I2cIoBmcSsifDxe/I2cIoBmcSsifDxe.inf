@@ -1,0 +1,45 @@
+#/** @file
+#
+# I2C IO based BMC SSIF communication
+#
+# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = I2cIoBmcSsifDxe
+  FILE_GUID                 = d0f4cbd0-f069-4b58-9036-101308b2d9c4
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = I2cIoBmcSsifDxeDriverEntryPoint
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  IpmiFeaturePkg/IpmiFeaturePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Sources]
+  I2cIoBmcSsifDxe.c
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  DebugLib
+
+[Protocols]
+  gIpmiTransportProtocolGuid
+  gEfiI2cMasterProtocolGuid
+  gEfiI2cEnumerateProtocolGuid
+
+[Guids]
+  gNVIDIAI2cBmcSSIF
+
+[Depex]
+  TRUE
