@@ -700,6 +700,12 @@
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
 
   #
+  # I2C Support
+  #
+  MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
+  Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
+
+  #
   # Graphics console support
   #
   Silicon/NVIDIA/Drivers/Logo/LogoDxe.inf

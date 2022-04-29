@@ -30,7 +30,6 @@
   INF Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
   INF Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
   INF Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
-  INF MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
   INF Silicon/NVIDIA/Drivers/BpmpI2c/BpmpI2cDxe.inf
 
   #
@@ -119,11 +118,6 @@
   # Tegra Controller Enable Driver
   #
   INF Silicon/NVIDIA/Drivers/TegraControllerEnableDxe/TegraControllerEnableDxe.inf
-
-  #
-  # Tegra I2C Support
-  #
-  INF Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
 
   #
   # EQOS NIC Support

@@ -89,6 +89,12 @@
   INF MdeModulePkg/Universal/PrintDxe/PrintDxe.inf
 
   #
+  # I2C Support
+  #
+  INF MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
+  INF Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
+
+  #
   # Graphics console support
   #
   INF Silicon/NVIDIA/Drivers/Logo/LogoDxe.inf

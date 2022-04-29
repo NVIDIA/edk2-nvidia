@@ -178,7 +178,6 @@
   Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
 
   Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
-  MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
   Silicon/NVIDIA/Drivers/BpmpI2c/BpmpI2cDxe.inf
 
   #
@@ -272,11 +271,6 @@
   # Tegra Controller Enable Driver
   #
   Silicon/NVIDIA/Drivers/TegraControllerEnableDxe/TegraControllerEnableDxe.inf
-
-  #
-  # Tegra I2C Support
-  #
-  Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
 
   #Security drivers
   SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
