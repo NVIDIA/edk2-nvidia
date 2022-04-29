@@ -50,6 +50,7 @@
   gNVIDIAI2cTca9539
   gNVIDIANonDiscoverableI2cDeviceGuid
   gNVIDIAI2cNcp81599
+  gNVIDIAI2cBmcSSIF
 
 [Depex]
   TRUE
