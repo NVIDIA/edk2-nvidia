@@ -36,6 +36,7 @@
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
   gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported
 
 [Guids]

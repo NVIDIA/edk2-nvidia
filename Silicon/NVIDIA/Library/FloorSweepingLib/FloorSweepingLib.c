@@ -26,6 +26,10 @@
 // Platform CPU configuration
 #define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
 #define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdTegraMaxClusters))
+#define PLATFORM_MAX_SOCKETS            (PcdGet32 (PcdTegraMaxSockets))
+#define PLATFORM_MAX_CORES_PER_SOCKET   ((PLATFORM_MAX_CLUSTERS /   \
+                                          PLATFORM_MAX_SOCKETS) *   \
+                                         PLATFORM_MAX_CORES_PER_CLUSTER)
 
 #define MAX_SUPPORTED_CORES             1024
 
@@ -183,25 +187,33 @@ GetMpidrFromLinearCoreID (
   IN UINT32 LinearCoreId
 )
 {
+  UINTN         Socket;
   UINTN         Cluster;
   UINTN         Core;
   UINT64        Mpidr;
+  UINT32        SocketCoreId;
 
-  Cluster = LinearCoreId / PLATFORM_MAX_CORES_PER_CLUSTER;
+  Socket = LinearCoreId / PLATFORM_MAX_CORES_PER_SOCKET;
+  ASSERT (Socket < PLATFORM_MAX_SOCKETS);
+
+  SocketCoreId = LinearCoreId - (Socket * PLATFORM_MAX_CORES_PER_SOCKET);
+
+  Cluster = SocketCoreId / PLATFORM_MAX_CORES_PER_CLUSTER;
   ASSERT (Cluster < PLATFORM_MAX_CLUSTERS);
 
-  Core = LinearCoreId % PLATFORM_MAX_CORES_PER_CLUSTER;
+  Core = SocketCoreId % PLATFORM_MAX_CORES_PER_CLUSTER;
   ASSERT (Core < PLATFORM_MAX_CORES_PER_CLUSTER);
 
   // Check the Pcd and modify MPIDR generation if required
   if (!PcdGetBool (PcdAffinityMpIdrSupported)) {
+    ASSERT (Socket == 0);
     Mpidr = (UINT64) GET_MPID(Cluster, Core);
   } else {
-    Mpidr = (UINT64) GET_AFFINITY_BASED_MPID(0, Cluster, Core, 0);
+    Mpidr = (UINT64) GET_AFFINITY_BASED_MPID(Socket, Cluster, Core, 0);
   }
 
-  DEBUG ((DEBUG_INFO, "%a:LinearCoreId=%u Cluster=%u, Core=%u, Mpidr=0x%llx \n",
-          __FUNCTION__, LinearCoreId , Cluster, Core, Mpidr));
+  DEBUG ((DEBUG_INFO, "%a:LinearCoreId=%u Socket=%u Cluster=%u, Core=%u, Mpidr=0x%llx \n",
+          __FUNCTION__, LinearCoreId, Socket, Cluster, Core, Mpidr));
 
   return Mpidr;
 }
