@@ -56,12 +56,17 @@
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting
   gNVIDIATokenSpaceGuid.PcdFmpWriteVerifyImage
   gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate
+  gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions
 
 [Protocols]
   gNVIDIABrBctUpdateProtocolGuid            ## CONSUMES
+  gNVIDIABootChainProtocolGuid              ## CONSUMES
 
 [Guids]
   gEfiEventVirtualAddressChangeGuid
   gEfiEventExitBootServicesGuid
   gNVIDIAPublicVariableGuid
   gNVIDIAPlatformResourceDataGuid
+
+[Depex]
+  gNVIDIABootChainProtocolGuid

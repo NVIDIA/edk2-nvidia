@@ -28,6 +28,7 @@
 #include <Protocol/FirmwareManagementProgress.h>
 #include <Protocol/FwImageProtocol.h>
 #include <Protocol/BrBctUpdateProtocol.h>
+#include <Protocol/BootChainProtocol.h>
 #include "TegraFmp.h"
 
 #define FMP_CAPSULE_SINGLE_PARTITION_CHAIN_VARIABLE L"FmpCapsuleSinglePartitionChain"
@@ -65,6 +66,7 @@ enum {
   LAS_ERROR_VERIFY_IMAGES_FAILED,
   LAS_ERROR_SET_SINGLE_IMAGE_FAILED,
   LAS_ERROR_FMP_LIB_UNINITIALIZED,
+  LAS_ERROR_BOOT_CHAIN_UPDATE_CANCELED,
 };
 
 // Package image names to be ignored
@@ -115,6 +117,7 @@ STATIC UINT32           mTegraVersion               = 0;
 STATIC CHAR16           *mTegraVersionString        = NULL;
 STATIC EFI_STATUS       mTegraVersionStatus         = EFI_UNSUPPORTED;
 
+STATIC NVIDIA_BOOT_CHAIN_PROTOCOL       *mBootChainProtocol     = NULL;
 STATIC NVIDIA_BR_BCT_UPDATE_PROTOCOL    *mBrBctUpdateProtocol   = NULL;
 STATIC EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS mProgress  = NULL;
 
@@ -1108,6 +1111,7 @@ FmpTegraCheckImage (
   CONST CHAR16                  *SingleImageName;
   NVIDIA_FW_IMAGE_PROTOCOL      **FwImageProtocolArray;
   CONST FW_PACKAGE_IMAGE_INFO   *PkgImageInfo;
+  BOOLEAN                       Canceled;
 
   DEBUG ((DEBUG_INFO, "%a: Image=0x%p ImageSize=%u\n",
           __FUNCTION__, Image, ImageSize));
@@ -1124,6 +1128,12 @@ FmpTegraCheckImage (
     *ImageUpdatable = IMAGE_UPDATABLE_INVALID;
     *LastAttemptStatus = LAS_ERROR_FMP_LIB_UNINITIALIZED;
     return EFI_NOT_READY;
+  }
+  Status = mBootChainProtocol->CheckAndCancelUpdate (mBootChainProtocol, &Canceled);
+  if (EFI_ERROR (Status) || Canceled) {
+    *ImageUpdatable = IMAGE_UPDATABLE_INVALID;
+    *LastAttemptStatus = LAS_ERROR_BOOT_CHAIN_UPDATE_CANCELED;
+    return EFI_ABORTED;
   }
 
   Header = (CONST FW_PACKAGE_HEADER *) Image;
@@ -1424,6 +1434,15 @@ FmpDeviceLibConstructor (
     goto Done;
   }
 
+  Status = gBS->LocateProtocol (&gNVIDIABootChainProtocolGuid,
+                                NULL,
+                                (VOID **)&mBootChainProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "BootChain Protocol Guid=%g not found: %r\n",
+            &gNVIDIABootChainProtocolGuid, Status));
+    goto Done;
+  }
+
   Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
                                TPL_NOTIFY,
                                FmpTegraExitBootServicesNotify,
@@ -1479,6 +1498,7 @@ Done:
     }
     mFmpDataBufferSize      = 0;
     mBrBctUpdateProtocol    = NULL;
+    mBootChainProtocol      = NULL;
     mActiveBootChain        = MAX_UINT32;
   }
 
