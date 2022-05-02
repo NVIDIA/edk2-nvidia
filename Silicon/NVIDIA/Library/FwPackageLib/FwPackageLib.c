@@ -203,6 +203,8 @@ FwPackageGetImageIndex (
     ImageInfo = FwPackageImageInfoPtr (Header, Index);
     if (AsciiStrnCmp (AsciiName, ImageInfo->Name, sizeof (AsciiName)) == 0) {
       if (!FwPackageUpdateModeIsOk (ImageInfo, IsProductionFused)) {
+        DEBUG ((DEBUG_INFO, "%a:  fuse mismatch fuse=%u mode=%u\n",
+                __FUNCTION__, IsProductionFused, ImageInfo->UpdateMode));
         continue;
       }
 
@@ -279,6 +281,13 @@ FwPackageUpdateModeIsOk (
   IN  BOOLEAN                           IsProductionFused
   )
 {
+  if (ImageInfo->UpdateMode != FW_PACKAGE_UPDATE_MODE_ALWAYS) {
+    if ((IsProductionFused && (ImageInfo->UpdateMode != FW_PACKAGE_UPDATE_MODE_PRODUCTION)) ||
+        (!IsProductionFused && (ImageInfo->UpdateMode != FW_PACKAGE_UPDATE_MODE_NON_PRODUCTION))) {
+      return FALSE;
+    }
+  }
+
   return TRUE;
 }
 

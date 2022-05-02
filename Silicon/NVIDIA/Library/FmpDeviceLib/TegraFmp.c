@@ -31,6 +31,7 @@
 #include "TegraFmp.h"
 
 #define FMP_CAPSULE_SINGLE_PARTITION_CHAIN_VARIABLE L"FmpCapsuleSinglePartitionChain"
+#define FMP_PLATFORM_FULL_SPEC_VARIABLE_NAME        L"TegraPlatformFullSpec"
 #define FMP_PLATFORM_SPEC_VARIABLE_NAME             L"TegraPlatformSpec"
 #define FMP_PLATFORM_SPEC_DEFAULT                   "-------"
 
@@ -119,7 +120,12 @@ STATIC EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS mProgress  = NULL;
 
 
 /**
-  Get system fuse settings.
+  Get production fuse setting from 5th field in TnSpec.  The field must contain
+  exactly -0- for non-production fused, otherwise it is treated as
+  production fused.
+
+  TnSpec fields:
+  ${BOARDID}-${FAB}-${BOARDSKU}-${BOARDREV}-${fuselevel_s}-${hwchiprev}-${ext_target_board}-
 
   @retval EFI_SUCCESS                   Operation completed successfully
   @retval Others                        An error occurred
@@ -132,7 +138,67 @@ GetFuseSettings (
   VOID
   )
 {
-  mIsProductionFused = FALSE;
+  CHAR8         *PlatformFullSpec;
+  UINTN         Dash;
+  CHAR8         *Ptr;
+  EFI_STATUS    Status;
+  UINTN         Size;
+
+  mIsProductionFused = TRUE;
+
+  Size = 0;
+  Status = gRT->GetVariable (FMP_PLATFORM_FULL_SPEC_VARIABLE_NAME,
+                             &gNVIDIATokenSpaceGuid,
+                             NULL,
+                             &Size,
+                             NULL);
+  if (Status != EFI_BUFFER_TOO_SMALL) {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting %s size: %r\n",
+            __FUNCTION__, FMP_PLATFORM_FULL_SPEC_VARIABLE_NAME, Status));
+    return EFI_SUCCESS;
+  }
+
+  PlatformFullSpec = (CHAR8 *) AllocateZeroPool (Size);
+  if (PlatformFullSpec == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Spec alloc failed\n",  __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = gRT->GetVariable (FMP_PLATFORM_FULL_SPEC_VARIABLE_NAME,
+                             &gNVIDIATokenSpaceGuid,
+                             NULL,
+                             &Size,
+                             PlatformFullSpec);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting %s: %r\n",
+            __FUNCTION__, FMP_PLATFORM_FULL_SPEC_VARIABLE_NAME, Status));
+    FreePool (PlatformFullSpec);
+    return Status;
+  }
+
+  Ptr = PlatformFullSpec;
+  for (Dash = 0; Dash < 4; Dash++) {
+    while (TRUE) {
+      if (*Ptr == '\0') {
+        break;
+      }
+      if (*Ptr == '-') {
+        Ptr++;
+        break;
+      }
+
+      Ptr++;
+    }
+  }
+
+  if ((*Ptr == '0') && (*(Ptr + 1) == '-')) {
+    mIsProductionFused = FALSE;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: fuse=%u, offset=%u\n",
+          __FUNCTION__, mIsProductionFused, Ptr - PlatformFullSpec));
+
+  FreePool (PlatformFullSpec);
 
   return EFI_SUCCESS;
 }
