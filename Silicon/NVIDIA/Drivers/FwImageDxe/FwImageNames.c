@@ -14,7 +14,6 @@
 
 STATIC CONST CHAR16 *SystemFwImageNamesCommon[] = {
   L"adsp-fw",
-  L"BCT",
   L"bpmp-fw",
   L"bpmp-fw-dtb",
   L"cpu-bootloader",

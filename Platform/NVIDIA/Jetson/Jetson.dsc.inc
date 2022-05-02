@@ -67,7 +67,8 @@
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
-  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x8000
+  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x4000
+  gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x1000
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|TRUE
   gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
   # SMBIOS for T194
@@ -114,6 +115,7 @@
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x10000
+  gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
 
 [PcdsDynamicHii.common.T234]

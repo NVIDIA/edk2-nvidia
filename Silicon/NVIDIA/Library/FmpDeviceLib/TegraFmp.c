@@ -41,7 +41,7 @@
 #define FMP_PROGRESS_CHECK_IMAGE        5
 #define FMP_PROGRESS_WRITE_IMAGES       (90 - FMP_PROGRESS_VERIFY_IMAGES)
 #define FMP_PROGRESS_VERIFY_IMAGES      ((mPcdFmpWriteVerifyImage) ? 30 : 0)
-#define FMP_PROGRESS_SETUP_REBOOT       5
+#define FMP_PROGRESS_UPDATE_BCT         5
 
 // last attempt status error codes
 enum {
@@ -63,13 +63,19 @@ enum {
   LAS_ERROR_MB1_WRITE_ERROR,
   LAS_ERROR_VERIFY_IMAGES_FAILED,
   LAS_ERROR_SET_SINGLE_IMAGE_FAILED,
-  LAS_ERROR_SETUP_REBOOT_FAILED,
   LAS_ERROR_FMP_LIB_UNINITIALIZED,
+  LAS_ERROR_BCT_IMAGE_NOT_IN_PACKAGE,
+};
+
+// Package image names for BR-BCT data, can be indexed by BootChain
+STATIC CONST CHAR16 *BrBctPackageImageNames[] = {
+  L"A_BCT",
+  L"B_BCT",
+  NULL
 };
 
 // special images that are not processed in the main loop
 STATIC CONST CHAR16 *SpecialImageNames[] = {
-  L"BCT",
   L"mb1",
   NULL
 };
@@ -417,25 +423,6 @@ IsSpecialImageName (
   )
 {
   return NameIsInList (ImageName, SpecialImageNames);
-}
-
-/**
-  Perform setup for reboot after FW update.  A variable is set which is
-  examined after the reboot to determine if the FW update succeeded and
-  the active FW set should be updated to the new FW during ExitBootServices().
-
-  @retval EFI_SUCCESS               The operation completed successfully
-  @retval Others                    An error occurred
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-FmpSetupReboot (
-  VOID
-  )
-{
-  return EFI_SUCCESS;
 }
 
 /**
@@ -935,9 +922,11 @@ UpdateBct (
   UINTN                         Bytes;
   CONST VOID                    *ImageData;
   EFI_STATUS                    Status;
+  UINT32                        InactiveBootChain;
 
+  InactiveBootChain = OTHER_BOOT_CHAIN (mActiveBootChain);
   Status = FwPackageGetImageIndex (Header,
-                                   L"BCT",
+                                   BrBctPackageImageNames[InactiveBootChain],
                                    mIsProductionFused,
                                    mPlatformTnSpec,
                                    &PkgImageIndex);
@@ -1172,6 +1161,27 @@ FmpTegraCheckImage (
     }
   }
 
+  // Check that the BR-BCT data images are present in the package
+  if (ImageCount != 1) {
+    CONST CHAR16    **List;
+
+    for (List = BrBctPackageImageNames; *List != NULL; List++) {
+      UINTN       PkgImageIndex;
+
+      Status = FwPackageGetImageIndex (Header,
+                                       *List,
+                                       mIsProductionFused,
+                                       mPlatformTnSpec,
+                                       &PkgImageIndex);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", *List, Status));
+        *ImageUpdatable = IMAGE_UPDATABLE_INVALID;
+        *LastAttemptStatus = LAS_ERROR_BCT_IMAGE_NOT_IN_PACKAGE;
+        return EFI_ABORTED;
+      }
+    }
+  }
+
   // Check that every image in the package has a protocol
   for (Index = 0; Index < Header->ImageCount; Index++) {
     CHAR16                      ImageName[FW_IMAGE_NAME_LENGTH];
@@ -1187,6 +1197,9 @@ FmpTegraCheckImage (
     }
 
     FwPackageCopyImageName (ImageName, PkgImageInfo, FW_IMAGE_NAME_LENGTH);
+    if (NameIsInList (ImageName, BrBctPackageImageNames)) {
+      continue;
+    }
     FwImageProtocol = FwImageFindProtocol (ImageName);
     if (FwImageProtocol == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Image %u, no protocol for %s\n",
@@ -1261,13 +1274,6 @@ FmpTegraSetImage (
   DEBUG ((DEBUG_INFO, "%a: Starting FW update sequence, images=%u, bytes=%u\n",
           __FUNCTION__, FwImageGetCount (), mTotalBytesToFlash));
 
-  Status = UpdateBct (Header);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Update BCT failed: %r\n", Status));
-    *LastAttemptStatus = LAS_ERROR_BCT_UPDATE_FAILED;
-    return EFI_ABORTED;
-  }
-
   Status = InvalidateImage (L"mb1", FW_IMAGE_RW_FLAG_NONE);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Invalidate mb1 failed: %r\n", Status));
@@ -1297,14 +1303,15 @@ FmpTegraSetImage (
 
   SetImageProgress (FMP_PROGRESS_VERIFY_IMAGES);
 
-  Status = FmpSetupReboot ();
+  Status = UpdateBct (Header);
   if (EFI_ERROR (Status)) {
-    *LastAttemptStatus = LAS_ERROR_SETUP_REBOOT_FAILED;
+    DEBUG ((DEBUG_ERROR, "Update BCT failed: %r\n", Status));
+    *LastAttemptStatus = LAS_ERROR_BCT_UPDATE_FAILED;
     return EFI_ABORTED;
   }
 
 Done:
-  SetImageProgress (FMP_PROGRESS_SETUP_REBOOT);
+  SetImageProgress (FMP_PROGRESS_UPDATE_BCT);
   *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
   DEBUG ((DEBUG_INFO, "%a: exit success\n", __FUNCTION__));
   return EFI_SUCCESS;

@@ -2,7 +2,7 @@
 
   Boot Chain Information Library
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,6 +17,7 @@
 #define MAX_PARTITION_NAME_LEN      36
 #define BOOT_CHAIN_A                0
 #define BOOT_CHAIN_B                1
+#define OTHER_BOOT_CHAIN(BootChain) ((BootChain) ^ 1)
 
 /**
   Retrieve Active Boot Chain Partition Name
