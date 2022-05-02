@@ -2,7 +2,7 @@
 #
 #  BR-BCT Update Device Library
 #
-#  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -30,5 +30,7 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize
+  gNVIDIATokenSpaceGuid.PcdBrBctDataSize
   gNVIDIATokenSpaceGuid.PcdBrBctVerifyUpdateBeforeWrite
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition
+  gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions

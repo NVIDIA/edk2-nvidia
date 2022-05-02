@@ -2,7 +2,7 @@
 
   FW Partition Device Library
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -164,7 +164,7 @@ FwPartitionWrite (
     DEBUG ((DEBUG_ERROR, "Overwriting active %s partition not allowed\n",
             PartitionInfo->Name));
     return EFI_WRITE_PROTECTED;
-  } else {
+  } else if (PartitionInfo->IsActivePartition) {
     DEBUG ((DEBUG_INFO, "Overwriting active %s partition\n",
             PartitionInfo->Name));
   }

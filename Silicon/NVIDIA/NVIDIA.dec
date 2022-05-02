@@ -403,6 +403,7 @@
 
 #BrBct config and options
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x0|UINT32|0x00000054
+  gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x0|UINT32|0x00000032
   gNVIDIATokenSpaceGuid.PcdBrBctVerifyUpdateBeforeWrite|TRUE|BOOLEAN|0x00000059
 
 #Fmp options

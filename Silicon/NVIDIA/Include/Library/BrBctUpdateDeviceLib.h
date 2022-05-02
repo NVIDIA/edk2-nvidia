@@ -2,7 +2,7 @@
 
   BR-BCT Update Device Library
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -43,7 +43,11 @@ typedef struct {
 
   // BR-BCT info
   UINT32                            SlotSize;
+  UINT32                            BrBctDataSize;
+  UINTN                             BctPartitionSlots;
   FW_PARTITION_PRIVATE_DATA         *BrBctPartition;
+  FW_PARTITION_PRIVATE_DATA         *BrBctBackupPartitionA;
+  FW_PARTITION_PRIVATE_DATA         *BrBctBackupPartitionB;
 
   // Erase function
   BR_BCT_UPDATE_DEVICE_ERASE        DeviceErase;
