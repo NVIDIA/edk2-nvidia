@@ -354,7 +354,7 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 
     GicCInfo[EnabledCoreCntr].CPUInterfaceNumber = CoreIndex;
     GicCInfo[EnabledCoreCntr].AcpiProcessorUid = CoreIndex;
-    GicCInfo[EnabledCoreCntr].Flags = EFI_ACPI_6_3_GIC_ENABLED;
+    GicCInfo[EnabledCoreCntr].Flags = EFI_ACPI_6_4_GIC_ENABLED;
     GicCInfo[EnabledCoreCntr].ParkingProtocolVersion = 0;
     GicCInfo[EnabledCoreCntr].PerformanceInterruptGsiv = PmuBaseInterrupt;
     GicCInfo[EnabledCoreCntr].ParkedAddress = 0;
@@ -376,7 +376,7 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     GicCInfo[EnabledCoreCntr].ProximityDomain = CoreIndex/PLATFORM_CPUS_PER_SOCKET;
 
     GicCInfo[EnabledCoreCntr].ClockDomain = 0;
-    GicCInfo[EnabledCoreCntr].AffinityFlags = EFI_ACPI_6_3_GICC_ENABLED;
+    GicCInfo[EnabledCoreCntr].AffinityFlags = EFI_ACPI_6_4_GICC_ENABLED;
 
     EnabledCoreCntr++;
     //Check to ensure space allocated for GICC is enough

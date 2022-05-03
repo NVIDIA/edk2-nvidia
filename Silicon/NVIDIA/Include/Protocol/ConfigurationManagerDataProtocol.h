@@ -38,7 +38,7 @@
           ) {                                                            \
     CPUInterfaceNumber,       /* UINT32  CPUInterfaceNumber           */ \
     CPUInterfaceNumber,       /* UINT32  AcpiProcessorUid             */ \
-    EFI_ACPI_6_3_GIC_ENABLED, /* UINT32  Flags                        */ \
+    EFI_ACPI_6_4_GIC_ENABLED, /* UINT32  Flags                        */ \
     0,                        /* UINT32  ParkingProtocolVersion       */ \
     PmuIrq,                   /* UINT32  PerformanceInterruptGsiv     */ \
     0,                        /* UINT64  ParkedAddress                */ \
@@ -52,7 +52,7 @@
     0,                        /* UINT16  SpeOverflowInterrupt         */ \
     ProximityDomain,          /* UINT32  ProximityDomain              */ \
     0,                        /* UINT32  ClockDomain                  */ \
-    EFI_ACPI_6_3_GICC_ENABLED /* UINT32  AffinityFlags                */ \
+    EFI_ACPI_6_4_GICC_ENABLED /* UINT32  AffinityFlags                */ \
     }
 
 /** A helper macro for populating the Processor Hierarchy Node flags
