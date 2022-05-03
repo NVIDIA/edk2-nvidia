@@ -403,9 +403,9 @@ OemGetCacheInformation (
     } else {
       WritePolicy = CacheInfo[CacheDataIdx].Attributes;
       WritePolicy = (WritePolicy >> 4) & 0x1;
-      if (WritePolicy == EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_THROUGH)
+      if (WritePolicy == EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_THROUGH)
         SmbiosCacheTable->CacheConfiguration |= (0 << 8);
-      else if (WritePolicy == EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK)
+      else if (WritePolicy == EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK)
         SmbiosCacheTable->CacheConfiguration |= (1 << 8);
       else
         SmbiosCacheTable->CacheConfiguration |= (3 << 8);

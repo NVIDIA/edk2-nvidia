@@ -54,8 +54,8 @@ STATIC
 CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
   // FADT Table
   {
-    EFI_ACPI_6_3_FIXED_ACPI_DESCRIPTION_TABLE_SIGNATURE,
-    EFI_ACPI_6_3_FIXED_ACPI_DESCRIPTION_TABLE_REVISION,
+    EFI_ACPI_6_4_FIXED_ACPI_DESCRIPTION_TABLE_SIGNATURE,
+    EFI_ACPI_6_4_FIXED_ACPI_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdFadt),
     NULL,
     0,
@@ -63,8 +63,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
   },
   // GTDT Table
   {
-    EFI_ACPI_6_3_GENERIC_TIMER_DESCRIPTION_TABLE_SIGNATURE,
-    EFI_ACPI_6_3_GENERIC_TIMER_DESCRIPTION_TABLE_REVISION,
+    EFI_ACPI_6_4_GENERIC_TIMER_DESCRIPTION_TABLE_SIGNATURE,
+    EFI_ACPI_6_4_GENERIC_TIMER_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdGtdt),
     NULL,
     0,
@@ -72,8 +72,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
   },
   // MADT Table
   {
-    EFI_ACPI_6_3_MULTIPLE_APIC_DESCRIPTION_TABLE_SIGNATURE,
-    EFI_ACPI_6_3_MULTIPLE_APIC_DESCRIPTION_TABLE_REVISION,
+    EFI_ACPI_6_4_MULTIPLE_APIC_DESCRIPTION_TABLE_SIGNATURE,
+    EFI_ACPI_6_4_MULTIPLE_APIC_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMadt),
     NULL,
     0,
@@ -81,8 +81,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
   },
   // DSDT Table
   {
-    EFI_ACPI_6_3_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
-    EFI_ACPI_6_3_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_REVISION,
+    EFI_ACPI_6_4_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
+    EFI_ACPI_6_4_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDsdt),
     (EFI_ACPI_DESCRIPTION_HEADER*)dsdt_aml_code,
     0,
@@ -90,8 +90,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
   },
   // SSDT Table - Cpu Topology
   {
-    EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
-    EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION,
+    EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE,
+    EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdtCpuTopology),
     NULL,
     0,
@@ -103,20 +103,20 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
 */
 STATIC
 CM_ARM_BOOT_ARCH_INFO BootArchInfo = {
-  EFI_ACPI_6_3_ARM_PSCI_COMPLIANT
+  EFI_ACPI_6_4_ARM_PSCI_COMPLIANT
 };
 
 /** The platform boot architecture information.
 */
 CM_ARM_FIXED_FEATURE_FLAGS            FixedFeatureFlags = {
-  EFI_ACPI_6_3_PWR_BUTTON
+  EFI_ACPI_6_4_PWR_BUTTON
 };
 
 /** The platform power management profile information.
 */
 STATIC
 CM_ARM_POWER_MANAGEMENT_PROFILE_INFO PmProfileInfo = {
-  EFI_ACPI_6_3_PM_PROFILE_ENTERPRISE_SERVER
+  EFI_ACPI_6_4_PM_PROFILE_ENTERPRISE_SERVER
 };
 
 /** The platform GIC distributor information.
@@ -156,9 +156,9 @@ CM_ARM_CACHE_INFO CacheInfo[] = {
     .NumberOfSets          = 4096,
     .Associativity         = 16,
     .Attributes            = CACHE_ATTRIBUTES (
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_UNIFIED,
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_CACHE_TYPE_UNIFIED,
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
     ),
     .LineSize              = 64,
   },
@@ -170,9 +170,9 @@ CM_ARM_CACHE_INFO CacheInfo[] = {
     .NumberOfSets          = 2048,
     .Associativity         = 16,
     .Attributes            = CACHE_ATTRIBUTES (
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_UNIFIED,
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_CACHE_TYPE_UNIFIED,
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
     ),
     .LineSize              = 64,
   },
@@ -184,9 +184,9 @@ CM_ARM_CACHE_INFO CacheInfo[] = {
     .NumberOfSets          = 512,
     .Associativity         = 4,
     .Attributes            = CACHE_ATTRIBUTES (
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ,
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_INSTRUCTION,
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_ALLOCATION_READ,
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_CACHE_TYPE_INSTRUCTION,
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
     ),
     .LineSize              = 64,
   },
@@ -198,9 +198,9 @@ CM_ARM_CACHE_INFO CacheInfo[] = {
     .NumberOfSets          = 256,
     .Associativity         = 4,
     .Attributes            = CACHE_ATTRIBUTES (
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_DATA,
-      EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_CACHE_TYPE_DATA,
+      EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
     ),
     .LineSize              = 64,
   },
@@ -417,8 +417,8 @@ UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 
       NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
 
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = (EFI_ACPI_DESCRIPTION_HEADER *)ssdtpci_aml_code;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId = PcdGet64(PcdAcpiDefaultOemTableId);
@@ -426,7 +426,7 @@ UpdatePcieInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_3_PCI_EXPRESS_MEMORY_MAPPED_CONFIGURATION_SPACE_BASE_ADDRESS_DESCRIPTION_TABLE_SIGNATURE;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_PCI_EXPRESS_MEMORY_MAPPED_CONFIGURATION_SPACE_BASE_ADDRESS_DESCRIPTION_TABLE_SIGNATURE;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_MEMORY_MAPPED_CONFIGURATION_SPACE_ACCESS_TABLE_REVISION;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMcfg);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = NULL;
@@ -554,8 +554,8 @@ UpdateAhciInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 
       NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
 
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = (EFI_ACPI_DESCRIPTION_HEADER *)ssdtahci_aml_code;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId = PcdGet64(PcdAcpiDefaultOemTableId);
@@ -681,11 +681,11 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
       NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
 
       if (SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_NVIDIA_16550) {
-        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_3_DEBUG_PORT_2_TABLE_SIGNATURE;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_DEBUG_PORT_2_TABLE_SIGNATURE;
         NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_DEBUG_PORT_2_TABLE_REVISION;
         NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDbg2);
       } else {
-        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_3_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE;
         NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision = EFI_ACPI_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_REVISION;
         NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSpcr);
       }
@@ -732,9 +732,9 @@ InitializeSsdtTable ()
   EFI_STATUS                  Status;
   EFI_ACPI_DESCRIPTION_HEADER SsdtTableHeader;
 
-  SsdtTableHeader.Signature = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+  SsdtTableHeader.Signature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
   SsdtTableHeader.Length = sizeof(EFI_ACPI_DESCRIPTION_HEADER);
-  SsdtTableHeader.Revision = EFI_ACPI_6_3_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+  SsdtTableHeader.Revision = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
   SsdtTableHeader.Checksum = 0;
   CopyMem(SsdtTableHeader.OemId, PcdGetPtr(PcdAcpiDefaultOemId), sizeof(SsdtTableHeader.OemId));
   SsdtTableHeader.OemTableId = PcdGet64(PcdAcpiDefaultOemTableId);
@@ -1321,7 +1321,7 @@ UpdateCpuInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   LpiInfo[NumberOfLpiStates].IsInteger = FALSE;
   LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AccessSize = 3;
   LpiInfo[NumberOfLpiStates].RegisterEntryMethod.Address = 0xFFFFFFFF;
-  LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AddressSpaceId = EFI_ACPI_6_3_FUNCTIONAL_FIXED_HARDWARE;
+  LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AddressSpaceId = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
   LpiInfo[NumberOfLpiStates].RegisterEntryMethod.RegisterBitOffset = 0;
   LpiInfo[NumberOfLpiStates].RegisterEntryMethod.RegisterBitWidth = 0x20;
   CopyMem (LpiInfo[NumberOfLpiStates].StateName, "WFI", sizeof ("WFI"));
@@ -1379,7 +1379,7 @@ UpdateCpuInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     LpiInfo[NumberOfLpiStates].EnableParentState = TRUE;
     LpiInfo[NumberOfLpiStates].IsInteger = FALSE;
     LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AccessSize = 3;
-    LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AddressSpaceId = EFI_ACPI_6_3_FUNCTIONAL_FIXED_HARDWARE;
+    LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AddressSpaceId = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
     LpiInfo[NumberOfLpiStates].RegisterEntryMethod.RegisterBitOffset = 0;
     LpiInfo[NumberOfLpiStates].RegisterEntryMethod.RegisterBitWidth = 0x20;
     Property = fdt_getprop (DeviceTreeBase, NodeOffset, "idle-state-name", &PropertyLen);
@@ -1427,11 +1427,11 @@ UpdateCpuInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   ProcHierarchyIndex = 0;
   ProcHierarchyInfo[ProcHierarchyIndex].Token         = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);
   ProcHierarchyInfo[ProcHierarchyIndex].Flags         = PROC_NODE_FLAGS (
-                                                          EFI_ACPI_6_3_PPTT_PACKAGE_PHYSICAL,
-                                                          EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
-                                                          EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-                                                          EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
-                                                          EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
+                                                          EFI_ACPI_6_4_PPTT_PACKAGE_PHYSICAL,
+                                                          EFI_ACPI_6_4_PPTT_PROCESSOR_ID_INVALID,
+                                                          EFI_ACPI_6_4_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                          EFI_ACPI_6_4_PPTT_NODE_IS_NOT_LEAF,
+                                                          EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
                                                         );
   ProcHierarchyInfo[ProcHierarchyIndex].ParentToken   = CM_NULL_TOKEN;
   ProcHierarchyInfo[ProcHierarchyIndex].GicCToken     = CM_NULL_TOKEN;
@@ -1448,11 +1448,11 @@ UpdateCpuInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
       //Build cluster node
       ProcHierarchyInfo[ProcHierarchyIndex].Token         = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);
       ProcHierarchyInfo[ProcHierarchyIndex].Flags         = PROC_NODE_FLAGS (
-                                                              EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-                                                              EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
-                                                              EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-                                                              EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
-                                                              EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
+                                                              EFI_ACPI_6_4_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                              EFI_ACPI_6_4_PPTT_PROCESSOR_ID_INVALID,
+                                                              EFI_ACPI_6_4_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                              EFI_ACPI_6_4_PPTT_NODE_IS_NOT_LEAF,
+                                                              EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
                                                             );
       ProcHierarchyInfo[ProcHierarchyIndex].ParentToken   = REFERENCE_TOKEN (ProcHierarchyInfo[0]);
       ProcHierarchyInfo[ProcHierarchyIndex].GicCToken     = CM_NULL_TOKEN;
@@ -1465,11 +1465,11 @@ UpdateCpuInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     //Build cpu core node
     ProcHierarchyInfo[ProcHierarchyIndex].Token         = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);
     ProcHierarchyInfo[ProcHierarchyIndex].Flags         = PROC_NODE_FLAGS (
-                                                            EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
-                                                            EFI_ACPI_6_3_PPTT_PROCESSOR_ID_VALID,
-                                                            EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-                                                            EFI_ACPI_6_3_PPTT_NODE_IS_LEAF,
-                                                            EFI_ACPI_6_3_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+                                                            EFI_ACPI_6_4_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                            EFI_ACPI_6_4_PPTT_PROCESSOR_ID_VALID,
+                                                            EFI_ACPI_6_4_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                            EFI_ACPI_6_4_PPTT_NODE_IS_LEAF,
+                                                            EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                                                           );
     ProcHierarchyInfo[ProcHierarchyIndex].ParentToken   = ClusterTokenMap [GET_CLUSTER_ID (MpIdr)];
     ProcHierarchyInfo[ProcHierarchyIndex].GicCToken     = REFERENCE_TOKEN (GicCInfo[Index]);
@@ -1480,7 +1480,7 @@ UpdateCpuInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 
     GicCInfo[Index].CPUInterfaceNumber = Index;
     GicCInfo[Index].AcpiProcessorUid = Index;
-    GicCInfo[Index].Flags = EFI_ACPI_6_3_GIC_ENABLED;
+    GicCInfo[Index].Flags = EFI_ACPI_6_4_GIC_ENABLED;
     GicCInfo[Index].ParkingProtocolVersion = 0;
     GicCInfo[Index].PerformanceInterruptGsiv = T194_PMU_BASE_INTERRUPT + Index;
     GicCInfo[Index].ParkedAddress = 0;
@@ -1495,7 +1495,7 @@ UpdateCpuInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     GicCInfo[Index].SpeOverflowInterrupt = 0;
     GicCInfo[Index].ProximityDomain = 0;
     GicCInfo[Index].ClockDomain = 0;
-    GicCInfo[Index].AffinityFlags = EFI_ACPI_6_3_GICC_ENABLED;
+    GicCInfo[Index].AffinityFlags = EFI_ACPI_6_4_GICC_ENABLED;
   }
 
   FreePool (ClusterTokenMap);
@@ -1580,7 +1580,7 @@ InitializePlatformRepository ()
   Repo->CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
   Repo->CmObjectPtr = &CmAcpiTableList;
   for(Index=0; Index<Repo->CmObjectCount; Index++) {
-    if (CmAcpiTableList[Index].AcpiTableSignature != EFI_ACPI_6_3_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE) {
+    if (CmAcpiTableList[Index].AcpiTableSignature != EFI_ACPI_6_4_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE) {
       CmAcpiTableList[Index].OemTableId =  PcdGet64(PcdAcpiDefaultOemTableId);
     }
   }
