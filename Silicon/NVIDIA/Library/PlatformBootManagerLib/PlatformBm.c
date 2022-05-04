@@ -31,6 +31,7 @@
 #include <Protocol/GenericMemoryTest.h>
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/LoadedImage.h>
+#include <Protocol/IpmiTransportProtocol.h>
 #include <Protocol/PciIo.h>
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PlatformBootManager.h>
@@ -38,6 +39,7 @@
 #include <Guid/RtPropertiesTable.h>
 #include <Guid/TtyTerm.h>
 #include <Guid/SerialPortLibVendor.h>
+#include <IndustryStandard/Ipmi.h>
 #include <libfdt.h>
 #include "PlatformBm.h"
 #include <NVIDIAConfiguration.h>
@@ -1036,6 +1038,153 @@ HandleCapsules (
   }
 }
 
+typedef struct {
+  UINT8    StaticAddresses;
+  UINT8    DynamicAddresses;
+  UINT8    Flags;
+} IPMI_LAN_IPV6_STATUS;
+
+STATIC
+VOID
+PrintBmcIpAddresses (
+  VOID
+  )
+{
+  EFI_STATUS                                      Status;
+  IPMI_TRANSPORT                                  *IpmiTransport;
+  IPMI_GET_LAN_CONFIGURATION_PARAMETERS_REQUEST   GetLanConfigRequest;
+  UINT8                                           ResponseData[32];
+  UINT32                                          ResponseDataSize;
+  IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE  *GetLanConfigResponse;
+  IPMI_LAN_IP_ADDRESS                             *IpV4Address;
+  IPMI_LAN_IPV6_STATUS                            *IpV6Status;
+  IPMI_LAN_IPV6_STATIC_ADDRESS                    *IpV6Address;
+  UINT8                                           Index;
+  UINT8                                           Index2;
+
+  IpmiTransport        = NULL;
+  GetLanConfigResponse = (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE *)ResponseData;
+  IpV4Address          = (IPMI_LAN_IP_ADDRESS *)GetLanConfigResponse->ParameterData;
+  IpV6Status           = (IPMI_LAN_IPV6_STATUS *)GetLanConfigResponse->ParameterData;
+  IpV6Address          = (IPMI_LAN_IPV6_STATIC_ADDRESS *)GetLanConfigResponse->ParameterData;
+
+  Status = gBS->LocateProtocol (&gIpmiTransportProtocolGuid, NULL, (VOID **)&IpmiTransport);
+  if (EFI_ERROR (Status)) {
+    // No IPMI present this is not an error
+    return;
+  }
+
+  GetLanConfigRequest.ChannelNumber.Uint8 = 0;
+  GetLanConfigRequest.ParameterSelector   = IpmiLanIpAddress;
+  GetLanConfigRequest.SetSelector         = 0;
+  GetLanConfigRequest.BlockSelector       = 0;
+
+  ResponseDataSize = sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE) + sizeof (IPMI_LAN_IPV6_STATUS);
+  Status           = IpmiTransport->IpmiSubmitCommand (
+                                      IpmiTransport,
+                                      IPMI_NETFN_TRANSPORT,
+                                      0,
+                                      IPMI_TRANSPORT_GET_LAN_CONFIG_PARAMETERS,
+                                      (UINT8 *)&GetLanConfigRequest,
+                                      sizeof (GetLanConfigRequest),
+                                      ResponseData,
+                                      &ResponseDataSize
+                                      );
+  if (EFI_ERROR (Status) || (GetLanConfigResponse->CompletionCode != IPMI_COMP_CODE_NORMAL)) {
+    Print (L"Failed to get BMC IPv4 Address\r\n");
+  } else {
+    Print (L"BMC IPv4 Address: %d.%d.%d.%d\r\n", IpV4Address->IpAddress[0], IpV4Address->IpAddress[1], IpV4Address->IpAddress[2], IpV4Address->IpAddress[3]);
+  }
+
+  GetLanConfigRequest.ChannelNumber.Uint8 = 0;
+  GetLanConfigRequest.ParameterSelector   = IpmiIpv6Status;
+  GetLanConfigRequest.SetSelector         = 0;
+  GetLanConfigRequest.BlockSelector       = 0;
+
+  ResponseDataSize = sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE) + sizeof (IPMI_LAN_IPV6_STATUS);
+  Status           = IpmiTransport->IpmiSubmitCommand (
+                                      IpmiTransport,
+                                      IPMI_NETFN_TRANSPORT,
+                                      0,
+                                      IPMI_TRANSPORT_GET_LAN_CONFIG_PARAMETERS,
+                                      (UINT8 *)&GetLanConfigRequest,
+                                      sizeof (GetLanConfigRequest),
+                                      ResponseData,
+                                      &ResponseDataSize
+                                      );
+  if (EFI_ERROR (Status) || (GetLanConfigResponse->CompletionCode != IPMI_COMP_CODE_NORMAL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get IPv6 Address count\r\n"));
+    return;
+  }
+
+  // Get Static addresses
+  for (Index = 0; Index < IpV6Status->StaticAddresses; Index++) {
+    GetLanConfigRequest.ChannelNumber.Uint8 = 0;
+    GetLanConfigRequest.ParameterSelector   = IpmiIpv6StaticAddress;
+    GetLanConfigRequest.SetSelector         = Index;
+    GetLanConfigRequest.BlockSelector       = 0;
+
+    ResponseDataSize = sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE) + sizeof (IPMI_LAN_IPV6_STATIC_ADDRESS);
+    Status           = IpmiTransport->IpmiSubmitCommand (
+                                        IpmiTransport,
+                                        IPMI_NETFN_TRANSPORT,
+                                        0,
+                                        IPMI_TRANSPORT_GET_LAN_CONFIG_PARAMETERS,
+                                        (UINT8 *)&GetLanConfigRequest,
+                                        sizeof (GetLanConfigRequest),
+                                        ResponseData,
+                                        &ResponseDataSize
+                                        );
+    if (!EFI_ERROR (Status) && (GetLanConfigResponse->CompletionCode == IPMI_COMP_CODE_NORMAL)) {
+      if (IpV6Address->AddressStatus == 0) {
+        Print (L"BMC IPv6 Static Address: ");
+        for (Index2 = 0; Index2 < sizeof (IpV6Address->Ipv6Address); Index2++) {
+          if (Index2 != 0) {
+            Print (L":");
+          }
+
+          Print (L"%02x", IpV6Address->Ipv6Address[Index2]);
+        }
+
+        Print (L"\r\n");
+      }
+    }
+  }
+
+  for (Index = 0; Index < IpV6Status->DynamicAddresses; Index++) {
+    GetLanConfigRequest.ChannelNumber.Uint8 = 0;
+    GetLanConfigRequest.ParameterSelector   = IpmiIpv6DhcpAddress;
+    GetLanConfigRequest.SetSelector         = Index;
+    GetLanConfigRequest.BlockSelector       = 0;
+
+    ResponseDataSize = sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE) + sizeof (IPMI_LAN_IPV6_STATIC_ADDRESS);
+    Status           = IpmiTransport->IpmiSubmitCommand (
+                                        IpmiTransport,
+                                        IPMI_NETFN_TRANSPORT,
+                                        0,
+                                        IPMI_TRANSPORT_GET_LAN_CONFIG_PARAMETERS,
+                                        (UINT8 *)&GetLanConfigRequest,
+                                        sizeof (GetLanConfigRequest),
+                                        ResponseData,
+                                        &ResponseDataSize
+                                        );
+    if (!EFI_ERROR (Status) && (GetLanConfigResponse->CompletionCode == IPMI_COMP_CODE_NORMAL)) {
+      if (IpV6Address->AddressStatus == 0) {
+        Print (L"BMC IPv6 Dynamic Address: ");
+        for (Index2 = 0; Index2 < sizeof (IpV6Address->Ipv6Address); Index2++) {
+          if (Index2 != 0) {
+            Print (L":");
+          }
+
+          Print (L"%02x", IpV6Address->Ipv6Address[Index2]);
+        }
+
+        Print (L"\r\n");
+      }
+    }
+  }
+}
+
 /**
   Do the platform specific action after the console is ready
   Possible things that can be done in PlatformBootManagerAfterConsole:
@@ -1108,6 +1257,9 @@ PlatformBootManagerAfterConsole (
 
   // Run Sparse memory test
   MemoryTest (SPARSE);
+
+  // Ipmi communication
+  PrintBmcIpAddresses ();
 
   //
   // On ARM, there is currently no reason to use the phased capsule

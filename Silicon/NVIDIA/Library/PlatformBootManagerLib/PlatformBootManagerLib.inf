@@ -36,6 +36,7 @@
   ShellPkg/ShellPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
   CryptoPkg/CryptoPkg.dec
+  IpmiFeaturePkg/IpmiFeaturePkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -101,3 +102,4 @@
   gEfiSimpleTextInProtocolGuid
   gEfiDevicePathProtocolGuid
   gEfiGenericMemTestProtocolGuid                ## CONSUMES
+  gIpmiTransportProtocolGuid
