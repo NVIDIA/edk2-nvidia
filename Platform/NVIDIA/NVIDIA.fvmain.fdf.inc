@@ -94,6 +94,7 @@
   INF MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
   INF Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
   INF Silicon/NVIDIA/Drivers/I2cIoBmcSsifDxe/I2cIoBmcSsifDxe.inf
+  INF Silicon/NVIDIA/Drivers/ArmSmbrStatusCodeDxe/ArmSmbrStatusCodeDxe.inf
 
   #
   # Graphics console support
