@@ -11,6 +11,7 @@
 #include <PiDxe.h>
 
 #include <Library/BaseLib.h>
+#include <Library/Crc8Lib.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -255,28 +256,9 @@ TegraI2cReset (
 
   Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER (This);
 
-  MmioWrite32 (
-    Private->BaseAddress + I2C_MST_FIFO_CONTROL_0_OFFSET,
-    (7 << TX_FIFO_TRIG_SHIFT) |
-    (0 << RX_FIFO_TRIG_SHIFT) |
-    TX_FIFO_FLUSH |
-    RX_FIFO_FLUSH
-    );
-
-  Timeout = I2C_TIMEOUT;
-  do {
-    Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_CONTROL_0_OFFSET);
-    Data32 = (Data32 & (TX_FIFO_FLUSH|RX_FIFO_FLUSH));
-    if (Data32 != 0) {
-      MicroSecondDelay (1);
-      Timeout--;
-      if (Timeout == 0) {
-        DEBUG ((DEBUG_ERROR, "%a: Timeout waiting for FIFO flush\r\n", __FUNCTION__));
-        Status = EFI_TIMEOUT;
-        return Status;
-      }
-    }
-  } while (Data32 != 0);
+  MmioWrite32 (Private->BaseAddress + I2C_I2C_MASTER_RESET_CNTRL_0_OFFSET, I2C_I2C_MASTER_RESET_CNTRL_0_SOFT_RESET);
+  MicroSecondDelay (I2C_SOFT_RESET_DELAY);
+  MmioWrite32 (Private->BaseAddress + I2C_I2C_MASTER_RESET_CNTRL_0_OFFSET, 0);
 
   Timeout = I2C_TIMEOUT;
   Data32  = BC_TERMINATE_IMMEDIATE;
@@ -317,6 +299,8 @@ TegraI2cSendHeader (
 {
   UINT32      PacketHeader[3];
   EFI_STATUS  Status;
+  UINT32      Data32;
+  UINT32      Timeout;
 
   if (PayloadSize > MAX_UINT16) {
     return EFI_INVALID_PARAMETER;
@@ -359,6 +343,21 @@ TegraI2cSendHeader (
 
   PacketHeader[2] |= ((SlaveAddress << I2C_HEADER_SLAVE_ADDR_SHIFT) & I2C_HEADER_SLAVE_ADDR_MASK);
   MmioWrite32 (Private->BaseAddress + I2C_INTERRUPT_STATUS_REGISTER_0_OFFSET, MAX_UINT32);
+
+  Timeout = I2C_TIMEOUT;
+  do {
+    Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_STATUS_0_OFFSET);
+    Data32 = (Data32 & TX_FIFO_EMPTY_CNT_MASK) >> TX_FIFO_EMPTY_CNT_SHIFT;
+    if (Data32 < 3) {
+      MicroSecondDelay (1);
+      Timeout--;
+      if (Timeout == 0) {
+        DEBUG ((DEBUG_ERROR, "%a: Timeout waiting for to send packet header Free\r\n", __FUNCTION__));
+        return EFI_TIMEOUT;
+      }
+    }
+  } while (Data32 < 3);
+
   MmioWrite32 (Private->BaseAddress + I2C_I2C_TX_PACKET_FIFO_0_OFFSET, PacketHeader[0]);
   MmioWrite32 (Private->BaseAddress + I2C_I2C_TX_PACKET_FIFO_0_OFFSET, PacketHeader[1]);
   MmioWrite32 (Private->BaseAddress + I2C_I2C_TX_PACKET_FIFO_0_OFFSET, PacketHeader[2]);
@@ -453,6 +452,13 @@ TegraI2cStartRequest (
   UINTN                          PacketIndex   = 0;
   BOOLEAN                        BlockTransfer = FALSE;
   BOOLEAN                        LastOperation;
+  BOOLEAN                        PecSupported = FALSE;
+  UINT8                          Crc8         = 0;
+  UINT8                          AddressCrc8  = 0;
+  UINT8                          ReadCrc8     = 0;
+  UINT32                         Data32;
+  UINT32                         Timeout;
+  BOOLEAN                        ReadOperation;
 
   if ((This == NULL) ||
       (RequestPacket == NULL) ||
@@ -462,9 +468,19 @@ TegraI2cStartRequest (
   }
 
   Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER (This);
-  // Do not currently support PEC
+
   if ((RequestPacket->Operation[0].Flags & I2C_FLAG_SMBUS_PEC) != 0) {
-    return EFI_UNSUPPORTED;
+    if (RequestPacket->OperationCount > 2) {
+      return EFI_INVALID_PARAMETER;
+    } else if (RequestPacket->OperationCount == 2) {
+      if (((RequestPacket->Operation[0].Flags & I2C_FLAG_READ) != 0) ||
+          ((RequestPacket->Operation[1].Flags & I2C_FLAG_READ) == 0))
+      {
+        return EFI_INVALID_PARAMETER;
+      }
+    }
+
+    PecSupported = TRUE;
   }
 
   if ((RequestPacket->Operation[0].Flags & I2C_FLAG_SMBUS_BLOCK) != 0) {
@@ -479,11 +495,8 @@ TegraI2cStartRequest (
 
   for (PacketIndex = 0; PacketIndex < RequestPacket->OperationCount; PacketIndex++) {
     BOOLEAN  ContinueTransfer = FALSE;
-    BOOLEAN  ReadOperation;
-    UINT32   LengthRemaining = RequestPacket->Operation[PacketIndex].LengthInBytes;
-    UINT32   Data32;
-    UINT32   BufferOffset = 0;
-    UINT32   Timeout;
+    UINT32   LengthRemaining  = RequestPacket->Operation[PacketIndex].LengthInBytes;
+    UINT32   BufferOffset     = 0;
 
     if ((RequestPacket->Operation[PacketIndex].Flags & I2C_FLAG_READ) != 0) {
       ReadOperation = TRUE;
@@ -491,17 +504,32 @@ TegraI2cStartRequest (
       ReadOperation = FALSE;
     }
 
+    if (PecSupported) {
+      AddressCrc8 = SlaveAddress << 1;
+      if (ReadOperation) {
+        AddressCrc8 |= 1;
+      }
+
+      Crc8 = CalculateCrc8 (&AddressCrc8, 1, Crc8, TYPE_CRC8);
+      if (!ReadOperation) {
+        if (RequestPacket->Operation[PacketIndex].LengthInBytes != 0) {
+          Crc8 = CalculateCrc8 (RequestPacket->Operation[PacketIndex].Buffer, RequestPacket->Operation[PacketIndex].LengthInBytes, Crc8, TYPE_CRC8);
+        }
+      }
+    }
+
     LastOperation = (PacketIndex == (RequestPacket->OperationCount - 1));
 
     do {
       UINT32  PayloadSize = 0;
       if (!ReadOperation) {
-        PayloadSize = MIN (LengthRemaining, I2C_MAX_PACKET_SIZE - I2C_PACKET_HEADER_SIZE);
-        if (BufferOffset != 0) {
-          ContinueTransfer = TRUE;
+        if (PecSupported && (BufferOffset == 0) && LastOperation) {
+          LengthRemaining++;
         }
 
-        Status = TegraI2cSendHeader (Private, SlaveAddress, PayloadSize, ReadOperation, LastOperation, ContinueTransfer);
+        PayloadSize      = MIN (LengthRemaining, I2C_MAX_PACKET_SIZE - I2C_PACKET_HEADER_SIZE);
+        ContinueTransfer = ((PayloadSize != LengthRemaining));
+        Status           = TegraI2cSendHeader (Private, SlaveAddress, PayloadSize, ReadOperation, LastOperation, ContinueTransfer);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "%a: Header send failed (%r)\r\n", __FUNCTION__, Status));
           goto Exit;
@@ -521,15 +549,35 @@ TegraI2cStartRequest (
                 Status = EFI_TIMEOUT;
                 goto Exit;
               }
+
+              Data32 = MmioRead32 (Private->BaseAddress + I2C_PACKET_TRANSFER_STATUS_0_OFFSET);
+              if ((Data32 & (PACKET_TRANSFER_NOACK_FOR_ADDR| PACKET_TRANSFER_NOACK_FOR_DATA)) != 0) {
+                DEBUG ((DEBUG_ERROR, "%a: NAK for TX\r\n", __FUNCTION__));
+                Status = EFI_DEVICE_ERROR;
+                goto Exit;
+              }
+
+              Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_STATUS_0_OFFSET);
+              Data32 = (Data32 & TX_FIFO_EMPTY_CNT_MASK) >> TX_FIFO_EMPTY_CNT_SHIFT;
             }
           } while (Data32 == 0);
 
           Data32 = 0;
-          CopyMem (
-            (VOID *)&Data32,
-            RequestPacket->Operation[PacketIndex].Buffer + BufferOffset,
-            WriteSize
-            );
+          if (PecSupported && LastOperation && (WriteSize == LengthRemaining)) {
+            CopyMem (
+              (VOID *)&Data32,
+              RequestPacket->Operation[PacketIndex].Buffer + BufferOffset,
+              WriteSize-1
+              );
+            ((UINT8 *)&Data32)[WriteSize-1] = Crc8;
+          } else {
+            CopyMem (
+              (VOID *)&Data32,
+              RequestPacket->Operation[PacketIndex].Buffer + BufferOffset,
+              WriteSize
+              );
+          }
+
           MmioWrite32 (Private->BaseAddress + I2C_I2C_TX_PACKET_FIFO_0_OFFSET, Data32);
           PayloadSize     -= WriteSize;
           LengthRemaining -= WriteSize;
@@ -537,17 +585,18 @@ TegraI2cStartRequest (
         }
       } else {
         UINT32  ReadPacketSize;
+        if (PecSupported && LastOperation && (BufferOffset == 0)) {
+          LengthRemaining++;
+        }
+
         if ((BufferOffset == 0) && BlockTransfer) {
           ReadPacketSize = 1;
         } else {
           ReadPacketSize = MIN (LengthRemaining, I2C_MAX_PACKET_SIZE);
         }
 
-        if (BufferOffset != 0) {
-          ContinueTransfer = TRUE;
-        }
-
-        Status = TegraI2cSendHeader (Private, SlaveAddress, ReadPacketSize, ReadOperation, LastOperation, ContinueTransfer);
+        ContinueTransfer = (LengthRemaining != ReadPacketSize);
+        Status           = TegraI2cSendHeader (Private, SlaveAddress, ReadPacketSize, ReadOperation, LastOperation, ContinueTransfer);
         while (ReadPacketSize != 0) {
           UINT32  ReadSize = MIN (sizeof (UINT32), ReadPacketSize);
           Timeout = I2C_TIMEOUT;
@@ -562,15 +611,34 @@ TegraI2cStartRequest (
                 Status = EFI_TIMEOUT;
                 goto Exit;
               }
+
+              Data32 = MmioRead32 (Private->BaseAddress + I2C_PACKET_TRANSFER_STATUS_0_OFFSET);
+              if ((Data32 & (PACKET_TRANSFER_NOACK_FOR_ADDR| PACKET_TRANSFER_NOACK_FOR_DATA)) != 0) {
+                DEBUG ((DEBUG_ERROR, "%a: NAK for RX\r\n", __FUNCTION__));
+                Status = EFI_NO_RESPONSE;
+                goto Exit;
+              }
+
+              Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_STATUS_0_OFFSET);
+              Data32 = (Data32 & RX_FIFO_FULL_CNT_MASK) >> RX_FIFO_FULL_CNT_SHIFT;
             }
           } while (Data32 == 0);
 
           Data32 = MmioRead32 (Private->BaseAddress + I2C_I2C_RX_FIFO_0_OFFSET);
-          CopyMem (
-            RequestPacket->Operation[PacketIndex].Buffer + BufferOffset,
-            (VOID *)&Data32,
-            ReadSize
-            );
+          if (PecSupported && LastOperation && (LengthRemaining == ReadSize)) {
+            CopyMem (
+              RequestPacket->Operation[PacketIndex].Buffer + BufferOffset,
+              (VOID *)&Data32,
+              ReadSize-1
+              );
+            ReadCrc8 = ((UINT8 *)&Data32)[ReadSize-1];
+          } else {
+            CopyMem (
+              RequestPacket->Operation[PacketIndex].Buffer + BufferOffset,
+              (VOID *)&Data32,
+              ReadSize
+              );
+          }
 
           if ((BufferOffset == 0) && BlockTransfer) {
             if (RequestPacket->Operation[PacketIndex].LengthInBytes < (*RequestPacket->Operation[PacketIndex].Buffer + 1)) {
@@ -580,6 +648,9 @@ TegraI2cStartRequest (
 
             RequestPacket->Operation[PacketIndex].LengthInBytes = *RequestPacket->Operation[PacketIndex].Buffer + 1;
             LengthRemaining                                     = *RequestPacket->Operation[PacketIndex].Buffer;
+            if (PecSupported && LastOperation) {
+              LengthRemaining++;
+            }
           } else {
             LengthRemaining -= ReadSize;
           }
@@ -589,6 +660,12 @@ TegraI2cStartRequest (
         }
       }
     } while (LengthRemaining != 0);
+
+    if (ReadOperation && PecSupported) {
+      if (RequestPacket->Operation[PacketIndex].LengthInBytes != 0) {
+        Crc8 = CalculateCrc8 (RequestPacket->Operation[PacketIndex].Buffer, RequestPacket->Operation[PacketIndex].LengthInBytes, Crc8, TYPE_CRC8);
+      }
+    }
 
     // Error Check
     Timeout = I2C_TIMEOUT;
@@ -604,11 +681,13 @@ TegraI2cStartRequest (
       Data32 = MmioRead32 (Private->BaseAddress + I2C_INTERRUPT_STATUS_REGISTER_0_OFFSET);
       MmioWrite32 (Private->BaseAddress + I2C_INTERRUPT_STATUS_REGISTER_0_OFFSET, Data32);
       if ((Data32 & INTERRUPT_STATUS_NOACK) != 0) {
+        DEBUG ((DEBUG_ERROR, "%a: No ACK received\r\n", __FUNCTION__));
         Status = EFI_NO_RESPONSE;
         break;
       }
 
       if ((Data32 & INTERRUPT_STATUS_ARB_LOST) != 0) {
+        DEBUG ((DEBUG_ERROR, "%a: ARB Lost\r\n", __FUNCTION__));
         Status = EFI_DEVICE_ERROR;
         break;
       }
@@ -618,6 +697,21 @@ TegraI2cStartRequest (
         break;
       }
     } while (TRUE);
+
+    if (EFI_ERROR (Status)) {
+      break;
+    }
+  }
+
+  if (!EFI_ERROR (Status)) {
+    if (PecSupported &&
+        ((RequestPacket->Operation[RequestPacket->OperationCount-1].Flags & I2C_FLAG_READ) != 0) &&
+        (ReadCrc8 != Crc8))
+    {
+      DEBUG ((DEBUG_ERROR, "%a: PEC Mismatch, got: 0x%02x expected 0x%02x\r\n", __FUNCTION__, ReadCrc8, Crc8));
+      Status = EFI_DEVICE_ERROR;
+      goto Exit;
+    }
   }
 
 Exit:
@@ -1118,7 +1212,7 @@ TegraI2CDriverBindingStart (
         }
 
         Count++;
-        DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx.\n", __FUNCTION__, I2cAddress));
+        DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
       }
     }
 
@@ -1143,6 +1237,8 @@ TegraI2CDriverBindingStart (
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
         }
+
+        DEBUG ((DEBUG_INFO, "%a: TCA9539 Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
       }
     }
 
@@ -1180,7 +1276,7 @@ TegraI2CDriverBindingStart (
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
         gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
-        DEBUG ((DEBUG_INFO, "%a: SSIF BMC Found.\n", __FUNCTION__));
+        DEBUG ((DEBUG_INFO, "%a: BMC-SSIF Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
         DeviceGuid = &gNVIDIAI2cBmcSSIF;
         Status     = TegraI2cAddDevice (
                        Private,

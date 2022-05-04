@@ -36,6 +36,7 @@
   UefiDriverEntryPoint
   FdtLib
   DeviceDiscoveryDriverLib
+  Crc8Lib
 
 [Protocols]
   gEfiI2cMasterProtocolGuid
