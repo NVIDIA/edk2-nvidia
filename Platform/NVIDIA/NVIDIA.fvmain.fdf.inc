@@ -95,6 +95,7 @@
   INF Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
   INF Silicon/NVIDIA/Drivers/I2cIoBmcSsifDxe/I2cIoBmcSsifDxe.inf
   INF Silicon/NVIDIA/Drivers/ArmSmbrStatusCodeDxe/ArmSmbrStatusCodeDxe.inf
+  INF IpmiFeaturePkg/Frb/FrbDxe.inf
 
   #
   # Graphics console support
