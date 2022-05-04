@@ -2,7 +2,7 @@
 #
 #  Nor Flash Driver
 #
-#  Copyright (c) 2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -34,6 +34,7 @@
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   UefiRuntimeLib
+  TegraPlatformInfoLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraNorBlockProtocols

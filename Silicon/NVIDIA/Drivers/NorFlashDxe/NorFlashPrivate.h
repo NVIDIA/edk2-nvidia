@@ -2,7 +2,7 @@
 
   NOR Flash Driver Private Data
 
-  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,6 +22,7 @@
 #include <Library/DevicePathLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiRuntimeLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 #include <libfdt.h>
 
@@ -49,6 +50,7 @@
 
 #define NOR_WRITE_DATA_CMD            0x12
 #define NOR_FAST_READ_DATA_CMD        0x0C
+#define NOR_READ_DATA_CMD             0x13
 #define NOR_WREN_DISABLE              0x4
 #define NOR_WREN_ENABLE               0x6
 
