@@ -1,0 +1,48 @@
+#/** @file
+#
+#  TegraPinControlDxe Driver
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TegraPinControlDxe
+  FILE_GUID                      = 19008c35-cad4-4d62-9d8f-b0e8ab4869e3
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  TegraPinControlDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  DeviceDiscoveryDriverLib
+
+[Protocols]
+  gNVIDIAPinControlProtocolGuid
+  gNVIDIASubPinControlProtocolGuid
+
+[Guids]
+  gNVIDIANonDiscoverableNVIDIADpAuxDeviceGuid
+
+[Depex]
+  TRUE

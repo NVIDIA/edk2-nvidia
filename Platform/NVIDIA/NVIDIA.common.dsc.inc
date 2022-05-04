@@ -990,6 +990,11 @@
   #
   Drivers/Realtek/Bus/Pcie/PcieNetworking/RtkUndiDxe.inf
 
+  #
+  # Tegra Pin Control support
+  #
+  Silicon/NVIDIA/Drivers/TegraPinControlDxe/TegraPinControlDxe.inf
+
 [Components.AARCH64]
   #
   # EBC

@@ -291,3 +291,8 @@
   # Third party drivers
   #
   INF Drivers/Realtek/Bus/Pcie/PcieNetworking/RtkUndiDxe.inf
+
+  #
+  # Tegra Pin Control support
+  #
+  INF Silicon/NVIDIA/Drivers/TegraPinControlDxe/TegraPinControlDxe.inf
