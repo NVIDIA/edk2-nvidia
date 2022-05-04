@@ -2,7 +2,7 @@
 
   NOR Flash Driver
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -693,6 +693,7 @@ NorFlashRead(
   QSPI_TRANSACTION_PACKET Packet;
   NOR_FLASH_PRIVATE_DATA  *Private;
   UINT32                  FlashDensity;
+  TEGRA_PLATFORM_TYPE     PlatformType;
 
   if (This == NULL ||
       Buffer == NULL ||
@@ -717,13 +718,23 @@ NorFlashRead(
     Private->CommandBuffer[Count] = (Offset & (0xFF << AddressShift)) >> AddressShift;
     AddressShift += 8;
   }
-  Private->CommandBuffer[0] = NOR_FAST_READ_DATA_CMD;
+
+  PlatformType = TegraGetPlatform();
+  if (PlatformType == TEGRA_PLATFORM_SILICON) {
+    Private->CommandBuffer[0] = NOR_FAST_READ_DATA_CMD;
+    Packet.WaitCycles = Private->PrivateFlashAttributes.ReadWaitCycles;
+  } else {
+    Private->CommandBuffer[0] = NOR_READ_DATA_CMD;
+    Packet.WaitCycles = 0;
+  }
 
   Packet.TxBuf = Private->CommandBuffer;
   Packet.TxLen = CmdSize;
   Packet.RxBuf = Buffer;
   Packet.RxLen = Size;
-  Packet.WaitCycles = Private->PrivateFlashAttributes.ReadWaitCycles;
+
+  DEBUG ((DEBUG_INFO, "%a: Read Cmd %u Wait Cycles %u\n",
+          __FUNCTION__, Private->CommandBuffer[0], Packet.WaitCycles));
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR(Status)) {
