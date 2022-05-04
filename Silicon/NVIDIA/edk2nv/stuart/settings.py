@@ -65,7 +65,7 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         packages_paths = [path + "/" for path in self._insert_pkgs_paths]
         packages_paths.extend([
             "edk2/BaseTools/", "edk2/", "edk2-platforms/", "edk2-nvidia/",
-            "edk2-nvidia-non-osi/", "edk2-non-osi"
+            "edk2-nvidia-non-osi/", "edk2-non-osi", "edk2-platforms/Features/Intel/OutOfBandManagement/"
         ])
 
         return packages_paths

@@ -212,6 +212,9 @@
 
   Crc8Lib|Silicon/NVIDIA/Library/Crc8Lib/Crc8Lib.inf
 
+  IpmiBaseLib|IpmiFeaturePkg/Library/IpmiBaseLib/IpmiBaseLib.inf
+  IpmiCommandLib|IpmiFeaturePkg/Library/IpmiCommandLib/IpmiCommandLib.inf
+
 !if $(BUILD_PROJECT_TYPE) == PROJECT_MU
   BaseBinSecurityLib|MdePkg/Library/BaseBinSecurityLibNull/BaseBinSecurityLibNull.inf
   MemoryProtectionLib|MdeModulePkg/Library/BaseMemoryProtectionLibNull/BaseMemoryProtectionLibNull.inf
