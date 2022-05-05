@@ -89,6 +89,7 @@ typedef struct {
 typedef struct {
   UINT32              NumSockets;
   UINT32              ActiveBootChain;
+  BOOLEAN             BrBctUpdateFlag;
   TEGRA_RESOURCE_INFO *ResourceInfo;
   TEGRA_MMIO_INFO     *MmioInfo;
   TEGRABL_EEPROM_DATA *EepromData;
