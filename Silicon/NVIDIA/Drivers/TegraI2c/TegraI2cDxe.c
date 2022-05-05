@@ -23,6 +23,7 @@
 #include <Library/PrintLib.h>
 #include <libfdt.h>
 #include <Protocol/DeviceTreeNode.h>
+#include <Protocol/PinControl.h>
 
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include "TegraI2c.h"
@@ -459,6 +460,7 @@ TegraI2cStartRequest (
   UINT32                         Data32;
   UINT32                         Timeout;
   BOOLEAN                        ReadOperation;
+  NVIDIA_PIN_CONTROL_PROTOCOL    *PinControl;
 
   if ((This == NULL) ||
       (RequestPacket == NULL) ||
@@ -491,6 +493,27 @@ TegraI2cStartRequest (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to update configuration (%r)\r\n", __FUNCTION__, Status));
     return Status;
+  }
+
+  if (!Private->PinControlConfigured) {
+    if (Private->PinControlId != 0) {
+      Status = gBS->LocateProtocol (&gNVIDIAPinControlProtocolGuid, NULL, (VOID **)&PinControl);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to get pin control protocol when needed (%r)\r\n", __FUNCTION__, Status));
+        return Status;
+      }
+
+      Status = PinControl->Enable (PinControl, Private->PinControlId);
+      if (Status == EFI_NOT_FOUND) {
+        DEBUG ((DEBUG_ERROR, "%a: Pinctl in device tree but not supported, ignoring.\r\n", __FUNCTION__));
+        Status = EFI_SUCCESS;
+      } else if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to configure pin control - %x (%r)\r\n", __FUNCTION__, Private->PinControlId, Status));
+        return Status;
+      }
+    }
+
+    Private->PinControlConfigured = TRUE;
   }
 
   for (PacketIndex = 0; PacketIndex < RequestPacket->OperationCount; PacketIndex++) {
@@ -1039,6 +1062,14 @@ TegraI2CDriverBindingStart (
   Private->DeviceTreeNode                                 = DeviceTreeNode;
   Private->PacketId                                       = 0;
   Private->HighSpeed                                      = FALSE;
+
+  Private->PinControlConfigured = FALSE;
+  Property                      = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "pinctrl-0", NULL);
+  if (Property != NULL) {
+    Private->PinControlId = SwapBytes32 (*(CONST UINT32 *)Property);
+  } else {
+    Private->PinControlId = 0;
+  }
 
   DtControllerId = (CONST UINT32 *)fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,hw-instance-id", NULL);
   if (NULL != DtControllerId) {

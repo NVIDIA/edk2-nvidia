@@ -44,6 +44,7 @@
   gEfiI2cBusConfigurationManagementProtocolGuid
   gEfiDevicePathProtocolGuid
   gNVIDIADeviceTreeNodeProtocolGuid
+  gNVIDIAPinControlProtocolGuid
 
 [Guids]
   gNVIDIAI2cUnknown
@@ -54,4 +55,4 @@
   gNVIDIAI2cBmcSSIF
 
 [Depex]
-  TRUE
+  gNVIDIAPinControlProtocolGuid

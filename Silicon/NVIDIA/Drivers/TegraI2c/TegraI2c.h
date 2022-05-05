@@ -2,7 +2,7 @@
 
   Tegra I2c Controller Driver private structures
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -64,6 +64,9 @@ typedef struct {
   EFI_I2C_DEVICE                                   I2cDevices[MAX_I2C_DEVICES];
   UINT32                                           SlaveAddressArray[MAX_I2C_DEVICES*MAX_SLAVES_PER_DEVICE];
   UINTN                                            NumberOfI2cDevices;
+
+  UINT32                                           PinControlId;
+  BOOLEAN                                          PinControlConfigured;
 } NVIDIA_TEGRA_I2C_PRIVATE_DATA;
 
 #define TEGRA_I2C_PRIVATE_DATA_FROM_MASTER(a)     CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2cMaster, TEGRA_I2C_SIGNATURE)
