@@ -1364,6 +1364,9 @@ ExtLinuxBoot (
     // Before calling the image, enable the Watchdog Timer for  the 5 Minute period
     gBS->SetWatchdogTimer(5 * 60, 0x10000, 0, NULL);
 
+    DEBUG ((DEBUG_ERROR, "%a: Cmdline: \n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%s", ImageInfo->LoadOptions));
+
     Status = gBS->StartImage(KernelHandle, NULL, NULL);
 
     // Clear the Watchdog Timer if the image returns
@@ -1631,6 +1634,9 @@ BootAndroidStylePartition (
     ErrorPrint (L"Failed to read disk\r\n");
     goto Exit;
   }
+
+  DEBUG ((DEBUG_ERROR, "%a: Cmdline: \n", __FUNCTION__));
+  DEBUG ((DEBUG_ERROR, "%a", ImageHeader.KernelArgs));
 
   Status = AndroidBootImgBoot (Image, ImageSize);
   if (EFI_ERROR (Status)) {
