@@ -76,7 +76,7 @@
 
 #define NOR_SFDP_FAST_READ_DEF_WAIT   8
 
-#define NOR_SFDP_FREQ                 100000000
+#define NOR_FAST_CMD_THRESH_FREQ      100000000
 
 #pragma pack(1)
 typedef struct {
@@ -127,7 +127,7 @@ typedef struct {
 
 
 typedef struct {
-  BOOLEAN                          Reserved:1;
+  BOOLEAN                          ReadCmd13:1;
   BOOLEAN                          ReadCmd0C:1;
   UINT8                            Reserved2:4;
   BOOLEAN                          WriteCmd12:1;
