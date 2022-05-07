@@ -402,9 +402,23 @@ ReadNorFlashSFDP (
     goto ErrorExit;
   }
 
-  if (SFDPParam4ByteInstructionTbl->ReadCmd0C == FALSE ||
-      SFDPParam4ByteInstructionTbl->WriteCmd12 == FALSE) {
-    DEBUG ((EFI_D_ERROR, "%a: NOR flash's single bit RW unsupported.\n", __FUNCTION__));
+  // Atleast one Read type should be supported
+  if ((SFDPParam4ByteInstructionTbl->ReadCmd0C == FALSE) ||
+      (SFDPParam4ByteInstructionTbl->ReadCmd13 == FALSE)) {
+    DEBUG ((EFI_D_ERROR, "%a: NOR flash's single bit Read unsupported.\n", __FUNCTION__));
+    Status = EFI_UNSUPPORTED;
+    goto ErrorExit;
+  }
+
+  // If Fast Read isn't supported override the FastReadSupport capability bool even if
+  // the support
+  if (SFDPParam4ByteInstructionTbl->ReadCmd0C == FALSE) {
+    Private->PrivateFlashAttributes.FastReadSupport = FALSE;
+  }
+
+  // Page write has to be supported
+   if (SFDPParam4ByteInstructionTbl->WriteCmd12 == FALSE) {
+    DEBUG ((EFI_D_ERROR, "%a: NOR flash's single bit Write unsupported.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -719,10 +733,22 @@ NorFlashRead(
     AddressShift += 8;
   }
 
+
+  /*
+   * For Silicon Platforms
+   *   Switch Read Commands based on clock/support.
+   * For Pre Sil
+   *   Always use Slow Read
+   */
   PlatformType = TegraGetPlatform();
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
-    Private->CommandBuffer[0] = NOR_FAST_READ_DATA_CMD;
-    Packet.WaitCycles = Private->PrivateFlashAttributes.ReadWaitCycles;
+    if (Private->PrivateFlashAttributes.FastReadSupport)  {
+      Private->CommandBuffer[0] = NOR_FAST_READ_DATA_CMD;
+      Packet.WaitCycles = Private->PrivateFlashAttributes.ReadWaitCycles;
+    } else {
+      Private->CommandBuffer[0] = NOR_READ_DATA_CMD;
+      Packet.WaitCycles = 0;
+    }
   } else {
     Private->CommandBuffer[0] = NOR_READ_DATA_CMD;
     Packet.WaitCycles = 0;
@@ -1457,8 +1483,8 @@ NorFlashDxeDriverBindingStart (
   }
   DEBUG ((DEBUG_ERROR, "%a: Default QSPI bus frequency: %u\n", __FUNCTION__, ClockSpeed / 2));
 
-  if (ClockSpeed > NOR_SFDP_FREQ) {
-    Status = QspiInstance->SetClockSpeed (QspiInstance, NOR_SFDP_FREQ);
+  if (ClockSpeed > NOR_FAST_CMD_THRESH_FREQ) {
+    Status = QspiInstance->SetClockSpeed (QspiInstance, NOR_FAST_CMD_THRESH_FREQ);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
       goto ErrorExit;
@@ -1470,6 +1496,7 @@ NorFlashDxeDriverBindingStart (
       goto ErrorExit;
     }
     DEBUG ((DEBUG_ERROR, "%a: New QSPI bus frequency: %u\n", __FUNCTION__, NewClockSpeed / 2));
+    Private->PrivateFlashAttributes.FastReadSupport = TRUE;
   }
 
   // Read NOR flash's SFDP
@@ -1490,7 +1517,7 @@ NorFlashDxeDriverBindingStart (
   DEBUG ((DEBUG_ERROR, "%a: NOR Flash Write Page Size: 0x%lx\n",
           __FUNCTION__, Private->PrivateFlashAttributes.PageSize));
 
-  if (ClockSpeed > NOR_SFDP_FREQ) {
+  if (ClockSpeed > NOR_FAST_CMD_THRESH_FREQ) {
     Status = QspiInstance->SetClockSpeed (QspiInstance, ClockSpeed);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
@@ -1503,8 +1530,6 @@ NorFlashDxeDriverBindingStart (
       goto ErrorExit;
     }
     DEBUG ((DEBUG_ERROR, "%a: Restored QSPI bus frequency: %u\n", __FUNCTION__, RestoredClockSpeed / 2));
-
-    Private->PrivateFlashAttributes.FastReadSupport = TRUE;
   }
 
   // Allocate Command Buffer
