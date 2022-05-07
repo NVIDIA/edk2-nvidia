@@ -1,7 +1,7 @@
 /** @file
   NVIDIA QSPI Controller Protocol
 
-  Copyright (c) 2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -41,9 +41,45 @@ EFI_STATUS
   IN QSPI_TRANSACTION_PACKET         *Packet
 );
 
+/**
+  Get QSPI clock speed.
+
+  @param[in] This                  Instance of protocol
+  @param[in] ClockSpeed            Pointer to get clock speed
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+
+**/
+typedef
+EFI_STATUS
+(EFIAPI * QSPI_CONTROLLER_GET_CLOCK_SPEED)(
+  IN NVIDIA_QSPI_CONTROLLER_PROTOCOL *This,
+  IN UINT64                          *ClockSpeed
+);
+
+/**
+  Set QSPI clock speed.
+
+  @param[in] This                  Instance of protocol
+  @param[in] ClockSpeed            Clock speed
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+
+**/
+typedef
+EFI_STATUS
+(EFIAPI * QSPI_CONTROLLER_SET_CLOCK_SPEED)(
+  IN NVIDIA_QSPI_CONTROLLER_PROTOCOL *This,
+  IN UINT64                          ClockSpeed
+);
+
 /// NVIDIA_QSPI_CONTROLLER_PROTOCOL protocol structure.
 struct _NVIDIA_QSPI_CONTROLLER_PROTOCOL {
   QSPI_CONTROLLER_PERFORM_TRANSACTION PerformTransaction;
+  QSPI_CONTROLLER_GET_CLOCK_SPEED     GetClockSpeed;
+  QSPI_CONTROLLER_SET_CLOCK_SPEED     SetClockSpeed;
 };
 
 extern EFI_GUID gNVIDIAQspiControllerProtocolGuid;
