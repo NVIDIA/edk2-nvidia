@@ -1420,6 +1420,7 @@ NorFlashDxeDriverBindingStart (
   EFI_STATUS                       Status;
   NOR_FLASH_PRIVATE_DATA           *Private;
   NVIDIA_QSPI_CONTROLLER_PROTOCOL  *QspiInstance;
+  UINT64                           ClockSpeed;
   EFI_DEVICE_PATH_PROTOCOL         *ParentDevicePath;
   EFI_DEVICE_PATH_PROTOCOL         *NorFlashDevicePath;
   VOID                             *Interface;
@@ -1448,6 +1449,29 @@ NorFlashDxeDriverBindingStart (
   Private->QspiControllerHandle = Controller;
   Private->QspiController = QspiInstance;
 
+  //Check QSPI Bus Frequency
+  Status = QspiInstance->GetClockSpeed (QspiInstance, &ClockSpeed);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
+    goto ErrorExit;
+  }
+  DEBUG ((DEBUG_ERROR, "%a: Default QSPI bus frequency: %u\n", __FUNCTION__, ClockSpeed / 2));
+
+  if (ClockSpeed > NOR_SFDP_FREQ) {
+    Status = QspiInstance->SetClockSpeed (QspiInstance, NOR_SFDP_FREQ);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
+      goto ErrorExit;
+    }
+    UINT64 NewClockSpeed;
+    Status = QspiInstance->GetClockSpeed (QspiInstance, &NewClockSpeed);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
+      goto ErrorExit;
+    }
+    DEBUG ((DEBUG_ERROR, "%a: New QSPI bus frequency: %u\n", __FUNCTION__, NewClockSpeed / 2));
+  }
+
   // Read NOR flash's SFDP
   Status = ReadNorFlashSFDP (Private);
   if (EFI_ERROR (Status)) {
@@ -1455,16 +1479,33 @@ NorFlashDxeDriverBindingStart (
     goto ErrorExit;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: NOR Flash Uniform Memory Density: 0x%lx\n",
+  DEBUG ((DEBUG_ERROR, "%a: NOR Flash Uniform Memory Density: 0x%lx\n",
           __FUNCTION__, Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity));
-  DEBUG ((DEBUG_INFO, "%a: NOR Flash Uniform Block Size: 0x%lx\n",
+  DEBUG ((DEBUG_ERROR, "%a: NOR Flash Uniform Block Size: 0x%lx\n",
           __FUNCTION__, Private->PrivateFlashAttributes.FlashAttributes.BlockSize));
-  DEBUG ((DEBUG_INFO, "%a: NOR Flash Hybrid Memory Density: 0x%lx\n",
+  DEBUG ((DEBUG_ERROR, "%a: NOR Flash Hybrid Memory Density: 0x%lx\n",
           __FUNCTION__, Private->PrivateFlashAttributes.HybridMemoryDensity));
-  DEBUG ((DEBUG_INFO, "%a: NOR Flash Hybrid Block Size: 0x%lx\n",
+  DEBUG ((DEBUG_ERROR, "%a: NOR Flash Hybrid Block Size: 0x%lx\n",
           __FUNCTION__, Private->PrivateFlashAttributes.HybridBlockSize));
-  DEBUG ((DEBUG_INFO, "%a: NOR Flash Write Page Size: 0x%lx\n",
+  DEBUG ((DEBUG_ERROR, "%a: NOR Flash Write Page Size: 0x%lx\n",
           __FUNCTION__, Private->PrivateFlashAttributes.PageSize));
+
+  if (ClockSpeed > NOR_SFDP_FREQ) {
+    Status = QspiInstance->SetClockSpeed (QspiInstance, ClockSpeed);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
+      goto ErrorExit;
+    }
+    UINT64 RestoredClockSpeed;
+    Status = QspiInstance->GetClockSpeed (QspiInstance, &RestoredClockSpeed);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
+      goto ErrorExit;
+    }
+    DEBUG ((DEBUG_ERROR, "%a: Restored QSPI bus frequency: %u\n", __FUNCTION__, RestoredClockSpeed / 2));
+
+    Private->PrivateFlashAttributes.FastReadSupport = TRUE;
+  }
 
   // Allocate Command Buffer
   Private->CommandBuffer = AllocateRuntimeZeroPool (NOR_CMD_SIZE + NOR_ADDR_SIZE +

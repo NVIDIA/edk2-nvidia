@@ -76,6 +76,8 @@
 
 #define NOR_SFDP_FAST_READ_DEF_WAIT   8
 
+#define NOR_SFDP_FREQ                 100000000
+
 #pragma pack(1)
 typedef struct {
   UINT32                           SFDPSignature;
@@ -161,6 +163,7 @@ typedef struct {
   UINT8                            ReadWaitCycles;
   UINT64                           HybridMemoryDensity;
   UINT32                           HybridBlockSize;
+  BOOLEAN                          FastReadSupport;
 } NOR_FLASH_PRIVATE_ATTRIBUTES;
 
 

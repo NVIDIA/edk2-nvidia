@@ -27,12 +27,21 @@
 #define QSPI_CONTROLLER_SIGNATURE SIGNATURE_32('Q','S','P','I')
 
 
+typedef enum {
+  CONTROLLER_TYPE_QSPI,
+  CONTROLLER_TYPE_SPI,
+  CONTROLLER_TYPE_UNSUPPORTED
+} QSPI_CONTROLLER_TYPE;
+
+
 typedef struct {
   UINT32                          Signature;
   EFI_PHYSICAL_ADDRESS            QspiBaseAddress;
   NVIDIA_QSPI_CONTROLLER_PROTOCOL QspiControllerProtocol;
   EFI_EVENT                       VirtualAddrChangeEvent;
   BOOLEAN                         WaitCyclesSupported;
+  QSPI_CONTROLLER_TYPE            ControllerType;
+  UINT32                          ClockId;
 } QSPI_CONTROLLER_PRIVATE_DATA;
 
 
@@ -92,6 +101,84 @@ QspiControllerPerformTransaction(
 
 
 /**
+  Get QSPI clock speed.
+
+  @param[in] This                  Instance of protocol
+  @param[in] ClockSpeed            Pointer to get clock speed
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+QspiControllerGetClockSpeed(
+  IN NVIDIA_QSPI_CONTROLLER_PROTOCOL *This,
+  IN UINT64                          *ClockSpeed
+)
+{
+  EFI_STATUS                   Status;
+  SCMI_CLOCK2_PROTOCOL         *ScmiClockProtocol;
+  QSPI_CONTROLLER_PRIVATE_DATA *Private;
+
+  Private = QSPI_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL (This);
+
+  Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid,
+                                NULL,
+                                (VOID **)&ScmiClockProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate ARM SCMI Clock2 Protocol\n", __FUNCTION__));
+    return Status;
+  }
+
+  if (Private->ClockId != MAX_UINT32) {
+    return ScmiClockProtocol->RateGet (ScmiClockProtocol, Private->ClockId, ClockSpeed);
+  } else {
+    return EFI_UNSUPPORTED;
+  }
+}
+
+
+/**
+  Set QSPI clock speed.
+
+  @param[in] This                  Instance of protocol
+  @param[in] ClockSpeed            Clock speed
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+QspiControllerSetClockSpeed(
+  IN NVIDIA_QSPI_CONTROLLER_PROTOCOL *This,
+  IN UINT64                          ClockSpeed
+)
+{
+  EFI_STATUS                   Status;
+  SCMI_CLOCK2_PROTOCOL         *ScmiClockProtocol;
+  QSPI_CONTROLLER_PRIVATE_DATA *Private;
+
+  Private = QSPI_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL (This);
+
+  Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid,
+                                NULL,
+                                (VOID **)&ScmiClockProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate ARM SCMI Clock2 Protocol\n", __FUNCTION__));
+    return Status;
+  }
+
+  if (Private->ClockId != MAX_UINT32) {
+    return ScmiClockProtocol->RateSet (ScmiClockProtocol, Private->ClockId, ClockSpeed);
+  } else {
+    return EFI_UNSUPPORTED;
+  }
+}
+
+
+/**
   Fixup internal data so that EFI can be call in virtual mode.
   Call the passed in Child Notify event and convert any pointers in
   lib to virtual mode.
@@ -117,8 +204,7 @@ VirtualNotifyEvent (
 /**
   Setup clock frequency for the spi controller.
 
-  @param[in]    DeviceTreeNode  Interface to controller's DTB entry
-  @param[in]    Controller      Controller handle
+  @param[in]    ClockId         Id of clock
   @param[in]    ClockFreq       Frequency to be setup
 
   @retval EFI_SUCCESS              Operation successful.
@@ -128,51 +214,48 @@ VirtualNotifyEvent (
 EFI_STATUS
 EFIAPI
 SetSpiFrequency (
-  IN CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode,
-  IN EFI_HANDLE Controller,
-  IN UINT32 ClockFreq
+  IN UINT32 ClockId,
+  IN UINT32 ClockSpeed
 )
 {
   EFI_STATUS                 Status;
-  CONST UINT32               *DtClockIds;
-  INT32                      ClocksLength;
-  CONST CHAR8                *ClockName;
-  NVIDIA_CLOCK_NODE_PROTOCOL *ClockNodeProtocol;
-  UINTN                      Index;
-  UINT32                     ClockId;
   SCMI_CLOCK2_PROTOCOL       *ScmiClockProtocol;
 
-  Status = EFI_SUCCESS;
+  Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid,
+                                NULL,
+                                (VOID **)&ScmiClockProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate ARM SCMI Clock2 Protocol\n", __FUNCTION__));
+    return Status;
+  }
+  if (ClockId != MAX_UINT32) {
+    return ScmiClockProtocol->RateSet (ScmiClockProtocol, ClockId, ClockSpeed);
+  } else {
+    return EFI_UNSUPPORTED;
+  }
+}
 
-  DtClockIds = (CONST UINT32*)fdt_getprop (DeviceTreeNode->DeviceTreeBase,
-                                           DeviceTreeNode->NodeOffset,
-                                           "clocks", &ClocksLength);
-  if ((DtClockIds != NULL) && (ClocksLength != 0)) {
-    ClockName = "spi";
-    ClockNodeProtocol = NULL;
-    Status = gBS->HandleProtocol (Controller,
-                                  &gNVIDIAClockNodeProtocolGuid,
-                                  (VOID **)&ClockNodeProtocol);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to locate Clock Protocol\n", __FUNCTION__));
-      return Status;
-    }
-    for (Index = 0; Index < ClockNodeProtocol->Clocks; Index++) {
-      if (0 == AsciiStrCmp (ClockName, ClockNodeProtocol->ClockEntries[Index].ClockName)) {
-        ClockId = ClockNodeProtocol->ClockEntries[Index].ClockId;
-        Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid,
-                                      NULL,
-                                      (VOID **)&ScmiClockProtocol);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "%a: Failed to locate ARM SCMI Clock2 Protocol\n", __FUNCTION__));
-          return Status;
-        }
-        Status = ScmiClockProtocol->RateSet (ScmiClockProtocol, ClockId, ClockFreq);
-      }
-    }
+
+/**
+  Detect Controller Type
+
+  @param[in]    Device          Non discoverable device
+  @param[in]    ControllerType  Pointer to controller type
+
+  @retval ControllerType        Type of controller
+
+**/
+QSPI_CONTROLLER_TYPE
+EFIAPI
+DetectControllerType (
+  IN NON_DISCOVERABLE_DEVICE *Device
+)
+{
+  if (CompareMem (Device->Type, &gNVIDIANonDiscoverableSpiDeviceGuid, sizeof (EFI_GUID)) == 0) {
+    return CONTROLLER_TYPE_SPI;
   }
 
-  return Status;
+  return CONTROLLER_TYPE_QSPI;
 }
 
 
@@ -202,6 +285,13 @@ DeviceDiscoveryNotify (
 {
   EFI_STATUS                      Status;
   NON_DISCOVERABLE_DEVICE         *Device;
+  QSPI_CONTROLLER_TYPE            ControllerType;
+  CONST UINT32                    *DtClockIds;
+  INT32                           ClocksLength;
+  CONST CHAR8                     *ClockName;
+  NVIDIA_CLOCK_NODE_PROTOCOL      *ClockNodeProtocol;
+  UINTN                           Index;
+  UINT32                          ClockId;
   BOOLEAN                         WaitCyclesSupported;
   UINT32                          SpiClockFreq;
   QSPI_CONTROLLER_PRIVATE_DATA    *Private;
@@ -224,7 +314,35 @@ DeviceDiscoveryNotify (
       return Status;
     }
 
-    if (CompareMem (Device->Type, &gNVIDIANonDiscoverableSpiDeviceGuid, sizeof (EFI_GUID)) == 0) {
+    ControllerType = DetectControllerType (Device);
+    ClockId = MAX_UINT32;
+
+    DtClockIds = (CONST UINT32*)fdt_getprop (DeviceTreeNode->DeviceTreeBase,
+                                             DeviceTreeNode->NodeOffset,
+                                             "clocks", &ClocksLength);
+    if ((DtClockIds != NULL) && (ClocksLength != 0)) {
+      if (ControllerType == CONTROLLER_TYPE_SPI) {
+        ClockName = "spi";
+      } else {
+        ClockName = "qspi";
+      }
+      ClockNodeProtocol = NULL;
+      Status = gBS->HandleProtocol (ControllerHandle,
+                                    &gNVIDIAClockNodeProtocolGuid,
+                                    (VOID **)&ClockNodeProtocol);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to locate Clock Protocol\n", __FUNCTION__));
+        return Status;
+      }
+      for (Index = 0; Index < ClockNodeProtocol->Clocks; Index++) {
+        if (0 == AsciiStrCmp (ClockName, ClockNodeProtocol->ClockEntries[Index].ClockName)) {
+          ClockId = ClockNodeProtocol->ClockEntries[Index].ClockId;
+          break;
+        }
+      }
+    }
+
+    if (ControllerType == CONTROLLER_TYPE_SPI) {
       WaitCyclesSupported = FALSE;
       // SPI controller is usually going to be used for non flash
       // peripherals. Because of this reason, it would not be set
@@ -232,7 +350,7 @@ DeviceDiscoveryNotify (
       // Set the clock rate here based on the PCD value.
       SpiClockFreq = PcdGet32 (PcdSpiClockFrequency);
       if (SpiClockFreq > 0) {
-        Status = SetSpiFrequency (DeviceTreeNode, ControllerHandle, SpiClockFreq);
+        Status = SetSpiFrequency (ClockId, SpiClockFreq);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "%a: Failed to Set Clock Frequency %r\n", __FUNCTION__, Status));
           return Status;
@@ -277,12 +395,17 @@ DeviceDiscoveryNotify (
     Private->Signature = QSPI_CONTROLLER_SIGNATURE;
     Private->QspiBaseAddress = BaseAddress;
     Private->WaitCyclesSupported = WaitCyclesSupported;
+    Private->ControllerType = ControllerType;
+    Private->ClockId = ClockId;
+
     Status = QspiInitialize (Private->QspiBaseAddress);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "QSPI Initialization Failed.\n"));
       goto ErrorExit;
     }
     Private->QspiControllerProtocol.PerformTransaction = QspiControllerPerformTransaction;
+    Private->QspiControllerProtocol.GetClockSpeed = QspiControllerGetClockSpeed;
+    Private->QspiControllerProtocol.SetClockSpeed = QspiControllerSetClockSpeed;
 
     Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
                                  TPL_NOTIFY,
