@@ -2,7 +2,7 @@
 
   Regulator Driver
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -54,6 +54,24 @@ PMIC_REGULATOR_SETTING Maxim20024Regulators[] = {
     { "ldo6", 0x2F, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x2F, 0xC0, 0x6, 0x3 },
     { "ldo7", 0x31, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x31, 0xC0, 0x6, 0x3 },
     { "ldo8", 0x33, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x33, 0xC0, 0x6, 0x3 },
+};
+
+PMIC_REGULATOR_SETTING Maxim77851Regulators[] = {
+    { "ldo0",   0xBD, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0xBC, 0x01, 0x0, 0x1 },
+    { "ldo1",   0xBF, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0x2E, 0x01, 0x0, 0x1 },
+    { "ldo2",   0xC1, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0xC0, 0x01, 0x0, 0x1 },
+    { "ldo3",   0xC3, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0xC2, 0x01, 0x0, 0x1 },
+    { "ldo4",   0xC5, 0x8F, 0x00,  400000, 3975000, 25000, 0x0, 0xC4, 0x01, 0x0, 0x1 },
+    { "ldo5",   0xC7, 0x8F, 0x00,  400000, 3975000, 25000, 0x0, 0xC6, 0x01, 0x0, 0x1 },
+    { "ldo6",   0xC9, 0x8F, 0x00,  400000, 3975000, 25000, 0x0, 0xC8, 0x01, 0x0, 0x1 },
+    { "buck01", 0xD5, 0x60, 0x05, 1800000, 1950000, 50000, 0x0, 0xD5, 0x01, 0x0, 0x1 },
+    { "buck0",  0xD7, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xD6, 0x01, 0x0, 0x1 },
+    { "buck1",  0xDF, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xDE, 0x01, 0x0, 0x1 },
+    { "buck23", 0xE6, 0x60, 0x05, 1800000, 1950000, 50000, 0x0, 0xE6, 0x01, 0x0, 0x1 },
+    { "buck2",  0xE8, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xE7, 0x01, 0x0, 0x1 },
+    { "buck3",  0xF0, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xEF, 0x01, 0x0, 0x1 },
+    { "buck45", 0xF7, 0x60, 0x05, 1800000, 1950000, 50000, 0x0, 0xF7, 0x01, 0x0, 0x1 },
+    { "buck4",  0xF9, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xF8, 0x01, 0x0, 0x1 },
 };
 
 /**
@@ -859,9 +877,12 @@ LookupPmicInfo (
   if (CompareGuid (Private->I2cDeviceGuid, &gNVIDIAI2cMaxim77620)) {
     ArraySize = ARRAY_SIZE (Maxim77620Regulators);
     RegulatorMap = Maxim77620Regulators;
-  } else {
+  } else if (CompareGuid (Private->I2cDeviceGuid, &gNVIDIAI2cMaxim20024)){
     ArraySize = ARRAY_SIZE (Maxim20024Regulators);
     RegulatorMap = Maxim20024Regulators;
+  } else {
+    ArraySize = ARRAY_SIZE (Maxim77851Regulators);
+    RegulatorMap = Maxim77851Regulators;
   }
 
   for (Index = 0; Index < ArraySize; Index++) {
@@ -921,6 +942,14 @@ AddPmicRegulators (
                    NodeOffset,
                    "maxim,max20024"
                    );
+    if (NodeOffset <= 0) {
+      Private->I2cDeviceGuid = &gNVIDIAI2cMaxim77851;
+      NodeOffset = fdt_node_offset_by_compatible (
+                     Private->DeviceTreeBase,
+                     NodeOffset,
+                     "maxim,max77851-pmic"
+                     );
+    }
   }
   if (NodeOffset <= 0) {
     DEBUG ((EFI_D_ERROR, "%a, No pmic nodes found.\r\n", __FUNCTION__));
