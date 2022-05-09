@@ -2,7 +2,7 @@
 
   Bpmp I2c Driver
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -27,6 +27,7 @@
 STATIC BPMP_I2C_DEVICE_TYPE_MAP mDeviceTypeMap[] = {
     { "maxim,max20024", &gNVIDIAI2cMaxim20024, 1, { { 0x22, 0x48 } } },
     { "maxim,max77620", &gNVIDIAI2cMaxim77620, 1, { { 0x22, 0x48 } } },
+    { "maxim,max77851-pmic", &gNVIDIAI2cMaxim77851, 1, { { 0x22, 0x48 } } },
     { "nvidia,vrs-pseq", &gNVIDIAI2cVrsPseq, 0, { { 0x00, 0x00 } } },
     { NULL, NULL, 0, { { 0x00, 0x00 } } }
 };
@@ -665,7 +666,6 @@ BuildI2cDevices (
 
     for (SlaveIndex = 0; SlaveIndex < AdditionalSlaves; SlaveIndex++) {
       UINTN NewSlave = Private->I2cDevices[Index].SlaveAddressArray[0];
-
       NewSlave &= MapEntry->SlaveMasks[SlaveIndex][BPMP_I2C_SLAVE_AND];
       NewSlave |= MapEntry->SlaveMasks[SlaveIndex][BPMP_I2C_SLAVE_OR];
       Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES) + SlaveIndex + 1] = NewSlave;

@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,7 +15,7 @@
 #define MAXIM_I2C_ADDRESS_INDEX   1
 #define MAXIM_I2C_DELAY_US        15000
 
-#define MAXIC_RTC_CONTROL_ADDRESS 0x03
+#define MAXIM_RTC_CONTROL_ADDRESS 0x03
 #define MAXIM_RTC_UPDATE0_ADDRESS 0x04
 #define MAXIM_RTC_TIME_ADDRESS    0x07
 
@@ -38,6 +38,15 @@ typedef struct {
 } MAXIM_RTC_UPDATE0;
 
 typedef struct {
+  UINT8                           ClearFlagsOnRead:1;
+  UINT8                           FreezeSeconds:1;
+  UINT8                           Reserved1:6;
+  UINT8                           UpdateFromWrite:1;
+  UINT8                           ReadBufferUpdate:1;
+  UINT8                           Reserved2:6;
+} MAXIM_RTC_UPDATE;
+
+typedef struct {
   UINT8                           Seconds;
   UINT8                           Minutes;
   UINT8                           Hours;
@@ -52,6 +61,7 @@ typedef struct {
   union {
     MAXIM_RTC_CONTROL             Control;
     MAXIM_RTC_UPDATE0             Update;
+    MAXIM_RTC_UPDATE              SplitUpdate;
     MAXIM_RTC_DATE_TIME           DateTime;
   };
 } MAXIM_RTC_UPDATE_DATA;

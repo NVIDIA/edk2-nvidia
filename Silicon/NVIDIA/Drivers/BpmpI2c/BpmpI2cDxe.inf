@@ -2,7 +2,7 @@
 #
 #  Bpmp I2c Controller Driver
 #
-#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -47,6 +47,7 @@
 [Guids]
   gNVIDIAI2cMaxim20024
   gNVIDIAI2cMaxim77620
+  gNVIDIAI2cMaxim77851
   gNVIDIAI2cVrsPseq
   gNVIDIAI2cUnknown
 
