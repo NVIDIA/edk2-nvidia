@@ -1,7 +1,7 @@
 ## @file
 #  Configuration Manager Data Dxe
 #
-#  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -27,6 +27,7 @@
 
 [Packages]
   ArmPkg/ArmPkg.dec
+  ArmPlatformPkg/ArmPlatformPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
@@ -60,6 +61,7 @@
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig
+  gArmPlatformTokenSpaceGuid.PL011UartClkInHz
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
