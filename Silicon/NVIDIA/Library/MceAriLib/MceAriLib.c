@@ -24,9 +24,14 @@
 #define TEGRA_ARI_VERSION_MINOR     1
 
 // ARI Request IDs
-#define TEGRA_ARI_VERSION_CMD       0
-#define TEGRA_ARI_ECHO_CMD          1
-#define TEGRA_ARI_NUM_CORES_CMD     2
+#define TEGRA_ARI_VERSION_CMD            0
+#define TEGRA_ARI_ECHO_CMD               1
+#define TEGRA_ARI_NUM_CORES_CMD          2
+#define TEGRA_ARI_CCPLEX_CACHE_OPERATION 97
+
+// ARI Cache Operation IDs
+#define TEGRA_ARI_CCPLEX_CACHE_CLEAN            0
+#define TEGRA_ARI_CCPLEX_CACHE_CLEAN_INVALIDATE 1
 
 // Register offsets for ARI request/results
 #define ARI_REQUEST_OFFS            0x00
@@ -547,4 +552,53 @@ MceAriCoreIsPresent (
   }
 
   return Present;
+}
+
+/**
+  Request specified MCE cache operation.
+
+  @param[in]    AriBase         ARI register aperture base address
+**/
+VOID
+EFIAPI
+AriCacheOperation(
+  IN  UINTN     AriBase,
+  IN  UINT32    OperationCode
+  )
+{
+  if (MceAriSupported ()) {
+    AriRequestWait (AriBase, 0, TEGRA_ARI_CCPLEX_CACHE_OPERATION, OperationCode, 0);
+  }
+}
+
+/**
+  Initiate an SCF level Cache Clean
+
+**/
+VOID
+EFIAPI
+MceAriSCFCacheClean (
+  VOID
+  )
+{
+  UINTN         AriBase;
+
+  AriBase = MceAriGetApertureBase ();
+  AriCacheOperation (AriBase, TEGRA_ARI_CCPLEX_CACHE_CLEAN);
+}
+
+/**
+  Initiate an SCF level Cache Clean Invalidate
+
+**/
+VOID
+EFIAPI
+MceAriSCFCacheCleanInvalidate (
+  VOID
+  )
+{
+  UINTN         AriBase;
+
+  AriBase = MceAriGetApertureBase ();
+  AriCacheOperation (AriBase, TEGRA_ARI_CCPLEX_CACHE_CLEAN_INVALIDATE);
 }
