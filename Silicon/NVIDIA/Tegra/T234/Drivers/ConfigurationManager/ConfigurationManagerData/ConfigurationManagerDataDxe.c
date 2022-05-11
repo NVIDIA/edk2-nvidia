@@ -476,7 +476,7 @@ UpdateSerialPortInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
         SpcrSerialPort[Index].PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_NVIDIA_16550_UART;
       }
     }
-    SpcrSerialPort[Index].Clock = 0;
+    SpcrSerialPort[Index].Clock = FixedPcdGet32 (PL011UartClkInHz);
   }
   FreePool (SerialHandles);
 
