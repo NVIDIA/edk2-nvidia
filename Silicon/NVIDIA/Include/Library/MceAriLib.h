@@ -58,4 +58,24 @@ MceAriGetEnabledCoresBitMap (
   IN  UINT64    *EnabledCoresBitMap
   );
 
+/**
+  Initiate an SCF level Cache Clean
+
+**/
+VOID
+EFIAPI
+MceAriSCFCacheClean (
+  VOID
+  );
+
+/**
+  Initiate an SCF level Cache Clean Invalidate
+
+**/
+VOID
+EFIAPI
+MceAriSCFCacheCleanInvalidate (
+  VOID
+  );
+
 #endif
