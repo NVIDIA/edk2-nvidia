@@ -89,4 +89,24 @@ MceAriCoreIsPresent (
   IN  UINTN     CoreId
   );
 
+/**
+  Initiate an SCF level Cache Clean
+
+**/
+VOID
+EFIAPI
+MceAriSCFCacheClean (
+  VOID
+  );
+
+/**
+  Initiate an SCF level Cache Clean Invalidate
+
+**/
+VOID
+EFIAPI
+MceAriSCFCacheCleanInvalidate (
+  VOID
+  );
+
 #endif

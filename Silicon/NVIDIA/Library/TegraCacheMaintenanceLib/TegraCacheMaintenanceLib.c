@@ -11,6 +11,8 @@
 #include <Library/ArmLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PcdLib.h>
+#include <Library/TegraPlatformInfoLib.h>
+#include <Library/MceAriLib.h>
 
 STATIC
 VOID
@@ -35,6 +37,13 @@ CacheRangeOperation (
     LineOperation(AlignedAddress);
     AlignedAddress += LineLength;
   }
+
+  if (TegraGetPlatform () != TEGRA_PLATFORM_VDK &&
+      TegraGetChipID () == T234_CHIP_ID &&
+      TegraGetMajorVersion () == T234_CHIP_MAJORREV) {
+    MceAriSCFCacheCleanInvalidate ();
+  }
+
   ArmDataSynchronizationBarrier ();
 }
 
@@ -65,7 +74,9 @@ InvalidateInstructionCacheRange (
 {
   CacheRangeOperation (Address, Length, ArmCleanDataCacheEntryToPoUByMVA,
     ArmDataCacheLineLength ());
-  ArmInvalidateInstructionCache ();
+  CacheRangeOperation (Address, Length,
+    ArmInvalidateInstructionCacheEntryToPoUByMVA,
+    ArmInstructionCacheLineLength ());
 
   ArmInstructionSynchronizationBarrier ();
 
