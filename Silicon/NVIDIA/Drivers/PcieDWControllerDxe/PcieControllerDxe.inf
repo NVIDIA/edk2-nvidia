@@ -54,6 +54,7 @@
   gEdkiiNonDiscoverableDeviceProtocolGuid
   gNVIDIAPciHostBridgeProtocolGuid
   gEfiDevicePathProtocolGuid
+  gEfiGraphicsOutputProtocolGuid
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
   gNVIDIABpmpIpcProtocolGuid
   gNVIDIATegraP2UProtocolGuid
@@ -68,6 +69,7 @@
   gNVIDIANonDiscoverableT234PcieDeviceGuid
   gEfiEventExitBootServicesGuid
   gEfiAcpiTableGuid
+  gFdtTableGuid
 
 [Depex]
   gNVIDIAAllRegulatorsPresentProtocolGuid AND

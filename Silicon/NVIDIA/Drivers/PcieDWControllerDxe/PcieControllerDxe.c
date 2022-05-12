@@ -71,6 +71,9 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
   }
 };
 
+STATIC EFI_EVENT  mFdtTableEvent;
+STATIC EFI_EVENT  mReadyToBootEvent;
+
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-pcie", &gNVIDIANonDiscoverableT194PcieDeviceGuid },
   { "nvidia,tegra234-pcie", &gNVIDIANonDiscoverableT234PcieDeviceGuid },
@@ -1513,6 +1516,462 @@ ParseGicMsiBase (
 }
 
 /**
+   Given a device handle, find the PCIE_CONTROLLER_PRIVATE structure
+   of its parent PCIe controller if the device handle has one.
+
+   @param [in] DeviceHandle  The device handle to start from.
+   @param [out] Private      Where to store pointer to PCIE_CONTROLLER_PRIVATE.
+
+   @return EFI_SUCCESS    Operation successful
+   @return EFI_NOT_FOUND  The device handle has no PCIe controller parent
+   @return others         Operation failed unexpectedly
+
+**/
+STATIC
+EFI_STATUS
+GetParentPcieControllerPrivate (
+  IN  CONST EFI_HANDLE                   DeviceHandle,
+  OUT PCIE_CONTROLLER_PRIVATE   **CONST  Private
+  )
+{
+  EFI_STATUS                                        Status;
+  EFI_HANDLE                                        ControllerHandle;
+  EFI_DEVICE_PATH_PROTOCOL                          *DevicePath;
+  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *PciRootBridgeConfigurationIo;
+
+  Status = gBS->HandleProtocol (
+                  DeviceHandle,
+                  &gEfiDevicePathProtocolGuid,
+                  (VOID **)&DevicePath
+                  );
+  if (EFI_ERROR (Status)) {
+    if (Status != EFI_NOT_FOUND) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: cannot retrieve device path protocol from device handle: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
+    }
+
+    return Status;
+  }
+
+  Status = gBS->LocateDevicePath (
+                  &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                  &DevicePath,
+                  &ControllerHandle
+                  );
+  if (EFI_ERROR (Status)) {
+    if (Status != EFI_NOT_FOUND) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: cannot locate parent PCIe controller handle: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
+    }
+
+    return Status;
+  }
+
+  Status = gBS->HandleProtocol (
+                  ControllerHandle,
+                  &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                  (VOID **)&PciRootBridgeConfigurationIo
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve PCI root bridge configuration I/O protocol: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  *Private = PCIE_CONTROLLER_PRIVATE_DATA_FROM_THIS (PciRootBridgeConfigurationIo);
+  return EFI_SUCCESS;
+}
+
+/**
+  Finds the FDT node of a specified PCIe controller.
+
+  @param[in]  Fdt        Base of the FDT to search
+  @param[in]  CtrlId     Controller number
+  @param[out] NodeOffset Where to store the resulting node offset
+
+  @retval TRUE  Node found successfully
+  @retval FALSE Failed to find the node
+
+**/
+STATIC
+BOOLEAN
+FindFdtPcieControllerNode (
+  IN  CONST VOID    *CONST  Fdt,
+  IN  CONST UINT32          CtrlId,
+  OUT INT32                 *NodeOffset
+  )
+{
+  INT32       Offset;
+  CONST VOID  *Property;
+  INT32       PropertySize;
+
+  Offset = -1;
+  while (1) {
+    Offset = fdt_node_offset_by_compatible (Fdt, Offset, "nvidia,tegra234-pcie");
+    if (Offset < 0) {
+      if (Offset != -FDT_ERR_NOTFOUND) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to locate node by compatible: %a\r\n",
+          __FUNCTION__,
+          fdt_strerror (Offset)
+          ));
+      }
+
+      return FALSE;
+    }
+
+    Property = fdt_getprop (Fdt, Offset, "linux,pci-domain", &PropertySize);
+    if (Property == NULL) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to retrieve controller number: %a\r\n",
+        __FUNCTION__,
+        fdt_strerror (PropertySize)
+        ));
+      return FALSE;
+    } else if (PropertySize != sizeof (UINT32)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: invalid size of controller number: expected %u, got %d\r\n",
+        __FUNCTION__,
+        (UINTN)sizeof (UINT32),
+        (INTN)PropertySize
+        ));
+      return FALSE;
+    }
+
+    if (CtrlId == SwapBytes32 (*(CONST UINT32 *)Property)) {
+      *NodeOffset = Offset;
+      return TRUE;
+    }
+  }
+}
+
+/**
+   Update a specified regulator of the given node to be always-on.
+
+   @param [in] Fdt         Base of the Device Tree to update.
+   @param [in] NodeOffset  Offset of the node whose regulator to update.
+   @param [in] RegName     Name of the regulator to update.
+
+   @return TRUE   Regulator updated successfully.
+   @return FALSE  Failed to update the regulator.
+
+**/
+STATIC
+BOOLEAN
+UpdateFdtRegulatorAlwaysOn (
+  IN VOID         *CONST  Fdt,
+  IN CONST INT32          NodeOffset,
+  IN CONST CHAR8  *CONST  RegName
+  )
+{
+  CONST UINT32  *Property;
+  INT32         PropertySize;
+  UINT32        RegPhandle;
+  INT32         RegNodeOffset;
+
+  Property = fdt_getprop (Fdt, NodeOffset, RegName, &PropertySize);
+  if (Property == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to lookup regulator '%a' property of node at offset 0x%x: %a\r\n",
+      __FUNCTION__,
+      RegName,
+      (UINTN)NodeOffset,
+      fdt_strerror (PropertySize)
+      ));
+    return FALSE;
+  } else if (PropertySize != sizeof (UINT32)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: invalid size of regulator '%a' property of node at offset 0x%x:"
+      " expected %u bytes, got %u bytes\r\n",
+      __FUNCTION__,
+      RegName,
+      (UINTN)NodeOffset,
+      sizeof (UINT32),
+      (UINTN)PropertySize
+      ));
+    return FALSE;
+  }
+
+  RegPhandle = SwapBytes32 (*Property);
+
+  RegNodeOffset = fdt_node_offset_by_phandle (Fdt, RegPhandle);
+  if (RegNodeOffset < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to locate regulator '%a' node by phandle 0x%x: %a\r\n",
+      __FUNCTION__,
+      RegName,
+      (UINTN)RegPhandle,
+      fdt_strerror (RegNodeOffset)
+      ));
+    return FALSE;
+  }
+
+  PropertySize = fdt_setprop_empty (Fdt, RegNodeOffset, "regulator-always-on");
+  if (PropertySize != 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to update regulator '%a' node at offset 0x%x: %a\r\n",
+      __FUNCTION__,
+      RegName,
+      (UINTN)RegNodeOffset,
+      fdt_strerror (PropertySize)
+      ));
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+   Patch the given PCIe controller node in the given Device Tree so
+   that the kernel can successfully take over managing the controller
+   and the attached devices without UEFI having to shut it down.
+
+   @param [in] Fdt         Base of the Device Tree to patch.
+   @param [in] NodeOffset  Offset of the PCIe controller node.
+
+   @return TRUE   Node patched successfully.
+   @return FALSE  Failed to patch the node.
+
+**/
+STATIC
+BOOLEAN
+UpdateFdtPcieControllerNode (
+  IN VOID           *CONST  Fdt,
+  IN CONST INT32            NodeOffset
+  )
+{
+  INT32  Result;
+  UINTN  EcamIndex;
+
+  CONST UINT64 (*RegProperty)[2];
+  UINT64  EcamRegion[2];
+
+  Result = fdt_setprop_string (Fdt, NodeOffset, "compatible", "pci-host-ecam-generic");
+  if (Result != 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to update compatible string of node at offset 0x%x: %a\r\n",
+      __FUNCTION__,
+      (UINTN)NodeOffset,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  Result = fdt_stringlist_search (Fdt, NodeOffset, "reg-names", "ecam");
+  if (Result < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve ecam region details from node at offset 0x%x: %a\r\n",
+      __FUNCTION__,
+      (UINTN)NodeOffset,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  EcamIndex = (UINTN)Result;
+
+  RegProperty = fdt_getprop (Fdt, NodeOffset, "reg", &Result);
+  if (RegProperty == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to lookup property 'reg' of node at offset 0x%x: %a\r\n",
+      __FUNCTION__,
+      (UINTN)NodeOffset,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  } else if ((UINTN)Result < (EcamIndex + 1) * sizeof (EcamRegion)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: invalid size of 'reg' property of node at offset 0x%x:"
+      " expected at least %u bytes, got %u bytes\r\n",
+      __FUNCTION__,
+      (UINTN)NodeOffset,
+      (EcamIndex + 1) * sizeof (EcamRegion),
+      (UINTN)Result
+      ));
+    return FALSE;
+  }
+
+  CopyMem (EcamRegion, RegProperty[EcamIndex], sizeof (EcamRegion));
+
+  Result = fdt_setprop_string (Fdt, NodeOffset, "reg-names", "ecam");
+  if (Result != 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to set property 'reg-names' of node at offset 0x%x: %a\r\n",
+      __FUNCTION__,
+      (UINTN)NodeOffset,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  Result = fdt_setprop (Fdt, NodeOffset, "reg", EcamRegion, sizeof (EcamRegion));
+  if (Result != 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to set property 'reg' of node at offset 0x%x: %a\r\n",
+      __FUNCTION__,
+      (UINTN)NodeOffset,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  Result = fdt_delprop (Fdt, NodeOffset, "power-domains");
+  if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to delete property 'power-domains' of node at offset 0x%x: %a\r\n",
+      __FUNCTION__,
+      (UINTN)NodeOffset,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  return (  UpdateFdtRegulatorAlwaysOn (Fdt, NodeOffset, "vpcie3v3-supply")
+         && UpdateFdtRegulatorAlwaysOn (Fdt, NodeOffset, "vpcie12v-supply"));
+}
+
+/**
+   Find if there are any PCIe controllers which have GPU devices
+   attached and apply the appropriate workarounds so that the kernel
+   doesn't crash on boot.
+
+   This function may be called multiple times with different Device
+   Trees to have them all patched appropriately.
+
+   @param [in] Fdt  Base of the Device Tree to patch.
+
+   @return EFI_SUCCESS    Operation successful.
+   @return !=EFI_SUCCESS  Operation failed.
+
+**/
+STATIC
+EFI_STATUS
+UpdatePcieControllersWithGpuDevice (
+  IN VOID *CONST  Fdt
+  )
+{
+  EFI_STATUS               Status;
+  EFI_HANDLE               *Handles = NULL;
+  UINTN                    HandleIndex, HandleCount;
+  PCIE_CONTROLLER_PRIVATE  *Private;
+  INT32                    NodeOffset;
+
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gEfiGraphicsOutputProtocolGuid,
+                  NULL,
+                  &HandleCount,
+                  &Handles
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to enumerate GPU device handles: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto Exit;
+  }
+
+  for (HandleIndex = 0; HandleIndex < HandleCount; ++HandleIndex) {
+    Status = GetParentPcieControllerPrivate (Handles[HandleIndex], &Private);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    if (FindFdtPcieControllerNode (Fdt, Private->CtrlId, &NodeOffset)) {
+      UpdateFdtPcieControllerNode (Fdt, NodeOffset);
+    }
+
+    /* Make sure the ExitBootServices notification event is closed to
+       prevent shutting down the PCIe controller on UEFI exit. */
+    if (Private->ExitBootServicesEvent != NULL) {
+      Status = gBS->CloseEvent (Private->ExitBootServicesEvent);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to close ExitBootServices event: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+      }
+
+      Private->ExitBootServicesEvent = NULL;
+    }
+  }
+
+  Status = EFI_SUCCESS;
+
+Exit:
+  if (Handles != NULL) {
+    gBS->FreePool (Handles);
+  }
+
+  return Status;
+}
+
+/**
+  FDT update notification handler.
+
+  This is installed as a driver (not controller) notification handler
+  and therefore fires only once (not once per controller).
+
+  @param[in]  Event     Event whose notification function is being invoked.
+  @param[in]  Context   Pointer to the notification function's context.
+
+**/
+STATIC
+VOID
+EFIAPI
+UpdateFdtEventNotification (
+  IN EFI_EVENT          Event,
+  IN VOID       *CONST  Context
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *Fdt;
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve FDT: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return;
+  }
+
+  UpdatePcieControllersWithGpuDevice (Fdt);
+}
+
+/**
   Exit Boot Services Event notification handler.
 
   Notify PCIe driver about the event.
@@ -1578,9 +2037,8 @@ DeviceDiscoveryNotify (
   CONST VOID                 *ControllerId  = NULL;
   CONST VOID                 *BpmpPhandle   = NULL;
   PCIE_CONTROLLER_PRIVATE    *Private       = NULL;
-  EFI_EVENT                  ExitBootServiceEvent;
-  NVIDIA_REGULATOR_PROTOCOL  *Regulator = NULL;
-  CONST VOID                 *Property  = NULL;
+  NVIDIA_REGULATOR_PROTOCOL  *Regulator     = NULL;
+  CONST VOID                 *Property      = NULL;
   UINT32                     Val;
   UINTN                      ChipID;
   UINT32                     DeviceTreeHandle;
@@ -1598,26 +2056,42 @@ DeviceDiscoveryNotify (
 
   switch (Phase) {
     case DeviceDiscoveryDriverStart:
+      /* UpdateFdtEventNotification is a driver (not controller)
+         notification handler, so install it as soon as the driver
+         starts; no need to wait for binding to any controllers. */
 
-      for (Index = 0; Index < (sizeof (gDeviceCompatibilityMap) / sizeof (gDeviceCompatibilityMap[0])); Index++) {
-        if (gDeviceCompatibilityMap[Index].Compatibility != NULL) {
-          Val    = 0;
-          Status = GetMatchingEnabledDeviceTreeNodes (gDeviceCompatibilityMap[Index].Compatibility, NULL, &Val);
-          if (Status == EFI_BUFFER_TOO_SMALL) {
-            PcieFound = TRUE;
-            break;
-          }
-        }
+      Status = gBS->CreateEventEx (
+                      EVT_NOTIFY_SIGNAL,
+                      TPL_CALLBACK,
+                      UpdateFdtEventNotification,
+                      NULL,
+                      &gFdtTableGuid,
+                      &mFdtTableEvent
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to create FDT table notification event: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+        break;
       }
 
-      Status = EFI_SUCCESS;
-      if (!PcieFound) {
-        Status = gBS->InstallMultipleProtocolInterfaces (
-                        &DriverHandle,
-                        &gNVIDIAConfigurationManagerDataObjectGuid,
-                        NULL,
-                        NULL
-                        );
+      Status = EfiCreateEventReadyToBootEx (
+                 TPL_CALLBACK,
+                 UpdateFdtEventNotification,
+                 NULL,
+                 &mReadyToBootEvent
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to create ready-to-boot notification event: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+        break;
       }
 
       break;
@@ -1923,7 +2397,7 @@ DeviceDiscoveryNotify (
                       OnExitBootServices,
                       Private,
                       &gEfiEventExitBootServicesGuid,
-                      &ExitBootServiceEvent
+                      &Private->ExitBootServicesEvent
                       );
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "%a: Unable to setup exit boot services uninitialize. (%r)\r\n", __FUNCTION__, Status));

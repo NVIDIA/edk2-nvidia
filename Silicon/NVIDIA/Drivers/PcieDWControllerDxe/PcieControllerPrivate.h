@@ -2,7 +2,7 @@
 
   PCIe Controller Driver private structures
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -53,6 +53,7 @@ typedef struct {
   NVIDIA_BPMP_IPC_PROTOCOL                            *BpmpIpcProtocol;
 
   EFI_HANDLE                                          ControllerHandle;
+  EFI_EVENT                                           ExitBootServicesEvent;
 
   UINT64                                              ApplSpace;
   UINT64                                              ApplSize;
