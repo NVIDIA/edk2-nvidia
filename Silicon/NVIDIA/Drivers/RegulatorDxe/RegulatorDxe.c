@@ -922,7 +922,7 @@ AddPmicRegulators (
   )
 {
   INT32      NodeOffset = -1;
-  INT32      SubNodeOffset;
+  INT32      SubNodeOffset = 0;
   EFI_STATUS Status;
 
   if (NULL == Private) {

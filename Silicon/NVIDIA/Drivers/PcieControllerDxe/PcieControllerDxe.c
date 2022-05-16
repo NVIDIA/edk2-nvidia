@@ -782,7 +782,7 @@ InitializeController (
     CopyMem ((VOID *)&P2UId, Property + Index, sizeof (UINT32));
     P2UId = SwapBytes32 (P2UId);
 
-    if EFI_ERROR(P2U->Init(P2U, P2UId)) {
+    if (EFI_ERROR(P2U->Init(P2U, P2UId))) {
       DEBUG ((EFI_D_ERROR, "Failed to Initialize P2U\n"));
     }
   }
@@ -1370,7 +1370,7 @@ DeviceDiscoveryNotify (
     if ((Property != NULL) && (PropertySize == sizeof (UINT32))) {
       Val = SwapBytes32 (*(UINT32 *)Property);
       /* Enable the vddio-pex-ctl supply */
-      if EFI_ERROR(Regulator-> Enable(Regulator, Val, TRUE)) {
+      if (EFI_ERROR(Regulator-> Enable(Regulator, Val, TRUE))) {
         DEBUG ((EFI_D_ERROR, "Failed to Enable vddio-pex-ctl supply regulator\n"));
       }
     } else {
@@ -1383,7 +1383,7 @@ DeviceDiscoveryNotify (
     if ((Property != NULL) && (PropertySize == sizeof (UINT32))) {
       Val = SwapBytes32 (*(UINT32 *)Property);
       /* Enable the 3v3 supply */
-      if EFI_ERROR(Regulator-> Enable(Regulator, Val, TRUE)) {
+      if (EFI_ERROR(Regulator-> Enable(Regulator, Val, TRUE))) {
         DEBUG ((EFI_D_ERROR, "Failed to Enable 3v3 Regulator\n"));
       }
     } else {
@@ -1396,7 +1396,7 @@ DeviceDiscoveryNotify (
     if ((Property != NULL) && (PropertySize == sizeof (UINT32))) {
       Val = SwapBytes32 (*(UINT32 *)Property);
       /* Enable the 12v supply */
-      if EFI_ERROR(Regulator-> Enable(Regulator, Val, TRUE)) {
+      if (EFI_ERROR(Regulator-> Enable(Regulator, Val, TRUE))) {
         DEBUG ((EFI_D_ERROR, "Failed to Enable 12v Regulator\n"));
       }
     } else {

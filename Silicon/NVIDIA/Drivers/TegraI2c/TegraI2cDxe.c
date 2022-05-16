@@ -849,7 +849,7 @@ TegraI2CDriverBindingStart (
   UINT32                            Data32;
   UINTN                             Index;
   NON_DISCOVERABLE_DEVICE           *Device;
-  INT32                             I2cNodeOffset;
+  INT32                             I2cNodeOffset = 0;
   UINT32                            I2cAddress;
   INT32                             EepromManagerNodeOffset;
   UINT32                            I2cNodeHandle;
