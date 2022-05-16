@@ -591,7 +591,7 @@ BuildI2cDevices (
   )
 {
   Private->NumberOfI2cDevices = 0;
-  INT32 Node;
+  INT32 Node = 0;
   INT32 ParentDepth = fdt_node_depth (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset);
   UINTN Index;
   if (ParentDepth < 0) {
