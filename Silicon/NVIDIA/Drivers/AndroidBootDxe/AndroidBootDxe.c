@@ -146,12 +146,12 @@ AndroidBootDxeLoadFile2 (
   )
 
 {
-  DEBUG ((DEBUG_INFO, "%a: buffer %09p in size %08x\n", __FUNCTION__, Buffer, *BufferSize));
-
   // Verify if the valid parameters
   if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
     return EFI_INVALID_PARAMETER;
   }
+
+  DEBUG ((DEBUG_INFO, "%a: buffer %09p in size %08x\n", __FUNCTION__, Buffer, *BufferSize));
 
   if (BootPolicy) {
     return EFI_UNSUPPORTED;
@@ -537,12 +537,12 @@ AndroidBootDxeLoadFile (
   ANDROID_BOOT_PRIVATE_DATA     *Private;
   ANDROID_BOOT_DATA             ImgData;
 
-  DEBUG ((DEBUG_INFO, "%a: buffer %09p in size %08x\n", __FUNCTION__, Buffer, *BufferSize));
-
   // Verify if the valid parameters
   if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
     return EFI_INVALID_PARAMETER;
   }
+
+  DEBUG ((DEBUG_INFO, "%a: buffer %09p in size %08x\n", __FUNCTION__, Buffer, *BufferSize));
 
   if (!BootPolicy) {
     return EFI_UNSUPPORTED;
