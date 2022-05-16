@@ -2,7 +2,7 @@
 
   USB Pad Control Driver Platform Specific Definitions/Functions
 
-  Copyright (c) 2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -558,7 +558,7 @@ DisableVbus (
       SelectVbusEnableTriState(Private, Usb2Ports[i].OcPin, FALSE);
     } else {
       /* Disable VBUS Regulator through GPIO */
-      if EFI_ERROR(mRegulator-> Enable(mRegulator, Usb2Ports[i].VbusSupply, FALSE)) {
+      if (EFI_ERROR(mRegulator-> Enable(mRegulator, Usb2Ports[i].VbusSupply, FALSE))) {
         DEBUG ((EFI_D_ERROR, "%a: Couldn't Disable Regulator: %d for USB Port: %d\n",
                                           __FUNCTION__, Usb2Ports[i].VbusSupply, i));
         /* Printing the Error and continuing here to do maximum clean up */
@@ -595,7 +595,7 @@ EnableVbus (
       Private->HandleOverCurrent = TRUE;
     } else {
       /* Enable VBUS Regulator through GPIO */
-      if EFI_ERROR(mRegulator-> Enable(mRegulator, Usb2Ports[i].VbusSupply, TRUE)) {
+      if (EFI_ERROR(mRegulator-> Enable(mRegulator, Usb2Ports[i].VbusSupply, TRUE))) {
         DEBUG ((EFI_D_ERROR, "Couldn't Enable Regulator: %d for USB Port: %d\n",
                                                    Usb2Ports[i].VbusSupply, i));
         /* Printing the Error and continuing here so that other Ports will

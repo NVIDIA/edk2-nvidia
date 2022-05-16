@@ -14,7 +14,7 @@
 #include <PiDxe.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 
-#define BIT(x)   (1 << (x))
+#define BIT(x)   (1UL << (x))
 
 #define upper_32_bits(n) ((UINT32)((n) >> 32))
 #define lower_32_bits(n) ((UINT32)(n))
@@ -85,7 +85,7 @@ typedef struct {
 #define TEGRA_PCIE_ATU_TYPE_TD_SHIFT    8
 #define TEGRA_PCIE_ATU_INCREASE_REGION_SIZE BIT13
 #define TEGRA_PCIE_ATU_CR2      0x4
-#define TEGRA_PCIE_ATU_ENABLE     (0x1 << 31)
+#define TEGRA_PCIE_ATU_ENABLE     (0x1UL << 31)
 #define TEGRA_PCIE_ATU_LOWER_BASE   0x8
 #define TEGRA_PCIE_ATU_UPPER_BASE   0xC
 #define TEGRA_PCIE_ATU_LIMIT      0x10
