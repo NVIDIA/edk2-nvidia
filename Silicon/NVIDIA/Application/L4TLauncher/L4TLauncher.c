@@ -1360,12 +1360,12 @@ ExtLinuxBoot (
       }
       ImageInfo->LoadOptions = NewArgs;
       ImageInfo->LoadOptionsSize = StrLen (NewArgs) * sizeof (CHAR16);
+      DEBUG ((DEBUG_ERROR, "%s", ImageInfo->LoadOptions));
     }
     // Before calling the image, enable the Watchdog Timer for  the 5 Minute period
     gBS->SetWatchdogTimer(5 * 60, 0x10000, 0, NULL);
 
     DEBUG ((DEBUG_ERROR, "%a: Cmdline: \n", __FUNCTION__));
-    DEBUG ((DEBUG_ERROR, "%s", ImageInfo->LoadOptions));
 
     Status = gBS->StartImage(KernelHandle, NULL, NULL);
 
