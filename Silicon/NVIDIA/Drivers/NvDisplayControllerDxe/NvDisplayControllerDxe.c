@@ -605,10 +605,12 @@ DisplayStop (
 {
   EFI_STATUS    Status = EFI_SUCCESS;
   EFI_STATUS    Status1;
-  EFI_HANDLE    ControllerHandle = Context->ControllerHandle;
+  EFI_HANDLE    ControllerHandle;
   CONST BOOLEAN UseDpOutput = FALSE;
 
   if (Context != NULL) {
+    ControllerHandle = Context->ControllerHandle;
+
     if (Context->OnExitBootServicesEvent != NULL) {
       Status1 = gBS->CloseEvent (Context->OnExitBootServicesEvent);
       if (EFI_ERROR (Status1)) {
