@@ -71,8 +71,8 @@ ASM_FUNC(TegraGetBLCarveoutInfoLocationAddress)
   mov w0, w1
   bl TegraGetBLCarveoutOffset
   mov x4, x0
-  cmp w1, #T234_CHIP_ID
-  bne _DefaultCarveoutInfo
+  cmp w1, #T194_CHIP_ID
+  beq _T194CarveoutInfo
   add x5, x3, #4
   ldr w5, [x5]
   lsl x5, x5, #32
@@ -80,7 +80,7 @@ ASM_FUNC(TegraGetBLCarveoutInfoLocationAddress)
   orr x3, x3, x5
   b _BootloaderAddressGood
 
-_DefaultCarveoutInfo:
+_T194CarveoutInfo:
   mov w0, w1
   bl TegraGetSystemMemoryBaseAddress
   mov x5, x0
