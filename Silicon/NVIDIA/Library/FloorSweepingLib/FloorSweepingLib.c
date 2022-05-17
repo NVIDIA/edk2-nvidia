@@ -437,7 +437,7 @@ UpdateCpuFloorsweepingConfig (
         }
         DEBUG ((DEBUG_INFO, "Deleted cluster%u node in FDT\r\n", Cluster));
       } else {
-        INT32       ClusterCpuNodeOffset;
+        INT32       ClusterCpuNodeOffset = 0;
         INT32       PrevClusterCpuNodeOffset;
         CONST VOID  *Property;
         CONST CHAR8 *NodeName;
