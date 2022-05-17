@@ -2,7 +2,7 @@
 
   Falcon Register Access
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -81,6 +81,11 @@ FalconSetHostCfgAddr (
 
 VOID
 FalconSetHostBase2Addr (
+  IN  UINTN Address
+  );
+
+VOID
+FalconSetAoAddr (
   IN  UINTN Address
   );
 

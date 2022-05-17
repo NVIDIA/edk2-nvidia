@@ -23,8 +23,9 @@
  * This address should be set first by calling FalconSetHostCfgAddr() before
  * accessing any other functions in the Falcon Library
  */
-STATIC UINTN XusbHostCfgAddr;
-STATIC UINTN XusbHostBase2Addr;
+STATIC UINTN XusbHostCfgAddr = 0;
+STATIC UINTN XusbHostBase2Addr = 0;
+STATIC UINTN XusbAoAddr = 0;
 
 VOID
 FalconSetHostCfgAddr (
@@ -40,6 +41,14 @@ FalconSetHostBase2Addr (
   )
 {
   XusbHostBase2Addr = Address;
+}
+
+VOID
+FalconSetAoAddr (
+  IN UINTN Address
+  )
+{
+  XusbAoAddr = Address;
 }
 
 VOID *
@@ -180,10 +189,15 @@ FalconFirmwareIfrLoad (
   UINT8      *FirmwareBuffer;
   UINT64     FirmwareBufferBusAddress;
   VOID       *FirmwareBufferMapping;
-  UINTN      XusbAoAddr;
 
   Status = EFI_SUCCESS;
   Value = 0;
+
+  if (XusbAoAddr == 0)
+  {
+    DEBUG ((EFI_D_ERROR, "%a: XUSB AO Address is not init\n",__FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
 
   Value = FalconRead32 (XUSB_CSB_MEMPOOL_IDIRECT_PC);
   if (Value != 0) {

@@ -205,6 +205,15 @@ DeviceDiscoveryNotify (
       }
       Private->XusbSoc->Base2Address = BaseAddress;
 
+      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 4, &BaseAddress,
+                                                                &RegionSize);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a: Unable to locate Xhci AO address range\n",
+                                                              __FUNCTION__));
+        goto ErrorExit;
+      }
+      FalconSetAoAddr(BaseAddress);
+
     } else {
       Private->XusbSoc->Base2Address = 0;
     }
