@@ -356,7 +356,7 @@ DeviceDiscoveryNotify (
       // to its default clock rate by previous stage bootloaders.
       // Set the clock rate here based on the PCD value.
       SpiClockFreq = PcdGet32 (PcdSpiClockFrequency);
-      if (SpiClockFreq > 0) {
+      if ((SpiClockFreq > 0) && (ClockId != MAX_UINT32)) {
         Status = SetSpiFrequency (ClockId, SpiClockFreq);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "%a: Failed to Set Clock Frequency %r\n", __FUNCTION__, Status));
@@ -411,8 +411,10 @@ DeviceDiscoveryNotify (
       goto ErrorExit;
     }
     Private->QspiControllerProtocol.PerformTransaction = QspiControllerPerformTransaction;
-    Private->QspiControllerProtocol.GetClockSpeed = QspiControllerGetClockSpeed;
-    Private->QspiControllerProtocol.SetClockSpeed = QspiControllerSetClockSpeed;
+    if (Private->ClockId != MAX_UINT32) {
+      Private->QspiControllerProtocol.GetClockSpeed = QspiControllerGetClockSpeed;
+      Private->QspiControllerProtocol.SetClockSpeed = QspiControllerSetClockSpeed;
+    }
 
     Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
                                  TPL_NOTIFY,
