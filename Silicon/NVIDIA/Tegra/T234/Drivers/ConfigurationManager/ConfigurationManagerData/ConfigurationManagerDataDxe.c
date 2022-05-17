@@ -139,15 +139,6 @@ CM_STD_OBJ_ACPI_TABLE_INFO CmAcpiTableList[] = {
     0,
     FixedPcdGet64(PcdAcpiDefaultOemRevision)
   },
-  // PPTT Table
-  {
-    EFI_ACPI_6_4_PROCESSOR_PROPERTIES_TOPOLOGY_TABLE_STRUCTURE_SIGNATURE,
-    EFI_ACPI_6_4_PROCESSOR_PROPERTIES_TOPOLOGY_TABLE_REVISION,
-    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdPptt),
-    NULL,
-    0,
-    FixedPcdGet64(PcdAcpiDefaultOemRevision),
-  },
 };
 
 /** The platform boot architecture information.
