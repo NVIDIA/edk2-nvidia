@@ -1450,6 +1450,7 @@ NorFlashDxeDriverBindingStart (
   EFI_DEVICE_PATH_PROTOCOL         *ParentDevicePath;
   EFI_DEVICE_PATH_PROTOCOL         *NorFlashDevicePath;
   VOID                             *Interface;
+  BOOLEAN                          QspiClockSupport;
 
   // Open Qspi Controller Protocol
   QspiInstance = NULL;
@@ -1475,28 +1476,36 @@ NorFlashDxeDriverBindingStart (
   Private->QspiControllerHandle = Controller;
   Private->QspiController = QspiInstance;
 
-  //Check QSPI Bus Frequency
-  Status = QspiInstance->GetClockSpeed (QspiInstance, &ClockSpeed);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
-    goto ErrorExit;
+  QspiClockSupport = FALSE;
+  if ((QspiInstance->GetClockSpeed != NULL) &&
+      (QspiInstance->SetClockSpeed != NULL)) {
+    QspiClockSupport = TRUE;
   }
-  DEBUG ((DEBUG_ERROR, "%a: Default QSPI bus frequency: %u\n", __FUNCTION__, ClockSpeed / 2));
 
-  if (ClockSpeed > NOR_FAST_CMD_THRESH_FREQ) {
-    Status = QspiInstance->SetClockSpeed (QspiInstance, NOR_FAST_CMD_THRESH_FREQ);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
-      goto ErrorExit;
-    }
-    UINT64 NewClockSpeed;
-    Status = QspiInstance->GetClockSpeed (QspiInstance, &NewClockSpeed);
+  if (QspiClockSupport == TRUE) {
+    //Check QSPI Bus Frequency
+    Status = QspiInstance->GetClockSpeed (QspiInstance, &ClockSpeed);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
       goto ErrorExit;
     }
-    DEBUG ((DEBUG_ERROR, "%a: New QSPI bus frequency: %u\n", __FUNCTION__, NewClockSpeed / 2));
-    Private->PrivateFlashAttributes.FastReadSupport = TRUE;
+    DEBUG ((DEBUG_ERROR, "%a: Default QSPI bus frequency: %u\n", __FUNCTION__, ClockSpeed / 2));
+
+    if (ClockSpeed > NOR_FAST_CMD_THRESH_FREQ) {
+      Status = QspiInstance->SetClockSpeed (QspiInstance, NOR_FAST_CMD_THRESH_FREQ);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
+        goto ErrorExit;
+      }
+      UINT64 NewClockSpeed;
+      Status = QspiInstance->GetClockSpeed (QspiInstance, &NewClockSpeed);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
+        goto ErrorExit;
+      }
+      DEBUG ((DEBUG_ERROR, "%a: New QSPI bus frequency: %u\n", __FUNCTION__, NewClockSpeed / 2));
+      Private->PrivateFlashAttributes.FastReadSupport = TRUE;
+    }
   }
 
   // Read NOR flash's SFDP
@@ -1517,19 +1526,21 @@ NorFlashDxeDriverBindingStart (
   DEBUG ((DEBUG_ERROR, "%a: NOR Flash Write Page Size: 0x%lx\n",
           __FUNCTION__, Private->PrivateFlashAttributes.PageSize));
 
-  if (ClockSpeed > NOR_FAST_CMD_THRESH_FREQ) {
-    Status = QspiInstance->SetClockSpeed (QspiInstance, ClockSpeed);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
-      goto ErrorExit;
+  if (QspiClockSupport == TRUE) {
+    if (ClockSpeed > NOR_FAST_CMD_THRESH_FREQ) {
+      Status = QspiInstance->SetClockSpeed (QspiInstance, ClockSpeed);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
+        goto ErrorExit;
+      }
+      UINT64 RestoredClockSpeed;
+      Status = QspiInstance->GetClockSpeed (QspiInstance, &RestoredClockSpeed);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
+        goto ErrorExit;
+      }
+      DEBUG ((DEBUG_ERROR, "%a: Restored QSPI bus frequency: %u\n", __FUNCTION__, RestoredClockSpeed / 2));
     }
-    UINT64 RestoredClockSpeed;
-    Status = QspiInstance->GetClockSpeed (QspiInstance, &RestoredClockSpeed);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
-      goto ErrorExit;
-    }
-    DEBUG ((DEBUG_ERROR, "%a: Restored QSPI bus frequency: %u\n", __FUNCTION__, RestoredClockSpeed / 2));
   }
 
   // Allocate Command Buffer
