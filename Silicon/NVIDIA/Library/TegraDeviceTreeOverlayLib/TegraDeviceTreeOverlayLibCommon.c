@@ -380,7 +380,7 @@ FdtCleanFixups (
   INTN         FixupsNode;
   INTN         FixupsNodeNew;
   INTN         SubNode;
-  INTN         PropOffset;
+  INTN         PropOffset = 0;
   INT32        PropLen;
   INT32        PropCount;
   INT32        PStrLen;
@@ -496,7 +496,7 @@ ProcessOverlayDeviceTree (
 {
   CONST CHAR8   *TargetName;
   INT32         TargetLen;
-  INTN          FrNode;
+  INTN          FrNode = 0;
   INTN          BufNode;
   CONST CHAR8   *FrName;
   CONST CHAR8   *NodeName;
