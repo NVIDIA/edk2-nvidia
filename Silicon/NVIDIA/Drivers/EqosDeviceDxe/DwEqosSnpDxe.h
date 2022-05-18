@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2020 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2012-2014, ARM Limited. All rights reserved.
 
@@ -66,8 +66,8 @@ extern EFI_COMPONENT_NAME2_PROTOCOL      gSnpComponentName2;
 #define SNP_DRIVER_SIGNATURE             SIGNATURE_32('A', 'S', 'N', 'P')
 #define INSTANCE_FROM_SNP_THIS(a)        CR(a, SIMPLE_NETWORK_DRIVER, Snp, SNP_DRIVER_SIGNATURE)
 
-#define ETHERNET_MAC_BROADCAST_INDEX                               0
-#define ETHERNET_MAC_ADDRESS_INDEX                                 1
+#define ETHERNET_MAC_ADDRESS_INDEX                                 0
+#define ETHERNET_MAC_BROADCAST_INDEX                               1
 #define ETHERNET_MAC_MULTICAST_INDEX                               2
 
 /*---------------------------------------------------------------------------------------------------------------------

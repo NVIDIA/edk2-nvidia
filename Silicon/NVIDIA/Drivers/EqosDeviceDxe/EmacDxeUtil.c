@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2019 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
@@ -32,8 +32,6 @@ EmacDxeInitialization (
   )
 {
   EFI_STATUS             Status;
-  struct osi_hw_features hw_feat;
-  INT32                  OsiReturn;
   UINTN                  Index;
   UINT8                  *RxFullBuffer;
   UINT8                  *TxFullBuffer;
@@ -102,8 +100,6 @@ EmacDxeInitialization (
   osi_set_rx_buf_len(EmacDriver->osi_dma);
   MaxPacketSize = EmacDriver->osi_dma->rx_buf_len;
 
-  osi_get_hw_features(EmacDriver->osi_core, &hw_feat);
-
   //Allocate TX DMA resources
   EmacDriver->osi_dma->tx_ring[0] = AllocateZeroPool(sizeof(struct osi_tx_ring));
   if (EmacDriver->osi_dma->tx_ring[0] == NULL) {
@@ -170,20 +166,6 @@ EmacDxeInitialization (
   }
   for (Index = 0; Index < TX_DESC_CNT; Index++) {
     EmacDriver->tx_buffers[Index] = TxFullBuffer + (MaxPacketSize * Index);
-  }
-
-  osi_poll_for_mac_reset_complete ( EmacDriver->osi_core );
-
-  // Init EMAC DMA
-  // Ignore error message on these failure to allow OS to initialize controller
-  OsiReturn = osi_hw_dma_init( EmacDriver->osi_dma);
-  if (OsiReturn < 0) {
-    DEBUG ((DEBUG_ERROR, "Failed to initialize MAC DMA\n"));
-  } else {
-    OsiReturn = osi_hw_core_init( EmacDriver->osi_core, hw_feat.tx_fifo_size, hw_feat.rx_fifo_size);
-    if (OsiReturn < 0) {
-      DEBUG ((DEBUG_ERROR, "Failed to initialize MAC Core: %d\n", OsiReturn));
-    }
   }
 
   return Status;
