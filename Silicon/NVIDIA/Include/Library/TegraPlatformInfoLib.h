@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -11,14 +11,12 @@
 
 #define UEFI_DECLARE_ALIGNED(var, size) var __attribute__ ((aligned (size)))
 
-#define T194_CHIP_ID       0x19
-#define T234_CHIP_ID       0x23
+#define T194_CHIP_ID      0x19
+#define T234_CHIP_ID      0x23
 
-#define T194_SKU           1
-#define T234_SKU           2
-#define T234SLT_SKU        3
-
-#define T234_CHIP_MAJORREV 4
+#define T194_SKU          1
+#define T234_SKU          2
+#define T234SLT_SKU       3
 
 #define SYSIMG_EMMC_MAGIC_OFFSET 0x4
 #define SYSIMG_EMMC_MAGIC 0xEAAAAAAC
