@@ -1,0 +1,104 @@
+# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+
+# Workflow for pushes to a rel-* release
+
+name: Push to rel branch
+on:
+  push:
+    branches:
+      - 'rel-*'
+env:
+  EDKREPO_URL: https://github.com/tianocore/edk2-edkrepo/releases/download/edkrepo-v2.1.2/edkrepo-2.1.2.tar.gz
+  EDKREPO_NVIDIA_MANIFEST_REPO: https://github.com/NVIDIA/edk2-edkrepo-manifest.git
+jobs:
+  # Build a draft release.  After it is posted, the draft release can be edited
+  # manually and published.
+  Build-Draft-Release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Install packages
+        run: |
+          # Add mono's PPA
+          # - https://github.com/tianocore/edk2-pytool-extensions/blob/master/docs/usability/using_extdep.md#a-note-on-nuget-on-linux
+          sudo apt install -y gnupg ca-certificates
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+          echo "deb https://download.mono-project.com/repo/ubuntu stable-bionic main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
+          sudo apt update
+          # Install required packages
+          sudo apt install -y build-essential uuid-dev git gcc python3 virtualenv gcc-aarch64-linux-gnu device-tree-compiler mono-devel
+          # Make sure everything is up-to-date
+          sudo apt upgrade
+      - name: Install edkrepo
+        run: |
+          mkdir ${{ github.workspace }}/edkrepo
+          cd ${{ github.workspace }}/edkrepo
+          wget -O- ${EDKREPO_URL} | tar zxvf -
+          sudo ./install.py --no-prompt --user $(id -nu)
+          # The installer leaves a root-owned file in .edkrepo
+          sudo chown -R $(id -nu). ${HOME}/.edkrepo
+      - name: Configure edkrepo
+        run: |
+          edkrepo manifest-repos add nvidia ${EDKREPO_NVIDIA_MANIFEST_REPO} main nvidia
+          edkrepo manifest
+      - name: Create workspace
+        run: |
+          set -x
+          cd ${{ github.workspace }}
+          # Start with the edkrepo combo that matches this branch
+          edkrepo clone -v workspace NVIDIA-Jetson ${GITHUB_REF_NAME/.*/}
+          cd workspace
+          # Checkout the ref that triggered this build
+          git -C edk2-nvidia fetch --verbose "${{ github.server_url }}/${{ github.repository }}" "${{ github.ref }}"
+          git -C edk2-nvidia checkout FETCH_HEAD
+          # Summarize the workspace, for debug purposes.
+          git -C edk2 describe --always --dirty
+          git -C edk2-platforms describe --always --dirty
+          git -C edk2-nvidia describe --always --dirty
+      - name: Test
+        run: |
+          cd ${{ github.workspace }}/workspace
+          edk2-nvidia/Platform/NVIDIA/HostBasedTests/test.sh
+      - name: Build
+        run: |
+          cd ${{ github.workspace }}/workspace
+          edk2-nvidia/Platform/NVIDIA/Jetson/build.sh
+      - name: Package
+        id: package
+        run: |
+          mkdir package
+          # Extract details about the build (BUILDID, sha, etc.)
+          cat workspace/Build/BUILDLOG_Jetson.txt | grep BUILDID_STRING= |sed -e 's/.*BUILDID_STRING=\([^ ]*\)/\1/' > package/buildid
+          BUILDID=$(cat package/buildid)
+          echo "::set-output name=version::${BUILDID}"
+          echo ${{ github.ref_name }} > package/ref_name
+          echo ${{ github.sha }} > package/sha
+          # Copy the images
+          ls -l workspace/images
+          cp -R workspace/images package/images
+          # Copy the build logs
+          mkdir package/Build
+          cp workspace/Build/*.txt package/Build
+          # Move it to a directory with a useful name.
+          mkdir upload
+          mv package upload/edk2-nvidia-${BUILDID}
+          # Tar it up as a release
+          cd upload
+          tar -czvf ../edk2-nvidia-${BUILDID}.tar.gz edk2-nvidia-${BUILDID}
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: package
+          path: upload
+      - name: Release
+        uses: ncipollo/release-action@v1.10.0
+        with:
+          draft: true
+          prerelease: true
+          name: edk2-nvidia-${{ steps.package.outputs.version }}
+          tag: ${{ github.ref_name }}-${{ steps.package.outputs.version }}
+          commit: ${{ github.sha }}
+          artifacts: edk2-nvidia-${{ steps.package.outputs.version }}.tar.gz

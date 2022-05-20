@@ -216,7 +216,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         else:
             import io
             result = io.StringIO()
-            ret = RunCmd("git", "describe --always --dirty",
+            ret = RunCmd("git", "-C edk2-nvidia describe --always --dirty",
                          workingdir=self.GetWorkspaceRoot(), outstream=result)
             if (ret == 0):
                 return base + "-" + result.getvalue()
