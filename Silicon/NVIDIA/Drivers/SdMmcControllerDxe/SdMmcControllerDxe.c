@@ -2,7 +2,7 @@
 
   SD MMC Controller Driver
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,6 +17,7 @@
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Protocol/SdMmcOverride.h>
 #include <Protocol/Regulator.h>
 #include <Protocol/PlatformToDriverConfiguration.h>
@@ -192,6 +193,12 @@ DeviceDiscoveryNotify (
                   &gSdMmcOverride,
                   NULL
                   );
+
+  case DeviceDiscoveryDriverBindingSupported:
+    if (GetBootType () == TegrablBootRcm) {
+      return EFI_UNSUPPORTED;
+    }
+    return EFI_SUCCESS;
 
   case DeviceDiscoveryDriverBindingStart:
     Status = gBS->LocateProtocol (&gEfiPlatformToDriverConfigurationProtocolGuid, NULL, (VOID **)&PlatformToDriverInterface);

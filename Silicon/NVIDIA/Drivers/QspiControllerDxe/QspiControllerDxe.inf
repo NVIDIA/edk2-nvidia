@@ -2,7 +2,7 @@
 #
 #  QSPI Controller Driver
 #
-#  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -34,6 +34,7 @@
   DxeServicesTableLib
   QspiControllerLib
   UefiRuntimeLib
+  PlatformResourceLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSpiClockFrequency
