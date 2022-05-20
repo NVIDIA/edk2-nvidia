@@ -2,7 +2,7 @@
 
   UFS Controller Driver
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,6 +17,7 @@
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <libfdt.h>
 
 #include <Protocol/UfsHostControllerPlatform.h>
@@ -366,6 +367,10 @@ DeviceDiscoveryNotify (
                   NULL
                   );
   case DeviceDiscoveryDriverBindingSupported:
+    if (GetBootType () == TegrablBootRcm) {
+      return EFI_UNSUPPORTED;
+    }
+
     Status = DeviceDiscoveryGetMmioRegionCount (ControllerHandle, &RegionCount);
     if (EFI_ERROR (Status) || (RegionCount < 2)) {
       return EFI_UNSUPPORTED;

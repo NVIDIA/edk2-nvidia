@@ -18,6 +18,7 @@
 #include <Library/DxeServicesTableLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/UefiRuntimeLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/QspiController.h>
@@ -305,6 +306,12 @@ DeviceDiscoveryNotify (
   Private = NULL;
 
   switch (Phase) {
+  case DeviceDiscoveryDriverBindingSupported:
+    if (GetBootType () == TegrablBootRcm) {
+      return EFI_UNSUPPORTED;
+    }
+    return EFI_SUCCESS;
+
   case DeviceDiscoveryDriverBindingStart:
     Status = gBS->HandleProtocol (ControllerHandle,
                                   &gNVIDIANonDiscoverableDeviceProtocolGuid,
