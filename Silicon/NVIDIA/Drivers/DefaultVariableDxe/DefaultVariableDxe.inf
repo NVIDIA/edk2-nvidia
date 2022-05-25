@@ -1,0 +1,53 @@
+## @file
+#  Provides support for default variable creation.
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DefaultVariableDxe
+  FILE_GUID                      = cb14d604-34b9-4e2b-8551-cb78a03ca7a5
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeDefaultVariable
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64
+#
+
+[Sources]
+  DefaultVariableDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  DebugLib
+  DtPlatformDtbLoaderLib
+  FdtLib
+  VariablePolicyHelperLib
+
+[Guids]
+  gNVIDIAPublicVariableGuid
+  gEfiGlobalVariableGuid
+  gDtPlatformFormSetGuid
+
+[Protocols]
+  gEfiVariableWriteArchProtocolGuid
+  gEdkiiVariablePolicyProtocolGuid
+
+[Depex]
+  TRUE
