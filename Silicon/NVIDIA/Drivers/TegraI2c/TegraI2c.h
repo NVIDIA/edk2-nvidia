@@ -67,6 +67,7 @@ typedef struct {
 
   UINT32                                           PinControlId;
   BOOLEAN                                          PinControlConfigured;
+  BOOLEAN                                          SkipOnExitDisabled;
 } NVIDIA_TEGRA_I2C_PRIVATE_DATA;
 
 #define TEGRA_I2C_PRIVATE_DATA_FROM_MASTER(a)     CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2cMaster, TEGRA_I2C_SIGNATURE)

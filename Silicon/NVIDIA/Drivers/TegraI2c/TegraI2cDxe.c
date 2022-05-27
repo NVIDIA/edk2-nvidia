@@ -39,7 +39,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .UseDriverBinding                = TRUE,
   .AutoEnableClocks                = TRUE,
   .AutoResetModule                 = TRUE,
-  .SkipEdkiiNondiscoverableInstall = TRUE,
+  .SkipEdkiiNondiscoverableInstall = TRUE
 };
 
 STATIC
@@ -1318,6 +1318,9 @@ TegraI2CDriverBindingStart (
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
         }
+
+        // Leave i2c for bmc activated on exit boot services
+        Private->SkipOnExitDisabled = TRUE;
       }
     }
   }
@@ -1470,7 +1473,9 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                     Status;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private;
+  EFI_I2C_MASTER_PROTOCOL        *I2cMaster;
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
@@ -1479,6 +1484,22 @@ DeviceDiscoveryNotify (
 
     case DeviceDiscoveryDriverBindingStop:
       Status = TegraI2CDriverBindingStop (DriverHandle, ControllerHandle);
+      break;
+
+    case DeviceDiscoveryOnExit:
+      Status = gBS->HandleProtocol (ControllerHandle, &gEfiI2cMasterProtocolGuid, (VOID **)&I2cMaster);
+      if (EFI_ERROR (Status)) {
+        Status = EFI_SUCCESS;
+        break;
+      }
+
+      Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER (I2cMaster);
+      if (Private->SkipOnExitDisabled) {
+        Status = EFI_UNSUPPORTED;
+      } else {
+        Status = EFI_SUCCESS;
+      }
+
       break;
 
     default:
