@@ -1,0 +1,67 @@
+#/** @file
+# Component description file for SmbiosMisc instance.
+#
+# Parses the MiscSubclassDataTable and reports any generated data to the DataHub.
+#  All .uni file who tagged with "ToolCode="DUMMY"" in following file list is included by
+#  MiscSubclassDriver.uni file, the StrGather tool will expand MiscSubclassDriver.uni file
+#  and parse all .uni file.
+#
+# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021, NUVIA Inc. All rights reserved.<BR>
+# Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2015, Hisilicon Limited. All rights reserved.<BR>
+# Copyright (c) 2015, Linaro Limited. All rights reserved.<BR>
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#**/
+
+
+[Defines]
+  INF_VERSION                    = 1.29
+  BASE_NAME                      = SmbiosMiscDxe
+  FILE_GUID                      = 492b2f66-f1a8-4247-be73-0b998677dc14
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = SmbiosMiscOemEntryPoint
+
+[Sources]
+  SmbiosMiscOem.h
+  SmbiosMiscOemDataTable.c
+  SmbiosMiscOemEntryPoint.c
+  SmbiosMiscOemDxeStrings.uni
+  Type16/PhysMemArrayData.c
+  Type16/PhysMemArrayFunction.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  DevicePathLib
+  PcdLib
+  HiiLib
+  HobLib
+  MemoryAllocationLib
+  SmbiosMiscLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  UefiRuntimeServicesTableLib
+
+[Protocols]
+  gEfiSmbiosProtocolGuid                       # PROTOCOL ALWAYS_CONSUMED
+
+[Pcd]
+
+[Guids]
+  gEfiGenericVariableGuid
+
+[Depex]
+  gEfiSmbiosProtocolGuid
+
+

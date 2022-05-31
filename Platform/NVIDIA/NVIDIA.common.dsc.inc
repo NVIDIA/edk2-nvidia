@@ -155,6 +155,7 @@
   FloorSweepingInternalLib|Silicon/NVIDIA/Library/FloorSweepingInternalLibNull/FloorSweepingInternalLibNull.inf
 
   OemMiscLib|Silicon/NVIDIA/Library/OemMiscLib/OemMiscLib.inf
+  SmbiosMiscLib|Silicon/NVIDIA/Library/SmbiosMiscLib/SmbiosMiscLib.inf
   TegraCpuFreqHelperLib|Silicon/NVIDIA/Library/TegraCpuFreqHelperLib/TegraCpuFreqHelper.inf
   TimeBaseLib|EmbeddedPkg/Library/TimeBaseLib/TimeBaseLib.inf
 
@@ -706,6 +707,7 @@
   MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
   ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
   ArmPkg/Universal/Smbios/SmbiosMiscDxe/SmbiosMiscDxe.inf
+  Silicon/NVIDIA/Drivers/SmbiosOemDxe/SmbiosMiscOemDxe/SmbiosMiscOemDxe.inf
 
   #
   # Bds
