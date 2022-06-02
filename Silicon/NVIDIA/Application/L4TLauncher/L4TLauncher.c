@@ -1276,7 +1276,7 @@ ExtLinuxBoot (
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (EFI_ERROR (Status) && BootOption->DtbPath != NULL) {
     Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &OldFdtBase);
-    if (!EFI_ERROR (Status)) {
+    if (EFI_ERROR (Status)) {
       OldFdtBase = NULL;
     }
 
