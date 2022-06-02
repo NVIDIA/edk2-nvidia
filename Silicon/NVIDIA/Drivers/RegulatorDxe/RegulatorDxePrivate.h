@@ -2,7 +2,7 @@
 
   Regulator Driver private structures
 
-  Copyright (c) 2018-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -37,7 +37,15 @@ typedef struct {
   UINT8       ConfigMask;
   UINT8       ConfigShift;
   UINT8       ConfigSetting;
+  UINT8       ConfigSettingDisabled;
 } PMIC_REGULATOR_SETTING;
+
+typedef struct {
+  CONST CHAR8             *CompatibilityString;
+  EFI_GUID                *I2cDeviceGuid;
+  PMIC_REGULATOR_SETTING  *RegulatorSettings;
+  UINTN                   SettingsSize;
+} PMIC_REGULATOR_SETTINGS_SUPPORTED;
 
 #define REGULATOR_LIST_SIGNATURE SIGNATURE_32('R','E','G','L')
 typedef struct {
@@ -54,6 +62,8 @@ typedef struct {
   CONST CHAR8                *Name;
   PMIC_REGULATOR_SETTING     *PmicSetting;
   LIST_ENTRY                 NotifyList;
+  EFI_GUID                   *I2cDeviceGuid;
+  EFI_I2C_IO_PROTOCOL        *I2cIoProtocol;
 } REGULATOR_LIST_ENTRY;
 #define REGULATOR_LIST_FROM_LINK(a) CR(a, REGULATOR_LIST_ENTRY, Link, REGULATOR_LIST_SIGNATURE)
 
@@ -76,11 +86,9 @@ typedef struct {
   LIST_ENTRY                 RegulatorList;
   UINTN                      Regulators;
 
-  EFI_GUID                   *I2cDeviceGuid;
   VOID                       *GpioSearchToken;
   EMBEDDED_GPIO              *GpioProtocol;
   VOID                       *I2cIoSearchToken;
-  EFI_I2C_IO_PROTOCOL        *I2cIoProtocol;
 } REGULATOR_DXE_PRIVATE;
 #define REGULATOR_PRIVATE_DATA_FROM_THIS(a) CR(a, REGULATOR_DXE_PRIVATE, RegulatorProtocol, REGULATOR_SIGNATURE)
 

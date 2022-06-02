@@ -35,6 +35,7 @@
   UefiDriverEntryPoint
   FdtLib
   DtPlatformDtbLoaderLib
+  DeviceTreeHelperLib
 
 [Protocols]
   gEmbeddedGpioProtocolGuid
@@ -48,6 +49,7 @@
   gNVIDIAI2cMaxim77620
   gNVIDIAI2cMaxim20024
   gNVIDIAI2cMaxim77851
+  gNVIDIAI2cNcp81599
 
 [Depex]
   TRUE
