@@ -298,7 +298,8 @@ TegraPlatformInitialize (
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     if (ChipID == T194_CHIP_ID) {
       LibPcdSetSku (T194_SKU);
-    } else if (ChipID == T234_CHIP_ID) {
+    } else if ((ChipID == T234_CHIP_ID) &&
+               (TegraGetMajorVersion() == T234_MAJOR_REV)) {
       T234SkuSet = FALSE;
       Property = fdt_getprop (DtbBase, 0, "model", &Length);
       if (Property != NULL && Length != 0) {
@@ -327,9 +328,8 @@ TegraPlatformInitialize (
     }
   }
 
-  SetCpuInfoPcdsFromDtb ();
-
-  if (GetBootType () == TegrablBootRcm) {
+  if ((GetBootType () == TegrablBootRcm) ||
+      (PcdGetBool(PcdEmuVariableNvModeEnable) == TRUE)) {
     EmulatedVariablesUsed = TRUE;
   }
 
@@ -343,6 +343,7 @@ TegraPlatformInitialize (
   }
 
   // Set Pcds
+  SetCpuInfoPcdsFromDtb ();
   SetGicInfoPcdsFromDtb (ChipID);
 
   Status = FloorSweepDtb (DtbBase);
