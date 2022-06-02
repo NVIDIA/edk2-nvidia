@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -13,6 +13,7 @@
 
 #define T194_CHIP_ID      0x19
 #define T234_CHIP_ID      0x23
+#define T234_MAJOR_REV    0x4
 
 #define T194_SKU          1
 #define T234_SKU          2
