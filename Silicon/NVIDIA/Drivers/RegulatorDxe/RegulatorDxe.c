@@ -19,59 +19,71 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Protocol/EmbeddedGpio.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <libfdt.h>
 
 #include "RegulatorDxePrivate.h"
 
 PMIC_REGULATOR_SETTING Maxim77620Regulators[] = {
-    { "sd0" , 0x16, 0xFF, 0x00, 625000, 1387500, 12500, 0x2, 0x1D, 0x30, 0x4, 0x3 },
-    { "sd1" , 0x17, 0xFF, 0x00, 625000, 1550000, 12500, 0x2, 0x1E, 0x30, 0x4, 0x3 },
-    { "sd2" , 0x18, 0xFF, 0x00, 625000, 3787500, 12500, 0x2, 0x1F, 0x30, 0x4, 0x3 },
-    { "sd3" , 0x19, 0xFF, 0x00, 625000, 3787500, 12500, 0x2, 0x20, 0x30, 0x4, 0x3 },
-    { "ldo0", 0x23, 0x3F, 0x00, 800000, 2375000, 25000, 0x0, 0x23, 0xC0, 0x6, 0x3 },
-    { "ldo1", 0x25, 0x3F, 0x00, 800000, 2375000, 25000, 0x0, 0x25, 0xC0, 0x6, 0x3 },
-    { "ldo2", 0x27, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x27, 0xC0, 0x6, 0x3 },
-    { "ldo3", 0x29, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x29, 0xC0, 0x6, 0x3 },
-    { "ldo4", 0x2B, 0x3F, 0x00, 800000, 1587500, 12500, 0x0, 0x2B, 0xC0, 0x6, 0x3 },
-    { "ldo5", 0x2D, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x2D, 0xC0, 0x6, 0x3 },
-    { "ldo6", 0x2F, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x2F, 0xC0, 0x6, 0x3 },
-    { "ldo7", 0x31, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x31, 0xC0, 0x6, 0x3 },
-    { "ldo8", 0x33, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x33, 0xC0, 0x6, 0x3 },
+    { "sd0" , 0x16, 0xFF, 0x00, 625000, 1387500, 12500, 0x2, 0x1D, 0x30, 0x4, 0x3, 0x0 },
+    { "sd1" , 0x17, 0xFF, 0x00, 625000, 1550000, 12500, 0x2, 0x1E, 0x30, 0x4, 0x3, 0x0 },
+    { "sd2" , 0x18, 0xFF, 0x00, 625000, 3787500, 12500, 0x2, 0x1F, 0x30, 0x4, 0x3, 0x0 },
+    { "sd3" , 0x19, 0xFF, 0x00, 625000, 3787500, 12500, 0x2, 0x20, 0x30, 0x4, 0x3, 0x0 },
+    { "ldo0", 0x23, 0x3F, 0x00, 800000, 2375000, 25000, 0x0, 0x23, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo1", 0x25, 0x3F, 0x00, 800000, 2375000, 25000, 0x0, 0x25, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo2", 0x27, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x27, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo3", 0x29, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x29, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo4", 0x2B, 0x3F, 0x00, 800000, 1587500, 12500, 0x0, 0x2B, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo5", 0x2D, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x2D, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo6", 0x2F, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x2F, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo7", 0x31, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x31, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo8", 0x33, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x33, 0xC0, 0x6, 0x3, 0x0 },
 };
 
 PMIC_REGULATOR_SETTING Maxim20024Regulators[] = {
-    { "sd0" , 0x16, 0xFF, 0x00, 800000, 1587500, 12500, 0x0, 0x1D, 0x30, 0x4, 0x3 },
-    { "sd1" , 0x17, 0xFF, 0x00, 600000, 3787500, 12500, 0x0, 0x1E, 0x30, 0x4, 0x3 },
-    { "sd2" , 0x18, 0xFF, 0x00, 600000, 3787500, 12500, 0x0, 0x1F, 0x30, 0x4, 0x3 },
-    { "sd3" , 0x19, 0xFF, 0x00, 600000, 3787500, 12500, 0x0, 0x20, 0x30, 0x4, 0x3 },
-    { "sd4" , 0x1A, 0xFF, 0x00, 600000, 3787500, 12500, 0x0, 0x21, 0x30, 0x4, 0x3 },
-    { "ldo0", 0x23, 0x3F, 0x00, 800000, 2375000, 25000, 0x0, 0x23, 0xC0, 0x6, 0x3 },
-    { "ldo1", 0x25, 0x3F, 0x00, 800000, 2375000, 25000, 0x0, 0x25, 0xC0, 0x6, 0x3 },
-    { "ldo2", 0x27, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x27, 0xC0, 0x6, 0x3 },
-    { "ldo3", 0x29, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x29, 0xC0, 0x6, 0x3 },
-    { "ldo4", 0x2B, 0x3F, 0x00, 800000, 1587500, 12500, 0x0, 0x2B, 0xC0, 0x6, 0x3 },
-    { "ldo5", 0x2D, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x2D, 0xC0, 0x6, 0x3 },
-    { "ldo6", 0x2F, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x2F, 0xC0, 0x6, 0x3 },
-    { "ldo7", 0x31, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x31, 0xC0, 0x6, 0x3 },
-    { "ldo8", 0x33, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x33, 0xC0, 0x6, 0x3 },
+    { "sd0" , 0x16, 0xFF, 0x00, 800000, 1587500, 12500, 0x0, 0x1D, 0x30, 0x4, 0x3, 0x0 },
+    { "sd1" , 0x17, 0xFF, 0x00, 600000, 3787500, 12500, 0x0, 0x1E, 0x30, 0x4, 0x3, 0x0 },
+    { "sd2" , 0x18, 0xFF, 0x00, 600000, 3787500, 12500, 0x0, 0x1F, 0x30, 0x4, 0x3, 0x0 },
+    { "sd3" , 0x19, 0xFF, 0x00, 600000, 3787500, 12500, 0x0, 0x20, 0x30, 0x4, 0x3, 0x0 },
+    { "sd4" , 0x1A, 0xFF, 0x00, 600000, 3787500, 12500, 0x0, 0x21, 0x30, 0x4, 0x3, 0x0 },
+    { "ldo0", 0x23, 0x3F, 0x00, 800000, 2375000, 25000, 0x0, 0x23, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo1", 0x25, 0x3F, 0x00, 800000, 2375000, 25000, 0x0, 0x25, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo2", 0x27, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x27, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo3", 0x29, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x29, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo4", 0x2B, 0x3F, 0x00, 800000, 1587500, 12500, 0x0, 0x2B, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo5", 0x2D, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x2D, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo6", 0x2F, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x2F, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo7", 0x31, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x31, 0xC0, 0x6, 0x3, 0x0 },
+    { "ldo8", 0x33, 0x3F, 0x00, 800000, 3950000, 50000, 0x0, 0x33, 0xC0, 0x6, 0x3, 0x0 },
 };
 
 PMIC_REGULATOR_SETTING Maxim77851Regulators[] = {
-    { "ldo0",   0xBD, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0xBC, 0x01, 0x0, 0x1 },
-    { "ldo1",   0xBF, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0x2E, 0x01, 0x0, 0x1 },
-    { "ldo2",   0xC1, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0xC0, 0x01, 0x0, 0x1 },
-    { "ldo3",   0xC3, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0xC2, 0x01, 0x0, 0x1 },
-    { "ldo4",   0xC5, 0x8F, 0x00,  400000, 3975000, 25000, 0x0, 0xC4, 0x01, 0x0, 0x1 },
-    { "ldo5",   0xC7, 0x8F, 0x00,  400000, 3975000, 25000, 0x0, 0xC6, 0x01, 0x0, 0x1 },
-    { "ldo6",   0xC9, 0x8F, 0x00,  400000, 3975000, 25000, 0x0, 0xC8, 0x01, 0x0, 0x1 },
-    { "buck01", 0xD5, 0x60, 0x05, 1800000, 1950000, 50000, 0x0, 0xD5, 0x01, 0x0, 0x1 },
-    { "buck0",  0xD7, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xD6, 0x01, 0x0, 0x1 },
-    { "buck1",  0xDF, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xDE, 0x01, 0x0, 0x1 },
-    { "buck23", 0xE6, 0x60, 0x05, 1800000, 1950000, 50000, 0x0, 0xE6, 0x01, 0x0, 0x1 },
-    { "buck2",  0xE8, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xE7, 0x01, 0x0, 0x1 },
-    { "buck3",  0xF0, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xEF, 0x01, 0x0, 0x1 },
-    { "buck45", 0xF7, 0x60, 0x05, 1800000, 1950000, 50000, 0x0, 0xF7, 0x01, 0x0, 0x1 },
-    { "buck4",  0xF9, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xF8, 0x01, 0x0, 0x1 },
+    { "ldo0",   0xBD, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0xBC, 0x01, 0x0, 0x1, 0x0 },
+    { "ldo1",   0xBF, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0x2E, 0x01, 0x0, 0x1, 0x0 },
+    { "ldo2",   0xC1, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0xC0, 0x01, 0x0, 0x1, 0x0 },
+    { "ldo3",   0xC3, 0xFF, 0x00,  400000, 1993750,  6250, 0x0, 0xC2, 0x01, 0x0, 0x1, 0x0 },
+    { "ldo4",   0xC5, 0x8F, 0x00,  400000, 3975000, 25000, 0x0, 0xC4, 0x01, 0x0, 0x1, 0x0 },
+    { "ldo5",   0xC7, 0x8F, 0x00,  400000, 3975000, 25000, 0x0, 0xC6, 0x01, 0x0, 0x1, 0x0 },
+    { "ldo6",   0xC9, 0x8F, 0x00,  400000, 3975000, 25000, 0x0, 0xC8, 0x01, 0x0, 0x1, 0x0 },
+    { "buck01", 0xD5, 0x60, 0x05, 1800000, 1950000, 50000, 0x0, 0xD5, 0x01, 0x0, 0x1, 0x0 },
+    { "buck0",  0xD7, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xD6, 0x01, 0x0, 0x1, 0x0 },
+    { "buck1",  0xDF, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xDE, 0x01, 0x0, 0x1, 0x0 },
+    { "buck23", 0xE6, 0x60, 0x05, 1800000, 1950000, 50000, 0x0, 0xE6, 0x01, 0x0, 0x1, 0x0 },
+    { "buck2",  0xE8, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xE7, 0x01, 0x0, 0x1, 0x0 },
+    { "buck3",  0xF0, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xEF, 0x01, 0x0, 0x1, 0x0 },
+    { "buck45", 0xF7, 0x60, 0x05, 1800000, 1950000, 50000, 0x0, 0xF7, 0x01, 0x0, 0x1, 0x0 },
+    { "buck4",  0xF9, 0xFF, 0x00,  300000, 1200000,  2500, 0x0, 0xF8, 0x01, 0x0, 0x1, 0x0 },
+};
+
+PMIC_REGULATOR_SETTING Ncp81599Regulators[] = {
+    { "12v",   0xFF, 0x00, 0x00,  1200000, 1200000,  0, 0x0, 0x00, 0x0C, 0x00, 0x0C, 0x04 },
+};
+
+PMIC_REGULATOR_SETTINGS_SUPPORTED PmicSupported[] = {
+  {"maxim,max77620",      &gNVIDIAI2cMaxim77620, &Maxim77620Regulators[0], ARRAY_SIZE(Maxim77620Regulators)},
+  {"maxim,max20024",      &gNVIDIAI2cMaxim20024, &Maxim20024Regulators[0], ARRAY_SIZE(Maxim20024Regulators)},
+  {"maxim,max77851-pmic", &gNVIDIAI2cMaxim77851, &Maxim77851Regulators[0], ARRAY_SIZE(Maxim77851Regulators)},
+  {"nvidia,ncp81599",     &gNVIDIAI2cNcp81599,   &Ncp81599Regulators[0],   ARRAY_SIZE(Ncp81599Regulators)},
 };
 
 /**
@@ -141,6 +153,7 @@ FindRegulatorEntry (
  * @param I2cIoProtocol - I2cIo protocol for Pmic
  * @param Address       - Address to read
  * @param Value         - Pointer to data to read to.
+ * @param DeviceGuid    - Guid of the device that is used
  * @return EFI_SUCCESS - Data read
  * @return others      - Error in read
  */
@@ -149,7 +162,8 @@ EFI_STATUS
 ReadPmicRegister (
   IN  EFI_I2C_IO_PROTOCOL *I2cIoProtocol,
   IN  UINT8               Address,
-  OUT UINT8               *Value
+  OUT UINT8               *Value,
+  IN  CONST EFI_GUID      *DeviceGuid
   )
 {
   EFI_STATUS Status;
@@ -159,21 +173,51 @@ ReadPmicRegister (
     return EFI_INVALID_PARAMETER;
   }
 
-  Operation.OperationCount = 2;
-  Operation.Operation[0].Flags = 0;
-  Operation.Operation[0].LengthInBytes = 1;
-  Operation.Operation[0].Buffer = &Address;
-  Operation.Operation[1].Flags = I2C_FLAG_READ;
-  Operation.Operation[1].LengthInBytes = 1;
-  Operation.Operation[1].Buffer = Value;
-  Status = I2cIoProtocol->QueueRequest (
-                          I2cIoProtocol,
-                          0,
-                          NULL,
-                          (EFI_I2C_REQUEST_PACKET *)&Operation,
-                          NULL
-                          );
-  DEBUG ((EFI_D_VERBOSE, "%a: 0x%02x <- 0x%02x, %r\r\n", __FUNCTION__, *Value, Address, Status));
+  if (CompareGuid (DeviceGuid, &gNVIDIAI2cNcp81599)) {
+    Operation.OperationCount = 1;
+    Operation.Operation[0].Flags = 0;
+    Operation.Operation[0].LengthInBytes = 1;
+    Operation.Operation[0].Buffer = &Address;
+    Status = I2cIoProtocol->QueueRequest (
+                            I2cIoProtocol,
+                            0,
+                            NULL,
+                            (EFI_I2C_REQUEST_PACKET *)&Operation,
+                            NULL
+                            );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a, Failed to send address - %r\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+    Operation.OperationCount = 1;
+    Operation.Operation[0].Flags = I2C_FLAG_READ;
+    Operation.Operation[0].LengthInBytes = 1;
+    Operation.Operation[0].Buffer = Value;
+    Status = I2cIoProtocol->QueueRequest (
+                            I2cIoProtocol,
+                            0,
+                            NULL,
+                            (EFI_I2C_REQUEST_PACKET *)&Operation,
+                            NULL
+                            );
+    DEBUG ((EFI_D_VERBOSE, "%a: 0x%02x <- 0x%02x, %r\r\n", __FUNCTION__, *Value, Address, Status));
+  } else {
+    Operation.OperationCount = 2;
+    Operation.Operation[0].Flags = 0;
+    Operation.Operation[0].LengthInBytes = 1;
+    Operation.Operation[0].Buffer = &Address;
+    Operation.Operation[1].Flags = I2C_FLAG_READ;
+    Operation.Operation[1].LengthInBytes = 1;
+    Operation.Operation[1].Buffer = Value;
+    Status = I2cIoProtocol->QueueRequest (
+                            I2cIoProtocol,
+                            0,
+                            NULL,
+                            (EFI_I2C_REQUEST_PACKET *)&Operation,
+                            NULL
+                            );
+    DEBUG ((EFI_D_VERBOSE, "%a: 0x%02x <- 0x%02x, %r\r\n", __FUNCTION__, *Value, Address, Status));
+  }
   return Status;
 }
 
@@ -182,6 +226,7 @@ ReadPmicRegister (
  * @param I2cIoProtocol - I2cIo protocol for Pmic
  * @param Address       - Address to write to
  * @param Value         - Data to write to.
+ * @param DeviceGuid    - Guid of the device that is used
  * @return EFI_SUCCESS - Data read
  * @return others      - Error in read
  */
@@ -190,7 +235,8 @@ EFI_STATUS
 WritePmicRegister (
   IN  EFI_I2C_IO_PROTOCOL *I2cIoProtocol,
   IN  UINT8               Address,
-  OUT UINT8               Value
+  OUT UINT8               Value,
+  IN  CONST EFI_GUID      *DeviceGuid
   )
 {
   EFI_STATUS Status;
@@ -274,7 +320,7 @@ RegulatorGetInfo (
       }
     } else if ((Entry->PmicSetting != NULL) && !Entry->AlwaysEnabled) {
       UINT8 Data;
-      Status = ReadPmicRegister (Private->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, &Data);
+      Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, &Data, Entry->I2cDeviceGuid);
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "%a, Failed to read configuration register: %r\r\n", __FUNCTION__, Status));
         return Status;
@@ -285,14 +331,18 @@ RegulatorGetInfo (
         RegulatorInfo->IsEnabled = FALSE;
       }
 
-      Status = ReadPmicRegister (Private->I2cIoProtocol, Entry->PmicSetting->VoltageRegister, &Data);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to read voltage register: %r\r\n", __FUNCTION__, Status));
-        return Status;
-      }
+      if (Entry->MicrovoltStep != 0x00) {
+        Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->VoltageRegister, &Data, Entry->I2cDeviceGuid);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((EFI_D_ERROR, "%a, Failed to read voltage register: %r\r\n", __FUNCTION__, Status));
+          return Status;
+        }
 
-      Data = ((Data & Entry->PmicSetting->VoltageMask) >> Entry->PmicSetting->VoltageShift) - Entry->PmicSetting->MinVoltSetting;
-      RegulatorInfo->CurrentMicrovolts = Data * Entry->MicrovoltStep + Entry->PmicSetting->MinMicrovolts;
+        Data = ((Data & Entry->PmicSetting->VoltageMask) >> Entry->PmicSetting->VoltageShift) - Entry->PmicSetting->MinVoltSetting;
+        RegulatorInfo->CurrentMicrovolts = Data * Entry->MicrovoltStep + Entry->PmicSetting->MinMicrovolts;
+      } else {
+        RegulatorInfo->CurrentMicrovolts = Entry->PmicSetting->MinMicrovolts;
+      }
     } else {
       RegulatorInfo->CurrentMicrovolts = Entry->MinMicrovolts;
       RegulatorInfo->IsEnabled = Entry->AlwaysEnabled;
@@ -512,7 +562,7 @@ RegulatorEnable (
   } else if (Entry->PmicSetting != NULL) {
     UINT8 DataOriginal;
     UINT8 DataNew;
-    Status = ReadPmicRegister (Private->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, &DataOriginal);
+    Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, &DataOriginal, Entry->I2cDeviceGuid);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a, Failed to read configuration register: %r\r\n", __FUNCTION__, Status));
       return Status;
@@ -521,9 +571,11 @@ RegulatorEnable (
     DataNew &= ~Entry->PmicSetting->ConfigMask;
     if (Enable) {
       DataNew |= (Entry->PmicSetting->ConfigSetting << Entry->PmicSetting->ConfigShift);
+    } else {
+      DataNew |= (Entry->PmicSetting->ConfigSettingDisabled << Entry->PmicSetting->ConfigShift);
     }
     if (DataNew != DataOriginal) {
-      Status = WritePmicRegister (Private->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, DataNew);
+      Status = WritePmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, DataNew, Entry->I2cDeviceGuid);
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "%a, Failed to write configuration register: %r\r\n", __FUNCTION__, Status));
         return Status;
@@ -581,27 +633,32 @@ RegulatorSetVoltage (
 
   if ((Entry->PmicSetting != NULL) &&
       (!Entry->AlwaysEnabled)) {
-    UINT8 DataOriginal;
-    UINT8 DataNew;
-    Status = ReadPmicRegister (Private->I2cIoProtocol, Entry->PmicSetting->VoltageRegister, &DataOriginal);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to read voltage register: %r\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-    Microvolts -= Entry->PmicSetting->MinMicrovolts;
-    Microvolts /= Entry->PmicSetting->MicrovoltStep;
-    Microvolts += Entry->PmicSetting->MinVoltSetting;
-    DataNew = DataOriginal & ~Entry->PmicSetting->VoltageMask;
-    DataNew |= (Microvolts << Entry->PmicSetting->VoltageShift);
-    if (DataNew != DataOriginal) {
-      Status = WritePmicRegister (Private->I2cIoProtocol, Entry->PmicSetting->VoltageRegister, DataNew);
+    if (Entry->PmicSetting->MicrovoltStep == 0) {
+      //Fixed regulator
+      return EFI_SUCCESS;
+    } else {
+      UINT8 DataOriginal;
+      UINT8 DataNew;
+      Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->VoltageRegister, &DataOriginal, Entry->I2cDeviceGuid);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to write voltage register: %r\r\n", __FUNCTION__, Status));
+        DEBUG ((EFI_D_ERROR, "%a, Failed to read voltage register: %r\r\n", __FUNCTION__, Status));
         return Status;
       }
-      NotifyEntry (Entry);
+      Microvolts -= Entry->PmicSetting->MinMicrovolts;
+      Microvolts /= Entry->PmicSetting->MicrovoltStep;
+      Microvolts += Entry->PmicSetting->MinVoltSetting;
+      DataNew = DataOriginal & ~Entry->PmicSetting->VoltageMask;
+      DataNew |= (Microvolts << Entry->PmicSetting->VoltageShift);
+      if (DataNew != DataOriginal) {
+        Status = WritePmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->VoltageRegister, DataNew, Entry->I2cDeviceGuid);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((EFI_D_ERROR, "%a, Failed to write voltage register: %r\r\n", __FUNCTION__, Status));
+          return Status;
+        }
+        NotifyEntry (Entry);
+      }
+      return Status;
     }
-    return Status;
   } else {
     //Fixed regulator
     return EFI_SUCCESS;
@@ -666,6 +723,9 @@ I2cIoProtocolReady (
   EFI_STATUS            Status = EFI_SUCCESS;
   REGULATOR_DXE_PRIVATE *Private = (REGULATOR_DXE_PRIVATE *)Context;
   LIST_ENTRY            *ListNode;
+  UINTN                 Index;
+  EFI_I2C_IO_PROTOCOL   *I2cIoProtocol;
+  BOOLEAN               AllPmicReady =  TRUE;
 
   if (Private == NULL) {
     return;
@@ -675,38 +735,49 @@ I2cIoProtocolReady (
     Status = gBS->LocateProtocol (
                     &gEfiI2cIoProtocolGuid,
                     Private->I2cIoSearchToken,
-                    (VOID **)&Private->I2cIoProtocol);
+                    (VOID **)&I2cIoProtocol);
     if (EFI_ERROR (Status)) {
       return;
     }
 
-    if (CompareGuid (Private->I2cIoProtocol->DeviceGuid, Private->I2cDeviceGuid)) {
+    for (Index = 0; Index < ARRAY_SIZE (PmicSupported); Index++) {
+      if (CompareGuid (I2cIoProtocol->DeviceGuid, PmicSupported[Index].I2cDeviceGuid)) {
+        break;
+      }
+    }
+    if (Index < ARRAY_SIZE (PmicSupported)) {
       break;
     }
   }
-  gBS->CloseEvent (Event);
-
 
   DEBUG ((EFI_D_VERBOSE, "%a: Ready!!!\r\n", __FUNCTION__));
   ListNode = GetFirstNode (&Private->RegulatorList);
   while (ListNode != &Private->RegulatorList) {
     REGULATOR_LIST_ENTRY *Entry;
     Entry = REGULATOR_LIST_FROM_LINK (ListNode);
-    if (NULL != Entry) {
-      if (Entry->PmicSetting != NULL) {
+    if ((Entry != NULL) &&
+        (Entry->PmicSetting != NULL)) {
+      if (CompareGuid (I2cIoProtocol->DeviceGuid, Entry->I2cDeviceGuid)) {
+        Entry->I2cIoProtocol = I2cIoProtocol;
         Entry->IsAvailable = TRUE;
         NotifyEntry (Entry);
+      }
+      if (!Entry->IsAvailable) {
+        AllPmicReady = FALSE;
       }
     }
     ListNode = GetNextNode (&Private->RegulatorList, ListNode);
   }
 
-  gBS->InstallMultipleProtocolInterfaces (
-         &Private->ImageHandle,
-         &gNVIDIAPmicRegulatorsPresentProtocolGuid,
-         NULL,
-         NULL
-         );
+  if (AllPmicReady) {
+    gBS->InstallMultipleProtocolInterfaces (
+          &Private->ImageHandle,
+          &gNVIDIAPmicRegulatorsPresentProtocolGuid,
+          NULL,
+          NULL
+          );
+    gBS->CloseEvent (Event);
+  }
 
   CheckForAllRegulators (Private);
 }
@@ -808,6 +879,12 @@ AddFixedRegulators (
       continue;
     }
 
+    Property = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "status", NULL);
+    if ((Property != NULL) &&
+        (AsciiStrCmp ((CONST CHAR8 *)Property, "okay") != 0)) {
+      continue;
+    }
+
     ListEntry = AllocateZeroPool (sizeof (REGULATOR_LIST_ENTRY));
     if (NULL == ListEntry) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
@@ -850,44 +927,32 @@ AddFixedRegulators (
 }
 
 /**
- * Finds the pmic structure for the entry
+ * Finds and initializes the pmic structure for the entry
  * @param Private        - Driver private date
  * @param ListEntry      - List to update
- * @param SubNodeOffset  - Nod offset
+ * @param Name           - Name of the regulator
+ * @param CurrentPmic    - PmicSettings instance
  * @return EFI_SUCCESS   - Node updated
  * @return EFI_NOT_FOUND - Node not found in list
  */
 STATIC
 EFI_STATUS
-LookupPmicInfo (
-  IN REGULATOR_DXE_PRIVATE    *Private,
-  IN OUT REGULATOR_LIST_ENTRY *ListEntry,
-  INT32                       SubNodeOffset
+SetupPmicInfo (
+  IN REGULATOR_DXE_PRIVATE              *Private,
+  IN OUT REGULATOR_LIST_ENTRY           *ListEntry,
+  IN CONST CHAR8                        *Name,
+  IN PMIC_REGULATOR_SETTINGS_SUPPORTED  *CurrentPmic
   )
 {
   UINTN                  Index;
-  UINTN                  ArraySize;
-  PMIC_REGULATOR_SETTING *RegulatorMap;
 
-  CONST CHAR8 *Name = fdt_get_name (Private->DeviceTreeBase, SubNodeOffset, NULL);
-  if (NULL == Name) {
-    return EFI_NOT_FOUND;
-  }
+  InitializeListHead (&ListEntry->NotifyList);
+  ListEntry->Signature = REGULATOR_LIST_SIGNATURE;
 
-  if (CompareGuid (Private->I2cDeviceGuid, &gNVIDIAI2cMaxim77620)) {
-    ArraySize = ARRAY_SIZE (Maxim77620Regulators);
-    RegulatorMap = Maxim77620Regulators;
-  } else if (CompareGuid (Private->I2cDeviceGuid, &gNVIDIAI2cMaxim20024)){
-    ArraySize = ARRAY_SIZE (Maxim20024Regulators);
-    RegulatorMap = Maxim20024Regulators;
-  } else {
-    ArraySize = ARRAY_SIZE (Maxim77851Regulators);
-    RegulatorMap = Maxim77851Regulators;
-  }
-
-  for (Index = 0; Index < ArraySize; Index++) {
-    if (0 == AsciiStrCmp (Name, RegulatorMap[Index].Name)) {
-      ListEntry->PmicSetting = &RegulatorMap[Index];
+  for (Index = 0; Index < CurrentPmic->SettingsSize; Index++) {
+    if (0 == AsciiStrCmp (Name, CurrentPmic->RegulatorSettings[Index].Name)) {
+      ListEntry->PmicSetting = &CurrentPmic->RegulatorSettings[Index];
+      ListEntry->I2cDeviceGuid = CurrentPmic->I2cDeviceGuid;
       ListEntry->MicrovoltStep = ListEntry->PmicSetting->MicrovoltStep;
       if (ListEntry->MinMicrovolts < ListEntry->PmicSetting->MinMicrovolts) {
         ListEntry->MinMicrovolts = ListEntry->PmicSetting->MinMicrovolts;
@@ -921,89 +986,119 @@ AddPmicRegulators (
   IN REGULATOR_DXE_PRIVATE *Private
   )
 {
+  REGULATOR_LIST_ENTRY *ListEntry;
   INT32      NodeOffset = -1;
+  INT32      RegulatorNodeOffset = -1;
   INT32      SubNodeOffset = 0;
   EFI_STATUS Status;
+  UINT32     *NodeHandles;
+  UINT32     NumberOfHandles;
+  VOID       *Dtb;
+  UINTN      PmicIndex;
+  UINTN      InstanceIndex;
+  UINTN      RegulatorIndex;
 
   if (NULL == Private) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private->I2cDeviceGuid = &gNVIDIAI2cMaxim77620;
-  NodeOffset = fdt_node_offset_by_compatible (
-                 Private->DeviceTreeBase,
-                 NodeOffset,
-                 "maxim,max77620"
-                 );
-  if (NodeOffset <= 0) {
-    Private->I2cDeviceGuid = &gNVIDIAI2cMaxim20024;
-    NodeOffset = fdt_node_offset_by_compatible (
-                   Private->DeviceTreeBase,
-                   NodeOffset,
-                   "maxim,max20024"
-                   );
-    if (NodeOffset <= 0) {
-      Private->I2cDeviceGuid = &gNVIDIAI2cMaxim77851;
-      NodeOffset = fdt_node_offset_by_compatible (
-                     Private->DeviceTreeBase,
-                     NodeOffset,
-                     "maxim,max77851-pmic"
-                     );
+  for (PmicIndex = 0; PmicIndex < ARRAY_SIZE(PmicSupported); PmicIndex++) {
+    NumberOfHandles = 0;
+    Status = GetMatchingEnabledDeviceTreeNodes (
+              PmicSupported[PmicIndex].CompatibilityString,
+              NULL,
+              &NumberOfHandles
+              );
+    if (Status != EFI_BUFFER_TOO_SMALL) {
+      Status = EFI_SUCCESS;
+      continue;
     }
-  }
-  if (NodeOffset <= 0) {
-    DEBUG ((EFI_D_ERROR, "%a, No pmic nodes found.\r\n", __FUNCTION__));
-    return EFI_SUCCESS;
-  }
-
-  NodeOffset = fdt_subnode_offset (
-                 Private->DeviceTreeBase,
-                 NodeOffset,
-                 "regulators"
-                 );
-  if (NodeOffset <= 0) {
-    DEBUG ((EFI_D_ERROR, "%a, No pmic regulator nodes found.\r\n"));
-    return EFI_SUCCESS;
-  }
-
-  fdt_for_each_subnode (SubNodeOffset, Private->DeviceTreeBase, NodeOffset) {
-    REGULATOR_LIST_ENTRY *ListEntry = NULL;
-    INT32                PropertySize;
-    CONST VOID           *Property = NULL;
-
-    ListEntry = AllocateZeroPool (sizeof (REGULATOR_LIST_ENTRY));
-    if (NULL == ListEntry) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
-      return EFI_OUT_OF_RESOURCES;
+    NodeHandles = AllocatePool (NumberOfHandles * sizeof(UINT32));
+    if (NodeHandles == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Node handle array\r\n", __FUNCTION__));
+      break;
     }
-
-    InitializeListHead (&ListEntry->NotifyList);
-    ListEntry->Signature = REGULATOR_LIST_SIGNATURE;
-    InsertTailList (&Private->RegulatorList, &ListEntry->Link);
-    Private->Regulators++;
-    ListEntry->RegulatorId = fdt_get_phandle (Private->DeviceTreeBase, SubNodeOffset);
-    Property = fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-always-on", NULL);
-    ListEntry->AlwaysEnabled = (Property != NULL);
-    ListEntry->IsAvailable = ListEntry->AlwaysEnabled;
-    Property = fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-min-microvolt", &PropertySize);
-    if ((NULL != Property) && (PropertySize == sizeof (UINT32))) {
-      UINT32 Microvolts = SwapBytes32 (*(UINT32 *)Property);
-      ListEntry->MinMicrovolts = Microvolts;
-    }
-    Property = fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-max-microvolt", &PropertySize);
-    if ((NULL != Property) && (PropertySize == sizeof (UINT32))) {
-      UINT32 Microvolts = SwapBytes32 (*(UINT32 *)Property);
-      ListEntry->MaxMicrovolts = Microvolts;
-    }
-    ListEntry->MicrovoltStep = 0;
-    ListEntry->Name = (CONST CHAR8 *)fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-name", NULL);
-    Status = LookupPmicInfo (Private, ListEntry, SubNodeOffset);
+    Status = GetMatchingEnabledDeviceTreeNodes (
+              PmicSupported[PmicIndex].CompatibilityString,
+              NodeHandles,
+              &NumberOfHandles
+              );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to get pmic info: %x, %r\r\n", __FUNCTION__, ListEntry->RegulatorId, Status));
-      return Status;
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get device tree nodes\r\n", __FUNCTION__));
+      break;
     }
+
+    for (InstanceIndex = 0; InstanceIndex < NumberOfHandles; InstanceIndex++) {
+      Status = GetDeviceTreeNode (NodeHandles[InstanceIndex], &Dtb, &NodeOffset);
+      if (!EFI_ERROR (Status)) {
+        RegulatorNodeOffset = fdt_subnode_offset (
+                                Private->DeviceTreeBase,
+                                NodeOffset,
+                                "regulators"
+                                );
+        if (RegulatorNodeOffset <= 0) {
+          for (RegulatorIndex = 0; RegulatorIndex < PmicSupported[PmicIndex].SettingsSize; RegulatorIndex++) {
+            ListEntry = AllocateZeroPool (sizeof (REGULATOR_LIST_ENTRY));
+            if (NULL == ListEntry) {
+              DEBUG ((EFI_D_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
+              return EFI_OUT_OF_RESOURCES;
+            }
+
+            ListEntry->RegulatorId = fdt_get_phandle (Private->DeviceTreeBase, NodeOffset);
+            ListEntry->Name = fdt_get_name (Private->DeviceTreeBase, NodeOffset, NULL);
+            Status = SetupPmicInfo (Private, ListEntry, PmicSupported[PmicIndex].RegulatorSettings[RegulatorIndex].Name, &PmicSupported[PmicIndex]);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((EFI_D_ERROR, "%a: Failed to get pmic info: %x, %r\r\n", __FUNCTION__, ListEntry->RegulatorId, Status));
+              FreePool (ListEntry);
+            } else {
+              InsertTailList (&Private->RegulatorList, &ListEntry->Link);
+              Private->Regulators++;
+            }
+          }
+        } else {
+          fdt_for_each_subnode (SubNodeOffset, Private->DeviceTreeBase, RegulatorNodeOffset) {
+            INT32                PropertySize;
+            CONST VOID           *Property = NULL;
+
+            ListEntry = AllocateZeroPool (sizeof (REGULATOR_LIST_ENTRY));
+            if (NULL == ListEntry) {
+              DEBUG ((EFI_D_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
+              return EFI_OUT_OF_RESOURCES;
+            }
+
+            ListEntry->RegulatorId = fdt_get_phandle (Private->DeviceTreeBase, SubNodeOffset);
+            Property = fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-always-on", NULL);
+            ListEntry->AlwaysEnabled = (Property != NULL);
+            ListEntry->IsAvailable = ListEntry->AlwaysEnabled;
+            Property = fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-min-microvolt", &PropertySize);
+            if ((NULL != Property) && (PropertySize == sizeof (UINT32))) {
+              UINT32 Microvolts = SwapBytes32 (*(UINT32 *)Property);
+              ListEntry->MinMicrovolts = Microvolts;
+            }
+            Property = fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-max-microvolt", &PropertySize);
+            if ((NULL != Property) && (PropertySize == sizeof (UINT32))) {
+              UINT32 Microvolts = SwapBytes32 (*(UINT32 *)Property);
+              ListEntry->MaxMicrovolts = Microvolts;
+            }
+            ListEntry->MicrovoltStep = 0;
+            ListEntry->Name = (CONST CHAR8 *)fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-name", NULL);
+            Status = SetupPmicInfo (Private, ListEntry, fdt_get_name (Private->DeviceTreeBase, SubNodeOffset, NULL), &PmicSupported[PmicIndex]);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((EFI_D_ERROR, "%a: Failed to get pmic info: %x, %r\r\n", __FUNCTION__, ListEntry->RegulatorId, Status));
+              FreePool (ListEntry);
+            } else {
+              InsertTailList (&Private->RegulatorList, &ListEntry->Link);
+              Private->Regulators++;
+            }
+          }
+        }
+      }
+    }
+    FreePool (NodeHandles);
+    NodeHandles = NULL;
   }
-  return EFI_SUCCESS;
+  return Status;
 }
 
 /**
@@ -1145,9 +1240,7 @@ RegulatorDxeInitialize (
   Private->RegulatorProtocol.SetVoltage = RegulatorSetVoltage;
   InitializeListHead (&Private->RegulatorList);
   Private->Regulators = 0;
-  Private->I2cDeviceGuid = NULL;
   Private->GpioProtocol = NULL;
-  Private->I2cIoProtocol = NULL;
   Private->ImageHandle = ImageHandle;
 
   Status = BuildRegulatorNodes (Private);
