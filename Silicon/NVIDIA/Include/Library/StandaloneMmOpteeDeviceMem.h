@@ -35,4 +35,10 @@ IsOpteePresent (
   VOID
 );
 
-#endif  //STANDALONEMM_OPTEE_DEICE_MEM_H
+EFIAPI
+BOOLEAN
+IsQspiPresent (
+  VOID
+);
+
+#endif  //STANDALONEMM_OPTEE_DEVICE_MEM_H
