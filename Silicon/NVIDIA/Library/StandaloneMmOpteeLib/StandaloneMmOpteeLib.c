@@ -59,3 +59,30 @@ GetDeviceRegion (
   return Status;
 }
 
+EFIAPI
+BOOLEAN
+IsQspiPresent (
+  VOID
+)
+{
+  EFI_STATUS            Status = EFI_NOT_FOUND;
+  EFI_MM_DEVICE_REGION  *DeviceRegionMap = NULL;
+  UINTN                 Index;
+  EFI_HOB_GUID_TYPE     *GuidHob;
+  BOOLEAN               QspiPresent = FALSE;
+
+  GuidHob = GetFirstGuidHob (&gEfiStandaloneMmDeviceMemoryRegions);
+  if (GuidHob == NULL) {
+    return Status;
+  }
+  DeviceRegionMap = GET_GUID_HOB_DATA(GuidHob);
+
+  for (Index = 0; Index < MAX_DEVICE_REGIONS; Index++) {
+    if (AsciiStrStr (DeviceRegionMap[Index].DeviceRegionName, "qspi") != NULL) {
+      QspiPresent = TRUE;
+      break;
+
+    }
+  }
+  return QspiPresent;
+}
