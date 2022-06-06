@@ -22,7 +22,7 @@
 #include <Protocol/SmmFirmwareVolumeBlock.h>
 #include <Guid/VariableFormat.h>
 
-#include "OpTeeRpmbFvb.h"
+#include "OpTeeRpmbFvbNv.h"
 
 // These are what OP-TEE expects in ./core/arch/arm/kernel/stmm_sp.c
 // Since the FFA autodiscovery mechanism is not yet implemented we are
