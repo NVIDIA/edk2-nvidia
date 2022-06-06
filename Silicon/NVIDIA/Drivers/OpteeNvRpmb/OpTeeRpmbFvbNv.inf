@@ -1,0 +1,59 @@
+## @file
+#
+#  Component description file for OpTeeRpmbFv module
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2020, Linaro Ltd. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = OpTeeRpmbFvNv
+  FILE_GUID                      = 0fbcdce2-2685-4c58-bb94-237ae7283471
+  MODULE_TYPE                    = MM_STANDALONE
+  VERSION_STRING                 = 0.1
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  ENTRY_POINT                    = OpTeeRpmbFvbInit
+
+[Sources]
+  OpTeeRpmbFvb.c
+  OpTeeRpmbFvb.h
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  ArmPlatformPkg/ArmPlatformPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+
+[LibraryClasses]
+  ArmSvcLib
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  MmServicesTableLib
+  PcdLib
+  StandaloneMmDriverEntryPoint
+
+[Guids]
+  gEfiAuthenticatedVariableGuid
+  gEfiSystemNvDataFvGuid
+  gEfiVariableGuid
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase64
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase64
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
+
+[Protocols]
+  gEfiSmmFirmwareVolumeBlockProtocolGuid          ## PRODUCES
+
+[Depex]
+  TRUE
