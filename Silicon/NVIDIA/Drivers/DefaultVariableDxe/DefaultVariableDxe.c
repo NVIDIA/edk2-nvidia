@@ -195,7 +195,7 @@ VariableReady (
   VOID        *Dtb;
   UINTN       DtbSize;
   INT32       NodeOffset;
-  INT32       SubNodeOffset;
+  INT32       SubNodeOffset = 0;
   INT32       VariableNodeOffset;
   EFI_GUID    *VariableGuid;
   EFI_GUID    DtbGuid;
