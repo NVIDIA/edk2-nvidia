@@ -18,11 +18,12 @@
 #include <Library/DebugLib.h>
 #include <Library/MmServicesTableLib.h>
 #include <Library/PcdLib.h>
+#include <Library/StandaloneMmOpteeDeviceMem.h>
 
 #include <Protocol/FirmwareVolumeBlock.h>
 #include <Protocol/SmmFirmwareVolumeBlock.h>
 
-#include "OpTeeRpmbFvb.h"
+#include "OpTeeRpmbFvbNv.h"
 
 /**
   Fixup the Pcd values for variable storage
@@ -46,6 +47,13 @@ FixPcdMemory (
   MEM_INSTANCE                        *Instance;
   EFI_STATUS                          Status;
 
+  if (PcdGetBool(PcdEmuVariableNvModeEnable)) {
+      return EFI_SUCCESS;
+  }
+
+  if (IsQspiPresent()) {
+    return EFI_SUCCESS;
+  }
   //
   // Locate SmmFirmwareVolumeBlockProtocol
   //

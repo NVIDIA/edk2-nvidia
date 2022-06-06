@@ -19,8 +19,8 @@
   ENTRY_POINT                    = OpTeeRpmbFvbInit
 
 [Sources]
-  OpTeeRpmbFvb.c
-  OpTeeRpmbFvb.h
+  OpTeeRpmbFvbNv.c
+  OpTeeRpmbFvbNv.h
 
 [Packages]
   ArmPkg/ArmPkg.dec

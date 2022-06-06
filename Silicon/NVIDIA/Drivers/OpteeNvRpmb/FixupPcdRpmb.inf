@@ -25,12 +25,14 @@
 [Packages]
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   BaseLib
   DebugLib
   MmServicesTableLib
   PcdLib
+  StandaloneMmOpteeLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase64
@@ -39,6 +41,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
 
 [Protocols]
   gEfiSmmFirmwareVolumeBlockProtocolGuid          ## CONSUMES
