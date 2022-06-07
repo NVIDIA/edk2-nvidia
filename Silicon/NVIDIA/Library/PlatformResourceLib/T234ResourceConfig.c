@@ -489,8 +489,11 @@ T234GetPlatformResourceInformation(
   IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
 )
 {
-  EFI_STATUS Status;
-  BOOLEAN    Result;
+  EFI_STATUS         Status;
+  BOOLEAN            Result;
+  TEGRA_CPUBL_PARAMS *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
   PlatformResourceInfo->NumSockets = 1;
 
@@ -512,6 +515,10 @@ T234GetPlatformResourceInformation(
   if (!Result) {
     return EFI_DEVICE_ERROR;
   }
+
+  // Populate RamOops Memory Information
+  PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Base;
+  PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryLength = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Size;
 
   return EFI_SUCCESS;
 }

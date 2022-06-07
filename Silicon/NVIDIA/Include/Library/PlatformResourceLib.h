@@ -48,6 +48,7 @@ typedef struct {
   NVDA_MEMORY_REGION   *CarveoutRegions;
   UINTN                CarveoutRegionsCount;
   UINTN                DtbLoadAddress;
+  NVDA_MEMORY_REGION   RamOopsRegion;
 } TEGRA_RESOURCE_INFO;
 
 typedef struct {

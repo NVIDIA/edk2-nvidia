@@ -199,6 +199,71 @@ RemoveQspiNodes (
 
 VOID
 EFIAPI
+UpdateRamOopsMemory (
+  IN VOID *Dtb
+  )
+{
+  EFI_STATUS           Status;
+  VOID                 *Hob;
+  EFI_PHYSICAL_ADDRESS RamOopsBase;
+  UINT64               RamOopsSize;
+  INT32                NodeOffset;
+  INT32                AddressCells;
+  INT32                SizeCells;
+  UINT8                *Data;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+    (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+    RamOopsBase = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ResourceInfo->RamOopsRegion.MemoryBaseAddress;
+    RamOopsSize = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ResourceInfo->RamOopsRegion.MemoryLength;
+    DEBUG ((DEBUG_ERROR, "%a: RamOopsBase: 0x%lx, RamOopsSize: 0x%lx\r\n", __FUNCTION__, RamOopsBase, RamOopsSize));
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: RamOopsBase Unsupported\r\n", __FUNCTION__));
+    return;
+  }
+
+  if (RamOopsBase != 0 && RamOopsSize != 0) {
+    NodeOffset = fdt_node_offset_by_compatible(Dtb, 0, "ramoops");
+    AddressCells = fdt_address_cells (Dtb, fdt_parent_offset(Dtb, NodeOffset));
+    SizeCells = fdt_size_cells (Dtb, fdt_parent_offset(Dtb, NodeOffset));
+    if ((AddressCells > 2) ||
+        (AddressCells == 0) ||
+        (SizeCells > 2) ||
+        (SizeCells == 0)) {
+      DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
+      return;
+    }
+
+    Data = NULL;
+    Status = gBS->AllocatePool (EfiBootServicesData,
+                                (AddressCells + SizeCells) * sizeof (UINT32),
+                                (VOID **)&Data);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    if (AddressCells == 2) {
+      *(UINT64*)Data = SwapBytes64 (RamOopsBase);
+    } else {
+      *(UINT32*)Data = SwapBytes32 (RamOopsBase);
+    }
+
+    if (SizeCells == 2) {
+      *(UINT64*)&Data[AddressCells * sizeof (UINT32)] = SwapBytes64 (RamOopsSize);
+    } else {
+      *(UINT32*)&Data[AddressCells * sizeof (UINT32)] = SwapBytes32 (RamOopsSize);
+    }
+
+    fdt_setprop (Dtb, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
+    fdt_setprop (Dtb, NodeOffset, "status", "okay", sizeof ("okay"));
+
+    gBS->FreePool (Data);
+  }
+}
+
+VOID
+EFIAPI
 UpdateFdt (
     IN EFI_EVENT Event,
     IN VOID      *Context
@@ -241,6 +306,7 @@ UpdateFdt (
   FloorSweepDtb (Dtb);
   RemoveQspiNodes (Dtb);
   AddBoardProperties (Dtb);
+  UpdateRamOopsMemory (Dtb);
   if (IsOpteePresent ()) {
     EnableOpteeNode (Dtb);
   } else if (IsTrustyPresent ()) {
