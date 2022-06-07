@@ -270,11 +270,17 @@ UpdateFdt (
     )
 {
   EFI_STATUS Status;
+  VOID       *AcpiBase;
   VOID       *Dtb;
   VOID       *CpublDtb;
   VOID       *OverlayDtb;
   INT32      NodeOffset;
   CHAR8      SWModule[] = "kernel";
+
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    return;
+  }
 
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Dtb);
   if (EFI_ERROR (Status)) {
