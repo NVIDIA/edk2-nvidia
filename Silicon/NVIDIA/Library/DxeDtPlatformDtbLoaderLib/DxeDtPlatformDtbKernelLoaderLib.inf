@@ -49,6 +49,7 @@
 
 [Guids]
   gFdtTableGuid
+  gEfiAcpiTableGuid
   gEfiEventReadyToBootGuid
 
 [Pcd]
