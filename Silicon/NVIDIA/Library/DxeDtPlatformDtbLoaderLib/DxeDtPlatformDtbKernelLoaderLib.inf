@@ -49,6 +49,7 @@
 [Guids]
   gFdtTableGuid
   gEfiEventReadyToBootGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName
