@@ -4,7 +4,7 @@ This file describes how to build UEFI for the Jetson platform.
 
 ## Supported Configuration Details
 
-The following steps have only been validated with Ubuntu 18.04 with GCC5
+The following steps have only been validated with Ubuntu 20.04 with GCC5
 toolchain.
 
 ## EDK2 Developer environment
