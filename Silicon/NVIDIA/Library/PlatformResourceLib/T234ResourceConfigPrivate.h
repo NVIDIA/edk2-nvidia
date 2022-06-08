@@ -248,10 +248,18 @@ typedef struct {
       UINT64 EnableDramPageBlacklisting:1;
       UINT64 EnableCombinedUart:1;
       UINT64 EnableDramStagedScrubbing:1;
-      UINT64 EnableSce:1;
       UINT64 SwitchBootchain:1;
       UINT64 ResetToRecovery:1;
-    };
+      UINT64 EnableSpe:1;
+      UINT64 EnableSce:1;
+      UINT64 EnableRce:1;
+      UINT64 EnableDce:1;
+      UINT64 EnableApe:1;
+      UINT64 EnableFsi:1;
+      UINT64 EnableBlanketNsdramCarveout:1;
+      UINT64 EnableNsdramEncryption:1;
+      UINT64 Unused:51;
+    } FeatureFlagData;
   }, 8);
 
   /**< Start address of SDRAM params used in MB1 as per RAMCODE */
