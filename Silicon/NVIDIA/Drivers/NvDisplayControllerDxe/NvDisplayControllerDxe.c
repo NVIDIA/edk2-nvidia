@@ -714,7 +714,14 @@ DisplayOnExitBootServices (
   )
 {
   CONST BOOLEAN OnExitBootServices = TRUE;
+  VOID          *AcpiBase;
+  EFI_STATUS    Status;
 
+  /* Leave display active for ACPI boot. */
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    return;
+  }
   DisplayBypassSorClocks (Context);
   DisplayStop (Context, OnExitBootServices);
 }
@@ -737,7 +744,6 @@ DisplayStart (
   )
 {
   EFI_STATUS                            Status;
-  VOID                                  *AcpiBase;
   UINTN                                 ResourcesSize;
   NON_DISCOVERABLE_DEVICE               *NvNonDiscoverableDevice;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR     FramebufferDescriptor, *FramebufferResource = NULL;
@@ -855,27 +861,22 @@ DisplayStart (
   }
   Result->OutputGpiosConfigured = TRUE;
 
-  /* Install the OnExitBootServices teardown event during non-ACPI
-     boot only. */
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_NOTIFY,
+                  (EFI_EVENT_NOTIFY) DisplayOnExitBootServices,
+                  Result,
+                  &gEfiEventExitBootServicesGuid,
+                  &Result->OnExitBootServicesEvent
+                  );
   if (EFI_ERROR (Status)) {
-    Status = gBS->CreateEventEx (
-                    EVT_NOTIFY_SIGNAL,
-                    TPL_NOTIFY,
-                    (EFI_EVENT_NOTIFY) DisplayOnExitBootServices,
-                    Result,
-                    &gEfiEventExitBootServicesGuid,
-                    &Result->OnExitBootServicesEvent
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to create OnExitBootServices event: %r\r\n",
-        __FUNCTION__, Status
-      ));
-      Result->OnExitBootServicesEvent = NULL;
-      goto Exit;
-    }
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to create OnExitBootServices event: %r\r\n",
+      __FUNCTION__, Status
+    ));
+    Result->OnExitBootServicesEvent = NULL;
+    goto Exit;
   }
 
 Exit:
