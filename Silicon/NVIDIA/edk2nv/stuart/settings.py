@@ -191,25 +191,29 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         ''' Return the base firmware version as a string.
 
             The return from this method will be used as the prefix when setting
-            BUILDID_STRING.
+            BUILDID_STRING, unless the FIRMWARE_VERSION_BASE env is set.
         '''
         raise NotImplementedError(
             "GetFirmwareVersionBase() must be implemented in "
-            "NVIDIASettingsManager subclasses."
+            "NVIDIASettingsManager subclasses or FIRMWARE_VERSION_BASE "
+            "must be set ."
         )
 
     def GetFirmwareVersion(self):
         ''' Return the firmware version as a string.
 
-            This implementation will attempt to generate a unique string from
-            the git revision and append it to GetFirmwareVersionBase().  If the
-            GIT_SYNC_REVISION environment variable is set, it will be used
-            instead.
-
             The return from this method will be used to set BUILDID_STRING.
             Subclasses may override it to generate the BUILDID differently.
+
+            This implementation will use the format {base}-{suffix}.
+            - The base can be set via the FIRMWARE_VERSION_BASE env var.  If
+              it is not set, we'll use GetFirmwareVersionBase().
+            - The suffix can be set via the GIT_SYNC_REVISION env var.  If it
+              is not set, we'll use `git describe`.
         '''
-        base = self.GetFirmwareVersionBase()
+        base = os.getenv("FIRMWARE_VERSION_BASE")
+        if not base:
+            base = self.GetFirmwareVersionBase()
 
         if os.getenv("GIT_SYNC_REVISION") is not None:
             return base + "-" + os.getenv("GIT_SYNC_REVISION")
