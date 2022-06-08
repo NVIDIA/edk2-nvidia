@@ -4,10 +4,6 @@
 
 ###############################################################################
 # Stuart build for NVIDIA StandaloneMm UEFI firmware
-#
-# Run with:
-# $ build_uefi.sh -c \
-#      edk2-nvidia/Platform/NVIDIA/StandaloneMmOptee/PlatformBuild.py
 
 
 from edk2nv.stuart import NVIDIASettingsManager, NVIDIAPlatformBuilder
@@ -20,7 +16,7 @@ class StandaloneMmOpteeSettingsManager(NVIDIASettingsManager):
         return "StandaloneMmOptee"
 
     def GetFirmwareVersionBase(self):
-        return "v1.1.1"
+        return "202209.0"
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_MM.Fv"

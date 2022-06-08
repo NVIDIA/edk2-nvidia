@@ -5,17 +5,9 @@
 
 ###############################################################################
 # Stuart build for NVIDIA Jetson UEFI firmware
-#
-# Run with:
-# $ build_uefi.sh -c \
-#      edk2-nvidia/Platform/NVIDIA/Jetson/PlatformBuild.py
 
 
-import os
-from pathlib import Path
 from edk2nv.stuart import NVIDIASettingsManager, NVIDIAPlatformBuilder
-import glob
-import shutil
 
 
 class JetsonSettingsManager(NVIDIASettingsManager):
@@ -28,10 +20,7 @@ class JetsonSettingsManager(NVIDIASettingsManager):
         return super().GetActiveScopes() + ["jetson"]
 
     def GetFirmwareVersionBase(self):
-        fvb = os.getenv("FIRMWARE_VERSION_BASE")
-        if not fvb:
-            fvb = "r35.0"
-        return fvb
+        return "202209.0"
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"
