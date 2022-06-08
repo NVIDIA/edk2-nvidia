@@ -11,6 +11,7 @@
 #      edk2-nvidia/Platform/NVIDIA/Jetson/PlatformBuild.py
 
 
+import os
 from edk2nv.stuart import NVIDIASettingsManager, NVIDIAPlatformBuilder
 
 
@@ -24,7 +25,10 @@ class JetsonSettingsManager(NVIDIASettingsManager):
         return super().GetActiveScopes() + ["jetson"]
 
     def GetFirmwareVersionBase(self):
-        return "v1.1.2"
+        fvb = os.getenv("FIRMWARE_VERSION_BASE")
+        if not fvb:
+            fvb = "r35.0"
+        return fvb
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"
