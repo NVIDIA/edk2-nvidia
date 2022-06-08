@@ -143,9 +143,13 @@ T234GetResourceConfig (
   UINTN                 CarveoutRegionsCount=0;
   EFI_MEMORY_DESCRIPTOR Descriptor;
   UINTN                 Index;
+  BOOLEAN               DramEncryptionEnabled;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   PlatformInfo->DtbLoadAddress = T234GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
+
+  DramEncryptionEnabled = (CpuBootloaderParams->FeatureFlagData.EnableBlanketNsdramCarveout == TRUE) &&
+                          (CpuBootloaderParams->FeatureFlagData.EnableNsdramEncryption == TRUE);
 
   //Build dram regions
   DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION));
@@ -215,10 +219,13 @@ T234GetResourceConfig (
       Descriptor.NumberOfPages = EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size);
       Descriptor.Attribute = 0;
       BuildGuidDataHob (&gNVIDIAOSCarveoutHob, &Descriptor, sizeof (Descriptor));
-    } else if ((Index != CARVEOUT_UEFI) &&
-               (Index != CARVEOUT_TEMP_MB2_LOAD) &&
-               (Index != CARVEOUT_TEMP_MB2_IO_BUFFERS) &&
-               (CpuBootloaderParams->CarveoutInfo[Index].Size != 0)) {
+    } else if (Index != CARVEOUT_UEFI) {
+      // Skip CARVEOUT_BLANKET_NSDRAM if dram encryption is enabled as this is a placeholder
+      // for BL carveout for BL to program GSC for available DRAM to be encrypted.
+      if ((DramEncryptionEnabled == TRUE) &&
+          (Index == CARVEOUT_BLANKET_NSDRAM)) {
+        continue;
+      }
       CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
       CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
       CarveoutRegionsCount++;
