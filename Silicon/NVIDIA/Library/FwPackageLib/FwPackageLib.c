@@ -2,7 +2,7 @@
 
   FwPackageLib - Firmware update package support library
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,6 +12,47 @@
 #include <Library/DebugLib.h>
 #include <Library/FwPackageLib.h>
 #include <Library/PrintLib.h>
+
+/**
+  Parse Ascii string for next token.  Based on C-library strsep().
+
+  @param[in][out] StringPtr         Pointer to string pointer to be parsed.
+                                    On return contains pointer to first
+                                    character after the token being returned
+                                    or NULL if token was at end of string.
+  @param[in]      Delimiter         Character that delimits tokens
+
+  @retval         NULL              Input string pointer was NULL
+  @retval         Others            Pointer to NULL-terminated token string
+
+**/
+STATIC
+CHAR8 *
+EFIAPI
+AsciiStrSep (
+  IN OUT CHAR8      **StringPtr,
+  IN     CHAR8      Delimiter
+  )
+{
+  UINTN         Index;
+  CHAR8         *SubString;
+
+  SubString = *StringPtr;
+  if (SubString == NULL) {
+    return NULL;
+  }
+
+  for (Index = 0; Index < AsciiStrLen (SubString); Index++) {
+    if (SubString[Index] == Delimiter) {
+      SubString[Index] = '\0';
+      *StringPtr = &SubString[Index+1];
+      return SubString;
+    }
+  }
+
+  *StringPtr = NULL;
+  return SubString;
+}
 
 /**
   Validate the FW_PACKAGE_IMAGE_INFO structures of image at requested index.
@@ -73,6 +114,62 @@ FwPackageValidateImageInfo (
   return EFI_SUCCESS;
 }
 
+STATIC
+EFI_STATUS
+EFIAPI
+FwPackageCheckTnSpec (
+  IN  CONST CHAR8 *S1,
+  IN  CONST CHAR8 *S2
+  )
+{
+  CHAR8 Spec1[FW_PACKAGE_TNSPEC_LENGTH];
+  CHAR8 Spec2[FW_PACKAGE_TNSPEC_LENGTH];
+  CHAR8 *Spec1Tokens[FW_PACKAGE_TNSPEC_LENGTH / 2];
+  CHAR8 *Spec2Tokens[FW_PACKAGE_TNSPEC_LENGTH / 2];
+  UINTN Spec1NumTokens;
+  UINTN Spec2NumTokens;
+  UINTN Index;
+  CHAR8 *Spec;
+
+  if ((S1 == NULL) || (S2 == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  AsciiStrCpyS(Spec1, sizeof (Spec1),  S1);
+  AsciiStrCpyS(Spec2, sizeof (Spec2),  S2);
+
+  Index = 0;
+  Spec = Spec1;
+  while((Spec1Tokens[Index] = AsciiStrSep (&Spec, '-')) != NULL) {
+    Index++;
+  }
+  Spec1NumTokens = Index;
+
+  Index = 0;
+  Spec = Spec2;
+  while((Spec2Tokens[Index] = AsciiStrSep (&Spec, '-')) != NULL) {
+    Index++;
+  }
+  Spec2NumTokens = Index;
+
+  if (Spec1NumTokens != Spec2NumTokens) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  for (Index = 0; Index < Spec1NumTokens; Index++) {
+    if ((AsciiStrCmp(Spec1Tokens[Index], "") == 0) ||
+        (AsciiStrCmp(Spec2Tokens[Index], "") == 0)) {
+      continue;
+    }
+
+    if (AsciiStrCmp(Spec1Tokens[Index], Spec2Tokens[Index]) != 0) {
+      return EFI_NOT_FOUND;
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
 UINTN
 EFIAPI
 FwPackageCopyImageName (
@@ -90,12 +187,15 @@ FwPackageGetImageIndex (
   IN  CONST FW_PACKAGE_HEADER           *Header,
   IN  CONST CHAR16                      *Name,
   IN  BOOLEAN                           IsProductionFused,
+  IN  CONST CHAR8                       *TnSpec,            OPTIONAL
   OUT UINTN                             *ImageIndex
   )
 {
   UINTN                                 Index;
   CHAR8                                 AsciiName[FW_PACKAGE_NAME_LENGTH];
+  BOOLEAN                               Found;
 
+  Found = FALSE;
   AsciiSPrintUnicodeFormat (AsciiName, sizeof (AsciiName), Name);
   for (Index = 0; Index < Header->ImageCount; Index++) {
     CONST FW_PACKAGE_IMAGE_INFO         *ImageInfo;
@@ -106,12 +206,25 @@ FwPackageGetImageIndex (
         continue;
       }
 
-      *ImageIndex = Index;
-      return EFI_SUCCESS;
+      if ((AsciiStrLen (ImageInfo->TnSpec) > 0) && (TnSpec != NULL)) {
+        EFI_STATUS Status;
+
+        Status = FwPackageCheckTnSpec (TnSpec, ImageInfo->TnSpec);
+        if (EFI_ERROR (Status)) {
+          continue;
+        }
+      }
+
+      if (!Found) {
+        *ImageIndex = Index;
+        Found = TRUE;
+      } else {
+        return EFI_UNSUPPORTED;
+      }
     }
   }
 
-  return EFI_NOT_FOUND;
+  return (Found) ? EFI_SUCCESS : EFI_NOT_FOUND;
 }
 
 CONST

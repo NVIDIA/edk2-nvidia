@@ -2,7 +2,7 @@
 
   FwPackageLib - Firmware update package support library
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -34,7 +34,7 @@
   |     Data for image N-1     | <--- Data size is FW_PACKAGE_IMAGE_INFO[N-1].Bytes
   +----------------------------+ <--- FW_PACKAGE_HEADER.PackageSize
 **/
-#define FW_PACKAGE_MAGIC                        "NVIDIA__BLOB__V2"
+#define FW_PACKAGE_MAGIC                        "NVIDIA__BLOB__V3"
 #define FW_PACKAGE_MAGIC_SIZE                   16
 
 #define FW_PACKAGE_TYPE_FW                      0
@@ -55,7 +55,7 @@ typedef struct {
 } FW_PACKAGE_HEADER;
 
 #define FW_PACKAGE_NAME_LENGTH                  40
-#define FW_PACKAGE_TNSPEC_LENGTH                64
+#define FW_PACKAGE_TNSPEC_LENGTH                128
 #define FW_PACKAGE_IMAGE_INFO_VERSION           0
 
 typedef struct {
@@ -96,6 +96,7 @@ FwPackageCopyImageName (
   @param[in]    IsProductionFused       Flag indicating if production mode is
                                         fused, used to enforce UpdateMode
                                         settings for the image.
+  @param[in]    TnSpec                  Pointer to platform TnSpec OPTIONAL
   @param[out]   ImageIndex              Index of image in the FW_PACKAGE_IMAGE_INFO array
 
   @retval       EFI_SUCCESS             Image name found, ImageIndex valid
@@ -108,6 +109,7 @@ FwPackageGetImageIndex (
   IN  CONST FW_PACKAGE_HEADER           *Header,
   IN  CONST CHAR16                      *Name,
   IN  BOOLEAN                           IsProductionFused,
+  IN  CONST CHAR8                       *TnSpec,            OPTIONAL
   OUT UINTN                             *ImageIndex
   );
 
