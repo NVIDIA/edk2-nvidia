@@ -31,6 +31,8 @@
 #include "TegraFmp.h"
 
 #define FMP_CAPSULE_SINGLE_PARTITION_VARIABLE_NAME  L"FmpCapsuleSinglePartitionName"
+#define FMP_PLATFORM_SPEC_VARIABLE_NAME             L"TegraPlatformSpec"
+#define FMP_PLATFORM_SPEC_DEFAULT                   "--------"
 
 #define FMP_DATA_BUFFER_SIZE            (4 * 1024)
 #define FMP_WRITE_LOOP_SIZE             (64 * 1024)
@@ -63,7 +65,6 @@ enum {
   LAS_ERROR_SET_SINGLE_IMAGE_FAILED,
   LAS_ERROR_SETUP_REBOOT_FAILED,
   LAS_ERROR_FMP_LIB_UNINITIALIZED,
-  LAS_ERROR_TN_SPEC_MISMATCH,
 };
 
 // special images that are not processed in the main loop
@@ -94,6 +95,7 @@ STATIC BOOLEAN          mPcdFmpSingleImageUpdate    = FALSE;
 STATIC VOID             *mFmpDataBuffer             = NULL;
 STATIC UINTN            mFmpDataBufferSize          = 0;
 STATIC BOOLEAN          mFmpLibInitialized          = FALSE;
+STATIC CHAR8            *mPlatformTnSpec            = NULL;
 STATIC BOOLEAN          mIsProductionFused          = FALSE;
 STATIC UINT32           mActiveBootChain            = MAX_UINT32;
 STATIC UINT32           mTegraVersion               = 0;
@@ -119,6 +121,72 @@ GetFuseSettings (
   )
 {
   mIsProductionFused = FALSE;
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Get the system's TnSpec string.
+
+  @retval EFI_SUCCESS                   Operation completed successfully
+  @retval Others                        An error occurred
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+GetTnSpec (
+  VOID
+  )
+{
+  EFI_STATUS        Status;
+  UINTN             Size;
+
+  Size = 0;
+  Status = gRT->GetVariable (FMP_PLATFORM_SPEC_VARIABLE_NAME,
+                             &gNVIDIATokenSpaceGuid,
+                             NULL,
+                             &Size,
+                             NULL);
+  if (Status != EFI_BUFFER_TOO_SMALL) {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting %s size: %r\n",
+            __FUNCTION__, FMP_PLATFORM_SPEC_VARIABLE_NAME, Status));
+    goto UseDefault;
+  }
+
+  mPlatformTnSpec = (CHAR8 *) AllocateRuntimeZeroPool (Size);
+  if (mPlatformTnSpec == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: TnSpec alloc failed\n",  __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = gRT->GetVariable (FMP_PLATFORM_SPEC_VARIABLE_NAME,
+                             &gNVIDIATokenSpaceGuid,
+                             NULL,
+                             &Size,
+                             mPlatformTnSpec);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting %s: %r\n",
+            __FUNCTION__, FMP_PLATFORM_SPEC_VARIABLE_NAME, Status));
+    FreePool (mPlatformTnSpec);
+    mPlatformTnSpec = NULL;
+    return Status;
+  }
+
+  goto Done;
+
+UseDefault:
+  mPlatformTnSpec = (CHAR8 *) AllocateRuntimeCopyPool (
+    AsciiStrSize (FMP_PLATFORM_SPEC_DEFAULT),
+    FMP_PLATFORM_SPEC_DEFAULT);
+  if (mPlatformTnSpec == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: TnSpec alloc failed\n",  __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+Done:
+  DEBUG ((DEBUG_INFO, "%a: %s=%a\n",
+          __FUNCTION__, FMP_PLATFORM_SPEC_VARIABLE_NAME, mPlatformTnSpec));
 
   return EFI_SUCCESS;
 }
@@ -457,7 +525,11 @@ WriteImage (
     return EFI_NOT_FOUND;
   }
 
-  Status = FwPackageGetImageIndex (Header, Name, mIsProductionFused, &ImageIndex);
+  Status = FwPackageGetImageIndex (Header,
+                                   Name,
+                                   mIsProductionFused,
+                                   mPlatformTnSpec,
+                                   &ImageIndex);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to find image=%s: %r\n", Name, Status));
     return Status;
@@ -516,6 +588,7 @@ WriteRegularImages (
     Status = FwPackageGetImageIndex (Header,
                                      ImageName,
                                      mIsProductionFused,
+                                     mPlatformTnSpec,
                                      &PkgImageIndex);
     if (EFI_ERROR (Status)) {
       if (NameIsInList (ImageName, OptionalImageNames)) {
@@ -586,7 +659,11 @@ VerifyImage (
     return Status;
   }
 
-  Status = FwPackageGetImageIndex (Header, Name, mIsProductionFused, &ImageIndex);
+  Status = FwPackageGetImageIndex (Header,
+                                   Name,
+                                   mIsProductionFused,
+                                   mPlatformTnSpec,
+                                   &ImageIndex);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to find image=%s: %r\n", Name, Status));
     return Status;
@@ -676,6 +753,7 @@ VerifyAllImages (
     Status = FwPackageGetImageIndex (Header,
                                      ImageName,
                                      mIsProductionFused,
+                                     mPlatformTnSpec,
                                      &PkgImageIndex);
     if (EFI_ERROR (Status)) {
       if (NameIsInList (ImageName, OptionalImageNames)) {
@@ -861,6 +939,7 @@ UpdateBct (
   Status = FwPackageGetImageIndex (Header,
                                    L"BCT",
                                    mIsProductionFused,
+                                   mPlatformTnSpec,
                                    &PkgImageIndex);
   if (EFI_ERROR (Status)) {
     return Status;
@@ -1051,6 +1130,7 @@ FmpTegraCheckImage (
     Status = FwPackageGetImageIndex (Header,
                                      ImageName,
                                      mIsProductionFused,
+                                     mPlatformTnSpec,
                                      &PkgImageIndex);
     if (EFI_ERROR (Status)) {
       if (NameIsInList (ImageName, OptionalImageNames)) {
@@ -1307,6 +1387,13 @@ FmpDeviceLibConstructor (
     goto Done;
   }
 
+  Status = GetTnSpec ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting TnSpec: %r\n",
+            __FUNCTION__, Status));
+    goto Done;
+  }
+
   mFmpLibInitialized = TRUE;
 
 Done:
@@ -1322,6 +1409,10 @@ Done:
     if (mAddressChangeEvent != NULL) {
       gBS->CloseEvent (mAddressChangeEvent);
       mAddressChangeEvent = NULL;
+    }
+    if (mPlatformTnSpec != NULL) {
+      FreePool (mPlatformTnSpec);
+      mPlatformTnSpec = NULL;
     }
     mFmpDataBufferSize      = 0;
     mBrBctUpdateProtocol    = NULL;
