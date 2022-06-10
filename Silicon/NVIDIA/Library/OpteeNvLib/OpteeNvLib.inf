@@ -11,13 +11,14 @@
 [Defines]
   INF_VERSION                    = 0x0001001A
   BASE_NAME                      = OpteeNvLib
-  FILE_GUID                      = d250e28a-6a79-4226-8e34-08ac730f4643 
+  FILE_GUID                      = d250e28a-6a79-4226-8e34-08ac730f4643
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = OpteeNvLib
 
 [Sources]
   Optee.c
+  OpteeRpmb.c
   OpteeSmc.h
 
 [Packages]
@@ -29,3 +30,21 @@
   ArmMmuLib
   ArmSmcLib
   BaseLib
+  UefiLib
+  UefiRuntimeServicesTableLib
+  UefiBootServicesTableLib
+  DxeServicesTableLib
+  DevicePathLib
+  TimeBaseLib
+  DebugLib
+
+[Pcd.common]
+  gArmTokenSpaceGuid.PcdMmBufferBase
+  gArmTokenSpaceGuid.PcdMmBufferSize
+
+[Protocols]
+  gEfiSdMmcPassThruProtocolGuid ## CONSUMES
+
+[Depex]
+  TRUE
+
