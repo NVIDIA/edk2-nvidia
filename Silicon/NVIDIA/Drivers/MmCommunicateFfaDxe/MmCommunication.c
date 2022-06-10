@@ -19,9 +19,23 @@
 
 #include <Protocol/MmCommunication2.h>
 
+#include <IndustryStandard/ArmFfaSvc.h>
 #include <IndustryStandard/ArmStdSmc.h>
 
 #include "MmCommunicate.h"
+
+#define STMM_UUID_0                         0x8afb129b
+#define STMM_UUID_1                         0x64ca4760
+#define STMM_UUID_2                         0x8618c888
+#define STMM_UUID_3                         0x4caa6c4a
+#define ARM_SVC_ID_FFA_PARTITION_INFO_GET   0x84000068
+#define ARM_SVC_ID_FFA_RXTX_MAP             0xC4000066
+#define ARM_SVC_ID_FFA_RXTX_UNMAP           0x84000067
+#define ARM_SVC_ID_FFA_SUCCESS_AARCH64      0xC4000061
+#define ARM_SVC_ID_FFA_SUCCESS_AARCH32      0x84000060
+
+STATIC UINT16 StmmVmId = 0xFFFF;
+STATIC VOID GetStmmVmId (VOID);
 
 //
 // Address, Length of the pre-allocated buffer for communication with the secure
@@ -80,10 +94,12 @@ MmCommunication2Communicate (
   ARM_SMC_ARGS               CommunicateSmcArgs;
   EFI_STATUS                 Status;
   UINTN                      BufferSize;
+  UINTN                       Ret;
 
   Status     = EFI_ACCESS_DENIED;
   BufferSize = 0;
 
+  DEBUG ((DEBUG_ERROR, "%a: Start\n", __FUNCTION__));
   ZeroMem (&CommunicateSmcArgs, sizeof (ARM_SMC_ARGS));
 
   //
@@ -140,25 +156,80 @@ MmCommunication2Communicate (
     return Status;
   }
 
-  // SMC Function ID
-  CommunicateSmcArgs.Arg0 = ARM_SMC_ID_MM_COMMUNICATE_AARCH64;
-
-  // Cookie
-  CommunicateSmcArgs.Arg1 = 0;
-
   // Copy Communication Payload
   CopyMem ((VOID *)mNsCommBuffMemRegion.VirtualBase, CommBufferVirtual, BufferSize);
 
-  // comm_buffer_address (64-bit physical address)
-  CommunicateSmcArgs.Arg2 = (UINTN)mNsCommBuffMemRegion.PhysicalBase;
+  // Use the FF-A interface if enabled.
+  if (FeaturePcdGet (PcdFfaEnable)) {
+    if (StmmVmId == 0xFFFF) {
+      GetStmmVmId();
+    }
+    // FF-A Interface ID for direct message communication
+    CommunicateSmcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64;
 
-  // comm_size_address (not used, indicated by setting to zero)
-  CommunicateSmcArgs.Arg3 = 0;
+    // FF-A Destination EndPoint ID, not used as of now
+    CommunicateSmcArgs.Arg1 = StmmVmId;
+
+    // Reserved for future use(MBZ)
+    CommunicateSmcArgs.Arg2 = 0x0;
+
+    // Arg3 onwards are the IMPLEMENTATION DEFINED FF-A parameters
+    // SMC Function ID
+    CommunicateSmcArgs.Arg3 = ARM_SMC_ID_MM_COMMUNICATE_AARCH64;
+
+    // Cookie
+    CommunicateSmcArgs.Arg4 = 0x0;
+
+    // comm_buffer_address (64-bit physical address)
+    CommunicateSmcArgs.Arg5 = (UINTN)mNsCommBuffMemRegion.PhysicalBase;
+
+    // comm_size_address (not used, indicated by setting to zero)
+    CommunicateSmcArgs.Arg6 = 0;
+  } else {
+    // SMC Function ID
+    CommunicateSmcArgs.Arg0 = ARM_SMC_ID_MM_COMMUNICATE_AARCH64;
+
+    // Cookie
+    CommunicateSmcArgs.Arg1 = 0;
+
+    // comm_buffer_address (64-bit physical address)
+    CommunicateSmcArgs.Arg2 = (UINTN)mNsCommBuffMemRegion.PhysicalBase;
+
+    // comm_size_address (not used, indicated by setting to zero)
+    CommunicateSmcArgs.Arg3 = 0;
+  }
 
   // Call the Standalone MM environment.
   ArmCallSmc (&CommunicateSmcArgs);
 
-  switch (CommunicateSmcArgs.Arg0) {
+  Ret = CommunicateSmcArgs.Arg0;
+
+  if ((FeaturePcdGet (PcdFfaEnable) &&
+      (Ret == ARM_SVC_ID_FFA_SUCCESS_AARCH64)) ||
+      (Ret == ARM_SMC_MM_RET_SUCCESS))
+  {
+    ZeroMem (CommBufferVirtual, BufferSize);
+    // On successful return, the size of data being returned is inferred from
+    // MessageLength + Header.
+    CommunicateHeader = (EFI_MM_COMMUNICATE_HEADER *)mNsCommBuffMemRegion.VirtualBase;
+    BufferSize = CommunicateHeader->MessageLength +
+                 sizeof (CommunicateHeader->HeaderGuid) +
+                 sizeof (CommunicateHeader->MessageLength);
+
+    CopyMem (
+      CommBufferVirtual,
+      (VOID *)mNsCommBuffMemRegion.VirtualBase,
+      BufferSize
+      );
+    Status = EFI_SUCCESS;
+    return Status;
+  }
+
+  if (FeaturePcdGet (PcdFfaEnable))
+    Ret = CommunicateSmcArgs.Arg2;
+
+
+  switch (Ret) {
     case ARM_SMC_MM_RET_SUCCESS:
       ZeroMem (CommBufferVirtual, BufferSize);
       // On successful return, the size of data being returned is inferred from
@@ -253,8 +324,14 @@ GetMmCompatibility (
   UINT32        MmVersion;
   ARM_SMC_ARGS  MmVersionArgs;
 
-  // MM_VERSION uses SMC32 calling conventions
-  MmVersionArgs.Arg0 = ARM_SMC_ID_MM_VERSION_AARCH32;
+  if (FeaturePcdGet (PcdFfaEnable)) {
+    MmVersionArgs.Arg0 = ARM_SVC_ID_FFA_VERSION_AARCH32;
+    MmVersionArgs.Arg1 = MM_CALLER_MAJOR_VER << MM_MAJOR_VER_SHIFT;
+    MmVersionArgs.Arg1 |= MM_CALLER_MINOR_VER;
+  } else {
+    // MM_VERSION uses SMC32 calling conventions
+    MmVersionArgs.Arg0 = ARM_SMC_ID_MM_VERSION_AARCH32;
+  }
 
   ArmCallSmc (&MmVersionArgs);
 
@@ -352,10 +429,10 @@ MmCommunication2Initialize (
     goto ReturnErrorStatus;
   }
 
-  mNsCommBuffMemRegion.PhysicalBase = PcdGet64 (PcdMmBufferBase);
+  mNsCommBuffMemRegion.PhysicalBase =  0x932FE000;//PcdGet64 (PcdMmBufferBase);
   // During boot , Virtual and Physical are same
   mNsCommBuffMemRegion.VirtualBase = mNsCommBuffMemRegion.PhysicalBase;
-  mNsCommBuffMemRegion.Length      = PcdGet64 (PcdMmBufferSize);
+  mNsCommBuffMemRegion.Length      =  0x200000; //PcdGet64 (PcdMmBufferSize);
 
   ASSERT (mNsCommBuffMemRegion.PhysicalBase != 0);
 
@@ -456,4 +533,146 @@ CleanAddedMemorySpace:
 
 ReturnErrorStatus:
   return EFI_INVALID_PARAMETER;
+}
+
+/**
+ * Allocate RX/TX buffers for FFA communication.
+ * Note: the RX/TX buffers are shared for the entire NS world, so they must be
+ * freed after use.
+ *
+ * @param[in]  pages           Number of pages for both buffers
+ * @param[out] rx              Address of the RX buffer
+ * @param[out] tx              Address of the TX buffer
+ *
+ * @return EFI_SUCCESS         Buffers allocated and mapped with Hafnium
+ *
+**/
+STATIC
+EFI_STATUS
+FfaAllocateAndMapRxTxBuffers (
+  IN  UINTN             pages,
+  OUT PHYSICAL_ADDRESS *rx,
+  OUT PHYSICAL_ADDRESS *tx
+)
+{
+  ARM_SMC_ARGS   ArmSmcArgs;
+  EFI_STATUS     Status = EFI_SUCCESS;
+
+  ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
+
+  Status = gBS->AllocatePages(AllocateAnyPages, EfiBootServicesData, pages, rx);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: RX buffer allocation failed\n", __FUNCTION__));
+    goto out;
+  }
+
+  Status = gBS->AllocatePages(AllocateAnyPages, EfiBootServicesData, pages, tx);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: TX buffer allocation failed\n", __FUNCTION__));
+    goto out_rx;
+  }
+
+  ArmSmcArgs.Arg0 = ARM_SVC_ID_FFA_RXTX_MAP;
+  ArmSmcArgs.Arg1 = (UINTN) *tx;
+  ArmSmcArgs.Arg2 = (UINTN) *rx;
+  ArmSmcArgs.Arg3 = pages;
+
+  ArmCallSmc (&ArmSmcArgs);
+
+  if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
+    DEBUG ((EFI_D_ERROR, "%a: ARM_SVC_ID_FFA_RXTX_MAP failed: 0x%x\n",
+            __FUNCTION__, ArmSmcArgs.Arg2));
+    Status = RETURN_OUT_OF_RESOURCES;
+    goto out_tx;
+  }
+
+  goto out;
+
+out_tx:
+  gBS->FreePages(*tx, pages);
+out_rx:
+  gBS->FreePages(*rx, pages);
+out:
+  return Status;
+}
+
+/**
+ * Unmap RX/TX buffers and free them.
+ *
+ * @param[in]  pages           Number of pages for both buffers
+ * @param[in]  rx              Address of the RX buffer
+ * @param[in]  tx              Address of the TX buffer
+ *
+ * @return EFI_SUCCESS         Buffers unmapped and freed.
+ *
+**/
+STATIC
+EFI_STATUS
+FfaFreeRxTxBuffers(
+  IN  UINTN             pages,
+  IN  PHYSICAL_ADDRESS  rx,
+  IN  PHYSICAL_ADDRESS  tx
+)
+{
+  ARM_SMC_ARGS   ArmSmcArgs;
+  EFI_STATUS     Status = EFI_SUCCESS;
+
+  ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
+
+  ArmSmcArgs.Arg0 = ARM_SVC_ID_FFA_RXTX_UNMAP;
+  ArmSmcArgs.Arg1 = 0; /* NS World */
+
+  ArmCallSmc (&ArmSmcArgs);
+
+  if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
+    DEBUG ((EFI_D_ERROR, "%a: ARM_SVC_ID_FFA_RXTX_UNMAP failed: 0x%x\n",
+            __FUNCTION__, ArmSmcArgs.Arg2));
+    Status = RETURN_OUT_OF_RESOURCES;
+  }
+
+  gBS->FreePages(tx, pages);
+  gBS->FreePages(rx, pages);
+
+  return Status;
+}
+
+
+STATIC
+VOID
+GetStmmVmId (
+  VOID
+)
+{
+  PHYSICAL_ADDRESS rx, tx;
+  UINTN            pages = 1;
+  EFI_STATUS       Status = EFI_SUCCESS;
+
+  Status = FfaAllocateAndMapRxTxBuffers(pages, &rx, &tx);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  ARM_SMC_ARGS ArmSmcArgs;
+
+  ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
+
+  ArmSmcArgs.Arg0 = ARM_SVC_ID_FFA_PARTITION_INFO_GET;
+  ArmSmcArgs.Arg1 = STMM_UUID_0;
+  ArmSmcArgs.Arg2 = STMM_UUID_1;
+  ArmSmcArgs.Arg3 = STMM_UUID_2;
+  ArmSmcArgs.Arg4 = STMM_UUID_3;
+
+  ArmCallSmc (&ArmSmcArgs);
+
+  /* One SP should have been found */
+  if (ArmSmcArgs.Arg2 != 1) {
+    DEBUG ((EFI_D_ERROR, "%a: ARM_SVC_ID_FFA_PARTITION_INFO_GET failed: 0x%x\n",
+            __FUNCTION__, ArmSmcArgs.Arg2));
+    return;
+  }
+
+  StmmVmId = *((UINT16 *) rx);
+  DEBUG ((DEBUG_ERROR, "%a: STMM VmId=0x%x\n", __FUNCTION__, StmmVmId));
+
+  Status = FfaFreeRxTxBuffers(pages, rx, tx);
 }
