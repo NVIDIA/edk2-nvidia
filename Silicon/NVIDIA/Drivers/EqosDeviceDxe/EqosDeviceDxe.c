@@ -189,6 +189,8 @@ DeviceDiscoveryNotify (
   BOOLEAN                          FlipResetMode;
   UINT32                           PhyNodeHandle;
   INT32                            PhyNodeOffset;
+  INT32                            OsiReturn;
+  struct osi_hw_features           hw_feat;
 
   PlatformType = TegraGetPlatform();
   switch (Phase) {
@@ -492,6 +494,22 @@ DeviceDiscoveryNotify (
     Status = PhyDxeInitialization (&Snp->PhyDriver, &Snp->MacDriver);
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
+    }
+
+    osi_get_hw_features(Snp->MacDriver.osi_core, &hw_feat);
+
+    osi_poll_for_mac_reset_complete ( Snp->MacDriver.osi_core );
+
+    // Init EMAC DMA
+    // Ignore error message on these failure to allow OS to initialize controller
+    OsiReturn = osi_hw_dma_init( Snp->MacDriver.osi_dma);
+    if (OsiReturn < 0) {
+      DEBUG ((DEBUG_ERROR, "Failed to initialize MAC DMA\n"));
+    } else {
+      OsiReturn = osi_hw_core_init( Snp->MacDriver.osi_core, hw_feat.tx_fifo_size, hw_feat.rx_fifo_size);
+      if (OsiReturn < 0) {
+        DEBUG ((DEBUG_ERROR, "Failed to initialize MAC Core: %d\n", OsiReturn));
+      }
     }
 
     // Set MAC Address
