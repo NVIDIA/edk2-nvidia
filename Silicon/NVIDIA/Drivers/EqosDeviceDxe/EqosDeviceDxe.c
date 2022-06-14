@@ -111,6 +111,8 @@ OnExitBootServices (
     }
   }
 
+  SnpShutdown (&Snp->Snp);
+
   return;
 }
 
