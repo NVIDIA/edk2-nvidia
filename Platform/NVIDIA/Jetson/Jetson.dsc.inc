@@ -335,3 +335,8 @@
       <LibraryClasses>
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
+
+  #
+  # Default Variables Device Tree
+  #
+  Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree.inf

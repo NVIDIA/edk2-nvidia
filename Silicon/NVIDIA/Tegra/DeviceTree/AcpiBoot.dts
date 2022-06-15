@@ -1,0 +1,28 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "UEFI default to ACPI";
+
+	fragment@0 {
+		target-path = "/";
+		board_config {
+			sw-modules = "uefi";
+		};
+
+		__overlay__ {
+			firmware {
+				uefi {
+					variables {
+						gDtPlatformFormSetGuid {
+							DtAcpiPref {
+								data = [01 00 00 00];
+								non-volatile;
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};

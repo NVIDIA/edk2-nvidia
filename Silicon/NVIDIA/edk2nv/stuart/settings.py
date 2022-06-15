@@ -262,6 +262,18 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         '''
         return None
 
+    def GetDtbPath(self):
+        ''' Optionally return the path to the platform's dtb files.
+
+            If `None`, the value is taken from target.txt.  Otherwise, this
+            will override target.txt
+
+            The path must be relative to GetWorkspaceRoot().
+
+            This will be used to set ACTIVE_PLATFORM.
+        '''
+        return None
+
     def GetToolchainTag(self):
         ''' Optionally return the toolchain identifier.
 

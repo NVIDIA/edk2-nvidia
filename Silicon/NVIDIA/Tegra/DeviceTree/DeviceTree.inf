@@ -1,0 +1,22 @@
+## @file
+#
+#  Default variable device tree description of the Tegra platforms
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION    = 0x0001001A
+  BASE_NAME      = TegraDeviceTree
+  FILE_GUID      = 5340d452-9676-433a-93a0-0c7e03062642
+  MODULE_TYPE    = USER_DEFINED
+  VERSION_STRING = 1.0
+
+[Sources]
+  AcpiBoot.dts
+
+[Packages]
+  MdePkg/MdePkg.dec
