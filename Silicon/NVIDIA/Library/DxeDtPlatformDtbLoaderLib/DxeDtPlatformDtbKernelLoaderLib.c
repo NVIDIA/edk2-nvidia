@@ -21,10 +21,12 @@
 #include <Library/TegraDeviceTreeOverlayLib.h>
 #include <Library/OpteeLib.h>
 #include <Library/BootChainInfoLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/Eeprom.h>
 #include <IndustryStandard/ArmStdSmc.h>
+#include <NVIDIAConfiguration.h>
 #include <libfdt.h>
 
 #define TRUSTY_OS_UID0          0xf025ee40
@@ -351,6 +353,8 @@ DtPlatformLoadDtb (
   EFI_BLOCK_IO_PROTOCOL       *BlockIo;
   VOID                        *DtbAllocated;
   VOID                        *DtbCopy;
+  UINTN                       DataSize;
+  UINT32                      BootMode;
 
   ValidFlash = FALSE;
   DtbLocAdjusted = FALSE;
@@ -358,9 +362,15 @@ DtPlatformLoadDtb (
   DtbAllocated = NULL;
   DtbCopy = NULL;
 
-  Status = GetActivePartitionName (PcdGetPtr(PcdKernelDtbPartitionName), PartitionName);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  DataSize = sizeof (BootMode);
+  Status = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
+  if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
+    StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, PcdGetPtr(PcdRecoveryKernelDtbPartitionName));
+  } else {
+    Status = GetActivePartitionName (PcdGetPtr(PcdKernelDtbPartitionName), PartitionName);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
   if (!PcdGetBool(PcdEmuVariableNvModeEnable)) {

@@ -60,7 +60,6 @@
 #define BOOT_FW_VARIABLE_NAME          L"BootChainFwCurrent"
 #define BOOT_OS_VARIABLE_NAME          L"BootChainOsCurrent"
 #define BOOT_OS_OVERRIDE_VARIABLE_NAME L"BootChainOsOverride"
-#define L4T_BOOTMODE_VARIABLE_NAME     L"L4TDefaultBootMode"
 
 #define ROOTFS_BASE_NAME               L"APP"
 #define BOOTIMG_BASE_NAME              L"kernel"
