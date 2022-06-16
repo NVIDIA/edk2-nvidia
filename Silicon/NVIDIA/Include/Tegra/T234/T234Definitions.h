@@ -23,6 +23,6 @@
 #define T234_PCIE_BUS_MAX                255
 
 // BL CARVEOUT OFFSET
-#define T234_BL_CARVEOUT_OFFSET               0x548
+#define T234_BL_CARVEOUT_OFFSET               0x588
 
 #endif //__T234_DEFINES_H__

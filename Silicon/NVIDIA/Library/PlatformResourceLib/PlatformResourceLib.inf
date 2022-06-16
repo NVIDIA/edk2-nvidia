@@ -15,6 +15,7 @@
 [Packages]
   MdePkg/MdePkg.dec
   NetworkPkg/NetworkPkg.dec
+  CryptoPkg/CryptoPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]

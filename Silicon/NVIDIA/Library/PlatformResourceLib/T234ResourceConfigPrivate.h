@@ -10,6 +10,7 @@
 #define __T234_RESOURCE_CONFIG_PRIVATE_H__
 
 #include <Uefi/UefiBaseType.h>
+#include <Library/BaseCryptLib.h>
 #include <Library/PlatformResourceLib.h>
 
 #define BOOT_CHAIN_MAX              2
@@ -205,6 +206,9 @@ typedef struct  {
 #pragma pack()
 
 typedef struct {
+  /**< sha512 digest */
+  UEFI_DECLARE_ALIGNED(UINT8 Digest[SHA512_DIGEST_SIZE], 8);
+
   /**< version */
   UEFI_DECLARE_ALIGNED(UINT32 Version, 4);
 
