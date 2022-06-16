@@ -24,6 +24,8 @@
 #define NVIDIA_OS_OVERRIDE_B                 0x1
 #define NVIDIA_OS_OVERRIDE_DEFAULT           0xFF
 
+#define L4T_BOOTMODE_VARIABLE_NAME           L"L4TDefaultBootMode"
+
 #define NVIDIA_L4T_BOOTMODE_GRUB             0x0
 #define NVIDIA_L4T_BOOTMODE_DIRECT           0x1
 #define NVIDIA_L4T_BOOTMODE_BOOTIMG          0x2

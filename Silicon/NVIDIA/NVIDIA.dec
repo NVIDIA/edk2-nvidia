@@ -294,6 +294,9 @@
 #allocated.
   gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|0xFF|UINT8|0x00000064
 
+#Name of Recovery Kernel DTB partition
+  gNVIDIATokenSpaceGuid.PcdRecoveryKernelDtbPartitionName|L"recovery-dtb"|VOID*|0x00000066
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
