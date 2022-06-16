@@ -279,3 +279,8 @@
   # Tegra EEPROM Support
   #
   INF Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf
+
+  #
+  # Third party drivers
+  #
+  INF Drivers/Realtek/Bus/Pcie/PcieNetworking/RtkUndiDxe.inf

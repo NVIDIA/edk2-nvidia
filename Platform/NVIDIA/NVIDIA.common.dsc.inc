@@ -975,6 +975,11 @@
   #
   Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf
 
+  #
+  # Third party drivers
+  #
+  Drivers/Realtek/Bus/Pcie/PcieNetworking/RtkUndiDxe.inf
+
 [Components.AARCH64]
   #
   # EBC
