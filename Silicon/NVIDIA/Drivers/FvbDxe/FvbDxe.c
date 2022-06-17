@@ -2,7 +2,7 @@
 
   Fvb Driver
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -1067,10 +1067,8 @@ FVBInitialize (
     }
 
     // Check for partition name to be uefi variables
-    if (0 == StrnCmp (PartitionInfo->Info.Gpt.PartitionName,
-                      PcdGetPtr(PcdUEFIVariablesPartitionName),
-                      StrnLenS(PcdGetPtr(PcdUEFIVariablesPartitionName),
-                               sizeof(PartitionInfo->Info.Gpt.PartitionName)))) {
+    if (0 == StrCmp (PartitionInfo->Info.Gpt.PartitionName,
+                      PcdGetPtr(PcdUEFIVariablesPartitionName))) {
       if (!EFI_ERROR(FvbCheckPartitionFlash (HandleBuffer[Index]))) {
         PrimaryIndex = Index;
         break;

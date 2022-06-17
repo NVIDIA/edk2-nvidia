@@ -403,9 +403,8 @@ DtPlatformLoadDtb (
           continue;
         }
 
-        if (0 == StrnCmp (PartitionInfo->Info.Gpt.PartitionName,
-                          PartitionName,
-                          StrnLenS(PartitionName, sizeof(PartitionInfo->Info.Gpt.PartitionName)))) {
+        if (0 == StrCmp (PartitionInfo->Info.Gpt.PartitionName,
+                         PartitionName)) {
           break;
         }
       }
