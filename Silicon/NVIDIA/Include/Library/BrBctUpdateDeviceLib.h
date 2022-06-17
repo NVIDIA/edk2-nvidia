@@ -46,8 +46,7 @@ typedef struct {
   UINT32                            BrBctDataSize;
   UINTN                             BctPartitionSlots;
   FW_PARTITION_PRIVATE_DATA         *BrBctPartition;
-  FW_PARTITION_PRIVATE_DATA         *BrBctBackupPartitionA;
-  FW_PARTITION_PRIVATE_DATA         *BrBctBackupPartitionB;
+  FW_PARTITION_PRIVATE_DATA         *BrBctBackupPartition;
 
   // Erase function
   BR_BCT_UPDATE_DEVICE_ERASE        DeviceErase;

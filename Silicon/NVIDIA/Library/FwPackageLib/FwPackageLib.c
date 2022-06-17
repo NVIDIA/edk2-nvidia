@@ -211,6 +211,8 @@ FwPackageGetImageIndex (
 
         Status = FwPackageCheckTnSpec (TnSpec, ImageInfo->TnSpec);
         if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_INFO, "%a:  %a / %a: %r\n",
+                  __FUNCTION__, TnSpec, ImageInfo->TnSpec, Status));
           continue;
         }
       }

@@ -14,6 +14,7 @@
 
 STATIC CONST CHAR16 *SystemFwImageNamesCommon[] = {
   L"adsp-fw",
+  L"BCT-boot-chain_backup",
   L"bpmp-fw",
   L"bpmp-fw-dtb",
   L"cpu-bootloader",

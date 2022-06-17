@@ -2,7 +2,7 @@
 
   BR-BCT Update Protocol
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,28 +19,7 @@
 typedef struct _NVIDIA_BR_BCT_UPDATE_PROTOCOL NVIDIA_BR_BCT_UPDATE_PROTOCOL;
 
 /**
-  Update BR-BCT data for inactive boot chain.
-
-  @param[in]  This                  Instance to protocol
-  @param[in]  Bytes                 Number of bytes available in Buffer
-  @param[in]  Buffer                Address of update data buffer
-
-  @retval EFI_SUCCESS               Operation successful
-  @retval others                    Error occurred
-
-**/
-typedef
-EFI_STATUS
-(EFIAPI *BR_BCT_UPDATE_BCT)(
-  IN  CONST NVIDIA_BR_BCT_UPDATE_PROTOCOL   *This,
-  IN  UINTN                                 Bytes,
-  IN  CONST VOID                            *Buffer
-  );
-
-/**
-  Update BR-BCT FW boot chain selection.
-  Switch to A: copy slot 2 to slot 0
-  Switch to B: delete slot 0
+  Update BR-BCT for new FW boot chain selection.
 
   @param[in]  This                  Instance to protocol
   @param[in]  NewFwChain            New FW chain to boot (0=a, 1=b)
@@ -58,7 +37,6 @@ EFI_STATUS
 
 // protocol structure
 struct _NVIDIA_BR_BCT_UPDATE_PROTOCOL {
-  BR_BCT_UPDATE_BCT                     UpdateBct;
   BR_BCT_UPDATE_FW_CHAIN                UpdateFwChain;
 };
 

@@ -32,7 +32,7 @@
 
 #define FMP_CAPSULE_SINGLE_PARTITION_VARIABLE_NAME  L"FmpCapsuleSinglePartitionName"
 #define FMP_PLATFORM_SPEC_VARIABLE_NAME             L"TegraPlatformSpec"
-#define FMP_PLATFORM_SPEC_DEFAULT                   "--------"
+#define FMP_PLATFORM_SPEC_DEFAULT                   "-------"
 
 #define FMP_DATA_BUFFER_SIZE            (4 * 1024)
 #define FMP_WRITE_LOOP_SIZE             (64 * 1024)
@@ -64,13 +64,15 @@ enum {
   LAS_ERROR_VERIFY_IMAGES_FAILED,
   LAS_ERROR_SET_SINGLE_IMAGE_FAILED,
   LAS_ERROR_FMP_LIB_UNINITIALIZED,
-  LAS_ERROR_BCT_IMAGE_NOT_IN_PACKAGE,
 };
 
-// Package image names for BR-BCT data, can be indexed by BootChain
-STATIC CONST CHAR16 *BrBctPackageImageNames[] = {
-  L"A_BCT",
-  L"B_BCT",
+// Package image names to be ignored
+STATIC CONST CHAR16 *IgnoreImageNames[] = {
+  L"BCT",
+  L"BCT_A",
+  L"BCT_B",
+  L"secondary_gpt",
+  L"secondary_gpt_backup",
   NULL
 };
 
@@ -83,6 +85,8 @@ STATIC CONST CHAR16 *SpecialImageNames[] = {
 // optional images are only updated if present in capsule
 STATIC CONST CHAR16 *OptionalImageNames[] = {
   L"sce-fw",
+  L"xusb-fw",
+  L"BCT-boot-chain_backup",
   NULL
 };
 
@@ -859,7 +863,7 @@ FmpTegraSetSingleImage (
 
   // Get capsule package image name and ensure match with variable
   PkgImageInfo = FwPackageImageInfoPtr (Header, 0);
-  FwPackageCopyImageName (PkgName, PkgImageInfo, FW_IMAGE_NAME_LENGTH);
+  FwPackageCopyImageName (PkgName, PkgImageInfo, sizeof (PkgName));
   if (StrCmp (BaseName, PkgName) != 0) {
     DEBUG ((DEBUG_ERROR, "%a: Name mismatch package=%s, variable=%s\n",
             __FUNCTION__, PkgName, BaseName));
@@ -900,49 +904,6 @@ FmpTegraSetSingleImage (
   }
 
   return EFI_SUCCESS;
-}
-
-/**
-  Update the inactive BCT slots with FW package data.
-
-  @param[in]  Header                Pointer to the FW package header
-
-  @retval EFI_SUCCESS               The operation completed successfully
-  @retval Others                    An error occurred
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-UpdateBct (
-  IN  CONST FW_PACKAGE_HEADER   *Header
-  )
-{
-  UINTN                         PkgImageIndex;
-  UINTN                         Bytes;
-  CONST VOID                    *ImageData;
-  EFI_STATUS                    Status;
-  UINT32                        InactiveBootChain;
-
-  InactiveBootChain = OTHER_BOOT_CHAIN (mActiveBootChain);
-  Status = FwPackageGetImageIndex (Header,
-                                   BrBctPackageImageNames[InactiveBootChain],
-                                   mIsProductionFused,
-                                   mPlatformTnSpec,
-                                   &PkgImageIndex);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Bytes = FwPackageImageInfoPtr (Header, PkgImageIndex)->Bytes;
-  ImageData = FwPackageImageDataPtr (Header, PkgImageIndex);
-
-  Status = mBrBctUpdateProtocol->UpdateBct (mBrBctUpdateProtocol,
-                                            Bytes,
-                                            ImageData);
-  ImageWriteProgress (Bytes);
-
-  return Status;
 }
 
 /**
@@ -1095,7 +1056,7 @@ FmpTegraCheckImage (
     PkgImageInfo = FwPackageImageInfoPtr (Header, 0);
     FwPackageCopyImageName (SingleImageNameBuffer,
                             PkgImageInfo,
-                            FW_IMAGE_NAME_LENGTH);
+                            sizeof (SingleImageNameBuffer));
     SingleImageName = SingleImageNameBuffer;
     ImageCount = 1;
     DEBUG ((DEBUG_INFO, "%a: handling single image=%s\n",
@@ -1161,27 +1122,6 @@ FmpTegraCheckImage (
     }
   }
 
-  // Check that the BR-BCT data images are present in the package
-  if (ImageCount != 1) {
-    CONST CHAR16    **List;
-
-    for (List = BrBctPackageImageNames; *List != NULL; List++) {
-      UINTN       PkgImageIndex;
-
-      Status = FwPackageGetImageIndex (Header,
-                                       *List,
-                                       mIsProductionFused,
-                                       mPlatformTnSpec,
-                                       &PkgImageIndex);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", *List, Status));
-        *ImageUpdatable = IMAGE_UPDATABLE_INVALID;
-        *LastAttemptStatus = LAS_ERROR_BCT_IMAGE_NOT_IN_PACKAGE;
-        return EFI_ABORTED;
-      }
-    }
-  }
-
   // Check that every image in the package has a protocol
   for (Index = 0; Index < Header->ImageCount; Index++) {
     CHAR16                      ImageName[FW_IMAGE_NAME_LENGTH];
@@ -1196,10 +1136,15 @@ FmpTegraCheckImage (
       return EFI_ABORTED;
     }
 
-    FwPackageCopyImageName (ImageName, PkgImageInfo, FW_IMAGE_NAME_LENGTH);
-    if (NameIsInList (ImageName, BrBctPackageImageNames)) {
+    FwPackageCopyImageName (ImageName, PkgImageInfo, sizeof (ImageName));
+    DEBUG ((DEBUG_INFO, "%a: Image %u is %s\n", __FUNCTION__, Index, ImageName));
+
+    if (NameIsInList (ImageName, IgnoreImageNames)) {
+      DEBUG ((DEBUG_ERROR, "%a: Image %u, skipping %s\n",
+              __FUNCTION__, Index, ImageName));
       continue;
     }
+
     FwImageProtocol = FwImageFindProtocol (ImageName);
     if (FwImageProtocol == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Image %u, no protocol for %s\n",
@@ -1303,7 +1248,8 @@ FmpTegraSetImage (
 
   SetImageProgress (FMP_PROGRESS_VERIFY_IMAGES);
 
-  Status = UpdateBct (Header);
+  Status = mBrBctUpdateProtocol->UpdateFwChain (mBrBctUpdateProtocol,
+                                                OTHER_BOOT_CHAIN (mActiveBootChain));
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Update BCT failed: %r\n", Status));
     *LastAttemptStatus = LAS_ERROR_BCT_UPDATE_FAILED;
