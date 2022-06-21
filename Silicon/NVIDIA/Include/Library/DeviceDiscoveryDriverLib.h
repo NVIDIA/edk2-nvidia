@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent)
 *
@@ -44,6 +44,7 @@ typedef enum {
   DeviceDiscoveryDriverBindingSupported,
   DeviceDiscoveryDriverBindingStart,
   DeviceDiscoveryDriverBindingStop,
+  DeviceDiscoveryOnExit,
   DeviceDiscoveryMax
 } NVIDIA_DEVICE_DISCOVERY_PHASES;
 

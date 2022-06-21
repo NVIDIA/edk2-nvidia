@@ -30,6 +30,7 @@
 
 SCMI_CLOCK2_PROTOCOL           *gScmiClockProtocol    = NULL;
 NVIDIA_CLOCK_PARENTS_PROTOCOL  *gClockParentsProtocol = NULL;
+STATIC EFI_HANDLE              mImageHandle           = NULL;
 
 VOID
 EFIAPI
@@ -48,12 +49,22 @@ DeviceDiscoveryOnExitBootServices (
 
   gBS->CloseEvent (Event);
 
+  Controller = Context;
+
+  Status = DeviceDiscoveryNotify (
+             DeviceDiscoveryOnExit,
+             mImageHandle,
+             Controller,
+             NULL
+             );
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
     return;
   }
-
-  Controller = Context;
 
   if (gDeviceDiscoverDriverConfig.AutoDeassertPg) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
@@ -625,6 +636,7 @@ DeviceDiscoveryDriverInitialize (
   EFI_STATUS  Status;
 
   mDriverBindingProtocol.DriverBindingHandle = ImageHandle;
+  mImageHandle                               = ImageHandle;
 
   Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&gScmiClockProtocol);
   if (EFI_ERROR (Status)) {
