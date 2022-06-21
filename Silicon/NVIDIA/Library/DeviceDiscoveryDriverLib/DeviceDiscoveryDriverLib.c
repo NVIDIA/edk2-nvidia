@@ -16,7 +16,9 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
+#include <Library/DeviceDiscoveryLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <libfdt.h>
 
 #include <Protocol/NonDiscoverableDevice.h>
@@ -617,6 +619,128 @@ STATIC NVIDIA_DEVICE_TREE_COMPATIBILITY_PROTOCOL  gDeviceTreeCompatibilty = {
 };
 
 /**
+  This is function is caused to allow the system to check if this implementation supports
+  the device tree node. If EFI_SUCCESS is returned then handle will be created and driver binding
+  will occur.
+
+  @param[in]  This                   The instance of the NVIDIA_DEVICE_TREE_BINDING_PROTOCOL.
+  @param[in]  Node                   The pointer to the requested node info structure.
+  @param[out] DeviceType             Pointer to allow the return of the device type
+  @param[out] PciIoInitialize        Pointer to allow return of function that will be called
+                                       when the PciIo subsystem connects to this device.
+                                       Note that this will may not be called if the device
+                                       is not in the boot path.
+
+  @return EFI_SUCCESS               The node is supported by this instance
+  @return EFI_UNSUPPORTED           The node is not supported by this instance
+**/
+STATIC
+EFI_STATUS
+EnumerationIsNodeSupported (
+  IN OUT  NVIDIA_DT_NODE_INFO  *DeviceInfo
+  )
+{
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  Node;
+
+  if (DeviceInfo == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Node.DeviceTreeBase = DeviceInfo->DeviceTreeBase;
+  Node.NodeOffset     = DeviceInfo->NodeOffset;
+
+  return DeviceTreeIsSupported (NULL, &Node, &DeviceInfo->DeviceType, &DeviceInfo->PciIoInitialize);
+}
+
+/**
+  Enumerate all matching devices
+**/
+STATIC
+EFI_STATUS
+EnumerateDevices (
+  VOID
+  )
+{
+  EFI_STATUS               Status;
+  NON_DISCOVERABLE_DEVICE  Device;
+  EFI_HANDLE               DeviceHandle;
+  NVIDIA_DT_NODE_INFO      *DtNodeInfo;
+  UINT32                   DeviceCount;
+  UINT32                   Index;
+
+  DeviceCount = 0;
+  DtNodeInfo  = NULL;
+
+  Status = GetSupportedDeviceTreeNodes (
+             NULL,
+             EnumerationIsNodeSupported,
+             &DeviceCount,
+             NULL
+             );
+  if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get suppoted nodes - %r\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  if (!EFI_ERROR (Status)) {
+    DtNodeInfo = (NVIDIA_DT_NODE_INFO *)AllocateZeroPool (DeviceCount * sizeof (NVIDIA_DT_NODE_INFO));
+    if (DtNodeInfo == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to allocate node structure\r\n", __FUNCTION__));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    Status = GetSupportedDeviceTreeNodes (
+               NULL,
+               EnumerationIsNodeSupported,
+               &DeviceCount,
+               DtNodeInfo
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get suppoted nodes - %r\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+  } else {
+    DeviceCount = 0;
+  }
+
+  for (Index = 0; Index < DeviceCount; Index++) {
+    DeviceHandle = NULL;
+    Status       = ProcessDeviceTreeNodeWithHandle (
+                     &DtNodeInfo[Index],
+                     &Device,
+                     mImageHandle,
+                     &DeviceHandle
+                     );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to process device node - %r\r\n", __FUNCTION__, Status));
+      continue;
+    }
+
+    Status = DeviceDiscoveryBindingStart (
+               &mDriverBindingProtocol,
+               DeviceHandle,
+               NULL
+               );
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+  }
+
+  if (DtNodeInfo != NULL) {
+    FreePool (DtNodeInfo);
+    DtNodeInfo = NULL;
+  }
+
+  Status = DeviceDiscoveryNotify (
+             DeviceDiscoveryEnumerationCompleted,
+             mImageHandle,
+             NULL,
+             NULL
+             );
+  return Status;
+}
+
+/**
   Initialize the Device Discovery Driver
 
   @param  ImageHandle   of the loaded driver
@@ -648,7 +772,9 @@ DeviceDiscoveryDriverInitialize (
     return Status;
   }
 
-  if (gDeviceDiscoverDriverConfig.UseDriverBinding) {
+  if (gDeviceDiscoverDriverConfig.UseDriverBinding &&
+      !gDeviceDiscoverDriverConfig.DirectEnumerationSupport)
+  {
     Status = EfiLibInstallDriverBinding (
                ImageHandle,
                SystemTable,
@@ -672,13 +798,18 @@ DeviceDiscoveryDriverInitialize (
     return Status;
   }
 
-  Status = gBS->InstallMultipleProtocolInterfaces (
-                  &mDriverBindingProtocol.DriverBindingHandle,
-                  &gNVIDIADeviceTreeCompatibilityProtocolGuid,
-                  &gDeviceTreeCompatibilty,
-                  NULL
-                  );
-  ASSERT_EFI_ERROR (Status);
+  if (!gDeviceDiscoverDriverConfig.DirectEnumerationSupport) {
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &mDriverBindingProtocol.DriverBindingHandle,
+                    &gNVIDIADeviceTreeCompatibilityProtocolGuid,
+                    &gDeviceTreeCompatibilty,
+                    NULL
+                    );
+    ASSERT_EFI_ERROR (Status);
+  } else {
+    Status = EnumerateDevices ();
+    ASSERT_EFI_ERROR (Status);
+  }
 
   return Status;
 }

@@ -35,6 +35,7 @@ typedef struct {
   BOOLEAN         AutoDeassertPg;
   BOOLEAN         SkipEdkiiNondiscoverableInstall;
   BOOLEAN         SkipAutoDeinitControllerOnExitBootServices;
+  BOOLEAN         DirectEnumerationSupport;
 } NVIDIA_DEVICE_DISCOVERY_CONFIG;
 extern NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig;
 
@@ -45,6 +46,7 @@ typedef enum {
   DeviceDiscoveryDriverBindingStart,
   DeviceDiscoveryDriverBindingStop,
   DeviceDiscoveryOnExit,
+  DeviceDiscoveryEnumerationCompleted,
   DeviceDiscoveryMax
 } NVIDIA_DEVICE_DISCOVERY_PHASES;
 

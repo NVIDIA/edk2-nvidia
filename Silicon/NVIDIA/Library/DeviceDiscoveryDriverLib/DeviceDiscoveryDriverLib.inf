@@ -36,6 +36,7 @@
   UefiDriverEntryPoint
   IoLib
   FdtLib
+  DeviceDiscoveryLib
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
