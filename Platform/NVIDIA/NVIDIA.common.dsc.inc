@@ -164,6 +164,7 @@
   DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbLoaderLib.inf
 
   DeviceDiscoveryDriverLib|Silicon/NVIDIA/Library/DeviceDiscoveryDriverLib/DeviceDiscoveryDriverLib.inf
+  DeviceDiscoveryLib|Silicon/NVIDIA/Library/DeviceDiscoveryLib/DeviceDiscoveryLib.inf
 
   TegraDeviceTreeOverlayLib|Silicon/NVIDIA/Library/TegraDeviceTreeOverlayLib/TegraDeviceTreeOverlayLib.inf
   TegraDeviceTreeKernelOverlayLib|Silicon/NVIDIA/Library/TegraDeviceTreeOverlayLib/TegraDeviceTreeKernelOverlayLib.inf

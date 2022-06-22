@@ -1,0 +1,62 @@
+## @file
+#
+#  Component description file for the Device Discovery Library.
+#
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = DeviceDiscoveryLib
+  FILE_GUID                      = 4f9f98eb-e848-494b-9f13-866b5e8b5870
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DeviceDiscoveryLib
+
+[Sources]
+  DeviceDiscoveryLib.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DxeServicesTableLib
+  DebugLib
+  PrintLib
+  UefiDriverEntryPoint
+  MemoryAllocationLib
+  DevicePathLib
+  DtPlatformDtbLoaderLib
+  TegraPlatformInfoLib
+  DeviceDiscoveryInternalLib
+  FdtLib
+
+[Guids]
+  gNVIDIAVendorDeviceDiscoveryGuid
+
+[Protocols]
+  gNVIDIADeviceTreeNodeProtocolGuid
+  gNVIDIANonDiscoverableDeviceProtocolGuid
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gEfiDriverBindingProtocolGuid
+  gArmScmiClock2ProtocolGuid
+  gNVIDIAClockNodeProtocolGuid
+  gNVIDIAResetNodeProtocolGuid
+  gNVIDIAPowerGateNodeProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
+  gNVIDIAClockParentsProtocolGuid
+
+[FixedPcd]
+
+[Depex]
+  gEfiCpuArchProtocolGuid
