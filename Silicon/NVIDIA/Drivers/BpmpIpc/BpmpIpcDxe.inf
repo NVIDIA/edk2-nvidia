@@ -1,8 +1,8 @@
 #/** @file
 #
-#  SD MMC Controller Driver
+#  BPMP IPC Driver
 #
-#  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -41,6 +41,7 @@
   IoLib
   FdtLib
   DtPlatformDtbLoaderLib
+  DeviceDiscoveryLib
 
 [Protocols]
   gNVIDIANonDiscoverableDeviceProtocolGuid

@@ -2,7 +2,7 @@
 
   BPMP IPC private structures
 
-  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -38,11 +38,8 @@ extern EFI_COMPONENT_NAME2_PROTOCOL gBpmpIpcComponentName2;
 #define BPMP_POLL_INTERVAL 1000 //(100us)
 
 /**
-  This routine is called right after the .Supported() called and
-  Starts the HspDoorbell protocol on the device.
+  This routine starts the HspDoorbell protocol on the device.
 
-  @param This                     Protocol instance pointer.
-  @param Controller               Handle of device to bind driver to.
   @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol.
 
   @retval EFI_SUCCESS             This driver is added to this device.
@@ -52,18 +49,14 @@ extern EFI_COMPONENT_NAME2_PROTOCOL gBpmpIpcComponentName2;
 **/
 EFI_STATUS
 EFIAPI
-HspDoorbellProtocolStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
+HspDoorbellProtocolInit (
+  IN EFI_HANDLE                     *Controller,
   IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
   );
 
 /**
-  This routine is called right after the .Supported() called and
-  Start the BmpIpc protocol on the device.
+  This routine starts the BmpIpc protocol on the device.
 
-  @param This                   Protocol instance pointer.
-  @param Controller             Handle of device to bind driver to.
   @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol.
 
   @retval EFI_SUCCESS           This driver is added to this device.
@@ -73,48 +66,8 @@ HspDoorbellProtocolStart (
 **/
 EFI_STATUS
 EFIAPI
-BpmpIpcProtocolStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
+BpmpIpcProtocolInit (
+  IN EFI_HANDLE                     *Controller,
   IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
   );
-
-/**
-  This function disconnects the HspDoorbell protocol from the specified controller.
-
-  @param This                     Protocol instance pointer.
-  @param Controller               Handle of device to disconnect driver from.
-  @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol.
-
-  @retval EFI_SUCCESS   This driver is removed from this device.
-  @retval other         Some error occurs when removing this driver from this device.
-
-**/
-EFI_STATUS
-EFIAPI
-HspDoorbellProtocolStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
-  IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
-  );
-
-/**
-  This function disconnects the BpmpIpc protocol from the specified controller.
-
-  @param This                     Protocol instance pointer.
-  @param Controller               Handle of device to disconnect driver from.
-  @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol.
-
-  @retval EFI_SUCCESS   This driver is removed from this device.
-  @retval other         Some error occurs when removing this driver from this device.
-
-**/
-EFI_STATUS
-EFIAPI
-BpmpIpcProtocolStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
-  IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
-  );
-
 #endif

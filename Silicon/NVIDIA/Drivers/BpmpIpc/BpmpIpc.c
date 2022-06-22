@@ -1,7 +1,7 @@
 /** @file
   BpmpIpc protocol implementation for BPMP IPC driver.
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -554,16 +554,13 @@ HspProtocolNotify (
   PrivateData->DoorbellHandle = HandleBuffer[0];
   FreePool (HandleBuffer);
 
-  Status = gBS->OpenProtocol (
+  Status = gBS->HandleProtocol (
                   PrivateData->DoorbellHandle,
                   &gNVIDIAHspDoorbellProtocolGuid,
-                  (VOID **) &PrivateData->DoorbellProtocol,
-                  PrivateData->DriverBindingHandle,
-                  PrivateData->DoorbellHandle,
-                  EFI_OPEN_PROTOCOL_BY_DRIVER
+                  (VOID **) &PrivateData->DoorbellProtocol
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Open Protocol %r\r\n", __FUNCTION__, Status));
+    DEBUG ((EFI_D_ERROR, "%a: Handle Protocol %r\r\n", __FUNCTION__, Status));
     PrivateData->DoorbellHandle = NULL;
     return;
   }
@@ -604,12 +601,10 @@ HspProtocolNotify (
 }
 
 /**
-  This routine is called right after the .Supported() called and
-  Starts the HspDoorbell protocol on the device.
+  This routine starts the HspDoorbell protocol on the device.
 
-  @param This                     Protocol instance pointer.
-  @param Controller               Handle of device to bind driver to.
-  @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol.
+  @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol
+  @param Controller               Handle of device to bind driver to..
 
   @retval EFI_SUCCESS             This driver is added to this device.
   @retval EFI_ALREADY_STARTED     This driver is already running on this device.
@@ -618,9 +613,8 @@ HspProtocolNotify (
 **/
 EFI_STATUS
 EFIAPI
-BpmpIpcProtocolStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
+BpmpIpcProtocolInit (
+  IN EFI_HANDLE                     *Controller,
   IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
   )
 {
@@ -637,13 +631,13 @@ BpmpIpcProtocolStart (
 
   PrivateData->Signature = BPMP_IPC_SIGNATURE;
   PrivateData->ProtocolInstalled = FALSE;
-  PrivateData->DriverBindingHandle = This->DriverBindingHandle;
+  PrivateData->DriverBindingHandle = NULL;
   PrivateData->DoorbellProtocol = NULL;
   PrivateData->DoorbellHandle = NULL;
   PrivateData->TxChannel = NULL;
   PrivateData->RxChannel = NULL;
   PrivateData->BpmpIpcProtocol.Communicate = BpmpIpcCommunicate;
-  PrivateData->Controller = Controller;
+  PrivateData->Controller = *Controller;
 
   Status = gBS->CreateEvent (
                   EVT_TIMER | EVT_NOTIFY_SIGNAL,
@@ -702,7 +696,7 @@ BpmpIpcProtocolStart (
   }
 
   Status = gBS->InstallMultipleProtocolInterfaces (
-                  &Controller,
+                  Controller,
                   &gEfiCallerIdGuid,
                   PrivateData,
                   NULL);
@@ -718,105 +712,12 @@ ErrorExit:
         gBS->CloseProtocol (
                         PrivateData->DoorbellHandle,
                         &gNVIDIAHspDoorbellProtocolGuid,
-                        This->DriverBindingHandle,
+                        NULL,
                         PrivateData->DoorbellHandle
                         );
       }
-
       FreePool (PrivateData);
     }
   }
   return Status;
-}
-
-/**
-  This function disconnects the HspDoorbell protocol from the specified controller.
-
-  @param This                     Protocol instance pointer.
-  @param Controller               Handle of device to disconnect driver from.
-  @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol.
-
-  @retval EFI_SUCCESS   This driver is removed from this device.
-  @retval other         Some error occurs when removing this driver from this device.
-
-**/
-EFI_STATUS
-EFIAPI
-BpmpIpcProtocolStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
-  IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
-  )
-{
-  EFI_STATUS                       Status;
-  NVIDIA_BPMP_IPC_PRIVATE_DATA     *PrivateData = NULL;
-
-  //
-  // Open the produced protocol
-  //
-  Status = gBS->OpenProtocol (
-                  Controller,
-                  &gEfiCallerIdGuid,
-                  (VOID **) &PrivateData,
-                  This->DriverBindingHandle,
-                  Controller,
-                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                  );
-
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  // Closing protocol
-  Status = gBS->CloseProtocol (
-                  Controller,
-                  &gEfiCallerIdGuid,
-                  This->DriverBindingHandle,
-                  Controller
-                  );
-
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  // Uninstall BpmpIpcProtocol if it been installed during BpmpIpcProtocolStart()
-  if (PrivateData->ProtocolInstalled) {
-    Status = gBS->UninstallMultipleProtocolInterfaces (
-                    Controller,
-                    &gNVIDIABpmpIpcProtocolGuid,
-                    &PrivateData->BpmpIpcProtocol,
-                    NULL
-                    );
-    if (EFI_ERROR (Status)) {
-      return EFI_DEVICE_ERROR;
-    }
-  }
-
-  Status = gBS->UninstallMultipleProtocolInterfaces (
-                  Controller,
-                  &gEfiCallerIdGuid,
-                  PrivateData,
-                  NULL
-                  );
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  if (NULL != PrivateData->RegisterNotifyEvent) {
-    gBS->CloseEvent (PrivateData->RegisterNotifyEvent);
-    PrivateData->RegisterNotifyEvent = NULL;
-  }
-
-  if (NULL != PrivateData->DoorbellProtocol) {
-    gBS->CloseProtocol (
-                    PrivateData->DoorbellHandle,
-                    &gNVIDIAHspDoorbellProtocolGuid,
-                    This->DriverBindingHandle,
-                    PrivateData->DoorbellHandle
-                    );
-  }
-
-  FreePool (PrivateData);
-
-  return EFI_SUCCESS;
 }

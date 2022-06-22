@@ -2,7 +2,7 @@
 #include "BpmpIpcDxePrivate.h"
   HspDoorbell protocol implementation for BPMP IPC driver.
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -113,12 +113,10 @@ HspDoorbellEnableChannel (
 
 
 /**
-  This routine is called right after the .Supported() called and
-  Starts the HspDoorbell protocol on the device.
+  This routine starts the HspDoorbell protocol on the device.
 
-  @param This                     Protocol instance pointer.
-  @param Controller               Handle of device to bind driver to.
   @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol.
+  @param Controller               Handle of device to bind driver to..
 
   @retval EFI_SUCCESS             This driver is added to this device.
   @retval EFI_ALREADY_STARTED     This driver is already running on this device.
@@ -127,9 +125,8 @@ HspDoorbellEnableChannel (
 **/
 EFI_STATUS
 EFIAPI
-HspDoorbellProtocolStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
+HspDoorbellProtocolInit (
+  IN EFI_HANDLE                     *Controller,
   IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
   )
 {
@@ -173,7 +170,7 @@ HspDoorbellProtocolStart (
   }
 
   Status = gBS->InstallMultipleProtocolInterfaces (
-                  &Controller,
+                  Controller,
                   &gNVIDIAHspDoorbellProtocolGuid,
                   &PrivateData->DoorbellProtocol,
                   NULL);
@@ -184,63 +181,4 @@ ErrorExit:
     }
   }
   return Status;
-}
-
-/**
-  This function disconnects the HspDoorbell protocol from the specified controller.
-
-  @param This                     Protocol instance pointer.
-  @param Controller               Handle of device to disconnect driver from.
-  @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol.
-
-  @retval EFI_SUCCESS   This driver is removed from this device.
-  @retval other         Some error occurs when removing this driver from this device.
-
-**/
-EFI_STATUS
-EFIAPI
-HspDoorbellProtocolStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
-  IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
-  )
-{
-  EFI_STATUS                       Status;
-  NVIDIA_HSP_DOORBELL_PROTOCOL     *DoorbellProtocol = NULL;
-  NVIDIA_HSP_DOORBELL_PRIVATE_DATA *PrivateData = NULL;
-
-  //
-  // Open the produced protocol
-  //
-  Status = gBS->OpenProtocol (
-                  Controller,
-                  &gNVIDIAHspDoorbellProtocolGuid,
-                  (VOID **) &DoorbellProtocol,
-                  This->DriverBindingHandle,
-                  Controller,
-                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                  );
-
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  PrivateData = HSP_DOORBELL_PRIVATE_DATA_FROM_THIS (DoorbellProtocol);
-  if (NULL == PrivateData) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  Status = gBS->UninstallMultipleProtocolInterfaces (
-                  Controller,
-                  &gNVIDIAHspDoorbellProtocolGuid,
-                  DoorbellProtocol,
-                  NULL
-                  );
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  FreePool (PrivateData);
-
-  return EFI_SUCCESS;
 }
