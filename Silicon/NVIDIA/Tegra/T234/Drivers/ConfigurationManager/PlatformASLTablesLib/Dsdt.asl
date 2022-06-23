@@ -13,11 +13,6 @@
 
 DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
 {
-  Device(CPU0) {
-    Name(_HID, "ACPI0007")
-    Name(_UID, Zero)
-  }
-
   Device(USB0) {
     Name (_HID, "NVDA0214")
     Name (_CID, "PNP0D10")
@@ -30,4 +25,3 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
     })
   }
 }
-
