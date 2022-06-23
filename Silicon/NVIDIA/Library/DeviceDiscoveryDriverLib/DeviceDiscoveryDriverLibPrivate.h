@@ -15,11 +15,11 @@
 #include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/ClockParents.h>
 
-extern SCMI_CLOCK2_PROTOCOL          *gScmiClockProtocol;
-extern NVIDIA_CLOCK_PARENTS_PROTOCOL *gClockParentsProtocol;
+extern SCMI_CLOCK2_PROTOCOL           *gScmiClockProtocol;
+extern NVIDIA_CLOCK_PARENTS_PROTOCOL  *gClockParentsProtocol;
 
 typedef struct {
-  EFI_EVENT OnExitBootServicesEvent;
+  EFI_EVENT    OnExitBootServicesEvent;
 } NVIDIA_DEVICE_DISCOVERY_CONTEXT;
 
 #endif

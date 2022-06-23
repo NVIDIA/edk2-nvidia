@@ -27,7 +27,6 @@
 
 #include "DeviceDiscoveryDriverLibPrivate.h"
 
-
 /**
   Retrieves the count of MMIO regions on this controller
 
@@ -40,14 +39,14 @@
 **/
 EFI_STATUS
 DeviceDiscoveryGetMmioRegionCount (
-  IN  EFI_HANDLE ControllerHandle,
-  OUT UINTN      *RegionCount
+  IN  EFI_HANDLE  ControllerHandle,
+  OUT UINTN       *RegionCount
   )
 {
-  NON_DISCOVERABLE_DEVICE             *Device;
-  EFI_STATUS                          Status;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR   *Desc;
-  UINTN                               CurrentResource = 0;
+  NON_DISCOVERABLE_DEVICE            *Device;
+  EFI_STATUS                         Status;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Desc;
+  UINTN                              CurrentResource = 0;
 
   if (NULL == RegionCount) {
     return EFI_INVALID_PARAMETER;
@@ -71,11 +70,14 @@ DeviceDiscoveryGetMmioRegionCount (
 
   if (Device->Resources != NULL) {
     for (Desc = Device->Resources; Desc->Desc != ACPI_END_TAG_DESCRIPTOR;
-        Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3)) {
-      if (Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR ||
-          Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM) {
+         Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3))
+    {
+      if ((Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
+          (Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM))
+      {
         continue;
       }
+
       CurrentResource++;
     }
   }
@@ -99,16 +101,16 @@ DeviceDiscoveryGetMmioRegionCount (
 **/
 EFI_STATUS
 DeviceDiscoveryGetMmioRegion (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  UINTN                Region,
-  OUT EFI_PHYSICAL_ADDRESS *RegionBase,
-  OUT UINTN                *RegionSize
+  IN  EFI_HANDLE            ControllerHandle,
+  IN  UINTN                 Region,
+  OUT EFI_PHYSICAL_ADDRESS  *RegionBase,
+  OUT UINTN                 *RegionSize
   )
 {
-  NON_DISCOVERABLE_DEVICE             *Device;
-  EFI_STATUS                          Status;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR   *Desc;
-  UINTN                               CurrentResource = 0;
+  NON_DISCOVERABLE_DEVICE            *Device;
+  EFI_STATUS                         Status;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Desc;
+  UINTN                              CurrentResource = 0;
 
   if ((NULL == RegionBase) || (NULL == RegionSize)) {
     return EFI_INVALID_PARAMETER;
@@ -132,9 +134,11 @@ DeviceDiscoveryGetMmioRegion (
 
   if (Device->Resources != NULL) {
     for (Desc = Device->Resources; Desc->Desc != ACPI_END_TAG_DESCRIPTOR;
-        Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3)) {
-      if (Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR ||
-          Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM) {
+         Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3))
+    {
+      if ((Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
+          (Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM))
+      {
         continue;
       }
 
@@ -143,6 +147,7 @@ DeviceDiscoveryGetMmioRegion (
         *RegionSize = Desc->AddrLen;
         return EFI_SUCCESS;
       }
+
       CurrentResource++;
     }
   }
@@ -164,14 +169,14 @@ DeviceDiscoveryGetMmioRegion (
 **/
 EFI_STATUS
 DeviceDiscoveryGetResetId (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ResetName,
-  OUT UINT32               *ResetId
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ResetName,
+  OUT UINT32       *ResetId
   )
 {
-  NVIDIA_RESET_NODE_PROTOCOL *ResetNodeProtocol = NULL;
-  UINTN                      Index;
-  EFI_STATUS                 Status;
+  NVIDIA_RESET_NODE_PROTOCOL  *ResetNodeProtocol = NULL;
+  UINTN                       Index;
+  EFI_STATUS                  Status;
 
   if ((NULL == ResetName) || (NULL == ResetId)) {
     return EFI_INVALID_PARAMETER;
@@ -188,6 +193,7 @@ DeviceDiscoveryGetResetId (
       return EFI_SUCCESS;
     }
   }
+
   return EFI_NOT_FOUND;
 }
 
@@ -205,14 +211,14 @@ DeviceDiscoveryGetResetId (
 **/
 EFI_STATUS
 DeviceDiscoveryConfigReset (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ResetName,
-  IN  BOOLEAN              Enable
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ResetName,
+  IN  BOOLEAN      Enable
   )
 {
-  EFI_STATUS          Status;
-  UINT32              ResetId;
-  NVIDIA_RESET_NODE_PROTOCOL *ResetNodeProtocol = NULL;
+  EFI_STATUS                  Status;
+  UINT32                      ResetId;
+  NVIDIA_RESET_NODE_PROTOCOL  *ResetNodeProtocol = NULL;
 
   Status = DeviceDiscoveryGetResetId (ControllerHandle, ResetName, &ResetId);
   if (EFI_ERROR (Status)) {
@@ -221,22 +227,24 @@ DeviceDiscoveryConfigReset (
 
   Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetNodeProtocol);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n",__FUNCTION__));
+    DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
     return Status;
   }
+
   if (Enable) {
     Status = ResetNodeProtocol->Assert (ResetNodeProtocol, ResetId);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to assert resets %r\r\n",__FUNCTION__,Status));
+      DEBUG ((EFI_D_ERROR, "%a, failed to assert resets %r\r\n", __FUNCTION__, Status));
       return Status;
     }
   } else {
     Status = ResetNodeProtocol->Deassert (ResetNodeProtocol, ResetId);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to deassert resets %r\r\n",__FUNCTION__,Status));
+      DEBUG ((EFI_D_ERROR, "%a, failed to deassert resets %r\r\n", __FUNCTION__, Status));
       return Status;
     }
   }
+
   return EFI_SUCCESS;
 }
 
@@ -254,14 +262,14 @@ DeviceDiscoveryConfigReset (
 **/
 EFI_STATUS
 DeviceDiscoveryGetClockId (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ClockName,
-  OUT UINT32               *ClockId
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ClockName,
+  OUT UINT32       *ClockId
   )
 {
-  NVIDIA_CLOCK_NODE_PROTOCOL *ClockNodeProtocol = NULL;
-  UINTN                      Index;
-  EFI_STATUS                 Status;
+  NVIDIA_CLOCK_NODE_PROTOCOL  *ClockNodeProtocol = NULL;
+  UINTN                       Index;
+  EFI_STATUS                  Status;
 
   if ((NULL == ClockName) || (NULL == ClockId)) {
     return EFI_INVALID_PARAMETER;
@@ -278,6 +286,7 @@ DeviceDiscoveryGetClockId (
       return EFI_SUCCESS;
     }
   }
+
   return EFI_NOT_FOUND;
 }
 
@@ -295,13 +304,13 @@ DeviceDiscoveryGetClockId (
 **/
 EFI_STATUS
 DeviceDiscoveryEnableClock (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ClockName,
-  IN  BOOLEAN              Enable
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ClockName,
+  IN  BOOLEAN      Enable
   )
 {
-  EFI_STATUS          Status;
-  UINT32              ClockId;
+  EFI_STATUS  Status;
+  UINT32      ClockId;
 
   if (NULL == gScmiClockProtocol) {
     return EFI_DEVICE_ERROR;
@@ -329,13 +338,13 @@ DeviceDiscoveryEnableClock (
 **/
 EFI_STATUS
 DeviceDiscoverySetClockFreq (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ClockName,
-  IN  UINT64               Frequency
-)
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ClockName,
+  IN  UINT64       Frequency
+  )
 {
-  EFI_STATUS          Status;
-  UINT32              ClockId;
+  EFI_STATUS  Status;
+  UINT32      ClockId;
 
   if (NULL == gScmiClockProtocol) {
     return EFI_DEVICE_ERROR;
@@ -364,13 +373,13 @@ DeviceDiscoverySetClockFreq (
 **/
 EFI_STATUS
 DeviceDiscoveryGetClockFreq (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ClockName,
-  OUT UINT64               *Frequency
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ClockName,
+  OUT UINT64       *Frequency
   )
 {
-  EFI_STATUS          Status;
-  UINT32              ClockId;
+  EFI_STATUS  Status;
+  UINT32      ClockId;
 
   if (NULL == gScmiClockProtocol) {
     return EFI_DEVICE_ERROR;
@@ -398,19 +407,20 @@ DeviceDiscoveryGetClockFreq (
 **/
 EFI_STATUS
 DeviceDiscoverySetClockParent (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ClockName,
-  IN  CONST CHAR8          *ParentClockName
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ClockName,
+  IN  CONST CHAR8  *ParentClockName
   )
 {
-  EFI_STATUS          Status;
-  UINT32              ClockId;
-  UINT32              ParentClockId;
+  EFI_STATUS  Status;
+  UINT32      ClockId;
+  UINT32      ParentClockId;
 
   Status = DeviceDiscoveryGetClockId (ControllerHandle, ClockName, &ClockId);
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
   Status = DeviceDiscoveryGetClockId (ControllerHandle, ParentClockName, &ParentClockId);
   if (EFI_ERROR (Status)) {
     return Status;
@@ -433,29 +443,29 @@ DeviceDiscoverySetClockParent (
 **/
 EFI_STATUS
 DeviceDiscoverySetProd (
-  IN  EFI_HANDLE                             ControllerHandle,
-  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode,
-  IN  CONST CHAR8                            *ProdSetting
+  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode,
+  IN  CONST CHAR8                             *ProdSetting
   )
 {
-  EFI_STATUS           Status;
-  EFI_PHYSICAL_ADDRESS RegionBase = 0;
-  UINTN                RegionSize = 0;
-  UINT32               LastRegion;
-  CONST UINT32         *Property;
-  INT32                PropertySize;
-  UINTN                Index = 0;
-  UINT32               ProdCells;
+  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS  RegionBase = 0;
+  UINTN                 RegionSize = 0;
+  UINT32                LastRegion;
+  CONST UINT32          *Property;
+  INT32                 PropertySize;
+  UINTN                 Index = 0;
+  UINT32                ProdCells;
 
-  INT32                ProdParentOffset;
-  INT32                ProdSettingOffset;
+  INT32  ProdParentOffset;
+  INT32  ProdSettingOffset;
 
   ProdParentOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "prod-settings");
   if (ProdParentOffset < 0) {
     return EFI_NOT_FOUND;
   }
 
-  Property = (CONST UINT32*)fdt_getprop (DeviceTreeNode->DeviceTreeBase, ProdParentOffset, "#prod-cells", NULL);
+  Property = (CONST UINT32 *)fdt_getprop (DeviceTreeNode->DeviceTreeBase, ProdParentOffset, "#prod-cells", NULL);
   if (NULL != Property) {
     ProdCells = SwapBytes32 (*Property);
   } else {
@@ -471,34 +481,38 @@ DeviceDiscoverySetProd (
   if (Property == NULL) {
     return EFI_NOT_FOUND;
   }
-  if ((PropertySize % (ProdCells * sizeof(UINT32))) != 0) {
+
+  if ((PropertySize % (ProdCells * sizeof (UINT32))) != 0) {
     DEBUG ((DEBUG_ERROR, "Invalid prod size (%d)\r\n", PropertySize));
     return EFI_DEVICE_ERROR;
   }
 
   LastRegion = 0;
-  Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, LastRegion, &RegionBase, &RegionSize);
+  Status     = DeviceDiscoveryGetMmioRegion (ControllerHandle, LastRegion, &RegionBase, &RegionSize);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %d\r\n", LastRegion));
     return Status;
   }
 
-  while (Index < (PropertySize/sizeof(UINT32))) {
-    UINTN IndexOffset = 0;
+  while (Index < (PropertySize/sizeof (UINT32))) {
+    UINTN  IndexOffset = 0;
     if (ProdCells == 4) {
-      UINT32 Region = SwapBytes32 (Property[Index]);
+      UINT32  Region = SwapBytes32 (Property[Index]);
       if (Region == MAX_UINT32) {
         DEBUG ((DEBUG_ERROR, "Invalid region in prod settings\r\n"));
         return EFI_DEVICE_ERROR;
       }
+
       if (Region != LastRegion) {
         Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, Region, &RegionBase, &RegionSize);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %d\r\n", Region));
           return Status;
         }
+
         LastRegion = Region;
       }
+
       IndexOffset = 1;
     }
 
@@ -506,10 +520,10 @@ DeviceDiscoverySetProd (
       DEBUG ((DEBUG_ERROR, "Bad offset value %x >= %x\r\n", SwapBytes32 (Property[Index+IndexOffset]), RegionSize));
       return EFI_DEVICE_ERROR;
     }
+
     MmioAndThenOr32 (RegionBase + SwapBytes32 (Property[Index+IndexOffset]), ~SwapBytes32 (Property[Index+IndexOffset+1]), SwapBytes32 (Property[Index+IndexOffset+2]));
     Index += ProdCells;
   }
+
   return EFI_SUCCESS;
 }
-
-

@@ -21,22 +21,22 @@
 /// Terminated with NULL Compatibility string
 ///
 typedef struct {
-  CONST CHAR8            *Compatibility;
-  EFI_GUID               *DeviceType;
+  CONST CHAR8    *Compatibility;
+  EFI_GUID       *DeviceType;
 } NVIDIA_COMPATIBILITY_MAPPING;
-extern NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[];
+extern NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[];
 
 typedef struct {
-  CONST CHAR16           *DriverName;
-  BOOLEAN                UseDriverBinding;
-  BOOLEAN                AutoEnableClocks;
-  BOOLEAN                AutoDeassertReset;
-  BOOLEAN                AutoResetModule;
-  BOOLEAN                AutoDeassertPg;
-  BOOLEAN                SkipEdkiiNondiscoverableInstall;
-  BOOLEAN                SkipAutoDeinitControllerOnExitBootServices;
+  CONST CHAR16    *DriverName;
+  BOOLEAN         UseDriverBinding;
+  BOOLEAN         AutoEnableClocks;
+  BOOLEAN         AutoDeassertReset;
+  BOOLEAN         AutoResetModule;
+  BOOLEAN         AutoDeassertPg;
+  BOOLEAN         SkipEdkiiNondiscoverableInstall;
+  BOOLEAN         SkipAutoDeinitControllerOnExitBootServices;
 } NVIDIA_DEVICE_DISCOVERY_CONFIG;
-extern NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig;
+extern NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig;
 
 typedef enum {
   DeviceDiscoveryDriverStart,
@@ -65,12 +65,11 @@ typedef enum {
 **/
 EFI_STATUS
 DeviceDiscoveryNotify (
-  IN  NVIDIA_DEVICE_DISCOVERY_PHASES         Phase,
-  IN  EFI_HANDLE                             DriverHandle,
-  IN  EFI_HANDLE                             ControllerHandle,
-  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
+  IN  NVIDIA_DEVICE_DISCOVERY_PHASES          Phase,
+  IN  EFI_HANDLE                              DriverHandle,
+  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   );
-
 
 ///
 /// Library service functions
@@ -88,8 +87,8 @@ DeviceDiscoveryNotify (
 **/
 EFI_STATUS
 DeviceDiscoveryGetMmioRegionCount (
-  IN  EFI_HANDLE ControllerHandle,
-  OUT UINTN      *RegionCount
+  IN  EFI_HANDLE  ControllerHandle,
+  OUT UINTN       *RegionCount
   );
 
 /**
@@ -107,10 +106,10 @@ DeviceDiscoveryGetMmioRegionCount (
 **/
 EFI_STATUS
 DeviceDiscoveryGetMmioRegion (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  UINTN                Region,
-  OUT EFI_PHYSICAL_ADDRESS *RegionBase,
-  OUT UINTN                *RegionSize
+  IN  EFI_HANDLE            ControllerHandle,
+  IN  UINTN                 Region,
+  OUT EFI_PHYSICAL_ADDRESS  *RegionBase,
+  OUT UINTN                 *RegionSize
   );
 
 /**
@@ -127,10 +126,10 @@ DeviceDiscoveryGetMmioRegion (
 **/
 EFI_STATUS
 DeviceDiscoveryGetResetId (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ResetName,
-  OUT UINT32               *ResetId
-);
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ResetName,
+  OUT UINT32       *ResetId
+  );
 
 /**
   Configures the reset with the specified reset name
@@ -146,10 +145,10 @@ DeviceDiscoveryGetResetId (
 **/
 EFI_STATUS
 DeviceDiscoveryConfigReset (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ResetName,
-  IN  BOOLEAN              Enable
-);
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ResetName,
+  IN  BOOLEAN      Enable
+  );
 
 /**
   Retrieves gets the clock id for the specified clock name
@@ -165,10 +164,10 @@ DeviceDiscoveryConfigReset (
 **/
 EFI_STATUS
 DeviceDiscoveryGetClockId (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ClockName,
-  OUT UINT32               *ClockId
-);
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ClockName,
+  OUT UINT32       *ClockId
+  );
 
 /**
   Enables the clock with the specified clock name
@@ -184,9 +183,9 @@ DeviceDiscoveryGetClockId (
 **/
 EFI_STATUS
 DeviceDiscoveryEnableClock (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ClockName,
-  IN  BOOLEAN              Enable
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ClockName,
+  IN  BOOLEAN      Enable
   );
 
 /**
@@ -203,10 +202,10 @@ DeviceDiscoveryEnableClock (
 **/
 EFI_STATUS
 DeviceDiscoverySetClockFreq (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ClockName,
-  IN  UINT64               Frequency
-);
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ClockName,
+  IN  UINT64       Frequency
+  );
 
 /**
   Gets the clock frequency for the clock with the specified clock name
@@ -223,10 +222,11 @@ DeviceDiscoverySetClockFreq (
 **/
 EFI_STATUS
 DeviceDiscoveryGetClockFreq (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ClockName,
-  OUT UINT64               *Frequency
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ClockName,
+  OUT UINT64       *Frequency
   );
+
 /**
   Sets the parent clock for a given clock with names
 
@@ -241,11 +241,10 @@ DeviceDiscoveryGetClockFreq (
 **/
 EFI_STATUS
 DeviceDiscoverySetClockParent (
-  IN  EFI_HANDLE           ControllerHandle,
-  IN  CONST CHAR8          *ClockName,
-  IN  CONST CHAR8          *ParentClockName
+  IN  EFI_HANDLE   ControllerHandle,
+  IN  CONST CHAR8  *ClockName,
+  IN  CONST CHAR8  *ParentClockName
   );
-
 
 /**
   Enable device tree based prod settings
@@ -261,9 +260,9 @@ DeviceDiscoverySetClockParent (
 **/
 EFI_STATUS
 DeviceDiscoverySetProd (
-  IN  EFI_HANDLE                             ControllerHandle,
-  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode,
-  IN  CONST CHAR8                            *ProdSetting
+  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode,
+  IN  CONST CHAR8                             *ProdSetting
   );
 
 /**
@@ -279,8 +278,8 @@ DeviceDiscoverySetProd (
 **/
 EFI_STATUS
 DeviceDiscoveryDriverInitialize (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   );
 
 #endif //__DEVICE_DISCOVERY_DRIVER_LIB_H__
