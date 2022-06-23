@@ -30,7 +30,7 @@
 #include <Protocol/BrBctUpdateProtocol.h>
 #include "TegraFmp.h"
 
-#define FMP_CAPSULE_SINGLE_PARTITION_VARIABLE_NAME  L"FmpCapsuleSinglePartitionName"
+#define FMP_CAPSULE_SINGLE_PARTITION_CHAIN_VARIABLE L"FmpCapsuleSinglePartitionChain"
 #define FMP_PLATFORM_SPEC_VARIABLE_NAME             L"TegraPlatformSpec"
 #define FMP_PLATFORM_SPEC_DEFAULT                   "-------"
 
@@ -816,8 +816,8 @@ InvalidateImage (
 /**
   Update a single FwImage from a special single-image FW package/capsule.
   This is a development feature enabled by PcdFmpSingleImageUpdate and
-  requires that the FMP_CAPSULE_SINGLE_PARTITION_VARIABLE_NAME variable
-  be set to the partition name to be written.
+  requires that the FMP_CAPSULE_SINGLE_PARTITION_CHAIN_VARIABLE variable
+  be set to the partition chain to be written (0=A, 1=B).
 
   @param[in]  Header                Pointer to the single-image FW package header
 
@@ -835,45 +835,25 @@ FmpTegraSetSingleImage (
   EFI_STATUS                    Status;
   CONST FW_PACKAGE_IMAGE_INFO   *PkgImageInfo;
   CHAR16                        PkgName[FW_IMAGE_NAME_LENGTH];
-  CHAR16                        PartitionName[MAX_PARTITION_NAME_LEN];
-  CHAR16                        BaseName[MAX_PARTITION_NAME_LEN];
-  UINTN                         BootChain;
+  UINT8                         BootChain;
   UINTN                         WriteFlag;
   UINTN                         VariableSize;
 
-  VariableSize = (MAX_PARTITION_NAME_LEN - 1) * sizeof (CHAR16);
-  Status = gRT->GetVariable (FMP_CAPSULE_SINGLE_PARTITION_VARIABLE_NAME,
+  // Get capsule package image name
+  PkgImageInfo = FwPackageImageInfoPtr (Header, 0);
+  FwPackageCopyImageName (PkgName, PkgImageInfo, FW_IMAGE_NAME_LENGTH);
+
+  // Get boot chain from variable
+  VariableSize = sizeof (BootChain);
+  Status = gRT->GetVariable (FMP_CAPSULE_SINGLE_PARTITION_CHAIN_VARIABLE,
                              &gNVIDIAPublicVariableGuid,
                              NULL,
                              &VariableSize,
-                             PartitionName);
+                             &BootChain);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error getting single partition name: %r\n",
+    DEBUG ((DEBUG_ERROR, "%a: Error getting single partition chain: %r\n",
             __FUNCTION__, Status));
     return Status;
-  }
-  PartitionName[VariableSize / sizeof (CHAR16)] = L'\0';
-
-  Status = GetPartitionBaseNameAndBootChain (PartitionName, BaseName, &BootChain);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error getting base name and boot chain for %s: %r\n",
-            __FUNCTION__, PartitionName, Status));
-    return Status;
-  }
-
-  // Get capsule package image name and ensure match with variable
-  PkgImageInfo = FwPackageImageInfoPtr (Header, 0);
-  FwPackageCopyImageName (PkgName, PkgImageInfo, sizeof (PkgName));
-  if (StrCmp (BaseName, PkgName) != 0) {
-    DEBUG ((DEBUG_ERROR, "%a: Name mismatch package=%s, variable=%s\n",
-            __FUNCTION__, PkgName, BaseName));
-    return EFI_NOT_FOUND;
-  }
-
-  if (IsSpecialImageName (PkgName)) {
-    DEBUG ((DEBUG_ERROR, "%a: %s single image not supported\n",
-            __FUNCTION__, PkgName));
-    return EFI_UNSUPPORTED;
   }
 
   // Determine A/B write flag
@@ -898,9 +878,25 @@ FmpTegraSetSingleImage (
   if (EFI_ERROR (Status)) {
     return Status;
   }
+  SetImageProgress (FMP_PROGRESS_WRITE_IMAGES);
+
   Status = VerifyImage (Header, PkgName, WriteFlag);
   if (EFI_ERROR (Status)) {
     return Status;
+  }
+  SetImageProgress (FMP_PROGRESS_VERIFY_IMAGES);
+
+  // delete the single partition chain variable
+  Status = gRT->SetVariable (FMP_CAPSULE_SINGLE_PARTITION_CHAIN_VARIABLE,
+                             &gNVIDIAPublicVariableGuid,
+                             EFI_VARIABLE_BOOTSERVICE_ACCESS |
+                             EFI_VARIABLE_RUNTIME_ACCESS |
+                             EFI_VARIABLE_NON_VOLATILE,
+                             0,
+                             NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error deleting single partition chain: %r\n",
+            __FUNCTION__, Status));
   }
 
   return EFI_SUCCESS;
