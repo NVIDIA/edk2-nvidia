@@ -54,6 +54,7 @@
   gNVIDIATegraP2UProtocolGuid
   gNVIDIARegulatorProtocolGuid
   gNVIDIAPinMuxProtocolGuid
+  gNVIDIAPcieControllerInitCompleteProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableT194PcieDeviceGuid

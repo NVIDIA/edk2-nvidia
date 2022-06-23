@@ -61,11 +61,12 @@ STATIC ACPI_HID_DEVICE_PATH  mPciRootBridgeDevicePathNode = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Pcie controller driver",
-  .UseDriverBinding                = TRUE,
+  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = FALSE,
   .AutoDeassertReset               = FALSE,
   .AutoDeassertPg                  = TRUE,
-  .SkipEdkiiNondiscoverableInstall = TRUE
+  .SkipEdkiiNondiscoverableInstall = TRUE,
+  .DirectEnumerationSupport        = TRUE
 };
 
 CHAR8  CoreClockNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
@@ -1816,6 +1817,17 @@ ErrorExit:
       Status = EFI_PROTOCOL_ERROR;
       DEBUG ((DEBUG_ERROR, "%a: Rejecting Driver Binding Stop (%r)\r\n", __FUNCTION__, Status));
       break;
+
+    case DeviceDiscoveryEnumerationCompleted:
+      Status = gBS->InstallMultipleProtocolInterfaces (
+                      &DriverHandle,
+                      &gNVIDIAPcieControllerInitCompleteProtocolGuid,
+                      NULL,
+                      NULL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to install PCI controller init complete protocol (%r)\r\n", __FUNCTION__, Status));
+      }
 
     default:
       break;
