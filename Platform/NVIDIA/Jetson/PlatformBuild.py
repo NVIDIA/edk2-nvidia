@@ -52,21 +52,3 @@ class JetsonSettingsManager(NVIDIASettingsManager):
 class PlatformBuilder(NVIDIAPlatformBuilder):
     ''' PlatformBuilder for NVIDIA's Jetson. '''
     SettingsManager = JetsonSettingsManager
-
-    def PlatformPostBuild(self):
-        ''' Additional build steps for Jetson platform. '''
-        ret = super().PlatformPostBuild()
-        if ret != 0:
-            return ret
-
-        build_dir = Path(self.env.GetValue("BUILD_OUTPUT_BASE"))
-        dtb_path = self.settings.GetDtbPath()
-        target = self.settings.GetTarget()
-
-        dtbs = (build_dir / dtb_path).glob("*.dtb")
-
-        for src_dtb in dtbs:
-            dest_dtb = Path("images") / f"{src_dtb.stem}_Jetson_{target}.dtbo"
-            shutil.copyfile(src_dtb, dest_dtb)
-
-        return 0

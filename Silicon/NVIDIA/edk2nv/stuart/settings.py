@@ -252,22 +252,10 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         '''
         platform_name = self.GetName()
         target = self.GetTarget()
-        return f"images/uefi_{platform_name}_{target}.bin"
+        return str(Path("images") / f"uefi_{platform_name}_{target}.bin")
 
     def GetDscName(self):
         ''' Optionally return the path to the platform's DSC file.
-
-            If `None`, the value is taken from target.txt.  Otherwise, this
-            will override target.txt
-
-            The path must be relative to GetWorkspaceRoot().
-
-            This will be used to set ACTIVE_PLATFORM.
-        '''
-        return None
-
-    def GetDtbPath(self):
-        ''' Optionally return the path to the platform's dtb files.
 
             If `None`, the value is taken from target.txt.  Otherwise, this
             will override target.txt
@@ -354,7 +342,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         '''
         platform_name = self.GetName()
         target = self.GetTarget()
-        return f"images/variables_{platform_name}_{target}.bin"
+        return str(Path("images") / f"variables_{platform_name}_{target}.bin")
 
     def GetBootAppName(self):
         ''' Optionally, the build name of this platform's boot app.
@@ -377,7 +365,30 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         '''
         platform_name = self.GetName()
         target = self.GetTarget()
-        return f"images/BOOTAA64_{platform_name}_{target}.efi"
+        return str(Path("images") / f"BOOTAA64_{platform_name}_{target}.efi")
+
+    def GetDtbPath(self):
+        ''' Optionally, the build path of this platform's DTB files.
+
+            If the platform does not have DTBs, this method should return
+            `None`.
+
+            Returns a path relative to the build directory.
+        '''
+        return None
+
+    def GetDtbFile(self, dtb_stem):
+        ''' Return the file name of the given DTB file.
+
+            We'll copy the built DTB to this location.  This default
+            implementation will use
+            "images/{dtb_stem}_{platform_name}_{target}.dtbo".
+
+            Returns a path relative to the workspace.
+        '''
+        platform_name = self.GetName()
+        target = self.GetTarget()
+        return str(Path("images") / f"{dtb_stem}_{platform_name}_{target}.dtbo")
 
     def GetBuildDirFile(self):
         ''' Return the file name of the build dir file.
@@ -391,7 +402,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         '''
         platform_name = self.GetName()
         target = self.GetTarget()
-        return f"images/builddir_{platform_name}_{target}.txt"
+        return str(Path("images") / f"builddir_{platform_name}_{target}.txt")
 
 
 class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,

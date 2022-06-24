@@ -260,6 +260,7 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
         ws_dir = Path(self.settings.GetWorkspaceRoot())
         build_dir = Path(self.env.GetValue("BUILD_OUTPUT_BASE"))
+        target = self.settings.GetTarget()
 
         # Store the path to the build directory in a place an upstream build
         # system can find it.
@@ -302,6 +303,17 @@ class NVIDIAPlatformBuilder(UefiBuilder):
             boot_out.parent.mkdir(parents=True, exist_ok=True)
             FormatUefiBinary(str(fw_vol), str(fw_img))
             shutil.copyfile(boot_path, boot_out)
+
+        # Copy DTBs, if appropriate for this platform
+        dtb_path = self.settings.GetDtbPath()
+        if dtb_path:
+            full_dtb_path = build_dir / dtb_path
+
+            # Copy each generated DTB
+            for src_dtb in full_dtb_path.glob("*.dtb"):
+                dest_dtb = self.settings.GetDtbFile(src_dtb.stem)
+                logging.info("Copying DTB %s", dest_dtb)
+                shutil.copyfile(src_dtb, dest_dtb)
 
         return 0
 
