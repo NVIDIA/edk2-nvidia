@@ -576,6 +576,9 @@
   #
   gEmbeddedTokenSpaceGuid.PcdMetronomeTickPeriod|1000
 
+  # Use Segment numbers as PCI UID
+  gEdkiiDynamicTablesPkgTokenSpaceGuid.PcdPciUseSegmentAsUid|TRUE
+
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.
