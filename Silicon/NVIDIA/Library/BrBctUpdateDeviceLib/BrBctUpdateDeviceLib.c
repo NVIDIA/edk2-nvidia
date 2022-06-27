@@ -414,10 +414,6 @@ BrBctUpdateDeviceLibInit (
   DEBUG ((DEBUG_INFO, "%a: BCT partition slots=%u size=0x%x\n",
           __FUNCTION__, Private->BctPartitionSlots, Private->SlotSize));
 
-  // Allow writes to the BR-BCT and backup partitions
-  Private->BrBctPartition->PartitionInfo.IsActivePartition = FALSE;
-  Private->BrBctBackupPartition->PartitionInfo.IsActivePartition = FALSE;
-
   // Pre-allocate a slot verify buffer to support runtime update of BCT data
   mVerifyBuffer = AllocateRuntimeZeroPool (Private->BrBctDataSize);
   if (mVerifyBuffer == NULL) {

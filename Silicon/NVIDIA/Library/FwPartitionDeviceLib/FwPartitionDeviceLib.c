@@ -45,8 +45,8 @@ FwPartitionIsActive (
 
   Status = GetPartitionBaseNameAndBootChain (Name, BaseName, &BootChain);
   if (EFI_ERROR (Status)) {
-    // Partition name isn't an A/B name, treat as active
-    return TRUE;
+    // Partition name isn't an A/B name, treat as inactive
+    return FALSE;
   }
 
   return (BootChain == mActiveBootChain);

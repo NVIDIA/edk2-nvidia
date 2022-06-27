@@ -85,6 +85,7 @@ STATIC CONST CHAR16 *SpecialImageNames[] = {
 // optional images are only updated if present in capsule
 STATIC CONST CHAR16 *OptionalImageNames[] = {
   L"sce-fw",
+  L"smm-fw",
   L"xusb-fw",
   L"BCT-boot-chain_backup",
   NULL

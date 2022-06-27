@@ -429,7 +429,7 @@ FwImageFindPartition (
   }
 
   // Look for matching partition name that doesn't have A/B backup, e.g. BCT
-  if ((FoundProtocol == NULL) && (BootChain == 0)) {
+  if (FoundProtocol == NULL) {
     for (Index = 0; Index < NumProtocols; Index++) {
       Protocol = ProtocolBuffer[Index];
       if (StrCmp (Protocol->PartitionName, ImageName) == 0) {

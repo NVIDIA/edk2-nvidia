@@ -43,6 +43,7 @@ STATIC CONST CHAR16 *SystemFwImageNamesT194[] = {
 
 STATIC CONST CHAR16 *SystemFwImageNamesT234[] = {
   L"dce-fw",
+  L"mb2-applet",
   L"mb2rf",
   L"nvdec",
   L"psc_bl1",
