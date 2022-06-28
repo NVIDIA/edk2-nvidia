@@ -263,6 +263,9 @@
 # Tegra Boot Chain Selection Register Address T234
   gNVIDIATokenSpaceGuid.PcdBootChainRegisterBaseAddressT234|0x0C3903CC|UINT64|0x0000003E
 
+# Tegra BootLoader Scratch Register Address T234
+  gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT234|0x0C3903A4|UINT64|0x0000002A
+
 # Tegra BootROM Selection Register Address T194
   gNVIDIATokenSpaceGuid.PcdBootROMRegisterBaseAddressT194|0x0C390568|UINT64|0x00000065
 

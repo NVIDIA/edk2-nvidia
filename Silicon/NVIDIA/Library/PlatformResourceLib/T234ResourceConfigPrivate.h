@@ -21,6 +21,11 @@
 #define BOOT_CHAIN_GOOD             0
 #define BOOT_CHAIN_BAD              1
 
+#define BL_MAGIC_BIT_FIELD_LO       0
+#define BL_MAGIC_BIT_FIELD_HI       15
+#define BL_UPDATE_BR_BCT_BIT_FIELD  26
+#define SR_BL_MAGIC                 0x4EF1UL
+
 #define TEGRA_UART_SUPPORT_FLAG     0x77E // UART_A..J except _G
 #define TEGRA_UART_SUPPORT_SBSA     0x600
 

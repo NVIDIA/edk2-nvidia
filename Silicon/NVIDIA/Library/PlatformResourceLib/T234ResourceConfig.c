@@ -506,6 +506,36 @@ T234ValidateActiveBootChain(
 }
 
 /**
+  Get UpdateBrBct flag
+
+**/
+BOOLEAN
+T234GetUpdateBrBct (
+  IN UINTN      CpuBootloaderAddress
+  )
+{
+  UINT32    Magic;
+  BOOLEAN   UpdateBrBct;
+
+  Magic = MmioBitFieldRead32 (FixedPcdGet64 (PcdBootLoaderRegisterBaseAddressT234),
+                              BL_MAGIC_BIT_FIELD_LO,
+                              BL_MAGIC_BIT_FIELD_HI);
+  if (Magic != SR_BL_MAGIC) {
+    DEBUG ((DEBUG_ERROR, "Invalid SR_BL magic=0x%x\n", Magic));
+    return FALSE;
+  }
+
+  UpdateBrBct = MmioBitFieldRead32 (FixedPcdGet64 (PcdBootLoaderRegisterBaseAddressT234),
+                                    BL_UPDATE_BR_BCT_BIT_FIELD,
+                                    BL_UPDATE_BR_BCT_BIT_FIELD);
+
+  DEBUG ((DEBUG_INFO, "SR_BL Magic=0x%x UpdateBrBct=%u\n",
+          Magic, UpdateBrBct));
+
+  return UpdateBrBct;
+}
+
+/**
   Get Platform Resource Information
 
 **/
@@ -523,6 +553,7 @@ T234GetPlatformResourceInformation(
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
   PlatformResourceInfo->NumSockets = 1;
+  PlatformResourceInfo->BrBctUpdateFlag = T234GetUpdateBrBct (CpuBootloaderAddress);
 
   Status = T234GetActiveBootChain (CpuBootloaderAddress, &PlatformResourceInfo->ActiveBootChain);
   if (EFI_ERROR (Status)) {
