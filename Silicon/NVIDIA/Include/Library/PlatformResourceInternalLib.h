@@ -19,7 +19,7 @@ BOOLEAN
 EFIAPI
 GetTegraUARTBaseAddressInternal (
   OUT EFI_PHYSICAL_ADDRESS  *TegraUARTBaseAddress
-);
+  );
 
 /**
   Retrieve the type and address of UART based on the instance Number
@@ -30,7 +30,7 @@ EFIAPI
 GetUARTInstanceInfoInternal (
   OUT UINT32                *UARTInstanceType,
   OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
-);
+  );
 
 /**
   Retrieve chip specific info for GIC
@@ -39,8 +39,8 @@ GetUARTInstanceInfoInternal (
 BOOLEAN
 EFIAPI
 GetGicInfoInternal (
-  OUT TEGRA_GIC_INFO *GicInfo
-);
+  OUT TEGRA_GIC_INFO  *GicInfo
+  );
 
 /**
   Retrieve CPU BL Address
@@ -49,8 +49,8 @@ GetGicInfoInternal (
 BOOLEAN
 EFIAPI
 GetCPUBLBaseAddressInternal (
-  OUT UINTN *CpuBootloaderAddress
-);
+  OUT UINTN  *CpuBootloaderAddress
+  );
 
 /**
   Retrieve DTB Address
@@ -59,8 +59,8 @@ GetCPUBLBaseAddressInternal (
 BOOLEAN
 EFIAPI
 GetDTBBaseAddressInternal (
-  OUT UINT64 *DTBBaseAddress
-);
+  OUT UINT64  *DTBBaseAddress
+  );
 
 /**
   Retrieve Carveout Info
@@ -69,10 +69,10 @@ GetDTBBaseAddressInternal (
 EFI_STATUS
 EFIAPI
 GetCarveoutInfoInternal (
-  IN TEGRA_CARVEOUT_TYPE Type,
-  IN UINTN               *Base,
-  IN UINT32              *Size
-);
+  IN TEGRA_CARVEOUT_TYPE  Type,
+  IN UINTN                *Base,
+  IN UINT32               *Size
+  );
 
 /**
   Retrieve Boot Type
@@ -81,8 +81,8 @@ GetCarveoutInfoInternal (
 BOOLEAN
 EFIAPI
 GetBootTypeInternal (
-  OUT TEGRA_BOOT_TYPE *BootType
-);
+  OUT TEGRA_BOOT_TYPE  *BootType
+  );
 
 /**
   Retrieve GR Blob Address
@@ -91,18 +91,8 @@ GetBootTypeInternal (
 BOOLEAN
 EFIAPI
 GetGRBlobBaseAddressInternal (
-  OUT UINT64 *DTBBaseAddress
-);
-
-/**
-  Retrieve GR Output Base and Size
-
-**/
-BOOLEAN
-GetGROutputBaseAndSizeInternal (
-  OUT UINTN *Base,
-  OUT UINTN *Size
-);
+  OUT UINT64  *DTBBaseAddress
+  );
 
 /**
   Retrieve FSI NS Base and Size
@@ -111,9 +101,9 @@ GetGROutputBaseAndSizeInternal (
 BOOLEAN
 EFIAPI
 GetFsiNsBaseAndSizeInternal (
-  OUT UINTN *Base,
-  OUT UINTN *Size
-);
+  OUT UINTN  *Base,
+  OUT UINTN  *Size
+  );
 
 /**
   Validate Active Boot Chain
@@ -123,7 +113,7 @@ BOOLEAN
 EFIAPI
 ValidateActiveBootChainInternal (
   VOID
-);
+  );
 
 /**
   Set next boot chain
@@ -132,7 +122,7 @@ ValidateActiveBootChainInternal (
 BOOLEAN
 EFIAPI
 SetNextBootChainInternal (
-  IN  UINT32    BootChain
+  IN  UINT32  BootChain
   );
 
 /**
@@ -142,9 +132,9 @@ SetNextBootChainInternal (
 BOOLEAN
 EFIAPI
 GetRamdiskOSBaseAndSizeInternal (
-  OUT UINTN *Base,
-  OUT UINTN *Size
-);
+  OUT UINTN  *Base,
+  OUT UINTN  *Size
+  );
 
 /**
   Get Platform Resource Information
@@ -153,7 +143,7 @@ GetRamdiskOSBaseAndSizeInternal (
 BOOLEAN
 EFIAPI
 GetPlatformResourceInformationInternal (
-  IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
-);
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  );
 
 #endif //__PLATFORM_RESOURCE_INTERNAL_LIB_H__

@@ -375,26 +375,6 @@ T234GetGRBlobBaseAddress (
 }
 
 /**
-  Retrieve GR Output Base and Size
-
-**/
-BOOLEAN
-T234GetGROutputBaseAndSize (
-  IN  UINTN  CpuBootloaderAddress,
-  OUT UINTN  *Base,
-  OUT UINTN  *Size
-  )
-{
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  *Base               = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Base;
-  *Size               = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Size;
-
-  return TRUE;
-}
-
-/**
   Retrieve FSI NS Base and Size
 
 **/
@@ -605,6 +585,10 @@ T234GetPlatformResourceInformation (
   PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Base;
   PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryLength      = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Size;
 
+  // Populate GrOutputInfo
+  PlatformResourceInfo->GrOutputInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Base;
+  PlatformResourceInfo->GrOutputInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Size;
+
   return EFI_SUCCESS;
 }
 
@@ -614,12 +598,12 @@ T234GetPlatformResourceInformation (
 **/
 EFI_STATUS
 EFIAPI
-T234GetRootfsStatusReg(
-  IN  UINTN                       CpuBootloaderAddress,
-  OUT UINT32                      *RegisterValue
-)
+T234GetRootfsStatusReg (
+  IN  UINTN   CpuBootloaderAddress,
+  OUT UINT32  *RegisterValue
+  )
 {
-  *RegisterValue = MmioRead32 (FixedPcdGet64(PcdRootfsRegisterBaseAddressT234));
+  *RegisterValue = MmioRead32 (FixedPcdGet64 (PcdRootfsRegisterBaseAddressT234));
 
   return EFI_SUCCESS;
 }
@@ -630,13 +614,12 @@ T234GetRootfsStatusReg(
 **/
 EFI_STATUS
 EFIAPI
-T234SetRootfsStatusReg(
-  IN  UINTN                       CpuBootloaderAddress,
-  IN  UINT32                      RegisterValue
-)
+T234SetRootfsStatusReg (
+  IN  UINTN   CpuBootloaderAddress,
+  IN  UINT32  RegisterValue
+  )
 {
-
-  MmioWrite32 (FixedPcdGet64(PcdRootfsRegisterBaseAddressT234), RegisterValue);
+  MmioWrite32 (FixedPcdGet64 (PcdRootfsRegisterBaseAddressT234), RegisterValue);
 
   return EFI_SUCCESS;
 }
@@ -648,17 +631,19 @@ T234SetRootfsStatusReg(
 EFI_STATUS
 EFIAPI
 T234SetNextBootChain (
-  IN  UINT32    BootChain
+  IN  UINT32  BootChain
   )
 {
   if (BootChain >= BOOT_CHAIN_MAX) {
     return EFI_INVALID_PARAMETER;
   }
 
-  MmioBitFieldWrite32 (FixedPcdGet64(PcdBootChainRegisterBaseAddressT234),
-                       BOOT_CHAIN_BIT_FIELD_LO,
-                       BOOT_CHAIN_BIT_FIELD_HI,
-                       BootChain);
+  MmioBitFieldWrite32 (
+    FixedPcdGet64 (PcdBootChainRegisterBaseAddressT234),
+    BOOT_CHAIN_BIT_FIELD_LO,
+    BOOT_CHAIN_BIT_FIELD_HI,
+    BootChain
+    );
 
   return EFI_SUCCESS;
 }

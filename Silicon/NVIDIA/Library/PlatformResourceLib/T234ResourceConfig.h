@@ -12,49 +12,42 @@
 #include <Library/PlatformResourceLib.h>
 
 BOOLEAN
-T234UARTInstanceInfo(
+T234UARTInstanceInfo (
   IN  UINT32                SharedUARTInstanceId,
   OUT UINT32                *UARTInstanceType,
   OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
-);
+  );
 
 UINT64
 T234GetDTBBaseAddress (
-  IN UINTN CpuBootloaderAddress
-);
+  IN UINTN  CpuBootloaderAddress
+  );
 
 EFI_STATUS
 EFIAPI
 T234GetCarveoutInfo (
-  IN UINTN               CpuBootloaderAddress,
-  IN TEGRA_CARVEOUT_TYPE Type,
-  IN UINTN               *Base,
-  IN UINT32              *Size
-);
+  IN UINTN                CpuBootloaderAddress,
+  IN TEGRA_CARVEOUT_TYPE  Type,
+  IN UINTN                *Base,
+  IN UINT32               *Size
+  );
 
 TEGRA_BOOT_TYPE
 T234GetBootType (
-  IN UINTN CpuBootloaderAddress
-);
+  IN UINTN  CpuBootloaderAddress
+  );
 
 UINT64
 T234GetGRBlobBaseAddress (
-  IN UINTN CpuBootloaderAddress
-);
-
-BOOLEAN
-T234GetGROutputBaseAndSize (
-  IN  UINTN CpuBootloaderAddress,
-  OUT UINTN *Base,
-  OUT UINTN *Size
-);
+  IN UINTN  CpuBootloaderAddress
+  );
 
 BOOLEAN
 T234GetFsiNsBaseAndSize (
-  IN  UINTN CpuBootloaderAddress,
-  OUT UINTN *Base,
-  OUT UINTN *Size
-);
+  IN  UINTN  CpuBootloaderAddress,
+  OUT UINTN  *Base,
+  OUT UINTN  *Size
+  );
 
 /**
   Retrieve Active Boot Chain Information
@@ -62,10 +55,10 @@ T234GetFsiNsBaseAndSize (
 **/
 EFI_STATUS
 EFIAPI
-T234GetActiveBootChain(
+T234GetActiveBootChain (
   IN  UINTN   CpuBootloaderAddress,
   OUT UINT32  *BootChain
-);
+  );
 
 /**
   Validate Active Boot Chain
@@ -73,9 +66,9 @@ T234GetActiveBootChain(
 **/
 EFI_STATUS
 EFIAPI
-T234ValidateActiveBootChain(
-  IN  UINTN   CpuBootloaderAddress
-);
+T234ValidateActiveBootChain (
+  IN  UINTN  CpuBootloaderAddress
+  );
 
 /**
   Get Platform Resource Information
@@ -83,10 +76,10 @@ T234ValidateActiveBootChain(
 **/
 EFI_STATUS
 EFIAPI
-T234GetPlatformResourceInformation(
-  IN UINTN                        CpuBootloaderAddress,
-  IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
-);
+T234GetPlatformResourceInformation (
+  IN UINTN                         CpuBootloaderAddress,
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  );
 
 /**
   Get Rootfs Status Register Value
@@ -94,10 +87,10 @@ T234GetPlatformResourceInformation(
 **/
 EFI_STATUS
 EFIAPI
-T234GetRootfsStatusReg(
-  IN UINTN                        CpuBootloaderAddress,
-  IN UINT32                       *RegisterValue
-);
+T234GetRootfsStatusReg (
+  IN UINTN   CpuBootloaderAddress,
+  IN UINT32  *RegisterValue
+  );
 
 /**
   Set Rootfs Status Register
@@ -105,10 +98,10 @@ T234GetRootfsStatusReg(
 **/
 EFI_STATUS
 EFIAPI
-T234SetRootfsStatusReg(
-  IN UINTN                        CpuBootloaderAddress,
-  IN UINT32                       RegisterValue
-);
+T234SetRootfsStatusReg (
+  IN UINTN   CpuBootloaderAddress,
+  IN UINT32  RegisterValue
+  );
 
 /**
   Set next boot chain
@@ -117,7 +110,7 @@ T234SetRootfsStatusReg(
 EFI_STATUS
 EFIAPI
 T234SetNextBootChain (
-  IN  UINT32    BootChain
+  IN  UINT32  BootChain
   );
 
 #endif //__T234_RESOURCE_CONFIG_H__

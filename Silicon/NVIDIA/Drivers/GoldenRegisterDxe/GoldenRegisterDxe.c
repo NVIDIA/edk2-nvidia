@@ -10,6 +10,7 @@
 #include <PiDxe.h>
 
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/PlatformResourceLib.h>
@@ -85,6 +86,8 @@ GoldenRegisterDxeInitialize (
   GOLDEN_REGISTER_PRIVATE_DATA  *Private;
   UINT32                        Count;
   EFI_HANDLE                    Handle;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
   GrBlobBase = GetGRBlobBaseAddress ();
   if (GrBlobBase == 0) {
@@ -110,10 +113,18 @@ GoldenRegisterDxeInitialize (
     return EFI_NOT_FOUND;
   }
 
-  if (!GetGROutputBaseAndSize (&GrOutBase, &GrOutSize)) {
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
     DEBUG ((DEBUG_ERROR, "Failed to get parameters of UEFI GR output\n"));
     return EFI_NOT_FOUND;
   }
+
+  GrOutBase = PlatformResourceInfo->GrOutputInfo.Base;
+  GrOutSize = PlatformResourceInfo->GrOutputInfo.Size;
 
   if ((GrOutBase == 0) ||
       (GrOutSize == 0))

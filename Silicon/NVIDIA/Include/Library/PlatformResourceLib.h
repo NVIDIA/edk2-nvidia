@@ -18,14 +18,14 @@
  * @name Tegra UART TYPE
  * These are the UARTs available on the Tegra platform
  */
-#define TEGRA_UART_TYPE_16550     0x00
-#define TEGRA_UART_TYPE_SBSA      0x01
-#define TEGRA_UART_TYPE_TCU       0xFE
-#define TEGRA_UART_TYPE_NONE      0xFF
+#define TEGRA_UART_TYPE_16550  0x00
+#define TEGRA_UART_TYPE_SBSA   0x01
+#define TEGRA_UART_TYPE_TCU    0xFE
+#define TEGRA_UART_TYPE_NONE   0xFF
 
-#define BIT(x)   (1 << (x))
+#define BIT(x)  (1 << (x))
 
-#define MAX_EEPROM_DATA_SIZE      256
+#define MAX_EEPROM_DATA_SIZE  256
 
 typedef enum {
   TegrablBootInvalid,
@@ -40,60 +40,66 @@ typedef enum {
 } TEGRA_CARVEOUT_TYPE;
 
 typedef struct {
-  NVDA_MEMORY_REGION   *InputDramRegions;
-  NVDA_MEMORY_REGION   *DramRegions;
-  UINTN                DramRegionsCount;
-  UINTN                UefiDramRegionsCount;
-  NVDA_MEMORY_REGION   *InputCarveoutRegions;
-  NVDA_MEMORY_REGION   *CarveoutRegions;
-  UINTN                CarveoutRegionsCount;
-  UINTN                DtbLoadAddress;
-  NVDA_MEMORY_REGION   RamOopsRegion;
+  NVDA_MEMORY_REGION    *InputDramRegions;
+  NVDA_MEMORY_REGION    *DramRegions;
+  UINTN                 DramRegionsCount;
+  UINTN                 UefiDramRegionsCount;
+  NVDA_MEMORY_REGION    *InputCarveoutRegions;
+  NVDA_MEMORY_REGION    *CarveoutRegions;
+  UINTN                 CarveoutRegionsCount;
+  UINTN                 DtbLoadAddress;
+  NVDA_MEMORY_REGION    RamOopsRegion;
 } TEGRA_RESOURCE_INFO;
 
 typedef struct {
-  EFI_PHYSICAL_ADDRESS Base;
-  UINTN                Size;
+  EFI_PHYSICAL_ADDRESS    Base;
+  UINTN                   Size;
 } TEGRA_MMIO_INFO;
 
 typedef struct {
-  CHAR8               *Name;
-  UINT32              Offset;
-  UINT32              Value;
+  CHAR8     *Name;
+  UINT32    Offset;
+  UINT32    Value;
 } TEGRA_FUSE_INFO;
 
 typedef struct {
-  UINTN           FuseBaseAddr;
-  TEGRA_FUSE_INFO *FuseList;
-  UINTN           FuseCount;
-  CHAR8           CvmBoardId[BOARD_ID_LEN + 1];
-  CHAR8           CvbBoardId[BOARD_ID_LEN + 1];
-  CHAR8           CvmProductId[PRODUCT_ID_LEN + 1];
-  CHAR8           CvbProductId[PRODUCT_ID_LEN + 1];
-  CHAR8           SerialNumber[SERIAL_NUM_LEN];
+  UINTN              FuseBaseAddr;
+  TEGRA_FUSE_INFO    *FuseList;
+  UINTN              FuseCount;
+  CHAR8              CvmBoardId[BOARD_ID_LEN + 1];
+  CHAR8              CvbBoardId[BOARD_ID_LEN + 1];
+  CHAR8              CvmProductId[PRODUCT_ID_LEN + 1];
+  CHAR8              CvbProductId[PRODUCT_ID_LEN + 1];
+  CHAR8              SerialNumber[SERIAL_NUM_LEN];
 } TEGRA_BOARD_INFO;
 
 typedef struct  {
-  UINT8  CvmEepromData[MAX_EEPROM_DATA_SIZE];
-  UINT8  CvbEepromData[MAX_EEPROM_DATA_SIZE];
-  UINT32 CvmEepromDataSize;
-  UINT32 CvbEepromDataSize;
+  UINT8     CvmEepromData[MAX_EEPROM_DATA_SIZE];
+  UINT8     CvbEepromData[MAX_EEPROM_DATA_SIZE];
+  UINT32    CvmEepromDataSize;
+  UINT32    CvbEepromDataSize;
 } TEGRABL_EEPROM_DATA;
 
 typedef struct {
-  CHAR8              *GicCompatString;
-  CHAR8              *ItsCompatString;
-  UINT32              Version;
+  CHAR8     *GicCompatString;
+  CHAR8     *ItsCompatString;
+  UINT32    Version;
 } TEGRA_GIC_INFO;
 
 typedef struct {
-  UINT32              NumSockets;
-  UINT32              ActiveBootChain;
-  BOOLEAN             BrBctUpdateFlag;
-  TEGRA_RESOURCE_INFO *ResourceInfo;
-  TEGRA_MMIO_INFO     *MmioInfo;
-  TEGRABL_EEPROM_DATA *EepromData;
-  TEGRA_BOARD_INFO    *BoardInfo;
+  UINTN    Base;
+  UINTN    Size;
+} TEGRA_BASE_AND_SIZE_INFO;
+
+typedef struct {
+  UINT32                      NumSockets;
+  UINT32                      ActiveBootChain;
+  BOOLEAN                     BrBctUpdateFlag;
+  TEGRA_RESOURCE_INFO         *ResourceInfo;
+  TEGRA_MMIO_INFO             *MmioInfo;
+  TEGRABL_EEPROM_DATA         *EepromData;
+  TEGRA_BOARD_INFO            *BoardInfo;
+  TEGRA_BASE_AND_SIZE_INFO    GrOutputInfo;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
@@ -105,8 +111,8 @@ typedef struct {
 VOID
 EFIAPI
 SetTegraUARTBaseAddress (
-  IN EFI_PHYSICAL_ADDRESS   UartBaseAddress
-);
+  IN EFI_PHYSICAL_ADDRESS  UartBaseAddress
+  );
 
 /**
   Retrieve Tegra UART Base Address
@@ -116,7 +122,7 @@ EFI_PHYSICAL_ADDRESS
 EFIAPI
 GetTegraUARTBaseAddress (
   VOID
-);
+  );
 
 /**
   Retrieve the type and address of UART based on the instance Number
@@ -127,7 +133,7 @@ EFIAPI
 GetUARTInstanceInfo (
   OUT UINT32                *UARTInstanceType,
   OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
-);
+  );
 
 /**
   Retrieve chip specific info for GIC
@@ -136,8 +142,8 @@ GetUARTInstanceInfo (
 BOOLEAN
 EFIAPI
 GetGicInfo (
-  OUT TEGRA_GIC_INFO *GicInfo
-);
+  OUT TEGRA_GIC_INFO  *GicInfo
+  );
 
 /**
   Retrieve CPU BL Address
@@ -147,7 +153,7 @@ UINTN
 EFIAPI
 GetCPUBLBaseAddress (
   VOID
-);
+  );
 
 /**
   Retrieve DTB Address
@@ -157,7 +163,7 @@ UINT64
 EFIAPI
 GetDTBBaseAddress (
   VOID
-);
+  );
 
 /**
   Retrieve Carveout Info
@@ -166,10 +172,10 @@ GetDTBBaseAddress (
 EFI_STATUS
 EFIAPI
 GetCarveoutInfo (
-  IN TEGRA_CARVEOUT_TYPE Type,
-  IN UINTN               *Base,
-  IN UINT32              *Size
-);
+  IN TEGRA_CARVEOUT_TYPE  Type,
+  IN UINTN                *Base,
+  IN UINT32               *Size
+  );
 
 /**
   Retrieve Boot Type
@@ -179,7 +185,7 @@ TEGRA_BOOT_TYPE
 EFIAPI
 GetBootType (
   VOID
-);
+  );
 
 /**
   Retrieve GR Blob Address
@@ -189,18 +195,7 @@ UINT64
 EFIAPI
 GetGRBlobBaseAddress (
   VOID
-);
-
-/**
-  Retrieve GR Output Base and Size
-
-**/
-BOOLEAN
-EFIAPI
-GetGROutputBaseAndSize (
-  OUT UINTN *Base,
-  OUT UINTN *Size
-);
+  );
 
 /**
   Retrieve FSI NS Base and Size
@@ -209,9 +204,9 @@ GetGROutputBaseAndSize (
 BOOLEAN
 EFIAPI
 GetFsiNsBaseAndSize (
-  OUT UINTN *Base,
-  OUT UINTN *Size
-);
+  OUT UINTN  *Base,
+  OUT UINTN  *Size
+  );
 
 /**
   Validate Active Boot Chain
@@ -221,7 +216,7 @@ EFI_STATUS
 EFIAPI
 ValidateActiveBootChain (
   VOID
-);
+  );
 
 /**
   Update boot chain scratch register to boot given boot chain on next reset
@@ -235,7 +230,7 @@ ValidateActiveBootChain (
 EFI_STATUS
 EFIAPI
 SetNextBootChain (
-  IN  UINT32    BootChain
+  IN  UINT32  BootChain
   );
 
 /**
@@ -245,9 +240,9 @@ SetNextBootChain (
 BOOLEAN
 EFIAPI
 GetRamdiskOSBaseAndSize (
-  OUT UINTN *Base,
-  OUT UINTN *Size
-);
+  OUT UINTN  *Base,
+  OUT UINTN  *Size
+  );
 
 /**
   Get Platform Resource Information
@@ -256,8 +251,8 @@ GetRamdiskOSBaseAndSize (
 EFI_STATUS
 EFIAPI
 GetPlatformResourceInformation (
-  IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
-);
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  );
 
 /**
   Get Rootfs Status Register Value
@@ -266,8 +261,8 @@ GetPlatformResourceInformation (
 EFI_STATUS
 EFIAPI
 GetRootfsStatusReg (
-  IN UINT32 *RegisterValue
-);
+  IN UINT32  *RegisterValue
+  );
 
 /**
   Set Rootfs Status Register
@@ -276,7 +271,7 @@ GetRootfsStatusReg (
 EFI_STATUS
 EFIAPI
 SetRootfsStatusReg (
-  IN UINT32 RegisterValue
-);
+  IN UINT32  RegisterValue
+  );
 
 #endif //__PLATFORM_RESOURCE_LIB_H__

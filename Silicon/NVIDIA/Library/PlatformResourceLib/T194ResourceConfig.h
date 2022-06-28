@@ -13,38 +13,27 @@
 
 UINT64
 T194GetDTBBaseAddress (
-  IN UINTN CpuBootloaderAddress
-);
+  IN UINTN  CpuBootloaderAddress
+  );
 
 EFI_STATUS
 EFIAPI
 T194GetCarveoutInfo (
-  IN UINTN               CpuBootloaderAddress,
-  IN TEGRA_CARVEOUT_TYPE Type,
-  IN UINTN               *Base,
-  IN UINT32              *Size
-);
+  IN UINTN                CpuBootloaderAddress,
+  IN TEGRA_CARVEOUT_TYPE  Type,
+  IN UINTN                *Base,
+  IN UINT32               *Size
+  );
 
 TEGRA_BOOT_TYPE
 T194GetBootType (
-  IN UINTN CpuBootloaderAddress
-);
+  IN UINTN  CpuBootloaderAddress
+  );
 
 UINT64
 T194GetGRBlobBaseAddress (
-  IN UINTN CpuBootloaderAddress
-);
-
-/**
-  Retrieve GR Output Base and Size
-
-**/
-BOOLEAN
-T194GetGROutputBaseAndSize (
-  IN  UINTN CpuBootloaderAddress,
-  OUT UINTN *Base,
-  OUT UINTN *Size
-);
+  IN UINTN  CpuBootloaderAddress
+  );
 
 /**
   Retrieve Active Boot Chain Information
@@ -52,10 +41,10 @@ T194GetGROutputBaseAndSize (
 **/
 EFI_STATUS
 EFIAPI
-T194GetActiveBootChain(
+T194GetActiveBootChain (
   IN  UINTN   CpuBootloaderAddress,
   OUT UINT32  *BootChain
-);
+  );
 
 /**
   Validate Active Boot Chain
@@ -63,9 +52,9 @@ T194GetActiveBootChain(
 **/
 EFI_STATUS
 EFIAPI
-T194ValidateActiveBootChain(
-  IN  UINTN   CpuBootloaderAddress
-);
+T194ValidateActiveBootChain (
+  IN  UINTN  CpuBootloaderAddress
+  );
 
 /**
   Get Platform Resource Information
@@ -73,10 +62,10 @@ T194ValidateActiveBootChain(
 **/
 EFI_STATUS
 EFIAPI
-T194GetPlatformResourceInformation(
-  IN UINTN                        CpuBootloaderAddress,
-  IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
-);
+T194GetPlatformResourceInformation (
+  IN UINTN                         CpuBootloaderAddress,
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  );
 
 /**
   Get Rootfs Status Register Value
@@ -84,10 +73,10 @@ T194GetPlatformResourceInformation(
 **/
 EFI_STATUS
 EFIAPI
-T194GetRootfsStatusReg(
-  IN UINTN                        CpuBootloaderAddress,
-  IN UINT32                       *RegisterValue
-);
+T194GetRootfsStatusReg (
+  IN UINTN   CpuBootloaderAddress,
+  IN UINT32  *RegisterValue
+  );
 
 /**
   Set Rootfs Status Register
@@ -95,10 +84,10 @@ T194GetRootfsStatusReg(
 **/
 EFI_STATUS
 EFIAPI
-T194SetRootfsStatusReg(
-  IN UINTN                        CpuBootloaderAddress,
-  IN UINT32                       RegisterValue
-);
+T194SetRootfsStatusReg (
+  IN UINTN   CpuBootloaderAddress,
+  IN UINT32  RegisterValue
+  );
 
 /**
   Set next boot chain
@@ -107,7 +96,7 @@ T194SetRootfsStatusReg(
 EFI_STATUS
 EFIAPI
 T194SetNextBootChain (
-  IN  UINT32    BootChain
+  IN  UINT32  BootChain
   );
 
 #endif //__T194_RESOURCE_CONFIG_H__
