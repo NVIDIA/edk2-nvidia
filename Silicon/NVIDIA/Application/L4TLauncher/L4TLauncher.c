@@ -38,94 +38,8 @@
 
 #include <NVIDIAConfiguration.h>
 #include <libfdt.h>
-
-#define GRUB_PATH                      L"EFI\\BOOT\\grubaa64.efi"
-#define GRUB_BOOTCONFIG_FILE           L"EFI\\BOOT\\boot.cfg"
-#define MAX_BOOTCONFIG_CONTENT_SIZE    512
-#define MAX_CBOOTARG_SIZE              256
-#define GRUB_BOOTCONFIG_CONTENT_FORMAT "set cbootargs=\"%s\"\r\nset root_partition_number=%d\r\nset bootimg_present=%d\r\nset recovery_present=%d\r\n"
-#define DETACHED_SIG_FILE_EXTENSION    L".sig"
-
-#define EXTLINUX_CONF_PATH             L"boot\\extlinux\\extlinux.conf"
-
-#define BOOTMODE_DIRECT_STRING         L"bootmode=direct"
-#define BOOTMODE_GRUB_STRING           L"bootmode=grub"
-#define BOOTMODE_BOOTIMG_STRING        L"bootmode=bootimg"
-#define BOOTMODE_RECOVERY_STRING       L"bootmode=recovery"
-
-#define BOOTCHAIN_OVERRIDE_STRING      L"bootchain="
-
-#define MAX_PARTITION_NAME_SIZE        36 //From the UEFI spec for GPT partitions
-
-#define BOOT_FW_VARIABLE_NAME          L"BootChainFwCurrent"
-#define BOOT_OS_VARIABLE_NAME          L"BootChainOsCurrent"
-#define BOOT_OS_OVERRIDE_VARIABLE_NAME L"BootChainOsOverride"
-
-#define ROOTFS_BASE_NAME               L"APP"
-#define BOOTIMG_BASE_NAME              L"kernel"
-#define RECOVERY_BASE_NAME             L"recovery"
-
-#define EXTLINUX_KEY_TIMEOUT           L"TIMEOUT"
-#define EXTLINUX_KEY_DEFAULT           L"DEFAULT"
-#define EXTLINUX_KEY_MENU_TITLE        L"MENU TITLE"
-#define EXTLINUX_KEY_LABEL             L"LABEL"
-#define EXTLINUX_KEY_MENU_LABEL        L"MENU LABEL"
-#define EXTLINUX_KEY_LINUX             L"LINUX"
-#define EXTLINUX_KEY_INITRD            L"INITRD"
-#define EXTLINUX_KEY_FDT               L"FDT"
-#define EXTLINUX_KEY_APPEND            L"APPEND"
-
-#define EXTLINUX_CBOOT_ARG             L"${cbootargs}"
-
-#define MAX_EXTLINUX_OPTIONS           10
-typedef struct {
-  UINT32 BootMode;
-  UINT32 BootChain;
-} L4T_BOOT_PARAMS;
-
-typedef struct {
-  CHAR16 *Label;
-  CHAR16 *MenuLabel;
-  CHAR16 *LinuxPath;
-  CHAR16 *DtbPath;
-  CHAR16 *InitrdPath;
-  CHAR16 *BootArgs;
-} EXTLINUX_BOOT_OPTION;
-
-typedef struct {
-  UINT32                DefaultBootEntry;
-  CHAR16               *MenuTitle;
-  EXTLINUX_BOOT_OPTION  BootOptions[MAX_EXTLINUX_OPTIONS];
-  UINT32                NumberOfBootOptions;
-  UINT32                Timeout;
-} EXTLINUX_BOOT_CONFIG;
-
-STATIC VOID                      *mRamdiskData = NULL;
-STATIC UINTN                     mRamdiskSize = 0;
-STATIC EFI_SIGNATURE_LIST        **AllowedDB = NULL;
-STATIC EFI_SIGNATURE_LIST        **RevokedDB = NULL;
-
-typedef struct {
-  VENDOR_DEVICE_PATH                      VendorMediaNode;
-  EFI_DEVICE_PATH_PROTOCOL                EndNode;
-} RAMDISK_DEVICE_PATH;
-
-STATIC CONST RAMDISK_DEVICE_PATH mRamdiskDevicePath =
-{
-  {
-    {
-      MEDIA_DEVICE_PATH,
-      MEDIA_VENDOR_DP,
-      { sizeof (VENDOR_DEVICE_PATH), 0 }
-    },
-    LINUX_EFI_INITRD_MEDIA_GUID
-  },
-  {
-    END_DEVICE_PATH_TYPE,
-    END_ENTIRE_DEVICE_PATH_SUBTYPE,
-    { sizeof (EFI_DEVICE_PATH_PROTOCOL), 0 }
-  }
-};
+#include <Library/PlatformResourceLib.h>
+#include "L4TLauncher.h"
 
 /**
   Causes the driver to load a specified file.
@@ -1434,6 +1348,528 @@ Exit:
 
   return Status;
 }
+
+/**
+  Initialize rootfs status register
+
+  @param[in]  RootfsSlot          Rootfs slot
+  @param[in]  RootfsInfo          Value of variable RootfsInfo
+  @param[out] RegisterValueRf     Value of rootfs status register
+
+  @retval EFI_SUCCESS    The operation completed successfully.
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+InitializeRootfsStatusReg (
+  IN  UINT32   RootfsSlot,
+  IN  UINT32   RootfsInfo,
+  OUT UINT32   *RegisterValueRf
+)
+{
+  EFI_STATUS   Status;
+  UINT32       RegisterValue;
+  UINT32       RetryCount;
+  UINT32       MaxRetryCount;
+  UINT32       RootfsStatus;
+
+  Status = GetRootfsStatusReg (&RegisterValue);
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Failed to get rootfs status register\r\n", __FUNCTION__);
+    return Status;
+  }
+
+  if (SR_RF_MAGIC_GET (RegisterValue) == SR_RF_MAGIC) {
+    // Rootfs Status Reg has been properly set in previous boot
+    goto Exit;
+  }
+
+  // This is first boot. Initialize SR_RF
+  RegisterValue = 0;
+
+  // Set magic
+  RegisterValue = SR_RF_MAGIC_SET (RegisterValue);
+
+  RegisterValue = SR_RF_CURRENT_SLOT_SET (RootfsSlot, RegisterValue);
+
+  // Set retry count according to the rootfs status
+  MaxRetryCount = RF_INFO_MAX_RETRY_CNT_GET (RootfsInfo);
+  RootfsStatus = RF_INFO_STATUS_A_GET (RootfsInfo);
+  if (RootfsStatus == ROOTFS_UNBOOTABLE) {
+    RetryCount = 0;
+  } else {
+    RetryCount = MaxRetryCount;
+  }
+  RegisterValue = SR_RF_RETRY_COUNT_A_SET (RetryCount, RegisterValue);
+
+  RootfsStatus = RF_INFO_STATUS_B_GET (RootfsInfo);
+  if (RootfsStatus == ROOTFS_UNBOOTABLE) {
+    RetryCount = 0;
+  } else {
+    RetryCount = MaxRetryCount;
+  }
+  RegisterValue = SR_RF_RETRY_COUNT_B_SET (RetryCount, RegisterValue);
+
+  // Write Rootfs Status register
+  Status = SetRootfsStatusReg (RegisterValue);
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Failed to set Rootfs status register: %r\r\n", __FUNCTION__, Status);
+  }
+
+Exit:
+  *RegisterValueRf = RegisterValue;
+  return Status;
+}
+
+/**
+  Set rootfs status value to RootfsInfo
+
+  @param[in]  RootfsSlot      Current rootfs slot
+  @param[in]  RootfsStatus    Value of rootfs status
+  @param[out] RootfsInfo      The value of RootfsInfo variable
+
+  @retval EFI_SUCCESS            The operation completed successfully.
+  @retval EFI_INVALID_PARAMETER  Input parameter invalid
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+SetStatusToRootfsInfo (
+  IN  UINT32      RootfsSlot,
+  IN  UINT32      RootfsStatus,
+  OUT UINT32      *RootfsInfo
+)
+{
+  if ((RootfsSlot > ROOTFS_SLOT_B) || (RootfsInfo == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (RootfsSlot == ROOTFS_SLOT_A) {
+    *RootfsInfo = RF_INFO_STATUS_A_SET (RootfsStatus, *RootfsInfo);
+  } else {
+    *RootfsInfo = RF_INFO_STATUS_B_SET (RootfsStatus, *RootfsInfo);
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Get rootfs retry count from RootfsInfo
+
+  @param[in]  RootfsInfo          The value of RootfsInfo variable
+  @param[in]  RootfsSlot          Current rootfs slot
+  @param[out] RootfsRetryCount    Rertry count of current RootfsSlot
+
+  @retval EFI_SUCCESS            The operation completed successfully.
+  @retval EFI_INVALID_PARAMETER  Input parameter invalid
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+GetRetryCountFromRootfsInfo (
+  IN  UINT32      RootfsInfo,
+  IN  UINT32      RootfsSlot,
+  OUT UINT32      *RootfsRetryCount
+)
+{
+  if ((RootfsSlot > ROOTFS_SLOT_B) || (RootfsRetryCount == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (RootfsSlot == ROOTFS_SLOT_A) {
+    *RootfsRetryCount = RF_INFO_RETRY_CNT_A_GET (RootfsInfo);
+  } else {
+    *RootfsRetryCount = RF_INFO_RETRY_CNT_B_GET (RootfsInfo);
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Set rootfs retry count value to RootfsInfo
+
+  @param[in]  RootfsSlot          Current rootfs slot
+  @param[in]  RootfsRetryCount    Rootfs retry count of current RootfsSlot
+  @param[out] RootfsInfo          The value of RootfsInfo variable
+
+  @retval EFI_SUCCESS            The operation completed successfully.
+  @retval EFI_INVALID_PARAMETER  Input parameter invalid
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+SetRetryCountToRootfsInfo (
+  IN  UINT32      RootfsSlot,
+  IN  UINT32      RootfsRetryCount,
+  OUT UINT32      *RootfsInfo
+)
+{
+  if ((RootfsSlot > ROOTFS_SLOT_B) || (RootfsInfo == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (RootfsSlot == ROOTFS_SLOT_A) {
+    *RootfsInfo = RF_INFO_RETRY_CNT_A_SET (RootfsRetryCount, *RootfsInfo);
+  } else {
+    *RootfsInfo = RF_INFO_RETRY_CNT_B_SET (RootfsRetryCount, *RootfsInfo);
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Sync the Rootfs status register and RootfsInfo variable according to
+  the specified direction
+
+  @param[in]     Direction          The sync up direction
+  @param[in/out] RegisterValue      The pointer of Rootfs Status register
+  @param[in/out] RootfsInfo         The pointer of RootfsInfo variable
+
+  @retval EFI_SUCCESS    The operation completed successfully.
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+SyncSrRfAndRootfsInfo (
+  IN  UINT32      Direction,
+  OUT UINT32      *RegisterValue,
+  OUT UINT32      *RootfsInfo
+)
+{
+  EFI_STATUS       Status = EFI_SUCCESS;
+  UINT32           RetryCount;
+  UINT32           RootfsSlot;
+
+  switch (Direction) {
+    case FROM_REG_TO_VAR:
+      // Copy RootfsSlot from Scratch Register to variable
+      RootfsSlot = SR_RF_CURRENT_SLOT_GET (*RegisterValue);
+      *RootfsInfo = RF_INFO_CURRENT_SLOT_SET (RootfsSlot, *RootfsInfo);
+
+      // Copy RetryCountA and RetryCountB from Scratch Register to variable
+      RetryCount = SR_RF_RETRY_COUNT_A_GET (*RegisterValue);
+      *RootfsInfo = RF_INFO_RETRY_CNT_A_SET (RetryCount, *RootfsInfo);
+      RetryCount = SR_RF_RETRY_COUNT_B_GET (*RegisterValue);
+      *RootfsInfo = RF_INFO_RETRY_CNT_B_SET (RetryCount, *RootfsInfo);
+      break;
+    case FROM_VAR_TO_REG:
+      // Copy RootfsSlot from variable to Scratch Register
+      RootfsSlot = RF_INFO_CURRENT_SLOT_GET (*RootfsInfo);
+      *RegisterValue = SR_RF_CURRENT_SLOT_SET (RootfsSlot, *RegisterValue);
+
+      // Copy RetryCountA and RetryCountB from Variable to Scratch Register
+      RetryCount = RF_INFO_RETRY_CNT_A_GET (*RootfsInfo);
+      *RegisterValue = SR_RF_RETRY_COUNT_A_SET (RetryCount, *RegisterValue);
+      RetryCount = RF_INFO_RETRY_CNT_B_GET (*RootfsInfo);
+      *RegisterValue = SR_RF_RETRY_COUNT_B_SET (RetryCount, *RegisterValue);
+      break;
+    default:
+      break;
+  }
+
+  return Status;
+}
+
+/**
+  Check if there is valid rootfs or not
+
+  @param[in] RootfsInfo      The value of RootfsInfo variable
+
+  @retval TRUE     There is valid rootfs
+  @retval FALSE    There is no valid rootfs
+
+**/
+STATIC
+BOOLEAN
+EFIAPI
+IsValidRootfs (
+  IN UINT32           RootfsInfo
+)
+{
+  UINT32           AbRedundancyLevel;
+  BOOLEAN          Status = TRUE;
+
+  AbRedundancyLevel = RF_INFO_REDUNDANCY_GET (RootfsInfo);
+
+  if (AbRedundancyLevel == REDUNDANCY_BOOT_ONLY &&
+      RF_INFO_STATUS_A_GET (RootfsInfo) == ROOTFS_UNBOOTABLE) {
+    Status = FALSE;
+  }
+
+  if (AbRedundancyLevel == REDUNDANCY_BOOT_ROOTFS &&
+      RF_INFO_STATUS_A_GET (RootfsInfo) == ROOTFS_UNBOOTABLE &&
+      RF_INFO_STATUS_B_GET (RootfsInfo) == ROOTFS_UNBOOTABLE) {
+    Status = FALSE;
+  }
+
+  return Status;
+}
+
+/**
+  Check RootfsInfo, update the variable if there is any changes
+
+  @param[in] RootfsInfo      The value of RootfsInfo variable
+  @param[in] RootfsInfo      The backup of RootfsInfo
+
+  @retval EFI_SUCCESS    The operation completed successfully.
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+CheckAndUpdateRootfsInfo (
+  IN UINT32           RootfsInfo,
+  IN UINT32           RootfsInfoBackup
+)
+{
+  EFI_STATUS       Status;
+  UINT32           RetryCount;
+  UINT32           DataSize;
+
+  // Sync up the Backup RetryCount
+  RetryCount = RF_INFO_RETRY_CNT_A_GET (RootfsInfo);
+  RootfsInfoBackup = RF_INFO_RETRY_CNT_A_SET (RetryCount, RootfsInfoBackup);
+  RetryCount = RF_INFO_RETRY_CNT_B_GET (RootfsInfo);
+  RootfsInfoBackup = RF_INFO_RETRY_CNT_B_SET (RetryCount, RootfsInfoBackup);
+
+  // Not update RootfsInfo
+  if (RootfsInfo == RootfsInfoBackup) {
+    return EFI_SUCCESS;
+  }
+
+  // RootfsInfo has been changed, update it.
+  DataSize = sizeof (RootfsInfo);
+  Status = gRT->SetVariable (ROOTFS_INFO_VARIABLE_NAME,
+                             &gNVIDIAPublicVariableGuid,
+                             EFI_VARIABLE_BOOTSERVICE_ACCESS|EFI_VARIABLE_RUNTIME_ACCESS|EFI_VARIABLE_NON_VOLATILE,
+                             DataSize,
+                             &RootfsInfo);
+
+  return Status;
+}
+
+/**
+  Check input rootfs slot is bootable or not:
+  If the retry count of rootfs slot is not 0, rootfs slot is bootable, decrease
+  the retry count in RootfsInfo by 1.
+  If the retry count of rootfs slot is 0, rootfs slot is unbootable, set status
+  of the rootfs slot in RootfsInfo to ROOTFS_UNBOOTABLE.
+
+  @param[in] RootfsSlot      The rootfs slot number
+  @param[in] RootfsInfo      The RootfsInfo pointer
+
+  @retval TRUE     The input rootfs slot is bootable
+  @retval FALSE    The input rootfs slot is unbootable
+
+**/
+STATIC
+BOOLEAN
+EFIAPI
+IsRootfsSlotBootable (
+  IN UINT32           RootfsSlot,
+  IN UINT32           *RootfsInfo
+)
+{
+  EFI_STATUS       Status;
+  UINT32           RetryCount;
+  BOOLEAN          Bootable = FALSE;
+
+  Status = GetRetryCountFromRootfsInfo (*RootfsInfo, RootfsSlot, &RetryCount);
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Failed to Get Rootfs retry count of slot %d from RootfsInfo: %r\r\n", __FUNCTION__, RootfsSlot, Status);
+    goto Exit;
+  }
+  // The rootfs slot is bootable.
+  if (RetryCount != 0) {
+    RetryCount--;
+    Status = SetRetryCountToRootfsInfo (RootfsSlot, RetryCount, RootfsInfo);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: Failed to set retry count of slot %d to RootfsInfo: %r\r\n", __FUNCTION__, RootfsSlot, Status);
+      goto Exit;
+    }
+    Bootable = TRUE;
+  } else {
+    // The rootfs slot is unbootable
+    Bootable = FALSE;
+    Status = SetStatusToRootfsInfo (RootfsSlot, ROOTFS_UNBOOTABLE, RootfsInfo);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: Failed to set Rootfs status of slot %d to RootfsInfo: %r\r\n", __FUNCTION__, RootfsSlot, Status);
+      goto Exit;
+    }
+  }
+
+Exit:
+  return Bootable;
+}
+
+/**
+  Validate rootfs A/B status and update BootMode and BootChain accordingly, basic flow:
+  If there is no rootfs B,
+     (1) boot to rootfs A if retry count of rootfs A is not 0;
+     (2) boot to recovery if rtry count of rootfs A is 0.
+  If there is rootfs B,
+     (1) boot to current rootfs slot if the retry count of current slot is not 0;
+     (2) switch to non-current rootfs slot if the retry count of current slot is 0
+         and non-current rootfs is bootable
+     (3) boot to recovery if both rootfs slots are invalid.
+
+  @param[out] BootParams      The current rootfs boot parameters
+
+  @retval EFI_SUCCESS    The operation completed successfully.
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+ValidateRootfsStatus (
+  OUT L4T_BOOT_PARAMS           *BootParams
+)
+{
+
+  EFI_STATUS       Status;
+  UINT32           RegisterValueRf;
+  UINT32           RootfsInfo = 0;
+  UINT32           RootfsInfoBackup;
+  UINTN            DataSize;
+  UINT32           CurrentSlot;
+  UINT32           NonCurrentSlot;
+  UINT32           AbRedundancyLevel;
+  UINT32           BootChainOverride;
+
+  // If boot mode has been set to RECOVERY (via runtime service or UEFI menu),
+  // boot to recovery
+  if (BootParams->BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY) {
+    return EFI_SUCCESS;
+  }
+
+  if (BootParams->BootChain > ROOTFS_SLOT_B) {
+    ErrorPrint (L"%a: Invalid BootChain: %d\r\n", __FUNCTION__, BootParams->BootChain);
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Read RootfsInfo and backup it
+  DataSize = sizeof (RootfsInfo);
+  Status = gRT->GetVariable (ROOTFS_INFO_VARIABLE_NAME,
+                             &gNVIDIAPublicVariableGuid,
+                             NULL,
+                             &DataSize,
+                             &RootfsInfo);
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Failed to get RootfsInfo variable: %r\r\n", __FUNCTION__, Status);
+    goto Exit;
+  }
+
+  RootfsInfoBackup = RootfsInfo;
+
+  // Initilize SR_RF if magic field of SR_RF is invalid
+  Status = InitializeRootfsStatusReg (BootParams->BootChain, RootfsInfo, &RegisterValueRf);
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Failed to initialize rootfs status register: %r\r\n", __FUNCTION__, Status);
+    goto Exit;
+  }
+
+  // Update the RootfsInfo to the latest from:
+  // BootChainOverride, RootfsStatusReg and BootParams->BootChain
+  DataSize = sizeof (BootChainOverride);
+  Status = gRT->GetVariable (BOOT_OS_OVERRIDE_VARIABLE_NAME,
+                             &gNVIDIAPublicVariableGuid,
+                             NULL,
+                             &DataSize,
+                             &BootChainOverride);
+  if (!EFI_ERROR (Status) && (BootChainOverride == NVIDIA_OS_OVERRIDE_DEFAULT)) {
+    RootfsInfo = RF_INFO_SLOT_LINK_FW_SET (RF_INFO_SLOT_LINK_FW, RootfsInfo);
+  } else {
+    RootfsInfo = RF_INFO_SLOT_LINK_FW_SET (RF_INFO_SLOT_NOT_LINK_FW, RootfsInfo);
+  }
+
+  // Three fields are updated from SR_RF:
+  // 1. CurrentSlot
+  // 2. Retry Count A
+  // 3. Retry Count B
+  SyncSrRfAndRootfsInfo (FROM_REG_TO_VAR, &RegisterValueRf, &RootfsInfo);
+
+  // When the BootChainOverride value is 0 or 1, the value is set to BootParams->BootChain
+  // in ProcessBootParams(), before calling ValidateRootfsStatus()
+  RootfsInfo = RF_INFO_CURRENT_SLOT_SET (BootParams->BootChain, RootfsInfo);
+
+  // Set BootMode to RECOVERY if there is no more valid rootfs
+  if (!IsValidRootfs (RootfsInfo)) {
+    BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;
+    return EFI_SUCCESS;
+  }
+
+  // Check redundancy level and validate rootfs status
+  AbRedundancyLevel = RF_INFO_REDUNDANCY_GET (RootfsInfo);
+  CurrentSlot = RF_INFO_CURRENT_SLOT_GET (RootfsInfo);
+
+  switch (AbRedundancyLevel) {
+    case REDUNDANCY_BOOT_ONLY:
+      // There is no rootfs B. Ensure to set rootfs slot to A.
+      if (CurrentSlot != ROOTFS_SLOT_A) {
+        CurrentSlot = ROOTFS_SLOT_A;
+        RootfsInfo = RF_INFO_CURRENT_SLOT_SET (CurrentSlot, RootfsInfo);
+      }
+
+      // If current slot is bootable, go on boot; if current slot is unbootable, boot to recovery kernel.
+      if (!IsRootfsSlotBootable(CurrentSlot, &RootfsInfo)) {
+        BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;
+      }
+      break;
+    case REDUNDANCY_BOOT_ROOTFS:
+      // Redundancy for both bootloader and rootfs.
+      // Go on boot if current slot is bootable.
+      if (!IsRootfsSlotBootable(CurrentSlot, &RootfsInfo)) {
+        // Current slot is unbootable, check non-current slot
+        NonCurrentSlot = !CurrentSlot;
+
+        if (IsRootfsSlotBootable(NonCurrentSlot, &RootfsInfo)) {
+          // Non-current slot is bootable, switch to it.
+          // Change UEFI boot chain (BootParams->BootChain) will be done at the end of this function
+          RootfsInfo = RF_INFO_CURRENT_SLOT_SET (NonCurrentSlot, RootfsInfo);
+        } else {
+          // Non-current slot is unbootable, boot to recovery kernel.
+           BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;
+        }
+      }
+      break;
+    default:
+      ErrorPrint (L"%a: Unsupported A/B redundancy level: %d\r\n", __FUNCTION__, AbRedundancyLevel);
+      break;
+  }
+
+Exit:
+  if (Status == EFI_SUCCESS) {
+    // Sync RootfsInfo to RootfsStatusReg and save to register
+    Status = SyncSrRfAndRootfsInfo (FROM_VAR_TO_REG, &RegisterValueRf, &RootfsInfo);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: Failed to sync RootfsInfo to Rootfs status register: %r\r\n", __FUNCTION__, Status);
+      return Status;
+    }
+    Status = SetRootfsStatusReg (RegisterValueRf);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: Failed to set Rootfs status register (0x%x): %r\r\n", __FUNCTION__, RegisterValueRf, Status);
+      return Status;
+    }
+
+    // Update BootParams->BootChain
+    BootParams->BootChain = RF_INFO_CURRENT_SLOT_GET (RootfsInfo);
+
+    // Set RootfsInfo variable if it is changed (Check RootfsInfo except
+    // the RetryCount field, it is decreased in every normal boot).
+    Status = CheckAndUpdateRootfsInfo (RootfsInfo, RootfsInfoBackup);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: Failed to check and update RootfsInfo: %r\r\n", __FUNCTION__, Status);
+    }
+  }
+
+  return Status;
+}
+
 /**
   Process the boot mode selection from command line and variables
 
@@ -1523,6 +1959,12 @@ ProcessBootParams (
         ErrorPrint (L"Boot chain override value out of range, ignoring\r\n");
       }
     }
+  }
+
+  // Find valid Rootfs Chain. If not, select recovery kernel
+  Status = ValidateRootfsStatus(BootParams);
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"Failed to validate rootfs status: %r\r\n", Status);
   }
 
   //Store the current boot chain in volatile variable to allow chain loading
