@@ -580,3 +580,36 @@ T234GetPlatformResourceInformation(
 
   return EFI_SUCCESS;
 }
+
+/**
+  Get Rootfs Status Register
+
+**/
+EFI_STATUS
+EFIAPI
+T234GetRootfsStatusReg(
+  IN  UINTN                       CpuBootloaderAddress,
+  OUT UINT32                      *RegisterValue
+)
+{
+  *RegisterValue = MmioRead32 (FixedPcdGet64(PcdRootfsRegisterBaseAddressT234));
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Set Rootfs Status Register
+
+**/
+EFI_STATUS
+EFIAPI
+T234SetRootfsStatusReg(
+  IN  UINTN                       CpuBootloaderAddress,
+  IN  UINT32                      RegisterValue
+)
+{
+
+  MmioWrite32 (FixedPcdGet64(PcdRootfsRegisterBaseAddressT234), RegisterValue);
+
+  return EFI_SUCCESS;
+}

@@ -78,4 +78,26 @@ T194GetPlatformResourceInformation(
   IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
 );
 
+/**
+  Get Rootfs Status Register Value
+
+**/
+EFI_STATUS
+EFIAPI
+T194GetRootfsStatusReg(
+  IN UINTN                        CpuBootloaderAddress,
+  IN UINT32                       *RegisterValue
+);
+
+/**
+  Set Rootfs Status Register
+
+**/
+EFI_STATUS
+EFIAPI
+T194SetRootfsStatusReg(
+  IN UINTN                        CpuBootloaderAddress,
+  IN UINT32                       RegisterValue
+);
+
 #endif //__T194_RESOURCE_CONFIG_H__

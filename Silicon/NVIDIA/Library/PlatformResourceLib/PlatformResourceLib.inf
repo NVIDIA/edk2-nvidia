@@ -43,3 +43,5 @@
   gNVIDIATokenSpaceGuid.PcdBootROMRegisterBaseAddressT194
   gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT194
   gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT234
+  gNVIDIATokenSpaceGuid.PcdRootfsRegisterBaseAddressT194
+  gNVIDIATokenSpaceGuid.PcdRootfsRegisterBaseAddressT234

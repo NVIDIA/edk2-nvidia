@@ -266,11 +266,17 @@
 # Tegra BootLoader Scratch Register Address T234
   gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT234|0x0C3903A4|UINT64|0x0000002A
 
+# Tegra Rootfs Status Register Address T234
+  gNVIDIATokenSpaceGuid.PcdRootfsRegisterBaseAddressT234|0x0C3903A8|UINT64|0x0000006A
+
 # Tegra BootROM Selection Register Address T194
   gNVIDIATokenSpaceGuid.PcdBootROMRegisterBaseAddressT194|0x0C390568|UINT64|0x00000065
 
 # Tegra BootLoader Selection Register Address T194
   gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT194|0x0C390418|UINT64|0x0000005D
+
+# Tegra Rootfs Status Register Address T194
+  gNVIDIATokenSpaceGuid.PcdRootfsRegisterBaseAddressT194|0x0C39041C|UINT64|0x00000069
 
 # Name of kernel GPT partition
   gNVIDIATokenSpaceGuid.PcdKernelPartitionName|L"kernel"|VOID*|0x0000003F

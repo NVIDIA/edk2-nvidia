@@ -244,4 +244,24 @@ GetPlatformResourceInformation (
   IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
 );
 
+/**
+  Get Rootfs Status Register Value
+
+**/
+EFI_STATUS
+EFIAPI
+GetRootfsStatusReg (
+  IN UINT32 *RegisterValue
+);
+
+/**
+  Set Rootfs Status Register
+
+**/
+EFI_STATUS
+EFIAPI
+SetRootfsStatusReg (
+  IN UINT32 RegisterValue
+);
+
 #endif //__PLATFORM_RESOURCE_LIB_H__

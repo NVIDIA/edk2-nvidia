@@ -507,3 +507,49 @@ GetPlatformResourceInformation (
       return EFI_UNSUPPORTED;
   }
 }
+
+EFI_STATUS
+EFIAPI
+GetRootfsStatusReg (
+  IN UINT32    *RegisterValue
+)
+{
+  UINTN           ChipID;
+  UINTN           CpuBootloaderAddress;
+
+  ChipID = TegraGetChipID();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      return T234GetRootfsStatusReg(CpuBootloaderAddress, RegisterValue);
+    case T194_CHIP_ID:
+      return T194GetRootfsStatusReg(CpuBootloaderAddress, RegisterValue);
+    default:
+      return EFI_UNSUPPORTED;
+  }
+}
+
+EFI_STATUS
+EFIAPI
+SetRootfsStatusReg (
+  IN UINT32    RegisterValue
+)
+{
+  UINTN           ChipID;
+  UINTN           CpuBootloaderAddress;
+
+  ChipID = TegraGetChipID();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      return T234SetRootfsStatusReg(CpuBootloaderAddress, RegisterValue);
+    case T194_CHIP_ID:
+      return T194SetRootfsStatusReg(CpuBootloaderAddress, RegisterValue);
+    default:
+      return EFI_UNSUPPORTED;
+  }
+}
