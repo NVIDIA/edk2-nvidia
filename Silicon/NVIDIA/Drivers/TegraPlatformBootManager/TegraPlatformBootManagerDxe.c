@@ -747,6 +747,28 @@ RefreshNvBootOptions (
     return EFI_INVALID_PARAMETER;
   }
 
+  if (PcdGet8 (PcdNewDeviceHierarchy)) {
+    NvBootOptions = NULL;
+    NvBootOptions = EfiBootManagerGetLoadOptions (&NvBootOptionsCount,
+                                                  LoadOptionTypeBoot);
+
+    if (NvBootOptionsCount == 0 ||
+        NvBootOptions == NULL) {
+      return EFI_SUCCESS;
+    }
+
+    for (Index = 0; Index < BootOptionsCount; Index++) {
+      if (EfiBootManagerFindLoadOption (&BootOptions[Index], NvBootOptions, NvBootOptionsCount) == -1) {
+        Status = EfiBootManagerAddLoadOptionVariable (&BootOptions[Index], 0);
+        if (EFI_ERROR (Status)) {
+          goto Error;
+        }
+      }
+    }
+
+    EfiBootManagerFreeLoadOptions (NvBootOptions, NvBootOptionsCount);
+  }
+
   NvBootOptions = NULL;
   NvBootOptions = EfiBootManagerGetLoadOptions (&NvBootOptionsCount,
                                                 LoadOptionTypeBoot);

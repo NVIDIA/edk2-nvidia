@@ -37,6 +37,11 @@ formset
     name  = QuickBootEnabled,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+  efivarstore NVIDIA_NEW_DEVICE_HIERARCHY,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name  = NewDeviceHierarchy,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
   efivarstore NVIDIA_SERIAL_TYPE_CONFIG,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS,  // EFI variable attributes
     name  = SerialTypeConfig,
@@ -77,6 +82,15 @@ formset
         flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
         option text = STRING_TOKEN(STR_DISABLED), value = QUICK_BOOT_DISABLE, flags = 0;
         option text = STRING_TOKEN(STR_ENABLED),  value = QUICK_BOOT_ENABLE, flags = 0;
+    endoneof;
+
+    oneof varid = NewDeviceHierarchy.Hierarchy,
+        questionid = KEY_NEW_DEVICE_HIERARCHY,
+        prompt = STRING_TOKEN(STR_NEW_DEVICE_HIERARCHY_PROMPT),
+        help   = STRING_TOKEN(STR_NEW_DEVICE_HIERARCHY_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_BOTTOM), value = NEW_DEVICE_HIERARCHY_BOTTOM, flags = 0;
+        option text = STRING_TOKEN(STR_TOP),  value = NEW_DEVICE_HIERARCHY_TOP, flags = 0;
     endoneof;
 
     oneof varid = SerialPortConfig.Configuration,

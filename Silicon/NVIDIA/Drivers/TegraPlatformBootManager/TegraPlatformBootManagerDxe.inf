@@ -31,6 +31,9 @@
   PlatformResourceLib
   FdtLib
 
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy
+
 [Protocols]
   gEfiLoadFileProtocolGuid
   gEfiFirmwareVolume2ProtocolGuid
@@ -50,4 +53,5 @@
   gEfiEndOfDxeEventGroupGuid
 
 [Depex]
-  TRUE
+  gEfiVariableArchProtocolGuid        AND
+  gEfiVariableWriteArchProtocolGuid

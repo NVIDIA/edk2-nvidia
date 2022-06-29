@@ -57,6 +57,7 @@
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
+  gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig
   gNVIDIATokenSpaceGuid.PcdOsChainOverride

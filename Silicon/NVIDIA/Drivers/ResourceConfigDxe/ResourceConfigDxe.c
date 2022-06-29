@@ -101,6 +101,9 @@ InitializeSettings (
   // Initialize Quick Boot Form Settings
   PcdSet8S (PcdQuickBootEnabled, PcdGet8 (PcdQuickBootEnabled));
 
+  // Initialize New Device Hierarchy Form Settings
+  PcdSet8S (PcdNewDeviceHierarchy, PcdGet8 (PcdNewDeviceHierarchy));
+
   // Initialize OS Selection Form Settings
   PcdSet32S (PcdOsChainOverride, PcdGet32 (PcdOsChainOverride));
 

@@ -2,7 +2,7 @@
 *
 *  String definitions for the OEM Config.
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -21,6 +21,8 @@
 #string STR_PCIE_IN_OS_HELP              #language en-US "Enable/Disable PCIe's ACPI Entry to be exposed to the O/S."
 #string STR_QUICK_BOOT_ENABLED_PROMPT    #language en-US "Enable UEFI Quick Boot"
 #string STR_QUICK_BOOT_ENABLED_HELP      #language en-US "Enable/Disable UEFI full device enumeration."
+#string STR_NEW_DEVICE_HIERARCHY_PROMPT  #language en-US "Add new devices to top or bottom of boot order"
+#string STR_NEW_DEVICE_HIERARCHY_HELP    #language en-US "Used to decide whether a new boot option is added at the top or bottom of the list."
 #string STR_SERIAL_PORT_CONFIG_PROMPT    #language en-US "Serial Port Configuration"
 #string STR_SERIAL_PORT_CONFIG_HELP      #language en-US "Used to select serial port configuration."
 #string STR_KERNEL_CMDLINE_PROMPT        #language en-US "Append to Kernel Command Line"
@@ -34,6 +36,9 @@
 
 #string STR_DISABLED                     #language en-US  "Disabled"
 #string STR_ENABLED                      #language en-US  "Enabled"
+
+#string STR_BOTTOM                       #language en-US  "Bottom"
+#string STR_TOP                          #language en-US  "Top"
 
 #string STR_SP_DISABLED                  #language en-US  "Port Disabled"
 #string STR_SP_ENABLED_SPCR_FULL_16550   #language en-US  "Console Enabled - 16550"

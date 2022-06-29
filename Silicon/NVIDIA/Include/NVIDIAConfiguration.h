@@ -53,6 +53,10 @@ typedef struct {
 } NVIDIA_QUICK_BOOT_ENABLED;
 
 typedef struct {
+  UINT8 Hierarchy;
+} NVIDIA_NEW_DEVICE_HIERARCHY;
+
+typedef struct {
   UINT8 Type;
 } NVIDIA_SERIAL_TYPE_CONFIG;
 typedef struct {

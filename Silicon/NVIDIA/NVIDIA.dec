@@ -418,3 +418,6 @@
 
 #MPIDR generation
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE|BOOLEAN|0x00000060
+
+#Option to add new boot device at top or bottom of list
+  gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy|0x01|UINT8|0x00000068
