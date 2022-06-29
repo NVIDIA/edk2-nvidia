@@ -17,6 +17,7 @@
 
 [Sources]
   AcpiBoot.dts
+  L4TConfiguration.dts
 
 [Packages]
   MdePkg/MdePkg.dec
