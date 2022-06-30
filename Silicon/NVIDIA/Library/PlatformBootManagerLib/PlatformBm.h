@@ -22,9 +22,9 @@
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 
-#define UEFI_VERSION_STRING_SIZE            100
+#define UEFI_VERSION_STRING_SIZE  100
 
-#define PLATFORM_CONFIG_DATA_VARIABLE_NAME   L"PlatformConfigData"
+#define PLATFORM_CONFIG_DATA_VARIABLE_NAME  L"PlatformConfigData"
 
 typedef enum {
   OS_USE_DT,
@@ -32,9 +32,9 @@ typedef enum {
 } OS_HARDWARE_DESCRIPTION;
 
 typedef struct {
-  UINT8                   DtbHash[SHA256_DIGEST_SIZE];
-  CHAR8                   UEFIVersion[UEFI_VERSION_STRING_SIZE];
-  OS_HARDWARE_DESCRIPTION OsHardwareDescription;
+  UINT8                      DtbHash[SHA256_DIGEST_SIZE];
+  CHAR8                      UEFIVersion[UEFI_VERSION_STRING_SIZE];
+  OS_HARDWARE_DESCRIPTION    OsHardwareDescription;
 } PLATFORM_CONFIGURATION_DATA;
 
 /**
