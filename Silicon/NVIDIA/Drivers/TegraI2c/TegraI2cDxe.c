@@ -26,26 +26,25 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include "TegraI2c.h"
 
-
-NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
+NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-i2c", &gNVIDIANonDiscoverableI2cDeviceGuid },
   { "nvidia,tegra234-i2c", &gNVIDIANonDiscoverableI2cDeviceGuid },
-  { NULL, NULL }
+  { NULL,                  NULL                                 }
 };
 
-NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-    .DriverName = L"NVIDIA Tegra I2C controller driver",
-    .UseDriverBinding = TRUE,
-    .AutoEnableClocks = TRUE,
-    .AutoResetModule = TRUE,
-    .SkipEdkiiNondiscoverableInstall = TRUE,
+NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
+  .DriverName                      = L"NVIDIA Tegra I2C controller driver",
+  .UseDriverBinding                = TRUE,
+  .AutoEnableClocks                = TRUE,
+  .AutoResetModule                 = TRUE,
+  .SkipEdkiiNondiscoverableInstall = TRUE,
 };
 
 STATIC
-CONTROLLER_DEVICE_PATH ControllerNode = {
+CONTROLLER_DEVICE_PATH  ControllerNode = {
   {
     HARDWARE_DEVICE_PATH, HW_CONTROLLER_DP,
-    {(UINT8)(sizeof (CONTROLLER_DEVICE_PATH)), (UINT8)((sizeof (CONTROLLER_DEVICE_PATH)) >> 8)}
+    { (UINT8)(sizeof (CONTROLLER_DEVICE_PATH)), (UINT8)((sizeof (CONTROLLER_DEVICE_PATH)) >> 8) }
   },
   0
 };
@@ -66,11 +65,11 @@ CONTROLLER_DEVICE_PATH ControllerNode = {
 STATIC
 EFI_STATUS
 TegraI2cLoadConfiguration (
-  IN NVIDIA_TEGRA_I2C_PRIVATE_DATA   *Private
+  IN NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private
   )
 {
-  UINT32                        Data32;
-  UINTN                         Timeout = I2C_I2C_CONFIG_LOAD_0_TIMEOUT*1000;
+  UINT32  Data32;
+  UINTN   Timeout = I2C_I2C_CONFIG_LOAD_0_TIMEOUT*1000;
 
   if (Private == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -79,6 +78,7 @@ TegraI2cLoadConfiguration (
   if (!Private->ConfigurationChanged) {
     return EFI_SUCCESS;
   }
+
   Private->ConfigurationChanged = FALSE;
 
   Data32 = I2C_I2C_CONFIG_LOAD_0_MSTR_CONFIG_LOAD;
@@ -87,12 +87,13 @@ TegraI2cLoadConfiguration (
   do {
     MicroSecondDelay (1);
     Data32 = MmioRead32 (Private->BaseAddress + I2C_I2C_CONFIG_LOAD_0_OFFSET);
-    Timeout --;
+    Timeout--;
     if (Timeout == 0) {
       DEBUG ((DEBUG_ERROR, "%a: Configuration load timeout %x\r\n", __FUNCTION__, Data32));
       return EFI_TIMEOUT;
     }
   } while (Data32 != 0);
+
   return EFI_SUCCESS;
 }
 
@@ -123,25 +124,26 @@ TegraI2cLoadConfiguration (
 **/
 EFI_STATUS
 TegraI2cSetBusFrequency (
-  IN CONST EFI_I2C_MASTER_PROTOCOL   *This,
-  IN OUT UINTN                       *BusClockHertz
+  IN CONST EFI_I2C_MASTER_PROTOCOL  *This,
+  IN OUT UINTN                      *BusClockHertz
   )
 {
-  NVIDIA_TEGRA_I2C_PRIVATE_DATA *Private = NULL;
-  UINT32                        Data32;
-  EFI_STATUS                    Status;
-  UINT8                         TLow;
-  UINT8                         THigh;
-  UINT32                        ClockDivisor;
-  UINT32                        ClockMultiplier;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
+  UINT32                         Data32;
+  EFI_STATUS                     Status;
+  UINT8                          TLow;
+  UINT8                          THigh;
+  UINT32                         ClockDivisor;
+  UINT32                         ClockMultiplier;
 
   if ((This == NULL) ||
-      (BusClockHertz == NULL)) {
+      (BusClockHertz == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER(This);
-  //Load relevent prod settings
+  Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER (This);
+  // Load relevent prod settings
   Status = DeviceDiscoverySetProd (Private->ControllerHandle, Private->DeviceTreeNode, "prod");
   if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to set prod settings (%r)\r\n", __FUNCTION__, Status));
@@ -154,6 +156,7 @@ TegraI2cSetBusFrequency (
       DEBUG ((DEBUG_ERROR, "%a: Failed to set HS prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
+
     ClockDivisor = 0x2;
   } else if (*BusClockHertz >= FM_PLUS_SPEED) {
     Status = DeviceDiscoverySetProd (Private->ControllerHandle, Private->DeviceTreeNode, "prod_c_fmplus");
@@ -161,6 +164,7 @@ TegraI2cSetBusFrequency (
       DEBUG ((DEBUG_ERROR, "%a: Failed to set FM+ prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
+
     ClockDivisor = 0x10;
   } else if (*BusClockHertz >= FM_SPEED) {
     Status = DeviceDiscoverySetProd (Private->ControllerHandle, Private->DeviceTreeNode, "prod_c_fm");
@@ -168,6 +172,7 @@ TegraI2cSetBusFrequency (
       DEBUG ((DEBUG_ERROR, "%a: Failed to set FM prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
+
     ClockDivisor = 0x19;
   } else {
     Status = DeviceDiscoverySetProd (Private->ControllerHandle, Private->DeviceTreeNode, "prod_c_sm");
@@ -175,23 +180,23 @@ TegraI2cSetBusFrequency (
       DEBUG ((DEBUG_ERROR, "%a: Failed to set SM prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
+
     ClockDivisor = 0x19;
   }
 
   if (*BusClockHertz < HS_SPEED) {
     Private->HighSpeed = FALSE;
-    Data32 = MmioRead32 (Private->BaseAddress + I2C_I2C_INTERFACE_TIMING_0_OFFSET);
-    TLow = (Data32 & I2C_I2C_INTERFACE_TIMING_0_TLOW_MASK) >> I2C_I2C_INTERFACE_TIMING_0_TLOW_SHIFT;
-    THigh = (Data32 & I2C_I2C_INTERFACE_TIMING_0_THIGH_MASK) >> I2C_I2C_INTERFACE_TIMING_0_THIGH_SHIFT;
+    Data32             = MmioRead32 (Private->BaseAddress + I2C_I2C_INTERFACE_TIMING_0_OFFSET);
+    TLow               = (Data32 & I2C_I2C_INTERFACE_TIMING_0_TLOW_MASK) >> I2C_I2C_INTERFACE_TIMING_0_TLOW_SHIFT;
+    THigh              = (Data32 & I2C_I2C_INTERFACE_TIMING_0_THIGH_MASK) >> I2C_I2C_INTERFACE_TIMING_0_THIGH_SHIFT;
   } else {
     Private->HighSpeed = TRUE;
-    Data32 = MmioRead32 (Private->BaseAddress + I2C_I2C_HS_INTERFACE_TIMING_0_OFFSET);
-    TLow = (Data32 & I2C_I2C_HS_INTERFACE_TIMING_0_TLOW_MASK) >> I2C_I2C_HS_INTERFACE_TIMING_0_TLOW_SHIFT;
-    THigh = (Data32 & I2C_I2C_HS_INTERFACE_TIMING_0_THIGH_MASK) >> I2C_I2C_HS_INTERFACE_TIMING_0_THIGH_SHIFT;
+    Data32             = MmioRead32 (Private->BaseAddress + I2C_I2C_HS_INTERFACE_TIMING_0_OFFSET);
+    TLow               = (Data32 & I2C_I2C_HS_INTERFACE_TIMING_0_TLOW_MASK) >> I2C_I2C_HS_INTERFACE_TIMING_0_TLOW_SHIFT;
+    THigh              = (Data32 & I2C_I2C_HS_INTERFACE_TIMING_0_THIGH_MASK) >> I2C_I2C_HS_INTERFACE_TIMING_0_THIGH_SHIFT;
   }
 
   ClockMultiplier = (TLow + THigh + 2) * (ClockDivisor + 1);
-
 
   Status = DeviceDiscoverySetClockFreq (Private->ControllerHandle, "div-clk", *BusClockHertz * ClockMultiplier);
   if (EFI_ERROR (Status)) {
@@ -199,19 +204,22 @@ TegraI2cSetBusFrequency (
     return Status;
   }
 
-
   if (*BusClockHertz < HS_SPEED) {
-    MmioAndThenOr32 (Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET,
-                     ~I2C_CLK_DIVISOR_STD_FAST_MODE_MASK,
-                     ClockDivisor << I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT);
+    MmioAndThenOr32 (
+      Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET,
+      ~I2C_CLK_DIVISOR_STD_FAST_MODE_MASK,
+      ClockDivisor << I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT
+      );
   } else {
-    MmioAndThenOr32 (Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET,
-                     ~I2C_CLK_DIVISOR_HSMODE_MASK,
-                     ClockDivisor << I2C_CLK_DIVISOR_HSMODE_SHIFT);
+    MmioAndThenOr32 (
+      Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET,
+      ~I2C_CLK_DIVISOR_HSMODE_MASK,
+      ClockDivisor << I2C_CLK_DIVISOR_HSMODE_SHIFT
+      );
   }
 
   Private->ConfigurationChanged = TRUE;
-  Status = TegraI2cLoadConfiguration (Private);
+  Status                        = TegraI2cLoadConfiguration (Private);
 
   return Status;
 }
@@ -233,78 +241,82 @@ TegraI2cSetBusFrequency (
 **/
 EFI_STATUS
 TegraI2cReset (
-  IN CONST EFI_I2C_MASTER_PROTOCOL *This
+  IN CONST EFI_I2C_MASTER_PROTOCOL  *This
   )
 {
-  NVIDIA_TEGRA_I2C_PRIVATE_DATA *Private = NULL;
-  UINT32                        Data32;
-  UINTN                         Timeout;
-  EFI_STATUS                    Status;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
+  UINT32                         Data32;
+  UINTN                          Timeout;
+  EFI_STATUS                     Status;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
+  Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER (This);
 
-  Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER(This);
-
-  MmioWrite32 (Private->BaseAddress + I2C_MST_FIFO_CONTROL_0_OFFSET,
-                (7 << TX_FIFO_TRIG_SHIFT) |
-                (0 << RX_FIFO_TRIG_SHIFT) |
-                TX_FIFO_FLUSH |
-                RX_FIFO_FLUSH);
+  MmioWrite32 (
+    Private->BaseAddress + I2C_MST_FIFO_CONTROL_0_OFFSET,
+    (7 << TX_FIFO_TRIG_SHIFT) |
+    (0 << RX_FIFO_TRIG_SHIFT) |
+    TX_FIFO_FLUSH |
+    RX_FIFO_FLUSH
+    );
 
   Timeout = I2C_TIMEOUT;
   do {
     Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_CONTROL_0_OFFSET);
     Data32 = (Data32 & (TX_FIFO_FLUSH|RX_FIFO_FLUSH));
     if (Data32 != 0) {
-     MicroSecondDelay (1);
-     Timeout--;
-     if (Timeout == 0) {
-       DEBUG ((DEBUG_ERROR, "%a: Timeout waiting for FIFO flush\r\n", __FUNCTION__));
-       Status = EFI_TIMEOUT;
-       return Status;
-     }
+      MicroSecondDelay (1);
+      Timeout--;
+      if (Timeout == 0) {
+        DEBUG ((DEBUG_ERROR, "%a: Timeout waiting for FIFO flush\r\n", __FUNCTION__));
+        Status = EFI_TIMEOUT;
+        return Status;
+      }
     }
   } while (Data32 != 0);
 
   Timeout = I2C_TIMEOUT;
-  Data32 = BC_TERMINATE_IMMEDIATE;
+  Data32  = BC_TERMINATE_IMMEDIATE;
   MmioWrite32 (Private->BaseAddress + I2C_I2C_BUS_CLEAR_CONFIG_0_OFFSET, Data32);
   Status = TegraI2cLoadConfiguration (Private);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to update configuration (%r)\r\n", __FUNCTION__, Status));
     return Status;
   }
+
   Data32 |= BC_ENABLE;
   MmioWrite32 (Private->BaseAddress + I2C_I2C_BUS_CLEAR_CONFIG_0_OFFSET, Data32);
   Data32 = MmioRead32 (Private->BaseAddress + I2C_I2C_BUS_CLEAR_CONFIG_0_OFFSET);
   while ((Data32 & BC_ENABLE) != 0) {
-      MicroSecondDelay(1);
-      Timeout--;
-      if (Timeout == 0) {
-        DEBUG ((DEBUG_ERROR, "%a: Failed to clear bus\r\n",__FUNCTION__));
-        return EFI_TIMEOUT;
-      }
-      Data32 = MmioRead32 (Private->BaseAddress + I2C_I2C_BUS_CLEAR_CONFIG_0_OFFSET);
+    MicroSecondDelay (1);
+    Timeout--;
+    if (Timeout == 0) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to clear bus\r\n", __FUNCTION__));
+      return EFI_TIMEOUT;
+    }
+
+    Data32 = MmioRead32 (Private->BaseAddress + I2C_I2C_BUS_CLEAR_CONFIG_0_OFFSET);
   }
+
   return EFI_SUCCESS;
 }
 
 STATIC
 EFI_STATUS
 TegraI2cSendHeader (
-  IN NVIDIA_TEGRA_I2C_PRIVATE_DATA *Private,
-  IN UINTN                         SlaveAddress,
-  IN UINT32                        PayloadSize,
-  IN BOOLEAN                       ReadOperation,
-  IN BOOLEAN                       LastOperation,
-  IN BOOLEAN                       ContinueTransfer
+  IN NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private,
+  IN UINTN                          SlaveAddress,
+  IN UINT32                         PayloadSize,
+  IN BOOLEAN                        ReadOperation,
+  IN BOOLEAN                        LastOperation,
+  IN BOOLEAN                        ContinueTransfer
   )
 {
-  UINT32 PacketHeader[3];
-  EFI_STATUS Status;
+  UINT32      PacketHeader[3];
+  EFI_STATUS  Status;
 
   if (PayloadSize > MAX_UINT16) {
     return EFI_INVALID_PARAMETER;
@@ -327,19 +339,24 @@ TegraI2cSendHeader (
   if (Private->HighSpeed) {
     PacketHeader[2] |= I2C_HEADER_HIGHSPEED_MODE;
   }
+
   if (ReadOperation) {
     PacketHeader[2] |= I2C_HEADER_READ;
     PacketHeader[2] |= BIT0;
   }
+
   if ((SlaveAddress & I2C_ADDRESSING_10_BIT) != 0) {
     PacketHeader[2] |= I2C_HEADER_10BIT_ADDR;
   }
+
   if (!LastOperation) {
     PacketHeader[2] |= I2C_HEADER_REPEAT_START;
   }
+
   if (ContinueTransfer) {
     PacketHeader[2] |= I2C_HEADER_CONTINUE_XFER;
   }
+
   PacketHeader[2] |= ((SlaveAddress << I2C_HEADER_SLAVE_ADDR_SHIFT) & I2C_HEADER_SLAVE_ADDR_MASK);
   MmioWrite32 (Private->BaseAddress + I2C_INTERRUPT_STATUS_REGISTER_0_OFFSET, MAX_UINT32);
   MmioWrite32 (Private->BaseAddress + I2C_I2C_TX_PACKET_FIFO_0_OFFSET, PacketHeader[0]);
@@ -424,30 +441,32 @@ TegraI2cSendHeader (
 **/
 EFI_STATUS
 TegraI2cStartRequest (
-  IN CONST EFI_I2C_MASTER_PROTOCOL *This,
-  IN UINTN                         SlaveAddress,
-  IN EFI_I2C_REQUEST_PACKET        *RequestPacket,
-  IN EFI_EVENT                     Event      OPTIONAL,
-  OUT EFI_STATUS                   *I2cStatus OPTIONAL
+  IN CONST EFI_I2C_MASTER_PROTOCOL  *This,
+  IN UINTN                          SlaveAddress,
+  IN EFI_I2C_REQUEST_PACKET         *RequestPacket,
+  IN EFI_EVENT                      Event      OPTIONAL,
+  OUT EFI_STATUS                    *I2cStatus OPTIONAL
   )
 {
-  NVIDIA_TEGRA_I2C_PRIVATE_DATA *Private = NULL;
-  EFI_STATUS                    Status;
-  UINTN                         PacketIndex = 0;
-  BOOLEAN                       BlockTransfer = FALSE;
-  BOOLEAN                       LastOperation;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
+  EFI_STATUS                     Status;
+  UINTN                          PacketIndex   = 0;
+  BOOLEAN                        BlockTransfer = FALSE;
+  BOOLEAN                        LastOperation;
 
   if ((This == NULL) ||
       (RequestPacket == NULL) ||
-      (RequestPacket->OperationCount == 0)) {
+      (RequestPacket->OperationCount == 0))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER(This);
-  //Do not currently support PEC
+  Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER (This);
+  // Do not currently support PEC
   if ((RequestPacket->Operation[0].Flags & I2C_FLAG_SMBUS_PEC) != 0) {
     return EFI_UNSUPPORTED;
   }
+
   if ((RequestPacket->Operation[0].Flags & I2C_FLAG_SMBUS_BLOCK) != 0) {
     BlockTransfer = TRUE;
   }
@@ -459,12 +478,12 @@ TegraI2cStartRequest (
   }
 
   for (PacketIndex = 0; PacketIndex < RequestPacket->OperationCount; PacketIndex++) {
-    BOOLEAN ContinueTransfer = FALSE;
-    BOOLEAN ReadOperation;
-    UINT32  LengthRemaining = RequestPacket->Operation[PacketIndex].LengthInBytes;
-    UINT32  Data32;
-    UINT32  BufferOffset = 0;
-    UINT32 Timeout;
+    BOOLEAN  ContinueTransfer = FALSE;
+    BOOLEAN  ReadOperation;
+    UINT32   LengthRemaining = RequestPacket->Operation[PacketIndex].LengthInBytes;
+    UINT32   Data32;
+    UINT32   BufferOffset = 0;
+    UINT32   Timeout;
 
     if ((RequestPacket->Operation[PacketIndex].Flags & I2C_FLAG_READ) != 0) {
       ReadOperation = TRUE;
@@ -475,12 +494,13 @@ TegraI2cStartRequest (
     LastOperation = (PacketIndex == (RequestPacket->OperationCount - 1));
 
     do {
-      UINT32 PayloadSize  = 0;
+      UINT32  PayloadSize = 0;
       if (!ReadOperation) {
         PayloadSize = MIN (LengthRemaining, I2C_MAX_PACKET_SIZE - I2C_PACKET_HEADER_SIZE);
         if (BufferOffset != 0) {
           ContinueTransfer = TRUE;
         }
+
         Status = TegraI2cSendHeader (Private, SlaveAddress, PayloadSize, ReadOperation, LastOperation, ContinueTransfer);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "%a: Header send failed (%r)\r\n", __FUNCTION__, Status));
@@ -488,7 +508,7 @@ TegraI2cStartRequest (
         }
 
         while (PayloadSize != 0) {
-          UINT32 WriteSize = MIN (sizeof(UINT32), PayloadSize);
+          UINT32  WriteSize = MIN (sizeof (UINT32), PayloadSize);
           Timeout = I2C_TIMEOUT;
           do {
             Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_STATUS_0_OFFSET);
@@ -505,28 +525,31 @@ TegraI2cStartRequest (
           } while (Data32 == 0);
 
           Data32 = 0;
-          CopyMem ((VOID *)&Data32,
-                   RequestPacket->Operation[PacketIndex].Buffer + BufferOffset,
-                   WriteSize);
+          CopyMem (
+            (VOID *)&Data32,
+            RequestPacket->Operation[PacketIndex].Buffer + BufferOffset,
+            WriteSize
+            );
           MmioWrite32 (Private->BaseAddress + I2C_I2C_TX_PACKET_FIFO_0_OFFSET, Data32);
-          PayloadSize -= WriteSize;
+          PayloadSize     -= WriteSize;
           LengthRemaining -= WriteSize;
-          BufferOffset += WriteSize;
+          BufferOffset    += WriteSize;
         }
-
       } else {
-        UINT32 ReadPacketSize;
+        UINT32  ReadPacketSize;
         if ((BufferOffset == 0) && BlockTransfer) {
           ReadPacketSize = 1;
         } else {
           ReadPacketSize = MIN (LengthRemaining, I2C_MAX_PACKET_SIZE);
         }
+
         if (BufferOffset != 0) {
           ContinueTransfer = TRUE;
         }
+
         Status = TegraI2cSendHeader (Private, SlaveAddress, ReadPacketSize, ReadOperation, LastOperation, ContinueTransfer);
         while (ReadPacketSize != 0) {
-          UINT32 ReadSize = MIN (sizeof(UINT32), ReadPacketSize);
+          UINT32  ReadSize = MIN (sizeof (UINT32), ReadPacketSize);
           Timeout = I2C_TIMEOUT;
           do {
             Data32 = MmioRead32 (Private->BaseAddress + I2C_MST_FIFO_STATUS_0_OFFSET);
@@ -543,49 +566,57 @@ TegraI2cStartRequest (
           } while (Data32 == 0);
 
           Data32 = MmioRead32 (Private->BaseAddress + I2C_I2C_RX_FIFO_0_OFFSET);
-          CopyMem (RequestPacket->Operation[PacketIndex].Buffer + BufferOffset,
-                   (VOID *)&Data32,
-                   ReadSize);
+          CopyMem (
+            RequestPacket->Operation[PacketIndex].Buffer + BufferOffset,
+            (VOID *)&Data32,
+            ReadSize
+            );
 
           if ((BufferOffset == 0) && BlockTransfer) {
             if (RequestPacket->Operation[PacketIndex].LengthInBytes < (*RequestPacket->Operation[PacketIndex].Buffer + 1)) {
               Status = EFI_BUFFER_TOO_SMALL;
               goto Exit;
             }
+
             RequestPacket->Operation[PacketIndex].LengthInBytes = *RequestPacket->Operation[PacketIndex].Buffer + 1;
-            LengthRemaining = *RequestPacket->Operation[PacketIndex].Buffer;
+            LengthRemaining                                     = *RequestPacket->Operation[PacketIndex].Buffer;
           } else {
             LengthRemaining -= ReadSize;
           }
+
           ReadPacketSize -= ReadSize;
-          BufferOffset += ReadSize;
+          BufferOffset   += ReadSize;
         }
       }
     } while (LengthRemaining != 0);
-    //Error Check
+
+    // Error Check
     Timeout = I2C_TIMEOUT;
     do {
-        MicroSecondDelay(1);
-        Timeout--;
-        if (Timeout == 0) {
-          DEBUG ((DEBUG_ERROR, "%a: Timeout waiting for Packet Complete\r\n", __FUNCTION__));
-          Status = EFI_TIMEOUT;
-          break;
-        }
-        Data32 = MmioRead32 (Private->BaseAddress + I2C_INTERRUPT_STATUS_REGISTER_0_OFFSET);
-        MmioWrite32 (Private->BaseAddress + I2C_INTERRUPT_STATUS_REGISTER_0_OFFSET, Data32);
-        if ((Data32 & INTERRUPT_STATUS_NOACK) != 0) {
-          Status = EFI_NO_RESPONSE;
-          break;
-        }
-        if ((Data32 & INTERRUPT_STATUS_ARB_LOST) != 0) {
-          Status = EFI_DEVICE_ERROR;
-          break;
-        }
-        if ((Data32 & INTERRUPT_STATUS_PACKET_XFER_COMPLETE) != 0) {
-          Status = EFI_SUCCESS;
-          break;
-        }
+      MicroSecondDelay (1);
+      Timeout--;
+      if (Timeout == 0) {
+        DEBUG ((DEBUG_ERROR, "%a: Timeout waiting for Packet Complete\r\n", __FUNCTION__));
+        Status = EFI_TIMEOUT;
+        break;
+      }
+
+      Data32 = MmioRead32 (Private->BaseAddress + I2C_INTERRUPT_STATUS_REGISTER_0_OFFSET);
+      MmioWrite32 (Private->BaseAddress + I2C_INTERRUPT_STATUS_REGISTER_0_OFFSET, Data32);
+      if ((Data32 & INTERRUPT_STATUS_NOACK) != 0) {
+        Status = EFI_NO_RESPONSE;
+        break;
+      }
+
+      if ((Data32 & INTERRUPT_STATUS_ARB_LOST) != 0) {
+        Status = EFI_DEVICE_ERROR;
+        break;
+      }
+
+      if ((Data32 & INTERRUPT_STATUS_PACKET_XFER_COMPLETE) != 0) {
+        Status = EFI_SUCCESS;
+        break;
+      }
     } while (TRUE);
   }
 
@@ -597,12 +628,13 @@ Exit:
 
   if (I2cStatus != NULL) {
     *I2cStatus = Status;
-    Status = EFI_SUCCESS;
+    Status     = EFI_SUCCESS;
   }
 
   if (Event != NULL) {
     gBS->SignalEvent (Event);
   }
+
   return Status;
 }
 
@@ -631,18 +663,20 @@ Exit:
 **/
 EFI_STATUS
 TegraI2cEnumerate (
-  IN CONST EFI_I2C_ENUMERATE_PROTOCOL *This,
-  IN OUT CONST EFI_I2C_DEVICE         **Device
+  IN CONST EFI_I2C_ENUMERATE_PROTOCOL  *This,
+  IN OUT CONST EFI_I2C_DEVICE          **Device
   )
 {
-  NVIDIA_TEGRA_I2C_PRIVATE_DATA *Private;
-  UINTN Index;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private;
+  UINTN                          Index;
 
   if ((This == NULL) ||
-      (Device == NULL)) {
+      (Device == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
-  Private = TEGRA_I2C_PRIVATE_DATA_FROM_ENUMERATE(This);
+
+  Private = TEGRA_I2C_PRIVATE_DATA_FROM_ENUMERATE (This);
 
   if (*Device == NULL) {
     Index = 0;
@@ -652,11 +686,14 @@ TegraI2cEnumerate (
         break;
       }
     }
+
     if (Index == Private->NumberOfI2cDevices) {
       return EFI_NO_MAPPING;
     }
+
     Index++;
   }
+
   if (Index == Private->NumberOfI2cDevices) {
     *Device = NULL;
     return EFI_NOT_FOUND;
@@ -689,23 +726,25 @@ TegraI2cEnumerate (
 **/
 EFI_STATUS
 TegraI2cGetBusFrequency (
-  IN CONST EFI_I2C_ENUMERATE_PROTOCOL *This,
-  IN UINTN                            I2cBusConfiguration,
-  OUT UINTN                           *BusClockHertz
+  IN CONST EFI_I2C_ENUMERATE_PROTOCOL  *This,
+  IN UINTN                             I2cBusConfiguration,
+  OUT UINTN                            *BusClockHertz
   )
 {
-  NVIDIA_TEGRA_I2C_PRIVATE_DATA *Private = NULL;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
 
   if ((This == NULL) ||
-      (NULL == BusClockHertz)) {
+      (NULL == BusClockHertz))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = TEGRA_I2C_PRIVATE_DATA_FROM_ENUMERATE(This);
+  Private = TEGRA_I2C_PRIVATE_DATA_FROM_ENUMERATE (This);
 
   if (0 != I2cBusConfiguration) {
     return EFI_NO_MAPPING;
   }
+
   *BusClockHertz = Private->BusClockHertz;
   return EFI_SUCCESS;
 }
@@ -763,10 +802,10 @@ TegraI2cGetBusFrequency (
 **/
 EFI_STATUS
 TegraI2cEnableI2cBusConfiguration (
-  IN CONST EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL *This,
-  IN UINTN                                               I2cBusConfiguration,
-  IN EFI_EVENT                                           Event      OPTIONAL,
-  IN EFI_STATUS                                          *I2cStatus OPTIONAL
+  IN CONST EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL  *This,
+  IN UINTN                                                I2cBusConfiguration,
+  IN EFI_EVENT                                            Event      OPTIONAL,
+  IN EFI_STATUS                                           *I2cStatus OPTIONAL
   )
 {
   if (I2cBusConfiguration != 0) {
@@ -777,9 +816,11 @@ TegraI2cEnableI2cBusConfiguration (
     if (NULL == I2cStatus) {
       return EFI_INVALID_PARAMETER;
     }
+
     *I2cStatus = EFI_SUCCESS;
     gBS->SignalEvent (Event);
   }
+
   return EFI_SUCCESS;
 }
 
@@ -797,10 +838,10 @@ TegraI2cEnableI2cBusConfiguration (
 **/
 EFI_STATUS
 TegraI2cAddDevice (
-  IN NVIDIA_TEGRA_I2C_PRIVATE_DATA     *Private,
-  IN UINT32                            I2cAddress,
-  IN EFI_GUID                          *DeviceGuid,
-  IN UINT32                            DeviceIndex
+  IN NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private,
+  IN UINT32                         I2cAddress,
+  IN EFI_GUID                       *DeviceGuid,
+  IN UINT32                         DeviceIndex
   )
 {
   if (Private->NumberOfI2cDevices >= MAX_I2C_DEVICES) {
@@ -808,13 +849,14 @@ TegraI2cAddDevice (
     ASSERT (FALSE);
     return EFI_OUT_OF_RESOURCES;
   }
+
   Private->SlaveAddressArray[Private->NumberOfI2cDevices * MAX_SLAVES_PER_DEVICE] = I2cAddress;
-  Private->I2cDevices[Private->NumberOfI2cDevices].DeviceGuid = DeviceGuid;
-  Private->I2cDevices[Private->NumberOfI2cDevices].DeviceIndex = DeviceIndex;
-  Private->I2cDevices[Private->NumberOfI2cDevices].HardwareRevision = 1;
-  Private->I2cDevices[Private->NumberOfI2cDevices].I2cBusConfiguration = 0;
-  Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressCount = 1;
-  Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressArray = &Private->SlaveAddressArray[Private->NumberOfI2cDevices * MAX_SLAVES_PER_DEVICE];
+  Private->I2cDevices[Private->NumberOfI2cDevices].DeviceGuid                     = DeviceGuid;
+  Private->I2cDevices[Private->NumberOfI2cDevices].DeviceIndex                    = DeviceIndex;
+  Private->I2cDevices[Private->NumberOfI2cDevices].HardwareRevision               = 1;
+  Private->I2cDevices[Private->NumberOfI2cDevices].I2cBusConfiguration            = 0;
+  Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressCount              = 1;
+  Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressArray              = &Private->SlaveAddressArray[Private->NumberOfI2cDevices * MAX_SLAVES_PER_DEVICE];
   Private->NumberOfI2cDevices++;
 
   return EFI_SUCCESS;
@@ -836,35 +878,35 @@ TegraI2cAddDevice (
 EFI_STATUS
 EFIAPI
 TegraI2CDriverBindingStart (
-    IN  EFI_HANDLE                             DriverHandle,
-    IN  EFI_HANDLE                             ControllerHandle,
-    IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
+  IN  EFI_HANDLE                              DriverHandle,
+  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                        Status;
-  NVIDIA_TEGRA_I2C_PRIVATE_DATA     *Private = NULL;
-  UINTN                             RegionSize;
-  CONST UINT32                      *DtClockHertz;
-  CONST UINT32                      *DtControllerId;
-  UINT32                            Data32;
-  UINTN                             Index;
-  NON_DISCOVERABLE_DEVICE           *Device;
-  INT32                             I2cNodeOffset = 0;
-  UINT32                            I2cAddress;
-  INT32                             EepromManagerNodeOffset;
-  UINT32                            I2cNodeHandle;
-  INT32                             EepromManagerBusNodeOffset;
-  CONST UINT32                      *I2cBusProperty;
-  INT32                             I2cBusHandleLength;
-  UINT32                            I2cBusHandle;
-  INT32                             EepromNodeOffset;
-  CONST VOID                        *Property;
-  INT32                             PropertyLen;
-  EFI_GUID                          *DeviceGuid;
-  EFI_DEVICE_PATH                   *OldDevicePath;
-  EFI_DEVICE_PATH                   *NewDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL          *DevicePathNode;
-  UINT32                            Count;
+  EFI_STATUS                     Status;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
+  UINTN                          RegionSize;
+  CONST UINT32                   *DtClockHertz;
+  CONST UINT32                   *DtControllerId;
+  UINT32                         Data32;
+  UINTN                          Index;
+  NON_DISCOVERABLE_DEVICE        *Device;
+  INT32                          I2cNodeOffset = 0;
+  UINT32                         I2cAddress;
+  INT32                          EepromManagerNodeOffset;
+  UINT32                         I2cNodeHandle;
+  INT32                          EepromManagerBusNodeOffset;
+  CONST UINT32                   *I2cBusProperty;
+  INT32                          I2cBusHandleLength;
+  UINT32                         I2cBusHandle;
+  INT32                          EepromNodeOffset;
+  CONST VOID                     *Property;
+  INT32                          PropertyLen;
+  EFI_GUID                       *DeviceGuid;
+  EFI_DEVICE_PATH                *OldDevicePath;
+  EFI_DEVICE_PATH                *NewDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL       *DevicePathNode;
+  UINT32                         Count;
 
   Status = gBS->HandleProtocol (
                   ControllerHandle,
@@ -878,7 +920,7 @@ TegraI2CDriverBindingStart (
 
   Private = (NVIDIA_TEGRA_I2C_PRIVATE_DATA *)AllocateZeroPool (sizeof (NVIDIA_TEGRA_I2C_PRIVATE_DATA));
   if (NULL == Private) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate private data\r\n",__FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate private data\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
@@ -904,7 +946,7 @@ TegraI2CDriverBindingStart (
   Private->PacketId                                       = 0;
   Private->HighSpeed                                      = FALSE;
 
-  DtControllerId = (CONST UINT32*)fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,hw-instance-id", NULL);
+  DtControllerId = (CONST UINT32 *)fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,hw-instance-id", NULL);
   if (NULL != DtControllerId) {
     Private->ControllerId = SwapBytes32 (*DtControllerId);
     if (Private->ControllerId > 0xf) {
@@ -912,17 +954,18 @@ TegraI2CDriverBindingStart (
       Private->ControllerId = 0xf;
     }
   } else {
-    CHAR8 I2cName[] = "i2cx";
+    CHAR8  I2cName[] = "i2cx";
     Private->ControllerId = 0xf;
 
     for (Index = 0; Index <= 9; Index++) {
-      INT32 AliasOffset;
-      CONST CHAR8 *AliasName;
-      AsciiSPrint (I2cName, sizeof (I2cName),"i2c%d", Index);
+      INT32        AliasOffset;
+      CONST CHAR8  *AliasName;
+      AsciiSPrint (I2cName, sizeof (I2cName), "i2c%d", Index);
       AliasName = fdt_get_alias (DeviceTreeNode->DeviceTreeBase, I2cName);
       if (AliasName == NULL) {
         break;
       }
+
       AliasOffset = fdt_path_offset (DeviceTreeNode->DeviceTreeBase, AliasName);
       if (AliasOffset == DeviceTreeNode->NodeOffset) {
         Private->ControllerId = Index;
@@ -935,27 +978,28 @@ TegraI2CDriverBindingStart (
     }
   }
 
-  //Add controller device node
+  // Add controller device node
   Status = gBS->HandleProtocol (
-                ControllerHandle,
-                &gEfiDevicePathProtocolGuid,
-                (VOID **)&OldDevicePath
-              );
+                  ControllerHandle,
+                  &gEfiDevicePathProtocolGuid,
+                  (VOID **)&OldDevicePath
+                  );
   if (!EFI_ERROR (Status)) {
-
     DevicePathNode = OldDevicePath;
-    //Check to make sure we haven't already added controller
+    // Check to make sure we haven't already added controller
     while (!IsDevicePathEnd (DevicePathNode)) {
       if ((DevicePathType (DevicePathNode) == HARDWARE_DEVICE_PATH) &&
-          (DevicePathSubType (DevicePathNode) == HW_CONTROLLER_DP)) {
+          (DevicePathSubType (DevicePathNode) == HW_CONTROLLER_DP))
+      {
         break;
       }
+
       DevicePathNode = NextDevicePathNode (DevicePathNode);
     }
 
     if (IsDevicePathEnd (DevicePathNode)) {
       ControllerNode.ControllerNumber = Private->ControllerId;
-      NewDevicePath = AppendDevicePathNode (OldDevicePath, (EFI_DEVICE_PATH_PROTOCOL *)&ControllerNode);
+      NewDevicePath                   = AppendDevicePathNode (OldDevicePath, (EFI_DEVICE_PATH_PROTOCOL *)&ControllerNode);
       if (NewDevicePath == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to create new device path\r\n", __FUNCTION__));
         Status = EFI_OUT_OF_RESOURCES;
@@ -967,7 +1011,7 @@ TegraI2CDriverBindingStart (
                       &gEfiDevicePathProtocolGuid,
                       OldDevicePath,
                       NewDevicePath
-                    );
+                      );
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to update device path, %r\r\n", __FUNCTION__, Status));
         goto ErrorExit;
@@ -981,7 +1025,7 @@ TegraI2CDriverBindingStart (
     goto ErrorExit;
   }
 
-  //Initialize controller
+  // Initialize controller
   Status = TegraI2cReset (&Private->I2cMaster);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a, Failed to reset I2C (%r)\r\n", __FUNCTION__, Status));
@@ -997,7 +1041,7 @@ TegraI2CDriverBindingStart (
   MmioWrite32 (Private->BaseAddress + I2C_I2C_DEBUG_CONTROL_0_OFFSET, 0);
   MmioWrite32 (Private->BaseAddress + I2C_I2C_INTERRUPT_SET_REGISTER_0_OFFSET, 0);
 
-  DtClockHertz = (CONST UINT32*)fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "clock-frequency", NULL);
+  DtClockHertz = (CONST UINT32 *)fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "clock-frequency", NULL);
   if (NULL != DtClockHertz) {
     Private->BusClockHertz = SwapBytes32 (*DtClockHertz);
   } else {
@@ -1014,13 +1058,15 @@ TegraI2CDriverBindingStart (
   if (Private->BusClockHertz <= HS_SPEED) {
     Data32 |= (0x2 << I2C_I2C_CNFG_0_DEBOUNCE_CNT_SHIFT);
   }
+
   if (NULL != fdt_get_property (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "multi-master", NULL)) {
     Data32 |= I2C_I2C_CNFG_0_MULTI_MASTER_MODE;
   }
+
   MmioWrite32 (Private->BaseAddress + I2C_I2C_CNFG_0_OFFSET, Data32);
 
   Private->ConfigurationChanged = TRUE;
-  Status = TegraI2cLoadConfiguration (Private);
+  Status                        = TegraI2cLoadConfiguration (Private);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to load configuration (%r)\r\n", __FUNCTION__, Status));
     goto ErrorExit;
@@ -1037,87 +1083,111 @@ TegraI2CDriverBindingStart (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to install i2c protocols:%r\r\n",__FUNCTION__,Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to install i2c protocols:%r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
   Private->ProtocolsInstalled = TRUE;
 
-  PropertyLen = 0;
-  Private->NumberOfI2cDevices  = 0;
+  PropertyLen                 = 0;
+  Private->NumberOfI2cDevices = 0;
 
   I2cNodeHandle = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
-  Count = 0;
+  Count         = 0;
   fdt_for_each_subnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
-    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
-                                   I2cNodeOffset,
-                                   "atmel,24c02") == 0) {
+    if (fdt_node_check_compatible (
+          DeviceTreeNode->DeviceTreeBase,
+          I2cNodeOffset,
+          "atmel,24c02"
+          ) == 0)
+    {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
-      if (Property != NULL && PropertyLen == sizeof (UINT32))  {
-        gBS->CopyMem (&I2cAddress, (VOID *) Property, PropertyLen);
+      if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
+        gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
         DEBUG ((DEBUG_INFO, "%a: Eeprom Found.\n", __FUNCTION__));
         DeviceGuid = &gNVIDIAEeprom;
-        Status = TegraI2cAddDevice (Private,
-                                    I2cAddress,
-                                    DeviceGuid,
-                                    Count);
+        Status     = TegraI2cAddDevice (
+                       Private,
+                       I2cAddress,
+                       DeviceGuid,
+                       Count
+                       );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
         }
+
         Count++;
         DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx.\n", __FUNCTION__, I2cAddress));
       }
     }
-    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
-                                   I2cNodeOffset,
-                                   "ti,tca9539") == 0) {
+
+    if (fdt_node_check_compatible (
+          DeviceTreeNode->DeviceTreeBase,
+          I2cNodeOffset,
+          "ti,tca9539"
+          ) == 0)
+    {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
-      if (Property != NULL && PropertyLen == sizeof (UINT32))  {
-        gBS->CopyMem (&I2cAddress, (VOID *) Property, PropertyLen);
+      if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
+        gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
         DEBUG ((DEBUG_INFO, "%a: TCA9539 Found.\n", __FUNCTION__));
         DeviceGuid = &gNVIDIAI2cTca9539;
-        Status = TegraI2cAddDevice (Private,
-                                    I2cAddress,
-                                    DeviceGuid,
-                                    fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset));
+        Status     = TegraI2cAddDevice (
+                       Private,
+                       I2cAddress,
+                       DeviceGuid,
+                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
         }
       }
     }
-    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
-                                   I2cNodeOffset,
-                                   "nvidia,ncp81599") == 0) {
+
+    if (fdt_node_check_compatible (
+          DeviceTreeNode->DeviceTreeBase,
+          I2cNodeOffset,
+          "nvidia,ncp81599"
+          ) == 0)
+    {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
-      if (Property != NULL && PropertyLen == sizeof (UINT32))  {
-        gBS->CopyMem (&I2cAddress, (VOID *) Property, PropertyLen);
+      if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
+        gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
         DEBUG ((DEBUG_INFO, "%a: NCP81599 Found.\n", __FUNCTION__));
         DeviceGuid = &gNVIDIAI2cNcp81599;
-        Status = TegraI2cAddDevice (Private,
-                                    I2cAddress,
-                                    DeviceGuid,
-                                    fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset));
+        Status     = TegraI2cAddDevice (
+                       Private,
+                       I2cAddress,
+                       DeviceGuid,
+                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
         }
       }
     }
-    if (fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase,
-                                   I2cNodeOffset,
-                                   "ssif-bmc") == 0) {
+
+    if (fdt_node_check_compatible (
+          DeviceTreeNode->DeviceTreeBase,
+          I2cNodeOffset,
+          "ssif-bmc"
+          ) == 0)
+    {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
-      if (Property != NULL && PropertyLen == sizeof (UINT32))  {
-        gBS->CopyMem (&I2cAddress, (VOID *) Property, PropertyLen);
+      if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
+        gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
         DEBUG ((DEBUG_INFO, "%a: SSIF BMC Found.\n", __FUNCTION__));
         DeviceGuid = &gNVIDIAI2cBmcSSIF;
-        Status = TegraI2cAddDevice (Private,
-                                    I2cAddress,
-                                    DeviceGuid,
-                                    fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset));
+        Status     = TegraI2cAddDevice (
+                       Private,
+                       I2cAddress,
+                       DeviceGuid,
+                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
         }
@@ -1125,35 +1195,40 @@ TegraI2CDriverBindingStart (
     }
   }
 
-  Count = 0;
+  Count                   = 0;
   EepromManagerNodeOffset = fdt_path_offset (DeviceTreeNode->DeviceTreeBase, "/eeprom-manager");
   if (EepromManagerNodeOffset >= 0) {
     fdt_for_each_subnode (EepromManagerBusNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerNodeOffset) {
-      I2cBusProperty = NULL;
+      I2cBusProperty     = NULL;
       I2cBusHandleLength = 0;
-      I2cBusProperty = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset, "i2c-bus", &I2cBusHandleLength);
-      if (I2cBusProperty == NULL || I2cBusHandleLength != sizeof (UINT32)) {
+      I2cBusProperty     = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset, "i2c-bus", &I2cBusHandleLength);
+      if ((I2cBusProperty == NULL) || (I2cBusHandleLength != sizeof (UINT32))) {
         continue;
       }
-      gBS->CopyMem (&I2cBusHandle, (VOID *) I2cBusProperty, I2cBusHandleLength);
+
+      gBS->CopyMem (&I2cBusHandle, (VOID *)I2cBusProperty, I2cBusHandleLength);
       I2cBusHandle = SwapBytes32 (I2cBusHandle);
       if (I2cNodeHandle != I2cBusHandle) {
         continue;
       }
+
       fdt_for_each_subnode (EepromNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset) {
         Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "slave-address", &PropertyLen);
-        if (Property != NULL && PropertyLen == sizeof (UINT32))  {
-          gBS->CopyMem (&I2cAddress, (VOID *) Property, PropertyLen);
+        if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
+          gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
           I2cAddress = SwapBytes32 (I2cAddress);
           DEBUG ((DEBUG_INFO, "%a: Eeprom Found.\n", __FUNCTION__));
           DeviceGuid = &gNVIDIAEeprom;
-          Status = TegraI2cAddDevice (Private,
-                                      I2cAddress,
-                                      DeviceGuid,
-                                      Count);
+          Status     = TegraI2cAddDevice (
+                         Private,
+                         I2cAddress,
+                         DeviceGuid,
+                         Count
+                         );
           if (EFI_ERROR (Status)) {
             goto ErrorExit;
           }
+
           Count++;
           DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, I2cBusHandle));
         }
@@ -1176,6 +1251,7 @@ ErrorExit:
                NULL
                );
       }
+
       FreePool (Private);
     }
   }
@@ -1196,14 +1272,14 @@ ErrorExit:
 EFI_STATUS
 EFIAPI
 TegraI2CDriverBindingStop (
-    IN  EFI_HANDLE                             DriverHandle,
-    IN  EFI_HANDLE                             ControllerHandle
+  IN  EFI_HANDLE  DriverHandle,
+  IN  EFI_HANDLE  ControllerHandle
   )
 {
-  EFI_STATUS                        Status;
+  EFI_STATUS  Status;
 
-  EFI_I2C_MASTER_PROTOCOL           *I2cMaster = NULL;
-  NVIDIA_TEGRA_I2C_PRIVATE_DATA     *Private = NULL;
+  EFI_I2C_MASTER_PROTOCOL        *I2cMaster = NULL;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private   = NULL;
 
   //
   // Attempt to open I2cMaster Protocol
@@ -1211,7 +1287,7 @@ TegraI2CDriverBindingStop (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiI2cMasterProtocolGuid,
-                  (VOID **) &I2cMaster,
+                  (VOID **)&I2cMaster,
                   DriverHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -1220,7 +1296,7 @@ TegraI2CDriverBindingStop (
     return EFI_DEVICE_ERROR;
   }
 
-  Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER(I2cMaster);
+  Private = TEGRA_I2C_PRIVATE_DATA_FROM_MASTER (I2cMaster);
   if (Private == NULL) {
     return EFI_DEVICE_ERROR;
   }
@@ -1238,6 +1314,7 @@ TegraI2CDriverBindingStop (
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
   FreePool (Private);
   return EFI_SUCCESS;
 }
@@ -1260,27 +1337,27 @@ TegraI2CDriverBindingStop (
 **/
 EFI_STATUS
 DeviceDiscoveryNotify (
-  IN  NVIDIA_DEVICE_DISCOVERY_PHASES         Phase,
-  IN  EFI_HANDLE                             DriverHandle,
-  IN  EFI_HANDLE                             ControllerHandle,
-  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
+  IN  NVIDIA_DEVICE_DISCOVERY_PHASES          Phase,
+  IN  EFI_HANDLE                              DriverHandle,
+  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS              Status;
+  EFI_STATUS  Status;
 
   switch (Phase) {
-  case DeviceDiscoveryDriverBindingStart:
-    Status = TegraI2CDriverBindingStart (DriverHandle, ControllerHandle, DeviceTreeNode);
-    break;
+    case DeviceDiscoveryDriverBindingStart:
+      Status = TegraI2CDriverBindingStart (DriverHandle, ControllerHandle, DeviceTreeNode);
+      break;
 
-  case DeviceDiscoveryDriverBindingStop:
-    Status = TegraI2CDriverBindingStop (DriverHandle, ControllerHandle);
-    break;
+    case DeviceDiscoveryDriverBindingStop:
+      Status = TegraI2CDriverBindingStop (DriverHandle, ControllerHandle);
+      break;
 
-  default:
-    Status = EFI_SUCCESS;
-    break;
+    default:
+      Status = EFI_SUCCESS;
+      break;
   }
+
   return Status;
 }
-
