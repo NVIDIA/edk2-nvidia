@@ -57,6 +57,12 @@
   gArmTokenSpaceGuid.PcdGicDistributorBase
   gArmTokenSpaceGuid.PcdGicRedistributorsBase
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
-
+  gNVIDIATokenSpaceGuid.PcdCpuToCpuDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToGpuDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToOwnGpuDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToOtherGpuDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToOwnCpuDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToOtherCpuDistance
+  
 [Depex]
   TRUE

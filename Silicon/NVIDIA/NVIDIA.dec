@@ -377,6 +377,16 @@
   gNVIDIATokenSpaceGuid.PcdTegraMaxClusters|1|UINT32|0x0000003C
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets|1|UINT32|0x0000005F
 
+#CPU GPU domain distance information
+  gNVIDIATokenSpaceGuid.PcdCpuToCpuDistance|0x28|UINT32|0x00000074
+  gNVIDIATokenSpaceGuid.PcdGpuToGpuDistance|0x50|UINT32|0x00000075
+  gNVIDIATokenSpaceGuid.PcdCpuToOwnGpuDistance|0x50|UINT32|0x00000076
+  gNVIDIATokenSpaceGuid.PcdCpuToOtherGpuDistance|0x78|UINT32|0x00000077
+  gNVIDIATokenSpaceGuid.PcdGpuToOwnCpuDistance|0x50|UINT32|0x00000078
+  gNVIDIATokenSpaceGuid.PcdGpuToOtherCpuDistance|0x78|UINT32|0x00000079
+  gNVIDIATokenSpaceGuid.PcdLocalDistance|10|UINT32|0x0000007A
+  gNVIDIATokenSpaceGuid.PcdUnreachableDistance|0xFF|UINT32|0x0000007B
+
 #Interrupts
   gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum|0x19|UINT32|0x0000005C
 
