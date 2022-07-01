@@ -55,7 +55,7 @@ SerialPortIdentify (
     } else {
       Status = GetDeviceRegion ("combuart-t234", &Base, &Size);
       if (!EFI_ERROR(Status)) {
-        TegraUartObj = Tegra16550SerialPortGetObject();
+        TegraUartObj = TegraCombinedSerialPortGetObject();
       }
     }
     if (TegraUartObj != NULL) {
