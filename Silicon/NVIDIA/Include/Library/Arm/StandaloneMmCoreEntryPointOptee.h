@@ -14,7 +14,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/FvLib.h>
 
 #define CPU_INFO_FLAG_PRIMARY_CPU  0x00000001
-#define DEVICE_REGION_NAME_MAX_LEN 16
+#define DEVICE_REGION_NAME_MAX_LEN 32
 #define MAX_DEVICE_REGIONS         10
 
 typedef struct {
@@ -54,6 +54,7 @@ typedef struct {
   UINT32                           NumCpus;
   EFI_SECURE_PARTITION_CPU_INFO    *CpuInfo;
   EFI_SECURE_PARTITION_DEVICE_REGION_MAP DeviceRegions[MAX_DEVICE_REGIONS];
+  UINT32                           DeviceRegionsLen;
 } EFI_SECURE_PARTITION_BOOT_INFO;
 
 typedef
