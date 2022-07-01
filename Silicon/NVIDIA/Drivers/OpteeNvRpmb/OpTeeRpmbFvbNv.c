@@ -15,6 +15,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/MmServicesTableLib.h>
 #include <Library/PcdLib.h>
+#include <Library/StandaloneMmOpteeDeviceMem.h>
 
 #include <IndustryStandard/ArmFfaSvc.h>
 #include <IndustryStandard/ArmMmSvc.h>
@@ -813,6 +814,14 @@ OpTeeRpmbFvbInit (
   VOID         *Addr;
   UINTN        FvLength;
   UINTN        NBlocks;
+
+  if (PcdGetBool(PcdEmuVariableNvModeEnable)) {
+      return EFI_SUCCESS;
+  }
+
+  if (IsQspiPresent()) {
+    return EFI_SUCCESS;
+  }
 
   FvLength = PcdGet32 (PcdFlashNvStorageVariableSize) +
              PcdGet32 (PcdFlashNvStorageFtwWorkingSize) +

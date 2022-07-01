@@ -28,6 +28,7 @@
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
   StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   ArmSvcLib
@@ -38,6 +39,7 @@
   MmServicesTableLib
   PcdLib
   StandaloneMmDriverEntryPoint
+  StandaloneMmOpteeLib
 
 [Guids]
   gEfiAuthenticatedVariableGuid
@@ -51,6 +53,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
 
 [Protocols]
   gEfiSmmFirmwareVolumeBlockProtocolGuid          ## PRODUCES
