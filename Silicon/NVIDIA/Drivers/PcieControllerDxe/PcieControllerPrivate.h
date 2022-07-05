@@ -202,6 +202,10 @@ typedef struct {
 #define APPL_ECAM_CONFIG_MODE_EN     BIT(30)
 #define APPL_ECAM_CONFIG_LIMIT       0x0FFFFFFF
 
+#define APPL_PCIE_MISC0_BASE                0x15c
+#define APPL_PCIE_MISC0_INT_SEGREGATION_EN  BIT1
+#define APPL_PCIE_MISC0_CFG_5G_MODE         BIT0
+
 #define PCI_BASE_ADDRESS_0  0x10        /* 32 bits */
 #define PCI_BASE_ADDRESS_1  0x14        /* 32 bits */
 

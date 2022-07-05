@@ -1942,6 +1942,10 @@ DeviceDiscoveryNotify (
           Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = SwapBytes32 (InterruptMap[(Index * PCIE_INTERRUPT_MAP_ENTRIES) + PCIE_PARENT_INTERRUPT_OFFSET]) + SPI_OFFSET;
           Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = BIT0;
         }
+
+        if (Private->IsT234) {
+          MmioOr32 (Private->ApplSpace + APPL_PCIE_MISC0_BASE, APPL_PCIE_MISC0_INT_SEGREGATION_EN);
+        }
       } else {
         Status = EFI_DEVICE_ERROR;
         DEBUG ((DEBUG_ERROR, "%a: Expected %d interrupts, got %d\r\n", __FUNCTION__, PCIE_NUMBER_OF_INTERUPT_MAP, NumberOfInterrupts));
