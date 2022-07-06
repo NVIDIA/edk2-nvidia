@@ -622,7 +622,7 @@ RpmbSetBlockCount (
   SdMmcCmdBlk.CommandArgument = BlockCount;
   // Set the Reliable Write argument always during writes.
   if (IsWrite) {
-    SdMmcCmdBlk.CommandArgument |= (1 << 31);
+    SdMmcCmdBlk.CommandArgument |= (1UL << 31);
   }
   Status = PassThru->PassThru (PassThru, Slot, &Packet, NULL);
   return Status;
