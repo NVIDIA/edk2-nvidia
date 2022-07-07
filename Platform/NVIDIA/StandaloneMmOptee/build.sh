@@ -5,8 +5,8 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
 ###############################################################################
-# Prepare and build a UEFI image for the StandaloneMm platform in the current
-# workspace using the stuart build system.  Calls prepare_stuart.sh and
+# Prepare and build a UEFI image for the StandaloneMmOptee platform in the
+# current workspace using the stuart build system.  Calls prepare_stuart.sh and
 # build_stuart.sh.
 
 # This script, along with the helper scripts, serves as a working example of
@@ -14,7 +14,7 @@
 
 set -e
 
-PLATFORM_BUILD=edk2-nvidia-private/Platform/NVIDIA/StandaloneMmOptee/PlatformBuild.py
+PLATFORM_BUILD=edk2-nvidia/Platform/NVIDIA/StandaloneMmOptee/PlatformBuild.py
 HELPER_SCRIPT_DIR=edk2-nvidia/Silicon/NVIDIA/scripts
 
 # Change directory to the root of the workspace

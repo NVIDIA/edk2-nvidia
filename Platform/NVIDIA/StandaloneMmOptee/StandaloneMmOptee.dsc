@@ -143,6 +143,14 @@
   GCC:*_*_*_DLINK_FLAGS = -z common-page-size=0x1000 -march=armv8-a+nofp
   GCC:*_*_*_CC_FLAGS = -mstrict-align
 
+[BuildOptions.AARCH64]
+  # Avoid absolute symbols when linking, which will cause a failure in GenFw.
+  # This happens in GCC toolchains not configured with --enable-default-pie,
+  # such as ubuntu's "gcc-aarch64-linux-gnu" toolchain.  By adding the
+  # following, we get the equivalent of "--enable-default-pie".
+  GCC:*_*_*_DLINK_FLAGS = -Wl,-z,text,-Bsymbolic,-pie
+  GCC:*_*_*_CC_FLAGS = -fPIE
+
 [BuildOptions.ARM]
   GCC:*_*_*_DLINK_FLAGS = -z common-page-size=0x1000 -march=armv7-a
   GCC:*_*_*_CC_FLAGS = -fno-stack-protector
