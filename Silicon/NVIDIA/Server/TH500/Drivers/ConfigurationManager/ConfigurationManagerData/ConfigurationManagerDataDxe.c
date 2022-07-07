@@ -128,6 +128,15 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     0,
     FixedPcdGet64 (PcdAcpiDefaultOemRevision)
   },
+  // HMAT Table
+  {
+    EFI_ACPI_6_4_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_SIGNATURE,
+    EFI_ACPI_6_4_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_REVISION,
+    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdHmat),
+    NULL,
+    0,
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+  },
 };
 
 /** The platform boot architecture information.
@@ -473,6 +482,11 @@ InitializePlatformRepository (
   }
 
   Status = InstallStaticLocalityInformationTable (&Repo, (UINTN)RepoEnd);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = InstallHeterogeneousMemoryAttributeTable (&Repo, (UINTN)RepoEnd);
   if (EFI_ERROR (Status)) {
     return Status;
   }

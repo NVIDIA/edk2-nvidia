@@ -29,6 +29,7 @@
   ConfigurationPptt.c
   ConfigurationMpam.c
   ConfigurationSlit.c
+  ConfigurationHmat.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -90,6 +91,27 @@
   gNVIDIATokenSpaceGuid.PcdCpuToOtherGpuDistance
   gNVIDIATokenSpaceGuid.PcdGpuToOwnCpuDistance
   gNVIDIATokenSpaceGuid.PcdGpuToOtherCpuDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToGpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToGpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdCpuToGpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth
 
 [Depex]
   gEfiVariableArchProtocolGuid AND
