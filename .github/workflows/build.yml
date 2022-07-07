@@ -8,6 +8,7 @@ name: Push to rel branch
 on:
   push:
     branches:
+      - 'main'
       - 'rel-*'
 env:
   EDKREPO_URL: https://github.com/tianocore/edk2-edkrepo/releases/download/edkrepo-v2.1.2/edkrepo-2.1.2.tar.gz
