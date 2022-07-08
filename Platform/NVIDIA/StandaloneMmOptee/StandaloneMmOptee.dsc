@@ -30,6 +30,14 @@
 [LibraryClasses]
   StandaloneMmOpteeLib|Silicon/NVIDIA/Library/StandaloneMmOpteeLib/StandaloneMmOpteeLib.inf
   StandaloneMmCoreEntryPoint|Silicon/NVIDIA/Library/StandaloneMmCoreEntryPointOptee/StandaloneMmCoreEntryPointOptee.inf
+  CacheMaintenanceLib|MdePkg/Library/BaseCacheMaintenanceLibNull/BaseCacheMaintenanceLibNull.inf
+  PL011UartLib|ArmPlatformPkg/Library/PL011UartLib/PL011UartLib.inf
+  TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraStandaloneMmCombinedSerialPortLib.inf
+  Tegra16550SerialPortLib|Silicon/NVIDIA/Library/Tegra16550SerialPortLib/Tegra16550SerialPortLib.inf
+  TegraSbsaSerialPortLib|Silicon/NVIDIA/Library/TegraSbsaSerialPortLib/TegraSbsaSerialPortLib.inf
+  SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraStandaloneMmSerialPortLib.inf
+  DebugLib|MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
+  QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 
@@ -42,10 +50,22 @@
   gArmTokenSpaceGuid.PcdMmBufferSize|65536
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x4f90
   gArmTokenSpaceGuid.PcdMmBufferSize|65536
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|FALSE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00020000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize|0x00010000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize|0x00020000
 
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdOpteePresent|TRUE
+
+[PcdsPatchableInModule]
+  #
+  # NV Storage PCDs.
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase64|0x0
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase64|0x0
 
 ###################################################################################################
 #
@@ -66,6 +86,47 @@
 #
 ###################################################################################################
 [Components.common]
+  #
+  # MM NorFlash Driver
+  #
+  Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMm.inf
+
+  #
+  # MM NOR FvB driver
+  #
+  Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashStandaloneMm.inf {
+    <LibraryClasses>
+      GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
+  }
+
+  #
+  # OP-TEE RPMB driver
+  #
+  Silicon/NVIDIA/Drivers/OpteeNvRpmb/OpTeeRpmbFvbNv.inf
+
+  #
+  # MM Fault Tolerant Write Driver
+  #
+  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf {
+    <LibraryClasses>
+      GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
+      NULL|Silicon/NVIDIA/Drivers/FvbNorFlashDxe/StandaloneMmFixupPcd.inf
+      NULL|Silicon/NVIDIA/Drivers/OpteeNvRpmb/FixupPcdRpmb.inf
+  }
+
+  #
+  # MM Variable Driver
+  #
+  MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf {
+    <LibraryClasses>
+      DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
+      VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
+      NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
+      NULL|MdeModulePkg/Library/VarCheckPolicyLib/VarCheckPolicyLibStandaloneMm.inf
+      GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
+      NULL|Silicon/NVIDIA/Drivers/FvbNorFlashDxe/StandaloneMmFixupPcd.inf
+      NULL|Silicon/NVIDIA/Drivers/OpteeNvRpmb/FixupPcdRpmb.inf
+  }
 
 [Components.AARCH64]
 

@@ -78,7 +78,28 @@ READ_STATUS        = TRUE
 READ_LOCK_CAP      = TRUE
 READ_LOCK_STATUS   = TRUE
 
-!include Platform/NVIDIA/StandaloneMm.common.fdf.inc
+  #
+  # MM NorFlashDriver
+  #
+  INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMm.inf
+
+  #
+  # MM NorFlashDriver
+  #
+  INF Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashStandaloneMm.inf
+
+  #
+  # RPMB FVB Driver
+  #
+  INF Silicon/NVIDIA/Drivers/OpteeNvRpmb/OpTeeRpmbFvbNv.inf
+
+  #
+  # FTW Driver
+  #
+  INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf
+
+  !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
+
 
 ################################################################################
 #
