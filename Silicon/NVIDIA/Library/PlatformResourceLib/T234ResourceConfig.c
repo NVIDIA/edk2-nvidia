@@ -24,27 +24,27 @@
 #include <T234/T234Definitions.h>
 #include <Protocol/Eeprom.h>
 
-#define T234_MAX_CPUS       12
+#define T234_MAX_CPUS  12
 
-TEGRA_MMIO_INFO T234MmioInfo[] = {
+TEGRA_MMIO_INFO  T234MmioInfo[] = {
   {
-    FixedPcdGet64(PcdTegraCombinedUartTxMailbox),
+    FixedPcdGet64 (PcdTegraCombinedUartTxMailbox),
     SIZE_4KB
   },
   {
-    FixedPcdGet64(PcdTegraCombinedUartRxMailbox),
+    FixedPcdGet64 (PcdTegraCombinedUartRxMailbox),
     SIZE_4KB
   },
   {
-    FixedPcdGet64(PcdTegraMCBBaseAddress),
+    FixedPcdGet64 (PcdTegraMCBBaseAddress),
     SIZE_4KB
   },
   {
     T234_GIC_REDISTRIBUTOR_BASE,
-    T234_GIC_REDISTRIBUTOR_INSTANCES * SIZE_128KB
+    T234_GIC_REDISTRIBUTOR_INSTANCES *SIZE_128KB
   },
   {
-    FixedPcdGet64(PcdTegraMceAriApertureBaseAddress),
+    FixedPcdGet64 (PcdTegraMceAriApertureBaseAddress),
     MCE_ARI_APERTURE_OFFSET (T234_MAX_CPUS)
   },
   {
@@ -53,13 +53,13 @@ TEGRA_MMIO_INFO T234MmioInfo[] = {
   }
 };
 
-TEGRA_FUSE_INFO T234FloorsweepingFuseList[] = {
-  {"fuse-disable-isp",   FUSE_OPT_ISP_DISABLE,   BIT(0) },
-  {"fuse-disable-nvenc", FUSE_OPT_NVENC_DISABLE, BIT(0)|BIT(1) },
-  {"fuse-disable-pva",   FUSE_OPT_PVA_DISABLE,   BIT(0)|BIT(1) },
-  {"fuse-disable-dla",   FUSE_OPT_DLA_DISABLE,   BIT(0)|BIT(1) },
-  {"fuse-disable-cv",    FUSE_OPT_CV_DISABLE,    BIT(0) },
-  {"fuse-disable-nvdec", FUSE_OPT_NVDEC_DISABLE, BIT(0)|BIT(1) }
+TEGRA_FUSE_INFO  T234FloorsweepingFuseList[] = {
+  { "fuse-disable-isp",   FUSE_OPT_ISP_DISABLE,   BIT (0)         },
+  { "fuse-disable-nvenc", FUSE_OPT_NVENC_DISABLE, BIT (0)|BIT (1) },
+  { "fuse-disable-pva",   FUSE_OPT_PVA_DISABLE,   BIT (0)|BIT (1) },
+  { "fuse-disable-dla",   FUSE_OPT_DLA_DISABLE,   BIT (0)|BIT (1) },
+  { "fuse-disable-cv",    FUSE_OPT_CV_DISABLE,    BIT (0)         },
+  { "fuse-disable-nvdec", FUSE_OPT_NVDEC_DISABLE, BIT (0)|BIT (1) }
 };
 
 /**
@@ -77,42 +77,43 @@ TEGRA_FUSE_INFO T234FloorsweepingFuseList[] = {
 
 **/
 BOOLEAN
-T234UARTInstanceInfo(
+T234UARTInstanceInfo (
   IN  UINT32                UARTInstanceNumber,
   OUT UINT32                *UARTInstanceType,
   OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
-)
+  )
 {
-  EFI_PHYSICAL_ADDRESS UARTBaseAddress[] = {
-      0x0,
-      TEGRA_UART_ADDRESS_A,
-      TEGRA_UART_ADDRESS_B,
-      TEGRA_UART_ADDRESS_C,
-      TEGRA_UART_ADDRESS_D,
-      TEGRA_UART_ADDRESS_E,
-      TEGRA_UART_ADDRESS_F,
-      0x0,
-      TEGRA_UART_ADDRESS_H,
-      TEGRA_UART_ADDRESS_I,
-      TEGRA_UART_ADDRESS_J,
+  EFI_PHYSICAL_ADDRESS  UARTBaseAddress[] = {
+    0x0,
+    TEGRA_UART_ADDRESS_A,
+    TEGRA_UART_ADDRESS_B,
+    TEGRA_UART_ADDRESS_C,
+    TEGRA_UART_ADDRESS_D,
+    TEGRA_UART_ADDRESS_E,
+    TEGRA_UART_ADDRESS_F,
+    0x0,
+    TEGRA_UART_ADDRESS_H,
+    TEGRA_UART_ADDRESS_I,
+    TEGRA_UART_ADDRESS_J,
   };
 
   *UARTInstanceAddress = 0;
-  *UARTInstanceType = TEGRA_UART_TYPE_NONE;
+  *UARTInstanceType    = TEGRA_UART_TYPE_NONE;
 
   if (UARTInstanceNumber == TEGRA_UART_TYPE_TCU) {
     *UARTInstanceType = TEGRA_UART_TYPE_TCU;
     return TRUE;
   }
 
-  if ((UARTInstanceNumber >= ARRAY_SIZE(UARTBaseAddress)) ||
-     ((BIT(UARTInstanceNumber) & TEGRA_UART_SUPPORT_FLAG) == 0x0)) {
+  if ((UARTInstanceNumber >= ARRAY_SIZE (UARTBaseAddress)) ||
+      ((BIT (UARTInstanceNumber) & TEGRA_UART_SUPPORT_FLAG) == 0x0))
+  {
     return FALSE;
   }
 
   *UARTInstanceAddress = UARTBaseAddress[UARTInstanceNumber];
-  *UARTInstanceType = TEGRA_UART_TYPE_16550;
-  if ((BIT(UARTInstanceNumber) & TEGRA_UART_SUPPORT_SBSA) != 0x0) {
+  *UARTInstanceType    = TEGRA_UART_TYPE_16550;
+  if ((BIT (UARTInstanceNumber) & TEGRA_UART_SUPPORT_SBSA) != 0x0) {
     *UARTInstanceType = TEGRA_UART_TYPE_SBSA;
   }
 
@@ -137,34 +138,35 @@ T234GetResourceConfig (
   OUT TEGRA_RESOURCE_INFO  *PlatformInfo
   )
 {
-  TEGRA_CPUBL_PARAMS    *CpuBootloaderParams;
-  NVDA_MEMORY_REGION    *DramRegions;
-  NVDA_MEMORY_REGION    *CarveoutRegions;
-  UINTN                 CarveoutRegionsCount=0;
-  EFI_MEMORY_DESCRIPTOR Descriptor;
-  UINTN                 Index;
-  BOOLEAN               BanketDramEnabled;
+  TEGRA_CPUBL_PARAMS     *CpuBootloaderParams;
+  NVDA_MEMORY_REGION     *DramRegions;
+  NVDA_MEMORY_REGION     *CarveoutRegions;
+  UINTN                  CarveoutRegionsCount = 0;
+  EFI_MEMORY_DESCRIPTOR  Descriptor;
+  UINTN                  Index;
+  BOOLEAN                BanketDramEnabled;
 
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  CpuBootloaderParams          = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   PlatformInfo->DtbLoadAddress = T234GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
 
   BanketDramEnabled = CpuBootloaderParams->FeatureFlagData.EnableBlanketNsdramCarveout;
 
-  //Build dram regions
+  // Build dram regions
   if (BanketDramEnabled) {
-    //When blanket dram is enabled, uefi should use only memory in nsdram carveout
-    //and interworld shmem carveout.
+    // When blanket dram is enabled, uefi should use only memory in nsdram carveout
+    // and interworld shmem carveout.
     DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (2 * sizeof (NVDA_MEMORY_REGION));
     ASSERT (DramRegions != NULL);
     if (DramRegions == NULL) {
       return EFI_DEVICE_ERROR;
     }
-    DramRegions[0].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Base;
-    DramRegions[0].MemoryLength = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Size;
-    DramRegions[1].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Base;
-    DramRegions[1].MemoryLength = CpuBootloaderParams->CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Size;
-    PlatformInfo->DramRegions = DramRegions;
-    PlatformInfo->DramRegionsCount = 2;
+
+    DramRegions[0].MemoryBaseAddress   = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Base;
+    DramRegions[0].MemoryLength        = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Size;
+    DramRegions[1].MemoryBaseAddress   = CpuBootloaderParams->CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Base;
+    DramRegions[1].MemoryLength        = CpuBootloaderParams->CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Size;
+    PlatformInfo->DramRegions          = DramRegions;
+    PlatformInfo->DramRegionsCount     = 2;
     PlatformInfo->UefiDramRegionsCount = 2;
   } else {
     DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION));
@@ -172,14 +174,15 @@ T234GetResourceConfig (
     if (DramRegions == NULL) {
       return EFI_DEVICE_ERROR;
     }
-    DramRegions->MemoryBaseAddress = TegraGetSystemMemoryBaseAddress(T234_CHIP_ID);
-    DramRegions->MemoryLength = CpuBootloaderParams->SdramSize;
-    PlatformInfo->DramRegions = DramRegions;
-    PlatformInfo->DramRegionsCount = 1;
+
+    DramRegions->MemoryBaseAddress     = TegraGetSystemMemoryBaseAddress (T234_CHIP_ID);
+    DramRegions->MemoryLength          = CpuBootloaderParams->SdramSize;
+    PlatformInfo->DramRegions          = DramRegions;
+    PlatformInfo->DramRegionsCount     = 1;
     PlatformInfo->UefiDramRegionsCount = 1;
   }
 
-  //Build Carveout regions
+  // Build Carveout regions
   CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_OEM_COUNT));
   ASSERT (CarveoutRegions != NULL);
   if (CarveoutRegions == NULL) {
@@ -187,24 +190,25 @@ T234GetResourceConfig (
   }
 
   for (Index = CARVEOUT_NONE; Index < CARVEOUT_OEM_COUNT; Index++) {
-    if (CpuBootloaderParams->CarveoutInfo[Index].Base == 0 ||
-        CpuBootloaderParams->CarveoutInfo[Index].Size == 0) {
+    if ((CpuBootloaderParams->CarveoutInfo[Index].Base == 0) ||
+        (CpuBootloaderParams->CarveoutInfo[Index].Size == 0))
+    {
       continue;
     }
-    DEBUG ((EFI_D_ERROR, "Carveout %d Region: Base: 0x%016lx, Size: 0x%016lx\n",
-            Index,
-            CpuBootloaderParams->CarveoutInfo[Index].Base,
-            CpuBootloaderParams->CarveoutInfo[Index].Size));
-    if (Index == CARVEOUT_CCPLEX_INTERWORLD_SHMEM) {
-      //Leave in memory map but marked as used
-      EFI_MEMORY_TYPE MemoryType;
 
-      if (FixedPcdGetBool(PcdExposeCcplexInterworldShmem)) {
-        if (ValidateGrBlobHeader(GetGRBlobBaseAddress ()) == EFI_SUCCESS) {
-          MemoryType = EfiReservedMemoryType;
-        } else {
-          MemoryType = EfiBootServicesData;
-        }
+    DEBUG ((
+      EFI_D_ERROR,
+      "Carveout %d Region: Base: 0x%016lx, Size: 0x%016lx\n",
+      Index,
+      CpuBootloaderParams->CarveoutInfo[Index].Base,
+      CpuBootloaderParams->CarveoutInfo[Index].Size
+      ));
+    if (Index == CARVEOUT_CCPLEX_INTERWORLD_SHMEM) {
+      // Leave in memory map but marked as used
+      EFI_MEMORY_TYPE  MemoryType;
+
+      if (FixedPcdGetBool (PcdExposeCcplexInterworldShmem)) {
+        MemoryType = EfiBootServicesData;
       } else {
         MemoryType = EfiReservedMemoryType;
       }
@@ -217,42 +221,51 @@ T234GetResourceConfig (
         CpuBootloaderParams->CarveoutInfo[Index].Base,
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
         MemoryType
-      );
+        );
     } else if (Index == CARVEOUT_RCM_BLOB) {
-      //Leave in memory map but marked as used
+      // Leave in memory map but marked as used
       BuildMemoryAllocationHob (
         CpuBootloaderParams->CarveoutInfo[Index].Base,
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
         EfiBootServicesData
-      );
+        );
     } else if (Index == CARVEOUT_OS) {
-      //Leave in memory map but marked as used
+      // Leave in memory map but marked as used
       BuildMemoryAllocationHob (
         CpuBootloaderParams->CarveoutInfo[Index].Base,
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
         EfiReservedMemoryType
-      );
+        );
 
-      Descriptor.Type = EfiReservedMemoryType;
+      Descriptor.Type          = EfiReservedMemoryType;
       Descriptor.PhysicalStart = CpuBootloaderParams->CarveoutInfo[Index].Base;
-      Descriptor.VirtualStart = CpuBootloaderParams->CarveoutInfo[Index].Base;
+      Descriptor.VirtualStart  = CpuBootloaderParams->CarveoutInfo[Index].Base;
       Descriptor.NumberOfPages = EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size);
-      Descriptor.Attribute = 0;
+      Descriptor.Attribute     = 0;
       BuildGuidDataHob (&gNVIDIAOSCarveoutHob, &Descriptor, sizeof (Descriptor));
+    } else if (Index == CARVEOUT_GR) {
+      // Leave in memory map but marked as used
+      BuildMemoryAllocationHob (
+        CpuBootloaderParams->CarveoutInfo[Index].Base,
+        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
+        EfiReservedMemoryType
+        );
     } else if (Index != CARVEOUT_UEFI) {
       // Skip CARVEOUT_BLANKET_NSDRAM if blanket dram is enabled as this is a placeholder
       // for BL carveout for BL to program GSC for usable DRAM.
       if ((BanketDramEnabled == TRUE) &&
-          (Index == CARVEOUT_BLANKET_NSDRAM)) {
+          (Index == CARVEOUT_BLANKET_NSDRAM))
+      {
         continue;
       }
+
       CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
       CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
       CarveoutRegionsCount++;
     }
   }
 
-  PlatformInfo->CarveoutRegions = CarveoutRegions;
+  PlatformInfo->CarveoutRegions      = CarveoutRegions;
   PlatformInfo->CarveoutRegionsCount = CarveoutRegionsCount;
 
   return EFI_SUCCESS;
@@ -264,10 +277,10 @@ T234GetResourceConfig (
 **/
 UINT64
 T234GetDTBBaseAddress (
-  IN UINTN CpuBootloaderAddress
+  IN UINTN  CpuBootloaderAddress
   )
 {
-  UINT64 GrBlobBase;
+  UINT64  GrBlobBase;
 
   GrBlobBase = T234GetGRBlobBaseAddress (CpuBootloaderAddress);
 
@@ -285,13 +298,13 @@ T234GetDTBBaseAddress (
 EFI_STATUS
 EFIAPI
 T234GetCarveoutInfo (
-  IN UINTN               CpuBootloaderAddress,
-  IN TEGRA_CARVEOUT_TYPE Type,
-  IN UINTN               *Base,
-  IN UINT32              *Size
+  IN UINTN                CpuBootloaderAddress,
+  IN TEGRA_CARVEOUT_TYPE  Type,
+  IN UINTN                *Base,
+  IN UINT32               *Size
   )
 {
-  TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
@@ -313,10 +326,10 @@ T234GetCarveoutInfo (
 **/
 TEGRA_BOOT_TYPE
 T234GetBootType (
-  IN UINTN CpuBootloaderAddress
+  IN UINTN  CpuBootloaderAddress
   )
 {
-  TEGRA_CPUBL_PARAMS   *CpuBootloaderParams;
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
@@ -329,28 +342,30 @@ T234GetBootType (
 **/
 UINT64
 T234GetGRBlobBaseAddress (
-  IN UINTN CpuBootloaderAddress
+  IN UINTN  CpuBootloaderAddress
   )
 {
-  TEGRA_CPUBL_PARAMS         *CpuBootloaderParams;
-  UINT64                     MemoryBase;
-  UINT64                     MemorySize;
-  EFI_FIRMWARE_VOLUME_HEADER *FvHeader;
-  UINT64                     FvOffset;
-  UINT64                     FvSize;
+  TEGRA_CPUBL_PARAMS          *CpuBootloaderParams;
+  UINT64                      MemoryBase;
+  UINT64                      MemorySize;
+  EFI_FIRMWARE_VOLUME_HEADER  *FvHeader;
+  UINT64                      FvOffset;
+  UINT64                      FvSize;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  MemoryBase = CpuBootloaderParams->CarveoutInfo[CARVEOUT_UEFI].Base;
-  MemorySize = CpuBootloaderParams->CarveoutInfo[CARVEOUT_UEFI].Size;
-  FvOffset = 0;
+  MemoryBase          = CpuBootloaderParams->CarveoutInfo[CARVEOUT_UEFI].Base;
+  MemorySize          = CpuBootloaderParams->CarveoutInfo[CARVEOUT_UEFI].Size;
+  FvOffset            = 0;
 
   while (FvOffset < MemorySize) {
     FvHeader = (EFI_FIRMWARE_VOLUME_HEADER *)(VOID *)(MemoryBase + FvOffset);
     if (FvHeader->Signature == EFI_FVH_SIGNATURE) {
       break;
     }
+
     FvOffset += SIZE_64KB;
   }
+
   ASSERT (FvOffset < MemorySize);
   FvSize = FvHeader->FvLength;
   // Make UEFI FV size aligned to 64KB.
@@ -365,16 +380,16 @@ T234GetGRBlobBaseAddress (
 **/
 BOOLEAN
 T234GetGROutputBaseAndSize (
-  IN  UINTN CpuBootloaderAddress,
-  OUT UINTN *Base,
-  OUT UINTN *Size
+  IN  UINTN  CpuBootloaderAddress,
+  OUT UINTN  *Base,
+  OUT UINTN  *Size
   )
 {
-  TEGRA_CPUBL_PARAMS *CpuBootloaderParams;
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  *Base = CpuBootloaderParams->GoldenRegisterAddress;
-  *Size = CpuBootloaderParams->GoldenRegisterSize;
+  *Base               = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Base;
+  *Size               = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Size;
 
   return TRUE;
 }
@@ -385,16 +400,16 @@ T234GetGROutputBaseAndSize (
 **/
 BOOLEAN
 T234GetFsiNsBaseAndSize (
-  IN  UINTN CpuBootloaderAddress,
-  OUT UINTN *Base,
-  OUT UINTN *Size
+  IN  UINTN  CpuBootloaderAddress,
+  OUT UINTN  *Base,
+  OUT UINTN  *Size
   )
 {
-  TEGRA_CPUBL_PARAMS *CpuBootloaderParams;
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  *Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Base;
-  *Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Size;
+  *Base               = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Base;
+  *Size               = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Size;
 
   return TRUE;
 }
@@ -403,11 +418,11 @@ T234GetFsiNsBaseAndSize (
   Retrieve MMIO Base and Size
 
 **/
-TEGRA_MMIO_INFO*
+TEGRA_MMIO_INFO *
 EFIAPI
 T234GetMmioBaseAndSize (
   VOID
-)
+  )
 {
   return T234MmioInfo;
 }
@@ -416,13 +431,13 @@ T234GetMmioBaseAndSize (
   Retrieve EEPROM Data
 
 **/
-TEGRABL_EEPROM_DATA*
+TEGRABL_EEPROM_DATA *
 EFIAPI
 T234GetEepromData (
-  IN  UINTN CpuBootloaderAddress
-)
+  IN  UINTN  CpuBootloaderAddress
+  )
 {
-  TEGRA_CPUBL_PARAMS *CpuBootloaderParams;
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
@@ -434,27 +449,27 @@ T234GetEepromData (
 
 **/
 BOOLEAN
-T234GetBoardInfo(
-  IN  UINTN            CpuBootloaderAddress,
-  OUT TEGRA_BOARD_INFO *BoardInfo
-)
+T234GetBoardInfo (
+  IN  UINTN             CpuBootloaderAddress,
+  OUT TEGRA_BOARD_INFO  *BoardInfo
+  )
 {
-  TEGRABL_EEPROM_DATA *EepromData;
-  T234_EEPROM_DATA    *T234EepromData;
+  TEGRABL_EEPROM_DATA  *EepromData;
+  T234_EEPROM_DATA     *T234EepromData;
 
-  EepromData = T234GetEepromData (CpuBootloaderAddress);
+  EepromData     = T234GetEepromData (CpuBootloaderAddress);
   T234EepromData = (T234_EEPROM_DATA *)EepromData->CvmEepromData;
 
   BoardInfo->FuseBaseAddr = T234_FUSE_BASE_ADDRESS;
-  BoardInfo->FuseList = T234FloorsweepingFuseList;
-  BoardInfo->FuseCount = sizeof(T234FloorsweepingFuseList) / sizeof(T234FloorsweepingFuseList[0]);
-  CopyMem ((VOID *) BoardInfo->CvmBoardId, (VOID *) T234EepromData->PartNumber.Id, BOARD_ID_LEN);
-  CopyMem ((VOID *) BoardInfo->CvmProductId, (VOID *) &T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
-  CopyMem ((VOID *) BoardInfo->SerialNumber, (VOID *) &T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
+  BoardInfo->FuseList     = T234FloorsweepingFuseList;
+  BoardInfo->FuseCount    = sizeof (T234FloorsweepingFuseList) / sizeof (T234FloorsweepingFuseList[0]);
+  CopyMem ((VOID *)BoardInfo->CvmBoardId, (VOID *)T234EepromData->PartNumber.Id, BOARD_ID_LEN);
+  CopyMem ((VOID *)BoardInfo->CvmProductId, (VOID *)&T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
+  CopyMem ((VOID *)BoardInfo->SerialNumber, (VOID *)&T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
 
   T234EepromData = (T234_EEPROM_DATA *)EepromData->CvbEepromData;
-  CopyMem ((VOID *) BoardInfo->CvbBoardId, (VOID *) T234EepromData->PartNumber.Id, BOARD_ID_LEN);
-  CopyMem ((VOID *) BoardInfo->CvbProductId, (VOID *) &T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
+  CopyMem ((VOID *)BoardInfo->CvbBoardId, (VOID *)T234EepromData->PartNumber.Id, BOARD_ID_LEN);
+  CopyMem ((VOID *)BoardInfo->CvbProductId, (VOID *)&T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
 
   return TRUE;
 }
@@ -464,14 +479,16 @@ T234GetBoardInfo(
 
 **/
 EFI_STATUS
-T234GetActiveBootChain(
+T234GetActiveBootChain (
   IN  UINTN   CpuBootloaderAddress,
   OUT UINT32  *BootChain
-)
+  )
 {
-  *BootChain = MmioBitFieldRead32 (FixedPcdGet64(PcdBootChainRegisterBaseAddressT234),
-                                   BOOT_CHAIN_BIT_FIELD_LO,
-                                   BOOT_CHAIN_BIT_FIELD_HI);
+  *BootChain = MmioBitFieldRead32 (
+                 FixedPcdGet64 (PcdBootChainRegisterBaseAddressT234),
+                 BOOT_CHAIN_BIT_FIELD_LO,
+                 BOOT_CHAIN_BIT_FIELD_HI
+                 );
 
   if (*BootChain >= BOOT_CHAIN_MAX) {
     return EFI_UNSUPPORTED;
@@ -485,22 +502,24 @@ T234GetActiveBootChain(
 
 **/
 EFI_STATUS
-T234ValidateActiveBootChain(
-  IN  UINTN   CpuBootloaderAddress
-)
+T234ValidateActiveBootChain (
+  IN  UINTN  CpuBootloaderAddress
+  )
 {
-  EFI_STATUS Status;
-  UINT32     BootChain;
+  EFI_STATUS  Status;
+  UINT32      BootChain;
 
   Status = T234GetActiveBootChain (CpuBootloaderAddress, &BootChain);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  MmioBitFieldWrite32 (FixedPcdGet64(PcdBootChainRegisterBaseAddressT234),
-                       BootChain,
-                       BootChain,
-                       BOOT_CHAIN_GOOD);
+  MmioBitFieldWrite32 (
+    FixedPcdGet64 (PcdBootChainRegisterBaseAddressT234),
+    BootChain,
+    BootChain,
+    BOOT_CHAIN_GOOD
+    );
 
   return EFI_SUCCESS;
 }
@@ -511,26 +530,34 @@ T234ValidateActiveBootChain(
 **/
 BOOLEAN
 T234GetUpdateBrBct (
-  IN UINTN      CpuBootloaderAddress
+  IN UINTN  CpuBootloaderAddress
   )
 {
-  UINT32    Magic;
-  BOOLEAN   UpdateBrBct;
+  UINT32   Magic;
+  BOOLEAN  UpdateBrBct;
 
-  Magic = MmioBitFieldRead32 (FixedPcdGet64 (PcdBootLoaderRegisterBaseAddressT234),
-                              BL_MAGIC_BIT_FIELD_LO,
-                              BL_MAGIC_BIT_FIELD_HI);
+  Magic = MmioBitFieldRead32 (
+            FixedPcdGet64 (PcdBootLoaderRegisterBaseAddressT234),
+            BL_MAGIC_BIT_FIELD_LO,
+            BL_MAGIC_BIT_FIELD_HI
+            );
   if (Magic != SR_BL_MAGIC) {
     DEBUG ((DEBUG_ERROR, "Invalid SR_BL magic=0x%x\n", Magic));
     return FALSE;
   }
 
-  UpdateBrBct = MmioBitFieldRead32 (FixedPcdGet64 (PcdBootLoaderRegisterBaseAddressT234),
-                                    BL_UPDATE_BR_BCT_BIT_FIELD,
-                                    BL_UPDATE_BR_BCT_BIT_FIELD);
+  UpdateBrBct = MmioBitFieldRead32 (
+                  FixedPcdGet64 (PcdBootLoaderRegisterBaseAddressT234),
+                  BL_UPDATE_BR_BCT_BIT_FIELD,
+                  BL_UPDATE_BR_BCT_BIT_FIELD
+                  );
 
-  DEBUG ((DEBUG_INFO, "SR_BL Magic=0x%x UpdateBrBct=%u\n",
-          Magic, UpdateBrBct));
+  DEBUG ((
+    DEBUG_INFO,
+    "SR_BL Magic=0x%x UpdateBrBct=%u\n",
+    Magic,
+    UpdateBrBct
+    ));
 
   return UpdateBrBct;
 }
@@ -541,18 +568,18 @@ T234GetUpdateBrBct (
 **/
 EFI_STATUS
 EFIAPI
-T234GetPlatformResourceInformation(
-  IN UINTN                        CpuBootloaderAddress,
-  IN TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo
-)
+T234GetPlatformResourceInformation (
+  IN UINTN                         CpuBootloaderAddress,
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
 {
-  EFI_STATUS         Status;
-  BOOLEAN            Result;
-  TEGRA_CPUBL_PARAMS *CpuBootloaderParams;
+  EFI_STATUS          Status;
+  BOOLEAN             Result;
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  PlatformResourceInfo->NumSockets = 1;
+  PlatformResourceInfo->NumSockets      = 1;
   PlatformResourceInfo->BrBctUpdateFlag = T234GetUpdateBrBct (CpuBootloaderAddress);
 
   Status = T234GetActiveBootChain (CpuBootloaderAddress, &PlatformResourceInfo->ActiveBootChain);
@@ -576,7 +603,7 @@ T234GetPlatformResourceInformation(
 
   // Populate RamOops Memory Information
   PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Base;
-  PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryLength = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Size;
+  PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryLength      = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Size;
 
   return EFI_SUCCESS;
 }
