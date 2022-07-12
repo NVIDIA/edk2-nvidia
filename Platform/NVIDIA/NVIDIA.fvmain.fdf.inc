@@ -270,7 +270,6 @@
   #
   # FW Partition
   #
-  INF Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
   INF Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
   INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
   INF Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
