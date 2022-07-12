@@ -345,6 +345,8 @@ UpdateGicInfo (
                );
       if (Prop != NULL) {
         RedistStride = SwapBytes64 (Prop[0]);
+      } else {
+        RedistStride = ARM_GICR_CTLR_FRAME_SIZE + ARM_GICR_SGI_PPI_FRAME_SIZE;
       }
 
       GicRedistInfo[Index].DiscoveryRangeBaseAddress = RegisterData[1].BaseAddress;
