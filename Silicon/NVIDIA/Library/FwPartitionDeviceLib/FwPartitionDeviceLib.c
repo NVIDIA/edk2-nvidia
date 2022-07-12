@@ -15,14 +15,49 @@
 #include <Library/FwPartitionDeviceLib.h>
 #include <Library/GptLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/PcdLib.h>
 #include <Uefi/UefiBaseType.h>
 
 STATIC FW_PARTITION_PRIVATE_DATA    *mPrivate                       = NULL;
 STATIC UINTN                        mNumFwPartitions                = 0;
 STATIC UINTN                        mMaxFwPartitions                = 0;
 STATIC UINT32                       mActiveBootChain                = MAX_UINT32;
-STATIC BOOLEAN                      mPcdOverwriteActiveFwPartition  = FALSE;
+STATIC BOOLEAN                      mOverwriteActiveFwPartition     = FALSE;
+
+// non-A/B partition names
+STATIC CONST CHAR16 *NonABPartitionNames[] = {
+  L"BCT",
+  L"BCT-boot-chain_backup",
+  L"mb2-applet",
+  NULL
+};
+
+/**
+  Check if given Name is in List.
+
+  @param[in]  Name                      Name to look for
+  @param[in]  List                      Null-terminated list to search
+
+  @retval BOOLEAN                       TRUE if Name is in List
+
+**/
+STATIC
+BOOLEAN
+EFIAPI
+NameIsInList (
+  CONST CHAR16                  *Name,
+  CONST CHAR16                  **List
+  )
+{
+  while (*List != NULL) {
+    if (StrCmp (Name, *List) == 0) {
+        return TRUE;
+    }
+
+    List++;
+  }
+
+  return FALSE;
+}
 
 /**
   Check if partition is part of the active FW boot chain
@@ -43,10 +78,13 @@ FwPartitionIsActive (
   UINTN             BootChain;
   EFI_STATUS        Status;
 
-  Status = GetPartitionBaseNameAndBootChain (Name, BaseName, &BootChain);
-  if (EFI_ERROR (Status)) {
-    // Partition name isn't an A/B name, treat as inactive
+  if (NameIsInList (Name, NonABPartitionNames)) {
     return FALSE;
+  }
+
+  Status = GetPartitionBaseNameAndBootChainAny (Name, BaseName, &BootChain);
+  if (EFI_ERROR (Status)) {
+    return TRUE;
   }
 
   return (BootChain == mActiveBootChain);
@@ -160,7 +198,7 @@ FwPartitionWrite (
     return Status;
   }
 
-  if (PartitionInfo->IsActivePartition && !mPcdOverwriteActiveFwPartition) {
+  if (PartitionInfo->IsActivePartition && !mOverwriteActiveFwPartition) {
     DEBUG ((DEBUG_ERROR, "Overwriting active %s partition not allowed\n",
             PartitionInfo->Name));
     return EFI_WRITE_PROTECTED;
@@ -464,19 +502,20 @@ FwPartitionDeviceLibDeinit (
   mNumFwPartitions                  = 0;
   mMaxFwPartitions                  = 0;
   mActiveBootChain                  = MAX_UINT32;
-  mPcdOverwriteActiveFwPartition    = FALSE;
+  mOverwriteActiveFwPartition       = FALSE;
 }
 
 EFI_STATUS
 EFIAPI
 FwPartitionDeviceLibInit (
   IN  UINT32                        ActiveBootChain,
-  IN  UINTN                         MaxFwPartitions
+  IN  UINTN                         MaxFwPartitions,
+  IN  BOOLEAN                       OverwriteActiveFwPartition
   )
 {
   mActiveBootChain                  = ActiveBootChain;
   mMaxFwPartitions                  = MaxFwPartitions;
-  mPcdOverwriteActiveFwPartition    = PcdGetBool (PcdOverwriteActiveFwPartition);
+  mOverwriteActiveFwPartition       = OverwriteActiveFwPartition;
 
   mPrivate = (FW_PARTITION_PRIVATE_DATA *) AllocateRuntimeZeroPool (
     mMaxFwPartitions * sizeof (FW_PARTITION_PRIVATE_DATA));

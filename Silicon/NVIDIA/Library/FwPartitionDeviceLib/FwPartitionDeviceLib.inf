@@ -2,7 +2,7 @@
 #
 #  FW Partition Device Library
 #
-#  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -13,7 +13,7 @@
   FILE_GUID                      = 9a15470a-6454-4648-9278-27a33a11104d
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = FwPartitionDeviceLib|DXE_DRIVER UEFI_DRIVER DXE_RUNTIME_DRIVER
+  LIBRARY_CLASS                  = FwPartitionDeviceLib|DXE_DRIVER UEFI_DRIVER DXE_RUNTIME_DRIVER MM_STANDALONE
 
 [Sources.common]
   FwPartitionDeviceLib.c
@@ -27,7 +27,3 @@
   BootChainInfoLib
   DebugLib
   GptLib
-  PcdLib
-
-[Pcd]
-  gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition

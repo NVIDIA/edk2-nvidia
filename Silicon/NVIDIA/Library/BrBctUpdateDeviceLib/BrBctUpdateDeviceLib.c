@@ -333,7 +333,6 @@ BrBctUpdateAddressChangeHandler (
   if (Private != NULL ) {
     ConvertFunction ((VOID **) &Private->BrBctPartition);
     ConvertFunction ((VOID **) &Private->BrBctBackupPartition);
-    ConvertFunction ((VOID **) &Private->DeviceErase);
     ConvertFunction ((VOID **) &Private->Protocol.UpdateFwChain);
   }
 
@@ -369,7 +368,6 @@ EFI_STATUS
 EFIAPI
 BrBctUpdateDeviceLibInit (
   IN  UINT32                        ActiveBootChain,
-  IN  BR_BCT_UPDATE_DEVICE_ERASE    DeviceErase,
   IN  UINT32                        EraseBlockSize
   )
 {
@@ -383,7 +381,6 @@ BrBctUpdateDeviceLibInit (
   Private->BrBctDataSize            = PcdGet32 (PcdBrBctDataSize);
   Private->SlotSize                 = MAX (EraseBlockSize,
                                            PcdGet32 (PcdBrBctLogicalSlotSize));
-  Private->DeviceErase              = DeviceErase;
   Private->Protocol.UpdateFwChain   = BrBctUpdateFwChain;
 
   // Find the BCT and backup partitions

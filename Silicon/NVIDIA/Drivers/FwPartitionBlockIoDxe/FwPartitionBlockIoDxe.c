@@ -44,89 +44,6 @@ STATIC UINTN                        mNumDevices         = 0;
 STATIC EFI_EVENT                    mAddressChangeEvent = NULL;
 
 /**
-  Erase data from device.  Writes 0xff data to simulate erasure.
-
-  @param[in]  DeviceInfo        Pointer to device info struct
-  @param[in]  Offset            Offset to begin erase
-  @param[in]  Bytes             Number of bytes to erase
-
-  @retval EFI_SUCCESS           Operation successful
-  @retval others                Error occurred
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-FPBlockIoErase (
-  IN  FW_PARTITION_DEVICE_INFO          *DeviceInfo,
-  IN  UINT64                            Offset,
-  IN  UINTN                             Bytes
-  )
-{
-  FW_PARTITION_BLOCK_IO_INFO            *BlockIoInfo;
-  EFI_BLOCK_IO_PROTOCOL                 *BlockIo;
-  EFI_STATUS                            Status;
-  VOID                                  *Buffer;
-  UINTN                                 BufferSize;
-  UINTN                                 EraseOffset;
-
-  if (EfiAtRuntime ()) {
-    return EFI_UNSUPPORTED;
-  }
-
-  BlockIoInfo   = CR (DeviceInfo,
-                      FW_PARTITION_BLOCK_IO_INFO,
-                      DeviceInfo,
-                      FW_PARTITION_BLOCK_IO_INFO_SIGNATURE);
-  BlockIo       = BlockIoInfo->BlockIo;
-
-  if (((Offset % BlockIo->Media->BlockSize) != 0) ||
-      (Bytes % BlockIo->Media->BlockSize) != 0) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  Status = FwPartitionCheckOffsetAndBytes (BlockIoInfo->Bytes, Offset, Bytes);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: erase offset=%llu, bytes=%u error: %r\n",
-            __FUNCTION__, Offset, Bytes, Status));
-    return Status;
-  }
-
-  DEBUG ((DEBUG_INFO, "%a: erasing offset=%llu, bytes=%u\n",
-          __FUNCTION__, Offset, Bytes));
-
-  BufferSize = FW_PARTITION_LOCAL_BUFFER_BLOCKS * BlockIo->Media->BlockSize;
-  Buffer = AllocatePool (BufferSize);
-  if (Buffer == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Buffer allocation failed\n", __FUNCTION__));
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  SetMem (Buffer, BufferSize, 0xff);
-
-  EraseOffset = 0;
-  while (Bytes > 0) {
-    UINTN   EraseSize;
-
-    EraseSize = (Bytes > BufferSize) ? BufferSize : Bytes;
-
-    Status = BlockIo->WriteBlocks (BlockIo,
-                                   BlockIo->Media->MediaId,
-                                   EraseOffset / BlockIo->Media->BlockSize,
-                                   EraseSize,
-                                   Buffer);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-
-    EraseOffset += EraseSize;
-    Bytes -= EraseSize;
-  }
-
-  return EFI_SUCCESS;
-}
-
-/**
   Read data from device.
 
   @param[in]  DeviceInfo        Pointer to device info struct
@@ -607,7 +524,9 @@ FwPartitionBlockIoDxeInitialize (
   BR_BCT_UPDATE_PRIVATE_DATA    *BrBctUpdatePrivate;
   FW_PARTITION_PRIVATE_DATA     *FwPartitionPrivate;
   VOID                          *Hob;
+  BOOLEAN                       PcdOverwriteActiveFwPartition;
 
+  PcdOverwriteActiveFwPartition = PcdGetBool (PcdOverwriteActiveFwPartition);
   BrBctUpdatePrivate = NULL;
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
@@ -620,7 +539,7 @@ FwPartitionBlockIoDxeInitialize (
     return EFI_UNSUPPORTED;
   }
 
-  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS);
+  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", Status));
     return Status;
@@ -678,7 +597,6 @@ FwPartitionBlockIoDxeInitialize (
   }
 
   Status = BrBctUpdateDeviceLibInit (ActiveBootChain,
-                                     FPBlockIoErase,
                                      1);
   if (Status == EFI_SUCCESS) {
     BrBctUpdatePrivate = BrBctUpdateGetPrivate ();
@@ -729,13 +647,16 @@ Done:
     FwPartitionPrivate = FwPartitionGetPrivateArray ();
     for (Index = 0; Index < FwPartitionGetCount (); Index++, FwPartitionPrivate++) {
       if (FwPartitionPrivate->Handle != NULL) {
-        Status = gBS->UninstallMultipleProtocolInterfaces (FwPartitionPrivate->Handle,
-                                                           &gNVIDIAFwPartitionProtocolGuid,
-                                                           &FwPartitionPrivate->Protocol,
-                                                           NULL);
-        if (EFI_ERROR (Status)) {
+        EFI_STATUS  LocalStatus;
+
+        LocalStatus = gBS->UninstallMultipleProtocolInterfaces (
+          FwPartitionPrivate->Handle,
+          &gNVIDIAFwPartitionProtocolGuid,
+          &FwPartitionPrivate->Protocol,
+          NULL);
+        if (EFI_ERROR (LocalStatus)) {
           DEBUG ((DEBUG_ERROR, "%a: Error uninstalling protocol for partition=%s: %r\n",
-                  __FUNCTION__, FwPartitionPrivate->PartitionInfo.Name, Status));
+                  __FUNCTION__, FwPartitionPrivate->PartitionInfo.Name, LocalStatus));
         }
         FwPartitionPrivate->Handle = NULL;
       }

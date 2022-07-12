@@ -37,7 +37,7 @@
 #define FMP_PLATFORM_SPEC_DEFAULT                   "-------"
 
 #define FMP_DATA_BUFFER_SIZE            (4 * 1024)
-#define FMP_WRITE_LOOP_SIZE             (64 * 1024)
+#define FMP_WRITE_LOOP_SIZE             (32 * 1024)
 
 // progress percentages (total=100)
 #define FMP_PROGRESS_CHECK_IMAGE        5

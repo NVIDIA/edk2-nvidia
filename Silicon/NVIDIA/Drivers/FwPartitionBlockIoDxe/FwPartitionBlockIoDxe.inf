@@ -42,5 +42,8 @@
 [Guids]
   gEfiEventVirtualAddressChangeGuid
 
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition
+
 [Depex]
   gEfiBlockIoProtocolGuid

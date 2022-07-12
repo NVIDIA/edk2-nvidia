@@ -2,7 +2,7 @@
 
   FW Image Library
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -115,6 +115,13 @@ FwImageLibConstructor (
 
     DEBUG ((DEBUG_INFO, "%a: Got FW Image protocol, Name=%s\n",
             __FUNCTION__, mFwImages[Index]->ImageName));
+
+    if (FwImageFindProtocol (mFwImages[Index]->ImageName) != NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: duplicate %s image index=%u\n",
+              __FUNCTION__, mFwImages[Index]->ImageName, Index));
+      Status = EFI_UNSUPPORTED;
+      goto Done;
+    }
 
     mNumImages++;
   }

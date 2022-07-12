@@ -1,7 +1,8 @@
 ## @file
-#  FW Partition Protocol NorFlash Dxe
 #
-#  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  MM FW partition protocol driver
+#
+#  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -9,14 +10,15 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = FwPartitionNorFlashDxe
-  FILE_GUID                      = e44cdde6-ef19-4a7a-8c90-395747c35f7c
+  BASE_NAME                      = FwPartitionMmDxe
+  FILE_GUID                      = c3c0ecb7-f1ad-400b-a279-65e2a8578c79
   MODULE_TYPE                    = DXE_RUNTIME_DRIVER
   VERSION_STRING                 = 1.0
-  ENTRY_POINT                    = FwPartitionNorFlashDxeInitialize
+  ENTRY_POINT                    = FwPartitionMmDxeInitialize
 
 [Sources.common]
-  FwPartitionNorFlashDxe.c
+  FwPartitionMmDxe.c
+  FwPartitionMmComm.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -26,9 +28,10 @@
   BaseLib
   BrBctUpdateDeviceLib
   DebugLib
-  HobLib
   FwPartitionDeviceLib
+  HobLib
   MemoryAllocationLib
+  PcdLib
   PlatformResourceLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
@@ -38,14 +41,15 @@
 [Protocols]
   gNVIDIAFwPartitionProtocolGuid            ## PRODUCES
   gNVIDIABrBctUpdateProtocolGuid            ## PRODUCES
-  gNVIDIANorFlashProtocolGuid               ## CONSUMES
   gEfiDevicePathProtocolGuid                ## CONSUMES
+  gEfiMmCommunication2ProtocolGuid          ## CONSUMES
 
 [Guids]
   gEfiEventVirtualAddressChangeGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition
 
 [Depex]
-  gNVIDIANorFlashProtocolGuid
+  gEfiMmCommunication2ProtocolGuid

@@ -161,3 +161,53 @@ GetPartitionBaseNameAndBootChain (
 
   return EFI_NOT_FOUND;
 }
+
+EFI_STATUS
+EFIAPI
+GetPartitionBaseNameAndBootChainAny (
+  IN  CONST CHAR16      *PartitionName,
+  OUT CHAR16            *BaseName,
+  OUT UINTN             *BootChain
+  )
+{
+  UINTN         Index;
+
+  if ((PartitionName == NULL) || (BaseName == NULL) || (BootChain == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // first check for t234-style name with prefix
+  for (Index = 0; Index < MAX_BOOT_CHAIN_INFO_MAPPING; Index++) {
+    if (StrnCmp (PartitionName, T234PartitionNameId[Index], PARTITION_PREFIX_LENGTH) == 0) {
+      StrCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName + PARTITION_PREFIX_LENGTH);
+      *BootChain = Index;
+      return EFI_SUCCESS;
+    }
+  }
+
+  // check for t194-style name with suffix
+  {
+    CONST CHAR16  *BSuffix;
+    UINTN         BSuffixLength;
+    CONST CHAR16  *SuffixStart;
+    UINTN         NameLength;
+
+    // check if boot chain B suffix is present, if not, it's boot chain A
+    BSuffix = T194PartitionNameId[1];
+    BSuffixLength = StrLen (BSuffix);
+    NameLength = StrLen (PartitionName);
+    if (NameLength > BSuffixLength) {
+      SuffixStart = PartitionName + NameLength - BSuffixLength;
+      if (StrnCmp (SuffixStart, BSuffix, BSuffixLength) == 0) {
+        StrnCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName,
+                  NameLength - BSuffixLength);
+        *BootChain = 1;
+        return EFI_SUCCESS;
+      }
+    }
+
+    StrCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName);
+    *BootChain = 0;
+    return EFI_SUCCESS;
+  }
+}

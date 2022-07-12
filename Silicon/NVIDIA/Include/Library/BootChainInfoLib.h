@@ -80,4 +80,25 @@ GetPartitionBaseNameAndBootChain (
   OUT UINTN             *BootChain
   );
 
+/**
+  Get base name and boot chain index from partition name without knowing
+  platform.
+
+  @param[in]  PartitionName         Pointer to partition name string
+  @param[out] BaseName              Pointer to buffer of MAX_PARTITION_NAME_LEN
+                                    CHAR16 characters to contain the
+                                    base partition name
+  @param[out] BootChain             Pointer to boot chain (0=a, 1=b)
+
+  @retval EFI_SUCCESS               Operation successful.
+  @retval others                    Error occurred.
+**/
+EFI_STATUS
+EFIAPI
+GetPartitionBaseNameAndBootChainAny (
+  IN  CONST CHAR16      *PartitionName,
+  OUT CHAR16            *BaseName,
+  OUT UINTN             *BootChain
+  );
+
 #endif

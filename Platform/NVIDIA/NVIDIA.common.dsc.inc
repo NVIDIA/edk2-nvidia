@@ -968,6 +968,7 @@
   #
   Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
   Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
+  Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
   Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
 
   #

@@ -187,11 +187,13 @@ FPNorFlashWrite (
     return Status;
   }
 
-  Status = FPNorFlashErase (DeviceInfo, Offset, Bytes);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: erase offset=%llu, bytes=%u error: %r\n",
-            __FUNCTION__, Offset, Bytes, Status));
-    return Status;
+  if (Offset % NorFlashInfo->Attributes.BlockSize == 0 ) {
+    Status = FPNorFlashErase (DeviceInfo, Offset, Bytes);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: erase offset=%llu, bytes=%u error: %r\n",
+              __FUNCTION__, Offset, Bytes, Status));
+      return Status;
+    }
   }
 
   DEBUG ((DEBUG_VERBOSE, "%a: write offset=%llu, bytes=%u\n",
@@ -374,7 +376,9 @@ FwPartitionNorFlashDxeInitialize (
   BR_BCT_UPDATE_PRIVATE_DATA    *BrBctUpdatePrivate;
   FW_PARTITION_PRIVATE_DATA     *FwPartitionPrivate;
   VOID                          *Hob;
+  BOOLEAN                       PcdOverwriteActiveFwPartition;
 
+  PcdOverwriteActiveFwPartition = PcdGetBool (PcdOverwriteActiveFwPartition);
   BrBctUpdatePrivate = NULL;
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
@@ -387,7 +391,7 @@ FwPartitionNorFlashDxeInitialize (
     return EFI_UNSUPPORTED;
   }
 
-  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS);
+  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", Status));
     return Status;
@@ -437,7 +441,6 @@ FwPartitionNorFlashDxeInitialize (
   // Only one is device supported, use its device erase size for BR-BCT
   ASSERT (mNumDevices == 1);
   Status = BrBctUpdateDeviceLibInit (ActiveBootChain,
-                                     FPNorFlashErase,
                                      mNorFlashInfo[0].Attributes.BlockSize);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error initializing BrBct lib: %r\n",
@@ -486,13 +489,16 @@ Done:
     FwPartitionPrivate = FwPartitionGetPrivateArray ();
     for (Index = 0; Index < FwPartitionGetCount (); Index++, FwPartitionPrivate++) {
       if (FwPartitionPrivate->Handle != NULL) {
-        Status = gBS->UninstallMultipleProtocolInterfaces (FwPartitionPrivate->Handle,
-                                                           &gNVIDIAFwPartitionProtocolGuid,
-                                                           &FwPartitionPrivate->Protocol,
-                                                           NULL);
-        if (EFI_ERROR (Status)) {
+        EFI_STATUS  LocalStatus;
+
+        LocalStatus = gBS->UninstallMultipleProtocolInterfaces (
+          FwPartitionPrivate->Handle,
+          &gNVIDIAFwPartitionProtocolGuid,
+          &FwPartitionPrivate->Protocol,
+          NULL);
+        if (EFI_ERROR (LocalStatus)) {
           DEBUG ((DEBUG_ERROR, "%a: Error uninstalling protocol for partition=%s: %r\n",
-                  __FUNCTION__, FwPartitionPrivate->PartitionInfo.Name, Status));
+                  __FUNCTION__, FwPartitionPrivate->PartitionInfo.Name, LocalStatus));
         }
         FwPartitionPrivate->Handle = NULL;
       }
