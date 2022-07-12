@@ -194,6 +194,94 @@ Exit:
   return Status;
 }
 
+/** Initialize the GIC MSI Frame entries based on device tree
+ *
+ * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
+ *
+  @retval EFI_SUCCESS   Success
+**/
+EFI_STATUS
+EFIAPI
+UpdateGicMsiFrame (
+  IN OUT EDKII_PLATFORM_REPOSITORY_INFO  **Repo
+  )
+{
+  EFI_STATUS                        Status;
+  UINT32                            Count;
+  UINT32                            Index;
+  UINT32                            *Handles;
+  CM_ARM_GIC_MSI_FRAME_INFO         *MsiInfo;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA  Registers[2];
+  UINT32                            NumberOfRegisters;
+  VOID                              *DeviceTreeBase;
+  INT32                             NodeOffset;
+  CONST VOID                        *Property;
+
+  Count  = 0;
+  Status = GetMatchingEnabledDeviceTreeNodes ("arm,gic-v2m-frame", NULL, &Count);
+  if (Status != EFI_BUFFER_TOO_SMALL) {
+    return EFI_SUCCESS;
+  }
+
+  Handles = (UINT32 *)AllocateZeroPool (sizeof (UINT32) * Count);
+  if (Handles == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate device handle array!\r\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = GetMatchingEnabledDeviceTreeNodes ("arm,gic-v2m-frame", Handles, &Count);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to GetMatchingEnabledDeviceTreeNodes - %r!\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  MsiInfo = (CM_ARM_GIC_MSI_FRAME_INFO *)AllocateZeroPool (sizeof (CM_ARM_GIC_MSI_FRAME_INFO) * Count);
+  if (MsiInfo == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate MSI Info array!\r\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  for (Index = 0; Index < Count; Index++) {
+    NumberOfRegisters = 2;
+    Status            = GetDeviceTreeRegisters (Handles[Index], Registers, &NumberOfRegisters);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get registers - %r\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    MsiInfo[Index].GicMsiFrameId       = Index;
+    MsiInfo[Index].PhysicalBaseAddress = Registers[0].BaseAddress;
+
+    Status = GetDeviceTreeNode (Handles[Index], &DeviceTreeBase, &NodeOffset);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get device node info - %r\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    Property = fdt_getprop (DeviceTreeBase, NodeOffset, "arm,msi-base-spi", NULL);
+    if (Property != NULL) {
+      MsiInfo[Index].SPIBase = SwapBytes32 (*(UINT32 *)Property);
+
+      Property = fdt_getprop (DeviceTreeBase, NodeOffset, "arm,msi-num-spis", NULL);
+      if (Property != NULL) {
+        MsiInfo[Index].SPICount = SwapBytes32 (*(UINT32 *)Property);
+        MsiInfo[Index].Flags    = BIT0;
+      }
+    }
+  }
+
+  FreePool (Handles);
+  Handles = NULL;
+
+  (*Repo)->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjGicMsiFrameInfo);
+  (*Repo)->CmObjectToken = CM_NULL_TOKEN;
+  (*Repo)->CmObjectSize  = sizeof (CM_ARM_GIC_MSI_FRAME_INFO) * Count;
+  (*Repo)->CmObjectCount = Count;
+  (*Repo)->CmObjectPtr   = MsiInfo;
+  (*Repo)++;
+  return EFI_SUCCESS;
+}
+
 /** Initialize the GIC entries in the platform configuration repository and patch MADT.
  *  This function updates GIC structure for all supporting Tegra platforms using the
  *  Device Tree information.
@@ -430,6 +518,8 @@ UpdateGicInfo (
   Repo->CmObjectPtr   = GicCInfo;
 
   Repo++;
+
+  UpdateGicMsiFrame (&Repo);
 
   *PlatformRepositoryInfo = Repo;
 
