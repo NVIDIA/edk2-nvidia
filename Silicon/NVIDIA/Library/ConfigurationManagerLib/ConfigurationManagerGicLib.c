@@ -33,15 +33,15 @@
 #define PLATFORM_CPUS_PER_SOCKET        (PLATFORM_MAX_CPUS / PLATFORM_MAX_SOCKETS)
 
 // GiC variable
-CM_ARM_GICC_INFO                  *GicCInfo;
+CM_ARM_GICC_INFO  *GicCInfo;
 
 // GicC Token for Processor Hierarchy structure
 
 CM_OBJECT_TOKEN
 EFIAPI
 GetGicCToken (
-  UINTN Index
-)
+  UINTN  Index
+  )
 {
   return REFERENCE_TOKEN (GicCInfo[Index]);
 }
@@ -49,38 +49,37 @@ GetGicCToken (
 EFI_STATUS
 EFIAPI
 GetPmuBaseInterrupt (
-  OUT HARDWARE_INTERRUPT_SOURCE* PmuBaseInterrupt
-)
+  OUT HARDWARE_INTERRUPT_SOURCE  *PmuBaseInterrupt
+  )
 {
-  EFI_STATUS                        Status;
-  UINT32                            PmuHandle;
-  UINT32                            NumPmuHandles;
-  NVIDIA_DEVICE_TREE_INTERRUPT_DATA InterruptData;
-  UINT32                            Size;
+  EFI_STATUS                         Status;
+  UINT32                             PmuHandle;
+  UINT32                             NumPmuHandles;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA  InterruptData;
+  UINT32                             Size;
 
   NumPmuHandles = 1;
-  Status = GetMatchingEnabledDeviceTreeNodes ("arm,armv8-pmuv3", &PmuHandle, &NumPmuHandles);
+  Status        = GetMatchingEnabledDeviceTreeNodes ("arm,armv8-pmuv3", &PmuHandle, &NumPmuHandles);
   if (EFI_ERROR (Status)) {
-    NumPmuHandles = 0;
+    NumPmuHandles     = 0;
     *PmuBaseInterrupt = 0;
     return Status;
   }
 
-  //Only one interrupt is expected
-  Size = 1;
+  // Only one interrupt is expected
+  Size   = 1;
   Status = GetDeviceTreeInterrupts (PmuHandle, &InterruptData, &Size);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  ASSERT(InterruptData.Type == INTERRUPT_PPI_TYPE);
+  ASSERT (InterruptData.Type == INTERRUPT_PPI_TYPE);
   *PmuBaseInterrupt = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                   DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                   DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
+                                                 DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
+                                                 DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
 
   return Status;
 }
-
 
 /** Initialize the GIC ITS entry in the platform configuration repository and patch MADT.
  *
@@ -90,7 +89,10 @@ GetPmuBaseInterrupt (
 **/
 EFI_STATUS
 EFIAPI
-UpdateGicItsInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo, CHAR8 *ItsCompatString)
+UpdateGicItsInfo (
+  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo,
+  CHAR8                           *ItsCompatString
+  )
 {
   EFI_STATUS                        Status;
   UINT32                            NumberOfItsCtlrs;
@@ -102,11 +104,11 @@ UpdateGicItsInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo, CHAR8
   UINT32                            Index;
   UINT32                            RegisterSize;
 
-  NumberOfItsCtlrs = 0;
+  NumberOfItsCtlrs   = 0;
   NumberOfItsEntries = 0;
-  ItsHandles = NULL;
-  RegisterData = NULL;
-  GicItsInfo = NULL;
+  ItsHandles         = NULL;
+  RegisterData       = NULL;
+  GicItsInfo         = NULL;
 
   Status = GetMatchingEnabledDeviceTreeNodes (ItsCompatString, NULL, &NumberOfItsCtlrs);
   if (Status != EFI_BUFFER_TOO_SMALL) {
@@ -139,11 +141,13 @@ UpdateGicItsInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo, CHAR8
         FreePool (RegisterData);
         RegisterData = NULL;
       }
-      RegisterData = (NVIDIA_DEVICE_TREE_REGISTER_DATA *) AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * RegisterSize);
+
+      RegisterData = (NVIDIA_DEVICE_TREE_REGISTER_DATA *)AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * RegisterSize);
       if (RegisterData == NULL) {
         Status = EFI_OUT_OF_RESOURCES;
         goto Exit;
       }
+
       Status = GetDeviceTreeRegisters (ItsHandles[Index], RegisterData, &RegisterSize);
       if (EFI_ERROR (Status)) {
         goto Exit;
@@ -153,9 +157,9 @@ UpdateGicItsInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo, CHAR8
     }
 
     GicItsInfo[Index].PhysicalBaseAddress = RegisterData[0].BaseAddress;
-    GicItsInfo[Index].GicItsId = Index;
+    GicItsInfo[Index].GicItsId            = Index;
 
-    //Assign socket number
+    // Assign socket number
     GicItsInfo[Index].ProximityDomain = Index;
 
     NumberOfItsEntries++;
@@ -163,27 +167,30 @@ UpdateGicItsInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo, CHAR8
 
   Repo = *PlatformRepositoryInfo;
 
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicItsInfo);
+  Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjGicItsInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (CM_ARM_GIC_ITS_INFO) * NumberOfItsEntries;
+  Repo->CmObjectSize  = sizeof (CM_ARM_GIC_ITS_INFO) * NumberOfItsEntries;
   Repo->CmObjectCount = NumberOfItsEntries;
-  Repo->CmObjectPtr = GicItsInfo;
+  Repo->CmObjectPtr   = GicItsInfo;
   Repo++;
 
   *PlatformRepositoryInfo = Repo;
 
-  Exit:
+Exit:
   if (EFI_ERROR (Status)) {
     if (GicItsInfo != NULL) {
       FreePool (GicItsInfo);
     }
   }
+
   if (ItsHandles != NULL) {
     FreePool (ItsHandles);
   }
+
   if (RegisterData != NULL) {
     FreePool (RegisterData);
   }
+
   return Status;
 }
 
@@ -197,7 +204,9 @@ UpdateGicItsInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo, CHAR8
 **/
 EFI_STATUS
 EFIAPI
-UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
+UpdateGicInfo (
+  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo
+  )
 {
   EFI_STATUS                        Status;
   UINT32                            NumberOfGicCtlrs;
@@ -221,22 +230,22 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   UINT32                            NumCores;
   UINT32                            EnabledCoreCntr;
 
-  NumberOfGicCtlrs = 0;
+  NumberOfGicCtlrs   = 0;
   NumberOfGicEntries = 0;
-  GicHandles = NULL;
-  GicInfo = NULL;
-  GicDInfo = NULL;
-  GicCInfo = NULL;
-  GicRedistInfo = NULL;
-  RegisterData = NULL;
-  Prop = NULL;
-  RedistStride = 0;
-  PmuBaseInterrupt = 0;
-  EnabledCoreCntr = 0;
+  GicHandles         = NULL;
+  GicInfo            = NULL;
+  GicDInfo           = NULL;
+  GicCInfo           = NULL;
+  GicRedistInfo      = NULL;
+  RegisterData       = NULL;
+  Prop               = NULL;
+  RedistStride       = 0;
+  PmuBaseInterrupt   = 0;
+  EnabledCoreCntr    = 0;
 
   NumCores = GetNumberOfEnabledCpuCores ();
 
-  GicInfo = (TEGRA_GIC_INFO *) AllocatePool ( sizeof (TEGRA_GIC_INFO));
+  GicInfo = (TEGRA_GIC_INFO *)AllocatePool (sizeof (TEGRA_GIC_INFO));
 
   if (!GetGicInfo (GicInfo)) {
     Status = EFI_D_ERROR;
@@ -266,14 +275,14 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     goto Exit;
   }
 
-  //Only one GICD structure
+  // Only one GICD structure
   GicDInfo = (CM_ARM_GICD_INFO *)AllocateZeroPool (sizeof (CM_ARM_GICD_INFO));
   if (GicDInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
 
-  //For Gic v3/v4 allocate space for Redistributor
+  // For Gic v3/v4 allocate space for Redistributor
   if (GicInfo->Version >= 3) {
     GicRedistInfo = (CM_ARM_GIC_REDIST_INFO *)AllocateZeroPool (sizeof (CM_ARM_GIC_REDIST_INFO) * NumberOfGicCtlrs);
     if (GicRedistInfo == NULL) {
@@ -282,7 +291,7 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     }
   }
 
-  //PMU
+  // PMU
   Status = GetPmuBaseInterrupt (&PmuBaseInterrupt);
   if (EFI_ERROR (Status)) {
     goto Exit;
@@ -297,11 +306,13 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
         FreePool (RegisterData);
         RegisterData = NULL;
       }
-      RegisterData = (NVIDIA_DEVICE_TREE_REGISTER_DATA *) AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * RegisterSize);
+
+      RegisterData = (NVIDIA_DEVICE_TREE_REGISTER_DATA *)AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * RegisterSize);
       if (RegisterData == NULL) {
         Status = EFI_OUT_OF_RESOURCES;
         goto Exit;
       }
+
       Status = GetDeviceTreeRegisters (GicHandles[Index], RegisterData, &RegisterSize);
       if (EFI_ERROR (Status)) {
         goto Exit;
@@ -314,8 +325,8 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     // One and only one GICD structure can be present
     if (Index == 0) {
       GicDInfo->PhysicalBaseAddress = RegisterData[0].BaseAddress;
-      GicDInfo->SystemVectorBase = 0;
-      GicDInfo->GicVersion = GicInfo->Version;
+      GicDInfo->SystemVectorBase    = 0;
+      GicDInfo->GicVersion          = GicInfo->Version;
     }
 
     // GICR structure entries
@@ -325,16 +336,19 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
       if (EFI_ERROR (Status)) {
         goto Exit;
       }
-      Prop = fdt_getprop (DeviceTree,
-                          NodeOffset,
-                          "redistributor-stride",
-                          &PropertySize);
+
+      Prop = fdt_getprop (
+               DeviceTree,
+               NodeOffset,
+               "redistributor-stride",
+               &PropertySize
+               );
       if (Prop != NULL) {
         RedistStride = SwapBytes64 (Prop[0]);
       }
 
       GicRedistInfo[Index].DiscoveryRangeBaseAddress = RegisterData[1].BaseAddress;
-      GicRedistInfo[Index].DiscoveryRangeLength = RedistStride * PLATFORM_CPUS_PER_SOCKET;
+      GicRedistInfo[Index].DiscoveryRangeLength      = RedistStride * PLATFORM_CPUS_PER_SOCKET;
     }
 
     NumberOfGicEntries++;
@@ -343,21 +357,20 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
   // Populate GICC structures for all enabled cores
   EnabledCoreCntr = 0;
   for (CoreIndex = 0; CoreIndex < PLATFORM_MAX_CPUS; CoreIndex++) {
-
     // Check if core enabled
-    if ( !IsCoreEnabled (CoreIndex) ) {
+    if ( !IsCoreEnabled (CoreIndex)) {
       continue;
     }
 
     // Get Mpidr using cpu index
     MpIdr = GetMpidrFromLinearCoreID (CoreIndex);
 
-    GicCInfo[EnabledCoreCntr].CPUInterfaceNumber = CoreIndex;
-    GicCInfo[EnabledCoreCntr].AcpiProcessorUid = CoreIndex;
-    GicCInfo[EnabledCoreCntr].Flags = EFI_ACPI_6_4_GIC_ENABLED;
-    GicCInfo[EnabledCoreCntr].ParkingProtocolVersion = 0;
+    GicCInfo[EnabledCoreCntr].CPUInterfaceNumber       = CoreIndex;
+    GicCInfo[EnabledCoreCntr].AcpiProcessorUid         = CoreIndex;
+    GicCInfo[EnabledCoreCntr].Flags                    = EFI_ACPI_6_4_GIC_ENABLED;
+    GicCInfo[EnabledCoreCntr].ParkingProtocolVersion   = 0;
     GicCInfo[EnabledCoreCntr].PerformanceInterruptGsiv = PmuBaseInterrupt;
-    GicCInfo[EnabledCoreCntr].ParkedAddress = 0;
+    GicCInfo[EnabledCoreCntr].ParkedAddress            = 0;
 
     if (GicInfo->Version < 3) {
       GicCInfo[EnabledCoreCntr].PhysicalBaseAddress = GicRedistInfo[CoreIndex/PLATFORM_CPUS_PER_SOCKET].DiscoveryRangeBaseAddress;
@@ -366,7 +379,7 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     // VGIC info
     GicCInfo[EnabledCoreCntr].VGICMaintenanceInterrupt = PcdGet32 (PcdArmArchVirtMaintenanceIntrNum);
 
-    GicCInfo[EnabledCoreCntr].MPIDR = MpIdr;
+    GicCInfo[EnabledCoreCntr].MPIDR                         = MpIdr;
     GicCInfo[EnabledCoreCntr].ProcessorPowerEfficiencyClass = 0;
 
     // TODO: check for compat string "arm,statistical-profiling-extension-v1"
@@ -375,11 +388,11 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
     // Obtain SocketID
     GicCInfo[EnabledCoreCntr].ProximityDomain = CoreIndex/PLATFORM_CPUS_PER_SOCKET;
 
-    GicCInfo[EnabledCoreCntr].ClockDomain = 0;
+    GicCInfo[EnabledCoreCntr].ClockDomain   = 0;
     GicCInfo[EnabledCoreCntr].AffinityFlags = EFI_ACPI_6_4_GICC_ENABLED;
 
     EnabledCoreCntr++;
-    //Check to ensure space allocated for GICC is enough
+    // Check to ensure space allocated for GICC is enough
     ASSERT (EnabledCoreCntr <= NumCores);
   }
 
@@ -387,57 +400,63 @@ UpdateGicInfo (EDKII_PLATFORM_REPOSITORY_INFO **PlatformRepositoryInfo)
 
   Repo = *PlatformRepositoryInfo;
 
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicDInfo);
+  Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjGicDInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (CM_ARM_GICD_INFO);
+  Repo->CmObjectSize  = sizeof (CM_ARM_GICD_INFO);
   Repo->CmObjectCount = 1;
-  Repo->CmObjectPtr = GicDInfo;
+  Repo->CmObjectPtr   = GicDInfo;
   Repo++;
 
   if (GicInfo->Version >= 3) {
-    Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicRedistributorInfo);
+    Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjGicRedistributorInfo);
     Repo->CmObjectToken = CM_NULL_TOKEN;
-    Repo->CmObjectSize = sizeof (CM_ARM_GIC_REDIST_INFO) * NumberOfGicEntries;
+    Repo->CmObjectSize  = sizeof (CM_ARM_GIC_REDIST_INFO) * NumberOfGicEntries;
     Repo->CmObjectCount = NumberOfGicEntries;
-    Repo->CmObjectPtr = GicRedistInfo;
+    Repo->CmObjectPtr   = GicRedistInfo;
     Repo++;
   }
 
-  //optional ITS
+  // optional ITS
   if ((GicInfo->Version >= 3) && (GicInfo->ItsCompatString)) {
-    UpdateGicItsInfo (&Repo,GicInfo->ItsCompatString);
+    UpdateGicItsInfo (&Repo, GicInfo->ItsCompatString);
   }
 
-  Repo->CmObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
+  Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize = sizeof (CM_ARM_GICC_INFO) * NumCores;
+  Repo->CmObjectSize  = sizeof (CM_ARM_GICC_INFO) * NumCores;
   Repo->CmObjectCount = NumCores;
-  Repo->CmObjectPtr = GicCInfo;
+  Repo->CmObjectPtr   = GicCInfo;
 
   Repo++;
 
   *PlatformRepositoryInfo = Repo;
 
-  Exit:
+Exit:
   if (EFI_ERROR (Status)) {
     if (GicDInfo != NULL) {
       FreePool (GicDInfo);
     }
+
     if (GicRedistInfo != NULL) {
       FreePool (GicRedistInfo);
     }
+
     if (GicCInfo != NULL) {
       FreePool (GicCInfo);
     }
   }
+
   if (GicHandles != NULL) {
     FreePool (GicHandles);
   }
+
   if (RegisterData != NULL) {
     FreePool (RegisterData);
   }
+
   if (GicInfo != NULL) {
     FreePool (GicInfo);
   }
+
   return Status;
 }
