@@ -127,6 +127,11 @@
       NULL|Silicon/NVIDIA/Drivers/OpteeNvRpmb/FixupPcdRpmb.inf
   }
 
+  #
+  # MM FW Partition Driver
+  #
+  Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionStandaloneMm.inf
+
 [Components.AARCH64]
 
 ###################################################################################################

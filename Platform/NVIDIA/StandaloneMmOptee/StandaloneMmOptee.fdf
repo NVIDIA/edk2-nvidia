@@ -98,8 +98,12 @@ READ_LOCK_STATUS   = TRUE
   #
   INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf
 
-  !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
+  #
+  # MM FW Partition Driver
+  #
+  INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionStandaloneMm.inf
 
+  !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
 
 ################################################################################
 #
