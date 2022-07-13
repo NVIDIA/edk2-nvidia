@@ -71,6 +71,7 @@ STATIC CONST CHAR16 *IgnoreImageNames[] = {
   L"BCT",
   L"BCT_A",
   L"BCT_B",
+  L"mb1_b",
   L"secondary_gpt",
   L"secondary_gpt_backup",
   NULL
@@ -424,11 +425,53 @@ STATIC
 BOOLEAN
 EFIAPI
 IsSpecialImageName (
-  CONST CHAR16                  *ImageName
+  IN  CONST CHAR16              *ImageName
   )
 {
   return NameIsInList (ImageName, SpecialImageNames);
 }
+
+/**
+  Get package image name for FwImage name.
+
+  @param[in]  Name                  Name of the FwImage
+  @param[in]  Header                Pointer to the FW package header
+
+  @retval CONST CHAR16 *            Package image name to use
+
+**/
+STATIC
+CONST CHAR16 *
+EFIAPI
+GetPackageImageName (
+  IN  CONST CHAR16                  *Name,
+  IN  CONST FW_PACKAGE_HEADER       *Header
+  )
+{
+  CONST CHAR16      *PkgImageName;
+  EFI_STATUS        Status;
+  UINTN             ImageIndex;
+
+  PkgImageName = Name;
+
+  // special case for T194 mb1_b when B is inactive boot chain being updated
+  if ((StrCmp (Name, L"mb1") == 0) && (mActiveBootChain == BOOT_CHAIN_A)) {
+    Status = FwPackageGetImageIndex (Header,
+                                     L"mb1_b",
+                                     mIsProductionFused,
+                                     mPlatformTnSpec,
+                                     &ImageIndex);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "No mb1_b in package: %r\n", Status));
+    } else {
+      DEBUG ((DEBUG_INFO, "Using package mb1_b image\n"));
+      PkgImageName = L"mb1_b";
+    }
+  }
+
+  return PkgImageName;
+}
+
 
 /**
   Write a buffer to a FwImage.
@@ -509,6 +552,7 @@ WriteImage (
   UINTN                             ImageIndex;
   CONST UINT8                       *DataBuffer;
   NVIDIA_FW_IMAGE_PROTOCOL          *FwImageProtocol;
+  CONST CHAR16                      *PkgImageName;
 
   FwImageProtocol = FwImageFindProtocol (Name);
   if (FwImageProtocol == NULL) {
@@ -517,8 +561,9 @@ WriteImage (
     return EFI_NOT_FOUND;
   }
 
+  PkgImageName = GetPackageImageName (Name, Header);
   Status = FwPackageGetImageIndex (Header,
-                                   Name,
+                                   PkgImageName,
                                    mIsProductionFused,
                                    mPlatformTnSpec,
                                    &ImageIndex);
@@ -632,6 +677,7 @@ VerifyImage (
   CONST FW_PACKAGE_IMAGE_INFO       *PkgImageInfo;
   UINTN                             ImageIndex;
   FW_IMAGE_ATTRIBUTES               ImageAttributes;
+  CONST CHAR16                      *PkgImageName;
 
   if (!mPcdFmpWriteVerifyImage) {
     return EFI_SUCCESS;
@@ -651,8 +697,9 @@ VerifyImage (
     return Status;
   }
 
+  PkgImageName = GetPackageImageName (Name, Header);
   Status = FwPackageGetImageIndex (Header,
-                                   Name,
+                                   PkgImageName,
                                    mIsProductionFused,
                                    mPlatformTnSpec,
                                    &ImageIndex);
@@ -1137,7 +1184,7 @@ FmpTegraCheckImage (
     DEBUG ((DEBUG_INFO, "%a: Image %u is %s\n", __FUNCTION__, Index, ImageName));
 
     if (NameIsInList (ImageName, IgnoreImageNames)) {
-      DEBUG ((DEBUG_ERROR, "%a: Image %u, skipping %s\n",
+      DEBUG ((DEBUG_INFO, "%a: Image %u, skipping %s\n",
               __FUNCTION__, Index, ImageName));
       continue;
     }

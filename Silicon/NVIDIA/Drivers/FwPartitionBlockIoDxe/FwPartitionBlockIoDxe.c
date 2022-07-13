@@ -25,6 +25,9 @@
 #include <Protocol/BlockIo.h>
 
 #define FW_PARTITION_BLOCK_IO_MAX_DEVICES       3
+#define FW_PARTITION_USER_PARTITION             0
+#define FW_PARTITION_BOOT_PARTITION_ZERO        1
+#define FW_PARTITION_BOOT_PARTITION_ONE         2
 #define FW_PARTITION_BLOCK_IO_INFO_SIGNATURE    SIGNATURE_32 ('F','W','B','I')
 #define FW_PARTITION_LOCAL_BUFFER_BLOCKS        8
 
@@ -304,6 +307,80 @@ FPBlockIoWrite (
 }
 
 /**
+  Read data from device boot partitions
+
+  @param[in]  DeviceInfo        Pointer to device info struct
+  @param[in]  Offset            Offset to read from
+  @param[in]  Bytes             Number of bytes to read
+  @param[out] Buffer            Address to read data into
+
+  @retval EFI_SUCCESS           Operation successful
+  @retval others                Error occurred
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+FPBlockIoReadBootPartition (
+  IN  FW_PARTITION_DEVICE_INFO          *DeviceInfo,
+  IN  UINT64                            Offset,
+  IN  UINTN                             Bytes,
+  OUT VOID                              *Buffer
+  )
+{
+  FW_PARTITION_BLOCK_IO_INFO            *BlockIoInfo;
+
+  BlockIoInfo = &mBlockIoInfo[FW_PARTITION_BOOT_PARTITION_ZERO];
+
+  if (Offset >= BlockIoInfo->Bytes) {
+    Offset -= BlockIoInfo->Bytes;
+    BlockIoInfo++;
+  }
+
+  return FPBlockIoRead (&BlockIoInfo->DeviceInfo,
+                        Offset,
+                        Bytes,
+                        Buffer);
+}
+
+/**
+  Write data to device boot partitions.
+
+  @param[in]  DeviceInfo        Pointer to device info struct
+  @param[in]  Offset            Offset to write
+  @param[in]  Bytes             Number of bytes to write
+  @param[in]  Buffer            Address of write data
+
+  @retval EFI_SUCCESS           Operation successful
+  @retval others                Error occurred
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+FPBlockIoWriteBootPartition (
+  IN  FW_PARTITION_DEVICE_INFO          *DeviceInfo,
+  IN  UINT64                            Offset,
+  IN  UINTN                             Bytes,
+  IN  CONST VOID                        *Buffer
+  )
+{
+  FW_PARTITION_BLOCK_IO_INFO            *BlockIoInfo;
+
+  BlockIoInfo = &mBlockIoInfo[FW_PARTITION_BOOT_PARTITION_ZERO];
+
+  if (Offset >= BlockIoInfo->Bytes) {
+    Offset -= BlockIoInfo->Bytes;
+    BlockIoInfo++;
+  }
+
+  return FPBlockIoWrite (&BlockIoInfo->DeviceInfo,
+                         Offset,
+                         Bytes,
+                         Buffer);
+}
+
+/**
   Check if device path is a supported BlockIo device:
      eMMC: Type == MESSAGING_DEVICE_PATH (3),  SubType == MSG_EMMC_DP (0x1D)
 
@@ -431,9 +508,15 @@ FPBlockIoInitDevices (
 
     DeviceInfo                      = &BlockIoInfo->DeviceInfo;
     DeviceInfo->DeviceName          = DeviceName;
-    DeviceInfo->DeviceRead          = FPBlockIoRead;
-    DeviceInfo->DeviceWrite         = FPBlockIoWrite;
     DeviceInfo->BlockSize           = BlockIo->Media->BlockSize;
+
+    if (mNumDevices == FW_PARTITION_USER_PARTITION) {
+      DeviceInfo->DeviceRead          = FPBlockIoRead;
+      DeviceInfo->DeviceWrite         = FPBlockIoWrite;
+    } else {
+      DeviceInfo->DeviceRead          = FPBlockIoReadBootPartition;
+      DeviceInfo->DeviceWrite         = FPBlockIoWriteBootPartition;
+    }
 
     mNumDevices++;
   }
@@ -519,6 +602,7 @@ FwPartitionBlockIoDxeInitialize (
   EFI_STATUS                    Status;
   UINTN                         Index;
   FW_PARTITION_BLOCK_IO_INFO    *BlockIoInfo;
+  FW_PARTITION_DEVICE_INFO      *DeviceInfo;
   UINT32                        ActiveBootChain;
   BR_BCT_UPDATE_PRIVATE_DATA    *BrBctUpdatePrivate;
   FW_PARTITION_PRIVATE_DATA     *FwPartitionPrivate;
@@ -557,12 +641,22 @@ FwPartitionBlockIoDxeInitialize (
     goto Done;
   }
 
-  // add FwPartition structs for all partitions in GPT on each device
-  BlockIoInfo = mBlockIoInfo;
-  for (Index = 0; Index < mNumDevices; Index++, BlockIoInfo++) {
-    FW_PARTITION_DEVICE_INFO    *DeviceInfo = &BlockIoInfo->DeviceInfo;
-
+  // add FwPartition structs from GPT on device user partition
+  if (mNumDevices > FW_PARTITION_USER_PARTITION) {
+    BlockIoInfo = &mBlockIoInfo[FW_PARTITION_USER_PARTITION];
+    DeviceInfo = &BlockIoInfo->DeviceInfo;
     Status = FwPartitionAddFromDeviceGpt (DeviceInfo, BlockIoInfo->Bytes);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a: Error adding partitions from FW device=%s: %r\n",
+              __FUNCTION__, DeviceInfo->DeviceName, Status));
+    }
+  }
+
+  // add FwPartition structs from GPT on device 2nd boot partition
+  if (mNumDevices > FW_PARTITION_BOOT_PARTITION_ONE) {
+    BlockIoInfo = &mBlockIoInfo[FW_PARTITION_BOOT_PARTITION_ONE];
+    DeviceInfo = &BlockIoInfo->DeviceInfo;
+    Status = FwPartitionAddFromDeviceGpt (DeviceInfo, 2 * BlockIoInfo->Bytes);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_INFO, "%a: Error adding partitions from FW device=%s: %r\n",
               __FUNCTION__, DeviceInfo->DeviceName, Status));
