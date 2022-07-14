@@ -56,10 +56,7 @@
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName
   gNVIDIATokenSpaceGuid.PcdRecoveryKernelDtbPartitionName
-  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
 
 [Depex]
-  gEdkiiNvVarStoreFormattedGuid
-  AND
-  gEfiVariableArchProtocolGuid
+  TRUE
