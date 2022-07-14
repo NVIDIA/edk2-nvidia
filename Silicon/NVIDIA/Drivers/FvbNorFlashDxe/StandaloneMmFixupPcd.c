@@ -129,14 +129,17 @@ StandaloneMmFixupPcdConstructor (
     if (Private != NULL) {
       if (Private->Signature == NVIDIA_FVB_SIGNATURE) {
         PatchPcdSet64 (PcdFlashNvStorageVariableBase64, Private->PartitionAddress);
+        PatchPcdSet32 (PcdFlashNvStorageVariableSize, Private->PartitionSize);
   DEBUG ((DEBUG_INFO, "%a: Fixup PcdFlashNvStorageVariableSize: 0x%x\n",
     __FUNCTION__, Private->PartitionSize));
       } else if (Private->Signature == NVIDIA_FWB_SIGNATURE) {
         PatchPcdSet64 (PcdFlashNvStorageFtwWorkingBase64, Private->PartitionAddress);
+        PatchPcdSet32 (PcdFlashNvStorageFtwWorkingSize, Private->PartitionSize);
   DEBUG ((DEBUG_INFO, "%a: Fixup PcdFlashNvStorageFtwWorkingSize: 0x%x\n",
     __FUNCTION__, Private->PartitionSize));
       } else if (Private->Signature == NVIDIA_FSB_SIGNATURE) {
         PatchPcdSet64 (PcdFlashNvStorageFtwSpareBase64, Private->PartitionAddress);
+        PatchPcdSet32 (PcdFlashNvStorageFtwSpareSize, Private->PartitionSize);
   DEBUG ((DEBUG_INFO, "%a: Fixup PcdFlashNvStorageFtwSpareSize: 0x%x\n",
     __FUNCTION__, Private->PartitionSize));
       } else {

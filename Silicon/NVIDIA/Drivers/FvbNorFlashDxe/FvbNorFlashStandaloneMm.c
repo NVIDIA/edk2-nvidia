@@ -1097,6 +1097,7 @@ FVBNORInitialize (
   FvpData[FVB_VARIABLE_INDEX].PartitionData = VarStoreBuffer;
   FvpData[FVB_VARIABLE_INDEX].PartitionAddress = (UINTN)FvpData[FVB_VARIABLE_INDEX].PartitionData;
   PatchPcdSet64(PcdFlashNvStorageVariableBase64, FvpData[FVB_VARIABLE_INDEX].PartitionAddress);
+  PatchPcdSet32(PcdFlashNvStorageVariableSize, FvpData[FVB_VARIABLE_INDEX].PartitionSize);
 
   FtwSpareBuffer = NULL;
   FtwSpareBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (VariableSize), NorFlashAttributes.BlockSize);
@@ -1111,6 +1112,7 @@ FVBNORInitialize (
   FvpData[FVB_FTW_SPARE_INDEX].PartitionAddress = (UINTN) FtwSpareBuffer;
 
   PatchPcdSet64(PcdFlashNvStorageFtwSpareBase64, FvpData[FVB_FTW_SPARE_INDEX].PartitionAddress);
+  PatchPcdSet32(PcdFlashNvStorageFtwSpareSize, FvpData[FVB_FTW_SPARE_INDEX].PartitionSize);
 
   FtwWorkingBuffer = NULL;
   FtwWorkingBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (FtwSize - VariableSize), NorFlashAttributes.BlockSize);
@@ -1124,6 +1126,7 @@ FVBNORInitialize (
   FvpData[FVB_FTW_WORK_INDEX].PartitionData = NULL;
   FvpData[FVB_FTW_WORK_INDEX].PartitionAddress = (UINTN) FtwWorkingBuffer;
   PatchPcdSet64(PcdFlashNvStorageFtwWorkingBase64, FvpData[FVB_FTW_WORK_INDEX].PartitionAddress);
+  PatchPcdSet32(PcdFlashNvStorageFtwWorkingSize, FvpData[FVB_FTW_WORK_INDEX].PartitionSize);
 
   //Spare needs to hold at least the full variable partition
   ASSERT (FvpData[FVB_FTW_SPARE_INDEX].PartitionSize >= VariableSize);
