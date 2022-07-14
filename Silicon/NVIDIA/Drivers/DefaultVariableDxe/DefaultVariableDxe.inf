@@ -39,15 +39,23 @@
   DtPlatformDtbLoaderLib
   FdtLib
   VariablePolicyHelperLib
+  FileHandleLib
+  DevicePathLib
+  PcdLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize                  ## CONSUMES
 
 [Guids]
   gNVIDIAPublicVariableGuid
   gEfiGlobalVariableGuid
   gDtPlatformFormSetGuid
+  gEfiPartTypeSystemPartGuid
 
 [Protocols]
   gEfiVariableWriteArchProtocolGuid
   gEdkiiVariablePolicyProtocolGuid
+  gEfiPartitionInfoProtocolGuid
 
 [Depex]
   TRUE

@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -51,6 +51,8 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
     INF MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
     INF MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
     INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
+    INF MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
+    INF FatPkg/EnhancedFatDxe/Fat.inf
     }
 
 !include Platform/NVIDIA/NVIDIA.fvmain.fdf.inc
