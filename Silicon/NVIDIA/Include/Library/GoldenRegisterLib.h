@@ -1,7 +1,7 @@
 /** @file
 *  Golden Register Library
 *
-*  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -11,72 +11,74 @@
 #define __GOLDENREGISTERLIB_H__
 
 /** @brief Length of the signature used to validate the golden register blob */
-#define GR_BLOB_SIG_LEN   8
+#define GR_BLOB_SIG_LEN  8
 /** @brief Signature of the golden register blob */
-#define GR_BLOB_SIGNATURE "GOLDENR"
+#define GR_BLOB_SIGNATURE  "GOLDENR"
 /** @brief Max number of binaries in the golden register blob */
-#define GR_MAX_BIN        2
+#define GR_MAX_BIN  2
 /** @brief Max length of the name of the associated bootloader stage */
-#define GR_STAGE_NAME_LEN 8
+#define GR_STAGE_NAME_LEN  8
 /** @brief Name of the associated bootloader stage */
-#define GR_STAGE_NAME     "UEFI"
+#define GR_STAGE_NAME  "CPUBL"
 /** @brief Max length of GR kernel command line argument */
-#define GR_CMD_MAX_LEN    64
+#define GR_CMD_MAX_LEN  64
 
 typedef struct {
   /** Base address of GR Blob */
-  UINT64 GrBlobBase;
+  UINT64    GrBlobBase;
   /** Offset of data for the bootloader stage */
-  UINT32 Offset;
+  UINT32    Offset;
   /** Size of data for the bootloader stage */
-  UINT32 Size;
+  UINT32    Size;
   /** Base of GR output location */
-  UINTN  GrOutBase;
+  UINTN     GrOutBase;
   /** Size of GR output location */
-  UINTN  GrOutSize;
+  UINTN     GrOutSize;
   /** Pointer to GR dump addresses */
-  UINT32 *Address;
-}GOLDEN_REGISTER_PRIVATE_DATA;
+  UINT32    *Address;
+  /** Number of address to read */
+  UINT32    NumberOfAddresses;
+} GOLDEN_REGISTER_PRIVATE_DATA;
 
 typedef struct {
   /** Name of the bootloader stage */
-  UINT8  Name[GR_STAGE_NAME_LEN];
+  UINT8     Name[GR_STAGE_NAME_LEN];
   /** Offset of the golden register list for the bootloader stage in the golden register blob */
-  UINT32 Offset;
+  UINT32    Offset;
   /** Size of the golden register list for the bootloader stage in the golden register blob */
-  UINT32 Size;
-}GR_BLOB_BINARY_DESC;
+  UINT32    Size;
+} GR_BLOB_BINARY_DESC;
 
 typedef struct {
   /** Signature of the golden register blob */
-  UINT8               Signature[GR_BLOB_SIG_LEN];
+  UINT8                  Signature[GR_BLOB_SIG_LEN];
   /** Number of binaries in the golden register blob, upto GR_MAX_BIN */
-  UINT32              NumBins;
+  UINT32                 NumBins;
   /** Binary descriptor associated with each binary of golden register dump */
-  GR_BLOB_BINARY_DESC BlobDesc[GR_MAX_BIN];
-}GR_BLOB_HEADER;
+  GR_BLOB_BINARY_DESC    BlobDesc[GR_MAX_BIN];
+} GR_BLOB_HEADER;
 
 typedef struct {
   /** GR Data Address */
-  UINT32 Address;
+  UINT32    Address;
   /** GR Data Value */
-  UINT32 Data;
-}GR_DATA;
+  UINT32    Data;
+} GR_DATA;
 
 typedef struct {
   /** Offset of MB1 GR Data */
-  UINT32 Mb1Offset;
+  UINT32    Mb1Offset;
   /** Size of MB1 GR Data */
-  UINT32 Mb1Size;
+  UINT32    Mb1Size;
   /** Offset of MB2 GR Data */
-  UINT32 Mb2Offset;
+  UINT32    Mb2Offset;
   /** Size of MB2 GR Data */
-  UINT32 Mb2Size;
+  UINT32    Mb2Size;
   /** Offset of UEFI GR Data */
-  UINT32 UefiOffset;
+  UINT32    UefiOffset;
   /** Size of UEFI GR Data */
-  UINT32 UefiSize;
-}GR_DATA_HEADER;
+  UINT32    UefiSize;
+} GR_DATA_HEADER;
 
 /**
   Get GR blob size
@@ -88,8 +90,8 @@ typedef struct {
 UINT32
 EFIAPI
 GrBlobBinarySize (
-  IN  UINT64 GrBlobBase
-);
+  IN  UINT64  GrBlobBase
+  );
 
 /**
   Locate UEFI GR binary in GR blob
@@ -104,10 +106,10 @@ GrBlobBinarySize (
 EFI_STATUS
 EFIAPI
 LocateGrBlobBinary (
-  IN  UINT64 GrBlobBase,
-  OUT UINT32 *Offset,
-  OUT UINT32 *Size
-);
+  IN  UINT64  GrBlobBase,
+  OUT UINT32  *Offset,
+  OUT UINT32  *Size
+  );
 
 /**
   Validate GR Blob Header
@@ -120,7 +122,7 @@ LocateGrBlobBinary (
 EFI_STATUS
 EFIAPI
 ValidateGrBlobHeader (
-  IN UINT64 GrBlobBase
-);
+  IN UINT64  GrBlobBase
+  );
 
 #endif // __GOLDENREGISTERLIB_H__
