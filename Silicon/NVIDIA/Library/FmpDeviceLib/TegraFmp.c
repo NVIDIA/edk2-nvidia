@@ -31,8 +31,8 @@
 #include "TegraFmp.h"
 
 #define FMP_CAPSULE_SINGLE_PARTITION_CHAIN_VARIABLE L"FmpCapsuleSinglePartitionChain"
-#define FMP_PLATFORM_FULL_SPEC_VARIABLE_NAME        L"TegraPlatformFullSpec"
 #define FMP_PLATFORM_SPEC_VARIABLE_NAME             L"TegraPlatformSpec"
+#define FMP_PLATFORM_COMPAT_SPEC_VARIABLE_NAME      L"TegraPlatformCompatSpec"
 #define FMP_PLATFORM_SPEC_DEFAULT                   "-------"
 
 #define FMP_DATA_BUFFER_SIZE            (4 * 1024)
@@ -147,14 +147,14 @@ GetFuseSettings (
   mIsProductionFused = TRUE;
 
   Size = 0;
-  Status = gRT->GetVariable (FMP_PLATFORM_FULL_SPEC_VARIABLE_NAME,
-                             &gNVIDIATokenSpaceGuid,
+  Status = gRT->GetVariable (FMP_PLATFORM_SPEC_VARIABLE_NAME,
+                             &gNVIDIAPublicVariableGuid,
                              NULL,
                              &Size,
                              NULL);
   if (Status != EFI_BUFFER_TOO_SMALL) {
     DEBUG ((DEBUG_ERROR, "%a: Error getting %s size: %r\n",
-            __FUNCTION__, FMP_PLATFORM_FULL_SPEC_VARIABLE_NAME, Status));
+            __FUNCTION__, FMP_PLATFORM_SPEC_VARIABLE_NAME, Status));
     return EFI_SUCCESS;
   }
 
@@ -164,14 +164,14 @@ GetFuseSettings (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Status = gRT->GetVariable (FMP_PLATFORM_FULL_SPEC_VARIABLE_NAME,
-                             &gNVIDIATokenSpaceGuid,
+  Status = gRT->GetVariable (FMP_PLATFORM_SPEC_VARIABLE_NAME,
+                             &gNVIDIAPublicVariableGuid,
                              NULL,
                              &Size,
                              PlatformFullSpec);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error getting %s: %r\n",
-            __FUNCTION__, FMP_PLATFORM_FULL_SPEC_VARIABLE_NAME, Status));
+            __FUNCTION__, FMP_PLATFORM_SPEC_VARIABLE_NAME, Status));
     FreePool (PlatformFullSpec);
     return Status;
   }
@@ -221,14 +221,14 @@ GetTnSpec (
   UINTN             Size;
 
   Size = 0;
-  Status = gRT->GetVariable (FMP_PLATFORM_SPEC_VARIABLE_NAME,
-                             &gNVIDIATokenSpaceGuid,
+  Status = gRT->GetVariable (FMP_PLATFORM_COMPAT_SPEC_VARIABLE_NAME,
+                             &gNVIDIAPublicVariableGuid,
                              NULL,
                              &Size,
                              NULL);
   if (Status != EFI_BUFFER_TOO_SMALL) {
     DEBUG ((DEBUG_ERROR, "%a: Error getting %s size: %r\n",
-            __FUNCTION__, FMP_PLATFORM_SPEC_VARIABLE_NAME, Status));
+            __FUNCTION__, FMP_PLATFORM_COMPAT_SPEC_VARIABLE_NAME, Status));
     goto UseDefault;
   }
 
@@ -238,14 +238,14 @@ GetTnSpec (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Status = gRT->GetVariable (FMP_PLATFORM_SPEC_VARIABLE_NAME,
-                             &gNVIDIATokenSpaceGuid,
+  Status = gRT->GetVariable (FMP_PLATFORM_COMPAT_SPEC_VARIABLE_NAME,
+                             &gNVIDIAPublicVariableGuid,
                              NULL,
                              &Size,
                              mPlatformTnSpec);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error getting %s: %r\n",
-            __FUNCTION__, FMP_PLATFORM_SPEC_VARIABLE_NAME, Status));
+            __FUNCTION__, FMP_PLATFORM_COMPAT_SPEC_VARIABLE_NAME, Status));
     FreePool (mPlatformTnSpec);
     mPlatformTnSpec = NULL;
     return Status;
@@ -264,7 +264,7 @@ UseDefault:
 
 Done:
   DEBUG ((DEBUG_INFO, "%a: %s=%a\n",
-          __FUNCTION__, FMP_PLATFORM_SPEC_VARIABLE_NAME, mPlatformTnSpec));
+          __FUNCTION__, FMP_PLATFORM_COMPAT_SPEC_VARIABLE_NAME, mPlatformTnSpec));
 
   return EFI_SUCCESS;
 }
