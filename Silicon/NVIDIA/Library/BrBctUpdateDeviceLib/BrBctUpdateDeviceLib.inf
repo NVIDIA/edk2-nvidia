@@ -27,6 +27,7 @@
   FwPartitionDeviceLib
   GptLib
   PcdLib
+  PlatformResourceLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize

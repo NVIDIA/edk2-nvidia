@@ -157,6 +157,19 @@ ValidateActiveBootChainInternal (
 }
 
 /**
+  Set next boot chain
+
+**/
+BOOLEAN
+EFIAPI
+SetNextBootChainInternal (
+  IN  UINT32    BootChain
+  )
+{
+  return FALSE;
+}
+
+/**
   Get Ramloaded OS Base and Size
 
 **/

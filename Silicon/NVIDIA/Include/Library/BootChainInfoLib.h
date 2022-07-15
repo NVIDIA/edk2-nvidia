@@ -17,6 +17,7 @@
 #define MAX_PARTITION_NAME_LEN      36
 #define BOOT_CHAIN_A                0
 #define BOOT_CHAIN_B                1
+#define BOOT_CHAIN_COUNT            2
 #define OTHER_BOOT_CHAIN(BootChain) ((BootChain) ^ 1)
 
 /**

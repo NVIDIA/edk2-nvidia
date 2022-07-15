@@ -110,4 +110,14 @@ T234SetRootfsStatusReg(
   IN UINT32                       RegisterValue
 );
 
+/**
+  Set next boot chain
+
+**/
+EFI_STATUS
+EFIAPI
+T234SetNextBootChain (
+  IN  UINT32    BootChain
+  );
+
 #endif //__T234_RESOURCE_CONFIG_H__

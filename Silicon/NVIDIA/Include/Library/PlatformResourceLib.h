@@ -224,6 +224,21 @@ ValidateActiveBootChain (
 );
 
 /**
+  Update boot chain scratch register to boot given boot chain on next reset
+
+  @param[in]  BootChain             Boot chain
+
+  @retval EFI_SUCCESS           Operation successful
+  @retval others                Error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+SetNextBootChain (
+  IN  UINT32    BootChain
+  );
+
+/**
   Get Ramloaded OS Base and Size
 
 **/

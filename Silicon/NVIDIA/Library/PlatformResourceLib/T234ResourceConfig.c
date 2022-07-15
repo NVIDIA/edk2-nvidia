@@ -640,3 +640,25 @@ T234SetRootfsStatusReg(
 
   return EFI_SUCCESS;
 }
+
+/**
+  Set next boot chain
+
+**/
+EFI_STATUS
+EFIAPI
+T234SetNextBootChain (
+  IN  UINT32    BootChain
+  )
+{
+  if (BootChain >= BOOT_CHAIN_MAX) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  MmioBitFieldWrite32 (FixedPcdGet64(PcdBootChainRegisterBaseAddressT234),
+                       BOOT_CHAIN_BIT_FIELD_LO,
+                       BOOT_CHAIN_BIT_FIELD_HI,
+                       BootChain);
+
+  return EFI_SUCCESS;
+}

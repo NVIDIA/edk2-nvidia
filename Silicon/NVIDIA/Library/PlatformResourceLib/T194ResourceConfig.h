@@ -100,4 +100,14 @@ T194SetRootfsStatusReg(
   IN UINT32                       RegisterValue
 );
 
+/**
+  Set next boot chain
+
+**/
+EFI_STATUS
+EFIAPI
+T194SetNextBootChain (
+  IN  UINT32    BootChain
+  );
+
 #endif //__T194_RESOURCE_CONFIG_H__

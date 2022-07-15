@@ -14,6 +14,7 @@
 #include <Library/BrBctUpdateDeviceLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Uefi/UefiBaseType.h>
 
 #define BR_BCT_SLOT_MAX                         4
@@ -287,12 +288,6 @@ BrBctUpdateFwChain (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (NewFwChain == mActiveBootChain) {
-    DEBUG ((DEBUG_ERROR, "%a: NewFwChain=%u same as current\n",
-            __FUNCTION__, NewFwChain));
-    return EFI_INVALID_PARAMETER;
-  }
-
   Private   = CR (This,
                   BR_BCT_UPDATE_PRIVATE_DATA,
                   Protocol,
@@ -315,6 +310,11 @@ BrBctUpdateFwChain (
   }
 
   Status = BrBctUpdateBctSlots (Private, DataSize, Buffer);
+  if (EFI_ERROR (Status)) {
+    goto Done;
+  }
+
+  SetNextBootChain (NewFwChain);
 
 Done:
   FreePool (Buffer);

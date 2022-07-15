@@ -445,6 +445,39 @@ ValidateActiveBootChain (
 }
 
 /**
+  Set next boot chain
+
+**/
+EFI_STATUS
+EFIAPI
+SetNextBootChain (
+  IN  UINT32    BootChain
+  )
+{
+  UINTN         ChipID;
+  BOOLEAN       ValidPrivatePlatform;
+
+  ValidPrivatePlatform = SetNextBootChainInternal (BootChain);
+  if (ValidPrivatePlatform) {
+    return EFI_SUCCESS;
+  }
+
+  ChipID = TegraGetChipID();
+
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      return T234SetNextBootChain (BootChain);
+      break;
+    case T194_CHIP_ID:
+      return T194SetNextBootChain (BootChain);
+      break;
+    default:
+      return EFI_UNSUPPORTED;
+      break;
+  }
+}
+
+/**
   Get Ramloaded OS Base and Size
 
 **/
