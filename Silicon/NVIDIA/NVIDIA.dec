@@ -438,3 +438,6 @@
 
 #Option to add new boot device at top or bottom of list
   gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy|0x01|UINT8|0x00000068
+
+#Enable OS access to QSPI DTB
+  gNVIDIATokenSpaceGuid.PcdAllowOsAccessQspi|FALSE|BOOLEAN|0x0000006B

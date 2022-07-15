@@ -57,6 +57,7 @@
   gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName
   gNVIDIATokenSpaceGuid.PcdRecoveryKernelDtbPartitionName
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
+  gNVIDIATokenSpaceGuid.PcdAllowOsAccessQspi
 
 [Depex]
   TRUE

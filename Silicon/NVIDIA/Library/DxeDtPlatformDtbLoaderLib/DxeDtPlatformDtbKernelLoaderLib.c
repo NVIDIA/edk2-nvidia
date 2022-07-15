@@ -337,7 +337,10 @@ UpdateFdt (
   }
 
   FloorSweepDtb (Dtb);
-  RemoveQspiNodes (Dtb);
+  if (!PcdGetBool (PcdAllowOsAccessQspi)) {
+    RemoveQspiNodes (Dtb);
+  }
+
   AddBoardProperties (Dtb);
   UpdateRamOopsMemory (Dtb);
   if (IsOpteePresent ()) {
