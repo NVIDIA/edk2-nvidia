@@ -1,0 +1,37 @@
+/** @file
+*
+*  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "L4T Rootfs Information";
+
+	fragment@0 {
+		target-path = "/";
+		board_config {
+			sw-modules = "uefi";
+		};
+
+		__overlay__ {
+			firmware {
+				uefi {
+					variables {
+						gNVIDIAPublicVariableGuid {
+							RootfsInfo {
+								data = [14 40 00 00];
+								runtime;
+								non-volatile;
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};
