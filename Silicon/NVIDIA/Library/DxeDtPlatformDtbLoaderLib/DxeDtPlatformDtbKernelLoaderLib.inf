@@ -45,6 +45,7 @@
   gEfiBlockIoProtocolGuid
   gNVIDIACvmEepromProtocolGuid
   gNVIDIAEepromProtocolGuid
+  gNVIDIAEFuseProtocolGuid
 
 [Guids]
   gFdtTableGuid

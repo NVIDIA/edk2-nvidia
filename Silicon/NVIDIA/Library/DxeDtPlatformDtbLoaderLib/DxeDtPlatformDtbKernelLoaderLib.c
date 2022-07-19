@@ -26,9 +26,19 @@
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/Eeprom.h>
+#include <Protocol/EFuse.h>
 #include <IndustryStandard/ArmStdSmc.h>
 #include <NVIDIAConfiguration.h>
 #include <libfdt.h>
+
+#define T234_FUSE_BOOT_SECURITY_INFO_OFFSET      0x268
+#define T234_OEM_KEY_VALID_BIT                   BIT9
+#define T234_FUSE_PRODUCTION_MODE_OFFSET         0x100
+#define T234_FUSE_PRODUCTION_MODE_SHADOW_OFFSET  0x7ac
+#define T234_PRODUCTION_MODE_BIT                 BIT0
+#define T234_FUSE_SECURITY_MODE_OFFSET           0x1a0
+#define T234_FUSE_SECURITY_MODE_SHADOW_OFFSET    0x7b0
+#define T234_SECURITY_MODE_BIT                   BIT0
 
 #define TRUSTY_OS_UID0  0xf025ee40
 #define TRUSTY_OS_UID1  0x4c30bca2
@@ -291,6 +301,89 @@ UpdateRamOopsMemory (
 
 VOID
 EFIAPI
+ProcessDsuPmu (
+  IN VOID  *Dtb
+  )
+{
+  EFI_STATUS             Status;
+  NVIDIA_EFUSE_PROTOCOL  *EFuse;
+  BOOLEAN                OemProduction;
+  INT32                  NodeOffset;
+
+  OemProduction = FALSE;
+
+  Status = gBS->LocateProtocol (&gNVIDIAEFuseProtocolGuid, NULL, (VOID **)&EFuse);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  if (TegraGetChipID () == T234_CHIP_ID) {
+    UINT32   Data;
+    BOOLEAN  OemKeyValidFuse;
+    BOOLEAN  ProductionMode;
+    BOOLEAN  ProductionModeFuse;
+    BOOLEAN  ProductionModeShadowFuse;
+    BOOLEAN  SecurityMode;
+    BOOLEAN  SecurityModeFuse;
+    BOOLEAN  SecurityModeShadowFuse;
+    BOOLEAN  OdmProductionMode;
+
+    Status = EFuse->ReadReg (EFuse, T234_FUSE_BOOT_SECURITY_INFO_OFFSET, &Data);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    OemKeyValidFuse = Data & T234_OEM_KEY_VALID_BIT;
+
+    Status = EFuse->ReadReg (EFuse, T234_FUSE_PRODUCTION_MODE_OFFSET, &Data);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    ProductionModeFuse = Data & T234_PRODUCTION_MODE_BIT;
+
+    Status = EFuse->ReadReg (EFuse, T234_FUSE_PRODUCTION_MODE_SHADOW_OFFSET, &Data);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    ProductionModeShadowFuse = Data & T234_PRODUCTION_MODE_BIT;
+
+    Status = EFuse->ReadReg (EFuse, T234_FUSE_SECURITY_MODE_OFFSET, &Data);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    SecurityModeFuse = Data & T234_SECURITY_MODE_BIT;
+
+    Status = EFuse->ReadReg (EFuse, T234_FUSE_SECURITY_MODE_SHADOW_OFFSET, &Data);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    SecurityModeShadowFuse = Data & T234_SECURITY_MODE_BIT;
+
+    ProductionMode = ProductionModeFuse || ProductionModeShadowFuse;
+    SecurityMode   = SecurityModeFuse || SecurityModeShadowFuse;
+
+    OdmProductionMode = ProductionMode && SecurityMode;
+
+    if (OemKeyValidFuse || OdmProductionMode) {
+      OemProduction = TRUE;
+    }
+  }
+
+  if (OemProduction) {
+    NodeOffset = fdt_node_offset_by_compatible (Dtb, 0, "arm,dsu-pmu");
+    while (NodeOffset >= 0) {
+      fdt_del_node (Dtb, NodeOffset);
+      NodeOffset = fdt_node_offset_by_compatible (Dtb, 0, "arm,dsu-pmu");
+    }
+  }
+}
+
+VOID
+EFIAPI
 UpdateFdt (
   IN EFI_EVENT  Event,
   IN VOID       *Context
@@ -343,6 +436,7 @@ UpdateFdt (
 
   AddBoardProperties (Dtb);
   UpdateRamOopsMemory (Dtb);
+  ProcessDsuPmu (Dtb);
   if (IsOpteePresent ()) {
     EnableOpteeNode (Dtb);
   } else if (IsTrustyPresent ()) {
