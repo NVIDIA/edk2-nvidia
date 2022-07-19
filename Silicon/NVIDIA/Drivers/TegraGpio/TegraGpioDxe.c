@@ -2,7 +2,7 @@
 
   SD MMC Controller Driver
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -23,109 +23,127 @@
 
 #include "TegraGpioPrivate.h"
 
-STATIC CONST GPIO_CONTROLLER Tegra194GpioControllers [] = {
-    TEGRA_GPIO_ENTRY (0,  1, 2, 8),
-    TEGRA_GPIO_ENTRY (1,  4, 7, 2),
-    TEGRA_GPIO_ENTRY (2,  4, 3, 8),
-    TEGRA_GPIO_ENTRY (3,  4, 4, 4),
-    TEGRA_GPIO_ENTRY (4,  4, 5, 8),
-    TEGRA_GPIO_ENTRY (5,  4, 6, 6),
-    TEGRA_GPIO_ENTRY (6,  4, 0, 8),
-    TEGRA_GPIO_ENTRY (7,  4, 1, 8),
-    TEGRA_GPIO_ENTRY (8,  4, 2, 5),
-    TEGRA_GPIO_ENTRY (9,  5, 1, 6),
-    TEGRA_GPIO_ENTRY (10, 3, 0, 8),
-    TEGRA_GPIO_ENTRY (11, 3, 1, 4),
-    TEGRA_GPIO_ENTRY (12, 2, 3, 8),
-    TEGRA_GPIO_ENTRY (13, 2, 4, 3),
-    TEGRA_GPIO_ENTRY (14, 5, 0, 6),
-    TEGRA_GPIO_ENTRY (15, 2, 5, 8),
-    TEGRA_GPIO_ENTRY (16, 2, 6, 8),
-    TEGRA_GPIO_ENTRY (17, 2, 7, 6),
-    TEGRA_GPIO_ENTRY (18, 3, 3, 8),
-    TEGRA_GPIO_ENTRY (19, 3, 4 ,8),
-    TEGRA_GPIO_ENTRY (20, 3, 5, 1),
-    TEGRA_GPIO_ENTRY (21, 1, 0, 8),
-    TEGRA_GPIO_ENTRY (22, 1, 1, 2),
-    TEGRA_GPIO_ENTRY (23, 2, 0, 8),
-    TEGRA_GPIO_ENTRY (24, 2, 1, 8),
-    TEGRA_GPIO_ENTRY (25, 2, 2, 8),
-    TEGRA_GPIO_ENTRY (26, 3, 2, 2),
-    TEGRA_GPIO_ENTRY (27, 0, 0, 2)
+STATIC CONST GPIO_CONTROLLER  Tegra194GpioControllers[] = {
+  TEGRA_GPIO_ENTRY (0,  1, 2, 8),
+  TEGRA_GPIO_ENTRY (1,  4, 7, 2),
+  TEGRA_GPIO_ENTRY (2,  4, 3, 8),
+  TEGRA_GPIO_ENTRY (3,  4, 4, 4),
+  TEGRA_GPIO_ENTRY (4,  4, 5, 8),
+  TEGRA_GPIO_ENTRY (5,  4, 6, 6),
+  TEGRA_GPIO_ENTRY (6,  4, 0, 8),
+  TEGRA_GPIO_ENTRY (7,  4, 1, 8),
+  TEGRA_GPIO_ENTRY (8,  4, 2, 5),
+  TEGRA_GPIO_ENTRY (9,  5, 1, 6),
+  TEGRA_GPIO_ENTRY (10, 3, 0, 8),
+  TEGRA_GPIO_ENTRY (11, 3, 1, 4),
+  TEGRA_GPIO_ENTRY (12, 2, 3, 8),
+  TEGRA_GPIO_ENTRY (13, 2, 4, 3),
+  TEGRA_GPIO_ENTRY (14, 5, 0, 6),
+  TEGRA_GPIO_ENTRY (15, 2, 5, 8),
+  TEGRA_GPIO_ENTRY (16, 2, 6, 8),
+  TEGRA_GPIO_ENTRY (17, 2, 7, 6),
+  TEGRA_GPIO_ENTRY (18, 3, 3, 8),
+  TEGRA_GPIO_ENTRY (19, 3, 4, 8),
+  TEGRA_GPIO_ENTRY (20, 3, 5, 1),
+  TEGRA_GPIO_ENTRY (21, 1, 0, 8),
+  TEGRA_GPIO_ENTRY (22, 1, 1, 2),
+  TEGRA_GPIO_ENTRY (23, 2, 0, 8),
+  TEGRA_GPIO_ENTRY (24, 2, 1, 8),
+  TEGRA_GPIO_ENTRY (25, 2, 2, 8),
+  TEGRA_GPIO_ENTRY (26, 3, 2, 2),
+  TEGRA_GPIO_ENTRY (27, 0, 0, 2)
 };
 
-STATIC CONST GPIO_CONTROLLER Tegra234GpioControllers [] = {
-    TEGRA_GPIO_ENTRY (0,  0, 0, 8),
-    TEGRA_GPIO_ENTRY (1,  0, 3, 1),
-    TEGRA_GPIO_ENTRY (2,  5, 1, 8),
-    TEGRA_GPIO_ENTRY (3,  5, 2, 4),
-    TEGRA_GPIO_ENTRY (4,  5, 3, 8),
-    TEGRA_GPIO_ENTRY (5,  5, 4, 6),
-    TEGRA_GPIO_ENTRY (6,  4, 0, 8),
-    TEGRA_GPIO_ENTRY (7,  4, 1, 8),
-    TEGRA_GPIO_ENTRY (8,  4, 2, 7),
-    TEGRA_GPIO_ENTRY (9,  5, 0, 6),
-    TEGRA_GPIO_ENTRY (10, 3, 0, 8),
-    TEGRA_GPIO_ENTRY (11, 3, 1, 4),
-    TEGRA_GPIO_ENTRY (12, 2, 0, 8),
-    TEGRA_GPIO_ENTRY (13, 2, 1, 8),
-    TEGRA_GPIO_ENTRY (14, 2, 2, 8),
-    TEGRA_GPIO_ENTRY (15, 2, 3, 8),
-    TEGRA_GPIO_ENTRY (16, 2, 4, 6),
-    TEGRA_GPIO_ENTRY (17, 1, 0, 8),
-    TEGRA_GPIO_ENTRY (18, 1, 1, 8),
-    TEGRA_GPIO_ENTRY (19, 1, 2, 8),
-    TEGRA_GPIO_ENTRY (20, 0, 1, 8),
-    TEGRA_GPIO_ENTRY (21, 0, 2, 4),
-    TEGRA_GPIO_ENTRY (22, 3, 3, 2),
-    TEGRA_GPIO_ENTRY (23, 3, 4, 4),
-    TEGRA_GPIO_ENTRY (24, 3, 2, 8),
+STATIC CONST GPIO_CONTROLLER  Tegra234GpioControllers[] = {
+  TEGRA_GPIO_ENTRY (0,  0, 0, 8),
+  TEGRA_GPIO_ENTRY (1,  0, 3, 1),
+  TEGRA_GPIO_ENTRY (2,  5, 1, 8),
+  TEGRA_GPIO_ENTRY (3,  5, 2, 4),
+  TEGRA_GPIO_ENTRY (4,  5, 3, 8),
+  TEGRA_GPIO_ENTRY (5,  5, 4, 6),
+  TEGRA_GPIO_ENTRY (6,  4, 0, 8),
+  TEGRA_GPIO_ENTRY (7,  4, 1, 8),
+  TEGRA_GPIO_ENTRY (8,  4, 2, 7),
+  TEGRA_GPIO_ENTRY (9,  5, 0, 6),
+  TEGRA_GPIO_ENTRY (10, 3, 0, 8),
+  TEGRA_GPIO_ENTRY (11, 3, 1, 4),
+  TEGRA_GPIO_ENTRY (12, 2, 0, 8),
+  TEGRA_GPIO_ENTRY (13, 2, 1, 8),
+  TEGRA_GPIO_ENTRY (14, 2, 2, 8),
+  TEGRA_GPIO_ENTRY (15, 2, 3, 8),
+  TEGRA_GPIO_ENTRY (16, 2, 4, 6),
+  TEGRA_GPIO_ENTRY (17, 1, 0, 8),
+  TEGRA_GPIO_ENTRY (18, 1, 1, 8),
+  TEGRA_GPIO_ENTRY (19, 1, 2, 8),
+  TEGRA_GPIO_ENTRY (20, 0, 1, 8),
+  TEGRA_GPIO_ENTRY (21, 0, 2, 4),
+  TEGRA_GPIO_ENTRY (22, 3, 3, 2),
+  TEGRA_GPIO_ENTRY (23, 3, 4, 4),
+  TEGRA_GPIO_ENTRY (24, 3, 2, 8),
 };
 
-NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-gpio", &gNVIDIANonDiscoverableT194GpioDeviceGuid },
-  { "nvidia,tegra234-gpio", &gNVIDIANonDiscoverableT234GpioDeviceGuid },
-  { NULL, NULL }
+STATIC CONST GPIO_CONTROLLER  Tegra234GpioAonControllers[] = {
+  TEGRA_GPIO_ENTRY (0, 0, 4, 8),
+  TEGRA_GPIO_ENTRY (1, 0, 5, 4),
+  TEGRA_GPIO_ENTRY (2, 0, 2, 8),
+  TEGRA_GPIO_ENTRY (3, 0, 3, 3),
+  TEGRA_GPIO_ENTRY (4, 0, 0, 8),
+  TEGRA_GPIO_ENTRY (5, 0, 1, 1),
 };
 
-NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-    .DriverName = L"NVIDIA Gpio controller driver",
-    .UseDriverBinding = TRUE,
-    .AutoEnableClocks = FALSE,
-    .AutoDeassertReset = FALSE,
-    .SkipEdkiiNondiscoverableInstall = TRUE
+NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
+  { "nvidia,tegra194-gpio",     &gNVIDIANonDiscoverableT194GpioDeviceGuid    },
+  { "nvidia,tegra234-gpio",     &gNVIDIANonDiscoverableT234GpioDeviceGuid    },
+  { "nvidia,tegra234-gpio-aon", &gNVIDIANonDiscoverableT234GpioAonDeviceGuid },
+  { NULL,                       NULL                                         }
 };
 
-STATIC PLATFORM_GPIO_CONTROLLER *mGpioController = NULL;
-STATIC EMBEDDED_GPIO            *mI2cExpanderGpio = NULL;
+NVIDIA_GPIO_CONTROLLER_ENTRY  *mControllerArray = NULL;
+UINT32                        mControllerCount  = 0;
+
+NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
+  .DriverName                      = L"NVIDIA Gpio controller driver",
+  .UseDriverBinding                = FALSE,
+  .AutoEnableClocks                = FALSE,
+  .AutoDeassertReset               = FALSE,
+  .SkipEdkiiNondiscoverableInstall = TRUE,
+  .DirectEnumerationSupport        = TRUE
+};
+
+STATIC PLATFORM_GPIO_CONTROLLER  *mGpioController  = NULL;
+STATIC EMBEDDED_GPIO             *mI2cExpanderGpio = NULL;
 
 STATIC
 EFI_STATUS
 GetGpioAddress (
-    IN  EMBEDDED_GPIO_PIN   Gpio,
-    OUT UINTN               *GpioAddress
-    )
+  IN  EMBEDDED_GPIO_PIN  Gpio,
+  OUT UINTN              *GpioAddress
+  )
 {
-  UINTN                    Index;
+  UINTN  Index;
 
   if (GpioAddress == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
   for (Index = 0; Index < mGpioController->GpioControllerCount; Index++) {
-    UINTN RegisterOffset;
+    UINTN  RegisterOffset;
     if ((Gpio < mGpioController->GpioController[Index].GpioIndex) ||
-        (Gpio >= (mGpioController->GpioController[Index].GpioIndex + mGpioController->GpioController[Index].InternalGpioCount))) {
+        (Gpio >= (mGpioController->GpioController[Index].GpioIndex + mGpioController->GpioController[Index].InternalGpioCount)))
+    {
       continue;
     }
+
     if (mGpioController->GpioController[Index].RegisterBase == 0) {
       *GpioAddress = 0;
     } else {
       RegisterOffset = (Gpio - mGpioController->GpioController[Index].GpioIndex) * GPIO_REGISTER_SPACING;
-      *GpioAddress = mGpioController->GpioController[Index].RegisterBase + RegisterOffset;
+      *GpioAddress   = mGpioController->GpioController[Index].RegisterBase + RegisterOffset;
     }
+
     return EFI_SUCCESS;
   }
+
   return EFI_NOT_FOUND;
 }
 
@@ -140,15 +158,15 @@ GetGpioAddress (
  */
 EFI_STATUS
 GetGpioState (
-  IN  EMBEDDED_GPIO       *This,
-  IN  EMBEDDED_GPIO_PIN   Gpio,
-  OUT UINTN               *Value
+  IN  EMBEDDED_GPIO      *This,
+  IN  EMBEDDED_GPIO_PIN  Gpio,
+  OUT UINTN              *Value
   )
 {
-  UINT32     Mode;
-  UINT32     State;
-  UINTN      Address;
-  EFI_STATUS Status;
+  UINT32      Mode;
+  UINT32      State;
+  UINTN       Address;
+  EFI_STATUS  Status;
 
   if ((NULL == This) || (NULL == Value)) {
     return EFI_INVALID_PARAMETER;
@@ -169,6 +187,7 @@ GetGpioState (
   } else {
     State = MmioRead32 (Address + GPIO_OUTPUT_VALUE_OFFSET);
   }
+
   *Value = State;
   return EFI_SUCCESS;
 }
@@ -184,14 +203,14 @@ GetGpioState (
  */
 EFI_STATUS
 SetGpioState (
-  IN EMBEDDED_GPIO      *This,
-  IN EMBEDDED_GPIO_PIN  Gpio,
-  IN EMBEDDED_GPIO_MODE Mode
+  IN EMBEDDED_GPIO       *This,
+  IN EMBEDDED_GPIO_PIN   Gpio,
+  IN EMBEDDED_GPIO_MODE  Mode
   )
 {
-  UINTN      Address;
-  EFI_STATUS Status;
-  UINT32     State = 0;
+  UINTN       Address;
+  EFI_STATUS  Status;
+  UINT32      State = 0;
 
   if (NULL == This) {
     return EFI_INVALID_PARAMETER;
@@ -207,33 +226,32 @@ SetGpioState (
   }
 
   switch (Mode) {
-  case GPIO_MODE_INPUT:
-    MmioBitFieldWrite32 (
-      Address + GPIO_ENABLE_CONFIG_OFFSET,
-      GPIO_ENABLE_BIT,
-      GPIO_OUTPUT_BIT,
-      GPIO_ENABLE_BIT_VALUE
-      );
-    return EFI_SUCCESS;
+    case GPIO_MODE_INPUT:
+      MmioBitFieldWrite32 (
+        Address + GPIO_ENABLE_CONFIG_OFFSET,
+        GPIO_ENABLE_BIT,
+        GPIO_OUTPUT_BIT,
+        GPIO_ENABLE_BIT_VALUE
+        );
+      return EFI_SUCCESS;
 
-  case GPIO_MODE_OUTPUT_1:
-    State = 1;
+    case GPIO_MODE_OUTPUT_1:
+      State = 1;
 
-  case GPIO_MODE_OUTPUT_0:
-    MmioWrite32 (Address + GPIO_OUTPUT_VALUE_OFFSET, State);
-    MmioWrite32 (Address + GPIO_OUTPUT_CONTROL_OFFET, 0);
-    MmioBitFieldWrite32 (
-      Address + GPIO_ENABLE_CONFIG_OFFSET,
-      GPIO_ENABLE_BIT,
-      GPIO_OUTPUT_BIT,
-      GPIO_ENABLE_BIT_VALUE|GPIO_OUTPUT_BIT_VALUE
-      );
+    case GPIO_MODE_OUTPUT_0:
+      MmioWrite32 (Address + GPIO_OUTPUT_VALUE_OFFSET, State);
+      MmioWrite32 (Address + GPIO_OUTPUT_CONTROL_OFFET, 0);
+      MmioBitFieldWrite32 (
+        Address + GPIO_ENABLE_CONFIG_OFFSET,
+        GPIO_ENABLE_BIT,
+        GPIO_OUTPUT_BIT,
+        GPIO_ENABLE_BIT_VALUE|GPIO_OUTPUT_BIT_VALUE
+        );
 
-    return EFI_SUCCESS;
+      return EFI_SUCCESS;
 
-
-  default:
-    return EFI_UNSUPPORTED;
+    default:
+      return EFI_UNSUPPORTED;
   }
 }
 
@@ -248,15 +266,15 @@ SetGpioState (
  */
 EFI_STATUS
 GetGpioMode (
-  IN  EMBEDDED_GPIO         *This,
-  IN  EMBEDDED_GPIO_PIN     Gpio,
-  OUT EMBEDDED_GPIO_MODE    *Mode
+  IN  EMBEDDED_GPIO       *This,
+  IN  EMBEDDED_GPIO_PIN   Gpio,
+  OUT EMBEDDED_GPIO_MODE  *Mode
   )
 {
-  UINT32     EnableConfig;
-  UINT32     State;
-  UINTN      Address;
-  EFI_STATUS Status;
+  UINT32      EnableConfig;
+  UINT32      State;
+  UINTN       Address;
+  EFI_STATUS  Status;
 
   if ((NULL == This) || (NULL == Mode)) {
     return EFI_INVALID_PARAMETER;
@@ -282,6 +300,7 @@ GetGpioMode (
       *Mode = GPIO_MODE_OUTPUT_1;
     }
   }
+
   return EFI_SUCCESS;
 }
 
@@ -296,17 +315,17 @@ GetGpioMode (
  */
 EFI_STATUS
 SetGpioPull (
-  IN  EMBEDDED_GPIO      *This,
-  IN  EMBEDDED_GPIO_PIN  Gpio,
-  IN  EMBEDDED_GPIO_PULL Direction
+  IN  EMBEDDED_GPIO       *This,
+  IN  EMBEDDED_GPIO_PIN   Gpio,
+  IN  EMBEDDED_GPIO_PULL  Direction
   )
 {
   return EFI_UNSUPPORTED;
 }
 
-STATIC CONST EMBEDDED_GPIO mGpioEmbeddedProtocol = {
-  .Get = GetGpioState,
-  .Set = SetGpioState,
+STATIC CONST EMBEDDED_GPIO  mGpioEmbeddedProtocol = {
+  .Get     = GetGpioState,
+  .Set     = SetGpioState,
   .GetMode = GetGpioMode,
   .SetPull = SetGpioPull
 };
@@ -314,7 +333,7 @@ STATIC CONST EMBEDDED_GPIO mGpioEmbeddedProtocol = {
 /**
  * Installs the Gpio protocols onto the handle
  *
- * @param[in] ControllerHandle - device handle of Gpio controller
+ * @param[in] DriverHandle - driver handle of Gpio controller
  *
  * @return EFI_SUCCESS         - protocols installed
  * @return others              - Failed to install protocols
@@ -322,99 +341,61 @@ STATIC CONST EMBEDDED_GPIO mGpioEmbeddedProtocol = {
 STATIC
 EFI_STATUS
 InstallGpioProtocols (
-  IN  EFI_HANDLE ControllerHandle
+  IN  EFI_HANDLE  DriverHandle
   )
 {
-  EFI_STATUS                       Status;
-  NON_DISCOVERABLE_DEVICE          *Device = NULL;
-  UINTN                            ControllerCount;
-  CONST GPIO_CONTROLLER            *ControllerDefault = NULL;
-  PLATFORM_GPIO_CONTROLLER         *GpioController = NULL;
-  PLATFORM_GPIO_CONTROLLER         *I2cExpanderGpioController = NULL;
-  UINTN                            GpioBaseAddress = 0;
-  UINTN                            GpioRegionSize = 0;
-  UINTN                            ControllerIndex = 0;
-  NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode = NULL;
-  UINT32                           ControllerDtHandle;
+  EFI_STATUS                Status;
+  PLATFORM_GPIO_CONTROLLER  *GpioController            = NULL;
+  PLATFORM_GPIO_CONTROLLER  *I2cExpanderGpioController = NULL;
+  UINTN                     CurrentController          = 0;
+  UINTN                     ControllerIndex            = 0;
+  UINTN                     GpioControllerIndex        = 0;
+  UINTN                     TotalControllerCount       = 0;
 
-
-  Status = gBS->HandleProtocol (
-                  ControllerHandle,
-                  &gNVIDIADeviceTreeNodeProtocolGuid,
-                  (VOID **)&DeviceTreeNode
-                  );
-  if (EFI_ERROR (Status)) {
-    return Status;
+  for (GpioControllerIndex = 0; GpioControllerIndex < mControllerCount; GpioControllerIndex++) {
+    TotalControllerCount += mControllerArray[GpioControllerIndex].ControllerCount;
   }
 
-  ControllerDtHandle = fdt_get_phandle (
-                        DeviceTreeNode->DeviceTreeBase,
-                        DeviceTreeNode->NodeOffset
-                        );
-  if ((ControllerDtHandle > MAX_UINT16)) {
-    ASSERT (ControllerDtHandle <= MAX_UINT16);
-    return EFI_UNSUPPORTED;
-  }
-
-  Status = gBS->HandleProtocol (
-                  ControllerHandle,
-                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
-                  (VOID **)&Device
-                  );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT194GpioDeviceGuid)) {
-    ControllerCount = ARRAY_SIZE (Tegra194GpioControllers);
-    ControllerDefault = Tegra194GpioControllers;
-  } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234GpioDeviceGuid)) {
-    ControllerCount = ARRAY_SIZE (Tegra234GpioControllers);
-    ControllerDefault = Tegra234GpioControllers;
-  } else {
-    return EFI_UNSUPPORTED;
-  }
-
-  Status = DeviceDiscoveryGetMmioRegion (
-             ControllerHandle,
-             1,
-             &GpioBaseAddress,
-             &GpioRegionSize
-             );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = gBS->LocateProtocol (&gNVIDIAI2cExpanderGpioProtocolGuid, NULL, (VOID **) &mI2cExpanderGpio);
-  if (EFI_ERROR (Status) || mI2cExpanderGpio == NULL) {
+  Status = gBS->LocateProtocol (&gNVIDIAI2cExpanderGpioProtocolGuid, NULL, (VOID **)&mI2cExpanderGpio);
+  if (EFI_ERROR (Status) || (mI2cExpanderGpio == NULL)) {
     DEBUG ((DEBUG_ERROR, "%a: No I2C expander protocol found\r\n", __FUNCTION__));
     return EFI_UNSUPPORTED;
   }
 
-  Status = gBS->LocateProtocol (&gNVIDIAI2cExpanderPlatformGpioProtocolGuid, NULL, (VOID **) &I2cExpanderGpioController);
-  if (EFI_ERROR (Status) || I2cExpanderGpioController == NULL) {
+  Status = gBS->LocateProtocol (&gNVIDIAI2cExpanderPlatformGpioProtocolGuid, NULL, (VOID **)&I2cExpanderGpioController);
+  if (EFI_ERROR (Status) || (I2cExpanderGpioController == NULL)) {
     DEBUG ((DEBUG_ERROR, "%a: No I2C expander platform protocol found\r\n", __FUNCTION__));
     return EFI_UNSUPPORTED;
   }
 
-  GpioController = (PLATFORM_GPIO_CONTROLLER *)AllocatePool (sizeof (PLATFORM_GPIO_CONTROLLER) + (ControllerCount +  I2cExpanderGpioController->GpioControllerCount) * sizeof (GPIO_CONTROLLER));
+  GpioController = (PLATFORM_GPIO_CONTROLLER *)AllocatePool (sizeof (PLATFORM_GPIO_CONTROLLER) + (TotalControllerCount +  I2cExpanderGpioController->GpioControllerCount) * sizeof (GPIO_CONTROLLER));
   if (NULL == GpioController) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  GpioController->GpioControllerCount = ControllerCount + I2cExpanderGpioController->GpioControllerCount;
-  GpioController->GpioCount = ControllerCount * GPIO_PINS_PER_CONTROLLER + I2cExpanderGpioController->GpioCount;
-  GpioController->GpioController = (GPIO_CONTROLLER *)((UINTN) GpioController + sizeof (PLATFORM_GPIO_CONTROLLER));
+  GpioController->GpioControllerCount = TotalControllerCount + I2cExpanderGpioController->GpioControllerCount;
+  GpioController->GpioCount           = TotalControllerCount * GPIO_PINS_PER_CONTROLLER + I2cExpanderGpioController->GpioCount;
+  GpioController->GpioController      = (GPIO_CONTROLLER *)((UINTN)GpioController + sizeof (PLATFORM_GPIO_CONTROLLER));
 
-  CopyMem (GpioController->GpioController, ControllerDefault, ControllerCount * sizeof (GPIO_CONTROLLER));
-  for (ControllerIndex = 0; ControllerIndex < ControllerCount; ControllerIndex++) {
-    GpioController->GpioController[ControllerIndex].GpioIndex = GPIO (ControllerDtHandle, GpioController->GpioController[ControllerIndex].GpioIndex);
-    GpioController->GpioController[ControllerIndex].RegisterBase += GpioBaseAddress;
+  CurrentController = 0;
+  for (GpioControllerIndex = 0; GpioControllerIndex < mControllerCount; GpioControllerIndex++) {
+    CopyMem (
+      GpioController->GpioController + CurrentController,
+      mControllerArray[GpioControllerIndex].ControllerDefault,
+      mControllerArray[GpioControllerIndex].ControllerCount * sizeof (GPIO_CONTROLLER)
+      );
+
+    for (ControllerIndex = 0; ControllerIndex < mControllerArray[GpioControllerIndex].ControllerCount; ControllerIndex++) {
+      GpioController->GpioController[CurrentController].GpioIndex     = GPIO (mControllerArray[GpioControllerIndex].Handle, GpioController->GpioController[CurrentController].GpioIndex);
+      GpioController->GpioController[CurrentController].RegisterBase += mControllerArray[GpioControllerIndex].BaseAddress;
+      CurrentController++;
+    }
   }
-  CopyMem (GpioController->GpioController + ControllerCount, I2cExpanderGpioController->GpioController, I2cExpanderGpioController->GpioControllerCount * sizeof (GPIO_CONTROLLER));
+
+  CopyMem (GpioController->GpioController + CurrentController, I2cExpanderGpioController->GpioController, I2cExpanderGpioController->GpioControllerCount * sizeof (GPIO_CONTROLLER));
 
   Status = gBS->InstallMultipleProtocolInterfaces (
-                  &ControllerHandle,
+                  &DriverHandle,
                   &gPlatformGpioProtocolGuid,
                   GpioController,
                   &gEmbeddedGpioProtocolGuid,
@@ -426,48 +407,7 @@ InstallGpioProtocols (
   } else {
     mGpioController = GpioController;
   }
-  return Status;
-}
 
-/**
- * Uninstalls the Gpio protocols from the handle
- *
- * @param[in] ControllerHandle - device handle of Gpio controller
- *
- * @return EFI_SUCCESS         - protocols removed
- * @return others              - Failed to remove protocols
- */
-STATIC
-EFI_STATUS
-UninstallGpioProtocols (
-  IN  EFI_HANDLE ControllerHandle
-  )
-{
-  EFI_STATUS               Status;
-  PLATFORM_GPIO_CONTROLLER *GpioController = NULL;
-
-
-  Status = gBS->HandleProtocol (
-                  ControllerHandle,
-                  &gPlatformGpioProtocolGuid,
-                  (VOID **)&GpioController
-                  );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = gBS->UninstallMultipleProtocolInterfaces (
-                  ControllerHandle,
-                  &gPlatformGpioProtocolGuid,
-                  GpioController,
-                  &gEmbeddedGpioProtocolGuid,
-                  &mGpioEmbeddedProtocol,
-                  NULL
-                  );
-  if (!EFI_ERROR (Status)) {
-    mGpioController = NULL;
-    FreePool (GpioController);
-  }
   return Status;
 }
 
@@ -489,20 +429,79 @@ UninstallGpioProtocols (
 **/
 EFI_STATUS
 DeviceDiscoveryNotify (
-  IN  NVIDIA_DEVICE_DISCOVERY_PHASES         Phase,
-  IN  EFI_HANDLE                             DriverHandle,
-  IN  EFI_HANDLE                             ControllerHandle,
-  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
+  IN  NVIDIA_DEVICE_DISCOVERY_PHASES          Phase,
+  IN  EFI_HANDLE                              DriverHandle,
+  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
+  EFI_STATUS               Status;
+  UINTN                    GpioBaseAddress = 0;
+  UINTN                    GpioRegionSize  = 0;
+  NON_DISCOVERABLE_DEVICE  *Device         = NULL;
+
   switch (Phase) {
-  case DeviceDiscoveryDriverBindingStart:
-    return InstallGpioProtocols (ControllerHandle);
+    case DeviceDiscoveryDriverBindingStart:
+      mControllerArray = ReallocatePool (
+                           mControllerCount * sizeof (NVIDIA_GPIO_CONTROLLER_ENTRY),
+                           (mControllerCount + 1) * sizeof (NVIDIA_GPIO_CONTROLLER_ENTRY),
+                           mControllerArray
+                           );
 
-  case DeviceDiscoveryDriverBindingStop:
-    return UninstallGpioProtocols (ControllerHandle);
+      if (mControllerArray == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate new array\r\n", __FUNCTION__));
+        return EFI_OUT_OF_RESOURCES;
+      }
 
-  default:
-    return EFI_SUCCESS;
+      Status = DeviceDiscoveryGetMmioRegion (
+                 ControllerHandle,
+                 1,
+                 &GpioBaseAddress,
+                 &GpioRegionSize
+                 );
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+
+      mControllerArray[mControllerCount].BaseAddress = GpioBaseAddress;
+      mControllerArray[mControllerCount].Handle      = fdt_get_phandle (
+                                                         DeviceTreeNode->DeviceTreeBase,
+                                                         DeviceTreeNode->NodeOffset
+                                                         );
+      if ((mControllerArray[mControllerCount].Handle > MAX_UINT16)) {
+        ASSERT (mControllerArray[mControllerCount].Handle <= MAX_UINT16);
+        return EFI_UNSUPPORTED;
+      }
+
+      Status = gBS->HandleProtocol (
+                      ControllerHandle,
+                      &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                      (VOID **)&Device
+                      );
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+
+      if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT194GpioDeviceGuid)) {
+        mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Tegra194GpioControllers);
+        mControllerArray[mControllerCount].ControllerDefault = Tegra194GpioControllers;
+      } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234GpioDeviceGuid)) {
+        mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Tegra234GpioControllers);
+        mControllerArray[mControllerCount].ControllerDefault = Tegra234GpioControllers;
+      } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234GpioAonDeviceGuid)) {
+        mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Tegra234GpioAonControllers);
+        mControllerArray[mControllerCount].ControllerDefault = Tegra234GpioAonControllers;
+      } else {
+        return EFI_UNSUPPORTED;
+      }
+
+      mControllerCount++;
+      return EFI_SUCCESS;
+
+    case DeviceDiscoveryEnumerationCompleted:
+      return InstallGpioProtocols (DriverHandle);
+
+    default:
+      return EFI_SUCCESS;
   }
 }
