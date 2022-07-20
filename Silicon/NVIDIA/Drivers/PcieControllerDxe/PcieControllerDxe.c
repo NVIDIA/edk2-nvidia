@@ -1874,6 +1874,44 @@ UpdateFdtPcieControllerNode (
     return FALSE;
   }
 
+  /* Disable IOMMU nodes. WARNING: This will likely cause crashes when
+     the attached device attempts to perform DMA! */
+  Result = fdt_delprop (Fdt, NodeOffset, "iommus");
+  if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to delete property 'iommus' of node at offset 0x%x: %a\r\n",
+      __FUNCTION__,
+      (UINTN)NodeOffset,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  Result = fdt_delprop (Fdt, NodeOffset, "iommu-map");
+  if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to delete property 'iommu-map' of node at offset 0x%x: %a\r\n",
+      __FUNCTION__,
+      (UINTN)NodeOffset,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  Result = fdt_delprop (Fdt, NodeOffset, "iommu-map-mask");
+  if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to delete property 'iommu-map-mask' of node at offset 0x%x: %a\r\n",
+      __FUNCTION__,
+      (UINTN)NodeOffset,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
   return (  UpdateFdtRegulatorAlwaysOn (Fdt, NodeOffset, "vpcie3v3-supply")
          && UpdateFdtRegulatorAlwaysOn (Fdt, NodeOffset, "vpcie12v-supply"));
 }
