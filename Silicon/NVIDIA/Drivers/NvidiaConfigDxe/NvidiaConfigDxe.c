@@ -811,6 +811,9 @@ InitializeSettings (
   // Initialize Acpi Timer Form Settings
   PcdSet8S (PcdAcpiTimerEnabled, PcdGet8 (PcdAcpiTimerEnabled));
 
+  // Initialize dGPU DT EFIFB support form settings
+  PcdSet8S (PcdDgpuDtEfifbSupport, PcdGet8 (PcdDgpuDtEfifbSupport));
+
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;
   Status           = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, NULL, &KernelCmdLineLen, NULL);

@@ -97,4 +97,8 @@ typedef struct {
   UINT8    Enabled;
 } NVIDIA_ACPI_TIMER_ENABLED;
 
+typedef struct {
+  UINT8    Enabled;
+} NVIDIA_DGPU_DT_EFIFB_SUPPORT;
+
 #endif //__NVIDIA_CONFIGURATION_H__

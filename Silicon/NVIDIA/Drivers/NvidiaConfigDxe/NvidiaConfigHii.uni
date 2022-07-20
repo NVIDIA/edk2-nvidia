@@ -51,6 +51,8 @@
 #string STR_OS_STATUS_B_HELP             #language en-US "Used to set the status of OS chain B."
 #string STR_L4T_BOOTMODE_PROMPT          #language en-US "L4T Boot Mode"
 #string STR_L4T_BOOTMODE_HELP            #language en-US "Used to override boot mode of l4t launcher."
+#string STR_DT_DGPU_EFIFB_PROMPT         #language en-US "dGPU EFIFB Support (DT Mode)"
+#string STR_DT_DGPU_EFIFB_HELP           #language en-US "Enable to support dGPU EFIFB in device tree mode."
 #string STR_EGM_ENABLE_PROMPT            #language en-US "EGM"
 #string STR_EGM_ENABLE_HELP              #language en-US "Used to Enable EGM mode."
 #string STR_EGM_HV_RESERVED_SIZE_PROMPT  #language en-US "EGM Hypervisor reserved memory"

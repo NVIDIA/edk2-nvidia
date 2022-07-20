@@ -106,6 +106,18 @@ STATIC CONST NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL  mEfifbSupportKernelCmdLineU
   .NewCommandLineArgument      = L"clk_ignore_unused pd_ignore_unused console=tty0",
 };
 
+/* Extra command-line arguments passed to the kernel when EFIFB
+   support is disabled.
+
+   They are required to prevent the kernel from using the EFI
+   framebuffer, since the PCIe link to the backing dGPU will be shut
+   down.
+*/
+STATIC CONST NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL  mEfifbOffKernelCmdLineUpdateProtocol = {
+  .ExistingCommandLineArgument = NULL,
+  .NewCommandLineArgument      = L"video=efifb:off",
+};
+
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Pcie controller driver",
   .UseDriverBinding                = FALSE,
@@ -1918,30 +1930,52 @@ UpdatePcieControllersWithGpuDevice (
   for (HandleIndex = 0; HandleIndex < HandleCount; ++HandleIndex) {
     Status = GetParentPcieControllerPrivate (Handles[HandleIndex], &Private);
     if (EFI_ERROR (Status)) {
+      /* The handle does not have a parent PCIe controller managed by
+         this driver. */
       continue;
     }
 
-    if (FindFdtPcieControllerNode (Fdt, Private->CtrlId, &NodeOffset)) {
-      UpdateFdtPcieControllerNode (Fdt, NodeOffset);
-    }
+    /* We have a GOP protocol installed on a handle whose parent PCIe
+       controller is managed by this driver. This means we have a
+       problem: since this driver shuts the PCIe controller down
+       before booting the kernel, the kernel will crash as soon as it
+       attempts to use the EFI framebuffer. */
 
-    /* Make sure the ExitBootServices notification event is closed to
-       prevent shutting down the PCIe controller on UEFI exit. */
-    if (Private->ExitBootServicesEvent != NULL) {
-      Status = gBS->CloseEvent (Private->ExitBootServicesEvent);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to close ExitBootServices event: %r\r\n",
-          __FUNCTION__,
-          Status
-          ));
+    if (PcdGet8 (PcdDgpuDtEfifbSupport)) {
+      /* Solution #1: Avoid shutting the PCIe controller down and make
+         sure the kernel can properly take over managing it. This
+         requires closing the controller's OnExitBootServices
+         notification event, some DT patchwork and extra kernel
+         command-line arguments to make sure the kernel won't shut the
+         PCIe controller down itself. */
+
+      if (FindFdtPcieControllerNode (Fdt, Private->CtrlId, &NodeOffset)) {
+        UpdateFdtPcieControllerNode (Fdt, NodeOffset);
       }
 
-      Private->ExitBootServicesEvent = NULL;
-    }
+      /* Make sure the ExitBootServices notification event is closed to
+         prevent shutting down the PCIe controller on UEFI exit. */
+      if (Private->ExitBootServicesEvent != NULL) {
+        Status = gBS->CloseEvent (Private->ExitBootServicesEvent);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((
+            DEBUG_ERROR,
+            "%a: failed to close ExitBootServices event: %r\r\n",
+            __FUNCTION__,
+            Status
+            ));
+        }
 
-    KernelCmdLineUpdateProtocol = &mEfifbSupportKernelCmdLineUpdateProtocol;
+        Private->ExitBootServicesEvent = NULL;
+      }
+
+      KernelCmdLineUpdateProtocol = &mEfifbSupportKernelCmdLineUpdateProtocol;
+    } else {
+      /* Solution #2: Tell the kernel to avoid using the EFI
+         framebuffer. This only requires additional kernel
+         command-line arguments. */
+      KernelCmdLineUpdateProtocol = &mEfifbOffKernelCmdLineUpdateProtocol;
+    }
   }
 
   if (KernelCmdLineUpdateProtocol != NULL) {

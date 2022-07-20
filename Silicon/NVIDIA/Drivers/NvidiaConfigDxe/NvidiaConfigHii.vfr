@@ -87,6 +87,11 @@ formset
     name  = AcpiTimerEnabled,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+  efivarstore NVIDIA_DGPU_DT_EFIFB_SUPPORT,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
+    name  = DgpuDtEfifbSupport,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
   //
   // Main form for NVIDIA Configuration
   //
@@ -245,6 +250,15 @@ formset
         option text = STRING_TOKEN(STR_L4T_BOOTMODE_DIRECT), value = NVIDIA_L4T_BOOTMODE_DIRECT, flags = 0;
         option text = STRING_TOKEN(STR_L4T_BOOTMODE_BOOTIMG), value = NVIDIA_L4T_BOOTMODE_BOOTIMG, flags = 0;
         option text = STRING_TOKEN(STR_L4T_BOOTMODE_RECOVERY), value = NVIDIA_L4T_BOOTMODE_RECOVERY, flags = 0;
+    endoneof;
+
+    oneof varid = DgpuDtEfifbSupport.Enabled,
+        questionid = KEY_DGPU_DT_EFIFB_SUPPORT,
+        prompt = STRING_TOKEN(STR_DT_DGPU_EFIFB_PROMPT),
+        help   = STRING_TOKEN(STR_DT_DGPU_EFIFB_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_DISABLED), value = DGPU_DT_EFIFB_DISABLE, flags = 0;
+        option text = STRING_TOKEN(STR_ENABLED),  value = DGPU_DT_EFIFB_ENABLE, flags = 0;
     endoneof;
   endform;
 

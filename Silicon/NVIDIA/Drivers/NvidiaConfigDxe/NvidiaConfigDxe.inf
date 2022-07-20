@@ -81,6 +81,7 @@
   gNVIDIATokenSpaceGuid.PcdFloorsweepingRuntimeVariables
   gNVIDIATokenSpaceGuid.PcdIpmiNetworkBootMode
   gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
+  gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND
