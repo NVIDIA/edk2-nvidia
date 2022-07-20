@@ -668,7 +668,7 @@ DtPlatformLoadDtb (
 
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
-                  TPL_CALLBACK,
+                  TPL_NOTIFY,
                   UpdateFdt,
                   NULL,
                   &gFdtTableGuid,
