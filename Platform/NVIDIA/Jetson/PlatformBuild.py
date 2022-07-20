@@ -45,9 +45,6 @@ class JetsonSettingsManager(NVIDIASettingsManager):
     def GetDtbPath(self):
         return "AARCH64/Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree/OUTPUT"
 
-    def GetVariablesDescFile(self):
-        return "edk2-nvidia/Platform/NVIDIA/Jetson/JetsonVariablesDesc.json"
-
 
 class PlatformBuilder(NVIDIAPlatformBuilder):
     ''' PlatformBuilder for NVIDIA's Jetson. '''

@@ -325,25 +325,6 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         target = self.GetTarget()
         return f"Conf/{platform_name}/{target}"
 
-    def GetVariablesDescFile(self):
-        ''' Optionally, the name of this platform's VariablesDesc.json file.
-
-            If the platform does not have a or require a VariablesDesc.json
-            file, this method should return `None`.
-        '''
-        return None
-
-    def GetVariableImageFile(self):
-        ''' Return the name of the variable store image.
-
-            The variable store will be generated and stored to this filename.
-            Returned as a string.  This default implementation will use
-            "images/variables_{platform_name}_{target}.bin".
-        '''
-        platform_name = self.GetName()
-        target = self.GetTarget()
-        return str(Path("images") / f"variables_{platform_name}_{target}.bin")
-
     def GetBootAppName(self):
         ''' Optionally, the build name of this platform's boot app.
 

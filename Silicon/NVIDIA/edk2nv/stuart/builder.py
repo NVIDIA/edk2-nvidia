@@ -239,9 +239,6 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         shell_environment.GetEnvironment().set_shell_var(
             f"DTCPP_PREFIX",
             self.settings.GetCrossCompilerPrefix())
-        # - Required by GenVariableStore.py.
-        shell_environment.GetEnvironment().set_shell_var(
-            "UEFI_SOURCE", self.settings.GetWorkspaceRoot())
         # - Needed by build.py.
         confdir_path = ws_dir / self.settings.GetConfDirName()
         shell_environment.GetEnvironment().set_shell_var(
@@ -256,7 +253,6 @@ class NVIDIAPlatformBuilder(UefiBuilder):
     def PlatformPostBuild(self):
         ''' Additional build steps for NVIDIA platforms. '''
         from FormatUefiBinary import FormatUefiBinary
-        from GenVariableStore import GenVariableStore
 
         ws_dir = Path(self.settings.GetWorkspaceRoot())
         build_dir = Path(self.env.GetValue("BUILD_OUTPUT_BASE"))
@@ -284,15 +280,6 @@ class NVIDIAPlatformBuilder(UefiBuilder):
             logging.info("Generating uefi image %s", fw_img)
             fw_img.parent.mkdir(parents=True, exist_ok=True)
             FormatUefiBinary(str(fw_vol), str(fw_img))
-
-        # Generate the variable store, if appropriate for this platform.
-        variables_desc = self.settings.GetVariablesDescFile()
-        if variables_desc:
-            var_img = ws_dir / self.settings.GetVariableImageFile()
-            logging.info("Generating variable image %s", var_img)
-
-            var_img.parent.mkdir(parents=True, exist_ok=True)
-            GenVariableStore(variables_desc, str(var_img))
 
         # Copy the boot app, if appropriate for this platform
         boot_rel = self.settings.GetBootAppName()
