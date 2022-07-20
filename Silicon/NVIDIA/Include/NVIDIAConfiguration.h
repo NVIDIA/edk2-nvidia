@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -88,5 +88,9 @@ typedef struct {
 typedef struct {
   UINT32    BootMode;
 } NVIDIA_L4T_BOOT_MODE;
+
+typedef struct {
+  UINT8    Enabled;
+} NVIDIA_DGPU_DT_EFIFB_SUPPORT;
 
 #endif //__NVIDIA_CONFIGURATION_H__

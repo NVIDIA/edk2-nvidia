@@ -2,7 +2,7 @@
 #
 #  This Package provides all definitions for NVIDIA silicon
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -491,3 +491,6 @@
 
 # Progress report message during BDS wait
   gNVIDIATokenSpaceGuid.PcdBootManagerWaitMessage|L""|VOID*|0x0000006F
+
+#Option to enable/disable EFI FB for dGPU
+  gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport|0x00|UINT8|0x0000009C

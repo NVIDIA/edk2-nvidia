@@ -1,7 +1,7 @@
 /** @file
 *  NVIDIA Configuration Dxe
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -116,6 +116,9 @@ InitializeSettings (
 
   // Initialize L4T boot mode form settings
   PcdSet32S (PcdL4TDefaultBootMode, PcdGet32 (PcdL4TDefaultBootMode));
+
+  // Initialize dGPU DT EFIFB support form settings
+  PcdSet8S (PcdDgpuDtEfifbSupport, PcdGet8 (PcdDgpuDtEfifbSupport));
 
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;

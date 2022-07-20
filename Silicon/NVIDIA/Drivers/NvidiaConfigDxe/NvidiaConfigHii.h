@@ -1,7 +1,7 @@
 /** @file
 *  Nvidia Configuration Dxe
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -34,6 +34,7 @@
 #define KEY_OS_CHAIN_STATUS_B         0x0109
 #define KEY_L4T_CONFIG                0x010A
 #define KEY_BOOT_CONFIG               0x010B
+#define KEY_DGPU_DT_EFIFB_SUPPORT     0x010C
 
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 
@@ -45,6 +46,9 @@
 
 #define NEW_DEVICE_HIERARCHY_BOTTOM  0x0
 #define NEW_DEVICE_HIERARCHY_TOP     0x1
+
+#define DGPU_DT_EFIFB_DISABLE  0x0
+#define DGPU_DT_EFIFB_ENABLE   0x1
 
 typedef struct {
   UINT32    L4TSupported;

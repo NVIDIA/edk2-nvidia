@@ -49,6 +49,7 @@
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
