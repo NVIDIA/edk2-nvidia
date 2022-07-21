@@ -498,109 +498,105 @@ InstallFdt (
     }
   }
 
-  do {
-    Status = gBS->LocateHandleBuffer (
-                    ByProtocol,
-                    &gEfiPartitionInfoProtocolGuid,
-                    NULL,
-                    &NumOfHandles,
-                    &HandleBuffer
-                    );
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gEfiPartitionInfoProtocolGuid,
+                  NULL,
+                  &NumOfHandles,
+                  &HandleBuffer
+                  );
 
-    if (EFI_ERROR (Status)) {
-      return;
-    }
+  if (EFI_ERROR (Status)) {
+    return;
+  }
 
-    for (Index = 0; Index < NumOfHandles; Index++) {
-      Status = gBS->HandleProtocol (
-                      HandleBuffer[Index],
-                      &gEfiPartitionInfoProtocolGuid,
-                      (VOID **)&PartitionInfo
-                      );
-
-      if (EFI_ERROR (Status) || (PartitionInfo == NULL)) {
-        continue;
-      }
-
-      if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
-        continue;
-      }
-
-      if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
-        continue;
-      }
-
-      if (0 == StrCmp (
-                 PartitionInfo->Info.Gpt.PartitionName,
-                 PartitionName
-                 ))
-      {
-        break;
-      }
-    }
-
-    if (Index == NumOfHandles) {
-      break;
-    }
-
+  for (Index = 0; Index < NumOfHandles; Index++) {
     Status = gBS->HandleProtocol (
                     HandleBuffer[Index],
-                    &gEfiBlockIoProtocolGuid,
-                    (VOID **)&BlockIo
+                    &gEfiPartitionInfoProtocolGuid,
+                    (VOID **)&PartitionInfo
                     );
-    if (EFI_ERROR (Status) || (BlockIo == NULL)) {
-      break;
+
+    if (EFI_ERROR (Status) || (PartitionInfo == NULL)) {
+      continue;
     }
 
-    Size = MultU64x32 (BlockIo->Media->LastBlock+1, BlockIo->Media->BlockSize);
-
-    KernelDtb = NULL;
-    Status    = gBS->AllocatePool (
-                       EfiBootServicesData,
-                       Size,
-                       &KernelDtb
-                       );
-
-    if (EFI_ERROR (Status) || (KernelDtb == NULL)) {
-      break;
+    if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
+      continue;
     }
 
-    Status = BlockIo->ReadBlocks (
-                        BlockIo,
-                        BlockIo->Media->MediaId,
-                        0,
-                        Size,
-                        KernelDtb
-                        );
-    if (EFI_ERROR (Status)) {
-      break;
+    if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
+      continue;
     }
 
-    Dtb = KernelDtb;
+    if (0 == StrCmp (
+               PartitionInfo->Info.Gpt.PartitionName,
+               PartitionName
+               ))
+    {
+      break;
+    }
+  }
+
+  if (Index == NumOfHandles) {
+    goto Exit;
+  }
+
+  Status = gBS->HandleProtocol (
+                  HandleBuffer[Index],
+                  &gEfiBlockIoProtocolGuid,
+                  (VOID **)&BlockIo
+                  );
+  if (EFI_ERROR (Status) || (BlockIo == NULL)) {
+    goto Exit;
+  }
+
+  Size = MultU64x32 (BlockIo->Media->LastBlock+1, BlockIo->Media->BlockSize);
+
+  KernelDtb = NULL;
+  Status    = gBS->AllocatePool (
+                     EfiBootServicesData,
+                     Size,
+                     &KernelDtb
+                     );
+
+  if (EFI_ERROR (Status) || (KernelDtb == NULL)) {
+    goto Exit;
+  }
+
+  Status = BlockIo->ReadBlocks (
+                      BlockIo,
+                      BlockIo->Media->MediaId,
+                      0,
+                      Size,
+                      KernelDtb
+                      );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Dtb = KernelDtb;
+  if (fdt_check_header (Dtb) != 0) {
+    Dtb += PcdGet32 (PcdSignedImageHeaderSize);
     if (fdt_check_header (Dtb) != 0) {
-      Dtb += PcdGet32 (PcdSignedImageHeaderSize);
-      if (fdt_check_header (Dtb) != 0) {
-        DEBUG ((DEBUG_ERROR, "%a: DTB on partition was corrupted, attempt use to UEFI DTB\r\n", __FUNCTION__));
-        break;
-      }
-    }
-
-    DtbCopy = NULL;
-    DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (Dtb)));
-    if (fdt_open_into (Dtb, DtbCopy, 2 * fdt_totalsize (Dtb)) != 0) {
+      DEBUG ((DEBUG_ERROR, "%a: DTB on partition was corrupted, attempt use to UEFI DTB\r\n", __FUNCTION__));
       goto Exit;
     }
-  } while (FALSE);
+  }
 
-  DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB\r\n", __FUNCTION__));
-  Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
-  if (EFI_ERROR (Status)) {
-    if (DtbCopy != NULL) {
+  DtbCopy = NULL;
+  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (Dtb)));
+  if ((DtbCopy != NULL) &&
+      (fdt_open_into (Dtb, DtbCopy, 2 * fdt_totalsize (Dtb)) == 0))
+  {
+    DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB\r\n", __FUNCTION__));
+    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
+    if (EFI_ERROR (Status)) {
       gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (fdt_totalsize (DtbCopy)));
       DtbCopy = NULL;
+    } else {
+      gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (CurrentDtb)));
     }
-  } else {
-    gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (CurrentDtb)));
   }
 
 Exit:
