@@ -18,7 +18,7 @@
 
 [Defines]
   INF_VERSION                    = 1.29
-  BASE_NAME                      = SmbiosMiscDxe
+  BASE_NAME                      = SmbiosMiscOemDxe
   FILE_GUID                      = 492b2f66-f1a8-4247-be73-0b998677dc14
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0

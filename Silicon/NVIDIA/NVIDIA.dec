@@ -403,7 +403,7 @@
   gNVIDIATokenSpaceGuid.PcdSystemSku|L""|VOID*|0x00000046
   gNVIDIATokenSpaceGuid.PcdSystemFamilyType|L""|VOID*|0x00000047
   #Type03 Table Data
-  gNVIDIATokenSpaceGuid.PcdType3Info|0|SMBIOS_TABLE_TYPE3|0x00000048 {
+  gNVIDIATokenSpaceGuid.PcdType3Info|{0}|SMBIOS_TABLE_TYPE3|0x00000048 {
   <HeaderFiles>
     IndustryStandard/SmBios.h
   <Packages>
@@ -415,7 +415,7 @@
   gNVIDIATokenSpaceGuid.PcdChassisAssetTag|L""|VOID*|0x000004C
   gNVIDIATokenSpaceGuid.PcdChassisVersion|L""|VOID*|0x000004D
   #Type32 Table Data
-  gNVIDIATokenSpaceGuid.PcdType32Info|0|SMBIOS_TABLE_TYPE32|0x0000004E {
+  gNVIDIATokenSpaceGuid.PcdType32Info|{0}|SMBIOS_TABLE_TYPE32|0x0000004E {
   <HeaderFiles>
     IndustryStandard/SmBios.h
   <Packages>

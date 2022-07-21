@@ -60,11 +60,11 @@ SmbiosMiscOemEntryPoint (
   }
 
   mSmbiosMiscOemHiiHandle = HiiAddPackages (
-                           &gEfiCallerIdGuid,
-                           mSmbiosMiscImageHandle,
-                           SmbiosMiscDxeStrings,
-                           NULL
-                           );
+                              &gEfiCallerIdGuid,
+                              mSmbiosMiscImageHandle,
+                              SmbiosMiscOemDxeStrings,
+                              NULL
+                              );
   if (mSmbiosMiscOemHiiHandle == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -75,9 +75,9 @@ SmbiosMiscOemEntryPoint (
     //
     if (mSmbiosMiscOemDataTable[Index].Function != NULL) {
       EfiStatus = (*mSmbiosMiscOemDataTable[Index].Function)(
-                     mSmbiosMiscOemDataTable[Index].RecordData,
-                      mSmbiosMiscSmbios
-                  );
+  mSmbiosMiscOemDataTable[Index].RecordData,
+  mSmbiosMiscSmbios
+  );
 
       if (EFI_ERROR (EfiStatus)) {
         DEBUG ((
