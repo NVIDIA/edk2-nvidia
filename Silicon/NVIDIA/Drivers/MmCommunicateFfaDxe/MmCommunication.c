@@ -34,8 +34,8 @@
 #define ARM_SVC_ID_FFA_SUCCESS_AARCH64      0xC4000061
 #define ARM_SVC_ID_FFA_SUCCESS_AARCH32      0x84000060
 
-STATIC UINT16 StmmVmId = 0xFFFF;
-STATIC VOID GetStmmVmId (VOID);
+STATIC UINT16     StmmVmId = 0xFFFF;
+STATIC EFI_STATUS GetStmmVmId (VOID);
 
 //
 // Address, Length of the pre-allocated buffer for communication with the secure
@@ -161,9 +161,6 @@ MmCommunication2Communicate (
 
   // Use the FF-A interface if enabled.
   if (FeaturePcdGet (PcdFfaEnable)) {
-    if (StmmVmId == 0xFFFF) {
-      GetStmmVmId();
-    }
     // FF-A Interface ID for direct message communication
     CommunicateSmcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64;
 
@@ -346,7 +343,12 @@ GetMmCompatibility (
       MM_MAJOR_VER (MmVersion),
       MM_MINOR_VER (MmVersion)
       ));
-    Status = EFI_SUCCESS;
+
+    Status = GetStmmVmId();
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get Stmm Partition Info %r\n",
+                            __FUNCTION__, Status));
+    }
   } else {
     DEBUG ((
       DEBUG_ERROR,
@@ -638,7 +640,7 @@ FfaFreeRxTxBuffers(
 
 
 STATIC
-VOID
+EFI_STATUS
 GetStmmVmId (
   VOID
 )
@@ -649,7 +651,7 @@ GetStmmVmId (
 
   Status = FfaAllocateAndMapRxTxBuffers(pages, &rx, &tx);
   if (EFI_ERROR (Status)) {
-    return;
+    return EFI_OUT_OF_RESOURCES;
   }
 
   ARM_SMC_ARGS ArmSmcArgs;
@@ -668,11 +670,14 @@ GetStmmVmId (
   if (ArmSmcArgs.Arg2 != 1) {
     DEBUG ((EFI_D_ERROR, "%a: ARM_SVC_ID_FFA_PARTITION_INFO_GET failed: 0x%x\n",
             __FUNCTION__, ArmSmcArgs.Arg2));
-    return;
+    Status = EFI_NOT_FOUND;
+    goto exit;
   }
 
   StmmVmId = *((UINT16 *) rx);
   DEBUG ((DEBUG_ERROR, "%a: STMM VmId=0x%x\n", __FUNCTION__, StmmVmId));
 
-  Status = FfaFreeRxTxBuffers(pages, rx, tx);
+exit:
+  FfaFreeRxTxBuffers(pages, rx, tx);
+  return Status;
 }
