@@ -17,6 +17,9 @@
 
 [Sources]
   AcpiBoot.dts
+  BootOrderNvme.dts
+  BootOrderPxe.dts
+  BootOrderSata.dts
   L4TConfiguration.dts
   L4TRootfsInfo.dts
   L4TRootfsABInfo.dts
