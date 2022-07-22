@@ -24,23 +24,23 @@
 #include <Protocol/PartitionInfo.h>
 #include <libfdt.h>
 
-#define VARIABLE_NODE_PATH    "/firmware/uefi/variables"
-#define VARIABLE_GUID_BASED   "guid-based"
-#define VARIABLE_GUID_PROP    "guid"
-#define VARIABLE_MAX_NAME     64
-#define VARIABLE_RUNTIME_PROP "runtime"
-#define VARIABLE_NV_PROP      "non-volatile"
-#define VARIABLE_LOCKED_PROP  "locked"
-#define VARIABLE_DATA_PROP    "data"
-#define ESP_VAR_DIR_PATH      L"EFI\\NVDA\\Variables"
-#define ESP_VAR_ATTR_EXP      (EFI_VARIABLE_NON_VOLATILE |\
+#define VARIABLE_NODE_PATH     "/firmware/uefi/variables"
+#define VARIABLE_GUID_BASED    "guid-based"
+#define VARIABLE_GUID_PROP     "guid"
+#define VARIABLE_MAX_NAME      64
+#define VARIABLE_RUNTIME_PROP  "runtime"
+#define VARIABLE_NV_PROP       "non-volatile"
+#define VARIABLE_LOCKED_PROP   "locked"
+#define VARIABLE_DATA_PROP     "data"
+#define ESP_VAR_DIR_PATH       L"EFI\\NVDA\\Variables"
+#define ESP_VAR_ATTR_EXP       (EFI_VARIABLE_NON_VOLATILE |\
                                EFI_VARIABLE_BOOTSERVICE_ACCESS |\
                                EFI_VARIABLE_RUNTIME_ACCESS)
 #define ESP_VAR_ATTR_SZ        (4)
 
-STATIC VOID     *Registration = NULL;
+STATIC VOID     *Registration       = NULL;
 STATIC VOID     *RegistrationPolicy = NULL;
-STATIC BOOLEAN  VariablesParsed = FALSE;
+STATIC BOOLEAN  VariablesParsed     = FALSE;
 
 /**
   Requests the variable to be locked.
@@ -53,17 +53,19 @@ STATIC BOOLEAN  VariablesParsed = FALSE;
 STATIC
 VOID
 LockVariable (
-  IN EFI_GUID     *Guid,
-  IN CONST CHAR16 *VariableName,
-  IN UINT8        LockType
+  IN EFI_GUID      *Guid,
+  IN CONST CHAR16  *VariableName,
+  IN UINT8         LockType
   )
 {
-  EFI_STATUS                     Status;
-  EDKII_VARIABLE_POLICY_PROTOCOL *PolicyProtocol;
+  EFI_STATUS                      Status;
+  EDKII_VARIABLE_POLICY_PROTOCOL  *PolicyProtocol;
 
-  Status = gBS->LocateProtocol (&gEdkiiVariablePolicyProtocolGuid,
-                                NULL,
-                                (VOID **)&PolicyProtocol);
+  Status = gBS->LocateProtocol (
+                  &gEdkiiVariablePolicyProtocolGuid,
+                  NULL,
+                  (VOID **)&PolicyProtocol
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to locate policy protocol\r\n"));
     return;
@@ -101,18 +103,18 @@ ProcessVariable (
   IN EFI_GUID  *Guid
   )
 {
-  EFI_STATUS  Status;
-  CHAR16      VariableName[VARIABLE_MAX_NAME];
-  CONST CHAR8 *NodeName;
-  BOOLEAN     Locked;
-  UINT32      CurrentAttributes;
-  UINT32      RequestedAttributes;
-  UINTN       DataSize;
-  CONST VOID  *Data;
-  INT32       Length;
-  CHAR16      *UnitAddress;
+  EFI_STATUS   Status;
+  CHAR16       VariableName[VARIABLE_MAX_NAME];
+  CONST CHAR8  *NodeName;
+  BOOLEAN      Locked;
+  UINT32       CurrentAttributes;
+  UINT32       RequestedAttributes;
+  UINTN        DataSize;
+  CONST VOID   *Data;
+  INT32        Length;
+  CHAR16       *UnitAddress;
 
-  Locked = FALSE;
+  Locked              = FALSE;
   RequestedAttributes = EFI_VARIABLE_BOOTSERVICE_ACCESS;
 
   NodeName = fdt_get_name (Dtb, Offset, NULL);
@@ -135,9 +137,11 @@ ProcessVariable (
   if (fdt_getprop (Dtb, Offset, VARIABLE_RUNTIME_PROP, NULL) != NULL) {
     RequestedAttributes |= EFI_VARIABLE_RUNTIME_ACCESS;
   }
+
   if (fdt_getprop (Dtb, Offset, VARIABLE_LOCKED_PROP, NULL) != NULL) {
     Locked = TRUE;
   }
+
   if (fdt_getprop (Dtb, Offset, VARIABLE_NV_PROP, NULL) != NULL) {
     RequestedAttributes |= EFI_VARIABLE_NON_VOLATILE;
   }
@@ -149,14 +153,15 @@ ProcessVariable (
   }
 
   DataSize = 0;
-  Status = gRT->GetVariable (VariableName, Guid, &CurrentAttributes, &DataSize, NULL);
+  Status   = gRT->GetVariable (VariableName, Guid, &CurrentAttributes, &DataSize, NULL);
 
   if (Status == EFI_BUFFER_TOO_SMALL) {
-    //Variable already exists
+    // Variable already exists
     if (CurrentAttributes == RequestedAttributes) {
       if (Locked) {
         LockVariable (Guid, VariableName, VARIABLE_POLICY_TYPE_LOCK_NOW);
       }
+
       return;
     }
 
@@ -172,13 +177,13 @@ ProcessVariable (
       return;
     }
   } else if (Status != EFI_NOT_FOUND) {
-    //Other error
-    DEBUG ((DEBUG_ERROR, "Error getting info on %s-%r\r\n",VariableName,Status));
+    // Other error
+    DEBUG ((DEBUG_ERROR, "Error getting info on %s-%r\r\n", VariableName, Status));
     return;
   }
 
   DataSize = Length;
-  Status = gRT->SetVariable (VariableName, Guid, RequestedAttributes, DataSize, (VOID *)Data);
+  Status   = gRT->SetVariable (VariableName, Guid, RequestedAttributes, DataSize, (VOID *)Data);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to create variable %s\r\n", VariableName));
     return;
@@ -201,38 +206,51 @@ ProcessVariable (
 STATIC
 EFI_STATUS
 GetEspVarNameAndGuid (
-  IN  EFI_FILE_INFO   *FileInfo,
-  OUT CHAR16          *VarName,
-  OUT EFI_GUID        *EfiVarGuid
+  IN  EFI_FILE_INFO  *FileInfo,
+  OUT CHAR16         *VarName,
+  OUT EFI_GUID       *EfiVarGuid
   )
 {
   EFI_STATUS  Status;
-  CHAR16     *SplitPos;
-  CHAR16     *VarGuid;
+  CHAR16      *SplitPos;
+  CHAR16      *VarGuid;
 
   SplitPos = StrStr (FileInfo->FileName, L"-");
   if (SplitPos == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Unexpected File Name %s",
-                         __FUNCTION__, FileInfo->FileName));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Unexpected File Name %s",
+      __FUNCTION__,
+      FileInfo->FileName
+      ));
     Status = EFI_INVALID_PARAMETER;
     goto exit;
   }
+
   ZeroMem (VarName, VARIABLE_MAX_NAME);
-  Status = StrnCpyS (VarName,
-                     VARIABLE_MAX_NAME,
-                     FileInfo->FileName,
-                     ((SplitPos - FileInfo->FileName)));
+  Status = StrnCpyS (
+             VarName,
+             VARIABLE_MAX_NAME,
+             FileInfo->FileName,
+             ((SplitPos - FileInfo->FileName))
+             );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Strncpy Failed %r\n", __FUNCTION__, Status));
     goto exit;
   }
+
   VarGuid = SplitPos + 1;
   if ((StrToGuid (VarGuid, EfiVarGuid)) != RETURN_SUCCESS) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to convert %s to EFI_GUID\n",
-                          __FUNCTION__, VarGuid));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to convert %s to EFI_GUID\n",
+      __FUNCTION__,
+      VarGuid
+      ));
     Status = EFI_INVALID_PARAMETER;
     goto exit;
   }
+
 exit:
   return Status;
 }
@@ -252,37 +270,50 @@ exit:
 STATIC
 EFI_STATUS
 GetEspVarDataAndAttr (
-  IN  EFI_FILE     *VarFile,
-  IN  UINTN        FileSize,
-  OUT VOID         **FileData,
-  OUT VOID         **VarData,
-  OUT UINT32       *VarAttr,
-  OUT UINTN        *VarSize
+  IN  EFI_FILE  *VarFile,
+  IN  UINTN     FileSize,
+  OUT VOID      **FileData,
+  OUT VOID      **VarData,
+  OUT UINT32    *VarAttr,
+  OUT UINTN     *VarSize
   )
 {
-  EFI_STATUS    Status;
-  EFI_FILE_INFO *FileInfo;
-  CHAR8         *BytePtr;
+  EFI_STATUS     Status;
+  EFI_FILE_INFO  *FileInfo;
+  CHAR8          *BytePtr;
 
   FileInfo = FileHandleGetInfo (VarFile);
   if (FileInfo == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Invalid File Handle %r\n",
-                          __FUNCTION__, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Invalid File Handle %r\n",
+      __FUNCTION__,
+      Status
+      ));
     return Status;
   }
 
   *FileData = AllocateZeroPool (FileSize);
   if (*FileData == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate buffer for %s\r\n",
-                         __FUNCTION__, FileInfo->FileName));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to allocate buffer for %s\r\n",
+      __FUNCTION__,
+      FileInfo->FileName
+      ));
     return EFI_OUT_OF_RESOURCES;
   }
 
-  FileHandleSetPosition(VarFile, 0);
+  FileHandleSetPosition (VarFile, 0);
   Status = FileHandleRead (VarFile, &FileSize, *FileData);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to read File %s %r\n",
-                         __FUNCTION__, FileInfo->FileName, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to read File %s %r\n",
+      __FUNCTION__,
+      FileInfo->FileName,
+      Status
+      ));
     return Status;
   }
 
@@ -302,7 +333,6 @@ GetEspVarDataAndAttr (
   @param FileInfo     File Info of the Variable File.
 
 **/
-
 STATIC
 EFI_STATUS
 ProcessEspVariable (
@@ -310,72 +340,104 @@ ProcessEspVariable (
   EFI_FILE_INFO  *FileInfo
   )
 {
-  EFI_STATUS Status;
-  EFI_FILE   *File;
-  CHAR16     VarName[VARIABLE_MAX_NAME];
-  UINTN      VarSize;
-  EFI_GUID   EfiVarGuid;
-  UINT32     VarAttr;
-  VOID       *VarData;
-  UINT64     FileSize;
-  VOID       *FileData = NULL;
-  UINTN      ReadSize;
+  EFI_STATUS  Status;
+  EFI_FILE    *File;
+  CHAR16      VarName[VARIABLE_MAX_NAME];
+  UINTN       VarSize;
+  EFI_GUID    EfiVarGuid;
+  UINT32      VarAttr;
+  VOID        *VarData;
+  UINT64      FileSize;
+  VOID        *FileData = NULL;
+  UINTN       ReadSize;
 
   if ((FileInfo == NULL) || (Dir == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = Dir->Open (Dir,
-                      &File,
-                      FileInfo->FileName,
-                      (EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE),
-                      0);
+  Status = Dir->Open (
+                  Dir,
+                  &File,
+                  FileInfo->FileName,
+                  (EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE),
+                  0
+                  );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to open File %s %r \n\r",
-                         __FUNCTION__, FileInfo->FileName,
-                         Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to open File %s %r \n\r",
+      __FUNCTION__,
+      FileInfo->FileName,
+      Status
+      ));
     goto exit;
   }
 
   Status = GetEspVarNameAndGuid (FileInfo, VarName, &EfiVarGuid);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get Esp Var Name/Guid %r\n\r",
-                          __FUNCTION__, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get Esp Var Name/Guid %r\n\r",
+      __FUNCTION__,
+      Status
+      ));
     goto exit;
   }
 
   Status = FileHandleGetSize (File, &FileSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get File Size %lu\n",
-                         __FUNCTION__, FileSize));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get File Size %lu\n",
+      __FUNCTION__,
+      FileSize
+      ));
     goto exit;
   }
 
   if ((FileSize > (PcdGet32 (PcdMaxVariableSize) + sizeof (VarAttr)))  ||
-      (FileSize < ESP_VAR_ATTR_SZ)) {
-    DEBUG ((DEBUG_ERROR, "%a: %s Invalid File Size %lu (min %u max %u)\r\n",
-                         __FUNCTION__, FileInfo->FileName, FileSize,
-                         ESP_VAR_ATTR_SZ,
-                         (PcdGet32 (PcdMaxVariableSize) + sizeof (VarAttr))));
+      (FileSize < ESP_VAR_ATTR_SZ))
+  {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: %s Invalid File Size %lu (min %u max %u)\r\n",
+      __FUNCTION__,
+      FileInfo->FileName,
+      FileSize,
+      ESP_VAR_ATTR_SZ,
+      (PcdGet32 (PcdMaxVariableSize) + sizeof (VarAttr))
+      ));
     Status = EFI_INVALID_PARAMETER;
     goto exit;
   }
 
   ReadSize = (UINTN)FileSize;
-  Status = GetEspVarDataAndAttr (File,
-                                 ReadSize,
-                                 &FileData,
-                                 &VarData,
-                                 &VarAttr,
-                                 &VarSize);
+  Status   = GetEspVarDataAndAttr (
+               File,
+               ReadSize,
+               &FileData,
+               &VarData,
+               &VarAttr,
+               &VarSize
+               );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: failed to read File Data %r\n\r",
-                         __FUNCTION__, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to read File Data %r\n\r",
+      __FUNCTION__,
+      Status
+      ));
     goto exit;
   }
+
   if ((VarAttr & ESP_VAR_ATTR_EXP) != ESP_VAR_ATTR_EXP) {
-    DEBUG ((DEBUG_ERROR, "%a:Unexpected Var Attributes 0x%x (expected%x)\n",
-                          __FUNCTION__, VarAttr, ESP_VAR_ATTR_EXP));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:Unexpected Var Attributes 0x%x (expected%x)\n",
+      __FUNCTION__,
+      VarAttr,
+      ESP_VAR_ATTR_EXP
+      ));
     Status = EFI_INVALID_PARAMETER;
     goto exit;
   }
@@ -386,18 +448,30 @@ ProcessEspVariable (
 
   Status = gRT->SetVariable (VarName, &EfiVarGuid, VarAttr, VarSize, VarData);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to Set variable %s %r\r\n",
-                          __FUNCTION__, VarName, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to Set variable %s %r\r\n",
+      __FUNCTION__,
+      VarName,
+      Status
+      ));
     goto exit;
   }
+
 exit:
   if (FileHandleDelete (File) != EFI_SUCCESS) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to delete File %s\n",
-                         __FUNCTION__, FileInfo->FileName));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to delete File %s\n",
+      __FUNCTION__,
+      FileInfo->FileName
+      ));
   }
+
   if (FileData != NULL) {
     FreePool (FileData);
   }
+
   return Status;
 }
 
@@ -408,7 +482,7 @@ exit:
 STATIC
 EFI_STATUS
 GetAndProcessEspVariables (
-    VOID
+  VOID
   )
 {
   EFI_STATUS                       Status;
@@ -421,19 +495,23 @@ GetAndProcessEspVariables (
   EFI_FILE_HANDLE                  RootDir;
 
   HandleSize = sizeof (EFI_HANDLE);
-  Status = gBS->LocateHandle (ByProtocol,
-                              &gEfiPartTypeSystemPartGuid,
-                              NULL,
-                              &HandleSize,
-                              &EspDeviceHandle);
+  Status     = gBS->LocateHandle (
+                      ByProtocol,
+                      &gEfiPartTypeSystemPartGuid,
+                      NULL,
+                      &HandleSize,
+                      &EspDeviceHandle
+                      );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to Locate System Partition Guid %r\n", Status));
     return Status;
   }
 
-  Status = gBS->HandleProtocol (EspDeviceHandle,
-                                &gEfiSimpleFileSystemProtocolGuid,
-                                (VOID **) &Fs);
+  Status = gBS->HandleProtocol (
+                  EspDeviceHandle,
+                  &gEfiSimpleFileSystemProtocolGuid,
+                  (VOID **)&Fs
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to find FS %r\n", Status));
     return Status;
@@ -450,10 +528,15 @@ GetAndProcessEspVariables (
                       &DirHandle,
                       ESP_VAR_DIR_PATH,
                       EFI_FILE_MODE_READ,
-                      0);
+                      0
+                      );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Can't find ESP Variables Dir %r\n",
-                          __FUNCTION__, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Can't find ESP Variables Dir %r\n",
+      __FUNCTION__,
+      Status
+      ));
     RootDir->Close (RootDir);
     return Status;
   }
@@ -463,16 +546,23 @@ GetAndProcessEspVariables (
 
   for (Status = FileHandleFindFirstFile (DirHandle, &FileInfo);
        !EFI_ERROR (Status) && !NoFile;
-       Status = FileHandleFindNextFile (DirHandle, FileInfo, &NoFile)) {
+       Status = FileHandleFindNextFile (DirHandle, FileInfo, &NoFile))
+  {
     // Process each Variable
     if ((StrnCmp (FileInfo->FileName, L".", VARIABLE_MAX_NAME) == 0) ||
-        (StrnCmp (FileInfo->FileName, L"..", VARIABLE_MAX_NAME) == 0)) {
+        (StrnCmp (FileInfo->FileName, L"..", VARIABLE_MAX_NAME) == 0))
+    {
       continue;
     }
+
     Status = ProcessEspVariable (DirHandle, FileInfo);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to process %s\n",
-                            __FUNCTION__, FileInfo->FileName));
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to process %s\n",
+        __FUNCTION__,
+        FileInfo->FileName
+        ));
       continue;
     }
   }
@@ -491,12 +581,16 @@ UpdateSpecialVariables (
   VOID
   )
 {
-  LockVariable (&gNVIDIAPublicVariableGuid,
-                L"TegraPlatformSpec",
-                VARIABLE_POLICY_TYPE_LOCK_ON_CREATE);
-  LockVariable (&gNVIDIAPublicVariableGuid,
-                L"TegraPlatformCompatSpec",
-                VARIABLE_POLICY_TYPE_LOCK_ON_CREATE);
+  LockVariable (
+    &gNVIDIAPublicVariableGuid,
+    L"TegraPlatformSpec",
+    VARIABLE_POLICY_TYPE_LOCK_ON_CREATE
+    );
+  LockVariable (
+    &gNVIDIAPublicVariableGuid,
+    L"TegraPlatformCompatSpec",
+    VARIABLE_POLICY_TYPE_LOCK_ON_CREATE
+    );
 }
 
 /**
@@ -509,22 +603,22 @@ UpdateSpecialVariables (
 STATIC
 VOID
 VariableReady (
-  IN EFI_EVENT Event,
-  IN VOID      *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
-  EFI_STATUS  Status;
-  VOID        *Dtb;
-  UINTN       DtbSize;
-  INT32       NodeOffset;
-  INT32       SubNodeOffset = 0;
-  INT32       VariableNodeOffset;
-  EFI_GUID    *VariableGuid;
-  EFI_GUID    DtbGuid;
-  CONST CHAR8 *NodeName;
-  CONST CHAR8 *GuidStr;
-  VOID        *Protocol;
-  BOOLEAN     GuidBased;
+  EFI_STATUS   Status;
+  VOID         *Dtb;
+  UINTN        DtbSize;
+  INT32        NodeOffset;
+  INT32        SubNodeOffset = 0;
+  INT32        VariableNodeOffset;
+  EFI_GUID     *VariableGuid;
+  EFI_GUID     DtbGuid;
+  CONST CHAR8  *NodeName;
+  CONST CHAR8  *GuidStr;
+  VOID         *Protocol;
+  BOOLEAN      GuidBased;
 
   Status = gBS->LocateProtocol (&gEfiVariableWriteArchProtocolGuid, NULL, &Protocol);
   if (EFI_ERROR (Status)) {
@@ -545,6 +639,7 @@ VariableReady (
   if (VariablesParsed) {
     return;
   }
+
   VariablesParsed = TRUE;
 
   UpdateSpecialVariables ();
@@ -575,6 +670,8 @@ VariableReady (
       VariableGuid = &gEfiGlobalVariableGuid;
     } else if (AsciiStrCmp (NodeName, "gDtPlatformFormSetGuid") == 0) {
       VariableGuid = &gDtPlatformFormSetGuid;
+    } else if (AsciiStrCmp (NodeName, "gNVIDIATokenSpaceGuid") == 0) {
+      VariableGuid = &gNVIDIATokenSpaceGuid;
     } else if (AsciiStrCmp (NodeName, VARIABLE_GUID_BASED) == 0) {
       GuidBased = TRUE;
     } else {
@@ -589,13 +686,16 @@ VariableReady (
           DEBUG ((DEBUG_ERROR, "No Guid found\r\n"));
           continue;
         }
+
         Status = AsciiStrToGuid (GuidStr, &DtbGuid);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "Failed to convert %a to GUID - %r\r\n", GuidStr, Status));
           continue;
         }
+
         VariableGuid = &DtbGuid;
       }
+
       ProcessVariable (Dtb, VariableNodeOffset, VariableGuid);
     }
   }
@@ -603,8 +703,12 @@ VariableReady (
 EspVar:
   Status = GetAndProcessEspVariables ();
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to Process ESP Partition Variables %r\n",
-                         __FUNCTION__, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to Process ESP Partition Variables %r\n",
+      __FUNCTION__,
+      Status
+      ));
   }
 }
 
@@ -623,12 +727,12 @@ EspVar:
 EFI_STATUS
 EFIAPI
 InitializeDefaultVariable (
-  IN EFI_HANDLE               ImageHandle,
-  IN EFI_SYSTEM_TABLE         *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_EVENT                   NotifyEvent;
-  EFI_EVENT                   NotifyEventPolicy;
+  EFI_EVENT  NotifyEvent;
+  EFI_EVENT  NotifyEventPolicy;
 
   NotifyEvent = EfiCreateProtocolNotifyEvent (
                   &gEfiVariableWriteArchProtocolGuid,
@@ -654,5 +758,6 @@ InitializeDefaultVariable (
     gBS->CloseEvent (NotifyEvent);
     return EFI_OUT_OF_RESOURCES;
   }
+
   return EFI_SUCCESS;
 }
