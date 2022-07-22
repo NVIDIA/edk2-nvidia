@@ -75,6 +75,7 @@ STATIC CONST CHAR16 *IgnoreImageNames[] = {
   L"BCT_A",
   L"BCT_B",
   L"mb1_b",
+  L"mb2-applet",
   L"secondary_gpt",
   L"secondary_gpt_backup",
   NULL
