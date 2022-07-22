@@ -50,6 +50,7 @@
   gNVIDIAPublicVariableGuid
   gEfiGlobalVariableGuid
   gDtPlatformFormSetGuid
+  gNVIDIATokenSpaceGuid
   gEfiPartTypeSystemPartGuid
 
 [Protocols]
