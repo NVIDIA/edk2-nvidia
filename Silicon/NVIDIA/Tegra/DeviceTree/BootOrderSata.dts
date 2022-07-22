@@ -1,0 +1,36 @@
+/** @file
+*
+*  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "UEFI Boot order pxe default";
+
+	fragment@0 {
+		target-path = "/";
+		board_config {
+			sw-modules = "uefi";
+		};
+
+		__overlay__ {
+			firmware {
+				uefi {
+					variables {
+						gNVIDIATokenSpaceGuid {
+							DefaultBootPriority {
+								data = "sata";
+								locked;
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};
