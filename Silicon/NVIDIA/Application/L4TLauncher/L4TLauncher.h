@@ -34,7 +34,9 @@
 
 #define ROOTFS_BASE_NAME               L"APP"
 #define BOOTIMG_BASE_NAME              L"kernel"
-#define RECOVERY_BASE_NAME             L"recovery"
+#define BOOTIMG_DTB_BASE_NAME          L"kernel-dtb"
+#define RECOVERY_DTB_BASE_NAME         L"recovery"
+#define RECOVERY_BASE_NAME             L"recovery-dtb"
 
 #define EXTLINUX_KEY_TIMEOUT           L"TIMEOUT"
 #define EXTLINUX_KEY_DEFAULT           L"DEFAULT"
