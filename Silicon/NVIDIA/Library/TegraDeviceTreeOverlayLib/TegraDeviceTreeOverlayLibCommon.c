@@ -106,7 +106,8 @@ STATIC OVERLAY_BOARD_INFO  *BoardInfo = NULL;
 
 STATIC INTN
 GetFabId (
-  CONST CHAR8  *BoardId
+  CONST CHAR8  *BoardId,
+  UINTN        *FabIdPrefixLen
   )
 {
   INTN  FabId = 0;
@@ -117,19 +118,31 @@ GetFabId (
     return -1;
   }
 
+  if (FabIdPrefixLen != NULL) {
+    *FabIdPrefixLen = 0;
+  }
+
   for (Index = 0; Index < 3; Index++) {
     Id = BoardId[Index + 10];
     if ((Id >= '0') && (Id <= '9')) {
       Id = Id - '0';
     } else if ((Id >= 'a') && (Id <= 'z')) {
-      Id = Id - 'a' + 10;
+      if (FabIdPrefixLen != NULL) {
+        *FabIdPrefixLen += 1;
+      }
+
+      continue;
     } else if ((Id >= 'A') && (Id <= 'Z')) {
-      Id = Id - 'A' + 10;
+      if (FabIdPrefixLen != NULL) {
+        *FabIdPrefixLen += 1;
+      }
+
+      continue;
     } else {
       return -1;
     }
 
-    FabId = FabId * 100 + Id;
+    FabId = FabId * 10 + Id;
   }
 
   return FabId;
@@ -147,6 +160,7 @@ MatchId (
   BOARD_ID_MATCH_TYPE  MatchType = BOARD_ID_MATCH_EXACT;
   INTN                 FabId, BoardFabId, i;
   INTN                 BoardIdLen;
+  UINTN                FabIdPrefixLen;
   CONST CHAR8          *BoardId = NULL;
 
   BOOLEAN  Matched = FALSE;
@@ -201,7 +215,7 @@ match_type_done:
   if ((MatchType == BOARD_ID_MATCH_GE) || (MatchType == BOARD_ID_MATCH_GT) ||
       (MatchType == BOARD_ID_MATCH_LE) || (MatchType == BOARD_ID_MATCH_LT))
   {
-    FabId = GetFabId (IdStr);
+    FabId = GetFabId (IdStr, &FabIdPrefixLen);
     if (FabId < 0) {
       goto finish;
     }
@@ -210,7 +224,7 @@ match_type_done:
   for (i = 0; i < BoardInfo->IdCount; i++) {
     BoardId    = TegraBoardIdFromPartNumber (&BoardInfo->ProductIds[i]);
     BoardIdLen = strlen (BoardId);
-    BoardFabId = GetFabId (BoardId);
+    BoardFabId = GetFabId (BoardId, NULL);
     DEBUG ((
       DEBUG_INFO,
       "%a: check if overlay node id %a match with %a\n",
@@ -246,7 +260,7 @@ match_type_done:
           break;
         }
 
-        if (CompareMem (IdStr, BoardId, 10)) {
+        if (CompareMem (IdStr, BoardId, 10 + FabIdPrefixLen)) {
           break;
         }
 
