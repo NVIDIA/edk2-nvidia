@@ -179,13 +179,6 @@ OpteeExchangeCapabilities (
   UINT64 *Cap
   );
 
-EFI_STATUS
-EFIAPI
-OpteeSetMsgBuffer (
-  UINT64 Buf,
-  UINT64 Size
- );
-
 UINT32
 EFIAPI
 OpteeCallWithArg (
@@ -195,7 +188,8 @@ OpteeCallWithArg (
 EFI_STATUS
 EFIAPI
 OpteeSetMsgBuffer (
-  UINT64 Buf,
+  UINT64 PBuf,
+  UINT64 VBuf,
   UINT64 Size
  );
 

@@ -59,8 +59,9 @@
 
 
 typedef struct {
-  UINT64    Base;
-  UINTN    Size;
+  UINT64    PBase;
+  UINT64    VBase;
+  UINTN     Size;
 } OPTEE_SHARED_MEMORY_INFORMATION;
 
 //

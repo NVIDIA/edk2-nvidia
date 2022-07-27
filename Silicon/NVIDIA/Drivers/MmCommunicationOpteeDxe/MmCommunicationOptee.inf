@@ -52,10 +52,14 @@
   gEfiEndOfDxeEventGroupGuid
   gEfiEventExitBootServicesGuid
   gEfiEventReadyToBootGuid
+  gEfiRtPropertiesTableGuid
 
 [Pcd.common]
   gArmTokenSpaceGuid.PcdMmBufferBase
   gArmTokenSpaceGuid.PcdMmBufferSize
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdVariableRtProperties
 
 [Depex]
   gEfiCpuArchProtocolGuid

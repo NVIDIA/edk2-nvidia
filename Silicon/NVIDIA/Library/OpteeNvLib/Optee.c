@@ -181,12 +181,12 @@ OpteeRegisterShm (
   UINT64 PageList;
   UINT32 RetCode;
 
-  if (OpteeSharedMemoryInformation.Base == 0) {
+  if (OpteeSharedMemoryInformation.PBase == 0) {
     DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
     return EFI_NOT_STARTED;
   }
 
-  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.Base;
+  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.VBase;
   ZeroMem (MessageArg, sizeof (OPTEE_MESSAGE_ARG));
   MessageArg->Command = OPTEE_MESSAGE_COMMAND_REGISTER_SHM;
 
@@ -202,7 +202,7 @@ OpteeRegisterShm (
   MessageArg->Params[0].Union.Memory.SharedMemoryReference = SharedMemCookie;
   MessageArg->NumParams = 1;
 
-  RetCode = OpteeCallWithArg ((UINT64)MessageArg);
+  RetCode = OpteeCallWithArg (OpteeSharedMemoryInformation.PBase);
   if (RetCode != 0) {
     DEBUG ((DEBUG_ERROR, "Error(%u) from OP-TEE REGISTER_SHM\n", RetCode));
     Status = EFI_ACCESS_DENIED;
@@ -221,12 +221,12 @@ OpteeUnRegisterShm (
   OPTEE_MESSAGE_ARG *MessageArg;
   UINT32 RetCode;
 
-  if (OpteeSharedMemoryInformation.Base == 0) {
+  if (OpteeSharedMemoryInformation.PBase == 0) {
     DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
     return EFI_NOT_STARTED;
   }
 
-  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.Base;
+  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.VBase;
   ZeroMem (MessageArg, sizeof (OPTEE_MESSAGE_ARG));
   MessageArg->Command = OPTEE_MESSAGE_COMMAND_UNREGISTER_SHM;
 
@@ -234,7 +234,7 @@ OpteeUnRegisterShm (
   MessageArg->Params[0].Union.Memory.SharedMemoryReference = SharedMemCookie;
   MessageArg->NumParams = 1;
 
-  RetCode = OpteeCallWithArg ((UINTN)MessageArg);
+  RetCode = OpteeCallWithArg (OpteeSharedMemoryInformation.PBase);
   if (RetCode != 0) {
     DEBUG ((DEBUG_ERROR, "Error(%u) from OP-TEE UNREGISTER_SHM\n", RetCode));
     Status = EFI_ACCESS_DENIED;
@@ -284,7 +284,8 @@ OpteeSharedMemoryRemap (
     return Status;
   }
 
-  OpteeSharedMemoryInformation.Base = (UINT64)PhysicalAddress;
+  OpteeSharedMemoryInformation.PBase = (UINT64)PhysicalAddress;
+  OpteeSharedMemoryInformation.VBase = (UINT64)PhysicalAddress;
   OpteeSharedMemoryInformation.Size = Size;
 
   return EFI_SUCCESS;
@@ -543,12 +544,12 @@ OpteeOpenSession (
 
   MessageArg = NULL;
 
-  if (OpteeSharedMemoryInformation.Base == 0) {
+  if (OpteeSharedMemoryInformation.PBase == 0) {
     DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
     return EFI_NOT_STARTED;
   }
 
-  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.Base;
+  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.VBase;
   ZeroMem (MessageArg, sizeof (OPTEE_MESSAGE_ARG));
 
   MessageArg->Command = OPTEE_MESSAGE_COMMAND_OPEN_SESSION;
@@ -570,7 +571,7 @@ OpteeOpenSession (
 
   MessageArg->NumParams = 2;
 
-  if (OpteeCallWithArg ((UINT64)MessageArg) != 0) {
+  if (OpteeCallWithArg (OpteeSharedMemoryInformation.PBase) != 0) {
     MessageArg->Return       = OPTEE_ERROR_COMMUNICATION;
     MessageArg->ReturnOrigin = OPTEE_ORIGIN_COMMUNICATION;
   }
@@ -592,18 +593,18 @@ OpteeCloseSession (
 
   MessageArg = NULL;
 
-  if (OpteeSharedMemoryInformation.Base == 0) {
+  if (OpteeSharedMemoryInformation.PBase == 0) {
     DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
     return EFI_NOT_STARTED;
   }
 
-  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.Base;
+  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.VBase;
   ZeroMem (MessageArg, sizeof (OPTEE_MESSAGE_ARG));
 
   MessageArg->Command = OPTEE_MESSAGE_COMMAND_CLOSE_SESSION;
   MessageArg->Session = Session;
 
-  OpteeCallWithArg ((UINT64)MessageArg);
+  OpteeCallWithArg (OpteeSharedMemoryInformation.PBase);
 
   return EFI_SUCCESS;
 }
@@ -623,7 +624,7 @@ OpteeToMessageParam (
 
   Size = (sizeof (OPTEE_MESSAGE_ARG) + sizeof (UINT64) - 1) &
          ~(sizeof (UINT64) - 1);
-  ParamSharedMemoryAddress = OpteeSharedMemoryInformation.Base + Size;
+  ParamSharedMemoryAddress = OpteeSharedMemoryInformation.VBase + Size;
   SharedMemorySize         = OpteeSharedMemoryInformation.Size - Size;
 
   for (Idx = 0; Idx < NumParams; Idx++) {
@@ -751,12 +752,12 @@ OpteeInvokeFunction (
 
   MessageArg = NULL;
 
-  if (OpteeSharedMemoryInformation.Base == 0) {
+  if (OpteeSharedMemoryInformation.PBase == 0) {
     DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
     return EFI_NOT_STARTED;
   }
 
-  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.Base;
+  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.VBase;
   ZeroMem (MessageArg, sizeof (OPTEE_MESSAGE_ARG));
 
   MessageArg->Command  = OPTEE_MESSAGE_COMMAND_INVOKE_FUNCTION;
@@ -774,7 +775,7 @@ OpteeInvokeFunction (
 
   MessageArg->NumParams = OPTEE_MAX_CALL_PARAMS;
 
-  if (OpteeCallWithArg ((UINT64)MessageArg) != 0) {
+  if (OpteeCallWithArg (OpteeSharedMemoryInformation.PBase) != 0) {
     MessageArg->Return       = OPTEE_ERROR_COMMUNICATION;
     MessageArg->ReturnOrigin = OPTEE_ORIGIN_COMMUNICATION;
   }
@@ -798,11 +799,13 @@ OpteeInvokeFunction (
 EFI_STATUS
 EFIAPI
 OpteeSetMsgBuffer (
-  UINT64 Buf,
+  UINT64 PBuf,
+  UINT64 VBuf,
   UINT64 Size
  )
 {
-  OpteeSharedMemoryInformation.Base = Buf;
+  OpteeSharedMemoryInformation.PBase = PBuf;
+  OpteeSharedMemoryInformation.VBase = VBuf;
   OpteeSharedMemoryInformation.Size = Size;
   return EFI_SUCCESS;
 }

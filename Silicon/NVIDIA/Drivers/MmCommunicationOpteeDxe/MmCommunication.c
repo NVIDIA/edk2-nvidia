@@ -20,6 +20,7 @@
 #include <Library/PrintLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <Guid/RtPropertiesTable.h>
 
 #include <Protocol/MmCommunication2.h>
 
@@ -329,7 +330,9 @@ OpteeStmmInit (
     OpteeMmSession.MmMsgCookiePa->Size = OpteeMmSession.MmMsgCookieVa->Size =EFI_PAGES_TO_SIZE(MmCommBufSizePg);
 
 
-    OpteeSetMsgBuffer((UINT64)OpteeMmSession.OpteeMsgArgPa, OpteeMmSession.TotalSize);
+    OpteeSetMsgBuffer ((UINT64)OpteeMmSession.OpteeMsgArgPa,
+                       (UINT64)OpteeMmSession.OpteeMsgArgVa,
+                       OpteeMmSession.TotalSize);
 
     ZeroMem (&OpenSessionArg, sizeof (OPTEE_OPEN_SESSION_ARG));
     CopyMem (&OpenSessionArg.Uuid, &gEfiSmmVariableProtocolGuid, sizeof (EFI_GUID));
@@ -412,22 +415,18 @@ OpteeMmConvertPointers (
     DEBUG ((DEBUG_ERROR," Error converting shm %r\n", Status));
   }
 
-  OpteeSetMsgBuffer((UINT64)OpteeMmSession.OpteeMsgArgVa, OpteeMmSession.TotalSize);
   Status = gRT->ConvertPointer (
              EFI_OPTIONAL_PTR,
-             (VOID **) &OpteeMmSession
-      );
-  if (EFI_ERROR(Status)) {
-    DEBUG ((DEBUG_ERROR," Error converting main session %r\n", Status));
-  }
-
-  Status = gRT->ConvertPointer (
-             EFI_OPTIONAL_PTR,
-             (VOID **) &MmCommunication2Communicate
+             (VOID **) &mMmCommunication2.Communicate
       );
   if (EFI_ERROR(Status)) {
     DEBUG ((DEBUG_ERROR," Error converting Proto Fn %r\n", Status));
   }
+
+  OpteeSetMsgBuffer((UINT64)OpteeMmSession.OpteeMsgArgPa,
+                    (UINT64)OpteeMmSession.OpteeMsgArgVa,
+                    OpteeMmSession.TotalSize);
+
   return Status;
 }
 
@@ -666,8 +665,9 @@ MmCommunication2Initialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS  Status;
-  UINTN       Index;
+  EFI_RT_PROPERTIES_TABLE   *RtProperties;
+  EFI_STATUS                Status;
+  UINTN                     Index;
 
   OpteePresent = IsOpteePresent();
   RpmbPresent  = IsRpmbPresent();
@@ -765,6 +765,23 @@ MmCommunication2Initialize (
       goto UninstallProtocol;
     }
   }
+
+  RtProperties = (EFI_RT_PROPERTIES_TABLE *) AllocatePool (sizeof (EFI_RT_PROPERTIES_TABLE));
+  if (RtProperties == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT table\n",__FUNCTION__));
+    Status = EFI_OUT_OF_RESOURCES;
+    goto UninstallProtocol;
+  }
+  RtProperties->Version = EFI_RT_PROPERTIES_TABLE_VERSION;
+  RtProperties->Length = sizeof (EFI_RT_PROPERTIES_TABLE);
+  RtProperties->RuntimeServicesSupported = PcdGet32 (PcdVariableRtProperties);
+
+  Status = gBS->InstallConfigurationTable (&gEfiRtPropertiesTableGuid, RtProperties);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error installing RT table: %r\n",__FUNCTION__, Status));
+    goto UninstallProtocol;
+  }
+
   return EFI_SUCCESS;
 
 UninstallProtocol:
