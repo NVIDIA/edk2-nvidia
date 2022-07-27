@@ -47,13 +47,15 @@ STATIC BOOLEAN  VariablesParsed = FALSE;
 
   @param  Guid              Guid of the variable
   @param  VariableName      Name of the variable
+  @param  LockType          Variable policy lock type
 
 **/
 STATIC
 VOID
 LockVariable (
   IN EFI_GUID     *Guid,
-  IN CONST CHAR16 *VariableName
+  IN CONST CHAR16 *VariableName,
+  IN UINT8        LockType
   )
 {
   EFI_STATUS                     Status;
@@ -75,7 +77,7 @@ LockVariable (
              0,
              0,
              0,
-             VARIABLE_POLICY_TYPE_LOCK_NOW
+             LockType
              );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to register lock policy: %r\r\n", Status));
@@ -153,7 +155,7 @@ ProcessVariable (
     //Variable already exists
     if (CurrentAttributes == RequestedAttributes) {
       if (Locked) {
-        LockVariable (Guid, VariableName);
+        LockVariable (Guid, VariableName, VARIABLE_POLICY_TYPE_LOCK_NOW);
       }
       return;
     }
@@ -183,7 +185,7 @@ ProcessVariable (
   }
 
   if (Locked) {
-    LockVariable (Guid, VariableName);
+    LockVariable (Guid, VariableName, VARIABLE_POLICY_TYPE_LOCK_NOW);
   }
 }
 
@@ -489,8 +491,12 @@ UpdateSpecialVariables (
   VOID
   )
 {
-  LockVariable (&gNVIDIAPublicVariableGuid, L"TegraPlatformSpec");
-  LockVariable (&gNVIDIAPublicVariableGuid, L"TegraPlatformCompatSpec");
+  LockVariable (&gNVIDIAPublicVariableGuid,
+                L"TegraPlatformSpec",
+                VARIABLE_POLICY_TYPE_LOCK_ON_CREATE);
+  LockVariable (&gNVIDIAPublicVariableGuid,
+                L"TegraPlatformCompatSpec",
+                VARIABLE_POLICY_TYPE_LOCK_ON_CREATE);
 }
 
 /**
@@ -600,8 +606,6 @@ EspVar:
     DEBUG ((DEBUG_ERROR, "%a: Failed to Process ESP Partition Variables %r\n",
                          __FUNCTION__, Status));
   }
-
-  UpdateSpecialVariables ();
 }
 
 /**
