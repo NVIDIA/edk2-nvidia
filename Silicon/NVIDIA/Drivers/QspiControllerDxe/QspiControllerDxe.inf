@@ -43,6 +43,7 @@
   gNVIDIANonDiscoverableDeviceProtocolGuid
   gEfiDevicePathProtocolGuid
   gNVIDIAQspiControllerProtocolGuid
+  gEfiMmCommunication2ProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableSpiDeviceGuid
@@ -50,4 +51,5 @@
   gEfiEventVirtualAddressChangeGuid
 
 [Depex]
-  TRUE
+  gEfiMmCommunication2ProtocolGuid OR
+  gNVIDIAStandaloneMmUnavailableGuid
