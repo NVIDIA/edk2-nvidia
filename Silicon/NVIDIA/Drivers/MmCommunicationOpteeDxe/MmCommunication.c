@@ -82,6 +82,11 @@ IsRpmbPresent (VOID) {
   if (Status != EFI_NOT_FOUND) {
     return TRUE;
   }
+  NumberOfPlatformNodes = 0;
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,e3360_1099", NULL, &NumberOfPlatformNodes);
+  if (Status != EFI_NOT_FOUND) {
+    return TRUE;
+  }
   return FALSE;
 }
 
