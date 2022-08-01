@@ -60,6 +60,7 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdVariableRtProperties
+  gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled
 
 [Depex]
   gEfiCpuArchProtocolGuid

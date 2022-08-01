@@ -287,11 +287,16 @@ OpteeStmmInit (
     DEBUG ((DEBUG_ERROR, "OP-Tee is not present\n"));
     return EFI_UNSUPPORTED;
   }
+
   if (RpmbPresent) {
     DEBUG ((DEBUG_INFO, "OP-Tee MM is not supported on RPMB platforms.\n"));
     return EFI_UNSUPPORTED;
   }
 
+  if (PcdGetBool (PcdTegraStmmEnabled) == FALSE) {
+    DEBUG ((DEBUG_INFO, "PCD to Enable MM set to False\n"));
+    return EFI_UNSUPPORTED;
+  }
 
   if (!OpteeExchangeCapabilities (&Capabilities)) {
     DEBUG ((DEBUG_ERROR, "Failed to exchange capabilities with OP-TEE(%r)\n",
