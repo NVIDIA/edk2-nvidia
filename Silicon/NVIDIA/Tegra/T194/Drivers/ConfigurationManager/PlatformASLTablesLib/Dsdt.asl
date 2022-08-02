@@ -328,19 +328,40 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
       Name (_UID, 0)
       Name (_CCA, ZERO)
     }
+
     Device(MRQ0) {
       Name (_HID, "NVDA2001")
       Name (_UID, 0)
       Name (_CCA, ZERO)
+      // Name (CDIS, ZERO)
+
+      // Method (_HID, 0, NotSerialized) {
+      //   Store (ZERO, CDIS)
+      //   Return ("NVDA2001")
+      // }
+
+      // Method (_STA, 0, NotSerialized) {
+      //   If (LEqual(CDIS, One)) {
+      //     Return (0x0D)
+      //   }
+      //   Return (0x0F)
+      // }
+
+      // Method (_DIS, 0, NotSerialized) {
+      //   Store (One, CDIS)
+      // }
 
       Name(_CRS, ResourceTemplate() {
-        Memory32Fixed (ReadWrite, 0x03C90300, 0x100)
-        Memory32Fixed (ReadWrite, BPMP_TX_MAILBOX+BPMP_CHANNEL_SIZE, 2*BPMP_CHANNEL_SIZE)
-        Memory32Fixed (ReadWrite, BPMP_RX_MAILBOX+BPMP_CHANNEL_SIZE, 2*BPMP_CHANNEL_SIZE)
+        // 1. HSP_TOP0 Registers
+        Memory32Fixed (ReadWrite, 0x03C00000, 0xA0000)
+        // 2. IVC Tx Pool (using 0x4004E000 + {0x100-0x1FF, 0x200-0x2FF, 0x300-0x3FF, 0xD00-0xDFF})
+        Memory32Fixed (ReadWrite, 0x4004E100, 0xF00)
+        // 3. IVC Rx Pool (using 0x4004F000 + {0x100-0x1FF, 0x200-0x2FF, 0x300-0x3FF, 0xD00-0xDFF})
+        Memory32Fixed (ReadWrite, 0x4004F100, 0xF00)
+        // 4. HSP_TOP0_CCPLEX_DBELL (0xB0 + 0x20)
         Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xD0 }
       })
     }
-
   }
 }
 
