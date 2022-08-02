@@ -346,38 +346,6 @@ GetGRBlobBaseAddress (
 }
 
 /**
-  Retrieve FSI NS Base and Size
-
-**/
-BOOLEAN
-EFIAPI
-GetFsiNsBaseAndSize (
-  OUT UINTN  *Base,
-  OUT UINTN  *Size
-  )
-{
-  UINTN    ChipID;
-  UINTN    CpuBootloaderAddress;
-  BOOLEAN  ValidPrivatePlatform;
-
-  ValidPrivatePlatform = GetFsiNsBaseAndSizeInternal (Base, Size);
-  if (ValidPrivatePlatform) {
-    return ValidPrivatePlatform;
-  }
-
-  ChipID = TegraGetChipID ();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      return T234GetFsiNsBaseAndSize (CpuBootloaderAddress, Base, Size);
-    default:
-      return FALSE;
-  }
-}
-
-/**
   Validate Active Boot Chain
 
 **/

@@ -100,6 +100,7 @@ typedef struct {
   TEGRABL_EEPROM_DATA         *EepromData;
   TEGRA_BOARD_INFO            *BoardInfo;
   TEGRA_BASE_AND_SIZE_INFO    GrOutputInfo;
+  TEGRA_BASE_AND_SIZE_INFO    FsiNsInfo;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
@@ -195,17 +196,6 @@ UINT64
 EFIAPI
 GetGRBlobBaseAddress (
   VOID
-  );
-
-/**
-  Retrieve FSI NS Base and Size
-
-**/
-BOOLEAN
-EFIAPI
-GetFsiNsBaseAndSize (
-  OUT UINTN  *Base,
-  OUT UINTN  *Size
   );
 
 /**

@@ -42,13 +42,6 @@ T234GetGRBlobBaseAddress (
   IN UINTN  CpuBootloaderAddress
   );
 
-BOOLEAN
-T234GetFsiNsBaseAndSize (
-  IN  UINTN  CpuBootloaderAddress,
-  OUT UINTN  *Base,
-  OUT UINTN  *Size
-  );
-
 /**
   Retrieve Active Boot Chain Information
 

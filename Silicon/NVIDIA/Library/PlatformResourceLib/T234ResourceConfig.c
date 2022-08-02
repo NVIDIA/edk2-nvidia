@@ -375,26 +375,6 @@ T234GetGRBlobBaseAddress (
 }
 
 /**
-  Retrieve FSI NS Base and Size
-
-**/
-BOOLEAN
-T234GetFsiNsBaseAndSize (
-  IN  UINTN  CpuBootloaderAddress,
-  OUT UINTN  *Base,
-  OUT UINTN  *Size
-  )
-{
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  *Base               = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Base;
-  *Size               = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Size;
-
-  return TRUE;
-}
-
-/**
   Retrieve MMIO Base and Size
 
 **/
@@ -588,6 +568,10 @@ T234GetPlatformResourceInformation (
   // Populate GrOutputInfo
   PlatformResourceInfo->GrOutputInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Base;
   PlatformResourceInfo->GrOutputInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Size;
+
+  // Populate FsiNsInfo
+  PlatformResourceInfo->FsiNsInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Base;
+  PlatformResourceInfo->FsiNsInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Size;
 
   return EFI_SUCCESS;
 }

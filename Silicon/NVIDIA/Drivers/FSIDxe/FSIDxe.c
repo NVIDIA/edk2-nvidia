@@ -8,11 +8,11 @@
 **/
 
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <libfdt.h>
-
 
 STATIC
 VOID
@@ -21,15 +21,17 @@ ConfigureFSICarveout (
   IN VOID
   )
 {
-  EFI_STATUS Status;
-  VOID       *AcpiBase;
-  VOID       *FdtBase;
-  INTN       NodeOffset;
-  UINTN      FsiBase;
-  UINTN      FsiSize;
-  INT32      AddressCells;
-  INT32      SizeCells;
-  UINT8      *Data;
+  EFI_STATUS                    Status;
+  VOID                          *AcpiBase;
+  VOID                          *FdtBase;
+  INTN                          NodeOffset;
+  UINTN                         FsiBase;
+  UINTN                         FsiSize;
+  INT32                         AddressCells;
+  INT32                         SizeCells;
+  UINT8                         *Data;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
@@ -50,45 +52,54 @@ ConfigureFSICarveout (
     return;
   }
 
-  AddressCells  = fdt_address_cells (FdtBase, fdt_parent_offset(FdtBase, NodeOffset));
-  SizeCells = fdt_size_cells (FdtBase, fdt_parent_offset(FdtBase, NodeOffset));
+  AddressCells = fdt_address_cells (FdtBase, fdt_parent_offset (FdtBase, NodeOffset));
+  SizeCells    = fdt_size_cells (FdtBase, fdt_parent_offset (FdtBase, NodeOffset));
   if ((AddressCells > 2) ||
       (AddressCells == 0) ||
       (SizeCells > 2) ||
-      (SizeCells == 0)) {
+      (SizeCells == 0))
+  {
     return;
   }
 
-  FsiBase = 0;
-  FsiSize = 0;
-  if (!GetFsiNsBaseAndSize (&FsiBase, &FsiSize)) {
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
     fdt_del_node (FdtBase, NodeOffset);
     return;
   }
 
-  if (FsiSize == 0 || FsiBase == 0) {
+  FsiBase = PlatformResourceInfo->FsiNsInfo.Base;
+  FsiSize = PlatformResourceInfo->FsiNsInfo.Size;
+
+  if ((FsiSize == 0) || (FsiBase == 0)) {
     fdt_del_node (FdtBase, NodeOffset);
     return;
   }
 
-  Data = NULL;
-  Status = gBS->AllocatePool (EfiBootServicesData,
-                              (AddressCells + SizeCells) * sizeof (UINT32),
-                              (VOID **)&Data);
+  Data   = NULL;
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  (AddressCells + SizeCells) * sizeof (UINT32),
+                  (VOID **)&Data
+                  );
   if (EFI_ERROR (Status)) {
     return;
   }
 
   if (AddressCells == 2) {
-    *(UINT64*)Data = SwapBytes64 (FsiBase);
+    *(UINT64 *)Data = SwapBytes64 (FsiBase);
   } else {
-    *(UINT32*)Data = SwapBytes32 (FsiBase);
+    *(UINT32 *)Data = SwapBytes32 (FsiBase);
   }
 
   if (SizeCells == 2) {
-    *(UINT64*)&Data[AddressCells * sizeof (UINT32)] = SwapBytes64 (FsiSize);
+    *(UINT64 *)&Data[AddressCells * sizeof (UINT32)] = SwapBytes64 (FsiSize);
   } else {
-    *(UINT32*)&Data[AddressCells * sizeof (UINT32)] = SwapBytes32 (FsiSize);
+    *(UINT32 *)&Data[AddressCells * sizeof (UINT32)] = SwapBytes32 (FsiSize);
   }
 
   fdt_setprop (FdtBase, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
@@ -97,7 +108,6 @@ ConfigureFSICarveout (
 
   return;
 }
-
 
 STATIC
 VOID
@@ -109,7 +119,6 @@ FdtInstalled (
 {
   ConfigureFSICarveout ();
 }
-
 
 /**
   Install FSI driver.
@@ -124,19 +133,21 @@ FdtInstalled (
 EFI_STATUS
 EFIAPI
 FSIDxeInitialize (
-  IN EFI_HANDLE               ImageHandle,
-  IN EFI_SYSTEM_TABLE         *SystemTable
-)
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
 {
-  EFI_STATUS Status;
-  EFI_EVENT  FdtInstallEvent;
+  EFI_STATUS  Status;
+  EFI_EVENT   FdtInstallEvent;
 
-  Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
-                               TPL_CALLBACK,
-                               FdtInstalled,
-                               NULL,
-                               &gFdtTableGuid,
-                               &FdtInstallEvent);
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  FdtInstalled,
+                  NULL,
+                  &gFdtTableGuid,
+                  &FdtInstallEvent
+                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }

@@ -117,20 +117,6 @@ GetGRBlobBaseAddressInternal (
 }
 
 /**
-  Retrieve FSI NS Base and Size
-
-**/
-BOOLEAN
-EFIAPI
-GetFsiNsBaseAndSizeInternal (
-  OUT UINTN  *Base,
-  OUT UINTN  *Size
-  )
-{
-  return FALSE;
-}
-
-/**
   Validate Active Boot Chain
 
 **/
