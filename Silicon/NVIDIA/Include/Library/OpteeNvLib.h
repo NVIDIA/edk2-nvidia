@@ -187,10 +187,11 @@ OpteeCallWithArg (
 
 EFI_STATUS
 EFIAPI
-OpteeSetMsgBuffer (
-  UINT64 PBuf,
-  UINT64 VBuf,
-  UINT64 Size
+OpteeSetProperties (
+  UINT64   PBuf,
+  UINT64   VBuf,
+  UINT64   Size,
+  BOOLEAN  RpmbPresent
  );
 
 EFI_STATUS

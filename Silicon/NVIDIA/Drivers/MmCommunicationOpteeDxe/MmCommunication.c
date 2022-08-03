@@ -340,9 +340,10 @@ OpteeStmmInit (
     OpteeMmSession.MmMsgCookiePa->Size = OpteeMmSession.MmMsgCookieVa->Size =EFI_PAGES_TO_SIZE(MmCommBufSizePg);
 
 
-    OpteeSetMsgBuffer ((UINT64)OpteeMmSession.OpteeMsgArgPa,
-                       (UINT64)OpteeMmSession.OpteeMsgArgVa,
-                       OpteeMmSession.TotalSize);
+    OpteeSetProperties ((UINT64)OpteeMmSession.OpteeMsgArgPa,
+                        (UINT64)OpteeMmSession.OpteeMsgArgVa,
+                        OpteeMmSession.TotalSize,
+                        RpmbPresent);
 
     ZeroMem (&OpenSessionArg, sizeof (OPTEE_OPEN_SESSION_ARG));
     CopyMem (&OpenSessionArg.Uuid, &gEfiSmmVariableProtocolGuid, sizeof (EFI_GUID));
@@ -433,9 +434,10 @@ OpteeMmConvertPointers (
     DEBUG ((DEBUG_ERROR," Error converting Proto Fn %r\n", Status));
   }
 
-  OpteeSetMsgBuffer((UINT64)OpteeMmSession.OpteeMsgArgPa,
-                    (UINT64)OpteeMmSession.OpteeMsgArgVa,
-                    OpteeMmSession.TotalSize);
+  OpteeSetProperties((UINT64)OpteeMmSession.OpteeMsgArgPa,
+                     (UINT64)OpteeMmSession.OpteeMsgArgVa,
+                     OpteeMmSession.TotalSize,
+                     RpmbPresent);
 
   return Status;
 }

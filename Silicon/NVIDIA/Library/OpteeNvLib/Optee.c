@@ -24,6 +24,7 @@
 #include <OpteeSmc.h>
 
 STATIC OPTEE_SHARED_MEMORY_INFORMATION  OpteeSharedMemoryInformation = { 0 };
+STATIC BOOLEAN IsRpmbPresent = FALSE;
 
 /**
   Check for OP-TEE presence.
@@ -450,9 +451,11 @@ IsOpteeSmcReturnRpc (
   UINT32  Return
   )
 {
-  return (Return != OPTEE_SMC_RETURN_UNKNOWN_FUNCTION) &&
+  return (IsRpmbPresent &&
+         (Return != OPTEE_SMC_RETURN_UNKNOWN_FUNCTION) &&
          ((Return & OPTEE_SMC_RETURN_RPC_PREFIX_MASK) ==
-          OPTEE_SMC_RETURN_RPC_PREFIX);
+          OPTEE_SMC_RETURN_RPC_PREFIX));
+  
 }
 
 /**
@@ -798,14 +801,16 @@ OpteeInvokeFunction (
 
 EFI_STATUS
 EFIAPI
-OpteeSetMsgBuffer (
-  UINT64 PBuf,
-  UINT64 VBuf,
-  UINT64 Size
+OpteeSetProperties (
+  UINT64   PBuf,
+  UINT64   VBuf,
+  UINT64   Size,
+  BOOLEAN  RpmbPresent
  )
 {
   OpteeSharedMemoryInformation.PBase = PBuf;
   OpteeSharedMemoryInformation.VBase = VBuf;
-  OpteeSharedMemoryInformation.Size = Size;
+  OpteeSharedMemoryInformation.Size  = Size;
+  IsRpmbPresent                      = RpmbPresent;
   return EFI_SUCCESS;
 }
