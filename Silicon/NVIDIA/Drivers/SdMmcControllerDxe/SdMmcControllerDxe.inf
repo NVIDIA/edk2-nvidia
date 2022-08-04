@@ -52,7 +52,7 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable
-  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable
+  gNVIDIATokenSpaceGuid.PcdSdhciHighSpeedDisable
 
 [Depex]
   gNVIDIAAllRegulatorsPresentProtocolGuid

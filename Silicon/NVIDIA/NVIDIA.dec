@@ -324,8 +324,8 @@
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C
 
-#Force disable SDR104 in SDHCi.
-  gNVIDIATokenSpaceGuid.PcdSdhciSDR104Disable|FALSE|BOOLEAN|0x0000000E
+#Force disable high speed modes in SDHCi.
+  gNVIDIATokenSpaceGuid.PcdSdhciHighSpeedDisable|TRUE|BOOLEAN|0x0000000E
 
 #Explicit PCIe Controller Enable
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|FALSE|BOOLEAN|0x00000017

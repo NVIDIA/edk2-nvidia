@@ -42,14 +42,14 @@
 **/
 EFI_STATUS
 SdMmcCapability (
-  IN      EFI_HANDLE                      ControllerHandle,
-  IN      UINT8                           Slot,
-  IN  OUT VOID                            *SdMmcHcSlotCapability,
-  IN  OUT UINT32                          *BaseClkFreq
+  IN      EFI_HANDLE  ControllerHandle,
+  IN      UINT8       Slot,
+  IN  OUT VOID        *SdMmcHcSlotCapability,
+  IN  OUT UINT32      *BaseClkFreq
   )
 {
-  EFI_STATUS                       Status;
-  NVIDIA_DEVICE_TREE_NODE_PROTOCOL *Node;
+  EFI_STATUS                        Status;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node;
 
   SD_MMC_HC_SLOT_CAP  *Capability = (SD_MMC_HC_SLOT_CAP *)SdMmcHcSlotCapability;
 
@@ -57,14 +57,18 @@ SdMmcCapability (
     return EFI_INVALID_PARAMETER;
   }
 
-  Node = NULL;
+  Node   = NULL;
   Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   if (NULL != fdt_get_property (Node->DeviceTreeBase, Node->NodeOffset, "non-removable", NULL)) {
-    Capability->SlotType = 0x1; //Embedded slot
+    Capability->SlotType = 0x1; // Embedded slot
+  }
+
+  if (PcdGetBool (PcdSdhciHighSpeedDisable)) {
+    Capability->Hs400 = 0;
   }
 
   return EFI_SUCCESS;
@@ -87,15 +91,15 @@ SdMmcCapability (
 **/
 EFI_STATUS
 SdMmcNotify (
-  IN      EFI_HANDLE                      ControllerHandle,
-  IN      UINT8                           Slot,
-  IN      EDKII_SD_MMC_PHASE_TYPE         PhaseType,
-  IN OUT  VOID                            *PhaseData
+  IN      EFI_HANDLE               ControllerHandle,
+  IN      UINT8                    Slot,
+  IN      EDKII_SD_MMC_PHASE_TYPE  PhaseType,
+  IN OUT  VOID                     *PhaseData
   )
 {
-  EFI_PHYSICAL_ADDRESS SlotBaseAddress  = 0;
-  UINTN                SlotSize;
-  EFI_STATUS           Status;
+  EFI_PHYSICAL_ADDRESS  SlotBaseAddress = 0;
+  UINTN                 SlotSize;
+  EFI_STATUS            Status;
 
   Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, Slot, &SlotBaseAddress, &SlotSize);
   if (EFI_ERROR (Status)) {
@@ -105,32 +109,31 @@ SdMmcNotify (
 
   if (PhaseType == EdkiiSdMmcInitHostPost) {
     // Enable SDMMC Clock again.
-    MmioOr32(SlotBaseAddress + SD_MMC_HC_CLOCK_CTRL, SD_MMC_CLK_CTRL_SD_CLK_EN);
+    MmioOr32 (SlotBaseAddress + SD_MMC_HC_CLOCK_CTRL, SD_MMC_CLK_CTRL_SD_CLK_EN);
   }
 
   return EFI_SUCCESS;
 }
 
-
-EDKII_SD_MMC_OVERRIDE gSdMmcOverride = {
+EDKII_SD_MMC_OVERRIDE  gSdMmcOverride = {
   EDKII_SD_MMC_OVERRIDE_PROTOCOL_VERSION,
   SdMmcCapability,
   SdMmcNotify
 };
 
-NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-    { "nvidia,tegra186-sdhci", &gEdkiiNonDiscoverableSdhciDeviceGuid },
-    { "nvidia,tegra194-sdhci", &gEdkiiNonDiscoverableSdhciDeviceGuid },
-    { "nvidia,tegra234-sdhci", &gEdkiiNonDiscoverableSdhciDeviceGuid },
-    { NULL, NULL }
+NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
+  { "nvidia,tegra186-sdhci", &gEdkiiNonDiscoverableSdhciDeviceGuid },
+  { "nvidia,tegra194-sdhci", &gEdkiiNonDiscoverableSdhciDeviceGuid },
+  { "nvidia,tegra234-sdhci", &gEdkiiNonDiscoverableSdhciDeviceGuid },
+  { NULL,                    NULL                                  }
 };
 
-NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-    .DriverName = L"NVIDIA SdMmc controller driver",
-    .UseDriverBinding = TRUE,
-    .AutoEnableClocks = TRUE,
-    .AutoResetModule = TRUE,
-    .SkipEdkiiNondiscoverableInstall = FALSE
+NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
+  .DriverName                      = L"NVIDIA SdMmc controller driver",
+  .UseDriverBinding                = TRUE,
+  .AutoEnableClocks                = TRUE,
+  .AutoResetModule                 = TRUE,
+  .SkipEdkiiNondiscoverableInstall = FALSE
 };
 
 /**
@@ -151,237 +154,259 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
 **/
 EFI_STATUS
 DeviceDiscoveryNotify (
-  IN  NVIDIA_DEVICE_DISCOVERY_PHASES         Phase,
-  IN  EFI_HANDLE                             DriverHandle,
-  IN  EFI_HANDLE                             ControllerHandle,
-  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
+  IN  NVIDIA_DEVICE_DISCOVERY_PHASES          Phase,
+  IN  EFI_HANDLE                              DriverHandle,
+  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                                    Status;
-  CONST UINT32                                  *RegulatorPointer;
-  NVIDIA_REGULATOR_PROTOCOL                     *RegulatorProtocol;
-  NON_DISCOVERABLE_DEVICE                       *Device;
-  EFI_PLATFORM_TO_DRIVER_CONFIGURATION_PROTOCOL *PlatformToDriverInterface;
-  SDMMC_PARAMETER_INFO                          *SdMmcParameterInfo;
-  SDMMC_PARAMETER_INFO                          SdMmcInfo;
-  EFI_GUID                                      *SdMmcParameterInfoGuid;
-  UINTN                                         Instance;
-  UINTN                                         SdMmcParameterSize;
-  UINT64                                        Rate;
-  EFI_PHYSICAL_ADDRESS                          BaseAddress;
-  UINTN                                         RegionSize;
-  CONST CHAR8                                   *ClockName;
-  REGULATOR_INFO                                RegulatorInfo;
-  UINT32                                        ClockId;
-  CONST UINT32                                  *ClockIds;
-  INT32                                         ClocksLength;
+  EFI_STATUS                                     Status;
+  CONST UINT32                                   *RegulatorPointer;
+  NVIDIA_REGULATOR_PROTOCOL                      *RegulatorProtocol;
+  NON_DISCOVERABLE_DEVICE                        *Device;
+  EFI_PLATFORM_TO_DRIVER_CONFIGURATION_PROTOCOL  *PlatformToDriverInterface;
+  SDMMC_PARAMETER_INFO                           *SdMmcParameterInfo;
+  SDMMC_PARAMETER_INFO                           SdMmcInfo;
+  EFI_GUID                                       *SdMmcParameterInfoGuid;
+  UINTN                                          Instance;
+  UINTN                                          SdMmcParameterSize;
+  UINT64                                         Rate;
+  EFI_PHYSICAL_ADDRESS                           BaseAddress;
+  UINTN                                          RegionSize;
+  CONST CHAR8                                    *ClockName;
+  REGULATOR_INFO                                 RegulatorInfo;
+  UINT32                                         ClockId;
+  CONST UINT32                                   *ClockIds;
+  INT32                                          ClocksLength;
 
-  RegulatorPointer = NULL;
-  RegulatorProtocol = NULL;
-  Device = NULL;
+  RegulatorPointer          = NULL;
+  RegulatorProtocol         = NULL;
+  Device                    = NULL;
   PlatformToDriverInterface = NULL;
-  SdMmcParameterInfo = NULL;
-  SdMmcParameterInfoGuid = NULL;
-  BaseAddress = 0;
-  ClockIds = NULL;
+  SdMmcParameterInfo        = NULL;
+  SdMmcParameterInfoGuid    = NULL;
+  BaseAddress               = 0;
+  ClockIds                  = NULL;
 
   switch (Phase) {
-  case DeviceDiscoveryDriverStart:
-    return gBS->InstallMultipleProtocolInterfaces (
-                  &DriverHandle,
-                  &gEdkiiSdMmcOverrideProtocolGuid,
-                  &gSdMmcOverride,
-                  NULL
-                  );
+    case DeviceDiscoveryDriverStart:
+      return gBS->InstallMultipleProtocolInterfaces (
+                    &DriverHandle,
+                    &gEdkiiSdMmcOverrideProtocolGuid,
+                    &gSdMmcOverride,
+                    NULL
+                    );
 
-  case DeviceDiscoveryDriverBindingSupported:
-    if (GetBootType () == TegrablBootRcm) {
-      return EFI_UNSUPPORTED;
-    }
-    return EFI_SUCCESS;
+    case DeviceDiscoveryDriverBindingSupported:
+      if (GetBootType () == TegrablBootRcm) {
+        return EFI_UNSUPPORTED;
+      }
 
-  case DeviceDiscoveryDriverBindingStart:
-    Status = gBS->LocateProtocol (&gEfiPlatformToDriverConfigurationProtocolGuid, NULL, (VOID **)&PlatformToDriverInterface);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Could not locate Platform to Driver Config protocol %r\r\n", __FUNCTION__, Status));
-      return Status;
-    }
+      return EFI_SUCCESS;
 
-    // Collect SDMMC DT properties
-    Instance = 0;
-    Status = PlatformToDriverInterface->Query (PlatformToDriverInterface,
-                                               ControllerHandle,
-                                               NULL,
-                                               &Instance,
-                                               &SdMmcParameterInfoGuid,
-                                               (VOID **)&SdMmcParameterInfo,
-                                               &SdMmcParameterSize);
-    if (EFI_ERROR (Status) ||
-        (SdMmcParameterInfo == NULL) ||
-        (SdMmcParameterInfoGuid == NULL) ||
-        (SdMmcParameterSize == 0)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to call Query %r\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    // Sanity check to ensure that the GUID returned is indeed SDMMC
-    if (!CompareGuid (SdMmcParameterInfoGuid, &gEdkiiNonDiscoverableSdhciDeviceGuid)) {
-      DEBUG ((DEBUG_ERROR, "GUID found does not match SDMMC GUID \r\n"));
-
-      Status = PlatformToDriverInterface->Response (PlatformToDriverInterface,
-                                                    ControllerHandle,
-                                                    NULL,
-                                                    &Instance,
-                                                    SdMmcParameterInfoGuid,
-                                                    (VOID *)SdMmcParameterInfo,
-                                                    SdMmcParameterSize,
-                                                    EfiPlatformConfigurationActionUnsupportedGuid);
-      Status = EFI_UNSUPPORTED;
-      return Status;
-    }
-
-    // Keeping a copy of SDMMC Parameter Info before response is called
-    gBS->CopyMem (&SdMmcInfo, (VOID*)SdMmcParameterInfo, sizeof (SDMMC_PARAMETER_INFO));
-
-    Status = PlatformToDriverInterface->Response (PlatformToDriverInterface,
-                                                  ControllerHandle,
-                                                  NULL,
-                                                  &Instance,
-                                                  SdMmcParameterInfoGuid,
-                                                  (VOID *)SdMmcParameterInfo,
-                                                  SdMmcParameterSize,
-                                                  EfiPlatformConfigurationActionNone);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to call Response %r\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    if (PcdGetBool(PcdSdhciCoherentDMADisable)) {
-      Status = gBS->HandleProtocol (
-                      ControllerHandle,
-                      &gNVIDIANonDiscoverableDeviceProtocolGuid,
-                      (VOID **)&Device);
+    case DeviceDiscoveryDriverBindingStart:
+      Status = gBS->LocateProtocol (&gEfiPlatformToDriverConfigurationProtocolGuid, NULL, (VOID **)&PlatformToDriverInterface);
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to locate non discoverable device\n", __FUNCTION__));
+        DEBUG ((EFI_D_ERROR, "%a, Could not locate Platform to Driver Config protocol %r\r\n", __FUNCTION__, Status));
         return Status;
       }
 
-      Device->DmaType = NonDiscoverableDeviceDmaTypeNonCoherent;
-    }
-
-    Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
-      return EFI_UNSUPPORTED;
-    }
-
-    ClockIds = (CONST UINT32*)fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset,
-                                           "clocks", &ClocksLength);
-    if ((ClockIds != NULL) &&
-        (ClocksLength != 0)) {
-      ClockName = SDHCI_CLOCK_NAME;
-      Status = DeviceDiscoveryGetClockId (ControllerHandle, ClockName, &ClockId);
-      if (EFI_ERROR (Status)) {
-        ClockName = SDHCI_CLOCK_OLD_NAME;
+      // Collect SDMMC DT properties
+      Instance = 0;
+      Status   = PlatformToDriverInterface->Query (
+                                              PlatformToDriverInterface,
+                                              ControllerHandle,
+                                              NULL,
+                                              &Instance,
+                                              &SdMmcParameterInfoGuid,
+                                              (VOID **)&SdMmcParameterInfo,
+                                              &SdMmcParameterSize
+                                              );
+      if (EFI_ERROR (Status) ||
+          (SdMmcParameterInfo == NULL) ||
+          (SdMmcParameterInfoGuid == NULL) ||
+          (SdMmcParameterSize == 0))
+      {
+        DEBUG ((EFI_D_ERROR, "%a, Failed to call Query %r\r\n", __FUNCTION__, Status));
+        return Status;
       }
 
-      Status = DeviceDiscoveryGetClockId (ControllerHandle, ClockName, &ClockId);
-      if (!EFI_ERROR (Status)) {
-        Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, SD_MMC_MAX_CLOCK);
+      // Sanity check to ensure that the GUID returned is indeed SDMMC
+      if (!CompareGuid (SdMmcParameterInfoGuid, &gEdkiiNonDiscoverableSdhciDeviceGuid)) {
+        DEBUG ((DEBUG_ERROR, "GUID found does not match SDMMC GUID \r\n"));
+
+        Status = PlatformToDriverInterface->Response (
+                                              PlatformToDriverInterface,
+                                              ControllerHandle,
+                                              NULL,
+                                              &Instance,
+                                              SdMmcParameterInfoGuid,
+                                              (VOID *)SdMmcParameterInfo,
+                                              SdMmcParameterSize,
+                                              EfiPlatformConfigurationActionUnsupportedGuid
+                                              );
+        Status = EFI_UNSUPPORTED;
+        return Status;
+      }
+
+      // Keeping a copy of SDMMC Parameter Info before response is called
+      gBS->CopyMem (&SdMmcInfo, (VOID *)SdMmcParameterInfo, sizeof (SDMMC_PARAMETER_INFO));
+
+      Status = PlatformToDriverInterface->Response (
+                                            PlatformToDriverInterface,
+                                            ControllerHandle,
+                                            NULL,
+                                            &Instance,
+                                            SdMmcParameterInfoGuid,
+                                            (VOID *)SdMmcParameterInfo,
+                                            SdMmcParameterSize,
+                                            EfiPlatformConfigurationActionNone
+                                            );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a, Failed to call Response %r\r\n", __FUNCTION__, Status));
+        return Status;
+      }
+
+      if (PcdGetBool (PcdSdhciCoherentDMADisable)) {
+        Status = gBS->HandleProtocol (
+                        ControllerHandle,
+                        &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                        (VOID **)&Device
+                        );
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a: Unable to locate non discoverable device\n", __FUNCTION__));
           return Status;
         }
 
-        //Update base clock in capabilities register
-        Status = DeviceDiscoveryGetClockFreq (ControllerHandle, ClockName, &Rate);
+        Device->DmaType = NonDiscoverableDeviceDmaTypeNonCoherent;
+      }
+
+      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
+        return EFI_UNSUPPORTED;
+      }
+
+      ClockIds = (CONST UINT32 *)fdt_getprop (
+                                   DeviceTreeNode->DeviceTreeBase,
+                                   DeviceTreeNode->NodeOffset,
+                                   "clocks",
+                                   &ClocksLength
+                                   );
+      if ((ClockIds != NULL) &&
+          (ClocksLength != 0))
+      {
+        ClockName = SDHCI_CLOCK_NAME;
+        Status    = DeviceDiscoveryGetClockId (ControllerHandle, ClockName, &ClockId);
+        if (EFI_ERROR (Status)) {
+          ClockName = SDHCI_CLOCK_OLD_NAME;
+        }
+
+        Status = DeviceDiscoveryGetClockId (ControllerHandle, ClockName, &ClockId);
         if (!EFI_ERROR (Status)) {
-          if (Rate > SD_MMC_MAX_CLOCK) {
-            DEBUG ((EFI_D_ERROR, "%a: Clock rate %llu out of range for SDHCI\r\n",__FUNCTION__,Rate));
-            return EFI_DEVICE_ERROR;
+          Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, SD_MMC_MAX_CLOCK);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
+            return Status;
           }
-          Rate = Rate / 1000000;
-          MmioBitFieldWrite32 (
-            BaseAddress + SDHCI_TEGRA_VENDOR_CLOCK_CTRL,
-            SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_START,
-            SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_END,
-            Rate
-            );
+
+          // Update base clock in capabilities register
+          Status = DeviceDiscoveryGetClockFreq (ControllerHandle, ClockName, &Rate);
+          if (!EFI_ERROR (Status)) {
+            if (Rate > SD_MMC_MAX_CLOCK) {
+              DEBUG ((EFI_D_ERROR, "%a: Clock rate %llu out of range for SDHCI\r\n", __FUNCTION__, Rate));
+              return EFI_DEVICE_ERROR;
+            }
+
+            Rate = Rate / 1000000;
+            MmioBitFieldWrite32 (
+              BaseAddress + SDHCI_TEGRA_VENDOR_CLOCK_CTRL,
+              SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_START,
+              SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_END,
+              Rate
+              );
+          }
         }
       }
-    }
 
-    if (PcdGetBool(PcdSdhciSDR104Disable)) {
-      MmioBitFieldWrite32 (
-        BaseAddress + SDHCI_TEGRA_VENDOR_MISC_CTRL,
-        SDHCI_MISC_CTRL_ENABLE_SDR104,
-        SDHCI_MISC_CTRL_ENABLE_SDR104,
-        0
-        );
-    }
-
-    if (!SdMmcInfo.NonRemovable) {
-      // For SD card, disable SDR50, DDR50 and SDR104 mode.
-      MmioBitFieldWrite32 (
-        BaseAddress + SDHCI_TEGRA_VENDOR_MISC_CTRL,
-        SDHCI_MISC_CTRL_ENABLE_SDR50,
-        SDHCI_MISC_CTRL_ENABLE_SDR50,
-        0
-        );
-      MmioBitFieldWrite32 (
-        BaseAddress + SDHCI_TEGRA_VENDOR_MISC_CTRL,
-        SDHCI_MISC_CTRL_ENABLE_DDR50,
-        SDHCI_MISC_CTRL_ENABLE_DDR50,
-        0
-        );
-      MmioBitFieldWrite32 (
-        BaseAddress + SDHCI_TEGRA_VENDOR_MISC_CTRL,
-        SDHCI_MISC_CTRL_ENABLE_SDR104,
-        SDHCI_MISC_CTRL_ENABLE_SDR104,
-        0
-        );
-    }
-
-    if (NULL == DeviceTreeNode) {
-      return EFI_SUCCESS;
-    }
-
-    Status = gBS->LocateProtocol (&gNVIDIARegulatorProtocolGuid, NULL, (VOID **)&RegulatorProtocol);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to locate regulator protocol %r\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    if (SdMmcInfo.VqmmcRegulatorIdPresent) {
-
-      UINTN Microvolts = 1800000;
-      UINT32 MmcRegulator = SdMmcInfo.VqmmcRegulatorId;
-      if (!SdMmcParameterInfo->Only1v8) {
-        Microvolts = 3300000;
+      if (PcdGetBool (PcdSdhciHighSpeedDisable)) {
+        MmioBitFieldWrite32 (
+          BaseAddress + SDHCI_TEGRA_VENDOR_MISC_CTRL,
+          SDHCI_MISC_CTRL_ENABLE_SDR50,
+          SDHCI_MISC_CTRL_ENABLE_SDR50,
+          0
+          );
+        MmioBitFieldWrite32 (
+          BaseAddress + SDHCI_TEGRA_VENDOR_MISC_CTRL,
+          SDHCI_MISC_CTRL_ENABLE_DDR50,
+          SDHCI_MISC_CTRL_ENABLE_DDR50,
+          0
+          );
+        MmioBitFieldWrite32 (
+          BaseAddress + SDHCI_TEGRA_VENDOR_MISC_CTRL,
+          SDHCI_MISC_CTRL_ENABLE_SDR104,
+          SDHCI_MISC_CTRL_ENABLE_SDR104,
+          0
+          );
       }
 
-      Status = RegulatorProtocol->GetInfo (RegulatorProtocol, MmcRegulator, &RegulatorInfo);
+      if (NULL == DeviceTreeNode) {
+        return EFI_SUCCESS;
+      }
+
+      Status = gBS->LocateProtocol (&gNVIDIARegulatorProtocolGuid, NULL, (VOID **)&RegulatorProtocol);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to get regulator info %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+        DEBUG ((EFI_D_ERROR, "%a, Failed to locate regulator protocol %r\r\n", __FUNCTION__, Status));
         return Status;
       }
 
-      //Check if regulator supports 3.3v if not set voltage to 1.8v to support 1.8v devices that do not have
-      //only-1-8-v device tree property
-      if (Microvolts > RegulatorInfo.MaxMicrovolts) {
-        Microvolts = 1800000;
-      }
-
-      if (RegulatorInfo.IsAvailable) {
-        if (Microvolts != RegulatorInfo.CurrentMicrovolts) {
-          Status = RegulatorProtocol->SetVoltage (RegulatorProtocol, MmcRegulator, Microvolts);
-          if (EFI_ERROR (Status)) {
-            DEBUG ((EFI_D_ERROR, "%a, Failed to set regulator voltage %x, %u, %r\r\n", __FUNCTION__, MmcRegulator, Microvolts, Status));
-            return Status;
-          }
+      if (SdMmcInfo.VqmmcRegulatorIdPresent) {
+        UINTN   Microvolts   = 1800000;
+        UINT32  MmcRegulator = SdMmcInfo.VqmmcRegulatorId;
+        if (!SdMmcParameterInfo->Only1v8) {
+          Microvolts = 3300000;
         }
 
-        if (!RegulatorInfo.IsEnabled) {
+        Status = RegulatorProtocol->GetInfo (RegulatorProtocol, MmcRegulator, &RegulatorInfo);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((EFI_D_ERROR, "%a, Failed to get regulator info %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+          return Status;
+        }
+
+        // Check if regulator supports 3.3v if not set voltage to 1.8v to support 1.8v devices that do not have
+        // only-1-8-v device tree property
+        if (Microvolts > RegulatorInfo.MaxMicrovolts) {
+          Microvolts = 1800000;
+        }
+
+        if (RegulatorInfo.IsAvailable) {
+          if (Microvolts != RegulatorInfo.CurrentMicrovolts) {
+            Status = RegulatorProtocol->SetVoltage (RegulatorProtocol, MmcRegulator, Microvolts);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((EFI_D_ERROR, "%a, Failed to set regulator voltage %x, %u, %r\r\n", __FUNCTION__, MmcRegulator, Microvolts, Status));
+              return Status;
+            }
+          }
+
+          if (!RegulatorInfo.IsEnabled) {
+            Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+              return Status;
+            }
+          }
+        }
+      }
+
+      if (SdMmcInfo.VmmcRegulatorIdPresent) {
+        UINT32  MmcRegulator = SdMmcInfo.VmmcRegulatorId;
+        Status = RegulatorProtocol->GetInfo (RegulatorProtocol, MmcRegulator, &RegulatorInfo);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((EFI_D_ERROR, "%a, Failed to get regulator info %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+          return Status;
+        }
+
+        if (RegulatorInfo.IsAvailable) {
           Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
           if (EFI_ERROR (Status)) {
             DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
@@ -389,29 +414,10 @@ DeviceDiscoveryNotify (
           }
         }
       }
-    }
 
-    if (SdMmcInfo.VmmcRegulatorIdPresent) {
+      return Status;
 
-      UINT32 MmcRegulator = SdMmcInfo.VmmcRegulatorId;
-      Status = RegulatorProtocol->GetInfo (RegulatorProtocol, MmcRegulator, &RegulatorInfo);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to get regulator info %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
-        return Status;
-      }
-
-      if (RegulatorInfo.IsAvailable) {
-        Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
-          return Status;
-        }
-      }
-    }
-
-  return Status;
-
-  default:
-    return EFI_SUCCESS;
+    default:
+      return EFI_SUCCESS;
   }
 }
