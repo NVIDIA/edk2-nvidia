@@ -445,5 +445,5 @@
   gNVIDIATokenSpaceGuid.PcdAllowOsAccessQspi|FALSE|BOOLEAN|0x0000006B
 
 #Enable STMM Secure Variable Store
-  gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled|FALSE|BOOLEAN|0x0000006C
+  gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled|TRUE|BOOLEAN|0x0000006C
 
