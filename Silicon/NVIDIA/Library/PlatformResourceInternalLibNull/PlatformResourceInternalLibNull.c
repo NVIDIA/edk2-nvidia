@@ -143,20 +143,6 @@ SetNextBootChainInternal (
 }
 
 /**
-  Get Ramloaded OS Base and Size
-
-**/
-BOOLEAN
-EFIAPI
-GetRamdiskOSBaseAndSizeInternal (
-  OUT UINTN  *Base,
-  OUT UINTN  *Size
-  )
-{
-  return FALSE;
-}
-
-/**
   Get Platform Resource Information
 
 **/

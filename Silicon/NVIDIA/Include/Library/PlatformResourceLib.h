@@ -101,6 +101,7 @@ typedef struct {
   TEGRA_BOARD_INFO            *BoardInfo;
   TEGRA_BASE_AND_SIZE_INFO    GrOutputInfo;
   TEGRA_BASE_AND_SIZE_INFO    FsiNsInfo;
+  TEGRA_BASE_AND_SIZE_INFO    RamdiskOSInfo;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
@@ -221,17 +222,6 @@ EFI_STATUS
 EFIAPI
 SetNextBootChain (
   IN  UINT32  BootChain
-  );
-
-/**
-  Get Ramloaded OS Base and Size
-
-**/
-BOOLEAN
-EFIAPI
-GetRamdiskOSBaseAndSize (
-  OUT UINTN  *Base,
-  OUT UINTN  *Size
   );
 
 /**
