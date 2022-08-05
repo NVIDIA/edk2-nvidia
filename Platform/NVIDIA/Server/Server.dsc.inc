@@ -325,3 +325,11 @@
   # User Authentication
   #
   Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationDxe.inf
+
+  #
+  # Redfish Host Interface Support
+  #
+  RedfishPkg/RedfishHostInterfaceDxe/RedfishHostInterfaceDxe.inf {
+    <LibraryClasses>
+      RedfishPlatformHostInterfaceLib|Silicon/NVIDIA/Library/RedfishPlatformHostInterfaceOemLib/RedfishPlatformHostInterfaceOemLib.inf
+  }

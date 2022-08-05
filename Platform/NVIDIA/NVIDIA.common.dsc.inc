@@ -167,6 +167,7 @@
   TegraDeviceTreeKernelOverlayLib|Silicon/NVIDIA/Library/TegraDeviceTreeOverlayLib/TegraDeviceTreeKernelOverlayLib.inf
 
   QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
+  RedfishPlatformHostInterfaceOemLib|Silicon/NVIDIA/Library/RedfishPlatformHostInterfaceOemLib/RedfishPlatformHostInterfaceOemLib.inf
 
   RootfsValidationLib|Silicon/NVIDIA/Library/RootfsValidationLib/RootfsValidationLib.inf
 
