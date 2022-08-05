@@ -483,3 +483,9 @@
 
 #The BlobId of SMBIOS Blob in BMC Phosphor Blob Transfer architecture
   gNVIDIATokenSpaceGuid.PcdBmcSmbiosBlobTransferId|"/smbios"|VOID*|0x0000006E
+
+# GUID of the Boot Menu App
+  gNVIDIATokenSpaceGuid.PcdBootMenuAppFile|{ 0xdc, 0x5b, 0xc2, 0xee, 0xf2, 0x67, 0x95, 0x4d, 0xb1, 0xd5, 0xf8, 0x1b, 0x20, 0x39, 0xd1, 0x1d }|VOID*|0x0001006b
+
+# Progress report message during BDS wait
+  gNVIDIATokenSpaceGuid.PcdBootManagerWaitMessage|L""|VOID*|0x0000006F

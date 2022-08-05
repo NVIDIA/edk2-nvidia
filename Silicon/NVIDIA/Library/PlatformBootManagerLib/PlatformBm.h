@@ -1,7 +1,7 @@
 /** @file
   Head file for BDS Platform specific code
 
-  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2004 - 2008, Intel Corporation. All rights reserved.<BR>
   Copyright (c) 2016, Linaro Ltd. All rights reserved.<BR>
@@ -64,6 +64,17 @@ EnableQuietBoot (
 EFI_STATUS
 DisableQuietBoot (
   VOID
+  );
+
+/**
+  Return the boot description for the controller.
+  @param Handle                Controller handle.
+
+  @return  The description string.
+**/
+CHAR16 *
+BmGetBootDescription (
+  IN EFI_HANDLE  Handle
   );
 
 #endif // _PLATFORM_BM_H_

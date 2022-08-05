@@ -77,6 +77,8 @@
 [Pcd]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
+  gNVIDIATokenSpaceGuid.PcdBootMenuAppFile
+  gNVIDIATokenSpaceGuid.PcdBootManagerWaitMessage
 
 [Guids]
   gEfiFileInfoGuid
@@ -104,3 +106,5 @@
   gEfiGenericMemTestProtocolGuid                ## CONSUMES
   gIpmiTransportProtocolGuid
   gNVIDIABootChainProtocolGuid
+  gEfiFirmwareVolume2ProtocolGuid
+  gEfiLoadFileProtocolGuid

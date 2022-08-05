@@ -15,6 +15,7 @@
 #include <Library/BootLogoLib.h>
 #include <Library/CapsuleLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/DxeServicesLib.h>
 #include <Library/HobLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiBootManagerLib.h>
@@ -92,6 +93,7 @@ STATIC PLATFORM_CONFIGURATION_DATA  CurrentPlatformConfigData;
   @retval FALSE  Otherwise. This includes the case when the condition could not
                  be fully evaluated due to an error.
 **/
+
 typedef
 BOOLEAN
 (EFIAPI *FILTER_FUNCTION)(
@@ -106,6 +108,7 @@ BOOLEAN
   @param[in] ReportText  A caller-allocated string passed in for reporting
                          purposes. It must never be NULL.
 **/
+
 typedef
 VOID
 (EFIAPI *CALLBACK_FUNCTION)(
@@ -575,7 +578,215 @@ GetPlatformOptions (
   FreePool (BootKeys);
 }
 
-STATIC
+/**
+  Check if it's a Device Path pointing to BootManagerMenuApp.
+
+  @param  DevicePath     Input device path.
+
+  @retval TRUE   The device path is BootManagerMenuApp File Device Path.
+  @retval FALSE  The device path is NOT BootManagerMenuApp File Device Path.
+**/
+BOOLEAN
+IsBootManagerMenuAppFilePath (
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath
+  )
+{
+  EFI_HANDLE  FvHandle;
+  VOID        *NameGuid;
+  EFI_STATUS  Status;
+
+  Status = gBS->LocateDevicePath (&gEfiFirmwareVolume2ProtocolGuid, &DevicePath, &FvHandle);
+  if (!EFI_ERROR (Status)) {
+    NameGuid = EfiGetNameGuidFromFwVolDevicePathNode ((CONST MEDIA_FW_VOL_FILEPATH_DEVICE_PATH *)DevicePath);
+    if (NameGuid != NULL) {
+      return CompareGuid (NameGuid, PcdGetPtr (PcdBootMenuAppFile));
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+  Register boot option for boot menu app and return its boot option instance.
+
+  @param[out]  BootOption     Boot option of boot menu app.
+
+  @retval EFI_SUCCESS             Boot option of boot menu app is registered.
+  @retval EFI_NOT_FOUND           No boot menu app is found.
+  @retval EFI_INVALID_PARAMETER   BootOption is NULL.
+  @retval Others                  Error occurs.
+**/
+EFI_STATUS
+BmRegisterBootMenuApp (
+  OUT EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption
+  )
+{
+  EFI_STATUS                Status;
+  CHAR16                    *Description;
+  UINTN                     DescriptionLength;
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
+  UINTN                     HandleCount;
+  EFI_HANDLE                *Handles;
+  UINTN                     Index;
+
+  if (BootOption == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  DevicePath  = NULL;
+  Description = NULL;
+
+  //
+  // Try to find BootMenu from LoadFile protocol
+  //
+  gBS->LocateHandleBuffer (
+         ByProtocol,
+         &gEfiLoadFileProtocolGuid,
+         NULL,
+         &HandleCount,
+         &Handles
+         );
+  for (Index = 0; Index < HandleCount; Index++) {
+    if (IsBootManagerMenuAppFilePath (DevicePathFromHandle (Handles[Index]))) {
+      DevicePath  = DuplicateDevicePath (DevicePathFromHandle (Handles[Index]));
+      Description = BmGetBootDescription (Handles[Index]);
+      break;
+    }
+  }
+
+  if (HandleCount != 0) {
+    FreePool (Handles);
+  }
+
+  if (DevicePath == NULL) {
+    Status = GetFileDevicePathFromAnyFv (
+               PcdGetPtr (PcdBootMenuAppFile),
+               EFI_SECTION_PE32,
+               0,
+               &DevicePath
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_WARN, "%a: [Bds]Boot Menu App FFS section can not be found, skip its boot option registration\n", __FUNCTION__));
+      return EFI_NOT_FOUND;
+    }
+
+    ASSERT (DevicePath != NULL);
+    //
+    // Get BootManagerMenu application's description from EFI User Interface Section.
+    //
+    Status = GetSectionFromAnyFv (
+               PcdGetPtr (PcdBootMenuAppFile),
+               EFI_SECTION_USER_INTERFACE,
+               0,
+               (VOID **)&Description,
+               &DescriptionLength
+               );
+    if (EFI_ERROR (Status)) {
+      if (Description != NULL) {
+        FreePool (Description);
+        Description = NULL;
+      }
+    }
+  }
+
+  //
+  // Create new boot option
+  //
+  Status = EfiBootManagerInitializeLoadOption (
+             BootOption,
+             LoadOptionNumberUnassigned,
+             LoadOptionTypeBoot,
+             LOAD_OPTION_CATEGORY_APP | LOAD_OPTION_ACTIVE | LOAD_OPTION_HIDDEN,
+             (Description != NULL) ? Description : L"Boot Manager Menu",
+             DevicePath,
+             NULL,
+             0
+             );
+  ASSERT_EFI_ERROR (Status);
+
+  //
+  // Release resource
+  //
+  if (DevicePath != NULL) {
+    FreePool (DevicePath);
+  }
+
+  if (Description != NULL) {
+    FreePool (Description);
+  }
+
+  DEBUG_CODE (
+    EFI_BOOT_MANAGER_LOAD_OPTION    *BootOptions;
+    UINTN                           BootOptionCount;
+
+    BootOptions = EfiBootManagerGetLoadOptions (&BootOptionCount, LoadOptionTypeBoot);
+    ASSERT (EfiBootManagerFindLoadOption (BootOption, BootOptions, BootOptionCount) == -1);
+    EfiBootManagerFreeLoadOptions (BootOptions, BootOptionCount);
+    );
+
+  return EfiBootManagerAddLoadOptionVariable (BootOption, (UINTN)-1);
+}
+
+/**
+  Return the boot option number to the boot menu app. If not found it in the
+  current boot option, create a new one.
+
+  @param[out] BootOption  Pointer to boot menu app boot option.
+
+  @retval EFI_SUCCESS   Boot option of boot menu app is found and returned.
+  @retval Others        Error occurs.
+
+**/
+EFI_STATUS
+EfiBootManagerGetBootMenuApp (
+  OUT EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption
+  )
+{
+  EFI_STATUS                    Status;
+  UINTN                         BootOptionCount;
+  EFI_BOOT_MANAGER_LOAD_OPTION  *BootOptions;
+  UINTN                         Index;
+
+  BootOptions = EfiBootManagerGetLoadOptions (&BootOptionCount, LoadOptionTypeBoot);
+
+  for (Index = 0; Index < BootOptionCount; Index++) {
+    if (IsBootManagerMenuAppFilePath (BootOptions[Index].FilePath)) {
+      Status = EfiBootManagerInitializeLoadOption (
+                 BootOption,
+                 BootOptions[Index].OptionNumber,
+                 BootOptions[Index].OptionType,
+                 BootOptions[Index].Attributes,
+                 BootOptions[Index].Description,
+                 BootOptions[Index].FilePath,
+                 BootOptions[Index].OptionalData,
+                 BootOptions[Index].OptionalDataSize
+                 );
+      ASSERT_EFI_ERROR (Status);
+      break;
+    }
+  }
+
+  EfiBootManagerFreeLoadOptions (BootOptions, BootOptionCount);
+
+  //
+  // Automatically create the Boot#### for Boot Menu App when not found.
+  //
+  if (Index >= BootOptionCount) {
+    return BmRegisterBootMenuApp (BootOption);
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Register the platform boot options and its hotkeys.
+
+  Supported hotkey:
+    ENTER: continue boot
+    ESC:   Boot manager menu
+    F11:   Boot menu app
+
+**/
 VOID
 PlatformRegisterOptionsAndKeys (
   VOID
@@ -583,7 +794,7 @@ PlatformRegisterOptionsAndKeys (
 {
   EFI_STATUS                    Status;
   EFI_INPUT_KEY                 Enter;
-  EFI_INPUT_KEY                 F2;
+  EFI_INPUT_KEY                 F11;
   EFI_INPUT_KEY                 Esc;
   EFI_BOOT_MANAGER_LOAD_OPTION  BootOption;
 
@@ -598,22 +809,13 @@ PlatformRegisterOptionsAndKeys (
   ASSERT_EFI_ERROR (Status);
 
   //
-  // Map F2 and ESC to Boot Manager Menu
+  // Map ESC to Boot Manager Menu
   //
-  F2.ScanCode     = SCAN_F2;
-  F2.UnicodeChar  = CHAR_NULL;
   Esc.ScanCode    = SCAN_ESC;
   Esc.UnicodeChar = CHAR_NULL;
   Status          = EfiBootManagerGetBootManagerMenu (&BootOption);
   ASSERT_EFI_ERROR (Status);
-  Status = EfiBootManagerAddKeyOptionVariable (
-             NULL,
-             (UINT16)BootOption.OptionNumber,
-             0,
-             &F2,
-             NULL
-             );
-  ASSERT (Status == EFI_SUCCESS || Status == EFI_ALREADY_STARTED);
+
   Status = EfiBootManagerAddKeyOptionVariable (
              NULL,
              (UINT16)BootOption.OptionNumber,
@@ -622,6 +824,108 @@ PlatformRegisterOptionsAndKeys (
              NULL
              );
   ASSERT (Status == EFI_SUCCESS || Status == EFI_ALREADY_STARTED);
+
+  //
+  // Map F11 to Boot Menu App (defined by PcdBootMenuAppFile)
+  //
+  F11.ScanCode    = SCAN_F11;
+  F11.UnicodeChar = CHAR_NULL;
+  Status          = EfiBootManagerGetBootMenuApp (&BootOption);
+  ASSERT_EFI_ERROR (Status);
+
+  Status = EfiBootManagerAddKeyOptionVariable (
+             NULL,
+             (UINT16)BootOption.OptionNumber,
+             0,
+             &F11,
+             NULL
+             );
+  ASSERT (Status == EFI_SUCCESS || Status == EFI_ALREADY_STARTED);
+}
+
+/**
+  System information is displayed at center of screen and hotkey
+  information is displayed at upper left corner when GOP is
+  available.
+
+**/
+VOID
+DisplaySystemAndHotkeyInformation (
+  VOID
+  )
+{
+  EFI_STATUS                     Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL   *GraphicsOutput;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  Black;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  White;
+  CHAR16                         Buffer[100];
+  UINTN                          CharCount;
+  UINTN                          PosX;
+  UINTN                          PosY;
+
+  //
+  // Display hotkey information at upper left corner.
+  //
+  Black.Blue = Black.Green = Black.Red = Black.Reserved = 0;
+  White.Blue = White.Green = White.Red = White.Reserved = 0xFF;
+
+  //
+  // Show NVIDIA Internal Banner.
+  //
+  if (PcdGetBool (PcdTegraPrintInternalBanner)) {
+    Print (L"********** FOR NVIDIA INTERNAL USE ONLY **********\n");
+  }
+
+  //
+  // firmware version.
+  //
+  CharCount = UnicodeSPrint (
+                Buffer,
+                sizeof (Buffer),
+                L"%s UEFI firmware (version %s built on %s)\n\r",
+                (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName),
+                (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString),
+                (CHAR16 *)PcdGetPtr (PcdFirmwareDateTimeBuiltString)
+                );
+
+  //
+  // Check and see if GOP is available.
+  //
+  Status = gBS->HandleProtocol (
+                  gST->ConsoleOutHandle,
+                  &gEfiGraphicsOutputProtocolGuid,
+                  (VOID **)&GraphicsOutput
+                  );
+  if (!EFI_ERROR (Status)) {
+    //
+    // Find the center position on screen.
+    //
+    PosX = (GraphicsOutput->Mode->Info->HorizontalResolution -
+            StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
+    PosY = 0;
+
+    PrintXY (PosX, PosY, NULL, NULL, Buffer);
+    PrintXY (10, 10, &White, &Black, L"ESC   to enter Setup.                              ");
+    PrintXY (10, 30, &White, &Black, L"F11   to enter Boot Manager Menu.");
+    PrintXY (10, 50, &White, &Black, L"Enter to continue boot.");
+  } else {
+    //
+    // Serial console only.
+    //
+    Print (Buffer);
+
+    //
+    // If Timeout is 0, next message comes in same line as previous message.
+    // Add a newline to maintain ordering and readability of logs.
+    //
+    if (PcdGet16 (PcdPlatformBootTimeOut) == 0) {
+      Print (L"\n\r");
+    }
+
+    Print (L"ESC   to enter Setup.\n");
+    Print (L"F11   to enter Boot Manager Menu.\n");
+    Print (L"Enter to continue boot.\n");
+  }
 }
 
 STATIC
@@ -1185,60 +1489,19 @@ PlatformBootManagerAfterConsole (
   VOID
   )
 {
-  EFI_STATUS                    Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *GraphicsOutput;
-  CHAR16                        Buffer[100];
-  UINTN                         CharCount;
-  UINTN                         PosX;
-  UINTN                         PosY;
-
-  //
-  // Show NVIDIA Internal Banner.
-  //
-  if (PcdGetBool (PcdTegraPrintInternalBanner)) {
-    Print (L"********** FOR NVIDIA INTERNAL USE ONLY **********\n");
-  }
-
-  CharCount = UnicodeSPrint (
-                Buffer,
-                sizeof (Buffer),
-                L"%s UEFI firmware (version %s built on %s)\n\r",
-                (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName),
-                (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString),
-                (CHAR16 *)PcdGetPtr (PcdFirmwareDateTimeBuiltString)
-                );
-
   //
   // Show the splash screen.
   //
-  Status = BootLogoEnableLogo ();
-  if (EFI_ERROR (Status)) {
-    Print (Buffer);
-    Print (L"Press ESCAPE for boot options ");
+  BootLogoEnableLogo ();
 
-    //
-    // If Timeout is 0, next message comes in same line as previous message.
-    // Add a newline to maintain ordering and readability of logs.
-    //
-    if (PcdGet16 (PcdPlatformBootTimeOut) == 0) {
-      Print (L"\n\r");
-    }
-  } else {
-    Status = gBS->HandleProtocol (
-                    gST->ConsoleOutHandle,
-                    &gEfiGraphicsOutputProtocolGuid,
-                    (VOID **)&GraphicsOutput
-                    );
-    if (!EFI_ERROR (Status)) {
-      PosX = (GraphicsOutput->Mode->Info->HorizontalResolution -
-              StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
-      PosY = 0;
+  //
+  // Display system and hotkey information after console is ready.
+  //
+  DisplaySystemAndHotkeyInformation ();
 
-      PrintXY (PosX, PosY, NULL, NULL, Buffer);
-    }
-  }
-
+  //
   // Run Sparse memory test
+  //
   MemoryTest (SPARSE);
 
   // Ipmi communication
@@ -1272,8 +1535,10 @@ PlatformBootManagerWaitCallback (
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL_UNION  White;
   UINT16                               Timeout;
   EFI_STATUS                           Status;
+  EFI_STRING                           ProgressTitle;
 
-  Timeout = PcdGet16 (PcdPlatformBootTimeOut);
+  Timeout       = PcdGet16 (PcdPlatformBootTimeOut);
+  ProgressTitle = PcdGetPtr (PcdBootManagerWaitMessage);
 
   Black.Raw = 0x00000000;
   White.Raw = 0x00FFFFFF;
@@ -1281,7 +1546,7 @@ PlatformBootManagerWaitCallback (
   Status = BootLogoUpdateProgress (
              White.Pixel,
              Black.Pixel,
-             L"Press ESCAPE for boot options",
+             ProgressTitle,
              White.Pixel,
              (Timeout - TimeoutRemain) * 100 / Timeout,
              0
