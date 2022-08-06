@@ -24,7 +24,7 @@
 					variables {
 						gNVIDIAPublicVariableGuid {
 							RootfsInfo {
-								data = [14 40 01 00];
+								data = [3c c0 01 00];
 								runtime;
 								non-volatile;
 							};
