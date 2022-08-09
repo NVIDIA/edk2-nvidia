@@ -1978,6 +1978,20 @@ ValidateRootfsStatus (
           // Non-current slot is bootable, switch to it.
           // Change UEFI boot chain (BootParams->BootChain) will be done at the end of this function
           RootfsInfo = RF_INFO_CURRENT_SLOT_SET (NonCurrentSlot, RootfsInfo);
+
+          // Rootfs slot is not linked with bootloader chain
+          BootChainOverride = NonCurrentSlot;
+          DataSize = sizeof (BootChainOverride);
+          Status   = gRT->SetVariable (
+                    BOOT_OS_OVERRIDE_VARIABLE_NAME,
+                    &gNVIDIAPublicVariableGuid,
+                    EFI_VARIABLE_BOOTSERVICE_ACCESS|EFI_VARIABLE_RUNTIME_ACCESS|EFI_VARIABLE_NON_VOLATILE,
+                    DataSize,
+                    &BootChainOverride
+                    );
+          if (EFI_ERROR (Status)) {
+            ErrorPrint (L"Failed to set OS override variable: %r\r\n", Status);
+          }
         } else {
           // Non-current slot is unbootable, boot to recovery kernel.
           BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;
