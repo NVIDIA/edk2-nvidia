@@ -19,6 +19,7 @@
 #include <Library/ConfigurationManagerLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DebugLib.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
@@ -31,6 +32,17 @@
                                          PLATFORM_MAX_CORES_PER_CLUSTER)
 #define PLATFORM_MAX_SOCKETS            (PcdGet32 (PcdTegraMaxSockets))
 #define PLATFORM_CPUS_PER_SOCKET        (PLATFORM_MAX_CPUS / PLATFORM_MAX_SOCKETS)
+
+// In GICv3, there are 2 x 64KB frames:
+// Redistributor control frame + SGI Control & Generation frame
+#define GIC_V3_REDISTRIBUTOR_GRANULARITY  (ARM_GICR_CTLR_FRAME_SIZE           \
+                                           + ARM_GICR_SGI_PPI_FRAME_SIZE)
+
+// In GICv4, there are 2 additional 64KB frames:
+// VLPI frame + Reserved page frame
+#define GIC_V4_REDISTRIBUTOR_GRANULARITY  (GIC_V3_REDISTRIBUTOR_GRANULARITY   \
+                                           + ARM_GICR_SGI_VLPI_FRAME_SIZE     \
+                                           + ARM_GICR_SGI_RESERVED_FRAME_SIZE)
 
 // GiC variable
 CM_ARM_GICC_INFO  *GicCInfo;
@@ -282,6 +294,34 @@ UpdateGicMsiFrame (
   return EFI_SUCCESS;
 }
 
+STATIC
+UINTN
+GicGetRedistributorSize (
+  IN UINTN  GicRedistributorBase
+  )
+{
+  UINTN   GicCpuRedistributorBase;
+  UINT64  TypeRegister;
+
+  GicCpuRedistributorBase = GicRedistributorBase;
+
+  do {
+    TypeRegister = MmioRead64 (GicCpuRedistributorBase + ARM_GICR_TYPER);
+
+    // Move to the next GIC Redistributor frame.
+    // The GIC specification does not forbid a mixture of redistributors
+    // with or without support for virtual LPIs, so we test Virtual LPIs
+    // Support (VLPIS) bit for each frame to decide the granularity.
+    // Note: The assumption here is that the redistributors are adjacent
+    // for all CPUs. However this may not be the case for NUMA systems.
+    GicCpuRedistributorBase += (((ARM_GICR_TYPER_VLPIS & TypeRegister) != 0)
+                                ? GIC_V4_REDISTRIBUTOR_GRANULARITY
+                                : GIC_V3_REDISTRIBUTOR_GRANULARITY);
+  } while ((TypeRegister & ARM_GICR_TYPER_LAST) == 0);
+
+  return GicCpuRedistributorBase - GicRedistributorBase;
+}
+
 /** Initialize the GIC entries in the platform configuration repository and patch MADT.
  *  This function updates GIC structure for all supporting Tegra platforms using the
  *  Device Tree information.
@@ -308,11 +348,7 @@ UpdateGicInfo (
   UINT32                            Index;
   UINT32                            CoreIndex;
   UINT32                            RegisterSize;
-  UINT32                            RedistStride;
   CONST UINT64                      *Prop;
-  VOID                              *DeviceTree;
-  INT32                             NodeOffset;
-  INT32                             PropertySize;
   UINT64                            MpIdr;
   UINT64                            PmuBaseInterrupt;
   UINT32                            NumCores;
@@ -327,7 +363,6 @@ UpdateGicInfo (
   GicRedistInfo      = NULL;
   RegisterData       = NULL;
   Prop               = NULL;
-  RedistStride       = 0;
   PmuBaseInterrupt   = 0;
   EnabledCoreCntr    = 0;
 
@@ -419,26 +454,8 @@ UpdateGicInfo (
 
     // GICR structure entries
     if (GicInfo->Version >= 3) {
-      // Get redistributor stride
-      Status = GetDeviceTreeNode (GicHandles[Index], &DeviceTree, &NodeOffset);
-      if (EFI_ERROR (Status)) {
-        goto Exit;
-      }
-
-      Prop = fdt_getprop (
-               DeviceTree,
-               NodeOffset,
-               "redistributor-stride",
-               &PropertySize
-               );
-      if (Prop != NULL) {
-        RedistStride = SwapBytes64 (Prop[0]);
-      } else {
-        RedistStride = ARM_GICR_CTLR_FRAME_SIZE + ARM_GICR_SGI_PPI_FRAME_SIZE;
-      }
-
       GicRedistInfo[Index].DiscoveryRangeBaseAddress = RegisterData[1].BaseAddress;
-      GicRedistInfo[Index].DiscoveryRangeLength      = RedistStride * PLATFORM_CPUS_PER_SOCKET;
+      GicRedistInfo[Index].DiscoveryRangeLength      = GicGetRedistributorSize (RegisterData[1].BaseAddress);
     }
 
     NumberOfGicEntries++;
