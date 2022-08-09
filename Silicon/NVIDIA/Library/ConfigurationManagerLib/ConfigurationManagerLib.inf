@@ -24,6 +24,7 @@
   DeviceTreeHelperLib
   MemoryAllocationLib
   FdtLib
+  IoLib
   PlatformResourceLib
   FloorSweepingInternalLib
   UefiLib
