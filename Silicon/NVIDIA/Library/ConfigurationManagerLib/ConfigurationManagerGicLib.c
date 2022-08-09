@@ -73,9 +73,13 @@ GetPmuBaseInterrupt (
   NumPmuHandles = 1;
   Status        = GetMatchingEnabledDeviceTreeNodes ("arm,armv8-pmuv3", &PmuHandle, &NumPmuHandles);
   if (EFI_ERROR (Status)) {
-    NumPmuHandles     = 0;
-    *PmuBaseInterrupt = 0;
-    return Status;
+    NumPmuHandles = 1;
+    Status        = GetMatchingEnabledDeviceTreeNodes ("arm,cortex-a78-pmu", &PmuHandle, &NumPmuHandles);
+    if (EFI_ERROR (Status)) {
+      NumPmuHandles     = 0;
+      *PmuBaseInterrupt = 0;
+      return Status;
+    }
   }
 
   // Only one interrupt is expected
