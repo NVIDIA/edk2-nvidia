@@ -23,15 +23,6 @@ T234GetDTBBaseAddress (
   IN UINTN  CpuBootloaderAddress
   );
 
-EFI_STATUS
-EFIAPI
-T234GetCarveoutInfo (
-  IN UINTN                CpuBootloaderAddress,
-  IN TEGRA_CARVEOUT_TYPE  Type,
-  IN UINTN                *Base,
-  IN UINT32               *Size
-  );
-
 TEGRA_BOOT_TYPE
 T234GetBootType (
   IN UINTN  CpuBootloaderAddress

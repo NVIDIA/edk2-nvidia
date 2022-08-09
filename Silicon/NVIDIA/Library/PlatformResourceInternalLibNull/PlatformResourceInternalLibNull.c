@@ -76,21 +76,6 @@ GetDTBBaseAddressInternal (
 }
 
 /**
-  Retrieve Carveout Info
-
-**/
-EFI_STATUS
-EFIAPI
-GetCarveoutInfoInternal (
-  IN TEGRA_CARVEOUT_TYPE  Type,
-  IN UINTN                *Base,
-  IN UINT32               *Size
-  )
-{
-  return EFI_UNSUPPORTED;
-}
-
-/**
   Retrieve Boot Type
 
 **/

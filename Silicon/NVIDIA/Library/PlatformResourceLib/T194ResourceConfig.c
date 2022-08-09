@@ -167,35 +167,6 @@ T194GetDTBBaseAddress (
 }
 
 /**
-  Retrieve Carveout Info
-
-**/
-EFI_STATUS
-EFIAPI
-T194GetCarveoutInfo (
-  IN UINTN                CpuBootloaderAddress,
-  IN TEGRA_CARVEOUT_TYPE  Type,
-  IN UINTN                *Base,
-  IN UINT32               *Size
-  )
-{
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-
-  switch (Type) {
-    case TegraRcmCarveout:
-      *Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
-      *Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;
-      break;
-    default:
-      return EFI_UNSUPPORTED;
-  }
-
-  return EFI_SUCCESS;
-}
-
-/**
   Retrieve Boot Type
 
 **/
@@ -461,6 +432,10 @@ T194GetPlatformResourceInformation (
   // Populate GrOutputInfo
   PlatformResourceInfo->GrOutputInfo.Base = CpuBootloaderParams->GoldenRegisterAddress;
   PlatformResourceInfo->GrOutputInfo.Size = CpuBootloaderParams->GoldenRegisterSize;
+
+  // Populate RcmBlobInfo
+  PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
+  PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;
 
   return EFI_SUCCESS;
 }

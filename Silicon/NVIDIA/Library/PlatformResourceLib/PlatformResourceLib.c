@@ -243,41 +243,6 @@ GetDTBBaseAddress (
 }
 
 /**
-  Retrieve Carveout Info
-
-**/
-EFI_STATUS
-EFIAPI
-GetCarveoutInfo (
-  IN TEGRA_CARVEOUT_TYPE  Type,
-  IN UINTN                *Base,
-  IN UINT32               *Size
-  )
-{
-  EFI_STATUS  Status;
-  UINTN       ChipID;
-  UINTN       CpuBootloaderAddress;
-
-  Status = GetCarveoutInfoInternal (Type, Base, Size);
-  if (!EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  ChipID = TegraGetChipID ();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case T194_CHIP_ID:
-      return T194GetCarveoutInfo (CpuBootloaderAddress, Type, Base, Size);
-    case T234_CHIP_ID:
-      return T234GetCarveoutInfo (CpuBootloaderAddress, Type, Base, Size);
-    default:
-      return EFI_UNSUPPORTED;
-  }
-}
-
-/**
   Retrieve Boot Type
 
 **/

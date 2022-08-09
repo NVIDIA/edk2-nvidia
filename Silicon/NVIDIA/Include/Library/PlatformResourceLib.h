@@ -34,11 +34,6 @@ typedef enum {
   TegrablBootTypeMax,
 } TEGRA_BOOT_TYPE;
 
-typedef enum {
-  TegraRcmCarveout,
-  TegraCarveoutMax,
-} TEGRA_CARVEOUT_TYPE;
-
 typedef struct {
   NVDA_MEMORY_REGION    *InputDramRegions;
   NVDA_MEMORY_REGION    *DramRegions;
@@ -102,6 +97,7 @@ typedef struct {
   TEGRA_BASE_AND_SIZE_INFO    GrOutputInfo;
   TEGRA_BASE_AND_SIZE_INFO    FsiNsInfo;
   TEGRA_BASE_AND_SIZE_INFO    RamdiskOSInfo;
+  TEGRA_BASE_AND_SIZE_INFO    RcmBlobInfo;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
@@ -165,18 +161,6 @@ UINT64
 EFIAPI
 GetDTBBaseAddress (
   VOID
-  );
-
-/**
-  Retrieve Carveout Info
-
-**/
-EFI_STATUS
-EFIAPI
-GetCarveoutInfo (
-  IN TEGRA_CARVEOUT_TYPE  Type,
-  IN UINTN                *Base,
-  IN UINT32               *Size
   );
 
 /**

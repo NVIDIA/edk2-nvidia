@@ -292,35 +292,6 @@ T234GetDTBBaseAddress (
 }
 
 /**
-  Retrieve Carveout Info
-
-**/
-EFI_STATUS
-EFIAPI
-T234GetCarveoutInfo (
-  IN UINTN                CpuBootloaderAddress,
-  IN TEGRA_CARVEOUT_TYPE  Type,
-  IN UINTN                *Base,
-  IN UINT32               *Size
-  )
-{
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-
-  switch (Type) {
-    case TegraRcmCarveout:
-      *Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
-      *Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;
-      break;
-    default:
-      return EFI_UNSUPPORTED;
-  }
-
-  return EFI_SUCCESS;
-}
-
-/**
   Retrieve Boot Type
 
 **/
@@ -572,6 +543,10 @@ T234GetPlatformResourceInformation (
   // Populate FsiNsInfo
   PlatformResourceInfo->FsiNsInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Base;
   PlatformResourceInfo->FsiNsInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Size;
+
+  // Populate RcmBlobInfo
+  PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
+  PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;
 
   return EFI_SUCCESS;
 }
