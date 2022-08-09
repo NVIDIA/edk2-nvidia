@@ -40,4 +40,38 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
       Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x64, 0x66, 0x67, 0x63 }
     })
   }
+
+  Device(MRQ0) {
+    Name (_HID, "NVDA2001")
+    Name (_UID, 0)
+    Name (_CCA, ZERO)
+    // Name (CDIS, ZERO)
+
+    // Method (_HID, 0, NotSerialized) {
+    //   Store (ZERO, CDIS)
+    //   Return ("NVDA2001")
+    // }
+
+    // Method (_STA, 0, NotSerialized) {
+    //   If (LEqual(CDIS, One)) {
+    //     Return (0x0D)
+    //   }
+    //   Return (0x0F)
+    // }
+
+    // Method (_DIS, 0, NotSerialized) {
+    //   Store (One, CDIS)
+    // }
+
+    Name(_CRS, ResourceTemplate() {
+      // 1. HSP_TOP0 Registers
+      Memory32Fixed (ReadWrite, 0x03C00000, 0xA0000)
+      // 2. IVC Tx Pool (using 0x40070000 + {0x100-0x1FF, 0x200-0x2FF, 0x300-0x3FF, 0xD00-0xDFF})
+      Memory32Fixed (ReadWrite, 0x40070100, 0xF00)
+      // 3. IVC Rx Pool (using 0x40071000 + {0x100-0x1FF, 0x200-0x2FF, 0x300-0x3FF, 0xD00-0xDFF})
+      Memory32Fixed (ReadWrite, 0x40071100, 0xF00)
+      // 4. HSP_TOP0_CCPLEX_DBELL (0xB0 + 0x20)
+      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xD0 }
+    })
+  }
 }
