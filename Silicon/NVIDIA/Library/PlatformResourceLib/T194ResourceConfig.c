@@ -167,18 +167,6 @@ T194GetDTBBaseAddress (
 }
 
 /**
-  Retrieve Boot Type
-
-**/
-TEGRA_BOOT_TYPE
-T194GetBootType (
-  IN UINTN  CpuBootloaderAddress
-  )
-{
-  return TegrablBootColdBoot;
-}
-
-/**
   Retrieve GR Blob Address
 
 **/
@@ -436,6 +424,8 @@ T194GetPlatformResourceInformation (
   // Populate RcmBlobInfo
   PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
   PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;
+
+  PlatformResourceInfo->BootType = TegrablBootColdBoot;
 
   return EFI_SUCCESS;
 }

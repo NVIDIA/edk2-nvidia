@@ -98,6 +98,7 @@ typedef struct {
   TEGRA_BASE_AND_SIZE_INFO    FsiNsInfo;
   TEGRA_BASE_AND_SIZE_INFO    RamdiskOSInfo;
   TEGRA_BASE_AND_SIZE_INFO    RcmBlobInfo;
+  TEGRA_BOOT_TYPE             BootType;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
@@ -160,16 +161,6 @@ GetCPUBLBaseAddress (
 UINT64
 EFIAPI
 GetDTBBaseAddress (
-  VOID
-  );
-
-/**
-  Retrieve Boot Type
-
-**/
-TEGRA_BOOT_TYPE
-EFIAPI
-GetBootType (
   VOID
   );
 

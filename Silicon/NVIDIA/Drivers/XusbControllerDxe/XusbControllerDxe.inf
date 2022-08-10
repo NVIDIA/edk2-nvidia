@@ -43,3 +43,4 @@
   gEdkiiNonDiscoverableXhciDeviceGuid
   gEfiEventExitBootServicesGuid
   gEfiAcpiTableGuid
+  gNVIDIAPlatformResourceDataGuid

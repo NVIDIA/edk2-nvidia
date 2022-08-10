@@ -76,19 +76,6 @@ GetDTBBaseAddressInternal (
 }
 
 /**
-  Retrieve Boot Type
-
-**/
-BOOLEAN
-EFIAPI
-GetBootTypeInternal (
-  OUT TEGRA_BOOT_TYPE  *BootType
-  )
-{
-  return FALSE;
-}
-
-/**
   Retrieve GR Blob Address
 
 **/

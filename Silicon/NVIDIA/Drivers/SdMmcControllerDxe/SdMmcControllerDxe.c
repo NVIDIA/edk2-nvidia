@@ -13,6 +13,7 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/HobLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
@@ -178,6 +179,8 @@ DeviceDiscoveryNotify (
   UINT32                                         ClockId;
   CONST UINT32                                   *ClockIds;
   INT32                                          ClocksLength;
+  VOID                                           *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO                   *PlatformResourceInfo;
 
   RegulatorPointer          = NULL;
   RegulatorProtocol         = NULL;
@@ -198,7 +201,17 @@ DeviceDiscoveryNotify (
                     );
 
     case DeviceDiscoveryDriverBindingSupported:
-      if (GetBootType () == TegrablBootRcm) {
+      Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+      if ((Hob != NULL) &&
+          (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+      {
+        PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+      } else {
+        DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+        return EFI_NOT_FOUND;
+      }
+
+      if (PlatformResourceInfo->BootType == TegrablBootRcm) {
         return EFI_UNSUPPORTED;
       }
 

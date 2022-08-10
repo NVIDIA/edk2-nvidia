@@ -40,10 +40,6 @@ RcmDxeInitialize (
   VOID                          *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
-  if (GetBootType () != TegrablBootRcm) {
-    return EFI_NOT_FOUND;
-  }
-
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   if ((Hob != NULL) &&
       (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
@@ -51,6 +47,10 @@ RcmDxeInitialize (
     PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
   } else {
     DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+    return EFI_NOT_FOUND;
+  }
+
+  if (PlatformResourceInfo->BootType != TegrablBootRcm) {
     return EFI_NOT_FOUND;
   }
 
@@ -80,7 +80,6 @@ RcmDxeInitialize (
   }
 
   PcdSet64S (PcdRcmKernelBase, (UINT64)RcmBlobHeader + RcmBlobHeader->BlobInfo[Count].Offset);
-
   PcdSet64S (PcdRcmKernelSize, RcmBlobHeader->BlobInfo[Count].Size);
 
   return EFI_SUCCESS;

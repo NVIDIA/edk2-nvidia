@@ -243,40 +243,6 @@ GetDTBBaseAddress (
 }
 
 /**
-  Retrieve Boot Type
-
-**/
-TEGRA_BOOT_TYPE
-EFIAPI
-GetBootType (
-  VOID
-  )
-{
-  UINTN            ChipID;
-  UINTN            CpuBootloaderAddress;
-  TEGRA_BOOT_TYPE  BootType;
-  BOOLEAN          ValidPrivatePlatform;
-
-  ValidPrivatePlatform = GetBootTypeInternal (&BootType);
-  if (ValidPrivatePlatform) {
-    return BootType;
-  }
-
-  ChipID = TegraGetChipID ();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case T194_CHIP_ID:
-      return T194GetBootType (CpuBootloaderAddress);
-    case T234_CHIP_ID:
-      return T234GetBootType (CpuBootloaderAddress);
-    default:
-      return TegrablBootTypeMax;
-  }
-}
-
-/**
   Retrieve GR Blob Address
 
 **/

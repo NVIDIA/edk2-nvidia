@@ -16,11 +16,6 @@ T194GetDTBBaseAddress (
   IN UINTN  CpuBootloaderAddress
   );
 
-TEGRA_BOOT_TYPE
-T194GetBootType (
-  IN UINTN  CpuBootloaderAddress
-  );
-
 UINT64
 T194GetGRBlobBaseAddress (
   IN UINTN  CpuBootloaderAddress

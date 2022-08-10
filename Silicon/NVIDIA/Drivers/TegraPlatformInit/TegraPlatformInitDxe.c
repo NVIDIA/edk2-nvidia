@@ -10,6 +10,7 @@
 
 #include <Uefi.h>
 #include <Library/BaseLib.h>
+#include <Library/HobLib.h>
 #include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
@@ -31,25 +32,25 @@ SetCpuInfoPcdsFromDtb (
   VOID
   )
 {
-  VOID          *Dtb;
-  UINTN         DtbSize;
-  UINTN         MaxClusters;
-  UINTN         MaxCoresPerCluster;
-  UINTN         MaxSockets;
-  INT32         CpuMapOffset;
-  INT32         Cluster0Offset;
-  INT32         NodeOffset;
-  CHAR8         ClusterNodeStr[] = "clusterxxx";
-  CHAR8         CoreNodeStr[] = "corexx";
-  EFI_STATUS    Status;
-  CHAR8         SocketNodeStr[] = "/socket@xx";
-  INT32         SocketOffset;
-  CHAR8         CpuMapPathStr[] = "/socket@xx/cpus/cpu-map";
-  CHAR8         *CpuMapPathFormat;
-  UINTN         Socket;
+  VOID        *Dtb;
+  UINTN       DtbSize;
+  UINTN       MaxClusters;
+  UINTN       MaxCoresPerCluster;
+  UINTN       MaxSockets;
+  INT32       CpuMapOffset;
+  INT32       Cluster0Offset;
+  INT32       NodeOffset;
+  CHAR8       ClusterNodeStr[] = "clusterxxx";
+  CHAR8       CoreNodeStr[]    = "corexx";
+  EFI_STATUS  Status;
+  CHAR8       SocketNodeStr[] = "/socket@xx";
+  INT32       SocketOffset;
+  CHAR8       CpuMapPathStr[] = "/socket@xx/cpus/cpu-map";
+  CHAR8       *CpuMapPathFormat;
+  UINTN       Socket;
 
-  Status = DtPlatformLoadDtb(&Dtb, &DtbSize);
-  if (EFI_ERROR(Status)) {
+  Status = DtPlatformLoadDtb (&Dtb, &DtbSize);
+  if (EFI_ERROR (Status)) {
     return;
   }
 
@@ -64,7 +65,7 @@ SetCpuInfoPcdsFromDtb (
 
   // handle global vs per-socket cpu map
   if (MaxSockets == 0) {
-    MaxSockets = 1;
+    MaxSockets       = 1;
     CpuMapPathFormat = "/cpus/cpu-map";
   } else {
     CpuMapPathFormat = "/socket@%u/cpus/cpu-map";
@@ -76,22 +77,26 @@ SetCpuInfoPcdsFromDtb (
   // count clusters across all sockets
   MaxClusters = 0;
   for (Socket = 0; Socket < MaxSockets; Socket++) {
-    UINTN   Cluster;
+    UINTN  Cluster;
 
     AsciiSPrint (CpuMapPathStr, sizeof (CpuMapPathStr), CpuMapPathFormat, Socket);
     CpuMapOffset = fdt_path_offset (Dtb, CpuMapPathStr);
     if (CpuMapOffset < 0) {
-      DEBUG ((DEBUG_ERROR,
-              "%a: %a missing in DTB, using Clusters=%u, CoresPerCluster=%u\n",
-              __FUNCTION__, CpuMapPathStr, PcdGet32 (PcdTegraMaxClusters),
-              PcdGet32 (PcdTegraMaxCoresPerCluster)));
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: %a missing in DTB, using Clusters=%u, CoresPerCluster=%u\n",
+        __FUNCTION__,
+        CpuMapPathStr,
+        PcdGet32 (PcdTegraMaxClusters),
+        PcdGet32 (PcdTegraMaxCoresPerCluster)
+        ));
       return;
     }
 
     Cluster = 0;
     while (TRUE) {
       AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
-      NodeOffset = fdt_subnode_offset(Dtb, CpuMapOffset, ClusterNodeStr);
+      NodeOffset = fdt_subnode_offset (Dtb, CpuMapOffset, ClusterNodeStr);
       if (NodeOffset < 0) {
         break;
       }
@@ -103,21 +108,26 @@ SetCpuInfoPcdsFromDtb (
 
     DEBUG ((DEBUG_INFO, "Socket=%u MaxClusters=%u\n", Socket, MaxClusters));
   }
+
   DEBUG ((DEBUG_INFO, "MaxClusters=%u\n", MaxClusters));
   PcdSet32S (PcdTegraMaxClusters, MaxClusters);
 
   // Use cluster0 node to find max core subnode
-  Cluster0Offset = fdt_subnode_offset(Dtb, CpuMapOffset, "cluster0");
+  Cluster0Offset = fdt_subnode_offset (Dtb, CpuMapOffset, "cluster0");
   if (Cluster0Offset < 0) {
-    DEBUG ((DEBUG_ERROR, "No cluster0 in %a, using CoresPerCluster=%u\n",
-            CpuMapPathStr, PcdGet32 (PcdTegraMaxCoresPerCluster)));
+    DEBUG ((
+      DEBUG_ERROR,
+      "No cluster0 in %a, using CoresPerCluster=%u\n",
+      CpuMapPathStr,
+      PcdGet32 (PcdTegraMaxCoresPerCluster)
+      ));
     return;
   }
 
   MaxCoresPerCluster = 1;
   while (TRUE) {
     AsciiSPrint (CoreNodeStr, sizeof (CoreNodeStr), "core%u", MaxCoresPerCluster);
-    NodeOffset = fdt_subnode_offset(Dtb, Cluster0Offset, CoreNodeStr);
+    NodeOffset = fdt_subnode_offset (Dtb, Cluster0Offset, CoreNodeStr);
     if (NodeOffset < 0) {
       break;
     }
@@ -125,6 +135,7 @@ SetCpuInfoPcdsFromDtb (
     MaxCoresPerCluster++;
     ASSERT (MaxCoresPerCluster < 100);     // "corexx" max
   }
+
   DEBUG ((DEBUG_INFO, "MaxCoresPerCluster=%u\n", MaxCoresPerCluster));
   PcdSet32S (PcdTegraMaxCoresPerCluster, MaxCoresPerCluster);
 }
@@ -133,19 +144,19 @@ STATIC
 EFI_STATUS
 EFIAPI
 UseEmulatedVariableStore (
-  IN EFI_HANDLE        ImageHandle
+  IN EFI_HANDLE  ImageHandle
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
-  PcdSetBoolS(PcdEmuVariableNvModeEnable, TRUE);
+  PcdSetBoolS (PcdEmuVariableNvModeEnable, TRUE);
   Status = gBS->InstallMultipleProtocolInterfaces (
-             &ImageHandle,
-             &gEdkiiNvVarStoreFormattedGuid,
-             NULL,
-             NULL
-             );
-  if (EFI_ERROR(Status)) {
+                  &ImageHandle,
+                  &gEdkiiNvVarStoreFormattedGuid,
+                  NULL,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error installing EmuVariableNvModeEnableProtocol\n", __FUNCTION__));
   }
 
@@ -159,7 +170,7 @@ STATIC
 VOID
 EFIAPI
 SetGicInfoPcdsFromDtb (
-  IN UINTN ChipID
+  IN UINTN  ChipID
   )
 {
   UINT32                            NumGicControllers;
@@ -169,12 +180,12 @@ SetGicInfoPcdsFromDtb (
   NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterData;
   UINT32                            RegisterSize;
 
-  GicHandle = 0;
-  Status = EFI_SUCCESS;
+  GicHandle    = 0;
+  Status       = EFI_SUCCESS;
   RegisterData = NULL;
-  GicInfo = NULL;
+  GicInfo      = NULL;
 
-  GicInfo = (TEGRA_GIC_INFO *) AllocatePool ( sizeof (TEGRA_GIC_INFO));
+  GicInfo = (TEGRA_GIC_INFO *)AllocatePool (sizeof (TEGRA_GIC_INFO));
   if (GicInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
@@ -197,17 +208,19 @@ SetGicInfoPcdsFromDtb (
 
   // Obtain Register Info using the Gic Handle
   RegisterSize = 0;
-  Status = GetDeviceTreeRegisters (GicHandle, RegisterData, &RegisterSize);
+  Status       = GetDeviceTreeRegisters (GicHandle, RegisterData, &RegisterSize);
   if (Status == EFI_BUFFER_TOO_SMALL) {
     if (RegisterData != NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       goto Exit;
     }
-    RegisterData = (NVIDIA_DEVICE_TREE_REGISTER_DATA *) AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * RegisterSize);
+
+    RegisterData = (NVIDIA_DEVICE_TREE_REGISTER_DATA *)AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * RegisterSize);
     if (RegisterData == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       goto Exit;
     }
+
     Status = GetDeviceTreeRegisters (GicHandle, RegisterData, &RegisterSize);
     if (EFI_ERROR (Status)) {
       goto Exit;
@@ -231,8 +244,12 @@ SetGicInfoPcdsFromDtb (
     // RegisterData[1] has Interrupt Interface Base and Size
     PcdSet64S (PcdGicInterruptInterfaceBase, RegisterData[1].BaseAddress);
 
-    DEBUG ((EFI_D_INFO, "Found GIC distributor and Interrupt Interface Base@ 0x%Lx (0x%Lx)\n",
-       PcdGet64 (PcdGicDistributorBase), PcdGet64 (PcdGicInterruptInterfaceBase)));
+    DEBUG ((
+      EFI_D_INFO,
+      "Found GIC distributor and Interrupt Interface Base@ 0x%Lx (0x%Lx)\n",
+      PcdGet64 (PcdGicDistributorBase),
+      PcdGet64 (PcdGicInterruptInterfaceBase)
+      ));
   } else {
     // RegisterData[0] has Gic Distributor Base and Size
     PcdSet64S (PcdGicDistributorBase, RegisterData[0].BaseAddress);
@@ -243,8 +260,12 @@ SetGicInfoPcdsFromDtb (
     // RegisterData[2] has GicH Base and Size
     // RegisterData[3] has GicV Base and Size
 
-    DEBUG ((EFI_D_INFO, "Found GIC distributor and (re)distributor Base @ 0x%Lx (0x%Lx)\n",
-       PcdGet64 (PcdGicDistributorBase), PcdGet64 (PcdGicRedistributorsBase)));
+    DEBUG ((
+      EFI_D_INFO,
+      "Found GIC distributor and (re)distributor Base @ 0x%Lx (0x%Lx)\n",
+      PcdGet64 (PcdGicDistributorBase),
+      PcdGet64 (PcdGicRedistributorsBase)
+      ));
   }
 
 Exit:
@@ -252,13 +273,13 @@ Exit:
     FreePool (RegisterData);
     RegisterData = NULL;
   }
+
   if (GicInfo != NULL) {
     FreePool (GicInfo);
     GicInfo = NULL;
   }
 
   return;
-
 }
 
 /**
@@ -271,27 +292,29 @@ TegraPlatformInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS              Status;
-  UINTN                   ChipID;
-  TEGRA_PLATFORM_TYPE     PlatformType;
-  VOID                    *DtbBase;
-  UINTN                   DtbSize;
-  CONST VOID              *Property;
-  INT32                   Length;
-  BOOLEAN                 T234SkuSet;
-  UINTN                   EmmcMagic;
-  BOOLEAN                 EmulatedVariablesUsed;
-  INTN                    UefiNode;
+  EFI_STATUS                    Status;
+  UINTN                         ChipID;
+  TEGRA_PLATFORM_TYPE           PlatformType;
+  VOID                          *DtbBase;
+  UINTN                         DtbSize;
+  CONST VOID                    *Property;
+  INT32                         Length;
+  BOOLEAN                       T234SkuSet;
+  UINTN                         EmmcMagic;
+  BOOLEAN                       EmulatedVariablesUsed;
+  INTN                          UefiNode;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
   EmulatedVariablesUsed = FALSE;
 
-  ChipID = TegraGetChipID();
+  ChipID = TegraGetChipID ();
   DEBUG ((DEBUG_INFO, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, ChipID));
 
-  PlatformType = TegraGetPlatform();
-  Status = DtPlatformLoadDtb(&DtbBase, &DtbSize);
-  ASSERT_EFI_ERROR(Status);
-  if (EFI_ERROR(Status)) {
+  PlatformType = TegraGetPlatform ();
+  Status       = DtPlatformLoadDtb (&DtbBase, &DtbSize);
+  ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
@@ -299,37 +322,50 @@ TegraPlatformInitialize (
     if (ChipID == T194_CHIP_ID) {
       LibPcdSetSku (T194_SKU);
     } else if ((ChipID == T234_CHIP_ID) &&
-               (TegraGetMajorVersion() == T234_MAJOR_REV)) {
+               (TegraGetMajorVersion () == T234_MAJOR_REV))
+    {
       T234SkuSet = FALSE;
-      Property = fdt_getprop (DtbBase, 0, "model", &Length);
-      if (Property != NULL && Length != 0) {
+      Property   = fdt_getprop (DtbBase, 0, "model", &Length);
+      if ((Property != NULL) && (Length != 0)) {
         if (AsciiStrStr (Property, "SLT") != NULL) {
           LibPcdSetSku (T234SLT_SKU);
           T234SkuSet = TRUE;
         }
       }
+
       if (T234SkuSet == FALSE) {
         LibPcdSetSku (T234_SKU);
       }
     }
   } else {
     // Override boot timeout for pre-si platforms
-    EmmcMagic = * ((UINTN *) (TegraGetSystemMemoryBaseAddress(ChipID) + SYSIMG_EMMC_MAGIC_OFFSET));
+    EmmcMagic = *((UINTN *)(TegraGetSystemMemoryBaseAddress (ChipID) + SYSIMG_EMMC_MAGIC_OFFSET));
     if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {
       EmulatedVariablesUsed = TRUE;
     }
   }
 
   /*TODO: Retaining above logic for backward compatibility. Remove once all DTBs are updated.*/
-  UefiNode = fdt_path_offset(DtbBase, "/firmware/uefi");
+  UefiNode = fdt_path_offset (DtbBase, "/firmware/uefi");
   if (UefiNode >= 0) {
-    if (NULL != fdt_get_property(DtbBase, UefiNode, "use-emulated-variables", NULL)) {
+    if (NULL != fdt_get_property (DtbBase, UefiNode, "use-emulated-variables", NULL)) {
       EmulatedVariablesUsed = TRUE;
     }
   }
 
-  if ((GetBootType () == TegrablBootRcm) ||
-      (PcdGetBool(PcdEmuVariableNvModeEnable) == TRUE)) {
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+    return EFI_NOT_FOUND;
+  }
+
+  if ((PlatformResourceInfo->BootType == TegrablBootRcm) ||
+      (PcdGetBool (PcdEmuVariableNvModeEnable) == TRUE))
+  {
     EmulatedVariablesUsed = TRUE;
   }
 
@@ -337,7 +373,7 @@ TegraPlatformInitialize (
     // Enable emulated variable NV mode in variable driver when ram loading images and emmc
     // is not enabled.
     Status = UseEmulatedVariableStore (ImageHandle);
-    if (EFI_ERROR(Status)) {
+    if (EFI_ERROR (Status)) {
       return Status;
     }
   }

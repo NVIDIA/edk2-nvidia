@@ -49,6 +49,7 @@
   gNVIDIANonDiscoverableSpiDeviceGuid
   gNVIDIANonDiscoverableQspiDeviceGuid
   gEfiEventVirtualAddressChangeGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
   gEfiMmCommunication2ProtocolGuid OR

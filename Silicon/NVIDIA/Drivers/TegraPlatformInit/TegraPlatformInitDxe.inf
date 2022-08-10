@@ -46,6 +46,7 @@
 
 [Guids]
   gEdkiiNvVarStoreFormattedGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable

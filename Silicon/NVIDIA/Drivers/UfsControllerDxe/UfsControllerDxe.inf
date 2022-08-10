@@ -39,6 +39,7 @@
 
 [Guids]
   gEdkiiNonDiscoverableUfsDeviceGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
   TRUE

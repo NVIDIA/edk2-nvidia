@@ -49,6 +49,7 @@
 
 [Guids]
   gEdkiiNonDiscoverableSdhciDeviceGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable

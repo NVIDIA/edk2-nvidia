@@ -205,10 +205,22 @@ RemoveQspiNodes (
   IN VOID  *Dtb
   )
 {
-  QSPI_COMPATIBILITY  *Map;
-  INT32               NodeOffset;
+  QSPI_COMPATIBILITY            *Map;
+  INT32                         NodeOffset;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
-  if (GetBootType () == TegrablBootRcm) {
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+    return;
+  }
+
+  if (PlatformResourceInfo->BootType == TegrablBootRcm) {
     return;
   }
 

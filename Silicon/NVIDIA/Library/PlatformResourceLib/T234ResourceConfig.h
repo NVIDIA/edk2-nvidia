@@ -23,11 +23,6 @@ T234GetDTBBaseAddress (
   IN UINTN  CpuBootloaderAddress
   );
 
-TEGRA_BOOT_TYPE
-T234GetBootType (
-  IN UINTN  CpuBootloaderAddress
-  );
-
 UINT64
 T234GetGRBlobBaseAddress (
   IN UINTN  CpuBootloaderAddress

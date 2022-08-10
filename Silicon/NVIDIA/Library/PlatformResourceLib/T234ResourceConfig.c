@@ -292,22 +292,6 @@ T234GetDTBBaseAddress (
 }
 
 /**
-  Retrieve Boot Type
-
-**/
-TEGRA_BOOT_TYPE
-T234GetBootType (
-  IN UINTN  CpuBootloaderAddress
-  )
-{
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-
-  return CpuBootloaderParams->BootType;
-}
-
-/**
   Retrieve GR Blob Address
 
 **/
@@ -547,6 +531,8 @@ T234GetPlatformResourceInformation (
   // Populate RcmBlobInfo
   PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
   PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;
+
+  PlatformResourceInfo->BootType = CpuBootloaderParams->BootType;
 
   return EFI_SUCCESS;
 }
