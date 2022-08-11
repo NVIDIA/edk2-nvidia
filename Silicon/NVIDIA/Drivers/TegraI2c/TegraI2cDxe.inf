@@ -45,6 +45,7 @@
   gEfiDevicePathProtocolGuid
   gNVIDIADeviceTreeNodeProtocolGuid
   gNVIDIAPinControlProtocolGuid
+  gNVIDIATegraI2cInitCompleteProtocolGuid
 
 [Guids]
   gNVIDIAI2cUnknown

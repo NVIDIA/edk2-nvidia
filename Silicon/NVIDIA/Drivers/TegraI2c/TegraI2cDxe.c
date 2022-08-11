@@ -36,10 +36,11 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Tegra I2C controller driver",
-  .UseDriverBinding                = TRUE,
+  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = TRUE,
   .AutoResetModule                 = TRUE,
-  .SkipEdkiiNondiscoverableInstall = TRUE
+  .SkipEdkiiNondiscoverableInstall = TRUE,
+  .DirectEnumerationSupport        = TRUE,
 };
 
 STATIC
@@ -1498,6 +1499,24 @@ DeviceDiscoveryNotify (
         Status = EFI_UNSUPPORTED;
       } else {
         Status = EFI_SUCCESS;
+      }
+
+      break;
+
+    case DeviceDiscoveryEnumerationCompleted:
+      Status = gBS->InstallMultipleProtocolInterfaces (
+                      &DriverHandle,
+                      &gNVIDIATegraI2cInitCompleteProtocolGuid,
+                      NULL,
+                      NULL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to install Tegra I2C init complete protocol: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
       }
 
       break;
