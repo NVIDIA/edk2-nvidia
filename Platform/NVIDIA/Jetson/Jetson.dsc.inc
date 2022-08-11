@@ -60,20 +60,7 @@
   # Console Resolution
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|0
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|0
-
-[PcdsDynamicDefault.common.T194]
-  gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
-  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA194'
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T194)")}
-  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
-  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
-  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
-  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x4000
-  gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x1000
-  gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|TRUE
-  gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
-  # SMBIOS for T194
+  # SMBIOS
   ## Type 2 Table (Board Information)
   gNVIDIATokenSpaceGuid.PcdBoardChassisLocation|L"Unknown"
   gNVIDIATokenSpaceGuid.PcdBoardVersion|L"Unknown"
@@ -100,6 +87,19 @@
   ##Type 32 (Boot Information)
   gNVIDIATokenSpaceGuid.PcdType32Info|{ 0 }
   gNVIDIATokenSpaceGuid.PcdType32Info.BootStatus|BootInformationStatusNoError
+
+[PcdsDynamicDefault.common.T194]
+  gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA194'
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T194)")}
+  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
+  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x4000
+  gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x1000
+  gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|TRUE
+  gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE
   gNVIDIATokenSpaceGuid.PcdAllowOsAccessQspi|TRUE
 
