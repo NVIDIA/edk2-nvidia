@@ -2,7 +2,7 @@
   Provides firmware device specific services to support updates of a firmware
   image stored in a firmware device.
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) Microsoft Corporation.<BR>
   Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
 
@@ -135,6 +135,7 @@ FmpDeviceGetSize (
   if (Size == NULL) {
     return EFI_INVALID_PARAMETER;
   }
+
   *Size = 0;
   return EFI_SUCCESS;
 }
@@ -190,11 +191,11 @@ FmpDeviceGetImageTypeIdGuidPtr (
 EFI_STATUS
 EFIAPI
 FmpDeviceGetAttributes (
-  OUT UINT64    *Supported,
-  OUT UINT64    *Setting
+  OUT UINT64  *Supported,
+  OUT UINT64  *Setting
   )
 {
-  if (Supported == NULL || Setting == NULL) {
+  if ((Supported == NULL) || (Setting == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -470,10 +471,12 @@ FmpDeviceCheckImageWithStatus (
   OUT UINT32      *LastAttemptStatus
   )
 {
-  return FmpTegraCheckImage (Image,
-                             ImageSize,
-                             ImageUpdatable,
-                             LastAttemptStatus);
+  return FmpTegraCheckImage (
+           Image,
+           ImageSize,
+           ImageUpdatable,
+           LastAttemptStatus
+           );
 }
 
 /**
@@ -531,25 +534,25 @@ FmpDeviceCheckImageWithStatus (
 EFI_STATUS
 EFIAPI
 FmpDeviceSetImage (
-  IN  CONST VOID                                     *Image,
-  IN  UINTN                                          ImageSize,
-  IN  CONST VOID                                     *VendorCode,       OPTIONAL
-  IN  EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  Progress,          OPTIONAL
+  IN  CONST VOID *Image,
+  IN  UINTN ImageSize,
+  IN  CONST VOID *VendorCode, OPTIONAL
+  IN  EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  Progress, OPTIONAL
   IN  UINT32                                         CapsuleFwVersion,
   OUT CHAR16                                         **AbortReason
   )
 {
   UINT32  LastAttemptStatus;
 
-  return  FmpDeviceSetImageWithStatus (
-            Image,
-            ImageSize,
-            VendorCode,
-            Progress,
-            CapsuleFwVersion,
-            AbortReason,
-            &LastAttemptStatus
-            );
+  return FmpDeviceSetImageWithStatus (
+           Image,
+           ImageSize,
+           VendorCode,
+           Progress,
+           CapsuleFwVersion,
+           AbortReason,
+           &LastAttemptStatus
+           );
 }
 
 /**
@@ -618,22 +621,24 @@ FmpDeviceSetImage (
 EFI_STATUS
 EFIAPI
 FmpDeviceSetImageWithStatus (
-  IN  CONST VOID                                     *Image,
-  IN  UINTN                                          ImageSize,
-  IN  CONST VOID                                     *VendorCode,       OPTIONAL
-  IN  EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  Progress,          OPTIONAL
+  IN  CONST VOID *Image,
+  IN  UINTN ImageSize,
+  IN  CONST VOID *VendorCode, OPTIONAL
+  IN  EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  Progress, OPTIONAL
   IN  UINT32                                         CapsuleFwVersion,
   OUT CHAR16                                         **AbortReason,
   OUT UINT32                                         *LastAttemptStatus
   )
 {
-  return FmpTegraSetImage (Image,
-                           ImageSize,
-                           VendorCode,
-                           Progress,
-                           CapsuleFwVersion,
-                           AbortReason,
-                           LastAttemptStatus);
+  return FmpTegraSetImage (
+           Image,
+           ImageSize,
+           VendorCode,
+           Progress,
+           CapsuleFwVersion,
+           AbortReason,
+           LastAttemptStatus
+           );
 }
 
 /**

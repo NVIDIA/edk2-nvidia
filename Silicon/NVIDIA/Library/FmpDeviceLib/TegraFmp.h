@@ -2,11 +2,12 @@
 
   Tegra Firmware Management Protocol support
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
 #ifndef __TEGRA_FMP_H__
 #define __TEGRA_FMP_H__
 
@@ -26,8 +27,8 @@
 EFI_STATUS
 EFIAPI
 FmpTegraGetVersion (
-  OUT UINT32        *Version,
-  OUT CHAR16        **VersionString
+  OUT UINT32  *Version,
+  OUT CHAR16  **VersionString
   );
 
 /**
@@ -76,10 +77,10 @@ FmpTegraCheckImage (
 EFI_STATUS
 EFIAPI
 FmpTegraSetImage (
-  IN  CONST VOID                                     *Image,
-  IN  UINTN                                          ImageSize,
-  IN  CONST VOID                                     *VendorCode,       OPTIONAL
-  IN  EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  Progress,          OPTIONAL
+  IN  CONST VOID *Image,
+  IN  UINTN ImageSize,
+  IN  CONST VOID *VendorCode, OPTIONAL
+  IN  EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  Progress, OPTIONAL
   IN  UINT32                                         CapsuleFwVersion,
   OUT CHAR16                                         **AbortReason,
   OUT UINT32                                         *LastAttemptStatus

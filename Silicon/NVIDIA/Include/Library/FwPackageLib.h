@@ -34,37 +34,37 @@
   |     Data for image N-1     | <--- Data size is FW_PACKAGE_IMAGE_INFO[N-1].Bytes
   +----------------------------+ <--- FW_PACKAGE_HEADER.PackageSize
 **/
-#define FW_PACKAGE_MAGIC                        "NVIDIA__BLOB__V3"
-#define FW_PACKAGE_MAGIC_SIZE                   16
+#define FW_PACKAGE_MAGIC       "NVIDIA__BLOB__V3"
+#define FW_PACKAGE_MAGIC_SIZE  16
 
-#define FW_PACKAGE_TYPE_FW                      0
+#define FW_PACKAGE_TYPE_FW  0
 
-#define FW_PACKAGE_UPDATE_MODE_ALWAYS           0
-#define FW_PACKAGE_UPDATE_MODE_NON_PRODUCTION   1
-#define FW_PACKAGE_UPDATE_MODE_PRODUCTION       2
+#define FW_PACKAGE_UPDATE_MODE_ALWAYS          0
+#define FW_PACKAGE_UPDATE_MODE_NON_PRODUCTION  1
+#define FW_PACKAGE_UPDATE_MODE_PRODUCTION      2
 
 typedef struct {
-  CHAR8         Magic[FW_PACKAGE_MAGIC_SIZE];   // not NULL-terminated
-  UINT32        BupVersion;
-  UINT32        PackageSize;
-  UINT32        HeaderSize;
-  UINT32        ImageCount;
-  UINT32        Type;
-  UINT32        UncompressedSize;
-  UINT8         RatchetInfo[8];                 // FW_PACKAGE_TYPE_FW only
+  CHAR8     Magic[FW_PACKAGE_MAGIC_SIZE];       // not NULL-terminated
+  UINT32    BupVersion;
+  UINT32    PackageSize;
+  UINT32    HeaderSize;
+  UINT32    ImageCount;
+  UINT32    Type;
+  UINT32    UncompressedSize;
+  UINT8     RatchetInfo[8];                     // FW_PACKAGE_TYPE_FW only
 } FW_PACKAGE_HEADER;
 
-#define FW_PACKAGE_NAME_LENGTH                  40
-#define FW_PACKAGE_TNSPEC_LENGTH                128
-#define FW_PACKAGE_IMAGE_INFO_VERSION           0
+#define FW_PACKAGE_NAME_LENGTH         40
+#define FW_PACKAGE_TNSPEC_LENGTH       128
+#define FW_PACKAGE_IMAGE_INFO_VERSION  0
 
 typedef struct {
-  CHAR8         Name[FW_PACKAGE_NAME_LENGTH];
-  UINT32        Offset;                         // from beginning of package header
-  UINT32        Bytes;
-  UINT32        Version;
-  UINT32        UpdateMode;
-  CHAR8         TnSpec[FW_PACKAGE_TNSPEC_LENGTH];
+  CHAR8     Name[FW_PACKAGE_NAME_LENGTH];
+  UINT32    Offset;                             // from beginning of package header
+  UINT32    Bytes;
+  UINT32    Version;
+  UINT32    UpdateMode;
+  CHAR8     TnSpec[FW_PACKAGE_TNSPEC_LENGTH];
 } FW_PACKAGE_IMAGE_INFO;
 
 /**
@@ -82,9 +82,9 @@ typedef struct {
 UINTN
 EFIAPI
 FwPackageCopyImageName (
-  OUT CHAR16                        *Name,
-  IN  CONST FW_PACKAGE_IMAGE_INFO   *ImageInfo,
-  IN  UINTN                         NameBufferBytes
+  OUT CHAR16                       *Name,
+  IN  CONST FW_PACKAGE_IMAGE_INFO  *ImageInfo,
+  IN  UINTN                        NameBufferBytes
   );
 
 /**
@@ -106,10 +106,10 @@ FwPackageCopyImageName (
 EFI_STATUS
 EFIAPI
 FwPackageGetImageIndex (
-  IN  CONST FW_PACKAGE_HEADER           *Header,
-  IN  CONST CHAR16                      *Name,
-  IN  BOOLEAN                           IsProductionFused,
-  IN  CONST CHAR8                       *TnSpec,            OPTIONAL
+  IN  CONST FW_PACKAGE_HEADER *Header,
+  IN  CONST CHAR16 *Name,
+  IN  BOOLEAN IsProductionFused,
+  IN  CONST CHAR8 *TnSpec, OPTIONAL
   OUT UINTN                             *ImageIndex
   );
 
@@ -127,8 +127,8 @@ CONST
 VOID *
 EFIAPI
 FwPackageImageDataPtr (
-  IN  CONST FW_PACKAGE_HEADER       *Header,
-  IN  UINTN                         ImageIndex
+  IN  CONST FW_PACKAGE_HEADER  *Header,
+  IN  UINTN                    ImageIndex
   );
 
 /**
@@ -142,7 +142,7 @@ FwPackageImageDataPtr (
 UINTN
 EFIAPI
 FwPackageImageInfoArraySize (
-  IN  CONST FW_PACKAGE_HEADER       *Header
+  IN  CONST FW_PACKAGE_HEADER  *Header
   );
 
 /**
@@ -160,8 +160,8 @@ CONST
 FW_PACKAGE_IMAGE_INFO *
 EFIAPI
 FwPackageImageInfoPtr (
-  IN  CONST FW_PACKAGE_HEADER       *Header,
-  IN  UINTN                         ImageIndex
+  IN  CONST FW_PACKAGE_HEADER  *Header,
+  IN  UINTN                    ImageIndex
   );
 
 /**
@@ -178,8 +178,8 @@ FwPackageImageInfoPtr (
 BOOLEAN
 EFIAPI
 FwPackageUpdateModeIsOk (
-  IN  CONST FW_PACKAGE_IMAGE_INFO       *ImageInfo,
-  IN  BOOLEAN                           IsProductionFused
+  IN  CONST FW_PACKAGE_IMAGE_INFO  *ImageInfo,
+  IN  BOOLEAN                      IsProductionFused
   );
 
 /**
@@ -197,7 +197,7 @@ FwPackageUpdateModeIsOk (
 EFI_STATUS
 EFIAPI
 FwPackageValidateHeader (
-  IN  CONST FW_PACKAGE_HEADER       *Header
+  IN  CONST FW_PACKAGE_HEADER  *Header
   );
 
 /**
@@ -216,7 +216,7 @@ FwPackageValidateHeader (
 EFI_STATUS
 EFIAPI
 FwPackageValidateImageInfoArray (
-  IN  CONST FW_PACKAGE_HEADER       *Header
+  IN  CONST FW_PACKAGE_HEADER  *Header
   );
 
 #endif
