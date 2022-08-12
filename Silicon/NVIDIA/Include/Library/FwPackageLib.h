@@ -96,7 +96,8 @@ FwPackageCopyImageName (
   @param[in]    IsProductionFused       Flag indicating if production mode is
                                         fused, used to enforce UpdateMode
                                         settings for the image.
-  @param[in]    TnSpec                  Pointer to platform TnSpec OPTIONAL
+  @param[in]    CompatSpec              Pointer to platform Compat TnSpec OPTIONAL
+  @param[in]    FullSpec                Pointer to platform Full TnSpec OPTIONAL
   @param[out]   ImageIndex              Index of image in the FW_PACKAGE_IMAGE_INFO array
 
   @retval       EFI_SUCCESS             Image name found, ImageIndex valid
@@ -109,8 +110,9 @@ FwPackageGetImageIndex (
   IN  CONST FW_PACKAGE_HEADER *Header,
   IN  CONST CHAR16 *Name,
   IN  BOOLEAN IsProductionFused,
-  IN  CONST CHAR8 *TnSpec, OPTIONAL
-  OUT UINTN                             *ImageIndex
+  IN  CONST CHAR8 *CompatSpec, OPTIONAL
+  IN  CONST CHAR8 *FullSpec, OPTIONAL
+  OUT UINTN       *ImageIndex
   );
 
 /**

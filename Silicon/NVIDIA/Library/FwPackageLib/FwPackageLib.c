@@ -203,8 +203,9 @@ FwPackageGetImageIndex (
   IN  CONST FW_PACKAGE_HEADER *Header,
   IN  CONST CHAR16 *Name,
   IN  BOOLEAN IsProductionFused,
-  IN  CONST CHAR8 *TnSpec, OPTIONAL
-  OUT UINTN                             *ImageIndex
+  IN  CONST CHAR8 *CompatSpec, OPTIONAL
+  IN  CONST CHAR8 *FullSpec, OPTIONAL
+  OUT UINTN       *ImageIndex
   )
 {
   UINTN    Index;
@@ -229,20 +230,35 @@ FwPackageGetImageIndex (
         continue;
       }
 
-      if ((AsciiStrLen (ImageInfo->TnSpec) > 0) && (TnSpec != NULL)) {
+      if ((AsciiStrLen (ImageInfo->TnSpec) > 0) && (CompatSpec != NULL)) {
         EFI_STATUS  Status;
 
-        Status = FwPackageCheckTnSpec (TnSpec, ImageInfo->TnSpec);
+        Status = FwPackageCheckTnSpec (CompatSpec, ImageInfo->TnSpec);
         if (EFI_ERROR (Status)) {
-          DEBUG ((
-            DEBUG_INFO,
-            "%a:  %a / %a: %r\n",
-            __FUNCTION__,
-            TnSpec,
-            ImageInfo->TnSpec,
-            Status
-            ));
-          continue;
+          if (FullSpec != NULL) {
+            Status = FwPackageCheckTnSpec (FullSpec, ImageInfo->TnSpec);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((
+                DEBUG_INFO,
+                "%a:  %a / %a: %r\n",
+                __FUNCTION__,
+                FullSpec,
+                ImageInfo->TnSpec,
+                Status
+                ));
+              continue;
+            }
+          } else {
+            DEBUG ((
+              DEBUG_INFO,
+              "%a:  %a / %a: %r\n",
+              __FUNCTION__,
+              CompatSpec,
+              ImageInfo->TnSpec,
+              Status
+              ));
+            continue;
+          }
         }
       }
 

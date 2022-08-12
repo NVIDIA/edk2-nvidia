@@ -111,7 +111,8 @@ STATIC BOOLEAN     mPcdFmpSingleImageUpdate = FALSE;
 STATIC VOID        *mFmpDataBuffer          = NULL;
 STATIC UINTN       mFmpDataBufferSize       = 0;
 STATIC BOOLEAN     mFmpLibInitialized       = FALSE;
-STATIC CHAR8       *mPlatformTnSpec         = NULL;
+STATIC CHAR8       *mPlatformCompatSpec     = NULL;
+STATIC CHAR8       *mPlatformSpec           = NULL;
 STATIC BOOLEAN     mIsProductionFused       = FALSE;
 STATIC UINT32      mActiveBootChain         = MAX_UINT32;
 STATIC UINT32      mTegraVersion            = 0;
@@ -141,7 +142,6 @@ GetFuseSettings (
   VOID
   )
 {
-  CHAR8       *PlatformFullSpec;
   UINTN       Dash;
   CHAR8       *Ptr;
   EFI_STATUS  Status;
@@ -168,8 +168,8 @@ GetFuseSettings (
     return EFI_SUCCESS;
   }
 
-  PlatformFullSpec = (CHAR8 *)AllocateZeroPool (Size);
-  if (PlatformFullSpec == NULL) {
+  mPlatformSpec = (CHAR8 *)AllocateRuntimeZeroPool (Size);
+  if (mPlatformSpec == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Spec alloc failed\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
@@ -179,7 +179,7 @@ GetFuseSettings (
                   &gNVIDIAPublicVariableGuid,
                   NULL,
                   &Size,
-                  PlatformFullSpec
+                  mPlatformSpec
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
@@ -189,11 +189,12 @@ GetFuseSettings (
       FMP_PLATFORM_SPEC_VARIABLE_NAME,
       Status
       ));
-    FreePool (PlatformFullSpec);
+    FreePool (mPlatformSpec);
+    mPlatformSpec = NULL;
     return Status;
   }
 
-  Ptr = PlatformFullSpec;
+  Ptr = mPlatformSpec;
   for (Dash = 0; Dash < 4; Dash++) {
     while (TRUE) {
       if (*Ptr == '\0') {
@@ -218,10 +219,8 @@ GetFuseSettings (
     "%a: fuse=%u, offset=%u\n",
     __FUNCTION__,
     mIsProductionFused,
-    Ptr - PlatformFullSpec
+    Ptr - mPlatformSpec
     ));
-
-  FreePool (PlatformFullSpec);
 
   return EFI_SUCCESS;
 }
@@ -262,9 +261,9 @@ GetTnSpec (
     goto UseDefault;
   }
 
-  mPlatformTnSpec = (CHAR8 *)AllocateRuntimeZeroPool (Size);
-  if (mPlatformTnSpec == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: TnSpec alloc failed\n", __FUNCTION__));
+  mPlatformCompatSpec = (CHAR8 *)AllocateRuntimeZeroPool (Size);
+  if (mPlatformCompatSpec == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: CompatSpec alloc failed\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -273,7 +272,7 @@ GetTnSpec (
                   &gNVIDIAPublicVariableGuid,
                   NULL,
                   &Size,
-                  mPlatformTnSpec
+                  mPlatformCompatSpec
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
@@ -283,20 +282,20 @@ GetTnSpec (
       FMP_PLATFORM_COMPAT_SPEC_VARIABLE_NAME,
       Status
       ));
-    FreePool (mPlatformTnSpec);
-    mPlatformTnSpec = NULL;
+    FreePool (mPlatformCompatSpec);
+    mPlatformCompatSpec = NULL;
     return Status;
   }
 
   goto Done;
 
 UseDefault:
-  mPlatformTnSpec = (CHAR8 *)AllocateRuntimeCopyPool (
-                               AsciiStrSize (FMP_PLATFORM_SPEC_DEFAULT),
-                               FMP_PLATFORM_SPEC_DEFAULT
-                               );
-  if (mPlatformTnSpec == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: TnSpec alloc failed\n", __FUNCTION__));
+  mPlatformCompatSpec = (CHAR8 *)AllocateRuntimeCopyPool (
+                                   AsciiStrSize (FMP_PLATFORM_SPEC_DEFAULT),
+                                   FMP_PLATFORM_SPEC_DEFAULT
+                                   );
+  if (mPlatformCompatSpec == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: CompatSpec alloc failed\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -306,7 +305,7 @@ Done:
     "%a: %s=%a\n",
     __FUNCTION__,
     FMP_PLATFORM_COMPAT_SPEC_VARIABLE_NAME,
-    mPlatformTnSpec
+    mPlatformCompatSpec
     ));
 
   return EFI_SUCCESS;
@@ -590,7 +589,8 @@ GetPackageImageName (
                Header,
                L"mb1_b",
                mIsProductionFused,
-               mPlatformTnSpec,
+               mPlatformCompatSpec,
+               mPlatformSpec,
                &ImageIndex
                );
     if (EFI_ERROR (Status)) {
@@ -707,7 +707,8 @@ WriteImage (
                    Header,
                    PkgImageName,
                    mIsProductionFused,
-                   mPlatformTnSpec,
+                   mPlatformCompatSpec,
+                   mPlatformSpec,
                    &ImageIndex
                    );
   if (EFI_ERROR (Status)) {
@@ -771,7 +772,8 @@ WriteRegularImages (
                Header,
                ImageName,
                mIsProductionFused,
-               mPlatformTnSpec,
+               mPlatformCompatSpec,
+               mPlatformSpec,
                &PkgImageIndex
                );
     if (EFI_ERROR (Status)) {
@@ -859,7 +861,8 @@ VerifyImage (
                    Header,
                    PkgImageName,
                    mIsProductionFused,
-                   mPlatformTnSpec,
+                   mPlatformCompatSpec,
+                   mPlatformSpec,
                    &ImageIndex
                    );
   if (EFI_ERROR (Status)) {
@@ -963,7 +966,8 @@ VerifyAllImages (
                Header,
                ImageName,
                mIsProductionFused,
-               mPlatformTnSpec,
+               mPlatformCompatSpec,
+               mPlatformSpec,
                &PkgImageIndex
                );
     if (EFI_ERROR (Status)) {
@@ -1359,7 +1363,8 @@ FmpTegraCheckImage (
                Header,
                ImageName,
                mIsProductionFused,
-               mPlatformTnSpec,
+               mPlatformCompatSpec,
+               mPlatformSpec,
                &PkgImageIndex
                );
     if (EFI_ERROR (Status)) {
@@ -1734,9 +1739,14 @@ Done:
       mAddressChangeEvent = NULL;
     }
 
-    if (mPlatformTnSpec != NULL) {
-      FreePool (mPlatformTnSpec);
-      mPlatformTnSpec = NULL;
+    if (mPlatformCompatSpec != NULL) {
+      FreePool (mPlatformCompatSpec);
+      mPlatformCompatSpec = NULL;
+    }
+
+    if (mPlatformSpec != NULL) {
+      FreePool (mPlatformSpec);
+      mPlatformSpec = NULL;
     }
 
     mFmpDataBufferSize   = 0;
