@@ -14,27 +14,46 @@
   FILE_GUID                 = ceb5f958-bf94-4f75-8e4b-4feff4ddf723
   MODULE_TYPE               = DXE_DRIVER
   VERSION_STRING            = 1.0
-  ENTRY_POINT               = TegraCpuFreqInitialize
+  ENTRY_POINT               = DeviceDiscoveryDriverInitialize
 
 [Sources]
   TegraCpuFreqDxe.c
+  TegraCpuFreqHelper.S
 
 [Packages]
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  ArmLib
   BaseLib
+  BaseMemoryLib
+  DeviceDiscoveryDriverLib
   UefiLib
   UefiDriverEntryPoint
   DebugLib
+  IoLib
+  MemoryAllocationLib
+  PcdLib
+  PlatformResourceLib
   PrintLib
   TegraPlatformInfoLib
-  PlatformResourceLib
 
 [Protocols]
   gNVIDIABpmpIpcProtocolGuid
+  gNVIDIATegraCpuFrequencyProtocolGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
+  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported
+
+[Guids]
+  gNVIDIACpuFreqT234
 
 [Depex]
   gNVIDIABpmpIpcProtocolGuid
