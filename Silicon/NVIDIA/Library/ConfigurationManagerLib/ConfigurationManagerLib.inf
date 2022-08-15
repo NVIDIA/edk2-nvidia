@@ -27,6 +27,7 @@
   IoLib
   PlatformResourceLib
   FloorSweepingInternalLib
+  UefiBootServicesTableLib
   UefiLib
 
 [Sources.common]
@@ -43,6 +44,9 @@
 
 [Protocols]
   gNVIDIAConfigurationManagerDataObjectGuid
+  gNVIDIATegraCpuFrequencyProtocolGuid
 
 [Depex]
   gNVIDIAPcieControllerInitCompleteProtocolGuid
+  AND
+  gNVIDIATegraCpuFrequencyProtocolGuid

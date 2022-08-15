@@ -10,7 +10,7 @@
     - Obj or OBJ - Object
 **/
 
-#include <Uefi/UefiBaseType.h>
+#include <Uefi.h>
 #include <ConfigurationManagerObject.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/PcdLib.h>
@@ -22,7 +22,9 @@
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DebugLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
+#include <Protocol/TegraCpuFreq.h>
 #include <libfdt.h>
 
 // Platform CPU configuration
@@ -364,6 +366,8 @@ UpdateGicInfo (
   UINT64                            PmuBaseInterrupt;
   UINT32                            NumCores;
   UINT32                            EnabledCoreCntr;
+  NVIDIA_TEGRA_CPU_FREQ_PROTOCOL    *CpuFreq;
+  CM_ARM_CPC_INFO                   *CpcInfo;
 
   NumberOfGicCtlrs   = 0;
   NumberOfGicEntries = 0;
@@ -425,6 +429,11 @@ UpdateGicInfo (
     }
   }
 
+  Status = gBS->LocateProtocol (&gNVIDIATegraCpuFrequencyProtocolGuid, NULL, (VOID **)&CpuFreq);
+  if (EFI_ERROR (Status)) {
+    CpuFreq = NULL;
+  }
+
   // PMU
   Status = GetPmuBaseInterrupt (&PmuBaseInterrupt);
   if (EFI_ERROR (Status)) {
@@ -472,6 +481,8 @@ UpdateGicInfo (
     NumberOfGicEntries++;
   }
 
+  Repo = *PlatformRepositoryInfo;
+
   // Populate GICC structures for all enabled cores
   EnabledCoreCntr = 0;
   for (CoreIndex = 0; CoreIndex < PLATFORM_MAX_CPUS; CoreIndex++) {
@@ -509,14 +520,38 @@ UpdateGicInfo (
     GicCInfo[EnabledCoreCntr].ClockDomain   = 0;
     GicCInfo[EnabledCoreCntr].AffinityFlags = EFI_ACPI_6_4_GICC_ENABLED;
 
+    GicCInfo[EnabledCoreCntr].CpcToken = CM_NULL_TOKEN;
+    if (CpuFreq != NULL) {
+      CpcInfo = AllocatePool (sizeof (CM_ARM_CPC_INFO));
+      if (CpcInfo == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate CpcInfo structure\r\n", __FUNCTION__));
+        ASSERT (CpcInfo != NULL);
+      } else {
+        Status = CpuFreq->GetCpcInfo (CpuFreq, MpIdr, CpcInfo);
+        if (EFI_ERROR (Status)) {
+          FreePool (CpcInfo);
+          CpcInfo = NULL;
+          // Set Status to SUCCESS as this is not a fatal  error
+          Status = EFI_SUCCESS;
+        } else {
+          Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCpcInfo);
+          Repo->CmObjectToken = (CM_OBJECT_TOKEN)(VOID *)CpcInfo;
+          Repo->CmObjectSize  = sizeof (CM_ARM_CPC_INFO);
+          Repo->CmObjectCount = 1;
+          Repo->CmObjectPtr   = CpcInfo;
+          DEBUG ((DEBUG_ERROR, "!!!!!CmObjectToken %llx: Id:%x\r\n", Repo->CmObjectToken, MpIdr));
+          GicCInfo[EnabledCoreCntr].CpcToken = Repo->CmObjectToken;
+          Repo++;
+        }
+      }
+    }
+
     EnabledCoreCntr++;
     // Check to ensure space allocated for GICC is enough
     ASSERT (EnabledCoreCntr <= NumCores);
   }
 
   ASSERT (EnabledCoreCntr == NumCores);
-
-  Repo = *PlatformRepositoryInfo;
 
   Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjGicDInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
