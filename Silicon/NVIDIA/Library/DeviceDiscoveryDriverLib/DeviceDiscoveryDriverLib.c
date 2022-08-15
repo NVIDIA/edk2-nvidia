@@ -662,7 +662,7 @@ EnumerateDevices (
   )
 {
   EFI_STATUS               Status;
-  NON_DISCOVERABLE_DEVICE  Device;
+  NON_DISCOVERABLE_DEVICE  *Device;
   EFI_HANDLE               DeviceHandle;
   NVIDIA_DT_NODE_INFO      *DtNodeInfo;
   UINT32                   DeviceCount;
@@ -705,12 +705,18 @@ EnumerateDevices (
 
   for (Index = 0; Index < DeviceCount; Index++) {
     DeviceHandle = NULL;
-    Status       = ProcessDeviceTreeNodeWithHandle (
-                     &DtNodeInfo[Index],
-                     &Device,
-                     mImageHandle,
-                     &DeviceHandle
-                     );
+    Device       = (NON_DISCOVERABLE_DEVICE *)AllocatePool (sizeof (NON_DISCOVERABLE_DEVICE));
+    if (Device == NULL) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
+      return EFI_DEVICE_ERROR;
+    }
+
+    Status = ProcessDeviceTreeNodeWithHandle (
+               &DtNodeInfo[Index],
+               Device,
+               mImageHandle,
+               &DeviceHandle
+               );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to process device node - %r\r\n", __FUNCTION__, Status));
       continue;
