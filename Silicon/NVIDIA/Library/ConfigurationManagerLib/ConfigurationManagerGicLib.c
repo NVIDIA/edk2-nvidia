@@ -476,7 +476,7 @@ UpdateGicInfo (
     // Get Mpidr using cpu index
     MpIdr = GetMpidrFromLinearCoreID (CoreIndex);
 
-    GicCInfo[EnabledCoreCntr].CPUInterfaceNumber       = CoreIndex;
+    GicCInfo[EnabledCoreCntr].CPUInterfaceNumber       = EnabledCoreCntr;
     GicCInfo[EnabledCoreCntr].AcpiProcessorUid         = CoreIndex;
     GicCInfo[EnabledCoreCntr].Flags                    = EFI_ACPI_6_4_GIC_ENABLED;
     GicCInfo[EnabledCoreCntr].ParkingProtocolVersion   = 0;
