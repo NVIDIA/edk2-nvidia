@@ -1006,6 +1006,11 @@
   Silicon/NVIDIA/Drivers/SmbiosBmcTransfer/SmbiosBmcTransfer.inf
 
 
+  #
+  # CPU Frequency support
+  #
+  Silicon/NVIDIA/Drivers/TegraCpuFreqDxe/TegraCpuFreqDxe.inf
+
 [Components.AARCH64]
   #
   # EBC
