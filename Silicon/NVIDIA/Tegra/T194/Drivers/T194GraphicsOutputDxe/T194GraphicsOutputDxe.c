@@ -177,6 +177,192 @@ GraphicsBlt (
 }
 
 /**
+  Read a Window register based off of the given BaseAddress.
+  Note that the BaseAddress should already adjusted for the correct Head.
+
+  @param [in]  BaseAddress       EFI_PHYSICAL_ADDRESS of Display head instance
+  @param [in]  WindowIndex       INTN of Window index
+  @param [in]  WindowOffset      UINT32 of Window register byte offset
+  @param [out] Reg               *UINT32 to return window register data
+  @retval EFI_SUCCESS            Operation successful
+  @retval EFI_INVALID_PARAMETER  Failed to retrieve Head index
+**/
+STATIC
+EFI_STATUS
+ReadDcWinReg32 (
+  IN CONST  EFI_PHYSICAL_ADDRESS  BaseAddress,
+  IN CONST  INTN                  WindowIndex,
+  IN CONST  UINT32                WindowOffset,
+  OUT       UINT32                *Reg
+  )
+{
+  EFI_STATUS  Status = EFI_SUCCESS;
+
+  if ((WindowIndex < 0) || (WindowIndex > WINDOW_INDEX_MAX)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *Reg = MmioRead32 (BaseAddress + (WindowIndex * DC_PER_WINDOW_OFFSET) + WindowOffset);
+
+  return Status;
+}
+
+/**
+  Write a Window register based off of the given BaseAddress.
+  Note that the BaseAddress should already adjusted for the correct Head.
+
+  @param [in]  BaseAddress       EFI_PHYSICAL_ADDRESS of Display head instance
+  @param [in]  WindowIndex       INTN of Window index
+  @param [in]  WindowOffset      UINT32 of Window register byte offset
+  @param [in]  Reg               UINT32 to window register data to write
+  @retval EFI_SUCCESS            Operation successful
+  @retval EFI_INVALID_PARAMETER  Failed to retrieve Head index
+**/
+STATIC
+EFI_STATUS
+WriteDcWinReg32 (
+  IN CONST  EFI_PHYSICAL_ADDRESS  BaseAddress,
+  IN CONST  INTN                  WindowIndex,
+  IN CONST  UINT32                WindowOffset,
+  IN CONST  UINT32                Reg
+  )
+{
+  EFI_STATUS  Status = EFI_SUCCESS;
+
+  if ((WindowIndex < 0) || (WindowIndex > WINDOW_INDEX_MAX)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  MmioWrite32 (BaseAddress + (WindowIndex * DC_PER_WINDOW_OFFSET) + WindowOffset, Reg);
+
+  return Status;
+}
+
+/**
+  Return the first enabled+usable window on the given Head index.
+  The Window index search always starts at 0 and runs to WINDOW_INDEX_MAX
+  (inclusive).
+
+  @param [in]  BaseAddress       EFI_PHYSICAL_ADDRESS of Display head instance
+  @param [in]  HeadIndex         INTN  of Head   index
+  @param [out] WinowIndexFound   INTN* of Window index, if usable
+  @retval EFI_SUCCESS            A  usable window was found on the given head
+  @retval EFI_NOT_FOUND          No usable window was found on the given head
+  @retval EFI_INVALID_PARAMETER  Error during usable window search
+**/
+STATIC
+EFI_STATUS
+GetFirstUsableWinForThisHead (
+  IN CONST  EFI_PHYSICAL_ADDRESS  BaseAddress,
+  IN CONST  INTN                  HeadIndex,
+  OUT       INTN                  *WindowIndexFound
+  )
+{
+  EFI_STATUS  Status;
+  INTN        WindowIndex;
+  UINT32      WindowOffset, Reg;
+  BOOLEAN     FoundActiveWindow = FALSE;
+  UINT32      WindowHeight, WindowWidth;
+
+  for (WindowIndex = 0; WindowIndex <= WINDOW_INDEX_MAX; WindowIndex++ ) {
+    /* first check: see if the window is enabled on the given head */
+    WindowOffset = DC_A_WIN_AD_WIN_OPTIONS_OFFSET;
+    Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &Reg);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: error reading Window index=%d @ WindowOffset=0x%08x\n", __FUNCTION__, WindowIndex, WindowOffset));
+      return EFI_INVALID_PARAMETER;
+    }
+
+    if ((Reg & DC_A_WIN_AD_WIN_OPTIONS_AD_WIN_ENABLE_ENABLE) == DC_A_WIN_AD_WIN_OPTIONS_AD_WIN_ENABLE_ENABLE) {
+      DEBUG ((DEBUG_INFO, "%a: Head index %d Window index=%d  Enabled\n", __FUNCTION__, HeadIndex, WindowIndex));
+    } else {
+      DEBUG ((DEBUG_INFO, "%a: Head index %d Window index=%d  Disabled\n", __FUNCTION__, HeadIndex, WindowIndex));
+      /* if a window is disabled don't bother checking the dimensions */
+      continue;
+    }
+
+    /* second check: confirm the window dimensions are acceptable for UEFI */
+    WindowOffset = DC_A_WIN_AD_PCALC_WINDOW_SET_CROPPED_SIZE_IN_0;
+    Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &Reg);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: error reading Window index=%d @ WindowOffset 0x%08x\n", __FUNCTION__, WindowIndex, WindowOffset));
+      return EFI_INVALID_PARAMETER;
+    }
+
+    WindowWidth  = Reg & 0x7fff;
+    WindowHeight = (Reg >> 16) & 0x7fff;
+    if ((WindowWidth >= WIN_CROPPED_SIZE_IN_MIN_WIDTH) && (WindowHeight >= WIN_CROPPED_SIZE_IN_MIN_HEIGHT)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Head index %d: Window index=%d %ux%u >= %ux%u: acceptable to use\n",
+        HeadIndex,
+        WindowIndex,
+        WindowWidth,
+        WindowHeight,
+        WIN_CROPPED_SIZE_IN_MIN_WIDTH,
+        WIN_CROPPED_SIZE_IN_MIN_HEIGHT
+        ));
+      *WindowIndexFound = WindowIndex;
+      FoundActiveWindow = TRUE;
+      break;
+    } else {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Head index %d: Window index=%d %ux%u < %ux%u: NOT acceptable to use\n",
+        HeadIndex,
+        WindowIndex,
+        WindowWidth,
+        WindowHeight,
+        WIN_CROPPED_SIZE_IN_MIN_WIDTH,
+        WIN_CROPPED_SIZE_IN_MIN_HEIGHT
+        ));
+    }
+  }
+
+  if (FoundActiveWindow == FALSE) {
+    Status = EFI_NOT_FOUND;
+  }
+
+  return Status;
+}
+
+/**
+  Return Head index based on BaseAddress
+
+  @param [in]  BaseAddress       EFI_PHYSICAL_ADDRESS of Display head instance
+  @param [out] HeadIndex         INTN* of Head index inferred from BaseAddress
+  @retval EFI_SUCCESS            Operation successful
+  @retval EFI_INVALID_PARAMETER  Failed to retrieve Head index
+**/
+STATIC
+EFI_STATUS
+GetDispHeadFromAddr (
+  IN CONST  EFI_PHYSICAL_ADDRESS  BaseAddress,
+  OUT       INTN                  *HeadIndex
+  )
+{
+  EFI_STATUS  Status = EFI_SUCCESS;
+
+  switch (BaseAddress) {
+    case DC_HEAD_0_BASE_ADDR:
+      *HeadIndex = 0;
+      break;
+    case DC_HEAD_1_BASE_ADDR:
+      *HeadIndex = 1;
+      break;
+    case DC_HEAD_2_BASE_ADDR:
+      *HeadIndex = 2;
+      break;
+    default:
+      *HeadIndex = 0;
+      Status     = EFI_INVALID_PARAMETER;
+      break;
+  }
+
+  return Status;
+}
+
+/**
   Retrieve LUT region details.
 
   @param [in]  Gop      ptr to GOP_INSTANCE
@@ -229,7 +415,7 @@ GetLutRegion (
   when accessing that head's register in the OS.
 
    @param [in]  *Gop           ptr to GOP_INSTANCE
-   @param [in]  Head           head index to check if active
+   @param [in]  HeadIndex      Head index to check if active
 
   @retval TRUE  head is active
   @retval FALSE head is inactive
@@ -238,12 +424,12 @@ STATIC
 BOOLEAN
 IsHeadActive (
   IN CONST  GOP_INSTANCE  *Gop,
-  IN CONST  INTN          Head
+  IN CONST  INTN          HeadIndex
   )
 {
   UINT32  DispActive;
 
-  DispActive = MmioRead32 (Gop->DcAddr + DC_HEAD_OFFSET*Head + DC_DISP_DISP_ACTIVE_OFFSET);
+  DispActive = MmioRead32 (DC_HEAD_0_BASE_ADDR + DC_PER_HEAD_OFFSET*HeadIndex + DC_DISP_DISP_ACTIVE_OFFSET);
   return (DispActive != 0) && (DispActive != DC_DISP_DISP_ACTIVE_RESET_VAL);
 }
 
@@ -324,6 +510,7 @@ FdtInstalled (
     }
 
     if (!FoundActiveHead && IsHeadActive (Gop, Head)) {
+      DEBUG ((DEBUG_ERROR, "%a: head %d is active\n", __FUNCTION__, Head));
       /* Active head: use FB and LUT settings from CBoot */
       FoundActiveHead = TRUE;
 
@@ -333,6 +520,7 @@ FdtInstalled (
       Data[3] = SwapBytes64 (LutSize);
     } else {
       /* Inactive head: zero-fill everything */
+      DEBUG ((DEBUG_ERROR, "%a: head %d is NOT active\n", __FUNCTION__, Head));
       ZeroMem (Data, sizeof (Data));
     }
 
@@ -384,37 +572,52 @@ FdtInstalled (
 **/
 EFI_STATUS
 DeviceDiscoveryNotify (
-  IN  NVIDIA_DEVICE_DISCOVERY_PHASES          Phase,
-  IN  EFI_HANDLE                              DriverHandle,
-  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_DISCOVERY_PHASES    Phase,
+  IN  CONST EFI_HANDLE                        DriverHandle,
+  IN  CONST EFI_HANDLE                        ControllerHandle,
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                  Status;
-  EFI_PHYSICAL_ADDRESS        BaseAddress;
-  UINTN                       RegionSize;
-  GOP_INSTANCE                *Private;
-  UINT32                      ScreenInputSize;
-  UINTN                       ConfigureSize;
-  UINT32                      ColorDepth;
-  UINTN                       Pitch;
-  EFI_PHYSICAL_ADDRESS        LowAddress;
-  EFI_PHYSICAL_ADDRESS        HighAddress;
-  EFI_PHYSICAL_ADDRESS        OldAddress;
-  SCMI_CLOCK2_PROTOCOL        *ScmiClockProtocol;
-  NVIDIA_CLOCK_NODE_PROTOCOL  *ClockNodeProtocol;
-  BOOLEAN                     ClockEnabled;
-  BOOLEAN                     WinEnabled;
-  UINT32                      WinOptions;
-  CHAR8                       ClockName[SCMI_MAX_STR_LEN];
+  EFI_STATUS                    Status;
+  EFI_PHYSICAL_ADDRESS          BaseAddress;
+  UINTN                         RegionSize;
+  GOP_INSTANCE                  *Private;
+  UINT32                        ScreenInputSize;
+  UINTN                         ConfigureSize;
+  UINT32                        ColorDepth;
+  UINTN                         Pitch;
+  UINT32                        LowAddress;
+  UINT32                        HighAddress;
+  EFI_PHYSICAL_ADDRESS          OldAddress;
+  SCMI_CLOCK2_PROTOCOL          *ScmiClockProtocol;
+  NVIDIA_CLOCK_NODE_PROTOCOL    *ClockNodeProtocol;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *TempGopProtocol;
+  BOOLEAN                       ClockEnabled;
+  CHAR8                         ClockName[SCMI_MAX_STR_LEN];
+  INTN                          HeadIndex;
+  INTN                          WindowIndex;
+  UINT32                        WindowOffset;
 
   Private = NULL;
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingSupported:
+
+      Status = gBS->LocateProtocol (&gEfiGraphicsOutputProtocolGuid, NULL, (VOID **)&TempGopProtocol);
+      if (Status == EFI_SUCCESS) {
+        DEBUG ((DEBUG_INFO, "%a: GOP already installed, only a single GOP instance supported\n", __FUNCTION__));
+        return EFI_UNSUPPORTED;
+      }
+
       BaseAddress = 0;
       Status      = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
       if (EFI_ERROR (Status)) {
+        break;
+      }
+
+      Status = GetDispHeadFromAddr (BaseAddress, &HeadIndex);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: error getting Head index\n", __FUNCTION__));
         break;
       }
 
@@ -428,7 +631,7 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      // If there are clocks listed make sure the primary one is enabled
+      /* If there are clocks listed make sure the primary one is enabled */
       if ((ClockNodeProtocol != NULL) && (ClockNodeProtocol->Clocks != 0) && (ScmiClockProtocol != NULL)) {
         Status = ScmiClockProtocol->GetClockAttributes (ScmiClockProtocol, ClockNodeProtocol->ClockEntries[0].ClockId, &ClockEnabled, ClockName);
         if (EFI_ERROR (Status)) {
@@ -436,22 +639,18 @@ DeviceDiscoveryNotify (
         }
 
         if (!ClockEnabled) {
+          DEBUG ((DEBUG_ERROR, "%a: Clock not enabled for Head index %d\n", __FUNCTION__, HeadIndex));
           return EFI_UNSUPPORTED;
         }
       }
 
-      ScreenInputSize = MmioRead32 (BaseAddress + PCALC_WINDOW_SET_CROPPED_SIZE_IN_OFFSET);
-      if (((ScreenInputSize >> 16) == 0) || ((ScreenInputSize & MAX_UINT16) == 0)) {
+      Status = GetFirstUsableWinForThisHead (BaseAddress, HeadIndex, &WindowIndex);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Head index %d: no usable windows found\n", __FUNCTION__, HeadIndex));
         return EFI_UNSUPPORTED;
       }
 
-      WinOptions = MmioRead32 (BaseAddress + DC_A_WIN_AD_WIN_OPTIONS_OFFSET);
-      WinEnabled = (WinOptions & BIT30) == BIT30;
-      if (WinEnabled == FALSE) {
-        DEBUG ((DEBUG_ERROR, "%a: WindowA disabled on this head\n", __FUNCTION__));
-        return EFI_UNSUPPORTED;
-      }
-
+      DEBUG ((DEBUG_INFO, "%a: Head index %d: Window index %d usable\n", __FUNCTION__, HeadIndex, WindowIndex));
       return EFI_SUCCESS;
 
     case DeviceDiscoveryDriverBindingStart:
@@ -461,13 +660,29 @@ DeviceDiscoveryNotify (
         break;
       }
 
+      Status = GetDispHeadFromAddr (BaseAddress, &HeadIndex);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: error getting Head index\n", __FUNCTION__));
+        break;
+      }
+
       Private = AllocateZeroPool (sizeof (GOP_INSTANCE));
       if (Private == NULL) {
         Status = EFI_OUT_OF_RESOURCES;
         break;
       }
 
-      ColorDepth = MmioRead32 (BaseAddress + WIN_COLOR_DEPTH_OFFSET);
+      Status = GetFirstUsableWinForThisHead (BaseAddress, HeadIndex, &WindowIndex);
+      if (EFI_ERROR (Status)) {
+        return EFI_UNSUPPORTED;
+      }
+
+      WindowOffset = WIN_COLOR_DEPTH_OFFSET;
+      Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &ColorDepth);
+      if (EFI_ERROR (Status)) {
+        break;
+      }
+
       if (ColorDepth == WIN_COLOR_DEPTH_R8G8B8A8) {
         Private->ModeInfo.PixelFormat = PixelRedGreenBlueReserved8BitPerColor;
       } else if (ColorDepth == WIN_COLOR_DEPTH_B8G8R8A8) {
@@ -477,12 +692,19 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      ScreenInputSize                        = MmioRead32 (BaseAddress + PCALC_WINDOW_SET_CROPPED_SIZE_IN_OFFSET);
+      WindowOffset = DC_A_WIN_AD_PCALC_WINDOW_SET_CROPPED_SIZE_IN_0;
+      Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &ScreenInputSize);
+      if (EFI_ERROR (Status)) {
+        break;
+      }
+
       Private->ModeInfo.Version              = 0;
       Private->ModeInfo.HorizontalResolution = ScreenInputSize & MAX_UINT16;
       Private->ModeInfo.VerticalResolution   = ScreenInputSize >> 16;
       Private->ModeInfo.PixelFormat          = PixelRedGreenBlueReserved8BitPerColor;
       Private->ModeInfo.PixelsPerScanLine    = Private->ModeInfo.HorizontalResolution;
+      DEBUG ((DEBUG_INFO, "%a: Modeinfo.HorizontalResolution %u\n", __FUNCTION__, Private->ModeInfo.HorizontalResolution));
+      DEBUG ((DEBUG_INFO, "%a: Modeinfo.VerticalResolution   %u\n", __FUNCTION__, Private->ModeInfo.VerticalResolution));
 
       Pitch = Private->ModeInfo.HorizontalResolution * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL);
       if ((Pitch & -Pitch) != Pitch) {
@@ -505,10 +727,19 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      LowAddress  = MmioRead32 (BaseAddress + WINBUF_START_ADDR_LO_OFFSET);
-      HighAddress = MmioRead32 (BaseAddress + WINBUF_START_ADDR_HI_OFFSET);
-      OldAddress  = (HighAddress << 32) | LowAddress;
+      WindowOffset = DC_A_WINBUF_AD_START_ADDR_OFFSET;
+      Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &LowAddress);
+      if (EFI_ERROR (Status)) {
+        break;
+      }
 
+      WindowOffset = DC_A_WINBUF_AD_START_ADDR_HI_OFFSET;
+      Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &HighAddress);
+      if (EFI_ERROR (Status)) {
+        break;
+      }
+
+      OldAddress = ((EFI_PHYSICAL_ADDRESS)HighAddress << 32) | (EFI_PHYSICAL_ADDRESS)LowAddress;
       if (OldAddress != 0) {
         CopyMem ((VOID *)Private->Mode.FrameBufferBase, (CONST VOID *)OldAddress, Private->Mode.FrameBufferSize);
       } else {
@@ -546,8 +777,24 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      MmioWrite32 (BaseAddress + WINBUF_START_ADDR_LO_OFFSET, Private->Mode.FrameBufferBase & MAX_UINT32);
-      MmioWrite32 (BaseAddress + WINBUF_START_ADDR_HI_OFFSET, Private->Mode.FrameBufferBase >> 32);
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Window %d .FrameBufferBase=0x%p\n",
+        __FUNCTION__,
+        WindowIndex,
+        Private->Mode.FrameBufferBase
+        ));
+      WindowOffset = DC_A_WINBUF_AD_START_ADDR_OFFSET;
+      Status       = WriteDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, Private->Mode.FrameBufferBase & MAX_UINT32);
+      if (EFI_ERROR (Status)) {
+        break;
+      }
+
+      WindowOffset = DC_A_WINBUF_AD_START_ADDR_HI_OFFSET;
+      Status       = WriteDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, Private->Mode.FrameBufferBase >> 32);
+      if (EFI_ERROR (Status)) {
+        break;
+      }
 
       Private->Signature     = GOP_INSTANCE_SIGNATURE;
       Private->Handle        = ControllerHandle;
@@ -581,7 +828,8 @@ DeviceDiscoveryNotify (
       break;
 
     default:
-      return EFI_SUCCESS;
+      Status = EFI_SUCCESS;
+      break;
   }
 
   if (EFI_ERROR (Status)) {
