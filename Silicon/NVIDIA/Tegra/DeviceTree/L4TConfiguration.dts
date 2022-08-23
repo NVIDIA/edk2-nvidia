@@ -31,6 +31,16 @@
 								data = [01];
 								non-volatile;
 							};
+							RootfsRetryCountMax {
+								data = [03 00 00 00];
+								runtime;
+								locked;
+							};
+							RootfsRedundancyLevel {
+								data = [00 00 00 00];
+								runtime;
+								locked;
+							};
 						};
 					};
 				};
