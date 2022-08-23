@@ -24,6 +24,12 @@
 #define NVIDIA_OS_OVERRIDE_B        0x1
 #define NVIDIA_OS_OVERRIDE_DEFAULT  0xFF
 
+#define NVIDIA_OS_STATUS_NORMAL      0x0
+#define NVIDIA_OS_STATUS_UNBOOTABLE  0xFF
+
+#define NVIDIA_OS_REDUNDANCY_BOOT_ONLY    0x0
+#define NVIDIA_OS_REDUNDANCY_BOOT_ROOTFS  0x1
+
 #define L4T_BOOTMODE_VARIABLE_NAME  L"L4TDefaultBootMode"
 
 #define NVIDIA_L4T_BOOTMODE_GRUB      0x0
@@ -70,6 +76,18 @@ typedef struct {
 typedef struct {
   UINT32    Chain;
 } NVIDIA_OS_OVERRIDE;
+
+typedef struct {
+  UINT32    Status;
+} NVIDIA_OS_STATUS_A;
+
+typedef struct {
+  UINT32    Status;
+} NVIDIA_OS_STATUS_B;
+
+typedef struct {
+  UINT32    Level;
+} NVIDIA_OS_REDUNDANCY;
 
 typedef struct {
   UINT32    BootMode;

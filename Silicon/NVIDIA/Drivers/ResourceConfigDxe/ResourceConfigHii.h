@@ -29,6 +29,8 @@
 #define KEY_OS_CHAIN_OVERRIDE         0x0106
 #define KEY_L4T_BOOTMODE_DEFAULT      0x0107
 #define KEY_RESET_VARIABLES           0x0108
+#define KEY_OS_CHAIN_STATUS_A         0x0109
+#define KEY_OS_CHAIN_STATUS_B         0x0110
 
 #define PCIE_IN_OS_DISABLE  0x0
 #define PCIE_IN_OS_ENABLE   0x1

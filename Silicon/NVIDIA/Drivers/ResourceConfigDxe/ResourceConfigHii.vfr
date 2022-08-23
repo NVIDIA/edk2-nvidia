@@ -62,6 +62,21 @@ formset
     name  = BootChainOsOverride,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+  efivarstore NVIDIA_OS_STATUS_A,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
+    name  = RootfsStatusSlotA,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
+  efivarstore NVIDIA_OS_STATUS_B,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
+    name  = RootfsStatusSlotB,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
+  efivarstore NVIDIA_OS_REDUNDANCY,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
+    name  = RootfsRedundancyLevel,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
   efivarstore NVIDIA_L4T_BOOT_MODE,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
     name  = L4TDefaultBootMode,
@@ -128,6 +143,26 @@ formset
         option text = STRING_TOKEN(STR_OS_PART_A), value = NVIDIA_OS_OVERRIDE_A, flags = 0;
         option text = STRING_TOKEN(STR_OS_PART_B), value = NVIDIA_OS_OVERRIDE_B, flags = 0;
     endoneof;
+
+    oneof varid = RootfsStatusSlotA.Status,
+        questionid = KEY_OS_CHAIN_STATUS_A,
+        prompt = STRING_TOKEN(STR_OS_STATUS_A_PROMPT),
+        help   = STRING_TOKEN(STR_OS_STATUS_A_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_4,
+        option text = STRING_TOKEN(STR_OS_STATUS_DEFAULT), value = NVIDIA_OS_STATUS_NORMAL, flags = 0;
+        option text = STRING_TOKEN(STR_OS_STATUS_UNBOOTABLE), value = NVIDIA_OS_STATUS_UNBOOTABLE, flags = 0;
+    endoneof;
+
+    suppressif NOT ideqval NVIDIA_OS_REDUNDANCY.Level == NVIDIA_OS_REDUNDANCY_BOOT_ROOTFS;
+        oneof varid = RootfsStatusSlotB.Status,
+            questionid = KEY_OS_CHAIN_STATUS_B,
+            prompt = STRING_TOKEN(STR_OS_STATUS_B_PROMPT),
+            help   = STRING_TOKEN(STR_OS_STATUS_B_HELP),
+            flags  = INTERACTIVE | NUMERIC_SIZE_4,
+            option text = STRING_TOKEN(STR_OS_STATUS_DEFAULT), value = NVIDIA_OS_STATUS_NORMAL, flags = 0;
+            option text = STRING_TOKEN(STR_OS_STATUS_UNBOOTABLE), value = NVIDIA_OS_STATUS_UNBOOTABLE, flags = 0;
+        endoneof;
+    endif;
 
     oneof varid = L4TDefaultBootMode.BootMode,
         questionid = KEY_L4T_BOOTMODE_DEFAULT,

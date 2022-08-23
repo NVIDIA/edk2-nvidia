@@ -401,6 +401,16 @@
   #255 - Use firmware version
   gNVIDIATokenSpaceGuid.PcdOsChainOverride|0xFF|UINT32|0x00000043
 
+#OS chain A status
+  #0   - Normal
+  #255 - Unbootable
+  gNVIDIATokenSpaceGuid.PcdOsChainStatusA|0x0|UINT32|0x00000070
+
+#OS chain B status
+  #0   - Normal
+  #255 - Unbootable
+  gNVIDIATokenSpaceGuid.PcdOsChainStatusB|0x0|UINT32|0x00000071
+
 #L4T default boot mode
   #0   - Boot using grub
   #1   - Boot using extlinux via filesystem

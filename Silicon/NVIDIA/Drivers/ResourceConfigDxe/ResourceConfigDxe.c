@@ -107,6 +107,12 @@ InitializeSettings (
   // Initialize OS Selection Form Settings
   PcdSet32S (PcdOsChainOverride, PcdGet32 (PcdOsChainOverride));
 
+  // Initialize OS Chain A status Form Settings
+  PcdSet32S (PcdOsChainStatusA, PcdGet32 (PcdOsChainStatusA));
+
+  // Initialize OS Chain B status Form Settings
+  PcdSet32S (PcdOsChainStatusB, PcdGet32 (PcdOsChainStatusB));
+
   // Initialize L4T boot mode form settings
   PcdSet32S (PcdL4TDefaultBootMode, PcdGet32 (PcdL4TDefaultBootMode));
 
