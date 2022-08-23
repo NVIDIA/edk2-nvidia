@@ -1,0 +1,57 @@
+#/** @file
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = NuvotonRealTimeClockLib
+  FILE_GUID                      = aebbe0c2-30a0-11ed-88c8-7b6a19e93da8
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = RealTimeClockLib
+
+[Sources.common]
+   NuvotonRealTimeClockLib.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiLib
+  UefiRuntimeLib
+  TimerLib
+  MemoryAllocationLib
+  TimeBaseLib
+
+[Guids]
+  gEfiEventExitBootServicesGuid
+  gEfiGlobalVariableGuid
+  gNVIDIAI2cNct3018y
+  gNVIDIATokenSpaceGuid
+  gEfiRtPropertiesTableGuid
+
+[Protocols]
+  gEfiI2cIoProtocolGuid                       ## CONSUMES
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC
+  gNVIDIATokenSpaceGuid.PcdCpuHasRtcControl
+
+[Depex]
+  gEfiVariableArchProtocolGuid
+  AND
+  gEfiVariableWriteArchProtocolGuid
+
+# Current usage of this library expects GCC in a UNIX-like shell environment with the date command
+# BUILD_EPOCH will be used as the reference date/time needed for Virtual RTC feature.
+[BuildOptions]
+  GCC:*_*_*_CC_FLAGS = -DBUILD_EPOCH=`date +%s`

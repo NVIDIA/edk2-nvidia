@@ -1301,6 +1301,30 @@ TegraI2CDriverBindingStart (
     if (fdt_node_check_compatible (
           DeviceTreeNode->DeviceTreeBase,
           I2cNodeOffset,
+          "nuvoton,nct3018y"
+          ) == 0)
+    {
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
+        gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
+        I2cAddress = SwapBytes32 (I2cAddress);
+        DEBUG ((DEBUG_INFO, "%a: NCT3018Y Found.\n", __FUNCTION__));
+        DeviceGuid = &gNVIDIAI2cNct3018y;
+        Status     = TegraI2cAddDevice (
+                       Private,
+                       I2cAddress,
+                       DeviceGuid,
+                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       );
+        if (EFI_ERROR (Status)) {
+          goto ErrorExit;
+        }
+      }
+    }
+
+    if (fdt_node_check_compatible (
+          DeviceTreeNode->DeviceTreeBase,
+          I2cNodeOffset,
           "ssif-bmc"
           ) == 0)
     {
