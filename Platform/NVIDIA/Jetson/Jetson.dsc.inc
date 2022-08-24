@@ -101,7 +101,6 @@
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|TRUE
   gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE
-  gNVIDIATokenSpaceGuid.PcdAllowOsAccessQspi|TRUE
 
 [PcdsDynamicHii.common.T194]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
@@ -120,7 +119,6 @@
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x10000
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
-  gNVIDIATokenSpaceGuid.PcdAllowOsAccessQspi|TRUE
 
 [PcdsDynamicHii.common.T234]
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
