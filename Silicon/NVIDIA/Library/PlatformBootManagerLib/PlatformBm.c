@@ -1114,7 +1114,7 @@ PrintBmcIpAddresses (
                                       &ResponseDataSize
                                       );
   if (EFI_ERROR (Status) || (GetLanConfigResponse->CompletionCode != IPMI_COMP_CODE_NORMAL)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get IPv6 Address count\r\n"));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get IPv6 Address count\r\n", __FUNCTION__));
     return;
   }
 
