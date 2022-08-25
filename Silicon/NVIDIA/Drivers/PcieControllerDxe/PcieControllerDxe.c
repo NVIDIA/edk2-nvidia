@@ -2072,14 +2072,14 @@ DeviceDiscoveryNotify (
           Private->InterruptRefInfo[Index].ReferenceToken          = REFERENCE_TOKEN (Private->InterruptMapInfo[Index]);
           Private->InterruptMapInfo[Index].PciInterrupt            = Index;
           Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = SwapBytes32 (InterruptMap[PCIE_PARENT_INTERRUPT_OFFSET]) + SPI_OFFSET;
-          Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = BIT0;
+          Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = BIT2;
         }
       } else if (NumberOfInterrupts == PCIE_NUMBER_OF_INTERUPT_MAP) {
         for (Index = 0; Index < PCIE_NUMBER_OF_INTERUPT_MAP; Index++) {
           Private->InterruptRefInfo[Index].ReferenceToken          = REFERENCE_TOKEN (Private->InterruptMapInfo[Index]);
           Private->InterruptMapInfo[Index].PciInterrupt            = SwapBytes32 (InterruptMap[(Index * PCIE_INTERRUPT_MAP_ENTRIES) + PCIE_CHILD_INT_OFFSET])-1;
           Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = SwapBytes32 (InterruptMap[(Index * PCIE_INTERRUPT_MAP_ENTRIES) + PCIE_PARENT_INTERRUPT_OFFSET]) + SPI_OFFSET;
-          Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = BIT0;
+          Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = BIT2;
         }
 
         if (Private->IsT234) {

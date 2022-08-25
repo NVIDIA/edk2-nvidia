@@ -34,6 +34,8 @@
 #include <Guid/LinuxEfiInitrdMedia.h>
 #include <Guid/AuthenticatedVariableFormat.h>
 #include <Guid/ImageAuthentication.h>
+
+#include <UefiSecureBoot.h>
 #include <Library/SecureBootVariableLib.h>
 
 #include <NVIDIAConfiguration.h>
