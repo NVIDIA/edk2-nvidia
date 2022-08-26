@@ -148,6 +148,13 @@ LibGetTime (
       //
       if (TimePacket.DateTime.DayOfWeek != ((EfiTimeToWday (Time) + NUVOTON_RTC_WDAY_OFFSET) % 7)) {
         mRtcOffset = 0;
+        EfiSetVariable (
+          L"RTC_OFFSET",
+          &gNVIDIATokenSpaceGuid,
+          EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
+          sizeof (mRtcOffset),
+          &mRtcOffset
+          );
         //
         // Reset DayOfWeek offset
         //
@@ -220,8 +227,8 @@ LibSetTime (
   )
 {
   EFI_STATUS                  Status;
-  NUVOTON_RTC_CONTROL_PACKET  ControlPacket;
-  NUVOTON_RTC_TIME_PACKET     TimePacket;
+  NUVOTON_RTC_CONTROL_PACKET  ControlPacket = { 0 };
+  NUVOTON_RTC_TIME_PACKET     TimePacket    = { 0 };
   I2C_REQUEST_PACKET_2_OPS    RequestData;
   EFI_I2C_REQUEST_PACKET      *RequestPacket              = (EFI_I2C_REQUEST_PACKET *)&RequestData;
   BOOLEAN                     BcdMode                     = FALSE;
@@ -237,10 +244,6 @@ LibSetTime (
 
   // Check the input parameters are within the range specified by UEFI
   if (!IsTimeValid (Time)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  if ((Time->Year < NUVOTON_RTC_BASE_YEAR) || (Time->Year >= (NUVOTON_RTC_BASE_YEAR + 100))) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -481,8 +484,8 @@ LibRtcConfigure (
   )
 {
   EFI_STATUS                  Status;
-  NUVOTON_RTC_CONTROL_PACKET  ControlPacket;
-  NUVOTON_RTC_PRIMARY_PACKET  PrimaryAccessPacket;
+  NUVOTON_RTC_CONTROL_PACKET  ControlPacket       = { 0 };
+  NUVOTON_RTC_PRIMARY_PACKET  PrimaryAccessPacket = { 0 };
   I2C_REQUEST_PACKET_2_OPS    RequestData;
   EFI_I2C_REQUEST_PACKET      *RequestPacket = (EFI_I2C_REQUEST_PACKET *)&RequestData;
 
@@ -592,7 +595,7 @@ I2cIoRegistrationEvent (
                       (VOID **)&I2cIo
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to get i2c interface: %r", __FUNCTION__, Status));
+        DEBUG ((EFI_D_ERROR, "%a: Failed to get i2c interface: %r\n", __FUNCTION__, Status));
         continue;
       }
 
@@ -652,6 +655,9 @@ LibRtcInitialize (
   EFI_STATUS  Status;
   UINTN       VariableSize = sizeof (mRtcOffset);
 
+  mI2cIo                 = NULL;
+  mPerfomanceTimerOffset = MAX_INT64;
+
   mVirtualRtc = PcdGetBool (PcdVirtualRTC);
 
   Status = EfiGetVariable (L"RTC_OFFSET", &gNVIDIATokenSpaceGuid, NULL, &VariableSize, &mRtcOffset);
@@ -694,6 +700,7 @@ LibRtcInitialize (
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
     gBS->CloseEvent (Event);
+    return EFI_OUT_OF_RESOURCES;
   }
 
   return EFI_SUCCESS;

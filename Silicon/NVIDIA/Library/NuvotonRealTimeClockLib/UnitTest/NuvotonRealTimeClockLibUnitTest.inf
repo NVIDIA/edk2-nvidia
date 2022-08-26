@@ -1,0 +1,50 @@
+#/** @file
+#
+#  Nuvoton RTC Unit Test
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = NuvotonRealTimeClockLibUnitTest
+  FILE_GUID                      = 7ac12fa4-23fb-11ed-8805-ff4444d2a153
+  MODULE_TYPE                    = HOST_APPLICATION
+  VERSION_STRING                 = 1.0
+
+[Sources]
+  NuvotonRealTimeClockLibUnitTest.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  BaseLib
+  DebugLib
+  UnitTestLib
+  PrintLib
+  CmockaLib
+  BaseMemoryLib
+  UefiBootServicesTableLib
+  UefiLib
+  UefiRuntimeLib
+  TimerLib
+  MemoryAllocationLib
+  TimeBaseLib
+  RealTimeClockLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC
+  gNVIDIATokenSpaceGuid.PcdCpuHasRtcControl
+
+[Guids]
+  gNVIDIAI2cNcp81599
+  gNVIDIAI2cMaxim20024
+  gNVIDIAI2cUnknown
