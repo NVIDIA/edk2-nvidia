@@ -115,7 +115,7 @@ OpteeSetupPageList (
   UINTN                Pages    = NumPages;
   UINTN                n        = 0;
   VOID                 *BufBase = UserBuf;
-  OPTEE_SHM_PAGE_LIST  *ShmList;
+  OPTEE_SHM_PAGE_LIST  *ShmList, *TmpShmList;
   UINTN                NumPgLists = 0;
 
   if (!(UserBuf && IS_ALIGNED (UserBuf, OPTEE_MSG_PAGE_SIZE))) {
@@ -138,14 +138,15 @@ OpteeSetupPageList (
     }
   }
 
+  TmpShmList = ShmList;
   while (Pages) {
-    ShmList->PagesArray[n] = (UINT64)BufBase;
+    TmpShmList->PagesArray[n] = (UINT64)BufBase;
     n++;
     Pages--;
     BufBase += OPTEE_MSG_PAGE_SIZE;
     if (n == MAX_PAGELIST_ENTRIES) {
-      ShmList->NextPage = (UINT64)(ShmList + 1);
-      ShmList++;
+      TmpShmList->NextPage = (UINT64) (TmpShmList + 1);
+      TmpShmList++;
       n = 0;
     }
   }
