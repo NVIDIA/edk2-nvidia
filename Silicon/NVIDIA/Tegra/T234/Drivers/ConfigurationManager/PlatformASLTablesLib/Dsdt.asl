@@ -129,4 +129,65 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
       Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xD0 }
     })
   }
+
+  //---------------------------------------------------------------------
+  // rce@bc00000
+  //---------------------------------------------------------------------
+  Device(RCE0) {
+    Name (_HID, "NVDA2007")
+    Name (_UID, 0)
+    Name (_CCA, ZERO)
+
+    Name(_CRS, ResourceTemplate() {
+      // HSP_RCE Registers
+      Memory32Fixed (ReadWrite, 0x0b950000, 0x90000)
+      // RCE_PM Registers
+      Memory32Fixed (ReadWrite, 0x0b9f0000, 0x40000)
+      // RCE_WDT_REMOTE (0x13 + 0x20)
+      // HSP_RCE_SHARED_MAILBOX (0xB6 + 0x20)
+      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x33, 0xD6 }
+    })
+  }
+
+  //---------------------------------------------------------------------
+  // vi0@15c00000
+  //---------------------------------------------------------------------
+  Device(VI00) {
+    Name (_HID, "NVDA2008")
+    Name (_UID, 0)
+    Name (_CCA, ZERO)
+
+    Name(_CRS, ResourceTemplate() {
+      // VI MMIO apertures are programmed by RTCPU and firewalls prevent
+      // access from CCPLEX.
+    })
+  }
+
+  //---------------------------------------------------------------------
+  // vi1@14c00000
+  //---------------------------------------------------------------------
+  Device(VI01) {
+    Name (_HID, "NVDA2008")
+    Name (_UID, 1)
+    Name (_CCA, ZERO)
+
+    Name(_CRS, ResourceTemplate() {
+      // VI MMIO apertures are programmed by RTCPU and firewalls prevent
+      // access from CCPLEX.
+    })
+  }
+
+  //---------------------------------------------------------------------
+  // isp@14800000
+  //---------------------------------------------------------------------
+  Device(ISP0) {
+    Name (_HID, "NVDA2009")
+    Name (_UID, 0)
+    Name (_CCA, ZERO)
+
+    Name(_CRS, ResourceTemplate() {
+      // ISP MMIO apertures are programmed by RTCPU and firewalls prevent
+      // access from CCPLEX.
+    })
+  }
 }

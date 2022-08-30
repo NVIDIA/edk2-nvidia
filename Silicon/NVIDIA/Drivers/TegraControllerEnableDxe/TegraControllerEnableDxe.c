@@ -23,6 +23,7 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,th500-soc-hwpm",  &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,tegra234-nvdla",  &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,tegra234-host1x", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra194-rce",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { NULL,                     NULL                                        }
 };
 
