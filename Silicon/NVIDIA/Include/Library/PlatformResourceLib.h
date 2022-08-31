@@ -68,12 +68,14 @@ typedef struct {
   CHAR8              SerialNumber[SERIAL_NUM_LEN];
 } TEGRA_BOARD_INFO;
 
+#pragma pack(1)
 typedef struct  {
   UINT8     CvmEepromData[MAX_EEPROM_DATA_SIZE];
   UINT8     CvbEepromData[MAX_EEPROM_DATA_SIZE];
   UINT32    CvmEepromDataSize;
   UINT32    CvbEepromDataSize;
 } TEGRABL_EEPROM_DATA;
+#pragma pack()
 
 typedef struct {
   CHAR8     *GicCompatString;

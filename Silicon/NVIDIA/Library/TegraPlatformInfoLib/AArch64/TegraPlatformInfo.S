@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 //  SPDX-License-Identifier: BSD-2-Clause-Patent
 //
@@ -40,7 +40,18 @@ _T194Carveout:
 _T234Carveout:
   cmp w1, #T234_CHIP_ID
   bne _DefaultCarveout
-  MOV64 (x0, T234_BL_CARVEOUT_OFFSET)
+  MOV64 (x0, T234_BL_VERSION_OFFSET)
+  add x0, x0, x3
+  ldr w0, [x0]
+  cmp w0, 0
+  beq _T234Carveout_V0
+  cmp w0, 1
+  bne _DefaultCarveout
+  MOV64 (x0, T234_BL_CARVEOUT_OFFSET_V1)
+  b _ReturnCarveout
+
+_T234Carveout_V0:
+  MOV64 (x0, T234_BL_CARVEOUT_OFFSET_V0)
   b _ReturnCarveout
 
 _DefaultCarveout:
@@ -68,9 +79,6 @@ ASM_FUNC(TegraGetBLCarveoutInfoLocationAddress)
   mov w0, w1
   bl TegraGetBLInfoLocationAddress
   mov x3, x0
-  mov w0, w1
-  bl TegraGetBLCarveoutOffset
-  mov x4, x0
   cmp w1, #T194_CHIP_ID
   beq _T194CarveoutInfo
   add x5, x3, #4
@@ -90,6 +98,9 @@ _T194CarveoutInfo:
   lsl x3, x3, #16
 
 _BootloaderAddressGood:
+  mov w0, w1
+  bl TegraGetBLCarveoutOffset
+  mov x4, x0
   add x0, x3, x4
   b _ReturnCarveoutInfo
 

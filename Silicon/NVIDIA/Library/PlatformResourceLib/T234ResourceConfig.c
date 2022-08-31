@@ -149,7 +149,7 @@ T234GetResourceConfig (
   CpuBootloaderParams          = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   PlatformInfo->DtbLoadAddress = T234GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
 
-  BanketDramEnabled = CpuBootloaderParams->FeatureFlagData.EnableBlanketNsdramCarveout;
+  BanketDramEnabled = CPUBL_PARAMS (CpuBootloaderParams, FeatureFlagData.EnableBlanketNsdramCarveout);
 
   // Build dram regions
   if (BanketDramEnabled) {
@@ -161,10 +161,10 @@ T234GetResourceConfig (
       return EFI_DEVICE_ERROR;
     }
 
-    DramRegions[0].MemoryBaseAddress   = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Base;
-    DramRegions[0].MemoryLength        = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Size;
-    DramRegions[1].MemoryBaseAddress   = CpuBootloaderParams->CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Base;
-    DramRegions[1].MemoryLength        = CpuBootloaderParams->CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Size;
+    DramRegions[0].MemoryBaseAddress   = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Base);
+    DramRegions[0].MemoryLength        = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Size);
+    DramRegions[1].MemoryBaseAddress   = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Base);
+    DramRegions[1].MemoryLength        = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Size);
     PlatformInfo->DramRegions          = DramRegions;
     PlatformInfo->DramRegionsCount     = 2;
     PlatformInfo->UefiDramRegionsCount = 2;
@@ -176,7 +176,7 @@ T234GetResourceConfig (
     }
 
     DramRegions->MemoryBaseAddress     = TegraGetSystemMemoryBaseAddress (T234_CHIP_ID);
-    DramRegions->MemoryLength          = CpuBootloaderParams->SdramSize;
+    DramRegions->MemoryLength          = CPUBL_PARAMS (CpuBootloaderParams, SdramSize);
     PlatformInfo->DramRegions          = DramRegions;
     PlatformInfo->DramRegionsCount     = 1;
     PlatformInfo->UefiDramRegionsCount = 1;
@@ -190,8 +190,8 @@ T234GetResourceConfig (
   }
 
   for (Index = CARVEOUT_NONE; Index < CARVEOUT_OEM_COUNT; Index++) {
-    if ((CpuBootloaderParams->CarveoutInfo[Index].Base == 0) ||
-        (CpuBootloaderParams->CarveoutInfo[Index].Size == 0))
+    if ((CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base) == 0) ||
+        (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size) == 0))
     {
       continue;
     }
@@ -200,8 +200,8 @@ T234GetResourceConfig (
       EFI_D_ERROR,
       "Carveout %d Region: Base: 0x%016lx, Size: 0x%016lx\n",
       Index,
-      CpuBootloaderParams->CarveoutInfo[Index].Base,
-      CpuBootloaderParams->CarveoutInfo[Index].Size
+      CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base),
+      CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size)
       ));
     if (Index == CARVEOUT_CCPLEX_INTERWORLD_SHMEM) {
       // Leave in memory map but marked as used
@@ -218,36 +218,36 @@ T234GetResourceConfig (
       }
 
       BuildMemoryAllocationHob (
-        CpuBootloaderParams->CarveoutInfo[Index].Base,
-        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
+        CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base),
+        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size))),
         MemoryType
         );
     } else if (Index == CARVEOUT_RCM_BLOB) {
       // Leave in memory map but marked as used
       BuildMemoryAllocationHob (
-        CpuBootloaderParams->CarveoutInfo[Index].Base,
-        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
+        CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base),
+        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size))),
         EfiBootServicesData
         );
     } else if (Index == CARVEOUT_OS) {
       // Leave in memory map but marked as used
       BuildMemoryAllocationHob (
-        CpuBootloaderParams->CarveoutInfo[Index].Base,
-        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
+        CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base),
+        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size))),
         EfiReservedMemoryType
         );
 
       Descriptor.Type          = EfiReservedMemoryType;
-      Descriptor.PhysicalStart = CpuBootloaderParams->CarveoutInfo[Index].Base;
-      Descriptor.VirtualStart  = CpuBootloaderParams->CarveoutInfo[Index].Base;
-      Descriptor.NumberOfPages = EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size);
+      Descriptor.PhysicalStart = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
+      Descriptor.VirtualStart  = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
+      Descriptor.NumberOfPages = EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size));
       Descriptor.Attribute     = 0;
       BuildGuidDataHob (&gNVIDIAOSCarveoutHob, &Descriptor, sizeof (Descriptor));
     } else if (Index == CARVEOUT_GR) {
       // Leave in memory map but marked as used
       BuildMemoryAllocationHob (
-        CpuBootloaderParams->CarveoutInfo[Index].Base,
-        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
+        CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base),
+        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size))),
         EfiReservedMemoryType
         );
     } else if (Index != CARVEOUT_UEFI) {
@@ -259,8 +259,8 @@ T234GetResourceConfig (
         continue;
       }
 
-      CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
-      CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
+      CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
+      CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size);
       CarveoutRegionsCount++;
     }
   }
@@ -308,8 +308,8 @@ T234GetGRBlobBaseAddress (
   UINT64                      FvSize;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  MemoryBase          = CpuBootloaderParams->CarveoutInfo[CARVEOUT_UEFI].Base;
-  MemorySize          = CpuBootloaderParams->CarveoutInfo[CARVEOUT_UEFI].Size;
+  MemoryBase          = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_UEFI].Base);
+  MemorySize          = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_UEFI].Size);
   FvOffset            = 0;
 
   while (FvOffset < MemorySize) {
@@ -356,7 +356,7 @@ T234GetEepromData (
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  return &CpuBootloaderParams->Eeprom;
+  return ADDR_OF_CPUBL_PARAMS (CpuBootloaderParams, Eeprom);
 }
 
 /**
@@ -492,7 +492,7 @@ T234GetPlatformResourceInformation (
   BOOLEAN             Result;
   TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
 
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)CpuBootloaderAddress;
 
   PlatformResourceInfo->NumSockets      = 1;
   PlatformResourceInfo->BrBctUpdateFlag = T234GetUpdateBrBct (CpuBootloaderAddress);
@@ -517,22 +517,22 @@ T234GetPlatformResourceInformation (
   }
 
   // Populate RamOops Memory Information
-  PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Base;
-  PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryLength      = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Size;
+  PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_RAM_OOPS].Base);
+  PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_RAM_OOPS].Size);
 
   // Populate GrOutputInfo
-  PlatformResourceInfo->GrOutputInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Base;
-  PlatformResourceInfo->GrOutputInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Size;
+  PlatformResourceInfo->GrOutputInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_GR].Base);
+  PlatformResourceInfo->GrOutputInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_GR].Size);
 
   // Populate FsiNsInfo
-  PlatformResourceInfo->FsiNsInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Base;
-  PlatformResourceInfo->FsiNsInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Size;
+  PlatformResourceInfo->FsiNsInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_FSI_CPU_NS].Base);
+  PlatformResourceInfo->FsiNsInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_FSI_CPU_NS].Size);
 
   // Populate RcmBlobInfo
-  PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
-  PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;
+  PlatformResourceInfo->RcmBlobInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_RCM_BLOB].Base);
+  PlatformResourceInfo->RcmBlobInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_RCM_BLOB].Size);
 
-  PlatformResourceInfo->BootType = CpuBootloaderParams->BootType;
+  PlatformResourceInfo->BootType = CPUBL_PARAMS (CpuBootloaderParams, BootType);
 
   return EFI_SUCCESS;
 }
