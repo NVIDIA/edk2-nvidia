@@ -466,3 +466,5 @@
 #CPU is connected to RTC's primary I2C bus, and has full control of RTC
   gNVIDIATokenSpaceGuid.PcdCpuHasRtcControl|FALSE|BOOLEAN|0x0000006D
 
+#The BlobId of SMBIOS Blob in BMC Phosphor Blob Transfer architecture
+  gNVIDIATokenSpaceGuid.PcdBmcSmbiosBlobTransferId|"/smbios"|VOID*|0x0000006E
