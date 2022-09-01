@@ -2,7 +2,7 @@
 
   I2C GPIO expander Driver
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -440,50 +440,56 @@ InitializeI2cExpanderGpio (
   )
 {
   EFI_STATUS  Status;
-  EFI_EVENT   I2cIoReadyEvent = NULL;
+  EFI_EVENT   I2cIoReadyEvent;
 
-  mI2cExpanderData.NumberOfControllers = 0;
+  I2cIoReadyEvent = NULL;
+  ZeroMem (&mI2cExpanderData, sizeof (mI2cExpanderData));
 
   Status = GetMatchingEnabledDeviceTreeNodes ("ti,tca9539", NULL, &mI2cExpanderData.NumberOfControllers);
   if (Status == EFI_NOT_FOUND) {
     mI2cExpanderData.NumberOfControllers = 0;
-  } else if (Status != EFI_BUFFER_TOO_SMALL) {
-    return Status;
-  }
-
-  mI2cExpanderData.PlatformGpioController.GpioControllerCount = 0;
-  mI2cExpanderData.PlatformGpioController.GpioCount           = 0;
-
-  if (mI2cExpanderData.NumberOfControllers == 0) {
-    mI2cExpanderData.I2cIoArray                            = NULL;
-    mI2cExpanderData.PlatformGpioController.GpioController = NULL;
     InstallI2cExpanderProtocols ();
-  } else {
+    Status = EFI_SUCCESS;
+  } else if (Status == EFI_BUFFER_TOO_SMALL) {
+    Status                                                 = EFI_SUCCESS;
     mI2cExpanderData.PlatformGpioController.GpioController = (GPIO_CONTROLLER *)AllocateZeroPool (sizeof (GPIO_CONTROLLER) * mI2cExpanderData.NumberOfControllers);
-    if (mI2cExpanderData.PlatformGpioController.GpioController == NULL) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Gpio Controller structure\r\n", __FUNCTION__));
-      return EFI_OUT_OF_RESOURCES;
-    }
+    mI2cExpanderData.I2cIoArray                            = (EFI_I2C_IO_PROTOCOL **)AllocateZeroPool (sizeof (EFI_I2C_IO_PROTOCOL *) * mI2cExpanderData.NumberOfControllers);
 
-    mI2cExpanderData.I2cIoArray = (EFI_I2C_IO_PROTOCOL **)AllocateZeroPool (sizeof (EFI_I2C_IO_PROTOCOL *) * mI2cExpanderData.NumberOfControllers);
-    if (mI2cExpanderData.I2cIoArray == NULL) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate I2C IO array structure\r\n", __FUNCTION__));
-      return EFI_OUT_OF_RESOURCES;
-    }
-
-    mI2cExpanderData.I2cIoSearchToken = NULL;
-    I2cIoReadyEvent                   = EfiCreateProtocolNotifyEvent (
-                                          &gEfiI2cIoProtocolGuid,
-                                          TPL_CALLBACK,
-                                          I2cIoProtocolReady,
-                                          NULL,
-                                          &mI2cExpanderData.I2cIoSearchToken
-                                          );
-    if (NULL == I2cIoReadyEvent) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to create I2cIo notification event\r\n", __FUNCTION__, Status));
-      return EFI_OUT_OF_RESOURCES;
+    if ((mI2cExpanderData.PlatformGpioController.GpioController != NULL) &&
+        (mI2cExpanderData.I2cIoArray != NULL))
+    {
+      I2cIoReadyEvent = EfiCreateProtocolNotifyEvent (
+                          &gEfiI2cIoProtocolGuid,
+                          TPL_CALLBACK,
+                          I2cIoProtocolReady,
+                          NULL,
+                          &mI2cExpanderData.I2cIoSearchToken
+                          );
+      if (I2cIoReadyEvent == NULL) {
+        DEBUG ((EFI_D_ERROR, "%a, Failed to create I2cIo notification event\r\n", __FUNCTION__));
+        Status = EFI_OUT_OF_RESOURCES;
+      }
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate I2CExpander structures\r\n", __FUNCTION__));
+      Status = EFI_OUT_OF_RESOURCES;
     }
   }
 
-  return EFI_SUCCESS;
+  if (EFI_ERROR (Status)) {
+    if (I2cIoReadyEvent != NULL) {
+      gBS->CloseEvent (I2cIoReadyEvent);
+    }
+
+    if (mI2cExpanderData.PlatformGpioController.GpioController != NULL) {
+      FreePool (mI2cExpanderData.PlatformGpioController.GpioController);
+      mI2cExpanderData.PlatformGpioController.GpioController = NULL;
+    }
+
+    if (mI2cExpanderData.I2cIoArray != NULL) {
+      FreePool (mI2cExpanderData.I2cIoArray);
+      mI2cExpanderData.I2cIoArray = NULL;
+    }
+  }
+
+  return Status;
 }
