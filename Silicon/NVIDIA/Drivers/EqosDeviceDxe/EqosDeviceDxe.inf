@@ -2,7 +2,7 @@
 #
 #  DW EQoS device tree binding driver
 #
-#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -110,4 +110,4 @@
 
 [BuildOptions]
   *_*_*_PP_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT
-  *_*_*_CC_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT
+  *_*_*_CC_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT -Wno-unused-function -Wno-self-assign
