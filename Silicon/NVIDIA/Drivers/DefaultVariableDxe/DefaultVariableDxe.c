@@ -284,6 +284,7 @@ GetEspVarDataAndAttr (
 
   FileInfo = FileHandleGetInfo (VarFile);
   if (FileInfo == NULL) {
+    Status = EFI_NOT_FOUND;
     DEBUG ((
       DEBUG_ERROR,
       "%a: Invalid File Handle %r\n",

@@ -144,8 +144,8 @@ BpmpIpcInitialize (
   INT32                    NodeOffset;
   NON_DISCOVERABLE_DEVICE  *Device      = NULL;
   EFI_HANDLE               DeviceHandle = NULL;
-  NVIDIA_DT_NODE_INFO      *DeviceInfo;
-  UINT32                   DeviceCount = 0;
+  NVIDIA_DT_NODE_INFO      *DeviceInfo  = NULL;
+  UINT32                   DeviceCount  = 0;
   UINT32                   Index;
 
   Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);

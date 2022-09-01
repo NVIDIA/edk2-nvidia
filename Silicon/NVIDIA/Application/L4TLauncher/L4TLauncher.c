@@ -2177,7 +2177,7 @@ BootAndroidStylePartition (
   VOID                    *KernelDtb;
   VOID                    *Dtb;
   VOID                    *ExpandedDtb;
-  VOID                    *CurrentDtb;
+  VOID                    *CurrentDtb = NULL;
   VOID                    *AcpiBase;
 
   Status = FindPartitionInfo (DeviceHandle, BootImgPartitionBasename, BootParams->BootChain, NULL, &PartitionHandle);
@@ -2332,7 +2332,10 @@ BootAndroidStylePartition (
     ExpandedDtb = NULL;
   }
 
-  Status = gBS->InstallConfigurationTable (&gFdtTableGuid, CurrentDtb);
+  if (CurrentDtb != NULL) {
+    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, CurrentDtb);
+  }
+
 Exit:
   return Status;
 }
