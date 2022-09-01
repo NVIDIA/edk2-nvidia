@@ -27,15 +27,15 @@
 //
 // Global Variables definitions
 //
-extern EFI_DRIVER_BINDING_PROTOCOL  gBpmpIpcDriverBinding;
-extern EFI_COMPONENT_NAME_PROTOCOL  gBpmpIpcComponentName;
-extern EFI_COMPONENT_NAME2_PROTOCOL gBpmpIpcComponentName2;
+extern EFI_DRIVER_BINDING_PROTOCOL   gBpmpIpcDriverBinding;
+extern EFI_COMPONENT_NAME_PROTOCOL   gBpmpIpcComponentName;
+extern EFI_COMPONENT_NAME2_PROTOCOL  gBpmpIpcComponentName2;
 
-//Amount to stall during timeout loops
-#define TIMEOUT_STALL_US 10
+// Amount to stall during timeout loops
+#define TIMEOUT_STALL_US  10
 
-//Time to poll in in 100ns intervals
-#define BPMP_POLL_INTERVAL 1000 //(100us)
+// Time to poll in in 100ns intervals
+#define BPMP_POLL_INTERVAL  1000// (100us)
 
 /**
   This routine starts the HspDoorbell protocol on the device.
@@ -50,8 +50,8 @@ extern EFI_COMPONENT_NAME2_PROTOCOL gBpmpIpcComponentName2;
 EFI_STATUS
 EFIAPI
 HspDoorbellProtocolInit (
-  IN EFI_HANDLE                     *Controller,
-  IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
+  IN EFI_HANDLE               *Controller,
+  IN NON_DISCOVERABLE_DEVICE  *NonDiscoverableProtocol
   );
 
 /**
@@ -67,7 +67,8 @@ HspDoorbellProtocolInit (
 EFI_STATUS
 EFIAPI
 BpmpIpcProtocolInit (
-  IN EFI_HANDLE                     *Controller,
-  IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
+  IN EFI_HANDLE               *Controller,
+  IN NON_DISCOVERABLE_DEVICE  *NonDiscoverableProtocol
   );
+
 #endif

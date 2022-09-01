@@ -12,7 +12,7 @@
 #include "HspDoorbellPrivate.h"
 #include <Library/IoLib.h>
 
-HSP_MASTER_ID DoorbellToMaster[HspDoorbellMax] = {
+HSP_MASTER_ID  DoorbellToMaster[HspDoorbellMax] = {
   HSP_MASTER_DPMU,
   HSP_MASTER_CCPLEX,
   HSP_MASTER_SECURE_CCPLEX,
@@ -35,10 +35,12 @@ HSP_MASTER_ID DoorbellToMaster[HspDoorbellMax] = {
 **/
 EFI_STATUS
 HspDoorbellRingDoorbell (
-  IN  NVIDIA_HSP_DOORBELL_PROTOCOL   *This,
-  IN  HSP_DOORBELL_ID                Doorbell
-  ) {
-  NVIDIA_HSP_DOORBELL_PRIVATE_DATA *PrivateData = NULL;
+  IN  NVIDIA_HSP_DOORBELL_PROTOCOL  *This,
+  IN  HSP_DOORBELL_ID               Doorbell
+  )
+{
+  NVIDIA_HSP_DOORBELL_PRIVATE_DATA  *PrivateData = NULL;
+
   PrivateData = HSP_DOORBELL_PRIVATE_DATA_FROM_THIS (This);
 
   if (Doorbell >= HspDoorbellMax) {
@@ -48,11 +50,13 @@ HspDoorbellRingDoorbell (
   if (0 == MmioBitFieldRead32 (
              PrivateData->DoorbellLocation[Doorbell] + HSP_DB_REG_ENABLE,
              HSP_MASTER_CCPLEX,
-             HSP_MASTER_CCPLEX)) {
+             HSP_MASTER_CCPLEX
+             ))
+  {
     return EFI_NOT_READY;
   }
 
-  //Ring doorbell
+  // Ring doorbell
   MmioWrite32 (PrivateData->DoorbellLocation[Doorbell] + HSP_DB_REG_TRIGGER, 1);
 
   return EFI_SUCCESS;
@@ -70,13 +74,13 @@ HspDoorbellRingDoorbell (
 **/
 EFI_STATUS
 HspDoorbellEnableChannel (
-  IN  NVIDIA_HSP_DOORBELL_PROTOCOL   *This,
-  IN  HSP_DOORBELL_ID                Doorbell
+  IN  NVIDIA_HSP_DOORBELL_PROTOCOL  *This,
+  IN  HSP_DOORBELL_ID               Doorbell
   )
 {
-  NVIDIA_HSP_DOORBELL_PRIVATE_DATA *PrivateData = NULL;
-  HSP_MASTER_ID                    Master;
-  UINT32                           Timeout = PcdGet32 (PcdHspDoorbellTimeout) / TIMEOUT_STALL_US;
+  NVIDIA_HSP_DOORBELL_PRIVATE_DATA  *PrivateData = NULL;
+  HSP_MASTER_ID                     Master;
+  UINT32                            Timeout = PcdGet32 (PcdHspDoorbellTimeout) / TIMEOUT_STALL_US;
 
   PrivateData = HSP_DOORBELL_PRIVATE_DATA_FROM_THIS (This);
 
@@ -97,7 +101,9 @@ HspDoorbellEnableChannel (
   while (0 == MmioBitFieldRead32 (
                 PrivateData->DoorbellLocation[Doorbell] + HSP_DB_REG_ENABLE,
                 HSP_MASTER_CCPLEX,
-                HSP_MASTER_CCPLEX)) {
+                HSP_MASTER_CCPLEX
+                ))
+  {
     gBS->Stall (TIMEOUT_STALL_US);
     if (Timeout != 0) {
       Timeout--;
@@ -106,11 +112,11 @@ HspDoorbellEnableChannel (
       }
     }
   }
+
   DEBUG ((EFI_D_ERROR, "%a: HSP Doorbell Channel Enabled.\r\n", __FUNCTION__));
 
   return EFI_SUCCESS;
 }
-
 
 /**
   This routine starts the HspDoorbell protocol on the device.
@@ -126,15 +132,15 @@ HspDoorbellEnableChannel (
 EFI_STATUS
 EFIAPI
 HspDoorbellProtocolInit (
-  IN EFI_HANDLE                     *Controller,
-  IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
+  IN EFI_HANDLE               *Controller,
+  IN NON_DISCOVERABLE_DEVICE  *NonDiscoverableProtocol
   )
 {
-  EFI_STATUS                       Status;
-  NVIDIA_HSP_DOORBELL_PRIVATE_DATA *PrivateData = NULL;
-  EFI_PHYSICAL_ADDRESS             HspBase;
-  UINTN                            Index;
-  HSP_DIMENSIONING_DATA            HspDimensioningData;
+  EFI_STATUS                        Status;
+  NVIDIA_HSP_DOORBELL_PRIVATE_DATA  *PrivateData = NULL;
+  EFI_PHYSICAL_ADDRESS              HspBase;
+  UINTN                             Index;
+  HSP_DIMENSIONING_DATA             HspDimensioningData;
 
   PrivateData = AllocateZeroPool (sizeof (NVIDIA_HSP_DOORBELL_PRIVATE_DATA));
   if (NULL == PrivateData) {
@@ -142,14 +148,15 @@ HspDoorbellProtocolInit (
     goto ErrorExit;
   }
 
-  PrivateData->Signature = HSP_DOORBELL_SIGNATURE;
-  PrivateData->DoorbellProtocol.RingDoorbell = HspDoorbellRingDoorbell;
+  PrivateData->Signature                      = HSP_DOORBELL_SIGNATURE;
+  PrivateData->DoorbellProtocol.RingDoorbell  = HspDoorbellRingDoorbell;
   PrivateData->DoorbellProtocol.EnableChannel = HspDoorbellEnableChannel;
 
-  //First resource must be MMIO
+  // First resource must be MMIO
   if ((NonDiscoverableProtocol->Resources == NULL) ||
       (NonDiscoverableProtocol->Resources->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
-      (NonDiscoverableProtocol->Resources->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM)) {
+      (NonDiscoverableProtocol->Resources->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM))
+  {
     DEBUG ((EFI_D_ERROR, "%a: Invalid node resources.\r\n", __FUNCTION__));
     Status = EFI_DEVICE_ERROR;
     goto ErrorExit;
@@ -157,28 +164,30 @@ HspDoorbellProtocolInit (
 
   HspBase = NonDiscoverableProtocol->Resources->AddrRangeMin;
 
-  HspDimensioningData.RawValue = MmioRead32(HspBase + HSP_DIMENSIONING);
+  HspDimensioningData.RawValue = MmioRead32 (HspBase + HSP_DIMENSIONING);
 
-  HspBase += HSP_COMMON_REGION_SIZE; /* skip common regs */
-  HspBase += HspDimensioningData.SharedMailboxes << HSP_MAILBOX_SHIFT_SIZE; /* skip shared mailboxes */
-  HspBase += HspDimensioningData.SharedSemaphores << HSP_SEMAPHORE_SHIFT_SIZE; /* skip shared semaphores */
+  HspBase += HSP_COMMON_REGION_SIZE;                                               /* skip common regs */
+  HspBase += HspDimensioningData.SharedMailboxes << HSP_MAILBOX_SHIFT_SIZE;        /* skip shared mailboxes */
+  HspBase += HspDimensioningData.SharedSemaphores << HSP_SEMAPHORE_SHIFT_SIZE;     /* skip shared semaphores */
   HspBase += HspDimensioningData.ArbitratedSemaphores << HSP_SEMAPHORE_SHIFT_SIZE; /* skip arbitrated semaphores */
 
   for (Index = HspDoorbellDpmu; Index < HspDoorbellMax; Index++) {
     PrivateData->DoorbellLocation[Index] = HspBase;
-    HspBase += HSP_DOORBELL_REGION_SIZE;
+    HspBase                             += HSP_DOORBELL_REGION_SIZE;
   }
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   Controller,
                   &gNVIDIAHspDoorbellProtocolGuid,
                   &PrivateData->DoorbellProtocol,
-                  NULL);
+                  NULL
+                  );
 ErrorExit:
   if (EFI_ERROR (Status)) {
     if (NULL != PrivateData) {
       FreePool (PrivateData);
     }
   }
+
   return Status;
 }

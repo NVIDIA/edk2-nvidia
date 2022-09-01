@@ -12,7 +12,7 @@
 #include <Library/ArmLib.h>
 #include <Library/IoLib.h>
 
-#define BOTH_ALIGNED(a, b, align) ((((UINTN)(a) | (UINTN)(b)) & ((align) - 1)) == 0)
+#define BOTH_ALIGNED(a, b, align)  ((((UINTN)(a) | (UINTN)(b)) & ((align) - 1)) == 0)
 
 /**
   Copy Length bytes from Source to Destination, using mmio accesses for specified direction.
@@ -26,48 +26,51 @@
 STATIC
 VOID
 MmioCopyMem (
-  OUT     VOID                      *DestinationBuffer,
-  IN      CONST VOID                *SourceBuffer,
-  IN      UINTN                     Length,
-  IN      BOOLEAN                   ReadFromMmio
+  OUT     VOID        *DestinationBuffer,
+  IN      CONST VOID  *SourceBuffer,
+  IN      UINTN       Length,
+  IN      BOOLEAN     ReadFromMmio
   )
 {
-  UINTN             AlignedLength;
+  UINTN  AlignedLength;
 
-  if (BOTH_ALIGNED(DestinationBuffer, SourceBuffer, 8) && Length >= 8) {
+  if (BOTH_ALIGNED (DestinationBuffer, SourceBuffer, 8) && (Length >= 8)) {
     AlignedLength = Length & ~0x7;
     if (ReadFromMmio) {
       MmioReadBuffer64 ((UINTN)SourceBuffer, AlignedLength, DestinationBuffer);
     } else {
       MmioWriteBuffer64 ((UINTN)DestinationBuffer, AlignedLength, SourceBuffer);
     }
-    Length -= AlignedLength;
+
+    Length            -= AlignedLength;
     DestinationBuffer += AlignedLength;
-    SourceBuffer += AlignedLength;
+    SourceBuffer      += AlignedLength;
   }
 
-  if (BOTH_ALIGNED(DestinationBuffer, SourceBuffer, 4) && Length >= 4) {
+  if (BOTH_ALIGNED (DestinationBuffer, SourceBuffer, 4) && (Length >= 4)) {
     AlignedLength = Length & ~0x3;
     if (ReadFromMmio) {
       MmioReadBuffer32 ((UINTN)SourceBuffer, AlignedLength, DestinationBuffer);
     } else {
       MmioWriteBuffer32 ((UINTN)DestinationBuffer, AlignedLength, SourceBuffer);
     }
-    Length -= AlignedLength;
+
+    Length            -= AlignedLength;
     DestinationBuffer += AlignedLength;
-    SourceBuffer += AlignedLength;
+    SourceBuffer      += AlignedLength;
   }
 
-  if (BOTH_ALIGNED(DestinationBuffer, SourceBuffer, 2) && Length >= 2) {
+  if (BOTH_ALIGNED (DestinationBuffer, SourceBuffer, 2) && (Length >= 2)) {
     AlignedLength = Length & ~0x1;
     if (ReadFromMmio) {
       MmioReadBuffer16 ((UINTN)SourceBuffer, AlignedLength, DestinationBuffer);
     } else {
       MmioWriteBuffer16 ((UINTN)DestinationBuffer, AlignedLength, SourceBuffer);
     }
-    Length -= AlignedLength;
+
+    Length            -= AlignedLength;
     DestinationBuffer += AlignedLength;
-    SourceBuffer += AlignedLength;
+    SourceBuffer      += AlignedLength;
   }
 
   if (Length != 0) {
@@ -92,12 +95,12 @@ MmioCopyMem (
 BOOLEAN
 EFIAPI
 ChannelFree (
-  IN volatile IVC_CHANNEL *Channel
+  IN volatile IVC_CHANNEL  *Channel
   )
 {
-  UINT32 TransferCount = Channel->WriteCount - Channel->ReadCount;
+  UINT32  TransferCount = Channel->WriteCount - Channel->ReadCount;
 
-  //If excess writes are seen then treat as free
+  // If excess writes are seen then treat as free
   return (TransferCount != 1);
 }
 
@@ -110,7 +113,7 @@ ChannelFree (
 VOID
 EFIAPI
 TransactionFree (
-  IN BPMP_PENDING_TRANSACTION *Transaction
+  IN BPMP_PENDING_TRANSACTION  *Transaction
   )
 {
   if (Transaction == NULL) {
@@ -136,18 +139,18 @@ ProcessTransaction (
   IN NVIDIA_BPMP_IPC_PRIVATE_DATA  *PrivateData
   )
 {
-  EFI_TPL                  OldTpl;
-  LIST_ENTRY               *List;
-  BPMP_PENDING_TRANSACTION *Transaction;
-  UINT64                   TimerTick;
-  EFI_STATUS               Status;
-  BOOLEAN                  ListEmpty;
+  EFI_TPL                   OldTpl;
+  LIST_ENTRY                *List;
+  BPMP_PENDING_TRANSACTION  *Transaction;
+  UINT64                    TimerTick;
+  EFI_STATUS                Status;
+  BOOLEAN                   ListEmpty;
 
   OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
-  List = GetFirstNode (&PrivateData->TransactionList);
+  List   = GetFirstNode (&PrivateData->TransactionList);
   gBS->RestoreTPL (OldTpl);
 
-  //List is empty
+  // List is empty
   if (List == &PrivateData->TransactionList) {
     return;
   }
@@ -157,7 +160,7 @@ ProcessTransaction (
     return;
   }
 
-  //Validate channels are empty
+  // Validate channels are empty
   if (!ChannelFree (PrivateData->RxChannel) || !ChannelFree (PrivateData->TxChannel)) {
     DEBUG ((EFI_D_ERROR, "%a: Channel not idle\r\n", __FUNCTION__));
     ASSERT (FALSE);
@@ -173,12 +176,13 @@ ProcessTransaction (
     if (!ListEmpty) {
       ProcessTransaction (PrivateData);
     }
+
     return;
   }
 
-  //Copy to Tx channel
+  // Copy to Tx channel
   PrivateData->TxChannel->MessageRequest = Transaction->MessageRequest;
-  PrivateData->TxChannel->Flags = IVC_FLAGS_DO_ACK;
+  PrivateData->TxChannel->Flags          = IVC_FLAGS_DO_ACK;
   MmioCopyMem ((VOID *)PrivateData->TxChannel->Data, Transaction->TxData, Transaction->TxDataSize, FALSE);
 
   PrivateData->TxChannel->WriteCount++;
@@ -189,14 +193,14 @@ ProcessTransaction (
                                    HspDoorbellBpmp
                                    );
 
-  //Wait for done
+  // Wait for done
   if (!Transaction->Blocking) {
     TimerTick = BPMP_POLL_INTERVAL;
-    Status = gBS->SetTimer (
-                    PrivateData->TimerEvent,
-                    TimerPeriodic,
-                    TimerTick
-                    );
+    Status    = gBS->SetTimer (
+                       PrivateData->TimerEvent,
+                       TimerPeriodic,
+                       TimerTick
+                       );
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to set timer:%r\r\n", __FUNCTION__, Status));
 
@@ -211,6 +215,7 @@ ProcessTransaction (
       if (!ListEmpty) {
         ProcessTransaction (PrivateData);
       }
+
       return;
     }
   }
@@ -226,8 +231,8 @@ ProcessTransaction (
 VOID
 EFIAPI
 BpmpIpcTimerNotify (
-  IN EFI_EVENT Event,
-  IN VOID      *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
   NVIDIA_BPMP_IPC_PRIVATE_DATA  *PrivateData = (NVIDIA_BPMP_IPC_PRIVATE_DATA *)Context;
@@ -247,10 +252,10 @@ BpmpIpcTimerNotify (
   ArmDataMemoryBarrier ();
 
   OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
-  List = GetFirstNode (&PrivateData->TransactionList);
+  List   = GetFirstNode (&PrivateData->TransactionList);
   gBS->RestoreTPL (OldTpl);
 
-  //List is empty
+  // List is empty
   if (List == &PrivateData->TransactionList) {
     return;
   }
@@ -269,11 +274,13 @@ BpmpIpcTimerNotify (
   if (NULL != Transaction->MessageError) {
     *Transaction->MessageError = PrivateData->RxChannel->MessageRequest;
   }
+
   if (PrivateData->RxChannel->MessageRequest != 0) {
     Transaction->Token->TransactionStatus = EFI_PROTOCOL_ERROR;
   } else {
     Transaction->Token->TransactionStatus = EFI_SUCCESS;
   }
+
   MmioCopyMem (Transaction->RxData, (VOID *)PrivateData->RxChannel->Data, Transaction->RxDataSize, TRUE);
 
   PrivateData->RxChannel->ReadCount++;
@@ -314,8 +321,8 @@ BpmpIpcTimerNotify (
 **/
 EFI_STATUS
 BpmpIpcCommunicate (
-  IN  NVIDIA_BPMP_IPC_PROTOCOL   *This,
-  IN  OUT NVIDIA_BPMP_IPC_TOKEN  *Token, OPTIONAL
+  IN  NVIDIA_BPMP_IPC_PROTOCOL *This,
+  IN  OUT NVIDIA_BPMP_IPC_TOKEN *Token, OPTIONAL
   IN  UINT32                     MessageRequest,
   IN  VOID                       *TxData,
   IN  UINTN                      TxDataSize,
@@ -324,20 +331,20 @@ BpmpIpcCommunicate (
   IN  INT32                      *MessageError OPTIONAL
   )
 {
-  NVIDIA_BPMP_IPC_TOKEN        LocalToken;
-  BPMP_PENDING_TRANSACTION     LocalPendingTransaction;
-  BOOLEAN                      Blocking = FALSE;
-  EFI_STATUS                   Status;
-  EFI_TPL                      OldTpl;
-  NVIDIA_BPMP_IPC_PRIVATE_DATA *PrivateData        = NULL;
-  BPMP_PENDING_TRANSACTION     *PendingTransaction = NULL;
-  BOOLEAN                      NeedQueue = FALSE;
+  NVIDIA_BPMP_IPC_TOKEN         LocalToken;
+  BPMP_PENDING_TRANSACTION      LocalPendingTransaction;
+  BOOLEAN                       Blocking = FALSE;
+  EFI_STATUS                    Status;
+  EFI_TPL                       OldTpl;
+  NVIDIA_BPMP_IPC_PRIVATE_DATA  *PrivateData        = NULL;
+  BPMP_PENDING_TRANSACTION      *PendingTransaction = NULL;
+  BOOLEAN                       NeedQueue           = FALSE;
 
   if (NULL == This) {
     return EFI_INVALID_PARAMETER;
   }
 
-  PrivateData = BPMP_IPC_PRIVATE_DATA_FROM_THIS(This);
+  PrivateData = BPMP_IPC_PRIVATE_DATA_FROM_THIS (This);
 
   if ((Token != NULL) && (Token->Event == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -348,42 +355,43 @@ BpmpIpcCommunicate (
       (TxDataSize > IVC_DATA_SIZE_BYTES) ||
       ((RxData != NULL) && (RxDataSize == 0)) ||
       ((RxData == NULL) && (RxDataSize != 0)) ||
-      (RxDataSize > IVC_DATA_SIZE_BYTES)) {
+      (RxDataSize > IVC_DATA_SIZE_BYTES))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
   if (Token == NULL) {
-    Blocking = TRUE;
+    Blocking           = TRUE;
     PendingTransaction = &LocalPendingTransaction;
-    Token = &LocalToken;
-    Status = gBS->CreateEvent (
-                    0,
-                    TPL_CALLBACK,
-                    NULL,
-                    NULL,
-                    &Token->Event
-                    );
+    Token              = &LocalToken;
+    Status             = gBS->CreateEvent (
+                                0,
+                                TPL_CALLBACK,
+                                NULL,
+                                NULL,
+                                &Token->Event
+                                );
     if (EFI_ERROR (Status)) {
       return Status;
     }
   } else {
-    PendingTransaction = (BPMP_PENDING_TRANSACTION *) AllocatePool(sizeof (BPMP_PENDING_TRANSACTION));
+    PendingTransaction = (BPMP_PENDING_TRANSACTION *)AllocatePool (sizeof (BPMP_PENDING_TRANSACTION));
     if (NULL == PendingTransaction) {
       return EFI_OUT_OF_RESOURCES;
     }
   }
 
-  PendingTransaction->Signature = BPMP_PENDING_TRANSACTION_SIGNATURE;
-  PendingTransaction->Token = Token;
+  PendingTransaction->Signature      = BPMP_PENDING_TRANSACTION_SIGNATURE;
+  PendingTransaction->Token          = Token;
   PendingTransaction->MessageRequest = MessageRequest;
-  PendingTransaction->TxData = TxData;
-  PendingTransaction->TxDataSize = TxDataSize;
-  PendingTransaction->RxData = RxData;
-  PendingTransaction->RxDataSize = RxDataSize;
-  PendingTransaction->Blocking = Blocking;
-  PendingTransaction->MessageError = MessageError;
+  PendingTransaction->TxData         = TxData;
+  PendingTransaction->TxDataSize     = TxDataSize;
+  PendingTransaction->RxData         = RxData;
+  PendingTransaction->RxDataSize     = RxDataSize;
+  PendingTransaction->Blocking       = Blocking;
+  PendingTransaction->MessageError   = MessageError;
 
-  OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
+  OldTpl    = gBS->RaiseTPL (TPL_NOTIFY);
   NeedQueue = IsListEmpty (&PrivateData->TransactionList);
   InsertTailList (&PrivateData->TransactionList, &PendingTransaction->Link);
   gBS->RestoreTPL (OldTpl);
@@ -405,12 +413,15 @@ BpmpIpcCommunicate (
       if (Status != EFI_NOT_READY) {
         break;
       }
+
       gBS->Stall (TIMEOUT_STALL_US);
     }
+
     gBS->CloseEvent (Token->Event);
     if (EFI_ERROR (Status)) {
       return Status;
     }
+
     return Token->TransactionStatus;
   } else {
     return EFI_SUCCESS;
@@ -434,18 +445,19 @@ MoveTxChannelState (
   IN IVC_STATE                     State
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   ArmDataMemoryBarrier ();
 
   PrivateData->TxChannel->State = State;
-  Status = PrivateData->DoorbellProtocol->RingDoorbell (
-                                            PrivateData->DoorbellProtocol,
-                                            HspDoorbellBpmp
-                                            );
+  Status                        = PrivateData->DoorbellProtocol->RingDoorbell (
+                                                                   PrivateData->DoorbellProtocol,
+                                                                   HspDoorbellBpmp
+                                                                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to ring doorbell: %r\r\n", __FUNCTION__, Status));
   }
+
   return Status;
 }
 
@@ -464,9 +476,9 @@ InitializeIvcChannel (
   IN NVIDIA_BPMP_IPC_PRIVATE_DATA  *PrivateData
   )
 {
-  UINT32     RemoteState;
-  EFI_STATUS Status;
-  UINTN      Timeout = PcdGet32 (PcdBpmpResponseTimeout) / TIMEOUT_STALL_US;
+  UINT32      RemoteState;
+  EFI_STATUS  Status;
+  UINTN       Timeout = PcdGet32 (PcdBpmpResponseTimeout) / TIMEOUT_STALL_US;
 
   Status = MoveTxChannelState (PrivateData, IvcStateSync);
   if (EFI_ERROR (Status)) {
@@ -486,8 +498,8 @@ InitializeIvcChannel (
 
     if ((RemoteState == IvcStateSync) ||
         ((RemoteState == IvcStateAck) &&
-         (PrivateData->TxChannel->State == IvcStateSync))) {
-
+         (PrivateData->TxChannel->State == IvcStateSync)))
+    {
       ArmDataMemoryBarrier ();
 
       PrivateData->TxChannel->WriteCount = 0;
@@ -525,14 +537,14 @@ InitializeIvcChannel (
 VOID
 EFIAPI
 HspProtocolNotify (
-  IN EFI_EVENT Event,
-  IN VOID      *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
-  EFI_STATUS                       Status;
-  NVIDIA_BPMP_IPC_PRIVATE_DATA     *PrivateData = (NVIDIA_BPMP_IPC_PRIVATE_DATA *)Context;
-  UINTN                            NumberOfHandles = 0;
-  EFI_HANDLE                       *HandleBuffer = NULL;
+  EFI_STATUS                    Status;
+  NVIDIA_BPMP_IPC_PRIVATE_DATA  *PrivateData    = (NVIDIA_BPMP_IPC_PRIVATE_DATA *)Context;
+  UINTN                         NumberOfHandles = 0;
+  EFI_HANDLE                    *HandleBuffer   = NULL;
 
   if (NULL == PrivateData) {
     return;
@@ -546,7 +558,7 @@ HspProtocolNotify (
                   &HandleBuffer
                   );
 
-  if (EFI_ERROR (Status) || NumberOfHandles == 0) {
+  if (EFI_ERROR (Status) || (NumberOfHandles == 0)) {
     DEBUG ((EFI_D_ERROR, "%a: Locate Handle:%r\r\n", __FUNCTION__, Status));
     return;
   }
@@ -557,7 +569,7 @@ HspProtocolNotify (
   Status = gBS->HandleProtocol (
                   PrivateData->DoorbellHandle,
                   &gNVIDIAHspDoorbellProtocolGuid,
-                  (VOID **) &PrivateData->DoorbellProtocol
+                  (VOID **)&PrivateData->DoorbellProtocol
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Handle Protocol %r\r\n", __FUNCTION__, Status));
@@ -614,14 +626,14 @@ HspProtocolNotify (
 EFI_STATUS
 EFIAPI
 BpmpIpcProtocolInit (
-  IN EFI_HANDLE                     *Controller,
-  IN NON_DISCOVERABLE_DEVICE        *NonDiscoverableProtocol
+  IN EFI_HANDLE               *Controller,
+  IN NON_DISCOVERABLE_DEVICE  *NonDiscoverableProtocol
   )
 {
-  EFI_STATUS                          Status;
-  NVIDIA_BPMP_IPC_PRIVATE_DATA        *PrivateData = NULL;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR   *Desc;
-  UINTN                               ResourceCount = 0;
+  EFI_STATUS                         Status;
+  NVIDIA_BPMP_IPC_PRIVATE_DATA       *PrivateData = NULL;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Desc;
+  UINTN                              ResourceCount = 0;
 
   PrivateData = AllocateZeroPool (sizeof (NVIDIA_BPMP_IPC_PRIVATE_DATA));
   if (NULL == PrivateData) {
@@ -629,15 +641,15 @@ BpmpIpcProtocolInit (
     goto ErrorExit;
   }
 
-  PrivateData->Signature = BPMP_IPC_SIGNATURE;
-  PrivateData->ProtocolInstalled = FALSE;
-  PrivateData->DriverBindingHandle = NULL;
-  PrivateData->DoorbellProtocol = NULL;
-  PrivateData->DoorbellHandle = NULL;
-  PrivateData->TxChannel = NULL;
-  PrivateData->RxChannel = NULL;
+  PrivateData->Signature                   = BPMP_IPC_SIGNATURE;
+  PrivateData->ProtocolInstalled           = FALSE;
+  PrivateData->DriverBindingHandle         = NULL;
+  PrivateData->DoorbellProtocol            = NULL;
+  PrivateData->DoorbellHandle              = NULL;
+  PrivateData->TxChannel                   = NULL;
+  PrivateData->RxChannel                   = NULL;
   PrivateData->BpmpIpcProtocol.Communicate = BpmpIpcCommunicate;
-  PrivateData->Controller = *Controller;
+  PrivateData->Controller                  = *Controller;
 
   Status = gBS->CreateEvent (
                   EVT_TIMER | EVT_NOTIFY_SIGNAL,
@@ -658,13 +670,16 @@ BpmpIpcProtocolInit (
   // that they only describe things that we can handle
   //
   for (Desc = NonDiscoverableProtocol->Resources; Desc->Desc != ACPI_END_TAG_DESCRIPTOR;
-       Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3)) {
-    if (Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR ||
-        Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM) {
+       Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3))
+  {
+    if ((Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
+        (Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM))
+    {
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
-    //Last two resources are tx and rx, some device trees have 3 nodes and some have 2.
+
+    // Last two resources are tx and rx, some device trees have 3 nodes and some have 2.
     if (PrivateData->TxChannel == NULL) {
       PrivateData->TxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
     } else if (PrivateData->RxChannel == NULL) {
@@ -673,22 +688,24 @@ BpmpIpcProtocolInit (
       PrivateData->TxChannel = PrivateData->RxChannel;
       PrivateData->RxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
     }
+
     ResourceCount++;
   }
 
   if ((NULL == PrivateData->TxChannel) ||
-      (NULL == PrivateData->RxChannel)) {
+      (NULL == PrivateData->RxChannel))
+  {
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
 
   PrivateData->RegisterNotifyEvent = EfiCreateProtocolNotifyEvent (
-                 &gNVIDIAHspDoorbellProtocolGuid,
-                 TPL_CALLBACK,
-                 HspProtocolNotify,
-                 (VOID *) PrivateData,
-                 &PrivateData->ProtocolNotifyToken
-                 );
+                                       &gNVIDIAHspDoorbellProtocolGuid,
+                                       TPL_CALLBACK,
+                                       HspProtocolNotify,
+                                       (VOID *)PrivateData,
+                                       &PrivateData->ProtocolNotifyToken
+                                       );
   if (NULL == PrivateData->RegisterNotifyEvent) {
     DEBUG ((EFI_D_ERROR, "%a: Enable Channel\r\n", __FUNCTION__));
     Status = EFI_DEVICE_ERROR;
@@ -699,7 +716,8 @@ BpmpIpcProtocolInit (
                   Controller,
                   &gEfiCallerIdGuid,
                   PrivateData,
-                  NULL);
+                  NULL
+                  );
 
 ErrorExit:
   if (EFI_ERROR (Status)) {
@@ -708,16 +726,19 @@ ErrorExit:
         gBS->CloseEvent (PrivateData->RegisterNotifyEvent);
         PrivateData->RegisterNotifyEvent = NULL;
       }
+
       if (NULL != PrivateData->DoorbellProtocol) {
         gBS->CloseProtocol (
-                        PrivateData->DoorbellHandle,
-                        &gNVIDIAHspDoorbellProtocolGuid,
-                        NULL,
-                        PrivateData->DoorbellHandle
-                        );
+               PrivateData->DoorbellHandle,
+               &gNVIDIAHspDoorbellProtocolGuid,
+               NULL,
+               PrivateData->DoorbellHandle
+               );
       }
+
       FreePool (PrivateData);
     }
   }
+
   return Status;
 }

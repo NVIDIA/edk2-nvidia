@@ -1,7 +1,7 @@
 /** @file
   UEFI Component Name(2) protocol implementation for BPMP IPC driver.
 
-  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -9,11 +9,10 @@
 
 #include "BpmpIpcDxePrivate.h"
 
-
 //
 /// Driver Name Strings
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mBpmpIpcDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mBpmpIpcDriverNameTable[] = {
   {
     "eng;en",
     (CHAR16 *)L"NVIDIA BPMP-FW IPC Driver"
@@ -27,7 +26,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mBpmpIpcDriverNameTable[]
 ///
 /// Controller Name Strings
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mBpmpControllerNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mBpmpControllerNameTable[] = {
   {
     "eng;en",
     (CHAR16 *)L"NVIDIA BPMP Controller"
@@ -38,7 +37,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mBpmpControllerNameTable[
   }
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mHspTopControllerNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mHspTopControllerNameTable[] = {
   {
     "eng;en",
     (CHAR16 *)L"NVIDIA HSP Controller"
@@ -73,9 +72,9 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mHspTopControllerNameTabl
 EFI_STATUS
 EFIAPI
 BpmpIpcComponentNameGetDriverName (
-  IN EFI_COMPONENT_NAME_PROTOCOL    *This,
-  IN CHAR8                          *Language,
-  OUT CHAR16                        **DriverName
+  IN EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN CHAR8                        *Language,
+  OUT CHAR16                      **DriverName
   )
 {
   return LookupUnicodeString2 (
@@ -130,16 +129,16 @@ BpmpIpcComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 BpmpIpcComponentNameGetControllerName (
-  IN EFI_COMPONENT_NAME_PROTOCOL    *This,
-  IN EFI_HANDLE                     ControllerHandle,
-  IN EFI_HANDLE                     ChildHandle OPTIONAL,
-  IN CHAR8                          *Language,
-  OUT CHAR16                        **ControllerName
+  IN EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN EFI_HANDLE                   ControllerHandle,
+  IN EFI_HANDLE                   ChildHandle OPTIONAL,
+  IN CHAR8                        *Language,
+  OUT CHAR16                      **ControllerName
   )
 {
-  EFI_STATUS               Status;
-  NON_DISCOVERABLE_DEVICE  *NonDiscoverableProtocol = NULL;
-  EFI_UNICODE_STRING_TABLE *StringTable = NULL;
+  EFI_STATUS                Status;
+  NON_DISCOVERABLE_DEVICE   *NonDiscoverableProtocol = NULL;
+  EFI_UNICODE_STRING_TABLE  *StringTable             = NULL;
 
   //
   // Make sure this driver is currently managing ControllHandle
@@ -163,7 +162,7 @@ BpmpIpcComponentNameGetControllerName (
                   (VOID **)&NonDiscoverableProtocol
                   );
   if (EFI_ERROR (Status)) {
-    //This should never be possible due to EfiTestManagedDeviceCall
+    // This should never be possible due to EfiTestManagedDeviceCall
     return EFI_UNSUPPORTED;
   }
 
@@ -176,14 +175,13 @@ BpmpIpcComponentNameGetControllerName (
   }
 
   return LookupUnicodeString2 (
-          Language,
-          This->SupportedLanguages,
-          StringTable,
-          ControllerName,
-          (BOOLEAN)(This == &gBpmpIpcComponentName)
-          );
+           Language,
+           This->SupportedLanguages,
+           StringTable,
+           ControllerName,
+           (BOOLEAN)(This == &gBpmpIpcComponentName)
+           );
 }
-
 
 //
 /// EFI Component Name Protocol
@@ -197,8 +195,8 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gBpmpIpcComponentName
 //
 /// EFI Component Name 2 Protocol
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gBpmpIpcComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) BpmpIpcComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) BpmpIpcComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gBpmpIpcComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)BpmpIpcComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)BpmpIpcComponentNameGetControllerName,
   "en"
 };

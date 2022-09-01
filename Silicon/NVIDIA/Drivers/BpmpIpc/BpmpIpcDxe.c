@@ -40,24 +40,26 @@ DeviceTreeIsSupported (
   )
 {
   if ((DeviceInfo == NULL) ||
-      (DeviceInfo->DeviceTreeBase == NULL)) {
+      (DeviceInfo->DeviceTreeBase == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
   if ((0 == fdt_node_check_compatible (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "nvidia,tegra186-hsp")) ||
       (0 == fdt_node_check_compatible (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "nvidia,tegra194-hsp")) ||
-      (0 == fdt_node_check_compatible (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "nvidia,tegra234-hsp"))){
-    //Only support hsp with doorbell
-    CONST CHAR8 *InterruptNames;
-    INT32       NamesLength;
+      (0 == fdt_node_check_compatible (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "nvidia,tegra234-hsp")))
+  {
+    // Only support hsp with doorbell
+    CONST CHAR8  *InterruptNames;
+    INT32        NamesLength;
 
-    InterruptNames = (CONST CHAR8*)fdt_getprop (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "interrupt-names", &NamesLength);
+    InterruptNames = (CONST CHAR8 *)fdt_getprop (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "interrupt-names", &NamesLength);
     if ((InterruptNames == NULL) || (NamesLength == 0)) {
       return EFI_UNSUPPORTED;
     }
 
     while (NamesLength > 0) {
-      INT32 Size = AsciiStrSize (InterruptNames);
+      INT32  Size = AsciiStrSize (InterruptNames);
       if ((Size <= 0) || (Size > NamesLength)) {
         return EFI_UNSUPPORTED;
       }
@@ -66,9 +68,11 @@ DeviceTreeIsSupported (
         DeviceInfo->DeviceType = &gNVIDIANonDiscoverableHspTopDeviceGuid;
         return EFI_SUCCESS;
       }
-      NamesLength -= Size;
+
+      NamesLength    -= Size;
       InterruptNames += Size;
     }
+
     return EFI_UNSUPPORTED;
   } else if (0 == fdt_node_check_compatible (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "nvidia,tegra186-bpmp")) {
     DeviceInfo->DeviceType = &gNVIDIANonDiscoverableBpmpDeviceGuid;
@@ -100,8 +104,8 @@ DeviceTreeIsSupported (
 **/
 EFI_STATUS
 BpmpIpcDummyCommunicate (
-  IN  NVIDIA_BPMP_IPC_PROTOCOL   *This,
-  IN  OUT NVIDIA_BPMP_IPC_TOKEN  *Token, OPTIONAL
+  IN  NVIDIA_BPMP_IPC_PROTOCOL *This,
+  IN  OUT NVIDIA_BPMP_IPC_TOKEN *Token, OPTIONAL
   IN  UINT32                     MessageRequest,
   IN  VOID                       *TxData,
   IN  UINTN                      TxDataSize,
@@ -113,9 +117,10 @@ BpmpIpcDummyCommunicate (
   return EFI_UNSUPPORTED;
 }
 
-CONST NVIDIA_BPMP_IPC_PROTOCOL mBpmpDummyProtocol = {
-    BpmpIpcDummyCommunicate
+CONST NVIDIA_BPMP_IPC_PROTOCOL  mBpmpDummyProtocol = {
+  BpmpIpcDummyCommunicate
 };
+
 /**
   Initialize the Bpmp Ipc Protocol Driver
 
@@ -129,39 +134,43 @@ CONST NVIDIA_BPMP_IPC_PROTOCOL mBpmpDummyProtocol = {
 **/
 EFI_STATUS
 BpmpIpcInitialize (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS              Status;
-  VOID                    *DeviceTreeBase;
-  UINTN                   DeviceTreeSize;
-  INT32                   NodeOffset;
-  NON_DISCOVERABLE_DEVICE *Device = NULL;
-  EFI_HANDLE              DeviceHandle = NULL;
-  NVIDIA_DT_NODE_INFO     *DeviceInfo;
-  UINT32                  DeviceCount=0;
-  UINT32                  Index;
+  EFI_STATUS               Status;
+  VOID                     *DeviceTreeBase;
+  UINTN                    DeviceTreeSize;
+  INT32                    NodeOffset;
+  NON_DISCOVERABLE_DEVICE  *Device      = NULL;
+  EFI_HANDLE               DeviceHandle = NULL;
+  NVIDIA_DT_NODE_INFO      *DeviceInfo;
+  UINT32                   DeviceCount = 0;
+  UINT32                   Index;
 
   Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
   }
 
-  //If BPMP is disabled on target return dummy ipc protocol
-  BOOLEAN BpmpPresent = FALSE;
+  // If BPMP is disabled on target return dummy ipc protocol
+  BOOLEAN  BpmpPresent = FALSE;
+
   NodeOffset = fdt_node_offset_by_compatible (DeviceTreeBase, -1, "nvidia,tegra186-bpmp");
   if (NodeOffset >= 0) {
-    CONST VOID *Property = NULL;
-    INT32      PropertySize = 0;
-    Property = fdt_getprop (DeviceTreeBase,
-                            NodeOffset,
-                            "status",
-                            &PropertySize);
+    CONST VOID  *Property    = NULL;
+    INT32       PropertySize = 0;
+    Property = fdt_getprop (
+                 DeviceTreeBase,
+                 NodeOffset,
+                 "status",
+                 &PropertySize
+                 );
     if ((Property == NULL) || (AsciiStrCmp (Property, "okay") == 0)) {
-        BpmpPresent = TRUE;
+      BpmpPresent = TRUE;
     }
   }
+
   if (!BpmpPresent) {
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &ImageHandle,
@@ -172,48 +181,51 @@ BpmpIpcInitialize (
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
     }
+
     return Status;
   }
 
-  Status = GetSupportedDeviceTreeNodes(DeviceTreeBase, &DeviceTreeIsSupported, &DeviceCount, DeviceInfo);
-  if ( EFI_ERROR(Status) && (Status != EFI_NOT_FOUND)) {
+  Status = GetSupportedDeviceTreeNodes (DeviceTreeBase, &DeviceTreeIsSupported, &DeviceCount, DeviceInfo);
+  if ( EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
     return EFI_DEVICE_ERROR;
   }
 
-  DeviceInfo = AllocatePool(sizeof(NVIDIA_DT_NODE_INFO) * DeviceCount);
+  DeviceInfo = AllocatePool (sizeof (NVIDIA_DT_NODE_INFO) * DeviceCount);
   if (DeviceInfo == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Status = GetSupportedDeviceTreeNodes(DeviceTreeBase, &DeviceTreeIsSupported, &DeviceCount, DeviceInfo);
+  Status = GetSupportedDeviceTreeNodes (DeviceTreeBase, &DeviceTreeIsSupported, &DeviceCount, DeviceInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  for (Index=0; Index < DeviceCount; Index++) {
-    DeviceHandle=NULL;
-    Device = (NON_DISCOVERABLE_DEVICE *)AllocatePool (sizeof (NON_DISCOVERABLE_DEVICE));
+  for (Index = 0; Index < DeviceCount; Index++) {
+    DeviceHandle = NULL;
+    Device       = (NON_DISCOVERABLE_DEVICE *)AllocatePool (sizeof (NON_DISCOVERABLE_DEVICE));
     if (NULL == Device) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
-    Status = ProcessDeviceTreeNodeWithHandle(&DeviceInfo[Index], Device, ImageHandle, &DeviceHandle);
 
-    if (!EFI_ERROR(Status)) {
+    Status = ProcessDeviceTreeNodeWithHandle (&DeviceInfo[Index], Device, ImageHandle, &DeviceHandle);
+
+    if (!EFI_ERROR (Status)) {
       if (CompareGuid (DeviceInfo[Index].DeviceType, &gNVIDIANonDiscoverableBpmpDeviceGuid)) {
         Status = BpmpIpcProtocolInit (&DeviceHandle, Device);
       } else if (CompareGuid (DeviceInfo[Index].DeviceType, &gNVIDIANonDiscoverableHspTopDeviceGuid)) {
         Status = HspDoorbellProtocolInit (&DeviceHandle, Device);
       }
-      if (EFI_ERROR(Status)) {
+
+      if (EFI_ERROR (Status)) {
         break;
       }
-
     } else {
       if (NULL != Device) {
         FreePool (Device);
       }
     }
   }
+
   return Status;
 }
