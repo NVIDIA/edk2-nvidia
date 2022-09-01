@@ -274,7 +274,10 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
 
             This will be used to set TOOL_CHAIN_TAG.
         '''
-        return "GCC5"
+        tool_chain_tag = os.getenv("TOOL_CHAIN_TAG")
+        if not tool_chain_tag:
+            tool_chain_tag = "GCC5"
+        return tool_chain_tag
 
     def GetReportTypes(self):
         ''' Return the build report types.
@@ -308,7 +311,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             return str(Path(os.getenv("CROSS_COMPILER_PREFIX")))
         else:
             raise AttributeError("CROSS_COMPILER_PREFIX not defined")
-
+        
     def GetTarget(self):
         ''' Return the value of the --target option.
         '''
@@ -433,4 +436,7 @@ class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
 
             This will be used to set TOOL_CHAIN_TAG.
         '''
-        return "GCC5"
+        tool_chain_tag = os.getenv("TOOL_CHAIN_TAG")
+        if not tool_chain_tag:
+            tool_chain_tag = "GCC5"
+        return tool_chain_tag
