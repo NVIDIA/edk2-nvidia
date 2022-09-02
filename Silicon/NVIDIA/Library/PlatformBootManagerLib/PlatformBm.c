@@ -1189,19 +1189,25 @@ PrintBmcIpAddresses (
 STATIC
 VOID
 EFIAPI
-HandleBootChainUpdate(
+HandleBootChainUpdate (
   VOID
   )
 {
-  NVIDIA_BOOT_CHAIN_PROTOCOL    *BootChainProtocol;
-  EFI_STATUS                    Status;
+  NVIDIA_BOOT_CHAIN_PROTOCOL  *BootChainProtocol;
+  EFI_STATUS                  Status;
 
-  Status = gBS->LocateProtocol (&gNVIDIABootChainProtocolGuid,
-                                NULL,
-                                (VOID **)&BootChainProtocol);
+  Status = gBS->LocateProtocol (
+                  &gNVIDIABootChainProtocolGuid,
+                  NULL,
+                  (VOID **)&BootChainProtocol
+                  );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Boot Chain Protocol Guid=%g not found: %r\n",
-            &gNVIDIABootChainProtocolGuid, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "Boot Chain Protocol Guid=%g not found: %r\n",
+      &gNVIDIABootChainProtocolGuid,
+      Status
+      ));
     return;
   }
 
