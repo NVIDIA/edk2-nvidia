@@ -1,0 +1,48 @@
+#/** @file
+#
+# OEM Status code handler to log addtional data as string
+#
+# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = OemDescStatusCodeDxe
+  FILE_GUID                 = 143a6ab6-27c0-11ed-8a92-43cccd9f9111
+  MODULE_TYPE               = DXE_RUNTIME_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = OemDescStatusCodeDxeDriverEntryPoint
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  IpmiFeaturePkg/IpmiFeaturePkg.dec
+
+[Sources]
+  OemDescStatusCodeDxe.c
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  DebugLib
+  DebugPrintErrorLevelLib
+  IpmiBaseLib
+
+[Guids]
+  gEfiEventExitBootServicesGuid
+
+[Protocols]
+  gIpmiProtocolGuid              ## CONSUMES
+  gEfiRscHandlerProtocolGuid     ## CONSUMES
+
+[Depex]
+  gIpmiTransportProtocolGuid
+  AND
+  gEfiRscHandlerProtocolGuid
