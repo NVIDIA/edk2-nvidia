@@ -36,6 +36,7 @@
 
 #include <Protocol/AmlPatchProtocol.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
+#include <Protocol/RasNsCommPcieDpcDataProtocol.h>
 
 #include <NVIDIAConfiguration.h>
 
@@ -49,5 +50,6 @@
 
 #define ACPI_PATCH_MAX_PATH    255
 #define ACPI_PCI_STA_TEMPLATE  "_SB_.PCI%d._STA"
+#define ACPI_GED1_SMR1         "_SB_.GED1.SMR1"
 
 #endif // __CONFIGURATION_MANAGER_DXE_PRIVATE_H__

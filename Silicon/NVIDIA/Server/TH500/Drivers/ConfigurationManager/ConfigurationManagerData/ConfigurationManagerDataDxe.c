@@ -305,6 +305,49 @@ UpdateEthernetInfo (
   return EFI_SUCCESS;
 }
 
+/** patch GED data in DSDT.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateGedInfo (
+  )
+{
+  EFI_STATUS                  Status;
+  NVIDIA_AML_NODE_INFO        AcpiNodeInfo;
+  RAS_PCIE_DPC_COMM_BUF_INFO  *DpcCommBuf = NULL;
+
+  Status = gBS->LocateProtocol (
+                  &gNVIDIARasNsCommPcieDpcDataProtocolGuid,
+                  NULL,
+                  (VOID **)&DpcCommBuf
+                  );
+  if (EFI_ERROR (Status) || (DpcCommBuf == NULL)) {
+    DEBUG ((
+      EFI_D_ERROR,
+      "%a: Couldn't get gNVIDIARasNsCommPcieDpcDataProtocolGuid Handle: %r\n",
+      __FUNCTION__,
+      Status
+      ));
+  }
+
+  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_GED1_SMR1, &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: GED node is not found for patching %a - %r\r\n", __FUNCTION__, ACPI_GED1_SMR1, Status));
+    return EFI_SUCCESS;
+  }
+
+  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &DpcCommBuf->PcieBase, 8);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_GED1_SMR1, Status));
+  }
+
+  return Status;
+}
+
 /** Initialize the platform configuration repository.
   @retval EFI_SUCCESS   Success
 **/
@@ -398,6 +441,11 @@ InitializePlatformRepository (
   }
 
   Status = UpdateEthernetInfo (&Repo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateGedInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

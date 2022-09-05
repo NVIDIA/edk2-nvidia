@@ -76,6 +76,7 @@
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
   gNVIDIAAmlPatchProtocolGuid
+  gNVIDIARasNsCommPcieDpcDataProtocolGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
@@ -91,4 +92,5 @@
   gNVIDIATokenSpaceGuid.PcdGpuToOtherCpuDistance
 
 [Depex]
-  gEfiVariableArchProtocolGuid
+  gEfiVariableArchProtocolGuid AND
+  gNVIDIARasNsCommPcieDpcDataProtocolGuid
