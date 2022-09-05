@@ -54,6 +54,19 @@
       IpmiBaseLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/IpmiStubLib/IpmiStubLib.inf
   }
 
+  #
+  # OEM Send Description
+  #
+  Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/UnitTest/OemDescStatusCodeDxeUnitTest.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/OemDescStatusCodeDxe.inf
+      IpmiBaseLib|IpmiFeaturePkg/Library/IpmiBaseLibNull/IpmiBaseLibNull.inf
+      DxeServicesLib|MdePkg/Library/DxeServicesLib/DxeServicesLib.inf
+      DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
+    <BuildOptions>
+      GCC:*_*_*_DLINK_FLAGS = -Wl,--wrap=IpmiSubmitCommand,--wrap=GetDebugPrintErrorLevel
+  }
+
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0

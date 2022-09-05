@@ -1,0 +1,42 @@
+#/** @file
+#
+#  OEM Status code handling unit test
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = OemDescStatusCodeDxeUnitTest
+  FILE_GUID                      = 141ef2ae-28ba-11ed-add2-3f19a0498049
+  MODULE_TYPE                    = HOST_APPLICATION
+  VERSION_STRING                 = 1.0
+
+[Sources]
+  OemDescStatusCodeDxeUnitTest.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  IpmiFeaturePkg/IpmiFeaturePkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  BaseLib
+  DebugLib
+  UnitTestLib
+  PrintLib
+  CmockaLib
+  BaseMemoryLib
+  UefiLib
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+
+[Guids]
+  gEfiStatusCodeSpecificDataGuid
