@@ -21,6 +21,7 @@
 #include <Protocol/AcpiTable.h>
 #include <Protocol/Apei.h>
 #include <Protocol/MmCommunication2.h>
+#include <Protocol/RasNsCommPcieDpcDataProtocol.h>
 #include <IndustryStandard/ArmFfaSvc.h>
 #include <Server/RASNSInterface.h>
 

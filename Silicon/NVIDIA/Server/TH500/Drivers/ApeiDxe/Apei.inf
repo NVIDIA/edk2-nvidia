@@ -37,6 +37,7 @@
 [Protocols]
   gEfiAcpiTableProtocolGuid       # PROTOCOL ALWAYS_CONSUMED
   gEfiApeiGetErrorSourcesGuid     # PROTOCOL ALWAYS_CONSUMED
+  gNVIDIARasNsCommPcieDpcDataProtocolGuid
 
 [Depex]
   gEfiAcpiTableProtocolGuid

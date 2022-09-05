@@ -11,6 +11,9 @@
 EFI_ACPI_TABLE_PROTOCOL  *AcpiTableProtocol;
 RAS_FW_BUFFER            RasFwBufferInfo;
 
+STATIC
+RAS_PCIE_DPC_COMM_BUF_INFO  *NVIDIARasNsCommPcieDpcData;
+
 /*
  * Setup the ARM defined SDEI table to enable SDEI support in the OS. SDEI can
  * be used as a notification mechanism for some error sources.
@@ -109,6 +112,32 @@ ApeiDxeInitialize (
          RasFwBufferInfo.Size,
          EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
          );
+
+  NVIDIARasNsCommPcieDpcData = (RAS_PCIE_DPC_COMM_BUF_INFO *)AllocateZeroPool (sizeof (RAS_PCIE_DPC_COMM_BUF_INFO));
+  if (NVIDIARasNsCommPcieDpcData == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: RAS_FW NS Memory allocation for NVIDIARasNsCommPcieDpcData failed\r\n",
+      __FUNCTION__
+      ));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  NVIDIARasNsCommPcieDpcData->PcieBase = RasFwBufferInfo.PcieBase;
+  NVIDIARasNsCommPcieDpcData->PcieSize = RasFwBufferInfo.PcieSize;
+
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &ImageHandle,
+                  &gNVIDIARasNsCommPcieDpcDataProtocolGuid,
+                  (VOID *)NVIDIARasNsCommPcieDpcData,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to install NVIDIARasNsCommPcieDpcDataProtocol (%r)\r\n", __FUNCTION__, Status));
+    return EFI_PROTOCOL_ERROR;
+  }
+
+  DEBUG ((DEBUG_VERBOSE, "%a: Successfully installed NVIDIARasNsCommPcieDpcDataProtocol (%r)\r\n", __FUNCTION__, Status));
 
   Status = HestBertSetupTables (&RasFwBufferInfo);
   if (EFI_ERROR (Status)) {
