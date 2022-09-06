@@ -33,6 +33,8 @@
 
 [Protocols]
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+  gNVIDIARasNsCommPcieDpcDataProtocolGuid
 
 [Depex]
-  gNVIDIAPcieControllerInitCompleteProtocolGuid
+  gNVIDIAPcieControllerInitCompleteProtocolGuid AND
+  gNVIDIARasNsCommPcieDpcDataProtocolGuid

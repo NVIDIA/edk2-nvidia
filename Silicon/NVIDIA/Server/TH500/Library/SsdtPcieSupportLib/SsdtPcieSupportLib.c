@@ -34,6 +34,7 @@
 #include <Library/AmlLib/AmlLib.h>
 #include <Library/SsdtPcieSupportLib.h>
 #include <Protocol/ConfigurationManagerProtocol.h>
+#include <Protocol/RasNsCommPcieDpcDataProtocol.h>
 
 #include "SsdtPcieSupportLibPrivate.h"
 
@@ -137,6 +138,53 @@ exit_handler:
   return Status;
 }
 
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateSharedNSMemAddr (
+  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT        AML_OBJECT_NODE_HANDLE        RpNode,
+  IN             UINT32                        Uid
+  )
+{
+  EFI_STATUS                   Status;
+  RAS_PCIE_DPC_COMM_BUF_INFO   *DpcCommBuf = NULL;
+  RAS_FW_PCIE_DPC_COMM_STRUCT  *DpcComm    = NULL;
+  AML_OBJECT_NODE_HANDLE       AddrNode;
+  UINT32                       Socket, Instance;
+
+  Status = gBS->LocateProtocol (
+                  &gNVIDIARasNsCommPcieDpcDataProtocolGuid,
+                  NULL,
+                  (VOID **)&DpcCommBuf
+                  );
+  if (EFI_ERROR (Status) || (DpcCommBuf == NULL)) {
+    DEBUG ((
+      EFI_D_ERROR,
+      "%a: Couldn't get gNVIDIARasNsCommPcieDpcDataProtocolGuid Handle: %r\n",
+      __FUNCTION__,
+      Status
+      ));
+  }
+
+  DpcComm  = (RAS_FW_PCIE_DPC_COMM_STRUCT *)DpcCommBuf->PcieBase;
+  Socket   = Uid >> 4;
+  Instance = Uid & 0xF;
+  DEBUG ((EFI_D_VERBOSE, "%a: Socket = %u, Instance = %u\r\n", __FUNCTION__, Socket, Instance));
+
+  Status = AmlFindNode (RpNode, "ADDR", &AddrNode);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = AmlNameOpUpdateInteger (AddrNode, (UINT64)(&(DpcComm->PcieDpcInfo[Socket][Instance])));
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return Status;
+}
+
 /** Generate Pci slots devices.
 
   PCI Firmware Specification - Revision 3.3,
@@ -224,6 +272,11 @@ GeneratePciSlots (
   }
 
   Status = GeneratePciDSDForExtPort (PciInfo, RpNode, Uid);
+  if (EFI_ERROR (Status)) {
+    goto error_handler;
+  }
+
+  Status = UpdateSharedNSMemAddr (PciInfo, RpNode, Uid);
   if (EFI_ERROR (Status)) {
     goto error_handler;
   }
