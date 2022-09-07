@@ -115,7 +115,7 @@ EfiGopCheckModeSet (
 
   if (Context->GopProtocol == NULL) {
     GopProtocolGuid = &mEfiGopProtocolGuids[0];
-    for ( ; GopProtocolGuid != NULL; ++GopProtocolGuid) {
+    for ( ; *GopProtocolGuid != NULL; ++GopProtocolGuid) {
       Status = gBS->LocateProtocol (
                       *GopProtocolGuid,
                       NULL,
@@ -126,7 +126,7 @@ EfiGopCheckModeSet (
       }
     }
 
-    if (GopProtocolGuid == NULL) {
+    if (*GopProtocolGuid == NULL) {
       DEBUG ((
         DEBUG_WARN,
         "%a: could not locate EFI GOP protocol instance: %r\r\n",
