@@ -47,6 +47,13 @@
       GCC:*_*_*_DLINK_FLAGS = -Wl,--wrap=LibPcdGetBool,--wrap=EfiGetVariable,--wrap=EfiSetVariable,--wrap=EfiCreateProtocolNotifyEvent,--wrap=GetPerformanceCounter,--wrap=GetTimeInNanoSecond,--wrap=EfiAtRuntime,--wrap=EfiGetSystemConfigurationTable
   }
 
+  # IPMI Blob Transfer protocol unit tests
+  Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/UnitTest/IpmiBlobTransferTestUnitTestsHost.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/IpmiBlobTransferDxe.inf
+      IpmiBaseLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/IpmiStubLib/IpmiStubLib.inf
+  }
+
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0
