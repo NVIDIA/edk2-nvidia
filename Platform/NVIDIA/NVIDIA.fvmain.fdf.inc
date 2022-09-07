@@ -299,3 +299,8 @@
   # Boot Chain Protocol
   #
   INF Silicon/NVIDIA/Drivers/BootChainDxe/BootChainDxe.inf
+  #
+  # Ipmi Blob Transfer support
+  #
+  INF Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/IpmiBlobTransferDxe.inf
+  INF Silicon/NVIDIA/Drivers/SmbiosBmcTransfer/SmbiosBmcTransfer.inf

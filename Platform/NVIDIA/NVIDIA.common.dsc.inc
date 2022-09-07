@@ -1004,6 +1004,13 @@
   #
   Silicon/NVIDIA/Drivers/BootChainDxe/BootChainDxe.inf
 
+  #
+  # Ipmi Blob Transfer support
+  #
+  Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/IpmiBlobTransferDxe.inf
+  Silicon/NVIDIA/Drivers/SmbiosBmcTransfer/SmbiosBmcTransfer.inf
+
+
 [Components.AARCH64]
   #
   # EBC
