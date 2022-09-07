@@ -654,6 +654,9 @@ MmGuidedEventNotify (
 
   Size = sizeof (Header);
   MmCommunication2Communicate (&mMmCommunication2, &Header, &Header, &Size);
+  if (CompareGuid (Context, &gEfiEventExitBootServicesGuid)) {
+    OpteeLibNotifyRuntime(TRUE);
+  }
 }
 
 /**

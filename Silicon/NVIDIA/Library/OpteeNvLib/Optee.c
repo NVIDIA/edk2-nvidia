@@ -15,6 +15,7 @@
 #include <Library/ArmMmuLib.h>
 #include <Library/ArmSmcLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/OpteeNvLib.h>
@@ -25,6 +26,7 @@
 
 STATIC OPTEE_SHARED_MEMORY_INFORMATION  OpteeSharedMemoryInformation = { 0 };
 STATIC BOOLEAN IsRpmbPresent = FALSE;
+STATIC BOOLEAN InRuntime;
 
 /**
   Check for OP-TEE presence.
@@ -387,6 +389,36 @@ Error:
 
 STATIC
 VOID
+HandleCmdNotification (
+  OPTEE_MESSAGE_ARG *Msg
+  )
+{
+  if (Msg->NumParams != 1) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid NumParams %u \n", __FUNCTION__, Msg->NumParams));
+    goto err;
+  }
+
+  switch (Msg->Params[0].Union.Value.A) {
+  case NOTIFICATION_MSG_WAIT:
+    DEBUG ((DEBUG_INFO, "SecureWorld is busy, do an unconditional 500ms Stall"));
+    gBS->Stall(500000);
+    break;
+  case NOTIFICATION_MSG_WAKE:
+    DEBUG ((DEBUG_INFO, "SecureWorld is ready\n"));
+    break;
+  default:
+    DEBUG ((DEBUG_INFO, "Unknown Notification %d\n",
+                         Msg->Params[0].Union.Value.A));
+    break;
+  }
+  Msg->Return = OPTEE_SUCCESS;
+  return;
+err:
+  Msg->Return = OPTEE_ERROR_BAD_PARAMS;
+}
+
+STATIC
+VOID
 HandleRpcCmd (
   ARM_SMC_ARGS *Regs
 )
@@ -396,13 +428,22 @@ HandleRpcCmd (
 
   switch (Msg->Command) {
   case OPTEE_MSG_RPC_CMD_SHM_ALLOC:
-    HandleCmdAlloc(Msg);
+    if (!InRuntime) {
+      HandleCmdAlloc(Msg);
+    }
     break;
   case OPTEE_MSG_RPC_CMD_SHM_FREE:
-    HandleCmdFree(Msg);
+    if (!InRuntime) {
+      HandleCmdFree(Msg);
+    }
     break;
   case OPTEE_MSG_RPC_CMD_RPMB:
-    HandleCmdRpmb(Msg);
+    if (IsRpmbPresent) {
+      HandleCmdRpmb(Msg);
+    }
+    break;
+  case OPTEE_MSG_RPC_CMD_NOTIFICATION:
+    HandleCmdNotification(Msg);
     break;
   default:
     DEBUG ((DEBUG_WARN, "Unhandled command %d \n", Msg->Command));
@@ -451,11 +492,10 @@ IsOpteeSmcReturnRpc (
   UINT32  Return
   )
 {
-  return (IsRpmbPresent &&
-         (Return != OPTEE_SMC_RETURN_UNKNOWN_FUNCTION) &&
+  return ((Return != OPTEE_SMC_RETURN_UNKNOWN_FUNCTION) &&
          ((Return & OPTEE_SMC_RETURN_RPC_PREFIX_MASK) ==
           OPTEE_SMC_RETURN_RPC_PREFIX));
-  
+
 }
 
 /**
@@ -495,13 +535,14 @@ OpteeCallWithArg (
         //
         break;
       case OPTEE_SMC_RETURN_RPC_FUNC_ALLOC:
-
-        Cookie = HandleRpcAlloc(ArmSmcArgs.Arg1);
-        if (Cookie != NULL) {
-          ArmSmcArgs.Arg1 = (UINT32)((UINT64)Cookie->Addr >> 32);
-          ArmSmcArgs.Arg2 = (UINT32)((UINT64)Cookie->Addr);
-          ArmSmcArgs.Arg4 = (UINT32)((UINT64)Cookie >> 32);
-          ArmSmcArgs.Arg5 = (UINT32)((UINT64)Cookie);
+        if (!InRuntime) {
+          Cookie = HandleRpcAlloc(ArmSmcArgs.Arg1);
+          if (Cookie != NULL) {
+            ArmSmcArgs.Arg1 = (UINT32)((UINT64)Cookie->Addr >> 32);
+            ArmSmcArgs.Arg2 = (UINT32)((UINT64)Cookie->Addr);
+            ArmSmcArgs.Arg4 = (UINT32)((UINT64)Cookie >> 32);
+            ArmSmcArgs.Arg5 = (UINT32)((UINT64)Cookie);
+          }
         }
         break;
       case OPTEE_SMC_RETURN_RPC_FUNC_CMD:
@@ -813,4 +854,13 @@ OpteeSetProperties (
   OpteeSharedMemoryInformation.Size  = Size;
   IsRpmbPresent                      = RpmbPresent;
   return EFI_SUCCESS;
+}
+
+VOID
+EFIAPI
+OpteeLibNotifyRuntime (
+  BOOLEAN Runtime
+  )
+{
+  InRuntime = Runtime;
 }

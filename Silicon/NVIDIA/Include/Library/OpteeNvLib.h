@@ -206,4 +206,11 @@ HandleCmdRpmb (
   OPTEE_MESSAGE_ARG *Msg
 );
 
+VOID
+EFIAPI
+OpteeLibNotifyRuntime (
+  BOOLEAN Runtime
+);
+
+
 #endif // OPTEENV_LIB_H

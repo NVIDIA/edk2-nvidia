@@ -34,6 +34,7 @@
 #define OPTEE_MSG_RPC_CMD_SHM_ALLOC     6
 #define OPTEE_MSG_RPC_CMD_SHM_FREE      7
 #define OPTEE_MSG_RPC_CMD_RPMB          1
+#define OPTEE_MSG_RPC_CMD_NOTIFICATION  4
 
 #define RPMB_GET_DEV_INFO  1
 #define RPMB_DATA_REQ  0
@@ -57,6 +58,8 @@
 #define RPMB_MSG_TYPE_RESP_AUTH_DATA_WRITE          0x0300
 #define RPMB_MSG_TYPE_RESP_AUTH_DATA_READ           0x0400
 
+#define NOTIFICATION_MSG_WAIT     (0)
+#define NOTIFICATION_MSG_WAKE     (1)
 
 typedef struct {
   UINT64    PBase;
