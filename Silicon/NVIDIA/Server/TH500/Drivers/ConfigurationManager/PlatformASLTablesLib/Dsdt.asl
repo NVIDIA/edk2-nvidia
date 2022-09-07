@@ -58,7 +58,283 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
       }
     }
 
-    //---------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // GED for PCIe DPC
+    // ---------------------------------------------------------------------
+    Device (GED1) {
+      Name (_HID, "ACPI0013") /* Generic Event Device */
+      Name (_UID, 1)
+
+      // In the case of Socket-0, PCIe controller node names take the shape of
+      // "PCIx" where 'x' represent the controller/instance number.
+
+      // Socket - 0
+      External (\_SB.PCI0.RP00)
+      External (\_SB.PCI1.RP00)
+      External (\_SB.PCI2.RP00)
+      External (\_SB.PCI3.RP00)
+      External (\_SB.PCI4.RP00)
+      External (\_SB.PCI5.RP00)
+      External (\_SB.PCI6.RP00)
+      External (\_SB.PCI7.RP00)
+      External (\_SB.PCI8.RP00)
+      External (\_SB.PCI9.RP00)
+
+      // Starting from Socket-1, PCIe controller node names take the shape of
+      // "PCyx" where 'x' represent the controller/instance number and 'y'
+      // represents the socket ID.
+
+      // Socket - 1
+      External (\_SB.PC10.RP00)
+      External (\_SB.PC11.RP00)
+      External (\_SB.PC12.RP00)
+      External (\_SB.PC13.RP00)
+      External (\_SB.PC14.RP00)
+      External (\_SB.PC15.RP00)
+      External (\_SB.PC16.RP00)
+      External (\_SB.PC17.RP00)
+      External (\_SB.PC18.RP00)
+      External (\_SB.PC19.RP00)
+
+      // Socket - 2
+      External (\_SB.PC20.RP00)
+      External (\_SB.PC21.RP00)
+      External (\_SB.PC22.RP00)
+      External (\_SB.PC23.RP00)
+      External (\_SB.PC24.RP00)
+      External (\_SB.PC25.RP00)
+      External (\_SB.PC26.RP00)
+      External (\_SB.PC27.RP00)
+      External (\_SB.PC28.RP00)
+      External (\_SB.PC29.RP00)
+
+      // Socket - 3
+      External (\_SB.PC30.RP00)
+      External (\_SB.PC31.RP00)
+      External (\_SB.PC32.RP00)
+      External (\_SB.PC33.RP00)
+      External (\_SB.PC34.RP00)
+      External (\_SB.PC35.RP00)
+      External (\_SB.PC36.RP00)
+      External (\_SB.PC37.RP00)
+      External (\_SB.PC38.RP00)
+      External (\_SB.PC39.RP00)
+
+      Name (
+        _CRS,
+        ResourceTemplate () {
+        Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive) {
+          TH500_SW_IO3_INTR_SOCKET_0
+        }
+      }
+        )
+
+      // The "SMR1" named object in the OperationRegion would be patched
+      // by UEFI to have the correct address of the NS shared memory region.
+      OperationRegion (SMR1, SystemMemory, 0xFFFFFFFFFFFFFFFF, 0x280)
+      Field (SMR1, DWordAcc, NoLock, Preserve) {
+        // DP = IsInDPC
+        // SK = Socket ID
+        // SG = Segment ID
+        // ES = Error Source
+
+        // Socket-0
+        DP00, 32, SK00, 32, SG00, 32, ES00, 32,
+        DP01, 32, SK01, 32, SG01, 32, ES01, 32,
+        DP02, 32, SK02, 32, SG02, 32, ES02, 32,
+        DP03, 32, SK03, 32, SG03, 32, ES03, 32,
+        DP04, 32, SK04, 32, SG04, 32, ES04, 32,
+        DP05, 32, SK05, 32, SG05, 32, ES05, 32,
+        DP06, 32, SK06, 32, SG06, 32, ES06, 32,
+        DP07, 32, SK07, 32, SG07, 32, ES07, 32,
+        DP08, 32, SK08, 32, SG08, 32, ES08, 32,
+        DP09, 32, SK09, 32, SG09, 32, ES09, 32,
+
+        // Socket-1
+        DP10, 32, SK10, 32, SG10, 32, ES10, 32,
+        DP11, 32, SK11, 32, SG11, 32, ES11, 32,
+        DP12, 32, SK12, 32, SG12, 32, ES12, 32,
+        DP13, 32, SK13, 32, SG13, 32, ES13, 32,
+        DP14, 32, SK14, 32, SG14, 32, ES14, 32,
+        DP15, 32, SK15, 32, SG15, 32, ES15, 32,
+        DP16, 32, SK16, 32, SG16, 32, ES16, 32,
+        DP17, 32, SK17, 32, SG17, 32, ES17, 32,
+        DP18, 32, SK18, 32, SG18, 32, ES18, 32,
+        DP19, 32, SK19, 32, SG19, 32, ES19, 32,
+
+        // Socket-2
+        DP20, 32, SK20, 32, SG20, 32, ES20, 32,
+        DP21, 32, SK21, 32, SG21, 32, ES21, 32,
+        DP22, 32, SK22, 32, SG22, 32, ES22, 32,
+        DP23, 32, SK23, 32, SG23, 32, ES23, 32,
+        DP24, 32, SK24, 32, SG24, 32, ES24, 32,
+        DP25, 32, SK25, 32, SG25, 32, ES25, 32,
+        DP26, 32, SK26, 32, SG26, 32, ES26, 32,
+        DP27, 32, SK27, 32, SG27, 32, ES27, 32,
+        DP28, 32, SK28, 32, SG28, 32, ES28, 32,
+        DP29, 32, SK29, 32, SG29, 32, ES29, 32,
+
+        // Socket-3
+        DP30, 32, SK30, 32, SG30, 32, ES30, 32,
+        DP31, 32, SK31, 32, SG31, 32, ES31, 32,
+        DP32, 32, SK32, 32, SG32, 32, ES32, 32,
+        DP33, 32, SK33, 32, SG33, 32, ES33, 32,
+        DP34, 32, SK34, 32, SG34, 32, ES34, 32,
+        DP35, 32, SK35, 32, SG35, 32, ES35, 32,
+        DP36, 32, SK36, 32, SG36, 32, ES36, 32,
+        DP37, 32, SK37, 32, SG37, 32, ES37, 32,
+        DP38, 32, SK38, 32, SG38, 32, ES38, 32,
+        DP39, 32, SK39, 32, SG39, 32, ES39, 32
+      }
+
+      OperationRegion (LIC3, SystemMemory, TH500_SW_IO3_BASE_SOCKET_0, TH500_SW_IO3_SIZE)
+      Field (LIC3, DWordAcc, NoLock, Preserve) {
+        STAT, 32,
+        SET, 32,
+        CLR, 32,
+        RSVD, 32,
+        DALO, 32,
+        DAHI, 32,
+      }
+
+      Method (_EVT, 1) {
+        Switch (Arg0) {
+          Case (TH500_SW_IO3_INTR_SOCKET_0) {
+            // Socket-0
+            If (LEqual (DP00, 0x1)) {
+              Notify (\_SB.PCI0.RP00, 0xF)
+            }
+            If (LEqual (DP01, 0x1)) {
+              Notify (\_SB.PCI1.RP00, 0xF)
+            }
+            If (LEqual (DP02, 0x1)) {
+              Notify (\_SB.PCI2.RP00, 0xF)
+            }
+            If (LEqual (DP03, 0x1)) {
+              Notify (\_SB.PCI3.RP00, 0xF)
+            }
+            If (LEqual (DP04, 0x1)) {
+              Notify (\_SB.PCI4.RP00, 0xF)
+            }
+            If (LEqual (DP05, 0x1)) {
+              Notify (\_SB.PCI5.RP00, 0xF)
+            }
+            If (LEqual (DP06, 0x1)) {
+              Notify (\_SB.PCI6.RP00, 0xF)
+            }
+            If (LEqual (DP07, 0x1)) {
+              Notify (\_SB.PCI7.RP00, 0xF)
+            }
+            If (LEqual (DP08, 0x1)) {
+              Notify (\_SB.PCI8.RP00, 0xF)
+            }
+            If (LEqual (DP09, 0x1)) {
+              Notify (\_SB.PCI9.RP00, 0xF)
+            }
+
+            // Socket-1
+            If (LEqual (DP10, 0x1)) {
+              Notify (\_SB.PC10.RP00, 0xF)
+            }
+            If (LEqual (DP11, 0x1)) {
+              Notify (\_SB.PC11.RP00, 0xF)
+            }
+            If (LEqual (DP12, 0x1)) {
+              Notify (\_SB.PC12.RP00, 0xF)
+            }
+            If (LEqual (DP13, 0x1)) {
+              Notify (\_SB.PC13.RP00, 0xF)
+            }
+            If (LEqual (DP14, 0x1)) {
+              Notify (\_SB.PC14.RP00, 0xF)
+            }
+            If (LEqual (DP15, 0x1)) {
+              Notify (\_SB.PC15.RP00, 0xF)
+            }
+            If (LEqual (DP16, 0x1)) {
+              Notify (\_SB.PC16.RP00, 0xF)
+            }
+            If (LEqual (DP17, 0x1)) {
+              Notify (\_SB.PC17.RP00, 0xF)
+            }
+            If (LEqual (DP18, 0x1)) {
+              Notify (\_SB.PC18.RP00, 0xF)
+            }
+            If (LEqual (DP19, 0x1)) {
+              Notify (\_SB.PC19.RP00, 0xF)
+            }
+
+            // Socket-2
+            If (LEqual (DP20, 0x1)) {
+              Notify (\_SB.PC20.RP00, 0xF)
+            }
+            If (LEqual (DP21, 0x1)) {
+              Notify (\_SB.PC21.RP00, 0xF)
+            }
+            If (LEqual (DP22, 0x1)) {
+              Notify (\_SB.PC22.RP00, 0xF)
+            }
+            If (LEqual (DP23, 0x1)) {
+              Notify (\_SB.PC23.RP00, 0xF)
+            }
+            If (LEqual (DP24, 0x1)) {
+              Notify (\_SB.PC24.RP00, 0xF)
+            }
+            If (LEqual (DP25, 0x1)) {
+              Notify (\_SB.PC25.RP00, 0xF)
+            }
+            If (LEqual (DP26, 0x1)) {
+              Notify (\_SB.PC26.RP00, 0xF)
+            }
+            If (LEqual (DP27, 0x1)) {
+              Notify (\_SB.PC27.RP00, 0xF)
+            }
+            If (LEqual (DP28, 0x1)) {
+              Notify (\_SB.PC28.RP00, 0xF)
+            }
+            If (LEqual (DP29, 0x1)) {
+              Notify (\_SB.PC29.RP00, 0xF)
+            }
+
+            // Socket-3
+            If (LEqual (DP30, 0x1)) {
+              Notify (\_SB.PC30.RP00, 0xF)
+            }
+            If (LEqual (DP31, 0x1)) {
+              Notify (\_SB.PC31.RP00, 0xF)
+            }
+            If (LEqual (DP32, 0x1)) {
+              Notify (\_SB.PC32.RP00, 0xF)
+            }
+            If (LEqual (DP33, 0x1)) {
+              Notify (\_SB.PC33.RP00, 0xF)
+            }
+            If (LEqual (DP34, 0x1)) {
+              Notify (\_SB.PC34.RP00, 0xF)
+            }
+            If (LEqual (DP35, 0x1)) {
+              Notify (\_SB.PC35.RP00, 0xF)
+            }
+            If (LEqual (DP36, 0x1)) {
+              Notify (\_SB.PC36.RP00, 0xF)
+            }
+            If (LEqual (DP37, 0x1)) {
+              Notify (\_SB.PC37.RP00, 0xF)
+            }
+            If (LEqual (DP38, 0x1)) {
+              Notify (\_SB.PC38.RP00, 0xF)
+            }
+            If (LEqual (DP39, 0x1)) {
+              Notify (\_SB.PC39.RP00, 0xF)
+            }
+
+            Store (0x1, CLR)
+          }
+        }
+      }
+    }
+
+    // ---------------------------------------------------------------------
     // HWPM - HW Performance Monitoring
     //---------------------------------------------------------------------
     Device(HWP0) {

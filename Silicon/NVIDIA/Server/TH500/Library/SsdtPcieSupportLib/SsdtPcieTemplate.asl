@@ -79,6 +79,80 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
   Device (RP00)
   {
       Name (_ADR, 0x0000)  // _ADR: Address
+
+    // The "ADDR" named object would be patched by UEFI to have the correct
+    // address of the NS shared memory region of this particular instance.
+    Name (ADDR, 0xFFFFFFFFFFFFFFFF)
+
+    // The "_SEG " named object would be added dynamically by UEFI at the
+    // time of generating the PCIe node.
+    External (_SEG)
+
+    OperationRegion (SMEM, SystemMemory, ADDR, 0x10)
+    Field (SMEM, DWordAcc, NoLock, Preserve) {
+      DPC0, 32, SOC0, 32, SEG0, 32, ESR0, 32
+    }
+
+    Method (_DSM, 4, Serialized) {
+      If (LEqual (Arg0, ToUUID ("E5C937D0-3553-4D7A-9117-EA4D19C3434D"))) {
+        If (LEqual (Arg1, 0x5)) {
+          // Check for Revision ID
+          If (LEqual (Arg2, 0xD)) {
+            // Check for Function Index
+            // return BDF of port that experienced containment
+            Local0                   = 0xFFFFFFFF
+                              Local1 = 0xFFFFFFFF
+                                       Store (DPC0, Local0)
+                                       If (LEqual (Local0, 0x1)) {
+              // Only if an active DPC is going on
+              Store (ESR0, Local1)
+              Return (Local1)
+            }
+            Return (Local1)
+          }   // end Check for Function Index
+        }   // end Check for Revision ID
+      }   // end Check UUID
+    }   // end _DSM
+
+    OperationRegion (LIC4, SystemMemory, TH500_SW_IO4_BASE_SOCKET_0, TH500_SW_IO4_SIZE)
+    Field (LIC4, DWordAcc, NoLock, Preserve) {
+      STS4, 32,
+      SET4, 32,
+      CLR4, 32,
+      RVD4, 32,
+      DAL4, 32,
+      DAH4, 32,
+    }
+
+    Method (_OST, 3, Serialized) {
+      // OSPM calls this method after processing ErrorDisconnectRecover
+      // notification from firmware
+      If (LEqual (And (Arg0, 0xFF), 0xF)) {
+        // Mask to retain low byte
+        If (LEqual (And (Arg1, 0xFF), 0x80)) {
+          /* Save BDF to DAH4 */
+          Local0 = (Arg1 >> 16)
+
+                   /* Embed Segment number also in DAH4 */
+                   Store (_SEG, Local1)
+                   Local0 |= (Local1 << 16)
+
+                             /* Make sure DAH4 is zero to avoid overwriting the value of
+                                an ongoing RAS-FW handling of _OST() call */
+                             Local1 = Zero
+                                      While (
+            (Local1 < 60000) && (LNotEqual (DAH4, 0))
+            )
+          {
+            Local1 += 2;
+            Sleep (2)
+          }
+
+          Store (Local0, DAH4)
+          Store (0x1, SET4)
+        }
+      }
+    }   // End _OST
   }
 
   Device(GPU0) {
