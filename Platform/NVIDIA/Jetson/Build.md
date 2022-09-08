@@ -4,8 +4,8 @@ This file describes how to build UEFI for the Jetson platform.
 
 ## Supported Configuration Details
 
-The following steps have only been validated with Ubuntu 20.04 with GCC5
-toolchain.
+The following steps have only been validated with Ubuntu 18.04 and 20.04 with
+the GCC5 toolchain.
 
 ## EDK2 Developer environment
 
@@ -17,13 +17,14 @@ The following tools are required:
   - Mono
   - Misc tools and libraries
 
-Steps to install requirements on Ubuntu 18.04:
+Steps to install requirements:
 1. Install all required packages:
 
     ``` bash
     sudo apt-get update
     sudo apt-get install build-essential uuid-dev git gcc python3 \
-                         virtualenv gcc-aarch64-linux-gnu
+                         virtualenv gcc-aarch64-linux-gnu \
+                         device-tree-compiler
     ```
 
 2. Install mono following the [edk2-pytool note on NuGet on Linux](https://github.com/tianocore/edk2-pytool-extensions/blob/master/docs/usability/using_extdep.md#a-note-on-nuget-on-linux).
