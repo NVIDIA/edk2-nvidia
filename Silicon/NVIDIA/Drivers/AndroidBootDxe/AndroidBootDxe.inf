@@ -41,6 +41,7 @@
   HobLib
   TegraPlatformInfoLib
   HandleParsingLib
+  BootChainInfoLib
 
 [Protocols]
   gEfiBlockIoProtocolGuid

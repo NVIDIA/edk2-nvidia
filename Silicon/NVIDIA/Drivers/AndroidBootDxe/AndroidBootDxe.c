@@ -16,6 +16,7 @@
 #include <Library/HobLib.h>
 #include <Protocol/LoadedImage.h>
 #include <Library/HandleParsingLib.h>
+#include <Library/BootChainInfoLib.h>
 
 
 STATIC EFI_PHYSICAL_ADDRESS      mRamLoadedBaseAddress = 0;
@@ -643,7 +644,9 @@ AndroidBootDriverBindingSupported (
   UINT32                          *Id;
   EFI_BLOCK_IO_PROTOCOL           *BlockIo = NULL;
   EFI_DISK_IO_PROTOCOL            *DiskIo = NULL;
+  EFI_PARTITION_INFO_PROTOCOL     *PartitionInfo = NULL;
   EFI_HANDLE                      *ParentHandles = NULL;
+  CHAR16                          PartitionName[MAX_PARTITION_NAME_LEN];
   UINTN                           ParentCount;
   UINTN                           ParentIndex;
   EFI_HANDLE                      *ChildHandles = NULL;
@@ -676,6 +679,18 @@ AndroidBootDriverBindingSupported (
 
   Status = gBS->OpenProtocol (
                   ControllerHandle,
+                  &gEfiPartitionInfoProtocolGuid,
+                  (VOID **)&PartitionInfo,
+                  This->DriverBindingHandle,
+                  ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  Status = gBS->OpenProtocol (
+                  ControllerHandle,
                   &gEfiBlockIoProtocolGuid,
                   (VOID **)&BlockIo,
                   This->DriverBindingHandle,
@@ -695,6 +710,26 @@ AndroidBootDriverBindingSupported (
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  Status = GetActivePartitionName (L"kernel", PartitionName);
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
+    Status = EFI_UNSUPPORTED;
+    goto ErrorExit;
+  }
+
+  if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
+    Status = EFI_UNSUPPORTED;
+    goto ErrorExit;
+  }
+
+  if (0 != StrCmp (PartitionInfo->Info.Gpt.PartitionName, PartitionName)) {
+    Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
 
@@ -736,6 +771,14 @@ ErrorExit:
   if (ChildHandles != NULL) {
     FreePool (ChildHandles);
     ChildHandles = NULL;
+  }
+  if (PartitionInfo != NULL) {
+    gBS->CloseProtocol (
+                    ControllerHandle,
+                    &gEfiPartitionInfoProtocolGuid,
+                    This->DriverBindingHandle,
+                    ControllerHandle
+                    );
   }
   if (BlockIo != NULL) {
     gBS->CloseProtocol (
