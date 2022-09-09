@@ -46,6 +46,12 @@ GetBootChainPartitionName (
     return EFI_INVALID_PARAMETER;
   }
 
+  if (TegraGetPlatform () != TEGRA_PLATFORM_SILICON) {
+    return StrCpyS (BootChainPartitionName,
+                    MAX_PARTITION_NAME_LEN,
+                    BasePartitionName);
+  }
+
   ChipID = TegraGetChipID ();
   switch (ChipID) {
     case T234_CHIP_ID:
@@ -118,6 +124,11 @@ GetPartitionBaseNameAndBootChain (
 
   if ((PartitionName == NULL) || (BaseName == NULL) || (BootChain == NULL)) {
     return EFI_INVALID_PARAMETER;
+  }
+
+  if (TegraGetPlatform () != TEGRA_PLATFORM_SILICON) {
+    *BootChain = 0;
+    return StrCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName);
   }
 
   ChipID = TegraGetChipID ();
