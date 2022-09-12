@@ -581,6 +581,7 @@ PrepareHost (
   UINT32      val;
   UINT32      Index;
   UINT32      Count;
+  UINT16      val_16;
 
   val  = MmioRead32 (Private->DbiBase + PCI_IO_BASE);
   val &= ~(IO_BASE_IO_DECODE | IO_BASE_IO_DECODE_BIT8);
@@ -596,6 +597,18 @@ PrepareHost (
   val &= ~(AMBA_ERROR_RESPONSE_CRS_MASK << AMBA_ERROR_RESPONSE_CRS_SHIFT);
   val |= (AMBA_ERROR_RESPONSE_CRS_OKAY_FFFF0001 << AMBA_ERROR_RESPONSE_CRS_SHIFT);
   MmioWrite32 (Private->DbiBase + PORT_LOGIC_AMBA_ERROR_RESPONSE_DEFAULT, val);
+
+  /* Reduce the CBB Timeout value to 7ms */
+  val  = MmioRead32 (Private->DbiBase + PORT_LOGIC_AMBA_LINK_TIMEOUT);
+  val &= ~AMBA_LINK_TIMEOUT_PERIOD_MASK;
+  val |= AMBA_LINK_TIMEOUT_PERIOD_VAL;
+  MmioWrite32 (Private->DbiBase + PORT_LOGIC_AMBA_LINK_TIMEOUT, val);
+
+  /* Set the Completion Timeout value in 1ms~10ms range */
+  val_16  = MmioRead16 (Private->DbiBase + PCI_EXP_DEVCTL_STS_2);
+  val_16 &= ~PCI_EXP_DEVCTL_STS_2_CPL_TO_MASK;
+  val_16 |= PCI_EXP_DEVCTL_STS_2_CPL_TO_VAL;
+  MmioWrite16 (Private->DbiBase + PCI_EXP_DEVCTL_STS_2, val_16);
 
   /* Configure Max lane width from DT */
   val  = MmioRead32 (Private->DbiBase + PCI_EXP_LNKCAP);
