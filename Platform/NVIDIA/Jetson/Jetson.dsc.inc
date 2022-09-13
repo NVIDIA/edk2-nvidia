@@ -98,8 +98,6 @@
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x4000
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x1000
-  gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|TRUE
-  gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE
 
 [PcdsDynamicHii.common.T194]
