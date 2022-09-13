@@ -912,43 +912,6 @@ PlatformBootManagerBeforeConsole (
 }
 
 STATIC
-BOOLEAN
-RuntimeSetVariableSupported (
-  VOID
-  )
-{
-  UINTN                    Index;
-  EFI_CONFIGURATION_TABLE  *ConfigEntry;
-  EFI_RT_PROPERTIES_TABLE  *RtProperties;
-  BOOLEAN                  SetVariableSupported;
-
-  // Find RT properties table in system configuration tables
-  SetVariableSupported = FALSE;
-  ConfigEntry          = gST->ConfigurationTable;
-  for (Index = 0; Index < gST->NumberOfTableEntries; Index++) {
-    if (CompareGuid (&gEfiRtPropertiesTableGuid, &ConfigEntry->VendorGuid)) {
-      RtProperties = (EFI_RT_PROPERTIES_TABLE *)ConfigEntry->VendorTable;
-
-      SetVariableSupported = ((RtProperties->RuntimeServicesSupported &
-                               EFI_RT_SUPPORTED_SET_VARIABLE) != 0);
-
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: RtServices=0x%x\n",
-        __FUNCTION__,
-        RtProperties->RuntimeServicesSupported
-        ));
-
-      break;
-    }
-
-    ConfigEntry++;
-  }
-
-  return SetVariableSupported;
-}
-
-STATIC
 VOID
 HandleCapsules (
   VOID
@@ -959,7 +922,6 @@ HandleCapsules (
   EFI_CAPSULE_HEADER        *CapsuleHeader;
   BOOLEAN                   NeedReset;
   EFI_STATUS                Status;
-  BOOLEAN                   OsIndicationsAvailable;
 
   DEBUG ((DEBUG_INFO, "%a: processing capsules ...\n", __FUNCTION__));
 
@@ -1003,18 +965,10 @@ HandleCapsules (
   //
   // Check for capsules on disk
   //
-  OsIndicationsAvailable = RuntimeSetVariableSupported ();
-  if ((OsIndicationsAvailable && CoDCheckCapsuleOnDiskFlag ()) ||
-      !OsIndicationsAvailable)
-  {
+  if (CoDCheckCapsuleOnDiskFlag ()) {
     NeedReset = TRUE;
     Status    = CoDRelocateCapsule (0);
-    if (!OsIndicationsAvailable &&
-        ((Status == EFI_NOT_FOUND) || (Status == EFI_UNSUPPORTED)))
-    {
-      DEBUG ((DEBUG_INFO, "%a: No capsule on disk\n", __FUNCTION__));
-      NeedReset = FALSE;
-    } else if (EFI_ERROR (Status)) {
+    if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
         "%a: CoDRelocateCapsule failed: %r\n",
