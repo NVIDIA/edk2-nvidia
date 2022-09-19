@@ -147,16 +147,6 @@ GetGicInfo (
   );
 
 /**
-  Retrieve CPU BL Address
-
-**/
-UINTN
-EFIAPI
-GetCPUBLBaseAddress (
-  VOID
-  );
-
-/**
   Retrieve DTB Address
 
 **/
