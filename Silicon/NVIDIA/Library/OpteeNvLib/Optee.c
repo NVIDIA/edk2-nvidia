@@ -8,7 +8,6 @@
 
 **/
 
-
 #include <Uefi.h>
 #include <IndustryStandard/ArmStdSmc.h>
 
@@ -25,8 +24,8 @@
 #include <OpteeSmc.h>
 
 STATIC OPTEE_SHARED_MEMORY_INFORMATION  OpteeSharedMemoryInformation = { 0 };
-STATIC BOOLEAN IsRpmbPresent = FALSE;
-STATIC BOOLEAN InRuntime;
+STATIC BOOLEAN                          IsRpmbPresent                = FALSE;
+STATIC BOOLEAN                          InRuntime;
 
 /**
   Check for OP-TEE presence.
@@ -55,7 +54,6 @@ IsOpteePresent (
   }
 }
 
-
 /*
  * OpteeExchangeCapabilities
  * Get the capabilities of the OP-TEE Trusted OS
@@ -69,10 +67,10 @@ IsOpteePresent (
 BOOLEAN
 EFIAPI
 OpteeExchangeCapabilities (
-  OUT UINT64 *Cap
+  OUT UINT64  *Cap
   )
 {
-  ARM_SMC_ARGS ArmSmcArgs;
+  ARM_SMC_ARGS  ArmSmcArgs;
 
   ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
   ArmSmcArgs.Arg0 = ARM_SMC_ID_TOS_CAPABILITIES;
@@ -106,21 +104,21 @@ OpteeExchangeCapabilities (
 STATIC
 EFI_STATUS
 OpteeSetupPageList (
-  IN  OPTEE_SHM_PAGE_LIST *PageList OPTIONAL,
-  IN  VOID *UserBuf,
-  IN  UINTN BufSize,
-  OUT UINT64 *RetPtr
- )
+  IN  OPTEE_SHM_PAGE_LIST  *PageList OPTIONAL,
+  IN  VOID                 *UserBuf,
+  IN  UINTN                BufSize,
+  OUT UINT64               *RetPtr
+  )
 {
-  EFI_STATUS Status = EFI_SUCCESS;
-  UINTN NumPages = EFI_SIZE_TO_PAGES (BufSize);
-  UINTN Pages = NumPages;
-  UINTN n = 0;
-  VOID *BufBase = UserBuf;
-  OPTEE_SHM_PAGE_LIST *ShmList;
-  UINTN NumPgLists = 0;
+  EFI_STATUS           Status   = EFI_SUCCESS;
+  UINTN                NumPages = EFI_SIZE_TO_PAGES (BufSize);
+  UINTN                Pages    = NumPages;
+  UINTN                n        = 0;
+  VOID                 *BufBase = UserBuf;
+  OPTEE_SHM_PAGE_LIST  *ShmList;
+  UINTN                NumPgLists = 0;
 
-  if (!(UserBuf && IS_ALIGNED (UserBuf, OPTEE_MSG_PAGE_SIZE)))  {
+  if (!(UserBuf && IS_ALIGNED (UserBuf, OPTEE_MSG_PAGE_SIZE))) {
     DEBUG ((DEBUG_ERROR, "UserBuf %p is not valid\n", UserBuf));
     return EFI_INVALID_PARAMETER;
   }
@@ -128,15 +126,14 @@ OpteeSetupPageList (
   ShmList = PageList;
   if (ShmList != NULL) {
     if (!IS_ALIGNED (ShmList, OPTEE_MSG_PAGE_SIZE)) {
-       DEBUG ((DEBUG_ERROR, "Invalid Shm List Buffer\n"));
-       return EFI_INVALID_PARAMETER;
+      DEBUG ((DEBUG_ERROR, "Invalid Shm List Buffer\n"));
+      return EFI_INVALID_PARAMETER;
     }
-  } else  {
+  } else {
     NumPgLists = (NumPages / MAX_PAGELIST_ENTRIES) + 1;
-    ShmList =
-    AllocateAlignedRuntimePages(EFI_SIZE_TO_PAGES(NumPages * sizeof(OPTEE_SHM_PAGE_LIST)), OPTEE_MSG_PAGE_SIZE);
-    if (ShmList == NULL)
-    {
+    ShmList    =
+      AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (NumPages * sizeof (OPTEE_SHM_PAGE_LIST)), OPTEE_MSG_PAGE_SIZE);
+    if (ShmList == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
   }
@@ -147,11 +144,12 @@ OpteeSetupPageList (
     Pages--;
     BufBase += OPTEE_MSG_PAGE_SIZE;
     if (n == MAX_PAGELIST_ENTRIES) {
-      ShmList->NextPage = (UINT64) (ShmList + 1);
+      ShmList->NextPage = (UINT64)(ShmList + 1);
       ShmList++;
       n = 0;
     }
   }
+
   *RetPtr = (UINT64)ShmList;
   return Status;
 }
@@ -169,20 +167,19 @@ OpteeSetupPageList (
  *                               to OP-TEE].
  *
  */
-
 EFI_STATUS
 EFIAPI
 OpteeRegisterShm (
-  IN VOID *Buf,
-  IN UINT64 SharedMemCookie,
-  IN UINTN Size,
-  IN OPTEE_SHM_PAGE_LIST *Shm OPTIONAL
+  IN VOID                 *Buf,
+  IN UINT64               SharedMemCookie,
+  IN UINTN                Size,
+  IN OPTEE_SHM_PAGE_LIST  *Shm OPTIONAL
   )
 {
-  EFI_STATUS Status = EFI_SUCCESS;
-  OPTEE_MESSAGE_ARG *MessageArg;
-  UINT64 PageList;
-  UINT32 RetCode;
+  EFI_STATUS         Status = EFI_SUCCESS;
+  OPTEE_MESSAGE_ARG  *MessageArg;
+  UINT64             PageList;
+  UINT32             RetCode;
 
   if (OpteeSharedMemoryInformation.PBase == 0) {
     DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
@@ -194,22 +191,24 @@ OpteeRegisterShm (
   MessageArg->Command = OPTEE_MESSAGE_COMMAND_REGISTER_SHM;
 
   Status = OpteeSetupPageList (Shm, Buf, Size, &PageList);
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to Setup Page list for OPTEE:%r\n", Status));
     goto Exit;
   }
+
   MessageArg->Params[0].Attribute = OPTEE_MESSAGE_ATTR_TYPE_TMEM_OUTPUT |
                                     OPTEE_MESSAGE_ATTR_NONCONTIG;
-  MessageArg->Params[0].Union.Memory.BufferAddress = PageList;
-  MessageArg->Params[0].Union.Memory.Size = Size;
+  MessageArg->Params[0].Union.Memory.BufferAddress         = PageList;
+  MessageArg->Params[0].Union.Memory.Size                  = Size;
   MessageArg->Params[0].Union.Memory.SharedMemoryReference = SharedMemCookie;
-  MessageArg->NumParams = 1;
+  MessageArg->NumParams                                    = 1;
 
   RetCode = OpteeCallWithArg (OpteeSharedMemoryInformation.PBase);
   if (RetCode != 0) {
     DEBUG ((DEBUG_ERROR, "Error(%u) from OP-TEE REGISTER_SHM\n", RetCode));
     Status = EFI_ACCESS_DENIED;
   }
+
 Exit:
   return Status;
 }
@@ -217,12 +216,12 @@ Exit:
 EFI_STATUS
 EFIAPI
 OpteeUnRegisterShm (
-  IN UINT64 SharedMemCookie
+  IN UINT64  SharedMemCookie
   )
 {
-  EFI_STATUS Status = EFI_SUCCESS;
-  OPTEE_MESSAGE_ARG *MessageArg;
-  UINT32 RetCode;
+  EFI_STATUS         Status = EFI_SUCCESS;
+  OPTEE_MESSAGE_ARG  *MessageArg;
+  UINT32             RetCode;
 
   if (OpteeSharedMemoryInformation.PBase == 0) {
     DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
@@ -233,15 +232,16 @@ OpteeUnRegisterShm (
   ZeroMem (MessageArg, sizeof (OPTEE_MESSAGE_ARG));
   MessageArg->Command = OPTEE_MESSAGE_COMMAND_UNREGISTER_SHM;
 
-  MessageArg->Params[0].Attribute = OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INPUT;
+  MessageArg->Params[0].Attribute                          = OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INPUT;
   MessageArg->Params[0].Union.Memory.SharedMemoryReference = SharedMemCookie;
-  MessageArg->NumParams = 1;
+  MessageArg->NumParams                                    = 1;
 
   RetCode = OpteeCallWithArg (OpteeSharedMemoryInformation.PBase);
   if (RetCode != 0) {
     DEBUG ((DEBUG_ERROR, "Error(%u) from OP-TEE UNREGISTER_SHM\n", RetCode));
     Status = EFI_ACCESS_DENIED;
   }
+
   return Status;
 }
 
@@ -289,7 +289,7 @@ OpteeSharedMemoryRemap (
 
   OpteeSharedMemoryInformation.PBase = (UINT64)PhysicalAddress;
   OpteeSharedMemoryInformation.VBase = (UINT64)PhysicalAddress;
-  OpteeSharedMemoryInformation.Size = Size;
+  OpteeSharedMemoryInformation.Size  = Size;
 
   return EFI_SUCCESS;
 }
@@ -319,66 +319,70 @@ OpteeInit (
 STATIC
 BOOLEAN
 HandleCmdFree (
-  OPTEE_MESSAGE_ARG *Msg
-)
+  OPTEE_MESSAGE_ARG  *Msg
+  )
 {
-  BOOLEAN Ret = TRUE;
-  OPTEE_SHM_COOKIE *Cookie = NULL;
+  BOOLEAN           Ret     = TRUE;
+  OPTEE_SHM_COOKIE  *Cookie = NULL;
 
-  if ((Msg->NumParams != 1) || Msg->Params[0].Attribute != OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INPUT) {
+  if ((Msg->NumParams != 1) || (Msg->Params[0].Attribute != OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INPUT)) {
     DEBUG ((DEBUG_WARN, "Bad Params Num %d, Attr %d \n", Msg->NumParams, Msg->Params[0].Attribute));
     Msg->Return = OPTEE_ERROR_BAD_PARAMS;
     goto Error;
   }
+
   Cookie = (OPTEE_SHM_COOKIE *)((UINT64)Msg->Params[0].Union.Value.B);
-  FreeAlignedPages (Cookie->Addr, EFI_SIZE_TO_PAGES(Cookie->Size));
+  FreeAlignedPages (Cookie->Addr, EFI_SIZE_TO_PAGES (Cookie->Size));
   Msg->Return = OPTEE_SUCCESS;
 Error:
   return Ret;
 }
 
-
 STATIC
 BOOLEAN
 HandleCmdAlloc (
-  OPTEE_MESSAGE_ARG *Msg
-)
+  OPTEE_MESSAGE_ARG  *Msg
+  )
 {
-  BOOLEAN Ret = TRUE;
-  UINTN Size;
-  VOID *Buf = NULL;
-  OPTEE_SHM_COOKIE *Cookie = NULL;
-  UINT64 PageList;
-  EFI_STATUS Status;
+  BOOLEAN           Ret = TRUE;
+  UINTN             Size;
+  VOID              *Buf    = NULL;
+  OPTEE_SHM_COOKIE  *Cookie = NULL;
+  UINT64            PageList;
+  EFI_STATUS        Status;
 
-  if ((Msg->NumParams != 1) || Msg->Params[0].Attribute != OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INPUT) {
+  if ((Msg->NumParams != 1) || (Msg->Params[0].Attribute != OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INPUT)) {
     DEBUG ((DEBUG_WARN, "Bad Params Num %d, Attr %d \n", Msg->NumParams, Msg->Params[0].Attribute));
     Msg->Return = OPTEE_ERROR_BAD_PARAMS;
     goto Error;
   }
+
   Size = Msg->Params[0].Union.Value.B;
 
-  Buf = AllocateAlignedRuntimePages(EFI_SIZE_TO_PAGES(Size), OPTEE_MSG_PAGE_SIZE);
+  Buf = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (Size), OPTEE_MSG_PAGE_SIZE);
   if (Buf == NULL) {
     DEBUG ((DEBUG_WARN, "Failed to alloc buf"));
     goto Error;
-   }
-  Cookie = AllocateAlignedRuntimePages(EFI_SIZE_TO_PAGES(sizeof(OPTEE_SHM_COOKIE)), OPTEE_MSG_PAGE_SIZE);
+  }
+
+  Cookie = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (sizeof (OPTEE_SHM_COOKIE)), OPTEE_MSG_PAGE_SIZE);
   if (Cookie == NULL) {
     DEBUG ((DEBUG_WARN, "Failed to alloc cookie"));
     goto Error;
   }
+
   Cookie->Addr = Buf;
   Cookie->Size = Size;
-  Status = OpteeSetupPageList (NULL, Buf, Size, &PageList);
-  if (EFI_ERROR(Status)) {
+  Status       = OpteeSetupPageList (NULL, Buf, Size, &PageList);
+  if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_WARN, "Failed to register %r\n", Status));
     goto Error;
   }
+
   Msg->Params[0].Attribute = OPTEE_MESSAGE_ATTR_TYPE_TMEM_OUTPUT | OPTEE_MESSAGE_ATTR_NONCONTIG;
-  //Need to free this Pagelist
-  Msg->Params[0].Union.Memory.BufferAddress = (UINT64)PageList;
-  Msg->Params[0].Union.Memory.Size = Size;
+  // Need to free this Pagelist
+  Msg->Params[0].Union.Memory.BufferAddress         = (UINT64)PageList;
+  Msg->Params[0].Union.Memory.Size                  = Size;
   Msg->Params[0].Union.Memory.SharedMemoryReference = (UINT64)Cookie;
 
   Msg->Return = OPTEE_SUCCESS;
@@ -386,11 +390,10 @@ Error:
   return Ret;
 }
 
-
 STATIC
 VOID
 HandleCmdNotification (
-  OPTEE_MESSAGE_ARG *Msg
+  OPTEE_MESSAGE_ARG  *Msg
   )
 {
   if (Msg->NumParams != 1) {
@@ -399,18 +402,22 @@ HandleCmdNotification (
   }
 
   switch (Msg->Params[0].Union.Value.A) {
-  case NOTIFICATION_MSG_WAIT:
-    DEBUG ((DEBUG_INFO, "SecureWorld is busy, do an unconditional 500ms Stall"));
-    gBS->Stall(500000);
-    break;
-  case NOTIFICATION_MSG_WAKE:
-    DEBUG ((DEBUG_INFO, "SecureWorld is ready\n"));
-    break;
-  default:
-    DEBUG ((DEBUG_INFO, "Unknown Notification %d\n",
-                         Msg->Params[0].Union.Value.A));
-    break;
+    case NOTIFICATION_MSG_WAIT:
+      DEBUG ((DEBUG_INFO, "SecureWorld is busy, do an unconditional 500ms Stall"));
+      gBS->Stall (500000);
+      break;
+    case NOTIFICATION_MSG_WAKE:
+      DEBUG ((DEBUG_INFO, "SecureWorld is ready\n"));
+      break;
+    default:
+      DEBUG ((
+        DEBUG_INFO,
+        "Unknown Notification %d\n",
+        Msg->Params[0].Union.Value.A
+        ));
+      break;
   }
+
   Msg->Return = OPTEE_SUCCESS;
   return;
 err:
@@ -420,58 +427,63 @@ err:
 STATIC
 VOID
 HandleRpcCmd (
-  ARM_SMC_ARGS *Regs
-)
+  ARM_SMC_ARGS  *Regs
+  )
 {
-  OPTEE_SHM_COOKIE *Cookie = (VOID *)(UINT64)(((UINT64)Regs->Arg1 << 32) | Regs->Arg2);
-  OPTEE_MESSAGE_ARG *Msg = Cookie->Addr;
+  OPTEE_SHM_COOKIE   *Cookie = (VOID *)(UINT64)(((UINT64)Regs->Arg1 << 32) | Regs->Arg2);
+  OPTEE_MESSAGE_ARG  *Msg    = Cookie->Addr;
 
   switch (Msg->Command) {
-  case OPTEE_MSG_RPC_CMD_SHM_ALLOC:
-    if (!InRuntime) {
-      HandleCmdAlloc(Msg);
-    }
-    break;
-  case OPTEE_MSG_RPC_CMD_SHM_FREE:
-    if (!InRuntime) {
-      HandleCmdFree(Msg);
-    }
-    break;
-  case OPTEE_MSG_RPC_CMD_RPMB:
-    if (IsRpmbPresent) {
-      HandleCmdRpmb(Msg);
-    }
-    break;
-  case OPTEE_MSG_RPC_CMD_NOTIFICATION:
-    HandleCmdNotification(Msg);
-    break;
-  default:
-    DEBUG ((DEBUG_WARN, "Unhandled command %d \n", Msg->Command));
-    break;
+    case OPTEE_MSG_RPC_CMD_SHM_ALLOC:
+      if (!InRuntime) {
+        HandleCmdAlloc (Msg);
+      }
+
+      break;
+    case OPTEE_MSG_RPC_CMD_SHM_FREE:
+      if (!InRuntime) {
+        HandleCmdFree (Msg);
+      }
+
+      break;
+    case OPTEE_MSG_RPC_CMD_RPMB:
+      if (IsRpmbPresent) {
+        HandleCmdRpmb (Msg);
+      }
+
+      break;
+    case OPTEE_MSG_RPC_CMD_NOTIFICATION:
+      HandleCmdNotification (Msg);
+      break;
+    default:
+      DEBUG ((DEBUG_WARN, "Unhandled command %d \n", Msg->Command));
+      break;
   }
+
   Msg->ReturnOrigin = OPTEE_ORIGIN_COMMUNICATION;
 }
-
 
 STATIC
 OPTEE_SHM_COOKIE *
 HandleRpcAlloc (
-  UINT32 Size
-)
+  UINT32  Size
+  )
 {
-  VOID *Buf = NULL;
-  OPTEE_SHM_COOKIE *Cookie = NULL;
+  VOID              *Buf    = NULL;
+  OPTEE_SHM_COOKIE  *Cookie = NULL;
 
-  Buf = AllocateAlignedRuntimePages(EFI_SIZE_TO_PAGES(Size), OPTEE_MSG_PAGE_SIZE);
+  Buf = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (Size), OPTEE_MSG_PAGE_SIZE);
   if (Buf == NULL) {
     DEBUG ((DEBUG_WARN, "Failed to alloc buf"));
     goto Error;
-   }
-  Cookie = AllocateAlignedRuntimePages(EFI_SIZE_TO_PAGES(sizeof(OPTEE_SHM_COOKIE)), OPTEE_MSG_PAGE_SIZE);
+  }
+
+  Cookie = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (sizeof (OPTEE_SHM_COOKIE)), OPTEE_MSG_PAGE_SIZE);
   if (Cookie == NULL) {
     DEBUG ((DEBUG_WARN, "Failed to alloc cookie"));
     goto Error;
   }
+
   Cookie->Addr = Buf;
   Cookie->Size = Size;
   return Cookie;
@@ -479,12 +491,13 @@ Error:
   if (Buf != NULL) {
     FreePool (Buf);
   }
+
   if (Cookie != NULL) {
     FreePool (Cookie);
   }
+
   return NULL;
 }
-
 
 STATIC
 BOOLEAN
@@ -493,9 +506,8 @@ IsOpteeSmcReturnRpc (
   )
 {
   return ((Return != OPTEE_SMC_RETURN_UNKNOWN_FUNCTION) &&
-         ((Return & OPTEE_SMC_RETURN_RPC_PREFIX_MASK) ==
-          OPTEE_SMC_RETURN_RPC_PREFIX));
-
+          ((Return & OPTEE_SMC_RETURN_RPC_PREFIX_MASK) ==
+           OPTEE_SMC_RETURN_RPC_PREFIX));
 }
 
 /**
@@ -523,37 +535,42 @@ OpteeCallWithArg (
     ArmCallSmc (&ArmSmcArgs);
 
     if (IsOpteeSmcReturnRpc (ArmSmcArgs.Arg0)) {
-      OPTEE_SHM_COOKIE *Cookie = 0;
+      OPTEE_SHM_COOKIE  *Cookie = 0;
 
       switch (ArmSmcArgs.Arg0) {
-      case OPTEE_SMC_RETURN_RPC_FOREIGN_INTERRUPT:
-        //
-        // A foreign interrupt was raised while secure world was
-        // executing, since they are handled in UEFI a dummy RPC is
-        // performed to let UEFI take the interrupt through the normal
-        // vector.
-        //
-        break;
-      case OPTEE_SMC_RETURN_RPC_FUNC_ALLOC:
-        if (!InRuntime) {
-          Cookie = HandleRpcAlloc(ArmSmcArgs.Arg1);
-          if (Cookie != NULL) {
-            ArmSmcArgs.Arg1 = (UINT32)((UINT64)Cookie->Addr >> 32);
-            ArmSmcArgs.Arg2 = (UINT32)((UINT64)Cookie->Addr);
-            ArmSmcArgs.Arg4 = (UINT32)((UINT64)Cookie >> 32);
-            ArmSmcArgs.Arg5 = (UINT32)((UINT64)Cookie);
+        case OPTEE_SMC_RETURN_RPC_FOREIGN_INTERRUPT:
+          //
+          // A foreign interrupt was raised while secure world was
+          // executing, since they are handled in UEFI a dummy RPC is
+          // performed to let UEFI take the interrupt through the normal
+          // vector.
+          //
+          break;
+        case OPTEE_SMC_RETURN_RPC_FUNC_ALLOC:
+          if (!InRuntime) {
+            Cookie = HandleRpcAlloc (ArmSmcArgs.Arg1);
+            if (Cookie != NULL) {
+              ArmSmcArgs.Arg1 = (UINT32)((UINT64)Cookie->Addr >> 32);
+              ArmSmcArgs.Arg2 = (UINT32)((UINT64)Cookie->Addr);
+              ArmSmcArgs.Arg4 = (UINT32)((UINT64)Cookie >> 32);
+              ArmSmcArgs.Arg5 = (UINT32)((UINT64)Cookie);
+            }
           }
-        }
-        break;
-      case OPTEE_SMC_RETURN_RPC_FUNC_CMD:
-        HandleRpcCmd(&ArmSmcArgs);
-        break;
-      case OPTEE_SMC_RETURN_RPC_FUNC_FREE:
-      default:
-         DEBUG ((DEBUG_WARN, "%a: Function 0x%x not implemented.\n",
-                             __FUNCTION__, ArmSmcArgs.Arg0));
-         // Do nothing in case RPC is not implemented.
-        break;
+
+          break;
+        case OPTEE_SMC_RETURN_RPC_FUNC_CMD:
+          HandleRpcCmd (&ArmSmcArgs);
+          break;
+        case OPTEE_SMC_RETURN_RPC_FUNC_FREE:
+        default:
+          DEBUG ((
+            DEBUG_WARN,
+            "%a: Function 0x%x not implemented.\n",
+            __FUNCTION__,
+            ArmSmcArgs.Arg0
+            ));
+          // Do nothing in case RPC is not implemented.
+          break;
       }
 
       ArmSmcArgs.Arg0 = OPTEE_SMC_RETURN_FROM_RPC;
@@ -847,7 +864,7 @@ OpteeSetProperties (
   UINT64   VBuf,
   UINT64   Size,
   BOOLEAN  RpmbPresent
- )
+  )
 {
   OpteeSharedMemoryInformation.PBase = PBuf;
   OpteeSharedMemoryInformation.VBase = VBuf;
@@ -859,7 +876,7 @@ OpteeSetProperties (
 VOID
 EFIAPI
 OpteeLibNotifyRuntime (
-  BOOLEAN Runtime
+  BOOLEAN  Runtime
   )
 {
   InRuntime = Runtime;
