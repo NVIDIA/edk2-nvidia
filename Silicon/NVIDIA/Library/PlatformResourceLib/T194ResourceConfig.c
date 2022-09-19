@@ -483,5 +483,21 @@ T194SetNextBootChain (
     BootChain
     );
 
+  if (BootChain == BOOT_CHAIN_A) {
+    MmioBitFieldWrite32 (
+      FixedPcdGet64 (PcdBootLoaderRegisterBaseAddressT194),
+      BL_BOOT_CHAIN_STATUS_A_BIT_FIELD,
+      BL_BOOT_CHAIN_STATUS_A_BIT_FIELD,
+      BOOT_CHAIN_GOOD
+      );
+  } else {
+    MmioBitFieldWrite32 (
+      FixedPcdGet64 (PcdBootLoaderRegisterBaseAddressT194),
+      BL_BOOT_CHAIN_STATUS_B_BIT_FIELD,
+      BL_BOOT_CHAIN_STATUS_B_BIT_FIELD,
+      BOOT_CHAIN_GOOD
+      );
+  }
+
   return EFI_SUCCESS;
 }

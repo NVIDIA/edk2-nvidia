@@ -590,5 +590,12 @@ T234SetNextBootChain (
     BootChain
     );
 
+  MmioBitFieldWrite32 (
+    FixedPcdGet64 (PcdBootChainRegisterBaseAddressT234),
+    BootChain,
+    BootChain,
+    BOOT_CHAIN_GOOD
+    );
+
   return EFI_SUCCESS;
 }
