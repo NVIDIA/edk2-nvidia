@@ -1981,14 +1981,14 @@ ValidateRootfsStatus (
 
           // Rootfs slot is not linked with bootloader chain
           BootChainOverride = NonCurrentSlot;
-          DataSize = sizeof (BootChainOverride);
-          Status   = gRT->SetVariable (
-                    BOOT_OS_OVERRIDE_VARIABLE_NAME,
-                    &gNVIDIAPublicVariableGuid,
-                    EFI_VARIABLE_BOOTSERVICE_ACCESS|EFI_VARIABLE_RUNTIME_ACCESS|EFI_VARIABLE_NON_VOLATILE,
-                    DataSize,
-                    &BootChainOverride
-                    );
+          DataSize          = sizeof (BootChainOverride);
+          Status            = gRT->SetVariable (
+                                     BOOT_OS_OVERRIDE_VARIABLE_NAME,
+                                     &gNVIDIAPublicVariableGuid,
+                                     EFI_VARIABLE_BOOTSERVICE_ACCESS|EFI_VARIABLE_RUNTIME_ACCESS|EFI_VARIABLE_NON_VOLATILE,
+                                     DataSize,
+                                     &BootChainOverride
+                                     );
           if (EFI_ERROR (Status)) {
             ErrorPrint (L"Failed to set OS override variable: %r\r\n", Status);
           }
@@ -2279,12 +2279,12 @@ BootAndroidStylePartition (
     }
 
     Status = DiskIo->ReadDisk (
-                        DiskIo,
-                        BlockIo->Media->MediaId,
-                        0,
-                        Size,
-                        KernelDtb
-                        );
+                       DiskIo,
+                       BlockIo->Media->MediaId,
+                       0,
+                       Size,
+                       KernelDtb
+                       );
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"Failed to read disk\r\n");
       goto Exit;
