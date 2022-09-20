@@ -155,6 +155,7 @@
   SmbiosMiscLib|Silicon/NVIDIA/Library/SmbiosMiscLib/SmbiosMiscLib.inf
   TegraCpuFreqHelperLib|Silicon/NVIDIA/Library/TegraCpuFreqHelperLib/TegraCpuFreqHelper.inf
   TimeBaseLib|EmbeddedPkg/Library/TimeBaseLib/TimeBaseLib.inf
+  FruLib|Silicon/NVIDIA/Library/FruLib/FruLib.inf
 
   FdtLib|EmbeddedPkg/Library/FdtLib/FdtLib.inf
   DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbLoaderLib.inf
@@ -323,7 +324,6 @@
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
   DisplayUpdateProgressLib|MdeModulePkg/Library/DisplayUpdateProgressLibText/DisplayUpdateProgressLibText.inf
-
 
 [LibraryClasses.ARM, LibraryClasses.AARCH64]
   #
