@@ -52,6 +52,7 @@
   gDtPlatformFormSetGuid
   gNVIDIATokenSpaceGuid
   gEfiPartTypeSystemPartGuid
+  gEfiImageSecurityDatabaseGuid
 
 [Protocols]
   gEfiVariableWriteArchProtocolGuid

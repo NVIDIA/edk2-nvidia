@@ -672,6 +672,8 @@ VariableReady (
       VariableGuid = &gDtPlatformFormSetGuid;
     } else if (AsciiStrCmp (NodeName, "gNVIDIATokenSpaceGuid") == 0) {
       VariableGuid = &gNVIDIATokenSpaceGuid;
+    } else if (AsciiStrCmp (NodeName, "gEfiImageSecurityDatabaseGuid") == 0) {
+      VariableGuid = &gEfiImageSecurityDatabaseGuid;
     } else if (AsciiStrCmp (NodeName, VARIABLE_GUID_BASED) == 0) {
       GuidBased = TRUE;
     } else {
