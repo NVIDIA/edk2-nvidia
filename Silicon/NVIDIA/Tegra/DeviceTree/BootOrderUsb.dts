@@ -10,7 +10,7 @@
 /plugin/;
 
 / {
-	overlay-name = "UEFI Boot order sata default";
+	overlay-name = "UEFI Boot order usb default";
 
 	fragment@0 {
 		target-path = "/";
@@ -24,7 +24,7 @@
 					variables {
 						gNVIDIATokenSpaceGuid {
 							DefaultBootPriority {
-								data = "sata";
+								data = "usb";
 								locked;
 							};
 						};
