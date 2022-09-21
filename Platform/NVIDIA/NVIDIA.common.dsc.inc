@@ -889,6 +889,11 @@
   MdeModulePkg/Application/VariableInfo/VariableInfo.inf
 
   #
+  # Default Security Key Enrollment Application.
+  #
+  SecurityPkg/EnrollFromDefaultKeysApp/EnrollFromDefaultKeysApp.inf
+
+  #
   # Capsule Application
   #
   MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf

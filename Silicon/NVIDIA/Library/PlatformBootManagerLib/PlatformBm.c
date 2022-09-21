@@ -398,9 +398,10 @@ AddOutput (
 STATIC
 VOID
 PlatformRegisterFvBootOption (
-  CONST EFI_GUID  *FileGuid,
-  CHAR16          *Description,
-  UINT32          Attributes
+  CONST EFI_GUID                     *FileGuid,
+  CHAR16                             *Description,
+  UINT32                             Attributes,
+  EFI_BOOT_MANAGER_LOAD_OPTION_TYPE  LoadOptionType
   )
 {
   EFI_STATUS                         Status;
@@ -431,7 +432,7 @@ PlatformRegisterFvBootOption (
   Status = EfiBootManagerInitializeLoadOption (
              &NewOption,
              LoadOptionNumberUnassigned,
-             LoadOptionTypeBoot,
+             LoadOptionType,
              Attributes,
              Description,
              DevicePath,
@@ -443,7 +444,7 @@ PlatformRegisterFvBootOption (
 
   BootOptions = EfiBootManagerGetLoadOptions (
                   &BootOptionCount,
-                  LoadOptionTypeBoot
+                  LoadOptionType
                   );
 
   OptionIndex = EfiBootManagerFindLoadOption (
@@ -1142,6 +1143,9 @@ PlatformBootManagerBeforeConsole (
   VOID
   )
 {
+  UINT8       *EnrollDefaultKeys;
+  EFI_STATUS  Status;
+
   //
   // Signal EndOfDxe PI Event
   //
@@ -1189,12 +1193,46 @@ PlatformBootManagerBeforeConsole (
     PlatformRegisterOptionsAndKeys ();
 
     //
+    // Register EnrollDefaultKeysApp as a SysPrep Option.
+    //
+    Status = GetVariable2 (
+               L"EnrollDefaultSecurityKeys",
+               &gNVIDIAPublicVariableGuid,
+               (VOID **)&EnrollDefaultKeys,
+               NULL
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: No Default keys to enroll %r.\n",
+        __FUNCTION__,
+        Status
+        ));
+    } else {
+      if (*EnrollDefaultKeys == 1) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Enroll default keys. %r\n",
+          __FUNCTION__,
+          Status
+          ));
+        PlatformRegisterFvBootOption (
+          &gEnrollFromDefaultKeysAppFileGuid,
+          L"Enroll Default Keys App",
+          LOAD_OPTION_ACTIVE,
+          LoadOptionTypeSysPrep
+          );
+      }
+    }
+
+    //
     // Register UEFI Shell
     //
     PlatformRegisterFvBootOption (
       &gUefiShellFileGuid,
       L"UEFI Shell",
-      LOAD_OPTION_ACTIVE
+      LOAD_OPTION_ACTIVE,
+      LoadOptionTypeBoot
       );
 
     //

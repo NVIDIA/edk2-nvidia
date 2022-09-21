@@ -193,6 +193,7 @@
   INF ShellPkg/Application/Shell/Shell.inf
   INF MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
   INF MdeModulePkg/Application/VariableInfo/VariableInfo.inf
+  INF SecurityPkg/EnrollFromDefaultKeysApp/EnrollFromDefaultKeysApp.inf
 
   #
   # SMBIOS/DMI
