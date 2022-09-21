@@ -10,7 +10,7 @@
 /plugin/;
 
 / {
-	overlay-name = "UEFI Boot order pxe default";
+	overlay-name = "UEFI Boot order nvme default";
 
 	fragment@0 {
 		target-path = "/";
