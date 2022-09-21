@@ -20,6 +20,8 @@
   BootOrderNvme.dts
   BootOrderPxe.dts
   BootOrderSata.dts
+  BootOrderUfs.dts
+  BootOrderUsb.dts
   L4TConfiguration.dts
   L4TRootfsInfo.dts
   L4TRootfsABInfo.dts
