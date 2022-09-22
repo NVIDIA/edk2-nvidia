@@ -191,6 +191,90 @@ exit:
 }
 
 /*
+ * The helper function to check the lock status of the specified slot
+ *
+ * @param[in]         CertIndex     The slot index of the certificate
+ * @param[out]        Locked        Return if this slot is locked or not
+ *
+ * @retval EFI_SUCCESS    Operation successful.
+ * @retval others         Error occurred
+ */
+STATIC
+EFI_STATUS
+NorFlashCheckLockStatus (
+  IN  INTN     CertIndex,
+  OUT BOOLEAN  *Locked
+  )
+{
+  EFI_STATUS          Status         = EFI_SUCCESS;
+  NOR_FLASH_LOCK_OPS  *LockOps       = NULL;
+  BOOLEAN             IsSectorLocked = FALSE;
+  BOOLEAN             Inited         = FALSE;
+  BOOLEAN             Enabled        = FALSE;
+  UINT32              Offset         = 0;
+
+  if ((CertIndex < 0) || (CertIndex >= MM_DICE_CERT_NUM_MAX)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (Locked == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  LockOps = SupportedDevices[DeviceChosen].LockOps;
+  if ((LockOps->IsInitialized == NULL) || (LockOps->Initialize == NULL) ||
+      (LockOps->IsWriteProtectEnabled == NULL) || (LockOps->IsLocked == NULL))
+  {
+    DEBUG ((DEBUG_ERROR, "DICE Lock: IsLocked is not implemented.\n"));
+    Status = EFI_UNSUPPORTED;
+    goto exit;
+  }
+
+  Status = LockOps->IsInitialized (&Inited);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to check init state (%r)\n", __FUNCTION__, Status));
+    goto exit;
+  }
+
+  if (Inited == FALSE) {
+    Status = LockOps->Initialize (QspiBaseAddress);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to initialize locking (%r)\n", __FUNCTION__, Status));
+      goto exit;
+    }
+  }
+
+  Status = LockOps->IsWriteProtectEnabled (&Enabled);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to query write protection state (%r).\n", Status));
+    goto exit;
+  }
+
+  if (Enabled == FALSE) {
+    // Write protection is not enabled yet so no slots are locked
+    *Locked = FALSE;
+    goto exit;
+  }
+
+  Offset = WormInfo->WormOffset + (WormInfo->WormSize / MM_DICE_CERT_NUM_MAX) * CertIndex;
+  Status = LockOps->IsLocked (Offset, &IsSectorLocked);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "Failed to query the lock status of the sector: 0x%x (%r).\n",
+      Offset,
+      Status
+      ));
+    goto exit;
+  }
+
+  *Locked = IsSectorLocked;
+
+exit:
+  return Status;
+}
+
+/*
  * The main function to handle the UEFI SMM DICE requests.
  *
  * @param[in]         DispatchHandle     The handler coming from UEFI SMM, unused for now
@@ -219,11 +303,15 @@ DiceProtocolMmHandler (
   MM_DICE_CERT_CONTENT        ReadCertHeader;
   UINT32                      ReadOffset = 0;
   INTN                        CertIndex;
-  UINTN                       RespDataSize   = 0;
-  NOR_FLASH_LOCK_OPS          *LockOps       = NULL;
-  BOOLEAN                     IsSectorLocked = FALSE;
-  BOOLEAN                     LockEnabled    = FALSE;
-  BOOLEAN                     LockInited     = FALSE;
+  UINTN                       RespDataSize     = 0;
+  NOR_FLASH_LOCK_OPS          *LockOps         = NULL;
+  BOOLEAN                     IsSectorLocked   = FALSE;
+  UINT32                      WriteOffset      = 0;
+  UINT32                      WriteOffsetLba   = 0;
+  UINT32                      WriteLbaCount    = 0;
+  MM_DICE_CERT_CONTENT        *WriteCertHeader = NULL;
+  UINT8                       *WriteBuffer     = NULL;
+  UINTN                       WriteBufferSize;
 
   if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -298,7 +386,95 @@ DiceProtocolMmHandler (
       break;
 
     case MM_DICE_WRITE:
+      PayloadSize = *CommBufferSize - MM_COMMUNICATE_DICE_HEADER_SIZE;
+      if (PayloadSize <= MM_DICE_CERT_CONTENT_HEADER_SIZE) {
+        // Type and Length are mandatory
+        DEBUG ((DEBUG_ERROR, "Communication buffer is too small\n"));
+        Status = EFI_BUFFER_TOO_SMALL;
+        goto exit;
+      }
+
+      Status = DiceGetActiveCertIndex (NorFlashProtocol, &CertIndex);
+      if (EFI_ERROR (Status)) {
+        goto exit;
+      }
+
+      if (CertIndex == -1) {
+        // No certificates yet
+        CertIndex = 0;
+      }
+
+      Status = NorFlashCheckLockStatus (CertIndex, &IsSectorLocked);
+      if (EFI_ERROR (Status)) {
+        goto exit;
+      }
+
+      if (IsSectorLocked == TRUE) {
+        // Write to the next slot
+        CertIndex++;
+        if (CertIndex >= MM_DICE_CERT_NUM_MAX) {
+          // No room to save new certificates
+          DEBUG ((DEBUG_ERROR, "No room to save new certificates\n"));
+          DiceHeader->ReturnStatus = EFI_END_OF_MEDIA;
+          goto exit;
+        }
+      }
+
+      WriteCertHeader = (MM_DICE_CERT_CONTENT *)DiceHeader->Data;
+      if (WriteCertHeader->Length > (WormInfo->WormSize / MM_DICE_CERT_NUM_MAX - MM_DICE_CERT_MAGIC_LEN)) {
+        DEBUG ((DEBUG_ERROR, "Certificate length is too large\n"));
+        DiceHeader->ReturnStatus = EFI_BAD_BUFFER_SIZE;
+        goto exit;
+      }
+
+      WriteBufferSize = MM_DICE_CERT_MAGIC_LEN + MM_DICE_CERT_CONTENT_HEADER_SIZE +
+                        WriteCertHeader->Length;
+      WriteBuffer = AllocateZeroPool (WriteBufferSize);
+      if (WriteBuffer == NULL) {
+        Status = EFI_OUT_OF_RESOURCES;
+        goto exit;
+      }
+
+      CopyMem (WriteBuffer, MM_DICE_CERT_MAGIC, MM_DICE_CERT_MAGIC_LEN);
+      CopyMem (WriteBuffer + MM_DICE_CERT_MAGIC_LEN, DiceHeader->Data, WriteBufferSize - MM_DICE_CERT_MAGIC_LEN);
+
+      WriteOffset = WormInfo->WormOffset + (WormInfo->WormSize / MM_DICE_CERT_NUM_MAX) * CertIndex;
+      if (WriteOffset % NorFlashAttributes->BlockSize != 0) {
+        DEBUG ((DEBUG_ERROR, "Unaligned write offset: 0x%x\n", WriteOffset));
+        DiceHeader->ReturnStatus = EFI_UNSUPPORTED;
+        goto exit;
+      }
+
+      WriteOffsetLba = WriteOffset / NorFlashAttributes->BlockSize;
+      WriteLbaCount  = ALIGN_VALUE (
+                         WriteBufferSize,
+                         NorFlashAttributes->BlockSize
+                         ) / NorFlashAttributes->BlockSize;
+      Status = NorFlashProtocol->Erase (NorFlashProtocol, WriteOffsetLba, WriteLbaCount);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "Failed to erase at 0x%x, count: 0x%x (%r)\n",
+          WriteOffsetLba,
+          WriteLbaCount,
+          Status
+          ));
+        goto exit;
+      }
+
+      Status = NorFlashProtocol->Write (
+                                   NorFlashProtocol,
+                                   WriteOffset,
+                                   WriteBufferSize,
+                                   WriteBuffer
+                                   );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "Failed to write cert(%d) (%r)\n", CertIndex, Status));
+        goto exit;
+      }
+
       break;
+
     case MM_DICE_LOCK:
       Status = DiceGetActiveCertIndex (NorFlashProtocol, &CertIndex);
       if (EFI_ERROR (Status)) {
@@ -358,50 +534,8 @@ DiceProtocolMmHandler (
         goto exit;
       }
 
-      LockOps = SupportedDevices[DeviceChosen].LockOps;
-      if ((LockOps->IsInitialized == NULL) || (LockOps->Initialize == NULL) ||
-          (LockOps->IsWriteProtectEnabled == NULL) || (LockOps->IsLocked == NULL))
-      {
-        DEBUG ((DEBUG_ERROR, "DICE Lock: IsLocked is not implemented.\n"));
-        Status = EFI_UNSUPPORTED;
-        goto exit;
-      }
-
-      Status = LockOps->IsInitialized (&LockInited);
+      Status = NorFlashCheckLockStatus (CertIndex, &IsSectorLocked);
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Failed to check init state (%r)\n", __FUNCTION__, Status));
-        goto exit;
-      }
-
-      if (LockInited == FALSE) {
-        Status = LockOps->Initialize (QspiBaseAddress);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "Failed to initialize locking (%r)\n", __FUNCTION__, Status));
-          goto exit;
-        }
-      }
-
-      Status = LockOps->IsWriteProtectEnabled (&LockEnabled);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Failed to query write protection state (%r).\n", Status));
-        goto exit;
-      }
-
-      if (LockEnabled == FALSE) {
-        // Write protection is not enabled yet so no slots are locked
-        DiceHeader->ReturnStatus = MM_DICE_UNLOCKED;
-        goto exit;
-      }
-
-      ReadOffset = WormInfo->WormOffset + (WormInfo->WormSize / MM_DICE_CERT_NUM_MAX) * CertIndex;
-      Status     = LockOps->IsLocked (ReadOffset, &IsSectorLocked);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "Failed to query the lock status of the sector: 0x%x (%r).\n",
-          ReadOffset,
-          Status
-          ));
         goto exit;
       }
 
@@ -415,6 +549,10 @@ DiceProtocolMmHandler (
   }
 
 exit:
+  if (WriteBuffer != NULL) {
+    FreePool (WriteBuffer);
+  }
+
   if (EFI_ERROR (Status)) {
     DiceHeader->ReturnStatus = Status;
   }
