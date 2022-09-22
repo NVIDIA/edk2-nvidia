@@ -17,15 +17,16 @@
 #include <Protocol/LoadedImage.h>
 #include <Library/HandleParsingLib.h>
 #include <Library/BootChainInfoLib.h>
+#include <NVIDIAConfiguration.h>
 
-
-STATIC EFI_PHYSICAL_ADDRESS      mRamLoadedBaseAddress = 0;
-STATIC UINT64                    mRamLoadedSize = 0;
-STATIC EFI_PHYSICAL_ADDRESS      mInitRdBaseAddress = 0;
-STATIC UINT64                    mInitRdSize = 0;
-STATIC SINGLE_VENHW_NODE_DEVPATH mRamLoadFileDevicePath = {
+STATIC EFI_PHYSICAL_ADDRESS       mRamLoadedBaseAddress  = 0;
+STATIC UINT64                     mRamLoadedSize         = 0;
+STATIC EFI_PHYSICAL_ADDRESS       mInitRdBaseAddress     = 0;
+STATIC UINT64                     mInitRdSize            = 0;
+STATIC SINGLE_VENHW_NODE_DEVPATH  mRamLoadFileDevicePath = {
   {
-    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
+    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) }
+    },
     { 0 }
   },
 
@@ -35,9 +36,10 @@ STATIC SINGLE_VENHW_NODE_DEVPATH mRamLoadFileDevicePath = {
   }
 };
 
-STATIC SINGLE_VENHW_NODE_DEVPATH mRcmLoadFileDevicePath = {
+STATIC SINGLE_VENHW_NODE_DEVPATH  mRcmLoadFileDevicePath = {
   {
-    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
+    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) }
+    },
     { 0 }
   },
 
@@ -47,9 +49,10 @@ STATIC SINGLE_VENHW_NODE_DEVPATH mRcmLoadFileDevicePath = {
   }
 };
 
-STATIC INITRD_DEVICE_PATH        mInitrdDevicePath = {
+STATIC INITRD_DEVICE_PATH  mInitrdDevicePath = {
   {
-    { MEDIA_DEVICE_PATH, MEDIA_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) } },
+    { MEDIA_DEVICE_PATH, MEDIA_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) }
+    },
     LINUX_EFI_INITRD_MEDIA_GUID
   },
   {
@@ -57,7 +60,6 @@ STATIC INITRD_DEVICE_PATH        mInitrdDevicePath = {
     { sizeof (EFI_DEVICE_PATH_PROTOCOL) }
   }
 };
-
 
 /**
   Check if loadfile2 protocol is already installed. If yes,
@@ -75,37 +77,44 @@ AndroidBootOnReadyToBootHandler (
   IN VOID       *Context
   )
 {
-  EFI_STATUS    Status;
-  EFI_HANDLE    Handle;
-  VOID          *Interface;
+  EFI_STATUS  Status;
+  EFI_HANDLE  Handle;
+  VOID        *Interface;
 
   gBS->CloseEvent (Event);
 
   Handle = (EFI_HANDLE)Context;
 
-  Status = gBS->HandleProtocol (Handle,
+  Status = gBS->HandleProtocol (
+                  Handle,
                   &gEfiLoadFile2ProtocolGuid,
-                  (VOID **)&Interface);
+                  (VOID **)&Interface
+                  );
   if (!EFI_ERROR (Status)) {
     // If LoadFile2 protocol installed on handle, uninstall it.
-    gBS->UninstallMultipleProtocolInterfaces (Handle,
+    gBS->UninstallMultipleProtocolInterfaces (
+           Handle,
            &gEfiLoadFile2ProtocolGuid,
            Interface,
-           NULL);
+           NULL
+           );
   }
 
-  Status = gBS->HandleProtocol (Handle,
+  Status = gBS->HandleProtocol (
+                  Handle,
                   &gEfiDevicePathProtocolGuid,
-                  (VOID **)&Interface);
+                  (VOID **)&Interface
+                  );
   if (!EFI_ERROR (Status)) {
     // If device path protocol installed on handle, uninstall it.
-    gBS->UninstallMultipleProtocolInterfaces (Handle,
+    gBS->UninstallMultipleProtocolInterfaces (
+           Handle,
            &gEfiDevicePathProtocolGuid,
            Interface,
-           NULL);
+           NULL
+           );
   }
 }
-
 
 /**
   Causes the driver to load a specified file.
@@ -139,16 +148,16 @@ AndroidBootOnReadyToBootHandler (
 EFI_STATUS
 EFIAPI
 AndroidBootDxeLoadFile2 (
-  IN EFI_LOAD_FILE2_PROTOCOL    *This,
-  IN EFI_DEVICE_PATH_PROTOCOL   *FilePath,
-  IN BOOLEAN                    BootPolicy,
-  IN OUT UINTN                  *BufferSize,
-  IN VOID                       *Buffer OPTIONAL
+  IN EFI_LOAD_FILE2_PROTOCOL   *This,
+  IN EFI_DEVICE_PATH_PROTOCOL  *FilePath,
+  IN BOOLEAN                   BootPolicy,
+  IN OUT UINTN                 *BufferSize,
+  IN VOID                      *Buffer OPTIONAL
   )
 
 {
   // Verify if the valid parameters
-  if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
+  if ((This == NULL) || (BufferSize == NULL) || (FilePath == NULL) || !IsDevicePathValid (FilePath, 0)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -163,7 +172,8 @@ AndroidBootDxeLoadFile2 (
   if (mInitRdBaseAddress == 0) {
     return EFI_NOT_FOUND;
   }
-  if (Buffer == NULL || *BufferSize < mInitRdSize) {
+
+  if ((Buffer == NULL) || (*BufferSize < mInitRdSize)) {
     *BufferSize = mInitRdSize;
     return EFI_BUFFER_TOO_SMALL;
   }
@@ -174,7 +184,6 @@ AndroidBootDxeLoadFile2 (
   return EFI_SUCCESS;
 }
 
-
 ///
 /// Load File Protocol instance
 ///
@@ -182,7 +191,6 @@ GLOBAL_REMOVE_IF_UNREFERENCED
 EFI_LOAD_FILE2_PROTOCOL  mAndroidBootDxeLoadFile2 = {
   AndroidBootDxeLoadFile2
 };
-
 
 /**
   Attempt to read the data from source to destination buffer.
@@ -198,16 +206,16 @@ EFI_LOAD_FILE2_PROTOCOL  mAndroidBootDxeLoadFile2 = {
 **/
 EFI_STATUS
 AndroidBootRead (
-  IN EFI_BLOCK_IO_PROTOCOL        *BlockIo,
-  IN EFI_DISK_IO_PROTOCOL         *DiskIo,
-  IN UINT32                       Offset,
-  IN VOID                         *Buffer,
-  IN UINTN                        BufferSize
+  IN EFI_BLOCK_IO_PROTOCOL  *BlockIo,
+  IN EFI_DISK_IO_PROTOCOL   *DiskIo,
+  IN UINT32                 Offset,
+  IN VOID                   *Buffer,
+  IN UINTN                  BufferSize
   )
 {
-  VOID *RcmKernelBase;
+  VOID  *RcmKernelBase;
 
-  RcmKernelBase = (VOID *) PcdGet64 (PcdRcmKernelBase);
+  RcmKernelBase = (VOID *)PcdGet64 (PcdRcmKernelBase);
 
   if ((BlockIo != NULL) && (DiskIo != NULL)) {
     return DiskIo->ReadDisk (
@@ -220,13 +228,12 @@ AndroidBootRead (
   }
 
   if (RcmKernelBase != NULL) {
-    gBS->CopyMem (Buffer, (VOID *) ((UINTN) RcmKernelBase + Offset), BufferSize);
+    gBS->CopyMem (Buffer, (VOID *)((UINTN)RcmKernelBase + Offset), BufferSize);
     return EFI_SUCCESS;
   }
 
   return EFI_INVALID_PARAMETER;
 }
-
 
 /**
   Verify if there is the Android Boot image file by reading the magic word at the first
@@ -246,37 +253,37 @@ AndroidBootRead (
 **/
 EFI_STATUS
 AndroidBootGetVerify (
-  IN  EFI_BLOCK_IO_PROTOCOL       *BlockIo,
-  IN  EFI_DISK_IO_PROTOCOL        *DiskIo,
-  OUT ANDROID_BOOT_DATA           *ImgData OPTIONAL,
-  OUT CHAR16                      *KernelArgs OPTIONAL
+  IN  EFI_BLOCK_IO_PROTOCOL  *BlockIo,
+  IN  EFI_DISK_IO_PROTOCOL   *DiskIo,
+  OUT ANDROID_BOOT_DATA      *ImgData OPTIONAL,
+  OUT CHAR16                 *KernelArgs OPTIONAL
   )
 {
-  EFI_STATUS                      Status;
-  ANDROID_BOOTIMG_HEADER          *Header;
-  UINT32                          Offset;
-  UINT32                          SignatureHeaderSize;
-  VOID                            *RcmKernelBase;
-  UINT64                          RcmKernelSize;
-  UINTN                           PartitionSize;
-  UINTN                           ImageSize;
+  EFI_STATUS              Status;
+  ANDROID_BOOTIMG_HEADER  *Header;
+  UINT32                  Offset;
+  UINT32                  SignatureHeaderSize;
+  VOID                    *RcmKernelBase;
+  UINT64                  RcmKernelSize;
+  UINTN                   PartitionSize;
+  UINTN                   ImageSize;
 
   // Get the image header of Android Boot image
-  Header = AllocatePool (sizeof(ANDROID_BOOTIMG_HEADER));
+  Header = AllocatePool (sizeof (ANDROID_BOOTIMG_HEADER));
   if (Header == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
   SignatureHeaderSize = PcdGet32 (PcdSignedImageHeaderSize);
-  RcmKernelBase = (VOID *) PcdGet64 (PcdRcmKernelBase);
-  RcmKernelSize = PcdGet64 (PcdRcmKernelSize);
+  RcmKernelBase       = (VOID *)PcdGet64 (PcdRcmKernelBase);
+  RcmKernelSize       = PcdGet64 (PcdRcmKernelSize);
 
   Offset = 0;
   Status = AndroidBootRead (
              BlockIo,
              DiskIo,
              Offset,
-             (VOID *) Header,
+             (VOID *)Header,
              sizeof (*Header)
              );
   if (EFI_ERROR (Status)) {
@@ -284,8 +291,12 @@ AndroidBootGetVerify (
   }
 
   // Make sure the Android Boot image
-  if (AsciiStrnCmp ((CONST CHAR8 *)Header->BootMagic,
-                    ANDROID_BOOT_MAGIC, ANDROID_BOOT_MAGIC_LENGTH) != 0) {
+  if (AsciiStrnCmp (
+        (CONST CHAR8 *)Header->BootMagic,
+        ANDROID_BOOT_MAGIC,
+        ANDROID_BOOT_MAGIC_LENGTH
+        ) != 0)
+  {
     Status = EFI_NOT_FOUND;
     if (SignatureHeaderSize != 0) {
       Offset = SignatureHeaderSize;
@@ -293,7 +304,7 @@ AndroidBootGetVerify (
                  BlockIo,
                  DiskIo,
                  Offset,
-                 (VOID *) Header,
+                 (VOID *)Header,
                  sizeof (*Header)
                  );
       if (EFI_ERROR (Status)) {
@@ -301,8 +312,12 @@ AndroidBootGetVerify (
       }
 
       // Make sure the Android Boot image
-      if (AsciiStrnCmp ((CONST CHAR8 *)Header->BootMagic,
-                        ANDROID_BOOT_MAGIC, ANDROID_BOOT_MAGIC_LENGTH) != 0) {
+      if (AsciiStrnCmp (
+            (CONST CHAR8 *)Header->BootMagic,
+            ANDROID_BOOT_MAGIC,
+            ANDROID_BOOT_MAGIC_LENGTH
+            ) != 0)
+      {
         Status = EFI_NOT_FOUND;
       }
     }
@@ -324,9 +339,10 @@ AndroidBootGetVerify (
   } else {
     PartitionSize = RcmKernelSize;
   }
+
   ImageSize = Offset + Header->PageSize
-                  + ALIGN_VALUE (Header->KernelSize, Header->PageSize)
-                  + ALIGN_VALUE (Header->RamdiskSize, Header->PageSize);
+              + ALIGN_VALUE (Header->KernelSize, Header->PageSize)
+              + ALIGN_VALUE (Header->RamdiskSize, Header->PageSize);
   if (ImageSize > PartitionSize) {
     Status = EFI_NOT_FOUND;
     goto Exit;
@@ -356,7 +372,6 @@ Exit:
   return Status;
 }
 
-
 /**
   Attempt to load the kernel and initrd from the Android Boot image.
   Allocate pages reserved in BootService for the initrd image to persist until
@@ -374,21 +389,21 @@ Exit:
 **/
 EFI_STATUS
 AndroidBootLoadFile (
-  IN EFI_BLOCK_IO_PROTOCOL        *BlockIo,
-  IN EFI_DISK_IO_PROTOCOL         *DiskIo,
-  IN ANDROID_BOOT_DATA            *ImgData,
-  IN VOID                         *Buffer
+  IN EFI_BLOCK_IO_PROTOCOL  *BlockIo,
+  IN EFI_DISK_IO_PROTOCOL   *DiskIo,
+  IN ANDROID_BOOT_DATA      *ImgData,
+  IN VOID                   *Buffer
   )
 {
-  EFI_STATUS                      Status;
-  EFI_HANDLE                      InitrdHandle;
-  EFI_EVENT                       InitrdEvent;
-  UINTN                           Addr;
-  UINTN                           BufSize;
-  UINTN                           BufBase;
+  EFI_STATUS  Status;
+  EFI_HANDLE  InitrdHandle;
+  EFI_EVENT   InitrdEvent;
+  UINTN       Addr;
+  UINTN       BufSize;
+  UINTN       BufBase;
 
   mInitRdBaseAddress = 0;
-  mInitRdSize = 0;
+  mInitRdSize        = 0;
 
   // Android Boot image enabled in EFI stub feature consists of:
   // - Header info in PageSize that contains Android Boot image header
@@ -401,81 +416,103 @@ AndroidBootLoadFile (
   if (ImgData->KernelSize == 0) {
     return EFI_NOT_FOUND;
   }
-  Addr = ImgData->PageSize + ImgData->Offset;
+
+  Addr    = ImgData->PageSize + ImgData->Offset;
   BufSize = ImgData->KernelSize;
-  BufBase = (UINTN) Buffer;
-  Status = AndroidBootRead (
-             BlockIo,
-             DiskIo,
-             Addr,
-             (VOID *) BufBase,
-             BufSize
-             );
+  BufBase = (UINTN)Buffer;
+  Status  = AndroidBootRead (
+              BlockIo,
+              DiskIo,
+              Addr,
+              (VOID *)BufBase,
+              BufSize
+              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Unable to read disk for kernel image: from offset %x" \
-                  " to %09p: %r\n", __FUNCTION__, Addr, BufBase, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Unable to read disk for kernel image: from offset %x" \
+      " to %09p: %r\n",
+      __FUNCTION__,
+      Addr,
+      BufBase,
+      Status
+      ));
     return Status;
   }
+
   DEBUG ((DEBUG_INFO, "%a: Kernel image copied to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
 
   // Load the initial ramdisk
   if (ImgData->RamdiskSize == 0) {
     mInitRdBaseAddress = 0;
-    mInitRdSize = 0;
+    mInitRdSize        = 0;
     return Status;
   }
 
   // Allocate a buffer reserved in EfiBootServicesData
   // to make this buffer persist until the completion of kernel booting
-  Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesData,
+  Status = gBS->AllocatePages (
+                  AllocateAnyPages,
+                  EfiBootServicesData,
                   EFI_SIZE_TO_PAGES (ImgData->RamdiskSize),
-                  (EFI_PHYSICAL_ADDRESS *) &BufBase);
+                  (EFI_PHYSICAL_ADDRESS *)&BufBase
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: fail to get a buffer for ramdisk: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
-  Addr += ALIGN_VALUE (ImgData->KernelSize, ImgData->PageSize);
+  Addr   += ALIGN_VALUE (ImgData->KernelSize, ImgData->PageSize);
   BufSize = ImgData->RamdiskSize;
-  Status = AndroidBootRead (
-             BlockIo,
-             DiskIo,
-             Addr,
-             (VOID *) BufBase,
-             BufSize
-             );
+  Status  = AndroidBootRead (
+              BlockIo,
+              DiskIo,
+              Addr,
+              (VOID *)BufBase,
+              BufSize
+              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Unable to read disk for ramdisk from offset %x" \
-                  " to %09p: %r\n", __FUNCTION__, Addr, BufBase, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Unable to read disk for ramdisk from offset %x" \
+      " to %09p: %r\n",
+      __FUNCTION__,
+      Addr,
+      BufBase,
+      Status
+      ));
     goto ErrorExit;
   }
+
   DEBUG ((DEBUG_INFO, "%a: RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
 
   mInitRdBaseAddress = BufBase;
-  mInitRdSize = BufSize;
+  mInitRdSize        = BufSize;
 
   if (mInitRdSize != 0) {
     InitrdHandle = NULL;
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &InitrdHandle,
-                    &gEfiLoadFile2ProtocolGuid,
-                    &mAndroidBootDxeLoadFile2,
-                    &gEfiDevicePathProtocolGuid,
-                    &mInitrdDevicePath,
-                    NULL
-                    );
+    Status       = gBS->InstallMultipleProtocolInterfaces (
+                          &InitrdHandle,
+                          &gEfiLoadFile2ProtocolGuid,
+                          &mAndroidBootDxeLoadFile2,
+                          &gEfiDevicePathProtocolGuid,
+                          &mInitrdDevicePath,
+                          NULL
+                          );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to install initrd: %r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
 
     InitrdEvent = NULL;
-    Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
-                    TPL_CALLBACK,
-                    AndroidBootOnReadyToBootHandler,
-                    InitrdHandle,
-                    &gEfiEventReadyToBootGuid,
-                    &InitrdEvent);
+    Status      = gBS->CreateEventEx (
+                         EVT_NOTIFY_SIGNAL,
+                         TPL_CALLBACK,
+                         AndroidBootOnReadyToBootHandler,
+                         InitrdHandle,
+                         &gEfiEventReadyToBootGuid,
+                         &InitrdEvent
+                         );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to create initrd callback: %r\n", __FUNCTION__, Status));
       goto ErrorExit;
@@ -485,12 +522,11 @@ AndroidBootLoadFile (
   return Status;
 
 ErrorExit:
-  gBS->FreePages ((EFI_PHYSICAL_ADDRESS) BufBase, EFI_SIZE_TO_PAGES (ImgData->RamdiskSize));
+  gBS->FreePages ((EFI_PHYSICAL_ADDRESS)BufBase, EFI_SIZE_TO_PAGES (ImgData->RamdiskSize));
   mInitRdBaseAddress = 0;
-  mInitRdSize = 0;
+  mInitRdSize        = 0;
   return Status;
 }
-
 
 /**
   Causes the driver to load a specified file.
@@ -526,20 +562,20 @@ ErrorExit:
 EFI_STATUS
 EFIAPI
 AndroidBootDxeLoadFile (
-  IN EFI_LOAD_FILE_PROTOCOL     *This,
-  IN EFI_DEVICE_PATH_PROTOCOL   *FilePath,
-  IN BOOLEAN                    BootPolicy,
-  IN OUT UINTN                  *BufferSize,
-  IN VOID                       *Buffer OPTIONAL
+  IN EFI_LOAD_FILE_PROTOCOL    *This,
+  IN EFI_DEVICE_PATH_PROTOCOL  *FilePath,
+  IN BOOLEAN                   BootPolicy,
+  IN OUT UINTN                 *BufferSize,
+  IN VOID                      *Buffer OPTIONAL
   )
 
 {
-  EFI_STATUS                    Status;
-  ANDROID_BOOT_PRIVATE_DATA     *Private;
-  ANDROID_BOOT_DATA             ImgData;
+  EFI_STATUS                 Status;
+  ANDROID_BOOT_PRIVATE_DATA  *Private;
+  ANDROID_BOOT_DATA          ImgData;
 
   // Verify if the valid parameters
-  if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
+  if ((This == NULL) || (BufferSize == NULL) || (FilePath == NULL) || !IsDevicePathValid (FilePath, 0)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -550,7 +586,7 @@ AndroidBootDxeLoadFile (
   }
 
   // Retrieve Private data structure
-  Private = ANDROID_BOOT_PRIVATE_DATA_FROM_LOADFILE(This);
+  Private = ANDROID_BOOT_PRIVATE_DATA_FROM_LOADFILE (This);
   if (Private == NULL) {
     return EFI_INVALID_PARAMETER;
   }
@@ -566,7 +602,8 @@ AndroidBootDxeLoadFile (
   if (ImgData.KernelSize == 0) {
     return EFI_NOT_FOUND;
   }
-  if (Buffer == NULL || *BufferSize < ImgData.KernelSize) {
+
+  if ((Buffer == NULL) || (*BufferSize < ImgData.KernelSize)) {
     *BufferSize = ImgData.KernelSize;
     return EFI_BUFFER_TOO_SMALL;
   }
@@ -580,7 +617,6 @@ AndroidBootDxeLoadFile (
   return EFI_SUCCESS;
 }
 
-
 ///
 /// Load File Protocol instance
 ///
@@ -588,7 +624,6 @@ GLOBAL_REMOVE_IF_UNREFERENCED
 EFI_LOAD_FILE_PROTOCOL  mAndroidBootDxeLoadFile = {
   AndroidBootDxeLoadFile
 };
-
 
 /**
   Tests to see if this driver supports a given controller. If a child device is provided,
@@ -640,20 +675,21 @@ AndroidBootDriverBindingSupported (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS                      Status;
-  UINT32                          *Id;
-  EFI_BLOCK_IO_PROTOCOL           *BlockIo = NULL;
-  EFI_DISK_IO_PROTOCOL            *DiskIo = NULL;
-  EFI_PARTITION_INFO_PROTOCOL     *PartitionInfo = NULL;
-  EFI_HANDLE                      *ParentHandles = NULL;
-  CHAR16                          PartitionName[MAX_PARTITION_NAME_LEN];
-  UINTN                           ParentCount;
-  UINTN                           ParentIndex;
-  EFI_HANDLE                      *ChildHandles = NULL;
-  UINTN                           ChildCount;
-  UINTN                           ChildIndex;
-  VOID                            *Protocol;
-
+  EFI_STATUS                   Status;
+  UINT32                       *Id;
+  EFI_BLOCK_IO_PROTOCOL        *BlockIo       = NULL;
+  EFI_DISK_IO_PROTOCOL         *DiskIo        = NULL;
+  EFI_PARTITION_INFO_PROTOCOL  *PartitionInfo = NULL;
+  EFI_HANDLE                   *ParentHandles = NULL;
+  CHAR16                       PartitionName[MAX_PARTITION_NAME_LEN];
+  UINTN                        ParentCount;
+  UINTN                        ParentIndex;
+  EFI_HANDLE                   *ChildHandles = NULL;
+  UINTN                        ChildCount;
+  UINTN                        ChildIndex;
+  VOID                         *Protocol;
+  UINTN                        DataSize;
+  UINT32                       BootMode;
 
   // This driver will be accessed while boot manager attempts to connect
   // all drivers to the controllers for each partition entry.
@@ -668,7 +704,7 @@ AndroidBootDriverBindingSupported (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **) &Id,
+                  (VOID **)&Id,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -713,9 +749,15 @@ AndroidBootDriverBindingSupported (
     goto ErrorExit;
   }
 
-  Status = GetActivePartitionName (L"kernel", PartitionName);
-  if (EFI_ERROR (Status)) {
-    goto ErrorExit;
+  DataSize = sizeof (BootMode);
+  Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
+  if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
+    StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, L"recovery");
+  } else {
+    Status = GetActivePartitionName (L"kernel", PartitionName);
+    if (EFI_ERROR (Status)) {
+      goto ErrorExit;
+    }
   }
 
   if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
@@ -733,13 +775,14 @@ AndroidBootDriverBindingSupported (
     goto ErrorExit;
   }
 
-  //Check if there is an efi system partition on this disk
-  //If so use that to boot the device
+  // Check if there is an efi system partition on this disk
+  // If so use that to boot the device
   Status = PARSE_HANDLE_DATABASE_PARENTS (ControllerHandle, &ParentCount, &ParentHandles);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to find parents - %r\r\n", __FUNCTION__, Status));
     return Status;
   }
+
   for (ParentIndex = 0; ParentIndex < ParentCount; ParentIndex++) {
     Status = ParseHandleDatabaseForChildControllers (ParentHandles[ParentIndex], &ChildCount, &ChildHandles);
     if (EFI_ERROR (Status)) {
@@ -749,7 +792,7 @@ AndroidBootDriverBindingSupported (
 
     for (ChildIndex = 0; ChildIndex < ChildCount; ChildIndex++) {
       Status = gBS->HandleProtocol (ChildHandles[ChildIndex], &gEfiPartTypeSystemPartGuid, (VOID **)&Protocol);
-      //Found ESP return unsupported
+      // Found ESP return unsupported
       if (!EFI_ERROR (Status)) {
         Status = EFI_UNSUPPORTED;
         goto ErrorExit;
@@ -768,37 +811,41 @@ ErrorExit:
     FreePool (ParentHandles);
     ParentHandles = NULL;
   }
+
   if (ChildHandles != NULL) {
     FreePool (ChildHandles);
     ChildHandles = NULL;
   }
+
   if (PartitionInfo != NULL) {
     gBS->CloseProtocol (
-                    ControllerHandle,
-                    &gEfiPartitionInfoProtocolGuid,
-                    This->DriverBindingHandle,
-                    ControllerHandle
-                    );
+           ControllerHandle,
+           &gEfiPartitionInfoProtocolGuid,
+           This->DriverBindingHandle,
+           ControllerHandle
+           );
   }
+
   if (BlockIo != NULL) {
     gBS->CloseProtocol (
-                    ControllerHandle,
-                    &gEfiBlockIoProtocolGuid,
-                    This->DriverBindingHandle,
-                    ControllerHandle
-                    );
+           ControllerHandle,
+           &gEfiBlockIoProtocolGuid,
+           This->DriverBindingHandle,
+           ControllerHandle
+           );
   }
+
   if (DiskIo != NULL) {
     gBS->CloseProtocol (
-                    ControllerHandle,
-                    &gEfiDiskIoProtocolGuid,
-                    This->DriverBindingHandle,
-                    ControllerHandle
-                    );
+           ControllerHandle,
+           &gEfiDiskIoProtocolGuid,
+           This->DriverBindingHandle,
+           ControllerHandle
+           );
   }
+
   return Status;
 }
-
 
 /**
   Starts a device controller or a bus controller.
@@ -843,28 +890,30 @@ AndroidBootDriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS                      Status;
-  EFI_BLOCK_IO_PROTOCOL           *BlockIo = NULL;
-  EFI_DISK_IO_PROTOCOL            *DiskIo = NULL;
-  EFI_DEVICE_PATH_PROTOCOL        *ParentDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL        *AndroidBootDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL        *Node;
-  ANDROID_BOOT_PRIVATE_DATA       *Private;
-  UINT32                          *Id;
-  CHAR16                          *KernelArgs;
+  EFI_STATUS                 Status;
+  EFI_BLOCK_IO_PROTOCOL      *BlockIo = NULL;
+  EFI_DISK_IO_PROTOCOL       *DiskIo  = NULL;
+  EFI_DEVICE_PATH_PROTOCOL   *ParentDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL   *AndroidBootDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL   *Node;
+  ANDROID_BOOT_PRIVATE_DATA  *Private;
+  UINT32                     *Id;
+  CHAR16                     *KernelArgs;
 
   // BindingSupported() filters out the unsupported attempts and the multiple attempts
   // from a successful ControllerHandle such that BindingStart() runs only once
 
-  Private = NULL;
-  BlockIo = NULL;
+  Private          = NULL;
+  BlockIo          = NULL;
   ParentDevicePath = NULL;
-  KernelArgs = NULL;
+  KernelArgs       = NULL;
 
   // Get Parent's device path to create a child node and append URI node
-  Status = gBS->HandleProtocol (ControllerHandle,
-                                &gEfiDevicePathProtocolGuid,
-                                (VOID **)&ParentDevicePath);
+  Status = gBS->HandleProtocol (
+                  ControllerHandle,
+                  &gEfiDevicePathProtocolGuid,
+                  (VOID **)&ParentDevicePath
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: fail to get DevicePath: %r\n", __FUNCTION__, Status));
     return Status;
@@ -917,7 +966,8 @@ AndroidBootDriverBindingStart (
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
-  AndroidBootDevicePath = AppendDevicePathNode (ParentDevicePath, (EFI_DEVICE_PATH_PROTOCOL*) Node);
+
+  AndroidBootDevicePath = AppendDevicePathNode (ParentDevicePath, (EFI_DEVICE_PATH_PROTOCOL *)Node);
   FreePool (Node);
   if (AndroidBootDevicePath == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
@@ -930,14 +980,15 @@ AndroidBootDriverBindingStart (
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
-  Private->Signature = ANDROID_BOOT_SIGNATURE;
-  Private->BlockIo = BlockIo;
-  Private->DiskIo = DiskIo;
-  Private->ParentDevicePath = ParentDevicePath;
+
+  Private->Signature             = ANDROID_BOOT_SIGNATURE;
+  Private->BlockIo               = BlockIo;
+  Private->DiskIo                = DiskIo;
+  Private->ParentDevicePath      = ParentDevicePath;
   Private->AndroidBootDevicePath = AndroidBootDevicePath;
-  Private->ControllerHandle = ControllerHandle;
-  Private->ProtocolsInstalled = FALSE;
-  Private->KernelArgs = KernelArgs;
+  Private->ControllerHandle      = ControllerHandle;
+  Private->ProtocolsInstalled    = FALSE;
+  Private->KernelArgs            = KernelArgs;
   CopyMem (&Private->LoadFile, &mAndroidBootDxeLoadFile, sizeof (Private->LoadFile));
 
   // Install LoadFile and AndroidBootDevicePath protocols on child, AndroidBootHandle
@@ -969,10 +1020,11 @@ AndroidBootDriverBindingStart (
     DEBUG ((DEBUG_ERROR, "%a: fail to install CallerId: %r\n", __FUNCTION__, Status));
     goto Exit;
   }
+
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **) &Id,
+                  (VOID **)&Id,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -986,7 +1038,7 @@ AndroidBootDriverBindingStart (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **) &Id,
+                  (VOID **)&Id,
                   This->DriverBindingHandle,
                   Private->AndroidBootHandle,
                   EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
@@ -1000,50 +1052,53 @@ Exit:
   if (EFI_ERROR (Status)) {
     if (Private != NULL) {
       gBS->CloseProtocol (
-                      ControllerHandle,
-                      &gEfiCallerIdGuid,
-                      This->DriverBindingHandle,
-                      Private->AndroidBootHandle
-                      );
+             ControllerHandle,
+             &gEfiCallerIdGuid,
+             This->DriverBindingHandle,
+             Private->AndroidBootHandle
+             );
       gBS->UninstallMultipleProtocolInterfaces (
-                      ControllerHandle,
-                      &gEfiCallerIdGuid,
-                      &Private->Id,
-                      NULL
-                      );
+             ControllerHandle,
+             &gEfiCallerIdGuid,
+             &Private->Id,
+             NULL
+             );
       if (Private->ProtocolsInstalled) {
         gBS->UninstallMultipleProtocolInterfaces (
-                        Private->AndroidBootHandle,
-                        &gEfiLoadFileProtocolGuid,
-                        &Private->LoadFile,
-                        &gNVIDIALoadfileKernelArgsGuid,
-                        Private->KernelArgs,
-                        &gEfiDevicePathProtocolGuid,
-                        Private->AndroidBootDevicePath,
-                        NULL
-                        );
+               Private->AndroidBootHandle,
+               &gEfiLoadFileProtocolGuid,
+               &Private->LoadFile,
+               &gNVIDIALoadfileKernelArgsGuid,
+               Private->KernelArgs,
+               &gEfiDevicePathProtocolGuid,
+               Private->AndroidBootDevicePath,
+               NULL
+               );
       }
+
       FreePool (Private);
     }
+
     if (KernelArgs != NULL) {
       FreePool (KernelArgs);
     }
+
     if (AndroidBootDevicePath != NULL) {
       FreePool (AndroidBootDevicePath);
     }
 
     gBS->CloseProtocol (
-                    ControllerHandle,
-                    &gEfiDiskIoProtocolGuid,
-                    This->DriverBindingHandle,
-                    &DiskIo
-                    );
+           ControllerHandle,
+           &gEfiDiskIoProtocolGuid,
+           This->DriverBindingHandle,
+           &DiskIo
+           );
     gBS->CloseProtocol (
-                    ControllerHandle,
-                    &gEfiBlockIoProtocolGuid,
-                    This->DriverBindingHandle,
-                    &BlockIo
-                    );
+           ControllerHandle,
+           &gEfiBlockIoProtocolGuid,
+           This->DriverBindingHandle,
+           &BlockIo
+           );
   } else {
     // BindingStart completed
     DEBUG ((DEBUG_INFO, "%a: done\n", __FUNCTION__));
@@ -1051,7 +1106,6 @@ Exit:
 
   return Status;
 }
-
 
 /**
   Stops a device controller or a bus controller.
@@ -1088,10 +1142,10 @@ AndroidBootDriverBindingStop (
   IN EFI_HANDLE                   *ChildHandleBuffer OPTIONAL
   )
 {
-  EFI_STATUS                      Status;
-  EFI_LOAD_FILE_PROTOCOL          *LoadFile;
-  ANDROID_BOOT_PRIVATE_DATA       *Private;
-  UINT32                          *Id;
+  EFI_STATUS                 Status;
+  EFI_LOAD_FILE_PROTOCOL     *LoadFile;
+  ANDROID_BOOT_PRIVATE_DATA  *Private;
+  UINT32                     *Id;
 
   if (NumberOfChildren != 0) {
     return EFI_UNSUPPORTED;
@@ -1101,7 +1155,7 @@ AndroidBootDriverBindingStop (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiLoadFileProtocolGuid,
-                  (VOID **) &LoadFile,
+                  (VOID **)&LoadFile,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -1110,7 +1164,7 @@ AndroidBootDriverBindingStop (
     Status = gBS->OpenProtocol (
                     ControllerHandle,
                     &gEfiCallerIdGuid,
-                    (VOID **) &Id,
+                    (VOID **)&Id,
                     This->DriverBindingHandle,
                     ControllerHandle,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -1118,36 +1172,38 @@ AndroidBootDriverBindingStop (
     if (EFI_ERROR (Status)) {
       return Status;
     }
+
     Private = ANDROID_BOOT_PRIVATE_DATA_FROM_ID (Id);
   } else {
     Private = ANDROID_BOOT_PRIVATE_DATA_FROM_LOADFILE (LoadFile);
   }
 
   gBS->CloseProtocol (
-                  ControllerHandle,
-                  &gEfiCallerIdGuid,
-                  This->DriverBindingHandle,
-                  &Private->Id
-                  );
+         ControllerHandle,
+         &gEfiCallerIdGuid,
+         This->DriverBindingHandle,
+         &Private->Id
+         );
   gBS->UninstallMultipleProtocolInterfaces (
-                  ControllerHandle,
-                  &gEfiCallerIdGuid,
-                  &Private->Id,
-                  NULL
-                  );
+         ControllerHandle,
+         &gEfiCallerIdGuid,
+         &Private->Id,
+         NULL
+         );
   gBS->UninstallMultipleProtocolInterfaces (
-                  Private->AndroidBootHandle,
-                  &gEfiLoadFileProtocolGuid,
-                  &Private->LoadFile,
-                  &gNVIDIALoadfileKernelArgsGuid,
-                  Private->KernelArgs,
-                  &gEfiDevicePathProtocolGuid,
-                  Private->AndroidBootDevicePath,
-                  NULL
-                  );
+         Private->AndroidBootHandle,
+         &gEfiLoadFileProtocolGuid,
+         &Private->LoadFile,
+         &gNVIDIALoadfileKernelArgsGuid,
+         Private->KernelArgs,
+         &gEfiDevicePathProtocolGuid,
+         Private->AndroidBootDevicePath,
+         NULL
+         );
   if (Private->KernelArgs != NULL) {
     FreePool (Private->KernelArgs);
   }
+
   FreePool (Private->AndroidBootDevicePath);
   FreePool (Private);
 
@@ -1155,7 +1211,6 @@ AndroidBootDriverBindingStop (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Causes the driver to load a specified file.
@@ -1191,15 +1246,15 @@ AndroidBootDriverBindingStop (
 EFI_STATUS
 EFIAPI
 RamloadLoadFile (
-  IN EFI_LOAD_FILE_PROTOCOL     *This,
-  IN EFI_DEVICE_PATH_PROTOCOL   *FilePath,
-  IN BOOLEAN                    BootPolicy,
-  IN OUT UINTN                  *BufferSize,
-  IN VOID                       *Buffer OPTIONAL
+  IN EFI_LOAD_FILE_PROTOCOL    *This,
+  IN EFI_DEVICE_PATH_PROTOCOL  *FilePath,
+  IN BOOLEAN                   BootPolicy,
+  IN OUT UINTN                 *BufferSize,
+  IN VOID                      *Buffer OPTIONAL
   )
 {
   // Verify if the valid parameters
-  if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
+  if ((This == NULL) || (BufferSize == NULL) || (FilePath == NULL) || !IsDevicePathValid (FilePath, 0)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1212,7 +1267,8 @@ RamloadLoadFile (
   if (mRamLoadedSize == 0) {
     return EFI_NOT_FOUND;
   }
-  if (Buffer == NULL || *BufferSize < mRamLoadedSize) {
+
+  if ((Buffer == NULL) || (*BufferSize < mRamLoadedSize)) {
     *BufferSize = mRamLoadedSize;
     return EFI_BUFFER_TOO_SMALL;
   }
@@ -1222,15 +1278,13 @@ RamloadLoadFile (
   return EFI_SUCCESS;
 }
 
-
 ///
 /// Ramload LoadFile Protocol instance
 ///
 GLOBAL_REMOVE_IF_UNREFERENCED
-EFI_LOAD_FILE_PROTOCOL mRamloadLoadFile = {
+EFI_LOAD_FILE_PROTOCOL  mRamloadLoadFile = {
   RamloadLoadFile
 };
-
 
 /**
   Causes the driver to load a specified file.
@@ -1266,18 +1320,18 @@ EFI_LOAD_FILE_PROTOCOL mRamloadLoadFile = {
 EFI_STATUS
 EFIAPI
 RcmLoadFile (
-  IN EFI_LOAD_FILE_PROTOCOL     *This,
-  IN EFI_DEVICE_PATH_PROTOCOL   *FilePath,
-  IN BOOLEAN                    BootPolicy,
-  IN OUT UINTN                  *BufferSize,
-  IN VOID                       *Buffer OPTIONAL
+  IN EFI_LOAD_FILE_PROTOCOL    *This,
+  IN EFI_DEVICE_PATH_PROTOCOL  *FilePath,
+  IN BOOLEAN                   BootPolicy,
+  IN OUT UINTN                 *BufferSize,
+  IN VOID                      *Buffer OPTIONAL
   )
 {
-  EFI_STATUS        Status;
-  ANDROID_BOOT_DATA ImgData;
+  EFI_STATUS         Status;
+  ANDROID_BOOT_DATA  ImgData;
 
   // Verify if the valid parameters
-  if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathValid (FilePath, 0)) {
+  if ((This == NULL) || (BufferSize == NULL) || (FilePath == NULL) || !IsDevicePathValid (FilePath, 0)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1296,7 +1350,8 @@ RcmLoadFile (
   if (ImgData.KernelSize == 0) {
     return EFI_NOT_FOUND;
   }
-  if (Buffer == NULL || *BufferSize < ImgData.KernelSize) {
+
+  if ((Buffer == NULL) || (*BufferSize < ImgData.KernelSize)) {
     *BufferSize = ImgData.KernelSize;
     return EFI_BUFFER_TOO_SMALL;
   }
@@ -1310,20 +1365,18 @@ RcmLoadFile (
   return EFI_SUCCESS;
 }
 
-
 ///
 /// Rcm LoadFile Protocol instance
 ///
 GLOBAL_REMOVE_IF_UNREFERENCED
-EFI_LOAD_FILE_PROTOCOL mRcmLoadFile = {
+EFI_LOAD_FILE_PROTOCOL  mRcmLoadFile = {
   RcmLoadFile
 };
-
 
 ///
 /// Driver Binding Protocol instance
 ///
-EFI_DRIVER_BINDING_PROTOCOL mAndroidBootDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL  mAndroidBootDriverBinding = {
   AndroidBootDriverBindingSupported,
   AndroidBootDriverBindingStart,
   AndroidBootDriverBindingStop,
@@ -1331,7 +1384,6 @@ EFI_DRIVER_BINDING_PROTOCOL mAndroidBootDriverBinding = {
   NULL,
   NULL
 };
-
 
 /**
   This is the declaration of an EFI image entry point. This entry point is
@@ -1348,14 +1400,14 @@ EFI_DRIVER_BINDING_PROTOCOL mAndroidBootDriverBinding = {
 EFI_STATUS
 EFIAPI
 AndroidBootDxeDriverEntryPoint (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS            Status;
-  VOID                  *Hob;
-  UINTN                 EmmcMagic;
-  CHAR16                *KernelArgs;
+  EFI_STATUS  Status;
+  VOID        *Hob;
+  UINTN       EmmcMagic;
+  CHAR16      *KernelArgs;
 
   // Install UEFI Driver Model protocol(s).
   Status = EfiLibInstallDriverBinding (
@@ -1368,9 +1420,9 @@ AndroidBootDxeDriverEntryPoint (
     return Status;
   }
 
-  if (PcdGet64 (PcdRcmKernelBase) != 0 &&
-      PcdGet64 (PcdRcmKernelSize) != 0) {
-
+  if ((PcdGet64 (PcdRcmKernelBase) != 0) &&
+      (PcdGet64 (PcdRcmKernelSize) != 0))
+  {
     // Allocate KernelArgs
     KernelArgs = AllocateZeroPool (sizeof (CHAR16) * ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
     if (KernelArgs == NULL) {
@@ -1396,40 +1448,45 @@ AndroidBootDxeDriverEntryPoint (
                     KernelArgs,
                     &gEfiDevicePathProtocolGuid,
                     &mRcmLoadFileDevicePath,
-                    NULL);
+                    NULL
+                    );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to image Load File Protocol (%r)\r\n", __FUNCTION__, Status));
     }
   } else {
-    EmmcMagic = * ((UINTN *) (TegraGetSystemMemoryBaseAddress(TegraGetChipID()) + SYSIMG_EMMC_MAGIC_OFFSET));
+    EmmcMagic = *((UINTN *)(TegraGetSystemMemoryBaseAddress (TegraGetChipID ()) + SYSIMG_EMMC_MAGIC_OFFSET));
     if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {
       Hob = GetFirstGuidHob (&gNVIDIAOSCarveoutHob);
       if (Hob != NULL) {
-        EFI_MEMORY_DESCRIPTOR *Descriptor;
-        EFI_HANDLE            LoadedImageHandle = 0;
-        EFI_HANDLE            LoadFileHandle = 0;
+        EFI_MEMORY_DESCRIPTOR  *Descriptor;
+        EFI_HANDLE             LoadedImageHandle = 0;
+        EFI_HANDLE             LoadFileHandle    = 0;
 
         Descriptor = (EFI_MEMORY_DESCRIPTOR *)GET_GUID_HOB_DATA (Hob);
         DEBUG ((DEBUG_INFO, "%a: Got descriptor %x, %x\r\n", __FUNCTION__, Descriptor->PhysicalStart, Descriptor->NumberOfPages));
         CopyMem (&mRamLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARamloadKernelGuid, sizeof (EFI_GUID));
 
-        Status = gBS->LoadImage (FALSE,
-                                 ImageHandle,
-                                 NULL,
-                                 (VOID *)(UINTN)Descriptor->PhysicalStart + KERNEL_OFFSET,
-                                 EFI_PAGES_TO_SIZE (Descriptor->NumberOfPages) - KERNEL_OFFSET,
-                                 &LoadedImageHandle);
+        Status = gBS->LoadImage (
+                        FALSE,
+                        ImageHandle,
+                        NULL,
+                        (VOID *)(UINTN)Descriptor->PhysicalStart + KERNEL_OFFSET,
+                        EFI_PAGES_TO_SIZE (Descriptor->NumberOfPages) - KERNEL_OFFSET,
+                        &LoadedImageHandle
+                        );
         if (!EFI_ERROR (Status)) {
-          EFI_LOADED_IMAGE_PROTOCOL *ImageProtocol;
-          Status = gBS->HandleProtocol (LoadedImageHandle,
-                                        &gEfiLoadedImageProtocolGuid,
-                                        (VOID **)&ImageProtocol);
+          EFI_LOADED_IMAGE_PROTOCOL  *ImageProtocol;
+          Status = gBS->HandleProtocol (
+                          LoadedImageHandle,
+                          &gEfiLoadedImageProtocolGuid,
+                          (VOID **)&ImageProtocol
+                          );
           if (EFI_ERROR (Status)) {
             DEBUG ((DEBUG_ERROR, "%a: Failed to get loaded image protocol (%r)\r\n", __FUNCTION__, Status));
           } else {
             DEBUG ((DEBUG_INFO, "%a: Located at 0x%016x 0x%016x\r\n", __FUNCTION__, Descriptor->PhysicalStart, ImageProtocol->ImageSize));
             mRamLoadedBaseAddress = Descriptor->PhysicalStart + KERNEL_OFFSET;
-            mRamLoadedSize = ImageProtocol->ImageSize;
+            mRamLoadedSize        = ImageProtocol->ImageSize;
             gBS->UnloadImage (LoadedImageHandle);
             Status = gBS->InstallMultipleProtocolInterfaces (
                             &LoadFileHandle,
@@ -1439,7 +1496,8 @@ AndroidBootDxeDriverEntryPoint (
                             NULL,
                             &gEfiDevicePathProtocolGuid,
                             &mRamLoadFileDevicePath,
-                            NULL);
+                            NULL
+                            );
             if (EFI_ERROR (Status)) {
               DEBUG ((DEBUG_ERROR, "%a: Failed to image Load File Protocol (%r)\r\n", __FUNCTION__, Status));
             }

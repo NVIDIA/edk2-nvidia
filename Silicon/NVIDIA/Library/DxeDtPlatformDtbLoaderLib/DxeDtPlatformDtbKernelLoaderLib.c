@@ -477,6 +477,8 @@ InstallFdt (
   VOID                         *KernelDtb;
   VOID                         *Dtb;
   VOID                         *DtbCopy;
+  UINTN                        DataSize;
+  UINT32                       BootMode;
 
   HandleBuffer   = NULL;
   PartitionInfo  = NULL;
@@ -497,9 +499,15 @@ InstallFdt (
     return;
   }
 
-  Status = GetActivePartitionName (PcdGetPtr (PcdKernelDtbPartitionName), PartitionName);
-  if (EFI_ERROR (Status)) {
-    return;
+  DataSize = sizeof (BootMode);
+  Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
+  if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
+    StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, PcdGetPtr (PcdRecoveryKernelDtbPartitionName));
+  } else {
+    Status = GetActivePartitionName (PcdGetPtr (PcdKernelDtbPartitionName), PartitionName);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
   }
 
   Status = gBS->LocateHandleBuffer (

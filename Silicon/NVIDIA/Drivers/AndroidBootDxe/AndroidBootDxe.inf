@@ -60,6 +60,7 @@
   gNVIDIALoadfileKernelArgsGuid
   gEfiPartTypeSystemPartGuid
   gEfiEventReadyToBootGuid
+  gNVIDIAPublicVariableGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
