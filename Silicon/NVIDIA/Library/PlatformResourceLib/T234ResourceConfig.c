@@ -48,6 +48,10 @@ TEGRA_MMIO_INFO  T234MmioInfo[] = {
     MCE_ARI_APERTURE_OFFSET (T234_MAX_CPUS)
   },
   {
+    T234_FUSE_BASE_ADDRESS,
+    SIZE_128KB
+  },
+  {
     0,
     0
   }
@@ -57,7 +61,8 @@ TEGRA_FUSE_INFO  T234FloorsweepingFuseList[] = {
   { "fuse-disable-isp",   FUSE_OPT_ISP_DISABLE,   BIT (0)         },
   { "fuse-disable-nvenc", FUSE_OPT_NVENC_DISABLE, BIT (0)|BIT (1) },
   { "fuse-disable-pva",   FUSE_OPT_PVA_DISABLE,   BIT (0)|BIT (1) },
-  { "fuse-disable-dla",   FUSE_OPT_DLA_DISABLE,   BIT (0)|BIT (1) },
+  { "fuse-disable-dla0",  FUSE_OPT_DLA_DISABLE,   BIT (0)         },
+  { "fuse-disable-dla1",  FUSE_OPT_DLA_DISABLE,   BIT (1)         },
   { "fuse-disable-cv",    FUSE_OPT_CV_DISABLE,    BIT (0)         },
   { "fuse-disable-nvdec", FUSE_OPT_NVDEC_DISABLE, BIT (0)|BIT (1) }
 };
