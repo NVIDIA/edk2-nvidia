@@ -19,6 +19,7 @@
 
 [Sources.common]
   NorFlashStandaloneMmDice.c
+  MacronixAsp.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

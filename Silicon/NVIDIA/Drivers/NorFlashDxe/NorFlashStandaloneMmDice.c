@@ -17,6 +17,8 @@
 #include <Uefi/UefiGpt.h>
 #include <Library/GptLib.h>
 
+#include <MacronixAsp.h>
+
 #define MM_DICE_READ                      (1)
 #define MM_DICE_WRITE                     (2)
 #define MM_DICE_LOCK                      (3)
@@ -26,6 +28,8 @@
 #define MM_DICE_CERT_MAGIC                "DICECERT"
 #define MM_DICE_CERT_MAGIC_LEN            (8)
 #define MM_DICE_CERT_NUM_MAX              (3)
+#define MM_DICE_LOCKED                    (0xFF)
+#define MM_DICE_UNLOCKED                  (0)
 #define MM_COMMUNICATE_DICE_HEADER_SIZE   (OFFSET_OF (MM_COMMUNICATE_DICE_HEADER, Data))
 #define MM_DICE_CERT_CONTENT_HEADER_SIZE  (OFFSET_OF (MM_DICE_CERT_CONTENT, Value))
 
@@ -48,17 +52,30 @@ typedef struct {
   UINT8     Value[1];
 } MM_DICE_CERT_CONTENT;
 
-STATIC UINT64                 QspiBaseAddress;
-STATIC UINTN                  QspiSize;
+STATIC UINT64  QspiBaseAddress;
+STATIC UINTN   QspiSize;
+STATIC UINTN   DeviceChosen;
+
+STATIC NOR_FLASH_LOCK_OPS  MacronixAspOps = {
+  .Initialize            = MxAspInitialize,
+  .IsInitialized         = MxAspIsInitialized,
+  .EnableWriteProtect    = MxAspEnable,
+  .IsWriteProtectEnabled = MxAspIsEnabled,
+  .Lock                  = MxAspLock,
+  .IsLocked              = MxAspIsLocked,
+};
+
 STATIC NOR_FLASH_DEVICE_INFO  SupportedDevices[] = {
   {
     .Name           = "Macronix 64MB\0",
     .ManufacturerId = 0xC2,
     .MemoryType     = 0x95,
-    .Density        = 0x3A
+    .Density        = 0x3A,
+    .LockOps        = &MacronixAspOps
   },
 };
-STATIC MM_DICE_WORM_INFO      *WormInfo = NULL;
+
+STATIC MM_DICE_WORM_INFO  *WormInfo = NULL;
 
 /*
  * The helper function to get current active certificate slot
@@ -113,6 +130,67 @@ DiceGetActiveCertIndex (
 }
 
 /*
+ * The helper function to enable write protection
+ *
+ * @retval EFI_SUCCESS    Operation successful.
+ * @retval others         Error occurred
+ */
+STATIC
+EFI_STATUS
+NorFlashEnableWriteProtect (
+  VOID
+  )
+{
+  EFI_STATUS          Status   = EFI_SUCCESS;
+  NOR_FLASH_LOCK_OPS  *LockOps = NULL;
+  BOOLEAN             Inited   = FALSE;
+  BOOLEAN             Enabled  = FALSE;
+
+  LockOps = SupportedDevices[DeviceChosen].LockOps;
+  if ((LockOps == NULL) || (LockOps->IsInitialized == NULL) ||
+      (LockOps->Initialize == NULL) || (LockOps->EnableWriteProtect == NULL) ||
+      (LockOps->IsWriteProtectEnabled == NULL))
+  {
+    DEBUG ((DEBUG_ERROR, "%a: LockOps is not fully implemented.\n", __FUNCTION__));
+    Status = EFI_UNSUPPORTED;
+    goto exit;
+  }
+
+  Status = LockOps->IsInitialized (&Inited);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to check init state (%r)\n", __FUNCTION__, Status));
+    goto exit;
+  }
+
+  if (Inited == FALSE) {
+    Status = LockOps->Initialize (QspiBaseAddress);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to initialize locking (%r)\n", __FUNCTION__, Status));
+      goto exit;
+    }
+  }
+
+  Status = LockOps->IsWriteProtectEnabled (&Enabled);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to query write protection state (%r)\n", __FUNCTION__, Status));
+    goto exit;
+  }
+
+  if (Enabled == FALSE) {
+    Status = LockOps->EnableWriteProtect ();
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to enable write protect (%r)\n", __FUNCTION__, Status));
+      goto exit;
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: NorFlash write protection is enabled.\n", __FUNCTION__));
+  }
+
+exit:
+  return Status;
+}
+
+/*
  * The main function to handle the UEFI SMM DICE requests.
  *
  * @param[in]         DispatchHandle     The handler coming from UEFI SMM, unused for now
@@ -141,7 +219,11 @@ DiceProtocolMmHandler (
   MM_DICE_CERT_CONTENT        ReadCertHeader;
   UINT32                      ReadOffset = 0;
   INTN                        CertIndex;
-  UINTN                       RespDataSize = 0;
+  UINTN                       RespDataSize   = 0;
+  NOR_FLASH_LOCK_OPS          *LockOps       = NULL;
+  BOOLEAN                     IsSectorLocked = FALSE;
+  BOOLEAN                     LockEnabled    = FALSE;
+  BOOLEAN                     LockInited     = FALSE;
 
   if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -218,9 +300,114 @@ DiceProtocolMmHandler (
     case MM_DICE_WRITE:
       break;
     case MM_DICE_LOCK:
+      Status = DiceGetActiveCertIndex (NorFlashProtocol, &CertIndex);
+      if (EFI_ERROR (Status)) {
+        goto exit;
+      }
+
+      if (CertIndex == -1) {
+        // No valid certificates
+        DiceHeader->ReturnStatus = EFI_NO_MEDIA;
+        goto exit;
+      }
+
+      Status = NorFlashEnableWriteProtect ();
+      if (EFI_ERROR (Status)) {
+        goto exit;
+      }
+
+      LockOps = SupportedDevices[DeviceChosen].LockOps;
+      if ((LockOps->Lock == NULL) || (LockOps->IsLocked == NULL)) {
+        DEBUG ((DEBUG_ERROR, "DICE Lock: Lock and IsLocked are not implemented.\n"));
+        Status = EFI_UNSUPPORTED;
+        goto exit;
+      }
+
+      ReadOffset = WormInfo->WormOffset + (WormInfo->WormSize / MM_DICE_CERT_NUM_MAX) * CertIndex;
+      Status     = LockOps->IsLocked (ReadOffset, &IsSectorLocked);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "Failed to query the lock status of the sector: 0x%x (%r).\n",
+          ReadOffset,
+          Status
+          ));
+        goto exit;
+      }
+
+      if (IsSectorLocked == FALSE) {
+        Status = LockOps->Lock (ReadOffset);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "Failed to lock the sector: 0x%x (%r).\n", ReadOffset, Status));
+          goto exit;
+        }
+      }
+
+      DEBUG ((DEBUG_INFO, "DICE certificate #%d has been locked.\n", CertIndex));
       break;
+
     case MM_DICE_CHECK_LOCK_STATUS:
+      Status = DiceGetActiveCertIndex (NorFlashProtocol, &CertIndex);
+      if (EFI_ERROR (Status)) {
+        goto exit;
+      }
+
+      if (CertIndex == -1) {
+        // No valid certificates
+        DiceHeader->ReturnStatus = EFI_NO_MEDIA;
+        goto exit;
+      }
+
+      LockOps = SupportedDevices[DeviceChosen].LockOps;
+      if ((LockOps->IsInitialized == NULL) || (LockOps->Initialize == NULL) ||
+          (LockOps->IsWriteProtectEnabled == NULL) || (LockOps->IsLocked == NULL))
+      {
+        DEBUG ((DEBUG_ERROR, "DICE Lock: IsLocked is not implemented.\n"));
+        Status = EFI_UNSUPPORTED;
+        goto exit;
+      }
+
+      Status = LockOps->IsInitialized (&LockInited);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "Failed to check init state (%r)\n", __FUNCTION__, Status));
+        goto exit;
+      }
+
+      if (LockInited == FALSE) {
+        Status = LockOps->Initialize (QspiBaseAddress);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "Failed to initialize locking (%r)\n", __FUNCTION__, Status));
+          goto exit;
+        }
+      }
+
+      Status = LockOps->IsWriteProtectEnabled (&LockEnabled);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "Failed to query write protection state (%r).\n", Status));
+        goto exit;
+      }
+
+      if (LockEnabled == FALSE) {
+        // Write protection is not enabled yet so no slots are locked
+        DiceHeader->ReturnStatus = MM_DICE_UNLOCKED;
+        goto exit;
+      }
+
+      ReadOffset = WormInfo->WormOffset + (WormInfo->WormSize / MM_DICE_CERT_NUM_MAX) * CertIndex;
+      Status     = LockOps->IsLocked (ReadOffset, &IsSectorLocked);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "Failed to query the lock status of the sector: 0x%x (%r).\n",
+          ReadOffset,
+          Status
+          ));
+        goto exit;
+      }
+
+      DiceHeader->ReturnStatus = (IsSectorLocked == TRUE) ? MM_DICE_LOCKED : MM_DICE_UNLOCKED;
       break;
+
     default:
       DEBUG ((DEBUG_ERROR, "%a: Unknown request: %u\n", __FUNCTION__, DiceHeader->Function));
       Status = EFI_INVALID_PARAMETER;
@@ -401,6 +588,7 @@ IsNorFlashDeviceSupported (
     {
       DEBUG ((DEBUG_INFO, "Found compatible device: %a\n", SupportedDevices[idx].Name));
       SupportedDevice = TRUE;
+      DeviceChosen    = idx;
       break;
     }
   }

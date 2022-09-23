@@ -181,10 +181,33 @@ typedef struct {
 } NOR_FLASH_PRIVATE_DATA;
 
 typedef struct {
-  CHAR8    Name[32];
-  UINT8    ManufacturerId;
-  UINT8    MemoryType;
-  UINT8    Density;
+  EFI_STATUS  (*Initialize)(
+    UINT64  QspiBaseAddress
+    );
+  EFI_STATUS  (*IsInitialized)(
+    BOOLEAN  *Initialized
+    );
+  EFI_STATUS  (*EnableWriteProtect)(
+    VOID
+    );
+  EFI_STATUS  (*IsWriteProtectEnabled)(
+    BOOLEAN  *Enabled
+    );
+  EFI_STATUS  (*Lock)(
+    UINT32  Address
+    );
+  EFI_STATUS  (*IsLocked)(
+    UINT32   Address,
+    BOOLEAN  *Locked
+    );
+} NOR_FLASH_LOCK_OPS;
+
+typedef struct {
+  CHAR8                 Name[32];
+  UINT8                 ManufacturerId;
+  UINT8                 MemoryType;
+  UINT8                 Density;
+  NOR_FLASH_LOCK_OPS    *LockOps;
 } NOR_FLASH_DEVICE_INFO;
 
 #define NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(a)    CR(a, NOR_FLASH_PRIVATE_DATA, NorFlashProtocol, NOR_FLASH_SIGNATURE)
