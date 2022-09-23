@@ -18,6 +18,9 @@
 #include <Library/HostBasedTestStubLib/IpmiStubLib.h>
 
 IPMI_COMMAND  *mStubIpmiCommand;
+UINT8         mIpmiCommandCounter = 0;
+
+#define MAX_IPMI_COMMAND_SUPPORTED  10
 
 /**
  Init Ipmi stub support
@@ -30,7 +33,7 @@ IpmiStubInit (
   VOID
   )
 {
-  mStubIpmiCommand = (IPMI_COMMAND *)AllocateZeroPool (sizeof (IPMI_COMMAND));
+  mStubIpmiCommand = (IPMI_COMMAND *)AllocateZeroPool (sizeof (IPMI_COMMAND) * MAX_IPMI_COMMAND_SUPPORTED);
 }
 
 /**
@@ -47,17 +50,26 @@ IpmiStubDeInit (
   FreePool (mStubIpmiCommand);
 }
 
-VOID
+EFI_STATUS
 MockIpmiSubmitCommand (
   IN UINT8       *ResponseData,
   IN UINT32      ResponseDataSize,
   IN EFI_STATUS  ReturnStatus
   )
 {
-  IpmiStubInit ();
-  mStubIpmiCommand->ResponseData     = ResponseData;
-  mStubIpmiCommand->ResponseDataSize = ResponseDataSize;
-  mStubIpmiCommand->ForcedStatus     = ReturnStatus;
+  if (mIpmiCommandCounter == MAX_IPMI_COMMAND_SUPPORTED) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  if (mIpmiCommandCounter == 0) {
+    IpmiStubInit ();
+  }
+
+  mStubIpmiCommand[mIpmiCommandCounter].ResponseData     = ResponseData;
+  mStubIpmiCommand[mIpmiCommandCounter].ResponseDataSize = ResponseDataSize;
+  mStubIpmiCommand[mIpmiCommandCounter].ForcedStatus     = ReturnStatus;
+  mIpmiCommandCounter++;
+  return EFI_SUCCESS;
 }
 
 /**
@@ -86,9 +98,27 @@ IpmiSubmitCommand (
   EFI_STATUS  Status;
 
   Status = EFI_SUCCESS;
-  CopyMem (ResponseData, mStubIpmiCommand->ResponseData, mStubIpmiCommand->ResponseDataSize);
-  *ResponseDataSize = mStubIpmiCommand->ResponseDataSize;
-  Status            = mStubIpmiCommand->ForcedStatus;
-  IpmiStubDeInit ();
+  mIpmiCommandCounter--;
+  CopyMem (ResponseData, mStubIpmiCommand[mIpmiCommandCounter].ResponseData, mStubIpmiCommand[mIpmiCommandCounter].ResponseDataSize);
+  *ResponseDataSize = mStubIpmiCommand[mIpmiCommandCounter].ResponseDataSize;
+  Status            = mStubIpmiCommand[mIpmiCommandCounter].ForcedStatus;
+  if (mIpmiCommandCounter == 0) {
+    IpmiStubDeInit ();
+  }
+
   return Status;
+}
+
+/**
+  Initialize the global varible with the pointer of IpmiTransport Protocol.
+
+  @retval EFI_SUCCESS  Always return success.
+
+**/
+EFI_STATUS
+InitializeIpmiBase (
+  VOID
+  )
+{
+  return EFI_SUCCESS;
 }

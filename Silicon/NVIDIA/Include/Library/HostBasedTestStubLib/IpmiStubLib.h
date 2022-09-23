@@ -54,7 +54,7 @@ IpmiStubDeInit (
   VOID
   );
 
-VOID
+EFI_STATUS
 MockIpmiSubmitCommand (
   IN UINT8       *ResponseData,
   IN UINT32      ResponseDataSize,
@@ -82,4 +82,9 @@ IpmiSubmitCommand (
   IN UINT32   CommandDataSize,
   OUT UINT8   *ResponseData,
   OUT UINT32  *ResponseDataSize
+  );
+
+EFI_STATUS
+InitializeIpmiBase (
+  VOID
   );
