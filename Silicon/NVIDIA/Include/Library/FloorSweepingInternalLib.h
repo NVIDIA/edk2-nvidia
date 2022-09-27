@@ -18,7 +18,7 @@
 BOOLEAN
 EFIAPI
 GetCpuInfoInternal (
-  IN  UINTN   EnabledSockets,
+  IN  UINT32  SocketMask,
   IN  UINTN   MaxSupportedCores,
   OUT UINT64  *EnabledCoresBitMap
   );
@@ -30,8 +30,8 @@ GetCpuInfoInternal (
 BOOLEAN
 EFIAPI
 FloorSweepDtbInternal (
-  IN  UINTN  EnabledSockets,
-  IN  VOID   *Dtb
+  IN  UINT32  SocketMask,
+  IN  VOID    *Dtb
   );
 
 BOOLEAN

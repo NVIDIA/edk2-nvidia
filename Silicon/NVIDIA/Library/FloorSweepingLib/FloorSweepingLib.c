@@ -38,9 +38,8 @@ typedef struct {
   UINTN     MaxCoresPerCluster;
   UINTN     MaxCores;
 
-  UINTN     EnabledSockets;
+  UINT32    SocketMask;
   UINTN     EnabledCores;
-
   UINT64    EnabledCoresBitMap[ALIGN_VALUE (MAX_SUPPORTED_CORES, 64) / 64];
 } PLATFORM_CPU_INFO;
 
@@ -54,7 +53,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 GetCpuInfo (
-  IN  UINTN   EnabledSockets,
+  IN  UINT32  SocketMask,
   IN  UINTN   MaxSupportedCores,
   OUT UINT64  *EnabledCoresBitMap
   )
@@ -64,7 +63,7 @@ GetCpuInfo (
 
   Status               = EFI_SUCCESS;
   ValidPrivatePlatform = GetCpuInfoInternal (
-                           EnabledSockets,
+                           SocketMask,
                            MaxSupportedCores,
                            EnabledCoresBitMap
                            );
@@ -114,16 +113,16 @@ FloorSweepCpuInfo (
     if ((Hob != NULL) &&
         (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
     {
-      Info->EnabledSockets = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->NumSockets;
+      Info->SocketMask = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->SocketMask;
     } else {
       ASSERT (FALSE);
-      Info->EnabledSockets = 1;
+      Info->SocketMask = 0x1;
     }
 
     Info->MaxClusters        = PLATFORM_MAX_CLUSTERS;
     Info->MaxCoresPerCluster = PLATFORM_MAX_CORES_PER_CLUSTER;
     Status                   = GetCpuInfo (
-                                 Info->EnabledSockets,
+                                 Info->SocketMask,
                                  MAX_SUPPORTED_CORES,
                                  Info->EnabledCoresBitMap
                                  );
@@ -157,9 +156,9 @@ FloorSweepCpuInfo (
       ));
     DEBUG ((
       DEBUG_INFO,
-      "%a: EnabledSockets=%u EnabledCores=%u\n",
+      "%a: SocketMask=0x%x EnabledCores=%u\n",
       __FUNCTION__,
-      Info->EnabledSockets,
+      Info->SocketMask,
       Info->EnabledCores
       ));
     DEBUG_CODE (
@@ -557,16 +556,14 @@ FloorSweepGlobalCpus (
 EFI_STATUS
 EFIAPI
 FloorSweepSockets (
-  IN  UINTN  EnabledSockets,
-  IN  VOID   *Dtb
+  IN  UINT32  SocketMask,
+  IN  VOID    *Dtb
   )
 {
   CHAR8   SocketNodeStr[] = "/socket@xx";
-  UINT32  NumSockets;
   UINT32  MaxSockets;
   INT32   NodeOffset;
 
-  NumSockets = 0;
   MaxSockets = 0;
 
   while (TRUE) {
@@ -585,11 +582,15 @@ FloorSweepSockets (
     MaxSockets = 1;
   }
 
-  for (UINT32 Count = EnabledSockets; Count < MaxSockets; Count++) {
-    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", Count);
+  for (UINT32 Socket = 0; Socket < MaxSockets; Socket++) {
+    if (SocketMask & (1UL << Socket)) {
+      continue;
+    }
+
+    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", Socket);
     NodeOffset = fdt_path_offset (Dtb, SocketNodeStr);
     if (NodeOffset >= 0) {
-      DEBUG ((DEBUG_INFO, "Deleting socket@%u node\n", Count));
+      DEBUG ((DEBUG_INFO, "Deleting socket@%u node\n", Socket));
       fdt_del_node (Dtb, NodeOffset);
     }
   }
@@ -613,9 +614,9 @@ FloorSweepDtb (
   EFI_STATUS         Status;
 
   Info = FloorSweepCpuInfo ();
-  FloorSweepSockets (Info->EnabledSockets, Dtb);
+  FloorSweepSockets (Info->SocketMask, Dtb);
 
-  ValidPrivatePlatform = FloorSweepDtbInternal (Info->EnabledSockets, Dtb);
+  ValidPrivatePlatform = FloorSweepDtbInternal (Info->SocketMask, Dtb);
   if (ValidPrivatePlatform) {
     return EFI_SUCCESS;
   }

@@ -89,7 +89,7 @@ typedef struct {
 } TEGRA_BASE_AND_SIZE_INFO;
 
 typedef struct {
-  UINT32                      NumSockets;
+  UINT32                      SocketMask;
   UINT32                      ActiveBootChain;
   BOOLEAN                     BrBctUpdateFlag;
   TEGRA_RESOURCE_INFO         *ResourceInfo;

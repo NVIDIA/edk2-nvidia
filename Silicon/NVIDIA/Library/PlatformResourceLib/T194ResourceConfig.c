@@ -395,7 +395,7 @@ T194GetPlatformResourceInformation (
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  PlatformResourceInfo->NumSockets      = 1;
+  PlatformResourceInfo->SocketMask      = 0x1;
   PlatformResourceInfo->BrBctUpdateFlag = T194GetUpdateBrBct (CpuBootloaderAddress);
 
   Status = T194GetActiveBootChain (CpuBootloaderAddress, &PlatformResourceInfo->ActiveBootChain);
