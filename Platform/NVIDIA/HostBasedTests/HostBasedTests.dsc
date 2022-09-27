@@ -67,7 +67,20 @@
       GCC:*_*_*_DLINK_FLAGS = -Wl,--wrap=IpmiSubmitCommand,--wrap=GetDebugPrintErrorLevel
   }
 
+  #
+  # Redfish CredentialBootstrap tests
+  #
+  Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/UniTest/CredentialBootstrapUnitTest.inf {
+    <LibraryClasses>
+      RedfishPlatformCredentialLib|Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/RedfishPlatformCredentialLib.inf
+      IpmiBaseLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/IpmiStubLib/IpmiStubLib.inf
+      UefiRuntimeServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiRuntimeServicesTableStubLib/UefiRuntimeServicesTableStubLib.inf
+  }
+
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|FALSE
+
+[PcdsFeatureFlag]
+  gIpmiFeaturePkgTokenSpaceGuid.PcdIpmiFeatureEnable|TRUE
