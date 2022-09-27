@@ -18,9 +18,9 @@
 BOOLEAN
 EFIAPI
 GetCpuInfoInternal (
-  IN  UINTN     EnabledSockets,
-  IN  UINTN     MaxSupportedCores,
-  OUT UINT64    *EnabledCoresBitMap
+  IN  UINTN   EnabledSockets,
+  IN  UINTN   MaxSupportedCores,
+  OUT UINT64  *EnabledCoresBitMap
   );
 
 /**
@@ -30,18 +30,18 @@ GetCpuInfoInternal (
 BOOLEAN
 EFIAPI
 FloorSweepDtbInternal (
-  IN  UINTN     EnabledSockets,
-  IN  VOID      *Dtb
+  IN  UINTN  EnabledSockets,
+  IN  VOID   *Dtb
   );
 
 BOOLEAN
 EFIAPI
 CheckAndRemapCpuInternal (
-  IN UINT32         LogicalCore,
-  IN OUT UINT64     *Mpidr,
-  OUT CONST CHAR8   **DtCpuFormat,
-  OUT UINTN         *DtCpuId,
-  OUT EFI_STATUS    *Status
+  IN UINT32        LogicalCore,
+  IN OUT UINT64    *Mpidr,
+  OUT CONST CHAR8  **DtCpuFormat,
+  OUT UINTN        *DtCpuId,
+  OUT EFI_STATUS   *Status
   );
 
 #endif //__FLOOR_SWEEPING_INTERNAL_LIB_H__
