@@ -445,6 +445,7 @@ GetDeviceTreeInterrupts (
   for (IntIndex = 0; IntIndex < IntPropertyEntries; IntIndex++) {
     InterruptArray[IntIndex].Type      = SwapBytes32 (IntProperty[(IntIndex * InterruptCells)]);
     InterruptArray[IntIndex].Interrupt = SwapBytes32 (IntProperty[(IntIndex * InterruptCells) + 1]);
+    InterruptArray[IntIndex].Flag      = SwapBytes32 (IntProperty[(IntIndex * InterruptCells) + 2]);
     if (NameOffset < NameSize) {
       InterruptArray[IntIndex].Name = IntNames + NameOffset;
       NameOffset                   += AsciiStrSize (InterruptArray[IntIndex].Name);

@@ -21,6 +21,13 @@ typedef enum {
   INTERRUPT_MAX_TYPE
 } NVIDIA_DEVICE_TREE_INTERRUPT_TYPE;
 
+typedef enum {
+  INTERRUPT_LO_TO_HI_EDGE = 1,
+  INTERRUPT_HI_TO_LO_EDGE = 2,          // Invalid for SPIs
+  INTERRUPT_HI_LEVEL      = 4,
+  INTERRUPT_LO_LEVEL      = 8           // Invalid for SPIs
+} NVIDIA_DEVICE_TREE_INTERRUPT_FLAG;
+
 typedef struct {
   EFI_PHYSICAL_ADDRESS    BaseAddress;
   UINTN                   Size;
@@ -30,6 +37,7 @@ typedef struct {
 typedef struct {
   NVIDIA_DEVICE_TREE_INTERRUPT_TYPE    Type;
   HARDWARE_INTERRUPT_SOURCE            Interrupt;
+  NVIDIA_DEVICE_TREE_INTERRUPT_FLAG    Flag;
   CONST CHAR8                          *Name;
 } NVIDIA_DEVICE_TREE_INTERRUPT_DATA;
 
