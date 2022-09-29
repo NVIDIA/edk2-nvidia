@@ -319,6 +319,23 @@ ClusterIsPresent (
 }
 
 /**
+  Check if given socket is enabled
+
+**/
+BOOLEAN
+EFIAPI
+IsSocketEnabled (
+  IN UINT32  SocketIndex
+  )
+{
+  PLATFORM_CPU_INFO  *Info;
+
+  Info = FloorSweepCpuInfo ();
+
+  return ((Info->SocketMask & (1UL << SocketIndex)) != 0);
+}
+
+/**
   Check if given core is enabled
 
 **/

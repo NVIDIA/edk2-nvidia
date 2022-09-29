@@ -149,7 +149,12 @@ UpdateGicItsInfo (
   }
 
   RegisterSize = 0;
-  for (Index = 0; Index < NumberOfItsCtlrs; Index++) {
+  for (Index = 0; Index < PLATFORM_MAX_SOCKETS; Index++) {
+    // check if socket enabled for this Index
+    if ( !IsSocketEnabled (Index)) {
+      continue;
+    }
+
     // Obtain Register Info using the ITS Handle
     Status = GetDeviceTreeRegisters (ItsHandles[Index], RegisterData, &RegisterSize);
     if (Status == EFI_BUFFER_TOO_SMALL) {
@@ -179,6 +184,8 @@ UpdateGicItsInfo (
     GicItsInfo[Index].ProximityDomain = Index;
 
     NumberOfItsEntries++;
+    // Check to ensure space allocated for ITS is enough
+    ASSERT (NumberOfItsEntries <= NumberOfItsCtlrs);
   }
 
   Repo = *PlatformRepositoryInfo;

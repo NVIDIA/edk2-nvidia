@@ -24,8 +24,8 @@
 UINT32
 EFIAPI
 GetClusterIDFromLinearCoreID (
-  IN UINT32 LinearCoreId
-);
+  IN UINT32  LinearCoreId
+  );
 
 /**
   Returns the MPIDR given the Linear Core ID
@@ -37,8 +37,8 @@ GetClusterIDFromLinearCoreID (
 UINT64
 EFIAPI
 GetMpidrFromLinearCoreID (
-  IN UINT32 LinearCoreId
-);
+  IN UINT32  LinearCoreId
+  );
 
 /**
   Checks if CPU is enabled and remaps MPIDR for Device Tree, if needed.
@@ -57,10 +57,10 @@ GetMpidrFromLinearCoreID (
 EFI_STATUS
 EFIAPI
 CheckAndRemapCpu (
-  IN UINT32         LogicalCore,
-  IN OUT UINT64     *Mpidr,
-  OUT CONST CHAR8   **DtCpuFormat,
-  OUT UINTN         *DtCpuId
+  IN UINT32        LogicalCore,
+  IN OUT UINT64    *Mpidr,
+  OUT CONST CHAR8  **DtCpuFormat,
+  OUT UINTN        *DtCpuId
   );
 
 /**
@@ -75,7 +75,17 @@ CheckAndRemapCpu (
 BOOLEAN
 EFIAPI
 ClusterIsPresent (
-  IN  UINTN ClusterId
+  IN  UINTN  ClusterId
+  );
+
+/**
+  Check if given socket is enabled
+
+**/
+BOOLEAN
+EFIAPI
+IsSocketEnabled (
+  IN UINT32  SocketIndex
   );
 
 /**
@@ -86,7 +96,7 @@ BOOLEAN
 EFIAPI
 IsCoreEnabled (
   IN  UINT32  CpuIndex
-);
+  );
 
 /**
   Retrieve number of enabled CPUs for each platform
@@ -96,7 +106,7 @@ UINT32
 EFIAPI
 GetNumberOfEnabledCpuCores (
   VOID
-);
+  );
 
 /**
   Floorsweep DTB
@@ -105,7 +115,7 @@ GetNumberOfEnabledCpuCores (
 EFI_STATUS
 EFIAPI
 FloorSweepDtb (
-  IN VOID *Dtb
-);
+  IN VOID  *Dtb
+  );
 
 #endif //__FLOOR_SWEEPING_LIB_H__
