@@ -112,7 +112,6 @@ STATIC BOOLEAN MatchId(VOID *Fdt, CONST CHAR8 *Id, VOID *Param)
   INTN                FabId, BoardFabId, i;
   INTN                BoardIdLen;
   CONST CHAR8         *BoardId = NULL;
-  CONST CHAR8         *NvidiaIdPrefix = "699";
 
   BOOLEAN Matched = FALSE;
 
@@ -172,22 +171,20 @@ match_type_done:
   }
 
   for (i = 0; i < BoardInfo->IdCount; i++) {
-    BoardId = (CHAR8 *)(&BoardInfo->ProductIds[i].Id);
+    if (BoardInfo->ProductIds[i].Leading[0] == EEPROM_CUSTOMER_BOARD_MAGIC) {
+      BoardId = (CHAR8 *)(&BoardInfo->ProductIds[i]) + 1;
+    } else {
+      BoardId = (CHAR8 *)(&BoardInfo->ProductIds[i].Id);
+    }
     BoardIdLen = strlen(BoardId);
     BoardFabId = GetFabId(BoardId);
     DEBUG((DEBUG_INFO,"%a: check if overlay node id %a match with %a\n",
-          __FUNCTION__, Id, BoardInfo->ProductIds[i]));
+          __FUNCTION__, Id, BoardId));
 
     switch (MatchType) {
       case BOARD_ID_MATCH_EXACT:
-        // Check if it is a Nvidia board.
-        if (!CompareMem(&BoardInfo->ProductIds[i], NvidiaIdPrefix, 3)) {
+        if (IdLen == BoardIdLen) {
           if (!CompareMem(IdStr, BoardId, IdLen)) {
-            Matched = TRUE;
-          }
-        } else if (IdLen < PRODUCT_ID_LEN) {
-          // Non-nvidia sensor board ids starts from byte 21 instead of 20.
-          if (!CompareMem(IdStr, ((void *)&BoardInfo->ProductIds[i])+1, IdLen)) {
             Matched = TRUE;
           }
         }

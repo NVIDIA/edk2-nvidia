@@ -49,7 +49,11 @@ PopulateEepromData (
   if (ChipID == T194_CHIP_ID) {
     T194EepromData = (T194_EEPROM_DATA *)EepromData;
     EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *) BoardInfo;
-    CopyMem ((VOID *) EepromBoardInfo->BoardId, (VOID *) &T194EepromData->PartNumber.Id, BOARD_ID_LEN);
+    if (T194EepromData->PartNumber.Leading[0] == EEPROM_CUSTOMER_BOARD_MAGIC) {
+      CopyMem ((VOID *) EepromBoardInfo->BoardId, (VOID *) &T194EepromData->PartNumber + 1, BOARD_ID_LEN);
+    } else {
+      CopyMem ((VOID *) EepromBoardInfo->BoardId, (VOID *) &T194EepromData->PartNumber.Id, BOARD_ID_LEN);
+    }
     CopyMem ((VOID *) EepromBoardInfo->ProductId, (VOID *) &T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
     CopyMem ((VOID *) EepromBoardInfo->SerialNumber, (VOID *) &T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
     if ((CompareMem (T194EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194EepromData->CustomerBlockSignature)) == 0) &&
@@ -61,7 +65,11 @@ PopulateEepromData (
   } else if (ChipID == T234_CHIP_ID) {
     T234EepromData = (T234_EEPROM_DATA *)EepromData;
     EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *) BoardInfo;
-    CopyMem ((VOID *) EepromBoardInfo->BoardId, (VOID *) &T234EepromData->PartNumber.Id, BOARD_ID_LEN);
+    if (T234EepromData->PartNumber.Leading[0] == EEPROM_CUSTOMER_BOARD_MAGIC) {
+      CopyMem ((VOID *) EepromBoardInfo->BoardId, (VOID *) &T234EepromData->PartNumber + 1, BOARD_ID_LEN);
+    } else {
+      CopyMem ((VOID *) EepromBoardInfo->BoardId, (VOID *) &T234EepromData->PartNumber.Id, BOARD_ID_LEN);
+    }
     CopyMem ((VOID *) EepromBoardInfo->ProductId, (VOID *) &T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
     CopyMem ((VOID *) EepromBoardInfo->SerialNumber, (VOID *) &T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
     if ((CompareMem (T234EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T234EepromData->CustomerBlockSignature)) == 0) &&
