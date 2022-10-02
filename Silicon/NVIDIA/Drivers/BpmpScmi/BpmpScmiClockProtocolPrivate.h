@@ -36,8 +36,9 @@ typedef enum {
 #define CLOCK_MAX_PARENTS      16
 #define CLOCK_MAX_NAME_LENGTH  40
 #define MAX_DIVIDER_2          256
-#define NVIDIA_CLOCK_ID(ID)       (ID & 0x0000FFFF)
-#define NVIDIA_CLOCK_PHANDLE(ID)  ((ID & 0xFFFF0000) >> 16)
+#define NVIDIA_CLOCK_MASK      ((UINT32)0x0000FFFF)
+#define NVIDIA_CLOCK_ID(ID)       (ID & NVIDIA_CLOCK_MASK)
+#define NVIDIA_CLOCK_BPMP_PHANDLE(ID)  (ID >> 16)
 
 #pragma pack (1)
 
