@@ -1510,6 +1510,7 @@ DeviceDiscoveryNotify (
   INT32                      SizeCells;
   INT32                      RangeSize;
   CONST VOID                 *SegmentNumber = NULL;
+  CONST VOID                 *ControllerId  = NULL;
   PCIE_CONTROLLER_PRIVATE    *Private       = NULL;
   EFI_EVENT                  ExitBootServiceEvent;
   NVIDIA_REGULATOR_PROTOCOL  *Regulator = NULL;
@@ -1636,8 +1637,21 @@ DeviceDiscoveryNotify (
 
       DEBUG ((EFI_D_INFO, "Segment Number = %u\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
 
-      /* Currently Segment number is nothing but the controller-ID  */
       Private->CtrlId = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
+
+      ControllerId = fdt_getprop (
+                       DeviceTreeNode->DeviceTreeBase,
+                       DeviceTreeNode->NodeOffset,
+                       "nvidia,controller-id",
+                       &PropertySize
+                       );
+      if ((ControllerId == NULL) || (PropertySize != 2*sizeof (UINT32))) {
+        DEBUG ((DEBUG_ERROR, "Failed to read controller number\n"));
+      } else {
+        CopyMem (&Private->CtrlId, ControllerId + sizeof (UINT32), sizeof (UINT32));
+        Private->CtrlId = SwapBytes32 (Private->CtrlId);
+      }
+
       DEBUG ((EFI_D_INFO, "Controller-ID = %u\n", Private->CtrlId));
 
       Property = fdt_getprop (
