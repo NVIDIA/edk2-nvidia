@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -116,6 +116,13 @@ READ_LOCK_STATUS   = TRUE
   FILE APPLICATION = $(NAMED_GUID) {
     UI     STRING ="$(MODULE_NAME)" Optional
     PE32   PE32                         $(INF_OUTPUT)/$(MODULE_NAME).efi
+  }
+
+[Rule.Common.UEFI_APPLICATION.UI]
+  FILE APPLICATION = $(NAMED_GUID) {
+    PE32      PE32                     $(INF_OUTPUT)/$(MODULE_NAME).efi
+    UI        STRING="Enter Setup"
+    VERSION   STRING="$(INF_VERSION)" Optional BUILD_NUM=$(BUILD_NUMBER)
   }
 
 [Rule.Common.UEFI_DRIVER.BINARY]

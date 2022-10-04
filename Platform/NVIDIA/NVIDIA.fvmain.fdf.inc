@@ -209,7 +209,7 @@
   INF MdeModulePkg/Universal/DisplayEngineDxe/DisplayEngineDxe.inf
   INF MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
   INF MdeModulePkg/Universal/BdsDxe/BdsDxe.inf
-  INF MdeModulePkg/Application/UiApp/UiApp.inf
+  INF RuleOverride = UI MdeModulePkg/Application/UiApp/UiApp.inf
   INF MdeModulePkg/Universal/DriverHealthManagerDxe/DriverHealthManagerDxe.inf
 
   #
