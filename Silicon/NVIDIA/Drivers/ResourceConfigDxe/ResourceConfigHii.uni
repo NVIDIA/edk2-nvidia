@@ -57,5 +57,8 @@
 #string STR_L4T_BOOTMODE_RECOVERY        #language en-US  "Recovery Partition"
 #string STR_L4T_BOOTMODE_DEFAULT         #language en-US  "Application Default"
 
+#string STR_RESET_VARIABLES_HELP         #language en-US  "Reset all non-authenticated settings (reboot required)"
+#string STR_RESET_VARIABLES_PROMPT       #language en-US  "Reset Settings"
+
 #string STR_EXIT_STRING                  #language en-US  "Press ESC to exit."
 

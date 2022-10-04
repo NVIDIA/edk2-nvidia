@@ -141,6 +141,12 @@ formset
         option text = STRING_TOKEN(STR_L4T_BOOTMODE_RECOVERY), value = NVIDIA_L4T_BOOTMODE_RECOVERY, flags = 0;
     endoneof;
 
+    text
+      help   = STRING_TOKEN(STR_RESET_VARIABLES_HELP),
+      text   = STRING_TOKEN(STR_RESET_VARIABLES_PROMPT),
+      flags  = INTERACTIVE | RESET_REQUIRED,
+      key    = KEY_RESET_VARIABLES;
+
     //
     // Display Enable PCIe in OS
     //

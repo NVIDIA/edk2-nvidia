@@ -29,6 +29,8 @@
 
 #include "ResourceConfigHii.h"
 
+#define MAX_VARIABLE_NAME  (256 * sizeof(CHAR16))
+
 extern EFI_GUID  gNVIDIAResourceConfigFormsetGuid;
 
 //
@@ -66,6 +68,8 @@ HII_VENDOR_DEVICE_PATH  mResourceConfigHiiVendorDevicePath = {
     }
   }
 };
+
+EFI_HII_CONFIG_ACCESS_PROTOCOL  mConfigAccess;
 
 /**
   Initializes any variables to current or default settings
@@ -129,6 +133,179 @@ InitializeSettings (
   }
 }
 
+/**
+  This function allows a caller to extract the current configuration for one
+  or more named elements from the target driver.
+
+  @param[in]  This           Points to the EFI_HII_CONFIG_ACCESS_PROTOCOL.
+  @param[in]  Request        A null-terminated Unicode string in
+                             <ConfigRequest> format.
+  @param[out] Progress       On return, points to a character in the Request
+                             string. Points to the string's null terminator if
+                             request was successful. Points to the most recent
+                             '&' before the first failing name/value pair (or
+                             the beginning of the string if the failure is in
+                             the first name/value pair) if the request was not
+                             successful.
+  @param[out] Results        A null-terminated Unicode string in
+                             <ConfigAltResp> format which has all values filled
+                             in for the names in the Request string. String to
+                             be allocated by the called function.
+
+  @retval EFI_SUCCESS             The Results is filled with the requested
+                                  values.
+  @retval EFI_OUT_OF_RESOURCES    Not enough memory to store the results.
+  @retval EFI_INVALID_PARAMETER   Request is illegal syntax, or unknown name.
+  @retval EFI_NOT_FOUND           Routing data doesn't match any storage in
+                                  this driver.
+
+**/
+EFI_STATUS
+EFIAPI
+ConfigExtractConfig (
+  IN CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
+  IN CONST EFI_STRING                      Request,
+  OUT EFI_STRING                           *Progress,
+  OUT EFI_STRING                           *Results
+  )
+{
+  if ((Progress == NULL) || (Results == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *Progress = Request;
+  return EFI_NOT_FOUND;
+}
+
+/**
+  This function processes the results of changes in configuration.
+
+  @param[in]  This           Points to the EFI_HII_CONFIG_ACCESS_PROTOCOL.
+  @param[in]  Configuration  A null-terminated Unicode string in <ConfigResp>
+                             format.
+  @param[out] Progress       A pointer to a string filled in with the offset of
+                             the most recent '&' before the first failing
+                             name/value pair (or the beginning of the string if
+                             the failure is in the first name/value pair) or
+                             the terminating NULL if all was successful.
+
+  @retval EFI_SUCCESS             The Results is processed successfully.
+  @retval EFI_INVALID_PARAMETER   Configuration is NULL.
+  @retval EFI_NOT_FOUND           Routing data doesn't match any storage in
+                                  this driver.
+
+**/
+EFI_STATUS
+EFIAPI
+ConfigRouteConfig (
+  IN CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
+  IN CONST EFI_STRING                      Configuration,
+  OUT EFI_STRING                           *Progress
+  )
+{
+  if ((Configuration == NULL) || (Progress == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *Progress = Configuration;
+
+  return EFI_NOT_FOUND;
+}
+
+/**
+  This function processes the results of changes in configuration.
+
+  @param[in]  This           Points to the EFI_HII_CONFIG_ACCESS_PROTOCOL.
+  @param[in]  Action         Specifies the type of action taken by the browser.
+  @param[in]  QuestionId     A unique value which is sent to the original
+                             exporting driver so that it can identify the type
+                             of data to expect.
+  @param[in]  Type           The type of value for the question.
+  @param[in]  Value          A pointer to the data being sent to the original
+                             exporting driver.
+  @param[out] ActionRequest  On return, points to the action requested by the
+                             callback function.
+
+  @retval EFI_SUCCESS             The callback successfully handled the action.
+  @retval EFI_OUT_OF_RESOURCES    Not enough storage is available to hold the
+                                  variable and its data.
+  @retval EFI_DEVICE_ERROR        The variable could not be saved.
+  @retval EFI_UNSUPPORTED         The specified Action is not supported by the
+                                  callback.
+
+**/
+EFI_STATUS
+EFIAPI
+ConfigCallback (
+  IN CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
+  IN     EFI_BROWSER_ACTION                Action,
+  IN     EFI_QUESTION_ID                   QuestionId,
+  IN     UINT8                             Type,
+  IN     EFI_IFR_TYPE_VALUE                *Value,
+  OUT EFI_BROWSER_ACTION_REQUEST           *ActionRequest
+  )
+{
+  EFI_STATUS  Status;
+  EFI_STATUS  VarDeleteStatus;
+  CHAR16      *CurrentName;
+  CHAR16      *NextName;
+  EFI_GUID    CurrentGuid;
+  EFI_GUID    NextGuid;
+  UINTN       NameSize;
+
+  Status = EFI_UNSUPPORTED;
+
+  if (Action == EFI_BROWSER_ACTION_CHANGED) {
+    switch (QuestionId) {
+      case KEY_RESET_VARIABLES:
+        CurrentName = AllocateZeroPool (MAX_VARIABLE_NAME);
+        if (CurrentName == NULL) {
+          Status = EFI_OUT_OF_RESOURCES;
+          break;
+        }
+
+        NextName = AllocateZeroPool (MAX_VARIABLE_NAME);
+        if (NextName == NULL) {
+          Status = EFI_OUT_OF_RESOURCES;
+          FreePool (CurrentName);
+          break;
+        }
+
+        NameSize = MAX_VARIABLE_NAME;
+        Status   = gRT->GetNextVariableName (&NameSize, NextName, &NextGuid);
+
+        while (!EFI_ERROR (Status)) {
+          CopyMem (CurrentName, NextName, NameSize);
+          CopyGuid (&CurrentGuid, &NextGuid);
+
+          NameSize = MAX_VARIABLE_NAME;
+          Status   = gRT->GetNextVariableName (&NameSize, NextName, &NextGuid);
+
+          // Delete Current Name variable
+          VarDeleteStatus = gRT->SetVariable (
+                                   CurrentName,
+                                   &CurrentGuid,
+                                   0,
+                                   0,
+                                   NULL
+                                   );
+          DEBUG ((DEBUG_ERROR, "Delete Variable %g:%s %r\r\n", &CurrentGuid, CurrentName, VarDeleteStatus));
+        }
+
+        FreePool (NextName);
+        FreePool (CurrentName);
+        Status = EFI_SUCCESS;
+
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  return Status;
+}
+
 VOID
 EFIAPI
 OnEndOfDxe (
@@ -144,11 +321,17 @@ OnEndOfDxe (
 
   InitializeSettings ();
 
+  mConfigAccess.Callback      = ConfigCallback;
+  mConfigAccess.ExtractConfig = ConfigExtractConfig;
+  mConfigAccess.RouteConfig   = ConfigRouteConfig;
+
   DriverHandle = NULL;
   Status       = gBS->InstallMultipleProtocolInterfaces (
                         &DriverHandle,
                         &gEfiDevicePathProtocolGuid,
                         &mResourceConfigHiiVendorDevicePath,
+                        &gEfiHiiConfigAccessProtocolGuid,
+                        &mConfigAccess,
                         NULL
                         );
   if (!EFI_ERROR (Status)) {
@@ -165,6 +348,8 @@ OnEndOfDxe (
              DriverHandle,
              &gEfiDevicePathProtocolGuid,
              &mResourceConfigHiiVendorDevicePath,
+             &gEfiHiiConfigAccessProtocolGuid,
+             &mConfigAccess,
              NULL
              );
     }
