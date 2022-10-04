@@ -47,20 +47,21 @@ FixPcdMemory (
   MEM_INSTANCE                        *Instance;
   EFI_STATUS                          Status;
 
-  if (PcdGetBool(PcdEmuVariableNvModeEnable)) {
-      return EFI_SUCCESS;
-  }
-
-  if (IsQspiPresent()) {
+  if (PcdGetBool (PcdEmuVariableNvModeEnable)) {
     return EFI_SUCCESS;
   }
+
+  if (IsQspiPresent ()) {
+    return EFI_SUCCESS;
+  }
+
   //
   // Locate SmmFirmwareVolumeBlockProtocol
   //
   Status = gMmst->MmLocateProtocol (
                     &gEfiSmmFirmwareVolumeBlockProtocolGuid,
                     NULL,
-                    (VOID **) &FvbProtocol
+                    (VOID **)&FvbProtocol
                     );
   ASSERT_EFI_ERROR (Status);
 
@@ -79,12 +80,24 @@ FixPcdMemory (
     PcdGet32 (PcdFlashNvStorageFtwWorkingSize)
     );
 
-  DEBUG ((DEBUG_INFO, "%a: Fixup PcdFlashNvStorageVariableBase64: 0x%lx\n",
-    __FUNCTION__, PcdGet64 (PcdFlashNvStorageVariableBase64)));
-  DEBUG ((DEBUG_INFO, "%a: Fixup PcdFlashNvStorageFtwWorkingBase64: 0x%lx\n",
-    __FUNCTION__, PcdGet64 (PcdFlashNvStorageFtwWorkingBase64)));
-  DEBUG ((DEBUG_INFO, "%a: Fixup PcdFlashNvStorageFtwSpareBase64: 0x%lx\n",
-    __FUNCTION__, PcdGet64 (PcdFlashNvStorageFtwSpareBase64)));
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Fixup PcdFlashNvStorageVariableBase64: 0x%lx\n",
+    __FUNCTION__,
+    PcdGet64 (PcdFlashNvStorageVariableBase64)
+    ));
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Fixup PcdFlashNvStorageFtwWorkingBase64: 0x%lx\n",
+    __FUNCTION__,
+    PcdGet64 (PcdFlashNvStorageFtwWorkingBase64)
+    ));
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Fixup PcdFlashNvStorageFtwSpareBase64: 0x%lx\n",
+    __FUNCTION__,
+    PcdGet64 (PcdFlashNvStorageFtwSpareBase64)
+    ));
 
   return Status;
 }

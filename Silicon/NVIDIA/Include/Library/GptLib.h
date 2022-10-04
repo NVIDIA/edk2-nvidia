@@ -15,7 +15,7 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
-#define NVIDIA_GPT_BLOCK_SIZE       512
+#define NVIDIA_GPT_BLOCK_SIZE  512
 
 /**
   Validate GPT header structure
@@ -28,7 +28,7 @@
 EFI_STATUS
 EFIAPI
 GptValidateHeader (
-  IN EFI_PARTITION_TABLE_HEADER *Header
+  IN EFI_PARTITION_TABLE_HEADER  *Header
   );
 
 /**
@@ -42,8 +42,8 @@ GptValidateHeader (
 EFI_LBA
 EFIAPI
 GptPartitionTableLba (
-  IN EFI_PARTITION_TABLE_HEADER *Header,
-  IN UINT64                     DeviceBytes
+  IN EFI_PARTITION_TABLE_HEADER  *Header,
+  IN UINT64                      DeviceBytes
   );
 
 /**
@@ -56,7 +56,7 @@ GptPartitionTableLba (
 UINTN
 EFIAPI
 GptPartitionTableSizeInBytes (
-  IN CONST EFI_PARTITION_TABLE_HEADER *Header
+  IN CONST EFI_PARTITION_TABLE_HEADER  *Header
   );
 
 /**
@@ -72,8 +72,8 @@ GptPartitionTableSizeInBytes (
 EFI_STATUS
 EFIAPI
 GptValidatePartitionTable (
-  IN CONST EFI_PARTITION_TABLE_HEADER *Header,
-  IN VOID                             *PartitionTable
+  IN CONST EFI_PARTITION_TABLE_HEADER  *Header,
+  IN VOID                              *PartitionTable
   );
 
 /**
@@ -89,9 +89,9 @@ GptValidatePartitionTable (
 CONST EFI_PARTITION_ENTRY *
 EFIAPI
 GptFindPartitionByName (
-  IN CONST EFI_PARTITION_TABLE_HEADER *Header,
-  IN CONST VOID                       *PartitionTable,
-  IN CONST CHAR16                     *Name
+  IN CONST EFI_PARTITION_TABLE_HEADER  *Header,
+  IN CONST VOID                        *PartitionTable,
+  IN CONST CHAR16                      *Name
   );
 
 /**
@@ -103,8 +103,8 @@ GptFindPartitionByName (
 **/
 UINT64
 EFIAPI
-GptPartitionSizeInBlocks(
-  CONST EFI_PARTITION_ENTRY *Partition
+GptPartitionSizeInBlocks (
+  CONST EFI_PARTITION_ENTRY  *Partition
   );
 
 #endif

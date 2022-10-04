@@ -31,17 +31,16 @@ typedef struct _NVIDIA_TEGRAP2U_PROTOCOL NVIDIA_TEGRAP2U_PROTOCOL;
  */
 typedef
 EFI_STATUS
-(EFIAPI *TEGRAP2U_INIT) (
+(EFIAPI *TEGRAP2U_INIT)(
   IN NVIDIA_TEGRAP2U_PROTOCOL  *This,
   IN UINT32                    P2UId
   );
 
 /// NVIDIA_REGULATOR_PROTOCOL protocol structure.
 struct _NVIDIA_TEGRAP2U_PROTOCOL {
-
-  TEGRAP2U_INIT            Init;
+  TEGRAP2U_INIT    Init;
 };
 
-extern EFI_GUID gNVIDIATegraP2UProtocolGuid;
+extern EFI_GUID  gNVIDIATegraP2UProtocolGuid;
 
 #endif

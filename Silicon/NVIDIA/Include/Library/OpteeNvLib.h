@@ -10,7 +10,7 @@
 #ifndef OPTEENV_LIB_H_
 #define OPTEENV_LIB_H_
 
-#define ARM_SMC_ID_TOS_CAPABILITIES   0xb2000009
+#define ARM_SMC_ID_TOS_CAPABILITIES  0xb2000009
 
 /*
  * The 'Trusted OS Call UID' is supposed to return the following UUID for
@@ -33,36 +33,36 @@
 #define OPTEE_MESSAGE_ATTR_TYPE_TMEM_OUTPUT         0xa
 #define OPTEE_MESSAGE_ATTR_TYPE_TMEM_INOUT          0xb
 
-#define OPTEE_MESSAGE_COMMAND_OPEN_SESSION      0
-#define OPTEE_MESSAGE_COMMAND_INVOKE_FUNCTION   1
-#define OPTEE_MESSAGE_COMMAND_CLOSE_SESSION     2
-#define OPTEE_MESSAGE_COMMAND_REGISTER_SHM      4
-#define OPTEE_MESSAGE_COMMAND_UNREGISTER_SHM    5
+#define OPTEE_MESSAGE_COMMAND_OPEN_SESSION     0
+#define OPTEE_MESSAGE_COMMAND_INVOKE_FUNCTION  1
+#define OPTEE_MESSAGE_COMMAND_CLOSE_SESSION    2
+#define OPTEE_MESSAGE_COMMAND_REGISTER_SHM     4
+#define OPTEE_MESSAGE_COMMAND_UNREGISTER_SHM   5
 
 /*
  * Values sent/obtained as part of the exchange capabilities SMC ID.
  */
 
-#define OPTEE_SMC_NSEC_CAP_UNIPROCESSOR         BIT0
-#define OPTEE_SMC_SEC_CAP_HAVE_RESERVED_SHM     BIT0
-#define OPTEE_SMC_SEC_CAP_UNREGISTERED_SHM      BIT1
-#define OPTEE_SMC_SEC_CAP_DYNAMIC_SHM           BIT2
+#define OPTEE_SMC_NSEC_CAP_UNIPROCESSOR      BIT0
+#define OPTEE_SMC_SEC_CAP_HAVE_RESERVED_SHM  BIT0
+#define OPTEE_SMC_SEC_CAP_UNREGISTERED_SHM   BIT1
+#define OPTEE_SMC_SEC_CAP_DYNAMIC_SHM        BIT2
 
-#define OPTEE_MESSAGE_FUNCTION_STMM_COMMUNICATE          0
+#define OPTEE_MESSAGE_FUNCTION_STMM_COMMUNICATE  0
 
 #define OPTEE_MESSAGE_ATTRIBUTE_TYPE_MASK  0xff
 
-#define OPTEE_SUCCESS                           0x00000000
-#define OPTEE_ORIGIN_COMMUNICATION              0x00000002
-#define OPTEE_ERROR_COMMUNICATION               0xFFFF000E
-#define OPTEE_ERROR_BAD_PARAMS                  0xFFFF0006
-#define OPTEE_ERROR_OUT_OF_MEMORY               0xFFFF000C
+#define OPTEE_SUCCESS               0x00000000
+#define OPTEE_ORIGIN_COMMUNICATION  0x00000002
+#define OPTEE_ERROR_COMMUNICATION   0xFFFF000E
+#define OPTEE_ERROR_BAD_PARAMS      0xFFFF0006
+#define OPTEE_ERROR_OUT_OF_MEMORY   0xFFFF000C
 
-#define OPTEE_MSG_PAGE_SIZE			0x1000
+#define OPTEE_MSG_PAGE_SIZE  0x1000
 #define MAX_PAGELIST_ENTRIES \
  ((OPTEE_MSG_PAGE_SIZE / sizeof(UINT64)) - 1)
 
-#define IS_ALIGNED(addr, size) (((UINTN) (addr) & (size - 1)) == 0)
+#define IS_ALIGNED(addr, size)  (((UINTN) (addr) & (size - 1)) == 0)
 
 typedef struct {
   UINT64    BufferAddress;
@@ -83,9 +83,9 @@ typedef struct {
 } OPTEE_MESSAGE_PARAM_VALUE;
 
 typedef union {
-  OPTEE_MESSAGE_PARAM_MEMORY   Memory;
-  OPTEE_MESSAGE_PARAM_RMEMORY  RMemory;
-  OPTEE_MESSAGE_PARAM_VALUE    Value;
+  OPTEE_MESSAGE_PARAM_MEMORY     Memory;
+  OPTEE_MESSAGE_PARAM_RMEMORY    RMemory;
+  OPTEE_MESSAGE_PARAM_VALUE      Value;
 } OPTEE_MESSAGE_PARAM_UNION;
 
 typedef struct {
@@ -125,13 +125,13 @@ typedef struct {
 } OPTEE_INVOKE_FUNCTION_ARG;
 
 typedef struct {
-  UINT32 Size;
-  VOID *Addr;
+  UINT32    Size;
+  VOID      *Addr;
 } OPTEE_SHM_COOKIE;
 
 typedef  struct  {
-  UINT64 PagesArray[MAX_PAGELIST_ENTRIES];
-  UINT64 NextPage;
+  UINT64    PagesArray[MAX_PAGELIST_ENTRIES];
+  UINT64    NextPage;
 } OPTEE_SHM_PAGE_LIST;
 
 BOOLEAN
@@ -167,23 +167,23 @@ OpteeInvokeFunction (
 EFI_STATUS
 EFIAPI
 OpteeRegisterShm (
-  VOID *Buf,
-  UINT64 SharedMemCookie,
-  UINTN Size,
-  OPTEE_SHM_PAGE_LIST *Shm
+  VOID                 *Buf,
+  UINT64               SharedMemCookie,
+  UINTN                Size,
+  OPTEE_SHM_PAGE_LIST  *Shm
   );
 
 BOOLEAN
 EFIAPI
 OpteeExchangeCapabilities (
-  UINT64 *Cap
+  UINT64  *Cap
   );
 
 UINT32
 EFIAPI
 OpteeCallWithArg (
   IN UINT64  PhysicalArg
-);
+  );
 
 EFI_STATUS
 EFIAPI
@@ -192,25 +192,24 @@ OpteeSetProperties (
   UINT64   VBuf,
   UINT64   Size,
   BOOLEAN  RpmbPresent
- );
+  );
 
 EFI_STATUS
 EFIAPI
 OpteeUnRegisterShm (
-  UINT64 SharedMemCookie
- );
+  UINT64  SharedMemCookie
+  );
 
 VOID
 EFIAPI
 HandleCmdRpmb (
-  OPTEE_MESSAGE_ARG *Msg
-);
+  OPTEE_MESSAGE_ARG  *Msg
+  );
 
 VOID
 EFIAPI
 OpteeLibNotifyRuntime (
-  BOOLEAN Runtime
-);
-
+  BOOLEAN  Runtime
+  );
 
 #endif // OPTEENV_LIB_H

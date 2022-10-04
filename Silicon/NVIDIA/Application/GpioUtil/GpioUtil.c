@@ -23,18 +23,18 @@
 // Used for ShellCommandLineParseEx only
 // and to ensure user inputs are in valid format
 //
-SHELL_PARAM_ITEM    mClockUtilParamList[] = {
-  { L"--id",                  TypeValue },
-  { L"--output",              TypeValue },
-  { L"--input",               TypeFlag  },
-  { L"-?",                    TypeFlag  },
-  { NULL,                     TypeMax   },
+SHELL_PARAM_ITEM  mClockUtilParamList[] = {
+  { L"--id",     TypeValue },
+  { L"--output", TypeValue },
+  { L"--input",  TypeFlag  },
+  { L"-?",       TypeFlag  },
+  { NULL,        TypeMax   },
 };
 
-PLATFORM_GPIO_CONTROLLER     *mGpioController;
-EMBEDDED_GPIO                *mGpioProtocol;
-EFI_HII_HANDLE               mHiiHandle;
-CHAR16                       mAppName[]          = L"GpioUtil";
+PLATFORM_GPIO_CONTROLLER  *mGpioController;
+EMBEDDED_GPIO             *mGpioProtocol;
+EFI_HII_HANDLE            mHiiHandle;
+CHAR16                    mAppName[] = L"GpioUtil";
 
 /**
   This is function displays the gpio info for the given pin
@@ -48,15 +48,16 @@ DisplayGpioInfo (
   IN EMBEDDED_GPIO_PIN  Gpio
   )
 {
-  EFI_STATUS         Status;
-  EMBEDDED_GPIO_MODE Mode;
-  UINTN              Value;
+  EFI_STATUS          Status;
+  EMBEDDED_GPIO_MODE  Mode;
+  UINTN               Value;
 
   Status = mGpioProtocol->Get (mGpioProtocol, Gpio, &Value);
   if (EFI_ERROR (Status)) {
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_DISPLAY_GET_VALUE_ERROR), mHiiHandle, mAppName, Gpio, Status);
     return;
   }
+
   Status = mGpioProtocol->GetMode (mGpioProtocol, Gpio, &Mode);
   if (EFI_ERROR (Status)) {
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_DISPLAY_GET_MODE_ERROR), mHiiHandle, mAppName, Gpio, Status);
@@ -64,18 +65,18 @@ DisplayGpioInfo (
   }
 
   switch (Mode) {
-  case GPIO_MODE_INPUT:
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_DISPLAY_INPUT), mHiiHandle, Gpio, Value);
-    return;
+    case GPIO_MODE_INPUT:
+      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_DISPLAY_INPUT), mHiiHandle, Gpio, Value);
+      return;
 
-  case GPIO_MODE_OUTPUT_0:
-  case GPIO_MODE_OUTPUT_1:
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_DISPLAY_OUTPUT), mHiiHandle, Gpio, Value);
-    return;
+    case GPIO_MODE_OUTPUT_0:
+    case GPIO_MODE_OUTPUT_1:
+      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_DISPLAY_OUTPUT), mHiiHandle, Gpio, Value);
+      return;
 
-  default:
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_DISPLAY_UNKNOWN_MODE), mHiiHandle, Gpio, Value);
-    return;
+    default:
+      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_DISPLAY_UNKNOWN_MODE), mHiiHandle, Gpio, Value);
+      return;
   }
 }
 
@@ -95,21 +96,21 @@ DisplayGpioInfo (
 EFI_STATUS
 EFIAPI
 InitializeGpioUtil (
-  IN EFI_HANDLE          ImageHandle,
-  IN EFI_SYSTEM_TABLE    *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                    Status;
-  LIST_ENTRY                    *ParamPackage;
-  CONST CHAR16                  *ValueStr;
-  CHAR16                        *ProblemParam;
-  EFI_HII_PACKAGE_LIST_HEADER   *PackageList;
+  EFI_STATUS                   Status;
+  LIST_ENTRY                   *ParamPackage;
+  CONST CHAR16                 *ValueStr;
+  CHAR16                       *ProblemParam;
+  EFI_HII_PACKAGE_LIST_HEADER  *PackageList;
 
-  BOOLEAN                       Input  = FALSE;
-  BOOLEAN                       Output = FALSE;
-  EMBEDDED_GPIO_MODE            Mode;
-  EMBEDDED_GPIO_PIN             Gpio = MAX_UINT64;
-  UINTN                         ControllerIndex;
+  BOOLEAN             Input  = FALSE;
+  BOOLEAN             Output = FALSE;
+  EMBEDDED_GPIO_MODE  Mode;
+  EMBEDDED_GPIO_PIN   Gpio = MAX_UINT64;
+  UINTN               ControllerIndex;
 
   //
   // Retrieve HII package list from ImageHandle
@@ -117,7 +118,7 @@ InitializeGpioUtil (
   Status = gBS->OpenProtocol (
                   ImageHandle,
                   &gEfiHiiPackageListProtocolGuid,
-                  (VOID **) &PackageList,
+                  (VOID **)&PackageList,
                   ImageHandle,
                   NULL,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -130,11 +131,11 @@ InitializeGpioUtil (
   // Publish HII package list to HII Database.
   //
   Status = gHiiDatabase->NewPackageList (
-                          gHiiDatabase,
-                          PackageList,
-                          NULL,
-                          &mHiiHandle
-                          );
+                           gHiiDatabase,
+                           PackageList,
+                           NULL,
+                           &mHiiHandle
+                           );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -147,14 +148,14 @@ InitializeGpioUtil (
     goto Done;
   }
 
-  Status = gBS->LocateProtocol (&gEmbeddedGpioProtocolGuid, NULL, (VOID **) &mGpioProtocol);
-  if (EFI_ERROR (Status) || mGpioProtocol == NULL) {
+  Status = gBS->LocateProtocol (&gEmbeddedGpioProtocolGuid, NULL, (VOID **)&mGpioProtocol);
+  if (EFI_ERROR (Status) || (mGpioProtocol == NULL)) {
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_PROTOCOL_NONEXISTENT), mHiiHandle, mAppName);
     goto Done;
   }
 
-  Status = gBS->LocateProtocol (&gPlatformGpioProtocolGuid, NULL, (VOID **) &mGpioController);
-  if (EFI_ERROR (Status) || mGpioController == NULL) {
+  Status = gBS->LocateProtocol (&gPlatformGpioProtocolGuid, NULL, (VOID **)&mGpioController);
+  if (EFI_ERROR (Status) || (mGpioController == NULL)) {
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_PLATFORM_PROTOCOL_NONEXISTENT), mHiiHandle, mAppName);
     goto Done;
   }
@@ -166,22 +167,23 @@ InitializeGpioUtil (
 
   if (ShellCommandLineGetFlag (ParamPackage, L"--input")) {
     Input = TRUE;
-    Mode = GPIO_MODE_INPUT;
+    Mode  = GPIO_MODE_INPUT;
   }
 
   ValueStr = ShellCommandLineGetValue (ParamPackage, L"--output");
   if (NULL != ValueStr) {
-    UINTN Value = ShellStrToUintn (ValueStr);
+    UINTN  Value = ShellStrToUintn (ValueStr);
     if (Input) {
       ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_INPUT_OUTPUT), mHiiHandle, mAppName);
       goto Done;
     }
+
     if (Value == 0) {
       Output = TRUE;
-      Mode = GPIO_MODE_OUTPUT_0;
+      Mode   = GPIO_MODE_OUTPUT_0;
     } else if (Value == 1) {
       Output = TRUE;
-      Mode = GPIO_MODE_OUTPUT_1;
+      Mode   = GPIO_MODE_OUTPUT_1;
     } else {
       ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_BAD_OUTPUT_VALUE), mHiiHandle, mAppName);
       goto Done;
@@ -198,6 +200,7 @@ InitializeGpioUtil (
       ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GPIO_UTIL_MODIFY_NO_ID), mHiiHandle, mAppName);
       goto Done;
     }
+
     Status = mGpioProtocol->Set (mGpioProtocol, Gpio, Mode);
   }
 
@@ -205,8 +208,8 @@ InitializeGpioUtil (
     DisplayGpioInfo (Gpio);
   } else {
     for (ControllerIndex = 0; ControllerIndex < mGpioController->GpioControllerCount; ControllerIndex++) {
-      UINTN GpioIndex;
-      for (GpioIndex = 0;GpioIndex < mGpioController->GpioController[ControllerIndex].InternalGpioCount; GpioIndex++) {
+      UINTN  GpioIndex;
+      for (GpioIndex = 0; GpioIndex < mGpioController->GpioController[ControllerIndex].InternalGpioCount; GpioIndex++) {
         DisplayGpioInfo (mGpioController->GpioController[ControllerIndex].GpioIndex + GpioIndex);
       }
     }

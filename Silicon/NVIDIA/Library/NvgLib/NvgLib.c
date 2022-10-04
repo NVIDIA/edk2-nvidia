@@ -12,27 +12,37 @@
 #include <Library/NvgLib.h>
 #include <Library/PcdLib.h>
 
-#define TEGRA_NVG_CHANNEL_NUM_CORES_CMD        20
-#define TEGRA_NVG_CHANNEL_LOGICAL_TO_MPIDR_CMD 23
+#define TEGRA_NVG_CHANNEL_NUM_CORES_CMD         20
+#define TEGRA_NVG_CHANNEL_LOGICAL_TO_MPIDR_CMD  23
 
 #define AA64_MRS(reg, var)  do { \
   asm volatile ("mrs %0, "#reg : "=r"(var) : : "memory", "cc"); \
 } while (FALSE)
 
-static inline void WriteNvgChannelIdx(UINT64 Channel)
+static inline void
+WriteNvgChannelIdx (
+  UINT64  Channel
+  )
 {
   asm volatile ("msr s3_0_c15_c1_2, %0" : : "r"(Channel) : "memory", "cc");
 }
 
-static inline void WriteNvgChannelData(UINT64 Data)
+static inline void
+WriteNvgChannelData (
+  UINT64  Data
+  )
 {
   asm volatile ("msr s3_0_c15_c1_3, %0" : : "r"(Data) : "memory", "cc");
 }
 
-static inline UINT64 ReadNvgChannelData(void)
+static inline UINT64
+ReadNvgChannelData (
+  void
+  )
 {
-  UINT64 Reg;
-  AA64_MRS(s3_0_c15_c1_3, Reg);
+  UINT64  Reg;
+
+  AA64_MRS (s3_0_c15_c1_3, Reg);
   return Reg;
 }
 
@@ -42,10 +52,10 @@ NvgGetNumberOfEnabledCpuCores (
   VOID
   )
 {
-  UINT64 Data;
+  UINT64  Data;
 
-  WriteNvgChannelIdx(TEGRA_NVG_CHANNEL_NUM_CORES_CMD);
-  Data = ReadNvgChannelData();
+  WriteNvgChannelIdx (TEGRA_NVG_CHANNEL_NUM_CORES_CMD);
+  Data = ReadNvgChannelData ();
 
   return (Data & 0xF);
 }
@@ -53,14 +63,14 @@ NvgGetNumberOfEnabledCpuCores (
 EFI_STATUS
 EFIAPI
 NvgConvertCpuLogicalToMpidr (
-  IN  UINT32 LogicalCore,
-  OUT UINT64 *Mpidr
+  IN  UINT32  LogicalCore,
+  OUT UINT64  *Mpidr
   )
 {
-  UINT32 NumCores;
-  UINT64 Data = 0;
+  UINT32  NumCores;
+  UINT64  Data = 0;
 
-  NumCores = NvgGetNumberOfEnabledCpuCores();
+  NumCores = NvgGetNumberOfEnabledCpuCores ();
   if (LogicalCore < NumCores) {
     WriteNvgChannelIdx (TEGRA_NVG_CHANNEL_LOGICAL_TO_MPIDR_CMD);
 
@@ -68,7 +78,7 @@ NvgConvertCpuLogicalToMpidr (
     WriteNvgChannelData (LogicalCore);
 
     /* Read-back the MPIDR */
-    Data = ReadNvgChannelData ();
+    Data   = ReadNvgChannelData ();
     *Mpidr = (Data & 0xFFFFFFFF);
 
     DEBUG ((DEBUG_INFO, "NVG: Logical CPU: %u; MPIDR: 0x%x\n", LogicalCore, *Mpidr));
@@ -88,10 +98,10 @@ NvgConvertCpuLogicalToMpidr (
 EFI_STATUS
 EFIAPI
 NvgGetEnabledCoresBitMap (
-  IN  UINT64    *EnabledCoresBitMap
+  IN  UINT64  *EnabledCoresBitMap
   )
 {
-  UINTN     CpuCount;
+  UINTN  CpuCount;
 
   CpuCount = NvgGetNumberOfEnabledCpuCores ();
   ASSERT (CpuCount <= 64);

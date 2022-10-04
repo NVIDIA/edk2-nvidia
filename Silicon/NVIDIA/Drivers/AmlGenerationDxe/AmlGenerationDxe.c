@@ -37,41 +37,43 @@
 **/
 EFI_STATUS
 EFIAPI
-InitializeTable(
-  IN NVIDIA_AML_GENERATION_PROTOCOL *This,
-  IN EFI_ACPI_DESCRIPTION_HEADER    *Header
-) {
+InitializeTable (
+  IN NVIDIA_AML_GENERATION_PROTOCOL  *This,
+  IN EFI_ACPI_DESCRIPTION_HEADER     *Header
+  )
+{
   NVIDIA_AML_GENERATION_PRIVATE_DATA  *Private;
   EFI_STATUS                          Status;
 
-  if (This == NULL || Header == NULL) {
+  if ((This == NULL) || (Header == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
-  Private = NVIDIA_AML_GENERATION_PRIVATE_DATA_FROM_PROTOCOL(This);
+
+  Private = NVIDIA_AML_GENERATION_PRIVATE_DATA_FROM_PROTOCOL (This);
 
   if (Private->CurrentTable != NULL) {
-    Status = gBS->FreePool(Private->CurrentTable);
+    Status = gBS->FreePool (Private->CurrentTable);
 
-    if (EFI_ERROR(Status)) {
+    if (EFI_ERROR (Status)) {
       Private->CurrentTable = NULL;
       return Status;
     }
   }
 
-  Status = gBS->AllocatePool(
-    EfiBootServicesData,
-    sizeof(EFI_ACPI_DESCRIPTION_HEADER),
-    (VOID**)&Private->CurrentTable
-  );
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  sizeof (EFI_ACPI_DESCRIPTION_HEADER),
+                  (VOID **)&Private->CurrentTable
+                  );
 
-  if (EFI_ERROR(Status) || Private->CurrentTable == NULL) {
+  if (EFI_ERROR (Status) || (Private->CurrentTable == NULL)) {
     Private->CurrentTable = NULL;
     return EFI_OUT_OF_RESOURCES;
   }
 
-  CopyMem(Private->CurrentTable, Header, sizeof(EFI_ACPI_DESCRIPTION_HEADER));
+  CopyMem (Private->CurrentTable, Header, sizeof (EFI_ACPI_DESCRIPTION_HEADER));
 
-  Private->CurrentTable->Length = sizeof(EFI_ACPI_DESCRIPTION_HEADER);
+  Private->CurrentTable->Length = sizeof (EFI_ACPI_DESCRIPTION_HEADER);
 
   Private->ScopeStart = NULL;
 
@@ -92,13 +94,14 @@ InitializeTable(
 STATIC
 EFI_STATUS
 EFIAPI
-SetScopePackageLength(
-  IN AML_SCOPE_HEADER *ScopeHeader,
-  IN UINT32           Length
-) {
-  UINT8 LeadByte;
+SetScopePackageLength (
+  IN AML_SCOPE_HEADER  *ScopeHeader,
+  IN UINT32            Length
+  )
+{
+  UINT8  LeadByte;
 
-  if (ScopeHeader == NULL || Length > 0x0FFFFFFF) {
+  if ((ScopeHeader == NULL) || (Length > 0x0FFFFFFF)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -124,20 +127,21 @@ SetScopePackageLength(
 STATIC
 EFI_STATUS
 EFIAPI
-GetScopePackageLength(
-  IN AML_SCOPE_HEADER *ScopeHeader,
-  OUT UINT32          *Length
-) {
+GetScopePackageLength (
+  IN AML_SCOPE_HEADER  *ScopeHeader,
+  OUT UINT32           *Length
+  )
+{
   UINT32  UpperBytes;
 
-  if (ScopeHeader == NULL || Length == NULL) {
+  if ((ScopeHeader == NULL) || (Length == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
   // Upper 3 bytes are shifted 4 bits right, then combined with lowest 4 bits
   // of the lead byte to get resulting length.
   UpperBytes = (ScopeHeader->PkgLength >> 4) & 0x0FFFFFF0;
-  *Length = UpperBytes | (ScopeHeader->PkgLength & 0xF);
+  *Length    = UpperBytes | (ScopeHeader->PkgLength & 0xF);
 
   return EFI_SUCCESS;
 }
@@ -159,34 +163,35 @@ GetScopePackageLength(
 STATIC
 EFI_STATUS
 EFIAPI
-GetDeviceLength(
+GetDeviceLength (
   IN VOID     *DeviceStart,
   OUT UINT32  *DeviceSize
-) {
-  UINT8 LeadByte;
-  UINT8 *DeviceLengthStart;
-  UINTN LengthSize;
+  )
+{
+  UINT8  LeadByte;
+  UINT8  *DeviceLengthStart;
+  UINTN  LengthSize;
 
-  if (DeviceStart == NULL || DeviceSize == NULL) {
+  if ((DeviceStart == NULL) || (DeviceSize == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (*(UINT8*)DeviceStart != 0x5B || *((UINT8*)DeviceStart + 1) != 0x82) {
+  if ((*(UINT8 *)DeviceStart != 0x5B) || (*((UINT8 *)DeviceStart + 1) != 0x82)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  DeviceLengthStart = (UINT8*)DeviceStart + 2;
-  LeadByte = *DeviceLengthStart;
-  LengthSize = 1 + ((LeadByte >> 6) & 0x3);
+  DeviceLengthStart = (UINT8 *)DeviceStart + 2;
+  LeadByte          = *DeviceLengthStart;
+  LengthSize        = 1 + ((LeadByte >> 6) & 0x3);
 
   if (LengthSize == 1) {
     *DeviceSize = (LeadByte) & 0x3F;
   } else if (LengthSize == 2) {
-    *DeviceSize = ((*(UINT16*)DeviceLengthStart >> 4) & 0x0FF0) | (LeadByte & 0xF);
+    *DeviceSize = ((*(UINT16 *)DeviceLengthStart >> 4) & 0x0FF0) | (LeadByte & 0xF);
   } else if (LengthSize == 3) {
-    *DeviceSize = ((*(UINT32*)DeviceLengthStart >> 4) & 0x0FFFF0) | (LeadByte & 0xF);
+    *DeviceSize = ((*(UINT32 *)DeviceLengthStart >> 4) & 0x0FFFF0) | (LeadByte & 0xF);
   } else {
-    *DeviceSize = ((*(UINT32*)DeviceLengthStart >> 4) & 0x0FFFFFFF0) | (LeadByte & 0xF);
+    *DeviceSize = ((*(UINT32 *)DeviceLengthStart >> 4) & 0x0FFFFFFF0) | (LeadByte & 0xF);
   }
 
   // Add Two Bytes to include opcode bytes
@@ -214,10 +219,11 @@ GetDeviceLength(
 **/
 EFI_STATUS
 EFIAPI
-AppendDevice(
-  IN NVIDIA_AML_GENERATION_PROTOCOL *This,
-  IN EFI_ACPI_DESCRIPTION_HEADER    *Device
-) {
+AppendDevice (
+  IN NVIDIA_AML_GENERATION_PROTOCOL  *This,
+  IN EFI_ACPI_DESCRIPTION_HEADER     *Device
+  )
+{
   NVIDIA_AML_GENERATION_PRIVATE_DATA  *Private;
   EFI_STATUS                          Status;
   UINT8                               *DeviceStart;
@@ -227,61 +233,64 @@ AppendDevice(
   EFI_ACPI_DESCRIPTION_HEADER         *NewTable;
   AML_SCOPE_HEADER                    *ScopeHeader;
 
-  if (This == NULL || Device == NULL) {
+  if ((This == NULL) || (Device == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_AML_GENERATION_PRIVATE_DATA_FROM_PROTOCOL(This);
+  Private = NVIDIA_AML_GENERATION_PRIVATE_DATA_FROM_PROTOCOL (This);
 
   if (Private->CurrentTable == NULL) {
     return EFI_NOT_READY;
   }
 
-  DeviceStart = (UINT8*)Device + sizeof(EFI_ACPI_DESCRIPTION_HEADER);
-  if (*(UINT8*)DeviceStart != AML_EXT_OP
-      || *((UINT8*)DeviceStart + 1) != AML_EXT_DEVICE_OP) {
+  DeviceStart = (UINT8 *)Device + sizeof (EFI_ACPI_DESCRIPTION_HEADER);
+  if (  (*(UINT8 *)DeviceStart != AML_EXT_OP)
+     || (*((UINT8 *)DeviceStart + 1) != AML_EXT_DEVICE_OP))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = GetDeviceLength(DeviceStart, &DeviceSize);
-  if (EFI_ERROR(Status)) {
+  Status = GetDeviceLength (DeviceStart, &DeviceSize);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  if (DeviceSize != Device->Length - sizeof(EFI_ACPI_DESCRIPTION_HEADER)) {
+  if (DeviceSize != Device->Length - sizeof (EFI_ACPI_DESCRIPTION_HEADER)) {
     return EFI_INVALID_PARAMETER;
   }
 
   NewLength = Private->CurrentTable->Length + DeviceSize;
 
-  Status = gBS->AllocatePool(EfiBootServicesData, NewLength, (VOID**)&NewTable);
+  Status = gBS->AllocatePool (EfiBootServicesData, NewLength, (VOID **)&NewTable);
 
-  if (EFI_ERROR(Status) || NewTable == NULL) {
+  if (EFI_ERROR (Status) || (NewTable == NULL)) {
     return EFI_OUT_OF_RESOURCES;
   }
-  CopyMem(NewTable, Private->CurrentTable, Private->CurrentTable->Length);
-  CopyMem(
-    (UINT8*)NewTable + Private->CurrentTable->Length,
+
+  CopyMem (NewTable, Private->CurrentTable, Private->CurrentTable->Length);
+  CopyMem (
+    (UINT8 *)NewTable + Private->CurrentTable->Length,
     DeviceStart,
     DeviceSize
-  );
+    );
 
   if (Private->ScopeStart != NULL) {
-    Private->ScopeStart = (UINT8*)NewTable + ((UINT8*)Private->ScopeStart - (UINT8*)Private->CurrentTable);
+    Private->ScopeStart = (UINT8 *)NewTable + ((UINT8 *)Private->ScopeStart - (UINT8 *)Private->CurrentTable);
   }
-  gBS->FreePool(Private->CurrentTable);
-  Private->CurrentTable = NewTable;
+
+  gBS->FreePool (Private->CurrentTable);
+  Private->CurrentTable         = NewTable;
   Private->CurrentTable->Length = NewLength;
 
   if (Private->ScopeStart != NULL) {
-    ScopeHeader = (AML_SCOPE_HEADER*)Private->ScopeStart;
-    Status = GetScopePackageLength(ScopeHeader, &ScopeLength);
-    if (EFI_ERROR(Status)) {
+    ScopeHeader = (AML_SCOPE_HEADER *)Private->ScopeStart;
+    Status      = GetScopePackageLength (ScopeHeader, &ScopeLength);
+    if (EFI_ERROR (Status)) {
       return Status;
     }
 
-    Status = SetScopePackageLength(ScopeHeader, ScopeLength + DeviceSize);
-    if (EFI_ERROR(Status)) {
+    Status = SetScopePackageLength (ScopeHeader, ScopeLength + DeviceSize);
+    if (EFI_ERROR (Status)) {
       return Status;
     }
   }
@@ -301,17 +310,18 @@ AppendDevice(
 **/
 EFI_STATUS
 EFIAPI
-GetTable(
-  IN NVIDIA_AML_GENERATION_PROTOCOL *This,
-  OUT EFI_ACPI_DESCRIPTION_HEADER   **Table
-) {
+GetTable (
+  IN NVIDIA_AML_GENERATION_PROTOCOL  *This,
+  OUT EFI_ACPI_DESCRIPTION_HEADER    **Table
+  )
+{
   NVIDIA_AML_GENERATION_PRIVATE_DATA  *Private;
 
-  if (This == NULL || Table == NULL) {
+  if ((This == NULL) || (Table == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_AML_GENERATION_PRIVATE_DATA_FROM_PROTOCOL(This);
+  Private = NVIDIA_AML_GENERATION_PRIVATE_DATA_FROM_PROTOCOL (This);
 
   if (Private->CurrentTable == NULL) {
     return EFI_NOT_READY;
@@ -345,10 +355,11 @@ GetTable(
 **/
 EFI_STATUS
 EFIAPI
-StartScope(
-  IN NVIDIA_AML_GENERATION_PROTOCOL *This,
-  IN CHAR8                          *ScopeName
-) {
+StartScope (
+  IN NVIDIA_AML_GENERATION_PROTOCOL  *This,
+  IN CHAR8                           *ScopeName
+  )
+{
   NVIDIA_AML_GENERATION_PRIVATE_DATA  *Private;
   EFI_STATUS                          Status;
   UINTN                               NewLength;
@@ -357,60 +368,63 @@ StartScope(
   UINTN                               ScopeNameLength;
   CHAR8                               *CurrChar;
 
-  if (This == NULL || ScopeName == NULL) {
+  if ((This == NULL) || (ScopeName == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_AML_GENERATION_PRIVATE_DATA_FROM_PROTOCOL(This);
+  Private = NVIDIA_AML_GENERATION_PRIVATE_DATA_FROM_PROTOCOL (This);
 
-  if (Private->CurrentTable == NULL || Private->ScopeStart != NULL) {
+  if ((Private->CurrentTable == NULL) || (Private->ScopeStart != NULL)) {
     return EFI_NOT_READY;
   }
 
-  ScopeNameLength = AsciiStrLen(ScopeName);
+  ScopeNameLength = AsciiStrLen (ScopeName);
 
-  if (ScopeNameLength > AML_NAME_LENGTH || ScopeNameLength == 0) {
+  if ((ScopeNameLength > AML_NAME_LENGTH) || (ScopeNameLength == 0)) {
     return EFI_BAD_BUFFER_SIZE;
   }
 
-  if ((*ScopeName < 'A' || *ScopeName > 'Z') && *ScopeName != '_') {
+  if (((*ScopeName < 'A') || (*ScopeName > 'Z')) && (*ScopeName != '_')) {
     return EFI_INVALID_PARAMETER;
   }
 
   for (CurrChar = ScopeName + 1; CurrChar < ScopeName + ScopeNameLength; CurrChar++) {
-    if ((*CurrChar < 'A' || *CurrChar > 'Z')
-        && (*CurrChar < '0' || *CurrChar > '9')
-        && *CurrChar != '_') {
+    if (  ((*CurrChar < 'A') || (*CurrChar > 'Z'))
+       && ((*CurrChar < '0') || (*CurrChar > '9'))
+       && (*CurrChar != '_'))
+    {
       return EFI_INVALID_PARAMETER;
     }
   }
 
-  NewLength = Private->CurrentTable->Length + sizeof(AML_SCOPE_HEADER);
+  NewLength = Private->CurrentTable->Length + sizeof (AML_SCOPE_HEADER);
 
-  Status = gBS->AllocatePool(EfiBootServicesData, NewLength, (VOID**)&NewTable);
+  Status = gBS->AllocatePool (EfiBootServicesData, NewLength, (VOID **)&NewTable);
 
-  if (EFI_ERROR(Status) || NewTable == NULL) {
+  if (EFI_ERROR (Status) || (NewTable == NULL)) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  CopyMem(NewTable, Private->CurrentTable, Private->CurrentTable->Length);
+  CopyMem (NewTable, Private->CurrentTable, Private->CurrentTable->Length);
 
-  ScopeHeader = (AML_SCOPE_HEADER*) ((UINT8*)NewTable + NewTable->Length);
+  ScopeHeader = (AML_SCOPE_HEADER *)((UINT8 *)NewTable + NewTable->Length);
 
   ScopeHeader->OpCode = AML_SCOPE_OP;
-  CopyMem(ScopeHeader->Name, ScopeName, ScopeNameLength);
+  CopyMem (ScopeHeader->Name, ScopeName, ScopeNameLength);
   if (ScopeNameLength < AML_NAME_LENGTH) {
-    SetMem(ScopeHeader->Name + ScopeNameLength, AML_NAME_LENGTH - ScopeNameLength, '_');
+    SetMem (ScopeHeader->Name + ScopeNameLength, AML_NAME_LENGTH - ScopeNameLength, '_');
   }  // Scope Length should include package bytes and name bytes but not opcode
-  SetScopePackageLength(ScopeHeader, sizeof(AML_SCOPE_HEADER) - 1);
+
+  SetScopePackageLength (ScopeHeader, sizeof (AML_SCOPE_HEADER) - 1);
 
   Private->ScopeStart = ScopeHeader;
 
-  Status = gBS->FreePool(Private->CurrentTable);
-  if (EFI_ERROR(Status)) {
+  Status = gBS->FreePool (Private->CurrentTable);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
-  Private->CurrentTable = NewTable;
+
+  Private->CurrentTable         = NewTable;
   Private->CurrentTable->Length = NewLength;
 
   return EFI_SUCCESS;
@@ -426,16 +440,17 @@ StartScope(
 **/
 EFI_STATUS
 EFIAPI
-EndScope(
-  IN NVIDIA_AML_GENERATION_PROTOCOL *This
-) {
+EndScope (
+  IN NVIDIA_AML_GENERATION_PROTOCOL  *This
+  )
+{
   NVIDIA_AML_GENERATION_PRIVATE_DATA  *Private;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_AML_GENERATION_PRIVATE_DATA_FROM_PROTOCOL(This);
+  Private = NVIDIA_AML_GENERATION_PRIVATE_DATA_FROM_PROTOCOL (This);
 
   Private->ScopeStart = NULL;
 
@@ -453,36 +468,39 @@ EndScope(
 **/
 EFI_STATUS
 EFIAPI
-AmlGenerationDxeEntryPoint(
-  IN EFI_HANDLE       ImageHandle,
-  IN EFI_SYSTEM_TABLE *SystemTable
-) {
+AmlGenerationDxeEntryPoint (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
   NVIDIA_AML_GENERATION_PRIVATE_DATA  *Private;
   EFI_STATUS                          Status;
 
-  Status = gBS->AllocatePool(EfiBootServicesData,
-                             sizeof(NVIDIA_AML_GENERATION_PRIVATE_DATA),
-                             (VOID**)&Private);
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  sizeof (NVIDIA_AML_GENERATION_PRIVATE_DATA),
+                  (VOID **)&Private
+                  );
 
-  if (EFI_ERROR(Status) || Private == NULL) {
+  if (EFI_ERROR (Status) || (Private == NULL)) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Private->Signature = NVIDIA_AML_GENERATION_SIGNATURE;
-  Private->CurrentTable = NULL;
-  Private->ScopeStart = NULL;
+  Private->Signature                             = NVIDIA_AML_GENERATION_SIGNATURE;
+  Private->CurrentTable                          = NULL;
+  Private->ScopeStart                            = NULL;
   Private->AmlGenerationProtocol.InitializeTable = InitializeTable;
-  Private->AmlGenerationProtocol.AppendDevice = AppendDevice;
-  Private->AmlGenerationProtocol.GetTable = GetTable;
-  Private->AmlGenerationProtocol.StartScope = StartScope;
-  Private->AmlGenerationProtocol.EndScope = EndScope;
+  Private->AmlGenerationProtocol.AppendDevice    = AppendDevice;
+  Private->AmlGenerationProtocol.GetTable        = GetTable;
+  Private->AmlGenerationProtocol.StartScope      = StartScope;
+  Private->AmlGenerationProtocol.EndScope        = EndScope;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
-    &ImageHandle,
-    &gNVIDIAAmlGenerationProtocolGuid,
-    &Private->AmlGenerationProtocol,
-    NULL
-  );
+                  &ImageHandle,
+                  &gNVIDIAAmlGenerationProtocolGuid,
+                  &Private->AmlGenerationProtocol,
+                  NULL
+                  );
 
   return Status;
 }

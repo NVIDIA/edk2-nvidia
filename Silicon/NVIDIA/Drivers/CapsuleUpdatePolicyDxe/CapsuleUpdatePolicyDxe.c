@@ -30,8 +30,8 @@ NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  mCapsuleUpdatePolicy = {
 EFI_STATUS
 EFIAPI
 CapsuleUpdatePolicyCheckSystemPower (
-  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This,
-  OUT BOOLEAN                               *Good
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  *This,
+  OUT BOOLEAN                                *Good
   )
 {
   *Good = TRUE;
@@ -41,8 +41,8 @@ CapsuleUpdatePolicyCheckSystemPower (
 EFI_STATUS
 EFIAPI
 CapsuleUpdatePolicyCheckSystemThermal (
-  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This,
-  OUT BOOLEAN                               *Good
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  *This,
+  OUT BOOLEAN                                *Good
   )
 {
   *Good = TRUE;
@@ -52,8 +52,8 @@ CapsuleUpdatePolicyCheckSystemThermal (
 EFI_STATUS
 EFIAPI
 CapsuleUpdatePolicyCheckSystemEnvironment (
-  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This,
-  OUT BOOLEAN                               *Good
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  *This,
+  OUT BOOLEAN                                *Good
   )
 {
   *Good = TRUE;
@@ -63,7 +63,7 @@ CapsuleUpdatePolicyCheckSystemEnvironment (
 BOOLEAN
 EFIAPI
 CapsuleUpdatePolicyIsLowestSupportedVersionCheckRequired (
-  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  *This
   )
 {
   return TRUE;
@@ -72,7 +72,7 @@ CapsuleUpdatePolicyIsLowestSupportedVersionCheckRequired (
 BOOLEAN
 EFIAPI
 CapsuleUpdatePolicyIsLockFmpDeviceAtLockEventGuidRequired (
-  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  *This
   )
 {
   // Don't use FmpDxe flash locking, FmpDeviceLib controls flash access
@@ -86,13 +86,15 @@ CapsuleUpdatePolicyInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   ASSERT_PROTOCOL_ALREADY_INSTALLED (NULL, &gNVIDIACapsuleUpdatePolicyProtocolGuid);
-  Status = gBS->InstallMultipleProtocolInterfaces (&mHandle,
-                                                   &gNVIDIACapsuleUpdatePolicyProtocolGuid,
-                                                   &mCapsuleUpdatePolicy,
-                                                   NULL);
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &mHandle,
+                  &gNVIDIACapsuleUpdatePolicyProtocolGuid,
+                  &mCapsuleUpdatePolicy,
+                  NULL
+                  );
   ASSERT_EFI_ERROR (Status);
 
   return Status;

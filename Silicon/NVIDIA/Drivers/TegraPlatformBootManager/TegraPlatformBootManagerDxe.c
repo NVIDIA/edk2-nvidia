@@ -25,12 +25,12 @@
 
 #include <NVIDIAConfiguration.h>
 
-#define NVIDIA_KERNEL_COMMAND_MAX_LEN   25
+#define NVIDIA_KERNEL_COMMAND_MAX_LEN  25
 
-extern EFI_GUID mBmAutoCreateBootOptionGuid;
+extern EFI_GUID  mBmAutoCreateBootOptionGuid;
 
-EFI_EVENT mEndOfDxeEvent;
-CHAR16 KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
+EFI_EVENT  mEndOfDxeEvent;
+CHAR16     KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
   L"console="
 };
 
@@ -46,7 +46,7 @@ CHAR16 KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
 STATIC
 BOOLEAN
 IsValidLoadOption (
-  IN  EFI_BOOT_MANAGER_LOAD_OPTION *LoadOption
+  IN  EFI_BOOT_MANAGER_LOAD_OPTION  *LoadOption
   )
 {
   EFI_STATUS              Status;
@@ -67,20 +67,23 @@ IsValidLoadOption (
 
     DevicePathNode = DevicePath;
     while (!IsDevicePathEndType (DevicePathNode)) {
-
-      //Look for eMMC and ignore the non-user partitions
+      // Look for eMMC and ignore the non-user partitions
       if ((DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) &&
-          (DevicePathSubType (DevicePathNode) == MSG_EMMC_DP)) {
+          (DevicePathSubType (DevicePathNode) == MSG_EMMC_DP))
+      {
         DevicePathNode = NextDevicePathNode (DevicePathNode);
         if ((DevicePathType (DevicePathNode) == HARDWARE_DEVICE_PATH) &&
-            (DevicePathSubType (DevicePathNode) == HW_CONTROLLER_DP)) {
+            (DevicePathSubType (DevicePathNode) == HW_CONTROLLER_DP))
+        {
           Controller = (CONTROLLER_DEVICE_PATH *)DevicePathNode;
           if (Controller->ControllerNumber != 0) {
             return FALSE;
           }
         }
+
         break;
       }
+
       DevicePathNode = NextDevicePathNode (DevicePathNode);
     }
   }
@@ -105,22 +108,25 @@ IsValidLoadOption (
 STATIC
 EFI_STATUS
 DuplicateLoadOption (
-  OUT EFI_BOOT_MANAGER_LOAD_OPTION *DestinationLoadOption,
-  IN  EFI_BOOT_MANAGER_LOAD_OPTION *SourceLoadOption
+  OUT EFI_BOOT_MANAGER_LOAD_OPTION  *DestinationLoadOption,
+  IN  EFI_BOOT_MANAGER_LOAD_OPTION  *SourceLoadOption
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
-  if (DestinationLoadOption == NULL ||
-      SourceLoadOption == NULL) {
+  if ((DestinationLoadOption == NULL) ||
+      (SourceLoadOption == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
   gBS->CopyMem (DestinationLoadOption, SourceLoadOption, sizeof (EFI_BOOT_MANAGER_LOAD_OPTION));
 
-  Status = gBS->AllocatePool (EfiBootServicesData,
-                              (StrLen (SourceLoadOption->Description) + 1) * sizeof (CHAR16),
-                              (VOID **)&DestinationLoadOption->Description);
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  (StrLen (SourceLoadOption->Description) + 1) * sizeof (CHAR16),
+                  (VOID **)&DestinationLoadOption->Description
+                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -129,18 +135,22 @@ DuplicateLoadOption (
 
   DestinationLoadOption->FilePath = DuplicateDevicePath (SourceLoadOption->FilePath);
 
-  Status = gBS->AllocatePool (EfiBootServicesData,
-                              SourceLoadOption->OptionalDataSize,
-                              (VOID **)&DestinationLoadOption->OptionalData);
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  SourceLoadOption->OptionalDataSize,
+                  (VOID **)&DestinationLoadOption->OptionalData
+                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   gBS->CopyMem (DestinationLoadOption->OptionalData, SourceLoadOption->OptionalData, SourceLoadOption->OptionalDataSize);
 
-  Status = gBS->AllocatePool (EfiBootServicesData,
-                              SourceLoadOption->ExitDataSize,
-                              (VOID **)&DestinationLoadOption->ExitData);
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  SourceLoadOption->ExitDataSize,
+                  (VOID **)&DestinationLoadOption->ExitData
+                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -162,19 +172,19 @@ DuplicateLoadOption (
 STATIC
 EFI_STATUS
 GetDtbCommandLine (
-  OUT CHAR16 **OutCmdLine
+  OUT CHAR16  **OutCmdLine
   )
 {
-  EFI_STATUS          Status;
-  VOID                *DeviceTreeBase;
-  UINTN               DeviceTreeSize;
-  INT32               NodeOffset;
-  CONST CHAR8         *CommandLineEntry;
-  INT32               CommandLineLength;
-  INT32               CommandLineBytes;
-  CHAR16              *CmdLineDtb;
-  BOOLEAN             DTBoot;
-  VOID                *AcpiBase;
+  EFI_STATUS   Status;
+  VOID         *DeviceTreeBase;
+  UINTN        DeviceTreeSize;
+  INT32        NodeOffset;
+  CONST CHAR8  *CommandLineEntry;
+  INT32        CommandLineLength;
+  INT32        CommandLineBytes;
+  CHAR16       *CmdLineDtb;
+  BOOLEAN      DTBoot;
+  VOID         *AcpiBase;
 
   DTBoot = FALSE;
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
@@ -183,7 +193,7 @@ GetDtbCommandLine (
   }
 
   DeviceTreeBase = NULL;
-  CmdLineDtb = NULL;
+  CmdLineDtb     = NULL;
   if (DTBoot) {
     Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DeviceTreeBase);
     if (EFI_ERROR (Status)) {
@@ -202,16 +212,18 @@ GetDtbCommandLine (
   }
 
   CommandLineEntry = NULL;
-  CommandLineEntry = (CONST CHAR8*)fdt_getprop (DeviceTreeBase, NodeOffset, "bootargs", &CommandLineLength);
+  CommandLineEntry = (CONST CHAR8 *)fdt_getprop (DeviceTreeBase, NodeOffset, "bootargs", &CommandLineLength);
   if (NULL == CommandLineEntry) {
     return EFI_NOT_FOUND;
   }
 
   CommandLineBytes = CommandLineLength * sizeof (CHAR16);
 
-  Status = gBS->AllocatePool (EfiBootServicesData,
-                              CommandLineBytes,
-                              (VOID **)&CmdLineDtb);
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  CommandLineBytes,
+                  (VOID **)&CmdLineDtb
+                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -239,14 +251,14 @@ GetDtbCommandLine (
 STATIC
 VOID
 RemoveKernelCommandLine (
-  IN CHAR16 *InCmdLine,
-  IN CHAR16 *DelCmdLine
+  IN CHAR16  *InCmdLine,
+  IN CHAR16  *DelCmdLine
   )
 {
-  CHAR16 *ExistingCommandLineArgumentStart;
-  CHAR16 *ExistingCommandLineArgumentEnd;
-  UINTN  Length;
-  CHAR16 *TempBuffer;
+  CHAR16  *ExistingCommandLineArgumentStart;
+  CHAR16  *ExistingCommandLineArgumentEnd;
+  UINTN   Length;
+  CHAR16  *TempBuffer;
 
   ExistingCommandLineArgumentStart = NULL;
   ExistingCommandLineArgumentStart = StrStr (InCmdLine, DelCmdLine);
@@ -260,25 +272,33 @@ RemoveKernelCommandLine (
     }
 
     TempBuffer = NULL;
-    Length = StrSize(ExistingCommandLineArgumentEnd + 1);
+    Length     = StrSize (ExistingCommandLineArgumentEnd + 1);
 
-    gBS->AllocatePool (EfiBootServicesData,
-                       Length,
-                       (VOID **)&TempBuffer);
+    gBS->AllocatePool (
+           EfiBootServicesData,
+           Length,
+           (VOID **)&TempBuffer
+           );
 
     gBS->SetMem (TempBuffer, Length, 0);
 
-    gBS->CopyMem (TempBuffer,
-                  ExistingCommandLineArgumentEnd + 1,
-                  Length);
+    gBS->CopyMem (
+           TempBuffer,
+           ExistingCommandLineArgumentEnd + 1,
+           Length
+           );
 
-    gBS->SetMem (ExistingCommandLineArgumentStart,
-                 StrSize(ExistingCommandLineArgumentStart),
-                 0);
+    gBS->SetMem (
+           ExistingCommandLineArgumentStart,
+           StrSize (ExistingCommandLineArgumentStart),
+           0
+           );
 
-    gBS->CopyMem (ExistingCommandLineArgumentStart,
-                  TempBuffer,
-                  Length);
+    gBS->CopyMem (
+           ExistingCommandLineArgumentStart,
+           TempBuffer,
+           Length
+           );
 
     gBS->FreePool (TempBuffer);
 
@@ -299,23 +319,23 @@ RemoveKernelCommandLine (
 STATIC
 EFI_STATUS
 UpdateKernelCommandLine (
-  IN  CHAR16 *InCmdLine,
-  OUT CHAR16 **OutCmdLine
+  IN  CHAR16  *InCmdLine,
+  OUT CHAR16  **OutCmdLine
   )
 {
-  EFI_STATUS                             Status;
-  UINTN                                  Length;
-  UINTN                                  NumOfHandles;
-  EFI_HANDLE                             *HandleBuffer;
-  UINTN                                  Count;
-  NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL *Interface;
-  CHAR16                                 *CmdLine;
-  NVIDIA_KERNEL_COMMAND_LINE             AddlCmdLine;
-  UINTN                                  AddlCmdLen;
-  VOID                                   *AcpiBase;
+  EFI_STATUS                              Status;
+  UINTN                                   Length;
+  UINTN                                   NumOfHandles;
+  EFI_HANDLE                              *HandleBuffer;
+  UINTN                                   Count;
+  NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL  *Interface;
+  CHAR16                                  *CmdLine;
+  NVIDIA_KERNEL_COMMAND_LINE              AddlCmdLine;
+  UINTN                                   AddlCmdLen;
+  VOID                                    *AcpiBase;
 
   AddlCmdLen = sizeof (AddlCmdLine);
-  Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, NULL, &AddlCmdLen, &AddlCmdLine);
+  Status     = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, NULL, &AddlCmdLen, &AddlCmdLine);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get additional command line - %r\r\n", __FUNCTION__, Status));
     ZeroMem (&AddlCmdLine, sizeof (AddlCmdLine));
@@ -323,19 +343,23 @@ UpdateKernelCommandLine (
 
   Length = StrSize (InCmdLine) + StrSize (AddlCmdLine.KernelCommand);
 
-  Status = gBS->LocateHandleBuffer (ByProtocol,
-                                    &gNVIDIAKernelCmdLineUpdateGuid,
-                                    NULL,
-                                    &NumOfHandles,
-                                    &HandleBuffer);
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gNVIDIAKernelCmdLineUpdateGuid,
+                  NULL,
+                  &NumOfHandles,
+                  &HandleBuffer
+                  );
   if (EFI_ERROR (Status)) {
     NumOfHandles = 0;
   }
 
   for (Count = 0; Count < NumOfHandles; Count++) {
-    Status = gBS->HandleProtocol (HandleBuffer[Count],
-                                  &gNVIDIAKernelCmdLineUpdateGuid,
-                                  (VOID **)&Interface);
+    Status = gBS->HandleProtocol (
+                    HandleBuffer[Count],
+                    &gNVIDIAKernelCmdLineUpdateGuid,
+                    (VOID **)&Interface
+                    );
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -345,9 +369,11 @@ UpdateKernelCommandLine (
     }
   }
 
-  Status = gBS->AllocatePool (EfiBootServicesData,
-                              Length,
-                              (VOID **)&CmdLine);
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  Length,
+                  (VOID **)&CmdLine
+                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -357,9 +383,11 @@ UpdateKernelCommandLine (
   gBS->CopyMem (CmdLine, InCmdLine, StrSize (InCmdLine));
 
   for (Count = 0; Count < NumOfHandles; Count++) {
-    Status = gBS->HandleProtocol (HandleBuffer[Count],
-                                  &gNVIDIAKernelCmdLineUpdateGuid,
-                                  (VOID **)&Interface);
+    Status = gBS->HandleProtocol (
+                    HandleBuffer[Count],
+                    &gNVIDIAKernelCmdLineUpdateGuid,
+                    (VOID **)&Interface
+                    );
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -370,9 +398,11 @@ UpdateKernelCommandLine (
   }
 
   for (Count = 0; Count < NumOfHandles; Count++) {
-    Status = gBS->HandleProtocol (HandleBuffer[Count],
-                                  &gNVIDIAKernelCmdLineUpdateGuid,
-                                  (VOID **)&Interface);
+    Status = gBS->HandleProtocol (
+                    HandleBuffer[Count],
+                    &gNVIDIAKernelCmdLineUpdateGuid,
+                    (VOID **)&Interface
+                    );
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -411,18 +441,18 @@ UpdateKernelCommandLine (
 STATIC
 EFI_STATUS
 GetPlatformCommandLine (
-  IN  CHAR16 *InCmdLine,
-  OUT CHAR16 **OutCmdLine,
-  OUT UINTN  *OutCmdLen
+  IN  CHAR16  *InCmdLine,
+  OUT CHAR16  **OutCmdLine,
+  OUT UINTN   *OutCmdLen
   )
 {
-  EFI_STATUS          Status;
-  CHAR16              *UpdatedCommandLine;
-  CHAR16              *CommandLine;
-  UINTN               CommandLineBytes;
+  EFI_STATUS  Status;
+  CHAR16      *UpdatedCommandLine;
+  CHAR16      *CommandLine;
+  UINTN       CommandLineBytes;
 
   UpdatedCommandLine = NULL;
-  Status = UpdateKernelCommandLine (InCmdLine, &UpdatedCommandLine);
+  Status             = UpdateKernelCommandLine (InCmdLine, &UpdatedCommandLine);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -430,9 +460,11 @@ GetPlatformCommandLine (
   CommandLineBytes = StrSize (UpdatedCommandLine) + sizeof (EFI_GUID);
 
   CommandLine = NULL;
-  Status = gBS->AllocatePool (EfiBootServicesData,
-                              CommandLineBytes,
-                              (VOID **)&CommandLine);
+  Status      = gBS->AllocatePool (
+                       EfiBootServicesData,
+                       CommandLineBytes,
+                       (VOID **)&CommandLine
+                       );
   if (EFI_ERROR (Status)) {
     gBS->FreePool (UpdatedCommandLine);
     return Status;
@@ -442,26 +474,29 @@ GetPlatformCommandLine (
 
   gBS->CopyMem (CommandLine, UpdatedCommandLine, StrSize (UpdatedCommandLine));
 
-  gBS->CopyMem ((CHAR8 *)CommandLine + StrSize (UpdatedCommandLine),
-                &gNVIDIABmBootOptionGuid, sizeof (EFI_GUID));
+  gBS->CopyMem (
+         (CHAR8 *)CommandLine + StrSize (UpdatedCommandLine),
+         &gNVIDIABmBootOptionGuid,
+         sizeof (EFI_GUID)
+         );
 
   *OutCmdLine = CommandLine;
-  *OutCmdLen = CommandLineBytes;
+  *OutCmdLen  = CommandLineBytes;
 
   gBS->FreePool (UpdatedCommandLine);
   return EFI_SUCCESS;
 }
 
-//Append platform specific commands
+// Append platform specific commands
 EFI_STATUS
 EFIAPI
 AndroidBootImgAppendKernelArgs (
-  IN CHAR16            *Args,
-  IN UINTN              Size
+  IN CHAR16  *Args,
+  IN UINTN   Size
   )
 {
-  EFI_STATUS Status;
-  CHAR16     *NewArgs;
+  EFI_STATUS  Status;
+  CHAR16      *NewArgs;
 
   Status = UpdateKernelCommandLine (Args, &NewArgs);
   if (EFI_ERROR (Status)) {
@@ -472,7 +507,7 @@ AndroidBootImgAppendKernelArgs (
     DEBUG ((DEBUG_ERROR, "%a: New command line too long: %d\r\n", __FUNCTION__, StrSize (NewArgs)));
     Status = EFI_DEVICE_ERROR;
   } else {
-    Status = StrCpyS (Args, Size / sizeof(CHAR16), NewArgs);
+    Status = StrCpyS (Args, Size / sizeof (CHAR16), NewArgs);
   }
 
   gBS->FreePool (NewArgs);
@@ -511,54 +546,58 @@ AndroidBootImgAppendKernelArgs (
 STATIC
 EFI_STATUS
 RefreshAutoEnumeratedBootOptions (
-  IN  CONST EFI_BOOT_MANAGER_LOAD_OPTION *BootOptions,
-  IN  CONST UINTN                        BootOptionsCount,
-  OUT       EFI_BOOT_MANAGER_LOAD_OPTION **UpdatedBootOptions,
-  OUT       UINTN                        *UpdatedBootOptionsCount
+  IN  CONST EFI_BOOT_MANAGER_LOAD_OPTION  *BootOptions,
+  IN  CONST UINTN                         BootOptionsCount,
+  OUT       EFI_BOOT_MANAGER_LOAD_OPTION  **UpdatedBootOptions,
+  OUT       UINTN                         *UpdatedBootOptionsCount
   )
 {
-  EFI_STATUS                   Status;
-  CHAR16                       *ImgKernelArgs;
-  CHAR16                       *DtbKernelArgs;
-  CHAR16                       *InputKernelArgs;
-  CHAR16                       *CmdLine;
-  UINTN                        CmdLen;
-  EFI_HANDLE                   Handle;
-  EFI_DEVICE_PATH              *DevicePath;
-  EFI_BOOT_MANAGER_LOAD_OPTION *LoadOption;
-  EFI_BOOT_MANAGER_LOAD_OPTION *UpdatedLoadOption;
-  UINTN                        Count;
+  EFI_STATUS                    Status;
+  CHAR16                        *ImgKernelArgs;
+  CHAR16                        *DtbKernelArgs;
+  CHAR16                        *InputKernelArgs;
+  CHAR16                        *CmdLine;
+  UINTN                         CmdLen;
+  EFI_HANDLE                    Handle;
+  EFI_DEVICE_PATH               *DevicePath;
+  EFI_BOOT_MANAGER_LOAD_OPTION  *LoadOption;
+  EFI_BOOT_MANAGER_LOAD_OPTION  *UpdatedLoadOption;
+  UINTN                         Count;
 
-  if (BootOptions == NULL ||
-      BootOptionsCount == 0 ||
-      UpdatedBootOptions == NULL ||
-      UpdatedBootOptionsCount == NULL) {
+  if ((BootOptions == NULL) ||
+      (BootOptionsCount == 0) ||
+      (UpdatedBootOptions == NULL) ||
+      (UpdatedBootOptionsCount == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
   ImgKernelArgs = NULL;
   DtbKernelArgs = NULL;
-  CmdLine = NULL;
-  CmdLen = 0;
+  CmdLine       = NULL;
+  CmdLen        = 0;
 
-  Status = gBS->AllocatePool (EfiBootServicesData,
-                              BootOptionsCount * sizeof (EFI_BOOT_MANAGER_LOAD_OPTION),
-                              (VOID **)UpdatedBootOptions);
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  BootOptionsCount * sizeof (EFI_BOOT_MANAGER_LOAD_OPTION),
+                  (VOID **)UpdatedBootOptions
+                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   gBS->SetMem (*UpdatedBootOptions, BootOptionsCount * sizeof (EFI_BOOT_MANAGER_LOAD_OPTION), 0);
 
-  LoadOption = (EFI_BOOT_MANAGER_LOAD_OPTION *)BootOptions;
-  UpdatedLoadOption = *UpdatedBootOptions;
+  LoadOption               = (EFI_BOOT_MANAGER_LOAD_OPTION *)BootOptions;
+  UpdatedLoadOption        = *UpdatedBootOptions;
   *UpdatedBootOptionsCount = 0;
   for (Count = 0; Count < BootOptionsCount; Count++) {
-    if (IsValidLoadOption (&LoadOption[Count])){
+    if (IsValidLoadOption (&LoadOption[Count])) {
       Status = DuplicateLoadOption (&UpdatedLoadOption[*UpdatedBootOptionsCount], &LoadOption[Count]);
       if (EFI_ERROR (Status)) {
         return Status;
       }
+
       (*UpdatedBootOptionsCount)++;
     }
   }
@@ -566,21 +605,24 @@ RefreshAutoEnumeratedBootOptions (
   for (Count = 0; Count < *UpdatedBootOptionsCount; Count++) {
     if (CompareGuid ((EFI_GUID *)UpdatedLoadOption[Count].OptionalData, &mBmAutoCreateBootOptionGuid)) {
       DevicePath = UpdatedLoadOption[Count].FilePath;
-      Status = gBS->LocateDevicePath (&gNVIDIALoadfileKernelArgsGuid, &DevicePath, &Handle);
+      Status     = gBS->LocateDevicePath (&gNVIDIALoadfileKernelArgsGuid, &DevicePath, &Handle);
       if (EFI_ERROR (Status)) {
         Status = EFI_SUCCESS;
         continue;
       }
 
-      Status = gBS->HandleProtocol (Handle,
-                                    &gNVIDIALoadfileKernelArgsGuid,
-                                    (VOID **)&ImgKernelArgs);
+      Status = gBS->HandleProtocol (
+                      Handle,
+                      &gNVIDIALoadfileKernelArgsGuid,
+                      (VOID **)&ImgKernelArgs
+                      );
       ASSERT_EFI_ERROR (Status);
 
-      //Always use DTB arguments on pre-silicon targets
-      if ((TegraGetPlatform() == TEGRA_PLATFORM_SILICON) &&
+      // Always use DTB arguments on pre-silicon targets
+      if ((TegraGetPlatform () == TEGRA_PLATFORM_SILICON) &&
           (ImgKernelArgs != NULL) &&
-          (StrLen (ImgKernelArgs) != 0)) {
+          (StrLen (ImgKernelArgs) != 0))
+      {
         DEBUG ((DEBUG_ERROR, "%a: Using Image Kernel Command Line\n", __FUNCTION__));
         InputKernelArgs = ImgKernelArgs;
       } else {
@@ -603,12 +645,15 @@ RefreshAutoEnumeratedBootOptions (
 
       UpdatedLoadOption[Count].OptionalDataSize = CmdLen;
       gBS->FreePool (UpdatedLoadOption[Count].OptionalData);
-      Status = gBS->AllocatePool (EfiBootServicesData,
-                                  CmdLen,
-                                  (VOID **)&UpdatedLoadOption[Count].OptionalData);
+      Status = gBS->AllocatePool (
+                      EfiBootServicesData,
+                      CmdLen,
+                      (VOID **)&UpdatedLoadOption[Count].OptionalData
+                      );
       if (EFI_ERROR (Status)) {
         goto Error;
       }
+
       gBS->CopyMem (UpdatedLoadOption[Count].OptionalData, CmdLine, CmdLen);
     }
   }
@@ -617,6 +662,7 @@ Error:
   if (DtbKernelArgs != NULL) {
     gBS->FreePool (DtbKernelArgs);
   }
+
   if (CmdLine != NULL) {
     gBS->FreePool (CmdLine);
   }
@@ -637,21 +683,25 @@ Error:
 STATIC
 BOOLEAN
 IsTegraBootOption (
-  EFI_BOOT_MANAGER_LOAD_OPTION *BootOption
+  EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption
   )
 {
-  UINTN Length;
+  UINTN  Length;
 
-  if (BootOption->OptionalData == NULL ||
-      BootOption->OptionalDataSize == 0) {
+  if ((BootOption->OptionalData == NULL) ||
+      (BootOption->OptionalDataSize == 0))
+  {
     return FALSE;
   }
 
   Length = StrLen ((CONST CHAR16 *)BootOption->OptionalData);
 
   if ((BootOption->OptionalDataSize == ((Length + 1) * sizeof (CHAR16)) + sizeof (EFI_GUID)) &&
-      CompareGuid ((EFI_GUID *)((UINT8 *)BootOption->OptionalData + ((Length + 1) * sizeof (CHAR16))),
-                   &gNVIDIABmBootOptionGuid)) {
+      CompareGuid (
+        (EFI_GUID *)((UINT8 *)BootOption->OptionalData + ((Length + 1) * sizeof (CHAR16))),
+        &gNVIDIABmBootOptionGuid
+        ))
+  {
     return TRUE;
   }
 
@@ -680,12 +730,12 @@ STATIC
 INTN
 EFIAPI
 TegraBootManagerMatchLoadOptionConfigurationChange (
-  IN CONST EFI_BOOT_MANAGER_LOAD_OPTION *Key,
-  IN CONST EFI_BOOT_MANAGER_LOAD_OPTION *Array,
-  IN UINTN                              Count
+  IN CONST EFI_BOOT_MANAGER_LOAD_OPTION  *Key,
+  IN CONST EFI_BOOT_MANAGER_LOAD_OPTION  *Array,
+  IN UINTN                               Count
   )
 {
-  UINTN                             Index;
+  UINTN  Index;
 
   for (Index = 0; Index < Count; Index++) {
     if ((Key->OptionType == Array[Index].OptionType) &&
@@ -693,8 +743,9 @@ TegraBootManagerMatchLoadOptionConfigurationChange (
         (StrCmp (Key->Description, Array[Index].Description) == 0) &&
         (CompareMem (Key->FilePath, Array[Index].FilePath, GetDevicePathSize (Key->FilePath)) == 0) &&
         (Key->OptionalDataSize != Array[Index].OptionalDataSize) &&
-        (CompareMem (Key->OptionalData, Array[Index].OptionalData, Key->OptionalDataSize) != 0)) {
-      return (INTN) Index;
+        (CompareMem (Key->OptionalData, Array[Index].OptionalData, Key->OptionalDataSize) != 0))
+    {
+      return (INTN)Index;
     }
   }
 
@@ -721,28 +772,32 @@ TegraBootManagerMatchLoadOptionConfigurationChange (
 STATIC
 EFI_STATUS
 RefreshNvBootOptions (
-  IN EFI_BOOT_MANAGER_LOAD_OPTION *BootOptions,
-  IN UINTN                        BootOptionsCount
+  IN EFI_BOOT_MANAGER_LOAD_OPTION  *BootOptions,
+  IN UINTN                         BootOptionsCount
   )
 {
-  EFI_STATUS                   Status;
-  EFI_BOOT_MANAGER_LOAD_OPTION *NvBootOptions;
-  UINTN                        NvBootOptionsCount;
-  UINTN                        Index;
-  INTN                         Match;
+  EFI_STATUS                    Status;
+  EFI_BOOT_MANAGER_LOAD_OPTION  *NvBootOptions;
+  UINTN                         NvBootOptionsCount;
+  UINTN                         Index;
+  INTN                          Match;
 
-  if (BootOptions == NULL ||
-      BootOptionsCount == 0) {
+  if ((BootOptions == NULL) ||
+      (BootOptionsCount == 0))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
   if (PcdGet8 (PcdNewDeviceHierarchy)) {
     NvBootOptions = NULL;
-    NvBootOptions = EfiBootManagerGetLoadOptions (&NvBootOptionsCount,
-                                                  LoadOptionTypeBoot);
+    NvBootOptions = EfiBootManagerGetLoadOptions (
+                      &NvBootOptionsCount,
+                      LoadOptionTypeBoot
+                      );
 
-    if (NvBootOptionsCount == 0 ||
-        NvBootOptions == NULL) {
+    if ((NvBootOptionsCount == 0) ||
+        (NvBootOptions == NULL))
+    {
       return EFI_SUCCESS;
     }
 
@@ -759,31 +814,41 @@ RefreshNvBootOptions (
   }
 
   NvBootOptions = NULL;
-  NvBootOptions = EfiBootManagerGetLoadOptions (&NvBootOptionsCount,
-                                                LoadOptionTypeBoot);
+  NvBootOptions = EfiBootManagerGetLoadOptions (
+                    &NvBootOptionsCount,
+                    LoadOptionTypeBoot
+                    );
 
-  if (NvBootOptionsCount == 0 ||
-      NvBootOptions == NULL) {
+  if ((NvBootOptionsCount == 0) ||
+      (NvBootOptions == NULL))
+  {
     return EFI_SUCCESS;
   }
 
   for (Index = 0; Index < NvBootOptionsCount; Index++) {
-    if ((DevicePathType (NvBootOptions[Index].FilePath) != BBS_DEVICE_PATH ||
-         DevicePathSubType (NvBootOptions[Index].FilePath) != BBS_BBS_DP) &&
-        IsTegraBootOption (&NvBootOptions[Index])) {
+    if (((DevicePathType (NvBootOptions[Index].FilePath) != BBS_DEVICE_PATH) ||
+         (DevicePathSubType (NvBootOptions[Index].FilePath) != BBS_BBS_DP)) &&
+        IsTegraBootOption (&NvBootOptions[Index]))
+    {
       Match = TegraBootManagerMatchLoadOptionConfigurationChange (&NvBootOptions[Index], BootOptions, BootOptionsCount);
       if (Match != -1) {
         BootOptions[Match].OptionNumber = NvBootOptions[Index].OptionNumber;
-        Status = EfiBootManagerLoadOptionToVariable (&BootOptions[Match]);
+        Status                          = EfiBootManagerLoadOptionToVariable (&BootOptions[Match]);
         if (EFI_ERROR (Status)) {
-          EfiBootManagerDeleteLoadOptionVariable (BootOptions[Match].OptionNumber,
-                                                  BootOptions[Match].OptionType);
+          EfiBootManagerDeleteLoadOptionVariable (
+            BootOptions[Match].OptionNumber,
+            BootOptions[Match].OptionType
+            );
         }
+
         continue;
       }
+
       if (EfiBootManagerFindLoadOption (&NvBootOptions[Index], BootOptions, BootOptionsCount) == -1) {
-        Status = EfiBootManagerDeleteLoadOptionVariable (NvBootOptions[Index].OptionNumber,
-                                                         LoadOptionTypeBoot);
+        Status = EfiBootManagerDeleteLoadOptionVariable (
+                   NvBootOptions[Index].OptionNumber,
+                   LoadOptionTypeBoot
+                   );
         if (EFI_ERROR (Status)) {
           Status = EFI_UNSUPPORTED;
           goto Error;
@@ -829,46 +894,52 @@ Error:
 STATIC
 EFI_STATUS
 RefreshAllBootOptions (
-  IN  CONST EFI_BOOT_MANAGER_LOAD_OPTION *BootOptions,
-  IN  CONST UINTN                        BootOptionsCount,
-  OUT       EFI_BOOT_MANAGER_LOAD_OPTION **UpdatedBootOptions,
-  OUT       UINTN                        *UpdatedBootOptionsCount
+  IN  CONST EFI_BOOT_MANAGER_LOAD_OPTION  *BootOptions,
+  IN  CONST UINTN                         BootOptionsCount,
+  OUT       EFI_BOOT_MANAGER_LOAD_OPTION  **UpdatedBootOptions,
+  OUT       UINTN                         *UpdatedBootOptionsCount
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
-  Status = RefreshAutoEnumeratedBootOptions (BootOptions,
-                                             BootOptionsCount,
-                                             UpdatedBootOptions,
-                                             UpdatedBootOptionsCount);
+  Status = RefreshAutoEnumeratedBootOptions (
+             BootOptions,
+             BootOptionsCount,
+             UpdatedBootOptions,
+             UpdatedBootOptionsCount
+             );
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  Status = RefreshNvBootOptions (*UpdatedBootOptions,
-                                 *UpdatedBootOptionsCount);
+  Status = RefreshNvBootOptions (
+             *UpdatedBootOptions,
+             *UpdatedBootOptionsCount
+             );
 
   return Status;
 }
 
-EDKII_PLATFORM_BOOT_MANAGER_PROTOCOL mPlatformBootManager = {
+EDKII_PLATFORM_BOOT_MANAGER_PROTOCOL  mPlatformBootManager = {
   EDKII_PLATFORM_BOOT_MANAGER_PROTOCOL_REVISION,
   RefreshAllBootOptions
 };
 
-STATIC ANDROID_BOOTIMG_PROTOCOL mAndroidBootImgProtocol = {AndroidBootImgAppendKernelArgs, NULL};
+STATIC ANDROID_BOOTIMG_PROTOCOL  mAndroidBootImgProtocol = { AndroidBootImgAppendKernelArgs, NULL };
 
 EFI_STATUS
 EFIAPI
 PlatformBootManagerEntryPoint (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  return gBS->InstallMultipleProtocolInterfaces (&ImageHandle,
-                                                 &gEdkiiPlatformBootManagerProtocolGuid,
-                                                 &mPlatformBootManager,
-                                                 &gAndroidBootImgProtocolGuid,
-                                                 &mAndroidBootImgProtocol,
-                                                 NULL);
+  return gBS->InstallMultipleProtocolInterfaces (
+                &ImageHandle,
+                &gEdkiiPlatformBootManagerProtocolGuid,
+                &mPlatformBootManager,
+                &gAndroidBootImgProtocolGuid,
+                &mAndroidBootImgProtocol,
+                NULL
+                );
 }

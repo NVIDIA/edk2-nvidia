@@ -7,6 +7,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
 #ifndef __HOB_STUB_LIB_H__
 #define __HOB_STUB_LIB_H__
 

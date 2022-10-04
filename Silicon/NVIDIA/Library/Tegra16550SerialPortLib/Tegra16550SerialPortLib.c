@@ -21,28 +21,28 @@
 //
 // 16550 UART register offsets and bitfields
 //
-#define R_UART_RXBUF          0   // LCR_DLAB = 0
-#define R_UART_TXBUF          0   // LCR_DLAB = 0
-#define R_UART_BAUD_LOW       0   // LCR_DLAB = 1
-#define R_UART_BAUD_HIGH      1   // LCR_DLAB = 1
-#define R_UART_IER            1   // LCR_DLAB = 0
-#define R_UART_FCR            2
-#define   B_UART_FCR_FIFOE    BIT0
-#define   B_UART_FCR_FIFO64   BIT5
-#define R_UART_LCR            3
-#define   B_UART_LCR_DLAB     BIT7
-#define R_UART_MCR            4
-#define   B_UART_MCR_DTRC     BIT0
-#define   B_UART_MCR_RTS      BIT1
-#define R_UART_LSR            5
-#define   B_UART_LSR_RXRDY    BIT0
-#define   B_UART_LSR_TXRDY    BIT5
-#define   B_UART_LSR_TEMT     BIT6
-#define R_UART_MSR            6
-#define   B_UART_MSR_CTS      BIT4
-#define   B_UART_MSR_DSR      BIT5
-#define   B_UART_MSR_RI       BIT6
-#define   B_UART_MSR_DCD      BIT7
+#define R_UART_RXBUF         0    // LCR_DLAB = 0
+#define R_UART_TXBUF         0    // LCR_DLAB = 0
+#define R_UART_BAUD_LOW      0    // LCR_DLAB = 1
+#define R_UART_BAUD_HIGH     1    // LCR_DLAB = 1
+#define R_UART_IER           1    // LCR_DLAB = 0
+#define R_UART_FCR           2
+#define   B_UART_FCR_FIFOE   BIT0
+#define   B_UART_FCR_FIFO64  BIT5
+#define R_UART_LCR           3
+#define   B_UART_LCR_DLAB    BIT7
+#define R_UART_MCR           4
+#define   B_UART_MCR_DTRC    BIT0
+#define   B_UART_MCR_RTS     BIT1
+#define R_UART_LSR           5
+#define   B_UART_LSR_RXRDY   BIT0
+#define   B_UART_LSR_TXRDY   BIT5
+#define   B_UART_LSR_TEMT    BIT6
+#define R_UART_MSR           6
+#define   B_UART_MSR_CTS     BIT4
+#define   B_UART_MSR_DSR     BIT5
+#define   B_UART_MSR_RI      BIT6
+#define   B_UART_MSR_DCD     BIT7
 
 /**
   Read an 8-bit 16550 register. The parameter Offset is added to the base address of the 16550
@@ -114,7 +114,7 @@ SerialPortWritable (
       //    1    0   Cable connected, but not clear to send.   Wait
       //    1    1   Cable connected, and clear to send.       Transmit
       //
-      return (BOOLEAN) ((SerialPortReadRegister (SerialRegisterBase, R_UART_MSR) & (B_UART_MSR_DSR | B_UART_MSR_CTS)) == (B_UART_MSR_DSR | B_UART_MSR_CTS));
+      return (BOOLEAN)((SerialPortReadRegister (SerialRegisterBase, R_UART_MSR) & (B_UART_MSR_DSR | B_UART_MSR_CTS)) == (B_UART_MSR_DSR | B_UART_MSR_CTS));
     } else {
       //
       // Wait for both DSR and CTS to be set OR for DSR to be clear.
@@ -128,7 +128,7 @@ SerialPortWritable (
       //    1    0   Cable connected, but not clear to send.   Wait
       //    1    1   Cable connected, and clar to send.        Transmit
       //
-      return (BOOLEAN) ((SerialPortReadRegister (SerialRegisterBase, R_UART_MSR) & (B_UART_MSR_DSR | B_UART_MSR_CTS)) != (B_UART_MSR_DSR));
+      return (BOOLEAN)((SerialPortReadRegister (SerialRegisterBase, R_UART_MSR) & (B_UART_MSR_DSR | B_UART_MSR_CTS)) != (B_UART_MSR_DSR));
     }
   }
 
@@ -149,14 +149,14 @@ SerialPortWritable (
 RETURN_STATUS
 EFIAPI
 Tegra16550SerialPortInitialize (
-  IN UINTN SerialRegisterBase
+  IN UINTN  SerialRegisterBase
   )
 {
-  UINT32         Divisor;
-  UINT32         CurrentDivisor;
-  BOOLEAN        Initialized;
+  UINT32   Divisor;
+  UINT32   CurrentDivisor;
+  BOOLEAN  Initialized;
 
-  if (SerialRegisterBase ==0) {
+  if (SerialRegisterBase == 0) {
     return RETURN_DEVICE_ERROR;
   }
 
@@ -176,13 +176,15 @@ Tegra16550SerialPortInitialize (
   if ((SerialPortReadRegister (SerialRegisterBase, R_UART_LCR) & 0x3F) != (PcdGet8 (PcdSerialLineControl) & 0x3F)) {
     Initialized = FALSE;
   }
+
   SerialPortWriteRegister (SerialRegisterBase, R_UART_LCR, (UINT8)(SerialPortReadRegister (SerialRegisterBase, R_UART_LCR) | B_UART_LCR_DLAB));
-  CurrentDivisor =  SerialPortReadRegister (SerialRegisterBase, R_UART_BAUD_HIGH) << 8;
-  CurrentDivisor |= (UINT32) SerialPortReadRegister (SerialRegisterBase, R_UART_BAUD_LOW);
+  CurrentDivisor  =  SerialPortReadRegister (SerialRegisterBase, R_UART_BAUD_HIGH) << 8;
+  CurrentDivisor |= (UINT32)SerialPortReadRegister (SerialRegisterBase, R_UART_BAUD_LOW);
   SerialPortWriteRegister (SerialRegisterBase, R_UART_LCR, (UINT8)(SerialPortReadRegister (SerialRegisterBase, R_UART_LCR) & ~B_UART_LCR_DLAB));
   if (CurrentDivisor != Divisor) {
     Initialized = FALSE;
   }
+
   if (Initialized) {
     return RETURN_SUCCESS;
   }
@@ -191,14 +193,15 @@ Tegra16550SerialPortInitialize (
   // Wait for the serial port to be ready.
   // Verify that both the transmit FIFO and the shift register are empty.
   //
-  while ((SerialPortReadRegister (SerialRegisterBase, R_UART_LSR) & (B_UART_LSR_TEMT | B_UART_LSR_TXRDY)) != (B_UART_LSR_TEMT | B_UART_LSR_TXRDY));
+  while ((SerialPortReadRegister (SerialRegisterBase, R_UART_LSR) & (B_UART_LSR_TEMT | B_UART_LSR_TXRDY)) != (B_UART_LSR_TEMT | B_UART_LSR_TXRDY)) {
+  }
 
   //
   // Configure baud rate
   //
   SerialPortWriteRegister (SerialRegisterBase, R_UART_LCR, B_UART_LCR_DLAB);
-  SerialPortWriteRegister (SerialRegisterBase, R_UART_BAUD_HIGH, (UINT8) (Divisor >> 8));
-  SerialPortWriteRegister (SerialRegisterBase, R_UART_BAUD_LOW, (UINT8) (Divisor & 0xff));
+  SerialPortWriteRegister (SerialRegisterBase, R_UART_BAUD_HIGH, (UINT8)(Divisor >> 8));
+  SerialPortWriteRegister (SerialRegisterBase, R_UART_BAUD_LOW, (UINT8)(Divisor & 0xff));
 
   //
   // Clear DLAB and configure Data Bits, Parity, and Stop Bits.
@@ -248,9 +251,9 @@ Tegra16550SerialPortInitialize (
 UINTN
 EFIAPI
 Tegra16550SerialPortWrite (
-  IN UINTN     SerialRegisterBase,
-  IN UINT8     *Buffer,
-  IN UINTN     NumberOfBytes
+  IN UINTN  SerialRegisterBase,
+  IN UINT8  *Buffer,
+  IN UINTN  NumberOfBytes
   )
 {
   UINTN  Result;
@@ -261,7 +264,7 @@ Tegra16550SerialPortWrite (
     return 0;
   }
 
-  if (SerialRegisterBase ==0) {
+  if (SerialRegisterBase == 0) {
     return 0;
   }
 
@@ -273,12 +276,15 @@ Tegra16550SerialPortWrite (
     //
     // Wait for both the transmit FIFO and shift register empty.
     //
-    while ((SerialPortReadRegister (SerialRegisterBase, R_UART_LSR) & (B_UART_LSR_TEMT | B_UART_LSR_TXRDY)) != (B_UART_LSR_TEMT | B_UART_LSR_TXRDY));
+    while ((SerialPortReadRegister (SerialRegisterBase, R_UART_LSR) & (B_UART_LSR_TEMT | B_UART_LSR_TXRDY)) != (B_UART_LSR_TEMT | B_UART_LSR_TXRDY)) {
+    }
 
     //
     // Wait for the hardware flow control signal
     //
-    while (!SerialPortWritable (SerialRegisterBase));
+    while (!SerialPortWritable (SerialRegisterBase)) {
+    }
+
     return 0;
   }
 
@@ -300,8 +306,10 @@ Tegra16550SerialPortWrite (
     // Wait for the serial port to be ready, to make sure both the transmit FIFO
     // and shift register empty.
     //
-    while ((SerialPortReadRegister (SerialRegisterBase, R_UART_LSR) & (B_UART_LSR_TEMT | B_UART_LSR_TXRDY)) != (B_UART_LSR_TEMT | B_UART_LSR_TXRDY));
-    //while ((SerialPortReadRegister (SerialRegisterBase, R_UART_LSR) & B_UART_LSR_TEMT) == 0);
+    while ((SerialPortReadRegister (SerialRegisterBase, R_UART_LSR) & (B_UART_LSR_TEMT | B_UART_LSR_TXRDY)) != (B_UART_LSR_TEMT | B_UART_LSR_TXRDY)) {
+    }
+
+    // while ((SerialPortReadRegister (SerialRegisterBase, R_UART_LSR) & B_UART_LSR_TEMT) == 0);
 
     //
     // Fill then entire Tx FIFO
@@ -310,7 +318,8 @@ Tegra16550SerialPortWrite (
       //
       // Wait for the hardware flow control signal
       //
-      while (!SerialPortWritable (SerialRegisterBase));
+      while (!SerialPortWritable (SerialRegisterBase)) {
+      }
 
       //
       // Write byte to the transmit buffer.
@@ -318,6 +327,7 @@ Tegra16550SerialPortWrite (
       SerialPortWriteRegister (SerialRegisterBase, R_UART_TXBUF, *Buffer);
     }
   }
+
   return Result;
 }
 
@@ -335,9 +345,9 @@ Tegra16550SerialPortWrite (
 UINTN
 EFIAPI
 Tegra16550SerialPortRead (
-  IN  UINTN     SerialRegisterBase,
-  OUT UINT8     *Buffer,
-  IN  UINTN     NumberOfBytes
+  IN  UINTN  SerialRegisterBase,
+  OUT UINT8  *Buffer,
+  IN  UINTN  NumberOfBytes
   )
 {
   UINTN  Result;
@@ -347,7 +357,7 @@ Tegra16550SerialPortRead (
     return 0;
   }
 
-  if (SerialRegisterBase ==0) {
+  if (SerialRegisterBase == 0) {
     return 0;
   }
 
@@ -365,6 +375,7 @@ Tegra16550SerialPortRead (
         SerialPortWriteRegister (SerialRegisterBase, R_UART_MCR, (UINT8)(Mcr | B_UART_MCR_RTS));
       }
     }
+
     if (PcdGetBool (PcdSerialUseHardwareFlowControl)) {
       //
       // Clear RTS to prevent peer from sending data
@@ -381,7 +392,6 @@ Tegra16550SerialPortRead (
   return Result;
 }
 
-
 /**
   Polls a serial device to see if there is any data waiting to be read.
 
@@ -396,10 +406,10 @@ Tegra16550SerialPortRead (
 BOOLEAN
 EFIAPI
 Tegra16550SerialPortPoll (
-  IN UINTN SerialRegisterBase
+  IN UINTN  SerialRegisterBase
   )
 {
-  if (SerialRegisterBase ==0) {
+  if (SerialRegisterBase == 0) {
     return FALSE;
   }
 
@@ -413,6 +423,7 @@ Tegra16550SerialPortPoll (
       //
       SerialPortWriteRegister (SerialRegisterBase, R_UART_MCR, (UINT8)(SerialPortReadRegister (SerialRegisterBase, R_UART_MCR) & ~B_UART_MCR_RTS));
     }
+
     return TRUE;
   }
 
@@ -439,13 +450,13 @@ Tegra16550SerialPortPoll (
 RETURN_STATUS
 EFIAPI
 Tegra16550SerialPortSetControl (
-  IN UINTN  SerialRegisterBase,
-  IN UINT32 Control
+  IN UINTN   SerialRegisterBase,
+  IN UINT32  Control
   )
 {
-  UINT8 Mcr;
+  UINT8  Mcr;
 
-  if (SerialRegisterBase ==0) {
+  if (SerialRegisterBase == 0) {
     return RETURN_UNSUPPORTED;
   }
 
@@ -453,14 +464,15 @@ Tegra16550SerialPortSetControl (
   // First determine the parameter is invalid.
   //
   if ((Control & (~(EFI_SERIAL_REQUEST_TO_SEND | EFI_SERIAL_DATA_TERMINAL_READY |
-                    EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE))) != 0) {
+                    EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE))) != 0)
+  {
     return RETURN_UNSUPPORTED;
   }
 
   //
   // Read the Modem Control Register.
   //
-  Mcr = SerialPortReadRegister (SerialRegisterBase, R_UART_MCR);
+  Mcr  = SerialPortReadRegister (SerialRegisterBase, R_UART_MCR);
   Mcr &= (~(B_UART_MCR_DTRC | B_UART_MCR_RTS));
 
   if ((Control & EFI_SERIAL_DATA_TERMINAL_READY) == EFI_SERIAL_DATA_TERMINAL_READY) {
@@ -492,15 +504,15 @@ Tegra16550SerialPortSetControl (
 RETURN_STATUS
 EFIAPI
 Tegra16550SerialPortGetControl (
-  IN  UINTN  SerialRegisterBase,
-  OUT UINT32 *Control
+  IN  UINTN   SerialRegisterBase,
+  OUT UINT32  *Control
   )
 {
-  UINT8 Msr;
-  UINT8 Mcr;
-  UINT8 Lsr;
+  UINT8  Msr;
+  UINT8  Mcr;
+  UINT8  Lsr;
 
-  if (SerialRegisterBase ==0) {
+  if (SerialRegisterBase == 0) {
     return RETURN_UNSUPPORTED;
   }
 
@@ -596,23 +608,23 @@ Tegra16550SerialPortGetControl (
 RETURN_STATUS
 EFIAPI
 Tegra16550SerialPortSetAttributes (
-  IN     UINTN              SerialRegisterBase,
-  IN OUT UINT64             *BaudRate,
-  IN OUT UINT32             *ReceiveFifoDepth,
-  IN OUT UINT32             *Timeout,
-  IN OUT EFI_PARITY_TYPE    *Parity,
-  IN OUT UINT8              *DataBits,
-  IN OUT EFI_STOP_BITS_TYPE *StopBits
+  IN     UINTN               SerialRegisterBase,
+  IN OUT UINT64              *BaudRate,
+  IN OUT UINT32              *ReceiveFifoDepth,
+  IN OUT UINT32              *Timeout,
+  IN OUT EFI_PARITY_TYPE     *Parity,
+  IN OUT UINT8               *DataBits,
+  IN OUT EFI_STOP_BITS_TYPE  *StopBits
   )
 {
-  UINT32    SerialBaudRate;
-  UINTN     Divisor;
-  UINT8     Lcr;
-  UINT8     LcrData;
-  UINT8     LcrParity;
-  UINT8     LcrStop;
+  UINT32  SerialBaudRate;
+  UINTN   Divisor;
+  UINT8   Lcr;
+  UINT8   LcrData;
+  UINT8   LcrParity;
+  UINT8   LcrStop;
 
-  if (SerialRegisterBase ==0) {
+  if (SerialRegisterBase == 0) {
     return RETURN_UNSUPPORTED;
   }
 
@@ -622,23 +634,25 @@ Tegra16550SerialPortSetAttributes (
   if (*BaudRate == 0) {
     *BaudRate = PcdGet32 (PcdSerialBaudRate);
   }
-  SerialBaudRate = (UINT32) *BaudRate;
+
+  SerialBaudRate = (UINT32)*BaudRate;
 
   if (*DataBits == 0) {
-    LcrData = (UINT8) (PcdGet8 (PcdSerialLineControl) & 0x3);
+    LcrData   = (UINT8)(PcdGet8 (PcdSerialLineControl) & 0x3);
     *DataBits = LcrData + 5;
   } else {
     if ((*DataBits < 5) || (*DataBits > 8)) {
       return RETURN_INVALID_PARAMETER;
     }
+
     //
     // Map 5..8 to 0..3
     //
-    LcrData = (UINT8) (*DataBits - (UINT8) 5);
+    LcrData = (UINT8)(*DataBits - (UINT8)5);
   }
 
   if (*Parity == DefaultParity) {
-    LcrParity = (UINT8) ((PcdGet8 (PcdSerialLineControl) >> 3) & 0x7);
+    LcrParity = (UINT8)((PcdGet8 (PcdSerialLineControl) >> 3) & 0x7);
     switch (LcrParity) {
       case 0:
         *Parity = NoParity;
@@ -691,7 +705,7 @@ Tegra16550SerialPortSetAttributes (
   }
 
   if (*StopBits == DefaultStopBits) {
-    LcrStop = (UINT8) ((PcdGet8 (PcdSerialLineControl) >> 2) & 0x1);
+    LcrStop = (UINT8)((PcdGet8 (PcdSerialLineControl) >> 2) & 0x1);
     switch (LcrStop) {
       case 0:
         *StopBits = OneStopBit;
@@ -703,6 +717,7 @@ Tegra16550SerialPortSetAttributes (
         } else {
           *StopBits = TwoStopBits;
         }
+
         break;
 
       default:
@@ -737,20 +752,20 @@ Tegra16550SerialPortSetAttributes (
   // Configure baud rate
   //
   SerialPortWriteRegister (SerialRegisterBase, R_UART_LCR, B_UART_LCR_DLAB);
-  SerialPortWriteRegister (SerialRegisterBase, R_UART_BAUD_HIGH, (UINT8) (Divisor >> 8));
-  SerialPortWriteRegister (SerialRegisterBase, R_UART_BAUD_LOW, (UINT8) (Divisor & 0xff));
+  SerialPortWriteRegister (SerialRegisterBase, R_UART_BAUD_HIGH, (UINT8)(Divisor >> 8));
+  SerialPortWriteRegister (SerialRegisterBase, R_UART_BAUD_LOW, (UINT8)(Divisor & 0xff));
 
   //
   // Clear DLAB and configure Data Bits, Parity, and Stop Bits.
   // Strip reserved bits from line control value
   //
-  Lcr = (UINT8) ((LcrParity << 3) | (LcrStop << 2) | LcrData);
-  SerialPortWriteRegister (SerialRegisterBase, R_UART_LCR, (UINT8) (Lcr & 0x3F));
+  Lcr = (UINT8)((LcrParity << 3) | (LcrStop << 2) | LcrData);
+  SerialPortWriteRegister (SerialRegisterBase, R_UART_LCR, (UINT8)(Lcr & 0x3F));
 
   return RETURN_SUCCESS;
 }
 
-TEGRA_UART_OBJ Tegra16550Uart = {
+TEGRA_UART_OBJ  Tegra16550Uart = {
   Tegra16550SerialPortInitialize,
   Tegra16550SerialPortWrite,
   Tegra16550SerialPortRead,

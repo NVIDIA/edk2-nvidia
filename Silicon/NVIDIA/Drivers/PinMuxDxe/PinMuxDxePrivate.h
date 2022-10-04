@@ -14,13 +14,13 @@
 #include <PiDxe.h>
 #include <Protocol/PinMux.h>
 
-#define PINMUX_SIGNATURE SIGNATURE_32('P','M','U','X')
+#define PINMUX_SIGNATURE  SIGNATURE_32('P','M','U','X')
 typedef struct {
-  UINT32                     Signature;
-  NVIDIA_PINMUX_PROTOCOL     PinMuxProtocol;
-  EFI_PHYSICAL_ADDRESS       BaseAddress;
-  UINTN                      RegionSize;
-  EFI_HANDLE                 ImageHandle;
+  UINT32                    Signature;
+  NVIDIA_PINMUX_PROTOCOL    PinMuxProtocol;
+  EFI_PHYSICAL_ADDRESS      BaseAddress;
+  UINTN                     RegionSize;
+  EFI_HANDLE                ImageHandle;
 } PINMUX_DXE_PRIVATE;
 #define PINMUX_PRIVATE_DATA_FROM_THIS(a)      CR(a, PINMUX_DXE_PRIVATE, PinMuxProtocol, PINMUX_SIGNATURE)
 #define PINMUX_PRIVATE_DATA_FROM_PROTOCOL(a)  PINMUX_PRIVATE_DATA_FROM_THIS(a)

@@ -12,8 +12,8 @@
 #include <Uefi/UefiBaseType.h>
 #include <Protocol/HardwareInterrupt.h>
 
-#define DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET 0x20
-#define DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET 0x10
+#define DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET  0x20
+#define DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET  0x10
 
 typedef enum {
   INTERRUPT_SPI_TYPE,
@@ -22,15 +22,15 @@ typedef enum {
 } NVIDIA_DEVICE_TREE_INTERRUPT_TYPE;
 
 typedef struct {
-  EFI_PHYSICAL_ADDRESS BaseAddress;
-  UINTN                Size;
-  CONST CHAR8          *Name;
+  EFI_PHYSICAL_ADDRESS    BaseAddress;
+  UINTN                   Size;
+  CONST CHAR8             *Name;
 } NVIDIA_DEVICE_TREE_REGISTER_DATA;
 
 typedef struct {
-  NVIDIA_DEVICE_TREE_INTERRUPT_TYPE Type;
-  HARDWARE_INTERRUPT_SOURCE         Interrupt;
-  CONST CHAR8                       *Name;
+  NVIDIA_DEVICE_TREE_INTERRUPT_TYPE    Type;
+  HARDWARE_INTERRUPT_SOURCE            Interrupt;
+  CONST CHAR8                          *Name;
 } NVIDIA_DEVICE_TREE_INTERRUPT_DATA;
 
 /**
@@ -44,9 +44,9 @@ typedef struct {
 **/
 VOID
 SetDeviceTreePointer (
-  IN  VOID      *DeviceTree,
-  IN  UINTN     DeviceTreeSize
-);
+  IN  VOID   *DeviceTree,
+  IN  UINTN  DeviceTreeSize
+  );
 
 /**
   Returns the enabled nodes that match the compatible string
@@ -67,9 +67,9 @@ SetDeviceTreePointer (
 EFI_STATUS
 EFIAPI
 GetMatchingEnabledDeviceTreeNodes (
-  IN CONST CHAR8    *CompatibleString,
-  OUT UINT32        *NodeHandleArray OPTIONAL,
-  IN OUT UINT32     *NumberOfNodes
+  IN CONST CHAR8  *CompatibleString,
+  OUT UINT32      *NodeHandleArray OPTIONAL,
+  IN OUT UINT32   *NumberOfNodes
   );
 
 /**
@@ -89,9 +89,9 @@ GetMatchingEnabledDeviceTreeNodes (
 EFI_STATUS
 EFIAPI
 GetDeviceTreeNode (
-  IN UINT32        Handle,
-  OUT VOID         **DeviceTreeBase,
-  OUT INT32        *NodeOffset
+  IN UINT32  Handle,
+  OUT VOID   **DeviceTreeBase,
+  OUT INT32  *NodeOffset
   );
 
 /**
@@ -110,9 +110,9 @@ GetDeviceTreeNode (
 EFI_STATUS
 EFIAPI
 GetDeviceTreeHandle (
-  IN  VOID         *DeviceTreeBase,
-  IN  INT32        NodeOffset,
-  OUT UINT32       *Handle
+  IN  VOID    *DeviceTreeBase,
+  IN  INT32   NodeOffset,
+  OUT UINT32  *Handle
   );
 
 /**
@@ -134,9 +134,9 @@ GetDeviceTreeHandle (
 EFI_STATUS
 EFIAPI
 GetDeviceTreeRegisters (
-  IN UINT32                            Handle,
-  OUT NVIDIA_DEVICE_TREE_REGISTER_DATA *RegisterArray OPTIONAL,
-  IN OUT UINT32                        *NumberOfRegisters
+  IN UINT32                             Handle,
+  OUT NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray OPTIONAL,
+  IN OUT UINT32                         *NumberOfRegisters
   );
 
 /**
@@ -158,9 +158,9 @@ GetDeviceTreeRegisters (
 EFI_STATUS
 EFIAPI
 GetDeviceTreeInterrupts (
-  IN UINT32                             Handle,
-  OUT NVIDIA_DEVICE_TREE_INTERRUPT_DATA *InterruptArray OPTIONAL,
-  IN OUT UINT32                         *NumberOfInterrupts
+  IN UINT32                              Handle,
+  OUT NVIDIA_DEVICE_TREE_INTERRUPT_DATA  *InterruptArray OPTIONAL,
+  IN OUT UINT32                          *NumberOfInterrupts
   );
 
 #endif //__DEVICE_TREE_HELPER_LIB_H__

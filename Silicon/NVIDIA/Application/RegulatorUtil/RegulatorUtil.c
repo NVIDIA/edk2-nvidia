@@ -23,19 +23,19 @@
 // Used for ShellCommandLineParseEx only
 // and to ensure user inputs are in valid format
 //
-SHELL_PARAM_ITEM    mRegulatorUtilParamList[] = {
-  { L"--id",                  TypeValue },
-  { L"--name",                TypeValue },
-  { L"--enable",              TypeFlag },
-  { L"--disable",             TypeFlag  },
-  { L"--voltage",             TypeValue  },
-  { L"-?",                    TypeFlag  },
-  { NULL,                     TypeMax   },
+SHELL_PARAM_ITEM  mRegulatorUtilParamList[] = {
+  { L"--id",      TypeValue },
+  { L"--name",    TypeValue },
+  { L"--enable",  TypeFlag  },
+  { L"--disable", TypeFlag  },
+  { L"--voltage", TypeValue },
+  { L"-?",        TypeFlag  },
+  { NULL,         TypeMax   },
 };
 
-NVIDIA_REGULATOR_PROTOCOL    *mRegulator;
-EFI_HII_HANDLE               mHiiHandle;
-CHAR16                       mAppName[]          = L"RegulatorUtil";
+NVIDIA_REGULATOR_PROTOCOL  *mRegulator;
+EFI_HII_HANDLE             mHiiHandle;
+CHAR16                     mAppName[] = L"RegulatorUtil";
 
 /**
   This is function displays the regulator info for the given regulator
@@ -49,44 +49,58 @@ DisplayRegulatorInfo (
   IN UINT32  RegulatorId
   )
 {
-  EFI_STATUS         Status;
-  REGULATOR_INFO     Info;
+  EFI_STATUS      Status;
+  REGULATOR_INFO  Info;
 
   Status = mRegulator->GetInfo (mRegulator, RegulatorId, &Info);
   if (EFI_ERROR (Status)) {
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_REGULATOR_UTIL_DISPLAY_GET_INFO_ERROR), mHiiHandle, mAppName, RegulatorId, Status);
     return;
   }
+
   if (Info.IsAvailable) {
     if (Info.AlwaysEnabled) {
-      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_REGULATOR_UTIL_DISPLAY_ALWAYS_ON_INFO),
-                       mHiiHandle,
-                       RegulatorId,
-                       Info.Name,
-                       Info.CurrentMicrovolts,
-                       Info.MinMicrovolts,
-                       Info.MaxMicrovolts,
-                       Info.MicrovoltStep
-                       );
+      ShellPrintHiiEx (
+        -1,
+        -1,
+        NULL,
+        STRING_TOKEN (STR_REGULATOR_UTIL_DISPLAY_ALWAYS_ON_INFO),
+        mHiiHandle,
+        RegulatorId,
+        Info.Name,
+        Info.CurrentMicrovolts,
+        Info.MinMicrovolts,
+        Info.MaxMicrovolts,
+        Info.MicrovoltStep
+        );
     } else {
-      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_REGULATOR_UTIL_DISPLAY_INFO),
-                       mHiiHandle,
-                       RegulatorId,
-                       Info.Name,
-                       Info.IsEnabled,
-                       Info.CurrentMicrovolts,
-                       Info.MinMicrovolts,
-                       Info.MaxMicrovolts,
-                       Info.MicrovoltStep
-                       );
+      ShellPrintHiiEx (
+        -1,
+        -1,
+        NULL,
+        STRING_TOKEN (STR_REGULATOR_UTIL_DISPLAY_INFO),
+        mHiiHandle,
+        RegulatorId,
+        Info.Name,
+        Info.IsEnabled,
+        Info.CurrentMicrovolts,
+        Info.MinMicrovolts,
+        Info.MaxMicrovolts,
+        Info.MicrovoltStep
+        );
     }
   } else {
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_REGULATOR_UTIL_DISPLAY_NOT_READY),
-                     mHiiHandle,
-                     RegulatorId,
-                     Info.Name
-                     );
+    ShellPrintHiiEx (
+      -1,
+      -1,
+      NULL,
+      STRING_TOKEN (STR_REGULATOR_UTIL_DISPLAY_NOT_READY),
+      mHiiHandle,
+      RegulatorId,
+      Info.Name
+      );
   }
+
   return;
 }
 
@@ -106,23 +120,23 @@ DisplayRegulatorInfo (
 EFI_STATUS
 EFIAPI
 InitializeRegulatorUtil (
-  IN EFI_HANDLE          ImageHandle,
-  IN EFI_SYSTEM_TABLE    *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                    Status;
-  LIST_ENTRY                    *ParamPackage;
-  CONST CHAR16                  *ValueStr;
-  CHAR16                        *ProblemParam;
-  EFI_HII_PACKAGE_LIST_HEADER   *PackageList;
+  EFI_STATUS                   Status;
+  LIST_ENTRY                   *ParamPackage;
+  CONST CHAR16                 *ValueStr;
+  CHAR16                       *ProblemParam;
+  EFI_HII_PACKAGE_LIST_HEADER  *PackageList;
 
-  BOOLEAN                       Enable  = FALSE;
-  BOOLEAN                       Disable = FALSE;
-  UINTN                         Microvolts = MAX_UINTN;
-  UINT32                        RegulatorId = MAX_UINT32;
-  UINTN                         RegulatorCount;
-  UINTN                         RegulatorIndex;
-  UINT32                        *RegulatorArray = NULL;
+  BOOLEAN  Enable      = FALSE;
+  BOOLEAN  Disable     = FALSE;
+  UINTN    Microvolts  = MAX_UINTN;
+  UINT32   RegulatorId = MAX_UINT32;
+  UINTN    RegulatorCount;
+  UINTN    RegulatorIndex;
+  UINT32   *RegulatorArray = NULL;
 
   //
   // Retrieve HII package list from ImageHandle
@@ -130,7 +144,7 @@ InitializeRegulatorUtil (
   Status = gBS->OpenProtocol (
                   ImageHandle,
                   &gEfiHiiPackageListProtocolGuid,
-                  (VOID **) &PackageList,
+                  (VOID **)&PackageList,
                   ImageHandle,
                   NULL,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -143,11 +157,11 @@ InitializeRegulatorUtil (
   // Publish HII package list to HII Database.
   //
   Status = gHiiDatabase->NewPackageList (
-                          gHiiDatabase,
-                          PackageList,
-                          NULL,
-                          &mHiiHandle
-                          );
+                           gHiiDatabase,
+                           PackageList,
+                           NULL,
+                           &mHiiHandle
+                           );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -160,8 +174,8 @@ InitializeRegulatorUtil (
     goto Done;
   }
 
-  Status = gBS->LocateProtocol (&gNVIDIARegulatorProtocolGuid, NULL, (VOID **) &mRegulator);
-  if (EFI_ERROR (Status) || mRegulator == NULL) {
+  Status = gBS->LocateProtocol (&gNVIDIARegulatorProtocolGuid, NULL, (VOID **)&mRegulator);
+  if (EFI_ERROR (Status) || (mRegulator == NULL)) {
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_REGULATOR_UTIL_PROTOCOL_NONEXISTENT), mHiiHandle, mAppName);
     goto Done;
   }
@@ -171,7 +185,7 @@ InitializeRegulatorUtil (
     goto Done;
   }
 
-  Enable = ShellCommandLineGetFlag (ParamPackage, L"--enable");
+  Enable  = ShellCommandLineGetFlag (ParamPackage, L"--enable");
   Disable = ShellCommandLineGetFlag (ParamPackage, L"--disable");
 
   ValueStr = ShellCommandLineGetValue (ParamPackage, L"--voltage");
@@ -190,12 +204,13 @@ InitializeRegulatorUtil (
 
   ValueStr = ShellCommandLineGetValue (ParamPackage, L"--name");
   if (NULL != ValueStr) {
-    CHAR8      *AsciiRegulatorName;
+    CHAR8  *AsciiRegulatorName;
     AsciiRegulatorName = AllocatePool (StrLen (ValueStr) + 1);
     if (NULL == AsciiRegulatorName) {
       ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_REGULATOR_UTIL_BAD_ALLOCATION), mHiiHandle, mAppName);
       goto Done;
     }
+
     UnicodeStrToAsciiStrS (ValueStr, AsciiRegulatorName, StrLen (ValueStr) + 1);
     Status = mRegulator->GetIdFromName (mRegulator, AsciiRegulatorName, &RegulatorId);
     FreePool (AsciiRegulatorName);
@@ -240,7 +255,7 @@ InitializeRegulatorUtil (
   }
 
   if (RegulatorId == MAX_UINT32) {
-    UINTN BufferSize = 0;
+    UINTN  BufferSize = 0;
     Status = mRegulator->GetRegulators (mRegulator, &BufferSize, NULL);
     if (EFI_BUFFER_TOO_SMALL != Status) {
       ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_REGULATOR_UTIL_LIST_LOOKUP_ERROR), mHiiHandle, mAppName, Status);
@@ -258,8 +273,8 @@ InitializeRegulatorUtil (
       ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_REGULATOR_UTIL_LIST_LOOKUP_ERROR), mHiiHandle, mAppName, Status);
       goto Done;
     }
-    RegulatorCount = BufferSize / sizeof (UINT32);
 
+    RegulatorCount = BufferSize / sizeof (UINT32);
   } else {
     RegulatorArray = &RegulatorId;
     RegulatorCount = 1;
@@ -271,9 +286,11 @@ InitializeRegulatorUtil (
 
 Done:
   if ((RegulatorArray != NULL) &&
-      (RegulatorArray != &RegulatorId)) {
+      (RegulatorArray != &RegulatorId))
+  {
     FreePool (RegulatorArray);
   }
+
   ShellCommandLineFreeVarList (ParamPackage);
   HiiRemovePackages (mHiiHandle);
 

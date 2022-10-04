@@ -9,11 +9,10 @@
 
 **/
 
-
 #ifndef _PHY_REALTEK_H__
 #define _PHY_REALTEK_H__
 
-#define PHY_REALTEK_OUI         0x000732
+#define PHY_REALTEK_OUI  0x000732
 
 /*
  * @brief Configure Realtek PHY
@@ -25,7 +24,7 @@
 EFI_STATUS
 EFIAPI
 PhyRealtekConfig (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   );
 
 /*
@@ -38,7 +37,7 @@ PhyRealtekConfig (
 EFI_STATUS
 EFIAPI
 PhyRealtekStartAutoNeg (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   );
 
 /*
@@ -51,7 +50,7 @@ PhyRealtekStartAutoNeg (
 EFI_STATUS
 EFIAPI
 PhyRealtekCheckAutoNeg (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   );
 
 /*
@@ -62,7 +61,7 @@ PhyRealtekCheckAutoNeg (
 VOID
 EFIAPI
 PhyRealtekDetectLink (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   );
 
 #endif /* _PHY_REALTEK_H__ */

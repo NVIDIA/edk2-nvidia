@@ -16,11 +16,11 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
-#define MAX_FW_PARTITIONS                       64
-#define FW_PARTITION_PRIVATE_DATA_SIGNATURE     SIGNATURE_32 ('F','W','P','A')
+#define MAX_FW_PARTITIONS                    64
+#define FW_PARTITION_PRIVATE_DATA_SIGNATURE  SIGNATURE_32 ('F','W','P','A')
 
-typedef struct _FW_PARTITION_PRIVATE_DATA   FW_PARTITION_PRIVATE_DATA;
-typedef struct _FW_PARTITION_DEVICE_INFO    FW_PARTITION_DEVICE_INFO;
+typedef struct _FW_PARTITION_PRIVATE_DATA  FW_PARTITION_PRIVATE_DATA;
+typedef struct _FW_PARTITION_DEVICE_INFO   FW_PARTITION_DEVICE_INFO;
 
 /**
   Convert address for runtime execution.
@@ -80,33 +80,33 @@ EFI_STATUS
 
 // device information structure
 struct _FW_PARTITION_DEVICE_INFO {
-  CONST CHAR16                      *DeviceName;
-  FW_PARTITION_DEVICE_READ          DeviceRead;
-  FW_PARTITION_DEVICE_WRITE         DeviceWrite;
-  UINT32                            BlockSize;
+  CONST CHAR16                 *DeviceName;
+  FW_PARTITION_DEVICE_READ     DeviceRead;
+  FW_PARTITION_DEVICE_WRITE    DeviceWrite;
+  UINT32                       BlockSize;
 };
 
 // partition information structure
 typedef struct {
-  CHAR16                            Name[FW_PARTITION_NAME_LENGTH];
-  UINTN                             Bytes;
-  UINT64                            Offset;
-  BOOLEAN                           IsActivePartition;
+  CHAR16     Name[FW_PARTITION_NAME_LENGTH];
+  UINTN      Bytes;
+  UINT64     Offset;
+  BOOLEAN    IsActivePartition;
 } FW_PARTITION_INFO;
 
 // fw partition private data structure
 struct _FW_PARTITION_PRIVATE_DATA {
-  UINT32                            Signature;
+  UINT32                          Signature;
 
   // Partition info
-  FW_PARTITION_INFO                 PartitionInfo;
+  FW_PARTITION_INFO               PartitionInfo;
 
   // Device info
-  FW_PARTITION_DEVICE_INFO          *DeviceInfo;
+  FW_PARTITION_DEVICE_INFO        *DeviceInfo;
 
   // Protocol info
-  EFI_HANDLE                        Handle;
-  NVIDIA_FW_PARTITION_PROTOCOL      Protocol;
+  EFI_HANDLE                      Handle;
+  NVIDIA_FW_PARTITION_PROTOCOL    Protocol;
 };
 
 /**
@@ -145,8 +145,8 @@ FwPartitionAdd (
 EFI_STATUS
 EFIAPI
 FwPartitionAddFromDeviceGpt (
-  IN  FW_PARTITION_DEVICE_INFO      *DeviceInfo,
-  IN  UINT64                        DeviceSizeInBytes
+  IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
+  IN  UINT64                    DeviceSizeInBytes
   );
 
 /**
@@ -164,9 +164,9 @@ FwPartitionAddFromDeviceGpt (
 EFI_STATUS
 EFIAPI
 FwPartitionAddFromPartitionTable (
-  IN  CONST EFI_PARTITION_TABLE_HEADER      *GptHeader,
-  IN  EFI_PARTITION_ENTRY                   *PartitionTable,
-  IN  FW_PARTITION_DEVICE_INFO              *DeviceInfo
+  IN  CONST EFI_PARTITION_TABLE_HEADER  *GptHeader,
+  IN  EFI_PARTITION_ENTRY               *PartitionTable,
+  IN  FW_PARTITION_DEVICE_INFO          *DeviceInfo
   );
 
 /**
@@ -181,7 +181,7 @@ FwPartitionAddFromPartitionTable (
 VOID
 EFIAPI
 FwPartitionAddressChangeHandler (
-  IN  FW_PARTITION_ADDRESS_CONVERT ConvertFunction
+  IN  FW_PARTITION_ADDRESS_CONVERT  ConvertFunction
   );
 
 /**
@@ -198,9 +198,9 @@ FwPartitionAddressChangeHandler (
 EFI_STATUS
 EFIAPI
 FwPartitionCheckOffsetAndBytes (
-  IN  UINT64                    MaxOffset,
-  IN  UINT64                    Offset,
-  IN  UINTN                     Bytes
+  IN  UINT64  MaxOffset,
+  IN  UINT64  Offset,
+  IN  UINTN   Bytes
   );
 
 /**
@@ -230,9 +230,9 @@ FwPartitionDeviceLibDeinit (
 EFI_STATUS
 EFIAPI
 FwPartitionDeviceLibInit (
-  IN  UINT32                        ActiveBootChain,
-  IN  UINTN                         MaxFwPartitions,
-  IN  BOOLEAN                       OverwriteActiveFwPartition
+  IN  UINT32   ActiveBootChain,
+  IN  UINTN    MaxFwPartitions,
+  IN  BOOLEAN  OverwriteActiveFwPartition
   );
 
 /**
@@ -247,7 +247,7 @@ FwPartitionDeviceLibInit (
 FW_PARTITION_PRIVATE_DATA *
 EFIAPI
 FwPartitionFindByName (
-  IN  CONST CHAR16                  *Name
+  IN  CONST CHAR16  *Name
   );
 
 /**

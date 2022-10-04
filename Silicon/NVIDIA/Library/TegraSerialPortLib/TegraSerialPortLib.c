@@ -20,12 +20,12 @@
 #include "TegraSerialPortLibPrivate.h"
 
 STATIC
-SERIAL_MAPPING gSerialCompatibilityMap[] = {
-  { TEGRA_UART_TYPE_TCU, TegraCombinedSerialPortGetObject, "nvidia,tegra194-tcu" },
-  { TEGRA_UART_TYPE_TCU, TegraCombinedSerialPortGetObject, "nvidia,tegra186-tcu" },
-  { TEGRA_UART_TYPE_SBSA, TegraSbsaSerialPortGetObject, "arm,sbsa-uart" },
-  { TEGRA_UART_TYPE_16550, Tegra16550SerialPortGetObject, "nvidia,tegra20-uart" },
-  { TEGRA_UART_TYPE_NONE, NULL, NULL },
+SERIAL_MAPPING  gSerialCompatibilityMap[] = {
+  { TEGRA_UART_TYPE_TCU,   TegraCombinedSerialPortGetObject, "nvidia,tegra194-tcu" },
+  { TEGRA_UART_TYPE_TCU,   TegraCombinedSerialPortGetObject, "nvidia,tegra186-tcu" },
+  { TEGRA_UART_TYPE_SBSA,  TegraSbsaSerialPortGetObject,     "arm,sbsa-uart"       },
+  { TEGRA_UART_TYPE_16550, Tegra16550SerialPortGetObject,    "nvidia,tegra20-uart" },
+  { TEGRA_UART_TYPE_NONE,  NULL,                             NULL                  },
 };
 
 /** Identify the serial device hardware
@@ -34,23 +34,23 @@ SERIAL_MAPPING gSerialCompatibilityMap[] = {
 STATIC
 VOID
 GetRawDeviceTreePointer (
-  OUT VOID      **DeviceTree,
-  OUT UINTN     *DeviceTreeSize
-)
+  OUT VOID   **DeviceTree,
+  OUT UINTN  *DeviceTreeSize
+  )
 {
-  UINT64        DtbBase;
-  UINT64        DtbSize;
+  UINT64  DtbBase;
+  UINT64  DtbSize;
 
   DtbBase = GetDTBBaseAddress ();
-  ASSERT ((VOID *) DtbBase != NULL);
+  ASSERT ((VOID *)DtbBase != NULL);
   DtbSize = fdt_totalsize ((VOID *)DtbBase);
   // DTB Base may not be aligned to page boundary. Add overlay to size.
   DtbSize += (DtbBase & EFI_PAGE_MASK);
-  DtbSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize));
+  DtbSize  = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize));
   // Align DTB Base to page boundary.
   DtbBase &= ~(EFI_PAGE_MASK);
 
-  *DeviceTree = (VOID *)DtbBase;
+  *DeviceTree     = (VOID *)DtbBase;
   *DeviceTreeSize = (UINTN)DtbSize;
 }
 
@@ -63,16 +63,16 @@ SerialPortIdentify (
   VOID
   )
 {
-  EFI_STATUS                          Status;
-  UINT32                              Handles;
-  UINT32                              NumberOfUart;
-  SERIAL_MAPPING                      *Mapping;
-  BOOLEAN                             UartFound;
-  TEGRA_PLATFORM_TYPE                 Platform;
-  UINT32                              Size;
-  VOID                                *DeviceTree;
-  UINTN                               DeviceTreeSize;
-  NVIDIA_DEVICE_TREE_REGISTER_DATA    RegData;
+  EFI_STATUS                        Status;
+  UINT32                            Handles;
+  UINT32                            NumberOfUart;
+  SERIAL_MAPPING                    *Mapping;
+  BOOLEAN                           UartFound;
+  TEGRA_PLATFORM_TYPE               Platform;
+  UINT32                            Size;
+  VOID                              *DeviceTree;
+  UINTN                             DeviceTreeSize;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA  RegData;
 
   // Ensure the fallback resource ready
   SetTegraUARTBaseAddress (0);
@@ -82,31 +82,36 @@ SerialPortIdentify (
   SetDeviceTreePointer (DeviceTree, DeviceTreeSize);
 
   UartFound = FALSE;
-  Platform = TegraGetPlatform ();
+  Platform  = TegraGetPlatform ();
   for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Platform == TEGRA_PLATFORM_SILICON &&
-        Mapping->Type == TEGRA_UART_TYPE_16550) {
+    if ((Platform == TEGRA_PLATFORM_SILICON) &&
+        (Mapping->Type == TEGRA_UART_TYPE_16550))
+    {
       continue;
     }
+
     // Only one UART controller is expected
     NumberOfUart = 1;
-    Status = GetMatchingEnabledDeviceTreeNodes (Mapping->Compatibility, &Handles, &NumberOfUart);
-    if (Status == EFI_SUCCESS || Status == EFI_BUFFER_TOO_SMALL) {
+    Status       = GetMatchingEnabledDeviceTreeNodes (Mapping->Compatibility, &Handles, &NumberOfUart);
+    if ((Status == EFI_SUCCESS) || (Status == EFI_BUFFER_TOO_SMALL)) {
       UartFound = TRUE;
       if (Mapping->Type != TEGRA_UART_TYPE_TCU) {
         // Retreive UART register space
-        Size = 1;
+        Size   = 1;
         Status = GetDeviceTreeRegisters (Handles, &RegData, &Size);
         if (EFI_ERROR (Status)) {
           return;
         }
+
         Mapping->BaseAddress = RegData.BaseAddress;
         // Update UART base address
         SetTegraUARTBaseAddress (Mapping->BaseAddress);
       }
+
       Mapping->IsFound = TRUE;
     }
   }
+
   if (UartFound == FALSE) {
     return;
   }
@@ -129,8 +134,8 @@ SerialPortInitialize (
   VOID
   )
 {
-  RETURN_STATUS  Status;
-  SERIAL_MAPPING *Mapping;
+  RETURN_STATUS   Status;
+  SERIAL_MAPPING  *Mapping;
 
   SerialPortIdentify ();
 
@@ -159,12 +164,12 @@ SerialPortInitialize (
 UINTN
 EFIAPI
 SerialPortWrite (
-  IN UINT8     *Buffer,
-  IN UINTN     NumberOfBytes
+  IN UINT8  *Buffer,
+  IN UINTN  NumberOfBytes
   )
 {
-  RETURN_STATUS  Status;
-  SERIAL_MAPPING *Mapping;
+  RETURN_STATUS   Status;
+  SERIAL_MAPPING  *Mapping;
 
   for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
     if (Mapping->IsFound == TRUE) {
@@ -191,11 +196,11 @@ SerialPortWrite (
 UINTN
 EFIAPI
 SerialPortRead (
-  OUT UINT8     *Buffer,
-  IN  UINTN     NumberOfBytes
-)
+  OUT UINT8  *Buffer,
+  IN  UINTN  NumberOfBytes
+  )
 {
-  SERIAL_MAPPING *Mapping;
+  SERIAL_MAPPING  *Mapping;
 
   for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
     if (Mapping->IsFound == TRUE) {
@@ -223,7 +228,7 @@ SerialPortPoll (
   VOID
   )
 {
-  SERIAL_MAPPING *Mapping;
+  SERIAL_MAPPING  *Mapping;
 
   for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
     if (Mapping->IsFound == TRUE) {
@@ -270,7 +275,7 @@ SerialPortSetControl (
   IN UINT32  Control
   )
 {
-  SERIAL_MAPPING *Mapping;
+  SERIAL_MAPPING  *Mapping;
 
   for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
     if (Mapping->IsFound == TRUE) {
@@ -323,7 +328,7 @@ SerialPortGetControl (
   OUT UINT32  *Control
   )
 {
-  SERIAL_MAPPING *Mapping;
+  SERIAL_MAPPING  *Mapping;
 
   for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
     if (Mapping->IsFound == TRUE) {
@@ -380,7 +385,7 @@ SerialPortSetAttributes (
   IN OUT EFI_STOP_BITS_TYPE  *StopBits
   )
 {
-  SERIAL_MAPPING *Mapping;
+  SERIAL_MAPPING  *Mapping;
 
   for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
     if (Mapping->IsFound == TRUE) {
@@ -392,7 +397,13 @@ SerialPortSetAttributes (
     return RETURN_DEVICE_ERROR;
   }
 
-  return Mapping->GetObject ()->SerialPortSetAttributes (Mapping->BaseAddress,
-                                  BaudRate, ReceiveFifoDepth, Timeout,
-                                  Parity, DataBits, StopBits);
+  return Mapping->GetObject ()->SerialPortSetAttributes (
+                                  Mapping->BaseAddress,
+                                  BaudRate,
+                                  ReceiveFifoDepth,
+                                  Timeout,
+                                  Parity,
+                                  DataBits,
+                                  StopBits
+                                  );
 }

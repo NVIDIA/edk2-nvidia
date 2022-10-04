@@ -40,26 +40,28 @@
 STATIC
 EFI_STATUS
 EFIAPI
-ValidateOpCode(
+ValidateOpCode (
   IN UINT8  OpCode,
   IN UINT8  *AmlTableData
-) {
+  )
+{
   if (AmlTableData == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (OpCode == AML_BYTE_PREFIX
-      || OpCode == AML_WORD_PREFIX
-      || OpCode == AML_DWORD_PREFIX
-      || OpCode == AML_QWORD_PREFIX) {
+  if (  (OpCode == AML_BYTE_PREFIX)
+     || (OpCode == AML_WORD_PREFIX)
+     || (OpCode == AML_DWORD_PREFIX)
+     || (OpCode == AML_QWORD_PREFIX))
+  {
     // For integers, the opcode is one byte before the offset table's offset
     // We also assume the new data doesn't have the opcode (just the value)
-    if (*((UINT8*)AmlTableData - 1) != OpCode) {
+    if (*((UINT8 *)AmlTableData - 1) != OpCode) {
       return EFI_INVALID_PARAMETER;
     }
   } else {
     // For the rest (currently descriptors) the first byte is the opcode.
-    if (*(UINT8*)AmlTableData != OpCode) {
+    if (*(UINT8 *)AmlTableData != OpCode) {
       return EFI_INVALID_PARAMETER;
     }
   }
@@ -102,10 +104,11 @@ ValidateNewAmlNode (
   IN UINTN  CurrentSize,
   IN VOID   *NewData,
   IN UINTN  NewSize
-) {
+  )
+{
   EFI_STATUS  Status;
 
-  if (CurrentData == NULL || NewData == NULL) {
+  if ((CurrentData == NULL) || (NewData == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -113,21 +116,22 @@ ValidateNewAmlNode (
     return EFI_BAD_BUFFER_SIZE;
   }
 
-  Status = ValidateOpCode(OffsetTableOpCode, CurrentData);
+  Status = ValidateOpCode (OffsetTableOpCode, CurrentData);
 
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
   // If the data is an integer, assume we are only given the integer data and
   // not the opcode.
   // If it isn't an integer, need to also check the new data's opcode.
-  if (OffsetTableOpCode != AML_BYTE_PREFIX
-      && OffsetTableOpCode != AML_WORD_PREFIX
-      && OffsetTableOpCode != AML_DWORD_PREFIX
-      && OffsetTableOpCode != AML_QWORD_PREFIX) {
-    Status = ValidateOpCode(OffsetTableOpCode, NewData);
-    if (EFI_ERROR(Status)) {
+  if (  (OffsetTableOpCode != AML_BYTE_PREFIX)
+     && (OffsetTableOpCode != AML_WORD_PREFIX)
+     && (OffsetTableOpCode != AML_DWORD_PREFIX)
+     && (OffsetTableOpCode != AML_QWORD_PREFIX))
+  {
+    Status = ValidateOpCode (OffsetTableOpCode, NewData);
+    if (EFI_ERROR (Status)) {
       return Status;
     }
   }
@@ -149,11 +153,14 @@ ValidateNewAmlNode (
     case ACPI_END_DEPENDENT_DESCRIPTOR:
     case ACPI_IO_PORT_DESCRIPTOR:
     case ACPI_FIXED_LOCATION_IO_PORT_DESCRIPTOR:
-    case ACPI_END_TAG_DESCRIPTOR: {
-      if (((ACPI_SMALL_RESOURCE_HEADER*)NewData)->Bits.Length
-          != ((ACPI_SMALL_RESOURCE_HEADER*)CurrentData)->Bits.Length) {
+    case ACPI_END_TAG_DESCRIPTOR:
+    {
+      if (((ACPI_SMALL_RESOURCE_HEADER *)NewData)->Bits.Length
+          != ((ACPI_SMALL_RESOURCE_HEADER *)CurrentData)->Bits.Length)
+      {
         return EFI_INVALID_PARAMETER;
       }
+
       break;
     }
     case ACPI_24_BIT_MEMORY_RANGE_DESCRIPTOR:
@@ -165,25 +172,31 @@ ValidateNewAmlNode (
     // it has the same value as the QWORD address space descriptor.
     // Logic for the two should be the same anyways.
     // case ACPI_ADDRESS_SPACE_DESCRIPTOR:
-    case ACPI_QWORD_ADDRESS_SPACE_DESCRIPTOR: {
-      if (((ACPI_LARGE_RESOURCE_HEADER*)NewData)->Length
-          != ((ACPI_LARGE_RESOURCE_HEADER*)CurrentData)->Length) {
+    case ACPI_QWORD_ADDRESS_SPACE_DESCRIPTOR:
+    {
+      if (((ACPI_LARGE_RESOURCE_HEADER *)NewData)->Length
+          != ((ACPI_LARGE_RESOURCE_HEADER *)CurrentData)->Length)
+      {
         return EFI_INVALID_PARAMETER;
       }
+
       break;
     }
-    case ACPI_EXTENDED_INTERRUPT_DESCRIPTOR: {
-      EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR *CurrentInterrupt;
-      EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR *NewInterrupt;
-      CurrentInterrupt = (EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR*)CurrentData;
-      NewInterrupt = (EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR*)NewData;
+    case ACPI_EXTENDED_INTERRUPT_DESCRIPTOR:
+    {
+      EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR  *CurrentInterrupt;
+      EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR  *NewInterrupt;
+      CurrentInterrupt = (EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR *)CurrentData;
+      NewInterrupt     = (EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR *)NewData;
 
       // Make sure the new interrupt has the correct package length and
       // the correct table length
-      if (NewInterrupt->Header.Length != CurrentInterrupt->Header.Length
-          || NewInterrupt->InterruptTableLength != CurrentInterrupt->InterruptTableLength) {
+      if (  (NewInterrupt->Header.Length != CurrentInterrupt->Header.Length)
+         || (NewInterrupt->InterruptTableLength != CurrentInterrupt->InterruptTableLength))
+      {
         return EFI_INVALID_PARAMETER;
       }
+
       break;
     }
     default:
@@ -207,32 +220,33 @@ ValidateNewAmlNode (
 STATIC
 EFI_STATUS
 EFIAPI
-GetAmlNodeSize(
-  IN NVIDIA_AML_NODE_INFO *AmlNodeInfo,
-  OUT UINTN               *Size
-) {
+GetAmlNodeSize (
+  IN NVIDIA_AML_NODE_INFO  *AmlNodeInfo,
+  OUT UINTN                *Size
+  )
+{
   AML_OFFSET_TABLE_ENTRY  *OffsetEntry;
   VOID                    *NodeStart;
 
-  if (AmlNodeInfo == NULL || Size == NULL) {
+  if ((AmlNodeInfo == NULL) || (Size == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
   OffsetEntry = AmlNodeInfo->AmlOffsetEntry;
-  NodeStart = ((UINT8*)AmlNodeInfo->AmlTable) + OffsetEntry->Offset;
+  NodeStart   = ((UINT8 *)AmlNodeInfo->AmlTable) + OffsetEntry->Offset;
 
   switch (OffsetEntry->Opcode) {
     case AML_BYTE_PREFIX:
-      *Size = sizeof(UINT8);
+      *Size = sizeof (UINT8);
       break;
     case AML_WORD_PREFIX:
-      *Size = sizeof(UINT16);
+      *Size = sizeof (UINT16);
       break;
     case AML_DWORD_PREFIX:
-      *Size = sizeof(UINT32);
+      *Size = sizeof (UINT32);
       break;
     case AML_QWORD_PREFIX:
-      *Size = sizeof(UINT64);
+      *Size = sizeof (UINT64);
       break;
     case ACPI_IRQ_NOFLAG_DESCRIPTOR:
     case ACPI_IRQ_DESCRIPTOR:
@@ -242,9 +256,10 @@ GetAmlNodeSize(
     case ACPI_END_DEPENDENT_DESCRIPTOR:
     case ACPI_IO_PORT_DESCRIPTOR:
     case ACPI_FIXED_LOCATION_IO_PORT_DESCRIPTOR:
-    case ACPI_END_TAG_DESCRIPTOR: {
-      *Size = sizeof(ACPI_SMALL_RESOURCE_HEADER)
-                + ((ACPI_SMALL_RESOURCE_HEADER*)NodeStart)->Bits.Length;
+    case ACPI_END_TAG_DESCRIPTOR:
+    {
+      *Size = sizeof (ACPI_SMALL_RESOURCE_HEADER)
+              + ((ACPI_SMALL_RESOURCE_HEADER *)NodeStart)->Bits.Length;
       break;
     }
     case ACPI_24_BIT_MEMORY_RANGE_DESCRIPTOR:
@@ -257,9 +272,10 @@ GetAmlNodeSize(
     // it has the same value as the QWORD address space descriptor.
     // Logic for the two should be the same anyways.
     // case ACPI_ADDRESS_SPACE_DESCRIPTOR:
-    case ACPI_QWORD_ADDRESS_SPACE_DESCRIPTOR: {
-      *Size = sizeof(ACPI_LARGE_RESOURCE_HEADER)
-                + ((ACPI_LARGE_RESOURCE_HEADER*)NodeStart)->Length;
+    case ACPI_QWORD_ADDRESS_SPACE_DESCRIPTOR:
+    {
+      *Size = sizeof (ACPI_LARGE_RESOURCE_HEADER)
+              + ((ACPI_LARGE_RESOURCE_HEADER *)NodeStart)->Length;
       break;
     }
     default:
@@ -283,23 +299,25 @@ GetAmlNodeSize(
 STATIC
 EFI_STATUS
 EFIAPI
-FindAmlOffsetEntry(
+FindAmlOffsetEntry (
   IN AML_OFFSET_TABLE_ENTRY   *OffsetTable,
   IN CHAR8                    *PathName,
   OUT AML_OFFSET_TABLE_ENTRY  **OffsetEntry
-) {
-  UINTN Index;
-  UINTN PathLen;
+  )
+{
+  UINTN  Index;
+  UINTN  PathLen;
 
-  if (OffsetTable == NULL || PathName == NULL || OffsetEntry == NULL) {
+  if ((OffsetTable == NULL) || (PathName == NULL) || (OffsetEntry == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
   Index = 0;
   // Find offset table entry associated with given SdcPathName
-  PathLen = AsciiStrLen(PathName);
+  PathLen = AsciiStrLen (PathName);
   while (OffsetTable[Index].Pathname != NULL &&
-         AsciiStrnCmp(PathName, OffsetTable[Index].Pathname, PathLen) != 0) {
+         AsciiStrnCmp (PathName, OffsetTable[Index].Pathname, PathLen) != 0)
+  {
     Index++;
   }
 
@@ -344,46 +362,47 @@ RegisterAmlTables (
   IN EFI_ACPI_DESCRIPTION_HEADER  **AmlTables,
   IN AML_OFFSET_TABLE_ENTRY       **OffsetTables,
   IN UINTN                        NumTables
-) {
-  EFI_STATUS                    Status;
-  NVIDIA_AML_PATCH_PRIVATE_DATA *Private;
-  UINTN                         Index;
+  )
+{
+  EFI_STATUS                     Status;
+  NVIDIA_AML_PATCH_PRIVATE_DATA  *Private;
+  UINTN                          Index;
 
-  if (AmlTables == NULL || OffsetTables == NULL || NumTables == 0) {
+  if ((AmlTables == NULL) || (OffsetTables == NULL) || (NumTables == 0)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_AML_PATCH_PRIVATE_DATA_FROM_PROTOCOL(This);
+  Private = NVIDIA_AML_PATCH_PRIVATE_DATA_FROM_PROTOCOL (This);
 
   Private->NumAmlTables = NumTables;
 
-  Status = gBS->AllocatePool(
-    EfiBootServicesData,
-    NumTables * sizeof(EFI_ACPI_DESCRIPTION_HEADER *),
-    (VOID**)&Private->RegisteredAmlTables
-  );
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  NumTables * sizeof (EFI_ACPI_DESCRIPTION_HEADER *),
+                  (VOID **)&Private->RegisteredAmlTables
+                  );
 
-  if (EFI_ERROR(Status)) {
-    Private->NumAmlTables = 0;
+  if (EFI_ERROR (Status)) {
+    Private->NumAmlTables        = 0;
     Private->RegisteredAmlTables = NULL;
     return Status;
   }
 
-  Status = gBS->AllocatePool(
-    EfiBootServicesData,
-    NumTables * sizeof(AML_OFFSET_TABLE_ENTRY *),
-    (VOID**)&Private->RegisteredOffsetTables
-  );
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  NumTables * sizeof (AML_OFFSET_TABLE_ENTRY *),
+                  (VOID **)&Private->RegisteredOffsetTables
+                  );
 
-  if (EFI_ERROR(Status)) {
-    Private->NumAmlTables = 0;
-    Private->RegisteredAmlTables = NULL;
+  if (EFI_ERROR (Status)) {
+    Private->NumAmlTables           = 0;
+    Private->RegisteredAmlTables    = NULL;
     Private->RegisteredOffsetTables = NULL;
     return Status;
   }
 
   for (Index = 0; Index < NumTables; Index++) {
-    Private->RegisteredAmlTables[Index] = AmlTables[Index];
+    Private->RegisteredAmlTables[Index]    = AmlTables[Index];
     Private->RegisteredOffsetTables[Index] = OffsetTables[Index];
   }
 
@@ -414,35 +433,37 @@ FindNode (
   IN NVIDIA_AML_PATCH_PROTOCOL  *This,
   IN CHAR8                      *PathName,
   OUT NVIDIA_AML_NODE_INFO      *AmlNodeInfo
-) {
-  EFI_STATUS                    Status;
-  NVIDIA_AML_PATCH_PRIVATE_DATA *Private;
-  UINTN                         Index;
-  UINTN                         FoundSize;
-  EFI_ACPI_DESCRIPTION_HEADER   *CurrentAmlTable;
-  AML_OFFSET_TABLE_ENTRY        *CurrentOffsetTable;
-  AML_OFFSET_TABLE_ENTRY        *OffsetEntry;
+  )
+{
+  EFI_STATUS                     Status;
+  NVIDIA_AML_PATCH_PRIVATE_DATA  *Private;
+  UINTN                          Index;
+  UINTN                          FoundSize;
+  EFI_ACPI_DESCRIPTION_HEADER    *CurrentAmlTable;
+  AML_OFFSET_TABLE_ENTRY         *CurrentOffsetTable;
+  AML_OFFSET_TABLE_ENTRY         *OffsetEntry;
 
-  if (This == NULL || PathName == NULL || AmlNodeInfo == NULL) {
+  if ((This == NULL) || (PathName == NULL) || (AmlNodeInfo == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_AML_PATCH_PRIVATE_DATA_FROM_PROTOCOL(This);
+  Private = NVIDIA_AML_PATCH_PRIVATE_DATA_FROM_PROTOCOL (This);
 
-  if (Private->RegisteredOffsetTables == NULL
-      || Private->RegisteredAmlTables == NULL) {
+  if (  (Private->RegisteredOffsetTables == NULL)
+     || (Private->RegisteredAmlTables == NULL))
+  {
     return EFI_NOT_READY;
   }
 
   for (Index = 0; Index < Private->NumAmlTables; Index++) {
     CurrentOffsetTable = Private->RegisteredOffsetTables[Index];
-    CurrentAmlTable = Private->RegisteredAmlTables[Index];
-    Status = FindAmlOffsetEntry(CurrentOffsetTable, PathName, &OffsetEntry);
-    if (!EFI_ERROR(Status)) {
-      AmlNodeInfo->AmlTable = CurrentAmlTable;
+    CurrentAmlTable    = Private->RegisteredAmlTables[Index];
+    Status             = FindAmlOffsetEntry (CurrentOffsetTable, PathName, &OffsetEntry);
+    if (!EFI_ERROR (Status)) {
+      AmlNodeInfo->AmlTable       = CurrentAmlTable;
       AmlNodeInfo->AmlOffsetEntry = OffsetEntry;
-      Status = GetAmlNodeSize(AmlNodeInfo, &FoundSize);
-      if (!EFI_ERROR(Status)) {
+      Status                      = GetAmlNodeSize (AmlNodeInfo, &FoundSize);
+      if (!EFI_ERROR (Status)) {
         AmlNodeInfo->Size = FoundSize;
       } else if (Status == EFI_UNSUPPORTED) {
         // Unsupported means we can't determine size and Get/Set data.
@@ -450,8 +471,9 @@ FindNode (
         // possible to patch the name of the node.
         // (Get and Set will check again to see if the opcode is supported).
         AmlNodeInfo->Size = 0;
-        Status = EFI_SUCCESS;
+        Status            = EFI_SUCCESS;
       }
+
       return Status;
     }
   }
@@ -483,23 +505,24 @@ FindNode (
 **/
 EFI_STATUS
 EFIAPI
-GetNodeData(
+GetNodeData (
   IN NVIDIA_AML_PATCH_PROTOCOL  *This,
   IN NVIDIA_AML_NODE_INFO       *AmlNodeInfo,
   OUT VOID                      *Data,
   IN  UINTN                     Size
-) {
+  )
+{
   EFI_STATUS  Status;
   UINTN       FoundSize;
   VOID        *AmlDataStart;
 
-  if (This == NULL || AmlNodeInfo == NULL || Data == NULL) {
+  if ((This == NULL) || (AmlNodeInfo == NULL) || (Data == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = GetAmlNodeSize(AmlNodeInfo, &FoundSize);
+  Status = GetAmlNodeSize (AmlNodeInfo, &FoundSize);
 
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
@@ -511,19 +534,19 @@ GetNodeData(
     return EFI_BUFFER_TOO_SMALL;
   }
 
-  AmlDataStart = ((UINT8*)AmlNodeInfo->AmlTable)
-                  + AmlNodeInfo->AmlOffsetEntry->Offset;
+  AmlDataStart = ((UINT8 *)AmlNodeInfo->AmlTable)
+                 + AmlNodeInfo->AmlOffsetEntry->Offset;
 
-  Status = ValidateOpCode(
-    AmlNodeInfo->AmlOffsetEntry->Opcode,
-    AmlDataStart
-  );
+  Status = ValidateOpCode (
+             AmlNodeInfo->AmlOffsetEntry->Opcode,
+             AmlDataStart
+             );
 
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  CopyMem(Data, AmlDataStart, FoundSize);
+  CopyMem (Data, AmlDataStart, FoundSize);
 
   return EFI_SUCCESS;
 }
@@ -557,17 +580,18 @@ SetNodeData (
   IN NVIDIA_AML_NODE_INFO       *AmlNodeInfo,
   IN VOID                       *Data,
   IN UINTN                      Size
-) {
+  )
+{
   EFI_STATUS  Status;
   UINTN       FoundSize;
   VOID        *AmlDataStart;
 
-  if (This == NULL || AmlNodeInfo == NULL || Data == NULL) {
+  if ((This == NULL) || (AmlNodeInfo == NULL) || (Data == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = GetAmlNodeSize(AmlNodeInfo, &FoundSize);
-  if (EFI_ERROR(Status)) {
+  Status = GetAmlNodeSize (AmlNodeInfo, &FoundSize);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
@@ -575,22 +599,22 @@ SetNodeData (
     return EFI_BAD_BUFFER_SIZE;
   }
 
-  AmlDataStart = ((UINT8*)AmlNodeInfo->AmlTable)
-                  + AmlNodeInfo->AmlOffsetEntry->Offset;
+  AmlDataStart = ((UINT8 *)AmlNodeInfo->AmlTable)
+                 + AmlNodeInfo->AmlOffsetEntry->Offset;
 
-  Status = ValidateNewAmlNode(
-    AmlNodeInfo->AmlOffsetEntry->Opcode,
-    AmlDataStart,
-    FoundSize,
-    Data,
-    Size
-  );
+  Status = ValidateNewAmlNode (
+             AmlNodeInfo->AmlOffsetEntry->Opcode,
+             AmlDataStart,
+             FoundSize,
+             Data,
+             Size
+             );
 
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  CopyMem(AmlDataStart, Data, Size);
+  CopyMem (AmlDataStart, Data, Size);
 
   return EFI_SUCCESS;
 }
@@ -619,43 +643,45 @@ SetNodeData (
 **/
 EFI_STATUS
 EFIAPI
-UpdateNodeName(
+UpdateNodeName (
   IN NVIDIA_AML_PATCH_PROTOCOL  *This,
   IN NVIDIA_AML_NODE_INFO       *AmlNodeInfo,
   IN CHAR8                      *NewName
-) {
-  UINT8 *NameStart;
-  UINTN NewNameLength;
-  CHAR8 *CurrChar;
+  )
+{
+  UINT8  *NameStart;
+  UINTN  NewNameLength;
+  CHAR8  *CurrChar;
 
-  if (This == NULL || AmlNodeInfo == NULL || NewName == NULL) {
+  if ((This == NULL) || (AmlNodeInfo == NULL) || (NewName == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  NewNameLength = AsciiStrLen(NewName);
+  NewNameLength = AsciiStrLen (NewName);
 
-  if (NewNameLength > AML_NAME_LENGTH || NewNameLength == 0) {
+  if ((NewNameLength > AML_NAME_LENGTH) || (NewNameLength == 0)) {
     return EFI_BAD_BUFFER_SIZE;
   }
 
-  if ((*NewName < 'A' || *NewName > 'Z') && *NewName != '_') {
+  if (((*NewName < 'A') || (*NewName > 'Z')) && (*NewName != '_')) {
     return EFI_INVALID_PARAMETER;
   }
 
   for (CurrChar = NewName + 1; CurrChar < NewName + NewNameLength; CurrChar++) {
-    if ((*CurrChar < 'A' || *CurrChar > 'Z')
-        && (*CurrChar < '0' || *CurrChar > '9')
-        && *CurrChar != '_') {
+    if (  ((*CurrChar < 'A') || (*CurrChar > 'Z'))
+       && ((*CurrChar < '0') || (*CurrChar > '9'))
+       && (*CurrChar != '_'))
+    {
       return EFI_INVALID_PARAMETER;
     }
   }
 
-  NameStart = (UINT8*)AmlNodeInfo->AmlTable
-                + AmlNodeInfo->AmlOffsetEntry->NamesegOffset;
+  NameStart = (UINT8 *)AmlNodeInfo->AmlTable
+              + AmlNodeInfo->AmlOffsetEntry->NamesegOffset;
 
-  CopyMem(NameStart, NewName, NewNameLength);
+  CopyMem (NameStart, NewName, NewNameLength);
   if (NewNameLength < AML_NAME_LENGTH) {
-    SetMem(NameStart + NewNameLength, AML_NAME_LENGTH - NewNameLength, '_');
+    SetMem (NameStart + NewNameLength, AML_NAME_LENGTH - NewNameLength, '_');
   }
 
   return EFI_SUCCESS;
@@ -671,34 +697,36 @@ UpdateNodeName(
 EFI_STATUS
 EFIAPI
 AmlPatchDxeEntryPoint (
-  IN EFI_HANDLE       ImageHandle,
-  IN EFI_SYSTEM_TABLE *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                    Status;
-  NVIDIA_AML_PATCH_PRIVATE_DATA *Private;
+  EFI_STATUS                     Status;
+  NVIDIA_AML_PATCH_PRIVATE_DATA  *Private;
 
-  Status = gBS->AllocatePool(EfiBootServicesData,
-                             sizeof(NVIDIA_AML_PATCH_PRIVATE_DATA),
-                             (VOID**)&Private);
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  sizeof (NVIDIA_AML_PATCH_PRIVATE_DATA),
+                  (VOID **)&Private
+                  );
 
-  if (EFI_ERROR(Status) || Private == NULL) {
+  if (EFI_ERROR (Status) || (Private == NULL)) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Private->Signature = NVIDIA_AML_PATCH_SIGNATURE;
+  Private->Signature                          = NVIDIA_AML_PATCH_SIGNATURE;
   Private->AmlPatchProtocol.RegisterAmlTables = RegisterAmlTables;
-  Private->AmlPatchProtocol.FindNode = FindNode;
-  Private->AmlPatchProtocol.GetNodeData = GetNodeData;
-  Private->AmlPatchProtocol.SetNodeData = SetNodeData;
-  Private->AmlPatchProtocol.UpdateNodeName = UpdateNodeName;
+  Private->AmlPatchProtocol.FindNode          = FindNode;
+  Private->AmlPatchProtocol.GetNodeData       = GetNodeData;
+  Private->AmlPatchProtocol.SetNodeData       = SetNodeData;
+  Private->AmlPatchProtocol.UpdateNodeName    = UpdateNodeName;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
-    &ImageHandle,
-    &gNVIDIAAmlPatchProtocolGuid,
-    &Private->AmlPatchProtocol,
-    NULL
-  );
+                  &ImageHandle,
+                  &gNVIDIAAmlPatchProtocolGuid,
+                  &Private->AmlPatchProtocol,
+                  NULL
+                  );
 
   return Status;
 }

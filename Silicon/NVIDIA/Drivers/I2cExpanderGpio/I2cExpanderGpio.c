@@ -20,22 +20,21 @@
 #include <Protocol/EmbeddedGpio.h>
 #include <Protocol/I2cIo.h>
 
-#define GPIO_PER_CONTROLLER 16
+#define GPIO_PER_CONTROLLER  16
 
 typedef struct {
-  UINT32                   NumberOfControllers;
-  PLATFORM_GPIO_CONTROLLER PlatformGpioController;
-  VOID                     *I2cIoSearchToken;
-  EFI_I2C_IO_PROTOCOL      **I2cIoArray;
-  EMBEDDED_GPIO            EmbeddedGpio;
-
+  UINT32                      NumberOfControllers;
+  PLATFORM_GPIO_CONTROLLER    PlatformGpioController;
+  VOID                        *I2cIoSearchToken;
+  EFI_I2C_IO_PROTOCOL         **I2cIoArray;
+  EMBEDDED_GPIO               EmbeddedGpio;
 } I2C_EXPANDER_DATA;
 
-I2C_EXPANDER_DATA mI2cExpanderData;
+I2C_EXPANDER_DATA  mI2cExpanderData;
 
-#define TCA9539_INPUT_BASE  0x0
-#define TCA9539_OUTPUT_BASE 0x2
-#define TCA9539_CONFIG_BASE 0x6
+#define TCA9539_INPUT_BASE   0x0
+#define TCA9539_OUTPUT_BASE  0x2
+#define TCA9539_CONFIG_BASE  0x6
 
 ///
 /// I2C device request
@@ -51,23 +50,23 @@ typedef struct {
   ///
   /// Number of elements in the operation array
   ///
-  UINTN OperationCount;
+  UINTN                OperationCount;
 
   ///
   /// Description of the I2C operation
   ///
-  EFI_I2C_OPERATION Operation [2];
+  EFI_I2C_OPERATION    Operation[2];
 } I2C_REQUEST_PACKET_2_OPS;
 
 STATIC
 EFI_STATUS
 GetGpioController (
-    IN  EMBEDDED_GPIO_PIN   Gpio,
-    OUT EFI_I2C_IO_PROTOCOL **I2cController
-    )
+  IN  EMBEDDED_GPIO_PIN    Gpio,
+  OUT EFI_I2C_IO_PROTOCOL  **I2cController
+  )
 {
-  UINTN                    Index;
-  UINT32                   Controller = GPIO_PORT(Gpio);
+  UINTN   Index;
+  UINT32  Controller = GPIO_PORT (Gpio);
 
   if (I2cController == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -79,6 +78,7 @@ GetGpioController (
       return EFI_SUCCESS;
     }
   }
+
   return EFI_NOT_FOUND;
 }
 
@@ -93,18 +93,18 @@ GetGpioController (
  */
 EFI_STATUS
 GetGpioState (
-  IN  EMBEDDED_GPIO       *This,
-  IN  EMBEDDED_GPIO_PIN   Gpio,
-  OUT UINTN               *Value
+  IN  EMBEDDED_GPIO      *This,
+  IN  EMBEDDED_GPIO_PIN  Gpio,
+  OUT UINTN              *Value
   )
 {
-  EFI_STATUS               Status;
-  EFI_I2C_IO_PROTOCOL      *I2cIo;
-  I2C_REQUEST_PACKET_2_OPS RequestData;
-  EFI_I2C_REQUEST_PACKET   *RequestPacket = (EFI_I2C_REQUEST_PACKET *)&RequestData;
-  UINT16                   Pin = GPIO_PIN (Gpio);
-  UINT8                    Address;
-  UINT8                    Data;
+  EFI_STATUS                Status;
+  EFI_I2C_IO_PROTOCOL       *I2cIo;
+  I2C_REQUEST_PACKET_2_OPS  RequestData;
+  EFI_I2C_REQUEST_PACKET    *RequestPacket = (EFI_I2C_REQUEST_PACKET *)&RequestData;
+  UINT16                    Pin            = GPIO_PIN (Gpio);
+  UINT8                     Address;
+  UINT8                     Data;
 
   if ((NULL == This) || (NULL == Value)) {
     return EFI_INVALID_PARAMETER;
@@ -119,15 +119,15 @@ GetGpioState (
     return EFI_NOT_FOUND;
   }
 
-  Address = TCA9539_INPUT_BASE + (Pin / 8);
-  RequestData.OperationCount = 2;
-  RequestData.Operation[0].Buffer = (VOID *)&Address;
+  Address                                = TCA9539_INPUT_BASE + (Pin / 8);
+  RequestData.OperationCount             = 2;
+  RequestData.Operation[0].Buffer        = (VOID *)&Address;
   RequestData.Operation[0].LengthInBytes = sizeof (Address);
-  RequestData.Operation[0].Flags = 0;
-  RequestData.Operation[1].Buffer = (VOID *)&Data;
+  RequestData.Operation[0].Flags         = 0;
+  RequestData.Operation[1].Buffer        = (VOID *)&Data;
   RequestData.Operation[1].LengthInBytes = sizeof (Data);
-  RequestData.Operation[1].Flags = I2C_FLAG_READ;
-  Status = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
+  RequestData.Operation[1].Flags         = I2C_FLAG_READ;
+  Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to get input register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
@@ -148,21 +148,21 @@ GetGpioState (
  */
 EFI_STATUS
 SetGpioState (
-  IN EMBEDDED_GPIO      *This,
-  IN EMBEDDED_GPIO_PIN  Gpio,
-  IN EMBEDDED_GPIO_MODE Mode
+  IN EMBEDDED_GPIO       *This,
+  IN EMBEDDED_GPIO_PIN   Gpio,
+  IN EMBEDDED_GPIO_MODE  Mode
   )
 {
-  EFI_STATUS               Status;
-  EFI_I2C_IO_PROTOCOL      *I2cIo;
-  I2C_REQUEST_PACKET_2_OPS RequestData;
-  EFI_I2C_REQUEST_PACKET   *RequestPacket = (EFI_I2C_REQUEST_PACKET *)&RequestData;
-  UINT16                   Pin = GPIO_PIN (Gpio);
-  UINT8                    Address;
-  UINT8                    Config;
-  UINT8                    Data;
-  BOOLEAN                  UpdateData;
-  UINT8                    WriteData[2];
+  EFI_STATUS                Status;
+  EFI_I2C_IO_PROTOCOL       *I2cIo;
+  I2C_REQUEST_PACKET_2_OPS  RequestData;
+  EFI_I2C_REQUEST_PACKET    *RequestPacket = (EFI_I2C_REQUEST_PACKET *)&RequestData;
+  UINT16                    Pin            = GPIO_PIN (Gpio);
+  UINT8                     Address;
+  UINT8                     Config;
+  UINT8                     Data;
+  BOOLEAN                   UpdateData;
+  UINT8                     WriteData[2];
 
   if (NULL == This) {
     return EFI_INVALID_PARAMETER;
@@ -177,76 +177,76 @@ SetGpioState (
     return EFI_NOT_FOUND;
   }
 
-  Address = TCA9539_CONFIG_BASE + (Pin / 8);
-  RequestData.OperationCount = 2;
-  RequestData.Operation[0].Buffer = (VOID *)&Address;
+  Address                                = TCA9539_CONFIG_BASE + (Pin / 8);
+  RequestData.OperationCount             = 2;
+  RequestData.Operation[0].Buffer        = (VOID *)&Address;
   RequestData.Operation[0].LengthInBytes = sizeof (Address);
-  RequestData.Operation[0].Flags = 0;
-  RequestData.Operation[1].Buffer = (VOID *)&Config;
+  RequestData.Operation[0].Flags         = 0;
+  RequestData.Operation[1].Buffer        = (VOID *)&Config;
   RequestData.Operation[1].LengthInBytes = sizeof (Config);
-  RequestData.Operation[1].Flags = I2C_FLAG_READ;
-  Status = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
+  RequestData.Operation[1].Flags         = I2C_FLAG_READ;
+  Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
-  Address = TCA9539_OUTPUT_BASE + (Pin / 8);
-  RequestData.OperationCount = 2;
-  RequestData.Operation[0].Buffer = (VOID *)&Address;
+  Address                                = TCA9539_OUTPUT_BASE + (Pin / 8);
+  RequestData.OperationCount             = 2;
+  RequestData.Operation[0].Buffer        = (VOID *)&Address;
   RequestData.Operation[0].LengthInBytes = sizeof (Address);
-  RequestData.Operation[0].Flags = 0;
-  RequestData.Operation[1].Buffer = (VOID *)&Data;
+  RequestData.Operation[0].Flags         = 0;
+  RequestData.Operation[1].Buffer        = (VOID *)&Data;
   RequestData.Operation[1].LengthInBytes = sizeof (Data);
-  RequestData.Operation[1].Flags = I2C_FLAG_READ;
-  Status = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
+  RequestData.Operation[1].Flags         = I2C_FLAG_READ;
+  Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
   switch (Mode) {
-  case GPIO_MODE_INPUT:
-    UpdateData = FALSE;
-    Config |= (1 << (Pin % 8));
-    break;
+    case GPIO_MODE_INPUT:
+      UpdateData = FALSE;
+      Config    |= (1 << (Pin % 8));
+      break;
 
-  case GPIO_MODE_OUTPUT_1:
-    UpdateData = TRUE;
-    Config &= ~(1 << (Pin % 8));
-    Data |= (1 << (Pin % 8));
-    break;
+    case GPIO_MODE_OUTPUT_1:
+      UpdateData = TRUE;
+      Config    &= ~(1 << (Pin % 8));
+      Data      |= (1 << (Pin % 8));
+      break;
 
-  case GPIO_MODE_OUTPUT_0:
-    UpdateData = TRUE;
-    Config &= ~(1 << (Pin % 8));
-    Data &= ~(1 << (Pin % 8));
-    break;
+    case GPIO_MODE_OUTPUT_0:
+      UpdateData = TRUE;
+      Config    &= ~(1 << (Pin % 8));
+      Data      &= ~(1 << (Pin % 8));
+      break;
 
-  default:
-    return EFI_UNSUPPORTED;
+    default:
+      return EFI_UNSUPPORTED;
   }
 
-  WriteData[0] = TCA9539_CONFIG_BASE + (Pin / 8);
-  WriteData[1] = Config;
-  RequestData.OperationCount = 1;
-  RequestData.Operation[0].Buffer = (VOID *)&WriteData;
+  WriteData[0]                           = TCA9539_CONFIG_BASE + (Pin / 8);
+  WriteData[1]                           = Config;
+  RequestData.OperationCount             = 1;
+  RequestData.Operation[0].Buffer        = (VOID *)&WriteData;
   RequestData.Operation[0].LengthInBytes = sizeof (WriteData);
-  RequestData.Operation[0].Flags = 0;
-  Status = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
+  RequestData.Operation[0].Flags         = 0;
+  Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to set config register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
   if (UpdateData) {
-    WriteData[0] = TCA9539_OUTPUT_BASE + (Pin / 8);
-    WriteData[1] = Data;
-    RequestData.OperationCount = 1;
-    RequestData.Operation[0].Buffer = (VOID *)&WriteData;
+    WriteData[0]                           = TCA9539_OUTPUT_BASE + (Pin / 8);
+    WriteData[1]                           = Data;
+    RequestData.OperationCount             = 1;
+    RequestData.Operation[0].Buffer        = (VOID *)&WriteData;
     RequestData.Operation[0].LengthInBytes = sizeof (WriteData);
-    RequestData.Operation[0].Flags = 0;
-    Status = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
+    RequestData.Operation[0].Flags         = 0;
+    Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to set output register: %r.\r\n", __FUNCTION__, Status));
       return EFI_DEVICE_ERROR;
@@ -267,19 +267,19 @@ SetGpioState (
  */
 EFI_STATUS
 GetGpioMode (
-  IN  EMBEDDED_GPIO         *This,
-  IN  EMBEDDED_GPIO_PIN     Gpio,
-  OUT EMBEDDED_GPIO_MODE    *Mode
+  IN  EMBEDDED_GPIO       *This,
+  IN  EMBEDDED_GPIO_PIN   Gpio,
+  OUT EMBEDDED_GPIO_MODE  *Mode
   )
 {
-  EFI_STATUS               Status;
-  EFI_I2C_IO_PROTOCOL      *I2cIo;
-  I2C_REQUEST_PACKET_2_OPS RequestData;
-  EFI_I2C_REQUEST_PACKET   *RequestPacket = (EFI_I2C_REQUEST_PACKET *)&RequestData;
-  UINT16                   Pin = GPIO_PIN (Gpio);
-  UINT8                    Address;
-  UINT8                    Config;
-  UINT8                    Data;
+  EFI_STATUS                Status;
+  EFI_I2C_IO_PROTOCOL       *I2cIo;
+  I2C_REQUEST_PACKET_2_OPS  RequestData;
+  EFI_I2C_REQUEST_PACKET    *RequestPacket = (EFI_I2C_REQUEST_PACKET *)&RequestData;
+  UINT16                    Pin            = GPIO_PIN (Gpio);
+  UINT8                     Address;
+  UINT8                     Config;
+  UINT8                     Data;
 
   if ((NULL == This) || (NULL == Mode)) {
     return EFI_INVALID_PARAMETER;
@@ -294,29 +294,29 @@ GetGpioMode (
     return EFI_NOT_FOUND;
   }
 
-  Address = TCA9539_CONFIG_BASE + (Pin / 8);
-  RequestData.OperationCount = 2;
-  RequestData.Operation[0].Buffer = (VOID *)&Address;
+  Address                                = TCA9539_CONFIG_BASE + (Pin / 8);
+  RequestData.OperationCount             = 2;
+  RequestData.Operation[0].Buffer        = (VOID *)&Address;
   RequestData.Operation[0].LengthInBytes = sizeof (Address);
-  RequestData.Operation[0].Flags = 0;
-  RequestData.Operation[1].Buffer = (VOID *)&Config;
+  RequestData.Operation[0].Flags         = 0;
+  RequestData.Operation[1].Buffer        = (VOID *)&Config;
   RequestData.Operation[1].LengthInBytes = sizeof (Config);
-  RequestData.Operation[1].Flags = I2C_FLAG_READ;
-  Status = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
+  RequestData.Operation[1].Flags         = I2C_FLAG_READ;
+  Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
-  Address = TCA9539_OUTPUT_BASE + (Pin / 8);
-  RequestData.OperationCount = 2;
-  RequestData.Operation[0].Buffer = (VOID *)&Address;
+  Address                                = TCA9539_OUTPUT_BASE + (Pin / 8);
+  RequestData.OperationCount             = 2;
+  RequestData.Operation[0].Buffer        = (VOID *)&Address;
   RequestData.Operation[0].LengthInBytes = sizeof (Address);
-  RequestData.Operation[0].Flags = 0;
-  RequestData.Operation[1].Buffer = (VOID *)&Data;
+  RequestData.Operation[0].Flags         = 0;
+  RequestData.Operation[1].Buffer        = (VOID *)&Data;
   RequestData.Operation[1].LengthInBytes = sizeof (Data);
-  RequestData.Operation[1].Flags = I2C_FLAG_READ;
-  Status = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
+  RequestData.Operation[1].Flags         = I2C_FLAG_READ;
+  Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
@@ -344,17 +344,17 @@ GetGpioMode (
  */
 EFI_STATUS
 SetGpioPull (
-  IN  EMBEDDED_GPIO      *This,
-  IN  EMBEDDED_GPIO_PIN  Gpio,
-  IN  EMBEDDED_GPIO_PULL Direction
+  IN  EMBEDDED_GPIO       *This,
+  IN  EMBEDDED_GPIO_PIN   Gpio,
+  IN  EMBEDDED_GPIO_PULL  Direction
   )
 {
   return EFI_UNSUPPORTED;
 }
 
-STATIC CONST EMBEDDED_GPIO mGpioEmbeddedProtocol = {
-  .Get = GetGpioState,
-  .Set = SetGpioState,
+STATIC CONST EMBEDDED_GPIO  mGpioEmbeddedProtocol = {
+  .Get     = GetGpioState,
+  .Set     = SetGpioState,
   .GetMode = GetGpioMode,
   .SetPull = SetGpioPull
 };
@@ -364,19 +364,20 @@ STATIC CONST EMBEDDED_GPIO mGpioEmbeddedProtocol = {
  */
 STATIC
 VOID
-    InstallI2cExpanderProtocols(
-        VOID
-)
+InstallI2cExpanderProtocols (
+  VOID
+  )
 {
-  EFI_HANDLE ImageHandle = 0;
+  EFI_HANDLE  ImageHandle = 0;
+
   gBS->InstallMultipleProtocolInterfaces (
-    &ImageHandle,
-    &gNVIDIAI2cExpanderGpioProtocolGuid,
-    &mGpioEmbeddedProtocol,
-    &gNVIDIAI2cExpanderPlatformGpioProtocolGuid,
-    &mI2cExpanderData.PlatformGpioController,
-    NULL
-  );
+         &ImageHandle,
+         &gNVIDIAI2cExpanderGpioProtocolGuid,
+         &mGpioEmbeddedProtocol,
+         &gNVIDIAI2cExpanderPlatformGpioProtocolGuid,
+         &mI2cExpanderData.PlatformGpioController,
+         NULL
+         );
 }
 
 /**
@@ -387,42 +388,40 @@ VOID
 STATIC
 VOID
 I2cIoProtocolReady (
-  IN EFI_EVENT Event,
-  IN VOID      *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
-  EFI_STATUS            Status = EFI_SUCCESS;
-  EFI_I2C_IO_PROTOCOL   *I2cIoProtocol;
-  UINT32                Index;
-
+  EFI_STATUS           Status = EFI_SUCCESS;
+  EFI_I2C_IO_PROTOCOL  *I2cIoProtocol;
+  UINT32               Index;
 
   while (!EFI_ERROR (Status)) {
     Status = gBS->LocateProtocol (
                     &gEfiI2cIoProtocolGuid,
                     mI2cExpanderData.I2cIoSearchToken,
-                    (VOID **)&I2cIoProtocol);
+                    (VOID **)&I2cIoProtocol
+                    );
     if (EFI_ERROR (Status)) {
       return;
     }
 
     if (CompareGuid (I2cIoProtocol->DeviceGuid, &gNVIDIAI2cTca9539)) {
-      Index = mI2cExpanderData.PlatformGpioController.GpioControllerCount;
-      mI2cExpanderData.I2cIoArray[Index] = I2cIoProtocol;
-      mI2cExpanderData.PlatformGpioController.GpioController[Index].GpioIndex = GPIO (I2cIoProtocol->DeviceIndex, 0);
-      mI2cExpanderData.PlatformGpioController.GpioController[Index].RegisterBase = 0;
+      Index                                                                           = mI2cExpanderData.PlatformGpioController.GpioControllerCount;
+      mI2cExpanderData.I2cIoArray[Index]                                              = I2cIoProtocol;
+      mI2cExpanderData.PlatformGpioController.GpioController[Index].GpioIndex         = GPIO (I2cIoProtocol->DeviceIndex, 0);
+      mI2cExpanderData.PlatformGpioController.GpioController[Index].RegisterBase      = 0;
       mI2cExpanderData.PlatformGpioController.GpioController[Index].InternalGpioCount = GPIO_PER_CONTROLLER;
       mI2cExpanderData.PlatformGpioController.GpioControllerCount++;
 
       if (mI2cExpanderData.NumberOfControllers == mI2cExpanderData.PlatformGpioController.GpioControllerCount) {
         gBS->CloseEvent (Event);
-        InstallI2cExpanderProtocols();
+        InstallI2cExpanderProtocols ();
         return;
       }
     }
   }
-
 }
-
 
 /**
   The user Entry Point for module. The user code starts with this function.
@@ -436,13 +435,12 @@ I2cIoProtocolReady (
 EFI_STATUS
 EFIAPI
 InitializeI2cExpanderGpio (
-  IN EFI_HANDLE           ImageHandle,
-  IN EFI_SYSTEM_TABLE     *SystemTable
-)
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
 {
-  EFI_STATUS            Status;
-  EFI_EVENT             I2cIoReadyEvent = NULL;
-
+  EFI_STATUS  Status;
+  EFI_EVENT   I2cIoReadyEvent = NULL;
 
   mI2cExpanderData.NumberOfControllers = 0;
 
@@ -454,18 +452,19 @@ InitializeI2cExpanderGpio (
   }
 
   mI2cExpanderData.PlatformGpioController.GpioControllerCount = 0;
-  mI2cExpanderData.PlatformGpioController.GpioCount = 0;
+  mI2cExpanderData.PlatformGpioController.GpioCount           = 0;
 
   if (mI2cExpanderData.NumberOfControllers == 0) {
-    mI2cExpanderData.I2cIoArray = NULL;
+    mI2cExpanderData.I2cIoArray                            = NULL;
     mI2cExpanderData.PlatformGpioController.GpioController = NULL;
-    InstallI2cExpanderProtocols();
+    InstallI2cExpanderProtocols ();
   } else {
     mI2cExpanderData.PlatformGpioController.GpioController = (GPIO_CONTROLLER *)AllocateZeroPool (sizeof (GPIO_CONTROLLER) * mI2cExpanderData.NumberOfControllers);
     if (mI2cExpanderData.PlatformGpioController.GpioController == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Gpio Controller structure\r\n", __FUNCTION__));
       return EFI_OUT_OF_RESOURCES;
     }
+
     mI2cExpanderData.I2cIoArray = (EFI_I2C_IO_PROTOCOL **)AllocateZeroPool (sizeof (EFI_I2C_IO_PROTOCOL *) * mI2cExpanderData.NumberOfControllers);
     if (mI2cExpanderData.I2cIoArray == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate I2C IO array structure\r\n", __FUNCTION__));
@@ -473,13 +472,13 @@ InitializeI2cExpanderGpio (
     }
 
     mI2cExpanderData.I2cIoSearchToken = NULL;
-    I2cIoReadyEvent = EfiCreateProtocolNotifyEvent (
-                        &gEfiI2cIoProtocolGuid,
-                        TPL_CALLBACK,
-                        I2cIoProtocolReady,
-                        NULL,
-                        &mI2cExpanderData.I2cIoSearchToken
-                     );
+    I2cIoReadyEvent                   = EfiCreateProtocolNotifyEvent (
+                                          &gEfiI2cIoProtocolGuid,
+                                          TPL_CALLBACK,
+                                          I2cIoProtocolReady,
+                                          NULL,
+                                          &mI2cExpanderData.I2cIoSearchToken
+                                          );
     if (NULL == I2cIoReadyEvent) {
       DEBUG ((EFI_D_ERROR, "%a, Failed to create I2cIo notification event\r\n", __FUNCTION__, Status));
       return EFI_OUT_OF_RESOURCES;

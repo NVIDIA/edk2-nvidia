@@ -13,7 +13,7 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
-#define NVIDIA_FW_PARTITION_PROTOCOL_GUID {0x52771b87, 0x204a, 0x4d7b,  \
+#define NVIDIA_FW_PARTITION_PROTOCOL_GUID  {0x52771b87, 0x204a, 0x4d7b, \
     {0xab, 0x5c, 0xbe, 0xf8, 0x70, 0x1e, 0x84, 0x16}}
 
 #define FW_PARTITION_NAME_LENGTH                                \
@@ -24,8 +24,8 @@ typedef struct _NVIDIA_FW_PARTITION_PROTOCOL NVIDIA_FW_PARTITION_PROTOCOL;
 
 // partition attributes structure
 typedef struct {
-  UINTN                                 Bytes;
-  UINT32                                BlockSize;
+  UINTN     Bytes;
+  UINT32    BlockSize;
 } FW_PARTITION_ATTRIBUTES;
 
 /**
@@ -90,12 +90,12 @@ EFI_STATUS
 
 // protocol structure
 struct _NVIDIA_FW_PARTITION_PROTOCOL {
-  CONST CHAR16                          *PartitionName;
-  FW_PARTITION_GET_ATTRIBUTES           GetAttributes;
-  FW_PARTITION_READ                     Read;
-  FW_PARTITION_WRITE                    Write;
+  CONST CHAR16                   *PartitionName;
+  FW_PARTITION_GET_ATTRIBUTES    GetAttributes;
+  FW_PARTITION_READ              Read;
+  FW_PARTITION_WRITE             Write;
 };
 
-extern EFI_GUID gNVIDIAFwPartitionProtocolGuid;
+extern EFI_GUID  gNVIDIAFwPartitionProtocolGuid;
 
 #endif

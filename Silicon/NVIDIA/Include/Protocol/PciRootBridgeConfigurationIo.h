@@ -66,25 +66,24 @@ struct _NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL {
   ///
   /// Read PCI controller registers in the PCI root bridge memory space.
   ///
-  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL_IO_MEM  Read;
+  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL_IO_MEM    Read;
   ///
   /// Write PCI controller registers in the PCI root bridge memory space.
   ///
-  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL_IO_MEM  Write;
+  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL_IO_MEM    Write;
 
   ///
   /// The segment number and bus infor that this PCI root bridge resides.
   ///
-  UINT32                                                   SegmentNumber;
-  UINT8                                                    MinBusNumber;
-  UINT8                                                    MaxBusNumber;
+  UINT32                                                     SegmentNumber;
+  UINT8                                                      MinBusNumber;
+  UINT8                                                      MaxBusNumber;
 
   ///
   /// External Facing Port information. Would be set if a controller is
   /// exposing an open slot.
   ///
-  BOOLEAN                                                  IsExternalFacingPort;
+  BOOLEAN                                                    IsExternalFacingPort;
 };
 
 #endif
-

@@ -20,7 +20,7 @@
 #include <Protocol/PciRootBridgeIo.h>
 
 #ifndef MDEPKG_NDEBUG
-STATIC CONST CHAR16 mPciHostBridgeLibAcpiAddressSpaceTypeStr[][4] = {
+STATIC CONST CHAR16  mPciHostBridgeLibAcpiAddressSpaceTypeStr[][4] = {
   L"Mem", L"I/O", L"Bus"
 };
 #endif
@@ -37,14 +37,14 @@ STATIC CONST CHAR16 mPciHostBridgeLibAcpiAddressSpaceTypeStr[][4] = {
 PCI_ROOT_BRIDGE *
 EFIAPI
 PciHostBridgeGetRootBridges (
-  UINTN *Count
+  UINTN  *Count
   )
 {
-  PCI_ROOT_BRIDGE *RootBridges = NULL;
-  EFI_STATUS      Status;
-  UINTN           NumberOfHandles;
-  EFI_HANDLE      *Handles = NULL;
-  UINTN           CurrentHandle;
+  PCI_ROOT_BRIDGE  *RootBridges = NULL;
+  EFI_STATUS       Status;
+  UINTN            NumberOfHandles;
+  EFI_HANDLE       *Handles = NULL;
+  UINTN            CurrentHandle;
 
   if (Count == NULL) {
     return NULL;
@@ -70,15 +70,20 @@ PciHostBridgeGetRootBridges (
   }
 
   for (CurrentHandle = 0; CurrentHandle < NumberOfHandles; CurrentHandle++) {
-    PCI_ROOT_BRIDGE *RootBridge = NULL;
+    PCI_ROOT_BRIDGE  *RootBridge = NULL;
     Status = gBS->HandleProtocol (
                     Handles[CurrentHandle],
                     &gNVIDIAPciHostBridgeProtocolGuid,
                     (VOID **)&RootBridge
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to get protocol for handle %p, %r.\r\n",
-            __FUNCTION__, Handles[CurrentHandle], Status));
+      DEBUG ((
+        EFI_D_ERROR,
+        "%a: Failed to get protocol for handle %p, %r.\r\n",
+        __FUNCTION__,
+        Handles[CurrentHandle],
+        Status
+        ));
       goto Done;
     }
 
@@ -90,6 +95,7 @@ Done:
     FreePool (Handles);
     Handles = NULL;
   }
+
   if (EFI_ERROR (Status)) {
     NumberOfHandles = 0;
     if (RootBridges != NULL) {
@@ -111,8 +117,8 @@ Done:
 VOID
 EFIAPI
 PciHostBridgeFreeRootBridges (
-  PCI_ROOT_BRIDGE *Bridges,
-  UINTN           Count
+  PCI_ROOT_BRIDGE  *Bridges,
+  UINTN            Count
   )
 {
   FreePool (Bridges);
@@ -135,43 +141,52 @@ PciHostBridgeFreeRootBridges (
 VOID
 EFIAPI
 PciHostBridgeResourceConflict (
-  EFI_HANDLE                        HostBridgeHandle,
-  VOID                              *Configuration
+  EFI_HANDLE  HostBridgeHandle,
+  VOID        *Configuration
   )
 {
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *Descriptor;
-  UINTN                             RootBridgeIndex;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Descriptor;
+  UINTN                              RootBridgeIndex;
+
   DEBUG ((DEBUG_ERROR, "PciHostBridge: Resource conflict happens!\n"));
 
   RootBridgeIndex = 0;
-  Descriptor = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *) Configuration;
+  Descriptor      = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)Configuration;
   while (Descriptor->Desc == ACPI_ADDRESS_SPACE_DESCRIPTOR) {
     DEBUG ((DEBUG_ERROR, "RootBridge[%d]:\n", RootBridgeIndex++));
-    for (; Descriptor->Desc == ACPI_ADDRESS_SPACE_DESCRIPTOR; Descriptor++) {
-      ASSERT (Descriptor->ResType <
-              (sizeof (mPciHostBridgeLibAcpiAddressSpaceTypeStr) /
-               sizeof (mPciHostBridgeLibAcpiAddressSpaceTypeStr[0])
-               )
-              );
-      DEBUG ((DEBUG_ERROR, " %s: Length/Alignment = 0x%lx / 0x%lx\n",
-              mPciHostBridgeLibAcpiAddressSpaceTypeStr[Descriptor->ResType],
-              Descriptor->AddrLen, Descriptor->AddrRangeMax
-              ));
+    for ( ; Descriptor->Desc == ACPI_ADDRESS_SPACE_DESCRIPTOR; Descriptor++) {
+      ASSERT (
+        Descriptor->ResType <
+        (sizeof (mPciHostBridgeLibAcpiAddressSpaceTypeStr) /
+         sizeof (mPciHostBridgeLibAcpiAddressSpaceTypeStr[0])
+        )
+        );
+      DEBUG ((
+        DEBUG_ERROR,
+        " %s: Length/Alignment = 0x%lx / 0x%lx\n",
+        mPciHostBridgeLibAcpiAddressSpaceTypeStr[Descriptor->ResType],
+        Descriptor->AddrLen,
+        Descriptor->AddrRangeMax
+        ));
       if (Descriptor->ResType == ACPI_ADDRESS_SPACE_TYPE_MEM) {
-        DEBUG ((DEBUG_ERROR, "     Granularity/SpecificFlag = %ld / %02x%s\n",
-                Descriptor->AddrSpaceGranularity, Descriptor->SpecificFlag,
-                ((Descriptor->SpecificFlag &
-                  EFI_ACPI_MEMORY_RESOURCE_SPECIFIC_FLAG_CACHEABLE_PREFETCHABLE
-                  ) != 0) ? L" (Prefetchable)" : L""
-                ));
+        DEBUG ((
+          DEBUG_ERROR,
+          "     Granularity/SpecificFlag = %ld / %02x%s\n",
+          Descriptor->AddrSpaceGranularity,
+          Descriptor->SpecificFlag,
+          ((Descriptor->SpecificFlag &
+            EFI_ACPI_MEMORY_RESOURCE_SPECIFIC_FLAG_CACHEABLE_PREFETCHABLE
+            ) != 0) ? L" (Prefetchable)" : L""
+          ));
       }
     }
+
     //
     // Skip the END descriptor for root bridge
     //
     ASSERT (Descriptor->Desc == ACPI_END_TAG_DESCRIPTOR);
     Descriptor = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)(
-                   (EFI_ACPI_END_TAG_DESCRIPTOR *)Descriptor + 1
-                   );
+                                                       (EFI_ACPI_END_TAG_DESCRIPTOR *)Descriptor + 1
+                                                       );
   }
 }

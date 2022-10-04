@@ -7,6 +7,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
 #ifndef __UEFI_RUNTIME_SERVICES_TABLE_STUB_LIB_H__
 #define __UEFI_RUNTIME_SERVICES_TABLE_STUB_LIB_H__
 
@@ -25,9 +26,9 @@
 **/
 VOID
 MockUefiGetVariable (
-  IN  CHAR16        *Name,
-  IN  EFI_GUID      *Guid,
-  IN  EFI_STATUS    ReturnStatus
+  IN  CHAR16      *Name,
+  IN  EFI_GUID    *Guid,
+  IN  EFI_STATUS  ReturnStatus
   );
 
 /**
@@ -42,9 +43,9 @@ MockUefiGetVariable (
 **/
 VOID
 MockUefiSetVariable (
-  IN  CHAR16        *Name,
-  IN  EFI_GUID      *Guid,
-  IN  EFI_STATUS    ReturnStatus
+  IN  CHAR16      *Name,
+  IN  EFI_GUID    *Guid,
+  IN  EFI_STATUS  ReturnStatus
   );
 
 /**
@@ -55,7 +56,7 @@ MockUefiSetVariable (
 **/
 VOID
 UefiRuntimeServicesTableInit (
-  IN  BOOLEAN   PreserveVariables
+  IN  BOOLEAN  PreserveVariables
   );
 
 /**
@@ -66,7 +67,7 @@ UefiRuntimeServicesTableInit (
 **/
 VOID
 UefiRuntimeServicesTableDeinit (
-  IN  BOOLEAN   PreserveVariables
+  IN  BOOLEAN  PreserveVariables
   );
 
 #endif

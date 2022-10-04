@@ -25,7 +25,7 @@
 NVIDIA_FW_IMAGE_PROTOCOL *
 EFIAPI
 FwImageFindProtocol (
-  CONST CHAR16                  *Name
+  CONST CHAR16  *Name
   );
 
 /**

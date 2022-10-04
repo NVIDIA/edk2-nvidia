@@ -26,7 +26,7 @@
 RETURN_STATUS
 EFIAPI
 TegraSbsaSerialPortInitialize (
-  IN UINTN SerialRegisterBase
+  IN UINTN  SerialRegisterBase
   )
 {
   UINT64              BaudRate;
@@ -35,11 +35,11 @@ TegraSbsaSerialPortInitialize (
   UINT8               DataBits;
   EFI_STOP_BITS_TYPE  StopBits;
 
-  BaudRate = FixedPcdGet64 (PcdUartDefaultBaudRate);
+  BaudRate         = FixedPcdGet64 (PcdUartDefaultBaudRate);
   ReceiveFifoDepth = 0;         // Use default FIFO depth
-  Parity = (EFI_PARITY_TYPE)FixedPcdGet8 (PcdUartDefaultParity);
-  DataBits = FixedPcdGet8 (PcdUartDefaultDataBits);
-  StopBits = (EFI_STOP_BITS_TYPE) FixedPcdGet8 (PcdUartDefaultStopBits);
+  Parity           = (EFI_PARITY_TYPE)FixedPcdGet8 (PcdUartDefaultParity);
+  DataBits         = FixedPcdGet8 (PcdUartDefaultDataBits);
+  StopBits         = (EFI_STOP_BITS_TYPE)FixedPcdGet8 (PcdUartDefaultStopBits);
 
   return PL011UartInitializePort (
            SerialRegisterBase,
@@ -65,9 +65,9 @@ TegraSbsaSerialPortInitialize (
 UINTN
 EFIAPI
 TegraSbsaSerialPortWrite (
-  IN UINTN     SerialRegisterBase,
-  IN UINT8     *Buffer,
-  IN UINTN     NumberOfBytes
+  IN UINTN  SerialRegisterBase,
+  IN UINT8  *Buffer,
+  IN UINTN  NumberOfBytes
   )
 {
   return PL011UartWrite (SerialRegisterBase, Buffer, NumberOfBytes);
@@ -86,10 +86,10 @@ TegraSbsaSerialPortWrite (
 UINTN
 EFIAPI
 TegraSbsaSerialPortRead (
-  IN UINTN      SerialRegisterBase,
-  OUT UINT8     *Buffer,
-  IN  UINTN     NumberOfBytes
-)
+  IN UINTN   SerialRegisterBase,
+  OUT UINT8  *Buffer,
+  IN  UINTN  NumberOfBytes
+  )
 {
   return PL011UartRead (SerialRegisterBase, Buffer, NumberOfBytes);
 }
@@ -104,11 +104,12 @@ TegraSbsaSerialPortRead (
 BOOLEAN
 EFIAPI
 TegraSbsaSerialPortPoll (
-  IN UINTN     SerialRegisterBase
+  IN UINTN  SerialRegisterBase
   )
 {
   return PL011UartPoll (SerialRegisterBase);
 }
+
 /**
   Set new attributes to PL011.
 
@@ -241,8 +242,7 @@ TegraSbsaSerialPortGetControl (
   return PL011UartGetControl (SerialRegisterBase, Control);
 }
 
-
-TEGRA_UART_OBJ TegraSbsaUart = {
+TEGRA_UART_OBJ  TegraSbsaUart = {
   TegraSbsaSerialPortInitialize,
   TegraSbsaSerialPortWrite,
   TegraSbsaSerialPortRead,

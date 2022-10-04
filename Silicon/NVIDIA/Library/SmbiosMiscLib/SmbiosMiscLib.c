@@ -45,6 +45,7 @@ OemGetPhysMemArrayLocation (
 {
   return MemoryArrayLocationUnknown;
 }
+
 /** Fetches the usage of the physical memory (Type16).
 
   @return The array use.
@@ -62,7 +63,6 @@ OemGetPhysMemArrayUse (
 
   @return The error correction used.
 **/
-
 MEMORY_ERROR_CORRECTION
 EFIAPI
 OemGetPhysMemErrCorrection (
@@ -76,12 +76,11 @@ OemGetPhysMemErrCorrection (
 
   @return The number of physical memory devices.
 **/
-
 UINT16
 EFIAPI
 OemGetPhysMemNumDevices (
   VOID
- )
+  )
 {
   return 0;
 }
@@ -90,12 +89,11 @@ OemGetPhysMemNumDevices (
 
   @return The max capacity across physical memory devices.
 **/
-
 UINT64
 EFIAPI
 OemGetPhysMemExtendedMaxCapacity (
   VOID
- )
+  )
 {
   return 0;
 }
@@ -105,12 +103,11 @@ OemGetPhysMemExtendedMaxCapacity (
   @return The err/handle of the last err detected OR 0xFFFE if this
           isn't reported..
 **/
-
 UINT16
 EFIAPI
 OemGetPhysMemErrInfoHandle (
   VOID
- )
+  )
 {
   return 0xFFFE;
 }
@@ -118,7 +115,7 @@ OemGetPhysMemErrInfoHandle (
 EFI_STATUS
 EFIAPI
 SmbiosMiscLibConstructor (
-    VOID
+  VOID
   )
 {
   return EFI_SUCCESS;

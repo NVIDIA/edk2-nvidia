@@ -27,25 +27,25 @@
 
 #include <libfdt.h>
 
-#define DISPLAY_SOR_COUNT               8
-#define DISPLAY_FE_SW_SYS_CAP           0x00030000
-#define DISPLAY_FE_CMGR_CLK_SOR(i)      (0x00002300 + (i) * SIZE_2KB)
+#define DISPLAY_SOR_COUNT      8
+#define DISPLAY_FE_SW_SYS_CAP  0x00030000
+#define DISPLAY_FE_CMGR_CLK_SOR(i)  (0x00002300 + (i) * SIZE_2KB)
 
-#define DISPLAY_CONTROLLER_SIGNATURE SIGNATURE_32('N','V','D','C')
+#define DISPLAY_CONTROLLER_SIGNATURE  SIGNATURE_32('N','V','D','C')
 
 typedef struct {
-  UINT32                                Signature;
-  EFI_HANDLE                            DriverHandle;
-  EFI_HANDLE                            ControllerHandle;
-  NON_DISCOVERABLE_DEVICE               EdkiiNonDiscoverableDevice;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR     *FramebufferResource;
-  BOOLEAN                               ResetsDeasserted;
-  BOOLEAN                               ClocksEnabled;
-  BOOLEAN                               OutputGpiosConfigured;
-  EFI_EVENT                             OnExitBootServicesEvent;
+  UINT32                               Signature;
+  EFI_HANDLE                           DriverHandle;
+  EFI_HANDLE                           ControllerHandle;
+  NON_DISCOVERABLE_DEVICE              EdkiiNonDiscoverableDevice;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR    *FramebufferResource;
+  BOOLEAN                              ResetsDeasserted;
+  BOOLEAN                              ClocksEnabled;
+  BOOLEAN                              OutputGpiosConfigured;
+  EFI_EVENT                            OnExitBootServicesEvent;
 } NVIDIA_DISPLAY_CONTROLLER_CONTEXT;
 
-#define DISPLAY_CONTROLLER_CONTEXT_FROM_EDKII_DEVICE(a) CR( \
+#define DISPLAY_CONTROLLER_CONTEXT_FROM_EDKII_DEVICE(a)  CR(\
     a,                                                      \
     NVIDIA_DISPLAY_CONTROLLER_CONTEXT,                      \
     EdkiiNonDiscoverableDevice,                             \
@@ -54,19 +54,19 @@ typedef struct {
 
 /* Discover driver */
 
-NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-    { "nvidia,tegra234-display", &gNVIDIANonDiscoverableT234DisplayDeviceGuid },
-    { NULL, NULL }
+NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
+  { "nvidia,tegra234-display", &gNVIDIANonDiscoverableT234DisplayDeviceGuid },
+  { NULL,                      NULL                                         }
 };
 
-NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-    .DriverName = L"NV Display Controller Driver",
-    .UseDriverBinding = TRUE,
-    .AutoEnableClocks = FALSE,
-    .AutoDeassertReset = FALSE,
-    .AutoResetModule = FALSE,
-    .AutoDeassertPg = TRUE,
-    .SkipEdkiiNondiscoverableInstall = TRUE
+NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
+  .DriverName                      = L"NV Display Controller Driver",
+  .UseDriverBinding                = TRUE,
+  .AutoEnableClocks                = FALSE,
+  .AutoDeassertReset               = FALSE,
+  .AutoResetModule                 = FALSE,
+  .AutoDeassertPg                  = TRUE,
+  .SkipEdkiiNondiscoverableInstall = TRUE
 };
 
 /**
@@ -81,11 +81,11 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
 STATIC
 EFI_STATUS
 ResetRequiredDisplayEngines (
-  IN       EFI_HANDLE   ControllerHandle,
-  IN CONST BOOLEAN      Assert
-)
+  IN       EFI_HANDLE  ControllerHandle,
+  IN CONST BOOLEAN     Assert
+  )
 {
-  STATIC CONST CHAR8 *CONST DisplayResets[] = {
+  STATIC CONST CHAR8 *CONST  DisplayResets[] = {
     "nvdisplay_reset",
     "dpaux0_reset",
   };
@@ -101,9 +101,13 @@ ResetRequiredDisplayEngines (
     Status = DeviceDiscoveryConfigReset (ControllerHandle, ResetName, Assert);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        DEBUG_ERROR, "%a: failed to %a reset %a: %r \r\n",
-        __FUNCTION__, Assert ? "assert" : "deassert", ResetName, Status
-      ));
+        DEBUG_ERROR,
+        "%a: failed to %a reset %a: %r \r\n",
+        __FUNCTION__,
+        Assert ? "assert" : "deassert",
+        ResetName,
+        Status
+        ));
       break;
     }
   }
@@ -125,11 +129,11 @@ ResetRequiredDisplayEngines (
 STATIC
 EFI_STATUS
 EnableRequiredDisplayClocks (
-  IN       EFI_HANDLE   ControllerHandle,
-  IN CONST BOOLEAN      Enable
+  IN       EFI_HANDLE  ControllerHandle,
+  IN CONST BOOLEAN     Enable
   )
 {
-  STATIC CONST CHAR8 *CONST Clocks[] = {
+  STATIC CONST CHAR8 *CONST  Clocks[] = {
     "nvdisplay_disp_clk",
     "dpaux0_clk",
     "nvdisplayhub_clk",
@@ -138,29 +142,33 @@ EnableRequiredDisplayClocks (
     "aza_2xbit_clk",
     "aza_bit_clk",
   };
-  STATIC CONST CHAR8 *CONST ClockParents[][2] = {
-    {"nvdisplay_disp_clk", "disppll_clk"},
-    {"nvdisplayhub_clk", "sppll0_clkoutb_clk"},
+  STATIC CONST CHAR8 *CONST  ClockParents[][2] = {
+    { "nvdisplay_disp_clk", "disppll_clk"        },
+    { "nvdisplayhub_clk",   "sppll0_clkoutb_clk" },
   };
 
-  EFI_STATUS                    Status;
-  UINTN                         Index;
-  CONST CHAR8                   *ClockName;
-  CONST CHAR8                   *ParentClockName;
-  NVIDIA_CLOCK_NODE_PROTOCOL    *ClockNodeProtocol;
+  EFI_STATUS                  Status;
+  UINTN                       Index;
+  CONST CHAR8                 *ClockName;
+  CONST CHAR8                 *ParentClockName;
+  NVIDIA_CLOCK_NODE_PROTOCOL  *ClockNodeProtocol;
 
   if (Enable) {
     /* Set required clock parents */
     for (Index = 0; Index < ARRAY_SIZE (ClockParents); ++Index) {
-      ClockName = ClockParents[Index][0];
+      ClockName       = ClockParents[Index][0];
       ParentClockName = ClockParents[Index][1];
 
       Status = DeviceDiscoverySetClockParent (ControllerHandle, ClockName, ParentClockName);
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          DEBUG_ERROR, "%a: failed to set parent of clock '%a' to '%a': %r\r\n",
-          __FUNCTION__, ClockName, ParentClockName, Status
-        ));
+          DEBUG_ERROR,
+          "%a: failed to set parent of clock '%a' to '%a': %r\r\n",
+          __FUNCTION__,
+          ClockName,
+          ParentClockName,
+          Status
+          ));
         return Status;
       }
     }
@@ -172,9 +180,12 @@ EnableRequiredDisplayClocks (
       Status = DeviceDiscoveryEnableClock (ControllerHandle, ClockName, TRUE);
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          DEBUG_ERROR, "%a: failed to enable clock '%a': %r\r\n",
-          __FUNCTION__, ClockName, Status
-        ));
+          DEBUG_ERROR,
+          "%a: failed to enable clock '%a': %r\r\n",
+          __FUNCTION__,
+          ClockName,
+          Status
+          ));
         return Status;
       }
     }
@@ -182,22 +193,26 @@ EnableRequiredDisplayClocks (
     Status = gBS->HandleProtocol (
                     ControllerHandle,
                     &gNVIDIAClockNodeProtocolGuid,
-                    (VOID**) &ClockNodeProtocol
+                    (VOID **)&ClockNodeProtocol
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        DEBUG_ERROR, "%a: failed to lookup clock node protocol: %r\r\n",
-        __FUNCTION__, Status
-      ));
+        DEBUG_ERROR,
+        "%a: failed to lookup clock node protocol: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
       return Status;
     }
 
     Status = ClockNodeProtocol->DisableAll (ClockNodeProtocol);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        DEBUG_ERROR, "%a: failed to disable clocks: %r\r\n",
-        __FUNCTION__, Status
-      ));
+        DEBUG_ERROR,
+        "%a: failed to disable clocks: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
       return Status;
     }
   }
@@ -219,47 +234,65 @@ EnableRequiredDisplayClocks (
 STATIC
 BOOLEAN
 GetSubnodeGpioPin (
-  IN  VOID          *CONST DeviceTreeBase,
-  IN  CONST INT32   NodeOffset,
-  IN  CONST CHAR8   *CONST SubnodeName,
-  OUT UINT32        *CONST Pin
+  IN  VOID          *CONST  DeviceTreeBase,
+  IN  CONST INT32           NodeOffset,
+  IN  CONST CHAR8   *CONST  SubnodeName,
+  OUT UINT32        *CONST  Pin
   )
 {
-  INT32         SubnodeOffset;
-  CONST CHAR8   *CONST GpiosPropName = "gpios";
-  CONST VOID    *GpiosProp;
-  INT32         PropSize;
+  INT32                 SubnodeOffset;
+  CONST CHAR8   *CONST  GpiosPropName = "gpios";
+  CONST VOID            *GpiosProp;
+  INT32                 PropSize;
 
-  SubnodeOffset = fdt_subnode_offset (DeviceTreeBase, NodeOffset,
-                                      SubnodeName);
+  SubnodeOffset = fdt_subnode_offset (
+                    DeviceTreeBase,
+                    NodeOffset,
+                    SubnodeName
+                    );
   if (SubnodeOffset < 0) {
     if (SubnodeOffset != -FDT_ERR_NOTFOUND) {
       DEBUG ((
-        DEBUG_ERROR, "%a: could not locate subnode '%a': %a\r\n",
-        __FUNCTION__, SubnodeName, fdt_strerror (SubnodeOffset)
-      ));
+        DEBUG_ERROR,
+        "%a: could not locate subnode '%a': %a\r\n",
+        __FUNCTION__,
+        SubnodeName,
+        fdt_strerror (SubnodeOffset)
+        ));
     }
+
     return FALSE;
   }
 
-  GpiosProp = fdt_getprop (DeviceTreeBase, SubnodeOffset,
-                           GpiosPropName, &PropSize);
+  GpiosProp = fdt_getprop (
+                DeviceTreeBase,
+                SubnodeOffset,
+                GpiosPropName,
+                &PropSize
+                );
   if (GpiosProp == NULL) {
     DEBUG ((
-      DEBUG_ERROR, "%a: could not locate property '%a': %a\r\n",
-      __FUNCTION__, GpiosPropName, fdt_strerror (PropSize)
-    ));
-    return FALSE;
-  }
-  if (PropSize < sizeof (*Pin)) {
-    DEBUG ((
-      DEBUG_ERROR, "%a: invalid size of property '%a': %d\r\n",
-      __FUNCTION__, GpiosPropName, (INTN) PropSize
-    ));
+      DEBUG_ERROR,
+      "%a: could not locate property '%a': %a\r\n",
+      __FUNCTION__,
+      GpiosPropName,
+      fdt_strerror (PropSize)
+      ));
     return FALSE;
   }
 
-  *Pin = SwapBytes32 (*(CONST UINT32*) GpiosProp);
+  if (PropSize < sizeof (*Pin)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: invalid size of property '%a': %d\r\n",
+      __FUNCTION__,
+      GpiosPropName,
+      (INTN)PropSize
+      ));
+    return FALSE;
+  }
+
+  *Pin = SwapBytes32 (*(CONST UINT32 *)GpiosProp);
   return TRUE;
 }
 
@@ -269,44 +302,54 @@ GetSubnodeGpioPin (
 STATIC
 EFI_STATUS
 ConfigureOutputGpios (
-  IN       EFI_HANDLE   ControllerHandle,
-  IN CONST BOOLEAN      Enable,
-  IN CONST BOOLEAN      UseDpOutput
+  IN       EFI_HANDLE  ControllerHandle,
+  IN CONST BOOLEAN     Enable,
+  IN CONST BOOLEAN     UseDpOutput
   )
 {
-  EFI_STATUS                        Status;
-  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode;
-  VOID                              *DeviceTreeBase;
-  EMBEDDED_GPIO                     *EmbeddedGpio;
-  CONST CHAR8                       *CONST GpioCompatible = "ti,tca9539";
-  INT32                             GpioOffset;
-  UINT32                            GpioPhandle;
-  UINT32                            EnVddHdmiPin;
-  UINT32                            Dp0AuxUart6SelPin;
-  UINT32                            HdmiDp0MuxSelPin;
-  UINT32                            Dp0AuxI2c8SelPin;
-  EMBEDDED_GPIO_PIN                 GpioPin;
-  EMBEDDED_GPIO_MODE                GpioMode;
+  EFI_STATUS                                Status;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL          *DeviceTreeNode;
+  VOID                                      *DeviceTreeBase;
+  EMBEDDED_GPIO                             *EmbeddedGpio;
+  CONST CHAR8                       *CONST  GpioCompatible = "ti,tca9539";
+  INT32                                     GpioOffset;
+  UINT32                                    GpioPhandle;
+  UINT32                                    EnVddHdmiPin;
+  UINT32                                    Dp0AuxUart6SelPin;
+  UINT32                                    HdmiDp0MuxSelPin;
+  UINT32                                    Dp0AuxI2c8SelPin;
+  EMBEDDED_GPIO_PIN                         GpioPin;
+  EMBEDDED_GPIO_MODE                        GpioMode;
 
-  Status = gBS->HandleProtocol (ControllerHandle,
-                                &gNVIDIADeviceTreeNodeProtocolGuid,
-                                (VOID**) &DeviceTreeNode);
+  Status = gBS->HandleProtocol (
+                  ControllerHandle,
+                  &gNVIDIADeviceTreeNodeProtocolGuid,
+                  (VOID **)&DeviceTreeNode
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      DEBUG_ERROR, "%a: could not retrieve DT node protocol: %r\r\n",
-      __FUNCTION__, Status
-    ));
+      DEBUG_ERROR,
+      "%a: could not retrieve DT node protocol: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
     return Status;
   }
+
   DeviceTreeBase = DeviceTreeNode->DeviceTreeBase;
 
-  Status = gBS->LocateProtocol (&gNVIDIAI2cExpanderGpioProtocolGuid,
-                                NULL, (VOID**) &EmbeddedGpio);
+  Status = gBS->LocateProtocol (
+                  &gNVIDIAI2cExpanderGpioProtocolGuid,
+                  NULL,
+                  (VOID **)&EmbeddedGpio
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      DEBUG_ERROR, "%a: could not locate I2C expander GPIO protocol: %r\r\n",
-      __FUNCTION__, Status
-    ));
+      DEBUG_ERROR,
+      "%a: could not locate I2C expander GPIO protocol: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
     return Status;
   }
 
@@ -315,78 +358,101 @@ ConfigureOutputGpios (
     GpioOffset = fdt_node_offset_by_compatible (DeviceTreeBase, GpioOffset, GpioCompatible);
     if (GpioOffset == -FDT_ERR_NOTFOUND) {
       DEBUG ((
-        DEBUG_WARN, "%a: could not find compatible GPIO node in DT: not on SLT board?\r\n",
+        DEBUG_WARN,
+        "%a: could not find compatible GPIO node in DT: not on SLT board?\r\n",
         __FUNCTION__
-      ));
+        ));
       /* Return success to avoid breaking boot on non-SLT boards. */
       return EFI_SUCCESS;
     } else if (GpioOffset < 0) {
       DEBUG ((
-        DEBUG_ERROR, "%a: failed to lookup node by compatible '%a': %a\r\n",
-        __FUNCTION__, GpioCompatible, fdt_strerror (GpioOffset)
-      ));
+        DEBUG_ERROR,
+        "%a: failed to lookup node by compatible '%a': %a\r\n",
+        __FUNCTION__,
+        GpioCompatible,
+        fdt_strerror (GpioOffset)
+        ));
       return EFI_NOT_FOUND;
     }
 
-    if (GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "en_vdd_hdmi_cvm", &EnVddHdmiPin)
-        && GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "dp0_aux_uart6_sel", &Dp0AuxUart6SelPin)
-        && GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "hdmi_dp0_mux_sel", &HdmiDp0MuxSelPin)
-        && GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "dp0_aux_i2c8_sel", &Dp0AuxI2c8SelPin)) {
+    if (  GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "en_vdd_hdmi_cvm", &EnVddHdmiPin)
+       && GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "dp0_aux_uart6_sel", &Dp0AuxUart6SelPin)
+       && GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "hdmi_dp0_mux_sel", &HdmiDp0MuxSelPin)
+       && GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, "dp0_aux_i2c8_sel", &Dp0AuxI2c8SelPin))
+    {
       break;
     }
   }
 
   GpioPhandle = fdt_get_phandle (DeviceTreeBase, GpioOffset);
-  if (0 == GpioPhandle || -1 == GpioPhandle) {
+  if ((0 == GpioPhandle) || (-1 == GpioPhandle)) {
     DEBUG ((
-      DEBUG_ERROR, "%a: failed to find phandle of node at offset %d\r\n",
-      __FUNCTION__, (INTN) GpioOffset
-    ));
+      DEBUG_ERROR,
+      "%a: failed to find phandle of node at offset %d\r\n",
+      __FUNCTION__,
+      (INTN)GpioOffset
+      ));
     return EFI_NOT_FOUND;
   }
 
   GpioPin  = GPIO (GpioPhandle, EnVddHdmiPin);
   GpioMode = Enable ? GPIO_MODE_OUTPUT_1 : GPIO_MODE_OUTPUT_0;
-  Status = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+  Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      DEBUG_ERROR, "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
-      __FUNCTION__, GpioPin, GpioMode, Status
-    ));
+      DEBUG_ERROR,
+      "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+      __FUNCTION__,
+      GpioPin,
+      GpioMode,
+      Status
+      ));
     return Status;
   }
 
   if (Enable) {
     GpioPin  = GPIO (GpioPhandle, Dp0AuxUart6SelPin);
     GpioMode = GPIO_MODE_OUTPUT_0;
-    Status = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+    Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        DEBUG_ERROR, "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
-        __FUNCTION__, GpioPin, GpioMode, Status
-      ));
+        DEBUG_ERROR,
+        "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+        __FUNCTION__,
+        GpioPin,
+        GpioMode,
+        Status
+        ));
       return Status;
     }
 
     GpioPin  = GPIO (GpioPhandle, HdmiDp0MuxSelPin);
     GpioMode = UseDpOutput ? GPIO_MODE_OUTPUT_1 : GPIO_MODE_OUTPUT_0;
-    Status = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+    Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        DEBUG_ERROR, "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
-        __FUNCTION__, GpioPin, GpioMode, Status
-      ));
+        DEBUG_ERROR,
+        "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+        __FUNCTION__,
+        GpioPin,
+        GpioMode,
+        Status
+        ));
       return Status;
     }
 
     GpioPin  = GPIO (GpioPhandle, Dp0AuxI2c8SelPin);
     GpioMode = GPIO_MODE_OUTPUT_0;
-    Status = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+    Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        DEBUG_ERROR, "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
-        __FUNCTION__, GpioPin, GpioMode, Status
-      ));
+        DEBUG_ERROR,
+        "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+        __FUNCTION__,
+        GpioPin,
+        GpioMode,
+        Status
+        ));
       return Status;
     }
   }
@@ -409,21 +475,21 @@ ConfigureOutputGpios (
 STATIC
 EFI_STATUS
 CreateFramebufferResource (
-  OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *CONST Desc,
-  IN  CONST UINTN                       HorizontalResolution,
-  IN  CONST UINTN                       VerticalResolution,
-  IN  CONST UINTN                       PixelSize
+  OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *CONST  Desc,
+  IN  CONST UINTN                               HorizontalResolution,
+  IN  CONST UINTN                               VerticalResolution,
+  IN  CONST UINTN                               PixelSize
   )
 {
-  EFI_STATUS    Status;
-  VOID          *Address;
-  UINTN         Pitch, Size, Pages;
+  EFI_STATUS  Status;
+  VOID        *Address;
+  UINTN       Pitch, Size, Pages;
 
   /* The GOP driver treats bits [25:0] as non-address bits and masks
      them away. Require 64 MB alignment (2^26 B) to make sure the
      low-order 26 bits are zero, so the GOP driver won't mask away
      address bits. */
-  CONST UINTN Alignment = SIZE_64MB;
+  CONST UINTN  Alignment = SIZE_64MB;
 
   ZeroMem (Desc, sizeof (*Desc));
 
@@ -431,10 +497,11 @@ CreateFramebufferResource (
      the next power of two. */
   Pitch = HorizontalResolution * PixelSize;
   if ((Pitch & -Pitch) != Pitch) {
-    Pitch = (UINTN) GetPowerOfTwo32 ((UINT32) Pitch) << 1;
+    Pitch = (UINTN)GetPowerOfTwo32 ((UINT32)Pitch) << 1;
   }
 
   Size = VerticalResolution * Pitch;
+
   /* Since we are allocating the framebuffer memory as
      EfiRuntimeServicesData, make sure the size is a multiple of
      RUNTIME_PAGE_ALLOCATION_GRANULARITY in order to avoid problems
@@ -442,25 +509,29 @@ CreateFramebufferResource (
   Size += RUNTIME_PAGE_ALLOCATION_GRANULARITY - 1;
   Size &= ~(RUNTIME_PAGE_ALLOCATION_GRANULARITY - 1);
 
-  Pages = EFI_SIZE_TO_PAGES (Size);
+  Pages  = EFI_SIZE_TO_PAGES (Size);
   Status = DmaAllocateAlignedBuffer (EfiRuntimeServicesData, Pages, Alignment, &Address);
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to allocate %u framebuffer pages (%u bytes): %r\r\n",
-      __FUNCTION__, Pages, Size, Status
-    ));
+      __FUNCTION__,
+      Pages,
+      Size,
+      Status
+      ));
     return Status;
   }
+
   ZeroMem (Address, Size);
 
   Desc->Desc                  = ACPI_ADDRESS_SPACE_DESCRIPTOR;
   Desc->Len                   = sizeof (*Desc) - 3;
-  Desc->AddrRangeMin          = (EFI_PHYSICAL_ADDRESS) Address;
+  Desc->AddrRangeMin          = (EFI_PHYSICAL_ADDRESS)Address;
   Desc->AddrLen               = Size;
-  Desc->AddrRangeMax          = (EFI_PHYSICAL_ADDRESS) Address + Size - 1;
+  Desc->AddrRangeMax          = (EFI_PHYSICAL_ADDRESS)Address + Size - 1;
   Desc->ResType               = ACPI_ADDRESS_SPACE_TYPE_MEM;
-  Desc->AddrSpaceGranularity  = (EFI_PHYSICAL_ADDRESS) Address + Size > SIZE_4GB ? 64 : 32;
+  Desc->AddrSpaceGranularity  = (EFI_PHYSICAL_ADDRESS)Address + Size > SIZE_4GB ? 64 : 32;
   Desc->AddrTranslationOffset = 0;
   return EFI_SUCCESS;
 }
@@ -474,25 +545,29 @@ CreateFramebufferResource (
 STATIC
 EFI_STATUS
 DestroyFramebufferResource (
-  IN EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *CONST Desc
+  IN EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *CONST  Desc
   )
 {
-  EFI_STATUS    Status = EFI_SUCCESS;
-  VOID          *Address;
-  UINTN         Pages;
+  EFI_STATUS  Status = EFI_SUCCESS;
+  VOID        *Address;
+  UINTN       Pages;
 
-  Address = (VOID*) (EFI_PHYSICAL_ADDRESS) Desc->AddrRangeMin;
+  Address = (VOID *)(EFI_PHYSICAL_ADDRESS)Desc->AddrRangeMin;
   if (Address != NULL) {
-    Pages = EFI_SIZE_TO_PAGES (Desc->AddrLen);
+    Pages  = EFI_SIZE_TO_PAGES (Desc->AddrLen);
     Status = DmaFreeBuffer (Pages, Address);
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
         "%a: failed to free %u framebuffer pages (%lu bytes): %r\r\n",
-        __FUNCTION__, Pages, Desc->AddrLen, Status
-      ));
+        __FUNCTION__,
+        Pages,
+        Desc->AddrLen,
+        Status
+        ));
     }
   }
+
   return Status;
 }
 
@@ -524,48 +599,52 @@ DestroyFramebufferResource (
 STATIC
 EFI_STATUS
 CopyAndInsertResource (
-     OUT       EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *CONST DestinationResources OPTIONAL,
-     OUT       UINTN                              *CONST DestinationResourcesSize OPTIONAL,
-  IN     CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *CONST SourceResources,
-  IN OUT CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR **CONST NewResource,
-  IN     CONST UINTN                                     NewResourceIndex
+  OUT       EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *CONST     DestinationResources OPTIONAL,
+  OUT       UINTN                              *CONST     DestinationResourcesSize OPTIONAL,
+  IN     CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *CONST  SourceResources,
+  IN OUT CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR **CONST  NewResource,
+  IN     CONST UINTN                                      NewResourceIndex
   )
 {
-  UINTN                                         DestIndex, DestSize;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR             *DestDesc;
-  CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR       *SrcDesc, *NewDesc;
+  UINTN                                    DestIndex, DestSize;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR        *DestDesc;
+  CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *SrcDesc, *NewDesc;
 
-  if ((DestinationResources == NULL
-       && DestinationResourcesSize == NULL)
-      || SourceResources == NULL) {
+  if (  (  (DestinationResources == NULL)
+        && (DestinationResourcesSize == NULL))
+     || (SourceResources == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-  NewDesc = NewResource != NULL ? *NewResource : NULL;
-  SrcDesc = SourceResources;
-  DestDesc = DestinationResources;
+  NewDesc   = NewResource != NULL ? *NewResource : NULL;
+  SrcDesc   = SourceResources;
+  DestDesc  = DestinationResources;
   DestIndex = DestSize = 0;
   while (1) {
-    if (NewDesc != NULL && DestIndex == NewResourceIndex) {
+    if ((NewDesc != NULL) && (DestIndex == NewResourceIndex)) {
       if (DestDesc != NULL) {
         CopyMem (DestDesc, NewDesc, NewDesc->Len + 3);
-        NewDesc = DestDesc;
-        DestDesc = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR*) ((UINT8*) DestDesc + DestDesc->Len + 3);
+        NewDesc  = DestDesc;
+        DestDesc = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)((UINT8 *)DestDesc + DestDesc->Len + 3);
       }
+
       DestIndex++;
       DestSize += NewDesc->Len + 3;
     } else if (SrcDesc->Desc != ACPI_END_TAG_DESCRIPTOR) {
       if (DestDesc != NULL) {
         CopyMem (DestDesc, SrcDesc, SrcDesc->Len + 3);
-        DestDesc = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR*) ((UINT8*) DestDesc + DestDesc->Len + 3);
+        DestDesc = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)((UINT8 *)DestDesc + DestDesc->Len + 3);
       }
-      SrcDesc = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR*) ((UINT8*) SrcDesc + SrcDesc->Len + 3);
+
+      SrcDesc = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)((UINT8 *)SrcDesc + SrcDesc->Len + 3);
       DestIndex++;
       DestSize += SrcDesc->Len + 3;
     } else {
       if (DestDesc != NULL) {
         CopyMem (DestDesc, SrcDesc, sizeof (EFI_ACPI_END_TAG_DESCRIPTOR));
       }
+
       DestSize += sizeof (EFI_ACPI_END_TAG_DESCRIPTOR);
       break;
     }
@@ -574,6 +653,7 @@ CopyAndInsertResource (
   if (DestinationResourcesSize != NULL) {
     *DestinationResourcesSize = DestSize;
   }
+
   if (NewResource != NULL) {
     *NewResource = NewDesc;
   }
@@ -583,7 +663,7 @@ CopyAndInsertResource (
   // NewResourceIndex must be smaller than number of resources in
   // DestinationResources, otherwise NewResourceIndex is out of
   // bounds.
-  if (NewDesc != NULL && !(NewResourceIndex < DestIndex)) {
+  if ((NewDesc != NULL) && !(NewResourceIndex < DestIndex)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -599,14 +679,14 @@ CopyAndInsertResource (
 STATIC
 EFI_STATUS
 DisplayStop (
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST Context,
-  IN CONST BOOLEAN                     OnExitBootServices
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
+  IN CONST BOOLEAN                             OnExitBootServices
   )
 {
-  EFI_STATUS    Status = EFI_SUCCESS;
-  EFI_STATUS    Status1;
-  EFI_HANDLE    ControllerHandle;
-  CONST BOOLEAN UseDpOutput = FALSE;
+  EFI_STATUS     Status = EFI_SUCCESS;
+  EFI_STATUS     Status1;
+  EFI_HANDLE     ControllerHandle;
+  CONST BOOLEAN  UseDpOutput = FALSE;
 
   if (Context != NULL) {
     ControllerHandle = Context->ControllerHandle;
@@ -617,12 +697,15 @@ DisplayStop (
         DEBUG ((
           DEBUG_ERROR,
           "%a: failed to close OnExitBootServices event: %r\r\n",
-          __FUNCTION__, Status1
-        ));
+          __FUNCTION__,
+          Status1
+          ));
       }
+
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
+
       Context->OnExitBootServicesEvent = NULL;
     }
 
@@ -631,6 +714,7 @@ DisplayStop (
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
+
       Context->OutputGpiosConfigured = FALSE;
     }
 
@@ -639,6 +723,7 @@ DisplayStop (
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
+
       Context->ClocksEnabled = FALSE;
     }
 
@@ -647,14 +732,16 @@ DisplayStop (
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
+
       Context->ResetsDeasserted = FALSE;
     }
 
-    if (!OnExitBootServices && Context->FramebufferResource != NULL) {
+    if (!OnExitBootServices && (Context->FramebufferResource != NULL)) {
       Status1 = DestroyFramebufferResource (Context->FramebufferResource);
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
+
       Context->FramebufferResource = NULL;
     }
 
@@ -662,13 +749,14 @@ DisplayStop (
       FreePool (Context);
     }
   }
+
   return Status;
 }
 
 STATIC
 EFI_STATUS
 DisplayBypassSorClocks (
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *CONST Context
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *CONST  Context
   )
 {
   EFI_STATUS            Status;
@@ -688,8 +776,9 @@ DisplayBypassSorClocks (
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to retrieve display region: %r\r\n",
-      __FUNCTION__, Status
-    ));
+      __FUNCTION__,
+      Status
+      ));
     return Status;
   }
 
@@ -709,19 +798,20 @@ STATIC
 VOID
 EFIAPI
 DisplayOnExitBootServices (
-  IN EFI_EVENT                          Event,
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *CONST Context
+  IN EFI_EVENT                                  Event,
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *CONST  Context
   )
 {
-  CONST BOOLEAN OnExitBootServices = TRUE;
-  VOID          *AcpiBase;
-  EFI_STATUS    Status;
+  CONST BOOLEAN  OnExitBootServices = TRUE;
+  VOID           *AcpiBase;
+  EFI_STATUS     Status;
 
   /* Leave display active for ACPI boot. */
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
     return;
   }
+
   DisplayBypassSorClocks (Context);
   DisplayStop (Context, OnExitBootServices);
 }
@@ -738,28 +828,28 @@ DisplayOnExitBootServices (
 STATIC
 EFI_STATUS
 DisplayStart (
-  OUT NVIDIA_DISPLAY_CONTROLLER_CONTEXT **CONST Context,
-  IN  EFI_HANDLE                        DriverHandle,
-  IN  EFI_HANDLE                        ControllerHandle
+  OUT NVIDIA_DISPLAY_CONTROLLER_CONTEXT **CONST  Context,
+  IN  EFI_HANDLE                                 DriverHandle,
+  IN  EFI_HANDLE                                 ControllerHandle
   )
 {
-  EFI_STATUS                            Status;
-  UINTN                                 ResourcesSize;
-  NON_DISCOVERABLE_DEVICE               *NvNonDiscoverableDevice;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR     FramebufferDescriptor, *FramebufferResource = NULL;
-  NVIDIA_DISPLAY_CONTROLLER_CONTEXT     *Result = NULL;
-  CONST BOOLEAN                         UseDpOutput = FALSE;
-  CONST BOOLEAN                         OnExitBootServices = FALSE;
+  EFI_STATUS                         Status;
+  UINTN                              ResourcesSize;
+  NON_DISCOVERABLE_DEVICE            *NvNonDiscoverableDevice;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  FramebufferDescriptor, *FramebufferResource = NULL;
+  NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *Result            = NULL;
+  CONST BOOLEAN                      UseDpOutput        = FALSE;
+  CONST BOOLEAN                      OnExitBootServices = FALSE;
 
-  CONST UINTN FramebufferHorizontalResolution = (UINTN) PcdGet32 (PcdFramebufferHorizontalResolution);
-  CONST UINTN FramebufferVerticalResolution   = (UINTN) PcdGet32 (PcdFramebufferVerticalResolution);
-  CONST UINTN FramebufferPixelSize            = (UINTN) PcdGet8  (PcdFramebufferPixelSize);
-  CONST UINTN FramebufferResourceIndex        = (UINTN) (PcdGet8 (PcdFramebufferBarIndex) + 1) - 1;
+  CONST UINTN  FramebufferHorizontalResolution = (UINTN)PcdGet32 (PcdFramebufferHorizontalResolution);
+  CONST UINTN  FramebufferVerticalResolution   = (UINTN)PcdGet32 (PcdFramebufferVerticalResolution);
+  CONST UINTN  FramebufferPixelSize            = (UINTN)PcdGet8 (PcdFramebufferPixelSize);
+  CONST UINTN  FramebufferResourceIndex        = (UINTN)(PcdGet8 (PcdFramebufferBarIndex) + 1) - 1;
 
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gNVIDIANonDiscoverableDeviceProtocolGuid,
-                  (VOID**) &NvNonDiscoverableDevice,
+                  (VOID **)&NvNonDiscoverableDevice,
                   DriverHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -768,8 +858,9 @@ DisplayStart (
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to open NVIDIA non-discoverable device protocol: %r\r\n",
-      __FUNCTION__, Status
-    ));
+      __FUNCTION__,
+      Status
+      ));
     goto Exit;
   }
 
@@ -783,6 +874,7 @@ DisplayStart (
     if (EFI_ERROR (Status)) {
       goto Exit;
     }
+
     FramebufferResource = &FramebufferDescriptor;
   }
 
@@ -790,30 +882,33 @@ DisplayStart (
              NULL,
              &ResourcesSize,
              NvNonDiscoverableDevice->Resources,
-             (CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR**) &FramebufferResource,
+             (CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR **)&FramebufferResource,
              FramebufferResourceIndex
              );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: could not determine size of resources: %r\r\n",
-      __FUNCTION__, Status
-    ));
+      __FUNCTION__,
+      Status
+      ));
     goto Exit;
   }
 
-  Result = (NVIDIA_DISPLAY_CONTROLLER_CONTEXT*) AllocateZeroPool (sizeof (*Result) + ResourcesSize);
+  Result = (NVIDIA_DISPLAY_CONTROLLER_CONTEXT *)AllocateZeroPool (sizeof (*Result) + ResourcesSize);
   if (Result == NULL) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: could not allocate %u bytes for display controller context\r\n",
-      __FUNCTION__, sizeof (*Result) + ResourcesSize
-    ));
+      __FUNCTION__,
+      sizeof (*Result) + ResourcesSize
+      ));
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
-  Result->Signature = DISPLAY_CONTROLLER_SIGNATURE;
-  Result->DriverHandle = DriverHandle;
+
+  Result->Signature        = DISPLAY_CONTROLLER_SIGNATURE;
+  Result->DriverHandle     = DriverHandle;
   Result->ControllerHandle = ControllerHandle;
 
   CopyMem (
@@ -823,48 +918,53 @@ DisplayStart (
     );
 
   Result->EdkiiNonDiscoverableDevice.Resources =
-    (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR*) (Result + 1);
+    (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)(Result + 1);
 
   Status = CopyAndInsertResource (
              Result->EdkiiNonDiscoverableDevice.Resources,
              NULL,
              NvNonDiscoverableDevice->Resources,
-             (CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR**) &FramebufferResource,
+             (CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR **)&FramebufferResource,
              FramebufferResourceIndex
              );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: could not insert resource: %r\r\n",
-      __FUNCTION__, Status
-    ));
+      __FUNCTION__,
+      Status
+      ));
     goto Exit;
   }
+
   Result->FramebufferResource = FramebufferResource;
-  FramebufferResource = NULL;
+  FramebufferResource         = NULL;
 
   Status = ResetRequiredDisplayEngines (ControllerHandle, FALSE);
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
+
   Result->ResetsDeasserted = TRUE;
 
   Status = EnableRequiredDisplayClocks (ControllerHandle, TRUE);
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
+
   Result->ClocksEnabled = TRUE;
 
   Status = ConfigureOutputGpios (ControllerHandle, TRUE, UseDpOutput);
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
   Result->OutputGpiosConfigured = TRUE;
 
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_NOTIFY,
-                  (EFI_EVENT_NOTIFY) DisplayOnExitBootServices,
+                  (EFI_EVENT_NOTIFY)DisplayOnExitBootServices,
                   Result,
                   &gEfiEventExitBootServicesGuid,
                   &Result->OnExitBootServicesEvent
@@ -873,8 +973,9 @@ DisplayStart (
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to create OnExitBootServices event: %r\r\n",
-      __FUNCTION__, Status
-    ));
+      __FUNCTION__,
+      Status
+      ));
     Result->OnExitBootServicesEvent = NULL;
     goto Exit;
   }
@@ -885,9 +986,11 @@ Exit:
   } else {
     *Context = Result;
   }
+
   if (FramebufferResource != NULL) {
     DestroyFramebufferResource (FramebufferResource);
   }
+
   return Status;
 }
 
@@ -909,88 +1012,92 @@ Exit:
 **/
 EFI_STATUS
 DeviceDiscoveryNotify (
-  IN  NVIDIA_DEVICE_DISCOVERY_PHASES         Phase,
-  IN  EFI_HANDLE                             DriverHandle,
-  IN  EFI_HANDLE                             ControllerHandle,
-  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
+  IN  NVIDIA_DEVICE_DISCOVERY_PHASES          Phase,
+  IN  EFI_HANDLE                              DriverHandle,
+  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                            Status;
-  TEGRA_PLATFORM_TYPE                   Platform;
-  NON_DISCOVERABLE_DEVICE               *EdkiiNonDiscoverableDevice;
-  NVIDIA_DISPLAY_CONTROLLER_CONTEXT     *Context;
-  CONST BOOLEAN                         OnExitBootServices = FALSE;
+  EFI_STATUS                         Status;
+  TEGRA_PLATFORM_TYPE                Platform;
+  NON_DISCOVERABLE_DEVICE            *EdkiiNonDiscoverableDevice;
+  NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *Context;
+  CONST BOOLEAN                      OnExitBootServices = FALSE;
 
   switch (Phase) {
-  case DeviceDiscoveryDriverBindingSupported:
-    Platform = TegraGetPlatform ();
-    if (Platform != TEGRA_PLATFORM_SILICON) {
-      return EFI_UNSUPPORTED;
-    }
-    return EFI_SUCCESS;
+    case DeviceDiscoveryDriverBindingSupported:
+      Platform = TegraGetPlatform ();
+      if (Platform != TEGRA_PLATFORM_SILICON) {
+        return EFI_UNSUPPORTED;
+      }
 
-  case DeviceDiscoveryDriverBindingStart:
-    Status = DisplayStart (&Context, DriverHandle, ControllerHandle);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &ControllerHandle,
-                    &gEdkiiNonDiscoverableDeviceProtocolGuid,
-                    &Context->EdkiiNonDiscoverableDevice,
-                    NULL
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to install non-discoverable device protocol: %r\r\n",
-        __FUNCTION__, Status
-      ));
-      DisplayStop (Context, OnExitBootServices);
-    }
-
-    return Status;
-
-  case DeviceDiscoveryDriverBindingStop:
-    Status = gBS->OpenProtocol (
-                    ControllerHandle,
-                    &gEdkiiNonDiscoverableDeviceProtocolGuid,
-                    (VOID**) &EdkiiNonDiscoverableDevice,
-                    DriverHandle,
-                    ControllerHandle,
-                    EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                    );
-    if (Status == EFI_UNSUPPORTED) {
       return EFI_SUCCESS;
-    } else if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to open non-discoverable device protocol: %r\r\n",
-        __FUNCTION__, Status
-      ));
+
+    case DeviceDiscoveryDriverBindingStart:
+      Status = DisplayStart (&Context, DriverHandle, ControllerHandle);
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+
+      Status = gBS->InstallMultipleProtocolInterfaces (
+                      &ControllerHandle,
+                      &gEdkiiNonDiscoverableDeviceProtocolGuid,
+                      &Context->EdkiiNonDiscoverableDevice,
+                      NULL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to install non-discoverable device protocol: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+        DisplayStop (Context, OnExitBootServices);
+      }
+
       return Status;
-    }
 
-    Status = gBS->UninstallMultipleProtocolInterfaces (
-                    ControllerHandle,
-                    &gEdkiiNonDiscoverableDeviceProtocolGuid,
-                    EdkiiNonDiscoverableDevice,
-                    NULL
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to uninstall non-discoverable device protocol: %r\r\n",
-        __FUNCTION__, Status
-      ));
-      return Status;
-    }
+    case DeviceDiscoveryDriverBindingStop:
+      Status = gBS->OpenProtocol (
+                      ControllerHandle,
+                      &gEdkiiNonDiscoverableDeviceProtocolGuid,
+                      (VOID **)&EdkiiNonDiscoverableDevice,
+                      DriverHandle,
+                      ControllerHandle,
+                      EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                      );
+      if (Status == EFI_UNSUPPORTED) {
+        return EFI_SUCCESS;
+      } else if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to open non-discoverable device protocol: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+        return Status;
+      }
 
-    Context = DISPLAY_CONTROLLER_CONTEXT_FROM_EDKII_DEVICE (EdkiiNonDiscoverableDevice);
-    return DisplayStop (Context, OnExitBootServices);
+      Status = gBS->UninstallMultipleProtocolInterfaces (
+                      ControllerHandle,
+                      &gEdkiiNonDiscoverableDeviceProtocolGuid,
+                      EdkiiNonDiscoverableDevice,
+                      NULL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to uninstall non-discoverable device protocol: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+        return Status;
+      }
 
-  default:
-    return EFI_SUCCESS;
+      Context = DISPLAY_CONTROLLER_CONTEXT_FROM_EDKII_DEVICE (EdkiiNonDiscoverableDevice);
+      return DisplayStop (Context, OnExitBootServices);
+
+    default:
+      return EFI_SUCCESS;
   }
 }

@@ -7,6 +7,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
 #ifndef __TEGRA_PLATFORM_INFO_STUB_LIB_H__
 #define __TEGRA_PLATFORM_INFO_STUB_LIB_H__
 
@@ -22,7 +23,7 @@
 **/
 VOID
 MockTegraGetChipID (
-  IN  UINT32    ChipId
+  IN  UINT32  ChipId
   );
 
 #endif

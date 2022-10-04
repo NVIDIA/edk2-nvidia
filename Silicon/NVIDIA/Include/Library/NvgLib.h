@@ -7,6 +7,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
 #ifndef __NVG_LIB__
 #define __NVG_LIB__
 
@@ -37,8 +38,8 @@ NvgGetNumberOfEnabledCpuCores (
 EFI_STATUS
 EFIAPI
 NvgConvertCpuLogicalToMpidr (
-  IN  UINT32 LogicalCore,
-  OUT UINT64 *Mpidr
+  IN  UINT32  LogicalCore,
+  OUT UINT64  *Mpidr
   );
 
 /**
@@ -48,7 +49,7 @@ NvgConvertCpuLogicalToMpidr (
 EFI_STATUS
 EFIAPI
 NvgGetEnabledCoresBitMap (
-  IN  UINT64    *EnabledCoresBitMap
+  IN  UINT64  *EnabledCoresBitMap
   );
 
 #endif

@@ -30,8 +30,8 @@ typedef struct {
   EFI_STATUS    ForcedSetStatus;
 } UEFI_VARIABLE;
 
-LIST_ENTRY              mUefiVariableListHead   = {0};
-EFI_RUNTIME_SERVICES    *gRT                    = NULL;
+LIST_ENTRY            mUefiVariableListHead = { 0 };
+EFI_RUNTIME_SERVICES  *gRT                  = NULL;
 
 /**
   Find a variable in the linked list
@@ -51,14 +51,16 @@ UefiFindVariable (
   IN  EFI_GUID  *Guid
   )
 {
-  UEFI_VARIABLE *ReturnVariable;
-  LIST_ENTRY    *Entry;
+  UEFI_VARIABLE  *ReturnVariable;
+  LIST_ENTRY     *Entry;
 
   ReturnVariable = NULL;
   BASE_LIST_FOR_EACH (Entry, &mUefiVariableListHead) {
-    UEFI_VARIABLE *Var = (UEFI_VARIABLE *) Entry;
+    UEFI_VARIABLE  *Var = (UEFI_VARIABLE *)Entry;
+
     if ((StrCmp (Var->Name, Name) == 0) &&
-        (CompareMem (&Var->Guid, Guid, sizeof (*Guid)) == 0)) {
+        (CompareMem (&Var->Guid, Guid, sizeof (*Guid)) == 0))
+    {
       ReturnVariable = Var;
       break;
     }
@@ -78,15 +80,15 @@ UefiGetVariable (
   IN  VOID      *Data
   )
 {
-  UEFI_VARIABLE *Var;
+  UEFI_VARIABLE  *Var;
 
   Var = UefiFindVariable (Name, Guid);
-  if ((Var == NULL) || ((Var->Data == NULL) && (!EFI_ERROR(Var->ForcedGetStatus)))) {
+  if ((Var == NULL) || ((Var->Data == NULL) && (!EFI_ERROR (Var->ForcedGetStatus)))) {
     return EFI_NOT_FOUND;
   }
 
   if (EFI_ERROR (Var->ForcedGetStatus)) {
-    EFI_STATUS    ForcedStatus;
+    EFI_STATUS  ForcedStatus;
 
     ForcedStatus = Var->ForcedGetStatus;
 
@@ -117,21 +119,22 @@ UefiGetVariable (
 
 VOID
 MockUefiGetVariable (
-  IN  CHAR16        *Name,
-  IN  EFI_GUID      *Guid,
-  IN  EFI_STATUS    ReturnStatus
+  IN  CHAR16      *Name,
+  IN  EFI_GUID    *Guid,
+  IN  EFI_STATUS  ReturnStatus
   )
 {
-  UEFI_VARIABLE *Var;
+  UEFI_VARIABLE  *Var;
 
   Var = UefiFindVariable (Name, Guid);
   if (Var == NULL) {
-    Var = (UEFI_VARIABLE *) AllocateZeroPool (sizeof (UEFI_VARIABLE));
-    Var->Name = (CHAR16 *) AllocateZeroPool (StrSize (Name));
+    Var       = (UEFI_VARIABLE *)AllocateZeroPool (sizeof (UEFI_VARIABLE));
+    Var->Name = (CHAR16 *)AllocateZeroPool (StrSize (Name));
     CopyMem (Var->Name, Name, StrSize (Name));
     CopyMem (&Var->Guid, Guid, sizeof (*Guid));
     InsertTailList (&mUefiVariableListHead, &Var->List);
   }
+
   Var->ForcedGetStatus = ReturnStatus;
 }
 
@@ -139,22 +142,23 @@ MockUefiGetVariable (
 EFI_STATUS
 EFIAPI
 UefiSetVariable (
-  IN  CHAR16                       *Name,
-  IN  EFI_GUID                     *Guid,
-  IN  UINT32                       Attributes,
-  IN  UINTN                        Size,
-  IN  VOID                         *Data
+  IN  CHAR16    *Name,
+  IN  EFI_GUID  *Guid,
+  IN  UINT32    Attributes,
+  IN  UINTN     Size,
+  IN  VOID      *Data
   )
 {
-  UEFI_VARIABLE *Var;
+  UEFI_VARIABLE  *Var;
 
   Var = UefiFindVariable (Name, Guid);
   if (Var == NULL) {
     if (Size == 0) {
       return EFI_SUCCESS;
     }
-    Var = (UEFI_VARIABLE *) AllocateZeroPool (sizeof (UEFI_VARIABLE));
-    Var->Name = (CHAR16 *) AllocateZeroPool (StrSize (Name));
+
+    Var       = (UEFI_VARIABLE *)AllocateZeroPool (sizeof (UEFI_VARIABLE));
+    Var->Name = (CHAR16 *)AllocateZeroPool (StrSize (Name));
     CopyMem (Var->Name, Name, StrSize (Name));
     CopyMem (&Var->Guid, Guid, sizeof (*Guid));
     InsertTailList (&mUefiVariableListHead, &Var->List);
@@ -164,7 +168,7 @@ UefiSetVariable (
   }
 
   if (EFI_ERROR (Var->ForcedSetStatus)) {
-    EFI_STATUS    ForcedStatus;
+    EFI_STATUS  ForcedStatus;
 
     ForcedStatus = Var->ForcedSetStatus;
 
@@ -185,6 +189,7 @@ UefiSetVariable (
     if (Var->Data != NULL) {
       FreePool (Var->Data);
     }
+
     FreePool (Var);
 
     return EFI_SUCCESS;
@@ -194,8 +199,8 @@ UefiSetVariable (
     Var->Data = AllocateZeroPool (Size);
   }
 
-  Var->Guid = *Guid;
-  Var->Size = Size;
+  Var->Guid       = *Guid;
+  Var->Size       = Size;
   Var->Attributes = Attributes;
   CopyMem (Var->Data, Data, Size);
 
@@ -204,17 +209,17 @@ UefiSetVariable (
 
 VOID
 MockUefiSetVariable (
-  IN  CHAR16        *Name,
-  IN  EFI_GUID      *Guid,
-  IN  EFI_STATUS    ReturnStatus
+  IN  CHAR16      *Name,
+  IN  EFI_GUID    *Guid,
+  IN  EFI_STATUS  ReturnStatus
   )
 {
-  UEFI_VARIABLE *Var;
+  UEFI_VARIABLE  *Var;
 
   Var = UefiFindVariable (Name, Guid);
   if (Var == NULL) {
-    Var = (UEFI_VARIABLE *) AllocateZeroPool (sizeof (UEFI_VARIABLE));
-    Var->Name = (CHAR16 *) AllocateZeroPool (StrSize (Name));
+    Var       = (UEFI_VARIABLE *)AllocateZeroPool (sizeof (UEFI_VARIABLE));
+    Var->Name = (CHAR16 *)AllocateZeroPool (StrSize (Name));
     CopyMem (Var->Name, Name, StrSize (Name));
     CopyMem (&Var->Guid, Guid, sizeof (*Guid));
     InsertTailList (&mUefiVariableListHead, &Var->List);
@@ -236,7 +241,6 @@ UefiVariableInit (
   )
 {
   InitializeListHead (&mUefiVariableListHead);
-
 }
 
 /**
@@ -251,13 +255,14 @@ UefiVariableDeinit (
   VOID
   )
 {
-  UEFI_VARIABLE *Var;
-  LIST_ENTRY    *Entry = NULL;
-  LIST_ENTRY    *Next = NULL;
+  UEFI_VARIABLE  *Var;
+  LIST_ENTRY     *Entry = NULL;
+  LIST_ENTRY     *Next  = NULL;
 
   BASE_LIST_FOR_EACH_SAFE (Entry, Next, &mUefiVariableListHead) {
-    EFI_STATUS Status;
-    Var = (UEFI_VARIABLE *) Entry;
+    EFI_STATUS  Status;
+
+    Var    = (UEFI_VARIABLE *)Entry;
     Status = UefiSetVariable (Var->Name, &Var->Guid, Var->Attributes, 0, NULL);
     ASSERT (Status == EFI_SUCCESS);
   }
@@ -267,7 +272,7 @@ UefiVariableDeinit (
 
 VOID
 UefiRuntimeServicesTableInit (
-  IN  BOOLEAN   PreserveVariables
+  IN  BOOLEAN  PreserveVariables
   )
 {
   ASSERT (gRT == NULL);
@@ -283,7 +288,7 @@ UefiRuntimeServicesTableInit (
 
 VOID
 UefiRuntimeServicesTableDeinit (
-  IN  BOOLEAN   PreserveVariables
+  IN  BOOLEAN  PreserveVariables
   )
 {
   ASSERT (gRT != NULL);

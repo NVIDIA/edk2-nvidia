@@ -23,19 +23,19 @@
 #include <Protocol/DeviceTreeCompatibility.h>
 #include "PinMuxDxePrivate.h"
 
-NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
+NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-pinmux", &gNVIDIANonDiscoverablePinMuxDeviceGuid },
-  { NULL, NULL }
+  { NULL,                     NULL                                    }
 };
 
-NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-    .DriverName = L"NVIDIA PinMux driver",
-    .UseDriverBinding = TRUE,
-    .AutoEnableClocks = TRUE,
-    .AutoDeassertReset = TRUE,
-    .AutoResetModule = FALSE,
-    .AutoDeassertPg = FALSE,
-    .SkipEdkiiNondiscoverableInstall = TRUE
+NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
+  .DriverName                      = L"NVIDIA PinMux driver",
+  .UseDriverBinding                = TRUE,
+  .AutoEnableClocks                = TRUE,
+  .AutoDeassertReset               = TRUE,
+  .AutoResetModule                 = FALSE,
+  .AutoDeassertPg                  = FALSE,
+  .SkipEdkiiNondiscoverableInstall = TRUE
 };
 
 /**
@@ -52,22 +52,23 @@ STATIC
 EFI_STATUS
 PinMuxReadRegister (
   IN  NVIDIA_PINMUX_PROTOCOL  *This,
-  IN  UINT32    RegisterOffset,
-  OUT UINT32    *RegisterValue
+  IN  UINT32                  RegisterOffset,
+  OUT UINT32                  *RegisterValue
   )
 {
-  PINMUX_DXE_PRIVATE *Private;
+  PINMUX_DXE_PRIVATE  *Private;
 
   if (NULL == This) {
     return EFI_INVALID_PARAMETER;
   }
 
   Private = PINMUX_PRIVATE_DATA_FROM_THIS (This);
-  if ((RegisterOffset > (Private->RegionSize - sizeof(UINT32))) ||
-                                     (RegisterValue == NULL)) {
+  if ((RegisterOffset > (Private->RegionSize - sizeof (UINT32))) ||
+      (RegisterValue == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   } else {
-    *RegisterValue = MmioRead32(Private->BaseAddress + RegisterOffset);
+    *RegisterValue = MmioRead32 (Private->BaseAddress + RegisterOffset);
     return EFI_SUCCESS;
   }
 }
@@ -86,21 +87,21 @@ STATIC
 EFI_STATUS
 PinMuxWriteRegister (
   IN  NVIDIA_PINMUX_PROTOCOL  *This,
-  IN  UINT32    RegisterOffset,
-  IN  UINT32    Value
+  IN  UINT32                  RegisterOffset,
+  IN  UINT32                  Value
   )
 {
-  PINMUX_DXE_PRIVATE *Private;
+  PINMUX_DXE_PRIVATE  *Private;
 
   if (NULL == This) {
     return EFI_INVALID_PARAMETER;
   }
 
   Private = PINMUX_PRIVATE_DATA_FROM_THIS (This);
-  if (RegisterOffset > (Private->RegionSize - sizeof(UINT32))) {
+  if (RegisterOffset > (Private->RegionSize - sizeof (UINT32))) {
     return EFI_INVALID_PARAMETER;
   } else {
-    MmioWrite32(Private->BaseAddress + RegisterOffset, Value);
+    MmioWrite32 (Private->BaseAddress + RegisterOffset, Value);
     return EFI_SUCCESS;
   }
 }
@@ -123,86 +124,95 @@ PinMuxWriteRegister (
 **/
 EFI_STATUS
 DeviceDiscoveryNotify (
-  IN  NVIDIA_DEVICE_DISCOVERY_PHASES         Phase,
-  IN  EFI_HANDLE                             DriverHandle,
-  IN  EFI_HANDLE                             ControllerHandle,
-  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
+  IN  NVIDIA_DEVICE_DISCOVERY_PHASES          Phase,
+  IN  EFI_HANDLE                              DriverHandle,
+  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                Status;
-  EFI_PHYSICAL_ADDRESS      BaseAddress;
-  UINTN                     RegionSize;
-  NVIDIA_PINMUX_PROTOCOL    *PinMuxProtocol;
-  PINMUX_DXE_PRIVATE        *Private;
+  EFI_STATUS              Status;
+  EFI_PHYSICAL_ADDRESS    BaseAddress;
+  UINTN                   RegionSize;
+  NVIDIA_PINMUX_PROTOCOL  *PinMuxProtocol;
+  PINMUX_DXE_PRIVATE      *Private;
 
-  Status = EFI_SUCCESS;
+  Status      = EFI_SUCCESS;
   BaseAddress = 0;
-  Private = NULL;
+  Private     = NULL;
 
   switch (Phase) {
-  case DeviceDiscoveryDriverBindingStart:
+    case DeviceDiscoveryDriverBindingStart:
 
-    Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress,
-                                                                &RegionSize);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR,
-        "%a: Couldn't find PinMux address range\n", __FUNCTION__));
-      return Status;
-    }
+      Status = DeviceDiscoveryGetMmioRegion (
+                 ControllerHandle,
+                 0,
+                 &BaseAddress,
+                 &RegionSize
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          EFI_D_ERROR,
+          "%a: Couldn't find PinMux address range\n",
+          __FUNCTION__
+          ));
+        return Status;
+      }
 
-    Private = AllocatePool (sizeof (PINMUX_DXE_PRIVATE));
-    if (NULL == Private) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Memory\r\n", __FUNCTION__));
-      Status = EFI_OUT_OF_RESOURCES;
-      return Status;
-    }
+      Private = AllocatePool (sizeof (PINMUX_DXE_PRIVATE));
+      if (NULL == Private) {
+        DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Memory\r\n", __FUNCTION__));
+        Status = EFI_OUT_OF_RESOURCES;
+        return Status;
+      }
 
-    Private->Signature = PINMUX_SIGNATURE;
-    Private->ImageHandle = DriverHandle;
-    Private->BaseAddress = BaseAddress;
-    Private->RegionSize = RegionSize;
-    Private->PinMuxProtocol.ReadReg =  PinMuxReadRegister;
-    Private->PinMuxProtocol.WriteReg = PinMuxWriteRegister;
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                  &DriverHandle,
-                  &gNVIDIAPinMuxProtocolGuid,
-                  &Private->PinMuxProtocol,
-                  NULL
-                  );
-    if (EFI_ERROR (Status)) {
+      Private->Signature               = PINMUX_SIGNATURE;
+      Private->ImageHandle             = DriverHandle;
+      Private->BaseAddress             = BaseAddress;
+      Private->RegionSize              = RegionSize;
+      Private->PinMuxProtocol.ReadReg  =  PinMuxReadRegister;
+      Private->PinMuxProtocol.WriteReg = PinMuxWriteRegister;
+      Status                           = gBS->InstallMultipleProtocolInterfaces (
+                                                &DriverHandle,
+                                                &gNVIDIAPinMuxProtocolGuid,
+                                                &Private->PinMuxProtocol,
+                                                NULL
+                                                );
+      if (EFI_ERROR (Status)) {
+        FreePool (Private);
+        return Status;
+      }
+
+      break;
+
+    case DeviceDiscoveryDriverBindingStop:
+
+      Status = gBS->HandleProtocol (
+                      DriverHandle,
+                      &gNVIDIAPinMuxProtocolGuid,
+                      (VOID **)&PinMuxProtocol
+                      );
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+
+      Private = PINMUX_PRIVATE_DATA_FROM_PROTOCOL (PinMuxProtocol);
+
+      Status =  gBS->UninstallMultipleProtocolInterfaces (
+                       DriverHandle,
+                       &gNVIDIAPinMuxProtocolGuid,
+                       &Private->PinMuxProtocol,
+                       NULL
+                       );
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+
       FreePool (Private);
-      return Status;
-    }
-    break;
+      break;
 
-  case DeviceDiscoveryDriverBindingStop:
-
-    Status = gBS->HandleProtocol (
-                  DriverHandle,
-                  &gNVIDIAPinMuxProtocolGuid,
-                  (VOID **)&PinMuxProtocol);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-
-    Private = PINMUX_PRIVATE_DATA_FROM_PROTOCOL (PinMuxProtocol);
-
-    Status =  gBS->UninstallMultipleProtocolInterfaces (
-                   DriverHandle,
-                   &gNVIDIAPinMuxProtocolGuid,
-                   &Private->PinMuxProtocol,
-                   NULL);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-
-    FreePool (Private);
-    break;
-
-  default:
-    break;
+    default:
+      break;
   }
 
   return Status;
-
 }

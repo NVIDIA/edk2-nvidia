@@ -31,16 +31,16 @@ typedef struct _NVIDIA_EFUSE_PROTOCOL NVIDIA_EFUSE_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFUSE_READ_REGISTER) (
+(EFIAPI *EFUSE_READ_REGISTER)(
   IN  NVIDIA_EFUSE_PROTOCOL  *This,
   IN  UINT32    RegisterOffset,
   OUT UINT32    *RegisterValue
   );
 
 struct _NVIDIA_EFUSE_PROTOCOL {
-  EFUSE_READ_REGISTER       ReadReg;
+  EFUSE_READ_REGISTER    ReadReg;
 };
 
-extern EFI_GUID gNVIDIAEFuseProtocolGuid;
+extern EFI_GUID  gNVIDIAEFuseProtocolGuid;
 
 #endif

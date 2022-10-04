@@ -13,7 +13,6 @@
 #include <Library/BaseLib.h>
 #include <Library/GoldenRegisterLib.h>
 
-
 /**
   Get GR blob size
 
@@ -24,12 +23,12 @@
 UINT32
 EFIAPI
 GrBlobBinarySize (
-  IN  UINT64 GrBlobBase
-)
+  IN  UINT64  GrBlobBase
+  )
 {
-  GR_BLOB_HEADER *GrBlobHeader;
-  UINT32         Count;
-  UINT32         Size;
+  GR_BLOB_HEADER  *GrBlobHeader;
+  UINT32          Count;
+  UINT32          Size;
 
   if (GrBlobBase == 0) {
     return 0;
@@ -61,22 +60,22 @@ GrBlobBinarySize (
 EFI_STATUS
 EFIAPI
 LocateGrBlobBinary (
-  IN  UINT64 GrBlobBase,
-  OUT UINT32 *Offset,
-  OUT UINT32 *Size
-)
+  IN  UINT64  GrBlobBase,
+  OUT UINT32  *Offset,
+  OUT UINT32  *Size
+  )
 {
-  GR_BLOB_HEADER *GrBlobHeader;
-  UINT32         Count;
+  GR_BLOB_HEADER  *GrBlobHeader;
+  UINT32          Count;
 
-  if (GrBlobBase == 0 || Offset == NULL || Size == NULL) {
+  if ((GrBlobBase == 0) || (Offset == NULL) || (Size == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
   GrBlobHeader = (GR_BLOB_HEADER *)GrBlobBase;
 
   for (Count = 0; Count < GrBlobHeader->NumBins; Count++) {
-    if (AsciiStrCmp ((CONST CHAR8*)GrBlobHeader->BlobDesc[Count].Name, (CONST CHAR8*)GR_STAGE_NAME) == 0) {
+    if (AsciiStrCmp ((CONST CHAR8 *)GrBlobHeader->BlobDesc[Count].Name, (CONST CHAR8 *)GR_STAGE_NAME) == 0) {
       break;
     }
   }
@@ -86,7 +85,7 @@ LocateGrBlobBinary (
   }
 
   *Offset = GrBlobHeader->BlobDesc[Count].Offset;
-  *Size = GrBlobHeader->BlobDesc[Count].Size;
+  *Size   = GrBlobHeader->BlobDesc[Count].Size;
   return EFI_SUCCESS;
 }
 
@@ -101,10 +100,10 @@ LocateGrBlobBinary (
 EFI_STATUS
 EFIAPI
 ValidateGrBlobHeader (
-  IN UINT64 GrBlobBase
-)
+  IN UINT64  GrBlobBase
+  )
 {
-  GR_BLOB_HEADER *GrBlobHeader;
+  GR_BLOB_HEADER  *GrBlobHeader;
 
   if (GrBlobBase == 0) {
     return EFI_INVALID_PARAMETER;
@@ -112,11 +111,11 @@ ValidateGrBlobHeader (
 
   GrBlobHeader = (GR_BLOB_HEADER *)GrBlobBase;
 
-  if (AsciiStrCmp ((CONST CHAR8*)GrBlobHeader->Signature, (CONST CHAR8*)GR_BLOB_SIGNATURE) != 0) {
+  if (AsciiStrCmp ((CONST CHAR8 *)GrBlobHeader->Signature, (CONST CHAR8 *)GR_BLOB_SIGNATURE) != 0) {
     return EFI_NOT_FOUND;
   }
 
-  if (GrBlobHeader->NumBins == 0 || GrBlobHeader->NumBins > GR_MAX_BIN) {
+  if ((GrBlobHeader->NumBins == 0) || (GrBlobHeader->NumBins > GR_MAX_BIN)) {
     return EFI_NOT_FOUND;
   }
 

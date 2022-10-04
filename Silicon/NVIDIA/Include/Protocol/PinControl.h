@@ -34,17 +34,16 @@ typedef struct _NVIDIA_PIN_CONTROL_PROTOCOL NVIDIA_PIN_CONTROL_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *PIN_CONTROL_ENABLE) (
+(EFIAPI *PIN_CONTROL_ENABLE)(
   IN  NVIDIA_PIN_CONTROL_PROTOCOL *This,
   IN  UINT32                      PinControlId
   );
 
 /// NVIDIA_CLOCK_PARENT_PROTOCOL protocol structure.
 struct _NVIDIA_PIN_CONTROL_PROTOCOL {
-
-  PIN_CONTROL_ENABLE   Enable;
+  PIN_CONTROL_ENABLE    Enable;
 };
 
-extern EFI_GUID gNVIDIAPinControlProtocolGuid;
+extern EFI_GUID  gNVIDIAPinControlProtocolGuid;
 
 #endif

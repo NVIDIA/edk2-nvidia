@@ -22,33 +22,33 @@
 #include <Protocol/FwImageProtocol.h>
 #include <Protocol/FwPartitionProtocol.h>
 
-#define FW_IMAGE_PRIVATE_DATA_SIGNATURE SIGNATURE_32 ('F','W','I','M')
+#define FW_IMAGE_PRIVATE_DATA_SIGNATURE  SIGNATURE_32 ('F','W','I','M')
 
 // private data structure per image
 typedef struct FW_IMAGE_PRIVATE_DATA {
-  UINT32                            Signature;
+  UINT32                          Signature;
 
   // image info
-  CHAR16                            Name[FW_IMAGE_NAME_LENGTH];
-  UINTN                             Bytes;
-  UINT32                            BlockSize;
-  NVIDIA_FW_PARTITION_PROTOCOL      *FwPartitionA;
-  NVIDIA_FW_PARTITION_PROTOCOL      *FwPartitionB;
+  CHAR16                          Name[FW_IMAGE_NAME_LENGTH];
+  UINTN                           Bytes;
+  UINT32                          BlockSize;
+  NVIDIA_FW_PARTITION_PROTOCOL    *FwPartitionA;
+  NVIDIA_FW_PARTITION_PROTOCOL    *FwPartitionB;
 
   // protocol info
-  EFI_HANDLE                        Handle;
-  NVIDIA_FW_IMAGE_PROTOCOL          Protocol;
+  EFI_HANDLE                      Handle;
+  NVIDIA_FW_IMAGE_PROTOCOL        Protocol;
 } FW_IMAGE_PRIVATE_DATA;
 
-STATIC FW_IMAGE_PRIVATE_DATA        *mPrivate           = NULL;
-STATIC UINTN                        mNumFwImages        = 0;
-STATIC UINT32                       mBootChain          = MAX_UINT32;
-STATIC EFI_EVENT                    mAddressChangeEvent = NULL;
+STATIC FW_IMAGE_PRIVATE_DATA  *mPrivate           = NULL;
+STATIC UINTN                  mNumFwImages        = 0;
+STATIC UINT32                 mBootChain          = MAX_UINT32;
+STATIC EFI_EVENT              mAddressChangeEvent = NULL;
 
 CONST CHAR16 **
 EFIAPI
 FwImageGetList (
-  OUT UINTN             *ImageCount
+  OUT UINTN  *ImageCount
   );
 
 /**
@@ -64,7 +64,7 @@ STATIC
 BOOLEAN
 EFIAPI
 HasAImage (
-  IN  CONST FW_IMAGE_PRIVATE_DATA       *Private
+  IN  CONST FW_IMAGE_PRIVATE_DATA  *Private
   )
 {
   return (Private->FwPartitionA != NULL);
@@ -83,7 +83,7 @@ STATIC
 BOOLEAN
 EFIAPI
 HasBImage (
-  IN  CONST FW_IMAGE_PRIVATE_DATA       *Private
+  IN  CONST FW_IMAGE_PRIVATE_DATA  *Private
   )
 {
   return (Private->FwPartitionB != NULL);
@@ -102,7 +102,7 @@ STATIC
 BOOLEAN
 EFIAPI
 BImageIsActive (
-  IN  FW_IMAGE_PRIVATE_DATA         *Private
+  IN  FW_IMAGE_PRIVATE_DATA  *Private
   )
 {
   return (mBootChain == 1);
@@ -120,7 +120,7 @@ STATIC
 NVIDIA_FW_PARTITION_PROTOCOL *
 EFIAPI
 ActiveImagePartition (
-  IN  FW_IMAGE_PRIVATE_DATA         *Private
+  IN  FW_IMAGE_PRIVATE_DATA  *Private
   )
 {
   return (BImageIsActive (Private)) ? Private->FwPartitionB : Private->FwPartitionA;
@@ -138,7 +138,7 @@ STATIC
 NVIDIA_FW_PARTITION_PROTOCOL *
 EFIAPI
 InactiveImagePartition (
-  IN  FW_IMAGE_PRIVATE_DATA         *Private
+  IN  FW_IMAGE_PRIVATE_DATA  *Private
   )
 {
   return (BImageIsActive (Private)) ? Private->FwPartitionA : Private->FwPartitionB;
@@ -159,15 +159,16 @@ STATIC
 EFI_STATUS
 EFIAPI
 FwImageCheckOffsetAndBytes (
-  IN  UINT64                    MaxOffset,
-  IN  UINT64                    Offset,
-  IN  UINTN                     Bytes
+  IN  UINT64  MaxOffset,
+  IN  UINT64  Offset,
+  IN  UINTN   Bytes
   )
 {
   // Check offset and bytes separately to avoid overflow
   if ((Offset > MaxOffset) ||
       (Bytes > MaxOffset) ||
-      (Offset + Bytes > MaxOffset)) {
+      (Offset + Bytes > MaxOffset))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -179,41 +180,56 @@ STATIC
 EFI_STATUS
 EFIAPI
 FwImageWrite (
-  IN  NVIDIA_FW_IMAGE_PROTOCOL          *This,
-  IN  UINT64                            Offset,
-  IN  UINTN                             Bytes,
-  IN  CONST VOID                        *Buffer,
-  IN  UINTN                             Flags
+  IN  NVIDIA_FW_IMAGE_PROTOCOL  *This,
+  IN  UINT64                    Offset,
+  IN  UINTN                     Bytes,
+  IN  CONST VOID                *Buffer,
+  IN  UINTN                     Flags
   )
 {
-  FW_IMAGE_PRIVATE_DATA                 *Private;
-  CONST CHAR16                          *ImageName;
-  EFI_STATUS                            Status;
-  NVIDIA_FW_PARTITION_PROTOCOL          *Partition;
+  FW_IMAGE_PRIVATE_DATA         *Private;
+  CONST CHAR16                  *ImageName;
+  EFI_STATUS                    Status;
+  NVIDIA_FW_PARTITION_PROTOCOL  *Partition;
 
   if ((Buffer == NULL) || (This == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = CR (This,
-                FW_IMAGE_PRIVATE_DATA,
-                Protocol,
-                FW_IMAGE_PRIVATE_DATA_SIGNATURE);
+  Private = CR (
+              This,
+              FW_IMAGE_PRIVATE_DATA,
+              Protocol,
+              FW_IMAGE_PRIVATE_DATA_SIGNATURE
+              );
   ImageName = Private->Name;
 
-  DEBUG ((DEBUG_VERBOSE, "%a: Entry for name=%s, Bytes=%llu Buffer=0x%p\n",
-          __FUNCTION__, ImageName, Bytes, Buffer));
+  DEBUG ((
+    DEBUG_VERBOSE,
+    "%a: Entry for name=%s, Bytes=%llu Buffer=0x%p\n",
+    __FUNCTION__,
+    ImageName,
+    Bytes,
+    Buffer
+    ));
 
   Status = FwImageCheckOffsetAndBytes (Private->Bytes, Offset, Bytes);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: offset=%llu, bytes=%u error: %r\n",
-            __FUNCTION__, Offset, Bytes, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: offset=%llu, bytes=%u error: %r\n",
+      __FUNCTION__,
+      Offset,
+      Bytes,
+      Status
+      ));
     return Status;
   }
 
   // Get partition to use based on active boot chain and override flags
   if (Flags & (FW_IMAGE_RW_FLAG_FORCE_PARTITION_A |
-               FW_IMAGE_RW_FLAG_FORCE_PARTITION_B)) {
+               FW_IMAGE_RW_FLAG_FORCE_PARTITION_B))
+  {
     if (Flags & (FW_IMAGE_RW_FLAG_FORCE_PARTITION_A)) {
       Partition = Private->FwPartitionA;
     } else {
@@ -224,22 +240,41 @@ FwImageWrite (
   } else {
     Partition = Private->FwPartitionA;
   }
+
   if (Partition == NULL) {
-    DEBUG ((DEBUG_ERROR, "Image %s, flags=0x%x invalid partition, A=%u, B=%u\n",
-            ImageName, Flags, HasAImage (Private), HasBImage (Private)));
+    DEBUG ((
+      DEBUG_ERROR,
+      "Image %s, flags=0x%x invalid partition, A=%u, B=%u\n",
+      ImageName,
+      Flags,
+      HasAImage (Private),
+      HasBImage (Private)
+      ));
     return EFI_NOT_FOUND;
   }
 
-  DEBUG ((DEBUG_VERBOSE, "Starting write of %s, Offset=%llu, Bytes=%u\n",
-          Partition->PartitionName, Offset, Bytes));
+  DEBUG ((
+    DEBUG_VERBOSE,
+    "Starting write of %s, Offset=%llu, Bytes=%u\n",
+    Partition->PartitionName,
+    Offset,
+    Bytes
+    ));
 
-  Status = Partition->Write (Partition,
-                             Offset,
-                             Bytes,
-                             Buffer);
+  Status = Partition->Write (
+                        Partition,
+                        Offset,
+                        Bytes,
+                        Buffer
+                        );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Error writing %s, Offset=%llu: %r\n",
-            Partition->PartitionName, Offset, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "Error writing %s, Offset=%llu: %r\n",
+      Partition->PartitionName,
+      Offset,
+      Status
+      ));
   }
 
   return Status;
@@ -250,38 +285,47 @@ STATIC
 EFI_STATUS
 EFIAPI
 FwImageRead (
-  IN  NVIDIA_FW_IMAGE_PROTOCOL          *This,
-  IN  UINT64                            Offset,
-  IN  UINTN                             Bytes,
-  OUT VOID                              *Buffer,
-  IN  UINTN                             Flags
+  IN  NVIDIA_FW_IMAGE_PROTOCOL  *This,
+  IN  UINT64                    Offset,
+  IN  UINTN                     Bytes,
+  OUT VOID                      *Buffer,
+  IN  UINTN                     Flags
   )
 {
-  FW_IMAGE_PRIVATE_DATA                 *Private;
-  CONST CHAR16                          *ImageName;
-  EFI_STATUS                            Status;
-  NVIDIA_FW_PARTITION_PROTOCOL          *Partition;
+  FW_IMAGE_PRIVATE_DATA         *Private;
+  CONST CHAR16                  *ImageName;
+  EFI_STATUS                    Status;
+  NVIDIA_FW_PARTITION_PROTOCOL  *Partition;
 
   if ((Buffer == NULL) || (This == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = CR (This,
-                FW_IMAGE_PRIVATE_DATA,
-                Protocol,
-                FW_IMAGE_PRIVATE_DATA_SIGNATURE);
+  Private = CR (
+              This,
+              FW_IMAGE_PRIVATE_DATA,
+              Protocol,
+              FW_IMAGE_PRIVATE_DATA_SIGNATURE
+              );
   ImageName = Private->Name;
 
   Status = FwImageCheckOffsetAndBytes (Private->Bytes, Offset, Bytes);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: offset=%llu, bytes=%u error: %r\n",
-            __FUNCTION__, Offset, Bytes, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: offset=%llu, bytes=%u error: %r\n",
+      __FUNCTION__,
+      Offset,
+      Bytes,
+      Status
+      ));
     return Status;
   }
 
   // Get partition to use based on active boot chain and override flags
   if (Flags & (FW_IMAGE_RW_FLAG_FORCE_PARTITION_A |
-               FW_IMAGE_RW_FLAG_FORCE_PARTITION_B)) {
+               FW_IMAGE_RW_FLAG_FORCE_PARTITION_B))
+  {
     if (Flags & (FW_IMAGE_RW_FLAG_FORCE_PARTITION_A)) {
       Partition = Private->FwPartitionA;
     } else {
@@ -296,22 +340,41 @@ FwImageRead (
   } else {
     Partition = Private->FwPartitionA;
   }
+
   if (Partition == NULL) {
-    DEBUG ((DEBUG_ERROR, "Image %s, flags=0x%x invalid partition, A=%u, B=%u\n",
-            ImageName, Flags, HasAImage (Private), HasBImage (Private)));
+    DEBUG ((
+      DEBUG_ERROR,
+      "Image %s, flags=0x%x invalid partition, A=%u, B=%u\n",
+      ImageName,
+      Flags,
+      HasAImage (Private),
+      HasBImage (Private)
+      ));
     return EFI_NOT_FOUND;
   }
 
-  DEBUG ((DEBUG_VERBOSE, "Starting read of %s, Offset=%lld, Bytes=%d\n",
-          Partition->PartitionName, Offset, Bytes));
+  DEBUG ((
+    DEBUG_VERBOSE,
+    "Starting read of %s, Offset=%lld, Bytes=%d\n",
+    Partition->PartitionName,
+    Offset,
+    Bytes
+    ));
 
-  Status = Partition->Read (Partition,
-                            Offset,
-                            Bytes,
-                            Buffer);
+  Status = Partition->Read (
+                        Partition,
+                        Offset,
+                        Bytes,
+                        Buffer
+                        );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Error reading %s, Offset=%lld: %r\n",
-            Partition->PartitionName, Offset, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "Error reading %s, Offset=%lld: %r\n",
+      Partition->PartitionName,
+      Offset,
+      Status
+      ));
   }
 
   return Status;
@@ -322,22 +385,24 @@ STATIC
 EFI_STATUS
 EFIAPI
 FwImageGetAttributes (
-  IN  NVIDIA_FW_IMAGE_PROTOCOL          *This,
-  IN  FW_IMAGE_ATTRIBUTES               *Attributes
+  IN  NVIDIA_FW_IMAGE_PROTOCOL  *This,
+  IN  FW_IMAGE_ATTRIBUTES       *Attributes
   )
 {
-  FW_IMAGE_PRIVATE_DATA                 *Private;
+  FW_IMAGE_PRIVATE_DATA  *Private;
 
   if ((Attributes == NULL) || (This == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = CR (This,
-                FW_IMAGE_PRIVATE_DATA,
-                Protocol,
-                FW_IMAGE_PRIVATE_DATA_SIGNATURE);
+  Private = CR (
+              This,
+              FW_IMAGE_PRIVATE_DATA,
+              Protocol,
+              FW_IMAGE_PRIVATE_DATA_SIGNATURE
+              );
 
-  Attributes->Bytes = Private->Bytes;
+  Attributes->Bytes     = Private->Bytes;
   Attributes->BlockSize = Private->BlockSize;
 
   return EFI_SUCCESS;
@@ -356,27 +421,30 @@ STATIC
 VOID
 EFIAPI
 FwImageDxeAddressChangeNotify (
-  IN EFI_EVENT                  Event,
-  IN VOID                       *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
-  UINTN                         Index;
-  FW_IMAGE_PRIVATE_DATA         *Private;
+  UINTN                  Index;
+  FW_IMAGE_PRIVATE_DATA  *Private;
 
   Private = mPrivate;
   for (Index = 0; Index < mNumFwImages; Index++, Private++) {
     if (Private->FwPartitionA != NULL) {
-      EfiConvertPointer (0x0, (VOID **) &Private->FwPartitionA);
+      EfiConvertPointer (0x0, (VOID **)&Private->FwPartitionA);
     }
+
     if (Private->FwPartitionB != NULL) {
-      EfiConvertPointer (0x0, (VOID **) &Private->FwPartitionB);
+      EfiConvertPointer (0x0, (VOID **)&Private->FwPartitionB);
     }
-    EfiConvertPointer (0x0, (VOID **) &Private->Protocol.ImageName);
-    EfiConvertPointer (0x0, (VOID **) &Private->Protocol.Read);
-    EfiConvertPointer (0x0, (VOID **) &Private->Protocol.Write);
-    EfiConvertPointer (0x0, (VOID **) &Private->Protocol.GetAttributes);
+
+    EfiConvertPointer (0x0, (VOID **)&Private->Protocol.ImageName);
+    EfiConvertPointer (0x0, (VOID **)&Private->Protocol.Read);
+    EfiConvertPointer (0x0, (VOID **)&Private->Protocol.Write);
+    EfiConvertPointer (0x0, (VOID **)&Private->Protocol.GetAttributes);
   }
-  EfiConvertPointer (0x0, (VOID **) &mPrivate);
+
+  EfiConvertPointer (0x0, (VOID **)&mPrivate);
 }
 
 /**
@@ -409,8 +477,12 @@ FwImageFindPartition (
 
   Status = GetBootChainPartitionName (ImageName, BootChain, PartitionName);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Error getting partition name for %s, BootChain=%u\n",
-            ImageName, BootChain));
+    DEBUG ((
+      DEBUG_ERROR,
+      "Error getting partition name for %s, BootChain=%u\n",
+      ImageName,
+      BootChain
+      ));
     return NULL;
   }
 
@@ -421,8 +493,12 @@ FwImageFindPartition (
       if (FoundProtocol == NULL) {
         FoundProtocol = Protocol;
       } else {
-        DEBUG ((DEBUG_ERROR, "%a: Duplicate %s partitions\n",
-                __FUNCTION__, PartitionName));
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Duplicate %s partitions\n",
+          __FUNCTION__,
+          PartitionName
+          ));
         return NULL;
       }
     }
@@ -436,8 +512,12 @@ FwImageFindPartition (
         if (FoundProtocol == NULL) {
           FoundProtocol = Protocol;
         } else {
-          DEBUG ((DEBUG_ERROR, "%a: Duplicate %s partitions\n",
-                  __FUNCTION__, ImageName));
+          DEBUG ((
+            DEBUG_ERROR,
+            "%a: Duplicate %s partitions\n",
+            __FUNCTION__,
+            ImageName
+            ));
           return NULL;
         }
       }
@@ -460,11 +540,11 @@ STATIC
 EFI_STATUS
 EFIAPI
 FwImageGetPartitionAttributes (
-  FW_IMAGE_PRIVATE_DATA         *Private
+  FW_IMAGE_PRIVATE_DATA  *Private
   )
 {
-  FW_PARTITION_ATTRIBUTES       AttributesA, AttributesB;
-  EFI_STATUS                    Status;
+  FW_PARTITION_ATTRIBUTES  AttributesA, AttributesB;
+  EFI_STATUS               Status;
 
   // get A partition attributes
   Status = Private->FwPartitionA->GetAttributes (Private->FwPartitionA, &AttributesA);
@@ -472,8 +552,8 @@ FwImageGetPartitionAttributes (
     return Status;
   }
 
-  Private->Bytes        = AttributesA.Bytes;
-  Private->BlockSize    = AttributesA.BlockSize;
+  Private->Bytes     = AttributesA.Bytes;
+  Private->BlockSize = AttributesA.BlockSize;
 
   // if B exists, its attributes must match A
   if (Private->FwPartitionB != NULL) {
@@ -483,8 +563,12 @@ FwImageGetPartitionAttributes (
     }
 
     if (AttributesA.Bytes != AttributesB.Bytes) {
-      DEBUG ((DEBUG_ERROR, "%a: Image %s A/B have different byte counts\n",
-              __FUNCTION__, Private->Name));
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Image %s A/B have different byte counts\n",
+        __FUNCTION__,
+        Private->Name
+        ));
       return EFI_UNSUPPORTED;
     }
 
@@ -507,8 +591,8 @@ FwImageGetPartitionAttributes (
 EFI_STATUS
 EFIAPI
 FwImageDxeInitialize (
-  IN EFI_HANDLE                 ImageHandle,
-  IN EFI_SYSTEM_TABLE           *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   FW_IMAGE_PRIVATE_DATA         *Private;
@@ -525,11 +609,15 @@ FwImageDxeInitialize (
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   if ((Hob != NULL) &&
-      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
     mBootChain = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ActiveBootChain;
   } else {
-    DEBUG ((DEBUG_ERROR, "%a: Error getting active boot chain\n",
-            __FUNCTION__));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Error getting active boot chain\n",
+      __FUNCTION__
+      ));
     return EFI_UNSUPPORTED;
   }
 
@@ -538,39 +626,56 @@ FwImageDxeInitialize (
     return EFI_UNSUPPORTED;
   }
 
-  Status = gBS->LocateHandleBuffer (ByProtocol,
-                                    &gNVIDIAFwPartitionProtocolGuid,
-                                    NULL,
-                                    &NumHandles,
-                                    &HandleBuffer);
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gNVIDIAFwPartitionProtocolGuid,
+                  NULL,
+                  &NumHandles,
+                  &HandleBuffer
+                  );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error locating FwPartition handles: %r\n",
-            __FUNCTION__, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Error locating FwPartition handles: %r\n",
+      __FUNCTION__,
+      Status
+      ));
     goto Done;
   }
 
-  ProtocolBuffer = (NVIDIA_FW_PARTITION_PROTOCOL **) AllocateZeroPool (
-    NumHandles * sizeof (NVIDIA_FW_PARTITION_PROTOCOL *));
+  ProtocolBuffer = (NVIDIA_FW_PARTITION_PROTOCOL **)AllocateZeroPool (
+                                                      NumHandles * sizeof (NVIDIA_FW_PARTITION_PROTOCOL *)
+                                                      );
   if (ProtocolBuffer == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: ProtocolBuffer allocation failed\n",
-            __FUNCTION__));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: ProtocolBuffer allocation failed\n",
+      __FUNCTION__
+      ));
     Status = EFI_OUT_OF_RESOURCES;
     goto Done;
   }
 
   for (Index = 0; Index < NumHandles; Index++) {
-    Status = gBS->HandleProtocol (HandleBuffer[Index],
-                                  &gNVIDIAFwPartitionProtocolGuid,
-                                  (VOID **) &ProtocolBuffer[Index]);
+    Status = gBS->HandleProtocol (
+                    HandleBuffer[Index],
+                    &gNVIDIAFwPartitionProtocolGuid,
+                    (VOID **)&ProtocolBuffer[Index]
+                    );
     if (EFI_ERROR (Status) || (ProtocolBuffer[Index] == NULL)) {
-      DEBUG ((DEBUG_ERROR, "Failed to get FwPartition for handle index %u: %r\n",
-              Index, Status));
+      DEBUG ((
+        DEBUG_ERROR,
+        "Failed to get FwPartition for handle index %u: %r\n",
+        Index,
+        Status
+        ));
       goto Done;
     }
   }
 
-  mPrivate = (FW_IMAGE_PRIVATE_DATA *) AllocateRuntimeZeroPool (
-    ImageCount * sizeof (FW_IMAGE_PRIVATE_DATA));
+  mPrivate = (FW_IMAGE_PRIVATE_DATA *)AllocateRuntimeZeroPool (
+                                        ImageCount * sizeof (FW_IMAGE_PRIVATE_DATA)
+                                        );
   if (mPrivate == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: mPrivate allocation failed\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
@@ -580,36 +685,43 @@ FwImageDxeInitialize (
   // initialize a private image tracking structure for every FW image
   Private = mPrivate;
   for (Index = 0; Index < ImageCount; Index++, Private++) {
-    CONST CHAR16    *Name;
+    CONST CHAR16  *Name;
 
     Name = ImageList[Index];
     DEBUG ((DEBUG_VERBOSE, "%a: Initializing image %s\n", __FUNCTION__, Name));
 
     Private->Signature = FW_IMAGE_PRIVATE_DATA_SIGNATURE;
-    Status = StrnCpyS (Private->Name, sizeof (Private->Name), Name, StrLen (Name));
+    Status             = StrnCpyS (Private->Name, sizeof (Private->Name), Name, StrLen (Name));
     if (EFI_ERROR (Status)) {
       goto Done;
     }
-    Private->FwPartitionA = FwImageFindPartition (Name,
-                                                  ProtocolBuffer,
-                                                  NumHandles,
-                                                  BOOT_CHAIN_A);
+
+    Private->FwPartitionA = FwImageFindPartition (
+                              Name,
+                              ProtocolBuffer,
+                              NumHandles,
+                              BOOT_CHAIN_A
+                              );
     if (Private->FwPartitionA == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: missing A partition for %s\n", __FUNCTION__, Name));
       Status = EFI_UNSUPPORTED;
       goto Done;
     }
+
     if (PcdGetBool (PcdFwImageEnableBPartitions)) {
-      Private->FwPartitionB = FwImageFindPartition (Name,
-                                                    ProtocolBuffer,
-                                                    NumHandles,
-                                                    BOOT_CHAIN_B);
+      Private->FwPartitionB = FwImageFindPartition (
+                                Name,
+                                ProtocolBuffer,
+                                NumHandles,
+                                BOOT_CHAIN_B
+                                );
       if (Private->FwPartitionB == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: missing B partition for %s\n", __FUNCTION__, Name));
         Status = EFI_UNSUPPORTED;
         goto Done;
       }
     }
+
     Status = FwImageGetPartitionAttributes (Private);
     if (EFI_ERROR (Status)) {
       goto Done;
@@ -620,28 +732,42 @@ FwImageDxeInitialize (
     Private->Protocol.Write         = FwImageWrite;
     Private->Protocol.GetAttributes = FwImageGetAttributes;
 
-    Status = gBS->InstallMultipleProtocolInterfaces (&Private->Handle,
-                                                     &gNVIDIAFwImageProtocolGuid,
-                                                     &Private->Protocol,
-                                                     NULL);
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &Private->Handle,
+                    &gNVIDIAFwImageProtocolGuid,
+                    &Private->Protocol,
+                    NULL
+                    );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Couldn't install protocol interface for Index=%u, image=%s: %r\n",
-              __FUNCTION__, Index, Private->Name, Status));
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Couldn't install protocol interface for Index=%u, image=%s: %r\n",
+        __FUNCTION__,
+        Index,
+        Private->Name,
+        Status
+        ));
       goto Done;
     }
 
     mNumFwImages++;
   }
 
-  Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
-                               TPL_NOTIFY,
-                               FwImageDxeAddressChangeNotify,
-                               NULL,
-                               &gEfiEventVirtualAddressChangeGuid,
-                               &mAddressChangeEvent);
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_NOTIFY,
+                  FwImageDxeAddressChangeNotify,
+                  NULL,
+                  &gEfiEventVirtualAddressChangeGuid,
+                  &mAddressChangeEvent
+                  );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error creating address change event: %r\n",
-            __FUNCTION__, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Error creating address change event: %r\n",
+      __FUNCTION__,
+      Status
+      ));
     ASSERT_EFI_ERROR (Status);
     goto Done;
   }
@@ -663,10 +789,12 @@ Done:
     Private = mPrivate;
     for (Index = 0; Index < mNumFwImages; Index++, Private++) {
       if (Private->Handle != NULL) {
-        gBS->UninstallMultipleProtocolInterfaces (Private->Handle,
-                                                  &gNVIDIAFwImageProtocolGuid,
-                                                  &Private->Protocol,
-                                                  NULL);
+        gBS->UninstallMultipleProtocolInterfaces (
+               Private->Handle,
+               &gNVIDIAFwImageProtocolGuid,
+               &Private->Protocol,
+               NULL
+               );
       }
     }
 
@@ -675,8 +803,8 @@ Done:
       mPrivate = NULL;
     }
 
-    mNumFwImages    = 0;
-    mBootChain      = MAX_UINT32;
+    mNumFwImages = 0;
+    mBootChain   = MAX_UINT32;
   }
 
   return Status;

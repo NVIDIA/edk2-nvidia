@@ -36,7 +36,8 @@ EFIAPI
 FaultyReset (
   IN EFI_BLOCK_IO_PROTOCOL  *This,
   IN BOOLEAN                ExtendedVerification
-) {
+  )
+{
   return EFI_DEVICE_ERROR;
 }
 
@@ -70,7 +71,8 @@ FaultyReadBlocks (
   IN EFI_LBA                Lba,
   IN UINTN                  BufferSize,
   OUT VOID                  *Buffer
-) {
+  )
+{
   return EFI_DEVICE_ERROR;
 }
 
@@ -104,7 +106,8 @@ FaultyWriteBlocks (
   IN EFI_LBA                Lba,
   IN UINTN                  BufferSize,
   IN VOID                   *Buffer
-) {
+  )
+{
   return EFI_DEVICE_ERROR;
 }
 
@@ -123,11 +126,12 @@ EFI_STATUS
 EFIAPI
 FaultyFlushBlocks (
   IN EFI_BLOCK_IO_PROTOCOL  *This
-) {
+  )
+{
   return EFI_DEVICE_ERROR;
 }
 
-FLASH_TEST_PRIVATE mFaultyFlashTestPrivate = {
+FLASH_TEST_PRIVATE  mFaultyFlashTestPrivate = {
   FLASH_TEST_PRIVATE_SIGNATURE,
   {
     EFI_BLOCK_IO_PROTOCOL_REVISION,
@@ -147,9 +151,9 @@ FLASH_TEST_PRIVATE mFaultyFlashTestPrivate = {
     0,     // BlockSize;
     1,     // IoAlign;
     0,     // LastBlock;
-    0, // LowestAlignedLba;
-    0, // LogicalBlocksPerPhysicalBlock;
-    0, // OptimalTransferLengthGranularity;
+    0,     // LowestAlignedLba;
+    0,     // LogicalBlocksPerPhysicalBlock;
+    0,     // OptimalTransferLengthGranularity;
   },
   0, // StartingAddr
   0, // Size
@@ -180,27 +184,28 @@ FaultyFlashStubInitialize (
   IN  UINT32                 BlockSize,
   IN  UINT32                 IoAlign,
   OUT EFI_BLOCK_IO_PROTOCOL  **BlockIo
-) {
-  FLASH_TEST_PRIVATE *FaultyFlashTestPrivate;
+  )
+{
+  FLASH_TEST_PRIVATE  *FaultyFlashTestPrivate;
 
-  if (Buffer == NULL || BlockIo == NULL) {
+  if ((Buffer == NULL) || (BlockIo == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (BufferSize == 0 || BlockSize == 0 || BufferSize % BlockSize != 0) {
+  if ((BufferSize == 0) || (BlockSize == 0) || (BufferSize % BlockSize != 0)) {
     return EFI_BAD_BUFFER_SIZE;
   }
 
-  FaultyFlashTestPrivate = AllocatePool(sizeof(FLASH_TEST_PRIVATE));
+  FaultyFlashTestPrivate = AllocatePool (sizeof (FLASH_TEST_PRIVATE));
   if (FaultyFlashTestPrivate == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  CopyMem(
+  CopyMem (
     FaultyFlashTestPrivate,
     &mFaultyFlashTestPrivate,
-    sizeof(FLASH_TEST_PRIVATE)
-  );
+    sizeof (FLASH_TEST_PRIVATE)
+    );
 
   FaultyFlashTestPrivate->BlockIo.Media = &FaultyFlashTestPrivate->Media;
 
@@ -210,7 +215,7 @@ FaultyFlashStubInitialize (
   FaultyFlashTestPrivate->Media.IoAlign   = IoAlign;
   FaultyFlashTestPrivate->Media.BlockSize = BlockSize;
   FaultyFlashTestPrivate->Media.LastBlock = (BufferSize + BlockSize - 1)
-                                                / BlockSize - 1;
+                                            / BlockSize - 1;
 
   *BlockIo = &FaultyFlashTestPrivate->BlockIo;
 
@@ -228,14 +233,14 @@ EFI_STATUS
 EFIAPI
 FaultyFlashStubDestroy (
   IN EFI_BLOCK_IO_PROTOCOL  *BlockIo
-) {
+  )
+{
+  FLASH_TEST_PRIVATE  *FaultyFlashTestPrivate;
 
-  FLASH_TEST_PRIVATE *FaultyFlashTestPrivate;
-
-  FaultyFlashTestPrivate = FLASH_TEST_PRIVATE_FROM_BLOCK_IO(BlockIo);
+  FaultyFlashTestPrivate = FLASH_TEST_PRIVATE_FROM_BLOCK_IO (BlockIo);
 
   if (FaultyFlashTestPrivate != NULL) {
-    FreePool(FaultyFlashTestPrivate);
+    FreePool (FaultyFlashTestPrivate);
     FaultyFlashTestPrivate = NULL;
   }
 

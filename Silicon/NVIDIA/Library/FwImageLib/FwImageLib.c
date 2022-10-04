@@ -16,23 +16,26 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Uefi/UefiBaseType.h>
 
-STATIC UINTN                        mNumImages                      = 0;
-STATIC NVIDIA_FW_IMAGE_PROTOCOL     **mFwImages                     = NULL;
+STATIC UINTN                     mNumImages  = 0;
+STATIC NVIDIA_FW_IMAGE_PROTOCOL  **mFwImages = NULL;
 
 NVIDIA_FW_IMAGE_PROTOCOL *
 EFIAPI
 FwImageFindProtocol (
-  CONST CHAR16                  *Name
+  CONST CHAR16  *Name
   )
 {
-  NVIDIA_FW_IMAGE_PROTOCOL      *Protocol;
-  UINTN                         ProtocolIndex;
+  NVIDIA_FW_IMAGE_PROTOCOL  *Protocol;
+  UINTN                     ProtocolIndex;
 
   Protocol = NULL;
   for (ProtocolIndex = 0; ProtocolIndex < mNumImages; ProtocolIndex++) {
-    if (StrnCmp (mFwImages[ProtocolIndex]->ImageName,
-                 Name,
-                 FW_IMAGE_NAME_LENGTH) == 0) {
+    if (StrnCmp (
+          mFwImages[ProtocolIndex]->ImageName,
+          Name,
+          FW_IMAGE_NAME_LENGTH
+          ) == 0)
+    {
       Protocol = mFwImages[ProtocolIndex];
       break;
     }
@@ -72,30 +75,37 @@ FwImageGetProtocolArray (
 EFI_STATUS
 EFIAPI
 FwImageLibConstructor (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS            Status;
-  UINTN                 Index;
-  UINTN                 NumHandles;
-  EFI_HANDLE            *HandleBuffer;
+  EFI_STATUS  Status;
+  UINTN       Index;
+  UINTN       NumHandles;
+  EFI_HANDLE  *HandleBuffer;
 
   HandleBuffer = NULL;
-  Status = gBS->LocateHandleBuffer (ByProtocol,
-                                    &gNVIDIAFwImageProtocolGuid,
-                                    NULL,
-                                    &NumHandles,
-                                    &HandleBuffer);
+  Status       = gBS->LocateHandleBuffer (
+                        ByProtocol,
+                        &gNVIDIAFwImageProtocolGuid,
+                        NULL,
+                        &NumHandles,
+                        &HandleBuffer
+                        );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: LocateHandleBuffer failed for gNVIDIAFwImageProtocolGuid (%r)\n",
-            __FUNCTION__, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: LocateHandleBuffer failed for gNVIDIAFwImageProtocolGuid (%r)\n",
+      __FUNCTION__,
+      Status
+      ));
     goto Done;
   }
+
   DEBUG ((DEBUG_INFO, "%a: got %d FW image handles", __FUNCTION__, NumHandles));
 
   mFwImages = (NVIDIA_FW_IMAGE_PROTOCOL **)
-    AllocateRuntimeZeroPool (NumHandles * sizeof (VOID *));
+              AllocateRuntimeZeroPool (NumHandles * sizeof (VOID *));
   if (mFwImages == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     DEBUG ((DEBUG_ERROR, "%a: mFwImages allocate failed\n", __FUNCTION__));
@@ -104,21 +114,37 @@ FwImageLibConstructor (
 
   mNumImages = 0;
   for (Index = 0; Index < NumHandles; Index++) {
-    Status = gBS->HandleProtocol( HandleBuffer[Index],
-                                  &gNVIDIAFwImageProtocolGuid,
-                                  (VOID **) &mFwImages[Index]);
+    Status = gBS->HandleProtocol (
+                    HandleBuffer[Index],
+                    &gNVIDIAFwImageProtocolGuid,
+                    (VOID **)&mFwImages[Index]
+                    );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get FW Image Protocol for index=%u: %r\n",
-              __FUNCTION__, Index, Status));
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to get FW Image Protocol for index=%u: %r\n",
+        __FUNCTION__,
+        Index,
+        Status
+        ));
       goto Done;
     }
 
-    DEBUG ((DEBUG_INFO, "%a: Got FW Image protocol, Name=%s\n",
-            __FUNCTION__, mFwImages[Index]->ImageName));
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: Got FW Image protocol, Name=%s\n",
+      __FUNCTION__,
+      mFwImages[Index]->ImageName
+      ));
 
     if (FwImageFindProtocol (mFwImages[Index]->ImageName) != NULL) {
-      DEBUG ((DEBUG_ERROR, "%a: duplicate %s image index=%u\n",
-              __FUNCTION__, mFwImages[Index]->ImageName, Index));
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: duplicate %s image index=%u\n",
+        __FUNCTION__,
+        mFwImages[Index]->ImageName,
+        Index
+        ));
       Status = EFI_UNSUPPORTED;
       goto Done;
     }
@@ -137,6 +163,7 @@ Done:
       FreePool (mFwImages);
       mFwImages = NULL;
     }
+
     mNumImages = 0;
   }
 

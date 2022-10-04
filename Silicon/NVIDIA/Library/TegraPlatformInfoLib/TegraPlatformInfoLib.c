@@ -23,13 +23,14 @@ TegraReadHidrevReg (
   VOID
   )
 {
-  UINT64 MiscRegBaseAddr = FixedPcdGet64(PcdMiscRegBaseAddress);
+  UINT64  MiscRegBaseAddr = FixedPcdGet64 (PcdMiscRegBaseAddress);
+
   if (MiscRegBaseAddr == 0) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to read HIDREV register\n", __FUNCTION__));
     return MAX_UINT32;
   }
 
-  return (MmioRead32(MiscRegBaseAddr + HIDREV_OFFSET));
+  return (MmioRead32 (MiscRegBaseAddr + HIDREV_OFFSET));
 }
 
 TEGRA_PLATFORM_TYPE
@@ -37,8 +38,9 @@ TegraGetPlatform (
   VOID
   )
 {
-  UINT32 Hidrev = TegraReadHidrevReg();
-  UINT32 PlatType;
+  UINT32  Hidrev = TegraReadHidrevReg ();
+  UINT32  PlatType;
+
   PlatType = ((Hidrev >> HIDREV_PRE_SI_PLAT_SHIFT) & HIDREV_PRE_SI_PLAT_MASK);
   if (PlatType >= TEGRA_PLATFORM_UNKNOWN) {
     return TEGRA_PLATFORM_UNKNOWN;
@@ -52,7 +54,7 @@ TegraGetMajorVersion (
   VOID
   )
 {
-  UINT32 Hidrev = TegraReadHidrevReg();
+  UINT32  Hidrev = TegraReadHidrevReg ();
 
   return ((Hidrev >> HIDREV_MAJORVER_SHIFT) & HIDREV_MAJORVER_MASK);
 }

@@ -34,12 +34,11 @@ InitMmu (
   IN ARM_MEMORY_REGION_DESCRIPTOR  *MemoryTable
   )
 {
+  VOID        *TranslationTableBase;
+  UINTN       TranslationTableSize;
+  EFI_STATUS  Status;
 
-  VOID                          *TranslationTableBase;
-  UINTN                         TranslationTableSize;
-  EFI_STATUS                    Status;
-
-  //Note: Because we called PeiServicesInstallPeiMemory() before to call InitMmu() the MMU Page Table resides in
+  // Note: Because we called PeiServicesInstallPeiMemory() before to call InitMmu() the MMU Page Table resides in
   //      DRAM (even at the top of DRAM as it is the first permanent memory allocation)
   Status = ArmConfigureMmu (MemoryTable, &TranslationTableBase, &TranslationTableSize);
   if (EFI_ERROR (Status)) {
@@ -69,8 +68,8 @@ Returns:
 EFI_STATUS
 EFIAPI
 RegisterFirmwareVolume (
-  IN EFI_PHYSICAL_ADDRESS               FvBase,
-  IN UINT64                             FvSize
+  IN EFI_PHYSICAL_ADDRESS  FvBase,
+  IN UINT64                FvSize
   )
 {
   EFI_RESOURCE_ATTRIBUTE_TYPE  ResourceAttributes;
@@ -94,27 +93,31 @@ RegisterFirmwareVolume (
         (FvTop <= NextHob.ResourceDescriptor->PhysicalStart + NextHob.ResourceDescriptor->ResourceLength))
     {
       ResourceAttributes = NextHob.ResourceDescriptor->ResourceAttribute;
-      ResourceLength = NextHob.ResourceDescriptor->ResourceLength;
-      ResourceTop = NextHob.ResourceDescriptor->PhysicalStart + ResourceLength;
+      ResourceLength     = NextHob.ResourceDescriptor->ResourceLength;
+      ResourceTop        = NextHob.ResourceDescriptor->PhysicalStart + ResourceLength;
 
       if (FvBase == NextHob.ResourceDescriptor->PhysicalStart) {
         if (ResourceTop != FvTop) {
           // Create the System Memory HOB for the firmware
-          BuildResourceDescriptorHob (EFI_RESOURCE_SYSTEM_MEMORY,
-                                      ResourceAttributes,
-                                      FvBase,
-                                      FvSize);
+          BuildResourceDescriptorHob (
+            EFI_RESOURCE_SYSTEM_MEMORY,
+            ResourceAttributes,
+            FvBase,
+            FvSize
+            );
 
           // Top of the FD is system memory available for UEFI
-          NextHob.ResourceDescriptor->PhysicalStart += FvSize;
+          NextHob.ResourceDescriptor->PhysicalStart  += FvSize;
           NextHob.ResourceDescriptor->ResourceLength -= FvSize;
         }
       } else {
         // Create the System Memory HOB for the firmware
-        BuildResourceDescriptorHob (EFI_RESOURCE_SYSTEM_MEMORY,
-                                    ResourceAttributes,
-                                    FvBase,
-                                    FvSize);
+        BuildResourceDescriptorHob (
+          EFI_RESOURCE_SYSTEM_MEMORY,
+          ResourceAttributes,
+          FvBase,
+          FvSize
+          );
 
         // Update the HOB
         NextHob.ResourceDescriptor->ResourceLength = FvBase - NextHob.ResourceDescriptor->PhysicalStart;
@@ -122,10 +125,12 @@ RegisterFirmwareVolume (
         // If there is some memory available on the top of the FD then create a HOB
         if (FvTop < NextHob.ResourceDescriptor->PhysicalStart + ResourceLength) {
           // Create the System Memory HOB for the remaining region (top of the FD)
-          BuildResourceDescriptorHob (EFI_RESOURCE_SYSTEM_MEMORY,
-                                      ResourceAttributes,
-                                      FvTop,
-                                      ResourceTop - FvTop);
+          BuildResourceDescriptorHob (
+            EFI_RESOURCE_SYSTEM_MEMORY,
+            ResourceAttributes,
+            FvTop,
+            ResourceTop - FvTop
+            );
         }
       }
 
@@ -135,10 +140,11 @@ RegisterFirmwareVolume (
       Found = TRUE;
       break;
     }
+
     NextHob.Raw = GET_NEXT_HOB (NextHob);
   }
 
-  ASSERT(Found);
+  ASSERT (Found);
 
   return EFI_SUCCESS;
 }
@@ -151,37 +157,46 @@ This is used for debug purposes
 --*/
 VOID
 EFIAPI
-DisplayHobResource ( VOID )
+DisplayHobResource (
+  VOID
+  )
 {
-  EFI_PEI_HOB_POINTERS         NextHob;
-  VOID                         *HobBase;
+  EFI_PEI_HOB_POINTERS  NextHob;
+  VOID                  *HobBase;
 
   // Search for System Memory Hob that contains the hob list
-  HobBase = GetHobList ();
+  HobBase     = GetHobList ();
   NextHob.Raw = HobBase;
   while ((NextHob.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, NextHob.Raw)) != NULL) {
     if ((NextHob.ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) &&
         ((UINTN)HobBase >= NextHob.ResourceDescriptor->PhysicalStart) &&
-        ((UINTN)HobBase < NextHob.ResourceDescriptor->PhysicalStart + NextHob.ResourceDescriptor->ResourceLength)) {
-      DEBUG ((EFI_D_INIT, "Main memory region: (0x%016llx, 0x%016llx)\r\n",
-          NextHob.ResourceDescriptor->PhysicalStart,
-          NextHob.ResourceDescriptor->ResourceLength));
+        ((UINTN)HobBase < NextHob.ResourceDescriptor->PhysicalStart + NextHob.ResourceDescriptor->ResourceLength))
+    {
+      DEBUG ((
+        EFI_D_INIT,
+        "Main memory region: (0x%016llx, 0x%016llx)\r\n",
+        NextHob.ResourceDescriptor->PhysicalStart,
+        NextHob.ResourceDescriptor->ResourceLength
+        ));
       return;
     }
+
     NextHob.Raw = GET_NEXT_HOB (NextHob);
   }
 }
 
 VOID
-PrintModel ( VOID )
+PrintModel (
+  VOID
+  )
 {
-  EFI_STATUS             Status;
-  VOID                   *Dtb;
-  UINTN                  DtbSize;
-  INT32                  NumProperty;
-  UINT32                 Count;
-  CHAR8                  *Data;
-  INT32                  Length;
+  EFI_STATUS  Status;
+  VOID        *Dtb;
+  UINTN       DtbSize;
+  INT32       NumProperty;
+  UINT32      Count;
+  CHAR8       *Data;
+  INT32       Length;
 
   Status = DtPlatformLoadDtb (&Dtb, &DtbSize);
   if (EFI_ERROR (Status)) {
@@ -198,19 +213,20 @@ PrintModel ( VOID )
     if (Length <= 0) {
       return;
     }
+
     DEBUG ((EFI_D_ERROR, "Model: %a\n", Data));
   }
 }
 
 VOID
 CEntryPoint (
-  IN  UINTN                     MemoryBase,
-  IN  UINTN                     MemorySize,
-  IN  UINTN                     StackBase,
-  IN  UINTN                     StackSize
+  IN  UINTN  MemoryBase,
+  IN  UINTN  MemorySize,
+  IN  UINTN  StackBase,
+  IN  UINTN  StackSize
   )
 {
-  EFI_HOB_HANDOFF_INFO_TABLE*   HobList;
+  EFI_HOB_HANDOFF_INFO_TABLE    *HobList;
   EFI_STATUS                    Status;
   CHAR8                         Buffer[100];
   UINTN                         CharCount;
@@ -234,42 +250,47 @@ CEntryPoint (
     if (FvHeader->Signature == EFI_FVH_SIGNATURE) {
       break;
     }
+
     FvOffset += SIZE_64KB;
   }
+
   ASSERT (FvOffset < MemorySize);
   FvSize = FvHeader->FvLength;
   // Make UEFI FV size aligned to 64KB.
   FvSize = ALIGN_VALUE (FvSize, SIZE_64KB);
 
-  if (GetGRBlobBaseAddress () != 0 &&
-      ValidateGrBlobHeader (GetGRBlobBaseAddress ()) == EFI_SUCCESS) {
+  if ((GetGRBlobBaseAddress () != 0) &&
+      (ValidateGrBlobHeader (GetGRBlobBaseAddress ()) == EFI_SUCCESS))
+  {
     FvSize += GrBlobBinarySize (GetGRBlobBaseAddress ());
   }
 
   DtbBase = GetDTBBaseAddress ();
-  ASSERT ((VOID *) DtbBase != NULL);
+  ASSERT ((VOID *)DtbBase != NULL);
   DtbSize = fdt_totalsize ((VOID *)DtbBase);
 
   // Find the end of overlay DTB region.
   // Overlay DTBs are aligned to 4KB
-  DtbNext = ALIGN_VALUE(DtbBase + DtbSize, SIZE_4KB);
+  DtbNext = ALIGN_VALUE (DtbBase + DtbSize, SIZE_4KB);
   while (DtbNext < MemoryBase + MemorySize) {
-    if (fdt_check_header((VOID *)DtbNext) != 0) {
+    if (fdt_check_header ((VOID *)DtbNext) != 0) {
       break;
     }
-    DtbNext += fdt_totalsize((VOID *)DtbNext);
-    DtbNext = ALIGN_VALUE(DtbNext, SIZE_4KB);
+
+    DtbNext += fdt_totalsize ((VOID *)DtbNext);
+    DtbNext  = ALIGN_VALUE (DtbNext, SIZE_4KB);
   }
+
   DtbSize = DtbNext - DtbBase;
 
   // DTB Base may not be aligned to page boundary. Add overlay to size.
   DtbSize += (DtbBase & EFI_PAGE_MASK);
-  DtbSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize));
+  DtbSize  = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize));
   // Align DTB Base to page boundary.
-  DtbBase &= ~(EFI_PAGE_MASK);
+  DtbBase  &= ~(EFI_PAGE_MASK);
   DtbOffset = DtbBase - MemoryBase;
 
-  if (DtbBase >= MemoryBase && DtbBase < (MemoryBase + MemorySize)) {
+  if ((DtbBase >= MemoryBase) && (DtbBase < (MemoryBase + MemorySize))) {
     // Find out where HOB region should be depending on the biggest available
     // memory chunk in memory. Memory has stack at the very end and FV and DTB
     // somewhere in the middle. FV and DTB could be present in any order.
@@ -338,10 +359,10 @@ CEntryPoint (
       }
     }
   } else {
-    //Default to hob after the FV
+    // Default to hob after the FV
     HobBase = MemoryBase + FvOffset + FvSize;
     HobSize = MemorySize - FvSize - FvOffset - StackSize;
-    //Unless area before FV is larger
+    // Unless area before FV is larger
     if (FvOffset > HobSize) {
       HobBase = MemoryBase;
       HobSize = FvOffset;
@@ -372,27 +393,31 @@ CEntryPoint (
 
   // Initialize the Serial Port
   SerialPortInitialize ();
-  CharCount = AsciiSPrint (Buffer,sizeof (Buffer),"%s UEFI firmware (version %s built on %s)\n\r",
-    (CHAR16*)PcdGetPtr(PcdPlatformFamilyName),
-    (CHAR16*)PcdGetPtr(PcdFirmwareVersionString),
-    (CHAR16*)PcdGetPtr(PcdFirmwareDateTimeBuiltString));
-  SerialPortWrite ((UINT8 *) Buffer, CharCount);
+  CharCount = AsciiSPrint (
+                Buffer,
+                sizeof (Buffer),
+                "%s UEFI firmware (version %s built on %s)\n\r",
+                (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName),
+                (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString),
+                (CHAR16 *)PcdGetPtr (PcdFirmwareDateTimeBuiltString)
+                );
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
 
   // Initialize the Debug Agent for Source Level Debugging
-  //InitializeDebugAgent (DEBUG_AGENT_INIT_POSTMEM_SEC, NULL, NULL);
+  // InitializeDebugAgent (DEBUG_AGENT_INIT_POSTMEM_SEC, NULL, NULL);
   SaveAndSetDebugTimerInterrupt (TRUE);
 
   // Declare the PI/UEFI memory region
   HobFree = HobBase + HobSize;
   HobList = HobConstructor (
-    (VOID*)HobBase,
-    HobSize,
-    (VOID*)HobBase,
-    (VOID*)HobFree
-    );
+              (VOID *)HobBase,
+              HobSize,
+              (VOID *)HobBase,
+              (VOID *)HobFree
+              );
   PrePeiSetHobList (HobList);
 
-  //Register Firmware volume
+  // Register Firmware volume
   BuildFvHob ((EFI_PHYSICAL_ADDRESS)FvHeader, FvSize);
 
   // Build Platform Resource Data HOB
@@ -412,7 +437,7 @@ CEntryPoint (
   ASSERT_EFI_ERROR (Status);
 
   // Register UEFI DTB
-  RegisterDeviceTree(DtbBase);
+  RegisterDeviceTree (DtbBase);
 
   // Print platform model info from UEFI DTB
   PrintModel ();
@@ -428,7 +453,7 @@ CEntryPoint (
   // Create the Stacks HOB (reserve the memory for all stacks)
   BuildStackHob (StackBase, StackSize + SIZE_4KB);
 
-  //TODO: Call CpuPei as a library
+  // TODO: Call CpuPei as a library
   BuildCpuHob (ArmGetPhysicalAddressBits (), ArmGetPhysicalAddressBits ());
 
   // Store timer value logged at the beginning of firmware image execution
@@ -463,4 +488,3 @@ CEntryPoint (
   // DXE Core should always load and never return
   ASSERT (FALSE);
 }
-

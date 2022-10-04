@@ -21,8 +21,8 @@ extern CM_ARM_GICC_INFO  *GicCInfo;
 CM_OBJECT_TOKEN
 EFIAPI
 GetGicCToken (
-  UINTN
-  );
+              UINTN
+              );
 
 EFI_STATUS
 EFIAPI

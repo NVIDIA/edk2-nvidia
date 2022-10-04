@@ -20,14 +20,14 @@
 typedef struct _NVIDIA_REGULATOR_PROTOCOL NVIDIA_REGULATOR_PROTOCOL;
 
 typedef struct {
-  BOOLEAN     IsEnabled;
-  BOOLEAN     AlwaysEnabled;
-  BOOLEAN     IsAvailable;
-  UINTN       CurrentMicrovolts;
-  UINTN       MinMicrovolts;
-  UINTN       MaxMicrovolts;
-  UINTN       MicrovoltStep;
-  CONST CHAR8 *Name;
+  BOOLEAN        IsEnabled;
+  BOOLEAN        AlwaysEnabled;
+  BOOLEAN        IsAvailable;
+  UINTN          CurrentMicrovolts;
+  UINTN          MinMicrovolts;
+  UINTN          MaxMicrovolts;
+  UINTN          MicrovoltStep;
+  CONST CHAR8    *Name;
 } REGULATOR_INFO;
 
 /**
@@ -43,7 +43,7 @@ typedef struct {
 **/
 typedef
 EFI_STATUS
-(EFIAPI *REGULATOR_GET_INFO) (
+(EFIAPI *REGULATOR_GET_INFO)(
   IN  NVIDIA_REGULATOR_PROTOCOL  *This,
   IN  UINT32                     RegulatorId,
   OUT REGULATOR_INFO             *RegulatorInfo
@@ -62,7 +62,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *REGULATOR_GET_ID_FROM_NAME) (
+(EFIAPI *REGULATOR_GET_ID_FROM_NAME)(
   IN  NVIDIA_REGULATOR_PROTOCOL  *This,
   IN  CONST CHAR8                *Name,
   OUT UINT32                     *RegulatorId
@@ -81,7 +81,7 @@ EFI_STATUS
  */
 typedef
 EFI_STATUS
-(EFIAPI *REGULATOR_GET_REGULATORS) (
+(EFIAPI *REGULATOR_GET_REGULATORS)(
   IN     NVIDIA_REGULATOR_PROTOCOL  *This,
   IN OUT UINTN                      *BufferSize,
   OUT    UINT32                     *RegulatorIds OPTIONAL
@@ -101,7 +101,7 @@ EFI_STATUS
  */
 typedef
 EFI_STATUS
-(EFIAPI *REGULATOR_NOTIFY_STATE_CHANGE) (
+(EFIAPI *REGULATOR_NOTIFY_STATE_CHANGE)(
   IN NVIDIA_REGULATOR_PROTOCOL  *This,
   IN UINT32                     RegulatorId,
   IN EFI_EVENT                  Event
@@ -121,7 +121,7 @@ EFI_STATUS
  */
 typedef
 EFI_STATUS
-(EFIAPI *REGULATOR_ENABLE) (
+(EFIAPI *REGULATOR_ENABLE)(
   IN NVIDIA_REGULATOR_PROTOCOL  *This,
   IN UINT32                     RegulatorId,
   IN BOOLEAN                    Enable
@@ -142,7 +142,7 @@ EFI_STATUS
  */
 typedef
 EFI_STATUS
-(EFIAPI *REGULATOR_SET_VOLTAGE) (
+(EFIAPI *REGULATOR_SET_VOLTAGE)(
   IN NVIDIA_REGULATOR_PROTOCOL  *This,
   IN UINT32                     RegulatorId,
   IN UINTN                      Microvolts
@@ -150,15 +150,14 @@ EFI_STATUS
 
 /// NVIDIA_REGULATOR_PROTOCOL protocol structure.
 struct _NVIDIA_REGULATOR_PROTOCOL {
-
-  REGULATOR_GET_INFO            GetInfo;
-  REGULATOR_GET_ID_FROM_NAME    GetIdFromName;
-  REGULATOR_GET_REGULATORS      GetRegulators;
-  REGULATOR_NOTIFY_STATE_CHANGE NotifyStateChange;
-  REGULATOR_ENABLE              Enable;
-  REGULATOR_SET_VOLTAGE         SetVoltage;
+  REGULATOR_GET_INFO               GetInfo;
+  REGULATOR_GET_ID_FROM_NAME       GetIdFromName;
+  REGULATOR_GET_REGULATORS         GetRegulators;
+  REGULATOR_NOTIFY_STATE_CHANGE    NotifyStateChange;
+  REGULATOR_ENABLE                 Enable;
+  REGULATOR_SET_VOLTAGE            SetVoltage;
 };
 
-extern EFI_GUID gNVIDIARegulatorProtocolGuid;
+extern EFI_GUID  gNVIDIARegulatorProtocolGuid;
 
 #endif

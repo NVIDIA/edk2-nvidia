@@ -16,14 +16,13 @@
 **/
 
 typedef struct {
-  BOOLEAN VmmcRegulatorIdPresent;
-  BOOLEAN VqmmcRegulatorIdPresent;
-  BOOLEAN NonRemovable;
-  BOOLEAN Only1v8;
-  UINT32  VmmcRegulatorId;
-  UINT32  VqmmcRegulatorId;
+  BOOLEAN    VmmcRegulatorIdPresent;
+  BOOLEAN    VqmmcRegulatorIdPresent;
+  BOOLEAN    NonRemovable;
+  BOOLEAN    Only1v8;
+  UINT32     VmmcRegulatorId;
+  UINT32     VqmmcRegulatorId;
 } SDMMC_PARAMETER_INFO;
-
 
 /**
 
@@ -32,6 +31,6 @@ typedef struct {
 **/
 
 typedef struct {
-  UINT8  *DcbImage;
-  UINT32 DcbImageLen;
+  UINT8     *DcbImage;
+  UINT32    DcbImageLen;
 } GOP_PARAMETER_INFO;

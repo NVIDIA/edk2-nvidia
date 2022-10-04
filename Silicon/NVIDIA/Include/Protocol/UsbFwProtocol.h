@@ -15,10 +15,10 @@
   }
 
 typedef struct UsbFwInfo {
-  VOID  *UsbFwBase;
-  UINTN UsbFwSize;
+  VOID     *UsbFwBase;
+  UINTN    UsbFwSize;
 } NVIDIA_USBFW_PROTOCOL;
 
-extern EFI_GUID gNVIDIAUsbFwProtocolGuid;
+extern EFI_GUID  gNVIDIAUsbFwProtocolGuid;
 
 #endif // USB_FW_PROTOCOL_H__

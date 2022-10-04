@@ -28,28 +28,27 @@
 
 #include "MmCommunicate.h"
 typedef struct {
-  UINTN TotalSize;
-  UINTN MmCommBufSize;
-  VOID *OpteeMsgArgPa;
-  VOID *OpteeMsgArgVa;
-  VOID *MmCommBufPa;
-  VOID *MmCommBufVa;
-  OPTEE_SHM_COOKIE *MmMsgCookiePa;
-  OPTEE_SHM_COOKIE *MmMsgCookieVa;
-  OPTEE_SHM_PAGE_LIST *ShmListPa;
-  OPTEE_SHM_PAGE_LIST *ShmListVa;
+  UINTN                  TotalSize;
+  UINTN                  MmCommBufSize;
+  VOID                   *OpteeMsgArgPa;
+  VOID                   *OpteeMsgArgVa;
+  VOID                   *MmCommBufPa;
+  VOID                   *MmCommBufVa;
+  OPTEE_SHM_COOKIE       *MmMsgCookiePa;
+  OPTEE_SHM_COOKIE       *MmMsgCookieVa;
+  OPTEE_SHM_PAGE_LIST    *ShmListPa;
+  OPTEE_SHM_PAGE_LIST    *ShmListVa;
 } OPTEE_MM_SESSION;
 
-
-STATIC OPTEE_MM_SESSION OpteeMmSession;
+STATIC OPTEE_MM_SESSION  OpteeMmSession;
 STATIC EFI_STATUS
 OpteeMmCommunicate (
-  IN OUT VOID   *CommBuf,
-  IN UINTN CommSize
+  IN OUT VOID  *CommBuf,
+  IN UINTN     CommSize
   );
 
-STATIC BOOLEAN OpteePresent = FALSE;
-STATIC BOOLEAN RpmbPresent  = FALSE;
+STATIC BOOLEAN  OpteePresent = FALSE;
+STATIC BOOLEAN  RpmbPresent  = FALSE;
 
 //
 // Address, Length of the pre-allocated buffer for communication with the secure
@@ -68,25 +67,31 @@ STATIC EFI_HANDLE  mMmCommunicateHandle;
 STATIC
 BOOLEAN
 EFIAPI
-IsRpmbPresent (VOID) {
-  EFI_STATUS Status;
-  UINT32     NumberOfPlatformNodes;
+IsRpmbPresent (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      NumberOfPlatformNodes;
 
   NumberOfPlatformNodes = 0;
-  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
+  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
   if (Status != EFI_NOT_FOUND) {
     return TRUE;
   }
+
   NumberOfPlatformNodes = 0;
-  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,galen", NULL, &NumberOfPlatformNodes);
+  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,galen", NULL, &NumberOfPlatformNodes);
   if (Status != EFI_NOT_FOUND) {
     return TRUE;
   }
+
   NumberOfPlatformNodes = 0;
-  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,e3360_1099", NULL, &NumberOfPlatformNodes);
+  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,e3360_1099", NULL, &NumberOfPlatformNodes);
   if (Status != EFI_NOT_FOUND) {
     return TRUE;
   }
+
   return FALSE;
 }
 
@@ -194,7 +199,7 @@ MmCommunication2Communicate (
   }
 
   if (OpteePresent) {
-      Status = OpteeMmCommunicate (CommBufferVirtual, BufferSize);
+    Status = OpteeMmCommunicate (CommBufferVirtual, BufferSize);
   } else {
     // SMC Function ID
     CommunicateSmcArgs.Arg0 = ARM_SMC_ID_MM_COMMUNICATE_AARCH64;
@@ -215,41 +220,41 @@ MmCommunication2Communicate (
     ArmCallSmc (&CommunicateSmcArgs);
 
     switch (CommunicateSmcArgs.Arg0) {
-    case ARM_SMC_MM_RET_SUCCESS:
-      ZeroMem (CommBufferVirtual, BufferSize);
-      // On successful return, the size of data being returned is inferred from
-      // MessageLength + Header.
-      CommunicateHeader = (EFI_MM_COMMUNICATE_HEADER *)mNsCommBuffMemRegion.VirtualBase;
-      BufferSize = CommunicateHeader->MessageLength +
-                   sizeof (CommunicateHeader->HeaderGuid) +
-                   sizeof (CommunicateHeader->MessageLength);
+      case ARM_SMC_MM_RET_SUCCESS:
+        ZeroMem (CommBufferVirtual, BufferSize);
+        // On successful return, the size of data being returned is inferred from
+        // MessageLength + Header.
+        CommunicateHeader = (EFI_MM_COMMUNICATE_HEADER *)mNsCommBuffMemRegion.VirtualBase;
+        BufferSize        = CommunicateHeader->MessageLength +
+                            sizeof (CommunicateHeader->HeaderGuid) +
+                            sizeof (CommunicateHeader->MessageLength);
 
-      CopyMem (
-        CommBufferVirtual,
-        (VOID *)mNsCommBuffMemRegion.VirtualBase,
-        BufferSize
-        );
-      Status = EFI_SUCCESS;
-      break;
+        CopyMem (
+          CommBufferVirtual,
+          (VOID *)mNsCommBuffMemRegion.VirtualBase,
+          BufferSize
+          );
+        Status = EFI_SUCCESS;
+        break;
 
-    case ARM_SMC_MM_RET_INVALID_PARAMS:
-      Status = EFI_INVALID_PARAMETER;
-      break;
+      case ARM_SMC_MM_RET_INVALID_PARAMS:
+        Status = EFI_INVALID_PARAMETER;
+        break;
 
-    case ARM_SMC_MM_RET_DENIED:
-      Status = EFI_ACCESS_DENIED;
-      break;
+      case ARM_SMC_MM_RET_DENIED:
+        Status = EFI_ACCESS_DENIED;
+        break;
 
-    case ARM_SMC_MM_RET_NO_MEMORY:
-      // Unexpected error since the CommSize was checked for zero length
-      // prior to issuing the SMC
-      Status = EFI_OUT_OF_RESOURCES;
-      ASSERT (0);
-      break;
+      case ARM_SMC_MM_RET_NO_MEMORY:
+        // Unexpected error since the CommSize was checked for zero length
+        // prior to issuing the SMC
+        Status = EFI_OUT_OF_RESOURCES;
+        ASSERT (0);
+        break;
 
-    default:
-      Status = EFI_ACCESS_DENIED;
-      ASSERT (0);
+      default:
+        Status = EFI_ACCESS_DENIED;
+        ASSERT (0);
     }
   }
 
@@ -270,18 +275,17 @@ STATIC
 EFI_STATUS
 OpteeStmmInit (
   VOID
-)
+  )
 {
-  EFI_STATUS Status = EFI_SUCCESS;
-  OPTEE_OPEN_SESSION_ARG OpenSessionArg;
-  VOID *OpteeBuf;
-  UINTN TotalOpteeBufSize = 0;
-  UINT64 Capabilities = 0;
-  UINTN  MmMsgCookieSizePg = EFI_SIZE_TO_PAGES(sizeof (OPTEE_SHM_COOKIE)) ;
-  UINTN  OpteeMsgBufSizePg = EFI_SIZE_TO_PAGES(sizeof (OPTEE_MESSAGE_ARG));
-  UINTN  ShmPageListSizePg = EFI_SIZE_TO_PAGES(sizeof (OPTEE_SHM_PAGE_LIST));
-  UINTN  MmCommBufSizePg = 0;
-
+  EFI_STATUS              Status = EFI_SUCCESS;
+  OPTEE_OPEN_SESSION_ARG  OpenSessionArg;
+  VOID                    *OpteeBuf;
+  UINTN                   TotalOpteeBufSize = 0;
+  UINT64                  Capabilities      = 0;
+  UINTN                   MmMsgCookieSizePg = EFI_SIZE_TO_PAGES (sizeof (OPTEE_SHM_COOKIE));
+  UINTN                   OpteeMsgBufSizePg = EFI_SIZE_TO_PAGES (sizeof (OPTEE_MESSAGE_ARG));
+  UINTN                   ShmPageListSizePg = EFI_SIZE_TO_PAGES (sizeof (OPTEE_SHM_PAGE_LIST));
+  UINTN                   MmCommBufSizePg   = 0;
 
   if (!OpteePresent) {
     DEBUG ((DEBUG_ERROR, "OP-Tee is not present\n"));
@@ -299,8 +303,11 @@ OpteeStmmInit (
   }
 
   if (!OpteeExchangeCapabilities (&Capabilities)) {
-    DEBUG ((DEBUG_ERROR, "Failed to exchange capabilities with OP-TEE(%r)\n",
-                         Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "Failed to exchange capabilities with OP-TEE(%r)\n",
+      Status
+      ));
     return Status;
   }
 
@@ -311,12 +318,14 @@ OpteeStmmInit (
       return EFI_UNSUPPORTED;
     }
 
-    OpteeMmSession.MmCommBufSize = EFI_PAGES_TO_SIZE(MmCommBufSizePg);
+    OpteeMmSession.MmCommBufSize = EFI_PAGES_TO_SIZE (MmCommBufSizePg);
     // Allocate one contiguous buffer for all the OP-TEE and MM Buffers.
     TotalOpteeBufSize = OpteeMsgBufSizePg + MmMsgCookieSizePg + MmCommBufSizePg
                         + ShmPageListSizePg;
-    OpteeBuf = AllocateAlignedRuntimePages(TotalOpteeBufSize,
-                                           OPTEE_MSG_PAGE_SIZE);
+    OpteeBuf = AllocateAlignedRuntimePages (
+                 TotalOpteeBufSize,
+                 OPTEE_MSG_PAGE_SIZE
+                 );
     if (OpteeBuf == NULL) {
       DEBUG ((DEBUG_ERROR, "Failed to allocate Comm Buf"));
       Status = EFI_OUT_OF_RESOURCES;
@@ -325,25 +334,26 @@ OpteeStmmInit (
 
     OpteeMmSession.OpteeMsgArgPa = OpteeBuf;
     OpteeMmSession.OpteeMsgArgVa = OpteeMmSession.OpteeMsgArgPa;
-    OpteeMmSession.TotalSize = EFI_PAGES_TO_SIZE(TotalOpteeBufSize);
-    OpteeMmSession.MmCommBufPa = OpteeBuf + EFI_PAGES_TO_SIZE(OpteeMsgBufSizePg);
+    OpteeMmSession.TotalSize     = EFI_PAGES_TO_SIZE (TotalOpteeBufSize);
+    OpteeMmSession.MmCommBufPa   = OpteeBuf + EFI_PAGES_TO_SIZE (OpteeMsgBufSizePg);
 
-    OpteeMmSession.MmCommBufVa = OpteeMmSession.MmCommBufPa;
+    OpteeMmSession.MmCommBufVa   = OpteeMmSession.MmCommBufPa;
     OpteeMmSession.MmMsgCookiePa = OpteeBuf + EFI_PAGES_TO_SIZE (OpteeMsgBufSizePg) +
-                  EFI_PAGES_TO_SIZE(MmCommBufSizePg);
+                                   EFI_PAGES_TO_SIZE (MmCommBufSizePg);
     OpteeMmSession.MmMsgCookieVa = OpteeMmSession.MmMsgCookiePa;
-    OpteeMmSession.ShmListPa = OpteeBuf +  EFI_PAGES_TO_SIZE (OpteeMsgBufSizePg) +
-              EFI_PAGES_TO_SIZE(MmCommBufSizePg) +
-              EFI_PAGES_TO_SIZE(ShmPageListSizePg);
-    OpteeMmSession.ShmListVa = OpteeMmSession.ShmListPa;
+    OpteeMmSession.ShmListPa     = OpteeBuf +  EFI_PAGES_TO_SIZE (OpteeMsgBufSizePg) +
+                                   EFI_PAGES_TO_SIZE (MmCommBufSizePg) +
+                                   EFI_PAGES_TO_SIZE (ShmPageListSizePg);
+    OpteeMmSession.ShmListVa           = OpteeMmSession.ShmListPa;
     OpteeMmSession.MmMsgCookiePa->Addr = OpteeMmSession.MmMsgCookieVa->Addr = OpteeMmSession.MmCommBufPa;
-    OpteeMmSession.MmMsgCookiePa->Size = OpteeMmSession.MmMsgCookieVa->Size =EFI_PAGES_TO_SIZE(MmCommBufSizePg);
+    OpteeMmSession.MmMsgCookiePa->Size = OpteeMmSession.MmMsgCookieVa->Size = EFI_PAGES_TO_SIZE (MmCommBufSizePg);
 
-
-    OpteeSetProperties ((UINT64)OpteeMmSession.OpteeMsgArgPa,
-                        (UINT64)OpteeMmSession.OpteeMsgArgVa,
-                        OpteeMmSession.TotalSize,
-                        RpmbPresent);
+    OpteeSetProperties (
+      (UINT64)OpteeMmSession.OpteeMsgArgPa,
+      (UINT64)OpteeMmSession.OpteeMsgArgVa,
+      OpteeMmSession.TotalSize,
+      RpmbPresent
+      );
 
     ZeroMem (&OpenSessionArg, sizeof (OPTEE_OPEN_SESSION_ARG));
     CopyMem (&OpenSessionArg.Uuid, &gEfiSmmVariableProtocolGuid, sizeof (EFI_GUID));
@@ -353,108 +363,114 @@ OpteeStmmInit (
       return Status;
     } else {
       if (OpenSessionArg.Return != OPTEE_SUCCESS) {
-        DEBUG ((DEBUG_ERROR, "Failed to Open Session to OPTEE STMM %u\n",
-        OpenSessionArg.Return));
+        DEBUG ((
+          DEBUG_ERROR,
+          "Failed to Open Session to OPTEE STMM %u\n",
+          OpenSessionArg.Return
+          ));
         Status = EFI_UNSUPPORTED;
         goto Error;
       }
     }
 
-    Status = OpteeRegisterShm(OpteeMmSession.MmCommBufPa,
-                              (UINT64)OpteeMmSession.MmMsgCookiePa,
-                              OpteeMmSession.MmCommBufSize,
-                              OpteeMmSession.ShmListPa);
+    Status = OpteeRegisterShm (
+               OpteeMmSession.MmCommBufPa,
+               (UINT64)OpteeMmSession.MmMsgCookiePa,
+               OpteeMmSession.MmCommBufSize,
+               OpteeMmSession.ShmListPa
+               );
 
-    if (EFI_ERROR(Status))
-    {
+    if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Failed to register Mmsg %r\n", Status));
       goto Error;
     }
   } else {
-    DEBUG ((DEBUG_ERROR, "Unsupported OP-TEE Communication Method.(%x)\n",
-                          Capabilities));
+    DEBUG ((
+      DEBUG_ERROR,
+      "Unsupported OP-TEE Communication Method.(%x)\n",
+      Capabilities
+      ));
     return EFI_UNSUPPORTED;
   }
 
-  OpteeCloseSession(OpenSessionArg.Session);
+  OpteeCloseSession (OpenSessionArg.Session);
   return Status;
 Error:
   FreeAlignedPages (OpteeBuf, TotalOpteeBufSize);
   return Status;
 }
 
-
 STATIC
 EFI_STATUS
 EFIAPI
 OpteeMmConvertPointers (
   VOID
-)
+  )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   Status = gRT->ConvertPointer (
-             EFI_OPTIONAL_PTR,
-             (VOID **) &OpteeMmSession.OpteeMsgArgVa
-      );
-  if (EFI_ERROR(Status)) {
-    DEBUG ((DEBUG_ERROR," Error converting main %r\n", Status));
+                  EFI_OPTIONAL_PTR,
+                  (VOID **)&OpteeMmSession.OpteeMsgArgVa
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, " Error converting main %r\n", Status));
   }
 
   Status = gRT->ConvertPointer (
-             EFI_OPTIONAL_PTR,
-             (VOID **) &OpteeMmSession.MmCommBufVa
-      );
-  if (EFI_ERROR(Status)) {
-    DEBUG ((DEBUG_ERROR," Error converting mmmsg %r\n", Status));
+                  EFI_OPTIONAL_PTR,
+                  (VOID **)&OpteeMmSession.MmCommBufVa
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, " Error converting mmmsg %r\n", Status));
   }
 
   Status = gRT->ConvertPointer (
-             EFI_OPTIONAL_PTR,
-             (VOID **) &OpteeMmSession.MmMsgCookieVa
-      );
-  if (EFI_ERROR(Status)) {
-    DEBUG ((DEBUG_ERROR," Error converting mmmsgcookie %r\n", Status));
-  }
-
-
-  Status = gRT->ConvertPointer (
-             EFI_OPTIONAL_PTR,
-             (VOID **) &OpteeMmSession.ShmListVa
-      );
-  if (EFI_ERROR(Status)) {
-    DEBUG ((DEBUG_ERROR," Error converting shm %r\n", Status));
+                  EFI_OPTIONAL_PTR,
+                  (VOID **)&OpteeMmSession.MmMsgCookieVa
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, " Error converting mmmsgcookie %r\n", Status));
   }
 
   Status = gRT->ConvertPointer (
-             EFI_OPTIONAL_PTR,
-             (VOID **) &mMmCommunication2.Communicate
-      );
-  if (EFI_ERROR(Status)) {
-    DEBUG ((DEBUG_ERROR," Error converting Proto Fn %r\n", Status));
+                  EFI_OPTIONAL_PTR,
+                  (VOID **)&OpteeMmSession.ShmListVa
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, " Error converting shm %r\n", Status));
   }
 
-  OpteeSetProperties((UINT64)OpteeMmSession.OpteeMsgArgPa,
-                     (UINT64)OpteeMmSession.OpteeMsgArgVa,
-                     OpteeMmSession.TotalSize,
-                     RpmbPresent);
+  Status = gRT->ConvertPointer (
+                  EFI_OPTIONAL_PTR,
+                  (VOID **)&mMmCommunication2.Communicate
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, " Error converting Proto Fn %r\n", Status));
+  }
+
+  OpteeSetProperties (
+    (UINT64)OpteeMmSession.OpteeMsgArgPa,
+    (UINT64)OpteeMmSession.OpteeMsgArgVa,
+    OpteeMmSession.TotalSize,
+    RpmbPresent
+    );
 
   return Status;
 }
 
-
 STATIC
 EFI_STATUS
 OpteeMmCommunicate (
-  IN OUT VOID   *CommBuf,
-  IN UINTN CommSize
+  IN OUT VOID  *CommBuf,
+  IN UINTN     CommSize
   )
 {
-  EFI_STATUS Status;
-  EFI_MM_COMMUNICATE_HEADER   *CommunicateHeader;
-  UINTN                       BufferSize;
-  OPTEE_MESSAGE_ARG    *MessageArg = NULL;
-  OPTEE_OPEN_SESSION_ARG OpenSessionArg;
+  EFI_STATUS                 Status;
+  EFI_MM_COMMUNICATE_HEADER  *CommunicateHeader;
+  UINTN                      BufferSize;
+  OPTEE_MESSAGE_ARG          *MessageArg = NULL;
+  OPTEE_OPEN_SESSION_ARG     OpenSessionArg;
 
   ZeroMem (&OpenSessionArg, sizeof (OPTEE_OPEN_SESSION_ARG));
   CopyMem (&OpenSessionArg.Uuid, &gEfiSmmVariableProtocolGuid, sizeof (EFI_GUID));
@@ -470,7 +486,6 @@ OpteeMmCommunicate (
     goto Exit;
   }
 
-
   /* Not verifying the CommBufSize since the part that checks the buffer
      Size is common. */
   ZeroMem (OpteeMmSession.MmCommBufVa, OpteeMmSession.MmCommBufSize);
@@ -478,28 +493,25 @@ OpteeMmCommunicate (
     (VOID *)OpteeMmSession.MmCommBufVa,
     (VOID *)CommBuf,
     CommSize
-  );
-
+    );
 
   MessageArg = OpteeMmSession.OpteeMsgArgVa;
   ZeroMem (MessageArg, sizeof (OPTEE_MESSAGE_ARG));
-  MessageArg->Command  = OPTEE_MESSAGE_COMMAND_INVOKE_FUNCTION;
-  MessageArg->Function = OPTEE_MESSAGE_FUNCTION_STMM_COMMUNICATE;
-  MessageArg->Session  = OpenSessionArg.Session;
-  MessageArg->Params[0].Attribute = OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INOUT;
-  MessageArg->Params[0].Union.Memory.Size = OpteeMmSession.MmCommBufSize;
+  MessageArg->Command                                      = OPTEE_MESSAGE_COMMAND_INVOKE_FUNCTION;
+  MessageArg->Function                                     = OPTEE_MESSAGE_FUNCTION_STMM_COMMUNICATE;
+  MessageArg->Session                                      = OpenSessionArg.Session;
+  MessageArg->Params[0].Attribute                          = OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INOUT;
+  MessageArg->Params[0].Union.Memory.Size                  = OpteeMmSession.MmCommBufSize;
   MessageArg->Params[0].Union.Memory.SharedMemoryReference =
-                                   (UINT64) OpteeMmSession.MmMsgCookiePa;
-
+    (UINT64)OpteeMmSession.MmMsgCookiePa;
 
   MessageArg->Params[1].Attribute = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_OUTPUT;
-  MessageArg->NumParams = 2;
-
+  MessageArg->NumParams           = 2;
 
   if (OpteeCallWithArg ((UINTN)OpteeMmSession.OpteeMsgArgPa) != 0) {
-    MessageArg->Return = OPTEE_ERROR_COMMUNICATION;
+    MessageArg->Return       = OPTEE_ERROR_COMMUNICATION;
     MessageArg->ReturnOrigin = OPTEE_ORIGIN_COMMUNICATION;
-    Status = EFI_ACCESS_DENIED;
+    Status                   = EFI_ACCESS_DENIED;
     DEBUG ((DEBUG_ERROR, "Optee call failed %r\n", Status));
   } else {
     switch (MessageArg->Params[1].Union.Value.A) {
@@ -508,9 +520,9 @@ OpteeMmCommunicate (
         // On successful return, the size of data being returned is inferred from
         // MessageLength + Header.
         CommunicateHeader = (EFI_MM_COMMUNICATE_HEADER *)OpteeMmSession.MmCommBufVa;
-        BufferSize = CommunicateHeader->MessageLength +
-                     sizeof (CommunicateHeader->HeaderGuid) +
-                     sizeof (CommunicateHeader->MessageLength);
+        BufferSize        = CommunicateHeader->MessageLength +
+                            sizeof (CommunicateHeader->HeaderGuid) +
+                            sizeof (CommunicateHeader->MessageLength);
 
         CopyMem (
           CommBuf,
@@ -518,7 +530,7 @@ OpteeMmCommunicate (
           BufferSize
           );
         Status = EFI_SUCCESS;
-       break;
+        break;
       case ARM_SMC_MM_RET_INVALID_PARAMS:
         Status = EFI_INVALID_PARAMETER;
         break;
@@ -529,16 +541,16 @@ OpteeMmCommunicate (
         Status = EFI_OUT_OF_RESOURCES;
         break;
       default:
-        DEBUG ((DEBUG_ERROR,"Unknown Return %d\n", MessageArg->Params[1].Union.Value.A));
+        DEBUG ((DEBUG_ERROR, "Unknown Return %d\n", MessageArg->Params[1].Union.Value.A));
         Status = EFI_ACCESS_DENIED;
         break;
     }
   }
+
 Exit:
-  OpteeCloseSession(OpenSessionArg.Session);
+  OpteeCloseSession (OpenSessionArg.Session);
   return Status;
 }
-
 
 /**
   Notification callback on SetVirtualAddressMap event.
@@ -570,13 +582,16 @@ NotifySetVirtualAddressMap (
                     (VOID **)&mNsCommBuffMemRegion.VirtualBase
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "NotifySetVirtualAddressMap():"
-              " Unable to convert MM runtime pointer. Status:0x%r\n", Status));
+      DEBUG ((
+        DEBUG_ERROR,
+        "NotifySetVirtualAddressMap():"
+        " Unable to convert MM runtime pointer. Status:0x%r\n",
+        Status
+        ));
     }
   } else {
-    OpteeMmConvertPointers();
+    OpteeMmConvertPointers ();
   }
-
 }
 
 STATIC
@@ -584,17 +599,16 @@ EFI_STATUS
 GetMmCompatibility (
   )
 {
-  EFI_STATUS   Status;
-  UINT32       MmVersion;
-  ARM_SMC_ARGS MmVersionArgs;
-
+  EFI_STATUS    Status;
+  UINT32        MmVersion;
+  ARM_SMC_ARGS  MmVersionArgs;
 
   if (OpteePresent) {
     Status = OpteeStmmInit ();
-    if (EFI_ERROR(Status)) {
-       DEBUG ((DEBUG_INFO, "Failed to open Session to StMM/OPTEE %r.\n", Status));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "Failed to open Session to StMM/OPTEE %r.\n", Status));
     } else {
-       DEBUG ((DEBUG_INFO, "Found StMM PTA managed by OPTEE.\n", Status));
+      DEBUG ((DEBUG_INFO, "Found StMM PTA managed by OPTEE.\n", Status));
     }
   } else {
     // MM_VERSION uses SMC32 calling conventions
@@ -604,14 +618,25 @@ GetMmCompatibility (
 
     MmVersion = MmVersionArgs.Arg0;
 
-    if ((MM_MAJOR_VER(MmVersion) == MM_CALLER_MAJOR_VER) &&
-        (MM_MINOR_VER(MmVersion) >= MM_CALLER_MINOR_VER)) {
-      DEBUG ((DEBUG_INFO, "MM Version: Major=0x%x, Minor=0x%x\n",
-              MM_MAJOR_VER(MmVersion), MM_MINOR_VER(MmVersion)));
+    if ((MM_MAJOR_VER (MmVersion) == MM_CALLER_MAJOR_VER) &&
+        (MM_MINOR_VER (MmVersion) >= MM_CALLER_MINOR_VER))
+    {
+      DEBUG ((
+        DEBUG_INFO,
+        "MM Version: Major=0x%x, Minor=0x%x\n",
+        MM_MAJOR_VER (MmVersion),
+        MM_MINOR_VER (MmVersion)
+        ));
       Status = EFI_SUCCESS;
     } else {
-      DEBUG ((DEBUG_ERROR, "Incompatible MM Versions.\n Current Version: Major=0x%x, Minor=0x%x.\n Expected: Major=0x%x, Minor>=0x%x.\n",
-              MM_MAJOR_VER(MmVersion), MM_MINOR_VER(MmVersion), MM_CALLER_MAJOR_VER, MM_CALLER_MINOR_VER));
+      DEBUG ((
+        DEBUG_ERROR,
+        "Incompatible MM Versions.\n Current Version: Major=0x%x, Minor=0x%x.\n Expected: Major=0x%x, Minor>=0x%x.\n",
+        MM_MAJOR_VER (MmVersion),
+        MM_MINOR_VER (MmVersion),
+        MM_CALLER_MAJOR_VER,
+        MM_CALLER_MINOR_VER
+        ));
       Status = EFI_UNSUPPORTED;
     }
   }
@@ -655,7 +680,7 @@ MmGuidedEventNotify (
   Size = sizeof (Header);
   MmCommunication2Communicate (&mMmCommunication2, &Header, &Header, &Size);
   if (CompareGuid (Context, &gEfiEventExitBootServicesGuid)) {
-    OpteeLibNotifyRuntime(TRUE);
+    OpteeLibNotifyRuntime (TRUE);
   }
 }
 
@@ -680,12 +705,12 @@ MmCommunication2Initialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_RT_PROPERTIES_TABLE   *RtProperties;
-  EFI_STATUS                Status;
-  UINTN                     Index;
+  EFI_RT_PROPERTIES_TABLE  *RtProperties;
+  EFI_STATUS               Status;
+  UINTN                    Index;
 
-  OpteePresent = IsOpteePresent();
-  RpmbPresent  = IsRpmbPresent();
+  OpteePresent = IsOpteePresent ();
+  RpmbPresent  = IsRpmbPresent ();
 
   // Check if we can make the MM call
   Status = GetMmCompatibility ();
@@ -693,12 +718,11 @@ MmCommunication2Initialize (
     goto ReturnErrorStatus;
   }
 
-
   if (!OpteePresent) {
     mNsCommBuffMemRegion.PhysicalBase = PcdGet64 (PcdMmBufferBase);
     // During boot , Virtual and Physical are same
     mNsCommBuffMemRegion.VirtualBase = mNsCommBuffMemRegion.PhysicalBase;
-    mNsCommBuffMemRegion.Length = PcdGet64 (PcdMmBufferSize);
+    mNsCommBuffMemRegion.Length      = PcdGet64 (PcdMmBufferSize);
 
     Status = gDS->AddMemorySpace (
                     EfiGcdMemoryTypeReserved,
@@ -709,14 +733,17 @@ MmCommunication2Initialize (
                     EFI_MEMORY_RUNTIME
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "MmCommunicateInitialize: "
-              "Failed to add MM-NS Buffer Memory Space\n"));
+      DEBUG ((
+        DEBUG_ERROR,
+        "MmCommunicateInitialize: "
+        "Failed to add MM-NS Buffer Memory Space\n"
+        ));
       goto ReturnErrorStatus;
     }
   } else {
     mNsCommBuffMemRegion.PhysicalBase = (EFI_PHYSICAL_ADDRESS)OpteeMmSession.MmCommBufPa;
-    mNsCommBuffMemRegion.Length = OpteeMmSession.MmCommBufSize;
-    mNsCommBuffMemRegion.VirtualBase = mNsCommBuffMemRegion.PhysicalBase;
+    mNsCommBuffMemRegion.Length       = OpteeMmSession.MmCommBufSize;
+    mNsCommBuffMemRegion.VirtualBase  = mNsCommBuffMemRegion.PhysicalBase;
   }
 
   ASSERT (mNsCommBuffMemRegion.PhysicalBase != 0);
@@ -777,23 +804,25 @@ MmCommunication2Initialize (
       while (Index-- > 0) {
         gBS->CloseEvent (mGuidedEvent[Index]);
       }
+
       goto UninstallProtocol;
     }
   }
 
-  RtProperties = (EFI_RT_PROPERTIES_TABLE *) AllocatePool (sizeof (EFI_RT_PROPERTIES_TABLE));
+  RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocatePool (sizeof (EFI_RT_PROPERTIES_TABLE));
   if (RtProperties == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT table\n",__FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT table\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto UninstallProtocol;
   }
-  RtProperties->Version = EFI_RT_PROPERTIES_TABLE_VERSION;
-  RtProperties->Length = sizeof (EFI_RT_PROPERTIES_TABLE);
+
+  RtProperties->Version                  = EFI_RT_PROPERTIES_TABLE_VERSION;
+  RtProperties->Length                   = sizeof (EFI_RT_PROPERTIES_TABLE);
   RtProperties->RuntimeServicesSupported = PcdGet32 (PcdVariableRtProperties);
 
   Status = gBS->InstallConfigurationTable (&gEfiRtPropertiesTableGuid, RtProperties);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error installing RT table: %r\n",__FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Error installing RT table: %r\n", __FUNCTION__, Status));
     goto UninstallProtocol;
   }
 

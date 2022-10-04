@@ -7,6 +7,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
 #ifndef __BOOT_CHAIN_DXE_PRIVATE_H__
 #define __BOOT_CHAIN_DXE_PRIVATE_H__
 
@@ -14,8 +15,8 @@
 #include <Protocol/BootChainProtocol.h>
 #include <Protocol/BrBctUpdateProtocol.h>
 
-#define NUM_BOOT_CHAINS                         2
-#define BOOT_CHAIN_MAX_RESET_COUNT              3
+#define NUM_BOOT_CHAINS             2
+#define BOOT_CHAIN_MAX_RESET_COUNT  3
 
 #define STATUS_SUCCESS                          0
 #define STATUS_IN_PROGRESS                      1
@@ -48,18 +49,18 @@ typedef enum {
 } BC_VARIABLE_INDEX;
 
 typedef struct {
-  CHAR16            *Name;
-  UINT32            Attributes;
-  UINT8             Bytes;
-  EFI_GUID          *Guid;
+  CHAR16      *Name;
+  UINT32      Attributes;
+  UINT8       Bytes;
+  EFI_GUID    *Guid;
 } BC_VARIABLE;
 
-extern UINT32                           mBootChain;
-extern NVIDIA_BR_BCT_UPDATE_PROTOCOL    *mBrBctUpdateProtocol;
-extern NVIDIA_BOOT_CHAIN_PROTOCOL       mProtocol;
-extern EFI_EVENT                        mEndOfDxeEvent;
-extern BOOLEAN                          mUpdateBrBctFlag;
-extern BC_VARIABLE                      mBCVariables[];
+extern UINT32                         mBootChain;
+extern NVIDIA_BR_BCT_UPDATE_PROTOCOL  *mBrBctUpdateProtocol;
+extern NVIDIA_BOOT_CHAIN_PROTOCOL     mProtocol;
+extern EFI_EVENT                      mEndOfDxeEvent;
+extern BOOLEAN                        mUpdateBrBctFlag;
+extern BC_VARIABLE                    mBCVariables[];
 
 /**
   Delete a boot chain variable.
@@ -73,7 +74,7 @@ extern BC_VARIABLE                      mBCVariables[];
 EFI_STATUS
 EFIAPI
 BCDeleteVariable (
-  IN  BC_VARIABLE_INDEX     VariableIndex
+  IN  BC_VARIABLE_INDEX  VariableIndex
   );
 
 /**
@@ -89,8 +90,8 @@ BCDeleteVariable (
 EFI_STATUS
 EFIAPI
 BCGetVariable (
-  IN  BC_VARIABLE_INDEX     VariableIndex,
-  OUT UINT32                *Value
+  IN  BC_VARIABLE_INDEX  VariableIndex,
+  OUT UINT32             *Value
   );
 
 /**
@@ -106,8 +107,8 @@ BCGetVariable (
 EFI_STATUS
 EFIAPI
 BCSetVariable (
-  IN  BC_VARIABLE_INDEX     VariableIndex,
-  IN  UINT32                Value
+  IN  BC_VARIABLE_INDEX  VariableIndex,
+  IN  UINT32             Value
   );
 
 /**
@@ -134,7 +135,7 @@ BrBctUpdateNeeded (
 VOID
 EFIAPI
 BootChainReset (
-  UINT32 BootChain
+  UINT32  BootChain
   );
 
 /**
@@ -149,7 +150,7 @@ BootChainReset (
 VOID
 EFIAPI
 BootChainFinishUpdate (
-  IN     UINT32         BCStatus
+  IN     UINT32  BCStatus
   );
 
 /**
@@ -164,7 +165,7 @@ BootChainFinishUpdate (
 EFI_STATUS
 EFIAPI
 BootChainSetScratchRegister (
-  IN  UINT32            BootChain
+  IN  UINT32  BootChain
   );
 
 /**
@@ -180,8 +181,8 @@ BootChainSetScratchRegister (
 EFI_STATUS
 EFIAPI
 BootChainDxeInitialize (
-  IN EFI_HANDLE                 ImageHandle,
-  IN EFI_SYSTEM_TABLE           *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   );
 
 #endif

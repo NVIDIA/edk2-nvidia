@@ -35,41 +35,43 @@
 EFI_STATUS
 EFIAPI
 PopulateEepromData (
-  IN  UINT8             *EepromData,
-  OUT VOID              *BoardInfo
-)
+  IN  UINT8  *EepromData,
+  OUT VOID   *BoardInfo
+  )
 {
-  UINTN                       ChipID;
-  T194_EEPROM_DATA            *T194EepromData;
-  T234_EEPROM_DATA            *T234EepromData;
-  TEGRA_EEPROM_BOARD_INFO     *EepromBoardInfo;
+  UINTN                    ChipID;
+  T194_EEPROM_DATA         *T194EepromData;
+  T234_EEPROM_DATA         *T234EepromData;
+  TEGRA_EEPROM_BOARD_INFO  *EepromBoardInfo;
 
-  ChipID = TegraGetChipID();
+  ChipID = TegraGetChipID ();
 
   if (ChipID == T194_CHIP_ID) {
-    T194EepromData = (T194_EEPROM_DATA *)EepromData;
-    EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *) BoardInfo;
-    CopyMem ((VOID *) EepromBoardInfo->BoardId, (VOID *) &T194EepromData->PartNumber.Id, BOARD_ID_LEN);
-    CopyMem ((VOID *) EepromBoardInfo->ProductId, (VOID *) &T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
-    CopyMem ((VOID *) EepromBoardInfo->SerialNumber, (VOID *) &T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
+    T194EepromData  = (T194_EEPROM_DATA *)EepromData;
+    EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)BoardInfo;
+    CopyMem ((VOID *)EepromBoardInfo->BoardId, (VOID *)&T194EepromData->PartNumber.Id, BOARD_ID_LEN);
+    CopyMem ((VOID *)EepromBoardInfo->ProductId, (VOID *)&T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
+    CopyMem ((VOID *)EepromBoardInfo->SerialNumber, (VOID *)&T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
     if ((CompareMem (T194EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194EepromData->CustomerBlockSignature)) == 0) &&
-        (CompareMem (T194EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T194EepromData->CustomerTypeSignature)) == 0)) {
-      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T194EepromData->CustomerEthernetMacAddress, NET_ETHER_ADDR_LEN);
+        (CompareMem (T194EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T194EepromData->CustomerTypeSignature)) == 0))
+    {
+      CopyMem ((VOID *)EepromBoardInfo->MacAddr, (VOID *)T194EepromData->CustomerEthernetMacAddress, NET_ETHER_ADDR_LEN);
     } else {
-      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T194EepromData->EthernetMacAddress, NET_ETHER_ADDR_LEN);
+      CopyMem ((VOID *)EepromBoardInfo->MacAddr, (VOID *)T194EepromData->EthernetMacAddress, NET_ETHER_ADDR_LEN);
     }
   } else if (ChipID == T234_CHIP_ID) {
-    T234EepromData = (T234_EEPROM_DATA *)EepromData;
-    EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *) BoardInfo;
-    CopyMem ((VOID *) EepromBoardInfo->BoardId, (VOID *) &T234EepromData->PartNumber.Id, BOARD_ID_LEN);
-    CopyMem ((VOID *) EepromBoardInfo->ProductId, (VOID *) &T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
-    CopyMem ((VOID *) EepromBoardInfo->SerialNumber, (VOID *) &T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
+    T234EepromData  = (T234_EEPROM_DATA *)EepromData;
+    EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)BoardInfo;
+    CopyMem ((VOID *)EepromBoardInfo->BoardId, (VOID *)&T234EepromData->PartNumber.Id, BOARD_ID_LEN);
+    CopyMem ((VOID *)EepromBoardInfo->ProductId, (VOID *)&T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
+    CopyMem ((VOID *)EepromBoardInfo->SerialNumber, (VOID *)&T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
     if ((CompareMem (T234EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T234EepromData->CustomerBlockSignature)) == 0) &&
-        (CompareMem (T234EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T234EepromData->CustomerTypeSignature)) == 0)) {
-      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T234EepromData->CustomerEthernetMacAddress, NET_ETHER_ADDR_LEN);
+        (CompareMem (T234EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T234EepromData->CustomerTypeSignature)) == 0))
+    {
+      CopyMem ((VOID *)EepromBoardInfo->MacAddr, (VOID *)T234EepromData->CustomerEthernetMacAddress, NET_ETHER_ADDR_LEN);
       EepromBoardInfo->NumMacs = T234EepromData->CustomerNumEthernetMacs;
     } else {
-      CopyMem ((VOID *) EepromBoardInfo->MacAddr, (VOID *) T234EepromData->EthernetMacAddress, NET_ETHER_ADDR_LEN);
+      CopyMem ((VOID *)EepromBoardInfo->MacAddr, (VOID *)T234EepromData->EthernetMacAddress, NET_ETHER_ADDR_LEN);
       EepromBoardInfo->NumMacs = T234EepromData->NumEthernetMacs;
     }
   } else {
@@ -82,25 +84,27 @@ PopulateEepromData (
 EFI_STATUS
 EFIAPI
 ValidateEepromData (
-  IN UINT8   *EepromData,
-  IN BOOLEAN IgnoreVersionCheck,
-  IN BOOLEAN IgnoreCRCCheck
-)
+  IN UINT8    *EepromData,
+  IN BOOLEAN  IgnoreVersionCheck,
+  IN BOOLEAN  IgnoreCRCCheck
+  )
 {
   UINTN             ChipID;
   T194_EEPROM_DATA  *T194EepromData;
   T234_EEPROM_DATA  *T234EepromData;
   UINT8             Checksum;
 
-  ChipID = TegraGetChipID();
+  ChipID = TegraGetChipID ();
 
   if (ChipID == T194_CHIP_ID) {
     T194EepromData = (T194_EEPROM_DATA *)EepromData;
     if (!IgnoreVersionCheck &&
-        (T194EepromData->Version != T194_EEPROM_VERSION)) {
+        (T194EepromData->Version != T194_EEPROM_VERSION))
+    {
       DEBUG ((DEBUG_ERROR, "%a: Invalid version in eeprom %x\r\n", __FUNCTION__, T194EepromData->Version));
       return EFI_DEVICE_ERROR;
     }
+
     if ((T194EepromData->Size <= ((UINTN)&T194EepromData->Reserved2 - (UINTN)T194EepromData))) {
       DEBUG ((DEBUG_ERROR, "%a: Invalid size in eeprom %x\r\n", __FUNCTION__, T194EepromData->Size));
       return EFI_DEVICE_ERROR;
@@ -116,10 +120,12 @@ ValidateEepromData (
   } else if (ChipID == T234_CHIP_ID) {
     T234EepromData = (T234_EEPROM_DATA *)EepromData;
     if (!IgnoreVersionCheck &&
-        (T234EepromData->Version != T234_EEPROM_VERSION)) {
+        (T234EepromData->Version != T234_EEPROM_VERSION))
+    {
       DEBUG ((DEBUG_ERROR, "%a: Invalid version in eeprom %x\r\n", __FUNCTION__, T234EepromData->Version));
       return EFI_DEVICE_ERROR;
     }
+
     if ((T234EepromData->Size <= ((UINTN)&T234EepromData->Reserved2 - (UINTN)T234EepromData))) {
       DEBUG ((DEBUG_ERROR, "%a: Invalid size in eeprom %x\r\n", __FUNCTION__, T234EepromData->Size));
       return EFI_DEVICE_ERROR;
@@ -184,33 +190,37 @@ ValidateEepromData (
 EFI_STATUS
 EFIAPI
 EepromDxeDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL   *This,
-  IN EFI_HANDLE                    Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL      *RemainingDevicePath
-)
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
+  )
 {
-  EFI_STATUS                       Status;
-  EFI_I2C_IO_PROTOCOL              *I2cIo;
-  EFI_RNG_PROTOCOL                 *RngProtocol;
-  TEGRA_PLATFORM_TYPE              PlatformType;
+  EFI_STATUS           Status;
+  EFI_I2C_IO_PROTOCOL  *I2cIo;
+  EFI_RNG_PROTOCOL     *RngProtocol;
+  TEGRA_PLATFORM_TYPE  PlatformType;
 
-  PlatformType = TegraGetPlatform();
+  PlatformType = TegraGetPlatform ();
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     // Check whether driver has already been started.
-    Status = gBS->OpenProtocol (Controller,
-                                &gEfiI2cIoProtocolGuid,
-                                (VOID**) &I2cIo,
-                                This->DriverBindingHandle,
-                                Controller,
-                                EFI_OPEN_PROTOCOL_BY_DRIVER);
+    Status = gBS->OpenProtocol (
+                    Controller,
+                    &gEfiI2cIoProtocolGuid,
+                    (VOID **)&I2cIo,
+                    This->DriverBindingHandle,
+                    Controller,
+                    EFI_OPEN_PROTOCOL_BY_DRIVER
+                    );
     if (EFI_ERROR (Status)) {
       return Status;
     }
 
-    Status = gBS->CloseProtocol (Controller,
-                                &gEfiI2cIoProtocolGuid,
-                                This->DriverBindingHandle,
-                                Controller);
+    Status = gBS->CloseProtocol (
+                    Controller,
+                    &gEfiI2cIoProtocolGuid,
+                    This->DriverBindingHandle,
+                    Controller
+                    );
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -221,20 +231,24 @@ EepromDxeDriverBindingSupported (
       Status = EFI_UNSUPPORTED;
     }
   } else {
-    Status = gBS->OpenProtocol (Controller,
-                                &gEfiRngProtocolGuid,
-                                (VOID**) &RngProtocol,
-                                This->DriverBindingHandle,
-                                Controller,
-                                EFI_OPEN_PROTOCOL_BY_DRIVER);
+    Status = gBS->OpenProtocol (
+                    Controller,
+                    &gEfiRngProtocolGuid,
+                    (VOID **)&RngProtocol,
+                    This->DriverBindingHandle,
+                    Controller,
+                    EFI_OPEN_PROTOCOL_BY_DRIVER
+                    );
     if (EFI_ERROR (Status)) {
       return Status;
     }
 
-    Status = gBS->CloseProtocol (Controller,
-                                &gEfiI2cIoProtocolGuid,
-                                This->DriverBindingHandle,
-                                Controller);
+    Status = gBS->CloseProtocol (
+                    Controller,
+                    &gEfiI2cIoProtocolGuid,
+                    This->DriverBindingHandle,
+                    Controller
+                    );
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -242,7 +256,6 @@ EepromDxeDriverBindingSupported (
 
   return Status;
 }
-
 
 /**
   Starts a device controller or a bus controller.
@@ -281,38 +294,40 @@ EepromDxeDriverBindingSupported (
 EFI_STATUS
 EFIAPI
 EepromDxeDriverBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL   *This,
-  IN EFI_HANDLE                    Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL      *RemainingDevicePath
-)
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
+  )
 {
-  EFI_STATUS                  Status;
-  EFI_I2C_IO_PROTOCOL         *I2cIo = NULL;
-  EFI_RNG_PROTOCOL            *RngProtocol = NULL;
-  EFI_I2C_REQUEST_PACKET      *Request = NULL;
-  UINT8                       Address = 0;
-  UINT8                       *RawData;
-  TEGRA_PLATFORM_TYPE         PlatformType;
-  BOOLEAN                     CvmEeprom;
-  TEGRA_EEPROM_BOARD_INFO     *CvmBoardInfo;
-  TEGRA_EEPROM_BOARD_INFO     *IdBoardInfo;
-  BOOLEAN                     SkipEepromCRC;
+  EFI_STATUS               Status;
+  EFI_I2C_IO_PROTOCOL      *I2cIo       = NULL;
+  EFI_RNG_PROTOCOL         *RngProtocol = NULL;
+  EFI_I2C_REQUEST_PACKET   *Request     = NULL;
+  UINT8                    Address      = 0;
+  UINT8                    *RawData;
+  TEGRA_PLATFORM_TYPE      PlatformType;
+  BOOLEAN                  CvmEeprom;
+  TEGRA_EEPROM_BOARD_INFO  *CvmBoardInfo;
+  TEGRA_EEPROM_BOARD_INFO  *IdBoardInfo;
+  BOOLEAN                  SkipEepromCRC;
 
-  RawData = NULL;
-  CvmBoardInfo = NULL;
-  IdBoardInfo = NULL;
-  CvmEeprom = FALSE;
+  RawData       = NULL;
+  CvmBoardInfo  = NULL;
+  IdBoardInfo   = NULL;
+  CvmEeprom     = FALSE;
   SkipEepromCRC = FALSE;
 
-  PlatformType = TegraGetPlatform();
+  PlatformType = TegraGetPlatform ();
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     // Open i2cio Controller Protocol
-    Status = gBS->OpenProtocol (Controller,
-                                &gEfiI2cIoProtocolGuid,
-                                (VOID**) &I2cIo,
-                                This->DriverBindingHandle,
-                                Controller,
-                                EFI_OPEN_PROTOCOL_BY_DRIVER);
+    Status = gBS->OpenProtocol (
+                    Controller,
+                    &gEfiI2cIoProtocolGuid,
+                    (VOID **)&I2cIo,
+                    This->DriverBindingHandle,
+                    Controller,
+                    EFI_OPEN_PROTOCOL_BY_DRIVER
+                    );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to open I2cIo Protocol\n", __FUNCTION__));
       goto ErrorExit;
@@ -330,24 +345,29 @@ EepromDxeDriverBindingStart (
       Status = EFI_OUT_OF_RESOURCES;
       goto ErrorExit;
     }
-    Request->OperationCount = 2;
-    Request->Operation[0].Flags = 0;
+
+    Request->OperationCount             = 2;
+    Request->Operation[0].Flags         = 0;
     Request->Operation[0].LengthInBytes = sizeof (Address);
-    Request->Operation[0].Buffer = &Address;
-    Request->Operation[1].Flags = I2C_FLAG_READ;
+    Request->Operation[0].Buffer        = &Address;
+    Request->Operation[1].Flags         = I2C_FLAG_READ;
     Request->Operation[1].LengthInBytes = EEPROM_DATA_SIZE;
-    Request->Operation[1].Buffer = RawData;
-    Status = I2cIo->QueueRequest (I2cIo, 0, NULL, Request, NULL);
+    Request->Operation[1].Buffer        = RawData;
+    Status                              = I2cIo->QueueRequest (I2cIo, 0, NULL, Request, NULL);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Failed to read eeprom (%r)\r\n", Status));
       goto ErrorExit;
     }
+
     FreePool (Request);
     Request = NULL;
 
-    if (0 == AsciiStrnCmp ((CHAR8 *)&RawData[CAMERA_EEPROM_PART_OFFSET],
-                           CAMERA_EEPROM_PART_NAME,
-                           AsciiStrLen (CAMERA_EEPROM_PART_NAME))) {
+    if (0 == AsciiStrnCmp (
+               (CHAR8 *)&RawData[CAMERA_EEPROM_PART_OFFSET],
+               CAMERA_EEPROM_PART_NAME,
+               AsciiStrLen (CAMERA_EEPROM_PART_NAME)
+               ))
+    {
       SkipEepromCRC = TRUE;
     }
 
@@ -362,21 +382,25 @@ EepromDxeDriverBindingStart (
       Status = EFI_OUT_OF_RESOURCES;
       goto ErrorExit;
     }
+
     Status = PopulateEepromData (RawData, IdBoardInfo);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Eeprom data population failed(%r)\r\n", Status));
       goto ErrorExit;
     }
+
     DEBUG ((DEBUG_ERROR, "Eeprom Product Id: %a\r\n", IdBoardInfo->ProductId));
   } else {
     CvmEeprom = TRUE;
     // Use RNG to generate a random MAC address instead
-    Status = gBS->OpenProtocol (Controller,
-                                &gEfiRngProtocolGuid,
-                                (VOID**) &RngProtocol,
-                                This->DriverBindingHandle,
-                                Controller,
-                                EFI_OPEN_PROTOCOL_BY_DRIVER);
+    Status = gBS->OpenProtocol (
+                    Controller,
+                    &gEfiRngProtocolGuid,
+                    (VOID **)&RngProtocol,
+                    This->DriverBindingHandle,
+                    Controller,
+                    EFI_OPEN_PROTOCOL_BY_DRIVER
+                    );
     if (EFI_ERROR (Status)) {
       goto ErrorExit;
     }
@@ -390,19 +414,22 @@ EepromDxeDriverBindingStart (
 
     // Get random EEPROM data
     Status = RngProtocol->GetRNG (RngProtocol, NULL, NET_ETHER_ADDR_LEN, CvmBoardInfo->MacAddr);
-    if (EFI_ERROR(Status)) {
+    if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to get RNG for EEPROM\r\n", __FUNCTION__));
       goto ErrorExit;
     }
   }
-  Status = gBS->InstallMultipleProtocolInterfaces (&Controller,
-                                                   CvmEeprom ?
-                                                     &gNVIDIACvmEepromProtocolGuid :
-                                                     &gNVIDIAEepromProtocolGuid,
-                                                   CvmEeprom ?
-                                                     (VOID *)CvmBoardInfo :
-                                                     (VOID *)IdBoardInfo,
-                                                   NULL);
+
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &Controller,
+                  CvmEeprom ?
+                  &gNVIDIACvmEepromProtocolGuid :
+                  &gNVIDIAEepromProtocolGuid,
+                  CvmEeprom ?
+                  (VOID *)CvmBoardInfo :
+                  (VOID *)IdBoardInfo,
+                  NULL
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to install EEPROM protocols\n", __FUNCTION__));
     goto ErrorExit;
@@ -411,42 +438,54 @@ EepromDxeDriverBindingStart (
 ErrorExit:
   if (EFI_ERROR (Status)) {
     if (CvmBoardInfo != NULL) {
-      gBS->UninstallMultipleProtocolInterfaces (Controller,
-                                                &gNVIDIACvmEepromProtocolGuid,
-                                                CvmBoardInfo,
-                                                NULL);
+      gBS->UninstallMultipleProtocolInterfaces (
+             Controller,
+             &gNVIDIACvmEepromProtocolGuid,
+             CvmBoardInfo,
+             NULL
+             );
       FreePool (CvmBoardInfo);
     }
+
     if (IdBoardInfo != NULL) {
-      gBS->UninstallMultipleProtocolInterfaces (Controller,
-                                                &gNVIDIAEepromProtocolGuid,
-                                                IdBoardInfo,
-                                                NULL);
+      gBS->UninstallMultipleProtocolInterfaces (
+             Controller,
+             &gNVIDIAEepromProtocolGuid,
+             IdBoardInfo,
+             NULL
+             );
       FreePool (IdBoardInfo);
     }
+
     if (RawData != NULL) {
       FreePool (RawData);
     }
+
     if (Request != NULL) {
       FreePool (Request);
     }
+
     if (I2cIo != NULL) {
-      gBS->CloseProtocol (Controller,
-                          &gEfiI2cIoProtocolGuid,
-                          This->DriverBindingHandle,
-                          Controller);
+      gBS->CloseProtocol (
+             Controller,
+             &gEfiI2cIoProtocolGuid,
+             This->DriverBindingHandle,
+             Controller
+             );
     }
+
     if (RngProtocol != NULL) {
-      gBS->CloseProtocol (Controller,
-                          &gEfiRngProtocolGuid,
-                          This->DriverBindingHandle,
-                          Controller);
+      gBS->CloseProtocol (
+             Controller,
+             &gEfiRngProtocolGuid,
+             This->DriverBindingHandle,
+             Controller
+             );
     }
   }
 
   return Status;
 }
-
 
 /**
   Stops a device controller or a bus controller.
@@ -476,19 +515,19 @@ ErrorExit:
 EFI_STATUS
 EFIAPI
 EepromDxeDriverBindingStop (
-  IN  EFI_DRIVER_BINDING_PROTOCOL     *This,
-  IN  EFI_HANDLE                      Controller,
-  IN  UINTN                           NumberOfChildren,
-  IN  EFI_HANDLE                      *ChildHandleBuffer
-)
+  IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN  EFI_HANDLE                   Controller,
+  IN  UINTN                        NumberOfChildren,
+  IN  EFI_HANDLE                   *ChildHandleBuffer
+  )
 {
-  EFI_STATUS            Status;
-  UINT8                 *EepromData;
-  TEGRA_PLATFORM_TYPE   PlatformType;
+  EFI_STATUS           Status;
+  UINT8                *EepromData;
+  TEGRA_PLATFORM_TYPE  PlatformType;
 
   EepromData = NULL;
 
-  PlatformType = TegraGetPlatform();
+  PlatformType = TegraGetPlatform ();
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAEepromProtocolGuid, (VOID **)&EepromData);
     if (EFI_ERROR (Status)) {
@@ -496,19 +535,23 @@ EepromDxeDriverBindingStop (
       return Status;
     }
 
-    Status = gBS->UninstallMultipleProtocolInterfaces (Controller,
-                                                       &gNVIDIAEepromProtocolGuid,
-                                                       EepromData,
-                                                       NULL);
+    Status = gBS->UninstallMultipleProtocolInterfaces (
+                    Controller,
+                    &gNVIDIAEepromProtocolGuid,
+                    EepromData,
+                    NULL
+                    );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to uninstall eeprom protocol (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
 
-    Status = gBS->CloseProtocol (Controller,
-                                 &gEfiI2cIoProtocolGuid,
-                                 This->DriverBindingHandle,
-                                 Controller);
+    Status = gBS->CloseProtocol (
+                    Controller,
+                    &gEfiI2cIoProtocolGuid,
+                    This->DriverBindingHandle,
+                    Controller
+                    );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to close i2cio protocol (%r)\r\n", __FUNCTION__, Status));
       return Status;
@@ -520,19 +563,23 @@ EepromDxeDriverBindingStop (
       return Status;
     }
 
-    Status = gBS->UninstallMultipleProtocolInterfaces (Controller,
-                                                       &gNVIDIACvmEepromProtocolGuid,
-                                                       EepromData,
-                                                       NULL);
+    Status = gBS->UninstallMultipleProtocolInterfaces (
+                    Controller,
+                    &gNVIDIACvmEepromProtocolGuid,
+                    EepromData,
+                    NULL
+                    );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to uninstall cvm eeprom protocol (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
 
-    Status = gBS->CloseProtocol (Controller,
-                                 &gEfiRngProtocolGuid,
-                                 This->DriverBindingHandle,
-                                 Controller);
+    Status = gBS->CloseProtocol (
+                    Controller,
+                    &gEfiRngProtocolGuid,
+                    This->DriverBindingHandle,
+                    Controller
+                    );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to close rng protocol (%r)\r\n", __FUNCTION__, Status));
       return Status;
@@ -543,8 +590,7 @@ EepromDxeDriverBindingStop (
   return EFI_SUCCESS;
 }
 
-
-EFI_DRIVER_BINDING_PROTOCOL gEepromDxeDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL  gEepromDxeDriverBinding = {
   EepromDxeDriverBindingSupported,
   EepromDxeDriverBindingStart,
   EepromDxeDriverBindingStop,
@@ -552,7 +598,6 @@ EFI_DRIVER_BINDING_PROTOCOL gEepromDxeDriverBinding = {
   NULL,
   NULL
 };
-
 
 /**
   The user Entry Point for module NorFlashDxe. The user code starts with this function.
@@ -566,9 +611,9 @@ EFI_DRIVER_BINDING_PROTOCOL gEepromDxeDriverBinding = {
 EFI_STATUS
 EFIAPI
 InitializeEepromDxe (
-  IN EFI_HANDLE           ImageHandle,
-  IN EFI_SYSTEM_TABLE     *SystemTable
-)
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
 {
   EFI_HANDLE               Handle;
   TEGRABL_EEPROM_DATA      *EepromData;
@@ -579,19 +624,21 @@ InitializeEepromDxe (
   BOOLEAN                  ValidCvmEepromData;
   VOID                     *Hob;
 
-  PlatformType = TegraGetPlatform();
+  PlatformType       = TegraGetPlatform ();
   ValidCvmEepromData = TRUE;
-  EepromData = NULL;
+  EepromData         = NULL;
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   if ((Hob != NULL) &&
-      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
     EepromData = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->EepromData;
   }
 
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
-    if ((EepromData == NULL) || EepromData->CvmEepromDataSize == 0 ||
-        EFI_ERROR (ValidateEepromData (EepromData->CvmEepromData, FALSE, FALSE))) {
+    if ((EepromData == NULL) || (EepromData->CvmEepromDataSize == 0) ||
+        EFI_ERROR (ValidateEepromData (EepromData->CvmEepromData, FALSE, FALSE)))
+    {
       DEBUG ((DEBUG_ERROR, "Cvm Eeprom data validation failed\r\n"));
       ValidCvmEepromData = FALSE;
     } else {
@@ -606,6 +653,7 @@ InitializeEepromDxe (
         DEBUG ((DEBUG_ERROR, "Cvm Eeprom data population failed(%r)\r\n", Status));
         return Status;
       }
+
       DEBUG ((DEBUG_ERROR, "Cvm Eeprom Product Id: %a\r\n", CvmBoardInfo->ProductId));
     }
   } else {
@@ -614,28 +662,41 @@ InitializeEepromDxe (
       Status = EFI_OUT_OF_RESOURCES;
       return Status;
     }
-    AsciiSPrint (CvmBoardInfo->BoardId, sizeof(CvmBoardInfo->BoardId),
-                 EEPROM_DUMMY_BOARDID);
-    AsciiSPrint (CvmBoardInfo->ProductId, sizeof(CvmBoardInfo->ProductId),
-                 EEPROM_DUMMY_PRODUCTID);
-    AsciiSPrint (CvmBoardInfo->SerialNumber, sizeof(CvmBoardInfo->SerialNumber),
-                 EEPROM_DUMMY_SERIALNUM);
+
+    AsciiSPrint (
+      CvmBoardInfo->BoardId,
+      sizeof (CvmBoardInfo->BoardId),
+      EEPROM_DUMMY_BOARDID
+      );
+    AsciiSPrint (
+      CvmBoardInfo->ProductId,
+      sizeof (CvmBoardInfo->ProductId),
+      EEPROM_DUMMY_PRODUCTID
+      );
+    AsciiSPrint (
+      CvmBoardInfo->SerialNumber,
+      sizeof (CvmBoardInfo->SerialNumber),
+      EEPROM_DUMMY_SERIALNUM
+      );
   }
 
   if (ValidCvmEepromData == TRUE) {
-     Handle = NULL;
-     Status = gBS->InstallMultipleProtocolInterfaces (&Handle,
-                                                     &gNVIDIACvmEepromProtocolGuid,
-                                                     CvmBoardInfo,
-                                                     NULL);
+    Handle = NULL;
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &Handle,
+                    &gNVIDIACvmEepromProtocolGuid,
+                    CvmBoardInfo,
+                    NULL
+                    );
     if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Failed to install Cvm EEPROM protocols\n", __FUNCTION__));
-        return Status;
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install Cvm EEPROM protocols\n", __FUNCTION__));
+      return Status;
     }
   }
 
-  if ((EepromData == NULL) || EepromData->CvbEepromDataSize == 0 ||
-      EFI_ERROR (ValidateEepromData (EepromData->CvbEepromData, FALSE, FALSE))) {
+  if ((EepromData == NULL) || (EepromData->CvbEepromDataSize == 0) ||
+      EFI_ERROR (ValidateEepromData (EepromData->CvbEepromData, FALSE, FALSE)))
+  {
     DEBUG ((DEBUG_ERROR, "Cvb Eeprom data validation failed(%r)\r\n", Status));
   } else {
     CvbBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)AllocateZeroPool (sizeof (TEGRA_EEPROM_BOARD_INFO));
@@ -649,12 +710,15 @@ InitializeEepromDxe (
       DEBUG ((DEBUG_ERROR, "Cvb Eeprom data population failed(%r)\r\n", Status));
       return Status;
     }
+
     DEBUG ((DEBUG_ERROR, "Cvb Eeprom Product Id: %a\r\n", CvbBoardInfo->ProductId));
 
-    Status = gBS->InstallMultipleProtocolInterfaces (&Handle,
-                                                     &gNVIDIACvbEepromProtocolGuid,
-                                                     CvbBoardInfo,
-                                                     NULL);
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &Handle,
+                    &gNVIDIACvbEepromProtocolGuid,
+                    CvbBoardInfo,
+                    NULL
+                    );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to install Cvb EEPROM protocols\n", __FUNCTION__));
       return Status;
@@ -662,10 +726,12 @@ InitializeEepromDxe (
   }
 
   // TODO: Add component name support.
-  return EfiLibInstallDriverBinding (ImageHandle,
-                                     SystemTable,
-                                     &gEepromDxeDriverBinding,
-                                     ImageHandle);
+  return EfiLibInstallDriverBinding (
+           ImageHandle,
+           SystemTable,
+           &gEepromDxeDriverBinding,
+           ImageHandle
+           );
 
   return Status;
 }

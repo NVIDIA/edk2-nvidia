@@ -19,7 +19,6 @@
 
 typedef struct _NVIDIA_USBPADCTL_PROTOCOL NVIDIA_USBPADCTL_PROTOCOL;
 
-
 /**
   This function Initializes the USB Pads for specific Chip.
 
@@ -29,7 +28,7 @@ typedef struct _NVIDIA_USBPADCTL_PROTOCOL NVIDIA_USBPADCTL_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *USBPADCTL_INIT_HW) (
+(EFIAPI *USBPADCTL_INIT_HW)(
   IN  NVIDIA_USBPADCTL_PROTOCOL  *This
   );
 
@@ -42,16 +41,15 @@ EFI_STATUS
 **/
 typedef
 VOID
-(EFIAPI *USBPADCTL_DEINIT_HW) (
+(EFIAPI *USBPADCTL_DEINIT_HW)(
   IN  NVIDIA_USBPADCTL_PROTOCOL  *This
   );
 
-
 struct _NVIDIA_USBPADCTL_PROTOCOL {
-  USBPADCTL_INIT_HW             InitHw;
-  USBPADCTL_DEINIT_HW           DeInitHw;
+  USBPADCTL_INIT_HW      InitHw;
+  USBPADCTL_DEINIT_HW    DeInitHw;
 };
 
-extern EFI_GUID gNVIDIAUsbPadCtlProtocolGuid;
+extern EFI_GUID  gNVIDIAUsbPadCtlProtocolGuid;
 
 #endif

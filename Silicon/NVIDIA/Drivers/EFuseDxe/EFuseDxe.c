@@ -23,20 +23,20 @@
 #include <Protocol/DeviceTreeCompatibility.h>
 #include "EFuseDxePrivate.h"
 
-NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-    { "nvidia,tegra194-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
-    { "nvidia,tegra234-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
-    { NULL, NULL }
+NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
+  { "nvidia,tegra194-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
+  { "nvidia,tegra234-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
+  { NULL,                    NULL                                   }
 };
 
-NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-  .DriverName = L"NVIDIA EFuse driver",
-  .UseDriverBinding = TRUE,
-  .AutoEnableClocks = TRUE,
-  .AutoDeassertReset = TRUE,
-  .AutoResetModule = FALSE,
-  .AutoDeassertPg = FALSE,
-  .SkipEdkiiNondiscoverableInstall = TRUE,
+NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
+  .DriverName                                 = L"NVIDIA EFuse driver",
+  .UseDriverBinding                           = TRUE,
+  .AutoEnableClocks                           = TRUE,
+  .AutoDeassertReset                          = TRUE,
+  .AutoResetModule                            = FALSE,
+  .AutoDeassertPg                             = FALSE,
+  .SkipEdkiiNondiscoverableInstall            = TRUE,
   .SkipAutoDeinitControllerOnExitBootServices = TRUE
 };
 
@@ -54,22 +54,23 @@ STATIC
 EFI_STATUS
 EfuseReadRegister (
   IN  NVIDIA_EFUSE_PROTOCOL  *This,
-  IN  UINT32    RegisterOffset,
-  OUT UINT32    *RegisterValue
+  IN  UINT32                 RegisterOffset,
+  OUT UINT32                 *RegisterValue
   )
 {
-  EFI_STATUS        Status;
-  EFUSE_DXE_PRIVATE *Private;
+  EFI_STATUS         Status;
+  EFUSE_DXE_PRIVATE  *Private;
 
   Status = EFI_SUCCESS;
 
   Private = EFUSE_PRIVATE_DATA_FROM_THIS (This);
-  if ((RegisterOffset > (Private->RegionSize - sizeof(UINT32))) ||
-                                     (RegisterValue == NULL)) {
+  if ((RegisterOffset > (Private->RegionSize - sizeof (UINT32))) ||
+      (RegisterValue == NULL))
+  {
     Status = EFI_INVALID_PARAMETER;
   } else {
-    *RegisterValue = MmioRead32(Private->BaseAddress + RegisterOffset);
-    Status = EFI_SUCCESS;
+    *RegisterValue = MmioRead32 (Private->BaseAddress + RegisterOffset);
+    Status         = EFI_SUCCESS;
   }
 
   return Status;
@@ -93,88 +94,101 @@ EfuseReadRegister (
 **/
 EFI_STATUS
 DeviceDiscoveryNotify (
-  IN  NVIDIA_DEVICE_DISCOVERY_PHASES         Phase,
-  IN  EFI_HANDLE                             DriverHandle,
-  IN  EFI_HANDLE                             ControllerHandle,
-  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
+  IN  NVIDIA_DEVICE_DISCOVERY_PHASES          Phase,
+  IN  EFI_HANDLE                              DriverHandle,
+  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                Status;
-  EFI_PHYSICAL_ADDRESS      BaseAddress;
-  UINTN                     RegionSize;
-  NVIDIA_EFUSE_PROTOCOL     *EFuseProtocol;
-  EFUSE_DXE_PRIVATE         *Private;
+  EFI_STATUS             Status;
+  EFI_PHYSICAL_ADDRESS   BaseAddress;
+  UINTN                  RegionSize;
+  NVIDIA_EFUSE_PROTOCOL  *EFuseProtocol;
+  EFUSE_DXE_PRIVATE      *Private;
 
-  Status = EFI_SUCCESS;
+  Status      = EFI_SUCCESS;
   BaseAddress = 0;
-  Private = NULL;
+  Private     = NULL;
 
   switch (Phase) {
-  case DeviceDiscoveryDriverBindingStart:
+    case DeviceDiscoveryDriverBindingStart:
 
-    Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress,
-                                                                &RegionSize);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR,
-        "%a: Couldn't find Efuse address range\n", __FUNCTION__));
-      return Status;
-    }
+      Status = DeviceDiscoveryGetMmioRegion (
+                 ControllerHandle,
+                 0,
+                 &BaseAddress,
+                 &RegionSize
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          EFI_D_ERROR,
+          "%a: Couldn't find Efuse address range\n",
+          __FUNCTION__
+          ));
+        return Status;
+      }
 
-    Private = AllocatePool (sizeof (EFUSE_DXE_PRIVATE));
-    if (NULL == Private) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Memory\r\n", __FUNCTION__));
-      Status = EFI_OUT_OF_RESOURCES;
-      return Status;
-    }
+      Private = AllocatePool (sizeof (EFUSE_DXE_PRIVATE));
+      if (NULL == Private) {
+        DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Memory\r\n", __FUNCTION__));
+        Status = EFI_OUT_OF_RESOURCES;
+        return Status;
+      }
 
-    Private->Signature = EFUSE_SIGNATURE;
-    Private->ImageHandle = DriverHandle;
-    Private->BaseAddress = BaseAddress;
-    Private->RegionSize = RegionSize;
-    Private->EFuseProtocol.ReadReg = EfuseReadRegister;
+      Private->Signature             = EFUSE_SIGNATURE;
+      Private->ImageHandle           = DriverHandle;
+      Private->BaseAddress           = BaseAddress;
+      Private->RegionSize            = RegionSize;
+      Private->EFuseProtocol.ReadReg = EfuseReadRegister;
 
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                  &DriverHandle,
-                  &gNVIDIAEFuseProtocolGuid,
-                  &Private->EFuseProtocol,
-                  NULL
-                  );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to install protocols: %r\r\n",
-                                                    __FUNCTION__, Status));
+      Status = gBS->InstallMultipleProtocolInterfaces (
+                      &DriverHandle,
+                      &gNVIDIAEFuseProtocolGuid,
+                      &Private->EFuseProtocol,
+                      NULL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          EFI_D_ERROR,
+          "%a, Failed to install protocols: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+        FreePool (Private);
+        return Status;
+      }
+
+      break;
+
+    case DeviceDiscoveryDriverBindingStop:
+
+      Status = gBS->HandleProtocol (
+                      DriverHandle,
+                      &gNVIDIAEFuseProtocolGuid,
+                      (VOID **)&EFuseProtocol
+                      );
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+
+      Private = EFUSE_PRIVATE_DATA_FROM_PROTOCOL (EFuseProtocol);
+
+      Status =  gBS->UninstallMultipleProtocolInterfaces (
+                       DriverHandle,
+                       &gNVIDIAEFuseProtocolGuid,
+                       &Private->EFuseProtocol,
+                       NULL
+                       );
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+
       FreePool (Private);
-      return Status;
-    }
-    break;
+      break;
 
-  case DeviceDiscoveryDriverBindingStop:
-
-    Status = gBS->HandleProtocol (
-                  DriverHandle,
-                  &gNVIDIAEFuseProtocolGuid,
-                  (VOID **)&EFuseProtocol);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-
-    Private = EFUSE_PRIVATE_DATA_FROM_PROTOCOL (EFuseProtocol);
-
-    Status =  gBS->UninstallMultipleProtocolInterfaces (
-                   DriverHandle,
-                   &gNVIDIAEFuseProtocolGuid,
-                   &Private->EFuseProtocol,
-                   NULL);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-
-    FreePool (Private);
-    break;
-
-  default:
-    break;
+    default:
+      break;
   }
 
   return Status;
-
 }

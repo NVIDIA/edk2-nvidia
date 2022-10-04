@@ -10,7 +10,7 @@
 
 #include <Library/PlatformToDriverConfiguration.h>
 
-GUID_DEVICEFUNCPTR_MAPPING InternalGuidDeviceFuncPtrMap[] = {
+GUID_DEVICEFUNCPTR_MAPPING  InternalGuidDeviceFuncPtrMap[] = {
   { NULL, NULL, NULL }
 };
 
@@ -18,7 +18,7 @@ GUID_DEVICEFUNCPTR_MAPPING InternalGuidDeviceFuncPtrMap[] = {
   Retrieve Internal Guid Device Funtion Map
 
 **/
-GUID_DEVICEFUNCPTR_MAPPING*
+GUID_DEVICEFUNCPTR_MAPPING *
 EFIAPI
 GetInternalGuidMap (
   VOID

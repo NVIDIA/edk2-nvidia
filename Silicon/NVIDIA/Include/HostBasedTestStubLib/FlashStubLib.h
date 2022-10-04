@@ -39,7 +39,7 @@ FlashStubInitialize (
   IN  UINT32                 BlockSize,
   IN  UINT32                 IoAlign,
   OUT EFI_BLOCK_IO_PROTOCOL  **BlockIo
-);
+  );
 
 /**
   Clean up the space used by the flash stub if necessary.
@@ -52,7 +52,7 @@ EFI_STATUS
 EFIAPI
 FlashStubDestroy (
   IN EFI_BLOCK_IO_PROTOCOL  *BlockIo
-);
+  );
 
 /**
   Initialize the Flash Stub.
@@ -79,7 +79,7 @@ FaultyFlashStubInitialize (
   IN  UINT32                 BlockSize,
   IN  UINT32                 IoAlign,
   OUT EFI_BLOCK_IO_PROTOCOL  **BlockIo
-);
+  );
 
 /**
   Clean up the space used by the flash stub if necessary.
@@ -92,6 +92,6 @@ EFI_STATUS
 EFIAPI
 FaultyFlashStubDestroy (
   IN EFI_BLOCK_IO_PROTOCOL  *BlockIo
-);
+  );
 
 #endif

@@ -14,15 +14,15 @@
 #include <PiDxe.h>
 #include <Protocol/EFuse.h>
 
-#define EFUSE_SIGNATURE SIGNATURE_32('E','F','S','E')
+#define EFUSE_SIGNATURE  SIGNATURE_32('E','F','S','E')
 typedef struct {
-  UINT32                     Signature;
-  NVIDIA_EFUSE_PROTOCOL      EFuseProtocol;
-  EFI_PHYSICAL_ADDRESS       BaseAddress;
-  UINTN                      RegionSize;
-  EFI_HANDLE                 ImageHandle;
+  UINT32                   Signature;
+  NVIDIA_EFUSE_PROTOCOL    EFuseProtocol;
+  EFI_PHYSICAL_ADDRESS     BaseAddress;
+  UINTN                    RegionSize;
+  EFI_HANDLE               ImageHandle;
 } EFUSE_DXE_PRIVATE;
-#define EFUSE_PRIVATE_DATA_FROM_THIS(a)     CR(a, EFUSE_DXE_PRIVATE, EFuseProtocol, EFUSE_SIGNATURE)
-#define EFUSE_PRIVATE_DATA_FROM_PROTOCOL(a) EFUSE_PRIVATE_DATA_FROM_THIS(a)
+#define EFUSE_PRIVATE_DATA_FROM_THIS(a)      CR(a, EFUSE_DXE_PRIVATE, EFuseProtocol, EFUSE_SIGNATURE)
+#define EFUSE_PRIVATE_DATA_FROM_PROTOCOL(a)  EFUSE_PRIVATE_DATA_FROM_THIS(a)
 
 #endif /* EFUSEDXE_PRIVATE_H_ */

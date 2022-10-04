@@ -21,15 +21,15 @@ TegraGetChipID (
   VOID
   )
 {
-  UINT32 ChipId;
+  UINT32  ChipId;
 
-  ChipId = (UINT32) mock();
+  ChipId = (UINT32)mock ();
   return ChipId;
 }
 
 VOID
 MockTegraGetChipID (
-  UINT32    ChipId
+  UINT32  ChipId
   )
 {
   will_return (TegraGetChipID, ChipId);

@@ -25,7 +25,7 @@
 **/
 typedef
 RETURN_STATUS
-(EFIAPI * SERIAL_PORT_INITIALIZE) (
+(EFIAPI *SERIAL_PORT_INITIALIZE)(
   IN UINTN SerialBaseAddress
   );
 
@@ -48,7 +48,7 @@ RETURN_STATUS
 **/
 typedef
 UINTN
-(EFIAPI * SERIAL_PORT_WRITE) (
+(EFIAPI *SERIAL_PORT_WRITE)(
   IN UINTN     SerialBaseAddress,
   IN UINT8     *Buffer,
   IN UINTN     NumberOfBytes
@@ -72,7 +72,7 @@ UINTN
 **/
 typedef
 UINTN
-(EFIAPI * SERIAL_PORT_READ) (
+(EFIAPI *SERIAL_PORT_READ)(
   IN  UINTN   SerialBaseAddress,
   OUT UINT8   *Buffer,
   IN  UINTN   NumberOfBytes
@@ -91,7 +91,7 @@ UINTN
 **/
 typedef
 BOOLEAN
-(EFIAPI * SERIAL_PORT_POLL) (
+(EFIAPI *SERIAL_PORT_POLL)(
   IN UINTN SerialBaseAddress
   );
 
@@ -107,7 +107,7 @@ BOOLEAN
 **/
 typedef
 RETURN_STATUS
-(EFIAPI * SERIAL_PORT_SET_CONTROL) (
+(EFIAPI *SERIAL_PORT_SET_CONTROL)(
   IN UINTN  SerialBaseAddress,
   IN UINT32 Control
   );
@@ -124,7 +124,7 @@ RETURN_STATUS
 **/
 typedef
 RETURN_STATUS
-(EFIAPI * SERIAL_PORT_GET_CONTROL) (
+(EFIAPI *SERIAL_PORT_GET_CONTROL)(
   IN  UINTN  SerialBaseAddress,
   OUT UINT32 *Control
   );
@@ -164,7 +164,7 @@ RETURN_STATUS
 **/
 typedef
 RETURN_STATUS
-(EFIAPI * SERIAL_PORT_SET_ATTRIBUTES) (
+(EFIAPI *SERIAL_PORT_SET_ATTRIBUTES)(
   IN     UINTN              SerialBaseAddress,
   IN OUT UINT64             *BaudRate,
   IN OUT UINT32             *ReceiveFifoDepth,
@@ -175,14 +175,14 @@ RETURN_STATUS
   );
 
 typedef struct {
-  SERIAL_PORT_INITIALIZE     SerialPortInitialize;
-  SERIAL_PORT_WRITE          SerialPortWrite;
-  SERIAL_PORT_READ           SerialPortRead;
-  SERIAL_PORT_POLL           SerialPortPoll;
-  SERIAL_PORT_SET_CONTROL    SerialPortSetControl;
-  SERIAL_PORT_GET_CONTROL    SerialPortGetControl;
-  SERIAL_PORT_SET_ATTRIBUTES SerialPortSetAttributes;
-  } TEGRA_UART_OBJ;
+  SERIAL_PORT_INITIALIZE        SerialPortInitialize;
+  SERIAL_PORT_WRITE             SerialPortWrite;
+  SERIAL_PORT_READ              SerialPortRead;
+  SERIAL_PORT_POLL              SerialPortPoll;
+  SERIAL_PORT_SET_CONTROL       SerialPortSetControl;
+  SERIAL_PORT_GET_CONTROL       SerialPortGetControl;
+  SERIAL_PORT_SET_ATTRIBUTES    SerialPortSetAttributes;
+} TEGRA_UART_OBJ;
 
 /**
   Retrieve the object of tegra SBSA serial port library.
@@ -227,8 +227,8 @@ Tegra16550SerialPortGetObject (
 EFI_SERIAL_IO_PROTOCOL *
 EFIAPI
 SerialSbsaIoInitialize (
-  IN UINTN SerialBaseAddress
-   );
+  IN UINTN  SerialBaseAddress
+  );
 
 /**
   Initialize 16550 Serial Console
@@ -237,7 +237,7 @@ SerialSbsaIoInitialize (
 EFI_SERIAL_IO_PROTOCOL *
 EFIAPI
 Serial16550IoInitialize (
-  IN UINTN SerialBaseAddress
+  IN UINTN  SerialBaseAddress
   );
 
 /**

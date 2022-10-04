@@ -33,9 +33,9 @@
 EFI_STATUS
 EFIAPI
 ResponseSdMmcParameters (
-  IN CONST  VOID                              *ParameterBlock,
-  IN CONST  EFI_PLATFORM_CONFIGURATION_ACTION ConfigurationAction
-);
+  IN CONST  VOID                               *ParameterBlock,
+  IN CONST  EFI_PLATFORM_CONFIGURATION_ACTION  ConfigurationAction
+  );
 
 /**
 
@@ -56,9 +56,9 @@ ResponseSdMmcParameters (
 EFI_STATUS
 EFIAPI
 QuerySdMmcParameters (
-  IN OUT   VOID                                   **ParameterBlock,
-  IN OUT   UINTN                                  *ParameterBlockSize,
-  IN       CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DtNode
-);
+  IN OUT   VOID                                    **ParameterBlock,
+  IN OUT   UINTN                                   *ParameterBlockSize,
+  IN       CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DtNode
+  );
 
 #endif /* _SDMMCDATAFILE_H_ */

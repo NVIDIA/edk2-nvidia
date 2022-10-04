@@ -23,22 +23,20 @@
 typedef struct _NVIDIA_CLOCK_NODE_PROTOCOL NVIDIA_CLOCK_NODE_PROTOCOL;
 
 typedef struct {
-
   ///
   /// Id of the clock, matches what is used in clock SCMI protocol.
   ///
-  UINT32                  ClockId;
+  UINT32         ClockId;
 
   ///
   /// Clock name from device database, does not necessarily match SCMI protocol.
   ///
-  CONST CHAR8             *ClockName;
+  CONST CHAR8    *ClockName;
 
   ///
   /// This clock is marked as a parent clock.
   ///
-  BOOLEAN                 Parent;
-
+  BOOLEAN        Parent;
 } NVIDIA_CLOCK_NODE_ENTRY;
 
 /**
@@ -52,7 +50,7 @@ typedef struct {
 **/
 typedef
 EFI_STATUS
-(EFIAPI *CLOCK_NODE_ENABLE_ALL) (
+(EFIAPI *CLOCK_NODE_ENABLE_ALL)(
   IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This
   );
 
@@ -67,19 +65,18 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *CLOCK_NODE_DISABLE_ALL) (
+(EFIAPI *CLOCK_NODE_DISABLE_ALL)(
   IN  NVIDIA_CLOCK_NODE_PROTOCOL   *This
   );
 
 /// NVIDIA_CLOCK_NODE_PROTOCOL protocol structure.
 struct _NVIDIA_CLOCK_NODE_PROTOCOL {
-
-  CLOCK_NODE_ENABLE_ALL   EnableAll;
-  CLOCK_NODE_DISABLE_ALL  DisableAll;
-  UINTN                   Clocks;
-  NVIDIA_CLOCK_NODE_ENTRY ClockEntries[0];
+  CLOCK_NODE_ENABLE_ALL      EnableAll;
+  CLOCK_NODE_DISABLE_ALL     DisableAll;
+  UINTN                      Clocks;
+  NVIDIA_CLOCK_NODE_ENTRY    ClockEntries[0];
 };
 
-extern EFI_GUID gNVIDIAClockNodeProtocolGuid;
+extern EFI_GUID  gNVIDIAClockNodeProtocolGuid;
 
 #endif

@@ -17,8 +17,8 @@
 #include <Library/SystemResourceLib.h>
 
 // DDR attributes
-#define DDR_ATTRIBUTES_CACHED           ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK
-#define DDR_ATTRIBUTES_UNCACHED         ARM_MEMORY_REGION_ATTRIBUTE_UNCACHED_UNBUFFERED
+#define DDR_ATTRIBUTES_CACHED    ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK
+#define DDR_ATTRIBUTES_UNCACHED  ARM_MEMORY_REGION_ATTRIBUTE_UNCACHED_UNBUFFERED
 
 /**
   Return the Virtual Memory Map of your platform
@@ -32,13 +32,13 @@
 **/
 VOID
 GetVirtualMemoryMap (
-  IN ARM_MEMORY_REGION_DESCRIPTOR** VirtualMemoryMap
+  IN ARM_MEMORY_REGION_DESCRIPTOR  **VirtualMemoryMap
   )
 {
-  UINTN                         Index = 0;
+  UINTN                         Index               = 0;
   ARM_MEMORY_REGION_DESCRIPTOR  *VirtualMemoryTable = NULL;
-  UINTN                         ResourcesCount = 0;
-  VOID                          *HobList = NULL;
+  UINTN                         ResourcesCount      = 0;
+  VOID                          *HobList            = NULL;
   EFI_STATUS                    Status;
 
   ASSERT (VirtualMemoryMap != NULL);
@@ -51,13 +51,13 @@ GetVirtualMemoryMap (
 
   ASSERT (ResourcesCount != 0);
 
-  VirtualMemoryTable = (ARM_MEMORY_REGION_DESCRIPTOR*)AllocatePages(EFI_SIZE_TO_PAGES (sizeof(ARM_MEMORY_REGION_DESCRIPTOR) * (ResourcesCount + 1)));
+  VirtualMemoryTable = (ARM_MEMORY_REGION_DESCRIPTOR *)AllocatePages (EFI_SIZE_TO_PAGES (sizeof (ARM_MEMORY_REGION_DESCRIPTOR) * (ResourcesCount + 1)));
   if (VirtualMemoryTable == NULL) {
     ASSERT (FALSE);
     return;
   }
 
-  //Walk HOB list for resources
+  // Walk HOB list for resources
   HobList = GetHobList ();
   if (NULL == HobList) {
     ASSERT (FALSE);
@@ -66,33 +66,35 @@ GetVirtualMemoryMap (
 
   HobList = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, HobList);
   while (NULL != HobList) {
-    EFI_HOB_RESOURCE_DESCRIPTOR *Resource = (EFI_HOB_RESOURCE_DESCRIPTOR *)HobList;
-    DEBUG ((EFI_D_VERBOSE,
-        "ArmPlatformGetVirtualMemoryMap() Resource: Base: 0x%016lx, Size: 0x%016lx, Type: 0x%x\n",
-        Resource->PhysicalStart,
-        Resource->ResourceLength,
-        Resource->ResourceType
+    EFI_HOB_RESOURCE_DESCRIPTOR  *Resource = (EFI_HOB_RESOURCE_DESCRIPTOR *)HobList;
+    DEBUG ((
+      EFI_D_VERBOSE,
+      "ArmPlatformGetVirtualMemoryMap() Resource: Base: 0x%016lx, Size: 0x%016lx, Type: 0x%x\n",
+      Resource->PhysicalStart,
+      Resource->ResourceLength,
+      Resource->ResourceType
       ));
 
-    VirtualMemoryTable[Index].PhysicalBase    = Resource->PhysicalStart;
-    VirtualMemoryTable[Index].VirtualBase     = Resource->PhysicalStart;
-    VirtualMemoryTable[Index].Length          = Resource->ResourceLength;
+    VirtualMemoryTable[Index].PhysicalBase = Resource->PhysicalStart;
+    VirtualMemoryTable[Index].VirtualBase  = Resource->PhysicalStart;
+    VirtualMemoryTable[Index].Length       = Resource->ResourceLength;
     if (Resource->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) {
-      VirtualMemoryTable[Index].Attributes      = DDR_ATTRIBUTES_CACHED;
+      VirtualMemoryTable[Index].Attributes = DDR_ATTRIBUTES_CACHED;
     } else {
-      VirtualMemoryTable[Index].Attributes      = ARM_MEMORY_REGION_ATTRIBUTE_DEVICE;
+      VirtualMemoryTable[Index].Attributes = ARM_MEMORY_REGION_ATTRIBUTE_DEVICE;
     }
+
     Index++;
     HobList = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, GET_NEXT_HOB (HobList));
-  };
+  }
 
   // End of Table
-  VirtualMemoryTable[Index].PhysicalBase    = 0;
-  VirtualMemoryTable[Index].VirtualBase     = 0;
-  VirtualMemoryTable[Index].Length          = 0;
-  VirtualMemoryTable[Index].Attributes      = (ARM_MEMORY_REGION_ATTRIBUTES)0;
+  VirtualMemoryTable[Index].PhysicalBase = 0;
+  VirtualMemoryTable[Index].VirtualBase  = 0;
+  VirtualMemoryTable[Index].Length       = 0;
+  VirtualMemoryTable[Index].Attributes   = (ARM_MEMORY_REGION_ATTRIBUTES)0;
 
-  ASSERT(Index == ResourcesCount);
+  ASSERT (Index == ResourcesCount);
 
   *VirtualMemoryMap = VirtualMemoryTable;
 }

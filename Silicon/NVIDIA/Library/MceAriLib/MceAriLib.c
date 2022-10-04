@@ -17,29 +17,29 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/TimerLib.h>
 
-#define BIT(Number)                 (1 << (Number))
+#define BIT(Number)  (1 << (Number))
 
 // ARI Version numbers
-#define TEGRA_ARI_VERSION_MAJOR     8
-#define TEGRA_ARI_VERSION_MINOR     1
+#define TEGRA_ARI_VERSION_MAJOR  8
+#define TEGRA_ARI_VERSION_MINOR  1
 
 // ARI Request IDs
-#define TEGRA_ARI_VERSION_CMD       0
-#define TEGRA_ARI_ECHO_CMD          1
-#define TEGRA_ARI_NUM_CORES_CMD     2
+#define TEGRA_ARI_VERSION_CMD    0
+#define TEGRA_ARI_ECHO_CMD       1
+#define TEGRA_ARI_NUM_CORES_CMD  2
 
 // Register offsets for ARI request/results
-#define ARI_REQUEST_OFFS            0x00
-#define ARI_REQUEST_EVENT_MASK_OFFS 0x08
-#define ARI_STATUS_OFFS             0x10
-#define ARI_REQUEST_DATA_LO_OFFS    0x18
-#define ARI_REQUEST_DATA_HI_OFFS    0x20
-#define ARI_RESPONSE_DATA_LO_OFFS   0x28
-#define ARI_RESPONSE_DATA_HI_OFFS   0x30
+#define ARI_REQUEST_OFFS             0x00
+#define ARI_REQUEST_EVENT_MASK_OFFS  0x08
+#define ARI_STATUS_OFFS              0x10
+#define ARI_REQUEST_DATA_LO_OFFS     0x18
+#define ARI_REQUEST_DATA_HI_OFFS     0x20
+#define ARI_RESPONSE_DATA_LO_OFFS    0x28
+#define ARI_RESPONSE_DATA_HI_OFFS    0x30
 
 // Status values for the current request
-#define ARI_REQ_PENDING             1
-#define ARI_REQ_ONGOING             2
+#define ARI_REQ_PENDING  1
+#define ARI_REQ_ONGOING  2
 
 // Request completion status values
 #define ARI_REQ_ERROR_STATUS_MASK   0xFC
@@ -50,22 +50,23 @@
 #define ARI_REQ_EXECUTION_ERROR     0x3F
 
 // Software request completion status values
-#define ARI_REQ_TIMEOUT             0x100U
-#define ARI_REQ_BAD_EVENT_MASK      0x200U
+#define ARI_REQ_TIMEOUT         0x100U
+#define ARI_REQ_BAD_EVENT_MASK  0x200U
 
 // Request control bits
-#define ARI_REQUEST_VALID_BIT       (1U << 8)
-#define ARI_REQUEST_KILL_BIT        (1U << 9)
-#define ARI_REQUEST_NS_BIT          (1U << 31)
+#define ARI_REQUEST_VALID_BIT  (1U << 8)
+#define ARI_REQUEST_KILL_BIT   (1U << 9)
+#define ARI_REQUEST_NS_BIT     (1U << 31)
 
 // Default timeout to wait for ARI completion
-#define ARI_MAX_RETRY_US            2000000U
+#define ARI_MAX_RETRY_US  2000000U
 
 // Platform CPU configuration
 #define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
 #define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdTegraMaxClusters))
 #define PLATFORM_MAX_CPUS               (PLATFORM_MAX_CLUSTERS * \
                                          PLATFORM_MAX_CORES_PER_CLUSTER)
+
 /**
   Returns flag indicating execution environment support for the MCE ARI interface.
 
@@ -97,11 +98,11 @@ STATIC
 UINT32
 EFIAPI
 AriRead32 (
-  IN  UINTN     AriBase,
-  IN  UINT32    Register
+  IN  UINTN   AriBase,
+  IN  UINT32  Register
   )
 {
-  UINT32        Value;
+  UINT32  Value;
 
   if (MceAriSupported ()) {
     Value = MmioRead32 (AriBase + Register);
@@ -110,8 +111,14 @@ AriRead32 (
     Value = ARI_REQ_ERROR_STATUS_MASK;
   }
 
-  DEBUG ((DEBUG_VERBOSE, "%a: AriBase=0x%x, Register=0x%x, Value=0x%x\n",
-          __FUNCTION__, AriBase, Register, Value));
+  DEBUG ((
+    DEBUG_VERBOSE,
+    "%a: AriBase=0x%x, Register=0x%x, Value=0x%x\n",
+    __FUNCTION__,
+    AriBase,
+    Register,
+    Value
+    ));
 
   return Value;
 }
@@ -129,13 +136,19 @@ STATIC
 VOID
 EFIAPI
 AriWrite32 (
-  IN  UINTN     AriBase,
-  IN  UINT32    Value,
-  IN  UINT32    Register
+  IN  UINTN   AriBase,
+  IN  UINT32  Value,
+  IN  UINT32  Register
   )
 {
-  DEBUG ((DEBUG_VERBOSE, "%a: AriBase=0x%x, Register=0x%x, Value=0x%x\n",
-          __FUNCTION__, AriBase, Register, Value));
+  DEBUG ((
+    DEBUG_VERBOSE,
+    "%a: AriBase=0x%x, Register=0x%x, Value=0x%x\n",
+    __FUNCTION__,
+    AriBase,
+    Register,
+    Value
+    ));
 
   if (MceAriSupported ()) {
     MmioWrite32 (AriBase + Register, Value);
@@ -153,7 +166,7 @@ STATIC
 UINT32
 EFIAPI
 AriGetResponseLow (
-  IN  UINTN     AriBase
+  IN  UINTN  AriBase
   )
 {
   return AriRead32 (AriBase, ARI_RESPONSE_DATA_LO_OFFS);
@@ -170,7 +183,7 @@ STATIC
 UINT32
 EFIAPI
 AriGetResponseHigh (
-  IN  UINTN     AriBase
+  IN  UINTN  AriBase
   )
 {
   return AriRead32 (AriBase, ARI_RESPONSE_DATA_HI_OFFS);
@@ -187,7 +200,8 @@ STATIC
 VOID
 EFIAPI
 AriClobberResponse (
-  IN  UINTN     AriBase)
+  IN  UINTN  AriBase
+  )
 {
   AriWrite32 (AriBase, 0, ARI_RESPONSE_DATA_LO_OFFS);
   AriWrite32 (AriBase, 0, ARI_RESPONSE_DATA_HI_OFFS);
@@ -208,11 +222,11 @@ STATIC
 VOID
 EFIAPI
 AriSendRequest (
-  IN  UINTN     AriBase,
-  IN  UINT32    EventMask,
-  IN  UINT32    Request,
-  IN  UINT32    Lo,
-  IN  UINT32    Hi
+  IN  UINTN   AriBase,
+  IN  UINT32  EventMask,
+  IN  UINT32  Request,
+  IN  UINT32  Lo,
+  IN  UINT32  Hi
   )
 {
   AriWrite32 (AriBase, Lo, ARI_REQUEST_DATA_LO_OFFS);
@@ -241,15 +255,15 @@ STATIC
 UINT32
 EFIAPI
 AriRequestWait (
-  IN  UINTN     AriBase,
-  IN  UINT32    EventMask,
-  IN  UINT32    Request,
-  IN  UINT32    Lo,
-  IN  UINT32    Hi
+  IN  UINTN   AriBase,
+  IN  UINT32  EventMask,
+  IN  UINT32  Request,
+  IN  UINT32  Lo,
+  IN  UINT32  Hi
   )
 {
-  UINT32      Retries;
-  UINT32      Status;
+  UINT32  Retries;
+  UINT32  Status;
 
   // For each ARI command, the registers that are not used are listed
   // as "Must be set to 0" and  MCE firmware enforces a check for it.
@@ -265,7 +279,8 @@ AriRequestWait (
     while (Retries != 0) {
       Status = AriRead32 (AriBase, ARI_STATUS_OFFS);
       if ((Status & (ARI_REQ_ONGOING | ARI_REQ_PENDING |
-                     ARI_REQ_ERROR_STATUS_MASK)) == 0) {
+                     ARI_REQ_ERROR_STATUS_MASK)) == 0)
+      {
         break;
       }
 
@@ -273,7 +288,7 @@ AriRequestWait (
       if ((Status & ARI_REQ_ERROR_STATUS_MASK) != 0) {
         UINT32  ErrorStatus;
         ErrorStatus = (Status & ARI_REQ_ERROR_STATUS_MASK) >>
-          ARI_REQ_ERROR_STATUS_SHIFT;
+                      ARI_REQ_ERROR_STATUS_SHIFT;
         DEBUG ((DEBUG_INFO, "ARI request got error: 0x%x\n", ErrorStatus));
         return ErrorStatus;
       }
@@ -308,21 +323,24 @@ AriRequestWait (
 STATIC
 UINT64
 EFIAPI
-AriGetVersion(
-  IN  UINTN     AriBase
+AriGetVersion (
+  IN  UINTN  AriBase
   )
 {
-  UINT32        Status;
-  UINT64        Version;
+  UINT32  Status;
+  UINT64  Version;
 
   Status = AriRequestWait (AriBase, 0, TEGRA_ARI_VERSION_CMD, 0, 0);
 
   if (Status == ARI_REQ_NO_ERROR) {
-    Version = AriGetResponseLow (AriBase);
-    Version |= (((UINT64) AriGetResponseHigh (AriBase)) << 32);
+    Version  = AriGetResponseLow (AriBase);
+    Version |= (((UINT64)AriGetResponseHigh (AriBase)) << 32);
   } else {
-    DEBUG ((DEBUG_ERROR, "%a: ARI request failed, returning version=0!\n",
-            __FUNCTION__));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: ARI request failed, returning version=0!\n",
+      __FUNCTION__
+      ));
     Version = 0;
   }
 
@@ -342,11 +360,11 @@ STATIC
 UINT32
 EFIAPI
 AriGetCoresEnabledBitMask (
-  IN  UINTN     AriBase
+  IN  UINTN  AriBase
   )
 {
-  UINT32        Status;
-  UINT32        CoreBitMask;
+  UINT32  Status;
+  UINT32  CoreBitMask;
 
   Status = AriRequestWait (AriBase, 0, TEGRA_ARI_NUM_CORES_CMD, 0, 0);
 
@@ -354,9 +372,13 @@ AriGetCoresEnabledBitMask (
     CoreBitMask = AriGetResponseLow (AriBase);
   } else {
     if (MceAriSupported ()) {
-      DEBUG ((DEBUG_ERROR, "%a: ARI request fail, returning core 0 only!\n",
-              __FUNCTION__));
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: ARI request fail, returning core 0 only!\n",
+        __FUNCTION__
+        ));
     }
+
     CoreBitMask = 0x1;
   }
 
@@ -374,12 +396,12 @@ STATIC
 UINTN
 EFIAPI
 MceAriMpidrToLinearCoreId (
-  UINT64        Mpidr
+  UINT64  Mpidr
   )
 {
-  UINTN         Cluster;
-  UINTN         Core;
-  UINTN         LinearCoreId;
+  UINTN  Cluster;
+  UINTN  Core;
+  UINTN  LinearCoreId;
 
   Cluster = (Mpidr >> MPIDR_AFF2_SHIFT) & MPIDR_AFFLVL_MASK;
   ASSERT (Cluster < PLATFORM_MAX_CLUSTERS);
@@ -389,8 +411,15 @@ MceAriMpidrToLinearCoreId (
 
   LinearCoreId = (Cluster * PLATFORM_MAX_CORES_PER_CLUSTER) + Core;
 
-  DEBUG ((DEBUG_INFO, "%a: Mpidr=0x%llx Cluster=%u, Core=%u, LinearCoreId=%u\n",
-          __FUNCTION__, Mpidr, Cluster, Core, LinearCoreId));
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Mpidr=0x%llx Cluster=%u, Core=%u, LinearCoreId=%u\n",
+    __FUNCTION__,
+    Mpidr,
+    Cluster,
+    Core,
+    LinearCoreId
+    ));
 
   return LinearCoreId;
 }
@@ -407,10 +436,10 @@ MceAriGetCurrentLinearCoreId (
   VOID
   )
 {
-  UINT64        Mpidr;
-  UINTN         LinearCoreId;
+  UINT64  Mpidr;
+  UINTN   LinearCoreId;
 
-  Mpidr = ArmReadMpidr ();
+  Mpidr        = ArmReadMpidr ();
   LinearCoreId = MceAriMpidrToLinearCoreId (Mpidr);
 
   return LinearCoreId;
@@ -428,10 +457,10 @@ MceAriGetApertureBase (
   VOID
   )
 {
-  UINTN         LinearCoreId;
-  UINT32        ApertureOffset;
+  UINTN   LinearCoreId;
+  UINT32  ApertureOffset;
 
-  LinearCoreId = MceAriGetCurrentLinearCoreId ();
+  LinearCoreId   = MceAriGetCurrentLinearCoreId ();
   ApertureOffset = MCE_ARI_APERTURE_OFFSET (LinearCoreId);
 
   return FixedPcdGet64 (PcdTegraMceAriApertureBaseAddress) + ApertureOffset;
@@ -443,7 +472,7 @@ MceAriGetVersion (
   VOID
   )
 {
-  UINTN         AriBase;
+  UINTN  AriBase;
 
   AriBase = MceAriGetApertureBase ();
   return AriGetVersion (AriBase);
@@ -452,18 +481,18 @@ MceAriGetVersion (
 EFI_STATUS
 EFIAPI
 MceAriCheckCoreEnabled (
-  IN UINT64     *Mpidr,
-  OUT UINTN     *DtCpuId
+  IN UINT64  *Mpidr,
+  OUT UINTN  *DtCpuId
   )
 {
-  UINTN         AriBase;
-  UINTN         LinearCoreId;
-  UINT32        LinearCoreIdBitmap;
+  UINTN   AriBase;
+  UINTN   LinearCoreId;
+  UINT32  LinearCoreIdBitmap;
 
   LinearCoreId = MceAriMpidrToLinearCoreId (*Mpidr);
   ASSERT (LinearCoreId < PLATFORM_MAX_CPUS);
 
-  AriBase = MceAriGetApertureBase ();
+  AriBase            = MceAriGetApertureBase ();
   LinearCoreIdBitmap = AriGetCoresEnabledBitMask (AriBase);
   if (!(LinearCoreIdBitmap & BIT (LinearCoreId))) {
     return EFI_NOT_FOUND;
@@ -480,14 +509,14 @@ MceAriCheckCoreEnabled (
 EFI_STATUS
 EFIAPI
 MceAriGetEnabledCoresBitMap (
-  IN  UINT64    *EnabledCoresBitMap
+  IN  UINT64  *EnabledCoresBitMap
   )
 {
-  UINTN         AriBase;
+  UINTN  AriBase;
 
   ASSERT (PLATFORM_MAX_CPUS <= 64);
 
-  AriBase = MceAriGetApertureBase ();
+  AriBase               = MceAriGetApertureBase ();
   EnabledCoresBitMap[0] = AriGetCoresEnabledBitMask (AriBase);
 
   return EFI_SUCCESS;

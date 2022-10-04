@@ -22,23 +22,26 @@ STATIC
 UINT64
 GetTotalDram (
   VOID
-)
+  )
 {
-  UINT64                     TotalDram = 0;
-  VOID                       *HobBase;
-  EFI_PEI_HOB_POINTERS       NextHob;
+  UINT64                TotalDram = 0;
+  VOID                  *HobBase;
+  EFI_PEI_HOB_POINTERS  NextHob;
 
-  HobBase = GetHobList();
+  HobBase     = GetHobList ();
   NextHob.Raw = HobBase;
 
   while ((NextHob.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, NextHob.Raw)) != NULL) {
     if ((NextHob.ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) &&
         ((UINTN)HobBase >= NextHob.ResourceDescriptor->PhysicalStart) &&
-        ((UINTN)HobBase < NextHob.ResourceDescriptor->PhysicalStart + NextHob.ResourceDescriptor->ResourceLength)) {
-       TotalDram += NextHob.ResourceDescriptor->ResourceLength;
+        ((UINTN)HobBase < NextHob.ResourceDescriptor->PhysicalStart + NextHob.ResourceDescriptor->ResourceLength))
+    {
+      TotalDram += NextHob.ResourceDescriptor->ResourceLength;
     }
+
     NextHob.Raw = GET_NEXT_HOB (NextHob);
   }
+
   return TotalDram;
 }
 
@@ -71,13 +74,13 @@ SMBIOS_MISC_TABLE_FUNCTION (MiscPhysMemArray) {
   }
 
   (VOID)CopyMem (SmbiosRecord, Input, sizeof (SMBIOS_TABLE_TYPE16));
-  SmbiosRecord->Hdr.Length = sizeof (SMBIOS_TABLE_TYPE16);
-  SmbiosRecord->Location = OemGetPhysMemArrayLocation();
-  SmbiosRecord->Use = OemGetPhysMemArrayUse();
-  SmbiosRecord->MemoryErrorCorrection = OemGetPhysMemErrCorrection();
-  SmbiosRecord->MemoryErrorInformationHandle = OemGetPhysMemErrInfoHandle();
-  SmbiosRecord->NumberOfMemoryDevices = OemGetPhysMemNumDevices();
-  SmbiosRecord->ExtendedMaximumCapacity = GetTotalDram();
+  SmbiosRecord->Hdr.Length                   = sizeof (SMBIOS_TABLE_TYPE16);
+  SmbiosRecord->Location                     = OemGetPhysMemArrayLocation ();
+  SmbiosRecord->Use                          = OemGetPhysMemArrayUse ();
+  SmbiosRecord->MemoryErrorCorrection        = OemGetPhysMemErrCorrection ();
+  SmbiosRecord->MemoryErrorInformationHandle = OemGetPhysMemErrInfoHandle ();
+  SmbiosRecord->NumberOfMemoryDevices        = OemGetPhysMemNumDevices ();
+  SmbiosRecord->ExtendedMaximumCapacity      = GetTotalDram ();
 
   Status = SmbiosMiscAddRecord ((UINT8 *)SmbiosRecord, NULL);
   if (EFI_ERROR (Status)) {

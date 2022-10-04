@@ -20,22 +20,22 @@
 
 /** The configuration manager version
 */
-#define CONFIGURATION_MANAGER_REVISION CREATE_REVISION (1, 0)
+#define CONFIGURATION_MANAGER_REVISION  CREATE_REVISION (1, 0)
 
 /** The OEM ID
 */
-#define CFG_MGR_OEM_ID    { 'N', 'V', 'I', 'D', 'I', 'A' }
+#define CFG_MGR_OEM_ID  { 'N', 'V', 'I', 'D', 'I', 'A' }
 
 /** A helper macro for populating the GIC CPU information
 */
 #define GICC_ENTRY(                                                      \
-          CPUInterfaceNumber,                                            \
-          Mpidr,                                                         \
-          PmuIrq,                                                        \
-          VGicIrq,                                                       \
-          EnergyEfficiency,                                              \
-          ProximityDomain                                                \
-          ) {                                                            \
+                                                                         CPUInterfaceNumber,                                            \
+                                                                         Mpidr,                                                         \
+                                                                         PmuIrq,                                                        \
+                                                                         VGicIrq,                                                       \
+                                                                         EnergyEfficiency,                                              \
+                                                                         ProximityDomain                                                \
+                                                                         )  {\
     CPUInterfaceNumber,       /* UINT32  CPUInterfaceNumber           */ \
     CPUInterfaceNumber,       /* UINT32  AcpiProcessorUid             */ \
     EFI_ACPI_6_4_GIC_ENABLED, /* UINT32  Flags                        */ \
@@ -58,12 +58,12 @@
 /** A helper macro for populating the Processor Hierarchy Node flags
 */
 #define PROC_NODE_FLAGS(                                                \
-          PhysicalPackage,                                              \
-          AcpiProcessorIdValid,                                         \
-          ProcessorIsThread,                                            \
-          NodeIsLeaf,                                                   \
-          IdenticalImplementation                                       \
-          )                                                             \
+                                                                        PhysicalPackage,                                              \
+                                                                        AcpiProcessorIdValid,                                         \
+                                                                        ProcessorIsThread,                                            \
+                                                                        NodeIsLeaf,                                                   \
+                                                                        IdenticalImplementation                                       \
+                                                                        )                                                             \
   (                                                                     \
     PhysicalPackage |                                                   \
     (AcpiProcessorIdValid << 1) |                                       \
@@ -75,10 +75,10 @@
 /** A helper macro for populating the Cache Type Structure's attributes
 */
 #define CACHE_ATTRIBUTES(                                               \
-          AllocationType,                                               \
-          CacheType,                                                    \
-          WritePolicy                                                   \
-          )                                                             \
+                                                                        AllocationType,                                               \
+                                                                        CacheType,                                                    \
+                                                                        WritePolicy                                                   \
+                                                                        )                                                             \
   (                                                                     \
     AllocationType |                                                    \
     (CacheType << 2) |                                                  \
@@ -95,21 +95,21 @@
 */
 typedef struct PlatformRepositoryInfo {
   // Configuration Manager Object ID
-  CM_OBJECT_ID      CmObjectId;
+  CM_OBJECT_ID       CmObjectId;
 
   // Configuration Manager Object Token
-  CM_OBJECT_TOKEN   CmObjectToken;
+  CM_OBJECT_TOKEN    CmObjectToken;
 
   // Configuration Manager Object Size
-  UINT32            CmObjectSize;
+  UINT32             CmObjectSize;
 
   // Configuration Manager Object Count
-  UINT32            CmObjectCount;
+  UINT32             CmObjectCount;
 
   // Configuration Manager Object Pointer
-  VOID              *CmObjectPtr;
+  VOID               *CmObjectPtr;
 } EDKII_PLATFORM_REPOSITORY_INFO;
 
-extern EFI_GUID gNVIDIAConfigurationManagerDataProtocolGuid;
+extern EFI_GUID  gNVIDIAConfigurationManagerDataProtocolGuid;
 
 #endif // CONFIGURATION_MANAGER_DATA_PROTOCOL_H__

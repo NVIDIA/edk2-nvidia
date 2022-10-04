@@ -8,7 +8,6 @@
 
 **/
 
-
 #include <PiDxe.h>
 
 #include <Library/BaseMemoryLib.h>
@@ -19,9 +18,7 @@
 
 #include "QspiControllerLibPrivate.h"
 
-
-BOOLEAN TimeOutMessage = FALSE;
-
+BOOLEAN  TimeOutMessage = FALSE;
 
 /**
   Flush QSPI Controller FIFO.
@@ -38,27 +35,35 @@ BOOLEAN TimeOutMessage = FALSE;
 STATIC
 EFI_STATUS
 QspiFlushFifo (
-  IN EFI_PHYSICAL_ADDRESS QspiBaseAddress,
-  IN BOOLEAN              TxFifo
-)
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN BOOLEAN               TxFifo
+  )
 {
-  UINT32 Timeout;
+  UINT32  Timeout;
 
   Timeout = 0;
   if (TxFifo) {
     // Flush TX FIFO if it is not already empty.
-    if (QSPI_FIFO_STATUS_0_FIFO_EMPTY != MmioBitFieldRead32 (QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                                                             QSPI_FIFO_STATUS_0_TX_FIFO_EMPTY_BIT,
-                                                             QSPI_FIFO_STATUS_0_TX_FIFO_EMPTY_BIT)) {
+    if (QSPI_FIFO_STATUS_0_FIFO_EMPTY != MmioBitFieldRead32 (
+                                           QspiBaseAddress + QSPI_FIFO_STATUS_0,
+                                           QSPI_FIFO_STATUS_0_TX_FIFO_EMPTY_BIT,
+                                           QSPI_FIFO_STATUS_0_TX_FIFO_EMPTY_BIT
+                                           ))
+    {
       // Flush FIFO.
-      MmioBitFieldWrite32 (QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                           QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT,
-                           QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT,
-                           QSPI_FIFO_STATUS_0_FIFO_FLUSH);
+      MmioBitFieldWrite32 (
+        QspiBaseAddress + QSPI_FIFO_STATUS_0,
+        QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT,
+        QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT,
+        QSPI_FIFO_STATUS_0_FIFO_FLUSH
+        );
       // Wait for FIFO to be flushed.
-      while (QSPI_FIFO_STATUS_0_FIFO_FLUSH == MmioBitFieldRead32 (QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                                                                  QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT,
-                                                                  QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT)) {
+      while (QSPI_FIFO_STATUS_0_FIFO_FLUSH == MmioBitFieldRead32 (
+                                                QspiBaseAddress + QSPI_FIFO_STATUS_0,
+                                                QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT,
+                                                QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT
+                                                ))
+      {
         MicroSecondDelay (1);
         if (Timeout != TIMEOUT) {
           Timeout++;
@@ -74,18 +79,26 @@ QspiFlushFifo (
     }
   } else {
     // Flush RX FIFO if it is not already empty.
-    if (QSPI_FIFO_STATUS_0_FIFO_EMPTY != MmioBitFieldRead32 (QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                                                             QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT,
-                                                             QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT)) {
+    if (QSPI_FIFO_STATUS_0_FIFO_EMPTY != MmioBitFieldRead32 (
+                                           QspiBaseAddress + QSPI_FIFO_STATUS_0,
+                                           QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT,
+                                           QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT
+                                           ))
+    {
       // Flush FIFO.
-      MmioBitFieldWrite32 (QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                           QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT,
-                           QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT,
-                           QSPI_FIFO_STATUS_0_FIFO_FLUSH);
+      MmioBitFieldWrite32 (
+        QspiBaseAddress + QSPI_FIFO_STATUS_0,
+        QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT,
+        QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT,
+        QSPI_FIFO_STATUS_0_FIFO_FLUSH
+        );
       // Wait for FIFO to be flushed.
-      while (QSPI_FIFO_STATUS_0_FIFO_FLUSH == MmioBitFieldRead32 (QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                                                                  QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT,
-                                                                  QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT)) {
+      while (QSPI_FIFO_STATUS_0_FIFO_FLUSH == MmioBitFieldRead32 (
+                                                QspiBaseAddress + QSPI_FIFO_STATUS_0,
+                                                QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT,
+                                                QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT
+                                                ))
+      {
         MicroSecondDelay (1);
         if (Timeout != TIMEOUT) {
           Timeout++;
@@ -104,7 +117,6 @@ QspiFlushFifo (
   return EFI_SUCCESS;
 }
 
-
 /**
   Configure the CS pin
 
@@ -116,27 +128,30 @@ QspiFlushFifo (
 STATIC
 VOID
 QspiConfigureCS (
-  IN EFI_PHYSICAL_ADDRESS QspiBaseAddress,
-  IN BOOLEAN              Enable
-)
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN BOOLEAN               Enable
+  )
 {
   if (Enable) {
     // Configure CS pin low.
-    MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                         QSPI_COMMAND_0_CS_SW_VAL_BIT,
-                         QSPI_COMMAND_0_CS_SW_VAL_BIT,
-                         QSPI_COMMAND_0_CS_SW_VAL_LOW);
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_COMMAND_0,
+      QSPI_COMMAND_0_CS_SW_VAL_BIT,
+      QSPI_COMMAND_0_CS_SW_VAL_BIT,
+      QSPI_COMMAND_0_CS_SW_VAL_LOW
+      );
   } else {
     // Configure CS pin high.
-    MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                         QSPI_COMMAND_0_CS_SW_VAL_BIT,
-                         QSPI_COMMAND_0_CS_SW_VAL_BIT,
-                         QSPI_COMMAND_0_CS_SW_VAL_HIGH);
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_COMMAND_0,
+      QSPI_COMMAND_0_CS_SW_VAL_BIT,
+      QSPI_COMMAND_0_CS_SW_VAL_BIT,
+      QSPI_COMMAND_0_CS_SW_VAL_HIGH
+      );
   }
 
   DEBUG ((EFI_D_INFO, "QSPI CS Configured.\n"));
 }
-
 
 /**
   Clear Transaction Status
@@ -148,20 +163,24 @@ QspiConfigureCS (
 STATIC
 VOID
 QspiClearTransactionStatus (
-  IN EFI_PHYSICAL_ADDRESS QspiBaseAddress
-)
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  )
 {
-  if (QSPI_TRANSFER_STATUS_0_RDY_READY == MmioBitFieldRead32 (QspiBaseAddress + QSPI_TRANSFER_STATUS_0,
-                                                              QSPI_TRANSFER_STATUS_0_RDY_BIT,
-                                                              QSPI_TRANSFER_STATUS_0_RDY_BIT)) {
+  if (QSPI_TRANSFER_STATUS_0_RDY_READY == MmioBitFieldRead32 (
+                                            QspiBaseAddress + QSPI_TRANSFER_STATUS_0,
+                                            QSPI_TRANSFER_STATUS_0_RDY_BIT,
+                                            QSPI_TRANSFER_STATUS_0_RDY_BIT
+                                            ))
+  {
     // Clear transaction status
-    MmioBitFieldWrite32 (QspiBaseAddress + QSPI_TRANSFER_STATUS_0,
-                         QSPI_TRANSFER_STATUS_0_RDY_BIT,
-                         QSPI_TRANSFER_STATUS_0_RDY_BIT,
-                         QSPI_TRANSFER_STATUS_0_RDY_READY);
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_TRANSFER_STATUS_0,
+      QSPI_TRANSFER_STATUS_0_RDY_BIT,
+      QSPI_TRANSFER_STATUS_0_RDY_BIT,
+      QSPI_TRANSFER_STATUS_0_RDY_READY
+      );
   }
 }
-
 
 /**
   Wait for transaction status to be ready.
@@ -176,16 +195,19 @@ QspiClearTransactionStatus (
 STATIC
 EFI_STATUS
 QspiWaitTransactionStatusReady (
-  IN EFI_PHYSICAL_ADDRESS QspiBaseAddress
-)
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  )
 {
-  UINT32 Timeout;
+  UINT32  Timeout;
 
   Timeout = 0;
   // Wait for transaction status to be ready.
-  while (QSPI_TRANSFER_STATUS_0_RDY_NOT_READY == MmioBitFieldRead32 (QspiBaseAddress + QSPI_TRANSFER_STATUS_0,
-                                                                     QSPI_TRANSFER_STATUS_0_RDY_BIT,
-                                                                     QSPI_TRANSFER_STATUS_0_RDY_BIT)) {
+  while (QSPI_TRANSFER_STATUS_0_RDY_NOT_READY == MmioBitFieldRead32 (
+                                                   QspiBaseAddress + QSPI_TRANSFER_STATUS_0,
+                                                   QSPI_TRANSFER_STATUS_0_RDY_BIT,
+                                                   QSPI_TRANSFER_STATUS_0_RDY_BIT
+                                                   ))
+  {
     MicroSecondDelay (1);
     if (Timeout != TIMEOUT) {
       Timeout++;
@@ -198,9 +220,9 @@ QspiWaitTransactionStatusReady (
       }
     }
   }
+
   return EFI_SUCCESS;
 }
-
 
 /**
   Setup Wait Cycles
@@ -214,14 +236,16 @@ QspiWaitTransactionStatusReady (
 STATIC
 VOID
 QspiPerformWaitCycleConfiguration (
-  IN EFI_PHYSICAL_ADDRESS QspiBaseAddress,
-  IN UINT8                WaitCycles
-)
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN UINT8                 WaitCycles
+  )
 {
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_MISC_0,
-                       QSPI_MISC_0_WAIT_CYCLES_LSB,
-                       QSPI_MISC_0_WAIT_CYCLES_MSB,
-                       WaitCycles);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_MISC_0,
+    QSPI_MISC_0_WAIT_CYCLES_LSB,
+    QSPI_MISC_0_WAIT_CYCLES_MSB,
+    WaitCycles
+    );
 }
 
 /**
@@ -237,38 +261,47 @@ QspiPerformWaitCycleConfiguration (
 STATIC
 VOID
 QspiPerformTransactionConfiguration (
-  IN EFI_PHYSICAL_ADDRESS QspiBaseAddress,
-  IN UINT32               PacketLen,
-  IN UINT32               BlockLen
-)
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN UINT32                PacketLen,
+  IN UINT32                BlockLen
+  )
 {
   // Select Single Data Rate mode.
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_SDR_DDR_SEL_BIT,
-                       QSPI_COMMAND_0_SDR_DDR_SEL_BIT,
-                       QSPI_COMMAND_0_SDR_DDR_SEL_SDR);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_SDR_DDR_SEL_BIT,
+    QSPI_COMMAND_0_SDR_DDR_SEL_BIT,
+    QSPI_COMMAND_0_SDR_DDR_SEL_SDR
+    );
   // Select single bit transfer mode.
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_INTERFACE_WIDTH_LSB,
-                       QSPI_COMMAND_0_INTERFACE_WIDTH_MSB,
-                       QSPI_COMMAND_0_INTERFACE_WIDTH_SINGLE);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_INTERFACE_WIDTH_LSB,
+    QSPI_COMMAND_0_INTERFACE_WIDTH_MSB,
+    QSPI_COMMAND_0_INTERFACE_WIDTH_SINGLE
+    );
   // Configure unpacked mode.
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_PACKED_BIT,
-                       QSPI_COMMAND_0_PACKED_BIT,
-                       QSPI_COMMAND_0_PACKED_ENABLE);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_PACKED_BIT,
+    QSPI_COMMAND_0_PACKED_BIT,
+    QSPI_COMMAND_0_PACKED_ENABLE
+    );
   // Configure packet width. Number of bits - 1
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_BIT_LENGTH_LSB,
-                       QSPI_COMMAND_0_BIT_LENGTH_MSB,
-                       (PacketLen * 8) - 1);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_BIT_LENGTH_LSB,
+    QSPI_COMMAND_0_BIT_LENGTH_MSB,
+    (PacketLen * 8) - 1
+    );
   // Configure number of packets. Number of packets - 1
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_DMA_BLK_SIZE_0,
-                       QSPI_DMA_BLK_SIZE_0_BLOCK_SIZE_LSB,
-                       QSPI_DMA_BLK_SIZE_0_BLOCK_SIZE_MSB,
-                       BlockLen - 1);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_DMA_BLK_SIZE_0,
+    QSPI_DMA_BLK_SIZE_0_BLOCK_SIZE_LSB,
+    QSPI_DMA_BLK_SIZE_0_BLOCK_SIZE_MSB,
+    BlockLen - 1
+    );
 }
-
 
 /**
   Receive data over QSPI
@@ -287,11 +320,11 @@ QspiPerformTransactionConfiguration (
 STATIC
 EFI_STATUS
 QspiPerformReceive (
-  IN EFI_PHYSICAL_ADDRESS   QspiBaseAddress,
-  IN VOID                   *Buffer,
-  IN UINT32                 Len,
-  IN UINT32                 PacketLen
-)
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN VOID                  *Buffer,
+  IN UINT32                Len,
+  IN UINT32                PacketLen
+  )
 {
   EFI_STATUS  Status;
   UINT32      Count;
@@ -306,59 +339,72 @@ QspiPerformReceive (
   // Perform transaction packet width and size configuration
   QspiPerformTransactionConfiguration (QspiBaseAddress, PacketLen, Len);
   // Enable RX
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_RX_EN_BIT,
-                       QSPI_COMMAND_0_RX_EN_BIT,
-                       QSPI_COMMAND_0_RX_EN_ENABLE);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_RX_EN_BIT,
+    QSPI_COMMAND_0_RX_EN_BIT,
+    QSPI_COMMAND_0_RX_EN_ENABLE
+    );
   // Enable PIO transfer
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_PIO_BIT,
-                       QSPI_COMMAND_0_PIO_BIT,
-                       QSPI_COMMAND_0_PIO_EN);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_PIO_BIT,
+    QSPI_COMMAND_0_PIO_BIT,
+    QSPI_COMMAND_0_PIO_EN
+    );
   // Wait for transaction to complete
   Status = QspiWaitTransactionStatusReady (QspiBaseAddress);
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
   // Read data from RX FIFO
   Count = 0;
   while (Count < Len) {
     // RX FIFO should not be already empty
-    if (QSPI_FIFO_STATUS_0_FIFO_EMPTY == MmioBitFieldRead32 (QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                                                             QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT,
-                                                             QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT)) {
+    if (QSPI_FIFO_STATUS_0_FIFO_EMPTY == MmioBitFieldRead32 (
+                                           QspiBaseAddress + QSPI_FIFO_STATUS_0,
+                                           QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT,
+                                           QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT
+                                           ))
+    {
       DEBUG ((EFI_D_ERROR, "%a QSPI Rx FIFO Empty.\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
+
     if (PacketLen == sizeof (UINT8)) {
       // Since we are using packed mode. we always read 4B but discard what we did not request.
-      Data = MmioRead32 (QspiBaseAddress + QSPI_RX_FIFO_0);
+      Data   = MmioRead32 (QspiBaseAddress + QSPI_RX_FIFO_0);
       Stride = ((Len - Count) >= sizeof (UINT32)) ? sizeof (UINT32) : (Len - Count);
       CopyMem (BufferTrack, &Data, Stride);
       BufferTrack += Stride;
-      Count += Stride;
+      Count       += Stride;
     } else if (PacketLen == sizeof (UINT32)) {
       *(UINT32 *)BufferTrack = (UINT32)MmioRead32 (QspiBaseAddress + QSPI_RX_FIFO_0);
-      BufferTrack += sizeof (UINT32);
+      BufferTrack           += sizeof (UINT32);
       Count++;
     }
   }
+
   // Disable RX
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_RX_EN_BIT,
-                       QSPI_COMMAND_0_RX_EN_BIT,
-                       QSPI_COMMAND_0_RX_EN_DISABLE);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_RX_EN_BIT,
+    QSPI_COMMAND_0_RX_EN_BIT,
+    QSPI_COMMAND_0_RX_EN_DISABLE
+    );
   // Disable PIO transfer
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_PIO_BIT,
-                       QSPI_COMMAND_0_PIO_BIT,
-                       QSPI_COMMAND_0_PIO_DIS);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_PIO_BIT,
+    QSPI_COMMAND_0_PIO_BIT,
+    QSPI_COMMAND_0_PIO_DIS
+    );
 
   DEBUG ((EFI_D_INFO, "QSPI Data Received.\n"));
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Transmit data over QSPI
@@ -377,11 +423,11 @@ QspiPerformReceive (
 STATIC
 EFI_STATUS
 QspiPerformTransmit (
-  IN EFI_PHYSICAL_ADDRESS   QspiBaseAddress,
-  IN VOID                   *Buffer,
-  IN UINT32                 Len,
-  IN UINT32                 PacketLen
-)
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN VOID                  *Buffer,
+  IN UINT32                Len,
+  IN UINT32                PacketLen
+  )
 {
   EFI_STATUS  Status;
   UINT32      Count;
@@ -396,59 +442,72 @@ QspiPerformTransmit (
   // Perform transaction packet width and size configuration
   QspiPerformTransactionConfiguration (QspiBaseAddress, PacketLen, Len);
   // Enable TX
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_TX_EN_BIT,
-                       QSPI_COMMAND_0_TX_EN_BIT,
-                       QSPI_COMMAND_0_TX_EN_ENABLE);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_TX_EN_BIT,
+    QSPI_COMMAND_0_TX_EN_BIT,
+    QSPI_COMMAND_0_TX_EN_ENABLE
+    );
   // Write data to TX FIFO
   Count = 0;
   while (Count < Len) {
     // TX FIFO should not be already full
-    if (QSPI_FIFO_STATUS_0_FIFO_FULL == MmioBitFieldRead32 (QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                                                            QSPI_FIFO_STATUS_0_TX_FIFO_FULL_BIT,
-                                                            QSPI_FIFO_STATUS_0_TX_FIFO_FULL_BIT)) {
+    if (QSPI_FIFO_STATUS_0_FIFO_FULL == MmioBitFieldRead32 (
+                                          QspiBaseAddress + QSPI_FIFO_STATUS_0,
+                                          QSPI_FIFO_STATUS_0_TX_FIFO_FULL_BIT,
+                                          QSPI_FIFO_STATUS_0_TX_FIFO_FULL_BIT
+                                          ))
+    {
       DEBUG ((EFI_D_ERROR, "%a QSPI Tx FIFO Full.\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
+
     if (PacketLen == sizeof (UINT8)) {
       // Since we are using packed mode. we always write 4B with dummy bytes if needed.
       Stride = ((Len - Count) >= sizeof (UINT32)) ? sizeof (UINT32) : (Len - Count);
       CopyMem (&Data, BufferTrack, Stride);
       MmioWrite32 (QspiBaseAddress + QSPI_TX_FIFO_0, Data);
       BufferTrack += Stride;
-      Count += Stride;
+      Count       += Stride;
     } else if (PacketLen == sizeof (UINT32)) {
       MmioWrite32 (QspiBaseAddress + QSPI_TX_FIFO_0, *(UINT32 *)BufferTrack);
       BufferTrack += sizeof (UINT32);
       Count++;
     }
   }
+
   // Enable PIO transfer
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_PIO_BIT,
-                       QSPI_COMMAND_0_PIO_BIT,
-                       QSPI_COMMAND_0_PIO_EN);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_PIO_BIT,
+    QSPI_COMMAND_0_PIO_BIT,
+    QSPI_COMMAND_0_PIO_EN
+    );
   // Wait for transaction to complete
   Status = QspiWaitTransactionStatusReady (QspiBaseAddress);
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
   // Disable TX
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_TX_EN_BIT,
-                       QSPI_COMMAND_0_TX_EN_BIT,
-                       QSPI_COMMAND_0_TX_EN_DISABLE);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_TX_EN_BIT,
+    QSPI_COMMAND_0_TX_EN_BIT,
+    QSPI_COMMAND_0_TX_EN_DISABLE
+    );
   // Disable PIO transfer.
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_PIO_BIT,
-                       QSPI_COMMAND_0_PIO_BIT,
-                       QSPI_COMMAND_0_PIO_DIS);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_PIO_BIT,
+    QSPI_COMMAND_0_PIO_BIT,
+    QSPI_COMMAND_0_PIO_DIS
+    );
 
   DEBUG ((EFI_D_INFO, "QSPI Data Transmitted.\n"));
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Initialize the QSPI Driver
@@ -464,52 +523,67 @@ QspiPerformTransmit (
 **/
 EFI_STATUS
 QspiInitialize (
-  IN EFI_PHYSICAL_ADDRESS QspiBaseAddress
-)
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   // Configure master mode.
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_M_S_BIT,
-                       QSPI_COMMAND_0_M_S_BIT,
-                       QSPI_COMMAND_0_M_S_MASTER);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_M_S_BIT,
+    QSPI_COMMAND_0_M_S_BIT,
+    QSPI_COMMAND_0_M_S_MASTER
+    );
   // Only master mode 0 is supported.
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_MODE_LSB,
-                       QSPI_COMMAND_0_MODE_MSB,
-                       QSPI_COMMAND_0_MODE_MODE0);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_MODE_LSB,
+    QSPI_COMMAND_0_MODE_MSB,
+    QSPI_COMMAND_0_MODE_MODE0
+    );
   // Only CS0 is supported.
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_CS_SEL_LSB,
-                       QSPI_COMMAND_0_CS_SEL_MSB,
-                       QSPI_COMMAND_0_CS_SEL_CS0);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_CS_SEL_LSB,
+    QSPI_COMMAND_0_CS_SEL_MSB,
+    QSPI_COMMAND_0_CS_SEL_CS0
+    );
   // Configure CS to be inactive high.
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_CS_POL_INACTIVE0_BIT,
-                       QSPI_COMMAND_0_CS_POL_INACTIVE0_BIT,
-                       QSPI_COMMAND_0_CS_POL_INACTIVE0_HIGH);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_CS_POL_INACTIVE0_BIT,
+    QSPI_COMMAND_0_CS_POL_INACTIVE0_BIT,
+    QSPI_COMMAND_0_CS_POL_INACTIVE0_HIGH
+    );
   // Configure CS to be software controlled.
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_CS_SW_HW_BIT,
-                       QSPI_COMMAND_0_CS_SW_HW_BIT,
-                       QSPI_COMMAND_0_CS_SW_HW_SOFTWARE);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_CS_SW_HW_BIT,
+    QSPI_COMMAND_0_CS_SW_HW_BIT,
+    QSPI_COMMAND_0_CS_SW_HW_SOFTWARE
+    );
   // Configure CS to be high.
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_CS_SW_VAL_BIT,
-                       QSPI_COMMAND_0_CS_SW_VAL_BIT,
-                       QSPI_COMMAND_0_CS_SW_VAL_HIGH);
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_CS_SW_VAL_BIT,
+    QSPI_COMMAND_0_CS_SW_VAL_BIT,
+    QSPI_COMMAND_0_CS_SW_VAL_HIGH
+    );
   // Configure pin to drive low strength during idle.
-  MmioBitFieldWrite32 (QspiBaseAddress + QSPI_COMMAND_0,
-                       QSPI_COMMAND_0_IDLE_SDA_LSB,
-                       QSPI_COMMAND_0_IDLE_SDA_LSB,
-                       QSPI_COMMAND_0_IDLE_SDA_DRIVE_LOW);
-  //Flush TX FIFO
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_IDLE_SDA_LSB,
+    QSPI_COMMAND_0_IDLE_SDA_LSB,
+    QSPI_COMMAND_0_IDLE_SDA_DRIVE_LOW
+    );
+  // Flush TX FIFO
   Status = QspiFlushFifo (QspiBaseAddress, TRUE);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-  //Flush RX FIFO
+
+  // Flush RX FIFO
   Status = QspiFlushFifo (QspiBaseAddress, FALSE);
   if (EFI_ERROR (Status)) {
     return Status;
@@ -519,7 +593,6 @@ QspiInitialize (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Perform Transaction
@@ -540,15 +613,15 @@ QspiInitialize (
 **/
 EFI_STATUS
 QspiPerformTransaction (
-  IN EFI_PHYSICAL_ADDRESS    QspiBaseAddress,
-  IN QSPI_TRANSACTION_PACKET *Packet
-)
+  IN EFI_PHYSICAL_ADDRESS     QspiBaseAddress,
+  IN QSPI_TRANSACTION_PACKET  *Packet
+  )
 {
-  EFI_STATUS Status;
-  UINT8      *Buffer;
-  UINT32     TransactionWidth;
-  UINT32     TransactionCount;
-  UINT32     Count;
+  EFI_STATUS  Status;
+  UINT8       *Buffer;
+  UINT32      TransactionWidth;
+  UINT32      TransactionCount;
+  UINT32      Count;
 
   // Check for invalid buffer address and size combinations.
   if (((Packet->TxBuf == NULL) &&
@@ -558,19 +631,20 @@ QspiPerformTransaction (
       ((Packet->RxBuf == NULL) &&
        (Packet->RxLen != 0)) ||
       ((Packet->RxBuf != NULL) &&
-       (Packet->RxLen == 0))) {
+       (Packet->RxLen == 0)))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
   // Setup Wait Cycles.
-  QspiPerformWaitCycleConfiguration(QspiBaseAddress, Packet->WaitCycles);
+  QspiPerformWaitCycleConfiguration (QspiBaseAddress, Packet->WaitCycles);
   // Enable CS
-  QspiConfigureCS(QspiBaseAddress, TRUE);
+  QspiConfigureCS (QspiBaseAddress, TRUE);
   // If transmission buffer address valid, start transmission
   if (Packet->TxBuf != NULL) {
     DEBUG ((EFI_D_INFO, "QSPI Tx Args: 0x%x %d.\n", Packet->TxBuf, Packet->TxLen));
     Buffer = Packet->TxBuf;
-    Count = Packet->TxLen;
+    Count  = Packet->TxLen;
     // Based on transmission buffer length, calculate packet width and packets in current transaction.
     // Packet width can be 1B or 4B. Maximum number of packets in a single transaction can be 64.
     while (Count > 0) {
@@ -581,15 +655,17 @@ QspiPerformTransaction (
       if (EFI_ERROR (Status)) {
         return Status;
       }
+
       Buffer += (TransactionWidth * TransactionCount);
-      Count -= (TransactionWidth * TransactionCount);
+      Count  -= (TransactionWidth * TransactionCount);
     }
   }
+
   // If reception buffer address valid, start reception
   if (Packet->RxBuf != NULL) {
     DEBUG ((EFI_D_INFO, "QSPI Rx Args: 0x%x %d.\n", Packet->RxBuf, Packet->RxLen));
     Buffer = Packet->RxBuf;
-    Count = Packet->RxLen;
+    Count  = Packet->RxLen;
     // Based on reception buffer length, calculate packet width and packets in current transaction.
     // Packet width can be 1B or 4B. Maximum number of packets in a single transaction can be 64.
     while (Count > 0) {
@@ -600,12 +676,14 @@ QspiPerformTransaction (
       if (EFI_ERROR (Status)) {
         return Status;
       }
+
       Buffer += (TransactionWidth * TransactionCount);
-      Count -= (TransactionWidth * TransactionCount);
+      Count  -= (TransactionWidth * TransactionCount);
     }
   }
+
   // Disable CS
-  QspiConfigureCS(QspiBaseAddress, FALSE);
+  QspiConfigureCS (QspiBaseAddress, FALSE);
 
   // Wait for the controller to clear state before starting next transaction.
   MicroSecondDelay (TIMEOUT);

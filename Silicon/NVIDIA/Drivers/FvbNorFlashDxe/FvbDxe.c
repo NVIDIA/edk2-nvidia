@@ -28,29 +28,29 @@
 **/
 EFI_STATUS
 EFIAPI
-FvbGetAttributes(
-  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL    *This,
-  OUT       EFI_FVB_ATTRIBUTES_2                   *Attributes
+FvbGetAttributes (
+  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
+  OUT       EFI_FVB_ATTRIBUTES_2                 *Attributes
   )
 {
-  NVIDIA_FVB_PRIVATE_DATA        *Private;
+  NVIDIA_FVB_PRIVATE_DATA  *Private;
 
   if ((This == NULL) || (Attributes == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL(This);
+  Private = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL (This);
   if (Private->PartitionData != NULL) {
     *Attributes = ((EFI_FIRMWARE_VOLUME_HEADER *)Private->PartitionData)->Attributes;
   } else {
-    *Attributes = (EFI_FVB_ATTRIBUTES_2) (
-        EFI_FVB2_READ_ENABLED_CAP   | // Reads may be enabled
-        EFI_FVB2_READ_STATUS        | // Reads are currently enabled
-        EFI_FVB2_STICKY_WRITE       | // A block erase is required to flip bits into EFI_FVB2_ERASE_POLARITY
-        EFI_FVB2_ERASE_POLARITY     | // After erasure all bits take this value (i.e. '1')
-        EFI_FVB2_WRITE_STATUS       | // Writes are currently enabled
-        EFI_FVB2_WRITE_ENABLED_CAP    // Writes may be enabled
-        );
+    *Attributes = (EFI_FVB_ATTRIBUTES_2)(
+                                         EFI_FVB2_READ_ENABLED_CAP   | // Reads may be enabled
+                                         EFI_FVB2_READ_STATUS        | // Reads are currently enabled
+                                         EFI_FVB2_STICKY_WRITE       | // A block erase is required to flip bits into EFI_FVB2_ERASE_POLARITY
+                                         EFI_FVB2_ERASE_POLARITY     | // After erasure all bits take this value (i.e. '1')
+                                         EFI_FVB2_WRITE_STATUS       | // Writes are currently enabled
+                                         EFI_FVB2_WRITE_ENABLED_CAP    // Writes may be enabled
+                                         );
   }
 
   return EFI_SUCCESS;
@@ -80,7 +80,7 @@ FvbGetAttributes(
 **/
 EFI_STATUS
 EFIAPI
-FvbSetAttributes(
+FvbSetAttributes (
   IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
   IN OUT    EFI_FVB_ATTRIBUTES_2                 *Attributes
   )
@@ -112,13 +112,13 @@ FvbGetPhysicalAddress (
   OUT       EFI_PHYSICAL_ADDRESS                 *Address
   )
 {
-  NVIDIA_FVB_PRIVATE_DATA        *Private;
+  NVIDIA_FVB_PRIVATE_DATA  *Private;
 
   if ((This == NULL) || (Address == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL(This);
+  Private  = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL (This);
   *Address = Private->PartitionAddress;
   return EFI_SUCCESS;
 }
@@ -158,16 +158,17 @@ FvbGetBlockSize (
   OUT       UINTN                                *NumberOfBlocks
   )
 {
-  NVIDIA_FVB_PRIVATE_DATA *Private;
+  NVIDIA_FVB_PRIVATE_DATA  *Private;
 
   if ((This == NULL) ||
       (BlockSize == NULL) ||
-      (NumberOfBlocks == NULL)) {
+      (NumberOfBlocks == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL(This);
-  *BlockSize = Private->FlashAttributes.BlockSize;
+  Private         = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL (This);
+  *BlockSize      = Private->FlashAttributes.BlockSize;
   *NumberOfBlocks = Private->PartitionSize / Private->FlashAttributes.BlockSize;
 
   return EFI_SUCCESS;
@@ -223,32 +224,34 @@ FvbGetBlockSize (
 EFI_STATUS
 EFIAPI
 FvbRead (
-  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL   *This,
-  IN        EFI_LBA                               Lba,
-  IN        UINTN                                 Offset,
-  IN OUT    UINTN                                 *NumBytes,
-  IN OUT    UINT8                                 *Buffer
+  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
+  IN        EFI_LBA                              Lba,
+  IN        UINTN                                Offset,
+  IN OUT    UINTN                                *NumBytes,
+  IN OUT    UINT8                                *Buffer
   )
 {
-  EFI_STATUS              Status;
-  UINT32                  BlockSize;
-  UINT64                  FvbOffset;
-  EFI_LBA                 LastBlock;
-  BOOLEAN                 LbaBoundaryCrossed;
-  NVIDIA_FVB_PRIVATE_DATA *Private;
+  EFI_STATUS               Status;
+  UINT32                   BlockSize;
+  UINT64                   FvbOffset;
+  EFI_LBA                  LastBlock;
+  BOOLEAN                  LbaBoundaryCrossed;
+  NVIDIA_FVB_PRIVATE_DATA  *Private;
 
   if ((This == NULL) ||
       (NumBytes == NULL) ||
-      (Buffer == NULL)) {
+      (Buffer == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
   if ((Offset > (MAX_UINT64 - *NumBytes)) ||
-      (*NumBytes > (MAX_UINT64 - Offset))) {
+      (*NumBytes > (MAX_UINT64 - Offset)))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL(This);
+  Private   = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL (This);
   BlockSize = Private->FlashAttributes.BlockSize;
   LastBlock = (Private->PartitionSize / Private->FlashAttributes.BlockSize) - 1;
 
@@ -272,21 +275,23 @@ FvbRead (
 
   LbaBoundaryCrossed = FALSE;
   if ((Offset + *NumBytes) >  BlockSize) {
-    *NumBytes = BlockSize - Offset;
+    *NumBytes          = BlockSize - Offset;
     LbaBoundaryCrossed = TRUE;
   }
 
   FvbOffset = MultU64x32 (Lba, BlockSize) + Offset;
 
   if (Private->PartitionData != NULL) {
-    CopyMem(Buffer, Private->PartitionData + FvbOffset, *NumBytes);
+    CopyMem (Buffer, Private->PartitionData + FvbOffset, *NumBytes);
     Status = EFI_SUCCESS;
   } else {
     // Update storage
-    Status = Private->NorFlashProtocol->Read (Private->NorFlashProtocol,
-                                               FvbOffset + Private->PartitionOffset,
-                                               *NumBytes,
-                                               Buffer);
+    Status = Private->NorFlashProtocol->Read (
+                                          Private->NorFlashProtocol,
+                                          FvbOffset + Private->PartitionOffset,
+                                          *NumBytes,
+                                          Buffer
+                                          );
   }
 
   return LbaBoundaryCrossed ? EFI_BAD_BUFFER_SIZE : Status;
@@ -354,32 +359,34 @@ FvbRead (
 EFI_STATUS
 EFIAPI
 FvbWrite (
-  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL   *This,
-  IN        EFI_LBA                               Lba,
-  IN        UINTN                                 Offset,
-  IN OUT    UINTN                                 *NumBytes,
-  IN        UINT8                                 *Buffer
+  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
+  IN        EFI_LBA                              Lba,
+  IN        UINTN                                Offset,
+  IN OUT    UINTN                                *NumBytes,
+  IN        UINT8                                *Buffer
   )
 {
-  EFI_STATUS              Status;
-  UINT32                  BlockSize;
-  UINT64                  FvbOffset;
-  EFI_LBA                 LastBlock;
-  BOOLEAN                 LbaBoundaryCrossed;
-  NVIDIA_FVB_PRIVATE_DATA *Private;
+  EFI_STATUS               Status;
+  UINT32                   BlockSize;
+  UINT64                   FvbOffset;
+  EFI_LBA                  LastBlock;
+  BOOLEAN                  LbaBoundaryCrossed;
+  NVIDIA_FVB_PRIVATE_DATA  *Private;
 
   if ((This == NULL) ||
       (NumBytes == NULL) ||
-      (Buffer == NULL)) {
+      (Buffer == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
   if ((Offset > (MAX_UINT64 - *NumBytes)) ||
-      (*NumBytes > (MAX_UINT64 - Offset))) {
+      (*NumBytes > (MAX_UINT64 - Offset)))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL(This);
+  Private   = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL (This);
   BlockSize = Private->FlashAttributes.BlockSize;
   LastBlock = (Private->PartitionSize / Private->FlashAttributes.BlockSize) - 1;
 
@@ -403,35 +410,40 @@ FvbWrite (
 
   LbaBoundaryCrossed = FALSE;
   if ((Offset + *NumBytes) >  BlockSize) {
-    *NumBytes = BlockSize - Offset;
+    *NumBytes          = BlockSize - Offset;
     LbaBoundaryCrossed = TRUE;
   }
 
-  //Modify FVB
+  // Modify FVB
   FvbOffset = MultU64x32 (Lba, BlockSize) + Offset;
   if (Private->PartitionData != NULL) {
-    CopyMem(Private->PartitionData + FvbOffset, Buffer, *NumBytes);
+    CopyMem (Private->PartitionData + FvbOffset, Buffer, *NumBytes);
   }
 
   // Update storage
-  Status = Private->NorFlashProtocol->Write (Private->NorFlashProtocol,
-                                             FvbOffset + Private->PartitionOffset,
-                                             *NumBytes,
-                                             Buffer);
+  Status = Private->NorFlashProtocol->Write (
+                                        Private->NorFlashProtocol,
+                                        FvbOffset + Private->PartitionOffset,
+                                        *NumBytes,
+                                        Buffer
+                                        );
 
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
     ASSERT (FALSE);
     if (Private->PartitionData != NULL) {
-      Private->NorFlashProtocol->Read (Private->NorFlashProtocol,
-                                       FvbOffset + Private->PartitionOffset,
-                                       *NumBytes,
-                                       Private->PartitionData + FvbOffset);
+      Private->NorFlashProtocol->Read (
+                                   Private->NorFlashProtocol,
+                                   FvbOffset + Private->PartitionOffset,
+                                   *NumBytes,
+                                   Private->PartitionData + FvbOffset
+                                   );
     }
+
     Status = EFI_DEVICE_ERROR;
   }
 
-  return (!EFI_ERROR(Status) && LbaBoundaryCrossed) ? EFI_BAD_BUFFER_SIZE : Status;
+  return (!EFI_ERROR (Status) && LbaBoundaryCrossed) ? EFI_BAD_BUFFER_SIZE : Status;
 }
 
 /**
@@ -485,27 +497,27 @@ FvbWrite (
 EFI_STATUS
 EFIAPI
 FvbEraseBlocks (
-  IN CONST EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL *This,
+  IN CONST EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
   ...
   )
 {
-  EFI_STATUS              Status;
-  VA_LIST                 Args;
-  EFI_LBA                 StartingLba;
-  UINTN                   NumOfLba;
-  UINT32                  BlockSize;
-  EFI_LBA                 LastBlock;
-  UINT64                  FvbOffset;
-  UINT64                  FvbBufferSize;
-  NVIDIA_FVB_PRIVATE_DATA *Private;
+  EFI_STATUS               Status;
+  VA_LIST                  Args;
+  EFI_LBA                  StartingLba;
+  UINTN                    NumOfLba;
+  UINT32                   BlockSize;
+  EFI_LBA                  LastBlock;
+  UINT64                   FvbOffset;
+  UINT64                   FvbBufferSize;
+  NVIDIA_FVB_PRIVATE_DATA  *Private;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL(This);
+  Private = NVIDIA_FVB_PRIVATE_DATA_FROM_FVB_PROTOCOL (This);
 
-  //If no blocks are passed in return should be invalid parameter.
+  // If no blocks are passed in return should be invalid parameter.
   Status = EFI_INVALID_PARAMETER;
 
   BlockSize = Private->FlashAttributes.BlockSize;
@@ -519,7 +531,7 @@ FvbEraseBlocks (
 
     // Have we reached the end of the list?
     if (StartingLba == EFI_LBA_LIST_TERMINATOR) {
-      //Exit the while loop
+      // Exit the while loop
       break;
     }
 
@@ -530,11 +542,13 @@ FvbEraseBlocks (
     if ((NumOfLba == 0) ||
         (StartingLba > (MAX_UINT64 - NumOfLba)) ||
         (NumOfLba > (MAX_UINT64 - StartingLba)) ||
-        ((StartingLba + NumOfLba - 1) > LastBlock)) {
+        ((StartingLba + NumOfLba - 1) > LastBlock))
+    {
       VA_END (Args);
       return EFI_INVALID_PARAMETER;
     }
   } while (TRUE);
+
   VA_END (Args);
 
   //
@@ -554,29 +568,35 @@ FvbEraseBlocks (
     // How many Lba blocks are we requested to erase?
     NumOfLba = VA_ARG (Args, UINTN);
 
-    //Modify FVB
-    FvbOffset = MultU64x32 (StartingLba, BlockSize);
+    // Modify FVB
+    FvbOffset     = MultU64x32 (StartingLba, BlockSize);
     FvbBufferSize = MultU64x32 (NumOfLba, BlockSize);
     if (Private->PartitionData != NULL) {
-      SetMem(Private->PartitionData + FvbOffset, FvbBufferSize, FVB_ERASED_BYTE);
+      SetMem (Private->PartitionData + FvbOffset, FvbBufferSize, FVB_ERASED_BYTE);
     }
 
-    Status = Private->NorFlashProtocol->Erase (Private->NorFlashProtocol,
-                                               (FvbOffset + Private->PartitionOffset) / BlockSize,
-                                               NumOfLba);
-    if (EFI_ERROR(Status)) {
+    Status = Private->NorFlashProtocol->Erase (
+                                          Private->NorFlashProtocol,
+                                          (FvbOffset + Private->PartitionOffset) / BlockSize,
+                                          NumOfLba
+                                          );
+    if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
       ASSERT (FALSE);
       if (Private->PartitionData != NULL) {
-        Private->NorFlashProtocol->Read (Private->NorFlashProtocol,
-                                         FvbOffset + Private->PartitionOffset,
-                                         FvbBufferSize,
-                                         Private->PartitionData + FvbOffset);
+        Private->NorFlashProtocol->Read (
+                                     Private->NorFlashProtocol,
+                                     FvbOffset + Private->PartitionOffset,
+                                     FvbBufferSize,
+                                     Private->PartitionData + FvbOffset
+                                     );
       }
+
       Status = EFI_DEVICE_ERROR;
       break;
     }
-  } while (!EFI_ERROR(Status));
+  } while (!EFI_ERROR (Status));
+
   VA_END (Args);
 
   return Status;
@@ -593,23 +613,24 @@ FvbEraseBlocks (
 VOID
 EFIAPI
 FVBVirtualNotifyEvent (
-  IN EFI_EVENT        Event,
-  IN VOID             *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
-  NVIDIA_FVB_PRIVATE_DATA *Private;
+  NVIDIA_FVB_PRIVATE_DATA  *Private;
 
   Private = (NVIDIA_FVB_PRIVATE_DATA *)Context;
-  EfiConvertPointer (0x0, (VOID**)&Private->NorFlashProtocol->Erase);
-  EfiConvertPointer (0x0, (VOID**)&Private->NorFlashProtocol->GetAttributes);
-  EfiConvertPointer (0x0, (VOID**)&Private->NorFlashProtocol->Read);
-  EfiConvertPointer (0x0, (VOID**)&Private->NorFlashProtocol->Write);
-  EfiConvertPointer (0x0, (VOID**)&Private->NorFlashProtocol);
+  EfiConvertPointer (0x0, (VOID **)&Private->NorFlashProtocol->Erase);
+  EfiConvertPointer (0x0, (VOID **)&Private->NorFlashProtocol->GetAttributes);
+  EfiConvertPointer (0x0, (VOID **)&Private->NorFlashProtocol->Read);
+  EfiConvertPointer (0x0, (VOID **)&Private->NorFlashProtocol->Write);
+  EfiConvertPointer (0x0, (VOID **)&Private->NorFlashProtocol);
   if (Private->PartitionData != NULL) {
-    EfiConvertPointer (0x0, (VOID**)&Private->PartitionData);
-    EfiConvertPointer (0x0, (VOID**)&Private->PartitionAddress);
+    EfiConvertPointer (0x0, (VOID **)&Private->PartitionData);
+    EfiConvertPointer (0x0, (VOID **)&Private->PartitionAddress);
   }
-  EfiConvertPointer (0x0, (VOID**)&Private);
+
+  EfiConvertPointer (0x0, (VOID **)&Private);
   return;
 }
 
@@ -625,13 +646,13 @@ FVBVirtualNotifyEvent (
 **/
 BOOLEAN
 IsErasedFlashBuffer (
-  IN UINT8           *Buffer,
-  IN UINTN           BufferSize
+  IN UINT8  *Buffer,
+  IN UINTN  BufferSize
   )
 {
-  BOOLEAN IsEmpty;
-  UINT8   *Ptr;
-  UINTN   Index;
+  BOOLEAN  IsEmpty;
+  UINT8    *Ptr;
+  UINTN    Index;
 
   Ptr     = Buffer;
   IsEmpty = TRUE;
@@ -659,7 +680,7 @@ IsErasedFlashBuffer (
 **/
 EFI_STATUS
 InitializeFvAndVariableStoreHeaders (
-  IN EFI_FIRMWARE_VOLUME_HEADER *FirmwareVolumeHeader,
+  IN EFI_FIRMWARE_VOLUME_HEADER  *FirmwareVolumeHeader,
   IN UINT64                      PartitionOffset,
   IN UINT64                      PartitionSize,
   IN BOOLEAN                     CheckVariableStore,
@@ -667,8 +688,8 @@ InitializeFvAndVariableStoreHeaders (
   IN NOR_FLASH_ATTRIBUTES        *FlashAttributes
   )
 {
-  EFI_STATUS                          Status;
-  VARIABLE_STORE_HEADER               *VariableStoreHeader;
+  EFI_STATUS             Status;
+  VARIABLE_STORE_HEADER  *VariableStoreHeader;
 
   if (FirmwareVolumeHeader == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -680,49 +701,59 @@ InitializeFvAndVariableStoreHeaders (
   }
 
   if (!IsErasedFlashBuffer ((UINT8 *)FirmwareVolumeHeader, PartitionSize)) {
-    Status = NorFlashProtocol->Erase (NorFlashProtocol,
-                                      PartitionOffset / FlashAttributes->BlockSize,
-                                      PartitionSize / FlashAttributes->BlockSize);
+    Status = NorFlashProtocol->Erase (
+                                 NorFlashProtocol,
+                                 PartitionOffset / FlashAttributes->BlockSize,
+                                 PartitionSize / FlashAttributes->BlockSize
+                                 );
 
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to Erase Partition\r\n", __FUNCTION__));
       return Status;
     }
-    NorFlashProtocol->Read (NorFlashProtocol,
-                            PartitionOffset,
-                            PartitionSize,
-                            FirmwareVolumeHeader);
+
+    NorFlashProtocol->Read (
+                        NorFlashProtocol,
+                        PartitionOffset,
+                        PartitionSize,
+                        FirmwareVolumeHeader
+                        );
     ASSERT (IsErasedFlashBuffer ((UINT8 *)FirmwareVolumeHeader, PartitionSize));
   }
+
   //
   // EFI_FIRMWARE_VOLUME_HEADER
   //
-  ZeroMem (FirmwareVolumeHeader,
-           sizeof(EFI_FIRMWARE_VOLUME_HEADER) + sizeof(EFI_FV_BLOCK_MAP_ENTRY));
+  ZeroMem (
+    FirmwareVolumeHeader,
+    sizeof (EFI_FIRMWARE_VOLUME_HEADER) + sizeof (EFI_FV_BLOCK_MAP_ENTRY)
+    );
   CopyGuid (&FirmwareVolumeHeader->FileSystemGuid, &gEfiSystemNvDataFvGuid);
-  FirmwareVolumeHeader->FvLength = PartitionSize;
-  FirmwareVolumeHeader->Signature = EFI_FVH_SIGNATURE;
-  FirmwareVolumeHeader->Attributes = (EFI_FVB_ATTRIBUTES_2) (
-                                          EFI_FVB2_READ_ENABLED_CAP   | // Reads may be enabled
-                                          EFI_FVB2_READ_STATUS        | // Reads are currently enabled
-                                          EFI_FVB2_STICKY_WRITE       | // A block erase is required to flip bits into EFI_FVB2_ERASE_POLARITY
-                                          EFI_FVB2_MEMORY_MAPPED      | // It is memory mapped
-                                          EFI_FVB2_ERASE_POLARITY     | // After erasure all bits take this value (i.e. '1')
-                                          EFI_FVB2_WRITE_STATUS       | // Writes are currently enabled
-                                          EFI_FVB2_WRITE_ENABLED_CAP    // Writes may be enabled
-                                      );
-  FirmwareVolumeHeader->HeaderLength = sizeof(EFI_FIRMWARE_VOLUME_HEADER) + sizeof(EFI_FV_BLOCK_MAP_ENTRY);
-  FirmwareVolumeHeader->Revision = EFI_FVH_REVISION;
+  FirmwareVolumeHeader->FvLength   = PartitionSize;
+  FirmwareVolumeHeader->Signature  = EFI_FVH_SIGNATURE;
+  FirmwareVolumeHeader->Attributes = (EFI_FVB_ATTRIBUTES_2)(
+                                                            EFI_FVB2_READ_ENABLED_CAP   | // Reads may be enabled
+                                                            EFI_FVB2_READ_STATUS        | // Reads are currently enabled
+                                                            EFI_FVB2_STICKY_WRITE       | // A block erase is required to flip bits into EFI_FVB2_ERASE_POLARITY
+                                                            EFI_FVB2_MEMORY_MAPPED      | // It is memory mapped
+                                                            EFI_FVB2_ERASE_POLARITY     | // After erasure all bits take this value (i.e. '1')
+                                                            EFI_FVB2_WRITE_STATUS       | // Writes are currently enabled
+                                                            EFI_FVB2_WRITE_ENABLED_CAP    // Writes may be enabled
+                                                            );
+  FirmwareVolumeHeader->HeaderLength          = sizeof (EFI_FIRMWARE_VOLUME_HEADER) + sizeof (EFI_FV_BLOCK_MAP_ENTRY);
+  FirmwareVolumeHeader->Revision              = EFI_FVH_REVISION;
   FirmwareVolumeHeader->BlockMap[0].NumBlocks = PartitionSize / FlashAttributes->BlockSize;
-  FirmwareVolumeHeader->BlockMap[0].Length = FlashAttributes->BlockSize;
+  FirmwareVolumeHeader->BlockMap[0].Length    = FlashAttributes->BlockSize;
   FirmwareVolumeHeader->BlockMap[1].NumBlocks = 0;
-  FirmwareVolumeHeader->BlockMap[1].Length = 0;
-  FirmwareVolumeHeader->Checksum = CalculateCheckSum16 ((UINT16*)FirmwareVolumeHeader,FirmwareVolumeHeader->HeaderLength);
+  FirmwareVolumeHeader->BlockMap[1].Length    = 0;
+  FirmwareVolumeHeader->Checksum              = CalculateCheckSum16 ((UINT16 *)FirmwareVolumeHeader, FirmwareVolumeHeader->HeaderLength);
 
-  Status = NorFlashProtocol->Write (NorFlashProtocol,
-                                    PartitionOffset,
-                                    FirmwareVolumeHeader->HeaderLength,
-                                    FirmwareVolumeHeader);
+  Status = NorFlashProtocol->Write (
+                               NorFlashProtocol,
+                               PartitionOffset,
+                               FirmwareVolumeHeader->HeaderLength,
+                               FirmwareVolumeHeader
+                               );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to Write Partition header\r\n", __FUNCTION__));
     return Status;
@@ -732,23 +763,28 @@ InitializeFvAndVariableStoreHeaders (
     //
     // VARIABLE_STORE_HEADER
     //
-    VariableStoreHeader = (VARIABLE_STORE_HEADER*)((UINTN)FirmwareVolumeHeader + FirmwareVolumeHeader->HeaderLength);
-    ZeroMem (VariableStoreHeader,
-             sizeof(VARIABLE_STORE_HEADER));
+    VariableStoreHeader = (VARIABLE_STORE_HEADER *)((UINTN)FirmwareVolumeHeader + FirmwareVolumeHeader->HeaderLength);
+    ZeroMem (
+      VariableStoreHeader,
+      sizeof (VARIABLE_STORE_HEADER)
+      );
     CopyGuid (&VariableStoreHeader->Signature, &gEfiAuthenticatedVariableGuid);
-    VariableStoreHeader->Size = PcdGet32(PcdFlashNvStorageVariableSize) - FirmwareVolumeHeader->HeaderLength;
+    VariableStoreHeader->Size   = PcdGet32 (PcdFlashNvStorageVariableSize) - FirmwareVolumeHeader->HeaderLength;
     VariableStoreHeader->Format = VARIABLE_STORE_FORMATTED;
     VariableStoreHeader->State  = VARIABLE_STORE_HEALTHY;
 
     // Write the combined super-header in the flash
-    Status = NorFlashProtocol->Write (NorFlashProtocol,
-                                      PartitionOffset + FirmwareVolumeHeader->HeaderLength,
-                                      sizeof(VARIABLE_STORE_HEADER),
-                                      VariableStoreHeader);
+    Status = NorFlashProtocol->Write (
+                                 NorFlashProtocol,
+                                 PartitionOffset + FirmwareVolumeHeader->HeaderLength,
+                                 sizeof (VARIABLE_STORE_HEADER),
+                                 VariableStoreHeader
+                                 );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to Write variable header\r\n", __FUNCTION__));
     }
   }
+
   return Status;
 }
 
@@ -765,12 +801,12 @@ InitializeFvAndVariableStoreHeaders (
 **/
 EFI_STATUS
 ValidateFvHeader (
-  IN VOID                        *PartitionData,
-  IN UINT64                      PartitionOffset,
-  IN UINT64                      PartitionSize,
-  IN BOOLEAN                     CheckVariableStore,
-  IN NVIDIA_NOR_FLASH_PROTOCOL   *NorFlashProtocol,
-  IN NOR_FLASH_ATTRIBUTES        *FlashAttributes
+  IN VOID                       *PartitionData,
+  IN UINT64                     PartitionOffset,
+  IN UINT64                     PartitionSize,
+  IN BOOLEAN                    CheckVariableStore,
+  IN NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol,
+  IN NOR_FLASH_ATTRIBUTES       *FlashAttributes
   )
 {
   EFI_STATUS                  Status;
@@ -789,30 +825,32 @@ ValidateFvHeader (
   //
   if ((FwVolHeader->Revision  != EFI_FVH_REVISION)  ||
       (FwVolHeader->Signature != EFI_FVH_SIGNATURE) ||
-      (FwVolHeader->FvLength  > PartitionSize)) {
+      (FwVolHeader->FvLength  > PartitionSize))
+  {
     DEBUG ((EFI_D_INFO, "%a: No Firmware Volume header present\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   // Check the Firmware Volume Guid
-  if( CompareGuid (&FwVolHeader->FileSystemGuid, &gEfiSystemNvDataFvGuid) == FALSE ) {
+  if ( CompareGuid (&FwVolHeader->FileSystemGuid, &gEfiSystemNvDataFvGuid) == FALSE ) {
     DEBUG ((EFI_D_INFO, "%a: Firmware Volume Guid non-compatible\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   // Verify the header checksum
-  Checksum = CalculateSum16((UINT16*)FwVolHeader, FwVolHeader->HeaderLength);
+  Checksum = CalculateSum16 ((UINT16 *)FwVolHeader, FwVolHeader->HeaderLength);
   if (Checksum != 0) {
     DEBUG ((EFI_D_INFO, "%a: FV checksum is invalid (Checksum:0x%X)\n", __FUNCTION__, Checksum));
     return EFI_NOT_FOUND;
   }
 
   if (CheckVariableStore) {
-    VariableStoreHeader = (VARIABLE_STORE_HEADER*)((UINTN)FwVolHeader + FwVolHeader->HeaderLength);
+    VariableStoreHeader = (VARIABLE_STORE_HEADER *)((UINTN)FwVolHeader + FwVolHeader->HeaderLength);
 
     // Check the Variable Store Guid
     if (!CompareGuid (&VariableStoreHeader->Signature, &gEfiVariableGuid) &&
-        !CompareGuid (&VariableStoreHeader->Signature, &gEfiAuthenticatedVariableGuid)) {
+        !CompareGuid (&VariableStoreHeader->Signature, &gEfiAuthenticatedVariableGuid))
+    {
       DEBUG ((EFI_D_INFO, "%a: Variable Store Guid non-compatible\n", __FUNCTION__));
       return EFI_NOT_FOUND;
     }
@@ -825,34 +863,41 @@ ValidateFvHeader (
     }
   }
 
-  //Resize if everything looks good except the size
+  // Resize if everything looks good except the size
   if ((FwVolHeader->FvLength != PartitionSize) ||
-      (FwVolHeader->BlockMap[0].Length != FlashAttributes->BlockSize)) {
-    OriginalLength = FwVolHeader->FvLength;
+      (FwVolHeader->BlockMap[0].Length != FlashAttributes->BlockSize))
+  {
+    OriginalLength        = FwVolHeader->FvLength;
     FwVolHeader->FvLength = PartitionSize;
     if (CheckVariableStore) {
       VariableStoreHeader->Size = FwVolHeader->FvLength - FwVolHeader->HeaderLength;
     }
+
     FwVolHeader->BlockMap[0].NumBlocks = PartitionSize / FlashAttributes->BlockSize;
-    FwVolHeader->BlockMap[0].Length = FlashAttributes->BlockSize;
+    FwVolHeader->BlockMap[0].Length    = FlashAttributes->BlockSize;
     FwVolHeader->BlockMap[1].NumBlocks = 0;
-    FwVolHeader->BlockMap[1].Length = 0;
+    FwVolHeader->BlockMap[1].Length    = 0;
 
     FwVolHeader->Checksum = 0;
-    FwVolHeader->Checksum = CalculateCheckSum16 ((UINT16*)FwVolHeader,FwVolHeader->HeaderLength);
+    FwVolHeader->Checksum = CalculateCheckSum16 ((UINT16 *)FwVolHeader, FwVolHeader->HeaderLength);
 
-    Status = NorFlashProtocol->Erase (NorFlashProtocol,
-                                      PartitionOffset / FlashAttributes->BlockSize,
-                                      PartitionSize / FlashAttributes->BlockSize);
+    Status = NorFlashProtocol->Erase (
+                                 NorFlashProtocol,
+                                 PartitionOffset / FlashAttributes->BlockSize,
+                                 PartitionSize / FlashAttributes->BlockSize
+                                 );
 
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to Erase Partition\r\n", __FUNCTION__));
       return Status;
     }
-    NorFlashProtocol->Write (NorFlashProtocol,
-                             PartitionOffset,
-                             OriginalLength,
-                             PartitionData);
+
+    NorFlashProtocol->Write (
+                        NorFlashProtocol,
+                        PartitionOffset,
+                        OriginalLength,
+                        PartitionData
+                        );
   }
 
   return EFI_SUCCESS;
@@ -866,19 +911,21 @@ ValidateFvHeader (
 **/
 VOID
 InitializeWorkSpaceHeader (
-    IN UINT64                      PartitionOffset,
-    IN UINT64                      PartitionSize,
-    IN NVIDIA_NOR_FLASH_PROTOCOL   *NorFlashProtocol,
-    IN NOR_FLASH_ATTRIBUTES        *FlashAttributes
+  IN UINT64                     PartitionOffset,
+  IN UINT64                     PartitionSize,
+  IN NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol,
+  IN NOR_FLASH_ATTRIBUTES       *FlashAttributes
   )
 {
-  EFI_STATUS                              Status;
-  EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER WorkingBlockHeader;
+  EFI_STATUS                               Status;
+  EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER  WorkingBlockHeader;
 
-  Status = NorFlashProtocol->Read (NorFlashProtocol,
-                                   PartitionOffset,
-                                   sizeof (EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER),
-                                   &WorkingBlockHeader);
+  Status = NorFlashProtocol->Read (
+                               NorFlashProtocol,
+                               PartitionOffset,
+                               sizeof (EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER),
+                               &WorkingBlockHeader
+                               );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to read the working area\r\n", __FUNCTION__));
     return;
@@ -895,9 +942,11 @@ InitializeWorkSpaceHeader (
   }
 
   if (!IsErasedFlashBuffer ((UINT8 *)&WorkingBlockHeader, sizeof (WorkingBlockHeader))) {
-    Status = NorFlashProtocol->Erase (NorFlashProtocol,
-                                      PartitionOffset / FlashAttributes->BlockSize,
-                                      PartitionSize / FlashAttributes->BlockSize);
+    Status = NorFlashProtocol->Erase (
+                                 NorFlashProtocol,
+                                 PartitionOffset / FlashAttributes->BlockSize,
+                                 PartitionSize / FlashAttributes->BlockSize
+                                 );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to erase working block\r\n", __FUNCTION__));
     }
@@ -931,13 +980,15 @@ InitializeWorkSpaceHeader (
     DEBUG ((DEBUG_ERROR, "%a: Failed to calculate CRC\r\n", __FUNCTION__));
   }
 
-  WorkingBlockHeader.WorkingBlockValid    = FTW_VALID_STATE;
-  WorkingBlockHeader.WorkingBlockInvalid  = FTW_INVALID_STATE;
+  WorkingBlockHeader.WorkingBlockValid   = FTW_VALID_STATE;
+  WorkingBlockHeader.WorkingBlockInvalid = FTW_INVALID_STATE;
 
-  Status = NorFlashProtocol->Write (NorFlashProtocol,
-                                   PartitionOffset,
-                                   sizeof (EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER),
-                                   &WorkingBlockHeader);
+  Status = NorFlashProtocol->Write (
+                               NorFlashProtocol,
+                               PartitionOffset,
+                               sizeof (EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER),
+                               &WorkingBlockHeader
+                               );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to write the working area\r\n", __FUNCTION__));
     return;
@@ -953,8 +1004,8 @@ InitializeWorkSpaceHeader (
 **/
 EFI_STATUS
 FVBInitialize (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   EFI_STATUS                  Status;
@@ -974,15 +1025,16 @@ FVBInitialize (
   VOID                        *FtwWorkingBuffer;
   EFI_RT_PROPERTIES_TABLE     *RtProperties;
 
-
-  if (PcdGetBool(PcdEmuVariableNvModeEnable)) {
-      return EFI_SUCCESS;
+  if (PcdGetBool (PcdEmuVariableNvModeEnable)) {
+    return EFI_SUCCESS;
   }
 
-  //Get NorFlashProtocol
-  Status = gBS->LocateProtocol (&gNVIDIANorFlashProtocolGuid,
-                                NULL,
-                                (VOID **)&NorFlashProtocol);
+  // Get NorFlashProtocol
+  Status = gBS->LocateProtocol (
+                  &gNVIDIANorFlashProtocolGuid,
+                  NULL,
+                  (VOID **)&NorFlashProtocol
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get NOR Flash protocol (%r)\r\n", __FUNCTION__, Status));
     return Status;
@@ -994,11 +1046,13 @@ FVBInitialize (
     return Status;
   }
 
-  //Validate GPT and get table entries, always 512 bytes from the end
-  Status = NorFlashProtocol->Read (NorFlashProtocol,
-                                   NorFlashAttributes.MemoryDensity - GPT_PARTITION_BLOCK_SIZE,
-                                   sizeof (PartitionHeader),
-                                   &PartitionHeader);
+  // Validate GPT and get table entries, always 512 bytes from the end
+  Status = NorFlashProtocol->Read (
+                               NorFlashProtocol,
+                               NorFlashAttributes.MemoryDensity - GPT_PARTITION_BLOCK_SIZE,
+                               sizeof (PartitionHeader),
+                               &PartitionHeader
+                               );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to read GPT partition table (%r)\r\n", __FUNCTION__, Status));
     return Status;
@@ -1018,10 +1072,12 @@ FVBInitialize (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Status = NorFlashProtocol->Read (NorFlashProtocol,
-                                   PartitionHeader.PartitionEntryLBA * GPT_PARTITION_BLOCK_SIZE,
-                                   GptPartitionTableSizeInBytes (&PartitionHeader),
-                                   PartitionEntryArray);
+  Status = NorFlashProtocol->Read (
+                               NorFlashProtocol,
+                               PartitionHeader.PartitionEntryLBA * GPT_PARTITION_BLOCK_SIZE,
+                               GptPartitionTableSizeInBytes (&PartitionHeader),
+                               PartitionEntryArray
+                               );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to read GPT partition array (%r)\r\n", __FUNCTION__, Status));
     FreePool (PartitionEntryArray);
@@ -1036,29 +1092,34 @@ FVBInitialize (
   }
 
   VariableOffset = 0;
-  VariableSize = 0;
-  FtwOffset = 0;
-  FtwSize = 0;
+  VariableSize   = 0;
+  FtwOffset      = 0;
+  FtwSize        = 0;
   // Find variable and FTW partitions
-  PartitionEntry = GptFindPartitionByName (&PartitionHeader,
-                                           PartitionEntryArray,
-                                           UEFI_VARIABLE_PARTITION_NAME);
+  PartitionEntry = GptFindPartitionByName (
+                     &PartitionHeader,
+                     PartitionEntryArray,
+                     UEFI_VARIABLE_PARTITION_NAME
+                     );
   if (PartitionEntry != NULL) {
     VariableOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
-    VariableSize = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
+    VariableSize   = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
     ASSERT ((VariableOffset % NorFlashAttributes.BlockSize) == 0);
     ASSERT ((VariableSize % NorFlashAttributes.BlockSize) == 0);
   }
 
-  PartitionEntry = GptFindPartitionByName (&PartitionHeader,
-                                           PartitionEntryArray,
-                                           FTW_PARTITION_NAME);
+  PartitionEntry = GptFindPartitionByName (
+                     &PartitionHeader,
+                     PartitionEntryArray,
+                     FTW_PARTITION_NAME
+                     );
   if (PartitionEntry != NULL) {
     FtwOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
-    FtwSize = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
+    FtwSize   = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
     ASSERT ((FtwOffset % NorFlashAttributes.BlockSize) == 0);
     ASSERT ((FtwSize % NorFlashAttributes.BlockSize) == 0);
   }
+
   FreePool (PartitionEntryArray);
 
   if ((VariableOffset == 0) || (FtwOffset == 0)) {
@@ -1068,7 +1129,7 @@ FVBInitialize (
 
   ASSERT (FtwSize > VariableSize);
 
-  //Build FVB instances
+  // Build FVB instances
   FvpData = NULL;
   FvpData = AllocateRuntimeZeroPool (sizeof (NVIDIA_FVB_PRIVATE_DATA) * FVB_TO_CREATE);
   if (FvpData == NULL) {
@@ -1083,12 +1144,12 @@ FVBInitialize (
     goto Exit;
   }
 
-  FvpData[FVB_VARIABLE_INDEX].PartitionOffset = VariableOffset;
-  FvpData[FVB_VARIABLE_INDEX].PartitionSize = VariableSize;
-  FvpData[FVB_VARIABLE_INDEX].PartitionData = VarStoreBuffer;
+  FvpData[FVB_VARIABLE_INDEX].PartitionOffset  = VariableOffset;
+  FvpData[FVB_VARIABLE_INDEX].PartitionSize    = VariableSize;
+  FvpData[FVB_VARIABLE_INDEX].PartitionData    = VarStoreBuffer;
   FvpData[FVB_VARIABLE_INDEX].PartitionAddress = (UINTN)FvpData[FVB_VARIABLE_INDEX].PartitionData;
-  PcdSet64S(PcdFlashNvStorageVariableBase64, FvpData[FVB_VARIABLE_INDEX].PartitionAddress);
-  PcdSet32S(PcdFlashNvStorageVariableSize, FvpData[FVB_VARIABLE_INDEX].PartitionSize);
+  PcdSet64S (PcdFlashNvStorageVariableBase64, FvpData[FVB_VARIABLE_INDEX].PartitionAddress);
+  PcdSet32S (PcdFlashNvStorageVariableSize, FvpData[FVB_VARIABLE_INDEX].PartitionSize);
 
   FtwSpareBuffer = NULL;
   FtwSpareBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (VariableSize), NorFlashAttributes.BlockSize);
@@ -1097,12 +1158,12 @@ FVBInitialize (
     goto Exit;
   }
 
-  FvpData[FVB_FTW_SPARE_INDEX].PartitionOffset = FtwOffset;
-  FvpData[FVB_FTW_SPARE_INDEX].PartitionSize = VariableSize;
-  FvpData[FVB_FTW_SPARE_INDEX].PartitionData = NULL;
+  FvpData[FVB_FTW_SPARE_INDEX].PartitionOffset  = FtwOffset;
+  FvpData[FVB_FTW_SPARE_INDEX].PartitionSize    = VariableSize;
+  FvpData[FVB_FTW_SPARE_INDEX].PartitionData    = NULL;
   FvpData[FVB_FTW_SPARE_INDEX].PartitionAddress = (UINTN)FtwSpareBuffer;
-  PcdSet64S(PcdFlashNvStorageFtwSpareBase64, FvpData[FVB_FTW_SPARE_INDEX].PartitionAddress);
-  PcdSet32S(PcdFlashNvStorageFtwSpareSize, FvpData[FVB_FTW_SPARE_INDEX].PartitionSize);
+  PcdSet64S (PcdFlashNvStorageFtwSpareBase64, FvpData[FVB_FTW_SPARE_INDEX].PartitionAddress);
+  PcdSet32S (PcdFlashNvStorageFtwSpareSize, FvpData[FVB_FTW_SPARE_INDEX].PartitionSize);
 
   FtwWorkingBuffer = NULL;
   FtwWorkingBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (FtwSize - VariableSize), NorFlashAttributes.BlockSize);
@@ -1111,102 +1172,116 @@ FVBInitialize (
     goto Exit;
   }
 
-  FvpData[FVB_FTW_WORK_INDEX].PartitionOffset = FtwOffset + PcdGet32(PcdFlashNvStorageFtwSpareSize);
-  FvpData[FVB_FTW_WORK_INDEX].PartitionSize = FtwSize - VariableSize;
-  FvpData[FVB_FTW_WORK_INDEX].PartitionData = NULL;
+  FvpData[FVB_FTW_WORK_INDEX].PartitionOffset  = FtwOffset + PcdGet32 (PcdFlashNvStorageFtwSpareSize);
+  FvpData[FVB_FTW_WORK_INDEX].PartitionSize    = FtwSize - VariableSize;
+  FvpData[FVB_FTW_WORK_INDEX].PartitionData    = NULL;
   FvpData[FVB_FTW_WORK_INDEX].PartitionAddress = (UINTN)FtwWorkingBuffer;
-  PcdSet64S(PcdFlashNvStorageFtwWorkingBase64, FvpData[FVB_FTW_WORK_INDEX].PartitionAddress);
-  PcdSet32S(PcdFlashNvStorageFtwWorkingSize, FvpData[FVB_FTW_WORK_INDEX].PartitionSize);
+  PcdSet64S (PcdFlashNvStorageFtwWorkingBase64, FvpData[FVB_FTW_WORK_INDEX].PartitionAddress);
+  PcdSet32S (PcdFlashNvStorageFtwWorkingSize, FvpData[FVB_FTW_WORK_INDEX].PartitionSize);
 
   for (Index = 0; Index < FVB_TO_CREATE; Index++) {
-    FvpData[Index].Signature = NVIDIA_FVB_SIGNATURE;
+    FvpData[Index].Signature        = NVIDIA_FVB_SIGNATURE;
     FvpData[Index].NorFlashProtocol = NorFlashProtocol;
-    CopyMem (&FvpData[Index].FlashAttributes, &NorFlashAttributes, sizeof(NorFlashAttributes));
+    CopyMem (&FvpData[Index].FlashAttributes, &NorFlashAttributes, sizeof (NorFlashAttributes));
 
     if (FvpData[Index].PartitionData != NULL) {
-      Status = NorFlashProtocol->Read (NorFlashProtocol,
-                                       FvpData[Index].PartitionOffset,
-                                       FvpData[Index].PartitionSize,
-                                       FvpData[Index].PartitionData);
+      Status = NorFlashProtocol->Read (
+                                   NorFlashProtocol,
+                                   FvpData[Index].PartitionOffset,
+                                   FvpData[Index].PartitionSize,
+                                   FvpData[Index].PartitionData
+                                   );
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to read partition data (%r)\r\n", __FUNCTION__, Status));
         goto Exit;
       }
     }
 
-    Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
-                                 TPL_NOTIFY,
-                                 FVBVirtualNotifyEvent,
-                                 &FvpData[Index],
-                                 &gEfiEventVirtualAddressChangeGuid,
-                                 &FvpData[Index].FvbVirtualAddrChangeEvent);
+    Status = gBS->CreateEventEx (
+                    EVT_NOTIFY_SIGNAL,
+                    TPL_NOTIFY,
+                    FVBVirtualNotifyEvent,
+                    &FvpData[Index],
+                    &gEfiEventVirtualAddressChangeGuid,
+                    &FvpData[Index].FvbVirtualAddrChangeEvent
+                    );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to create virtual change address event\r\n", __FUNCTION__));
       goto Exit;
     }
 
-    FvpData[Index].FvbProtocol.GetAttributes = FvbGetAttributes;
-    FvpData[Index].FvbProtocol.SetAttributes = FvbSetAttributes;
+    FvpData[Index].FvbProtocol.GetAttributes      = FvbGetAttributes;
+    FvpData[Index].FvbProtocol.SetAttributes      = FvbSetAttributes;
     FvpData[Index].FvbProtocol.GetPhysicalAddress = FvbGetPhysicalAddress;
-    FvpData[Index].FvbProtocol.GetBlockSize = FvbGetBlockSize;
-    FvpData[Index].FvbProtocol.Read = FvbRead;
-    FvpData[Index].FvbProtocol.Write = FvbWrite;
-    FvpData[Index].FvbProtocol.EraseBlocks = FvbEraseBlocks;
-    FvpData[Index].FvbProtocol.ParentHandle = NULL;
+    FvpData[Index].FvbProtocol.GetBlockSize       = FvbGetBlockSize;
+    FvpData[Index].FvbProtocol.Read               = FvbRead;
+    FvpData[Index].FvbProtocol.Write              = FvbWrite;
+    FvpData[Index].FvbProtocol.EraseBlocks        = FvbEraseBlocks;
+    FvpData[Index].FvbProtocol.ParentHandle       = NULL;
 
-    //Validate and initialize content
+    // Validate and initialize content
     if (Index == FVB_VARIABLE_INDEX) {
-      Status = ValidateFvHeader (FvpData[Index].PartitionData,
-                                 FvpData[Index].PartitionOffset,
-                                 FvpData[Index].PartitionSize,
-                                 (Index == FVB_VARIABLE_INDEX),
-                                 NorFlashProtocol,
-                                 &NorFlashAttributes);
+      Status = ValidateFvHeader (
+                 FvpData[Index].PartitionData,
+                 FvpData[Index].PartitionOffset,
+                 FvpData[Index].PartitionSize,
+                 (Index == FVB_VARIABLE_INDEX),
+                 NorFlashProtocol,
+                 &NorFlashAttributes
+                 );
       if (EFI_ERROR (Status)) {
-        //Re-init partition
-        Status = InitializeFvAndVariableStoreHeaders ((EFI_FIRMWARE_VOLUME_HEADER *)FvpData[Index].PartitionData,
-                                                      FvpData[Index].PartitionOffset,
-                                                      FvpData[Index].PartitionSize,
-                                                      (Index == FVB_VARIABLE_INDEX),
-                                                      NorFlashProtocol,
-                                                      &NorFlashAttributes);
+        // Re-init partition
+        Status = InitializeFvAndVariableStoreHeaders (
+                   (EFI_FIRMWARE_VOLUME_HEADER *)FvpData[Index].PartitionData,
+                   FvpData[Index].PartitionOffset,
+                   FvpData[Index].PartitionSize,
+                   (Index == FVB_VARIABLE_INDEX),
+                   NorFlashProtocol,
+                   &NorFlashAttributes
+                   );
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "%a: Failed to init FVB %d\r\n", __FUNCTION__, Index));
           goto Exit;
         }
       }
     } else if (Index == FVB_FTW_WORK_INDEX) {
-      //Init work partition if needed
-      InitializeWorkSpaceHeader (FvpData[Index].PartitionOffset,
-                                 FvpData[Index].PartitionSize,
-                                 NorFlashProtocol,
-                                 &NorFlashAttributes);
+      // Init work partition if needed
+      InitializeWorkSpaceHeader (
+        FvpData[Index].PartitionOffset,
+        FvpData[Index].PartitionSize,
+        NorFlashProtocol,
+        &NorFlashAttributes
+        );
     }
 
-    Status = gBS->InstallMultipleProtocolInterfaces(&FvpData[Index].Handle,
-                                                    &gEfiFirmwareVolumeBlockProtocolGuid,
-                                                    &FvpData[Index].FvbProtocol,
-                                                    NULL);
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &FvpData[Index].Handle,
+                    &gEfiFirmwareVolumeBlockProtocolGuid,
+                    &FvpData[Index].FvbProtocol,
+                    NULL
+                    );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to install FVP protocol\r\n", __FUNCTION__));
       goto Exit;
     }
   }
 
-  Status = gBS->InstallMultipleProtocolInterfaces (&gImageHandle,
-                                                   &gEdkiiNvVarStoreFormattedGuid,
-                                                   NULL,
-                                                   NULL);
-
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &gImageHandle,
+                  &gEdkiiNvVarStoreFormattedGuid,
+                  NULL,
+                  NULL
+                  );
 
   RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocatePool (sizeof (EFI_RT_PROPERTIES_TABLE));
   if (RtProperties == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT properties table\r\n",__FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT properties table\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
-  RtProperties->Version = EFI_RT_PROPERTIES_TABLE_VERSION;
-  RtProperties->Length = sizeof (EFI_RT_PROPERTIES_TABLE);
+
+  RtProperties->Version                  = EFI_RT_PROPERTIES_TABLE_VERSION;
+  RtProperties->Length                   = sizeof (EFI_RT_PROPERTIES_TABLE);
   RtProperties->RuntimeServicesSupported = PcdGet32 (PcdVariableRtProperties);
   gBS->InstallConfigurationTable (&gEfiRtPropertiesTableGuid, RtProperties);
 
@@ -1215,25 +1290,33 @@ Exit:
   if (EFI_ERROR (Status)) {
     for (Index = 0; Index < FVB_TO_CREATE; Index++) {
       if (FvpData[Index].FvbVirtualAddrChangeEvent != NULL) {
-        gBS->CloseEvent(FvpData[Index].FvbVirtualAddrChangeEvent);
+        gBS->CloseEvent (FvpData[Index].FvbVirtualAddrChangeEvent);
       }
-      gBS->UninstallMultipleProtocolInterfaces(FvpData[Index].Handle,
-                                               &gEfiFirmwareVolumeBlockProtocolGuid,
-                                               &FvpData[Index].FvbProtocol,
-                                               NULL);
+
+      gBS->UninstallMultipleProtocolInterfaces (
+             FvpData[Index].Handle,
+             &gEfiFirmwareVolumeBlockProtocolGuid,
+             &FvpData[Index].FvbProtocol,
+             NULL
+             );
     }
+
     if (FvpData != NULL) {
       FreePool (FvpData);
     }
+
     if (VarStoreBuffer != NULL) {
       FreePages (VarStoreBuffer, EFI_SIZE_TO_PAGES (VariableSize));
     }
+
     if (FtwSpareBuffer != NULL) {
       FreePages (FtwSpareBuffer, EFI_SIZE_TO_PAGES (VariableSize));
     }
+
     if (FtwWorkingBuffer != NULL) {
       FreePages (FtwWorkingBuffer, EFI_SIZE_TO_PAGES (FtwSize - VariableSize));
     }
   }
+
   return Status;
 }

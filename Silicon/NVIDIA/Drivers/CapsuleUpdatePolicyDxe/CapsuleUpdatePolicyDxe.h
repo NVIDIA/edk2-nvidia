@@ -38,8 +38,8 @@
 EFI_STATUS
 EFIAPI
 CapsuleUpdatePolicyCheckSystemPower (
-  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This,
-  OUT BOOLEAN                               *Good
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  *This,
+  OUT BOOLEAN                                *Good
   );
 
 /**
@@ -59,8 +59,8 @@ CapsuleUpdatePolicyCheckSystemPower (
 EFI_STATUS
 EFIAPI
 CapsuleUpdatePolicyCheckSystemThermal (
-  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This,
-  OUT BOOLEAN                               *Good
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  *This,
+  OUT BOOLEAN                                *Good
   );
 
 /**
@@ -80,8 +80,8 @@ CapsuleUpdatePolicyCheckSystemThermal (
 EFI_STATUS
 EFIAPI
 CapsuleUpdatePolicyCheckSystemEnvironment (
-  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This,
-  OUT BOOLEAN                               *Good
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  *This,
+  OUT BOOLEAN                                *Good
   );
 
 /**
@@ -99,7 +99,7 @@ CapsuleUpdatePolicyCheckSystemEnvironment (
 BOOLEAN
 EFIAPI
 CapsuleUpdatePolicyIsLowestSupportedVersionCheckRequired (
-  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  *This
   );
 
 /**
@@ -117,7 +117,7 @@ CapsuleUpdatePolicyIsLowestSupportedVersionCheckRequired (
 BOOLEAN
 EFIAPI
 CapsuleUpdatePolicyIsLockFmpDeviceAtLockEventGuidRequired (
-  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL *This
+  IN  NVIDIA_CAPSULE_UPDATE_POLICY_PROTOCOL  *This
   );
 
 /**

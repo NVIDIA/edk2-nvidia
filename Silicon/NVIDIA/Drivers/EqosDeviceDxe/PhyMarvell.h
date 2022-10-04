@@ -9,11 +9,10 @@
 
 **/
 
-
 #ifndef _PHY_MARVELL_H__
 #define _PHY_MARVELL_H__
 
-#define PHY_MARVELL_OUI         0x005043
+#define PHY_MARVELL_OUI  0x005043
 
 /*
  * @brief Configure Marvell PHY
@@ -25,7 +24,7 @@
 EFI_STATUS
 EFIAPI
 PhyMarvellConfig (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   );
 
 /*
@@ -38,7 +37,7 @@ PhyMarvellConfig (
 EFI_STATUS
 EFIAPI
 PhyMarvellStartAutoNeg (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   );
 
 /*
@@ -51,7 +50,7 @@ PhyMarvellStartAutoNeg (
 EFI_STATUS
 EFIAPI
 PhyMarvellCheckAutoNeg (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   );
 
 /*
@@ -62,7 +61,7 @@ PhyMarvellCheckAutoNeg (
 VOID
 EFIAPI
 PhyMarvellDetectLink (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   );
 
 #endif /* _PHY_MARVELL_H__ */

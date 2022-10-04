@@ -14,9 +14,9 @@
 EFI_STATUS
 EFIAPI
 ApplyTegraDeviceTreeOverlay (
-  VOID *FdtBase,
-  VOID *FdtOverlay,
-  CHAR8 *SWModule
-);
+  VOID   *FdtBase,
+  VOID   *FdtOverlay,
+  CHAR8  *SWModule
+  );
 
 #endif //__TEGRA_DEVICE_TREE_OVERLAY_LIB_H__

@@ -16,10 +16,8 @@
 #include <Library/IoLib.h>
 #include <libfdt.h>
 
-
 STATIC
 EFI_EVENT  FdtInstallEvent;
-
 
 STATIC
 VOID
@@ -29,15 +27,15 @@ FdtInstalled (
   IN VOID       *Context
   )
 {
-  EFI_STATUS Status;
-  VOID       *AcpiBase;
-  VOID       *FdtBase;
-  INTN       NodeOffset;
-  UINT64     VPRBase;
-  UINT64     VPRSize;
-  INT32      AddressCells;
-  INT32      SizeCells;
-  UINT8      *Data;
+  EFI_STATUS  Status;
+  VOID        *AcpiBase;
+  VOID        *FdtBase;
+  INTN        NodeOffset;
+  UINT64      VPRBase;
+  UINT64      VPRSize;
+  INT32       AddressCells;
+  INT32       SizeCells;
+  UINT8       *Data;
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
@@ -58,44 +56,47 @@ FdtInstalled (
     return;
   }
 
-  VPRBase = ((UINT64) MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_BOM_ADR_HI_0) << 32) |
-              MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_BOM_0);
+  VPRBase = ((UINT64)MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_BOM_ADR_HI_0) << 32) |
+            MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_BOM_0);
 
-  VPRSize = MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_SIZE_MB_0);
+  VPRSize   = MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_SIZE_MB_0);
   VPRSize <<= 20;
 
-  if (VPRBase == 0 && VPRSize == 0) {
+  if ((VPRBase == 0) && (VPRSize == 0)) {
     fdt_del_node (FdtBase, NodeOffset);
     DEBUG ((DEBUG_INFO, "%a: VPR Node Deleted\n", __FUNCTION__));
   } else {
-    AddressCells = fdt_address_cells (FdtBase, fdt_parent_offset(FdtBase, NodeOffset));
-    SizeCells = fdt_size_cells (FdtBase, fdt_parent_offset(FdtBase, NodeOffset));
+    AddressCells = fdt_address_cells (FdtBase, fdt_parent_offset (FdtBase, NodeOffset));
+    SizeCells    = fdt_size_cells (FdtBase, fdt_parent_offset (FdtBase, NodeOffset));
     if ((AddressCells > 2) ||
         (AddressCells == 0) ||
         (SizeCells > 2) ||
-        (SizeCells == 0)) {
+        (SizeCells == 0))
+    {
       DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
       return;
     }
 
-    Data = NULL;
-    Status = gBS->AllocatePool (EfiBootServicesData,
-                                (AddressCells + SizeCells) * sizeof (UINT32),
-                                (VOID **)&Data);
+    Data   = NULL;
+    Status = gBS->AllocatePool (
+                    EfiBootServicesData,
+                    (AddressCells + SizeCells) * sizeof (UINT32),
+                    (VOID **)&Data
+                    );
     if (EFI_ERROR (Status)) {
       return;
     }
 
     if (AddressCells == 2) {
-      *(UINT64*)Data = SwapBytes64 (VPRBase);
+      *(UINT64 *)Data = SwapBytes64 (VPRBase);
     } else {
-      *(UINT32*)Data = SwapBytes32 (VPRBase);
+      *(UINT32 *)Data = SwapBytes32 (VPRBase);
     }
 
     if (SizeCells == 2) {
-      *(UINT64*)&Data[AddressCells * sizeof (UINT32)] = SwapBytes64 (VPRSize);
+      *(UINT64 *)&Data[AddressCells * sizeof (UINT32)] = SwapBytes64 (VPRSize);
     } else {
-      *(UINT32*)&Data[AddressCells * sizeof (UINT32)] = SwapBytes32 (VPRSize);
+      *(UINT32 *)&Data[AddressCells * sizeof (UINT32)] = SwapBytes32 (VPRSize);
     }
 
     fdt_setprop (FdtBase, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
@@ -106,7 +107,6 @@ FdtInstalled (
 
   return;
 }
-
 
 /**
   Install VPR driver.
@@ -121,14 +121,16 @@ FdtInstalled (
 EFI_STATUS
 EFIAPI
 VPRDxeInitialize (
-  IN EFI_HANDLE               ImageHandle,
-  IN EFI_SYSTEM_TABLE         *SystemTable
-)
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
 {
-  return gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
-                             TPL_CALLBACK,
-                             FdtInstalled,
-                             NULL,
-                             &gFdtTableGuid,
-                             &FdtInstallEvent);
+  return gBS->CreateEventEx (
+                EVT_NOTIFY_SIGNAL,
+                TPL_CALLBACK,
+                FdtInstalled,
+                NULL,
+                &gFdtTableGuid,
+                &FdtInstallEvent
+                );
 }

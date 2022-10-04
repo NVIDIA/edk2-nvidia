@@ -65,7 +65,7 @@ ProcessLibraryConstructorList (
 **/
 VOID
 GetVirtualMemoryMap (
-  IN ARM_MEMORY_REGION_DESCRIPTOR** VirtualMemoryMap
+  IN ARM_MEMORY_REGION_DESCRIPTOR  **VirtualMemoryMap
   );
 
 #endif /* _PREPI_H_ */

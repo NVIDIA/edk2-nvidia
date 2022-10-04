@@ -14,12 +14,12 @@
 // Intended to match the offset table entry struct from the generated offset
 // table file, which is why C types are used instead of UEFI types.
 typedef struct {
-    char                   *Pathname;      /* Full pathname (from root) to the object */
-    unsigned short         ParentOpcode;   /* AML opcode for the parent object */
-    unsigned long          NamesegOffset;  /* Offset of last nameseg in the parent namepath */
-    unsigned char          Opcode;         /* AML opcode for the data */
-    unsigned long          Offset;         /* Offset for the data */
-    unsigned long long     Value;          /* Original value of the data (as applicable) */
+  char                  *Pathname;         /* Full pathname (from root) to the object */
+  unsigned short        ParentOpcode;      /* AML opcode for the parent object */
+  unsigned long         NamesegOffset;     /* Offset of last nameseg in the parent namepath */
+  unsigned char         Opcode;            /* AML opcode for the data */
+  unsigned long         Offset;            /* Offset for the data */
+  unsigned long long    Value;             /* Original value of the data (as applicable) */
 } AML_OFFSET_TABLE_ENTRY;
 
 #endif /* __AML_OFFSET_TABLE_H */
@@ -27,9 +27,9 @@ typedef struct {
 #ifndef __AML_PATCH_PROTOCOL_H__
 #define __AML_PATCH_PROTOCOL_H__
 
-#include <Uefi/UefiBaseType.h>
-#include <Library/BaseLib.h>
-#include <IndustryStandard/Acpi10.h>
+  #include <Uefi/UefiBaseType.h>
+  #include <Library/BaseLib.h>
+  #include <IndustryStandard/Acpi10.h>
 
 //
 // Define for forward reference.
@@ -37,9 +37,9 @@ typedef struct {
 typedef struct _NVIDIA_AML_PATCH_PROTOCOL NVIDIA_AML_PATCH_PROTOCOL;
 
 typedef struct {
-  EFI_ACPI_DESCRIPTION_HEADER *AmlTable;        /* Pointer to start of AML Table w/node */
-  AML_OFFSET_TABLE_ENTRY      *AmlOffsetEntry;  /* Pointer to offset table entry for node*/
-  UINTN                       Size;             /* Size of AML node */
+  EFI_ACPI_DESCRIPTION_HEADER    *AmlTable;       /* Pointer to start of AML Table w/node */
+  AML_OFFSET_TABLE_ENTRY         *AmlOffsetEntry; /* Pointer to offset table entry for node*/
+  UINTN                          Size;            /* Size of AML node */
 } NVIDIA_AML_NODE_INFO;
 
 /**
@@ -70,12 +70,12 @@ typedef struct {
 **/
 typedef
 EFI_STATUS
-(EFIAPI * NVIDIA_AML_PATCH_REGISTER_TABLES)(
+(EFIAPI *NVIDIA_AML_PATCH_REGISTER_TABLES)(
   IN NVIDIA_AML_PATCH_PROTOCOL    *This,
   IN EFI_ACPI_DESCRIPTION_HEADER  **AmlTables,
   IN AML_OFFSET_TABLE_ENTRY       **OffsetTables,
   IN UINTN                        NumTables
-);
+  );
 
 /**
   Find the AML Node for the given path name. Will use the registered AML Tables
@@ -97,11 +97,11 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * NVIDIA_AML_PATCH_FIND_NODE)(
+(EFIAPI *NVIDIA_AML_PATCH_FIND_NODE)(
   IN NVIDIA_AML_PATCH_PROTOCOL  *This,
   IN CHAR8                      *PathName,
   OUT NVIDIA_AML_NODE_INFO      *AmlNodeInfo
-);
+  );
 
 /**
   Find the AML Node for the given path name. Will use the AML Tables and offset
@@ -125,12 +125,12 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * NVIDIA_AML_PATCH_GET_NODE_DATA)(
+(EFIAPI *NVIDIA_AML_PATCH_GET_NODE_DATA)(
   IN NVIDIA_AML_PATCH_PROTOCOL  *This,
   IN NVIDIA_AML_NODE_INFO       *AmlNodeInfo,
   OUT VOID                      *Data,
   IN  UINTN                     Size
-);
+  );
 
 /**
   Set the data of the AML Node with the given AmlNodeInfo.
@@ -156,12 +156,12 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * NVIDIA_AML_PATCH_SET_NODE_DATA) (
+(EFIAPI *NVIDIA_AML_PATCH_SET_NODE_DATA)(
   IN NVIDIA_AML_PATCH_PROTOCOL  *This,
   IN NVIDIA_AML_NODE_INFO       *AmlNodeInfo,
   IN VOID                       *Data,
   IN UINTN                      Size
-);
+  );
 
 /**
   Update the name of the AML Node with the given AmlNodeInfo. The name is located
@@ -187,19 +187,19 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * NVIDIA_AML_PATCH_UPDATE_NODE_NAME) (
+(EFIAPI *NVIDIA_AML_PATCH_UPDATE_NODE_NAME)(
   IN NVIDIA_AML_PATCH_PROTOCOL  *This,
   IN NVIDIA_AML_NODE_INFO       *AmlNodeInfo,
   IN CHAR8                      *NewName
-);
+  );
 
 // NVIDIA_AML_PATCH_PROTOCOL protocol structure.
 struct _NVIDIA_AML_PATCH_PROTOCOL {
-  NVIDIA_AML_PATCH_REGISTER_TABLES  RegisterAmlTables;
-  NVIDIA_AML_PATCH_FIND_NODE        FindNode;
-  NVIDIA_AML_PATCH_GET_NODE_DATA    GetNodeData;
-  NVIDIA_AML_PATCH_SET_NODE_DATA    SetNodeData;
-  NVIDIA_AML_PATCH_UPDATE_NODE_NAME UpdateNodeName;
+  NVIDIA_AML_PATCH_REGISTER_TABLES     RegisterAmlTables;
+  NVIDIA_AML_PATCH_FIND_NODE           FindNode;
+  NVIDIA_AML_PATCH_GET_NODE_DATA       GetNodeData;
+  NVIDIA_AML_PATCH_SET_NODE_DATA       SetNodeData;
+  NVIDIA_AML_PATCH_UPDATE_NODE_NAME    UpdateNodeName;
 };
 
-#endif  /* __AML_PATCH_PROTOCOL_H__ */
+#endif /* __AML_PATCH_PROTOCOL_H__ */

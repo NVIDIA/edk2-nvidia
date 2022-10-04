@@ -40,12 +40,12 @@
 EFI_STATUS
 EFIAPI
 SnpStart (
-  IN  EFI_SIMPLE_NETWORK_PROTOCOL   *This
- )
+  IN  EFI_SIMPLE_NETWORK_PROTOCOL  *This
+  )
 {
-  SIMPLE_NETWORK_DRIVER    *Snp;
+  SIMPLE_NETWORK_DRIVER  *Snp;
 
-  DEBUG ((DEBUG_INFO,"SNP:DXE: %a ()\r\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "SNP:DXE: %a ()\r\n", __FUNCTION__));
 
   // Check Snp instance
   if (This == NULL) {
@@ -55,7 +55,8 @@ SnpStart (
   Snp = INSTANCE_FROM_SNP_THIS (This);
   // Check state
   if ((Snp->SnpMode.State == EfiSimpleNetworkStarted)    ||
-      (Snp->SnpMode.State == EfiSimpleNetworkInitialized)  ) {
+      (Snp->SnpMode.State == EfiSimpleNetworkInitialized))
+  {
     return EFI_ALREADY_STARTED;
   }
 
@@ -63,7 +64,6 @@ SnpStart (
   Snp->SnpMode.State = EfiSimpleNetworkStarted;
   return EFI_SUCCESS;
 }
-
 
 /**
   Changes the state of a network interface from "started" to "stopped."
@@ -89,10 +89,10 @@ SnpStart (
 EFI_STATUS
 EFIAPI
 SnpStop (
-  IN  EFI_SIMPLE_NETWORK_PROTOCOL*   This
+  IN  EFI_SIMPLE_NETWORK_PROTOCOL  *This
   )
 {
-  SIMPLE_NETWORK_DRIVER    *Snp;
+  SIMPLE_NETWORK_DRIVER  *Snp;
 
   DEBUG ((DEBUG_INFO, "SNP:DXE: %a ()\r\n", __FUNCTION__));
 
@@ -115,7 +115,6 @@ SnpStop (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Resets a network adapter and allocates the transmit and receive buffers
@@ -153,13 +152,13 @@ SnpStop (
 EFI_STATUS
 EFIAPI
 SnpInitialize (
-  IN  EFI_SIMPLE_NETWORK_PROTOCOL   *This,
-  IN  UINTN                         ExtraRxBufferSize OPTIONAL,
-  IN  UINTN                         ExtraTxBufferSize OPTIONAL
+  IN  EFI_SIMPLE_NETWORK_PROTOCOL  *This,
+  IN  UINTN                        ExtraRxBufferSize OPTIONAL,
+  IN  UINTN                        ExtraTxBufferSize OPTIONAL
   )
 {
-  SIMPLE_NETWORK_DRIVER       *Snp;
-  EFI_STATUS                  Status;
+  SIMPLE_NETWORK_DRIVER  *Snp;
+  EFI_STATUS             Status;
 
   DEBUG ((DEBUG_INFO, "SNP:DXE: %a ()\r\n", __FUNCTION__));
 
@@ -178,13 +177,13 @@ SnpInitialize (
   }
 
   // Check Auto Neg here
-  Snp->PhyDriver.CheckAutoNeg( &Snp->PhyDriver);
+  Snp->PhyDriver.CheckAutoNeg (&Snp->PhyDriver);
 
   // Init Link
   DEBUG ((DEBUG_INFO, "SNP:DXE: Auto-Negotiating Ethernet PHY Link\r\n"));
 
   Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver);
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_INFO, "SNP:DXE: Link is Down - Network Cable is not plugged in?\r\n"));
   }
 
@@ -202,7 +201,6 @@ SnpInitialize (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Resets a network adapter and reinitializes it with the parameters that were
@@ -231,12 +229,12 @@ SnpInitialize (
 EFI_STATUS
 EFIAPI
 SnpReset (
-  IN  EFI_SIMPLE_NETWORK_PROTOCOL   *This,
-  IN  BOOLEAN                       ExtendedVerification
+  IN  EFI_SIMPLE_NETWORK_PROTOCOL  *This,
+  IN  BOOLEAN                      ExtendedVerification
   )
 {
-  EFI_STATUS                  Status;
-  SIMPLE_NETWORK_DRIVER       *Snp;
+  EFI_STATUS             Status;
+  SIMPLE_NETWORK_DRIVER  *Snp;
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
@@ -272,7 +270,6 @@ SnpReset (
   return EFI_SUCCESS;
 }
 
-
 /**
   Resets a network adapter and leaves it in a state that is safe for another
   driver to initialize.
@@ -295,10 +292,10 @@ SnpReset (
 EFI_STATUS
 EFIAPI
 SnpShutdown (
-  IN  EFI_SIMPLE_NETWORK_PROTOCOL*   This
+  IN  EFI_SIMPLE_NETWORK_PROTOCOL  *This
   )
 {
-  SIMPLE_NETWORK_DRIVER     *Snp;
+  SIMPLE_NETWORK_DRIVER  *Snp;
 
   DEBUG ((DEBUG_INFO, "SNP:DXE: %a ()\r\n", __FUNCTION__));
 
@@ -328,16 +325,16 @@ STATIC
 VOID
 EFIAPI
 RegisterFilterIndex (
-  IN EMAC_DRIVER              *EmacDriver,
-  IN EFI_MAC_ADDRESS          *MacAddress,
-  IN BOOLEAN                  Enable,
-  IN UINT32                   Index,
-  IN UINT32                   BaseMode
+  IN EMAC_DRIVER      *EmacDriver,
+  IN EFI_MAC_ADDRESS  *MacAddress,
+  IN BOOLEAN          Enable,
+  IN UINT32           Index,
+  IN UINT32           BaseMode
   )
 {
-  struct osi_filter filter;
+  struct osi_filter  filter;
 
-  ZeroMem (&filter, sizeof(filter));
+  ZeroMem (&filter, sizeof (filter));
   filter.oper_mode = BaseMode;
 
   if (Enable) {
@@ -349,10 +346,10 @@ RegisterFilterIndex (
   filter.index = Index;
   CopyMem (filter.mac_address, MacAddress->Addr, OSI_ETH_ALEN);
   filter.dma_routing = EmacDriver->osi_core->dcs_en;
-  filter.dma_chan = EmacDriver->osi_dma->dma_chans[0];
-  filter.addr_mask = OSI_AMASK_DISABLE;
-  filter.src_dest = OSI_DA_MATCH;
-  osi_l2_filter(EmacDriver->osi_core, &filter);
+  filter.dma_chan    = EmacDriver->osi_dma->dma_chans[0];
+  filter.addr_mask   = OSI_AMASK_DISABLE;
+  filter.src_dest    = OSI_DA_MATCH;
+  osi_l2_filter (EmacDriver->osi_core, &filter);
 }
 
 /**
@@ -368,14 +365,14 @@ RegisterFilterIndex (
 EFI_STATUS
 EFIAPI
 SnpCommitFilters (
-  IN SIMPLE_NETWORK_DRIVER *Snp,
-  IN BOOLEAN               UpdateMac,
-  IN BOOLEAN               UpdateMCast
+  IN SIMPLE_NETWORK_DRIVER  *Snp,
+  IN BOOLEAN                UpdateMac,
+  IN BOOLEAN                UpdateMCast
   )
 {
-  UINT32 BaseMode;
-  UINT32 Index;
-  BOOLEAN BroadcastEnabled;
+  UINT32   BaseMode;
+  UINT32   Index;
+  BOOLEAN  BroadcastEnabled;
 
   BaseMode = OSI_OPER_EN_PERFECT;
 
@@ -389,32 +386,40 @@ SnpCommitFilters (
 
   BroadcastEnabled = (Snp->SnpMode.ReceiveFilterSetting & EFI_SIMPLE_NETWORK_RECEIVE_BROADCAST) != 0;
   if (BroadcastEnabled != Snp->BroadcastEnabled) {
-    RegisterFilterIndex (&Snp->MacDriver,
-                         &Snp->SnpMode.BroadcastAddress,
-                         BroadcastEnabled,
-                         ETHERNET_MAC_BROADCAST_INDEX,
-                         BaseMode);
+    RegisterFilterIndex (
+      &Snp->MacDriver,
+      &Snp->SnpMode.BroadcastAddress,
+      BroadcastEnabled,
+      ETHERNET_MAC_BROADCAST_INDEX,
+      BaseMode
+      );
     Snp->BroadcastEnabled = BroadcastEnabled;
   }
 
   if (UpdateMac) {
-    RegisterFilterIndex (&Snp->MacDriver,
-                         &Snp->SnpMode.CurrentAddress,
-                         TRUE,
-                         ETHERNET_MAC_ADDRESS_INDEX,
-                         BaseMode);
+    RegisterFilterIndex (
+      &Snp->MacDriver,
+      &Snp->SnpMode.CurrentAddress,
+      TRUE,
+      ETHERNET_MAC_ADDRESS_INDEX,
+      BaseMode
+      );
   }
 
   if (UpdateMCast) {
     for (Index = 0; Index < MAX (Snp->MulticastFiltersEnabled, Snp->SnpMode.MCastFilterCount); Index++) {
-      RegisterFilterIndex (&Snp->MacDriver,
-                           &Snp->SnpMode.MCastFilter[Index],
-                           Index < Snp->SnpMode.MCastFilterCount,
-                           ETHERNET_MAC_MULTICAST_INDEX + Index,
-                           BaseMode);
+      RegisterFilterIndex (
+        &Snp->MacDriver,
+        &Snp->SnpMode.MCastFilter[Index],
+        Index < Snp->SnpMode.MCastFilterCount,
+        ETHERNET_MAC_MULTICAST_INDEX + Index,
+        BaseMode
+        );
     }
+
     Snp->MulticastFiltersEnabled = Snp->SnpMode.MCastFilterCount;
   }
+
   return EFI_SUCCESS;
 }
 
@@ -515,17 +520,17 @@ SnpCommitFilters (
 EFI_STATUS
 EFIAPI
 SnpReceiveFilters (
-  IN  EFI_SIMPLE_NETWORK_PROTOCOL   *This,
-  IN  UINT32                        Enable,
-  IN  UINT32                        Disable,
-  IN  BOOLEAN                       ResetMCastFilter,
-  IN  UINTN                         MCastFilterCnt  OPTIONAL,
-  IN  EFI_MAC_ADDRESS               *MCastFilter    OPTIONAL
+  IN  EFI_SIMPLE_NETWORK_PROTOCOL  *This,
+  IN  UINT32                       Enable,
+  IN  UINT32                       Disable,
+  IN  BOOLEAN                      ResetMCastFilter,
+  IN  UINTN                        MCastFilterCnt  OPTIONAL,
+  IN  EFI_MAC_ADDRESS              *MCastFilter    OPTIONAL
   )
 {
-  UINT32                  ReceiveFilterSetting;
-  SIMPLE_NETWORK_DRIVER   *Snp;
-  BOOLEAN                 EnablingMulticast;
+  UINT32                 ReceiveFilterSetting;
+  SIMPLE_NETWORK_DRIVER  *Snp;
+  BOOLEAN                EnablingMulticast;
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
@@ -542,25 +547,28 @@ SnpReceiveFilters (
   }
 
   // Check that bits set in Enable/Disable are set in ReceiveFilterMask
-   if ((Enable  & (~Snp->SnpMode.ReceiveFilterMask)) ||
-      (Disable & (~Snp->SnpMode.ReceiveFilterMask))    ) {
+  if ((Enable  & (~Snp->SnpMode.ReceiveFilterMask)) ||
+      (Disable & (~Snp->SnpMode.ReceiveFilterMask)))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-   if (((Enable & EFI_SIMPLE_NETWORK_RECEIVE_MULTICAST) != 0) &&
-       ((Disable & EFI_SIMPLE_NETWORK_RECEIVE_MULTICAST) == 0) &&
-       (!ResetMCastFilter)) {
-     EnablingMulticast = TRUE;
-   } else {
-     EnablingMulticast = FALSE;
-   }
+  if (((Enable & EFI_SIMPLE_NETWORK_RECEIVE_MULTICAST) != 0) &&
+      ((Disable & EFI_SIMPLE_NETWORK_RECEIVE_MULTICAST) == 0) &&
+      (!ResetMCastFilter))
+  {
+    EnablingMulticast = TRUE;
+  } else {
+    EnablingMulticast = FALSE;
+  }
 
-   if (EnablingMulticast &&
-       ((MCastFilterCnt == 0) ||
-        (MCastFilter == NULL) ||
-        (MCastFilterCnt > Snp->SnpMode.MaxMCastFilterCount))) {
-     return EFI_INVALID_PARAMETER;
-   }
+  if (EnablingMulticast &&
+      ((MCastFilterCnt == 0) ||
+       (MCastFilter == NULL) ||
+       (MCastFilterCnt > Snp->SnpMode.MaxMCastFilterCount)))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
 
   // Get the filter mask bits that are set in Enable parameter or Disable Parameter
   // Same bits that are set in Enable/Disable parameters,
@@ -571,14 +579,13 @@ SnpReceiveFilters (
     Snp->SnpMode.MCastFilterCount = 0;
   } else if (EnablingMulticast) {
     Snp->SnpMode.MCastFilterCount = MCastFilterCnt;
-    CopyMem (Snp->SnpMode.MCastFilter, MCastFilter, sizeof(EFI_MAC_ADDRESS)*MCastFilterCnt);
+    CopyMem (Snp->SnpMode.MCastFilter, MCastFilter, sizeof (EFI_MAC_ADDRESS)*MCastFilterCnt);
   }
 
   Snp->SnpMode.ReceiveFilterSetting = ReceiveFilterSetting;
 
   return SnpCommitFilters (Snp, FALSE, ResetMCastFilter | EnablingMulticast);
 }
-
 
 /**
   Modifies or resets the current station address, if supported.
@@ -615,13 +622,13 @@ SnpReceiveFilters (
 EFI_STATUS
 EFIAPI
 SnpStationAddress (
-  IN  EFI_SIMPLE_NETWORK_PROTOCOL   *This,
-  IN  BOOLEAN                       Reset,
-  IN  EFI_MAC_ADDRESS               *NewMac
-)
+  IN  EFI_SIMPLE_NETWORK_PROTOCOL  *This,
+  IN  BOOLEAN                      Reset,
+  IN  EFI_MAC_ADDRESS              *NewMac
+  )
 {
-  SIMPLE_NETWORK_DRIVER     *Snp;
-  EFI_STATUS                 Status;
+  SIMPLE_NETWORK_DRIVER  *Snp;
+  EFI_STATUS             Status;
 
   // Check Snp Instance
   if (This == NULL) {
@@ -645,13 +652,12 @@ SnpStationAddress (
   } else {
     CopyMem (&Snp->SnpMode.CurrentAddress, NewMac, sizeof (Snp->SnpMode.CurrentAddress));
   }
+
   Status = SnpCommitFilters (Snp, TRUE, FALSE);
 
   UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
   return Status;
 }
-
-
 
 /**
   Resets or collects the statistics on a network interface.
@@ -703,17 +709,16 @@ SnpStationAddress (
 EFI_STATUS
 EFIAPI
 SnpStatistics (
-  IN       EFI_SIMPLE_NETWORK_PROTOCOL   *This,
-  IN       BOOLEAN                       Reset,
-  IN  OUT  UINTN                         *StatSize,
-      OUT  EFI_NETWORK_STATISTICS        *Statistics
+  IN       EFI_SIMPLE_NETWORK_PROTOCOL  *This,
+  IN       BOOLEAN                      Reset,
+  IN  OUT  UINTN                        *StatSize,
+  OUT  EFI_NETWORK_STATISTICS           *Statistics
   )
 {
   SIMPLE_NETWORK_DRIVER   *Snp;
-  EFI_STATUS               Status;
-  struct osi_ioctl         ioctl_data;
-  EFI_NETWORK_STATISTICS   LocalStats;
-
+  EFI_STATUS              Status;
+  struct osi_ioctl        ioctl_data;
+  EFI_NETWORK_STATISTICS  LocalStats;
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
@@ -745,7 +750,7 @@ SnpStatistics (
   if (Statistics != NULL) {
     osi_read_mmc (Snp->MacDriver.osi_core);
 
-    //Populate local copy of data structure to allow for partial read
+    // Populate local copy of data structure to allow for partial read
     LocalStats.RxTotalFrames     = Snp->MacDriver.osi_core->mmc.mmc_rx_framecount_gb;
     LocalStats.RxUndersizeFrames = Snp->MacDriver.osi_core->mmc.mmc_rx_undersize_g;
     LocalStats.RxOversizeFrames  = Snp->MacDriver.osi_core->mmc.mmc_rx_oversize_g;
@@ -768,13 +773,14 @@ SnpStatistics (
     LocalStats.Collisions        = Snp->MacDriver.osi_core->mmc.mmc_tx_latecol +
                                    Snp->MacDriver.osi_core->mmc.mmc_tx_exesscol;
     // Fill in the statistics
-    CopyMem (Statistics, &LocalStats, MIN (*StatSize, sizeof(EFI_NETWORK_STATISTICS)));
+    CopyMem (Statistics, &LocalStats, MIN (*StatSize, sizeof (EFI_NETWORK_STATISTICS)));
 
     // Check buffer size
-    if (*StatSize < sizeof(EFI_NETWORK_STATISTICS)) {
+    if (*StatSize < sizeof (EFI_NETWORK_STATISTICS)) {
       Status =  EFI_BUFFER_TOO_SMALL;
     }
-    *StatSize = sizeof(EFI_NETWORK_STATISTICS);
+
+    *StatSize = sizeof (EFI_NETWORK_STATISTICS);
   }
 
   return Status;
@@ -811,13 +817,12 @@ SnpStatistics (
 EFI_STATUS
 EFIAPI
 SnpMcastIptoMac (
-  IN   EFI_SIMPLE_NETWORK_PROTOCOL   *This,
-  IN   BOOLEAN                       IsIpv6,
-  IN   EFI_IP_ADDRESS                *Ip,
-  OUT  EFI_MAC_ADDRESS               *McastMac
+  IN   EFI_SIMPLE_NETWORK_PROTOCOL  *This,
+  IN   BOOLEAN                      IsIpv6,
+  IN   EFI_IP_ADDRESS               *Ip,
+  OUT  EFI_MAC_ADDRESS              *McastMac
   )
 {
-
   DEBUG ((DEBUG_INFO, "SNP:DXE: %a ()\r\n", __FUNCTION__));
 
   // Check Snp instance
@@ -842,7 +847,7 @@ SnpMcastIptoMac (
   }
 
   // Make sure MAC address is empty
-  ZeroMem (McastMac, sizeof(EFI_MAC_ADDRESS));
+  ZeroMem (McastMac, sizeof (EFI_MAC_ADDRESS));
 
   // If we need ipv4 address
   if (!IsIpv6) {
@@ -871,7 +876,6 @@ SnpMcastIptoMac (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Performs read and write operations on the NVRAM device attached to a network
@@ -927,16 +931,15 @@ SnpMcastIptoMac (
 EFI_STATUS
 EFIAPI
 SnpNvData (
-  IN  EFI_SIMPLE_NETWORK_PROTOCOL   *This,
-  IN  BOOLEAN                       ReadWrite,
-  IN  UINTN                         Offset,
-  IN  UINTN                         BufferSize,
-  IN  OUT VOID                      *Buffer
+  IN  EFI_SIMPLE_NETWORK_PROTOCOL  *This,
+  IN  BOOLEAN                      ReadWrite,
+  IN  UINTN                        Offset,
+  IN  UINTN                        BufferSize,
+  IN  OUT VOID                     *Buffer
   )
 {
   return EFI_UNSUPPORTED;
 }
-
 
 /**
   Reads the current interrupt status and recycled transmit buffer status from a
@@ -979,14 +982,14 @@ SnpNvData (
 EFI_STATUS
 EFIAPI
 SnpGetStatus (
-  IN   EFI_SIMPLE_NETWORK_PROTOCOL   *This,
-  OUT  UINT32                        *IrqStat  OPTIONAL,
-  OUT  VOID                          **TxBuff  OPTIONAL
+  IN   EFI_SIMPLE_NETWORK_PROTOCOL  *This,
+  OUT  UINT32                       *IrqStat  OPTIONAL,
+  OUT  VOID                         **TxBuff  OPTIONAL
   )
 {
-  EFI_STATUS                 Status;
-  SIMPLE_NETWORK_DRIVER      *Snp;
-  UINT32                     more_data_avail;
+  EFI_STATUS             Status;
+  SIMPLE_NETWORK_DRIVER  *Snp;
+  UINT32                 more_data_avail;
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
@@ -994,6 +997,7 @@ SnpGetStatus (
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
   }
+
   if (Snp->SnpMode.State == EfiSimpleNetworkStopped) {
     return EFI_NOT_STARTED;
   } else if (Snp->SnpMode.State == EfiSimpleNetworkStarted) {
@@ -1001,13 +1005,15 @@ SnpGetStatus (
   }
 
   // Check DMA irq status
-  if(IrqStat != NULL) {
+  if (IrqStat != NULL) {
     EfiAcquireLock (&Snp->Lock);
     *IrqStat = 0;
-    if ((osi_txring_empty(Snp->MacDriver.osi_dma, 0) == 0) &&
-        (Snp->MacDriver.tx_completed_buffer == NULL)) {
-      osi_process_tx_completions(Snp->MacDriver.osi_dma, 0, 1);
+    if ((osi_txring_empty (Snp->MacDriver.osi_dma, 0) == 0) &&
+        (Snp->MacDriver.tx_completed_buffer == NULL))
+    {
+      osi_process_tx_completions (Snp->MacDriver.osi_dma, 0, 1);
     }
+
     if (Snp->MacDriver.tx_completed_buffer != NULL) {
       *IrqStat |= EFI_SIMPLE_NETWORK_TRANSMIT_INTERRUPT;
     }
@@ -1015,17 +1021,18 @@ SnpGetStatus (
     if (Snp->MacDriver.rx_pkt_swcx != NULL) {
       *IrqStat |= EFI_SIMPLE_NETWORK_RECEIVE_INTERRUPT;
     } else {
-      osi_process_rx_completions(Snp->MacDriver.osi_dma, 0, 0, &more_data_avail);
+      osi_process_rx_completions (Snp->MacDriver.osi_dma, 0, 0, &more_data_avail);
       if (more_data_avail == OSI_ENABLE) {
         *IrqStat |= EFI_SIMPLE_NETWORK_RECEIVE_INTERRUPT;
       }
     }
+
     EfiReleaseLock (&Snp->Lock);
   }
 
   // Update the media status
   Status = PhyLinkAdjustEmacConfig (&Snp->PhyDriver);
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     Snp->SnpMode.MediaPresent = FALSE;
   } else {
     Snp->SnpMode.MediaPresent = TRUE;
@@ -1034,18 +1041,19 @@ SnpGetStatus (
   // TxBuff
   if (TxBuff != NULL) {
     EfiAcquireLock (&Snp->Lock);
-    if ((osi_txring_empty(Snp->MacDriver.osi_dma, 0) == 0) &&
-        (Snp->MacDriver.tx_completed_buffer == NULL)) {
-      osi_process_tx_completions(Snp->MacDriver.osi_dma, 0, 1);
+    if ((osi_txring_empty (Snp->MacDriver.osi_dma, 0) == 0) &&
+        (Snp->MacDriver.tx_completed_buffer == NULL))
+    {
+      osi_process_tx_completions (Snp->MacDriver.osi_dma, 0, 1);
     }
-    *TxBuff = Snp->MacDriver.tx_completed_buffer;
+
+    *TxBuff                            = Snp->MacDriver.tx_completed_buffer;
     Snp->MacDriver.tx_completed_buffer = NULL;
     EfiReleaseLock (&Snp->Lock);
   }
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Places a packet in the transmit queue of a network interface.
@@ -1102,32 +1110,29 @@ SnpGetStatus (
   @retval EFI_ACCESS_DENIED     Error acquire global lock for operation.
 
 **/
-
-
-
 EFI_STATUS
 EFIAPI
 SnpTransmit (
-  IN  EFI_SIMPLE_NETWORK_PROTOCOL   *This,
-  IN  UINTN                         HdrSize,
-  IN  UINTN                         BuffSize,
-  IN  VOID                          *Data,
-  IN  EFI_MAC_ADDRESS               *SrcAddr  OPTIONAL,
-  IN  EFI_MAC_ADDRESS               *DstAddr  OPTIONAL,
-  IN  UINT16                        *Protocol OPTIONAL
+  IN  EFI_SIMPLE_NETWORK_PROTOCOL  *This,
+  IN  UINTN                        HdrSize,
+  IN  UINTN                        BuffSize,
+  IN  VOID                         *Data,
+  IN  EFI_MAC_ADDRESS              *SrcAddr  OPTIONAL,
+  IN  EFI_MAC_ADDRESS              *DstAddr  OPTIONAL,
+  IN  UINT16                       *Protocol OPTIONAL
   )
 {
-  SIMPLE_NETWORK_DRIVER      *Snp;
-  UINT8                      *EthernetPacket;
-  EFI_STATUS                 Status;
-  BOOLEAN                    LockAcquired;
-  struct osi_dma_priv_data   *osi_dma;
-  struct osi_tx_ring         *tx_ring;
-  struct osi_tx_swcx         *tx_swcx;
-  struct osi_tx_pkt_cx       *tx_pkt_cx;
+  SIMPLE_NETWORK_DRIVER     *Snp;
+  UINT8                     *EthernetPacket;
+  EFI_STATUS                Status;
+  BOOLEAN                   LockAcquired;
+  struct osi_dma_priv_data  *osi_dma;
+  struct osi_tx_ring        *tx_ring;
+  struct osi_tx_swcx        *tx_swcx;
+  struct osi_tx_pkt_cx      *tx_pkt_cx;
 
   EthernetPacket = Data;
-  LockAcquired = FALSE;
+  LockAcquired   = FALSE;
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
@@ -1137,8 +1142,8 @@ SnpTransmit (
     goto Exit;
   }
 
-  osi_dma = Snp->MacDriver.osi_dma;
-  tx_ring = osi_dma->tx_ring[0];
+  osi_dma   = Snp->MacDriver.osi_dma;
+  tx_ring   = osi_dma->tx_ring[0];
   tx_pkt_cx = &tx_ring->tx_pkt_cx;
 
   if (EFI_ERROR (EfiAcquireLockOrFail (&Snp->Lock))) {
@@ -1146,6 +1151,7 @@ SnpTransmit (
     Status = EFI_ACCESS_DENIED;
     goto Exit;
   }
+
   LockAcquired = TRUE;
 
   if (Snp->SnpMode.State == EfiSimpleNetworkStopped) {
@@ -1156,7 +1162,7 @@ SnpTransmit (
     goto Exit;
   }
 
-  //Make sure slot is free i.e, current shadow desc. len should be 0
+  // Make sure slot is free i.e, current shadow desc. len should be 0
   tx_swcx = tx_ring->tx_swcx + tx_ring->cur_tx_idx;
   if (tx_swcx->len != 0) {
     Status = EFI_NOT_READY;
@@ -1164,7 +1170,7 @@ SnpTransmit (
   }
 
   if (BuffSize > Snp->SnpMode.MaxPacketSize) {
-    DEBUG((DEBUG_ERROR, "Tx buffer size > %d\r\n", Snp->SnpMode.MaxPacketSize));
+    DEBUG ((DEBUG_ERROR, "Tx buffer size > %d\r\n", Snp->SnpMode.MaxPacketSize));
     Status = EFI_UNSUPPORTED;
   }
 
@@ -1196,10 +1202,10 @@ SnpTransmit (
     EthernetPacket[4] = DstAddr->Addr[4];
     EthernetPacket[5] = DstAddr->Addr[5];
 
-    EthernetPacket[6] = SrcAddr->Addr[0];
-    EthernetPacket[7] = SrcAddr->Addr[1];
-    EthernetPacket[8] = SrcAddr->Addr[2];
-    EthernetPacket[9] = SrcAddr->Addr[3];
+    EthernetPacket[6]  = SrcAddr->Addr[0];
+    EthernetPacket[7]  = SrcAddr->Addr[1];
+    EthernetPacket[8]  = SrcAddr->Addr[2];
+    EthernetPacket[9]  = SrcAddr->Addr[3];
     EthernetPacket[10] = SrcAddr->Addr[4];
     EthernetPacket[11] = SrcAddr->Addr[5];
 
@@ -1210,18 +1216,19 @@ SnpTransmit (
   CopyMem ((VOID *)Snp->MacDriver.tx_buffers[tx_ring->cur_tx_idx], Data, BuffSize);
   tx_swcx->buf_phy_addr = (UINTN)Snp->MacDriver.tx_buffers[tx_ring->cur_tx_idx];
 
-  tx_pkt_cx->flags |= OSI_PKT_CX_CSUM;
-  tx_pkt_cx->desc_cnt = 1;
+  tx_pkt_cx->flags      |= OSI_PKT_CX_CSUM;
+  tx_pkt_cx->desc_cnt    = 1;
   tx_swcx->buf_virt_addr = Data;
-  tx_swcx->len = BuffSize;
+  tx_swcx->len           = BuffSize;
 
-  osi_hw_transmit(osi_dma, 0);
+  osi_hw_transmit (osi_dma, 0);
   Status = EFI_SUCCESS;
 
 Exit:
   if (LockAcquired) {
     EfiReleaseLock (&Snp->Lock);
   }
+
   return Status;
 }
 
@@ -1277,26 +1284,25 @@ Exit:
 EFI_STATUS
 EFIAPI
 SnpReceive (
-  IN       EFI_SIMPLE_NETWORK_PROTOCOL   *This,
-      OUT  UINTN                         *HdrSize      OPTIONAL,
-  IN  OUT  UINTN                         *BuffSize,
-      OUT  VOID                          *Data,
-      OUT  EFI_MAC_ADDRESS               *SrcAddr      OPTIONAL,
-      OUT  EFI_MAC_ADDRESS               *DstAddr      OPTIONAL,
-      OUT  UINT16                        *Protocol     OPTIONAL
+  IN       EFI_SIMPLE_NETWORK_PROTOCOL  *This,
+  OUT  UINTN                            *HdrSize      OPTIONAL,
+  IN  OUT  UINTN                        *BuffSize,
+  OUT  VOID                             *Data,
+  OUT  EFI_MAC_ADDRESS                  *SrcAddr      OPTIONAL,
+  OUT  EFI_MAC_ADDRESS                  *DstAddr      OPTIONAL,
+  OUT  UINT16                           *Protocol     OPTIONAL
   )
 {
-  SIMPLE_NETWORK_DRIVER      *Snp;
-  EFI_MAC_ADDRESS            Dst;
-  EFI_MAC_ADDRESS            Src;
-  EFI_STATUS                 Status;
-  UINT8                      *u_char_data = Data;
-  UINT32                     more_data_avail;
-  BOOLEAN                    ReleasePacket;
-
+  SIMPLE_NETWORK_DRIVER  *Snp;
+  EFI_MAC_ADDRESS        Dst;
+  EFI_MAC_ADDRESS        Src;
+  EFI_STATUS             Status;
+  UINT8                  *u_char_data = Data;
+  UINT32                 more_data_avail;
+  BOOLEAN                ReleasePacket;
 
   ReleasePacket = FALSE;
-  Snp = INSTANCE_FROM_SNP_THIS (This);
+  Snp           = INSTANCE_FROM_SNP_THIS (This);
 
   // Check preliminaries
   if ((This == NULL) || (Data == NULL)) {
@@ -1315,7 +1321,7 @@ SnpReceive (
   }
 
   if (Snp->MacDriver.rx_pkt_swcx == NULL) {
-    osi_process_rx_completions(Snp->MacDriver.osi_dma, 0, 1, &more_data_avail);
+    osi_process_rx_completions (Snp->MacDriver.osi_dma, 0, 1, &more_data_avail);
   }
 
   if (Snp->MacDriver.rx_pkt_swcx == NULL) {
@@ -1324,13 +1330,13 @@ SnpReceive (
   }
 
   if ((Snp->MacDriver.rxpkt_cx->flags & OSI_PKT_CX_VALID) == 0) {
-    Status = EFI_DEVICE_ERROR;
+    Status        = EFI_DEVICE_ERROR;
     ReleasePacket = TRUE;
     goto Exit;
   }
 
   if (*BuffSize < Snp->MacDriver.rxpkt_cx->pkt_len) {
-    DEBUG((DEBUG_ERROR, "Rx buffer %u < packet length %ld\n", *BuffSize, Snp->MacDriver.rxpkt_cx->pkt_len));
+    DEBUG ((DEBUG_ERROR, "Rx buffer %u < packet length %ld\n", *BuffSize, Snp->MacDriver.rxpkt_cx->pkt_len));
     Status = EFI_BUFFER_TOO_SMALL;
     /* Indicate the needed buffer size to the stack */
     *BuffSize = Snp->MacDriver.rxpkt_cx->pkt_len;
@@ -1338,7 +1344,7 @@ SnpReceive (
   }
 
   ReleasePacket = TRUE;
-  CopyMem (Data, Snp->MacDriver.rx_pkt_swcx->buf_virt_addr ,Snp->MacDriver.rxpkt_cx->pkt_len);
+  CopyMem (Data, Snp->MacDriver.rx_pkt_swcx->buf_virt_addr, Snp->MacDriver.rxpkt_cx->pkt_len);
 
   if (HdrSize != NULL) {
     *HdrSize = Snp->SnpMode.MediaHeaderSize;
@@ -1375,11 +1381,11 @@ SnpReceive (
 Exit:
   if (ReleasePacket) {
     Snp->MacDriver.rx_pkt_swcx->flags |= OSI_RX_SWCX_BUF_VALID;
-    Snp->MacDriver.rx_pkt_swcx = NULL;
-    Snp->MacDriver.rxpkt_cx = NULL;
+    Snp->MacDriver.rx_pkt_swcx         = NULL;
+    Snp->MacDriver.rxpkt_cx            = NULL;
     osi_rx_dma_desc_init (Snp->MacDriver.osi_dma, Snp->MacDriver.osi_dma->rx_ring[0], 0);
   }
+
   EfiReleaseLock (&Snp->Lock);
   return Status;
 }
-

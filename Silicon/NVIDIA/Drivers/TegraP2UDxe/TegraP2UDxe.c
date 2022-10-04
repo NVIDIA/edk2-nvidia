@@ -25,24 +25,24 @@
 
 #include "TegraP2UDxePrivate.h"
 
-#define BIT(x)   (1 << (x))
+#define BIT(x)  (1 << (x))
 
-#define P2U_CONTROL_CMN                                     0x74
-#define P2U_CONTROL_CMN_ENABLE_L2_EXIT_RATE_CHANGE          BIT(13)
-#define P2U_CONTROL_CMN_SKP_SIZE_PROTECTION_EN              BIT(20)
+#define P2U_CONTROL_CMN                             0x74
+#define P2U_CONTROL_CMN_ENABLE_L2_EXIT_RATE_CHANGE  BIT(13)
+#define P2U_CONTROL_CMN_SKP_SIZE_PROTECTION_EN      BIT(20)
 
-#define P2U_PERIODIC_EQ_CTRL_GEN3                           0xc0
-#define P2U_PERIODIC_EQ_CTRL_GEN3_PERIODIC_EQ_EN            BIT(0)
-#define P2U_PERIODIC_EQ_CTRL_GEN3_INIT_PRESET_EQ_TRAIN_EN   BIT(1)
-#define P2U_PERIODIC_EQ_CTRL_GEN4                           0xc4
-#define P2U_PERIODIC_EQ_CTRL_GEN4_INIT_PRESET_EQ_TRAIN_EN   BIT(1)
+#define P2U_PERIODIC_EQ_CTRL_GEN3                          0xc0
+#define P2U_PERIODIC_EQ_CTRL_GEN3_PERIODIC_EQ_EN           BIT(0)
+#define P2U_PERIODIC_EQ_CTRL_GEN3_INIT_PRESET_EQ_TRAIN_EN  BIT(1)
+#define P2U_PERIODIC_EQ_CTRL_GEN4                          0xc4
+#define P2U_PERIODIC_EQ_CTRL_GEN4_INIT_PRESET_EQ_TRAIN_EN  BIT(1)
 
-#define P2U_RX_DEBOUNCE_TIME                                0xa4
-#define P2U_RX_DEBOUNCE_TIME_DEBOUNCE_TIMER_MASK            0xffff
-#define P2U_RX_DEBOUNCE_TIME_DEBOUNCE_TIMER_VAL             160
+#define P2U_RX_DEBOUNCE_TIME                      0xa4
+#define P2U_RX_DEBOUNCE_TIME_DEBOUNCE_TIMER_MASK  0xffff
+#define P2U_RX_DEBOUNCE_TIME_DEBOUNCE_TIMER_VAL   160
 
-#define P2U_DIR_SEARCH_CTRL                                 0xd4
-#define P2U_DIR_SEARCH_CTRL_GEN4_FINE_GRAIN_SEARCH_TWICE    BIT(18)
+#define P2U_DIR_SEARCH_CTRL                               0xd4
+#define P2U_DIR_SEARCH_CTRL_GEN4_FINE_GRAIN_SEARCH_TWICE  BIT(18)
 
 /**
   Function map region into GCD and MMU
@@ -55,47 +55,54 @@
 **/
 EFI_STATUS
 AddMemoryRegion (
-  IN  UINT64                              BaseAddress,
-  IN  UINT64                              Size
+  IN  UINT64  BaseAddress,
+  IN  UINT64  Size
   )
 {
-  EFI_STATUS Status;
-  UINT64 AlignedBaseAddress = BaseAddress & ~(SIZE_4KB-1);
-  UINT64 AlignedSize = Size + (BaseAddress - AlignedBaseAddress);
-  UINT64 AlignedEnd;
-  UINT64 ScanLocation;
+  EFI_STATUS  Status;
+  UINT64      AlignedBaseAddress = BaseAddress & ~(SIZE_4KB-1);
+  UINT64      AlignedSize        = Size + (BaseAddress - AlignedBaseAddress);
+  UINT64      AlignedEnd;
+  UINT64      ScanLocation;
+
   AlignedSize = ALIGN_VALUE (Size, SIZE_4KB);
-  AlignedEnd = AlignedBaseAddress + AlignedSize;
+  AlignedEnd  = AlignedBaseAddress + AlignedSize;
 
   ScanLocation = AlignedBaseAddress;
   while (ScanLocation < AlignedEnd) {
-    EFI_GCD_MEMORY_SPACE_DESCRIPTOR MemorySpace;
-    UINT64                          OverlapSize;
+    EFI_GCD_MEMORY_SPACE_DESCRIPTOR  MemorySpace;
+    UINT64                           OverlapSize;
 
     Status = gDS->GetMemorySpaceDescriptor (ScanLocation, &MemorySpace);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to GetMemorySpaceDescriptor (0x%llx): %r.\r\n", __FUNCTION__, ScanLocation, Status));
       return Status;
     }
+
     OverlapSize = MIN (MemorySpace.BaseAddress + MemorySpace.Length, AlignedEnd) - ScanLocation;
     if (MemorySpace.GcdMemoryType == EfiGcdMemoryTypeNonExistent) {
-      Status = gDS->AddMemorySpace (EfiGcdMemoryTypeMemoryMappedIo,
-                                    ScanLocation,
-                                    OverlapSize,
-                                    EFI_MEMORY_UC | EFI_MEMORY_RUNTIME);
+      Status = gDS->AddMemorySpace (
+                      EfiGcdMemoryTypeMemoryMappedIo,
+                      ScanLocation,
+                      OverlapSize,
+                      EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
+                      );
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "%a: Failed to AddMemorySpace: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
         return Status;
       }
 
-      Status = gDS->SetMemorySpaceAttributes (ScanLocation,
-                                              OverlapSize,
-                                              EFI_MEMORY_UC);
+      Status = gDS->SetMemorySpaceAttributes (
+                      ScanLocation,
+                      OverlapSize,
+                      EFI_MEMORY_UC
+                      );
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "%a: Failed to SetMemorySpaceAttributes: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
         return Status;
       }
     }
+
     ScanLocation += OverlapSize;
   }
 
@@ -114,25 +121,28 @@ AddMemoryRegion (
 STATIC
 TEGRAP2U_LIST_ENTRY *
 FindP2UEntry (
-    IN LIST_ENTRY  *TegraP2UList,
-    IN UINT32      P2UId
-    )
+  IN LIST_ENTRY  *TegraP2UList,
+  IN UINT32      P2UId
+  )
 {
-  LIST_ENTRY *ListNode;
+  LIST_ENTRY  *ListNode;
+
   if (NULL == TegraP2UList) {
     return NULL;
   }
 
   ListNode = GetFirstNode (TegraP2UList);
   while (ListNode != TegraP2UList) {
-    TEGRAP2U_LIST_ENTRY *Entry = TEGRAP2U_LIST_FROM_LINK (ListNode);
+    TEGRAP2U_LIST_ENTRY  *Entry = TEGRAP2U_LIST_FROM_LINK (ListNode);
     if (Entry != NULL) {
       if (Entry->P2UId == P2UId) {
         return Entry;
       }
     }
+
     ListNode = GetNextNode (TegraP2UList, ListNode);
   }
+
   return NULL;
 }
 
@@ -152,52 +162,57 @@ STATIC
 EFI_STATUS
 TegraP2UInit (
   IN NVIDIA_TEGRAP2U_PROTOCOL  *This,
-  IN UINT32                     P2UId
+  IN UINT32                    P2UId
   )
 {
-  TEGRAP2U_DXE_PRIVATE *Private;
-  TEGRAP2U_LIST_ENTRY  *Entry;
-  UINT32 val;
-  UINTN ChipID;
+  TEGRAP2U_DXE_PRIVATE  *Private;
+  TEGRAP2U_LIST_ENTRY   *Entry;
+  UINT32                val;
+  UINTN                 ChipID;
 
-  ChipID = TegraGetChipID();
+  ChipID = TegraGetChipID ();
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
   }
+
   Private = TEGRAP2U_PRIVATE_DATA_FROM_THIS (This);
 
-  Entry = FindP2UEntry(&Private->TegraP2UList, P2UId);
+  Entry = FindP2UEntry (&Private->TegraP2UList, P2UId);
   if (Entry == NULL) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to find P2U Entry\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
-  DEBUG ((EFI_D_VERBOSE, "%a: P2U Base Addr = 0x%08X\r\n", __FUNCTION__,
-         Entry->BaseAddr));
+  DEBUG ((
+    EFI_D_VERBOSE,
+    "%a: P2U Base Addr = 0x%08X\r\n",
+    __FUNCTION__,
+    Entry->BaseAddr
+    ));
 
   if (Entry->SkipSizeProtectionEn) {
-    val = MmioRead32(Entry->BaseAddr + P2U_CONTROL_CMN);
+    val  = MmioRead32 (Entry->BaseAddr + P2U_CONTROL_CMN);
     val |= P2U_CONTROL_CMN_SKP_SIZE_PROTECTION_EN;
     MmioWrite32 (Entry->BaseAddr + P2U_CONTROL_CMN, val);
   }
 
-  val = MmioRead32(Entry->BaseAddr + P2U_PERIODIC_EQ_CTRL_GEN3);
+  val  = MmioRead32 (Entry->BaseAddr + P2U_PERIODIC_EQ_CTRL_GEN3);
   val &= ~P2U_PERIODIC_EQ_CTRL_GEN3_PERIODIC_EQ_EN;
   val |= P2U_PERIODIC_EQ_CTRL_GEN3_INIT_PRESET_EQ_TRAIN_EN;
   MmioWrite32 (Entry->BaseAddr + P2U_PERIODIC_EQ_CTRL_GEN3, val);
 
-  val = MmioRead32(Entry->BaseAddr + P2U_PERIODIC_EQ_CTRL_GEN4);
+  val  = MmioRead32 (Entry->BaseAddr + P2U_PERIODIC_EQ_CTRL_GEN4);
   val |= P2U_PERIODIC_EQ_CTRL_GEN4_INIT_PRESET_EQ_TRAIN_EN;
   MmioWrite32 (Entry->BaseAddr + P2U_PERIODIC_EQ_CTRL_GEN4, val);
 
-  val = MmioRead32(Entry->BaseAddr + P2U_RX_DEBOUNCE_TIME);
+  val  = MmioRead32 (Entry->BaseAddr + P2U_RX_DEBOUNCE_TIME);
   val &= ~P2U_RX_DEBOUNCE_TIME_DEBOUNCE_TIMER_MASK;
   val |= P2U_RX_DEBOUNCE_TIME_DEBOUNCE_TIMER_VAL;
   MmioWrite32 (Entry->BaseAddr + P2U_RX_DEBOUNCE_TIME, val);
 
   if (ChipID == T234_CHIP_ID ) {
-    val = MmioRead32(Entry->BaseAddr + P2U_DIR_SEARCH_CTRL);
+    val  = MmioRead32 (Entry->BaseAddr + P2U_DIR_SEARCH_CTRL);
     val &= ~P2U_DIR_SEARCH_CTRL_GEN4_FINE_GRAIN_SEARCH_TWICE;
     MmioWrite32 (Entry->BaseAddr + P2U_DIR_SEARCH_CTRL, val);
   }
@@ -216,20 +231,20 @@ TegraP2UInit (
 STATIC
 EFI_STATUS
 AddP2UEntries (
-  IN TEGRAP2U_DXE_PRIVATE *Private
+  IN TEGRAP2U_DXE_PRIVATE  *Private
   )
 {
-  INT32 NodeOffset = -1;
-  UINTN ChipID;
+  INT32  NodeOffset = -1;
+  UINTN  ChipID;
 
   if (NULL == Private) {
     return EFI_INVALID_PARAMETER;
   }
 
-  ChipID = TegraGetChipID();
+  ChipID = TegraGetChipID ();
 
   do {
-    TEGRAP2U_LIST_ENTRY *ListEntry = NULL;
+    TEGRAP2U_LIST_ENTRY  *ListEntry = NULL;
     INT32                PropertySize;
     CONST VOID           *RegProperty = NULL;
     EFI_STATUS           Status;
@@ -239,19 +254,23 @@ AddP2UEntries (
      * we attempt to find all of them and create a list.
      */
     if (ChipID == T194_CHIP_ID) {
-      NodeOffset = fdt_node_offset_by_compatible (Private->DeviceTreeBase,
-                                                  NodeOffset,
-                                                  "nvidia,tegra194-p2u");
+      NodeOffset = fdt_node_offset_by_compatible (
+                     Private->DeviceTreeBase,
+                     NodeOffset,
+                     "nvidia,tegra194-p2u"
+                     );
       if (NodeOffset <= 0) {
         break;
       }
     } else if (ChipID == T234_CHIP_ID) {
-      NodeOffset = fdt_node_offset_by_compatible (Private->DeviceTreeBase,
-                                                  NodeOffset,
-                                                  "nvidia,tegra234-p2u");
+      NodeOffset = fdt_node_offset_by_compatible (
+                     Private->DeviceTreeBase,
+                     NodeOffset,
+                     "nvidia,tegra234-p2u"
+                     );
       if (NodeOffset <= 0) {
         break;
-        }
+      }
     }
 
     ListEntry = AllocateZeroPool (sizeof (TEGRAP2U_LIST_ENTRY));
@@ -266,36 +285,50 @@ AddP2UEntries (
     Private->TegraP2Us++;
     ListEntry->P2UId = fdt_get_phandle (Private->DeviceTreeBase, NodeOffset);
 
-    RegProperty = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "reg",
-                               &PropertySize);
+    RegProperty = fdt_getprop (
+                    Private->DeviceTreeBase,
+                    NodeOffset,
+                    "reg",
+                    &PropertySize
+                    );
     if (RegProperty == NULL) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to find \"reg\" entry\r\n", __FUNCTION__));
       return EFI_NOT_FOUND;
     }
+
     CopyMem ((VOID *)&ListEntry->BaseAddr, RegProperty, sizeof (UINT32));
     ListEntry->BaseAddr = SwapBytes32 (ListEntry->BaseAddr);
-    DEBUG ((EFI_D_VERBOSE, "%a: P2U Base Addr = 0x%08X\r\n", __FUNCTION__,
-           ListEntry->BaseAddr));
+    DEBUG ((
+      EFI_D_VERBOSE,
+      "%a: P2U Base Addr = 0x%08X\r\n",
+      __FUNCTION__,
+      ListEntry->BaseAddr
+      ));
 
     Status = AddMemoryRegion (ListEntry->BaseAddr, SIZE_64KB);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to add region 0x%016lx, 0x%016lx: %r.\r\n",
-             __FUNCTION__,
-             ListEntry->BaseAddr,
-             SIZE_64KB,
-             Status));
+      DEBUG ((
+        EFI_D_ERROR,
+        "%a: Failed to add region 0x%016lx, 0x%016lx: %r.\r\n",
+        __FUNCTION__,
+        ListEntry->BaseAddr,
+        SIZE_64KB,
+        Status
+        ));
       return EFI_DEVICE_ERROR;
     }
 
-    if (NULL != fdt_get_property (Private->DeviceTreeBase,
-                                  NodeOffset,
-                                  "nvidia,skip-sz-protect-en",
-                                  NULL)) {
+    if (NULL != fdt_get_property (
+                  Private->DeviceTreeBase,
+                  NodeOffset,
+                  "nvidia,skip-sz-protect-en",
+                  NULL
+                  ))
+    {
       ListEntry->SkipSizeProtectionEn = TRUE;
     } else {
       ListEntry->SkipSizeProtectionEn = FALSE;
     }
-
   } while (1);
 
   return EFI_SUCCESS;
@@ -312,10 +345,10 @@ AddP2UEntries (
 STATIC
 EFI_STATUS
 BuildP2UNodes (
-  IN TEGRAP2U_DXE_PRIVATE *Private
+  IN TEGRAP2U_DXE_PRIVATE  *Private
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   if (NULL == Private) {
     return EFI_INVALID_PARAMETER;
@@ -349,12 +382,12 @@ BuildP2UNodes (
 **/
 EFI_STATUS
 TegraP2UDxeInitialize (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   EFI_STATUS            Status;
-  TEGRAP2U_DXE_PRIVATE *Private = NULL;
+  TEGRAP2U_DXE_PRIVATE  *Private = NULL;
 
   Private = AllocatePool (sizeof (TEGRAP2U_DXE_PRIVATE));
   if (NULL == Private) {
@@ -362,10 +395,10 @@ TegraP2UDxeInitialize (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Private->Signature = TEGRAP2U_SIGNATURE;
+  Private->Signature             = TEGRAP2U_SIGNATURE;
   Private->TegraP2UProtocol.Init = TegraP2UInit;
   InitializeListHead (&Private->TegraP2UList);
-  Private->TegraP2Us = 0;
+  Private->TegraP2Us   = 0;
   Private->ImageHandle = ImageHandle;
 
   /*
@@ -401,7 +434,7 @@ TegraP2UDxeInitialize (
 ErrorExit:
   if (EFI_ERROR (Status)) {
     while (!IsListEmpty (&Private->TegraP2UList)) {
-      TEGRAP2U_LIST_ENTRY *Entry;
+      TEGRAP2U_LIST_ENTRY  *Entry;
       LIST_ENTRY           *Node = GetFirstNode (&Private->TegraP2UList);
       RemoveEntryList (Node);
       Entry = TEGRAP2U_LIST_FROM_LINK (Node);
@@ -409,6 +442,7 @@ ErrorExit:
         FreePool (Entry);
       }
     }
+
     Private->TegraP2Us = 0;
 
 ErrorBuildP2UNodes:

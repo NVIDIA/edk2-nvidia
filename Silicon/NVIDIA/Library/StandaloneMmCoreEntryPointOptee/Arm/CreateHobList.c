@@ -203,16 +203,19 @@ CreateHobListFromBootInfo (
   MmramRanges[5].PhysicalSize  = HobStart->EfiFreeMemoryTop - HobStart->EfiFreeMemoryBottom;
   MmramRanges[5].RegionState   = EFI_CACHEABLE;
 
-  BufferSize = MAX_DEVICE_REGIONS * sizeof (EFI_MM_DEVICE_REGION);
+  BufferSize       = MAX_DEVICE_REGIONS * sizeof (EFI_MM_DEVICE_REGION);
   DeviceRegionData = BuildGuidHob (&gEfiStandaloneMmDeviceMemoryRegions, BufferSize);
   for (Index = 0; Index < MAX_DEVICE_REGIONS; Index++) {
-    CopyMem (DeviceRegionData[Index].DeviceRegionName,
-             PayloadBootInfo->DeviceRegions[Index].RegionName,
-             DEVICE_REGION_NAME_MAX_LEN);
+    CopyMem (
+      DeviceRegionData[Index].DeviceRegionName,
+      PayloadBootInfo->DeviceRegions[Index].RegionName,
+      DEVICE_REGION_NAME_MAX_LEN
+      );
     DeviceRegionData[Index].DeviceRegionStart =
-              PayloadBootInfo->DeviceRegions[Index].RegionVaddr;
+      PayloadBootInfo->DeviceRegions[Index].RegionVaddr;
     DeviceRegionData[Index].DeviceRegionSize =
-              PayloadBootInfo->DeviceRegions[Index].RegionSize;
+      PayloadBootInfo->DeviceRegions[Index].RegionSize;
   }
+
   return HobStart;
 }

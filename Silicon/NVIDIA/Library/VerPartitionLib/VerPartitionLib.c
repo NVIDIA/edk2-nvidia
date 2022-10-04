@@ -28,12 +28,12 @@
 // BYTES:107 CRC32:4EFF24B8
 //
 
-#define VERSION_STR_ID          "NV4"
-#define VERSION_STR_CRC32       "CRC32:"
+#define VERSION_STR_ID     "NV4"
+#define VERSION_STR_CRC32  "CRC32:"
 
-#define VERSION_STRING_LINE     2
-#define VERSION32_LINE          5
-#define VERSION_CRC32_LINE      6
+#define VERSION_STRING_LINE  2
+#define VERSION32_LINE       5
+#define VERSION_CRC32_LINE   6
 
 /**
   Return pointer to given line number in string
@@ -49,12 +49,12 @@ STATIC
 CONST CHAR8 *
 EFIAPI
 AsciiFindLine (
-  IN  CONST CHAR8   *String,
-  IN  UINTN         LineNumber
+  IN  CONST CHAR8  *String,
+  IN  UINTN        LineNumber
   )
 {
-  UINTN         Index;
-  CONST CHAR8   *Line;
+  UINTN        Index;
+  CONST CHAR8  *Line;
 
   Line = String;
   for (Index = 1; Index < LineNumber; Index++) {
@@ -62,6 +62,7 @@ AsciiFindLine (
     if (Line == NULL) {
       break;
     }
+
     Line++;
   }
 
@@ -71,31 +72,35 @@ AsciiFindLine (
 EFI_STATUS
 EFIAPI
 VerPartitionGetVersion (
-  IN  VOID          *Data,
-  IN  UINTN         DataLen,
-  OUT UINT32        *Version,
-  OUT CHAR8         **VersionString
+  IN  VOID    *Data,
+  IN  UINTN   DataLen,
+  OUT UINT32  *Version,
+  OUT CHAR8   **VersionString
   )
 {
-  CONST CHAR8   *VerData;
-  CONST CHAR8   *EndOfData;
-  CONST CHAR8   *Line;
-  CONST CHAR8   *EndOfLine;
-  UINTN         LineLength;
-  CONST CHAR8   *CrcStr;
-  UINT32        CrcExpected;
-  UINT32        CrcReceived;
-  UINT64        Version64;
-  EFI_STATUS    Status;
+  CONST CHAR8  *VerData;
+  CONST CHAR8  *EndOfData;
+  CONST CHAR8  *Line;
+  CONST CHAR8  *EndOfLine;
+  UINTN        LineLength;
+  CONST CHAR8  *CrcStr;
+  UINT32       CrcExpected;
+  UINT32       CrcReceived;
+  UINT64       Version64;
+  EFI_STATUS   Status;
 
-  VerData = (CHAR8 *) Data;
-  EndOfData = VerData + DataLen;
+  VerData        = (CHAR8 *)Data;
+  EndOfData      = VerData + DataLen;
   *VersionString = NULL;
 
   // check for supported format
   if (AsciiStrnCmp (VerData, VERSION_STR_ID, AsciiStrLen (VERSION_STR_ID)) != 0) {
-    DEBUG ((DEBUG_ERROR, "%a: version id is not %a\n",
-            __FUNCTION__, VERSION_STR_ID));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: version id is not %a\n",
+      __FUNCTION__,
+      VERSION_STR_ID
+      ));
     return EFI_UNSUPPORTED;
   }
 
@@ -105,12 +110,18 @@ VerPartitionGetVersion (
     DEBUG ((DEBUG_ERROR, "%a: Line %u missing\n", __FUNCTION__, VERSION_CRC32_LINE));
     return EFI_VOLUME_CORRUPTED;
   }
+
   CrcReceived = CalculateCrc32 ((VOID *)VerData, Line - VerData);
 
   CrcStr = AsciiStrStr (Line, VERSION_STR_CRC32);
   if (CrcStr == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: No '%a' string on line %u\n",
-            __FUNCTION__, VERSION_STR_CRC32, VERSION_CRC32_LINE));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: No '%a' string on line %u\n",
+      __FUNCTION__,
+      VERSION_STR_CRC32,
+      VERSION_CRC32_LINE
+      ));
     return EFI_INVALID_PARAMETER;
   }
 
@@ -121,8 +132,13 @@ VerPartitionGetVersion (
 
   CrcExpected = AsciiStrHexToUintn (CrcStr);
   if (CrcExpected != CrcReceived) {
-    DEBUG ((DEBUG_ERROR, "%a: Crc mismatch expected=0x%x, received=0x%x\n",
-            __FUNCTION__, CrcExpected, CrcReceived));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Crc mismatch expected=0x%x, received=0x%x\n",
+      __FUNCTION__,
+      CrcExpected,
+      CrcReceived
+      ));
     return EFI_VOLUME_CORRUPTED;
   }
 
@@ -132,10 +148,10 @@ VerPartitionGetVersion (
     return EFI_INVALID_PARAMETER;
   }
 
-  EndOfLine = AsciiStrStr (Line, "\n");
+  EndOfLine  = AsciiStrStr (Line, "\n");
   LineLength = EndOfLine - Line;
 
-  *VersionString = (CHAR8 *) AllocatePool (LineLength + 1);
+  *VersionString = (CHAR8 *)AllocatePool (LineLength + 1);
   if (*VersionString == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -156,8 +172,8 @@ VerPartitionGetVersion (
     goto Done;
   }
 
-  *Version =  (UINT32) Version64;
-  Status = EFI_SUCCESS;
+  *Version =  (UINT32)Version64;
+  Status   = EFI_SUCCESS;
 
 Done:
   if (EFI_ERROR (Status)) {
@@ -169,8 +185,14 @@ Done:
     return Status;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: Crc=0x%x Version=0x%x (%a)\n",
-          __FUNCTION__, CrcExpected, *Version, *VersionString));
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Crc=0x%x Version=0x%x (%a)\n",
+    __FUNCTION__,
+    CrcExpected,
+    *Version,
+    *VersionString
+    ));
 
   return EFI_SUCCESS;
 }

@@ -19,12 +19,10 @@
   0x1e710608, 0x28a3, 0x4c0b, { 0x9b, 0xec, 0x1c, 0x75, 0x49, 0xa7, 0x0d, 0x90 } \
   }
 
-
 //
 // Define for forward reference.
 //
 typedef struct _NVIDIA_DEVICE_TREE_COMPATIBILITY_PROTOCOL NVIDIA_DEVICE_TREE_COMPATIBILITY_PROTOCOL;
-
 
 /**
   This function is invoked to allow the system to check if this implementation supports
@@ -44,7 +42,7 @@ typedef struct _NVIDIA_DEVICE_TREE_COMPATIBILITY_PROTOCOL NVIDIA_DEVICE_TREE_COM
 **/
 typedef
 EFI_STATUS
-(EFIAPI * DEVICE_TREE_COMPATIBILITY_SUPPORTED)(
+(EFIAPI *DEVICE_TREE_COMPATIBILITY_SUPPORTED)(
   IN NVIDIA_DEVICE_TREE_COMPATIBILITY_PROTOCOL   *This,
   IN CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL      *Node,
   OUT EFI_GUID                                   **DeviceType,
@@ -53,11 +51,9 @@ EFI_STATUS
 
 /// NVIDIA_DEVICE_TREE_COMPATIBILITY_PROTOCOL protocol structure.
 struct _NVIDIA_DEVICE_TREE_COMPATIBILITY_PROTOCOL {
-
-  DEVICE_TREE_COMPATIBILITY_SUPPORTED  Supported;
-
+  DEVICE_TREE_COMPATIBILITY_SUPPORTED    Supported;
 };
 
-extern EFI_GUID gNVIDIADeviceTreeCompatibilityProtocolGuid;
+extern EFI_GUID  gNVIDIADeviceTreeCompatibilityProtocolGuid;
 
 #endif

@@ -15,8 +15,8 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 
-#define STACK_DATA_SIZE 32
-#define STACK_WRITE_SIZE 33
+#define STACK_DATA_SIZE   32
+#define STACK_WRITE_SIZE  33
 
 /**
   This is the declaration of an EFI image entry point. This entry point is
@@ -34,11 +34,12 @@
 EFI_STATUS
 EFIAPI
 InitializeStackCheck (
-  IN EFI_HANDLE          ImageHandle,
-  IN EFI_SYSTEM_TABLE    *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  UINT8 TestArray[STACK_DATA_SIZE];
+  UINT8  TestArray[STACK_DATA_SIZE];
+
   Print (L"Application should not return to shell as stack checker should abort\r\n");
 
   SetMem (TestArray, STACK_WRITE_SIZE, 0);

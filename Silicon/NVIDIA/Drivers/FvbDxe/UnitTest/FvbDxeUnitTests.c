@@ -29,18 +29,20 @@
 #define UNIT_TEST_APP_NAME     "FvbDxe Unit Test Application"
 #define UNIT_TEST_APP_VERSION  "0.1"
 
-#define BLOCK_SIZE 512
-#define NUM_BLOCKS 10  // EraseBlock tests rely on this being >= 4 blocks
-#define IO_ALIGN 1
-#define MOCK_ATTRIBUTES 0xFF
+#define BLOCK_SIZE       512
+#define NUM_BLOCKS       10// EraseBlock tests rely on this being >= 4 blocks
+#define IO_ALIGN         1
+#define MOCK_ATTRIBUTES  0xFF
 
 extern NVIDIA_FVB_PRIVATE_DATA  *Private;
 
-STATIC UINT8 *TestVariablePartition;
-STATIC UINT8 *TestFlashStorage;
-STATIC UINT8 *TestBuffer;
+STATIC UINT8  *TestVariablePartition;
+STATIC UINT8  *TestFlashStorage;
+STATIC UINT8  *TestBuffer;
 
-STATIC GUID ZeroGuid = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
+STATIC GUID  ZeroGuid = {
+  0, 0, 0, { 0, 0, 0, 0, 0, 0, 0, 0 }
+};
 
 // RW_TEST_CONTEXT fields:
 //  Lba
@@ -203,11 +205,13 @@ STATIC RW_TEST_CONTEXT  BadLbaTest = {
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbGetAttributesTestSetup(
+FvbGetAttributesTestSetup (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_FIRMWARE_VOLUME_HEADER  *TestVariableVH;
-  TestVariableVH = (EFI_FIRMWARE_VOLUME_HEADER *)TestVariablePartition;
+
+  TestVariableVH             = (EFI_FIRMWARE_VOLUME_HEADER *)TestVariablePartition;
   TestVariableVH->Attributes = MOCK_ATTRIBUTES;
 
   return UNIT_TEST_PASSED;
@@ -227,14 +231,15 @@ FvbGetAttributesTestSetup(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbGetAttributesInvalidTest(
+FvbGetAttributesInvalidTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS  Status;
 
-  Status = Private->FvbInstance.GetAttributes(&Private->FvbInstance, NULL);
+  Status = Private->FvbInstance.GetAttributes (&Private->FvbInstance, NULL);
 
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   return UNIT_TEST_PASSED;
 }
@@ -252,18 +257,19 @@ FvbGetAttributesInvalidTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbGetAttributesTest(
+FvbGetAttributesTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS            Status;
   EFI_FVB_ATTRIBUTES_2  Attributes;
 
-  Status = Private->FvbInstance.GetAttributes(
-    &Private->FvbInstance,
-    &Attributes
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
-  UT_ASSERT_EQUAL(MOCK_ATTRIBUTES, Attributes);
+  Status = Private->FvbInstance.GetAttributes (
+                                  &Private->FvbInstance,
+                                  &Attributes
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL (MOCK_ATTRIBUTES, Attributes);
 
   return UNIT_TEST_PASSED;
 }
@@ -281,14 +287,15 @@ FvbGetAttributesTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbSetAttributesTest(
+FvbSetAttributesTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   // Right now SetAttributes is not supported by FvbDxe
-  UT_ASSERT_STATUS_EQUAL(
-    Private->FvbInstance.SetAttributes(&Private->FvbInstance, NULL),
+  UT_ASSERT_STATUS_EQUAL (
+    Private->FvbInstance.SetAttributes (&Private->FvbInstance, NULL),
     EFI_UNSUPPORTED
-  );
+    );
 
   return UNIT_TEST_PASSED;
 }
@@ -307,14 +314,15 @@ FvbSetAttributesTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbGetPhysicalAddressInvalidTest(
+FvbGetPhysicalAddressInvalidTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS  Status;
 
-  Status = Private->FvbInstance.GetPhysicalAddress(&Private->FvbInstance, NULL);
+  Status = Private->FvbInstance.GetPhysicalAddress (&Private->FvbInstance, NULL);
 
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   return UNIT_TEST_PASSED;
 }
@@ -333,19 +341,20 @@ FvbGetPhysicalAddressInvalidTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbGetPhysicalAddressTest(
+FvbGetPhysicalAddressTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS            Status;
   EFI_PHYSICAL_ADDRESS  Address;
 
   // Make sure the variable partition was correctly memory mapped
-  Status = Private->FvbInstance.GetPhysicalAddress(
-    &Private->FvbInstance,
-    &Address
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
-  UT_ASSERT_EQUAL((EFI_PHYSICAL_ADDRESS)(TestVariablePartition), Address);
+  Status = Private->FvbInstance.GetPhysicalAddress (
+                                  &Private->FvbInstance,
+                                  &Address
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL ((EFI_PHYSICAL_ADDRESS)(TestVariablePartition), Address);
 
   return UNIT_TEST_PASSED;
 }
@@ -364,48 +373,49 @@ FvbGetPhysicalAddressTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbGetBlockSizeInvalidTest(
+FvbGetBlockSizeInvalidTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS  Status;
   UINTN       BlockSize;
   UINTN       NumberOfBlocks;
 
   // Test when only NumberOfBlocks is NULL
-  Status = Private->FvbInstance.GetBlockSize(
-    &Private->FvbInstance,
-    0,
-    &BlockSize,
-    NULL
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.GetBlockSize (
+                                  &Private->FvbInstance,
+                                  0,
+                                  &BlockSize,
+                                  NULL
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Test when only BlockSize is NULL
-  Status = Private->FvbInstance.GetBlockSize(
-    &Private->FvbInstance,
-    0,
-    NULL,
-    &NumberOfBlocks
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.GetBlockSize (
+                                  &Private->FvbInstance,
+                                  0,
+                                  NULL,
+                                  &NumberOfBlocks
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Test when both NumberOfBlocks and BlockSize are NULL
-  Status = Private->FvbInstance.GetBlockSize(
-    &Private->FvbInstance,
-    0,
-    NULL,
-    NULL
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.GetBlockSize (
+                                  &Private->FvbInstance,
+                                  0,
+                                  NULL,
+                                  NULL
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Test when LBA is out of bounds
-  Status = Private->FvbInstance.GetBlockSize(
-    &Private->FvbInstance,
-    NUM_BLOCKS,
-    &BlockSize,
-    &NumberOfBlocks
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.GetBlockSize (
+                                  &Private->FvbInstance,
+                                  NUM_BLOCKS,
+                                  &BlockSize,
+                                  &NumberOfBlocks
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   return UNIT_TEST_PASSED;
 }
@@ -425,47 +435,48 @@ FvbGetBlockSizeInvalidTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbGetBlockSizeTest(
+FvbGetBlockSizeTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS  Status;
   UINTN       BlockSize;
   UINTN       NumberOfBlocks;
 
   // Check that we get the correct size/numblocks from the start
-  Status = Private->FvbInstance.GetBlockSize(
-    &Private->FvbInstance,
-    0,
-    &BlockSize,
-    &NumberOfBlocks
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
-  UT_ASSERT_EQUAL(BlockSize, BLOCK_SIZE);
-  UT_ASSERT_EQUAL(NumberOfBlocks, NUM_BLOCKS);
+  Status = Private->FvbInstance.GetBlockSize (
+                                  &Private->FvbInstance,
+                                  0,
+                                  &BlockSize,
+                                  &NumberOfBlocks
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL (BlockSize, BLOCK_SIZE);
+  UT_ASSERT_EQUAL (NumberOfBlocks, NUM_BLOCKS);
 
   // NumberOfBlocks returned should be the number from the given LBA to the
   // end of the partition (including the block w/the given LBA)
   // Test a middle block
-  Status = Private->FvbInstance.GetBlockSize(
-    &Private->FvbInstance,
-    NUM_BLOCKS - (NUM_BLOCKS / 2),
-    &BlockSize,
-    &NumberOfBlocks
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
-  UT_ASSERT_EQUAL(BlockSize, BLOCK_SIZE);
-  UT_ASSERT_EQUAL(NumberOfBlocks, NUM_BLOCKS / 2);
+  Status = Private->FvbInstance.GetBlockSize (
+                                  &Private->FvbInstance,
+                                  NUM_BLOCKS - (NUM_BLOCKS / 2),
+                                  &BlockSize,
+                                  &NumberOfBlocks
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL (BlockSize, BLOCK_SIZE);
+  UT_ASSERT_EQUAL (NumberOfBlocks, NUM_BLOCKS / 2);
 
   // Test the last block
-  Status = Private->FvbInstance.GetBlockSize(
-    &Private->FvbInstance,
-    NUM_BLOCKS - 1,
-    &BlockSize,
-    &NumberOfBlocks
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
-  UT_ASSERT_EQUAL(BlockSize, BLOCK_SIZE);
-  UT_ASSERT_EQUAL(NumberOfBlocks, 1);
+  Status = Private->FvbInstance.GetBlockSize (
+                                  &Private->FvbInstance,
+                                  NUM_BLOCKS - 1,
+                                  &BlockSize,
+                                  &NumberOfBlocks
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL (BlockSize, BLOCK_SIZE);
+  UT_ASSERT_EQUAL (NumberOfBlocks, 1);
 
   return UNIT_TEST_PASSED;
 }
@@ -489,30 +500,31 @@ FvbGetBlockSizeTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbReadTestSetup(
+FvbReadTestSetup (
   IN UNIT_TEST_CONTEXT  Context
-) {
-  RW_TEST_CONTEXT *TestInfo;
-  UINT8           *VariableStartAddress;
-  UINT8           *FlashStartAddress;
+  )
+{
+  RW_TEST_CONTEXT  *TestInfo;
+  UINT8            *VariableStartAddress;
+  UINT8            *FlashStartAddress;
 
-  TestInfo = (RW_TEST_CONTEXT*) Context;
+  TestInfo = (RW_TEST_CONTEXT *)Context;
 
   // Only set areas that should be read so
   // that we know the correct blocks are being used
   VariableStartAddress = TestVariablePartition
-                          + MultU64x32(TestInfo->Lba, BLOCK_SIZE)
-                          + TestInfo->Offset;
+                         + MultU64x32 (TestInfo->Lba, BLOCK_SIZE)
+                         + TestInfo->Offset;
   FlashStartAddress = TestFlashStorage
-                        + MultU64x32(TestInfo->Lba, BLOCK_SIZE)
-                        + TestInfo->Offset;
+                      + MultU64x32 (TestInfo->Lba, BLOCK_SIZE)
+                      + TestInfo->Offset;
 
   // Set both the flash memory as well as the partition buffer used by Private
-  ZeroMem(TestFlashStorage, BLOCK_SIZE * NUM_BLOCKS);
-  ZeroMem(TestVariablePartition, BLOCK_SIZE * NUM_BLOCKS);
-  SetMem(FlashStartAddress, TestInfo->ExpectedNumBytes, (UINT8)0x55);
-  SetMem(VariableStartAddress, TestInfo->ExpectedNumBytes, (UINT8)0x55);
-  ZeroMem(TestBuffer, BLOCK_SIZE);
+  ZeroMem (TestFlashStorage, BLOCK_SIZE * NUM_BLOCKS);
+  ZeroMem (TestVariablePartition, BLOCK_SIZE * NUM_BLOCKS);
+  SetMem (FlashStartAddress, TestInfo->ExpectedNumBytes, (UINT8)0x55);
+  SetMem (VariableStartAddress, TestInfo->ExpectedNumBytes, (UINT8)0x55);
+  ZeroMem (TestBuffer, BLOCK_SIZE);
 
   return UNIT_TEST_PASSED;
 }
@@ -531,79 +543,80 @@ FvbReadTestSetup(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbReadInvalidTest(
+FvbReadInvalidTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS  Status;
   EFI_LBA     Lba;
   UINTN       NumBytes;
   UINTN       Offset;
 
   // Defaults that should always be valid
-  Lba = 0;
+  Lba      = 0;
   NumBytes = 1;
-  Offset = 1;
+  Offset   = 1;
 
   // Check when Buffer is NULL
-  Status = Private->FvbInstance.Read(
-    &Private->FvbInstance,
-    Lba,
-    Offset,
-    &NumBytes,
-    NULL
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.Read (
+                                  &Private->FvbInstance,
+                                  Lba,
+                                  Offset,
+                                  &NumBytes,
+                                  NULL
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Check when NumBytes is NULL
-  Status = Private->FvbInstance.Read(
-    &Private->FvbInstance,
-    Lba,
-    Offset,
-    NULL,
-    TestBuffer
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.Read (
+                                  &Private->FvbInstance,
+                                  Lba,
+                                  Offset,
+                                  NULL,
+                                  TestBuffer
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Check when both NumBytes and Buffer are NULL
-  Status = Private->FvbInstance.Read(
-    &Private->FvbInstance,
-    Lba,
-    Offset,
-    NULL,
-    NULL
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.Read (
+                                  &Private->FvbInstance,
+                                  Lba,
+                                  Offset,
+                                  NULL,
+                                  NULL
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Check when Offset would cause overlow
-  Status = Private->FvbInstance.Read(
-    &Private->FvbInstance,
-    Lba,
-    MAX_UINT64,
-    &NumBytes,
-    TestBuffer
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.Read (
+                                  &Private->FvbInstance,
+                                  Lba,
+                                  MAX_UINT64,
+                                  &NumBytes,
+                                  TestBuffer
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Check when NumBytes would cause overlow
   NumBytes = MAX_UINT64;
-  Status = Private->FvbInstance.Read(
-    &Private->FvbInstance,
-    Lba,
-    Offset,
-    &NumBytes,
-    TestBuffer
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status   = Private->FvbInstance.Read (
+                                    &Private->FvbInstance,
+                                    Lba,
+                                    Offset,
+                                    &NumBytes,
+                                    TestBuffer
+                                    );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Check when both are at the max
-  Status = Private->FvbInstance.Read(
-    &Private->FvbInstance,
-    Lba,
-    MAX_UINT64,
-    &NumBytes,
-    TestBuffer
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.Read (
+                                  &Private->FvbInstance,
+                                  Lba,
+                                  MAX_UINT64,
+                                  &NumBytes,
+                                  TestBuffer
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   return UNIT_TEST_PASSED;
 }
@@ -627,39 +640,40 @@ FvbReadInvalidTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbReadTest(
+FvbReadTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
-  RW_TEST_CONTEXT *TestInfo;
-  EFI_STATUS      Status;
-  UINTN           NumBytes;
-  UINTN           UnreadBytes;
-  UINT8           *VariableStartAddress;
-  UINT8           *FlashStartAddress;
+  )
+{
+  RW_TEST_CONTEXT  *TestInfo;
+  EFI_STATUS       Status;
+  UINTN            NumBytes;
+  UINTN            UnreadBytes;
+  UINT8            *VariableStartAddress;
+  UINT8            *FlashStartAddress;
 
-  TestInfo = (RW_TEST_CONTEXT*) Context;
+  TestInfo = (RW_TEST_CONTEXT *)Context;
 
-  NumBytes = TestInfo->NumBytes;
+  NumBytes             = TestInfo->NumBytes;
   VariableStartAddress = TestVariablePartition
-                          + MultU64x32(TestInfo->Lba, BLOCK_SIZE)
-                          + TestInfo->Offset;
+                         + MultU64x32 (TestInfo->Lba, BLOCK_SIZE)
+                         + TestInfo->Offset;
   FlashStartAddress = TestFlashStorage
-                        + MultU64x32(TestInfo->Lba, BLOCK_SIZE)
-                        + TestInfo->Offset;
+                      + MultU64x32 (TestInfo->Lba, BLOCK_SIZE)
+                      + TestInfo->Offset;
 
-  Status = Private->FvbInstance.Read(
-    &Private->FvbInstance,
-    TestInfo->Lba,
-    TestInfo->Offset,
-    &NumBytes,
-    TestBuffer
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, TestInfo->ExpectedStatus);
-  UT_ASSERT_EQUAL(NumBytes, TestInfo->ExpectedNumBytes);
+  Status = Private->FvbInstance.Read (
+                                  &Private->FvbInstance,
+                                  TestInfo->Lba,
+                                  TestInfo->Offset,
+                                  &NumBytes,
+                                  TestBuffer
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, TestInfo->ExpectedStatus);
+  UT_ASSERT_EQUAL (NumBytes, TestInfo->ExpectedNumBytes);
   // Need to check both VariableParition private memory buffer
   // And the memory used by the flash stub
-  UT_ASSERT_MEM_EQUAL(TestBuffer, VariableStartAddress, NumBytes);
-  UT_ASSERT_MEM_EQUAL(TestBuffer, FlashStartAddress, NumBytes);
+  UT_ASSERT_MEM_EQUAL (TestBuffer, VariableStartAddress, NumBytes);
+  UT_ASSERT_MEM_EQUAL (TestBuffer, FlashStartAddress, NumBytes);
 
   // Check that extra data wasn't copied if we had to stop at
   // a block boundary. Even though the returned NumBytes implies this wouldn't
@@ -667,7 +681,7 @@ FvbReadTest(
   // isn't performing unnecessary flash reads
   UnreadBytes = TestInfo->NumBytes - NumBytes;
   if (UnreadBytes > 0) {
-    UT_ASSERT_TRUE(IsZeroBuffer(TestBuffer + NumBytes, BLOCK_SIZE - NumBytes));
+    UT_ASSERT_TRUE (IsZeroBuffer (TestBuffer + NumBytes, BLOCK_SIZE - NumBytes));
   }
 
   return UNIT_TEST_PASSED;
@@ -687,12 +701,13 @@ FvbReadTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbWriteTestSetup(
+FvbWriteTestSetup (
   IN UNIT_TEST_CONTEXT  Context
-) {
-  SetMem(TestBuffer, BLOCK_SIZE, (UINT8)0x55);
-  ZeroMem(TestFlashStorage, BLOCK_SIZE * NUM_BLOCKS);
-  ZeroMem(TestVariablePartition, BLOCK_SIZE * NUM_BLOCKS);
+  )
+{
+  SetMem (TestBuffer, BLOCK_SIZE, (UINT8)0x55);
+  ZeroMem (TestFlashStorage, BLOCK_SIZE * NUM_BLOCKS);
+  ZeroMem (TestVariablePartition, BLOCK_SIZE * NUM_BLOCKS);
 
   return UNIT_TEST_PASSED;
 }
@@ -711,79 +726,80 @@ FvbWriteTestSetup(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbWriteInvalidTest(
+FvbWriteInvalidTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS  Status;
   EFI_LBA     Lba;
   UINTN       NumBytes;
   UINTN       Offset;
 
   // Defaults that should always be valid
-  Lba = 0;
+  Lba      = 0;
   NumBytes = 1;
-  Offset = 1;
+  Offset   = 1;
 
   // Check when Buffer is NULL
-  Status = Private->FvbInstance.Write(
-    &Private->FvbInstance,
-    Lba,
-    Offset,
-    &NumBytes,
-    NULL
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.Write (
+                                  &Private->FvbInstance,
+                                  Lba,
+                                  Offset,
+                                  &NumBytes,
+                                  NULL
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Check when NumBytes is NULL
-  Status = Private->FvbInstance.Write(
-    &Private->FvbInstance,
-    Lba,
-    Offset,
-    NULL,
-    TestBuffer
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.Write (
+                                  &Private->FvbInstance,
+                                  Lba,
+                                  Offset,
+                                  NULL,
+                                  TestBuffer
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Check when both NumBytes and Buffer are NULL
-  Status = Private->FvbInstance.Write(
-    &Private->FvbInstance,
-    Lba,
-    Offset,
-    NULL,
-    NULL
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.Write (
+                                  &Private->FvbInstance,
+                                  Lba,
+                                  Offset,
+                                  NULL,
+                                  NULL
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Check when Offset would cause overlow
-  Status = Private->FvbInstance.Write(
-    &Private->FvbInstance,
-    Lba,
-    MAX_UINT64,
-    &NumBytes,
-    TestBuffer
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.Write (
+                                  &Private->FvbInstance,
+                                  Lba,
+                                  MAX_UINT64,
+                                  &NumBytes,
+                                  TestBuffer
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Check when NumBytes would cause overlow
   NumBytes = MAX_UINT64;
-  Status = Private->FvbInstance.Write(
-    &Private->FvbInstance,
-    Lba,
-    Offset,
-    &NumBytes,
-    TestBuffer
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status   = Private->FvbInstance.Write (
+                                    &Private->FvbInstance,
+                                    Lba,
+                                    Offset,
+                                    &NumBytes,
+                                    TestBuffer
+                                    );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Check when both are at the max
-  Status = Private->FvbInstance.Write(
-    &Private->FvbInstance,
-    Lba,
-    MAX_UINT64,
-    &NumBytes,
-    TestBuffer
-  );
-  UT_ASSERT_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = Private->FvbInstance.Write (
+                                  &Private->FvbInstance,
+                                  Lba,
+                                  MAX_UINT64,
+                                  &NumBytes,
+                                  TestBuffer
+                                  );
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   return UNIT_TEST_PASSED;
 }
@@ -806,55 +822,60 @@ FvbWriteInvalidTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbWriteTest(
+FvbWriteTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
-  RW_TEST_CONTEXT *TestInfo;
-  EFI_STATUS      Status;
-  UINTN           FvbOffset;
-  UINTN           NumBytes;
-  UINTN           UnwrittenEndBytes;
-  UINT8           *VariableStartAddress;
-  UINT8           *FlashStartAddress;
+  )
+{
+  RW_TEST_CONTEXT  *TestInfo;
+  EFI_STATUS       Status;
+  UINTN            FvbOffset;
+  UINTN            NumBytes;
+  UINTN            UnwrittenEndBytes;
+  UINT8            *VariableStartAddress;
+  UINT8            *FlashStartAddress;
 
-  TestInfo = (RW_TEST_CONTEXT*) Context;
+  TestInfo = (RW_TEST_CONTEXT *)Context;
 
-  NumBytes = TestInfo->NumBytes;
-  FvbOffset = MultU64x32(TestInfo->Lba, BLOCK_SIZE) + TestInfo->Offset;
+  NumBytes             = TestInfo->NumBytes;
+  FvbOffset            = MultU64x32 (TestInfo->Lba, BLOCK_SIZE) + TestInfo->Offset;
   VariableStartAddress = TestVariablePartition + FvbOffset;
-  FlashStartAddress = TestFlashStorage + FvbOffset;
+  FlashStartAddress    = TestFlashStorage + FvbOffset;
 
-  Status = Private->FvbInstance.Write(
-    &Private->FvbInstance,
-    TestInfo->Lba,
-    TestInfo->Offset,
-    &NumBytes,
-    TestBuffer
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, TestInfo->ExpectedStatus);
-  UT_ASSERT_EQUAL(NumBytes, TestInfo->ExpectedNumBytes);
+  Status = Private->FvbInstance.Write (
+                                  &Private->FvbInstance,
+                                  TestInfo->Lba,
+                                  TestInfo->Offset,
+                                  &NumBytes,
+                                  TestBuffer
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, TestInfo->ExpectedStatus);
+  UT_ASSERT_EQUAL (NumBytes, TestInfo->ExpectedNumBytes);
   // This is implementation specific, make sure the write was flushed
   // to the flash and that the Private partition buffer was correctly updated.
-  UT_ASSERT_MEM_EQUAL(TestBuffer, VariableStartAddress, NumBytes);
-  UT_ASSERT_MEM_EQUAL(TestBuffer, FlashStartAddress, NumBytes);
+  UT_ASSERT_MEM_EQUAL (TestBuffer, VariableStartAddress, NumBytes);
+  UT_ASSERT_MEM_EQUAL (TestBuffer, FlashStartAddress, NumBytes);
 
   // Double check that any space before write region was not written
   if (FvbOffset != 0) {
-    UT_ASSERT_TRUE(IsZeroBuffer(TestVariablePartition, FvbOffset));
-    UT_ASSERT_TRUE(IsZeroBuffer(TestVariablePartition, FvbOffset));
+    UT_ASSERT_TRUE (IsZeroBuffer (TestVariablePartition, FvbOffset));
+    UT_ASSERT_TRUE (IsZeroBuffer (TestVariablePartition, FvbOffset));
   }
 
   // Double check no extra bytes were written after the write region
   UnwrittenEndBytes = (BLOCK_SIZE * NUM_BLOCKS) - (FvbOffset + NumBytes);
   if (UnwrittenEndBytes > 0) {
-    UT_ASSERT_TRUE(IsZeroBuffer(
-      FlashStartAddress + NumBytes,
-      UnwrittenEndBytes
-    ));
-    UT_ASSERT_TRUE(IsZeroBuffer(
-      VariableStartAddress + NumBytes,
-      UnwrittenEndBytes
-    ));
+    UT_ASSERT_TRUE (
+      IsZeroBuffer (
+        FlashStartAddress + NumBytes,
+        UnwrittenEndBytes
+        )
+      );
+    UT_ASSERT_TRUE (
+      IsZeroBuffer (
+        VariableStartAddress + NumBytes,
+        UnwrittenEndBytes
+        )
+      );
   }
 
   return UNIT_TEST_PASSED;
@@ -874,12 +895,13 @@ FvbWriteTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbEraseBlocksTestSetup(
+FvbEraseBlocksTestSetup (
   IN UNIT_TEST_CONTEXT  Context
-) {
-  SetMem(TestBuffer, BLOCK_SIZE, (UINT8)0xFF);
-  ZeroMem(TestFlashStorage, BLOCK_SIZE * NUM_BLOCKS);
-  ZeroMem(TestVariablePartition, BLOCK_SIZE * NUM_BLOCKS);
+  )
+{
+  SetMem (TestBuffer, BLOCK_SIZE, (UINT8)0xFF);
+  ZeroMem (TestFlashStorage, BLOCK_SIZE * NUM_BLOCKS);
+  ZeroMem (TestVariablePartition, BLOCK_SIZE * NUM_BLOCKS);
 
   return UNIT_TEST_PASSED;
 }
@@ -903,74 +925,76 @@ FvbEraseBlocksTestSetup(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbEraseBlocksFailureTest(
+FvbEraseBlocksFailureTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS  Status;
 
   // Check no arguments
-  Status = Private->FvbInstance.EraseBlocks(
-    &Private->FvbInstance,
-    EFI_LBA_LIST_TERMINATOR
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_INVALID_PARAMETER);
-  UT_ASSERT_TRUE(IsZeroBuffer(TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
-  UT_ASSERT_TRUE(IsZeroBuffer(TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
+  Status = Private->FvbInstance.EraseBlocks (
+                                  &Private->FvbInstance,
+                                  EFI_LBA_LIST_TERMINATOR
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_INVALID_PARAMETER);
+  UT_ASSERT_TRUE (IsZeroBuffer (TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
+  UT_ASSERT_TRUE (IsZeroBuffer (TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
 
   // Check completely invalid LBA start entry
-  Status = Private->FvbInstance.EraseBlocks(
-    &Private->FvbInstance,
-    (EFI_LBA) NUM_BLOCKS,
-    (UINTN) 1,
-    EFI_LBA_LIST_TERMINATOR
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_INVALID_PARAMETER);
-  UT_ASSERT_TRUE(IsZeroBuffer(TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
-  UT_ASSERT_TRUE(IsZeroBuffer(TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
+  Status = Private->FvbInstance.EraseBlocks (
+                                  &Private->FvbInstance,
+                                  (EFI_LBA)NUM_BLOCKS,
+                                  (UINTN)1,
+                                  EFI_LBA_LIST_TERMINATOR
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_INVALID_PARAMETER);
+  UT_ASSERT_TRUE (IsZeroBuffer (TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
+  UT_ASSERT_TRUE (IsZeroBuffer (TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
 
   // Check completely invalid num blocks entry
-  Status = Private->FvbInstance.EraseBlocks(
-    &Private->FvbInstance,
-    (EFI_LBA) 0,
-    (UINTN) 0,
-    EFI_LBA_LIST_TERMINATOR
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_INVALID_PARAMETER);
-  UT_ASSERT_TRUE(IsZeroBuffer(TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
-  UT_ASSERT_TRUE(IsZeroBuffer(TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
+  Status = Private->FvbInstance.EraseBlocks (
+                                  &Private->FvbInstance,
+                                  (EFI_LBA)0,
+                                  (UINTN)0,
+                                  EFI_LBA_LIST_TERMINATOR
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_INVALID_PARAMETER);
+  UT_ASSERT_TRUE (IsZeroBuffer (TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
+  UT_ASSERT_TRUE (IsZeroBuffer (TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
 
   // Check when part of LBA range is valid
-  Status = Private->FvbInstance.EraseBlocks(
-    &Private->FvbInstance,
-    (EFI_LBA) (NUM_BLOCKS - 1),
-    (UINTN) 2,
-    EFI_LBA_LIST_TERMINATOR
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_INVALID_PARAMETER);
-  UT_ASSERT_TRUE(IsZeroBuffer(TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
-  UT_ASSERT_TRUE(IsZeroBuffer(TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
+  Status = Private->FvbInstance.EraseBlocks (
+                                  &Private->FvbInstance,
+                                  (EFI_LBA)(NUM_BLOCKS - 1),
+                                  (UINTN)2,
+                                  EFI_LBA_LIST_TERMINATOR
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_INVALID_PARAMETER);
+  UT_ASSERT_TRUE (IsZeroBuffer (TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
+  UT_ASSERT_TRUE (IsZeroBuffer (TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
 
   // Check when one LBA range is valid but the other is not
-  Status = Private->FvbInstance.EraseBlocks(
-    &Private->FvbInstance,
-    (EFI_LBA) 0,
-    (UINTN) 1,
-    (EFI_LBA) (NUM_BLOCKS - 1),
-    (UINTN) 2, EFI_LBA_LIST_TERMINATOR
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_INVALID_PARAMETER);
-  UT_ASSERT_TRUE(IsZeroBuffer(TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
-  UT_ASSERT_TRUE(IsZeroBuffer(TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
+  Status = Private->FvbInstance.EraseBlocks (
+                                  &Private->FvbInstance,
+                                  (EFI_LBA)0,
+                                  (UINTN)1,
+                                  (EFI_LBA)(NUM_BLOCKS - 1),
+                                  (UINTN)2,
+                                  EFI_LBA_LIST_TERMINATOR
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_INVALID_PARAMETER);
+  UT_ASSERT_TRUE (IsZeroBuffer (TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
+  UT_ASSERT_TRUE (IsZeroBuffer (TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
 
   // Check failure without EFI_LBA_LIST_TERMINATOR
-  Status = Private->FvbInstance.EraseBlocks(
-    &Private->FvbInstance,
-    (EFI_LBA) 0,
-    (UINTN) 1
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_INVALID_PARAMETER);
-  UT_ASSERT_TRUE(IsZeroBuffer(TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
-  UT_ASSERT_TRUE(IsZeroBuffer(TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
+  Status = Private->FvbInstance.EraseBlocks (
+                                  &Private->FvbInstance,
+                                  (EFI_LBA)0,
+                                  (UINTN)1
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_INVALID_PARAMETER);
+  UT_ASSERT_TRUE (IsZeroBuffer (TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE));
+  UT_ASSERT_TRUE (IsZeroBuffer (TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE));
 
   return UNIT_TEST_PASSED;
 }
@@ -991,43 +1015,48 @@ FvbEraseBlocksFailureTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbEraseBlocksSuccessEdgeTest(
+FvbEraseBlocksSuccessEdgeTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS  Status;
 
   // Check blocks at the edge of the range (first and last)
-  Status = Private->FvbInstance.EraseBlocks(
-    &Private->FvbInstance,
-    (EFI_LBA) 0,
-    (UINTN) 1,
-    (EFI_LBA) (NUM_BLOCKS - 1),
-    (UINTN) 1,
-    EFI_LBA_LIST_TERMINATOR
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
+  Status = Private->FvbInstance.EraseBlocks (
+                                  &Private->FvbInstance,
+                                  (EFI_LBA)0,
+                                  (UINTN)1,
+                                  (EFI_LBA)(NUM_BLOCKS - 1),
+                                  (UINTN)1,
+                                  EFI_LBA_LIST_TERMINATOR
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
   // Make sure in between blocks are still 0 (not cleared)
-  UT_ASSERT_TRUE(IsZeroBuffer(
-    TestVariablePartition + BLOCK_SIZE,
-    BLOCK_SIZE * (NUM_BLOCKS - 2)
-  ));
-  UT_ASSERT_TRUE(IsZeroBuffer(
-    TestFlashStorage + BLOCK_SIZE,
-    BLOCK_SIZE * (NUM_BLOCKS - 2)
-  ));
+  UT_ASSERT_TRUE (
+    IsZeroBuffer (
+      TestVariablePartition + BLOCK_SIZE,
+      BLOCK_SIZE * (NUM_BLOCKS - 2)
+      )
+    );
+  UT_ASSERT_TRUE (
+    IsZeroBuffer (
+      TestFlashStorage + BLOCK_SIZE,
+      BLOCK_SIZE * (NUM_BLOCKS - 2)
+      )
+    );
   // Make sure that first and last block were cleared (should be set to 0xFF)
-  UT_ASSERT_MEM_EQUAL(TestBuffer, TestVariablePartition, BLOCK_SIZE);
-  UT_ASSERT_MEM_EQUAL(TestBuffer, TestFlashStorage, BLOCK_SIZE);
-  UT_ASSERT_MEM_EQUAL(
+  UT_ASSERT_MEM_EQUAL (TestBuffer, TestVariablePartition, BLOCK_SIZE);
+  UT_ASSERT_MEM_EQUAL (TestBuffer, TestFlashStorage, BLOCK_SIZE);
+  UT_ASSERT_MEM_EQUAL (
     TestBuffer,
     TestVariablePartition + BLOCK_SIZE * (NUM_BLOCKS - 1),
     BLOCK_SIZE
-  );
-  UT_ASSERT_MEM_EQUAL(
+    );
+  UT_ASSERT_MEM_EQUAL (
     TestBuffer,
     TestFlashStorage + BLOCK_SIZE * (NUM_BLOCKS - 1),
     BLOCK_SIZE
-  );
+    );
 
   return UNIT_TEST_PASSED;
 }
@@ -1048,47 +1077,52 @@ FvbEraseBlocksSuccessEdgeTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FvbEraseBlocksSuccessGeneralTest(
+FvbEraseBlocksSuccessGeneralTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS  Status;
 
   // Check a multi block middle range
-  Status = Private->FvbInstance.EraseBlocks(
-    &Private->FvbInstance,
-    (EFI_LBA) 1,
-    (UINTN) 2,
-    EFI_LBA_LIST_TERMINATOR
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
+  Status = Private->FvbInstance.EraseBlocks (
+                                  &Private->FvbInstance,
+                                  (EFI_LBA)1,
+                                  (UINTN)2,
+                                  EFI_LBA_LIST_TERMINATOR
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
   // Make sure first block and remaining blocks are still 0 (not cleared)
-  UT_ASSERT_TRUE(IsZeroBuffer(TestVariablePartition, BLOCK_SIZE));
-  UT_ASSERT_TRUE(IsZeroBuffer(TestFlashStorage, BLOCK_SIZE));
-  UT_ASSERT_TRUE(IsZeroBuffer(
-    TestVariablePartition + BLOCK_SIZE * 3,
-    BLOCK_SIZE * (NUM_BLOCKS - 3)
-  ));
-  UT_ASSERT_TRUE(IsZeroBuffer(
-    TestFlashStorage + BLOCK_SIZE * 3,
-    BLOCK_SIZE * (NUM_BLOCKS - 3)
-  ));
+  UT_ASSERT_TRUE (IsZeroBuffer (TestVariablePartition, BLOCK_SIZE));
+  UT_ASSERT_TRUE (IsZeroBuffer (TestFlashStorage, BLOCK_SIZE));
+  UT_ASSERT_TRUE (
+    IsZeroBuffer (
+      TestVariablePartition + BLOCK_SIZE * 3,
+      BLOCK_SIZE * (NUM_BLOCKS - 3)
+      )
+    );
+  UT_ASSERT_TRUE (
+    IsZeroBuffer (
+      TestFlashStorage + BLOCK_SIZE * 3,
+      BLOCK_SIZE * (NUM_BLOCKS - 3)
+      )
+    );
   // Make sure that middle range was cleared (should be set to 0xFF)
-  UT_ASSERT_MEM_EQUAL(
+  UT_ASSERT_MEM_EQUAL (
     TestBuffer,
     TestVariablePartition + BLOCK_SIZE,
     BLOCK_SIZE
-  );
-  UT_ASSERT_MEM_EQUAL(TestBuffer, TestFlashStorage + BLOCK_SIZE, BLOCK_SIZE);
-  UT_ASSERT_MEM_EQUAL(
+    );
+  UT_ASSERT_MEM_EQUAL (TestBuffer, TestFlashStorage + BLOCK_SIZE, BLOCK_SIZE);
+  UT_ASSERT_MEM_EQUAL (
     TestBuffer,
     TestVariablePartition + BLOCK_SIZE * 2,
     BLOCK_SIZE
-  );
-  UT_ASSERT_MEM_EQUAL(
+    );
+  UT_ASSERT_MEM_EQUAL (
     TestBuffer,
     TestFlashStorage + BLOCK_SIZE * 2,
     BLOCK_SIZE
-  );
+    );
 
   return UNIT_TEST_PASSED;
 }
@@ -1108,28 +1142,29 @@ FvbEraseBlocksSuccessGeneralTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-InitializeFvAndVariableStoreHeadersInvalidTest(
+InitializeFvAndVariableStoreHeadersInvalidTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS                  Status;
   UINT32                      OriginalPcdValue;
   EFI_FIRMWARE_VOLUME_HEADER  *VariableVH;
 
-  VariableVH = (EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition;
-  OriginalPcdValue = PcdGet32(PcdFlashNvStorageVariableSize);
+  VariableVH       = (EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition;
+  OriginalPcdValue = PcdGet32 (PcdFlashNvStorageVariableSize);
 
-  Status = InitializeFvAndVariableStoreHeaders(NULL);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_INVALID_PARAMETER);
+  Status = InitializeFvAndVariableStoreHeaders (NULL);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_INVALID_PARAMETER);
 
-  PcdSet32S(PcdFlashNvStorageVariableSize, 0);
-  Status = InitializeFvAndVariableStoreHeaders(VariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_OUT_OF_RESOURCES);
+  PcdSet32S (PcdFlashNvStorageVariableSize, 0);
+  Status = InitializeFvAndVariableStoreHeaders (VariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_OUT_OF_RESOURCES);
 
-  PcdSet32S(PcdFlashNvStorageVariableSize, BLOCK_SIZE - 1);
-  Status = InitializeFvAndVariableStoreHeaders(VariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_OUT_OF_RESOURCES);
+  PcdSet32S (PcdFlashNvStorageVariableSize, BLOCK_SIZE - 1);
+  Status = InitializeFvAndVariableStoreHeaders (VariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_OUT_OF_RESOURCES);
 
-  PcdSet32S(PcdFlashNvStorageVariableSize, OriginalPcdValue);
+  PcdSet32S (PcdFlashNvStorageVariableSize, OriginalPcdValue);
 
   return UNIT_TEST_PASSED;
 }
@@ -1146,72 +1181,77 @@ InitializeFvAndVariableStoreHeadersInvalidTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-InitializeFvAndVariableStoreHeadersTest(
+InitializeFvAndVariableStoreHeadersTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS                  Status;
   EFI_FIRMWARE_VOLUME_HEADER  *TestVariableVH;
   EFI_FIRMWARE_VOLUME_HEADER  *PrivateVariableVH;
   VARIABLE_STORE_HEADER       *TestVariableVSH;
   EFI_FVB_ATTRIBUTES_2        ExpectedAttributes;
 
-  PrivateVariableVH = (EFI_FIRMWARE_VOLUME_HEADER*)Private->VariablePartition;
+  PrivateVariableVH = (EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition;
 
-  Status = InitializeFvAndVariableStoreHeaders(PrivateVariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
+  Status = InitializeFvAndVariableStoreHeaders (PrivateVariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
   // Check the Volume Header Settings
-  TestVariableVH = (EFI_FIRMWARE_VOLUME_HEADER*)TestVariablePartition;
+  TestVariableVH = (EFI_FIRMWARE_VOLUME_HEADER *)TestVariablePartition;
 
   // Taken from FvbDxe.c
   ExpectedAttributes = (
-      EFI_FVB2_READ_ENABLED_CAP   |
-      EFI_FVB2_READ_STATUS        |
-      EFI_FVB2_STICKY_WRITE       |
-      EFI_FVB2_MEMORY_MAPPED      |
-      EFI_FVB2_ERASE_POLARITY     |
-      EFI_FVB2_WRITE_STATUS       |
-      EFI_FVB2_WRITE_ENABLED_CAP
-  );
+                        EFI_FVB2_READ_ENABLED_CAP   |
+                        EFI_FVB2_READ_STATUS        |
+                        EFI_FVB2_STICKY_WRITE       |
+                        EFI_FVB2_MEMORY_MAPPED      |
+                        EFI_FVB2_ERASE_POLARITY     |
+                        EFI_FVB2_WRITE_STATUS       |
+                        EFI_FVB2_WRITE_ENABLED_CAP
+                        );
 
-  UT_ASSERT_TRUE(CompareGuid(
-    &TestVariableVH->FileSystemGuid,
-    &gEfiSystemNvDataFvGuid
-  ));
-  UT_ASSERT_EQUAL(TestVariableVH->FvLength, BLOCK_SIZE * NUM_BLOCKS);
-  UT_ASSERT_EQUAL(TestVariableVH->Signature, EFI_FVH_SIGNATURE);
-  UT_ASSERT_EQUAL(TestVariableVH->Attributes, ExpectedAttributes);
-  UT_ASSERT_EQUAL(
+  UT_ASSERT_TRUE (
+    CompareGuid (
+      &TestVariableVH->FileSystemGuid,
+      &gEfiSystemNvDataFvGuid
+      )
+    );
+  UT_ASSERT_EQUAL (TestVariableVH->FvLength, BLOCK_SIZE * NUM_BLOCKS);
+  UT_ASSERT_EQUAL (TestVariableVH->Signature, EFI_FVH_SIGNATURE);
+  UT_ASSERT_EQUAL (TestVariableVH->Attributes, ExpectedAttributes);
+  UT_ASSERT_EQUAL (
     TestVariableVH->HeaderLength,
-    sizeof(EFI_FIRMWARE_VOLUME_HEADER) + sizeof(EFI_FV_BLOCK_MAP_ENTRY)
-  );
-  UT_ASSERT_EQUAL(TestVariableVH->Revision, EFI_FVH_REVISION);
-  UT_ASSERT_EQUAL(TestVariableVH->BlockMap[0].NumBlocks, NUM_BLOCKS);
-  UT_ASSERT_EQUAL(TestVariableVH->BlockMap[0].Length, BLOCK_SIZE);
-  UT_ASSERT_EQUAL(TestVariableVH->BlockMap[1].NumBlocks, 0);
-  UT_ASSERT_EQUAL(TestVariableVH->BlockMap[1].Length, 0);
-  UT_ASSERT_EQUAL(TestVariableVH->Checksum, (UINT16)0xE3FE);
+    sizeof (EFI_FIRMWARE_VOLUME_HEADER) + sizeof (EFI_FV_BLOCK_MAP_ENTRY)
+    );
+  UT_ASSERT_EQUAL (TestVariableVH->Revision, EFI_FVH_REVISION);
+  UT_ASSERT_EQUAL (TestVariableVH->BlockMap[0].NumBlocks, NUM_BLOCKS);
+  UT_ASSERT_EQUAL (TestVariableVH->BlockMap[0].Length, BLOCK_SIZE);
+  UT_ASSERT_EQUAL (TestVariableVH->BlockMap[1].NumBlocks, 0);
+  UT_ASSERT_EQUAL (TestVariableVH->BlockMap[1].Length, 0);
+  UT_ASSERT_EQUAL (TestVariableVH->Checksum, (UINT16)0xE3FE);
 
   // Check the Variable Store Header Settings
-  TestVariableVSH = (VARIABLE_STORE_HEADER*)((UINTN)TestVariableVH
+  TestVariableVSH = (VARIABLE_STORE_HEADER *)((UINTN)TestVariableVH
                                               + TestVariableVH->HeaderLength);
-  UT_ASSERT_TRUE(CompareGuid(
-    &TestVariableVSH->Signature,
-    &gEfiAuthenticatedVariableGuid
-  ));
-  UT_ASSERT_EQUAL(
+  UT_ASSERT_TRUE (
+    CompareGuid (
+      &TestVariableVSH->Signature,
+      &gEfiAuthenticatedVariableGuid
+      )
+    );
+  UT_ASSERT_EQUAL (
     TestVariableVSH->Size,
     BLOCK_SIZE * NUM_BLOCKS - TestVariableVH->HeaderLength
-  );
-  UT_ASSERT_EQUAL(TestVariableVSH->Format, VARIABLE_STORE_FORMATTED);
-  UT_ASSERT_EQUAL(TestVariableVSH->State, VARIABLE_STORE_HEALTHY);
+    );
+  UT_ASSERT_EQUAL (TestVariableVSH->Format, VARIABLE_STORE_FORMATTED);
+  UT_ASSERT_EQUAL (TestVariableVSH->State, VARIABLE_STORE_HEALTHY);
 
   // Make sure everything was flushed to the flash device correctly
-  UT_ASSERT_MEM_EQUAL(
+  UT_ASSERT_MEM_EQUAL (
     TestVariablePartition,
     TestFlashStorage,
     TestVariableVH->HeaderLength + TestVariableVSH->Size
-  );
+    );
 
   return UNIT_TEST_PASSED;
 }
@@ -1228,15 +1268,16 @@ InitializeFvAndVariableStoreHeadersTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-ValidateFvHeaderTestSetup(
+ValidateFvHeaderTestSetup (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS                  Status;
   EFI_FIRMWARE_VOLUME_HEADER  *PrivateVariableVH;
 
   PrivateVariableVH = (EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition;
-  Status = InitializeFvAndVariableStoreHeaders(PrivateVariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
+  Status            = InitializeFvAndVariableStoreHeaders (PrivateVariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
   return UNIT_TEST_PASSED;
 }
@@ -1257,9 +1298,10 @@ ValidateFvHeaderTestSetup(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-ValidateFvHeaderTest(
+ValidateFvHeaderTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS                  Status;
   EFI_FIRMWARE_VOLUME_HEADER  *TestVariableVH;
   EFI_FIRMWARE_VOLUME_HEADER  *TestFlashVH;
@@ -1267,51 +1309,51 @@ ValidateFvHeaderTest(
   VARIABLE_STORE_HEADER       *TestFlashVSH;
 
   TestVariableVH = (EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition;
-  TestFlashVH = (EFI_FIRMWARE_VOLUME_HEADER *)TestFlashStorage;
+  TestFlashVH    = (EFI_FIRMWARE_VOLUME_HEADER *)TestFlashStorage;
 
   // Should be valid after InitializeFvAndVariableStoreHeaders runs
-  Status = ValidateFvHeader(TestVariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
+  Status = ValidateFvHeader (TestVariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
   // Test that when we corrupt various header values, the
   // validation fails by returning EFI_NOT_FOUND.
   // Each value is restored after being corrupted
   // to test the values independently
   TestVariableVH->Revision = 0;
-  Status = ValidateFvHeader(TestVariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_NOT_FOUND);
+  Status                   = ValidateFvHeader (TestVariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_NOT_FOUND);
   TestVariableVH->Revision = TestFlashVH->Revision;
 
   TestVariableVH->Signature = 0;
-  Status = ValidateFvHeader(TestVariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_NOT_FOUND);
+  Status                    = ValidateFvHeader (TestVariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_NOT_FOUND);
   TestVariableVH->Signature = TestFlashVH->Signature;
 
   TestVariableVH->FvLength = BLOCK_SIZE * NUM_BLOCKS - 1;
-  Status = ValidateFvHeader(TestVariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_NOT_FOUND);
+  Status                   = ValidateFvHeader (TestVariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_NOT_FOUND);
   TestVariableVH->FvLength = TestFlashVH->FvLength;
 
   TestVariableVH->FileSystemGuid = ZeroGuid;
-  Status = ValidateFvHeader(TestVariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_NOT_FOUND);
+  Status                         = ValidateFvHeader (TestVariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_NOT_FOUND);
   TestVariableVH->FileSystemGuid = TestFlashVH->FileSystemGuid;
 
-  TestVariableVSH = (VARIABLE_STORE_HEADER*)((UINTN)TestVariableVH
+  TestVariableVSH = (VARIABLE_STORE_HEADER *)((UINTN)TestVariableVH
                                               + TestVariableVH->HeaderLength);
-  TestFlashVSH = (VARIABLE_STORE_HEADER*)((UINTN)TestFlashVH
-                                            + TestFlashVH->HeaderLength);
+  TestFlashVSH = (VARIABLE_STORE_HEADER *)((UINTN)TestFlashVH
+                                           + TestFlashVH->HeaderLength);
 
   TestVariableVSH->Signature = ZeroGuid;
-  Status = ValidateFvHeader(TestVariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_NOT_FOUND);
+  Status                     = ValidateFvHeader (TestVariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_NOT_FOUND);
   TestVariableVSH->Signature = TestFlashVSH->Signature;
 
   TestVariableVSH->Size = BLOCK_SIZE * NUM_BLOCKS
-                            - TestVariableVH->HeaderLength
-                            - 1;
-  Status = ValidateFvHeader(TestVariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_NOT_FOUND);
+                          - TestVariableVH->HeaderLength
+                          - 1;
+  Status = ValidateFvHeader (TestVariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_NOT_FOUND);
 
   return UNIT_TEST_PASSED;
 }
@@ -1324,17 +1366,18 @@ ValidateFvHeaderTest(
 STATIC
 VOID
 EFIAPI
-FaultyFlashSetup(
+FaultyFlashSetup (
   VOID
-) {
-  FlashStubDestroy(Private->BlockIo);
-  FaultyFlashStubInitialize(
+  )
+{
+  FlashStubDestroy (Private->BlockIo);
+  FaultyFlashStubInitialize (
     TestFlashStorage,
     NUM_BLOCKS * BLOCK_SIZE,
     BLOCK_SIZE,
     IO_ALIGN,
     &Private->BlockIo
-  );
+    );
 }
 
 /**
@@ -1345,17 +1388,18 @@ FaultyFlashSetup(
 STATIC
 VOID
 EFIAPI
-FaultyFlashCleanup(
+FaultyFlashCleanup (
   VOID
-) {
-  FaultyFlashStubDestroy(Private->BlockIo);
-  FlashStubInitialize(
+  )
+{
+  FaultyFlashStubDestroy (Private->BlockIo);
+  FlashStubInitialize (
     TestFlashStorage,
     NUM_BLOCKS * BLOCK_SIZE,
     BLOCK_SIZE,
     IO_ALIGN,
     &Private->BlockIo
-  );
+    );
 }
 
 /**
@@ -1369,19 +1413,20 @@ FaultyFlashCleanup(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FaultyFlashGetAttributesTest(
+FaultyFlashGetAttributesTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS            Status;
   EFI_FVB_ATTRIBUTES_2  Attributes;
 
   // GetAttributes doesn't interact with the flash device so it should be ok
-  Status = Private->FvbInstance.GetAttributes(
-    &Private->FvbInstance,
-    &Attributes
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
-  UT_ASSERT_EQUAL(MOCK_ATTRIBUTES, Attributes);
+  Status = Private->FvbInstance.GetAttributes (
+                                  &Private->FvbInstance,
+                                  &Attributes
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL (MOCK_ATTRIBUTES, Attributes);
 
   return UNIT_TEST_PASSED;
 }
@@ -1397,14 +1442,15 @@ FaultyFlashGetAttributesTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FaultyFlashSetAttributesTest(
+FaultyFlashSetAttributesTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   // Right now SetAttributes is not supported by FvbDxe
-  UT_ASSERT_STATUS_EQUAL(
-    Private->FvbInstance.SetAttributes(&Private->FvbInstance, NULL),
+  UT_ASSERT_STATUS_EQUAL (
+    Private->FvbInstance.SetAttributes (&Private->FvbInstance, NULL),
     EFI_UNSUPPORTED
-  );
+    );
 
   return UNIT_TEST_PASSED;
 }
@@ -1420,19 +1466,20 @@ FaultyFlashSetAttributesTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FaultyFlashGetPhysicalAddressTest(
+FaultyFlashGetPhysicalAddressTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS            Status;
   EFI_PHYSICAL_ADDRESS  Address;
 
   // GetPhysicalAddress doesn't interact with the flash device so should be ok
-  Status = Private->FvbInstance.GetPhysicalAddress(
-    &Private->FvbInstance,
-    &Address
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
-  UT_ASSERT_EQUAL((EFI_PHYSICAL_ADDRESS)(TestVariablePartition), Address);
+  Status = Private->FvbInstance.GetPhysicalAddress (
+                                  &Private->FvbInstance,
+                                  &Address
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL ((EFI_PHYSICAL_ADDRESS)(TestVariablePartition), Address);
 
   return UNIT_TEST_PASSED;
 }
@@ -1448,7 +1495,7 @@ FaultyFlashGetPhysicalAddressTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FaultyFlashGetBlockSizeTest(
+FaultyFlashGetBlockSizeTest (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
@@ -1457,15 +1504,15 @@ FaultyFlashGetBlockSizeTest(
   UINTN       NumberOfBlocks;
 
   // GetBlockSize doesn't interact with the flash device so it should be ok
-  Status = Private->FvbInstance.GetBlockSize(
-    &Private->FvbInstance,
-    0,
-    &BlockSize,
-    &NumberOfBlocks
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
-  UT_ASSERT_EQUAL(BlockSize, BLOCK_SIZE);
-  UT_ASSERT_EQUAL(NumberOfBlocks, NUM_BLOCKS);
+  Status = Private->FvbInstance.GetBlockSize (
+                                  &Private->FvbInstance,
+                                  0,
+                                  &BlockSize,
+                                  &NumberOfBlocks
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL (BlockSize, BLOCK_SIZE);
+  UT_ASSERT_EQUAL (NumberOfBlocks, NUM_BLOCKS);
 
   return UNIT_TEST_PASSED;
 }
@@ -1481,23 +1528,24 @@ FaultyFlashGetBlockSizeTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FaultyFlashReadTest(
+FaultyFlashReadTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS  Status;
   UINTN       NumBytes;
 
   NumBytes = 1;
 
   // Reading doesn't currently interact with flash so it should be ok
-  Status = Private->FvbInstance.Read(
-    &Private->FvbInstance,
-    0,
-    0,
-    &NumBytes,
-    TestBuffer
-  );
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_SUCCESS);
+  Status = Private->FvbInstance.Read (
+                                  &Private->FvbInstance,
+                                  0,
+                                  0,
+                                  &NumBytes,
+                                  TestBuffer
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
   return UNIT_TEST_PASSED;
 }
@@ -1513,22 +1561,25 @@ FaultyFlashReadTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FaultyFlashWriteTest(
+FaultyFlashWriteTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
-  UINTN       NumBytes;
+  )
+{
+  UINTN  NumBytes;
 
   NumBytes = 1;
 
   // Write tries to flush to the flash device so we should get an error
-  UT_EXPECT_ASSERT_FAILURE(
-    Private->FvbInstance.Write(
-      &Private->FvbInstance,
-      0,
-      0,
-      &NumBytes,
-      TestBuffer
-    ), NULL);
+  UT_EXPECT_ASSERT_FAILURE (
+    Private->FvbInstance.Write (
+                           &Private->FvbInstance,
+                           0,
+                           0,
+                           &NumBytes,
+                           TestBuffer
+                           ),
+    NULL
+    );
 
   return UNIT_TEST_PASSED;
 }
@@ -1544,17 +1595,20 @@ FaultyFlashWriteTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FaultyFlashEraseBlocksTest(
+FaultyFlashEraseBlocksTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   // EraseBlocks tries to flush to the flash device so we should get an error
-  UT_EXPECT_ASSERT_FAILURE(
-    Private->FvbInstance.EraseBlocks(
-      &Private->FvbInstance,
-      (EFI_LBA) 0,
-      (UINTN) 1,
-      EFI_LBA_LIST_TERMINATOR
-    ), NULL);
+  UT_EXPECT_ASSERT_FAILURE (
+    Private->FvbInstance.EraseBlocks (
+                           &Private->FvbInstance,
+                           (EFI_LBA)0,
+                           (UINTN)1,
+                           EFI_LBA_LIST_TERMINATOR
+                           ),
+    NULL
+    );
 
   return UNIT_TEST_PASSED;
 }
@@ -1571,9 +1625,10 @@ FaultyFlashEraseBlocksTest(
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-FaultyFlashInitializeFvHeaderTest(
+FaultyFlashInitializeFvHeaderTest (
   IN UNIT_TEST_CONTEXT  Context
-) {
+  )
+{
   EFI_STATUS                  Status;
   EFI_FIRMWARE_VOLUME_HEADER  *PrivateVariableVH;
 
@@ -1581,8 +1636,8 @@ FaultyFlashInitializeFvHeaderTest(
 
   // Initializing the header tries to flush
   // to the flash device so we should get an error
-  Status = InitializeFvAndVariableStoreHeaders(PrivateVariableVH);
-  UT_ASSERT_STATUS_EQUAL(Status, EFI_DEVICE_ERROR);
+  Status = InitializeFvAndVariableStoreHeaders (PrivateVariableVH);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
   return UNIT_TEST_PASSED;
 }
@@ -1596,43 +1651,43 @@ FaultyFlashInitializeFvHeaderTest(
 **/
 STATIC
 VOID
-InitTestData(
+InitTestData (
   VOID
-) {
-  Private = (NVIDIA_FVB_PRIVATE_DATA*)
-              AllocatePool(sizeof(NVIDIA_FVB_PRIVATE_DATA));
+  )
+{
+  Private = (NVIDIA_FVB_PRIVATE_DATA *)
+            AllocatePool (sizeof (NVIDIA_FVB_PRIVATE_DATA));
 
-  TestFlashStorage = AllocatePool(NUM_BLOCKS * BLOCK_SIZE);
-  TestVariablePartition = AllocatePool(NUM_BLOCKS * BLOCK_SIZE);
-  TestBuffer = AllocatePool(BLOCK_SIZE);
+  TestFlashStorage      = AllocatePool (NUM_BLOCKS * BLOCK_SIZE);
+  TestVariablePartition = AllocatePool (NUM_BLOCKS * BLOCK_SIZE);
+  TestBuffer            = AllocatePool (BLOCK_SIZE);
 
-  ZeroMem(TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE);
-  ZeroMem(TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE);
-  ZeroMem(TestBuffer, BLOCK_SIZE);
+  ZeroMem (TestFlashStorage, NUM_BLOCKS * BLOCK_SIZE);
+  ZeroMem (TestVariablePartition, NUM_BLOCKS * BLOCK_SIZE);
+  ZeroMem (TestBuffer, BLOCK_SIZE);
 
-  FlashStubInitialize(
+  FlashStubInitialize (
     TestFlashStorage,
     NUM_BLOCKS * BLOCK_SIZE,
     BLOCK_SIZE,
     IO_ALIGN,
     &Private->BlockIo
-  );
-  PcdSet32S(PcdFlashNvStorageVariableSize, NUM_BLOCKS * BLOCK_SIZE);
-
+    );
+  PcdSet32S (PcdFlashNvStorageVariableSize, NUM_BLOCKS * BLOCK_SIZE);
 
   Private->VariablePartition = TestVariablePartition;
 
-  Private->NumBlocks = NUM_BLOCKS;
+  Private->NumBlocks            = NUM_BLOCKS;
   Private->PartitionStartingLBA = 0;
 
-  Private->FvbInstance.GetAttributes = FvbGetAttributes;
-  Private->FvbInstance.SetAttributes = FvbSetAttributes;
+  Private->FvbInstance.GetAttributes      = FvbGetAttributes;
+  Private->FvbInstance.SetAttributes      = FvbSetAttributes;
   Private->FvbInstance.GetPhysicalAddress = FvbGetPhysicalAddress;
-  Private->FvbInstance.GetBlockSize = FvbGetBlockSize;
-  Private->FvbInstance.Read = FvbRead;
-  Private->FvbInstance.Write = FvbWrite;
-  Private->FvbInstance.EraseBlocks = FvbEraseBlocks;
-  Private->FvbInstance.ParentHandle = NULL;
+  Private->FvbInstance.GetBlockSize       = FvbGetBlockSize;
+  Private->FvbInstance.Read               = FvbRead;
+  Private->FvbInstance.Write              = FvbWrite;
+  Private->FvbInstance.EraseBlocks        = FvbEraseBlocks;
+  Private->FvbInstance.ParentHandle       = NULL;
 }
 
 /**
@@ -1643,24 +1698,25 @@ InitTestData(
 **/
 STATIC
 VOID
-CleanUpTestData(
+CleanUpTestData (
   VOID
-) {
+  )
+{
   if (Private != NULL) {
-    FlashStubDestroy(Private->BlockIo);
-    FreePool(Private);
+    FlashStubDestroy (Private->BlockIo);
+    FreePool (Private);
   }
 
   if (TestFlashStorage != NULL) {
-    FreePool(TestFlashStorage);
+    FreePool (TestFlashStorage);
   }
 
   if (TestVariablePartition != NULL) {
-    FreePool(TestVariablePartition);
+    FreePool (TestVariablePartition);
   }
 
   if (TestBuffer != NULL) {
-    FreePool(TestBuffer);
+    FreePool (TestBuffer);
   }
 
   Private = NULL;
@@ -1677,9 +1733,10 @@ CleanUpTestData(
 STATIC
 EFI_STATUS
 EFIAPI
-UnitTestingEntry(
+UnitTestingEntry (
   VOID
-) {
+  )
+{
   EFI_STATUS                  Status;
   UNIT_TEST_FRAMEWORK_HANDLE  Fw;
   UNIT_TEST_SUITE_HANDLE      FvbGetSetTestSuite;
@@ -1693,35 +1750,35 @@ UnitTestingEntry(
 
   DEBUG ((DEBUG_INFO, "%a v%a\n", UNIT_TEST_APP_NAME, UNIT_TEST_APP_VERSION));
 
-  InitTestData();
+  InitTestData ();
 
   // Start setting up the test framework for running the tests.
-  Status = InitUnitTestFramework(
-    &Fw,
-    UNIT_TEST_APP_NAME,
-    gEfiCallerBaseName,
-    UNIT_TEST_APP_VERSION
-  );
+  Status = InitUnitTestFramework (
+             &Fw,
+             UNIT_TEST_APP_NAME,
+             gEfiCallerBaseName,
+             UNIT_TEST_APP_VERSION
+             );
   if (EFI_ERROR (Status)) {
-    DEBUG(
+    DEBUG (
       (DEBUG_ERROR,
-      "Failed in InitUnitTestFramework. Status = %r\n",
-      Status)
-    );
+       "Failed in InitUnitTestFramework. Status = %r\n",
+       Status)
+      );
     goto EXIT;
   }
 
   // Populate the Fvb Getter/Setter Unit Test Suite.
-  Status = CreateUnitTestSuite(
-    &FvbGetSetTestSuite,
-    Fw,
-    "Fvb Getter/Setter Tests",
-    "FvbDxe.FvbGetSetTestSuite",
-    NULL,
-    NULL
-  );
+  Status = CreateUnitTestSuite (
+             &FvbGetSetTestSuite,
+             Fw,
+             "Fvb Getter/Setter Tests",
+             "FvbDxe.FvbGetSetTestSuite",
+             NULL,
+             NULL
+             );
   if (EFI_ERROR (Status)) {
-    DEBUG((DEBUG_ERROR, "Failed in CreateUnitTestSuite for FvbTests\n"));
+    DEBUG ((DEBUG_ERROR, "Failed in CreateUnitTestSuite for FvbTests\n"));
     Status = EFI_OUT_OF_RESOURCES;
     goto EXIT;
   }
@@ -1730,129 +1787,84 @@ UnitTestingEntry(
   //  Suite | Description
   //  Class Name | Function
   //  Pre | Post | Context
-  AddTestCase(FvbGetSetTestSuite, "GetAttributes Test",
-              "FvbGetAttributesTest", FvbGetAttributesTest,
-              FvbGetAttributesTestSetup, NULL, NULL);
-  AddTestCase(FvbGetSetTestSuite, "GetAttributes Invalid Test",
-              "FvbGetAttributesInvalidTest", FvbGetAttributesInvalidTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbGetSetTestSuite, "SetAttributes Test",
-              "FvbSetAttributesTest", FvbSetAttributesTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbGetSetTestSuite, "GetPhysicalAddress Test",
-              "FvbGetPhysicalAddressTest", FvbGetPhysicalAddressTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbGetSetTestSuite, "GetPhysicalAddress Invalid Test",
-              "FvbGetPhysicalAddressInvalidTest",
-              FvbGetPhysicalAddressInvalidTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbGetSetTestSuite, "GetBlockSize Test",
-              "FvbGetBlockSizeTest", FvbGetBlockSizeTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbGetSetTestSuite, "GetBlockSize Invalid Test",
-              "FvbGetBlockSizeInvalidTest", FvbGetBlockSizeInvalidTest,
-              NULL, NULL, NULL);
+  AddTestCase (
+    FvbGetSetTestSuite,
+    "GetAttributes Test",
+    "FvbGetAttributesTest",
+    FvbGetAttributesTest,
+    FvbGetAttributesTestSetup,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbGetSetTestSuite,
+    "GetAttributes Invalid Test",
+    "FvbGetAttributesInvalidTest",
+    FvbGetAttributesInvalidTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbGetSetTestSuite,
+    "SetAttributes Test",
+    "FvbSetAttributesTest",
+    FvbSetAttributesTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbGetSetTestSuite,
+    "GetPhysicalAddress Test",
+    "FvbGetPhysicalAddressTest",
+    FvbGetPhysicalAddressTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbGetSetTestSuite,
+    "GetPhysicalAddress Invalid Test",
+    "FvbGetPhysicalAddressInvalidTest",
+    FvbGetPhysicalAddressInvalidTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbGetSetTestSuite,
+    "GetBlockSize Test",
+    "FvbGetBlockSizeTest",
+    FvbGetBlockSizeTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbGetSetTestSuite,
+    "GetBlockSize Invalid Test",
+    "FvbGetBlockSizeInvalidTest",
+    FvbGetBlockSizeInvalidTest,
+    NULL,
+    NULL,
+    NULL
+    );
 
   // Populate the Fvb REad Unit Test Suite.
-  Status = CreateUnitTestSuite(
-    &FvbReadTestSuite,
-    Fw,
-    "Fvb Read Tests",
-    "FvbDxe.FvbReadTestSuite",
-    NULL,
-    NULL
-  );
-  if (EFI_ERROR (Status)) {
-    DEBUG(
-      (DEBUG_ERROR,
-      "Failed in CreateUnitTestSuite for FvbReadTestSuite\n")
-    );
-    Status = EFI_OUT_OF_RESOURCES;
-    goto EXIT;
-  }
-
-  // AddTestCase Args:
-  //  Suite | Description
-  //  Class Name | Function
-  //  Pre | Post | Context
-  AddTestCase(FvbReadTestSuite, "Simple Read Test 1 - Lowest Lba",
-              "SimpleTest1LbaLo", FvbReadTest,
-              FvbReadTestSetup, NULL, &SimpleTest1LbaLo);
-  AddTestCase(FvbReadTestSuite, "Simple Read Test 2 - Lowest Lba",
-              "SimpleTest2LbaLo", FvbReadTest,
-              FvbReadTestSetup, NULL, &SimpleTest2LbaLo);
-  AddTestCase(FvbReadTestSuite, "Full Block Read Test - Lowest Lba",
-              "FullBlockTestLbaLo", FvbReadTest,
-              FvbReadTestSetup, NULL, &FullBlockTestLbaLo);
-  AddTestCase(FvbReadTestSuite, "Zero Byte Read - Lowest Lba",
-              "ZeroByteTestLbaLo", FvbReadTest,
-              FvbReadTestSetup, NULL, &ZeroByteTestLbaLo);
-  AddTestCase(FvbReadTestSuite, "Cross Boundary Read Test - Lowest Lba",
-              "CrossBoundaryTestLbaLo", FvbReadTest,
-              FvbReadTestSetup, NULL, &CrossBoundaryTestLbaLo);
-  AddTestCase(FvbReadTestSuite, "Bad Offset Read Test - Lowest Lba",
-              "BadOffsetTestLbaLo", FvbReadTest,
-              FvbReadTestSetup, NULL, &BadOffsetTestLbaLo);
-
-  AddTestCase(FvbReadTestSuite, "Simple Read Test 1 - Middle Lba",
-              "SimpleTest1LbaMid", FvbReadTest,
-              FvbReadTestSetup, NULL, &SimpleTest1LbaMid);
-  AddTestCase(FvbReadTestSuite, "Simple Read Test 2 - Middle Lba",
-              "SimpleTest2LbaMid", FvbReadTest,
-              FvbReadTestSetup, NULL, &SimpleTest2LbaMid);
-  AddTestCase(FvbReadTestSuite, "Full Block Read Test - Middle Lba",
-              "FullBlockTestLbaMid", FvbReadTest,
-              FvbReadTestSetup, NULL, &FullBlockTestLbaMid);
-  AddTestCase(FvbReadTestSuite, "Zero Byte Read - Middle Lba",
-              "ZeroByteTestLbaMid", FvbReadTest,
-              FvbReadTestSetup, NULL, &ZeroByteTestLbaMid);
-  AddTestCase(FvbReadTestSuite, "Cross Boundary Read Test - Middle Lba",
-              "CrossBoundaryTestLbaMid", FvbReadTest,
-              FvbReadTestSetup, NULL, &CrossBoundaryTestLbaMid);
-  AddTestCase(FvbReadTestSuite, "Bad Offset Read Test - Middle Lba",
-              "BadOffsetTestLbaMid", FvbReadTest,
-              FvbReadTestSetup, NULL, &BadOffsetTestLbaMid);
-
-  AddTestCase(FvbReadTestSuite, "Simple Read Test 1 - Highest Lba",
-              "SimpleTest1LbaHi", FvbReadTest,
-              FvbReadTestSetup, NULL, &SimpleTest1LbaHi);
-  AddTestCase(FvbReadTestSuite, "Simple Read Test 2 - Highest Lba",
-              "SimpleTest2LbaHi", FvbReadTest,
-              FvbReadTestSetup, NULL, &SimpleTest2LbaHi);
-  AddTestCase(FvbReadTestSuite, "Full Block Read Test - Highest Lba",
-              "FullBlockTestLbaHi", FvbReadTest,
-              FvbReadTestSetup, NULL, &FullBlockTestLbaHi);
-  AddTestCase(FvbReadTestSuite, "Zero Byte Read - Highest Lba",
-              "ZeroByteTestLbaHi", FvbReadTest,
-              FvbReadTestSetup, NULL, &ZeroByteTestLbaHi);
-  AddTestCase(FvbReadTestSuite, "Cross Boundary Read Test - Highest Lba",
-              "CrossBoundaryTestLbaHi", FvbReadTest,
-              FvbReadTestSetup, NULL, &CrossBoundaryTestLbaHi);
-  AddTestCase(FvbReadTestSuite, "Bad Offset Read Test - Highest Lba",
-              "BadOffsetTestLbaHi", FvbReadTest,
-              FvbReadTestSetup, NULL, &BadOffsetTestLbaHi);
-
-  AddTestCase(FvbReadTestSuite, "Bad Lba Read Test",
-              "BadLbaTest", FvbReadTest,
-              FvbReadTestSetup, NULL, &BadLbaTest);
-  AddTestCase(FvbReadTestSuite, "Read Invalid Test",
-              "FvbReadInvalidTest", FvbReadInvalidTest,
-              NULL, NULL, NULL);
-
-  // Populate the Fvb Write Unit Test Suite.
-  Status = CreateUnitTestSuite(
-    &FvbWriteTestSuite,
-    Fw,
-    "Fvb Write Tests",
-    "FvbDxe.FvbWriteTestSuite",
-    NULL,
-    NULL
-  );
+  Status = CreateUnitTestSuite (
+             &FvbReadTestSuite,
+             Fw,
+             "Fvb Read Tests",
+             "FvbDxe.FvbReadTestSuite",
+             NULL,
+             NULL
+             );
   if (EFI_ERROR (Status)) {
     DEBUG (
       (DEBUG_ERROR,
-      "Failed in CreateUnitTestSuite for FvbWriteTestSuite\n")
-    );
+       "Failed in CreateUnitTestSuite for FvbReadTestSuite\n")
+      );
     Status = EFI_OUT_OF_RESOURCES;
     goto EXIT;
   }
@@ -1861,183 +1873,588 @@ UnitTestingEntry(
   //  Suite | Description
   //  Class Name | Function
   //  Pre | Post | Context
-  AddTestCase(FvbWriteTestSuite, "Simple Write Test 1 - Lowest Lba",
-              "SimpleTest1LbaLo", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &SimpleTest1LbaLo);
-  AddTestCase(FvbWriteTestSuite, "Simple Write Test 2 - Lowest Lba",
-              "SimpleTest2LbaLo", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &SimpleTest2LbaLo);
-  AddTestCase(FvbWriteTestSuite, "Full Block Write Test - Lowest Lba",
-              "FullBlockTestLbaLo", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &FullBlockTestLbaLo);
-  AddTestCase(FvbWriteTestSuite, "Zero Byte Write - Lowest Lba",
-              "ZeroByteTestLbaLo", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &ZeroByteTestLbaLo);
-  AddTestCase(FvbWriteTestSuite, "Cross Boundary Write Test - Lowest Lba",
-              "CrossBoundaryTestLbaLo", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &CrossBoundaryTestLbaLo);
-  AddTestCase(FvbWriteTestSuite, "Bad Offset Write Test - Lowest Lba",
-              "BadOffsetTestLbaLo", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &BadOffsetTestLbaLo);
+  AddTestCase (
+    FvbReadTestSuite,
+    "Simple Read Test 1 - Lowest Lba",
+    "SimpleTest1LbaLo",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &SimpleTest1LbaLo
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Simple Read Test 2 - Lowest Lba",
+    "SimpleTest2LbaLo",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &SimpleTest2LbaLo
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Full Block Read Test - Lowest Lba",
+    "FullBlockTestLbaLo",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &FullBlockTestLbaLo
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Zero Byte Read - Lowest Lba",
+    "ZeroByteTestLbaLo",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &ZeroByteTestLbaLo
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Cross Boundary Read Test - Lowest Lba",
+    "CrossBoundaryTestLbaLo",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &CrossBoundaryTestLbaLo
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Bad Offset Read Test - Lowest Lba",
+    "BadOffsetTestLbaLo",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &BadOffsetTestLbaLo
+    );
 
-  AddTestCase(FvbWriteTestSuite, "Simple Write Test 1 - Middle Lba",
-              "SimpleTest1LbaMid", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &SimpleTest1LbaMid);
-  AddTestCase(FvbWriteTestSuite, "Simple Write Test 2 - Middle Lba",
-              "SimpleTest2LbaMid", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &SimpleTest2LbaMid);
-  AddTestCase(FvbWriteTestSuite, "Full Block Write Test - Middle Lba",
-              "FullBlockTestLbaMid", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &FullBlockTestLbaMid);
-  AddTestCase(FvbWriteTestSuite, "Zero Byte Write - Middle Lba",
-              "ZeroByteTestLbaMid", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &ZeroByteTestLbaMid);
-  AddTestCase(FvbWriteTestSuite, "Cross Boundary Write Test - Middle Lba",
-              "CrossBoundaryTestLbaMid", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &CrossBoundaryTestLbaMid);
-  AddTestCase(FvbWriteTestSuite, "Bad Offset Write Test - Middle Lba",
-              "BadOffsetTestLbaMid", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &BadOffsetTestLbaMid);
+  AddTestCase (
+    FvbReadTestSuite,
+    "Simple Read Test 1 - Middle Lba",
+    "SimpleTest1LbaMid",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &SimpleTest1LbaMid
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Simple Read Test 2 - Middle Lba",
+    "SimpleTest2LbaMid",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &SimpleTest2LbaMid
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Full Block Read Test - Middle Lba",
+    "FullBlockTestLbaMid",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &FullBlockTestLbaMid
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Zero Byte Read - Middle Lba",
+    "ZeroByteTestLbaMid",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &ZeroByteTestLbaMid
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Cross Boundary Read Test - Middle Lba",
+    "CrossBoundaryTestLbaMid",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &CrossBoundaryTestLbaMid
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Bad Offset Read Test - Middle Lba",
+    "BadOffsetTestLbaMid",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &BadOffsetTestLbaMid
+    );
 
-  AddTestCase(FvbWriteTestSuite, "Simple Write Test 1 - Highest Lba",
-              "SimpleTest1LbaHi", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &SimpleTest1LbaHi);
-  AddTestCase(FvbWriteTestSuite, "Simple Write Test 2 - Highest Lba",
-              "SimpleTest2LbaHi", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &SimpleTest2LbaHi);
-  AddTestCase(FvbWriteTestSuite, "Full Block Write Test - Highest Lba",
-              "FullBlockTestLbaHi", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &FullBlockTestLbaHi);
-  AddTestCase(FvbWriteTestSuite, "Zero Byte Write - Highest Lba",
-              "ZeroByteTestLbaHi", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &ZeroByteTestLbaHi);
-  AddTestCase(FvbWriteTestSuite, "Cross Boundary Write Test - Highest Lba",
-              "CrossBoundaryTestLbaHi", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &CrossBoundaryTestLbaHi);
-  AddTestCase(FvbWriteTestSuite, "Bad Offset Write Test - Highest Lba",
-              "BadOffsetTestLbaHi", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &BadOffsetTestLbaHi);
+  AddTestCase (
+    FvbReadTestSuite,
+    "Simple Read Test 1 - Highest Lba",
+    "SimpleTest1LbaHi",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &SimpleTest1LbaHi
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Simple Read Test 2 - Highest Lba",
+    "SimpleTest2LbaHi",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &SimpleTest2LbaHi
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Full Block Read Test - Highest Lba",
+    "FullBlockTestLbaHi",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &FullBlockTestLbaHi
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Zero Byte Read - Highest Lba",
+    "ZeroByteTestLbaHi",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &ZeroByteTestLbaHi
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Cross Boundary Read Test - Highest Lba",
+    "CrossBoundaryTestLbaHi",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &CrossBoundaryTestLbaHi
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Bad Offset Read Test - Highest Lba",
+    "BadOffsetTestLbaHi",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &BadOffsetTestLbaHi
+    );
 
-  AddTestCase(FvbWriteTestSuite, "Bad Lba Write Test",
-              "BadLbaTest", FvbWriteTest,
-              FvbWriteTestSetup, NULL, &BadLbaTest);
-  AddTestCase(FvbWriteTestSuite, "Write Invalid Test",
-              "FvbWriteInvalidTest", FvbWriteInvalidTest,
-              NULL, NULL, NULL);
-
-  // Populate the Fvb Erase Blocks Unit Test Suite.
-  Status = CreateUnitTestSuite(
-    &FvbEraseBlocksTestSuite,
-    Fw,
-    "Fvb EraseBlocks Tests",
-    "FvbDxe.FvbEraseBlocksTestSuite",
+  AddTestCase (
+    FvbReadTestSuite,
+    "Bad Lba Read Test",
+    "BadLbaTest",
+    FvbReadTest,
+    FvbReadTestSetup,
+    NULL,
+    &BadLbaTest
+    );
+  AddTestCase (
+    FvbReadTestSuite,
+    "Read Invalid Test",
+    "FvbReadInvalidTest",
+    FvbReadInvalidTest,
+    NULL,
     NULL,
     NULL
-  );
-  if (EFI_ERROR (Status)) {
-    DEBUG(
-      (DEBUG_ERROR,
-      "Failed in CreateUnitTestSuite for FvbEraseBlocksTestSuite\n")
     );
+
+  // Populate the Fvb Write Unit Test Suite.
+  Status = CreateUnitTestSuite (
+             &FvbWriteTestSuite,
+             Fw,
+             "Fvb Write Tests",
+             "FvbDxe.FvbWriteTestSuite",
+             NULL,
+             NULL
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG (
+      (DEBUG_ERROR,
+       "Failed in CreateUnitTestSuite for FvbWriteTestSuite\n")
+      );
     Status = EFI_OUT_OF_RESOURCES;
     goto EXIT;
   }
 
-  AddTestCase(FvbEraseBlocksTestSuite, "EraseBlocks Failure Tests",
-              "FvbEraseBlocksFailureTest", FvbEraseBlocksFailureTest,
-              FvbEraseBlocksTestSetup, NULL, NULL);
-  AddTestCase(FvbEraseBlocksTestSuite, "EraseBlocks Success Edge Tests",
-              "FvbEraseBlocksSuccessEdgeTest", FvbEraseBlocksSuccessEdgeTest,
-              FvbEraseBlocksTestSetup, NULL, NULL);
-  AddTestCase(FvbEraseBlocksTestSuite, "EraseBlocks Success General Tests",
-              "FvbEraseBlocksSuccessGeneralTest",
-              FvbEraseBlocksSuccessGeneralTest,
-              FvbEraseBlocksTestSetup, NULL, NULL);
+  // AddTestCase Args:
+  //  Suite | Description
+  //  Class Name | Function
+  //  Pre | Post | Context
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Simple Write Test 1 - Lowest Lba",
+    "SimpleTest1LbaLo",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &SimpleTest1LbaLo
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Simple Write Test 2 - Lowest Lba",
+    "SimpleTest2LbaLo",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &SimpleTest2LbaLo
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Full Block Write Test - Lowest Lba",
+    "FullBlockTestLbaLo",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &FullBlockTestLbaLo
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Zero Byte Write - Lowest Lba",
+    "ZeroByteTestLbaLo",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &ZeroByteTestLbaLo
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Cross Boundary Write Test - Lowest Lba",
+    "CrossBoundaryTestLbaLo",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &CrossBoundaryTestLbaLo
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Bad Offset Write Test - Lowest Lba",
+    "BadOffsetTestLbaLo",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &BadOffsetTestLbaLo
+    );
+
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Simple Write Test 1 - Middle Lba",
+    "SimpleTest1LbaMid",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &SimpleTest1LbaMid
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Simple Write Test 2 - Middle Lba",
+    "SimpleTest2LbaMid",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &SimpleTest2LbaMid
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Full Block Write Test - Middle Lba",
+    "FullBlockTestLbaMid",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &FullBlockTestLbaMid
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Zero Byte Write - Middle Lba",
+    "ZeroByteTestLbaMid",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &ZeroByteTestLbaMid
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Cross Boundary Write Test - Middle Lba",
+    "CrossBoundaryTestLbaMid",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &CrossBoundaryTestLbaMid
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Bad Offset Write Test - Middle Lba",
+    "BadOffsetTestLbaMid",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &BadOffsetTestLbaMid
+    );
+
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Simple Write Test 1 - Highest Lba",
+    "SimpleTest1LbaHi",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &SimpleTest1LbaHi
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Simple Write Test 2 - Highest Lba",
+    "SimpleTest2LbaHi",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &SimpleTest2LbaHi
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Full Block Write Test - Highest Lba",
+    "FullBlockTestLbaHi",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &FullBlockTestLbaHi
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Zero Byte Write - Highest Lba",
+    "ZeroByteTestLbaHi",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &ZeroByteTestLbaHi
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Cross Boundary Write Test - Highest Lba",
+    "CrossBoundaryTestLbaHi",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &CrossBoundaryTestLbaHi
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Bad Offset Write Test - Highest Lba",
+    "BadOffsetTestLbaHi",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &BadOffsetTestLbaHi
+    );
+
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Bad Lba Write Test",
+    "BadLbaTest",
+    FvbWriteTest,
+    FvbWriteTestSetup,
+    NULL,
+    &BadLbaTest
+    );
+  AddTestCase (
+    FvbWriteTestSuite,
+    "Write Invalid Test",
+    "FvbWriteInvalidTest",
+    FvbWriteInvalidTest,
+    NULL,
+    NULL,
+    NULL
+    );
+
+  // Populate the Fvb Erase Blocks Unit Test Suite.
+  Status = CreateUnitTestSuite (
+             &FvbEraseBlocksTestSuite,
+             Fw,
+             "Fvb EraseBlocks Tests",
+             "FvbDxe.FvbEraseBlocksTestSuite",
+             NULL,
+             NULL
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG (
+      (DEBUG_ERROR,
+       "Failed in CreateUnitTestSuite for FvbEraseBlocksTestSuite\n")
+      );
+    Status = EFI_OUT_OF_RESOURCES;
+    goto EXIT;
+  }
+
+  AddTestCase (
+    FvbEraseBlocksTestSuite,
+    "EraseBlocks Failure Tests",
+    "FvbEraseBlocksFailureTest",
+    FvbEraseBlocksFailureTest,
+    FvbEraseBlocksTestSetup,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbEraseBlocksTestSuite,
+    "EraseBlocks Success Edge Tests",
+    "FvbEraseBlocksSuccessEdgeTest",
+    FvbEraseBlocksSuccessEdgeTest,
+    FvbEraseBlocksTestSetup,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbEraseBlocksTestSuite,
+    "EraseBlocks Success General Tests",
+    "FvbEraseBlocksSuccessGeneralTest",
+    FvbEraseBlocksSuccessGeneralTest,
+    FvbEraseBlocksTestSetup,
+    NULL,
+    NULL
+    );
 
   // Populate the Fvb Fv Header Unit Test Suite.
   Status = CreateUnitTestSuite (
-    &FvbFvHeaderTestSuite,
-    Fw,
-    "Fvb Fv Header Tests",
-    "FvbDxe.FvbFvHeaderTestSuite",
+             &FvbFvHeaderTestSuite,
+             Fw,
+             "Fvb Fv Header Tests",
+             "FvbDxe.FvbFvHeaderTestSuite",
+             NULL,
+             NULL
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG (
+      (DEBUG_ERROR,
+       "Failed in CreateUnitTestSuite for FvbFvHeaderTestSuite\n")
+      );
+    Status = EFI_OUT_OF_RESOURCES;
+    goto EXIT;
+  }
+
+  AddTestCase (
+    FvbFvHeaderTestSuite,
+    "Initialize Fv Header Invalid Tests",
+    "InitializeFvAndVariableStoreHeadersInvalidTest",
+    InitializeFvAndVariableStoreHeadersInvalidTest,
+    NULL,
     NULL,
     NULL
-  );
-  if (EFI_ERROR (Status)) {
-    DEBUG(
-      (DEBUG_ERROR,
-      "Failed in CreateUnitTestSuite for FvbFvHeaderTestSuite\n")
     );
-    Status = EFI_OUT_OF_RESOURCES;
-    goto EXIT;
-  }
-
-  AddTestCase(FvbFvHeaderTestSuite, "Initialize Fv Header Invalid Tests",
-              "InitializeFvAndVariableStoreHeadersInvalidTest",
-              InitializeFvAndVariableStoreHeadersInvalidTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbFvHeaderTestSuite, "Initialize Fv Header Tests",
-              "InitializeFvAndVariableStoreHeadersTest",
-              InitializeFvAndVariableStoreHeadersTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbFvHeaderTestSuite, "Validate Fv Header Tests",
-              "ValidateFvHeaderTest", ValidateFvHeaderTest,
-              ValidateFvHeaderTestSetup, NULL, NULL);
+  AddTestCase (
+    FvbFvHeaderTestSuite,
+    "Initialize Fv Header Tests",
+    "InitializeFvAndVariableStoreHeadersTest",
+    InitializeFvAndVariableStoreHeadersTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbFvHeaderTestSuite,
+    "Validate Fv Header Tests",
+    "ValidateFvHeaderTest",
+    ValidateFvHeaderTest,
+    ValidateFvHeaderTestSetup,
+    NULL,
+    NULL
+    );
 
   // Populate the Fvb Faulty Flash Unit Test Suite.
-  Status = CreateUnitTestSuite(
-    &FvbFaultyFlashTestSuite,
-    Fw,
-    "Fvb Faulty Flash Tests",
-    "FvbDxe.FvbFaultyFlashTestSuite",
-    FaultyFlashSetup,
-    FaultyFlashCleanup
-  );
+  Status = CreateUnitTestSuite (
+             &FvbFaultyFlashTestSuite,
+             Fw,
+             "Fvb Faulty Flash Tests",
+             "FvbDxe.FvbFaultyFlashTestSuite",
+             FaultyFlashSetup,
+             FaultyFlashCleanup
+             );
   if (EFI_ERROR (Status)) {
-    DEBUG(
+    DEBUG (
       (DEBUG_ERROR,
-      "Failed in CreateUnitTestSuite for FvbFaultyFlashTestSuite\n")
-    );
+       "Failed in CreateUnitTestSuite for FvbFaultyFlashTestSuite\n")
+      );
     Status = EFI_OUT_OF_RESOURCES;
     goto EXIT;
   }
 
-  AddTestCase(FvbFaultyFlashTestSuite, "Faulty Flash GetAttributes Test",
-              "FaultyFlashGetAttributesTest", FaultyFlashGetAttributesTest,
-              FvbGetAttributesTestSetup, NULL, NULL);
-  AddTestCase(FvbFaultyFlashTestSuite, "Faulty Flash SetAttributes Test",
-              "FaultyFlashSetAttributesTest", FaultyFlashSetAttributesTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbFaultyFlashTestSuite, "Faulty Flash GetPhysicalAddress Test",
-              "FaultyFlashGetPhysicalAddressTest",
-              FaultyFlashGetPhysicalAddressTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbFaultyFlashTestSuite, "Faulty Flash GetBlockSize Test",
-              "FaultyFlashGetBlockSizeTest", FaultyFlashGetBlockSizeTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbFaultyFlashTestSuite, "Faulty Flash Read Test",
-              "FaultyFlashReadTest", FaultyFlashReadTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbFaultyFlashTestSuite, "Faulty Flash Write Test",
-              "FaultyFlashWriteTest", FaultyFlashWriteTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbFaultyFlashTestSuite, "Faulty Flash EraseBlocks Test",
-              "FaultyFlashEraseBlocksTest", FaultyFlashEraseBlocksTest,
-              NULL, NULL, NULL);
-  AddTestCase(FvbFaultyFlashTestSuite, "Faulty Flash Initialize FvHeader Test",
-              "FaultyFlashInitializeFvHeaderTest",
-              FaultyFlashInitializeFvHeaderTest,
-              NULL, NULL, NULL);
+  AddTestCase (
+    FvbFaultyFlashTestSuite,
+    "Faulty Flash GetAttributes Test",
+    "FaultyFlashGetAttributesTest",
+    FaultyFlashGetAttributesTest,
+    FvbGetAttributesTestSetup,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbFaultyFlashTestSuite,
+    "Faulty Flash SetAttributes Test",
+    "FaultyFlashSetAttributesTest",
+    FaultyFlashSetAttributesTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbFaultyFlashTestSuite,
+    "Faulty Flash GetPhysicalAddress Test",
+    "FaultyFlashGetPhysicalAddressTest",
+    FaultyFlashGetPhysicalAddressTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbFaultyFlashTestSuite,
+    "Faulty Flash GetBlockSize Test",
+    "FaultyFlashGetBlockSizeTest",
+    FaultyFlashGetBlockSizeTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbFaultyFlashTestSuite,
+    "Faulty Flash Read Test",
+    "FaultyFlashReadTest",
+    FaultyFlashReadTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbFaultyFlashTestSuite,
+    "Faulty Flash Write Test",
+    "FaultyFlashWriteTest",
+    FaultyFlashWriteTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbFaultyFlashTestSuite,
+    "Faulty Flash EraseBlocks Test",
+    "FaultyFlashEraseBlocksTest",
+    FaultyFlashEraseBlocksTest,
+    NULL,
+    NULL,
+    NULL
+    );
+  AddTestCase (
+    FvbFaultyFlashTestSuite,
+    "Faulty Flash Initialize FvHeader Test",
+    "FaultyFlashInitializeFvHeaderTest",
+    FaultyFlashInitializeFvHeaderTest,
+    NULL,
+    NULL,
+    NULL
+    );
 
   // Execute the tests.
   Status = RunAllTestSuites (Fw);
 
 EXIT:
   if (Fw) {
-    FreeUnitTestFramework(Fw);
+    FreeUnitTestFramework (Fw);
   }
 
-  CleanUpTestData();
+  CleanUpTestData ();
 
   return Status;
 }
@@ -2048,20 +2465,22 @@ EXIT:
 **/
 EFI_STATUS
 EFIAPI
-BaseLibUnitTestAppEntry(
+BaseLibUnitTestAppEntry (
   IN EFI_HANDLE        ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
-) {
-  return UnitTestingEntry();
+  )
+{
+  return UnitTestingEntry ();
 }
 
 /**
   Standard POSIX C entry point for host based unit test execution.
 **/
 int
-main(
-  int argc,
-  char *argv[]
-) {
+main (
+  int   argc,
+  char  *argv[]
+  )
+{
   return UnitTestingEntry ();
 }

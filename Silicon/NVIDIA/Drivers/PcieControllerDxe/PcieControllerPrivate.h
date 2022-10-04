@@ -236,9 +236,9 @@ typedef struct {
 #define PCI_EXP_LNKCTL_STATUS_SLOT_CLOCK_CONFIG  BIT(28)
 #define PCI_EXP_LNKCTL_STATUS_DLL_ACTIVE         BIT(29)
 
-#define PCI_EXP_DEVCTL_STS_2                     0x98
-#define PCI_EXP_DEVCTL_STS_2_CPL_TO_MASK         0xF
-#define PCI_EXP_DEVCTL_STS_2_CPL_TO_VAL          0x2 /* Range-A: 1ms to 10ms */
+#define PCI_EXP_DEVCTL_STS_2              0x98
+#define PCI_EXP_DEVCTL_STS_2_CPL_TO_MASK  0xF
+#define PCI_EXP_DEVCTL_STS_2_CPL_TO_VAL   0x2        /* Range-A: 1ms to 10ms */
 
 #define PCI_EXP_LNKCTL_STS_2  0xa0
 
@@ -279,9 +279,9 @@ typedef struct {
 #define AMBA_ERROR_RESPONSE_CRS_OKAY_FFFFFFFF   1
 #define AMBA_ERROR_RESPONSE_CRS_OKAY_FFFF0001   2
 
-#define PORT_LOGIC_AMBA_LINK_TIMEOUT            0x8D4
-#define AMBA_LINK_TIMEOUT_PERIOD_MASK           0xFF
-#define AMBA_LINK_TIMEOUT_PERIOD_VAL            0x7
+#define PORT_LOGIC_AMBA_LINK_TIMEOUT   0x8D4
+#define AMBA_LINK_TIMEOUT_PERIOD_MASK  0xFF
+#define AMBA_LINK_TIMEOUT_PERIOD_VAL   0x7
 
 /* ASPM L1 PM Substates */
 #define PCI_L1SS_CAP                     0x04       /* Capabilities Register */

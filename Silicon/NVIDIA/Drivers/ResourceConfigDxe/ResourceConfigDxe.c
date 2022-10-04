@@ -29,31 +29,30 @@
 
 #include "ResourceConfigHii.h"
 
-extern EFI_GUID gNVIDIAResourceConfigFormsetGuid;
+extern EFI_GUID  gNVIDIAResourceConfigFormsetGuid;
 
 //
 // These are the VFR compiler generated data representing our VFR data.
 //
-extern UINT8 ResourceConfigHiiBin[];
-extern UINT8 ResourceConfigDxeStrings[];
+extern UINT8  ResourceConfigHiiBin[];
+extern UINT8  ResourceConfigDxeStrings[];
 
 //
 // HII specific Vendor Device Path definition.
 //
 typedef struct {
-  VENDOR_DEVICE_PATH                VendorDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL          End;
+  VENDOR_DEVICE_PATH          VendorDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL    End;
 } HII_VENDOR_DEVICE_PATH;
 
-
-HII_VENDOR_DEVICE_PATH mResourceConfigHiiVendorDevicePath = {
+HII_VENDOR_DEVICE_PATH  mResourceConfigHiiVendorDevicePath = {
   {
     {
       HARDWARE_DEVICE_PATH,
       HW_VENDOR_DP,
       {
-        (UINT8) (sizeof (VENDOR_DEVICE_PATH)),
-        (UINT8) ((sizeof (VENDOR_DEVICE_PATH)) >> 8)
+        (UINT8)(sizeof (VENDOR_DEVICE_PATH)),
+        (UINT8)((sizeof (VENDOR_DEVICE_PATH)) >> 8)
       }
     },
     RESOURCE_CONFIG_FORMSET_GUID
@@ -62,8 +61,8 @@ HII_VENDOR_DEVICE_PATH mResourceConfigHiiVendorDevicePath = {
     END_DEVICE_PATH_TYPE,
     END_ENTIRE_DEVICE_PATH_SUBTYPE,
     {
-      (UINT8) (END_DEVICE_PATH_LENGTH),
-      (UINT8) ((END_DEVICE_PATH_LENGTH) >> 8)
+      (UINT8)(END_DEVICE_PATH_LENGTH),
+      (UINT8)((END_DEVICE_PATH_LENGTH) >> 8)
     }
   }
 };
@@ -75,12 +74,12 @@ HII_VENDOR_DEVICE_PATH mResourceConfigHiiVendorDevicePath = {
 VOID
 EFIAPI
 InitializeSettings (
-)
+  )
 {
-  EFI_STATUS                 Status;
-  VOID                       *AcpiBase;
-  NVIDIA_KERNEL_COMMAND_LINE CmdLine;
-  UINTN                      KernelCmdLineLen;
+  EFI_STATUS                  Status;
+  VOID                        *AcpiBase;
+  NVIDIA_KERNEL_COMMAND_LINE  CmdLine;
+  UINTN                       KernelCmdLineLen;
 
   // Initialize PCIe Form Settings
   PcdSet8S (PcdPcieResourceConfigNeeded, PcdGet8 (PcdPcieResourceConfigNeeded));
@@ -112,7 +111,7 @@ InitializeSettings (
 
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;
-  Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, NULL, &KernelCmdLineLen, NULL);
+  Status           = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, NULL, &KernelCmdLineLen, NULL);
   if (Status == EFI_NOT_FOUND) {
     KernelCmdLineLen = 0;
   } else if (Status != EFI_BUFFER_TOO_SMALL) {
@@ -125,7 +124,7 @@ InitializeSettings (
     ZeroMem (&CmdLine, KernelCmdLineLen);
     Status = gRT->SetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS, KernelCmdLineLen, (VOID *)&CmdLine);
     if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Error setting command line variable %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Error setting command line variable %r\r\n", __FUNCTION__, Status));
     }
   }
 }
@@ -137,32 +136,37 @@ OnEndOfDxe (
   IN VOID       *Context
   )
 {
-  EFI_STATUS                      Status;
-  EFI_HII_HANDLE                  HiiHandle;
-  EFI_HANDLE                      DriverHandle;
+  EFI_STATUS      Status;
+  EFI_HII_HANDLE  HiiHandle;
+  EFI_HANDLE      DriverHandle;
 
   gBS->CloseEvent (Event);
 
   InitializeSettings ();
 
   DriverHandle = NULL;
-  Status = gBS->InstallMultipleProtocolInterfaces (&DriverHandle,
-                  &gEfiDevicePathProtocolGuid,
-                  &mResourceConfigHiiVendorDevicePath,
-                  NULL);
+  Status       = gBS->InstallMultipleProtocolInterfaces (
+                        &DriverHandle,
+                        &gEfiDevicePathProtocolGuid,
+                        &mResourceConfigHiiVendorDevicePath,
+                        NULL
+                        );
   if (!EFI_ERROR (Status)) {
-    HiiHandle = HiiAddPackages (&gNVIDIAResourceConfigFormsetGuid,
-                                DriverHandle,
-                                ResourceConfigDxeStrings,
-                                ResourceConfigHiiBin,
-                                NULL
-                                );
+    HiiHandle = HiiAddPackages (
+                  &gNVIDIAResourceConfigFormsetGuid,
+                  DriverHandle,
+                  ResourceConfigDxeStrings,
+                  ResourceConfigHiiBin,
+                  NULL
+                  );
 
     if (HiiHandle == NULL) {
-      gBS->UninstallMultipleProtocolInterfaces (DriverHandle,
-                    &gEfiDevicePathProtocolGuid,
-                    &mResourceConfigHiiVendorDevicePath,
-                    NULL);
+      gBS->UninstallMultipleProtocolInterfaces (
+             DriverHandle,
+             &gEfiDevicePathProtocolGuid,
+             &mResourceConfigHiiVendorDevicePath,
+             NULL
+             );
     }
   }
 }
@@ -180,19 +184,21 @@ OnEndOfDxe (
 EFI_STATUS
 EFIAPI
 ResourceConfigDxeInitialize (
-  IN EFI_HANDLE               ImageHandle,
-  IN EFI_SYSTEM_TABLE         *SystemTable
-)
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
 {
-  EFI_STATUS                      Status;
-  EFI_EVENT                       EndOfDxeEvent;
+  EFI_STATUS  Status;
+  EFI_EVENT   EndOfDxeEvent;
 
-  Status = gBS->CreateEventEx (EVT_NOTIFY_SIGNAL,
-                               TPL_CALLBACK,
-                               OnEndOfDxe,
-                               NULL,
-                               &gEfiEndOfDxeEventGroupGuid,
-                               &EndOfDxeEvent);
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  OnEndOfDxe,
+                  NULL,
+                  &gEfiEndOfDxeEventGroupGuid,
+                  &EndOfDxeEvent
+                  );
 
   return Status;
 }

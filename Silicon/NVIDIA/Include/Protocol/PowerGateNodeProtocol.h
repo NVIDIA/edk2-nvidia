@@ -19,7 +19,7 @@
 
 typedef enum {
   CmdPgStateOff = 0,
-  CmdPgStateOn = 1,
+  CmdPgStateOn  = 1,
   CmdPgStateMax,
 } MRQ_PG_STATES;
 
@@ -27,7 +27,6 @@ typedef enum {
 // Define for forward reference.
 //
 typedef struct _NVIDIA_POWER_GATE_NODE_PROTOCOL NVIDIA_POWER_GATE_NODE_PROTOCOL;
-
 
 /**
   This function allows for deassert of specified power gate node.
@@ -41,7 +40,7 @@ typedef struct _NVIDIA_POWER_GATE_NODE_PROTOCOL NVIDIA_POWER_GATE_NODE_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *POWER_GATE_NODE_DEASSERT) (
+(EFIAPI *POWER_GATE_NODE_DEASSERT)(
   IN  NVIDIA_POWER_GATE_NODE_PROTOCOL   *This,
   IN  UINT32                            PowerGateId
   );
@@ -58,7 +57,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *POWER_GATE_NODE_ASSERT) (
+(EFIAPI *POWER_GATE_NODE_ASSERT)(
   IN  NVIDIA_POWER_GATE_NODE_PROTOCOL   *This,
   IN  UINT32                            PowerGateId
   );
@@ -76,7 +75,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *POWER_GATE_NODE_GET_STATE) (
+(EFIAPI *POWER_GATE_NODE_GET_STATE)(
   IN  NVIDIA_POWER_GATE_NODE_PROTOCOL   *This,
   IN  UINT32                            PowerGateId,
   OUT UINT32                            *PowerGateState
@@ -84,7 +83,6 @@ EFI_STATUS
 
 /// NVIDIA_RESET_NODE_PROTOCOL protocol structure.
 struct _NVIDIA_POWER_GATE_NODE_PROTOCOL {
-
   POWER_GATE_NODE_DEASSERT     Deassert;
   POWER_GATE_NODE_ASSERT       Assert;
   POWER_GATE_NODE_GET_STATE    GetState;
@@ -92,6 +90,6 @@ struct _NVIDIA_POWER_GATE_NODE_PROTOCOL {
   UINT32                       PowerGateId[1];
 };
 
-extern EFI_GUID gNVIDIAPowerGateNodeProtocolGuid;
+extern EFI_GUID  gNVIDIAPowerGateNodeProtocolGuid;
 
 #endif

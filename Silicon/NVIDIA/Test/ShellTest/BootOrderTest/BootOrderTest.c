@@ -19,19 +19,19 @@
 #include <Library/UnitTestLib.h>
 #include <Protocol/LoadedImage.h>
 
-#define UNIT_TEST_NAME    "Boot order test"
-#define UNIT_TEST_VERSION "0.1.0"
+#define UNIT_TEST_NAME     "Boot order test"
+#define UNIT_TEST_VERSION  "0.1.0"
 
 /// Name of the variable used to persist the boot order test context.
-#define NVDA_TEST_CONTEXT_VARIABLE_NAME L"BootOrderTestContext"
+#define NVDA_TEST_CONTEXT_VARIABLE_NAME  L"BootOrderTestContext"
 
 /// The number of non-existent boot options to include in the test
 /// permutation.
-#define NONEXISTENT_OPTION_COUNT        1
+#define NONEXISTENT_OPTION_COUNT  1
 
 /// The number of failing boot options to include in the test
 /// permutation.
-#define FAILING_OPTION_COUNT            2
+#define FAILING_OPTION_COUNT  2
 
 /// Total number of boot options to include in the test
 /// permutation. Note that the extra one option is the successful boot
@@ -44,19 +44,19 @@
 #pragma pack (1)
 typedef struct {
   /// TRUE if we are running BootNext test, FALSE otherwise.
-  BOOLEAN                           UseBootNext;
+  BOOLEAN    UseBootNext;
 
   /// Size of the data originally stored in the BootOrder variable.
-  UINT32                            OriginalBootOrderSize;
+  UINT32     OriginalBootOrderSize;
 
   /// An array mapping internal boot option ids used in the test
   /// permutation (i.e. numbers between 1 and TOTAL_OPTION_COUNT) to
   /// the boot option numbers used for BootOrder and Boot####
   /// variables.
-  UINT16                            BootOptionNumber[TOTAL_OPTION_COUNT];
+  UINT16     BootOptionNumber[TOTAL_OPTION_COUNT];
 
   /// The permutation of boot options currently under test.
-  UINT16                            TestPermutation[TOTAL_OPTION_COUNT];
+  UINT16     TestPermutation[TOTAL_OPTION_COUNT];
 } BOOT_ORDER_TEST_CONTEXT_HEADER;
 
 typedef struct {
@@ -81,7 +81,7 @@ STATIC
 BOOLEAN
 EFIAPI
 IsNonexistentBootOption (
-  IN CONST UINT16 OptionId
+  IN CONST UINT16  OptionId
   )
 {
   return OptionId < NONEXISTENT_OPTION_COUNT;
@@ -97,11 +97,11 @@ STATIC
 BOOLEAN
 EFIAPI
 IsFailingBootOption (
-  IN CONST UINT16 OptionId
+  IN CONST UINT16  OptionId
   )
 {
   return NONEXISTENT_OPTION_COUNT <= OptionId
-    && OptionId < NONEXISTENT_OPTION_COUNT + FAILING_OPTION_COUNT;
+         && OptionId < NONEXISTENT_OPTION_COUNT + FAILING_OPTION_COUNT;
 }
 
 /**
@@ -114,11 +114,11 @@ STATIC
 BOOLEAN
 EFIAPI
 IsSuccessfulBootOption (
-  IN CONST UINT16 OptionId
+  IN CONST UINT16  OptionId
   )
 {
   return NONEXISTENT_OPTION_COUNT + FAILING_OPTION_COUNT <= OptionId
-    && OptionId < TOTAL_OPTION_COUNT;
+         && OptionId < TOTAL_OPTION_COUNT;
 }
 
 /**
@@ -133,37 +133,43 @@ STATIC
 EFI_STATUS
 EFIAPI
 SaveTestContext (
-  IN CONST BOOT_ORDER_TEST_CONTEXT * CONST Context
+  IN CONST BOOT_ORDER_TEST_CONTEXT *CONST  Context
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
-  CONST UINTN ContextSize =
+  CONST UINTN  ContextSize =
     sizeof (Context->Hdr)
     + (Context->RecordedBootSequenceLength
        * sizeof (*Context->RecordedBootSequence));
 
   if (!((ContextSize
-         + sizeof (Context->RecordedBootSequenceLength)) <= sizeof (*Context))) {
+         + sizeof (Context->RecordedBootSequenceLength)) <= sizeof (*Context)))
+  {
     DEBUG ((
       DEBUG_ERROR,
-      "ERROR: %a: recorded boot sequence too long\r\n",  __FUNCTION__
-    ));
+      "ERROR: %a: recorded boot sequence too long\r\n",
+      __FUNCTION__
+      ));
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = gRT->SetVariable (NVDA_TEST_CONTEXT_VARIABLE_NAME,
-                             &gNVIDIATokenSpaceGuid,
-                             EFI_VARIABLE_BOOTSERVICE_ACCESS
-                             | EFI_VARIABLE_NON_VOLATILE,
-                             ContextSize,
-                             (VOID*) Context);
+  Status = gRT->SetVariable (
+                  NVDA_TEST_CONTEXT_VARIABLE_NAME,
+                  &gNVIDIATokenSpaceGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS
+                  | EFI_VARIABLE_NON_VOLATILE,
+                  ContextSize,
+                  (VOID *)Context
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Could not persist context."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
   }
 
   return Status;
@@ -181,26 +187,31 @@ STATIC
 EFI_STATUS
 EFIAPI
 LoadTestContext (
-  IN BOOT_ORDER_TEST_CONTEXT * CONST Context
+  IN BOOT_ORDER_TEST_CONTEXT *CONST  Context
   )
 {
-  EFI_STATUS Status;
-  UINTN      ContextSize;
+  EFI_STATUS  Status;
+  UINTN       ContextSize;
 
   ContextSize = sizeof (*Context);
-  Status = gRT->GetVariable (NVDA_TEST_CONTEXT_VARIABLE_NAME,
-                             &gNVIDIATokenSpaceGuid,
-                             NULL,
-                             &ContextSize,
-                             (VOID*) Context);
+  Status      = gRT->GetVariable (
+                       NVDA_TEST_CONTEXT_VARIABLE_NAME,
+                       &gNVIDIATokenSpaceGuid,
+                       NULL,
+                       &ContextSize,
+                       (VOID *)Context
+                       );
   if (EFI_ERROR (Status)) {
     if (!(Status == EFI_NOT_FOUND)) {
       DEBUG ((
         DEBUG_ERROR,
         "ERROR: %a: Could not retrieve context."
-        " Status = %r\r\n",  __FUNCTION__, Status
-      ));
+        " Status = %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
     }
+
     return Status;
   }
 
@@ -208,21 +219,26 @@ LoadTestContext (
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Buffer too short."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
     return Status;
   }
+
   ContextSize -= sizeof (Context->Hdr);
 
   Context->RecordedBootSequenceLength =
     ContextSize / sizeof (*Context->RecordedBootSequence);
-  if (!(ContextSize == (Context->RecordedBootSequenceLength
-                        * sizeof (*Context->RecordedBootSequence))
-        && ContextSize <= sizeof (Context->RecordedBootSequence))) {
+  if (!(  (ContextSize == (Context->RecordedBootSequenceLength
+                           * sizeof (*Context->RecordedBootSequence)))
+       && (ContextSize <= sizeof (Context->RecordedBootSequence))))
+  {
     DEBUG ((
       DEBUG_ERROR,
-      "ERROR: %a: Unexpected data at the end of buffer\r\n", __FUNCTION__
-    ));
+      "ERROR: %a: Unexpected data at the end of buffer\r\n",
+      __FUNCTION__
+      ));
     return EFI_INVALID_PARAMETER;
   }
 
@@ -239,25 +255,30 @@ STATIC
 EFI_STATUS
 EFIAPI
 RecordTestContextBootSequence (
-  IN CONST UINT16 BootOptionId
+  IN CONST UINT16  BootOptionId
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
-  Status = gRT->SetVariable (NVDA_TEST_CONTEXT_VARIABLE_NAME,
-                             &gNVIDIATokenSpaceGuid,
-                             EFI_VARIABLE_BOOTSERVICE_ACCESS
-                             | EFI_VARIABLE_NON_VOLATILE
-                             | EFI_VARIABLE_APPEND_WRITE,
-                             sizeof (BootOptionId),
-                             (VOID*) &BootOptionId);
+  Status = gRT->SetVariable (
+                  NVDA_TEST_CONTEXT_VARIABLE_NAME,
+                  &gNVIDIATokenSpaceGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS
+                  | EFI_VARIABLE_NON_VOLATILE
+                  | EFI_VARIABLE_APPEND_WRITE,
+                  sizeof (BootOptionId),
+                  (VOID *)&BootOptionId
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Could not append boot option id."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
   }
+
   return Status;
 }
 
@@ -271,23 +292,31 @@ STATIC
 EFI_STATUS
 EFIAPI
 GetBootOptionNumbers (
-  IN BOOT_ORDER_TEST_CONTEXT * CONST Context
+  IN BOOT_ORDER_TEST_CONTEXT *CONST  Context
   )
 {
-  EFI_STATUS Status;
-  UINTN      BootOptionId = 0;
-  UINT16     BootOptionNumber = 0;
-  CHAR16     BootOptionName[sizeof ("Boot####")];
-  UINTN      DataSize;
+  EFI_STATUS  Status;
+  UINTN       BootOptionId     = 0;
+  UINT16      BootOptionNumber = 0;
+  CHAR16      BootOptionName[sizeof ("Boot####")];
+  UINTN       DataSize;
 
   do {
-    UnicodeSPrint (BootOptionName, sizeof (BootOptionName),
-                   L"Boot%04x", BootOptionNumber);
+    UnicodeSPrint (
+      BootOptionName,
+      sizeof (BootOptionName),
+      L"Boot%04x",
+      BootOptionNumber
+      );
 
     DataSize = 0;
-    Status = gRT->GetVariable (BootOptionName,
-                               &gEfiGlobalVariableGuid,
-                               NULL, &DataSize, NULL);
+    Status   = gRT->GetVariable (
+                      BootOptionName,
+                      &gEfiGlobalVariableGuid,
+                      NULL,
+                      &DataSize,
+                      NULL
+                      );
     if (Status == EFI_NOT_FOUND) {
       // We found a free boot option number, store it.
       Context->Hdr.BootOptionNumber[BootOptionId++] = BootOptionNumber;
@@ -295,8 +324,11 @@ GetBootOptionNumbers (
       DEBUG ((
         DEBUG_ERROR,
         "ERROR: %a: Could not determine if variable %s exists."
-        " Status = %r\r\n", __FUNCTION__, BootOptionName, Status
-      ));
+        " Status = %r\r\n",
+        __FUNCTION__,
+        BootOptionName,
+        Status
+        ));
       return Status;
     }
 
@@ -323,17 +355,17 @@ STATIC
 EFI_STATUS
 EFIAPI
 CreateBootOption (
-  IN EFI_DEVICE_PATH_PROTOCOL * CONST FilePath,
-  IN BOOT_ORDER_TEST_CONTEXT  * CONST Context,
+  IN EFI_DEVICE_PATH_PROTOCOL *CONST  FilePath,
+  IN BOOT_ORDER_TEST_CONTEXT  *CONST  Context,
   IN CONST UINT16                     OptionId
   )
 {
-  EFI_STATUS                   Status;
-  EFI_STATUS                   Status2;
-  EFI_BOOT_MANAGER_LOAD_OPTION LoadOption;
-  CHAR16                       Description[sizeof ("Test boot option ##")];
-  UINT8                        *OptionalData;
-  UINT32                       OptionalDataSize;
+  EFI_STATUS                    Status;
+  EFI_STATUS                    Status2;
+  EFI_BOOT_MANAGER_LOAD_OPTION  LoadOption;
+  CHAR16                        Description[sizeof ("Test boot option ##")];
+  UINT8                         *OptionalData;
+  UINT32                        OptionalDataSize;
 
   if (IsNonexistentBootOption (OptionId)) {
     // Non-existent boot options do not have the corresponding
@@ -341,31 +373,40 @@ CreateBootOption (
     return EFI_SUCCESS;
   }
 
-  UnicodeSPrint (Description, sizeof (Description),
-                 L"Test boot option %02u", OptionId);
+  UnicodeSPrint (
+    Description,
+    sizeof (Description),
+    L"Test boot option %02u",
+    OptionId
+    );
 
   if (IsFailingBootOption (OptionId)) {
-    OptionalData = (UINT8*) &OptionId;
+    OptionalData     = (UINT8 *)&OptionId;
     OptionalDataSize = sizeof (OptionId);
-  } else /* IsSuccessfulBootOption (OptionId) == TRUE */ {
-    OptionalData = NULL;
+  } else {
+    /* IsSuccessfulBootOption (OptionId) == TRUE */
+    OptionalData     = NULL;
     OptionalDataSize = 0;
   }
 
-  Status = EfiBootManagerInitializeLoadOption (&LoadOption,
-                                               Context->Hdr.BootOptionNumber[OptionId],
-                                               LoadOptionTypeBoot,
-                                               LOAD_OPTION_ACTIVE,
-                                               Description,
-                                               FilePath,
-                                               OptionalData,
-                                               OptionalDataSize);
+  Status = EfiBootManagerInitializeLoadOption (
+             &LoadOption,
+             Context->Hdr.BootOptionNumber[OptionId],
+             LoadOptionTypeBoot,
+             LOAD_OPTION_ACTIVE,
+             Description,
+             FilePath,
+             OptionalData,
+             OptionalDataSize
+             );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Cannot initialize load option."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
     return Status;
   }
 
@@ -374,8 +415,10 @@ CreateBootOption (
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Cannot create boot option variable."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
   }
 
   Status2 = EfiBootManagerFreeLoadOption (&LoadOption);
@@ -383,8 +426,10 @@ CreateBootOption (
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Cannot free load option."
-      " Status = %r\r\n", __FUNCTION__, Status2
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status2
+      ));
   }
 
   return EFI_ERROR (Status) ? Status : Status2;
@@ -399,25 +444,29 @@ STATIC
 EFI_STATUS
 EFIAPI
 CreateBootOptions (
-  IN BOOT_ORDER_TEST_CONTEXT * CONST Context
+  IN BOOT_ORDER_TEST_CONTEXT *CONST  Context
   )
 {
-  EFI_STATUS                Status;
-  EFI_STATUS                Status2;
-  EFI_LOADED_IMAGE_PROTOCOL *LoadedImage;
-  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
-  EFI_DEVICE_PATH_PROTOCOL  *FilePath = NULL;
-  UINT16                    OptionId;
+  EFI_STATUS                 Status;
+  EFI_STATUS                 Status2;
+  EFI_LOADED_IMAGE_PROTOCOL  *LoadedImage;
+  EFI_DEVICE_PATH_PROTOCOL   *DevicePath;
+  EFI_DEVICE_PATH_PROTOCOL   *FilePath = NULL;
+  UINT16                     OptionId;
 
-  Status = gBS->HandleProtocol (gImageHandle,
-                                &gEfiLoadedImageProtocolGuid,
-                                (VOID**) &LoadedImage);
+  Status = gBS->HandleProtocol (
+                  gImageHandle,
+                  &gEfiLoadedImageProtocolGuid,
+                  (VOID **)&LoadedImage
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Failed to retrieve loaded image protocol from the image handle."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
     return Status;
   }
 
@@ -425,8 +474,9 @@ CreateBootOptions (
   if (DevicePath == NULL) {
     DEBUG ((
       DEBUG_ERROR,
-      "ERROR: %a: Could not retrieve device path\r\n", __FUNCTION__
-    ));
+      "ERROR: %a: Could not retrieve device path\r\n",
+      __FUNCTION__
+      ));
     Status = EFI_NOT_FOUND;
     goto error_handler;
   }
@@ -435,8 +485,9 @@ CreateBootOptions (
   if (FilePath == NULL) {
     DEBUG ((
       DEBUG_ERROR,
-      "ERROR: %a: Could not append file path to device path\r\n", __FUNCTION__
-    ));
+      "ERROR: %a: Could not append file path to device path\r\n",
+      __FUNCTION__
+      ));
     Status = EFI_OUT_OF_RESOURCES;
     goto error_handler;
   }
@@ -457,10 +508,13 @@ error_handler:
       DEBUG ((
         DEBUG_ERROR,
         "ERROR: %a: Could not free file path."
-        " Status = %r\r\n", __FUNCTION__, Status2
-      ));
+        " Status = %r\r\n",
+        __FUNCTION__,
+        Status2
+        ));
     }
   }
+
   return EFI_ERROR (Status) ? Status : Status2;
 }
 
@@ -473,23 +527,28 @@ STATIC
 EFI_STATUS
 EFIAPI
 DeleteBootOptions (
-  IN BOOT_ORDER_TEST_CONTEXT  * CONST Context
+  IN BOOT_ORDER_TEST_CONTEXT  *CONST  Context
   )
 {
-  EFI_STATUS Status;
-  UINT16     OptionId;
-  UINT16     OptionNumber;
+  EFI_STATUS  Status;
+  UINT16      OptionId;
+  UINT16      OptionNumber;
 
   for (OptionId = 0; OptionId < ARRAY_SIZE (Context->Hdr.BootOptionNumber); ++OptionId) {
     OptionNumber = Context->Hdr.BootOptionNumber[OptionId];
-    Status = EfiBootManagerDeleteLoadOptionVariable (OptionNumber,
-                                                     LoadOptionTypeBoot);
+    Status       = EfiBootManagerDeleteLoadOptionVariable (
+                     OptionNumber,
+                     LoadOptionTypeBoot
+                     );
     if (EFI_ERROR (Status) && !(Status == EFI_NOT_FOUND)) {
       DEBUG ((
         DEBUG_ERROR,
         "ERROR: %a: Failed to delete load option variable Boot%04x."
-        " Status = %r\r\n", __FUNCTION__, OptionNumber, Status
-      ));
+        " Status = %r\r\n",
+        __FUNCTION__,
+        OptionNumber,
+        Status
+        ));
       return Status;
     }
   }
@@ -507,14 +566,14 @@ STATIC
 VOID
 EFIAPI
 Swap16 (
-  IN UINT16 * CONST First,
-  IN UINT16 * CONST Second
+  IN UINT16 *CONST  First,
+  IN UINT16 *CONST  Second
   )
 {
-  UINT16 Temp;
+  UINT16  Temp;
 
-  Temp = *First;
-  *First = *Second;
+  Temp    = *First;
+  *First  = *Second;
   *Second = Temp;
 }
 
@@ -528,14 +587,14 @@ STATIC
 VOID
 EFIAPI
 Reverse16 (
-  IN UINT16 * CONST First,
-  IN UINT16 * CONST Last
+  IN UINT16 *CONST  First,
+  IN UINT16 *CONST  Last
   )
 {
-  UINT16 * Left = First;
-  UINT16 * Right = Last - 1;
+  UINT16  *Left  = First;
+  UINT16  *Right = Last - 1;
 
-  for (; Left < Right; ++Left, --Right) {
+  for ( ; Left < Right; ++Left, --Right) {
     Swap16 (Left, Right);
   }
 }
@@ -552,15 +611,15 @@ VOID
 EFIAPI
 DumpRange16 (
   IN CONST UINTN          ErrorLevel,
-  IN       UINT16 * CONST First,
-  IN       UINT16 * CONST Last
+  IN       UINT16 *CONST  First,
+  IN       UINT16 *CONST  Last
   )
 {
-  UINT16 *Current = First;
+  UINT16  *Current = First;
 
   if (Current < Last) {
     DEBUG ((ErrorLevel, "%04x", *Current++));
-    for (; Current < Last; ++Current) {
+    for ( ; Current < Last; ++Current) {
       DEBUG ((ErrorLevel, " %04x", *Current));
     }
   }
@@ -578,11 +637,11 @@ STATIC
 EFI_STATUS
 EFIAPI
 InitPermutation (
-  IN UINT16 * CONST First,
-  IN UINT16 * CONST Last
+  IN UINT16 *CONST  First,
+  IN UINT16 *CONST  Last
   )
 {
-  UINT16 Index;
+  UINT16  Index;
 
   for (Index = 0; First + Index < Last; ++Index) {
     First[Index] = Index;
@@ -606,13 +665,13 @@ STATIC
 EFI_STATUS
 EFIAPI
 NextPermutation (
-  IN UINT16 * CONST First,
-  IN UINT16 * CONST Last
+  IN UINT16 *CONST  First,
+  IN UINT16 *CONST  Last
   )
 {
-  UINT16 *Current = Last - 1;
-  UINT16 *Next;
-  UINT16 *Other;
+  UINT16  *Current = Last - 1;
+  UINT16  *Next;
+  UINT16  *Other;
 
   if (!(First < Current)) {
     return EFI_NOT_FOUND;
@@ -622,11 +681,14 @@ NextPermutation (
     Next = Current--;
     if (*Current < *Next) {
       Other = Last;
-      while (!(*Current < *--Other));
+      while (!(*Current < *--Other)) {
+      }
+
       Swap16 (Current, Other);
       Reverse16 (Next, Last);
       return EFI_SUCCESS;
     }
+
     if (Current == First) {
       Reverse16 (First, Last);
       return EFI_NOT_FOUND;
@@ -646,12 +708,12 @@ STATIC
 UNIT_TEST_STATUS
 EFIAPI
 VerifyRecordedBootSequence (
-  IN BOOT_ORDER_TEST_CONTEXT * CONST Context
+  IN BOOT_ORDER_TEST_CONTEXT *CONST  Context
   )
 {
-  UINT16 PermIdx;
-  UINT16 SeqIdx;
-  UINT16 OptionId;
+  UINT16  PermIdx;
+  UINT16  SeqIdx;
+  UINT16  OptionId;
 
   SeqIdx = 0;
   for (PermIdx = 0; PermIdx < ARRAY_SIZE (Context->Hdr.TestPermutation); ++PermIdx) {
@@ -663,6 +725,7 @@ VerifyRecordedBootSequence (
       UT_ASSERT_EQUAL (SeqIdx, Context->RecordedBootSequenceLength);
       return UNIT_TEST_PASSED;
     }
+
     // ... else non-existent boot option, which we just skip over.
   }
 
@@ -678,34 +741,40 @@ STATIC
 EFI_STATUS
 EFIAPI
 WriteBootOrder (
-  IN BOOT_ORDER_TEST_CONTEXT * CONST Context
+  IN BOOT_ORDER_TEST_CONTEXT *CONST  Context
   )
 {
   EFI_STATUS  Status;
   EFI_STATUS  Status2;
-  UINT8       *BootOrderValue = NULL;
+  UINT8       *BootOrderValue  = NULL;
   UINT8       *BootOrderBuffer = NULL;
   UINTN       BootOrderSize;
   UINTN       TestPermutationSize;
   UINT16      Idx;
   UINT16      OptionId;
 
-  Status = GetEfiGlobalVariable2 (EFI_BOOT_ORDER_VARIABLE_NAME,
-                                  (VOID**) &BootOrderValue,
-                                  &BootOrderSize);
+  Status = GetEfiGlobalVariable2 (
+             EFI_BOOT_ORDER_VARIABLE_NAME,
+             (VOID **)&BootOrderValue,
+             &BootOrderSize
+             );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Cannot read boot order."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
     goto error_handler;
   }
+
   if (!(Context->Hdr.OriginalBootOrderSize <= BootOrderSize)) {
     DEBUG ((
       DEBUG_ERROR,
-      "ERROR: %a: Invalid boot order size\r\n", __FUNCTION__
-    ));
+      "ERROR: %a: Invalid boot order size\r\n",
+      __FUNCTION__
+      ));
     goto error_handler;
   }
 
@@ -714,67 +783,81 @@ WriteBootOrder (
     TestPermutationSize -= sizeof (*Context->Hdr.TestPermutation);
   }
 
-  Status = gBS->AllocatePool (EfiBootServicesData,
-                              TestPermutationSize + Context->Hdr.OriginalBootOrderSize,
-                              (VOID**) &BootOrderBuffer);
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  TestPermutationSize + Context->Hdr.OriginalBootOrderSize,
+                  (VOID **)&BootOrderBuffer
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Cannot allocate boot order buffer."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
     goto error_handler;
   }
 
   if (Context->Hdr.UseBootNext) {
     OptionId = Context->Hdr.TestPermutation[0];
-    Status = gRT->SetVariable (EFI_BOOT_NEXT_VARIABLE_NAME,
-                               &gEfiGlobalVariableGuid,
-                               EFI_VARIABLE_BOOTSERVICE_ACCESS
-                               | EFI_VARIABLE_RUNTIME_ACCESS
-                               | EFI_VARIABLE_NON_VOLATILE,
-                               sizeof (Context->Hdr.BootOptionNumber[OptionId]),
-                               &Context->Hdr.BootOptionNumber[OptionId]);
+    Status   = gRT->SetVariable (
+                      EFI_BOOT_NEXT_VARIABLE_NAME,
+                      &gEfiGlobalVariableGuid,
+                      EFI_VARIABLE_BOOTSERVICE_ACCESS
+                      | EFI_VARIABLE_RUNTIME_ACCESS
+                      | EFI_VARIABLE_NON_VOLATILE,
+                      sizeof (Context->Hdr.BootOptionNumber[OptionId]),
+                      &Context->Hdr.BootOptionNumber[OptionId]
+                      );
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
         "ERROR: %a: Cannot update variable BootNext."
-        " Status = %r\r\n", __FUNCTION__, Status
-      ));
+        " Status = %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
       goto error_handler;
     }
 
     for (Idx = 1; Idx < ARRAY_SIZE (Context->Hdr.TestPermutation); ++Idx) {
-      OptionId = Context->Hdr.TestPermutation[Idx];
-      ((UINT16*) BootOrderBuffer)[Idx - 1] = Context->Hdr.BootOptionNumber[OptionId];
+      OptionId                             = Context->Hdr.TestPermutation[Idx];
+      ((UINT16 *)BootOrderBuffer)[Idx - 1] = Context->Hdr.BootOptionNumber[OptionId];
     }
   } else {
     for (Idx = 0; Idx < ARRAY_SIZE (Context->Hdr.TestPermutation); ++Idx) {
-      OptionId = Context->Hdr.TestPermutation[Idx];
-      ((UINT16*) BootOrderBuffer)[Idx] = Context->Hdr.BootOptionNumber[OptionId];
+      OptionId                         = Context->Hdr.TestPermutation[Idx];
+      ((UINT16 *)BootOrderBuffer)[Idx] = Context->Hdr.BootOptionNumber[OptionId];
     }
   }
 
   // Append the last Context->Hdr.OriginalBootOrderSize bytes from the
   // previous boot order value. This corresponds to the original value
   // (before testing) of the BootOrder variable.
-  gBS->CopyMem (BootOrderBuffer + TestPermutationSize,
-                BootOrderValue + BootOrderSize - Context->Hdr.OriginalBootOrderSize,
-                Context->Hdr.OriginalBootOrderSize);
+  gBS->CopyMem (
+         BootOrderBuffer + TestPermutationSize,
+         BootOrderValue + BootOrderSize - Context->Hdr.OriginalBootOrderSize,
+         Context->Hdr.OriginalBootOrderSize
+         );
 
-  Status = gRT->SetVariable (EFI_BOOT_ORDER_VARIABLE_NAME,
-                             &gEfiGlobalVariableGuid,
-                             EFI_VARIABLE_BOOTSERVICE_ACCESS
-                             | EFI_VARIABLE_RUNTIME_ACCESS
-                             | EFI_VARIABLE_NON_VOLATILE,
-                             TestPermutationSize + Context->Hdr.OriginalBootOrderSize,
-                             BootOrderBuffer);
+  Status = gRT->SetVariable (
+                  EFI_BOOT_ORDER_VARIABLE_NAME,
+                  &gEfiGlobalVariableGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS
+                  | EFI_VARIABLE_RUNTIME_ACCESS
+                  | EFI_VARIABLE_NON_VOLATILE,
+                  TestPermutationSize + Context->Hdr.OriginalBootOrderSize,
+                  BootOrderBuffer
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Cannot write boot order."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
     goto error_handler;
   }
 
@@ -786,20 +869,26 @@ error_handler:
       DEBUG ((
         DEBUG_ERROR,
         "ERROR: %a: Cannot free boot order buffer."
-        " Status = %r\r\n", __FUNCTION__, Status2
-      ));
+        " Status = %r\r\n",
+        __FUNCTION__,
+        Status2
+        ));
     }
   }
+
   if (BootOrderValue != NULL) {
     Status2 = gBS->FreePool (BootOrderValue);
     if (EFI_ERROR (Status2)) {
       DEBUG ((
         DEBUG_ERROR,
         "ERROR: %a: Cannot free boot order value."
-        " Status = %r\r\n", __FUNCTION__, Status2
-      ));
+        " Status = %r\r\n",
+        __FUNCTION__,
+        Status2
+        ));
     }
   }
+
   return EFI_ERROR (Status) ? Status : Status2;
 }
 
@@ -815,13 +904,13 @@ STATIC
 UNIT_TEST_STATUS
 EFIAPI
 BootOrderTest (
-  IN CONST BOOLEAN UseBootNext
+  IN CONST BOOLEAN  UseBootNext
   )
 {
-  EFI_STATUS              Status;
-  UNIT_TEST_STATUS        TestStatus;
-  BOOT_ORDER_TEST_CONTEXT Context;
-  UINTN                   OriginalBootOrderSize;
+  EFI_STATUS               Status;
+  UNIT_TEST_STATUS         TestStatus;
+  BOOT_ORDER_TEST_CONTEXT  Context;
+  UINTN                    OriginalBootOrderSize;
 
   gBS->SetMem (&Context, sizeof (Context), 0);
 
@@ -831,8 +920,13 @@ BootOrderTest (
     Context.Hdr.UseBootNext = UseBootNext;
 
     OriginalBootOrderSize = 0;
-    Status = gRT->GetVariable (EFI_BOOT_ORDER_VARIABLE_NAME, &gEfiGlobalVariableGuid,
-                               NULL, &OriginalBootOrderSize, NULL);
+    Status                = gRT->GetVariable (
+                                   EFI_BOOT_ORDER_VARIABLE_NAME,
+                                   &gEfiGlobalVariableGuid,
+                                   NULL,
+                                   &OriginalBootOrderSize,
+                                   NULL
+                                   );
     UT_ASSERT_EQUAL (Status, EFI_BUFFER_TOO_SMALL);
     Context.Hdr.OriginalBootOrderSize = OriginalBootOrderSize;
 
@@ -842,9 +936,11 @@ BootOrderTest (
     Status = CreateBootOptions (&Context);
     UT_ASSERT_NOT_EFI_ERROR (Status);
 
-    Status = InitPermutation (Context.Hdr.TestPermutation,
-                              Context.Hdr.TestPermutation
-                              + ARRAY_SIZE (Context.Hdr.TestPermutation));
+    Status = InitPermutation (
+               Context.Hdr.TestPermutation,
+               Context.Hdr.TestPermutation
+               + ARRAY_SIZE (Context.Hdr.TestPermutation)
+               );
     UT_ASSERT_NOT_EFI_ERROR (Status);
   } else if (!EFI_ERROR (Status)) {
     // Verification run
@@ -853,35 +949,42 @@ BootOrderTest (
       return TestStatus;
     }
 
-    Status = NextPermutation (Context.Hdr.TestPermutation,
-                              Context.Hdr.TestPermutation
-                              + ARRAY_SIZE (Context.Hdr.TestPermutation));
+    Status = NextPermutation (
+               Context.Hdr.TestPermutation,
+               Context.Hdr.TestPermutation
+               + ARRAY_SIZE (Context.Hdr.TestPermutation)
+               );
     if (Status == EFI_NOT_FOUND) {
       return UNIT_TEST_PASSED;
     }
+
     UT_ASSERT_NOT_EFI_ERROR (Status);
   } else {
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Could not load test context."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
     return UNIT_TEST_ERROR_TEST_FAILED;
   }
 
-  DEBUG ((DEBUG_INFO, "UseBootNext     = %u\r\n", (UINTN) Context.Hdr.UseBootNext));
+  DEBUG ((DEBUG_INFO, "UseBootNext     = %u\r\n", (UINTN)Context.Hdr.UseBootNext));
   DEBUG ((DEBUG_INFO, "TestPermutation = "));
-  DumpRange16 (DEBUG_INFO,
-               Context.Hdr.TestPermutation,
-               Context.Hdr.TestPermutation
-               + ARRAY_SIZE (Context.Hdr.TestPermutation));
+  DumpRange16 (
+    DEBUG_INFO,
+    Context.Hdr.TestPermutation,
+    Context.Hdr.TestPermutation
+    + ARRAY_SIZE (Context.Hdr.TestPermutation)
+    );
   DEBUG ((DEBUG_INFO, "\r\n"));
 
   Status = WriteBootOrder (&Context);
   UT_ASSERT_NOT_EFI_ERROR (Status);
 
   Context.RecordedBootSequenceLength = 0;
-  Status = SaveTestContext (&Context);
+  Status                             = SaveTestContext (&Context);
   UT_ASSERT_NOT_EFI_ERROR (Status);
 
   gRT->ResetSystem (EfiResetWarm, EFI_SUCCESS, 0, NULL);
@@ -898,31 +1001,39 @@ STATIC
 VOID
 EFIAPI
 BootOrderTestCleanup (
-  IN CONST BOOLEAN UseBootNext
+  IN CONST BOOLEAN  UseBootNext
   )
 {
-  EFI_STATUS              Status;
-  BOOT_ORDER_TEST_CONTEXT Context;
+  EFI_STATUS               Status;
+  BOOT_ORDER_TEST_CONTEXT  Context;
 
-  (VOID) UseBootNext;           // Unused
+  (VOID)UseBootNext;            // Unused
 
   Status = LoadTestContext (&Context);
   ASSERT (!EFI_ERROR (Status) || Status == EFI_NOT_FOUND);
 
   if (!EFI_ERROR (Status)) {
     if (Context.Hdr.UseBootNext) {
-      Status = gRT->SetVariable (EFI_BOOT_NEXT_VARIABLE_NAME,
-                                 &gEfiGlobalVariableGuid,
-                                 0, 0, NULL);
+      Status = gRT->SetVariable (
+                      EFI_BOOT_NEXT_VARIABLE_NAME,
+                      &gEfiGlobalVariableGuid,
+                      0,
+                      0,
+                      NULL
+                      );
       ASSERT (!EFI_ERROR (Status) || Status == EFI_NOT_FOUND);
     }
 
     Status = DeleteBootOptions (&Context);
     ASSERT (!EFI_ERROR (Status));
 
-    Status = gRT->SetVariable (NVDA_TEST_CONTEXT_VARIABLE_NAME,
-                               &gNVIDIATokenSpaceGuid,
-                               0, 0, NULL);
+    Status = gRT->SetVariable (
+                    NVDA_TEST_CONTEXT_VARIABLE_NAME,
+                    &gNVIDIATokenSpaceGuid,
+                    0,
+                    0,
+                    NULL
+                    );
     ASSERT (!EFI_ERROR (Status));
   }
 }
@@ -939,32 +1050,41 @@ STATIC
 EFI_STATUS
 EFIAPI
 InitTestSuite (
-  IN CONST UNIT_TEST_FRAMEWORK_HANDLE Framework,
-  IN CONST BOOLEAN                    UseBootNext
+  IN CONST UNIT_TEST_FRAMEWORK_HANDLE  Framework,
+  IN CONST BOOLEAN                     UseBootNext
   )
 {
-  EFI_STATUS                Status;
-  UNIT_TEST_SUITE_HANDLE    TestSuite;
+  EFI_STATUS              Status;
+  UNIT_TEST_SUITE_HANDLE  TestSuite;
 
-  Status = CreateUnitTestSuite (&TestSuite,
-                                Framework,
-                                "Boot Order Tests",
-                                "NVIDIA-Internal.BootOrder",
-                                NULL, NULL);
+  Status = CreateUnitTestSuite (
+             &TestSuite,
+             Framework,
+             "Boot Order Tests",
+             "NVIDIA-Internal.BootOrder",
+             NULL,
+             NULL
+             );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Failed to create a unit test suite."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
     return Status;
   }
 
-  AddTestCase (TestSuite, "Test boot order", "BootOrderTest",
-               (UNIT_TEST_FUNCTION) BootOrderTest,
-               NULL,
-               (UNIT_TEST_CLEANUP) BootOrderTestCleanup,
-               (UNIT_TEST_CONTEXT) (UINTN) UseBootNext);
+  AddTestCase (
+    TestSuite,
+    "Test boot order",
+    "BootOrderTest",
+    (UNIT_TEST_FUNCTION)BootOrderTest,
+    NULL,
+    (UNIT_TEST_CLEANUP)BootOrderTestCleanup,
+    (UNIT_TEST_CONTEXT)(UINTN)UseBootNext
+    );
 
   return Status;
 }
@@ -984,23 +1104,27 @@ BootOrderTestDxe (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                    Status;
-  EFI_LOADED_IMAGE_PROTOCOL     *LoadedImage;
-  UINT16                        BootOptionId;
-  CHAR16                        *CmdLine;
-  UINT32                        CmdLineSize;
-  BOOLEAN                       UseBootNext;
-  UNIT_TEST_FRAMEWORK_HANDLE    Framework;
+  EFI_STATUS                  Status;
+  EFI_LOADED_IMAGE_PROTOCOL   *LoadedImage;
+  UINT16                      BootOptionId;
+  CHAR16                      *CmdLine;
+  UINT32                      CmdLineSize;
+  BOOLEAN                     UseBootNext;
+  UNIT_TEST_FRAMEWORK_HANDLE  Framework;
 
-  Status = gBS->HandleProtocol (ImageHandle,
-                                &gEfiLoadedImageProtocolGuid,
-                                (VOID**) &LoadedImage);
+  Status = gBS->HandleProtocol (
+                  ImageHandle,
+                  &gEfiLoadedImageProtocolGuid,
+                  (VOID **)&LoadedImage
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "ERROR: %a: Failed to retrieve loaded image protocol from the image handle."
-      " Status = %r\r\n", __FUNCTION__, Status
-    ));
+      " Status = %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
     return Status;
   }
 
@@ -1010,7 +1134,7 @@ BootOrderTestDxe (
     // passed boot option id to persistent test context, then return
     // an error to continue booting the next boot option.
 
-    BootOptionId = *(UINT16*) LoadedImage->LoadOptions;
+    BootOptionId = *(UINT16 *)LoadedImage->LoadOptions;
 
     // Write the just-booted option id into the persistent test
     // context.
@@ -1031,7 +1155,7 @@ BootOrderTestDxe (
 
     UseBootNext = FALSE;
 
-    CmdLine = (CHAR16*) LoadedImage->LoadOptions;
+    CmdLine     = (CHAR16 *)LoadedImage->LoadOptions;
     CmdLineSize = LoadedImage->LoadOptionsSize / sizeof (*CmdLine);
     if (CmdLineSize > 0) {
       // This is most likely initial test invocation from the UEFI
@@ -1045,16 +1169,20 @@ BootOrderTestDxe (
 
     DEBUG ((DEBUG_INFO, "%a v%a\r\n", UNIT_TEST_NAME, UNIT_TEST_VERSION));
 
-    Status = InitUnitTestFramework (&Framework,
-                                    UNIT_TEST_NAME,
-                                    gEfiCallerBaseName,
-                                    UNIT_TEST_VERSION);
+    Status = InitUnitTestFramework (
+               &Framework,
+               UNIT_TEST_NAME,
+               gEfiCallerBaseName,
+               UNIT_TEST_VERSION
+               );
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
         "ERROR: %a: InitUnitTestFramework failed."
-        " Status = %r\r\n", __FUNCTION__, Status
-      ));
+        " Status = %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
       return Status;
     }
 

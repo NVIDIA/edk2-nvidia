@@ -20,9 +20,8 @@
 **/
 VOID
 RegisterDeviceTree (
-  IN UINTN BlDtbLoadAddress
-);
-
+  IN UINTN  BlDtbLoadAddress
+  );
 
 /**
   Installs resources into the HOB list
@@ -38,7 +37,7 @@ RegisterDeviceTree (
 **/
 EFI_STATUS
 InstallSystemResources (
-  OUT UINTN *MemoryRegionsCount
-);
+  OUT UINTN  *MemoryRegionsCount
+  );
 
 #endif //__SYSTEM_RESOURCE_LIB_H__

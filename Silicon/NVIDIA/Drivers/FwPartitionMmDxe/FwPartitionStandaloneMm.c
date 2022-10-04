@@ -14,8 +14,8 @@
 EFI_STATUS
 EFIAPI
 FwPartitionNorFlashStmmInitialize (
-  UINTN     ActiveBootChain,
-  BOOLEAN   OverwriteActiveFwPartition
+  UINTN    ActiveBootChain,
+  BOOLEAN  OverwriteActiveFwPartition
   );
 
 EFI_STATUS
@@ -27,11 +27,11 @@ FwPartitionMmHandler (
   IN OUT UINTN       *CommBufferSize
   )
 {
-  FW_PARTITION_COMM_HEADER      *FwImageCommHeader;
-  UINTN                         PayloadSize;
-  EFI_STATUS                    Status;
+  FW_PARTITION_COMM_HEADER  *FwImageCommHeader;
+  UINTN                     PayloadSize;
+  EFI_STATUS                Status;
 
-  FwImageCommHeader = (FW_PARTITION_COMM_HEADER *) CommBuffer;
+  FwImageCommHeader = (FW_PARTITION_COMM_HEADER *)CommBuffer;
 
   PayloadSize = *CommBufferSize - FW_PARTITION_COMM_HEADER_SIZE;
 
@@ -42,14 +42,15 @@ FwPartitionMmHandler (
     {
       FW_PARTITION_COMM_INITIALIZE  *InitPayload;
 
-      InitPayload = (FW_PARTITION_COMM_INITIALIZE *) FwImageCommHeader->Data;
-      Status = FwPartitionNorFlashStmmInitialize (
-        InitPayload->ActiveBootChain,
-        InitPayload->OverwriteActiveFwPartition);
+      InitPayload = (FW_PARTITION_COMM_INITIALIZE *)FwImageCommHeader->Data;
+      Status      = FwPartitionNorFlashStmmInitialize (
+                      InitPayload->ActiveBootChain,
+                      InitPayload->OverwriteActiveFwPartition
+                      );
 
       FwImageCommHeader->ReturnStatus = Status;
+      break;
     }
-    break;
 
     case FW_PARTITION_COMM_FUNCTION_GET_PARTITIONS:
     {
@@ -58,36 +59,47 @@ FwPartitionMmHandler (
       UINTN                             NumImages;
       FW_PARTITION_PRIVATE_DATA         *Partition;
 
-      NumImages = FwPartitionGetCount ();
-      ImagesPayload = (FW_PARTITION_COMM_GET_PARTITIONS *) FwImageCommHeader->Data;
-      ASSERT (PayloadSize == OFFSET_OF (FW_PARTITION_COMM_GET_PARTITIONS, Partitions) +
-              (ImagesPayload->MaxCount * sizeof (ImagesPayload->Partitions[0])));
+      NumImages     = FwPartitionGetCount ();
+      ImagesPayload = (FW_PARTITION_COMM_GET_PARTITIONS *)FwImageCommHeader->Data;
+      ASSERT (
+        PayloadSize == OFFSET_OF (FW_PARTITION_COMM_GET_PARTITIONS, Partitions) +
+        (ImagesPayload->MaxCount * sizeof (ImagesPayload->Partitions[0]))
+        );
 
       Partition = FwPartitionGetPrivateArray ();
       for (Index = 0; Index < NumImages; Index++, Partition++) {
-        FW_PARTITION_MM_PARTITION_INFO *ImageInfo = &ImagesPayload->Partitions[Index];
+        FW_PARTITION_MM_PARTITION_INFO  *ImageInfo = &ImagesPayload->Partitions[Index];
 
-        CopyMem ( ImageInfo->Name, Partition->PartitionInfo.Name,
-                  StrSize (Partition->PartitionInfo.Name));
+        CopyMem (
+          ImageInfo->Name,
+          Partition->PartitionInfo.Name,
+          StrSize (Partition->PartitionInfo.Name)
+          );
         ImageInfo->Bytes = Partition->PartitionInfo.Bytes;
       }
-      ImagesPayload->Count = NumImages;
+
+      ImagesPayload->Count            = NumImages;
       FwImageCommHeader->ReturnStatus = EFI_SUCCESS;
+      break;
     }
-    break;
 
     case FW_PARTITION_COMM_FUNCTION_READ_DATA:
     {
-      FW_PARTITION_COMM_READ_DATA   *ReadDataPayload;
-      FW_PARTITION_PRIVATE_DATA     *Partition;
-      FW_PARTITION_DEVICE_INFO      *DeviceInfo;
+      FW_PARTITION_COMM_READ_DATA  *ReadDataPayload;
+      FW_PARTITION_PRIVATE_DATA    *Partition;
+      FW_PARTITION_DEVICE_INFO     *DeviceInfo;
 
-      ReadDataPayload = (FW_PARTITION_COMM_READ_DATA *) FwImageCommHeader->Data;
+      ReadDataPayload = (FW_PARTITION_COMM_READ_DATA *)FwImageCommHeader->Data;
       ASSERT (PayloadSize == OFFSET_OF (FW_PARTITION_COMM_READ_DATA, Data) + ReadDataPayload->Bytes);
 
-      DEBUG ((DEBUG_INFO, "%a: reading %s offset=%u bytes=%u\n",
-              __FUNCTION__, ReadDataPayload->Name, ReadDataPayload->Offset,
-              ReadDataPayload->Bytes));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: reading %s offset=%u bytes=%u\n",
+        __FUNCTION__,
+        ReadDataPayload->Name,
+        ReadDataPayload->Offset,
+        ReadDataPayload->Bytes
+        ));
 
       Partition = FwPartitionFindByName (ReadDataPayload->Name);
       if (Partition == NULL) {
@@ -96,27 +108,34 @@ FwPartitionMmHandler (
       }
 
       DeviceInfo = Partition->DeviceInfo;
-      Status = DeviceInfo->DeviceRead (DeviceInfo,
-                                       Partition->PartitionInfo.Offset + ReadDataPayload->Offset,
-                                       ReadDataPayload->Bytes,
-                                       ReadDataPayload->Data);
+      Status     = DeviceInfo->DeviceRead (
+                                 DeviceInfo,
+                                 Partition->PartitionInfo.Offset + ReadDataPayload->Offset,
+                                 ReadDataPayload->Bytes,
+                                 ReadDataPayload->Data
+                                 );
 
       FwImageCommHeader->ReturnStatus = Status;
+      break;
     }
-    break;
 
     case FW_PARTITION_COMM_FUNCTION_WRITE_DATA:
     {
-      FW_PARTITION_COMM_WRITE_DATA *WriteDataPayload;
+      FW_PARTITION_COMM_WRITE_DATA  *WriteDataPayload;
       FW_PARTITION_PRIVATE_DATA     *Partition;
       FW_PARTITION_DEVICE_INFO      *DeviceInfo;
 
-      WriteDataPayload = (FW_PARTITION_COMM_WRITE_DATA *) FwImageCommHeader->Data;
+      WriteDataPayload = (FW_PARTITION_COMM_WRITE_DATA *)FwImageCommHeader->Data;
       ASSERT (PayloadSize == OFFSET_OF (FW_PARTITION_COMM_WRITE_DATA, Data) + WriteDataPayload->Bytes);
 
-      DEBUG ((DEBUG_INFO, "%a: writing  %s offset=%u bytes=%u\n",
-              __FUNCTION__, WriteDataPayload->Name, WriteDataPayload->Offset,
-              WriteDataPayload->Bytes));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: writing  %s offset=%u bytes=%u\n",
+        __FUNCTION__,
+        WriteDataPayload->Name,
+        WriteDataPayload->Offset,
+        WriteDataPayload->Bytes
+        ));
 
       Partition = FwPartitionFindByName (WriteDataPayload->Name);
       if (Partition == NULL) {
@@ -125,22 +144,29 @@ FwPartitionMmHandler (
       }
 
       DeviceInfo = Partition->DeviceInfo;
-      Status = DeviceInfo->DeviceWrite (DeviceInfo,
-                                        Partition->PartitionInfo.Offset + WriteDataPayload->Offset,
-                                        WriteDataPayload->Bytes,
-                                        WriteDataPayload->Data);
+      Status     = DeviceInfo->DeviceWrite (
+                                 DeviceInfo,
+                                 Partition->PartitionInfo.Offset + WriteDataPayload->Offset,
+                                 WriteDataPayload->Bytes,
+                                 WriteDataPayload->Data
+                                 );
 
       FwImageCommHeader->ReturnStatus = Status;
+      break;
     }
-    break;
 
     default:
       FwImageCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
       break;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: Func=%u ReturnStatus=%u\n", __FUNCTION__,
-          FwImageCommHeader->Function, FwImageCommHeader->ReturnStatus));
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Func=%u ReturnStatus=%u\n",
+    __FUNCTION__,
+    FwImageCommHeader->Function,
+    FwImageCommHeader->ReturnStatus
+    ));
 
   return EFI_SUCCESS;
 }
@@ -155,19 +181,21 @@ FwPartitionMmHandler (
 EFI_STATUS
 EFIAPI
 FwPartitionStandaloneMmInitialize (
-  IN EFI_HANDLE            ImageHandle,
-  IN EFI_MM_SYSTEM_TABLE   *MmSystemTable
+  IN EFI_HANDLE           ImageHandle,
+  IN EFI_MM_SYSTEM_TABLE  *MmSystemTable
   )
 {
-  EFI_HANDLE    Handle;
-  EFI_STATUS    Status;
+  EFI_HANDLE  Handle;
+  EFI_STATUS  Status;
 
   DEBUG ((DEBUG_INFO, "%a: Entry\n", __FUNCTION__));
 
   Handle = NULL;
-  Status         = gMmst->MmiHandlerRegister (FwPartitionMmHandler,
-                                              &gNVIDIAFwPartitionProtocolGuid,
-                                              &Handle);
+  Status = gMmst->MmiHandlerRegister (
+                    FwPartitionMmHandler,
+                    &gNVIDIAFwPartitionProtocolGuid,
+                    &Handle
+                    );
   ASSERT_EFI_ERROR (Status);
 
   return EFI_SUCCESS;

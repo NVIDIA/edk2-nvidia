@@ -10,23 +10,22 @@
 
 #include <Library/DeviceDiscoveryDriverLib.h>
 
-NVIDIA_COMPATIBILITY_MAPPING gDeviceCompatibilityMap[] = {
-  { "nvidia,gv11b", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
+  { "nvidia,gv11b",       &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,tegra30-hda", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,ga10b", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { NULL, NULL }
+  { "nvidia,ga10b",       &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { NULL,                 NULL                                        }
 };
 
-NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
-  .DriverName = L"NVIDIA Controller Enable Driver",
-  .UseDriverBinding = TRUE,
-  .AutoEnableClocks = TRUE,
-  .AutoResetModule = TRUE,
-   .AutoDeassertPg = TRUE,
-  .SkipEdkiiNondiscoverableInstall = TRUE,
+NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
+  .DriverName                                 = L"NVIDIA Controller Enable Driver",
+  .UseDriverBinding                           = TRUE,
+  .AutoEnableClocks                           = TRUE,
+  .AutoResetModule                            = TRUE,
+  .AutoDeassertPg                             = TRUE,
+  .SkipEdkiiNondiscoverableInstall            = TRUE,
   .SkipAutoDeinitControllerOnExitBootServices = TRUE
 };
-
 
 /**
   Callback that will be invoked at various phases of the driver initialization
@@ -46,10 +45,10 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG gDeviceDiscoverDriverConfig = {
 **/
 EFI_STATUS
 DeviceDiscoveryNotify (
-  IN  NVIDIA_DEVICE_DISCOVERY_PHASES         Phase,
-  IN  EFI_HANDLE                             DriverHandle,
-  IN  EFI_HANDLE                             ControllerHandle,
-  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL *DeviceTreeNode OPTIONAL
+  IN  NVIDIA_DEVICE_DISCOVERY_PHASES          Phase,
+  IN  EFI_HANDLE                              DriverHandle,
+  IN  EFI_HANDLE                              ControllerHandle,
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
   return EFI_SUCCESS;

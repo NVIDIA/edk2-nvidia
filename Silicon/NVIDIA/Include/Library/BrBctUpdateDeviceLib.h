@@ -16,22 +16,22 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
-#define BR_BCT_UPDATE_PRIVATE_DATA_SIGNATURE SIGNATURE_32 ('B','R','B','C')
+#define BR_BCT_UPDATE_PRIVATE_DATA_SIGNATURE  SIGNATURE_32 ('B','R','B','C')
 
 // BR-BCT update private data structure
 typedef struct {
-  UINT32                            Signature;
+  UINT32                           Signature;
 
   // BR-BCT info
-  UINT32                            SlotSize;
-  UINT32                            BrBctDataSize;
-  UINTN                             BctPartitionSlots;
-  FW_PARTITION_PRIVATE_DATA         *BrBctPartition;
-  FW_PARTITION_PRIVATE_DATA         *BrBctBackupPartition;
+  UINT32                           SlotSize;
+  UINT32                           BrBctDataSize;
+  UINTN                            BctPartitionSlots;
+  FW_PARTITION_PRIVATE_DATA        *BrBctPartition;
+  FW_PARTITION_PRIVATE_DATA        *BrBctBackupPartition;
 
   // Protocol info
-  EFI_HANDLE                        Handle;
-  NVIDIA_BR_BCT_UPDATE_PROTOCOL     Protocol;
+  EFI_HANDLE                       Handle;
+  NVIDIA_BR_BCT_UPDATE_PROTOCOL    Protocol;
 } BR_BCT_UPDATE_PRIVATE_DATA;
 
 /**
@@ -46,7 +46,7 @@ typedef struct {
 VOID
 EFIAPI
 BrBctUpdateAddressChangeHandler (
-  IN  FW_PARTITION_ADDRESS_CONVERT ConvertFunction
+  IN  FW_PARTITION_ADDRESS_CONVERT  ConvertFunction
   );
 
 /**
@@ -88,8 +88,8 @@ BrBctUpdateDeviceLibDeinit (
 EFI_STATUS
 EFIAPI
 BrBctUpdateDeviceLibInit (
-  IN  UINT32                        ActiveBootChain,
-  IN  UINT32                        EraseBlockSize
+  IN  UINT32  ActiveBootChain,
+  IN  UINT32  EraseBlockSize
   );
 
 #endif

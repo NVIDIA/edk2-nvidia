@@ -16,81 +16,79 @@
 #include <Protocol/I2cIo.h>
 #include <Protocol/EmbeddedGpio.h>
 
-#define REGULATOR_NOFITY_LIST_SIGNATURE SIGNATURE_32('R','E','G','N')
+#define REGULATOR_NOFITY_LIST_SIGNATURE  SIGNATURE_32('R','E','G','N')
 typedef struct {
-  UINT32                     Signature;
-  LIST_ENTRY                 Link;
-  EFI_EVENT                  Event;
+  UINT32        Signature;
+  LIST_ENTRY    Link;
+  EFI_EVENT     Event;
 } REGULATOR_NOTIFY_LIST_ENTRY;
-#define REGULATOR_NOTIFY_LIST_FROM_LINK(a) CR(a, REGULATOR_NOTIFY_LIST_ENTRY, Link, REGULATOR_NOFITY_LIST_SIGNATURE)
+#define REGULATOR_NOTIFY_LIST_FROM_LINK(a)  CR(a, REGULATOR_NOTIFY_LIST_ENTRY, Link, REGULATOR_NOFITY_LIST_SIGNATURE)
 
 typedef struct {
-  CONST CHAR8 *Name;
-  UINT8       VoltageRegister;
-  UINT8       VoltageMask;
-  UINT8       VoltageShift;
-  UINTN       MinMicrovolts;
-  UINTN       MaxMicrovolts;
-  UINTN       MicrovoltStep;
-  UINT8       MinVoltSetting;
-  UINT8       ConfigRegister;
-  UINT8       ConfigMask;
-  UINT8       ConfigShift;
-  UINT8       ConfigSetting;
-  UINT8       ConfigSettingDisabled;
+  CONST CHAR8    *Name;
+  UINT8          VoltageRegister;
+  UINT8          VoltageMask;
+  UINT8          VoltageShift;
+  UINTN          MinMicrovolts;
+  UINTN          MaxMicrovolts;
+  UINTN          MicrovoltStep;
+  UINT8          MinVoltSetting;
+  UINT8          ConfigRegister;
+  UINT8          ConfigMask;
+  UINT8          ConfigShift;
+  UINT8          ConfigSetting;
+  UINT8          ConfigSettingDisabled;
 } PMIC_REGULATOR_SETTING;
 
 typedef struct {
-  CONST CHAR8             *CompatibilityString;
-  EFI_GUID                *I2cDeviceGuid;
-  PMIC_REGULATOR_SETTING  *RegulatorSettings;
-  UINTN                   SettingsSize;
+  CONST CHAR8               *CompatibilityString;
+  EFI_GUID                  *I2cDeviceGuid;
+  PMIC_REGULATOR_SETTING    *RegulatorSettings;
+  UINTN                     SettingsSize;
 } PMIC_REGULATOR_SETTINGS_SUPPORTED;
 
-#define REGULATOR_LIST_SIGNATURE SIGNATURE_32('R','E','G','L')
+#define REGULATOR_LIST_SIGNATURE  SIGNATURE_32('R','E','G','L')
 typedef struct {
-  UINT32                     Signature;
-  LIST_ENTRY                 Link;
-  UINT32                     RegulatorId;
-  UINTN                      Gpio;
-  BOOLEAN                    AlwaysEnabled;
-  BOOLEAN                    ActiveLow;
-  BOOLEAN                    IsAvailable;
-  UINTN                      MinMicrovolts;
-  UINTN                      MaxMicrovolts;
-  UINTN                      MicrovoltStep;
-  CONST CHAR8                *Name;
-  PMIC_REGULATOR_SETTING     *PmicSetting;
-  LIST_ENTRY                 NotifyList;
-  EFI_GUID                   *I2cDeviceGuid;
-  EFI_I2C_IO_PROTOCOL        *I2cIoProtocol;
+  UINT32                    Signature;
+  LIST_ENTRY                Link;
+  UINT32                    RegulatorId;
+  UINTN                     Gpio;
+  BOOLEAN                   AlwaysEnabled;
+  BOOLEAN                   ActiveLow;
+  BOOLEAN                   IsAvailable;
+  UINTN                     MinMicrovolts;
+  UINTN                     MaxMicrovolts;
+  UINTN                     MicrovoltStep;
+  CONST CHAR8               *Name;
+  PMIC_REGULATOR_SETTING    *PmicSetting;
+  LIST_ENTRY                NotifyList;
+  EFI_GUID                  *I2cDeviceGuid;
+  EFI_I2C_IO_PROTOCOL       *I2cIoProtocol;
 } REGULATOR_LIST_ENTRY;
-#define REGULATOR_LIST_FROM_LINK(a) CR(a, REGULATOR_LIST_ENTRY, Link, REGULATOR_LIST_SIGNATURE)
+#define REGULATOR_LIST_FROM_LINK(a)  CR(a, REGULATOR_LIST_ENTRY, Link, REGULATOR_LIST_SIGNATURE)
 
-
-
-#define REGULATOR_SIGNATURE SIGNATURE_32('R','E','G','D')
+#define REGULATOR_SIGNATURE  SIGNATURE_32('R','E','G','D')
 typedef struct {
   //
   // Standard signature used to identify regulator private data
   //
-  UINT32                     Signature;
+  UINT32                       Signature;
 
-  NVIDIA_REGULATOR_PROTOCOL  RegulatorProtocol;
+  NVIDIA_REGULATOR_PROTOCOL    RegulatorProtocol;
 
-  EFI_HANDLE                 ImageHandle;
+  EFI_HANDLE                   ImageHandle;
 
-  VOID                       *DeviceTreeBase;
-  UINTN                      DeviceTreeSize;
+  VOID                         *DeviceTreeBase;
+  UINTN                        DeviceTreeSize;
 
-  LIST_ENTRY                 RegulatorList;
-  UINTN                      Regulators;
+  LIST_ENTRY                   RegulatorList;
+  UINTN                        Regulators;
 
-  VOID                       *GpioSearchToken;
-  EMBEDDED_GPIO              *GpioProtocol;
-  VOID                       *I2cIoSearchToken;
+  VOID                         *GpioSearchToken;
+  EMBEDDED_GPIO                *GpioProtocol;
+  VOID                         *I2cIoSearchToken;
 } REGULATOR_DXE_PRIVATE;
-#define REGULATOR_PRIVATE_DATA_FROM_THIS(a) CR(a, REGULATOR_DXE_PRIVATE, RegulatorProtocol, REGULATOR_SIGNATURE)
+#define REGULATOR_PRIVATE_DATA_FROM_THIS(a)  CR(a, REGULATOR_DXE_PRIVATE, RegulatorProtocol, REGULATOR_SIGNATURE)
 
 ///
 /// I2C device request
@@ -106,11 +104,11 @@ typedef struct {
   ///
   /// Number of elements in the operation array
   ///
-  UINTN OperationCount;
+  UINTN                OperationCount;
 
   ///
   /// Description of the I2C operation
   ///
-  EFI_I2C_OPERATION Operation [2];
+  EFI_I2C_OPERATION    Operation[2];
 } REGULATOR_I2C_REQUEST_PACKET_2_OPS;
 #endif

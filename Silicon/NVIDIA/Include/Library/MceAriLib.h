@@ -13,7 +13,7 @@
 
 #include <Uefi/UefiBaseType.h>
 
-#define MCE_ARI_APERTURE_SIZE                   0x10000
+#define MCE_ARI_APERTURE_SIZE  0x10000
 
 // Gives the ARI aperture offset from PcdTegraMceAriApertureBaseAddress for
 // a given Linear Core Id, both split and locked modes.
@@ -44,8 +44,8 @@ MceAriGetVersion (
 EFI_STATUS
 EFIAPI
 MceAriCheckCoreEnabled (
-  IN  UINT64    *Mpidr,
-  OUT UINTN     *DtCpuId
+  IN  UINT64  *Mpidr,
+  OUT UINTN   *DtCpuId
   );
 
 /**
@@ -55,7 +55,7 @@ MceAriCheckCoreEnabled (
 EFI_STATUS
 EFIAPI
 MceAriGetEnabledCoresBitMap (
-  IN  UINT64    *EnabledCoresBitMap
+  IN  UINT64  *EnabledCoresBitMap
   );
 
 #endif

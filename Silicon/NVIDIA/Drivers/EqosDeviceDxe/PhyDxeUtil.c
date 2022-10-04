@@ -9,7 +9,6 @@
 
 **/
 
-
 #include "PhyDxeUtil.h"
 #include "EmacDxeUtil.h"
 
@@ -27,11 +26,11 @@ STATIC
 EFI_STATUS
 EFIAPI
 PhyReset (
-  IN PHY_DRIVER   *PhyDriver
+  IN PHY_DRIVER  *PhyDriver
   )
 {
-  EFI_STATUS    Status;
-  EMBEDDED_GPIO *GpioProtocol = NULL;
+  EFI_STATUS     Status;
+  EMBEDDED_GPIO  *GpioProtocol = NULL;
 
   if (PhyDriver->ResetPin == NON_EXISTENT_ON_PLATFORM) {
     return EFI_SUCCESS;
@@ -48,14 +47,16 @@ PhyReset (
     DEBUG ((DEBUG_ERROR, "Failed to set gpio %x to %d %r\r\n", PhyDriver->ResetPin, PhyDriver->ResetMode0, Status));
     return Status;
   }
-  MicroSecondDelay(PhyDriver->ResetDelay);
+
+  MicroSecondDelay (PhyDriver->ResetDelay);
 
   Status = GpioProtocol->Set (GpioProtocol, PhyDriver->ResetPin, PhyDriver->ResetMode1);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to set gpio %x to %d %r\r\n", PhyDriver->ResetPin, PhyDriver->ResetMode1, Status));
     return Status;
   }
-  MicroSecondDelay(PhyDriver->PostResetDelay);
+
+  MicroSecondDelay (PhyDriver->PostResetDelay);
   return PhySoftReset (PhyDriver);
 }
 
@@ -63,52 +64,56 @@ PhyReset (
 EFI_STATUS
 EFIAPI
 PhyRead (
-  IN PHY_DRIVER   *PhyDriver,
-  IN  UINT32       Page,
-  IN  UINT32       Reg,
-  OUT UINT32      *Data
+  IN PHY_DRIVER  *PhyDriver,
+  IN  UINT32     Page,
+  IN  UINT32     Reg,
+  OUT UINT32     *Data
   )
 {
-  INT32 OsiStatus;
+  INT32  OsiStatus;
 
   if ((PhyDriver->PhyPage != Page) &&
-      (PhyDriver->PhyPageSelRegister != 0)) {
-    osi_write_phy_reg(PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, PhyDriver->PhyPageSelRegister, Page);
-    MicroSecondDelay(PHY_PAGE_SWITCH_DELAY_USEC);
+      (PhyDriver->PhyPageSelRegister != 0))
+  {
+    osi_write_phy_reg (PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, PhyDriver->PhyPageSelRegister, Page);
+    MicroSecondDelay (PHY_PAGE_SWITCH_DELAY_USEC);
     PhyDriver->PhyPage = Page;
   }
 
-  OsiStatus = osi_read_phy_reg(PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, Reg);
+  OsiStatus = osi_read_phy_reg (PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, Reg);
   if (OsiStatus == -1) {
     return EFI_DEVICE_ERROR;
   }
+
   *Data = OsiStatus;
   return EFI_SUCCESS;
 }
-
 
 // Function to write to the MII register (PHY Access)
 EFI_STATUS
 EFIAPI
 PhyWrite (
-  IN PHY_DRIVER   *PhyDriver,
-  IN UINT32        Page,
-  IN UINT32        Reg,
-  IN UINT32        Data
+  IN PHY_DRIVER  *PhyDriver,
+  IN UINT32      Page,
+  IN UINT32      Reg,
+  IN UINT32      Data
   )
 {
-  INT32 OsiStatus;
+  INT32  OsiStatus;
+
   if ((PhyDriver->PhyPage != Page) &&
-      (PhyDriver->PhyPageSelRegister != 0)) {
-    osi_write_phy_reg(PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, PhyDriver->PhyPageSelRegister, Page);
-    MicroSecondDelay(PHY_PAGE_SWITCH_DELAY_USEC);
+      (PhyDriver->PhyPageSelRegister != 0))
+  {
+    osi_write_phy_reg (PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, PhyDriver->PhyPageSelRegister, Page);
+    MicroSecondDelay (PHY_PAGE_SWITCH_DELAY_USEC);
     PhyDriver->PhyPage = Page;
   }
 
-  OsiStatus = osi_write_phy_reg(PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, Reg, Data);
+  OsiStatus = osi_write_phy_reg (PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, Reg, Data);
   if (OsiStatus != 0) {
     return EFI_DEVICE_ERROR;
   }
+
   return EFI_SUCCESS;
 }
 
@@ -116,12 +121,12 @@ PhyWrite (
 EFI_STATUS
 EFIAPI
 PhySoftReset (
-  IN PHY_DRIVER   *PhyDriver
+  IN PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32        TimeOut;
-  UINT32        Data32;
-  EFI_STATUS    Status;
+  UINT32      TimeOut;
+  UINT32      Data32;
+  EFI_STATUS  Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
@@ -133,15 +138,18 @@ PhySoftReset (
   do {
     // Read PHY_BASIC_CTRL register from PHY
     Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, &Data32);
-    if (EFI_ERROR(Status)) {
+    if (EFI_ERROR (Status)) {
       return Status;
     }
+
     // Wait until PHYCTRL_RESET become zero
     if ((Data32 & REG_PHY_CONTROL_RESET) == 0) {
       break;
     }
-    MicroSecondDelay(1);
+
+    MicroSecondDelay (1);
   } while (TimeOut++ < PHY_TIMEOUT);
+
   if (TimeOut >= PHY_TIMEOUT) {
     DEBUG ((DEBUG_INFO, "SNP:PHY: ERROR! PhySoftReset timeout\n"));
     return EFI_TIMEOUT;
@@ -160,9 +168,9 @@ PhyGetOui (
   IN  PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32 OuiMsb;
-  UINT32 OuiLsb;
-  UINT32 Oui;
+  UINT32  OuiMsb;
+  UINT32  OuiLsb;
+  UINT32  Oui;
 
   PhyRead (PhyDriver, PAGE_PHY, REG_PHY_IDENTIFIER_1, &OuiMsb);
   PhyRead (PhyDriver, PAGE_PHY, REG_PHY_IDENTIFIER_2, &OuiLsb);
@@ -174,7 +182,7 @@ PhyGetOui (
 EFI_STATUS
 EFIAPI
 PhyConfig (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   )
 {
   UINT32      Oui;
@@ -182,24 +190,24 @@ PhyConfig (
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
   PhyDriver->PhyPageSelRegister = 0;
-  PhyDriver->PhyPage = MAX_UINT32;
-  PhyDriver->AutoNegState = PHY_AUTONEG_IDLE;
-  PhyDriver->PhyOldLink = LINK_DOWN;
+  PhyDriver->PhyPage            = MAX_UINT32;
+  PhyDriver->AutoNegState       = PHY_AUTONEG_IDLE;
+  PhyDriver->PhyOldLink         = LINK_DOWN;
 
   Oui = PhyGetOui (PhyDriver);
   switch (Oui) {
     case PHY_MARVELL_OUI:
-      PhyDriver->Config = PhyMarvellConfig;
+      PhyDriver->Config       = PhyMarvellConfig;
       PhyDriver->StartAutoNeg = PhyMarvellStartAutoNeg;
       PhyDriver->CheckAutoNeg = PhyMarvellCheckAutoNeg;
-      PhyDriver->DetectLink = PhyMarvellDetectLink;
+      PhyDriver->DetectLink   = PhyMarvellDetectLink;
       break;
 
     case PHY_REALTEK_OUI:
-      PhyDriver->Config = PhyRealtekConfig;
+      PhyDriver->Config       = PhyRealtekConfig;
       PhyDriver->StartAutoNeg = PhyRealtekStartAutoNeg;
       PhyDriver->CheckAutoNeg = PhyRealtekCheckAutoNeg;
-      PhyDriver->DetectLink = PhyRealtekDetectLink;
+      PhyDriver->DetectLink   = PhyRealtekDetectLink;
       break;
 
     default:
@@ -228,7 +236,7 @@ PhyDxeInitialization (
   IN EMAC_DRIVER  *MacDriver
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
@@ -251,11 +259,11 @@ PhyDxeInitialization (
 EFI_STATUS
 EFIAPI
 PhyLinkAdjustEmacConfig (
-  IN PHY_DRIVER   *PhyDriver
+  IN PHY_DRIVER  *PhyDriver
   )
 {
-  EFI_STATUS   Status;
-  UINT64       ClockRate;
+  EFI_STATUS  Status;
+  UINT64      ClockRate;
 
   Status = EFI_SUCCESS;
 
@@ -275,10 +283,11 @@ PhyLinkAdjustEmacConfig (
         ClockRate = 2500000;
         osi_set_speed (PhyDriver->MacDriver->osi_core, OSI_SPEED_10);
       }
+
       if (PhyDriver->Duplex == DUPLEX_FULL) {
-        osi_set_mode(PhyDriver->MacDriver->osi_core, OSI_FULL_DUPLEX);
+        osi_set_mode (PhyDriver->MacDriver->osi_core, OSI_FULL_DUPLEX);
       } else {
-        osi_set_mode(PhyDriver->MacDriver->osi_core, OSI_HALF_DUPLEX);
+        osi_set_mode (PhyDriver->MacDriver->osi_core, OSI_HALF_DUPLEX);
       }
 
       Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "tx", ClockRate);

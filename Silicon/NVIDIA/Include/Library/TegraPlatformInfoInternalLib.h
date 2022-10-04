@@ -19,7 +19,10 @@
   @retval              CPUBL carveout offset.
 
 **/
-extern UINT64 TegraGetBLCarveoutOffsetInternal (UINT32 ChipID);
+extern UINT64
+TegraGetBLCarveoutOffsetInternal (
+  UINT32  ChipID
+  );
 
 /**
   Returns gic distributor base address for a given chip.
@@ -29,7 +32,10 @@ extern UINT64 TegraGetBLCarveoutOffsetInternal (UINT32 ChipID);
   @retval              Gic distributor base address.
 
 **/
-extern UINT64 TegraGetGicDistributorBaseAddressInternal (UINT32 ChipID);
+extern UINT64
+TegraGetGicDistributorBaseAddressInternal (
+  UINT32  ChipID
+  );
 
 /**
   Returns gic redistributor base address for a given chip.
@@ -39,7 +45,10 @@ extern UINT64 TegraGetGicDistributorBaseAddressInternal (UINT32 ChipID);
   @retval              Gic redistributor base address.
 
 **/
-extern UINT64 TegraGetGicRedistributorBaseAddressInternal (UINT32 ChipID);
+extern UINT64
+TegraGetGicRedistributorBaseAddressInternal (
+  UINT32  ChipID
+  );
 
 #endif /* !__ASSEMBLY */
 

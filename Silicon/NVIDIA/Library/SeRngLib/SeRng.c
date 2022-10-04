@@ -15,8 +15,7 @@
 #include <Protocol/SeRngProtocol.h>
 #include <Library/UefiBootServicesTableLib.h>
 
-
-STATIC NVIDIA_SE_RNG_PROTOCOL *mRngProtocol = NULL;
+STATIC NVIDIA_SE_RNG_PROTOCOL  *mRngProtocol = NULL;
 
 /**
   The constructor function checks for existence of SE RNG protocol.
@@ -31,13 +30,14 @@ SeRngLibConstructor (
   VOID
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   Status = gBS->LocateProtocol (&gNVIDIASeRngProtocolGuid, NULL, (VOID **)&mRngProtocol);
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to locate RNG protocol (%r)\r\n",__FUNCTION__,Status));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to locate RNG protocol (%r)\r\n", __FUNCTION__, Status));
   }
+
   return Status;
 }
 
@@ -55,19 +55,20 @@ SeRngLibConstructor (
 BOOLEAN
 EFIAPI
 GetRandomNumber16 (
-  OUT     UINT16                    *Rand
+  OUT     UINT16  *Rand
   )
 {
-  EFI_STATUS Status;
-  UINT64 Random[2];
+  EFI_STATUS  Status;
+  UINT64      Random[2];
 
   ASSERT (Rand != NULL);
 
   Status = mRngProtocol->GetRandom128 (mRngProtocol, Random);
 
-  if (!EFI_ERROR(Status)) {
+  if (!EFI_ERROR (Status)) {
     CopyMem (Rand, Random, sizeof (*Rand));
   }
+
   return !EFI_ERROR (Status);
 }
 
@@ -85,19 +86,20 @@ GetRandomNumber16 (
 BOOLEAN
 EFIAPI
 GetRandomNumber32 (
-  OUT     UINT32                    *Rand
+  OUT     UINT32  *Rand
   )
 {
-  EFI_STATUS Status;
-  UINT64 Random[2];
+  EFI_STATUS  Status;
+  UINT64      Random[2];
 
   ASSERT (Rand != NULL);
 
   Status = mRngProtocol->GetRandom128 (mRngProtocol, Random);
 
-  if (!EFI_ERROR(Status)) {
+  if (!EFI_ERROR (Status)) {
     CopyMem (Rand, Random, sizeof (*Rand));
   }
+
   return !EFI_ERROR (Status);
 }
 
@@ -115,19 +117,20 @@ GetRandomNumber32 (
 BOOLEAN
 EFIAPI
 GetRandomNumber64 (
-  OUT     UINT64                    *Rand
+  OUT     UINT64  *Rand
   )
 {
-  EFI_STATUS Status;
-  UINT64 Random[2];
+  EFI_STATUS  Status;
+  UINT64      Random[2];
 
   ASSERT (Rand != NULL);
 
   Status = mRngProtocol->GetRandom128 (mRngProtocol, Random);
 
-  if (!EFI_ERROR(Status)) {
+  if (!EFI_ERROR (Status)) {
     CopyMem (Rand, Random, sizeof (*Rand));
   }
+
   return !EFI_ERROR (Status);
 }
 
@@ -145,10 +148,10 @@ GetRandomNumber64 (
 BOOLEAN
 EFIAPI
 GetRandomNumber128 (
-  OUT     UINT64                    *Rand
+  OUT     UINT64  *Rand
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   ASSERT (Rand != NULL);
 

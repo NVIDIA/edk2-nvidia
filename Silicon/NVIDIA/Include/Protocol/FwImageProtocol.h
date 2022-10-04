@@ -21,17 +21,17 @@
    sizeof (((EFI_PARTITION_ENTRY *) 0)->PartitionName[0]))
 
 // Flags for Read() and/or Write()
-#define FW_IMAGE_RW_FLAG_NONE                   0x00000000
-#define FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE    0x00000001
-#define FW_IMAGE_RW_FLAG_FORCE_PARTITION_A      0x00000002
-#define FW_IMAGE_RW_FLAG_FORCE_PARTITION_B      0x00000004
+#define FW_IMAGE_RW_FLAG_NONE                 0x00000000
+#define FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE  0x00000001
+#define FW_IMAGE_RW_FLAG_FORCE_PARTITION_A    0x00000002
+#define FW_IMAGE_RW_FLAG_FORCE_PARTITION_B    0x00000004
 
 typedef struct _NVIDIA_FW_IMAGE_PROTOCOL NVIDIA_FW_IMAGE_PROTOCOL;
 
 // image attributes structure
 typedef struct {
-  UINTN                                 Bytes;
-  UINT32                                BlockSize;
+  UINTN     Bytes;
+  UINT32    BlockSize;
 } FW_IMAGE_ATTRIBUTES;
 
 /**
@@ -108,12 +108,12 @@ EFI_STATUS
 
 // protocol structure
 struct _NVIDIA_FW_IMAGE_PROTOCOL {
-  CONST CHAR16                          *ImageName;
-  FW_IMAGE_READ_IMAGE                   Read;
-  FW_IMAGE_WRITE_IMAGE                  Write;
-  FW_IMAGE_GET_ATTRIBUTES               GetAttributes;
+  CONST CHAR16               *ImageName;
+  FW_IMAGE_READ_IMAGE        Read;
+  FW_IMAGE_WRITE_IMAGE       Write;
+  FW_IMAGE_GET_ATTRIBUTES    GetAttributes;
 };
 
-extern EFI_GUID gNVIDIAFwImageProtocolGuid;
+extern EFI_GUID  gNVIDIAFwImageProtocolGuid;
 
 #endif

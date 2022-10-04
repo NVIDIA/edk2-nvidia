@@ -19,7 +19,7 @@
 #include "BpmpScmiClockProtocolPrivate.h"
 #include "ScmiDxe.h"
 
-STATIC CONST SCMI_PROTOCOL_INIT_FXN Protocols[] = {
+STATIC CONST SCMI_PROTOCOL_INIT_FXN  Protocols[] = {
   ScmiClockProtocolInit
 };
 
@@ -37,21 +37,22 @@ STATIC CONST SCMI_PROTOCOL_INIT_FXN Protocols[] = {
 EFI_STATUS
 EFIAPI
 BpmpScmiDxeEntryPoint (
-  IN EFI_HANDLE             ImageHandle,
-  IN EFI_SYSTEM_TABLE       *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS          Status;
-  UINT32              ProtocolIndex;
+  EFI_STATUS  Status;
+  UINT32      ProtocolIndex;
 
   // Install supported protocol on ImageHandle.
   for (ProtocolIndex = 0; ProtocolIndex < ARRAY_SIZE (Protocols);
-       ProtocolIndex++) {
-      Status = Protocols[ProtocolIndex] (&ImageHandle);
-      if (EFI_ERROR (Status)) {
-        ASSERT_EFI_ERROR (Status);
-        return Status;
-      }
+       ProtocolIndex++)
+  {
+    Status = Protocols[ProtocolIndex](&ImageHandle);
+    if (EFI_ERROR (Status)) {
+      ASSERT_EFI_ERROR (Status);
+      return Status;
+    }
   }
 
   return EFI_SUCCESS;

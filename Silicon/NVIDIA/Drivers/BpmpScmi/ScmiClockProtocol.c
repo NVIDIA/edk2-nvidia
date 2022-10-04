@@ -22,14 +22,14 @@
 
 #include "BpmpScmiClockProtocolPrivate.h"
 
-STATIC NVIDIA_BPMP_IPC_PROTOCOL *mBpmpIpcProtocol = NULL;
+STATIC NVIDIA_BPMP_IPC_PROTOCOL  *mBpmpIpcProtocol = NULL;
 
 // Instance of the clock parents protocol.
-STATIC NVIDIA_CLOCK_PARENTS_PROTOCOL mClockParentsProtocol;
+STATIC NVIDIA_CLOCK_PARENTS_PROTOCOL  mClockParentsProtocol;
 // Instance of the SCMI clock management protocol.
-STATIC SCMI_CLOCK_PROTOCOL ScmiClockProtocol;
+STATIC SCMI_CLOCK_PROTOCOL  ScmiClockProtocol;
 // Instance of the SCMI clock management protocol.
-STATIC SCMI_CLOCK2_PROTOCOL ScmiClock2Protocol;
+STATIC SCMI_CLOCK2_PROTOCOL  ScmiClock2Protocol;
 
 /** Return version of the clock management protocol supported by SCP firmware.
 
@@ -74,8 +74,8 @@ ClockGetTotalClocks (
   OUT UINT32               *TotalClocks
   )
 {
-  EFI_STATUS Status;
-  BPMP_CLOCK_REQUEST Request;
+  EFI_STATUS          Status;
+  BPMP_CLOCK_REQUEST  Request;
 
   if ((This == NULL) || (TotalClocks == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -97,9 +97,11 @@ ClockGetTotalClocks (
   if (!EFI_ERROR (Status)) {
     *TotalClocks += 1;
   }
+
   if (*TotalClocks > SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
     *TotalClocks = SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK;
   }
+
   return Status;
 }
 
@@ -125,16 +127,17 @@ ClockGetClockAttributes (
   OUT CHAR8                *ClockAsciiName
   )
 {
-  EFI_STATUS                       Status;
-  BPMP_CLOCK_REQUEST               Request;
-  BPMP_CLOCK_GET_ALL_INFO_RESPONSE Response;
-  UINT32                           IsEnabled;
-  INT32                            MessageError;
+  EFI_STATUS                        Status;
+  BPMP_CLOCK_REQUEST                Request;
+  BPMP_CLOCK_GET_ALL_INFO_RESPONSE  Response;
+  UINT32                            IsEnabled;
+  INT32                             MessageError;
 
   if ((This == NULL) ||
       (Enabled == NULL) ||
       (ClockAsciiName == NULL) ||
-      (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK)) {
+      (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -153,11 +156,13 @@ ClockGetClockAttributes (
                                );
   if (EFI_ERROR (Status)) {
     if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
-      //Clock is not visible to the MRQ
+      // Clock is not visible to the MRQ
       Status = EFI_NOT_FOUND;
     }
+
     return Status;
   }
+
   *Enabled = (IsEnabled != 0);
 
   Request.Subcommand = ClockSubcommandGetAllInfo;
@@ -175,19 +180,21 @@ ClockGetClockAttributes (
                                );
   if (EFI_ERROR (Status)) {
     if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
-      //Clock is not visible to the MRQ
+      // Clock is not visible to the MRQ
       Status = EFI_NOT_FOUND;
     }
+
     return Status;
   }
 
   CopyMem (ClockAsciiName, Response.Name, SCMI_MAX_STR_LEN - 1);
-  ClockAsciiName [SCMI_MAX_STR_LEN - 1] = '\0';
+  ClockAsciiName[SCMI_MAX_STR_LEN - 1] = '\0';
 
   if (AsciiStrSize (Response.Name) > SCMI_MAX_STR_LEN) {
     DEBUG ((EFI_D_VERBOSE, "String %a, too large truncated to %a\r\n", Response.Name, ClockAsciiName));
     Status = EFI_WARN_BUFFER_TOO_SMALL;
   }
+
   return Status;
 }
 
@@ -218,7 +225,7 @@ STATIC
 EFI_STATUS
 ClockDescribeRates (
   IN     SCMI_CLOCK_PROTOCOL     *This,
-  IN     UINT32                   ClockId,
+  IN     UINT32                  ClockId,
   OUT    SCMI_CLOCK_RATE_FORMAT  *Format,
   OUT    UINT32                  *TotalRates,
   IN OUT UINT32                  *RateArraySize,
@@ -247,9 +254,9 @@ ClockRateGet (
   OUT UINT64               *Rate
   )
 {
-  EFI_STATUS         Status;
-  BPMP_CLOCK_REQUEST Request;
-  INT32              MessageError;
+  EFI_STATUS          Status;
+  BPMP_CLOCK_REQUEST  Request;
+  INT32               MessageError;
 
   if ((This == NULL) || (Rate == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -273,9 +280,10 @@ ClockRateGet (
                                &MessageError
                                );
   if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
-    //Clock is not visible to the MRQ
+    // Clock is not visible to the MRQ
     Status = EFI_NOT_FOUND;
   }
+
   return Status;
 }
 
@@ -292,17 +300,17 @@ ClockRateGet (
 STATIC
 EFI_STATUS
 ClockSetParentByDesiredRate (
-    IN SCMI_CLOCK_PROTOCOL  *This,
-    IN UINT32               ClockId,
-    IN UINT64               Rate
-    )
+  IN SCMI_CLOCK_PROTOCOL  *This,
+  IN UINT32               ClockId,
+  IN UINT64               Rate
+  )
 {
-  UINT64 ClosestRate = 0;
-  UINT32 ParentIndex;
-  UINT32 ClosestParent;
-  EFI_STATUS Status;
-  UINT32 NumberOfParents;
-  UINT32 *ParentIds;
+  UINT64      ClosestRate = 0;
+  UINT32      ParentIndex;
+  UINT32      ClosestParent;
+  EFI_STATUS  Status;
+  UINT32      NumberOfParents;
+  UINT32      *ParentIds;
 
   Status = mClockParentsProtocol.GetParents (&mClockParentsProtocol, ClockId, &NumberOfParents, &ParentIds);
   if (EFI_ERROR (Status)) {
@@ -312,19 +320,20 @@ ClockSetParentByDesiredRate (
 
   ClosestParent = MAX_UINT32;
   for (ParentIndex = 0; ParentIndex < NumberOfParents; ParentIndex++) {
-    UINT64 ParentRate;
-    UINT64 ParentClosestRate;
-    UINT64 Divider;
+    UINT64  ParentRate;
+    UINT64  ParentClosestRate;
+    UINT64  Divider;
     Status = This->RateGet (This, ParentIds[ParentIndex], &ParentRate);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to get parent rate for parent %d\r\n", __FUNCTION__, ParentIds[ParentIndex]));
       return Status;
     }
-    //Find closest rate with half step dividers
-    Divider = MIN (MAX_DIVIDER_2, ((ParentRate * 2) + Rate - 1) / Rate);
+
+    // Find closest rate with half step dividers
+    Divider           = MIN (MAX_DIVIDER_2, ((ParentRate * 2) + Rate - 1) / Rate);
     ParentClosestRate = (ParentRate * 2) / Divider;
     if (ParentClosestRate > ClosestRate) {
-      ClosestRate = ParentClosestRate;
+      ClosestRate   = ParentClosestRate;
       ClosestParent = ParentIds[ParentIndex];
     }
   }
@@ -334,7 +343,7 @@ ClockSetParentByDesiredRate (
     return EFI_SUCCESS;
   }
 
-  //Enable and set the parent
+  // Enable and set the parent
   Status = ScmiClock2Protocol.Enable (&ScmiClock2Protocol, ClosestParent, TRUE);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to enable parent %d\r\n", __FUNCTION__, ClosestParent));
@@ -349,7 +358,6 @@ ClockSetParentByDesiredRate (
 
   return Status;
 }
-
 
 /** Set clock rate.
 
@@ -369,10 +377,10 @@ ClockRateSet (
   IN UINT64               Rate
   )
 {
-  EFI_STATUS         Status;
-  BPMP_CLOCK_REQUEST Request;
-  UINT64             NewRate;
-  INT32              MessageError;
+  EFI_STATUS          Status;
+  BPMP_CLOCK_REQUEST  Request;
+  UINT64              NewRate;
+  INT32               MessageError;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -404,19 +412,21 @@ ClockRateSet (
                                &MessageError
                                );
   if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
-    //Clock is not visible to the MRQ
+    // Clock is not visible to the MRQ
     Status = EFI_NOT_FOUND;
   } else if (Status == EFI_UNSUPPORTED) {
     Status = EFI_SUCCESS;
   } else if (Rate != NewRate) {
-    DEBUG ((EFI_D_INFO,
-            "%a: Clock %d, attempt set to %16ld, was set to %16ld\r\n",
-            __FUNCTION__,
-            ClockId,
-            Rate,
-            NewRate
-            ));
+    DEBUG ((
+      EFI_D_INFO,
+      "%a: Clock %d, attempt set to %16ld, was set to %16ld\r\n",
+      __FUNCTION__,
+      ClockId,
+      Rate,
+      NewRate
+      ));
   }
+
   return Status;
 }
 
@@ -433,14 +443,14 @@ ClockRateSet (
 STATIC
 EFI_STATUS
 ClockEnable (
-  IN SCMI_CLOCK2_PROTOCOL *This,
-  IN UINT32               ClockId,
-  IN BOOLEAN              Enable
+  IN SCMI_CLOCK2_PROTOCOL  *This,
+  IN UINT32                ClockId,
+  IN BOOLEAN               Enable
   )
 {
-  EFI_STATUS         Status;
-  BPMP_CLOCK_REQUEST Request;
-  INT32              MessageError;
+  EFI_STATUS          Status;
+  BPMP_CLOCK_REQUEST  Request;
+  INT32               MessageError;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -451,7 +461,7 @@ ClockEnable (
   }
 
   if (Enable) {
-    UINT32 ParentId;
+    UINT32  ParentId;
     Status = mClockParentsProtocol.GetParent (&mClockParentsProtocol, ClockId, &ParentId);
     if (!EFI_ERROR (Status)) {
       Status = ScmiClock2Protocol.Enable (&ScmiClock2Protocol, ParentId, TRUE);
@@ -466,7 +476,8 @@ ClockEnable (
   } else {
     Request.Subcommand = ClockSubcommandDisable;
   }
-  Request.ClockId    = ClockId;
+
+  Request.ClockId = ClockId;
 
   Status = mBpmpIpcProtocol->Communicate (
                                mBpmpIpcProtocol,
@@ -479,11 +490,12 @@ ClockEnable (
                                &MessageError
                                );
   if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
-    //Clock is not visible to the MRQ
+    // Clock is not visible to the MRQ
     Status = EFI_NOT_FOUND;
   } else if (Status == EFI_UNSUPPORTED) {
     Status = EFI_SUCCESS;
   }
+
   return Status;
 }
 
@@ -500,15 +512,15 @@ ClockEnable (
 **/
 EFI_STATUS
 ClockParentsIsParent (
-  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
-  IN  UINT32                        ClockId,
-  IN  UINT32                        ParentId
+  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL  *This,
+  IN  UINT32                         ClockId,
+  IN  UINT32                         ParentId
   )
 {
-  EFI_STATUS Status;
-  UINT32 NumberOfParents;
-  UINT32 *ParentIds = NULL;
-  UINT32 ParentIndex;
+  EFI_STATUS  Status;
+  UINT32      NumberOfParents;
+  UINT32      *ParentIds = NULL;
+  UINT32      ParentIndex;
 
   Status = This->GetParents (This, ClockId, &NumberOfParents, &ParentIds);
   if (EFI_ERROR (Status)) {
@@ -526,6 +538,7 @@ ClockParentsIsParent (
   } else {
     Status = EFI_NOT_FOUND;
   }
+
   FreePool (ParentIds);
   return Status;
 }
@@ -543,15 +556,15 @@ ClockParentsIsParent (
 **/
 EFI_STATUS
 ClockParentsSetParent (
-  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
-  IN  UINT32                        ClockId,
-  IN  UINT32                        ParentId
+  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL  *This,
+  IN  UINT32                         ClockId,
+  IN  UINT32                         ParentId
   )
 {
-  EFI_STATUS         Status;
-  BPMP_CLOCK_REQUEST Request;
-  INT32              MessageError;
-  UINT32             CurrentParent;
+  EFI_STATUS          Status;
+  BPMP_CLOCK_REQUEST  Request;
+  INT32               MessageError;
+  UINT32              CurrentParent;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -586,11 +599,12 @@ ClockParentsSetParent (
                                &MessageError
                                );
   if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
-    //Clock is not visible to the MRQ
+    // Clock is not visible to the MRQ
     Status = EFI_NOT_FOUND;
   } else if (Status == EFI_UNSUPPORTED) {
     Status = EFI_SUCCESS;
   }
+
   return Status;
 }
 
@@ -606,14 +620,14 @@ ClockParentsSetParent (
 **/
 EFI_STATUS
 ClockParentsGetParent (
-  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
-  IN  UINT32                        ClockId,
-  OUT UINT32                        *ParentId
+  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL  *This,
+  IN  UINT32                         ClockId,
+  OUT UINT32                         *ParentId
   )
 {
-  EFI_STATUS         Status;
-  BPMP_CLOCK_REQUEST Request;
-  INT32              MessageError;
+  EFI_STATUS          Status;
+  BPMP_CLOCK_REQUEST  Request;
+  INT32               MessageError;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -637,7 +651,7 @@ ClockParentsGetParent (
                                &MessageError
                                );
   if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
-    //Clock is not visible to the MRQ
+    // Clock is not visible to the MRQ
     Status = EFI_NOT_FOUND;
   }
 
@@ -662,21 +676,22 @@ ClockParentsGetParent (
 **/
 EFI_STATUS
 ClockParentsGetParents (
-  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
-  IN  UINT32                        ClockId,
-  OUT UINT32                        *NumberOfParents,
-  OUT UINT32                        **ParentIds
+  IN  NVIDIA_CLOCK_PARENTS_PROTOCOL  *This,
+  IN  UINT32                         ClockId,
+  OUT UINT32                         *NumberOfParents,
+  OUT UINT32                         **ParentIds
   )
 {
-  EFI_STATUS                       Status;
-  BPMP_CLOCK_REQUEST               Request;
-  BPMP_CLOCK_GET_ALL_INFO_RESPONSE Response;
-  INT32                            MessageError;
+  EFI_STATUS                        Status;
+  BPMP_CLOCK_REQUEST                Request;
+  BPMP_CLOCK_GET_ALL_INFO_RESPONSE  Response;
+  INT32                             MessageError;
 
   if ((This == NULL) ||
       (NumberOfParents == NULL) ||
       (ParentIds == NULL) ||
-      (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK)) {
+      (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -695,14 +710,15 @@ ClockParentsGetParents (
                                );
   if (EFI_ERROR (Status)) {
     if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_EINVAL)) {
-      //Clock is not visible to the MRQ
+      // Clock is not visible to the MRQ
       Status = EFI_NOT_FOUND;
     }
+
     return Status;
   }
 
   *NumberOfParents = Response.NumberOfParents;
-  *ParentIds = (UINT32 *)AllocateCopyPool (sizeof (UINT32) * Response.NumberOfParents, Response.Parents);
+  *ParentIds       = (UINT32 *)AllocateCopyPool (sizeof (UINT32) * Response.NumberOfParents, Response.Parents);
   if (*ParentIds == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
   }
@@ -718,37 +734,38 @@ ClockParentsGetParents (
 **/
 EFI_STATUS
 ScmiClockProtocolInit (
-  IN EFI_HANDLE* Handle
+  IN EFI_HANDLE  *Handle
   )
 {
-  EFI_STATUS Status = gBS->LocateProtocol (
-                             &gNVIDIABpmpIpcProtocolGuid,
-                             NULL,
-                             (VOID **)&mBpmpIpcProtocol
-                             );
+  EFI_STATUS  Status = gBS->LocateProtocol (
+                              &gNVIDIABpmpIpcProtocolGuid,
+                              NULL,
+                              (VOID **)&mBpmpIpcProtocol
+                              );
+
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  ScmiClockProtocol.GetVersion = ClockGetVersion;
-  ScmiClockProtocol.GetTotalClocks = ClockGetTotalClocks;
+  ScmiClockProtocol.GetVersion         = ClockGetVersion;
+  ScmiClockProtocol.GetTotalClocks     = ClockGetTotalClocks;
   ScmiClockProtocol.GetClockAttributes = ClockGetClockAttributes;
-  ScmiClockProtocol.DescribeRates = ClockDescribeRates;
-  ScmiClockProtocol.RateGet = ClockRateGet;
-  ScmiClockProtocol.RateSet = ClockRateSet;
+  ScmiClockProtocol.DescribeRates      = ClockDescribeRates;
+  ScmiClockProtocol.RateGet            = ClockRateGet;
+  ScmiClockProtocol.RateSet            = ClockRateSet;
 
-  ScmiClock2Protocol.GetVersion = (SCMI_CLOCK2_GET_VERSION)ClockGetVersion;
-  ScmiClock2Protocol.GetTotalClocks = (SCMI_CLOCK2_GET_TOTAL_CLOCKS)ClockGetTotalClocks;
+  ScmiClock2Protocol.GetVersion         = (SCMI_CLOCK2_GET_VERSION)ClockGetVersion;
+  ScmiClock2Protocol.GetTotalClocks     = (SCMI_CLOCK2_GET_TOTAL_CLOCKS)ClockGetTotalClocks;
   ScmiClock2Protocol.GetClockAttributes = (SCMI_CLOCK2_GET_CLOCK_ATTRIBUTES)ClockGetClockAttributes;
-  ScmiClock2Protocol.DescribeRates = (SCMI_CLOCK2_DESCRIBE_RATES)ClockDescribeRates;
-  ScmiClock2Protocol.RateGet = (SCMI_CLOCK2_RATE_GET)ClockRateGet;
-  ScmiClock2Protocol.RateSet = (SCMI_CLOCK2_RATE_SET)ClockRateSet;
-  ScmiClock2Protocol.Version = SCMI_CLOCK2_PROTOCOL_VERSION;
-  ScmiClock2Protocol.Enable = ClockEnable;
+  ScmiClock2Protocol.DescribeRates      = (SCMI_CLOCK2_DESCRIBE_RATES)ClockDescribeRates;
+  ScmiClock2Protocol.RateGet            = (SCMI_CLOCK2_RATE_GET)ClockRateGet;
+  ScmiClock2Protocol.RateSet            = (SCMI_CLOCK2_RATE_SET)ClockRateSet;
+  ScmiClock2Protocol.Version            = SCMI_CLOCK2_PROTOCOL_VERSION;
+  ScmiClock2Protocol.Enable             = ClockEnable;
 
-  mClockParentsProtocol.IsParent = ClockParentsIsParent;
-  mClockParentsProtocol.SetParent = ClockParentsSetParent;
-  mClockParentsProtocol.GetParent = ClockParentsGetParent;
+  mClockParentsProtocol.IsParent   = ClockParentsIsParent;
+  mClockParentsProtocol.SetParent  = ClockParentsSetParent;
+  mClockParentsProtocol.GetParent  = ClockParentsGetParent;
   mClockParentsProtocol.GetParents = ClockParentsGetParents;
 
   return gBS->InstallMultipleProtocolInterfaces (
@@ -762,4 +779,3 @@ ScmiClockProtocolInit (
                 NULL
                 );
 }
-

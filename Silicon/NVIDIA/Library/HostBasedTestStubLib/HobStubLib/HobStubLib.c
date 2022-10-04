@@ -23,7 +23,7 @@ GetFirstGuidHob (
 {
   check_expected (Guid);
 
-  return (VOID *) mock ();
+  return (VOID *)mock ();
 }
 
 VOID

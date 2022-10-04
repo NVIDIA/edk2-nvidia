@@ -22,7 +22,6 @@
 //
 typedef struct _NVIDIA_RESET_NODE_PROTOCOL NVIDIA_RESET_NODE_PROTOCOL;
 
-
 /**
   This function allows for deassert of all reset nodes.
 
@@ -34,7 +33,7 @@ typedef struct _NVIDIA_RESET_NODE_PROTOCOL NVIDIA_RESET_NODE_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *RESET_NODE_DEASSERT_ALL) (
+(EFIAPI *RESET_NODE_DEASSERT_ALL)(
   IN  NVIDIA_RESET_NODE_PROTOCOL   *This
   );
 
@@ -49,7 +48,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *RESET_NODE_ASSERT_ALL) (
+(EFIAPI *RESET_NODE_ASSERT_ALL)(
   IN  NVIDIA_RESET_NODE_PROTOCOL   *This
   );
 
@@ -64,7 +63,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *RESET_NODE_MODULE_RESET_ALL) (
+(EFIAPI *RESET_NODE_MODULE_RESET_ALL)(
   IN  NVIDIA_RESET_NODE_PROTOCOL   *This
   );
 
@@ -80,7 +79,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *RESET_NODE_DEASSERT) (
+(EFIAPI *RESET_NODE_DEASSERT)(
   IN  NVIDIA_RESET_NODE_PROTOCOL   *This,
   IN  UINT32                       ResetId
   );
@@ -97,7 +96,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *RESET_NODE_ASSERT) (
+(EFIAPI *RESET_NODE_ASSERT)(
   IN  NVIDIA_RESET_NODE_PROTOCOL   *This,
   IN  UINT32                       ResetId
   );
@@ -114,29 +113,28 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *RESET_NODE_MODULE_RESET) (
+(EFIAPI *RESET_NODE_MODULE_RESET)(
   IN  NVIDIA_RESET_NODE_PROTOCOL   *This,
   IN  UINT32                       ResetId
   );
 
 typedef struct {
-  UINT32                  ResetId;
-  CONST CHAR8             *ResetName;
+  UINT32         ResetId;
+  CONST CHAR8    *ResetName;
 } NVIDIA_RESET_NODE_ENTRY;
 
 /// NVIDIA_RESET_NODE_PROTOCOL protocol structure.
 struct _NVIDIA_RESET_NODE_PROTOCOL {
-
-  RESET_NODE_DEASSERT_ALL     DeassertAll;
-  RESET_NODE_ASSERT_ALL       AssertAll;
-  RESET_NODE_MODULE_RESET_ALL ModuleResetAll;
-  RESET_NODE_DEASSERT         Deassert;
-  RESET_NODE_ASSERT           Assert;
-  RESET_NODE_MODULE_RESET     ModuleReset;
-  UINTN                       Resets;
-  NVIDIA_RESET_NODE_ENTRY     ResetEntries[0];
+  RESET_NODE_DEASSERT_ALL        DeassertAll;
+  RESET_NODE_ASSERT_ALL          AssertAll;
+  RESET_NODE_MODULE_RESET_ALL    ModuleResetAll;
+  RESET_NODE_DEASSERT            Deassert;
+  RESET_NODE_ASSERT              Assert;
+  RESET_NODE_MODULE_RESET        ModuleReset;
+  UINTN                          Resets;
+  NVIDIA_RESET_NODE_ENTRY        ResetEntries[0];
 };
 
-extern EFI_GUID gNVIDIAResetNodeProtocolGuid;
+extern EFI_GUID  gNVIDIAResetNodeProtocolGuid;
 
 #endif

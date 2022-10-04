@@ -13,7 +13,7 @@ SMBIOS_MISC_TABLE_DATA (SMBIOS_TABLE_TYPE16, MiscPhysMemArray) = {
   {                                                     // Hdr
     EFI_SMBIOS_TYPE_PHYSICAL_MEMORY_ARRAY,              // Type,
     0,                                                  // Length,
-    0,                                                   // Handle
+    0,                                                  // Handle
   },
   MemoryArrayLocationUnknown,
   MemoryArrayUseSystemMemory,

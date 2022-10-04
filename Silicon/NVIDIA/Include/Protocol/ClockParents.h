@@ -35,7 +35,7 @@ typedef struct _NVIDIA_CLOCK_PARENTS_PROTOCOL NVIDIA_CLOCK_PARENTS_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *CLOCK_PARENTS_IS_PARENT) (
+(EFIAPI *CLOCK_PARENTS_IS_PARENT)(
   IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
   IN  UINT32                        ClockId,
   IN  UINT32                        ParentId
@@ -54,7 +54,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *CLOCK_PARENTS_SET_PARENT) (
+(EFIAPI *CLOCK_PARENTS_SET_PARENT)(
   IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
   IN  UINT32                        ClockId,
   IN  UINT32                        ParentId
@@ -72,7 +72,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *CLOCK_PARENTS_GET_PARENT) (
+(EFIAPI *CLOCK_PARENTS_GET_PARENT)(
   IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
   IN  UINT32                        ClockId,
   OUT UINT32                        *ParentId
@@ -91,7 +91,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *CLOCK_PARENTS_GET_PARENTS) (
+(EFIAPI *CLOCK_PARENTS_GET_PARENTS)(
   IN  NVIDIA_CLOCK_PARENTS_PROTOCOL *This,
   IN  UINT32                        ClockId,
   OUT UINT32                        *NumberOfParents,
@@ -100,13 +100,12 @@ EFI_STATUS
 
 /// NVIDIA_CLOCK_PARENT_PROTOCOL protocol structure.
 struct _NVIDIA_CLOCK_PARENTS_PROTOCOL {
-
-  CLOCK_PARENTS_IS_PARENT   IsParent;
-  CLOCK_PARENTS_SET_PARENT  SetParent;
-  CLOCK_PARENTS_GET_PARENT  GetParent;
-  CLOCK_PARENTS_GET_PARENTS GetParents;
+  CLOCK_PARENTS_IS_PARENT      IsParent;
+  CLOCK_PARENTS_SET_PARENT     SetParent;
+  CLOCK_PARENTS_GET_PARENT     GetParent;
+  CLOCK_PARENTS_GET_PARENTS    GetParents;
 };
 
-extern EFI_GUID gNVIDIAClockParentsProtocolGuid;
+extern EFI_GUID  gNVIDIAClockParentsProtocolGuid;
 
 #endif

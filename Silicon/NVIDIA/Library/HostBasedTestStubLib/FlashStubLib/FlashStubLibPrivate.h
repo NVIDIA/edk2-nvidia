@@ -16,17 +16,17 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Protocol/BlockIo.h>
 
 typedef struct {
-  UINT32                  Signature;
-  EFI_BLOCK_IO_PROTOCOL   BlockIo;
-  EFI_BLOCK_IO_MEDIA      Media;
-  UINT64                  StartingAddr;
-  UINT64                  Size;
+  UINT32                   Signature;
+  EFI_BLOCK_IO_PROTOCOL    BlockIo;
+  EFI_BLOCK_IO_MEDIA       Media;
+  UINT64                   StartingAddr;
+  UINT64                   Size;
 } FLASH_TEST_PRIVATE;
 
-#define DATA_BUFFER_BLOCK_NUM   (64)
+#define DATA_BUFFER_BLOCK_NUM  (64)
 
-#define FLASH_TEST_PRIVATE_SIGNATURE    SIGNATURE_32 ('F', 'S', 'H', 'T')
+#define FLASH_TEST_PRIVATE_SIGNATURE  SIGNATURE_32 ('F', 'S', 'H', 'T')
 
-#define FLASH_TEST_PRIVATE_FROM_BLOCK_IO(a)   CR (a, FLASH_TEST_PRIVATE, BlockIo, FLASH_TEST_PRIVATE_SIGNATURE)
+#define FLASH_TEST_PRIVATE_FROM_BLOCK_IO(a)  CR (a, FLASH_TEST_PRIVATE, BlockIo, FLASH_TEST_PRIVATE_SIGNATURE)
 
 #endif

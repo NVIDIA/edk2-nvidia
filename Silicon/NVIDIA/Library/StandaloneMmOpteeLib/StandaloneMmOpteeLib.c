@@ -24,7 +24,7 @@ EFIAPI
 BOOLEAN
 IsOpteePresent (
   VOID
-)
+  )
 {
   return (FeaturePcdGet (PcdOpteePresent));
 }
@@ -32,26 +32,27 @@ IsOpteePresent (
 EFIAPI
 EFI_STATUS
 GetDeviceRegion (
-  IN CHAR8  *Name,
-  OUT EFI_VIRTUAL_ADDRESS *DeviceBase,
-  OUT UINTN *DeviceRegionSize
+  IN CHAR8                 *Name,
+  OUT EFI_VIRTUAL_ADDRESS  *DeviceBase,
+  OUT UINTN                *DeviceRegionSize
   )
 {
-  EFI_STATUS Status = EFI_NOT_FOUND;
-  EFI_MM_DEVICE_REGION *DeviceRegionMap = NULL;
-  UINTN Index;
-  EFI_HOB_GUID_TYPE             *GuidHob;
+  EFI_STATUS            Status           = EFI_NOT_FOUND;
+  EFI_MM_DEVICE_REGION  *DeviceRegionMap = NULL;
+  UINTN                 Index;
+  EFI_HOB_GUID_TYPE     *GuidHob;
 
   GuidHob = GetFirstGuidHob (&gEfiStandaloneMmDeviceMemoryRegions);
   if (GuidHob == NULL) {
     return Status;
   }
-  DeviceRegionMap = GET_GUID_HOB_DATA(GuidHob);
+
+  DeviceRegionMap = GET_GUID_HOB_DATA (GuidHob);
   for (Index = 0; Index < MAX_DEVICE_REGIONS; Index++) {
     if (AsciiStrCmp (Name, DeviceRegionMap[Index].DeviceRegionName) == 0) {
-      *DeviceBase = DeviceRegionMap[Index].DeviceRegionStart;
+      *DeviceBase       = DeviceRegionMap[Index].DeviceRegionStart;
       *DeviceRegionSize = DeviceRegionMap[Index].DeviceRegionSize;
-      Status = EFI_SUCCESS;
+      Status            = EFI_SUCCESS;
       break;
     }
   }
@@ -63,9 +64,9 @@ EFIAPI
 BOOLEAN
 IsQspiPresent (
   VOID
-)
+  )
 {
-  EFI_STATUS            Status = EFI_NOT_FOUND;
+  EFI_STATUS            Status           = EFI_NOT_FOUND;
   EFI_MM_DEVICE_REGION  *DeviceRegionMap = NULL;
   UINTN                 Index;
   EFI_HOB_GUID_TYPE     *GuidHob;
@@ -75,14 +76,15 @@ IsQspiPresent (
   if (GuidHob == NULL) {
     return Status;
   }
-  DeviceRegionMap = GET_GUID_HOB_DATA(GuidHob);
+
+  DeviceRegionMap = GET_GUID_HOB_DATA (GuidHob);
 
   for (Index = 0; Index < MAX_DEVICE_REGIONS; Index++) {
     if (AsciiStrStr (DeviceRegionMap[Index].DeviceRegionName, "qspi") != NULL) {
       QspiPresent = TRUE;
       break;
-
     }
   }
+
   return QspiPresent;
 }

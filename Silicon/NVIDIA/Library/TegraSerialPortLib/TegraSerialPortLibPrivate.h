@@ -18,7 +18,7 @@
 **/
 typedef
 TEGRA_UART_OBJ *
-(EFIAPI * SERIAL_PORT_GET_OBJECT) (
+(EFIAPI *SERIAL_PORT_GET_OBJECT)(
   VOID
   );
 
@@ -26,11 +26,11 @@ TEGRA_UART_OBJ *
   Describe compatibility mapping regions terminated with NULL Compatibility string
 **/
 typedef struct {
-  UINT32                  Type;
-  SERIAL_PORT_GET_OBJECT  GetObject;
-  CONST CHAR8             *Compatibility;
-  BOOLEAN                 IsFound;
-  EFI_PHYSICAL_ADDRESS    BaseAddress;
+  UINT32                    Type;
+  SERIAL_PORT_GET_OBJECT    GetObject;
+  CONST CHAR8               *Compatibility;
+  BOOLEAN                   IsFound;
+  EFI_PHYSICAL_ADDRESS      BaseAddress;
 } SERIAL_MAPPING;
 
 #endif //__TEGRA_SERIAL_PORT_LIB_PRIVATE_H__

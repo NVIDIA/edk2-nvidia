@@ -37,9 +37,9 @@ EFI_STATUS
 
 // protocol structure
 struct _NVIDIA_BR_BCT_UPDATE_PROTOCOL {
-  BR_BCT_UPDATE_FW_CHAIN                UpdateFwChain;
+  BR_BCT_UPDATE_FW_CHAIN    UpdateFwChain;
 };
 
-extern EFI_GUID gNVIDIABrBctUpdateProtocolGuid;
+extern EFI_GUID  gNVIDIABrBctUpdateProtocolGuid;
 
 #endif

@@ -9,10 +9,11 @@
     http://infocenter.arm.com/help/topic/com.arm.doc.den0056a/
     DEN0056A_System_Control_and_Management_Interface.pdf
 **/
+
 #ifndef SCMI_DXE_H_
 #define SCMI_DXE_H_
 
-#define MAX_VENDOR_LEN       SCMI_MAX_STR_LEN
+#define MAX_VENDOR_LEN  SCMI_MAX_STR_LEN
 
 /** Pointer to protocol initialization function.
 

@@ -9,15 +9,13 @@
 #ifndef __QSPI_CONTROLLER_LIB_H__
 #define __QSPI_CONTROLLER_LIB_H__
 
-
 typedef struct {
-  VOID   *TxBuf;
-  UINT32  TxLen;
-  VOID   *RxBuf;
-  UINT32  RxLen;
-  UINT8   WaitCycles;
+  VOID      *TxBuf;
+  UINT32    TxLen;
+  VOID      *RxBuf;
+  UINT32    RxLen;
+  UINT8     WaitCycles;
 } QSPI_TRANSACTION_PACKET;
-
 
 /**
   Initialize the QSPI Driver
@@ -33,9 +31,8 @@ typedef struct {
 **/
 EFI_STATUS
 QspiInitialize (
-  IN EFI_PHYSICAL_ADDRESS QspiBaseAddress
-);
-
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  );
 
 /**
   Perform Transaction
@@ -56,9 +53,8 @@ QspiInitialize (
 **/
 EFI_STATUS
 QspiPerformTransaction (
-  IN EFI_PHYSICAL_ADDRESS    QspiBaseAddress,
-  IN QSPI_TRANSACTION_PACKET *Packet
-);
-
+  IN EFI_PHYSICAL_ADDRESS     QspiBaseAddress,
+  IN QSPI_TRANSACTION_PACKET  *Packet
+  );
 
 #endif //__QSPI_CONTROLLER_LIB_H__

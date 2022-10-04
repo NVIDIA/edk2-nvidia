@@ -32,10 +32,10 @@
 #include <Protocol/NonDiscoverableDevice.h>
 
 typedef struct {
-  VOID                          *DeviceTreeBase;
-  INT32                         NodeOffset;
-  EFI_GUID                      *DeviceType;
-  NON_DISCOVERABLE_DEVICE_INIT  PciIoInitialize;
+  VOID                            *DeviceTreeBase;
+  INT32                           NodeOffset;
+  EFI_GUID                        *DeviceType;
+  NON_DISCOVERABLE_DEVICE_INIT    PciIoInitialize;
 } NVIDIA_DT_NODE_INFO;
 
 /**
@@ -47,9 +47,9 @@ typedef struct {
  **/
 typedef
 EFI_STATUS
-(EFIAPI * DEVICE_TREE_NODE_SUPPORTED) (
+(EFIAPI *DEVICE_TREE_NODE_SUPPORTED)(
   IN OUT  NVIDIA_DT_NODE_INFO  *DeviceInfo
-);
+  );
 
 /**
  * @brief Process a given device node, this creates the memory map for it and registers support protocols.
@@ -62,11 +62,11 @@ EFI_STATUS
  * @return EFI_STATUS    - EFI_SUCCESS on success, others for error
  **/
 EFI_STATUS
-ProcessDeviceTreeNodeWithHandle(
-  IN      NVIDIA_DT_NODE_INFO        *DeviceInfo,
-  IN      NON_DISCOVERABLE_DEVICE    *Device,
-  IN      EFI_HANDLE                 DriverHandle,
-  IN OUT  EFI_HANDLE                 *DeviceHandle
+ProcessDeviceTreeNodeWithHandle (
+  IN      NVIDIA_DT_NODE_INFO      *DeviceInfo,
+  IN      NON_DISCOVERABLE_DEVICE  *Device,
+  IN      EFI_HANDLE               DriverHandle,
+  IN OUT  EFI_HANDLE               *DeviceHandle
   );
 
 /**
@@ -79,8 +79,8 @@ ProcessDeviceTreeNodeWithHandle(
  **/
 EFI_STATUS
 GetNextSupportedDeviceTreeNode (
-  IN  DEVICE_TREE_NODE_SUPPORTED IsNodeSupported,
-  IN OUT NVIDIA_DT_NODE_INFO     *DeviceInfo
+  IN  DEVICE_TREE_NODE_SUPPORTED  IsNodeSupported,
+  IN OUT NVIDIA_DT_NODE_INFO      *DeviceInfo
   );
 
 /**
@@ -94,9 +94,10 @@ GetNextSupportedDeviceTreeNode (
  **/
 EFI_STATUS
 GetSupportedDeviceTreeNodes (
-  IN  VOID                        *DeviceTreeBase,  OPTIONAL
+  IN  VOID *DeviceTreeBase, OPTIONAL
   IN  DEVICE_TREE_NODE_SUPPORTED  IsNodeSupported,
   IN OUT UINT32                   *DeviceCount,
   OUT NVIDIA_DT_NODE_INFO         *DTNodeInfo
   );
+
 #endif //__DEVICE_DISCOVERY_LIB_H__

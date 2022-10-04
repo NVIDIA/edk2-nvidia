@@ -18,17 +18,17 @@
 #include <Library/DebugLib.h>
 
 typedef struct {
-  UINT8   Data[3];
-  UINT8   NumberOfBytes:2;
-  BOOLEAN Flush:1;
-  BOOLEAN HwFlush:1;
-  UINT8   Reserved:3;
-  BOOLEAN Interrupt:1;
+  UINT8      Data[3];
+  UINT8      NumberOfBytes : 2;
+  BOOLEAN    Flush         : 1;
+  BOOLEAN    HwFlush       : 1;
+  UINT8      Reserved      : 3;
+  BOOLEAN    Interrupt     : 1;
 } TEGRA_COMBINED_UART_PIO;
 
 typedef union {
-  UINT32                  RawValue;
-  TEGRA_COMBINED_UART_PIO Pio;
+  UINT32                     RawValue;
+  TEGRA_COMBINED_UART_PIO    Pio;
 } TEGRA_COMBINED_UART;
 
 /**
@@ -44,10 +44,10 @@ STATIC
 BOOLEAN
 EFIAPI
 IsDataPresent (
-  UINTN MailboxAddress
+  UINTN  MailboxAddress
   )
 {
-  TEGRA_COMBINED_UART CombinedUartData;
+  TEGRA_COMBINED_UART  CombinedUartData;
 
   CombinedUartData.RawValue = MmioRead32 (MailboxAddress);
 
@@ -63,32 +63,34 @@ IsDataPresent (
 RETURN_STATUS
 EFIAPI
 TegraCombinedSerialPortInitialize (
-  IN UINTN SerialBaseAddress
+  IN UINTN  SerialBaseAddress
   )
 {
-  TEGRA_COMBINED_UART CombinedUartData;
-  UINTN               TxMailbox;
-  UINTN               RxMailbox;
+  TEGRA_COMBINED_UART  CombinedUartData;
+  UINTN                TxMailbox;
+  UINTN                RxMailbox;
 
   TxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
   RxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox);
 
-  //Wait until all prior data is sent
-  while (IsDataPresent(TxMailbox) == TRUE);
+  // Wait until all prior data is sent
+  while (IsDataPresent (TxMailbox) == TRUE) {
+  }
 
   MmioWrite32 (TxMailbox, 0);
   MmioWrite32 (RxMailbox, 0);
 
-  CombinedUartData.Pio.Data[0] = '\n';
+  CombinedUartData.Pio.Data[0]       = '\n';
   CombinedUartData.Pio.NumberOfBytes = 1;
-  CombinedUartData.Pio.Flush = TRUE;
-  CombinedUartData.Pio.HwFlush = TRUE;
-  CombinedUartData.Pio.Interrupt = TRUE;
+  CombinedUartData.Pio.Flush         = TRUE;
+  CombinedUartData.Pio.HwFlush       = TRUE;
+  CombinedUartData.Pio.Interrupt     = TRUE;
 
   MmioWrite32 (TxMailbox, CombinedUartData.RawValue);
 
-  //Wait until new data is sent
-  while (IsDataPresent(TxMailbox) == TRUE);
+  // Wait until new data is sent
+  while (IsDataPresent (TxMailbox) == TRUE) {
+  }
 
   return EFI_SUCCESS;
 }
@@ -106,29 +108,31 @@ TegraCombinedSerialPortInitialize (
 UINTN
 EFIAPI
 TegraCombinedSerialPortWrite (
-  IN UINTN     SerialBaseAddress,
-  IN UINT8     *Buffer,
-  IN UINTN     NumberOfBytes
+  IN UINTN  SerialBaseAddress,
+  IN UINT8  *Buffer,
+  IN UINTN  NumberOfBytes
   )
 {
-  UINT8*              Final;
-  UINTN               TxMailbox;
-  TEGRA_COMBINED_UART CombinedUartData;
+  UINT8                *Final;
+  UINTN                TxMailbox;
+  TEGRA_COMBINED_UART  CombinedUartData;
 
-  Final = &Buffer[NumberOfBytes];
-  TxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
+  Final                     = &Buffer[NumberOfBytes];
+  TxMailbox                 = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
   CombinedUartData.RawValue = 0;
 
   while (Buffer < Final) {
-    //Wait until all prior data is sent
-    while (IsDataPresent(TxMailbox) == TRUE);
+    // Wait until all prior data is sent
+    while (IsDataPresent (TxMailbox) == TRUE) {
+    }
 
     CombinedUartData.Pio.NumberOfBytes = 0;
-    CombinedUartData.Pio.Reserved = 0;
-    CombinedUartData.Pio.Flush = TRUE;
+    CombinedUartData.Pio.Reserved      = 0;
+    CombinedUartData.Pio.Flush         = TRUE;
 
     while ((Buffer < Final) &&
-           (CombinedUartData.Pio.NumberOfBytes < 3)) {
+           (CombinedUartData.Pio.NumberOfBytes < 3))
+    {
       CombinedUartData.Pio.Data[CombinedUartData.Pio.NumberOfBytes] = *Buffer;
       CombinedUartData.Pio.NumberOfBytes++;
       Buffer++;
@@ -138,9 +142,10 @@ TegraCombinedSerialPortWrite (
 
     MmioWrite32 (TxMailbox, CombinedUartData.RawValue);
 
-    //Wait until new data is sent
-    while (IsDataPresent(TxMailbox) == TRUE);
-  };
+    // Wait until new data is sent
+    while (IsDataPresent (TxMailbox) == TRUE) {
+    }
+  }
 
   return NumberOfBytes;
 }
@@ -158,31 +163,34 @@ TegraCombinedSerialPortWrite (
 UINTN
 EFIAPI
 TegraCombinedSerialPortRead (
-  IN  UINTN     SerialBaseAddress,
-  OUT UINT8     *Buffer,
-  IN  UINTN     NumberOfBytes
-)
+  IN  UINTN  SerialBaseAddress,
+  OUT UINT8  *Buffer,
+  IN  UINTN  NumberOfBytes
+  )
 {
-  UINTN               Count;
-  UINTN               RxMailbox;
-  TEGRA_COMBINED_UART CombinedUartData;
+  UINTN                Count;
+  UINTN                RxMailbox;
+  TEGRA_COMBINED_UART  CombinedUartData;
 
-  Count = 0;
-  RxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox);
+  Count                     = 0;
+  RxMailbox                 = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox);
   CombinedUartData.RawValue = 0;
 
   for (Count = 0; Count < NumberOfBytes; Count++, Buffer++) {
-    //Wait until data is ready
-    while (IsDataPresent(RxMailbox) == FALSE);
+    // Wait until data is ready
+    while (IsDataPresent (RxMailbox) == FALSE) {
+    }
 
     CombinedUartData.RawValue = MmioRead32 (RxMailbox);
 
     ASSERT (CombinedUartData.Pio.NumberOfBytes != 0);
     while (CombinedUartData.Pio.NumberOfBytes == 0) {
-      //Clear this and try again
+      // Clear this and try again
       CombinedUartData.RawValue = 0;
       MmioWrite32 (RxMailbox, CombinedUartData.RawValue);
-      while (IsDataPresent(RxMailbox) == FALSE);
+      while (IsDataPresent (RxMailbox) == FALSE) {
+      }
+
       CombinedUartData.RawValue = MmioRead32 (RxMailbox);
     }
 
@@ -204,8 +212,8 @@ TegraCombinedSerialPortRead (
         break;
 
       default:
-        //This can never occur as we have a check for this above
-        ASSERT(FALSE);
+        // This can never occur as we have a check for this above
+        ASSERT (FALSE);
     }
 
     MmioWrite32 (RxMailbox, CombinedUartData.RawValue);
@@ -224,7 +232,7 @@ TegraCombinedSerialPortRead (
 BOOLEAN
 EFIAPI
 TegraCombinedSerialPortPoll (
-  IN UINTN SerialBaseAddress
+  IN UINTN  SerialBaseAddress
   )
 {
   return IsDataPresent ((UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox));
@@ -305,8 +313,9 @@ TegraCombinedSerialPortGetControl (
   OUT UINT32  *Control
   )
 {
-  UINTN RxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox);
-  UINTN TxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
+  UINTN  RxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox);
+  UINTN  TxMailbox = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
+
   if (NULL == Control) {
     return EFI_INVALID_PARAMETER;
   }
@@ -315,6 +324,7 @@ TegraCombinedSerialPortGetControl (
   if (IsDataPresent (RxMailbox) == FALSE) {
     *Control |= EFI_SERIAL_INPUT_BUFFER_EMPTY;
   }
+
   if (IsDataPresent (TxMailbox) == FALSE) {
     *Control |= EFI_SERIAL_OUTPUT_BUFFER_EMPTY;
   }
@@ -368,7 +378,7 @@ TegraCombinedSerialPortSetAttributes (
   return EFI_UNSUPPORTED;
 }
 
-TEGRA_UART_OBJ TegraCombinedUart = {
+TEGRA_UART_OBJ  TegraCombinedUart = {
   TegraCombinedSerialPortInitialize,
   TegraCombinedSerialPortWrite,
   TegraCombinedSerialPortRead,

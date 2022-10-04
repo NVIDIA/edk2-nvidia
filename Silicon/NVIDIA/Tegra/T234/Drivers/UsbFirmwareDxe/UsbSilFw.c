@@ -11,7 +11,7 @@
 
 #include <Protocol/UsbFwProtocol.h>
 
-NVIDIA_USBFW_PROTOCOL mUsbFwData;
+NVIDIA_USBFW_PROTOCOL  mUsbFwData;
 
 /**
   Entrypoint of USB Firmware Dxe.
@@ -27,13 +27,13 @@ NVIDIA_USBFW_PROTOCOL mUsbFwData;
 EFI_STATUS
 EFIAPI
 UsbFirmwareDxeInitialize (
-  IN EFI_HANDLE          ImageHandle,
-  IN EFI_SYSTEM_TABLE  * SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  UINTN      ChipID;
+  UINTN  ChipID;
 
-  ChipID = TegraGetChipID();
+  ChipID = TegraGetChipID ();
   if (ChipID != T234_CHIP_ID) {
     return EFI_SUCCESS;
   }
@@ -46,8 +46,10 @@ UsbFirmwareDxeInitialize (
     mUsbFwData.UsbFwSize = xusb_sil_rel_fw_len;
   }
 
-  return gBS->InstallMultipleProtocolInterfaces (&ImageHandle,
-                                                 &gNVIDIAUsbFwProtocolGuid,
-                                                 (VOID*)&mUsbFwData,
-                                                 NULL);
+  return gBS->InstallMultipleProtocolInterfaces (
+                &ImageHandle,
+                &gNVIDIAUsbFwProtocolGuid,
+                (VOID *)&mUsbFwData,
+                NULL
+                );
 }

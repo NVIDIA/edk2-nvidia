@@ -15,7 +15,6 @@
 #include <Uefi.h>
 #include <IndustryStandard/SmBios.h>
 
-
 /** Fetches the location of the physical memory array (Type16).
 
   @return The array location.
@@ -56,7 +55,7 @@ UINT16
 EFIAPI
 OemGetPhysMemNumDevices (
   VOID
- );
+  );
 
 /** Fetches the max capacity across all physical memory devices (Type16).
 
@@ -67,7 +66,7 @@ UINT64
 EFIAPI
 OemGetPhysMemExtendedMaxCapacity (
   VOID
- );
+  );
 
 /** Fetches the handle/instance of the last err detected (Type16).
 
@@ -79,6 +78,6 @@ UINT16
 EFIAPI
 OemGetPhysMemErrInfoHandle (
   VOID
- );
+  );
 
 #endif //SMBIOS_MISC_LIB_H

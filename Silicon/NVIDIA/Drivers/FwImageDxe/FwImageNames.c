@@ -12,7 +12,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
-STATIC CONST CHAR16 *SystemFwImageNamesCommon[] = {
+STATIC CONST CHAR16  *SystemFwImageNamesCommon[] = {
   L"adsp-fw",
   L"BCT-boot-chain_backup",
   L"bpmp-fw",
@@ -33,7 +33,7 @@ STATIC CONST CHAR16 *SystemFwImageNamesCommon[] = {
   NULL
 };
 
-STATIC CONST CHAR16 *SystemFwImageNamesT194[] = {
+STATIC CONST CHAR16  *SystemFwImageNamesT194[] = {
   L"bootloader-dtb",
   L"mts-preboot",
   L"mts-proper",
@@ -41,7 +41,7 @@ STATIC CONST CHAR16 *SystemFwImageNamesT194[] = {
   NULL
 };
 
-STATIC CONST CHAR16 *SystemFwImageNamesT234[] = {
+STATIC CONST CHAR16  *SystemFwImageNamesT234[] = {
   L"dce-fw",
   L"mb2rf",
   L"nvdec",
@@ -64,12 +64,13 @@ STATIC CONST CHAR16 *SystemFwImageNamesT234[] = {
 STATIC
 UINTN
 GetListCount (
-  IN  CONST CHAR16 **List
+  IN  CONST CHAR16  **List
   )
 {
-  UINTN Count;
+  UINTN  Count;
 
-  for (Count = 0; *List != NULL; Count++, List++);
+  for (Count = 0; *List != NULL; Count++, List++) {
+  }
 
   return Count;
 }
@@ -91,21 +92,23 @@ STATIC
 CONST CHAR16 **
 EFIAPI
 CombineLists (
-  IN  CONST CHAR16 **L1,
-  IN  CONST CHAR16 **L2,
+  IN  CONST CHAR16  **L1,
+  IN  CONST CHAR16  **L2,
   OUT UINTN         *Count
   )
 {
-  UINTN L1Count;
-  UINTN L2Count;
-  CONST CHAR16 **CombinedList;
+  UINTN         L1Count;
+  UINTN         L2Count;
+  CONST CHAR16  **CombinedList;
 
   L1Count = GetListCount (L1);
   L2Count = GetListCount (L2);
-  *Count = L1Count + L2Count;
+  *Count  = L1Count + L2Count;
 
-  CombinedList = (CONST CHAR16 **) AllocateZeroPool ((*Count + 1) *
-                                                     sizeof (CHAR16 *));
+  CombinedList = (CONST CHAR16 **)AllocateZeroPool (
+                                    (*Count + 1) *
+                                    sizeof (CHAR16 *)
+                                    );
   if (CombinedList == NULL) {
     return NULL;
   }
@@ -130,28 +133,32 @@ CombineLists (
 CONST CHAR16 **
 EFIAPI
 FwImageGetList (
-  OUT UINTN             *ImageCount
+  OUT UINTN  *ImageCount
   )
 {
-  CONST CHAR16          **ImageList;
-  UINTN                 ChipId;
+  CONST CHAR16  **ImageList;
+  UINTN         ChipId;
 
   ChipId = TegraGetChipID ();
   switch (ChipId) {
     case T194_CHIP_ID:
-      ImageList = CombineLists (SystemFwImageNamesT194,
-                                SystemFwImageNamesCommon,
-                                ImageCount);
+      ImageList = CombineLists (
+                    SystemFwImageNamesT194,
+                    SystemFwImageNamesCommon,
+                    ImageCount
+                    );
       break;
     case T234_CHIP_ID:
-      ImageList = CombineLists (SystemFwImageNamesT234,
-                                SystemFwImageNamesCommon,
-                                ImageCount);
+      ImageList = CombineLists (
+                    SystemFwImageNamesT234,
+                    SystemFwImageNamesCommon,
+                    ImageCount
+                    );
       break;
     default:
       DEBUG ((DEBUG_ERROR, "%a: Unknown ChipId=%u\n", __FUNCTION__, ChipId));
-      ImageList     = NULL;
-      *ImageCount   = 0;
+      ImageList   = NULL;
+      *ImageCount = 0;
       break;
   }
 

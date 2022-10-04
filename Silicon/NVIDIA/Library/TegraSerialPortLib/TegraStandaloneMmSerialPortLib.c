@@ -15,11 +15,11 @@
 #include <Library/StandaloneMmOpteeDeviceMem.h>
 
 STATIC
-TEGRA_UART_OBJ *TegraUartObj = NULL;
+TEGRA_UART_OBJ  *TegraUartObj = NULL;
 STATIC
-EFI_PHYSICAL_ADDRESS SerialBaseAddress = MAX_UINTN;
+EFI_PHYSICAL_ADDRESS  SerialBaseAddress = MAX_UINTN;
 STATIC
-BOOLEAN SerialPortInitialized = FALSE;
+BOOLEAN  SerialPortInitialized = FALSE;
 
 /** Identify the serial device hardware
 
@@ -45,19 +45,20 @@ SerialPortIdentify (
   /*
    * In OP-TEE configurations StMM can't access an
    */
-  if (IsOpteePresent()) {
-    EFI_VIRTUAL_ADDRESS Base;
-    UINTN Size;
+  if (IsOpteePresent ()) {
+    EFI_VIRTUAL_ADDRESS  Base;
+    UINTN                Size;
 
     Status = GetDeviceRegion ("combuart-t194", &Base, &Size);
-    if (!EFI_ERROR(Status)) {
-      TegraUartObj = TegraCombinedSerialPortGetObject();
+    if (!EFI_ERROR (Status)) {
+      TegraUartObj = TegraCombinedSerialPortGetObject ();
     } else {
       Status = GetDeviceRegion ("combuart-t234", &Base, &Size);
-      if (!EFI_ERROR(Status)) {
-        TegraUartObj = TegraCombinedSerialPortGetObject();
+      if (!EFI_ERROR (Status)) {
+        TegraUartObj = TegraCombinedSerialPortGetObject ();
       }
     }
+
     if (TegraUartObj != NULL) {
       SetTegraUARTBaseAddress (Base);
       SerialBaseAddress = Base;
@@ -66,15 +67,16 @@ SerialPortIdentify (
   } else {
     // Retrieve the type and address based on UART instance
     Status = GetUARTInstanceInfo (&UARTInstanceType, &UARTInstanceAddress);
-    if (EFI_ERROR(Status) || (UARTInstanceType == TEGRA_UART_TYPE_NONE)) {
+    if (EFI_ERROR (Status) || (UARTInstanceType == TEGRA_UART_TYPE_NONE)) {
       // Try the legacy fallback mode to select the SerialPort
       SerialBaseAddress = GetTegraUARTBaseAddress ();
-      ChipID = TegraGetChipID();
+      ChipID            = TegraGetChipID ();
       if (ChipID == T194_CHIP_ID) {
-        TegraUartObj = TegraCombinedSerialPortGetObject();
+        TegraUartObj = TegraCombinedSerialPortGetObject ();
       } else {
-        TegraUartObj = Tegra16550SerialPortGetObject();
+        TegraUartObj = Tegra16550SerialPortGetObject ();
       }
+
       return TegraUartObj;
     }
 
@@ -82,15 +84,16 @@ SerialPortIdentify (
     SerialBaseAddress = UARTInstanceAddress;
     SetTegraUARTBaseAddress (UARTInstanceAddress);
     if (UARTInstanceType == TEGRA_UART_TYPE_16550) {
-        TegraUartObj = Tegra16550SerialPortGetObject();
+      TegraUartObj = Tegra16550SerialPortGetObject ();
     } else if (UARTInstanceType == TEGRA_UART_TYPE_TCU) {
-        TegraUartObj = TegraCombinedSerialPortGetObject();
+      TegraUartObj = TegraCombinedSerialPortGetObject ();
     } else if (UARTInstanceType == TEGRA_UART_TYPE_SBSA) {
-        TegraUartObj = TegraSbsaSerialPortGetObject();
+      TegraUartObj = TegraSbsaSerialPortGetObject ();
     } else {
-        TegraUartObj = Tegra16550SerialPortGetObject();
+      TegraUartObj = Tegra16550SerialPortGetObject ();
     }
   }
+
   return TegraUartObj;
 }
 
@@ -111,11 +114,11 @@ SerialPortInitialize (
    * point at which point the Guided Hob list containing the device Mem
    * address mappings haven't been setup..
    */
-  if (IsOpteePresent()) {
+  if (IsOpteePresent ()) {
     SerialPortInitialized = TRUE;
     return RETURN_SUCCESS;
   } else {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
+    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
     if (UartObj != NULL) {
       return UartObj->SerialPortInitialize (SerialBaseAddress);
     } else {
@@ -137,12 +140,12 @@ SerialPortInitialize (
 UINTN
 EFIAPI
 SerialPortWrite (
-  IN UINT8     *Buffer,
-  IN UINTN     NumberOfBytes
+  IN UINT8  *Buffer,
+  IN UINTN  NumberOfBytes
   )
 {
   if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
+    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
     if (UartObj != NULL) {
       return UartObj->SerialPortWrite (SerialBaseAddress, Buffer, NumberOfBytes);
     } else {
@@ -166,12 +169,12 @@ SerialPortWrite (
 UINTN
 EFIAPI
 SerialPortRead (
-  OUT UINT8     *Buffer,
-  IN  UINTN     NumberOfBytes
-)
+  OUT UINT8  *Buffer,
+  IN  UINTN  NumberOfBytes
+  )
 {
   if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
+    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
     if (UartObj != NULL) {
       return UartObj->SerialPortRead (SerialBaseAddress, Buffer, NumberOfBytes);
     } else {
@@ -196,7 +199,7 @@ SerialPortPoll (
   )
 {
   if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
+    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
     if (UartObj != NULL) {
       return UartObj->SerialPortPoll (SerialBaseAddress);
     } else {
@@ -240,7 +243,7 @@ SerialPortSetControl (
   )
 {
   if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
+    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
     if (UartObj != NULL) {
       return UartObj->SerialPortSetControl (SerialBaseAddress, Control);
     } else {
@@ -290,7 +293,7 @@ SerialPortGetControl (
   )
 {
   if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
+    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
     if (UartObj != NULL) {
       return UartObj->SerialPortGetControl (SerialBaseAddress, Control);
     } else {
@@ -344,10 +347,17 @@ SerialPortSetAttributes (
   )
 {
   if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ *UartObj = SerialPortIdentify ();
+    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
     if (UartObj != NULL) {
-      return UartObj->SerialPortSetAttributes (SerialBaseAddress, BaudRate, ReceiveFifoDepth, Timeout,
-                                 Parity, DataBits, StopBits);
+      return UartObj->SerialPortSetAttributes (
+                        SerialBaseAddress,
+                        BaudRate,
+                        ReceiveFifoDepth,
+                        Timeout,
+                        Parity,
+                        DataBits,
+                        StopBits
+                        );
     } else {
       return RETURN_SUCCESS;
     }

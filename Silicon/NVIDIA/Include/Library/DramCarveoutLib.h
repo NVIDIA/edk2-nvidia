@@ -15,8 +15,8 @@
 /// Describes memory regions
 ///
 typedef struct {
-  EFI_PHYSICAL_ADDRESS MemoryBaseAddress;
-  UINT64               MemoryLength;
+  EFI_PHYSICAL_ADDRESS    MemoryBaseAddress;
+  UINT64                  MemoryLength;
 } NVDA_MEMORY_REGION;
 
 /**
@@ -40,12 +40,12 @@ typedef struct {
 **/
 EFI_STATUS
 InstallDramWithCarveouts (
-  IN  NVDA_MEMORY_REGION *DramRegions,
-  IN  UINTN              DramRegionsCount,
-  IN  UINTN              UefiDramRegionsCount,
-  IN  NVDA_MEMORY_REGION *CarveoutRegions,
-  IN  UINTN              CarveoutRegionsCount,
-  OUT UINTN              *FinalRegionsCount
-);
+  IN  NVDA_MEMORY_REGION  *DramRegions,
+  IN  UINTN               DramRegionsCount,
+  IN  UINTN               UefiDramRegionsCount,
+  IN  NVDA_MEMORY_REGION  *CarveoutRegions,
+  IN  UINTN               CarveoutRegionsCount,
+  OUT UINTN               *FinalRegionsCount
+  );
 
 #endif //__DRAM_CARVEOUT_LIB_H__

@@ -27,7 +27,7 @@
   @param  M Additional bits to assert to be zero.
 
 **/
-#define ASSERT_INVALID_PCI_SEGMENT_ADDRESS(A,M) \
+#define ASSERT_INVALID_PCI_SEGMENT_ADDRESS(A, M) \
   ASSERT (((A) & (0xffff0000f0000000ULL | (M))) == 0)
 
 /**

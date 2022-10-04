@@ -12,6 +12,6 @@
 #define NVIDIA_TOKEN_SPACE_GUID  \
     { 0xed3374ef, 0x767b, 0x42fa, { 0xaf, 0x70, 0xdb, 0x52, 0x0a, 0x39, 0x28, 0x22 } }
 
-extern EFI_GUID gNVIDIATokenSpaceGuid;
+extern EFI_GUID  gNVIDIATokenSpaceGuid;
 
 #endif

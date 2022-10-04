@@ -13,13 +13,13 @@
 #include <NVIDIABoardConfiguration.h>
 #include <Library/NetLib.h>
 
-#define T194_EEPROM_VERSION             1
-#define T234_EEPROM_VERSION             2
-#define EEPROM_CUSTOMER_BLOCK_SIGNATURE "NVCB"
-#define EEPROM_CUSTOMER_TYPE_SIGNATURE  "M1"
+#define T194_EEPROM_VERSION              1
+#define T234_EEPROM_VERSION              2
+#define EEPROM_CUSTOMER_BLOCK_SIGNATURE  "NVCB"
+#define EEPROM_CUSTOMER_TYPE_SIGNATURE   "M1"
 
-#define CAMERA_EEPROM_PART_OFFSET       21
-#define CAMERA_EEPROM_PART_NAME         "LPRD"
+#define CAMERA_EEPROM_PART_OFFSET  21
+#define CAMERA_EEPROM_PART_NAME    "LPRD"
 
 /**
  * @brief The Product Part Number structure that is embedded into
@@ -40,20 +40,21 @@
  * @param Pad - 0x00
  */
 #pragma pack(1)
-typedef struct {       /* 20 - 49 */
-  UINT8  Leading[3];   /* 20 */
-  UINT8  Separator0;   /* 23 */
-  UINT8  Class;        /* 24 */
-  UINT8  Id[4];        /* 25 */
-  UINT8  Separator1;   /* 29 */
-  UINT8  Sku[4];       /* 30 */
-  UINT8  Separator2;   /* 34 */
-  UINT8  Fab[3];       /* 35 */
-  UINT8  Separator3;   /* 38 */
-  UINT8  Revision;     /* 39 */
-  UINT8  Separator4;   /* 40 */
-  UINT8  Ending;       /* 41 */
-  UINT8  Pad[8];       /* 42 */
+typedef struct {
+  /* 20 - 49 */
+  UINT8    Leading[3]; /* 20 */
+  UINT8    Separator0; /* 23 */
+  UINT8    Class;      /* 24 */
+  UINT8    Id[4];      /* 25 */
+  UINT8    Separator1; /* 29 */
+  UINT8    Sku[4];     /* 30 */
+  UINT8    Separator2; /* 34 */
+  UINT8    Fab[3];     /* 35 */
+  UINT8    Separator3; /* 38 */
+  UINT8    Revision;   /* 39 */
+  UINT8    Separator4; /* 40 */
+  UINT8    Ending;     /* 41 */
+  UINT8    Pad[8];     /* 42 */
 } TEGRA_EEPROM_PART_NUMBER;
 #pragma pack()
 
@@ -94,37 +95,37 @@ typedef struct {       /* 20 - 49 */
  */
 #pragma pack(1)
 typedef struct {
-  UINT16   Version;                       /* 00 */
-  UINT16   Size;                          /* 02 */
-  UINT16   BoardNumber;                   /* 04 */
-  UINT16   Sku;                           /* 06 */
-  UINT8    Fab;                           /* 08 */
-  UINT8    Revision;                      /* 09 */
-  UINT8    MinorRevision;                 /* 10 */
-  UINT8    MemoryType;                    /* 11 */
-  UINT8    PowerConfig;                   /* 12 */
-  UINT8    MiscConfig;                    /* 13 */
-  UINT8    ModemConfig;                   /* 14 */
-  UINT8    TouchConfig;                   /* 15 */
-  UINT8    DisplayConfig;                 /* 16 */
-  UINT8    ReworkLevel;                   /* 17 */
-  UINT8    Reserved0[2];                  /* 18 */
-  TEGRA_EEPROM_PART_NUMBER PartNumber;    /* 20 - 49 */
-  UINT8    WifiMacAddress[6];             /* 50 */
-  UINT8    BtMacAddress[6];               /* 56 */
-  UINT8    SecWifiMacAddress[6];          /* 62 */
-  UINT8    EthernetMacAddress[6];         /* 68 */
-  UINT8    SerialNumber[15];              /* 74 */
-  UINT8    Reserved1[61];                 /* 89 */
-  UINT8    CustomerBlockSignature[4];     /* 150 */
-  UINT16   CustomerBlockLength;           /* 154 */
-  UINT8    CustomerTypeSignature[2];      /* 156 */
-  UINT16   CustomerVersion;               /* 158 */
-  UINT8    CustomerWifiMacAddress[6];     /* 160 */
-  UINT8    CustomerBtMacAddress[6];       /* 166 */
-  UINT8    CustomerEthernetMacAddress[6]; /* 172 */
-  UINT8    Reserved2[77];                 /* 178 */
-  UINT8    Checksum;                      /* 255 */
+  UINT16                      Version;                       /* 00 */
+  UINT16                      Size;                          /* 02 */
+  UINT16                      BoardNumber;                   /* 04 */
+  UINT16                      Sku;                           /* 06 */
+  UINT8                       Fab;                           /* 08 */
+  UINT8                       Revision;                      /* 09 */
+  UINT8                       MinorRevision;                 /* 10 */
+  UINT8                       MemoryType;                    /* 11 */
+  UINT8                       PowerConfig;                   /* 12 */
+  UINT8                       MiscConfig;                    /* 13 */
+  UINT8                       ModemConfig;                   /* 14 */
+  UINT8                       TouchConfig;                   /* 15 */
+  UINT8                       DisplayConfig;                 /* 16 */
+  UINT8                       ReworkLevel;                   /* 17 */
+  UINT8                       Reserved0[2];                  /* 18 */
+  TEGRA_EEPROM_PART_NUMBER    PartNumber;                    /* 20 - 49 */
+  UINT8                       WifiMacAddress[6];             /* 50 */
+  UINT8                       BtMacAddress[6];               /* 56 */
+  UINT8                       SecWifiMacAddress[6];          /* 62 */
+  UINT8                       EthernetMacAddress[6];         /* 68 */
+  UINT8                       SerialNumber[15];              /* 74 */
+  UINT8                       Reserved1[61];                 /* 89 */
+  UINT8                       CustomerBlockSignature[4];     /* 150 */
+  UINT16                      CustomerBlockLength;           /* 154 */
+  UINT8                       CustomerTypeSignature[2];      /* 156 */
+  UINT16                      CustomerVersion;               /* 158 */
+  UINT8                       CustomerWifiMacAddress[6];     /* 160 */
+  UINT8                       CustomerBtMacAddress[6];       /* 166 */
+  UINT8                       CustomerEthernetMacAddress[6]; /* 172 */
+  UINT8                       Reserved2[77];                 /* 178 */
+  UINT8                       Checksum;                      /* 255 */
 } T194_EEPROM_DATA;
 #pragma pack()
 
@@ -167,39 +168,39 @@ typedef struct {
  */
 #pragma pack(1)
 typedef struct {
-  UINT16   Version;                       /* 00 */
-  UINT16   Size;                          /* 02 */
-  UINT16   BoardNumber;                   /* 04 */
-  UINT16   Sku;                           /* 06 */
-  UINT8    Fab;                           /* 08 */
-  UINT8    Revision;                      /* 09 */
-  UINT8    MinorRevision;                 /* 10 */
-  UINT8    MemoryType;                    /* 11 */
-  UINT8    PowerConfig;                   /* 12 */
-  UINT8    MiscConfig;                    /* 13 */
-  UINT8    ModemConfig;                   /* 14 */
-  UINT8    TouchConfig;                   /* 15 */
-  UINT8    DisplayConfig;                 /* 16 */
-  UINT8    ReworkLevel;                   /* 17 */
-  UINT8    Reserved0;                     /* 18 */
-  UINT8    NumEthernetMacs;               /* 19 */
-  TEGRA_EEPROM_PART_NUMBER PartNumber;    /* 20 - 49 */
-  UINT8    WifiMacAddress[6];             /* 50 */
-  UINT8    BtMacAddress[6];               /* 56 */
-  UINT8    SecWifiMacAddress[6];          /* 62 */
-  UINT8    EthernetMacAddress[6];         /* 68 */
-  UINT8    SerialNumber[15];              /* 74 */
-  UINT8    Reserved1[61];                 /* 89 */
-  UINT8    CustomerBlockSignature[4];     /* 150 */
-  UINT16   CustomerBlockLength;           /* 154 */
-  UINT8    CustomerTypeSignature[2];      /* 156 */
-  UINT16   CustomerVersion;               /* 158 */
-  UINT8    CustomerWifiMacAddress[6];     /* 160 */
-  UINT8    CustomerBtMacAddress[6];       /* 166 */
-  UINT8    CustomerEthernetMacAddress[6]; /* 172 */
-  UINT8    CustomerNumEthernetMacs;       /* 178 */
-  UINT8    Reserved2[76];                 /* 179 */
-  UINT8    Checksum;                      /* 255 */
+  UINT16                      Version;                       /* 00 */
+  UINT16                      Size;                          /* 02 */
+  UINT16                      BoardNumber;                   /* 04 */
+  UINT16                      Sku;                           /* 06 */
+  UINT8                       Fab;                           /* 08 */
+  UINT8                       Revision;                      /* 09 */
+  UINT8                       MinorRevision;                 /* 10 */
+  UINT8                       MemoryType;                    /* 11 */
+  UINT8                       PowerConfig;                   /* 12 */
+  UINT8                       MiscConfig;                    /* 13 */
+  UINT8                       ModemConfig;                   /* 14 */
+  UINT8                       TouchConfig;                   /* 15 */
+  UINT8                       DisplayConfig;                 /* 16 */
+  UINT8                       ReworkLevel;                   /* 17 */
+  UINT8                       Reserved0;                     /* 18 */
+  UINT8                       NumEthernetMacs;               /* 19 */
+  TEGRA_EEPROM_PART_NUMBER    PartNumber;                    /* 20 - 49 */
+  UINT8                       WifiMacAddress[6];             /* 50 */
+  UINT8                       BtMacAddress[6];               /* 56 */
+  UINT8                       SecWifiMacAddress[6];          /* 62 */
+  UINT8                       EthernetMacAddress[6];         /* 68 */
+  UINT8                       SerialNumber[15];              /* 74 */
+  UINT8                       Reserved1[61];                 /* 89 */
+  UINT8                       CustomerBlockSignature[4];     /* 150 */
+  UINT16                      CustomerBlockLength;           /* 154 */
+  UINT8                       CustomerTypeSignature[2];      /* 156 */
+  UINT16                      CustomerVersion;               /* 158 */
+  UINT8                       CustomerWifiMacAddress[6];     /* 160 */
+  UINT8                       CustomerBtMacAddress[6];       /* 166 */
+  UINT8                       CustomerEthernetMacAddress[6]; /* 172 */
+  UINT8                       CustomerNumEthernetMacs;       /* 178 */
+  UINT8                       Reserved2[76];                 /* 179 */
+  UINT8                       Checksum;                      /* 255 */
 } T234_EEPROM_DATA;
 #pragma pack()
 

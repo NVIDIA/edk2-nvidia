@@ -35,17 +35,16 @@ typedef struct _NVIDIA_SE_RNG_PROTOCOL NVIDIA_SE_RNG_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SE_RNG_GET_RANDOM) (
+(EFIAPI *SE_RNG_GET_RANDOM)(
   IN  NVIDIA_SE_RNG_PROTOCOL   *This,
   IN  UINT64                   *Buffer
   );
 
 /// NVIDIA_SE_RNG_PROTOCOL protocol structure.
 struct _NVIDIA_SE_RNG_PROTOCOL {
-
-  SE_RNG_GET_RANDOM  GetRandom128;
+  SE_RNG_GET_RANDOM    GetRandom128;
 };
 
-extern EFI_GUID gNVIDIASeRngProtocolGuid;
+extern EFI_GUID  gNVIDIASeRngProtocolGuid;
 
 #endif

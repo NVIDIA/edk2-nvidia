@@ -13,7 +13,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 
 typedef struct {
-  CONST CHAR8            *Compatibility;
+  CONST CHAR8    *Compatibility;
 } NVIDIA_COMPATIBILITY_INTERNAL;
 
 /**
@@ -23,7 +23,7 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 GetDeviceDiscoveryCompatibleInternal (
-  OUT NVIDIA_COMPATIBILITY_INTERNAL   **CompatibleInternal
-);
+  OUT NVIDIA_COMPATIBILITY_INTERNAL  **CompatibleInternal
+  );
 
 #endif //__DEVICE_DISCOVERY_INTERNAL_LIB_H__

@@ -37,29 +37,29 @@
 #define OPTEE_MSG_RPC_CMD_NOTIFICATION  4
 
 #define RPMB_GET_DEV_INFO  1
-#define RPMB_DATA_REQ  0
+#define RPMB_DATA_REQ      0
 
-#define RPMB_CMD_GET_DEV_INFO_RET_OK        0x00
-#define RPMB_CMD_GET_DEV_INFO_RET_ERROR     0x01
-#define EMMC_TRANS_TIMEOUT             2500 * 1000
-#define RPMB_ST_SIZE       (196)
-#define RPMB_MAC_SIZE      (32)
-#define RPMB_DATA_SIZE     (256)
-#define RPMB_NONCE_SIZE    (16)
-#define RPMB_FRAME_SIZE    (512)
+#define RPMB_CMD_GET_DEV_INFO_RET_OK     0x00
+#define RPMB_CMD_GET_DEV_INFO_RET_ERROR  0x01
+#define EMMC_TRANS_TIMEOUT               2500 * 1000
+#define RPMB_ST_SIZE                     (196)
+#define RPMB_MAC_SIZE                    (32)
+#define RPMB_DATA_SIZE                   (256)
+#define RPMB_NONCE_SIZE                  (16)
+#define RPMB_FRAME_SIZE                  (512)
 
-#define RPMB_MSG_TYPE_REQ_AUTH_KEY_PROGRAM          0x0001
-#define RPMB_MSG_TYPE_REQ_WRITE_COUNTER_VAL_READ    0x0002
-#define RPMB_MSG_TYPE_REQ_AUTH_DATA_WRITE           0x0003
-#define RPMB_MSG_TYPE_REQ_AUTH_DATA_READ            0x0004
-#define RPMB_MSG_TYPE_REQ_RESULT_READ               0x0005
-#define RPMB_MSG_TYPE_RESP_AUTH_KEY_PROGRAM         0x0100
-#define RPMB_MSG_TYPE_RESP_WRITE_COUNTER_VAL_READ   0x0200
-#define RPMB_MSG_TYPE_RESP_AUTH_DATA_WRITE          0x0300
-#define RPMB_MSG_TYPE_RESP_AUTH_DATA_READ           0x0400
+#define RPMB_MSG_TYPE_REQ_AUTH_KEY_PROGRAM         0x0001
+#define RPMB_MSG_TYPE_REQ_WRITE_COUNTER_VAL_READ   0x0002
+#define RPMB_MSG_TYPE_REQ_AUTH_DATA_WRITE          0x0003
+#define RPMB_MSG_TYPE_REQ_AUTH_DATA_READ           0x0004
+#define RPMB_MSG_TYPE_REQ_RESULT_READ              0x0005
+#define RPMB_MSG_TYPE_RESP_AUTH_KEY_PROGRAM        0x0100
+#define RPMB_MSG_TYPE_RESP_WRITE_COUNTER_VAL_READ  0x0200
+#define RPMB_MSG_TYPE_RESP_AUTH_DATA_WRITE         0x0300
+#define RPMB_MSG_TYPE_RESP_AUTH_DATA_READ          0x0400
 
-#define NOTIFICATION_MSG_WAIT     (0)
-#define NOTIFICATION_MSG_WAKE     (1)
+#define NOTIFICATION_MSG_WAIT  (0)
+#define NOTIFICATION_MSG_WAKE  (1)
 
 typedef struct {
   UINT64    PBase;
@@ -78,31 +78,29 @@ typedef struct {
 } RFC4122_UUID;
 
 typedef struct {
-  UINT16 Cmd;
-  UINT16 DevId;
-  UINT16 BlockCount;
+  UINT16    Cmd;
+  UINT16    DevId;
+  UINT16    BlockCount;
   /* RPMB Frames */
 } RPMB_REQUEST;
 
 typedef struct {
-  UINT8  Cid[16];
-  UINT8  RpmbSizeMult;
-  UINT8  RelWrSecCount;
-  UINT8  RetCode;
+  UINT8    Cid[16];
+  UINT8    RpmbSizeMult;
+  UINT8    RelWrSecCount;
+  UINT8    RetCode;
 } RPMB_DEV_INFO;
 
-
 typedef struct {
-  UINT8   St[RPMB_ST_SIZE];
-  UINT8   Mac[RPMB_MAC_SIZE];
-  UINT8   Data[RPMB_DATA_SIZE];
-  UINT8   Nonce[RPMB_NONCE_SIZE];
-  UINT8   WrCounter[4];
-  UINT8   Address[2];
-  UINT8   BlockCount[2];
-  UINT8   Result[2];
-  UINT8   Request[2];
+  UINT8    St[RPMB_ST_SIZE];
+  UINT8    Mac[RPMB_MAC_SIZE];
+  UINT8    Data[RPMB_DATA_SIZE];
+  UINT8    Nonce[RPMB_NONCE_SIZE];
+  UINT8    WrCounter[4];
+  UINT8    Address[2];
+  UINT8    BlockCount[2];
+  UINT8    Result[2];
+  UINT8    Request[2];
 } RPMB_FRAME;
-
 
 #endif // OPTEE_SMC_H_

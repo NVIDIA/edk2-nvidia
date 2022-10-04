@@ -11,8 +11,8 @@
 EFI_STATUS
 EFIAPI
 GetDeviceDiscoveryCompatibleInternal (
-  OUT NVIDIA_COMPATIBILITY_INTERNAL   **CompatibleInternal
-)
+  OUT NVIDIA_COMPATIBILITY_INTERNAL  **CompatibleInternal
+  )
 {
   *CompatibleInternal = NULL;
 

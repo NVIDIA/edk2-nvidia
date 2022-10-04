@@ -10,7 +10,6 @@
 #include "LogoPrivate.h"
 #include <Protocol/GraphicsOutput.h>
 
-
 /**
   Load a platform logo image and return its data and attributes.
 
@@ -27,29 +26,29 @@
 EFI_STATUS
 EFIAPI
 GetImage (
-  IN     EDKII_PLATFORM_LOGO_PROTOCOL          *This,
-  IN OUT UINT32                                *Instance,
-     OUT EFI_IMAGE_INPUT                       *Image,
-     OUT EDKII_PLATFORM_LOGO_DISPLAY_ATTRIBUTE *Attribute,
-     OUT INTN                                  *OffsetX,
-     OUT INTN                                  *OffsetY
+  IN     EDKII_PLATFORM_LOGO_PROTOCOL        *This,
+  IN OUT UINT32                              *Instance,
+  OUT EFI_IMAGE_INPUT                        *Image,
+  OUT EDKII_PLATFORM_LOGO_DISPLAY_ATTRIBUTE  *Attribute,
+  OUT INTN                                   *OffsetX,
+  OUT INTN                                   *OffsetY
   )
 {
-  EFI_STATUS                    Status;
-  NVIDIA_LOGO_PRIVATE_DATA      *Private;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL *GopBlt;
-  UINTN                         GopBltSize;
-  UINTN                         PixelHeight;
-  UINTN                         PixelWidth;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *GraphicsOutput;
-  UINTN                         CurrentLogo;
-  UINTN                         SelectedHeight;
-  UINTN                         SelectedWidth;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL *SelectedGopBlt;
+  EFI_STATUS                     Status;
+  NVIDIA_LOGO_PRIVATE_DATA       *Private;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *GopBlt;
+  UINTN                          GopBltSize;
+  UINTN                          PixelHeight;
+  UINTN                          PixelWidth;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL   *GraphicsOutput;
+  UINTN                          CurrentLogo;
+  UINTN                          SelectedHeight;
+  UINTN                          SelectedWidth;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *SelectedGopBlt;
 
-
-  if (This == NULL || Instance == NULL || Image == NULL ||
-      Attribute == NULL || OffsetX == NULL || OffsetY == NULL) {
+  if ((This == NULL) || (Instance == NULL) || (Image == NULL) ||
+      (Attribute == NULL) || (OffsetX == NULL) || (OffsetY == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -59,7 +58,7 @@ GetImage (
     return EFI_NOT_FOUND;
   }
 
-  Status = gBS->HandleProtocol (gST->ConsoleOutHandle, &gEfiGraphicsOutputProtocolGuid, (VOID **) &GraphicsOutput);
+  Status = gBS->HandleProtocol (gST->ConsoleOutHandle, &gEfiGraphicsOutputProtocolGuid, (VOID **)&GraphicsOutput);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -69,51 +68,55 @@ GetImage (
   *OffsetY   = 0;
 
   SelectedHeight = 0;
-  SelectedWidth = 0;
+  SelectedWidth  = 0;
   SelectedGopBlt = NULL;
 
   for (CurrentLogo = 0; CurrentLogo < Private->NumLogos; CurrentLogo++) {
-    GopBlt = NULL;
-    GopBltSize = 0;
+    GopBlt      = NULL;
+    GopBltSize  = 0;
     PixelHeight = 0;
-    PixelWidth = 0;
-    Status = TranslateBmpToGopBlt (Private->LogoInfo[CurrentLogo].Base,
-                                   Private->LogoInfo[CurrentLogo].Size,
-                                   &GopBlt,
-                                   &GopBltSize,
-                                   &PixelHeight,
-                                   &PixelWidth);
+    PixelWidth  = 0;
+    Status      = TranslateBmpToGopBlt (
+                    Private->LogoInfo[CurrentLogo].Base,
+                    Private->LogoInfo[CurrentLogo].Size,
+                    &GopBlt,
+                    &GopBltSize,
+                    &PixelHeight,
+                    &PixelWidth
+                    );
     if (EFI_ERROR (Status)) {
       continue;
     }
 
     DEBUG ((DEBUG_ERROR, "Found %dx%d\r\n", PixelWidth, PixelHeight));
-    //If larger that display or this is smaller then previous image skip
+    // If larger that display or this is smaller then previous image skip
     if ((PixelHeight > GraphicsOutput->Mode->Info->VerticalResolution) ||
         (PixelWidth > GraphicsOutput->Mode->Info->HorizontalResolution) ||
         (PixelHeight < SelectedHeight) ||
-        (PixelWidth < SelectedWidth)) {
+        (PixelWidth < SelectedWidth))
+    {
       gBS->FreePool (GopBlt);
       GopBlt = NULL;
       continue;
     }
 
     SelectedHeight = PixelHeight;
-    SelectedWidth = PixelWidth;
+    SelectedWidth  = PixelWidth;
     if (SelectedGopBlt != NULL) {
       gBS->FreePool (SelectedGopBlt);
     }
+
     SelectedGopBlt = GopBlt;
   }
 
-  if (SelectedGopBlt == NULL || SelectedHeight == 0 || SelectedWidth == 0) {
+  if ((SelectedGopBlt == NULL) || (SelectedHeight == 0) || (SelectedWidth == 0)) {
     return EFI_NOT_FOUND;
   }
 
   (*Instance)++;
-  Image->Flags = 0;
+  Image->Flags  = 0;
   Image->Height = SelectedHeight;
-  Image->Width = SelectedWidth;
+  Image->Width  = SelectedWidth;
   Image->Bitmap = SelectedGopBlt;
 
   return EFI_SUCCESS;
@@ -134,30 +137,34 @@ GetImage (
 EFI_STATUS
 EFIAPI
 InitializeLogo (
-  IN EFI_HANDLE               ImageHandle,
-  IN EFI_SYSTEM_TABLE         *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                  Status;
-  NVIDIA_LOGO_PRIVATE_DATA    *Private;
-  UINT32                      Count;
-  EFI_HANDLE                  Handle;
+  EFI_STATUS                Status;
+  NVIDIA_LOGO_PRIVATE_DATA  *Private;
+  UINT32                    Count;
+  EFI_HANDLE                Handle;
 
-  Status = gBS->AllocatePool (EfiBootServicesData,
-                              sizeof (NVIDIA_LOGO_PRIVATE_DATA),
-                              (VOID **)&Private);
-  if (EFI_ERROR(Status)) {
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  sizeof (NVIDIA_LOGO_PRIVATE_DATA),
+                  (VOID **)&Private
+                  );
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
   gBS->SetMem (Private, sizeof (NVIDIA_LOGO_PRIVATE_DATA), 0);
 
   for (Count = 0; Count < MAX_SUPPORTED_LOGO; Count++) {
-    Status = GetSectionFromFv (&gNVIDIAPlatformLogoGuid,
-                               EFI_SECTION_RAW,
-                               Count,
-                               &Private->LogoInfo[Count].Base,
-                               &Private->LogoInfo[Count].Size);
+    Status = GetSectionFromFv (
+               &gNVIDIAPlatformLogoGuid,
+               EFI_SECTION_RAW,
+               Count,
+               &Private->LogoInfo[Count].Base,
+               &Private->LogoInfo[Count].Size
+               );
     if (EFI_ERROR (Status)) {
       break;
     }
@@ -168,13 +175,15 @@ InitializeLogo (
     return EFI_NOT_FOUND;
   }
 
-  Private->Signature = NVIDIA_LOGO_SIGNATURE;
-  Private->NumLogos = Count;
+  Private->Signature             = NVIDIA_LOGO_SIGNATURE;
+  Private->NumLogos              = Count;
   Private->PlatformLogo.GetImage = GetImage;
 
   Handle = NULL;
-  return gBS->InstallMultipleProtocolInterfaces (&Handle,
-                                                 &gEdkiiPlatformLogoProtocolGuid,
-                                                 &Private->PlatformLogo,
-                                                 NULL);
+  return gBS->InstallMultipleProtocolInterfaces (
+                &Handle,
+                &gEdkiiPlatformLogoProtocolGuid,
+                &Private->PlatformLogo,
+                NULL
+                );
 }

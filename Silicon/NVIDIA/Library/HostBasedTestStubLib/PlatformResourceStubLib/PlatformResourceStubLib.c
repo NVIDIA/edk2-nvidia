@@ -15,19 +15,19 @@
 
 #include <HostBasedTestStubLib/PlatformResourceStubLib.h>
 
-BOOLEAN mBootChainIsInvalid[2] = {FALSE, FALSE};
+BOOLEAN  mBootChainIsInvalid[2] = { FALSE, FALSE };
 
 EFI_STATUS
 EFIAPI
 GetActiveBootChain (
-  OUT UINT32 *BootChain
-)
+  OUT UINT32  *BootChain
+  )
 {
-  EFI_STATUS    Status;
-  UINT32        RequestedBootChain;
+  EFI_STATUS  Status;
+  UINT32      RequestedBootChain;
 
-  Status = (EFI_STATUS) mock();
-  RequestedBootChain = (UINT32) mock();
+  Status             = (EFI_STATUS)mock ();
+  RequestedBootChain = (UINT32)mock ();
 
   if (!EFI_ERROR (Status)) {
     *BootChain = RequestedBootChain;
@@ -38,8 +38,8 @@ GetActiveBootChain (
 
 VOID
 MockGetActiveBootChain (
-  IN  UINT32        ReturnBootChain,
-  IN  EFI_STATUS    ReturnStatus
+  IN  UINT32      ReturnBootChain,
+  IN  EFI_STATUS  ReturnStatus
   )
 {
   will_return (GetActiveBootChain, ReturnStatus);
@@ -50,7 +50,7 @@ EFI_STATUS
 EFIAPI
 ValidateActiveBootChain (
   VOID
-)
+  )
 {
   return EFI_SUCCESS;
 }
@@ -58,18 +58,18 @@ ValidateActiveBootChain (
 EFI_STATUS
 EFIAPI
 SetNextBootChain (
-  IN  UINT32    BootChain
+  IN  UINT32  BootChain
   )
 {
-  UINT32        OtherBootChain;
-  EFI_STATUS    ReturnStatus;
+  UINT32      OtherBootChain;
+  EFI_STATUS  ReturnStatus;
 
-  ReturnStatus = (EFI_STATUS) mock ();
+  ReturnStatus = (EFI_STATUS)mock ();
 
   if (!EFI_ERROR (ReturnStatus)) {
     OtherBootChain = BootChain ^ 1;
 
-    mBootChainIsInvalid[BootChain] = FALSE;
+    mBootChainIsInvalid[BootChain]      = FALSE;
     mBootChainIsInvalid[OtherBootChain] = TRUE;
   }
 
@@ -78,7 +78,7 @@ SetNextBootChain (
 
 VOID
 MockSetNextBootChain (
-  IN  EFI_STATUS        ReturnStatus
+  IN  EFI_STATUS  ReturnStatus
   )
 {
   will_return (SetNextBootChain, ReturnStatus);

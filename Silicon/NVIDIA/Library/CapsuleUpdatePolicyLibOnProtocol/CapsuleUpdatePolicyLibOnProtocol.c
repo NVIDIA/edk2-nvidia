@@ -46,6 +46,7 @@ CheckSystemPower (
   if (CapsuleUpdatePolicyProtocolIsValid ()) {
     return mCapsuleUpdatePolicy->CheckSystemPower (mCapsuleUpdatePolicy, Good);
   }
+
   *Good = TRUE;
   return EFI_SUCCESS;
 }
@@ -53,12 +54,13 @@ CheckSystemPower (
 EFI_STATUS
 EFIAPI
 CheckSystemThermal (
-  OUT BOOLEAN   *Good
+  OUT BOOLEAN  *Good
   )
 {
   if (CapsuleUpdatePolicyProtocolIsValid ()) {
     return mCapsuleUpdatePolicy->CheckSystemThermal (mCapsuleUpdatePolicy, Good);
   }
+
   *Good = TRUE;
   return EFI_SUCCESS;
 }
@@ -66,12 +68,13 @@ CheckSystemThermal (
 EFI_STATUS
 EFIAPI
 CheckSystemEnvironment (
-  OUT BOOLEAN   *Good
+  OUT BOOLEAN  *Good
   )
 {
   if (CapsuleUpdatePolicyProtocolIsValid ()) {
     return mCapsuleUpdatePolicy->CheckSystemEnvironment (mCapsuleUpdatePolicy, Good);
   }
+
   *Good = TRUE;
   return EFI_SUCCESS;
 }
@@ -85,6 +88,7 @@ IsLowestSupportedVersionCheckRequired (
   if (CapsuleUpdatePolicyProtocolIsValid ()) {
     return mCapsuleUpdatePolicy->IsLowestSupportedVersionCheckRequired (mCapsuleUpdatePolicy);
   }
+
   return TRUE;
 }
 
@@ -97,6 +101,7 @@ IsLockFmpDeviceAtLockEventGuidRequired (
   if (CapsuleUpdatePolicyProtocolIsValid ()) {
     return mCapsuleUpdatePolicy->IsLockFmpDeviceAtLockEventGuidRequired (mCapsuleUpdatePolicy);
   }
+
   // Don't use FmpDxe flash locking, FmpDeviceLib controls flash access
   return FALSE;
 }
@@ -118,12 +123,18 @@ CapsuleUpdatePolicyLibInit (
   EFI_STATUS  Status;
 
   // find and save the CapsuleUpdatePolicy Protocol pointer
-  Status = gBS->LocateProtocol (&gNVIDIACapsuleUpdatePolicyProtocolGuid,
-                                NULL,
-                                (VOID **)&mCapsuleUpdatePolicy);
+  Status = gBS->LocateProtocol (
+                  &gNVIDIACapsuleUpdatePolicyProtocolGuid,
+                  NULL,
+                  (VOID **)&mCapsuleUpdatePolicy
+                  );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_WARN, "CapsuleUpdatePolicy Protocol Guid=%g not found: %r\n",
-            &gNVIDIACapsuleUpdatePolicyProtocolGuid, Status));
+    DEBUG ((
+      DEBUG_WARN,
+      "CapsuleUpdatePolicy Protocol Guid=%g not found: %r\n",
+      &gNVIDIACapsuleUpdatePolicyProtocolGuid,
+      Status
+      ));
     // use default policies
     mCapsuleUpdatePolicy = NULL;
   }

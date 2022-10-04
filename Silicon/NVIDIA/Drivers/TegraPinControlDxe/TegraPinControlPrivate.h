@@ -14,34 +14,34 @@
 #include <PiDxe.h>
 #include <Protocol/PinControl.h>
 
-#define DP_AUX_CONTROL_SIGNATURE SIGNATURE_32('D','P','A','X')
+#define DP_AUX_CONTROL_SIGNATURE  SIGNATURE_32('D','P','A','X')
 typedef struct {
   //
   // Standard signature used to identify regulator private data
   //
-  UINT32                      Signature;
+  UINT32                         Signature;
 
-  NVIDIA_PIN_CONTROL_PROTOCOL PinControlProtocol;
+  NVIDIA_PIN_CONTROL_PROTOCOL    PinControlProtocol;
 
-  UINT32                      PinControlId;
+  UINT32                         PinControlId;
 
-  EFI_PHYSICAL_ADDRESS        BaseAddress;
+  EFI_PHYSICAL_ADDRESS           BaseAddress;
 } DP_AUX_CONTROL_PRIVATE;
-#define DP_AUX_CONTROL_PRIVATE_FROM_THIS(a) CR(a, DP_AUX_CONTROL_PRIVATE, PinControlProtocol, DP_AUX_CONTROL_SIGNATURE)
+#define DP_AUX_CONTROL_PRIVATE_FROM_THIS(a)  CR(a, DP_AUX_CONTROL_PRIVATE, PinControlProtocol, DP_AUX_CONTROL_SIGNATURE)
 
-#define PIN_CONTROL_SIGNATURE SIGNATURE_32('P','I','N','C')
+#define PIN_CONTROL_SIGNATURE  SIGNATURE_32('P','I','N','C')
 typedef struct {
   //
   // Standard signature used to identify regulator private data
   //
-  UINT32                      Signature;
+  UINT32                         Signature;
 
-  NVIDIA_PIN_CONTROL_PROTOCOL PinControlProtocol;
+  NVIDIA_PIN_CONTROL_PROTOCOL    PinControlProtocol;
 
-  UINTN                       NumberOfHandles;
+  UINTN                          NumberOfHandles;
 
-  EFI_HANDLE                  *HandleArray;
+  EFI_HANDLE                     *HandleArray;
 } PIN_CONTROL_PRIVATE;
-#define PIN_CONTROL_PRIVATE_FROM_THIS(a) CR(a, PIN_CONTROL_PRIVATE, PinControlProtocol, PIN_CONTROL_SIGNATURE)
+#define PIN_CONTROL_PRIVATE_FROM_THIS(a)  CR(a, PIN_CONTROL_PRIVATE, PinControlProtocol, PIN_CONTROL_SIGNATURE)
 
 #endif

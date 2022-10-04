@@ -13,19 +13,19 @@
 #include <Library/PlatformResourceLib.h>
 
 typedef struct {
-  UINTN                     FuseBaseAddr;
-  TEGRA_FUSE_INFO           *FuseList;
-  UINTN                     FuseCount;
-  TEGRA_EEPROM_PART_NUMBER  *ProductIds;
-  UINTN                     IdCount;
+  UINTN                       FuseBaseAddr;
+  TEGRA_FUSE_INFO             *FuseList;
+  UINTN                       FuseCount;
+  TEGRA_EEPROM_PART_NUMBER    *ProductIds;
+  UINTN                       IdCount;
 } OVERLAY_BOARD_INFO;
 
 EFI_STATUS
 ApplyTegraDeviceTreeOverlayCommon (
-  VOID *FdtBase,
-  VOID *FdtOverlay,
-  CHAR8 *SWModule,
-  OVERLAY_BOARD_INFO *BoardInfo
-);
+  VOID                *FdtBase,
+  VOID                *FdtOverlay,
+  CHAR8               *SWModule,
+  OVERLAY_BOARD_INFO  *BoardInfo
+  );
 
 #endif //__TEGRA_DEVICE_TREE_OVERLAY_LIB_COMMON_H__

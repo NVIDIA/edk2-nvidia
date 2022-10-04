@@ -7,6 +7,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
 #ifndef __PLATFORM_RESOURCE_STUB_LIB_H__
 #define __PLATFORM_RESOURCE_STUB_LIB_H__
 
@@ -24,8 +25,8 @@
 **/
 VOID
 MockGetActiveBootChain (
-  IN  UINT32        ReturnBootChain,
-  IN  EFI_STATUS    ReturnStatus
+  IN  UINT32      ReturnBootChain,
+  IN  EFI_STATUS  ReturnStatus
   );
 
 /**
@@ -38,7 +39,7 @@ MockGetActiveBootChain (
 **/
 VOID
 MockSetNextBootChain (
-  IN  EFI_STATUS        ReturnStatus
+  IN  EFI_STATUS  ReturnStatus
   );
 
 /**

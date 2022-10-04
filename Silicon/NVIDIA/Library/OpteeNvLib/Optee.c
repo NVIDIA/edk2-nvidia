@@ -110,10 +110,10 @@ OpteeSetupPageList (
   OUT UINT64               *RetPtr
   )
 {
-  EFI_STATUS           Status   = EFI_SUCCESS;
+  EFI_STATUS           Status = EFI_SUCCESS;
   UINTN                NumPages = EFI_SIZE_TO_PAGES (BufSize);
-  UINTN                Pages    = NumPages;
-  UINTN                n        = 0;
+  UINTN                Pages = NumPages;
+  UINTN                n = 0;
   VOID                 *BufBase = UserBuf;
   OPTEE_SHM_PAGE_LIST  *ShmList, *TmpShmList;
   UINTN                NumPgLists = 0;
@@ -145,7 +145,7 @@ OpteeSetupPageList (
     Pages--;
     BufBase += OPTEE_MSG_PAGE_SIZE;
     if (n == MAX_PAGELIST_ENTRIES) {
-      TmpShmList->NextPage = (UINT64) (TmpShmList + 1);
+      TmpShmList->NextPage = (UINT64)(TmpShmList + 1);
       TmpShmList++;
       n = 0;
     }

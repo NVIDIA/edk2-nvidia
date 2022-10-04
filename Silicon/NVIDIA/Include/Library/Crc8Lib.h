@@ -14,9 +14,8 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
-#define TYPE_CRC8       0 //x^8 + x^2 + x^1 + 1
-#define TYPE_CRC8_MAXIM 1 //x^8 + x^5 + x^4 + 1
-
+#define TYPE_CRC8        0 // x^8 + x^2 + x^1 + 1
+#define TYPE_CRC8_MAXIM  1 // x^8 + x^5 + x^4 + 1
 
 /**
   Calculates CRC-8 for input buffer.
@@ -31,10 +30,10 @@
 UINT8
 EFIAPI
 CalculateCrc8 (
-  IN UINT8  *Buffer,
-  IN UINT16 Size,
-  IN UINT8  Seed,
-  IN UINT8  Type
-);
+  IN UINT8   *Buffer,
+  IN UINT16  Size,
+  IN UINT8   Seed,
+  IN UINT8   Type
+  );
 
 #endif

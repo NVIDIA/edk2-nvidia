@@ -7,6 +7,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
 #ifndef __UEFI_BOOT_SERVICES_TABLE_STUB_LIB_H__
 #define __UEFI_BOOT_SERVICES_TABLE_STUB_LIB_H__
 
@@ -25,9 +26,9 @@
 **/
 VOID
 MockUefiCreateEventEx (
-  IN  EFI_GUID      *EventGroup,
-  IN  EFI_EVENT     *EventSavePtr,
-  IN  EFI_STATUS    ReturnStatus
+  IN  EFI_GUID    *EventGroup,
+  IN  EFI_EVENT   *EventSavePtr,
+  IN  EFI_STATUS  ReturnStatus
   );
 
 /**
@@ -41,7 +42,7 @@ MockUefiCreateEventEx (
 VOID
 EFIAPI
 MockInstallMultipleProtocolInterfaces (
-  IN  EFI_STATUS    ReturnStatus,
+  IN  EFI_STATUS  ReturnStatus,
   ...
   );
 
@@ -57,9 +58,9 @@ MockInstallMultipleProtocolInterfaces (
 **/
 VOID
 MockUefiLocateProtocol (
-  IN  EFI_GUID      *ProtocolGuid,
-  IN  VOID          *ReturnProtocolInterface,
-  IN  EFI_STATUS    ReturnStatus
+  IN  EFI_GUID    *ProtocolGuid,
+  IN  VOID        *ReturnProtocolInterface,
+  IN  EFI_STATUS  ReturnStatus
   );
 
 /**

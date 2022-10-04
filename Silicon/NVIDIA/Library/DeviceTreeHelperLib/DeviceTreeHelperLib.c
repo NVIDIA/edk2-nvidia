@@ -14,7 +14,7 @@
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <libfdt.h>
 
-STATIC VOID   *LocalDeviceTree = NULL;
+STATIC VOID   *LocalDeviceTree    = NULL;
 STATIC UINTN  LocalDeviceTreeSize = 0;
 
 /**
@@ -28,11 +28,11 @@ STATIC UINTN  LocalDeviceTreeSize = 0;
 **/
 VOID
 SetDeviceTreePointer (
-  IN  VOID      *DeviceTree,
-  IN  UINTN     DeviceTreeSize
-)
+  IN  VOID   *DeviceTree,
+  IN  UINTN  DeviceTreeSize
+  )
 {
-  LocalDeviceTree = DeviceTree;
+  LocalDeviceTree     = DeviceTree;
   LocalDeviceTreeSize = DeviceTreeSize;
 }
 
@@ -49,15 +49,15 @@ SetDeviceTreePointer (
 STATIC
 EFI_STATUS
 GetDeviceTreePointer (
-  OUT VOID      **DeviceTree,
-  OUT UINTN     *DeviceTreeSize
-)
+  OUT VOID   **DeviceTree,
+  OUT UINTN  *DeviceTreeSize
+  )
 {
   if ((LocalDeviceTree == NULL) || (LocalDeviceTreeSize == 0)) {
     return DtPlatformLoadDtb (DeviceTree, DeviceTreeSize);
   }
 
-  *DeviceTree = LocalDeviceTree;
+  *DeviceTree     = LocalDeviceTree;
   *DeviceTreeSize = LocalDeviceTreeSize;
   return EFI_SUCCESS;
 }
@@ -81,22 +81,23 @@ GetDeviceTreePointer (
 EFI_STATUS
 EFIAPI
 GetMatchingEnabledDeviceTreeNodes (
-  IN CONST CHAR8    *CompatibleString,
-  OUT UINT32        *NodeHandleArray OPTIONAL,
-  IN OUT UINT32     *NumberOfNodes
+  IN CONST CHAR8  *CompatibleString,
+  OUT UINT32      *NodeHandleArray OPTIONAL,
+  IN OUT UINT32   *NumberOfNodes
   )
 {
-  UINT32     OriginalSize;
-  UINT32     DeviceCount;
-  EFI_STATUS Status;
-  VOID       *DeviceTree;
-  UINTN      DeviceTreeSize;
-  INT32      Offset;
-  CONST VOID *Property;
+  UINT32      OriginalSize;
+  UINT32      DeviceCount;
+  EFI_STATUS  Status;
+  VOID        *DeviceTree;
+  UINTN       DeviceTreeSize;
+  INT32       Offset;
+  CONST VOID  *Property;
 
   if ((CompatibleString == NULL) ||
       (NumberOfNodes == NULL)    ||
-      ((*NumberOfNodes != 0) && (NodeHandleArray == NULL))) {
+      ((*NumberOfNodes != 0) && (NodeHandleArray == NULL)))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -107,23 +108,28 @@ GetMatchingEnabledDeviceTreeNodes (
   }
 
   DeviceCount = 0;
-  Offset = fdt_node_offset_by_compatible(DeviceTree, -1, CompatibleString);
+  Offset      = fdt_node_offset_by_compatible (DeviceTree, -1, CompatibleString);
   while (Offset != -FDT_ERR_NOTFOUND) {
-    Property = fdt_getprop (DeviceTree,
-                            Offset,
-                            "status",
-                            NULL);
+    Property = fdt_getprop (
+                 DeviceTree,
+                 Offset,
+                 "status",
+                 NULL
+                 );
     if ((Property == NULL) ||
-        (AsciiStrCmp (Property, "okay") == 0)) {
+        (AsciiStrCmp (Property, "okay") == 0))
+    {
       if (DeviceCount < *NumberOfNodes) {
         NodeHandleArray[DeviceCount] = (UINT32)Offset;
       }
+
       DeviceCount++;
     }
-    Offset = fdt_node_offset_by_compatible(DeviceTree, Offset, CompatibleString);
+
+    Offset = fdt_node_offset_by_compatible (DeviceTree, Offset, CompatibleString);
   }
 
-  OriginalSize = *NumberOfNodes;
+  OriginalSize   = *NumberOfNodes;
   *NumberOfNodes = DeviceCount;
   if (DeviceCount == 0) {
     Status = EFI_NOT_FOUND;
@@ -132,6 +138,7 @@ GetMatchingEnabledDeviceTreeNodes (
   } else {
     Status = EFI_SUCCESS;
   }
+
   return Status;
 }
 
@@ -152,17 +159,18 @@ GetMatchingEnabledDeviceTreeNodes (
 EFI_STATUS
 EFIAPI
 GetDeviceTreeNode (
-  IN UINT32        Handle,
-  OUT VOID         **DeviceTreeBase,
-  OUT INT32        *NodeOffset
+  IN UINT32  Handle,
+  OUT VOID   **DeviceTreeBase,
+  OUT INT32  *NodeOffset
   )
 {
-  EFI_STATUS Status;
-  VOID       *DeviceTree;
-  UINTN      DeviceTreeSize;
+  EFI_STATUS  Status;
+  VOID        *DeviceTree;
+  UINTN       DeviceTreeSize;
 
   if ((DeviceTreeBase == NULL) ||
-      (NodeOffset == NULL)) {
+      (NodeOffset == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -176,7 +184,7 @@ GetDeviceTreeNode (
   }
 
   *DeviceTreeBase = DeviceTree;
-  *NodeOffset = (INT32)Handle;
+  *NodeOffset     = (INT32)Handle;
   return EFI_SUCCESS;
 }
 
@@ -196,17 +204,18 @@ GetDeviceTreeNode (
 EFI_STATUS
 EFIAPI
 GetDeviceTreeHandle (
-  IN  VOID         *DeviceTreeBase,
-  IN  INT32        NodeOffset,
-  OUT UINT32       *Handle
+  IN  VOID    *DeviceTreeBase,
+  IN  INT32   NodeOffset,
+  OUT UINT32  *Handle
   )
 {
-  EFI_STATUS Status;
-  VOID       *DeviceTree;
-  UINTN      DeviceTreeSize;
+  EFI_STATUS  Status;
+  VOID        *DeviceTree;
+  UINTN       DeviceTreeSize;
 
   if ((DeviceTreeBase == NULL) ||
-      (Handle == NULL)) {
+      (Handle == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -246,27 +255,28 @@ GetDeviceTreeHandle (
 EFI_STATUS
 EFIAPI
 GetDeviceTreeRegisters (
-  IN UINT32                            Handle,
-  OUT NVIDIA_DEVICE_TREE_REGISTER_DATA *RegisterArray OPTIONAL,
-  IN OUT UINT32                        *NumberOfRegisters
+  IN UINT32                             Handle,
+  OUT NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray OPTIONAL,
+  IN OUT UINT32                         *NumberOfRegisters
   )
 {
-  EFI_STATUS Status;
-  VOID       *DeviceTree;
-  INT32      NodeOffset;
-  INT32      AddressCells;
-  INT32      SizeCells;
-  CONST VOID *RegProperty;
-  CONST VOID *RegNames;
-  INT32      PropertySize;
-  INT32      NameSize;
-  INT32      NameOffset;
-  UINTN      EntrySize;
-  UINTN      NumberOfRegRegions;
-  UINTN      RegionIndex;
+  EFI_STATUS  Status;
+  VOID        *DeviceTree;
+  INT32       NodeOffset;
+  INT32       AddressCells;
+  INT32       SizeCells;
+  CONST VOID  *RegProperty;
+  CONST VOID  *RegNames;
+  INT32       PropertySize;
+  INT32       NameSize;
+  INT32       NameOffset;
+  UINTN       EntrySize;
+  UINTN       NumberOfRegRegions;
+  UINTN       RegionIndex;
 
   if ((NumberOfRegisters == NULL) ||
-      ((*NumberOfRegisters != 0) && (RegisterArray == NULL))) {
+      ((*NumberOfRegisters != 0) && (RegisterArray == NULL)))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -275,24 +285,28 @@ GetDeviceTreeRegisters (
     return Status;
   }
 
-  AddressCells  = fdt_address_cells (DeviceTree, fdt_parent_offset(DeviceTree, NodeOffset));
-  SizeCells     = fdt_size_cells (DeviceTree, fdt_parent_offset(DeviceTree, NodeOffset));
+  AddressCells = fdt_address_cells (DeviceTree, fdt_parent_offset (DeviceTree, NodeOffset));
+  SizeCells    = fdt_size_cells (DeviceTree, fdt_parent_offset (DeviceTree, NodeOffset));
 
   if ((AddressCells > 2) ||
       (AddressCells == 0) ||
       (SizeCells > 2) ||
-      (SizeCells == 0)) {
+      (SizeCells == 0))
+  {
     DEBUG ((EFI_D_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
     return EFI_DEVICE_ERROR;
   }
 
-  RegProperty = fdt_getprop (DeviceTree,
-                           NodeOffset,
-                           "reg",
-                           &PropertySize);
+  RegProperty = fdt_getprop (
+                  DeviceTree,
+                  NodeOffset,
+                  "reg",
+                  &PropertySize
+                  );
   if (RegProperty == NULL) {
     return EFI_NOT_FOUND;
   }
+
   EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
   ASSERT ((PropertySize % EntrySize) == 0);
   NumberOfRegRegions = PropertySize / EntrySize;
@@ -304,21 +318,24 @@ GetDeviceTreeRegisters (
     return EFI_NOT_FOUND;
   }
 
-  RegNames = fdt_getprop (DeviceTree,
-                           NodeOffset,
-                           "reg-names",
-                           &NameSize);
+  RegNames = fdt_getprop (
+               DeviceTree,
+               NodeOffset,
+               "reg-names",
+               &NameSize
+               );
   if (RegNames == NULL) {
     NameSize = 0;
   }
+
   NameOffset = 0;
 
   for (RegionIndex = 0; RegionIndex < NumberOfRegRegions; RegionIndex++) {
-    UINT64 AddressBase = 0;
-    UINT64 RegionSize  = 0;
+    UINT64  AddressBase = 0;
+    UINT64  RegionSize  = 0;
 
     CopyMem ((VOID *)&AddressBase, RegProperty + EntrySize * RegionIndex, AddressCells * sizeof (UINT32));
-    CopyMem ((VOID *)&RegionSize, RegProperty + EntrySize * RegionIndex + (AddressCells * sizeof (UINT32)),  SizeCells * sizeof (UINT32));
+    CopyMem ((VOID *)&RegionSize, RegProperty + EntrySize * RegionIndex + (AddressCells * sizeof (UINT32)), SizeCells * sizeof (UINT32));
     if (AddressCells == 2) {
       AddressBase = SwapBytes64 (AddressBase);
     } else {
@@ -332,14 +349,15 @@ GetDeviceTreeRegisters (
     }
 
     RegisterArray[RegionIndex].BaseAddress = AddressBase;
-    RegisterArray[RegionIndex].Size = RegionSize;
-    RegisterArray[RegionIndex].Name = NULL;
+    RegisterArray[RegionIndex].Size        = RegionSize;
+    RegisterArray[RegionIndex].Name        = NULL;
 
     if (NameOffset < NameSize) {
       RegisterArray[RegionIndex].Name = RegNames + NameOffset;
-      NameOffset += AsciiStrSize (RegisterArray[RegionIndex].Name);
+      NameOffset                     += AsciiStrSize (RegisterArray[RegionIndex].Name);
     }
   }
+
   *NumberOfRegisters = NumberOfRegRegions;
   return EFI_SUCCESS;
 }
@@ -363,28 +381,29 @@ GetDeviceTreeRegisters (
 EFI_STATUS
 EFIAPI
 GetDeviceTreeInterrupts (
-  IN UINT32                             Handle,
-  OUT NVIDIA_DEVICE_TREE_INTERRUPT_DATA *InterruptArray OPTIONAL,
-  IN OUT UINT32                         *NumberOfInterrupts
+  IN UINT32                              Handle,
+  OUT NVIDIA_DEVICE_TREE_INTERRUPT_DATA  *InterruptArray OPTIONAL,
+  IN OUT UINT32                          *NumberOfInterrupts
   )
 {
-  EFI_STATUS   Status;
-  VOID         *DeviceTree;
-  INT32        NodeOffset;
-  UINT32       InterruptCells;
-  CONST UINT32 *IntProperty;
-  CONST VOID   *IntNames;
-  INT32        PropertySize;
-  UINT32       IntPropertyEntries;
-  UINT32       IntIndex;
-  INT32        NameSize;
-  INT32        NameOffset;
+  EFI_STATUS    Status;
+  VOID          *DeviceTree;
+  INT32         NodeOffset;
+  UINT32        InterruptCells;
+  CONST UINT32  *IntProperty;
+  CONST VOID    *IntNames;
+  INT32         PropertySize;
+  UINT32        IntPropertyEntries;
+  UINT32        IntIndex;
+  INT32         NameSize;
+  INT32         NameOffset;
 
-  //Three cells per interrupt
+  // Three cells per interrupt
   InterruptCells = 3;
 
   if ((NumberOfInterrupts == NULL) ||
-      ((*NumberOfInterrupts != 0) && (InterruptArray == NULL))) {
+      ((*NumberOfInterrupts != 0) && (InterruptArray == NULL)))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -393,10 +412,12 @@ GetDeviceTreeInterrupts (
     return Status;
   }
 
-  IntProperty = (CONST UINT32 *)fdt_getprop (DeviceTree,
-                           NodeOffset,
-                           "interrupts",
-                           &PropertySize);
+  IntProperty = (CONST UINT32 *)fdt_getprop (
+                                  DeviceTree,
+                                  NodeOffset,
+                                  "interrupts",
+                                  &PropertySize
+                                  );
   if (IntProperty == NULL) {
     return EFI_NOT_FOUND;
   }
@@ -409,21 +430,24 @@ GetDeviceTreeInterrupts (
     return EFI_BUFFER_TOO_SMALL;
   }
 
-  IntNames = fdt_getprop (DeviceTree,
-                           NodeOffset,
-                           "interrupt-names",
-                           &NameSize);
+  IntNames = fdt_getprop (
+               DeviceTree,
+               NodeOffset,
+               "interrupt-names",
+               &NameSize
+               );
   if (IntNames == NULL) {
     NameSize = 0;
   }
+
   NameOffset = 0;
 
   for (IntIndex = 0; IntIndex < IntPropertyEntries; IntIndex++) {
-    InterruptArray[IntIndex].Type = SwapBytes32 (IntProperty[(IntIndex * InterruptCells)]);
+    InterruptArray[IntIndex].Type      = SwapBytes32 (IntProperty[(IntIndex * InterruptCells)]);
     InterruptArray[IntIndex].Interrupt = SwapBytes32 (IntProperty[(IntIndex * InterruptCells) + 1]);
     if (NameOffset < NameSize) {
       InterruptArray[IntIndex].Name = IntNames + NameOffset;
-      NameOffset += AsciiStrSize (InterruptArray[IntIndex].Name);
+      NameOffset                   += AsciiStrSize (InterruptArray[IntIndex].Name);
     } else {
       InterruptArray[IntIndex].Name = NULL;
     }

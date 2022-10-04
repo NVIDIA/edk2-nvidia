@@ -9,7 +9,6 @@
 
 **/
 
-
 #include "PhyDxeUtil.h"
 #include "PhyRealtek.h"
 #include "EmacDxeUtil.h"
@@ -22,42 +21,42 @@
 #include <Library/UefiBootServicesTableLib.h>
 
 /************************************************************************************************************/
-#define PAGE_A43              0xA43
+#define PAGE_A43  0xA43
 
 /***************************************************************/
-#define REG_PHYSR             26
-#define PHYSR_SPEED_1000      BIT5
-#define PHYSR_SPEED_100       BIT4
-#define PHYSR_SPEED_MASK      (BIT5|BIT4)
-#define PHYSR_DUPLEX_MODE     BIT3
-#define PHYSR_LINK            BIT2
+#define REG_PHYSR          26
+#define PHYSR_SPEED_1000   BIT5
+#define PHYSR_SPEED_100    BIT4
+#define PHYSR_SPEED_MASK   (BIT5|BIT4)
+#define PHYSR_DUPLEX_MODE  BIT3
+#define PHYSR_LINK         BIT2
 
 /***************************************************************/
-#define REG_PHY_PAGE          31
+#define REG_PHY_PAGE  31
 
 /************************************************************************************************************/
-#define PAGE_LED              0xd04
+#define PAGE_LED  0xd04
 
 /***************************************************************/
-#define REG_LCR               16
-#define LCR_LED1_ACT          BIT9
-#define LCR_LED1_LINK_1000    BIT8
-#define LCR_LED1_LINK_100     BIT6
-#define LCR_LED1_LINK_10      BIT5
-#define LCR_LED0_LINK_1000    BIT3
+#define REG_LCR             16
+#define LCR_LED1_ACT        BIT9
+#define LCR_LED1_LINK_1000  BIT8
+#define LCR_LED1_LINK_100   BIT6
+#define LCR_LED1_LINK_10    BIT5
+#define LCR_LED0_LINK_1000  BIT3
 
 /***************************************************************/
-#define REG_EEELCR            17
+#define REG_EEELCR  17
 
 /************************************************************************************************************/
 // Start auto-negotiation
 EFI_STATUS
 EFIAPI
 PhyRealtekStartAutoNeg (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32        Data32;
+  UINT32  Data32;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
   PhyDriver->AutoNegState = PHY_AUTONEG_RUNNING;
@@ -88,39 +87,39 @@ PhyRealtekStartAutoNeg (
 EFI_STATUS
 EFIAPI
 PhyRealtekCheckAutoNeg (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   )
 {
-
-  UINT64        TimeoutNS;
-  UINT32        Data32;
-  EFI_STATUS    Status;
+  UINT64      TimeoutNS;
+  UINT32      Data32;
+  EFI_STATUS  Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
   if (PhyDriver->AutoNegState == PHY_AUTONEG_IDLE) {
     return EFI_SUCCESS;
   }
 
-  //Only check once if we are in timeout state
+  // Only check once if we are in timeout state
   if (PhyDriver->AutoNegState == PHY_AUTONEG_TIMEOUT) {
     TimeoutNS = GetTimeInNanoSecond (GetPerformanceCounter ());
   } else {
     TimeoutNS = GetTimeInNanoSecond (GetPerformanceCounter ()) + (PHY_TIMEOUT * 1000);
   }
 
-
   do {
     // Read PHY_BASIC_CTRL register from PHY
     Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_STATUS, &Data32);
-    if (EFI_ERROR(Status)) {
+    if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_INFO, "Failed to read PHY_BASIC_CTRL register\r\n"));
       goto Exit;
     }
+
     // Wait until PHYCTRL_RESET become zero
     if ((Data32 & REG_PHY_STATUS_AUTO_NEGOTIATION_COMPLETED) != 0) {
       break;
     }
   } while (TimeoutNS > GetTimeInNanoSecond (GetPerformanceCounter ()));
+
   if ((Data32 & REG_PHY_STATUS_AUTO_NEGOTIATION_COMPLETED) == 0) {
     DEBUG ((DEBUG_INFO, "SNP:PHY: ERROR! auto-negotiation timeout\n"));
     Status = EFI_TIMEOUT;
@@ -146,11 +145,11 @@ Exit:
 EFI_STATUS
 EFIAPI
 PhyRealtekConfig (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32        Data32;
-  EFI_STATUS    Status;
+  UINT32      Data32;
+  EFI_STATUS  Status;
 
   DEBUG ((DEBUG_INFO, "%s(): %u\n", __FUNCTION__, __LINE__));
 
@@ -184,10 +183,10 @@ PhyRealtekConfig (
 VOID
 EFIAPI
 PhyRealtekDetectLink (
-  IN  PHY_DRIVER   *PhyDriver
+  IN  PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32       Data32;
+  UINT32  Data32;
 
   PhyRead (PhyDriver, PAGE_A43, REG_PHYSR, &Data32);
 
@@ -205,6 +204,7 @@ PhyRealtekDetectLink (
       } else {
         PhyDriver->Duplex = DUPLEX_FULL;
       }
+
       if ((Data32 & PHYSR_SPEED_MASK) == PHYSR_SPEED_1000) {
         PhyDriver->Speed = SPEED_1000;
       } else if ((Data32 & PHYSR_SPEED_MASK) == PHYSR_SPEED_100) {

@@ -24,11 +24,11 @@
 
 // Test context for FvbRead and FvbWrite tests
 typedef struct {
-  EFI_LBA     Lba;              // Input Lba
-  UINTN       Offset;           // Input Offset
-  UINTN       NumBytes;         // Input NumBytes
-  EFI_STATUS  ExpectedStatus;   // Expected Status returned
-  UINTN       ExpectedNumBytes; // Expected NumBytes returned
+  EFI_LBA       Lba;              // Input Lba
+  UINTN         Offset;           // Input Offset
+  UINTN         NumBytes;         // Input NumBytes
+  EFI_STATUS    ExpectedStatus;   // Expected Status returned
+  UINTN         ExpectedNumBytes; // Expected NumBytes returned
 } RW_TEST_CONTEXT;
 
 // Fvb Functions we want to test
@@ -50,10 +50,10 @@ typedef struct {
 **/
 EFI_STATUS
 EFIAPI
-FvbGetAttributes(
-  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL    *This,
-  OUT       EFI_FVB_ATTRIBUTES_2                   *Attributes
-);
+FvbGetAttributes (
+  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
+  OUT       EFI_FVB_ATTRIBUTES_2                 *Attributes
+  );
 
 /**
   The SetAttributes() function sets configurable firmware volume
@@ -79,10 +79,10 @@ FvbGetAttributes(
 **/
 EFI_STATUS
 EFIAPI
-FvbSetAttributes(
+FvbSetAttributes (
   IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
   IN OUT    EFI_FVB_ATTRIBUTES_2                 *Attributes
-);
+  );
 
 /**
   The GetPhysicalAddress() function retrieves the base address of
@@ -106,7 +106,7 @@ EFIAPI
 FvbGetPhysicalAddress (
   IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
   OUT       EFI_PHYSICAL_ADDRESS                 *Address
-);
+  );
 
 /**
   The GetBlockSize() function retrieves the size of the requested
@@ -141,7 +141,7 @@ FvbGetBlockSize (
   IN        EFI_LBA                              Lba,
   OUT       UINTN                                *BlockSize,
   OUT       UINTN                                *NumberOfBlocks
-);
+  );
 
 /**
   Reads the specified number of bytes into a buffer from the specified block.
@@ -193,12 +193,12 @@ FvbGetBlockSize (
 EFI_STATUS
 EFIAPI
 FvbRead (
-  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL   *This,
-  IN        EFI_LBA                               Lba,
-  IN        UINTN                                 Offset,
-  IN OUT    UINTN                                 *NumBytes,
-  IN OUT    UINT8                                 *Buffer
-);
+  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
+  IN        EFI_LBA                              Lba,
+  IN        UINTN                                Offset,
+  IN OUT    UINTN                                *NumBytes,
+  IN OUT    UINT8                                *Buffer
+  );
 
 /**
   Writes the specified number of bytes from the input buffer to the block.
@@ -262,12 +262,12 @@ FvbRead (
 EFI_STATUS
 EFIAPI
 FvbWrite (
-  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL   *This,
-  IN        EFI_LBA                               Lba,
-  IN        UINTN                                 Offset,
-  IN OUT    UINTN                                 *NumBytes,
-  IN        UINT8                                 *Buffer
-);
+  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
+  IN        EFI_LBA                              Lba,
+  IN        UINTN                                Offset,
+  IN OUT    UINTN                                *NumBytes,
+  IN        UINT8                                *Buffer
+  );
 
 /**
   Erases and initializes a firmware volume block.
@@ -320,9 +320,9 @@ FvbWrite (
 EFI_STATUS
 EFIAPI
 FvbEraseBlocks (
-  IN CONST EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL *This,
+  IN CONST EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
   ...
-);
+  );
 
 /**
   Initializes the FV Header and Variable Store Header
@@ -333,8 +333,8 @@ FvbEraseBlocks (
 **/
 EFI_STATUS
 InitializeFvAndVariableStoreHeaders (
-  IN EFI_FIRMWARE_VOLUME_HEADER *FirmwareVolumeHeader
-);
+  IN EFI_FIRMWARE_VOLUME_HEADER  *FirmwareVolumeHeader
+  );
 
 /**
   Check the integrity of firmware volume header.
@@ -344,7 +344,7 @@ InitializeFvAndVariableStoreHeaders (
 **/
 EFI_STATUS
 ValidateFvHeader (
-  IN EFI_FIRMWARE_VOLUME_HEADER *FwVolHeader
-);
+  IN EFI_FIRMWARE_VOLUME_HEADER  *FwVolHeader
+  );
 
 #endif

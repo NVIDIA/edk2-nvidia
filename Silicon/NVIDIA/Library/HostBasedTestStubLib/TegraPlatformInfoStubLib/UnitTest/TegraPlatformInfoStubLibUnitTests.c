@@ -21,9 +21,9 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UnitTestLib.h>
 
-#define TEST_CASE(Name)         #Name, "", Name
-#define UNIT_TEST_APP_NAME      "TegraPlatformInfoStubLib Unit Test Application"
-#define UNIT_TEST_APP_VERSION   "0.0"
+#define TEST_CASE(Name)  #Name, "", Name
+#define UNIT_TEST_APP_NAME     "TegraPlatformInfoStubLib Unit Test Application"
+#define UNIT_TEST_APP_VERSION  "0.0"
 
 STATIC
 UNIT_TEST_STATUS
@@ -32,13 +32,15 @@ TegraGetChipIDTest (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
-  UINT32  ChipIdArray[] = {T194_CHIP_ID,
-                           T234_CHIP_ID};
+  UINT32  ChipIdArray[] = {
+    T194_CHIP_ID,
+    T234_CHIP_ID
+  };
   UINTN   Index;
 
   for (Index = 0; Index < (sizeof (ChipIdArray) / sizeof (ChipIdArray[0])); Index++) {
-    UINT32 ExpectedChipId = ChipIdArray[Index];
-    UINT32 ChipId;
+    UINT32  ExpectedChipId = ChipIdArray[Index];
+    UINT32  ChipId;
 
     MockTegraGetChipID (ExpectedChipId);
     ChipId = TegraGetChipID ();
@@ -58,50 +60,54 @@ TegraGetChipIDTest (
 STATIC
 EFI_STATUS
 EFIAPI
-UnitTestingEntry(
+UnitTestingEntry (
   VOID
   )
 {
-  EFI_STATUS                    Status;
-  UNIT_TEST_FRAMEWORK_HANDLE    Framework;
-  UNIT_TEST_SUITE_HANDLE        TestSuite;
+  EFI_STATUS                  Status;
+  UNIT_TEST_FRAMEWORK_HANDLE  Framework;
+  UNIT_TEST_SUITE_HANDLE      TestSuite;
 
   Framework = NULL;
   DEBUG ((DEBUG_INFO, "%a v%a\n", UNIT_TEST_APP_NAME, UNIT_TEST_APP_VERSION));
 
-  Status = InitUnitTestFramework(
-    &Framework,
-    UNIT_TEST_APP_NAME,
-    gEfiCallerBaseName,
-    UNIT_TEST_APP_VERSION
-  );
+  Status = InitUnitTestFramework (
+             &Framework,
+             UNIT_TEST_APP_NAME,
+             gEfiCallerBaseName,
+             UNIT_TEST_APP_VERSION
+             );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "InitUnitTestFramework failed: %r\n", Status));
     goto EXIT;
   }
 
-  Status = CreateUnitTestSuite(
-    &TestSuite,
-    Framework,
-    "TegraPlatformInfoStubLib",
-    "",
-    NULL,
-    NULL
-  );
+  Status = CreateUnitTestSuite (
+             &TestSuite,
+             Framework,
+             "TegraPlatformInfoStubLib",
+             "",
+             NULL,
+             NULL
+             );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "CreateUnitTestSuite failed: %r\n", Status));
     goto EXIT;
   }
 
-  AddTestCase(TestSuite,
-              TEST_CASE (TegraGetChipIDTest),
-              NULL, NULL, NULL);
+  AddTestCase (
+    TestSuite,
+    TEST_CASE (TegraGetChipIDTest),
+    NULL,
+    NULL,
+    NULL
+    );
 
   Status = RunAllTestSuites (Framework);
 
 EXIT:
   if (Framework) {
-    FreeUnitTestFramework(Framework);
+    FreeUnitTestFramework (Framework);
   }
 
   return Status;
@@ -113,21 +119,21 @@ EXIT:
 **/
 EFI_STATUS
 EFIAPI
-BaseLibUnitTestAppEntry(
+BaseLibUnitTestAppEntry (
   IN EFI_HANDLE        ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  return UnitTestingEntry();
+  return UnitTestingEntry ();
 }
 
 /**
   Standard POSIX C entry point for host based unit test execution.
 **/
 int
-main(
-  int argc,
-  char *argv[]
+main (
+  int   argc,
+  char  *argv[]
   )
 {
   return UnitTestingEntry ();

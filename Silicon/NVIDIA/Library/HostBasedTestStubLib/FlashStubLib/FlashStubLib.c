@@ -36,7 +36,8 @@ EFIAPI
 Reset (
   IN EFI_BLOCK_IO_PROTOCOL  *This,
   IN BOOLEAN                ExtendedVerification
-) {
+  )
+{
   return EFI_SUCCESS;
 }
 
@@ -70,7 +71,8 @@ ReadBlocks (
   IN EFI_LBA                Lba,
   IN UINTN                  BufferSize,
   OUT VOID                  *Buffer
-) {
+  )
+{
   FLASH_TEST_PRIVATE  *PrivateData;
   UINTN               NumberOfBlocks;
 
@@ -101,12 +103,12 @@ ReadBlocks (
     return EFI_INVALID_PARAMETER;
   }
 
-  CopyMem(
+  CopyMem (
     Buffer,
     (VOID *)(UINTN)(PrivateData->StartingAddr
-                      + MultU64x32 (Lba, PrivateData->Media.BlockSize)),
+                    + MultU64x32 (Lba, PrivateData->Media.BlockSize)),
     BufferSize
-  );
+    );
 
   return EFI_SUCCESS;
 }
@@ -141,7 +143,8 @@ WriteBlocks (
   IN EFI_LBA                Lba,
   IN UINTN                  BufferSize,
   IN VOID                   *Buffer
-) {
+  )
+{
   FLASH_TEST_PRIVATE  *PrivateData;
   UINTN               NumberOfBlocks;
 
@@ -176,12 +179,12 @@ WriteBlocks (
     return EFI_INVALID_PARAMETER;
   }
 
-  CopyMem(
+  CopyMem (
     (VOID *)(UINTN)(PrivateData->StartingAddr
-                      + MultU64x32 (Lba, PrivateData->Media.BlockSize)),
+                    + MultU64x32 (Lba, PrivateData->Media.BlockSize)),
     Buffer,
     BufferSize
-  );
+    );
 
   return EFI_SUCCESS;
 }
@@ -201,11 +204,12 @@ EFI_STATUS
 EFIAPI
 FlushBlocks (
   IN EFI_BLOCK_IO_PROTOCOL  *This
-) {
+  )
+{
   return EFI_SUCCESS;
 }
 
-STATIC FLASH_TEST_PRIVATE mFlashTestPrivate = {
+STATIC FLASH_TEST_PRIVATE  mFlashTestPrivate = {
   FLASH_TEST_PRIVATE_SIGNATURE,
   {
     EFI_BLOCK_IO_PROTOCOL_REVISION,
@@ -225,9 +229,9 @@ STATIC FLASH_TEST_PRIVATE mFlashTestPrivate = {
     0,     // BlockSize;
     1,     // IoAlign;
     0,     // LastBlock;
-    0, // LowestAlignedLba;
-    0, // LogicalBlocksPerPhysicalBlock;
-    0, // OptimalTransferLengthGranularity;
+    0,     // LowestAlignedLba;
+    0,     // LogicalBlocksPerPhysicalBlock;
+    0,     // OptimalTransferLengthGranularity;
   },
   0, // StartingAddr
   0, // Size
@@ -258,33 +262,34 @@ FlashStubInitialize (
   IN  UINT32                 BlockSize,
   IN  UINT32                 IoAlign,
   OUT EFI_BLOCK_IO_PROTOCOL  **BlockIo
-) {
-  FLASH_TEST_PRIVATE *FlashTestPrivate;
+  )
+{
+  FLASH_TEST_PRIVATE  *FlashTestPrivate;
 
-  if (Buffer == NULL || BlockIo == NULL) {
+  if ((Buffer == NULL) || (BlockIo == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (BufferSize == 0 || BlockSize == 0 || BufferSize % BlockSize != 0) {
+  if ((BufferSize == 0) || (BlockSize == 0) || (BufferSize % BlockSize != 0)) {
     return EFI_BAD_BUFFER_SIZE;
   }
 
-  FlashTestPrivate = AllocatePool(sizeof(FLASH_TEST_PRIVATE));
+  FlashTestPrivate = AllocatePool (sizeof (FLASH_TEST_PRIVATE));
   if (FlashTestPrivate == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  CopyMem(FlashTestPrivate, &mFlashTestPrivate, sizeof(FLASH_TEST_PRIVATE));
+  CopyMem (FlashTestPrivate, &mFlashTestPrivate, sizeof (FLASH_TEST_PRIVATE));
 
   FlashTestPrivate->BlockIo.Media = &FlashTestPrivate->Media;
 
   FlashTestPrivate->StartingAddr = (UINTN)Buffer;
-  FlashTestPrivate->Size = BufferSize;
+  FlashTestPrivate->Size         = BufferSize;
 
-  FlashTestPrivate->Media.IoAlign = IoAlign;
+  FlashTestPrivate->Media.IoAlign   = IoAlign;
   FlashTestPrivate->Media.BlockSize = BlockSize;
   FlashTestPrivate->Media.LastBlock = (BufferSize + BlockSize - 1)
-                                          / BlockSize - 1;
+                                      / BlockSize - 1;
 
   *BlockIo = &FlashTestPrivate->BlockIo;
 
@@ -302,13 +307,14 @@ EFI_STATUS
 EFIAPI
 FlashStubDestroy (
   IN EFI_BLOCK_IO_PROTOCOL  *BlockIo
-) {
-  FLASH_TEST_PRIVATE *FlashTestPrivate;
+  )
+{
+  FLASH_TEST_PRIVATE  *FlashTestPrivate;
 
-  FlashTestPrivate = FLASH_TEST_PRIVATE_FROM_BLOCK_IO(BlockIo);
+  FlashTestPrivate = FLASH_TEST_PRIVATE_FROM_BLOCK_IO (BlockIo);
 
   if (FlashTestPrivate != NULL) {
-    FreePool(FlashTestPrivate);
+    FreePool (FlashTestPrivate);
     FlashTestPrivate = NULL;
   }
 

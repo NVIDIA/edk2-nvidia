@@ -7,6 +7,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
 #ifndef __BOOT_CHAIN_PROTOCOL_H__
 #define __BOOT_CHAIN_PROTOCOL_H__
 
@@ -63,7 +64,7 @@ typedef
 EFI_STATUS
 (EFIAPI *BOOT_CHAIN_EXECUTE_UPDATE)(
   IN  NVIDIA_BOOT_CHAIN_PROTOCOL    *This
-);
+  );
 
 // Protocol structure
 struct _NVIDIA_BOOT_CHAIN_PROTOCOL {
@@ -76,6 +77,6 @@ struct _NVIDIA_BOOT_CHAIN_PROTOCOL {
   BOOT_CHAIN_EXECUTE_UPDATE             ExecuteUpdate;
 };
 
-extern EFI_GUID gNVIDIABootChainProtocolGuid;
+extern EFI_GUID  gNVIDIABootChainProtocolGuid;
 
 #endif

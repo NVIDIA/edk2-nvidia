@@ -24,16 +24,32 @@
 
 #include "BpmpI2c.h"
 
-STATIC BPMP_I2C_DEVICE_TYPE_MAP mDeviceTypeMap[] = {
-    { "maxim,max20024", &gNVIDIAI2cMaxim20024, 1, { { 0x22, 0x48 } } },
-    { "maxim,max77620", &gNVIDIAI2cMaxim77620, 1, { { 0x22, 0x48 } } },
-    { "maxim,max77851-pmic", &gNVIDIAI2cMaxim77851, 1, { { 0x22, 0x48 } } },
-    { "nvidia,vrs-pseq", &gNVIDIAI2cVrsPseq, 0, { { 0x00, 0x00 } } },
-    { NULL, NULL, 0, { { 0x00, 0x00 } } }
+STATIC BPMP_I2C_DEVICE_TYPE_MAP  mDeviceTypeMap[] = {
+  { "maxim,max20024",      &gNVIDIAI2cMaxim20024, 1, {
+          { 0x22,                  0x48 }
+        }
+  },
+  { "maxim,max77620",      &gNVIDIAI2cMaxim77620, 1, {
+          { 0x22,                  0x48 }
+        }
+  },
+  { "maxim,max77851-pmic", &gNVIDIAI2cMaxim77851, 1, {
+          { 0x22,                  0x48 }
+        }
+  },
+  { "nvidia,vrs-pseq",     &gNVIDIAI2cVrsPseq,    0, {
+          { 0x00,                  0x00 }
+        }
+  },
+  { NULL,                  NULL,                  0, {
+          { 0x00,                  0x00 }
+        }
+  }
 };
 
-STATIC VENDOR_DEVICE_PATH mDevicePathNode = {
-  { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH), 0 } },
+STATIC VENDOR_DEVICE_PATH  mDevicePathNode = {
+  { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH), 0 }
+  },
   EFI_I2C_MASTER_PROTOCOL_GUID
 };
 
@@ -45,22 +61,21 @@ STATIC VENDOR_DEVICE_PATH mDevicePathNode = {
  */
 VOID
 BpmpIpcProcess (
- IN EFI_EVENT Event,
- IN VOID *Context
- )
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
 {
-  NVIDIA_BPMP_I2C_PRIVATE_DATA *Private = (NVIDIA_BPMP_I2C_PRIVATE_DATA *)Context;
-  EFI_I2C_OPERATION            *Operation;
-  EFI_STATUS                   Status;
-  NVIDIA_BPMP_IPC_TOKEN        *Token;
-  UINT32                       RequestSize;
-  UINT32                       ResponseSize;
-  VOID                         *ResponseData;
-  UINT8                        Crc8;
-  UINTN                        OperationIndex;
-  UINTN                        BufferLocation = 0;
-  BPMP_I2C_REQUEST_OP          *I2cRequest;
-
+  NVIDIA_BPMP_I2C_PRIVATE_DATA  *Private = (NVIDIA_BPMP_I2C_PRIVATE_DATA *)Context;
+  EFI_I2C_OPERATION             *Operation;
+  EFI_STATUS                    Status;
+  NVIDIA_BPMP_IPC_TOKEN         *Token;
+  UINT32                        RequestSize;
+  UINT32                        ResponseSize;
+  VOID                          *ResponseData;
+  UINT8                         Crc8;
+  UINTN                         OperationIndex;
+  UINTN                         BufferLocation = 0;
+  BPMP_I2C_REQUEST_OP           *I2cRequest;
 
   if (NULL == Private) {
     return;
@@ -76,70 +91,74 @@ BpmpIpcProcess (
     Private->TransferInProgress = FALSE;
     if (NULL != Token) {
       if (EFI_ERROR (Token->TransactionStatus)) {
-        DEBUG ((EFI_D_ERROR, "%a: I2C transfer failed async: %r, %08x\r\n",__FUNCTION__,Token->TransactionStatus, Private->MessageError));
+        DEBUG ((EFI_D_ERROR, "%a: I2C transfer failed async: %r, %08x\r\n", __FUNCTION__, Token->TransactionStatus, Private->MessageError));
         *Private->TransactionStatus = EFI_DEVICE_ERROR;
-        Private->RequestPacket = NULL;
+        Private->RequestPacket      = NULL;
         if (Private->TransactionEvent != NULL) {
           gBS->SignalEvent (Private->TransactionEvent);
         }
+
         return;
       }
     }
+
     BufferLocation = 0;
     for (OperationIndex = 0; OperationIndex < Private->RequestPacket->OperationCount; OperationIndex++) {
       Operation = &Private->RequestPacket->Operation[OperationIndex];
-      //Sync failures are handled after return of BpmpIpc->Communicate
+      // Sync failures are handled after return of BpmpIpc->Communicate
       if (Operation->Flags == I2C_FLAG_READ) {
-        CopyMem (Operation->Buffer, Private->Response.Data + BufferLocation, MIN(Operation->LengthInBytes, Private->Response.DataSize));
-        BufferLocation += MIN(Operation->LengthInBytes, Private->Response.DataSize);
+        CopyMem (Operation->Buffer, Private->Response.Data + BufferLocation, MIN (Operation->LengthInBytes, Private->Response.DataSize));
+        BufferLocation += MIN (Operation->LengthInBytes, Private->Response.DataSize);
       }
     }
 
     *Private->TransactionStatus = EFI_SUCCESS;
-    Private->RequestPacket = NULL;
+    Private->RequestPacket      = NULL;
     if (Private->TransactionEvent != NULL) {
       gBS->SignalEvent (Private->TransactionEvent);
     }
+
     return;
   }
 
-  BufferLocation = 0;
+  BufferLocation           = 0;
   Private->Request.Command = BPMP_I2C_CMD_TRANSFER;
-  Private->Request.BusId = Private->BusId;
-  ResponseSize = sizeof (UINT32);
-  ResponseData = &Private->Response;
+  Private->Request.BusId   = Private->BusId;
+  ResponseSize             = sizeof (UINT32);
+  ResponseData             = &Private->Response;
   for (OperationIndex = 0; OperationIndex < Private->RequestPacket->OperationCount; OperationIndex++) {
-    Operation = &Private->RequestPacket->Operation[OperationIndex];
-    I2cRequest = (BPMP_I2C_REQUEST_OP *)&Private->Request.Data [BufferLocation];
+    Operation  = &Private->RequestPacket->Operation[OperationIndex];
+    I2cRequest = (BPMP_I2C_REQUEST_OP *)&Private->Request.Data[BufferLocation];
 
     I2cRequest->SlaveAddress = Private->SlaveAddress;
-    I2cRequest->Length = Operation->LengthInBytes;
-    I2cRequest->Flags = 0;
+    I2cRequest->Length       = Operation->LengthInBytes;
+    I2cRequest->Flags        = 0;
 
     if (Operation->Flags == I2C_FLAG_READ) {
       I2cRequest->Flags |= BPMP_I2C_READ;
-      ResponseSize += Operation->LengthInBytes;
-      BufferLocation += sizeof (BPMP_I2C_REQUEST_OP);
+      ResponseSize      += Operation->LengthInBytes;
+      BufferLocation    += sizeof (BPMP_I2C_REQUEST_OP);
     } else if (Operation->Flags == I2C_FLAG_SMBUS_PEC) {
-      //Write with PEC
+      // Write with PEC
       CopyMem (I2cRequest->Data, Operation->Buffer, Operation->LengthInBytes);
 
       I2cRequest->Length++;
-      //Calculate PEC
-      Crc8 = (Private->SlaveAddress << 1);
-      Crc8 = CalculateCrc8 (&Crc8, 1, 0, TYPE_CRC8);
+      // Calculate PEC
+      Crc8                                       = (Private->SlaveAddress << 1);
+      Crc8                                       = CalculateCrc8 (&Crc8, 1, 0, TYPE_CRC8);
       I2cRequest->Data[Operation->LengthInBytes] = CalculateCrc8 (Operation->Buffer, Operation->LengthInBytes, Crc8, TYPE_CRC8);
-      BufferLocation += sizeof (BPMP_I2C_REQUEST_OP) + I2cRequest->Length;
+      BufferLocation                            += sizeof (BPMP_I2C_REQUEST_OP) + I2cRequest->Length;
     } else if (Operation->Flags == 0) {
-      //Write
+      // Write
       CopyMem (I2cRequest->Data, Operation->Buffer, Operation->LengthInBytes);
       BufferLocation += sizeof (BPMP_I2C_REQUEST_OP) + I2cRequest->Length;
     } else {
-      //Unsupported
+      // Unsupported
       *Private->TransactionStatus = EFI_UNSUPPORTED;
       if (Private->TransactionEvent != NULL) {
         gBS->SignalEvent (Private->TransactionEvent);
       }
+
       return;
     }
 
@@ -149,7 +168,7 @@ BpmpIpcProcess (
   }
 
   Private->Request.DataSize = BufferLocation;
-  //3 UINT32s in header (Command, BusId, DataSize) before buffer
+  // 3 UINT32s in header (Command, BusId, DataSize) before buffer
   RequestSize = (3 * sizeof (UINT32)) + BufferLocation;
 
   Status = Private->BpmpIpc->Communicate (
@@ -163,12 +182,13 @@ BpmpIpcProcess (
                                &Private->MessageError
                                );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: I2C transfer failed sync: %r, %08x\r\n",__FUNCTION__,Status, Private->MessageError));
+    DEBUG ((EFI_D_ERROR, "%a: I2C transfer failed sync: %r, %08x\r\n", __FUNCTION__, Status, Private->MessageError));
     *Private->TransactionStatus = EFI_DEVICE_ERROR;
-    Private->RequestPacket = NULL;
+    Private->RequestPacket      = NULL;
     if (Private->TransactionEvent != NULL) {
       gBS->SignalEvent (Private->TransactionEvent);
     }
+
     return;
   }
 
@@ -177,6 +197,7 @@ BpmpIpcProcess (
   if (Event == NULL) {
     BpmpIpcProcess (Event, Context);
   }
+
   return;
 }
 
@@ -207,8 +228,8 @@ BpmpIpcProcess (
 **/
 EFI_STATUS
 BpmpI2cSetBusFrequency (
-  IN CONST EFI_I2C_MASTER_PROTOCOL   *This,
-  IN OUT UINTN                       *BusClockHertz
+  IN CONST EFI_I2C_MASTER_PROTOCOL  *This,
+  IN OUT UINTN                      *BusClockHertz
   )
 {
   return EFI_UNSUPPORTED;
@@ -231,7 +252,7 @@ BpmpI2cSetBusFrequency (
 **/
 EFI_STATUS
 BpmpI2cReset (
-  IN CONST EFI_I2C_MASTER_PROTOCOL *This
+  IN CONST EFI_I2C_MASTER_PROTOCOL  *This
   )
 {
   return EFI_SUCCESS;
@@ -306,35 +327,37 @@ BpmpI2cReset (
 **/
 EFI_STATUS
 BpmpI2cStartRequest (
-  IN CONST EFI_I2C_MASTER_PROTOCOL *This,
-  IN UINTN                         SlaveAddress,
-  IN EFI_I2C_REQUEST_PACKET        *RequestPacket,
-  IN EFI_EVENT                     Event      OPTIONAL,
-  OUT EFI_STATUS                   *I2cStatus OPTIONAL
+  IN CONST EFI_I2C_MASTER_PROTOCOL  *This,
+  IN UINTN                          SlaveAddress,
+  IN EFI_I2C_REQUEST_PACKET         *RequestPacket,
+  IN EFI_EVENT                      Event      OPTIONAL,
+  OUT EFI_STATUS                    *I2cStatus OPTIONAL
   )
 {
-  NVIDIA_BPMP_I2C_PRIVATE_DATA *Private = NULL;
-  EFI_STATUS                   Status;
+  NVIDIA_BPMP_I2C_PRIVATE_DATA  *Private = NULL;
+  EFI_STATUS                    Status;
 
   if ((This == NULL) ||
-      (RequestPacket == NULL)) {
+      (RequestPacket == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = BPMP_I2C_PRIVATE_DATA_FROM_MASTER(This);
+  Private = BPMP_I2C_PRIVATE_DATA_FROM_MASTER (This);
 
   if (NULL != Private->RequestPacket) {
     return EFI_ALREADY_STARTED;
   }
 
-  Private->SlaveAddress  = SlaveAddress;
-  Private->RequestPacket = RequestPacket;
+  Private->SlaveAddress     = SlaveAddress;
+  Private->RequestPacket    = RequestPacket;
   Private->TransactionEvent = Event;
   if ((NULL == Event) || (NULL == I2cStatus)) {
     Private->TransactionStatus = &Status;
   } else {
     Private->TransactionStatus = I2cStatus;
   }
+
   Private->TransferInProgress = FALSE;
 
   if (NULL == Event) {
@@ -375,18 +398,20 @@ BpmpI2cStartRequest (
 **/
 EFI_STATUS
 BpmpI2cEnumerate (
-  IN CONST EFI_I2C_ENUMERATE_PROTOCOL *This,
-  IN OUT CONST EFI_I2C_DEVICE         **Device
+  IN CONST EFI_I2C_ENUMERATE_PROTOCOL  *This,
+  IN OUT CONST EFI_I2C_DEVICE          **Device
   )
 {
-  NVIDIA_BPMP_I2C_PRIVATE_DATA *Private;
-  UINTN Index;
+  NVIDIA_BPMP_I2C_PRIVATE_DATA  *Private;
+  UINTN                         Index;
 
   if ((This == NULL) ||
-      (Device == NULL)) {
+      (Device == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
-  Private = BPMP_I2C_PRIVATE_DATA_FROM_ENUMERATE(This);
+
+  Private = BPMP_I2C_PRIVATE_DATA_FROM_ENUMERATE (This);
 
   if (*Device == NULL) {
     Index = 0;
@@ -396,11 +421,14 @@ BpmpI2cEnumerate (
         break;
       }
     }
+
     if (Index == Private->NumberOfI2cDevices) {
       return EFI_NO_MAPPING;
     }
+
     Index++;
   }
+
   if (Index == Private->NumberOfI2cDevices) {
     *Device = NULL;
     return EFI_NOT_FOUND;
@@ -433,17 +461,19 @@ BpmpI2cEnumerate (
 **/
 EFI_STATUS
 BpmpI2cGetBusFrequency (
-  IN CONST EFI_I2C_ENUMERATE_PROTOCOL *This,
-  IN UINTN                            I2cBusConfiguration,
-  OUT UINTN                           *BusClockHertz
+  IN CONST EFI_I2C_ENUMERATE_PROTOCOL  *This,
+  IN UINTN                             I2cBusConfiguration,
+  OUT UINTN                            *BusClockHertz
   )
 {
   if (NULL == BusClockHertz) {
     return EFI_INVALID_PARAMETER;
   }
+
   if (0 != I2cBusConfiguration) {
     return EFI_NO_MAPPING;
   }
+
   return EFI_UNSUPPORTED;
 }
 
@@ -500,10 +530,10 @@ BpmpI2cGetBusFrequency (
 **/
 EFI_STATUS
 BpmpI2cEnableI2cBusConfiguration (
-  IN CONST EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL *This,
-  IN UINTN                                               I2cBusConfiguration,
-  IN EFI_EVENT                                           Event      OPTIONAL,
-  IN EFI_STATUS                                          *I2cStatus OPTIONAL
+  IN CONST EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL  *This,
+  IN UINTN                                                I2cBusConfiguration,
+  IN EFI_EVENT                                            Event      OPTIONAL,
+  IN EFI_STATUS                                           *I2cStatus OPTIONAL
   )
 {
   if (I2cBusConfiguration != 0) {
@@ -514,9 +544,11 @@ BpmpI2cEnableI2cBusConfiguration (
     if (NULL == I2cStatus) {
       return EFI_INVALID_PARAMETER;
     }
+
     *I2cStatus = EFI_SUCCESS;
     gBS->SignalEvent (Event);
   }
+
   return EFI_SUCCESS;
 }
 
@@ -537,12 +569,12 @@ BpmpI2cEnableI2cBusConfiguration (
 EFI_STATUS
 EFIAPI
 BpmpI2cSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL       *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS            Status;
+  EFI_STATUS  Status;
 
   //
   // Attempt to open BpmpIpc Protocol
@@ -575,7 +607,6 @@ BpmpI2cSupported (
   }
 
   return EFI_SUCCESS;
-
 }
 
 /**
@@ -588,35 +619,39 @@ BpmpI2cSupported (
  */
 EFI_STATUS
 BuildI2cDevices (
-  IN NVIDIA_BPMP_I2C_PRIVATE_DATA *Private
+  IN NVIDIA_BPMP_I2C_PRIVATE_DATA  *Private
   )
 {
   Private->NumberOfI2cDevices = 0;
-  INT32 Node = 0;
-  INT32 ParentDepth = fdt_node_depth (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset);
-  UINTN Index;
+  INT32  Node        = 0;
+  INT32  ParentDepth = fdt_node_depth (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset);
+  UINTN  Index;
+
   if (ParentDepth < 0) {
     return EFI_DEVICE_ERROR;
   }
 
   fdt_for_each_subnode (Node, Private->DeviceTreeBase, Private->DeviceTreeNodeOffset) {
-    INT32 ChildDepth = 0;
+    INT32  ChildDepth = 0;
 
     ChildDepth = fdt_node_depth (Private->DeviceTreeBase, Node);
     if ((ParentDepth + 1) != ChildDepth) {
       continue;
     }
+
     Private->NumberOfI2cDevices++;
   }
   if (0 == Private->NumberOfI2cDevices) {
-    Private->I2cDevices = NULL;
+    Private->I2cDevices        = NULL;
     Private->SlaveAddressArray = NULL;
     return EFI_SUCCESS;
   }
+
   Private->I2cDevices = (EFI_I2C_DEVICE *)AllocateZeroPool (sizeof (EFI_I2C_DEVICE) * Private->NumberOfI2cDevices);
   if (NULL == Private->I2cDevices) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   Private->SlaveAddressArray = (UINT32 *)AllocateZeroPool (sizeof (UINT32) * Private->NumberOfI2cDevices * (1 + BPMP_I2C_ADDL_SLAVES));
   if (NULL == Private->SlaveAddressArray) {
     FreePool (Private->I2cDevices);
@@ -626,12 +661,12 @@ BuildI2cDevices (
 
   Index = 0;
   fdt_for_each_subnode (Node, Private->DeviceTreeBase, Private->DeviceTreeNodeOffset) {
-    BPMP_I2C_DEVICE_TYPE_MAP *MapEntry = mDeviceTypeMap;
-    CONST UINT32             *RegEntry = NULL;
-    INT32                    RegLength;
-    INT32                    ChildDepth = 0;
-    UINTN                    AdditionalSlaves = 0;
-    UINTN                    SlaveIndex;
+    BPMP_I2C_DEVICE_TYPE_MAP  *MapEntry = mDeviceTypeMap;
+    CONST UINT32              *RegEntry = NULL;
+    INT32                     RegLength;
+    INT32                     ChildDepth       = 0;
+    UINTN                     AdditionalSlaves = 0;
+    UINTN                     SlaveIndex;
 
     ChildDepth = fdt_node_depth (Private->DeviceTreeBase, Node);
     if ((ParentDepth + 1) != ChildDepth) {
@@ -643,34 +678,37 @@ BuildI2cDevices (
       if (0 == fdt_node_check_compatible (Private->DeviceTreeBase, Node, MapEntry->Compatibility)) {
         DEBUG ((DEBUG_ERROR, "%a: %a detected\r\n", __FUNCTION__, MapEntry->Compatibility));
         Private->I2cDevices[Index].DeviceGuid = MapEntry->DeviceType;
-        AdditionalSlaves = MapEntry->AdditionalSlaves;
+        AdditionalSlaves                      = MapEntry->AdditionalSlaves;
         break;
       }
+
       MapEntry++;
     }
-    Private->I2cDevices[Index].DeviceIndex = Index;
-    Private->I2cDevices[Index].HardwareRevision = 1;
+
+    Private->I2cDevices[Index].DeviceIndex         = Index;
+    Private->I2cDevices[Index].HardwareRevision    = 1;
     Private->I2cDevices[Index].I2cBusConfiguration = 0;
-    RegEntry = (CONST UINT32*)fdt_getprop (Private->DeviceTreeBase, Node, "reg", &RegLength);
+    RegEntry                                       = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Node, "reg", &RegLength);
     if ((RegEntry == NULL) || (RegLength != sizeof (UINT32))) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to locate reg property\r\n",__FUNCTION__));
+      DEBUG ((EFI_D_ERROR, "%a: Failed to locate reg property\r\n", __FUNCTION__));
       Private->I2cDevices[Index].SlaveAddressCount = 0;
-      Private->I2cDevices[Index].SlaveAddressArray  = NULL;
+      Private->I2cDevices[Index].SlaveAddressArray = NULL;
       break;
     } else {
-      Private->I2cDevices[Index].SlaveAddressCount = 1;
-      Private->I2cDevices[Index].SlaveAddressArray = &Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)];
+      Private->I2cDevices[Index].SlaveAddressCount                   = 1;
+      Private->I2cDevices[Index].SlaveAddressArray                   = &Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)];
       Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)] = SwapBytes32 (*RegEntry);
       DEBUG ((DEBUG_ERROR, "%a: Address %02x\r\n", __FUNCTION__, Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)]));
     }
 
     for (SlaveIndex = 0; SlaveIndex < AdditionalSlaves; SlaveIndex++) {
-      UINTN NewSlave = Private->I2cDevices[Index].SlaveAddressArray[0];
-      NewSlave &= MapEntry->SlaveMasks[SlaveIndex][BPMP_I2C_SLAVE_AND];
-      NewSlave |= MapEntry->SlaveMasks[SlaveIndex][BPMP_I2C_SLAVE_OR];
+      UINTN  NewSlave = Private->I2cDevices[Index].SlaveAddressArray[0];
+      NewSlave                                                                       &= MapEntry->SlaveMasks[SlaveIndex][BPMP_I2C_SLAVE_AND];
+      NewSlave                                                                       |= MapEntry->SlaveMasks[SlaveIndex][BPMP_I2C_SLAVE_OR];
       Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES) + SlaveIndex + 1] = NewSlave;
       Private->I2cDevices[Index].SlaveAddressCount++;
     }
+
     Index++;
   }
   if (Index == Private->NumberOfI2cDevices) {
@@ -701,9 +739,9 @@ BuildI2cDevices (
 EFI_STATUS
 EFIAPI
 BpmpI2cStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL       *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
   EFI_STATUS                        Status;
@@ -712,7 +750,7 @@ BpmpI2cStart (
   VOID                              *Interface;
   EFI_DEVICE_PATH_PROTOCOL          *ParentDevicePath = NULL;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode   = NULL;
-  CONST UINT32                      *Adapter = NULL;
+  CONST UINT32                      *Adapter          = NULL;
   INT32                             AdapterLength;
 
   //
@@ -721,13 +759,13 @@ BpmpI2cStart (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gNVIDIABpmpIpcProtocolGuid,
-                  (VOID **) &BpmpIpc,
+                  (VOID **)&BpmpIpc,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get BpmpIpc protocol %r\r\n",__FUNCTION__,Status));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to get BpmpIpc protocol %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -737,13 +775,13 @@ BpmpI2cStart (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiDevicePathProtocolGuid,
-                  (VOID **) &ParentDevicePath,
+                  (VOID **)&ParentDevicePath,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get device path protocol %r\r\n",__FUNCTION__,Status));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to get device path protocol %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -753,26 +791,26 @@ BpmpI2cStart (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gNVIDIADeviceTreeNodeProtocolGuid,
-                  (VOID **) &DeviceTreeNode,
+                  (VOID **)&DeviceTreeNode,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get device tree node protocol %r\r\n",__FUNCTION__,Status));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to get device tree node protocol %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
   Private = (NVIDIA_BPMP_I2C_PRIVATE_DATA *)AllocateZeroPool (sizeof (NVIDIA_BPMP_I2C_PRIVATE_DATA));
   if (NULL == Private) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate private data\r\n",__FUNCTION__));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate private data\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
 
   Private->ChildDevicePath = AppendDevicePathNode (ParentDevicePath, (EFI_DEVICE_PATH_PROTOCOL *)&mDevicePathNode);
   if (NULL == Private->ChildDevicePath) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate device path\r\n",__FUNCTION__));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate device path\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
@@ -795,37 +833,38 @@ BpmpI2cStart (
   Private->DriverBindingHandle                            = This->DriverBindingHandle;
   Private->BpmpIpc                                        = BpmpIpc;
   Private->DeviceTreeBase                                 = DeviceTreeNode->DeviceTreeBase;
-  Private->DeviceTreeNodeOffset = fdt_node_offset_by_compatible (
-                                    DeviceTreeNode->DeviceTreeBase,
-                                    0,
-                                    "nvidia,tegra186-bpmp-i2c"
-                                    );
+  Private->DeviceTreeNodeOffset                           = fdt_node_offset_by_compatible (
+                                                              DeviceTreeNode->DeviceTreeBase,
+                                                              0,
+                                                              "nvidia,tegra186-bpmp-i2c"
+                                                              );
   if (0 == Private->DeviceTreeNodeOffset) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to locate bpmp-i2c device tree node\r\n",__FUNCTION__));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to locate bpmp-i2c device tree node\r\n", __FUNCTION__));
     Status = EFI_NOT_FOUND;
     goto ErrorExit;
   }
 
-  Adapter = (CONST UINT32*)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "nvidia,bpmp-bus-id", &AdapterLength);
+  Adapter = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "nvidia,bpmp-bus-id", &AdapterLength);
   if ((Adapter == NULL) || (AdapterLength != sizeof (UINT32))) {
-    Adapter = (CONST UINT32*)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "adapter", &AdapterLength);
+    Adapter = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "adapter", &AdapterLength);
     if ((Adapter == NULL) || (AdapterLength != sizeof (UINT32))) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to locate adapter property\r\n",__FUNCTION__));
+      DEBUG ((EFI_D_ERROR, "%a: Failed to locate adapter property\r\n", __FUNCTION__));
       Status = EFI_NOT_FOUND;
       goto ErrorExit;
     }
   }
+
   Private->BusId = SwapBytes32 (*Adapter);
 
   Status = BuildI2cDevices (Private);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to enumerate i2c devices: %r\r\n",__FUNCTION__,Status));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to enumerate i2c devices: %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
-  Private->SlaveAddress = 0;
-  Private->RequestPacket = NULL;
-  Private->TransactionEvent = NULL;
+  Private->SlaveAddress      = 0;
+  Private->RequestPacket     = NULL;
+  Private->TransactionEvent  = NULL;
   Private->TransactionStatus = EFI_SUCCESS;
 
   Status = gBS->CreateEvent (
@@ -833,9 +872,10 @@ BpmpI2cStart (
                   TPL_NOTIFY,
                   BpmpIpcProcess,
                   (VOID *)Private,
-                  &Private->BpmpIpcToken.Event);
+                  &Private->BpmpIpcToken.Event
+                  );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create BpmpIpcEvent: %R\r\n",__FUNCTION__,Status));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to create BpmpIpcEvent: %R\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -854,7 +894,7 @@ BpmpI2cStart (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to install i2c protocols:%r\r\n",__FUNCTION__,Status));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to install i2c protocols:%r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -867,7 +907,7 @@ BpmpI2cStart (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to install callerid protocol:%r\r\n",__FUNCTION__,Status));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to install callerid protocol:%r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -877,13 +917,13 @@ BpmpI2cStart (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiCallerIdGuid,
-                  (VOID **) &Interface,
+                  (VOID **)&Interface,
                   This->DriverBindingHandle,
                   Private->Child,
                   EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed open by child %r\r\n",__FUNCTION__,Status));
+    DEBUG ((EFI_D_ERROR, "%a: Failed open by child %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -894,12 +934,15 @@ ErrorExit:
         if (NULL != Private->ChildDevicePath) {
           FreePool (Private->ChildDevicePath);
         }
+
         if (NULL != Private->I2cDevices) {
           FreePool (Private->I2cDevices);
         }
+
         if (NULL != Private->SlaveAddressArray) {
           FreePool (Private->SlaveAddressArray);
         }
+
         gBS->UninstallMultipleProtocolInterfaces (
                Private->Child,
                &gEfiI2cMasterProtocolGuid,
@@ -913,8 +956,10 @@ ErrorExit:
                NULL
                );
       }
+
       FreePool (Private);
     }
+
     gBS->UninstallMultipleProtocolInterfaces (
            Controller,
            &gEfiCallerIdGuid,
@@ -941,28 +986,28 @@ ErrorExit:
 EFI_STATUS
 EFIAPI
 BpmpI2cStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
-  IN UINTN                          NumberOfChildren,
-  IN EFI_HANDLE                     *ChildHandleBuffer
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN UINTN                        NumberOfChildren,
+  IN EFI_HANDLE                   *ChildHandleBuffer
   )
 {
-  EFI_STATUS                        Status;
+  EFI_STATUS  Status;
 
   if (NumberOfChildren == 0) {
-    //Close controller
+    // Close controller
     Status = gBS->UninstallMultipleProtocolInterfaces (
-                      Controller,
-                      &gEfiCallerIdGuid,
-                      NULL,
-                      NULL
-                      );
-   return Status;
+                    Controller,
+                    &gEfiCallerIdGuid,
+                    NULL,
+                    NULL
+                    );
+    return Status;
   } else {
-    UINTN Index;
+    UINTN  Index;
     for (Index = 0; Index < NumberOfChildren; Index++) {
-      EFI_I2C_MASTER_PROTOCOL           *I2cMaster = NULL;
-      NVIDIA_BPMP_I2C_PRIVATE_DATA      *Private = NULL;
+      EFI_I2C_MASTER_PROTOCOL       *I2cMaster = NULL;
+      NVIDIA_BPMP_I2C_PRIVATE_DATA  *Private   = NULL;
 
       //
       // Attempt to open I2cMaster Protocol
@@ -970,7 +1015,7 @@ BpmpI2cStop (
       Status = gBS->OpenProtocol (
                       ChildHandleBuffer[Index],
                       &gEfiI2cMasterProtocolGuid,
-                      (VOID **) &I2cMaster,
+                      (VOID **)&I2cMaster,
                       This->DriverBindingHandle,
                       Controller,
                       EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -979,10 +1024,11 @@ BpmpI2cStop (
         return EFI_DEVICE_ERROR;
       }
 
-      Private = BPMP_I2C_PRIVATE_DATA_FROM_MASTER(This);
+      Private = BPMP_I2C_PRIVATE_DATA_FROM_MASTER (This);
       if (Private == NULL) {
         return EFI_DEVICE_ERROR;
       }
+
       Status = gBS->CloseProtocol (
                       Controller,
                       &gEfiCallerIdGuid,
@@ -1008,16 +1054,18 @@ BpmpI2cStop (
       if (EFI_ERROR (Status)) {
         return Status;
       }
+
       FreePool (Private);
     }
   }
+
   return EFI_SUCCESS;
 }
 
 ///
 /// EFI_DRIVER_BINDING_PROTOCOL instance
 ///
-EFI_DRIVER_BINDING_PROTOCOL mDriverBindingProtocol = {
+EFI_DRIVER_BINDING_PROTOCOL  mDriverBindingProtocol = {
   BpmpI2cSupported,
   BpmpI2cStart,
   BpmpI2cStop,
@@ -1039,8 +1087,8 @@ EFI_DRIVER_BINDING_PROTOCOL mDriverBindingProtocol = {
 **/
 EFI_STATUS
 BpmpI2cInitialize (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   EFI_STATUS  Status;
@@ -1052,26 +1100,28 @@ BpmpI2cInitialize (
              ImageHandle,
              SystemTable,
              &mDriverBindingProtocol,
-             ImageHandle);
+             ImageHandle
+             );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to install driver binding protocol: %r\r\n",__FUNCTION__,Status));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to install driver binding protocol: %r\r\n", __FUNCTION__, Status));
     return Status;
   }
 
   //
-  //Look for existing controllers as I2C subsystem is needed for
-  //variable support and thus prior to BDS.
+  // Look for existing controllers as I2C subsystem is needed for
+  // variable support and thus prior to BDS.
   //
   HandleStatus = gBS->LocateHandleBuffer (
                         ByProtocol,
                         &gNVIDIABpmpIpcProtocolGuid,
                         NULL,
                         &NumberOfHandles,
-                        &HandleBuffer);
+                        &HandleBuffer
+                        );
   if (!EFI_ERROR (HandleStatus)) {
-    EFI_HANDLE DriverHandles[2];
-    UINTN Index;
+    EFI_HANDLE  DriverHandles[2];
+    UINTN       Index;
 
     DriverHandles[0] = ImageHandle;
     DriverHandles[1] = NULL;
@@ -1083,10 +1133,9 @@ BpmpI2cInitialize (
              TRUE
              );
     }
-	FreePool (HandleBuffer);
+
+    FreePool (HandleBuffer);
   }
 
   return Status;
 }
-
-

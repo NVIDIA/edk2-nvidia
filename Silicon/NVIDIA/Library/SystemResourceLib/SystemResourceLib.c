@@ -27,32 +27,32 @@
 **/
 VOID
 RegisterDeviceTree (
-  IN UINTN BlDtbLoadAddress
+  IN UINTN  BlDtbLoadAddress
   )
 {
-  EFI_PHYSICAL_ADDRESS *DeviceTreeHobData = NULL;
-  UINT64                        DtbNext;
-  EFI_STATUS                    Status;
-  CHAR8                         SWModule[] = "uefi";
-  INT32                         NodeOffset;
+  EFI_PHYSICAL_ADDRESS  *DeviceTreeHobData = NULL;
+  UINT64                DtbNext;
+  EFI_STATUS            Status;
+  CHAR8                 SWModule[] = "uefi";
+  INT32                 NodeOffset;
 
-  //Register Device Tree
+  // Register Device Tree
   if (0 != BlDtbLoadAddress) {
     if (fdt_check_header ((VOID *)BlDtbLoadAddress) == 0) {
-      UINTN DtbSize = fdt_totalsize ((VOID *)BlDtbLoadAddress);
+      UINTN  DtbSize = fdt_totalsize ((VOID *)BlDtbLoadAddress);
 
-      EFI_PHYSICAL_ADDRESS DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize * 2));
-      if (fdt_open_into ( (VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 2 * DtbSize) != 0) {
+      EFI_PHYSICAL_ADDRESS  DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize * 2));
+      if (fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 2 * DtbSize) != 0) {
         DEBUG ((EFI_D_ERROR, "%a: Failed to increase device tree size\r\n", __FUNCTION__));
         return;
       }
 
-      DtbNext = ALIGN_VALUE(BlDtbLoadAddress + DtbSize, SIZE_4KB);
-      if (fdt_check_header((VOID *)DtbNext) == 0) {
-        Status = ApplyTegraDeviceTreeOverlay((VOID *)DtbCopy, (VOID *)DtbNext, SWModule);
+      DtbNext = ALIGN_VALUE (BlDtbLoadAddress + DtbSize, SIZE_4KB);
+      if (fdt_check_header ((VOID *)DtbNext) == 0) {
+        Status = ApplyTegraDeviceTreeOverlay ((VOID *)DtbCopy, (VOID *)DtbNext, SWModule);
         if (EFI_ERROR (Status)) {
           DEBUG ((EFI_D_ERROR, "DTB Overlay failed. Using base DTB.\n"));
-          fdt_open_into ( (VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 2 * DtbSize);
+          fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 2 * DtbSize);
         }
       }
 
@@ -61,7 +61,7 @@ RegisterDeviceTree (
         fdt_del_node ((VOID *)DtbCopy, NodeOffset);
       }
 
-      DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob ( &gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
+      DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob (&gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));
       if (NULL != DeviceTreeHobData) {
         *DeviceTreeHobData = DtbCopy;
       } else {
@@ -69,6 +69,7 @@ RegisterDeviceTree (
       }
     }
   }
+
   return;
 }
 
@@ -87,28 +88,28 @@ RegisterDeviceTree (
 STATIC
 UINTN
 InstallMmioRegion (
-  IN CONST UINTN MemoryBaseAddress,
-  IN UINTN MemoryLength
+  IN CONST UINTN  MemoryBaseAddress,
+  IN UINTN        MemoryLength
   )
 {
   EFI_RESOURCE_ATTRIBUTE_TYPE  ResourceAttribute = (EFI_RESOURCE_ATTRIBUTE_PRESENT |
                                                     EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
                                                     EFI_RESOURCE_ATTRIBUTE_TESTED
-                                                   );
+                                                    );
 
   if (MemoryBaseAddress == 0) {
     return 0;
   }
+
   BuildResourceDescriptorHob (
     EFI_RESOURCE_FIRMWARE_DEVICE,
     ResourceAttribute,
     MemoryBaseAddress,
     MemoryLength
-  );
+    );
 
   return 1;
 }
-
 
 /**
    Align carveout regions to 64KiB
@@ -122,16 +123,16 @@ InstallMmioRegion (
 STATIC
 VOID
 AlignCarveoutRegions64KiB (
-  NVDA_MEMORY_REGION *CarveoutRegions,
-  UINTN CarveoutRegionsCount
+  NVDA_MEMORY_REGION  *CarveoutRegions,
+  UINTN               CarveoutRegionsCount
   )
 {
-  UINTN Index;
+  UINTN  Index;
 
   for (Index = 0; Index < CarveoutRegionsCount; Index++) {
-    UINTN AddressShift = (CarveoutRegions[Index].MemoryBaseAddress & (SIZE_64KB-1));
+    UINTN  AddressShift = (CarveoutRegions[Index].MemoryBaseAddress & (SIZE_64KB-1));
     CarveoutRegions[Index].MemoryBaseAddress -= AddressShift;
-    CarveoutRegions[Index].MemoryLength = ALIGN_VALUE (CarveoutRegions[Index].MemoryLength + AddressShift, SIZE_64KB);
+    CarveoutRegions[Index].MemoryLength       = ALIGN_VALUE (CarveoutRegions[Index].MemoryLength + AddressShift, SIZE_64KB);
   }
 
   return;
@@ -140,24 +141,31 @@ AlignCarveoutRegions64KiB (
 STATIC
 EFI_STATUS
 InstallMmioRegions (
-  IN UINTN  ChipID,
-  OUT UINTN *MmioRegionsCount
-)
+  IN UINTN   ChipID,
+  OUT UINTN  *MmioRegionsCount
+  )
 {
-  VOID            *Hob;
-  TEGRA_MMIO_INFO *MmioInfo;
+  VOID             *Hob;
+  TEGRA_MMIO_INFO  *MmioInfo;
 
-  *MmioRegionsCount += InstallMmioRegion(
-                         (TegraGetBLInfoLocationAddress(ChipID) & ~EFI_PAGE_MASK), SIZE_4KB);
-  *MmioRegionsCount += InstallMmioRegion(
-                         FixedPcdGet64(PcdMiscRegBaseAddress), SIZE_4KB);
-  *MmioRegionsCount += InstallMmioRegion(
-                         TegraGetGicDistributorBaseAddress(ChipID), SIZE_64KB);
-  *MmioRegionsCount += InstallMmioRegion(GetTegraUARTBaseAddress (), SIZE_4KB);
+  *MmioRegionsCount += InstallMmioRegion (
+                         (TegraGetBLInfoLocationAddress (ChipID) & ~EFI_PAGE_MASK),
+                         SIZE_4KB
+                         );
+  *MmioRegionsCount += InstallMmioRegion (
+                         FixedPcdGet64 (PcdMiscRegBaseAddress),
+                         SIZE_4KB
+                         );
+  *MmioRegionsCount += InstallMmioRegion (
+                         TegraGetGicDistributorBaseAddress (ChipID),
+                         SIZE_64KB
+                         );
+  *MmioRegionsCount += InstallMmioRegion (GetTegraUARTBaseAddress (), SIZE_4KB);
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   if ((Hob != NULL) &&
-      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
     MmioInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->MmioInfo;
   } else {
     return EFI_DEVICE_ERROR;
@@ -165,9 +173,12 @@ InstallMmioRegions (
 
   if (MmioInfo != NULL) {
     while (MmioInfo->Base != 0 &&
-           MmioInfo->Size != 0) {
-      *MmioRegionsCount += InstallMmioRegion(
-                             MmioInfo->Base, MmioInfo->Size);
+           MmioInfo->Size != 0)
+    {
+      *MmioRegionsCount += InstallMmioRegion (
+                             MmioInfo->Base,
+                             MmioInfo->Size
+                             );
       MmioInfo++;
     }
   }
@@ -189,7 +200,7 @@ InstallMmioRegions (
 **/
 EFI_STATUS
 InstallSystemResources (
-  OUT UINTN *MemoryRegionsCount
+  OUT UINTN  *MemoryRegionsCount
   )
 {
   EFI_STATUS           Status;
@@ -204,9 +215,9 @@ InstallSystemResources (
 
   *MemoryRegionsCount = 0;
 
-  ChipID = TegraGetChipID();
+  ChipID = TegraGetChipID ();
 
-  //Install MMIO regions
+  // Install MMIO regions
   Status = InstallMmioRegions (ChipID, MemoryRegionsCount);
   ASSERT_EFI_ERROR (Status);
   if (EFI_ERROR (Status)) {
@@ -215,7 +226,8 @@ InstallSystemResources (
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   if ((Hob != NULL) &&
-      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))) {
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
     PlatformInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ResourceInfo;
   } else {
     return EFI_DEVICE_ERROR;
@@ -226,28 +238,36 @@ InstallSystemResources (
   if (PlatformInfo->InputDramRegions == NULL) {
     return EFI_DEVICE_ERROR;
   }
-  CopyMem (PlatformInfo->InputDramRegions, PlatformInfo->DramRegions,
-           sizeof (NVDA_MEMORY_REGION) * PlatformInfo->DramRegionsCount);
+
+  CopyMem (
+    PlatformInfo->InputDramRegions,
+    PlatformInfo->DramRegions,
+    sizeof (NVDA_MEMORY_REGION) * PlatformInfo->DramRegionsCount
+    );
 
   PlatformInfo->InputCarveoutRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * PlatformInfo->CarveoutRegionsCount);
   ASSERT (PlatformInfo->InputCarveoutRegions != NULL);
   if (PlatformInfo->InputCarveoutRegions == NULL) {
     return EFI_DEVICE_ERROR;
   }
-  CopyMem (PlatformInfo->InputCarveoutRegions, PlatformInfo->CarveoutRegions,
-           sizeof (NVDA_MEMORY_REGION) * PlatformInfo->CarveoutRegionsCount);
 
-  AlignCarveoutRegions64KiB(PlatformInfo->CarveoutRegions, PlatformInfo->CarveoutRegionsCount);
+  CopyMem (
+    PlatformInfo->InputCarveoutRegions,
+    PlatformInfo->CarveoutRegions,
+    sizeof (NVDA_MEMORY_REGION) * PlatformInfo->CarveoutRegionsCount
+    );
+
+  AlignCarveoutRegions64KiB (PlatformInfo->CarveoutRegions, PlatformInfo->CarveoutRegionsCount);
 
   FinalDramRegionsCount = 0;
-  Status = InstallDramWithCarveouts (
-             PlatformInfo->DramRegions,
-             PlatformInfo->DramRegionsCount,
-             PlatformInfo->UefiDramRegionsCount,
-             PlatformInfo->CarveoutRegions,
-             PlatformInfo->CarveoutRegionsCount,
-             &FinalDramRegionsCount
-           );
+  Status                = InstallDramWithCarveouts (
+                            PlatformInfo->DramRegions,
+                            PlatformInfo->DramRegionsCount,
+                            PlatformInfo->UefiDramRegionsCount,
+                            PlatformInfo->CarveoutRegions,
+                            PlatformInfo->CarveoutRegionsCount,
+                            &FinalDramRegionsCount
+                            );
 
   if (!EFI_ERROR (Status)) {
     *MemoryRegionsCount += FinalDramRegionsCount;

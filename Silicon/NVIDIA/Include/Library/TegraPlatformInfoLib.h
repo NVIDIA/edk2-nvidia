@@ -9,19 +9,19 @@
 #ifndef __TEGRA_PLATFORM_INFO_LIB_H__
 #define __TEGRA_PLATFORM_INFO_LIB_H__
 
-#define UEFI_DECLARE_ALIGNED(var, size) var __attribute__ ((aligned (size)))
+#define UEFI_DECLARE_ALIGNED(var, size)  var __attribute__ ((aligned (size)))
 
-#define T194_CHIP_ID      0x19
-#define T234_CHIP_ID      0x23
-#define T234_MAJOR_REV    0x4
+#define T194_CHIP_ID    0x19
+#define T234_CHIP_ID    0x23
+#define T234_MAJOR_REV  0x4
 
-#define T194_SKU          1
-#define T234_SKU          2
-#define T234SLT_SKU       3
+#define T194_SKU     1
+#define T234_SKU     2
+#define T234SLT_SKU  3
 
-#define SYSIMG_EMMC_MAGIC_OFFSET 0x4
-#define SYSIMG_EMMC_MAGIC 0xEAAAAAAC
-#define SYSIMG_DEFAULT_MAGIC 0xE0000000
+#define SYSIMG_EMMC_MAGIC_OFFSET  0x4
+#define SYSIMG_EMMC_MAGIC         0xEAAAAAAC
+#define SYSIMG_DEFAULT_MAGIC      0xE0000000
 
 #ifndef __ASSEMBLY__
 
@@ -46,7 +46,10 @@ typedef enum {
   @retval MAX_UINT32  ERROR
   @retval <MAX_UINT32 Tegra Chip ID
 **/
-extern UINT32 TegraGetChipID (VOID);
+extern UINT32
+TegraGetChipID (
+  VOID
+  );
 
 /**
   Returns system memory base address for a given chip.
@@ -56,7 +59,10 @@ extern UINT32 TegraGetChipID (VOID);
   @retval              System memory base address.
 
 **/
-extern UINT64 TegraGetSystemMemoryBaseAddress (UINT32 ChipID);
+extern UINT64
+TegraGetSystemMemoryBaseAddress (
+  UINT32  ChipID
+  );
 
 /**
   Returns bootloader info location address for a given chip.
@@ -66,7 +72,10 @@ extern UINT64 TegraGetSystemMemoryBaseAddress (UINT32 ChipID);
   @retval              Address of bootloader info location.
 
 **/
-extern UINT64 TegraGetBLInfoLocationAddress (UINT32 ChipID);
+extern UINT64
+TegraGetBLInfoLocationAddress (
+  UINT32  ChipID
+  );
 
 /**
   Returns bootloader carveout info location address for a given chip.
@@ -76,7 +85,10 @@ extern UINT64 TegraGetBLInfoLocationAddress (UINT32 ChipID);
   @retval              Address of bootloader carveout info location.
 
 **/
-extern UINT64 TegraGetBLCarveoutInfoLocationAddress (UINT32 ChipID);
+extern UINT64
+TegraGetBLCarveoutInfoLocationAddress (
+  UINT32  ChipID
+  );
 
 /**
   Returns gic distributor base address for a given chip.
@@ -86,7 +98,10 @@ extern UINT64 TegraGetBLCarveoutInfoLocationAddress (UINT32 ChipID);
   @retval              Gic distributor base address.
 
 **/
-extern UINT64 TegraGetGicDistributorBaseAddress (UINT32 ChipID);
+extern UINT64
+TegraGetGicDistributorBaseAddress (
+  UINT32  ChipID
+  );
 
 /**
   Returns gic redistributor base address for a given chip.
@@ -96,7 +111,10 @@ extern UINT64 TegraGetGicDistributorBaseAddress (UINT32 ChipID);
   @retval              Gic redistributor base address.
 
 **/
-extern UINT64 TegraGetGicRedistributorBaseAddress (UINT32 ChipID);
+extern UINT64
+TegraGetGicRedistributorBaseAddress (
+  UINT32  ChipID
+  );
 
 /**
   Returns gic interrupt interface base address for a given chip.
@@ -106,7 +124,10 @@ extern UINT64 TegraGetGicRedistributorBaseAddress (UINT32 ChipID);
   @retval              Gic interrupt interface base address.
 
 **/
-extern UINT64 TegraGetGicInterruptInterfaceBaseAddress (UINT32 ChipID);
+extern UINT64
+TegraGetGicInterruptInterfaceBaseAddress (
+  UINT32  ChipID
+  );
 
 /**
   Returns tegra platform type.

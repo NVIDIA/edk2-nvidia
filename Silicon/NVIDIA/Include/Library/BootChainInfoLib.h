@@ -14,11 +14,11 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
-#define MAX_PARTITION_NAME_LEN      36
-#define BOOT_CHAIN_A                0
-#define BOOT_CHAIN_B                1
-#define BOOT_CHAIN_COUNT            2
-#define OTHER_BOOT_CHAIN(BootChain) ((BootChain) ^ 1)
+#define MAX_PARTITION_NAME_LEN  36
+#define BOOT_CHAIN_A            0
+#define BOOT_CHAIN_B            1
+#define BOOT_CHAIN_COUNT        2
+#define OTHER_BOOT_CHAIN(BootChain)  ((BootChain) ^ 1)
 
 /**
   Retrieve Active Boot Chain Partition Name
@@ -35,9 +35,9 @@
 EFI_STATUS
 EFIAPI
 GetActivePartitionName (
-  IN  CONST CHAR16 *GeneralPartitionName,
-  OUT CHAR16       *ActivePartitionName
-);
+  IN  CONST CHAR16  *GeneralPartitionName,
+  OUT CHAR16        *ActivePartitionName
+  );
 
 /**
   Get boot chain partition name from base partition name and boot chain index.
@@ -55,9 +55,9 @@ GetActivePartitionName (
 EFI_STATUS
 EFIAPI
 GetBootChainPartitionName (
-  IN  CONST CHAR16      *BasePartitionName,
-  IN  UINTN             BootChain,
-  OUT CHAR16            *BootChainPartitionName
+  IN  CONST CHAR16  *BasePartitionName,
+  IN  UINTN         BootChain,
+  OUT CHAR16        *BootChainPartitionName
   );
 
 /**
@@ -75,9 +75,9 @@ GetBootChainPartitionName (
 EFI_STATUS
 EFIAPI
 GetPartitionBaseNameAndBootChain (
-  IN  CONST CHAR16      *PartitionName,
-  OUT CHAR16            *BaseName,
-  OUT UINTN             *BootChain
+  IN  CONST CHAR16  *PartitionName,
+  OUT CHAR16        *BaseName,
+  OUT UINTN         *BootChain
   );
 
 /**
@@ -96,9 +96,9 @@ GetPartitionBaseNameAndBootChain (
 EFI_STATUS
 EFIAPI
 GetPartitionBaseNameAndBootChainAny (
-  IN  CONST CHAR16      *PartitionName,
-  OUT CHAR16            *BaseName,
-  OUT UINTN             *BootChain
+  IN  CONST CHAR16  *PartitionName,
+  OUT CHAR16        *BaseName,
+  OUT UINTN         *BootChain
   );
 
 #endif

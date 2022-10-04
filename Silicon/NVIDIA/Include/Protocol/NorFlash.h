@@ -10,9 +10,7 @@
 #ifndef __NVIDIA_NOR_FLASH_PROTOCOL_H__
 #define __NVIDIA_NOR_FLASH_PROTOCOL_H__
 
-
 #include <Pi/PiFirmwareVolume.h>
-
 
 #define NVIDIA_NOR_FLASH_PROTOCOL_GUID \
   { \
@@ -20,16 +18,14 @@
   }
 
 typedef struct {
-  UINT64                           MemoryDensity;
-  UINT32                           BlockSize;
+  UINT64    MemoryDensity;
+  UINT32    BlockSize;
 } NOR_FLASH_ATTRIBUTES;
-
 
 //
 // Define for forward reference.
 //
 typedef struct _NVIDIA_NOR_FLASH_PROTOCOL NVIDIA_NOR_FLASH_PROTOCOL;
-
 
 /**
   Get NOR Flash Attributes.
@@ -43,11 +39,10 @@ typedef struct _NVIDIA_NOR_FLASH_PROTOCOL NVIDIA_NOR_FLASH_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI * NOR_FLASH_GET_ATTRIBUTES)(
+(EFIAPI *NOR_FLASH_GET_ATTRIBUTES)(
   IN  NVIDIA_NOR_FLASH_PROTOCOL *This,
   OUT NOR_FLASH_ATTRIBUTES      *Attributes
-);
-
+  );
 
 /**
   Read data from NOR Flash.
@@ -63,13 +58,12 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * NOR_FLASH_READ)(
+(EFIAPI *NOR_FLASH_READ)(
   IN NVIDIA_NOR_FLASH_PROTOCOL *This,
   IN UINT32                    Offset,
   IN UINT32                    Size,
   IN VOID                      *Buffer
-);
-
+  );
 
 /**
   Write data to NOR Flash.
@@ -85,13 +79,12 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * NOR_FLASH_WRITE)(
+(EFIAPI *NOR_FLASH_WRITE)(
   IN NVIDIA_NOR_FLASH_PROTOCOL *This,
   IN UINT32                    Offset,
   IN UINT32                    Size,
   IN VOID                      *Buffer
-);
-
+  );
 
 /**
   Erase data from NOR Flash.
@@ -106,21 +99,21 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * NOR_FLASH_ERASE)(
+(EFIAPI *NOR_FLASH_ERASE)(
   IN NVIDIA_NOR_FLASH_PROTOCOL *This,
   IN UINT32                    Lba,
   IN UINT32                    NumLba
-);
+  );
 
 /// NVIDIA_NOR_FLASH_PROTOCOL protocol structure.
 struct _NVIDIA_NOR_FLASH_PROTOCOL {
-  EFI_FVB_ATTRIBUTES_2     FvbAttributes;
-  NOR_FLASH_GET_ATTRIBUTES GetAttributes;
-  NOR_FLASH_READ           Read;
-  NOR_FLASH_WRITE          Write;
-  NOR_FLASH_ERASE          Erase;
+  EFI_FVB_ATTRIBUTES_2        FvbAttributes;
+  NOR_FLASH_GET_ATTRIBUTES    GetAttributes;
+  NOR_FLASH_READ              Read;
+  NOR_FLASH_WRITE             Write;
+  NOR_FLASH_ERASE             Erase;
 };
 
-extern EFI_GUID gNVIDIANorFlashProtocolGuid;
+extern EFI_GUID  gNVIDIANorFlashProtocolGuid;
 
 #endif

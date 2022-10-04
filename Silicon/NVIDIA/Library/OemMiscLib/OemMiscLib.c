@@ -33,14 +33,14 @@
 #define MAX_CNTR     (~0U)
 #define REF_CLK_MHZ  (408)
 
-STATIC TEGRA_EEPROM_BOARD_INFO *SmEepromData;
-STATIC SMBIOS_TABLE_TYPE32     *Type32Record;
-STATIC SMBIOS_TABLE_TYPE3      *Type3Record;
-STATIC CHAR16                  *BoardProductName;
-STATIC CHAR16                  *AssetTag;
-STATIC CHAR16                  *SerialNumber;
-STATIC UINTN                   CurCpuFreqMhz;
-STATIC UINTN                   NumProcessorSockets;
+STATIC TEGRA_EEPROM_BOARD_INFO  *SmEepromData;
+STATIC SMBIOS_TABLE_TYPE32      *Type32Record;
+STATIC SMBIOS_TABLE_TYPE3       *Type3Record;
+STATIC CHAR16                   *BoardProductName;
+STATIC CHAR16                   *AssetTag;
+STATIC CHAR16                   *SerialNumber;
+STATIC UINTN                    CurCpuFreqMhz;
+STATIC UINTN                    NumProcessorSockets;
 
 /**
   GetCpuFreqT194
@@ -56,7 +56,9 @@ STATIC UINTN                   NumProcessorSockets;
 **/
 STATIC
 UINT16
-GetCpuFreqT194 ( VOID  )
+GetCpuFreqT194 (
+  VOID
+  )
 {
   EFI_TPL  CurrentTpl;
   UINT64   BeginValue;
@@ -70,32 +72,31 @@ GetCpuFreqT194 ( VOID  )
   UINT32   FreqMHz;
   UINT16   ReturnFreq;
 
-
   CurrentTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
-  BeginValue = NvReadPmCntr();
+  BeginValue = NvReadPmCntr ();
   MicroSecondDelay (100);
-  EndValue = NvReadPmCntr();
+  EndValue = NvReadPmCntr ();
   gBS->RestoreTPL (CurrentTpl);
 
   BeginRefCnt = LOWER_32 (BeginValue);
-  BeginCcnt = UPPER_32 (BeginValue);
-  EndRefCnt = LOWER_32 (EndValue);
-  EndCcnt = UPPER_32 (EndValue);
+  BeginCcnt   = UPPER_32 (BeginValue);
+  EndRefCnt   = LOWER_32 (EndValue);
+  EndCcnt     = UPPER_32 (EndValue);
 
   if (EndRefCnt < BeginRefCnt) {
     DeltaRefCnt = EndRefCnt + (MAX_CNTR - BeginRefCnt);
-  }  else {
+  } else {
     DeltaRefCnt = EndRefCnt - BeginRefCnt;
   }
 
   if (EndCcnt < BeginCcnt) {
     DeltaCcnt = EndCcnt + (MAX_CNTR - BeginCcnt);
-  }  else {
+  } else {
     DeltaCcnt = EndCcnt - BeginCcnt;
   }
 
-  FreqMHz = (DeltaCcnt * REF_CLK_MHZ) / DeltaRefCnt;
-  ReturnFreq = (UINT16) FreqMHz;
+  FreqMHz    = (DeltaCcnt * REF_CLK_MHZ) / DeltaRefCnt;
+  ReturnFreq = (UINT16)FreqMHz;
   return ReturnFreq;
 }
 
@@ -108,20 +109,20 @@ GetCpuFreqT194 ( VOID  )
   @retval                       CPU Frequency in MHz
 
 **/
-
 STATIC
 UINTN
 GetCpuFreqMhz (
-  UINTN ChipId
- )
+  UINTN  ChipId
+  )
 {
-  UINTN CpuFreqMhz = 0;
+  UINTN  CpuFreqMhz = 0;
 
   if (ChipId == T194_CHIP_ID) {
-    CpuFreqMhz = GetCpuFreqT194();
+    CpuFreqMhz = GetCpuFreqT194 ();
   } else {
     CpuFreqMhz =  2000; // 2 GHz
   }
+
   return CpuFreqMhz;
 }
 
@@ -139,19 +140,19 @@ GetCpuFreqMhz (
 **/
 STATIC
 VOID
-PopulateCpuData(
-  OEM_MISC_PROCESSOR_DATA *MiscProcessorData
-)
+PopulateCpuData (
+  OEM_MISC_PROCESSOR_DATA  *MiscProcessorData
+  )
 {
-  UINT16                  MaxClusters;
-  UINT16                  MaxCoresPerCluster;
+  UINT16  MaxClusters;
+  UINT16  MaxCoresPerCluster;
 
-  MaxCoresPerCluster =  PcdGet32 (PcdTegraMaxCoresPerCluster);
-  MaxClusters        =  PcdGet32 (PcdTegraMaxClusters);
+  MaxCoresPerCluster              =  PcdGet32 (PcdTegraMaxCoresPerCluster);
+  MaxClusters                     =  PcdGet32 (PcdTegraMaxClusters);
   MiscProcessorData->CurrentSpeed = CurCpuFreqMhz;
   MiscProcessorData->MaxSpeed     = CurCpuFreqMhz;
   MiscProcessorData->CoreCount    = (MaxClusters * MaxCoresPerCluster);
-  MiscProcessorData->CoresEnabled = GetNumberOfEnabledCpuCores();
+  MiscProcessorData->CoresEnabled = GetNumberOfEnabledCpuCores ();
   MiscProcessorData->ThreadCount  = 1;
 }
 
@@ -169,23 +170,22 @@ PopulateCpuData(
 **/
 STATIC
 VOID
-PopulateCpuCharData(
-  PROCESSOR_CHARACTERISTIC_FLAGS *ProcessorCharacteristics
- )
+PopulateCpuCharData (
+  PROCESSOR_CHARACTERISTIC_FLAGS  *ProcessorCharacteristics
+  )
 {
-  ProcessorCharacteristics->ProcessorReserved1      = 0;
-  ProcessorCharacteristics->ProcessorUnknown        = 0;
-  ProcessorCharacteristics->Processor64BitCapable   = 1;
-  ProcessorCharacteristics->ProcessorMultiCore      = 0;
-  ProcessorCharacteristics->ProcessorHardwareThread = 0;
+  ProcessorCharacteristics->ProcessorReserved1              = 0;
+  ProcessorCharacteristics->ProcessorUnknown                = 0;
+  ProcessorCharacteristics->Processor64BitCapable           = 1;
+  ProcessorCharacteristics->ProcessorMultiCore              = 0;
+  ProcessorCharacteristics->ProcessorHardwareThread         = 0;
   ProcessorCharacteristics->ProcessorExecuteProtection      = 1;
   ProcessorCharacteristics->ProcessorEnhancedVirtualization = 0;
   ProcessorCharacteristics->ProcessorPowerPerformanceCtrl   = 0;
-  ProcessorCharacteristics->Processor128BitCapable = 0;
-  ProcessorCharacteristics->ProcessorArm64SocId = 1;
-  ProcessorCharacteristics->ProcessorReserved2  = 0;
+  ProcessorCharacteristics->Processor128BitCapable          = 0;
+  ProcessorCharacteristics->ProcessorArm64SocId             = 1;
+  ProcessorCharacteristics->ProcessorReserved2              = 0;
 }
-
 
 /**
   OemGetCpuFreq
@@ -198,7 +198,7 @@ PopulateCpuCharData(
 UINTN
 EFIAPI
 OemGetCpuFreq (
-  IN UINT8 ProcessorIndex
+  IN UINT8  ProcessorIndex
   )
 {
   return (CurCpuFreqMhz * 1000 * 1000);
@@ -219,13 +219,13 @@ OemGetCpuFreq (
 BOOLEAN
 EFIAPI
 OemGetProcessorInformation (
-  IN UINTN ProcessorIndex,
-  IN OUT PROCESSOR_STATUS_DATA *ProcessorStatus,
-  IN OUT PROCESSOR_CHARACTERISTIC_FLAGS *ProcessorCharacteristics,
-  IN OUT OEM_MISC_PROCESSOR_DATA *MiscProcessorData
+  IN UINTN                               ProcessorIndex,
+  IN OUT PROCESSOR_STATUS_DATA           *ProcessorStatus,
+  IN OUT PROCESSOR_CHARACTERISTIC_FLAGS  *ProcessorCharacteristics,
+  IN OUT OEM_MISC_PROCESSOR_DATA         *MiscProcessorData
   )
 {
-  UINT16 ProcessorCount;
+  UINT16  ProcessorCount;
 
   ProcessorCount = NumProcessorSockets;
 
@@ -242,6 +242,7 @@ OemGetProcessorInformation (
     ProcessorStatus->Bits.SocketPopulated = 0;
     ProcessorStatus->Bits.Reserved2       = 0;
   }
+
   return TRUE;
 }
 
@@ -256,10 +257,10 @@ OemGetProcessorInformation (
 STATIC
 UINTN
 GetMaxCacheLevels (
-  CM_OBJ_DESCRIPTOR *CmCacheObj
- )
+  CM_OBJ_DESCRIPTOR  *CmCacheObj
+  )
 {
-  UINTN MaxCacheLevels = 0;
+  UINTN  MaxCacheLevels = 0;
 
   if (CmCacheObj) {
     /*
@@ -268,6 +269,7 @@ GetMaxCacheLevels (
      */
     MaxCacheLevels = CmCacheObj->Count - 1;
   }
+
   return MaxCacheLevels;
 }
 
@@ -284,21 +286,21 @@ GetMaxCacheLevels (
 STATIC
 UINTN
 GetCacheIndex (
-  IN UINTN   MaxCacheLevels,
-  IN UINT8   CacheLevel,
-  IN BOOLEAN DataCache
- )
+  IN UINTN    MaxCacheLevels,
+  IN UINT8    CacheLevel,
+  IN BOOLEAN  DataCache
+  )
 {
-  UINTN CacheIndex = 0;
+  UINTN  CacheIndex = 0;
 
   if (CacheLevel > MaxCacheLevels) {
     CacheIndex = MaxCacheLevels + 1;
   } else {
-  /*
-     * HardCode this Logic for now, the assumption is that only L1
-     * has a dedicated I/D Cache, all other levels have unified caches.
-     */
-    if (CacheLevel ==1) {
+    /*
+       * HardCode this Logic for now, the assumption is that only L1
+       * has a dedicated I/D Cache, all other levels have unified caches.
+       */
+    if (CacheLevel == 1) {
       if (DataCache) {
         CacheIndex = 0;
       } else {
@@ -308,9 +310,9 @@ GetCacheIndex (
       CacheIndex = MaxCacheLevels - 1;
     }
   }
+
   return CacheIndex;
 }
-
 
 /**
   GetCmCacheObject
@@ -323,35 +325,40 @@ GetCacheIndex (
 STATIC
 EFI_STATUS
 GetCmCacheObject (
-  OUT CM_OBJ_DESCRIPTOR *CmCacheObj
- )
+  OUT CM_OBJ_DESCRIPTOR  *CmCacheObj
+  )
 {
-  EFI_STATUS                                Status;
-  EDKII_CONFIGURATION_MANAGER_PROTOCOL     *CfgMgrProtocol;
+  EFI_STATUS                            Status;
+  EDKII_CONFIGURATION_MANAGER_PROTOCOL  *CfgMgrProtocol;
 
   Status = gBS->LocateProtocol (
                   &gEdkiiConfigurationManagerProtocolGuid,
                   NULL,
-                  (VOID**)&CfgMgrProtocol
+                  (VOID **)&CfgMgrProtocol
                   );
-  if ( EFI_ERROR(Status)) {
-    DEBUG ((DEBUG_ERROR, "%a:Failed to Locate Config Manager Protocol: %r",
-                          __FUNCTION__, Status));
+  if ( EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:Failed to Locate Config Manager Protocol: %r",
+      __FUNCTION__,
+      Status
+      ));
   } else {
     Status = CfgMgrProtocol->GetObject (
-                       CfgMgrProtocol,
-                       CREATE_CM_ARM_OBJECT_ID(EArmObjCacheInfo),
-                       CM_NULL_TOKEN,
-                       CmCacheObj
-                       );
+                               CfgMgrProtocol,
+                               CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo),
+                               CM_NULL_TOKEN,
+                               CmCacheObj
+                               );
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
         "ERROR: Failed to Get Cache Info. Status = %r\n",
-         Status
+        Status
         ));
     }
   }
+
   return Status;
 }
 
@@ -370,47 +377,49 @@ GetCmCacheObject (
 BOOLEAN
 EFIAPI
 OemGetCacheInformation (
-  IN UINT8   ProcessorIndex,
-  IN UINT8   CacheLevel,
-  IN BOOLEAN DataCache,
-  IN BOOLEAN UnifiedCache,
-  IN OUT SMBIOS_TABLE_TYPE7 *SmbiosCacheTable
+  IN UINT8                   ProcessorIndex,
+  IN UINT8                   CacheLevel,
+  IN BOOLEAN                 DataCache,
+  IN BOOLEAN                 UnifiedCache,
+  IN OUT SMBIOS_TABLE_TYPE7  *SmbiosCacheTable
   )
 {
-  UINT8 CacheDataIdx = 0;
-  UINT32 WritePolicy;
-  CM_ARM_CACHE_INFO *CacheInfo;
-  CM_OBJ_DESCRIPTOR CmCacheObj;
-  UINT8 NumCacheLevels;
-  EFI_STATUS Status;
+  UINT8              CacheDataIdx = 0;
+  UINT32             WritePolicy;
+  CM_ARM_CACHE_INFO  *CacheInfo;
+  CM_OBJ_DESCRIPTOR  CmCacheObj;
+  UINT8              NumCacheLevels;
+  EFI_STATUS         Status;
 
-  if (ProcessorIndex >= NumProcessorSockets)
-  {
+  if (ProcessorIndex >= NumProcessorSockets) {
     return FALSE;
   }
+
   SmbiosCacheTable->CacheConfiguration = CacheLevel - 1;
-  Status = GetCmCacheObject (&CmCacheObj);
+  Status                               = GetCmCacheObject (&CmCacheObj);
 
   // Unknown operational mode
   if (EFI_ERROR (Status)) {
     SmbiosCacheTable->CacheConfiguration |= (3 << 8);
-  }  else  {
-    CacheInfo = (CM_ARM_CACHE_INFO *)CmCacheObj.Data;
+  } else {
+    CacheInfo      = (CM_ARM_CACHE_INFO *)CmCacheObj.Data;
     NumCacheLevels = GetMaxCacheLevels (&CmCacheObj);
-    CacheDataIdx = GetCacheIndex (NumCacheLevels, CacheLevel, DataCache);
+    CacheDataIdx   = GetCacheIndex (NumCacheLevels, CacheLevel, DataCache);
     if (CacheDataIdx > NumCacheLevels) {
       SmbiosCacheTable->CacheConfiguration |= (3 << 8);
     } else {
       WritePolicy = CacheInfo[CacheDataIdx].Attributes;
       WritePolicy = (WritePolicy >> 4) & 0x1;
-      if (WritePolicy == EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_THROUGH)
+      if (WritePolicy == EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_THROUGH) {
         SmbiosCacheTable->CacheConfiguration |= (0 << 8);
-      else if (WritePolicy == EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK)
+      } else if (WritePolicy == EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK) {
         SmbiosCacheTable->CacheConfiguration |= (1 << 8);
-      else
+      } else {
         SmbiosCacheTable->CacheConfiguration |= (3 << 8);
+      }
     }
   }
+
   return TRUE;
 }
 
@@ -459,7 +468,7 @@ OemGetChassisType (
 BOOLEAN
 EFIAPI
 OemIsProcessorPresent (
-  IN UINTN ProcessorIndex
+  IN UINTN  ProcessorIndex
   )
 {
   if (ProcessorIndex < NumProcessorSockets) {
@@ -481,30 +490,36 @@ STATIC
 CHAR16 *
 OemGetProductName (
   VOID
-)
+  )
 {
-  VOID                    *DtbBase;
-  UINTN                   DtbSize;
-  CONST VOID              *Property;
-  INT32                   Length;
-  EFI_STATUS              Status;
+  VOID        *DtbBase;
+  UINTN       DtbSize;
+  CONST VOID  *Property;
+  INT32       Length;
+  EFI_STATUS  Status;
 
   if (BoardProductName == NULL) {
-    Status = DtPlatformLoadDtb(&DtbBase, &DtbSize);
-    if (EFI_ERROR(Status)) {
+    Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
+    if (EFI_ERROR (Status)) {
       return NULL;
     }
+
     Property = fdt_getprop (DtbBase, 0, "model", &Length);
-    if (Property != NULL && Length != 0) {
+    if ((Property != NULL) && (Length != 0)) {
       BoardProductName = AllocateZeroPool (Length * sizeof (CHAR16));
       if (BoardProductName == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
         return NULL;
       }
-      AsciiStrToUnicodeStrS (Property, BoardProductName,
-                             (Length * sizeof (CHAR16)));
+
+      AsciiStrToUnicodeStrS (
+        Property,
+        BoardProductName,
+        (Length * sizeof (CHAR16))
+        );
     }
   }
+
   return BoardProductName;
 }
 
@@ -521,18 +536,23 @@ STATIC
 CHAR16 *
 OemGetAssetTag (
   TEGRA_EEPROM_BOARD_INFO  *EepromInfo
-)
+  )
 {
   if (AssetTag == NULL) {
-    UINTN AssetTagLen = (PRODUCT_ID_LEN + 1);
-    AssetTag = AllocateZeroPool (AssetTagLen * sizeof(CHAR16));
+    UINTN  AssetTagLen = (PRODUCT_ID_LEN + 1);
+    AssetTag = AllocateZeroPool (AssetTagLen * sizeof (CHAR16));
     if (AssetTag == NULL) {
-        DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
-        return NULL;
-      }
-      AsciiStrToUnicodeStrS (EepromInfo->ProductId, AssetTag,
-                             (AssetTagLen * sizeof (CHAR16)));
+      DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
+      return NULL;
+    }
+
+    AsciiStrToUnicodeStrS (
+      EepromInfo->ProductId,
+      AssetTag,
+      (AssetTagLen * sizeof (CHAR16))
+      );
   }
+
   return AssetTag;
 }
 
@@ -548,17 +568,22 @@ STATIC
 CHAR16 *
 OemGetSerialNumber (
   TEGRA_EEPROM_BOARD_INFO  *EepromInfo
-)
+  )
 {
   if (SerialNumber == NULL) {
-    SerialNumber = AllocateZeroPool (SERIAL_NUM_LEN * sizeof(CHAR16));
+    SerialNumber = AllocateZeroPool (SERIAL_NUM_LEN * sizeof (CHAR16));
     if (SerialNumber == NULL) {
-        DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
-        return NULL;
-      }
-      AsciiStrToUnicodeStrS (EepromInfo->SerialNumber, SerialNumber,
-                             (SERIAL_NUM_LEN * sizeof (CHAR16)));
+      DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
+      return NULL;
+    }
+
+    AsciiStrToUnicodeStrS (
+      EepromInfo->SerialNumber,
+      SerialNumber,
+      (SERIAL_NUM_LEN * sizeof (CHAR16))
+      );
   }
+
   return SerialNumber;
 }
 
@@ -573,60 +598,64 @@ OemGetSerialNumber (
 VOID
 EFIAPI
 OemUpdateSmbiosInfo (
-  IN EFI_HII_HANDLE HiiHandle,
-  IN EFI_STRING_ID TokenToUpdate,
-  IN OEM_MISC_SMBIOS_HII_STRING_FIELD Field
+  IN EFI_HII_HANDLE                    HiiHandle,
+  IN EFI_STRING_ID                     TokenToUpdate,
+  IN OEM_MISC_SMBIOS_HII_STRING_FIELD  Field
   )
 {
-  CHAR16* HiiString = NULL
-;
+  CHAR16  *HiiString = NULL
+  ;
+
   switch (Field) {
     case SystemManufacturerType01:
-      HiiString = (CHAR16 *) PcdGetPtr (PcdSystemManufacturer);
+      HiiString = (CHAR16 *)PcdGetPtr (PcdSystemManufacturer);
       break;
     case FamilyType01:
-      HiiString = (CHAR16 *) PcdGetPtr (PcdSystemFamilyType);
+      HiiString = (CHAR16 *)PcdGetPtr (PcdSystemFamilyType);
       break;
     case SkuNumberType01:
-      HiiString = (CHAR16 *) PcdGetPtr (PcdSystemSku);
+      HiiString = (CHAR16 *)PcdGetPtr (PcdSystemSku);
       break;
     case AssetTagType03:
     case AssertTagType02:
-        if (SmEepromData) {
-          HiiString = OemGetAssetTag(SmEepromData);
-        }
+      if (SmEepromData) {
+        HiiString = OemGetAssetTag (SmEepromData);
+      }
+
       break;
     case ChassisLocationType02:
-      HiiString = (CHAR16 *) PcdGetPtr (PcdBoardChassisLocation);
+      HiiString = (CHAR16 *)PcdGetPtr (PcdBoardChassisLocation);
       break;
     case BoardManufacturerType02:
-      HiiString = (CHAR16 *) PcdGetPtr (PcdBoardManufacturer);
+      HiiString = (CHAR16 *)PcdGetPtr (PcdBoardManufacturer);
       break;
     case SerialNumType01:
     case SerialNumberType02:
-        if (SmEepromData) {
-          HiiString = OemGetSerialNumber(SmEepromData);
-        }
+      if (SmEepromData) {
+        HiiString = OemGetSerialNumber (SmEepromData);
+      }
+
       break;
     case ProductNameType02:
     case ProductNameType01:
-        HiiString =  OemGetProductName();
+      HiiString =  OemGetProductName ();
       break;
     case VersionType03:
-      HiiString = (CHAR16 *) PcdGetPtr (PcdChassisVersion);
+      HiiString = (CHAR16 *)PcdGetPtr (PcdChassisVersion);
       break;
     case ManufacturerType03:
-      HiiString = (CHAR16 *) PcdGetPtr (PcdChassisManufacturer);
+      HiiString = (CHAR16 *)PcdGetPtr (PcdChassisManufacturer);
       break;
     case SkuNumberType03:
-      HiiString = (CHAR16 *) PcdGetPtr (PcdChassisSku);
+      HiiString = (CHAR16 *)PcdGetPtr (PcdChassisSku);
       break;
     case SerialNumberType03:
-      HiiString = (CHAR16 *) PcdGetPtr (PcdChassisSerialNumber);
+      HiiString = (CHAR16 *)PcdGetPtr (PcdChassisSerialNumber);
       break;
     default:
       break;
   }
+
   if (HiiString != NULL) {
     HiiSetString (HiiHandle, TokenToUpdate, HiiString, NULL);
   }
@@ -773,27 +802,30 @@ OemGetChassisNumPowerCords (
   @retval EFI_SUCCESS   The constructor always returns EFI_SUCCESS.
 
 **/
-
 EFI_STATUS
 EFIAPI
 OemMiscLibConstructor (
-    VOID
+  VOID
   )
 {
-  EFI_STATUS Status;
-  UINTN                 ChipId;
+  EFI_STATUS  Status;
+  UINTN       ChipId;
 
   Status = gBS->LocateProtocol (&gNVIDIACvmEepromProtocolGuid, NULL, (VOID **)&SmEepromData);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: SMBIOS: Failed to get Board Data protocol %r\n",
-                            __FUNCTION__, Status));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: SMBIOS: Failed to get Board Data protocol %r\n",
+      __FUNCTION__,
+      Status
+      ));
     SmEepromData = NULL;
   }
 
-  NumProcessorSockets =  1;  //Hardcode this to 1 for now.
-  ChipId              =  TegraGetChipID();
+  NumProcessorSockets =  1;  // Hardcode this to 1 for now.
+  ChipId              =  TegraGetChipID ();
   CurCpuFreqMhz       =  GetCpuFreqMhz (ChipId);
-  Type32Record = (SMBIOS_TABLE_TYPE32 *)PcdGetPtr (PcdType32Info);
-  Type3Record = (SMBIOS_TABLE_TYPE3 *)PcdGetPtr (PcdType3Info);
+  Type32Record        = (SMBIOS_TABLE_TYPE32 *)PcdGetPtr (PcdType32Info);
+  Type3Record         = (SMBIOS_TABLE_TYPE3 *)PcdGetPtr (PcdType3Info);
   return EFI_SUCCESS;
 }
