@@ -170,3 +170,11 @@
   # MM Communication
   #
   INF Silicon/NVIDIA/Drivers/MmCommunicationOpteeDxe/MmCommunicationOptee.inf
+
+  #
+  # FW Partition
+  #
+  INF Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
+  INF Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
+  INF Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
+  INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf

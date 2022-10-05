@@ -971,13 +971,6 @@
   #
   Silicon/NVIDIA/Drivers/PlatformToDriverConfiguration/PlatformToDriverConfiguration.inf
 
-  #
-  # FW Partition and FW Image
-  #
-  Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
-  Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
-  Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
-  Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
 
   #
   # Capsule Update Policy Protocol

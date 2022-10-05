@@ -348,3 +348,11 @@
       NULL|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
       NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
   }
+
+  #
+  # FW Partition and FW Image
+  #
+  Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
+  Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
+  Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
+  Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
