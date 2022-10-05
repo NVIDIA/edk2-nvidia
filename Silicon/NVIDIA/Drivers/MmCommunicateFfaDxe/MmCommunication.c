@@ -438,10 +438,10 @@ MmCommunication2Initialize (
     goto ReturnErrorStatus;
   }
 
-  mNsCommBuffMemRegion.PhysicalBase =  0x932FE000;// PcdGet64 (PcdMmBufferBase);
+  mNsCommBuffMemRegion.PhysicalBase =  PcdGet64 (PcdMmBufferBase);
   // During boot , Virtual and Physical are same
   mNsCommBuffMemRegion.VirtualBase = mNsCommBuffMemRegion.PhysicalBase;
-  mNsCommBuffMemRegion.Length      =  0x200000; // PcdGet64 (PcdMmBufferSize);
+  mNsCommBuffMemRegion.Length      =  PcdGet64 (PcdMmBufferSize);
 
   ASSERT (mNsCommBuffMemRegion.PhysicalBase != 0);
 
