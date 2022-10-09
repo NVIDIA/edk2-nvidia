@@ -1,0 +1,45 @@
+#/** @file
+#
+#  TPM 2.0 functions
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = Tpm2DeviceLib
+  FILE_GUID                      = a6ca3624-45cd-11ed-b92a-937cfb0ec122
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = Tpm2DeviceLib
+  CONSTRUCTOR                    = Tpm2DeviceLibConstructor
+
+[Sources.common]
+  Tpm2DeviceLib.c
+  Tpm2Tis.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  SecurityPkg/SecurityPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  IoLib
+  DebugLib
+  TimerLib
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  UefiLib
+
+[Protocols]
+  gNVIDIATpm2ProtocolGuid  ## CONSUMES
+
+[Pcd]
+  gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType    ## PRODUCES
+
+[Depex]
+  gNVIDIATpm2ProtocolGuid
