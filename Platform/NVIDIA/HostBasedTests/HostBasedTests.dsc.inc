@@ -26,7 +26,7 @@
 !ifdef $(HOSTAPP_STATIC_LINK)
   # Statically link the host-based executable.  This allows us to easily use
   # alternate toolchains at build time and not introduce a runtime dependency.
-  GCC:*_*_*_DLINK2_FLAGS = -static -s
+  GCC:*_*_*_DLINK2_FLAGS = -static
 !endif
 
 [BuildOptions]
