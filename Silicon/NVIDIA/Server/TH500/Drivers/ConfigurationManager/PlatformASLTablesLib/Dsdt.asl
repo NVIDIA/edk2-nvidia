@@ -1,7 +1,7 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * Copyright (c) 2020 - 2022, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2020 - 2023, NVIDIA Corporation. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -624,6 +624,44 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
           Package () {"spi-max-frequency", 10000000},
         }
       })
+    }
+
+    Device (FLS1) {
+      Name (_HID, "PRP0001")
+      Name (_UID, 0)
+      Name (_STA, 0)
+      Name (_DSD, Package () {
+        ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
+        Package () {
+          Package (2) { "compatible", "jedec,spi-nor" },
+        }
+      })
+      Name (_CRS, ResourceTemplate() {
+        SPISerialBus(0, PolarityLow, FourWireMode, 8,
+                     ControllerInitiated, 1000000, ClockPolarityLow,
+                     ClockPhaseFirst, "\\_SB.QSP1",)
+      })
+    }
+
+    Device (TPM1) {
+      Name (_HID, "PRP0001")
+      Name (_UID, 0)
+      Name (_STA, 0)
+      Name(RBUF, ResourceTemplate() {
+        SPISerialBus(0, PolarityLow, FourWireMode, 8,
+                     ControllerInitiated, 1000000, ClockPolarityLow,
+                     ClockPhaseFirst, "\\_SB.QSP1",)
+      })
+      Name (_DSD, Package () {
+        ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
+        Package () {
+          Package () { "compatible", "tegra-tpm-spi" },
+          Package () { "nvidia,wait-polling", 1 }
+        }
+      })
+      Method (_CRS, 0, NotSerialized) {
+        Return(RBUF)
+      }
     }
 
     //---------------------------------------------------------------------
