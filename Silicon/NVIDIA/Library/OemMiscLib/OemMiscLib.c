@@ -1,7 +1,7 @@
 /** @file
 *  OemMiscLib.c
 *
-*  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -700,7 +700,7 @@ OemGetAssetTag (
   )
 {
   if (AssetTag == NULL) {
-    UINTN  AssetTagLen = (PRODUCT_ID_LEN + 1);
+    UINTN  AssetTagLen = (TEGRA_PRODUCT_ID_LEN + 1);
     AssetTag = AllocateZeroPool (AssetTagLen * sizeof (CHAR16));
     if (AssetTag == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
@@ -732,7 +732,7 @@ OemGetSerialNumber (
   )
 {
   if (SerialNumber == NULL) {
-    SerialNumber = AllocateZeroPool (SERIAL_NUM_LEN * sizeof (CHAR16));
+    SerialNumber = AllocateZeroPool (TEGRA_SERIAL_NUM_LEN * sizeof (CHAR16));
     if (SerialNumber == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
       return NULL;
@@ -741,7 +741,7 @@ OemGetSerialNumber (
     AsciiStrToUnicodeStrS (
       EepromInfo->SerialNumber,
       SerialNumber,
-      (SERIAL_NUM_LEN * sizeof (CHAR16))
+      (TEGRA_SERIAL_NUM_LEN * sizeof (CHAR16))
       );
   }
 

@@ -2,7 +2,7 @@
 
   EEPROM Driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -45,13 +45,15 @@ PopulateEepromData (
   T194_EEPROM_DATA         *T194EepromData;
   T234_EEPROM_DATA         *T234EepromData;
   TEGRA_EEPROM_BOARD_INFO  *EepromBoardInfo;
+  CONST CHAR8              *BoardId;
 
   ChipID = TegraGetChipID ();
 
   if (ChipID == T194_CHIP_ID) {
     T194EepromData  = (T194_EEPROM_DATA *)EepromData;
     EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)BoardInfo;
-    CopyMem ((VOID *)EepromBoardInfo->BoardId, (VOID *)&T194EepromData->PartNumber.Id, BOARD_ID_LEN);
+    BoardId         = TegraBoardIdFromPartNumber (&T194EepromData->PartNumber);
+    CopyMem ((VOID *)EepromBoardInfo->BoardId, BoardId, TEGRA_BOARD_ID_LEN);
     CopyMem ((VOID *)EepromBoardInfo->ProductId, (VOID *)&T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
     CopyMem ((VOID *)EepromBoardInfo->SerialNumber, (VOID *)&T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
     if ((CompareMem (T194EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194EepromData->CustomerBlockSignature)) == 0) &&
@@ -64,7 +66,8 @@ PopulateEepromData (
   } else if (ChipID == T234_CHIP_ID) {
     T234EepromData  = (T234_EEPROM_DATA *)EepromData;
     EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)BoardInfo;
-    CopyMem ((VOID *)EepromBoardInfo->BoardId, (VOID *)&T234EepromData->PartNumber.Id, BOARD_ID_LEN);
+    BoardId         = TegraBoardIdFromPartNumber (&T234EepromData->PartNumber);
+    CopyMem ((VOID *)EepromBoardInfo->BoardId, BoardId, TEGRA_BOARD_ID_LEN);
     CopyMem ((VOID *)EepromBoardInfo->ProductId, (VOID *)&T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
     CopyMem ((VOID *)EepromBoardInfo->SerialNumber, (VOID *)&T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
     if ((CompareMem (T234EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T234EepromData->CustomerBlockSignature)) == 0) &&

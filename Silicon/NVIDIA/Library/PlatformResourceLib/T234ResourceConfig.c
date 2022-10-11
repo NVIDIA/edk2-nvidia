@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -387,13 +387,11 @@ T234GetBoardInfo (
   BoardInfo->FuseBaseAddr = T234_FUSE_BASE_ADDRESS;
   BoardInfo->FuseList     = T234FloorsweepingFuseList;
   BoardInfo->FuseCount    = sizeof (T234FloorsweepingFuseList) / sizeof (T234FloorsweepingFuseList[0]);
-  CopyMem ((VOID *)BoardInfo->CvmBoardId, (VOID *)T234EepromData->PartNumber.Id, BOARD_ID_LEN);
-  CopyMem ((VOID *)BoardInfo->CvmProductId, (VOID *)&T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
+  CopyMem ((VOID *)&BoardInfo->CvmProductId, (VOID *)&T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
   CopyMem ((VOID *)BoardInfo->SerialNumber, (VOID *)&T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
 
   T234EepromData = (T234_EEPROM_DATA *)EepromData->CvbEepromData;
-  CopyMem ((VOID *)BoardInfo->CvbBoardId, (VOID *)T234EepromData->PartNumber.Id, BOARD_ID_LEN);
-  CopyMem ((VOID *)BoardInfo->CvbProductId, (VOID *)&T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
+  CopyMem ((VOID *)&BoardInfo->CvbProductId, (VOID *)&T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
 
   return TRUE;
 }
