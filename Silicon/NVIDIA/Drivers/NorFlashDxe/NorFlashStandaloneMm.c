@@ -1357,15 +1357,10 @@ NorFlashInitialise (
   UINTN                   QspiSize;
 
   // OP-TEE path
-  if (IsOpteePresent ()) {
-    Status = GetDeviceRegion ("qspi0-t194", &QspiBaseAddress, &QspiSize);
-    if (EFI_ERROR (Status)) {
-      Status = GetDeviceRegion ("qspi0-t234", &QspiBaseAddress, &QspiSize);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: No Device Regions found \n", __FUNCTION__));
-        return EFI_SUCCESS;
-      }
-    }
+  Status = GetQspiDeviceRegion (&QspiBaseAddress, &QspiSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Qspi MMIO region not found %r", Status));
+    return Status;
   }
 
   if (QspiBaseAddress == 0) {

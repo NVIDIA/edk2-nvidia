@@ -88,3 +88,26 @@ IsQspiPresent (
 
   return QspiPresent;
 }
+
+EFIAPI
+EFI_STATUS
+GetQspiDeviceRegion (
+  UINT64  *QspiBaseAddress,
+  UINTN   *QspiRegionSize
+  )
+{
+  EFI_STATUS  Status = EFI_UNSUPPORTED;
+
+  // OP-TEE path
+  if (IsOpteePresent ()) {
+    Status = GetDeviceRegion ("qspi0-t194", QspiBaseAddress, QspiRegionSize);
+    if (EFI_ERROR (Status)) {
+      Status = GetDeviceRegion ("qspi0-t234", QspiBaseAddress, QspiRegionSize);
+      if (EFI_ERROR (Status)) {
+        Status = EFI_NOT_FOUND;
+      }
+    }
+  }
+
+  return Status;
+}

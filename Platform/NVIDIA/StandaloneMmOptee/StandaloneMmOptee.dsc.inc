@@ -124,6 +124,11 @@
   #
   Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionStandaloneMm.inf
 
+  #
+  # MM Dice Driver
+  #
+  Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmDice.inf
+
 [Components.AARCH64]
 
 ###################################################################################################

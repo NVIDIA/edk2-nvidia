@@ -41,4 +41,11 @@ IsQspiPresent (
   VOID
   );
 
+EFIAPI
+EFI_STATUS
+GetQspiDeviceRegion (
+  UINT64  *QspiBaseAddress,
+  UINTN   *QspiRegionSize
+  );
+
 #endif //STANDALONEMM_OPTEE_DEVICE_MEM_H

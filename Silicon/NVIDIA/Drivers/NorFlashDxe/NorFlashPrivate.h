@@ -76,6 +76,12 @@
 
 #define NOR_FAST_CMD_THRESH_FREQ  100000000
 
+#define NOR_READ_RDID_CMD              0x9f
+#define NOR_READ_RDID_RESP_SIZE        3
+#define NOR_RDID_MANU_ID_OFFSET        0
+#define NOR_RDID_MEM_INTF_TYPE_OFFSET  1
+#define NOR_RDID_MEM_DENSITY_OFFSET    2
+
 #pragma pack(1)
 typedef struct {
   UINT32    SFDPSignature;
@@ -173,6 +179,13 @@ typedef struct {
   EFI_EVENT                          VirtualAddrChangeEvent;
   UINT8                              *CommandBuffer;
 } NOR_FLASH_PRIVATE_DATA;
+
+typedef struct {
+  CHAR8    Name[32];
+  UINT8    ManufacturerId;
+  UINT8    MemoryType;
+  UINT8    Density;
+} NOR_FLASH_DEVICE_INFO;
 
 #define NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL(a)    CR(a, NOR_FLASH_PRIVATE_DATA, NorFlashProtocol, NOR_FLASH_SIGNATURE)
 #define NOR_FLASH_PRIVATE_DATA_FROM_BLOCK_IO_PROTOCOL(a)     CR(a, NOR_FLASH_PRIVATE_DATA, BlockIoProtocol, NOR_FLASH_SIGNATURE)

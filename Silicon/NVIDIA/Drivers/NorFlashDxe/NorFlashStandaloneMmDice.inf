@@ -1,0 +1,53 @@
+#/** @file
+#
+#  NOR Flash Driver Addendum for DICE functionality
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = NorFlashStandaloneMmDice
+  FILE_GUID                      = 1e960987-189f-4029-999c-87da63061ce3
+  MODULE_TYPE                    = MM_STANDALONE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  ENTRY_POINT                    = NorFlashDiceInitialise
+
+[Sources.common]
+  NorFlashStandaloneMmDice.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+  ArmPkg/ArmPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  IoLib
+  MemoryAllocationLib
+  QspiControllerLib
+  StandaloneMmDriverEntryPoint
+  HobLib
+  ArmSvcLib
+  MmServicesTableLib
+  StandaloneMmOpteeLib
+  GptLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+
+[Protocols]
+  gNVIDIANorFlashProtocolGuid
+  gNVIDIANorFlashDiceProtocolGuid
+
+[Depex]
+  TRUE

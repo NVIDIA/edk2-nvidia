@@ -30,6 +30,11 @@
   #
   INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionStandaloneMm.inf
 
+  #
+  # MM Dice Driver (save/load ECA certificates)
+  #
+  INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmDice.inf
+
   !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
 
 ################################################################################
