@@ -1,7 +1,7 @@
 /** @file
   NVIDIA EEPROM Protocol
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,6 +20,9 @@
 
 #define CAMERA_EEPROM_PART_OFFSET  21
 #define CAMERA_EEPROM_PART_NAME    "LPRD"
+
+#define NVIDIA_EEPROM_BOARD_ID_PREFIX   "699"
+#define CUSTOMER_EEPROM_BOARD_ID_MAGIC  0xcc
 
 /**
  * @brief The Product Part Number structure that is embedded into
@@ -56,6 +59,17 @@ typedef struct {
   UINT8    Ending;     /* 41 */
   UINT8    Pad[8];     /* 42 */
 } TEGRA_EEPROM_PART_NUMBER;
+
+typedef struct {
+  /* 20 - 49 */
+  UINT8    CustEepromMagic; /* 20 */
+  UINT8    Data[29];        /* 21 */
+} CUST_EEPROM_PART_NUMBER;
+
+typedef union {
+  TEGRA_EEPROM_PART_NUMBER    TegraEepromPartNumber;
+  CUST_EEPROM_PART_NUMBER     CustEepromPartNumber;
+} EEPROM_PART_NUMBER;
 #pragma pack()
 
 /**
@@ -76,7 +90,7 @@ typedef struct {
  * @param DisplayConfig - Reflects any spl reworks/changes related to Display
  * @param ReworkLevel - Syseng Rework Level
  * @param Reserved0 - Reserved bytes
- * @param PartNumber - asset_tracker_field_1 - 699 or 600 BOM Number
+ * @param PartNumber - asset_tracker_field_1
  * @param WifiMacAddress - MAC address for primary wifi chip
  * @param BtMacAddress - MAC address for bluetooth chip
  * @param SecWifiMacAddress - MAC address for secondary wifi chip
@@ -95,37 +109,37 @@ typedef struct {
  */
 #pragma pack(1)
 typedef struct {
-  UINT16                      Version;                       /* 00 */
-  UINT16                      Size;                          /* 02 */
-  UINT16                      BoardNumber;                   /* 04 */
-  UINT16                      Sku;                           /* 06 */
-  UINT8                       Fab;                           /* 08 */
-  UINT8                       Revision;                      /* 09 */
-  UINT8                       MinorRevision;                 /* 10 */
-  UINT8                       MemoryType;                    /* 11 */
-  UINT8                       PowerConfig;                   /* 12 */
-  UINT8                       MiscConfig;                    /* 13 */
-  UINT8                       ModemConfig;                   /* 14 */
-  UINT8                       TouchConfig;                   /* 15 */
-  UINT8                       DisplayConfig;                 /* 16 */
-  UINT8                       ReworkLevel;                   /* 17 */
-  UINT8                       Reserved0[2];                  /* 18 */
-  TEGRA_EEPROM_PART_NUMBER    PartNumber;                    /* 20 - 49 */
-  UINT8                       WifiMacAddress[6];             /* 50 */
-  UINT8                       BtMacAddress[6];               /* 56 */
-  UINT8                       SecWifiMacAddress[6];          /* 62 */
-  UINT8                       EthernetMacAddress[6];         /* 68 */
-  UINT8                       SerialNumber[15];              /* 74 */
-  UINT8                       Reserved1[61];                 /* 89 */
-  UINT8                       CustomerBlockSignature[4];     /* 150 */
-  UINT16                      CustomerBlockLength;           /* 154 */
-  UINT8                       CustomerTypeSignature[2];      /* 156 */
-  UINT16                      CustomerVersion;               /* 158 */
-  UINT8                       CustomerWifiMacAddress[6];     /* 160 */
-  UINT8                       CustomerBtMacAddress[6];       /* 166 */
-  UINT8                       CustomerEthernetMacAddress[6]; /* 172 */
-  UINT8                       Reserved2[77];                 /* 178 */
-  UINT8                       Checksum;                      /* 255 */
+  UINT16                Version;                             /* 00 */
+  UINT16                Size;                                /* 02 */
+  UINT16                BoardNumber;                         /* 04 */
+  UINT16                Sku;                                 /* 06 */
+  UINT8                 Fab;                                 /* 08 */
+  UINT8                 Revision;                            /* 09 */
+  UINT8                 MinorRevision;                       /* 10 */
+  UINT8                 MemoryType;                          /* 11 */
+  UINT8                 PowerConfig;                         /* 12 */
+  UINT8                 MiscConfig;                          /* 13 */
+  UINT8                 ModemConfig;                         /* 14 */
+  UINT8                 TouchConfig;                         /* 15 */
+  UINT8                 DisplayConfig;                       /* 16 */
+  UINT8                 ReworkLevel;                         /* 17 */
+  UINT8                 Reserved0[2];                        /* 18 */
+  EEPROM_PART_NUMBER    PartNumber;                          /* 20 - 49 */
+  UINT8                 WifiMacAddress[6];                   /* 50 */
+  UINT8                 BtMacAddress[6];                     /* 56 */
+  UINT8                 SecWifiMacAddress[6];                /* 62 */
+  UINT8                 EthernetMacAddress[6];               /* 68 */
+  UINT8                 SerialNumber[15];                    /* 74 */
+  UINT8                 Reserved1[61];                       /* 89 */
+  UINT8                 CustomerBlockSignature[4];           /* 150 */
+  UINT16                CustomerBlockLength;                 /* 154 */
+  UINT8                 CustomerTypeSignature[2];            /* 156 */
+  UINT16                CustomerVersion;                     /* 158 */
+  UINT8                 CustomerWifiMacAddress[6];           /* 160 */
+  UINT8                 CustomerBtMacAddress[6];             /* 166 */
+  UINT8                 CustomerEthernetMacAddress[6];       /* 172 */
+  UINT8                 Reserved2[77];                       /* 178 */
+  UINT8                 Checksum;                            /* 255 */
 } T194_EEPROM_DATA;
 #pragma pack()
 
@@ -148,7 +162,7 @@ typedef struct {
  * @param ReworkLevel - Syseng Rework Level
  * @param Reserved0 - Reserved byte
  * @param NumEthernetMacs - Number of ethernet mac addresses
- * @param PartNumber - asset_tracker_field_1 - 699 or 600 BOM Number
+ * @param PartNumber - asset_tracker_field_1
  * @param WifiMacAddress - MAC address for primary wifi chip
  * @param BtMacAddress - MAC address for bluetooth chip
  * @param SecWifiMacAddress - MAC address for secondary wifi chip
@@ -168,48 +182,67 @@ typedef struct {
  */
 #pragma pack(1)
 typedef struct {
-  UINT16                      Version;                       /* 00 */
-  UINT16                      Size;                          /* 02 */
-  UINT16                      BoardNumber;                   /* 04 */
-  UINT16                      Sku;                           /* 06 */
-  UINT8                       Fab;                           /* 08 */
-  UINT8                       Revision;                      /* 09 */
-  UINT8                       MinorRevision;                 /* 10 */
-  UINT8                       MemoryType;                    /* 11 */
-  UINT8                       PowerConfig;                   /* 12 */
-  UINT8                       MiscConfig;                    /* 13 */
-  UINT8                       ModemConfig;                   /* 14 */
-  UINT8                       TouchConfig;                   /* 15 */
-  UINT8                       DisplayConfig;                 /* 16 */
-  UINT8                       ReworkLevel;                   /* 17 */
-  UINT8                       Reserved0;                     /* 18 */
-  UINT8                       NumEthernetMacs;               /* 19 */
-  TEGRA_EEPROM_PART_NUMBER    PartNumber;                    /* 20 - 49 */
-  UINT8                       WifiMacAddress[6];             /* 50 */
-  UINT8                       BtMacAddress[6];               /* 56 */
-  UINT8                       SecWifiMacAddress[6];          /* 62 */
-  UINT8                       EthernetMacAddress[6];         /* 68 */
-  UINT8                       SerialNumber[15];              /* 74 */
-  UINT8                       Reserved1[61];                 /* 89 */
-  UINT8                       CustomerBlockSignature[4];     /* 150 */
-  UINT16                      CustomerBlockLength;           /* 154 */
-  UINT8                       CustomerTypeSignature[2];      /* 156 */
-  UINT16                      CustomerVersion;               /* 158 */
-  UINT8                       CustomerWifiMacAddress[6];     /* 160 */
-  UINT8                       CustomerBtMacAddress[6];       /* 166 */
-  UINT8                       CustomerEthernetMacAddress[6]; /* 172 */
-  UINT8                       CustomerNumEthernetMacs;       /* 178 */
-  UINT8                       Reserved2[76];                 /* 179 */
-  UINT8                       Checksum;                      /* 255 */
+  UINT16                Version;                             /* 00 */
+  UINT16                Size;                                /* 02 */
+  UINT16                BoardNumber;                         /* 04 */
+  UINT16                Sku;                                 /* 06 */
+  UINT8                 Fab;                                 /* 08 */
+  UINT8                 Revision;                            /* 09 */
+  UINT8                 MinorRevision;                       /* 10 */
+  UINT8                 MemoryType;                          /* 11 */
+  UINT8                 PowerConfig;                         /* 12 */
+  UINT8                 MiscConfig;                          /* 13 */
+  UINT8                 ModemConfig;                         /* 14 */
+  UINT8                 TouchConfig;                         /* 15 */
+  UINT8                 DisplayConfig;                       /* 16 */
+  UINT8                 ReworkLevel;                         /* 17 */
+  UINT8                 Reserved0;                           /* 18 */
+  UINT8                 NumEthernetMacs;                     /* 19 */
+  EEPROM_PART_NUMBER    PartNumber;                          /* 20 - 49 */
+  UINT8                 WifiMacAddress[6];                   /* 50 */
+  UINT8                 BtMacAddress[6];                     /* 56 */
+  UINT8                 SecWifiMacAddress[6];                /* 62 */
+  UINT8                 EthernetMacAddress[6];               /* 68 */
+  UINT8                 SerialNumber[15];                    /* 74 */
+  UINT8                 Reserved1[61];                       /* 89 */
+  UINT8                 CustomerBlockSignature[4];           /* 150 */
+  UINT16                CustomerBlockLength;                 /* 154 */
+  UINT8                 CustomerTypeSignature[2];            /* 156 */
+  UINT16                CustomerVersion;                     /* 158 */
+  UINT8                 CustomerWifiMacAddress[6];           /* 160 */
+  UINT8                 CustomerBtMacAddress[6];             /* 166 */
+  UINT8                 CustomerEthernetMacAddress[6];       /* 172 */
+  UINT8                 CustomerNumEthernetMacs;             /* 178 */
+  UINT8                 Reserved2[76];                       /* 179 */
+  UINT8                 Checksum;                            /* 255 */
 } T234_EEPROM_DATA;
 #pragma pack()
 
 typedef struct {
-  CHAR8    BoardId[BOARD_ID_LEN + 1];
-  CHAR8    ProductId[PRODUCT_ID_LEN + 1];
-  CHAR8    SerialNumber[SERIAL_NUM_LEN];
+  CHAR8    BoardId[TEGRA_BOARD_ID_LEN + 1];
+  CHAR8    ProductId[TEGRA_PRODUCT_ID_LEN + 1];
+  CHAR8    SerialNumber[TEGRA_SERIAL_NUM_LEN];
   UINT8    MacAddr[NET_ETHER_ADDR_LEN];
   UINT8    NumMacs;
 } TEGRA_EEPROM_BOARD_INFO;
+
+static inline
+CONST CHAR8 *
+TegraBoardIdFromPartNumber (
+  CONST EEPROM_PART_NUMBER  *PartNumber
+  )
+{
+  CONST CHAR8  *BoardId;
+
+  if (CompareMem (PartNumber->TegraEepromPartNumber.Leading, NVIDIA_EEPROM_BOARD_ID_PREFIX, 3) == 0) {
+    BoardId = (CONST CHAR8 *)(PartNumber->TegraEepromPartNumber.Id);
+  } else if ((PartNumber)->CustEepromPartNumber.CustEepromMagic == CUSTOMER_EEPROM_BOARD_ID_MAGIC) {
+    BoardId = (CONST CHAR8 *)(PartNumber->CustEepromPartNumber.Data);
+  } else {
+    BoardId = "InvalidBoardId";
+  }
+
+  return BoardId;
+}
 
 #endif
