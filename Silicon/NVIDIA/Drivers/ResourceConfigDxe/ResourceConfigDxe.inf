@@ -22,6 +22,7 @@
   ResourceConfigHii.vfr
 
 [Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
@@ -31,7 +32,9 @@
   DebugLib
   HiiLib
   DevicePathLib
+  DeviceTreeHelperLib
   MemoryAllocationLib
+  PcdLib
   UefiHiiServicesLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
@@ -58,10 +61,10 @@
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
   gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy
-  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
-  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
   gNVIDIATokenSpaceGuid.PcdOsChainOverride
   gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

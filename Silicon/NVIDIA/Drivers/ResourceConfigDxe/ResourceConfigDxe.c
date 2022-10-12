@@ -23,6 +23,7 @@
 #include <Library/BaseLib.h>
 #include <Library/HiiLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiHiiServicesLib.h>
 #include <Library/UefiLib.h>
@@ -96,10 +97,6 @@ InitializeSettings (
       PcdSet8S (PcdPcieEntryInAcpiConfigNeeded, 0);
     }
   }
-
-  // Initialize UART Form Settings
-  PcdSet8S (PcdSerialTypeConfig, PcdGet8 (PcdSerialTypeConfig));
-  PcdSet8S (PcdSerialPortConfig, PcdGet8 (PcdSerialPortConfig));
 
   // Initialize Quick Boot Form Settings
   PcdSet8S (PcdQuickBootEnabled, PcdGet8 (PcdQuickBootEnabled));
@@ -357,6 +354,41 @@ OnEndOfDxe (
 }
 
 /**
+  Update Serial Port PCDs.
+**/
+STATIC
+EFI_STATUS
+UpdateSerialPcds (
+  VOID
+  )
+{
+  UINT32      NumSbsaUartControllers;
+  EFI_STATUS  Status;
+  UINT8       DefaultPortConfig;
+  UINTN       SerialPortVarLen;
+
+  NumSbsaUartControllers = 0;
+
+  // Obtain SBSA Handle Info
+  Status = GetMatchingEnabledDeviceTreeNodes ("arm,sbsa-uart", NULL, &NumSbsaUartControllers);
+  if (Status == EFI_NOT_FOUND) {
+    PcdSet8S (PcdSerialTypeConfig, NVIDIA_SERIAL_PORT_TYPE_16550);
+    DefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_FULL_16550;
+  } else {
+    PcdSet8S (PcdSerialTypeConfig, NVIDIA_SERIAL_PORT_TYPE_SBSA);
+    DefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_SBSA;
+  }
+
+  SerialPortVarLen = 0;
+  Status           = gRT->GetVariable (L"SerialPortConfig", &gNVIDIATokenSpaceGuid, NULL, &SerialPortVarLen, NULL);
+  if (Status == EFI_NOT_FOUND) {
+    PcdSet8S (PcdSerialPortConfig, DefaultPortConfig);
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Install Resource Config driver.
 
   @param  ImageHandle     The image handle.
@@ -375,6 +407,8 @@ ResourceConfigDxeInitialize (
 {
   EFI_STATUS  Status;
   EFI_EVENT   EndOfDxeEvent;
+
+  UpdateSerialPcds ();
 
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
