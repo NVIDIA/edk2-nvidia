@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -21,6 +21,7 @@
   1|T194
   2|T234
   3|T234SLT|T234
+  255|T234Presil|T234
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
 

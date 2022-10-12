@@ -63,6 +63,7 @@
   gNVIDIATokenSpaceGuid.PcdCpuToOtherGpuDistance
   gNVIDIATokenSpaceGuid.PcdGpuToOwnCpuDistance
   gNVIDIATokenSpaceGuid.PcdGpuToOtherCpuDistance
-  
+  gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled
+
 [Depex]
   TRUE

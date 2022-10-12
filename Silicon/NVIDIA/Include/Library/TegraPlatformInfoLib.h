@@ -15,9 +15,10 @@
 #define T234_CHIP_ID    0x23
 #define T234_MAJOR_REV  0x4
 
-#define T194_SKU     1
-#define T234_SKU     2
-#define T234SLT_SKU  3
+#define T194_SKU         1
+#define T234_SKU         2
+#define T234SLT_SKU      3
+#define T234_PRESIL_SKU  255
 
 #define SYSIMG_EMMC_MAGIC_OFFSET  0x4
 #define SYSIMG_EMMC_MAGIC         0xEAAAAAAC

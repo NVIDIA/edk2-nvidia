@@ -399,9 +399,7 @@ TegraPlatformInitialize (
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     if (ChipID == T194_CHIP_ID) {
       LibPcdSetSku (T194_SKU);
-    } else if ((ChipID == T234_CHIP_ID) &&
-               (TegraGetMajorVersion () == T234_MAJOR_REV))
-    {
+    } else if (ChipID == T234_CHIP_ID) {
       T234SkuSet = FALSE;
       Property   = fdt_getprop (DtbBase, 0, "model", &Length);
       if ((Property != NULL) && (Length != 0)) {
@@ -416,6 +414,10 @@ TegraPlatformInitialize (
       }
     }
   } else {
+    if (ChipID == T234_CHIP_ID) {
+      LibPcdSetSku (T234_PRESIL_SKU);
+    }
+
     // Override boot timeout for pre-si platforms
     EmmcMagic = *((UINTN *)(TegraGetSystemMemoryBaseAddress (ChipID) + SYSIMG_EMMC_MAGIC_OFFSET));
     if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {
@@ -453,6 +455,10 @@ TegraPlatformInitialize (
     Status = UseEmulatedVariableStore (ImageHandle);
     if (EFI_ERROR (Status)) {
       return Status;
+    }
+
+    if (PlatformType == TEGRA_PLATFORM_SILICON) {
+      PcdSetBoolS (PcdTegraStmmEnabled, FALSE);
     }
   }
 

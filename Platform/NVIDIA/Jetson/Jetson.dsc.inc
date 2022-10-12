@@ -125,6 +125,15 @@
 [PcdsDynamicHii.common.T234SLT]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
 
+[PcdsDynamicHii.common.T234Presil]
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS,NV
+
+[PcdsDynamicDefault.common.T234Presil]
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
+  gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled|FALSE
+
 [PcdsFeatureFlag.common]
   gEmbeddedTokenSpaceGuid.PcdAndroidBootLoadFile2|TRUE
 
