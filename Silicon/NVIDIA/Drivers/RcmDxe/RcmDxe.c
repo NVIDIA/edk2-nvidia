@@ -35,6 +35,8 @@ RcmDxeInitialize (
   TEGRABL_BLOBHEADER            *RcmBlobHeader;
   UINTN                         RcmBlobBase;
   UINTN                         RcmBlobSize;
+  UINTN                         OsCarveoutBase;
+  UINTN                         OsCarveoutSize;
   UINT8                         BlobMagic[4] = { 'b', 'l', 'o', 'b' };
   UINTN                         Count;
   VOID                          *Hob;
@@ -81,6 +83,13 @@ RcmDxeInitialize (
 
   PcdSet64S (PcdRcmKernelBase, (UINT64)RcmBlobHeader + RcmBlobHeader->BlobInfo[Count].Offset);
   PcdSet64S (PcdRcmKernelSize, RcmBlobHeader->BlobInfo[Count].Size);
+
+  OsCarveoutBase = PlatformResourceInfo->RamdiskOSInfo.Base;
+  OsCarveoutSize = PlatformResourceInfo->RamdiskOSInfo.Size;
+
+  if ((OsCarveoutBase != 0) && (OsCarveoutSize != 0) && (OsCarveoutSize >= PcdGet64 (PcdRcmKernelSize))) {
+    CopyMem ((VOID *)OsCarveoutBase, (VOID *)PcdGet64 (PcdRcmKernelBase), PcdGet64 (PcdRcmKernelSize));
+  }
 
   return EFI_SUCCESS;
 }
