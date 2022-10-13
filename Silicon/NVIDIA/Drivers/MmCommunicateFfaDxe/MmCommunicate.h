@@ -20,4 +20,15 @@
 #define MM_CALLER_MAJOR_VER  0x1UL
 #define MM_CALLER_MINOR_VER  0x0
 
+/**
+ * Call an SMC to send an FFA request. This function is similar to
+ * ArmCallSmc except that it returns extra GP registers as needed for FFA.
+ *
+ * @param Args    GP registers to send with the SMC request
+ */
+VOID
+StmmFfaSmc (
+  IN OUT ARM_SMC_ARGS  *Args
+  );
+
 #endif /* MM_COMMUNICATE_H_ */

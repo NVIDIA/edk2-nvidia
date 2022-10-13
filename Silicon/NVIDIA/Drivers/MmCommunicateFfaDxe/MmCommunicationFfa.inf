@@ -27,10 +27,13 @@
 [Sources.AARCH64]
   MmCommunicate.h
   MmCommunication.c
+  AArch64/StmmFfa.S
 
 [Packages]
   ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
 
 [LibraryClasses]
   ArmLib
@@ -48,6 +51,10 @@
   gEfiEndOfDxeEventGroupGuid
   gEfiEventExitBootServicesGuid
   gEfiEventReadyToBootGuid
+  gEfiRtPropertiesTableGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdVariableRtProperties
 
 [Pcd.common]
   gArmTokenSpaceGuid.PcdMmBufferBase

@@ -10,12 +10,14 @@
 #include <Library/ArmLib.h>
 #include <Library/ArmSmcLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DxeServicesTableLib.h>
 #include <Library/HobLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Guid/RtPropertiesTable.h>
 
 #include <Protocol/MmCommunication2.h>
 
@@ -33,10 +35,16 @@
 #define ARM_SVC_ID_FFA_RXTX_UNMAP          0x84000067
 #define ARM_SVC_ID_FFA_SUCCESS_AARCH64     0xC4000061
 #define ARM_SVC_ID_FFA_SUCCESS_AARCH32     0x84000060
+#define STMM_GET_NS_BUFFER                 0xC0270001
 
 STATIC UINT16  StmmVmId = 0xFFFF;
 STATIC EFI_STATUS
 GetStmmVmId (
+  VOID
+  );
+
+STATIC EFI_STATUS
+GetNsBufferAddr (
   VOID
   );
 
@@ -356,6 +364,16 @@ GetMmCompatibility (
         Status
         ));
     }
+
+    Status = GetNsBufferAddr ();
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to get NS Buffer Details. %r\n",
+        __FUNCTION__,
+        Status
+        ));
+    }
   } else {
     DEBUG ((
       DEBUG_ERROR,
@@ -429,8 +447,9 @@ MmCommunication2Initialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS  Status;
-  UINTN       Index;
+  EFI_STATUS               Status;
+  UINTN                    Index;
+  EFI_RT_PROPERTIES_TABLE  *RtProperties;
 
   // Check if we can make the MM call
   Status = GetMmCompatibility ();
@@ -523,6 +542,23 @@ MmCommunication2Initialize (
 
       goto UninstallProtocol;
     }
+  }
+
+  RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocatePool (sizeof (EFI_RT_PROPERTIES_TABLE));
+  if (RtProperties == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT table\n", __FUNCTION__));
+    Status = EFI_OUT_OF_RESOURCES;
+    goto UninstallProtocol;
+  }
+
+  RtProperties->Version                  = EFI_RT_PROPERTIES_TABLE_VERSION;
+  RtProperties->Length                   = sizeof (EFI_RT_PROPERTIES_TABLE);
+  RtProperties->RuntimeServicesSupported = PcdGet32 (PcdVariableRtProperties);
+
+  Status = gBS->InstallConfigurationTable (&gEfiRtPropertiesTableGuid, RtProperties);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error installing RT table: %r\n", __FUNCTION__, Status));
+    goto UninstallProtocol;
   }
 
   return EFI_SUCCESS;
@@ -650,6 +686,58 @@ FfaFreeRxTxBuffers (
   gBS->FreePages (tx, pages);
   gBS->FreePages (rx, pages);
 
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+GetNsBufferAddr (
+  VOID
+  )
+{
+  EFI_STATUS    Status;
+  ARM_SMC_ARGS  ArmSmcArgs;
+  UINT64        NsBufferBase;
+  UINT32        NsBufferSize;
+
+  if (StmmVmId ==  0xFFFF) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
+  Status = EFI_SUCCESS;
+
+  ArmSmcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64;
+  ArmSmcArgs.Arg1 = StmmVmId;
+  ArmSmcArgs.Arg3 = STMM_GET_NS_BUFFER;
+
+  StmmFfaSmc (&ArmSmcArgs);
+
+  if (ArmSmcArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Invalid FFA response: 0x%x\n",
+      __FUNCTION__,
+      ArmSmcArgs.Arg0
+      ));
+    Status = EFI_INVALID_PARAMETER;
+    goto exit;
+  }
+
+  NsBufferBase = ArmSmcArgs.Arg5;
+  NsBufferSize = ArmSmcArgs.Arg6;
+
+  PcdSet64S (PcdMmBufferBase, NsBufferBase);
+  PcdSet64S (PcdMmBufferSize, NsBufferSize);
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Set NufBase to %lu Size %u\n",
+    __FUNCTION__,
+    NsBufferBase,
+    NsBufferSize
+    ));
+
+exit:
   return Status;
 }
 
