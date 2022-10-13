@@ -1,0 +1,36 @@
+#/** @file
+#
+#  Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES
+# SPDX-License-Identifier: BSD-2-Clause-Patenty
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = RamDiskOS
+  FILE_GUID                      = 76c4bfdb-3bab-4b18-8350-73afbf4ffadf
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = RamDiskOSEntryPoint
+
+[Sources]
+  RamDiskOS.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiDriverEntryPoint
+  PlatformResourceLib
+  HobLib
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
+
+[Protocols]
+  gEfiRamDiskProtocolGuid
