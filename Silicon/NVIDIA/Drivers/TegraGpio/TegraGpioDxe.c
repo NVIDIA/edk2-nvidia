@@ -91,10 +91,36 @@ STATIC CONST GPIO_CONTROLLER  Tegra234GpioAonControllers[] = {
   TEGRA_GPIO_ENTRY (5, 0, 1, 1),
 };
 
+STATIC CONST GPIO_CONTROLLER  Tegra23xGpioControllers[] = {
+  TEGRA_GPIO_ENTRY (0,  0, 0, 8),
+  TEGRA_GPIO_ENTRY (1,  0, 1, 5),
+  TEGRA_GPIO_ENTRY (2,  0, 2, 8),
+  TEGRA_GPIO_ENTRY (3,  0, 3, 8),
+  TEGRA_GPIO_ENTRY (4,  0, 4, 4),
+  TEGRA_GPIO_ENTRY (5,  0, 5, 8),
+  TEGRA_GPIO_ENTRY (6,  0, 6, 8),
+  TEGRA_GPIO_ENTRY (7,  0, 7, 6),
+  TEGRA_GPIO_ENTRY (8,  1, 0, 8),
+  TEGRA_GPIO_ENTRY (9,  1, 1, 4),
+  TEGRA_GPIO_ENTRY (10, 1, 2, 8),
+  TEGRA_GPIO_ENTRY (11, 1, 3, 8),
+  TEGRA_GPIO_ENTRY (12, 1, 4, 3),
+  TEGRA_GPIO_ENTRY (13, 1, 5, 8),
+  TEGRA_GPIO_ENTRY (14, 1, 6, 3),
+  TEGRA_GPIO_ENTRY (15, 2, 0, 8),
+  TEGRA_GPIO_ENTRY (16, 2, 1, 8),
+  TEGRA_GPIO_ENTRY (17, 2, 2, 8),
+  TEGRA_GPIO_ENTRY (18, 2, 3, 6),
+  TEGRA_GPIO_ENTRY (19, 2, 4, 2),
+  TEGRA_GPIO_ENTRY (20, 3, 0, 8),
+  TEGRA_GPIO_ENTRY (21, 3, 1, 2)
+};
+
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-gpio",     &gNVIDIANonDiscoverableT194GpioDeviceGuid    },
   { "nvidia,tegra234-gpio",     &gNVIDIANonDiscoverableT234GpioDeviceGuid    },
   { "nvidia,tegra234-gpio-aon", &gNVIDIANonDiscoverableT234GpioAonDeviceGuid },
+  { "nvidia,tegra23x-gpio",     &gNVIDIANonDiscoverableT23xGpioDeviceGuid    },
   { NULL,                       NULL                                         }
 };
 
@@ -491,6 +517,9 @@ DeviceDiscoveryNotify (
       } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234GpioAonDeviceGuid)) {
         mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Tegra234GpioAonControllers);
         mControllerArray[mControllerCount].ControllerDefault = Tegra234GpioAonControllers;
+      } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT23xGpioDeviceGuid)) {
+        mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Tegra23xGpioControllers);
+        mControllerArray[mControllerCount].ControllerDefault = Tegra23xGpioControllers;
       } else {
         return EFI_UNSUPPORTED;
       }
