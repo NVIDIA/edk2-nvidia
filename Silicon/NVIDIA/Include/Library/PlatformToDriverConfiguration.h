@@ -2,7 +2,7 @@
 
   Platform To Driver Configuration Protocol private structures
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -34,15 +34,5 @@ typedef struct {
   QUERY       Query;
   RESPONSE    Response;
 } GUID_DEVICEFUNCPTR_MAPPING;
-
-/**
-  Retrieve Internal Guid Device Funtion Map
-
-**/
-GUID_DEVICEFUNCPTR_MAPPING *
-EFIAPI
-GetInternalGuidMap (
-  VOID
-  );
 
 #endif /* PLATFORMTODRIVERCONFIG_H_ */

@@ -38,7 +38,6 @@
   DevicePathLib
   DtPlatformDtbLoaderLib
   TegraPlatformInfoLib
-  DeviceDiscoveryInternalLib
   FdtLib
 
 [Guids]

@@ -93,26 +93,14 @@ Query (
     return Status;
   }
 
-  // Get GUID map for internal targets
-  GuidMapper = GetInternalGuidMap ();
+  // Iterate over the list of known clients
+  GuidMapper = GuidDeviceFuncPtrMap;
   while (GuidMapper->DeviceGuid != NULL) {
     if (CompareGuid (Device->Type, GuidMapper->DeviceGuid)) {
       break;
     }
 
     GuidMapper++;
-  }
-
-  // Iterate over the list of known clients
-  if (GuidMapper->DeviceGuid == NULL) {
-    GuidMapper = GuidDeviceFuncPtrMap;
-    while (GuidMapper->DeviceGuid != NULL) {
-      if (CompareGuid (Device->Type, GuidMapper->DeviceGuid)) {
-        break;
-      }
-
-      GuidMapper++;
-    }
   }
 
   if (GuidMapper->DeviceGuid != NULL) {
@@ -161,26 +149,14 @@ Response (
     return EFI_INVALID_PARAMETER;
   }
 
-  // Get GUID map for internal targets
-  GuidMapper = GetInternalGuidMap ();
+  // Iterate over the list of known clients
+  GuidMapper = GuidDeviceFuncPtrMap;
   while (GuidMapper->DeviceGuid != NULL) {
     if (CompareGuid (ParameterTypeGuid, GuidMapper->DeviceGuid)) {
       break;
     }
 
     GuidMapper++;
-  }
-
-  // Iterate over the list of known clients
-  if (GuidMapper->DeviceGuid == NULL) {
-    GuidMapper = GuidDeviceFuncPtrMap;
-    while (GuidMapper->DeviceGuid != NULL) {
-      if (CompareGuid (ParameterTypeGuid, GuidMapper->DeviceGuid)) {
-        break;
-      }
-
-      GuidMapper++;
-    }
   }
 
   if (GuidMapper->DeviceGuid != NULL) {

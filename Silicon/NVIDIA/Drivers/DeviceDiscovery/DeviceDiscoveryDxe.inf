@@ -2,7 +2,7 @@
 #
 #  Component description file for the Device Discovery DXE platform driver.
 #
-#  Copyright (c) 2018-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -38,7 +38,6 @@
   DevicePathLib
   DtPlatformDtbLoaderLib
   TegraPlatformInfoLib
-  DeviceDiscoveryInternalLib
   FdtLib
 
 [Guids]

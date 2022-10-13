@@ -20,7 +20,6 @@
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <libfdt.h>
 #include <Library/DxeServicesTableLib.h>
-#include <Library/DeviceDiscoveryInternalLib.h>
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
 #include <Protocol/ClockNodeProtocol.h>

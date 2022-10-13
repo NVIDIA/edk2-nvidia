@@ -33,7 +33,6 @@
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   MemoryAllocationLib
-  PlatformToDriverConfigurationInternalLib
 
 [Protocols]
   gEfiPlatformToDriverConfigurationProtocolGuid
