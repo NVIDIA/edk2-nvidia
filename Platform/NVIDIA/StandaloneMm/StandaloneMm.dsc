@@ -60,7 +60,7 @@
   #  DEBUG_VERBOSE   0x00400000  // Detailed debug messages that may
   #                              // significantly impact boot performance
   #  DEBUG_ERROR     0x80000000  // Error
-  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x800000CF
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000000F
 
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE

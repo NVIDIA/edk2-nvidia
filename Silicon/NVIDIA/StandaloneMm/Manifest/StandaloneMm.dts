@@ -65,21 +65,21 @@
 		rxbuffer: rx-buffer {
 			description = "rx-buffer";
 			pages-count = <1>;
-			base-address = <0x00000000 0x8B53D000>;
+			base-address = <0x00000000 0x8B52F000>;
 			attributes = <0x1>; /* read-only */
 		};
 		/* Reserved memory for stage-1 table entries */
 		stage1-entries {
 			description = "stage1-entries";
 			pages-count = <192>;
-			base-address = <0x00000000 0x8B53E000>;
+			base-address = <0x00000000 0x8B530000>;
 			attributes = <0x3>; /* read-write */
 		};
 		/* Shared memory between StMM and NS world */
 		stmmns-memory {
 			description = "stmmns-memory";
 			pages-count = <512>;
-			base-address = <0x00000000 0x8B5FE000>;
+			base-address = <0x00000000 0x8B5F0000>;
 			attributes = <0x3>; /* read-write */
 			nv-non-secure-memory = <0x1>;
 		};
