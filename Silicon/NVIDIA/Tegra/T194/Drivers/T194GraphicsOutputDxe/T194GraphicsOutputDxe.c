@@ -85,7 +85,7 @@ GraphicsQueryMode (
 
   *SizeOfInfo = sizeof (EFI_GRAPHICS_OUTPUT_MODE_INFORMATION);
 
-  CopyMem (*Info, &Instance->ModeInfo, *SizeOfInfo);
+  CopyMem (*Info, &Instance->ModeInfo[Instance->ActiveHeadIndex], *SizeOfInfo);
 
 EXIT:
   return Status;
@@ -176,24 +176,73 @@ GraphicsBlt (
            );
 }
 
-/**
-  Read a Window register based off of the given BaseAddress.
-  Note that the BaseAddress should already adjusted for the correct Head.
+/***************************************
+  Read a Display Controller register
 
-  @param [in]  BaseAddress       EFI_PHYSICAL_ADDRESS of Display head instance
+  @param [in]  HeadIndex         INTN of Head index
+  @param [in]  RegOffset         UINT32 of Head register byte offset
+  @param [out] Data              *UINT32 to store read data
+  @retval EFI_SUCCESS            Operation successful
+  @retval EFI_INVALID_PARAMETER  Invalid Head index
+ ***************************************/
+STATIC
+EFI_STATUS
+ReadDcReg32 (
+  IN CONST  INTN    HeadIndex,
+  IN CONST  UINT32  RegOffset,
+  OUT       UINT32  *Data
+  )
+{
+  if ((HeadIndex == DC_HEAD_INDEX_UNKNOWN) || (Data == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *Data = MmioRead32 (DC_HEAD_0_BASE_ADDR + DC_PER_HEAD_OFFSET*HeadIndex + RegOffset);
+  return EFI_SUCCESS;
+}
+
+/***************************************
+  Write a Display Controller register
+
+  @param [in]  HeadIndex         INTN of Head index
+  @param [in]  RegOffset         UINT32 of Head register byte offset
+  @param [in]  Data              UINT32 of data to write
+  @retval EFI_SUCCESS            Operation successful
+  @retval EFI_INVALID_PARAMETER  Invalid Head index
+ ***************************************/
+STATIC
+EFI_STATUS
+WriteDcReg32 (
+  IN CONST  INTN    HeadIndex,
+  IN CONST  UINT32  RegOffset,
+  IN CONST  UINT32  Data
+  )
+{
+  if (HeadIndex == DC_HEAD_INDEX_UNKNOWN) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  MmioWrite32 (DC_HEAD_0_BASE_ADDR + DC_PER_HEAD_OFFSET*HeadIndex + RegOffset, Data);
+  return EFI_SUCCESS;
+}
+
+/***************************************
+  Read a Window register on the given Head
+
+  @param [in]  HeadIndex         INTN of Head index
   @param [in]  WindowIndex       INTN of Window index
   @param [in]  WindowOffset      UINT32 of Window register byte offset
-  @param [out] Reg               *UINT32 to return window register data
+  @param [out] Reg               UINT32* to return window register data
   @retval EFI_SUCCESS            Operation successful
-  @retval EFI_INVALID_PARAMETER  Failed to retrieve Head index
-**/
+  @retval EFI_INVALID_PARAMETER  Invalid Head or Window index
+ ***************************************/
 STATIC
 EFI_STATUS
 ReadDcWinReg32 (
-  IN CONST  EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN CONST  INTN                  WindowIndex,
-  IN CONST  UINT32                WindowOffset,
-  OUT       UINT32                *Reg
+  IN CONST  INTN    HeadIndex,
+  IN CONST  INTN    WindowIndex,
+  IN CONST  UINT32  WindowOffset,
+  OUT       UINT32  *Reg
   )
 {
   EFI_STATUS  Status = EFI_SUCCESS;
@@ -202,29 +251,28 @@ ReadDcWinReg32 (
     return EFI_INVALID_PARAMETER;
   }
 
-  *Reg = MmioRead32 (BaseAddress + (WindowIndex * DC_PER_WINDOW_OFFSET) + WindowOffset);
+  Status = ReadDcReg32 (HeadIndex, (WindowIndex * DC_PER_WINDOW_OFFSET) + WindowOffset, Reg);
 
   return Status;
 }
 
-/**
-  Write a Window register based off of the given BaseAddress.
-  Note that the BaseAddress should already adjusted for the correct Head.
+/***************************************
+  Write a Window register on the given Head index
 
-  @param [in]  BaseAddress       EFI_PHYSICAL_ADDRESS of Display head instance
+  @param [in]  HeadIndex         INTN of Head index
   @param [in]  WindowIndex       INTN of Window index
   @param [in]  WindowOffset      UINT32 of Window register byte offset
   @param [in]  Reg               UINT32 to window register data to write
   @retval EFI_SUCCESS            Operation successful
   @retval EFI_INVALID_PARAMETER  Failed to retrieve Head index
-**/
+ ***************************************/
 STATIC
 EFI_STATUS
 WriteDcWinReg32 (
-  IN CONST  EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN CONST  INTN                  WindowIndex,
-  IN CONST  UINT32                WindowOffset,
-  IN CONST  UINT32                Reg
+  IN CONST  INTN    HeadIndex,
+  IN CONST  INTN    WindowIndex,
+  IN CONST  UINT32  WindowOffset,
+  IN CONST  UINT32  Data
   )
 {
   EFI_STATUS  Status = EFI_SUCCESS;
@@ -233,29 +281,97 @@ WriteDcWinReg32 (
     return EFI_INVALID_PARAMETER;
   }
 
-  MmioWrite32 (BaseAddress + (WindowIndex * DC_PER_WINDOW_OFFSET) + WindowOffset, Reg);
+  Status = WriteDcReg32 (HeadIndex, (WindowIndex * DC_PER_WINDOW_OFFSET) + WindowOffset, Data);
 
   return Status;
 }
 
-/**
+/***************************************
+  debug dump of registers for the indicated Head.index
+  This function will also do some sanity checks as described
+  in the ardisplay.html manual:
+
+  @param [in]  HeadIndex         INTN of Head index
+  @retval EFI_SUCCESS            Operation successful
+  @retval EFI_INVALID_PARAMETER  Failed to retrieve Head data
+ ***************************************/
+STATIC
+EFI_STATUS
+DumpRegsForThisHead (
+  IN CONST  INTN  HeadIndex
+  )
+{
+  EFI_STATUS  Status = EFI_SUCCESS;
+  UINT32      Data;
+  UINT32      VSyncWidth;
+  UINT32      HSyncWidth;
+  UINT32      VFrontPorch;
+  UINT32      HFrontPorch;
+  UINT32      VBackPorch;
+  UINT32      HBackPorch;
+  UINT32      VDispActive;
+  UINT32      HDispActive;
+
+  if (EFI_ERROR (ReadDcReg32 (HeadIndex, DC_DISP_SYNC_WIDTH_OFFSET, &Data))) {
+    return EFI_INVALID_PARAMETER;
+  } else {
+    DEBUG ((DEBUG_ERROR, "Head index=%d DC_DISP_SYNC_WIDTH  = 0x%08x\n", HeadIndex, Data));
+    VSyncWidth = (Data >> 16) & MAX_UINT16;
+    HSyncWidth = Data & MAX_UINT16;
+  }
+
+  if (EFI_ERROR (ReadDcReg32 (HeadIndex, DC_DISP_BACK_PORCH_OFFSET, &Data))) {
+    return EFI_INVALID_PARAMETER;
+  } else {
+    DEBUG ((DEBUG_ERROR, "Head index=%d DC_DISP_BACK_PORCH  = 0x%08x\n", HeadIndex, Data));
+    VBackPorch = (Data >> 16) & MAX_UINT16;
+    HBackPorch = Data & MAX_UINT16;
+  }
+
+  if (EFI_ERROR (ReadDcReg32 (HeadIndex, DC_DISP_FRONT_PORCH_OFFSET, &Data))) {
+    return EFI_INVALID_PARAMETER;
+  } else {
+    DEBUG ((DEBUG_ERROR, "Head index=%d DC_DISP_FRONT_PORCH = 0x%08x\n", HeadIndex, Data));
+    VFrontPorch = (Data >> 16) & MAX_UINT16;
+    HFrontPorch = Data & MAX_UINT16;
+  }
+
+  if (EFI_ERROR (ReadDcReg32 (HeadIndex, DC_DISP_DISP_ACTIVE_OFFSET, &Data))) {
+    return EFI_INVALID_PARAMETER;
+  } else {
+    DEBUG ((
+      DEBUG_ERROR,
+      "Head index=%d DC_DISP_DISP_ACTIVE = 0x%08x = %u x %u\n",
+      HeadIndex,
+      Data,
+      Data & 0x7fff,
+      (Data >> 16) & 0x7fff
+      ));
+    VDispActive = (Data >> 16) & MAX_UINT16;
+    HDispActive = Data & MAX_UINT16;
+  }
+
+  return Status;
+}
+
+/***************************************
   Return the first enabled+usable window on the given Head index.
   The Window index search always starts at 0 and runs to WINDOW_INDEX_MAX
   (inclusive).
 
-  @param [in]  BaseAddress       EFI_PHYSICAL_ADDRESS of Display head instance
-  @param [in]  HeadIndex         INTN  of Head   index
+  @param [in]  HeadIndex         INTN  of Head index
+  @param [in]  WindowState       WindowState criteria
   @param [out] WinowIndexFound   INTN* of Window index, if usable
   @retval EFI_SUCCESS            A  usable window was found on the given head
   @retval EFI_NOT_FOUND          No usable window was found on the given head
   @retval EFI_INVALID_PARAMETER  Error during usable window search
-**/
+ ***************************************/
 STATIC
 EFI_STATUS
-GetFirstUsableWinForThisHead (
-  IN CONST  EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN CONST  INTN                  HeadIndex,
-  OUT       INTN                  *WindowIndexFound
+GetFirstWinForThisHead (
+  IN CONST  INTN         HeadIndex,
+  IN CONST  WindowState  WinStateCriteria,
+  OUT       INTN         *WindowIndexFound
   )
 {
   EFI_STATUS  Status;
@@ -264,10 +380,12 @@ GetFirstUsableWinForThisHead (
   BOOLEAN     FoundActiveWindow = FALSE;
   UINT32      WindowHeight, WindowWidth;
 
+  *WindowIndexFound = WINDOW_INDEX_UNKNOWN;
+
   for (WindowIndex = 0; WindowIndex <= WINDOW_INDEX_MAX; WindowIndex++ ) {
     /* first check: see if the window is enabled on the given head */
     WindowOffset = DC_A_WIN_AD_WIN_OPTIONS_OFFSET;
-    Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &Reg);
+    Status       = ReadDcWinReg32 (HeadIndex, WindowIndex, WindowOffset, &Reg);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: error reading Window index=%d @ WindowOffset=0x%08x\n", __FUNCTION__, WindowIndex, WindowOffset));
       return EFI_INVALID_PARAMETER;
@@ -281,41 +399,55 @@ GetFirstUsableWinForThisHead (
       continue;
     }
 
-    /* second check: confirm the window dimensions are acceptable for UEFI */
-    WindowOffset = DC_A_WIN_AD_PCALC_WINDOW_SET_CROPPED_SIZE_IN_0;
-    Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &Reg);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: error reading Window index=%d @ WindowOffset 0x%08x\n", __FUNCTION__, WindowIndex, WindowOffset));
-      return EFI_INVALID_PARAMETER;
-    }
-
-    WindowWidth  = Reg & 0x7fff;
-    WindowHeight = (Reg >> 16) & 0x7fff;
-    if ((WindowWidth >= WIN_CROPPED_SIZE_IN_MIN_WIDTH) && (WindowHeight >= WIN_CROPPED_SIZE_IN_MIN_HEIGHT)) {
+    if (WinStateCriteria == WindowStateEnabled) {
       DEBUG ((
         DEBUG_ERROR,
-        "Head index %d: Window index=%d %ux%u >= %ux%u: acceptable to use\n",
+        "Head index %d: Window index=%d enabled\n",
         HeadIndex,
-        WindowIndex,
-        WindowWidth,
-        WindowHeight,
-        WIN_CROPPED_SIZE_IN_MIN_WIDTH,
-        WIN_CROPPED_SIZE_IN_MIN_HEIGHT
+        WindowIndex
         ));
       *WindowIndexFound = WindowIndex;
       FoundActiveWindow = TRUE;
       break;
-    } else {
-      DEBUG ((
-        DEBUG_ERROR,
-        "Head index %d: Window index=%d %ux%u < %ux%u: NOT acceptable to use\n",
-        HeadIndex,
-        WindowIndex,
-        WindowWidth,
-        WindowHeight,
-        WIN_CROPPED_SIZE_IN_MIN_WIDTH,
-        WIN_CROPPED_SIZE_IN_MIN_HEIGHT
-        ));
+    }
+
+    if (WinStateCriteria == WindowStateUsable) {
+      /* second check: confirm the window dimensions are acceptable for UEFI */
+      WindowOffset = DC_A_WIN_AD_PCALC_WINDOW_SET_CROPPED_SIZE_IN_0;
+      Status       = ReadDcWinReg32 (HeadIndex, WindowIndex, WindowOffset, &Reg);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: error reading Window index=%d @ WindowOffset 0x%08x\n", __FUNCTION__, WindowIndex, WindowOffset));
+        return EFI_INVALID_PARAMETER;
+      }
+
+      WindowWidth  = Reg & 0x7fff;
+      WindowHeight = (Reg >> 16) & 0x7fff;
+      if ((WindowWidth >= WIN_CROPPED_SIZE_IN_MIN_WIDTH) && (WindowHeight >= WIN_CROPPED_SIZE_IN_MIN_HEIGHT)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "Head index %d: Window index=%d %ux%u >= %ux%u: enabled and usable by UEFI\n",
+          HeadIndex,
+          WindowIndex,
+          WindowWidth,
+          WindowHeight,
+          WIN_CROPPED_SIZE_IN_MIN_WIDTH,
+          WIN_CROPPED_SIZE_IN_MIN_HEIGHT
+          ));
+        *WindowIndexFound = WindowIndex;
+        FoundActiveWindow = TRUE;
+        break;
+      } else {
+        DEBUG ((
+          DEBUG_ERROR,
+          "Head index %d: Window index=%d %ux%u < %ux%u: enabled but NOT usable; keep searching\n",
+          HeadIndex,
+          WindowIndex,
+          WindowWidth,
+          WindowHeight,
+          WIN_CROPPED_SIZE_IN_MIN_WIDTH,
+          WIN_CROPPED_SIZE_IN_MIN_HEIGHT
+          ));
+      }
     }
   }
 
@@ -326,14 +458,14 @@ GetFirstUsableWinForThisHead (
   return Status;
 }
 
-/**
+/***************************************
   Return Head index based on BaseAddress
 
   @param [in]  BaseAddress       EFI_PHYSICAL_ADDRESS of Display head instance
   @param [out] HeadIndex         INTN* of Head index inferred from BaseAddress
   @retval EFI_SUCCESS            Operation successful
   @retval EFI_INVALID_PARAMETER  Failed to retrieve Head index
-**/
+ ***************************************/
 STATIC
 EFI_STATUS
 GetDispHeadFromAddr (
@@ -362,35 +494,37 @@ GetDispHeadFromAddr (
   return Status;
 }
 
-/**
+/***************************************
   Retrieve LUT region details.
 
-  @param [in]  Gop      ptr to GOP_INSTANCE
-  @param [out] LutBase  Holds LUT region start address on return
-  @param [out] LutSize  Holds LUT region size on return
+  @param [in]  GopInstance  ptr to GOP_INSTANCE
+  @param [in]  HeadIndex    head index
+  @param [out] LutBase      on return: LUT region start address
+  @param [out] LutSize      on return: LUT region size
 
   @retval EFI_SUCCESS            Operation successful
   @retval EFI_INVALID_PARAMETER  Failed to retrieve region details
-**/
+ ***************************************/
 STATIC
 EFI_STATUS
 GetLutRegion (
-  IN  CONST GOP_INSTANCE    *CONST  Gop,
+  IN  CONST GOP_INSTANCE    *CONST  GopInstance,
+  IN  CONST INTN                    HeadIndex,
   OUT EFI_PHYSICAL_ADDRESS  *CONST  LutBase,
   OUT UINTN                 *CONST  LutSize
   )
 {
   UINT32  Low32, High32;
 
-  if (Gop == NULL) {
+  if (GopInstance == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Low32    = MmioRead32 (Gop->DcAddr + COREPVT_HEAD_SET_OUTPUT_LUT_BASE_LO_OFFSET);
-  High32   = MmioRead32 (Gop->DcAddr + COREPVT_HEAD_SET_OUTPUT_LUT_BASE_HI_OFFSET);
+  (void)ReadDcReg32 (HeadIndex, COREPVT_HEAD_SET_OUTPUT_LUT_BASE_LO_OFFSET, &Low32);
+  (void)ReadDcReg32 (HeadIndex, COREPVT_HEAD_SET_OUTPUT_LUT_BASE_HI_OFFSET, &High32);
   *LutBase = (EFI_PHYSICAL_ADDRESS)(((UINT64)High32) << 32) | ((UINT64)Low32);
 
-  Low32 = MmioRead32 (Gop->DcAddr + CORE_HEAD_SET_CONTROL_OUTPUT_LUT_OFFSET);
+  (void)ReadDcReg32 (HeadIndex, CORE_HEAD_SET_CONTROL_OUTPUT_LUT_OFFSET, &Low32);
   switch (CORE_HEAD_SET_CONTROL_OUTPUT_LUT_SIZE (Low32)) {
     case CORE_HEAD_SET_CONTROL_OUTPUT_LUT_SIZE_257:
       *LutSize = 257 * sizeof (UINT64);
@@ -414,8 +548,8 @@ GetLutRegion (
   a supported iommu range, there will be a fault
   when accessing that head's register in the OS.
 
-   @param [in]  *Gop           ptr to GOP_INSTANCE
-   @param [in]  HeadIndex      Head index to check if active
+  @param [in]  *GopInstance   ptr to GOP_INSTANCE
+  @param [in]  HeadIndex      Head index to check if active
 
   @retval TRUE  head is active
   @retval FALSE head is inactive
@@ -423,14 +557,119 @@ GetLutRegion (
 STATIC
 BOOLEAN
 IsHeadActive (
-  IN CONST  GOP_INSTANCE  *Gop,
+  IN CONST  GOP_INSTANCE  *GopInstance,
   IN CONST  INTN          HeadIndex
   )
 {
   UINT32  DispActive;
 
-  DispActive = MmioRead32 (DC_HEAD_0_BASE_ADDR + DC_PER_HEAD_OFFSET*HeadIndex + DC_DISP_DISP_ACTIVE_OFFSET);
+  (void)ReadDcReg32 (HeadIndex, DC_DISP_DISP_ACTIVE_OFFSET, &DispActive);
+
   return (DispActive != 0) && (DispActive != DC_DISP_DISP_ACTIVE_RESET_VAL);
+}
+
+/***************************************
+  support function for FdtInstalled callback
+  to update the appropriate fb?_carveout node.
+
+  @param [in]  DtBlob      ptr to Device Tree blob
+  @param [in]  Private     ptr to GOP_INSTANCE
+  @param [in,out] Data     array of UINT64 items
+  @param [in]  DataItems   number of items in Data
+  @param [in]  HeadIndex   Head index to update
+
+  @retval EFI_SUCCESS      Operation successful.
+  @retval others           Error occurred
+ ***************************************/
+STATIC
+EFI_STATUS
+UpdateFbCarveoutNode (
+  IN VOID                       *DtBlob,
+  IN GOP_INSTANCE       *CONST  Private,
+  IN OUT UINT64                 Data[],
+  IN UINTN                      DataItems,
+  IN INTN                       HeadIndex
+  )
+{
+  EFI_STATUS            Status;
+  INT32                 Result;
+  CONST CHAR8           *FbCarveoutPath;
+  INTN                  FbCarveoutNodeOffset;
+  EFI_PHYSICAL_ADDRESS  FbAddress, LutAddress;
+  UINTN                 FbSize, LutSize;
+
+  Status = GetLutRegion (Private, HeadIndex, &LutAddress, &LutSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting LUT region, force LutAddress and LutSize to 0: %r\n", __FUNCTION__, Status));
+    LutAddress = 0;
+    LutSize    = 0;
+  }
+
+  FbAddress = Private->Mode[HeadIndex].FrameBufferBase;
+  FbSize    = Private->Mode[HeadIndex].FrameBufferSize;
+  DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferBase = 0x%p\n", HeadIndex, Private->Mode[HeadIndex].FrameBufferBase));
+  DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferSize = %u\n", HeadIndex, Private->Mode[HeadIndex].FrameBufferSize));
+  FbCarveoutPath       = mFbCarveoutPaths[HeadIndex];
+  FbCarveoutNodeOffset = fdt_path_offset (DtBlob, FbCarveoutPath);
+  if (FbCarveoutNodeOffset < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Error getting %a DT node offset: %a\n",
+      __FUNCTION__,
+      FbCarveoutPath,
+      fdt_strerror (FbCarveoutNodeOffset)
+      ));
+    return EFI_NOT_FOUND;
+  }
+
+  if (IsHeadActive (Private, HeadIndex)) {
+    /* Active head: use FB and LUT settings from CBoot */
+
+    if (HeadIndex == Private->ActiveHeadIndex) {
+      DEBUG ((DEBUG_ERROR, "Head index %d is active and used by UEFI\n", HeadIndex));
+    } else {
+      DEBUG ((DEBUG_ERROR, "Head index %d is active but not used by UEFI\n", HeadIndex));
+    }
+
+    Data[0] = SwapBytes64 (FbAddress);
+    Data[1] = SwapBytes64 (FbSize);
+    Data[2] = SwapBytes64 (LutAddress);
+    Data[3] = SwapBytes64 (LutSize);
+  } else {
+    /* inactive head: zero-fill everything */
+    DEBUG ((DEBUG_ERROR, "Head index %d is NOT active\n", HeadIndex));
+    ZeroMem (Data, sizeof (Data[0])*DataItems);
+  }
+
+  /* update the DT blob with the new FB and LUT details */
+  Result = fdt_setprop_inplace (DtBlob, FbCarveoutNodeOffset, "reg", Data, sizeof (Data[0])*DataItems);
+  if (Result != 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Error updating %a DT node\n",
+      __FUNCTION__,
+      FbCarveoutPath
+      ));
+    return EFI_NOT_FOUND;
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Updated %a: FbAddress  = 0x%016lx FbSize  = 0x%lx (%lu)\n"
+    "%a: Updated %a: LutAddress = 0x%016lx LutSize = 0x%lx (%lu)\n",
+    __FUNCTION__,
+    FbCarveoutPath,
+    Data[0],
+    Data[1],
+    Data[1],
+    __FUNCTION__,
+    FbCarveoutPath,
+    Data[2],
+    Data[3],
+    Data[3]
+    ));
+
+  return Status;
 }
 
 /***************************************
@@ -442,10 +681,10 @@ IsHeadActive (
   The other fb?_carveout DT node's reg propertys
   will be cleared to 0.
 
-   @param [in]  Event       EFI_EVENT FdtInstallEvent
-   @param [in]  Context     *GOP_INSTANCE callback context
+  @param [in]  Event       EFI_EVENT FdtInstallEvent
+  @param [in]  Context     *GOP_INSTANCE callback context
 
-   @retval none
+  @retval none
  ***************************************/
 STATIC
 VOID
@@ -458,26 +697,12 @@ FdtInstalled (
   EFI_STATUS                    Status;
   INT32                         Result;
   VOID                          *DtBlob;
-  CONST CHAR8                   *FbCarveoutPath;
-  INTN                          FbCarveoutNodeOffset;
   UINT64                        Data[4];
-  EFI_PHYSICAL_ADDRESS          FbAddress, LutAddress;
-  UINTN                         FbSize, LutSize;
-  GOP_INSTANCE          *CONST  Gop = (GOP_INSTANCE *)Context;
-  BOOLEAN                       FoundActiveHead;
-  INTN                          Head;
+  GOP_INSTANCE          *CONST  GopInstance = (GOP_INSTANCE *)Context;
+  INTN                          HeadIndex, HeadIndexLimit;
 
-  if ((Gop == NULL) || (Gop->Mode.Info == NULL)) {
+  if (GopInstance == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Invalid context\n", __FUNCTION__));
-    return;
-  }
-
-  FbAddress = Gop->Mode.FrameBufferBase;
-  FbSize    = Gop->Mode.FrameBufferSize;
-
-  Status = GetLutRegion (Gop, &LutAddress, &LutSize);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error getting LUT region: %r\n", __FUNCTION__, Status));
     return;
   }
 
@@ -494,67 +719,220 @@ FdtInstalled (
     return;
   }
 
-  FoundActiveHead = FALSE;
-  for (Head = 0; Head < ARRAY_SIZE (mFbCarveoutPaths); Head++) {
-    FbCarveoutPath       = mFbCarveoutPaths[Head];
-    FbCarveoutNodeOffset = fdt_path_offset (DtBlob, FbCarveoutPath);
-    if (FbCarveoutNodeOffset < 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Error getting %a DT node offset: %a\n",
-        __FUNCTION__,
-        FbCarveoutPath,
-        fdt_strerror (FbCarveoutNodeOffset)
-        ));
-      continue;
-    }
+  if (GopInstance->MaxHeadIndex == DC_HEAD_INDEX_UNKNOWN) {
+    DEBUG ((DEBUG_ERROR, "%a: unsupported MaxHeadIndex=%d\n", __FUNCTION__, GopInstance->MaxHeadIndex));
+    return;
+  }
 
-    if (!FoundActiveHead && IsHeadActive (Gop, Head)) {
-      DEBUG ((DEBUG_ERROR, "%a: head %d is active\n", __FUNCTION__, Head));
-      /* Active head: use FB and LUT settings from CBoot */
-      FoundActiveHead = TRUE;
+  HeadIndexLimit = GopInstance->MaxHeadIndex + 1;
 
-      Data[0] = SwapBytes64 (FbAddress);
-      Data[1] = SwapBytes64 (FbSize);
-      Data[2] = SwapBytes64 (LutAddress);
-      Data[3] = SwapBytes64 (LutSize);
-    } else {
-      /* Inactive head: zero-fill everything */
-      DEBUG ((DEBUG_ERROR, "%a: head %d is NOT active\n", __FUNCTION__, Head));
-      ZeroMem (Data, sizeof (Data));
-    }
-
-    /* update the DT blob with the new FB and LUT details */
-    Result = fdt_setprop_inplace (DtBlob, FbCarveoutNodeOffset, "reg", Data, sizeof (Data));
-    if (Result != 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Error updating %a DT node\n",
-        __FUNCTION__,
-        FbCarveoutPath
-        ));
-      continue;
-    }
-
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Updated %a reg: FbAddress  = 0x%016lx FbSize  = 0x%lx (%lu)\n"
-      "%a: Updated %a reg: LutAddress = 0x%016lx LutSize = 0x%lx (%lu)\n",
-      __FUNCTION__,
-      FbCarveoutPath,
-      Data[0],
-      Data[1],
-      Data[1],
-      __FUNCTION__,
-      FbCarveoutPath,
-      Data[2],
-      Data[3],
-      Data[3]
-      ));
+  for (HeadIndex = 0; HeadIndex < HeadIndexLimit; HeadIndex++) {
+    Status = UpdateFbCarveoutNode (DtBlob, GopInstance, Data, DC_HEAD_INDEX_MAX+1, HeadIndex);
   }
 }
 
-/**
+/***************************************
+  initialise GOP_INSTANCE data during different phases of DeviceDiscovery.
+
+  Some data is initialiased unconditionally as the FdtInstalled callback relies
+  on those particular Private members:
+    ->MaxHeadIndex                      init value of DC_HEAD_INDEX_UNKNOWN is disallowed
+    ->ActiveHeadIndex                   init value of DC_HEAD_INDEX_UNKNOWN is ok
+    ->Mode[HeadIndex].FrameBufferSize   requires ->ModeInfo[HeadIndex].VerticalResolution,
+                                        (which requires ScreenInputSize) and Pitch
+    ->Mode[HeadIndex].FrameBufferBase   requires ->Mode[HeadIndex].FrameBufferSize
+
+  Since the FdtInstalled callback is installed when any ENABLED head+window
+  is found, as opposed to ENABLED+USABLE by UEFI, those items must be initialised
+  regardless of Phase.
+
+  If Phase=DeviceDiscoveryDriverBindingStart, then additional data is
+  initialised, as this implies an enabled head has a window which is usable ny
+  UEFI, and the GOP protocol will be installed.
+
+  @param[in]     Phase                 Current phase of the driver initialization
+  @param[in]     ControllerHandle      Handle of the controller
+  @param[in]     BaseAddress           Controller's base address, i.e. DC base address
+  @param[in,out] Private               ptr to private GOP_INSTANCE
+  @param[in]     HeadIndex             DC controller index; the current head to init
+  @param[in]     WindowIndex           hardware window index; the enabled window
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval EFI_SUCCESS              Driver does not handle this phase
+  @retval others                   Error occurred
+ ***************************************/
+EFI_STATUS
+UpdateGopInfoForThisHead (
+  IN  CONST NVIDIA_DEVICE_DISCOVERY_PHASES  Phase,
+  IN  CONST EFI_HANDLE                      ControllerHandle,
+  IN  EFI_PHYSICAL_ADDRESS                  BaseAddress,
+  IN  OUT GOP_INSTANCE                      *Private,
+  IN  INTN                                  HeadIndex,
+  IN  INTN                                  WindowIndex
+  )
+{
+  EFI_STATUS            Status;
+  UINT32                ScreenInputSize;
+  UINTN                 ConfigureSize;
+  UINT32                ColorDepth;
+  UINTN                 Pitch;
+  UINT32                LowAddress;
+  UINT32                HighAddress;
+  EFI_PHYSICAL_ADDRESS  OldAddress;
+  UINT32                WindowOffset;
+
+  Private->Signature = GOP_INSTANCE_SIGNATURE;
+  if (HeadIndex > Private->MaxHeadIndex) {
+    Private->MaxHeadIndex = HeadIndex;
+  }
+
+  WindowOffset = WIN_COLOR_DEPTH_OFFSET;
+  Status       = ReadDcWinReg32 (HeadIndex, WindowIndex, WindowOffset, &ColorDepth);
+  if (EFI_ERROR (Status)) {
+    goto exit;
+  }
+
+  if (ColorDepth == WIN_COLOR_DEPTH_R8G8B8A8) {
+    Private->ModeInfo[HeadIndex].PixelFormat = PixelRedGreenBlueReserved8BitPerColor;
+  } else if (ColorDepth == WIN_COLOR_DEPTH_B8G8R8A8) {
+    Private->ModeInfo[HeadIndex].PixelFormat = PixelBlueGreenRedReserved8BitPerColor;
+  } else {
+    Status = EFI_UNSUPPORTED;
+    goto exit;
+  }
+
+  WindowOffset = DC_A_WIN_AD_PCALC_WINDOW_SET_CROPPED_SIZE_IN_0;
+  Status       = ReadDcWinReg32 (HeadIndex, WindowIndex, WindowOffset, &ScreenInputSize);
+  if (EFI_ERROR (Status)) {
+    goto exit;
+  }
+
+  Private->ModeInfo[HeadIndex].Version              = 0;
+  Private->ModeInfo[HeadIndex].HorizontalResolution = ScreenInputSize & MAX_UINT16;
+  Private->ModeInfo[HeadIndex].VerticalResolution   = ScreenInputSize >> 16;
+  Private->ModeInfo[HeadIndex].PixelFormat          = PixelRedGreenBlueReserved8BitPerColor;
+  Private->ModeInfo[HeadIndex].PixelsPerScanLine    = Private->ModeInfo[HeadIndex].HorizontalResolution;
+  DEBUG ((DEBUG_ERROR, "Modeinfo[%d].HorizontalResolution %u\n", HeadIndex, Private->ModeInfo[HeadIndex].HorizontalResolution));
+  DEBUG ((DEBUG_ERROR, "Modeinfo[%d].VerticalResolution   %u\n", HeadIndex, Private->ModeInfo[HeadIndex].VerticalResolution));
+
+  Pitch = Private->ModeInfo[HeadIndex].HorizontalResolution * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL);
+  if ((Pitch & -Pitch) != Pitch) {
+    Pitch = (UINTN)GetPowerOfTwo32 ((UINT32)Pitch) << 1;
+  }
+
+  Private->Mode[HeadIndex].MaxMode         = 1;
+  Private->Mode[HeadIndex].Mode            = 0;
+  Private->Mode[HeadIndex].Info            = &Private->ModeInfo[HeadIndex];
+  Private->Mode[HeadIndex].SizeOfInfo      = sizeof (EFI_GRAPHICS_OUTPUT_MODE_INFORMATION);
+  Private->Mode[HeadIndex].FrameBufferSize = Private->ModeInfo[HeadIndex].VerticalResolution * Pitch;
+
+  if (Private->Mode[HeadIndex].FrameBufferBase == 0) {
+    Status = DmaAllocateBuffer (
+               EfiRuntimeServicesData,
+               EFI_SIZE_TO_PAGES (Private->Mode[HeadIndex].FrameBufferSize),
+               (VOID **)&Private->Mode[HeadIndex].FrameBufferBase
+               );
+    if (EFI_ERROR (Status)) {
+      goto exit;
+    }
+  }
+
+  WindowOffset = DC_A_WINBUF_AD_START_ADDR_OFFSET;
+  Status       = ReadDcWinReg32 (HeadIndex, WindowIndex, WindowOffset, &LowAddress);
+  if (EFI_ERROR (Status)) {
+    goto exit;
+  }
+
+  WindowOffset = DC_A_WINBUF_AD_START_ADDR_HI_OFFSET;
+  Status       = ReadDcWinReg32 (HeadIndex, WindowIndex, WindowOffset, &HighAddress);
+  if (EFI_ERROR (Status)) {
+    goto exit;
+  }
+
+  OldAddress = ((EFI_PHYSICAL_ADDRESS)HighAddress << 32) | (EFI_PHYSICAL_ADDRESS)LowAddress;
+  if (OldAddress != 0) {
+    CopyMem ((VOID *)Private->Mode[HeadIndex].FrameBufferBase, (CONST VOID *)OldAddress, Private->Mode[HeadIndex].FrameBufferSize);
+  } else {
+    ZeroMem ((VOID *)Private->Mode[HeadIndex].FrameBufferBase, Private->Mode[HeadIndex].FrameBufferSize);
+  }
+
+  // at this point all Private items required by the FdtInstalled callback has been set up
+  // now need to setup required information for Private->Gop and Private->Configure
+  // iff Phase == DeviceDiscoveryDriverBindingStart, since there is only one Gop and
+  // one Configure supported/used by the Blt function
+
+  if (Phase == DeviceDiscoveryDriverBindingStart) {
+    if (Private->ActiveHeadIndex == DC_HEAD_INDEX_UNKNOWN) {
+      Private->ActiveHeadIndex = HeadIndex;
+    }
+
+    if (Private->Configure == NULL) {
+      ConfigureSize = 0;
+      Status        = FrameBufferBltConfigure (
+                        (VOID *)Private->Mode[HeadIndex].FrameBufferBase,
+                        &Private->ModeInfo[HeadIndex],
+                        NULL,
+                        &ConfigureSize
+                        );
+      if (Status != EFI_BUFFER_TOO_SMALL) {
+        if (!EFI_ERROR (Status)) {
+          Status = EFI_DEVICE_ERROR;
+        }
+
+        goto exit;
+      }
+
+      Private->Configure = (FRAME_BUFFER_CONFIGURE *)AllocatePool (ConfigureSize);
+      if (Private->Configure == NULL) {
+        Status = EFI_OUT_OF_RESOURCES;
+        goto exit;
+      }
+
+      Status = FrameBufferBltConfigure (
+                 (VOID *)Private->Mode[HeadIndex].FrameBufferBase,
+                 &Private->ModeInfo[HeadIndex],
+                 Private->Configure,
+                 &ConfigureSize
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Frame buffer not configured\n", __FUNCTION__));
+        goto exit;
+      }
+
+      WindowOffset = DC_A_WINBUF_AD_START_ADDR_OFFSET;
+      Status       = WriteDcWinReg32 (HeadIndex, WindowIndex, WindowOffset, Private->Mode[HeadIndex].FrameBufferBase & MAX_UINT32);
+      if (EFI_ERROR (Status)) {
+        goto exit;
+      }
+
+      WindowOffset = DC_A_WINBUF_AD_START_ADDR_HI_OFFSET;
+      Status       = WriteDcWinReg32 (HeadIndex, WindowIndex, WindowOffset, Private->Mode[HeadIndex].FrameBufferBase >> 32);
+      if (EFI_ERROR (Status)) {
+        goto exit;
+      }
+
+      DEBUG ((
+        DEBUG_ERROR,
+        "Mode[%d].FrameBufferBase =0x%p; updated Window index %d start address\n",
+        HeadIndex,
+        Private->Mode[HeadIndex].FrameBufferBase,
+        WindowIndex
+        ));
+
+      Private->Handle        = ControllerHandle;
+      Private->Gop.QueryMode = GraphicsQueryMode;
+      Private->Gop.SetMode   = GraphicsSetMode;
+      Private->Gop.Blt       = GraphicsBlt;
+      Private->Gop.Mode      = &Private->Mode[HeadIndex];
+    }
+  }
+
+exit:
+
+  return Status;
+}
+
+/***************************************
   Callback that will be invoked at various phases of the driver initialization
 
   This function allows for modification of system behavior at various points in
@@ -568,8 +946,7 @@ FdtInstalled (
   @retval EFI_SUCCESS              Operation successful.
   @retval EFI_SUCCESS              Driver does not handle this phase
   @retval others                   Error occurred
-
-**/
+ ***************************************/
 EFI_STATUS
 DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_DISCOVERY_PHASES    Phase,
@@ -579,16 +956,9 @@ DeviceDiscoveryNotify (
   )
 {
   EFI_STATUS                    Status;
-  EFI_PHYSICAL_ADDRESS          BaseAddress;
+  EFI_PHYSICAL_ADDRESS          BaseAddress = 0;
   UINTN                         RegionSize;
-  GOP_INSTANCE                  *Private;
-  UINT32                        ScreenInputSize;
-  UINTN                         ConfigureSize;
-  UINT32                        ColorDepth;
-  UINTN                         Pitch;
-  UINT32                        LowAddress;
-  UINT32                        HighAddress;
-  EFI_PHYSICAL_ADDRESS          OldAddress;
+  STATIC GOP_INSTANCE           *Private = NULL;
   SCMI_CLOCK2_PROTOCOL          *ScmiClockProtocol;
   NVIDIA_CLOCK_NODE_PROTOCOL    *ClockNodeProtocol;
   EFI_GRAPHICS_OUTPUT_PROTOCOL  *TempGopProtocol;
@@ -596,21 +966,12 @@ DeviceDiscoveryNotify (
   CHAR8                         ClockName[SCMI_MAX_STR_LEN];
   INTN                          HeadIndex;
   INTN                          WindowIndex;
-  UINT32                        WindowOffset;
-
-  Private = NULL;
 
   switch (Phase) {
+    /******************************************************************************************/
     case DeviceDiscoveryDriverBindingSupported:
 
-      Status = gBS->LocateProtocol (&gEfiGraphicsOutputProtocolGuid, NULL, (VOID **)&TempGopProtocol);
-      if (Status == EFI_SUCCESS) {
-        DEBUG ((DEBUG_INFO, "%a: GOP already installed, only a single GOP instance supported\n", __FUNCTION__));
-        return EFI_UNSUPPORTED;
-      }
-
-      BaseAddress = 0;
-      Status      = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
+      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
       if (EFI_ERROR (Status)) {
         break;
       }
@@ -621,20 +982,33 @@ DeviceDiscoveryNotify (
         break;
       }
 
+      // some debug prints to confirm programming from Cbboot nvdisp-init
+      Status = DumpRegsForThisHead (HeadIndex);
+
+      Status = GetFirstWinForThisHead (HeadIndex, WindowStateEnabled, &WindowIndex);
+      if (EFI_ERROR (Status)) {
+        return EFI_UNSUPPORTED;
+      }
+
+      // this head has an enabled window: do some sanity checks,
+
       Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&ScmiClockProtocol);
       if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Head index=%d: failed to get ScmiClockProtocol\n", __FUNCTION__, HeadIndex));
         break;
       }
 
       Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAClockNodeProtocolGuid, (VOID **)&ClockNodeProtocol);
       if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Head index=%d: failed to get ClockNodeProtocol\n", __FUNCTION__, HeadIndex));
         break;
       }
 
-      /* If there are clocks listed make sure the primary one is enabled */
+      // If there are clocks listed make sure the primary one is enabled
       if ((ClockNodeProtocol != NULL) && (ClockNodeProtocol->Clocks != 0) && (ScmiClockProtocol != NULL)) {
         Status = ScmiClockProtocol->GetClockAttributes (ScmiClockProtocol, ClockNodeProtocol->ClockEntries[0].ClockId, &ClockEnabled, ClockName);
         if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Head index=%d: failed detect clock enable state\n", __FUNCTION__, HeadIndex));
           break;
         }
 
@@ -644,18 +1018,60 @@ DeviceDiscoveryNotify (
         }
       }
 
-      Status = GetFirstUsableWinForThisHead (BaseAddress, HeadIndex, &WindowIndex);
+      // sanity checks passed: alloc GOP_INSTANCE Private on first Supported call
+
+      if (Private == NULL) {
+        Private = AllocateZeroPool (sizeof (GOP_INSTANCE));
+        if (Private == NULL) {
+          Status = EFI_OUT_OF_RESOURCES;
+          break;
+        }
+
+        Private->MaxHeadIndex    = DC_HEAD_INDEX_UNKNOWN;
+        Private->ActiveHeadIndex = DC_HEAD_INDEX_UNKNOWN;
+        Private->DcAddr[0]       = DC_HEAD_0_BASE_ADDR;
+        Private->DcAddr[1]       = DC_HEAD_1_BASE_ADDR;
+        Private->DcAddr[2]       = DC_HEAD_2_BASE_ADDR;
+        Private->DcAddr[3]       = DC_HEAD_3_BASE_ADDR;
+
+        Status = gBS->CreateEventEx (
+                        EVT_NOTIFY_SIGNAL,                  // Type
+                        TPL_CALLBACK,                       // NotifyTpl
+                        FdtInstalled,                       // NotifyFunction / callback
+                        (void *)Private,                    // NotifyContext
+                        &gFdtTableGuid,                     // EventGroup
+                        &FdtInstallEvent
+                        );                                  // Event
+        DEBUG ((DEBUG_ERROR, "%a: FdtInstalled callback installed\n", __FUNCTION__));
+      }
+
+      // note that for eny enabled but unusable head+window config, this next call will get executed multiple times
+      // update data for later usage by GetLutRegion<=FdtInstalled callback
+      Status = UpdateGopInfoForThisHead (Phase, ControllerHandle, BaseAddress, Private, HeadIndex, WindowIndex);
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Head index %d: no usable windows found\n", __FUNCTION__, HeadIndex));
+        break;
+      }
+
+      /* check if there are any usable windows on the current head */
+      Status = GetFirstWinForThisHead (HeadIndex, WindowStateUsable, &WindowIndex);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Head index %d: no windows found usable by UEFI\n", __FUNCTION__, HeadIndex));
         return EFI_UNSUPPORTED;
       }
 
-      DEBUG ((DEBUG_INFO, "%a: Head index %d: Window index %d usable\n", __FUNCTION__, HeadIndex, WindowIndex));
+      /* found usable window on current head: return success */
+      DEBUG ((DEBUG_ERROR, "%a: Head index %d: Window index %d usable by UEFI\n", __FUNCTION__, HeadIndex, WindowIndex));
+
+      if (Private->ActiveHeadIndex != DC_HEAD_INDEX_UNKNOWN) {
+        return EFI_UNSUPPORTED;
+      }
+
       return EFI_SUCCESS;
 
+    /******************************************************************************************/
     case DeviceDiscoveryDriverBindingStart:
-      BaseAddress = 0;
-      Status      = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
+
+      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
       if (EFI_ERROR (Status)) {
         break;
       }
@@ -666,143 +1082,25 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      Private = AllocateZeroPool (sizeof (GOP_INSTANCE));
       if (Private == NULL) {
-        Status = EFI_OUT_OF_RESOURCES;
-        break;
+        return EFI_UNSUPPORTED;
       }
 
-      Status = GetFirstUsableWinForThisHead (BaseAddress, HeadIndex, &WindowIndex);
+      Status = gBS->LocateProtocol (&gEfiGraphicsOutputProtocolGuid, NULL, (VOID **)&TempGopProtocol);
+      if (Status == EFI_SUCCESS) {
+        DEBUG ((DEBUG_ERROR, "%a: GOP protocol already installed, but only one GOP instance is supported\n", __FUNCTION__));
+      }
+
+      Status = GetFirstWinForThisHead (HeadIndex, WindowStateUsable, &WindowIndex);
+
       if (EFI_ERROR (Status)) {
         return EFI_UNSUPPORTED;
       }
 
-      WindowOffset = WIN_COLOR_DEPTH_OFFSET;
-      Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &ColorDepth);
+      Status = UpdateGopInfoForThisHead (Phase, ControllerHandle, BaseAddress, Private, HeadIndex, WindowIndex);
       if (EFI_ERROR (Status)) {
         break;
       }
-
-      if (ColorDepth == WIN_COLOR_DEPTH_R8G8B8A8) {
-        Private->ModeInfo.PixelFormat = PixelRedGreenBlueReserved8BitPerColor;
-      } else if (ColorDepth == WIN_COLOR_DEPTH_B8G8R8A8) {
-        Private->ModeInfo.PixelFormat = PixelBlueGreenRedReserved8BitPerColor;
-      } else {
-        Status = EFI_UNSUPPORTED;
-        break;
-      }
-
-      WindowOffset = DC_A_WIN_AD_PCALC_WINDOW_SET_CROPPED_SIZE_IN_0;
-      Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &ScreenInputSize);
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-
-      Private->ModeInfo.Version              = 0;
-      Private->ModeInfo.HorizontalResolution = ScreenInputSize & MAX_UINT16;
-      Private->ModeInfo.VerticalResolution   = ScreenInputSize >> 16;
-      Private->ModeInfo.PixelFormat          = PixelRedGreenBlueReserved8BitPerColor;
-      Private->ModeInfo.PixelsPerScanLine    = Private->ModeInfo.HorizontalResolution;
-      DEBUG ((DEBUG_INFO, "%a: Modeinfo.HorizontalResolution %u\n", __FUNCTION__, Private->ModeInfo.HorizontalResolution));
-      DEBUG ((DEBUG_INFO, "%a: Modeinfo.VerticalResolution   %u\n", __FUNCTION__, Private->ModeInfo.VerticalResolution));
-
-      Pitch = Private->ModeInfo.HorizontalResolution * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL);
-      if ((Pitch & -Pitch) != Pitch) {
-        Pitch = (UINTN)GetPowerOfTwo32 ((UINT32)Pitch) << 1;
-      }
-
-      Private->Mode.FrameBufferSize = Private->ModeInfo.VerticalResolution * Pitch;
-
-      Private->Mode.MaxMode    = 1;
-      Private->Mode.Mode       = 0;
-      Private->Mode.Info       = &Private->ModeInfo;
-      Private->Mode.SizeOfInfo = sizeof (EFI_GRAPHICS_OUTPUT_MODE_INFORMATION);
-
-      Status = DmaAllocateBuffer (
-                 EfiRuntimeServicesData,
-                 EFI_SIZE_TO_PAGES (Private->Mode.FrameBufferSize),
-                 (VOID **)&Private->Mode.FrameBufferBase
-                 );
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-
-      WindowOffset = DC_A_WINBUF_AD_START_ADDR_OFFSET;
-      Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &LowAddress);
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-
-      WindowOffset = DC_A_WINBUF_AD_START_ADDR_HI_OFFSET;
-      Status       = ReadDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, &HighAddress);
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-
-      OldAddress = ((EFI_PHYSICAL_ADDRESS)HighAddress << 32) | (EFI_PHYSICAL_ADDRESS)LowAddress;
-      if (OldAddress != 0) {
-        CopyMem ((VOID *)Private->Mode.FrameBufferBase, (CONST VOID *)OldAddress, Private->Mode.FrameBufferSize);
-      } else {
-        ZeroMem ((VOID *)Private->Mode.FrameBufferBase, Private->Mode.FrameBufferSize);
-      }
-
-      ConfigureSize = 0;
-      Status        = FrameBufferBltConfigure (
-                        (VOID *)Private->Mode.FrameBufferBase,
-                        &Private->ModeInfo,
-                        NULL,
-                        &ConfigureSize
-                        );
-      if (Status != EFI_BUFFER_TOO_SMALL) {
-        if (!EFI_ERROR (Status)) {
-          Status = EFI_DEVICE_ERROR;
-        }
-
-        break;
-      }
-
-      Private->Configure = (FRAME_BUFFER_CONFIGURE *)AllocatePool (ConfigureSize);
-      if (Private->Configure == NULL) {
-        Status = EFI_OUT_OF_RESOURCES;
-        break;
-      }
-
-      Status = FrameBufferBltConfigure (
-                 (VOID *)Private->Mode.FrameBufferBase,
-                 &Private->ModeInfo,
-                 Private->Configure,
-                 &ConfigureSize
-                 );
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Window %d .FrameBufferBase=0x%p\n",
-        __FUNCTION__,
-        WindowIndex,
-        Private->Mode.FrameBufferBase
-        ));
-      WindowOffset = DC_A_WINBUF_AD_START_ADDR_OFFSET;
-      Status       = WriteDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, Private->Mode.FrameBufferBase & MAX_UINT32);
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-
-      WindowOffset = DC_A_WINBUF_AD_START_ADDR_HI_OFFSET;
-      Status       = WriteDcWinReg32 (BaseAddress, WindowIndex, WindowOffset, Private->Mode.FrameBufferBase >> 32);
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-
-      Private->Signature     = GOP_INSTANCE_SIGNATURE;
-      Private->Handle        = ControllerHandle;
-      Private->Gop.QueryMode = GraphicsQueryMode;
-      Private->Gop.SetMode   = GraphicsSetMode;
-      Private->Gop.Blt       = GraphicsBlt;
-      Private->Gop.Mode      = &Private->Mode;
-      Private->DcAddr        = BaseAddress;
 
       // Install the Graphics Output Protocol and the Device Path
       Status = gBS->InstallMultipleProtocolInterfaces (
@@ -811,22 +1109,16 @@ DeviceDiscoveryNotify (
                       &Private->Gop,
                       NULL
                       );
-
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Error installing GOP protocol; skipping DT callback event\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Error installing GOP protocol\n", __FUNCTION__));
+        return EFI_DEVICE_ERROR;
       } else {
-        Status = gBS->CreateEventEx (
-                        EVT_NOTIFY_SIGNAL,              // Type
-                        TPL_CALLBACK,                   // NotifyTpl
-                        FdtInstalled,                   // NotifyFunction
-                        (void *)Private,                // NotifyContext
-                        &gFdtTableGuid,                 // EventGroup
-                        &FdtInstallEvent
-                        );                              // Event
+        DEBUG ((DEBUG_ERROR, "%a: installed &Private->Gop=0x%p protocol\n", __FUNCTION__, &Private->Gop));
       }
 
       break;
 
+    /******************************************************************************************/
     default:
       Status = EFI_SUCCESS;
       break;
@@ -834,10 +1126,10 @@ DeviceDiscoveryNotify (
 
   if (EFI_ERROR (Status)) {
     if (Private != NULL) {
-      if (Private->Mode.FrameBufferBase != 0) {
-        DmaFreeBuffer (EFI_SIZE_TO_PAGES (Private->Mode.FrameBufferSize), (VOID *)Private->Mode.FrameBufferBase);
-        Private->Mode.FrameBufferBase = 0;
-        Private->Mode.FrameBufferSize = 0;
+      if (Private->Mode[HeadIndex].FrameBufferBase != 0) {
+        DmaFreeBuffer (EFI_SIZE_TO_PAGES (Private->Mode[HeadIndex].FrameBufferSize), (VOID *)Private->Mode[HeadIndex].FrameBufferBase);
+        Private->Mode[HeadIndex].FrameBufferBase = 0;
+        Private->Mode[HeadIndex].FrameBufferSize = 0;
       }
 
       FreePool (Private);
