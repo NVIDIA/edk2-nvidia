@@ -344,7 +344,7 @@ IpmiBlobTransferOpen (
   BlobFound = FALSE;
   for (Index = 0; Index < NumBlobs; Index++) {
     Status = IpmiBlobTransferEnumerate (Index, BlobSearch);
-    if (AsciiStrCmp (BlobSearch, BlobId) == 0) {
+    if ((!EFI_ERROR (Status)) && (AsciiStrCmp (BlobSearch, BlobId) == 0)) {
       BlobFound = TRUE;
       break;
     } else {
