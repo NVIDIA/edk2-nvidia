@@ -234,7 +234,7 @@ I2cIoBmcSsifIpmiSubmitCommand (
           return EFI_NOT_FOUND;
         }
 
-        if (((ReadData[3] >> 2) != NetFunction) ||
+        if (((ReadData[3] >> 2) != (NetFunction + 1)) ||
             (ReadData[4] != Command))
         {
           BmcSsifPrivate->SoftErrorCount++;
@@ -249,7 +249,7 @@ I2cIoBmcSsifIpmiSubmitCommand (
         }
 
         *ResponseDataSize = ReadData[0] - SSIF_HEADER_SIZE - 2;
-        CopyMem (ResponseData, &ReadData[SSIF_HEADER_SIZE + 2], *ResponseDataSize);
+        CopyMem (ResponseData, &ReadData[SSIF_HEADER_SIZE + 2 + 1], *ResponseDataSize);
 
         // Need to get the rest of the data
         ExpectedBlock = 0;
