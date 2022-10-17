@@ -142,8 +142,6 @@
 
   ReportStatusCodeLib|MdeModulePkg/Library/DxeReportStatusCodeLib/DxeReportStatusCodeLib.inf
 
-  TegraPlatformInfoInternalLib|Silicon/NVIDIA/Library/TegraPlatformInfoInternalLibNull/TegraPlatformInfoInternalLibNull.inf
-  PlatformResourceInternalLib|Silicon/NVIDIA/Library/PlatformResourceInternalLibNull/PlatformResourceInternalLibNull.inf
   TegraPlatformInfoLib|Silicon/NVIDIA/Library/TegraPlatformInfoLib/TegraPlatformInfoLib.inf
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/PlatformResourceLib.inf
   SystemResourceLib|Silicon/NVIDIA/Library/SystemResourceLib/SystemResourceLib.inf

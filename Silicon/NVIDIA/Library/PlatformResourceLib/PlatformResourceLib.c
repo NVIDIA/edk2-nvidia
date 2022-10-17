@@ -13,9 +13,9 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/MceAriLib.h>
 #include <Library/NvgLib.h>
-#include <Library/PlatformResourceInternalLib.h>
 #include "T194ResourceConfig.h"
 #include "T234ResourceConfig.h"
+#include "TH500ResourceConfig.h"
 
 STATIC
 EFI_PHYSICAL_ADDRESS  TegraUARTBaseAddress = 0x0;
@@ -42,17 +42,10 @@ GetTegraUARTBaseAddress (
   VOID
   )
 {
-  UINTN                 ChipID;
-  EFI_PHYSICAL_ADDRESS  TegraUARTBase;
-  BOOLEAN               ValidPrivatePlatform;
+  UINTN  ChipID;
 
   if (TegraUARTBaseAddress != 0x0) {
     return TegraUARTBaseAddress;
-  }
-
-  ValidPrivatePlatform = GetTegraUARTBaseAddressInternal (&TegraUARTBase);
-  if (ValidPrivatePlatform) {
-    return TegraUARTBase;
   }
 
   ChipID = TegraGetChipID ();
@@ -62,6 +55,8 @@ GetTegraUARTBaseAddress (
       return FixedPcdGet64 (PcdTegra16550UartBaseT194);
     case T234_CHIP_ID:
       return FixedPcdGet64 (PcdTegra16550UartBaseT234);
+    case TH500_CHIP_ID:
+      return FixedPcdGet64 (PcdSbsaUartBaseTH500);
     default:
       return 0x0;
   }
@@ -84,6 +79,9 @@ GetSharedUARTInstanceId (
     case T234_CHIP_ID:
       *UARTInstanceNumber = 1; // UART_A
       return TRUE;
+    case TH500_CHIP_ID:
+      *UARTInstanceNumber = 1; // UART_0
+      return TRUE;
     default:
       return FALSE;
   }
@@ -100,17 +98,11 @@ GetUARTInstanceInfo (
   OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
   )
 {
-  UINTN    ChipID;
-  UINT32   SharedUARTInstanceId;
-  BOOLEAN  ValidPrivatePlatform;
+  UINTN   ChipID;
+  UINT32  SharedUARTInstanceId;
 
   *UARTInstanceType    = TEGRA_UART_TYPE_NONE;
   *UARTInstanceAddress = 0x0;
-
-  ValidPrivatePlatform = GetUARTInstanceInfoInternal (UARTInstanceType, UARTInstanceAddress);
-  if (ValidPrivatePlatform) {
-    return EFI_SUCCESS;
-  }
 
   ChipID = TegraGetChipID ();
 
@@ -120,11 +112,17 @@ GetUARTInstanceInfo (
       *UARTInstanceAddress = (EFI_PHYSICAL_ADDRESS)FixedPcdGet64 (PcdTegra16550UartBaseT194);
       return EFI_SUCCESS;
     case T234_CHIP_ID:
-      if (!GetSharedUARTInstanceId (T234_CHIP_ID, &SharedUARTInstanceId)) {
+      if (!GetSharedUARTInstanceId (ChipID, &SharedUARTInstanceId)) {
         return EFI_UNSUPPORTED;
       }
 
       return T234UARTInstanceInfo (SharedUARTInstanceId, UARTInstanceType, UARTInstanceAddress);
+    case TH500_CHIP_ID:
+      if (!GetSharedUARTInstanceId (ChipID, &SharedUARTInstanceId)) {
+        return EFI_UNSUPPORTED;
+      }
+
+      return TH500UARTInstanceInfo (SharedUARTInstanceId, UARTInstanceType, UARTInstanceAddress);
     default:
       return EFI_UNSUPPORTED;
   }
@@ -140,13 +138,7 @@ GetGicInfo (
   OUT TEGRA_GIC_INFO  *GicInfo
   )
 {
-  UINTN    ChipID;
-  BOOLEAN  ValidPrivatePlatform;
-
-  ValidPrivatePlatform = GetGicInfoInternal (GicInfo);
-  if (ValidPrivatePlatform) {
-    return TRUE;
-  }
+  UINTN  ChipID;
 
   ChipID = TegraGetChipID ();
 
@@ -161,6 +153,11 @@ GetGicInfo (
       GicInfo->GicCompatString = "arm,gic-v3";
       GicInfo->ItsCompatString = "arm,gic-v3-its";
       GicInfo->Version         = 3;
+      break;
+    case TH500_CHIP_ID:
+      GicInfo->GicCompatString = "arm,gic-v3";
+      GicInfo->ItsCompatString = "arm,gic-v3-its";
+      GicInfo->Version         = 4;
       break;
     default:
       return FALSE;
@@ -179,17 +176,11 @@ GetCPUBLBaseAddress (
   VOID
   )
 {
-  UINTN    ChipID;
-  UINTN    CpuBootloaderAddress;
-  UINTN    CpuBootloaderAddressLo;
-  UINTN    CpuBootloaderAddressHi;
-  UINTN    SystemMemoryBaseAddress;
-  BOOLEAN  ValidPrivatePlatform;
-
-  ValidPrivatePlatform = GetCPUBLBaseAddressInternal (&CpuBootloaderAddress);
-  if (ValidPrivatePlatform) {
-    return CpuBootloaderAddress;
-  }
+  UINTN  ChipID;
+  UINTN  CpuBootloaderAddress;
+  UINTN  CpuBootloaderAddressLo;
+  UINTN  CpuBootloaderAddressHi;
+  UINTN  SystemMemoryBaseAddress;
 
   ChipID = TegraGetChipID ();
 
@@ -218,15 +209,8 @@ GetDTBBaseAddress (
   VOID
   )
 {
-  UINTN    ChipID;
-  UINTN    CpuBootloaderAddress;
-  UINT64   DTBBaseAddress;
-  BOOLEAN  ValidPrivatePlatform;
-
-  ValidPrivatePlatform = GetDTBBaseAddressInternal (&DTBBaseAddress);
-  if (ValidPrivatePlatform) {
-    return DTBBaseAddress;
-  }
+  UINTN  ChipID;
+  UINTN  CpuBootloaderAddress;
 
   ChipID = TegraGetChipID ();
 
@@ -237,6 +221,8 @@ GetDTBBaseAddress (
       return T194GetDTBBaseAddress (CpuBootloaderAddress);
     case T234_CHIP_ID:
       return T234GetDTBBaseAddress (CpuBootloaderAddress);
+    case TH500_CHIP_ID:
+      return TH500GetDTBBaseAddress (CpuBootloaderAddress);
     default:
       return 0x0;
   }
@@ -252,15 +238,8 @@ GetGRBlobBaseAddress (
   VOID
   )
 {
-  UINTN    ChipID;
-  UINTN    CpuBootloaderAddress;
-  UINT64   GRBlobBaseAddress;
-  BOOLEAN  ValidPrivatePlatform;
-
-  ValidPrivatePlatform = GetGRBlobBaseAddressInternal (&GRBlobBaseAddress);
-  if (ValidPrivatePlatform) {
-    return GRBlobBaseAddress;
-  }
+  UINTN  ChipID;
+  UINTN  CpuBootloaderAddress;
 
   ChipID = TegraGetChipID ();
 
@@ -286,14 +265,8 @@ ValidateActiveBootChain (
   VOID
   )
 {
-  UINTN    ChipID;
-  UINTN    CpuBootloaderAddress;
-  BOOLEAN  ValidPrivatePlatform;
-
-  ValidPrivatePlatform = ValidateActiveBootChainInternal ();
-  if (ValidPrivatePlatform) {
-    return EFI_SUCCESS;
-  }
+  UINTN  ChipID;
+  UINTN  CpuBootloaderAddress;
 
   ChipID = TegraGetChipID ();
 
@@ -319,13 +292,7 @@ SetNextBootChain (
   IN  UINT32  BootChain
   )
 {
-  UINTN    ChipID;
-  BOOLEAN  ValidPrivatePlatform;
-
-  ValidPrivatePlatform = SetNextBootChainInternal (BootChain);
-  if (ValidPrivatePlatform) {
-    return EFI_SUCCESS;
-  }
+  UINTN  ChipID;
 
   ChipID = TegraGetChipID ();
 
@@ -352,9 +319,8 @@ GetPlatformResourceInformation (
   IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   )
 {
-  UINTN    ChipID;
-  UINTN    CpuBootloaderAddress;
-  BOOLEAN  ValidPrivatePlatform;
+  UINTN  ChipID;
+  UINTN  CpuBootloaderAddress;
 
   PlatformResourceInfo->ResourceInfo = AllocateZeroPool (sizeof (TEGRA_RESOURCE_INFO));
   if (PlatformResourceInfo->ResourceInfo == NULL) {
@@ -366,11 +332,6 @@ GetPlatformResourceInformation (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  ValidPrivatePlatform = GetPlatformResourceInformationInternal (PlatformResourceInfo);
-  if (ValidPrivatePlatform) {
-    return EFI_SUCCESS;
-  }
-
   ChipID = TegraGetChipID ();
 
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
@@ -380,6 +341,8 @@ GetPlatformResourceInformation (
       return T234GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo);
     case T194_CHIP_ID:
       return T194GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo);
+    case TH500_CHIP_ID:
+      return TH500GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo);
     default:
       return EFI_UNSUPPORTED;
   }

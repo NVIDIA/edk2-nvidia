@@ -26,6 +26,7 @@
 
 [Includes]
   Include
+  Include/Server
   Include/Tegra
 
 [Guids.common]
@@ -236,6 +237,9 @@
 
 #Tegra 16550 UART T234 Base
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234|0x03100000|UINT64|0x00000001E
+
+#TH500 Sbsa UART Base
+  gNVIDIATokenSpaceGuid.PcdSbsaUartBaseTH500|0x0C280000|UINT64|0x0000001F
 
 #Tegra Firmware Date Time
   gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString|L""|VOID*|0x00010022

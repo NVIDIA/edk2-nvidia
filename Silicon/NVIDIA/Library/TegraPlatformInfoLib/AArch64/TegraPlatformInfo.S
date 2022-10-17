@@ -6,9 +6,9 @@
 
 #include <AsmMacroIoLibV8.h>
 #include <Library/TegraPlatformInfoLib.h>
-#include <Library/TegraPlatformInfoInternalLib.h>
 #include <T194/T194Definitions.h>
 #include <T234/T234Definitions.h>
+#include <TH500/TH500Definitions.h>
 #include "TegraPlatformInfoLibPrivate.h"
 
 ASM_FUNC(TegraGetChipID)
@@ -26,10 +26,6 @@ ASM_FUNC(TegraGetSystemMemoryBaseAddress)
 ASM_FUNC(TegraGetBLCarveoutOffset)
   mov w1, w0
   mov x4, x30
-  bl TegraGetBLCarveoutOffsetInternal
-  cmp x0, #0
-  beq _T194Carveout
-  b _ReturnCarveout
 
 _T194Carveout:
   cmp w1, #T194_CHIP_ID
@@ -39,7 +35,7 @@ _T194Carveout:
 
 _T234Carveout:
   cmp w1, #T234_CHIP_ID
-  bne _DefaultCarveout
+  bne _TH500Carveout
   MOV64 (x0, T234_BL_VERSION_OFFSET)
   add x0, x0, x3
   ldr w0, [x0]
@@ -52,6 +48,12 @@ _T234Carveout:
 
 _T234Carveout_V0:
   MOV64 (x0, T234_BL_CARVEOUT_OFFSET_V0)
+  b _ReturnCarveout
+
+_TH500Carveout:
+  cmp w1, #TH500_CHIP_ID
+  bne _DefaultCarveout
+  MOV64 (x0, TH500_BL_CARVEOUT_OFFSET)
   b _ReturnCarveout
 
 _DefaultCarveout:
@@ -111,10 +113,6 @@ _ReturnCarveoutInfo:
 ASM_FUNC(TegraGetGicDistributorBaseAddress)
   mov w1, w0
   mov x2, x30
-  bl TegraGetGicDistributorBaseAddressInternal
-  cmp x0, #0
-  beq _T194GicDAddr
-  b _ReturnGicDAddr
 
 _T194GicDAddr:
   cmp w1, #T194_CHIP_ID
@@ -124,8 +122,14 @@ _T194GicDAddr:
 
 _T234GicDAddr:
   cmp w1, #T234_CHIP_ID
-  bne _DefaultGicDAddr
+  bne _TH500GicDAddr
   MOV64 (x0, T234_GIC_DISTRIBUTOR_BASE)
+  b _ReturnGicDAddr
+
+_TH500GicDAddr:
+  cmp w1, #TH500_CHIP_ID
+  bne _DefaultGicDAddr
+  MOV64 (x0, TH500_GIC_DISTRIBUTOR_BASE)
   b _ReturnGicDAddr
 
 _DefaultGicDAddr:
@@ -138,16 +142,18 @@ _ReturnGicDAddr:
 ASM_FUNC(TegraGetGicRedistributorBaseAddress)
   mov w1, w0
   mov x2, x30
-  bl TegraGetGicRedistributorBaseAddressInternal
-  cmp x0, #0
-  beq _T234GicRAddr
-  b _ReturnGicRAddr
 
 _T234GicRAddr:
   cmp w1, #T234_CHIP_ID
-  bne _DefaultGicRAddr
+  bne _TH500GicRAddr
   MOV64 (x0, T234_GIC_REDISTRIBUTOR_BASE)
   b _ReturnGicDAddr
+
+_TH500GicRAddr:
+  cmp w1, #TH500_CHIP_ID
+  bne _DefaultGicRAddr
+  MOV64 (x0, TH500_GIC_REDISTRIBUTOR_BASE_SOCKET_0)
+  b _ReturnGicRAddr
 
 _DefaultGicRAddr:
   MOV64 (x0, 0)

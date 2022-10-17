@@ -20,13 +20,13 @@
 
 [LibraryClasses]
   TegraPlatformInfoLib
-  PlatformResourceInternalLib
   GoldenRegisterLib
 
 [Sources.common]
   PlatformResourceLib.c
   T194ResourceConfig.c
   T234ResourceConfig.c
+  TH500ResourceConfig.c
 
 [Guids]
   gNVIDIAOSCarveoutHob
@@ -36,6 +36,7 @@
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
+  gNVIDIATokenSpaceGuid.PcdSbsaUartBaseTH500
   gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress
   gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress
   gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem

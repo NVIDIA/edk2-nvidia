@@ -465,10 +465,14 @@ TegraPlatformInitialize (
       if (T234SkuSet == FALSE) {
         LibPcdSetSku (T234_SKU);
       }
+    } else if (ChipID == TH500_CHIP_ID) {
+      LibPcdSetSku (TH500_SKU);
     }
   } else {
     if (ChipID == T234_CHIP_ID) {
       LibPcdSetSku (T234_PRESIL_SKU);
+    } else if (ChipID == TH500_CHIP_ID) {
+      LibPcdSetSku (TH500_PRESIL_SKU);
     }
 
     // Override boot timeout for pre-si platforms
