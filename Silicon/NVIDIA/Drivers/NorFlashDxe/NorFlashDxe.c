@@ -1420,6 +1420,7 @@ NorFlashDxeDriverBindingSupported (
   )
 {
   EFI_STATUS                       Status;
+  EFI_STATUS                       CompatibilityStatus;
   NVIDIA_QSPI_CONTROLLER_PROTOCOL  *QspiInstance;
 
   // Check whether driver has already been started.
@@ -1436,10 +1437,7 @@ NorFlashDxeDriverBindingSupported (
     return Status;
   }
 
-  Status = CheckNorFlashCompatibility (Controller);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
+  CompatibilityStatus = CheckNorFlashCompatibility (Controller);
 
   Status = gBS->CloseProtocol (
                   Controller,
@@ -1447,7 +1445,9 @@ NorFlashDxeDriverBindingSupported (
                   This->DriverBindingHandle,
                   Controller
                   );
-  return Status;
+  ASSERT_EFI_ERROR (Status);
+
+  return CompatibilityStatus;
 }
 
 /**
