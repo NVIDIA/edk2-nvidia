@@ -1,0 +1,44 @@
+#/** @file
+#
+#  Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = ApeiDxe
+  FILE_GUID                      = f197874e-ea69-11eb-a915-878412631562
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = ApeiDxeInitialize
+
+[Sources.Common]
+  Apei.c
+  HestBertTables.c
+  EinjTable.c
+  RASFwInterface.c
+
+[Sources.AARCH64]
+  AArch64/FfaSmc.S
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiLib
+  DxeServicesTableLib
+  IoLib
+
+[Protocols]
+  gEfiAcpiTableProtocolGuid       # PROTOCOL ALWAYS_CONSUMED
+  gEfiApeiGetErrorSourcesGuid     # PROTOCOL ALWAYS_CONSUMED
+
+[Depex]
+  gEfiAcpiTableProtocolGuid
+  AND
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
