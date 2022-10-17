@@ -1,0 +1,94 @@
+## @file
+#  Configuration Manager Data Dxe
+#
+#  Copyright (c) 2020 - 2022, NVIDIA Corporation. All rights reserved.
+#  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = ConfigurationManagerDataDxe
+  FILE_GUID                      = 5f74d26c-eb8f-4007-8183-2dbea7b2280d
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = ConfigurationManagerDataDxeInitialize
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+
+[Sources]
+  ConfigurationManagerDataDxe.c
+  ConfigurationIort.c
+  ConfigurationSrat.c
+  ConfigurationPptt.c
+  ConfigurationMpam.c
+  ConfigurationSlit.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ArmPlatformPkg/ArmPlatformPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  TegraPlatformInfoLib
+  PlatformAslTablesLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  DxeServicesTableLib
+  DebugLib
+  MemoryAllocationLib
+  FdtLib
+  DtPlatformDtbLoaderLib
+  DeviceTreeHelperLib
+  ConfigurationManagerLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gArmTokenSpaceGuid.PcdArmArchTimerSecIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerHypIntrNum
+  gArmTokenSpaceGuid.PcdPciBusMin
+  gArmTokenSpaceGuid.PcdPciBusMax
+  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase
+  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum
+  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase
+  gNVIDIATokenSpaceGuid.PcdSbsaUartBaseTH500
+  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
+  gArmPlatformTokenSpaceGuid.PL011UartClkInHz
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
+
+[Protocols]
+  gNVIDIAConfigurationManagerDataProtocolGuid
+  gNVIDIAAmlPatchProtocolGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
+  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+  gNVIDIATokenSpaceGuid.PcdLocalDistance
+  gNVIDIATokenSpaceGuid.PcdUnreachableDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToCpuDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToGpuDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToOwnGpuDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToOtherGpuDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToOwnCpuDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToOtherCpuDistance
+
+[Depex]
+  gEfiVariableArchProtocolGuid
