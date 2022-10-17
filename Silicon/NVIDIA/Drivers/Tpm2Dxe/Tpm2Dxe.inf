@@ -1,0 +1,45 @@
+#/** @file
+#
+#  TPM2 Driver
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = Tpm2Dxe
+  FILE_GUID                      = d9956228-4b3f-11ed-a6f4-27e70351022a
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = InitializeTpm2Dxe
+
+[Sources.common]
+  Tpm2Dxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  SecurityPkg/SecurityPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiLib
+  FdtLib
+  TimerLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gNVIDIAQspiControllerProtocolGuid  ## CONSUMES
+  gNVIDIADeviceTreeNodeProtocolGuid  ## CONSUMES
+  gNVIDIATpm2ProtocolGuid            ## PRODUCES
+  gEfiDevicePathProtocolGuid         ## PRODUCES
+
+[Depex]
+  TRUE
