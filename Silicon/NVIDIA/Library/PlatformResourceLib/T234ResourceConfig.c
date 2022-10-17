@@ -158,6 +158,7 @@ T234GetResourceConfig (
 
   // Build dram regions
   if (BanketDramEnabled) {
+    DEBUG ((EFI_D_ERROR, "DRAM Encryption Enabled\n"));
     // When blanket dram is enabled, uefi should use only memory in nsdram carveout
     // and interworld shmem carveout.
     DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (2 * sizeof (NVDA_MEMORY_REGION));
@@ -174,6 +175,7 @@ T234GetResourceConfig (
     PlatformInfo->DramRegionsCount     = 2;
     PlatformInfo->UefiDramRegionsCount = 2;
   } else {
+    DEBUG ((EFI_D_ERROR, "DRAM Encryption Disabled\n"));
     DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION));
     ASSERT (DramRegions != NULL);
     if (DramRegions == NULL) {
