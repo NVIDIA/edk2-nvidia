@@ -264,6 +264,88 @@ PcieConfigurationWrite (
 }
 
 STATIC
+UINT8
+PCIeFindNextCap (
+  UINT64  CfgBase,
+  UINT8   cap_ptr,
+  UINT8   cap
+  )
+{
+  UINT8   cap_id, next_cap_ptr;
+  UINT16  reg;
+
+  if (!cap_ptr) {
+    return 0;
+  }
+
+  reg    = MmioRead16 (CfgBase + cap_ptr);
+  cap_id = (reg & 0x00ff);
+
+  if (cap_id > 0x14) {
+    return 0;
+  }
+
+  if (cap_id == cap) {
+    return cap_ptr;
+  }
+
+  next_cap_ptr = (reg & 0xff00) >> 8;
+
+  return PCIeFindNextCap (CfgBase, next_cap_ptr, cap);
+}
+
+STATIC
+UINT8
+PCIeFindCap (
+  UINT64  CfgBase,
+  UINT8   cap
+  )
+{
+  UINT8   next_cap_ptr;
+  UINT16  reg;
+
+  reg          = MmioRead16 (CfgBase + PCI_CAPBILITY_POINTER_OFFSET);
+  next_cap_ptr = (reg & 0x00ff);
+
+  return PCIeFindNextCap (CfgBase, next_cap_ptr, cap);
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+InitFWFIntr (
+  PCIE_CONTROLLER_PRIVATE  *Private
+  )
+{
+  UINT32                 PCIeCapOff;
+  PCI_TYPE_GENERIC       *PciCap    = NULL;
+  PCI_CAPABILITY_PCIEXP  *PciExpCap = NULL;
+
+  PCIeCapOff = PCIeFindCap (Private->EcamBase, EFI_PCI_CAPABILITY_ID_PCIEXP);
+  if (!PCIeCapOff) {
+    DEBUG ((EFI_D_VERBOSE, "Failed to find PCIe capability registers\r\n"));
+    return EFI_NOT_FOUND;
+  }
+
+  PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + PCIeCapOff);
+
+  PciExpCap->RootControl.Bits.SystemErrorOnCorrectableError = 1;
+  PciExpCap->RootControl.Bits.SystemErrorOnNonFatalError    = 1;
+  PciExpCap->RootControl.Bits.SystemErrorOnFatalError       = 1;
+
+  PciExpCap->DeviceControl.Bits.CorrectableError   = 1;
+  PciExpCap->DeviceControl.Bits.NonFatalError      = 1;
+  PciExpCap->DeviceControl.Bits.FatalError         = 1;
+  PciExpCap->DeviceControl.Bits.UnsupportedRequest = 1;
+
+  PciCap = (PCI_TYPE_GENERIC *)(Private->EcamBase);
+
+  PciCap->Bridge.Hdr.Command |= EFI_PCI_COMMAND_SERR;
+
+  return EFI_SUCCESS;
+}
+
+STATIC
 EFI_STATUS
 EFIAPI
 InitializeController (
@@ -271,8 +353,9 @@ InitializeController (
   IN  EFI_HANDLE           ControllerHandle
   )
 {
-  UINT64  val;
-  UINT32  count;
+  UINT64      val;
+  UINT32      count;
+  EFI_STATUS  Status;
 
   /* Program XAL */
   MmioWrite32 (Private->XalBase + XAL_RC_MEM_32BIT_BASE_HI, upper_32_bits (Private->MemBase));
@@ -305,6 +388,16 @@ InitializeController (
     EFI_PCI_COMMAND_BUS_MASTER |
     EFI_PCI_COMMAND_SERR
     );
+
+  /*
+   * TODO: Make sure that it is called only in the Firmware-First flow
+   * and is skipped in the Os-First flow
+   */
+  Status = InitFWFIntr (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "Failed to Enable Firmware-First Interrupt(%r)\r\n", Status));
+    return Status;
+  }
 
   val  = MmioRead32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL);
   val |= XTL_RC_MGMT_PERST_CONTROL_PERST_O_N;
