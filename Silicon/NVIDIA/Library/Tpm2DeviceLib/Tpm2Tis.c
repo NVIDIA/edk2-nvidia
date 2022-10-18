@@ -145,21 +145,18 @@ TisReadBurstCount (
   OUT  UINT16                *BurstCount
   )
 {
-  UINT32  WaitTime;
-  UINT8   DataByte0;
-  UINT8   DataByte1;
+  EFI_STATUS  Status;
+  UINT32      WaitTime;
+  UINT8       StsReg[4];
 
   ASSERT (BurstCount != NULL);
 
   WaitTime = 0;
   do {
-    //
-    // burstCount is UINT16, but it is not 2bytes aligned,
-    // so it needs to use TisRead8 to read two times
-    //
-    DataByte0   = TisRead8 (Tpm2, TPM_STS_BURSTCNT_LO_0);
-    DataByte1   = TisRead8 (Tpm2, TPM_STS_BURSTCNT_HI_0);
-    *BurstCount = (UINT16)((DataByte1 << 8) + DataByte0);
+    Status = Tpm2->Transfer (Tpm2, TRUE, TPM_STS_0, StsReg, sizeof (StsReg));
+    ASSERT_EFI_ERROR (Status);
+
+    *BurstCount = (UINT16)((StsReg[2] << 8) | StsReg[1]);
     if (*BurstCount != 0) {
       return EFI_SUCCESS;
     }
@@ -255,6 +252,7 @@ TisTpmCommand (
   UINT32      TpmOutSize;
   UINT16      Data16;
   UINT32      Data32;
+  UINT16      TransferSize;
 
   ASSERT (Tpm2  != NULL);
   ASSERT (BufferIn  != NULL);
@@ -303,10 +301,20 @@ TisTpmCommand (
       goto Exit;
     }
 
-    for ( ; BurstCount > 0 && Index < SizeIn; BurstCount--) {
-      TisWrite8 (Tpm2, TPM_DATA_FIFO_0, *(BufferIn + Index));
-      Index++;
+    TransferSize = MIN (TPM_MAX_TRANSFER_SIZE, MIN (BurstCount, (SizeIn - Index)));
+    Status       = Tpm2->Transfer (
+                           Tpm2,
+                           FALSE,
+                           TPM_DATA_FIFO_0,
+                           BufferIn + Index,
+                           TransferSize
+                           );
+    if (EFI_ERROR (Status)) {
+      Status = EFI_DEVICE_ERROR;
+      goto Exit;
     }
+
+    Index += TransferSize;
   }
 
   //
@@ -380,23 +388,27 @@ TisTpmCommand (
       goto Exit;
     }
 
-    for ( ; BurstCount > 0; BurstCount--) {
-      *(BufferOut + Index) = TisRead8 (Tpm2, TPM_DATA_FIFO_0);
-      Index++;
-      if (Index == sizeof (TPM2_RESPONSE_HEADER)) {
-        break;
-      }
+    if (*SizeOut < (Index + BurstCount)) {
+      Status = EFI_BUFFER_TOO_SMALL;
+      goto Exit;
     }
+
+    TransferSize = MIN (TPM_MAX_TRANSFER_SIZE, BurstCount);
+    Status       = Tpm2->Transfer (
+                           Tpm2,
+                           TRUE,
+                           TPM_DATA_FIFO_0,
+                           BufferOut + Index,
+                           TransferSize
+                           );
+    if (EFI_ERROR (Status)) {
+      Status = EFI_DEVICE_ERROR;
+      goto Exit;
+    }
+
+    Index += TransferSize;
   }
 
-  DEBUG_CODE_BEGIN ();
-  DEBUG ((DEBUG_VERBOSE, "Tpm2TisTpmCommand ReceiveHeader - "));
-  for (Index = 0; Index < sizeof (TPM2_RESPONSE_HEADER); Index++) {
-    DEBUG ((DEBUG_VERBOSE, "%02x ", BufferOut[Index]));
-  }
-
-  DEBUG ((DEBUG_VERBOSE, "\n"));
-  DEBUG_CODE_END ();
   //
   // Check the response data header (tag,parasize and returncode )
   //
@@ -419,21 +431,29 @@ TisTpmCommand (
   //
   // Continue reading the remaining data
   //
-  while ( Index < TpmOutSize ) {
-    for ( ; BurstCount > 0; BurstCount--) {
-      *(BufferOut + Index) = TisRead8 (Tpm2, TPM_DATA_FIFO_0);
-      Index++;
-      if (Index == TpmOutSize) {
-        Status = EFI_SUCCESS;
-        goto Exit;
-      }
-    }
-
+  while (Index < TpmOutSize) {
     Status = TisReadBurstCount (Tpm2, &BurstCount);
     if (EFI_ERROR (Status)) {
       Status = EFI_DEVICE_ERROR;
       goto Exit;
     }
+
+    ASSERT (*SizeOut >= (Index + BurstCount));
+
+    TransferSize = MIN (TPM_MAX_TRANSFER_SIZE, BurstCount);
+    Status       = Tpm2->Transfer (
+                           Tpm2,
+                           TRUE,
+                           TPM_DATA_FIFO_0,
+                           BufferOut + Index,
+                           TransferSize
+                           );
+    if (EFI_ERROR (Status)) {
+      Status = EFI_DEVICE_ERROR;
+      goto Exit;
+    }
+
+    Index += TransferSize;
   }
 
 Exit:
