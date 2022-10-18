@@ -678,7 +678,7 @@ EnumerateDevices (
              NULL
              );
   if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get suppoted nodes - %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get supported nodes - %r\r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -696,7 +696,7 @@ EnumerateDevices (
                DtNodeInfo
                );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get suppoted nodes - %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get supported nodes - %r\r\n", __FUNCTION__, Status));
       return Status;
     }
   } else {

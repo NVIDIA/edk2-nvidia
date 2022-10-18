@@ -1198,23 +1198,6 @@ TegraI2CDriverBindingStart (
     goto ErrorExit;
   }
 
-  Status = gBS->InstallMultipleProtocolInterfaces (
-                  &ControllerHandle,
-                  &gEfiI2cMasterProtocolGuid,
-                  &Private->I2cMaster,
-                  &gEfiI2cEnumerateProtocolGuid,
-                  &Private->I2cEnumerate,
-                  &gEfiI2cBusConfigurationManagementProtocolGuid,
-                  &Private->I2CConfiguration,
-                  NULL
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to install i2c protocols:%r\r\n", __FUNCTION__, Status));
-    goto ErrorExit;
-  }
-
-  Private->ProtocolsInstalled = TRUE;
-
   PropertyLen                 = 0;
   Private->NumberOfI2cDevices = 0;
 
@@ -1389,6 +1372,22 @@ TegraI2CDriverBindingStart (
         }
       }
     }
+  }
+
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &ControllerHandle,
+                  &gEfiI2cMasterProtocolGuid,
+                  &Private->I2cMaster,
+                  &gEfiI2cEnumerateProtocolGuid,
+                  &Private->I2cEnumerate,
+                  &gEfiI2cBusConfigurationManagementProtocolGuid,
+                  &Private->I2CConfiguration,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to install i2c protocols:%r\r\n", __FUNCTION__, Status));
+  } else {
+    Private->ProtocolsInstalled = TRUE;
   }
 
 ErrorExit:
