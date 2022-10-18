@@ -20,6 +20,7 @@
   RootfsValidationLib.c
 
 [Packages]
+  MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
@@ -27,6 +28,10 @@
   BaseLib
   PrintLib
   PlatformResourceLib
+  ResetSystemLib
+  DebugLib
+  UefiLib
+  TimerLib
 
 [Guids]
  gNVIDIAPublicVariableGuid

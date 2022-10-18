@@ -9,10 +9,13 @@
 **/
 
 #include <Uefi.h>
+#include <Library/UefiLib.h>
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PrintLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/ResetSystemLib.h>
+#include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/RootfsValidationLib.h>
@@ -41,6 +44,12 @@ RF_AB_VARIABLE  mRFAbVariable[RF_VARIABLE_INDEX_MAX] = {
                       sizeof (UINT32),
                       &gNVIDIAPublicVariableGuid },
   [RF_RETRY_MAX] =  { L"RootfsRetryCountMax",
+                      EFI_VARIABLE_BOOTSERVICE_ACCESS |
+                      EFI_VARIABLE_RUNTIME_ACCESS |
+                      EFI_VARIABLE_NON_VOLATILE,
+                      sizeof (UINT32),
+                      &gNVIDIAPublicVariableGuid },
+  [RF_FW_NEXT] =    { L"BootChainFwNext",
                       EFI_VARIABLE_BOOTSERVICE_ACCESS |
                       EFI_VARIABLE_RUNTIME_ACCESS |
                       EFI_VARIABLE_NON_VOLATILE,
@@ -86,13 +95,24 @@ RFGetVariable (
                   Value
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Error getting %s: %r\n",
-      __FUNCTION__,
-      Variable->Name,
-      Status
-      ));
+    // The BootChainFwNext does not exist by default
+    if ((Status == EFI_NOT_FOUND) && (VariableIndex == RF_FW_NEXT)) {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: Info: %s is not found\n",
+        __FUNCTION__,
+        Variable->Name
+        ));
+      Status = EFI_SUCCESS;
+    } else {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Error getting %s: %r\n",
+        __FUNCTION__,
+        Variable->Name,
+        Status
+        ));
+    }
   }
 
   return Status;
@@ -723,6 +743,10 @@ ValidateRootfsStatus (
               ));
             goto Exit;
           }
+
+          // Rootfs slot is always linked with bootloader chain
+          mRootfsInfo.RootfsVar[RF_FW_NEXT].Value      = NonCurrentSlot;
+          mRootfsInfo.RootfsVar[RF_FW_NEXT].UpdateFlag = 1;
         } else {
           // Non-current slot is unbootable, boot to recovery kernel.
           BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;
@@ -794,6 +818,26 @@ Exit:
         __FUNCTION__,
         Status
         ));
+    }
+
+    // Trigger a reset to switch the BootChain if the UpdateFlag of BootChainFwNext is 1
+    if (mRootfsInfo.RootfsVar[RF_FW_NEXT].UpdateFlag) {
+      // Clear the rootfs status register before issuing a reset
+      Status = SetRootfsStatusReg (0x0);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to clear Rootfs status register: %r\n",
+          __FUNCTION__,
+          Status
+          ));
+        return Status;
+      }
+
+      Print (L"Switching the bootchain. Resetting the system in 2 seconds.\r\n");
+      MicroSecondDelay (2 * DELAY_SECOND);
+
+      ResetCold ();
     }
   }
 
