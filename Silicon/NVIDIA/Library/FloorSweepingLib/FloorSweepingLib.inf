@@ -16,6 +16,7 @@
 
 [Sources]
   FloorSweepingLib.c
+  TH500FloorSweepingLib.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -32,7 +33,6 @@
   MemoryAllocationLib
   NvgLib
   TegraPlatformInfoLib
-  FloorSweepingInternalLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster

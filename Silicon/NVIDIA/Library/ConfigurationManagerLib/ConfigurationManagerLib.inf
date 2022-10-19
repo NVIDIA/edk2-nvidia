@@ -26,7 +26,6 @@
   FdtLib
   IoLib
   PlatformResourceLib
-  FloorSweepingInternalLib
   UefiBootServicesTableLib
   UefiLib
 

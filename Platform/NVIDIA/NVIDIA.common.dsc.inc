@@ -150,7 +150,6 @@
   DramCarveoutLib|Silicon/NVIDIA/Library/DramCarveoutLib/DramCarveoutLib.inf
   BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoLib/BootChainInfoLib.inf
   ConfigurationManagerLib|Silicon/NVIDIA/Library/ConfigurationManagerLib/ConfigurationManagerLib.inf
-  FloorSweepingInternalLib|Silicon/NVIDIA/Library/FloorSweepingInternalLibNull/FloorSweepingInternalLibNull.inf
 
   OemMiscLib|Silicon/NVIDIA/Library/OemMiscLib/OemMiscLib.inf
   SmbiosMiscLib|Silicon/NVIDIA/Library/SmbiosMiscLib/SmbiosMiscLib.inf

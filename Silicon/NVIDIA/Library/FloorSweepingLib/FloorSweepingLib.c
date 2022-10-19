@@ -13,7 +13,6 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/FloorSweepingLib.h>
-#include <Library/FloorSweepingInternalLib.h>
 #include <Library/HobLib.h>
 #include <Library/MceAriLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -23,6 +22,8 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PrintLib.h>
 #include <libfdt.h>
+
+#include "TH500FloorSweepingLib.h"
 
 #define THERMAL_COOLING_DEVICE_ENTRY_SIZE  (3 * sizeof (INT32))
 
@@ -35,7 +36,6 @@
                                          PLATFORM_MAX_CORES_PER_CLUSTER)
 
 #define MAX_SUPPORTED_CORES  1024
-
 typedef struct {
   UINTN     MaxClusters;
   UINTN     MaxCoresPerCluster;
@@ -61,32 +61,31 @@ GetCpuInfo (
   OUT UINT64  *EnabledCoresBitMap
   )
 {
-  BOOLEAN     ValidPrivatePlatform;
   EFI_STATUS  Status;
+  UINTN       ChipId;
 
-  Status               = EFI_SUCCESS;
-  ValidPrivatePlatform = GetCpuInfoInternal (
-                           SocketMask,
-                           MaxSupportedCores,
-                           EnabledCoresBitMap
-                           );
-  if (!ValidPrivatePlatform) {
-    UINTN  ChipId;
+  Status = EFI_SUCCESS;
 
-    ChipId = TegraGetChipID ();
+  ChipId = TegraGetChipID ();
 
-    switch (ChipId) {
-      case T194_CHIP_ID:
-        Status = NvgGetEnabledCoresBitMap (EnabledCoresBitMap);
-        break;
-      case T234_CHIP_ID:
-        Status = MceAriGetEnabledCoresBitMap (EnabledCoresBitMap);
-        break;
-      default:
-        ASSERT (FALSE);
-        Status = EFI_UNSUPPORTED;
-        break;
-    }
+  switch (ChipId) {
+    case T194_CHIP_ID:
+      Status = NvgGetEnabledCoresBitMap (EnabledCoresBitMap);
+      break;
+    case T234_CHIP_ID:
+      Status = MceAriGetEnabledCoresBitMap (EnabledCoresBitMap);
+      break;
+    case TH500_CHIP_ID:
+      Status = TH500GetEnabledCoresBitMap (
+                 SocketMask,
+                 MaxSupportedCores,
+                 EnabledCoresBitMap
+                 );
+      break;
+    default:
+      ASSERT (FALSE);
+      Status = EFI_UNSUPPORTED;
+      break;
   }
 
   return Status;
@@ -261,20 +260,8 @@ CheckAndRemapCpu (
   OUT UINTN        *DtCpuId
   )
 {
-  BOOLEAN     ValidPrivatePlatform;
   UINTN       ChipId;
   EFI_STATUS  Status;
-
-  ValidPrivatePlatform = CheckAndRemapCpuInternal (
-                           LogicalCore,
-                           Mpidr,
-                           DtCpuFormat,
-                           DtCpuId,
-                           &Status
-                           );
-  if (ValidPrivatePlatform) {
-    return Status;
-  }
 
   ChipId = TegraGetChipID ();
 
@@ -288,6 +275,9 @@ CheckAndRemapCpu (
     case T234_CHIP_ID:
       Status       = MceAriCheckCoreEnabled (Mpidr, DtCpuId);
       *DtCpuFormat = "cpu@%u";
+      break;
+    case TH500_CHIP_ID:
+      Status = TH500CheckAndRemapCpu (LogicalCore, Mpidr, DtCpuFormat, DtCpuId);
       break;
     default:
       Status = EFI_UNSUPPORTED;
@@ -749,18 +739,12 @@ FloorSweepDtb (
   IN VOID  *Dtb
   )
 {
-  BOOLEAN            ValidPrivatePlatform;
   PLATFORM_CPU_INFO  *Info;
   UINTN              ChipId;
   EFI_STATUS         Status;
 
   Info = FloorSweepCpuInfo ();
   FloorSweepSockets (Info->SocketMask, Dtb);
-
-  ValidPrivatePlatform = FloorSweepDtbInternal (Info->SocketMask, Dtb);
-  if (ValidPrivatePlatform) {
-    return EFI_SUCCESS;
-  }
 
   ChipId = TegraGetChipID ();
 
@@ -772,6 +756,11 @@ FloorSweepDtb (
         Status = FloorSweepGlobalThermals (Dtb);
       }
 
+      break;
+    case TH500_CHIP_ID:
+      TH500FloorSweepCpus (Info->SocketMask, Dtb);
+      TH500FloorSweepPcie (Info->SocketMask, Dtb);
+      TH500FloorSweepScfCache (Info->SocketMask, Dtb);
       break;
     default:
       Status = EFI_UNSUPPORTED;
