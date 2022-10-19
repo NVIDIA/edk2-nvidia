@@ -91,6 +91,7 @@ STATIC CONST CHAR16  *SpecialImageNames[] = {
 STATIC CONST CHAR16  *OptionalImageNames[] = {
   L"sce-fw",
   L"smm-fw",
+  L"tsec-fw",
   L"xusb-fw",
   L"BCT-boot-chain_backup",
   NULL
