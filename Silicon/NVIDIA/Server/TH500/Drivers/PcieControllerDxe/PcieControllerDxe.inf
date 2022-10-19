@@ -1,0 +1,66 @@
+#/** @file
+#
+#  PCIe Controller Driver
+#
+#  Copyright (c) 2019-2022, NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = PcieControllerDxe
+  FILE_GUID                      = 89815ce0-782d-4c64-96ff-4ce4b68bc0e4
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  PcieControllerDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  DeviceTreeHelperLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  TimerLib
+  FdtLib
+  DeviceDiscoveryDriverLib
+  MemoryAllocationLib
+  DxeServicesTableLib
+  DevicePathLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+
+[Protocols]
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIAPciHostBridgeProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
+  gNVIDIARegulatorProtocolGuid
+  gNVIDIAPcieControllerInitCompleteProtocolGuid
+  gNVIDIAConfigurationManagerDataObjectGuid
+
+[Guids]
+  gNVIDIANonDiscoverableTH500PcieDeviceGuid
+  gEfiEventExitBootServicesGuid
+
+[Depex]
+  gNVIDIAAllRegulatorsPresentProtocolGuid

@@ -1,0 +1,38 @@
+## @file
+# Ssdt Serial Port Table Support Library
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2021-2022, Arm Limited. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x0001001B
+  BASE_NAME      = SsdtPcieSupportLib
+  FILE_GUID      = 5f41b6d9-3091-40a9-9bd8-3e87673284c5
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = SsdtPcieSupportLib
+
+[Sources]
+  SsdtPcieSupportLib.c
+  SsdtPcieSupportLibPrivate.h
+  SsdtPcieTemplate.asl
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  AcpiHelperLib
+  AmlLib
+  BaseLib
+
+[Protocols]
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+
+[Depex]
+  gNVIDIAPcieControllerInitCompleteProtocolGuid
