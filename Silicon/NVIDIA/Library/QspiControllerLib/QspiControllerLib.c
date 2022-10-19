@@ -694,3 +694,26 @@ QspiPerformTransaction (
 
   return EFI_SUCCESS;
 }
+
+/**
+  Enable polling for wait state
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+
+  @retval EFI_SUCCESS              Wait state is enabled
+  @retval Others                   Wait state cannot be enabled
+**/
+EFI_STATUS
+QspiEnableWaitState (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  )
+{
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_GLOBAL_CONFIG_0,
+    QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_BIT,
+    QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_BIT,
+    QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_ENABLE
+    );
+
+  return EFI_SUCCESS;
+}

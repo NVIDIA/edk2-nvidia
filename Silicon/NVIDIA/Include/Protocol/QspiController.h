@@ -23,6 +23,15 @@
 typedef struct _NVIDIA_QSPI_CONTROLLER_PROTOCOL NVIDIA_QSPI_CONTROLLER_PROTOCOL;
 
 /**
+  Device specific features
+**/
+typedef enum QspiDevFeature {
+  QspiDevFeatUnknown,     ///< 0 - Unknown feature
+  QspiDevFeatWaitState,   ///< 1 - Wait state
+  QspiDevFeatMax
+} QSPI_DEV_FEATURE;
+
+/**
   Perform a single transaction on QSPI bus.
 
   @param[in] This                  Instance of protocol
@@ -90,12 +99,30 @@ EFI_STATUS
   OUT UINT8                          *NumChipSelects
   );
 
+/**
+  Initialize QSPI controller for a specific device
+
+  @param[in] This                  Instance of protocol
+  @param[in] DeviceFeature         Device feature to initialize
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+
+**/
+typedef
+EFI_STATUS
+(EFIAPI *QSPI_CONTROLLER_DEVICE_SPECIFIC_INIT)(
+  IN NVIDIA_QSPI_CONTROLLER_PROTOCOL *This,
+  IN QSPI_DEV_FEATURE                DeviceFeature
+  );
+
 /// NVIDIA_QSPI_CONTROLLER_PROTOCOL protocol structure.
 struct _NVIDIA_QSPI_CONTROLLER_PROTOCOL {
   QSPI_CONTROLLER_PERFORM_TRANSACTION     PerformTransaction;
   QSPI_CONTROLLER_GET_CLOCK_SPEED         GetClockSpeed;
   QSPI_CONTROLLER_SET_CLOCK_SPEED         SetClockSpeed;
   QSPI_CONTROLLER_GET_NUM_CHIP_SELECTS    GetNumChipSelects;
+  QSPI_CONTROLLER_DEVICE_SPECIFIC_INIT    DeviceSpecificInit;
 };
 
 extern EFI_GUID  gNVIDIAQspiControllerProtocolGuid;

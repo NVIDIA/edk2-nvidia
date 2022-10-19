@@ -21,6 +21,7 @@
 #include <Library/UefiRuntimeLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/QspiController.h>
@@ -263,6 +264,49 @@ SetSpiFrequency (
   } else {
     return EFI_UNSUPPORTED;
   }
+}
+
+/**
+  Initialize QSPI controller for a specific device
+
+  @param[in] This                  Instance of protocol
+  @param[in] DeviceFeature         Device feature to initialize
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+QspiControllerDeviceSpecificInit (
+  IN NVIDIA_QSPI_CONTROLLER_PROTOCOL  *This,
+  IN QSPI_DEV_FEATURE                 DeviceFeature
+  )
+{
+  EFI_STATUS                    Status;
+  QSPI_CONTROLLER_PRIVATE_DATA  *Private;
+
+  Private = QSPI_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL (This);
+
+  //
+  // Enable wait state
+  //
+  if (DeviceFeature == QspiDevFeatWaitState) {
+    if ((TegraGetChipID () == T194_CHIP_ID) ||
+        (Private->ControllerType == CONTROLLER_TYPE_SPI))
+    {
+      DEBUG ((DEBUG_ERROR, "%a: Wait state is not supported.\n", __FUNCTION__));
+      return EFI_UNSUPPORTED;
+    }
+
+    Status = QspiEnableWaitState (Private->QspiBaseAddress);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Fail to enable wait state\n", __FUNCTION__));
+      return Status;
+    }
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -534,6 +578,7 @@ DeviceDiscoveryNotify (
 
       Private->QspiControllerProtocol.PerformTransaction = QspiControllerPerformTransaction;
       Private->QspiControllerProtocol.GetNumChipSelects  = QspiControllerGetNumChipSelects;
+      Private->QspiControllerProtocol.DeviceSpecificInit = QspiControllerDeviceSpecificInit;
       if (Private->ClockId != MAX_UINT32) {
         Private->QspiControllerProtocol.GetClockSpeed = QspiControllerGetClockSpeed;
         Private->QspiControllerProtocol.SetClockSpeed = QspiControllerSetClockSpeed;

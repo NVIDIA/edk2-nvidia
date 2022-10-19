@@ -60,4 +60,17 @@ QspiPerformTransaction (
   IN QSPI_TRANSACTION_PACKET  *Packet
   );
 
+/**
+  Enable polling for wait state
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+
+  @retval EFI_SUCCESS              Wait state is enabled
+  @retval Others                   Wait state cannot be enabled
+**/
+EFI_STATUS
+QspiEnableWaitState (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  );
+
 #endif //__QSPI_CONTROLLER_LIB_H__
