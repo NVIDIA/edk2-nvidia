@@ -110,7 +110,6 @@ MmCommunication2Communicate (
   Status     = EFI_ACCESS_DENIED;
   BufferSize = 0;
 
-  DEBUG ((DEBUG_ERROR, "%a: Start\n", __FUNCTION__));
   ZeroMem (&CommunicateSmcArgs, sizeof (ARM_SMC_ARGS));
 
   //
@@ -467,7 +466,7 @@ MmCommunication2Initialize (
   ASSERT (mNsCommBuffMemRegion.Length != 0);
 
   Status = gDS->AddMemorySpace (
-                  EfiGcdMemoryTypeReserved,
+                  EfiGcdMemoryTypeSystemMemory,
                   mNsCommBuffMemRegion.PhysicalBase,
                   mNsCommBuffMemRegion.Length,
                   EFI_MEMORY_WB |
