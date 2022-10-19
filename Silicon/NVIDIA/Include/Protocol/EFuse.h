@@ -1,7 +1,7 @@
 /** @file
   EFuse Register Access Protocol
 
-  Copyright (c) 2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,7 +14,7 @@
 
 #define NVIDIA_EFUSE_PROTOCOL_GUID \
   { \
-  0x961c9250, 0x1f49, 0x44a2, { 0x97, 0x41, 0x66, 0x27, 0x4d, 0xbe, 0x65, 0xd0 } \
+  0xb5938c29, 0xe1c0, 0x4969, { 0x8b, 0x87, 0xe1, 0x5b, 0xdf, 0xf3, 0x78, 0x89 } \
   }
 
 typedef struct _NVIDIA_EFUSE_PROTOCOL NVIDIA_EFUSE_PROTOCOL;
@@ -27,6 +27,7 @@ typedef struct _NVIDIA_EFUSE_PROTOCOL NVIDIA_EFUSE_PROTOCOL;
   @param[out]    RegisterValue       Value of the Read Fuse Register.
 
   @return EFI_SUCCESS                Fuse Register Value successfully returned.
+  @return EFI_INVALID_PARAMETER      Register Offset param not in EFUSE Region
   @return EFI_DEVICE_ERROR           Other error occured in reading FUSE Registers.
 **/
 typedef
@@ -37,8 +38,28 @@ EFI_STATUS
   OUT UINT32    *RegisterValue
   );
 
+/**
+  This function writes and returns the value of a specified Fuse Register
+
+  @param[in]        This                The instance of NVIDIA_EFUSE_PROTOCOL.
+  @param[in]        RegisterOffset      Offset from the EFUSE Base address to write.
+  @param[in out]    RegisterValue       Value of the Write Fuse Register.
+
+  @return EFI_SUCCESS                Fuse Register Value successfully returned.
+  @return EFI_INVALID_PARAMETER      Register Offset param not in EFUSE Region
+  @return EFI_DEVICE_ERROR           Other error occured in reading FUSE Registers.
+**/
+typedef
+EFI_STATUS
+(EFIAPI *EFUSE_WRITE_REGISTER)(
+  IN     NVIDIA_EFUSE_PROTOCOL  *This,
+  IN     UINT32    RegisterOffset,
+  IN OUT UINT32    *RegisterValue
+  );
+
 struct _NVIDIA_EFUSE_PROTOCOL {
-  EFUSE_READ_REGISTER    ReadReg;
+  EFUSE_READ_REGISTER     ReadReg;
+  EFUSE_WRITE_REGISTER    WriteReg;
 };
 
 extern EFI_GUID  gNVIDIAEFuseProtocolGuid;

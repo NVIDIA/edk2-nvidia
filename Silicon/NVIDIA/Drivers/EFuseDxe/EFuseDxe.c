@@ -2,7 +2,7 @@
 
   EFUSE Driver
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,6 +18,7 @@
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/ResetNodeProtocol.h>
 #include <libfdt.h>
 #include <Protocol/DeviceTreeCompatibility.h>
@@ -71,6 +72,47 @@ EfuseReadRegister (
   } else {
     *RegisterValue = MmioRead32 (Private->BaseAddress + RegisterOffset);
     Status         = EFI_SUCCESS;
+  }
+
+  return Status;
+}
+
+/**
+  This function writes and returns the value of a specified Fuse Register
+
+  @param[in]        This                The instance of NVIDIA_EFUSE_PROTOCOL.
+  @param[in]        RegisterOffset      Offset from the EFUSE Base address to write.
+  @param[in out]    RegisterValue       Value of the Write Fuse Register.
+
+  @return EFI_SUCCESS                Fuse Register Value successfully returned.
+  @return EFI_INVALID_PARAMETER      Register Offset param not in EFUSE Region
+  @return EFI_DEVICE_ERROR           Other error occured in reading FUSE Registers.
+**/
+STATIC
+EFI_STATUS
+EfuseWriteRegister (
+  IN     NVIDIA_EFUSE_PROTOCOL  *This,
+  IN     UINT32                 RegisterOffset,
+  IN OUT UINT32                 *RegisterValue
+  )
+{
+  EFI_STATUS         Status;
+  EFUSE_DXE_PRIVATE  *Private;
+  UINT32             ChipID;
+
+  ChipID = TegraGetChipID ();
+  if (ChipID != T194_CHIP_ID) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  Private = EFUSE_PRIVATE_DATA_FROM_THIS (This);
+  if ((RegisterOffset > (Private->RegionSize - sizeof (UINT32))) ||
+      (RegisterValue == NULL))
+  {
+    Status = EFI_INVALID_PARAMETER;
+  } else {
+    // TODO: Add fuse write support.
+    Status = EFI_SUCCESS;
   }
 
   return Status;
@@ -135,11 +177,12 @@ DeviceDiscoveryNotify (
         return Status;
       }
 
-      Private->Signature             = EFUSE_SIGNATURE;
-      Private->ImageHandle           = DriverHandle;
-      Private->BaseAddress           = BaseAddress;
-      Private->RegionSize            = RegionSize;
-      Private->EFuseProtocol.ReadReg = EfuseReadRegister;
+      Private->Signature              = EFUSE_SIGNATURE;
+      Private->ImageHandle            = DriverHandle;
+      Private->BaseAddress            = BaseAddress;
+      Private->RegionSize             = RegionSize;
+      Private->EFuseProtocol.ReadReg  = EfuseReadRegister;
+      Private->EFuseProtocol.WriteReg = EfuseWriteRegister;
 
       Status = gBS->InstallMultipleProtocolInterfaces (
                       &DriverHandle,
