@@ -35,6 +35,7 @@
   QspiControllerLib
   UefiRuntimeLib
   PlatformResourceLib
+  TegraPlatformInfoLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSpiClockFrequency

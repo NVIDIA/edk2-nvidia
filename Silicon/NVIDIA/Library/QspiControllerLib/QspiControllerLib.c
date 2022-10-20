@@ -2,7 +2,7 @@
 
   QSPI Controller Library
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -123,15 +123,25 @@ QspiFlushFifo (
   Configure whether to enable or disable CS for a slave
 
   @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  ChipSelect               Chip select to configure
   @param  Enable                   TRUE for Tx Fifo, FALSE for Rx Fifo
 **/
 STATIC
 VOID
 QspiConfigureCS (
   IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN UINT8                 ChipSelect,
   IN BOOLEAN               Enable
   )
 {
+  // Configure CS
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_CS_SEL_LSB,
+    QSPI_COMMAND_0_CS_SEL_MSB,
+    QSPI_COMMAND_0_CS_SEL_CS0 + ChipSelect
+    );
+
   if (Enable) {
     // Configure CS pin low.
     MmioBitFieldWrite32 (
@@ -517,16 +527,19 @@ QspiPerformTransmit (
   start transactions.
 
   @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  NumChipSelects           Number of chip selects supported.
 
   @retval EFI_SUCCESS              Controller initialized successfully.
   @retval Others                   Controller initialization failed.
 **/
 EFI_STATUS
 QspiInitialize (
-  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN UINT8                 NumChipSelects
   )
 {
   EFI_STATUS  Status;
+  UINTN       ChipSelect;
 
   // Configure master mode.
   MmioBitFieldWrite32 (
@@ -542,20 +555,6 @@ QspiInitialize (
     QSPI_COMMAND_0_MODE_MSB,
     QSPI_COMMAND_0_MODE_MODE0
     );
-  // Only CS0 is supported.
-  MmioBitFieldWrite32 (
-    QspiBaseAddress + QSPI_COMMAND_0,
-    QSPI_COMMAND_0_CS_SEL_LSB,
-    QSPI_COMMAND_0_CS_SEL_MSB,
-    QSPI_COMMAND_0_CS_SEL_CS0
-    );
-  // Configure CS to be inactive high.
-  MmioBitFieldWrite32 (
-    QspiBaseAddress + QSPI_COMMAND_0,
-    QSPI_COMMAND_0_CS_POL_INACTIVE0_BIT,
-    QSPI_COMMAND_0_CS_POL_INACTIVE0_BIT,
-    QSPI_COMMAND_0_CS_POL_INACTIVE0_HIGH
-    );
   // Configure CS to be software controlled.
   MmioBitFieldWrite32 (
     QspiBaseAddress + QSPI_COMMAND_0,
@@ -563,13 +562,18 @@ QspiInitialize (
     QSPI_COMMAND_0_CS_SW_HW_BIT,
     QSPI_COMMAND_0_CS_SW_HW_SOFTWARE
     );
-  // Configure CS to be high.
-  MmioBitFieldWrite32 (
-    QspiBaseAddress + QSPI_COMMAND_0,
-    QSPI_COMMAND_0_CS_SW_VAL_BIT,
-    QSPI_COMMAND_0_CS_SW_VAL_BIT,
-    QSPI_COMMAND_0_CS_SW_VAL_HIGH
-    );
+  for (ChipSelect = 0; ChipSelect < NumChipSelects; ChipSelect++) {
+    // Configure CS to be inactive high.
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_COMMAND_0,
+      QSPI_COMMAND_0_CS_POL_INACTIVE0_BIT + ChipSelect,
+      QSPI_COMMAND_0_CS_POL_INACTIVE0_BIT + ChipSelect,
+      QSPI_COMMAND_0_CS_POL_INACTIVE_HIGH
+      );
+    // Configure CS to be high.
+    QspiConfigureCS (QspiBaseAddress, ChipSelect, FALSE);
+  }
+
   // Configure pin to drive low strength during idle.
   MmioBitFieldWrite32 (
     QspiBaseAddress + QSPI_COMMAND_0,
@@ -639,7 +643,7 @@ QspiPerformTransaction (
   // Setup Wait Cycles.
   QspiPerformWaitCycleConfiguration (QspiBaseAddress, Packet->WaitCycles);
   // Enable CS
-  QspiConfigureCS (QspiBaseAddress, TRUE);
+  QspiConfigureCS (QspiBaseAddress, Packet->ChipSelect, TRUE);
   // If transmission buffer address valid, start transmission
   if (Packet->TxBuf != NULL) {
     DEBUG ((EFI_D_INFO, "QSPI Tx Args: 0x%x %d.\n", Packet->TxBuf, Packet->TxLen));
@@ -683,7 +687,7 @@ QspiPerformTransaction (
   }
 
   // Disable CS
-  QspiConfigureCS (QspiBaseAddress, FALSE);
+  QspiConfigureCS (QspiBaseAddress, Packet->ChipSelect, FALSE);
 
   // Wait for the controller to clear state before starting next transaction.
   MicroSecondDelay (TIMEOUT);

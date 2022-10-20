@@ -22,6 +22,7 @@
 
 STATIC UINT64   QspiBaseAddress = 0;
 STATIC BOOLEAN  AspInitialized  = FALSE;
+STATIC UINT8    ChipSelect      = 0;
 
 STATIC EFI_STATUS
 MxReadRegister (
@@ -46,6 +47,7 @@ MxReadRegister (
   Packet.TxLen      = CmdSize;
   Packet.RxLen      = sizeof (UINT8);
   Packet.WaitCycles = 0;
+  Packet.ChipSelect = ChipSelect;
 
   Status = QSPIPERFORMTRANSACTION (&Packet);
   if (EFI_ERROR (Status)) {
@@ -128,6 +130,7 @@ MxWriteRegister (
   Packet.TxLen      = sizeof (Command);
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
+  Packet.ChipSelect = ChipSelect;
   Status            = QSPIPERFORMTRANSACTION (&Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Could not write WREN (%r).\n", __FUNCTION__, Status));
@@ -146,6 +149,7 @@ MxWriteRegister (
   Packet.TxLen      = CmdSize;
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
+  Packet.ChipSelect = ChipSelect;
   Status            = QSPIPERFORMTRANSACTION (&Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((
@@ -171,11 +175,13 @@ exit:
 
 EFI_STATUS
 MxAspInitialize (
-  UINT64  QspiBase
+  UINT64  QspiBase,
+  UINT8   FlashCS
   )
 {
   QspiBaseAddress = QspiBase;
   AspInitialized  = TRUE;
+  ChipSelect      = FlashCS;
   return EFI_SUCCESS;
 }
 

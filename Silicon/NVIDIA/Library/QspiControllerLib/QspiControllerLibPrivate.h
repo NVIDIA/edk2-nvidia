@@ -2,7 +2,7 @@
 
   QSPI Controller Library Private Structures
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,6 +21,9 @@
 #define QSPI_COMMAND_0_MODE_LSB              28
 #define QSPI_COMMAND_0_CS_SEL_MSB            27
 #define QSPI_COMMAND_0_CS_SEL_LSB            26
+#define QSPI_COMMAND_0_CS_POL_INACTIVE3_BIT  25
+#define QSPI_COMMAND_0_CS_POL_INACTIVE2_BIT  24
+#define QSPI_COMMAND_0_CS_POL_INACTIVE1_BIT  23
 #define QSPI_COMMAND_0_CS_POL_INACTIVE0_BIT  22
 #define QSPI_COMMAND_0_CS_SW_HW_BIT          21
 #define QSPI_COMMAND_0_CS_SW_VAL_BIT         20
@@ -40,7 +43,7 @@
 #define QSPI_COMMAND_0_M_S_MASTER              1
 #define QSPI_COMMAND_0_MODE_MODE0              0
 #define QSPI_COMMAND_0_CS_SEL_CS0              0
-#define QSPI_COMMAND_0_CS_POL_INACTIVE0_HIGH   1
+#define QSPI_COMMAND_0_CS_POL_INACTIVE_HIGH    1
 #define QSPI_COMMAND_0_CS_SW_HW_SOFTWARE       1
 #define QSPI_COMMAND_0_CS_SW_VAL_LOW           0
 #define QSPI_COMMAND_0_CS_SW_VAL_HIGH          1

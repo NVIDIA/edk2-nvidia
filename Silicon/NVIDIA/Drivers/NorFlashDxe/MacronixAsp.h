@@ -15,7 +15,8 @@
 
 EFI_STATUS
 MxAspInitialize (
-  UINT64  QspiBaseAddress
+  UINT64  QspiBaseAddress,
+  UINT8   FlashCS
   );
 
 EFI_STATUS

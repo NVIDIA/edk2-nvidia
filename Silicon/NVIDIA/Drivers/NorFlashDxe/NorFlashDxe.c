@@ -22,17 +22,27 @@ EFI_BLOCK_IO_MEDIA  Media = {
   0          // Last logical block gets updated during start
 };
 
-VENDOR_DEVICE_PATH  VendorDevicePath = {
+#pragma pack(1)
+typedef struct {
+  VENDOR_DEVICE_PATH    Vendor;
+  UINT8                 FlashIndex;
+} NOR_FLASH_DEVICE_PATH;
+#pragma pack()
+
+NOR_FLASH_DEVICE_PATH  mNorFlashDevicePath = {
   {
-    HARDWARE_DEVICE_PATH,
-    HW_VENDOR_DP,
     {
-      (UINT8)(sizeof (VENDOR_DEVICE_PATH)),
-      (UINT8)((sizeof (VENDOR_DEVICE_PATH)) >> 8)
+      HARDWARE_DEVICE_PATH,
+      HW_VENDOR_DP,
+      {
+        (UINT8)(sizeof (NOR_FLASH_DEVICE_PATH)),
+        (UINT8)(sizeof (NOR_FLASH_DEVICE_PATH) >> 8)
+      }
+    },
+    { 0x8332de7f, 0x50c3, 0x47ca, { 0x82, 0x4e, 0x83, 0x3a, 0xac, 0x7c, 0xf1, 0x6d }
     }
   },
-  { 0x8332de7f, 0x50c3, 0x47ca, { 0x82, 0x4e, 0x83, 0x3a, 0xac, 0x7c, 0xf1, 0x6d }
-  }
+  0
 };
 
 BOOLEAN  TimeOutMessage = FALSE;
@@ -70,6 +80,7 @@ ReadNorFlashRegister (
   Packet.TxLen      = CmdSize;
   Packet.RxLen      = sizeof (UINT8);
   Packet.WaitCycles = 0;
+  Packet.ChipSelect = Private->QspiChipSelect;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -166,6 +177,7 @@ ConfigureNorFlashWriteEnLatch (
   Packet.TxLen      = sizeof (Cmd);
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
+  Packet.ChipSelect = Private->QspiChipSelect;
 
   RegCmd = NOR_READ_SR1;
 
@@ -267,6 +279,7 @@ ReadNorFlashSFDP (
   Packet.TxLen      = CmdSize;
   Packet.RxLen      = sizeof (SFDPHeader);
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
+  Packet.ChipSelect = Private->QspiChipSelect;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -303,6 +316,7 @@ ReadNorFlashSFDP (
   Packet.TxLen      = CmdSize;
   Packet.RxLen      = (SFDPHeader.NumParamHdrs + 1) * sizeof (NOR_SFDP_PARAM_TBL_HDR);
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
+  Packet.ChipSelect = Private->QspiChipSelect;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -349,6 +363,7 @@ ReadNorFlashSFDP (
   Packet.TxLen      = CmdSize;
   Packet.RxLen      = SFDPParamBasicTblSize;
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
+  Packet.ChipSelect = Private->QspiChipSelect;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -395,6 +410,7 @@ ReadNorFlashSFDP (
   Packet.TxLen      = CmdSize;
   Packet.RxLen      = SFDPParam4ByteInstructionTblSize;
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
+  Packet.ChipSelect = Private->QspiChipSelect;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -494,6 +510,7 @@ ReadNorFlashSFDP (
     Packet.TxLen      = CmdSize;
     Packet.RxLen      = SFDPParamSectorTblSize;
     Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
+    Packet.ChipSelect = Private->QspiChipSelect;
 
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
@@ -764,10 +781,11 @@ NorFlashRead (
     Packet.WaitCycles         = 0;
   }
 
-  Packet.TxBuf = Private->CommandBuffer;
-  Packet.TxLen = CmdSize;
-  Packet.RxBuf = Buffer;
-  Packet.RxLen = Size;
+  Packet.TxBuf      = Private->CommandBuffer;
+  Packet.TxLen      = CmdSize;
+  Packet.RxBuf      = Buffer;
+  Packet.RxLen      = Size;
+  Packet.ChipSelect = Private->QspiChipSelect;
 
   DEBUG ((
     DEBUG_INFO,
@@ -945,6 +963,7 @@ NorFlashErase (
     Packet.RxBuf      = NULL;
     Packet.RxLen      = 0;
     Packet.WaitCycles = 0;
+    Packet.ChipSelect = Private->QspiChipSelect;
 
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
@@ -1112,6 +1131,7 @@ NorFlashWriteSinglePage (
   Packet.RxBuf      = NULL;
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
+  Packet.ChipSelect = Private->QspiChipSelect;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -1278,6 +1298,100 @@ NorFlashWriteBlock (
 }
 
 /**
+  Check if DT node is a valid supported flash device and optionally return
+  its chip select.
+
+  @param[in]  DeviceTreeBase       Pointer to DT
+  @param[in]  NodeOffset           Offset of DT flash device subnode
+  @param[in]  NumChipSelects       Number of chip selects QSPI supports
+  @param[out] ChipSelect           Pointer to save chip select, if not NULL
+
+  @retval BOOLEAN                  Flag indicating if DT node is valid flash
+
+**/
+STATIC
+BOOLEAN
+EFIAPI
+IsValidFlashNode (
+  IN CONST VOID  *DeviceTreeBase,
+  IN INT32       NodeOffset,
+  IN UINT8       NumChipSelects,
+  OUT UINT8      *ChipSelect         OPTIONAL
+  )
+{
+  CONST CHAR8  *NodeName;
+  CONST VOID   *Property;
+  INT32        Offset;
+  INT32        Length;
+  BOOLEAN      IsFlash;
+  BOOLEAN      IsDisabled;
+  BOOLEAN      IsValidCS;
+  UINT32       NodeChipSelect;
+
+  NodeName = fdt_get_name (DeviceTreeBase, NodeOffset, NULL);
+
+  NodeChipSelect = MAX_UINT32;
+  IsDisabled     = FALSE;
+  IsFlash        = FALSE;
+  IsValidCS      = FALSE;
+  if (AsciiStrnCmp (NodeName, "flash@", AsciiStrLen ("flash@")) == 0) {
+    IsFlash = TRUE;
+  } else if (AsciiStrnCmp (NodeName, "spiflash@", AsciiStrLen ("spiflash@")) == 0) {
+    Offset = fdt_subnode_offset (
+               DeviceTreeBase,
+               NodeOffset,
+               "partition@0"
+               );
+    if (Offset >= 0) {
+      Property = fdt_getprop (DeviceTreeBase, Offset, "label", &Length);
+      if ((Property != NULL) && (Length != 0)) {
+        if (AsciiStrStr (Property, "flash") != NULL) {
+          IsFlash = TRUE;
+        }
+      }
+    }
+  }
+
+  Property = fdt_getprop (DeviceTreeBase, NodeOffset, "status", NULL);
+  if ((Property != NULL) && (AsciiStrCmp (Property, "disabled") == 0)) {
+    DEBUG ((DEBUG_ERROR, "%a: %a disabled\n", __FUNCTION__, NodeName));
+    IsDisabled = TRUE;
+  }
+
+  if (IsFlash && !IsDisabled) {
+    Property = fdt_getprop (
+                 DeviceTreeBase,
+                 NodeOffset,
+                 "reg",
+                 &Length
+                 );
+    if ((Property != NULL) && (Length == sizeof (UINT32))) {
+      NodeChipSelect = (UINT8)fdt32_to_cpu (*(CONST UINT32 *)Property);
+      if (NodeChipSelect < NumChipSelects) {
+        IsValidCS = TRUE;
+        if (ChipSelect != NULL) {
+          *ChipSelect = (UINT8)NodeChipSelect;
+        }
+      }
+    }
+  }
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: %a(0x%x) Flash=%u Disabled=%u CS Valid=%u CS=%u\n",
+    __FUNCTION__,
+    NodeName,
+    NodeOffset,
+    IsFlash,
+    IsDisabled,
+    IsValidCS,
+    NodeChipSelect
+    ));
+
+  return (IsFlash && !IsDisabled && IsValidCS);
+}
+
+/**
   Check for flash part in device tree.
 
   Looks through all subnodes of the QSPI node to see if any of them has
@@ -1286,20 +1400,20 @@ NorFlashWriteBlock (
   @param[in]   Controller          The handle of the controller to test. This handle
                                    must support a protocol interface that supplies
                                    an I/O abstraction to the driver.
+  @param[in]   NumChipSelects      Number of Qspi chip selects.
 
   @retval EFI_SUCCESS              Operation successful.
   @retval others                   Error occurred
 **/
 EFI_STATUS
 CheckNorFlashCompatibility (
-  IN EFI_HANDLE  Controller
+  IN EFI_HANDLE  Controller,
+  IN UINT8       NumChipSelects
   )
 {
   EFI_STATUS                        Status;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode;
-  INTN                              Offset;
-  CONST VOID                        *Property;
-  INT32                             Length;
+  INT32                             SubNode;
 
   // Check whether device tree node protocol is available.
   DeviceTreeNode = NULL;
@@ -1312,33 +1426,10 @@ CheckNorFlashCompatibility (
     return Status;
   }
 
-  Offset = fdt_subnode_offset (
-             DeviceTreeNode->DeviceTreeBase,
-             DeviceTreeNode->NodeOffset,
-             "flash@0"
-             );
-  if (Offset >= 0) {
-    return EFI_SUCCESS;
-  }
-
-  Offset = fdt_subnode_offset (
-             DeviceTreeNode->DeviceTreeBase,
-             DeviceTreeNode->NodeOffset,
-             "spiflash@0"
-             );
-  if (Offset >= 0) {
-    Offset = fdt_subnode_offset (
-               DeviceTreeNode->DeviceTreeBase,
-               Offset,
-               "partition@0"
-               );
-    if (Offset >= 0) {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, Offset, "label", &Length);
-      if ((Property != NULL) && (Length != 0)) {
-        if (AsciiStrStr (Property, "flash") != NULL) {
-          return EFI_SUCCESS;
-        }
-      }
+  SubNode = 0;
+  fdt_for_each_subnode (SubNode, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
+    if (IsValidFlashNode (DeviceTreeNode->DeviceTreeBase, SubNode, NumChipSelects, NULL)) {
+      return EFI_SUCCESS;
     }
   }
 
@@ -1422,6 +1513,7 @@ NorFlashDxeDriverBindingSupported (
   EFI_STATUS                       Status;
   EFI_STATUS                       CompatibilityStatus;
   NVIDIA_QSPI_CONTROLLER_PROTOCOL  *QspiInstance;
+  UINT8                            NumChipSelects;
 
   // Check whether driver has already been started.
   QspiInstance = NULL;
@@ -1437,7 +1529,10 @@ NorFlashDxeDriverBindingSupported (
     return Status;
   }
 
-  CompatibilityStatus = CheckNorFlashCompatibility (Controller);
+  Status = QspiInstance->GetNumChipSelects (QspiInstance, &NumChipSelects);
+  ASSERT_EFI_ERROR (Status);
+
+  CompatibilityStatus = CheckNorFlashCompatibility (Controller, NumChipSelects);
 
   Status = gBS->CloseProtocol (
                   Controller,
@@ -1492,14 +1587,23 @@ NorFlashDxeDriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS                       Status;
-  NOR_FLASH_PRIVATE_DATA           *Private;
-  NVIDIA_QSPI_CONTROLLER_PROTOCOL  *QspiInstance;
-  UINT64                           ClockSpeed;
-  EFI_DEVICE_PATH_PROTOCOL         *ParentDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL         *NorFlashDevicePath;
-  VOID                             *Interface;
-  BOOLEAN                          QspiClockSupport;
+  EFI_STATUS                        Status;
+  NOR_FLASH_PRIVATE_DATA            *Private;
+  NVIDIA_QSPI_CONTROLLER_PROTOCOL   *QspiInstance;
+  UINT64                            ClockSpeed;
+  EFI_DEVICE_PATH_PROTOCOL          *ParentDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL          *NorFlashDevicePath;
+  VOID                              *Interface;
+  BOOLEAN                           QspiClockSupport;
+  UINT8                             NumChipSelects;
+  UINT8                             ChipSelect;
+  INT32                             SubNode;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode;
+  UINTN                             FlashIndex;
+  UINTN                             NumInitialized;
+
+  FlashIndex     = 0;
+  NumInitialized = 0;
 
   // Open Qspi Controller Protocol
   QspiInstance = NULL;
@@ -1513,121 +1617,21 @@ NorFlashDxeDriverBindingStart (
                         );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to open QSPI Protocol\n", __FUNCTION__));
-    goto ErrorExit;
+    goto DriverErrorExit;
   }
 
-  // Allocate Private Data
-  Private = AllocateRuntimeZeroPool (sizeof (NOR_FLASH_PRIVATE_DATA));
-  if (Private == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto ErrorExit;
-  }
+  QspiInstance->GetNumChipSelects (QspiInstance, &NumChipSelects);
 
-  Private->Signature            = NOR_FLASH_SIGNATURE;
-  Private->QspiControllerHandle = Controller;
-  Private->QspiController       = QspiInstance;
-
-  QspiClockSupport = FALSE;
-  if ((QspiInstance->GetClockSpeed != NULL) &&
-      (QspiInstance->SetClockSpeed != NULL))
-  {
-    QspiClockSupport = TRUE;
-  }
-
-  if (QspiClockSupport == TRUE) {
-    // Check QSPI Bus Frequency
-    Status = QspiInstance->GetClockSpeed (QspiInstance, &ClockSpeed);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
-      goto ErrorExit;
-    }
-
-    DEBUG ((DEBUG_ERROR, "%a: Default QSPI bus frequency: %u\n", __FUNCTION__, ClockSpeed / 2));
-
-    if (ClockSpeed > NOR_FAST_CMD_THRESH_FREQ) {
-      Status = QspiInstance->SetClockSpeed (QspiInstance, NOR_FAST_CMD_THRESH_FREQ);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
-        goto ErrorExit;
-      }
-
-      UINT64  NewClockSpeed;
-      Status = QspiInstance->GetClockSpeed (QspiInstance, &NewClockSpeed);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
-        goto ErrorExit;
-      }
-
-      DEBUG ((DEBUG_ERROR, "%a: New QSPI bus frequency: %u\n", __FUNCTION__, NewClockSpeed / 2));
-      Private->PrivateFlashAttributes.FastReadSupport = TRUE;
-    }
-  }
-
-  // Read NOR flash's SFDP
-  Status = ReadNorFlashSFDP (Private);
+  // Get device tree node protocol for Qspi
+  DeviceTreeNode = NULL;
+  Status         = gBS->HandleProtocol (
+                          Controller,
+                          &gNVIDIADeviceTreeNodeProtocolGuid,
+                          (VOID **)&DeviceTreeNode
+                          );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: SFDP Read Failed\n", __FUNCTION__));
-    goto ErrorExit;
-  }
-
-  DEBUG ((
-    DEBUG_ERROR,
-    "%a: NOR Flash Uniform Memory Density: 0x%lx\n",
-    __FUNCTION__,
-    Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity
-    ));
-  DEBUG ((
-    DEBUG_ERROR,
-    "%a: NOR Flash Uniform Block Size: 0x%lx\n",
-    __FUNCTION__,
-    Private->PrivateFlashAttributes.FlashAttributes.BlockSize
-    ));
-  DEBUG ((
-    DEBUG_ERROR,
-    "%a: NOR Flash Hybrid Memory Density: 0x%lx\n",
-    __FUNCTION__,
-    Private->PrivateFlashAttributes.HybridMemoryDensity
-    ));
-  DEBUG ((
-    DEBUG_ERROR,
-    "%a: NOR Flash Hybrid Block Size: 0x%lx\n",
-    __FUNCTION__,
-    Private->PrivateFlashAttributes.HybridBlockSize
-    ));
-  DEBUG ((
-    DEBUG_ERROR,
-    "%a: NOR Flash Write Page Size: 0x%lx\n",
-    __FUNCTION__,
-    Private->PrivateFlashAttributes.PageSize
-    ));
-
-  if (QspiClockSupport == TRUE) {
-    if (ClockSpeed > NOR_FAST_CMD_THRESH_FREQ) {
-      Status = QspiInstance->SetClockSpeed (QspiInstance, ClockSpeed);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
-        goto ErrorExit;
-      }
-
-      UINT64  RestoredClockSpeed;
-      Status = QspiInstance->GetClockSpeed (QspiInstance, &RestoredClockSpeed);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
-        goto ErrorExit;
-      }
-
-      DEBUG ((DEBUG_ERROR, "%a: Restored QSPI bus frequency: %u\n", __FUNCTION__, RestoredClockSpeed / 2));
-    }
-  }
-
-  // Allocate Command Buffer
-  Private->CommandBuffer = AllocateRuntimeZeroPool (
-                             NOR_CMD_SIZE + NOR_ADDR_SIZE +
-                             Private->PrivateFlashAttributes.PageSize
-                             );
-  if (Private->CommandBuffer == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto ErrorExit;
+    DEBUG ((DEBUG_ERROR, "%a: DT protocol failed: %r\n", __FUNCTION__, Status));
+    goto DriverErrorExit;
   }
 
   // Get Parent's device path.
@@ -1638,91 +1642,7 @@ NorFlashDxeDriverBindingStart (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to get parent's device path\n", __FUNCTION__));
-    goto ErrorExit;
-  }
-
-  // Append Vendor device path to parent device path.
-  NorFlashDevicePath = AppendDevicePathNode (
-                         ParentDevicePath,
-                         (EFI_DEVICE_PATH_PROTOCOL *)&VendorDevicePath
-                         );
-  if (NorFlashDevicePath == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto ErrorExit;
-  }
-
-  Private->ParentDevicePath   = ParentDevicePath;
-  Private->NorFlashDevicePath = NorFlashDevicePath;
-
-  // Install Protocols
-  Private->NorFlashProtocol.FvbAttributes = EFI_FVB2_READ_ENABLED_CAP |
-                                            EFI_FVB2_READ_STATUS |
-                                            EFI_FVB2_STICKY_WRITE |
-                                            EFI_FVB2_ERASE_POLARITY |
-                                            EFI_FVB2_WRITE_STATUS |
-                                            EFI_FVB2_WRITE_ENABLED_CAP;
-  Private->NorFlashProtocol.GetAttributes = NorFlashGetAttributes;
-  Private->NorFlashProtocol.Read          = NorFlashRead;
-  Private->NorFlashProtocol.Write         = NorFlashWrite;
-  Private->NorFlashProtocol.Erase         = NorFlashUniformErase;
-
-  Status = gBS->InstallMultipleProtocolInterfaces (
-                  &Private->NorFlashHandle,
-                  &gNVIDIANorFlashProtocolGuid,
-                  &Private->NorFlashProtocol,
-                  &gEfiDevicePathProtocolGuid,
-                  Private->NorFlashDevicePath,
-                  NULL
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to install NOR flash protocols\n", __FUNCTION__));
-    goto ErrorExit;
-  }
-
-  if (PcdGetBool (PcdTegraNorBlockProtocols)) {
-    Media.MediaId   = Private->FlashInstance;
-    Media.BlockSize = Private->PrivateFlashAttributes.FlashAttributes.BlockSize;
-    Media.LastBlock = (Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity /
-                       Private->PrivateFlashAttributes.FlashAttributes.BlockSize) - 1;
-
-    Private->BlockIoProtocol.Reset       = NULL;
-    Private->BlockIoProtocol.ReadBlocks  = NorFlashReadBlock;
-    Private->BlockIoProtocol.WriteBlocks = NorFlashWriteBlock;
-    Private->BlockIoProtocol.FlushBlocks = NULL;
-    Private->BlockIoProtocol.Revision    = EFI_BLOCK_IO_PROTOCOL_REVISION;
-    Private->BlockIoProtocol.Media       = &Media;
-
-    Private->EraseBlockProtocol.Revision               = EFI_ERASE_BLOCK_PROTOCOL_REVISION;
-    Private->EraseBlockProtocol.EraseLengthGranularity = 1;
-    Private->EraseBlockProtocol.EraseBlocks            = NorFlashEraseBlock;
-
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &Private->NorFlashHandle,
-                    &gEfiBlockIoProtocolGuid,
-                    &Private->BlockIoProtocol,
-                    &gEfiEraseBlockProtocolGuid,
-                    &Private->EraseBlockProtocol,
-                    NULL
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to install NOR flash block protocols\n", __FUNCTION__));
-      goto ErrorExit;
-    }
-  }
-
-  Private->ProtocolsInstalled = TRUE;
-
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_NOTIFY,
-                  NorVirtualNotifyEvent,
-                  Private,
-                  &gEfiEventVirtualAddressChangeGuid,
-                  &Private->VirtualAddrChangeEvent
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create virtual address callback event\r\n", __FUNCTION__));
-    goto ErrorExit;
+    goto DriverErrorExit;
   }
 
   // Open caller ID protocol for child
@@ -1734,71 +1654,290 @@ NorFlashDxeDriverBindingStart (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to install callerid protocol\n", __FUNCTION__));
-    goto ErrorExit;
+    goto DriverErrorExit;
   }
 
-  Status = gBS->OpenProtocol (
-                  Controller,
-                  &gEfiCallerIdGuid,
-                  (VOID **)&Interface,
-                  This->DriverBindingHandle,
-                  Private->NorFlashHandle,
-                  EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to open caller ID protocol\n", __FUNCTION__));
-    goto ErrorExit;
-  }
-
-ErrorExit:
-  if (EFI_ERROR (Status)) {
-    if (Private != NULL) {
-      gBS->CloseProtocol (
-             Controller,
-             &gEfiCallerIdGuid,
-             This->DriverBindingHandle,
-             Private->NorFlashHandle
-             );
-      gBS->UninstallMultipleProtocolInterfaces (
-             Controller,
-             &gEfiCallerIdGuid,
-             NULL,
-             NULL
-             );
-      gBS->CloseEvent (Private->VirtualAddrChangeEvent);
-      if (Private->ProtocolsInstalled) {
-        gBS->UninstallMultipleProtocolInterfaces (
-               Private->NorFlashHandle,
-               &gNVIDIANorFlashProtocolGuid,
-               &Private->NorFlashProtocol,
-               &gEfiDevicePathProtocolGuid,
-               Private->NorFlashDevicePath,
-               NULL
-               );
-
-        if (PcdGetBool (PcdTegraNorBlockProtocols)) {
-          gBS->UninstallMultipleProtocolInterfaces (
-                 Private->NorFlashHandle,
-                 &gEfiBlockIoProtocolGuid,
-                 &Private->BlockIoProtocol,
-                 &gEfiEraseBlockProtocolGuid,
-                 &Private->EraseBlockProtocol,
-                 NULL
-                 );
-        }
-      }
-
-      if (Private->NorFlashDevicePath != NULL) {
-        FreePool (Private->NorFlashDevicePath);
-      }
-
-      if (Private->CommandBuffer != NULL) {
-        FreePool (Private->CommandBuffer);
-      }
-
-      FreePool (Private);
+  SubNode = 0;
+  fdt_for_each_subnode (SubNode, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
+    if (!IsValidFlashNode (DeviceTreeNode->DeviceTreeBase, SubNode, NumChipSelects, &ChipSelect)) {
+      continue;
     }
 
+    // Allocate Private Data
+    Private = AllocateRuntimeZeroPool (sizeof (NOR_FLASH_PRIVATE_DATA));
+    if (Private == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto ErrorExit;
+    }
+
+    Private->Signature            = NOR_FLASH_SIGNATURE;
+    Private->QspiControllerHandle = Controller;
+    Private->QspiController       = QspiInstance;
+    Private->QspiChipSelect       = ChipSelect;
+
+    QspiClockSupport = FALSE;
+    if ((QspiInstance->GetClockSpeed != NULL) &&
+        (QspiInstance->SetClockSpeed != NULL))
+    {
+      QspiClockSupport = TRUE;
+    }
+
+    if (QspiClockSupport == TRUE) {
+      // Check QSPI Bus Frequency
+      Status = QspiInstance->GetClockSpeed (QspiInstance, &ClockSpeed);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
+        goto ErrorExit;
+      }
+
+      DEBUG ((DEBUG_ERROR, "%a: Default QSPI bus frequency: %u\n", __FUNCTION__, ClockSpeed / 2));
+
+      if (ClockSpeed > NOR_FAST_CMD_THRESH_FREQ) {
+        Status = QspiInstance->SetClockSpeed (QspiInstance, NOR_FAST_CMD_THRESH_FREQ);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
+          goto ErrorExit;
+        }
+
+        UINT64  NewClockSpeed;
+        Status = QspiInstance->GetClockSpeed (QspiInstance, &NewClockSpeed);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
+          goto ErrorExit;
+        }
+
+        DEBUG ((DEBUG_ERROR, "%a: New QSPI bus frequency: %u\n", __FUNCTION__, NewClockSpeed / 2));
+        Private->PrivateFlashAttributes.FastReadSupport = TRUE;
+      }
+    }
+
+    // Read NOR flash's SFDP
+    Status = ReadNorFlashSFDP (Private);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: SFDP Read Failed\n", __FUNCTION__));
+      goto ErrorExit;
+    }
+
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: NOR Flash Uniform Memory Density: 0x%lx\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity
+      ));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: NOR Flash Uniform Block Size: 0x%lx\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.BlockSize
+      ));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: NOR Flash Hybrid Memory Density: 0x%lx\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.HybridMemoryDensity
+      ));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: NOR Flash Hybrid Block Size: 0x%lx\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.HybridBlockSize
+      ));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: NOR Flash Write Page Size: 0x%lx\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.PageSize
+      ));
+
+    if (QspiClockSupport == TRUE) {
+      if (ClockSpeed > NOR_FAST_CMD_THRESH_FREQ) {
+        Status = QspiInstance->SetClockSpeed (QspiInstance, ClockSpeed);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be set for SFDP.\n", __FUNCTION__));
+          goto ErrorExit;
+        }
+
+        UINT64  RestoredClockSpeed;
+        Status = QspiInstance->GetClockSpeed (QspiInstance, &RestoredClockSpeed);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: QSPI bus frequency could not be retrieved.\n", __FUNCTION__));
+          goto ErrorExit;
+        }
+
+        DEBUG ((DEBUG_ERROR, "%a: Restored QSPI bus frequency: %u\n", __FUNCTION__, RestoredClockSpeed / 2));
+      }
+    }
+
+    // Allocate Command Buffer
+    Private->CommandBuffer = AllocateRuntimeZeroPool (
+                               NOR_CMD_SIZE + NOR_ADDR_SIZE +
+                               Private->PrivateFlashAttributes.PageSize
+                               );
+    if (Private->CommandBuffer == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto ErrorExit;
+    }
+
+    // Append Vendor device path to parent device path.
+    mNorFlashDevicePath.FlashIndex = FlashIndex;
+    NorFlashDevicePath             = AppendDevicePathNode (
+                                       ParentDevicePath,
+                                       (EFI_DEVICE_PATH_PROTOCOL *)&mNorFlashDevicePath
+                                       );
+    if (NorFlashDevicePath == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to append path\n", __FUNCTION__));
+      Status = EFI_OUT_OF_RESOURCES;
+      goto ErrorExit;
+    }
+
+    Private->ParentDevicePath   = ParentDevicePath;
+    Private->NorFlashDevicePath = NorFlashDevicePath;
+
+    // Install Protocols
+    Private->NorFlashProtocol.FvbAttributes = EFI_FVB2_READ_ENABLED_CAP |
+                                              EFI_FVB2_READ_STATUS |
+                                              EFI_FVB2_STICKY_WRITE |
+                                              EFI_FVB2_ERASE_POLARITY |
+                                              EFI_FVB2_WRITE_STATUS |
+                                              EFI_FVB2_WRITE_ENABLED_CAP;
+    Private->NorFlashProtocol.GetAttributes = NorFlashGetAttributes;
+    Private->NorFlashProtocol.Read          = NorFlashRead;
+    Private->NorFlashProtocol.Write         = NorFlashWrite;
+    Private->NorFlashProtocol.Erase         = NorFlashUniformErase;
+
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &Private->NorFlashHandle,
+                    &gNVIDIANorFlashProtocolGuid,
+                    &Private->NorFlashProtocol,
+                    &gEfiDevicePathProtocolGuid,
+                    Private->NorFlashDevicePath,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install NOR flash protocols\n", __FUNCTION__));
+      goto ErrorExit;
+    }
+
+    Status = gBS->CreateEventEx (
+                    EVT_NOTIFY_SIGNAL,
+                    TPL_NOTIFY,
+                    NorVirtualNotifyEvent,
+                    Private,
+                    &gEfiEventVirtualAddressChangeGuid,
+                    &Private->VirtualAddrChangeEvent
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to create virtual address callback event\r\n", __FUNCTION__));
+      goto ErrorExit;
+    }
+
+    if (PcdGetBool (PcdTegraNorBlockProtocols)) {
+      Media.MediaId   = Private->FlashInstance;
+      Media.BlockSize = Private->PrivateFlashAttributes.FlashAttributes.BlockSize;
+      Media.LastBlock = (Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity /
+                         Private->PrivateFlashAttributes.FlashAttributes.BlockSize) - 1;
+
+      Private->BlockIoProtocol.Reset       = NULL;
+      Private->BlockIoProtocol.ReadBlocks  = NorFlashReadBlock;
+      Private->BlockIoProtocol.WriteBlocks = NorFlashWriteBlock;
+      Private->BlockIoProtocol.FlushBlocks = NULL;
+      Private->BlockIoProtocol.Revision    = EFI_BLOCK_IO_PROTOCOL_REVISION;
+      Private->BlockIoProtocol.Media       = &Media;
+
+      Private->EraseBlockProtocol.Revision               = EFI_ERASE_BLOCK_PROTOCOL_REVISION;
+      Private->EraseBlockProtocol.EraseLengthGranularity = 1;
+      Private->EraseBlockProtocol.EraseBlocks            = NorFlashEraseBlock;
+
+      Status = gBS->InstallMultipleProtocolInterfaces (
+                      &Private->NorFlashHandle,
+                      &gEfiBlockIoProtocolGuid,
+                      &Private->BlockIoProtocol,
+                      &gEfiEraseBlockProtocolGuid,
+                      &Private->EraseBlockProtocol,
+                      NULL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to install NOR flash block protocols\n", __FUNCTION__));
+        goto ErrorExit;
+      }
+    }
+
+    Private->ProtocolsInstalled = TRUE;
+
+    Status = gBS->OpenProtocol (
+                    Controller,
+                    &gEfiCallerIdGuid,
+                    (VOID **)&Interface,
+                    This->DriverBindingHandle,
+                    Private->NorFlashHandle,
+                    EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to open caller ID protocol\n", __FUNCTION__));
+      goto ErrorExit;
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: flash%u initialized\n", __FUNCTION__, FlashIndex));
+    FlashIndex++;
+    NumInitialized++;
+
+ErrorExit:
+    if (EFI_ERROR (Status)) {
+      if (Private != NULL) {
+        gBS->CloseProtocol (
+               Controller,
+               &gEfiCallerIdGuid,
+               This->DriverBindingHandle,
+               Private->NorFlashHandle
+               );
+        gBS->CloseEvent (Private->VirtualAddrChangeEvent);
+        if (Private->ProtocolsInstalled) {
+          gBS->UninstallMultipleProtocolInterfaces (
+                 Private->NorFlashHandle,
+                 &gNVIDIANorFlashProtocolGuid,
+                 &Private->NorFlashProtocol,
+                 &gEfiDevicePathProtocolGuid,
+                 Private->NorFlashDevicePath,
+                 NULL
+                 );
+
+          if (PcdGetBool (PcdTegraNorBlockProtocols)) {
+            gBS->UninstallMultipleProtocolInterfaces (
+                   Private->NorFlashHandle,
+                   &gEfiBlockIoProtocolGuid,
+                   &Private->BlockIoProtocol,
+                   &gEfiEraseBlockProtocolGuid,
+                   &Private->EraseBlockProtocol,
+                   NULL
+                   );
+          }
+        }
+
+        if (Private->NorFlashDevicePath != NULL) {
+          FreePool (Private->NorFlashDevicePath);
+        }
+
+        if (Private->CommandBuffer != NULL) {
+          FreePool (Private->CommandBuffer);
+        }
+
+        FreePool (Private);
+      }
+    }
+  }
+
+DriverErrorExit:
+  if (NumInitialized > 0) {
+    return EFI_SUCCESS;
+  }
+
+  if (EFI_ERROR (Status)) {
+    gBS->UninstallMultipleProtocolInterfaces (
+           Controller,
+           &gEfiCallerIdGuid,
+           NULL,
+           NULL
+           );
     gBS->CloseProtocol (
            Controller,
            &gNVIDIAQspiControllerProtocolGuid,

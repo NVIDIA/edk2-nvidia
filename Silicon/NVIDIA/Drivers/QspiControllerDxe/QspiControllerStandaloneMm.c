@@ -22,6 +22,9 @@
 
 #define QSPI_CONTROLLER_SIGNATURE  SIGNATURE_32('Q','S','P','I')
 
+#define QSPI_NUM_CHIP_SELECTS_JETSON  1
+#define QSPI_NUM_CHIP_SELECTS_TH500   4
+
 typedef enum {
   CONTROLLER_TYPE_QSPI,
   CONTROLLER_TYPE_SPI,
@@ -36,6 +39,7 @@ typedef struct {
   BOOLEAN                            WaitCyclesSupported;
   QSPI_CONTROLLER_TYPE               ControllerType;
   UINT32                             ClockId;
+  UINT8                              NumChipSelects;
 } QSPI_CONTROLLER_PRIVATE_DATA;
 
 #define QSPI_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL(a)  CR(a, QSPI_CONTROLLER_PRIVATE_DATA, QspiControllerProtocol, QSPI_CONTROLLER_SIGNATURE)
@@ -68,6 +72,55 @@ QspiControllerPerformTransaction (
   return QspiPerformTransaction (Private->QspiBaseAddress, Packet);
 }
 
+/**
+  Get QSPI number of chip selects
+
+  @param[in]  This                 Instance of protocol
+  @param[out] NumChipSelects       Pointer to store number of chip selects
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+QspiControllerGetNumChipSelects (
+  IN NVIDIA_QSPI_CONTROLLER_PROTOCOL  *This,
+  OUT UINT8                           *NumChipSelects
+  )
+{
+  QSPI_CONTROLLER_PRIVATE_DATA  *Private;
+
+  Private         = QSPI_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL (This);
+  *NumChipSelects = Private->NumChipSelects;
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Detect Number of Chip Selects
+
+  @retval UINT8                    Number of chip selects
+
+**/
+STATIC
+UINT8
+EFIAPI
+DetectNumChipSelects (
+  VOID
+  )
+{
+  UINT8  NumChipSelects;
+
+  if (IsOpteePresent ()) {
+    NumChipSelects = QSPI_NUM_CHIP_SELECTS_JETSON;
+  } else {
+    NumChipSelects = QSPI_NUM_CHIP_SELECTS_TH500;
+  }
+
+  return NumChipSelects;
+}
+
 EFI_STATUS
 EFIAPI
 QspiControllerStMmInitialize (
@@ -80,6 +133,7 @@ QspiControllerStMmInitialize (
   UINTN                         QspiRegionSize;
   QSPI_CONTROLLER_PRIVATE_DATA  *Private;
   BOOLEAN                       WaitCyclesSupported;
+  UINT8                         NumChipSelects;
 
   DEBUG ((DEBUG_ERROR, "%a: Looking for Dev Region with qspi", __FUNCTION__));
 
@@ -94,6 +148,8 @@ QspiControllerStMmInitialize (
     return EFI_SUCCESS;
   }
 
+  NumChipSelects = DetectNumChipSelects ();
+
   Private = AllocateRuntimeZeroPool (sizeof (QSPI_CONTROLLER_PRIVATE_DATA));
   if (Private == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -105,14 +161,16 @@ QspiControllerStMmInitialize (
   Private->WaitCyclesSupported = WaitCyclesSupported;
   Private->ControllerType      = CONTROLLER_TYPE_QSPI;
   Private->ClockId             = MAX_UINT32;
+  Private->NumChipSelects      = NumChipSelects;
 
-  Status = QspiInitialize (Private->QspiBaseAddress);
+  Status = QspiInitialize (Private->QspiBaseAddress, NumChipSelects);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "QSPI Initialization Failed.\n"));
     goto ErrorExit;
   }
 
   Private->QspiControllerProtocol.PerformTransaction = QspiControllerPerformTransaction;
+  Private->QspiControllerProtocol.GetNumChipSelects  = QspiControllerGetNumChipSelects;
 
   Status = gMmst->MmInstallProtocolInterface (
                     &ImageHandle,

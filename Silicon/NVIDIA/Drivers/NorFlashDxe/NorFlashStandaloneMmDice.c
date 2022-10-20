@@ -55,6 +55,7 @@ typedef struct {
 STATIC UINT64  QspiBaseAddress;
 STATIC UINTN   QspiSize;
 STATIC UINTN   DeviceChosen;
+STATIC UINT8   ChipSelect;
 
 STATIC NOR_FLASH_LOCK_OPS  MacronixAspOps = {
   .Initialize            = MxAspInitialize,
@@ -163,7 +164,7 @@ NorFlashEnableWriteProtect (
   }
 
   if (Inited == FALSE) {
-    Status = LockOps->Initialize (QspiBaseAddress);
+    Status = LockOps->Initialize (QspiBaseAddress, ChipSelect);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to initialize locking (%r)\n", __FUNCTION__, Status));
       goto exit;
@@ -237,7 +238,7 @@ NorFlashCheckLockStatus (
   }
 
   if (Inited == FALSE) {
-    Status = LockOps->Initialize (QspiBaseAddress);
+    Status = LockOps->Initialize (QspiBaseAddress, ChipSelect);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Failed to initialize locking (%r)\n", __FUNCTION__, Status));
       goto exit;
@@ -697,10 +698,12 @@ IsNorFlashDeviceSupported (
   Cmd = NOR_READ_RDID_CMD;
   ZeroMem (DeviceID, sizeof (DeviceID));
 
-  Packet.TxBuf = &Cmd;
-  Packet.RxBuf = DeviceID;
-  Packet.TxLen = sizeof (Cmd);
-  Packet.RxLen = sizeof (DeviceID);
+  Packet.TxBuf      = &Cmd;
+  Packet.RxBuf      = DeviceID;
+  Packet.TxLen      = sizeof (Cmd);
+  Packet.RxLen      = sizeof (DeviceID);
+  Packet.WaitCycles = 0;
+  Packet.ChipSelect = ChipSelect;
 
   Status = QspiPerformTransaction ((EFI_PHYSICAL_ADDRESS)QspiBaseAddress, &Packet);
   if (EFI_ERROR (Status)) {
@@ -744,6 +747,34 @@ IsNorFlashDeviceSupported (
   }
 
   return SupportedDevice;
+}
+
+/**
+  Get NOR flash chip select
+
+  @param[in]   ChipSelect          Pointer to store the chip select.
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+GetNorFlashCS (
+  UINT8  *ChipSelect
+  )
+{
+  UINT8  FlashCS;
+
+  if (IsOpteePresent ()) {
+    FlashCS = NOR_FLASH_CHIP_SELECT_JETSON;
+  } else {
+    FlashCS = NOR_FLASH_CHIP_SELECT_TH500;
+  }
+
+  *ChipSelect = FlashCS;
+
+  return EFI_SUCCESS;
 }
 
 /*
@@ -796,6 +827,12 @@ NorFlashDiceInitialise (
 
   if (IsNorFlashDeviceSupported () == FALSE) {
     FreePool (WormInfo);
+    goto exit;
+  }
+
+  Status = GetNorFlashCS (&ChipSelect);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unknown chip select (%r)\n", __FUNCTION__, Status));
     goto exit;
   }
 

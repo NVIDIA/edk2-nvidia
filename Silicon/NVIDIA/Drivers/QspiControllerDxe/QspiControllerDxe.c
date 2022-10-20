@@ -20,12 +20,18 @@
 #include <Library/DevicePathLib.h>
 #include <Library/UefiRuntimeLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/QspiController.h>
 #include <libfdt.h>
 
 #define QSPI_CONTROLLER_SIGNATURE  SIGNATURE_32('Q','S','P','I')
+
+#define QSPI_NUM_CHIP_SELECTS_DEFAULT  1
+#define QSPI_NUM_CHIP_SELECTS_T194     1
+#define QSPI_NUM_CHIP_SELECTS_T234     1
+#define QSPI_NUM_CHIP_SELECTS_TH500    4
 
 typedef enum {
   CONTROLLER_TYPE_QSPI,
@@ -41,6 +47,7 @@ typedef struct {
   BOOLEAN                            WaitCyclesSupported;
   QSPI_CONTROLLER_TYPE               ControllerType;
   UINT32                             ClockId;
+  UINT8                              NumChipSelects;
 } QSPI_CONTROLLER_PRIVATE_DATA;
 
 #define QSPI_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL(a)  CR(a, QSPI_CONTROLLER_PRIVATE_DATA, QspiControllerProtocol, QSPI_CONTROLLER_SIGNATURE)
@@ -175,6 +182,31 @@ QspiControllerSetClockSpeed (
 }
 
 /**
+  Get QSPI number of chip selects
+
+  @param[in]  This                 Instance of protocol
+  @param[out] NumChipSelects       Pointer to store number of chip selects
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+QspiControllerGetNumChipSelects (
+  IN NVIDIA_QSPI_CONTROLLER_PROTOCOL  *This,
+  OUT UINT8                           *NumChipSelects
+  )
+{
+  QSPI_CONTROLLER_PRIVATE_DATA  *Private;
+
+  Private         = QSPI_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL (This);
+  *NumChipSelects = Private->NumChipSelects;
+
+  return EFI_SUCCESS;
+}
+
+/**
   Fixup internal data so that EFI can be call in virtual mode.
   Call the passed in Child Notify event and convert any pointers in
   lib to virtual mode.
@@ -256,6 +288,59 @@ DetectControllerType (
 }
 
 /**
+  Detect Number of Chip Selects
+
+  @retval UINT8                    Number of chip selects
+
+**/
+STATIC
+UINT8
+EFIAPI
+DetectNumChipSelects (
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode
+  )
+{
+  UINTN         ChipID;
+  CONST UINT32  *NumCs;
+  INT32         Length;
+  UINT8         NumChipSelects;
+
+  NumCs = (CONST UINT32 *)fdt_getprop (
+                            DeviceTreeNode->DeviceTreeBase,
+                            DeviceTreeNode->NodeOffset,
+                            "num-cs",
+                            &Length
+                            );
+
+  if ((NumCs != NULL) && (Length == sizeof (UINT32))) {
+    NumChipSelects = (UINT8)fdt32_to_cpu (*(CONST UINT32 *)NumCs);
+    DEBUG ((DEBUG_INFO, "%a: num-cs=%u\n", __FUNCTION__, NumChipSelects));
+    return NumChipSelects;
+  }
+
+  ChipID = TegraGetChipID ();
+
+  switch (ChipID) {
+    case T194_CHIP_ID:
+      NumChipSelects = QSPI_NUM_CHIP_SELECTS_T194;
+      break;
+    case T234_CHIP_ID:
+      NumChipSelects = QSPI_NUM_CHIP_SELECTS_T234;
+      break;
+    case TH500_CHIP_ID:
+      NumChipSelects = QSPI_NUM_CHIP_SELECTS_TH500;
+      break;
+    default:
+      NumChipSelects = QSPI_NUM_CHIP_SELECTS_DEFAULT;
+      break;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: NumChipSelects = %u\n", __FUNCTION__, NumChipSelects));
+
+  return NumChipSelects;
+}
+
+/**
   Callback that will be invoked at various phases of the driver initialization
 
   This function allows for modification of system behavior at various points in
@@ -299,6 +384,7 @@ DeviceDiscoveryNotify (
   VOID                             *Interface;
   VOID                             *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO     *PlatformResourceInfo;
+  UINT8                            NumChipSelects;
 
   Device  = NULL;
   Private = NULL;
@@ -426,6 +512,8 @@ DeviceDiscoveryNotify (
         return Status;
       }
 
+      NumChipSelects = DetectNumChipSelects (DeviceTreeNode);
+
       Private = AllocateRuntimeZeroPool (sizeof (QSPI_CONTROLLER_PRIVATE_DATA));
       if (Private == NULL) {
         return EFI_OUT_OF_RESOURCES;
@@ -436,14 +524,16 @@ DeviceDiscoveryNotify (
       Private->WaitCyclesSupported = WaitCyclesSupported;
       Private->ControllerType      = ControllerType;
       Private->ClockId             = ClockId;
+      Private->NumChipSelects      = NumChipSelects;
 
-      Status = QspiInitialize (Private->QspiBaseAddress);
+      Status = QspiInitialize (Private->QspiBaseAddress, NumChipSelects);
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "QSPI Initialization Failed.\n"));
         goto ErrorExit;
       }
 
       Private->QspiControllerProtocol.PerformTransaction = QspiControllerPerformTransaction;
+      Private->QspiControllerProtocol.GetNumChipSelects  = QspiControllerGetNumChipSelects;
       if (Private->ClockId != MAX_UINT32) {
         Private->QspiControllerProtocol.GetClockSpeed = QspiControllerGetClockSpeed;
         Private->QspiControllerProtocol.SetClockSpeed = QspiControllerSetClockSpeed;

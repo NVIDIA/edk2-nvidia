@@ -14,7 +14,7 @@
 
 #define NVIDIA_QSPI_CONTROLLER_PROTOCOL_GUID \
   { \
-  0x112e0323, 0x50e0, 0x418a, { 0x94, 0x4e, 0xe2, 0x25, 0x43, 0x51, 0x56, 0x2a } \
+  0xd4719e8a, 0xf980, 0x405a, { 0xbe, 0xf6, 0xb6, 0x50, 0xd1, 0x32, 0x92, 0x40 } \
   }
 
 //
@@ -73,11 +73,29 @@ EFI_STATUS
   IN UINT64                          ClockSpeed
   );
 
+/**
+  Get QSPI number of chip selects
+
+  @param[in]  This                  Instance of protocol
+  @param[out] NumChipSelects        Pointer to store number of chip selects
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval others                   Error occurred
+
+**/
+typedef
+EFI_STATUS
+(EFIAPI *QSPI_CONTROLLER_GET_NUM_CHIP_SELECTS)(
+  IN NVIDIA_QSPI_CONTROLLER_PROTOCOL *This,
+  OUT UINT8                          *NumChipSelects
+  );
+
 /// NVIDIA_QSPI_CONTROLLER_PROTOCOL protocol structure.
 struct _NVIDIA_QSPI_CONTROLLER_PROTOCOL {
-  QSPI_CONTROLLER_PERFORM_TRANSACTION    PerformTransaction;
-  QSPI_CONTROLLER_GET_CLOCK_SPEED        GetClockSpeed;
-  QSPI_CONTROLLER_SET_CLOCK_SPEED        SetClockSpeed;
+  QSPI_CONTROLLER_PERFORM_TRANSACTION     PerformTransaction;
+  QSPI_CONTROLLER_GET_CLOCK_SPEED         GetClockSpeed;
+  QSPI_CONTROLLER_SET_CLOCK_SPEED         SetClockSpeed;
+  QSPI_CONTROLLER_GET_NUM_CHIP_SELECTS    GetNumChipSelects;
 };
 
 extern EFI_GUID  gNVIDIAQspiControllerProtocolGuid;

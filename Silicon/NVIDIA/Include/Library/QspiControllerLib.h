@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -15,6 +15,7 @@ typedef struct {
   VOID      *RxBuf;
   UINT32    RxLen;
   UINT8     WaitCycles;
+  UINT8     ChipSelect;
 } QSPI_TRANSACTION_PACKET;
 
 /**
@@ -25,13 +26,15 @@ typedef struct {
   start transactions.
 
   @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  NumChipSelects           Number of chip selects supported.
 
   @retval EFI_SUCCESS              Controller initialized successfully.
   @retval Others                   Controller initialization failed.
 **/
 EFI_STATUS
 QspiInitialize (
-  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN UINT8                 NumChipSelects
   );
 
 /**

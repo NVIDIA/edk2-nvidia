@@ -35,6 +35,9 @@
 #define NOR_SFDP_SIGNATURE   SIGNATURE_32('S','F','D','P')
 #define QSPI_BASE_ADDRESS    0x3270000
 
+#define NOR_FLASH_CHIP_SELECT_JETSON  0
+#define NOR_FLASH_CHIP_SELECT_TH500   2
+
 #define TIMEOUT  100
 
 #define NOR_READ_SR1           0x5
@@ -169,6 +172,7 @@ typedef struct {
   EFI_HANDLE                         QspiControllerHandle;
   EFI_HANDLE                         NorFlashHandle;
   BOOLEAN                            ProtocolsInstalled;
+  UINT8                              QspiChipSelect;
   NVIDIA_NOR_FLASH_PROTOCOL          NorFlashProtocol;
   EFI_BLOCK_IO_PROTOCOL              BlockIoProtocol;
   EFI_ERASE_BLOCK_PROTOCOL           EraseBlockProtocol;
@@ -182,7 +186,8 @@ typedef struct {
 
 typedef struct {
   EFI_STATUS  (*Initialize)(
-    UINT64  QspiBaseAddress
+    UINT64  QspiBaseAddress,
+    UINT8   FlashCS
     );
   EFI_STATUS  (*IsInitialized)(
     BOOLEAN  *Initialized
