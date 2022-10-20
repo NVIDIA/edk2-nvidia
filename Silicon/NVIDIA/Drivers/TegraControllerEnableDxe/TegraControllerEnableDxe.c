@@ -19,6 +19,7 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,gv11b",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,tegra30-hda",     &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,tegra194-hda",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra23x-hda",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,ga10b",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,th500-soc-hwpm",  &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,tegra234-nvdla",  &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
