@@ -480,8 +480,6 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
         Memory32Fixed(ReadWrite, 0x13E86000, 0x1000)
         Memory32Fixed(ReadWrite, 0x13E87000, 0x1000)
         Memory32Fixed(ReadWrite, 0x13E88000, 0x1000)
-        Memory32Fixed(ReadWrite, 0x13E89000, 0x1000)
-        Memory32Fixed(ReadWrite, 0x13E8A000, 0x1000)
         Memory32Fixed(ReadWrite, 0x13E8B000, 0x1000)
         Memory32Fixed(ReadWrite, 0x13E8C000, 0x1000)
         Memory32Fixed(ReadWrite, 0x13E8D000, 0x1000)
@@ -489,6 +487,11 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
         Memory32Fixed(ReadWrite, 0x13EF0000, 0x2000)
         Memory32Fixed(ReadWrite, 0x13EF2000, 0x1000)
       })
+
+      // _STA(): Report device status (0xF: Present, 0x0: Absent)
+      Method (_STA) {
+        Return (0xF)
+      }
     }
 
     //---------------------------------------------------------------------
