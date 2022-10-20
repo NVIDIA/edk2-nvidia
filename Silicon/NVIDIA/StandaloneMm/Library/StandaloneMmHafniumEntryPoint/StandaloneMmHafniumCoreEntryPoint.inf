@@ -1,0 +1,63 @@
+## @file
+# Module entry point library for DXE core.
+#
+# Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = StandaloneMmHafniumCoreEntryPoint 
+  FILE_GUID                      = a8b8c0e6-9b17-42ff-aaf0-c923f01c2ab0
+  MODULE_TYPE                    = MM_CORE_STANDALONE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  LIBRARY_CLASS                  = StandaloneMmCoreEntryPoint|MM_CORE_STANDALONE
+
+#
+#  VALID_ARCHITECTURES           = IA32 X64 IPF EBC (EBC is for build only)
+#
+
+[Sources.AARCH64]
+  AArch64/StandaloneMmCoreEntryPoint.c
+  AArch64/SetPermissions.c
+  AArch64/CreateHobList.c
+  AArch64/ModuleEntryPoint.S
+  SlabMmuOps/ArmMmuLibCore.c
+  SlabMmuOps/ArmMmuLibReplaceEntry.S
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+
+[Packages.AARCH64]
+  ArmPkg/ArmPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  PcdLib
+  FdtLib
+
+[LibraryClasses.AARCH64]
+  StandaloneMmMmuLib
+  ArmSvcLib
+  CacheMaintenanceLib
+
+[Guids]
+  gMpInformationHobGuid
+  gEfiMmPeiMmramMemoryReserveGuid
+  gEfiStandaloneMmNonSecureBufferGuid
+  gEfiArmTfCpuDriverEpDescriptorGuid
+  gMmCoreDataHobGuid
+
+[FeaturePcd.AARCH64]
+  gArmTokenSpaceGuid.PcdFfaEnable
+
+[BuildOptions]
+  GCC:*_*_*_CC_FLAGS = -fpie

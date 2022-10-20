@@ -1,0 +1,14 @@
+/*
+ * Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Device regions for the RASBaseServices driver
+ *
+ */
+
+		tegra-misc {
+			base-address = <0x00000000 0x00100000>;
+			pages-count = <4>;
+			attributes = <0x3>; // read-write
+		};

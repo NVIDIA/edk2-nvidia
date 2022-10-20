@@ -1,0 +1,19 @@
+#/** @file
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = Manifest
+  FILE_GUID                      = 61fe79b1-abc4-496d-aa34-fa7b277eeac7
+  MODULE_TYPE                    = USER_DEFINED
+  VERSION_STRING                 = 1.0
+
+[Sources]
+  StandaloneMm.dts
+
+[Packages]
+  MdePkg/MdePkg.dec

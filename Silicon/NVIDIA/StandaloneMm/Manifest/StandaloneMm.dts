@@ -1,0 +1,109 @@
+/*
+ * Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Partition manifest for the StMM Secure Partition
+ *
+ */
+
+/dts-v1/;
+
+/ {
+	compatible = "arm,ffa-manifest-1.0";
+
+	/* Properties */
+	description = "StandaloneMm Firmware";
+	ffa-version = <0x00010001>; /* 31:16 - Major, 15:0 - Minor */
+	uuid = <0x8afb129b 0x64ca4760 0x8618c888 0x4caa6c4a>;
+	id = <1>;
+	auxiliary-id = <0xae>;
+	stream-endpoint-ids = <0 1 2 3>;
+	execution-ctx-count = <1>;
+	exception-level = <2>; /* S-EL1 */
+	execution-state = <0>; /* AARCH64 */
+	load-address = <0x00000000 0x8B000000>;
+	entrypoint-offset = <0x52415346>; /* Magic value to get sptool.py to patch it */
+	reserved-pages-count = <256>; /* Core-Heap */
+	xlat-granule = <0>; /* 4KiB */
+	boot-order = <0>;
+	messaging-method = <3>; /* Direct messaging with managed exit */
+	run-time-model = <0>; /* Run to completion */
+
+	/* Boot protocol */
+	gp-register-num = <0x0>;
+
+	nv-sp-params {
+		compatible = "nvidia,th500-sp-params";
+		enabled-sockets = <0x0>;
+		enabled-cores = <0x0 0x0 0x0 0x0
+				0x0 0x0 0x0 0x0
+				0x0 0x0 0x0 0x0
+				0x0 0x0 0x0 0x0>;
+		reserved-core = <0x0>;
+		enabled-mc-channels = <0x0 0x0 0x0 0x0>;
+		enabled-pcie = <0x0 0x0 0x0 0x0>;
+		enabled-uphy = <0x0 0x0 0x0 0x0>;
+		enabled-nvlink = <0x0 0x0 0x0 0x0>;
+		tzdram-base = <0x0 0x0>;
+		tzdram-size = <0x0 0x0>;
+	};
+
+	rx_tx-info {
+		compatible = "arm,ffa-manifest-rx_tx-buffer";
+		rx-buffer = <&rxbuffer>;
+		tx-buffer = <&txbuffer>;
+	};
+
+	memory-regions {
+		compatible = "arm,ffa-manifest-memory-regions";
+
+		/*
+		 * Regions will either be allocated by MB2 at the end of the SP space, or
+		 * outside of SP space.
+		 */
+		rxbuffer: rx-buffer {
+			description = "rx-buffer";
+			pages-count = <1>;
+			base-address = <0x00000000 0x8B53D000>;
+			attributes = <0x1>; /* read-only */
+		};
+		/* Reserved memory for stage-1 table entries */
+		stage1-entries {
+			description = "stage1-entries";
+			pages-count = <192>;
+			base-address = <0x00000000 0x8B53E000>;
+			attributes = <0x3>; /* read-write */
+		};
+		/* Shared memory between StMM and NS world */
+		stmmns-memory {
+			description = "stmmns-memory";
+			pages-count = <512>;
+			base-address = <0x00000000 0x8B5FE000>;
+			attributes = <0x3>; /* read-write */
+			nv-non-secure-memory = <0x1>;
+		};
+		/* Shared memory between StMM and Secure world (TF-A) */
+		stmmsec-memory {
+			description = "stmmsec-memory";
+			pages-count = <1>;
+			base-address = <0x00000000 0x8B7FE000>;
+			attributes = <0x3>; /* read-write */
+			nv-sp-shared-buffer-id = <4>;
+		};
+		txbuffer: tx-buffer {
+			description = "tx-buffer";
+			pages-count = <1>;
+			base-address = <0x00000000 0x8B7FF000>;
+			attributes = <0x3>; /* read-write */
+		};
+	};
+
+	device-regions {
+		compatible = "arm,ffa-manifest-device-regions";
+		#include "StmmDeviceRegions.dtsi"
+	};
+
+	metadata {
+	};
+};
