@@ -1,4 +1,4 @@
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -59,7 +59,6 @@ export WORKSPACE=`pwd`
 
 # Add NVIDIA Python modules to the python path
 export PYTHONPATH=$WORKSPACE/edk2-nvidia/Silicon/NVIDIA:$PYTHONPATH
-export PYTHONPATH=$WORKSPACE/edk2-nvidia/Silicon/NVIDIA/Tools:$PYTHONPATH
 
 # Use the cross-compiler installed on the host
 export CROSS_COMPILER_PREFIX=/usr/bin/aarch64-linux-gnu-

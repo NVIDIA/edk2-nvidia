@@ -253,7 +253,7 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
     def PlatformPostBuild(self):
         ''' Additional build steps for NVIDIA platforms. '''
-        from FormatUefiBinary import FormatUefiBinary
+        from edk2nv.FormatUefiBinary import FormatUefiBinary
 
         ws_dir = Path(self.settings.GetWorkspaceRoot())
         build_dir = Path(self.env.GetValue("BUILD_OUTPUT_BASE"))
