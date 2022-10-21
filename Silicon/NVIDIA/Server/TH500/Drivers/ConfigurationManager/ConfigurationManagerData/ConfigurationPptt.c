@@ -316,6 +316,17 @@ UpdateCpuInfo (
   CM_OBJECT_TOKEN                 *CorePrivateResources;
   UINT32                          EnabledCoreCntr;
   UINT32                          ResIndex;
+  UINT32                          *CpuIdleHandles;
+  UINT32                          Index;
+  UINT32                          NumberOfCpuIdles;
+  UINT32                          NumberOfLpiStates;
+  CM_OBJECT_TOKEN                 LpiToken;
+  CM_OBJECT_TOKEN                 *LpiTokenMap;
+  CM_ARM_LPI_INFO                 *LpiInfo;
+  VOID                            *DeviceTreeBase;
+  CONST VOID                      *Property;
+  INT32                           PropertyLen;
+  UINT32                          WakeupLatencyUs;
 
   CacheNodeCntr   = 0;
   EnabledCoreCntr = 0;
@@ -326,6 +337,144 @@ UpdateCpuInfo (
   Repo = *PlatformRepositoryInfo;
 
   NumCpus = GetNumberOfEnabledCpuCores ();
+
+  // Build LPI stuctures
+  NumberOfCpuIdles = 0;
+
+  Status = GetMatchingEnabledDeviceTreeNodes ("arm,idle-state", NULL, &NumberOfCpuIdles);
+  if (Status != EFI_BUFFER_TOO_SMALL) {
+    NumberOfCpuIdles = 0;
+  } else {
+    CpuIdleHandles = AllocateZeroPool (sizeof (UINT32) * NumberOfCpuIdles);
+    if (CpuIdleHandles == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate array for cpuidle cores\r\n", __FUNCTION__));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    Status = GetMatchingEnabledDeviceTreeNodes ("arm,idle-state", CpuIdleHandles, &NumberOfCpuIdles);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get cpuidle cores %r\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+  }
+
+  // 1 extra for WFI state
+  LpiTokenMap = AllocateZeroPool (sizeof (CM_OBJECT_TOKEN) * (NumberOfCpuIdles + 1));
+  if (LpiTokenMap == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate array for lpi token map\r\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  LpiToken = REFERENCE_TOKEN (LpiTokenMap);
+
+  LpiInfo = AllocateZeroPool (sizeof (CM_ARM_LPI_INFO) * (NumberOfCpuIdles + 1));
+  if (LpiInfo == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate array for lpi info\r\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  for (Index = 0; Index <= NumberOfCpuIdles; Index++) {
+    LpiTokenMap[Index] = REFERENCE_TOKEN (LpiInfo[Index]);
+  }
+
+  NumberOfLpiStates = 0;
+
+  // Create WFI entry
+  LpiInfo[NumberOfLpiStates].MinResidency                          = 1;
+  LpiInfo[NumberOfLpiStates].WorstCaseWakeLatency                  = 1;
+  LpiInfo[NumberOfLpiStates].Flags                                 = 1;
+  LpiInfo[NumberOfLpiStates].ArchFlags                             = 0;
+  LpiInfo[NumberOfLpiStates].EnableParentState                     = FALSE;
+  LpiInfo[NumberOfLpiStates].IsInteger                             = FALSE;
+  LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AccessSize        = 3;
+  LpiInfo[NumberOfLpiStates].RegisterEntryMethod.Address           = 0xFFFFFFFF;
+  LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AddressSpaceId    = EFI_ACPI_6_3_FUNCTIONAL_FIXED_HARDWARE;
+  LpiInfo[NumberOfLpiStates].RegisterEntryMethod.RegisterBitOffset = 0;
+  LpiInfo[NumberOfLpiStates].RegisterEntryMethod.RegisterBitWidth  = 0x20;
+  CopyMem (LpiInfo[NumberOfLpiStates].StateName, "WFI", sizeof ("WFI"));
+
+  Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjLpiInfo);
+  Repo->CmObjectToken = REFERENCE_TOKEN (LpiInfo[NumberOfLpiStates]);
+  Repo->CmObjectSize  = sizeof (CM_ARM_LPI_INFO);
+  Repo->CmObjectCount = 1;
+  Repo->CmObjectPtr   = &LpiInfo[NumberOfLpiStates];
+  Repo++;
+  NumberOfLpiStates++;
+
+  for (Index = 0; Index < NumberOfCpuIdles; Index++) {
+    Status = GetDeviceTreeNode (CpuIdleHandles[Index], &DeviceTreeBase, &NodeOffset);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to get idle state node - %r\r\n", Status));
+      continue;
+    }
+
+    Property = fdt_getprop (DeviceTreeBase, NodeOffset, "arm,psci-suspend-param", NULL);
+    if (Property == NULL) {
+      DEBUG ((DEBUG_ERROR, "Failed to get psci-suspend-param\r\n"));
+      continue;
+    }
+
+    LpiInfo[NumberOfLpiStates].RegisterEntryMethod.Address = SwapBytes32 (*(CONST UINT32 *)Property);
+
+    Property = fdt_getprop (DeviceTreeBase, NodeOffset, "min-residency-us", NULL);
+    if (Property == NULL) {
+      DEBUG ((DEBUG_ERROR, "Failed to get min-residency-us\r\n"));
+      continue;
+    }
+
+    LpiInfo[NumberOfLpiStates].MinResidency = SwapBytes32 (*(CONST UINT32 *)Property);
+
+    Property = fdt_getprop (DeviceTreeBase, NodeOffset, "wakeup-latency-us", NULL);
+    if (Property == NULL) {
+      Property = fdt_getprop (DeviceTreeBase, NodeOffset, "entry-latency-us", NULL);
+      if (Property == NULL) {
+        DEBUG ((DEBUG_ERROR, "Failed to get entry-latency-us\r\n"));
+        continue;
+      }
+
+      WakeupLatencyUs = SwapBytes32 (*(CONST UINT32 *)Property);
+      Property        = fdt_getprop (DeviceTreeBase, NodeOffset, "exit-latency-us", NULL);
+      if (Property == NULL) {
+        DEBUG ((DEBUG_ERROR, "Failed to get exit-latency-us\r\n"));
+        continue;
+      }
+
+      WakeupLatencyUs += SwapBytes32 (*(CONST UINT32 *)Property);
+    } else {
+      WakeupLatencyUs = SwapBytes32 (*(CONST UINT32 *)Property);
+    }
+
+    LpiInfo[NumberOfLpiStates].WorstCaseWakeLatency = WakeupLatencyUs;
+
+    LpiInfo[NumberOfLpiStates].Flags                                 = 1;
+    LpiInfo[NumberOfLpiStates].ArchFlags                             = 1;
+    LpiInfo[NumberOfLpiStates].EnableParentState                     = TRUE;
+    LpiInfo[NumberOfLpiStates].IsInteger                             = FALSE;
+    LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AccessSize        = 3;
+    LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AddressSpaceId    = EFI_ACPI_6_3_FUNCTIONAL_FIXED_HARDWARE;
+    LpiInfo[NumberOfLpiStates].RegisterEntryMethod.RegisterBitOffset = 0;
+    LpiInfo[NumberOfLpiStates].RegisterEntryMethod.RegisterBitWidth  = 0x20;
+    Property                                                         = fdt_getprop (DeviceTreeBase, NodeOffset, "idle-state-name", &PropertyLen);
+    if (Property != NULL) {
+      CopyMem (LpiInfo[NumberOfLpiStates].StateName, Property, PropertyLen);
+    }
+
+    Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjLpiInfo);
+    Repo->CmObjectToken = REFERENCE_TOKEN (LpiInfo[NumberOfLpiStates]);
+    Repo->CmObjectSize  = sizeof (CM_ARM_LPI_INFO);
+    Repo->CmObjectCount = 1;
+    Repo->CmObjectPtr   = &LpiInfo[NumberOfLpiStates];
+    Repo++;
+
+    NumberOfLpiStates++;
+  }
+
+  Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+  Repo->CmObjectToken = REFERENCE_TOKEN (LpiTokenMap);
+  Repo->CmObjectSize  = sizeof (CM_OBJECT_TOKEN) * NumberOfLpiStates;
+  Repo->CmObjectCount = NumberOfLpiStates;
+  Repo->CmObjectPtr   = LpiTokenMap;
+  Repo++;
 
   // TODO: Get Enabled Sockets and enabled Cluster info
 
@@ -634,7 +783,7 @@ UpdateCpuInfo (
               ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CM_NULL_TOKEN;
             }
 
-            ProcHierarchyInfo[ProcHierarchyIndex].LpiToken = CM_NULL_TOKEN;
+            ProcHierarchyInfo[ProcHierarchyIndex].LpiToken = LpiToken;
 
             ProcHierarchyIndex++;
             EnabledCoreCntr++;
