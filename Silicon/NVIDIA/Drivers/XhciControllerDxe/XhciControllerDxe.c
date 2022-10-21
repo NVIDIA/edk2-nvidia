@@ -91,6 +91,44 @@ XhciGetCfgAddr (
   return EFI_SUCCESS;
 }
 
+VOID
+EFIAPI
+OnExitBootServices (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  XHCICONTROLLER_DXE_PRIVATE       *Private;
+  EFI_STATUS                       Status;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgProtocol;
+  UINT32                           Index;
+  UINT32                           PgState;
+
+  Private    = (XHCICONTROLLER_DXE_PRIVATE *)Context;
+  PgProtocol = NULL;
+  PgState    = CmdPgStateOn;
+
+  Status = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+    Status = PgProtocol->GetState (PgProtocol, PgProtocol->PowerGateId[Index], &PgState);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    if (PgState == CmdPgStateOn) {
+      Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "Xhci Assert pg fail: %d\r\n", PgProtocol->PowerGateId[Index]));
+        return;
+      }
+    }
+  }
+}
+
 /**
   Callback that will be invoked at various phases of the driver initialization
 
@@ -251,23 +289,6 @@ DeviceDiscoveryNotify (
         }
 
         Private->XusbSoc->Base2Address = BaseAddress;
-
-        Status = DeviceDiscoveryGetMmioRegion (
-                   ControllerHandle,
-                   4,
-                   &BaseAddress,
-                   &RegionSize
-                   );
-        if (EFI_ERROR (Status)) {
-          DEBUG ((
-            EFI_D_ERROR,
-            "%a: Unable to locate Xhci AO address range\n",
-            __FUNCTION__
-            ));
-          goto ErrorExit;
-        }
-
-        FalconSetAoAddr (BaseAddress);
       } else {
         Private->XusbSoc->Base2Address = 0;
       }
@@ -275,7 +296,9 @@ DeviceDiscoveryNotify (
       Private->Signature                          = XHCICONTROLLER_SIGNATURE;
       Private->ImageHandle                        = DriverHandle;
       Private->XhciControllerProtocol.GetBaseAddr = XhciGetBaseAddr;
-      Private->XhciControllerProtocol.GetCfgAddr  =  XhciGetCfgAddr;
+      Private->XhciControllerProtocol.GetCfgAddr  = XhciGetCfgAddr;
+      Private->ControllerHandle                   = ControllerHandle;
+
       /* Install the XhciController Protocol */
       Status = gBS->InstallMultipleProtocolInterfaces (
                       &DriverHandle,
@@ -296,27 +319,25 @@ DeviceDiscoveryNotify (
       Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "PowerGateNodeProtocol not found\r\n"));
+        goto ErrorExit;
       }
 
-      // Unpowergate XUSBA/XUSBB/XUSBC partition first
-      for (Index = 0; Index < 3; Index++) {
-        i = Index + 10;
-        DEBUG ((EFI_D_ERROR, "Deassert pg: %d\r\n", i));
-        // Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
-        Status = PgProtocol->Deassert (PgProtocol, i);
+      // Unpowergate XUSBA/XUSBC partition first in XHCI DT
+      for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+        DEBUG ((EFI_D_ERROR, "Deassert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
+        Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
         if (EFI_ERROR (Status)) {
           DEBUG ((EFI_D_ERROR, "Deassert pg not found\r\n"));
+          goto ErrorExit;
         }
       }
 
-      // Powergate XUSBA/XUSBB/XUSBC partition again to make it in default state
-      for (Index = 0; Index < 3; Index++) {
-        i = Index + 10;
-        DEBUG ((EFI_D_ERROR, "assert pg: %d\r\n", i));
-        // Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
-        Status = PgProtocol->Assert (PgProtocol, i);
+      // Powergate XUSBA/XUSBC partition again to make it in default state
+      for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+        DEBUG ((EFI_D_ERROR, "Assert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
+        Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "assert pg not found\r\n"));
+          DEBUG ((EFI_D_ERROR, "Assert pg not found\r\n"));
         }
       }
 
@@ -328,13 +349,6 @@ DeviceDiscoveryNotify (
           DEBUG ((EFI_D_ERROR, "Deassert pg not found\r\n"));
         }
       }
-
-      /* Pass Xhci Config Address to Falcon Library before using Library's
-       * other functions */
-      FalconSetHostCfgAddr (CfgAddress);
-
-      /* Set Base 2 adress, only valid in T234 */
-      FalconSetHostBase2Addr (Private->XusbSoc->Base2Address);
 
       Status = gBS->LocateProtocol (
                       &gNVIDIAUsbPadCtlProtocolGuid,
@@ -350,6 +364,25 @@ DeviceDiscoveryNotify (
           ));
         goto ErrorExit;
       }
+
+      Status = gBS->CreateEventEx (
+                      EVT_NOTIFY_SIGNAL,
+                      TPL_NOTIFY,
+                      OnExitBootServices,
+                      Private,
+                      &gEfiEventExitBootServicesGuid,
+                      &Private->ExitBootServicesEvent
+                      );
+      if (EFI_ERROR (Status)) {
+        goto ErrorExit;
+      }
+
+      /* Pass Xhci Config Address to Falcon Library before using Library's
+       * other functions */
+      FalconSetHostCfgAddr (CfgAddress);
+
+      /* Set Base 2 adress, only valid in T234 */
+      FalconSetHostBase2Addr (Private->XusbSoc->Base2Address);
 
       /* Initialize USB Pad Registers */
       Status = Private->mUsbPadCtlProtocol->InitHw (Private->mUsbPadCtlProtocol);

@@ -2,7 +2,7 @@
 
   Usb Pad Control Driver
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,6 +18,7 @@
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/UsbFalconLib.h>
 #include <Protocol/Regulator.h>
 #include <Protocol/EFuse.h>
 #include <Protocol/PinMux.h>
@@ -178,6 +179,25 @@ DeviceDiscoveryNotify (
         if (T234Platform == FALSE) {
           goto ErrorExit;
         }
+      }
+
+      if (T234Platform == TRUE) {
+        Status = DeviceDiscoveryGetMmioRegion (
+                   ControllerHandle,
+                   1,
+                   &BaseAddress,
+                   &RegionSize
+                   );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((
+            EFI_D_ERROR,
+            "%a: Unable to locate Xhci AO address range\n",
+            __FUNCTION__
+            ));
+          goto ErrorExit;
+        }
+
+        FalconSetAoAddr (BaseAddress);
       }
 
       Status = DeviceDiscoveryGetMmioRegion (

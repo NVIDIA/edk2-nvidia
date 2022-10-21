@@ -39,6 +39,7 @@
   IoLib
   FdtLib
   DeviceDiscoveryDriverLib
+  UsbFalconLib
   TegraPlatformInfoLib
 
 [Protocols]
