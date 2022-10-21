@@ -4,6 +4,10 @@
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
+  #
+  # MM Qspi Driver
+  #
+  INF Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerStandaloneMm.inf
 
   #
   # MM NorFlashDriver

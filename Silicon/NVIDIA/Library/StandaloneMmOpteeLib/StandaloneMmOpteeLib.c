@@ -107,6 +107,11 @@ GetQspiDeviceRegion (
         Status = EFI_NOT_FOUND;
       }
     }
+  } else {
+    Status = GetDeviceRegion ("qspi0", QspiBaseAddress, QspiRegionSize);
+    if (EFI_ERROR (Status)) {
+      Status = EFI_NOT_FOUND;
+    }
   }
 
   return Status;

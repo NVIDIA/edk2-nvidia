@@ -78,6 +78,12 @@
 #
 ###################################################################################################
 [Components.common]
+
+  #
+  # MM Qspi Driver
+  #
+  Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerStandaloneMm.inf
+
   #
   # MM NorFlash Driver
   #

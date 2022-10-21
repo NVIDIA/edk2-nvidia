@@ -54,6 +54,7 @@
   gNVIDIANorFlashProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiEraseBlockProtocolGuid
+  gNVIDIAQspiControllerProtocolGuid
 
 [Depex]
   TRUE

@@ -39,9 +39,7 @@ VENDOR_DEVICE_PATH  VendorDevicePath = {
   }
 };
 
-STATIC BOOLEAN              TimeOutMessage = FALSE;
-STATIC EFI_VIRTUAL_ADDRESS  QspiBaseAddress;
-#define QSPIPERFORMTRANSACTION(x)  QspiPerformTransaction((EFI_PHYSICAL_ADDRESS)QspiBaseAddress, x);
+STATIC BOOLEAN  TimeOutMessage = FALSE;
 
 /**
   Read a register in the NOR Flash
@@ -77,7 +75,7 @@ ReadNorFlashRegister (
   Packet.RxLen      = sizeof (UINT8);
   Packet.WaitCycles = 0;
 
-  Status = QSPIPERFORMTRANSACTION (&Packet);
+  Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash register.\n", __FUNCTION__));
   }
@@ -188,7 +186,7 @@ ConfigureNorFlashWriteEnLatch (
     }
 
     // Configure WREN
-    Status = QSPIPERFORMTRANSACTION (&Packet);
+    Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Could not program WREN latch.\n", __FUNCTION__));
       return Status;
@@ -274,7 +272,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = sizeof (SFDPHeader);
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
 
-  Status = QSPIPERFORMTRANSACTION (&Packet);
+  Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP header.\n", __FUNCTION__));
     goto ErrorExit;
@@ -310,7 +308,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = (SFDPHeader.NumParamHdrs + 1) * sizeof (NOR_SFDP_PARAM_TBL_HDR);
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
 
-  Status = QSPIPERFORMTRANSACTION (&Packet);
+  Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP parameter table headers.\n", __FUNCTION__));
     goto ErrorExit;
@@ -356,7 +354,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = SFDPParamBasicTblSize;
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
 
-  Status = QSPIPERFORMTRANSACTION (&Packet);
+  Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP parameters.\n", __FUNCTION__));
     goto ErrorExit;
@@ -402,7 +400,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = SFDPParam4ByteInstructionTblSize;
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
 
-  Status = QSPIPERFORMTRANSACTION (&Packet);
+  Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP 4 byte instruction parameters.\n", __FUNCTION__));
     goto ErrorExit;
@@ -487,7 +485,7 @@ ReadNorFlashSFDP (
     Packet.RxLen      = SFDPParamSectorTblSize;
     Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
 
-    Status = QSPIPERFORMTRANSACTION (&Packet);
+    Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP sector parameters.\n", __FUNCTION__));
       goto ErrorExit;
@@ -743,7 +741,7 @@ NorFlashRead (
   Packet.RxLen      = Size;
   Packet.WaitCycles = Private->PrivateFlashAttributes.ReadWaitCycles;
 
-  Status = QSPIPERFORMTRANSACTION (&Packet);
+  Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Could not read data from NOR flash.\n", __FUNCTION__));
     goto ErrorExit;
@@ -912,7 +910,7 @@ NorFlashErase (
     Packet.RxLen      = 0;
     Packet.WaitCycles = 0;
 
-    Status = QSPIPERFORMTRANSACTION (&Packet);
+    Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Could not erase data from NOR flash.\n", __FUNCTION__));
       goto ErrorExit;
@@ -1079,7 +1077,7 @@ NorFlashWriteSinglePage (
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
 
-  Status = QSPIPERFORMTRANSACTION (&Packet);
+  Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Could not write data to NOR flash.\n", __FUNCTION__));
     goto ErrorExit;
@@ -1352,20 +1350,18 @@ NorFlashInitialise (
   IN EFI_MM_SYSTEM_TABLE  *MmSystemTable
   )
 {
-  EFI_STATUS              Status;
-  NOR_FLASH_PRIVATE_DATA  *Private;
-  UINTN                   QspiSize;
+  EFI_STATUS                       Status;
+  NOR_FLASH_PRIVATE_DATA           *Private;
+  NVIDIA_QSPI_CONTROLLER_PROTOCOL  *QspiProtocol;
 
-  // OP-TEE path
-  Status = GetQspiDeviceRegion (&QspiBaseAddress, &QspiSize);
+  Status = gMmst->MmLocateProtocol (
+                    &gNVIDIAQspiControllerProtocolGuid,
+                    NULL,
+                    (VOID **)&QspiProtocol
+                    );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Qspi MMIO region not found %r", Status));
-    return Status;
-  }
-
-  if (QspiBaseAddress == 0) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto ErrorExit;
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get QSPI protocol (%r)\r\n", __FUNCTION__, Status));
+    return EFI_SUCCESS;
   }
 
   // Allocate Private Data
@@ -1375,14 +1371,8 @@ NorFlashInitialise (
     goto ErrorExit;
   }
 
-  Private->Signature = NOR_FLASH_SIGNATURE;
-
-  // Initialize QSPI controller
-  Status = QspiInitialize ((EFI_PHYSICAL_ADDRESS)QspiBaseAddress);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "QSPI Initialization Failed.\n"));
-    goto ErrorExit;
-  }
+  Private->Signature      = NOR_FLASH_SIGNATURE;
+  Private->QspiController = QspiProtocol;
 
   // Read NOR flash's SFDP
   Status = ReadNorFlashSFDP (Private);
