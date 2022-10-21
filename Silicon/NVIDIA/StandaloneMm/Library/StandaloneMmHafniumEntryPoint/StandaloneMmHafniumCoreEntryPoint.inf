@@ -34,6 +34,7 @@
   MdeModulePkg/MdeModulePkg.dec
   StandaloneMmPkg/StandaloneMmPkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [Packages.AARCH64]
   ArmPkg/ArmPkg.dec
@@ -43,6 +44,8 @@
   DebugLib
   PcdLib
   FdtLib
+  TegraPlatformInfoLib
+  StandaloneMmOpteeLib
 
 [LibraryClasses.AARCH64]
   StandaloneMmMmuLib
@@ -55,6 +58,7 @@
   gEfiStandaloneMmNonSecureBufferGuid
   gEfiArmTfCpuDriverEpDescriptorGuid
   gMmCoreDataHobGuid
+  gEfiStandaloneMmDeviceMemoryRegions
 
 [FeaturePcd.AARCH64]
   gArmTokenSpaceGuid.PcdFfaEnable

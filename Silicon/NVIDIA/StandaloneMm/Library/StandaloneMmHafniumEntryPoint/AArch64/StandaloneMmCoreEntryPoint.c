@@ -24,6 +24,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/BaseMemoryLib.h>
 #include <Library/SerialPortLib.h>
 #include <Library/PcdLib.h>
+#include <Library/StandaloneMmOpteeDeviceMem.h>
 
 #include <IndustryStandard/ArmStdSmc.h>
 #include <IndustryStandard/ArmMmSvc.h>
@@ -165,6 +166,92 @@ GetSpImageBase (
                 FDTGetProperty32 (DtbAddress, ParentOffset, "entrypoint-offset");
 
   return SpImageBase;
+}
+
+/*
+ * Get the device regions from the manifest and install a guided hob that
+ * the other drivers can use.
+ *
+ * @param  [in] DtbAddress           Address of the partition manifest.
+ * EFI_SUCCESS                       On Success
+ * EFI_NOT_FOUND                     Device Regions not found.
+ * OTHER                             On failure to install GuidHob
+ */
+STATIC
+EFI_STATUS
+GetDeviceMemRegions (
+  IN VOID  *DtbAddress
+  )
+{
+  INT32                 ParentOffset   = 0;
+  INT32                 NodeOffset     = 0;
+  INT32                 PrevNodeOffset = 0;
+  CONST VOID            *NodeName;
+  EFI_MM_DEVICE_REGION  *DeviceRegions;
+  UINTN                 NumRegions;
+  UINTN                 BufferSize;
+  EFI_STATUS            Status;
+  UINTN                 Index;
+
+  NumRegions   = 0;
+  Index        = 0;
+  Status       = EFI_SUCCESS;
+  ParentOffset = fdt_path_offset (DtbAddress, "/device-regions");
+  if (ParentOffset < 0) {
+    DEBUG ((DEBUG_ERROR, "Failed to find /device-regions node\r\n"));
+    Status = EFI_NOT_FOUND;
+    goto GetDeviceMemRegionsExit;
+  }
+
+  for (NodeOffset = fdt_first_subnode (DtbAddress, ParentOffset);
+       NodeOffset > 0;
+       NodeOffset = fdt_next_subnode (DtbAddress, PrevNodeOffset))
+  {
+    NumRegions++;
+    PrevNodeOffset = NodeOffset;
+  }
+
+  if (NumRegions == 0) {
+    goto GetDeviceMemRegionsExit;
+  }
+
+  BufferSize    = NumRegions * sizeof (EFI_MM_DEVICE_REGION);
+  DeviceRegions = BuildGuidHob (&gEfiStandaloneMmDeviceMemoryRegions, BufferSize);
+
+  for (NodeOffset = fdt_first_subnode (DtbAddress, ParentOffset);
+       NodeOffset > 0;
+       NodeOffset = fdt_next_subnode (DtbAddress, PrevNodeOffset))
+  {
+    NodeName                               = fdt_get_name (DtbAddress, NodeOffset, NULL);
+    DeviceRegions[Index].DeviceRegionStart =
+      FDTGetProperty64 (DtbAddress, NodeOffset, "base-address");
+    DeviceRegions[Index].DeviceRegionSize = FDTGetProperty32 (
+                                              DtbAddress,
+                                              NodeOffset,
+                                              "pages-count"
+                                              )
+                                            * DEFAULT_PAGE_SIZE;
+
+    AsciiStrnCpyS (
+      DeviceRegions[Index].DeviceRegionName,
+      DEVICE_REGION_NAME_MAX_LEN,
+      NodeName,
+      AsciiStrLen (NodeName)
+      );
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: Name %a Start 0x%lx Size %u\n",
+      __FUNCTION__,
+      DeviceRegions[Index].DeviceRegionName,
+      DeviceRegions[Index].DeviceRegionStart,
+      DeviceRegions[Index].DeviceRegionSize
+      ));
+    Index++;
+    PrevNodeOffset = NodeOffset;
+  }
+
+GetDeviceMemRegionsExit:
+  return Status;
 }
 
 /*
@@ -750,6 +837,16 @@ _ModuleEntryPointC (
   }
 
   HobStart = CreateHobListFromBootInfo (&CpuDriverEntryPoint, &PayloadBootInfo);
+  Status   = GetDeviceMemRegions (DTBAddress);
+  if (EFI_ERROR (Status)) {
+    // Not ideal, but not fatal, so continue.
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to install Device Regions Hob %r\n",
+      __FUNCTION__,
+      Status
+      ));
+  }
 
   StmmCommBuffers.DTBAddress = (PHYSICAL_ADDRESS)DTBAddress;
 
