@@ -85,3 +85,10 @@
   # Report status code
   #
   INF Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/OemDescStatusCodeDxe.inf
+
+  #
+  # TPM
+  #
+  INF Silicon/NVIDIA/Drivers/Tpm2Dxe/Tpm2Dxe.inf
+  INF SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf
+  INF SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf
