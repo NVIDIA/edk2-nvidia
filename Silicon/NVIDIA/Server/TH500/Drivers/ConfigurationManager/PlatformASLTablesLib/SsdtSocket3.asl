@@ -202,5 +202,104 @@ DefinitionBlock("SsdtSocket3.aml", "SSDT", 2, "NVIDIA", "TH500_S3", 0x00000001) 
       })
     }
 
+    //---------------------------------------------------------------------
+    // SMMU0_CMDQV @ 0x300011200000
+    //---------------------------------------------------------------------
+    Device (SQ30) {
+      Name (_HID, "NVDA200C")
+      Name (_UID, TH500_SMMU0_BASE_SOCKET_3)
+      Name (_CCA, 1)
+
+      Name (_CRS, ResourceTemplate() {
+        QWordMemory (ResourceConsumer, , MinFixed, MaxFixed, Cacheable, ReadWrite,
+                     0x0,                              // Granularity
+                     TH500_SMMU0_CMDQV_BASE_SOCKET_3,  // Range Minimum
+                     TH500_SMMU0_CMDQV_LIMIT_SOCKET_3, // Range Maximum
+                     0x0,                              // Translation Offset
+                     TH500_SMMU0_CMDQV_SIZE            // Length
+                     )
+        Interrupt (ResourceConsumer, Edge, ActiveHigh, Exclusive) { TH500_SMMU0_CMDQV_INTR_SOCKET_3 }
+      })
+    }
+
+    //---------------------------------------------------------------------
+    // SMMU1_CMDQV @ 0x300012200000
+    //---------------------------------------------------------------------
+    Device (SQ31) {
+      Name (_HID, "NVDA200C")
+      Name (_UID, TH500_SMMU1_BASE_SOCKET_3)
+      Name (_CCA, 1)
+
+      Name (_CRS, ResourceTemplate() {
+        QWordMemory (ResourceConsumer, , MinFixed, MaxFixed, Cacheable, ReadWrite,
+                     0x0,                              // Granularity
+                     TH500_SMMU1_CMDQV_BASE_SOCKET_3,  // Range Minimum
+                     TH500_SMMU1_CMDQV_LIMIT_SOCKET_3, // Range Maximum
+                     0x0,                              // Translation Offset
+                     TH500_SMMU1_CMDQV_SIZE            // Length
+                     )
+        Interrupt (ResourceConsumer, Edge, ActiveHigh, Exclusive) { TH500_SMMU1_CMDQV_INTR_SOCKET_3 }
+      })
+    }
+
+    //---------------------------------------------------------------------
+    // SMMU2_CMDQV @ 0x300015200000
+    //---------------------------------------------------------------------
+    Device (SQ32) {
+      Name (_HID, "NVDA200C")
+      Name (_UID, TH500_SMMU2_BASE_SOCKET_3)
+      Name (_CCA, 1)
+
+      Name (_CRS, ResourceTemplate() {
+        QWordMemory (ResourceConsumer, , MinFixed, MaxFixed, Cacheable, ReadWrite,
+                     0x0,                              // Granularity
+                     TH500_SMMU2_CMDQV_BASE_SOCKET_3,  // Range Minimum
+                     TH500_SMMU2_CMDQV_LIMIT_SOCKET_3, // Range Maximum
+                     0x0,                              // Translation Offset
+                     TH500_SMMU2_CMDQV_SIZE            // Length
+                     )
+        Interrupt (ResourceConsumer, Edge, ActiveHigh, Exclusive) { TH500_SMMU2_CMDQV_INTR_SOCKET_3 }
+      })
+    }
+
+    //---------------------------------------------------------------------
+    // GSMMU0_CMDQV @ 0x300016200000
+    //---------------------------------------------------------------------
+    Device (GQ30) {
+      Name (_HID, "NVDA200C")
+      Name (_UID, TH500_GSMMU0_BASE_SOCKET_3)
+      Name (_CCA, 1)
+
+      Name (_CRS, ResourceTemplate() {
+        QWordMemory (ResourceConsumer, , MinFixed, MaxFixed, Cacheable, ReadWrite,
+                     0x0,                               // Granularity
+                     TH500_GSMMU0_CMDQV_BASE_SOCKET_3,  // Range Minimum
+                     TH500_GSMMU0_CMDQV_LIMIT_SOCKET_3, // Range Maximum
+                     0x0,                               // Translation Offset
+                     TH500_GSMMU0_CMDQV_SIZE            // Length
+                     )
+        Interrupt (ResourceConsumer, Edge, ActiveHigh, Exclusive) { TH500_GSMMU0_CMDQV_INTR_SOCKET_3 }
+      })
+    }
+
+    //---------------------------------------------------------------------
+    // GSMMU1_CMDQV @ 0x300005200000
+    //---------------------------------------------------------------------
+    Device (GQ31) {
+      Name (_HID, "NVDA200C")
+      Name (_UID, TH500_GSMMU1_BASE_SOCKET_3)
+      Name (_CCA, 1)
+
+      Name (_CRS, ResourceTemplate() {
+        QWordMemory (ResourceConsumer, , MinFixed, MaxFixed, Cacheable, ReadWrite,
+                     0x0,                               // Granularity
+                     TH500_GSMMU1_CMDQV_BASE_SOCKET_3,  // Range Minimum
+                     TH500_GSMMU1_CMDQV_LIMIT_SOCKET_3, // Range Maximum
+                     0x0,                               // Translation Offset
+                     TH500_GSMMU1_CMDQV_SIZE            // Length
+                     )
+        Interrupt (ResourceConsumer, Edge, ActiveHigh, Exclusive) { TH500_GSMMU1_CMDQV_INTR_SOCKET_3 }
+      })
+    }
   } //Scope(_SB)
 }
