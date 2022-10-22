@@ -238,18 +238,22 @@ FfaGetRasFwBuffer (
   RasFwBufferInfo->Base = ArmSmcArgs.Arg4;
   RasFwBufferInfo->Size = ArmSmcArgs.Arg5;
 
-  ASSERT ((RAS_FW_COMM_SIZE+RAS_FW_EINJ_SIZE) < RasFwBufferInfo->Size);
+  ASSERT ((RAS_FW_COMM_SIZE+RAS_FW_EINJ_SIZE+RAS_FW_PCIE_SIZE) < RasFwBufferInfo->Size);
 
   RasFwBufferInfo->CommBase = RasFwBufferInfo->Base;
   RasFwBufferInfo->CommSize = RAS_FW_COMM_SIZE;
   RasFwBufferInfo->EinjBase = RasFwBufferInfo->CommBase +
                               RasFwBufferInfo->CommSize;
   RasFwBufferInfo->EinjSize = RAS_FW_EINJ_SIZE;
-  RasFwBufferInfo->CperBase = RasFwBufferInfo->EinjBase +
+  RasFwBufferInfo->PcieBase = RasFwBufferInfo->EinjBase +
                               RasFwBufferInfo->EinjSize;
+  RasFwBufferInfo->PcieSize = RAS_FW_PCIE_SIZE;
+  RasFwBufferInfo->CperBase = RasFwBufferInfo->PcieBase +
+                              RasFwBufferInfo->PcieSize;
   RasFwBufferInfo->CperSize = RasFwBufferInfo->Size -
                               (RasFwBufferInfo->CommSize +
-                               RasFwBufferInfo->EinjSize);
+                               RasFwBufferInfo->EinjSize +
+                               RasFwBufferInfo->PcieSize);
 
   DEBUG ((
     EFI_D_INFO,
@@ -264,6 +268,13 @@ FfaGetRasFwBuffer (
     __FUNCTION__,
     RasFwBufferInfo->EinjBase,
     RasFwBufferInfo->EinjSize
+    ));
+  DEBUG ((
+    EFI_D_INFO,
+    "%a: PcieBase: 0x%llx\tPcieSize: 0x%x\r\n",
+    __FUNCTION__,
+    RasFwBufferInfo->PcieBase,
+    RasFwBufferInfo->PcieSize
     ));
   DEBUG ((
     EFI_D_INFO,

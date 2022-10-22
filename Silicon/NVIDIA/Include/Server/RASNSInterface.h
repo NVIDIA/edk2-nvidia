@@ -16,10 +16,12 @@
  * RAS_FW shares a single memory region split into 3 sub-sections:
  * CommBase: 64 KB mailbox to use in a similar way to MM_COMMUNICATE protocol
  * EinjBase: 4KB to hold EINJ requests from the OS
- * CperBase: contains error records and ack registers
+ * PcieBase: 4KB to hold ACPI interfaces for PCIe-related features
+ * CperBase: contains error records and ack registers (rest of allocated memory)
  */
 #define RAS_FW_COMM_SIZE  SIZE_64KB
 #define RAS_FW_EINJ_SIZE  SIZE_4KB
+#define RAS_FW_PCIE_SIZE  SIZE_4KB
 
 typedef struct {
   PHYSICAL_ADDRESS    Base;
@@ -28,6 +30,8 @@ typedef struct {
   UINTN               CommSize;
   PHYSICAL_ADDRESS    EinjBase;
   UINTN               EinjSize;
+  PHYSICAL_ADDRESS    PcieBase;
+  UINTN               PcieSize;
   PHYSICAL_ADDRESS    CperBase;
   UINTN               CperSize;
 } RAS_FW_BUFFER;
@@ -109,5 +113,24 @@ typedef struct {
 #define EINJ_DEFAULT_TIMING       10000
 #define EINJ_MAX_TIMING_SHIFT     32
 #define EINJ_NOMINAL_TIMING_MASK  0xFFFFFFFF
+
+#define MAX_SOCKETS      4
+#define PCIE_PER_SOCKET  10
+
+/*
+ * The NS buffer shared between RAS-FW and Non-Secure world is going to have
+ * the data in this structure format for all the PCIe controllers of all
+ * sockets.
+ */
+typedef struct {
+  UINT32    IsInDPC;
+  UINT32    SocketID;
+  UINT32    SegmentID;
+  UINT32    ErrSrc;
+} RAS_FW_PCIE_DPC_INFO;
+
+typedef struct {
+  RAS_FW_PCIE_DPC_INFO    PcieDpcInfo[MAX_SOCKETS][PCIE_PER_SOCKET];
+} RAS_FW_PCIE_DPC_COMM_STRUCT;
 
 #endif
