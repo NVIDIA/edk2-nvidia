@@ -12,6 +12,7 @@
 #include <Library/DxeServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/FloorSweepingLib.h>
 
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
@@ -76,11 +77,14 @@ InstallStaticResourceAffinityTable (
   UINTN                            MemoryAffinityInfoCount;
   UINTN                            MemoryAffinityInfoIndex;
   UINTN                            GpuMemoryAffinityId;
+  UINT8                            NumEnabledSockets;
 
   Repo = *PlatformRepositoryInfo;
 
   MemoryAffinityInfoCount = 0;
-  Status                  = gDS->GetMemorySpaceMap (&DescriptorCount, &Descriptors);
+  NumEnabledSockets       = 0;
+
+  Status = gDS->GetMemorySpaceMap (&DescriptorCount, &Descriptors);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get Memory Space Map: %r\r\n", Status));
     return EFI_DEVICE_ERROR;
@@ -95,8 +99,14 @@ InstallStaticResourceAffinityTable (
   // Should be no way to get this far in boot without system memory
   ASSERT (MemoryAffinityInfoCount != 0);
 
+  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
+    if (IsSocketEnabled (Socket)) {
+      NumEnabledSockets++;
+    }
+  }
+
   // Increment to hold dummy entry for GPU memory
-  MemoryAffinityInfoCount += TH500_GPU_MAX_NR_MEM_PARTITIONS * PLATFORM_MAX_SOCKETS;
+  MemoryAffinityInfoCount += TH500_GPU_MAX_NR_MEM_PARTITIONS * NumEnabledSockets;
 
   MemoryAffinityInfo = (CM_ARM_MEMORY_AFFINITY_INFO *)AllocatePool (sizeof (CM_ARM_MEMORY_AFFINITY_INFO) * MemoryAffinityInfoCount);
   if (MemoryAffinityInfo == NULL) {
@@ -119,6 +129,10 @@ InstallStaticResourceAffinityTable (
 
   // Placeholder node for all domains, actual entries will be present in DSDT
   for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
+    if (!IsSocketEnabled (Socket)) {
+      continue;
+    }
+
     for (GpuMemoryAffinityId = 0; GpuMemoryAffinityId < TH500_GPU_MAX_NR_MEM_PARTITIONS; GpuMemoryAffinityId++) {
       MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_GPU_PXM_START (Socket) + GpuMemoryAffinityId;
       MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = 0;

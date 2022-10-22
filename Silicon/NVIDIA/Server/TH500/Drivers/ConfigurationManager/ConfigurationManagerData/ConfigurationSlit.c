@@ -10,6 +10,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/FloorSweepingLib.h>
 
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
@@ -70,8 +71,16 @@ InstallStaticLocalityInformationTable (
 
   // Assign adjacent memory distance for all CPU to other domains (CPU and GPU)
   for (RowIndex = 0; RowIndex < PcdGet32 (PcdTegraMaxSockets); RowIndex++ ) {
+    if (!IsSocketEnabled (RowIndex)) {
+      continue;
+    }
+
     // CPU to CPU domains only
     for (ColIndex = 0; ColIndex < PcdGet32 (PcdTegraMaxSockets); ColIndex++ ) {
+      if (!IsSocketEnabled (ColIndex)) {
+        continue;
+      }
+
       if (RowIndex != ColIndex) {
         Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_CPU_TO_CPU_DISTANCE;
       }
@@ -79,6 +88,10 @@ InstallStaticLocalityInformationTable (
 
     // CPU to GPU domains only
     for (ColIndex = TH500_GPU_DOMAIN_START; ColIndex < (TH500_GPU_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets)); ColIndex++ ) {
+      if (!IsSocketEnabled (ColIndex - TH500_GPU_DOMAIN_START)) {
+        continue;
+      }
+
       if (RowIndex == (ColIndex - TH500_GPU_DOMAIN_START)) {
         Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_CPU_TO_OWN_GPU_DISTANCE;
       } else {
@@ -89,8 +102,16 @@ InstallStaticLocalityInformationTable (
 
   // Assign adjacent memory distance for all GPU to other domains (CPU and GPU)
   for (RowIndex = TH500_GPU_DOMAIN_START; RowIndex < (TH500_GPU_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets)); RowIndex++ ) {
+    if (!IsSocketEnabled (RowIndex - TH500_GPU_DOMAIN_START)) {
+      continue;
+    }
+
     // GPU to CPU domains only
     for (ColIndex = 0; ColIndex < PcdGet32 (PcdTegraMaxSockets); ColIndex++ ) {
+      if (!IsSocketEnabled (ColIndex)) {
+        continue;
+      }
+
       if ((RowIndex-TH500_GPU_DOMAIN_START) == ColIndex) {
         Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_GPU_TO_OWN_CPU_DISTANCE;
       } else {
@@ -100,6 +121,10 @@ InstallStaticLocalityInformationTable (
 
     // GPU to GPU domains only
     for (ColIndex = TH500_GPU_DOMAIN_START; ColIndex < (TH500_GPU_DOMAIN_START+ PcdGet32 (PcdTegraMaxSockets)); ColIndex++ ) {
+      if (!IsSocketEnabled (ColIndex - TH500_GPU_DOMAIN_START)) {
+        continue;
+      }
+
       if (RowIndex != ColIndex) {
         Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_GPU_TO_GPU_DISTANCE;
       }
