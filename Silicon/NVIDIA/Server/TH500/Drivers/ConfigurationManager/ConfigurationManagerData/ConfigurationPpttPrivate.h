@@ -20,7 +20,7 @@
 #define CACHE_TYPE_UNIFIED  0
 #define CACHE_TYPE_ICACHE   1
 #define CACHE_TYPE_DCACHE   2
-#define GET_CACHE_ID(Level, Type, Cluster, Core, Socket)  ((((3 - (Level)) << 24)) | (((Type) << 16)) | (((Core) << 12)) |(((Cluster) << 8)) | ((Socket) + 1))
+#define GET_CACHE_ID(Level, Type, Core, Cluster, Socket)  ((((3 - (Level)) << 24)) | (((Type) << 16)) | (((Core) << 12)) |(((Cluster) << 8)) | ((Socket) + 1))
 
 // CACHE_NODE structure definition.
 #define CACHE_NODE_SIGNATURE  SIGNATURE_32('C','H','N','D')
