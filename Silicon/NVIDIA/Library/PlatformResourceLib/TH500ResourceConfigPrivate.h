@@ -102,6 +102,15 @@ typedef struct  {
   UINT64    Size;
 } TEGRABL_SDRAM_INFO_DATA;
 
+#define TEGRABL_TEGRABL_FRU_EEPROM_DATA_SIZE 256
+
+#pragma pack(1)
+typedef struct {
+  UINT8 Data[TEGRABL_TEGRABL_FRU_EEPROM_DATA_SIZE];
+  UINT32 DataSize;
+  UINT32 Reserved;
+} TEGRABL_FRU_EEPROM_DATA;
+
 #pragma pack()
 typedef struct {
   /**< version */
@@ -110,8 +119,11 @@ typedef struct {
   /**< Uart instance */
   UEFI_DECLARE_ALIGNED (UINT32 Uart_Instance, 4);
 
-  /**< EEPROM data */
-  UEFI_DECLARE_ALIGNED (TEGRABL_EEPROM_DATA Eeprom, 8);
+  /**< CVM EEPROM data */
+  UEFI_DECLARE_ALIGNED (TEGRABL_FRU_EEPROM_DATA CvmEeprom[TH500_MAX_SOCKETS], 8);
+
+  /**< CVB EEPROM data */
+  UEFI_DECLARE_ALIGNED (TEGRABL_FRU_EEPROM_DATA CvbEeprom, 8);
 
   /**< List of physical addresses of retired pages */
   UEFI_DECLARE_ALIGNED (UINT64 RetiredDramPages[TH500_MAX_SOCKETS][MAX_RETIRED_DRAM_PAGES], 8);
@@ -121,13 +133,6 @@ typedef struct {
 
   /**< Bit mask to specify which sockets are enabled */
   UEFI_DECLARE_ALIGNED (UINT32 SocketMask, 8);
-
-  /**
-    * Bit map of enabled cores.
-    * There are 76 cores per socket. A bit is set when corresponding core is enabled
-    * otherwise core is either disabled or not available for use.
-    **/
-  UEFI_DECLARE_ALIGNED (UINT64 EnabledCores[TH500_MAX_SOCKETS][2], 8);
 
   /**< Base and size information of the DRAM connected to each socket */
   UEFI_DECLARE_ALIGNED (TEGRABL_SDRAM_INFO_DATA SdramInfo[TH500_MAX_SOCKETS], 8);
