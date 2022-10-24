@@ -38,7 +38,7 @@
 
 // Platform PCI-e floorsweeping scratch masks
 #define PCIE_SIM_FLOORSWEEPING_INFO      0x1F3
-#define PCIE_FPGA_FLOORSWEEPING_INFO     0x2FF
+#define PCIE_FPGA_FLOORSWEEPING_INFO     0x0FF
 #define PCIE_FLOORSWEEPING_DISABLE_MASK  0xFFFFFC00
 
 #define PCIE_ID_TO_SOCKET(PcieId)     ((PcieId) >> 4)
