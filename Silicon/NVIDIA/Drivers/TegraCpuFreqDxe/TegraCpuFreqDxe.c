@@ -21,16 +21,19 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/BpmpIpc.h>
+#include <Protocol/DeviceTreeNode.h>
 #include <Protocol/TegraCpuFreq.h>
 #include <ArmNameSpaceObjects.h>
+#include <libfdt.h>
 
 #include <Library/DeviceDiscoveryDriverLib.h>
 
 #include "TegraCpuFreqDxePrivate.h"
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,t234-cpufreq", &gNVIDIACpuFreqT234 },
-  { NULL,                  NULL                }
+  { "nvidia,t234-cpufreq",  &gNVIDIACpuFreqT234  },
+  { "nvidia,th500-cpufreq", &gNVIDIACpuFreqTH500 },
+  { NULL,                   NULL                 }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
@@ -51,18 +54,23 @@ GetCpuFreqAddresses (
   IN UINT64                 Mpidr,
   OUT EFI_PHYSICAL_ADDRESS  *NdivAddress OPTIONAL,
   OUT EFI_PHYSICAL_ADDRESS  *RefClockAddress OPTIONAL,
-  OUT EFI_PHYSICAL_ADDRESS  *CoreClockAddress OPTIONAL
+  OUT EFI_PHYSICAL_ADDRESS  *CoreClockAddress OPTIONAL,
+  OUT UINT64                *RefClockFreq OPTIONAL
   )
 {
-  EFI_STATUS            Status;
-  UINTN                 HandleCount;
-  EFI_HANDLE            *HandleBuffer;
-  EFI_PHYSICAL_ADDRESS  RegionBase;
-  UINTN                 RegionSize;
-  UINT8                 Socket;
-  UINT8                 Cluster;
-  UINT8                 Core;
-  UINT32                LinearId;
+  EFI_STATUS                        Status;
+  UINTN                             HandleCount;
+  EFI_HANDLE                        *HandleBuffer;
+  EFI_PHYSICAL_ADDRESS              RegionBase;
+  UINTN                             RegionSize;
+  UINT8                             Socket;
+  UINT8                             Cluster;
+  UINT8                             Core;
+  UINT32                            LinearId;
+  UINT32                            Index;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node;
+  INT32                             ParentOffset;
+  CONST UINT32                      *SocketRegProperty;
 
   if (!PcdGetBool (PcdAffinityMpIdrSupported)) {
     Core    = GET_MPIDR_AFF0 (Mpidr);
@@ -88,35 +96,91 @@ GetCpuFreqAddresses (
                   &HandleCount,
                   &HandleBuffer
                   );
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
     return Status;
   }
 
-  // Need to add multi-socket support
-  ASSERT (Socket == 0);
-  if (HandleCount != 1) {
-    DEBUG ((DEBUG_ERROR, "%a: Unexpected number of cpu frequency controllers - %d", __FUNCTION__, HandleCount));
+  if (HandleCount == 1) {
+    Status = DeviceDiscoveryGetMmioRegion (HandleBuffer[0], 0, &RegionBase, &RegionSize);
+    if (EFI_ERROR (Status)) {
+      FreePool (HandleBuffer);
+      return Status;
+    }
+
+    if (NdivAddress != NULL) {
+      LinearId     = Cluster * PcdGet32 (PcdTegraMaxCoresPerCluster) + Core;
+      *NdivAddress = RegionBase + SCRATCH_FREQ_CORE_REG (LinearId);
+    }
+
+    if (RefClockAddress != NULL) {
+      *RefClockAddress = RegionBase + CLUSTER_ACTMON_REFCLK_REG (Cluster, Core);
+    }
+
+    if (CoreClockAddress != NULL) {
+      *CoreClockAddress = RegionBase + CLUSTER_ACTMON_CORE_REG (Cluster, Core);
+    }
+
+    if (RefClockFreq != NULL) {
+      *RefClockFreq = REFCLK_FREQ;
+    }
+
+    FreePool (HandleBuffer);
+    return EFI_SUCCESS;
+  } else if (HandleCount != 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Unexpected number of cpu frequency controllers - %d\r\n", __FUNCTION__, HandleCount));
     FreePool (HandleBuffer);
     return EFI_UNSUPPORTED;
   }
 
-  Status = DeviceDiscoveryGetMmioRegion (HandleBuffer[0], 0, &RegionBase, &RegionSize);
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gNVIDIACpuFreqTH500,
+                  NULL,
+                  &HandleCount,
+                  &HandleBuffer
+                  );
   if (EFI_ERROR (Status)) {
-    FreePool (HandleBuffer);
     return Status;
   }
 
-  if (NdivAddress != NULL) {
-    LinearId     = Cluster * PcdGet32 (PcdTegraMaxCoresPerCluster) + Core;
-    *NdivAddress = RegionBase + SCRATCH_FREQ_CORE_REG (LinearId);
-  }
+  for (Index = 0; Index < HandleCount; Index++) {
+    Status = gBS->HandleProtocol (HandleBuffer[Index], &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
 
-  if (RefClockAddress != NULL) {
-    *RefClockAddress = RegionBase + CLUSTER_ACTMON_REFCLK_REG (Cluster, Core);
-  }
+    ParentOffset      = fdt_parent_offset (Node->DeviceTreeBase, Node->NodeOffset);
+    SocketRegProperty = fdt_getprop (
+                          Node->DeviceTreeBase,
+                          ParentOffset,
+                          "reg",
+                          NULL
+                          );
+    if ((SocketRegProperty == NULL) || (*SocketRegProperty != SwapBytes32 (Socket))) {
+      continue;
+    }
 
-  if (CoreClockAddress != NULL) {
-    *CoreClockAddress = RegionBase + CLUSTER_ACTMON_CORE_REG (Cluster, Core);
+    Status = DeviceDiscoveryGetMmioRegion (HandleBuffer[Index], 0, &RegionBase, &RegionSize);
+    if (EFI_ERROR (Status)) {
+      FreePool (HandleBuffer);
+      return Status;
+    }
+
+    if (NdivAddress != NULL) {
+      *NdivAddress = RegionBase + TH500_SCRATCH_FREQ_CORE_REG (Cluster);
+    }
+
+    if (RefClockAddress != NULL) {
+      *RefClockAddress = 0;
+    }
+
+    if (CoreClockAddress != NULL) {
+      *CoreClockAddress = 0;
+    }
+
+    if (RefClockFreq != NULL) {
+      *RefClockFreq = TH500_REFCLK_FREQ;
+    }
   }
 
   FreePool (HandleBuffer);
@@ -155,7 +219,7 @@ GetCpuNdiv (
       Status = EFI_UNSUPPORTED;
     }
   } else {
-    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL);
+    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL);
     if (!EFI_ERROR (Status)) {
       *Ndiv = MmioRead32 (NdivAddress);
     }
@@ -192,7 +256,7 @@ SetCpuNdiv (
       Status = EFI_UNSUPPORTED;
     }
   } else {
-    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL);
+    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL);
     if (!EFI_ERROR (Status)) {
       MmioWrite32 (NdivAddress, Ndiv);
     }
@@ -255,6 +319,8 @@ TegraCpuGetNdivLimits (
     Request.ClusterId = GET_MPIDR_AFF2 (Mpidr);
   }
 
+  // TODO: Add handle lookup for BPMP
+
   Status = BpmpIpcProtocol->Communicate (
                               BpmpIpcProtocol,
                               NULL,
@@ -266,7 +332,7 @@ TegraCpuGetNdivLimits (
                               &MessageError
                               );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to request NDIV - %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to request NDIV - %r -%d\r\n", __FUNCTION__, Status, MessageError));
   }
 
   return Status;
@@ -411,6 +477,7 @@ TegraCpuFreqGetCpcInfo (
   EFI_PHYSICAL_ADDRESS           RefclkClockAddress;
   EFI_PHYSICAL_ADDRESS           CoreClockAddress;
   VOID                           *PerfLimited;
+  UINT64                         RefClockFreq;
 
   if (CpcInfo == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -421,7 +488,7 @@ TegraCpuFreqGetCpcInfo (
     return Status;
   }
 
-  Status = GetCpuFreqAddresses (Mpidr, &DesiredAddress, &RefclkClockAddress, &CoreClockAddress);
+  Status = GetCpuFreqAddresses (Mpidr, &DesiredAddress, &RefclkClockAddress, &CoreClockAddress, &RefClockFreq);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -450,9 +517,32 @@ TegraCpuFreqGetCpcInfo (
   SetAddressStruct (&CpcInfo->PerformanceReductionToleranceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   SetAddressStruct (&CpcInfo->TimeWindowRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   SetAddressStruct (&CpcInfo->CounterWraparoundTimeBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  CpcInfo->CounterWraparoundTimeInteger = MAX_UINT32 / ConvertNdivToFreq (&Limits, Limits.ndiv_max);
-  SetAddressStruct (&CpcInfo->ReferencePerformanceCounterRegister, 32, 0, EFI_ACPI_6_4_DWORD, RefclkClockAddress);
-  SetAddressStruct (&CpcInfo->DeliveredPerformanceCounterRegister, 32, 0, EFI_ACPI_6_4_DWORD, CoreClockAddress);
+  if (CoreClockAddress == 0) {
+    CpcInfo->CounterWraparoundTimeInteger = MAX_UINT64 / ConvertNdivToFreq (&Limits, Limits.ndiv_max);
+  } else {
+    CpcInfo->CounterWraparoundTimeInteger = MAX_UINT32 / ConvertNdivToFreq (&Limits, Limits.ndiv_max);
+  }
+
+  if (RefclkClockAddress == 0) {
+    CpcInfo->ReferencePerformanceCounterRegister.AddressSpaceId    = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
+    CpcInfo->ReferencePerformanceCounterRegister.RegisterBitWidth  = 64;
+    CpcInfo->ReferencePerformanceCounterRegister.RegisterBitOffset = 0;
+    CpcInfo->ReferencePerformanceCounterRegister.AccessSize        = EFI_ACPI_6_4_QWORD;
+    CpcInfo->ReferencePerformanceCounterRegister.Address           = 0x1;
+  } else {
+    SetAddressStruct (&CpcInfo->ReferencePerformanceCounterRegister, 32, 0, EFI_ACPI_6_4_DWORD, RefclkClockAddress);
+  }
+
+  if (CoreClockAddress == 0) {
+    CpcInfo->DeliveredPerformanceCounterRegister.AddressSpaceId    = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
+    CpcInfo->DeliveredPerformanceCounterRegister.RegisterBitWidth  = 64;
+    CpcInfo->DeliveredPerformanceCounterRegister.RegisterBitOffset = 0;
+    CpcInfo->DeliveredPerformanceCounterRegister.AccessSize        = EFI_ACPI_6_4_QWORD;
+    CpcInfo->DeliveredPerformanceCounterRegister.Address           = 0x0;
+  } else {
+    SetAddressStruct (&CpcInfo->DeliveredPerformanceCounterRegister, 32, 0, EFI_ACPI_6_4_DWORD, CoreClockAddress);
+  }
+
   SetAddressStruct (&CpcInfo->PerformanceLimitedRegister, 32, 0, EFI_ACPI_6_4_DWORD, (UINT64)PerfLimited);
   SetAddressStruct (&CpcInfo->CPPCEnableRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   SetAddressStruct (&CpcInfo->AutonomousSelectionEnableBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
@@ -460,7 +550,7 @@ TegraCpuFreqGetCpcInfo (
   SetAddressStruct (&CpcInfo->AutonomousActivityWindowRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   SetAddressStruct (&CpcInfo->EnergyPerformancePreferenceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   SetAddressStruct (&CpcInfo->ReferencePerformanceBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  CpcInfo->ReferencePerformanceInteger = ConvertFreqToNdiv (&Limits, REFCLK_FREQ);
+  CpcInfo->ReferencePerformanceInteger = ConvertFreqToNdiv (&Limits, RefClockFreq);
   SetAddressStruct (&CpcInfo->LowestFrequencyBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   CpcInfo->LowestFrequencyInteger = HZ_TO_MHZ (ConvertNdivToFreq (&Limits, CpcInfo->LowestPerformanceInteger));
   SetAddressStruct (&CpcInfo->NominalFrequencyBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
