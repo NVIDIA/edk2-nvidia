@@ -1,7 +1,7 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * Copyright (c) 2020 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -61,6 +61,22 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
                     Memory32Fixed(ReadWrite, 0x158c0000, 0x40000)
                     Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x10c, 0x10d }
                     })
+    }
+
+    //---------------------------------------------------------------------
+    // host1x
+    //---------------------------------------------------------------------
+    // Description: host1x
+    Device(HOST) {
+      Name (_HID, "NVDA200D")
+      Name (_UID, 0)
+      Name (_CCA, ZERO)
+
+      Name (_CRS, ResourceTemplate() {
+        Memory32Fixed(ReadWrite, 0x13e00000, 0x10000)
+        Memory32Fixed(ReadWrite, 0x13e10000, 0x10000)
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x127 }
+      })
     }
 
     //---------------------------------------------------------------------

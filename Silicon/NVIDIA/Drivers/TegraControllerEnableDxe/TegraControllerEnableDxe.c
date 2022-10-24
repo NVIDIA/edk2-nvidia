@@ -2,7 +2,7 @@
 
   Tegra Controller Enable Driver
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,12 +16,13 @@
 #define HWPM_LA_MAX_CLOCK   625000000
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,gv11b",          &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra30-hda",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,ga10b",          &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,th500-soc-hwpm", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra234-nvdla", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { NULL,                    NULL                                        }
+  { "nvidia,gv11b",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra30-hda",     &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,ga10b",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,th500-soc-hwpm",  &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra234-nvdla",  &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra234-host1x", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { NULL,                     NULL                                        }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
