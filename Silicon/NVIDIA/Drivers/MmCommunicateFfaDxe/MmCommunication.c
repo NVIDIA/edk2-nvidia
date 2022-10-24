@@ -36,6 +36,7 @@
 #define ARM_SVC_ID_FFA_SUCCESS_AARCH64     0xC4000061
 #define ARM_SVC_ID_FFA_SUCCESS_AARCH32     0x84000060
 #define STMM_GET_NS_BUFFER                 0xC0270001
+#define ARM_SVC_ID_FFA_RX_RELEASE          0x84000065
 
 STATIC UINT16  StmmVmId = 0xFFFF;
 STATIC EFI_STATUS
@@ -742,6 +743,34 @@ exit:
 
 STATIC
 EFI_STATUS
+FfaReleaseRxBuffer (
+  )
+{
+  ARM_SMC_ARGS  ArmSmcArgs;
+  EFI_STATUS    Status = EFI_SUCCESS;
+
+  ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
+
+  ArmSmcArgs.Arg0 = ARM_SVC_ID_FFA_RX_RELEASE;
+  ArmSmcArgs.Arg1 = 0; /* NS World */
+
+  ArmCallSmc (&ArmSmcArgs);
+
+  if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
+    DEBUG ((
+      EFI_D_ERROR,
+      "%a: ARM_SVC_ID_FFA_RX_RELEASE failed: 0x%x\n",
+      __FUNCTION__,
+      ArmSmcArgs.Arg2
+      ));
+    Status = RETURN_OUT_OF_RESOURCES;
+  }
+
+  return Status;
+}
+
+STATIC
+EFI_STATUS
 GetStmmVmId (
   VOID
   )
@@ -783,6 +812,7 @@ GetStmmVmId (
   DEBUG ((DEBUG_ERROR, "%a: STMM VmId=0x%x\n", __FUNCTION__, StmmVmId));
 
 exit:
+  FfaReleaseRxBuffer ();
   FfaFreeRxTxBuffers (pages, rx, tx);
   return Status;
 }
