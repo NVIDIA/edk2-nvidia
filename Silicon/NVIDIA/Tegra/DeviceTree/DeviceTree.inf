@@ -24,9 +24,6 @@
   BootOrderUfs.dts
   BootOrderUsb.dts
   L4TConfiguration.dts
-  L4TRootfsInfo.dts
-  L4TRootfsABInfo.dts
-  L4TRootfsBrokenInfo.dts
 
 [Packages]
   MdePkg/MdePkg.dec
