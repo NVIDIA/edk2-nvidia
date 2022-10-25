@@ -1,0 +1,31 @@
+## @file
+# Component description file for NorFlashStubLib module.
+#
+# Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = NorFlashStubLib
+  FILE_GUID                      = 6302291d-150e-411d-9ba0-3b634248d0f5
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = NorFlashStubLib
+
+[Sources]
+  NorFlashStubLib.c
+  FaultyNorFlashStubLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib
