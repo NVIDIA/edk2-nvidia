@@ -1,0 +1,24 @@
+## @file
+#  Instance of Debug Library based on Serial Port Library.
+#  It uses Print Library to produce formatted output strings to seiral port device.
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2016 - 2017, ARM Ltd. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = ArmSvcHvcLib
+  FILE_GUID                      = ce32c8ce-4797-4f24-9e18-4a04e565ccc8
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = ArmSvcLib
+
+[Sources.AARCH64]
+  AArch64/ArmSvcHvc.S
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec

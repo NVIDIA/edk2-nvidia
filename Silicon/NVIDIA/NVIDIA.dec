@@ -338,6 +338,9 @@
 
 #Name of Recovery Kernel DTB partition
   gNVIDIATokenSpaceGuid.PcdRecoveryKernelDtbPartitionName|L"recovery-dtb"|VOID*|0x00000066
+#Firmware Prefix printed during hafnium boot
+  gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString|L""|VOID*|0x00000073
+  gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString|L""|VOID*|0x00000072
 
 #L4T Configuration support
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|FALSE|BOOLEAN|0x00000100
