@@ -1047,13 +1047,13 @@ FVBNORInitialize (
                     );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get NOR Flash protocol (%r)\r\n", __FUNCTION__, Status));
-    return Status;
+    return EFI_SUCCESS;
   }
 
   Status = NorFlashProtocol->GetAttributes (NorFlashProtocol, &NorFlashAttributes);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get NOR Flash attributes (%r)\r\n", __FUNCTION__, Status));
-    return Status;
+    return EFI_SUCCESS;
   }
 
   // Validate GPT and get table entries, always 512 bytes from the end
@@ -1065,13 +1065,13 @@ FVBNORInitialize (
                                );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to read GPT partition table (%r)\r\n", __FUNCTION__, Status));
-    return Status;
+    return EFI_SUCCESS;
   }
 
   Status = GptValidateHeader (&PartitionHeader);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Invalid efi partition table header\n"));
-    return EFI_DEVICE_ERROR;
+    return EFI_SUCCESS;
   }
 
   //
@@ -1079,7 +1079,7 @@ FVBNORInitialize (
   //
   PartitionEntryArray = AllocateZeroPool (GptPartitionTableSizeInBytes (&PartitionHeader));
   if (PartitionEntryArray == NULL) {
-    return EFI_OUT_OF_RESOURCES;
+    return EFI_SUCCESS;
   }
 
   Status = NorFlashProtocol->Read (
@@ -1091,14 +1091,14 @@ FVBNORInitialize (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to read GPT partition array (%r)\r\n", __FUNCTION__, Status));
     FreePool (PartitionEntryArray);
-    return Status;
+    return EFI_SUCCESS;
   }
 
   Status = GptValidatePartitionTable (&PartitionHeader, PartitionEntryArray);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Invalid PartitionEntryArray\r\n"));
     FreePool (PartitionEntryArray);
-    return Status;
+    return EFI_SUCCESS;
   }
 
   VariableOffset = 0;
@@ -1134,7 +1134,7 @@ FVBNORInitialize (
 
   if ((VariableOffset == 0) || (FtwOffset == 0)) {
     DEBUG ((DEBUG_ERROR, "%a: Partition not found\r\n", __FUNCTION__));
-    return EFI_DEVICE_ERROR;
+    return EFI_SUCCESS;
   }
 
   ASSERT (FtwSize > VariableSize);
@@ -1197,7 +1197,7 @@ FVBNORInitialize (
   if ((FvpData[FVB_FTW_WORK_INDEX].PartitionSize + FvpData[FVB_FTW_SPARE_INDEX].PartitionSize) > FtwSize) {
     DEBUG ((DEBUG_ERROR, "%a: FTW partition not large enough to fit working and spare\r\n", __FUNCTION__));
     ASSERT (FALSE);
-    return EFI_DEVICE_ERROR;
+    goto Exit;
   }
 
   for (Index = 0; Index < FVB_TO_CREATE; Index++) {
@@ -1284,7 +1284,7 @@ FVBNORInitialize (
         &FvpData[Index].Handle,
         Status
         ));
-      return Status;
+      goto Exit;
     }
   }
 
@@ -1316,5 +1316,5 @@ Exit:
     }
   }
 
-  return Status;
+  return EFI_SUCCESS;
 }

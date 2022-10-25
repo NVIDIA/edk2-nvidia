@@ -42,6 +42,9 @@ ENTRY_POINT = QspiControllerStMmInitialize
   StandaloneMmDriverEntryPoint
   StandaloneMmOpteeLib
 
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+
 [Protocols]
   gNVIDIAQspiControllerProtocolGuid
 

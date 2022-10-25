@@ -4,6 +4,25 @@
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
+  # MM QSPI Driver
+  #
+  INF Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerStandaloneMm.inf
+
+  #
+  # MM NorFlash Driver
+  #
+  INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMm.inf
+
+  #
+  # MM NOR FvB driver
+  #
+  INF Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashStandaloneMm.inf
+
+  #
+  # FTW Driver
+  #
+  INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf
+
   !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
 
 ################################################################################

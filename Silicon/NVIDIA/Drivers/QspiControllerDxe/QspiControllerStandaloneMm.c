@@ -134,6 +134,21 @@ QspiControllerStMmInitialize (
   QSPI_CONTROLLER_PRIVATE_DATA  *Private;
   BOOLEAN                       WaitCyclesSupported;
   UINT8                         NumChipSelects;
+  TEGRA_BOOT_TYPE               TegraBootType;
+  BOOLEAN                       Fbc;
+
+  TegraBootType = GetBootType ();
+  Fbc           = InFbc ();
+
+  DEBUG ((DEBUG_ERROR, "Boot Type %d fbc %d\n", TegraBootType, Fbc));
+
+  /* Fall back to emulated store as the QSPI resources
+   * may not be setup.
+   */
+  if ((Fbc == FALSE) || (TegraBootType == TegrablBootRcm)) {
+    DEBUG ((DEBUG_ERROR, "Not Initializing QSPI \n"));
+    return EFI_SUCCESS;
+  }
 
   DEBUG ((DEBUG_ERROR, "%a: Looking for Dev Region with qspi", __FUNCTION__));
 

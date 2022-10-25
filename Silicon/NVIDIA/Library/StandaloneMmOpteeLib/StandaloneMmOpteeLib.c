@@ -18,7 +18,12 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <IndustryStandard/ArmFfaSvc.h>
 #include <IndustryStandard/ArmStdSmc.h>
 #include <Library/BaseLib.h>
+#include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
+
+#define HIDREV_OFFSET             0x4
+#define HIDREV_PRE_SI_PLAT_SHIFT  0x14
+#define HIDREV_PRE_SI_PLAT_MASK   0xf
 
 EFIAPI
 BOOLEAN
@@ -115,4 +120,82 @@ GetQspiDeviceRegion (
   }
 
   return Status;
+}
+
+EFIAPI
+TEGRA_PLATFORM_TYPE
+GetPlatformTypeMm (
+  VOID
+  )
+{
+  TEGRA_PLATFORM_TYPE  PlatformType;
+  UINT64               MiscAddress;
+  UINTN                MiscRegionSize;
+  EFI_STATUS           Status;
+  UINT32               HidRev;
+
+  Status = GetDeviceRegion ("tegra-misc", &MiscAddress, &MiscRegionSize);
+  if (EFI_ERROR (Status)) {
+    PlatformType = TEGRA_PLATFORM_UNKNOWN;
+  } else {
+    HidRev       = MmioRead32 (MiscAddress + HIDREV_OFFSET);
+    PlatformType = ((HidRev >> HIDREV_PRE_SI_PLAT_SHIFT) & HIDREV_PRE_SI_PLAT_MASK);
+    if (PlatformType >= TEGRA_PLATFORM_UNKNOWN) {
+      PlatformType =  TEGRA_PLATFORM_UNKNOWN;
+    }
+  }
+
+  return PlatformType;
+}
+
+EFIAPI
+BOOLEAN
+InFbc (
+  VOID
+  )
+{
+  EFI_HOB_GUID_TYPE  *GuidHob;
+  STMM_COMM_BUFFERS  *StmmCommBuffers;
+  BOOLEAN            Fbc;
+
+  GuidHob = GetFirstGuidHob (&gNVIDIAStMMBuffersGuid);
+  if (GuidHob == NULL) {
+    if (IsOpteePresent ()) {
+      Fbc = TRUE;
+      goto ExitInFbc;
+    } else {
+      ASSERT_EFI_ERROR (EFI_NOT_FOUND);
+    }
+  }
+
+  StmmCommBuffers = (STMM_COMM_BUFFERS *)GET_GUID_HOB_DATA (GuidHob);
+  Fbc             = StmmCommBuffers->Fbc;
+ExitInFbc:
+  return Fbc;
+}
+
+EFIAPI
+TEGRA_BOOT_TYPE
+GetBootType (
+  VOID
+  )
+{
+  EFI_HOB_GUID_TYPE             *GuidHob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  TEGRA_BOOT_TYPE               BootType;
+
+  GuidHob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if (GuidHob == NULL) {
+    if (IsOpteePresent ()) {
+      BootType = TegrablBootInvalid;
+      goto ExitBootType;
+    } else {
+      ASSERT_EFI_ERROR (EFI_NOT_FOUND);
+    }
+  }
+
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (GuidHob);
+  BootType             = PlatformResourceInfo->BootType;
+ExitBootType:
+  return BootType;
 }

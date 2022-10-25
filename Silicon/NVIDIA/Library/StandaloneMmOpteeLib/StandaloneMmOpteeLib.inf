@@ -44,3 +44,6 @@
 
 [Guids]
   gEfiStandaloneMmDeviceMemoryRegions
+  gNVIDIAPlatformResourceDataGuid
+  gNVIDIAStMMBuffersGuid
+

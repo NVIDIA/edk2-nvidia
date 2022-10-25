@@ -25,6 +25,8 @@
   FdtLib|EmbeddedPkg/Library/FdtLib/FdtLib.inf
   DebugLib|Silicon/NVIDIA/Library/DebugLibHafnium/DebugLibHafnium.inf
   ArmSvcLib|Silicon/NVIDIA/Library/ArmSvcHvcLibHafnium/ArmSvcHvcLibHafnium.inf
+  QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
+  ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerVirtCounterLib/ArmGenericTimerVirtCounterLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 
@@ -54,13 +56,28 @@
   #  DEBUG_VERBOSE   0x00400000  // Detailed debug messages that may
   #                              // significantly impact boot performance
   #  DEBUG_ERROR     0x80000000  // Error
-  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x800000FF
-
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000000F
   gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString|L"STMM:"
   gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString|L"StandaloneMm"
 
+  gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString|L"STMM:"
+  gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString|L"StandaloneMm"
+  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
+  gArmTokenSpaceGuid.PcdMmBufferSize|65536
+
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
+
+[PcdsPatchableInModule]
+  #
+  # NV Storage PCDs.
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase64|0x0
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase64|0x0
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x0
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize|0x0
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize|0x0
 
 ###################################################################################################
 #
@@ -86,6 +103,45 @@
   # Note: it is not included in the FDF as it is not part of the FV
   #
   Silicon/NVIDIA/StandaloneMm/Manifest/Manifest.inf
+
+  # MM Qspi Driver
+  #
+  Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerStandaloneMm.inf
+
+  #
+  # MM NorFlash Driver
+  #
+  Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMm.inf
+
+  #
+  # MM NOR FvB driver
+  #
+  Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashStandaloneMm.inf {
+    <LibraryClasses>
+      GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
+  }
+
+  #
+  # MM Fault Tolerant Write Driver
+  #
+  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf {
+    <LibraryClasses>
+      GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
+      NULL|Silicon/NVIDIA/Drivers/FvbNorFlashDxe/StandaloneMmFixupPcd.inf
+  }
+
+  #
+  # MM Variable Driver
+  #
+  MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf {
+    <LibraryClasses>
+      DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
+      VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
+      NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
+      NULL|MdeModulePkg/Library/VarCheckPolicyLib/VarCheckPolicyLibStandaloneMm.inf
+      GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
+      NULL|Silicon/NVIDIA/Drivers/FvbNorFlashDxe/StandaloneMmFixupPcd.inf
+  }
 
 [Components.AARCH64]
 

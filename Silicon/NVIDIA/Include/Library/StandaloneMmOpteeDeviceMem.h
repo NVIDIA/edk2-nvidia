@@ -8,6 +8,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #ifndef STANDLONEMM_OPTEE_DEVICE_MEM_H
 #define STANDLONEMM_OPTEE_DEVICE_MEM_H
 
+#include <Library/TegraPlatformInfoLib.h>
+#include <Library/PlatformResourceLib.h>
+
 #define DEVICE_REGION_NAME_MAX_LEN  32
 #define MAX_DEVICE_REGIONS          10
 #define OPTEE_OS_UID0               0x384fb3e0
@@ -57,6 +60,24 @@ EFI_STATUS
 GetQspiDeviceRegion (
   UINT64  *QspiBaseAddress,
   UINTN   *QspiRegionSize
+  );
+
+EFIAPI
+TEGRA_PLATFORM_TYPE
+GetPlatformTypeMm (
+  VOID
+  );
+
+EFIAPI
+TEGRA_BOOT_TYPE
+GetBootType (
+  VOID
+  );
+
+EFIAPI
+BOOLEAN
+InFbc (
+  VOID
   );
 
 #endif //STANDALONEMM_OPTEE_DEVICE_MEM_H

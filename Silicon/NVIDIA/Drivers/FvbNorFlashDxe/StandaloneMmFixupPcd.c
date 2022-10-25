@@ -16,6 +16,8 @@
 
 #include <Protocol/FirmwareVolumeBlock.h>
 #include <Protocol/SmmFirmwareVolumeBlock.h>
+#include <Library/TegraPlatformInfoLib.h>
+#include <Library/PlatformResourceLib.h>
 
 #include "FvbPrivate.h"
 
@@ -101,16 +103,56 @@ StandaloneMmFixupPcdConstructor (
   UINTN                               HandleCount;
   NVIDIA_FVB_PRIVATE_DATA             *Private;
   UINTN                               Index;
+  TEGRA_PLATFORM_TYPE                 PlatformType;
+  TEGRA_BOOT_TYPE                     TegraBootType;
+  BOOLEAN                             Fbc;
 
+  /*
+   * If we are here and the PcdEmuVariableNvModeEnable is already set, return.
+   */
   if (PcdGetBool (PcdEmuVariableNvModeEnable)) {
     return EFI_SUCCESS;
   }
 
-  if (!IsQspiPresent ()) {
+  /* In Jetson deployments, if the QSPI MMIO region isn't found then
+   * return, this could be an RPMB platform.
+   */
+  if (!IsQspiPresent () && IsOpteePresent ()) {
+    return EFI_SUCCESS;
+  }
+
+  TegraBootType = GetBootType ();
+  Fbc           = InFbc ();
+
+  /* Fallback to emulated store in certain boot flavors */
+  if ((Fbc == FALSE) || (TegraBootType == TegrablBootRcm)) {
+    PatchPcdSetBool (PcdEmuVariableNvModeEnable, TRUE);
+    DEBUG ((
+      DEBUG_ERROR,
+      "Falling back to emulated store Boot Type %d fbc %d\n",
+      TegraBootType,
+      Fbc
+      ));
     return EFI_SUCCESS;
   }
 
   Status = GetFvbCountAndBuffer (&HandleCount, &HandleBuffer);
+  if (EFI_ERROR (Status)) {
+    PlatformType = GetPlatformTypeMm ();
+
+    /* If we're doing FD boot on a simulator, allow falling back
+       to emulated variables.
+     */
+    if (PlatformType == TEGRA_PLATFORM_VDK) {
+      PatchPcdSetBool (PcdEmuVariableNvModeEnable, TRUE);
+      DEBUG ((DEBUG_ERROR, "%a:Fvb not found using Emulated\n", __FUNCTION__));
+      return EFI_SUCCESS;
+    }
+  }
+
+  /* Assert if we are doing a regular boot on a silicon/FPGA platform and
+   * we haven't found the variable partitions.
+   */
   ASSERT_EFI_ERROR (Status);
 
   for (Index = 0; Index < HandleCount; Index += 1, Fvb = NULL) {

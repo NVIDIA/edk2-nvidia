@@ -7,8 +7,13 @@
  *
  */
 
-		tegra-misc {
-			base-address = <0x00000000 0x00100000>;
-			pages-count = <4>;
-			attributes = <0x3>; // read-write
-		};
+tegra-misc {
+  base-address = < 0x00000000 0x00100000 >;
+  pages-count  = < 4 >;
+  attributes   = < 0x3 >;                   // read-write
+};
+qspi0 {
+  base-address = < 0x00000000 0x3240000 >;
+  pages-count  = < 16 >;
+  attributes   = < 0x3 >;                   // read-write
+};
