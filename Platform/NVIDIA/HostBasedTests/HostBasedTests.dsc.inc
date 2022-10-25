@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,6 +17,7 @@
   # stub libs
   FlashStubLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/FlashStubLib/FlashStubLib.inf
   HobLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/HobStubLib/HobStubLib.inf
+  IoLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/IoStubLib/IoStubLib.inf
   PlatformResourceLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PlatformResourceStubLib/PlatformResourceStubLib.inf
   TegraPlatformInfoLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/TegraPlatformInfoStubLib/TegraPlatformInfoStubLib.inf
   UefiBootServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiBootServicesTableStubLib/UefiBootServicesTableStubLib.inf
