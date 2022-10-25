@@ -46,12 +46,6 @@ RF_AB_VARIABLE  mRFAbVariable[RF_VARIABLE_INDEX_MAX] = {
                       EFI_VARIABLE_NON_VOLATILE,
                       sizeof (UINT32),
                       &gNVIDIAPublicVariableGuid },
-  [RF_OVERRIDE] =   { L"BootChainOsOverride",
-                      EFI_VARIABLE_BOOTSERVICE_ACCESS |
-                      EFI_VARIABLE_RUNTIME_ACCESS |
-                      EFI_VARIABLE_NON_VOLATILE,
-                      sizeof (UINT32),
-                      &gNVIDIAPublicVariableGuid },
 };
 
 /**
@@ -729,10 +723,6 @@ ValidateRootfsStatus (
               ));
             goto Exit;
           }
-
-          // Rootfs slot is not linked with bootloader chain
-          mRootfsInfo.RootfsVar[RF_OVERRIDE].Value      = NonCurrentSlot;
-          mRootfsInfo.RootfsVar[RF_OVERRIDE].UpdateFlag = 1;
         } else {
           // Non-current slot is unbootable, boot to recovery kernel.
           BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;

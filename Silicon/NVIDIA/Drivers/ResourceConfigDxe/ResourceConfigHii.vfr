@@ -57,11 +57,6 @@ formset
     name  = KernelCommandLine,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
-  efivarstore NVIDIA_OS_OVERRIDE,
-    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
-    name  = BootChainOsOverride,
-    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
-
   efivarstore NVIDIA_OS_STATUS_A,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
     name  = RootfsStatusSlotA,
@@ -133,16 +128,6 @@ formset
             minsize = KERNEL_CMD_STR_MIN_SIZE,
             maxsize = KERNEL_CMD_STR_MAX_SIZE,
     endstring;
-
-    oneof varid = BootChainOsOverride.Chain,
-        questionid = KEY_OS_CHAIN_OVERRIDE,
-        prompt = STRING_TOKEN(STR_OS_OVERRIDE_PROMPT),
-        help   = STRING_TOKEN(STR_OS_OVERRIDE_HELP),
-        flags  = INTERACTIVE | NUMERIC_SIZE_4,
-        option text = STRING_TOKEN(STR_OS_PART_DEFAULT), value = NVIDIA_OS_OVERRIDE_DEFAULT, flags = 0;
-        option text = STRING_TOKEN(STR_OS_PART_A), value = NVIDIA_OS_OVERRIDE_A, flags = 0;
-        option text = STRING_TOKEN(STR_OS_PART_B), value = NVIDIA_OS_OVERRIDE_B, flags = 0;
-    endoneof;
 
     oneof varid = RootfsStatusSlotA.Status,
         questionid = KEY_OS_CHAIN_STATUS_A,

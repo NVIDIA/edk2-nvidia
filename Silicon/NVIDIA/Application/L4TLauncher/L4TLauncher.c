@@ -1529,14 +1529,6 @@ ProcessBootParams (
     BootParams->BootChain = BootChain;
   }
 
-  // Read override OS boot type
-  DataSize = sizeof (BootChain);
-  Status   = gRT->GetVariable (BOOT_OS_OVERRIDE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootChain);
-  // If variable does not exist, is >4 bytes or has a value larger than 1, boot partition A
-  if (!EFI_ERROR (Status) && (BootChain <= 1)) {
-    BootParams->BootChain = BootChain;
-  }
-
   // Read current OS boot type to allow for chaining
   DataSize = sizeof (BootChain);
   Status   = gRT->GetVariable (BOOT_OS_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootChain);

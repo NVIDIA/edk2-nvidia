@@ -104,9 +104,6 @@ InitializeSettings (
   // Initialize New Device Hierarchy Form Settings
   PcdSet8S (PcdNewDeviceHierarchy, PcdGet8 (PcdNewDeviceHierarchy));
 
-  // Initialize OS Selection Form Settings
-  PcdSet32S (PcdOsChainOverride, PcdGet32 (PcdOsChainOverride));
-
   // Initialize OS Chain A status Form Settings
   PcdSet32S (PcdOsChainStatusA, PcdGet32 (PcdOsChainStatusA));
 

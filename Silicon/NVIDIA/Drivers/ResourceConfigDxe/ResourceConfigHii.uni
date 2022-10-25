@@ -27,8 +27,6 @@
 #string STR_SERIAL_PORT_CONFIG_HELP      #language en-US "Used to select serial port configuration."
 #string STR_KERNEL_CMDLINE_PROMPT        #language en-US "Append to Kernel Command Line"
 #string STR_KERNEL_CMDLINE_HELP          #language en-US "Used to append command line to default kernel command line."
-#string STR_OS_OVERRIDE_PROMPT           #language en-US "Override OS selection"
-#string STR_OS_OVERRIDE_HELP             #language en-US "Used to override selection of A/B partitions."
 #string STR_OS_STATUS_A_PROMPT           #language en-US "OS chain A status"
 #string STR_OS_STATUS_A_HELP             #language en-US "Used to set the status of OS chain A."
 #string STR_OS_STATUS_B_PROMPT           #language en-US "OS chain B status"

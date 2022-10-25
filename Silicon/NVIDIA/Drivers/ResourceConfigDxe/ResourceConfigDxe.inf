@@ -61,7 +61,6 @@
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
   gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy
-  gNVIDIATokenSpaceGuid.PcdOsChainOverride
   gNVIDIATokenSpaceGuid.PcdOsChainStatusA
   gNVIDIATokenSpaceGuid.PcdOsChainStatusB
   gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode

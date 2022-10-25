@@ -26,11 +26,10 @@
 #define KEY_NEW_DEVICE_HIERARCHY      0x0103
 #define KEY_SERIAL_PORT_CONFIG        0x0104
 #define KEY_KERNEL_CMDLINE            0x0105
-#define KEY_OS_CHAIN_OVERRIDE         0x0106
-#define KEY_L4T_BOOTMODE_DEFAULT      0x0107
-#define KEY_RESET_VARIABLES           0x0108
-#define KEY_OS_CHAIN_STATUS_A         0x0109
-#define KEY_OS_CHAIN_STATUS_B         0x0110
+#define KEY_L4T_BOOTMODE_DEFAULT      0x0106
+#define KEY_RESET_VARIABLES           0x0107
+#define KEY_OS_CHAIN_STATUS_A         0x0108
+#define KEY_OS_CHAIN_STATUS_B         0x0109
 
 #define PCIE_IN_OS_DISABLE  0x0
 #define PCIE_IN_OS_ENABLE   0x1
