@@ -179,6 +179,10 @@
   #
   Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
+  #
+  # MM Error Serialization Driver
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
 
 [Components.AARCH64]
 

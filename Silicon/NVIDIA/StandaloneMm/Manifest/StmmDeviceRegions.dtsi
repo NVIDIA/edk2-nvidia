@@ -60,3 +60,10 @@ th500-gpio-socket3 {
   pages-count  = < 16 >;
   attributes   = < 0x3 >;                   // read-write
 };
+
+lic-sw-io-erst { /* TH500_SW_IO6_BASE */
+	base-address = <0x00000000 0x03F60000>;
+	pages-count = <1>;
+	attributes = <0x3>; /* read-write */
+	nv-ras-intr = <230>;
+};

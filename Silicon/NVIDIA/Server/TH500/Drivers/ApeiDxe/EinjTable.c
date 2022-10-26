@@ -7,6 +7,8 @@
 **/
 #include "Apei.h"
 #include <TH500/TH500Definitions.h>
+#include <LicSwIo.h>
+
 typedef struct {
   EFI_ACPI_6_4_ERROR_INJECTION_TABLE_HEADER        Header;
   EFI_ACPI_6_4_EINJ_INJECTION_INSTRUCTION_ENTRY    Entries[EINJ_ENTRIES_COUNT];

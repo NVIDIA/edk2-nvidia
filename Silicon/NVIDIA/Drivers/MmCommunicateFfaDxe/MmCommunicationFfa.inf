@@ -56,6 +56,8 @@
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdVariableRtProperties
   gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled
+  gNVIDIATokenSpaceGuid.PcdErstBufferBase
+  gNVIDIATokenSpaceGuid.PcdErstBufferSize
 
 [Pcd.common]
   gArmTokenSpaceGuid.PcdMmBufferBase

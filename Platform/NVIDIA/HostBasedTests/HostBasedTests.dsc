@@ -86,6 +86,17 @@
   }
 
   #
+  # ErrorSerializationMmDxe Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/UnitTest/ErrorSerializationDxeUnitTestsHost.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
+      MmServicesTableLib|MdePkg/Library/StandaloneMmServicesTableLib/StandaloneMmServicesTableLib.inf
+      StandaloneMmDriverEntryPoint|MdePkg/Library/StandaloneMmDriverEntryPoint/StandaloneMmDriverEntryPoint.inf
+      TimerLib|MdePkg/Library/BaseTimerLibNullTemplate/BaseTimerLibNullTemplate.inf
+  }
+
+  #
   # IPMI BootOrder tests
   #
   Silicon/NVIDIA/Library/PlatformBootOrderLib/UnitTest/IpmiBootOrderUnitTest.inf {

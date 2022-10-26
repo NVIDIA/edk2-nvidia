@@ -27,6 +27,7 @@
 #include <IndustryStandard/ArmFfaSvc.h>
 #include <Server/RASNSInterface.h>
 #include <libfdt.h>
+#include <Server/Erst.h>
 
 /* ACPI table creation default values */
 #define EFI_ACPI_OEM_ID            {'N','V','I','D','I','A'}
@@ -79,9 +80,6 @@ typedef struct {
 #define ARM_SVC_ID_FFA_RXTX_MAP            0xC4000066
 #define ARM_SVC_ID_FFA_RXTX_UNMAP          0x84000067
 #define ARM_SVC_ID_FFA_RX_RELEASE          0x84000065
-
-/* LIC SW IO Set register offset */
-#define INTR_CTLR_SW_IO_N_INTR_STATUS_SET_0_OFFSET  0x04
 
 /* There are 10 unique entries supported in EINJ */
 #define EINJ_ENTRIES_COUNT  10

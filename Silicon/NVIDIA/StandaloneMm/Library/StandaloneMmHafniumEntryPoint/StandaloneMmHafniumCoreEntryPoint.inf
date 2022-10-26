@@ -53,6 +53,9 @@
   ArmSvcLib
   CacheMaintenanceLib
 
+[Protocols]
+  gNVIDIAErrorSerializationProtocolGuid
+
 [Guids]
   gMpInformationHobGuid
   gEfiMmPeiMmramMemoryReserveGuid

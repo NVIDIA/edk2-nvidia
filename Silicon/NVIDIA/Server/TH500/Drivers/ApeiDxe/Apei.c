@@ -10,6 +10,7 @@
 
 EFI_ACPI_TABLE_PROTOCOL  *AcpiTableProtocol;
 RAS_FW_BUFFER            RasFwBufferInfo;
+VOID                     *MMCommProtNotify;
 
 STATIC
 RAS_PCIE_DPC_COMM_BUF_INFO  *NVIDIARasNsCommPcieDpcData = NULL;
@@ -79,11 +80,14 @@ ApeiDxeInitialize (
   BOOLEAN     SkipHest;
   BOOLEAN     SkipBert;
   BOOLEAN     SkipEinj;
+  BOOLEAN     SkipErst;
+  EFI_EVENT   MmCommunication2ReadyEvent;
 
   SkipSdei = FALSE;
   SkipHest = FALSE;
   SkipBert = FALSE;
   SkipEinj = FALSE;
+  SkipErst = FALSE;
 
   Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
   if (EFI_ERROR (Status)) {
@@ -110,6 +114,11 @@ ApeiDxeInitialize (
     if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-einj-table", NULL)) {
       SkipEinj = TRUE;
       DEBUG ((DEBUG_ERROR, "%a: Skip EINJ Table\r\n", __FUNCTION__));
+    }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-erst-table", NULL)) {
+      SkipErst = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip ERST Table\r\n", __FUNCTION__));
     }
   }
 
@@ -183,6 +192,21 @@ ApeiDxeInitialize (
   }
 
   DEBUG ((DEBUG_VERBOSE, "%a: Successfully installed NVIDIARasNsCommPcieDpcDataProtocol (%r)\r\n", __FUNCTION__, Status));
+
+  // ERST uses MmCommunication2's buffer, so don't install till available
+  if (!SkipErst) {
+    MmCommunication2ReadyEvent = EfiCreateProtocolNotifyEvent (
+                                   &gEfiMmCommunication2ProtocolGuid,
+                                   TPL_CALLBACK,
+                                   ErstSetupTable,
+                                   NULL,
+                                   &MMCommProtNotify
+                                   );
+    if (NULL == MmCommunication2ReadyEvent) {
+      Status = EFI_OUT_OF_RESOURCES;
+      return Status;
+    }
+  }
 
   return Status;
 }

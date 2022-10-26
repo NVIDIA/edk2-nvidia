@@ -53,8 +53,11 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define STMM_GET_NS_BUFFER             0xC0270001
 #define STMM_GET_ERST_UNCACHED_BUFFER  0xC0270002
 #define STMM_GET_ERST_CACHED_BUFFER    0xC0270003
+#define STMM_SATMC_EVENT               0xC0270005
 #define RASFW_VMID                     0x8003
 #define SATMC_VMID                     0x8001
+
+#define TH500_ERST_SW_IO_6_GIC_ID_SOCKET0  230
 
 #define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
 
@@ -510,6 +513,90 @@ GetAndPrintManifestinformation (
   return EFI_SUCCESS;
 }
 
+// JDS TODO - clean this up once I figure out how to add the header
+typedef
+EFI_STATUS
+(EFIAPI *ERROR_SERIALIZATION_INTERRUPT_HANDLER)(
+  IN     EFI_HANDLE  DispatchHandle,
+  IN     CONST VOID  *RegisterContext,
+  IN OUT VOID        *CommBuffer,
+  IN OUT UINTN       *CommBufferSize
+  );
+
+typedef struct {
+  ERROR_SERIALIZATION_INTERRUPT_HANDLER    InterruptHandler;
+} ERROR_SERIALIZATION_MM_PROTOCOL;
+
+STATIC ERROR_SERIALIZATION_MM_PROTOCOL  *ErrorSerializationProtocol;
+
+EFI_STATUS
+GetErrorSerializationProtocol (
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       Index;
+  UINTN       NumHandles;
+  UINTN       HandleBufferSize;
+  EFI_HANDLE  HandleBuffer[1];
+
+  if (ErrorSerializationProtocol != NULL) {
+    return EFI_SUCCESS;
+  }
+
+  ErrorSerializationProtocol = NULL;
+
+  HandleBufferSize = sizeof (HandleBuffer);
+  Status           = gMmst->MmLocateHandle (
+                              ByProtocol,
+                              &gNVIDIAErrorSerializationProtocolGuid,
+                              NULL,
+                              &HandleBufferSize,
+                              HandleBuffer
+                              );
+  if (Status != EFI_SUCCESS) {
+    DEBUG ((DEBUG_ERROR, "Error locating MM-ErrorSerialization handles: %r\n", Status));
+    if (Status == EFI_BUFFER_TOO_SMALL) {
+      DEBUG ((DEBUG_ERROR, "The Handle buffer size (%lu) is too small\n", HandleBufferSize));
+    }
+
+    goto Done;
+  }
+
+  NumHandles = HandleBufferSize / sizeof (EFI_HANDLE);
+
+  for (Index = 0; Index < NumHandles; Index++) {
+    Status = gMmst->MmHandleProtocol (
+                      HandleBuffer[Index],
+                      &gNVIDIAErrorSerializationProtocolGuid,
+                      (VOID **)&ErrorSerializationProtocol
+                      );
+    if ((Status != EFI_SUCCESS) || (ErrorSerializationProtocol == NULL)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Failed to get MM-ErrorSerializationProtocol for handle index %u: %r\n",
+        Index,
+        Status
+        ));
+      if ((Status == EFI_SUCCESS) && (ErrorSerializationProtocol == NULL)) {
+        DEBUG ((DEBUG_ERROR, "Couldn't get MM-ErrorSerialization Protocol\n"));
+        Status = EFI_NO_MAPPING;
+      }
+
+      goto Done;
+    }
+
+    if (TRUE) {
+      goto Done;
+    }
+  }
+
+  DEBUG ((DEBUG_ERROR, "Couldn't locate MM-ErrorSerialization Protocol\n"));
+  Status = EFI_NO_MEDIA;
+
+Done:
+  return Status;
+}
+
 /**
  * Check if payload buffer address is valid for the sender VM's. A valid payload address
  * should be in the correct range for this VM's mailbox (that is in StMM's manifest) and
@@ -714,6 +801,17 @@ DelegatedEventLoop (
           EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsErstCachedBufSize;
           Status                     = EFI_SUCCESS;
           break;
+        case STMM_SATMC_EVENT:
+          if (EventCompleteSvcArgs->Arg6 == TH500_ERST_SW_IO_6_GIC_ID_SOCKET0) {
+            Status = GetErrorSerializationProtocol ();
+            if (ErrorSerializationProtocol != NULL) {
+              Status = ErrorSerializationProtocol->InterruptHandler (NULL, NULL, NULL, NULL);
+            }
+          } else {
+            Status = EFI_UNSUPPORTED;
+          }
+
+          break;
         case ARM_SMC_ID_MM_COMMUNICATE_AARCH64:
           if (SenderPartId == 0) {
             Status = CpuDriverEntryPoint (
@@ -743,6 +841,7 @@ DelegatedEventLoop (
 
           break;
         default:
+          DEBUG ((DEBUG_ERROR, "Unknown DelegatedEvent request 0x%x\n", EventCompleteSvcArgs->Arg3));
           Status = EFI_UNSUPPORTED;
           break;
       }

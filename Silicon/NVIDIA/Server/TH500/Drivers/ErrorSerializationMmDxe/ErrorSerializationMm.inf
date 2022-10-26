@@ -1,0 +1,51 @@
+#/** @file
+#  NVIDIA ERST Driver Inf
+#
+#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = ErrorSerializationMmDxe
+  FILE_GUID                      = f23764aa-765e-4dfa-b8f3-a95e2d920d39
+  MODULE_TYPE                    = MM_STANDALONE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  ENTRY_POINT                    = ErrorSerializationMmDxeInitialize
+
+[Sources.Common]
+  ErrorSerializationMm.c
+  ErrorSerializationMemory.c
+
+[Sources.AARCH64]
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  StandaloneMmDriverEntryPoint
+  DebugLib
+  MemoryAllocationLib
+  BaseMemoryLib
+  IoLib
+  MmServicesTableLib
+  HobLib
+  StandaloneMmOpteeLib
+  PlatformResourceLib
+  TimerLib
+
+[Protocols]
+  gNVIDIANorFlashProtocolGuid         # ALWAYS_CONSUMED
+  gNVIDIAErrorSerializationProtocolGuid
+
+[Guids]
+  gNVIDIAStMMBuffersGuid
+
+[Depex]
+  TRUE

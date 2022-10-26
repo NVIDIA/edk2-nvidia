@@ -20,6 +20,7 @@
   EinjTable.c
   RASFwInterface.c
   RASTimeOfDay.c
+  ErstTable.c
 
 [Sources.AARCH64]
   AArch64/FfaSmc.S
@@ -46,9 +47,13 @@
   gEfiApeiGetErrorSourcesGuid     # PROTOCOL ALWAYS_CONSUMED
   gEfiApeiSetTimeOfDayGuid        # PROTOCOL ALWAYS CONSUMED
   gNVIDIARasNsCommPcieDpcDataProtocolGuid
+  gEfiMmCommunication2ProtocolGuid
+  gNVIDIAErrorSerializationProtocolGuid
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gNVIDIATokenSpaceGuid.PcdErstBufferBase
+  gNVIDIATokenSpaceGuid.PcdErstBufferSize
 
 [Depex]
   gEfiAcpiTableProtocolGuid

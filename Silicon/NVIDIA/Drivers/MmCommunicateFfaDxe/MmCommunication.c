@@ -36,6 +36,7 @@
 #define ARM_SVC_ID_FFA_SUCCESS_AARCH64     0xC4000061
 #define ARM_SVC_ID_FFA_SUCCESS_AARCH32     0x84000060
 #define STMM_GET_NS_BUFFER                 0xC0270001
+#define STMM_GET_ERST_UNCACHED_BUFFER      0xC0270002
 #define ARM_SVC_ID_FFA_RX_RELEASE          0x84000065
 
 STATIC UINT16  StmmVmId = 0xFFFF;
@@ -46,6 +47,12 @@ GetStmmVmId (
 
 STATIC EFI_STATUS
 GetNsBufferAddr (
+  VOID
+  );
+
+STATIC
+EFI_STATUS
+GetErstBufferAddr (
   VOID
   );
 
@@ -379,6 +386,16 @@ GetMmCompatibility (
         Status
         ));
     }
+
+    Status = GetErstBufferAddr ();
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to get ERST Buffer Details. %r\n",
+        __FUNCTION__,
+        Status
+        ));
+    }
   } else {
     DEBUG ((
       DEBUG_ERROR,
@@ -465,7 +482,7 @@ MmCommunication2Initialize (
   mNsCommBuffMemRegion.PhysicalBase =  PcdGet64 (PcdMmBufferBase);
   // During boot , Virtual and Physical are same
   mNsCommBuffMemRegion.VirtualBase = mNsCommBuffMemRegion.PhysicalBase;
-  mNsCommBuffMemRegion.Length      =  PcdGet64 (PcdMmBufferSize);
+  mNsCommBuffMemRegion.Length      = PcdGet64 (PcdMmBufferSize);
 
   ASSERT (mNsCommBuffMemRegion.PhysicalBase != 0);
 
@@ -673,14 +690,14 @@ FfaFreeRxTxBuffers (
 
 STATIC
 EFI_STATUS
-GetNsBufferAddr (
-  VOID
+GetBufferAddr (
+  UINT32  BufferId,
+  UINT64  *BufferBase,
+  UINT64  *BufferSize
   )
 {
   EFI_STATUS    Status;
   ARM_SMC_ARGS  ArmSmcArgs;
-  UINT64        NsBufferBase;
-  UINT32        NsBufferSize;
 
   if (StmmVmId ==  0xFFFF) {
     return EFI_INVALID_PARAMETER;
@@ -691,7 +708,7 @@ GetNsBufferAddr (
 
   ArmSmcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64;
   ArmSmcArgs.Arg1 = StmmVmId;
-  ArmSmcArgs.Arg3 = STMM_GET_NS_BUFFER;
+  ArmSmcArgs.Arg3 = BufferId;
 
   StmmFfaSmc (&ArmSmcArgs);
 
@@ -706,20 +723,62 @@ GetNsBufferAddr (
     goto exit;
   }
 
-  NsBufferBase = ArmSmcArgs.Arg5;
-  NsBufferSize = ArmSmcArgs.Arg6;
+  *BufferBase = ArmSmcArgs.Arg5;
+  *BufferSize = ArmSmcArgs.Arg6;
+
+exit:
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+GetNsBufferAddr (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      NsBufferBase;
+  UINT64      NsBufferSize;
+
+  Status = GetBufferAddr (STMM_GET_NS_BUFFER, &NsBufferBase, &NsBufferSize);
 
   PcdSet64S (PcdMmBufferBase, NsBufferBase);
   PcdSet64S (PcdMmBufferSize, NsBufferSize);
+
   DEBUG ((
     DEBUG_ERROR,
-    "%a: Set NufBase to %lu Size %u\n",
+    "%a: Set NsBufferBase to %lu Size %lu\n",
     __FUNCTION__,
     NsBufferBase,
     NsBufferSize
     ));
 
-exit:
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+GetErstBufferAddr (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      ErstBufferBase;
+  UINT64      ErstBufferSize;
+
+  Status = GetBufferAddr (STMM_GET_ERST_UNCACHED_BUFFER, &ErstBufferBase, &ErstBufferSize);
+
+  PcdSet64S (PcdErstBufferBase, ErstBufferBase);
+  PcdSet64S (PcdErstBufferSize, ErstBufferSize);
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Set ErstBufferBase to %llx Size %llx\n",
+    __FUNCTION__,
+    ErstBufferBase,
+    ErstBufferSize
+    ));
+
   return Status;
 }
 

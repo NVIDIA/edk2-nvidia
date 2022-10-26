@@ -246,6 +246,7 @@
   gNVIDIAHostInterfaceReadyProtocolGuid           = { 0x554de793, 0xd07b, 0x4420, { 0xa6, 0x84, 0x0a, 0x80, 0x5c, 0x9c, 0x87, 0x8e } }
   gNVIDIACmetStorageGuid                          = { 0x6eddd254, 0x16e9, 0x4406, { 0xa7, 0xee, 0xd9, 0xd0, 0xef, 0x6a, 0x6d, 0xff } }
   gNVIDIAUserAuthenticationProtocolGuid           = { 0xa1e191fa, 0xc8fb, 0x11ed, { 0x91, 0x24, 0x5f, 0xe4, 0xa5, 0x8e, 0x1e, 0xd6 } }
+  gNVIDIAErrorSerializationProtocolGuid           = { 0xdbe0b12b, 0x72da, 0x4bf6, { 0x95, 0xc1, 0x0b, 0xb2, 0x43, 0xb8, 0x8e, 0xb6 } }
 
 [PcdsFixedAtBuild.common]
 #Tegra Combined UART mailboxes
@@ -396,6 +397,7 @@
 
 # Use FAST reads in S QSPI controllers
   gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead|TRUE|BOOLEAN|0x00000099
+
 # Floorsweeping runtime variable exposure
 # EXPOSE_PCIE_FLOORSWEEPING_VARIABLE          0x0001
 # EXPOSE_NVML_FLOORSWEEPING_VARIABLE          0x0002
@@ -623,6 +625,10 @@
 
 #Option to enable/disable EFI FB for dGPU
   gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport|0x00|UINT8|0x0000009C
+
+# Description of the Erst buffer
+  gNVIDIATokenSpaceGuid.PcdErstBufferBase|0x0|UINT64|0x0000009D
+  gNVIDIATokenSpaceGuid.PcdErstBufferSize|0x0|UINT64|0x0000009E
 
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature

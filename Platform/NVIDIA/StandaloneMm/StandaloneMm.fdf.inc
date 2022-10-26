@@ -56,6 +56,10 @@
   #
   INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
+  #
+  # MM Error Serialization Driver
+  #
+  INF Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
 
 ################################################################################
 #
