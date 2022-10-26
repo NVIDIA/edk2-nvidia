@@ -1,0 +1,31 @@
+/** @file
+  String definitions for the Shell HostInterfaceUtil application.
+
+  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#langdef en-US "English"
+
+#string STR_HOST_INTERFACE_UTIL_UNKNOWN_OPERATION         #language en-US  "%s: Operation not specified.\n"
+#string STR_HOST_INTERFACE_UTIL_PROTOCOL_NOT_READY        #language en-US  "Redfish credential protocol is not ready: %r\n"
+#string STR_HOST_INTERFACE_UTIL_STOP_FAILED               #language en-US  "Fail to stop bootstrap credential service: %r\n"
+#string STR_HOST_INTERFACE_UTIL_STOP_SUCCESS              #language en-US  "Stop bootstrap credential service\n"
+#string STR_HOST_INTERFACE_UTIL_GET_CREDENTIAL_FAILED     #language en-US  "Fail to get bootstrap credential: %r\n"
+#string STR_HOST_INTERFACE_UTIL_SHOW_USERNAME             #language en-US  "Username: %a\n"
+#string STR_HOST_INTERFACE_UTIL_SHOW_PASSWD               #language en-US  "Password: %a\n"
+#string STR_HOST_INTERFACE_UTIL_HELP                      #language en-US  ""
+".TH HostInterfaceUtil 0 "Test bootstrap IPMI command."\r\n"
+".SH NAME\r\n"
+"Test bootstrap IPMI command.\r\n"
+".SH SYNOPSIS\r\n"
+" \r\n"
+"%HHostInterfaceUtil [-help]\r\n"
+".SH OPTIONS\r\n"
+" \r\n"
+"%Hcommand%N:\r\n"
+"  -disable                         Disables bootstrap service.\r\n"
+"  -?                               Displays this help.\r\n"
+" \r\n"

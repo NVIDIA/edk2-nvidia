@@ -284,3 +284,11 @@
       *_*_*_PLATFORM_FLAGS = -Wno-unused-value -Wno-multistatement-macros
   }
 !endif
+
+  #
+  # Host Interface test Application
+  #
+  Silicon/NVIDIA/Application/HostInterfaceUtil/HostInterfaceUtil.inf  {
+    <LibraryClasses>
+      RedfishPlatformCredentialLib|Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/RedfishPlatformCredentialLib.inf
+  }

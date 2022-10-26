@@ -1,0 +1,17 @@
+// /** @file
+// Shell application HostInterfaceUtil.
+//
+// This application is used to test IPMI command between BIOS an BMC in order to
+// get bootstrap credential.
+//
+// Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+//
+// **/
+
+
+#string STR_MODULE_ABSTRACT             #language en-US "Shell application HostInterfaceUtil"
+
+#string STR_MODULE_DESCRIPTION          #language en-US "This application is used to test IPMI command between BIOS an BMC in order to get bootstrap credential"
+

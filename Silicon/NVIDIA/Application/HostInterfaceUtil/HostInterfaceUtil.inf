@@ -1,0 +1,57 @@
+## @file
+#  Shell application HostInterfaceUtil.
+#
+#  This application is used to test IPMI command between BIOS an BMC in order to
+#  get bootstrap credential.
+#
+# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = HostInterfaceUtil
+  FILE_GUID                      = 84BC4CA8-1EE6-4A82-8CBE-749059BE695E
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeHostInterfaceUtil
+  MODULE_UNI_FILE                = HostInterfaceUtil.uni
+
+#
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  HostInterfaceUtilStrings.uni
+  HostInterfaceUtil.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  RedfishPkg/RedfishPkg.dec
+  ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiApplicationEntryPoint
+  UefiHiiServicesLib
+  BaseMemoryLib
+  ShellLib
+  MemoryAllocationLib
+  DebugLib
+  HiiLib
+  UefiLib
+  RedfishPlatformCredentialLib
+
+[Protocols]
+  gEfiHiiPackageListProtocolGuid                ##CONSUMES
+  gEdkIIRedfishCredentialProtocolGuid           ##CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  HostInterfaceUtilExtra.uni
+
