@@ -101,42 +101,6 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     0,
     FixedPcdGet64 (PcdAcpiDefaultOemRevision)
   },
-  // IORT Table
-  {
-    EFI_ACPI_6_4_IO_REMAPPING_TABLE_SIGNATURE,
-    EFI_ACPI_IO_REMAPPING_TABLE_REVISION_00,
-    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdIort),
-    NULL,
-    0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
-  },
-  // SRAT Table
-  {
-    EFI_ACPI_6_4_SYSTEM_RESOURCE_AFFINITY_TABLE_SIGNATURE,
-    EFI_ACPI_6_4_SYSTEM_RESOURCE_AFFINITY_TABLE_REVISION,
-    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSrat),
-    NULL,
-    0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
-  },
-  // SLIT Table
-  {
-    EFI_ACPI_6_4_SYSTEM_LOCALITY_INFORMATION_TABLE_SIGNATURE,
-    EFI_ACPI_6_4_SYSTEM_LOCALITY_INFORMATION_TABLE_REVISION,
-    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSlit),
-    NULL,
-    0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
-  },
-  // HMAT Table
-  {
-    EFI_ACPI_6_4_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_SIGNATURE,
-    EFI_ACPI_6_4_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_REVISION,
-    CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdHmat),
-    NULL,
-    0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
-  },
 };
 
 /** The platform boot architecture information.
@@ -371,6 +335,14 @@ InitializePlatformRepository (
   EFI_STATUS                      Status;
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
   EDKII_PLATFORM_REPOSITORY_INFO  *RepoEnd;
+  VOID                            *DtbBase;
+  UINTN                           DtbSize;
+  INTN                            NodeOffset;
+  BOOLEAN                         SkipSlit;
+  BOOLEAN                         SkipSrat;
+  BOOLEAN                         SkipHmat;
+  BOOLEAN                         SkipIort;
+  BOOLEAN                         SkipMpam;
 
   NVIDIAPlatformRepositoryInfo = (EDKII_PLATFORM_REPOSITORY_INFO *)AllocateZeroPool (sizeof (EDKII_PLATFORM_REPOSITORY_INFO) * PcdGet32 (PcdConfigMgrObjMax));
 
@@ -439,6 +411,44 @@ InitializePlatformRepository (
     Repo++;
   }
 
+  SkipSlit = FALSE;
+  SkipSrat = FALSE;
+  SkipHmat = FALSE;
+  SkipIort = FALSE;
+  SkipMpam = FALSE;
+  Status   = DtPlatformLoadDtb (&DtbBase, &DtbSize);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  NodeOffset = fdt_path_offset (DtbBase, "/firmware/uefi");
+  if (NodeOffset >= 0) {
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-slit-table", NULL)) {
+      SkipSlit = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip SLIT Table\r\n", __FUNCTION__));
+    }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-srat-table", NULL)) {
+      SkipSrat = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip SRAT Table\r\n", __FUNCTION__));
+    }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-hmat-table", NULL)) {
+      SkipHmat = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip HMAT Table\r\n", __FUNCTION__));
+    }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-iort-table", NULL)) {
+      SkipIort = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip IORT Table\r\n", __FUNCTION__));
+    }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-mpam-table", NULL)) {
+      SkipMpam = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip MPAM Table\r\n", __FUNCTION__));
+    }
+  }
+
   Status = UpdateCpuInfo (&Repo);
   if (EFI_ERROR (Status)) {
     return Status;
@@ -464,31 +474,39 @@ InitializePlatformRepository (
     return Status;
   }
 
-  Status = InstallIoRemappingTable (&Repo, (UINTN)RepoEnd);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (!SkipIort) {
+    Status = InstallIoRemappingTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
-  if (IsMpamEnabled ()) {
+  if ((!SkipMpam) && (IsMpamEnabled ())) {
     Status = InstallMpamTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
     if (EFI_ERROR (Status)) {
       return Status;
     }
   }
 
-  Status = InstallStaticResourceAffinityTable (&Repo, (UINTN)RepoEnd);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (!SkipSrat) {
+    Status = InstallStaticResourceAffinityTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
-  Status = InstallStaticLocalityInformationTable (&Repo, (UINTN)RepoEnd);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (!SkipSlit) {
+    Status = InstallStaticLocalityInformationTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
-  Status = InstallHeterogeneousMemoryAttributeTable (&Repo, (UINTN)RepoEnd);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (!SkipHmat) {
+    Status = InstallHeterogeneousMemoryAttributeTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
   ASSERT ((UINTN)Repo <= (UINTN)RepoEnd);

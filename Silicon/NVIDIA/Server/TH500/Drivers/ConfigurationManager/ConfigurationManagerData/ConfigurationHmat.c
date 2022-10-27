@@ -29,10 +29,12 @@ EFI_STATUS
 EFIAPI
 InstallHeterogeneousMemoryAttributeTable (
   IN OUT  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo,
-  IN      UINTN                           PlatformRepositoryInfoEnd
+  IN      UINTN                           PlatformRepositoryInfoEnd,
+  IN      EDKII_PLATFORM_REPOSITORY_INFO  *NVIDIAPlatformRepositoryInfo
   )
 {
   EDKII_PLATFORM_REPOSITORY_INFO          *Repo;
+  CM_STD_OBJ_ACPI_TABLE_INFO              *NewAcpiTables;
   CM_ARM_LOCALITY_LATENCY_BANDWIDTH_INFO  *SysInfo;
   UINT32                                  SysInfoStructCount;
   UINT32                                  SysInfoStructIndex;
@@ -44,6 +46,38 @@ InstallHeterogeneousMemoryAttributeTable (
   UINT32                                  *InitiatorProximityDomainList;
   UINT32                                  *TargetProximityDomainList;
   UINT32                                  Index;
+
+  // Create a ACPI Table Entry
+  for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
+    if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
+      NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (
+                                                      NVIDIAPlatformRepositoryInfo[Index].CmObjectSize +
+                                                      (sizeof (CM_STD_OBJ_ACPI_TABLE_INFO)),
+                                                      NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr
+                                                      );
+
+      if (NewAcpiTables == NULL) {
+        return EFI_OUT_OF_RESOURCES;
+      }
+
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
+
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_SYSTEM_RESOURCE_AFFINITY_TABLE_SIGNATURE;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision  = EFI_ACPI_6_4_SYSTEM_RESOURCE_AFFINITY_TABLE_REVISION;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSrat);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = NULL;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = 0;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+
+      break;
+    } else if (NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr == NULL) {
+      break;
+    }
+  }
+
+  Repo = *PlatformRepositoryInfo;
 
   SysInfoStructCount = 6; // Maximum types allowed by this structure
   SysInfoStructIndex = 0;
@@ -248,7 +282,6 @@ InstallHeterogeneousMemoryAttributeTable (
   SysInfo[SysInfoStructIndex].LatencyBandwidthEntries      = AccessBandwidthList;
   SysInfoStructIndex++;
 
-  Repo                = *PlatformRepositoryInfo;
   Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjLocalityLatencyBandwidthInfo);
   Repo->CmObjectSize  = sizeof (CM_ARM_LOCALITY_LATENCY_BANDWIDTH_INFO) * SysInfoStructIndex;
   Repo->CmObjectCount = SysInfoStructIndex;

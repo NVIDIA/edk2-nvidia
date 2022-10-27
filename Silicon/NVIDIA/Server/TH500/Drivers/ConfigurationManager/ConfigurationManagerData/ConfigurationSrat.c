@@ -64,12 +64,14 @@ EFI_STATUS
 EFIAPI
 InstallStaticResourceAffinityTable (
   IN OUT  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo,
-  IN      UINTN                           PlatformRepositoryInfoEnd
+  IN      UINTN                           PlatformRepositoryInfoEnd,
+  IN      EDKII_PLATFORM_REPOSITORY_INFO  *NVIDIAPlatformRepositoryInfo
   )
 {
   UINTN                            Index;
   UINTN                            Socket;
   EFI_STATUS                       Status;
+  CM_STD_OBJ_ACPI_TABLE_INFO       *NewAcpiTables;
   EDKII_PLATFORM_REPOSITORY_INFO   *Repo;
   EFI_GCD_MEMORY_SPACE_DESCRIPTOR  *Descriptors;
   UINTN                            DescriptorCount;
@@ -78,6 +80,36 @@ InstallStaticResourceAffinityTable (
   UINTN                            MemoryAffinityInfoIndex;
   UINTN                            GpuMemoryAffinityId;
   UINT8                            NumEnabledSockets;
+
+  // Create a ACPI Table Entry
+  for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
+    if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
+      NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (
+                                                      NVIDIAPlatformRepositoryInfo[Index].CmObjectSize +
+                                                      (sizeof (CM_STD_OBJ_ACPI_TABLE_INFO)),
+                                                      NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr
+                                                      );
+
+      if (NewAcpiTables == NULL) {
+        return EFI_OUT_OF_RESOURCES;
+      }
+
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
+
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_SYSTEM_RESOURCE_AFFINITY_TABLE_SIGNATURE;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision  = EFI_ACPI_6_4_SYSTEM_RESOURCE_AFFINITY_TABLE_REVISION;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSrat);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = NULL;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = 0;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
+      NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+
+      break;
+    } else if (NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr == NULL) {
+      break;
+    }
+  }
 
   Repo = *PlatformRepositoryInfo;
 
@@ -145,6 +177,7 @@ InstallStaticResourceAffinityTable (
   ASSERT (MemoryAffinityInfoIndex == MemoryAffinityInfoCount);
 
   Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjMemoryAffinityInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
   Repo->CmObjectSize  = sizeof (CM_ARM_MEMORY_AFFINITY_INFO) * MemoryAffinityInfoCount;
   Repo->CmObjectCount = MemoryAffinityInfoCount;
   Repo->CmObjectPtr   = MemoryAffinityInfo;
