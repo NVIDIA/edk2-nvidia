@@ -514,6 +514,11 @@ InitializePlatformRepository (
     }
   }
 
+  Status = InstallArmPerformanceMonitoringUnitTable (NVIDIAPlatformRepositoryInfo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   ASSERT ((UINTN)Repo <= (UINTN)RepoEnd);
 
   return EFI_SUCCESS;

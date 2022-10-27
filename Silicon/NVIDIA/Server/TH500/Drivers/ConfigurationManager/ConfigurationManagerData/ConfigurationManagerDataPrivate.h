@@ -146,4 +146,19 @@ InstallStaticLocalityInformationTable (
   IN      EDKII_PLATFORM_REPOSITORY_INFO  *NVIDIAPlatformRepositoryInfo
   );
 
+/**
+  Install the APMT table to Configuration Manager Data driver
+
+  @param[in] PlatformRepositoryInfo      Pointer to the full Platform Repository
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+InstallArmPerformanceMonitoringUnitTable (
+  IN EDKII_PLATFORM_REPOSITORY_INFO  *PlatformRepositoryInfo
+  );
+
 #endif
