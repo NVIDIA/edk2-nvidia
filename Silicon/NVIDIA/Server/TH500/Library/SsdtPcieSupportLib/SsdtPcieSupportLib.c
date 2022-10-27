@@ -158,13 +158,18 @@ UpdateSharedNSMemAddr (
                   NULL,
                   (VOID **)&DpcCommBuf
                   );
-  if (EFI_ERROR (Status) || (DpcCommBuf == NULL)) {
+  if (EFI_ERROR (Status)) {
     DEBUG ((
       EFI_D_ERROR,
-      "%a: Couldn't get gNVIDIARasNsCommPcieDpcDataProtocolGuid Handle: %r\n",
+      "%a: Couldn't get gNVIDIARasNsCommPcieDpcDataProtocolGuid protocol: %r\n",
       __FUNCTION__,
       Status
       ));
+  }
+
+  if (DpcCommBuf == NULL) {
+    // Protocol installed NULL interface. Skip using it.
+    return EFI_SUCCESS;
   }
 
   DpcComm  = (RAS_FW_PCIE_DPC_COMM_STRUCT *)DpcCommBuf->PcieBase;

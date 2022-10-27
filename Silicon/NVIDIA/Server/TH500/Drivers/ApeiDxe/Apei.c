@@ -12,7 +12,7 @@ EFI_ACPI_TABLE_PROTOCOL  *AcpiTableProtocol;
 RAS_FW_BUFFER            RasFwBufferInfo;
 
 STATIC
-RAS_PCIE_DPC_COMM_BUF_INFO  *NVIDIARasNsCommPcieDpcData;
+RAS_PCIE_DPC_COMM_BUF_INFO  *NVIDIARasNsCommPcieDpcData = NULL;
 
 /*
  * Setup the ARM defined SDEI table to enable SDEI support in the OS. SDEI can
@@ -72,6 +72,46 @@ ApeiDxeInitialize (
   )
 {
   EFI_STATUS  Status;
+  VOID        *DtbBase;
+  UINTN       DtbSize;
+  INTN        NodeOffset;
+  BOOLEAN     SkipSdei;
+  BOOLEAN     SkipHest;
+  BOOLEAN     SkipBert;
+  BOOLEAN     SkipEinj;
+
+  SkipSdei = FALSE;
+  SkipHest = FALSE;
+  SkipBert = FALSE;
+  SkipEinj = FALSE;
+
+  Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  NodeOffset = fdt_path_offset (DtbBase, "/firmware/uefi");
+  if (NodeOffset >= 0) {
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-sdei-table", NULL)) {
+      SkipSdei = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip SDEI Table\r\n", __FUNCTION__));
+    }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-hest-table", NULL)) {
+      SkipHest = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip HEST Table\r\n", __FUNCTION__));
+    }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-bert-table", NULL)) {
+      SkipBert = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip BERT Table\r\n", __FUNCTION__));
+    }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-einj-table", NULL)) {
+      SkipEinj = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip EINJ Table\r\n", __FUNCTION__));
+    }
+  }
 
   ZeroMem ((UINT8 *)&RasFwBufferInfo, sizeof (RAS_FW_BUFFER));
 
@@ -84,47 +124,60 @@ ApeiDxeInitialize (
     return Status;
   }
 
-  Status = SdeiSetupTable ();
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (!SkipSdei) {
+    Status = SdeiSetupTable ();
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
   Status = FfaGetRasFwBuffer (&RasFwBufferInfo);
-  if (EFI_ERROR (Status)) {
+  if (!EFI_ERROR (Status)) {
+    gDS->AddMemorySpace (
+           EfiGcdMemoryTypeReserved,
+           RasFwBufferInfo.Base,
+           RasFwBufferInfo.Size,
+           EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
+           );
+
+    gDS->SetMemorySpaceAttributes (
+           RasFwBufferInfo.Base,
+           RasFwBufferInfo.Size,
+           EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
+           );
+
+    NVIDIARasNsCommPcieDpcData = (RAS_PCIE_DPC_COMM_BUF_INFO *)AllocateZeroPool (sizeof (RAS_PCIE_DPC_COMM_BUF_INFO));
+    if (NVIDIARasNsCommPcieDpcData == NULL) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: RAS_FW NS Memory allocation for NVIDIARasNsCommPcieDpcData failed\r\n",
+        __FUNCTION__
+        ));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    Status = HestBertSetupTables (&RasFwBufferInfo, SkipHest, SkipBert);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    if (!SkipEinj) {
+      Status = EinjSetupTable (&RasFwBufferInfo);
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+    }
+
+    NVIDIARasNsCommPcieDpcData->PcieBase = RasFwBufferInfo.PcieBase;
+    NVIDIARasNsCommPcieDpcData->PcieSize = RasFwBufferInfo.PcieSize;
+  } else {
     DEBUG ((
       EFI_D_ERROR,
-      "%a: Failed to get RAS_FW NS shared mem: %d\n",
+      "%a: Failed to get RAS_FW NS shared mem: %r\n",
       __FUNCTION__,
       Status
       ));
-    return Status;
   }
-
-  gDS->AddMemorySpace (
-         EfiGcdMemoryTypeReserved,
-         RasFwBufferInfo.Base,
-         RasFwBufferInfo.Size,
-         EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
-         );
-
-  gDS->SetMemorySpaceAttributes (
-         RasFwBufferInfo.Base,
-         RasFwBufferInfo.Size,
-         EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
-         );
-
-  NVIDIARasNsCommPcieDpcData = (RAS_PCIE_DPC_COMM_BUF_INFO *)AllocateZeroPool (sizeof (RAS_PCIE_DPC_COMM_BUF_INFO));
-  if (NVIDIARasNsCommPcieDpcData == NULL) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: RAS_FW NS Memory allocation for NVIDIARasNsCommPcieDpcData failed\r\n",
-      __FUNCTION__
-      ));
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  NVIDIARasNsCommPcieDpcData->PcieBase = RasFwBufferInfo.PcieBase;
-  NVIDIARasNsCommPcieDpcData->PcieSize = RasFwBufferInfo.PcieSize;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &ImageHandle,
@@ -138,16 +191,6 @@ ApeiDxeInitialize (
   }
 
   DEBUG ((DEBUG_VERBOSE, "%a: Successfully installed NVIDIARasNsCommPcieDpcDataProtocol (%r)\r\n", __FUNCTION__, Status));
-
-  Status = HestBertSetupTables (&RasFwBufferInfo);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = EinjSetupTable (&RasFwBufferInfo);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
 
   return Status;
 }

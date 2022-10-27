@@ -336,7 +336,9 @@ BERTCreateAcpiTable (
 
 EFI_STATUS
 HestBertSetupTables (
-  RAS_FW_BUFFER  *RasFwBufferInfo
+  RAS_FW_BUFFER  *RasFwBufferInfo,
+  BOOLEAN        SkipHestTable,
+  BOOLEAN        SkipBertTable
   )
 {
   EFI_MM_COMMUNICATE_HEADER   *CommunicationHeader;
@@ -368,8 +370,13 @@ HestBertSetupTables (
     ErrorSourceInfo->NumErrorSource
     ));
 
-  HESTCreateAcpiTable (ErrorSourceInfo);
-  BERTCreateAcpiTable (ErrorSourceInfo);
+  if (!SkipHestTable) {
+    HESTCreateAcpiTable (ErrorSourceInfo);
+  }
+
+  if (!SkipBertTable) {
+    BERTCreateAcpiTable (ErrorSourceInfo);
+  }
 
   FreePool (ErrorSourceInfo);
 

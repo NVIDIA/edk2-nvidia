@@ -25,6 +25,7 @@
 
 [Packages]
   ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
@@ -33,6 +34,7 @@
   UefiLib
   DxeServicesTableLib
   IoLib
+  DtPlatformDtbLoaderLib
 
 [Protocols]
   gEfiAcpiTableProtocolGuid       # PROTOCOL ALWAYS_CONSUMED

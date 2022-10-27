@@ -18,12 +18,14 @@
 #include <Library/ArmSmcLib.h>
 #include <Library/DxeServicesTableLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/DtPlatformDtbLoaderLib.h>
 #include <Protocol/AcpiTable.h>
 #include <Protocol/Apei.h>
 #include <Protocol/MmCommunication2.h>
 #include <Protocol/RasNsCommPcieDpcDataProtocol.h>
 #include <IndustryStandard/ArmFfaSvc.h>
 #include <Server/RASNSInterface.h>
+#include <libfdt.h>
 
 /* ACPI table creation default values */
 #define EFI_ACPI_OEM_ID            {'N','V','I','D','I','A'}
@@ -93,7 +95,9 @@ typedef struct {
 **/
 EFI_STATUS
 HestBertSetupTables (
-  IN RAS_FW_BUFFER  *RasFwBufferInfo
+  IN RAS_FW_BUFFER  *RasFwBufferInfo,
+  IN BOOLEAN        SkipHestTable,
+  IN BOOLEAN        SkipBertTable
   );
 
 /**
