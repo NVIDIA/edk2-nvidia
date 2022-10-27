@@ -30,7 +30,7 @@
   PL011UartClockLib|ArmPlatformPkg/Library/PL011UartClockLib/PL011UartClockLib.inf
   PL011UartLib|ArmPlatformPkg/Library/PL011UartLib/PL011UartLib.inf
 
-  RealTimeClockLib|Silicon/NVIDIA/Library/MaximRealTimeClockLib/MaximRealTimeClockLib.inf
+  RealTimeClockLib|Silicon/NVIDIA/Library/NuvotonRealTimeClockLib/NuvotonRealTimeClockLib.inf
 
   SsdtPcieSupportLib|Silicon/NVIDIA/Server/TH500/Library/SsdtPcieSupportLib/SsdtPcieSupportLib.inf
 
@@ -96,7 +96,8 @@
   ##Type 32 (Boot Information)
   gNVIDIATokenSpaceGuid.PcdType32Info|{ 0 }
   gNVIDIATokenSpaceGuid.PcdType32Info.BootStatus|BootInformationStatusNoError
-
+  ## RTC
+  gNVIDIATokenSpaceGuid.PcdCpuHasRtcControl|TRUE
 
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
 
