@@ -619,5 +619,27 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     {
       Name (_HID, "NVDA200B")
     }
+
+    //---------------------------------------------------------------------
+    // MCF Devices
+    //---------------------------------------------------------------------
+    //MCF NVLINK Chiplet
+    Device (MNVL)
+    {
+      Name (_HID, "NVDA1180")
+      Name (_UID, 0)
+    }
+    //MCF C2C Chiplet
+    Device (MC2C)
+    {
+      Name (_HID, "NVDA1180")
+      Name (_UID, 1)
+    }
+    //MCF SOC-HUB Chiplet
+    Device (MSHB)
+    {
+      Name (_HID, "NVDA1180")
+      Name (_UID, 2)
+    }
   }
 }
