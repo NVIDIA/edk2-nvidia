@@ -97,6 +97,12 @@
 			base-address = <0x00000000 0x8B7FF000>;
 			attributes = <0x3>; /* read-write */
 		};
+		cpubl-params {
+			description  = "cpubl-params";
+			pages-count  = < 0x10 >;
+			base-address = < 0x00000000 0x9C000000 >;
+			attributes   = < 0x1 >; /* read-only */
+		};
 	};
 
 	device-regions {

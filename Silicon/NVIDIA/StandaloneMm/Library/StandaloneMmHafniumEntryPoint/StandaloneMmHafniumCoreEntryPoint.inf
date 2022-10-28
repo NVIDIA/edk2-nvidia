@@ -45,6 +45,7 @@
   PcdLib
   FdtLib
   TegraPlatformInfoLib
+  PlatformResourceLib
   StandaloneMmOpteeLib
 
 [LibraryClasses.AARCH64]
@@ -59,6 +60,8 @@
   gEfiArmTfCpuDriverEpDescriptorGuid
   gMmCoreDataHobGuid
   gEfiStandaloneMmDeviceMemoryRegions
+  gNVIDIAPlatformResourceDataGuid
+  gNVIDIAStMMBuffersGuid
 
 [FeaturePcd.AARCH64]
   gArmTokenSpaceGuid.PcdFfaEnable

@@ -342,7 +342,7 @@ GetPlatformResourceInformation (
     case T194_CHIP_ID:
       return T194GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo);
     case TH500_CHIP_ID:
-      return TH500GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo);
+      return TH500GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo, FALSE);
     default:
       return EFI_UNSUPPORTED;
   }
@@ -392,4 +392,18 @@ SetRootfsStatusReg (
     default:
       return EFI_UNSUPPORTED;
   }
+}
+
+/**
+  Get Platform Resource Information
+
+**/
+EFI_STATUS
+EFIAPI
+GetPlatformResourceInformationStandaloneMm (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
+  IN PHYSICAL_ADDRESS              CpuBootloaderAddress
+  )
+{
+  return TH500GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo, TRUE);
 }

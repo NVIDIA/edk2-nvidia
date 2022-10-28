@@ -221,4 +221,15 @@ SetRootfsStatusReg (
   IN UINT32  RegisterValue
   );
 
+/**
+  Get Platform Resource Information in StMM image
+
+**/
+EFI_STATUS
+EFIAPI
+GetPlatformResourceInformationStandaloneMm (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
+  IN PHYSICAL_ADDRESS              CpuBootloaderAddress
+  );
+
 #endif //__PLATFORM_RESOURCE_LIB_H__

@@ -25,6 +25,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/SerialPortLib.h>
 #include <Library/PcdLib.h>
 #include <Library/StandaloneMmOpteeDeviceMem.h>
+#include <Library/PlatformResourceLib.h>
 
 #include <IndustryStandard/ArmStdSmc.h>
 #include <IndustryStandard/ArmMmSvc.h>
@@ -33,7 +34,6 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Include/libfdt.h>
 
 #include "../SlabMmuOps/SlabMmuOps.h"
-#include "StandaloneMmHafnium.h"
 
 #define SPM_MAJOR_VER_MASK    0xFFFF0000
 #define SPM_MINOR_VER_MASK    0x0000FFFF
@@ -46,6 +46,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define DEFAULT_PAGE_SIZE     SIZE_4KB
 #define MAX_MANIFEST_REGIONS  255
 #define SP_PKG_HEADER_SIZE    0x18
+/* Request the PA of the STMM_FW NS shared buffer */
+#define STMM_GET_NS_BUFFER  0xC0270001
 
 #define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
 
@@ -239,7 +241,7 @@ GetDeviceMemRegions (
       AsciiStrLen (NodeName)
       );
     DEBUG ((
-      DEBUG_INFO,
+      DEBUG_ERROR,
       "%a: Name %a Start 0x%lx Size %u\n",
       __FUNCTION__,
       DeviceRegions[Index].DeviceRegionName,
@@ -323,6 +325,9 @@ GetAndPrintManifestinformation (
     } else if (AsciiStrCmp (NodeName, "stmmsec-memory") == 0) {
       StmmCommBuffers.SecBufferAddr = RegionAddress;
       StmmCommBuffers.SecBufferSize = RegionSize;
+    } else if (AsciiStrCmp (NodeName, "cpubl-params") == 0) {
+      StmmCommBuffers.CpuBlParamsAddr = RegionAddress;
+      StmmCommBuffers.CpuBlParamsSize = RegionSize;
     }
 
     PrevNodeOffset = NodeOffset;
@@ -365,9 +370,19 @@ GetAndPrintManifestinformation (
   DEBUG ((DEBUG_ERROR, "SP NS buf size    = 0x%llx \n", StmmCommBuffers.NsBufferSize));
   DEBUG ((DEBUG_ERROR, "SP Sec buf base   = 0x%llx \n", StmmCommBuffers.SecBufferAddr));
   DEBUG ((DEBUG_ERROR, "SP Sec buf size   = 0x%llx \n", StmmCommBuffers.SecBufferSize));
+  DEBUG ((DEBUG_ERROR, "CPU BL buf base   = 0x%llx \n", StmmCommBuffers.CpuBlParamsAddr));
+  DEBUG ((DEBUG_ERROR, "CPU BL buf size   = 0x%llx \n", StmmCommBuffers.CpuBlParamsSize));
 
   /* Core will take all the memory from SpMemBase to CoreHeapLimit and should not reach the first memory-region */
   ASSERT ((PayloadBootInfo.SpMemLimit + ReservedPagesSize) <= FfaRxBufferAddr);
+
+  if (ADDRESS_IN_RANGE (PayloadBootInfo.SpNsCommBufBase, PayloadBootInfo.SpMemBase, SPMemoryLimit)) {
+    DEBUG ((DEBUG_ERROR, "Not FBC\n"));
+    StmmCommBuffers.Fbc = FALSE;
+    ASSERT ((PayloadBootInfo.SpMemLimit + ReservedPagesSize) <= PayloadBootInfo.SpNsCommBufBase);
+  } else {
+    StmmCommBuffers.Fbc = TRUE;
+  }
 
   return EFI_SUCCESS;
 }
@@ -699,6 +714,18 @@ ConfigureStage1Translations (
       NumRegions++;
     }
 
+    if (AsciiStrStr (NodeName, "cpubl-params") != NULL) {
+      RegionAddress                        = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address"), DEFAULT_PAGE_SIZE);
+      RegionSize                           = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count") * DEFAULT_PAGE_SIZE;
+      MemoryTable[NumRegions].PhysicalBase = RegionAddress;
+      MemoryTable[NumRegions].VirtualBase  = RegionAddress;
+      MemoryTable[NumRegions].Length       = RegionSize;
+      MemoryTable[NumRegions].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_UNCACHED_UNBUFFERED;
+      DEBUG ((DEBUG_ERROR, "CPUBL Address     = 0x%llx \n", RegionAddress));
+      DEBUG ((DEBUG_ERROR, "CPUPL Size      = 0x%llx \n", RegionSize));
+      NumRegions++;
+    }
+
     if (AsciiStrStr (NodeName, "stage1-entries") != NULL) {
       Stage1EntriesAddress = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address"), DEFAULT_PAGE_SIZE);
       Stage1EntriesPages   = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count");
@@ -746,6 +773,8 @@ _ModuleEntryPointC (
   VOID                          *TeData;
   UINTN                         TeDataSize;
   EFI_PHYSICAL_ADDRESS          ImageBase;
+  STMM_COMM_BUFFERS             *CommBuffersHob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfoHob;
 
   DEBUG ((DEBUG_ERROR, "EntryPoint: MemorySize=0x%x DTB@0x%x\n", TotalSPMemorySize, DTBAddress));
 
@@ -849,6 +878,23 @@ _ModuleEntryPointC (
   }
 
   StmmCommBuffers.DTBAddress = (PHYSICAL_ADDRESS)DTBAddress;
+
+  /* Guided HOB with the addresses of Manifest buffers */
+  CommBuffersHob = (STMM_COMM_BUFFERS *)BuildGuidHob (
+                                          &gNVIDIAStMMBuffersGuid,
+                                          sizeof (STMM_COMM_BUFFERS)
+                                          );
+  CopyMem ((VOID *)CommBuffersHob, (VOID *)&StmmCommBuffers, sizeof (STMM_COMM_BUFFERS));
+
+  PlatformResourceInfoHob = (TEGRA_PLATFORM_RESOURCE_INFO *)BuildGuidHob (
+                                                              &gNVIDIAPlatformResourceDataGuid,
+                                                              sizeof (TEGRA_PLATFORM_RESOURCE_INFO)
+                                                              );
+
+  Status = GetPlatformResourceInformationStandaloneMm (
+             PlatformResourceInfoHob,
+             StmmCommBuffers.CpuBlParamsAddr
+             );
 
   /* Call the MM Core entry point */
   ProcessModuleEntryPointList (HobStart);

@@ -31,7 +31,8 @@ EFI_STATUS
 EFIAPI
 TH500GetPlatformResourceInformation (
   IN UINTN                         CpuBootloaderAddress,
-  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
+  IN BOOLEAN                       InMm
   );
 
 #endif //__TH500_RESOURCE_CONFIG_H__

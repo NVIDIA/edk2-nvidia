@@ -395,7 +395,8 @@ EFI_STATUS
 EFIAPI
 TH500GetPlatformResourceInformation (
   IN UINTN                         CpuBootloaderAddress,
-  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
+  IN BOOLEAN                       InMm
   )
 {
   EFI_STATUS          Status;
@@ -408,12 +409,15 @@ TH500GetPlatformResourceInformation (
 
   PlatformResourceInfo->SocketMask = SocketMask;
 
-  Status = TH500GetResourceConfig (CpuBootloaderAddress, PlatformResourceInfo->ResourceInfo);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
+  /* Avoid this step when called from MM */
+  if (InMm == FALSE) {
+    Status = TH500GetResourceConfig (CpuBootloaderAddress, PlatformResourceInfo->ResourceInfo);
+    if (EFI_ERROR (Status)) {
+      return FALSE;
+    }
 
-  PlatformResourceInfo->MmioInfo = TH500GetMmioBaseAndSize (SocketMask);
+    PlatformResourceInfo->MmioInfo = TH500GetMmioBaseAndSize (SocketMask);
+  }
 
   PlatformResourceInfo->RamdiskOSInfo.Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Base;
   PlatformResourceInfo->RamdiskOSInfo.Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Size;

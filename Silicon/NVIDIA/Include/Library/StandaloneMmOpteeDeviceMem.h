@@ -21,6 +21,17 @@ typedef struct _EFI_MM_DEVICE_REGION {
   CHAR8                  DeviceRegionName[DEVICE_REGION_NAME_MAX_LEN];
 } EFI_MM_DEVICE_REGION;
 
+typedef struct {
+  PHYSICAL_ADDRESS    NsBufferAddr;
+  UINTN               NsBufferSize;
+  PHYSICAL_ADDRESS    SecBufferAddr;
+  UINTN               SecBufferSize;
+  PHYSICAL_ADDRESS    DTBAddress;
+  PHYSICAL_ADDRESS    CpuBlParamsAddr;
+  UINTN               CpuBlParamsSize;
+  BOOLEAN             Fbc;
+} STMM_COMM_BUFFERS;
+
 EFIAPI
 EFI_STATUS
 GetDeviceRegion (
