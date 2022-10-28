@@ -633,31 +633,39 @@ BmRegisterBootMenuApp (
     return EFI_INVALID_PARAMETER;
   }
 
+  HandleCount = 0;
+  Handles     = NULL;
   DevicePath  = NULL;
   Description = NULL;
 
   //
   // Try to find BootMenu from LoadFile protocol
   //
-  gBS->LocateHandleBuffer (
-         ByProtocol,
-         &gEfiLoadFileProtocolGuid,
-         NULL,
-         &HandleCount,
-         &Handles
-         );
-  for (Index = 0; Index < HandleCount; Index++) {
-    if (IsBootManagerMenuAppFilePath (DevicePathFromHandle (Handles[Index]))) {
-      DevicePath  = DuplicateDevicePath (DevicePathFromHandle (Handles[Index]));
-      Description = BmGetBootDescription (Handles[Index]);
-      break;
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gEfiLoadFileProtocolGuid,
+                  NULL,
+                  &HandleCount,
+                  &Handles
+                  );
+  if (!EFI_ERROR (Status)) {
+    for (Index = 0; Index < HandleCount; Index++) {
+      if (IsBootManagerMenuAppFilePath (DevicePathFromHandle (Handles[Index]))) {
+        DevicePath  = DuplicateDevicePath (DevicePathFromHandle (Handles[Index]));
+        Description = BmGetBootDescription (Handles[Index]);
+        break;
+      }
+    }
+
+    if (HandleCount != 0) {
+      FreePool (Handles);
+      Handles = NULL;
     }
   }
 
-  if (HandleCount != 0) {
-    FreePool (Handles);
-  }
-
+  //
+  // Not found in LoadFile protocol. Search FV.
+  //
   if (DevicePath == NULL) {
     Status = GetFileDevicePathFromAnyFv (
                PcdGetPtr (PcdBootMenuAppFile),
@@ -1537,8 +1545,18 @@ PlatformBootManagerWaitCallback (
   EFI_STATUS                           Status;
   EFI_STRING                           ProgressTitle;
 
+  ProgressTitle = NULL;
   Timeout       = PcdGet16 (PcdPlatformBootTimeOut);
-  ProgressTitle = PcdGetPtr (PcdBootManagerWaitMessage);
+  ProgressTitle = (EFI_STRING)PcdGetPtr (PcdBootManagerWaitMessage);
+
+  ASSERT (ProgressTitle != NULL);
+
+  //
+  // BootLogoUpdateProgress does not expect empty string
+  //
+  if ((ProgressTitle == NULL) || (StrLen (ProgressTitle) == 0)) {
+    ProgressTitle = L" ";
+  }
 
   Black.Raw = 0x00000000;
   White.Raw = 0x00FFFFFF;
