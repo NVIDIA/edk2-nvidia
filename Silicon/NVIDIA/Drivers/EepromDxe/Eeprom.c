@@ -26,7 +26,9 @@
 #include <Protocol/I2cIo.h>
 #include <Protocol/Eeprom.h>
 #include <Protocol/Rng.h>
+#include <Protocol/KernelCmdLineUpdate.h>
 
+#define SERIAL_NUM_CMD_MAX_LEN  64
 #define EEPROM_DATA_SIZE        256
 #define EEPROM_DUMMY_BOARDID    "DummyId"
 #define EEPROM_DUMMY_SERIALNUM  "DummySN"
@@ -615,14 +617,16 @@ InitializeEepromDxe (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_HANDLE               Handle;
-  TEGRABL_EEPROM_DATA      *EepromData;
-  TEGRA_EEPROM_BOARD_INFO  *CvmBoardInfo;
-  TEGRA_EEPROM_BOARD_INFO  *CvbBoardInfo;
-  EFI_STATUS               Status;
-  TEGRA_PLATFORM_TYPE      PlatformType;
-  BOOLEAN                  ValidCvmEepromData;
-  VOID                     *Hob;
+  EFI_HANDLE                              Handle;
+  TEGRABL_EEPROM_DATA                     *EepromData;
+  TEGRA_EEPROM_BOARD_INFO                 *CvmBoardInfo;
+  TEGRA_EEPROM_BOARD_INFO                 *CvbBoardInfo;
+  EFI_STATUS                              Status;
+  TEGRA_PLATFORM_TYPE                     PlatformType;
+  BOOLEAN                                 ValidCvmEepromData;
+  VOID                                    *Hob;
+  NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL  *SerialNumberCmdLine;
+  CHAR16                                  *SerialNumberCmdLineBuffer;
 
   PlatformType       = TegraGetPlatform ();
   ValidCvmEepromData = TRUE;
@@ -690,6 +694,33 @@ InitializeEepromDxe (
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to install Cvm EEPROM protocols\n", __FUNCTION__));
+      return Status;
+    }
+
+    SerialNumberCmdLine = (NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL *)AllocateZeroPool (sizeof (NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL));
+    if (SerialNumberCmdLine == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      return Status;
+    }
+
+    SerialNumberCmdLineBuffer = (CHAR16 *)AllocateZeroPool (sizeof (CHAR16) * SERIAL_NUM_CMD_MAX_LEN);
+    if (SerialNumberCmdLineBuffer == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      return Status;
+    }
+
+    SerialNumberCmdLine->ExistingCommandLineArgument = NULL;
+    UnicodeSPrintAsciiFormat (SerialNumberCmdLineBuffer, SERIAL_NUM_CMD_MAX_LEN, "androidboot.serialno=%a", CvmBoardInfo->SerialNumber);
+    SerialNumberCmdLine->NewCommandLineArgument = SerialNumberCmdLineBuffer;
+
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &Handle,
+                    &gNVIDIAKernelCmdLineUpdateGuid,
+                    SerialNumberCmdLine,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install serial number kernel command line update protocol\n", __FUNCTION__));
       return Status;
     }
   }
