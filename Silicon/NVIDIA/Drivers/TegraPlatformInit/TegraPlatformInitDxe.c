@@ -227,11 +227,12 @@ SetBandwidthLatencyInfoPcdsFromdtb (
 
   UINT32  CpuToLocalCpuReadLatency;
   UINT32  CpuToLocalCpuWriteLatency;
-  UINT32  CpuToGpuReadLatency;
-  UINT32  CpuToGpuWriteLatency;
+  UINT32  CpuToLocalHbmReadLatency;
+  UINT32  CpuToLocalHbmWriteLatency;
   UINT32  CpuToRemoteCpuReadLatency;
   UINT32  CpuToRemoteCpuWriteLatency;
-
+  UINT32  CpuToRemoteHbmReadLatency;
+  UINT32  CpuToRemoteHbmWriteLatency;
   UINT32  GpuToLocalHbmReadLatency;
   UINT32  GpuToLocalHbmWriteLatency;
   UINT32  GpuToLocalCpuReadLatency;
@@ -240,16 +241,15 @@ SetBandwidthLatencyInfoPcdsFromdtb (
   UINT32  GpuToRemoteHbmWriteLatency;
   UINT32  GpuToRemoteCpuReadLatency;
   UINT32  GpuToRemoteCpuWriteLatency;
-
   UINT32  CpuToLocalCpuAccessBandwidth;
-  UINT32  CpuToGpuAccessBandwidth;
+  UINT32  CpuToLocalHbmAccessBandwidth;
   UINT32  CpuToRemoteCpuAccessBandwidth;
+  UINT32  CpuToRemoteHbmAccessBandwidth;
   UINT32  GpuToLocalHbmAccessBandwidth;
   UINT32  GpuToLocalCpuAccessBandwidth;
   UINT32  GpuToRemoteHbmAccessBandwidth;
   UINT32  GpuToRemoteCpuAccessBandwidth;
-
-  INTN  AcpiNode;
+  INTN    AcpiNode;
 
   AcpiNode = fdt_path_offset (Dtb, "/firmware/acpi");
   if (AcpiNode >= 0) {
@@ -272,22 +272,40 @@ SetBandwidthLatencyInfoPcdsFromdtb (
       DEBUG ((DEBUG_INFO, "Cpu To Local Cpu Write Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalCpuWriteLatency)));
     }
 
-    Property = fdt_getprop (Dtb, AcpiNode, "cpu-gpu-read-latency", NULL);
+    Property = fdt_getprop (Dtb, AcpiNode, "cpu-localhbm-read-latency", NULL);
     if (Property != NULL) {
-      CpuToGpuReadLatency = SwapBytes32 (Property[0]);
-      PcdSet32S (PcdCpuToGpuReadLatency, CpuToGpuReadLatency);
-      DEBUG ((EFI_D_INFO, "Cpu To Gpu Read Latency = 0x%X\n", PcdGet32 (PcdCpuToGpuReadLatency)));
+      CpuToLocalHbmReadLatency = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdCpuToLocalHbmReadLatency, CpuToLocalHbmReadLatency);
+      DEBUG ((EFI_D_INFO, "Cpu To local HBM Read Latency = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmReadLatency)));
     } else {
-      DEBUG ((DEBUG_INFO, "Cpu To Gpu Read Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToGpuReadLatency)));
+      DEBUG ((DEBUG_INFO, "Cpu To Local HBM Read Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalHbmReadLatency)));
     }
 
-    Property = fdt_getprop (Dtb, AcpiNode, "cpu-gpu-write-latency", NULL);
+    Property = fdt_getprop (Dtb, AcpiNode, "cpu-localhbm-write-latency", NULL);
     if (Property != NULL) {
-      CpuToGpuWriteLatency = SwapBytes32 (Property[0]);
-      PcdSet32S (PcdCpuToGpuWriteLatency, CpuToGpuWriteLatency);
-      DEBUG ((EFI_D_INFO, "Cpu To Gpu Write Latency = 0x%X\n", PcdGet32 (PcdCpuToGpuWriteLatency)));
+      CpuToLocalHbmWriteLatency = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdCpuToLocalHbmWriteLatency, CpuToLocalHbmWriteLatency);
+      DEBUG ((EFI_D_INFO, "Cpu To LocalHbm Write Latency = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmWriteLatency)));
     } else {
-      DEBUG ((DEBUG_INFO, "Cpu To Gpu Write Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToGpuWriteLatency)));
+      DEBUG ((DEBUG_INFO, "Cpu To LocalHbm Write Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalHbmWriteLatency)));
+    }
+
+    Property = fdt_getprop (Dtb, AcpiNode, "cpu-remotehbm-read-latency", NULL);
+    if (Property != NULL) {
+      CpuToRemoteHbmReadLatency = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdCpuToLocalHbmReadLatency, CpuToRemoteHbmReadLatency);
+      DEBUG ((EFI_D_INFO, "Cpu To local HBM Read Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmReadLatency)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Cpu To Local HBM Read Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmReadLatency)));
+    }
+
+    Property = fdt_getprop (Dtb, AcpiNode, "cpu-remotehbm-write-latency", NULL);
+    if (Property != NULL) {
+      CpuToRemoteHbmWriteLatency = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdCpuToRemoteHbmWriteLatency, CpuToRemoteHbmWriteLatency);
+      DEBUG ((EFI_D_INFO, "Cpu To RemoteHbm Write Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmWriteLatency)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Cpu To RemoteHbm Write Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmWriteLatency)));
     }
 
     Property = fdt_getprop (Dtb, AcpiNode, "cpu-remotecpu-read-latency", NULL);
@@ -390,59 +408,77 @@ SetBandwidthLatencyInfoPcdsFromdtb (
       DEBUG ((DEBUG_INFO, "Cpu To Local Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalCpuAccessBandwidth)));
     }
 
-    Property = fdt_getprop (Dtb, AcpiNode, "cpu-gpu-accessbandwidth", NULL);
+    Property = fdt_getprop (Dtb, AcpiNode, "cpu-localhbm-accessbandwidth", NULL);
     if (Property != NULL) {
-      CpuToGpuAccessBandwidth = SwapBytes32 (Property[0]);
-      PcdSet32S (PcdCpuToGpuAccessBandwidth, CpuToGpuAccessBandwidth);
-      DEBUG ((EFI_D_INFO, "Cpu To Gpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToGpuAccessBandwidth)));
+      CpuToLocalHbmAccessBandwidth = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdCpuToLocalHbmAccessBandwidth, CpuToLocalHbmAccessBandwidth);
+      DEBUG ((EFI_D_INFO, "Cpu To LocalHbm Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmAccessBandwidth)));
     } else {
-      DEBUG ((DEBUG_INFO, "Cpu To Gpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdCpuToGpuAccessBandwidth)));
+      DEBUG ((DEBUG_INFO, "Cpu To LocalHbm Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalHbmAccessBandwidth)));
     }
-  }
 
-  Property = fdt_getprop (Dtb, AcpiNode, "cpu-remotecpu-accessbandwidth", NULL);
-  if (Property != NULL) {
-    CpuToRemoteCpuAccessBandwidth = SwapBytes32 (Property[0]);
-    PcdSet32S (PcdCpuToRemoteCpuAccessBandwidth, CpuToRemoteCpuAccessBandwidth);
-    DEBUG ((EFI_D_INFO, "Cpu To Remote Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuAccessBandwidth)));
-  } else {
-    DEBUG ((DEBUG_INFO, "Cpu To Remote Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuAccessBandwidth)));
-  }
+    Property = fdt_getprop (Dtb, AcpiNode, "cpu-remotecpu-accessbandwidth", NULL);
+    if (Property != NULL) {
+      CpuToRemoteCpuAccessBandwidth = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdCpuToRemoteCpuAccessBandwidth, CpuToRemoteCpuAccessBandwidth);
+      DEBUG ((EFI_D_INFO, "Cpu To Remote Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuAccessBandwidth)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Cpu To Remote Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuAccessBandwidth)));
+    }
 
-  Property = fdt_getprop (Dtb, AcpiNode, "gpu-localhbm-accessbandwidth", NULL);
-  if (Property != NULL) {
-    GpuToLocalHbmAccessBandwidth = SwapBytes32 (Property[0]);
-    PcdSet32S (PcdGpuToLocalHbmAccessBandwidth, GpuToLocalHbmAccessBandwidth);
-    DEBUG ((EFI_D_INFO, "Gpu To Local HBM Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToLocalHbmAccessBandwidth)));
-  } else {
-    DEBUG ((DEBUG_INFO, "Gpu To Local HBM Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalHbmAccessBandwidth)));
-  }
+    Property = fdt_getprop (Dtb, AcpiNode, "cpu-remotehbm-accessbandwidth", NULL);
+    if (Property != NULL) {
+      CpuToRemoteHbmAccessBandwidth = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdCpuToRemoteHbmAccessBandwidth, CpuToRemoteHbmAccessBandwidth);
+      DEBUG ((EFI_D_INFO, "Cpu To Remote Hbm Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmAccessBandwidth)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Cpu To Remote Hbm Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmAccessBandwidth)));
+    }
 
-  Property = fdt_getprop (Dtb, AcpiNode, "gpu-localcpu-accessbandwidth", NULL);
-  if (Property != NULL) {
-    GpuToLocalCpuAccessBandwidth = SwapBytes32 (Property[0]);
-    PcdSet32S (PcdGpuToLocalCpuAccessBandwidth, GpuToLocalCpuAccessBandwidth);
-    DEBUG ((EFI_D_INFO, "Gpu To Local Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToLocalCpuAccessBandwidth)));
-  } else {
-    DEBUG ((DEBUG_INFO, "Gpu To Local Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalCpuAccessBandwidth)));
-  }
+    Property = fdt_getprop (Dtb, AcpiNode, "gpu-localhbm-accessbandwidth", NULL);
+    if (Property != NULL) {
+      GpuToLocalHbmAccessBandwidth = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdGpuToLocalHbmAccessBandwidth, GpuToLocalHbmAccessBandwidth);
+      DEBUG ((EFI_D_INFO, "Gpu To Local HBM Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToLocalHbmAccessBandwidth)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Gpu To Local HBM Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalHbmAccessBandwidth)));
+    }
 
-  Property = fdt_getprop (Dtb, AcpiNode, "gpu-remotehbm-accessbandwidth", NULL);
-  if (Property != NULL) {
-    GpuToRemoteHbmAccessBandwidth = SwapBytes32 (Property[0]);
-    PcdSet32S (PcdGpuToRemoteHbmAccessBandwidth, GpuToRemoteHbmAccessBandwidth);
-    DEBUG ((EFI_D_INFO, "Gpu To Remote Gpu HBM Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth)));
-  } else {
-    DEBUG ((DEBUG_INFO, "Gpu To Remote Gpu HBM Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth)));
-  }
+    Property = fdt_getprop (Dtb, AcpiNode, "gpu-remotehbm-accessbandwidth", NULL);
+    if (Property != NULL) {
+      GpuToRemoteHbmAccessBandwidth = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdGpuToRemoteHbmAccessBandwidth, GpuToRemoteHbmAccessBandwidth);
+      DEBUG ((EFI_D_INFO, "Gpu To Remote HBM Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Gpu To Remote HBM Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth)));
+    }
 
-  Property = fdt_getprop (Dtb, AcpiNode, "gpu-remotecpu-accessbandwidth", NULL);
-  if (Property != NULL) {
-    GpuToRemoteCpuAccessBandwidth = SwapBytes32 (Property[0]);
-    PcdSet32S (PcdGpuToRemoteCpuAccessBandwidth, GpuToRemoteCpuAccessBandwidth);
-    DEBUG ((EFI_D_INFO, "Gpu To Remote Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuAccessBandwidth)));
-  } else {
-    DEBUG ((DEBUG_INFO, "Gpu To Remote Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuAccessBandwidth)));
+    Property = fdt_getprop (Dtb, AcpiNode, "gpu-localcpu-accessbandwidth", NULL);
+    if (Property != NULL) {
+      GpuToLocalCpuAccessBandwidth = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdGpuToLocalCpuAccessBandwidth, GpuToLocalCpuAccessBandwidth);
+      DEBUG ((EFI_D_INFO, "Gpu To Local Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToLocalCpuAccessBandwidth)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Gpu To Local Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalCpuAccessBandwidth)));
+    }
+
+    Property = fdt_getprop (Dtb, AcpiNode, "gpu-remotehbm-accessbandwidth", NULL);
+    if (Property != NULL) {
+      GpuToRemoteHbmAccessBandwidth = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdGpuToRemoteHbmAccessBandwidth, GpuToRemoteHbmAccessBandwidth);
+      DEBUG ((EFI_D_INFO, "Gpu To Remote Gpu HBM Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Gpu To Remote Gpu HBM Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth)));
+    }
+
+    Property = fdt_getprop (Dtb, AcpiNode, "gpu-remotecpu-accessbandwidth", NULL);
+    if (Property != NULL) {
+      GpuToRemoteCpuAccessBandwidth = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdGpuToRemoteCpuAccessBandwidth, GpuToRemoteCpuAccessBandwidth);
+      DEBUG ((EFI_D_INFO, "Gpu To Remote Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuAccessBandwidth)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Gpu To Remote Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuAccessBandwidth)));
+    }
   }
 }
 
@@ -457,69 +493,127 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
   )
 {
   CONST UINT32  *Property;
-  UINT32        CpuToCpuDistance;
-  UINT32        GpuToGpuDistance;
-  UINT32        CpuToOwnGpuDistance;
-  UINT32        CpuToOtherGpuDistance;
-  UINT32        GpuToOwnCpuDistance;
-  UINT32        GpuToOtherCpuDistance;
+  UINT32        CpuToRemoteCpuDistance;
+  UINT32        GpuToRemoteGpuDistance;
+  UINT32        CpuToLocalHbmDistance;
+  UINT32        CpuToRemoteHbmDistance;
+  UINT32        HbmToLocalCpuDistance;
+  UINT32        HbmToRemoteCpuDistance;
+  UINT32        HbmToLocalGpuDistance;
+  UINT32        HbmToRemoteGpuDistance;
+  UINT32        GpuToLocalHbmDistance;
+  UINT32        GpuToRemoteHbmDistance;
   INTN          AcpiNode;
 
   AcpiNode = fdt_path_offset (Dtb, "/firmware/acpi");
   if (AcpiNode >= 0) {
     // Obtain Distance info
-    Property = fdt_getprop (Dtb, AcpiNode, "cpu-distance-cpu", NULL);
+    Property = fdt_getprop (Dtb, AcpiNode, "cpu-distance-remotecpu", NULL);
     if (Property != NULL) {
-      CpuToCpuDistance = SwapBytes32 (Property[0]);
-      PcdSet32S (PcdCpuToCpuDistance, CpuToCpuDistance);
-      DEBUG ((EFI_D_INFO, "Cpu To Cpu Distance = 0x%X\n", PcdGet32 (PcdCpuToCpuDistance)));
+      CpuToRemoteCpuDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdCpuToRemoteCpuDistance, CpuToRemoteCpuDistance);
+      DEBUG ((EFI_D_INFO, "Cpu To Remote Cpu Distance = 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuDistance)));
     } else {
-      DEBUG ((DEBUG_INFO, "Cpu To Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToCpuDistance)));
+      DEBUG ((DEBUG_INFO, "Cpu To Remote Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuDistance)));
     }
 
-    Property = fdt_getprop (Dtb, AcpiNode, "gpu-distance-gpu", NULL);
+    Property = fdt_getprop (Dtb, AcpiNode, "gpu-distance-remotegpu", NULL);
     if (Property != NULL) {
-      GpuToGpuDistance = SwapBytes32 (Property[0]);
-      PcdSet32S (PcdGpuToGpuDistance, GpuToGpuDistance);
-      DEBUG ((EFI_D_INFO, "Gpu To Gpu Distance = 0x%X\n", PcdGet32 (PcdGpuToGpuDistance)));
+      GpuToRemoteGpuDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdGpuToRemoteGpuDistance, GpuToRemoteGpuDistance);
+      DEBUG ((EFI_D_INFO, "Gpu To Remote Gpu Distance = 0x%X\n", PcdGet32 (PcdGpuToRemoteGpuDistance)));
     } else {
-      DEBUG ((DEBUG_INFO, "Gpu To Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToGpuDistance)));
+      DEBUG ((DEBUG_INFO, "Gpu To Remote Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteGpuDistance)));
     }
 
-    Property = fdt_getprop (Dtb, AcpiNode, "cpu-distance-other-gpu", NULL);
+    Property = fdt_getprop (Dtb, AcpiNode, "cpu-distance-localhbm", NULL);
     if (Property != NULL) {
-      CpuToOtherGpuDistance = SwapBytes32 (Property[0]);
-      PcdSet32S (PcdCpuToOtherGpuDistance, CpuToOtherGpuDistance);
-      DEBUG ((EFI_D_INFO, "Cpu To Other Gpu Distance = 0x%X\n", PcdGet32 (PcdCpuToOtherGpuDistance)));
+      CpuToLocalHbmDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdCpuToLocalHbmDistance, CpuToLocalHbmDistance);
+      DEBUG ((EFI_D_INFO, "Cpu To Local Hbm Distance = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmDistance)));
     } else {
-      DEBUG ((DEBUG_INFO, "Cpu To Other Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToOtherGpuDistance)));
+      DEBUG ((DEBUG_INFO, "Cpu To Local Hbm Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalHbmDistance)));
     }
 
-    Property = fdt_getprop (Dtb, AcpiNode, "cpu-distance-own-gpu", NULL);
+    Property = fdt_getprop (Dtb, AcpiNode, "cpu-distance-remotehbm", NULL);
     if (Property != NULL) {
-      CpuToOwnGpuDistance = SwapBytes32 (Property[0]);
-      PcdSet32S (PcdCpuToOwnGpuDistance, CpuToOwnGpuDistance);
-      DEBUG ((EFI_D_INFO, "Cpu To Own Gpu Distance = 0x%X\n", PcdGet32 (PcdCpuToOwnGpuDistance)));
+      CpuToRemoteHbmDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdCpuToRemoteHbmDistance, CpuToRemoteHbmDistance);
+      DEBUG ((EFI_D_INFO, "Cpu To Other Hbm Distance = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmDistance)));
     } else {
-      DEBUG ((DEBUG_INFO, "Cpu To Own Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToOwnGpuDistance)));
+      DEBUG ((DEBUG_INFO, "Cpu To Other Hbm Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmDistance)));
     }
 
-    Property = fdt_getprop (Dtb, AcpiNode, "gpu-distance-other-cpu", NULL);
+    Property = fdt_getprop (Dtb, AcpiNode, "hbm-distance-localcpu", NULL);
     if (Property != NULL) {
-      GpuToOtherCpuDistance = SwapBytes32 (Property[0]);
-      PcdSet32S (PcdGpuToOtherCpuDistance, GpuToOtherCpuDistance);
-      DEBUG ((EFI_D_INFO, "Gpu To Other Cpu Distance = 0x%X\n", PcdGet32 (PcdGpuToOtherCpuDistance)));
+      HbmToLocalCpuDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdHbmToLocalCpuDistance, HbmToLocalCpuDistance);
+      DEBUG ((EFI_D_INFO, "Local Hbm To Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToLocalCpuDistance)));
     } else {
-      DEBUG ((DEBUG_INFO, "Gpu To Other Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToOtherCpuDistance)));
+      DEBUG ((DEBUG_INFO, "Local Hbm To Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToLocalCpuDistance)));
     }
 
-    Property = fdt_getprop (Dtb, AcpiNode, "gpu-distance-own-cpu", NULL);
+    Property = fdt_getprop (Dtb, AcpiNode, "hbm-distance-remotecpu", NULL);
     if (Property != NULL) {
-      GpuToOwnCpuDistance = SwapBytes32 (Property[0]);
-      PcdSet32S (PcdGpuToOwnCpuDistance, GpuToOwnCpuDistance);
-      DEBUG ((EFI_D_INFO, "Gpu To Own Cpu Distance = 0x%X\n", PcdGet32 (PcdGpuToOwnCpuDistance)));
+      HbmToRemoteCpuDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdHbmToRemoteCpuDistance, HbmToRemoteCpuDistance);
+      DEBUG ((EFI_D_INFO, "Remote Hbm To Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToRemoteCpuDistance)));
     } else {
-      DEBUG ((DEBUG_INFO, "Gpu To Own Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToOwnCpuDistance)));
+      DEBUG ((DEBUG_INFO, "Remote Hbm To Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToRemoteCpuDistance)));
+    }
+
+    Property = fdt_getprop (Dtb, AcpiNode, "hbm-distance-localcpu", NULL);
+    if (Property != NULL) {
+      HbmToLocalCpuDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdHbmToLocalCpuDistance, HbmToLocalCpuDistance);
+      DEBUG ((EFI_D_INFO, "Hbm To Local Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToLocalCpuDistance)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Hbm To Local Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToLocalCpuDistance)));
+    }
+
+    Property = fdt_getprop (Dtb, AcpiNode, "hbm-distance-remotecpu", NULL);
+    if (Property != NULL) {
+      HbmToRemoteCpuDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdHbmToRemoteCpuDistance, HbmToRemoteCpuDistance);
+      DEBUG ((EFI_D_INFO, "Hbm To Remote Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToRemoteCpuDistance)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Hbm To Remote Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToRemoteCpuDistance)));
+    }
+
+    Property = fdt_getprop (Dtb, AcpiNode, "gpu-distance-localhbm", NULL);
+    if (Property != NULL) {
+      GpuToLocalHbmDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdGpuToLocalHbmDistance, GpuToLocalHbmDistance);
+      DEBUG ((EFI_D_INFO, "Gpu To Local Hbm Distance = 0x%X\n", PcdGet32 (PcdGpuToLocalHbmDistance)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Gpu To Local Hbm Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalHbmDistance)));
+    }
+
+    Property = fdt_getprop (Dtb, AcpiNode, "gpu-distance-remotehbm", NULL);
+    if (Property != NULL) {
+      GpuToRemoteHbmDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdGpuToRemoteHbmDistance, GpuToRemoteHbmDistance);
+      DEBUG ((EFI_D_INFO, "Gpu To Other Hbm Distance = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmDistance)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Gpu To Other Hbm Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmDistance)));
+    }
+
+    Property = fdt_getprop (Dtb, AcpiNode, "hbm-distance-localgpu", NULL);
+    if (Property != NULL) {
+      HbmToLocalGpuDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdHbmToLocalGpuDistance, HbmToLocalGpuDistance);
+      DEBUG ((EFI_D_INFO, "Local Hbm To Gpu Distance = 0x%X\n", PcdGet32 (PcdHbmToLocalGpuDistance)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Local Hbm To Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToLocalGpuDistance)));
+    }
+
+    Property = fdt_getprop (Dtb, AcpiNode, "hbm-distance-remotegpu", NULL);
+    if (Property != NULL) {
+      HbmToRemoteGpuDistance = SwapBytes32 (Property[0]);
+      PcdSet32S (PcdHbmToRemoteGpuDistance, HbmToRemoteGpuDistance);
+      DEBUG ((EFI_D_INFO, "Remote Hbm To Gpu Distance = 0x%X\n", PcdGet32 (PcdHbmToRemoteGpuDistance)));
+    } else {
+      DEBUG ((DEBUG_INFO, "Remote Hbm To Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToRemoteGpuDistance)));
     }
   }
 }

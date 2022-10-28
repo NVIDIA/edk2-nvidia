@@ -89,8 +89,8 @@ InstallHeterogeneousMemoryAttributeTable (
   }
 
   // Proximity Domains
-  NumInitiatorProximityDomains = TH500_GPU_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets);
-  NumTargetProximityDomains    = TH500_GPU_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets);
+  NumInitiatorProximityDomains = TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS;
+  NumTargetProximityDomains    = TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS;
 
   // Generate and populate Initiator proximity domain list
   InitiatorProximityDomainList = (UINT32 *)AllocateZeroPool (sizeof (UINT32) * NumInitiatorProximityDomains);
@@ -167,42 +167,52 @@ InstallHeterogeneousMemoryAttributeTable (
     }
   }
 
-  // cpu to gpu
+  // cpu to local gpu hbm and remote gpu hbm
   for (UINTN InitIndex = 0; InitIndex < PcdGet32 (PcdTegraMaxSockets); InitIndex++) {
     // check if socket enabled for this Index
     if (!IsSocketEnabled (InitIndex)) {
       continue;
     }
 
-    for (UINTN TargIndex = TH500_GPU_DOMAIN_START; TargIndex < TH500_GPU_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets); TargIndex++) {
-      if (!IsSocketEnabled (TargIndex - TH500_GPU_DOMAIN_START)) {
+    for (UINTN TargIndex = TH500_GPU_HBM_PXM_DOMAIN_START; TargIndex < (TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS); TargIndex++) {
+      if (!IsSocketEnabled ((TargIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
         continue;
       }
 
-      ReadLatencyList[InitIndex * NumInitiatorProximityDomains + TargIndex]     = PcdGet32 (PcdCpuToGpuReadLatency);
-      WriteLatencyList[InitIndex * NumInitiatorProximityDomains + TargIndex]    = PcdGet32 (PcdCpuToGpuWriteLatency);
-      AccessBandwidthList[InitIndex * NumInitiatorProximityDomains + TargIndex] = PcdGet32 (PcdCpuToGpuAccessBandwidth);
+      if ((TargIndex >= TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (InitIndex)) &&
+          (TargIndex < (TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (InitIndex) + TH500_GPU_MAX_NR_MEM_PARTITIONS)))
+      {
+        // local hbm
+        ReadLatencyList[InitIndex * NumInitiatorProximityDomains + TargIndex]     = PcdGet32 (PcdCpuToLocalHbmReadLatency);
+        WriteLatencyList[InitIndex * NumInitiatorProximityDomains + TargIndex]    = PcdGet32 (PcdCpuToLocalHbmWriteLatency);
+        AccessBandwidthList[InitIndex * NumInitiatorProximityDomains + TargIndex] = PcdGet32 (PcdCpuToLocalHbmAccessBandwidth);
+      } else {
+        // remote hbm
+        ReadLatencyList[InitIndex * NumInitiatorProximityDomains + TargIndex]     = PcdGet32 (PcdCpuToRemoteHbmReadLatency);
+        WriteLatencyList[InitIndex * NumInitiatorProximityDomains + TargIndex]    = PcdGet32 (PcdCpuToRemoteHbmWriteLatency);
+        AccessBandwidthList[InitIndex * NumInitiatorProximityDomains + TargIndex] = PcdGet32 (PcdCpuToRemoteHbmAccessBandwidth);
+      }
     }
   }
 
   // gpu to local hbm and remote hbm
-  for (UINTN InitIndex = TH500_GPU_DOMAIN_START; InitIndex < TH500_GPU_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets); InitIndex++) {
+  for (UINTN InitIndex = TH500_GPU_PXM_DOMAIN_START; InitIndex < TH500_GPU_PXM_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets); InitIndex++) {
     // check if CPU socket enabled for this GPU Index
-    if (!IsSocketEnabled (InitIndex - TH500_GPU_DOMAIN_START)) {
+    if (!IsSocketEnabled (InitIndex - TH500_GPU_PXM_DOMAIN_START)) {
       continue;
     }
 
     // for all proximity domains
-    for (UINTN TargIndex = TH500_GPU_PXM_START (0);
-         TargIndex < TH500_GPU_PXM_START (PcdGet32 (PcdTegraMaxSockets));
+    for (UINTN TargIndex = TH500_GPU_HBM_PXM_DOMAIN_START;
+         TargIndex < (TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS);
          TargIndex++)
     {
-      if (!IsSocketEnabled ((TargIndex - 16)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
+      if (!IsSocketEnabled ((TargIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
         continue;
       }
 
-      if ((TargIndex >= TH500_GPU_PXM_START (InitIndex-TH500_GPU_DOMAIN_START)) &&
-          (TargIndex < TH500_GPU_PXM_START (InitIndex-TH500_GPU_DOMAIN_START) + TH500_GPU_MAX_NR_MEM_PARTITIONS))
+      if ((TargIndex >= TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (InitIndex-TH500_GPU_PXM_DOMAIN_START)) &&
+          (TargIndex < TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (InitIndex-TH500_GPU_PXM_DOMAIN_START) + TH500_GPU_MAX_NR_MEM_PARTITIONS))
       {
         // local hbm
         ReadLatencyList[InitIndex * NumInitiatorProximityDomains + TargIndex]     = PcdGet32 (PcdGpuToLocalHbmReadLatency);
@@ -218,9 +228,9 @@ InstallHeterogeneousMemoryAttributeTable (
   }
 
   // gpu to local cpu and remote cpu
-  for (UINTN InitIndex = TH500_GPU_DOMAIN_START; InitIndex < TH500_GPU_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets); InitIndex++) {
+  for (UINTN InitIndex = TH500_GPU_PXM_DOMAIN_START; InitIndex < TH500_GPU_PXM_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets); InitIndex++) {
     // check if CPU socket enabled for this GPU Index
-    if (!IsSocketEnabled (InitIndex - TH500_GPU_DOMAIN_START)) {
+    if (!IsSocketEnabled (InitIndex - TH500_GPU_PXM_DOMAIN_START)) {
       continue;
     }
 
@@ -229,7 +239,7 @@ InstallHeterogeneousMemoryAttributeTable (
         continue;
       }
 
-      if ((InitIndex - TH500_GPU_DOMAIN_START) == TargIndex) {
+      if ((InitIndex - TH500_GPU_PXM_DOMAIN_START) == TargIndex) {
         // local cpu
         ReadLatencyList[InitIndex * NumInitiatorProximityDomains + TargIndex]     = PcdGet32 (PcdGpuToLocalCpuReadLatency);
         WriteLatencyList[InitIndex * NumInitiatorProximityDomains + TargIndex]    = PcdGet32 (PcdGpuToLocalCpuWriteLatency);

@@ -406,37 +406,46 @@
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets|1|UINT32|0x0000005F
 
 #CPU GPU domain distance information
-  gNVIDIATokenSpaceGuid.PcdCpuToCpuDistance|0x28|UINT32|0x00000074
-  gNVIDIATokenSpaceGuid.PcdGpuToGpuDistance|0x50|UINT32|0x00000075
-  gNVIDIATokenSpaceGuid.PcdCpuToOwnGpuDistance|0x50|UINT32|0x00000076
-  gNVIDIATokenSpaceGuid.PcdCpuToOtherGpuDistance|0x78|UINT32|0x00000077
-  gNVIDIATokenSpaceGuid.PcdGpuToOwnCpuDistance|0x50|UINT32|0x00000078
-  gNVIDIATokenSpaceGuid.PcdGpuToOtherCpuDistance|0x78|UINT32|0x00000079
-  gNVIDIATokenSpaceGuid.PcdLocalDistance|10|UINT32|0x0000007A
-  gNVIDIATokenSpaceGuid.PcdUnreachableDistance|0xFF|UINT32|0x0000007B
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuDistance|0x0|UINT32|0x00000074
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteGpuDistance|0x0|UINT32|0x00000075
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmDistance|0x0|UINT32|0x00000076
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmDistance|0x0|UINT32|0x00000077
+  gNVIDIATokenSpaceGuid.PcdLocalHbmToCpuDistance|0x0|UINT32|0x00000078
+  gNVIDIATokenSpaceGuid.PcdRemoteHbmToCpuDistance|0x0|UINT32|0x00000079
+  gNVIDIATokenSpaceGuid.PcdHbmToLocalCpuDistance|0x0|UINT32|0x0000007A
+  gNVIDIATokenSpaceGuid.PcdHbmToRemoteCpuDistance|0x0|UINT32|0x0000007B
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmDistance|0x0|UINT32|0x0000007C
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmDistance|0x0|UINT32|0x0000007D
+  gNVIDIATokenSpaceGuid.PcdHbmToLocalGpuDistance|0x0|UINT32|0x0000007E
+  gNVIDIATokenSpaceGuid.PcdHbmToRemoteGpuDistance|0x0|UINT32|0x0000007F
+  gNVIDIATokenSpaceGuid.PcdLocalDistance|10|UINT32|0x000000A0
+  gNVIDIATokenSpaceGuid.PcdUnreachableDistance|0xFF|UINT32|0x000000A1
 
 #CPU GPU domain bandwidth and latency information
-  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuReadLatency|0xA0|UINT32|0x00000080
-  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuWriteLatency|0x55|UINT32|0x00000081
-  gNVIDIATokenSpaceGuid.PcdCpuToGpuReadLatency|0x208|UINT32|0x00000082
-  gNVIDIATokenSpaceGuid.PcdCpuToGpuWriteLatency|0x181|UINT32|0x00000083
-  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuReadLatency|0x1BD|UINT32|0x00000084
-  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuWriteLatency|0x172|UINT32|0x00000085
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmReadLatency|0x144|UINT32|0x00000086
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmWriteLatency|0x73|UINT32|0x00000087
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuReadLatency|0x280|UINT32|0x00000088
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuWriteLatency|0x235|UINT32|0x00000089
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuReadLatency|0x578|UINT32|0x0000008A
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuWriteLatency|0x52D|UINT32|0x0000008B
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmReadLatency|0x44C|UINT32|0x0000008C
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency|0x3C5|UINT32|0x0000008D
-  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuAccessBandwidth|0x200|UINT32|0x0000008E
-  gNVIDIATokenSpaceGuid.PcdCpuToGpuAccessBandwidth|0x1C2|UINT32|0x0000008F
-  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuAccessBandwidth|0x64|UINT32|0x00000090
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmAccessBandwidth|0xBB8|UINT32|0x00000091
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuAccessBandwidth|0x1C2|UINT32|0x00000092
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmAccessBandwidth|0x1C2|UINT32|0x00000093
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth|0x1C2|UINT32|0x00000094
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuReadLatency|0x0|UINT32|0x00000081
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuWriteLatency|0x0|UINT32|0x00000082
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuAccessBandwidth|0x0|UINT32|0x00000083
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuReadLatency|0x0|UINT32|0x00000084
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuWriteLatency|0x0|UINT32|0x00000085
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuAccessBandwidth|0x0|UINT32|0x00000086
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmReadLatency|0x0|UINT32|0x00000087
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmWriteLatency|0x0|UINT32|0x00000088
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmAccessBandwidth|0x0|UINT32|0x00000089
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmReadLatency|0x0|UINT32|0x0000008A
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmWriteLatency|0x0|UINT32|0x0000008B
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmAccessBandwidth|0x0|UINT32|0x0000008C
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmReadLatency|0x0|UINT32|0x0000008D
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmWriteLatency|0x0|UINT32|0x0000008E
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmAccessBandwidth|0x0|UINT32|0x0000008F
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuReadLatency|0x0|UINT32|0x00000090
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuWriteLatency|0x0|UINT32|0x00000091
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuAccessBandwidth|0x0|UINT32|0x00000092
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuReadLatency|0x0|UINT32|0x00000093
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuWriteLatency|0x0|UINT32|0x00000094
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmAccessBandwidth|0x0|UINT32|0x00000095
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmReadLatency|0x0|UINT32|0x00000096
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency|0x0|UINT32|0x00000097
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth|0x0|UINT32|0x00000098
 
 #Interrupts
   gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum|0x19|UINT32|0x0000005C

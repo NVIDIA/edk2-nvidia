@@ -161,7 +161,7 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
       ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
       Package () {
         Package(2) { "gpu_mem_base_pa", 0x400000000000 },
-        Package(2) { "gpu_mem_pxm_start", TH500_GPU_PXM_START(0) },
+        Package(2) { "gpu_mem_pxm_start", TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID(0) },
         Package(2) { "gpu_mem_pxm_count", TH500_GPU_MAX_NR_MEM_PARTITIONS },
       }
     })

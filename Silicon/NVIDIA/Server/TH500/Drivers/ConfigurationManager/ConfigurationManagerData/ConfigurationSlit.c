@@ -20,14 +20,18 @@
 #include <TH500/TH500Definitions.h>
 
 // Normalized Distances
-#define NORMALIZED_LOCAL_DISTANCE             PcdGet32 (PcdLocalDistance)
-#define NORMALIZED_UNREACHABLE_DISTANCE       PcdGet32 (PcdUnreachableDistance)
-#define NORMALIZED_CPU_TO_CPU_DISTANCE        PcdGet32 (PcdCpuToCpuDistance)
-#define NORMALIZED_GPU_TO_GPU_DISTANCE        PcdGet32 (PcdGpuToGpuDistance)
-#define NORMALIZED_CPU_TO_OWN_GPU_DISTANCE    PcdGet32 (PcdCpuToOwnGpuDistance)
-#define NORMALIZED_CPU_TO_OTHER_GPU_DISTANCE  PcdGet32 (PcdCpuToOtherGpuDistance)
-#define NORMALIZED_GPU_TO_OWN_CPU_DISTANCE    PcdGet32 (PcdGpuToOwnCpuDistance)
-#define NORMALIZED_GPU_TO_OTHER_CPU_DISTANCE  PcdGet32 (PcdGpuToOtherCpuDistance)
+#define NORMALIZED_LOCAL_DISTANCE              PcdGet32 (PcdLocalDistance)
+#define NORMALIZED_UNREACHABLE_DISTANCE        PcdGet32 (PcdUnreachableDistance)
+#define NORMALIZED_CPU_TO_REMOTE_CPU_DISTANCE  PcdGet32 (PcdCpuToRemoteCpuDistance)
+#define NORMALIZED_GPU_TO_REMOTE_GPU_DISTANCE  PcdGet32 (PcdGpuToRemoteGpuDistance)
+#define NORMALIZED_CPU_TO_LOCAL_HBM_DISTANCE   PcdGet32 (PcdCpuToLocalHbmDistance)
+#define NORMALIZED_CPU_TO_REMOTE_HBM_DISTANCE  PcdGet32 (PcdCpuToRemoteHbmDistance)
+#define NORMALIZED_HBM_TO_LOCAL_CPU_DISTANCE   PcdGet32 (PcdHbmToLocalCpuDistance)
+#define NORMALIZED_HBM_TO_REMOTE_CPU_DISTANCE  PcdGet32 (PcdHbmToRemoteCpuDistance)
+#define NORMALIZED_GPU_TO_LOCAL_HBM_DISTANCE   PcdGet32 (PcdGpuToLocalHbmDistance)
+#define NORMALIZED_GPU_TO_REMOTE_HBM_DISTANCE  PcdGet32 (PcdGpuToRemoteHbmDistance)
+#define NORMALIZED_HBM_TO_LOCAL_GPU_DISTANCE   PcdGet32 (PcdHbmToLocalGpuDistance)
+#define NORMALIZED_HBM_TO_REMOTE_GPU_DISTANCE  PcdGet32 (PcdHbmToRemoteGpuDistance)
 
 EFI_STATUS
 EFIAPI
@@ -81,9 +85,9 @@ InstallStaticLocalityInformationTable (
   SysLocalityInfo = (CM_ARM_SYSTEM_LOCALITY_INFO *)AllocateZeroPool (sizeof (CM_ARM_SYSTEM_LOCALITY_INFO));
 
   // Create a 2D distance matrix with locality information across all possible proximity domains
-  // Each CPU and GPU Socket is a proximity domain
+  // Each CPU, GPU and GPU HBM is a proximity domain
 
-  ProximityDomains = TH500_GPU_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets);
+  ProximityDomains = TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS;
 
   Distance = (UINT8 *)AllocateZeroPool (sizeof (UINT8) * ProximityDomains * ProximityDomains);
   if (Distance == NULL) {
@@ -103,64 +107,106 @@ InstallStaticLocalityInformationTable (
     }
   }
 
-  // Assign adjacent memory distance for all CPU to other domains (CPU and GPU)
+  // Assign adjacent memory distance for all CPU to other CPU and GPU domains
   for (RowIndex = 0; RowIndex < PcdGet32 (PcdTegraMaxSockets); RowIndex++ ) {
     if (!IsSocketEnabled (RowIndex)) {
       continue;
     }
 
-    // CPU to CPU domains only
+    // CPU to other CPU domains
     for (ColIndex = 0; ColIndex < PcdGet32 (PcdTegraMaxSockets); ColIndex++ ) {
       if (!IsSocketEnabled (ColIndex)) {
         continue;
       }
 
       if (RowIndex != ColIndex) {
-        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_CPU_TO_CPU_DISTANCE;
+        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_CPU_TO_REMOTE_CPU_DISTANCE;
       }
     }
 
-    // CPU to GPU domains only
-    for (ColIndex = TH500_GPU_DOMAIN_START; ColIndex < (TH500_GPU_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets)); ColIndex++ ) {
-      if (!IsSocketEnabled (ColIndex - TH500_GPU_DOMAIN_START)) {
+    // CPU to GPU HBM domains
+    for (ColIndex = TH500_GPU_HBM_PXM_DOMAIN_START; ColIndex < (TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS); ColIndex++ ) {
+      if (!IsSocketEnabled ((ColIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
         continue;
       }
 
-      if (RowIndex == (ColIndex - TH500_GPU_DOMAIN_START)) {
-        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_CPU_TO_OWN_GPU_DISTANCE;
+      if ((ColIndex >= TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (RowIndex)) &&
+          (ColIndex < (TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (RowIndex) + TH500_GPU_MAX_NR_MEM_PARTITIONS)))
+      {
+        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_CPU_TO_LOCAL_HBM_DISTANCE;
       } else {
-        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_CPU_TO_OTHER_GPU_DISTANCE;
+        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_CPU_TO_REMOTE_HBM_DISTANCE;
       }
     }
   }
 
-  // Assign adjacent memory distance for all GPU to other domains (CPU and GPU)
-  for (RowIndex = TH500_GPU_DOMAIN_START; RowIndex < (TH500_GPU_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets)); RowIndex++ ) {
-    if (!IsSocketEnabled (RowIndex - TH500_GPU_DOMAIN_START)) {
+  // Assign adjacent memory distance for all GPU to other GPU domains and GPU HBM domains
+  for (RowIndex = TH500_GPU_PXM_DOMAIN_START; RowIndex < (TH500_GPU_PXM_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets)); RowIndex++ ) {
+    if (!IsSocketEnabled (RowIndex - TH500_GPU_PXM_DOMAIN_START)) {
       continue;
     }
 
-    // GPU to CPU domains only
+    // GPU to GPU domains only
+    for (ColIndex = TH500_GPU_PXM_DOMAIN_START; ColIndex < (TH500_GPU_PXM_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets)); ColIndex++ ) {
+      if (!IsSocketEnabled (ColIndex - TH500_GPU_PXM_DOMAIN_START)) {
+        continue;
+      }
+
+      if ((RowIndex) != ColIndex) {
+        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_GPU_TO_REMOTE_GPU_DISTANCE;
+      }
+    }
+
+    // Assign adjacent memory distance for all GPU to GPU HBM domains only
+    for (ColIndex = TH500_GPU_HBM_PXM_DOMAIN_START; ColIndex < (TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS); ColIndex++ ) {
+      if (!IsSocketEnabled ((ColIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
+        continue;
+      }
+
+      // check for local vs remote HBM partitions
+      if ((ColIndex >= TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (RowIndex - TH500_GPU_PXM_DOMAIN_START)) &&
+          (ColIndex < (TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (RowIndex - TH500_GPU_PXM_DOMAIN_START) + TH500_GPU_MAX_NR_MEM_PARTITIONS)))
+      {
+        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_GPU_TO_LOCAL_HBM_DISTANCE;
+      } else {
+        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_GPU_TO_REMOTE_HBM_DISTANCE;
+      }
+    }
+  }
+
+  // GPU HBM to CPU domains and GPU domains
+  for (RowIndex = TH500_GPU_HBM_PXM_DOMAIN_START; RowIndex < (TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS); RowIndex++ ) {
+    if (!IsSocketEnabled ((RowIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
+      continue;
+    }
+
+    // HBM to CPU domains
     for (ColIndex = 0; ColIndex < PcdGet32 (PcdTegraMaxSockets); ColIndex++ ) {
       if (!IsSocketEnabled (ColIndex)) {
         continue;
       }
 
-      if ((RowIndex-TH500_GPU_DOMAIN_START) == ColIndex) {
-        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_GPU_TO_OWN_CPU_DISTANCE;
+      // check for local vs remote HBM partitions
+      if ((RowIndex >= TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (ColIndex)) &&
+          (RowIndex < (TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (ColIndex) + TH500_GPU_MAX_NR_MEM_PARTITIONS)))
+      {
+        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_HBM_TO_LOCAL_CPU_DISTANCE;
       } else {
-        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_GPU_TO_OTHER_CPU_DISTANCE;
+        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_HBM_TO_REMOTE_CPU_DISTANCE;
       }
     }
 
-    // GPU to GPU domains only
-    for (ColIndex = TH500_GPU_DOMAIN_START; ColIndex < (TH500_GPU_DOMAIN_START+ PcdGet32 (PcdTegraMaxSockets)); ColIndex++ ) {
-      if (!IsSocketEnabled (ColIndex - TH500_GPU_DOMAIN_START)) {
+    // HBM to GPU domains
+    for (ColIndex = TH500_GPU_PXM_DOMAIN_START; ColIndex < (TH500_GPU_PXM_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets)); ColIndex++ ) {
+      if (!IsSocketEnabled (ColIndex - TH500_GPU_PXM_DOMAIN_START)) {
         continue;
       }
 
-      if (RowIndex != ColIndex) {
-        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_GPU_TO_GPU_DISTANCE;
+      // check if it is a local GPU domain
+      if (((RowIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS) == (ColIndex - TH500_GPU_PXM_DOMAIN_START)) {
+        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_HBM_TO_LOCAL_GPU_DISTANCE;
+      } else {
+        Distance[RowIndex * ProximityDomains + ColIndex] = NORMALIZED_HBM_TO_REMOTE_GPU_DISTANCE;
       }
     }
   }
