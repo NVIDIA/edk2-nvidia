@@ -642,10 +642,13 @@ DtPlatformLoadDtb (
   OUT   UINTN  *DtbSize
   )
 {
-  EFI_STATUS           Status;
-  VOID                 *UefiDtb;
-  VOID                 *DtbCopy;
-  TEGRA_PLATFORM_TYPE  PlatformType;
+  EFI_STATUS                    Status;
+  VOID                          *UefiDtb;
+  VOID                          *DtbCopy;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  TEGRA_PLATFORM_TYPE           PlatformType;
+  BOOLEAN                       UefiDtbBoot;
 
   UefiDtb = (VOID *)(UINTN)GetDTBBaseAddress ();
   if (fdt_check_header (UefiDtb) != 0) {
@@ -666,6 +669,16 @@ DtPlatformLoadDtb (
   *Dtb     = DtbCopy;
   *DtbSize = fdt_totalsize (*Dtb);
 
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+    return EFI_NOT_FOUND;
+  }
+
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_NOTIFY,
@@ -681,12 +694,19 @@ DtPlatformLoadDtb (
 
   PlatformType = TegraGetPlatform ();
 
+  UefiDtbBoot = FALSE;
+  if ((PlatformType != TEGRA_PLATFORM_SILICON) ||
+      (PlatformResourceInfo->BootType == TegrablBootRcm))
+  {
+    UefiDtbBoot = TRUE;
+  }
+
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
-                  PlatformType == TEGRA_PLATFORM_SILICON ?
-                  InstallFdt :
-                  UpdateFdt,
+                  UefiDtbBoot ?
+                  UpdateFdt :
+                  InstallFdt,
                   NULL,
                   &gEfiEventReadyToBootGuid,
                   &ReadyToBootEvent
