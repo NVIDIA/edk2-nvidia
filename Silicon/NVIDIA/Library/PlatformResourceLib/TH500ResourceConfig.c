@@ -391,7 +391,7 @@ TH500GetMmioBaseAndSize (
   Get Platform Resource Information
 
 **/
-BOOLEAN
+EFI_STATUS
 EFIAPI
 TH500GetPlatformResourceInformation (
   IN UINTN                         CpuBootloaderAddress,
@@ -410,7 +410,7 @@ TH500GetPlatformResourceInformation (
 
   Status = TH500GetResourceConfig (CpuBootloaderAddress, PlatformResourceInfo->ResourceInfo);
   if (EFI_ERROR (Status)) {
-    return FALSE;
+    return Status;
   }
 
   PlatformResourceInfo->MmioInfo = TH500GetMmioBaseAndSize (SocketMask);
@@ -429,5 +429,5 @@ TH500GetPlatformResourceInformation (
     PlatformResourceInfo->BootType = TegrablBootColdBoot;
   }
 
-  return TRUE;
+  return EFI_SUCCESS;
 }

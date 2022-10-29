@@ -27,7 +27,7 @@ TH500GetDTBBaseAddress (
   Get Platform Resource Information
 
 **/
-BOOLEAN
+EFI_STATUS
 EFIAPI
 TH500GetPlatformResourceInformation (
   IN UINTN                         CpuBootloaderAddress,
