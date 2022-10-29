@@ -470,9 +470,7 @@ MmCommunication2Initialize (
                   EfiGcdMemoryTypeSystemMemory,
                   mNsCommBuffMemRegion.PhysicalBase,
                   mNsCommBuffMemRegion.Length,
-                  EFI_MEMORY_WB |
-                  EFI_MEMORY_XP |
-                  EFI_MEMORY_RUNTIME
+                  EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
@@ -486,7 +484,7 @@ MmCommunication2Initialize (
   Status = gDS->SetMemorySpaceAttributes (
                   mNsCommBuffMemRegion.PhysicalBase,
                   mNsCommBuffMemRegion.Length,
-                  EFI_MEMORY_WB | EFI_MEMORY_XP | EFI_MEMORY_RUNTIME
+                  EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
