@@ -12,6 +12,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/FloorSweepingLib.h>
 
+#include <IndustryStandard/Slit.h>
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <ConfigurationManagerDataPrivate.h>
@@ -60,9 +61,9 @@ InstallStaticLocalityInformationTable (
 
       NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
 
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_SYSTEM_RESOURCE_AFFINITY_TABLE_SIGNATURE;
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision  = EFI_ACPI_6_4_SYSTEM_RESOURCE_AFFINITY_TABLE_REVISION;
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSrat);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_SYSTEM_LOCALITY_INFORMATION_TABLE_SIGNATURE;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision  = EFI_ACPI_6_4_SYSTEM_LOCALITY_INFORMATION_TABLE_REVISION;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSlit);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = NULL;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = 0;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
@@ -168,6 +169,7 @@ InstallStaticLocalityInformationTable (
   SysLocalityInfo->Distance            = Distance;
 
   Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjSystemLocalityInfo);
+  Repo->CmObjectToken = CM_NULL_TOKEN;
   Repo->CmObjectSize  = sizeof (CM_ARM_SYSTEM_LOCALITY_INFO);
   Repo->CmObjectCount = 1;
   Repo->CmObjectPtr   = SysLocalityInfo;
