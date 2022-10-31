@@ -80,4 +80,16 @@ InFbc (
   VOID
   );
 
+EFIAPI
+EFI_STATUS
+GetVarStoreCs (
+  UINT8  *VarCs
+  );
+
+EFIAPI
+EFI_STATUS
+GetCpuBlParamsAddrStMm (
+  EFI_PHYSICAL_ADDRESS  *CpuBlAddr
+  );
+
 #endif //STANDALONEMM_OPTEE_DEVICE_MEM_H

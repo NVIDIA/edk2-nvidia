@@ -89,6 +89,29 @@ typedef struct {
 
 #define TEGRABL_MAX_CONTROLLER_PROD_WORDS  64
 
+#define BLOCK_SIZE                          (12)
+#define PRIMARY_COPY                        (0)
+#define TEGRABL_BINARY_MAX                  (33U)
+#define TEGRABL_BINARY_COPY_MAX             (4)
+#define TEGRABL_PARTITION_DEVICE_TYPE_QSPI  (1)
+
+typedef struct {
+  /* Partition Device (QSPI/RCM/NONE). On TH500 this can be QSPI only */
+  UINT32    DeviceType;
+
+  /* Device Instance. In QSPI cases, this represents which NOR-FLASH
+   * device the partition is on. The upper 8 bits represent the Chip
+   * Select Number , lower 8 bits represents the QSPI instance.
+   */
+  UINT16    DeviceInstance;
+  /* Start LBA of partition. */
+  UINT32    StartBlock;
+  /* Partiton Size. */
+  UINT32    Size;
+  /* MB2 may call this "Attributes", but for now this field is reserved. */
+  UINT32    Reserved;
+} TEGRABL_PARTITION_DESC;
+
 #pragma pack(1)
 typedef struct  {
   UINT32    NumWords;
@@ -102,13 +125,13 @@ typedef struct  {
   UINT64    Size;
 } TEGRABL_SDRAM_INFO_DATA;
 
-#define TEGRABL_TEGRABL_FRU_EEPROM_DATA_SIZE 256
+#define TEGRABL_TEGRABL_FRU_EEPROM_DATA_SIZE  256
 
 #pragma pack(1)
 typedef struct {
-  UINT8 Data[TEGRABL_TEGRABL_FRU_EEPROM_DATA_SIZE];
-  UINT32 DataSize;
-  UINT32 Reserved;
+  UINT8     Data[TEGRABL_TEGRABL_FRU_EEPROM_DATA_SIZE];
+  UINT32    DataSize;
+  UINT32    Reserved;
 } TEGRABL_FRU_EEPROM_DATA;
 
 #pragma pack()
@@ -172,6 +195,8 @@ typedef struct {
    * otherwise checksum verification is passed.
    */
   UEFI_DECLARE_ALIGNED (UINT8 UphyLinkChecksumStatusp[TH500_MAX_SOCKETS], 8);
+
+  UEFI_DECLARE_ALIGNED (TEGRABL_PARTITION_DESC PartitionInfo[TEGRABL_BINARY_MAX][TEGRABL_BINARY_COPY_MAX], 8);
 } TEGRA_CPUBL_PARAMS;
 
 #endif //__TH500_RESOURCE_CONFIG_PRIVATE_H__

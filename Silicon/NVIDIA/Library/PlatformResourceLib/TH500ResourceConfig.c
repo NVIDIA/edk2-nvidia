@@ -435,3 +435,40 @@ TH500GetPlatformResourceInformation (
 
   return EFI_SUCCESS;
 }
+
+/**
+ * Get Partition information.
+**/
+EFI_STATUS
+EFIAPI
+TH500GetPartitionInfo (
+  IN  UINTN   CpuBootloaderAddress,
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  )
+{
+  TEGRA_CPUBL_PARAMS      *CpuBootloaderParams;
+  TEGRABL_PARTITION_DESC  *PartitionDesc;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  if (PartitionIndex >= TEGRABL_BINARY_MAX) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a, Partition Index is invalid %u (Max %u)\n",
+      __FUNCTION__,
+      PartitionIndex,
+      TEGRABL_BINARY_MAX
+      ));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  PartitionDesc       = &CpuBootloaderParams->PartitionInfo[PartitionIndex][PRIMARY_COPY];
+  *DeviceInstance     = PartitionDesc->DeviceInstance;
+  *PartitionStartByte = PartitionDesc->StartBlock * BLOCK_SIZE;
+  *PartitionSizeBytes = PartitionDesc->Size;
+
+  return EFI_SUCCESS;
+}

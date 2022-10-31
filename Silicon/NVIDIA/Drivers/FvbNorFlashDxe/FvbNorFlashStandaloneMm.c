@@ -12,6 +12,7 @@
 #include <Library/MmServicesTableLib.h>
 #include <Library/StandaloneMmOpteeDeviceMem.h>
 #include <FvbPrivate.h>
+#include <Library/PlatformResourceLib.h>
 
 /**
   The GetAttributes() function retrieves the attributes and
@@ -1002,6 +1003,246 @@ InitializeWorkSpaceHeader (
 }
 
 /**
+ * Validate that the Variable and FTW partition sizes are valid.
+ **/
+STATIC
+EFI_STATUS
+ValidatePartitionInfo (
+  IN NOR_FLASH_ATTRIBUTES  *NorFlashAttributes,
+  IN UINT64                VariableOffset,
+  IN UINT64                VariableSize,
+  IN UINT64                FtwOffset,
+  IN UINT64                FtwSize
+  )
+{
+  if ((VariableSize == 0) ||
+      ((VariableSize % NorFlashAttributes->BlockSize) != 0) ||
+      (FtwSize == 0) ||
+      ((FtwSize % NorFlashAttributes->BlockSize) != 0))
+  {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:Invalid Partition Size.Var(%lu) FTW(%lu) Block %u\n",
+      __FUNCTION__,
+      VariableSize,
+      FtwSize,
+      NorFlashAttributes->BlockSize
+      ));
+    return EFI_DEVICE_ERROR;
+  }
+
+  if ((VariableOffset == 0) && (FtwOffset == 0)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Invalid Variable and FTW Offset (0)\n",
+      __FUNCTION__
+      ));
+    return EFI_DEVICE_ERROR;
+  }
+
+  if (FtwSize < (VariableSize + (VariableSize >> 1))) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:FTW(%lu) should be atleast 1.5x Variable(%lu)\n",
+      __FUNCTION__,
+      FtwSize,
+      VariableSize
+      ));
+    return EFI_DEVICE_ERROR;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Get the Variable and FTW partition offset and size from the BootLoader Params in
+  configs where GPT table isn't available.
+**/
+STATIC
+EFI_STATUS
+FvbInitializeNoGpt (
+  IN  NOR_FLASH_ATTRIBUTES  *NorFlashAttributes,
+  OUT UINT64                *VariableOffset,
+  OUT UINT64                *VariableSize,
+  OUT UINT64                *FtwOffset,
+  OUT UINT64                *FtwSize
+  )
+{
+  EFI_STATUS            Status;
+  UINT16                DeviceInstance;
+  UINT64                VOffset;
+  UINT64                VSize;
+  UINT64                FOffset;
+  UINT64                FSize;
+  EFI_PHYSICAL_ADDRESS  CpuBlParamsAddr;
+
+  *VariableOffset = 0;
+  *VariableSize   = 0;
+  *FtwOffset      = 0;
+  *FtwSize        = 0;
+
+  Status = GetCpuBlParamsAddrStMm (&CpuBlParamsAddr);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get CPU BL Addr %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  Status = GetPartitionInfoStMm (
+             (UINTN)CpuBlParamsAddr,
+             TEGRABL_VARIABLE_IMAGE_INDEX,
+             &DeviceInstance,
+             &VOffset,
+             &VSize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get Variable partition Info %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  DeviceInstance = 0;
+  Status         = GetPartitionInfoStMm (
+                     (UINTN)CpuBlParamsAddr,
+                     TEGRABL_FTW_IMAGE_INDEX,
+                     &DeviceInstance,
+                     &FOffset,
+                     &FSize
+                     );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get FTW partition Info %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  *VariableOffset = VOffset;
+  *VariableSize   = VSize;
+  *FtwOffset      = FOffset;
+  *FtwSize        = FSize;
+
+  Status = ValidatePartitionInfo (
+             NorFlashAttributes,
+             *VariableOffset,
+             *VariableSize,
+             *FtwOffset,
+             *FtwSize
+             );
+  return Status;
+}
+
+/**
+  Get the Variable and FTW Partition offset and sizes from the GPT table. This
+  should be the typical call flow in most platforms.
+**/
+STATIC
+EFI_STATUS
+FvbInitializeGpt (
+  IN  NOR_FLASH_ATTRIBUTES       *NorFlashAttributes,
+  IN  NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol,
+  OUT UINT64                     *VariableOffset,
+  OUT UINT64                     *VariableSize,
+  OUT UINT64                     *FtwOffset,
+  OUT UINT64                     *FtwSize
+  )
+{
+  EFI_STATUS                  Status;
+  EFI_PARTITION_TABLE_HEADER  PartitionHeader;
+  VOID                        *PartitionEntryArray;
+  CONST EFI_PARTITION_ENTRY   *PartitionEntry;
+
+  // Validate GPT and get table entries, always 512 bytes from the end
+  Status = NorFlashProtocol->Read (
+                               NorFlashProtocol,
+                               NorFlashAttributes->MemoryDensity - GPT_PARTITION_BLOCK_SIZE,
+                               sizeof (PartitionHeader),
+                               &PartitionHeader
+                               );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read GPT partition table (%r)\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = GptValidateHeader (&PartitionHeader);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Invalid efi partition table header\n"));
+    return EFI_DEVICE_ERROR;
+  }
+
+  //
+  // Read the partition Entries;
+  //
+  PartitionEntryArray = AllocateZeroPool (GptPartitionTableSizeInBytes (&PartitionHeader));
+  if (PartitionEntryArray == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = NorFlashProtocol->Read (
+                               NorFlashProtocol,
+                               PartitionHeader.PartitionEntryLBA * GPT_PARTITION_BLOCK_SIZE,
+                               GptPartitionTableSizeInBytes (&PartitionHeader),
+                               PartitionEntryArray
+                               );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read GPT partition array (%r)\r\n", __FUNCTION__, Status));
+    goto ExitInitializeGpt;
+  }
+
+  Status = GptValidatePartitionTable (&PartitionHeader, PartitionEntryArray);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Invalid PartitionEntryArray\r\n"));
+    goto ExitInitializeGpt;
+  }
+
+  *VariableOffset = 0;
+  *VariableSize   = 0;
+  *FtwOffset      = 0;
+  *FtwSize        = 0;
+  // Find variable and FTW partitions
+  PartitionEntry = GptFindPartitionByName (
+                     &PartitionHeader,
+                     PartitionEntryArray,
+                     UEFI_VARIABLE_PARTITION_NAME
+                     );
+  if (PartitionEntry != NULL) {
+    *VariableOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
+    *VariableSize   = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
+  }
+
+  PartitionEntry = GptFindPartitionByName (
+                     &PartitionHeader,
+                     PartitionEntryArray,
+                     FTW_PARTITION_NAME
+                     );
+  if (PartitionEntry != NULL) {
+    *FtwOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
+    *FtwSize   = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
+  }
+
+  Status = ValidatePartitionInfo (
+             NorFlashAttributes,
+             *VariableOffset,
+             *VariableSize,
+             *FtwOffset,
+             *FtwSize
+             );
+ExitInitializeGpt:
+  FreePool (PartitionEntryArray);
+  return Status;
+}
+
+/**
   Initialize the FVB Driver
 
   @param[in]  ImageHandle   of the loaded driver
@@ -1015,21 +1256,18 @@ FVBNORInitialize (
   IN EFI_MM_SYSTEM_TABLE  *MmSystemTable
   )
 {
-  EFI_STATUS                  Status;
-  NVIDIA_NOR_FLASH_PROTOCOL   *NorFlashProtocol;
-  NOR_FLASH_ATTRIBUTES        NorFlashAttributes;
-  EFI_PARTITION_TABLE_HEADER  PartitionHeader;
-  VOID                        *PartitionEntryArray;
-  CONST EFI_PARTITION_ENTRY   *PartitionEntry;
-  UINTN                       Index;
-  UINT64                      VariableOffset;
-  UINT64                      VariableSize;
-  UINT64                      FtwOffset;
-  UINT64                      FtwSize;
-  NVIDIA_FVB_PRIVATE_DATA     *FvpData;
-  VOID                        *VarStoreBuffer;
-  VOID                        *FtwSpareBuffer;
-  VOID                        *FtwWorkingBuffer;
+  EFI_STATUS                 Status;
+  NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol;
+  NOR_FLASH_ATTRIBUTES       NorFlashAttributes;
+  UINTN                      Index;
+  UINT64                     VariableOffset;
+  UINT64                     VariableSize;
+  UINT64                     FtwOffset;
+  UINT64                     FtwSize;
+  NVIDIA_FVB_PRIVATE_DATA    *FvpData;
+  VOID                       *VarStoreBuffer;
+  VOID                       *FtwSpareBuffer;
+  VOID                       *FtwWorkingBuffer;
 
   if (PcdGetBool (PcdEmuVariableNvModeEnable)) {
     return EFI_SUCCESS;
@@ -1056,88 +1294,47 @@ FVBNORInitialize (
     return EFI_SUCCESS;
   }
 
-  // Validate GPT and get table entries, always 512 bytes from the end
-  Status = NorFlashProtocol->Read (
-                               NorFlashProtocol,
-                               NorFlashAttributes.MemoryDensity - GPT_PARTITION_BLOCK_SIZE,
-                               sizeof (PartitionHeader),
-                               &PartitionHeader
-                               );
+  /* Assume that the Variable store part has a GPT */
+  Status = FvbInitializeGpt (
+             &NorFlashAttributes,
+             NorFlashProtocol,
+             &VariableOffset,
+             &VariableSize,
+             &FtwOffset,
+             &FtwSize
+             );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to read GPT partition table (%r)\r\n", __FUNCTION__, Status));
-    return EFI_SUCCESS;
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Couldn't get Partition info from Gpt(%r), Trying CPUBL\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    /* Try to look up the CPU BL Params for the partition Info. */
+    Status = FvbInitializeNoGpt (
+               &NorFlashAttributes,
+               &VariableOffset,
+               &VariableSize,
+               &FtwOffset,
+               &FtwSize
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a:Failed to get Partition info from CPUBL(%r) \n",
+        __FUNCTION__,
+        Status
+        ));
+
+      /*
+       * If we fail here, then return a success to the MM dispatcher to
+       * a. Keep the dispatcher from crashing. (known issue with failed drivers).
+       * b. There could be cases where we dynamically fallback to emulated store;
+       *    this is unique to MM since we don't do dynamic PCDs or DTB overlays.
+       **/
+      return EFI_SUCCESS;
+    }
   }
-
-  Status = GptValidateHeader (&PartitionHeader);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Invalid efi partition table header\n"));
-    return EFI_SUCCESS;
-  }
-
-  //
-  // Read the partition Entries;
-  //
-  PartitionEntryArray = AllocateZeroPool (GptPartitionTableSizeInBytes (&PartitionHeader));
-  if (PartitionEntryArray == NULL) {
-    return EFI_SUCCESS;
-  }
-
-  Status = NorFlashProtocol->Read (
-                               NorFlashProtocol,
-                               PartitionHeader.PartitionEntryLBA * GPT_PARTITION_BLOCK_SIZE,
-                               GptPartitionTableSizeInBytes (&PartitionHeader),
-                               PartitionEntryArray
-                               );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to read GPT partition array (%r)\r\n", __FUNCTION__, Status));
-    FreePool (PartitionEntryArray);
-    return EFI_SUCCESS;
-  }
-
-  Status = GptValidatePartitionTable (&PartitionHeader, PartitionEntryArray);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Invalid PartitionEntryArray\r\n"));
-    FreePool (PartitionEntryArray);
-    return EFI_SUCCESS;
-  }
-
-  VariableOffset = 0;
-  VariableSize   = 0;
-  FtwOffset      = 0;
-  FtwSize        = 0;
-  // Find variable and FTW partitions
-  PartitionEntry = GptFindPartitionByName (
-                     &PartitionHeader,
-                     PartitionEntryArray,
-                     UEFI_VARIABLE_PARTITION_NAME
-                     );
-  if (PartitionEntry != NULL) {
-    VariableOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
-    VariableSize   = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
-    ASSERT ((VariableOffset % NorFlashAttributes.BlockSize) == 0);
-    ASSERT ((VariableSize % NorFlashAttributes.BlockSize) == 0);
-  }
-
-  PartitionEntry = GptFindPartitionByName (
-                     &PartitionHeader,
-                     PartitionEntryArray,
-                     FTW_PARTITION_NAME
-                     );
-  if (PartitionEntry != NULL) {
-    FtwOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
-    FtwSize   = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
-    ASSERT ((FtwOffset % NorFlashAttributes.BlockSize) == 0);
-    ASSERT ((FtwSize % NorFlashAttributes.BlockSize) == 0);
-  }
-
-  FreePool (PartitionEntryArray);
-
-  if ((VariableOffset == 0) || (FtwOffset == 0)) {
-    DEBUG ((DEBUG_ERROR, "%a: Partition not found\r\n", __FUNCTION__));
-    return EFI_SUCCESS;
-  }
-
-  ASSERT (FtwSize > VariableSize);
 
   // Build FVB instances
   FvpData = NULL;

@@ -407,3 +407,79 @@ GetPlatformResourceInformationStandaloneMm (
 {
   return TH500GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo, TRUE);
 }
+
+/**
+ * Get Partition Info in Dxe.
+ *
+ * @param[in] PartitionIndex        Index into the Partition info array, usually
+ *                                  defined by the early BLs..
+ * @param[out] DeviceInstance       Value that conveys the device/CS for the
+ *                                  partition..
+ * @param[out] PartitionStartByte   Start byte offset for the partition..
+ * @param[out] PartitionSizeBytes   Size of the partition in bytes.
+ *
+ * @retval  EFI_SUCCESS             Success in looking up partition.
+ * @retval  EFI_INVALID_PARAMETER   Invalid partition Index.
+**/
+EFI_STATUS
+EFIAPI
+GetPartitionInfo (
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  )
+{
+  UINTN  ChipID;
+  UINTN  CpuBootloaderAddress;
+
+  ChipID = TegraGetChipID ();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case TH500_CHIP_ID:
+      return TH500GetPartitionInfo (
+               CpuBootloaderAddress,
+               PartitionIndex,
+               DeviceInstance,
+               PartitionStartByte,
+               PartitionSizeBytes
+               );
+    default:
+      return EFI_UNSUPPORTED;
+  }
+}
+
+/**
+ * Get Partition Info in Standalone MM image.
+ *
+ * @param[in] CpuBlAddress          Address of the CPU BL params.
+ * @param[in] PartitionIndex        Index into the Partition info array, usually
+ *                                  defined by the early BLs..
+ * @param[out] DeviceInstance       Value that conveys the device/CS for the
+ *                                  partition..
+ * @param[out] PartitionStartByte   Start byte offset for the partition..
+ * @param[out] PartitionSizeBytes   Size of the partition in bytes.
+ *
+ * @retval  EFI_SUCCESS             Success in looking up partition.
+ * @retval  EFI_INVALID_PARAMETER   Invalid partition Index.
+**/
+EFI_STATUS
+EFIAPI
+GetPartitionInfoStMm (
+  IN  UINTN   CpuBlAddress,
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  )
+{
+  return TH500GetPartitionInfo (
+           CpuBlAddress,
+           PartitionIndex,
+           DeviceInstance,
+           PartitionStartByte,
+           PartitionSizeBytes
+           );
+}

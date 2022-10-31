@@ -35,4 +35,18 @@ TH500GetPlatformResourceInformation (
   IN BOOLEAN                       InMm
   );
 
+/**
+ * Get Partition information.
+**/
+
+EFI_STATUS
+EFIAPI
+TH500GetPartitionInfo (
+  IN  UINTN   CpuBootloaderAddress,
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  );
+
 #endif //__TH500_RESOURCE_CONFIG_H__

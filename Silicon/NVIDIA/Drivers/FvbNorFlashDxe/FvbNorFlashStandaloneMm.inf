@@ -38,6 +38,7 @@
   GptLib
   ArmSvcLib
   StandaloneMmOpteeLib
+  PlatformResourceLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
@@ -58,6 +59,7 @@
   gEfiVariableGuid
   gEdkiiNvVarStoreFormattedGuid
   gEdkiiWorkingBlockSignatureGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
   TRUE

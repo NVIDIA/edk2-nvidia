@@ -1252,34 +1252,6 @@ NorFlashWriteBlock (
 }
 
 /**
-  Get NOR flash chip select
-
-  @param[in]   ChipSelect          Pointer to store the chip select.
-
-  @retval EFI_SUCCESS              Operation successful.
-  @retval others                   Error occurred
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-GetNorFlashCS (
-  UINT8  *ChipSelect
-  )
-{
-  UINT8  FlashCS;
-
-  if (IsOpteePresent ()) {
-    FlashCS = NOR_FLASH_CHIP_SELECT_JETSON;
-  } else {
-    FlashCS = NOR_FLASH_CHIP_SELECT_TH500;
-  }
-
-  *ChipSelect = FlashCS;
-
-  return EFI_SUCCESS;
-}
-
-/**
   Check for flash part in device tree.
 
   Looks through all subnodes of the QSPI node to see if any of them has
@@ -1412,7 +1384,7 @@ NorFlashInitialise (
   Private->Signature      = NOR_FLASH_SIGNATURE;
   Private->QspiController = QspiProtocol;
 
-  Status = GetNorFlashCS (&Private->QspiChipSelect);
+  Status = GetVarStoreCs (&Private->QspiChipSelect);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unknown chip select: %r\n", __FUNCTION__, Status));
     goto ErrorExit;

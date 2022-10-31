@@ -35,9 +35,6 @@
 #define NOR_SFDP_SIGNATURE   SIGNATURE_32('S','F','D','P')
 #define QSPI_BASE_ADDRESS    0x3270000
 
-#define NOR_FLASH_CHIP_SELECT_JETSON  0
-#define NOR_FLASH_CHIP_SELECT_TH500   0
-
 #define TIMEOUT  100
 
 #define NOR_READ_SR1           0x5

@@ -15,6 +15,10 @@
 #define T234_CHIP_ID    0x23
 #define T234_MAJOR_REV  0x4
 #define TH500_CHIP_ID   0x24
+/* CS definitions for the platforms */
+#define NOR_FLASH_CHIP_SELECT_JETSON        0
+#define NOR_FLASH_CHIP_SELECT_TH500_PRESIL  0
+#define NOR_FLASH_CHIP_SELECT_TH500_SIL     2
 
 // Jetson SKUs
 #define T194_SKU         1

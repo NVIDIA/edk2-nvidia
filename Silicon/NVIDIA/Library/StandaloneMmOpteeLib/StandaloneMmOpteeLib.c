@@ -199,3 +199,104 @@ GetBootType (
 ExitBootType:
   return BootType;
 }
+
+/**
+ * Get the CPU BL Params Address.
+ *
+ * @param[out] CpuBlAddr   Address for the CPU Bootloader Params..
+ *
+ * @retval  EFI_SUCCESS    Succesfully looked up the CS  value.
+ *          EFI_NOT_FOUND  Couldn't find the GUID'd HOB that contains
+ *                         the STMM Comm Buffers.
+**/
+EFIAPI
+EFI_STATUS
+GetCpuBlParamsAddrStMm (
+  EFI_PHYSICAL_ADDRESS  *CpuBlAddr
+  )
+{
+  EFI_HOB_GUID_TYPE  *GuidHob;
+  STMM_COMM_BUFFERS  *StmmCommBuffers;
+
+  GuidHob = GetFirstGuidHob (&gNVIDIAStMMBuffersGuid);
+  if (GuidHob == NULL) {
+    return EFI_NOT_FOUND;
+  }
+
+  StmmCommBuffers = (STMM_COMM_BUFFERS *)GET_GUID_HOB_DATA (GuidHob);
+  *CpuBlAddr      = StmmCommBuffers->CpuBlParamsAddr;
+  return EFI_SUCCESS;
+}
+
+/**
+ * Look up the CS to be used for the Variable partition.
+ *
+ * @param[out] VarCs  Chipselect for the Variable partition.
+ *
+ * @retval  EFI_SUCCESS    Succesfully looked up the CS  value.
+ *          EFI_NOT_FOUND  Couldn't lookup the CPUBL Params OR
+ *                         the partition info for the Variable partition
+ *                         isn't valid.
+**/
+EFIAPI
+EFI_STATUS
+GetVarStoreCs (
+  UINT8  *VarCs
+  )
+{
+  EFI_STATUS            Status;
+  UINT64                VarOffset;
+  UINT64                VarSize;
+  UINT16                DeviceInstance;
+  EFI_PHYSICAL_ADDRESS  CpuBlAddr;
+  TEGRA_PLATFORM_TYPE   Platform;
+
+  if (IsOpteePresent ()) {
+    /* For Jetson we always use CS 0 */
+    *VarCs = NOR_FLASH_CHIP_SELECT_JETSON;
+    Status = EFI_SUCCESS;
+  } else {
+    Status = GetCpuBlParamsAddrStMm (&CpuBlAddr);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to get CPUBL Addr %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      goto ExitVarStoreCs;
+    }
+
+    Status = GetPartitionInfoStMm (
+               (UINTN)&CpuBlAddr,
+               TEGRABL_VARIABLE_IMAGE_INDEX,
+               &DeviceInstance,
+               &VarOffset,
+               &VarSize
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to get Variable partition Info %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      goto ExitVarStoreCs;
+    }
+
+    if (VarSize != 0) {
+      *VarCs = ((DeviceInstance & DEVICE_CS_MASK) >> DEVICE_CS_SHIFT);
+    } else {
+      Platform = GetPlatformTypeMm ();
+      /* Unable to get the CS information from CPU BL Params */
+      if (Platform == TEGRA_PLATFORM_SILICON) {
+        *VarCs = NOR_FLASH_CHIP_SELECT_TH500_SIL;
+      } else {
+        *VarCs = NOR_FLASH_CHIP_SELECT_TH500_PRESIL;
+      }
+    }
+  }
+
+ExitVarStoreCs:
+  return Status;
+}

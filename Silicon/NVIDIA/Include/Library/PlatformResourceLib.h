@@ -25,7 +25,14 @@
 
 #define BIT(x)  (1 << (x))
 
-#define MAX_EEPROM_DATA_SIZE  256
+#define MAX_EEPROM_DATA_SIZE          256
+#define TEGRABL_VARIABLE_IMAGE_INDEX  (25U)
+#define TEGRABL_FTW_IMAGE_INDEX       (26U)
+#define TEGRABL_RAS_ERROR_LOGS        (24U)
+#define TEGRABL_EARLY_BOOT_VARS       (16U)
+#define TEGRABL_CMET                  (17U)
+#define DEVICE_CS_MASK                (0xFF00)
+#define DEVICE_CS_SHIFT               (8)
 
 typedef enum {
   TegrablBootInvalid,
@@ -230,6 +237,52 @@ EFIAPI
 GetPlatformResourceInformationStandaloneMm (
   IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
   IN PHYSICAL_ADDRESS              CpuBootloaderAddress
+  );
+
+/**
+ * Get Partition Info in Dxe.
+ *
+ * @param[in] PartitionIndex        Index into the Partition info array, usually
+ *                                  defined by the early BLs..
+ * @param[out] DeviceInstance       Value that conveys the device/CS for the
+ *                                  partition..
+ * @param[out] PartitionStartByte   Start byte offset for the partition..
+ * @param[out] PartitionSizeBytes   Size of the partition in bytes.
+ *
+ * @retval  EFI_SUCCESS             Success in looking up partition.
+ * @retval  EFI_INVALID_PARAMETER   Invalid partition Index.
+**/
+EFI_STATUS
+EFIAPI
+GetPartitionInfo (
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  );
+
+/**
+ * Get Partition Info in Standalone MM image.
+ *
+ * @param[in] CpuBlAddress          Address of the CPU BL params.
+ * @param[in] PartitionIndex        Index into the Partition info array, usually
+ *                                  defined by the early BLs..
+ * @param[out] DeviceInstance       Value that conveys the device/CS for the
+ *                                  partition..
+ * @param[out] PartitionStartByte   Start byte offset for the partition..
+ * @param[out] PartitionSizeBytes   Size of the partition in bytes.
+ *
+ * @retval  EFI_SUCCESS             Success in looking up partition.
+ * @retval  EFI_INVALID_PARAMETER   Invalid partition Index.
+**/
+EFI_STATUS
+EFIAPI
+GetPartitionInfoStMm (
+  IN  UINTN   CpuBlAddress,
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
   );
 
 #endif //__PLATFORM_RESOURCE_LIB_H__
