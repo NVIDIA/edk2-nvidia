@@ -17,6 +17,7 @@
 
 [Sources]
   AcpiBoot.dts
+  BootOrderEmmc.dts
   BootOrderHttp.dts
   BootOrderNvme.dts
   BootOrderPxe.dts
