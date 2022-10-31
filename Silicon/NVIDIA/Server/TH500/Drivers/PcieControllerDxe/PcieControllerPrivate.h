@@ -61,6 +61,8 @@ typedef struct {
   UINT64                                              MemLimit;
   UINT64                                              PrefetchMemBase;
   UINT64                                              PrefetchMemLimit;
+  UINT64                                              IoBase;
+  UINT64                                              IoLimit;
   UINT32                                              BusMask;
 
   // Configuration data
@@ -85,6 +87,10 @@ typedef struct {
 #define XAL_RC_ECAM_BASE_HI                  0x0
 #define XAL_RC_ECAM_BASE_LO                  0x4
 #define XAL_RC_ECAM_BUSMASK                  0x8
+#define XAL_RC_IO_BASE_HI                    0xc
+#define XAL_RC_IO_BASE_LO                    0x10
+#define XAL_RC_IO_LIMIT_HI                   0x14
+#define XAL_RC_IO_LIMIT_LO                   0x18
 #define XAL_RC_MEM_32BIT_BASE_HI             0x1c
 #define XAL_RC_MEM_32BIT_BASE_LO             0x20
 #define XAL_RC_MEM_32BIT_LIMIT_HI            0x24

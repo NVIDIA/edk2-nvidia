@@ -294,6 +294,8 @@ TH500FloorSweepPcie (
         UINT64  NonPrefSize;
         UINT64  PrefBase;
         UINT64  PrefSize;
+        UINT64  IoBase;
+        UINT64  IoSize;
         UINT64  MSSBase;
         UINT32  C2CMode;
         INT32   RPNodeOffset;
@@ -309,19 +311,19 @@ TH500FloorSweepPcie (
         DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 64-bit Aperture Size = 0x%llX\n", PcieId, Aperture64Size));
 
         /*
-         * +------------------------------------+
-         * | 64-bit Aperture Usage              |
-         * +----------+-------------------------+
-         * | 256 MB   | Reserved for VDM        |
-         * +----------+-------------------------+
-         * | 256 MB   | ECAM                    |
-         * +----------+-------------------------+
-         * | 512 MB   | RSVD                    |
-         * +----------+-------------------------+
-         * | 2 GB     | Non-Prefetchable Region |
-         * +----------+-------------------------+
-         * | Rest all | Prefetchable Region     |
-         * +----------+-------------------------+
+         * +-----------------------------------------------------+
+         * | 64-bit Aperture Usage                               |
+         * +----------+------------------------------------------+
+         * | 256 MB   | Reserved for VDM                         |
+         * +----------+------------------------------------------+
+         * | 256 MB   | ECAM                                     |
+         * +----------+------------------------------------------+
+         * | 512 MB   | RSVD (64K of this is used for I/O)       |
+         * +----------+------------------------------------------+
+         * | 2 GB     | Non-Prefetchable Region                  |
+         * +----------+------------------------------------------+
+         * | Rest all | Prefetchable Region                      |
+         * +----------+------------------------------------------+
         */
 
         /* Patch ECAM Address in 'reg' property */
@@ -347,7 +349,7 @@ TH500FloorSweepPcie (
 
         /* Patch 'ranges' property */
         Property = fdt_getprop (Dtb, NodeOffset, "ranges", &Length);
-        if ((Property == NULL) || (Length != sizeof (Tmp32) * 14)) {
+        if ((Property == NULL) || (Length != sizeof (Tmp32) * 21)) {
           DEBUG ((DEBUG_ERROR, "Unexpected \"ranges\" property. Length = %d\n", Length));
           return EFI_UNSUPPORTED;
         }
@@ -375,6 +377,18 @@ TH500FloorSweepPcie (
         ((UINT32 *)Property)[11] = cpu_to_fdt32 (PrefBase);
         ((UINT32 *)Property)[12] = cpu_to_fdt32 (PrefSize >> 32);
         ((UINT32 *)Property)[13] = cpu_to_fdt32 (PrefSize);
+
+        IoBase = EcamBase + EcamSize;
+        IoSize = SIZE_64KB; /* 64K fixed size I/O aperture */
+        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: IO Base = 0x%llX\n", PcieId, IoBase));
+        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: IO Size = 0x%llX\n", PcieId, IoSize));
+
+        ((UINT32 *)Property)[15] = cpu_to_fdt32 (0x0);
+        ((UINT32 *)Property)[16] = cpu_to_fdt32 (0x0);
+        ((UINT32 *)Property)[17] = cpu_to_fdt32 (IoBase >> 32);
+        ((UINT32 *)Property)[18] = cpu_to_fdt32 (IoBase);
+        ((UINT32 *)Property)[19] = cpu_to_fdt32 (IoSize>> 32);
+        ((UINT32 *)Property)[20] = cpu_to_fdt32 (IoSize);
 
         /* Patch 'external-facing' property only for C8 controller */
         if (PCIE_ID_TO_INTERFACE (PcieId) == 8) {

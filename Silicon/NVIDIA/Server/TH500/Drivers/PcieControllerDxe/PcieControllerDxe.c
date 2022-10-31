@@ -370,6 +370,12 @@ InitializeController (
   MmioWrite32 (Private->XalBase + XAL_RC_MEM_64BIT_LIMIT_HI, upper_32_bits (Private->PrefetchMemLimit));
   MmioWrite32 (Private->XalBase + XAL_RC_MEM_64BIT_LIMIT_LO, lower_32_bits (Private->PrefetchMemLimit));
 
+  MmioWrite32 (Private->XalBase + XAL_RC_IO_BASE_HI, upper_32_bits (Private->IoBase));
+  MmioWrite32 (Private->XalBase + XAL_RC_IO_BASE_LO, lower_32_bits (Private->IoBase));
+
+  MmioWrite32 (Private->XalBase + XAL_RC_IO_LIMIT_HI, upper_32_bits (Private->IoLimit));
+  MmioWrite32 (Private->XalBase + XAL_RC_IO_LIMIT_LO, lower_32_bits (Private->IoLimit));
+
   val = XAL_RC_BAR_CNTL_STANDARD_IOBAR_EN | XAL_RC_BAR_CNTL_STANDARD_32B_BAR_EN |
         XAL_RC_BAR_CNTL_STANDARD_64B_BAR_EN;
   MmioWrite32 (Private->XalBase + XAL_RC_BAR_CNTL_STANDARD, val);
@@ -705,6 +711,8 @@ DeviceDiscoveryNotify (
           RootBridge->Io.Base                                         = DeviceAddress;
           RootBridge->Io.Limit                                        = Limit;
           RootBridge->Io.Translation                                  = Translation;
+          Private->IoBase                                             = HostAddress;
+          Private->IoLimit                                            = HostAddress + Size - 1;
           Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 1;
         } else if (Space == PCIE_DEVICETREE_SPACE_MEM64) {
           if (Prefetchable) {
