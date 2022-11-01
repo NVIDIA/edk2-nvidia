@@ -954,7 +954,7 @@
   #
   # Custom HII Support
   #
-  Silicon/NVIDIA/Drivers/ResourceConfigDxe/ResourceConfigDxe.inf
+  Silicon/NVIDIA/Drivers/NvidiaConfigDxe/NvidiaConfigDxe.inf
 
   #
   # Secure Boot Support

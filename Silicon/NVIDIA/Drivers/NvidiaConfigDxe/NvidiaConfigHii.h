@@ -1,5 +1,5 @@
 /** @file
-*  Resource Configuration Dxe
+*  Nvidia Configuration Dxe
 *
 *  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro Limited. All rights reserved.
@@ -8,16 +8,16 @@
 *
 **/
 
-#ifndef __RESOURCE_CONFIG_HII_H__
-#define __RESOURCE_CONFIG_HII_H__
+#ifndef __NVIDIA_CONFIG_HII_H__
+#define __NVIDIA_CONFIG_HII_H__
 
 #include <Guid/NVIDIAPublicVariableGuid.h>
 #include <Guid/NVIDIATokenSpaceGuid.h>
 #include <NVIDIAConfiguration.h>
 
-#define RESOURCE_CONFIG_FORMSET_GUID  { 0x685c0b6e, 0x11af, 0x47cf, { 0xa9, 0xef, 0x95, 0xac, 0x18, 0x68, 0x73, 0xc3 } }
+#define NVIDIA_CONFIG_FORMSET_GUID  { 0x685c0b6e, 0x11af, 0x47cf, { 0xa9, 0xef, 0x95, 0xac, 0x18, 0x68, 0x73, 0xc3 } }
 
-#define RESOURCE_CONFIG_FORM_ID     0x0001
+#define NVIDIA_CONFIG_FORM_ID       0x0001
 #define PCIE_CONFIGURATION_FORM_ID  0x0002
 
 #define KEY_ENABLE_PCIE_CONFIG        0x0100
@@ -40,4 +40,4 @@
 #define NEW_DEVICE_HIERARCHY_BOTTOM  0x0
 #define NEW_DEVICE_HIERARCHY_TOP     0x1
 
-#endif // __RESOURCE_CONFIG_HII_H__
+#endif // __NVIDIA_CONFIG_HII_H__

@@ -1,5 +1,5 @@
 /** @file
-*  Resource Configuration Dxe
+*  NVIDIA Configuration Dxe
 *
 *  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
@@ -28,7 +28,7 @@
 #include <Library/UefiHiiServicesLib.h>
 #include <Library/UefiLib.h>
 
-#include "ResourceConfigHii.h"
+#include "NvidiaConfigHii.h"
 
 #define MAX_VARIABLE_NAME  (256 * sizeof(CHAR16))
 
@@ -37,8 +37,8 @@ extern EFI_GUID  gNVIDIAResourceConfigFormsetGuid;
 //
 // These are the VFR compiler generated data representing our VFR data.
 //
-extern UINT8  ResourceConfigHiiBin[];
-extern UINT8  ResourceConfigDxeStrings[];
+extern UINT8  NvidiaConfigHiiBin[];
+extern UINT8  NvidiaConfigDxeStrings[];
 
 //
 // HII specific Vendor Device Path definition.
@@ -48,7 +48,7 @@ typedef struct {
   EFI_DEVICE_PATH_PROTOCOL    End;
 } HII_VENDOR_DEVICE_PATH;
 
-HII_VENDOR_DEVICE_PATH  mResourceConfigHiiVendorDevicePath = {
+HII_VENDOR_DEVICE_PATH  mNvidiaConfigHiiVendorDevicePath = {
   {
     {
       HARDWARE_DEVICE_PATH,
@@ -58,7 +58,7 @@ HII_VENDOR_DEVICE_PATH  mResourceConfigHiiVendorDevicePath = {
         (UINT8)((sizeof (VENDOR_DEVICE_PATH)) >> 8)
       }
     },
-    RESOURCE_CONFIG_FORMSET_GUID
+    NVIDIA_CONFIG_FORMSET_GUID
   },
   {
     END_DEVICE_PATH_TYPE,
@@ -329,7 +329,7 @@ OnEndOfDxe (
   Status       = gBS->InstallMultipleProtocolInterfaces (
                         &DriverHandle,
                         &gEfiDevicePathProtocolGuid,
-                        &mResourceConfigHiiVendorDevicePath,
+                        &mNvidiaConfigHiiVendorDevicePath,
                         &gEfiHiiConfigAccessProtocolGuid,
                         &mConfigAccess,
                         NULL
@@ -338,8 +338,8 @@ OnEndOfDxe (
     HiiHandle = HiiAddPackages (
                   &gNVIDIAResourceConfigFormsetGuid,
                   DriverHandle,
-                  ResourceConfigDxeStrings,
-                  ResourceConfigHiiBin,
+                  NvidiaConfigDxeStrings,
+                  NvidiaConfigHiiBin,
                   NULL
                   );
 
@@ -347,7 +347,7 @@ OnEndOfDxe (
       gBS->UninstallMultipleProtocolInterfaces (
              DriverHandle,
              &gEfiDevicePathProtocolGuid,
-             &mResourceConfigHiiVendorDevicePath,
+             &mNvidiaConfigHiiVendorDevicePath,
              &gEfiHiiConfigAccessProtocolGuid,
              &mConfigAccess,
              NULL
@@ -392,7 +392,7 @@ UpdateSerialPcds (
 }
 
 /**
-  Install Resource Config driver.
+  Install NVIDIA Config driver.
 
   @param  ImageHandle     The image handle.
   @param  SystemTable     The system table.
@@ -403,7 +403,7 @@ UpdateSerialPcds (
 **/
 EFI_STATUS
 EFIAPI
-ResourceConfigDxeInitialize (
+NvidiaConfigDxeInitialize (
   IN EFI_HANDLE        ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   )

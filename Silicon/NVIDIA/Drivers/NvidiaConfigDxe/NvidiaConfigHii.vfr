@@ -1,6 +1,6 @@
 /** @file
 *
-*  OEM Config formset.
+*  NVIDIA Config formset.
 *
 *  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
@@ -10,12 +10,12 @@
 **/
 
 #include <Uefi/UefiMultiPhase.h>
-#include "ResourceConfigHii.h"
+#include "NvidiaConfigHii.h"
 
 formset
-  guid      = RESOURCE_CONFIG_FORMSET_GUID,
-  title     = STRING_TOKEN(STR_RESOURCE_CONFIG_TITLE),
-  help      = STRING_TOKEN(STR_RESOURCE_CONFIG_HELP),
+  guid      = NVIDIA_CONFIG_FORMSET_GUID,
+  title     = STRING_TOKEN(STR_NVIDIA_CONFIG_TITLE),
+  help      = STRING_TOKEN(STR_NVIDIA_CONFIG_HELP),
 
   efivarstore NvidiaPcieEnableVariable,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
@@ -78,10 +78,10 @@ formset
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
   //
-  // Main form for NVIDIA Resource Configuration
+  // Main form for NVIDIA Configuration
   //
-  form formid = RESOURCE_CONFIG_FORM_ID,
-    title = STRING_TOKEN(STR_RESOURCE_CONFIG_TITLE);
+  form formid = NVIDIA_CONFIG_FORM_ID,
+    title = STRING_TOKEN(STR_NVIDIA_CONFIG_TITLE);
 
     subtitle text = STRING_TOKEN(STR_NULL);
 

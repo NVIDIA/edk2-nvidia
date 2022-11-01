@@ -1,5 +1,5 @@
 ## @file
-#  Resource Configuration Dxe
+#  NVIDIA Configuration Dxe
 #
 #  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2017, Linaro, Ltd. All rights reserved.<BR>
@@ -10,16 +10,16 @@
 
 [Defines]
   INF_VERSION               = 0x00010019
-  BASE_NAME                 = ResourceConfigDxe
+  BASE_NAME                 = NvidiaConfigDxe
   FILE_GUID                 = 2BCD55FD-99D7-49CE-B15E-57718A071509
   MODULE_TYPE               = DXE_DRIVER
   VERSION_STRING            = 1.0
-  ENTRY_POINT               = ResourceConfigDxeInitialize
+  ENTRY_POINT               = NvidiaConfigDxeInitialize
 
 [Sources]
-  ResourceConfigDxe.c
-  ResourceConfigHii.uni
-  ResourceConfigHii.vfr
+  NvidiaConfigDxe.c
+  NvidiaConfigHii.uni
+  NvidiaConfigHii.vfr
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

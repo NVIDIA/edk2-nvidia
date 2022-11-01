@@ -1,6 +1,6 @@
 /** @file
 *
-*  String definitions for the OEM Config.
+*  String definitions for the NVIDIA Config.
 *
 *  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
@@ -11,8 +11,8 @@
 
 #langdef   en-US "English"
 
-#string STR_RESOURCE_CONFIG_TITLE        #language en-US "NVIDIA Resource Configuration"
-#string STR_RESOURCE_CONFIG_HELP         #language en-US "Select Resource Configuration options."
+#string STR_NVIDIA_CONFIG_TITLE        #language en-US "NVIDIA Configuration"
+#string STR_NVIDIA_CONFIG_HELP         #language en-US "Select NVIDIA Configuration options."
 
 #string STR_PCIE_CONFIG_FORM_TITLE       #language en-US "PCIe Configuration"
 #string STR_PCIE_CONFIG_FORM_HELP        #language en-US "PCIe configuration options"
