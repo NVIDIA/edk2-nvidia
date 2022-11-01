@@ -41,6 +41,10 @@
 								runtime;
 								locked;
 							};
+							AutoUpdateBrBct {
+								data = [01 00 00 00];
+								non-volatile;
+							};
 						};
 					};
 				};
