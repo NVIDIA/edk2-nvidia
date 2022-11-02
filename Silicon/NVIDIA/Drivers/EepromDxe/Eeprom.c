@@ -710,7 +710,7 @@ InitializeEepromDxe (
     }
 
     SerialNumberCmdLine->ExistingCommandLineArgument = NULL;
-    UnicodeSPrintAsciiFormat (SerialNumberCmdLineBuffer, SERIAL_NUM_CMD_MAX_LEN, "androidboot.serialno=%a", CvmBoardInfo->SerialNumber);
+    UnicodeSPrintAsciiFormat (SerialNumberCmdLineBuffer, sizeof (CHAR16) * SERIAL_NUM_CMD_MAX_LEN, "androidboot.serialno=%a", CvmBoardInfo->SerialNumber);
     SerialNumberCmdLine->NewCommandLineArgument = SerialNumberCmdLineBuffer;
 
     Status = gBS->InstallMultipleProtocolInterfaces (
