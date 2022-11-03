@@ -43,5 +43,3 @@
 
 [Depex]
   gEfiAcpiTableProtocolGuid
-  AND
-  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
