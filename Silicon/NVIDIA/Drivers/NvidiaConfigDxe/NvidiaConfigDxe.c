@@ -13,6 +13,7 @@
 
 #include <Protocol/HiiConfigAccess.h>
 #include <Protocol/HiiConfigRouting.h>
+#include <Protocol/MmCommunication2.h>
 
 #include <Library/PrintLib.h>
 #include <Library/DebugLib.h>
@@ -21,13 +22,16 @@
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/BaseLib.h>
+#include <Library/FloorSweepingLib.h>
 #include <Library/HiiLib.h>
+#include <Library/HobLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiHiiServicesLib.h>
 #include <Library/UefiLib.h>
 
+#include <Guid/NVIDIAMmMb1Record.h>
 #include <TH500/TH500MB1Configuration.h>
 #include "NvidiaConfigHii.h"
 
@@ -144,7 +148,77 @@ EFI_HII_CONFIG_ACCESS_PROTOCOL  mConfigAccess;
 CHAR16                          mHiiControlStorageName[] = L"NVIDIA_CONFIG_HII_CONTROL";
 NVIDIA_CONFIG_HII_CONTROL       mHiiControlSettings      = { 0 };
 EFI_HANDLE                      mDriverHandle;
-TEGRABL_EARLY_BOOT_VARIABLES    mMb1Config = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES    mMb1Config                 = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES    mLastWrittenMb1Config      = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES    mVariableOverrideMb1Config = { 0 };
+EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2           = NULL;
+VOID                            *mMmCommunicationBuffer    = NULL;
+
+// Talk to MB1 actual storage
+EFI_STATUS
+EFIAPI
+AccessMb1Record (
+  TEGRABL_EARLY_BOOT_VARIABLES  *EarlyVariable,
+  BOOLEAN                       Write
+  )
+{
+  EFI_STATUS                    Status;
+  EFI_MM_COMMUNICATE_HEADER     *Header;
+  NVIDIA_MM_MB1_RECORD_PAYLOAD  *Payload;
+  UINTN                         MmBufferSize;
+
+  MmBufferSize = sizeof (EFI_MM_COMMUNICATE_HEADER) + sizeof (NVIDIA_MM_MB1_RECORD_PAYLOAD) - 1;
+
+  if (mMmCommunicate2 == NULL) {
+    Status = gBS->LocateProtocol (&gEfiMmCommunication2ProtocolGuid, NULL, (VOID **)&mMmCommunicate2);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    mMmCommunicationBuffer = AllocateZeroPool (MmBufferSize);
+    if (mMmCommunicationBuffer == NULL) {
+      mMmCommunicate2 = NULL;
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate buffer \r\n", __FUNCTION__));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    Header = (EFI_MM_COMMUNICATE_HEADER *)mMmCommunicationBuffer;
+    CopyGuid (&Header->HeaderGuid, &gNVIDIAMmMb1RecordGuid);
+    Header->MessageLength = sizeof (NVIDIA_MM_MB1_RECORD_PAYLOAD);
+  }
+
+  Header  = (EFI_MM_COMMUNICATE_HEADER *)mMmCommunicationBuffer;
+  Payload = (NVIDIA_MM_MB1_RECORD_PAYLOAD *)&Header->Data;
+
+  if (Write) {
+    Payload->Command = NVIDIA_MM_MB1_RECORD_WRITE_CMD;
+    CopyMem (Payload->Data, &EarlyVariable->Data.Mb1Data, sizeof (Payload->Data));
+  } else {
+    Payload->Command = NVIDIA_MM_MB1_RECORD_READ_CMD;
+  }
+
+  Status = mMmCommunicate2->Communicate (
+                              mMmCommunicate2,
+                              mMmCommunicationBuffer,
+                              mMmCommunicationBuffer,
+                              &MmBufferSize
+                              );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to dispatch Mb1 MM command %r \r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  if (EFI_ERROR (Payload->Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error in Mb1 MM command %r \r\n", __FUNCTION__, Payload->Status));
+    return Payload->Status;
+  }
+
+  if (!Write) {
+    CopyMem (&EarlyVariable->Data.Mb1Data, Payload->Data, sizeof (Payload->Data));
+  }
+
+  return Status;
+}
 
 /**
   Syncs settings betweem Control settings and MB1 Config structure
@@ -262,11 +336,14 @@ EFIAPI
 InitializeSettings (
   )
 {
-  EFI_STATUS                  Status;
-  VOID                        *AcpiBase;
-  NVIDIA_KERNEL_COMMAND_LINE  CmdLine;
-  UINTN                       KernelCmdLineLen;
-  UINTN                       BufferSize;
+  EFI_STATUS                          Status;
+  VOID                                *AcpiBase;
+  NVIDIA_KERNEL_COMMAND_LINE          CmdLine;
+  UINTN                               KernelCmdLineLen;
+  UINTN                               BufferSize;
+  UINTN                               Index;
+  CONST TEGRABL_EARLY_BOOT_VARIABLES  *TH500HobConfig;
+  VOID                                *HobPointer;
 
   // Initialize PCIe Form Settings
   PcdSet8S (PcdPcieResourceConfigNeeded, PcdGet8 (PcdPcieResourceConfigNeeded));
@@ -327,6 +404,39 @@ InitializeSettings (
   }
 
   mHiiControlSettings.L4TSupported = PcdGetBool (PcdL4TConfigurationSupport);
+
+  HobPointer = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
+  if (HobPointer != NULL) {
+    if ((GET_GUID_HOB_DATA_SIZE (HobPointer) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * MAX_SOCKETS))) {
+      TH500HobConfig                  = (CONST TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (HobPointer);
+      mHiiControlSettings.TH500Config = TRUE;
+      CopyMem (&mMb1Config, TH500HobConfig, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
+
+      // Check versions
+      if (mMb1Config.Data.Mb1Data.Header.MajorVersion > TEGRABL_MB1_BCT_MAJOR_VERSION) {
+        // We don't support this so disable settings
+        mHiiControlSettings.TH500Config = FALSE;
+      } else if ((mMb1Config.Data.Mb1Data.Header.MajorVersion == TEGRABL_MB1_BCT_MAJOR_VERSION) &&
+                 (mMb1Config.Data.Mb1Data.Header.MinorVersion > TEGRABL_MB1_BCT_MINOR_VERSION))
+      {
+        // Force to common supported version
+        mMb1Config.Data.Mb1Data.Header.MinorVersion = TEGRABL_MB1_BCT_MINOR_VERSION;
+      }
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Unexpected size of TH500 HOB\r\n", __FUNCTION__));
+    }
+  }
+
+  for (Index = 0; Index < MAX_SOCKETS; Index++) {
+    mHiiControlSettings.SocketEnabled[Index] = IsSocketEnabled (Index);
+  }
+
+  if (mHiiControlSettings.TH500Config) {
+    Status = AccessMb1Record (&mLastWrittenMb1Config, FALSE);
+    if (EFI_ERROR (Status)) {
+      CopyMem (&mLastWrittenMb1Config, &mMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
+    }
+  }
 }
 
 /**
@@ -503,7 +613,14 @@ ConfigRouteConfig (
   }
 
   SyncHiiSettings (FALSE);
-  // Send settings to MB1 record.
+  if (mHiiControlSettings.TH500Config) {
+    if (CompareMem (&mMb1Config, &mLastWrittenMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES)) != 0) {
+      Status = AccessMb1Record (&mMb1Config, TRUE);
+      if (!EFI_ERROR (Status)) {
+        CopyMem (&mLastWrittenMb1Config, &mMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
+      }
+    }
+  }
 
   return Status;
 }

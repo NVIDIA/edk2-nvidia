@@ -604,6 +604,8 @@ TH500GetPlatformResourceInformation (
     PlatformResourceInfo->BootType = TegrablBootColdBoot;
   }
 
+  BuildGuidDataHob (&gNVIDIATH500MB1DataGuid, &CpuBootloaderParams->EarlyBootVariables, sizeof (CpuBootloaderParams->EarlyBootVariables));
+
   return EFI_SUCCESS;
 }
 

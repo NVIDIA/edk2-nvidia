@@ -11,6 +11,7 @@
 
 #include <Uefi/UefiBaseType.h>
 #include <TH500/TH500Definitions.h>
+#include <TH500/TH500MB1Configuration.h>
 
 // NOTE The register map would change
 #define TEGRA_UART_SUPPORT_FLAG  0x6        // UART_0..1
@@ -213,6 +214,8 @@ typedef struct {
   UEFI_DECLARE_ALIGNED (UINT8 UphyLinkChecksumStatusp[TH500_MAX_SOCKETS], 8);
 
   UEFI_DECLARE_ALIGNED (TEGRABL_PARTITION_DESC PartitionInfo[TEGRABL_BINARY_MAX][TEGRABL_BINARY_COPY_MAX], 8);
+
+  UEFI_DECLARE_ALIGNED (TEGRABL_EARLY_BOOT_VARIABLES EarlyBootVariables[TH500_MAX_SOCKETS], 8);
 } TEGRA_CPUBL_PARAMS;
 
 #endif //__TH500_RESOURCE_CONFIG_PRIVATE_H__

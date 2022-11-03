@@ -30,7 +30,9 @@
 [LibraryClasses]
   BaseLib
   DebugLib
+  FloorSweepingLib
   HiiLib
+  HobLib
   DevicePathLib
   DeviceTreeHelperLib
   MemoryAllocationLib
@@ -51,9 +53,12 @@
   gEfiAcpiTableGuid
   gNVIDIAPublicVariableGuid
   gNVIDIATokenSpaceGuid
+  gNVIDIATH500MB1DataGuid
+  gNVIDIAMmMb1RecordGuid
 
 [Protocols]
   gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
+  gEfiMmCommunication2ProtocolGuid              ## CONSUMES
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded
