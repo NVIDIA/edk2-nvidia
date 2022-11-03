@@ -43,3 +43,5 @@
 
 [Depex]
   gEfiAcpiTableProtocolGuid
+  AND
+  gNVIDIAPcieControllerInitCompleteProtocolGuid
