@@ -348,6 +348,7 @@ InitializePlatformRepository (
   BOOLEAN                         SkipHmat;
   BOOLEAN                         SkipIort;
   BOOLEAN                         SkipMpam;
+  BOOLEAN                         SkipApmt;
 
   NVIDIAPlatformRepositoryInfo = (EDKII_PLATFORM_REPOSITORY_INFO *)AllocateZeroPool (sizeof (EDKII_PLATFORM_REPOSITORY_INFO) * PcdGet32 (PcdConfigMgrObjMax));
 
@@ -421,6 +422,7 @@ InitializePlatformRepository (
   SkipHmat = FALSE;
   SkipIort = FALSE;
   SkipMpam = FALSE;
+  SkipApmt = FALSE;
   Status   = DtPlatformLoadDtb (&DtbBase, &DtbSize);
   if (EFI_ERROR (Status)) {
     return Status;
@@ -451,6 +453,11 @@ InitializePlatformRepository (
     if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-mpam-table", NULL)) {
       SkipMpam = TRUE;
       DEBUG ((DEBUG_ERROR, "%a: Skip MPAM Table\r\n", __FUNCTION__));
+    }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-apmt-table", NULL)) {
+      SkipApmt = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip APMT Table\r\n", __FUNCTION__));
     }
   }
 
@@ -514,9 +521,11 @@ InitializePlatformRepository (
     }
   }
 
-  Status = InstallArmPerformanceMonitoringUnitTable (NVIDIAPlatformRepositoryInfo);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (!SkipApmt) {
+    Status = InstallArmPerformanceMonitoringUnitTable (NVIDIAPlatformRepositoryInfo);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
   ASSERT ((UINTN)Repo <= (UINTN)RepoEnd);
