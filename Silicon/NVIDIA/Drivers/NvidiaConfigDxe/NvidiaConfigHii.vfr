@@ -126,6 +126,12 @@ formset
         flags  = INTERACTIVE,
         key    = KEY_BOOT_CONFIG;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 0;
+    goto TH500_CONFIGURATION_FORM_ID,
+        prompt = STRING_TOKEN(STR_TH500_CONFIG_FORM_TITLE),
+        help   = STRING_TOKEN(STR_TH500_CONFIG_FORM_HELP);
+    endif;
+
     text
       help   = STRING_TOKEN(STR_RESET_VARIABLES_HELP),
       text   = STRING_TOKEN(STR_RESET_VARIABLES_PROMPT),
@@ -236,5 +242,88 @@ formset
     endif;
 
   endform;
+
+  form formid = TH500_CONFIGURATION_FORM_ID,
+    title = STRING_TOKEN(STR_TH500_CONFIG_FORM_TITLE);
+    subtitle text = STRING_TOKEN(STR_NULL);
+
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EgmEnabled,
+        prompt = STRING_TOKEN(STR_EGM_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_EGM_ENABLE_HELP),
+        flags  = RESET_REQUIRED,
+        default = FALSE,
+    endcheckbox;
+
+    grayoutif ideqval NVIDIA_CONFIG_HII_CONTROL.EgmEnabled == 0;
+    numeric varid = NVIDIA_CONFIG_HII_CONTROL.EgmHvSizeMb,
+        prompt = STRING_TOKEN(STR_EGM_HV_RESERVED_SIZE_PROMPT),
+        help   = STRING_TOKEN(STR_EGM_HV_RESERVED_SIZE_HELP),
+        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 4294967295,
+        step = 64,
+        default = 0,
+    endnumeric;
+
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.SpreadSpectrumEnable,
+        prompt = STRING_TOKEN(STR_SPREAD_SPECTRUM_PROMPT),
+        help   = STRING_TOKEN(STR_SPREAD_SPECTRUM_HELP),
+        flags  = RESET_REQUIRED,
+        default = FALSE,
+    endcheckbox;
+
+    endif;
+
+    ADD_GOTO_SOCKET_FORM(0)
+    ADD_GOTO_SOCKET_FORM(1)
+    ADD_GOTO_SOCKET_FORM(2)
+    ADD_GOTO_SOCKET_FORM(3)
+
+  endform;
+
+  ADD_SOCKET_FORM(0)
+  ADD_SOCKET_FORM(1)
+  ADD_SOCKET_FORM(2)
+  ADD_SOCKET_FORM(3)
+  ADD_PCIE_FORM(0,0)
+  ADD_PCIE_FORM(0,1)
+  ADD_PCIE_FORM(0,2)
+  ADD_PCIE_FORM(0,3)
+  ADD_PCIE_FORM(0,4)
+  ADD_PCIE_FORM(0,5)
+  ADD_PCIE_FORM(0,6)
+  ADD_PCIE_FORM(0,7)
+  ADD_PCIE_FORM(0,8)
+  ADD_PCIE_FORM(0,9)
+  ADD_PCIE_FORM(1,0)
+  ADD_PCIE_FORM(1,1)
+  ADD_PCIE_FORM(1,2)
+  ADD_PCIE_FORM(1,3)
+  ADD_PCIE_FORM(1,4)
+  ADD_PCIE_FORM(1,5)
+  ADD_PCIE_FORM(1,6)
+  ADD_PCIE_FORM(1,7)
+  ADD_PCIE_FORM(1,8)
+  ADD_PCIE_FORM(1,9)
+  ADD_PCIE_FORM(2,0)
+  ADD_PCIE_FORM(2,1)
+  ADD_PCIE_FORM(2,2)
+  ADD_PCIE_FORM(2,3)
+  ADD_PCIE_FORM(2,4)
+  ADD_PCIE_FORM(2,5)
+  ADD_PCIE_FORM(2,6)
+  ADD_PCIE_FORM(2,7)
+  ADD_PCIE_FORM(2,8)
+  ADD_PCIE_FORM(2,9)
+  ADD_PCIE_FORM(3,0)
+  ADD_PCIE_FORM(3,1)
+  ADD_PCIE_FORM(3,2)
+  ADD_PCIE_FORM(3,3)
+  ADD_PCIE_FORM(3,4)
+  ADD_PCIE_FORM(3,5)
+  ADD_PCIE_FORM(3,6)
+  ADD_PCIE_FORM(3,7)
+  ADD_PCIE_FORM(3,8)
+  ADD_PCIE_FORM(3,9)
 
 endformset;

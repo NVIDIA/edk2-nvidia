@@ -17,10 +17,55 @@
 
 #define NVIDIA_CONFIG_FORMSET_GUID  { 0x685c0b6e, 0x11af, 0x47cf, { 0xa9, 0xef, 0x95, 0xac, 0x18, 0x68, 0x73, 0xc3 } }
 
-#define NVIDIA_CONFIG_FORM_ID       0x0001
-#define PCIE_CONFIGURATION_FORM_ID  0x0002
-#define BOOT_CONFIGURATION_FORM_ID  0x0003
-#define L4T_CONFIGURATION_FORM_ID   0x0004
+#define NVIDIA_CONFIG_FORM_ID                      0x0001
+#define PCIE_CONFIGURATION_FORM_ID                 0x0002
+#define BOOT_CONFIGURATION_FORM_ID                 0x0003
+#define L4T_CONFIGURATION_FORM_ID                  0x0004
+#define TH500_CONFIGURATION_FORM_ID                0x0005
+#define TH500_SOCKET0_CONFIGURATION_FORM_ID        0x0006
+#define TH500_SOCKET1_CONFIGURATION_FORM_ID        0x0007
+#define TH500_SOCKET2_CONFIGURATION_FORM_ID        0x0008
+#define TH500_SOCKET3_CONFIGURATION_FORM_ID        0x0009
+#define TH500_SOCKET0_PCIE0_CONFIGURATION_FORM_ID  0x000A
+#define TH500_SOCKET0_PCIE1_CONFIGURATION_FORM_ID  0x000B
+#define TH500_SOCKET0_PCIE2_CONFIGURATION_FORM_ID  0x000C
+#define TH500_SOCKET0_PCIE3_CONFIGURATION_FORM_ID  0x000D
+#define TH500_SOCKET0_PCIE4_CONFIGURATION_FORM_ID  0x000E
+#define TH500_SOCKET0_PCIE5_CONFIGURATION_FORM_ID  0x000F
+#define TH500_SOCKET0_PCIE6_CONFIGURATION_FORM_ID  0x0010
+#define TH500_SOCKET0_PCIE7_CONFIGURATION_FORM_ID  0x0011
+#define TH500_SOCKET0_PCIE8_CONFIGURATION_FORM_ID  0x0012
+#define TH500_SOCKET0_PCIE9_CONFIGURATION_FORM_ID  0x0013
+#define TH500_SOCKET1_PCIE0_CONFIGURATION_FORM_ID  0x0014
+#define TH500_SOCKET1_PCIE1_CONFIGURATION_FORM_ID  0x0015
+#define TH500_SOCKET1_PCIE2_CONFIGURATION_FORM_ID  0x0016
+#define TH500_SOCKET1_PCIE3_CONFIGURATION_FORM_ID  0x0017
+#define TH500_SOCKET1_PCIE4_CONFIGURATION_FORM_ID  0x0018
+#define TH500_SOCKET1_PCIE5_CONFIGURATION_FORM_ID  0x0019
+#define TH500_SOCKET1_PCIE6_CONFIGURATION_FORM_ID  0x001A
+#define TH500_SOCKET1_PCIE7_CONFIGURATION_FORM_ID  0x001B
+#define TH500_SOCKET1_PCIE8_CONFIGURATION_FORM_ID  0x001C
+#define TH500_SOCKET1_PCIE9_CONFIGURATION_FORM_ID  0x001D
+#define TH500_SOCKET2_PCIE0_CONFIGURATION_FORM_ID  0x001E
+#define TH500_SOCKET2_PCIE1_CONFIGURATION_FORM_ID  0x001F
+#define TH500_SOCKET2_PCIE2_CONFIGURATION_FORM_ID  0x0020
+#define TH500_SOCKET2_PCIE3_CONFIGURATION_FORM_ID  0x0021
+#define TH500_SOCKET2_PCIE4_CONFIGURATION_FORM_ID  0x0022
+#define TH500_SOCKET2_PCIE5_CONFIGURATION_FORM_ID  0x0023
+#define TH500_SOCKET2_PCIE6_CONFIGURATION_FORM_ID  0x0024
+#define TH500_SOCKET2_PCIE7_CONFIGURATION_FORM_ID  0x0025
+#define TH500_SOCKET2_PCIE8_CONFIGURATION_FORM_ID  0x0026
+#define TH500_SOCKET2_PCIE9_CONFIGURATION_FORM_ID  0x0027
+#define TH500_SOCKET3_PCIE0_CONFIGURATION_FORM_ID  0x0028
+#define TH500_SOCKET3_PCIE1_CONFIGURATION_FORM_ID  0x0029
+#define TH500_SOCKET3_PCIE2_CONFIGURATION_FORM_ID  0x002A
+#define TH500_SOCKET3_PCIE3_CONFIGURATION_FORM_ID  0x002B
+#define TH500_SOCKET3_PCIE4_CONFIGURATION_FORM_ID  0x002C
+#define TH500_SOCKET3_PCIE5_CONFIGURATION_FORM_ID  0x002D
+#define TH500_SOCKET3_PCIE6_CONFIGURATION_FORM_ID  0x002E
+#define TH500_SOCKET3_PCIE7_CONFIGURATION_FORM_ID  0x002F
+#define TH500_SOCKET3_PCIE8_CONFIGURATION_FORM_ID  0x0030
+#define TH500_SOCKET3_PCIE9_CONFIGURATION_FORM_ID  0x0031
 
 #define KEY_ENABLE_PCIE_CONFIG        0x0100
 #define KEY_ENABLE_PCIE_IN_OS_CONFIG  0x0101
@@ -46,9 +91,194 @@
 #define NEW_DEVICE_HIERARCHY_BOTTOM  0x0
 #define NEW_DEVICE_HIERARCHY_TOP     0x1
 
+#define MAX_SOCKETS  4
+#define MAX_PCIE     10
+#define MAX_UPHY     6
+
 typedef struct {
-  UINT32    L4TSupported;
-  UINT32    RootfsRedundancyLevel;
+  UINT32     L4TSupported;
+  UINT32     RootfsRedundancyLevel;
+  BOOLEAN    TH500Config;
+  BOOLEAN    SocketEnabled[MAX_SOCKETS];
+  UINT8      PhysicalPcieWidth0[MAX_PCIE];
+  UINT8      PhysicalPcieWidth1[MAX_PCIE];
+  UINT8      PhysicalPcieWidth2[MAX_PCIE];
+  UINT8      PhysicalPcieWidth3[MAX_PCIE];
+  // MB1 DATA
+  BOOLEAN    EgmEnabled;
+  UINT32     EgmHvSizeMb;
+  BOOLEAN    SpreadSpectrumEnable;
+  UINT8      UphySetting0[MAX_UPHY];
+  UINT8      UphySetting1[MAX_UPHY];
+  UINT8      UphySetting2[MAX_UPHY];
+  UINT8      UphySetting3[MAX_UPHY];
+  UINT32     MaxSpeed0[MAX_PCIE];
+  UINT32     MaxSpeed1[MAX_PCIE];
+  UINT32     MaxSpeed2[MAX_PCIE];
+  UINT32     MaxSpeed3[MAX_PCIE];
+  UINT32     MaxWidth0[MAX_PCIE];
+  UINT32     MaxWidth1[MAX_PCIE];
+  UINT32     MaxWidth2[MAX_PCIE];
+  UINT32     MaxWidth3[MAX_PCIE];
+  UINT8      SlotType0[MAX_PCIE];
+  UINT8      SlotType1[MAX_PCIE];
+  UINT8      SlotType2[MAX_PCIE];
+  UINT8      SlotType3[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_0[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_1[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_2[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_3[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_1_0[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_1_1[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_1_2[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_1_3[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_2_0[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_2_1[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_2_2[MAX_PCIE];
+  BOOLEAN    EnableAspmL1_2_3[MAX_PCIE];
+  BOOLEAN    EnablePciPmL1_2_0[MAX_PCIE];
+  BOOLEAN    EnablePciPmL1_2_1[MAX_PCIE];
+  BOOLEAN    EnablePciPmL1_2_2[MAX_PCIE];
+  BOOLEAN    EnablePciPmL1_2_3[MAX_PCIE];
+  BOOLEAN    SupportsClkReq0[MAX_PCIE];
+  BOOLEAN    SupportsClkReq1[MAX_PCIE];
+  BOOLEAN    SupportsClkReq2[MAX_PCIE];
+  BOOLEAN    SupportsClkReq3[MAX_PCIE];
 } NVIDIA_CONFIG_HII_CONTROL;
+
+#define ADD_GOTO_SOCKET_FORM(socket)                                       \
+  suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.SocketEnabled[socket] == 0; \
+  goto TH500_SOCKET##socket##_CONFIGURATION_FORM_ID,                       \
+      prompt = STRING_TOKEN(STR_SOCKET##socket##_CONFIG_FORM_TITLE),       \
+      help = STRING_TOKEN(STR_SOCKET##socket##_CONFIG_FORM_HELP);          \
+  endif;
+
+#define ADD_GOTO_PCIE_FORM(socket, pcie) \
+  goto TH500_SOCKET##socket##_PCIE##pcie##_CONFIGURATION_FORM_ID, \
+    prompt = STRING_TOKEN (STR_PCIE##pcie##_CONFIG_FORM_TITLE), \
+    help   = STRING_TOKEN (STR_NULL);
+
+#define ADD_SOCKET_FORM(socket) \
+  form formid = TH500_SOCKET##socket##_CONFIGURATION_FORM_ID, \
+    title = STRING_TOKEN(STR_SOCKET##socket##_CONFIG_FORM_TITLE); \
+    subtitle text = STRING_TOKEN(STR_NULL); \
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[0],\
+        prompt = STRING_TOKEN(STR_UPHY0_PROMPT),\
+        help   = STRING_TOKEN(STR_UPHY0_HELP),\
+        flags  = RESET_REQUIRED,\
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C0_X16),  value = 1, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C0_X8_C1_X8),  value = 2, flags = 0;\
+    endoneof;\
+    ADD_GOTO_PCIE_FORM(socket,0) \
+    ADD_GOTO_PCIE_FORM(socket,1) \
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[1],\
+        prompt = STRING_TOKEN(STR_UPHY1_PROMPT),\
+        help   = STRING_TOKEN(STR_UPHY1_HELP),\
+        flags  = RESET_REQUIRED,\
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C2_X16),  value = 1, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C2_X8_C3_X8),  value = 2, flags = 0;\
+    endoneof;\
+    ADD_GOTO_PCIE_FORM(socket,2) \
+    ADD_GOTO_PCIE_FORM(socket,3) \
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[2],\
+        prompt = STRING_TOKEN(STR_UPHY2_PROMPT),\
+        help   = STRING_TOKEN(STR_UPHY2_HELP),\
+        flags  = RESET_REQUIRED,\
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C4_X16),  value = 1, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C4_X8_C5_X8),  value = 2, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C5_X4_NVLINK_X12),  value = 3, flags = 0;\
+    endoneof;\
+    ADD_GOTO_PCIE_FORM(socket,4) \
+    ADD_GOTO_PCIE_FORM(socket,5) \
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[3],\
+        prompt = STRING_TOKEN(STR_UPHY3_PROMPT),\
+        help   = STRING_TOKEN(STR_UPHY3_HELP),\
+        flags  = RESET_REQUIRED,\
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C6_X16),  value = 1, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C6_X8_C7_X8),  value = 2, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C7_X4_NVLINK_X12),  value = 3, flags = 0;\
+    endoneof;\
+    ADD_GOTO_PCIE_FORM(socket,6) \
+    ADD_GOTO_PCIE_FORM(socket,7) \
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[4],\
+        prompt = STRING_TOKEN(STR_UPHY4_PROMPT),\
+        help   = STRING_TOKEN(STR_UPHY4_HELP),\
+        flags  = RESET_REQUIRED,\
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C8_X2),  value = 1, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C8_X1_USB),  value = 2, flags = 0;\
+    endoneof;\
+    ADD_GOTO_PCIE_FORM(socket,8) \
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[5],\
+        prompt = STRING_TOKEN(STR_UPHY5_PROMPT),\
+        help   = STRING_TOKEN(STR_UPHY5_HELP),\
+        flags  = RESET_REQUIRED,\
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C9_X2),  value = 1, flags = 0;\
+    endoneof;\
+    ADD_GOTO_PCIE_FORM(socket,9) \
+  endform;
+
+#define ADD_PCIE_FORM(socket, pcie) \
+  form formid = TH500_SOCKET##socket##_PCIE##pcie##_CONFIGURATION_FORM_ID, \
+    title = STRING_TOKEN(STR_PCIE##pcie##_CONFIG_FORM_TITLE); \
+    subtitle text = STRING_TOKEN(STR_NULL); \
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.MaxSpeed##socket[pcie],\
+        prompt = STRING_TOKEN(STR_PCIE_MAX_SPEED_TITLE),\
+        help   = STRING_TOKEN(STR_PCIE_MAX_SPEED_HELP),\
+        flags  = RESET_REQUIRED,\
+        option text = STRING_TOKEN(STR_PCIE_GEN5), value = 5, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_GEN4), value = 4, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_GEN3), value = 3, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_GEN2), value = 2, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_GEN1), value = 1, flags = 0;\
+    endoneof;\
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.MaxWidth##socket[pcie],\
+        prompt = STRING_TOKEN(STR_PCIE_MAX_WIDTH_TITLE),\
+        help   = STRING_TOKEN(STR_PCIE_MAX_WIDTH_HELP),\
+        flags  = RESET_REQUIRED,\
+        option text = STRING_TOKEN(STR_PCIE_X16), value = 16, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_X8), value = 8, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_X4), value = 4, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_X2), value = 2, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_X1), value = 1, flags = 0;\
+    endoneof;\
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_##socket[pcie], \
+        prompt = STRING_TOKEN(STR_PCIE_ENABLE_ASPM_L1_TITLE), \
+        help   = STRING_TOKEN(STR_NULL), \
+        flags  = RESET_REQUIRED, \
+        default = FALSE, \
+    endcheckbox; \
+    grayoutif ideqval NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_##socket[pcie] == 0; \
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_1_##socket[pcie], \
+        prompt = STRING_TOKEN(STR_PCIE_ENABLE_ASPM_L1_1_TITLE), \
+        help   = STRING_TOKEN(STR_NULL), \
+        flags  = RESET_REQUIRED, \
+        default = FALSE, \
+    endcheckbox; \
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_2_##socket[pcie], \
+        prompt = STRING_TOKEN(STR_PCIE_ENABLE_ASPM_L1_2_TITLE), \
+        help   = STRING_TOKEN(STR_NULL), \
+        flags  = RESET_REQUIRED, \
+        default = FALSE, \
+    endcheckbox; \
+    endif; \
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnablePciPmL1_2_##socket[pcie], \
+        prompt = STRING_TOKEN(STR_PCIE_ENABLE_PCIPM_L1_2_TITLE), \
+        help   = STRING_TOKEN(STR_NULL), \
+        flags  = RESET_REQUIRED, \
+        default = FALSE, \
+    endcheckbox; \
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.SupportsClkReq##socket[pcie], \
+        prompt = STRING_TOKEN(STR_PCIE_SUPPORTS_CLK_REQ_TITLE), \
+        help   = STRING_TOKEN(STR_PCIE_SUPPORTS_CLK_REQ_HELP), \
+        flags  = RESET_REQUIRED, \
+        default = FALSE, \
+    endcheckbox; \
+  endform;
 
 #endif // __NVIDIA_CONFIG_HII_H__

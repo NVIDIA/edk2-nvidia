@@ -28,6 +28,7 @@
 #include <Library/UefiHiiServicesLib.h>
 #include <Library/UefiLib.h>
 
+#include <TH500/TH500MB1Configuration.h>
 #include "NvidiaConfigHii.h"
 
 #define MAX_VARIABLE_NAME  (256 * sizeof(CHAR16))
@@ -39,6 +40,75 @@ extern EFI_GUID  gNVIDIAResourceConfigFormsetGuid;
 //
 extern UINT8  NvidiaConfigHiiBin[];
 extern UINT8  NvidiaConfigDxeStrings[];
+
+// Used to make sure autogen isn't too smart
+EFI_STRING_ID  UnusedStringArray[] = {
+  STRING_TOKEN (STR_SOCKET0_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_SOCKET0_CONFIG_FORM_HELP),
+  STRING_TOKEN (STR_SOCKET1_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_SOCKET1_CONFIG_FORM_HELP),
+  STRING_TOKEN (STR_SOCKET2_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_SOCKET2_CONFIG_FORM_HELP),
+  STRING_TOKEN (STR_SOCKET3_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_SOCKET3_CONFIG_FORM_HELP),
+  STRING_TOKEN (STR_SPREAD_SPECTRUM_PROMPT),
+  STRING_TOKEN (STR_SPREAD_SPECTRUM_HELP),
+  STRING_TOKEN (STR_UPHY0_PROMPT),
+  STRING_TOKEN (STR_UPHY0_HELP),
+  STRING_TOKEN (STR_PCIE_C0_X16),
+  STRING_TOKEN (STR_PCIE_C0_X8_C1_X8),
+  STRING_TOKEN (STR_UPHY1_PROMPT),
+  STRING_TOKEN (STR_UPHY1_HELP),
+  STRING_TOKEN (STR_PCIE_C2_X16),
+  STRING_TOKEN (STR_PCIE_C2_X8_C3_X8),
+  STRING_TOKEN (STR_UPHY2_PROMPT),
+  STRING_TOKEN (STR_UPHY2_HELP),
+  STRING_TOKEN (STR_PCIE_C4_X16),
+  STRING_TOKEN (STR_PCIE_C4_X8_C5_X8),
+  STRING_TOKEN (STR_PCIE_C5_X4_NVLINK_X12),
+  STRING_TOKEN (STR_UPHY3_PROMPT),
+  STRING_TOKEN (STR_UPHY3_HELP),
+  STRING_TOKEN (STR_PCIE_C6_X16),
+  STRING_TOKEN (STR_PCIE_C6_X8_C7_X8),
+  STRING_TOKEN (STR_PCIE_C7_X4_NVLINK_X12),
+  STRING_TOKEN (STR_UPHY4_PROMPT),
+  STRING_TOKEN (STR_UPHY4_HELP),
+  STRING_TOKEN (STR_PCIE_C8_X2),
+  STRING_TOKEN (STR_PCIE_C8_X1_USB),
+  STRING_TOKEN (STR_UPHY5_PROMPT),
+  STRING_TOKEN (STR_UPHY5_HELP),
+  STRING_TOKEN (STR_PCIE_C9_X2),
+  STRING_TOKEN (STR_PCIE0_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_PCIE1_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_PCIE2_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_PCIE3_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_PCIE4_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_PCIE5_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_PCIE6_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_PCIE7_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_PCIE8_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_PCIE9_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_SPEED_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_SPEED_HELP),
+  STRING_TOKEN (STR_PCIE_GEN5),
+  STRING_TOKEN (STR_PCIE_GEN4),
+  STRING_TOKEN (STR_PCIE_GEN3),
+  STRING_TOKEN (STR_PCIE_GEN2),
+  STRING_TOKEN (STR_PCIE_GEN1),
+  STRING_TOKEN (STR_PCIE_MAX_WIDTH_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_WIDTH_HELP),
+  STRING_TOKEN (STR_PCIE_X16),
+  STRING_TOKEN (STR_PCIE_X8),
+  STRING_TOKEN (STR_PCIE_X4),
+  STRING_TOKEN (STR_PCIE_X2),
+  STRING_TOKEN (STR_PCIE_X1),
+  STRING_TOKEN (STR_PCIE_ENABLE_ASPM_L1_TITLE),
+  STRING_TOKEN (STR_PCIE_ENABLE_ASPM_L1_1_TITLE),
+  STRING_TOKEN (STR_PCIE_ENABLE_ASPM_L1_2_TITLE),
+  STRING_TOKEN (STR_PCIE_ENABLE_PCIPM_L1_2_TITLE),
+  STRING_TOKEN (STR_PCIE_SUPPORTS_CLK_REQ_TITLE),
+  STRING_TOKEN (STR_PCIE_SUPPORTS_CLK_REQ_HELP),
+};
 
 //
 // HII specific Vendor Device Path definition.
@@ -74,6 +144,114 @@ EFI_HII_CONFIG_ACCESS_PROTOCOL  mConfigAccess;
 CHAR16                          mHiiControlStorageName[] = L"NVIDIA_CONFIG_HII_CONTROL";
 NVIDIA_CONFIG_HII_CONTROL       mHiiControlSettings      = { 0 };
 EFI_HANDLE                      mDriverHandle;
+TEGRABL_EARLY_BOOT_VARIABLES    mMb1Config = { 0 };
+
+/**
+  Syncs settings betweem Control settings and MB1 Config structure
+
+**/
+VOID
+EFIAPI
+SyncHiiSettings (
+  IN BOOLEAN  Read
+  )
+{
+  UINTN  Index;
+
+  if (Read) {
+    mHiiControlSettings.EgmEnabled           = mMb1Config.Data.Mb1Data.FeatureData.EgmEnable;
+    mHiiControlSettings.EgmHvSizeMb          = mMb1Config.Data.Mb1Data.HvRsvdMemSize;
+    mHiiControlSettings.SpreadSpectrumEnable = mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable;
+
+    for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {
+      mHiiControlSettings.UphySetting0[Index] = mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[0][Index];
+      mHiiControlSettings.UphySetting1[Index] = mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[1][Index];
+      mHiiControlSettings.UphySetting2[Index] = mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[2][Index];
+      mHiiControlSettings.UphySetting3[Index] = mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[3][Index];
+    }
+
+    for (Index = 0; Index < TEGRABL_MAX_PCIE_PER_SOCKET; Index++) {
+      mHiiControlSettings.MaxSpeed0[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxSpeed;
+      mHiiControlSettings.MaxWidth0[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxWidth;
+      mHiiControlSettings.SlotType0[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].SlotType;
+      mHiiControlSettings.EnableAspmL1_0[Index]    = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].EnableAspmL1;
+      mHiiControlSettings.EnableAspmL1_1_0[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].EnableAspmL1_1;
+      mHiiControlSettings.EnableAspmL1_2_0[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].EnableAspmL1_2;
+      mHiiControlSettings.EnablePciPmL1_2_0[Index] = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].EnablePciPmL1_2;
+      mHiiControlSettings.SupportsClkReq0[Index]   = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].SupportsClkReq;
+      mHiiControlSettings.MaxSpeed1[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].MaxSpeed;
+      mHiiControlSettings.MaxWidth1[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].MaxWidth;
+      mHiiControlSettings.SlotType1[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].SlotType;
+      mHiiControlSettings.EnableAspmL1_1[Index]    = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].EnableAspmL1;
+      mHiiControlSettings.EnableAspmL1_1_1[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].EnableAspmL1_1;
+      mHiiControlSettings.EnableAspmL1_2_1[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].EnableAspmL1_2;
+      mHiiControlSettings.EnablePciPmL1_2_1[Index] = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].EnablePciPmL1_2;
+      mHiiControlSettings.SupportsClkReq1[Index]   = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].SupportsClkReq;
+      mHiiControlSettings.MaxSpeed2[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].MaxSpeed;
+      mHiiControlSettings.MaxWidth2[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].MaxWidth;
+      mHiiControlSettings.SlotType2[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].SlotType;
+      mHiiControlSettings.EnableAspmL1_2[Index]    = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].EnableAspmL1;
+      mHiiControlSettings.EnableAspmL1_1_2[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].EnableAspmL1_1;
+      mHiiControlSettings.EnableAspmL1_2_2[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].EnableAspmL1_2;
+      mHiiControlSettings.EnablePciPmL1_2_2[Index] = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].EnablePciPmL1_2;
+      mHiiControlSettings.SupportsClkReq2[Index]   = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].SupportsClkReq;
+      mHiiControlSettings.MaxSpeed3[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].MaxSpeed;
+      mHiiControlSettings.MaxWidth3[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].MaxWidth;
+      mHiiControlSettings.SlotType3[Index]         = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].SlotType;
+      mHiiControlSettings.EnableAspmL1_3[Index]    = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].EnableAspmL1;
+      mHiiControlSettings.EnableAspmL1_1_3[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].EnableAspmL1_1;
+      mHiiControlSettings.EnableAspmL1_2_3[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].EnableAspmL1_2;
+      mHiiControlSettings.EnablePciPmL1_2_3[Index] = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].EnablePciPmL1_2;
+      mHiiControlSettings.SupportsClkReq3[Index]   = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].SupportsClkReq;
+    }
+  } else {
+    mMb1Config.Data.Mb1Data.FeatureData.EgmEnable        = mHiiControlSettings.EgmEnabled;
+    mMb1Config.Data.Mb1Data.HvRsvdMemSize                = mHiiControlSettings.EgmHvSizeMb;
+    mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable = mHiiControlSettings.SpreadSpectrumEnable;
+
+    for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {
+      mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[0][Index] = mHiiControlSettings.UphySetting0[Index];
+      mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[1][Index] = mHiiControlSettings.UphySetting1[Index];
+      mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[2][Index] = mHiiControlSettings.UphySetting2[Index];
+      mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[3][Index] = mHiiControlSettings.UphySetting3[Index];
+    }
+
+    for (Index = 0; Index < TEGRABL_MAX_PCIE_PER_SOCKET; Index++) {
+      mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxSpeed        = mHiiControlSettings.MaxSpeed0[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxWidth        = mHiiControlSettings.MaxWidth0[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[0][Index].SlotType        = mHiiControlSettings.SlotType0[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[0][Index].EnableAspmL1    = mHiiControlSettings.EnableAspmL1_0[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[0][Index].EnableAspmL1_1  = mHiiControlSettings.EnableAspmL1_1_0[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[0][Index].EnableAspmL1_2  = mHiiControlSettings.EnableAspmL1_2_0[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[0][Index].EnablePciPmL1_2 = mHiiControlSettings.EnablePciPmL1_2_0[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[0][Index].SupportsClkReq  = mHiiControlSettings.SupportsClkReq0[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[1][Index].MaxSpeed        = mHiiControlSettings.MaxSpeed1[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[1][Index].MaxWidth        = mHiiControlSettings.MaxWidth1[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[1][Index].SlotType        = mHiiControlSettings.SlotType1[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[1][Index].EnableAspmL1    = mHiiControlSettings.EnableAspmL1_1[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[1][Index].EnableAspmL1_1  = mHiiControlSettings.EnableAspmL1_1_1[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[1][Index].EnableAspmL1_2  = mHiiControlSettings.EnableAspmL1_2_1[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[1][Index].EnablePciPmL1_2 = mHiiControlSettings.EnablePciPmL1_2_1[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[1][Index].SupportsClkReq  = mHiiControlSettings.SupportsClkReq1[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[2][Index].MaxSpeed        = mHiiControlSettings.MaxSpeed2[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[2][Index].MaxWidth        = mHiiControlSettings.MaxWidth2[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[2][Index].SlotType        = mHiiControlSettings.SlotType2[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[2][Index].EnableAspmL1    = mHiiControlSettings.EnableAspmL1_2[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[2][Index].EnableAspmL1_1  = mHiiControlSettings.EnableAspmL1_1_2[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[2][Index].EnableAspmL1_2  = mHiiControlSettings.EnableAspmL1_2_2[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[2][Index].EnablePciPmL1_2 = mHiiControlSettings.EnablePciPmL1_2_2[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[2][Index].SupportsClkReq  = mHiiControlSettings.SupportsClkReq2[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].MaxSpeed        = mHiiControlSettings.MaxSpeed3[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].MaxWidth        = mHiiControlSettings.MaxWidth3[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].SlotType        = mHiiControlSettings.SlotType3[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].EnableAspmL1    = mHiiControlSettings.EnableAspmL1_3[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].EnableAspmL1_1  = mHiiControlSettings.EnableAspmL1_1_3[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].EnableAspmL1_2  = mHiiControlSettings.EnableAspmL1_2_3[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].EnablePciPmL1_2 = mHiiControlSettings.EnablePciPmL1_2_3[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].SupportsClkReq  = mHiiControlSettings.SupportsClkReq3[Index];
+    }
+  }
+}
 
 /**
   Initializes any variables to current or default settings
@@ -235,6 +413,8 @@ ConfigExtractConfig (
     FreePool (ConfigRequestHdr);
   }
 
+  SyncHiiSettings (TRUE);
+
   Status = gHiiConfigRouting->BlockToConfig (
                                 gHiiConfigRouting,
                                 ConfigRequest,
@@ -322,6 +502,9 @@ ConfigRouteConfig (
     return Status;
   }
 
+  SyncHiiSettings (FALSE);
+  // Send settings to MB1 record.
+
   return Status;
 }
 
@@ -367,8 +550,14 @@ ConfigCallback (
   UINTN       NameSize;
 
   Status = EFI_UNSUPPORTED;
-
-  if (Action == EFI_BROWSER_ACTION_CHANGED) {
+  if ((Action == EFI_BROWSER_ACTION_FORM_OPEN) ||
+      (Action == EFI_BROWSER_ACTION_FORM_CLOSE))
+  {
+    //
+    // Do nothing for UEFI OPEN/CLOSE Action
+    //
+    Status = EFI_SUCCESS;
+  } else if (Action == EFI_BROWSER_ACTION_CHANGED) {
     switch (QuestionId) {
       case KEY_RESET_VARIABLES:
         CurrentName = AllocateZeroPool (MAX_VARIABLE_NAME);
