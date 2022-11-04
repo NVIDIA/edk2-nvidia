@@ -616,6 +616,10 @@ UpdateCpuInfo (
       ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CM_NULL_TOKEN;
     }
 
+    ProcHierarchyInfo[ProcHierarchyIndex].OverrideNameUidEnabled = TRUE;
+    ProcHierarchyInfo[ProcHierarchyIndex].OverrideUid            = Socket;
+    ProcHierarchyInfo[ProcHierarchyIndex].OverrideName           = Socket;
+
     SocketTokenMap[Socket] = ProcHierarchyInfo[ProcHierarchyIndex].Token;
 
     ProcHierarchyIndex++;
@@ -783,7 +787,9 @@ UpdateCpuInfo (
               ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CM_NULL_TOKEN;
             }
 
-            ProcHierarchyInfo[ProcHierarchyIndex].LpiToken = LpiToken;
+            ProcHierarchyInfo[ProcHierarchyIndex].LpiToken               = LpiToken;
+            ProcHierarchyInfo[ProcHierarchyIndex].OverrideNameUidEnabled = TRUE;
+            ProcHierarchyInfo[ProcHierarchyIndex].OverrideName           = (Cluster * PLATFORM_MAX_CORES_PER_CLUSTER) + Core;
 
             ProcHierarchyIndex++;
             EnabledCoreCntr++;
