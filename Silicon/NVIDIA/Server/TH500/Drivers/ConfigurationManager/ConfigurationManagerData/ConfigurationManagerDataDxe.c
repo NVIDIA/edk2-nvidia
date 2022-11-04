@@ -326,6 +326,83 @@ UpdateGedInfo (
   return Status;
 }
 
+/** patch QSPI1 data in DSDT.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateQspiInfo (
+  VOID
+  )
+{
+  EFI_STATUS            Status;
+  UINT32                NumberOfQspiControllers;
+  UINT32                *QspiHandles;
+  UINT32                Index;
+  VOID                  *Dtb;
+  INT32                 NodeOffset;
+  INT32                 SubNode;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+  UINT8                 QspiStatus;
+
+  NumberOfQspiControllers = 0;
+  Status                  = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra186-qspi", NULL, &NumberOfQspiControllers);
+  if (Status == EFI_NOT_FOUND) {
+    return EFI_SUCCESS;
+  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+    return Status;
+  }
+
+  QspiHandles = NULL;
+  QspiHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfQspiControllers);
+  if (QspiHandles == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra186-qspi", QspiHandles, &NumberOfQspiControllers);
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  for (Index = 0; Index < NumberOfQspiControllers; Index++) {
+    Status = GetDeviceTreeNode (QspiHandles[Index], &Dtb, &NodeOffset);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get device node info - %r\r\n", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
+
+    SubNode = 0;
+    fdt_for_each_subnode (SubNode, Dtb, NodeOffset) {
+      if (0 == fdt_node_check_compatible (Dtb, SubNode, "tcg,tpm_tis-spi")) {
+        Status = PatchProtocol->FindNode (PatchProtocol, ACPI_QSPI1_STA, &AcpiNodeInfo);
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
+
+        if (AcpiNodeInfo.Size > sizeof (QspiStatus)) {
+          return EFI_DEVICE_ERROR;
+        }
+
+        QspiStatus = 0xF;
+        Status     = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &QspiStatus, sizeof (QspiStatus));
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_QSPI1_STA, Status));
+        }
+      }
+    }
+  }
+
+ErrorExit:
+  if (QspiHandles != NULL) {
+    FreePool (QspiHandles);
+  }
+
+  return Status;
+}
+
 /** Initialize the platform configuration repository.
   @retval EFI_SUCCESS   Success
 **/
@@ -580,6 +657,11 @@ ConfigurationManagerDataDxeInitialize (
   }
 
   Status = InitializePlatformRepository ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateQspiInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

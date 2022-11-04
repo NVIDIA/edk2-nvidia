@@ -602,6 +602,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
       Name (_HID, "NVDA1513")
       Name (_UID, 1)
       Name (_CCA, 1) // coherent DMA, explicit setting
+      Name (_STA, 0)
 
       Name (_CRS, ResourceTemplate() {
         Memory32Fixed (ReadWrite, 0x3250000, 0x10000)

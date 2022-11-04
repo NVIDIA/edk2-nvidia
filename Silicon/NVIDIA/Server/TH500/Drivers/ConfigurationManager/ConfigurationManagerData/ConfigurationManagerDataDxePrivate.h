@@ -48,8 +48,8 @@
 #include <Dsdt.offset.h>
 #include <SsdtEth.hex>
 
-#define ACPI_PATCH_MAX_PATH    255
-#define ACPI_PCI_STA_TEMPLATE  "_SB_.PCI%d._STA"
-#define ACPI_GED1_SMR1         "_SB_.GED1.SMR1"
+#define ACPI_PATCH_MAX_PATH  255
+#define ACPI_GED1_SMR1       "_SB_.GED1.SMR1"
+#define ACPI_QSPI1_STA       "_SB_.QSP1._STA"
 
 #endif // __CONFIGURATION_MANAGER_DXE_PRIVATE_H__
