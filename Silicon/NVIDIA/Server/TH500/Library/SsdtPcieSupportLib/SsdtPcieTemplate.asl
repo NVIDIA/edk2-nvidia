@@ -129,28 +129,28 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
       // notification from firmware
       If (LEqual (And (Arg0, 0xFF), 0xF)) {
         // Mask to retain low byte
-        If (LEqual (And (Arg1, 0xFF), 0x80)) {
-          /* Save BDF to DAH4 */
-          Local0 = (Arg1 >> 16)
 
-                   /* Embed Segment number also in DAH4 */
-                   Store (_SEG, Local1)
-                   Local0 |= (Local1 << 16)
+        // Invoke RAS-FW for both cases i.e
+        // OST_SUCCESS (Arg1=0x80) and
+        // OST_FAILURE (Arg1=0x81)
 
-                             /* Make sure DAH4 is zero to avoid overwriting the value of
-                                an ongoing RAS-FW handling of _OST() call */
-                             Local1 = Zero
-                                      While (
-            (Local1 < 60000) && (LNotEqual (DAH4, 0))
-            )
-          {
-            Local1 += 2;
-            Sleep (2)
-          }
+        /* Save BDF to DAH4 */
+        Local0 = (Arg1 >> 16)
 
-          Store (Local0, DAH4)
-          Store (0x1, SET4)
+        /* Embed Segment number also in DAH4 */
+        Store (_SEG, Local1)
+        Local0 |= (Local1 << 16)
+
+        /* Make sure DAH4 is zero to avoid overwriting the value of
+           an ongoing RAS-FW handling of _OST() call */
+        Local1 = Zero
+        While ((Local1 < 60000) && (LNotEqual (DAH4, 0))) {
+          Local1 += 2;
+          Sleep (2)
         }
+
+        Store (Local0, DAH4)
+        Store (0x1, SET4)
       }
     }   // End _OST
   }
