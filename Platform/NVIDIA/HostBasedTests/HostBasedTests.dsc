@@ -70,7 +70,7 @@
   #
   # Redfish CredentialBootstrap tests
   #
-  Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/UniTest/CredentialBootstrapUnitTest.inf {
+  Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/UnitTest/CredentialBootstrapUnitTest.inf {
     <LibraryClasses>
       RedfishPlatformCredentialLib|Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/RedfishPlatformCredentialLib.inf
       IpmiBaseLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/IpmiStubLib/IpmiStubLib.inf
