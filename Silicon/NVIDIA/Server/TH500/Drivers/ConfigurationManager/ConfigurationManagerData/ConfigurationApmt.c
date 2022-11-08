@@ -193,11 +193,6 @@ InstallArmPerformanceMonitoringUnitTable (
         ApmtNodes[ApmtNodeIndex].NodeInstancePrimary   = 0;
         ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary = GET_CACHE_ID (3, CACHE_TYPE_UNIFIED, 0, 0, Socket);
       } else if (AsciiStrCmp (Property, "acpi") == 0) {
-        // Only socket 0 until we add socket ssdt
-        if (Socket != 0) {
-          continue;
-        }
-
         ApmtNodes[ApmtNodeIndex].NodeType = EFI_ACPI_APMT_NODE_TYPE_ACPI_DEVICE;
         Property                          = fdt_getprop (DeviceTreeBase, DeviceOffset, "nvidia,hid", NULL);
         if (Property == NULL) {
