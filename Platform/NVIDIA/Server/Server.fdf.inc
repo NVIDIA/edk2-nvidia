@@ -92,3 +92,10 @@
   INF Silicon/NVIDIA/Drivers/Tpm2Dxe/Tpm2Dxe.inf
   INF SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf
   INF SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf
+
+!ifdef $(ENABLE_INTELUNDI)
+  #
+  # Intel 500 series NIC
+  #
+  INF IntelUndiPkg/XGigUndiDxe/XGigUndiDxe.inf
+!endif

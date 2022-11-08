@@ -266,3 +266,15 @@
       Tcg2PhysicalPresenceLib|SecurityPkg/Library/DxeTcg2PhysicalPresenceLib/DxeTcg2PhysicalPresenceLib.inf
       Tcg2PpVendorLib|SecurityPkg/Library/Tcg2PpVendorLibNull/Tcg2PpVendorLibNull.inf
   }
+
+!ifdef $(ENABLE_INTELUNDI)
+  #
+  # Intel 500 series NIC
+  #
+  IntelUndiPkg/XGigUndiDxe/XGigUndiDxe.inf {
+    <LibraryClasses>
+      StdLibC|IntelUndiPkg/LibC/LibC.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -Wno-unused-value -Wno-multistatement-macros
+  }
+!endif
