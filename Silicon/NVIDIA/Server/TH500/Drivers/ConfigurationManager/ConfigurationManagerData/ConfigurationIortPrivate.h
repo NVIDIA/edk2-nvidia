@@ -106,6 +106,7 @@ typedef struct {
   EARM_OBJECT_ID       ObjectId;
   CONST CHAR8          *Compatibility;
   SetupIortNodeFunc    SetupIortNode;
+  CONST CHAR8          *Alias;
   CHAR8                *ObjectName;
 } IORT_DEVICE_NODE_MAP;
 

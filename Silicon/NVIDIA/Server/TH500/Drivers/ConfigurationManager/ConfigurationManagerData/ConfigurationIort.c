@@ -288,6 +288,7 @@ AddIortPropNodes (
   CONST UINT32    *IommusProp;
   CONST UINT32    *IommuMapProp;
   INT32           PropSize;
+  CONST CHAR8     *AliasName;
 
   for ( ; DevMap->Compatibility != NULL; DevMap++) {
     if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->ObjectName == NULL)) {
@@ -296,13 +297,24 @@ AddIortPropNodes (
     }
 
     NodeOffset = -1;
-
     do {
-      NodeOffset = fdt_node_offset_by_compatible (
-                     Private->DtbBase,
-                     NodeOffset,
-                     DevMap->Compatibility
-                     );
+      // check for aliases in dtb
+      if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->Alias != NULL)) {
+        AliasName = fdt_get_alias (Private->DtbBase, DevMap->Alias);
+        if (AliasName == NULL) {
+          DEBUG ((EFI_D_WARN, "%a: Invalid alias for named component \r\n", __FUNCTION__));
+          break;
+        }
+
+        NodeOffset = fdt_path_offset (Private->DtbBase, AliasName);
+      } else {
+        NodeOffset = fdt_node_offset_by_compatible (
+                       Private->DtbBase,
+                       NodeOffset,
+                       DevMap->Compatibility
+                       );
+      }
+
       // All the requested DTB nodes are optional
       if (NodeOffset <= 0) {
         break;
@@ -326,6 +338,11 @@ AddIortPropNodes (
       // Check DTB status and skip if it's not enabled
       Prop = fdt_getprop (Private->DtbBase, NodeOffset, "status", &PropSize);
       if ((Prop != NULL) && !((AsciiStrCmp (Prop, "okay") == 0) || (AsciiStrCmp (Prop, "ok") == 0))) {
+        // Alias path would be unique
+        if (DevMap->Alias != NULL) {
+          break;
+        }
+
         continue;
       }
 
@@ -336,6 +353,11 @@ AddIortPropNodes (
       } else {
         // Skip if the target DTB node is not valid
         if (FindPropNodeByPhandle (Private, SwapBytes32 (MsiProp[1])) == NULL) {
+          // Alias path would be unique
+          if (DevMap->Alias != NULL) {
+            break;
+          }
+
           continue;
         }
 
@@ -348,6 +370,11 @@ AddIortPropNodes (
         if ((IommusProp != NULL) && (PropSize == IOMMUS_PROP_LENGTH)) {
           // Check DTB status and skip if it's not enabled
           if (FindPropNodeByPhandle (Private, SwapBytes32 (IommusProp[0])) == NULL) {
+            // Alias path would be unique
+            if (DevMap->Alias != NULL) {
+              break;
+            }
+
             continue;
           }
 
@@ -358,11 +385,21 @@ AddIortPropNodes (
             IommuMapProp = NULL;
             // Skip this node if both 'iommu-map' and 'msi-map' are not defined
             if (MsiProp == NULL) {
+              // Alias path would be unique
+              if (DevMap->Alias != NULL) {
+                break;
+              }
+
               continue;
             }
           } else {
             // Check DTB status and skip if it's not enabled
             if (FindPropNodeByPhandle (Private, SwapBytes32 (IommuMapProp[1])) == NULL) {
+              // Alias path would be unique
+              if (DevMap->Alias != NULL) {
+                break;
+              }
+
               continue;
             }
 
@@ -390,6 +427,11 @@ AllocatePropNode:
       PropNode->Signature    = IORT_PROP_NODE_SIGNATURE;
       InsertTailList (&Private->PropNodeList, &PropNode->Link);
       Private->IoNodes[IORT_TYPE_INDEX (DevMap->ObjectId)].NumberOfNodes++;
+
+      // Alias path would be unique
+      if (DevMap->Alias != NULL) {
+        break;
+      }
     } while (1);
   }
 
@@ -869,14 +911,14 @@ SetupIortNodeForNComp (
 
 // The order must be ITS, SMMUv3, RootComplex and NamedComponent
 STATIC CONST IORT_DEVICE_NODE_MAP  mIortDevTypeMap[] = {
-  { EArmObjItsGroup,       "arm,gic-v3-its",        SetupIortNodeForItsGroup, NULL          },
-  { EArmObjSmmuV3,         "arm,smmu-v3",           SetupIortNodeForSmmuV3,   NULL          },
-  { EArmObjRootComplex,    "nvidia,th500-pcie",     SetupIortNodeForPciRc,    NULL          },
-  { EArmObjNamedComponent, "nvidia,tegra186-qspi",  SetupIortNodeForNComp,    "\\_SB_.QSP1" },
-  { EArmObjNamedComponent, "nvidia,smmu_test",      SetupIortNodeForNComp,    "\\_SB_.TEST" },
-  { EArmObjNamedComponent, "nvidia,th500-soc-hwpm", SetupIortNodeForNComp,    "\\_SB_.HWP0" },
-  { EArmObjNamedComponent, "nvidia,th500-psc",      SetupIortNodeForNComp,    "\\_SB_.PSC0" },
-  { EArmObjMax,            NULL,                    NULL,                     NULL          }
+  { EArmObjItsGroup,       "arm,gic-v3-its",        SetupIortNodeForItsGroup, NULL,            NULL          },
+  { EArmObjSmmuV3,         "arm,smmu-v3",           SetupIortNodeForSmmuV3,   NULL,            NULL          },
+  { EArmObjRootComplex,    "nvidia,th500-pcie",     SetupIortNodeForPciRc,    NULL,            NULL          },
+  { EArmObjNamedComponent, "nvidia,tegra186-qspi",  SetupIortNodeForNComp,    "socket0_qspi1", "\\_SB_.QSP1" },
+  { EArmObjNamedComponent, "nvidia,smmu_test",      SetupIortNodeForNComp,    NULL,            "\\_SB_.TEST" },
+  { EArmObjNamedComponent, "nvidia,th500-soc-hwpm", SetupIortNodeForNComp,    NULL,            "\\_SB_.HWP0" },
+  { EArmObjNamedComponent, "nvidia,th500-psc",      SetupIortNodeForNComp,    NULL,            "\\_SB_.PSC0" },
+  { EArmObjMax,            NULL,                    NULL,                     NULL,            NULL          }
 };
 
 EFI_STATUS
