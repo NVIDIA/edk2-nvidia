@@ -147,8 +147,21 @@ TH500GetEnabledCoresBitMap (
   UINT32  ScratchDisable0Reg;
   UINT32  ScratchDisable1Reg;
   UINT32  ScratchDisable2Reg;
+  UINT32  SatMcCore;
+  UINT32  CoresPerSocket;
   UINT32  EnaBitMap[TH500_MAX_CORE_DISABLE_WORDS];
   UINTN   Socket;
+
+  // SatMC core is reserved on socket 0.
+  CoresPerSocket = (PLATFORM_MAX_CLUSTERS * PLATFORM_MAX_CORES_PER_CLUSTER) / PLATFORM_MAX_SOCKETS;
+  SatMcCore      = MmioBitFieldRead32 (
+                     SocketScratchBaseAddr[0] + CoreDisableScratchOffset[2],
+                     CPU_FLOORSWEEPING_SATMC_CORE_BIT_LO,
+                     CPU_FLOORSWEEPING_SATMC_CORE_BIT_HI
+                     );
+  if (SatMcCore != CPU_FLOORSWEEPING_SATMC_CORE_INVALID) {
+    ASSERT (SatMcCore <= CoresPerSocket);
+  }
 
   for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
     UINT64  ScratchBase = SocketScratchBaseAddr[Socket];
@@ -160,6 +173,19 @@ TH500GetEnabledCoresBitMap (
     ScratchDisable0Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[0]);
     ScratchDisable1Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[1]);
     ScratchDisable2Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[2]);
+
+    if ((SatMcCore != CPU_FLOORSWEEPING_SATMC_CORE_INVALID) &&
+        (Socket == 0))
+    {
+      DEBUG ((DEBUG_ERROR, "%a: Mask core %d on socket 0 for SatMC\n", __FUNCTION__, SatMcCore));
+      if (SatMcCore < 32) {
+        ScratchDisable0Reg |= (1 << SatMcCore);
+      } else if (SatMcCore < 64) {
+        ScratchDisable1Reg |= (1 << (SatMcCore - 32));
+      } else if (SatMcCore < CoresPerSocket) {
+        ScratchDisable2Reg |= (1 << (SatMcCore - 64));
+      }
+    }
 
     ScratchDisable0Reg |= CoreDisableScratchMask[0];
     ScratchDisable1Reg |= CoreDisableScratchMask[1];
