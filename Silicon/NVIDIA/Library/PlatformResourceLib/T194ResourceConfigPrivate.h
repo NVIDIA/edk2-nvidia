@@ -90,11 +90,11 @@
 #define CARVEOUT_OS                   38U
 #define CARVEOUT_RCM_BLOB             39U
 #define CARVEOUT_ECC_TEST             40U
-#define CARVEOUT_RESERVED1            41U
-#define CARVEOUT_RESERVED2            42U
-#define CARVEOUT_RESERVED3            43U
-#define CARVEOUT_RESERVED4            44U
-#define CARVEOUT_RESERVED5            45U
+#define CARVEOUT_PROFILER             41U
+#define CARVEOUT_RAM_OOPS             42U
+#define CARVEOUT_RESERVED1            43U
+#define CARVEOUT_RESERVED2            44U
+#define CARVEOUT_RESERVED3            45U
 #define CARVEOUT_NUM                  46U
 
 #define BOOT_CHAIN_MAX                      2

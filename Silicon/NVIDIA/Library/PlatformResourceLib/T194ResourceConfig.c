@@ -417,6 +417,10 @@ T194GetPlatformResourceInformation (
     return EFI_DEVICE_ERROR;
   }
 
+  // Populate RamOops Memory Information
+  PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Base;
+  PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryLength      = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Size;
+
   // Populate GrOutputInfo
   PlatformResourceInfo->GrOutputInfo.Base = CpuBootloaderParams->GoldenRegisterAddress;
   PlatformResourceInfo->GrOutputInfo.Size = CpuBootloaderParams->GoldenRegisterSize;
