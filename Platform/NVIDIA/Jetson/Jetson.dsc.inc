@@ -269,11 +269,6 @@
   #
   Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
 
-  #
-  # Tegra Controller Enable Driver
-  #
-  Silicon/NVIDIA/Drivers/TegraControllerEnableDxe/TegraControllerEnableDxe.inf
-
   #Security drivers
   SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
   SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf

@@ -116,11 +116,6 @@
   INF Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
 
   #
-  # Tegra Controller Enable Driver
-  #
-  INF Silicon/NVIDIA/Drivers/TegraControllerEnableDxe/TegraControllerEnableDxe.inf
-
-  #
   # EQOS NIC Support
   #
   INF Silicon/NVIDIA/Drivers/EqosDeviceDxe/EqosDeviceDxe.inf

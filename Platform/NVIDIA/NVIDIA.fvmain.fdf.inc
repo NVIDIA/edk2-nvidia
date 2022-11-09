@@ -303,3 +303,8 @@
   # CPU Frequency support
   #
   INF Silicon/NVIDIA/Drivers/TegraCpuFreqDxe/TegraCpuFreqDxe.inf
+
+  #
+  # Tegra Controller Enable Driver
+  #
+  INF Silicon/NVIDIA/Drivers/TegraControllerEnableDxe/TegraControllerEnableDxe.inf

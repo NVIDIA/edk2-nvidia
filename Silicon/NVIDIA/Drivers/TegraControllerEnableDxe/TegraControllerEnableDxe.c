@@ -11,10 +11,11 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,gv11b",       &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra30-hda", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,ga10b",       &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { NULL,                 NULL                                        }
+  { "nvidia,gv11b",          &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra30-hda",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,ga10b",          &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,th500-soc-hwpm", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { NULL,                    NULL                                        }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {

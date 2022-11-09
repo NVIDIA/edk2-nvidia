@@ -1013,6 +1013,11 @@
   #
   Silicon/NVIDIA/Drivers/TegraCpuFreqDxe/TegraCpuFreqDxe.inf
 
+  #
+  # Tegra Controller Enable Driver
+  #
+  Silicon/NVIDIA/Drivers/TegraControllerEnableDxe/TegraControllerEnableDxe.inf
+
 [Components.AARCH64]
   #
   # EBC
