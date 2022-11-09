@@ -107,6 +107,7 @@ typedef struct {
   TEGRA_BASE_AND_SIZE_INFO    FsiNsInfo;
   TEGRA_BASE_AND_SIZE_INFO    RamdiskOSInfo;
   TEGRA_BASE_AND_SIZE_INFO    RcmBlobInfo;
+  TEGRA_BASE_AND_SIZE_INFO    PvaFwInfo;
   TEGRA_BOOT_TYPE             BootType;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 

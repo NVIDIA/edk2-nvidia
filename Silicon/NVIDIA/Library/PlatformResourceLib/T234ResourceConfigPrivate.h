@@ -76,7 +76,7 @@
 #define CARVEOUT_BPMP_SPE                   16
 #define CARVEOUT_RCE                        17
 #define CARVEOUT_BPMP_CPUTZ                 18
-#define CARVEOUT_UNUSED1                    19
+#define CARVEOUT_PVA_FW                     19
 #define CARVEOUT_DCE                        20
 #define CARVEOUT_BPMP_PSC                   21
 #define CARVEOUT_PSC                        22

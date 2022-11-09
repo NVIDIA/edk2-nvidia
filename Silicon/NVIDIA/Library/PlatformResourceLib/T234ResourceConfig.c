@@ -541,6 +541,10 @@ T234GetPlatformResourceInformation (
   PlatformResourceInfo->RcmBlobInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_RCM_BLOB].Base);
   PlatformResourceInfo->RcmBlobInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_RCM_BLOB].Size);
 
+  // Populate PvaFwInfo
+  PlatformResourceInfo->PvaFwInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_PVA_FW].Base);
+  PlatformResourceInfo->PvaFwInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_PVA_FW].Size);
+
   PlatformResourceInfo->BootType = CPUBL_PARAMS (CpuBootloaderParams, BootType);
 
   return EFI_SUCCESS;

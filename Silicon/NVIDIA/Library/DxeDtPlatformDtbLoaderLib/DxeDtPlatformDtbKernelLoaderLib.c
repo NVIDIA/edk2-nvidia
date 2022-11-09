@@ -266,7 +266,7 @@ UpdateRamOopsMemory (
     RamOopsSize = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ResourceInfo->RamOopsRegion.MemoryLength;
     DEBUG ((DEBUG_ERROR, "%a: RamOopsBase: 0x%lx, RamOopsSize: 0x%lx\r\n", __FUNCTION__, RamOopsBase, RamOopsSize));
   } else {
-    DEBUG ((DEBUG_ERROR, "%a: RamOopsBase Unsupported\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: RamOops Unsupported\r\n", __FUNCTION__));
     return;
   }
 
@@ -309,6 +309,81 @@ UpdateRamOopsMemory (
     fdt_setprop (Dtb, NodeOffset, "status", "okay", sizeof ("okay"));
 
     gBS->FreePool (Data);
+  }
+}
+
+VOID
+EFIAPI
+UpdatePvaFwMemory (
+  IN VOID  *Dtb
+  )
+{
+  EFI_STATUS            Status;
+  VOID                  *Hob;
+  EFI_PHYSICAL_ADDRESS  PvaFwBase;
+  UINT64                PvaFwSize;
+  INT32                 NodeOffset;
+  INT32                 AddressCells;
+  INT32                 SizeCells;
+  UINT8                 *Data;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PvaFwBase = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->PvaFwInfo.Base;
+    PvaFwSize = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->PvaFwInfo.Size;
+    DEBUG ((DEBUG_ERROR, "%a: PvaFwBase: 0x%lx, PvaFwSize: 0x%lx\r\n", __FUNCTION__, PvaFwBase, PvaFwSize));
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: PvaFw Carveout Unsupported\r\n", __FUNCTION__));
+    return;
+  }
+
+  if ((PvaFwBase != 0) && (PvaFwSize != 0)) {
+    NodeOffset = fdt_subnode_offset (Dtb, 0, "reserved-memory");
+    if (NodeOffset >= 0) {
+      NodeOffset = fdt_add_subnode (Dtb, NodeOffset, "pva-carveout");
+      if (NodeOffset >= 0) {
+        AddressCells = fdt_address_cells (Dtb, fdt_parent_offset (Dtb, NodeOffset));
+        SizeCells    = fdt_size_cells (Dtb, fdt_parent_offset (Dtb, NodeOffset));
+        if ((AddressCells > 2) ||
+            (AddressCells == 0) ||
+            (SizeCells > 2) ||
+            (SizeCells == 0))
+        {
+          DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
+          return;
+        }
+
+        Data   = NULL;
+        Status = gBS->AllocatePool (
+                        EfiBootServicesData,
+                        (AddressCells + SizeCells) * sizeof (UINT32),
+                        (VOID **)&Data
+                        );
+        if (EFI_ERROR (Status)) {
+          return;
+        }
+
+        if (AddressCells == 2) {
+          *(UINT64 *)Data = SwapBytes64 (PvaFwBase);
+        } else {
+          *(UINT32 *)Data = SwapBytes32 (PvaFwBase);
+        }
+
+        if (SizeCells == 2) {
+          *(UINT64 *)&Data[AddressCells * sizeof (UINT32)] = SwapBytes64 (PvaFwSize);
+        } else {
+          *(UINT32 *)&Data[AddressCells * sizeof (UINT32)] = SwapBytes32 (PvaFwSize);
+        }
+
+        fdt_setprop (Dtb, NodeOffset, "compatible", "nvidia,pva-carveout", sizeof ("nvidia,pva-carveout"));
+        fdt_setprop (Dtb, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
+        fdt_setprop (Dtb, NodeOffset, "status", "okay", sizeof ("okay"));
+
+        gBS->FreePool (Data);
+      }
+    }
   }
 }
 
@@ -449,6 +524,7 @@ UpdateFdt (
 
   AddBoardProperties (Dtb);
   UpdateRamOopsMemory (Dtb);
+  UpdatePvaFwMemory (Dtb);
   ProcessDsuPmu (Dtb);
   if (IsOpteePresent ()) {
     EnableOpteeNode (Dtb);
