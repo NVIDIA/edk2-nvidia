@@ -487,11 +487,12 @@ DeviceDiscoveryNotify (
   )
 {
   EFI_STATUS                Status;
-  PCI_ROOT_BRIDGE           *RootBridge       = NULL;
-  EFI_DEVICE_PATH_PROTOCOL  *ParentDevicePath = NULL;
-  CONST VOID                *BusProperty      = NULL;
-  CONST VOID                *RangesProperty   = NULL;
-  INT32                     PropertySize      = 0;
+  PCI_ROOT_BRIDGE           *RootBridge        = NULL;
+  EFI_DEVICE_PATH_PROTOCOL  *ParentDevicePath  = NULL;
+  CONST VOID                *BusProperty       = NULL;
+  CONST VOID                *RangesProperty    = NULL;
+  CONST VOID                *HbmRangesProperty = NULL;
+  INT32                     PropertySize       = 0;
   INT32                     AddressCells;
   INT32                     PciAddressCells;
   INT32                     SizeCells;
@@ -766,6 +767,42 @@ DeviceDiscoveryNotify (
 
       if (EFI_ERROR (Status)) {
         break;
+      }
+
+      RangeSize         = (AddressCells + SizeCells) * sizeof (UINT32);
+      HbmRangesProperty = fdt_getprop (
+                            DeviceTreeNode->DeviceTreeBase,
+                            DeviceTreeNode->NodeOffset,
+                            "hbm-ranges",
+                            &PropertySize
+                            );
+      if ((HbmRangesProperty != NULL) && (PropertySize == RangeSize)) {
+        if (AddressCells == 2) {
+          CopyMem (&Private->PcieRootBridgeConfigurationIo.HbmRangeStart, HbmRangesProperty, sizeof (UINT64));
+          Private->PcieRootBridgeConfigurationIo.HbmRangeStart = SwapBytes64 (Private->PcieRootBridgeConfigurationIo.HbmRangeStart);
+        } else if (AddressCells == 1) {
+          CopyMem (&Private->PcieRootBridgeConfigurationIo.HbmRangeStart, HbmRangesProperty, sizeof (UINT32));
+          Private->PcieRootBridgeConfigurationIo.HbmRangeStart = SwapBytes32 (Private->PcieRootBridgeConfigurationIo.HbmRangeStart);
+        } else {
+          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
+          Status = EFI_DEVICE_ERROR;
+          break;
+        }
+
+        if (SizeCells == 2) {
+          CopyMem (&Private->PcieRootBridgeConfigurationIo.HbmRangeSize, HbmRangesProperty + (AddressCells * sizeof (UINT32)), sizeof (UINT64));
+          Private->PcieRootBridgeConfigurationIo.HbmRangeSize = SwapBytes64 (Private->PcieRootBridgeConfigurationIo.HbmRangeSize);
+        } else if (SizeCells == 1) {
+          CopyMem (&Private->PcieRootBridgeConfigurationIo.HbmRangeSize, HbmRangesProperty + (AddressCells * sizeof (UINT32)), sizeof (UINT32));
+          Private->PcieRootBridgeConfigurationIo.HbmRangeSize = SwapBytes32 (Private->PcieRootBridgeConfigurationIo.HbmRangeSize);
+        } else {
+          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
+          Status = EFI_DEVICE_ERROR;
+          break;
+        }
+
+        Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID ((Private->PcieRootBridgeConfigurationIo.SegmentNumber >> 4) & 0xF);
+        Private->PcieRootBridgeConfigurationIo.NumProximityDomains  = TH500_GPU_MAX_NR_MEM_PARTITIONS;
       }
 
       if ((RootBridge->PMem.Base == MAX_UINT64) && (RootBridge->PMemAbove4G.Base == MAX_UINT64)) {

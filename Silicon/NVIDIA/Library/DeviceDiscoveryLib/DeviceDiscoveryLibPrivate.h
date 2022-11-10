@@ -30,7 +30,7 @@ typedef union {
 } DEVICE_DISCOVERY_DEVICE_PATH;
 #pragma pack ()
 
-#define NUMBER_OF_OPTIONAL_PROTOCOLS  3
+#define NUMBER_OF_OPTIONAL_PROTOCOLS  4
 
 typedef enum {
   CmdResetAssert   = 1,
@@ -47,10 +47,26 @@ typedef enum {
   CmdPgMax,
 } MRQ_PG_COMMANDS;
 
+typedef enum {
+  CmdC2cQueryAbi            = 0,
+  CmdC2cStartInitialization = 1,
+  CmdC2cGetStatus           = 2,
+  CmdC2cHotresetPrep        = 3,
+  CmdC2cStartHotreset       = 4,
+  CmdC2cMax,
+} MRQ_C2C_COMMANDS;
+
+#pragma pack (1)
 typedef struct {
   UINT32    Command;
   UINT32    PgId;
   UINT32    Argument;
 } MRQ_PG_COMMAND_PACKET;
+
+typedef struct {
+  UINT32    Command;
+  UINT8     Partitions;
+} MRQ_C2C_COMMAND_PACKET;
+#pragma pack ()
 
 #endif

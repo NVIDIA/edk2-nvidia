@@ -84,6 +84,14 @@ struct _NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL {
   /// exposing an open slot.
   ///
   BOOLEAN                                                    IsExternalFacingPort;
+
+  ///
+  /// HBM memory range for connected GPU over C2C
+  ///
+  EFI_PHYSICAL_ADDRESS                                       HbmRangeStart;
+  UINTN                                                      HbmRangeSize;
+  UINT8                                                      ProximityDomainStart;
+  UINT8                                                      NumProximityDomains;
 };
 
 #endif

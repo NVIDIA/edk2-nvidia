@@ -25,6 +25,7 @@
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ResetNodeProtocol.h>
 #include <Protocol/PowerGateNodeProtocol.h>
+#include <Protocol/C2CNodeProtocol.h>
 #include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/ClockParents.h>
 #include <Protocol/BpmpIpc.h>
@@ -403,6 +404,57 @@ GetResources (
   End->Checksum = 0;
 
   return EFI_SUCCESS;
+}
+
+/**
+  This function processes a c2c command.
+
+  @param[in]     BpmpIpcProtocol     The instance of the NVIDIA_BPMP_IPC_PROTOCOL.
+  @param[in]     Partitions          partitions to process
+  @param[in]     Command             c2c command
+  @param[out]    Response            c2c response
+  @param[in]     ResponseSize        c2c response size
+
+  @return EFI_SUCCESS                c2c initialized
+  @return EFI_DEVICE_ERROR           Failed to initialized c2c
+**/
+EFI_STATUS
+BpmpProcessC2cCommand (
+  IN  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol,
+  IN  MRQ_C2C_COMMAND_PACKET    *Request,
+  OUT VOID                      *Response,
+  IN  UINTN                     ResponseSize
+  )
+{
+  EFI_STATUS  Status;
+
+  if ((Request->Partitions == CmdC2cPartitionNone) ||
+      (Request->Partitions >= CmdC2cPartitionMax))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (BpmpIpcProtocol == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = BpmpIpcProtocol->Communicate (
+                              BpmpIpcProtocol,
+                              NULL,
+                              MRQ_C2C,
+                              (VOID *)Request,
+                              sizeof (MRQ_C2C_COMMAND_PACKET),
+                              Response,
+                              ResponseSize,
+                              NULL
+                              );
+  if (Status == EFI_UNSUPPORTED) {
+    Status = EFI_SUCCESS;
+  } else if (EFI_ERROR (Status)) {
+    Status = EFI_DEVICE_ERROR;
+  }
+
+  return Status;
 }
 
 /**
@@ -1144,6 +1196,104 @@ AssertPgNodes (
 }
 
 /**
+  This function allows for initialization of C2C.
+
+  @param[in]     This                The instance of the NVIDIA_C2C_NODE_PROTOCOL.
+  @param[in]     Partitions          Partitions to be initialized.
+
+  @return EFI_SUCCESS                C2C initialized.
+  @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
+  @return EFI_DEVICE_ERROR           Failed to initialize C2C.
+**/
+EFI_STATUS
+InitC2cPartitions (
+  IN  NVIDIA_C2C_NODE_PROTOCOL  *This,
+  IN  UINT8                     Partitions
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol = NULL;
+  EFI_STATUS                Status;
+  MRQ_C2C_COMMAND_PACKET    Request;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_READY;
+  }
+
+  Request.Command    = CmdC2cStartInitialization;
+  Request.Partitions = Partitions;
+
+  return BpmpProcessC2cCommand (BpmpIpcProtocol, &Request, NULL, 0);
+}
+
+/**
+  Function builds the C2C node protocol if supported by device tree.
+
+  @param[in]  Node                  Pointer to the device tree node
+  @param[out] C2cNodeProtocol       Pointer to where to store the guid for c2c node protocol
+  @param[out] C2cNodeInterface      Pointer to the c2c node interface
+  @param[out] ProtocolListSize      Number of entries in the protocol lists
+
+  @return EFI_SUCCESS               Driver handles this node, protocols installed.
+  @return EFI_UNSUPPORTED           Driver does not support this node.
+  @return others                    Error occured during setup.
+
+**/
+VOID
+GetC2cNodeProtocol (
+  IN  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node,
+  OUT EFI_GUID                          **C2cNodeProtocol,
+  OUT VOID                              **C2cNodeInterface,
+  IN  UINTN                             ProtocolListSize
+  )
+{
+  NVIDIA_C2C_NODE_PROTOCOL  *C2c = NULL;
+  UINTN                     ListEntry;
+  CONST UINT32              *Partitions = NULL;
+  INT32                     PartitionsLength;
+
+  if ((NULL == Node) ||
+      (NULL == C2cNodeProtocol) ||
+      (NULL == C2cNodeInterface))
+  {
+    return;
+  }
+
+  for (ListEntry = 0; ListEntry < ProtocolListSize; ListEntry++) {
+    if (C2cNodeProtocol[ListEntry] == NULL) {
+      break;
+    }
+  }
+
+  if (ListEntry == ProtocolListSize) {
+    return;
+  }
+
+  Partitions = (CONST UINT32 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "c2c-partitions", &PartitionsLength);
+
+  if (Partitions == NULL) {
+    return;
+  }
+
+  if (PartitionsLength != (sizeof (UINT32) * 2)) {
+    DEBUG ((EFI_D_ERROR, "%a, C2C partitions length unexpected %d\r\n", __FUNCTION__, PartitionsLength));
+    return;
+  }
+
+  C2c = (NVIDIA_C2C_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_POWER_GATE_NODE_PROTOCOL));
+  if (NULL == C2c) {
+    DEBUG ((EFI_D_ERROR, "%a, Failed to allocate c2c node\r\n", __FUNCTION__));
+    return;
+  }
+
+  C2c->Init       = InitC2cPartitions;
+  C2c->Partitions = SwapBytes32 (Partitions[1]);
+
+  C2cNodeInterface[ListEntry] = (VOID *)C2c;
+  C2cNodeProtocol[ListEntry]  = &gNVIDIAC2cNodeProtocolGuid;
+}
+
+/**
   Function builds the PowerGate node protocol if supported by device tree.
 
   @param[in]  Node                  Pointer to the device tree node
@@ -1356,6 +1506,7 @@ ProcessDeviceTreeNodeWithHandle (
     }
   }
 
+  GetC2cNodeProtocol (&NodeProtocol, ProtocolGuidList, InterfaceList, NUMBER_OF_OPTIONAL_PROTOCOLS);
   GetPowerGateNodeProtocol (&NodeProtocol, ProtocolGuidList, InterfaceList, NUMBER_OF_OPTIONAL_PROTOCOLS);
   GetClockNodeProtocol (&NodeProtocol, ProtocolGuidList, InterfaceList, NUMBER_OF_OPTIONAL_PROTOCOLS);
   GetResetNodeProtocol (&NodeProtocol, ProtocolGuidList, InterfaceList, NUMBER_OF_OPTIONAL_PROTOCOLS);

@@ -46,6 +46,7 @@
   gNVIDIAClockNodeProtocolGuid
   gNVIDIAResetNodeProtocolGuid
   gNVIDIAPowerGateNodeProtocolGuid
+  gNVIDIAC2cNodeProtocolGuid
   gArmScmiClock2ProtocolGuid
   gNVIDIAClockParentsProtocolGuid
 

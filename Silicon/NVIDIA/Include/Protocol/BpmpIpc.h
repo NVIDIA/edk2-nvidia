@@ -46,6 +46,7 @@
 #define MRQ_TRACE_ITER        64
 #define MRQ_PG                66
 #define MRQ_CPU_NDIV_LIMITS   67
+#define MRQ_C2C               85
 
 #define   BPMP_ENOENT      (-2)   // No such file or directory.
 #define   BPMP_ENOHANDLER  (-3)   // No MRQ handler.

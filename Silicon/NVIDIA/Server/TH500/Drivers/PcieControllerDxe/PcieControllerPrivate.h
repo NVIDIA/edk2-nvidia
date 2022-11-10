@@ -15,6 +15,7 @@
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
+#include <TH500/TH500Definitions.h>
 
 #define BIT(x)  (1 << (x))
 
