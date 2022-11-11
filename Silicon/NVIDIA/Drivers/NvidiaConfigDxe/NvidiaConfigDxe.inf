@@ -37,6 +37,7 @@
   DeviceTreeHelperLib
   MemoryAllocationLib
   PcdLib
+  PrintLib
   UefiHiiServicesLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint

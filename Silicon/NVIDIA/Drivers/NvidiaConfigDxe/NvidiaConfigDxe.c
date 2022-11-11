@@ -1,7 +1,7 @@
 /** @file
 *  NVIDIA Configuration Dxe
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -28,6 +28,7 @@
 #include <Library/DevicePathLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PrintLib.h>
 #include <Library/UefiHiiServicesLib.h>
 #include <Library/UefiLib.h>
 
@@ -148,11 +149,11 @@ EFI_HII_CONFIG_ACCESS_PROTOCOL  mConfigAccess;
 CHAR16                          mHiiControlStorageName[] = L"NVIDIA_CONFIG_HII_CONTROL";
 NVIDIA_CONFIG_HII_CONTROL       mHiiControlSettings      = { 0 };
 EFI_HANDLE                      mDriverHandle;
-TEGRABL_EARLY_BOOT_VARIABLES    mMb1Config                 = { 0 };
-TEGRABL_EARLY_BOOT_VARIABLES    mLastWrittenMb1Config      = { 0 };
-TEGRABL_EARLY_BOOT_VARIABLES    mVariableOverrideMb1Config = { 0 };
-EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2           = NULL;
-VOID                            *mMmCommunicationBuffer    = NULL;
+TEGRABL_EARLY_BOOT_VARIABLES    mMb1Config              = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES    mLastWrittenMb1Config   = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES    mVariableMb1Config      = { 0 };
+EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2        = NULL;
+VOID                            *mMmCommunicationBuffer = NULL;
 
 // Talk to MB1 actual storage
 EFI_STATUS
@@ -218,6 +219,244 @@ AccessMb1Record (
   }
 
   return Status;
+}
+
+// Read a single variable, set if undefined
+EFI_STATUS
+EFIAPI
+GetMb1Variable (
+  CHAR16  *VariableName,
+  VOID    *VariableData,
+  UINTN   VariableSize
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       ReadVariableSize;
+  UINT32      Attributes;
+
+  ReadVariableSize = 0;
+  Status           = gRT->GetVariable (VariableName, &gNVIDIAPublicVariableGuid, &Attributes, &ReadVariableSize, NULL);
+  if ((Status == EFI_NOT_FOUND) ||
+      ((Status == EFI_BUFFER_TOO_SMALL) &&
+       ((ReadVariableSize != VariableSize) ||
+        (Attributes != (EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS)))))
+  {
+    if (Status != EFI_NOT_FOUND) {
+      // Delete the variable
+      gRT->SetVariable (VariableName, &gNVIDIAPublicVariableGuid, Attributes, 0, NULL);
+    }
+
+    Attributes = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS;
+    Status     = gRT->SetVariable (VariableName, &gNVIDIAPublicVariableGuid, Attributes, VariableSize, VariableData);
+    return Status;
+  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+    DEBUG ((DEBUG_ERROR, "%a: Unexpected return value - %r when getting variable\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  ReadVariableSize = VariableSize;
+  Status           = gRT->GetVariable (VariableName, &gNVIDIAPublicVariableGuid, &Attributes, &ReadVariableSize, VariableData);
+  return Status;
+}
+
+// Sync the structure based on the EFI Variables
+EFI_STATUS
+EFIAPI
+ReadMb1Variables (
+  TEGRABL_EARLY_BOOT_VARIABLES  *EarlyVariable
+  )
+{
+  EFI_STATUS  Status;
+  CHAR16      VariableName[(MAX_VARIABLE_NAME/sizeof (CHAR16))];
+  UINTN       Index;
+  UINTN       Index2;
+
+  Status = GetMb1Variable (
+             L"TH500.MB1.FeatureData",
+             (VOID *)&(EarlyVariable->Data.Mb1Data.FeatureData),
+             sizeof (EarlyVariable->Data.Mb1Data.FeatureData)
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = GetMb1Variable (
+             L"TH500.MB1.HvRsvdMemSize",
+             (VOID *)&(EarlyVariable->Data.Mb1Data.HvRsvdMemSize),
+             sizeof (EarlyVariable->Data.Mb1Data.HvRsvdMemSize)
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = GetMb1Variable (
+             L"TH500.MB1.UefiDebugLevel",
+             (VOID *)&(EarlyVariable->Data.Mb1Data.UefiDebugLevel),
+             sizeof (EarlyVariable->Data.Mb1Data.UefiDebugLevel)
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  for (Index = 0; Index < TEGRABL_SOC_MAX_SOCKETS; Index++) {
+    if (!mHiiControlSettings.SocketEnabled[Index]) {
+      continue;
+    }
+
+    for (Index2 = 0; Index2 < TEGRABL_MAX_UPHY_PER_SOCKET; Index2++) {
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.MB1.UphyConfig.%x.%x", Index, Index2);
+      Status = GetMb1Variable (
+                 VariableName,
+                 (VOID *)&(EarlyVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]),
+                 sizeof (UINT8)
+                 );
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+    }
+  }
+
+  for (Index = 0; Index < TEGRABL_SOC_MAX_SOCKETS; Index++) {
+    if (!mHiiControlSettings.SocketEnabled[Index]) {
+      continue;
+    }
+
+    for (Index2 = 0; Index2 < TEGRABL_MAX_PCIE_PER_SOCKET; Index2++) {
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.MB1.PcieConfig.%x.%x", Index, Index2);
+      Status = GetMb1Variable (
+                 VariableName,
+                 (VOID *)&(EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2]),
+                 sizeof (TEGRABL_MB1BCT_PCIE_CONFIG)
+                 );
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+// Update the variables based on MB1 data
+EFI_STATUS
+EFIAPI
+WriteMb1Variables (
+  TEGRABL_EARLY_BOOT_VARIABLES  *NewVariable,
+  TEGRABL_EARLY_BOOT_VARIABLES  *CurrentVariable
+  )
+{
+  EFI_STATUS  Status;
+  CHAR16      VariableName[(MAX_VARIABLE_NAME/sizeof (CHAR16))];
+  UINTN       Index;
+  UINTN       Index2;
+  VOID        *SrcPtr;
+  VOID        *DestPtr;
+  UINTN       Size;
+  UINT32      Attributes;
+
+  Attributes = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS;
+
+  SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.FeatureData);
+  DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.FeatureData);
+  Size    = sizeof (NewVariable->Data.Mb1Data.FeatureData);
+  if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
+    Status = gRT->SetVariable (
+                    L"TH500.MB1.FeatureData",
+                    &gNVIDIAPublicVariableGuid,
+                    Attributes,
+                    Size,
+                    SrcPtr
+                    );
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    CopyMem (DestPtr, SrcPtr, Size);
+  }
+
+  SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.HvRsvdMemSize);
+  DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.HvRsvdMemSize);
+  Size    = sizeof (NewVariable->Data.Mb1Data.HvRsvdMemSize);
+  if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
+    Status = gRT->SetVariable (
+                    L"TH500.MB1.HvRsvdMemSize",
+                    &gNVIDIAPublicVariableGuid,
+                    Attributes,
+                    Size,
+                    SrcPtr
+                    );
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    CopyMem (DestPtr, SrcPtr, Size);
+  }
+
+  SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.UefiDebugLevel);
+  DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.UefiDebugLevel);
+  Size    = sizeof (NewVariable->Data.Mb1Data.UefiDebugLevel);
+  if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
+    Status = gRT->SetVariable (
+                    L"TH500.MB1.UefiDebugLevel",
+                    &gNVIDIAPublicVariableGuid,
+                    Attributes,
+                    Size,
+                    SrcPtr
+                    );
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    CopyMem (DestPtr, SrcPtr, Size);
+  }
+
+  for (Index = 0; Index < TEGRABL_SOC_MAX_SOCKETS; Index++) {
+    for (Index2 = 0; Index2 < TEGRABL_MAX_UPHY_PER_SOCKET; Index2++) {
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.MB1.UphyConfig.%x.%x", Index, Index2);
+      SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]);
+      DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]);
+      Size    = sizeof (UINT8);
+      if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
+        Status = gRT->SetVariable (
+                        VariableName,
+                        &gNVIDIAPublicVariableGuid,
+                        Attributes,
+                        Size,
+                        SrcPtr
+                        );
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
+
+        CopyMem (DestPtr, SrcPtr, Size);
+      }
+    }
+  }
+
+  for (Index = 0; Index < TEGRABL_SOC_MAX_SOCKETS; Index++) {
+    for (Index2 = 0; Index2 < TEGRABL_MAX_PCIE_PER_SOCKET; Index2++) {
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.MB1.PcieConfig.%x.%x", Index, Index2);
+      SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.PcieConfig[Index][Index2]);
+      DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.PcieConfig[Index][Index2]);
+      Size    = sizeof (UINT8);
+      if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
+        Status = gRT->SetVariable (
+                        VariableName,
+                        &gNVIDIAPublicVariableGuid,
+                        Attributes,
+                        Size,
+                        SrcPtr
+                        );
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
+
+        CopyMem (DestPtr, SrcPtr, Size);
+      }
+    }
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -437,6 +676,22 @@ InitializeSettings (
     if (EFI_ERROR (Status)) {
       CopyMem (&mLastWrittenMb1Config, &mMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
     }
+
+    CopyMem (&mVariableMb1Config, &mLastWrittenMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
+    Status = ReadMb1Variables (&mVariableMb1Config);
+    if (!EFI_ERROR (Status)) {
+      if ((CompareMem (&mVariableMb1Config, &mLastWrittenMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES)) != 0) &&
+          (CompareMem (&mVariableMb1Config, &mMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES)) != 0))
+      {
+        Status = AccessMb1Record (&mVariableMb1Config, TRUE);
+        if (!EFI_ERROR (Status)) {
+          gRT->ResetSystem (EfiResetWarm, EFI_SUCCESS, 0, NULL);
+          ASSERT (FALSE);
+        }
+      }
+    }
+
+    WriteMb1Variables (&mMb1Config, &mVariableMb1Config);
   }
 }
 
@@ -619,6 +874,7 @@ ConfigRouteConfig (
       Status = AccessMb1Record (&mMb1Config, TRUE);
       if (!EFI_ERROR (Status)) {
         CopyMem (&mLastWrittenMb1Config, &mMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
+        WriteMb1Variables (&mMb1Config, &mVariableMb1Config);
       }
     }
   }
