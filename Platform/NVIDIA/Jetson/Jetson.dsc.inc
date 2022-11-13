@@ -133,6 +133,7 @@
   gNVIDIATokenSpaceGuid.PcdFramebufferHorizontalResolution|3840
   gNVIDIATokenSpaceGuid.PcdFramebufferVerticalResolution|2160
   gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|1
+  gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|TRUE
 
 ################################################################################
 #

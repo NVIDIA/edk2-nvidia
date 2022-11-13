@@ -17,6 +17,12 @@
 #string STR_PCIE_CONFIG_FORM_TITLE       #language en-US "PCIe Configuration"
 #string STR_PCIE_CONFIG_FORM_HELP        #language en-US "PCIe configuration options"
 
+#string STR_L4T_CONFIG_FORM_TITLE       #language en-US "L4T Configuration"
+#string STR_L4T_CONFIG_FORM_HELP        #language en-US "L4T configuration options"
+
+#string STR_BOOT_CONFIG_FORM_TITLE       #language en-US "Boot Configuration"
+#string STR_BOOT_CONFIG_FORM_HELP        #language en-US "Boot configuration options"
+
 #string STR_PCIE_IN_OS_PROMPT            #language en-US "Enable PCIe in OS"
 #string STR_PCIE_IN_OS_HELP              #language en-US "Enable/Disable PCIe's ACPI Entry to be exposed to the O/S."
 #string STR_QUICK_BOOT_ENABLED_PROMPT    #language en-US "Enable UEFI Quick Boot"

@@ -71,6 +71,9 @@ HII_VENDOR_DEVICE_PATH  mNvidiaConfigHiiVendorDevicePath = {
 };
 
 EFI_HII_CONFIG_ACCESS_PROTOCOL  mConfigAccess;
+CHAR16                          mHiiControlStorageName[] = L"NVIDIA_CONFIG_HII_CONTROL";
+NVIDIA_CONFIG_HII_CONTROL       mHiiControlSettings      = { 0 };
+EFI_HANDLE                      mDriverHandle;
 
 /**
   Initializes any variables to current or default settings
@@ -85,6 +88,8 @@ InitializeSettings (
   VOID                        *AcpiBase;
   NVIDIA_KERNEL_COMMAND_LINE  CmdLine;
   UINTN                       KernelCmdLineLen;
+  NVIDIA_OS_REDUNDANCY        RedundancyLevel;
+  UINTN                       BufferSize;
 
   // Initialize PCIe Form Settings
   PcdSet8S (PcdPcieResourceConfigNeeded, PcdGet8 (PcdPcieResourceConfigNeeded));
@@ -131,6 +136,25 @@ InitializeSettings (
       DEBUG ((DEBUG_ERROR, "%a: Error setting command line variable %r\r\n", __FUNCTION__, Status));
     }
   }
+
+  BufferSize = sizeof (RedundancyLevel);
+  Status     = gRT->GetVariable (L"RootfsRedundancyLevel", &gNVIDIAPublicVariableGuid, NULL, &BufferSize, &RedundancyLevel);
+  if (EFI_ERROR (Status)) {
+    RedundancyLevel.Level = 0;
+    BufferSize            = sizeof (RedundancyLevel);
+    Status                = gRT->SetVariable (
+                                   L"RootfsRedundancyLevel",
+                                   &gNVIDIAPublicVariableGuid,
+                                   EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,
+                                   BufferSize,
+                                   &RedundancyLevel
+                                   );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error setting RootfsRedundancyLevel variable %r\r\n", __FUNCTION__, Status));
+    }
+  }
+
+  mHiiControlSettings.L4TSupported = PcdGetBool (PcdL4TConfigurationSupport);
 }
 
 /**
@@ -169,12 +193,80 @@ ConfigExtractConfig (
   OUT EFI_STRING                           *Results
   )
 {
-  if ((Progress == NULL) || (Results == NULL)) {
+  EFI_STATUS  Status;
+  UINTN       BufferSize;
+  EFI_STRING  ConfigRequestHdr;
+  EFI_STRING  ConfigRequest;
+  BOOLEAN     AllocatedRequest;
+  UINTN       Size;
+
+  if ((This == NULL) || (Progress == NULL) || (Results == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
   *Progress = Request;
-  return EFI_NOT_FOUND;
+  if ((Request != NULL) && !HiiIsConfigHdrMatch (Request, &gNVIDIAResourceConfigFormsetGuid, mHiiControlStorageName)) {
+    return EFI_NOT_FOUND;
+  }
+
+  ConfigRequestHdr = NULL;
+  ConfigRequest    = NULL;
+  AllocatedRequest = FALSE;
+  Size             = 0;
+
+  //
+  // Convert buffer data to <ConfigResp> by helper function BlockToConfig().
+  //
+  BufferSize    = sizeof (NVIDIA_CONFIG_HII_CONTROL);
+  ConfigRequest = Request;
+  if ((Request == NULL) || (StrStr (Request, L"OFFSET") == NULL)) {
+    //
+    // Request has no request element, construct full request string.
+    // Allocate and fill a buffer large enough to hold the <ConfigHdr> template
+    // followed by "&OFFSET=0&WIDTH=WWWWWWWWWWWWWWWW" followed by a Null-terminator
+    //
+    ConfigRequestHdr = HiiConstructConfigHdr (&gNVIDIAResourceConfigFormsetGuid, mHiiControlStorageName, mDriverHandle);
+    if (ConfigRequestHdr == NULL) {
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    Size          = (StrLen (ConfigRequestHdr) + 32 + 1) * sizeof (CHAR16);
+    ConfigRequest = AllocateZeroPool (Size);
+    if (ConfigRequest == NULL) {
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    AllocatedRequest = TRUE;
+    UnicodeSPrint (ConfigRequest, Size, L"%s&OFFSET=0&WIDTH=%016LX", ConfigRequestHdr, (UINT64)BufferSize);
+    FreePool (ConfigRequestHdr);
+  }
+
+  Status = gHiiConfigRouting->BlockToConfig (
+                                gHiiConfigRouting,
+                                ConfigRequest,
+                                (UINT8 *)&mHiiControlSettings,
+                                BufferSize,
+                                Results,
+                                Progress
+                                );
+  //
+  // Free the allocated config request string.
+  //
+  if (AllocatedRequest) {
+    FreePool (ConfigRequest);
+    ConfigRequest = NULL;
+  }
+
+  //
+  // Set Progress string to the original request string.
+  //
+  if (Request == NULL) {
+    *Progress = NULL;
+  } else if (StrStr (Request, L"OFFSET") == NULL) {
+    *Progress = Request + StrLen (Request);
+  }
+
+  return Status;
 }
 
 /**
@@ -203,13 +295,40 @@ ConfigRouteConfig (
   OUT EFI_STRING                           *Progress
   )
 {
-  if ((Configuration == NULL) || (Progress == NULL)) {
+  EFI_STATUS  Status;
+  UINTN       BufferSize;
+
+  Status = EFI_SUCCESS;
+
+  if ((This == NULL) || (Configuration == NULL) || (Progress == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  *Progress = Configuration;
+  //
+  // Check routing data in <ConfigHdr>.
+  // Note: if only one Storage is used, then this checking could be skipped.
+  //
+  if (!HiiIsConfigHdrMatch (Configuration, &gNVIDIAResourceConfigFormsetGuid, mHiiControlStorageName)) {
+    *Progress = Configuration;
+    return EFI_NOT_FOUND;
+  }
 
-  return EFI_NOT_FOUND;
+  //
+  // Convert <ConfigResp> to buffer data by helper function ConfigToBlock().
+  //
+  BufferSize = sizeof (NVIDIA_CONFIG_HII_CONTROL);
+  Status     = gHiiConfigRouting->ConfigToBlock (
+                                    gHiiConfigRouting,
+                                    Configuration,
+                                    (UINT8 *)&mHiiControlSettings,
+                                    &BufferSize,
+                                    Progress
+                                    );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return Status;
 }
 
 /**
@@ -315,7 +434,6 @@ OnEndOfDxe (
 {
   EFI_STATUS      Status;
   EFI_HII_HANDLE  HiiHandle;
-  EFI_HANDLE      DriverHandle;
 
   gBS->CloseEvent (Event);
 
@@ -325,19 +443,19 @@ OnEndOfDxe (
   mConfigAccess.ExtractConfig = ConfigExtractConfig;
   mConfigAccess.RouteConfig   = ConfigRouteConfig;
 
-  DriverHandle = NULL;
-  Status       = gBS->InstallMultipleProtocolInterfaces (
-                        &DriverHandle,
-                        &gEfiDevicePathProtocolGuid,
-                        &mNvidiaConfigHiiVendorDevicePath,
-                        &gEfiHiiConfigAccessProtocolGuid,
-                        &mConfigAccess,
-                        NULL
-                        );
+  mDriverHandle = NULL;
+  Status        = gBS->InstallMultipleProtocolInterfaces (
+                         &mDriverHandle,
+                         &gEfiDevicePathProtocolGuid,
+                         &mNvidiaConfigHiiVendorDevicePath,
+                         &gEfiHiiConfigAccessProtocolGuid,
+                         &mConfigAccess,
+                         NULL
+                         );
   if (!EFI_ERROR (Status)) {
     HiiHandle = HiiAddPackages (
                   &gNVIDIAResourceConfigFormsetGuid,
-                  DriverHandle,
+                  mDriverHandle,
                   NvidiaConfigDxeStrings,
                   NvidiaConfigHiiBin,
                   NULL
@@ -345,7 +463,7 @@ OnEndOfDxe (
 
     if (HiiHandle == NULL) {
       gBS->UninstallMultipleProtocolInterfaces (
-             DriverHandle,
+             mDriverHandle,
              &gEfiDevicePathProtocolGuid,
              &mNvidiaConfigHiiVendorDevicePath,
              &gEfiHiiConfigAccessProtocolGuid,

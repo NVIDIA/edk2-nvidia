@@ -66,6 +66,7 @@
   gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
+  gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

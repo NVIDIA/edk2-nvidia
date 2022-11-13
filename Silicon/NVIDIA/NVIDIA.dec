@@ -328,6 +328,9 @@
 #Name of Recovery Kernel DTB partition
   gNVIDIATokenSpaceGuid.PcdRecoveryKernelDtbPartitionName|L"recovery-dtb"|VOID*|0x00000066
 
+#L4T Configuration support
+  gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|FALSE|BOOLEAN|0x00000100
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
