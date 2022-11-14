@@ -29,8 +29,8 @@ if [ ! -e venv/bin/activate ]; then
   . venv/bin/activate
   _msg "Installing required Python packages..."
   pip install --upgrade -r edk2/pip-requirements.txt
-  # Require at least stuart 0.17.1, which fixes a PackagePath reordering issue.
-  pip install --upgrade "edk2-pytool-extensions>=0.17.1"
+  # Require stuart 0.17.1, which fixes a PackagePath reordering issue.
+  pip install --upgrade "edk2-pytool-extensions==0.17.1"
 else
   _msg "Activating Python virtual environment."
   . venv/bin/activate
