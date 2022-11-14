@@ -871,6 +871,9 @@ DisplaySystemAndHotkeyInformation (
   UINTN                          CharCount;
   UINTN                          PosX;
   UINTN                          PosY;
+  UINTN                          StartLineX = EFI_GLYPH_WIDTH+2;
+  UINTN                          StartLineY = EFI_GLYPH_HEIGHT+1;
+  UINTN                          LineDeltaY = EFI_GLYPH_HEIGHT+1;
 
   //
   // Display hotkey information at upper left corner.
@@ -914,9 +917,9 @@ DisplaySystemAndHotkeyInformation (
     PosY = 0;
 
     PrintXY (PosX, PosY, NULL, NULL, Buffer);
-    PrintXY (10, 10, &White, &Black, L"ESC   to enter Setup.                              ");
-    PrintXY (10, 30, &White, &Black, L"F11   to enter Boot Manager Menu.");
-    PrintXY (10, 50, &White, &Black, L"Enter to continue boot.");
+    PrintXY (StartLineX, StartLineY+LineDeltaY*0, &White, &Black, L"ESC   to enter Setup.                              ");
+    PrintXY (StartLineX, StartLineY+LineDeltaY*1, &White, &Black, L"F11   to enter Boot Manager Menu.");
+    PrintXY (StartLineX, StartLineY+LineDeltaY*2, &White, &Black, L"Enter to continue boot.");
   } else {
     //
     // Serial console only.
