@@ -466,21 +466,6 @@ MmCommunication2Initialize (
 
   ASSERT (mNsCommBuffMemRegion.Length != 0);
 
-  Status = gDS->AddMemorySpace (
-                  EfiGcdMemoryTypeSystemMemory,
-                  mNsCommBuffMemRegion.PhysicalBase,
-                  mNsCommBuffMemRegion.Length,
-                  EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "MmCommunicateInitialize: "
-      "Failed to add MM-NS Buffer Memory Space\n"
-      ));
-    goto ReturnErrorStatus;
-  }
-
   Status = gDS->SetMemorySpaceAttributes (
                   mNsCommBuffMemRegion.PhysicalBase,
                   mNsCommBuffMemRegion.Length,
@@ -492,7 +477,7 @@ MmCommunication2Initialize (
       "MmCommunicateInitialize: "
       "Failed to set MM-NS Buffer Memory attributes\n"
       ));
-    goto CleanAddedMemorySpace;
+    goto ReturnErrorStatus;
   }
 
   // Install the communication protocol
@@ -508,7 +493,7 @@ MmCommunication2Initialize (
       "MmCommunicationInitialize: "
       "Failed to install MM communication protocol\n"
       ));
-    goto CleanAddedMemorySpace;
+    goto ReturnErrorStatus;
   }
 
   // Register notification callback when virtual address is associated
@@ -566,12 +551,6 @@ UninstallProtocol:
          mMmCommunicateHandle,
          &gEfiMmCommunication2ProtocolGuid,
          &mMmCommunication2
-         );
-
-CleanAddedMemorySpace:
-  gDS->RemoveMemorySpace (
-         mNsCommBuffMemRegion.PhysicalBase,
-         mNsCommBuffMemRegion.Length
          );
 
 ReturnErrorStatus:

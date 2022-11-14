@@ -229,7 +229,10 @@
   #
   # APEI
   #
-  Silicon/NVIDIA/Server/TH500/Drivers/ApeiDxe/Apei.inf
+  Silicon/NVIDIA/Server/TH500/Drivers/ApeiDxe/Apei.inf {
+    <LibraryClasses>
+      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  }
 
   #
   # MM Communication

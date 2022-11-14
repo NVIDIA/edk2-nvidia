@@ -35,6 +35,12 @@ TEGRA_MMIO_INFO  TH500MmioInfo[] = {
     TH500_WDT_RFRSH_BASE,
     SIZE_4KB
   },
+  // Placeholder for memory in DRAM CO CARVEOUT_CCPLEX_INTERWORLD_SHMEM that would
+  // be treated as MMIO memory.
+  {
+    0,
+    0
+  },
   {
     0,
     0
@@ -267,12 +273,15 @@ TH500GetResourceConfig (
         CpuBootloaderParams->CarveoutInfo[Count][Index].Size
         ));
       if (Index == CARVEOUT_CCPLEX_INTERWORLD_SHMEM) {
-        // Leave in memory map but marked as used
-        BuildMemoryAllocationHob (
-          CpuBootloaderParams->CarveoutInfo[Count][Index].Base,
-          EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Count][Index].Size)),
-          EfiReservedMemoryType
-          );
+        if (Count == 0) {
+          // For primary socket, add memory in DRAM CO CARVEOUT_CCPLEX_INTERWORLD_SHMEM in its placeholder
+          // in TH500MmioInfo for MMIO mapping.
+          TH500MmioInfo[ARRAY_SIZE (TH500MmioInfo)-2].Base        = CpuBootloaderParams->CarveoutInfo[Count][Index].Base;
+          TH500MmioInfo[ARRAY_SIZE (TH500MmioInfo)-2].Size        = CpuBootloaderParams->CarveoutInfo[Count][Index].Size;
+          CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Count][Index].Base;
+          CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Count][Index].Size;
+          CarveoutRegionsCount++;
+        }
       } else if (Index == CARVEOUT_RCM_BLOB) {
         // Leave in memory map but marked as used
         BuildMemoryAllocationHob (

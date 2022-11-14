@@ -133,19 +133,6 @@ ApeiDxeInitialize (
 
   Status = FfaGetRasFwBuffer (&RasFwBufferInfo);
   if (!EFI_ERROR (Status)) {
-    gDS->AddMemorySpace (
-           EfiGcdMemoryTypeReserved,
-           RasFwBufferInfo.Base,
-           RasFwBufferInfo.Size,
-           EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
-           );
-
-    gDS->SetMemorySpaceAttributes (
-           RasFwBufferInfo.Base,
-           RasFwBufferInfo.Size,
-           EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
-           );
-
     NVIDIARasNsCommPcieDpcData = (RAS_PCIE_DPC_COMM_BUF_INFO *)AllocateZeroPool (sizeof (RAS_PCIE_DPC_COMM_BUF_INFO));
     if (NVIDIARasNsCommPcieDpcData == NULL) {
       DEBUG ((
