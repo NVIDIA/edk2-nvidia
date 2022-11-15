@@ -1,0 +1,27 @@
+## @file
+#
+#  MCTP base protocol and helper function library
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 1.25
+  BASE_NAME                      = MctpBaseLib
+  FILE_GUID                      = ab07cfb6-837f-4c72-94d1-e80070de53b9
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = MctpBaseLib
+
+[Sources.common]
+  MctpBaseLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
