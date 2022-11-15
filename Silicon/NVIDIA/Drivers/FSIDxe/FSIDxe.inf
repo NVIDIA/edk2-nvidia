@@ -30,6 +30,7 @@
   UefiLib
   FdtLib
   PlatformResourceLib
+  HobLib
 
 [Guids]
   gEfiAcpiTableGuid

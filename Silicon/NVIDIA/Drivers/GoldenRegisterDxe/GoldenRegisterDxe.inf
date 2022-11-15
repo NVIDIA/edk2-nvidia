@@ -30,6 +30,7 @@
   PlatformResourceLib
   DxeServicesTableLib
   GoldenRegisterLib
+  HobLib
 
 [Guids]
   gEfiEventExitBootServicesGuid

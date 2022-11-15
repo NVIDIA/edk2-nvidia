@@ -37,6 +37,7 @@
   IoLib
   FdtLib
   DtPlatformDtbLoaderLib
+  TegraPlatformInfoLib
 
 [Protocols]
   gNVIDIATegraP2UProtocolGuid

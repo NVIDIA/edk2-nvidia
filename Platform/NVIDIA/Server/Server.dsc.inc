@@ -144,7 +144,7 @@
   MdeModulePkg/Universal/SerialDxe/SerialDxe.inf
 
   #
-  # Platform Comfiguration Manager Data
+  # Platform Configuration Manager Data
   #
   Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
     <LibraryClasses>
