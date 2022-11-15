@@ -1,0 +1,32 @@
+## @file
+#
+#  Erot library
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 1.25
+  BASE_NAME                      = ErotLib
+  FILE_GUID                      = ca1082ad-d38a-4f73-a023-03675713e4bd
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = ErotLib
+
+[Sources.common]
+  ErotLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  MctpBaseLib
+  MctpNvVdmLib
+
+[Protocols]
+  gNVIDIAMctpProtocolGuid
