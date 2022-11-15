@@ -559,6 +559,18 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosVersion|0x0300
   gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosDocRev|0x0
 
+  # SMBIOS Type0 Firmware BIOS characteristics.
+  gArmTokenSpaceGuid.PcdBiosCharacteristics|{0}
+  gArmTokenSpaceGuid.PcdBiosCharacteristics.PciIsSupported            | TRUE
+  gArmTokenSpaceGuid.PcdBiosCharacteristics.PlugAndPlayIsSupported    | TRUE
+  gArmTokenSpaceGuid.PcdBiosCharacteristics.BiosIsUpgradable          | TRUE
+  gArmTokenSpaceGuid.PcdBiosCharacteristics.BiosShadowingAllowed      | TRUE
+  gArmTokenSpaceGuid.PcdBiosCharacteristics.BootFromCdIsSupported     | TRUE
+  gArmTokenSpaceGuid.PcdBiosCharacteristics.SelectableBootIsSupported | TRUE
+  gArmTokenSpaceGuid.PcdBiosCharacteristics.SerialIsSupported         | TRUE
+
+  gArmTokenSpaceGuid.PcdBiosCharacteristicsExtension|0x0C01
+
   #
   # ACPI PCDs
   #
@@ -956,6 +968,7 @@
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtPcieLibArm/SsdtPcieLibArm.inf
 
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType1Lib/SmbiosType1Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType0Lib/SmbiosType0Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType2Lib/SmbiosType2Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType8Lib/SmbiosType8Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType9Lib/SmbiosType9Lib.inf

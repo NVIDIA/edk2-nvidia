@@ -73,7 +73,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
   gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x07
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x400
-  gArmTokenSpaceGuid.PcdSmbiosMiscDxeGenMask|0x000000010000200D
+  gArmTokenSpaceGuid.PcdSmbiosMiscDxeGenMask|0x000000010000200C
 
 [PcdsDynamicDefault]
   ## MM Communicate
@@ -92,6 +92,8 @@
   gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|0x000000000c6a8000
   gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|37
   # SMBIOS for TH500
+  ## Type 0 Table (BIOS Information)
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor|L"NVIDIA"
   ## Type 2 Table (Board Information)
   gNVIDIATokenSpaceGuid.PcdBoardChassisLocation|L"Unknown"
   gNVIDIATokenSpaceGuid.PcdBoardVersion|L"Unknown"

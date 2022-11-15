@@ -376,6 +376,19 @@
 #L4T Configuration support
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|FALSE|BOOLEAN|0x00000100
 
+#SMBIOS Data
+  #Type00 Data
+  #  Enable/Disable the SMBIOS Type00 Bios characteristics.
+  #  This Structured PCD is associated with MISC_BIOS_CHARACTERISTICS
+  #  structure that is defined in Include/IndustryStandard/SmBios.h
+  gArmTokenSpaceGuid.PcdBiosCharacteristics|{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}|MISC_BIOS_CHARACTERISTICS|0x30000077 {
+    <HeaderFiles>
+      IndustryStandard/SmBios.h
+  }
+  # This PCD is associated with the BIOSCharacteristicsExtensionBytes[2] field
+  # in the SMBIOS Type00 structure defined in Include/IndustryStandard/SmBios.h
+  gArmTokenSpaceGuid.PcdBiosCharacteristicsExtension|0x0000|UINT16|0x30000078
+
 # Use FAST reads in S QSPI controllers
   gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead|TRUE|BOOLEAN|0x00000099
 # Floorsweeping runtime variable exposure
@@ -519,8 +532,9 @@
   #3   - Boot recovery image
   #255 - Use application default
   gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode|0xFF|UINT32|0x00000044
+
 #SMBIOS Data
-  #Typ02 Data
+  #Type02 Data
   gNVIDIATokenSpaceGuid.PcdBoardChassisLocation|L""|VOID*|0x00000051
   gNVIDIATokenSpaceGuid.PcdBoardVersion|L""|VOID*|0x00000050
   gNVIDIATokenSpaceGuid.PcdBoardManufacturer|L""|VOID*|0x00000052

@@ -104,6 +104,7 @@ InstallCmSmbiosTableList (
   EFI_STATUS                      Status;
   UINTN                           Index;
   CM_SMBIOS_RECORD_POPULATION     CmInstallSmbiosRecords[] = {
+    { EFI_SMBIOS_TYPE_BIOS_INFORMATION,           InstallSmbiosType0Cm  },
     { EFI_SMBIOS_TYPE_SYSTEM_INFORMATION,         InstallSmbiosType1Cm  },
     { EFI_SMBIOS_TYPE_BASEBOARD_INFORMATION,      InstallSmbiosType2Cm  },
     { EFI_SMBIOS_TYPE_PORT_CONNECTOR_INFORMATION, InstallSmbiosType8Cm  },

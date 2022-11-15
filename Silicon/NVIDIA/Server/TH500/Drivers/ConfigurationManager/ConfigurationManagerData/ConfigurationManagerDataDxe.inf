@@ -34,6 +34,7 @@
   ConfigurationSpmi.c
   ConfigurationTpm2.c
   ConfigurationSmbios.c
+  ConfigurationSmbiosType0.c
   ConfigurationSmbiosType1.c
   ConfigurationSmbiosType2.c
   ConfigurationSmbiosType8.c
@@ -70,6 +71,7 @@
   FruLib
   IpmiBaseLib
   Tpm2CommandLib
+  PcdLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
@@ -96,6 +98,13 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass
   gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType
+  gArmTokenSpaceGuid.PcdFdSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gArmTokenSpaceGuid.PcdFdBaseAddress
+  gArmTokenSpaceGuid.PcdBiosCharacteristics
+  gArmTokenSpaceGuid.PcdBiosCharacteristicsExtension
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
