@@ -694,7 +694,7 @@ InitializeFvAndVariableStoreHeaders (
   EFI_STATUS             Status;
   VARIABLE_STORE_HEADER  *VariableStoreHeader;
 
-  DEBUG ((DEBUG_ERROR, "%s Address 0x%x\n", __FUNCTION__, (UINTN)FirmwareVolumeHeader));
+  DEBUG ((DEBUG_ERROR, "%a Address 0x%x\n", __FUNCTION__, (UINTN)FirmwareVolumeHeader));
   if (FirmwareVolumeHeader == NULL) {
     return EFI_INVALID_PARAMETER;
   }
@@ -704,9 +704,7 @@ InitializeFvAndVariableStoreHeaders (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  DEBUG ((DEBUG_ERROR, "%s: 0\n", __FUNCTION__));
   if (!IsErasedFlashBuffer ((UINT8 *)FirmwareVolumeHeader, PartitionSize)) {
-    DEBUG ((DEBUG_ERROR, "%s: 1\n", __FUNCTION__));
     Status = NorFlashProtocol->Erase (
                                  NorFlashProtocol,
                                  PartitionOffset / FlashAttributes->BlockSize,
@@ -725,7 +723,6 @@ InitializeFvAndVariableStoreHeaders (
                         FirmwareVolumeHeader
                         );
     ASSERT (IsErasedFlashBuffer ((UINT8 *)FirmwareVolumeHeader, PartitionSize));
-    DEBUG ((DEBUG_ERROR, "%s: 2\n", __FUNCTION__));
   }
 
   //
@@ -736,7 +733,6 @@ InitializeFvAndVariableStoreHeaders (
     sizeof (EFI_FIRMWARE_VOLUME_HEADER) + sizeof (EFI_FV_BLOCK_MAP_ENTRY)
     );
   CopyGuid (&FirmwareVolumeHeader->FileSystemGuid, &gEfiSystemNvDataFvGuid);
-  DEBUG ((DEBUG_ERROR, "%s: 3\n", __FUNCTION__));
   FirmwareVolumeHeader->FvLength   = PartitionSize;
   FirmwareVolumeHeader->Signature  = EFI_FVH_SIGNATURE;
   FirmwareVolumeHeader->Attributes = (EFI_FVB_ATTRIBUTES_2)(
@@ -756,7 +752,6 @@ InitializeFvAndVariableStoreHeaders (
   FirmwareVolumeHeader->BlockMap[1].Length    = 0;
   FirmwareVolumeHeader->Checksum              = CalculateCheckSum16 ((UINT16 *)FirmwareVolumeHeader, FirmwareVolumeHeader->HeaderLength);
 
-  DEBUG ((DEBUG_ERROR, "%s: 3\n", __FUNCTION__));
   Status = NorFlashProtocol->Write (
                                NorFlashProtocol,
                                PartitionOffset,
@@ -782,7 +777,6 @@ InitializeFvAndVariableStoreHeaders (
     VariableStoreHeader->Format = VARIABLE_STORE_FORMATTED;
     VariableStoreHeader->State  = VARIABLE_STORE_HEALTHY;
 
-    DEBUG ((DEBUG_ERROR, "%s: 4\n", __FUNCTION__));
     // Write the combined super-header in the flash
     Status = NorFlashProtocol->Write (
                                  NorFlashProtocol,
@@ -795,7 +789,6 @@ InitializeFvAndVariableStoreHeaders (
     }
   }
 
-  DEBUG ((DEBUG_ERROR, "%s: 5\n", __FUNCTION__));
   return Status;
 }
 
@@ -1351,6 +1344,16 @@ FVBNORInitialize (
     goto Exit;
   }
 
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: VariableOffset %lu VariableSize %lu"
+    "FTW Offset %lu FTW Size %lu",
+    __FUNCTION__,
+    VariableOffset,
+    VariableSize,
+    FtwOffset,
+    FtwSize
+    ));
   FvpData[FVB_VARIABLE_INDEX].PartitionOffset  = VariableOffset;
   FvpData[FVB_VARIABLE_INDEX].PartitionSize    = VariableSize;
   FvpData[FVB_VARIABLE_INDEX].PartitionData    = VarStoreBuffer;

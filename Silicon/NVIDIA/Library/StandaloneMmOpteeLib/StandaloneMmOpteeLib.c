@@ -284,6 +284,16 @@ GetVarStoreCs (
       goto ExitVarStoreCs;
     }
 
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:PartitionIndex[%u] VarOffset %lu VarSize %lu"
+      "Device Instance %lx\n",
+      __FUNCTION__,
+      TEGRABL_VARIABLE_IMAGE_INDEX,
+      VarOffset,
+      VarSize,
+      DeviceInstance
+      ));
     if (VarSize != 0) {
       *VarCs = ((DeviceInstance & DEVICE_CS_MASK) >> DEVICE_CS_SHIFT);
     } else {

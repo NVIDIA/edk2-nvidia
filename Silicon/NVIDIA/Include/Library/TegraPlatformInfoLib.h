@@ -18,7 +18,7 @@
 /* CS definitions for the platforms */
 #define NOR_FLASH_CHIP_SELECT_JETSON        0
 #define NOR_FLASH_CHIP_SELECT_TH500_PRESIL  0
-#define NOR_FLASH_CHIP_SELECT_TH500_SIL     2
+#define NOR_FLASH_CHIP_SELECT_TH500_SIL     0
 
 // Jetson SKUs
 #define T194_SKU         1

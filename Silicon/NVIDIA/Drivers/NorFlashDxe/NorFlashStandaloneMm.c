@@ -1390,6 +1390,12 @@ NorFlashInitialise (
     goto ErrorExit;
   }
 
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Using ChipSelect %u\n",
+    __FUNCTION__,
+    Private->QspiChipSelect
+    ));
   // Read NOR flash's SFDP
   Status = ReadNorFlashSFDP (Private);
   if (EFI_ERROR (Status)) {
