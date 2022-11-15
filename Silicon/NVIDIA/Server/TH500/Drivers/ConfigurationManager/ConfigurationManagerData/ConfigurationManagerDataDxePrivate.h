@@ -42,6 +42,7 @@
 
 #include "Platform.h"
 #include "ConfigurationManagerDataPrivate.h"
+#include "ConfigurationSmbiosPrivate.h"
 #include <TH500/TH500Definitions.h>
 
 #include <Dsdt.hex>

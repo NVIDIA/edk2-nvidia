@@ -601,6 +601,11 @@ InitializePlatformRepository (
     }
   }
 
+  Status = InstallCmSmbiosTableList (&Repo, (UINTN)RepoEnd);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   ASSERT ((UINTN)Repo <= (UINTN)RepoEnd);
 
   return EFI_SUCCESS;

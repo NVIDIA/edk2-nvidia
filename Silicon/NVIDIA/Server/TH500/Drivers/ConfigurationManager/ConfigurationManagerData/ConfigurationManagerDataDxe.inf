@@ -31,6 +31,8 @@
   ConfigurationMpam.c
   ConfigurationSlit.c
   ConfigurationHmat.c
+  ConfigurationSmbios.c
+  ConfigurationSmbiosType1.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -40,6 +42,7 @@
   ArmPlatformPkg/ArmPlatformPkg.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  IpmiFeaturePkg/IpmiFeaturePkg.dec
 
 [LibraryClasses]
   TegraPlatformInfoLib
@@ -53,6 +56,8 @@
   DtPlatformDtbLoaderLib
   DeviceTreeHelperLib
   ConfigurationManagerLib
+  FruLib
+  IpmiBaseLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
