@@ -45,6 +45,11 @@
 								data = [01 00 00 00];
 								non-volatile;
 							};
+							L4TDefaultBootMode {
+								data = [01 00 00 00];
+								runtime;
+								non-volatile;
+							};
 						};
 					};
 				};
