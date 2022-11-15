@@ -10,7 +10,7 @@
 
 [Defines]
   INF_VERSION                    = 0x0001001A
-  BASE_NAME                      = StandaloneMmHafniumCoreEntryPoint 
+  BASE_NAME                      = StandaloneMmHafniumCoreEntryPoint
   FILE_GUID                      = a8b8c0e6-9b17-42ff-aaf0-c923f01c2ab0
   MODULE_TYPE                    = MM_CORE_STANDALONE
   VERSION_STRING                 = 1.0

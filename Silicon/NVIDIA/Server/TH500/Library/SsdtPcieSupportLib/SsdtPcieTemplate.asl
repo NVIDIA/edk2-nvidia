@@ -57,7 +57,7 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
       /* Do not allow Native AER (RAS-FW handles it) */
       /* Allow Native PCIe capability */
       /* Allow Native LTR control */
-      And(CTRL,0x30,CTRL) 
+      And(CTRL,0x30,CTRL)
 
       If (LNotEqual (Arg1, One)) {  // Unknown revision
         Or (CDW1, 0x08, CDW1)
