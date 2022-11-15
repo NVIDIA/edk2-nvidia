@@ -13,6 +13,8 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/FloorSweepingLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Protocol/PciRootBridgeConfigurationIo.h>
 
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
@@ -20,6 +22,12 @@
 #include <TH500/TH500Definitions.h>
 
 #define PLATFORM_MAX_SOCKETS  (PcdGet32 (PcdTegraMaxSockets))
+
+typedef struct {
+  UINT32    PxmDmn;
+  UINT64    HbmSize;
+  UINT64    HbmBase;
+} HBM_MEMORY_INFO;
 
 UINT32
 EFIAPI
@@ -76,10 +84,14 @@ InstallStaticResourceAffinityTable (
   EFI_GCD_MEMORY_SPACE_DESCRIPTOR  *Descriptors;
   UINTN                            DescriptorCount;
   CM_ARM_MEMORY_AFFINITY_INFO      *MemoryAffinityInfo;
+  HBM_MEMORY_INFO                  *HbmMemInfo;
   UINTN                            MemoryAffinityInfoCount;
   UINTN                            MemoryAffinityInfoIndex;
   UINTN                            GpuMemoryAffinityId;
   UINT8                            NumEnabledSockets;
+  EFI_HANDLE                       *Handles = NULL;
+  UINTN                            NumberOfHandles;
+  UINTN                            HandleIdx;
 
   // Create a ACPI Table Entry
   for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
@@ -137,7 +149,7 @@ InstallStaticResourceAffinityTable (
     }
   }
 
-  // Increment to hold dummy entry for GPU memory
+  // Increment to hold entries for GPU memory
   MemoryAffinityInfoCount += TH500_GPU_MAX_NR_MEM_PARTITIONS * NumEnabledSockets;
 
   MemoryAffinityInfo = (CM_ARM_MEMORY_AFFINITY_INFO *)AllocatePool (sizeof (CM_ARM_MEMORY_AFFINITY_INFO) * MemoryAffinityInfoCount);
@@ -159,6 +171,55 @@ InstallStaticResourceAffinityTable (
 
   FreePool (Descriptors);
 
+  // Allocate space to save HBM info
+  HbmMemInfo = (HBM_MEMORY_INFO *)AllocatePool (sizeof (HBM_MEMORY_INFO) * TH500_GPU_MAX_NR_MEM_PARTITIONS * PLATFORM_MAX_SOCKETS);
+  if (HbmMemInfo == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate HBM memory info\r\n"));
+    return EFI_DEVICE_ERROR;
+  }
+
+  // Retrieve HBM memory info from PCI Root Bridge Protocol
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                  NULL,
+                  &NumberOfHandles,
+                  &Handles
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to locate root bridge protocols, %r.\r\n", __FUNCTION__, NumberOfHandles));
+    return Status;
+  }
+
+  for (HandleIdx = 0; HandleIdx < NumberOfHandles; HandleIdx++) {
+    NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *PciRbCfg = NULL;
+    Status = gBS->HandleProtocol (
+                    Handles[HandleIdx],
+                    &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                    (VOID **)&PciRbCfg
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        EFI_D_ERROR,
+        "%a: Failed to get protocol for handle %p, %r.\r\n",
+        __FUNCTION__,
+        Handles[HandleIdx],
+        Status
+        ));
+      return Status;
+    }
+
+    if (PciRbCfg->NumProximityDomains > 0) {
+      // found the GPU HBM info
+      for (UINTN Idx = 0; Idx < PciRbCfg->NumProximityDomains; Idx++ ) {
+        HbmMemInfo[PciRbCfg->ProximityDomainStart + Idx].PxmDmn  = PciRbCfg->ProximityDomainStart + Idx;
+        HbmMemInfo[PciRbCfg->ProximityDomainStart + Idx].HbmSize = PciRbCfg->HbmRangeSize / PciRbCfg->NumProximityDomains;
+        HbmMemInfo[PciRbCfg->ProximityDomainStart + Idx].HbmBase = PciRbCfg->HbmRangeStart +
+                                                                   (PciRbCfg->HbmRangeSize / PciRbCfg->NumProximityDomains * Idx);
+      }
+    }
+  }
+
   // Placeholder node for all domains, actual entries will be present in DSDT
   for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     if (!IsSocketEnabled (Socket)) {
@@ -167,12 +228,14 @@ InstallStaticResourceAffinityTable (
 
     for (GpuMemoryAffinityId = 0; GpuMemoryAffinityId < TH500_GPU_MAX_NR_MEM_PARTITIONS; GpuMemoryAffinityId++) {
       MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (Socket) + GpuMemoryAffinityId;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = 0;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = 0;
+      MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = HbmMemInfo[MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain].HbmBase;
+      MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = HbmMemInfo[MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain].HbmSize;
       MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED|EFI_ACPI_6_4_MEMORY_HOT_PLUGGABLE;
       MemoryAffinityInfoIndex++;
     }
   }
+
+  FreePool (HbmMemInfo);
 
   ASSERT (MemoryAffinityInfoIndex == MemoryAffinityInfoCount);
 

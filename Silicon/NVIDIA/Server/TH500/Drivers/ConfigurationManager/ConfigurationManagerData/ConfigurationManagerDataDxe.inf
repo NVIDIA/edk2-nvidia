@@ -81,6 +81,7 @@
   gNVIDIAConfigurationManagerDataProtocolGuid
   gNVIDIAAmlPatchProtocolGuid
   gNVIDIARasNsCommPcieDpcDataProtocolGuid
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
