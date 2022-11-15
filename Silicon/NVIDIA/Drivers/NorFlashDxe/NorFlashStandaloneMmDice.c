@@ -765,14 +765,25 @@ NorFlashDiceInitialise (
   IN EFI_MM_SYSTEM_TABLE  *MmSystemTable
   )
 {
-  EFI_STATUS  Status = EFI_SUCCESS;
-  EFI_HANDLE  Handle;
+  EFI_STATUS            Status = EFI_SUCCESS;
+  EFI_HANDLE            Handle;
+  EFI_MM_DEVICE_REGION  *DeviceRegions;
+  UINT32                NumRegions;
+  BOOLEAN               QspiPresent;
 
   if (PcdGetBool (PcdEmuVariableNvModeEnable)) {
     return EFI_SUCCESS;
   }
 
-  if (!IsQspiPresent ()) {
+  QspiPresent = IsQspi0Present (&NumRegions);
+  if ((QspiPresent == FALSE)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: No Qspi present, %u %u\n",
+      __FUNCTION__,
+      QspiPresent,
+      NumRegions
+      ));
     return EFI_SUCCESS;
   }
 
@@ -791,12 +802,14 @@ NorFlashDiceInitialise (
     goto exit;
   }
 
-  Status = GetQspiDeviceRegion (&QspiBaseAddress, &QspiSize);
+  Status = GetQspi0DeviceRegions (&DeviceRegions, &NumRegions);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Qspi MMIO region not found (%r)\n", __FUNCTION__, Status));
     goto exit;
   }
 
+  QspiBaseAddress = DeviceRegions[0].DeviceRegionStart;
+  QspiSize        = DeviceRegions[0].DeviceRegionSize;
   if (IsNorFlashDeviceSupported () == FALSE) {
     FreePool (WormInfo);
     goto exit;

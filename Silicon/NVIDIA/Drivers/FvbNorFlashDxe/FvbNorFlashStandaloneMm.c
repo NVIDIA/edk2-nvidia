@@ -14,6 +14,9 @@
 #include <FvbPrivate.h>
 #include <Library/PlatformResourceLib.h>
 
+/* FVB transactions will only be made to socket 0. */
+#define FVB_DEVICE_SOCKET  (0)
+
 /**
   The GetAttributes() function retrieves the attributes and
   current settings of the block.
@@ -1266,18 +1269,19 @@ FVBNORInitialize (
     return EFI_SUCCESS;
   }
 
-  if (!IsQspiPresent ()) {
+  if (!IsQspi0Present (NULL)) {
     return EFI_SUCCESS;
   }
 
-  // Get NorFlashProtocol
-  Status = gMmst->MmLocateProtocol (
-                    &gNVIDIANorFlashProtocolGuid,
-                    NULL,
-                    (VOID **)&NorFlashProtocol
-                    );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get NOR Flash protocol (%r)\r\n", __FUNCTION__, Status));
+  NorFlashProtocol = GetSocketNorFlashProtocol (FVB_DEVICE_SOCKET);
+  if (NorFlashProtocol == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:%d Failed to get Socket0 NORFlash proto(%r)\n",
+      __FUNCTION__,
+      __LINE__,
+      Status
+      ));
     return EFI_SUCCESS;
   }
 

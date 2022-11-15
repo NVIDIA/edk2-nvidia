@@ -287,6 +287,19 @@ GetPartitionInfoStMm (
   );
 
 /**
+ * Get the sockets Enabled Bit Mask.
+ *
+ * @param[in] CpuBlAddress          Address of the CPU BL params.
+ *
+ * @retval  Bitmask of enabled sockets (0x1 if CPUBL is 0).
+**/
+UINT32
+EFIAPI
+GetSocketMaskStMm (
+  IN UINTN  CpuBlAddress
+  );
+
+/**
  * Check if socket is enabled in the CPU BL Params's socket mask.
  * This API is usually only called from StMM.
  *

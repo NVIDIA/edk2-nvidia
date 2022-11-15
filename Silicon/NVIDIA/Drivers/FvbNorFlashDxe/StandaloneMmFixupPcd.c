@@ -117,7 +117,7 @@ StandaloneMmFixupPcdConstructor (
   /* In Jetson deployments, if the QSPI MMIO region isn't found then
    * return, this could be an RPMB platform.
    */
-  if (!IsQspiPresent () && IsOpteePresent ()) {
+  if (!IsQspi0Present (NULL) && IsOpteePresent ()) {
     return EFI_SUCCESS;
   }
 

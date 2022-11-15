@@ -854,7 +854,7 @@ OpTeeRpmbFvbInit (
     return EFI_SUCCESS;
   }
 
-  if (IsQspiPresent ()) {
+  if (IsQspi0Present (NULL)) {
     return EFI_SUCCESS;
   }
 

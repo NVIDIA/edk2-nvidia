@@ -43,6 +43,11 @@
 [FeaturePcd]
   gNVIDIATokenSpaceGuid.PcdOpteePresent
 
+[Protocols]
+  gNVIDIASocketIdProtocolGuid
+  gNVIDIAQspiControllerProtocolGuid
+  gNVIDIANorFlashProtocolGuid
+
 [Guids]
   gEfiStandaloneMmDeviceMemoryRegions
   gNVIDIAPlatformResourceDataGuid

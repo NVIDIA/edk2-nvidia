@@ -129,30 +129,35 @@ QspiControllerStMmInitialize (
   )
 {
   EFI_STATUS                    Status;
-  EFI_VIRTUAL_ADDRESS           QspiBaseAddress;
-  UINTN                         QspiRegionSize;
   QSPI_CONTROLLER_PRIVATE_DATA  *Private;
   BOOLEAN                       WaitCyclesSupported;
   UINT8                         NumChipSelects;
   TEGRA_BOOT_TYPE               TegraBootType;
   BOOLEAN                       Fbc;
+  EFI_MM_DEVICE_REGION          *QspiRegions;
+  UINT32                        NumRegions;
+  EFI_HANDLE                    Handle;
+  UINT32                        Index;
+  UINT32                        *SockNum;
 
   TegraBootType = GetBootType ();
   Fbc           = InFbc ();
-
-  DEBUG ((DEBUG_ERROR, "Boot Type %d fbc %d\n", TegraBootType, Fbc));
 
   /* Fall back to emulated store as the QSPI resources
    * may not be setup.
    */
   if ((Fbc == FALSE) || (TegraBootType == TegrablBootRcm)) {
-    DEBUG ((DEBUG_ERROR, "Not Initializing QSPI \n"));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:Not Initializing QSPI.FBC:%u BootType:%u\n",
+      __FUNCTION__,
+      Fbc,
+      TegraBootType
+      ));
     return EFI_SUCCESS;
   }
 
-  DEBUG ((DEBUG_ERROR, "%a: Looking for Dev Region with qspi", __FUNCTION__));
-
-  Status = GetQspiDeviceRegion (&QspiBaseAddress, &QspiRegionSize);
+  Status = GetQspi0DeviceRegions (&QspiRegions, &NumRegions);
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -163,39 +168,63 @@ QspiControllerStMmInitialize (
     return EFI_SUCCESS;
   }
 
-  NumChipSelects = DetectNumChipSelects ();
+  for (Index = 0; Index < NumRegions; Index++) {
+    NumChipSelects = DetectNumChipSelects ();
+    Private        = AllocateRuntimeZeroPool (sizeof (QSPI_CONTROLLER_PRIVATE_DATA));
+    if (Private == NULL) {
+      return EFI_OUT_OF_RESOURCES;
+    }
 
-  Private = AllocateRuntimeZeroPool (sizeof (QSPI_CONTROLLER_PRIVATE_DATA));
-  if (Private == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
+    WaitCyclesSupported          = TRUE;
+    Private->Signature           = QSPI_CONTROLLER_SIGNATURE;
+    Private->QspiBaseAddress     = QspiRegions[Index].DeviceRegionStart;
+    Private->WaitCyclesSupported = WaitCyclesSupported;
+    Private->ControllerType      = CONTROLLER_TYPE_QSPI;
+    Private->ClockId             = MAX_UINT32;
+    Private->NumChipSelects      = NumChipSelects;
 
-  WaitCyclesSupported          = TRUE;
-  Private->Signature           = QSPI_CONTROLLER_SIGNATURE;
-  Private->QspiBaseAddress     = QspiBaseAddress;
-  Private->WaitCyclesSupported = WaitCyclesSupported;
-  Private->ControllerType      = CONTROLLER_TYPE_QSPI;
-  Private->ClockId             = MAX_UINT32;
-  Private->NumChipSelects      = NumChipSelects;
+    Status = QspiInitialize (Private->QspiBaseAddress, NumChipSelects);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        EFI_D_ERROR,
+        "QSPI Initialization Failed for 0x%x %r.\n",
+        Private->QspiBaseAddress,
+        Status
+        ));
+      continue;
+    }
 
-  Status = QspiInitialize (Private->QspiBaseAddress, NumChipSelects);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "QSPI Initialization Failed.\n"));
-    goto ErrorExit;
-  }
+    Private->QspiControllerProtocol.PerformTransaction = QspiControllerPerformTransaction;
+    Private->QspiControllerProtocol.GetNumChipSelects  = QspiControllerGetNumChipSelects;
 
-  Private->QspiControllerProtocol.PerformTransaction = QspiControllerPerformTransaction;
-  Private->QspiControllerProtocol.GetNumChipSelects  = QspiControllerGetNumChipSelects;
+    Handle = NULL;
+    Status = gMmst->MmInstallProtocolInterface (
+                      &Handle,
+                      &gNVIDIAQspiControllerProtocolGuid,
+                      EFI_NATIVE_INTERFACE,
+                      &Private->QspiControllerProtocol
+                      );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install QspiControllerProtocol \n", __FUNCTION__));
+      goto ErrorExit;
+    }
 
-  Status = gMmst->MmInstallProtocolInterface (
-                    &ImageHandle,
-                    &gNVIDIAQspiControllerProtocolGuid,
-                    EFI_NATIVE_INTERFACE,
-                    &Private->QspiControllerProtocol
-                    );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to install QspiControllerProtocol \n", __FUNCTION__));
-    goto ErrorExit;
+    SockNum = AllocateRuntimeZeroPool (sizeof (UINT32));
+    if (SockNum == NULL) {
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    *SockNum = GetDeviceSocketNum (QspiRegions[Index].DeviceRegionName);
+    Status   = gMmst->MmInstallProtocolInterface (
+                        &Handle,
+                        &gNVIDIASocketIdProtocolGuid,
+                        EFI_NATIVE_INTERFACE,
+                        SockNum
+                        );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install SocketIdProtocol \n", __FUNCTION__));
+      goto ErrorExit;
+    }
   }
 
 ErrorExit:

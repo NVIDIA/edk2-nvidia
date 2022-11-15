@@ -47,6 +47,7 @@ ENTRY_POINT = QspiControllerStMmInitialize
 
 [Protocols]
   gNVIDIAQspiControllerProtocolGuid
+  gNVIDIASocketIdProtocolGuid
 
 [Depex]
   TRUE

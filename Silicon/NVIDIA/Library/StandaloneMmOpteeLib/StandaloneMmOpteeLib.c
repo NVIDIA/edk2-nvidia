@@ -20,6 +20,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/MemoryAllocationLib.h>
 
 #define HIDREV_OFFSET             0x4
 #define HIDREV_PRE_SI_PLAT_SHIFT  0x14
@@ -68,8 +69,8 @@ GetDeviceRegion (
 
 EFIAPI
 BOOLEAN
-IsQspiPresent (
-  VOID
+IsQspi0Present (
+  UINT32  *NumRegions
   )
 {
   EFI_STATUS            Status           = EFI_NOT_FOUND;
@@ -77,6 +78,7 @@ IsQspiPresent (
   UINTN                 Index;
   EFI_HOB_GUID_TYPE     *GuidHob;
   BOOLEAN               QspiPresent = FALSE;
+  UINT32                NumQspi;
 
   GuidHob = GetFirstGuidHob (&gEfiStandaloneMmDeviceMemoryRegions);
   if (GuidHob == NULL) {
@@ -84,42 +86,107 @@ IsQspiPresent (
   }
 
   DeviceRegionMap = GET_GUID_HOB_DATA (GuidHob);
-
+  NumQspi         = 0;
   for (Index = 0; Index < MAX_DEVICE_REGIONS; Index++) {
-    if (AsciiStrStr (DeviceRegionMap[Index].DeviceRegionName, "qspi") != NULL) {
+    if (AsciiStrStr (DeviceRegionMap[Index].DeviceRegionName, "qspi0") != NULL) {
       QspiPresent = TRUE;
-      break;
+      NumQspi++;
     }
+  }
+
+  if (NumRegions != NULL) {
+    *NumRegions = NumQspi;
   }
 
   return QspiPresent;
 }
 
+/**
+  * GetQspi0DeviceRegions
+  * Get all the MMIO regions for QSPI controller 0 across all the sockets.
+  *
+  * @param[out]  QspiRegions  Allocated region of Qspi0 regions on success.
+  * @param[out]  NumRegions   Number of Qspi device regions.
+  *
+  * @retval  EFI_SUCCESS           Found QSPI regions.
+  *          EFI_NOT_FOUND         Device Memory HOB not found or no Qspi0
+  *                                regions installed in the HOB.
+  *          EFI_OUT_OF_RESOURCES  Failed to allocate the QspiRegions Buffer.
+ **/
 EFIAPI
 EFI_STATUS
-GetQspiDeviceRegion (
-  UINT64  *QspiBaseAddress,
-  UINTN   *QspiRegionSize
+GetQspi0DeviceRegions (
+  EFI_MM_DEVICE_REGION  **QspiRegions,
+  UINT32                *NumRegions
   )
 {
-  EFI_STATUS  Status = EFI_UNSUPPORTED;
+  EFI_MM_DEVICE_REGION  *QspiMmio;
+  UINT32                NumQspi;
+  EFI_STATUS            Status;
+  UINTN                 Index;
+  EFI_HOB_GUID_TYPE     *GuidHob;
+  EFI_MM_DEVICE_REGION  *DeviceRegionMap = NULL;
+  UINTN                 QspiIndex;
 
-  // OP-TEE path
-  if (IsOpteePresent ()) {
-    Status = GetDeviceRegion ("qspi0-t194", QspiBaseAddress, QspiRegionSize);
-    if (EFI_ERROR (Status)) {
-      Status = GetDeviceRegion ("qspi0-t234", QspiBaseAddress, QspiRegionSize);
-      if (EFI_ERROR (Status)) {
-        Status = EFI_NOT_FOUND;
-      }
-    }
-  } else {
-    Status = GetDeviceRegion ("qspi0", QspiBaseAddress, QspiRegionSize);
-    if (EFI_ERROR (Status)) {
-      Status = EFI_NOT_FOUND;
+  Status = EFI_SUCCESS;
+  if (IsQspi0Present (&NumQspi) == FALSE) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: There are no QSPI0 regions present\n",
+      __FUNCTION__
+      ));
+    Status = EFI_NOT_FOUND;
+    goto ExitGetQspiDeviceRegions;
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: %u QSPI0 regions present\n",
+    __FUNCTION__,
+    NumQspi
+    ));
+  QspiMmio = AllocateRuntimeZeroPool (sizeof (EFI_MM_DEVICE_REGION) * NumQspi);
+  if (QspiMmio == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to allocate %u bytes\n",
+      __FUNCTION__,
+      (NumQspi * sizeof (EFI_MM_DEVICE_REGION))
+      ));
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ExitGetQspiDeviceRegions;
+  }
+
+  GuidHob = GetFirstGuidHob (&gEfiStandaloneMmDeviceMemoryRegions);
+  if (GuidHob == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to lookup Device Memory Hob",
+      __FUNCTION__
+      ));
+    Status = EFI_NOT_FOUND;
+    FreePool (QspiMmio);
+    goto ExitGetQspiDeviceRegions;
+  }
+
+  DeviceRegionMap = GET_GUID_HOB_DATA (GuidHob);
+  QspiIndex       = 0;
+  for (QspiIndex = 0, Index = 0;
+       (Index < MAX_DEVICE_REGIONS) && (QspiIndex < NumQspi);
+       Index++)
+  {
+    if (AsciiStrStr (DeviceRegionMap[Index].DeviceRegionName, "qspi0") != NULL) {
+      CopyMem (
+        &QspiMmio[QspiIndex++],
+        &DeviceRegionMap[Index],
+        sizeof (EFI_MM_DEVICE_REGION)
+        );
     }
   }
 
+  *QspiRegions = QspiMmio;
+  *NumRegions  = NumQspi;
+ExitGetQspiDeviceRegions:
   return Status;
 }
 
@@ -313,7 +380,7 @@ ExitVarStoreCs:
 }
 
 /**
- * GetSocketNum
+ * GetDeviceSocketNum
  * Util function to get the socket number from the device region name.
  *
  * @param[in] DeviceRegionName Name of the device region.
@@ -346,4 +413,229 @@ GetDeviceSocketNum (
   }
 
   return SockNum;
+}
+
+/**
+ * GetProtocolHandleBuffer
+ * Util function to get the socket number from the device region name.
+ * Ideally this should be part of the MMST , just as BS provides this service.
+ *
+ * @param[in]  Guid          Protocol GUID to search.
+ * @param[out] NumberHandles Number of handles installed.
+ * @param[out] Buffer        Buffer of the handles installed.
+ *
+ * @retval Socket number.
+ */
+EFIAPI
+EFI_STATUS
+GetProtocolHandleBuffer (
+  IN  EFI_GUID    *Guid,
+  OUT UINTN       *NumberHandles,
+  OUT EFI_HANDLE  **Buffer
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       BufferSize;
+
+  if ((NumberHandles == NULL) || (Buffer == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  BufferSize     = 0;
+  *NumberHandles = 0;
+  *Buffer        = NULL;
+  Status         = gMmst->MmLocateHandle (
+                            ByProtocol,
+                            Guid,
+                            NULL,
+                            &BufferSize,
+                            *Buffer
+                            );
+  if (EFI_ERROR (Status) && (Status != EFI_BUFFER_TOO_SMALL)) {
+    return EFI_NOT_FOUND;
+  }
+
+  *Buffer = AllocatePool (BufferSize);
+  if (*Buffer == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = gMmst->MmLocateHandle (
+                    ByProtocol,
+                    Guid,
+                    NULL,
+                    &BufferSize,
+                    *Buffer
+                    );
+
+  *NumberHandles = BufferSize / sizeof (EFI_HANDLE);
+  if (EFI_ERROR (Status)) {
+    *NumberHandles = 0;
+    FreePool (*Buffer);
+    *Buffer = NULL;
+  }
+
+  return Status;
+}
+
+/**
+ * Locate the Protocol interface installed on the socket.
+ *
+ * @param[in] SocketNum  Socket Number for which the protocol is requested.
+ *
+ * @retval    EFI_SUCCESS      On Success.
+ *            OTHER            On Failure to lookup if the protocol is installed.
+ *                             Or if there wasn't any socketId protocol installed.
+ **/
+EFIAPI
+EFI_STATUS
+FindProtocolInSocket (
+  IN  UINT32    SocketNum,
+  IN  EFI_GUID  *ProtocolGuid,
+  OUT VOID      **ProtocolInterface
+  )
+{
+  EFI_HANDLE  *HandleBuffer;
+  UINTN       HandleCount;
+  UINTN       Index;
+  EFI_STATUS  Status;
+  UINT32      *Socket;
+  BOOLEAN     SocketMatchFound;
+
+  /* Locate all the handles for the passed in protocol Guid. */
+  Status = GetProtocolHandleBuffer (
+             ProtocolGuid,
+             &HandleCount,
+             &HandleBuffer
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to find protocol Guid (%r)\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitFindProtocolInSocket;
+  }
+
+  SocketMatchFound = FALSE;
+
+  /* Find the Socket Id interface for each handle and match it to the passed
+   * in socket number.
+   */
+  for (Index = 0; Index < HandleCount; Index++) {
+    Socket = NULL;
+    Status = gMmst->MmHandleProtocol (
+                      HandleBuffer[Index],
+                      &gNVIDIASocketIdProtocolGuid,
+                      (VOID **)&Socket
+                      );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to find SocketId installed on %u %r\n",
+        __FUNCTION__,
+        HandleBuffer[Index],
+        Status
+        ));
+      continue;
+    }
+
+    if (SocketNum == *Socket) {
+      SocketMatchFound = TRUE;
+      break;
+    }
+  }
+
+  if (SocketMatchFound == TRUE) {
+    Status = gMmst->MmHandleProtocol (
+                      HandleBuffer[Index],
+                      ProtocolGuid,
+                      ProtocolInterface
+                      );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to find Protocol installed on %u %r\n",
+        __FUNCTION__,
+        HandleBuffer[Index],
+        Status
+        ));
+    }
+  }
+
+ExitFindProtocolInSocket:
+  return Status;
+}
+
+/**
+ * Get the NorFlashProtocol for a given socket.
+ *
+ * @param[in] SocketNum  Socket Number for which the NOR Flash protocol
+ *                       is requested.
+ * @retval    NorFlashProtocol    On Success.
+ *            NULL                On Failure.
+ **/
+EFIAPI
+NVIDIA_NOR_FLASH_PROTOCOL *
+GetSocketNorFlashProtocol (
+  UINT32  SocketNum
+  )
+{
+  NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol;
+  EFI_STATUS                 Status;
+
+  NorFlashProtocol = NULL;
+  Status           = FindProtocolInSocket (
+                       SocketNum,
+                       &gNVIDIANorFlashProtocolGuid,
+                       (VOID **)&NorFlashProtocol
+                       );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:Failed to get NorFlash on Socket %u %r\n",
+      __FUNCTION__,
+      SocketNum,
+      Status
+      ));
+  }
+
+  return NorFlashProtocol;
+}
+
+/**
+ * Get the QSPI Protocol for a given socket.
+ *
+ * @param[in] SocketNum  Socket Number for which the NOR Flash protocol
+ *                       is requested.
+ * @retval    QspiControllerProtocol    On Success.
+ *            NULL                      On Failure.
+ **/
+EFIAPI
+NVIDIA_QSPI_CONTROLLER_PROTOCOL  *
+GetSocketQspiProtocol (
+  UINT32  SocketNum
+  )
+{
+  NVIDIA_QSPI_CONTROLLER_PROTOCOL  *QspiControllerProtocol;
+  EFI_STATUS                       Status;
+
+  QspiControllerProtocol = NULL;
+  Status                 = FindProtocolInSocket (
+                             SocketNum,
+                             &gNVIDIAQspiControllerProtocolGuid,
+                             (VOID **)&QspiControllerProtocol
+                             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:Failed to get NorFlashProto on Socket %u %r\n",
+      __FUNCTION__,
+      SocketNum,
+      Status
+      ));
+  }
+
+  return QspiControllerProtocol;
 }
