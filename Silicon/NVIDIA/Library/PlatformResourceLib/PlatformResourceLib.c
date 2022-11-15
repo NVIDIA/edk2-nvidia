@@ -485,3 +485,37 @@ GetPartitionInfoStMm (
            PartitionSizeBytes
            );
 }
+
+/**
+ * Check if socket is enabled in the CPU BL Params's socket mask.
+ * This API is usually only called from StMM.
+ *
+ * @param[in] CpuBlAddress          Address of the CPU BL params.
+ * @param[in] SocketNum             Socket to check.
+ *
+ * @retval  TRUE                    Socket is enabled.
+ * @retval  FALSE                   Socket is not enabled.
+**/
+BOOLEAN
+EFIAPI
+IsSocketEnabledStMm (
+  IN UINTN   CpuBlAddress,
+  IN UINT32  SocketNum
+  )
+{
+  UINT32   SocketMask;
+  BOOLEAN  SocketEnabled;
+
+  /*
+   * For now, assume that in Jetson targets we run with single socket as the CPU
+   * BL params needn't be mapped for MM in all targets.
+   **/
+  if (CpuBlAddress == 0) {
+    SocketMask = 0x1;
+  } else {
+    SocketMask = TH500GetSocketMask (CpuBlAddress);
+  }
+
+  SocketEnabled = ((SocketMask & (1U << SocketNum)) ? TRUE : FALSE);
+  return SocketEnabled;
+}

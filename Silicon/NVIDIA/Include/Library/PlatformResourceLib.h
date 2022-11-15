@@ -286,4 +286,21 @@ GetPartitionInfoStMm (
   OUT UINT64  *PartitionSizeBytes
   );
 
+/**
+ * Check if socket is enabled in the CPU BL Params's socket mask.
+ * This API is usually only called from StMM.
+ *
+ * @param[in] CpuBlAddress          Address of the CPU BL params.
+ * @param[in] SocketNum             Socket to check..
+ *
+ * @retval  TRUE                    Socket is enabled.
+ * @retval  FALSE                   Socket is not enabled.
+**/
+BOOLEAN
+EFIAPI
+IsSocketEnabledStMm (
+  IN UINTN   CpuBlAddress,
+  IN UINT32  SocketNum
+  );
+
 #endif //__PLATFORM_RESOURCE_LIB_H__

@@ -92,4 +92,10 @@ GetCpuBlParamsAddrStMm (
   EFI_PHYSICAL_ADDRESS  *CpuBlAddr
   );
 
+EFIAPI
+UINT32
+GetDeviceSocketNum (
+  CONST CHAR8  *DeviceRegionName
+  );
+
 #endif //STANDALONEMM_OPTEE_DEVICE_MEM_H

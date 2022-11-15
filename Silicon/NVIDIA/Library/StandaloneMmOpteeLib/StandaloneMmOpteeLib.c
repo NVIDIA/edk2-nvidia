@@ -24,6 +24,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define HIDREV_OFFSET             0x4
 #define HIDREV_PRE_SI_PLAT_SHIFT  0x14
 #define HIDREV_PRE_SI_PLAT_MASK   0xf
+#define MAX_SOCKETS               4
 
 EFIAPI
 BOOLEAN
@@ -309,4 +310,40 @@ GetVarStoreCs (
 
 ExitVarStoreCs:
   return Status;
+}
+
+/**
+ * GetSocketNum
+ * Util function to get the socket number from the device region name.
+ *
+ * @param[in] DeviceRegionName Name of the device region.
+ *
+ * @retval Socket number.
+ */
+EFIAPI
+UINT32
+GetDeviceSocketNum (
+  CONST CHAR8  *DeviceRegionName
+  )
+{
+  CHAR8   *SockStr;
+  UINT32  SockNum;
+
+  SockStr = AsciiStrStr (DeviceRegionName, "-socket");
+  if (SockStr != NULL) {
+    SockNum = AsciiStrDecimalToUintn ((SockStr + AsciiStrLen ("-socket")));
+    if (SockNum >= MAX_SOCKETS) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: SockNum %u is out of range , max(%u)\n",
+        __FUNCTION__,
+        SockNum,
+        MAX_SOCKETS
+        ));
+    }
+  } else {
+    SockNum = 0;
+  }
+
+  return SockNum;
 }

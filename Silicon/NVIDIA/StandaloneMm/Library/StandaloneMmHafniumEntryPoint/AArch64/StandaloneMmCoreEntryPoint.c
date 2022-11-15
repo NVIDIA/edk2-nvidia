@@ -170,6 +170,42 @@ GetSpImageBase (
   return SpImageBase;
 }
 
+/**
+ * SkipDeviceNode
+ *   Util function that tells if a device node shouldn't be added to the
+ *   Device Region Hob.
+ *
+ * @param[in] DevRegion  Name of the device region. The expectation is that the
+ *                       manifest will name socket specific regions with the
+ *                       -socketX suffix (e.g qspi-socket0)
+ *
+ * @retval    TRUE      Skip adding this region as the socket it belongs to
+ *                      is disabled.
+ *            FALSE     Add this region to the device region GUID'd HOB.
+ */
+STATIC
+BOOLEAN
+SkipDeviceNode (
+  IN CONST CHAR8  *DevRegion
+  )
+{
+  BOOLEAN  SkipNode;
+  CHAR8    *SockStr;
+  UINT32   SockNum;
+
+  SkipNode = FALSE;
+  SockStr  = AsciiStrStr (DevRegion, "-socket");
+  if (SockStr != NULL) {
+    SockNum = GetDeviceSocketNum (DevRegion);
+    /* If socket is disabled then don't add this MMIO region */
+    if (IsSocketEnabledStMm (StmmCommBuffers.CpuBlParamsAddr, SockNum) == FALSE) {
+      SkipNode = TRUE;
+    }
+  }
+
+  return SkipNode;
+}
+
 /*
  * Get the device regions from the manifest and install a guided hob that
  * the other drivers can use.
@@ -209,7 +245,15 @@ GetDeviceMemRegions (
        NodeOffset > 0;
        NodeOffset = fdt_next_subnode (DtbAddress, PrevNodeOffset))
   {
-    NumRegions++;
+    NodeName = fdt_get_name (DtbAddress, NodeOffset, NULL);
+
+    /*
+     * Don't account for a device-region whose socket isn't enabled.
+     */
+    if (SkipDeviceNode (NodeName) == FALSE) {
+      NumRegions++;
+    }
+
     PrevNodeOffset = NodeOffset;
   }
 
@@ -224,7 +268,23 @@ GetDeviceMemRegions (
        NodeOffset > 0;
        NodeOffset = fdt_next_subnode (DtbAddress, PrevNodeOffset))
   {
-    NodeName                               = fdt_get_name (DtbAddress, NodeOffset, NULL);
+    NodeName = fdt_get_name (DtbAddress, NodeOffset, NULL);
+
+    /*
+     * If Socket specific device regions are present, then check if the socket
+     * enabled before adding the region.
+     */
+    if (SkipDeviceNode (NodeName) == TRUE) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a Skip Device %a Socket is not enabled\n",
+        __FUNCTION__,
+        NodeName
+        ));
+      PrevNodeOffset = NodeOffset;
+      continue;
+    }
+
     DeviceRegions[Index].DeviceRegionStart =
       FDTGetProperty64 (DtbAddress, NodeOffset, "base-address");
     DeviceRegions[Index].DeviceRegionSize = FDTGetProperty32 (

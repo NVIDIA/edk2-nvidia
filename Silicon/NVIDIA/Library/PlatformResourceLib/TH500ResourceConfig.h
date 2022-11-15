@@ -59,4 +59,14 @@ TH500ValidateActiveBootChain (
   IN  UINTN  CpuBootloaderAddress
   );
 
+/**
+  Get Socket Mask
+
+**/
+UINT32
+EFIAPI
+TH500GetSocketMask (
+  IN UINTN  CpuBootloaderAddress
+  );
+
 #endif //__TH500_RESOURCE_CONFIG_H__
