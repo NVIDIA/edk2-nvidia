@@ -1,0 +1,29 @@
+## @file
+#
+#  MCTP NVIDIA Vendor-Defined Message Library
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 1.25
+  BASE_NAME                      = MctpNvVdmLib
+  FILE_GUID                      = 8b3a78d8-ee24-4ffa-9435-6f50e1e9b0d3
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = MctpNvVdmLib
+
+[Sources.common]
+  MctpNvVdmLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  MctpBaseLib
