@@ -33,6 +33,8 @@
   ConfigurationHmat.c
   ConfigurationSmbios.c
   ConfigurationSmbiosType1.c
+  ConfigurationSmbiosType2.c
+  ConfigurationSmbiosType9.c
   ConfigurationSmbiosType38.c
   ConfigurationHbm.c
 
@@ -89,6 +91,7 @@
   gNVIDIAAmlPatchProtocolGuid
   gNVIDIARasNsCommPcieDpcDataProtocolGuid
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+  gEfiPciIoProtocolGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster

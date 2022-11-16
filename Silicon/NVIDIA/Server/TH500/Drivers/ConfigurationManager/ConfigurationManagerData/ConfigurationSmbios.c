@@ -144,6 +144,12 @@ InstallCmSmbiosTableList (
   Status = InstallSmbiosType1Cm (Private);
   DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 1 - %r.\n", __FUNCTION__, Status));
 
+  Status = InstallSmbiosType2Cm (Private);
+  DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 2 - %r.\n", __FUNCTION__, Status));
+
+  Status = InstallSmbiosType9Cm (Private);
+  DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 9 - %r.\n", __FUNCTION__, Status));
+
   Status = InstallSmbiosType38Cm (Private);
   DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 38 - %r.\n", __FUNCTION__, Status));
 
