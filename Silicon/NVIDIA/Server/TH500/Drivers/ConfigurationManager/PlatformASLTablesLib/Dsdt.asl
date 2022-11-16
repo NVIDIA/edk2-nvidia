@@ -630,6 +630,41 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
        })
 
        Method (_RST) { }
+
+       Device (SSIF) {
+         Name (_HID, "IPI0001")
+         Name (_UID, 0)
+         Name (_STA, 0)
+
+         Name (_STR, Unicode("IPMI_SSIF"))
+
+         // Return interface type
+         Method (_IFT) {
+           Return(0x04)
+         }
+
+         // Return the SSIF slave address
+         Method (_ADR) {
+           Return(0x10)
+         }
+
+         // Return interface specification version
+         Method (_SRV) {
+           Return(0x0200)
+         }
+
+         Name (_CRS, ResourceTemplate () {
+                  I2cSerialBusV2 (
+                    0x10,
+                    ControllerInitiated,
+                    100000,
+                    AddressingMode7Bit,
+                    "\\_SB.I2C3",
+                    0,
+                    ResourceConsumer
+                  )
+         })
+       }
     }
 
 
