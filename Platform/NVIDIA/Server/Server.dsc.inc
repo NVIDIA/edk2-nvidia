@@ -304,3 +304,8 @@
   # BMC Virtual NIC support
   #
   Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf
+
+  #
+  # NS ERoT
+  #
+  Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiDxe.inf

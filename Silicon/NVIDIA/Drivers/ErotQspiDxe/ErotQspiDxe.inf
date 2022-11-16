@@ -1,0 +1,43 @@
+## @file
+#
+#  ERoT over NS SPI driver
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 1.25
+  BASE_NAME                      = ErotQspiDxe
+  FILE_GUID                      = 68ef18a9-41ac-4c5a-ada3-88f6e52fed2c
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = ErotQspiDxeInitialize
+
+[Sources.common]
+  ErotQspiDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  ErotQspiLib
+  FdtLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gNVIDIAMctpProtocolGuid               ## PRODUCES
+  gNVIDIAQspiControllerProtocolGuid     ## CONSUMES
+  gNVIDIADeviceTreeNodeProtocolGuid     ## CONSUMES
+
+[Depex]
+  gNVIDIAQspiControllerProtocolGuid
