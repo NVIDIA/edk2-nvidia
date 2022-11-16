@@ -1,0 +1,40 @@
+#/** @file
+#
+# Null IPMI Driver
+#
+# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = IpmiNullDxe
+  FILE_GUID                 = 8465a63e-65e6-11ed-8a0c-87f28fd13a0f
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = IpmiNullDxeEntryPoint
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  IpmiFeaturePkg/IpmiFeaturePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Sources]
+  IpmiNullDxe.c
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  DebugLib
+  DeviceTreeHelperLib
+
+[Protocols]
+  gIpmiTransportProtocolGuid  ## PRODUCES
+
+[Depex]
+  TRUE

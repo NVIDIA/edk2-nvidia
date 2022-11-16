@@ -9,6 +9,11 @@
   INF MdeModulePkg/Universal/SerialDxe/SerialDxe.inf
 
   #
+  # IPMI Null Driver
+  #
+  INF Silicon/NVIDIA/Drivers/IpmiNullDxe/IpmiNullDxe.inf
+
+  #
   # Platform Configuration Manager Data
   #
   INF Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
