@@ -1,0 +1,35 @@
+## @file
+#
+#  Erot Qspi library
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 1.25
+  BASE_NAME                      = ErotQspiLib
+  FILE_GUID                      = 02e419bf-693d-40e9-94ef-650e46870b87
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = ErotQspiLib
+
+[Sources.common]
+  ErotQspiCore.c
+  ErotQspiLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  MctpBaseLib
+  MemoryAllocationLib
+  PrintLib
+
+[Protocols]
+  gNVIDIAMctpProtocolGuid               ## CONSUMES
+  gNVIDIAQspiControllerProtocolGuid     ## CONSUMES
