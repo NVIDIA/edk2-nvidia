@@ -20,6 +20,15 @@
 #define TEGRA_UART_ADDRESS_0  0x0c280000
 #define TEGRA_UART_ADDRESS_1  0x03100000
 
+#define TH500_BOOT_CHAIN_SCRATCH_OFFSET  0x3cc // SCRATCH_SECURE_RSV109_SCRATCH
+#define BOOT_CHAIN_MAX                   2
+#define BOOT_CHAIN_BIT_FIELD_LO          4
+#define BOOT_CHAIN_BIT_FIELD_HI          5
+#define BOOT_CHAIN_STATUS_LO             0
+#define BOOT_CHAIN_STATUS_HI             3
+#define BOOT_CHAIN_GOOD                  0
+#define BOOT_CHAIN_BAD                   1
+
 #define CARVEOUT_NONE                     0
 #define CARVEOUT_EGM                      1
 #define CARVEOUT_BPMP_CPUTZ               2

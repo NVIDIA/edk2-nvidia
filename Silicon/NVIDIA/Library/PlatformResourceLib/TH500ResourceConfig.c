@@ -13,6 +13,7 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/ErotLib.h>
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/DramCarveoutLib.h>
@@ -399,6 +400,83 @@ TH500GetMmioBaseAndSize (
 }
 
 /**
+  Retrieve Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+TH500GetActiveBootChain (
+  IN  UINTN   CpuBootloaderAddress,
+  IN  UINTN   Socket,
+  OUT UINT32  *BootChain
+  )
+{
+  UINT64  ScratchAddr;
+
+  ScratchAddr = TH500SocketScratchMmioInfo[Socket].Base + TH500_BOOT_CHAIN_SCRATCH_OFFSET;
+
+  *BootChain = MmioBitFieldRead32 (
+                 ScratchAddr,
+                 BOOT_CHAIN_BIT_FIELD_LO,
+                 BOOT_CHAIN_BIT_FIELD_HI
+                 );
+
+  if (*BootChain >= BOOT_CHAIN_MAX) {
+    return EFI_UNSUPPORTED;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Validate Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+TH500ValidateActiveBootChain (
+  IN  UINTN  CpuBootloaderAddress
+  )
+{
+  UINT32      SocketMask;
+  UINTN       Socket;
+  UINT64      ScratchAddr;
+  EFI_STATUS  Status;
+  UINT32      BootChain;
+
+  DEBUG ((DEBUG_INFO, "%a: Entry\n", __FUNCTION__));
+
+  SocketMask = TH500GetSocketMask (CpuBootloaderAddress);
+  for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
+    if (!(SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    Status = TH500GetActiveBootChain (CpuBootloaderAddress, Socket, &BootChain);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: GetActiveBootChain failed socket %u: %r\n", __FUNCTION__, Socket, Status));
+      continue;
+    }
+
+    ScratchAddr = TH500SocketScratchMmioInfo[Socket].Base + TH500_BOOT_CHAIN_SCRATCH_OFFSET;
+
+    MmioBitFieldWrite32 (
+      ScratchAddr,
+      BOOT_CHAIN_STATUS_LO + BootChain,
+      BOOT_CHAIN_STATUS_LO + BootChain,
+      BOOT_CHAIN_GOOD
+      );
+
+    Status = ErotSendBootComplete (Socket, BootChain);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: ErotSendBootComplete failed socket %u: %r\n", __FUNCTION__, Socket, Status));
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Get Platform Resource Information
 
 **/
@@ -422,9 +500,14 @@ TH500GetPlatformResourceInformation (
 
   /* Avoid this step when called from MM */
   if (InMm == FALSE) {
+    Status = TH500GetActiveBootChain (CpuBootloaderAddress, 0, &PlatformResourceInfo->ActiveBootChain);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
     Status = TH500GetResourceConfig (CpuBootloaderAddress, PlatformResourceInfo->ResourceInfo);
     if (EFI_ERROR (Status)) {
-      return FALSE;
+      return Status;
     }
 
     PlatformResourceInfo->MmioInfo = TH500GetMmioBaseAndSize (SocketMask);

@@ -49,4 +49,14 @@ TH500GetPartitionInfo (
   OUT UINT64  *PartitionSizeBytes
   );
 
+/**
+  Validate Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+TH500ValidateActiveBootChain (
+  IN  UINTN  CpuBootloaderAddress
+  );
+
 #endif //__TH500_RESOURCE_CONFIG_H__

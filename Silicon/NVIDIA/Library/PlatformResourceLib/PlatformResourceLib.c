@@ -277,6 +277,8 @@ ValidateActiveBootChain (
       return T234ValidateActiveBootChain (CpuBootloaderAddress);
     case T194_CHIP_ID:
       return T194ValidateActiveBootChain (CpuBootloaderAddress);
+    case TH500_CHIP_ID:
+      return TH500ValidateActiveBootChain (CpuBootloaderAddress);
     default:
       return EFI_UNSUPPORTED;
   }
