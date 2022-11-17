@@ -332,6 +332,7 @@ ConfigureSidebandSignals (
       __FUNCTION__,
       Status
       ));
+    return;
   }
 
   mPmux->ReadReg (mPmux, PADCTL_PEX_RST, &RegVal);

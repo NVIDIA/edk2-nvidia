@@ -179,11 +179,11 @@ TH500GetEnabledCoresBitMap (
     {
       DEBUG ((DEBUG_ERROR, "%a: Mask core %d on socket 0 for SatMC\n", __FUNCTION__, SatMcCore));
       if (SatMcCore < 32) {
-        ScratchDisable0Reg |= (1 << SatMcCore);
+        ScratchDisable0Reg |= (1U << SatMcCore);
       } else if (SatMcCore < 64) {
-        ScratchDisable1Reg |= (1 << (SatMcCore - 32));
+        ScratchDisable1Reg |= (1U << (SatMcCore - 32));
       } else if (SatMcCore < CoresPerSocket) {
-        ScratchDisable2Reg |= (1 << (SatMcCore - 64));
+        ScratchDisable2Reg |= (1U << (SatMcCore - 64));
       }
     }
 

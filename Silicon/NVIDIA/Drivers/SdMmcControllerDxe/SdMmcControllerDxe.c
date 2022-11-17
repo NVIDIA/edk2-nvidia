@@ -300,6 +300,12 @@ DeviceDiscoveryNotify (
         return EFI_UNSUPPORTED;
       }
 
+      // DeviceTreeNode becomes a required argument at this point.
+      if (DeviceTreeNode == NULL) {
+        ASSERT (FALSE);
+        return EFI_INVALID_PARAMETER;
+      }
+
       ClockIds = (CONST UINT32 *)fdt_getprop (
                                    DeviceTreeNode->DeviceTreeBase,
                                    DeviceTreeNode->NodeOffset,

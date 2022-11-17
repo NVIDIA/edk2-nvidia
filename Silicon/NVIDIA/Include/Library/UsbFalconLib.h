@@ -62,7 +62,7 @@ struct tegra_xhci_fw_cfgtbl {
 #define XUSB_CSB_MEMPOOL_L2IMEMOP_SIZE_0    0x0101a10
 #define XUSB_CSB_MEMPOOL_L2IMEMOP_TRIG_0    0x0101a14
 #define XUSB_CSB_MEMPOOL_L2IMEMOP_RESULT_0  0x0101a18
-#define L2IMEMOP_RESULT_VLD                 (1 << 31)
+#define L2IMEMOP_RESULT_VLD                 (1U << 31)
 #define XUSB_CSB_MEMPOOL_APMAP_0            0x010181c
 #define XUSB_CSB_MEMPOOL_IDIRECT_PC         0x0101814
 #define FALCON_CPUCTL_0                     0x100

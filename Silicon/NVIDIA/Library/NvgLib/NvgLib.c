@@ -14,6 +14,8 @@
 
 #define TEGRA_NVG_CHANNEL_NUM_CORES_CMD         20
 #define TEGRA_NVG_CHANNEL_LOGICAL_TO_MPIDR_CMD  23
+#define TEGRA_NVG_NUM_CORES_MAX                 0x10U
+#define TEGRA_NVG_NUM_CORES_MASK                (TEGRA_NVG_NUM_CORES_MAX - 1)
 
 #define AA64_MRS(reg, var)  do { \
   asm volatile ("mrs %0, "#reg : "=r"(var) : : "memory", "cc"); \
@@ -57,7 +59,7 @@ NvgGetNumberOfEnabledCpuCores (
   WriteNvgChannelIdx (TEGRA_NVG_CHANNEL_NUM_CORES_CMD);
   Data = ReadNvgChannelData ();
 
-  return (Data & 0xF);
+  return (Data & TEGRA_NVG_NUM_CORES_MASK);
 }
 
 EFI_STATUS
@@ -104,7 +106,7 @@ NvgGetEnabledCoresBitMap (
   UINTN  CpuCount;
 
   CpuCount = NvgGetNumberOfEnabledCpuCores ();
-  ASSERT (CpuCount <= 64);
+  ASSERT (CpuCount < TEGRA_NVG_NUM_CORES_MAX);
 
   EnabledCoresBitMap[0] = (1ULL << CpuCount) - 1;
 

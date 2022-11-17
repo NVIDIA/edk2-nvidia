@@ -245,6 +245,8 @@ CEntryPoint (
   UINT64                        DtbNext;
   TEGRA_PLATFORM_RESOURCE_INFO  PlatformResourceInfo;
 
+  FvHeader = NULL;
+
   while (FvOffset < MemorySize) {
     FvHeader = (EFI_FIRMWARE_VOLUME_HEADER *)(VOID *)(MemoryBase + FvOffset);
     if (FvHeader->Signature == EFI_FVH_SIGNATURE) {
@@ -255,6 +257,7 @@ CEntryPoint (
   }
 
   ASSERT (FvOffset < MemorySize);
+  ASSERT (FvHeader != NULL);
   FvSize = FvHeader->FvLength;
   // Make UEFI FV size aligned to 64KB.
   FvSize = ALIGN_VALUE (FvSize, SIZE_64KB);

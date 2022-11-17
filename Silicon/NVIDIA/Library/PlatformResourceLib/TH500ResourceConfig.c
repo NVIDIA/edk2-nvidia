@@ -340,6 +340,7 @@ TH500GetDTBBaseAddress (
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   MemoryBase          = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Base;
   MemorySize          = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Size;
+  FvHeader            = NULL;
   FvOffset            = 0;
 
   while (FvOffset < MemorySize) {
@@ -352,6 +353,7 @@ TH500GetDTBBaseAddress (
   }
 
   ASSERT (FvOffset < MemorySize);
+  ASSERT (FvHeader != NULL);
   FvSize = FvHeader->FvLength;
   // Make UEFI FV size aligned to 64KB.
   FvSize = ALIGN_VALUE (FvSize, SIZE_64KB);

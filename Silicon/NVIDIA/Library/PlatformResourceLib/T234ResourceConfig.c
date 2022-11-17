@@ -317,6 +317,7 @@ T234GetGRBlobBaseAddress (
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   MemoryBase          = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_UEFI].Base);
   MemorySize          = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_UEFI].Size);
+  FvHeader            = NULL;
   FvOffset            = 0;
 
   while (FvOffset < MemorySize) {
@@ -329,6 +330,7 @@ T234GetGRBlobBaseAddress (
   }
 
   ASSERT (FvOffset < MemorySize);
+  ASSERT (FvHeader != NULL);
   FvSize = FvHeader->FvLength;
   // Make UEFI FV size aligned to 64KB.
   FvSize = ALIGN_VALUE (FvSize, SIZE_64KB);
