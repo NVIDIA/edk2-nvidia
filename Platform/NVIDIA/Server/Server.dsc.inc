@@ -309,3 +309,8 @@
   # NS ERoT
   #
   Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiDxe.inf
+
+  #
+  # MM MCTP
+  #
+  Silicon/NVIDIA/Drivers/MctpMmDxe/MctpMmDxe.inf

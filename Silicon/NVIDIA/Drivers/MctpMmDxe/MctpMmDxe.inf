@@ -1,0 +1,47 @@
+## @file
+#
+#  MCTP protocol over MM communication driver
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 1.25
+  BASE_NAME                      = MctpMmDxe
+  FILE_GUID                      = 6b763802-9f9a-4f2e-94a8-53c3f9b3c431
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = MctpMmDxeInitialize
+
+[Sources.common]
+  MctpMmDxe.c
+  MctpMmComm.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  DtPlatformDtbLoaderLib
+  FdtLib
+  PrintLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  UefiRuntimeLib
+
+[Protocols]
+  gNVIDIAMctpProtocolGuid            ## PRODUCES
+  gEfiMmCommunication2ProtocolGuid   ## CONSUMES
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid
+
+[Depex]
+  gEfiMmCommunication2ProtocolGuid
