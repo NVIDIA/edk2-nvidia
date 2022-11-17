@@ -72,11 +72,6 @@ formset
     name  = RootfsStatusSlotB,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
-  efivarstore NVIDIA_OS_REDUNDANCY,
-    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
-    name  = RootfsRedundancyLevel,
-    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
-
   efivarstore NVIDIA_L4T_BOOT_MODE,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
     name  = L4TDefaultBootMode,
@@ -194,7 +189,7 @@ formset
         option text = STRING_TOKEN(STR_OS_STATUS_UNBOOTABLE), value = NVIDIA_OS_STATUS_UNBOOTABLE, flags = 0;
     endoneof;
 
-    suppressif NOT ideqval NVIDIA_OS_REDUNDANCY.Level == NVIDIA_OS_REDUNDANCY_BOOT_ROOTFS;
+    suppressif NOT ideqval NVIDIA_CONFIG_HII_CONTROL.RootfsRedundancyLevel == NVIDIA_OS_REDUNDANCY_BOOT_ROOTFS;
         oneof varid = RootfsStatusSlotB.Status,
             questionid = KEY_OS_CHAIN_STATUS_B,
             prompt = STRING_TOKEN(STR_OS_STATUS_B_PROMPT),

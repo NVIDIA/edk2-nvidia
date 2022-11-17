@@ -88,7 +88,6 @@ InitializeSettings (
   VOID                        *AcpiBase;
   NVIDIA_KERNEL_COMMAND_LINE  CmdLine;
   UINTN                       KernelCmdLineLen;
-  NVIDIA_OS_REDUNDANCY        RedundancyLevel;
   UINTN                       BufferSize;
 
   // Initialize PCIe Form Settings
@@ -137,21 +136,16 @@ InitializeSettings (
     }
   }
 
-  BufferSize = sizeof (RedundancyLevel);
-  Status     = gRT->GetVariable (L"RootfsRedundancyLevel", &gNVIDIAPublicVariableGuid, NULL, &BufferSize, &RedundancyLevel);
+  BufferSize = sizeof (mHiiControlSettings.RootfsRedundancyLevel);
+  Status     = gRT->GetVariable (
+                      L"RootfsRedundancyLevel",
+                      &gNVIDIAPublicVariableGuid,
+                      NULL,
+                      &BufferSize,
+                      &mHiiControlSettings.RootfsRedundancyLevel
+                      );
   if (EFI_ERROR (Status)) {
-    RedundancyLevel.Level = 0;
-    BufferSize            = sizeof (RedundancyLevel);
-    Status                = gRT->SetVariable (
-                                   L"RootfsRedundancyLevel",
-                                   &gNVIDIAPublicVariableGuid,
-                                   EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,
-                                   BufferSize,
-                                   &RedundancyLevel
-                                   );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Error setting RootfsRedundancyLevel variable %r\r\n", __FUNCTION__, Status));
-    }
+    mHiiControlSettings.RootfsRedundancyLevel = 0;
   }
 
   mHiiControlSettings.L4TSupported = PcdGetBool (PcdL4TConfigurationSupport);

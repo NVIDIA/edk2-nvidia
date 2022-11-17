@@ -48,6 +48,7 @@
 
 typedef struct {
   UINT32    L4TSupported;
+  UINT32    RootfsRedundancyLevel;
 } NVIDIA_CONFIG_HII_CONTROL;
 
 #endif // __NVIDIA_CONFIG_HII_H__
