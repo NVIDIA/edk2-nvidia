@@ -27,6 +27,7 @@
   # MM MCTP/ERoT Drivers
   #
   INF Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiStmm.inf
+  INF Silicon/NVIDIA/Drivers/MctpMmDxe/MctpStandaloneMm.inf
 
   !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
 

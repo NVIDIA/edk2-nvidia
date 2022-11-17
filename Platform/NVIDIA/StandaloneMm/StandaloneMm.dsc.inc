@@ -149,6 +149,7 @@
   # MM MCTP/ERoT Drivers
   #
   Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiStmm.inf
+  Silicon/NVIDIA/Drivers/MctpMmDxe/MctpStandaloneMm.inf
 
 [Components.AARCH64]
 

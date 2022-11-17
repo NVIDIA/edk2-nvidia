@@ -1,0 +1,43 @@
+## @file
+#
+#  MCTP protocol standalone MM
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = MctpStandaloneMm
+  FILE_GUID                      = 19cffafe-c4ff-4f32-b35f-1dc8fafd4693
+  MODULE_TYPE                    = MM_STANDALONE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  ENTRY_POINT                    = MctpStandaloneMmInitialize
+
+[Sources.common]
+  MctpStandaloneMm.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+
+[LibraryClasses]
+  ArmSvcLib
+  BaseMemoryLib
+  DebugLib
+  IoLib
+  MemoryAllocationLib
+  MmServicesTableLib
+  StandaloneMmDriverEntryPoint
+
+[Protocols]
+  gNVIDIAMctpProtocolGuid
+
+[Depex]
+  TRUE
