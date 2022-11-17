@@ -27,6 +27,7 @@
   ArmSvcLib|Silicon/NVIDIA/Library/ArmSvcHvcLibHafnium/ArmSvcHvcLibHafnium.inf
   QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
   ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerVirtCounterLib/ArmGenericTimerVirtCounterLib.inf
+  ErotQspiLib|Silicon/NVIDIA/Library/ErotQspiLib/ErotQspiLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 
@@ -143,6 +144,11 @@
       GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
       NULL|Silicon/NVIDIA/Drivers/FvbNorFlashDxe/StandaloneMmFixupPcd.inf
   }
+
+  #
+  # MM MCTP/ERoT Drivers
+  #
+  Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiStmm.inf
 
 [Components.AARCH64]
 

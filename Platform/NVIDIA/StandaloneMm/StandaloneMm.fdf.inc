@@ -23,6 +23,11 @@
   #
   INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf
 
+  #
+  # MM MCTP/ERoT Drivers
+  #
+  INF Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiStmm.inf
+
   !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
 
 ################################################################################
