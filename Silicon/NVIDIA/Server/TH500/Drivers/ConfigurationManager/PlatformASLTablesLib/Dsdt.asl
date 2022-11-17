@@ -628,22 +628,28 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     // MCF Devices
     //---------------------------------------------------------------------
     //MCF NVLINK Chiplet
-    Device (MNVL)
+    Device (MNV0)
     {
       Name (_HID, "NVDA1180")
       Name (_UID, 0)
     }
     //MCF C2C Chiplet
-    Device (MC2C)
+    Device (MC20)
     {
       Name (_HID, "NVDA1180")
       Name (_UID, 1)
     }
-    //MCF SOC-HUB Chiplet
-    Device (MSHB)
+    //GPU SOC-HUB Chiplet
+    Device (GSH0)
     {
       Name (_HID, "NVDA1180")
       Name (_UID, 2)
+    }
+    //PCIe SOC-HUB Chiplet
+    Device (PSH0)
+    {
+      Name (_HID, "NVDA1180")
+      Name (_UID, 3)
     }
   }
 }
