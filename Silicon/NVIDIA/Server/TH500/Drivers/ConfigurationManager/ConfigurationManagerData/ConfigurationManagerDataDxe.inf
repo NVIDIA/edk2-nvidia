@@ -44,6 +44,7 @@
   ConfigurationSmbiosType13.c
   ConfigurationSmbiosType32.c
   ConfigurationSmbiosType38.c
+  ConfigurationSmbiosType39.c
   ConfigurationSmbiosType41.c
   ConfigurationSmbiosType43.c
   ConfigurationHbm.c

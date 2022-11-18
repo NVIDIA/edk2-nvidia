@@ -115,6 +115,7 @@ InstallCmSmbiosTableList (
     { EFI_SMBIOS_TYPE_PHYSICAL_MEMORY_ARRAY,                InstallSmbiosTypeMemCm },
     { EFI_SMBIOS_TYPE_SYSTEM_BOOT_INFORMATION,              InstallSmbiosType32Cm  },
     { EFI_SMBIOS_TYPE_IPMI_DEVICE_INFORMATION,              InstallSmbiosType38Cm  },
+    { EFI_SMBIOS_TYPE_SYSTEM_POWER_SUPPLY,                  InstallSmbiosType39Cm  },
     { EFI_SMBIOS_TYPE_ONBOARD_DEVICES_EXTENDED_INFORMATION, InstallSmbiosType41Cm  },
     { SMBIOS_TYPE_TPM_DEVICE,                               InstallSmbiosType43Cm  }
   };
