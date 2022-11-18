@@ -539,7 +539,6 @@ UpdateGicInfo (
           Repo->CmObjectSize  = sizeof (CM_ARM_CPC_INFO);
           Repo->CmObjectCount = 1;
           Repo->CmObjectPtr   = CpcInfo;
-          DEBUG ((DEBUG_ERROR, "!!!!!CmObjectToken %llx: Id:%x\r\n", Repo->CmObjectToken, MpIdr));
           GicCInfo[EnabledCoreCntr].CpcToken = Repo->CmObjectToken;
           Repo++;
         }
