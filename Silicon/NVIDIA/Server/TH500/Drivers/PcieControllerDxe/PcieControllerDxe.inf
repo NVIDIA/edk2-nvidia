@@ -57,6 +57,7 @@
   gNVIDIARegulatorProtocolGuid
   gNVIDIAPcieControllerInitCompleteProtocolGuid
   gNVIDIAConfigurationManagerDataObjectGuid
+  gNVIDIAC2cNodeProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableTH500PcieDeviceGuid

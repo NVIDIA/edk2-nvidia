@@ -26,7 +26,6 @@
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ResetNodeProtocol.h>
 #include <Protocol/PowerGateNodeProtocol.h>
-#include <Protocol/C2CNodeProtocol.h>
 #include <Protocol/ArmScmiClock2Protocol.h>
 
 #include "DeviceDiscoveryDriverLibPrivate.h"
@@ -233,7 +232,6 @@ DeviceDiscoveryBindingStart (
   NVIDIA_CLOCK_NODE_PROTOCOL        *ClockProtocol           = NULL;
   NVIDIA_RESET_NODE_PROTOCOL        *ResetProtocol           = NULL;
   NVIDIA_POWER_GATE_NODE_PROTOCOL   *PgProtocol              = NULL;
-  NVIDIA_C2C_NODE_PROTOCOL          *C2cProtocol             = NULL;
   NVIDIA_COMPATIBILITY_MAPPING      *MappingNode             = gDeviceCompatibilityMap;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node                    = NULL;
   UINTN                             Index;
@@ -328,16 +326,6 @@ DeviceDiscoveryBindingStart (
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a, failed to deassert resets %r\r\n", __FUNCTION__, Status));
       goto ErrorExit;
-    }
-  }
-
-  // C2C protocol may not be available on all controllers of same type. If protocol is not found
-  // we should not return a failure.
-  Status = gBS->HandleProtocol (Controller, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&C2cProtocol);
-  if (!EFI_ERROR (Status)) {
-    Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to init c2c %r\r\n", __FUNCTION__, Status));
     }
   }
 

@@ -31,6 +31,7 @@
 #include <Protocol/PciHostBridgeResourceAllocation.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <Protocol/PciRootBridgeIo.h>
+#include <Protocol/C2CNodeProtocol.h>
 
 #include "PcieControllerPrivate.h"
 
@@ -353,9 +354,10 @@ InitializeController (
   IN  EFI_HANDLE           ControllerHandle
   )
 {
-  UINT64      val;
-  UINT32      count;
-  EFI_STATUS  Status;
+  UINT64                    val;
+  UINT32                    count;
+  EFI_STATUS                Status;
+  NVIDIA_C2C_NODE_PROTOCOL  *C2cProtocol = NULL;
 
   /* Program XAL */
   MmioWrite32 (Private->XalBase + XAL_RC_MEM_32BIT_BASE_HI, upper_32_bits (Private->MemBase));
@@ -416,6 +418,14 @@ InitializeController (
     val = MmioRead32 (Private->EcamBase + XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS);
     if (val & XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS_DLL_ACTIVE) {
       DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is UP (Speed: %d)\r\n", Private->CtrlId, (val & 0xf0000) >> 16));
+      Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&C2cProtocol);
+      if (!EFI_ERROR (Status)) {
+        Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((EFI_D_ERROR, "%a, Failed To Init C2c %r\r\n", __FUNCTION__, Status));
+        }
+      }
+
       break;
     }
 
