@@ -16,6 +16,7 @@
 
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
+#include <ConfigurationManagerDataPrivate.h>
 
 #include <TH500/TH500Definitions.h>
 
@@ -46,6 +47,7 @@ InstallHeterogeneousMemoryAttributeTable (
   UINT32                                  *InitiatorProximityDomainList;
   UINT32                                  *TargetProximityDomainList;
   UINT32                                  Index;
+  UINT32                                  MaxEnabledHbmDmns;
 
   // Create a ACPI Table Entry
   for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
@@ -89,8 +91,9 @@ InstallHeterogeneousMemoryAttributeTable (
   }
 
   // Proximity Domains
-  NumInitiatorProximityDomains = TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS;
-  NumTargetProximityDomains    = TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS;
+  MaxEnabledHbmDmns            = GetMaxHbmPxmDomains ();
+  NumInitiatorProximityDomains = (TH500_GPU_HBM_PXM_DOMAIN_START > MaxEnabledHbmDmns) ? TH500_GPU_HBM_PXM_DOMAIN_START : MaxEnabledHbmDmns;
+  NumTargetProximityDomains    = (TH500_GPU_HBM_PXM_DOMAIN_START > MaxEnabledHbmDmns) ? TH500_GPU_HBM_PXM_DOMAIN_START : MaxEnabledHbmDmns;
 
   // Generate and populate Initiator proximity domain list
   InitiatorProximityDomainList = (UINT32 *)AllocateZeroPool (sizeof (UINT32) * NumInitiatorProximityDomains);
@@ -174,7 +177,7 @@ InstallHeterogeneousMemoryAttributeTable (
       continue;
     }
 
-    for (UINTN TargIndex = TH500_GPU_HBM_PXM_DOMAIN_START; TargIndex < (TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS); TargIndex++) {
+    for (UINTN TargIndex = TH500_GPU_HBM_PXM_DOMAIN_START; TargIndex < NumTargetProximityDomains; TargIndex++) {
       if (!IsSocketEnabled ((TargIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
         continue;
       }
@@ -204,7 +207,7 @@ InstallHeterogeneousMemoryAttributeTable (
 
     // for all proximity domains
     for (UINTN TargIndex = TH500_GPU_HBM_PXM_DOMAIN_START;
-         TargIndex < (TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS);
+         TargIndex < NumTargetProximityDomains;
          TargIndex++)
     {
       if (!IsSocketEnabled ((TargIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {

@@ -33,6 +33,7 @@
   ConfigurationHmat.c
   ConfigurationSmbios.c
   ConfigurationSmbiosType1.c
+  ConfigurationHbm.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

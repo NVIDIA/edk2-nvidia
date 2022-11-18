@@ -462,15 +462,6 @@ SetBandwidthLatencyInfoPcdsFromdtb (
       DEBUG ((DEBUG_INFO, "Gpu To Local Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalCpuAccessBandwidth)));
     }
 
-    Property = fdt_getprop (Dtb, AcpiNode, "gpu-remotehbm-accessbandwidth", NULL);
-    if (Property != NULL) {
-      GpuToRemoteHbmAccessBandwidth = SwapBytes32 (Property[0]);
-      PcdSet32S (PcdGpuToRemoteHbmAccessBandwidth, GpuToRemoteHbmAccessBandwidth);
-      DEBUG ((EFI_D_INFO, "Gpu To Remote Gpu HBM Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth)));
-    } else {
-      DEBUG ((DEBUG_INFO, "Gpu To Remote Gpu HBM Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth)));
-    }
-
     Property = fdt_getprop (Dtb, AcpiNode, "gpu-remotecpu-accessbandwidth", NULL);
     if (Property != NULL) {
       GpuToRemoteCpuAccessBandwidth = SwapBytes32 (Property[0]);

@@ -161,4 +161,43 @@ InstallArmPerformanceMonitoringUnitTable (
   IN EDKII_PLATFORM_REPOSITORY_INFO  *PlatformRepositoryInfo
   );
 
+/**
+  Check if a given HBM domain is enabled or not
+
+  @param[in] UINT32      DmnIdx
+
+  @return    BOOLEAN     (TRUE if enabled
+                          FALSE if disabled)
+
+**/
+BOOLEAN
+EFIAPI
+IsHbmDmnEnabled (
+  UINT32  DmnIdx
+  );
+
+/**
+  Generate a bit map to indicate enabled HBM memory segments
+
+  @param[in] VOID
+
+**/
+EFI_STATUS
+EFIAPI
+GenerateHbmMemPxmDmnMap (
+  VOID
+  );
+
+/**
+  Obtain the max number of HBM memory proximity domains
+
+  @param[in] VOID
+
+**/
+UINTN
+EFIAPI
+GetMaxHbmPxmDomains (
+  VOID
+  );
+
 #endif

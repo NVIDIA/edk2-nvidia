@@ -49,6 +49,7 @@ InstallStaticLocalityInformationTable (
   UINT8                           *Distance;
   UINT32                          RowIndex;
   UINT32                          ColIndex;
+  UINT32                          MaxEnabledHbmDmns;
 
   // Create a ACPI Table Entry
   for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
@@ -87,7 +88,8 @@ InstallStaticLocalityInformationTable (
   // Create a 2D distance matrix with locality information across all possible proximity domains
   // Each CPU, GPU and GPU HBM is a proximity domain
 
-  ProximityDomains = TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS;
+  MaxEnabledHbmDmns = GetMaxHbmPxmDomains ();
+  ProximityDomains  = (TH500_GPU_HBM_PXM_DOMAIN_START > MaxEnabledHbmDmns) ? TH500_GPU_HBM_PXM_DOMAIN_START : MaxEnabledHbmDmns;
 
   Distance = (UINT8 *)AllocateZeroPool (sizeof (UINT8) * ProximityDomains * ProximityDomains);
   if (Distance == NULL) {
@@ -125,7 +127,7 @@ InstallStaticLocalityInformationTable (
     }
 
     // CPU to GPU HBM domains
-    for (ColIndex = TH500_GPU_HBM_PXM_DOMAIN_START; ColIndex < (TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS); ColIndex++ ) {
+    for (ColIndex = TH500_GPU_HBM_PXM_DOMAIN_START; ColIndex < ProximityDomains; ColIndex++ ) {
       if (!IsSocketEnabled ((ColIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
         continue;
       }
@@ -141,7 +143,7 @@ InstallStaticLocalityInformationTable (
   }
 
   // Assign adjacent memory distance for all GPU to other GPU domains and GPU HBM domains
-  for (RowIndex = TH500_GPU_PXM_DOMAIN_START; RowIndex < (TH500_GPU_PXM_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets)); RowIndex++ ) {
+  for (RowIndex = TH500_GPU_PXM_DOMAIN_START; RowIndex < ProximityDomains; RowIndex++ ) {
     if (!IsSocketEnabled (RowIndex - TH500_GPU_PXM_DOMAIN_START)) {
       continue;
     }
@@ -158,7 +160,7 @@ InstallStaticLocalityInformationTable (
     }
 
     // Assign adjacent memory distance for all GPU to GPU HBM domains only
-    for (ColIndex = TH500_GPU_HBM_PXM_DOMAIN_START; ColIndex < (TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS); ColIndex++ ) {
+    for (ColIndex = TH500_GPU_HBM_PXM_DOMAIN_START; ColIndex < ProximityDomains; ColIndex++ ) {
       if (!IsSocketEnabled ((ColIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
         continue;
       }
@@ -175,7 +177,7 @@ InstallStaticLocalityInformationTable (
   }
 
   // GPU HBM to CPU domains and GPU domains
-  for (RowIndex = TH500_GPU_HBM_PXM_DOMAIN_START; RowIndex < (TH500_GPU_HBM_PXM_DOMAIN_START + TH500_GPU_MAX_PXM_DOMAINS); RowIndex++ ) {
+  for (RowIndex = TH500_GPU_HBM_PXM_DOMAIN_START; RowIndex < ProximityDomains; RowIndex++ ) {
     if (!IsSocketEnabled ((RowIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
       continue;
     }
