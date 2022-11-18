@@ -51,7 +51,7 @@
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid|{GUID("$(SYSTEM_FMP_ESRT_GUID)")}
 
 [PcdsFixedAtBuild.common]
-  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|232
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x200
 
 [PcdsDynamicDefault]
   ## MM Communicate
