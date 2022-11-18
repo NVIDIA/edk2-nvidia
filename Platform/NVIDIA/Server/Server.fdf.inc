@@ -104,3 +104,8 @@
   #
   INF IntelUndiPkg/XGigUndiDxe/XGigUndiDxe.inf
 !endif
+
+  #
+  # BMC Virtual NIC support
+  #
+  INF Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf

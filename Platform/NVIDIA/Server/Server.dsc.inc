@@ -297,3 +297,8 @@
     <LibraryClasses>
       RedfishPlatformCredentialLib|Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/RedfishPlatformCredentialLib.inf
   }
+
+  #
+  # BMC Virtual NIC support
+  #
+  Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf
