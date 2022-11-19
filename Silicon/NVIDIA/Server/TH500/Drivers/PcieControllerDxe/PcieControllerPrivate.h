@@ -57,6 +57,7 @@ typedef struct {
   UINT64                                              XplSize;
   UINT64                                              EcamBase;
   UINT64                                              EcamSize;
+  UINT32                                              PCIeCapOff;
 
   UINT64                                              MemBase;
   UINT64                                              MemLimit;

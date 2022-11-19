@@ -318,17 +318,16 @@ InitFWFIntr (
   PCIE_CONTROLLER_PRIVATE  *Private
   )
 {
-  UINT32                 PCIeCapOff;
   PCI_TYPE_GENERIC       *PciCap    = NULL;
   PCI_CAPABILITY_PCIEXP  *PciExpCap = NULL;
 
-  PCIeCapOff = PCIeFindCap (Private->EcamBase, EFI_PCI_CAPABILITY_ID_PCIEXP);
-  if (!PCIeCapOff) {
+  Private->PCIeCapOff = PCIeFindCap (Private->EcamBase, EFI_PCI_CAPABILITY_ID_PCIEXP);
+  if (!Private->PCIeCapOff) {
     DEBUG ((EFI_D_VERBOSE, "Failed to find PCIe capability registers\r\n"));
     return EFI_NOT_FOUND;
   }
 
-  PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + PCIeCapOff);
+  PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);
 
   PciExpCap->RootControl.Bits.SystemErrorOnCorrectableError = 1;
   PciExpCap->RootControl.Bits.SystemErrorOnNonFatalError    = 1;
@@ -358,6 +357,7 @@ InitializeController (
   UINT32                    count;
   EFI_STATUS                Status;
   NVIDIA_C2C_NODE_PROTOCOL  *C2cProtocol = NULL;
+  PCI_CAPABILITY_PCIEXP     *PciExpCap   = NULL;
 
   /* Program XAL */
   MmioWrite32 (Private->XalBase + XAL_RC_MEM_32BIT_BASE_HI, upper_32_bits (Private->MemBase));
@@ -412,12 +412,20 @@ InitializeController (
   MmioWrite32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, val);
 
   /* Wait for link up */
-  count = 0;
+  PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);
+  count     = 0;
   do {
     MicroSecondDelay (100);
-    val = MmioRead32 (Private->EcamBase + XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS);
-    if (val & XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS_DLL_ACTIVE) {
-      DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is UP (Speed: %d)\r\n", Private->CtrlId, (val & 0xf0000) >> 16));
+    if (PciExpCap->LinkStatus.Bits.DataLinkLayerLinkActive) {
+      DEBUG ((
+        EFI_D_ERROR,
+        "PCIe Controller-%d Link is UP (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
+        Private->CtrlId,
+        PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
+        PciExpCap->LinkCapability.Bits.MaxLinkWidth,
+        PciExpCap->LinkStatus.Bits.CurrentLinkSpeed,
+        PciExpCap->LinkStatus.Bits.NegotiatedLinkWidth
+        ));
       Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&C2cProtocol);
       if (!EFI_ERROR (Status)) {
         Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions);
@@ -435,7 +443,13 @@ InitializeController (
   } while (count < 10000);
 
   if (count == 10000) {
-    DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is DOWN\r\n", Private->CtrlId));
+    DEBUG ((
+      EFI_D_ERROR,
+      "PCIe Controller-%d Link is DOWN (Capable: Gen-%d,x%d)\r\n",
+      Private->CtrlId,
+      PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
+      PciExpCap->LinkCapability.Bits.MaxLinkWidth
+      ));
   }
 
   return EFI_SUCCESS;
