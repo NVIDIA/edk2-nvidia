@@ -124,11 +124,11 @@ AddSocketCoresToEnabledCoresBitMap (
     "%a: Socket %d cores 0x%x 0x%x 0x%x added as EnabledCores bits %u-%u\n",
     __FUNCTION__,
     SocketNumber,
-    SocketCores[0],
-    SocketCores[1],
     SocketCores[2],
-    SocketStartingCore,
-    SocketStartingCore + CoresPerSocket - 1
+    SocketCores[1],
+    SocketCores[0],
+    SocketStartingCore + CoresPerSocket - 1,
+    SocketStartingCore
     ));
 }
 
