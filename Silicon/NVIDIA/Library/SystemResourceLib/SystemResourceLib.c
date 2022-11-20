@@ -94,7 +94,8 @@ InstallMmioRegion (
 {
   EFI_RESOURCE_ATTRIBUTE_TYPE  ResourceAttribute = (EFI_RESOURCE_ATTRIBUTE_PRESENT |
                                                     EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
-                                                    EFI_RESOURCE_ATTRIBUTE_TESTED
+                                                    EFI_RESOURCE_ATTRIBUTE_TESTED    |
+                                                    EFI_RESOURCE_ATTRIBUTE_UNCACHEABLE
                                                     );
 
   if (MemoryBaseAddress == 0) {
