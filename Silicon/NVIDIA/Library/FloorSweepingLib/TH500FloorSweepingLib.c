@@ -30,6 +30,7 @@
 EFI_STATUS
 EFIAPI
 UpdateCpuFloorsweepingConfig (
+  IN UINTN  Socket,
   IN INT32  CpusOffset,
   IN VOID   *Dtb
   );
@@ -604,7 +605,7 @@ TH500FloorSweepCpus (
 
     DEBUG ((DEBUG_INFO, "Floorsweeping cpus in %a\n", SocketCpusStr));
 
-    Status = UpdateCpuFloorsweepingConfig (CpusOffset, Dtb);
+    Status = UpdateCpuFloorsweepingConfig (Socket, CpusOffset, Dtb);
     if (EFI_ERROR (Status)) {
       break;
     }

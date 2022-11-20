@@ -66,6 +66,7 @@ CheckAndRemapCpu (
 /**
   Returns flag indicating presence of cluster after CPU floorsweeping
 
+  @param[in]    Socket          Socket number
   @param[in]    Cluster         Cluster ID
 
   @return       TRUE            Cluster is present
@@ -75,6 +76,7 @@ CheckAndRemapCpu (
 BOOLEAN
 EFIAPI
 ClusterIsPresent (
+  IN  UINTN  Socket,
   IN  UINTN  ClusterId
   );
 

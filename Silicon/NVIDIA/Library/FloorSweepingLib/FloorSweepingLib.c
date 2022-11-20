@@ -294,16 +294,19 @@ CheckAndRemapCpu (
 BOOLEAN
 EFIAPI
 ClusterIsPresent (
+  IN  UINTN  Socket,
   IN  UINTN  ClusterId
   )
 {
   PLATFORM_CPU_INFO  *Info;
   UINTN              Core;
+  UINT32             SocketCoreStart;
 
-  Info = FloorSweepCpuInfo ();
+  Info            = FloorSweepCpuInfo ();
+  SocketCoreStart = Socket * PLATFORM_MAX_CORES_PER_SOCKET;
 
   for (Core = 0; Core < Info->MaxCoresPerCluster; Core++) {
-    if (IsCoreEnabled (Core + (ClusterId * Info->MaxCoresPerCluster))) {
+    if (IsCoreEnabled (SocketCoreStart + Core + (ClusterId * Info->MaxCoresPerCluster))) {
       return TRUE;
     }
   }
@@ -370,6 +373,7 @@ GetNumberOfEnabledCpuCores (
 EFI_STATUS
 EFIAPI
 UpdateCpuFloorsweepingConfig (
+  IN UINTN  Socket,
   IN INT32  CpusOffset,
   IN VOID   *Dtb
   )
@@ -484,7 +488,7 @@ UpdateCpuFloorsweepingConfig (
     AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
     NodeOffset = fdt_subnode_offset (Dtb, CpuMapOffset, ClusterNodeStr);
     if (NodeOffset >= 0) {
-      if (!ClusterIsPresent (Cluster)) {
+      if (!ClusterIsPresent (Socket, Cluster)) {
         FdtErr = fdt_del_node (Dtb, NodeOffset);
         if (FdtErr < 0) {
           DEBUG ((
@@ -552,7 +556,7 @@ FloorSweepGlobalCpus (
     return EFI_DEVICE_ERROR;
   }
 
-  return UpdateCpuFloorsweepingConfig (CpusOffset, Dtb);
+  return UpdateCpuFloorsweepingConfig (0, CpusOffset, Dtb);
 }
 
 /**
