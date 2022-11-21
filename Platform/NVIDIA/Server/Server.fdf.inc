@@ -132,3 +132,24 @@
   # Default TLS Cipher Suites
   #
   INF Silicon/NVIDIA/Drivers/RedfishCipherDxe/RedfishCipherDxe.inf
+
+  #
+  # Redfish support
+  #
+  INF RedfishPkg/RestJsonStructureDxe/RestJsonStructureDxe.inf
+  INF RedfishPkg/RedfishRestExDxe/RedfishRestExDxe.inf
+  INF RedfishPkg/RedfishCredentialDxe/RedfishCredentialDxe.inf
+  INF RedfishPkg/RedfishDiscoverDxe/RedfishDiscoverDxe.inf
+  INF RedfishPkg/RedfishConfigHandler/RedfishConfigHandlerDriver.inf
+  INF RedfishPkg/RedfishPlatformConfigDxe/RedfishPlatformConfigDxe.inf
+  INF MdeModulePkg/Universal/RegularExpressionDxe/RegularExpressionDxe.inf
+  INF RedfishClientPkg/RedfishFeatureCoreDxe/RedfishFeatureCoreDxe.inf
+  INF RedfishClientPkg/RedfishETagDxe/RedfishETagDxe.inf
+  INF RedfishClientPkg/RedfishConfigLangMapDxe/RedfishConfigLangMapDxe.inf
+  INF RedfishClientPkg/Features/ComputerSystem/v1_17_0/Dxe/ComputerSystemDxe.inf
+  INF RedfishClientPkg/Features/ComputerSystemCollectionDxe/ComputerSystemCollectionDxe.inf
+  INF RedfishClientPkg/Features/Bios/v1_2_0/Dxe/BiosDxe.inf
+  INF RedfishClientPkg/Converter/ComputerSystem/v1_17_0/RedfishComputerSystem_V1_17_0_Dxe.inf
+  INF RedfishClientPkg/Converter/ComputerSystemCollection/RedfishComputerSystemCollection_Dxe.inf
+  INF RedfishClientPkg/Converter/Bios/v1_2_0/RedfishBios_V1_2_0_Dxe.inf
+  INF Silicon/NVIDIA/Drivers/PlatformRedfishBiosDxe/PlatformRedfishBiosDxe.inf

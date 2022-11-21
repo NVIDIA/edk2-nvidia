@@ -53,6 +53,32 @@
   # Configurable DebugLib
   DebugPrintErrorLevelLib|Silicon/NVIDIA/Library/DebugPrintErrorLevelLib/DebugPrintErrorLevelLib.inf
 
+  #
+  # Redfish support
+  #
+  RestExLib|RedfishPkg/Library/DxeRestExLib/DxeRestExLib.inf
+  Ucs2Utf8Lib|RedfishPkg/Library/BaseUcs2Utf8Lib/BaseUcs2Utf8Lib.inf
+  BaseSortLib|MdeModulePkg/Library/BaseSortLib/BaseSortLib.inf
+  RedfishCrtLib|RedfishPkg/PrivateLibrary/RedfishCrtLib/RedfishCrtLib.inf
+  JsonLib|RedfishPkg/Library/JsonLib/JsonLib.inf
+  RedfishLib|RedfishPkg/PrivateLibrary/RedfishLib/RedfishLib.inf
+  HiiUtilityLib|RedfishPkg/Library/HiiUtilityLib/HiiUtilityLib.inf
+  RedfishPlatformConfigLib|RedfishPkg/Library/RedfishPlatformConfigLib/RedfishPlatformConfigLib.inf
+  RedfishDebugLib|RedfishClientPkg/Library/RedfishDebugLib/RedfishDebugLib.inf
+
+  RedfishLib|RedfishClientPkg/PrivateLibrary/RedfishLib/RedfishLib.inf
+  RedfishFeatureUtilityLib|RedfishClientPkg/Library/RedfishFeatureUtilityLib/RedfishFeatureUtilityLib.inf
+  RedfishContentCodingLib|RedfishPkg/Library/RedfishContentCodingLibNull/RedfishContentCodingLibNull.inf
+  ConverterCommonLib|RedfishClientPkg/ConverterLib/edk2library/ConverterCommonLib/ConverterCommonLib.inf
+  RedfishResourceIdentifyLib|RedfishClientPkg/Library/RedfishResourceIdentifyLibNull/RedfishResourceIdentifyLibNull.inf
+  EdkIIRedfishResourceConfigLib|RedfishClientPkg/Library/EdkIIRedfishResourceConfigLib/EdkIIRedfishResourceConfigLib.inf
+  RedfishEventLib|RedfishClientPkg/Library/RedfishEventLib/RedfishEventLib.inf
+  RedfishVersionLib|RedfishClientPkg/Library/RedfishVersionLib/RedfishVersionLib.inf
+  RedfishPlatformCredentialLib|Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/RedfishPlatformCredentialLib.inf
+  ComputerSystemV1_17_0Lib|RedfishClientPkg/ConverterLib/edk2library/ComputerSystem/v1_17_0/Lib.inf
+  ComputerSystemCollectionLib|RedfishClientPkg/ConverterLib/edk2library/ComputerSystemCollection/Lib.inf
+  BiosV1_2_0Lib|RedfishClientPkg/ConverterLib/edk2library/Bios/v1_2_0/Lib.inf
+
 [LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
 
@@ -181,10 +207,25 @@
   #
   gEfiCryptoPkgTokenSpaceGuid.PcdOpensslEcEnabled|TRUE
 
+  #
+  # Redfish support
+  #
+  # Use gNVIDIABeforeConsoleEventGuid to startup Redfish feature drivers.
+  # { 0x974180a0, 0xa203, 0x43c8, { 0xb1, 0x12, 0x48, 0x70, 0xe1, 0xdb, 0xd6, 0x48 } }
+  gEfiRedfishClientPkgTokenSpaceGuid.PcdEdkIIRedfishFeatureDriverStartupEventGuid|{0xA0, 0x80, 0x41, 0x97, 0x03, 0xA2, 0xC8, 0x43, 0xB1, 0x12, 0x48, 0x70, 0xE1, 0xDB, 0xD6, 0x48 }
+  gEfiRedfishPkgTokenSpaceGuid.PcdRedfishRestExServiceAccessModeInBand|False
+  gEfiRedfishPkgTokenSpaceGuid.PcdRedfishDiscoverAccessModeInBand|False
+  gEfiRedfishClientPkgTokenSpaceGuid.PcdDefaultRedfishVersion|L"/v1/"
+
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdQuickBootSupported|FALSE
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|TRUE
+
+  #
+  # Redfish support
+  #
+  gIpmiFeaturePkgTokenSpaceGuid.PcdIpmiFeatureEnable|True
 
 ################################################################################
 #
@@ -372,3 +413,28 @@
     <LibraryClasses>
       RedfishEventLib|RedfishClientPkg/Library/RedfishEventLib/RedfishEventLib.inf
   }
+
+  #
+  # Redfish support
+  #
+  RedfishPkg/RestJsonStructureDxe/RestJsonStructureDxe.inf
+  RedfishPkg/RedfishRestExDxe/RedfishRestExDxe.inf
+  RedfishPkg/RedfishCredentialDxe/RedfishCredentialDxe.inf
+  RedfishPkg/RedfishDiscoverDxe/RedfishDiscoverDxe.inf
+  RedfishPkg/RedfishConfigHandler/RedfishConfigHandlerDriver.inf
+  RedfishPkg/RedfishPlatformConfigDxe/RedfishPlatformConfigDxe.inf
+  MdeModulePkg/Universal/RegularExpressionDxe/RegularExpressionDxe.inf
+
+  RedfishClientPkg/RedfishFeatureCoreDxe/RedfishFeatureCoreDxe.inf
+  RedfishClientPkg/RedfishETagDxe/RedfishETagDxe.inf
+  RedfishClientPkg/RedfishConfigLangMapDxe/RedfishConfigLangMapDxe.inf
+  RedfishClientPkg/Features/ComputerSystemCollectionDxe/ComputerSystemCollectionDxe.inf
+  RedfishClientPkg/Features/ComputerSystem/v1_17_0/Dxe/ComputerSystemDxe.inf
+  RedfishClientPkg/Features/Bios/v1_2_0/Dxe/BiosDxe.inf {
+    <LibraryClasses>
+      RedfishAddendumLib|RedfishClientPkg/Library/RedfishAddendumLib/RedfishAddendumLib.inf
+  }
+  RedfishClientPkg/Converter/ComputerSystem/v1_17_0/RedfishComputerSystem_V1_17_0_Dxe.inf
+  RedfishClientPkg/Converter/ComputerSystemCollection/RedfishComputerSystemCollection_Dxe.inf
+  RedfishClientPkg/Converter/Bios/v1_2_0/RedfishBios_V1_2_0_Dxe.inf
+  Silicon/NVIDIA/Drivers/PlatformRedfishBiosDxe/PlatformRedfishBiosDxe.inf
