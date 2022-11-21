@@ -152,7 +152,7 @@ InstallStaticResourceAffinityTable (
   // Increment to hold entries for GPU memory
   MemoryAffinityInfoCount += TH500_GPU_MAX_NR_MEM_PARTITIONS * NumEnabledSockets;
 
-  MemoryAffinityInfo = (CM_ARM_MEMORY_AFFINITY_INFO *)AllocatePool (sizeof (CM_ARM_MEMORY_AFFINITY_INFO) * MemoryAffinityInfoCount);
+  MemoryAffinityInfo = (CM_ARM_MEMORY_AFFINITY_INFO *)AllocateZeroPool (sizeof (CM_ARM_MEMORY_AFFINITY_INFO) * MemoryAffinityInfoCount);
   if (MemoryAffinityInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory affinity info\r\n"));
     return EFI_DEVICE_ERROR;
@@ -172,7 +172,7 @@ InstallStaticResourceAffinityTable (
   FreePool (Descriptors);
 
   // Allocate space to save HBM info
-  HbmMemInfo = (HBM_MEMORY_INFO *)AllocatePool (sizeof (HBM_MEMORY_INFO) * TH500_GPU_MAX_NR_MEM_PARTITIONS * PLATFORM_MAX_SOCKETS);
+  HbmMemInfo = (HBM_MEMORY_INFO *)AllocateZeroPool (sizeof (HBM_MEMORY_INFO) * TH500_GPU_MAX_NR_MEM_PARTITIONS * PLATFORM_MAX_SOCKETS);
   if (HbmMemInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate HBM memory info\r\n"));
     return EFI_DEVICE_ERROR;
