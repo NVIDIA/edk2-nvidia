@@ -51,6 +51,8 @@
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid|{GUID("$(SYSTEM_FMP_ESRT_GUID)")}
 
 [PcdsFixedAtBuild.common]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
+  gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x07
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x200
 
 [PcdsDynamicDefault]
