@@ -109,3 +109,4 @@
   gNVIDIABootChainProtocolGuid
   gEfiFirmwareVolume2ProtocolGuid
   gEfiLoadFileProtocolGuid
+  gEfiAcpiSdtProtocolGuid

@@ -37,6 +37,7 @@
 #include <Protocol/PciIo.h>
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PlatformBootManager.h>
+#include <Protocol/AcpiSystemDescriptionTable.h>
 #include <Guid/EventGroup.h>
 #include <Guid/RtPropertiesTable.h>
 #include <Guid/TtyTerm.h>
@@ -1521,6 +1522,47 @@ HandleBootChainUpdate (
   BootChainProtocol->ExecuteUpdate (BootChainProtocol);
 }
 
+STATIC
+VOID
+EFIAPI
+VerifyAcpiSanity (
+  VOID
+  )
+{
+  EFI_STATUS              Status;
+  EFI_ACPI_SDT_PROTOCOL   *AcpiTableProtocol;
+  EFI_ACPI_SDT_HEADER     *Table;
+  EFI_ACPI_TABLE_VERSION  TableVersion;
+  UINTN                   TableKey;
+  UINTN                   Count;
+  BOOLEAN                 DsdtFound;
+
+  Status = gBS->LocateProtocol (&gEfiAcpiSdtProtocolGuid, NULL, (VOID **)&AcpiTableProtocol);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  DsdtFound = FALSE;
+  for (Count = 0; ; Count++) {
+    Status = AcpiTableProtocol->GetAcpiTable (Count, &Table, &TableVersion, &TableKey);
+    if (EFI_ERROR (Status)) {
+      break;
+    }
+
+    if (Table->Signature != EFI_ACPI_6_4_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE) {
+      continue;
+    } else {
+      DsdtFound = TRUE;
+      break;
+    }
+  }
+
+  if (DsdtFound != TRUE) {
+    DEBUG ((DEBUG_ERROR, "!!!!ACPI Corrupted!!!!\n"));
+    ASSERT (FALSE);
+  }
+}
+
 /**
   Do the platform specific action after the console is ready
   Possible things that can be done in PlatformBootManagerAfterConsole:
@@ -1566,6 +1608,9 @@ PlatformBootManagerAfterConsole (
   HandleCapsules ();
 
   HandleBootChainUpdate ();
+
+  // Validate acpi to be present
+  VerifyAcpiSanity ();
 }
 
 /**
