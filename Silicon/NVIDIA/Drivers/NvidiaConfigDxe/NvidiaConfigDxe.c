@@ -25,14 +25,17 @@
 #include <Library/FloorSweepingLib.h>
 #include <Library/HiiLib.h>
 #include <Library/HobLib.h>
+#include <Library/IoLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiHiiServicesLib.h>
 #include <Library/UefiLib.h>
+#include <Library/VariablePolicyHelperLib.h>
 
 #include <Guid/NVIDIAMmMb1Record.h>
+#include <TH500/TH500Definitions.h>
 #include <TH500/TH500MB1Configuration.h>
 #include "NvidiaConfigHii.h"
 
@@ -113,6 +116,13 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PCIE_ENABLE_PCIPM_L1_2_TITLE),
   STRING_TOKEN (STR_PCIE_SUPPORTS_CLK_REQ_TITLE),
   STRING_TOKEN (STR_PCIE_SUPPORTS_CLK_REQ_HELP),
+};
+
+UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
+  TH500_SCRATCH_BASE_SOCKET_0,
+  TH500_SCRATCH_BASE_SOCKET_1,
+  TH500_SCRATCH_BASE_SOCKET_2,
+  TH500_SCRATCH_BASE_SOCKET_3,
 };
 
 //
@@ -460,6 +470,191 @@ WriteMb1Variables (
 }
 
 /**
+  Sets and locks NV variable
+**/
+STATIC
+EFI_STATUS
+WriteAndLockPublicVariables (
+  EDKII_VARIABLE_POLICY_PROTOCOL  *PolicyProtocol,
+  VOID                            *VariableData,
+  UINTN                           VariableSize,
+  CHAR16                          *VariableName
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      Attributes;
+
+  Attributes = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
+  Status     = gRT->SetVariable (
+                      VariableName,
+                      &gNVIDIAPublicVariableGuid,
+                      Attributes,
+                      VariableSize,
+                      VariableData
+                      );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to set variable %s\r\n", VariableName));
+    return Status;
+  }
+
+  Status = RegisterBasicVariablePolicy (
+             PolicyProtocol,
+             &gNVIDIAPublicVariableGuid,
+             VariableName,
+             0,
+             0,
+             0,
+             0,
+             VARIABLE_POLICY_TYPE_LOCK_NOW
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to register lock policy: %s-%r\r\n", VariableName, Status));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Exposes the floorsweeping registers as volatile variables
+**/
+STATIC
+VOID
+WriteFloorsweepingVariables (
+  VOID
+  )
+{
+  EFI_STATUS                      Status;
+  EDKII_VARIABLE_POLICY_PROTOCOL  *PolicyProtocol;
+  UINT32                          VariableData[3];
+  CHAR16                          VariableName[(MAX_VARIABLE_NAME/sizeof (CHAR16))];
+  UINTN                           VariableSize;
+  UINTN                           Socket;
+  UINT32                          ExposeVariableControl;
+
+  ExposeVariableControl = PcdGet32 (PcdFloorsweepingRuntimeVariables);
+
+  Status = gBS->LocateProtocol (
+                  &gEdkiiVariablePolicyProtocolGuid,
+                  NULL,
+                  (VOID **)&PolicyProtocol
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to locate policy protocol\r\n"));
+    return;
+  }
+
+  for (Socket = 0; Socket < MAX_SOCKETS; Socket++) {
+    if (!mHiiControlSettings.SocketEnabled[Socket]) {
+      continue;
+    }
+
+    if ((ExposeVariableControl & EXPOSE_PCIE_FLOORSWEEPING_VARIABLE) != 0) {
+      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + PCIE_FLOORSWEEPING_DISABLE_OFFSET);
+      VariableData[0] &= ~PCIE_FLOORSWEEPING_DISABLE_MASK;
+      VariableSize     = 2;
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.PCIeDisabled.%x", Socket);
+      WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
+    }
+
+    if ((ExposeVariableControl & EXPOSE_NVML_FLOORSWEEPING_VARIABLE) != 0) {
+      VariableData[0]   = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + NVLM_DISABLE_OFFSET);
+      VariableData[0]  &= ~NVLM_DISABLE_MASK;
+      VariableData[0] >>= NVLM_DISABLE_SHIFT;
+      VariableSize      = 1;
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.NvlmDisabled.%x", Socket);
+      WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
+    }
+
+    if ((ExposeVariableControl & EXPOSE_C2C_FLOORSWEEPING_VARIABLE) != 0) {
+      VariableData[0]   = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + C2C_DISABLE_OFFSET);
+      VariableData[0]  &= ~C2C_DISABLE_MASK;
+      VariableData[0] >>= C2C_DISABLE_SHIFT;
+      VariableSize      = 1;
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.C2CDisabled.%x", Socket);
+      WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
+    }
+
+    if ((ExposeVariableControl & EXPOSE_HALF_CHIP_DISABLED_VARIABLE) != 0) {
+      VariableData[0]   = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + HALF_CHIP_DISABLE_OFFSET);
+      VariableData[0]  &= ~HALF_CHIP_DISABLE_MASK;
+      VariableData[0] >>= HALF_CHIP_DISABLE_SHIFT;
+      VariableSize      = 1;
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.HalfChipDisabled.%x", Socket);
+      WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
+    }
+
+    if ((ExposeVariableControl & EXPOSE_MCF_CHANNEL_DISABLED_VARIABLE) != 0) {
+      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + MCF_CHANNEL_DISABLE_OFFSET);
+      VariableData[0] &= ~MCF_CHANNEL_DISABLE_MASK;
+      VariableSize     = sizeof (UINT32);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.McfChannelDisabled.%x", Socket);
+      WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
+    }
+
+    if ((ExposeVariableControl & EXPOSE_UPHY_LANE_OWNERSHIP_VARAIBLE) != 0) {
+      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + UPHY_LANE_OWNERSHIP_OFFSET);
+      VariableData[0] &= ~UPHY_LANE_OWNERSHIP_MASK;
+      VariableSize     = sizeof (UINT32);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.UphyLaneOwnership.%x", Socket);
+      WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
+    }
+
+    if ((ExposeVariableControl & EXPOSE_CCPLEX_CORE_DISABLED_VARIABLE) != 0) {
+      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + CPU_FLOORSWEEPING_DISABLE_OFFSET_0);
+      VariableData[0] &= ~CPU_FLOORSWEEPING_DISABLE_MASK_0;
+      VariableData[1]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + CPU_FLOORSWEEPING_DISABLE_OFFSET_1);
+      VariableData[1] &= ~CPU_FLOORSWEEPING_DISABLE_MASK_1;
+      VariableData[2]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + CPU_FLOORSWEEPING_DISABLE_OFFSET_2);
+      VariableData[2] &= ~CPU_FLOORSWEEPING_DISABLE_MASK_2;
+      VariableSize     = 3*sizeof (UINT32);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.CcplexCoreDisabled.%x", Socket);
+      WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
+    }
+
+    if ((ExposeVariableControl & EXPOSE_CCPLEX_MCF_BRIDGE_DISABLED_VARIABLE) != 0) {
+      VariableData[0]   = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + CCPLEX_MCF_BR_DISABLE_OFFSET);
+      VariableData[0]  &= ~CCPLEX_MCF_BR_DISABLE_MASK;
+      VariableData[0] >>= CCPLEX_MCF_BR_DISABLE_SHIFT;
+      VariableSize      = sizeof (UINT32);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.CcplexMcfBridgeDisabled.%x", Socket);
+      WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
+    }
+
+    if ((ExposeVariableControl & EXPOSE_CCPLEX_SOC_BRIDGE_DISABLED_VARIABLE) != 0) {
+      VariableData[0]   = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + CCPLEX_SOC_BR_DISABLE_OFFSET);
+      VariableData[0]  &= ~CCPLEX_SOC_BR_DISABLE_MASK;
+      VariableData[0] >>= CCPLEX_SOC_BR_DISABLE_SHIFT;
+      VariableSize      = 1;
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.CcplexSocBridgeDisabled.%x", Socket);
+      WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
+    }
+
+    if ((ExposeVariableControl & EXPOSE_CCPLEX_CSN_DISABLED_VARIABLE) != 0) {
+      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + CCPLEX_CSN_DISABLE_OFFSET_0);
+      VariableData[0] &= ~CCPLEX_CSN_DISABLE_MASK_0;
+      VariableData[1]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + CCPLEX_CSN_DISABLE_OFFSET_1);
+      VariableData[1] &= ~CCPLEX_CSN_DISABLE_MASK_1;
+      VariableSize     = 2*sizeof (UINT32);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.CcplexCsnDisabled.%x", Socket);
+      WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
+    }
+
+    if ((ExposeVariableControl & EXPOSE_SCF_CACHE_DISABLED_VARIABLE) != 0) {
+      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_0);
+      VariableData[0] &= ~SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_0;
+      VariableData[1]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_1);
+      VariableData[1] &= ~SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_1;
+      VariableData[2]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_2);
+      VariableData[2] &= ~SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2;
+      VariableSize     = 3*sizeof (UINT32);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.ScfCacheDisabled.%x", Socket);
+      WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
+    }
+  }
+}
+
+/**
   Syncs settings betweem Control settings and MB1 Config structure
 
 **/
@@ -672,6 +867,8 @@ InitializeSettings (
   }
 
   if (mHiiControlSettings.TH500Config) {
+    WriteFloorsweepingVariables ();
+
     Status = AccessMb1Record (&mLastWrittenMb1Config, FALSE);
     if (EFI_ERROR (Status)) {
       CopyMem (&mLastWrittenMb1Config, &mMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));

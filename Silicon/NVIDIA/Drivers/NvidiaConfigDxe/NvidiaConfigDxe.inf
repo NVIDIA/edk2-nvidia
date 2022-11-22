@@ -33,6 +33,7 @@
   FloorSweepingLib
   HiiLib
   HobLib
+  IoLib
   DevicePathLib
   DeviceTreeHelperLib
   MemoryAllocationLib
@@ -44,6 +45,7 @@
   UefiRuntimeServicesTableLib
   BaseMemoryLib
   UefiLib
+  VariablePolicyHelperLib
 
 [Guids]
   gEfiHiiPlatformSetupFormsetGuid               ## CONSUMES ## GUID (Indicate the formset class guid to be displayed)
@@ -60,6 +62,7 @@
 [Protocols]
   gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
   gEfiMmCommunication2ProtocolGuid              ## CONSUMES
+  gEdkiiVariablePolicyProtocolGuid              ## CONSUMES
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded
@@ -74,6 +77,7 @@
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport
+  gNVIDIATokenSpaceGuid.PcdFloorsweepingRuntimeVariables
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND
