@@ -34,6 +34,10 @@ typedef struct {
   PHYSICAL_ADDRESS    DTBAddress;
   PHYSICAL_ADDRESS    CpuBlParamsAddr;
   UINTN               CpuBlParamsSize;
+  PHYSICAL_ADDRESS    RasMmBufferAddr;
+  UINTN               RasMmBufferSize;
+  PHYSICAL_ADDRESS    SatMcMmBufferAddr;
+  UINTN               SatMcMmBufferSize;
   BOOLEAN             Fbc;
 } STMM_COMM_BUFFERS;
 

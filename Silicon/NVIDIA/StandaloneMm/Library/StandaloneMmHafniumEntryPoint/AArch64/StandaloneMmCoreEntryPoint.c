@@ -26,6 +26,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/PcdLib.h>
 #include <Library/StandaloneMmOpteeDeviceMem.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/MmServicesTableLib.h>
+#include <Protocol/MmCommunication2.h>
 
 #include <IndustryStandard/ArmStdSmc.h>
 #include <IndustryStandard/ArmMmSvc.h>
@@ -48,6 +50,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define SP_PKG_HEADER_SIZE    0x18
 /* Request the PA of the STMM_FW NS shared buffer */
 #define STMM_GET_NS_BUFFER  0xC0270001
+#define RASFW_VMID          0x8003
+#define SATMC_VMID          0x8001
 
 #define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
 
@@ -388,6 +392,12 @@ GetAndPrintManifestinformation (
     } else if (AsciiStrCmp (NodeName, "cpubl-params") == 0) {
       StmmCommBuffers.CpuBlParamsAddr = RegionAddress;
       StmmCommBuffers.CpuBlParamsSize = RegionSize;
+    } else if (AsciiStrCmp (NodeName, "common-shared-buffer-ras-mm") == 0) {
+      StmmCommBuffers.RasMmBufferAddr = RegionAddress;
+      StmmCommBuffers.RasMmBufferSize = RegionSize;
+    } else if (AsciiStrCmp (NodeName, "common-shared-buffer-satmc-mm") == 0) {
+      StmmCommBuffers.SatMcMmBufferAddr = RegionAddress;
+      StmmCommBuffers.SatMcMmBufferSize = RegionSize;
     }
 
     PrevNodeOffset = NodeOffset;
@@ -432,6 +442,10 @@ GetAndPrintManifestinformation (
   DEBUG ((DEBUG_ERROR, "SP Sec buf size   = 0x%llx \n", StmmCommBuffers.SecBufferSize));
   DEBUG ((DEBUG_ERROR, "CPU BL buf base   = 0x%llx \n", StmmCommBuffers.CpuBlParamsAddr));
   DEBUG ((DEBUG_ERROR, "CPU BL buf size   = 0x%llx \n", StmmCommBuffers.CpuBlParamsSize));
+  DEBUG ((DEBUG_ERROR, "RAS MM buf base   = 0x%llx \n", StmmCommBuffers.RasMmBufferAddr));
+  DEBUG ((DEBUG_ERROR, "RAS MM buf size   = 0x%llx \n", StmmCommBuffers.RasMmBufferSize));
+  DEBUG ((DEBUG_ERROR, "SatMc MM buf base = 0x%llx \n", StmmCommBuffers.SatMcMmBufferAddr));
+  DEBUG ((DEBUG_ERROR, "SatMc MM buf size = 0x%llx \n", StmmCommBuffers.SatMcMmBufferSize));
 
   /* Core will take all the memory from SpMemBase to CoreHeapLimit and should not reach the first memory-region */
   ASSERT ((PayloadBootInfo.SpMemLimit + ReservedPagesSize) <= FfaRxBufferAddr);
@@ -445,6 +459,158 @@ GetAndPrintManifestinformation (
   }
 
   return EFI_SUCCESS;
+}
+
+/**
+ * Check if payload buffer address is valid for the sender VM's. A valid payload address
+ * should be in the correct range for this VM's mailbox (that is in StMM's manifest) and
+ * is large enough.
+ *
+ * @param  [in] CommBufStart    Incoming buffer id comtaining the payload
+ * @param  [in] SenderPartId    VM Id of the Source SP.
+ *
+ * @retval      EFI_SUCCESS            Buffer is valid and big enough.
+ *              EFI_INVALID_PARAMETER  The buffer is not in the valid range for this VM OR
+ *                                     isn't big enough.
+ *              EFI_UNSUPPORTED        Can't lookup the GUID'd Hob to get the Comm
+ *                                     Buffers OR communication for the incoming SenderId
+ *                                     isn't supported.
+ */
+STATIC
+EFI_STATUS
+CheckBufferAddr (
+  IN UINTN   CommBufStart,
+  IN UINT16  SenderPartId
+  )
+{
+  UINT64             SecBufStart;
+  UINT32             SecBufRange;
+  UINT64             SecBufEnd;
+  UINT64             CommBufEnd;
+  EFI_STATUS         Status;
+  EFI_HOB_GUID_TYPE  *GuidHob;
+  STMM_COMM_BUFFERS  *StmmCommBuffers;
+
+  GuidHob = GetFirstGuidHob (&gNVIDIAStMMBuffersGuid);
+  if (GuidHob == NULL) {
+    DEBUG ((DEBUG_ERROR, "Failed to find Buffers GUID HOB\n"));
+    Status = EFI_UNSUPPORTED;
+    goto ExitCheckBufferAddr;
+  }
+
+  StmmCommBuffers = (STMM_COMM_BUFFERS *)GET_GUID_HOB_DATA (GuidHob);
+
+  if (SenderPartId == RASFW_VMID) {
+    SecBufStart = StmmCommBuffers->RasMmBufferAddr;
+    SecBufRange = StmmCommBuffers->RasMmBufferSize;
+    SecBufEnd   = SecBufStart + SecBufRange;
+  } else if (SenderPartId == SATMC_VMID) {
+    SecBufStart = StmmCommBuffers->SatMcMmBufferAddr;
+    SecBufRange = StmmCommBuffers->SatMcMmBufferSize;
+    SecBufEnd   = SecBufStart + SecBufRange;
+  } else {
+    Status = EFI_UNSUPPORTED;
+    goto ExitCheckBufferAddr;
+  }
+
+  if ((CommBufStart >= SecBufStart) &&
+      (CommBufStart < SecBufEnd))
+  {
+    CommBufEnd = SecBufEnd;
+  } else {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: CommBuff[0x%lx] not in range [0x%lx - 0x%lx] \n",
+      __FUNCTION__,
+      CommBufStart,
+      SecBufStart,
+      SecBufEnd
+      ));
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitCheckBufferAddr;
+  }
+
+  if ((CommBufEnd - CommBufStart) < sizeof (EFI_MM_COMMUNICATE_HEADER)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: CommBuff[0x%lx] not enough %u for header(%u)\n",
+      __FUNCTION__,
+      CommBufStart,
+      (CommBufEnd - CommBufStart),
+      sizeof (EFI_MM_COMMUNICATE_HEADER)
+      ));
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitCheckBufferAddr;
+  }
+
+  // perform bounds check.
+  if ((CommBufEnd - CommBufStart - sizeof (EFI_MM_COMMUNICATE_HEADER)) <
+      ((EFI_MM_COMMUNICATE_HEADER *)CommBufStart)->MessageLength)
+  {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: CommBuff[0x%lx] not enough %u for Payload(%u)\n",
+      __FUNCTION__,
+      CommBufStart,
+      (CommBufEnd - CommBufStart - sizeof (EFI_MM_COMMUNICATE_HEADER)),
+      ((EFI_MM_COMMUNICATE_HEADER *)CommBufStart)->MessageLength
+      ));
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitCheckBufferAddr;
+  }
+
+  Status = EFI_SUCCESS;
+ExitCheckBufferAddr:
+  return Status;
+}
+
+/**
+ * Handle Communication between SPs. The NS-S communication will not be handled
+ * by this function.
+ * Check if payload buffer address is in the correct range for the sender VM's
+ * mailbox. If Valid, then try to route this request to the correct MMI handler.
+ *
+ * @param  [in] SenderPartId   Sender VM Id.
+ * @param  [in] SecBuf         Pointer to the payload.
+ *
+ * @retval      EFI_SUCCESS            Successfully parsed the incoming payload
+ *                                     and re-directed the call to the appropriate
+ *                                     MMI handler.
+ *              OTHER                  Invalid Buffer address ORFrom MMI handler when
+ *                                     trying to route this request.
+ */
+STATIC
+EFI_STATUS
+HandleSpComm (
+  IN UINT16  SenderPartId,
+  IN UINTN   SecBuf
+  )
+{
+  EFI_STATUS                 Status;
+  EFI_MM_COMMUNICATE_HEADER  *CommunicateHeader;
+
+  Status = CheckBufferAddr (SecBuf, SenderPartId);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Address %lx is not valid %r \n",
+      __FUNCTION__,
+      SecBuf,
+      Status
+      ));
+    goto ExitHandleSpComm;
+  }
+
+  CommunicateHeader = (EFI_MM_COMMUNICATE_HEADER *)(UINTN)SecBuf;
+  Status            = gMmst->MmiManage (
+                               &CommunicateHeader->HeaderGuid,
+                               NULL,
+                               CommunicateHeader->Data,
+                               &CommunicateHeader->MessageLength
+                               );
+
+ExitHandleSpComm:
+  return Status;
 }
 
 /**
@@ -474,7 +640,7 @@ DelegatedEventLoop (
     DEBUG ((DEBUG_INFO, "X2 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg2));
     DEBUG ((DEBUG_INFO, "X3 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg3));
     DEBUG ((DEBUG_INFO, "X4 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg4));
-    DEBUG ((DEBUG_INFO, "X5 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg5));
+    DEBUG ((DEBUG_INFO, "X5 :  0x%lx\n", (UINTN)EventCompleteSvcArgs->Arg5));
     DEBUG ((DEBUG_INFO, "X6 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg6));
     DEBUG ((DEBUG_INFO, "X7 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg7));
 
@@ -490,18 +656,30 @@ DelegatedEventLoop (
           Status                     = EFI_SUCCESS;
           break;
         case ARM_SMC_ID_MM_COMMUNICATE_AARCH64:
-          Status = CpuDriverEntryPoint (
-                     EventCompleteSvcArgs->Arg0,
-                     EventCompleteSvcArgs->Arg6,
-                     EventCompleteSvcArgs->Arg5
-                     );
-          if (EFI_ERROR (Status)) {
-            DEBUG ((
-              DEBUG_ERROR,
-              "Failed delegated event 0x%x, Status 0x%x\n",
-              EventCompleteSvcArgs->Arg3,
-              Status
-              ));
+          if (SenderPartId == 0) {
+            Status = CpuDriverEntryPoint (
+                       EventCompleteSvcArgs->Arg0,
+                       EventCompleteSvcArgs->Arg6,
+                       EventCompleteSvcArgs->Arg5
+                       );
+            if (EFI_ERROR (Status)) {
+              DEBUG ((
+                DEBUG_ERROR,
+                "Failed delegated event 0x%x, Status 0x%x\n",
+                EventCompleteSvcArgs->Arg3,
+                Status
+                ));
+            }
+          } else {
+            Status = HandleSpComm (SenderPartId, (UINTN)EventCompleteSvcArgs->Arg5);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((
+                DEBUG_ERROR,
+                "Secure SPComm Failed delegated event 0x%x, Status 0x%x\n",
+                EventCompleteSvcArgs->Arg3,
+                Status
+                ));
+            }
           }
 
           break;
