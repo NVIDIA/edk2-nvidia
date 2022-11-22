@@ -39,6 +39,7 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSpiClockFrequency
+  gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable
 
 [Protocols]
   gNVIDIANonDiscoverableDeviceProtocolGuid

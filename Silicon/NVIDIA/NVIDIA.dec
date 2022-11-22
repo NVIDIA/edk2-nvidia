@@ -539,3 +539,6 @@
 
 # Progress report message during BDS wait
   gNVIDIATokenSpaceGuid.PcdBootManagerWaitMessage|L""|VOID*|0x0000006F
+
+# Platform supports NS QSPI controllers
+  gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|FALSE|BOOLEAN|0x00000080

@@ -411,6 +411,7 @@ DeviceDiscoveryNotify (
   EFI_STATUS                       Status;
   NON_DISCOVERABLE_DEVICE          *Device;
   QSPI_CONTROLLER_TYPE             ControllerType;
+  CONST UINT32                     *SecureController;
   CONST UINT32                     *DtClockIds;
   INT32                            ClocksLength;
   CONST CHAR8                      *ClockName;
@@ -449,6 +450,13 @@ DeviceDiscoveryNotify (
         return EFI_UNSUPPORTED;
       }
 
+      SecureController = (CONST UINT32 *)fdt_getprop (
+                                           DeviceTreeNode->DeviceTreeBase,
+                                           DeviceTreeNode->NodeOffset,
+                                           "nvidia,secure-qspi-controller",
+                                           NULL
+                                           );
+
       Status = gBS->LocateProtocol (
                       &gEfiMmCommunication2ProtocolGuid,
                       NULL,
@@ -456,6 +464,14 @@ DeviceDiscoveryNotify (
                       );
       if (EFI_ERROR (Status)) {
         return EFI_SUCCESS;
+      } else {
+        if (PcdGetBool (PcdNonSecureQspiAvailable)) {
+          if (SecureController == NULL) {
+            return EFI_SUCCESS;
+          }
+        } else {
+          return EFI_UNSUPPORTED;
+        }
       }
 
       return EFI_UNSUPPORTED;
