@@ -36,12 +36,14 @@
   UefiBootServicesTableLib
   MemoryAllocationLib
   UefiLib
+  Tpm2CommandLib
 
 [Protocols]
   gNVIDIATpm2ProtocolGuid  ## CONSUMES
 
 [Pcd]
-  gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType    ## PRODUCES
+  gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType   ## PRODUCES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2InitializationPolicy ## CONSUMES
 
 [Depex]
   gNVIDIATpm2ProtocolGuid

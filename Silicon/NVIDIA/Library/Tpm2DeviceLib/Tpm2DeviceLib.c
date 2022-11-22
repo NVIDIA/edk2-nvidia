@@ -15,6 +15,7 @@
 #include <Library/Tpm2DeviceLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
+#include <Library/Tpm2CommandLib.h>
 
 #include <Guid/TpmInstance.h>
 #include <IndustryStandard/TpmPtp.h>
@@ -85,6 +86,43 @@ TPM2_DEVICE_INTERFACE  mInternalTpm2Device = {
 };
 
 /**
+  Initialize TPM
+
+  @retval EFI_SUCCESS      TPM initialized successfully.
+  @retval EFI_DEVICE_ERROR Unexpected device behavior.
+**/
+STATIC
+EFI_STATUS
+Tpm2Initialize (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = Tpm2RequestUseTpmInternal ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Fail to request to use TPM.\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  if (PcdGet8 (PcdTpm2InitializationPolicy) == 1) {
+    DEBUG ((DEBUG_INFO, "%a: TPM Startup STATE\n", __FUNCTION__));
+    Status = Tpm2Startup (TPM_SU_STATE);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a: TPM Startup STATE failed - %r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_INFO, "%a: TPM Startup CLEAR\n", __FUNCTION__));
+      Status = Tpm2Startup (TPM_SU_CLEAR);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: TPM Startup CLEAR failed - %r\n", __FUNCTION__, Status));
+        return EFI_DEVICE_ERROR;
+      }
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Get TPM2 protocol
 
   @param[in]    Event   The Event that is being processed
@@ -141,6 +179,14 @@ Tpm2RegistrationEvent (
     }
 
     mTpm2 = Tpm2;
+
+    Status = Tpm2Initialize ();
+    if (EFI_ERROR (Status)) {
+      //
+      // Disable if fail to initialize TPM
+      //
+      mTpm2 = NULL;
+    }
   } else {
     //
     // Disable if the protocol had been uninstalled
