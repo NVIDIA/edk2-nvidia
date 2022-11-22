@@ -344,7 +344,6 @@ UpdateQspiInfo (
   UINT32                Index;
   VOID                  *Dtb;
   INT32                 NodeOffset;
-  INT32                 SubNode;
   NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
   UINT8                 QspiStatus;
 
@@ -374,23 +373,20 @@ UpdateQspiInfo (
       goto ErrorExit;
     }
 
-    SubNode = 0;
-    fdt_for_each_subnode (SubNode, Dtb, NodeOffset) {
-      if (0 == fdt_node_check_compatible (Dtb, SubNode, "tcg,tpm_tis-spi")) {
-        Status = PatchProtocol->FindNode (PatchProtocol, ACPI_QSPI1_STA, &AcpiNodeInfo);
-        if (EFI_ERROR (Status)) {
-          return Status;
-        }
+    if (NULL == fdt_getprop (Dtb, NodeOffset, "nvidia,secure-qspi-controller", NULL)) {
+      Status = PatchProtocol->FindNode (PatchProtocol, ACPI_QSPI1_STA, &AcpiNodeInfo);
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
 
-        if (AcpiNodeInfo.Size > sizeof (QspiStatus)) {
-          return EFI_DEVICE_ERROR;
-        }
+      if (AcpiNodeInfo.Size > sizeof (QspiStatus)) {
+        return EFI_DEVICE_ERROR;
+      }
 
-        QspiStatus = 0xF;
-        Status     = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &QspiStatus, sizeof (QspiStatus));
-        if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_QSPI1_STA, Status));
-        }
+      QspiStatus = 0xF;
+      Status     = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &QspiStatus, sizeof (QspiStatus));
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_QSPI1_STA, Status));
       }
     }
   }
