@@ -29,6 +29,16 @@
   INF Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiStmm.inf
   INF Silicon/NVIDIA/Drivers/MctpMmDxe/MctpStandaloneMm.inf
 
+  #
+  # Sequential Record Flash Driver
+  #
+  INF Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordStorage.inf
+
+  #
+  # Sequential Record client driver
+  #
+  INF Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordComm.inf
+
   !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
 
 ################################################################################

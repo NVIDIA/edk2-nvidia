@@ -1,0 +1,56 @@
+#/** @file
+#
+#  Nor Flash Driver
+#
+#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SequentialRecordStorage
+  FILE_GUID                      = 296307fc-362d-42ac-989e-b540d0ab403b
+  MODULE_TYPE                    = MM_STANDALONE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  ENTRY_POINT                    = SequentialStorageInit
+
+[Sources.common]
+  SequentialRecordStorage.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  IoLib
+  MemoryAllocationLib
+  MmServicesTableLib
+  StandaloneMmDriverEntryPoint
+  GptLib
+  ArmSvcLib
+  StandaloneMmOpteeLib
+  BaseLib
+  Crc8Lib
+
+[Protocols]
+  gNVIDIANorFlashProtocolGuid
+  gEfiSmmFirmwareVolumeBlockProtocolGuid
+  gNVIDIASequentialStorageGuid
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
+  gNVIDIARasLogMmGuid
+  gNVIDIAEarlyVarsMmGuid
+  gNVIDIARasCmetMmGuid
+
+[Depex]
+  TRUE
