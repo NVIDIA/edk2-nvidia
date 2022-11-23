@@ -524,6 +524,13 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
         Memory32Fixed(ReadWrite,0x0e80201c, 8) // PSC_EXT_CFG_SIDTABLE_VM0_0, PSC_EXT_CFG_SIDCONFIG_VM0_0 (extcfg in DT)
       })
 
+      Name (_DSD, Package () {
+        ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
+        Package () {
+          Package (2) {"nvidia,sidtable", Package {9, 9, 9, 9}}, // to put in PSC_EXT_CFG_SIDTABLE_VM0_0 for SMMU config.
+        }
+      })
+
       // _STA(): Report device status (0xF: Present, 0x0: Absent)
       Method (_STA) {
         Return (0xF)
