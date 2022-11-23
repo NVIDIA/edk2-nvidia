@@ -497,21 +497,7 @@ UpdateCpuInfo (
   }
 
   // Build top level node
-  ProcHierarchyIndex                          = 0;
-  ProcHierarchyInfo[ProcHierarchyIndex].Token = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);
-  ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
-                                                  EFI_ACPI_6_3_PPTT_PACKAGE_PHYSICAL,
-                                                  EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
-                                                  EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
-                                                  EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
-                                                  EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
-                                                  );
-  ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = CM_NULL_TOKEN;
-  ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = CM_NULL_TOKEN;
-  ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = 0;
-  ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CM_NULL_TOKEN;
-
-  ProcHierarchyIndex++;
+  ProcHierarchyIndex = 0;
 
   // loop through all sockets and see if there are private resources for socket
   INT32   SocketOffset;
@@ -601,13 +587,13 @@ UpdateCpuInfo (
     // Build Socket Proc topology node and socket token map
     ProcHierarchyInfo[ProcHierarchyIndex].Token = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);
     ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
-                                                    EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                    EFI_ACPI_6_3_PPTT_PACKAGE_PHYSICAL,
                                                     EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
                                                     EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
                                                     EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
                                                     EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
                                                     );
-    ProcHierarchyInfo[ProcHierarchyIndex].ParentToken          = REFERENCE_TOKEN (ProcHierarchyInfo[0]);
+    ProcHierarchyInfo[ProcHierarchyIndex].ParentToken          = CM_NULL_TOKEN;
     ProcHierarchyInfo[ProcHierarchyIndex].GicCToken            = CM_NULL_TOKEN;
     ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources = SocketPrivateResourceCntr;
     if (SocketPrivateResourceCntr > 0) {
