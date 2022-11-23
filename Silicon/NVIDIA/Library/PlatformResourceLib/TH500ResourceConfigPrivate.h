@@ -89,7 +89,7 @@ typedef struct {
 
 #define TEGRABL_MAX_CONTROLLER_PROD_WORDS  64
 
-#define BLOCK_SIZE                          (12)
+#define BLOCK_SIZE                          (512)
 #define PRIMARY_COPY                        (0)
 #define TEGRABL_BINARY_MAX                  (33U)
 #define TEGRABL_BINARY_COPY_MAX             (4)

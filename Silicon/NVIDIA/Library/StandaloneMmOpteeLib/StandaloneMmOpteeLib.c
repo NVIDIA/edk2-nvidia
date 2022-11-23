@@ -268,7 +268,7 @@ GetVarStoreCs (
     }
 
     Status = GetPartitionInfoStMm (
-               (UINTN)&CpuBlAddr,
+               (UINTN)CpuBlAddr,
                TEGRABL_VARIABLE_IMAGE_INDEX,
                &DeviceInstance,
                &VarOffset,
