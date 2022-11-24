@@ -35,6 +35,7 @@ typedef struct _NVIDIA_C2C_NODE_PROTOCOL NVIDIA_C2C_NODE_PROTOCOL;
 
   @param[in]     This                The instance of the NVIDIA_C2C_NODE_PROTOCOL.
   @param[in]     Partitions          Partitions to be initialized.
+  @param[out]    C2cStatus           Status of init.
 
   @return EFI_SUCCESS                C2C initialized.
   @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
@@ -43,8 +44,9 @@ typedef struct _NVIDIA_C2C_NODE_PROTOCOL NVIDIA_C2C_NODE_PROTOCOL;
 typedef
 EFI_STATUS
 (EFIAPI *C2C_NODE_INIT)(
-  IN  NVIDIA_C2C_NODE_PROTOCOL   *This,
-  IN  UINT8                      Partitions
+  IN   NVIDIA_C2C_NODE_PROTOCOL   *This,
+  IN   UINT8                      Partitions,
+  OUT  UINT8                      *C2cStatus
   );
 
 /// NVIDIA_C2C_NODE_PROTOCOL protocol structure.

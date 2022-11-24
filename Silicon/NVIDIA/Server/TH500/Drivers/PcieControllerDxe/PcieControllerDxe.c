@@ -358,6 +358,7 @@ InitializeController (
   EFI_STATUS                Status;
   NVIDIA_C2C_NODE_PROTOCOL  *C2cProtocol = NULL;
   PCI_CAPABILITY_PCIEXP     *PciExpCap   = NULL;
+  UINT8                     C2cStatus;
 
   /* Program XAL */
   MmioWrite32 (Private->XalBase + XAL_RC_MEM_32BIT_BASE_HI, upper_32_bits (Private->MemBase));
@@ -428,11 +429,11 @@ InitializeController (
         ));
       Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&C2cProtocol);
       if (!EFI_ERROR (Status)) {
-        Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions);
+        Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions, &C2cStatus);
         if (EFI_ERROR (Status)) {
           DEBUG ((EFI_D_ERROR, "%a: C2C Initialization Failed: %r\r\n", __FUNCTION__, Status));
         } else {
-          DEBUG ((EFI_D_ERROR, "%a: C2C Initialization Passed: %r\r\n", __FUNCTION__, Status));
+          DEBUG ((EFI_D_ERROR, "%a: C2C Initialization Status: 0x%x\r\n", __FUNCTION__, C2cStatus));
         }
       }
 

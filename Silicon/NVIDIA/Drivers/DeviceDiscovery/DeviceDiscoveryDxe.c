@@ -1200,6 +1200,7 @@ AssertPgNodes (
 
   @param[in]     This                The instance of the NVIDIA_C2C_NODE_PROTOCOL.
   @param[in]     Partitions          Partitions to be initialized.
+  @param[out]    C2cStatus           Status of init.
 
   @return EFI_SUCCESS                C2C initialized.
   @return EFI_NOT_READY              BPMP-IPC protocol is not installed.
@@ -1207,8 +1208,9 @@ AssertPgNodes (
 **/
 EFI_STATUS
 InitC2cPartitions (
-  IN  NVIDIA_C2C_NODE_PROTOCOL  *This,
-  IN  UINT8                     Partitions
+  IN   NVIDIA_C2C_NODE_PROTOCOL  *This,
+  IN   UINT8                     Partitions,
+  OUT  UINT8                     *C2cStatus
   )
 {
   NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol = NULL;
@@ -1223,7 +1225,7 @@ InitC2cPartitions (
   Request.Command    = CmdC2cStartInitialization;
   Request.Partitions = Partitions;
 
-  return BpmpProcessC2cCommand (BpmpIpcProtocol, &Request, NULL, 0);
+  return BpmpProcessC2cCommand (BpmpIpcProtocol, &Request, C2cStatus, sizeof (UINT8));
 }
 
 /**
