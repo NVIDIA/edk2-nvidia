@@ -9,6 +9,7 @@
 
 #include <Uefi.h>
 #include <ConfigurationManagerObject.h>
+#include <PiDxe.h>
 
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
@@ -23,6 +24,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/TimerLib.h>
+#include <Library/HobLib.h>
 #include <Protocol/Eeprom.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <Protocol/ConfigurationManagerProtocol.h>
@@ -40,7 +42,7 @@ STATIC CHAR16                   *BoardProductName;
 STATIC CHAR16                   *AssetTag;
 STATIC CHAR16                   *SerialNumber;
 STATIC UINTN                    CurCpuFreqMhz;
-STATIC UINTN                    NumProcessorSockets;
+STATIC UINT32                   SocketMask;
 
 /**
   GetCpuFreqT194
@@ -313,11 +315,10 @@ OemGetProcessorInformation (
   IN OUT OEM_MISC_PROCESSOR_DATA         *MiscProcessorData
   )
 {
-  UINT16  ProcessorCount;
+  DEBUG ((DEBUG_INFO, "%a: ProcessorIndex %x ", __FUNCTION__, ProcessorIndex));
 
-  ProcessorCount = NumProcessorSockets;
-
-  if (ProcessorIndex < ProcessorCount) {
+  if ((SocketMask & (1UL << ProcessorIndex)) != 0) {
+    DEBUG ((DEBUG_INFO, "is enabled\n"));
     ProcessorStatus->Bits.CpuStatus       = 1; // CPU enabled
     ProcessorStatus->Bits.Reserved1       = 0;
     ProcessorStatus->Bits.SocketPopulated = 1;
@@ -325,6 +326,7 @@ OemGetProcessorInformation (
     PopulateCpuData (MiscProcessorData);
     PopulateCpuCharData (ProcessorCharacteristics);
   } else {
+    DEBUG ((DEBUG_INFO, "is disbled\n"));
     ProcessorStatus->Bits.CpuStatus       = 0; // CPU disabled
     ProcessorStatus->Bits.Reserved1       = 0;
     ProcessorStatus->Bits.SocketPopulated = 0;
@@ -479,7 +481,7 @@ OemGetCacheInformation (
   UINT8              NumCacheLevels;
   EFI_STATUS         Status;
 
-  if (ProcessorIndex >= NumProcessorSockets) {
+  if ((SocketMask & (1UL << ProcessorIndex)) == 0) {
     return FALSE;
   }
 
@@ -523,6 +525,17 @@ OemGetMaxProcessors (
   VOID
   )
 {
+  UINTN  NumProcessorSockets;
+  UINTN  Index;
+
+  NumProcessorSockets = 0;
+
+  for (Index = 0; Index < PcdGet32 (PcdTegraMaxSockets); Index++) {
+    if ((SocketMask & (1UL << Index)) != 0) {
+      NumProcessorSockets++;
+    }
+  }
+
   return NumProcessorSockets;
 }
 
@@ -559,7 +572,7 @@ OemIsProcessorPresent (
   IN UINTN  ProcessorIndex
   )
 {
-  if (ProcessorIndex < NumProcessorSockets) {
+  if ((SocketMask & (1UL << ProcessorIndex)) != 0) {
     return TRUE;
   } else {
     return FALSE;
@@ -898,6 +911,7 @@ OemMiscLibConstructor (
 {
   EFI_STATUS  Status;
   UINTN       ChipId;
+  VOID        *Hob;
 
   Status = gBS->LocateProtocol (&gNVIDIACvmEepromProtocolGuid, NULL, (VOID **)&SmEepromData);
   if (EFI_ERROR (Status)) {
@@ -910,10 +924,21 @@ OemMiscLibConstructor (
     SmEepromData = NULL;
   }
 
-  NumProcessorSockets =  1;  // Hardcode this to 1 for now.
-  ChipId              =  TegraGetChipID ();
-  CurCpuFreqMhz       =  GetCpuFreqMhz (ChipId);
-  Type32Record        = (SMBIOS_TABLE_TYPE32 *)PcdGetPtr (PcdType32Info);
-  Type3Record         = (SMBIOS_TABLE_TYPE3 *)PcdGetPtr (PcdType3Info);
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    SocketMask = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->SocketMask;
+  } else {
+    ASSERT (FALSE);
+    SocketMask = 0x1;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: SocketMask = 0x%x\n", __FUNCTION__, SocketMask));
+
+  ChipId        =  TegraGetChipID ();
+  CurCpuFreqMhz =  GetCpuFreqMhz (ChipId);
+  Type32Record  = (SMBIOS_TABLE_TYPE32 *)PcdGetPtr (PcdType32Info);
+  Type3Record   = (SMBIOS_TABLE_TYPE3 *)PcdGetPtr (PcdType3Info);
   return EFI_SUCCESS;
 }

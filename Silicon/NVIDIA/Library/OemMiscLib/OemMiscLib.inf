@@ -34,6 +34,7 @@
 [LibraryClasses]
   BaseMemoryLib
   DebugLib
+  HobLib
   PrintLib
   PlatformResourceLib
   FdtLib
@@ -63,7 +64,10 @@
   gNVIDIATokenSpaceGuid.PcdType32Info
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
   gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
 
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
   gNVIDIACvmEepromProtocolGuid
