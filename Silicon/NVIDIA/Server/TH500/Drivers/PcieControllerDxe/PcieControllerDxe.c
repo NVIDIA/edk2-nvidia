@@ -422,7 +422,9 @@ InitializeController (
       if (!EFI_ERROR (Status)) {
         Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed To Init C2c %r\r\n", __FUNCTION__, Status));
+          DEBUG ((EFI_D_ERROR, "%a: C2C Initialization Failed: %r\r\n", __FUNCTION__, Status));
+        } else {
+          DEBUG ((EFI_D_ERROR, "%a: C2C Initialization Passed: %r\r\n", __FUNCTION__, Status));
         }
       }
 
