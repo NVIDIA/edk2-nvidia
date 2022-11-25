@@ -343,7 +343,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     {
       Name (_HID, "NVDA2006")
       Name (_UID, 0)
-      Name (_CCA, ZERO)
+      Name (_CCA, 1)
 
       Name(_CRS, ResourceTemplate() {
         Memory32Fixed(ReadWrite, 0x13E00000, 0x1000)
