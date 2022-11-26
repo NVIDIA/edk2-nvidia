@@ -21,8 +21,6 @@
 
 #include <TH500/TH500Definitions.h>
 
-#define PLATFORM_MAX_SOCKETS  (PcdGet32 (PcdTegraMaxSockets))
-
 typedef struct {
   UINT32    PxmDmn;
   UINT64    HbmSize;
@@ -172,7 +170,7 @@ InstallStaticResourceAffinityTable (
   FreePool (Descriptors);
 
   // Allocate space to save HBM info
-  HbmMemInfo = (HBM_MEMORY_INFO *)AllocateZeroPool (sizeof (HBM_MEMORY_INFO) * TH500_GPU_MAX_NR_MEM_PARTITIONS * PLATFORM_MAX_SOCKETS);
+  HbmMemInfo = (HBM_MEMORY_INFO *)AllocateZeroPool (sizeof (HBM_MEMORY_INFO) * TH500_TOTAL_PROXIMITY_DOMAINS);
   if (HbmMemInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate HBM memory info\r\n"));
     return EFI_DEVICE_ERROR;
