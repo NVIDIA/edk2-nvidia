@@ -64,6 +64,7 @@
   gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString|L"StandaloneMm"
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
   gArmTokenSpaceGuid.PcdMmBufferSize|65536
+  gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead|FALSE
 
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE

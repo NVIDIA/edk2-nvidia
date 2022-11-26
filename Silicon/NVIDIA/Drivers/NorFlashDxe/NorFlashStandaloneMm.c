@@ -413,9 +413,22 @@ ReadNorFlashSFDP (
   }
 
   if ((SFDPParam4ByteInstructionTbl->ReadCmd0C == FALSE) ||
-      (SFDPParam4ByteInstructionTbl->WriteCmd12 == FALSE))
+      (SFDPParam4ByteInstructionTbl->ReadCmd13 == FALSE))
   {
     DEBUG ((EFI_D_ERROR, "%a: NOR flash's single bit RW unsupported.\n", __FUNCTION__));
+    Status = EFI_UNSUPPORTED;
+    goto ErrorExit;
+  }
+
+  // If Fast Read isn't supported override the FastReadSupport capability bool even if
+  // the support
+  if (SFDPParam4ByteInstructionTbl->ReadCmd0C == FALSE) {
+    Private->PrivateFlashAttributes.FastReadSupport = FALSE;
+  }
+
+  // Page write has to be supported
+  if (SFDPParam4ByteInstructionTbl->WriteCmd12 == FALSE) {
+    DEBUG ((EFI_D_ERROR, "%a: NOR flash's single page Write unsupported.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -740,14 +753,26 @@ NorFlashRead (
     AddressShift                 += 8;
   }
 
-  Private->CommandBuffer[0] = NOR_FAST_READ_DATA_CMD;
+  if (Private->PrivateFlashAttributes.FastReadSupport == TRUE) {
+    Private->CommandBuffer[0] = NOR_FAST_READ_DATA_CMD;
+    Packet.WaitCycles         = Private->PrivateFlashAttributes.ReadWaitCycles;
+  } else {
+    Private->CommandBuffer[0] = NOR_READ_DATA_CMD;
+    Packet.WaitCycles         = 0;
+  }
 
   Packet.TxBuf      = Private->CommandBuffer;
   Packet.TxLen      = CmdSize;
   Packet.RxBuf      = Buffer;
   Packet.RxLen      = Size;
-  Packet.WaitCycles = Private->PrivateFlashAttributes.ReadWaitCycles;
   Packet.ChipSelect = Private->QspiChipSelect;
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Using Command %u to READ Wait %u  \n",
+    __FUNCTION__,
+    Private->CommandBuffer[0],
+    Packet.WaitCycles
+    ));
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -1396,6 +1421,13 @@ NorFlashInitialise (
     __FUNCTION__,
     Private->QspiChipSelect
     ));
+
+  if (PcdGetBool (PcdSecureQspiUseFastRead) == TRUE) {
+    Private->PrivateFlashAttributes.FastReadSupport = TRUE;
+  } else {
+    Private->PrivateFlashAttributes.FastReadSupport = FALSE;
+  }
+
   // Read NOR flash's SFDP
   Status = ReadNorFlashSFDP (Private);
   if (EFI_ERROR (Status)) {

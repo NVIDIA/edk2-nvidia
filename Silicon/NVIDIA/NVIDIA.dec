@@ -351,6 +351,9 @@
 #L4T Configuration support
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|FALSE|BOOLEAN|0x00000100
 
+# Use FAST reads in S QSPI controllers
+  gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead|TRUE|BOOLEAN|0x00000099
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067

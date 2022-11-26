@@ -435,7 +435,7 @@ ReadNorFlashSFDP (
 
   // Page write has to be supported
   if (SFDPParam4ByteInstructionTbl->WriteCmd12 == FALSE) {
-    DEBUG ((EFI_D_ERROR, "%a: NOR flash's single bit Write unsupported.\n", __FUNCTION__));
+    DEBUG ((EFI_D_ERROR, "%a: NOR flash's single Page Write unsupported.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }

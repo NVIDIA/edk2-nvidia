@@ -49,6 +49,7 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraNorBlockProtocols
+  gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead
 
 [Protocols]
   gNVIDIANorFlashProtocolGuid
