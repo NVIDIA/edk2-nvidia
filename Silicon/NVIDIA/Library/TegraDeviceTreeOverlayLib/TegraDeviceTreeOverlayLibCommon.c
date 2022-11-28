@@ -684,6 +684,8 @@ process_deletes:
             DEBUG ((DEBUG_ERROR, "Error deleting node: %a from %a\n", PropStr, TargetName));
             return EFI_DEVICE_ERROR;
           }
+
+          DEBUG ((DEBUG_ERROR, "Node Deleted: %a from %a\n", PropStr, TargetName));
         }
       }
 
@@ -696,6 +698,8 @@ process_deletes:
             DEBUG ((DEBUG_ERROR, "Error deleting property: %a from %a\n", PropStr, TargetName));
             return EFI_DEVICE_ERROR;
           }
+
+          DEBUG ((DEBUG_ERROR, "Property Deleted: %a from %a\n", PropStr, TargetName));
         }
       }
     }
