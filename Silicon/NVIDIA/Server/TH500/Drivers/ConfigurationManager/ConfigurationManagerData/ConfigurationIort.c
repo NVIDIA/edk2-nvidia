@@ -34,6 +34,8 @@ STATIC IORT_PRIVATE_DATA  mIortPrivate = {
   .IoNodes[IORT_TYPE_INDEX (EArmObjGicItsIdentifierArray)] = { sizeof (CM_ARM_ITS_IDENTIFIER), }
 };
 
+UINT32 UniqueIdentifier;
+
 /**
   Function map region into GCD and MMU
 
@@ -490,6 +492,8 @@ SetupIortNodeForItsGroup (
   IortNode->ItsIdCount = 1;
   IortNode->Token      = (CM_OBJECT_TOKEN)(VOID *)IortNode;
   IortNode->ItsIdToken = (CM_OBJECT_TOKEN)ItsIdArray;
+  IortNode->Identifier = UniqueIdentifier++;
+  ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
   Private->ItsIdentifierIndex++;
 
@@ -570,17 +574,6 @@ SetupIortIdMappingForSmmuV3 (
     PropNode->IdMapCount++;
   }
 
-  // Validation check for DeviceIdMappingIndex
-  if (((IortNode->PriInterrupt == 0) || (IortNode->GerrInterrupt == 0) || \
-       (IortNode->SyncInterrupt == 0) || (IortNode->EventInterrupt == 0)) && \
-      (PropNode->MsiProp == NULL) && (PropNode->IdMapCount != 0))
-  {
-    // As per the IORT specifciation, DeviceIdMappingIndex must contain a valid
-    // index if any one of wired interrupt is zero and msi-map is not defined
-    IortNode->DeviceIdMappingIndex = PropNode->IdMapCount;
-    DEBUG ((EFI_D_WARN, "%a: Setting the invalid IDMAP index for SMMU\r\n", __FUNCTION__));
-  }
-
   IortNode->IdMappingCount = PropNode->IdMapCount;
   IortNode->IdMappingToken = (CM_OBJECT_TOKEN)PropNode->IdMapArray;
 
@@ -628,6 +621,8 @@ SetupIortNodeForSmmuV3 (
   IortNode->ProximityDomain = 0;
   IortNode->Model           = EFI_ACPI_IORT_SMMUv3_MODEL_GENERIC;
   IortNode->Flags           = EFI_ACPI_IORT_SMMUv3_FLAG_PROXIMITY_DOMAIN;
+  IortNode->Identifier      = UniqueIdentifier++;
+  ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
     IortNode->Flags |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
@@ -735,6 +730,8 @@ SetupIortNodeForPciRc (
   IortNode->CacheCoherent     = 0;
   IortNode->IdMappingCount    = 1;
   IortNode->PciSegmentNumber  = 0;
+  IortNode->Identifier        = UniqueIdentifier++;
+  ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
     IortNode->CacheCoherent |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
@@ -826,6 +823,8 @@ SetupIortNodeForNComp (
   IortNode->ObjectName        = PropNode->ObjectName;
   IortNode->IdMappingCount    = 1;
   IortNode->CacheCoherent     = 0;
+  IortNode->Identifier        = UniqueIdentifier++;
+  ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
     IortNode->CacheCoherent |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
@@ -890,6 +889,9 @@ InitializeIoRemappingNodes (
   IORT_PRIVATE_DATA           *Private;
   LIST_ENTRY                  *ListEntry;
   EFI_STATUS                  Status;
+
+  // Identifier for all IORT nodes
+  UniqueIdentifier = 0;
 
   Private = &mIortPrivate;
   DevMap  = mIortDevTypeMap;
@@ -974,7 +976,7 @@ InstallIoRemappingTable (
       NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
 
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_IO_REMAPPING_TABLE_SIGNATURE;
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision  = EFI_ACPI_IO_REMAPPING_TABLE_REVISION_00;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision  = EFI_ACPI_IO_REMAPPING_TABLE_REVISION_06;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdIort);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = NULL;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = 0;
