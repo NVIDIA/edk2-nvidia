@@ -419,7 +419,7 @@ InitializeController (
     if (PciExpCap->LinkStatus.Bits.DataLinkLayerLinkActive) {
       DEBUG ((
         EFI_D_ERROR,
-        "PCIe Controller-%d Link is UP (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
+        "PCIe Controller-0x%x Link is UP (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
         Private->CtrlId,
         PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
         PciExpCap->LinkCapability.Bits.MaxLinkWidth,
@@ -445,7 +445,7 @@ InitializeController (
   if (count == 10000) {
     DEBUG ((
       EFI_D_ERROR,
-      "PCIe Controller-%d Link is DOWN (Capable: Gen-%d,x%d)\r\n",
+      "PCIe Controller-0x%x Link is DOWN (Capable: Gen-%d,x%d)\r\n",
       Private->CtrlId,
       PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
       PciExpCap->LinkCapability.Bits.MaxLinkWidth
@@ -606,11 +606,11 @@ DeviceDiscoveryNotify (
         Private->PcieRootBridgeConfigurationIo.SegmentNumber = SwapBytes32 (Private->PcieRootBridgeConfigurationIo.SegmentNumber);
       }
 
-      DEBUG ((DEBUG_ERROR, "Segment Number = %u\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
+      DEBUG ((DEBUG_ERROR, "Segment Number = 0x%x\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
 
       /* Currently Segment number is nothing but the controller-ID  */
       Private->CtrlId = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
-      DEBUG ((DEBUG_ERROR, "Controller-ID = %u\n", Private->CtrlId));
+      DEBUG ((DEBUG_ERROR, "Controller-ID = 0x%x\n", Private->CtrlId));
 
       RPNodeOffset = fdt_first_subnode (
                        DeviceTreeNode->DeviceTreeBase,
