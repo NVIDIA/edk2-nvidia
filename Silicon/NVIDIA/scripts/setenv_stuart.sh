@@ -27,7 +27,7 @@ _die() {
 }
 
 # verify we are at the root of the workspace
-if [ -d edk2 -a -d edk2-nvidia ]; then
+if [ -d edk2 ]; then
   _msg "building from workspace rooted at: `pwd`"
 else
   _die 1 "must be launched from the workspace root."
@@ -58,7 +58,7 @@ verify_cmd_exists aarch64-linux-gnu-gcc
 export WORKSPACE=`pwd`
 
 # Add NVIDIA Python modules to the python path
-export PYTHONPATH=$WORKSPACE/edk2-nvidia/Silicon/NVIDIA:$PYTHONPATH
+export PYTHONPATH=${SCRIPT_DIR}/..:${PYTHONPATH}
 
 # Use the cross-compiler installed on the host
 export CROSS_COMPILER_PREFIX=/usr/bin/aarch64-linux-gnu-
