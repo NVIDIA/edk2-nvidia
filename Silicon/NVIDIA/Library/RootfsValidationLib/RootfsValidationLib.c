@@ -431,7 +431,7 @@ CheckAndUpdateVariable (
   VOID
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS  Status = EFI_SUCCESS;
   UINT32      Index;
 
   // Check mRootfsInfo.RootfsVar[], update the variable if UpdateFlag is set
