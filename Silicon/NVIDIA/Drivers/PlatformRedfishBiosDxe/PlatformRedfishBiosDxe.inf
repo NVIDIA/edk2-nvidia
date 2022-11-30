@@ -1,0 +1,46 @@
+## @file
+#  Platform Redfish BIOS configuration driver
+#
+#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PlatformRedfishBiosDxe
+  FILE_GUID                      = 2E3F144D-E0AE-41E8-8040-74DB290D20E2
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = PlatformRedfishBiosEntryPoint
+  UNLOAD_IMAGE                   = PlatformRedfishBiosUnload
+
+[Sources]
+  PlatformRedfishBiosDxe.c
+  PlatformRedfishBiosDxe.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  RedfishPkg/RedfishPkg.dec
+  RedfishClientPkg/RedfishClientPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiLib
+  JsonLib
+  RedfishPlatformConfigLib
+  PrintLib
+
+[Protocols]
+  gEdkIIRedfishResourceAddendumProtocolGuid ## PRODUCED ##
+
+[Depex]
+  TRUE
