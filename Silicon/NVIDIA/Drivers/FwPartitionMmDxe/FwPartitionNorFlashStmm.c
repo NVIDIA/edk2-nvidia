@@ -354,12 +354,10 @@ FPNorFlashInitDevices (
     DeviceInfo->DeviceName  = L"MM-NorFlash";
     DeviceInfo->DeviceRead  = FPNorFlashRead;
     DeviceInfo->DeviceWrite = FPNorFlashWrite;
-    DeviceInfo->BlockSize   = 1;
+    DeviceInfo->BlockSize   = Attributes.BlockSize;
 
     mNumDevices++;
   }
-
-  DEBUG ((DEBUG_INFO, "%a: debug 1\n", __FUNCTION__));
 
   return EFI_SUCCESS;
 }

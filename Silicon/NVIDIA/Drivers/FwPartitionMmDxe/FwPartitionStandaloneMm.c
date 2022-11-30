@@ -58,6 +58,7 @@ FwPartitionMmHandler (
       UINTN                             Index;
       UINTN                             NumImages;
       FW_PARTITION_PRIVATE_DATA         *Partition;
+      UINT32                            EraseBlockSize;
 
       NumImages     = FwPartitionGetCount ();
       ImagesPayload = (FW_PARTITION_COMM_GET_PARTITIONS *)FwImageCommHeader->Data;
@@ -66,7 +67,8 @@ FwPartitionMmHandler (
         (ImagesPayload->MaxCount * sizeof (ImagesPayload->Partitions[0]))
         );
 
-      Partition = FwPartitionGetPrivateArray ();
+      EraseBlockSize = 0;
+      Partition      = FwPartitionGetPrivateArray ();
       for (Index = 0; Index < NumImages; Index++, Partition++) {
         FW_PARTITION_MM_PARTITION_INFO  *ImageInfo = &ImagesPayload->Partitions[Index];
 
@@ -76,10 +78,15 @@ FwPartitionMmHandler (
           StrSize (Partition->PartitionInfo.Name)
           );
         ImageInfo->Bytes = Partition->PartitionInfo.Bytes;
+
+        if (StrCmp (ImageInfo->Name, L"BCT") == 0) {
+          EraseBlockSize = Partition->DeviceInfo->BlockSize;
+        }
       }
 
-      ImagesPayload->Count            = NumImages;
-      FwImageCommHeader->ReturnStatus = EFI_SUCCESS;
+      ImagesPayload->Count               = NumImages;
+      ImagesPayload->BrBctEraseBlockSize = EraseBlockSize;
+      FwImageCommHeader->ReturnStatus    = EFI_SUCCESS;
       break;
     }
 
