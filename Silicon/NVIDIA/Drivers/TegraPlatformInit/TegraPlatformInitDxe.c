@@ -851,6 +851,7 @@ TegraPlatformInitialize (
   Status = FloorSweepDtb (DtbBase);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "DTB floorsweeping failed.\n"));
+    ASSERT (FALSE);
     return Status;
   }
 

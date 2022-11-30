@@ -762,9 +762,16 @@ FloorSweepDtb (
 
       break;
     case TH500_CHIP_ID:
-      TH500FloorSweepCpus (Info->SocketMask, Dtb);
-      TH500FloorSweepPcie (Info->SocketMask, Dtb);
-      TH500FloorSweepScfCache (Info->SocketMask, Dtb);
+      Status = TH500FloorSweepCpus (Info->SocketMask, Dtb);
+
+      if (!EFI_ERROR (Status)) {
+        Status = TH500FloorSweepPcie (Info->SocketMask, Dtb);
+      }
+
+      if (!EFI_ERROR (Status)) {
+        Status = TH500FloorSweepScfCache (Info->SocketMask, Dtb);
+      }
+
       break;
     default:
       Status = EFI_UNSUPPORTED;
