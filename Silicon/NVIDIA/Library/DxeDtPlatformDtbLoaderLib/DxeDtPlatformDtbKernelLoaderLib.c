@@ -380,6 +380,7 @@ UpdatePvaFwMemory (
         fdt_setprop (Dtb, NodeOffset, "compatible", "nvidia,pva-carveout", sizeof ("nvidia,pva-carveout"));
         fdt_setprop (Dtb, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
         fdt_setprop (Dtb, NodeOffset, "status", "okay", sizeof ("okay"));
+        fdt_setprop (Dtb, NodeOffset, "nomap", NULL, 0);
 
         gBS->FreePool (Data);
       }
