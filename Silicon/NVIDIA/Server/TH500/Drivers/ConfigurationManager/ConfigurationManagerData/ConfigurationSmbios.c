@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS tables
 
-  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2022 - 2023, NVIDIA CORPORATION. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -152,6 +152,9 @@ InstallCmSmbiosTableList (
 
   Status = InstallSmbiosType38Cm (Private);
   DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 38 - %r.\n", __FUNCTION__, Status));
+
+  Status = InstallSmbiosType43Cm (Private);
+  DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 43 - %r.\n", __FUNCTION__, Status));
 
   //
   // Free all FRUs

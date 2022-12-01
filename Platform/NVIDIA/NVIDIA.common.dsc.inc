@@ -956,6 +956,7 @@
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType2Lib/SmbiosType2Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType9Lib/SmbiosType9Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType38Lib/SmbiosType38Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType43Lib/SmbiosType43Lib.inf
 
       # AML Fixup
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtSerialPortLibArm/SsdtSerialPortLibArm.inf

@@ -2,7 +2,7 @@
 
   Configuration Manager Data Driver private structures for SMBIOS tables
 
-  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2022 - 2023, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -146,6 +146,21 @@ InstallSmbiosType9Cm (
 EFI_STATUS
 EFIAPI
 InstallSmbiosType38Cm (
+  IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
+  );
+
+/**
+  Install CM object for SMBIOS Type 43
+
+  @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+InstallSmbiosType43Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
 
