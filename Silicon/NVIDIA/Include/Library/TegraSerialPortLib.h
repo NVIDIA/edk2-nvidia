@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -11,6 +11,8 @@
 
 #include <Uefi/UefiBaseType.h>
 #include <Protocol/SerialIo.h>
+
+#define SERIAL_DEFAULT_TIMEOUT  (1000 * 1000)
 
 /**
   Initialize the serial device hardware.

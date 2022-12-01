@@ -1,7 +1,7 @@
 /** @file
   Serial driver that layers on top of a Serial Port Library instance.
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
@@ -164,12 +164,32 @@ SerialSetAttributes (
   //
   // Set the Serial I/O mode
   //
-  This->Mode->ReceiveFifoDepth = ReceiveFifoDepth;
-  This->Mode->Timeout          = Timeout;
-  This->Mode->BaudRate         = BaudRate;
-  This->Mode->DataBits         = (UINT32)DataBits;
-  This->Mode->Parity           = (UINT32)Parity;
-  This->Mode->StopBits         = (UINT32)StopBits;
+  if (ReceiveFifoDepth == 0) {
+    This->Mode->ReceiveFifoDepth = PcdGet16 (PcdUartDefaultReceiveFifoDepth);
+  } else {
+    This->Mode->ReceiveFifoDepth = ReceiveFifoDepth;
+  }
+
+  if (Timeout == 0) {
+    This->Mode->Timeout = SERIAL_DEFAULT_TIMEOUT;
+  } else {
+    This->Mode->Timeout = Timeout;
+  }
+
+  if (BaudRate == 0) {
+    This->Mode->BaudRate = PcdGet64 (PcdUartDefaultBaudRate);
+  } else {
+    This->Mode->BaudRate = BaudRate;
+  }
+
+  if (DataBits == 0) {
+    This->Mode->DataBits = (UINT32)PcdGet8 (PcdUartDefaultDataBits);
+  } else {
+    This->Mode->DataBits = (UINT32)DataBits;
+  }
+
+  This->Mode->Parity   = (UINT32)Parity;
+  This->Mode->StopBits = (UINT32)StopBits;
 
   return Status;
 }
@@ -343,7 +363,7 @@ SerialSbsaIoInitialize (
 
   gBS->SetMem (SerialIoMode, sizeof (EFI_SERIAL_IO_MODE), 0);
   SerialIoMode->ControlMask      = 0;
-  SerialIoMode->Timeout          = 1000 * 1000;
+  SerialIoMode->Timeout          = SERIAL_DEFAULT_TIMEOUT;
   SerialIoMode->BaudRate         = PcdGet64 (PcdUartDefaultBaudRate);
   SerialIoMode->ReceiveFifoDepth = PcdGet16 (PcdUartDefaultReceiveFifoDepth);
   SerialIoMode->DataBits         = (UINT32)PcdGet8 (PcdUartDefaultDataBits);
