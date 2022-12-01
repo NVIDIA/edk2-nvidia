@@ -1,11 +1,11 @@
 /** @file
   SSDT Serial Template
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2019 - 2020, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
-  
+
   @par Reference(s):
   - Arm Server Base Boot Requirements (SBBR), s4.2.1.8 "SPCR".
 

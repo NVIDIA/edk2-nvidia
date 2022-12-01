@@ -40,7 +40,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
         Memory32Fixed(ReadWrite, 0x18000000, 0x1000000)
         Memory32Fixed(ReadWrite, 0x03b41000, 0x1000)
         Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x64, 0x66, 0x67, 0x63 }
-      })       
+      })
     }
   }
 
