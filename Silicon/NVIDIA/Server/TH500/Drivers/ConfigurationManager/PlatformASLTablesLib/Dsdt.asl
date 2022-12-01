@@ -617,6 +617,23 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     }
 
     //---------------------------------------------------------------------
+    // I2C Device
+    //---------------------------------------------------------------------
+    Device (I2C3) {
+       Name (_HID, "NVDA0301")
+       Name (_UID, 3)
+       Name (_STA, 0)
+
+       Name (_CRS, ResourceTemplate() {
+         Memory32Fixed (ReadWrite, 0xc250000, 0x10000)
+         Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x3e }
+       })
+
+       Method (_RST) { }
+    }
+
+
+    //---------------------------------------------------------------------
     // SMMU Test Device
     //---------------------------------------------------------------------
     Device (TEST)
