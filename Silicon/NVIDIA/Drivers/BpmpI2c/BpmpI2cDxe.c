@@ -786,7 +786,7 @@ BpmpI2cStart (
   }
 
   //
-  // Attempt to open DevicePath Protocol
+  // Attempt to open DeviceTreeNode Protocol
   //
   Status = gBS->OpenProtocol (
                   Controller,
