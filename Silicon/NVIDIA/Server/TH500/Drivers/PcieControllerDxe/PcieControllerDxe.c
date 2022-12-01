@@ -321,12 +321,6 @@ InitFWFIntr (
   PCI_TYPE_GENERIC       *PciCap    = NULL;
   PCI_CAPABILITY_PCIEXP  *PciExpCap = NULL;
 
-  Private->PCIeCapOff = PCIeFindCap (Private->EcamBase, EFI_PCI_CAPABILITY_ID_PCIEXP);
-  if (!Private->PCIeCapOff) {
-    DEBUG ((EFI_D_VERBOSE, "Failed to find PCIe capability registers\r\n"));
-    return EFI_NOT_FOUND;
-  }
-
   PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);
 
   PciExpCap->RootControl.Bits.SystemErrorOnCorrectableError = 1;
@@ -398,14 +392,18 @@ InitializeController (
     EFI_PCI_COMMAND_SERR
     );
 
-  /*
-   * TODO: Make sure that it is called only in the Firmware-First flow
-   * and is skipped in the Os-First flow
-   */
-  Status = InitFWFIntr (Private);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Failed to Enable Firmware-First Interrupt(%r)\r\n", Status));
-    return Status;
+  Private->PCIeCapOff = PCIeFindCap (Private->EcamBase, EFI_PCI_CAPABILITY_ID_PCIEXP);
+  if (!Private->PCIeCapOff) {
+    DEBUG ((EFI_D_VERBOSE, "Failed to find PCIe capability registers\r\n"));
+    return EFI_NOT_FOUND;
+  }
+
+  if ((Private->CtrlId & 0xF) != 8) {
+    Status = InitFWFIntr (Private);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "Failed to Enable Firmware-First Interrupt(%r)\r\n", Status));
+      return Status;
+    }
   }
 
   val  = MmioRead32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL);
