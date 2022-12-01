@@ -608,6 +608,8 @@ ProcessOverlayDeviceTree (
     if ((AsciiStrCmp (FrName, "__fixups__") == 0) || (AsciiStrCmp (FrName, "__local_fixups__") == 0)) {
       FixupNodes++;
       continue;
+    } else if (AsciiStrCmp (FrName, "__symbols__") == 0) {
+      continue;
     }
 
     DEBUG ((DEBUG_INFO, "Processing node %a for overlay\n", FrName));
