@@ -665,56 +665,93 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     }
 
     //---------------------------------------------------------------------
+    // GPIO Device
+    //---------------------------------------------------------------------
+    Device (GPI0) {
+        Name (_HID, "NVDA0508")
+        Name (_UID, 0)
+        Name (_STA, 0xF)
+
+        Name (_CRS, ResourceTemplate () {
+            Memory32Fixed(ReadWrite, 0x2200000, 0x10000)
+            Memory32Fixed(ReadWrite, 0x2210000, 0x10000)
+            Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xad,
+                                                                        0xae,
+                                                                        0xaf,
+                                                                        0xb0,
+                                                                        0xb1,
+                                                                        0xb2,
+                                                                        0xb3,
+                                                                        0xb4,
+                                                                        0xb5,
+                                                                        0xb6,
+                                                                        0xb7,
+                                                                        0xb8,
+                                                                        0xb9,
+                                                                        0xba,
+                                                                        0xbb,
+                                                                        0xbc }
+        })
+    }
+
+    //---------------------------------------------------------------------
     // I2C Device
     //---------------------------------------------------------------------
     Device (I2C3) {
-       Name (_HID, "NVDA0301")
-       Name (_UID, 3)
-       Name (_STA, 0)
+      Name (_HID, "NVDA0301")
+      Name (_UID, 3)
+      Name (_STA, 0)
 
-       Name (_CRS, ResourceTemplate() {
-         Memory32Fixed (ReadWrite, 0xc250000, 0x10000)
-         Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x3e }
-       })
+      Name (_CRS, ResourceTemplate() {
+        Memory32Fixed (ReadWrite, 0xc250000, 0x10000)
+        Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x3e }
+        Interrupt (ResourceConsumer, Edge, ActiveLow, Exclusive, 0, "\\_SB.GPI0") { 0xa }
+      })
 
-       Method (_RST) { }
+      Name (_DSD, Package () {
+        ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
+        Package () {
+          Package (2) {"interrupt-names", Package () { "default", "smbus_alert" } },
+        },
+      })
 
-       Device (SSIF) {
-         Name (_HID, "IPI0001")
-         Name (_UID, 0)
-         Name (_STA, 0)
+      Method (_RST) { }
 
-         Name (_STR, Unicode("IPMI_SSIF"))
+      Device (SSIF) {
+        Name (_HID, "IPI0001")
+        Name (_UID, 0)
+        Name (_STA, 0)
 
-         // Return interface type
-         Method (_IFT) {
-           Return(0x04)
-         }
+        Name (_STR, Unicode("IPMI_SSIF"))
 
-         // Return the SSIF slave address
-         Method (_ADR) {
-           Return(0x10)
-         }
+        // Return interface type
+        Method (_IFT) {
+          Return(0x04)
+        }
 
-         // Return interface specification version
-         Method (_SRV) {
-           Return(0x0200)
-         }
+        // Return the SSIF slave address
+        Method (_ADR) {
+          Return(0x10)
+        }
 
-         Name (_CRS, ResourceTemplate () {
-                  I2cSerialBusV2 (
-                    0x10,
-                    ControllerInitiated,
-                    100000,
-                    AddressingMode7Bit,
-                    "\\_SB.I2C3",
-                    0,
-                    ResourceConsumer
-                  )
-         })
-       }
+        // Return interface specification version
+        Method (_SRV) {
+          Return(0x0200)
+        }
+
+        Name (_CRS, ResourceTemplate () {
+                 I2cSerialBusV2 (
+                   0x10,
+                   ControllerInitiated,
+                   100000,
+                   AddressingMode7Bit,
+                   "\\_SB.I2C3",
+                   0,
+                   ResourceConsumer
+                 )
+        })
+      }
     }
-
 
     //---------------------------------------------------------------------
     // SMMU Test Device
