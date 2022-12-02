@@ -101,6 +101,85 @@ GetCpuFreqT194 (
 }
 
 /**
+  GetCpuFreqMhzFromCpcInfo
+  Helper function to compute CPU frequency from CpcInfo CM Object.
+
+  @param ProcessorIndex Index of the processor to get the frequency for.
+
+  @retval                       CPU Frequency in Mhz.
+
+**/
+STATIC
+UINTN
+GetCpuFreqMhzFromCpcInfo (
+  IN UINT8  ProcessorIndex
+  )
+{
+  EFI_STATUS                            Status;
+  EDKII_CONFIGURATION_MANAGER_PROTOCOL  *CfgMgrProtocol;
+  CM_OBJ_DESCRIPTOR                     CmObjectDesc;
+  CM_OBJ_DESCRIPTOR                     CmObjectDesc2;
+  CM_ARM_GICC_INFO                      *GicCInfo;
+  CM_ARM_CPC_INFO                       *CpcInfo;
+  UINT32                                NumCores;
+  UINT32                                Index;
+
+  // Locate Configuration Manager Protocol for getting GicC and Cpc CM Objects.
+  Status = gBS->LocateProtocol (
+                  &gEdkiiConfigurationManagerProtocolGuid,
+                  NULL,
+                  (VOID **)&CfgMgrProtocol
+                  );
+  if ( EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Locate CfgMgrProtocol %r", __FUNCTION__, Status));
+    return 0;
+  }
+
+  // Get GicC Info for each CPU core
+  Status = CfgMgrProtocol->GetObject (
+                             CfgMgrProtocol,
+                             CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo),
+                             CM_NULL_TOKEN,
+                             &CmObjectDesc
+                             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Get GicC Info %r\n", __FUNCTION__, Status));
+    return 0;
+  }
+
+  NumCores = CmObjectDesc.Count;
+  GicCInfo = (CM_ARM_GICC_INFO *)CmObjectDesc.Data;
+
+  for (Index = 0; Index < NumCores; Index++) {
+    // Find the core which belongs to the ProcessorIndex
+    if (GicCInfo[Index].ProximityDomain == ProcessorIndex) {
+      if (GicCInfo[Index].CpcToken == CM_NULL_TOKEN) {
+        DEBUG ((DEBUG_ERROR, "%a: CpcToken == CM_NULL_TOKEN\n", __FUNCTION__));
+        return 0;
+      }
+
+      // Get the reference Cpc Info CM object for the core.
+      Status = CfgMgrProtocol->GetObject (
+                                 CfgMgrProtocol,
+                                 CREATE_CM_ARM_OBJECT_ID (EArmObjCpcInfo),
+                                 GicCInfo[Index].CpcToken,
+                                 &CmObjectDesc2
+                                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Get Cpc Info %r\n", __FUNCTION__, Status));
+        return 0;
+      }
+
+      CpcInfo = (CM_ARM_CPC_INFO *)CmObjectDesc2.Data;
+
+      return CpcInfo->NominalFrequencyInteger;
+    }
+  }
+
+  return 0;
+}
+
+/**
   GetCpuFreqMhz
   Helper Function to get current CPU Freq Cores. This is computed using
   PMU counter registers, currently this is done only for T194.
@@ -120,7 +199,8 @@ GetCpuFreqMhz (
   if (ChipId == T194_CHIP_ID) {
     CpuFreqMhz = GetCpuFreqT194 ();
   } else {
-    CpuFreqMhz =  2000; // 2 GHz
+    // Set it to zero for updating later by OemGetCpuFreq with ProcessorIndex.
+    CpuFreqMhz = 0;
   }
 
   return CpuFreqMhz;
@@ -201,7 +281,15 @@ OemGetCpuFreq (
   IN UINT8  ProcessorIndex
   )
 {
-  return (CurCpuFreqMhz * 1000 * 1000);
+  UINTN  CpuFreqMhz = 0;
+
+  if (CurCpuFreqMhz) {
+    return (CurCpuFreqMhz * 1000 * 1000);
+  }
+
+  CpuFreqMhz = GetCpuFreqMhzFromCpcInfo (ProcessorIndex);
+
+  return (CpuFreqMhz * 1000 * 1000);
 }
 
 /**
