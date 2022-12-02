@@ -29,11 +29,11 @@
 #define ARM_SBMR_SEND_PROGRESS_CODE_REQ_SIZE  10
 #define ARM_SBMR_SEND_PROGRESS_CODE_RSP_SIZE  2
 
-STATIC BOOLEAN  mDisableSmbrStatus = FALSE;
+STATIC BOOLEAN  mDisableSbmrStatus = FALSE;
 
 STATIC
 EFI_STATUS
-ArmSmbrStatusCodeCallback (
+ArmSbmrStatusCodeCallback (
   IN EFI_STATUS_CODE_TYPE   CodeType,
   IN EFI_STATUS_CODE_VALUE  Value,
   IN UINT32                 Instance,
@@ -46,14 +46,14 @@ ArmSmbrStatusCodeCallback (
   UINT8       Response[ARM_SBMR_SEND_PROGRESS_CODE_RSP_SIZE];
   UINT32      ResponseDataSize;
 
-  if (mDisableSmbrStatus) {
+  if (mDisableSbmrStatus) {
     return EFI_UNSUPPORTED;
   }
 
   if (((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_PROGRESS_CODE) &&
       (Value == (EFI_SOFTWARE_EFI_BOOT_SERVICE | EFI_SW_BS_PC_EXIT_BOOT_SERVICES)))
   {
-    mDisableSmbrStatus = TRUE;
+    mDisableSbmrStatus = TRUE;
   }
 
   if (Instance > MAX_UINT8) {
@@ -86,7 +86,7 @@ ArmSmbrStatusCodeCallback (
 
   if (Response[0] == IPMI_COMP_CODE_INVALID_COMMAND) {
     DEBUG ((DEBUG_ERROR, "%a: BMC does not support status codes, disabling\r\n", __FUNCTION__));
-    mDisableSmbrStatus = TRUE;
+    mDisableSbmrStatus = TRUE;
   } else if (Response[0] != IPMI_COMP_CODE_NORMAL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed unexpected command completion code, Got: %x, Expected: %x\r\n", __FUNCTION__, Response[0], IPMI_COMP_CODE_NORMAL));
     return EFI_DEVICE_ERROR;
@@ -112,7 +112,7 @@ ArmSmbrStatusCodeCallback (
 **/
 EFI_STATUS
 EFIAPI
-ArmSmbrStatusCodeDxeDriverEntryPoint (
+ArmSbmrStatusCodeDxeDriverEntryPoint (
   IN EFI_HANDLE        ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
@@ -129,6 +129,6 @@ ArmSmbrStatusCodeDxeDriverEntryPoint (
     return Status;
   }
 
-  Status = RscHandler->Register (ArmSmbrStatusCodeCallback, TPL_CALLBACK);
+  Status = RscHandler->Register (ArmSbmrStatusCodeCallback, TPL_CALLBACK);
   return Status;
 }

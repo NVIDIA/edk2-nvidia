@@ -1,6 +1,6 @@
 #/** @file
 #
-# Status code handler for Arm SMBR messages
+# Status code handler for Arm SBMR messages
 #
 # Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
@@ -10,11 +10,11 @@
 
 [Defines]
   INF_VERSION               = 0x00010005
-  BASE_NAME                 = ArmSmbrStatusCodeDxe
+  BASE_NAME                 = ArmSbmrStatusCodeDxe
   FILE_GUID                 = 1b6520d3-7f4d-4d64-85f5-7d8ed1c8b291
   MODULE_TYPE               = DXE_RUNTIME_DRIVER
   VERSION_STRING            = 1.0
-  ENTRY_POINT               = ArmSmbrStatusCodeDxeDriverEntryPoint
+  ENTRY_POINT               = ArmSbmrStatusCodeDxeDriverEntryPoint
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -23,7 +23,7 @@
   IpmiFeaturePkg/IpmiFeaturePkg.dec
 
 [Sources]
-  ArmSmbrStatusCodeDxe.c
+  ArmSbmrStatusCodeDxe.c
 
 [LibraryClasses]
   BaseLib
