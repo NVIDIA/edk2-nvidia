@@ -470,6 +470,8 @@ TH500ValidateActiveBootChain (
     Status = ErotSendBootComplete (Socket, BootChain);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: ErotSendBootComplete failed socket %u: %r\n", __FUNCTION__, Socket, Status));
+    } else {
+      DEBUG ((DEBUG_ERROR, "BootComplete successful, socket %u\n", Socket));
     }
   }
 
