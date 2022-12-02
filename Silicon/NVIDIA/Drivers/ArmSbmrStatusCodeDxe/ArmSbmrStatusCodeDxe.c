@@ -31,6 +31,20 @@
 
 STATIC BOOLEAN  mDisableSbmrStatus = FALSE;
 
+typedef struct {
+  EFI_STATUS_CODE_TYPE     Type;
+  EFI_STATUS_CODE_VALUE    Value;
+} STATUS_CODE_DENYLIST_TABLE;
+
+//
+// Denylist overly-verbose codes
+//
+STATUS_CODE_DENYLIST_TABLE  mStatusCodeDenyList[] = {
+  { EFI_PROGRESS_CODE, (EFI_SOFTWARE_DXE_CORE | EFI_SW_PC_INIT_BEGIN) },
+  { EFI_PROGRESS_CODE, (EFI_SOFTWARE_DXE_CORE | EFI_SW_PC_INIT_END)   },
+  { EFI_PROGRESS_CODE, (EFI_IO_BUS_PCI | EFI_P_PC_ENABLE)             },
+};
+
 STATIC
 EFI_STATUS
 ArmSbmrStatusCodeCallback (
@@ -45,9 +59,16 @@ ArmSbmrStatusCodeCallback (
   UINT8       Request[ARM_SBMR_SEND_PROGRESS_CODE_REQ_SIZE];
   UINT8       Response[ARM_SBMR_SEND_PROGRESS_CODE_RSP_SIZE];
   UINT32      ResponseDataSize;
+  UINT8       Index;
 
   if (mDisableSbmrStatus) {
     return EFI_UNSUPPORTED;
+  }
+
+  for (Index = 0; Index < ARRAY_SIZE (mStatusCodeDenyList); Index++) {
+    if ((mStatusCodeDenyList[Index].Type == CodeType) && (mStatusCodeDenyList[Index].Value == Value)) {
+      return EFI_SUCCESS;
+    }
   }
 
   if (((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_PROGRESS_CODE) &&
