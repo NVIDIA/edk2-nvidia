@@ -749,6 +749,60 @@ OemGetSerialNumber (
 }
 
 /**
+  OemGetSocketDesignation
+  Get the Socket Designation of the Processor Index from the DT.
+
+  @param Index The Processor Index.
+
+  @return Null terminated unicode string for the SocketDesignation.
+**/
+STATIC
+CHAR16 *
+OemGetSocketDesignation (
+  IN UINTN  Index
+  )
+{
+  CHAR16      *SocketDesignation;
+  VOID        *DtbBase;
+  UINTN       DtbSize;
+  CONST VOID  *Property;
+  INT32       Length;
+  EFI_STATUS  Status;
+  CHAR8       Type4tNodeStr[] = "/firmware/smbios/type4@xx";
+  INT32       NodeOffset;
+
+  SocketDesignation = NULL;
+
+  Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
+  if (EFI_ERROR (Status)) {
+    return NULL;
+  }
+
+  AsciiSPrint (Type4tNodeStr, sizeof (Type4tNodeStr), "/firmware/smbios/type4@%u", Index);
+  NodeOffset = fdt_path_offset (DtbBase, Type4tNodeStr);
+  if (NodeOffset < 0) {
+    return NULL;
+  }
+
+  Property = fdt_getprop (DtbBase, NodeOffset, "socket-designation", &Length);
+  if ((Property != NULL) && (Length != 0)) {
+    SocketDesignation = AllocateZeroPool (Length * sizeof (CHAR16));
+    if (SocketDesignation == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
+      return NULL;
+    }
+
+    AsciiStrToUnicodeStrS (
+      Property,
+      SocketDesignation,
+      (Length * sizeof (CHAR16))
+      );
+  }
+
+  return SocketDesignation;
+}
+
+/**
   OemUpdateSmbiosInfo
   Updates the HII string for the specified field.
 
@@ -764,8 +818,7 @@ OemUpdateSmbiosInfo (
   IN OEM_MISC_SMBIOS_HII_STRING_FIELD  Field
   )
 {
-  CHAR16  *HiiString = NULL
-  ;
+  CHAR16  *HiiString = NULL;
 
   switch (Field) {
     case SystemManufacturerType01:
@@ -812,6 +865,10 @@ OemUpdateSmbiosInfo (
       break;
     case SerialNumberType03:
       HiiString = (CHAR16 *)PcdGetPtr (PcdChassisSerialNumber);
+      break;
+    case ProcessorSocketDesType04_0 ... ProcessorSocketDesType04_15:
+      ASSERT (SD_FIELD_TO_INDEX (Field) < PcdGet32 (PcdTegraMaxSockets));
+      HiiString = OemGetSocketDesignation (SD_FIELD_TO_INDEX (Field));
       break;
     default:
       break;
