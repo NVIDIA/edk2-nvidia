@@ -16,7 +16,6 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
-#include <libfdt.h>
 
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
@@ -35,7 +34,35 @@
   @return EFI_UNSUPPORTED  The node is not supported by this instance
 **/
 EFI_STATUS
-DeviceTreeIsSupported (
+BpmpDeviceTreeIsSupported (
+  IN OUT  NVIDIA_DT_NODE_INFO  *DeviceInfo
+  )
+{
+  if ((DeviceInfo == NULL) ||
+      (DeviceInfo->DeviceTreeBase == NULL))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (0 == fdt_node_check_compatible (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "nvidia,tegra186-bpmp")) {
+    DeviceInfo->DeviceType = &gNVIDIANonDiscoverableBpmpDeviceGuid;
+    return EFI_SUCCESS;
+  } else {
+    return EFI_UNSUPPORTED;
+  }
+}
+
+/**
+  This is function is caused to allow the system to check if this implementation supports
+  the device tree node..
+
+  @param DeviceInfo        - Info regarding device tree base address,node offset,
+                             device type and init function.
+  @return EFI_SUCCESS      The node is supported by this instance
+  @return EFI_UNSUPPORTED  The node is not supported by this instance
+**/
+EFI_STATUS
+HspDeviceTreeIsSupported (
   IN OUT  NVIDIA_DT_NODE_INFO  *DeviceInfo
   )
 {
@@ -74,9 +101,6 @@ DeviceTreeIsSupported (
     }
 
     return EFI_UNSUPPORTED;
-  } else if (0 == fdt_node_check_compatible (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "nvidia,tegra186-bpmp")) {
-    DeviceInfo->DeviceType = &gNVIDIANonDiscoverableBpmpDeviceGuid;
-    return EFI_SUCCESS;
   } else {
     return EFI_UNSUPPORTED;
   }
@@ -106,6 +130,7 @@ EFI_STATUS
 BpmpIpcDummyCommunicate (
   IN  NVIDIA_BPMP_IPC_PROTOCOL *This,
   IN  OUT NVIDIA_BPMP_IPC_TOKEN *Token, OPTIONAL
+  IN  UINT32                     BpmpPhandle,
   IN  UINT32                     MessageRequest,
   IN  VOID                       *TxData,
   IN  UINTN                      TxDataSize,
@@ -120,6 +145,80 @@ BpmpIpcDummyCommunicate (
 CONST NVIDIA_BPMP_IPC_PROTOCOL  mBpmpDummyProtocol = {
   BpmpIpcDummyCommunicate
 };
+
+/**
+ This routine finds all supported device tree nodes and installs memory regions
+ to hob list.
+
+ @param DeviceTreeBase          A pointer to device tree.
+ @param IsNodeSupported         A function pointer which checks if a device tree node is supported.
+ @param ImageHandle             Handle of the loaded driver.
+ @param[out] DeviceInfo         A pointer to the list of supported device tree nodes.
+ @param[out] Device             Handle of the device.
+ @param[out] DeviceCount        Number of supported devices.
+**/
+STATIC
+EFI_STATUS
+ProcessDTNodes (
+  IN VOID                        *DeviceTreeBase,
+  IN DEVICE_TREE_NODE_SUPPORTED  IsNodeSupported,
+  IN EFI_HANDLE                  ImageHandle,
+  OUT NVIDIA_DT_NODE_INFO        **DeviceInfo,
+  OUT NON_DISCOVERABLE_DEVICE    **Device,
+  OUT UINT32                     *DeviceCount
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      Index;
+  EFI_HANDLE  DeviceHandle = NULL;
+
+  *DeviceInfo = NULL;
+
+  Status = GetSupportedDeviceTreeNodes (DeviceTreeBase, IsNodeSupported, DeviceCount, *DeviceInfo);
+  if ( EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
+    Status = EFI_DEVICE_ERROR;
+  }
+
+  *DeviceInfo = AllocateZeroPool (sizeof (NVIDIA_DT_NODE_INFO) * (*DeviceCount));
+  if (*DeviceInfo == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = GetSupportedDeviceTreeNodes (DeviceTreeBase, IsNodeSupported, DeviceCount, *DeviceInfo);
+
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  *Device = (NON_DISCOVERABLE_DEVICE *)AllocateZeroPool (sizeof (NON_DISCOVERABLE_DEVICE) * (*DeviceCount));
+  if (NULL == *Device) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
+    Status = EFI_DEVICE_ERROR;
+    goto ErrorExit;
+  }
+
+  for (Index = 0; Index < *DeviceCount; Index++) {
+    DeviceHandle = NULL;
+    Status       = ProcessDeviceTreeNodeWithHandle (&(*DeviceInfo)[Index], &(*Device)[Index], ImageHandle, &DeviceHandle);
+
+    if (EFI_ERROR (Status)) {
+      goto ErrorExit;
+    }
+  }
+
+ErrorExit:
+  if (EFI_ERROR (Status)) {
+    if (NULL != *Device) {
+      FreePool (*Device);
+    }
+
+    if (NULL != *DeviceInfo) {
+      FreePool (*DeviceInfo);
+    }
+  }
+
+  return Status;
+}
 
 /**
   Initialize the Bpmp Ipc Protocol Driver
@@ -142,11 +241,12 @@ BpmpIpcInitialize (
   VOID                     *DeviceTreeBase;
   UINTN                    DeviceTreeSize;
   INT32                    NodeOffset;
-  NON_DISCOVERABLE_DEVICE  *Device      = NULL;
-  EFI_HANDLE               DeviceHandle = NULL;
-  NVIDIA_DT_NODE_INFO      *DeviceInfo  = NULL;
-  UINT32                   DeviceCount  = 0;
-  UINT32                   Index;
+  NON_DISCOVERABLE_DEVICE  *BpmpDevice     = NULL;
+  NON_DISCOVERABLE_DEVICE  *HspDevice      = NULL;
+  NVIDIA_DT_NODE_INFO      *HspDeviceInfo  = NULL;
+  NVIDIA_DT_NODE_INFO      *BpmpDeviceInfo = NULL;
+  UINT32                   HspDeviceCount  = 0;
+  UINT32                   BpmpDeviceCount = 0;
 
   Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
   if (EFI_ERROR (Status)) {
@@ -185,47 +285,21 @@ BpmpIpcInitialize (
     return Status;
   }
 
-  Status = GetSupportedDeviceTreeNodes (DeviceTreeBase, &DeviceTreeIsSupported, &DeviceCount, DeviceInfo);
-  if ( EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
-    return EFI_DEVICE_ERROR;
-  }
+  // BPMP
+  Status = ProcessDTNodes (DeviceTreeBase, &BpmpDeviceTreeIsSupported, ImageHandle, &BpmpDeviceInfo, &BpmpDevice, &BpmpDeviceCount);
 
-  DeviceInfo = AllocatePool (sizeof (NVIDIA_DT_NODE_INFO) * DeviceCount);
-  if (DeviceInfo == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  Status = GetSupportedDeviceTreeNodes (DeviceTreeBase, &DeviceTreeIsSupported, &DeviceCount, DeviceInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  for (Index = 0; Index < DeviceCount; Index++) {
-    DeviceHandle = NULL;
-    Device       = (NON_DISCOVERABLE_DEVICE *)AllocatePool (sizeof (NON_DISCOVERABLE_DEVICE));
-    if (NULL == Device) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
-      return EFI_DEVICE_ERROR;
-    }
+  // HSP
+  Status = ProcessDTNodes (DeviceTreeBase, &HspDeviceTreeIsSupported, ImageHandle, &HspDeviceInfo, &HspDevice, &HspDeviceCount);
 
-    Status = ProcessDeviceTreeNodeWithHandle (&DeviceInfo[Index], Device, ImageHandle, &DeviceHandle);
-
-    if (!EFI_ERROR (Status)) {
-      if (CompareGuid (DeviceInfo[Index].DeviceType, &gNVIDIANonDiscoverableBpmpDeviceGuid)) {
-        Status = BpmpIpcProtocolInit (&DeviceHandle, Device);
-      } else if (CompareGuid (DeviceInfo[Index].DeviceType, &gNVIDIANonDiscoverableHspTopDeviceGuid)) {
-        Status = HspDoorbellProtocolInit (&DeviceHandle, Device);
-      }
-
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-    } else {
-      if (NULL != Device) {
-        FreePool (Device);
-      }
-    }
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
+
+  Status = BpmpIpcProtocolInit (BpmpDeviceInfo, BpmpDevice, BpmpDeviceCount, HspDeviceInfo, HspDevice, HspDeviceCount);
 
   return Status;
 }

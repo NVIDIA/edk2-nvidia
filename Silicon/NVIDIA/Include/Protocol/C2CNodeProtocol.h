@@ -52,6 +52,7 @@ EFI_STATUS
 /// NVIDIA_C2C_NODE_PROTOCOL protocol structure.
 struct _NVIDIA_C2C_NODE_PROTOCOL {
   C2C_NODE_INIT         Init;
+  UINT32                BpmpPhandle;
   MRQ_C2C_PARTITIONS    Partitions;
 };
 

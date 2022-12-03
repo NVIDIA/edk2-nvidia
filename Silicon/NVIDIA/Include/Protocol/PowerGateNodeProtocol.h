@@ -1,7 +1,7 @@
 /** @file
   Power Gate node protocol Protocol
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -81,11 +81,12 @@ EFI_STATUS
   OUT UINT32                            *PowerGateState
   );
 
-/// NVIDIA_RESET_NODE_PROTOCOL protocol structure.
+/// NVIDIA_POWER_GATE_NODE_PROTOCOL protocol structure.
 struct _NVIDIA_POWER_GATE_NODE_PROTOCOL {
   POWER_GATE_NODE_DEASSERT     Deassert;
   POWER_GATE_NODE_ASSERT       Assert;
   POWER_GATE_NODE_GET_STATE    GetState;
+  UINT32                       BpmpPhandle;
   UINT32                       NumberOfPowerGates;
   UINT32                       PowerGateId[1];
 };

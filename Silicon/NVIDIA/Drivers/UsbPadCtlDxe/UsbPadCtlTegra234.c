@@ -672,6 +672,7 @@ FindUsb2PadClocks (
   INT32         NodeOffset = -1;
   CONST UINT32  *ClockIds = NULL;
   INT32         ClocksLength, Index;
+  UINT32        BpmpPhandle;
 
   NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "pads");
   if (NodeOffset < 0) {
@@ -699,9 +700,11 @@ FindUsb2PadClocks (
     PlatConfig->NumUsb2Clocks = ClocksLength / (sizeof (UINT32) * 2);
   }
 
+  BpmpPhandle = SwapBytes32 (ClockIds[0]);
+  ASSERT (BpmpPhandle <= MAX_UINT16);
   PlatConfig->Usb2ClockIds = AllocateZeroPool (sizeof (UINT32) * PlatConfig->NumUsb2Clocks);
   for (Index = 0; Index < PlatConfig->NumUsb2Clocks; Index++) {
-    PlatConfig->Usb2ClockIds[Index] = SwapBytes32 (ClockIds[2 * Index + 1]);
+    PlatConfig->Usb2ClockIds[Index] = ((BpmpPhandle << 16) | SwapBytes32 (ClockIds[2 * Index + 1]));
   }
 
   return EFI_SUCCESS;

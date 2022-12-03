@@ -12,7 +12,7 @@
 #define __BPMP_IPC_PRIVATE_H__
 
 #include <Protocol/BpmpIpc.h>
-#include <Protocol/HspDoorbell.h>
+#include "HspDoorbellPrivate.h"
 
 typedef struct {
   UINT32    WriteCount;
@@ -68,73 +68,73 @@ typedef struct {
 
 #define BPMP_PENDING_TRANSACTION_FROM_LINK(a)  CR(a, BPMP_PENDING_TRANSACTION, Link, BPMP_PENDING_TRANSACTION_SIGNATURE)
 
-//
-// HspDoorbell driver private data structure
-//
-
 #define BPMP_IPC_SIGNATURE  SIGNATURE_32('B','P','M','P')
+
+//
+// Private data structure for channel and doorbell info.
+//
+typedef struct {
+  volatile IVC_CHANNEL    *RxChannel;
+
+  volatile IVC_CHANNEL    *TxChannel;
+
+  UINT32                  BpmpPhandle;
+
+  UINT32                  HspPhandle;
+
+  EFI_PHYSICAL_ADDRESS    HspDoorbellLocation[HspDoorbellMax];
+} NVIDIA_BPMP_MRQ_CHANNEL;
 
 typedef struct {
   //
   // Standard signature used to identify BpmpIpc private data
   //
-  UINT32                          Signature;
+  UINT32                      Signature;
 
   //
   // Protocol instance of NVIDIA_BPMP_IPC_PROTOCOL produced by this driver
   //
-  NVIDIA_BPMP_IPC_PROTOCOL        BpmpIpcProtocol;
+  NVIDIA_BPMP_IPC_PROTOCOL    BpmpIpcProtocol;
 
   //
   // Indicates if the BpmpIpcProtocol is installed
   //
-  BOOLEAN                         ProtocolInstalled;
+  BOOLEAN                     ProtocolInstalled;
 
   //
   // Controller handler
   //
-  EFI_HANDLE                      Controller;
+  EFI_HANDLE                  Controller;
 
   //
   // Driver binding handle
   //
-  EFI_HANDLE                      DriverBindingHandle;
+  EFI_HANDLE                  DriverBindingHandle;
 
   //
-  // Event for protocol notification
+  // Number of BPMP Nodes
   //
-  EFI_EVENT                       RegisterNotifyEvent;
+  UINT32                      DeviceCount;
 
   //
-  // Token for protocol notification
+  // MRQ Channels
   //
-  VOID                            *ProtocolNotifyToken;
+  NVIDIA_BPMP_MRQ_CHANNEL     *Channels;
 
   //
-  // Reference to the Hsp Doorbell Protocol
+  // Current/Active Channel Index
   //
-  NVIDIA_HSP_DOORBELL_PROTOCOL    *DoorbellProtocol;
-
-  //
-  // Handle of the doorbell protocol
-  //
-  EFI_HANDLE                      DoorbellHandle;
-
-  //
-  // IVC Channels
-  //
-  volatile IVC_CHANNEL            *RxChannel;
-  volatile IVC_CHANNEL            *TxChannel;
+  UINT32                      ActiveChannel;
 
   //
   // Pending Transaction Linked List
   //
-  LIST_ENTRY                      TransactionList;
+  LIST_ENTRY                  TransactionList;
 
   //
   // Timer event
   //
-  EFI_EVENT                       TimerEvent;
+  EFI_EVENT                   TimerEvent;
 } NVIDIA_BPMP_IPC_PRIVATE_DATA;
 
 #define BPMP_IPC_PRIVATE_DATA_FROM_THIS(a)  CR(a, NVIDIA_BPMP_IPC_PRIVATE_DATA, BpmpIpcProtocol, BPMP_IPC_SIGNATURE)

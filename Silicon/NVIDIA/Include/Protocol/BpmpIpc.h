@@ -105,6 +105,7 @@ EFI_STATUS
 (EFIAPI *BPMP_IPC_COMMUNICATE)(
   IN  NVIDIA_BPMP_IPC_PROTOCOL   *This,
   IN  OUT NVIDIA_BPMP_IPC_TOKEN  *Token, OPTIONAL
+  IN  UINT32                     BpmpPhandle,
   IN  UINT32                     MessageRequest,
   IN  VOID                       *TxData,
   IN  UINTN                      TxDataSize,

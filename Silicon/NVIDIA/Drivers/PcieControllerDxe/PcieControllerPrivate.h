@@ -80,6 +80,7 @@ typedef struct {
   BOOLEAN                                             EnableGicV2m;
   UINT64                                              GicBase;
   UINT64                                              MsiBase;
+  UINT32                                              BpmpPhandle;
 
   // Configuration data
   CM_ARM_PCI_CONFIG_SPACE_INFO                        ConfigSpaceInfo;

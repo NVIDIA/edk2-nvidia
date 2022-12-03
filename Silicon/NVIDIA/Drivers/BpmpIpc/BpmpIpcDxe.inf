@@ -57,6 +57,7 @@
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout
   gNVIDIATokenSpaceGuid.PcdBpmpResponseTimeout
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
 
 [Depex]
-  TRUE
+  gEfiDevicePathProtocolGuid

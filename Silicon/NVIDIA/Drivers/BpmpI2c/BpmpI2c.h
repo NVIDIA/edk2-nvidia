@@ -2,7 +2,7 @@
 
   Bpmp I2c Controller Driver private structures
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -100,6 +100,7 @@ typedef struct {
   UINT32                                           BusId;
   VOID                                             *DeviceTreeBase;
   INT32                                            DeviceTreeNodeOffset;
+  UINT32                                           BpmpPhandle;
 
   // Current transaction info
   UINTN                                            SlaveAddress;

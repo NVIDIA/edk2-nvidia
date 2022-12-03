@@ -15,6 +15,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
@@ -174,6 +175,7 @@ BpmpIpcProcess (
   Status = Private->BpmpIpc->Communicate (
                                Private->BpmpIpc,
                                Token,
+                               Private->BpmpPhandle,
                                MRQ_I2C,
                                &Private->Request,
                                RequestSize,
@@ -744,14 +746,15 @@ BpmpI2cStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS                        Status;
-  NVIDIA_BPMP_IPC_PROTOCOL          *BpmpIpc = NULL;
-  NVIDIA_BPMP_I2C_PRIVATE_DATA      *Private = NULL;
-  VOID                              *Interface;
-  EFI_DEVICE_PATH_PROTOCOL          *ParentDevicePath = NULL;
-  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode   = NULL;
-  CONST UINT32                      *Adapter          = NULL;
-  INT32                             AdapterLength;
+  EFI_STATUS                    Status;
+  NVIDIA_BPMP_IPC_PROTOCOL      *BpmpIpc = NULL;
+  NVIDIA_BPMP_I2C_PRIVATE_DATA  *Private = NULL;
+  VOID                          *Interface;
+  EFI_DEVICE_PATH_PROTOCOL      *ParentDevicePath = NULL;
+  CONST UINT32                  *Adapter          = NULL;
+  INT32                         AdapterLength;
+  VOID                          *DeviceTreeBase = NULL;
+  UINTN                         DeviceTreeSize;
 
   //
   // Attempt to open BpmpI2c Protocol
@@ -781,24 +784,13 @@ BpmpI2cStart (
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get device path protocol %r\r\n", __FUNCTION__, Status));
-    goto ErrorExit;
+    ParentDevicePath = NULL;
   }
 
-  //
-  // Attempt to open DeviceTreeNode Protocol
-  //
-  Status = gBS->OpenProtocol (
-                  Controller,
-                  &gNVIDIADeviceTreeNodeProtocolGuid,
-                  (VOID **)&DeviceTreeNode,
-                  This->DriverBindingHandle,
-                  Controller,
-                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                  );
+  Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get device tree node protocol %r\r\n", __FUNCTION__, Status));
-    goto ErrorExit;
+    DEBUG ((EFI_D_ERROR, "%a: Failed to load device tree..\r\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
   }
 
   Private = (NVIDIA_BPMP_I2C_PRIVATE_DATA *)AllocateZeroPool (sizeof (NVIDIA_BPMP_I2C_PRIVATE_DATA));
@@ -832,9 +824,9 @@ BpmpI2cStart (
   Private->Child                                          = NULL;
   Private->DriverBindingHandle                            = This->DriverBindingHandle;
   Private->BpmpIpc                                        = BpmpIpc;
-  Private->DeviceTreeBase                                 = DeviceTreeNode->DeviceTreeBase;
+  Private->DeviceTreeBase                                 = DeviceTreeBase;
   Private->DeviceTreeNodeOffset                           = fdt_node_offset_by_compatible (
-                                                              DeviceTreeNode->DeviceTreeBase,
+                                                              DeviceTreeBase,
                                                               0,
                                                               "nvidia,tegra186-bpmp-i2c"
                                                               );
@@ -843,6 +835,12 @@ BpmpI2cStart (
     Status = EFI_NOT_FOUND;
     goto ErrorExit;
   }
+
+  Private->BpmpPhandle = fdt_get_phandle (
+                           DeviceTreeBase,
+                           fdt_parent_offset (DeviceTreeBase, Private->DeviceTreeNodeOffset)
+                           );
+  Private->BpmpPhandle = SwapBytes32 (Private->BpmpPhandle);
 
   Adapter = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "nvidia,bpmp-bus-id", &AdapterLength);
   if ((Adapter == NULL) || (AdapterLength != sizeof (UINT32))) {

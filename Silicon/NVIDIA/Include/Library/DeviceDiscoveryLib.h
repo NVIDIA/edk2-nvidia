@@ -13,11 +13,15 @@
 #include <Uefi/UefiBaseType.h>
 #include <Protocol/NonDiscoverableDevice.h>
 
+/**
+  Structure to store device tree node info.
+**/
 typedef struct {
   VOID                            *DeviceTreeBase;
   INT32                           NodeOffset;
   EFI_GUID                        *DeviceType;
   NON_DISCOVERABLE_DEVICE_INIT    PciIoInitialize;
+  UINT32                          Phandle;
 } NVIDIA_DT_NODE_INFO;
 
 /**

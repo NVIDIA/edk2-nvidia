@@ -55,7 +55,8 @@ GetCpuFreqAddresses (
   OUT EFI_PHYSICAL_ADDRESS  *NdivAddress OPTIONAL,
   OUT EFI_PHYSICAL_ADDRESS  *RefClockAddress OPTIONAL,
   OUT EFI_PHYSICAL_ADDRESS  *CoreClockAddress OPTIONAL,
-  OUT UINT64                *RefClockFreq OPTIONAL
+  OUT UINT64                *RefClockFreq OPTIONAL,
+  OUT UINT32                *BpmpPhandle OPTIONAL
   )
 {
   EFI_STATUS                        Status;
@@ -71,6 +72,9 @@ GetCpuFreqAddresses (
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node;
   INT32                             ParentOffset;
   CONST UINT32                      *SocketRegProperty;
+  CONST VOID                        *Property    = NULL;
+  INT32                             PropertySize = 0;
+  UINTN                             ChipID;
 
   if (!PcdGetBool (PcdAffinityMpIdrSupported)) {
     Core    = GET_MPIDR_AFF0 (Mpidr);
@@ -89,6 +93,16 @@ GetCpuFreqAddresses (
     return EFI_NOT_FOUND;
   }
 
+  ChipID = TegraGetChipID ();
+
+  if (ChipID == T194_CHIP_ID) {
+    if (BpmpPhandle != NULL) {
+      *BpmpPhandle = 0;
+    }
+
+    return EFI_SUCCESS;
+  }
+
   Status = gBS->LocateHandleBuffer (
                   ByProtocol,
                   &gNVIDIACpuFreqT234,
@@ -101,6 +115,23 @@ GetCpuFreqAddresses (
   }
 
   if (HandleCount == 1) {
+    Status = gBS->HandleProtocol (HandleBuffer, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    Property = fdt_getprop (
+                 Node->DeviceTreeBase,
+                 Node->NodeOffset,
+                 "status",
+                 &PropertySize
+                 );
+    if ((Property != NULL) &&
+        (AsciiStrCmp (Property, "okay") != 0))
+    {
+      return EFI_UNSUPPORTED;
+    }
+
     Status = DeviceDiscoveryGetMmioRegion (HandleBuffer[0], 0, &RegionBase, &RegionSize);
     if (EFI_ERROR (Status)) {
       FreePool (HandleBuffer);
@@ -124,6 +155,10 @@ GetCpuFreqAddresses (
       *RefClockFreq = REFCLK_FREQ;
     }
 
+    if (BpmpPhandle != NULL) {
+      *BpmpPhandle = 0;
+    }
+
     FreePool (HandleBuffer);
     return EFI_SUCCESS;
   } else if (HandleCount != 0) {
@@ -139,7 +174,7 @@ GetCpuFreqAddresses (
                   &HandleCount,
                   &HandleBuffer
                   );
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
     return Status;
   }
 
@@ -147,6 +182,18 @@ GetCpuFreqAddresses (
     Status = gBS->HandleProtocol (HandleBuffer[Index], &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
     if (EFI_ERROR (Status)) {
       continue;
+    }
+
+    Property = fdt_getprop (
+                 Node->DeviceTreeBase,
+                 Node->NodeOffset,
+                 "status",
+                 &PropertySize
+                 );
+    if ((Property != NULL) &&
+        (AsciiStrCmp (Property, "okay") != 0))
+    {
+      return EFI_UNSUPPORTED;
     }
 
     ParentOffset      = fdt_parent_offset (Node->DeviceTreeBase, Node->NodeOffset);
@@ -181,10 +228,27 @@ GetCpuFreqAddresses (
     if (RefClockFreq != NULL) {
       *RefClockFreq = TH500_REFCLK_FREQ;
     }
+
+    if (BpmpPhandle != NULL) {
+      Property = fdt_getprop (
+                   Node->DeviceTreeBase,
+                   Node->NodeOffset,
+                   "nvidia,bpmp",
+                   &PropertySize
+                   );
+      if ((Property == NULL) || (PropertySize < sizeof (UINT32))) {
+        DEBUG ((DEBUG_ERROR, "Failed to get Bpmp node phandle.\n"));
+      } else {
+        CopyMem ((VOID *)BpmpPhandle, Property, sizeof (UINT32));
+        *BpmpPhandle = SwapBytes32 (*BpmpPhandle);
+      }
+    }
+
+    FreePool (HandleBuffer);
+    return EFI_SUCCESS;
   }
 
-  FreePool (HandleBuffer);
-  return EFI_SUCCESS;
+  return EFI_UNSUPPORTED;
 }
 
 STATIC
@@ -219,7 +283,7 @@ GetCpuNdiv (
       Status = EFI_UNSUPPORTED;
     }
   } else {
-    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL);
+    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
     if (!EFI_ERROR (Status)) {
       *Ndiv = MmioRead32 (NdivAddress);
     }
@@ -256,7 +320,7 @@ SetCpuNdiv (
       Status = EFI_UNSUPPORTED;
     }
   } else {
-    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL);
+    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
     if (!EFI_ERROR (Status)) {
       MmioWrite32 (NdivAddress, Ndiv);
     }
@@ -299,9 +363,15 @@ TegraCpuGetNdivLimits (
   NVIDIA_BPMP_IPC_PROTOCOL      *BpmpIpcProtocol;
   BPMP_CPU_NDIV_LIMITS_REQUEST  Request;
   INT32                         MessageError;
+  UINT32                        BpmpPhandle;
 
   if (Limits == NULL) {
     return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetCpuFreqAddresses (Mpidr, NULL, NULL, NULL, NULL, &BpmpPhandle);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   Status = gBS->LocateProtocol (
@@ -319,11 +389,10 @@ TegraCpuGetNdivLimits (
     Request.ClusterId = GET_MPIDR_AFF2 (Mpidr);
   }
 
-  // TODO: Add handle lookup for BPMP
-
   Status = BpmpIpcProtocol->Communicate (
                               BpmpIpcProtocol,
                               NULL,
+                              BpmpPhandle,
                               MRQ_CPU_NDIV_LIMITS,
                               (VOID *)&Request,
                               sizeof (BPMP_CPU_NDIV_LIMITS_REQUEST),
@@ -488,7 +557,7 @@ TegraCpuFreqGetCpcInfo (
     return Status;
   }
 
-  Status = GetCpuFreqAddresses (Mpidr, &DesiredAddress, &RefclkClockAddress, &CoreClockAddress, &RefClockFreq);
+  Status = GetCpuFreqAddresses (Mpidr, &DesiredAddress, &RefclkClockAddress, &CoreClockAddress, &RefClockFreq, NULL);
   if (EFI_ERROR (Status)) {
     return Status;
   }

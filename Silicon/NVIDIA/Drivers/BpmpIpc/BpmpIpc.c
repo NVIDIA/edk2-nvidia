@@ -11,8 +11,10 @@
 #include "BpmpIpcPrivate.h"
 #include <Library/ArmLib.h>
 #include <Library/IoLib.h>
+#include <Library/PcdLib.h>
 
 #define BOTH_ALIGNED(a, b, align)  ((((UINTN)(a) | (UINTN)(b)) & ((align) - 1)) == 0)
+#define PLATFORM_MAX_SOCKETS  (PcdGet32 (PcdTegraMaxSockets))
 
 /**
   Copy Length bytes from Source to Destination, using mmio accesses for specified direction.
@@ -145,6 +147,7 @@ ProcessTransaction (
   UINT64                    TimerTick;
   EFI_STATUS                Status;
   BOOLEAN                   ListEmpty;
+  UINT32                    CIndex;
 
   OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
   List   = GetFirstNode (&PrivateData->TransactionList);
@@ -160,8 +163,9 @@ ProcessTransaction (
     return;
   }
 
+  CIndex = PrivateData->ActiveChannel;
   // Validate channels are empty
-  if (!ChannelFree (PrivateData->RxChannel) || !ChannelFree (PrivateData->TxChannel)) {
+  if (!ChannelFree (PrivateData->Channels[CIndex].RxChannel) || !ChannelFree (PrivateData->Channels[CIndex].TxChannel)) {
     DEBUG ((EFI_D_ERROR, "%a: Channel not idle\r\n", __FUNCTION__));
     ASSERT (FALSE);
 
@@ -181,17 +185,17 @@ ProcessTransaction (
   }
 
   // Copy to Tx channel
-  PrivateData->TxChannel->MessageRequest = Transaction->MessageRequest;
-  PrivateData->TxChannel->Flags          = IVC_FLAGS_DO_ACK;
-  MmioCopyMem ((VOID *)PrivateData->TxChannel->Data, Transaction->TxData, Transaction->TxDataSize, FALSE);
+  PrivateData->Channels[CIndex].TxChannel->MessageRequest = Transaction->MessageRequest;
+  PrivateData->Channels[CIndex].TxChannel->Flags          = IVC_FLAGS_DO_ACK;
+  MmioCopyMem ((VOID *)PrivateData->Channels[CIndex].TxChannel->Data, Transaction->TxData, Transaction->TxDataSize, FALSE);
 
-  PrivateData->TxChannel->WriteCount++;
+  PrivateData->Channels[CIndex].TxChannel->WriteCount++;
   ArmDataMemoryBarrier ();
 
-  PrivateData->DoorbellProtocol->RingDoorbell (
-                                   PrivateData->DoorbellProtocol,
-                                   HspDoorbellBpmp
-                                   );
+  Status = HspDoorbellRingDoorbell (
+             PrivateData->Channels[CIndex].HspDoorbellLocation,
+             HspDoorbellBpmp
+             );
 
   // Wait for done
   if (!Transaction->Blocking) {
@@ -240,12 +244,14 @@ BpmpIpcTimerNotify (
   LIST_ENTRY                    *List;
   BPMP_PENDING_TRANSACTION      *Transaction;
   BOOLEAN                       ListEmpty;
+  UINT32                        CIndex;
 
   if (NULL == PrivateData) {
     return;
   }
 
-  if (ChannelFree (PrivateData->RxChannel)) {
+  CIndex = PrivateData->ActiveChannel;
+  if (ChannelFree (PrivateData->Channels[CIndex].RxChannel)) {
     return;
   }
 
@@ -272,18 +278,18 @@ BpmpIpcTimerNotify (
          );
 
   if (NULL != Transaction->MessageError) {
-    *Transaction->MessageError = PrivateData->RxChannel->MessageRequest;
+    *Transaction->MessageError = PrivateData->Channels[CIndex].RxChannel->MessageRequest;
   }
 
-  if (PrivateData->RxChannel->MessageRequest != 0) {
+  if (PrivateData->Channels[CIndex].RxChannel->MessageRequest != 0) {
     Transaction->Token->TransactionStatus = EFI_PROTOCOL_ERROR;
   } else {
     Transaction->Token->TransactionStatus = EFI_SUCCESS;
   }
 
-  MmioCopyMem (Transaction->RxData, (VOID *)PrivateData->RxChannel->Data, Transaction->RxDataSize, TRUE);
+  MmioCopyMem (Transaction->RxData, (VOID *)PrivateData->Channels[CIndex].RxChannel->Data, Transaction->RxDataSize, TRUE);
 
-  PrivateData->RxChannel->ReadCount++;
+  PrivateData->Channels[CIndex].RxChannel->ReadCount++;
 
   ArmDataMemoryBarrier ();
 
@@ -323,6 +329,7 @@ EFI_STATUS
 BpmpIpcCommunicate (
   IN  NVIDIA_BPMP_IPC_PROTOCOL *This,
   IN  OUT NVIDIA_BPMP_IPC_TOKEN *Token, OPTIONAL
+  IN  UINT32                     BpmpPhandle,
   IN  UINT32                     MessageRequest,
   IN  VOID                       *TxData,
   IN  UINTN                      TxDataSize,
@@ -339,6 +346,7 @@ BpmpIpcCommunicate (
   NVIDIA_BPMP_IPC_PRIVATE_DATA  *PrivateData        = NULL;
   BPMP_PENDING_TRANSACTION      *PendingTransaction = NULL;
   BOOLEAN                       NeedQueue           = FALSE;
+  UINT32                        ChannelNo           = 0;
 
   if (NULL == This) {
     return EFI_INVALID_PARAMETER;
@@ -349,6 +357,25 @@ BpmpIpcCommunicate (
   if ((Token != NULL) && (Token->Event == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
+
+  while (ChannelNo < PrivateData->DeviceCount) {
+    if (BpmpPhandle == PrivateData->Channels[ChannelNo].BpmpPhandle) {
+      break;
+    }
+
+    ChannelNo++;
+  }
+
+  if (ChannelNo >= PrivateData->DeviceCount) {
+    if (PLATFORM_MAX_SOCKETS == 1) {
+      ChannelNo = 0;
+    } else {
+      DEBUG ((EFI_D_ERROR, "%a: Invalid Bpmp device phandle: %u\n", __FUNCTION__, BpmpPhandle));
+      return EFI_INVALID_PARAMETER;
+    }
+  }
+
+  PrivateData->ActiveChannel = ChannelNo;
 
   if ((TxData == NULL) ||
       (TxDataSize == 0) ||
@@ -375,7 +402,8 @@ BpmpIpcCommunicate (
       return Status;
     }
   } else {
-    PendingTransaction = (BPMP_PENDING_TRANSACTION *)AllocatePool (sizeof (BPMP_PENDING_TRANSACTION));
+    PendingTransaction = (BPMP_PENDING_TRANSACTION *)AllocateZeroPool (sizeof (BPMP_PENDING_TRANSACTION));
+
     if (NULL == PendingTransaction) {
       return EFI_OUT_OF_RESOURCES;
     }
@@ -441,8 +469,8 @@ BpmpIpcCommunicate (
 EFI_STATUS
 EFIAPI
 MoveTxChannelState (
-  IN NVIDIA_BPMP_IPC_PRIVATE_DATA  *PrivateData,
-  IN IVC_STATE                     State
+  IN NVIDIA_BPMP_MRQ_CHANNEL  *PrivateData,
+  IN IVC_STATE                State
   )
 {
   EFI_STATUS  Status;
@@ -450,10 +478,10 @@ MoveTxChannelState (
   ArmDataMemoryBarrier ();
 
   PrivateData->TxChannel->State = State;
-  Status                        = PrivateData->DoorbellProtocol->RingDoorbell (
-                                                                   PrivateData->DoorbellProtocol,
-                                                                   HspDoorbellBpmp
-                                                                   );
+  Status                        = HspDoorbellRingDoorbell (
+                                    PrivateData->HspDoorbellLocation,
+                                    HspDoorbellBpmp
+                                    );
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to ring doorbell: %r\r\n", __FUNCTION__, Status));
   }
@@ -473,7 +501,7 @@ MoveTxChannelState (
 EFI_STATUS
 EFIAPI
 InitializeIvcChannel (
-  IN NVIDIA_BPMP_IPC_PRIVATE_DATA  *PrivateData
+  IN NVIDIA_BPMP_MRQ_CHANNEL  *PrivateData
   )
 {
   UINT32      RemoteState;
@@ -528,112 +556,40 @@ InitializeIvcChannel (
 }
 
 /**
-  This routine is called to notify system that HspDoorbell protocol is available.
+  This routine starts the BmpIpc protocol on the device.
 
-  @param Event                      Event that was notified
-  @param Context                    Pointer to private data.
+  @param BpmpNodeInfo             A pointer to BPMP device tree node info.
+  @param BpmpDevice               A pointer to Non Discoverable Device.
+  @param BpmpDeviceCount          Count of BPMP nodes enabled.
+  @param HspNodeInfo              A pointer to HSP device tree node info.
+  @param HspDevice                A pointer to Non Discoverable Device.
+  @param HspDeviceCount           Count of HSP nodes enabled.
 
-**/
-VOID
-EFIAPI
-HspProtocolNotify (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
-  )
-{
-  EFI_STATUS                    Status;
-  NVIDIA_BPMP_IPC_PRIVATE_DATA  *PrivateData    = (NVIDIA_BPMP_IPC_PRIVATE_DATA *)Context;
-  UINTN                         NumberOfHandles = 0;
-  EFI_HANDLE                    *HandleBuffer   = NULL;
-
-  if (NULL == PrivateData) {
-    return;
-  }
-
-  Status = gBS->LocateHandleBuffer (
-                  ByRegisterNotify,
-                  &gNVIDIAHspDoorbellProtocolGuid,
-                  PrivateData->ProtocolNotifyToken,
-                  &NumberOfHandles,
-                  &HandleBuffer
-                  );
-
-  if (EFI_ERROR (Status) || (NumberOfHandles == 0)) {
-    DEBUG ((EFI_D_ERROR, "%a: Locate Handle:%r\r\n", __FUNCTION__, Status));
-    return;
-  }
-
-  PrivateData->DoorbellHandle = HandleBuffer[0];
-  FreePool (HandleBuffer);
-
-  Status = gBS->HandleProtocol (
-                  PrivateData->DoorbellHandle,
-                  &gNVIDIAHspDoorbellProtocolGuid,
-                  (VOID **)&PrivateData->DoorbellProtocol
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Handle Protocol %r\r\n", __FUNCTION__, Status));
-    PrivateData->DoorbellHandle = NULL;
-    return;
-  }
-
-  if (NULL != PrivateData->RegisterNotifyEvent) {
-    gBS->CloseEvent (PrivateData->RegisterNotifyEvent);
-    PrivateData->RegisterNotifyEvent = NULL;
-  }
-
-  Status = PrivateData->DoorbellProtocol->EnableChannel (
-                                            PrivateData->DoorbellProtocol,
-                                            HspDoorbellBpmp
-                                            );
-
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to enable doorbell channel: %r", __FUNCTION__, Status));
-    return;
-  }
-
-  Status = InitializeIvcChannel (PrivateData);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to initialize channel: %r", __FUNCTION__, Status));
-    return;
-  }
-
-  Status = gBS->InstallMultipleProtocolInterfaces (
-                  &PrivateData->Controller,
-                  &gNVIDIABpmpIpcProtocolGuid,
-                  &PrivateData->BpmpIpcProtocol,
-                  NULL
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
-    return;
-  }
-
-  PrivateData->ProtocolInstalled = TRUE;
-}
-
-/**
-  This routine starts the HspDoorbell protocol on the device.
-
-  @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol
-  @param Controller               Handle of device to bind driver to..
-
-  @retval EFI_SUCCESS             This driver is added to this device.
-  @retval EFI_ALREADY_STARTED     This driver is already running on this device.
-  @retval other                   Some error occurs when binding this driver to this device.
+  @retval EFI_SUCCESS           This driver is added to this device.
+  @retval EFI_ALREADY_STARTED   This driver is already running on this device.
+  @retval other                 Some error occurs when binding this driver to this device.
 
 **/
 EFI_STATUS
 EFIAPI
 BpmpIpcProtocolInit (
-  IN EFI_HANDLE               *Controller,
-  IN NON_DISCOVERABLE_DEVICE  *NonDiscoverableProtocol
+  IN NVIDIA_DT_NODE_INFO      *BpmpNodeInfo,
+  IN NON_DISCOVERABLE_DEVICE  *BpmpDevice,
+  IN UINT32                   BpmpDeviceCount,
+  IN NVIDIA_DT_NODE_INFO      *HspNodeInfo,
+  IN NON_DISCOVERABLE_DEVICE  *HspDevice,
+  IN UINT32                   HspDeviceCount
   )
 {
   EFI_STATUS                         Status;
+  EFI_HANDLE                         DeviceHandle = NULL;
   NVIDIA_BPMP_IPC_PRIVATE_DATA       *PrivateData = NULL;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Desc;
   UINTN                              ResourceCount = 0;
+  UINT32                             Index;
+  INT32                              HspIndex;
+  CONST VOID                         *MboxesProperty = NULL;
+  INT32                              PropertySize    = 0;
 
   PrivateData = AllocateZeroPool (sizeof (NVIDIA_BPMP_IPC_PRIVATE_DATA));
   if (NULL == PrivateData) {
@@ -642,14 +598,17 @@ BpmpIpcProtocolInit (
   }
 
   PrivateData->Signature                   = BPMP_IPC_SIGNATURE;
-  PrivateData->ProtocolInstalled           = FALSE;
+  PrivateData->ProtocolInstalled           = TRUE; // TODO: check usage
   PrivateData->DriverBindingHandle         = NULL;
-  PrivateData->DoorbellProtocol            = NULL;
-  PrivateData->DoorbellHandle              = NULL;
-  PrivateData->TxChannel                   = NULL;
-  PrivateData->RxChannel                   = NULL;
   PrivateData->BpmpIpcProtocol.Communicate = BpmpIpcCommunicate;
-  PrivateData->Controller                  = *Controller;
+  PrivateData->Controller                  = DeviceHandle; // TODO: Move to the end.
+  PrivateData->DeviceCount                 = BpmpDeviceCount;
+
+  PrivateData->Channels = AllocateZeroPool (sizeof (NVIDIA_BPMP_MRQ_CHANNEL) * BpmpDeviceCount);
+  if (NULL == PrivateData->Channels) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ErrorExit;
+  }
 
   Status = gBS->CreateEvent (
                   EVT_TIMER | EVT_NOTIFY_SIGNAL,
@@ -665,75 +624,102 @@ BpmpIpcProtocolInit (
 
   InitializeListHead (&PrivateData->TransactionList);
 
-  //
-  // We only support MMIO devices, so iterate over the resources to ensure
-  // that they only describe things that we can handle
-  //
-  for (Desc = NonDiscoverableProtocol->Resources; Desc->Desc != ACPI_END_TAG_DESCRIPTOR;
-       Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3))
-  {
-    if ((Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
-        (Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM))
+  for (Index = 0; Index < BpmpDeviceCount; Index++) {
+    PrivateData->Channels[Index].BpmpPhandle = BpmpNodeInfo[Index].Phandle;
+    MboxesProperty                           = fdt_getprop (BpmpNodeInfo[Index].DeviceTreeBase, BpmpNodeInfo[Index].NodeOffset, "mboxes", &PropertySize);
+    if (NULL == MboxesProperty) {
+      Status = EFI_UNSUPPORTED;
+      goto ErrorExit;
+    }
+
+    ASSERT (PropertySize % sizeof (UINT32) == 0);
+    PrivateData->Channels[Index].HspPhandle = SwapBytes32 (*(UINT32 *)MboxesProperty);
+    //
+    // We only support MMIO devices, so iterate over the resources to ensure
+    // that they only describe things that we can handle
+    //
+    for (Desc = BpmpDevice[Index].Resources; Desc->Desc != ACPI_END_TAG_DESCRIPTOR;
+         Desc = (VOID *)((UINT8 *)Desc + Desc->Len + 3))
+    {
+      if ((Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
+          (Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM))
+      {
+        Status = EFI_UNSUPPORTED;
+        goto ErrorExit;
+      }
+
+      // Last two resources are tx and rx, some device trees have 3 nodes and some have 2.
+      if (PrivateData->Channels[Index].TxChannel == NULL) {
+        PrivateData->Channels[Index].TxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
+      } else if (PrivateData->Channels[Index].RxChannel == NULL) {
+        PrivateData->Channels[Index].RxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
+      } else {
+        PrivateData->Channels[Index].TxChannel = PrivateData->Channels[Index].RxChannel;
+        PrivateData->Channels[Index].RxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
+      }
+
+      ResourceCount++;
+    }
+
+    if ((NULL == PrivateData->Channels[Index].TxChannel) ||
+        (NULL == PrivateData->Channels[Index].RxChannel))
     {
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
 
-    // Last two resources are tx and rx, some device trees have 3 nodes and some have 2.
-    if (PrivateData->TxChannel == NULL) {
-      PrivateData->TxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
-    } else if (PrivateData->RxChannel == NULL) {
-      PrivateData->RxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
-    } else {
-      PrivateData->TxChannel = PrivateData->RxChannel;
-      PrivateData->RxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
+    HspIndex = 0;
+    while (HspIndex <  HspDeviceCount) {
+      if (PrivateData->Channels[Index].HspPhandle == HspNodeInfo[HspIndex].Phandle) {
+        break;
+      }
+
+      HspIndex++;
     }
 
-    ResourceCount++;
-  }
+    if (HspIndex >= HspDeviceCount) {
+      DEBUG ((EFI_D_ERROR, "%a, HSP device with phandle %u not found.", __FUNCTION__, PrivateData->Channels[Index].HspPhandle));
+      Status = EFI_UNSUPPORTED;
+      goto ErrorExit;
+    }
 
-  if ((NULL == PrivateData->TxChannel) ||
-      (NULL == PrivateData->RxChannel))
-  {
-    Status = EFI_UNSUPPORTED;
-    goto ErrorExit;
-  }
+    Status = HspDoorbellInit (&HspNodeInfo[HspIndex], &HspDevice[HspIndex], PrivateData->Channels[Index].HspDoorbellLocation);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, Failed to initialize Hsp Doorbell: %r", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
 
-  PrivateData->RegisterNotifyEvent = EfiCreateProtocolNotifyEvent (
-                                       &gNVIDIAHspDoorbellProtocolGuid,
-                                       TPL_CALLBACK,
-                                       HspProtocolNotify,
-                                       (VOID *)PrivateData,
-                                       &PrivateData->ProtocolNotifyToken
-                                       );
-  if (NULL == PrivateData->RegisterNotifyEvent) {
-    DEBUG ((EFI_D_ERROR, "%a: Enable Channel\r\n", __FUNCTION__));
-    Status = EFI_DEVICE_ERROR;
-    goto ErrorExit;
+    Status = HspDoorbellEnableChannel (PrivateData->Channels[Index].HspDoorbellLocation, HspDoorbellBpmp);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, Failed to enable Hsp Doorbell channel: %r", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
+
+    Status = InitializeIvcChannel (&PrivateData->Channels[Index]);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, Failed to initialize channel: %r", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
   }
 
   Status = gBS->InstallMultipleProtocolInterfaces (
-                  Controller,
-                  &gEfiCallerIdGuid,
-                  PrivateData,
+                  &PrivateData->Controller,
+                  &gNVIDIABpmpIpcProtocolGuid,
+                  &PrivateData->BpmpIpcProtocol,
                   NULL
                   );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
+    goto ErrorExit;
+  }
+
+  PrivateData->ProtocolInstalled = TRUE;
 
 ErrorExit:
   if (EFI_ERROR (Status)) {
     if (NULL != PrivateData) {
-      if (NULL != PrivateData->RegisterNotifyEvent) {
-        gBS->CloseEvent (PrivateData->RegisterNotifyEvent);
-        PrivateData->RegisterNotifyEvent = NULL;
-      }
-
-      if (NULL != PrivateData->DoorbellProtocol) {
-        gBS->CloseProtocol (
-               PrivateData->DoorbellHandle,
-               &gNVIDIAHspDoorbellProtocolGuid,
-               NULL,
-               PrivateData->DoorbellHandle
-               );
+      if (NULL != PrivateData->Channels) {
+        FreePool (PrivateData->Channels);
       }
 
       FreePool (PrivateData);

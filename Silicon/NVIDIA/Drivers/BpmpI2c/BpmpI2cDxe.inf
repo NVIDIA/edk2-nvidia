@@ -35,6 +35,7 @@
   UefiDriverEntryPoint
   FdtLib
   Crc8Lib
+  DtPlatformDtbLoaderLib
 
 [Protocols]
   gNVIDIABpmpIpcProtocolGuid

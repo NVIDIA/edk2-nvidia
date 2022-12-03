@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2017-2018, Arm Limited. All rights reserved.
-  Copyright (c) 2018-2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,13 +15,13 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PcdLib.h>
 #include <Protocol/ArmScmiClockProtocol.h>
 #include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/BpmpIpc.h>
 #include <Protocol/ClockParents.h>
 
 #include "BpmpScmiClockProtocolPrivate.h"
-
 STATIC NVIDIA_BPMP_IPC_PROTOCOL  *mBpmpIpcProtocol = NULL;
 
 // Instance of the clock parents protocol.
@@ -87,6 +87,7 @@ ClockGetTotalClocks (
   Status = mBpmpIpcProtocol->Communicate (
                                mBpmpIpcProtocol,
                                NULL,
+                               0,
                                MRQ_CLK,
                                (VOID *)&Request,
                                sizeof (UINT32),
@@ -95,7 +96,7 @@ ClockGetTotalClocks (
                                NULL
                                );
   if (!EFI_ERROR (Status)) {
-    *TotalClocks += 1;
+    *TotalClocks = (*TotalClocks * PcdGet32 (PcdTegraMaxSockets)) + 1;
   }
 
   if (*TotalClocks > SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
@@ -136,17 +137,18 @@ ClockGetClockAttributes (
   if ((This == NULL) ||
       (Enabled == NULL) ||
       (ClockAsciiName == NULL) ||
-      (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK))
+      (NVIDIA_CLOCK_ID (ClockId) >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK))
   {
     return EFI_INVALID_PARAMETER;
   }
 
   Request.Subcommand = ClockSubcommandIsEnabled;
-  Request.ClockId    = ClockId;
+  Request.ClockId    = NVIDIA_CLOCK_ID (ClockId);
 
   Status = mBpmpIpcProtocol->Communicate (
                                mBpmpIpcProtocol,
                                NULL,
+                               NVIDIA_CLOCK_PHANDLE (ClockId),
                                MRQ_CLK,
                                (VOID *)&Request,
                                sizeof (UINT32),
@@ -166,11 +168,12 @@ ClockGetClockAttributes (
   *Enabled = (IsEnabled != 0);
 
   Request.Subcommand = ClockSubcommandGetAllInfo;
-  Request.ClockId    = ClockId;
+  Request.ClockId    = NVIDIA_CLOCK_ID (ClockId);
 
   Status = mBpmpIpcProtocol->Communicate (
                                mBpmpIpcProtocol,
                                NULL,
+                               NVIDIA_CLOCK_PHANDLE (ClockId),
                                MRQ_CLK,
                                (VOID *)&Request,
                                sizeof (UINT32),
@@ -262,16 +265,17 @@ ClockRateGet (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
+  if (NVIDIA_CLOCK_ID (ClockId) >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
     return EFI_INVALID_PARAMETER;
   }
 
   Request.Subcommand = ClockSubcommandGetRate;
-  Request.ClockId    = ClockId;
+  Request.ClockId    = NVIDIA_CLOCK_ID (ClockId);
 
   Status = mBpmpIpcProtocol->Communicate (
                                mBpmpIpcProtocol,
                                NULL,
+                               NVIDIA_CLOCK_PHANDLE (ClockId),
                                MRQ_CLK,
                                (VOID *)&Request,
                                sizeof (UINT32),
@@ -314,7 +318,7 @@ ClockSetParentByDesiredRate (
 
   Status = mClockParentsProtocol.GetParents (&mClockParentsProtocol, ClockId, &NumberOfParents, &ParentIds);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_INFO, "%a Failed to get parent info for clock %d\r\n", __FUNCTION__, ClockId));
+    DEBUG ((EFI_D_INFO, "%a Failed to get parent info for clock %d\r\n", __FUNCTION__, NVIDIA_CLOCK_ID (ClockId)));
     return EFI_SUCCESS;
   }
 
@@ -323,7 +327,7 @@ ClockSetParentByDesiredRate (
     UINT64  ParentRate;
     UINT64  ParentClosestRate;
     UINT64  Divider;
-    Status = This->RateGet (This, ParentIds[ParentIndex], &ParentRate);
+    Status = This->RateGet (This, ((ClockId & 0xFFFF0000) | ParentIds[ParentIndex]), &ParentRate);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to get parent rate for parent %d\r\n", __FUNCTION__, ParentIds[ParentIndex]));
       return Status;
@@ -344,7 +348,7 @@ ClockSetParentByDesiredRate (
   }
 
   // Enable and set the parent
-  Status = ScmiClock2Protocol.Enable (&ScmiClock2Protocol, ClosestParent, TRUE);
+  Status = ScmiClock2Protocol.Enable (&ScmiClock2Protocol, ((ClockId & 0xFFFF0000) | ClosestParent), TRUE);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to enable parent %d\r\n", __FUNCTION__, ClosestParent));
     return Status;
@@ -352,7 +356,7 @@ ClockSetParentByDesiredRate (
 
   Status = mClockParentsProtocol.SetParent (&mClockParentsProtocol, ClockId, ClosestParent);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to set parent %d for clock %d\r\n", __FUNCTION__, ClosestParent, ClockId));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to set parent %d for clock %d\r\n", __FUNCTION__, ClosestParent, NVIDIA_CLOCK_ID (ClockId)));
     return Status;
   }
 
@@ -386,24 +390,25 @@ ClockRateSet (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
+  if (NVIDIA_CLOCK_ID (ClockId) >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
     return EFI_INVALID_PARAMETER;
   }
 
   Status = ClockSetParentByDesiredRate (This, ClockId, Rate);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to set parent for clock %d, rate %d\r\n", __FUNCTION__, ClockId, Rate));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to set parent for clock %d, rate %d\r\n", __FUNCTION__, NVIDIA_CLOCK_ID (ClockId), Rate));
     return Status;
   }
 
   Request.Subcommand = ClockSubcommandSetRate;
-  Request.ClockId    = ClockId;
+  Request.ClockId    = NVIDIA_CLOCK_ID (ClockId);
   Request.ParentId   = 0;
   Request.Rate       = Rate;
 
   Status = mBpmpIpcProtocol->Communicate (
                                mBpmpIpcProtocol,
                                NULL,
+                               NVIDIA_CLOCK_PHANDLE (ClockId),
                                MRQ_CLK,
                                (VOID *)&Request,
                                sizeof (BPMP_CLOCK_REQUEST),
@@ -421,7 +426,7 @@ ClockRateSet (
       EFI_D_INFO,
       "%a: Clock %d, attempt set to %16ld, was set to %16ld\r\n",
       __FUNCTION__,
-      ClockId,
+      NVIDIA_CLOCK_ID (ClockId),
       Rate,
       NewRate
       ));
@@ -456,7 +461,7 @@ ClockEnable (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
+  if (NVIDIA_CLOCK_ID (ClockId) >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -464,9 +469,9 @@ ClockEnable (
     UINT32  ParentId;
     Status = mClockParentsProtocol.GetParent (&mClockParentsProtocol, ClockId, &ParentId);
     if (!EFI_ERROR (Status)) {
-      Status = ScmiClock2Protocol.Enable (&ScmiClock2Protocol, ParentId, TRUE);
+      Status = ScmiClock2Protocol.Enable (&ScmiClock2Protocol, ((ClockId & 0xFFFF0000) | ParentId), TRUE);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to enable parent clock %d for %d: %r\r\n", __FUNCTION__, ParentId, ClockId, Status));
+        DEBUG ((EFI_D_ERROR, "%a: Failed to enable parent clock %d for %d: %r\r\n", __FUNCTION__, ParentId, NVIDIA_CLOCK_ID (ClockId), Status));
       }
     }
   }
@@ -477,11 +482,12 @@ ClockEnable (
     Request.Subcommand = ClockSubcommandDisable;
   }
 
-  Request.ClockId = ClockId;
+  Request.ClockId = NVIDIA_CLOCK_ID (ClockId);
 
   Status = mBpmpIpcProtocol->Communicate (
                                mBpmpIpcProtocol,
                                NULL,
+                               NVIDIA_CLOCK_PHANDLE (ClockId),
                                MRQ_CLK,
                                (VOID *)&Request,
                                sizeof (UINT32),
@@ -528,7 +534,7 @@ ClockParentsIsParent (
   }
 
   for (ParentIndex = 0; ParentIndex < NumberOfParents; ParentIndex++) {
-    if (ParentIds[ParentIndex] == ParentId) {
+    if (ParentIds[ParentIndex] == NVIDIA_CLOCK_ID (ParentId)) {
       break;
     }
   }
@@ -570,7 +576,7 @@ ClockParentsSetParent (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
+  if (NVIDIA_CLOCK_ID (ClockId) >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -585,12 +591,13 @@ ClockParentsSetParent (
   }
 
   Request.Subcommand = ClockSubcommandSetParent;
-  Request.ClockId    = ClockId;
+  Request.ClockId    = NVIDIA_CLOCK_ID (ClockId);
   Request.ParentId   = ParentId;
 
   Status = mBpmpIpcProtocol->Communicate (
                                mBpmpIpcProtocol,
                                NULL,
+                               NVIDIA_CLOCK_PHANDLE (ClockId),
                                MRQ_CLK,
                                (VOID *)&Request,
                                sizeof (BPMP_CLOCK_REQUEST),
@@ -633,16 +640,17 @@ ClockParentsGetParent (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
+  if (NVIDIA_CLOCK_ID (ClockId) >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK) {
     return EFI_INVALID_PARAMETER;
   }
 
   Request.Subcommand = ClockSubcommandGetParent;
-  Request.ClockId    = ClockId;
+  Request.ClockId    = NVIDIA_CLOCK_ID (ClockId);
 
   Status = mBpmpIpcProtocol->Communicate (
                                mBpmpIpcProtocol,
                                NULL,
+                               NVIDIA_CLOCK_PHANDLE (ClockId),
                                MRQ_CLK,
                                (VOID *)&Request,
                                sizeof (BPMP_CLOCK_REQUEST),
@@ -690,17 +698,18 @@ ClockParentsGetParents (
   if ((This == NULL) ||
       (NumberOfParents == NULL) ||
       (ParentIds == NULL) ||
-      (ClockId >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK))
+      (NVIDIA_CLOCK_ID (ClockId) >= SCMI_CLOCK_PROTOCOL_NUM_CLOCKS_MASK))
   {
     return EFI_INVALID_PARAMETER;
   }
 
   Request.Subcommand = ClockSubcommandGetAllInfo;
-  Request.ClockId    = ClockId;
+  Request.ClockId    = NVIDIA_CLOCK_ID (ClockId);
 
   Status = mBpmpIpcProtocol->Communicate (
                                mBpmpIpcProtocol,
                                NULL,
+                               NVIDIA_CLOCK_PHANDLE (ClockId),
                                MRQ_CLK,
                                (VOID *)&Request,
                                sizeof (UINT32),

@@ -1,7 +1,7 @@
 /** @file
   Reset node protocol Protocol
 
-  Copyright (c) 2018-2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -131,6 +131,7 @@ struct _NVIDIA_RESET_NODE_PROTOCOL {
   RESET_NODE_DEASSERT            Deassert;
   RESET_NODE_ASSERT              Assert;
   RESET_NODE_MODULE_RESET        ModuleReset;
+  UINT32                         BpmpPhandle;
   UINTN                          Resets;
   NVIDIA_RESET_NODE_ENTRY        ResetEntries[0];
 };

@@ -421,6 +421,7 @@ GetResources (
 EFI_STATUS
 BpmpProcessC2cCommand (
   IN  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol,
+  IN  UINT32                    BpmpPhandle,
   IN  MRQ_C2C_COMMAND_PACKET    *Request,
   OUT VOID                      *Response,
   IN  UINTN                     ResponseSize
@@ -441,6 +442,7 @@ BpmpProcessC2cCommand (
   Status = BpmpIpcProtocol->Communicate (
                               BpmpIpcProtocol,
                               NULL,
+                              BpmpPhandle,
                               MRQ_C2C,
                               (VOID *)Request,
                               sizeof (MRQ_C2C_COMMAND_PACKET),
@@ -472,6 +474,7 @@ BpmpProcessC2cCommand (
 EFI_STATUS
 BpmpProcessPgCommand (
   IN  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol,
+  IN  UINT32                    BpmpPhandle,
   IN  MRQ_PG_COMMAND_PACKET     *Request,
   OUT VOID                      *Response,
   IN  UINTN                     ResponseSize
@@ -490,6 +493,7 @@ BpmpProcessPgCommand (
   Status = BpmpIpcProtocol->Communicate (
                               BpmpIpcProtocol,
                               NULL,
+                              BpmpPhandle,
                               MRQ_PG,
                               (VOID *)Request,
                               sizeof (MRQ_PG_COMMAND_PACKET),
@@ -519,6 +523,7 @@ BpmpProcessPgCommand (
 EFI_STATUS
 BpmpProcessResetCommand (
   IN NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol,
+  IN UINT32                    BpmpPhandle,
   IN UINT32                    ResetId,
   IN MRQ_RESET_COMMANDS        Command
   )
@@ -536,6 +541,7 @@ BpmpProcessResetCommand (
   Status = BpmpIpcProtocol->Communicate (
                               BpmpIpcProtocol,
                               NULL,
+                              BpmpPhandle,
                               MRQ_RESET,
                               (VOID *)&Request,
                               sizeof (Request),
@@ -580,7 +586,7 @@ DeassertAllResetNodes (
   }
 
   for (Index = 0; Index < This->Resets; Index++) {
-    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->ResetEntries[Index].ResetId, CmdResetDeassert);
+    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->BpmpPhandle, This->ResetEntries[Index].ResetId, CmdResetDeassert);
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
     }
@@ -617,7 +623,7 @@ AssertAllResetNodes (
   }
 
   for (Index = 0; Index < This->Resets; Index++) {
-    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->ResetEntries[Index].ResetId, CmdResetAssert);
+    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->BpmpPhandle, This->ResetEntries[Index].ResetId, CmdResetAssert);
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
     }
@@ -654,7 +660,7 @@ ModuleResetAllResetNodes (
   }
 
   for (Index = 0; Index < This->Resets; Index++) {
-    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->ResetEntries[Index].ResetId, CmdResetModule);
+    Status = BpmpProcessResetCommand (BpmpIpcProtocol, This->BpmpPhandle, This->ResetEntries[Index].ResetId, CmdResetModule);
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
     }
@@ -691,7 +697,7 @@ DeassertResetNodes (
     return EFI_NOT_READY;
   }
 
-  return BpmpProcessResetCommand (BpmpIpcProtocol, ResetId, CmdResetDeassert);
+  return BpmpProcessResetCommand (BpmpIpcProtocol, This->BpmpPhandle, ResetId, CmdResetDeassert);
 }
 
 /**
@@ -722,7 +728,7 @@ AssertResetNodes (
     return EFI_NOT_READY;
   }
 
-  return BpmpProcessResetCommand (BpmpIpcProtocol, ResetId, CmdResetAssert);
+  return BpmpProcessResetCommand (BpmpIpcProtocol, This->BpmpPhandle, ResetId, CmdResetAssert);
 }
 
 /**
@@ -753,7 +759,7 @@ ModuleResetNodes (
     return EFI_NOT_READY;
   }
 
-  return BpmpProcessResetCommand (BpmpIpcProtocol, ResetId, CmdResetModule);
+  return BpmpProcessResetCommand (BpmpIpcProtocol, This->BpmpPhandle, ResetId, CmdResetModule);
 }
 
 /**
@@ -818,7 +824,7 @@ GetResetNodeProtocol (
     NumberOfResets = ResetsLength / (sizeof (UINT32) * 2);
   }
 
-  ResetNode = (NVIDIA_RESET_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_RESET_NODE_PROTOCOL) + (NumberOfResets * sizeof (NVIDIA_RESET_NODE_ENTRY)));
+  ResetNode = (NVIDIA_RESET_NODE_PROTOCOL *)AllocateZeroPool (sizeof (NVIDIA_RESET_NODE_PROTOCOL) + (NumberOfResets * sizeof (NVIDIA_RESET_NODE_ENTRY)));
   if (NULL == ResetNode) {
     DEBUG ((EFI_D_ERROR, "%a, Failed to allocate reset node\r\n", __FUNCTION__));
     return;
@@ -834,6 +840,10 @@ GetResetNodeProtocol (
   ResetNames                = (CONST CHAR8 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "reset-names", &ResetNamesLength);
   if (ResetNamesLength == 0) {
     ResetNames = NULL;
+  }
+
+  if (NumberOfResets > 0) {
+    ResetNode->BpmpPhandle =  SwapBytes32 (ResetIds[0]);
   }
 
   for (Index = 0; Index < NumberOfResets; Index++) {
@@ -983,6 +993,7 @@ GetClockNodeProtocol (
   NVIDIA_CLOCK_NODE_PROTOCOL  *ClockNode = NULL;
   UINTN                       Index;
   UINTN                       ListEntry;
+  UINT32                      BpmpPhandle;
 
   if ((NULL == Node) ||
       (NULL == ClockNodeProtocol) ||
@@ -1016,7 +1027,7 @@ GetClockNodeProtocol (
     NumberOfClocks = ClocksLength / (sizeof (UINT32) * 2);
   }
 
-  ClockNode = (NVIDIA_CLOCK_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_CLOCK_NODE_PROTOCOL) + (NumberOfClocks * sizeof (NVIDIA_CLOCK_NODE_ENTRY)));
+  ClockNode = (NVIDIA_CLOCK_NODE_PROTOCOL *)AllocateZeroPool (sizeof (NVIDIA_CLOCK_NODE_PROTOCOL) + (NumberOfClocks * sizeof (NVIDIA_CLOCK_NODE_ENTRY)));
   if (NULL == ClockNode) {
     DEBUG ((EFI_D_ERROR, "%a, Failed to allocate clock node\r\n", __FUNCTION__));
     return;
@@ -1035,8 +1046,15 @@ GetClockNodeProtocol (
     ClockParentNames = NULL;
   }
 
+  if (NumberOfClocks > 0) {
+    BpmpPhandle = SwapBytes32 (ClockIds[0]);
+    ASSERT (BpmpPhandle <= MAX_UINT16);
+  }
+
   for (Index = 0; Index < NumberOfClocks; Index++) {
-    ClockNode->ClockEntries[Index].ClockId   = SwapBytes32 (ClockIds[2 * Index + 1]);
+    ClockNode->ClockEntries[Index].ClockId = SwapBytes32 (ClockIds[2 * Index + 1]);
+    ASSERT (ClockNode->ClockEntries[Index].ClockId <= MAX_UINT16);
+    ClockNode->ClockEntries[Index].ClockId   = ClockNode->ClockEntries[Index].ClockId | (BpmpPhandle << 16);
     ClockNode->ClockEntries[Index].ClockName = NULL;
     ClockNode->ClockEntries[Index].Parent    = FALSE;
     if (ClockNames != NULL) {
@@ -1108,7 +1126,7 @@ GetStatePgNodes (
   Request.PgId     = PgId;
   Request.Argument = MAX_UINT32;
 
-  return BpmpProcessPgCommand (BpmpIpcProtocol, &Request, PowerGateState, 4);
+  return BpmpProcessPgCommand (BpmpIpcProtocol, This->BpmpPhandle, &Request, PowerGateState, 4);
 }
 
 /**
@@ -1147,7 +1165,7 @@ DeassertPgNodes (
     Request.PgId     = PgId;
     Request.Argument = CmdPgStateOn;
 
-    return BpmpProcessPgCommand (BpmpIpcProtocol, &Request, NULL, 0);
+    return BpmpProcessPgCommand (BpmpIpcProtocol, This->BpmpPhandle, &Request, NULL, 0);
   }
 
   return EFI_SUCCESS;
@@ -1189,7 +1207,7 @@ AssertPgNodes (
     Request.PgId     = PgId;
     Request.Argument = CmdPgStateOff;
 
-    return BpmpProcessPgCommand (BpmpIpcProtocol, &Request, NULL, 0);
+    return BpmpProcessPgCommand (BpmpIpcProtocol, This->BpmpPhandle, &Request, NULL, 0);
   }
 
   return EFI_SUCCESS;
@@ -1225,7 +1243,7 @@ InitC2cPartitions (
   Request.Command    = CmdC2cStartInitialization;
   Request.Partitions = Partitions;
 
-  return BpmpProcessC2cCommand (BpmpIpcProtocol, &Request, C2cStatus, sizeof (UINT8));
+  return BpmpProcessC2cCommand (BpmpIpcProtocol, This->BpmpPhandle, &Request, C2cStatus, sizeof (UINT8));
 }
 
 /**
@@ -1282,14 +1300,15 @@ GetC2cNodeProtocol (
     return;
   }
 
-  C2c = (NVIDIA_C2C_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_POWER_GATE_NODE_PROTOCOL));
+  C2c = (NVIDIA_C2C_NODE_PROTOCOL *)AllocateZeroPool (sizeof (NVIDIA_POWER_GATE_NODE_PROTOCOL));
   if (NULL == C2c) {
     DEBUG ((EFI_D_ERROR, "%a, Failed to allocate c2c node\r\n", __FUNCTION__));
     return;
   }
 
-  C2c->Init       = InitC2cPartitions;
-  C2c->Partitions = SwapBytes32 (Partitions[1]);
+  C2c->Init        = InitC2cPartitions;
+  C2c->BpmpPhandle = SwapBytes32 (Partitions[0]);
+  C2c->Partitions  = SwapBytes32 (Partitions[1]);
 
   C2cNodeInterface[ListEntry] = (VOID *)C2c;
   C2cNodeProtocol[ListEntry]  = &gNVIDIAC2cNodeProtocolGuid;
@@ -1353,7 +1372,7 @@ GetPowerGateNodeProtocol (
 
   NumberOfPgs = PgLength / (sizeof (UINT32) * 2);
 
-  PgNode = (NVIDIA_POWER_GATE_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_POWER_GATE_NODE_PROTOCOL) + (NumberOfPgs * sizeof (UINT32)));
+  PgNode = (NVIDIA_POWER_GATE_NODE_PROTOCOL *)AllocateZeroPool (sizeof (NVIDIA_POWER_GATE_NODE_PROTOCOL) + (NumberOfPgs * sizeof (UINT32)));
   if (NULL == PgNode) {
     DEBUG ((EFI_D_ERROR, "%a, Failed to allocate power gate node\r\n", __FUNCTION__));
     return;
@@ -1363,6 +1382,10 @@ GetPowerGateNodeProtocol (
   PgNode->Assert             = AssertPgNodes;
   PgNode->GetState           = GetStatePgNodes;
   PgNode->NumberOfPowerGates = NumberOfPgs;
+  if (NumberOfPgs > 0) {
+    PgNode->BpmpPhandle = SwapBytes32 (PgIds[0]);
+  }
+
   for (Index = 0; Index < PgNode->NumberOfPowerGates; Index++) {
     PgNode->PowerGateId[Index] = SwapBytes32 (PgIds[(Index *2) + 1]);
   }
@@ -1679,6 +1702,7 @@ GetSupportedDeviceTreeNodes (
         (AsciiStrCmp (Property, "okay") == 0))
     {
       if (NodeCount < *DeviceCount) {
+        NodeInfo.Phandle      = fdt_get_phandle (DTBase, NodeOffset);
         DTNodeInfo[NodeCount] = NodeInfo;
       }
 

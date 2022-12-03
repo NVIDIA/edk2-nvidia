@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2017-2018, Arm Limited. All rights reserved.
-  Copyright (c) 2018-2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -36,6 +36,8 @@ typedef enum {
 #define CLOCK_MAX_PARENTS      16
 #define CLOCK_MAX_NAME_LENGTH  40
 #define MAX_DIVIDER_2          256
+#define NVIDIA_CLOCK_ID(ID)       (ID & 0x0000FFFF)
+#define NVIDIA_CLOCK_PHANDLE(ID)  ((ID & 0xFFFF0000) >> 16)
 
 #pragma pack (1)
 

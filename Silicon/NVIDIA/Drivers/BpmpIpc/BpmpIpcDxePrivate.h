@@ -23,6 +23,8 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/NonDiscoverableDevice.h>
+#include <Library/DeviceDiscoveryLib.h>
+#include <libfdt.h>
 
 //
 // Global Variables definitions
@@ -38,26 +40,14 @@ extern EFI_COMPONENT_NAME2_PROTOCOL  gBpmpIpcComponentName2;
 #define BPMP_POLL_INTERVAL  1000// (100us)
 
 /**
-  This routine starts the HspDoorbell protocol on the device.
-
-  @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol.
-
-  @retval EFI_SUCCESS             This driver is added to this device.
-  @retval EFI_ALREADY_STARTED     This driver is already running on this device.
-  @retval other                   Some error occurs when binding this driver to this device.
-
-**/
-EFI_STATUS
-EFIAPI
-HspDoorbellProtocolInit (
-  IN EFI_HANDLE               *Controller,
-  IN NON_DISCOVERABLE_DEVICE  *NonDiscoverableProtocol
-  );
-
-/**
   This routine starts the BmpIpc protocol on the device.
 
-  @param NonDiscoverableProtocol  A pointer to the NonDiscoverableProtocol.
+  @param BpmpNodeInfo             A pointer to BPMP device tree node info.
+  @param BpmpDevice               A pointer to Non Discoverable Device.
+  @param BpmpDeviceCount          Count of BPMP nodes enabled.
+  @param HspNodeInfo              A pointer to HSP device tree node info.
+  @param HspDevice                A pointer to Non Discoverable Device.
+  @param HspDeviceCount           Count of HSP nodes enabled.
 
   @retval EFI_SUCCESS           This driver is added to this device.
   @retval EFI_ALREADY_STARTED   This driver is already running on this device.
@@ -67,8 +57,12 @@ HspDoorbellProtocolInit (
 EFI_STATUS
 EFIAPI
 BpmpIpcProtocolInit (
-  IN EFI_HANDLE               *Controller,
-  IN NON_DISCOVERABLE_DEVICE  *NonDiscoverableProtocol
+  IN NVIDIA_DT_NODE_INFO      *BpmpNodeInfo,
+  IN NON_DISCOVERABLE_DEVICE  *BpmpDevice,
+  IN UINT32                   BpmpDeviceCount,
+  IN NVIDIA_DT_NODE_INFO      *HspNodeInfo,
+  IN NON_DISCOVERABLE_DEVICE  *HspDevice,
+  IN UINT32                   HspDeviceCount
   );
 
 #endif

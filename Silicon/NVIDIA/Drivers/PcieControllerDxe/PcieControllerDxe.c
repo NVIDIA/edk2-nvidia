@@ -1134,6 +1134,7 @@ exit:
 EFI_STATUS
 BpmpProcessSetCtrlState (
   IN NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol,
+  IN UINT32                    BpmpPhandle,
   IN UINT32                    CtrlId,
   IN BOOLEAN                   State
   )
@@ -1152,6 +1153,7 @@ BpmpProcessSetCtrlState (
   Status = BpmpIpcProtocol->Communicate (
                               BpmpIpcProtocol,
                               NULL,
+                              BpmpPhandle,
                               69,
                               (VOID *)&Request,
                               sizeof (Request),
@@ -1328,7 +1330,7 @@ UninitializeController (
 
   if (!((Private->CtrlId == 5) && Private->IsT194)) {
     if (PcdGetBool (PcdBPMPPCIeControllerEnable)) {
-      Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->CtrlId, 0);
+      Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->BpmpPhandle, Private->CtrlId, 0);
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "Failed to disable Controller-%u\n", Private->CtrlId));
         return Status;
@@ -1512,6 +1514,7 @@ DeviceDiscoveryNotify (
   INT32                      RangeSize;
   CONST VOID                 *SegmentNumber = NULL;
   CONST VOID                 *ControllerId  = NULL;
+  CONST VOID                 *BpmpPhandle   = NULL;
   PCIE_CONTROLLER_PRIVATE    *Private       = NULL;
   EFI_EVENT                  ExitBootServiceEvent;
   NVIDIA_REGULATOR_PROTOCOL  *Regulator = NULL;
@@ -1655,6 +1658,21 @@ DeviceDiscoveryNotify (
 
       DEBUG ((EFI_D_INFO, "Controller-ID = %u\n", Private->CtrlId));
 
+      BpmpPhandle = fdt_getprop (
+                      DeviceTreeNode->DeviceTreeBase,
+                      DeviceTreeNode->NodeOffset,
+                      "nvidia,bpmp",
+                      &PropertySize
+                      );
+      if ((BpmpPhandle == NULL) || (PropertySize < sizeof (UINT32))) {
+        DEBUG ((DEBUG_ERROR, "Failed to get Bpmp node phandle.\n"));
+        goto ErrorExit;
+      } else {
+        CopyMem (&Private->BpmpPhandle, BpmpPhandle, sizeof (UINT32));
+        Private->BpmpPhandle = SwapBytes32 (Private->BpmpPhandle);
+        DEBUG ((EFI_D_ERROR, "PCIE Controller ID-%u, Bpmp Phandle-%u\n", Private->CtrlId, Private->BpmpPhandle));
+      }
+
       Property = fdt_getprop (
                    DeviceTreeNode->DeviceTreeBase,
                    DeviceTreeNode->NodeOffset,
@@ -1794,7 +1812,7 @@ DeviceDiscoveryNotify (
         }
 
         if (PcdGetBool (PcdBPMPPCIeControllerEnable)) {
-          Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->CtrlId, 1);
+          Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->BpmpPhandle, Private->CtrlId, 1);
           if (EFI_ERROR (Status)) {
             DEBUG ((EFI_D_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));
             Status = EFI_NOT_READY;
