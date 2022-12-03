@@ -27,45 +27,6 @@ typedef struct {
   UINT64    HbmBase;
 } HBM_MEMORY_INFO;
 
-UINT32
-EFIAPI
-GetAffinityDomain (
-  IN UINT64  BaseAddress
-  )
-{
-  VOID                 *Hob;
-  TEGRA_RESOURCE_INFO  *ResourceInfo;
-  UINT32               Count;
-
-  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-  if ((Hob != NULL) &&
-      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
-  {
-    ResourceInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ResourceInfo;
-  } else {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Error getting affinity domain\n",
-      __FUNCTION__
-      ));
-    ASSERT (FALSE);
-    return MAX_UINT32;
-  }
-
-  for (Count = 0; Count < ResourceInfo->DramRegionsCount; Count++) {
-    if ((BaseAddress >= ResourceInfo->InputDramRegions[Count].MemoryBaseAddress) &&
-        (BaseAddress < ResourceInfo->InputDramRegions[Count].MemoryBaseAddress +
-         ResourceInfo->InputDramRegions[Count].MemoryLength))
-    {
-      break;
-    }
-  }
-
-  ASSERT (Count < ResourceInfo->DramRegionsCount);
-
-  return Count;
-}
-
 EFI_STATUS
 EFIAPI
 InstallStaticResourceAffinityTable (
@@ -159,7 +120,7 @@ InstallStaticResourceAffinityTable (
   MemoryAffinityInfoIndex = 0;
   for (Index = 0; Index < DescriptorCount; Index++) {
     if (Descriptors[Index].GcdMemoryType == EfiGcdMemoryTypeSystemMemory) {
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = GetAffinityDomain (Descriptors[Index].BaseAddress);
+      MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_AMAP_GET_SOCKET (Descriptors[Index].BaseAddress);
       MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = Descriptors[Index].BaseAddress;
       MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = Descriptors[Index].Length;
       MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED;
