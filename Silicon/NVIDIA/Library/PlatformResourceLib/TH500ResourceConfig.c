@@ -214,6 +214,7 @@ TH500GetResourceConfig (
   UINTN               Count;
   UINTN               Socket;
   UINT32              SocketMask;
+  BOOLEAN             EgmEnabled;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
@@ -223,23 +224,76 @@ TH500GetResourceConfig (
 
   DEBUG ((EFI_D_ERROR, "SocketMask=0x%x\n", SocketMask));
 
-  // Build dram regions
-  DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS);
-  ASSERT (DramRegions != NULL);
-  if (DramRegions == NULL) {
-    return EFI_DEVICE_ERROR;
+  // Checking EGM carveout for primary socket is enough to detect whether
+  // EGM mode is enabled or not.
+  EgmEnabled = FALSE;
+  if ((CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Base != 0) &&
+      (CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Size != 0))
+  {
+    EgmEnabled = TRUE;
   }
 
-  Index = 0;
-  for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
-    if (!(SocketMask & (1UL << Socket))) {
-      continue;
+  // Build dram regions
+  if (EgmEnabled) {
+    DEBUG ((EFI_D_ERROR, "EGM Enabled\n"));
+    // When egm is enabled, uefi should use only memory in egm, interworld shmem, rcm, os and uefi
+    // carveouts.
+    DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * 5 * TH500_MAX_SOCKETS);
+    ASSERT (DramRegions != NULL);
+    if (DramRegions == NULL) {
+      return EFI_DEVICE_ERROR;
     }
 
-    DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->SdramInfo[Socket].Base;
-    DramRegions[Index].MemoryLength      = CpuBootloaderParams->SdramInfo[Socket].Size;
+    Index = 0;
+    for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
+      if (!(SocketMask & (1UL << Socket))) {
+        continue;
+      }
 
-    Index++;
+      DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Base;
+      DramRegions[Index].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Size;
+      Index++;
+      DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Base;
+      DramRegions[Index].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Size;
+      Index++;
+      if ((CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Base != 0) &&
+          (CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Size != 0))
+      {
+        DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Base;
+        DramRegions[Index].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Size;
+        Index++;
+      }
+
+      if ((CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Base != 0) &&
+          (CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Size != 0))
+      {
+        DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Base;
+        DramRegions[Index].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Size;
+        Index++;
+      }
+
+      DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_UEFI].Base;
+      DramRegions[Index].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_UEFI].Size;
+      Index++;
+    }
+  } else {
+    DEBUG ((EFI_D_ERROR, "EGM Disabled\n"));
+    DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS);
+    ASSERT (DramRegions != NULL);
+    if (DramRegions == NULL) {
+      return EFI_DEVICE_ERROR;
+    }
+
+    Index = 0;
+    for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
+      if (!(SocketMask & (1UL << Socket))) {
+        continue;
+      }
+
+      DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->SdramInfo[Socket].Base;
+      DramRegions[Index].MemoryLength      = CpuBootloaderParams->SdramInfo[Socket].Size;
+      Index++;
+    }
   }
 
   PlatformInfo->DramRegions          = DramRegions;
@@ -282,13 +336,22 @@ TH500GetResourceConfig (
           CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Count][Index].Base;
           CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Count][Index].Size;
           CarveoutRegionsCount++;
+        } else {
+          // Leave in memory map but marked as used
+          BuildMemoryAllocationHob (
+            CpuBootloaderParams->CarveoutInfo[Count][Index].Base,
+            EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Count][Index].Size)),
+            EfiReservedMemoryType
+            );
         }
-      } else if (Index == CARVEOUT_RCM_BLOB) {
+      } else if ((Index == CARVEOUT_RCM_BLOB) ||
+                 (Index == CARVEOUT_UEFI))
+      {
         // Leave in memory map but marked as used
         BuildMemoryAllocationHob (
           CpuBootloaderParams->CarveoutInfo[Count][Index].Base,
           EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Count][Index].Size)),
-          EfiBootServicesData
+          EfiReservedMemoryType
           );
       } else if (Index == CARVEOUT_OS) {
         // Leave in memory map but marked as used
@@ -305,10 +368,13 @@ TH500GetResourceConfig (
         Descriptor.NumberOfPages = EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Count][Index].Size);
         Descriptor.Attribute     = 0;
         BuildGuidDataHob (&gNVIDIAOSCarveoutHob, &Descriptor, sizeof (Descriptor));
-      } else if ((Index != CARVEOUT_EGM) &&
-                 (Index != CARVEOUT_UEFI) &&
-                 (CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][Index].Size != 0))
-      {
+      } else {
+        if ((EgmEnabled == TRUE) &&
+            (Index == CARVEOUT_EGM))
+        {
+          continue;
+        }
+
         CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Count][Index].Base;
         CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Count][Index].Size;
         CarveoutRegionsCount++;
