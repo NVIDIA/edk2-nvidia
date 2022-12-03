@@ -56,7 +56,7 @@
 #define CARVEOUT_UNUSED_GSC24             24
 #define CARVEOUT_UNUSED_GSC25             25
 #define CARVEOUT_UNUSED_GSC26             26
-#define CARVEOUT_UNUSED_GSC27             27
+#define CARVEOUT_TEMP_MB2                 27
 #define CARVEOUT_UNUSED_GSC28             28
 #define CARVEOUT_UNUSED_GSC29             29
 #define CARVEOUT_UNUSED_GSC30             30
@@ -70,17 +70,17 @@
 #define CARVEOUT_UEFI               37
 #define CARVEOUT_CCPLEX_LA_BUFFERS  38
 #define CARVEOUT_OS                 39
-#define CARVEOUT_RSVD1              40
-#define CARVEOUT_RSVD2              41
-#define CARVEOUT_RSVD3              42
-#define CARVEOUT_RSVD4              43
-#define CARVEOUT_RSVD5              44
-#define CARVEOUT_RSVD6              45
-#define CARVEOUT_RSVD7              46
-#define CARVEOUT_RSVD8              47
-#define CARVEOUT_RSVD9              48
-#define CARVEOUT_RSVD10             49
-#define CARVEOUT_RSVD11             50
+#define CARVEOUT_HV                 40
+#define CARVEOUT_RSVD1              41
+#define CARVEOUT_RSVD2              42
+#define CARVEOUT_RSVD3              43
+#define CARVEOUT_RSVD4              44
+#define CARVEOUT_RSVD5              45
+#define CARVEOUT_RSVD6              46
+#define CARVEOUT_RSVD7              47
+#define CARVEOUT_RSVD8              48
+#define CARVEOUT_RSVD9              49
+#define CARVEOUT_RSVD10             50
 #define CARVEOUT_OEM_COUNT          51
 
 typedef struct {
