@@ -102,6 +102,16 @@ InstallCmSmbiosTableList (
   CM_SMBIOS_PRIVATE_DATA          *Private;
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
   EFI_STATUS                      Status;
+  UINTN                           Index;
+  CM_SMBIOS_RECORD_POPULATION     CmInstallSmbiosRecords[] = {
+    { EFI_SMBIOS_TYPE_SYSTEM_INFORMATION,         InstallSmbiosType1Cm  },
+    { EFI_SMBIOS_TYPE_BASEBOARD_INFORMATION,      InstallSmbiosType2Cm  },
+    { EFI_SMBIOS_TYPE_PORT_CONNECTOR_INFORMATION, InstallSmbiosType8Cm  },
+    { EFI_SMBIOS_TYPE_SYSTEM_SLOTS,               InstallSmbiosType9Cm  },
+    { EFI_SMBIOS_TYPE_OEM_STRINGS,                InstallSmbiosType11Cm },
+    { EFI_SMBIOS_TYPE_IPMI_DEVICE_INFORMATION,    InstallSmbiosType38Cm },
+    { SMBIOS_TYPE_TPM_DEVICE,                     InstallSmbiosType43Cm }
+  };
 
   Private = AllocatePool (sizeof (CM_SMBIOS_PRIVATE_DATA));
   if (Private == NULL) {
@@ -141,23 +151,10 @@ InstallCmSmbiosTableList (
   //
   // Install CM object for each SMBIOS table
   //
-  Status = InstallSmbiosType1Cm (Private);
-  DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 1 - %r.\n", __FUNCTION__, Status));
-
-  Status = InstallSmbiosType2Cm (Private);
-  DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 2 - %r.\n", __FUNCTION__, Status));
-
-  Status = InstallSmbiosType9Cm (Private);
-  DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 9 - %r.\n", __FUNCTION__, Status));
-
-  Status = InstallSmbiosType11Cm (Private);
-  DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 11 - %r.\n", __FUNCTION__, Status));
-
-  Status = InstallSmbiosType38Cm (Private);
-  DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 38 - %r.\n", __FUNCTION__, Status));
-
-  Status = InstallSmbiosType43Cm (Private);
-  DEBUG ((DEBUG_INFO, "%a: Install SMBIOS Type 43 - %r.\n", __FUNCTION__, Status));
+  for (Index = 0; Index < ARRAY_SIZE (CmInstallSmbiosRecords); Index++) {
+    Status = CmInstallSmbiosRecords[Index].Function (Private);
+    DEBUG ((DEBUG_INFO, "%a: Install CM object of SMBIOS Type %d, Status = %r.\n", __FUNCTION__, CmInstallSmbiosRecords[Index].Type, Status));
+  }
 
   //
   // Free all FRUs

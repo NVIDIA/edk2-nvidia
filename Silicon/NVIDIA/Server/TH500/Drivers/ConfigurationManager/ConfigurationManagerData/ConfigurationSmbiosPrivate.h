@@ -45,6 +45,18 @@ typedef struct CmSmbiosPrivateData {
   UINT8                             FruCount;
 } CM_SMBIOS_PRIVATE_DATA;
 
+typedef EFI_STATUS
+(EFIAPI *CM_INSTALL_SMBIOS_RECORD)(
+  IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
+  );
+//
+// Device structures
+//
+typedef struct {
+  SMBIOS_TYPE                 Type;
+  CM_INSTALL_SMBIOS_RECORD    Function;
+} CM_SMBIOS_RECORD_POPULATION;
+
 /**
   Install the SMBIOS tables to Configuration Manager Data driver
 
@@ -117,6 +129,21 @@ InstallSmbiosType1Cm (
 EFI_STATUS
 EFIAPI
 InstallSmbiosType2Cm (
+  IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
+  );
+
+/**
+  Install CM object for SMBIOS Type 8
+
+  @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+InstallSmbiosType8Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
 
