@@ -236,9 +236,8 @@ TH500GetResourceConfig (
   // Build dram regions
   if (EgmEnabled) {
     DEBUG ((EFI_D_ERROR, "EGM Enabled\n"));
-    // When egm is enabled, uefi should use only memory in egm, interworld shmem, rcm, os and uefi
-    // carveouts.
-    DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * 5 * TH500_MAX_SOCKETS);
+    // When egm is enabled, uefi should use only memory in egm, rcm, os and uefi carveouts.
+    DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * 4 * TH500_MAX_SOCKETS);
     ASSERT (DramRegions != NULL);
     if (DramRegions == NULL) {
       return EFI_DEVICE_ERROR;
@@ -252,9 +251,6 @@ TH500GetResourceConfig (
 
       DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Base;
       DramRegions[Index].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Size;
-      Index++;
-      DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Base;
-      DramRegions[Index].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Size;
       Index++;
       if ((CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Base != 0) &&
           (CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Size != 0))
@@ -336,13 +332,6 @@ TH500GetResourceConfig (
           CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Count][Index].Base;
           CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Count][Index].Size;
           CarveoutRegionsCount++;
-        } else {
-          // Leave in memory map but marked as used
-          BuildMemoryAllocationHob (
-            CpuBootloaderParams->CarveoutInfo[Count][Index].Base,
-            EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Count][Index].Size)),
-            EfiReservedMemoryType
-            );
         }
       } else if ((Index == CARVEOUT_RCM_BLOB) ||
                  (Index == CARVEOUT_UEFI))
