@@ -13,7 +13,18 @@
 
 #include <Library/FruLib.h>
 
-#define MAX_SMBIOS_TABLE_TYPES_SUPPORTED  64
+#define MAX_SMBIOS_TABLE_TYPES_SUPPORTED   64
+#define MAX_TYPE2_COUNT                    10
+#define MAX_TYPE3_COUNT                    100
+#define MAX_TYPE3_CONTAINED_ELEMENT_COUNT  100
+
+//
+// CM SMBIOS record population struct
+//
+typedef struct {
+  UINT8              FruDeviceId;
+  CM_OBJECT_TOKEN    ChassisCmToken;
+} CM_ENCLOSURE_BASEBOARD_INFO;
 
 #define MAX_TYPE41_COUNT               100
 #define TYPE41_DEVICE_NOT_PRESENT      0xFFFFFFFF
@@ -47,6 +58,12 @@ typedef struct CmSmbiosPrivateData {
 
   /// Number of FRUs in FRU info array
   UINT8                             FruCount;
+
+  /// Enclosure and baseboard binding info
+  struct {
+    CM_ENCLOSURE_BASEBOARD_INFO    *Info;
+    UINT8                          Count;
+  } EnclosureBaseboardBinding;
 } CM_SMBIOS_PRIVATE_DATA;
 
 typedef EFI_STATUS
@@ -149,6 +166,21 @@ InstallSmbiosType1Cm (
 EFI_STATUS
 EFIAPI
 InstallSmbiosType2Cm (
+  IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
+  );
+
+/**
+  Install CM object for SMBIOS Type 3
+
+  @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+InstallSmbiosType3Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
 

@@ -1,24 +1,18 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 2 table
 
-  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
-#include <Library/HobLib.h>
-#include <Library/IpmiBaseLib.h>
-#include <Library/DxeServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/FruLib.h>
 #include <Library/PrintLib.h>
 #include <libfdt.h>
-
-#include <IndustryStandard/Ipmi.h>
-
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 
@@ -51,15 +45,16 @@ InstallSmbiosType2Cm (
   CONST CHAR8                     *PropertyStr;
   INT32                           Length;
   UINTN                           Index;
+  UINTN                           BindingInfoIndex;
   INT32                           NodeOffset;
   CHAR8                           Type2tNodeStr[] = "/firmware/smbios/type2@xx";
-  FRU_DEVICE_INFO                 *SystemFru;
+  FRU_DEVICE_INFO                 *Type2FruInfo;
   CHAR8                           *FruDesc;
 
   NumBaseboards = 0;
   BaseboardInfo = NULL;
 
-  for (Index = 0; Index < 10; Index++) {
+  for (Index = 0; Index < MAX_TYPE2_COUNT; Index++) {
     AsciiSPrint (Type2tNodeStr, sizeof (Type2tNodeStr), "/firmware/smbios/type2@%u", Index);
     NodeOffset = fdt_path_offset (DtbBase, Type2tNodeStr);
     if (NodeOffset < 0) {
@@ -112,29 +107,37 @@ InstallSmbiosType2Cm (
     // Get data from FRU.
     Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", &Length);
     if (Property != NULL) {
-      FruDesc   = (CHAR8 *)Property;
-      SystemFru = FindFruByDescription (Private, FruDesc);
-      if (SystemFru != NULL) {
+      FruDesc      = (CHAR8 *)Property;
+      Type2FruInfo = FindFruByDescription (Private, FruDesc);
+      if (Type2FruInfo != NULL) {
         if (BaseboardInfo[NumBaseboards].Manufacturer == NULL) {
           // If not override by DTB. Copy from FRU.
-          BaseboardInfo[NumBaseboards].Manufacturer = AllocateCopyString (SystemFru->ProductManufacturer);
+          BaseboardInfo[NumBaseboards].Manufacturer = AllocateCopyString (Type2FruInfo->ProductManufacturer);
         }
 
-        BaseboardInfo[NumBaseboards].ProductName  = AllocateCopyString (SystemFru->ProductName);
-        BaseboardInfo[NumBaseboards].Version      = AllocateCopyString (SystemFru->ProductVersion);
-        BaseboardInfo[NumBaseboards].SerialNumber = AllocateCopyString (SystemFru->ProductSerial);
-        BaseboardInfo[NumBaseboards].AssetTag     = AllocateCopyString (SystemFru->ProductAssetTag);
+        BaseboardInfo[NumBaseboards].ProductName        = AllocateCopyString (Type2FruInfo->ProductName);
+        BaseboardInfo[NumBaseboards].Version            = AllocateCopyString (Type2FruInfo->ProductVersion);
+        BaseboardInfo[NumBaseboards].SerialNumber       = AllocateCopyString (Type2FruInfo->ProductSerial);
+        BaseboardInfo[NumBaseboards].AssetTag           = AllocateCopyString (Type2FruInfo->ProductAssetTag);
+        BaseboardInfo[NumBaseboards].BaseboardInfoToken = REFERENCE_TOKEN (BaseboardInfo[NumBaseboards]);
+
+        if (Private->EnclosureBaseboardBinding.Info != NULL) {
+          for (BindingInfoIndex = 0; BindingInfoIndex < Private->EnclosureBaseboardBinding.Count; BindingInfoIndex++) {
+            if (Private->EnclosureBaseboardBinding.Info[BindingInfoIndex].FruDeviceId == Type2FruInfo->FruDeviceId) {
+              BaseboardInfo[NumBaseboards].ChassisToken = Private->EnclosureBaseboardBinding.Info[BindingInfoIndex].ChassisCmToken;
+            }
+          }
+        }
       }
     }
 
     BaseboardInfo[NumBaseboards].NumberOfContainedObjectHandles = 0;
-    BaseboardInfo[NumBaseboards].ChassisToken                   = CM_NULL_TOKEN;
 
     NumBaseboards++;
   }
 
-  for (Index = 0; Index < NumBaseboards; Index++) {
-    BaseboardInfo[Index].BaseboardInfoToken = REFERENCE_TOKEN (BaseboardInfo[Index]);
+  if (Private->EnclosureBaseboardBinding.Info != NULL) {
+    FreePool (Private->EnclosureBaseboardBinding.Info);
   }
 
   DEBUG ((DEBUG_INFO, "%a: NumBaseboards = %d\n", __FUNCTION__, NumBaseboards));

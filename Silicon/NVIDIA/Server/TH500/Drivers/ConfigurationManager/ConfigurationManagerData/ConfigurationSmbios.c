@@ -106,6 +106,7 @@ InstallCmSmbiosTableList (
   CM_SMBIOS_RECORD_POPULATION     CmInstallSmbiosRecords[] = {
     { EFI_SMBIOS_TYPE_BIOS_INFORMATION,                     InstallSmbiosType0Cm  },
     { EFI_SMBIOS_TYPE_SYSTEM_INFORMATION,                   InstallSmbiosType1Cm  },
+    { EFI_SMBIOS_TYPE_SYSTEM_ENCLOSURE,                     InstallSmbiosType3Cm  },
     { EFI_SMBIOS_TYPE_BASEBOARD_INFORMATION,                InstallSmbiosType2Cm  },
     { EFI_SMBIOS_TYPE_PORT_CONNECTOR_INFORMATION,           InstallSmbiosType8Cm  },
     { EFI_SMBIOS_TYPE_SYSTEM_SLOTS,                         InstallSmbiosType9Cm  },
@@ -121,9 +122,11 @@ InstallCmSmbiosTableList (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Private->CmSmbiosTableCount = 0;
-  Private->Repo               = *PlatformRepositoryInfo;
-  Private->RepoEnd            = PlatformRepositoryInfoEnd;
+  Private->CmSmbiosTableCount              = 0;
+  Private->Repo                            = *PlatformRepositoryInfo;
+  Private->RepoEnd                         = PlatformRepositoryInfoEnd;
+  Private->EnclosureBaseboardBinding.Count = 0;
+  Private->EnclosureBaseboardBinding.Info  = NULL;
 
   //
   // Load device tree SMBIOS node

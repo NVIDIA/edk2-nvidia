@@ -37,6 +37,7 @@
   ConfigurationSmbiosType0.c
   ConfigurationSmbiosType1.c
   ConfigurationSmbiosType2.c
+  ConfigurationSmbiosType3.c
   ConfigurationSmbiosType8.c
   ConfigurationSmbiosType9.c
   ConfigurationSmbiosType11.c
@@ -76,6 +77,7 @@
   PciSegmentLib
   Tpm2CommandLib
   PcdLib
+  UefiRuntimeServicesTableLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
@@ -99,6 +101,7 @@
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
+  gNVIDIATokenSpaceGuid.PcdType3Info
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass
   gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType
@@ -163,6 +166,9 @@
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth
   gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
+
+[Guids]
+  gNVIDIAPublicVariableGuid
 
 [Depex]
   gEfiVariableArchProtocolGuid AND

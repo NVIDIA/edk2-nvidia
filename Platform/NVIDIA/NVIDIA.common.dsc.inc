@@ -988,6 +988,7 @@
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType1Lib/SmbiosType1Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType0Lib/SmbiosType0Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType2Lib/SmbiosType2Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType3Lib/SmbiosType3Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType8Lib/SmbiosType8Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType9Lib/SmbiosType9Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType11Lib/SmbiosType11Lib.inf
