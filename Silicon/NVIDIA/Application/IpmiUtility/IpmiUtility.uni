@@ -1,0 +1,13 @@
+// /** @file
+// Shell application IpmiUtility.
+//
+// This application is used to test IPMI command between BIOS an BMC.
+//
+// Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+//
+// **/
+
+#string STR_MODULE_ABSTRACT             #language en-US "Shell application IpmiUtility"
+#string STR_MODULE_DESCRIPTION          #language en-US "This application is used to test IPMI command between BIOS an BMC"

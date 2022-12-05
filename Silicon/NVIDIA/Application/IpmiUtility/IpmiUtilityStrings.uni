@@ -1,0 +1,33 @@
+/** @file
+  String definitions for the Shell IpmiUtility application.
+
+  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#langdef en-US "English"
+
+#string STR_IPMI_UTILITY_UNKNOWN_OPERATION         #language en-US  "%s: Operation not specified.\n"
+#string STR_IPMI_UTILITY_INVALID_PARAMETER         #language en-US  "%s: Please specify Net Function and Command\n"
+#string STR_IPMI_UTILITY_INVALID_FORMAT            #language en-US  "%s: Illegal input detected!\n"
+#string STR_IPMI_UTILITY_OUT_OF_RESOURCE           #language en-US  "%s: Out of resource\n"
+#string STR_IPMI_UTILITY_CMD_FAILED                #language en-US  "Submit IPMI command failed: %r\n"
+#string STR_IPMI_UTILITY_INPUT_DATA                #language en-US  "NetFn: 0x%02X Command: 0x%02X Data size: %d Data:\n"
+#string STR_IPMI_UTILITY_OUTPUT_DATA               #language en-US  "Return Data size: %d Data:\n"
+#string STR_IPMI_UTILITY_HELP                      #language en-US  ""
+".TH IpmiUtility 0 "Test IPMI command."\r\n"
+".SH NAME\r\n"
+"Test IPMI command.\r\n"
+".SH SYNOPSIS\r\n"
+" \r\n"
+"%HIpmiUtility [-help]\r\n"
+".SH OPTIONS\r\n"
+" \r\n"
+"%Hcommand%N: RAW DATA\r\n"
+"  -?, --help                    Displays this help.\r\n"
+"\r\n"
+"  Example: IpmiUtility 06 01\r\n"
+"  Example: IpmiUtility 3C 30 01\r\n"
+" \r\n"

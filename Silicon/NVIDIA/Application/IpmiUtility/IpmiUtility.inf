@@ -1,0 +1,54 @@
+## @file
+#  Shell application IPMI utility.
+#
+#  This application is used to test IPMI command between BIOS an BMC.
+#
+# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = IpmiUtility
+  FILE_GUID                      = 4F8C3277-4F55-43C5-AAA4-EEF06C048421
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeIpmiUtility
+  MODULE_UNI_FILE                = IpmiUtility.uni
+
+#
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  IpmiUtilityStrings.uni
+  IpmiUtility.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  IpmiFeaturePkg/IpmiFeaturePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiApplicationEntryPoint
+  UefiHiiServicesLib
+  BaseMemoryLib
+  ShellLib
+  MemoryAllocationLib
+  DebugLib
+  HiiLib
+  UefiLib
+  IpmiBaseLib
+
+[Protocols]
+  gEfiHiiPackageListProtocolGuid                ##CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  IpmiUtilityExtra.uni

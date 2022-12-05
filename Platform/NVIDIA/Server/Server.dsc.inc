@@ -325,3 +325,8 @@
   # MM MCTP
   #
   Silicon/NVIDIA/Drivers/MctpMmDxe/MctpMmDxe.inf
+
+  #
+  # IPMI test Application
+  #
+  Silicon/NVIDIA/Application/IpmiUtility/IpmiUtility.inf
