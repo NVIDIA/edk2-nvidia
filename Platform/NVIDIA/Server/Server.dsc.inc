@@ -53,7 +53,7 @@
 [PcdsFixedAtBuild.common]
   gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
   gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x07
-  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x200
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x400
 
 [PcdsDynamicDefault]
   ## MM Communicate
