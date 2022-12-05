@@ -803,8 +803,11 @@ InitializeSettings (
   // Initialize OS Chain B status Form Settings
   PcdSet32S (PcdOsChainStatusB, PcdGet32 (PcdOsChainStatusB));
 
-  // Initialize L4T boot mode form settings
+  // Initialize L4T boot mode Form Settings
   PcdSet32S (PcdL4TDefaultBootMode, PcdGet32 (PcdL4TDefaultBootMode));
+
+  // Initialize the IPMI network boot mode Form Settings
+  PcdSet8S (PcdIpmiNetworkBootMode, PcdGet8 (PcdIpmiNetworkBootMode));
 
   // Initialize Acpi Timer Form Settings
   PcdSet8S (PcdAcpiTimerEnabled, PcdGet8 (PcdAcpiTimerEnabled));

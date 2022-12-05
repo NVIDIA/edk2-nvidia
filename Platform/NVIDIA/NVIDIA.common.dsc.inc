@@ -539,6 +539,13 @@
 
   gArmTokenSpaceGuid.PcdMmBufferSize|65536
 
+  ## Indicates whether PlatformBootManagerLib code can set BootNext for the current boot.
+  #  If enabled, setting BootNext in PlatformBootManagerLib controls the current boot.<BR><BR>
+  #   TRUE  - BootNext value from PlatformBootManagerLib will affect the current boot.<BR>
+  #   FALSE - BootNext value from PlatformBootManagerLib will affect the subsequent boot (or be ignored if already set).<BR>
+  # @Prompt Allow PlatformBootManagerLib to set BootNext for the current boot.
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAllowBootNextFromPlatformBootManagerLib|TRUE
+
 [PcdsFixedAtBuild]
   #
   # Variable Services PCDs.
@@ -654,6 +661,7 @@
   gNVIDIATokenSpaceGuid.PcdOsChainStatusA|L"RootfsStatusSlotA"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdOsChainStatusB|L"RootfsStatusSlotB"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode|L"L4TDefaultBootMode"|gNVIDIAPublicVariableGuid|0x00|0xFF|BS,NV,RT
+  gNVIDIATokenSpaceGuid.PcdIpmiNetworkBootMode|L"IpmiNetworkBootMode"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled|L"AcpiTimerEnabled"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV
 
 [Components.common]

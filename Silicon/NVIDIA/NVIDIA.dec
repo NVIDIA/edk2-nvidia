@@ -604,6 +604,9 @@
 # Platform supports NS QSPI controllers
   gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|FALSE|BOOLEAN|0x00000080
 
+# Option to select IPv4/IPv6 for IPMI network boot
+  gNVIDIATokenSpaceGuid.PcdIpmiNetworkBootMode|0x00|UINT8|0x0000009a
+
 #Option to enable/disable ACPI Timer
   gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled|0x00|UINT8|0x0000009b
 

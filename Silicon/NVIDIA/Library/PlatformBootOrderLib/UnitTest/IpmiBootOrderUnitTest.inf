@@ -1,0 +1,40 @@
+## @file
+# IPMI BootOrder UnitTest
+#
+# Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = IpmiBootOrderUnitTest
+  FILE_GUID                      = fcd0fd8a-2dd1-436b-b464-a6760956f428
+  MODULE_TYPE                    = HOST_APPLICATION
+  VERSION_STRING                 = 1.0
+
+[Sources]
+  IpmiBootOrderUnitTest.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  IpmiFeaturePkg/IpmiFeaturePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  BaseLib
+  DebugLib
+  UnitTestLib
+  PrintLib
+  CmockaLib
+  PcdLib
+  IpmiBaseLib
+  MemoryAllocationLib
+  PlatformBootOrderLib
+  UefiRuntimeServicesTableLib
+
+[Guids]
+  gEfiGlobalVariableGuid

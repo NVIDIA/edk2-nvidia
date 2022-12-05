@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -1323,6 +1323,11 @@ PlatformBootManagerBeforeConsole (
     //
     PlatformConfigured ();
   }
+
+  //
+  // Check for IPMI-directed changes to the boot order
+  //
+  CheckIPMIForBootOrderUpdates ();
 
   //
   // Add the hardcoded short-form USB keyboard device path to ConIn.

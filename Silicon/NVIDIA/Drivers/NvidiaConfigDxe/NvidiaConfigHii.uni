@@ -2,7 +2,7 @@
 *
 *  String definitions for the NVIDIA Config.
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -113,6 +113,8 @@
 #string STR_PCIE_SUPPORTS_CLK_REQ_TITLE  #language en-US "Supports ClkReq"
 #string STR_PCIE_SUPPORTS_CLK_REQ_HELP   #language en-US "Availability of CLKREQ signal from RP to EP"
 
+#string STR_IPMI_NETWORK_BOOT_MODE_PROMPT #language en-US "IP mode for IPMI-requested BootOrder changes"
+#string STR_IPMI_NETWORK_BOOT_MODE_HELP   #language en-US "IPv4/v6 selection for IPMI requested PXE and HTTP BootOrder changes. No effect without relevant IPMI BootOrder request"
 
 #string STR_ACPI_TIMER_ENABLED_PROMPT    #language en-US "Enable ACPI Timer"
 #string STR_ACPI_TIMER_ENABLED_HELP      #language en-US "Enable/Disable ACPI Timer"
@@ -124,6 +126,9 @@
 
 #string STR_BOTTOM                       #language en-US  "Bottom"
 #string STR_TOP                          #language en-US  "Top"
+
+#string STR_IPV4                         #language en-US  "IPv4"
+#string STR_IPV6                         #language en-US  "IPv6"
 
 #string STR_SP_DISABLED                  #language en-US  "Port Disabled"
 #string STR_SP_ENABLED_SPCR_FULL_16550   #language en-US  "Console Enabled - 16550"

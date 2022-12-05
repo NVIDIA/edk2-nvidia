@@ -1,7 +1,7 @@
 /** @file
 *  Nvidia Configuration Dxe
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -79,6 +79,7 @@
 #define KEY_OS_CHAIN_STATUS_B         0x0109
 #define KEY_L4T_CONFIG                0x010A
 #define KEY_BOOT_CONFIG               0x010B
+#define KEY_IPMI_NETWORK_BOOT_MODE    0x010C
 #define KEY_ENABLE_ACPI_TIMER         0x010D
 
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
@@ -88,6 +89,9 @@
 
 #define QUICK_BOOT_DISABLE  0x0
 #define QUICK_BOOT_ENABLE   0x1
+
+#define IPMI_NETWORK_BOOT_MODE_IPV4  0x0
+#define IPMI_NETWORK_BOOT_MODE_IPV6  0x1
 
 #define ACPI_TIMER_DISABLE  0x0
 #define ACPI_TIMER_ENABLE   0x1

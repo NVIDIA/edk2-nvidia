@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -9,6 +9,7 @@
 
 #include <Uefi.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/IpmiBaseLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiBootManagerLib.h>
@@ -17,9 +18,13 @@
 #include <Library/DevicePathLib.h>
 #include <Library/SortLib.h>
 #include <Library/DebugLib.h>
+#include <IndustryStandard/Ipmi.h>
+#include <Guid/GlobalVariable.h>
 
-#define NVIDIA_BOOT_TYPE_HTTP     0
-#define NVIDIA_BOOT_TYPE_BOOTIMG  1
+#define NVIDIA_BOOT_TYPE_HTTP                    0
+#define NVIDIA_BOOT_TYPE_BOOTIMG                 1
+#define IPMI_GET_BOOT_OPTIONS_PARAMETER_INVALID  1
+#define IPMI_PARAMETER_VERSION                   1
 
 typedef struct {
   CHAR8    *OrderName;
@@ -47,49 +52,39 @@ STATIC NVIDIA_BOOT_ORDER_PRIORITY  mBootPriority[] = {
 
 #define DEFAULT_BOOT_ORDER_STRING  "boot.img,usb,sd,emmc,ufs"
 
-STATIC
-INT32
+NVIDIA_BOOT_ORDER_PRIORITY *
 EFIAPI
-GetDevicePriority (
-  IN UINT16  BootOption
+GetBootClassOfOption (
+  IN EFI_BOOT_MANAGER_LOAD_OPTION  *Option
   )
 {
-  EFI_STATUS                    Status;
-  CHAR16                        OptionName[sizeof ("Boot####")];
-  EFI_BOOT_MANAGER_LOAD_OPTION  Option;
-  UINTN                         OptionalDataSize;
-  UINTN                         BootPriorityIndex;
-  EFI_DEVICE_PATH_PROTOCOL      *DevicePathNode;
-  UINT8                         ExtraSpecifier;
-
-  UnicodeSPrint (OptionName, sizeof (OptionName), L"Boot%04x", BootOption);
-  Status = EfiBootManagerVariableToLoadOption (OptionName, &Option);
-  if (EFI_ERROR (Status)) {
-    return MAX_INT32;
-  }
+  UINTN                     OptionalDataSize;
+  UINTN                     BootPriorityIndex;
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePathNode;
+  UINT8                     ExtraSpecifier;
 
   OptionalDataSize = 0;
-  if (Option.OptionalData != NULL) {
-    OptionalDataSize = StrSize ((CONST CHAR16 *)Option.OptionalData);
+  if (Option->OptionalData != NULL) {
+    OptionalDataSize = StrSize ((CONST CHAR16 *)Option->OptionalData);
   }
 
-  if ((Option.OptionalData != NULL) &&
-      (Option.OptionalDataSize == OptionalDataSize + sizeof (EFI_GUID)) &&
+  if ((Option->OptionalData != NULL) &&
+      (Option->OptionalDataSize == OptionalDataSize + sizeof (EFI_GUID)) &&
       CompareGuid (
-        (EFI_GUID *)((UINT8 *)Option.OptionalData + OptionalDataSize),
+        (EFI_GUID *)((UINT8 *)Option->OptionalData + OptionalDataSize),
         &gNVIDIABmBootOptionGuid
         ))
   {
     for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriority); BootPriorityIndex++) {
       if (mBootPriority[BootPriorityIndex].ExtraSpecifier == NVIDIA_BOOT_TYPE_BOOTIMG) {
-        DEBUG ((DEBUG_VERBOSE, "Found %s priority to be %d\r\n", ConvertDevicePathToText (Option.FilePath, TRUE, FALSE), mBootPriority[BootPriorityIndex].PriorityOrder));
-        return mBootPriority[BootPriorityIndex].PriorityOrder;
+        DEBUG ((DEBUG_ERROR, "Option %d has class %a\n", Option->OptionNumber, mBootPriority[BootPriorityIndex].OrderName));
+        return &mBootPriority[BootPriorityIndex];
       }
     }
   }
 
   ExtraSpecifier = MAX_UINT8;
-  DevicePathNode = Option.FilePath;
+  DevicePathNode = Option->FilePath;
   while (!IsDevicePathEndType (DevicePathNode)) {
     if ((DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) &&
         (DevicePathSubType (DevicePathNode) == MSG_URI_DP))
@@ -101,23 +96,77 @@ GetDevicePriority (
     DevicePathNode = NextDevicePathNode (DevicePathNode);
   }
 
-  DevicePathNode = Option.FilePath;
+  DevicePathNode = Option->FilePath;
   while (!IsDevicePathEndType (DevicePathNode)) {
     for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriority); BootPriorityIndex++) {
       if ((DevicePathType (DevicePathNode) == mBootPriority[BootPriorityIndex].Type) &&
           (DevicePathSubType (DevicePathNode) == mBootPriority[BootPriorityIndex].SubType) &&
           (ExtraSpecifier == mBootPriority[BootPriorityIndex].ExtraSpecifier))
       {
-        DEBUG ((DEBUG_VERBOSE, "Found %s priority to be %d\r\n", ConvertDevicePathToText (Option.FilePath, TRUE, FALSE), mBootPriority[BootPriorityIndex].PriorityOrder));
-        return mBootPriority[BootPriorityIndex].PriorityOrder;
+        DEBUG ((DEBUG_ERROR, "Option %d has class %a\n", Option->OptionNumber, mBootPriority[BootPriorityIndex].OrderName));
+        return &mBootPriority[BootPriorityIndex];
       }
     }
 
     DevicePathNode = NextDevicePathNode (DevicePathNode);
   }
 
-  DEBUG ((DEBUG_VERBOSE, "Found %s priority to be %d\r\n", ConvertDevicePathToText (Option.FilePath, TRUE, FALSE), MAX_INT32));
-  return MAX_INT32;
+  return NULL;
+}
+
+NVIDIA_BOOT_ORDER_PRIORITY *
+EFIAPI
+GetBootClassOfName (
+  CHAR8  *ClassName,
+  UINTN  ClassNameLen
+  )
+{
+  UINTN  BootPriorityIndex;
+  UINTN  BootPriorityMatchLen;
+
+  for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriority); BootPriorityIndex++) {
+    BootPriorityMatchLen = AsciiStrLen (mBootPriority[BootPriorityIndex].OrderName);
+    if ((BootPriorityMatchLen == ClassNameLen) &&
+        (CompareMem (ClassName, mBootPriority[BootPriorityIndex].OrderName, ClassNameLen) == 0))
+    {
+      return &mBootPriority[BootPriorityIndex];
+    }
+  }
+
+  DEBUG ((DEBUG_ERROR, "Unable to determine class of boot device type \"%a\"\r\n", ClassName));
+  return NULL;
+}
+
+STATIC
+INT32
+EFIAPI
+GetDevicePriority (
+  IN UINT16  BootOption
+  )
+{
+  EFI_STATUS                    Status;
+  CHAR16                        OptionName[sizeof ("Boot####")];
+  EFI_BOOT_MANAGER_LOAD_OPTION  Option;
+  NVIDIA_BOOT_ORDER_PRIORITY    *BootPriorityClass;
+  INT32                         DevicePriority;
+
+  UnicodeSPrint (OptionName, sizeof (OptionName), L"Boot%04x", BootOption);
+  Status = EfiBootManagerVariableToLoadOption (OptionName, &Option);
+  if (EFI_ERROR (Status)) {
+    return MAX_INT32;
+  }
+
+  BootPriorityClass = GetBootClassOfOption (&Option);
+
+  if (BootPriorityClass == NULL) {
+    DevicePriority = MAX_INT32;
+  } else {
+    DevicePriority = BootPriorityClass->PriorityOrder;
+  }
+
+  DEBUG ((DEBUG_VERBOSE, "Found %s priority to be %d\r\n", ConvertDevicePathToText (Option.FilePath, TRUE, FALSE), DevicePriority));
+  EfiBootManagerFreeLoadOption (&Option);
+  return DevicePriority;
 }
 
 STATIC
@@ -139,40 +188,18 @@ BootOrderSortCompare (
 
 VOID
 EFIAPI
-SetBootOrder (
+ParseDefaultBootPriority (
   VOID
   )
 {
-  EFI_STATUS  Status;
-  BOOLEAN     VariableData;
-  UINTN       VariableSize;
-  UINT32      VariableAttributes;
-  UINT16      *BootOrder;
-  UINTN       BootOrderSize;
-  UINT16      *NewOrder;
-  INT32       Priority;
-  CHAR8       *DefaultBootOrder;
-  UINTN       DefaultBootOrderSize;
-  CHAR8       *CurrentBootPriorityStr;
-  CHAR8       *CurrentBootPriorityEnd;
-  UINTN       CurrentBootPriorityLen;
-  UINTN       BootPriorityMatchLen;
-  UINTN       BootPriorityIndex;
-
-  VariableData = FALSE;
-  VariableSize = sizeof (BOOLEAN);
-  Status       = gRT->GetVariable (
-                        L"PlatformBootOrderSet",
-                        &gNVIDIATokenSpaceGuid,
-                        &VariableAttributes,
-                        &VariableSize,
-                        (VOID *)&VariableData
-                        );
-  if (!EFI_ERROR (Status) && (VariableSize == sizeof (BOOLEAN))) {
-    if (VariableData == TRUE) {
-      return;
-    }
-  }
+  EFI_STATUS                  Status;
+  INT32                       Priority;
+  CHAR8                       *DefaultBootOrder;
+  UINTN                       DefaultBootOrderSize;
+  CHAR8                       *CurrentBootPriorityStr;
+  CHAR8                       *CurrentBootPriorityEnd;
+  UINTN                       CurrentBootPriorityLen;
+  NVIDIA_BOOT_ORDER_PRIORITY  *ClassBootPriority;
 
   Priority = 0;
   // Process the priority order
@@ -202,40 +229,51 @@ SetBootOrder (
 
     CurrentBootPriorityLen = CurrentBootPriorityEnd - CurrentBootPriorityStr;
 
-    for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriority); BootPriorityIndex++) {
-      BootPriorityMatchLen = AsciiStrLen (mBootPriority[BootPriorityIndex].OrderName);
-      if ((BootPriorityMatchLen == CurrentBootPriorityLen) &&
-          (CompareMem (CurrentBootPriorityStr, mBootPriority[BootPriorityIndex].OrderName, CurrentBootPriorityLen) == 0))
-      {
-        DEBUG ((DEBUG_INFO, "Setting %a priority to %d\r\n", mBootPriority[BootPriorityIndex].OrderName, Priority));
-        mBootPriority[BootPriorityIndex].PriorityOrder = Priority;
-        Priority++;
-        break;
-      }
+    ClassBootPriority = GetBootClassOfName (CurrentBootPriorityStr, CurrentBootPriorityLen);
+    if (ClassBootPriority != NULL) {
+      DEBUG ((DEBUG_INFO, "Setting %a priority to %d\r\n", ClassBootPriority->OrderName, Priority));
+      ClassBootPriority->PriorityOrder = Priority;
+      Priority++;
+    } else {
+      *CurrentBootPriorityEnd = '\0';
+      DEBUG ((DEBUG_ERROR, "Ignoring unknown boot class %a\r\n", CurrentBootPriorityStr));
     }
 
     CurrentBootPriorityStr += CurrentBootPriorityLen + 1;
   }
 
-  GetEfiGlobalVariable2 (L"BootOrder", (VOID **)&BootOrder, &BootOrderSize);
-  if (BootOrder == NULL) {
-    return;
-  }
+  return;
+}
 
-  NewOrder = AllocateCopyPool (BootOrderSize, BootOrder);
-  PerformQuickSort (NewOrder, BootOrderSize/sizeof (UINT16), sizeof (UINT16), BootOrderSortCompare);
-  if (CompareMem (NewOrder, BootOrder, BootOrderSize) != 0) {
-    Status = gRT->SetVariable (
-                    L"BootOrder",
-                    &gEfiGlobalVariableGuid,
-                    EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
-                    BootOrderSize,
-                    NewOrder
-                    );
-    if (EFI_ERROR (Status)) {
+VOID
+EFIAPI
+SetBootOrder (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  BOOLEAN     VariableData;
+  UINTN       VariableSize;
+  UINT32      VariableAttributes;
+
+  VariableData = FALSE;
+  VariableSize = sizeof (BOOLEAN);
+  Status       = gRT->GetVariable (
+                        L"PlatformBootOrderSet",
+                        &gNVIDIATokenSpaceGuid,
+                        &VariableAttributes,
+                        &VariableSize,
+                        (VOID *)&VariableData
+                        );
+  if (!EFI_ERROR (Status) && (VariableSize == sizeof (BOOLEAN))) {
+    if (VariableData == TRUE) {
       return;
     }
   }
+
+  ParseDefaultBootPriority ();
+
+  EfiBootManagerSortLoadOptionVariable (LoadOptionTypeBoot, BootOrderSortCompare);
 
   VariableData = TRUE;
   gRT->SetVariable (
@@ -245,6 +283,398 @@ SetBootOrder (
          sizeof (BOOLEAN),
          &VariableData
          );
+
+  return;
+}
+
+STATIC
+EFI_STATUS
+GetIPMIBootOrderParameter (
+  IN UINT8                            ParameterSelector,
+  OUT IPMI_GET_BOOT_OPTIONS_RESPONSE  *BootOptionsResponse
+  )
+{
+  EFI_STATUS                     Status;
+  IPMI_GET_BOOT_OPTIONS_REQUEST  BootOptionsRequest;
+  UINT32                         ResponseSize;
+
+  BootOptionsRequest.ParameterSelector.Bits.ParameterSelector = ParameterSelector;
+  BootOptionsRequest.SetSelector                              = 0;
+  BootOptionsRequest.BlockSelector                            = 0;
+
+  ResponseSize = sizeof (IPMI_GET_BOOT_OPTIONS_RESPONSE);
+  if (ParameterSelector == IPMI_BOOT_OPTIONS_PARAMETER_BOOT_INFO_ACK) {
+    ResponseSize += sizeof (IPMI_BOOT_OPTIONS_RESPONSE_PARAMETER_4);
+  } else if (ParameterSelector == IPMI_BOOT_OPTIONS_PARAMETER_BOOT_FLAGS) {
+    ResponseSize += sizeof (IPMI_BOOT_OPTIONS_RESPONSE_PARAMETER_5);
+  }
+
+  Status = IpmiSubmitCommand (
+             IPMI_NETFN_CHASSIS,
+             IPMI_CHASSIS_GET_SYSTEM_BOOT_OPTIONS,
+             (VOID *)&BootOptionsRequest,
+             sizeof (BootOptionsRequest),
+             (VOID *)BootOptionsResponse,
+             &ResponseSize
+             );
+
+  if (EFI_ERROR (Status) ||
+      (BootOptionsResponse->CompletionCode != IPMI_COMP_CODE_NORMAL) ||
+      (BootOptionsResponse->ParameterValid.Bits.ParameterValid == IPMI_GET_BOOT_OPTIONS_PARAMETER_INVALID) ||
+      (BootOptionsResponse->ParameterValid.Bits.ParameterSelector != ParameterSelector) ||
+      (BootOptionsResponse->ParameterVersion.Bits.ParameterVersion != IPMI_PARAMETER_VERSION))
+  {
+    DEBUG ((DEBUG_ERROR, "Failed to get BMC Boot Options Parameter %d (IPMI CompCode = 0x%x)\r\n", ParameterSelector, BootOptionsResponse->CompletionCode));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+SetIPMIBootOrderParameter (
+  IN UINT8                          ParameterSelector,
+  IN IPMI_SET_BOOT_OPTIONS_REQUEST  *BootOptionsRequest
+  )
+{
+  EFI_STATUS                      Status;
+  IPMI_SET_BOOT_OPTIONS_RESPONSE  BootOptionsResponse;
+  UINT32                          RequestSize;
+  UINT32                          ResponseSize;
+
+  BootOptionsRequest->ParameterValid.Bits.MarkParameterInvalid = 0;
+  BootOptionsRequest->ParameterValid.Bits.ParameterSelector    = ParameterSelector;
+
+  RequestSize = sizeof (IPMI_SET_BOOT_OPTIONS_REQUEST);
+  if (ParameterSelector == IPMI_BOOT_OPTIONS_PARAMETER_BOOT_INFO_ACK) {
+    RequestSize += sizeof (IPMI_BOOT_OPTIONS_RESPONSE_PARAMETER_4);
+  } else if (ParameterSelector == IPMI_BOOT_OPTIONS_PARAMETER_BOOT_FLAGS) {
+    RequestSize += sizeof (IPMI_BOOT_OPTIONS_RESPONSE_PARAMETER_5);
+  }
+
+  ResponseSize = sizeof (IPMI_SET_BOOT_OPTIONS_RESPONSE);
+
+  Status = IpmiSubmitCommand (
+             IPMI_NETFN_CHASSIS,
+             IPMI_CHASSIS_SET_SYSTEM_BOOT_OPTIONS,
+             (VOID *)BootOptionsRequest,
+             RequestSize,
+             (VOID *)&BootOptionsResponse,
+             &ResponseSize
+             );
+
+  if (EFI_ERROR (Status) ||
+      (BootOptionsResponse.CompletionCode != IPMI_COMP_CODE_NORMAL))
+  {
+    DEBUG ((DEBUG_ERROR, "Failed to set BMC Boot Options Parameter %d (IPMI CompCode = 0x%x)\r\n", ParameterSelector, BootOptionsResponse.CompletionCode));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+INTN
+EFIAPI
+Uint16SortCompare (
+  IN CONST VOID  *Buffer1,
+  IN CONST VOID  *Buffer2
+  )
+{
+  return *(UINT16 *)Buffer1 - *(UINT16 *)Buffer2;
+}
+
+VOID
+EFIAPI
+CheckIPMIForBootOrderUpdates (
+  VOID
+  )
+{
+  EFI_STATUS                      Status;
+  VOID                            *BootOptionsBuffer;
+  IPMI_GET_BOOT_OPTIONS_RESPONSE  *BootOptionsResponse;
+  IPMI_BOOT_OPTIONS_PARAMETERS    *BootOptionsParameters;
+  IPMI_SET_BOOT_OPTIONS_REQUEST   *BootOptionsRequest;
+  IPMI_BOOT_OPTIONS_PARAMETERS    *BootOptionsData;
+  NVIDIA_BOOT_ORDER_PRIORITY      *RequestedBootClass;
+  NVIDIA_BOOT_ORDER_PRIORITY      *OptionBootClass;
+  CHAR8                           *RequestedClassName;
+  UINT8                           RequestedInstance;
+  UINTN                           BootOrderIndex;
+  INTN                            FirstBootOrderIndex;
+  UINT16                          *BootOrder;
+  UINTN                           BootOrderSize;
+  UINTN                           BootOrderLength;
+  UINT16                          *ClassInstanceList;
+  UINTN                           ClassInstanceLength;
+  UINTN                           ClassInstanceIndex;
+  UINT16                          BootOption;
+  UINT64                          OsIndications;
+  UINTN                           OsIndicationsSize;
+  CHAR16                          OptionName[sizeof ("Boot####")];
+  EFI_BOOT_MANAGER_LOAD_OPTION    Option;
+  BOOLEAN                         IPv6;
+
+  BootOptionsResponse = NULL;
+  ClassInstanceList   = NULL;
+  BootOrder           = NULL;
+
+  if (PcdGet8 (PcdIpmiNetworkBootMode) == 1) {
+    IPv6 = TRUE;
+  } else {
+    IPv6 = FALSE;
+  }
+
+  BootOptionsBuffer = AllocateZeroPool (MAX (sizeof (IPMI_GET_BOOT_OPTIONS_RESPONSE), sizeof (IPMI_SET_BOOT_OPTIONS_REQUEST)) + sizeof (IPMI_BOOT_OPTIONS_PARAMETERS));
+  if (BootOptionsBuffer == NULL) {
+    DEBUG ((DEBUG_ERROR, "Unable to allocate memory for handling IPMI BootOrder commands\n"));
+    return;
+  }
+
+  BootOptionsResponse   = BootOptionsBuffer;
+  BootOptionsParameters = (IPMI_BOOT_OPTIONS_PARAMETERS *)&BootOptionsResponse->ParameterData[0];
+
+  Status = GetIPMIBootOrderParameter (IPMI_BOOT_OPTIONS_PARAMETER_BOOT_INFO_ACK, BootOptionsResponse);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Error 0x%x checking for IPMI BOOT_INFO_ACK\n", Status));
+    goto CleanupAndReturn;
+  }
+
+  if (BootOptionsParameters->Parm4.BootInitiatorAcknowledgeData & BOOT_OPTION_HANDLED_BY_BIOS) {
+    Status = GetIPMIBootOrderParameter (IPMI_BOOT_OPTIONS_PARAMETER_BOOT_FLAGS, BootOptionsResponse);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Error 0x%x checking if IPMI boot options were already processed\n", Status));
+      goto CleanupAndReturn;
+    }
+
+    if (!BootOptionsParameters->Parm5.Data1.Bits.BootFlagValid) {
+      goto CleanupAndReturn;
+      return;
+    }
+
+    // TODO update UEFI verbosity based on BootOptionsParameters->Parm5.Data3.Bits.BiosVerbosity?
+
+    // TODO potentially clear all boot variables if BootOptionsParameters->Parm5.Data2.Bits.CmosClear is set?
+
+    switch (BootOptionsParameters->Parm5.Data2.Bits.BootDeviceSelector) {
+      case IPMI_BOOT_DEVICE_SELECTOR_NO_OVERRIDE:
+        goto AcknowledgeAndCleanup;
+        break;
+      case IPMI_BOOT_DEVICE_SELECTOR_PXE:
+        RequestedClassName = IPv6 ? "pxev6" : "pxev4";
+        break;
+      case IPMI_BOOT_DEVICE_SELECTOR_HARDDRIVE:
+        RequestedClassName = "nvme";
+        break;
+      case IPMI_BOOT_DEVICE_SELECTOR_HARDDRIVE_SAFE_MODE:
+        DEBUG ((DEBUG_WARN, "Ignoring unsupported boot device selector IPMI_BOOT_DEVICE_SELECTOR_HARDDRIVE_SAFE_MODE\n"));
+        goto AcknowledgeAndCleanup;
+      case IPMI_BOOT_DEVICE_SELECTOR_DIAGNOSTIC_PARTITION:
+        DEBUG ((DEBUG_WARN, "Ignoring unsupported boot device selector IPMI_BOOT_DEVICE_SELECTOR_DIAGNOSTIC_PARTITION\n"));
+        goto AcknowledgeAndCleanup;
+      case IPMI_BOOT_DEVICE_SELECTOR_CD_DVD:
+        RequestedClassName = "cdrom";
+        break;
+      case IPMI_BOOT_DEVICE_SELECTOR_BIOS_SETUP:
+        OsIndications     = 0;
+        OsIndicationsSize = sizeof (OsIndications);
+        Status            = gRT->GetVariable (
+                                   EFI_OS_INDICATIONS_VARIABLE_NAME,
+                                   &gEfiGlobalVariableGuid,
+                                   NULL,
+                                   &OsIndicationsSize,
+                                   &OsIndications
+                                   );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "Error 0x%x getting OsIndications to request to boot to UEFI menu\n", Status));
+        }
+
+        OsIndications |= EFI_OS_INDICATIONS_BOOT_TO_FW_UI;
+        Status         = gRT->SetVariable (
+                                EFI_OS_INDICATIONS_VARIABLE_NAME,
+                                &gEfiGlobalVariableGuid,
+                                EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                                sizeof (OsIndications),
+                                &OsIndications
+                                );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "Error 0x%x setting OsIndications to request to boot to UEFI menu\n", Status));
+        }
+
+        goto AcknowledgeAndCleanup;
+        break;
+      case IPMI_BOOT_DEVICE_SELECTOR_REMOTE_FLOPPY:
+        RequestedClassName = "sata";
+        break;
+      case IPMI_BOOT_DEVICE_SELECTOR_REMOTE_CD_DVD:
+        RequestedClassName = IPv6 ? "httpv6" : "httpv4";
+        break;
+      case IPMI_BOOT_DEVICE_SELECTOR_PRIMARY_REMOTE_MEDIA:
+        // TODO - support BMC's USB here
+        DEBUG ((DEBUG_WARN, "Ignoring request to boot from BMC's USB - not yet supported\n"));
+        goto AcknowledgeAndCleanup;
+      case IPMI_BOOT_DEVICE_SELECTOR_REMOTE_HARDDRIVE:
+        RequestedClassName = "scsi";
+        break;
+      case IPMI_BOOT_DEVICE_SELECTOR_FLOPPY:
+        RequestedClassName = "usb";
+        break;
+      default:
+        DEBUG ((DEBUG_WARN, "Ignoring unknown boot device selector %d\n", BootOptionsParameters->Parm5.Data2.Bits.BootDeviceSelector));
+        goto AcknowledgeAndCleanup;
+    }
+
+    RequestedBootClass = GetBootClassOfName (RequestedClassName, AsciiStrLen (RequestedClassName));
+    if (RequestedBootClass == NULL) {
+      DEBUG ((DEBUG_WARN, "Ignoring unsupported boot class \"%a\"\n", RequestedClassName));
+      goto AcknowledgeAndCleanup;
+    }
+
+    RequestedInstance = BootOptionsParameters->Parm5.Data5.Bits.DeviceInstanceSelector;
+    // Note: bit 4 selects between external(0) and internal(1) device instances, but we don't have that distinction, so ignore it
+    RequestedInstance &= 0x0F;
+
+    Status = GetEfiGlobalVariable2 (EFI_BOOT_ORDER_VARIABLE_NAME, (VOID **)&BootOrder, &BootOrderSize);
+    if (EFI_ERROR (Status) || (BootOrder == NULL)) {
+      DEBUG ((DEBUG_ERROR, "Unable to determine BootOrder (Status 0x%x) - ignoring request to prioritize %a instance %d\n", Status, RequestedClassName, RequestedInstance));
+      goto AcknowledgeAndCleanup;
+    }
+
+    BootOrderLength = BootOrderSize/sizeof (BootOrder[0]);
+
+    if (RequestedInstance > 0) {
+      ClassInstanceList = AllocatePool (BootOrderSize);
+      if (ClassInstanceList == NULL) {
+        DEBUG ((DEBUG_ERROR, "Unable to allocate memory to process BootOrder - ignoring request to prioritize %a instance %d\n", RequestedClassName, RequestedInstance));
+        goto AcknowledgeAndCleanup;
+      }
+
+      ClassInstanceLength = 0;
+    }
+
+    // Find the index of the first occurance of RequestedClass in BootOrder
+    // and the list of instances of RequestedClass in BootOrder [if RequestedInstance > 0]
+    FirstBootOrderIndex = -1;
+    for (BootOrderIndex = 0; BootOrderIndex < BootOrderLength; BootOrderIndex++) {
+      UnicodeSPrint (OptionName, sizeof (OptionName), L"Boot%04x", BootOrder[BootOrderIndex]);
+      Status = EfiBootManagerVariableToLoadOption (OptionName, &Option);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "Error 0x%x parsing BootOrder - ignoring request to prioritize %a instance %d\n", Status, RequestedClassName, RequestedInstance));
+        goto AcknowledgeAndCleanup;
+      }
+
+      OptionBootClass = GetBootClassOfOption (&Option);
+      EfiBootManagerFreeLoadOption (&Option);
+
+      if (OptionBootClass == RequestedBootClass) {
+        if (FirstBootOrderIndex == -1) {
+          FirstBootOrderIndex = BootOrderIndex;
+          if (RequestedInstance == 0) {
+            break;
+          }
+        }
+
+        ClassInstanceList[ClassInstanceLength] = BootOrder[BootOrderIndex];
+        ClassInstanceLength++;
+      }
+    }
+
+    if (FirstBootOrderIndex == -1) {
+      DEBUG ((DEBUG_ERROR, "Unable to find any instance of %a in BootOrder - Ignoring boot order change request from IPMI\n", RequestedClassName));
+      goto AcknowledgeAndCleanup;
+    }
+
+    // Find the index of the N-th occurance of RequestedClass in BootOrder when sorted by number
+    if (RequestedInstance == 0) {
+      BootOrderIndex = FirstBootOrderIndex;
+    } else {
+      if (RequestedInstance-1 < ClassInstanceLength) {
+        PerformQuickSort (ClassInstanceList, ClassInstanceLength, sizeof (ClassInstanceList[0]), Uint16SortCompare);
+        ClassInstanceIndex = RequestedInstance-1;
+        for (BootOrderIndex = 0; BootOrderIndex < BootOrderLength; BootOrderIndex++) {
+          if (BootOrder[BootOrderIndex] == ClassInstanceList[ClassInstanceIndex]) {
+            break;
+          }
+        }
+      } else {
+        DEBUG ((DEBUG_WARN, "Unable to find requested instance %d of %a - Using first found instance instead\n", RequestedInstance, RequestedClassName));
+        BootOrderIndex = FirstBootOrderIndex;
+      }
+    }
+
+    // At this point BootOrderIndex is the entry to move to the start of the list
+
+    if (BootOptionsParameters->Parm5.Data1.Bits.PersistentOptions) {
+      if (BootOrderIndex > 0) {
+        BootOption = BootOrder[BootOrderIndex];
+        CopyMem (&BootOrder[1], &BootOrder[0], BootOrderIndex*sizeof (BootOrder[0]));
+        BootOrder[0] = BootOption;
+
+        Status = gRT->SetVariable (
+                        EFI_BOOT_ORDER_VARIABLE_NAME,
+                        &gEfiGlobalVariableGuid,
+                        EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                        BootOrderSize,
+                        BootOrder
+                        );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "Error 0x%x moving %a instance %d to the start of BootOrder\n", Status, RequestedClassName, RequestedInstance));
+        }
+      }
+    } else {
+      Status = gRT->SetVariable (
+                      EFI_BOOT_NEXT_VARIABLE_NAME,
+                      &gEfiGlobalVariableGuid,
+                      EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                      sizeof (BootOrder[0]),
+                      &BootOrder[BootOrderIndex]
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "Error 0x%x setting BootNext to %a instance %d\n", Status, RequestedClassName, RequestedInstance));
+      }
+    }
+  } else {
+    goto CleanupAndReturn;
+  }
+
+AcknowledgeAndCleanup:
+  BootOptionsRequest = BootOptionsBuffer;
+  BootOptionsData    = (IPMI_BOOT_OPTIONS_PARAMETERS *)&BootOptionsRequest->ParameterData[0];
+
+  SetMem (BootOptionsData, sizeof (IPMI_BOOT_OPTIONS_RESPONSE_PARAMETER_4), 0);
+  BootOptionsData->Parm4.WriteMask                    = BOOT_OPTION_HANDLED_BY_BIOS;
+  BootOptionsData->Parm4.BootInitiatorAcknowledgeData = 0;
+  Status                                              = SetIPMIBootOrderParameter (IPMI_BOOT_OPTIONS_PARAMETER_BOOT_INFO_ACK, BootOptionsRequest);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "Error 0x%x acknowledging IPMI boot order request\n", Status));
+  }
+
+  SetMem (BootOptionsData, sizeof (IPMI_BOOT_OPTIONS_RESPONSE_PARAMETER_5), 0);
+  Status = SetIPMIBootOrderParameter (IPMI_BOOT_OPTIONS_PARAMETER_BOOT_FLAGS, BootOptionsRequest);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "Error 0x%x clearing IPMI boot flags\n", Status));
+  }
+
+CleanupAndReturn:
+  if (BootOptionsBuffer != NULL) {
+    FreePool (BootOptionsBuffer);
+    BootOptionsBuffer     = NULL;
+    BootOptionsRequest    = NULL;
+    BootOptionsResponse   = NULL;
+    BootOptionsParameters = NULL;
+    BootOptionsData       = NULL;
+  }
+
+  if (ClassInstanceList != NULL) {
+    FreePool (ClassInstanceList);
+    ClassInstanceList = NULL;
+  }
+
+  if (BootOrder != NULL) {
+    FreePool (BootOrder);
+    BootOrder = NULL;
+  }
 
   return;
 }

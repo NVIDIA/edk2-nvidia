@@ -2,7 +2,7 @@
 
   UEFI Runtime Services Table Lib stubs for host based tests
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -109,7 +109,7 @@ UefiGetVariable (
 
   if (Var->Size > *Size) {
     *Size = Var->Size;
-    return EFI_BAD_BUFFER_SIZE;
+    return EFI_BUFFER_TOO_SMALL;
   }
 
   CopyMem (Data, Var->Data, Var->Size);

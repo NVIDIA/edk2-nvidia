@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -12,6 +12,12 @@
 VOID
 EFIAPI
 SetBootOrder (
+  VOID
+  );
+
+VOID
+EFIAPI
+CheckIPMIForBootOrderUpdates (
   VOID
   );
 
