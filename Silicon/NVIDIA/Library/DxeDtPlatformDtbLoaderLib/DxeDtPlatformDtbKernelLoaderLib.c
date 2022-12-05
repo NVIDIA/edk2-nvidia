@@ -55,6 +55,7 @@ EFI_EVENT  ReadyToBootEvent;
 QSPI_COMPATIBILITY  gQspiCompatibilityMap[] = {
   { "nvidia,tegra186-qspi" },
   { "nvidia,tegra194-qspi" },
+  { "nvidia,tegra234-qspi" },
   { "nvidia,tegra23x-qspi" },
   { NULL                   }
 };
