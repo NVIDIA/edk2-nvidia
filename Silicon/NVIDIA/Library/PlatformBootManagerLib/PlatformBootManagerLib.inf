@@ -46,6 +46,7 @@
   DebugLib
   DevicePathLib
   DxeServicesLib
+  DxeServicesTableLib
   HobLib
   MemoryAllocationLib
   PcdLib
@@ -110,3 +111,4 @@
   gEfiFirmwareVolume2ProtocolGuid
   gEfiLoadFileProtocolGuid
   gEfiAcpiSdtProtocolGuid
+  gNVIDIABdsDeviceConnectCompleteGuid

@@ -37,4 +37,5 @@
 
 [Depex]
   gNVIDIAPcieControllerInitCompleteProtocolGuid AND
-  gNVIDIARasNsCommPcieDpcDataProtocolGuid
+  gNVIDIARasNsCommPcieDpcDataProtocolGuid AND
+  gNVIDIABdsDeviceConnectCompleteGuid

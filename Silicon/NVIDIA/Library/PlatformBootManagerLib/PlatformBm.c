@@ -16,6 +16,7 @@
 #include <Library/CapsuleLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/DxeServicesLib.h>
+#include <Library/DxeServicesTableLib.h>
 #include <Library/HobLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiBootManagerLib.h>
@@ -1149,6 +1150,7 @@ PlatformBootManagerBeforeConsole (
 {
   UINT8       *EnrollDefaultKeys;
   EFI_STATUS  Status;
+  EFI_HANDLE  BdsHandle = NULL;
 
   //
   // Signal EndOfDxe PI Event
@@ -1263,6 +1265,15 @@ PlatformBootManagerBeforeConsole (
   // Register all available consoles.
   //
   PlatformRegisterConsoles ();
+
+  // Install protocol to indicate that devices are connected
+  gBS->InstallMultipleProtocolInterfaces (
+         &BdsHandle,
+         &gNVIDIABdsDeviceConnectCompleteGuid,
+         NULL,
+         NULL
+         );
+  gDS->Dispatch ();
 }
 
 STATIC
