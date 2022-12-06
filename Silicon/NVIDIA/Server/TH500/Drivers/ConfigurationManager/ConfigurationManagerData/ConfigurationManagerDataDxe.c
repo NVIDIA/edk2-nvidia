@@ -376,11 +376,12 @@ UpdateQspiInfo (
     if (NULL == fdt_getprop (Dtb, NodeOffset, "nvidia,secure-qspi-controller", NULL)) {
       Status = PatchProtocol->FindNode (PatchProtocol, ACPI_QSPI1_STA, &AcpiNodeInfo);
       if (EFI_ERROR (Status)) {
-        return Status;
+        goto ErrorExit;
       }
 
       if (AcpiNodeInfo.Size > sizeof (QspiStatus)) {
-        return EFI_DEVICE_ERROR;
+        Status = EFI_DEVICE_ERROR;
+        goto ErrorExit;
       }
 
       QspiStatus = 0xF;
@@ -394,6 +395,102 @@ UpdateQspiInfo (
 ErrorExit:
   if (QspiHandles != NULL) {
     FreePool (QspiHandles);
+  }
+
+  return Status;
+}
+
+/** patch I2C3 and SSIF data in DSDT.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateSSIFInfo (
+  VOID
+  )
+{
+  EFI_STATUS            Status;
+  UINT32                NumberOfI2CControllers;
+  UINT32                *I2CHandles;
+  UINT32                Index;
+  VOID                  *Dtb;
+  INT32                 NodeOffset;
+  INT32                 SubNodeOffset;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+  UINT8                 I2CStatus;
+  UINT8                 SSIFStatus;
+
+  NumberOfI2CControllers = 0;
+  Status                 = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra234-i2c", NULL, &NumberOfI2CControllers);
+  if (Status == EFI_NOT_FOUND) {
+    return EFI_SUCCESS;
+  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+    return Status;
+  }
+
+  I2CHandles = NULL;
+  I2CHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfI2CControllers);
+  if (I2CHandles == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra234-i2c", I2CHandles, &NumberOfI2CControllers);
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  for (Index = 0; Index < NumberOfI2CControllers; Index++) {
+    Status = GetDeviceTreeNode (I2CHandles[Index], &Dtb, &NodeOffset);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get device node info - %r\r\n", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
+
+    SubNodeOffset = fdt_subnode_offset (Dtb, NodeOffset, "bmc-ssif");
+    if (SubNodeOffset != 0) {
+      /* Update I2C3 Status */
+      Status = PatchProtocol->FindNode (PatchProtocol, ACPI_I2C3_STA, &AcpiNodeInfo);
+      if (EFI_ERROR (Status)) {
+        goto ErrorExit;
+      }
+
+      if (AcpiNodeInfo.Size > sizeof (I2CStatus)) {
+        Status = EFI_DEVICE_ERROR;
+        goto ErrorExit;
+      }
+
+      I2CStatus = 0xF;
+      Status    = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &I2CStatus, sizeof (I2CStatus));
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_I2C3_STA, Status));
+        goto ErrorExit;
+      }
+
+      /* Update SSIF Status */
+      Status = PatchProtocol->FindNode (PatchProtocol, ACPI_SSIF_STA, &AcpiNodeInfo);
+      if (EFI_ERROR (Status)) {
+        goto ErrorExit;
+      }
+
+      if (AcpiNodeInfo.Size > sizeof (SSIFStatus)) {
+        Status = EFI_DEVICE_ERROR;
+        goto ErrorExit;
+      }
+
+      SSIFStatus = 0xF;
+      Status     = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &I2CStatus, sizeof (SSIFStatus));
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_SSIF_STA, Status));
+      }
+    }
+  }
+
+ErrorExit:
+  if (I2CHandles != NULL) {
+    FreePool (I2CHandles);
   }
 
   return Status;
@@ -663,6 +760,11 @@ ConfigurationManagerDataDxeInitialize (
   }
 
   Status = UpdateQspiInfo ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateSSIFInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }
