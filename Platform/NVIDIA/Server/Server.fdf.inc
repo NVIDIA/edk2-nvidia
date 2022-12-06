@@ -112,6 +112,11 @@
   INF Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf
 
   #
+  # Realtek USB NIC
+  #
+  INF Drivers/Realtek/Bus/Usb/UsbNetworking/RtkUsbUndiDxe.inf
+
+  #
   # NS ERoT
   #
   INF Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiDxe.inf
