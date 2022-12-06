@@ -1545,6 +1545,255 @@ ProcessBootParams (
 }
 
 /**
+  Reads an android style kernel partition located with Partition base
+  name and bootchain.
+
+  This function allocates memory for Image with AllocatePool; the
+  caller is responsible for passing Image to FreePool after use.
+
+  @param[in]  DeviceHandle      The handle of device where the partition lives on.
+  @param[in]  PartitionBasename The base name of the partion where the image to boot is located.
+  @param[in]  BootParams        Boot params for L4T.
+  @param[out] Image             Pointer to the kernel image.
+  @param[out] ImageSize         Size of the kernel image.
+
+  @retval EFI_SUCCESS    The operation completed successfully.
+  @retval !=EFI_SUCCESS  Errors occurred.
+
+**/
+STATIC
+EFI_STATUS
+ReadAndroidStyleKernelPartition (
+  IN  CONST EFI_HANDLE               DeviceHandle,
+  IN  CONST CHAR16           *CONST  PartitionBasename,
+  IN  CONST L4T_BOOT_PARAMS  *CONST  BootParams,
+  OUT       VOID            **CONST  Image,
+  OUT       UINTN            *CONST  ImageSize
+  )
+{
+  EFI_STATUS              Status;
+  EFI_HANDLE              PartitionHandle;
+  EFI_BLOCK_IO_PROTOCOL   *BlockIo;
+  EFI_DISK_IO_PROTOCOL    *DiskIo;
+  UINTN                   Offset;
+  ANDROID_BOOTIMG_HEADER  ImageHeader;
+  VOID                    *ImageBuffer = NULL;
+  UINTN                   ImageBufferSize;
+
+  Status = FindPartitionInfo (
+             DeviceHandle,
+             PartitionBasename,
+             BootParams->BootChain,
+             NULL,
+             &PartitionHandle
+             );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Unable to located partition\r\n", __FUNCTION__);
+    goto Exit;
+  }
+
+  Status = gBS->HandleProtocol (
+                  PartitionHandle,
+                  &gEfiBlockIoProtocolGuid,
+                  (VOID **)&BlockIo
+                  );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Unable to locate block io protocol on partition\r\n", __FUNCTION__);
+    goto Exit;
+  }
+
+  Status = gBS->HandleProtocol (
+                  PartitionHandle,
+                  &gEfiDiskIoProtocolGuid,
+                  (VOID **)&DiskIo
+                  );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Unable to locate disk io protocol on partition\r\n", __FUNCTION__);
+    goto Exit;
+  }
+
+  Offset = 0;
+  Status = DiskIo->ReadDisk (
+                     DiskIo,
+                     BlockIo->Media->MediaId,
+                     Offset,
+                     sizeof (ANDROID_BOOTIMG_HEADER),
+                     &ImageHeader
+                     );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"Failed to read disk\r\n");
+    goto Exit;
+  }
+
+  Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
+  if (EFI_ERROR (Status)) {
+    Offset = FixedPcdGet32 (PcdSignedImageHeaderSize);
+    Status = DiskIo->ReadDisk (
+                       DiskIo,
+                       BlockIo->Media->MediaId,
+                       Offset,
+                       sizeof (ANDROID_BOOTIMG_HEADER),
+                       &ImageHeader
+                       );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to read disk\r\n");
+      goto Exit;
+    }
+
+    Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Header not seen at either offset 0 or offset 0x%x\r\n", Offset);
+      goto Exit;
+    }
+  }
+
+  ImageBuffer = AllocatePool (ImageBufferSize);
+  if (ImageBuffer == NULL) {
+    ErrorPrint (L"Failed to allocate buffer for Image\r\n");
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
+
+  Status = DiskIo->ReadDisk (
+                     DiskIo,
+                     BlockIo->Media->MediaId,
+                     Offset,
+                     ImageBufferSize,
+                     ImageBuffer
+                     );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"Failed to read disk\r\n");
+    goto Exit;
+  }
+
+  *Image      = ImageBuffer;
+  ImageBuffer = NULL;
+  *ImageSize  = ImageBufferSize;
+
+Exit:
+  if (ImageBuffer != NULL) {
+    FreePool (ImageBuffer);
+  }
+
+  return Status;
+}
+
+/**
+  Reads an android style kernel dtb partition located with Partition base
+  name and bootchain.
+
+  This function allocates memory for Dtb with AllocatePool; the
+  caller is responsible for passing Dtb to FreePool after use.
+
+  @param[in]  DeviceHandle      The handle of device where this partition lives on.
+  @param[in]  PartitionBasename The base name of the partion where the image to boot is located.
+  @param[in]  BootParams        Boot params for L4T.
+  @param[out] Dtb               Pointer to the allocated dtb buffer.
+  @param[out] DtbOffset         Offset where dtb starts.
+  @param[out] DtbSize           Size of the dtb buffer.
+
+  @retval EFI_SUCCESS    The operation completed successfully.
+  @retval !=EFI_SUCCESS  Errors occurred.
+
+**/
+STATIC
+EFI_STATUS
+ReadAndroidStyleDtbPartition (
+  IN  CONST EFI_HANDLE               DeviceHandle,
+  IN  CONST CHAR16           *CONST  PartitionBasename,
+  IN  CONST L4T_BOOT_PARAMS  *CONST  BootParams,
+  OUT       VOID            **CONST  Dtb,
+  OUT       UINTN            *CONST  DtbOffset,
+  OUT       UINTN            *CONST  DtbSize
+  )
+{
+  EFI_STATUS             Status;
+  EFI_HANDLE             PartitionHandle;
+  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
+  EFI_DISK_IO_PROTOCOL   *DiskIo;
+  VOID                   *DtbBuffer;
+  UINT64                 DtbBufferSize;
+  UINTN                  Offset;
+  UINTN                  Size;
+
+  Status = FindPartitionInfo (
+             DeviceHandle,
+             PartitionBasename,
+             BootParams->BootChain,
+             NULL,
+             &PartitionHandle
+             );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Unable to located partition\r\n", __FUNCTION__);
+    goto Exit;
+  }
+
+  Status = gBS->HandleProtocol (
+                  PartitionHandle,
+                  &gEfiBlockIoProtocolGuid,
+                  (VOID **)&BlockIo
+                  );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Unable to locate block io protocol on partition\r\n", __FUNCTION__);
+    goto Exit;
+  }
+
+  Status = gBS->HandleProtocol (
+                  PartitionHandle,
+                  &gEfiDiskIoProtocolGuid,
+                  (VOID **)&DiskIo
+                  );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Unable to locate disk io protocol on partition\r\n", __FUNCTION__);
+    goto Exit;
+  }
+
+  DtbBufferSize = MultU64x32 (BlockIo->Media->LastBlock + 1, BlockIo->Media->BlockSize);
+
+  DtbBuffer = AllocatePool (DtbBufferSize);
+  if (DtbBuffer == NULL) {
+    ErrorPrint (L"Failed to allocate buffer for dtb\r\n");
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
+
+  Status = DiskIo->ReadDisk (
+                     DiskIo,
+                     BlockIo->Media->MediaId,
+                     0,
+                     DtbBufferSize,
+                     DtbBuffer
+                     );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"Failed to read disk\r\n");
+    goto Exit;
+  }
+
+  Offset = 0;
+  if (fdt_check_header ((UINT8 *)DtbBuffer + Offset) != 0) {
+    Offset = PcdGet32 (PcdSignedImageHeaderSize);
+    if (fdt_check_header ((UINT8 *)DtbBuffer + Offset) != 0) {
+      ErrorPrint (L"DTB on partition was corrupted, attempt use to UEFI DTB\r\n");
+      goto Exit;
+    }
+  }
+
+  Size = fdt_totalsize ((UINT8 *)DtbBuffer + Offset);
+
+  *Dtb       = DtbBuffer;
+  DtbBuffer  = NULL;
+  *DtbOffset = Offset;
+  *DtbSize   = Size;
+
+Exit:
+  if (DtbBuffer != NULL) {
+    FreePool (DtbBuffer);
+  }
+
+  return Status;
+}
+
+/**
   Boots an android style partition located with Partition base name and bootchain
 
   @param[in]  DeviceHandle      The handle of partition where this file lives on.
@@ -1565,178 +1814,108 @@ BootAndroidStylePartition (
   IN L4T_BOOT_PARAMS  *BootParams
   )
 {
-  EFI_STATUS              Status;
-  EFI_HANDLE              PartitionHandle;
-  EFI_BLOCK_IO_PROTOCOL   *BlockIo = NULL;
-  EFI_DISK_IO_PROTOCOL    *DiskIo  = NULL;
-  ANDROID_BOOTIMG_HEADER  ImageHeader;
-  UINTN                   ImageSize;
-  VOID                    *Image;
-  UINT32                  Offset = 0;
-  UINT64                  Size;
-  VOID                    *KernelDtb;
-  VOID                    *Dtb;
-  VOID                    *ExpandedDtb;
-  VOID                    *CurrentDtb = NULL;
-  VOID                    *AcpiBase;
+  EFI_STATUS  Status;
+  EFI_STATUS  Status1;
+  VOID        *Image = NULL;
+  UINTN       ImageSize;
+  VOID        *AcpiBase;
+  VOID        *Dtb = NULL;
+  UINTN       DtbOffset;
+  UINTN       DtbSize;
+  VOID        *OldDtb;
+  VOID        *NewDtb = NULL;
+  UINTN       NewDtbPages;
+  BOOLEAN     NewDtbInstalled = FALSE;
 
-  Status = FindPartitionInfo (DeviceHandle, BootImgPartitionBasename, BootParams->BootChain, NULL, &PartitionHandle);
+  Status = ReadAndroidStyleKernelPartition (
+             DeviceHandle,
+             BootImgPartitionBasename,
+             BootParams,
+             &Image,
+             &ImageSize
+             );
   if (EFI_ERROR (Status)) {
-    ErrorPrint (L"%a: Unable to located partition\r\n", __FUNCTION__);
-    return Status;
-  }
-
-  Status = gBS->HandleProtocol (PartitionHandle, &gEfiBlockIoProtocolGuid, (VOID **)&BlockIo);
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"%a: Unable to locate block io protocol on partition\r\n", __FUNCTION__);
     goto Exit;
   }
 
-  Status = gBS->HandleProtocol (PartitionHandle, &gEfiDiskIoProtocolGuid, (VOID **)&DiskIo);
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"%a: Unable to locate disk io protocol on partition\r\n", __FUNCTION__);
-    goto Exit;
-  }
+  do {
+    Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+    if (!EFI_ERROR (Status)) {
+      break;
+    }
 
-  Status = DiskIo->ReadDisk (
-                     DiskIo,
-                     BlockIo->Media->MediaId,
-                     Offset,
-                     sizeof (ANDROID_BOOTIMG_HEADER),
-                     &ImageHeader
-                     );
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"Failed to read disk\r\n");
-    goto Exit;
-  }
-
-  Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageSize);
-  if (EFI_ERROR (Status)) {
-    Offset = FixedPcdGet32 (PcdSignedImageHeaderSize);
-    Status = DiskIo->ReadDisk (
-                       DiskIo,
-                       BlockIo->Media->MediaId,
-                       Offset,
-                       sizeof (ANDROID_BOOTIMG_HEADER),
-                       &ImageHeader
-                       );
+    Status = ReadAndroidStyleDtbPartition (
+               DeviceHandle,
+               BootImgDtbPartitionBasename,
+               BootParams,
+               &Dtb,
+               &DtbOffset,
+               &DtbSize
+               );
     if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Failed to read disk\r\n");
+      break;
+    }
+
+    NewDtbPages = EFI_SIZE_TO_PAGES (2 * DtbSize);
+    NewDtb      = AllocatePages (NewDtbPages);
+    if (NewDtb == NULL) {
+      DEBUG ((DEBUG_WARN, "%a: failed to allocate pages for expanded kernel DTB\r\n", __FUNCTION__));
+      break;
+    }
+
+    if (fdt_open_into ((UINT8 *)Dtb + DtbOffset, NewDtb, EFI_PAGES_TO_SIZE (NewDtbPages)) != 0) {
+      DEBUG ((DEBUG_WARN, "%a: failed to relocate kernel DTB\r\n", __FUNCTION__));
+      break;
+    }
+
+    DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB\r\n", __FUNCTION__));
+    Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &OldDtb);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"No existing DTB\r\n");
       goto Exit;
     }
 
-    Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageSize);
+    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, NewDtb);
     if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Header not seen at either offset 0 or offset 0x%x\r\n", Offset);
-      goto Exit;
-    }
-  }
-
-  Image = AllocatePool (ImageSize);
-  if (Image == NULL) {
-    ErrorPrint (L"Failed to allocate buffer for Image\r\n");
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Exit;
-  }
-
-  Status = DiskIo->ReadDisk (
-                     DiskIo,
-                     BlockIo->Media->MediaId,
-                     Offset,
-                     ImageSize,
-                     Image
-                     );
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"Failed to read disk\r\n");
-    goto Exit;
-  }
-
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (EFI_ERROR (Status)) {
-    Status = FindPartitionInfo (DeviceHandle, BootImgDtbPartitionBasename, BootParams->BootChain, NULL, &PartitionHandle);
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"%a: Unable to located partition\r\n", __FUNCTION__);
-      return Status;
-    }
-
-    Status = gBS->HandleProtocol (PartitionHandle, &gEfiBlockIoProtocolGuid, (VOID **)&BlockIo);
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"%a: Unable to locate block io protocol on partition\r\n", __FUNCTION__);
+      ErrorPrint (L"DTB Installation Failed\r\n");
       goto Exit;
     }
 
-    Status = gBS->HandleProtocol (PartitionHandle, &gEfiDiskIoProtocolGuid, (VOID **)&DiskIo);
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"%a: Unable to locate disk io protocol on partition\r\n", __FUNCTION__);
-      goto Exit;
-    }
-
-    Size = MultU64x32 (BlockIo->Media->LastBlock+1, BlockIo->Media->BlockSize);
-
-    KernelDtb = AllocatePool (Size);
-    if (KernelDtb == NULL) {
-      ErrorPrint (L"Failed to allocate buffer for dtb\r\n");
-      Status = EFI_OUT_OF_RESOURCES;
-      goto Exit;
-    }
-
-    Status = DiskIo->ReadDisk (
-                       DiskIo,
-                       BlockIo->Media->MediaId,
-                       0,
-                       Size,
-                       KernelDtb
-                       );
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Failed to read disk\r\n");
-      goto Exit;
-    }
-
-    Dtb = KernelDtb;
-    if (fdt_check_header (Dtb) != 0) {
-      Dtb += PcdGet32 (PcdSignedImageHeaderSize);
-      if (fdt_check_header (Dtb) != 0) {
-        ErrorPrint (L"DTB on partition was corrupted, attempt use to UEFI DTB\r\n");
-        goto Exit;
-      }
-    }
-
-    ExpandedDtb = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (Dtb)));
-    if ((ExpandedDtb != NULL) &&
-        (fdt_open_into (Dtb, ExpandedDtb, 2 * fdt_totalsize (Dtb)) == 0))
-    {
-      DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB\r\n", __FUNCTION__));
-      Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &CurrentDtb);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"No existing DTB\r\n");
-        goto Exit;
-      }
-
-      Status = gBS->InstallConfigurationTable (&gFdtTableGuid, ExpandedDtb);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"DTB Installation Failed\r\n");
-        gBS->FreePages ((EFI_PHYSICAL_ADDRESS)ExpandedDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (ExpandedDtb)));
-        ExpandedDtb = NULL;
-        goto Exit;
-      }
-    }
-  }
+    NewDtbInstalled = TRUE;
+  } while (FALSE);
 
   DEBUG ((DEBUG_ERROR, "%a: Cmdline: \n", __FUNCTION__));
-  DEBUG ((DEBUG_ERROR, "%a", ImageHeader.KernelArgs));
+  DEBUG ((DEBUG_ERROR, "%a", ((ANDROID_BOOTIMG_HEADER *)Image)->KernelArgs));
 
   Status = AndroidBootImgBoot (Image, ImageSize);
   if (EFI_ERROR (Status)) {
     ErrorPrint (L"Failed to boot image: %r\r\n", Status);
-    gBS->FreePages ((EFI_PHYSICAL_ADDRESS)ExpandedDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (ExpandedDtb)));
-    ExpandedDtb = NULL;
-  }
-
-  if (CurrentDtb != NULL) {
-    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, CurrentDtb);
   }
 
 Exit:
+  if (NewDtbInstalled) {
+    Status1 = gBS->InstallConfigurationTable (&gFdtTableGuid, OldDtb);
+    if (EFI_ERROR (Status1)) {
+      ErrorPrint (L"%a: Failed to re-install UEFI DTB: %r\r\n", __FUNCTION__, Status);
+    }
+
+    if (!EFI_ERROR (Status)) {
+      Status = Status1;
+    }
+  }
+
+  if (NewDtb != NULL) {
+    FreePages (NewDtb, NewDtbPages);
+  }
+
+  if (Dtb != NULL) {
+    FreePool (Dtb);
+  }
+
+  if (Image != NULL) {
+    FreePool (Image);
+  }
+
   return Status;
 }
 
