@@ -13,12 +13,13 @@
 
 DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
 {
-  Scope(_SB) {
-
+  Scope(_SB)
+  {
     //---------------------------------------------------------------------
     // GED to receive RAS events
     //---------------------------------------------------------------------
-    Device(GED0) {
+    Device(GED0)
+    {
       Name(_HID, "ACPI0013") /* Generic Event Device */
       Name(_UID, 0)
 
@@ -61,7 +62,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     // ---------------------------------------------------------------------
     // GED for PCIe DPC
     // ---------------------------------------------------------------------
-    Device (GED1) {
+    Device (GED1)
+    {
       Name (_HID, "ACPI0013") /* Generic Event Device */
       Name (_UID, 1)
 
@@ -337,7 +339,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     // ---------------------------------------------------------------------
     // HWPM - HW Performance Monitoring
     //---------------------------------------------------------------------
-    Device(HWP0) {
+    Device(HWP0)
+    {
       Name (_HID, "NVDA2006")
       Name (_UID, 0)
       Name (_CCA, ZERO)

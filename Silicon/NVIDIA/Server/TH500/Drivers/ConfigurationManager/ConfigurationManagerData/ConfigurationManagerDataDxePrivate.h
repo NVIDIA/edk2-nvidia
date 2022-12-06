@@ -48,6 +48,12 @@
 #include <Dsdt.hex>
 #include <Dsdt.offset.h>
 #include <SsdtEth.hex>
+#include <SsdtSocket1.hex>
+#include <SsdtSocket1.offset.h>
+#include <SsdtSocket2.hex>
+#include <SsdtSocket2.offset.h>
+#include <SsdtSocket3.hex>
+#include <SsdtSocket3.offset.h>
 
 #define ACPI_PATCH_MAX_PATH  255
 #define ACPI_GED1_SMR1       "_SB_.GED1.SMR1"

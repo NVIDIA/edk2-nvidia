@@ -25,6 +25,9 @@
 [Sources]
   Dsdt.asl
   SsdtEth.asl
+  SsdtSocket1.asl
+  SsdtSocket2.asl
+  SsdtSocket3.asl
 
 [Packages]
   ArmPkg/ArmPkg.dec
