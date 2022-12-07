@@ -541,89 +541,74 @@ SetupCertList (
   IN CHAR16  *VariableName
   )
 {
-  VOID                *EfiDBSig = NULL;
-  EFI_STATUS          Status    = EFI_SUCCESS;
-  UINTN               EfiDBSigSize;
-  UINTN               EfiDBSigSizeTmp;
+  EFI_STATUS          Status;
+  EFI_SIGNATURE_LIST  *CertDb = NULL;
+  UINTN               CertDbSize;
   EFI_SIGNATURE_LIST  *CertList;
-  EFI_SIGNATURE_LIST  **CertDB  = NULL;
-  UINTN               ListCount = 0;
-  UINTN               CertIndex;
+  UINTN               CertListIndex;
+  UINTN               CertListCount;
+  EFI_SIGNATURE_LIST  **CertLists = NULL;
 
-  EfiDBSigSize = 0;
-  Status       = gRT->GetVariable (
-                        VariableName,
-                        &gEfiImageSecurityDatabaseGuid,
-                        NULL,
-                        &EfiDBSigSize,
-                        NULL
-                        );
-  if (Status != EFI_BUFFER_TOO_SMALL) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a:Failed to Locate %s(%r)\n",
-      __FUNCTION__,
-      EFI_IMAGE_SECURITY_DATABASE,
-      Status
-      ));
-    goto Error;
-  }
-
-  EfiDBSig = (UINT8 *)AllocateZeroPool (EfiDBSigSize);
-  if (EfiDBSig == NULL) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a:Failed to allocate Memory for DBCert %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Error;
-  }
-
-  Status = gRT->GetVariable (VariableName, &gEfiImageSecurityDatabaseGuid, NULL, &EfiDBSigSize, (VOID *)EfiDBSig);
+  Status = GetVariable2 (
+             VariableName,
+             &gEfiImageSecurityDatabaseGuid,
+             (VOID **)&CertDb,
+             &CertDbSize
+             );
   if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a:%s Data Not Found  %r\n",
-      __FUNCTION__,
-      EFI_IMAGE_SECURITY_DATABASE,
-      Status
-      ));
-    goto Error;
+    if (Status != EFI_NOT_FOUND) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to retrieve certificate database '%s': %r\r\n",
+        __FUNCTION__,
+        VariableName,
+        Status
+        ));
+    }
+
+    // In case of an error, assume an empty certificate database.
+    CertDb     = NULL;
+    CertDbSize = 0;
+    Status     = EFI_SUCCESS;
   }
 
-  CertList        = (EFI_SIGNATURE_LIST *)EfiDBSig;
-  EfiDBSigSizeTmp = EfiDBSigSize;
-
-  // Walk the list to determine how many signatures are present.
-  while ((EfiDBSigSizeTmp > 0) && (EfiDBSigSizeTmp >= CertList->SignatureListSize)) {
-    ListCount++;
-    EfiDBSigSizeTmp -= CertList->SignatureListSize;
-    CertList         = (EFI_SIGNATURE_LIST *)((UINT8 *)CertList + CertList->SignatureListSize);
+  // Walk the list to determine how many signature lists are present.
+  CertListCount = 0;
+  CertList      = CertDb;
+  while (  ((UINT8 *)CertList < (UINT8 *)CertDb + CertDbSize)
+        && ((UINT8 *)CertList + CertList->SignatureListSize <= (UINT8 *)CertDb + CertDbSize))
+  {
+    CertListCount++;
+    CertList = (EFI_SIGNATURE_LIST *)((UINT8 *)CertList + CertList->SignatureListSize);
   }
 
-  CertDB = (EFI_SIGNATURE_LIST **)AllocateZeroPool (sizeof (EFI_SIGNATURE_LIST *) * (ListCount + 1));
-  if (CertDB == NULL) {
+  CertLists = (EFI_SIGNATURE_LIST **)AllocateZeroPool (sizeof (EFI_SIGNATURE_LIST *) * (CertListCount + 1));
+  if (CertLists == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
-    goto Error;
+    goto Exit;
   }
 
-  CertList = (EFI_SIGNATURE_LIST *)EfiDBSig;
-  for (CertIndex = 0; CertIndex < ListCount; CertIndex++) {
-    CertDB[CertIndex] = CertList;
-    CertList          = (EFI_SIGNATURE_LIST *)((UINT8 *)CertList + CertList->SignatureListSize);
+  CertList = CertDb;
+  for (CertListIndex = 0; CertListIndex < CertListCount; CertListIndex++) {
+    CertLists[CertListIndex] = CertList;
+    CertList                 = (EFI_SIGNATURE_LIST *)((UINT8 *)CertList + CertList->SignatureListSize);
   }
 
   // Keep the last entry NULL (what the PKCS lib code expects)
-  CertDB[CertIndex] = NULL;
-  return CertDB;
-Error:
-  if (EfiDBSig) {
-    FreePool (EfiDBSig);
+  CertLists[CertListCount] = NULL;
+
+Exit:
+  if (EFI_ERROR (Status)) {
+    if (CertLists != NULL) {
+      FreePool (CertLists);
+    }
+
+    if (CertDb != NULL) {
+      FreePool (CertDb);
+    }
   }
 
-  return NULL;
+  return CertLists;
 }
 
 /*
