@@ -98,11 +98,16 @@ EFIAPI
 ErotQspiHasErot (
   IN EFI_HANDLE  QspiController,
   IN UINT8       NumChipSelects,
-  OUT UINT8      *ChipSelect
+  OUT UINT8      *ChipSelect,
+  OUT UINT8      *Socket
+
   )
 {
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode;
   EFI_STATUS                        Status;
+  INT32                             SocketOffset;
+  CONST CHAR8                       *SocketName;
+  CONST CHAR8                       *SocketPrefix = "socket@";
 
   DeviceTreeNode = NULL;
   Status         = gBS->HandleProtocol (
@@ -115,12 +120,38 @@ ErotQspiHasErot (
     return FALSE;
   }
 
-  return ErotQspiNodeHasErot (
-           DeviceTreeNode->DeviceTreeBase,
-           DeviceTreeNode->NodeOffset,
-           NumChipSelects,
-           ChipSelect
-           );
+  if (!ErotQspiNodeHasErot (
+         DeviceTreeNode->DeviceTreeBase,
+         DeviceTreeNode->NodeOffset,
+         NumChipSelects,
+         ChipSelect
+         ))
+  {
+    return FALSE;
+  }
+
+  SocketOffset = fdt_parent_offset (
+                   DeviceTreeNode->DeviceTreeBase,
+                   DeviceTreeNode->NodeOffset
+                   );
+  if (SocketOffset < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: no socket parent\n", __FUNCTION__));
+    return FALSE;
+  }
+
+  SocketName = fdt_get_name (DeviceTreeNode->DeviceTreeBase, SocketOffset, NULL);
+  if ((AsciiStrnCmp (SocketName, SocketPrefix, AsciiStrLen (SocketPrefix)) != 0) ||
+      (AsciiStrLen (SocketName) != AsciiStrLen (SocketPrefix) + 1))
+  {
+    DEBUG ((DEBUG_ERROR, "%a: bad socket %a\n", __FUNCTION__, SocketName));
+    return FALSE;
+  }
+
+  *Socket = SocketName[AsciiStrLen (SocketPrefix)] - '0';
+
+  DEBUG ((DEBUG_INFO, "%a: returning socket=%u\n", __FUNCTION__, *Socket));
+
+  return TRUE;
 }
 
 /**
@@ -182,12 +213,10 @@ ErotQspiDxeInitialize (
     }
 
     Qspi->GetNumChipSelects (Qspi, &NumChipSelects);
-    if (!ErotQspiHasErot (HandleBuffer[Index], NumChipSelects, &ChipSelect)) {
+    if (!ErotQspiHasErot (HandleBuffer[Index], NumChipSelects, &ChipSelect, &Socket)) {
       continue;
     }
 
-    // TODO: Need to get qspi socket
-    Socket = Index;
     Status = ErotQspiAddErot (Qspi, ChipSelect, Socket);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: AddErot for index %u failed: %r\n", __FUNCTION__, Index, Status));

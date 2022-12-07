@@ -45,6 +45,7 @@ ErotQspiStmmInitialize (
   NVIDIA_QSPI_CONTROLLER_PROTOCOL  *Qspi;
   UINT8                            ChipSelect;
   UINT8                            Socket;
+  UINT32                           *SocketIdProtocol;
   TEGRA_PLATFORM_TYPE              PlatformType;
 
   PlatformType = GetPlatformTypeMm ();
@@ -84,8 +85,19 @@ ErotQspiStmmInitialize (
       continue;
     }
 
+    SocketIdProtocol = NULL;
+    Status           = gMmst->MmHandleProtocol (
+                                HandleBuffer[Index],
+                                &gNVIDIASocketIdProtocolGuid,
+                                (VOID **)&SocketIdProtocol
+                                );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: SocketId failed for index %u: %r\n", __FUNCTION__, Index, Status));
+      continue;
+    }
+
     ChipSelect = EROT_QSPI_CHIP_SELECT_DEFAULT;
-    Socket     = Index; // TODO: Need to get qspi socket
+    Socket     = (UINT8)(*SocketIdProtocol);
     Status     = ErotQspiAddErot (Qspi, ChipSelect, Socket);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to add device for handle index %u: %r\n", __FUNCTION__, Index, Status));
