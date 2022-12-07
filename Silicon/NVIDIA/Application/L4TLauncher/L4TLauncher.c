@@ -611,6 +611,71 @@ Exit:
   return CertLists;
 }
 
+/**
+  Verify a detached signature.
+
+  @param[in]  SignData      Detached signature data
+  @param[in]  SignDataSize  Size of the detached signature data
+  @param[in]  InData        Data signed by the detached signature
+  @param[in]  InDataSize    Length of the signed data
+
+  @retval EFI_SUCCESS     Signature successfully verified
+  @retval !(EFI_SUCCESS)  Could not verify signature
+*/
+STATIC
+EFI_STATUS
+VerifyDetachedSignature (
+  IN       VOID   *CONST  SignData,
+  IN CONST UINTN          SignDataSize,
+  IN       VOID   *CONST  InData,
+  IN CONST UINTN          InDataSize
+  )
+{
+  STATIC EFI_SIGNATURE_LIST  **AllowedDb = NULL;
+  STATIC EFI_SIGNATURE_LIST  **RevokedDb = NULL;
+
+  EFI_STATUS                 Status;
+  EFI_SIGNATURE_LIST         **TimeStampDb = NULL;
+  EFI_PKCS7_VERIFY_PROTOCOL  *Pkcs7VerifyProtocol;
+
+  // Do these steps once, to locate and setup the DB/DBX certs.
+  if (AllowedDb == NULL) {
+    AllowedDb = SetupCertList (EFI_IMAGE_SECURITY_DATABASE);
+  }
+
+  if (RevokedDb == NULL) {
+    RevokedDb = SetupCertList (EFI_IMAGE_SECURITY_DATABASE1);
+  }
+
+  Status = gBS->LocateProtocol (
+                  &gEfiPkcs7VerifyProtocolGuid,
+                  NULL,
+                  (VOID **)&Pkcs7VerifyProtocol
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to locate PKCS7 verification protocol: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  return Pkcs7VerifyProtocol->VerifyBuffer (
+                                Pkcs7VerifyProtocol,
+                                SignData,
+                                SignDataSize,
+                                InData,
+                                InDataSize,
+                                AllowedDb,
+                                RevokedDb,
+                                TimeStampDb,
+                                NULL, /* Content */
+                                NULL  /* ContentSize */
+                                );
+}
+
 /*
  *
   OpenAndReadFileToBuffer
@@ -741,16 +806,15 @@ VerifyDetachedCertificateFile (
   OUT UINTN            *DataSize OPTIONAL
   )
 {
-  UINT8                      *SecureBootEnabled = NULL;
-  EFI_FILE_HANDLE            FileSigHandle;
-  CHAR16                     *NewFileName;
-  VOID                       *FileData    = NULL;
-  VOID                       *FileSigData = NULL;
-  UINT64                     FileSize;
-  UINT64                     FileSigSize;
-  EFI_STATUS                 Status = EFI_SUCCESS;
-  EFI_PKCS7_VERIFY_PROTOCOL  *PkcsVerifyProtocol;
-  UINTN                      NewFileNameSize;
+  UINT8            *SecureBootEnabled = NULL;
+  EFI_FILE_HANDLE  FileSigHandle;
+  CHAR16           *NewFileName;
+  VOID             *FileData    = NULL;
+  VOID             *FileSigData = NULL;
+  UINT64           FileSize;
+  UINT64           FileSigSize;
+  EFI_STATUS       Status = EFI_SUCCESS;
+  UINTN            NewFileNameSize;
 
   FileSigHandle = NULL;
 
@@ -804,50 +868,12 @@ VerifyDetachedCertificateFile (
       goto Error;
     }
 
-    Status = gBS->LocateProtocol (&gEfiPkcs7VerifyProtocolGuid, NULL, (VOID **)&PkcsVerifyProtocol);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a:Failed to locate PKCS Proto %r\n", __FUNCTION__, Status));
-      goto Error;
-    }
-
-    // Do these steps once, to locate and setup the DB/DBX certs.
-    if (AllowedDB == NULL) {
-      AllowedDB = SetupCertList (EFI_IMAGE_SECURITY_DATABASE);
-      if (AllowedDB == NULL) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a:Failed to setup Allowed DB %r\n",
-          __FUNCTION__,
-          Status
-          ));
-        goto Error;
-      }
-    }
-
-    if (RevokedDB == NULL) {
-      RevokedDB = SetupCertList (EFI_IMAGE_SECURITY_DATABASE1);
-      if (RevokedDB == NULL) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: Revoked DB not found(Not Fatal)\n",
-          __FUNCTION__
-          ));
-      }
-    }
-
-    Status = PkcsVerifyProtocol->VerifyBuffer (
-                                   PkcsVerifyProtocol,
-                                   FileSigData,
-                                   FileSigSize,
-                                   FileData,
-                                   FileSize,
-                                   AllowedDB,
-                                   RevokedDB,
-                                   NULL,
-                                   NULL,
-                                   NULL
-                                   );
-
+    Status = VerifyDetachedSignature (
+               FileSigData,
+               FileSigSize,
+               FileData,
+               FileSize
+               );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a:PKCS7 Failed verification %r\n", __FUNCTION__, Status));
     } else {

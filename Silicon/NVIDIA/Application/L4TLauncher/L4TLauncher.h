@@ -67,10 +67,8 @@ typedef struct {
   UINT32                  Timeout;
 } EXTLINUX_BOOT_CONFIG;
 
-STATIC VOID                *mRamdiskData = NULL;
-STATIC UINTN               mRamdiskSize  = 0;
-STATIC EFI_SIGNATURE_LIST  **AllowedDB   = NULL;
-STATIC EFI_SIGNATURE_LIST  **RevokedDB   = NULL;
+STATIC VOID   *mRamdiskData = NULL;
+STATIC UINTN  mRamdiskSize  = 0;
 
 typedef struct {
   VENDOR_DEVICE_PATH          VendorMediaNode;
