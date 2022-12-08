@@ -33,6 +33,7 @@
   ConfigurationHmat.c
   ConfigurationSmbios.c
   ConfigurationSmbiosType1.c
+  ConfigurationSmbiosType38.c
   ConfigurationHbm.c
 
 [Packages]
