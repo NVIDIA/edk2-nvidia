@@ -26,14 +26,13 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
-  BaseLib
+  BaseMemoryLib
   DebugLib
   DtPlatformDtbLoaderLib
   FdtLib
   PrintLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
-  UefiLib
   UefiRuntimeLib
 
 [Protocols]

@@ -9,7 +9,11 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-#include "MctpMmDxe.h"
+#include <Uefi/UefiBaseType.h>
+#include <Library/BaseMemoryLib.h>
+#include <Library/DebugLib.h>
+#include <Protocol/MmCommunication2.h>
+#include "MctpMmComm.h"
 
 /**
   Initialize comm buffer for MM communicate transaction.

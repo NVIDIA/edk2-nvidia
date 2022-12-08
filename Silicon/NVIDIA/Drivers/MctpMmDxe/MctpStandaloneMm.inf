@@ -29,10 +29,8 @@
 
 [LibraryClasses]
   ArmSvcLib
-  BaseMemoryLib
+  BaseLib
   DebugLib
-  IoLib
-  MemoryAllocationLib
   MmServicesTableLib
   StandaloneMmDriverEntryPoint
 

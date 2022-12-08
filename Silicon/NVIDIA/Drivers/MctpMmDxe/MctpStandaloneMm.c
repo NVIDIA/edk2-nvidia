@@ -7,9 +7,12 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+#include <Uefi/UefiBaseType.h>
+#include <Library/BaseLib.h>
+#include <Library/DebugLib.h>
 #include <Library/MmServicesTableLib.h>
-
-#include "MctpMmDxe.h"
+#include <Protocol/MctpProtocol.h>
+#include "MctpMmCommMsgs.h"
 
 #define MCTP_MM_MAX_DEVICES  4
 

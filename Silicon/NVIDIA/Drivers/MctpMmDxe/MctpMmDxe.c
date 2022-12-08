@@ -8,13 +8,18 @@
 
 **/
 #include <PiDxe.h>
+#include <Uefi/UefiBaseType.h>
+#include <Library/DebugLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeLib.h>
+#include <Protocol/MctpProtocol.h>
+#include <Protocol/MmCommunication2.h>
 #include <libfdt.h>
 
-#include "MctpMmDxe.h"
+#include "MctpMmComm.h"
 
 #define MCTP_MM_SIGNATURE  SIGNATURE_32 ('M','C','T','P')
 
