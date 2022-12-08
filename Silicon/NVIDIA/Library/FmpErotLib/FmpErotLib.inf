@@ -17,6 +17,7 @@
   MODULE_TYPE     = DXE_DRIVER
   VERSION_STRING  = 1.0
   LIBRARY_CLASS   = FmpDeviceLib|DXE_DRIVER UEFI_DRIVER
+  CONSTRUCTOR     = FmpErotLibConstructor
 
 #
 # The following information is for reference only and not required by the build tools.
@@ -26,7 +27,35 @@
 
 [Sources]
   FmpErotLib.c
+  FmpErotSupport.c
 
 [Packages]
   MdePkg/MdePkg.dec
   FmpDevicePkg/FmpDevicePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DisplayUpdateProgressLib
+  ErotLib
+  MemoryAllocationLib
+  PcdLib
+  PldmFwUpdateLib
+  PrintLib
+  TimerLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
+  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion
+  gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported
+  gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting
+
+[Protocols]
+  gNVIDIAMctpProtocolGuid       ## CONSUMES
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid
+
+[Depex]
+  gNVIDIAMctpProtocolGuid
