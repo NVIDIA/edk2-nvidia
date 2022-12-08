@@ -215,57 +215,60 @@ formset
   form formid = L4T_CONFIGURATION_FORM_ID,
     title = STRING_TOKEN(STR_L4T_CONFIG_FORM_TITLE);
 
-    subtitle text = STRING_TOKEN(STR_NULL);
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.L4TSupported == 0;
 
-        string  varid   = KernelCommandLine.KernelCommand,
-            questionid = KEY_KERNEL_CMDLINE,
-            prompt  = STRING_TOKEN(STR_KERNEL_CMDLINE_PROMPT),
-            help    = STRING_TOKEN(STR_KERNEL_CMDLINE_HELP),
-            flags   = INTERACTIVE | RESET_REQUIRED,
-            minsize = KERNEL_CMD_STR_MIN_SIZE,
-            maxsize = KERNEL_CMD_STR_MAX_SIZE,
-    endstring;
+      subtitle text = STRING_TOKEN(STR_NULL);
 
-    oneof varid = RootfsStatusSlotA.Status,
-        questionid = KEY_OS_CHAIN_STATUS_A,
-        prompt = STRING_TOKEN(STR_OS_STATUS_A_PROMPT),
-        help   = STRING_TOKEN(STR_OS_STATUS_A_HELP),
-        flags  = INTERACTIVE | NUMERIC_SIZE_4,
-        option text = STRING_TOKEN(STR_OS_STATUS_DEFAULT), value = NVIDIA_OS_STATUS_NORMAL, flags = 0;
-        option text = STRING_TOKEN(STR_OS_STATUS_UNBOOTABLE), value = NVIDIA_OS_STATUS_UNBOOTABLE, flags = 0;
-    endoneof;
+          string  varid   = KernelCommandLine.KernelCommand,
+              questionid = KEY_KERNEL_CMDLINE,
+              prompt  = STRING_TOKEN(STR_KERNEL_CMDLINE_PROMPT),
+              help    = STRING_TOKEN(STR_KERNEL_CMDLINE_HELP),
+              flags   = INTERACTIVE | RESET_REQUIRED,
+              minsize = KERNEL_CMD_STR_MIN_SIZE,
+              maxsize = KERNEL_CMD_STR_MAX_SIZE,
+      endstring;
 
-    suppressif NOT ideqval NVIDIA_CONFIG_HII_CONTROL.RootfsRedundancyLevel == NVIDIA_OS_REDUNDANCY_BOOT_ROOTFS;
-        oneof varid = RootfsStatusSlotB.Status,
-            questionid = KEY_OS_CHAIN_STATUS_B,
-            prompt = STRING_TOKEN(STR_OS_STATUS_B_PROMPT),
-            help   = STRING_TOKEN(STR_OS_STATUS_B_HELP),
-            flags  = INTERACTIVE | NUMERIC_SIZE_4,
-            option text = STRING_TOKEN(STR_OS_STATUS_DEFAULT), value = NVIDIA_OS_STATUS_NORMAL, flags = 0;
-            option text = STRING_TOKEN(STR_OS_STATUS_UNBOOTABLE), value = NVIDIA_OS_STATUS_UNBOOTABLE, flags = 0;
-        endoneof;
-    endif;
+      oneof varid = RootfsStatusSlotA.Status,
+          questionid = KEY_OS_CHAIN_STATUS_A,
+          prompt = STRING_TOKEN(STR_OS_STATUS_A_PROMPT),
+          help   = STRING_TOKEN(STR_OS_STATUS_A_HELP),
+          flags  = INTERACTIVE | NUMERIC_SIZE_4,
+          option text = STRING_TOKEN(STR_OS_STATUS_DEFAULT), value = NVIDIA_OS_STATUS_NORMAL, flags = 0;
+          option text = STRING_TOKEN(STR_OS_STATUS_UNBOOTABLE), value = NVIDIA_OS_STATUS_UNBOOTABLE, flags = 0;
+      endoneof;
 
-    oneof varid = L4TDefaultBootMode.BootMode,
-        questionid = KEY_L4T_BOOTMODE_DEFAULT,
-        prompt = STRING_TOKEN(STR_L4T_BOOTMODE_PROMPT),
-        help   = STRING_TOKEN(STR_L4T_BOOTMODE_HELP),
-        flags  = INTERACTIVE | NUMERIC_SIZE_4,
-        option text = STRING_TOKEN(STR_L4T_BOOTMODE_DEFAULT), value = NVIDIA_L4T_BOOTMODE_DEFAULT, flags = 0;
-        option text = STRING_TOKEN(STR_L4T_BOOTMODE_GRUB), value = NVIDIA_L4T_BOOTMODE_GRUB, flags = 0;
-        option text = STRING_TOKEN(STR_L4T_BOOTMODE_DIRECT), value = NVIDIA_L4T_BOOTMODE_DIRECT, flags = 0;
-        option text = STRING_TOKEN(STR_L4T_BOOTMODE_BOOTIMG), value = NVIDIA_L4T_BOOTMODE_BOOTIMG, flags = 0;
-        option text = STRING_TOKEN(STR_L4T_BOOTMODE_RECOVERY), value = NVIDIA_L4T_BOOTMODE_RECOVERY, flags = 0;
-    endoneof;
+      suppressif NOT ideqval NVIDIA_CONFIG_HII_CONTROL.RootfsRedundancyLevel == NVIDIA_OS_REDUNDANCY_BOOT_ROOTFS;
+          oneof varid = RootfsStatusSlotB.Status,
+              questionid = KEY_OS_CHAIN_STATUS_B,
+              prompt = STRING_TOKEN(STR_OS_STATUS_B_PROMPT),
+              help   = STRING_TOKEN(STR_OS_STATUS_B_HELP),
+              flags  = INTERACTIVE | NUMERIC_SIZE_4,
+              option text = STRING_TOKEN(STR_OS_STATUS_DEFAULT), value = NVIDIA_OS_STATUS_NORMAL, flags = 0;
+              option text = STRING_TOKEN(STR_OS_STATUS_UNBOOTABLE), value = NVIDIA_OS_STATUS_UNBOOTABLE, flags = 0;
+          endoneof;
+      endif;
 
-    oneof varid = DgpuDtEfifbSupport.Enabled,
+      oneof varid = L4TDefaultBootMode.BootMode,
+          questionid = KEY_L4T_BOOTMODE_DEFAULT,
+          prompt = STRING_TOKEN(STR_L4T_BOOTMODE_PROMPT),
+          help   = STRING_TOKEN(STR_L4T_BOOTMODE_HELP),
+          flags  = INTERACTIVE | NUMERIC_SIZE_4,
+          option text = STRING_TOKEN(STR_L4T_BOOTMODE_DEFAULT), value = NVIDIA_L4T_BOOTMODE_DEFAULT, flags = 0;
+          option text = STRING_TOKEN(STR_L4T_BOOTMODE_GRUB), value = NVIDIA_L4T_BOOTMODE_GRUB, flags = 0;
+          option text = STRING_TOKEN(STR_L4T_BOOTMODE_DIRECT), value = NVIDIA_L4T_BOOTMODE_DIRECT, flags = 0;
+          option text = STRING_TOKEN(STR_L4T_BOOTMODE_BOOTIMG), value = NVIDIA_L4T_BOOTMODE_BOOTIMG, flags = 0;
+          option text = STRING_TOKEN(STR_L4T_BOOTMODE_RECOVERY), value = NVIDIA_L4T_BOOTMODE_RECOVERY, flags = 0;
+      endoneof;
+
+      oneof varid = DgpuDtEfifbSupport.Enabled,
         questionid = KEY_DGPU_DT_EFIFB_SUPPORT,
         prompt = STRING_TOKEN(STR_DT_DGPU_EFIFB_PROMPT),
         help   = STRING_TOKEN(STR_DT_DGPU_EFIFB_HELP),
         flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
         option text = STRING_TOKEN(STR_DISABLED), value = DGPU_DT_EFIFB_DISABLE, flags = 0;
         option text = STRING_TOKEN(STR_ENABLED),  value = DGPU_DT_EFIFB_ENABLE, flags = 0;
-    endoneof;
+      endoneof;
+    endif; // suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.L4TSupported == 0;
   endform;
 
   //
