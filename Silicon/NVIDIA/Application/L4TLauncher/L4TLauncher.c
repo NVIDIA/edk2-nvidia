@@ -676,97 +676,145 @@ VerifyDetachedSignature (
                                 );
 }
 
-/*
- *
-  OpenAndReadFileToBuffer
+/**
+  Utility function to open a file named FileName, return its
+  FileHandle and read the contents of the file into buffer Data.
 
-  Utility function to open a File with FileName and read the contents of the
-  file into DstBuffer. This function will open the file, allocate a data buffer
-  based on the file size and returns the Buffer ,File Handle and File Size.
-  If there is an error in this util function, then it will clean up all the
-  resources it allocated else upon success the caller has to free up the
-  resources allocated (File Handle/Data Buffer)
+  This function will open the file, allocate a data buffer based on
+  the file size and returns file handle, the data buffer and the file
+  size.
 
-  @param[in]  FsHandle         The handle of partition where this file lives on.
-  @param[in]  FileName         Name of File to be processed
-  @param[out] DstBuffer        Destination Buffer with File Data.
-  @param[out] FileHandle       File Handle of the opened file.
-  @param[out] FileSize         Size of the File opened.
+  Upon successful return, the caller is responsible for freeing all
+  allocated resources (file handle and/or data buffer).
 
-  @retval EFI_SUCCESS          The operation completed successfully.
-          EFI_OUT_OF_RESOURCES Failed buffer allocation.
-          EFI_XXX              Error status from other APIs called.
- *
- */
+  @param[in]   PartitionHandle  Handle of the partition where this file lives on.
+  @param[in]   FileName         Name of file to be processed
+  @param[out]  FileHandle       File handle of the opened file.
+  @param[out]  FileData         Buffer with file data.
+  @param[out]  FileDataSize     Size of the opened file.
+
+  @retval EFI_SUCCESS           The operation completed successfully.
+  @retval EFI_OUT_OF_RESOURCES  Failed buffer allocation.
+  @retval !(EFI_SUCCESS)        Error status from other APIs called.
+*/
 STATIC
 EFI_STATUS
-OpenAndReadFileToBuffer (
-  IN CONST EFI_HANDLE  FsHandle,
-  IN CONST CHAR16      *FileName,
-  OUT VOID             **DstBuffer,
-  OUT EFI_FILE_HANDLE  *FileHandle,
-  OUT UINT64           *FileSize
+OpenAndReadUntrustedFileToBuffer (
+  IN  CONST EFI_HANDLE          PartitionHandle,
+  IN  CONST CHAR16      *CONST  FileName,
+  OUT EFI_FILE_HANDLE   *CONST  FileHandle    OPTIONAL,
+  OUT VOID             **CONST  FileData      OPTIONAL,
+  OUT UINT64            *CONST  FileDataSize  OPTIONAL
   )
 {
-  EFI_DEVICE_PATH  *FullDevicePath;
-  EFI_DEVICE_PATH  *TmpFullDevicePath;
-  EFI_STATUS       Status;
+  EFI_STATUS       Status      = EFI_SUCCESS;
+  EFI_DEVICE_PATH  *DevicePath = NULL;
+  EFI_DEVICE_PATH  *NextDevicePath;
+  EFI_FILE_HANDLE  Handle = NULL;
+  VOID             *Data  = NULL;
+  UINT64           DataSize;
 
-  FullDevicePath = FileDevicePath (FsHandle, FileName);
-  if (FullDevicePath == NULL) {
-    ErrorPrint (L"%a: Failed to create file device path\r\n", __FUNCTION__);
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Error;
+  if ((FileHandle != NULL) || (FileData != NULL) || (FileDataSize != NULL)) {
+    DevicePath = FileDevicePath (PartitionHandle, FileName);
+    if (DevicePath == NULL) {
+      ErrorPrint (L"%a: Failed to create file device path\r\n", __FUNCTION__);
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
+    NextDevicePath = DevicePath;
+    Status         = EfiOpenFileByDevicePath (
+                       &NextDevicePath,
+                       &Handle,
+                       EFI_FILE_MODE_READ,
+                       0
+                       );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (
+        L"%a: Failed to open %s: %r\r\n",
+        __FUNCTION__,
+        FileName,
+        Status
+        );
+      goto Exit;
+    }
   }
 
-  TmpFullDevicePath = FullDevicePath;
-  Status            = EfiOpenFileByDevicePath (&TmpFullDevicePath, FileHandle, EFI_FILE_MODE_READ, 0);
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (
-      L"%a: Failed to open %s: %r\r\n",
-      __FUNCTION__,
-      FileName,
-      Status
-      );
-    goto Error;
+  if ((FileData != NULL) || (FileDataSize != NULL)) {
+    Status = FileHandleGetSize (Handle, &DataSize);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (
+        L"%a: Failed to get size of file %s: %r\r\n",
+        __FUNCTION__,
+        FileName,
+        Status
+        );
+      goto Exit;
+    }
   }
 
-  FileHandleGetSize (*FileHandle, FileSize);
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"%a: Failed to get file size: %r\r\n", __FUNCTION__, Status);
-    goto Error;
+  if (FileData != NULL) {
+    Data = AllocatePool (DataSize);
+    if (Data == NULL) {
+      ErrorPrint (
+        L"%a: Failed to allocate buffer for %s\r\n",
+        __FUNCTION__,
+        FileName
+        );
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
+    Status = FileHandleRead (Handle, &DataSize, Data);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (
+        L"%a: Failed to read %s\r\n",
+        __FUNCTION__,
+        FileName
+        );
+      goto Exit;
+    }
+
+    if (FileHandle != NULL) {
+      // If both handle and data were requested, rewind the handle
+      // back to the beginning of the file.
+      Status = FileHandleSetPosition (Handle, 0);
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (
+          L"%a: Failed to rewind %s\r\n",
+          __FUNCTION__,
+          FileName
+          );
+        goto Exit;
+      }
+    }
   }
 
-  *DstBuffer = AllocatePool (*FileSize);
-  if (*DstBuffer == NULL) {
-    ErrorPrint (
-      L"%a: Failed to Allocate buffer for %s\r\n",
-      __FUNCTION__,
-      FileName
-      );
-    FileHandleClose (*FileHandle);
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Error;
+  if (FileHandle != NULL) {
+    *FileHandle = Handle;
+    Handle      = NULL;
   }
 
-  Status = FileHandleRead (*FileHandle, FileSize, *DstBuffer);
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"%a: Failed to read file\r\n", __FUNCTION__);
-    goto Error;
+  if (FileData != NULL) {
+    *FileData = Data;
+    Data      = NULL;
   }
 
-  FreePool (FullDevicePath);
-  return Status;
-Error:
-  DEBUG ((DEBUG_ERROR, "%a: Cleanup\n", __FUNCTION__));
-  if (*DstBuffer != NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Cleanup 1\n", __FUNCTION__));
-    FreePool (*DstBuffer);
+  if (FileDataSize != NULL) {
+    *FileDataSize = DataSize;
   }
 
-  if (*FileHandle != NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Cleanup 2\n", __FUNCTION__));
-    FileHandleClose (*FileHandle);
+Exit:
+  if (Data != NULL) {
+    FreePool (Data);
+  }
+
+  if (Handle != NULL) {
+    FileHandleClose (Handle);
+  }
+
+  if (DevicePath != NULL) {
+    FreePool (DevicePath);
   }
 
   return Status;
@@ -825,11 +873,11 @@ VerifyDetachedCertificateFile (
     NULL
     );
   if (SecureBootEnabled && (*SecureBootEnabled == SECURE_BOOT_ENABLE)) {
-    Status = OpenAndReadFileToBuffer (
+    Status = OpenAndReadUntrustedFileToBuffer (
                FsHandle,
                FileName,
-               &FileData,
                FileHandle,
+               &FileData,
                &FileSize
                );
     if (EFI_ERROR (Status)) {
@@ -852,11 +900,11 @@ VerifyDetachedCertificateFile (
     }
 
     UnicodeSPrint (NewFileName, NewFileNameSize, L"%s%s", FileName, DETACHED_SIG_FILE_EXTENSION);
-    Status = OpenAndReadFileToBuffer (
+    Status = OpenAndReadUntrustedFileToBuffer (
                FsHandle,
                NewFileName,
-               &FileSigData,
                &FileSigHandle,
+               &FileSigData,
                &FileSigSize
                );
     if (EFI_ERROR (Status)) {
