@@ -1,0 +1,28 @@
+## @file
+#
+#  PLDM base protocol and helper functions
+#
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 1.25
+  BASE_NAME                      = PldmBaseLib
+  FILE_GUID                      = 6ac4f865-7260-4a37-9bdc-3bddee77de99
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PldmBaseLib
+
+[Sources.common]
+  PldmBaseLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  MctpBaseLib
