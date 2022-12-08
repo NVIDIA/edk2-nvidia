@@ -820,138 +820,143 @@ Exit:
   return Status;
 }
 
-/*
- *
-  VerifyDetachedCertificateFile
+/**
+  Do exactly what OpenAndReadUntrustedFileToBuffer does, except when
+  UEFI Secure Boot is enabled, also check detached signature of the
+  file. A valid signature establishes trust in the file's contents.
 
-  Verify a file that has a detached signature.
-  For a given file name, read the file and its signature file contents in to
-  data buffers, locate the signatures in DB and DBX (optional) and pass these
-  to the PKCS Verify protocol to verify the file.
-  The function returns the FileHandle of the file it opens and optionally the
-  data buffer/size with the contents of the file.
+  @param[in]   PartitionHandle  Handle of the partition where this file lives on.
+  @param[in]   FileName         Name of file to be processed
+  @param[out]  FileHandle       File handle of the opened file.
+  @param[out]  FileData         Buffer with file data.
+  @param[out]  FileDataSize     Size of the opened file.
 
-  @param[in]   FileName        Name of File to be processed
-  @param[in]   FsHandle        The handle of partition where this file lives on.
-  @param[out]  FileHandle      The File Handle of the file for the caller to use.
-  @param[out]  DataBuf         Optional parameter: The data buffer to put the
-                               file contents in.
-  @param[out]  DataSize        Optional parameter: The size of the file's data
-                               contents.
-
-  @retval EFI_SUCCESS          The operation completed successfully.
-          EFI_OUT_OF_RESOURCES Failed buffer allocation
-          EFI_XXX              Error status from other APIs called.
- *
- */
+  @retval EFI_SUCCESS     The operation completed successfully.
+  @retval !(EFI_SUCCESS)  Error status from other APIs called.
+*/
 STATIC
 EFI_STATUS
-VerifyDetachedCertificateFile (
-  IN CONST CHAR16      *FileName,
-  IN CONST EFI_HANDLE  FsHandle,
-  OUT EFI_FILE_HANDLE  *FileHandle,
-  OUT VOID             **DataBuf OPTIONAL,
-  OUT UINTN            *DataSize OPTIONAL
+OpenAndReadFileToBuffer (
+  IN  CONST EFI_HANDLE          PartitionHandle,
+  IN  CONST CHAR16      *CONST  FileName,
+  OUT EFI_FILE_HANDLE   *CONST  FileHandle    OPTIONAL,
+  OUT VOID             **CONST  FileData      OPTIONAL,
+  OUT UINT64            *CONST  FileDataSize  OPTIONAL
   )
 {
-  UINT8            *SecureBootEnabled = NULL;
-  EFI_FILE_HANDLE  FileSigHandle;
-  CHAR16           *NewFileName;
-  VOID             *FileData    = NULL;
-  VOID             *FileSigData = NULL;
-  UINT64           FileSize;
-  UINT64           FileSigSize;
-  EFI_STATUS       Status = EFI_SUCCESS;
-  UINTN            NewFileNameSize;
+  EFI_STATUS       Status;
+  EFI_FILE_HANDLE  Handle = NULL;
+  VOID             *Data  = NULL;
+  UINT64           DataSize;
+  CHAR16           *SigFileName = NULL;
+  UINTN            SigFileNameSize;
+  VOID             *SigData = NULL;
+  UINT64           SigSize;
 
-  FileSigHandle = NULL;
+  if (!IsSecureBootEnabled ()) {
+    DEBUG ((DEBUG_INFO, "%a: Secure Boot is disabled\r\n", __FUNCTION__));
 
-  GetVariable2 (
-    EFI_SECURE_BOOT_ENABLE_NAME,
-    &gEfiSecureBootEnableDisableGuid,
-    (VOID **)&SecureBootEnabled,
-    NULL
-    );
-  if (SecureBootEnabled && (*SecureBootEnabled == SECURE_BOOT_ENABLE)) {
-    Status = OpenAndReadUntrustedFileToBuffer (
-               FsHandle,
-               FileName,
-               FileHandle,
-               &FileData,
-               &FileSize
-               );
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Error Reading %s \n", FileSize);
-      goto Exit;
-    }
+    return OpenAndReadUntrustedFileToBuffer (
+             PartitionHandle,
+             FileName,
+             FileHandle,
+             FileData,
+             FileDataSize
+             );
+  }
 
-    // The detached signature file should be <filename>.sig
-    NewFileNameSize = StrSize (FileName) + StrSize (DETACHED_SIG_FILE_EXTENSION)
-                      + sizeof (CHAR16);
-    NewFileName = AllocateZeroPool (NewFileNameSize);
-    if (NewFileName == NULL) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Cannot Allocate Buffer for NewFileName\n",
-        __FUNCTION__
-        ));
-      Status = EFI_OUT_OF_RESOURCES;
-      goto Error;
-    }
+  Status = OpenAndReadUntrustedFileToBuffer (
+             PartitionHandle,
+             FileName,
+             FileHandle != NULL ? &Handle : NULL,
+             &Data,
+             &DataSize
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
 
-    UnicodeSPrint (NewFileName, NewFileNameSize, L"%s%s", FileName, DETACHED_SIG_FILE_EXTENSION);
-    Status = OpenAndReadUntrustedFileToBuffer (
-               FsHandle,
-               NewFileName,
-               &FileSigHandle,
-               &FileSigData,
-               &FileSigSize
-               );
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (
-        L"%a: Failed to open/read Sig file %s\n",
-        __FUNCTION__,
-        NewFileName
-        );
-      goto Error;
-    }
+  // The detached signature file should be <filename>.sig
+  SigFileNameSize = StrSize (FileName) + StrSize (DETACHED_SIG_FILE_EXTENSION) - sizeof (CHAR16);
+  SigFileName     = AllocatePool (SigFileNameSize);
+  if (SigFileName == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: cannot allocate buffer for signature file name (%u bytes)\r\n",
+      __FUNCTION__,
+      SigFileNameSize
+      ));
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
 
-    Status = VerifyDetachedSignature (
-               FileSigData,
-               FileSigSize,
-               FileData,
-               FileSize
-               );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a:PKCS7 Failed verification %r\n", __FUNCTION__, Status));
-    } else {
-      DEBUG ((DEBUG_INFO, "%a:PKCS7 Verification Success %r\n", __FUNCTION__, Status));
-    }
+  UnicodeSPrint (SigFileName, SigFileNameSize, L"%s%s", FileName, DETACHED_SIG_FILE_EXTENSION);
 
-Error:
-    if (FileSigData) {
-      FreePool (FileSigData);
-    }
+  Status = OpenAndReadUntrustedFileToBuffer (
+             PartitionHandle,
+             SigFileName,
+             NULL,
+             &SigData,
+             &SigSize
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
 
-    if (FileSigHandle) {
-      FileHandleClose (FileSigHandle);
-    }
+  Status = VerifyDetachedSignature (
+             SigData,
+             SigSize,
+             Data,
+             DataSize
+             );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (
+      L"%a: %s failed signature verification: %r\r\n",
+      __FUNCTION__,
+      FileName,
+      Status
+      );
+    goto Exit;
+  }
 
-    if (NewFileName) {
-      FreePool (NewFileName);
-    }
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: %s signature verification successful\r\n",
+    __FUNCTION__,
+    FileName
+    ));
 
-    if (FileData && !DataBuf) {
-      FreePool (FileData);
-    } else {
-      *DataBuf  = FileData;
-      *DataSize = FileSize;
-    }
-  } else {
-    DEBUG ((DEBUG_INFO, "%a: Secure Boot is not Enabled\n", __FUNCTION__));
+  if (FileHandle != NULL) {
+    *FileHandle = Handle;
+    Handle      = NULL;
+  }
+
+  if (FileData != NULL) {
+    *FileData = Data;
+    Data      = NULL;
+  }
+
+  if (FileDataSize != NULL) {
+    *FileDataSize = DataSize;
   }
 
 Exit:
+  if (SigData != NULL) {
+    FreePool (SigData);
+  }
+
+  if (SigFileName != NULL) {
+    FreePool (SigFileName);
+  }
+
+  if (Data != NULL) {
+    FreePool (Data);
+  }
+
+  if (Handle != NULL) {
+    FileHandleClose (Handle);
+  }
+
   return Status;
 }
 
@@ -1003,9 +1008,8 @@ ProcessExtLinuxConfig (
   )
 {
   EFI_STATUS       Status;
-  EFI_DEVICE_PATH  *FullDevicePath;
-  EFI_FILE_HANDLE  FileHandle = NULL;
-  CHAR16           *FileLine  = NULL;
+  EFI_FILE_HANDLE  FileHandle;
+  CHAR16           *FileLine = NULL;
   CHAR16           *CleanLine;
   CHAR16           *DefaultLabel = NULL;
   CHAR16           *Timeout      = NULL;
@@ -1026,9 +1030,9 @@ ProcessExtLinuxConfig (
     return Status;
   }
 
-  Status = VerifyDetachedCertificateFile (
-             EXTLINUX_CONF_PATH,
+  Status = OpenAndReadFileToBuffer (
              *RootFsHandle,
+             EXTLINUX_CONF_PATH,
              &FileHandle,
              NULL,
              NULL
@@ -1036,22 +1040,6 @@ ProcessExtLinuxConfig (
   if (EFI_ERROR (Status)) {
     ErrorPrint (L"%a:sds Failed to Authenticate %s (%r)\r\n", __FUNCTION__, EXTLINUX_CONF_PATH, Status);
     return Status;
-  }
-
-  if (FileHandle == NULL) {
-    FullDevicePath = FileDevicePath (*RootFsHandle, EXTLINUX_CONF_PATH);
-    if (FullDevicePath == NULL) {
-      ErrorPrint (L"%a: Failed to create file device path\r\n", __FUNCTION__);
-      return EFI_OUT_OF_RESOURCES;
-    }
-
-    Status = EfiOpenFileByDevicePath (&FullDevicePath, &FileHandle, EFI_FILE_MODE_READ, 0);
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"%a: Failed to open file: %r\r\n", __FUNCTION__, Status);
-      return Status;
-    }
-  } else {
-    FileHandleSetPosition (FileHandle, 0);
   }
 
   while (!FileHandleEof (FileHandle)) {
@@ -1138,6 +1126,8 @@ ProcessExtLinuxConfig (
     FreePool (FileLine);
     FileLine = NULL;
   }
+
+  FileHandleClose (FileHandle);
 
   if (DefaultLabel != NULL) {
     for (Index = 0; Index < BootConfig->NumberOfBootOptions; Index++) {
@@ -1265,11 +1255,6 @@ ExtLinuxBoot (
   UINTN                      ArgSize;
   ANDROID_BOOTIMG_PROTOCOL   *AndroidBootProtocol;
   EFI_HANDLE                 RamDiskLoadFileHandle = NULL;
-  EFI_DEVICE_PATH_PROTOCOL   *TempDevicePath       = NULL;
-  EFI_DEVICE_PATH_PROTOCOL   *InitRdDevicePath     = NULL;
-  EFI_FILE_HANDLE            InitRdFileHandle      = NULL;
-  EFI_DEVICE_PATH_PROTOCOL   *FdtDevicePath        = NULL;
-  EFI_FILE_HANDLE            FdtFileHandle         = NULL;
   UINTN                      FdtSize;
   VOID                       *AcpiBase         = NULL;
   VOID                       *OldFdtBase       = NULL;
@@ -1301,51 +1286,16 @@ ExtLinuxBoot (
 
   // Expose LoadFile2 for initrd
   if (BootOption->InitrdPath != NULL) {
-    Status = VerifyDetachedCertificateFile (
-               BootOption->InitrdPath,
+    Status = OpenAndReadFileToBuffer (
                DeviceHandle,
-               &InitRdFileHandle,
+               BootOption->InitrdPath,
+               NULL,
                &mRamdiskData,
                &mRamdiskSize
                );
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"%a:sds Failed to Authenticate %s (%r)\r\n", __FUNCTION__, BootOption->InitrdPath, Status);
       return Status;
-    }
-
-    if (InitRdFileHandle == NULL) {
-      InitRdDevicePath = FileDevicePath (DeviceHandle, BootOption->InitrdPath);
-      if (InitRdDevicePath == NULL) {
-        ErrorPrint (L"%a: Failed to create file device path\r\n", __FUNCTION__);
-        Status = EFI_OUT_OF_RESOURCES;
-        goto Exit;
-      }
-
-      TempDevicePath = InitRdDevicePath;
-      Status         = EfiOpenFileByDevicePath (&TempDevicePath, &InitRdFileHandle, EFI_FILE_MODE_READ, 0);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"%a: Failed to open file: %s %r\r\n", __FUNCTION__, BootOption->InitrdPath, Status);
-        goto Exit;
-      }
-
-      Status = FileHandleGetSize (InitRdFileHandle, &mRamdiskSize);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"%a: Failed to get file size: %r\r\n", __FUNCTION__, Status);
-        goto Exit;
-      }
-
-      mRamdiskData = AllocatePool (mRamdiskSize);
-      if (mRamdiskData == NULL) {
-        ErrorPrint (L"%a: Failed to create ram disk buffer\r\n", __FUNCTION__);
-        Status = EFI_OUT_OF_RESOURCES;
-        goto Exit;
-      }
-
-      Status = FileHandleRead (InitRdFileHandle, &mRamdiskSize, mRamdiskData);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"%a: Failed to read ram disk\r\n", __FUNCTION__);
-        goto Exit;
-      }
     }
 
     Status = gBS->InstallMultipleProtocolInterfaces (
@@ -1369,51 +1319,16 @@ ExtLinuxBoot (
       OldFdtBase = NULL;
     }
 
-    Status = VerifyDetachedCertificateFile (
-               BootOption->DtbPath,
+    Status = OpenAndReadFileToBuffer (
                DeviceHandle,
-               &FdtFileHandle,
+               BootOption->DtbPath,
+               NULL,
                &NewFdtBase,
                &FdtSize
                );
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"%a:sds Failed to Authenticate %s (%r)\r\n", __FUNCTION__, EXTLINUX_CONF_PATH, Status);
       goto Exit;
-    }
-
-    if (FdtFileHandle == NULL) {
-      FdtDevicePath = FileDevicePath (DeviceHandle, BootOption->DtbPath);
-      if (FdtDevicePath == NULL) {
-        ErrorPrint (L"%a: Failed to create file device path\r\n", __FUNCTION__);
-        Status = EFI_OUT_OF_RESOURCES;
-        goto Exit;
-      }
-
-      TempDevicePath = FdtDevicePath;
-      Status         = EfiOpenFileByDevicePath (&TempDevicePath, &FdtFileHandle, EFI_FILE_MODE_READ, 0);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"%a: Failed to open file: %s %r\r\n", __FUNCTION__, BootOption->DtbPath, Status);
-        goto Exit;
-      }
-
-      Status = FileHandleGetSize (FdtFileHandle, &FdtSize);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"%a: Failed to get file size: %r\r\n", __FUNCTION__, Status);
-        goto Exit;
-      }
-
-      NewFdtBase = AllocatePool (FdtSize);
-      if (NewFdtBase == NULL) {
-        ErrorPrint (L"%a: Failed to create FDT buffer\r\n", __FUNCTION__);
-        Status = EFI_OUT_OF_RESOURCES;
-        goto Exit;
-      }
-
-      Status = FileHandleRead (FdtFileHandle, &FdtSize, NewFdtBase);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"%a: Failed to read fdt\r\n", __FUNCTION__);
-        goto Exit;
-      }
     }
 
     ExpandedFdtBase = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (NewFdtBase)));
@@ -1495,16 +1410,6 @@ Exit:
            );
   }
 
-  if (InitRdFileHandle != NULL) {
-    FileHandleClose (InitRdFileHandle);
-    InitRdFileHandle = NULL;
-  }
-
-  if (FdtFileHandle != NULL) {
-    FileHandleClose (FdtFileHandle);
-    FdtFileHandle = NULL;
-  }
-
   // Free Memory
   if (KernelDevicePath != NULL) {
     FreePool (KernelDevicePath);
@@ -1522,10 +1427,6 @@ Exit:
   }
 
   FdtSize = 0;
-  if (FdtDevicePath != NULL) {
-    FreePool (FdtDevicePath);
-    FdtDevicePath = NULL;
-  }
 
   if (mRamdiskData != NULL) {
     FreePool (mRamdiskData);
@@ -1533,10 +1434,6 @@ Exit:
   }
 
   mRamdiskSize = 0;
-  if (InitRdDevicePath != NULL) {
-    FreePool (InitRdDevicePath);
-    InitRdDevicePath = NULL;
-  }
 
   if (NewArgs != NULL) {
     FreePool (NewArgs);
