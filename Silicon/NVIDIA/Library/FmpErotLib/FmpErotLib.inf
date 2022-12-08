@@ -2,6 +2,7 @@
 #  Provides firmware device specific services to support updates of a firmware
 #  image stored in a firmware device.
 #
+#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2016, Microsoft Corporation. All rights reserved.<BR>
 #  Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
 #
@@ -10,9 +11,9 @@
 
 [Defines]
   INF_VERSION     = 0x00010005
-  BASE_NAME       = FmpDeviceLibNull
-  MODULE_UNI_FILE = FmpDeviceLibNull.uni
-  FILE_GUID       = 8507642B-AE92-4664-B713-807F7774A96D
+  BASE_NAME       = FmpErotLib
+  MODULE_UNI_FILE = FmpErotLib.uni
+  FILE_GUID       = 7b7d4cb9-2667-4e2c-8883-ef170a7e1e3d
   MODULE_TYPE     = DXE_DRIVER
   VERSION_STRING  = 1.0
   LIBRARY_CLASS   = FmpDeviceLib|DXE_DRIVER UEFI_DRIVER
@@ -24,7 +25,7 @@
 #
 
 [Sources]
-  FmpDeviceLib.c
+  FmpErotLib.c
 
 [Packages]
   MdePkg/MdePkg.dec
