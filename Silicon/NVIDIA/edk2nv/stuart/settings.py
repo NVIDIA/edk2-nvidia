@@ -312,7 +312,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             return str(Path(os.getenv("CROSS_COMPILER_PREFIX")))
         else:
             raise AttributeError("CROSS_COMPILER_PREFIX not defined")
-        
+
     def GetTarget(self):
         ''' Return the value of the --target option.
         '''
@@ -406,6 +406,7 @@ class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
         '''
         super().__init__(*args, **kwargs)
         env = shell_environment.GetBuildVars()
+        ws_dir = Path(self.GetWorkspaceRoot())
 
         # TOOL_CHAIN_TAG
         # - If not provided by the SettingsManager, the value in target.txt
@@ -413,6 +414,14 @@ class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
         toolchain_tag = self.GetToolchainTag()
         if toolchain_tag:
             env.SetValue("TOOL_CHAIN_TAG", toolchain_tag, reason_setman)
+
+        # Setup build reporting
+        env.SetValue("BUILDREPORTING", "TRUE", reason_setman)
+        env.SetValue("BUILDREPORT_TYPES",
+                     self.GetReportTypes(), reason_setman)
+        env.SetValue("BUILDREPORT_FILE",
+                     str(ws_dir / self.GetReportFile()),
+                     reason_setman)
 
     def GetArchitecturesSupported(self):
         ''' return iterable of edk2 architectures supported by this build '''
@@ -441,3 +450,21 @@ class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
         if not tool_chain_tag:
             tool_chain_tag = "GCC5"
         return tool_chain_tag
+
+    def GetReportTypes(self):
+        ''' Return the build report types.
+
+            This will be used to set BUILDREPORT_TYPES.
+        '''
+        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS "
+                "HASH EXECUTION_ORDER")
+
+    def GetReportFile(self):
+        ''' Return the build report filename.
+
+            The report will copied to this location after the build.  Returned
+            as a string.  This default implementation will use
+            "reports/{platform_name}.report"
+        '''
+        platform_name = self.GetName()
+        return f"reports/{platform_name}.report"
