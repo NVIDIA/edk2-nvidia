@@ -28,6 +28,7 @@
   SsdtSocket1.asl
   SsdtSocket2.asl
   SsdtSocket3.asl
+  BpmpSsdtSocket0.asl
 
 [Packages]
   ArmPkg/ArmPkg.dec
