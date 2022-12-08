@@ -985,6 +985,7 @@
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType9Lib/SmbiosType9Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType11Lib/SmbiosType11Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType38Lib/SmbiosType38Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType41Lib/SmbiosType41Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType43Lib/SmbiosType43Lib.inf
 
       # AML Fixup

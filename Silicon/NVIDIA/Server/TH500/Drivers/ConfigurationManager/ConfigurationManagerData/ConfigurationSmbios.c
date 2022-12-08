@@ -104,14 +104,15 @@ InstallCmSmbiosTableList (
   EFI_STATUS                      Status;
   UINTN                           Index;
   CM_SMBIOS_RECORD_POPULATION     CmInstallSmbiosRecords[] = {
-    { EFI_SMBIOS_TYPE_BIOS_INFORMATION,           InstallSmbiosType0Cm  },
-    { EFI_SMBIOS_TYPE_SYSTEM_INFORMATION,         InstallSmbiosType1Cm  },
-    { EFI_SMBIOS_TYPE_BASEBOARD_INFORMATION,      InstallSmbiosType2Cm  },
-    { EFI_SMBIOS_TYPE_PORT_CONNECTOR_INFORMATION, InstallSmbiosType8Cm  },
-    { EFI_SMBIOS_TYPE_SYSTEM_SLOTS,               InstallSmbiosType9Cm  },
-    { EFI_SMBIOS_TYPE_OEM_STRINGS,                InstallSmbiosType11Cm },
-    { EFI_SMBIOS_TYPE_IPMI_DEVICE_INFORMATION,    InstallSmbiosType38Cm },
-    { SMBIOS_TYPE_TPM_DEVICE,                     InstallSmbiosType43Cm }
+    { EFI_SMBIOS_TYPE_BIOS_INFORMATION,                     InstallSmbiosType0Cm  },
+    { EFI_SMBIOS_TYPE_SYSTEM_INFORMATION,                   InstallSmbiosType1Cm  },
+    { EFI_SMBIOS_TYPE_BASEBOARD_INFORMATION,                InstallSmbiosType2Cm  },
+    { EFI_SMBIOS_TYPE_PORT_CONNECTOR_INFORMATION,           InstallSmbiosType8Cm  },
+    { EFI_SMBIOS_TYPE_SYSTEM_SLOTS,                         InstallSmbiosType9Cm  },
+    { EFI_SMBIOS_TYPE_OEM_STRINGS,                          InstallSmbiosType11Cm },
+    { EFI_SMBIOS_TYPE_IPMI_DEVICE_INFORMATION,              InstallSmbiosType38Cm },
+    { EFI_SMBIOS_TYPE_ONBOARD_DEVICES_EXTENDED_INFORMATION, InstallSmbiosType41Cm },
+    { SMBIOS_TYPE_TPM_DEVICE,                               InstallSmbiosType43Cm }
   };
 
   Private = AllocatePool (sizeof (CM_SMBIOS_PRIVATE_DATA));

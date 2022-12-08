@@ -41,6 +41,7 @@
   ConfigurationSmbiosType9.c
   ConfigurationSmbiosType11.c
   ConfigurationSmbiosType38.c
+  ConfigurationSmbiosType41.c
   ConfigurationSmbiosType43.c
   ConfigurationHbm.c
   ConfigurationIpmiDev.c
@@ -70,6 +71,7 @@
   ConfigurationManagerLib
   FruLib
   IpmiBaseLib
+  PciSegmentLib
   Tpm2CommandLib
   PcdLib
 

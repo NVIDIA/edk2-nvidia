@@ -15,6 +15,10 @@
 
 #define MAX_SMBIOS_TABLE_TYPES_SUPPORTED  64
 
+#define MAX_TYPE41_COUNT               100
+#define TYPE41_DEVICE_NOT_PRESENT      0xFFFFFFFF
+#define TYPE41_ONBOARD_DEVICE_ENABLED  0x80
+
 /** This structure contains data used by SMBIOS CM object creators */
 typedef struct CmSmbiosPrivateData {
   /// List of SMBIOS Tables that will be installed (EStdObjSmbiosTableList)
@@ -49,8 +53,9 @@ typedef EFI_STATUS
 (EFIAPI *CM_INSTALL_SMBIOS_RECORD)(
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
+
 //
-// Device structures
+// CM SMBIOS record population struct
 //
 typedef struct {
   SMBIOS_TYPE                 Type;
@@ -203,6 +208,21 @@ InstallSmbiosType11Cm (
 EFI_STATUS
 EFIAPI
 InstallSmbiosType38Cm (
+  IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
+  );
+
+/**
+  Install CM object for SMBIOS Type 41
+
+  @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+InstallSmbiosType41Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
 
