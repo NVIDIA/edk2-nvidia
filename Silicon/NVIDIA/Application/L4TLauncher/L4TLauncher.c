@@ -1579,6 +1579,9 @@ ReadAndroidStyleKernelPartition (
   ANDROID_BOOTIMG_HEADER  ImageHeader;
   VOID                    *ImageBuffer = NULL;
   UINTN                   ImageBufferSize;
+  UINTN                   SignatureOffset;
+  UINT8                   Signature[SIZE_2KB];
+  CONST UINTN             SignatureSize = sizeof (Signature);
 
   Status = FindPartitionInfo (
              DeviceHandle,
@@ -1666,6 +1669,32 @@ ReadAndroidStyleKernelPartition (
     goto Exit;
   }
 
+  if (IsSecureBootEnabled ()) {
+    SignatureOffset = Offset + ALIGN_VALUE (ImageBufferSize, SignatureSize);
+    Status          = DiskIo->ReadDisk (
+                                DiskIo,
+                                BlockIo->Media->MediaId,
+                                SignatureOffset,
+                                SignatureSize,
+                                Signature
+                                );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to read kernel image signature\r\n");
+      goto Exit;
+    }
+
+    Status = VerifyDetachedSignature (
+               Signature,
+               SignatureSize,
+               ImageBuffer,
+               ImageBufferSize
+               );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to verify kernel image signature\r\n");
+      goto Exit;
+    }
+  }
+
   *Image      = ImageBuffer;
   ImageBuffer = NULL;
   *ImageSize  = ImageBufferSize;
@@ -1715,6 +1744,8 @@ ReadAndroidStyleDtbPartition (
   UINT64                 DtbBufferSize;
   UINTN                  Offset;
   UINTN                  Size;
+  UINTN                  SignatureOffset;
+  CONST UINTN            SignatureSize = SIZE_2KB;
 
   Status = FindPartitionInfo (
              DeviceHandle,
@@ -1779,6 +1810,26 @@ ReadAndroidStyleDtbPartition (
   }
 
   Size = fdt_totalsize ((UINT8 *)DtbBuffer + Offset);
+
+  if (IsSecureBootEnabled ()) {
+    SignatureOffset = Offset + ALIGN_VALUE (Size, SignatureSize);
+    if (SignatureOffset + SignatureSize > DtbBufferSize) {
+      ErrorPrint (L"DTB signature missing\r\n");
+      Status = EFI_SECURITY_VIOLATION;
+      goto Exit;
+    }
+
+    Status = VerifyDetachedSignature (
+               (UINT8 *)DtbBuffer + SignatureOffset,
+               SignatureSize,
+               (UINT8 *)DtbBuffer + Offset,
+               Size
+               );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"DTB signature invalid\r\n");
+      goto Exit;
+    }
+  }
 
   *Dtb       = DtbBuffer;
   DtbBuffer  = NULL;
