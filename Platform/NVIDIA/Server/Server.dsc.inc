@@ -138,6 +138,8 @@
   # TODO: Remove once the simulator issue is fixed.
   gEfiMdeModulePkgTokenSpaceGuid.PcdSrIovSupport|FALSE
 
+  gEdkiiDynamicTablesPkgTokenSpaceGuid.PcdForceTopLevelProcessorContainer|TRUE
+
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
 
