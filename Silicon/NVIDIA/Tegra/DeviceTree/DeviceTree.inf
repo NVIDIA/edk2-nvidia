@@ -25,6 +25,7 @@
   BootOrderUfs.dts
   BootOrderUsb.dts
   L4TConfiguration.dts
+  AndroidConfiguration.dts
 
 [Packages]
   MdePkg/MdePkg.dec
