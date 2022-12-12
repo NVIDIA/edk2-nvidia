@@ -239,6 +239,63 @@ GetDtbCommandLine (
 }
 
 /*
+  Check if platform forces the kernel command line to be picked from DTB
+  and not from android boot image.
+
+  @retval TRUE    Use kernel command line from DTB.
+
+  @retval FALSE   Platform does not force using kernel dtb for cmdline.
+*/
+STATIC
+BOOLEAN
+ForceUseDtbCommandLine (
+  VOID
+  )
+{
+  EFI_STATUS   Status;
+  VOID         *DeviceTreeBase;
+  UINTN        DeviceTreeSize;
+  INT32        NodeOffset;
+  CONST CHAR8  *Property;
+  BOOLEAN      DTBoot;
+  VOID         *AcpiBase;
+
+  DTBoot = FALSE;
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (EFI_ERROR (Status)) {
+    DTBoot = TRUE;
+  }
+
+  DeviceTreeBase = NULL;
+  if (DTBoot) {
+    Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DeviceTreeBase);
+    if (EFI_ERROR (Status)) {
+      return FALSE;
+    }
+  } else {
+    Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
+    if (EFI_ERROR (Status)) {
+      return FALSE;
+    }
+  }
+
+  NodeOffset = fdt_path_offset (DeviceTreeBase, "/chosen");
+  if (NodeOffset < 0) {
+    return FALSE;
+  }
+
+  Property = NULL;
+  Property = (CONST CHAR8 *)fdt_getprop (DeviceTreeBase, NodeOffset, "use_dts_cmdline", NULL);
+  if (NULL == Property) {
+    return FALSE;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Platform forced to use kernel command line from DTB.\n", __FUNCTION__));
+
+  return TRUE;
+}
+
+/*
   Remove kernel command line.
 
   @param[in]  InCmdLine  Input Kernel command line.
@@ -563,6 +620,7 @@ RefreshAutoEnumeratedBootOptions (
   EFI_BOOT_MANAGER_LOAD_OPTION  *LoadOption;
   EFI_BOOT_MANAGER_LOAD_OPTION  *UpdatedLoadOption;
   UINTN                         Count;
+  BOOLEAN                       ForceUseDtbCmdLine;
 
   if ((BootOptions == NULL) ||
       (BootOptionsCount == 0) ||
@@ -572,10 +630,11 @@ RefreshAutoEnumeratedBootOptions (
     return EFI_INVALID_PARAMETER;
   }
 
-  ImgKernelArgs = NULL;
-  DtbKernelArgs = NULL;
-  CmdLine       = NULL;
-  CmdLen        = 0;
+  ImgKernelArgs      = NULL;
+  DtbKernelArgs      = NULL;
+  CmdLine            = NULL;
+  CmdLen             = 0;
+  ForceUseDtbCmdLine = FALSE;
 
   Status = gBS->AllocatePool (
                   EfiBootServicesData,
@@ -618,10 +677,13 @@ RefreshAutoEnumeratedBootOptions (
                       );
       ASSERT_EFI_ERROR (Status);
 
+      ForceUseDtbCmdLine = ForceUseDtbCommandLine ();
+
       // Always use DTB arguments on pre-silicon targets
       if ((TegraGetPlatform () == TEGRA_PLATFORM_SILICON) &&
           (ImgKernelArgs != NULL) &&
-          (StrLen (ImgKernelArgs) != 0))
+          (StrLen (ImgKernelArgs) != 0) &&
+          (ForceUseDtbCmdLine == FALSE))
       {
         DEBUG ((DEBUG_ERROR, "%a: Using Image Kernel Command Line\n", __FUNCTION__));
         InputKernelArgs = ImgKernelArgs;
