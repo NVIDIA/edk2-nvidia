@@ -48,9 +48,6 @@
 
 [Guids]
   gNVIDIAPlatformResourceDataGuid
-  gNVIDIARasLogMmGuid
-  gNVIDIAEarlyVarsMmGuid
-  gNVIDIARasCmetMmGuid
 
 [Depex]
   TRUE

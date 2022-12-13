@@ -42,11 +42,12 @@ GetSeqProto (
   NVIDIA_SEQ_RECORD_PROTOCOL  *SeqProto;
   NVIDIA_SEQ_RECORD_PROTOCOL  *ReturnProto;
 
-  Status = GetProtocolHandleBuffer (
-             &gNVIDIASequentialStorageGuid,
-             &NumHandles,
-             &HandleBuffer
-             );
+  ReturnProto = NULL;
+  Status      = GetProtocolHandleBuffer (
+                  &gNVIDIASequentialStorageGuid,
+                  &NumHandles,
+                  &HandleBuffer
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -57,7 +58,6 @@ GetSeqProto (
     goto ExitGetSeqProto;
   }
 
-  ReturnProto = NULL;
   for (Index = 0; Index < NumHandles; Index++) {
     Status = gMmst->MmHandleProtocol (
                       HandleBuffer[Index],
@@ -259,7 +259,92 @@ EarlyVarsMsgHandler (
   IN OUT UINTN       *CommBufferSize
   )
 {
-  DEBUG ((DEBUG_ERROR, "%a: Unsupported\n", __FUNCTION__));
+  EFI_STATUS                    Status;
+  NVIDIA_MM_MB1_RECORD_PAYLOAD  *EarlyVars;
+  UINT8                         *Record;
+  UINTN                         SocketIdx;
+  EFI_PHYSICAL_ADDRESS          CpuBlAddr;
+  UINT32                        RecSize;
+
+  EarlyVars = (NVIDIA_MM_MB1_RECORD_PAYLOAD *)CommBuffer;
+  RecSize   = TEGRABL_EARLY_BOOT_VARS_MAX_SIZE - sizeof (TEGRABL_EARLY_BOOT_VARS_DATA_HEADER);
+  if (EarlyVarsProto == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: No Storage support for Early Vars\n", __FUNCTION__));
+    Status = EFI_UNSUPPORTED;
+    goto ExitEarlyVarsMsgHandler;
+  }
+
+  Record = EarlyVars->Data;
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Fn %u Size %u\n ",
+    __FUNCTION__,
+    EarlyVars->Command,
+    *CommBufferSize
+    ));
+  switch (EarlyVars->Command) {
+    case READ_LAST_RECORD:
+      Status = EarlyVarsProto->ReadLast (
+                                 EarlyVarsProto,
+                                 EARLY_VARS_RD_SOCKET,
+                                 (VOID *)Record,
+                                 RecSize
+                                 );
+      break;
+    case WRITE_NEXT_RECORD:
+      Status = GetCpuBlParamsAddrStMm (&CpuBlAddr);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to get CPU BL Addr %r\n",
+          __FUNCTION__,
+          Status
+          ));
+        goto ExitEarlyVarsMsgHandler;
+      }
+
+      for (SocketIdx = 0; SocketIdx < MAX_SOCKETS; SocketIdx++) {
+        if (IsSocketEnabledStMm (CpuBlAddr, SocketIdx) == TRUE) {
+          Status = EarlyVarsProto->WriteNext (
+                                     EarlyVarsProto,
+                                     SocketIdx,
+                                     (VOID *)Record,
+                                     RecSize
+                                     );
+          if (EFI_ERROR (Status)) {
+            DEBUG ((
+              DEBUG_ERROR,
+              "%a: Write Failed Socket %u %r\n",
+              __FUNCTION__,
+              SocketIdx,
+              Status
+              ));
+            break;
+          }
+        }
+      }
+
+      break;
+    default:
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Invalid Function %u\n",
+        __FUNCTION__,
+        EarlyVars->Command
+        ));
+      Status = EFI_INVALID_PARAMETER;
+      break;
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Got Function %u Return %r\n",
+    __FUNCTION__,
+    EarlyVars->Command,
+    Status
+    ));
+ExitEarlyVarsMsgHandler:
+  EarlyVars->Status = Status;
   return EFI_SUCCESS;
 }
 
@@ -305,9 +390,8 @@ RegisterRasLogHandler (
   if (RasSeqProto == NULL) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Failed to Get Sequential Proto for RAS%r\n",
-      __FUNCTION__,
-      Status
+      "%a: Failed to Get Sequential Proto for RAS\n",
+      __FUNCTION__
       ));
 
     /* Log the failure to get partition info, but return
@@ -345,7 +429,7 @@ RegisterEarlyVarsHandler (
   Status = EFI_SUCCESS;
   Status = gMmst->MmiHandlerRegister (
                     EarlyVarsMsgHandler,
-                    &gNVIDIAEarlyVarsMmGuid,
+                    &gNVIDIAMmMb1RecordGuid,
                     &Handle
                     );
   if (EFI_ERROR (Status)) {
@@ -362,9 +446,8 @@ RegisterEarlyVarsHandler (
   if (EarlyVarsProto == NULL) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Failed to Get Sequential Proto for EarlyVars%r\n",
-      __FUNCTION__,
-      Status
+      "%a: Failed to Get Sequential Proto for EarlyVars\n",
+      __FUNCTION__
       ));
     EarlyVarsProto = NULL;
 
@@ -419,9 +502,8 @@ RegisterCmetHandler (
   if (CmetSeqProto == NULL) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Failed to Get Sequential Proto for Cmet%r\n",
-      __FUNCTION__,
-      Status
+      "%a: Failed to Get Sequential Proto for Cmet\n",
+      __FUNCTION__
       ));
     CmetSeqProto = NULL;
 

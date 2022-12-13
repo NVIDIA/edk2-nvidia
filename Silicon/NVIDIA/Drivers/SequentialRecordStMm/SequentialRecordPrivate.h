@@ -18,6 +18,8 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/StandaloneMmOpteeDeviceMem.h>
 #include <Protocol/SequentialRecord.h>
+#include <TH500/TH500MB1Configuration.h>
+#include <Guid/NVIDIAMmMb1Record.h>
 
 #define READ_LAST_RECORD   (0)
 #define WRITE_NEXT_RECORD  (1)
