@@ -936,7 +936,7 @@
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtCpuTopologyLibArm/SsdtCpuTopologyLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtPcieLibArm/SsdtPcieLibArm.inf
 
-      NULL|DynamicTablesPkg/Library/Smbios/Arm/SmbiosType1Lib/SmbiosType1LibArm.inf
+      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType1Lib/SmbiosType1Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType2Lib/SmbiosType2Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType9Lib/SmbiosType9Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType38Lib/SmbiosType38Lib.inf
