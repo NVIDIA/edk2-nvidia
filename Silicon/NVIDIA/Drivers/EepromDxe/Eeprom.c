@@ -684,6 +684,7 @@ InitializeEepromDxe (
       sizeof (CvmBoardInfo->SerialNumber),
       EEPROM_DUMMY_SERIALNUM
       );
+    DEBUG ((DEBUG_ERROR, "Populated dummy Cvm Eeprom data\r\n"));
   }
 
   Handle = NULL;
