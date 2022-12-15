@@ -62,8 +62,6 @@
   gNVIDIATokenSpaceGuid.PcdChassisVersion
   gNVIDIATokenSpaceGuid.PcdType3Info
   gNVIDIATokenSpaceGuid.PcdType32Info
-  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
-  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
 
 [Guids]

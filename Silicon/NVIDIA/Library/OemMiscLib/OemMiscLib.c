@@ -209,10 +209,71 @@ GetCpuFreqMhz (
 }
 
 /**
+  GetCpuEnabledCoresFromCm
+  Helper function to get number of enabled cores from GicC CM Object.
+
+  @param ProcessorIndex Index of the processor to get the frequency for.
+
+  @retval               Number of enabled cores.
+
+**/
+STATIC
+UINTN
+GetCpuEnabledCoresFromCm (
+  IN UINT8  ProcessorIndex
+  )
+{
+  EFI_STATUS                            Status;
+  EDKII_CONFIGURATION_MANAGER_PROTOCOL  *CfgMgrProtocol;
+  CM_OBJ_DESCRIPTOR                     CmObjectDesc;
+  CM_ARM_GICC_INFO                      *GicCInfo;
+  UINT32                                TotalNumCores;
+  UINT32                                NumCores;
+  UINT32                                Index;
+
+  // Locate Configuration Manager Protocol for getting GicC and Cpc CM Objects.
+  Status = gBS->LocateProtocol (
+                  &gEdkiiConfigurationManagerProtocolGuid,
+                  NULL,
+                  (VOID **)&CfgMgrProtocol
+                  );
+  if ( EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Locate CfgMgrProtocol %r", __FUNCTION__, Status));
+    return 0;
+  }
+
+  // Get GicC Info for each CPU core
+  Status = CfgMgrProtocol->GetObject (
+                             CfgMgrProtocol,
+                             CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo),
+                             CM_NULL_TOKEN,
+                             &CmObjectDesc
+                             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Get GicC Info %r\n", __FUNCTION__, Status));
+    return 0;
+  }
+
+  NumCores      = 0;
+  TotalNumCores = CmObjectDesc.Count;
+  GicCInfo      = (CM_ARM_GICC_INFO *)CmObjectDesc.Data;
+
+  for (Index = 0; Index < TotalNumCores; Index++) {
+    // Find the core which belongs to the ProcessorIndex
+    if (GicCInfo[Index].ProximityDomain == ProcessorIndex) {
+      NumCores++;
+    }
+  }
+
+  return NumCores;
+}
+
+/**
   PopulateCpuData
   Helper Function to get CPU/Core data.The Enabled Cores count
   is obtained using the Floorsweeping Library.
 
+  @param ProcessorIndex         Index of the processor to get the CpuData for.
   @param MiscProcessorData      Pointer to the Processor Data structure which
                                 is used by the Smbios drivers.
                                 it should be ignored by device driver.
@@ -223,18 +284,17 @@ GetCpuFreqMhz (
 STATIC
 VOID
 PopulateCpuData (
+  IN UINT8                 ProcessorIndex,
   OEM_MISC_PROCESSOR_DATA  *MiscProcessorData
   )
 {
-  UINT16  MaxClusters;
-  UINT16  MaxCoresPerCluster;
+  UINTN  CoresEnabled;
 
-  MaxCoresPerCluster              =  PcdGet32 (PcdTegraMaxCoresPerCluster);
-  MaxClusters                     =  PcdGet32 (PcdTegraMaxClusters);
   MiscProcessorData->CurrentSpeed = CurCpuFreqMhz;
   MiscProcessorData->MaxSpeed     = CurCpuFreqMhz;
-  MiscProcessorData->CoreCount    = (MaxClusters * MaxCoresPerCluster);
-  MiscProcessorData->CoresEnabled = GetNumberOfEnabledCpuCores ();
+  CoresEnabled                    = GetCpuEnabledCoresFromCm (ProcessorIndex);
+  MiscProcessorData->CoreCount    = CoresEnabled;
+  MiscProcessorData->CoresEnabled = CoresEnabled;
   MiscProcessorData->ThreadCount  = 1;
 }
 
@@ -323,7 +383,7 @@ OemGetProcessorInformation (
     ProcessorStatus->Bits.Reserved1       = 0;
     ProcessorStatus->Bits.SocketPopulated = 1;
     ProcessorStatus->Bits.Reserved2       = 0;
-    PopulateCpuData (MiscProcessorData);
+    PopulateCpuData (ProcessorIndex, MiscProcessorData);
     PopulateCpuCharData (ProcessorCharacteristics);
   } else {
     DEBUG ((DEBUG_INFO, "is disbled\n"));
