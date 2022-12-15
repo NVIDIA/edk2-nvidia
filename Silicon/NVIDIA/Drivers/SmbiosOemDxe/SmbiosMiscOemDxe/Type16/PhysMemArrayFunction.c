@@ -32,10 +32,7 @@ GetTotalDram (
   NextHob.Raw = HobBase;
 
   while ((NextHob.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, NextHob.Raw)) != NULL) {
-    if ((NextHob.ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) &&
-        ((UINTN)HobBase >= NextHob.ResourceDescriptor->PhysicalStart) &&
-        ((UINTN)HobBase < NextHob.ResourceDescriptor->PhysicalStart + NextHob.ResourceDescriptor->ResourceLength))
-    {
+    if (NextHob.ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) {
       TotalDram += NextHob.ResourceDescriptor->ResourceLength;
     }
 
