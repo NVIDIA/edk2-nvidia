@@ -387,12 +387,32 @@ ErotQspiRecv (
     if (!StartOfMsg) {
       Status = ErotQspiWaitForInterrupt (Private, QSPI_MCTP_PT_MS_MAX);
       if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: interrupt failed MsgLen=%u, SOM=%u EOM=%u NextSeq=%u: %r\n",
+          __FUNCTION__,
+          MsgLength,
+          StartOfMsg,
+          EndOfMsg,
+          NextSeq,
+          Status
+          ));
         return Status;
       }
     }
 
     Status = ErotQspiRecvPacket (Private, &PacketLength);
     if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: RecvPacket MsgLen=%u, SOM=%u EOM=%u NextSeq=%u failed: %r\n",
+        __FUNCTION__,
+        MsgLength,
+        StartOfMsg,
+        EndOfMsg,
+        NextSeq,
+        Status
+        ));
       return Status;
     }
 
@@ -407,19 +427,22 @@ ErotQspiRecv (
         MediumHdr->Length,
         PacketLength
         ));
-      return EFI_PROTOCOL_ERROR;
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: dropping packet MsgLen=%u, SOM=%u EOM=%u NextSeq=%u\n",
+        __FUNCTION__,
+        MsgLength,
+        StartOfMsg,
+        EndOfMsg,
+        NextSeq
+        ));
+      continue;
     }
 
     PayloadLength = PacketLength - OFFSET_OF (EROT_QSPI_PACKET, Payload);
 
     if (*Length < MsgLength + PayloadLength) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: length error %u < %u\n",
-        __FUNCTION__,
-        *Length,
-        MsgLength + PayloadLength
-        ));
+      DEBUG ((DEBUG_ERROR, "%a: length error %u < %u\n", __FUNCTION__, *Length, MsgLength + PayloadLength));
       return EFI_BUFFER_TOO_SMALL;
     }
 

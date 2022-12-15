@@ -58,4 +58,4 @@
   gEfiEventVirtualAddressChangeGuid
 
 [Depex]
-  gNVIDIAMctpProtocolGuid
+  gNVIDIAErotBootCompleteProtocolGuid

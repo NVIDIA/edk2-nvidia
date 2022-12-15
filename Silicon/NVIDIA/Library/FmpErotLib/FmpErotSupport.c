@@ -26,6 +26,7 @@ typedef struct {
 } FMP_EROT_VENDOR_FW_DESCRIPTOR;
 #pragma pack()
 
+STATIC BOOLEAN     mInitialized    = FALSE;
 STATIC EFI_STATUS  mVersionStatus  = EFI_UNSUPPORTED;
 STATIC UINT32      mVersion        = 0;
 STATIC CHAR16      *mVersionString = NULL;
@@ -38,6 +39,10 @@ FmpErotGetVersion (
   )
 {
   UINTN  VersionStringSize;
+
+  if (!mInitialized) {
+    return EFI_UNSUPPORTED;
+  }
 
   if (EFI_ERROR (mVersionStatus)) {
     DEBUG ((DEBUG_ERROR, "%a: bad status: %r\n", __FUNCTION__, mVersionStatus));
@@ -59,6 +64,8 @@ FmpErotGetVersion (
       return EFI_OUT_OF_RESOURCES;
     }
   }
+
+  DEBUG ((DEBUG_INFO, "%a: version 0x%08x (%s)\n", __FUNCTION__, mVersion, mVersionString));
 
   return EFI_SUCCESS;
 }
@@ -242,7 +249,15 @@ FmpErotGetVersionInfo (
   mVersion       = (UINT32)Version64;
   mVersionStatus = EFI_SUCCESS;
 
-  DEBUG ((DEBUG_INFO, "%a: got version=0x%x (%s)\n", __FUNCTION__, mVersion, mVersionString));
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: got version=0x%x (%s) Pending=%.*a\n",
+    __FUNCTION__,
+    mVersion,
+    mVersionString,
+    ComponentEntry->PendingVersionStringLength,
+    &ComponentEntry->ActiveVersionString[ComponentEntry->ActiveVersionStringLength]
+    ));
 
   return EFI_SUCCESS;
 }
@@ -269,12 +284,20 @@ FmpErotLibConstructor (
   Status = ErotLibInit ();
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: lib init error: %r\n", __FUNCTION__, Status));
-    return Status;
+    goto Done;
   }
 
   Status = FmpErotGetVersionInfo ();
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto Done;
+  }
+
+  mInitialized = TRUE;
+
+Done:
+  // must exit with good status, API disabled if errors occurred above
+  if (EFI_ERROR (Status)) {
+    ErotLibDeinit ();
   }
 
   return EFI_SUCCESS;

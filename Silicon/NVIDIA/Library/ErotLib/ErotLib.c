@@ -10,8 +10,6 @@
 
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
-#include <Library/BaseLib.h>
-#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/ErotLib.h>
 #include <Library/MctpNvVdmLib.h>
@@ -248,6 +246,7 @@ ErotSendBootComplete (
   MCTP_DEVICE_ATTRIBUTES          Attributes;
   NVIDIA_MCTP_PROTOCOL            *Protocol;
   UINTN                           ResponseLength;
+  EFI_HANDLE                      Handle;
 
   Status = ErotLibInit ();
   if (EFI_ERROR (Status)) {
@@ -292,6 +291,19 @@ ErotSendBootComplete (
       Rsp.CompletionCode
       ));
     return EFI_DEVICE_ERROR;
+  }
+
+  if (Socket == 0) {
+    Handle = NULL;
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &Handle,
+                    &gNVIDIAErotBootCompleteProtocolGuid,
+                    NULL,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: install protocol failed: %r\n", __FUNCTION__, Status));
+    }
   }
 
   return EFI_SUCCESS;

@@ -27,6 +27,8 @@
   DebugLib
   MctpBaseLib
   MctpNvVdmLib
+  MemoryAllocationLib
 
 [Protocols]
   gNVIDIAMctpProtocolGuid
+  gNVIDIAErotBootCompleteProtocolGuid

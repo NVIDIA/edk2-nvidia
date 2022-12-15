@@ -1511,7 +1511,7 @@ HandleBootChainUpdate (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      DEBUG_ERROR,
+      DEBUG_INFO,
       "Boot Chain Protocol Guid=%g not found: %r\n",
       &gNVIDIABootChainProtocolGuid,
       Status

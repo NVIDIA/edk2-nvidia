@@ -72,9 +72,11 @@
 #define EROT_CMD_GET_POLL_ALL  0x2F
 
 // timeouts
-#define EROT_HOST_MBOX_SEQUENCE_TIMEOUT_MS  100
-#define EROT_SREG_BUSY_TIMEOUT_MS           100
-#define EROT_MEM_BUSY_TIMEOUT_MS            100
+#define EROT_HOST_MBOX_POLL_MSG_TIMEOUT_MS      0
+#define EROT_HOST_MBOX_POLL_DEFAULT_TIMEOUT_MS  100
+#define EROT_HOST_MBOX_POLL_LENGTH_TIMEOUT_MS   100
+#define EROT_SREG_BUSY_TIMEOUT_MS               100
+#define EROT_MEM_BUSY_TIMEOUT_MS                100
 
 #define EROT_WAIT_CYCLES      0
 #define EROT_TAR_CYCLES       1     // 1 in single, 4 in quad
@@ -633,70 +635,67 @@ ErotQspiPollHostMbox (
   UINT32      MaskedMbox;
   EFI_STATUS  Status;
   EFI_STATUS  MboxStatus;
+  UINTN       PollMs;
 
-  if (PollLengthField & (Length == NULL)) {
+  if (PollLengthField && (Length == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if ((Cmd == EROT_HOST_MBOX_MSG_AVAILABLE) && Private->HasMessageAvailable) {
-    Private->HasMessageAvailable = FALSE;
-    return EFI_SUCCESS;
+  if (PollLengthField) {
+    Mask   = EROT_HOST_MBOX_LENGTH_MASK;
+    PollMs = EROT_HOST_MBOX_POLL_LENGTH_TIMEOUT_MS;
+  } else {
+    Mask   = EROT_HOST_MBOX_CMD_MASK;
+    PollMs = (Cmd == EROT_HOST_MBOX_MSG_AVAILABLE) ?
+             EROT_HOST_MBOX_POLL_MSG_TIMEOUT_MS :
+             EROT_HOST_MBOX_POLL_DEFAULT_TIMEOUT_MS;
   }
 
-  EndNs = ErotQspiNsCounter () + EROT_QSPI_MS_TO_NS (EROT_HOST_MBOX_SEQUENCE_TIMEOUT_MS);
-  Mask  = (PollLengthField) ? EROT_HOST_MBOX_LENGTH_MASK : EROT_HOST_MBOX_CMD_MASK;
-
+  EndNs  = ErotQspiNsCounter () + EROT_QSPI_MS_TO_NS (PollMs);
   Status = EFI_TIMEOUT;
   do {
-    if (ErotQspiHasInterruptReq (Private)) {
-      MboxStatus = ErotQspiSregRead32 (Private, EROT_REG_HOST_MBOX, &Mbox);
-      if (EFI_ERROR (MboxStatus)) {
-        DEBUG ((DEBUG_ERROR, "%a: read failed: %r\n", __FUNCTION__, Status));
-        continue;
-      }
+    MboxStatus = ErotQspiSregRead32 (Private, EROT_REG_HOST_MBOX, &Mbox);
+    if (EFI_ERROR (MboxStatus)) {
+      DEBUG ((DEBUG_ERROR, "%a: read failed: %r\n", __FUNCTION__, Status));
+      continue;
+    }
 
-      DEBUG ((DEBUG_VERBOSE, "%a: Mbox=0x%08x %a\n", __FUNCTION__, Mbox, ErotQspiDecodeHostMbox (Mbox)));
+    DEBUG ((DEBUG_VERBOSE, "%a: Mbox=0x%08x %a\n", __FUNCTION__, Mbox, ErotQspiDecodeHostMbox (Mbox)));
 
-      if ((Mbox & EROT_HOST_MBOX_MASK) == 0) {
-        DEBUG ((DEBUG_ERROR, "%a: spurious interrupt, mbox=0x%x\n", __FUNCTION__, Mbox));
-        continue;
-      }
+    if (Mbox & EROT_HOST_MBOX_MSG_AVAILABLE) {
+      if (Cmd == EROT_HOST_MBOX_MSG_AVAILABLE) {
+        return EFI_SUCCESS;
+      } else if (!PollLengthField) {
+        DEBUG ((DEBUG_INFO, "%a: msg avail, Mbox=0x%x Cmd=0x%x\n", __FUNCTION__, Mbox, Cmd));
 
-      if (Mbox & EROT_HOST_MBOX_MSG_AVAILABLE) {
-        if (Cmd == EROT_HOST_MBOX_MSG_AVAILABLE) {
+        Private->HasMessageAvailable = TRUE;
+        // allow MSG_AVAILABLE to serve as ACK
+        if (Cmd == EROT_HOST_MBOX_CMD_ACK) {
           return EFI_SUCCESS;
-        } else {
-          Private->HasMessageAvailable = TRUE;
-          // allow MSG_AVAILABLE to serve as ACK
-          if (Cmd == EROT_HOST_MBOX_CMD_ACK) {
-            return EFI_SUCCESS;
-          }
         }
       }
+    }
 
-      MaskedMbox = Mbox & Mask;
-      if ((MaskedMbox == 0) ||
-          (!PollLengthField && (MaskedMbox != Cmd)))
-      {
-        DEBUG ((DEBUG_INFO, "%a: unexpected Mbox=0x%x Mask=0x%x Cmd=0x%x\n", __FUNCTION__, Mbox, Mask, Cmd));
-        continue;
-      }
+    MaskedMbox = Mbox & Mask;
 
-      if (PollLengthField) {
-        *Length = (UINT8)(Mbox & EROT_HOST_MBOX_LENGTH_MASK);
-        DEBUG ((DEBUG_INFO, "%a: got Length Mbox=0x%x Mask=0x%x Len=0x%x\n", __FUNCTION__, Mbox, Mask, *Length));
+    if (PollLengthField) {
+      if (MaskedMbox != 0) {
+        *Length = (UINT8)MaskedMbox;
+        DEBUG ((DEBUG_VERBOSE, "%a: got Length Mbox=0x%x Mask=0x%x Len=0x%x\n", __FUNCTION__, Mbox, Mask, *Length));
         return EFI_SUCCESS;
       }
 
-      if (MaskedMbox == Cmd) {
-        DEBUG ((DEBUG_INFO, "%a: got Cmd Mbox=0x%x Mask=0x%x Cmd=0x%x\n", __FUNCTION__, Mbox, Mask, Cmd));
-        return EFI_SUCCESS;
-      }
+      continue;
+    }
+
+    if (MaskedMbox == Cmd) {
+      DEBUG ((DEBUG_VERBOSE, "%a: got Cmd Mbox=0x%x Mask=0x%x Cmd=0x%x\n", __FUNCTION__, Mbox, Mask, Cmd));
+      return EFI_SUCCESS;
     }
   } while (EFI_ERROR (Status) && (ErotQspiNsCounter () < EndNs));
 
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: failed: %r\n", __FUNCTION__, Status));
+  if (EFI_ERROR (Status) && (Cmd != EROT_HOST_MBOX_MSG_AVAILABLE)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed Mbox=0x%x, Cmd=0x%x PollLen=%u: %r\n", __FUNCTION__, Mbox, Cmd, PollLengthField, Status));
   }
 
   return Status;
@@ -1090,14 +1089,24 @@ ErotQspiHasInterruptReq (
   IN  EROT_QSPI_PRIVATE_DATA  *Private
   )
 {
-  if (Private->HasMessageAvailable) {
-    DEBUG ((DEBUG_INFO, "%a: Msg Available\n", __FUNCTION__));
+  EFI_STATUS  Status;
 
+  if (Private->HasMessageAvailable) {
+    DEBUG ((DEBUG_INFO, "%a: HasMsgAvailable\n", __FUNCTION__));
+    Private->HasMessageAvailable = FALSE;
     return TRUE;
   }
 
   // TODO: should read gpio.
-  MicroSecondDelay (1000);
+  Status = ErotQspiPollHostMbox (
+             Private,
+             FALSE,
+             EROT_HOST_MBOX_MSG_AVAILABLE,
+             NULL
+             );
+  if (EFI_ERROR (Status)) {
+    return FALSE;
+  }
 
   return TRUE;
 }
@@ -1123,16 +1132,6 @@ ErotQspiRecvPacket (
   EROT_QSPI_PACKET  *Packet;
 
   Packet = &Private->Packet;
-
-  Status = ErotQspiPollHostMbox (
-             Private,
-             FALSE,
-             EROT_HOST_MBOX_MSG_AVAILABLE,
-             NULL
-             );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
 
   Status = ErotQspiWriteErotMbox (Private, EROT_MBOX_CMD_READY_TO_READ);
   if (EFI_ERROR (Status)) {
