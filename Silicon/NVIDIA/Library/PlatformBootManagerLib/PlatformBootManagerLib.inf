@@ -94,6 +94,7 @@
   gNVIDIATokenSpaceGuid
   gEfiRtPropertiesTableGuid
   gEnrollFromDefaultKeysAppFileGuid
+  gNVIDIAAfterConsoleEventGuid
 
 [Protocols]
   gEfiDevicePathProtocolGuid

@@ -1857,6 +1857,11 @@ PlatformBootManagerAfterConsole (
   )
 {
   //
+  // Signal Redfish startup event.
+  //
+  EfiEventGroupSignal (&gNVIDIAAfterConsoleEventGuid);
+
+  //
   // Show the splash screen.
   //
   BootLogoEnableLogo ();
