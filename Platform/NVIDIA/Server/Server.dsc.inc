@@ -59,6 +59,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|TRUE
   gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x07
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x400
+  gArmTokenSpaceGuid.PcdSmbiosMiscDxeGenMask|0x000000010000200D
 
 [PcdsDynamicDefault]
   ## MM Communicate
