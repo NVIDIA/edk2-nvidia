@@ -19,9 +19,6 @@ class ServerSettingsManager(NVIDIASettingsManager):
     def GetActiveScopes(self):
         return super().GetActiveScopes() + ["server"]
 
-    def GetFirmwareVersionBase(self):
-        return "v1.1.1"
-
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"
 

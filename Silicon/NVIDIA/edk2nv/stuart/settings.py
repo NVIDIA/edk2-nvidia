@@ -194,11 +194,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             The return from this method will be used as the prefix when setting
             BUILDID_STRING, unless the FIRMWARE_VERSION_BASE env is set.
         '''
-        raise NotImplementedError(
-            "GetFirmwareVersionBase() must be implemented in "
-            "NVIDIASettingsManager subclasses or FIRMWARE_VERSION_BASE "
-            "must be set ."
-        )
+        return os.getenv("USER") or "000000.0"
 
     def GetFirmwareVersion(self):
         ''' Return the firmware version as a string.

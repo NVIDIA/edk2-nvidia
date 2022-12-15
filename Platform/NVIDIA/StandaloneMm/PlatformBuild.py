@@ -21,9 +21,6 @@ class StandaloneMmSettingsManager(NVIDIASettingsManager):
     def GetActiveScopes(self):
         return super().GetActiveScopes() + ["standalonemm"]
 
-    def GetFirmwareVersionBase(self):
-        return "v1.1.1"
-
     def GetFirmwareVolume(self):
         return "FV/UEFI_MM.Fv"
 
