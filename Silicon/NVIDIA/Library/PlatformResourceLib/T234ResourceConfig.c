@@ -167,13 +167,13 @@ T234GetResourceConfig (
       return EFI_DEVICE_ERROR;
     }
 
-    DramRegions[0].MemoryBaseAddress   = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Base);
-    DramRegions[0].MemoryLength        = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Size);
-    DramRegions[1].MemoryBaseAddress   = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Base);
-    DramRegions[1].MemoryLength        = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Size);
-    PlatformInfo->DramRegions          = DramRegions;
-    PlatformInfo->DramRegionsCount     = 2;
-    PlatformInfo->UefiDramRegionsCount = 2;
+    DramRegions[0].MemoryBaseAddress  = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Base);
+    DramRegions[0].MemoryLength       = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_BLANKET_NSDRAM].Size);
+    DramRegions[1].MemoryBaseAddress  = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Base);
+    DramRegions[1].MemoryLength       = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Size);
+    PlatformInfo->DramRegions         = DramRegions;
+    PlatformInfo->DramRegionsCount    = 2;
+    PlatformInfo->UefiDramRegionIndex = 0;
   } else {
     DEBUG ((EFI_D_ERROR, "DRAM Encryption Disabled\n"));
     DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION));
@@ -182,11 +182,11 @@ T234GetResourceConfig (
       return EFI_DEVICE_ERROR;
     }
 
-    DramRegions->MemoryBaseAddress     = TegraGetSystemMemoryBaseAddress (T234_CHIP_ID);
-    DramRegions->MemoryLength          = CPUBL_PARAMS (CpuBootloaderParams, SdramSize);
-    PlatformInfo->DramRegions          = DramRegions;
-    PlatformInfo->DramRegionsCount     = 1;
-    PlatformInfo->UefiDramRegionsCount = 1;
+    DramRegions->MemoryBaseAddress    = TegraGetSystemMemoryBaseAddress (T234_CHIP_ID);
+    DramRegions->MemoryLength         = CPUBL_PARAMS (CpuBootloaderParams, SdramSize);
+    PlatformInfo->DramRegions         = DramRegions;
+    PlatformInfo->DramRegionsCount    = 1;
+    PlatformInfo->UefiDramRegionIndex = 0;
   }
 
   // Build Carveout regions

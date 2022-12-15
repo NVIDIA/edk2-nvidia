@@ -28,7 +28,7 @@ typedef struct {
 
   @param  DramRegions              Sorted list of available DRAM regions
   @param  DramRegionsCount         Number of regions in DramRegions.
-  @param  UefiDramRegionsCount     Number of uefi usable regions in DramRegions.
+  @param  UefiDramRegionIndex      Index of uefi usable regions in DramRegions.
   @param  CarveoutRegions          Sorted list of carveout regions that will be
                                    removed from DramRegions.
   @param  CarveoutRegionsCount     Number of regions in CarveoutRegions.
@@ -42,7 +42,7 @@ EFI_STATUS
 InstallDramWithCarveouts (
   IN  NVDA_MEMORY_REGION  *DramRegions,
   IN  UINTN               DramRegionsCount,
-  IN  UINTN               UefiDramRegionsCount,
+  IN  UINTN               UefiDramRegionIndex,
   IN  NVDA_MEMORY_REGION  *CarveoutRegions,
   IN  UINTN               CarveoutRegionsCount,
   OUT UINTN               *FinalRegionsCount

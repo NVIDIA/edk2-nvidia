@@ -264,7 +264,7 @@ InstallSystemResources (
   Status                = InstallDramWithCarveouts (
                             PlatformInfo->DramRegions,
                             PlatformInfo->DramRegionsCount,
-                            PlatformInfo->UefiDramRegionsCount,
+                            PlatformInfo->UefiDramRegionIndex,
                             PlatformInfo->CarveoutRegions,
                             PlatformInfo->CarveoutRegionsCount,
                             &FinalDramRegionsCount

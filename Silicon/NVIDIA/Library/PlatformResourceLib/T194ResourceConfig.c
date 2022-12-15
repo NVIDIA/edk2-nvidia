@@ -82,11 +82,11 @@ T194GetResourceConfig (
     return EFI_DEVICE_ERROR;
   }
 
-  DramRegions->MemoryBaseAddress     = TegraGetSystemMemoryBaseAddress (T194_CHIP_ID);
-  DramRegions->MemoryLength          = CpuBootloaderParams->SdramSize;
-  PlatformInfo->DramRegions          = DramRegions;
-  PlatformInfo->DramRegionsCount     = 1;
-  PlatformInfo->UefiDramRegionsCount = 1;
+  DramRegions->MemoryBaseAddress    = TegraGetSystemMemoryBaseAddress (T194_CHIP_ID);
+  DramRegions->MemoryLength         = CpuBootloaderParams->SdramSize;
+  PlatformInfo->DramRegions         = DramRegions;
+  PlatformInfo->DramRegionsCount    = 1;
+  PlatformInfo->UefiDramRegionIndex = 0;
 
   // Build Carveout regions
   CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (

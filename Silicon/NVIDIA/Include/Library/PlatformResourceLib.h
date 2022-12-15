@@ -45,7 +45,7 @@ typedef struct {
   NVDA_MEMORY_REGION    *InputDramRegions;
   NVDA_MEMORY_REGION    *DramRegions;
   UINTN                 DramRegionsCount;
-  UINTN                 UefiDramRegionsCount;
+  UINTN                 UefiDramRegionIndex;
   NVDA_MEMORY_REGION    *InputCarveoutRegions;
   NVDA_MEMORY_REGION    *CarveoutRegions;
   UINTN                 CarveoutRegionsCount;

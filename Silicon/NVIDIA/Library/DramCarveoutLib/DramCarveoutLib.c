@@ -134,7 +134,7 @@ MemoryRegionCompare (
 
   @param  DramRegions              Sorted list of available DRAM regions
   @param  DramRegionsCount         Number of regions in DramRegions.
-  @param  UefiDramRegionsCount     Number of uefi usable regions in DramRegions.
+  @param  UefiDramRegionIndex      Index of uefi usable regions in DramRegions.
   @param  CarveoutRegions          Sorted list of carveout regions that will be
                                    removed from DramRegions.
   @param  CarveoutRegionsCount     Number of regions in CarveoutRegions.
@@ -148,7 +148,7 @@ EFI_STATUS
 InstallDramWithCarveouts (
   IN  NVDA_MEMORY_REGION  *DramRegions,
   IN  UINTN               DramRegionsCount,
-  IN  UINTN               UefiDramRegionsCount,
+  IN  UINTN               UefiDramRegionIndex,
   IN  NVDA_MEMORY_REGION  *CarveoutRegions,
   IN  UINTN               CarveoutRegionsCount,
   OUT UINTN               *FinalRegionsCount
@@ -160,6 +160,10 @@ InstallDramWithCarveouts (
   EFI_PHYSICAL_ADDRESS         LargestRegionStart = 0;
   UINTN                        MaxSize            = 0;
   EFI_RESOURCE_ATTRIBUTE_TYPE  ResourceAttributes;
+  EFI_PHYSICAL_ADDRESS         CarveoutStart;
+  EFI_PHYSICAL_ADDRESS         CarveoutEnd;
+  EFI_PHYSICAL_ADDRESS         DramEnd;
+  UINTN                        RegionSize;
 
   PerformQuickSort (
     (VOID *)DramRegions,
@@ -209,101 +213,66 @@ InstallDramWithCarveouts (
                         EFI_RESOURCE_ATTRIBUTE_READ_ONLY_PROTECTABLE
                         );
 
-  while (DramIndex < UefiDramRegionsCount) {
-    // No more carveouts or carveout is after dram region
-    if ((CarveoutRegionsCount == CarveoutIndex) ||
-        ((DramRegions[DramIndex].MemoryBaseAddress + DramRegions[DramIndex].MemoryLength) <= CarveoutRegions[CarveoutIndex].MemoryBaseAddress))
-    {
-      if (DramRegions[DramIndex].MemoryLength > MaxSize) {
-        if (LargestRegionStart != 0) {
-          DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", LargestRegionStart, MaxSize));
-          BuildResourceDescriptorHob (
-            EFI_RESOURCE_SYSTEM_MEMORY,
-            ResourceAttributes,
-            LargestRegionStart,
-            MaxSize
-            );
-        }
-
-        LargestRegionStart = DramRegions[DramIndex].MemoryBaseAddress;
-        MaxSize            = DramRegions[DramIndex].MemoryLength;
-      } else {
-        DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", DramRegions[DramIndex].MemoryBaseAddress, DramRegions[DramIndex].MemoryLength));
-        BuildResourceDescriptorHob (
-          EFI_RESOURCE_SYSTEM_MEMORY,
-          ResourceAttributes,
-          DramRegions[DramIndex].MemoryBaseAddress,
-          DramRegions[DramIndex].MemoryLength
-          );
-      }
-
-      DramIndex++;
-      InstalledRegions++;
+  while (DramIndex < DramRegionsCount) {
+    if (CarveoutIndex < CarveoutRegionsCount) {
+      CarveoutStart = CarveoutRegions[CarveoutIndex].MemoryBaseAddress;
+      CarveoutEnd   = CarveoutRegions[CarveoutIndex].MemoryBaseAddress + CarveoutRegions[CarveoutIndex].MemoryLength;
     } else {
-      EFI_PHYSICAL_ADDRESS  CarveoutEnd = CarveoutRegions[CarveoutIndex].MemoryBaseAddress + CarveoutRegions[CarveoutIndex].MemoryLength;
-      EFI_PHYSICAL_ADDRESS  DramEnd     = DramRegions[DramIndex].MemoryBaseAddress + DramRegions[DramIndex].MemoryLength;
-      if (DramRegions[DramIndex].MemoryBaseAddress < CarveoutRegions[CarveoutIndex].MemoryBaseAddress) {
-        if ((CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress) > MaxSize) {
-          if (LargestRegionStart != 0) {
-            DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", LargestRegionStart, MaxSize));
-            BuildResourceDescriptorHob (
-              EFI_RESOURCE_SYSTEM_MEMORY,
-              ResourceAttributes,
-              LargestRegionStart,
-              MaxSize
-              );
-          }
+      CarveoutStart = MAX_UINT64;
+      CarveoutEnd   = MAX_UINT64;
+    }
 
-          LargestRegionStart = DramRegions[DramIndex].MemoryBaseAddress;
-          MaxSize            = CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress;
-        } else {
-          DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", DramRegions[DramIndex].MemoryBaseAddress, CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress));
-          BuildResourceDescriptorHob (
-            EFI_RESOURCE_SYSTEM_MEMORY,
-            ResourceAttributes,
-            DramRegions[DramIndex].MemoryBaseAddress,
-            CarveoutRegions[CarveoutIndex].MemoryBaseAddress - DramRegions[DramIndex].MemoryBaseAddress
-            );
-        }
-
-        InstalledRegions++;
-      }
-
-      if (CarveoutEnd > DramEnd) {
-        // Move carveout end
-        CarveoutRegions[CarveoutIndex].MemoryBaseAddress = DramEnd;
-        CarveoutRegions[CarveoutIndex].MemoryLength      = CarveoutEnd - DramEnd;
-        DramIndex++;
-      } else if (CarveoutEnd <= DramRegions[DramIndex].MemoryBaseAddress) {
-        CarveoutIndex++;
-      } else if (CarveoutEnd < DramEnd) {
-        DramRegions[DramIndex].MemoryBaseAddress = CarveoutEnd;
-        DramRegions[DramIndex].MemoryLength      = DramEnd - CarveoutEnd;
-        CarveoutIndex++;
+    DramEnd = DramRegions[DramIndex].MemoryBaseAddress + DramRegions[DramIndex].MemoryLength;
+    // Check if region starts before the carveout, will install that region
+    if (DramRegions[DramIndex].MemoryBaseAddress < CarveoutStart) {
+      if (CarveoutStart < DramEnd) {
+        RegionSize = CarveoutStart - DramRegions[DramIndex].MemoryBaseAddress;
       } else {
-        CarveoutIndex++;
-        DramIndex++;
+        RegionSize = DramRegions[DramIndex].MemoryLength;
       }
+
+      DEBUG ((DEBUG_ERROR, "DRAM Region: %016lx, %016lx\r\n", DramRegions[DramIndex].MemoryBaseAddress, RegionSize));
+      BuildResourceDescriptorHob (
+        EFI_RESOURCE_SYSTEM_MEMORY,
+        ResourceAttributes,
+        DramRegions[DramIndex].MemoryBaseAddress,
+        RegionSize
+        );
+
+      if ((DramIndex == UefiDramRegionIndex) &&
+          (RegionSize > MaxSize))
+      {
+        LargestRegionStart = DramRegions[DramIndex].MemoryBaseAddress;
+        MaxSize            = RegionSize;
+      }
+
+      InstalledRegions++;
+    }
+
+    // Update indexes and regions
+    // Regions will be reduced to reflect processed info and indexes updated
+    // if region is done in processing
+    if (CarveoutStart >= DramEnd) {
+      DramIndex++;
+    } else if (CarveoutEnd > DramEnd) {
+      // Remove current dram region from carveout may be in other carveout
+      CarveoutRegions[CarveoutIndex].MemoryBaseAddress = DramEnd;
+      CarveoutRegions[CarveoutIndex].MemoryLength      = CarveoutEnd - DramEnd;
+      DramIndex++;
+    } else if (CarveoutEnd <= DramRegions[DramIndex].MemoryBaseAddress) {
+      // Carveout is completely before DramRegion
+      CarveoutIndex++;
+    } else if (CarveoutEnd < DramEnd) {
+      // Reduce remaining size to what is after carveout
+      DramRegions[DramIndex].MemoryBaseAddress = CarveoutEnd;
+      DramRegions[DramIndex].MemoryLength      = DramEnd - CarveoutEnd;
+      CarveoutIndex++;
+    } else {
+      // CarveOutEnd == DramEnd
+      CarveoutIndex++;
+      DramIndex++;
     }
   }
-
-  while (DramIndex < DramRegionsCount) {
-    BuildResourceDescriptorHob (
-      EFI_RESOURCE_SYSTEM_MEMORY,
-      ResourceAttributes,
-      DramRegions[DramIndex].MemoryBaseAddress,
-      DramRegions[DramIndex].MemoryLength
-      );
-    InstalledRegions++;
-    DramIndex++;
-  }
-
-  BuildResourceDescriptorHob (
-    EFI_RESOURCE_SYSTEM_MEMORY,
-    ResourceAttributes,
-    LargestRegionStart,
-    MaxSize
-    );
 
   MigrateHobList (LargestRegionStart, MaxSize);
   *FinalRegionsCount = InstalledRegions;
