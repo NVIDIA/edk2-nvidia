@@ -8,7 +8,12 @@
 
 **/
 
+#include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <libfdt.h>
+
+#define HWPM_LA_CLOCK_NAME  "la"
+#define HWPM_LA_MAX_CLOCK   625000000
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,gv11b",          &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
@@ -53,5 +58,28 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  return EFI_SUCCESS;
+  EFI_STATUS   Status;
+  CONST CHAR8  *ClockName;
+  UINT32       ClockId;
+
+  switch (Phase) {
+    case DeviceDiscoveryDriverBindingStart:
+      if (DeviceTreeNode != NULL) {
+        if (0 == fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,th500-soc-hwpm")) {
+          ClockName = HWPM_LA_CLOCK_NAME;
+          Status    = DeviceDiscoveryGetClockId (ControllerHandle, ClockName, &ClockId);
+          if (!EFI_ERROR (Status)) {
+            Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, HWPM_LA_MAX_CLOCK);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((EFI_D_ERROR, "%a, Failed to set hwpm la clock frequency %r\r\n", __FUNCTION__, Status));
+            }
+          }
+        }
+      }
+
+      return EFI_SUCCESS;
+
+    default:
+      return EFI_SUCCESS;
+  }
 }

@@ -21,6 +21,7 @@
   TegraControllerEnableDxe.c
 
 [Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
