@@ -249,12 +249,6 @@ UpdateAdditionalSocketInfo (
   EFI_STATUS                  Status;
   UINT32                      Index;
   CM_STD_OBJ_ACPI_TABLE_INFO  *NewAcpiTables;
-  TEGRA_PLATFORM_TYPE         PlatformType;
-
-  PlatformType = TegraGetPlatform ();
-  if (PlatformType != TEGRA_PLATFORM_VDK) {
-    return EFI_SUCCESS;
-  }
 
   for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
     if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
