@@ -31,14 +31,22 @@ STATIC EFI_ACPI_DESCRIPTION_HEADER  *AcpiTableArray[] = {
   (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_aml_code,
   (EFI_ACPI_DESCRIPTION_HEADER *)ssdtsocket1_aml_code,
   (EFI_ACPI_DESCRIPTION_HEADER *)ssdtsocket2_aml_code,
-  (EFI_ACPI_DESCRIPTION_HEADER *)ssdtsocket3_aml_code
+  (EFI_ACPI_DESCRIPTION_HEADER *)ssdtsocket3_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket0_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket1_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket2_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket3_aml_code
 };
 
 STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray[] = {
   DSDT_TH500_OffsetTable,
   SSDT_TH500_S1_OffsetTable,
   SSDT_TH500_S2_OffsetTable,
-  SSDT_TH500_S3_OffsetTable
+  SSDT_TH500_S3_OffsetTable,
+  SSDT_BPMP_S0_OffsetTable,
+  SSDT_BPMP_S1_OffsetTable,
+  SSDT_BPMP_S2_OffsetTable,
+  SSDT_BPMP_S3_OffsetTable
 };
 
 STATIC EFI_ACPI_DESCRIPTION_HEADER  *AcpiBpmpTableArray[] = {
