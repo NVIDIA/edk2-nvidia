@@ -200,6 +200,6 @@ typedef struct {
 #define TX_FIFO_EMPTY_CNT_MASK        0xFF0000
 #define RX_FIFO_FULL_CNT_SHIFT        0
 #define RX_FIFO_FULL_CNT_MASK         0x0000FF
-#define I2C_TIMEOUT                   (500 * 32)
+#define I2C_TIMEOUT                   (25000 * 2)
 
 #endif
