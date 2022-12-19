@@ -42,7 +42,10 @@ STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray[] = {
 };
 
 STATIC EFI_ACPI_DESCRIPTION_HEADER  *AcpiBpmpTableArray[] = {
-  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket0_aml_code
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket0_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket1_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket2_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket3_aml_code
 };
 
 /** The platform configuration manager information.
@@ -769,9 +772,15 @@ InitializePlatformRepository (
   }
 
   // BPMP SSDT
-  Status = AddBpmpSocketInfo (&Repo, 0);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  for (SocketId = 0; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
+    if (!IsSocketEnabled (SocketId)) {
+      continue;
+    }
+
+    Status = AddBpmpSocketInfo (&Repo, SocketId);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
   Status = RegisterProtocolBasedObjects (NVIDIAPlatformRepositoryInfo, &Repo);
