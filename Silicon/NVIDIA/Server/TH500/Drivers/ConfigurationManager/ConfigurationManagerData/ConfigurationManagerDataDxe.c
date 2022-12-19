@@ -627,6 +627,7 @@ InitializePlatformRepository (
   BOOLEAN                         SkipMpam;
   BOOLEAN                         SkipApmt;
   UINTN                           SocketId;
+  TEGRA_PLATFORM_TYPE             PlatformType;
 
   NVIDIAPlatformRepositoryInfo = (EDKII_PLATFORM_REPOSITORY_INFO *)AllocateZeroPool (sizeof (EDKII_PLATFORM_REPOSITORY_INFO) * PcdGet32 (PcdConfigMgrObjMax));
 
@@ -772,14 +773,17 @@ InitializePlatformRepository (
   }
 
   // BPMP SSDT
-  for (SocketId = 0; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
-    if (!IsSocketEnabled (SocketId)) {
-      continue;
-    }
+  PlatformType = TegraGetPlatform ();
+  if (PlatformType == TEGRA_PLATFORM_SILICON) {
+    for (SocketId = 0; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
+      if (!IsSocketEnabled (SocketId)) {
+        continue;
+      }
 
-    Status = AddBpmpSocketInfo (&Repo, SocketId);
-    if (EFI_ERROR (Status)) {
-      return Status;
+      Status = AddBpmpSocketInfo (&Repo, SocketId);
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
     }
   }
 
