@@ -624,7 +624,7 @@
   #
   # Allow physical presence activities
   #
-  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
+  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|FALSE
 
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables
