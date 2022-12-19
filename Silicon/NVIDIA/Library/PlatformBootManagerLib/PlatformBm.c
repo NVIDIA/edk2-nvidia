@@ -921,24 +921,24 @@ DisplaySystemAndHotkeyInformation (
     PrintXY (StartLineX, StartLineY+LineDeltaY*0, &White, &Black, L"ESC   to enter Setup.                              ");
     PrintXY (StartLineX, StartLineY+LineDeltaY*1, &White, &Black, L"F11   to enter Boot Manager Menu.");
     PrintXY (StartLineX, StartLineY+LineDeltaY*2, &White, &Black, L"Enter to continue boot.");
-  } else {
-    //
-    // Serial console only.
-    //
-    Print (Buffer);
-
-    //
-    // If Timeout is 0, next message comes in same line as previous message.
-    // Add a newline to maintain ordering and readability of logs.
-    //
-    if (PcdGet16 (PcdPlatformBootTimeOut) == 0) {
-      Print (L"\n\r");
-    }
-
-    Print (L"ESC   to enter Setup.\n");
-    Print (L"F11   to enter Boot Manager Menu.\n");
-    Print (L"Enter to continue boot.\n");
   }
+
+  //
+  // Serial console only.
+  //
+  Print (Buffer);
+
+  //
+  // If Timeout is 0, next message comes in same line as previous message.
+  // Add a newline to maintain ordering and readability of logs.
+  //
+  if (PcdGet16 (PcdPlatformBootTimeOut) == 0) {
+    Print (L"\n\r");
+  }
+
+  Print (L"ESC   to enter Setup.\n");
+  Print (L"F11   to enter Boot Manager Menu.\n");
+  Print (L"Enter to continue boot.\n");
 }
 
 STATIC
