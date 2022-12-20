@@ -51,6 +51,19 @@ InstallStaticResourceAffinityTable (
   EFI_HANDLE                       *Handles = NULL;
   UINTN                            NumberOfHandles;
   UINTN                            HandleIdx;
+  VOID                             *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO     *PlatformResourceInfo;
+
+  // Get platform resource info
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+    return EFI_NOT_FOUND;
+  }
 
   // Create a ACPI Table Entry
   for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
@@ -108,6 +121,11 @@ InstallStaticResourceAffinityTable (
     }
   }
 
+  // Increment to hold entries for EGM memory in case of hypervisor
+  if (PlatformResourceInfo->HypervisorMode) {
+    MemoryAffinityInfoCount += NumEnabledSockets;
+  }
+
   // Increment to hold entries for GPU memory
   MemoryAffinityInfoCount += TH500_GPU_MAX_NR_MEM_PARTITIONS * NumEnabledSockets;
 
@@ -129,6 +147,21 @@ InstallStaticResourceAffinityTable (
   }
 
   FreePool (Descriptors);
+
+  // Allocate space to save EGM info in case of hypervisor
+  if (PlatformResourceInfo->HypervisorMode) {
+    for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
+      if (!IsSocketEnabled (Socket)) {
+        continue;
+      }
+
+      MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_HV_EGM_PXM_DOMAIN_START + Socket;
+      MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = PlatformResourceInfo->EgmMemoryInfo[Socket].Base;
+      MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = PlatformResourceInfo->EgmMemoryInfo[Socket].Size;
+      MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED;
+      MemoryAffinityInfoIndex++;
+    }
+  }
 
   // Allocate space to save HBM info
   HbmMemInfo = (HBM_MEMORY_INFO *)AllocateZeroPool (sizeof (HBM_MEMORY_INFO) * TH500_TOTAL_PROXIMITY_DOMAINS);

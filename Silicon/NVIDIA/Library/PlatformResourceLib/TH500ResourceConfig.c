@@ -124,6 +124,8 @@ TEGRA_MMIO_INFO  TH500SocketMssMmioInfo[] = {
   },
 };
 
+TEGRA_BASE_AND_SIZE_INFO  TH500EgmMemoryInfo[TH500_MAX_SOCKETS] = { };
+
 /**
   Get Socket Mask
 
@@ -568,6 +570,7 @@ TH500GetPlatformResourceInformation (
   EFI_STATUS          Status;
   TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
   UINT32              SocketMask;
+  UINTN               Index;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
@@ -602,6 +605,22 @@ TH500GetPlatformResourceInformation (
     PlatformResourceInfo->BootType = TegrablBootRcm;
   } else {
     PlatformResourceInfo->BootType = TegrablBootColdBoot;
+  }
+
+  if ((CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Base != 0) &&
+      (CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Size != 0))
+  {
+    if ((CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Base != 0) &&
+        (CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Size != 0))
+    {
+      PlatformResourceInfo->HypervisorMode = TRUE;
+    }
+  }
+
+  PlatformResourceInfo->EgmMemoryInfo = TH500EgmMemoryInfo;
+  for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
+    PlatformResourceInfo->EgmMemoryInfo[Index].Base = CpuBootloaderParams->CarveoutInfo[Index][CARVEOUT_EGM].Base;
+    PlatformResourceInfo->EgmMemoryInfo[Index].Size = CpuBootloaderParams->CarveoutInfo[Index][CARVEOUT_EGM].Size;
   }
 
   BuildGuidDataHob (&gNVIDIATH500MB1DataGuid, &CpuBootloaderParams->EarlyBootVariables, sizeof (CpuBootloaderParams->EarlyBootVariables));

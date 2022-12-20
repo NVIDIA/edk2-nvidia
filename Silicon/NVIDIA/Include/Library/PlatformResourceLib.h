@@ -109,6 +109,8 @@ typedef struct {
   TEGRA_BASE_AND_SIZE_INFO    RcmBlobInfo;
   TEGRA_BASE_AND_SIZE_INFO    PvaFwInfo;
   TEGRA_BOOT_TYPE             BootType;
+  BOOLEAN                     HypervisorMode;
+  TEGRA_BASE_AND_SIZE_INFO    *EgmMemoryInfo;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
