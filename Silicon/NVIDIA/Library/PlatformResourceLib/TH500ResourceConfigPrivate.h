@@ -83,6 +83,13 @@
 #define CARVEOUT_RSVD10             50
 #define CARVEOUT_OEM_COUNT          51
 
+typedef enum {
+  Th500MemoryModeNormal,
+  Th500MemoryModeEgmNoHv,
+  Th500MemoryModeEgmWithHv,
+  Th500MemoryModeMax
+} TH500_MEMORY_MODE;
+
 typedef struct {
   UINT64    Base;
   UINT64    Size;
