@@ -31,12 +31,14 @@
   ConfigurationMpam.c
   ConfigurationSlit.c
   ConfigurationHmat.c
+  ConfigurationSpmi.c
   ConfigurationSmbios.c
   ConfigurationSmbiosType1.c
   ConfigurationSmbiosType2.c
   ConfigurationSmbiosType9.c
   ConfigurationSmbiosType38.c
   ConfigurationHbm.c
+  ConfigurationIpmiDev.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

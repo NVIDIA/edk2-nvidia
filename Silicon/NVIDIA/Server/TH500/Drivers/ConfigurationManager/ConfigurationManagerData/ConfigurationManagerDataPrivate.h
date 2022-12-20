@@ -200,4 +200,39 @@ GetMaxHbmPxmDomains (
   VOID
   );
 
+/**
+  Install CM object for IPMI device information
+
+  @param[in, out] PlatformRepositoryInfo      Pointer to the available Platform Repository
+  @param[in]      PlatformRepositoryInfoEnd   End address of the Platform Repository
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+**/
+EFI_STATUS
+EFIAPI
+InstallIpmiDeviceInformationCm (
+  IN OUT  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo,
+  IN      UINTN                           PlatformRepositoryInfoEnd
+  );
+
+/**
+  Install the SPMI table to Configuration Manager Data driver
+
+  @param[in, out] PlatformRepositoryInfo      Pointer to the available Platform Repository
+  @param[in]      PlatformRepositoryInfoEnd   End address of the Platform Repository
+  @param[in, out] PlatformRepositoryInfo      Pointer to the ACPI Table Repository
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+InstallServiceProcessorManagementInterfaceTable (
+  IN OUT  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo,
+  IN      UINTN                           PlatformRepositoryInfoEnd,
+  IN      EDKII_PLATFORM_REPOSITORY_INFO  *NVIDIAPlatformRepositoryInfo
+  );
+
 #endif

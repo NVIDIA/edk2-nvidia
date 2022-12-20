@@ -932,6 +932,7 @@
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSlitLibArm/AcpiSlitLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSratLibArm/AcpiSratLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiHmatLibArm/AcpiHmatLibArm.inf
+      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSpmiLibArm/AcpiSpmiLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtCpuTopologyLibArm/SsdtCpuTopologyLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtPcieLibArm/SsdtPcieLibArm.inf
 

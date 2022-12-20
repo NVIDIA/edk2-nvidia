@@ -634,6 +634,7 @@ InitializePlatformRepository (
   BOOLEAN                         SkipIort;
   BOOLEAN                         SkipMpam;
   BOOLEAN                         SkipApmt;
+  BOOLEAN                         SkipSpmi;
   UINTN                           SocketId;
   TEGRA_PLATFORM_TYPE             PlatformType;
 
@@ -710,6 +711,7 @@ InitializePlatformRepository (
   SkipIort = FALSE;
   SkipMpam = FALSE;
   SkipApmt = FALSE;
+  SkipSpmi = FALSE;
   Status   = DtPlatformLoadDtb (&DtbBase, &DtbSize);
   if (EFI_ERROR (Status)) {
     return Status;
@@ -745,6 +747,11 @@ InitializePlatformRepository (
     if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-apmt-table", NULL)) {
       SkipApmt = TRUE;
       DEBUG ((DEBUG_ERROR, "%a: Skip APMT Table\r\n", __FUNCTION__));
+    }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-spmi-table", NULL)) {
+      SkipSpmi = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip SPMI Table\r\n", __FUNCTION__));
     }
   }
 
@@ -842,6 +849,13 @@ InitializePlatformRepository (
 
   if (!SkipApmt) {
     Status = InstallArmPerformanceMonitoringUnitTable (NVIDIAPlatformRepositoryInfo);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  }
+
+  if (!SkipSpmi) {
+    Status = InstallServiceProcessorManagementInterfaceTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
     if (EFI_ERROR (Status)) {
       return Status;
     }
