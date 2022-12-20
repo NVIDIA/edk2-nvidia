@@ -116,12 +116,33 @@ STATIC CONST GPIO_CONTROLLER  Tegra23xGpioControllers[] = {
   TEGRA_GPIO_ENTRY (21, 3, 1, 2)
 };
 
+STATIC CONST GPIO_CONTROLLER  Th500GpioControllers[] = {
+  TEGRA_GPIO_ENTRY (0,  0, 0, 8),
+  TEGRA_GPIO_ENTRY (1,  0, 1, 8),
+  TEGRA_GPIO_ENTRY (2,  0, 2, 2),
+  TEGRA_GPIO_ENTRY (3,  0, 3, 6),
+  TEGRA_GPIO_ENTRY (4,  0, 4, 8),
+  TEGRA_GPIO_ENTRY (5,  1, 0, 8),
+  TEGRA_GPIO_ENTRY (6,  1, 1, 8),
+  TEGRA_GPIO_ENTRY (7,  1, 2, 8),
+  TEGRA_GPIO_ENTRY (8,  1, 3, 8),
+  TEGRA_GPIO_ENTRY (9,  1, 4, 4),
+  TEGRA_GPIO_ENTRY (10, 1, 5, 6)
+};
+
+STATIC CONST GPIO_CONTROLLER  Th500GpioAonControllers[] = {
+  TEGRA_GPIO_ENTRY (0, 0, 0, 8),
+  TEGRA_GPIO_ENTRY (1, 0, 0, 4)
+};
+
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-gpio",     &gNVIDIANonDiscoverableT194GpioDeviceGuid    },
-  { "nvidia,tegra234-gpio",     &gNVIDIANonDiscoverableT234GpioDeviceGuid    },
-  { "nvidia,tegra234-gpio-aon", &gNVIDIANonDiscoverableT234GpioAonDeviceGuid },
-  { "nvidia,tegra23x-gpio",     &gNVIDIANonDiscoverableT23xGpioDeviceGuid    },
-  { NULL,                       NULL                                         }
+  { "nvidia,tegra194-gpio",     &gNVIDIANonDiscoverableT194GpioDeviceGuid     },
+  { "nvidia,tegra234-gpio",     &gNVIDIANonDiscoverableT234GpioDeviceGuid     },
+  { "nvidia,tegra234-gpio-aon", &gNVIDIANonDiscoverableT234GpioAonDeviceGuid  },
+  { "nvidia,tegra23x-gpio",     &gNVIDIANonDiscoverableT23xGpioDeviceGuid     },
+  { "nvidia,th500-gpio",        &gNVIDIANonDiscoverableTH500GpioDeviceGuid    },
+  { "nvidia,th500-gpio-aon",    &gNVIDIANonDiscoverableTH500GpioAonDeviceGuid },
+  { NULL,                       NULL                                          }
 };
 
 NVIDIA_GPIO_CONTROLLER_ENTRY  *mControllerArray = NULL;
@@ -520,6 +541,12 @@ DeviceDiscoveryNotify (
       } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT23xGpioDeviceGuid)) {
         mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Tegra23xGpioControllers);
         mControllerArray[mControllerCount].ControllerDefault = Tegra23xGpioControllers;
+      } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableTH500GpioDeviceGuid)) {
+        mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Th500GpioControllers);
+        mControllerArray[mControllerCount].ControllerDefault = Th500GpioControllers;
+      } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableTH500GpioAonDeviceGuid)) {
+        mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Th500GpioAonControllers);
+        mControllerArray[mControllerCount].ControllerDefault = Th500GpioAonControllers;
       } else {
         return EFI_UNSUPPORTED;
       }

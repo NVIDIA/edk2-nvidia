@@ -51,6 +51,8 @@
   gNVIDIANonDiscoverableT234GpioDeviceGuid
   gNVIDIANonDiscoverableT234GpioAonDeviceGuid
   gNVIDIANonDiscoverableT23xGpioDeviceGuid
+  gNVIDIANonDiscoverableTH500GpioDeviceGuid
+  gNVIDIANonDiscoverableTH500GpioAonDeviceGuid
 
 [Depex]
   gNVIDIAI2cExpanderGpioProtocolGuid
