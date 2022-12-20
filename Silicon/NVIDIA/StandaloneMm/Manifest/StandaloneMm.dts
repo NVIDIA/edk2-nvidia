@@ -62,6 +62,14 @@
 		 * Regions will either be allocated by MB2 at the end of the SP space, or
 		 * outside of SP space.
 		 */
+		/* Buffer for shared communication from RAS_FW to MM */
+		common-shared-buffer-ras-mm {
+			description = "ras-mm";
+			pages-count = <9>;
+			base-address = <0x00000000 0x8ACF2000>;
+			attributes = <0x3>; /* read-write */
+			nv-sp-shared-buffer-id = <2>;
+		};
 		rxbuffer: rx-buffer {
 			description = "rx-buffer";
 			pages-count = <1>;
