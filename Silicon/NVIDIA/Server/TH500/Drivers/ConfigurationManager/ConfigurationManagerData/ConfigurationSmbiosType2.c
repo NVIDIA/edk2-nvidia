@@ -139,6 +139,10 @@ InstallSmbiosType2Cm (
 
   DEBUG ((DEBUG_INFO, "%a: NumBaseboards = %d\n", __FUNCTION__, NumBaseboards));
 
+  if (BaseboardInfo == NULL) {
+    return EFI_NOT_FOUND;
+  }
+
   //
   // Add type 2 to SMBIOS table list
   //

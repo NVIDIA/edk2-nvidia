@@ -218,6 +218,10 @@ InstallSmbiosType9Cm (
     FreePool (HandleBuf);
   }
 
+  if (SystemSlotInfo == NULL) {
+    return EFI_NOT_FOUND;
+  }
+
   //
   // Add type 9 to SMBIOS table list
   //
