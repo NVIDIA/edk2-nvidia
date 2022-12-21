@@ -611,6 +611,95 @@ ErrorExit:
   return Status;
 }
 
+/** patch thermal zone temperature ranges data in SSDT.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateThermalZoneTempInfo (
+  VOID
+  )
+{
+  EFI_STATUS            Status;
+  VOID                  *DtbBase;
+  UINTN                 DtbSize;
+  INTN                  NodeOffset;
+  CONST UINT32          *Temp;
+  INT32                 TempLen;
+  UINT32                SocketId;
+  CHAR8                 Buffer[16];
+  UINTN                 CharCount;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+  UINT16                PsvTemp;
+  UINT16                CrtTemp;
+
+  Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  NodeOffset = fdt_path_offset (DtbBase, "/firmware/acpi");
+  if (NodeOffset < 0) {
+    return EFI_SUCCESS;
+  }
+
+  PsvTemp = MAX_UINT16;
+  CrtTemp = MAX_UINT16;
+
+  Temp = NULL;
+  Temp = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-thermal-zone-passive-cooling-trip-point-temp", &TempLen);
+  if ((Temp != NULL) && (TempLen == sizeof (UINT32))) {
+    PsvTemp = (SwapBytes32 (*Temp) * 10) + 2732;
+  }
+
+  Temp = NULL;
+  Temp = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-thermal-zone-critical-point-temp", &TempLen);
+  if ((Temp != NULL) && (TempLen == sizeof (UINT32))) {
+    CrtTemp = (SwapBytes32 (*Temp) * 10) + 2732;
+  }
+
+  for (SocketId = 0; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
+    if (!IsSocketEnabled (SocketId)) {
+      continue;
+    }
+
+    if (PsvTemp != MAX_UINT16) {
+      CharCount = AsciiSPrint (Buffer, sizeof (Buffer), "_SB_.BPM%01x.PSVT", SocketId);
+      Status    = PatchProtocol->FindNode (PatchProtocol, Buffer, &AcpiNodeInfo);
+      if (!EFI_ERROR (Status)) {
+        if (AcpiNodeInfo.Size > sizeof (PsvTemp)) {
+          continue;
+        }
+
+        Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &PsvTemp, sizeof (PsvTemp));
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
+      }
+    }
+
+    if (CrtTemp != MAX_UINT16) {
+      CharCount = AsciiSPrint (Buffer, sizeof (Buffer), "_SB_.BPM%01x.CRTT", SocketId);
+      Status    = PatchProtocol->FindNode (PatchProtocol, Buffer, &AcpiNodeInfo);
+      if (!EFI_ERROR (Status)) {
+        if (AcpiNodeInfo.Size > sizeof (CrtTemp)) {
+          continue;
+        }
+
+        Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &CrtTemp, sizeof (CrtTemp));
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
+      }
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
 /** Initialize the platform configuration repository.
   @retval EFI_SUCCESS   Success
 **/
@@ -928,6 +1017,11 @@ ConfigurationManagerDataDxeInitialize (
   }
 
   Status = UpdateSSIFInfo ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateThermalZoneTempInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

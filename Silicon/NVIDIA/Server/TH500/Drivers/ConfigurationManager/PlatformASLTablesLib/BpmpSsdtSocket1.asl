@@ -22,6 +22,8 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
     {
       Name (_HID, EISAID("PNP0C02")) // Motherboard resources
       Name (_UID, "BPMP IPC Socket 1")
+      Name (PSVT, ((TH500_THERMAL_ZONE_PSV * 10) + 2732))
+      Name (CRTT, ((TH500_THERMAL_ZONE_CRT * 10) + 2732))
       OperationRegion (BPTX, SystemMemory, BPMP_TX_MAILBOX_SOCKET_1, BPMP_CHANNEL_SIZE)
       Field (BPTX, AnyAcc, NoLock, Preserve) {
         TWCT, 32,
@@ -180,10 +182,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
                             \_SB.C001.C007,
                             \_SB.C001.C008,
                             \_SB.C001.C009 }) // passive cooling devices
-      Name(_PSV, (900 + 2732) )
+      Method(_PSV) { Return (\_SB.BPM1.PSVT) }
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 CPU0"))
@@ -201,10 +203,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
                             \_SB.C001.C012,
                             \_SB.C001.C013,
                             \_SB.C001.C014 }) // passive cooling devices
-      Name(_PSV, (900 + 2732) )
+      Method(_PSV) { Return (\_SB.BPM1.PSVT) }
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 CPU1"))
@@ -222,10 +224,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
                             \_SB.C001.C01C,
                             \_SB.C001.C01D,
                             \_SB.C001.C01E }) // passive cooling devices
-      Name(_PSV, (900 + 2732) )
+      Method(_PSV) { Return (\_SB.BPM1.PSVT) }
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 CPU2"))
@@ -243,10 +245,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
                             \_SB.C001.C025,
                             \_SB.C001.C026,
                             \_SB.C001.C027 }) // passive cooling devices
-      Name(_PSV, (900 + 2732) )
+      Method(_PSV) { Return (\_SB.BPM1.PSVT) }
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 CPU3"))
@@ -264,10 +266,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
                             \_SB.C001.C02E,
                             \_SB.C001.C02F,
                             \_SB.C001.C030 }) // passive cooling devices
-      Name(_PSV, (900 + 2732) )
+      Method(_PSV) { Return (\_SB.BPM1.PSVT) }
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 SOC0"))
@@ -285,10 +287,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
                             \_SB.C001.C037,
                             \_SB.C001.C038,
                             \_SB.C001.C03A }) // passive cooling devices
-      Name(_PSV, (900 + 2732) )
+      Method(_PSV) { Return (\_SB.BPM1.PSVT) }
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 SOC1"))
@@ -306,10 +308,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
                             \_SB.C001.C041,
                             \_SB.C001.C042,
                             \_SB.C001.C043 }) // passive cooling devices
-      Name(_PSV, (900 + 2732) )
+      Method(_PSV) { Return (\_SB.BPM1.PSVT) }
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 SOC2"))
@@ -327,10 +329,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
                             \_SB.C001.C04C,
                             \_SB.C001.C04D,
                             \_SB.C001.C04E }) // passive cooling devices
-      Name(_PSV, (900 + 2732) )
+      Method(_PSV) { Return (\_SB.BPM1.PSVT) }
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 SOC3"))
@@ -343,10 +345,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
                             \_SB.C001.C050,
                             \_SB.C001.C051,
                             \_SB.C001.C052 }) // passive cooling devices
-      Name(_PSV, (900 + 2732) )
+      Method(_PSV) { Return (\_SB.BPM1.PSVT) }
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 SOC4"))
@@ -356,7 +358,7 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
       Method(_TMP) { Return (\_SB.BPM1.TEMP (TH500_THERMAL_ZONE_TJ_MAX) )} // get current temp
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 TJMax"))
@@ -366,7 +368,7 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
       Method(_TMP) { Return (\_SB.BPM1.TEMP (TH500_THERMAL_ZONE_TJ_MIN) )} // get current temp
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 TJMin"))
@@ -376,7 +378,7 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
       Method(_TMP) { Return (\_SB.BPM1.TEMP (TH500_THERMAL_ZONE_TJ_AVG) )} // get current temp
       Name(_TC1, 1)  // TODO: get correct values
       Name(_TC2, 1)  // TODO: get correct values
-      Method(_CRT) { Return (950 + 2732) }
+      Method(_CRT) { Return (\_SB.BPM1.CRTT) }
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt1 TJAvg"))

@@ -163,5 +163,7 @@
 #define TH500_THERMAL_ZONE_TJ_MIN  10
 #define TH500_THERMAL_ZONE_TJ_AVG  11
 #define TEMP_POLL_TIME_100MS       1                  // 100ms
+#define TH500_THERMAL_ZONE_PSV     90
+#define TH500_THERMAL_ZONE_CRT     95
 
 #endif //__TH500_DEFINES_H__
