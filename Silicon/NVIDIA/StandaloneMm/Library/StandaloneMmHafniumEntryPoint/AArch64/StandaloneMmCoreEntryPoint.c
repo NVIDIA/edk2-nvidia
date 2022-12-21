@@ -21,6 +21,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/BaseLib.h>
+#include <Library/PrintLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/SerialPortLib.h>
 #include <Library/PcdLib.h>
@@ -65,6 +66,8 @@ STATIC CONST UINT32  mSpmMinorVer = SPM_MINOR_VERSION;
 
 STATIC CONST UINT32  mSpmMajorVerFfa = SPM_MAJOR_VERSION_FFA;
 STATIC CONST UINT32  mSpmMinorVerFfa = SPM_MINOR_VERSION_FFA;
+
+STATIC CHAR8  Version[VERSION_STR_MAX];
 
 /*
  * Helper function get a 32-bit property from the Manifest and accessing it in a way
@@ -825,7 +828,6 @@ InitArmSvcArgs (
   OUT INT32         *Ret
   )
 {
-  DEBUG ((DEBUG_ERROR, "%a: Ret %u\n", __FUNCTION__, *Ret));
   if (*Ret == 0) {
     InitMmFoundationSvcArgs->Arg0 = FFA_MSG_WAIT_32;
   } else {
@@ -1014,6 +1016,15 @@ _ModuleEntryPointC (
   STMM_COMM_BUFFERS             *CommBuffersHob;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfoHob;
 
+  AsciiSPrint (
+    Version,
+    sizeof (Version),
+    "%s (version %s)\r\n",
+    (CHAR16 *)PcdGetPtr (PcdFirmwareFullNameString),
+    (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString)
+    );
+  DebugPrint (DEBUG_ERROR, Version);
+
   DEBUG ((DEBUG_ERROR, "EntryPoint: MemorySize=0x%x DTB@0x%x\n", TotalSPMemorySize, DTBAddress));
 
   ConfigureStage1Translations (TotalSPMemorySize, DTBAddress);
@@ -1152,5 +1163,6 @@ finish:
 
   ZeroMem (&InitMmFoundationSvcArgs, sizeof (InitMmFoundationSvcArgs));
   InitArmSvcArgs (&InitMmFoundationSvcArgs, &Ret);
+  DebugPrint (DEBUG_ERROR, "Boot Complete\n");
   DelegatedEventLoop (&InitMmFoundationSvcArgs);
 }

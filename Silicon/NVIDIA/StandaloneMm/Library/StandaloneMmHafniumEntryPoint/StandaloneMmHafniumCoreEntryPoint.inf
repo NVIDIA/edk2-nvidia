@@ -66,5 +66,10 @@
 [FeaturePcd.AARCH64]
   gArmTokenSpaceGuid.PcdFfaEnable
 
+[FixedPcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString
+  gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString
+
 [BuildOptions]
   GCC:*_*_*_CC_FLAGS = -fpie

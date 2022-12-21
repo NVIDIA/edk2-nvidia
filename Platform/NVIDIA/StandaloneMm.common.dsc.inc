@@ -127,6 +127,9 @@
 [PcdsFeatureFlag]
   gEfiMdeModulePkgTokenSpaceGuid.PcdVariableCollectStatistics|TRUE
 
+[PcdsFixedAtBuild.common]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING) $(BUILD_DATE_TIME)"
+
 ###################################################################################################
 #
 # Components Section - list of the modules and components that will be processed by compilation

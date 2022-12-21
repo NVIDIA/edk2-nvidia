@@ -19,6 +19,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define OPTEE_OS_UID1               0xe7f811e3
 #define OPTEE_OS_UID2               0xaf630002
 #define OPTEE_OS_UID3               0xa5d5c51b
+#define VERSION_STR_MAX             0x100
 
 typedef struct _EFI_MM_DEVICE_REGION {
   EFI_VIRTUAL_ADDRESS    DeviceRegionStart;
