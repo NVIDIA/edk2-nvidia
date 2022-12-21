@@ -103,10 +103,17 @@ OnExitBootServices (
   NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgProtocol;
   UINT32                           Index;
   UINT32                           PgState;
+  VOID                             *AcpiBase;
 
   Private    = (XHCICONTROLLER_DXE_PRIVATE *)Context;
   PgProtocol = NULL;
   PgState    = CmdPgStateOn;
+
+  /* Leave USB active for ACPI boot. */
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    return;
+  }
 
   Status = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
   if (EFI_ERROR (Status)) {
