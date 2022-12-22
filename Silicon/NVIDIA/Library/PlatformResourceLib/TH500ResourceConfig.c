@@ -217,6 +217,9 @@ TH500GetResourceConfig (
   UINT32              SocketMask;
   TH500_MEMORY_MODE   MemoryMode;
 
+  Index       = 0;
+  DramRegions = NULL;
+
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
   PlatformInfo->DtbLoadAddress = TH500GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
