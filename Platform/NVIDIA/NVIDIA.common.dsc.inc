@@ -572,11 +572,6 @@
   #
   gArmTokenSpaceGuid.PcdVFPEnabled|1
 
-  #
-  # Pltaform's Tick Period in 100 nS units
-  #
-  gEmbeddedTokenSpaceGuid.PcdMetronomeTickPeriod|1000
-
   # Use Segment numbers as PCI UID
   gEdkiiDynamicTablesPkgTokenSpaceGuid.PcdPciUseSegmentAsUid|TRUE
 
@@ -687,10 +682,10 @@
        NULL|SecurityPkg/Library/DxeImageVerificationLib/DxeImageVerificationLib.inf
   }
   MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
+  MdeModulePkg/Universal/Metronome/Metronome.inf
   MdeModulePkg/Universal/MonotonicCounterRuntimeDxe/MonotonicCounterRuntimeDxe.inf
   MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
   EmbeddedPkg/RealTimeClockRuntimeDxe/RealTimeClockRuntimeDxe.inf
-  EmbeddedPkg/MetronomeDxe/MetronomeDxe.inf
   MdeModulePkg/Universal/TimestampDxe/TimestampDxe.inf
   MdeModulePkg/Universal/StatusCodeHandler/RuntimeDxe/StatusCodeHandlerRuntimeDxe.inf
 
