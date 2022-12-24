@@ -585,7 +585,6 @@ BpmpIpcProtocolInit (
   EFI_HANDLE                         DeviceHandle = NULL;
   NVIDIA_BPMP_IPC_PRIVATE_DATA       *PrivateData = NULL;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Desc;
-  UINTN                              ResourceCount = 0;
   UINT32                             Index;
   INT32                              HspIndex;
   CONST VOID                         *MboxesProperty = NULL;
@@ -658,7 +657,6 @@ BpmpIpcProtocolInit (
         PrivateData->Channels[Index].RxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
       }
 
-      ResourceCount++;
     }
 
     if ((NULL == PrivateData->Channels[Index].TxChannel) ||

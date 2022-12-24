@@ -176,12 +176,15 @@ ProcessDTNodes (
 
   Status = GetSupportedDeviceTreeNodes (DeviceTreeBase, IsNodeSupported, DeviceCount, *DeviceInfo);
   if ( EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
-    Status = EFI_DEVICE_ERROR;
+    return Status;
+  } else if (Status == EFI_NOT_FOUND) {
+    return EFI_SUCCESS;
   }
 
   *DeviceInfo = AllocateZeroPool (sizeof (NVIDIA_DT_NODE_INFO) * (*DeviceCount));
   if (*DeviceInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
+    goto ErrorExit;
   }
 
   Status = GetSupportedDeviceTreeNodes (DeviceTreeBase, IsNodeSupported, DeviceCount, *DeviceInfo);

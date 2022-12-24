@@ -840,7 +840,6 @@ BpmpI2cStart (
                            DeviceTreeBase,
                            fdt_parent_offset (DeviceTreeBase, Private->DeviceTreeNodeOffset)
                            );
-  Private->BpmpPhandle = SwapBytes32 (Private->BpmpPhandle);
 
   Adapter = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "nvidia,bpmp-bus-id", &AdapterLength);
   if ((Adapter == NULL) || (AdapterLength != sizeof (UINT32))) {
