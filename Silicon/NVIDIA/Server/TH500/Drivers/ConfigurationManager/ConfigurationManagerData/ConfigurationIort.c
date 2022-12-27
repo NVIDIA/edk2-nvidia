@@ -34,7 +34,7 @@ STATIC IORT_PRIVATE_DATA  mIortPrivate = {
   .IoNodes[IORT_TYPE_INDEX (EArmObjGicItsIdentifierArray)] = { sizeof (CM_ARM_ITS_IDENTIFIER), }
 };
 
-UINT32 UniqueIdentifier;
+UINT32  UniqueIdentifier;
 
 /**
   Function map region into GCD and MMU
@@ -614,6 +614,17 @@ SetupIortIdMappingForSmmuV3 (
     IdMapping++;
     Private->IdMapIndex++;
     PropNode->IdMapCount++;
+  }
+
+  // Validation check for DeviceIdMappingIndex
+  if (((IortNode->PriInterrupt == 0) || (IortNode->GerrInterrupt == 0) || \
+       (IortNode->SyncInterrupt == 0) || (IortNode->EventInterrupt == 0)) && \
+      (PropNode->MsiProp == NULL) && (PropNode->IdMapCount != 0))
+  {
+    // As per the IORT specification, DeviceIdMappingIndex must contain a valid
+    // index if any one of wired interrupt is zero and msi-map is not defined
+    // Retaining this for IORT spec backward compatibility
+    IortNode->DeviceIdMappingIndex = PropNode->IdMapCount;
   }
 
   IortNode->IdMappingCount = PropNode->IdMapCount;
