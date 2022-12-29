@@ -57,7 +57,6 @@ ArmSbmrStatusCodeCallback (
 {
   EFI_STATUS  Status;
   UINT8       Request[ARM_SBMR_SEND_PROGRESS_CODE_REQ_SIZE];
-  UINT8       Response[ARM_SBMR_SEND_PROGRESS_CODE_RSP_SIZE];
   UINT32      ResponseDataSize;
   UINT8       Index;
 
@@ -86,34 +85,18 @@ ArmSbmrStatusCodeCallback (
   CopyMem (&Request[5], &Value, sizeof (Value));
   Request[9] = (UINT8)Instance;
 
-  ResponseDataSize = ARM_SBMR_SEND_PROGRESS_CODE_RSP_SIZE;
+  ResponseDataSize = 0;
   Status           = IpmiSubmitCommand (
                        IPMI_NETFN_GROUP_EXT,
                        ARM_SBMR_SEND_PROGRESS_CODE_CMD,
                        Request,
                        sizeof (Request),
-                       Response,
+                       NULL,
                        &ResponseDataSize
                        );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to send IPMI command - %r\r\n", __FUNCTION__, Status));
     return Status;
-  }
-
-  if (ResponseDataSize != ARM_SBMR_SEND_PROGRESS_CODE_RSP_SIZE) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed unexpected response size, Got: %d, Expected: %d\r\n", __FUNCTION__, ResponseDataSize, ARM_SBMR_SEND_PROGRESS_CODE_RSP_SIZE));
-    return EFI_DEVICE_ERROR;
-  }
-
-  if (Response[0] == IPMI_COMP_CODE_INVALID_COMMAND) {
-    DEBUG ((DEBUG_ERROR, "%a: BMC does not support status codes, disabling\r\n", __FUNCTION__));
-    mDisableSbmrStatus = TRUE;
-  } else if (Response[0] != IPMI_COMP_CODE_NORMAL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed unexpected command completion code, Got: %x, Expected: %x\r\n", __FUNCTION__, Response[0], IPMI_COMP_CODE_NORMAL));
-    return EFI_DEVICE_ERROR;
-  } else if (Response[1] != ARM_IPMI_GROUP_EXTENSION) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed unexpected group id, Got: %x, Expected: %x\r\n", __FUNCTION__, Response[1], ARM_IPMI_GROUP_EXTENSION));
-    return EFI_DEVICE_ERROR;
   }
 
   return EFI_SUCCESS;
