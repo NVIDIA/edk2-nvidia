@@ -18,15 +18,21 @@
 #include <Library/BaseLib.h>
 #include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
+#include <Library/TimerLib.h>
+#include <libfdt.h>
 
 #include <IndustryStandard/Ipmi.h>
+#include <Protocol/DeviceTreeNode.h>
+#include <Protocol/EmbeddedGpio.h>
 #include <Protocol/IpmiTransportProtocol.h>
 #include <Protocol/I2cMaster.h>
 #include <Protocol/I2cEnumerate.h>
 
-#define BMC_SSIF_SIGNATURE  SIGNATURE_64 ('B','M','C','_','S','S','I','F')
-#define BMC_RETRY_COUNT     10
-#define BMC_RETRY_DELAY     100000
+#define BMC_SSIF_SIGNATURE      SIGNATURE_64 ('B','M','C','_','S','S','I','F')
+#define BMC_RETRY_COUNT         10
+#define BMC_RETRY_DELAY         100000
+#define BMC_SMBALERT_TIMEOUT    500000
+#define BMC_SMBALERT_POLL_TIME  100
 
 // Private data structure
 typedef struct {
@@ -41,6 +47,10 @@ typedef struct {
 
   BMC_STATUS                 BmcStatus;
   UINT32                     SoftErrorCount;
+
+  EMBEDDED_GPIO              *Gpio;
+  BOOLEAN                    SmbAlertSupported;
+  EMBEDDED_GPIO_PIN          SmbAlertGpio;
 } BMC_SSIF_PRIVATE_DATA;
 
 #define BMC_SSIF_PRIVATE_DATA_FROM_IPMI(a)  CR (a, BMC_SSIF_PRIVATE_DATA, IpmiTransport, BMC_SSIF_SIGNATURE)
@@ -115,220 +125,262 @@ I2cIoBmcSsifIpmiSubmitCommand (
   UINT8                  ExpectedBlock;
   UINT32                 ResponseDataBufferSize;
   UINT32                 RetryCount;
+  UINT32                 OverallRetryCount;
+  UINT64                 Timeout;
+  UINTN                  GpioValue;
+  UINT64                 StartTime, EndTime;
 
   BmcSsifPrivate         = BMC_SSIF_PRIVATE_DATA_FROM_IPMI (This);
   ResponseDataBufferSize = *ResponseDataSize;
 
-  // Transmit data
-  if ((RequestDataSize + SSIF_HEADER_SIZE) <= SSIF_MAX_DATA) {
-    // SinglePart
-    WriteData[0]                           = BMC_SSIF_SINGLE_PART_WRITE_CMD;
-    WriteData[1]                           = RequestDataSize + SSIF_HEADER_SIZE;
-    WriteData[SMBUS_WRITE_HEADER_SIZE + 0] = NetFunction << 2 | (Lun & 0x3);
-    WriteData[SMBUS_WRITE_HEADER_SIZE + 1] = Command;
-    CopyMem (WriteData + SMBUS_WRITE_HEADER_SIZE + SSIF_HEADER_SIZE, RequestData, RequestDataSize);
-
-    Packet.OperationCount             = 1;
-    Packet.Operation[0].Flags         = I2C_FLAG_SMBUS_OPERATION | I2C_FLAG_SMBUS_BLOCK | I2C_FLAG_SMBUS_PEC;
-    Packet.Operation[0].LengthInBytes = RequestDataSize + SSIF_HEADER_SIZE + SMBUS_WRITE_HEADER_SIZE;
-    Packet.Operation[0].Buffer        = WriteData;
-
-    Status = BmcSsifPrivate->I2cMaster->StartRequest (BmcSsifPrivate->I2cMaster, BmcSsifPrivate->SlaveAddress, (EFI_I2C_REQUEST_PACKET *)&Packet, NULL, NULL);
-    if (EFI_ERROR (Status)) {
-      BmcSsifPrivate->SoftErrorCount++;
-      BmcSsifPrivate->BmcStatus = BMC_SOFTFAIL;
-      DEBUG ((DEBUG_ERROR, "%a: Failed to send single part write - %r\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-  } else {
-    // Multi-part
-    WriteData[0]                           = BMC_SSIF_MULTI_PART_WRITE_CMD_START;
-    WriteData[1]                           = SSIF_MAX_DATA;
-    WriteData[SMBUS_WRITE_HEADER_SIZE + 0] = NetFunction << 2;
-    WriteData[SMBUS_WRITE_HEADER_SIZE + 1] = Command;
-    CopyMem (WriteData + SMBUS_WRITE_HEADER_SIZE + SSIF_HEADER_SIZE, RequestData, SSIF_MAX_DATA - SSIF_HEADER_SIZE);
-
-    Packet.OperationCount             = 1;
-    Packet.Operation[0].Flags         = I2C_FLAG_SMBUS_OPERATION | I2C_FLAG_SMBUS_BLOCK | I2C_FLAG_SMBUS_PEC;
-    Packet.Operation[0].LengthInBytes = SSIF_MAX_DATA + SMBUS_WRITE_HEADER_SIZE;
-    Packet.Operation[0].Buffer        = WriteData;
-
-    Status = BmcSsifPrivate->I2cMaster->StartRequest (BmcSsifPrivate->I2cMaster, BmcSsifPrivate->SlaveAddress, (EFI_I2C_REQUEST_PACKET *)&Packet, NULL, NULL);
-    if (EFI_ERROR (Status)) {
-      BmcSsifPrivate->SoftErrorCount++;
-      BmcSsifPrivate->BmcStatus = BMC_SOFTFAIL;
-      DEBUG ((DEBUG_ERROR, "%a: Failed to send multi part write start - %r\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    DataLeft = RequestDataSize - (SSIF_MAX_DATA - SSIF_HEADER_SIZE);
-    while (DataLeft != 0) {
-      if (DataLeft <= SSIF_MAX_DATA) {
-        WriteData[0] = BMC_SSIF_MULTI_PART_WRITE_CMD_END;
-        DataSize     = DataLeft;
-      } else {
-        WriteData[0] = BMC_SSIF_MULTI_PART_WRITE_CMD_MIDDLE;
-        DataSize     = SSIF_MAX_DATA;
-      }
-
-      WriteData[1] = DataSize;
-      CopyMem (WriteData + SMBUS_WRITE_HEADER_SIZE, RequestData + (RequestDataSize - DataLeft), DataSize);
+  for (OverallRetryCount = 0; OverallRetryCount < BMC_RETRY_COUNT; OverallRetryCount++) {
+    // Transmit data
+    if ((RequestDataSize + SSIF_HEADER_SIZE) <= SSIF_MAX_DATA) {
+      // SinglePart
+      WriteData[0]                           = BMC_SSIF_SINGLE_PART_WRITE_CMD;
+      WriteData[1]                           = RequestDataSize + SSIF_HEADER_SIZE;
+      WriteData[SMBUS_WRITE_HEADER_SIZE + 0] = NetFunction << 2 | (Lun & 0x3);
+      WriteData[SMBUS_WRITE_HEADER_SIZE + 1] = Command;
+      CopyMem (WriteData + SMBUS_WRITE_HEADER_SIZE + SSIF_HEADER_SIZE, RequestData, RequestDataSize);
 
       Packet.OperationCount             = 1;
       Packet.Operation[0].Flags         = I2C_FLAG_SMBUS_OPERATION | I2C_FLAG_SMBUS_BLOCK | I2C_FLAG_SMBUS_PEC;
-      Packet.Operation[0].LengthInBytes = DataSize + SMBUS_WRITE_HEADER_SIZE;
+      Packet.Operation[0].LengthInBytes = RequestDataSize + SSIF_HEADER_SIZE + SMBUS_WRITE_HEADER_SIZE;
       Packet.Operation[0].Buffer        = WriteData;
 
       Status = BmcSsifPrivate->I2cMaster->StartRequest (BmcSsifPrivate->I2cMaster, BmcSsifPrivate->SlaveAddress, (EFI_I2C_REQUEST_PACKET *)&Packet, NULL, NULL);
       if (EFI_ERROR (Status)) {
         BmcSsifPrivate->SoftErrorCount++;
         BmcSsifPrivate->BmcStatus = BMC_SOFTFAIL;
-        DEBUG ((DEBUG_ERROR, "%a: Failed to send multi part write continue/end - %r\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to send single part write - %r\r\n", __FUNCTION__, Status));
+        return Status;
+      }
+    } else {
+      // Multi-part
+      WriteData[0]                           = BMC_SSIF_MULTI_PART_WRITE_CMD_START;
+      WriteData[1]                           = SSIF_MAX_DATA;
+      WriteData[SMBUS_WRITE_HEADER_SIZE + 0] = NetFunction << 2;
+      WriteData[SMBUS_WRITE_HEADER_SIZE + 1] = Command;
+      CopyMem (WriteData + SMBUS_WRITE_HEADER_SIZE + SSIF_HEADER_SIZE, RequestData, SSIF_MAX_DATA - SSIF_HEADER_SIZE);
+
+      Packet.OperationCount             = 1;
+      Packet.Operation[0].Flags         = I2C_FLAG_SMBUS_OPERATION | I2C_FLAG_SMBUS_BLOCK | I2C_FLAG_SMBUS_PEC;
+      Packet.Operation[0].LengthInBytes = SSIF_MAX_DATA + SMBUS_WRITE_HEADER_SIZE;
+      Packet.Operation[0].Buffer        = WriteData;
+
+      Status = BmcSsifPrivate->I2cMaster->StartRequest (BmcSsifPrivate->I2cMaster, BmcSsifPrivate->SlaveAddress, (EFI_I2C_REQUEST_PACKET *)&Packet, NULL, NULL);
+      if (EFI_ERROR (Status)) {
+        BmcSsifPrivate->SoftErrorCount++;
+        BmcSsifPrivate->BmcStatus = BMC_SOFTFAIL;
+        DEBUG ((DEBUG_ERROR, "%a: Failed to send multi part write start - %r\r\n", __FUNCTION__, Status));
         return Status;
       }
 
-      DataLeft -= DataSize;
+      DataLeft = RequestDataSize - (SSIF_MAX_DATA - SSIF_HEADER_SIZE);
+      while (DataLeft != 0) {
+        if (DataLeft <= SSIF_MAX_DATA) {
+          WriteData[0] = BMC_SSIF_MULTI_PART_WRITE_CMD_END;
+          DataSize     = DataLeft;
+        } else {
+          WriteData[0] = BMC_SSIF_MULTI_PART_WRITE_CMD_MIDDLE;
+          DataSize     = SSIF_MAX_DATA;
+        }
+
+        WriteData[1] = DataSize;
+        CopyMem (WriteData + SMBUS_WRITE_HEADER_SIZE, RequestData + (RequestDataSize - DataLeft), DataSize);
+
+        Packet.OperationCount             = 1;
+        Packet.Operation[0].Flags         = I2C_FLAG_SMBUS_OPERATION | I2C_FLAG_SMBUS_BLOCK | I2C_FLAG_SMBUS_PEC;
+        Packet.Operation[0].LengthInBytes = DataSize + SMBUS_WRITE_HEADER_SIZE;
+        Packet.Operation[0].Buffer        = WriteData;
+
+        Status = BmcSsifPrivate->I2cMaster->StartRequest (BmcSsifPrivate->I2cMaster, BmcSsifPrivate->SlaveAddress, (EFI_I2C_REQUEST_PACKET *)&Packet, NULL, NULL);
+        if (EFI_ERROR (Status)) {
+          BmcSsifPrivate->SoftErrorCount++;
+          BmcSsifPrivate->BmcStatus = BMC_SOFTFAIL;
+          DEBUG ((DEBUG_ERROR, "%a: Failed to send multi part write continue/end - %r\r\n", __FUNCTION__, Status));
+          return Status;
+        }
+
+        DataLeft -= DataSize;
+      }
     }
-  }
 
-  if (ResponseData != NULL) { \
-    gBS->Stall (BMC_RETRY_DELAY);
-    for (RetryCount = 0; RetryCount < BMC_RETRY_COUNT; RetryCount++) {
-      // Get response data
-      WriteData[0] = BMC_SSIF_SINGLE_PART_READ_CMD;
+    if (ResponseData != NULL) {
+      if (BmcSsifPrivate->SmbAlertSupported) {
+        StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+        Timeout   = BMC_SMBALERT_TIMEOUT/BMC_SMBALERT_POLL_TIME;
+        while (Timeout != 0) {
+          Status = BmcSsifPrivate->Gpio->Get (BmcSsifPrivate->Gpio, BmcSsifPrivate->SmbAlertGpio, &GpioValue);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "%a: Error reading SMBALERT gpio - %r\r\n", __FUNCTION__, Status));
+            Timeout = 0;
+            break;
+          }
 
-      Packet.OperationCount             = 2;
-      Packet.Operation[0].Flags         = I2C_FLAG_SMBUS_OPERATION | I2C_FLAG_SMBUS_BLOCK | I2C_FLAG_SMBUS_PEC;
-      Packet.Operation[0].LengthInBytes = 1;
-      Packet.Operation[0].Buffer        = WriteData;
-      Packet.Operation[1].Flags         = I2C_FLAG_READ;
-      Packet.Operation[1].LengthInBytes = SSIF_MAX_DATA + SMBUS_READ_HEADER_SIZE;
-      Packet.Operation[1].Buffer        = ReadData;
+          if (GpioValue == 0) {
+            break;
+          }
 
-      Status = BmcSsifPrivate->I2cMaster->StartRequest (BmcSsifPrivate->I2cMaster, BmcSsifPrivate->SlaveAddress, (EFI_I2C_REQUEST_PACKET *)&Packet, NULL, NULL);
-      if (EFI_ERROR (Status)) {
-        BmcSsifPrivate->SoftErrorCount++;
-        BmcSsifPrivate->BmcStatus = BMC_SOFTFAIL;
-        DEBUG ((DEBUG_ERROR, "%a: Failed to send read command - %r\r\n", __FUNCTION__, Status));
-        if (Status == EFI_NO_RESPONSE) {
-          gBS->Stall (BMC_RETRY_DELAY);
+          gBS->Stall (BMC_SMBALERT_POLL_TIME);
+          Timeout--;
+        }
+
+        if (Timeout == 0) {
+          DEBUG ((DEBUG_ERROR, "%a: Timeout reading SMBALERT gpio\r\n", __FUNCTION__));
+          Status = EFI_TIMEOUT;
           continue;
         } else {
-          break;
+          EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+          DEBUG ((DEBUG_INFO, "%a: SMBALERT gpio Time %dus\r\n", __FUNCTION__, (EndTime-StartTime)/1000));
         }
+      } else {
+        gBS->Stall (BMC_RETRY_DELAY);
       }
 
-      // Sanity check size
-      if (ReadData[0] < SSIF_HEADER_SIZE) {
-        BmcSsifPrivate->SoftErrorCount++;
-        BmcSsifPrivate->BmcStatus = BMC_SOFTFAIL;
-        DEBUG ((DEBUG_ERROR, "%a: Read size less then expected 0x%x\r\n", __FUNCTION__, ReadData[0]));
-        return EFI_NOT_FOUND;
-      }
+      for (RetryCount = 0; RetryCount < BMC_RETRY_COUNT; RetryCount++) {
+        // Get response data
+        WriteData[0] = BMC_SSIF_SINGLE_PART_READ_CMD;
 
-      if ((ReadData[1] == 0x00) && (ReadData[2] == 0x01)) {
-        // Multi-part read
-        if (ReadData[0] < (SSIF_HEADER_SIZE + 2)) {
+        Packet.OperationCount             = 2;
+        Packet.Operation[0].Flags         = I2C_FLAG_SMBUS_OPERATION | I2C_FLAG_SMBUS_BLOCK | I2C_FLAG_SMBUS_PEC;
+        Packet.Operation[0].LengthInBytes = 1;
+        Packet.Operation[0].Buffer        = WriteData;
+        Packet.Operation[1].Flags         = I2C_FLAG_READ;
+        Packet.Operation[1].LengthInBytes = SSIF_MAX_DATA + SMBUS_READ_HEADER_SIZE;
+        Packet.Operation[1].Buffer        = ReadData;
+
+        Status = BmcSsifPrivate->I2cMaster->StartRequest (BmcSsifPrivate->I2cMaster, BmcSsifPrivate->SlaveAddress, (EFI_I2C_REQUEST_PACKET *)&Packet, NULL, NULL);
+        if (EFI_ERROR (Status)) {
           BmcSsifPrivate->SoftErrorCount++;
+          BmcSsifPrivate->BmcStatus = BMC_SOFTFAIL;
+          DEBUG ((DEBUG_ERROR, "%a: Failed to send read command - %r\r\n", __FUNCTION__, Status));
+          if (Status == EFI_NO_RESPONSE) {
+            gBS->Stall (BMC_RETRY_DELAY);
+            continue;
+          } else {
+            break;
+          }
+        }
+
+        // Sanity check size
+        if (ReadData[0] < SSIF_HEADER_SIZE) {
+          BmcSsifPrivate->SoftErrorCount++;
+          BmcSsifPrivate->BmcStatus = BMC_SOFTFAIL;
           DEBUG ((DEBUG_ERROR, "%a: Read size less then expected 0x%x\r\n", __FUNCTION__, ReadData[0]));
           return EFI_NOT_FOUND;
         }
 
-        if (((ReadData[3] >> 2) != (NetFunction + 1)) ||
-            (ReadData[4] != Command))
-        {
-          BmcSsifPrivate->SoftErrorCount++;
-          DEBUG ((DEBUG_ERROR, "%a: Unexpected NetFn:Command! Expected: %x:%x. Got: %x:%x\r\n", __FUNCTION__, NetFunction, Command, ReadData[3]>>2, ReadData[4]));
-          return EFI_NOT_FOUND;
-        }
-
-        if (ResponseDataBufferSize < (ReadData[0] - SSIF_HEADER_SIZE - 2)) {
-          BmcSsifPrivate->SoftErrorCount++;
-          DEBUG ((DEBUG_ERROR, "%a: Read size returned is larger than buffer\r\n", __FUNCTION__));
-          return EFI_OUT_OF_RESOURCES;
-        }
-
-        *ResponseDataSize = ReadData[0] - SSIF_HEADER_SIZE - 2;
-        CopyMem (ResponseData, &ReadData[SSIF_HEADER_SIZE + 2 + 1], *ResponseDataSize);
-
-        // Need to get the rest of the data
-        ExpectedBlock = 0;
-        do {
-          WriteData[0]                      = BMC_SSIF_MULTI_PART_READ_CMD_MIDDLE_END;
-          Packet.OperationCount             = 2;
-          Packet.Operation[0].Flags         = I2C_FLAG_SMBUS_OPERATION | I2C_FLAG_SMBUS_BLOCK | I2C_FLAG_SMBUS_PEC;
-          Packet.Operation[0].LengthInBytes = 1;
-          Packet.Operation[0].Buffer        = WriteData;
-          Packet.Operation[1].Flags         = I2C_FLAG_READ;
-          Packet.Operation[1].LengthInBytes = SSIF_MAX_DATA + SMBUS_READ_HEADER_SIZE;
-          Packet.Operation[1].Buffer        = ReadData;
-
-          Status = BmcSsifPrivate->I2cMaster->StartRequest (BmcSsifPrivate->I2cMaster, BmcSsifPrivate->SlaveAddress, (EFI_I2C_REQUEST_PACKET *)&Packet, NULL, NULL);
-          if (EFI_ERROR (Status)) {
-            BmcSsifPrivate->SoftErrorCount++;
-            DEBUG ((DEBUG_ERROR, "%a: Failed to send multi part read middle/end - %r\r\n", __FUNCTION__, Status));
-            return Status;
-          }
-
-          if (ReadData[0] < 2) {
+        if ((ReadData[1] == 0x00) && (ReadData[2] == 0x01)) {
+          // Multi-part read
+          if (ReadData[0] < (SSIF_HEADER_SIZE + 2)) {
             BmcSsifPrivate->SoftErrorCount++;
             DEBUG ((DEBUG_ERROR, "%a: Read size less then expected 0x%x\r\n", __FUNCTION__, ReadData[0]));
             return EFI_NOT_FOUND;
           }
 
-          if ((ReadData[1] == ExpectedBlock) || (ReadData[1] == 0xFF)) {
-            if (ResponseDataBufferSize < (*ResponseDataSize + (ReadData[0] - 1))) {
-              BmcSsifPrivate->SoftErrorCount++;
-              DEBUG ((DEBUG_ERROR, "%a: Read size returned is larger than buffer\r\n", __FUNCTION__));
-              return EFI_OUT_OF_RESOURCES;
-            }
+          if (((ReadData[3] >> 2) != (NetFunction + 1)) ||
+              (ReadData[4] != Command))
+          {
+            BmcSsifPrivate->SoftErrorCount++;
+            DEBUG ((DEBUG_ERROR, "%a: Unexpected NetFn:Command! Expected: %x:%x. Got: %x:%x\r\n", __FUNCTION__, NetFunction, Command, ReadData[3]>>2, ReadData[4]));
+            return EFI_NOT_FOUND;
+          }
 
-            CopyMem (ResponseData + *ResponseDataSize, &ReadData[2], ReadData[0]-1);
-            *ResponseDataSize += (ReadData[0] - 1);
-            if (ReadData[1] == 0xFF) {
-              ExpectedBlock = 0xFF;
-            } else {
-              ExpectedBlock++;
-            }
-          } else {
-            // Out of order block, request retry
-            WriteData[0]                      = BMC_SSIF_MULTI_PART_READ_CMD_MIDDLE_RETRY;
-            WriteData[1]                      = 1;
-            WriteData[2]                      = ExpectedBlock;
-            Packet.OperationCount             = 1;
+          if (ResponseDataBufferSize < (ReadData[0] - SSIF_HEADER_SIZE - 2)) {
+            BmcSsifPrivate->SoftErrorCount++;
+            DEBUG ((DEBUG_ERROR, "%a: Read size returned is larger than buffer\r\n", __FUNCTION__));
+            return EFI_OUT_OF_RESOURCES;
+          }
+
+          *ResponseDataSize = ReadData[0] - SSIF_HEADER_SIZE - 2;
+          CopyMem (ResponseData, &ReadData[SSIF_HEADER_SIZE + 2 + 1], *ResponseDataSize);
+
+          // Need to get the rest of the data
+          ExpectedBlock = 0;
+          do {
+            WriteData[0]                      = BMC_SSIF_MULTI_PART_READ_CMD_MIDDLE_END;
+            Packet.OperationCount             = 2;
             Packet.Operation[0].Flags         = I2C_FLAG_SMBUS_OPERATION | I2C_FLAG_SMBUS_BLOCK | I2C_FLAG_SMBUS_PEC;
-            Packet.Operation[0].LengthInBytes = 3;
+            Packet.Operation[0].LengthInBytes = 1;
             Packet.Operation[0].Buffer        = WriteData;
+            Packet.Operation[1].Flags         = I2C_FLAG_READ;
+            Packet.Operation[1].LengthInBytes = SSIF_MAX_DATA + SMBUS_READ_HEADER_SIZE;
+            Packet.Operation[1].Buffer        = ReadData;
 
             Status = BmcSsifPrivate->I2cMaster->StartRequest (BmcSsifPrivate->I2cMaster, BmcSsifPrivate->SlaveAddress, (EFI_I2C_REQUEST_PACKET *)&Packet, NULL, NULL);
             if (EFI_ERROR (Status)) {
               BmcSsifPrivate->SoftErrorCount++;
-              DEBUG ((DEBUG_ERROR, "%a: Failed to send multi part read retry - %r\r\n", __FUNCTION__, Status));
+              DEBUG ((DEBUG_ERROR, "%a: Failed to send multi part read middle/end - %r\r\n", __FUNCTION__, Status));
               return Status;
             }
+
+            if (ReadData[0] < 2) {
+              BmcSsifPrivate->SoftErrorCount++;
+              DEBUG ((DEBUG_ERROR, "%a: Read size less then expected 0x%x\r\n", __FUNCTION__, ReadData[0]));
+              return EFI_NOT_FOUND;
+            }
+
+            if ((ReadData[1] == ExpectedBlock) || (ReadData[1] == 0xFF)) {
+              if (ResponseDataBufferSize < (*ResponseDataSize + (ReadData[0] - 1))) {
+                BmcSsifPrivate->SoftErrorCount++;
+                DEBUG ((DEBUG_ERROR, "%a: Read size returned is larger than buffer\r\n", __FUNCTION__));
+                return EFI_OUT_OF_RESOURCES;
+              }
+
+              CopyMem (ResponseData + *ResponseDataSize, &ReadData[2], ReadData[0]-1);
+              *ResponseDataSize += (ReadData[0] - 1);
+              if (ReadData[1] == 0xFF) {
+                ExpectedBlock = 0xFF;
+              } else {
+                ExpectedBlock++;
+              }
+            } else {
+              // Out of order block, request retry
+              WriteData[0]                      = BMC_SSIF_MULTI_PART_READ_CMD_MIDDLE_RETRY;
+              WriteData[1]                      = 1;
+              WriteData[2]                      = ExpectedBlock;
+              Packet.OperationCount             = 1;
+              Packet.Operation[0].Flags         = I2C_FLAG_SMBUS_OPERATION | I2C_FLAG_SMBUS_BLOCK | I2C_FLAG_SMBUS_PEC;
+              Packet.Operation[0].LengthInBytes = 3;
+              Packet.Operation[0].Buffer        = WriteData;
+
+              Status = BmcSsifPrivate->I2cMaster->StartRequest (BmcSsifPrivate->I2cMaster, BmcSsifPrivate->SlaveAddress, (EFI_I2C_REQUEST_PACKET *)&Packet, NULL, NULL);
+              if (EFI_ERROR (Status)) {
+                BmcSsifPrivate->SoftErrorCount++;
+                DEBUG ((DEBUG_ERROR, "%a: Failed to send multi part read retry - %r\r\n", __FUNCTION__, Status));
+                return Status;
+              }
+            }
+          } while (ExpectedBlock != 0xFF);
+        } else {
+          // Check netfn and command
+          if (((ReadData[1] >> 2) != (NetFunction + 1)) ||
+              (ReadData[2] != Command))
+          {
+            BmcSsifPrivate->SoftErrorCount++;
+            DEBUG ((DEBUG_ERROR, "%a: Unexpected NetFn:Command! Expected: %x:%x. Got: %x:%x\r\n", __FUNCTION__, NetFunction+1, Command, ReadData[1]>>2, ReadData[2]));
+            return EFI_NOT_FOUND;
           }
-        } while (ExpectedBlock != 0xFF);
-      } else {
-        // Check netfn and command
-        if (((ReadData[1] >> 2) != (NetFunction + 1)) ||
-            (ReadData[2] != Command))
-        {
-          BmcSsifPrivate->SoftErrorCount++;
-          DEBUG ((DEBUG_ERROR, "%a: Unexpected NetFn:Command! Expected: %x:%x. Got: %x:%x\r\n", __FUNCTION__, NetFunction+1, Command, ReadData[1]>>2, ReadData[2]));
-          return EFI_NOT_FOUND;
+
+          if (ResponseDataBufferSize < (ReadData[0] - SSIF_HEADER_SIZE)) {
+            DEBUG ((DEBUG_ERROR, "%a: Read size returned is larger than buffer\r\n", __FUNCTION__));
+            return EFI_OUT_OF_RESOURCES;
+          }
+
+          *ResponseDataSize = ReadData[0] - SSIF_HEADER_SIZE;
+          CopyMem (ResponseData, &ReadData[SSIF_HEADER_SIZE + 1], *ResponseDataSize);
         }
 
-        if (ResponseDataBufferSize < (ReadData[0] - SSIF_HEADER_SIZE)) {
-          DEBUG ((DEBUG_ERROR, "%a: Read size returned is larger than buffer\r\n", __FUNCTION__));
-          return EFI_OUT_OF_RESOURCES;
-        }
-
-        *ResponseDataSize = ReadData[0] - SSIF_HEADER_SIZE;
-        CopyMem (ResponseData, &ReadData[SSIF_HEADER_SIZE + 1], *ResponseDataSize);
+        break;
       }
 
-      break;
+      if (Status == EFI_NO_RESPONSE) {
+        continue;
+      }
     }
+
+    break;
   }
 
   return Status;
@@ -387,18 +439,24 @@ I2cIoBmcMasterNotify (
   IN VOID       *Context
   )
 {
-  EFI_STATUS                      Status;
-  EFI_HANDLE                      Handle;
-  UINTN                           HandleSize;
-  EFI_I2C_MASTER_PROTOCOL         *I2cMasterProtocol;
-  EFI_I2C_ENUMERATE_PROTOCOL      *I2cEnumerateProtocol;
-  CONST EFI_I2C_DEVICE            *I2cDevice;
-  BMC_SSIF_PRIVATE_DATA           *BmcSsifPrivate;
-  IPMI_SELF_TEST_RESULT_RESPONSE  SelfTestResult;
-  UINT32                          ResultSize;
+  EFI_STATUS                        Status;
+  EFI_HANDLE                        Handle;
+  UINTN                             HandleSize;
+  EFI_I2C_MASTER_PROTOCOL           *I2cMasterProtocol;
+  EFI_I2C_ENUMERATE_PROTOCOL        *I2cEnumerateProtocol;
+  CONST EFI_I2C_DEVICE              *I2cDevice;
+  BMC_SSIF_PRIVATE_DATA             *BmcSsifPrivate;
+  IPMI_SELF_TEST_RESULT_RESPONSE    SelfTestResult;
+  UINT32                            ResultSize;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode;
+  INT32                             I2cNodeOffset;
+  CONST VOID                        *Property;
+  INT32                             PropertyLen;
+  CONST UINT32                      *GpioProperty;
 
   I2cMasterProtocol = NULL;
   BmcSsifPrivate    = (BMC_SSIF_PRIVATE_DATA *)Context;
+  I2cNodeOffset     = 0;
 
   do {
     HandleSize = sizeof (Handle);
@@ -446,6 +504,30 @@ I2cIoBmcMasterNotify (
 
   gBS->CloseEvent (Event);
 
+  BmcSsifPrivate->SmbAlertSupported = FALSE;
+  Status                            = gBS->HandleProtocol (Handle, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&DeviceTreeNode);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get device tree node, assuming no SMBALERT\r\n", __FUNCTION__));
+  } else {
+    fdt_for_each_subnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
+      if (fdt_node_check_compatible (
+            DeviceTreeNode->DeviceTreeBase,
+            I2cNodeOffset,
+            "ssif-bmc"
+            ) == 0)
+      {
+        Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nvidia,smbalert-gpio", &PropertyLen);
+        if ((Property != NULL) && (PropertyLen == (3 * sizeof (UINT32)))) {
+          GpioProperty                      = (CONST UINT32 *)Property;
+          BmcSsifPrivate->SmbAlertGpio      = GPIO (SwapBytes32 (GpioProperty[0]), SwapBytes32 (GpioProperty[1]));
+          BmcSsifPrivate->SmbAlertSupported = TRUE;
+          BmcSsifPrivate->Gpio->Set (BmcSsifPrivate->Gpio, BmcSsifPrivate->SmbAlertGpio, GPIO_MODE_INPUT);
+          BmcSsifPrivate->Gpio->SetPull (BmcSsifPrivate->Gpio, BmcSsifPrivate->SmbAlertGpio, GPIO_PULL_UP);
+        }
+      }
+    }
+  }
+
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &Handle,
                   &gIpmiTransportProtocolGuid,
@@ -478,6 +560,8 @@ I2cIoBmcMasterNotify (
     {
       DEBUG ((DEBUG_ERROR, "%a: BMC Self test failed - 0x%02x\r\n", __FUNCTION__, SelfTestResult.Result));
       BmcSsifPrivate->BmcStatus = BMC_HARDFAIL;
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: BMC Self test success\r\n", __FUNCTION__));
     }
   }
 }
@@ -501,11 +585,18 @@ I2cIoBmcSsifDxeDriverEntryPoint (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
+  EFI_STATUS             Status;
   BMC_SSIF_PRIVATE_DATA  *BmcSsifPrivate;
 
   BmcSsifPrivate = AllocateZeroPool (sizeof (BMC_SSIF_PRIVATE_DATA));
   if (BmcSsifPrivate == NULL) {
     return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = gBS->LocateProtocol (&gEmbeddedGpioProtocolGuid, NULL, (VOID **)&BmcSsifPrivate->Gpio);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get GPIO protocol - %r\r\n", __FUNCTION__, Status));
+    return Status;
   }
 
   BmcSsifPrivate->ProtocolEvent = EfiCreateProtocolNotifyEvent (

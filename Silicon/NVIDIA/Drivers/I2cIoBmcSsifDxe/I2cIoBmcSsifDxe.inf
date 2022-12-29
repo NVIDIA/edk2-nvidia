@@ -17,6 +17,7 @@
   ENTRY_POINT               = I2cIoBmcSsifDxeDriverEntryPoint
 
 [Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   IpmiFeaturePkg/IpmiFeaturePkg.dec
@@ -27,19 +28,23 @@
 
 [LibraryClasses]
   BaseLib
+  FdtLib
   UefiLib
   UefiDriverEntryPoint
   UefiBootServicesTableLib
   MemoryAllocationLib
   DebugLib
+  TimerLib
 
 [Protocols]
   gIpmiTransportProtocolGuid
   gEfiI2cMasterProtocolGuid
   gEfiI2cEnumerateProtocolGuid
+  gEmbeddedGpioProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
 
 [Guids]
   gNVIDIAI2cBmcSSIF
 
 [Depex]
-  TRUE
+  gEmbeddedGpioProtocolGuid
