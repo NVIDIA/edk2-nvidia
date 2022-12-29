@@ -710,6 +710,13 @@
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
 
   #
+  # GPIO driver/utility
+  #
+  Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf
+  Silicon/NVIDIA/Drivers/I2cExpanderGpio/I2cExpanderGpio.inf
+  Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
+
+  #
   # I2C Support
   #
   MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf

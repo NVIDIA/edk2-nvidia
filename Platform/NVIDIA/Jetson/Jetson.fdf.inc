@@ -34,13 +34,6 @@
   INF Silicon/NVIDIA/Drivers/BpmpI2c/BpmpI2cDxe.inf
 
   #
-  # GPIO driver/utility
-  #
-  INF Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf
-  INF Silicon/NVIDIA/Drivers/I2cExpanderGpio/I2cExpanderGpio.inf
-  INF Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
-
-  #
   # Regulator support
   #
   INF Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf

@@ -89,6 +89,13 @@
   INF MdeModulePkg/Universal/PrintDxe/PrintDxe.inf
 
   #
+  # GPIO driver/utility
+  #
+  INF Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf
+  INF Silicon/NVIDIA/Drivers/I2cExpanderGpio/I2cExpanderGpio.inf
+  INF Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
+
+  #
   # I2C Support
   #
   INF MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
