@@ -149,6 +149,7 @@ formset
 
     subtitle text = STRING_TOKEN(STR_NULL);
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.QuickBootSupported == 0;
     oneof varid = QuickBootEnabled.Enabled,
         questionid = KEY_ENABLE_QUICK_BOOT,
         prompt = STRING_TOKEN(STR_QUICK_BOOT_ENABLED_PROMPT),
@@ -157,6 +158,7 @@ formset
         option text = STRING_TOKEN(STR_DISABLED), value = QUICK_BOOT_DISABLE, flags = 0;
         option text = STRING_TOKEN(STR_ENABLED),  value = QUICK_BOOT_ENABLE, flags = 0;
     endoneof;
+    endif;
 
     oneof varid = NewDeviceHierarchy.Hierarchy,
         questionid = KEY_NEW_DEVICE_HIERARCHY,

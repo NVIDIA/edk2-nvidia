@@ -146,6 +146,7 @@
 
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
+  gNVIDIATokenSpaceGuid.PcdQuickBootSupported|FALSE
 
 ################################################################################
 #

@@ -97,6 +97,7 @@
 
 typedef struct {
   UINT32     L4TSupported;
+  BOOLEAN    QuickBootSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];

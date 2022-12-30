@@ -65,6 +65,7 @@
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
+  gNVIDIATokenSpaceGuid.PcdQuickBootSupported
   gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy
   gNVIDIATokenSpaceGuid.PcdOsChainStatusA
   gNVIDIATokenSpaceGuid.PcdOsChainStatusB

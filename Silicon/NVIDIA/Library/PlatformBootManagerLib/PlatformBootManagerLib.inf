@@ -62,6 +62,7 @@
 
 [FeaturePcd]
   gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport
+  gNVIDIATokenSpaceGuid.PcdQuickBootSupported
 
 [FixedPcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString

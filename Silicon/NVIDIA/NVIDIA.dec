@@ -376,6 +376,9 @@
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
 
+#QuickBoot Support
+  gNVIDIATokenSpaceGuid.PcdQuickBootSupported|TRUE|BOOLEAN|0x00000101
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C

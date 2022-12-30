@@ -403,7 +403,8 @@ InitializeSettings (
     mHiiControlSettings.RootfsRedundancyLevel = 0;
   }
 
-  mHiiControlSettings.L4TSupported = PcdGetBool (PcdL4TConfigurationSupport);
+  mHiiControlSettings.L4TSupported       = PcdGetBool (PcdL4TConfigurationSupport);
+  mHiiControlSettings.QuickBootSupported = FeaturePcdGet (PcdQuickBootSupported);
 
   HobPointer = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
   if (HobPointer != NULL) {

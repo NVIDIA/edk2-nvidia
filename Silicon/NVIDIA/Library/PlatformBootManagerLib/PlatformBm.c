@@ -1017,7 +1017,11 @@ IsPlatformConfigurationNeeded (
     }
   }
 
-  if (PcdGet8 (PcdQuickBootEnabled) == 0) {
+  if (FeaturePcdGet (PcdQuickBootSupported)) {
+    if (PcdGet8 (PcdQuickBootEnabled) == 0) {
+      PlatformConfigurationNeeded = TRUE;
+    }
+  } else {
     PlatformConfigurationNeeded = TRUE;
   }
 
