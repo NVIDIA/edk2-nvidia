@@ -113,6 +113,11 @@
   INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationDxe.inf
 
   #
+  # GH100 GPU Driver
+  #
+  INF Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.inf
+
+  #
   # Redfish Host Interface Support
   #
   INF RedfishPkg/RedfishHostInterfaceDxe/RedfishHostInterfaceDxe.inf

@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,6 +18,11 @@ class ServerSettingsManager(NVIDIASettingsManager):
 
     def GetActiveScopes(self):
         return super().GetActiveScopes() + ["server"]
+
+    def GetPackagesPath(self):
+        return super().GetPackagesPath() + [
+            "edk2-nvidia-server-gpu-sdk"
+        ]
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"

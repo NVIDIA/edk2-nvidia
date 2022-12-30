@@ -1,7 +1,7 @@
 /** @file
   SSDT Pcie Table Generator.
 
-  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2022 - 2023, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2021 - 2022, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -34,10 +34,12 @@
 #include <Library/AmlLib/AmlLib.h>
 #include <Library/SsdtPcieSupportLib.h>
 #include <Protocol/ConfigurationManagerProtocol.h>
+#include <Protocol/PciIo.h>
 #include <Protocol/RasNsCommPcieDpcDataProtocol.h>
+#include <GpuDsdAmlGenerationProtocol.h>
 #include <TH500/TH500Definitions.h>
 
-#include "SsdtPcieSupportLibPrivate.h"
+extern CHAR8  ssdtpcietemplate_aml_code[];
 
 #define DSD_EXTERNAL_FACING_PORT_GUID \
 (GUID){0xEFCC06CC, 0x73AC, 0x4BC3, {0xBF, 0xF0, 0x76, 0x14, 0x38, 0x07, 0xC3, 0x89}}
@@ -248,14 +250,26 @@ GeneratePciSlots (
   IN  OUT       AML_OBJECT_NODE_HANDLE        PciNode
   )
 {
-  EFI_STATUS                   Status;
-  EFI_STATUS                   Status1;
-  EFI_ACPI_DESCRIPTION_HEADER  *SsdtPcieTemplate;
-  AML_ROOT_NODE_HANDLE         TemplateRoot;
-  AML_OBJECT_NODE_HANDLE       Node;
-  AML_OBJECT_NODE_HANDLE       RpNode;
+  EFI_STATUS                              Status;
+  EFI_STATUS                              Status1;
+  EFI_ACPI_DESCRIPTION_HEADER             *SsdtPcieTemplate;
+  AML_ROOT_NODE_HANDLE                    TemplateRoot;
+  AML_OBJECT_NODE_HANDLE                  Node;
+  AML_OBJECT_NODE_HANDLE                  DsdNode;
+  AML_OBJECT_NODE_HANDLE                  RpNode;
+  EFI_HANDLE                              *HandleBuffer;
+  UINTN                                   NumberOfHandles;
+  UINTN                                   HandleIndex;
+  EFI_PCI_IO_PROTOCOL                     *PciIo;
+  UINTN                                   SegmentNumber;
+  UINTN                                   BusNumber;
+  UINTN                                   DeviceNumber;
+  UINTN                                   FunctionNumber;
+  NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL  *GpuDsdGeneration;
 
-  ASSERT (PciNode != NULL);
+  ASSERT (
+    PciNode !=  NULL
+    );
 
   // Parse the Ssdt Pci Osc Template.
   SsdtPcieTemplate = (EFI_ACPI_DESCRIPTION_HEADER *)
@@ -324,23 +338,97 @@ GeneratePciSlots (
     goto error_handler;
   }
 
-  if (PciInfo->PciSegmentGroupNumber == PCIE_GPU_SEGMENT) {
-    Status = AmlFindNode (TemplateRoot, "\\GPU0", &Node);
-    if (EFI_ERROR (Status)) {
-      goto error_handler;
+  Status1 = gBS->LocateHandleBuffer (
+                   ByProtocol,
+                   &gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid,
+                   NULL,
+                   &NumberOfHandles,
+                   &HandleBuffer
+                   );
+  DEBUG ((
+    DEBUG_ERROR,
+    "DEBUG: SSDT-PCI: GpuDSDAMLGeneration Proocol(s) [handles:%d handle buffer:%p]"      " Status = %r\n",
+    NumberOfHandles,
+    HandleBuffer,
+    Status1
+    ));
+
+  if (!EFI_ERROR (Status1)) {
+    for (HandleIndex = 0; HandleIndex < NumberOfHandles; HandleIndex++) {
+      Status1 = gBS->HandleProtocol (
+                       HandleBuffer[HandleIndex],
+                       &gEfiPciIoProtocolGuid,
+                       (VOID **)&PciIo
+                       );
+      if (EFI_ERROR (Status1)) {
+        continue;
+      }
+
+      Status1 = PciIo->GetLocation (PciIo, &SegmentNumber, &BusNumber, &DeviceNumber, &FunctionNumber);
+      if (EFI_ERROR (Status1)) {
+        continue;
+      }
+
+      if (SegmentNumber != PciInfo->PciSegmentGroupNumber) {
+        continue;
+      }
+
+      Status = gBS->HandleProtocol (
+                      HandleBuffer[HandleIndex],
+                      &gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid,
+                      (VOID **)&GpuDsdGeneration
+                      );
+      DEBUG ((
+        DEBUG_ERROR,
+        "DEBUG: SSDT-PCI: GpuDSDAMLGeneration Proocol(s) [HandleIndex:%d Protocol:%p]"      " Status = %r\n",
+        HandleIndex,
+        GpuDsdGeneration,
+        Status1
+        ));
+
+      if (EFI_ERROR (Status)) {
+        ASSERT_EFI_ERROR (Status);
+        goto error_handler;
+      }
+
+      Status = AmlFindNode (TemplateRoot, "\\GPU0", &Node);
+      if (EFI_ERROR (Status)) {
+        goto error_handler;
+      }
+
+      Status = AmlDetachNode (Node);
+      if (EFI_ERROR (Status)) {
+        goto error_handler;
+      }
+
+      Status = GpuDsdGeneration->GetDsdNode (GpuDsdGeneration, &DsdNode);
+      if (EFI_ERROR (Status)) {
+        ASSERT_EFI_ERROR (Status);
+      } else {
+        Status = AmlAttachNode (Node, DsdNode);
+        if (EFI_ERROR (Status)) {
+          // Free the detached node.
+          AmlDeleteTree (Node);
+          goto error_handler;
+        }
+      }
+
+      Status = AmlAttachNode (RpNode, Node);
+      if (EFI_ERROR (Status)) {
+        // Free the detached node.
+        AmlDeleteTree (Node);
+        goto error_handler;
+      }
+
+      Status = UpdateLICAddr (PciInfo, Node, Uid, TH500_SW_IO1_BASE_SOCKET_0);
+      if (EFI_ERROR (Status)) {
+        goto error_handler;
+      }
+
+      break;
     }
 
-    Status = AmlDetachNode (Node);
-    if (EFI_ERROR (Status)) {
-      goto error_handler;
-    }
-
-    Status = AmlAttachNode (RpNode, Node);
-    if (EFI_ERROR (Status)) {
-      // Free the detached node.
-      AmlDeleteTree (Node);
-      goto error_handler;
-    }
+    FreePool (HandleBuffer);
   }
 
 error_handler:

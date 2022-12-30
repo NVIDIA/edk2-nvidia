@@ -1,0 +1,104 @@
+#/** @file
+#
+#  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+#
+#  This program and the accompanying materials
+#  are licensed and made available under the terms and conditions of the BSD License
+#  which accompanies this distribution.  The full text of the license may be found at
+#  http://opensource.org/licenses/bsd-license.php
+#
+#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+#**/
+
+[Defines]
+  INF_VERSION                   = 0x00010005
+  BASE_NAME                     = TH500GpuDxe
+  FILE_GUID                     = f6d05fd7-766a-4548-b95a-d3c4b807cd71
+  MODULE_TYPE                   = UEFI_DRIVER
+  VERSION_STRING                = 0.01
+  EDK_RELEASE_VERSION           = 0x00020000
+  UEFI_SPECIFICATION_VERSION    = 0x0002000A
+
+  ENTRY_POINT                   = NVIDIAGpuDriverEntryPoint
+  UNLOAD_IMAGE                  = NVIDIAGpuDriverUnloadImage
+  DEFINE TH500GPUDXE_SDK_PREFIX = Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/sdk/
+
+[Sources]
+  core/GPUMemoryInfo.c
+  core/GPUSupport.c
+  core/UEFIFspRpc.c
+  efihand/ComponentName2.c
+  efihand/DriverBinding.c
+  efihand/GpuDsdAmlGeneration.c
+  efihand/GpuFirmwareBootComplete.c
+  # Required for Include path when AmlDebugPrint is used
+  DynamicTablesPkg/Library/Common/AmlLib/AmlInclude.h
+
+[BuildOptions]
+  # Enable full SDK
+  GCC:*_*_*_CC_FLAGS      = -D NVIDIA_FULL_SDK
+  MSFT:*_*_*_CC_FLAGS     = /D NVIDIA_FULL_SDK
+
+  # Standard DEBUG build flags
+  GCC:DEBUG_*_*_CC_FLAGS      = -Wno-error -D EFI_DEBUG
+  MSFT:DEBUG_*_*_CC_FLAGS     = /D EFI_DEBUG
+  # Standard RELEASE build flags
+  GCC:RELEASE_*_*_CC_FLAGS    = -Wno-error
+
+  MSFT:*_*_*_CC_FLAGS         = /TC /wd4456 /wd4244
+
+[Binaries]
+
+[Protocols]
+  # EDK protocols
+  gEfiPciIoProtocolGuid
+  gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid
+  gEfiNVIDIAGpuFirmwareBootCompleteGuid
+
+[Ppis]
+
+[Guids]
+  # Used to set and get shell and nvram variables
+  gShellEnvProtocolGuid
+
+  # EDK guids
+  gEfiSmbiosTableGuid
+  gEfiEventReadyToBootGuid
+
+  # ACPI DSD property GUID
+  gDsdDevicePropertyGuid
+
+  gNVIDIAPlatformResourceDataGuid
+
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+
+[Pcd]
+
+[FeaturePcd]
+
+[FixedPcd]
+  # Master Flag
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x2F
+  # Required to enable logging when DebugLib or ReportStatusCode are used for error logging
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x80400042
+  gEfiMdePkgTokenSpaceGuid.PcdFixedDebugPrintErrorLevel|0x80400042
+
+[LibraryClasses]
+  AmlLib
+  BaseLib
+  HobLib
+  UefiLib
+  UefiDriverEntryPoint
+  DevicePathLib
+  DebugLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.dec
+  $(TH500GPUDXE_SDK_PREFIX)TH500GpuDxe-sdk.dec
+
