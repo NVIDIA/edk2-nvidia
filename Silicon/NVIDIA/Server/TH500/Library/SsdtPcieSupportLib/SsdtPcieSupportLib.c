@@ -35,6 +35,7 @@
 #include <Library/SsdtPcieSupportLib.h>
 #include <Protocol/ConfigurationManagerProtocol.h>
 #include <Protocol/RasNsCommPcieDpcDataProtocol.h>
+#include <TH500/TH500Definitions.h>
 
 #include "SsdtPcieSupportLibPrivate.h"
 
@@ -190,6 +191,38 @@ UpdateSharedNSMemAddr (
   return Status;
 }
 
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateLICAddr (
+  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT        AML_OBJECT_NODE_HANDLE        Node,
+  IN             UINT32                        Uid,
+  IN             EFI_PHYSICAL_ADDRESS          Base
+  )
+{
+  EFI_STATUS              Status;
+  AML_OBJECT_NODE_HANDLE  LicaNode;
+  UINT64                  Socket;
+  EFI_PHYSICAL_ADDRESS    Address;
+
+  Socket = Uid >> 4;
+
+  Status = AmlFindNode (Node, "LICA", &LicaNode);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Address = Base | (Socket << 44);
+
+  Status = AmlNameOpUpdateInteger (LicaNode, Address);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return Status;
+}
+
 /** Generate Pci slots devices.
 
   PCI Firmware Specification - Revision 3.3,
@@ -282,6 +315,11 @@ GeneratePciSlots (
   }
 
   Status = UpdateSharedNSMemAddr (PciInfo, RpNode, Uid);
+  if (EFI_ERROR (Status)) {
+    goto error_handler;
+  }
+
+  Status = UpdateLICAddr (PciInfo, RpNode, Uid, TH500_SW_IO4_BASE_SOCKET_0);
   if (EFI_ERROR (Status)) {
     goto error_handler;
   }
