@@ -17,6 +17,20 @@
   0x50740212, 0xd769, 0x4b70, { 0xaf, 0x49, 0x3d, 0xa2, 0x95, 0x4b, 0xe2, 0xca } \
   }
 
+#define C2C_STATUS_INIT_NOT_STARTED         0
+#define C2C_STATUS_C2C_INVALID_SPEEDO_CODE  7
+#define C2C_STATUS_C2C_INVALID_FREQ         8
+#define C2C_STATUS_C2C_INVALID_LINK         9
+#define C2C_STATUS_C2C0_REFPLL_FAIL         10
+#define C2C_STATUS_C2C1_REFPLL_FAIL         11
+#define C2C_STATUS_C2C0_PLLCAL_FAIL         12
+#define C2C_STATUS_C2C1_PLLCAL_FAIL         13
+#define C2C_STATUS_C2C0_CLKDET_FAIL         14
+#define C2C_STATUS_C2C1_CLKDET_FAIL         15
+#define C2C_STATUS_C2C0_TR_FAIL             16
+#define C2C_STATUS_C2C1_TR_FAIL             17
+#define C2C_STATUS_C2C_LINK_TRAIN_PASS      255
+
 typedef enum {
   CmdC2cPartitionNone = 0,
   CmdC2cPartition0    = 1,

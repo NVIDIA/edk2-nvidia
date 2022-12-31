@@ -427,11 +427,17 @@ InitializeController (
         ));
       Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&C2cProtocol);
       if (!EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a: Requesting C2C Initialization\r\n", __FUNCTION__));
         Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions, &C2cStatus);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a: C2C Initialization Failed: %r\r\n", __FUNCTION__, Status));
+          DEBUG ((EFI_D_ERROR, "%a: C2C initialization mrq failed: %r\r\n", __FUNCTION__, Status));
         } else {
-          DEBUG ((EFI_D_ERROR, "%a: C2C Initialization Status: 0x%x\r\n", __FUNCTION__, C2cStatus));
+          DEBUG ((EFI_D_ERROR, "%a: C2C initialization mrq successful.\r\n", __FUNCTION__));
+          if (C2cStatus == C2C_STATUS_C2C_LINK_TRAIN_PASS) {
+            DEBUG ((EFI_D_ERROR, "%a: C2C link training successful.\r\n", __FUNCTION__));
+          } else {
+            DEBUG ((EFI_D_ERROR, "%a: C2C link training failed with error code: 0x%x\r\n", __FUNCTION__, C2cStatus));
+          }
         }
       }
 
