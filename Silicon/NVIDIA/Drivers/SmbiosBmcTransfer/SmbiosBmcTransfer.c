@@ -2,7 +2,7 @@
 
   A driver that sends SMBIOS tables to an OpenBMC receiver
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -103,6 +103,12 @@ SmbiosBmcTransferEntry (
       DEBUG ((DEBUG_ERROR, "%a: Failure writing to blob: %r\n", __FUNCTION__, Status));
       return EFI_ABORTED;
     }
+  }
+
+  Status = IpmiBlobTransfer->BlobCommit (SessionId, 0, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failure sending commit to blob: %r\n", __FUNCTION__, Status));
+    return EFI_ABORTED;
   }
 
   Status = IpmiBlobTransfer->BlobClose (SessionId);
