@@ -136,6 +136,21 @@ InstallSmbiosType9Cm (
   );
 
 /**
+  Install CM object for SMBIOS Type 11
+
+  @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+InstallSmbiosType11Cm (
+  IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
+  );
+
+/**
   Install CM object for SMBIOS Type 38
 
   @param[in, out] Private   Pointer to the private data of SMBIOS creators
