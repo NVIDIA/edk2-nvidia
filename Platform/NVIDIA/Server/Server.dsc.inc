@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -229,7 +229,7 @@
   # PCI Support
   #
   ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
-  Silicon/NVIDIA/Server/TH500/Drivers/PcieControllerDxe/PcieControllerDxe.inf
+  Silicon/NVIDIA/Drivers/PcieControllerDxe/PcieControllerDxe.inf
 
   #
   # Memory Tests
