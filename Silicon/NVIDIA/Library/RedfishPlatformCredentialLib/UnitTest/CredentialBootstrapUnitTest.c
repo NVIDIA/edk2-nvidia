@@ -1,7 +1,7 @@
 /** @file
   Unit tests of the Redfish bootstrap credential library.
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -93,6 +93,7 @@ RCBS_IpmiFailure (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
+  EFI_STATUS                 Status;
   CHAR8                      *Username;
   CHAR8                      *Password;
   EDKII_REDFISH_AUTH_METHOD  AuthMethod;
@@ -100,10 +101,13 @@ RCBS_IpmiFailure (
   Username = NULL;
   Password = NULL;
 
+  UefiRuntimeServicesTableInit (FALSE);
   CopyMem (ResponseResults, &DeviceFailure, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResults, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE), EFI_DEVICE_ERROR);
 
-  UT_EXPECT_ASSERT_FAILURE (LibCredentialGetAuthInfo (NULL, &AuthMethod, &Username, &Password), NULL);
+  Status = LibCredentialGetAuthInfo (NULL, &AuthMethod, &Username, &Password);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
+  UefiRuntimeServicesTableDeinit (FALSE);
 
   FREE_NON_NULL (Username);
   FREE_NON_NULL (Password);
@@ -141,12 +145,14 @@ RCBS_BadCompletion (
   Username = NULL;
   Password = NULL;
 
+  UefiRuntimeServicesTableInit (FALSE);
   CopyMem (ResponseResults, &InvalidCompletion, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResults, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE), EFI_SUCCESS);
 
   Status = LibCredentialGetAuthInfo (NULL, &AuthMethod, &Username, &Password);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
+  UefiRuntimeServicesTableDeinit (FALSE);
 
   FREE_NON_NULL (Username);
   FREE_NON_NULL (Password);
@@ -184,12 +190,14 @@ RCBS_WrongGroupExtension (
   Username = NULL;
   Password = NULL;
 
+  UefiRuntimeServicesTableInit (FALSE);
   CopyMem (ResponseResults, &InvalidGroup, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResults, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE), EFI_SUCCESS);
 
   Status = LibCredentialGetAuthInfo (NULL, &AuthMethod, &Username, &Password);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
+  UefiRuntimeServicesTableDeinit (FALSE);
 
   FREE_NON_NULL (Username);
   FREE_NON_NULL (Password);
@@ -227,6 +235,7 @@ RCBS_ValidData (
   Username = NULL;
   Password = NULL;
 
+  UefiRuntimeServicesTableInit (FALSE);
   CopyMem (ResponseResults, &ValidResponse, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResults, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE), EFI_SUCCESS);
 
@@ -235,6 +244,7 @@ RCBS_ValidData (
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
   UT_ASSERT_EQUAL (AsciiStrCmp (Username, USERNAME_STRING), 0x00);
   UT_ASSERT_EQUAL (AsciiStrCmp (Password, PASSWORD_STRING), 0x00);
+  UefiRuntimeServicesTableDeinit (FALSE);
 
   FREE_NON_NULL (Username);
   FREE_NON_NULL (Password);
@@ -273,6 +283,7 @@ RCBS_EmptyUsernamePassword (
   Username = NULL;
   Password = NULL;
 
+  UefiRuntimeServicesTableInit (FALSE);
   CopyMem (ResponseResults, &EmptyUsernamePassword, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResults, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE), EFI_SUCCESS);
 
@@ -281,6 +292,7 @@ RCBS_EmptyUsernamePassword (
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
   UT_ASSERT_EQUAL (AsciiStrCmp (Username, EMPTY_STRING), 0x00);
   UT_ASSERT_EQUAL (AsciiStrCmp (Password, EMPTY_STRING), 0x00);
+  UefiRuntimeServicesTableDeinit (FALSE);
 
   FREE_NON_NULL (Username);
   FREE_NON_NULL (Password);
@@ -319,6 +331,7 @@ RCBS_ShortUsernamePassword (
   Username = NULL;
   Password = NULL;
 
+  UefiRuntimeServicesTableInit (FALSE);
   CopyMem (ResponseResults, &ShortUsernamePassword, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResults, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE), EFI_SUCCESS);
 
@@ -327,6 +340,7 @@ RCBS_ShortUsernamePassword (
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
   UT_ASSERT_EQUAL (AsciiStrCmp (Username, USERNAME_SHORT), 0x00);
   UT_ASSERT_EQUAL (AsciiStrCmp (Password, PASSWORD_SHORT), 0x00);
+  UefiRuntimeServicesTableDeinit (FALSE);
 
   FREE_NON_NULL (Username);
   FREE_NON_NULL (Password);
@@ -364,6 +378,7 @@ RCBS_CredentialsServiceStopped (
   Username = NULL;
   Password = NULL;
 
+  UefiRuntimeServicesTableInit (FALSE);
   CopyMem (ResponseResults, &ValidResponse, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResults, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE), EFI_SUCCESS);
 
@@ -371,6 +386,7 @@ RCBS_CredentialsServiceStopped (
   Status = LibCredentialGetAuthInfo (NULL, &AuthMethod, &Username, &Password);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_ACCESS_DENIED);
+  UefiRuntimeServicesTableDeinit (FALSE);
 
   FREE_NON_NULL (Username);
   FREE_NON_NULL (Password);
@@ -408,12 +424,14 @@ RCBS_CredentialsSuccessfullyRetrieved (
   Username = NULL;
   Password = NULL;
 
+  UefiRuntimeServicesTableInit (FALSE);
   CopyMem (ResponseResults, &ValidResponse, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResults, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE), EFI_SUCCESS);
 
   Status = LibCredentialGetAuthInfo (NULL, &AuthMethod, &Username, &Password);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  UefiRuntimeServicesTableDeinit (FALSE);
 
   FREE_NON_NULL (Username);
   FREE_NON_NULL (Password);
@@ -442,6 +460,7 @@ RCBS_EntryIpmiFails (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
+  EFI_STATUS                 Status;
   CHAR8                      *Username;
   CHAR8                      *Password;
   EDKII_REDFISH_AUTH_METHOD  AuthMethod;
@@ -449,10 +468,14 @@ RCBS_EntryIpmiFails (
   Username = NULL;
   Password = NULL;
 
+  UefiRuntimeServicesTableInit (FALSE);
   CopyMem (ResponseResults, &InvalidGroup, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResults, sizeof (IPMI_BOOTSTRAP_CREDENTIALS_RESULT_RESPONSE), EFI_NOT_FOUND);
 
-  UT_EXPECT_ASSERT_FAILURE (LibCredentialGetAuthInfo (NULL, &AuthMethod, &Username, &Password), NULL);
+  Status = LibCredentialGetAuthInfo (NULL, &AuthMethod, &Username, &Password);
+
+  UT_ASSERT_STATUS_EQUAL (Status, RETURN_NOT_FOUND);
+  UefiRuntimeServicesTableDeinit (FALSE);
 
   FREE_NON_NULL (Username);
   FREE_NON_NULL (Password);

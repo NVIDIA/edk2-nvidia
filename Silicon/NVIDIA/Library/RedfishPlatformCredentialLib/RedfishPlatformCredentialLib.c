@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -43,6 +43,13 @@ LibStopRedfishService (
   }
 
   //
+  // Only stop credential service after leaving BIOS
+  //
+  if (ServiceStopType != ServiceStopTypeExitBootService) {
+    return EFI_UNSUPPORTED;
+  }
+
+  //
   // Raise flag first
   //
   mRedfishServiceStopped = TRUE;
@@ -50,11 +57,23 @@ LibStopRedfishService (
   //
   // Notify BMC to disable credential bootstrapping support.
   //
-  Status = GetBootstrapAccountCredentials (TRUE, NULL, NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: fail to disable bootstrap credential: %r\n", __FUNCTION__, Status));
-    return Status;
+  if (PcdGetBool (PcdRedfishDisableBootstrapCredentialService)) {
+    Status = GetBootstrapAccountCredentials (TRUE, NULL, NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: fail to disable bootstrap credential: %r\n", __FUNCTION__, Status));
+      return Status;
+    }
   }
+
+  //
+  // Delete cached variable
+  //
+  Status = SetBootstrapAccountCredentialsToVariable (NULL, NULL, TRUE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: fail to remove bootstrap credential: %r\n", __FUNCTION__, Status));
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: bootstrap credential service stopped\n", __FUNCTION__));
 
   return EFI_SUCCESS;
 }
@@ -94,18 +113,18 @@ LibCredentialEndOfDxeNotify (
 }
 
 /**
-  Function to retrieve temporary use credentials for the UEFI redfish client
+  Function to retrieve temporary user credentials for the UEFI redfish client
 
   @param[in]  DisableBootstrapControl
                                       TRUE - Tell the BMC to disable the bootstrap credential
                                              service to ensure no one else gains credentials
                                       FALSE  Allow the bootstrap credential service to continue
   @param[out] BootstrapUsername
-                                      A pointer to a UTF-8 encoded string for the credential username
+                                      A pointer to a Ascii encoded string for the credential username
                                       When DisableBootstrapControl is TRUE, this pointer can be NULL
 
   @param[out] BootstrapPassword
-                                      A pointer to a UTF-8 encoded string for the credential password
+                                      A pointer to a Ascii encoded string for the credential password
                                       When DisableBootstrapControl is TRUE, this pointer can be NULL
 
   @retval  EFI_SUCCESS                Credentials were successfully fetched and returned
@@ -168,7 +187,6 @@ GetBootstrapAccountCredentials (
 
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: IPMI transaction failure. Returning\n", __FUNCTION__));
-    ASSERT_EFI_ERROR (Status);
     return Status;
   } else {
     if (ResponseData.CompletionCode != IPMI_COMP_CODE_NORMAL) {
@@ -200,6 +218,141 @@ GetBootstrapAccountCredentials (
       }
     }
   }
+
+  DEBUG ((DEBUG_INFO, "%a: get bootstrap credential via IPMI: %r\n", __FUNCTION__, Status));
+
+  return Status;
+}
+
+/**
+  Function to retrieve temporary user credentials from cached boot time variable.
+
+  @param[out] BootstrapUsername       A pointer to a Ascii encoded string for the credential username
+  @param[out] BootstrapPassword       A pointer to a Ascii encoded string for the credential password
+
+  @retval  EFI_SUCCESS                Credentials were successfully fetched and returned
+  @retval  EFI_INVALID_PARAMETER      BootstrapUsername or BootstrapPassword is NULL
+  @retval  EFI_NOT_FOUND              No variable found for account and credentails
+**/
+EFI_STATUS
+GetBootstrapAccountCredentialsFromVariable (
+  IN OUT CHAR8  *BootstrapUsername,
+  IN OUT CHAR8  *BootstrapPassword
+  )
+{
+  EFI_STATUS                      Status;
+  BOOTSTRAP_CREDENTIALS_VARIABLE  *CredentialVariable;
+  VOID                            *Data;
+  UINTN                           DataSize;
+
+  if ((BootstrapUsername == NULL) || (BootstrapPassword == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  DataSize = 0;
+  Status   = GetVariable2 (
+               CREDENTIAL_VARIABLE_NAME,
+               &gEfiRedfishVariableGuid,
+               (VOID *)&Data,
+               &DataSize
+               );
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_FOUND;
+  }
+
+  if (DataSize != sizeof (BOOTSTRAP_CREDENTIALS_VARIABLE)) {
+    DEBUG ((DEBUG_ERROR, "%a: data corruption. returned size: %d != structure size: %d\n", __FUNCTION__, DataSize, sizeof (BOOTSTRAP_CREDENTIALS_VARIABLE)));
+    return EFI_NOT_FOUND;
+  }
+
+  CredentialVariable = (BOOTSTRAP_CREDENTIALS_VARIABLE *)Data;
+
+  AsciiStrCpyS (BootstrapUsername, USERNAME_MAX_SIZE, CredentialVariable->Username);
+  AsciiStrCpyS (BootstrapPassword, PASSWORD_MAX_SIZE, CredentialVariable->Password);
+
+  ZeroMem (CredentialVariable->Username, USERNAME_MAX_SIZE);
+  ZeroMem (CredentialVariable->Password, PASSWORD_MAX_SIZE);
+
+  FreePool (Data);
+
+  DEBUG ((DEBUG_INFO, "%a: get bootstrap credential from variable\n", __FUNCTION__));
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Function to save temporary user credentials into boot time variable. When DeleteVariable is True,
+  this function delete boot time variable.
+
+  @param[in] BootstrapUsername       A pointer to a Ascii encoded string for the credential username.
+  @param[in] BootstrapPassword       A pointer to a Ascii encoded string for the credential password.
+  @param[in] DeleteVariable          True to remove boot time variable. False otherwise.
+
+  @retval  EFI_SUCCESS                Credentials were successfully saved.
+  @retval  EFI_INVALID_PARAMETER      BootstrapUsername or BootstrapPassword is NULL
+  @retval  Others                     Error occurs
+**/
+EFI_STATUS
+SetBootstrapAccountCredentialsToVariable (
+  IN CHAR8 *BootstrapUsername, OPTIONAL
+  IN CHAR8  *BootstrapPassword, OPTIONAL
+  IN BOOLEAN DeleteVariable
+  )
+{
+  EFI_STATUS                      Status;
+  BOOTSTRAP_CREDENTIALS_VARIABLE  CredentialVariable;
+  VOID                            *Data;
+
+  if (!DeleteVariable && ((BootstrapUsername == NULL) || (BootstrapUsername[0] == '\0'))) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (!DeleteVariable && ((BootstrapPassword == NULL) || (BootstrapPassword[0] == '\0'))) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  //
+  // Delete variable
+  //
+  if (DeleteVariable) {
+    Status = GetVariable2 (
+               CREDENTIAL_VARIABLE_NAME,
+               &gEfiRedfishVariableGuid,
+               (VOID *)&Data,
+               NULL
+               );
+    if (!EFI_ERROR (Status)) {
+      FreePool (Data);
+      gRT->SetVariable (CREDENTIAL_VARIABLE_NAME, &gEfiRedfishVariableGuid, EFI_VARIABLE_BOOTSERVICE_ACCESS, 0, NULL);
+    }
+
+    return EFI_SUCCESS;
+  }
+
+  ZeroMem (CredentialVariable.Username, USERNAME_MAX_SIZE);
+  ZeroMem (CredentialVariable.Password, PASSWORD_MAX_SIZE);
+
+  AsciiStrCpyS (CredentialVariable.Username, USERNAME_MAX_SIZE, BootstrapUsername);
+  AsciiStrCpyS (CredentialVariable.Password, PASSWORD_MAX_SIZE, BootstrapPassword);
+
+  //
+  // Check if variable exists already. If yes, remove it first.
+  //
+  Status = GetVariable2 (
+             CREDENTIAL_VARIABLE_NAME,
+             &gEfiRedfishVariableGuid,
+             (VOID *)&Data,
+             NULL
+             );
+  if (!EFI_ERROR (Status)) {
+    FreePool (Data);
+    gRT->SetVariable (CREDENTIAL_VARIABLE_NAME, &gEfiRedfishVariableGuid, EFI_VARIABLE_BOOTSERVICE_ACCESS, 0, NULL);
+  }
+
+  Status = gRT->SetVariable (CREDENTIAL_VARIABLE_NAME, &gEfiRedfishVariableGuid, EFI_VARIABLE_BOOTSERVICE_ACCESS, sizeof (BOOTSTRAP_CREDENTIALS_VARIABLE), (VOID *)&CredentialVariable);
+
+  ZeroMem (CredentialVariable.Username, USERNAME_MAX_SIZE);
+  ZeroMem (CredentialVariable.Password, PASSWORD_MAX_SIZE);
 
   return Status;
 }
@@ -263,10 +416,26 @@ LibCredentialGetAuthInfo (
     return EFI_OUT_OF_RESOURCES;
   }
 
+  //
+  // Get bootstrap credential from variable first
+  //
+  Status = GetBootstrapAccountCredentialsFromVariable (*UserId, *Password);
+  if (!EFI_ERROR (Status)) {
+    return EFI_SUCCESS;
+  }
+
+  //
+  // Make a IPMI query
+  //
   Status = GetBootstrapAccountCredentials (FALSE, *UserId, *Password);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: fail to get bootstrap credential: %r\n", __FUNCTION__, Status));
     return Status;
+  }
+
+  Status = SetBootstrapAccountCredentialsToVariable (*UserId, *Password, FALSE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: fail to cache bootstrap credential: %r\n", __FUNCTION__, Status));
   }
 
   return EFI_SUCCESS;
