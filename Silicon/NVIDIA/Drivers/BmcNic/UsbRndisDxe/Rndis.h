@@ -2,7 +2,7 @@
   Definitions for USB RNDIS interface.
 
   Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -48,9 +48,8 @@
 
 #define USB_INCREASE_REQUEST_ID(a)  ((a)++)
 #define USB_RESET_REQUEST_ID(a)     ((a) = 0x1)
-#define USB_BACKGROUND_PULL_INTERVAL    (10 * TICKS_PER_MS) // 10 ms
-#define USB_BACKGROUND_SLOW_PULL_COUNT  200                 // 200 * 10ms = slow pull is 2 second interval.
-#define USB_LANGUAGE_ID_ENGLISH         0x0409              // English
+#define USB_BACKGROUND_PULL_INTERVAL  (1000 * TICKS_PER_MS) // slow down polling to 1 second interval.
+#define USB_LANGUAGE_ID_ENGLISH       0x0409                // English
 
 //
 // Per MS-RNDIS
@@ -460,20 +459,6 @@ RndisReceiveDequeue (
   );
 
 /**
-  This is the timer controlling the receive packet rate.
-
-  @param[in]  Event        The event this notify function registered to.
-  @param[in]  Context      Pointer to the context data registered to the event.
-
-**/
-VOID
-EFIAPI
-RndisReceiveTimer (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
-  );
-
-/**
   Ask receive timer to receive data immediately.
 
   @param[in]      Private       Poniter to private data
@@ -484,6 +469,35 @@ RndisReceiveTimer (
 **/
 VOID
 UndisReceiveNow (
+  IN USB_RNDIS_PRIVATE_DATA  *Private
+  );
+
+/**
+  This is the timer controlling the receive packet rate.
+
+  @param[in]  Event        The event this notify function registered to.
+  @param[in]  Context      Pointer to the context data registered to the event.
+
+**/
+VOID
+EFIAPI
+RndisReceiveControlTimer (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  );
+
+/**
+  This is worker to receive data from network and it returns until there is
+  no network data available.
+
+  Private       Pointer to private data.
+
+  @retval EFI_SUCCESS           function is finished successfully.
+  @retval Others                Error occurs.
+
+**/
+EFI_STATUS
+RndisReceiveWorker (
   IN USB_RNDIS_PRIVATE_DATA  *Private
   );
 

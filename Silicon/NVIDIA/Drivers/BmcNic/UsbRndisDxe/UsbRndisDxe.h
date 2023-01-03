@@ -1,7 +1,7 @@
 /** @file
   Definition of USB RNDIS driver.
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,17 +15,14 @@
 //
 // Include Protocols that are consumed
 //
-#include <Protocol/SimpleNetwork.h>
 #include <Protocol/UsbIo.h>
 #include <Protocol/DevicePath.h>
 
 //
 // Include Protocols that are produced
 //
-
-//
-// Include GUIDs that are consumed
-//
+#include <Protocol/SimpleNetwork.h>
+#include <Protocol/UsbNicInfoProtocol.h>
 
 //
 // Include Library Classes commonly used by UEFI Drivers
@@ -105,32 +102,33 @@ typedef struct {
 // Driver private data
 //
 typedef struct {
-  UINTN                          Signature;
-  UINT32                         Id;
-  EFI_HANDLE                     Controller;
-  EFI_HANDLE                     ControllerData;
-  EFI_HANDLE                     Handle;
+  UINTN                           Signature;
+  UINT32                          Id;
+  EFI_HANDLE                      Controller;
+  EFI_HANDLE                      ControllerData;
+  EFI_HANDLE                      Handle;
 
   //
   // Pointers to consumed protocols
   //
-  EFI_USB_IO_PROTOCOL            *UsbIoProtocol;
-  EFI_USB_IO_PROTOCOL            *UsbIoDataProtocol;
-  EFI_DEVICE_PATH_PROTOCOL       *DevicePathProtocol;
+  EFI_USB_IO_PROTOCOL             *UsbIoProtocol;
+  EFI_USB_IO_PROTOCOL             *UsbIoDataProtocol;
+  EFI_DEVICE_PATH_PROTOCOL        *DevicePathProtocol;
 
   //
   // Pointers to produced protocols
   //
-  EFI_SIMPLE_NETWORK_PROTOCOL    SnpProtocol;
+  EFI_SIMPLE_NETWORK_PROTOCOL     SnpProtocol;
+  NVIDIA_USB_NIC_INFO_PROTOCOL    UsbNicInfoProtocol;
 
   //
   // Private functions and data fields
   //
-  EFI_SIMPLE_NETWORK_MODE        SnpModeData;
-  USB_PRIVATE_DATA               UsbData;
-
-  EFI_EVENT                      ReceiverTimer;
-  UINTN                          ReceiverSlowPullCount;
+  EFI_SIMPLE_NETWORK_MODE         SnpModeData;
+  USB_PRIVATE_DATA                UsbData;
+  EFI_EVENT                       ReceiverControlTimer;
+  BOOLEAN                         ReceiverSlowWaitFlag;
+  BOOLEAN                         DeviceLost;
 } USB_RNDIS_PRIVATE_DATA;
 
 #define USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS(a) \
@@ -149,6 +147,14 @@ typedef struct {
     USB_RNDIS_PRIVATE_DATA_SIGNATURE \
     )
 
+#define USB_RNDIS_PRIVATE_DATA_FROM_USB_NIC_INFO_THIS(a) \
+  CR(                                      \
+    a,                                     \
+    USB_RNDIS_PRIVATE_DATA,          \
+    UsbNicInfoProtocol,                    \
+    USB_RNDIS_PRIVATE_DATA_SIGNATURE \
+    )
+
 //
 // Useful macro to release buffer while it is not NULL
 //
@@ -157,5 +163,19 @@ typedef struct {
     FreePool ((a));  \
     (a) = NULL;      \
   }
+
+/**
+  Initial RNDIS USB NIC Information protocol.
+
+  @param[in]      Private       Poniter to private data
+
+  @retval EFI_SUCCESS           function is finished successfully.
+  @retval Others                Error occurs.
+
+**/
+EFI_STATUS
+UsbRndisInitialUsbNicInfo (
+  IN  USB_RNDIS_PRIVATE_DATA  *Private
+  );
 
 #endif

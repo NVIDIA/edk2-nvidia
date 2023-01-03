@@ -1,7 +1,7 @@
 /** @file
   Provides the Simple Network functions.
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -41,9 +41,15 @@ UsbRndisSnpStart (
     return EFI_ALREADY_STARTED;
   }
 
-  TplPrevious                = gBS->RaiseTPL (TPL_CALLBACK);
-  Private                    = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
+  Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
+  if (Private->DeviceLost) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
+
   Private->SnpModeData.State = EfiSimpleNetworkStarted;
+
   gBS->RestoreTPL (TplPrevious);
 
   return EFI_SUCCESS;
@@ -79,9 +85,15 @@ UsbRndisSnpStop (
     return EFI_ALREADY_STARTED;
   }
 
-  TplPrevious                = gBS->RaiseTPL (TPL_CALLBACK);
-  Private                    = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
+  Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
+  if (Private->DeviceLost) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
+
   Private->SnpModeData.State = EfiSimpleNetworkStopped;
+
   gBS->RestoreTPL (TplPrevious);
 
   return EFI_SUCCESS;
@@ -138,11 +150,16 @@ UsbRndisSnpInitialize (
     return EFI_NOT_STARTED;
   }
 
-  TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
-  Private     = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
-  Status      = UsbRndisInitialDevice (Private->UsbIoProtocol, USB_INCREASE_REQUEST_ID (Private->UsbData.RequestId), &Private->UsbData);
+  Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
+  if (Private->DeviceLost) {
+    return EFI_DEVICE_ERROR;
+  }
 
+  TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
+
+  Status                     = UsbRndisInitialDevice (Private->UsbIoProtocol, USB_INCREASE_REQUEST_ID (Private->UsbData.RequestId), &Private->UsbData);
   Private->SnpModeData.State = EfiSimpleNetworkInitialized;
+
   gBS->RestoreTPL (TplPrevious);
 
   return Status;
@@ -184,12 +201,17 @@ UsbRndisSnpReset (
     return EFI_NOT_STARTED;
   }
 
-  TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
-  Private     = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
-  Status      = UsbRndisResetDevice (Private->UsbIoProtocol, USB_INCREASE_REQUEST_ID (Private->UsbData.RequestId));
+  Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
+  if (Private->DeviceLost) {
+    return EFI_DEVICE_ERROR;
+  }
 
+  TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
+
+  Status = UsbRndisResetDevice (Private->UsbIoProtocol, USB_INCREASE_REQUEST_ID (Private->UsbData.RequestId));
   USB_RESET_REQUEST_ID (Private->UsbData.RequestId);
   Private->SnpModeData.State = EfiSimpleNetworkStopped;
+
   gBS->RestoreTPL (TplPrevious);
 
   return Status;
@@ -227,12 +249,17 @@ UsbRndisSnpShutdown (
     return EFI_NOT_STARTED;
   }
 
-  TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
-  Private     = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
-  Status      = UsbRndisShutdownDevice (Private->UsbIoProtocol);
+  Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
+  if (Private->DeviceLost) {
+    return EFI_DEVICE_ERROR;
+  }
 
+  TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
+
+  Status = UsbRndisShutdownDevice (Private->UsbIoProtocol);
   USB_RESET_REQUEST_ID (Private->UsbData.RequestId);
   Private->SnpModeData.State = EfiSimpleNetworkStopped;
+
   gBS->RestoreTPL (TplPrevious);
 
   return Status;
@@ -286,8 +313,12 @@ UsbRndisSnpReceiveFilters (
     return EFI_NOT_STARTED;
   }
 
+  Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
+  if (Private->DeviceLost) {
+    return EFI_DEVICE_ERROR;
+  }
+
   TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
-  Private     = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
 
   //
   // check if we are asked to enable or disable something that the SNP
@@ -497,11 +528,19 @@ UsbRndisSnpGetSatus (
     return EFI_NOT_STARTED;
   }
 
+  Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
+  if (Private->DeviceLost) {
+    return EFI_DEVICE_ERROR;
+  }
+
   TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
-  Private     = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
 
   if (InterruptStatus != NULL) {
     *InterruptStatus = 0;
+  }
+
+  if (TxBuf != NULL) {
+    *TxBuf = NULL;
   }
 
   Private->SnpProtocol.Mode->MediaPresent = (Private->UsbData.MediaStatus == RNDIS_MEDIA_STATE_CONNECTED ? TRUE : FALSE);
@@ -584,10 +623,15 @@ UsbRndisSnpTransmit (
   }
 
   Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
+  if (Private->DeviceLost) {
+    return EFI_DEVICE_ERROR;
+  }
 
-  if (BufferSize > Private->UsbData.MaxFrameSize) {
-    DEBUG ((DEBUG_ERROR, "%a, buffer size exceeds MTU: (%d/%d)\n", __FUNCTION__, BufferSize, Private->UsbData.MaxFrameSize));
+  if (BufferSize > Private->UsbData.MaxTransferSize) {
+    DEBUG ((DEBUG_ERROR, "%a, buffer size exceeds Max Transfer Size: (%d/%d)\n", __FUNCTION__, BufferSize, Private->UsbData.MaxTransferSize));
     return EFI_UNSUPPORTED;
+  } else if (BufferSize > Private->UsbData.MaxFrameSize) {
+    DEBUG ((DEBUG_ERROR, "%a, buffer size exceeds MTU: (%d/%d)\n", __FUNCTION__, BufferSize, Private->UsbData.MaxFrameSize));
   }
 
   DEBUG_CODE_BEGIN ();
@@ -725,8 +769,16 @@ UsbRndisSnpReceive (
     return EFI_NOT_STARTED;
   }
 
+  Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
+  if (Private->DeviceLost) {
+    //
+    // Return EFI_NOT_READY because EFI_DEVICE_ERROR will
+    // trigger error storm in MNP driver.
+    //
+    return EFI_NOT_READY;
+  }
+
   TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
-  Private     = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
 
   RndisBuffer = NULL;
   Status      = RndisReceiveDequeue (
@@ -735,8 +787,19 @@ UsbRndisSnpReceive (
                   &Length
                   );
   if (EFI_ERROR (Status)) {
-    Status = EFI_NOT_READY;
-    goto OnRelease;
+    //
+    // Call receive worker when queue is empty.
+    //
+    RndisReceiveWorker (Private);
+    Status = RndisReceiveDequeue (
+               &Private->UsbData,
+               (UINT8 **)&RndisBuffer,
+               &Length
+               );
+    if (EFI_ERROR (Status)) {
+      Status = EFI_NOT_READY;
+      goto OnRelease;
+    }
   }
 
   RndisPacketMsg = (RNDIS_PACKET_MSG_DATA *)RndisBuffer;
@@ -803,7 +866,7 @@ OnRelease:
   DEBUG_CODE_BEGIN ();
   if (!EFI_ERROR (Status)) {
     DEBUG ((USB_DEBUG_SNP, "%a, BufferSize: %d\n", __FUNCTION__, *BufferSize));
-    DumpRawBuffer (USB_DEBUG_RNDIS_TRANSFER, Buffer, *BufferSize);
+    DumpRawBuffer (USB_DEBUG_SNP, Buffer, *BufferSize);
   } else {
     DEBUG ((USB_DEBUG_SNP_TRACE, "%a, done: %r\n", __FUNCTION__, Status));
   }
@@ -831,6 +894,10 @@ UsbRndisInitialSnpService (
 
   if (Private == NULL) {
     return EFI_INVALID_PARAMETER;
+  }
+
+  if (Private->DeviceLost) {
+    return EFI_DEVICE_ERROR;
   }
 
   DEBUG ((USB_DEBUG_SNP_TRACE, "%a\n", __FUNCTION__));

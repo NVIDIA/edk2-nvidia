@@ -1,7 +1,7 @@
 /** @file
   Implement the RNDIS interface.
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -591,7 +591,6 @@ RndisReceiveEnqueue (
   IN  UINTN             BufferSize
   )
 {
-  EFI_TPL         OldTpl;
   USB_QUEUE_NODE  *NewNode;
 
   if ((Private == NULL) || (Buffer == NULL) || (BufferSize == 0)) {
@@ -605,8 +604,6 @@ RndisReceiveEnqueue (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
-
   NewNode = AllocatePool (sizeof (USB_QUEUE_NODE));
   if (NewNode != NULL) {
     NewNode->Signature  = USB_QUEUE_NODE_SIGNATURE;
@@ -616,11 +613,8 @@ RndisReceiveEnqueue (
     InsertTailList (&Private->ReceiveQueue, &NewNode->Link);
     Private->QueueCount += 1;
 
-    gBS->RestoreTPL (OldTpl);
     return EFI_SUCCESS;
   }
-
-  gBS->RestoreTPL (OldTpl);
 
   return EFI_OUT_OF_RESOURCES;
 }
@@ -643,7 +637,6 @@ RndisReceiveDequeue (
   OUT UINTN             *BufferSize
   )
 {
-  EFI_TPL         OldTpl;
   LIST_ENTRY      *Link;
   USB_QUEUE_NODE  *Node;
 
@@ -655,10 +648,7 @@ RndisReceiveDequeue (
 
   *BufferSize = 0;
 
-  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
-
   if (IsListEmpty (&Private->ReceiveQueue)) {
-    gBS->RestoreTPL (OldTpl);
     return EFI_NOT_FOUND;
   }
 
@@ -672,22 +662,20 @@ RndisReceiveDequeue (
   FreePool (Node);
   Private->QueueCount -= 1;
 
-  gBS->RestoreTPL (OldTpl);
-
   return EFI_SUCCESS;
 }
 
 /**
-  A background worker to receive data from USB device on regular basis.
+  This function receives data from USB device and push it to queue for later use.
 
-  @param[in]      Private           Pointer to private data.
+  @param[in]      Private       Pointer to private data.
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.
 
 **/
 EFI_STATUS
-UsbRndisBackgroundReceive (
+UsbRndisReceive (
   IN  USB_RNDIS_PRIVATE_DATA  *Private
   )
 {
@@ -700,7 +688,7 @@ UsbRndisBackgroundReceive (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (Private->UsbData.EndPoint.BulkIn == 0) {
+  if ((Private->UsbIoProtocol == NULL) || (Private->UsbData.EndPoint.BulkIn == 0)) {
     return EFI_NOT_READY;
   }
 
@@ -957,7 +945,7 @@ UsbRndisInitialRndisDevice (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (Private->UsbIoProtocol == NULL) {
+  if ((Private->UsbIoProtocol == NULL)) {
     return EFI_NOT_READY;
   }
 
@@ -1108,25 +1096,11 @@ UsbRndisInitialRndisDevice (
     Private->UsbData.CurrentAddress.Addr[5]
     ));
 
-  //
-  // Start background receiver
-  //
-  Private->ReceiverSlowPullCount = USB_BACKGROUND_SLOW_PULL_COUNT;
-  Status                         = gBS->SetTimer (
-                                          Private->ReceiverTimer,
-                                          TimerPeriodic,
-                                          USB_BACKGROUND_PULL_INTERVAL
-                                          );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a, Start timer failed: %r\n", __FUNCTION__, Status));
-    return Status;
-  }
-
   return EFI_SUCCESS;
 }
 
 /**
-  Ask receive timer to receive data immediately.
+  Ask receiver control to receive data immediately.
 
   @param[in]      Private       Poniter to private data
 
@@ -1141,13 +1115,55 @@ UndisReceiveNow (
 {
   EFI_TPL  OldTpl;
 
-  if (Private == NULL) {
+  if ((Private == NULL) || (Private->ReceiverControlTimer == NULL)) {
     return;
   }
 
   OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
 
-  Private->ReceiverSlowPullCount = 0;
+  gBS->SetTimer (Private->ReceiverControlTimer, TimerCancel, 0);
+  Private->ReceiverSlowWaitFlag = FALSE;
+
+  gBS->RestoreTPL (OldTpl);
+}
+
+/**
+  Ask receiver control to slow down receive ratio.
+
+  @param[in]      Private       Poniter to private data
+
+  @retval EFI_SUCCESS           function is finished successfully.
+  @retval Others                Error occurs.
+
+**/
+VOID
+UndisReceiveSlowDown (
+  IN USB_RNDIS_PRIVATE_DATA  *Private
+  )
+{
+  EFI_TPL     OldTpl;
+  EFI_STATUS  Status;
+
+  if ((Private == NULL) || (Private->ReceiverControlTimer == NULL)) {
+    return;
+  }
+
+  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
+
+  //
+  // Start receiver control timer
+  //
+  Private->ReceiverSlowWaitFlag = TRUE;
+  Status                        = gBS->SetTimer (
+                                         Private->ReceiverControlTimer,
+                                         TimerRelative,
+                                         USB_BACKGROUND_PULL_INTERVAL
+                                         );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a, Start timer failed: %r\n", __FUNCTION__, Status));
+  } else {
+    Private->ReceiverSlowWaitFlag = TRUE;
+  }
 
   gBS->RestoreTPL (OldTpl);
 }
@@ -1161,31 +1177,50 @@ UndisReceiveNow (
 **/
 VOID
 EFIAPI
-RndisReceiveTimer (
+RndisReceiveControlTimer (
   IN EFI_EVENT  Event,
   IN VOID       *Context
   )
 {
   USB_RNDIS_PRIVATE_DATA  *Private;
-  EFI_STATUS              Status;
 
   Private = (USB_RNDIS_PRIVATE_DATA *)Context;
-
-  if (Private->ReceiverSlowPullCount > 0) {
-    Private->ReceiverSlowPullCount -= 1;
+  if (Private == NULL) {
     return;
   }
 
   //
-  // When receive error happens, slow down to 2 second.
+  // Turn off flag and exit. This is called at TPL_NOTIFY level.
   //
-  Private->ReceiverSlowPullCount = USB_BACKGROUND_SLOW_PULL_COUNT;
+  Private->ReceiverSlowWaitFlag = FALSE;
+}
+
+/**
+  This is worker to receive data from network and it returns until there is
+  no network data available.
+
+  Private       Pointer to private data.
+
+  @retval EFI_SUCCESS           function is finished successfully.
+  @retval Others                Error occurs.
+
+**/
+EFI_STATUS
+RndisReceiveWorker (
+  IN USB_RNDIS_PRIVATE_DATA  *Private
+  )
+{
+  EFI_STATUS  Status;
+
+  if (Private->ReceiverSlowWaitFlag) {
+    return EFI_NOT_READY;
+  }
 
   //
   // Receive data from USB device until failure happens.
   //
   do {
-    Status = UsbRndisBackgroundReceive (Private);
+    Status = UsbRndisReceive (Private);
     if (EFI_ERROR (Status)) {
       DEBUG ((USB_DEBUG_RNDIS_TRACE, "%a, receive failed: %r\n", __FUNCTION__, Status));
     }
@@ -1194,4 +1229,11 @@ RndisReceiveTimer (
     // Leave loop when there is no data or when queue is full.
     //
   } while (!EFI_ERROR (Status) && Private->UsbData.QueueCount < RNDIS_RECEIVE_QUEUE_MAX);
+
+  //
+  // When receive error happens, slow down to USB_BACKGROUND_PULL_INTERVAL receive ratio.
+  //
+  UndisReceiveSlowDown (Private);
+
+  return Status;
 }

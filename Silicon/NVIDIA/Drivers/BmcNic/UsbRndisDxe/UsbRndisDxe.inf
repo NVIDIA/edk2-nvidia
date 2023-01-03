@@ -1,7 +1,7 @@
 ## @file
 #  Component description file for OpenBMC USB over LAN driver.
 #
-#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -26,11 +26,13 @@
   UsbRndisDxe.c
   UsbRndisDxe.h
   ComponentName.c
+  UsbNicInfo.c
 
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   NetworkPkg/NetworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   BaseMemoryLib
@@ -45,6 +47,7 @@
   gEfiDevicePathProtocolGuid           ## BY_START
   gEfiSimpleNetworkProtocolGuid        ## BY_START
   gEfiUsbIoProtocolGuid                ## TO_START
+  gNVIDIAUsbNicInfoProtocolGuid        ## BY_START
 
 [Pcd]
   gEfiMdePkgTokenSpaceGuid.PcdUsbTransferTimeoutValue

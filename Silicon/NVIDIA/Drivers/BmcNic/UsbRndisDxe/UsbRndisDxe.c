@@ -3,7 +3,7 @@
 
   Copyright (c) 2011, Intel Corporation. All rights reserved.
   Copyright (c) 2020, ARM Limited. All rights reserved
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -44,14 +44,14 @@ NewUsbRndisPrivate (
   InitializeListHead (&NewBuf->UsbData.ReceiveQueue);
 
   //
-  // receive timer.
+  // receiver control timer.
   //
   Status = gBS->CreateEvent (
                   EVT_NOTIFY_SIGNAL | EVT_TIMER,
-                  TPL_CALLBACK,
-                  RndisReceiveTimer,
+                  TPL_NOTIFY,
+                  RndisReceiveControlTimer,
                   NewBuf,
-                  &NewBuf->ReceiverTimer
+                  &NewBuf->ReceiverControlTimer
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a, failed to create event: %r\n", __FUNCTION__, Status));
@@ -80,10 +80,10 @@ ReleaseUsbRndisPrivate (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (Private->ReceiverTimer != NULL) {
-    gBS->SetTimer (Private->ReceiverTimer, TimerCancel, 0);
-    gBS->CloseEvent (Private->ReceiverTimer);
-    Private->ReceiverTimer = NULL;
+  if (Private->ReceiverControlTimer != NULL) {
+    gBS->SetTimer (Private->ReceiverControlTimer, TimerCancel, 0);
+    gBS->CloseEvent (Private->ReceiverControlTimer);
+    Private->ReceiverControlTimer = NULL;
   }
 
   if (Private->UsbIoProtocol != NULL) {
@@ -93,6 +93,7 @@ ReleaseUsbRndisPrivate (
            DriverBinding->DriverBindingHandle,
            Private->Controller
            );
+    Private->UsbIoProtocol = NULL;
   }
 
   if (Private->UsbIoDataProtocol != NULL) {
@@ -102,6 +103,7 @@ ReleaseUsbRndisPrivate (
            DriverBinding->DriverBindingHandle,
            Private->ControllerData
            );
+    Private->UsbIoDataProtocol = NULL;
   }
 
   if (Private->DevicePathProtocol != NULL) {
@@ -325,6 +327,8 @@ UsbRndisDriverStart (
                     &Private->Handle,
                     &gEfiSimpleNetworkProtocolGuid,
                     &Private->SnpProtocol,
+                    &gNVIDIAUsbNicInfoProtocolGuid,
+                    &Private->UsbNicInfoProtocol,
                     NULL
                     );
     if (EFI_ERROR (Status)) {
@@ -340,6 +344,7 @@ UsbRndisDriverStart (
     return EFI_OUT_OF_RESOURCES;
   }
 
+  Private->DeviceLost    = FALSE;
   Private->UsbIoProtocol = UsbIo;
 
   //
@@ -348,6 +353,15 @@ UsbRndisDriverStart (
   Status = UsbRndisInitialSnpService (Private);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: UsbRndisInitialSnpService: %r\n", __FUNCTION__, Status));
+    goto OnError;
+  }
+
+  //
+  // Initialize USB NIC info protocol
+  //
+  Status = UsbRndisInitialUsbNicInfo (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: UsbRndisInitialUsbNicInfo: %r\n", __FUNCTION__, Status));
     goto OnError;
   }
 
@@ -396,19 +410,33 @@ UsbRndisDriverStart (
   DEBUG_CODE_END ();
 
   //
-  //  Install both the simple network and device path protocols.
+  //  Install both the caller id and device path protocols.
   //
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &Controller,
+                  &gEfiCallerIdGuid,
+                  &Private->Id,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a, install caller id failed: %r\n", __FUNCTION__, Status));
+    goto OnError;
+  }
+
   Private->Handle = NULL;
   Status          = gBS->InstallMultipleProtocolInterfaces (
                            &Private->Handle,
-                           &gEfiCallerIdGuid,
-                           &Private->Id,
                            &gEfiDevicePathProtocolGuid,
                            Private->DevicePathProtocol,
                            NULL
                            );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a, install protocol failed: %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, install device path protocol failed: %r\n", __FUNCTION__, Status));
+    gBS->UninstallProtocolInterface (
+           Controller,
+           &gEfiCallerIdGuid,
+           &Private->Id
+           );
     goto OnError;
   }
 
@@ -446,9 +474,9 @@ UsbRndisDriverStop (
   IN  EFI_HANDLE                   *ChildHandleBuffer
   )
 {
-  EFI_SIMPLE_NETWORK_PROTOCOL  *SimpleNetwork;
-  USB_RNDIS_PRIVATE_DATA       *Private;
-  EFI_STATUS                   Status;
+  USB_RNDIS_PRIVATE_DATA  *Private;
+  EFI_STATUS              Status;
+  UINT32                  *Id;
 
   ASSERT (NumberOfChildren == 0);
 
@@ -456,41 +484,53 @@ UsbRndisDriverStop (
 
   Status = gBS->OpenProtocol (
                   Controller,
-                  &gEfiSimpleNetworkProtocolGuid,
-                  (VOID **)&SimpleNetwork,
+                  &gEfiCallerIdGuid,
+                  (VOID **)&Id,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
-    gBS->CloseProtocol (
-           Controller,
-           &gEfiDevicePathProtocolGuid,
-           This->DriverBindingHandle,
-           Controller
-           );
-    gBS->CloseProtocol (
-           Controller,
-           &gEfiUsbIoProtocolGuid,
-           This->DriverBindingHandle,
-           Controller
-           );
-    return EFI_SUCCESS;
+    DEBUG ((DEBUG_ERROR, "%a, no caller id found: %r\n", __FUNCTION__, Status));
+    return EFI_UNSUPPORTED;
   }
 
-  Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (SimpleNetwork);
+  Private = USB_RNDIS_PRIVATE_DATA_FROM_ID (Id);
 
+  //
+  // SNP protocol may not be uninstalled because MNP is using it.
+  // Set this flag because we no long can communicate with USB NIC.
+  //
+  Private->DeviceLost = TRUE;
+  DEBUG ((DEBUG_INFO, "%a, USB NIC lost!!\n", __FUNCTION__));
+
+  //
+  // Uninstall caller id.
+  //
+  Status = gBS->UninstallProtocolInterface (
+                  Controller,
+                  &gEfiCallerIdGuid,
+                  &Private->Id
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a, uninstall caller ID failed: %r\n", __FUNCTION__, Status));
+  }
+
+  //
+  // Uninstall protocols
+  //
   Status = gBS->UninstallMultipleProtocolInterfaces (
                   Private->Handle,
-                  &gEfiCallerIdGuid,
-                  &Private->Id,
-                  &gEfiSimpleNetworkProtocolGuid,
-                  &Private->SnpProtocol,
                   &gEfiDevicePathProtocolGuid,
                   Private->DevicePathProtocol,
+                  &gEfiSimpleNetworkProtocolGuid,
+                  &Private->SnpProtocol,
+                  &gNVIDIAUsbNicInfoProtocolGuid,
+                  &Private->UsbNicInfoProtocol,
                   NULL
                   );
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a, uninstall protocols failed, MNP may still consume SNP: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
