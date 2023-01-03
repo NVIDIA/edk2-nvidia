@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -16,12 +16,15 @@
 #include <Library/FloorSweepingInternalLib.h>
 #include <Library/HobLib.h>
 #include <Library/MceAriLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/NvgLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PrintLib.h>
 #include <libfdt.h>
+
+#define THERMAL_COOLING_DEVICE_ENTRY_SIZE  (3 * sizeof (INT32))
 
 // Platform CPU configuration
 #define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
@@ -490,6 +493,133 @@ FloorSweepGlobalCpus (
 }
 
 /**
+  Floorsweep global thermal mappings.  Examines thermal-zones subnodes
+  for cooling-maps entries and removes cooling-device list entries
+  that reference deleted phandles (e.g. cpus that were floorswept).
+
+**/
+EFI_STATUS
+EFIAPI
+FloorSweepGlobalThermals (
+  IN VOID  *Dtb
+  )
+{
+  INT32        ThermsOffset;
+  INT32        ThermSubNodeOffset;
+  INT32        CoolingMapsSubNodeOffset;
+  INT32        MapSubNodeOffset;
+  INT32        PrevMapSubNodeOffset;
+  UINT32       Phandle;
+  INT32        Length;
+  CONST UINT8  *CoolingDeviceList;
+  CONST CHAR8  *ThermNodeName;
+  CONST CHAR8  *MapName;
+  UINT8        *Buffer;
+  INT32        Index;
+  INT32        BufferLength;
+  INT32        EntrySize;
+  INT32        FdtErr;
+  UINTN        NumMaps;
+
+  ThermsOffset = fdt_path_offset (Dtb, "/thermal-zones");
+  if (ThermsOffset < 0) {
+    DEBUG ((DEBUG_INFO, "Failed to find /thermal-zones node\n"));
+    return EFI_SUCCESS;
+  }
+
+  EntrySize          = THERMAL_COOLING_DEVICE_ENTRY_SIZE;
+  ThermSubNodeOffset = 0;
+  fdt_for_each_subnode (ThermSubNodeOffset, Dtb, ThermsOffset) {
+    ThermNodeName = fdt_get_name (Dtb, ThermSubNodeOffset, NULL);
+
+    CoolingMapsSubNodeOffset = fdt_subnode_offset (Dtb, ThermSubNodeOffset, "cooling-maps");
+    if (CoolingMapsSubNodeOffset < 0) {
+      DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps does not exist\n", ThermNodeName));
+      continue;
+    }
+
+    NumMaps              = 0;
+    MapSubNodeOffset     = 0;
+    PrevMapSubNodeOffset = CoolingMapsSubNodeOffset;
+    fdt_for_each_subnode (MapSubNodeOffset, Dtb, CoolingMapsSubNodeOffset) {
+      NumMaps++;
+      MapName           = fdt_get_name (Dtb, MapSubNodeOffset, NULL);
+      CoolingDeviceList = (CONST UINT8 *)fdt_getprop (Dtb, MapSubNodeOffset, "cooling-device", &Length);
+      if (CoolingDeviceList == NULL) {
+        DEBUG ((DEBUG_ERROR, "/thermal-zones/%a/cooling-maps/%a missing cooling-device property\n", ThermNodeName, MapName));
+        PrevMapSubNodeOffset = MapSubNodeOffset;
+        continue;
+      }
+
+      DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a len=%u\n", ThermNodeName, MapName, Length));
+
+      // Remove any list entries that have a deleted phandle
+      Buffer = NULL;
+      for (Index = 0; Index < Length; Index += EntrySize) {
+        Phandle = fdt32_to_cpu (*(CONST UINT32 *)&CoolingDeviceList[Index]);
+        if (fdt_node_offset_by_phandle (Dtb, Phandle) < 0) {
+          DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a deleting Phandle=0x%x\n", ThermNodeName, MapName, Phandle));
+
+          if (Buffer == NULL) {
+            Buffer = (UINT8 *)AllocateCopyPool (Length, CoolingDeviceList);
+            if (Buffer == NULL) {
+              DEBUG ((DEBUG_ERROR, "%a: alloc failed\n", __FUNCTION__));
+              return EFI_OUT_OF_RESOURCES;
+            }
+
+            BufferLength = Length;
+          }
+
+          CopyMem (&Buffer[Index], &Buffer[Index + EntrySize], Length - Index - EntrySize);
+          BufferLength -= EntrySize;
+        }
+      }
+
+      if (Buffer != NULL) {
+        if (BufferLength != 0) {
+          fdt_delprop (Dtb, MapSubNodeOffset, "cooling-device");
+          fdt_setprop (Dtb, MapSubNodeOffset, "cooling-device", Buffer, BufferLength);
+        } else {
+          DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a cooling-device empty, deleting\n", ThermNodeName, MapName));
+
+          FdtErr = fdt_del_node (Dtb, MapSubNodeOffset);
+          if (FdtErr < 0) {
+            DEBUG ((
+              DEBUG_ERROR,
+              "Failed to delete /thermal-zones/%a/cooling-maps/%a: %a\r\n",
+              ThermNodeName,
+              MapName,
+              fdt_strerror (FdtErr)
+              ));
+            FreePool (Buffer);
+            return EFI_DEVICE_ERROR;
+          }
+
+          NumMaps--;
+          MapSubNodeOffset = PrevMapSubNodeOffset;
+        }
+
+        FreePool (Buffer);
+      }
+
+      PrevMapSubNodeOffset = MapSubNodeOffset;
+    }
+
+    DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps has %u maps\n", ThermNodeName, NumMaps));
+
+    if (NumMaps == 0) {
+      FdtErr = fdt_del_node (Dtb, CoolingMapsSubNodeOffset);
+      if (FdtErr < 0) {
+        DEBUG ((DEBUG_ERROR, "Failed to delete /thermal-zones/%a/cooling-maps: %a\r\n", ThermNodeName, fdt_strerror (FdtErr)));
+        return EFI_DEVICE_ERROR;
+      }
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Floorsweep sockets
 
 **/
@@ -565,6 +695,10 @@ FloorSweepDtb (
     case T194_CHIP_ID:
     case T234_CHIP_ID:
       Status = FloorSweepGlobalCpus (Dtb);
+      if (!EFI_ERROR (Status)) {
+        Status = FloorSweepGlobalThermals (Dtb);
+      }
+
       break;
     default:
       Status = EFI_UNSUPPORTED;
