@@ -1,7 +1,7 @@
 /** @file
   Boot order test
 
-  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -600,27 +600,25 @@ Reverse16 (
 }
 
 /**
-   Prints the given range as a debug message.
+   Prints the given permutation range.
 
-   @param [in] ErrorLevel The error level of the debug message.
-   @param [in] First      Pointer to the first element of the range.
-   @param [in] Last       Pointer past the last element of the range.
+   @param [in] First  Pointer to the first element of the range.
+   @param [in] Last   Pointer past the last element of the range.
 */
 STATIC
 VOID
 EFIAPI
-DumpRange16 (
-  IN CONST UINTN          ErrorLevel,
-  IN       UINT16 *CONST  First,
-  IN       UINT16 *CONST  Last
+PrintRange16 (
+  IN CONST UINT16 *CONST  First,
+  IN CONST UINT16 *CONST  Last
   )
 {
-  UINT16  *Current = First;
+  CONST UINT16  *Current = First;
 
   if (Current < Last) {
-    DEBUG ((ErrorLevel, "%04x", *Current++));
+    Print (L"%04x", *Current++);
     for ( ; Current < Last; ++Current) {
-      DEBUG ((ErrorLevel, " %04x", *Current));
+      Print (L" %04x", *Current);
     }
   }
 }
@@ -970,15 +968,14 @@ BootOrderTest (
     return UNIT_TEST_ERROR_TEST_FAILED;
   }
 
-  DEBUG ((DEBUG_INFO, "UseBootNext     = %u\r\n", (UINTN)Context.Hdr.UseBootNext));
-  DEBUG ((DEBUG_INFO, "TestPermutation = "));
-  DumpRange16 (
-    DEBUG_INFO,
+  Print (L"UseBootNext     = %u\r\n", (UINTN)Context.Hdr.UseBootNext);
+  Print (L"TestPermutation = ");
+  PrintRange16 (
     Context.Hdr.TestPermutation,
     Context.Hdr.TestPermutation
     + ARRAY_SIZE (Context.Hdr.TestPermutation)
     );
-  DEBUG ((DEBUG_INFO, "\r\n"));
+  Print (L"\r\n");
 
   Status = WriteBootOrder (&Context);
   UT_ASSERT_NOT_EFI_ERROR (Status);
@@ -1167,7 +1164,7 @@ BootOrderTestDxe (
       UseBootNext = (StrStr (CmdLine, L"-BootNext") != NULL);
     }
 
-    DEBUG ((DEBUG_INFO, "%a v%a\r\n", UNIT_TEST_NAME, UNIT_TEST_VERSION));
+    DEBUG ((DEBUG_INFO | DEBUG_INIT, "%a v%a\r\n", UNIT_TEST_NAME, UNIT_TEST_VERSION));
 
     Status = InitUnitTestFramework (
                &Framework,
