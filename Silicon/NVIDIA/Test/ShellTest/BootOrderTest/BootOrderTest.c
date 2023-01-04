@@ -20,7 +20,7 @@
 #include <Protocol/LoadedImage.h>
 
 #define UNIT_TEST_NAME     "Boot order test"
-#define UNIT_TEST_VERSION  "0.1.0"
+#define UNIT_TEST_VERSION  "0.1.1"
 
 /// Name of the variable used to persist the boot order test context.
 #define NVDA_TEST_CONTEXT_VARIABLE_NAME  L"BootOrderTestContext"
@@ -695,6 +695,60 @@ NextPermutation (
 }
 
 /**
+   Calculates the number of permutations of Count distinct items.
+
+   @param [in] Count Number of items to permute.
+
+   @return Calculated number of permutations.
+*/
+STATIC
+UINTN
+PermutationCount (
+  IN UINTN  Count
+  )
+{
+  UINTN  Result = 1;
+
+  for ( ; 1 < Count; --Count) {
+    Result *= Count;
+  }
+
+  return Result;
+}
+
+/**
+   Calculate the number of permutations lexicographically smaller than
+   the given permutation.
+
+   @param [in] First Pointer to the first element of the range.
+   @param [in] Last  Pointer past the last element of the range.
+
+   @return Calculated number of permutations.
+*/
+STATIC
+UINTN
+PermutationIndex (
+  IN CONST UINT16  *First,
+  IN CONST UINT16  *Last
+  )
+{
+  UINTN         Factorial, Result = 0;
+  CONST UINT16  *Current;
+
+  for ( ; First < Last; ++First) {
+    Factorial = PermutationCount ((UINTN)(Last - First) - 1);
+
+    for (Current = First + 1; Current < Last; ++Current) {
+      if (*Current < *First) {
+        Result += Factorial;
+      }
+    }
+  }
+
+  return Result;
+}
+
+/**
    Verifies the recorded boot sequence against the expectation.
 
    @param [in] Context Boot order test context.
@@ -909,6 +963,8 @@ BootOrderTest (
   UNIT_TEST_STATUS         TestStatus;
   BOOT_ORDER_TEST_CONTEXT  Context;
   UINTN                    OriginalBootOrderSize;
+  UINTN                    CurrentPermIdx;
+  UINTN                    TotalPermCount;
 
   gBS->SetMem (&Context, sizeof (Context), 0);
 
@@ -968,6 +1024,16 @@ BootOrderTest (
     return UNIT_TEST_ERROR_TEST_FAILED;
   }
 
+  CurrentPermIdx = PermutationIndex (
+                     Context.Hdr.TestPermutation,
+                     Context.Hdr.TestPermutation
+                     + ARRAY_SIZE (Context.Hdr.TestPermutation)
+                     );
+  TotalPermCount = PermutationCount (
+                     ARRAY_SIZE (Context.Hdr.TestPermutation)
+                     );
+
+  Print (L"Current/Total   = %u/%u\r\n", CurrentPermIdx + 1, TotalPermCount);
   Print (L"UseBootNext     = %u\r\n", (UINTN)Context.Hdr.UseBootNext);
   Print (L"TestPermutation = ");
   PrintRange16 (
