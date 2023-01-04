@@ -26,14 +26,6 @@
   INF Silicon/NVIDIA/Tegra/T234/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #
-  # BPMP-FW IPC protocol
-  #
-  INF Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
-  INF Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
-  INF Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
-  INF Silicon/NVIDIA/Drivers/BpmpI2c/BpmpI2cDxe.inf
-
-  #
   # Regulator support
   #
   INF Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf

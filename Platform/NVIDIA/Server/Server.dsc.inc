@@ -176,15 +176,6 @@
   }
 
   #
-  # BPMP-FW IPC protocol
-  #
-  Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
-  Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
-
-  Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
-  Silicon/NVIDIA/Drivers/BpmpI2c/BpmpI2cDxe.inf
-
-  #
   # Regulator support
   #
   Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf

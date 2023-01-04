@@ -89,6 +89,14 @@
   INF MdeModulePkg/Universal/PrintDxe/PrintDxe.inf
 
   #
+  # BPMP-FW IPC protocol
+  #
+  INF Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
+  INF Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
+  INF Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
+  INF Silicon/NVIDIA/Drivers/BpmpI2c/BpmpI2cDxe.inf
+
+  #
   # GPIO driver/utility
   #
   INF Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf

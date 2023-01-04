@@ -711,6 +711,14 @@
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
 
   #
+  # BPMP-FW IPC protocol
+  #
+  Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
+  Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
+  Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
+  Silicon/NVIDIA/Drivers/BpmpI2c/BpmpI2cDxe.inf
+
+  #
   # GPIO driver/utility
   #
   Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf
