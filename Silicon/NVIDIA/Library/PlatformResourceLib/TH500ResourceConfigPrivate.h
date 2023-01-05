@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2022, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -104,8 +104,6 @@ typedef struct {
   };
 } TEGRABL_CARVEOUT_INFO;
 
-#define TEGRABL_MAX_CONTROLLER_PROD_WORDS  64
-
 #define BLOCK_SIZE                          (512)
 #define PRIMARY_COPY                        (0)
 #define TEGRABL_BINARY_MAX                  (33U)
@@ -128,13 +126,6 @@ typedef struct {
   /* MB2 may call this "Attributes", but for now this field is reserved. */
   UINT32    Reserved;
 } TEGRABL_PARTITION_DESC;
-
-#pragma pack(1)
-typedef struct  {
-  UINT32    NumWords;
-  UINT32    Reserved;
-  UINT32    Data[TEGRABL_MAX_CONTROLLER_PROD_WORDS];
-} TEGRABL_CONTROLLER_PROD_DATA;
 
 #pragma pack(1)
 typedef struct  {
@@ -167,9 +158,6 @@ typedef struct {
 
   /**< List of physical addresses of retired pages */
   UEFI_DECLARE_ALIGNED (UINT64 RetiredDramPages[TH500_MAX_SOCKETS][MAX_RETIRED_DRAM_PAGES], 8);
-
-  /**< Controller prod data */
-  UEFI_DECLARE_ALIGNED (TEGRABL_CONTROLLER_PROD_DATA ControllerProdSetting, 8);
 
   /**< Bit mask to specify which sockets are enabled */
   UEFI_DECLARE_ALIGNED (UINT32 SocketMask, 8);
