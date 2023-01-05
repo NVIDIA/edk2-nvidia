@@ -691,7 +691,11 @@ BuildI2cDevices (
       MapEntry++;
     }
 
-    Private->I2cDevices[Index].DeviceIndex         = Index;
+    if (0 == fdt_get_phandle (Private->DeviceTreeBase, Node)) {
+      continue;
+    }
+
+    Private->I2cDevices[Index].DeviceIndex         = fdt_get_phandle (Private->DeviceTreeBase, Node);
     Private->I2cDevices[Index].HardwareRevision    = 1;
     Private->I2cDevices[Index].I2cBusConfiguration = 0;
     RegEntry                                       = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Node, "reg", &RegLength);
