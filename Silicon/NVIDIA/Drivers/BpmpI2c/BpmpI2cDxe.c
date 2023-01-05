@@ -2,7 +2,7 @@
 
   Bpmp I2c Driver
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -39,6 +39,10 @@ STATIC BPMP_I2C_DEVICE_TYPE_MAP  mDeviceTypeMap[] = {
         }
   },
   { "nvidia,vrs-pseq",     &gNVIDIAI2cVrsPseq,    0, {
+          { 0x00,                  0x00 }
+        }
+  },
+  { "ti,tca9539",          &gNVIDIAI2cTca9539,    0, {
           { 0x00,                  0x00 }
         }
   },
