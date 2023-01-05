@@ -625,6 +625,96 @@ ErrorExit:
   return Status;
 }
 
+/** patch TPM1 data in DSDT.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateTpmInfo (
+  VOID
+  )
+{
+  EFI_STATUS            Status;
+  UINT32                NumberOfTpmControllers;
+  VOID                  *Dtb;
+  INT32                 NodeOffset;
+  INT32                 BusNodeOffset;
+  CONST VOID            *Property;
+  UINT32                *TpmHandles;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+  UINT8                 TpmStatus;
+
+  NumberOfTpmControllers = 0;
+  Status                 = GetMatchingEnabledDeviceTreeNodes ("tcg,tpm_tis-spi", NULL, &NumberOfTpmControllers);
+  if (Status == EFI_NOT_FOUND) {
+    return EFI_SUCCESS;
+  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+    return Status;
+  }
+
+  TpmHandles = NULL;
+  TpmHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfTpmControllers);
+  if (TpmHandles == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = GetMatchingEnabledDeviceTreeNodes ("tcg,tpm_tis-spi", TpmHandles, &NumberOfTpmControllers);
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  // Only support one TPM per system
+  ASSERT (NumberOfTpmControllers == 1);
+
+  Status = GetDeviceTreeNode (TpmHandles[0], &Dtb, &NodeOffset);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get TPM DT node - %r\r\n", __FUNCTION__, Status));
+    goto ErrorExit;
+  }
+
+  //
+  // Check if the bus that TPM is on is enabled
+  //
+  BusNodeOffset = fdt_parent_offset (Dtb, NodeOffset);
+  if (BusNodeOffset != 0) {
+    Property = fdt_getprop (Dtb, BusNodeOffset, "status", NULL);
+    if ((Property != NULL) && (AsciiStrCmp (Property, "okay") != 0)) {
+      DEBUG ((DEBUG_INFO, "%a: TPM is present but the bus is disabled\r\n", __FUNCTION__));
+      Status = EFI_SUCCESS;
+      goto ErrorExit;
+    }
+  }
+
+  //
+  // Patch to enable TPM1 device
+  //
+  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_TPM1_STA, &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  if (AcpiNodeInfo.Size > sizeof (TpmStatus)) {
+    Status = EFI_DEVICE_ERROR;
+    goto ErrorExit;
+  }
+
+  TpmStatus = 0xF;
+  Status    = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &TpmStatus, sizeof (TpmStatus));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_TPM1_STA, Status));
+  }
+
+ErrorExit:
+  if (TpmHandles != NULL) {
+    FreePool (TpmHandles);
+  }
+
+  return Status;
+}
+
 /** patch thermal zone temperature ranges data in SSDT.
 
   @retval EFI_SUCCESS   Success
@@ -1412,6 +1502,11 @@ ConfigurationManagerDataDxeInitialize (
   }
 
   Status = UpdateSSIFInfo ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateTpmInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

@@ -67,6 +67,7 @@
 #define ACPI_PATCH_MAX_PATH  255
 #define ACPI_GED1_SMR1       "_SB_.GED1.SMR1"
 #define ACPI_QSPI1_STA       "_SB_.QSP1._STA"
+#define ACPI_TPM1_STA        "_SB_.TPM1._STA"
 #define ACPI_I2C3_STA        "_SB_.I2C3._STA"
 #define ACPI_SSIF_STA        "_SB_.I2C3.SSIF._STA"
 
