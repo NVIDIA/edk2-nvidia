@@ -2,7 +2,7 @@
 
   IPMI Blob Transfer driver
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -470,7 +470,7 @@ IpmiBlobTransferWrite (
   //
   // Format send data
   //
-  SendDataSize = sizeof (IPMI_BLOB_TRANSFER_BLOB_WRITE_SEND_DATA);
+  SendDataSize = sizeof (SessionId) + sizeof (Offset) + WriteLength;
   SendData     = AllocateZeroPool (SendDataSize);
   if (SendData == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -481,7 +481,7 @@ IpmiBlobTransferWrite (
   CopyMem (((IPMI_BLOB_TRANSFER_BLOB_WRITE_SEND_DATA *)SendData)->Data, Data, sizeof (UINT8) * WriteLength);
 
   ResponseDataSize = 0;
-  Status           = IpmiBlobTransferSendIpmi (IpmiBlobTransferSubcommandWrite, SendData, WriteLength, NULL, &ResponseDataSize);
+  Status           = IpmiBlobTransferSendIpmi (IpmiBlobTransferSubcommandWrite, SendData, SendDataSize, NULL, &ResponseDataSize);
 
   FreePool (SendData);
   return Status;
@@ -510,7 +510,7 @@ IpmiBlobTransferCommit (
   //
   // Format send data
   //
-  SendDataSize = sizeof (IPMI_BLOB_TRANSFER_BLOB_COMMIT_SEND_DATA);
+  SendDataSize = sizeof (SessionId) + sizeof (CommitDataLength) + CommitDataLength;
   SendData     = AllocateZeroPool (SendDataSize);
   if (SendData == NULL) {
     return EFI_OUT_OF_RESOURCES;
