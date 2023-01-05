@@ -328,3 +328,8 @@
   # Tegra Controller Enable Driver
   #
   INF Silicon/NVIDIA/Drivers/TegraControllerEnableDxe/TegraControllerEnableDxe.inf
+
+  #
+  # Uphy Configuration Driver
+  #
+  INF Silicon/NVIDIA/Drivers/UphyConfigurationDxe/UphyConfigurationDxe.inf

@@ -1,0 +1,54 @@
+## @file
+#  Uphy Configuration Dxe
+#
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = UphyConfigurationDxe
+  FILE_GUID                      = 8a5c84be-9d28-451e-bced-634d5cbd534c
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UphyConfigurationDxeInitialize
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+
+[Sources]
+  UphyConfigurationDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  HobLib
+  DebugLib
+  PcdLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  TegraPlatformInfoLib
+  DeviceTreeHelperLib
+  MemoryAllocationLib
+  FdtLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+
+[Guids]
+  gNVIDIATH500MB1DataGuid
+
+[Protocols]
+  gEmbeddedGpioProtocolGuid
+  gNVIDIAUphyConfigurationCompleteGuid
+
+[Depex]
+  gEmbeddedGpioProtocolGuid

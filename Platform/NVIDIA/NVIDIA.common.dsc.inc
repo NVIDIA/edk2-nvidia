@@ -1078,6 +1078,11 @@
   #
   Silicon/NVIDIA/Drivers/TegraControllerEnableDxe/TegraControllerEnableDxe.inf
 
+  #
+  # Uphy Configuration Driver
+  #
+  Silicon/NVIDIA/Drivers/UphyConfigurationDxe/UphyConfigurationDxe.inf
+
 [Components.AARCH64]
   #
   # EBC

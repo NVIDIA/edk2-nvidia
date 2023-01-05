@@ -69,3 +69,5 @@
 
 [Depex]
   gNVIDIAAllRegulatorsPresentProtocolGuid
+  AND
+  gNVIDIAUphyConfigurationCompleteGuid
