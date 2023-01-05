@@ -3,26 +3,28 @@
   does user authentication before entering Setup.
 
   Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "UserAuthenticationDxe.h"
 
-EFI_EVENT                           mExitBootServicesEvent  = NULL;
-EFI_RSC_HANDLER_PROTOCOL           *mRscHandlerProtocol     = NULL;
-USER_AUTHENTICATION_PRIVATE_DATA   *mUserAuthenticationData = NULL;
-EFI_SMM_COMMUNICATION_PROTOCOL     *mSmmCommunication       = NULL;
+EFI_EVENT                         mExitBootServicesEvent   = NULL;
+EFI_RSC_HANDLER_PROTOCOL          *mRscHandlerProtocol     = NULL;
+USER_AUTHENTICATION_PRIVATE_DATA  *mUserAuthenticationData = NULL;
+EFI_SMM_COMMUNICATION_PROTOCOL    *mSmmCommunication       = NULL;
 
-EFI_GUID mUserAuthenticationVendorGuid = USER_AUTHENTICATION_FORMSET_GUID;
-HII_VENDOR_DEVICE_PATH mHiiVendorDevicePath = {
+EFI_GUID                mUserAuthenticationVendorGuid = USER_AUTHENTICATION_FORMSET_GUID;
+HII_VENDOR_DEVICE_PATH  mHiiVendorDevicePath          = {
   {
     {
       HARDWARE_DEVICE_PATH,
       HW_VENDOR_DP,
       {
-        (UINT8) (sizeof (VENDOR_DEVICE_PATH)),
-        (UINT8) ((sizeof (VENDOR_DEVICE_PATH)) >> 8)
+        (UINT8)(sizeof (VENDOR_DEVICE_PATH)),
+        (UINT8)((sizeof (VENDOR_DEVICE_PATH)) >> 8)
       }
     },
     USER_AUTHENTICATION_FORMSET_GUID
@@ -31,8 +33,8 @@ HII_VENDOR_DEVICE_PATH mHiiVendorDevicePath = {
     END_DEVICE_PATH_TYPE,
     END_ENTIRE_DEVICE_PATH_SUBTYPE,
     {
-      (UINT8) (END_DEVICE_PATH_LENGTH),
-      (UINT8) ((END_DEVICE_PATH_LENGTH) >> 8)
+      (UINT8)(END_DEVICE_PATH_LENGTH),
+      (UINT8)((END_DEVICE_PATH_LENGTH) >> 8)
     }
   }
 };
@@ -46,17 +48,17 @@ HII_VENDOR_DEVICE_PATH mHiiVendorDevicePath = {
 **/
 EFI_STATUS
 GetUserInput (
-  IN     CHAR16      *PopUpString,
-  IN OUT CHAR16      *UserInput,
-  IN     UINTN       UserInputMaxLen
+  IN     CHAR16  *PopUpString,
+  IN OUT CHAR16  *UserInput,
+  IN     UINTN   UserInputMaxLen
   )
 {
-  EFI_INPUT_KEY                InputKey;
-  UINTN                        InputLength;
-  CHAR16                       *Mask;
+  EFI_INPUT_KEY  InputKey;
+  UINTN          InputLength;
+  CHAR16         *Mask;
 
   UserInput[0] = 0;
-  Mask = AllocateZeroPool ((UserInputMaxLen + 1) * sizeof(CHAR16));
+  Mask         = AllocateZeroPool ((UserInputMaxLen + 1) * sizeof (CHAR16));
   if (Mask == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -67,6 +69,7 @@ GetUserInput (
     if (InputLength < UserInputMaxLen) {
       Mask[InputLength] = L'_';
     }
+
     CreatePopUp (
       EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
       &InputKey,
@@ -79,7 +82,7 @@ GetUserInput (
       //
       // Check whether finish inputing password.
       //
-      if (InputKey.UnicodeChar == CHAR_CARRIAGE_RETURN && InputLength > 0) {
+      if ((InputKey.UnicodeChar == CHAR_CARRIAGE_RETURN) && (InputLength > 0)) {
         //
         // Add the null terminator.
         //
@@ -88,7 +91,8 @@ GetUserInput (
       } else if ((InputKey.UnicodeChar == CHAR_NULL) ||
                  (InputKey.UnicodeChar == CHAR_LINEFEED) ||
                  (InputKey.UnicodeChar == CHAR_CARRIAGE_RETURN)
-                ) {
+                 )
+      {
         continue;
       } else {
         //
@@ -97,7 +101,7 @@ GetUserInput (
         if (InputKey.UnicodeChar == CHAR_BACKSPACE) {
           if (InputLength > 0) {
             UserInput[InputLength] = 0;
-            Mask[InputLength] = 0;
+            Mask[InputLength]      = 0;
             InputLength--;
           }
         } else {
@@ -105,16 +109,18 @@ GetUserInput (
             Mask[InputLength] = 0;
             continue;
           }
+
           //
           // add Next key entry
           //
           UserInput[InputLength] = InputKey.UnicodeChar;
-          Mask[InputLength] = L'*';
+          Mask[InputLength]      = L'*';
           InputLength++;
         }
       }
     }
   }
+
   FreePool (Mask);
   return EFI_SUCCESS;
 }
@@ -154,7 +160,7 @@ ForceSystemReset (
 {
   MessageBox (L"Password retry count reach, reset system!");
   gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
-  CpuDeadLoop();
+  CpuDeadLoop ();
 }
 
 /**
@@ -167,8 +173,8 @@ PrintSetPasswordStatus (
   IN EFI_STATUS  ReturnStatus
   )
 {
-  CHAR16         *DisplayString;
-  CHAR16         *DisplayString2;
+  CHAR16  *DisplayString;
+  CHAR16  *DisplayString2;
 
   EFI_INPUT_KEY  Key;
 
@@ -222,13 +228,13 @@ RequireUserPassword (
   VOID
   )
 {
-  EFI_STATUS                                    Status;
-  CHAR16                                        UserInputPw[PASSWORD_MAX_SIZE];
-  CHAR16                                        *PopUpString;
-  SMM_PASSWORD_COMMUNICATE_VERIFY_POLICY        VerifyPolicy;
+  EFI_STATUS                              Status;
+  CHAR16                                  UserInputPw[PASSWORD_MAX_SIZE];
+  CHAR16                                  *PopUpString;
+  SMM_PASSWORD_COMMUNICATE_VERIFY_POLICY  VerifyPolicy;
 
   Status = EFI_SUCCESS;
-  ZeroMem(UserInputPw, sizeof(UserInputPw));
+  ZeroMem (UserInputPw, sizeof (UserInputPw));
 
   if (!IsPasswordInstalled ()) {
     return FALSE;
@@ -236,7 +242,7 @@ RequireUserPassword (
 
   Status = GetPasswordVerificationPolicy (&VerifyPolicy);
   if (!EFI_ERROR (Status)) {
-    if (WasPasswordVerified() && (!VerifyPolicy.NeedReVerify)) {
+    if (WasPasswordVerified () && (!VerifyPolicy.NeedReVerify)) {
       DEBUG ((DEBUG_INFO, "Password was verified and Re-verify is not needed\n"));
       return TRUE;
     }
@@ -245,25 +251,27 @@ RequireUserPassword (
   PopUpString = L"Please input admin password";
 
   while (TRUE) {
-    gST->ConOut->ClearScreen(gST->ConOut);
+    gST->ConOut->ClearScreen (gST->ConOut);
     GetUserInput (PopUpString, UserInputPw, PASSWORD_MAX_SIZE - 1);
 
-    Status = VerifyPassword (UserInputPw, StrSize(UserInputPw));
-    if (!EFI_ERROR(Status)) {
+    Status = VerifyPassword (UserInputPw, StrSize (UserInputPw));
+    if (!EFI_ERROR (Status)) {
       break;
     }
+
     if (Status == EFI_ACCESS_DENIED) {
       //
       // Password retry count reach.
       //
       ForceSystemReset ();
     }
+
     MessageBox (L"Incorrect password!");
   }
 
-  ZeroMem(UserInputPw, sizeof(UserInputPw));
+  ZeroMem (UserInputPw, sizeof (UserInputPw));
 
-  gST->ConOut->ClearScreen(gST->ConOut);
+  gST->ConOut->ClearScreen (gST->ConOut);
 
   return TRUE;
 }
@@ -277,40 +285,40 @@ SetUserPassword (
   VOID
   )
 {
-  EFI_STATUS                   Status;
-  CHAR16                       UserInputPw[PASSWORD_MAX_SIZE];
-  CHAR16                       TmpPassword[PASSWORD_MAX_SIZE];
-  CHAR16                       *PopUpString;
-  CHAR16                       *PopUpString2;
+  EFI_STATUS  Status;
+  CHAR16      UserInputPw[PASSWORD_MAX_SIZE];
+  CHAR16      TmpPassword[PASSWORD_MAX_SIZE];
+  CHAR16      *PopUpString;
+  CHAR16      *PopUpString2;
 
-  ZeroMem(UserInputPw, sizeof(UserInputPw));
-  ZeroMem(TmpPassword, sizeof(TmpPassword));
+  ZeroMem (UserInputPw, sizeof (UserInputPw));
+  ZeroMem (TmpPassword, sizeof (TmpPassword));
 
   PopUpString = L"Please set admin password";
 
   while (TRUE) {
-    gST->ConOut->ClearScreen(gST->ConOut);
+    gST->ConOut->ClearScreen (gST->ConOut);
     GetUserInput (PopUpString, UserInputPw, PASSWORD_MAX_SIZE - 1);
 
     PopUpString2 = L"Please confirm your new password";
-    gST->ConOut->ClearScreen(gST->ConOut);
+    gST->ConOut->ClearScreen (gST->ConOut);
     GetUserInput (PopUpString2, TmpPassword, PASSWORD_MAX_SIZE - 1);
     if (StrCmp (TmpPassword, UserInputPw) != 0) {
       MessageBox (L"Password are not the same!");
       continue;
     }
 
-    Status = SetPassword (UserInputPw, StrSize(UserInputPw), NULL, 0);
+    Status = SetPassword (UserInputPw, StrSize (UserInputPw), NULL, 0);
     PrintSetPasswordStatus (Status);
-    if (!EFI_ERROR(Status)) {
+    if (!EFI_ERROR (Status)) {
       break;
     }
   }
 
-  ZeroMem(UserInputPw, sizeof(UserInputPw));
-  ZeroMem(TmpPassword, sizeof(TmpPassword));
+  ZeroMem (UserInputPw, sizeof (UserInputPw));
+  ZeroMem (TmpPassword, sizeof (TmpPassword));
 
-  gST->ConOut->ClearScreen(gST->ConOut);
+  gST->ConOut->ClearScreen (gST->ConOut);
 }
 
 /**
@@ -345,17 +353,18 @@ SetUserPassword (
 EFI_STATUS
 EFIAPI
 CheckForPassword (
-  IN EFI_STATUS_CODE_TYPE     CodeType,
-  IN EFI_STATUS_CODE_VALUE    Value,
-  IN UINT32                   Instance,
-  IN EFI_GUID                 *CallerId, OPTIONAL
+  IN EFI_STATUS_CODE_TYPE CodeType,
+  IN EFI_STATUS_CODE_VALUE Value,
+  IN UINT32 Instance,
+  IN EFI_GUID *CallerId, OPTIONAL
   IN EFI_STATUS_CODE_DATA     *Data      OPTIONAL
   )
 {
-  BOOLEAN   PasswordSet;
+  BOOLEAN  PasswordSet;
 
   if (((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_PROGRESS_CODE) &&
-      (Value == (EFI_SOFTWARE_DXE_BS_DRIVER | EFI_SW_PC_USER_SETUP))) {
+      (Value == (EFI_SOFTWARE_DXE_BS_DRIVER | EFI_SW_PC_USER_SETUP)))
+  {
     //
     // Check whether enter setup page.
     //
@@ -364,13 +373,13 @@ CheckForPassword (
       DEBUG ((DEBUG_INFO, "Welcome Admin!\n"));
     } else {
       DEBUG ((DEBUG_INFO, "Admin password is not set!\n"));
-      if (NeedEnrollPassword()) {
+      if (NeedEnrollPassword ()) {
         SetUserPassword ();
       }
     }
 
     return EFI_SUCCESS;
-  } else{
+  } else {
     return EFI_UNSUPPORTED;
   }
 }
@@ -404,19 +413,19 @@ CheckForPassword (
 EFI_STATUS
 EFIAPI
 ExtractConfig (
-  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL   *This,
-  IN  CONST EFI_STRING                       Request,
-  OUT EFI_STRING                             *Progress,
-  OUT EFI_STRING                             *Results
+  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
+  IN  CONST EFI_STRING                      Request,
+  OUT EFI_STRING                            *Progress,
+  OUT EFI_STRING                            *Results
   )
 {
-  if (Progress == NULL || Results == NULL) {
+  if ((Progress == NULL) || (Results == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
+
   *Progress = Request;
   return EFI_NOT_FOUND;
 }
-
 
 /**
   This function processes the results of changes in configuration.
@@ -439,12 +448,12 @@ ExtractConfig (
 EFI_STATUS
 EFIAPI
 RouteConfig (
-  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL   *This,
-  IN  CONST EFI_STRING                       Configuration,
-  OUT EFI_STRING                             *Progress
+  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
+  IN  CONST EFI_STRING                      Configuration,
+  OUT EFI_STRING                            *Progress
   )
 {
-  if (Configuration == NULL || Progress == NULL) {
+  if ((Configuration == NULL) || (Progress == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -504,12 +513,12 @@ HiiUpdateAdminPasswordStatus (
 EFI_STATUS
 EFIAPI
 UserAuthenticationCallback (
-  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL   *This,
-  IN  EFI_BROWSER_ACTION                     Action,
-  IN  EFI_QUESTION_ID                        QuestionId,
-  IN  UINT8                                  Type,
-  IN  EFI_IFR_TYPE_VALUE                     *Value,
-  OUT EFI_BROWSER_ACTION_REQUEST             *ActionRequest
+  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
+  IN  EFI_BROWSER_ACTION                    Action,
+  IN  EFI_QUESTION_ID                       QuestionId,
+  IN  UINT8                                 Type,
+  IN  EFI_IFR_TYPE_VALUE                    *Value,
+  OUT EFI_BROWSER_ACTION_REQUEST            *ActionRequest
   )
 {
   EFI_STATUS  Status;
@@ -518,103 +527,116 @@ UserAuthenticationCallback (
   Status = EFI_SUCCESS;
 
   if (((Value == NULL) && (Action != EFI_BROWSER_ACTION_FORM_OPEN) && (Action != EFI_BROWSER_ACTION_FORM_CLOSE)) ||
-      (ActionRequest == NULL)) {
+      (ActionRequest == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
   switch (Action) {
-  case EFI_BROWSER_ACTION_FORM_OPEN:
+    case EFI_BROWSER_ACTION_FORM_OPEN:
     {
       switch (QuestionId) {
-      case ADMIN_PASSWORD_KEY_ID:
-        HiiUpdateAdminPasswordStatus ();
-      default:
-        break;
-      }
-    }
-    break;
-  case EFI_BROWSER_ACTION_CHANGING:
-    {
-      switch (QuestionId) {
-      case ADMIN_PASSWORD_KEY_ID:
-        if ((Type == EFI_IFR_TYPE_STRING) && (Value->string == 0) &&
-            (mUserAuthenticationData->PasswordState == BROWSER_STATE_SET_PASSWORD)) {
-          mUserAuthenticationData->PasswordState = BROWSER_STATE_VALIDATE_PASSWORD;
-          ZeroMem (mUserAuthenticationData->OldPassword, sizeof(mUserAuthenticationData->OldPassword));
-          return EFI_INVALID_PARAMETER;
-        }
-        //
-        // The Callback is responsible for validating old password input by user,
-        // If Callback return EFI_SUCCESS, it indicates validation pass.
-        //
-        switch (mUserAuthenticationData->PasswordState) {
-        case BROWSER_STATE_VALIDATE_PASSWORD:
-          UserInputPassword = HiiGetString (mUserAuthenticationData->HiiHandle, Value->string, NULL);
-          if ((StrLen (UserInputPassword) >= PASSWORD_MAX_SIZE)) {
-            Status = EFI_NOT_READY;
-            break;
-          }
-          if (UserInputPassword[0] == 0) {
-            //
-            // Setup will use a NULL password to check whether the old password is set,
-            // If the validation is successful, means there is no old password, return
-            // success to set the new password. Or need to return EFI_NOT_READY to
-            // let user input the old password.
-            //
-            Status = VerifyPassword (UserInputPassword, StrSize (UserInputPassword));
-            if (Status == EFI_SUCCESS) {
-              mUserAuthenticationData->PasswordState = BROWSER_STATE_SET_PASSWORD;
-            } else {
-              Status = EFI_NOT_READY;
-            }
-            break;
-          }
-          Status = VerifyPassword (UserInputPassword, StrSize (UserInputPassword));
-          if (Status == EFI_SUCCESS) {
-            mUserAuthenticationData->PasswordState = BROWSER_STATE_SET_PASSWORD;
-            StrCpyS (
-              mUserAuthenticationData->OldPassword,
-              sizeof(mUserAuthenticationData->OldPassword)/sizeof(CHAR16),
-              UserInputPassword
-              );
-          } else {
-            //
-            // Old password mismatch, return EFI_NOT_READY to prompt for error message.
-            //
-            if (Status == EFI_ACCESS_DENIED) {
-              //
-              // Password retry count reach.
-              //
-              ForceSystemReset ();
-            }
-            Status = EFI_NOT_READY;
-          }
-          break;
-
-        case BROWSER_STATE_SET_PASSWORD:
-          UserInputPassword = HiiGetString (mUserAuthenticationData->HiiHandle, Value->string, NULL);
-          if ((StrLen (UserInputPassword) >= PASSWORD_MAX_SIZE)) {
-            Status = EFI_NOT_READY;
-            break;
-          }
-          Status = SetPassword (UserInputPassword, StrSize (UserInputPassword), mUserAuthenticationData->OldPassword, StrSize(mUserAuthenticationData->OldPassword));
-          PrintSetPasswordStatus (Status);
-          ZeroMem (mUserAuthenticationData->OldPassword, sizeof(mUserAuthenticationData->OldPassword));
-          mUserAuthenticationData->PasswordState = BROWSER_STATE_VALIDATE_PASSWORD;
+        case ADMIN_PASSWORD_KEY_ID:
           HiiUpdateAdminPasswordStatus ();
+        default:
           break;
+      }
+
+      break;
+    }
+    case EFI_BROWSER_ACTION_CHANGING:
+    {
+      switch (QuestionId) {
+        case ADMIN_PASSWORD_KEY_ID:
+          if ((Type == EFI_IFR_TYPE_STRING) && (Value->string == 0) &&
+              (mUserAuthenticationData->PasswordState == BROWSER_STATE_SET_PASSWORD))
+          {
+            mUserAuthenticationData->PasswordState = BROWSER_STATE_VALIDATE_PASSWORD;
+            ZeroMem (mUserAuthenticationData->OldPassword, sizeof (mUserAuthenticationData->OldPassword));
+            return EFI_INVALID_PARAMETER;
+          }
+
+          //
+          // The Callback is responsible for validating old password input by user,
+          // If Callback return EFI_SUCCESS, it indicates validation pass.
+          //
+          switch (mUserAuthenticationData->PasswordState) {
+            case BROWSER_STATE_VALIDATE_PASSWORD:
+              UserInputPassword = HiiGetString (mUserAuthenticationData->HiiHandle, Value->string, NULL);
+              if ((StrLen (UserInputPassword) >= PASSWORD_MAX_SIZE)) {
+                Status = EFI_NOT_READY;
+                break;
+              }
+
+              if (UserInputPassword[0] == 0) {
+                //
+                // Setup will use a NULL password to check whether the old password is set,
+                // If the validation is successful, means there is no old password, return
+                // success to set the new password. Or need to return EFI_NOT_READY to
+                // let user input the old password.
+                //
+                Status = VerifyPassword (UserInputPassword, StrSize (UserInputPassword));
+                if (Status == EFI_SUCCESS) {
+                  mUserAuthenticationData->PasswordState = BROWSER_STATE_SET_PASSWORD;
+                } else {
+                  Status = EFI_NOT_READY;
+                }
+
+                break;
+              }
+
+              Status = VerifyPassword (UserInputPassword, StrSize (UserInputPassword));
+              if (Status == EFI_SUCCESS) {
+                mUserAuthenticationData->PasswordState = BROWSER_STATE_SET_PASSWORD;
+                StrCpyS (
+                  mUserAuthenticationData->OldPassword,
+                  sizeof (mUserAuthenticationData->OldPassword)/sizeof (CHAR16),
+                  UserInputPassword
+                  );
+              } else {
+                //
+                // Old password mismatch, return EFI_NOT_READY to prompt for error message.
+                //
+                if (Status == EFI_ACCESS_DENIED) {
+                  //
+                  // Password retry count reach.
+                  //
+                  ForceSystemReset ();
+                }
+
+                Status = EFI_NOT_READY;
+              }
+
+              break;
+
+            case BROWSER_STATE_SET_PASSWORD:
+              UserInputPassword = HiiGetString (mUserAuthenticationData->HiiHandle, Value->string, NULL);
+              if ((StrLen (UserInputPassword) >= PASSWORD_MAX_SIZE)) {
+                Status = EFI_NOT_READY;
+                break;
+              }
+
+              Status = SetPassword (UserInputPassword, StrSize (UserInputPassword), mUserAuthenticationData->OldPassword, StrSize (mUserAuthenticationData->OldPassword));
+              PrintSetPasswordStatus (Status);
+              ZeroMem (mUserAuthenticationData->OldPassword, sizeof (mUserAuthenticationData->OldPassword));
+              mUserAuthenticationData->PasswordState = BROWSER_STATE_VALIDATE_PASSWORD;
+              HiiUpdateAdminPasswordStatus ();
+              break;
+
+            default:
+              break;
+          }
 
         default:
           break;
-        }
-      default:
-        break;
       }
+
+      break;
     }
-    break;
-  default:
-    break;
+    default:
+      break;
   }
+
   return Status;
 }
 
@@ -629,8 +651,8 @@ UserAuthenticationCallback (
 VOID
 EFIAPI
 UnregisterBootTimeHandlers (
-  IN EFI_EVENT        Event,
-  IN VOID             *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
   mRscHandlerProtocol->Unregister (CheckForPassword);
@@ -649,15 +671,15 @@ UnregisterBootTimeHandlers (
 EFI_STATUS
 EFIAPI
 UserAuthenticationEntry (
-  IN EFI_HANDLE           ImageHandle,
-  IN EFI_SYSTEM_TABLE     *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS        Status;
-  EFI_HANDLE        DriverHandle;
-  EFI_HII_HANDLE    HiiHandle;
+  EFI_STATUS      Status;
+  EFI_HANDLE      DriverHandle;
+  EFI_HII_HANDLE  HiiHandle;
 
-  DriverHandle  = NULL;
+  DriverHandle = NULL;
 
   mUserAuthenticationData = AllocateZeroPool (sizeof (USER_AUTHENTICATION_PRIVATE_DATA));
   if (mUserAuthenticationData == NULL) {
@@ -665,9 +687,9 @@ UserAuthenticationEntry (
   }
 
   mUserAuthenticationData->ConfigAccess.ExtractConfig = ExtractConfig;
-  mUserAuthenticationData->ConfigAccess.RouteConfig = RouteConfig;
-  mUserAuthenticationData->ConfigAccess.Callback = UserAuthenticationCallback;
-  mUserAuthenticationData->PasswordState = BROWSER_STATE_VALIDATE_PASSWORD;
+  mUserAuthenticationData->ConfigAccess.RouteConfig   = RouteConfig;
+  mUserAuthenticationData->ConfigAccess.Callback      = UserAuthenticationCallback;
+  mUserAuthenticationData->PasswordState              = BROWSER_STATE_VALIDATE_PASSWORD;
 
   //
   // Install Config Access protocol to driver handle.
@@ -687,15 +709,16 @@ UserAuthenticationEntry (
   // Add HII data to database.
   //
   HiiHandle = HiiAddPackages (
-                   &mUserAuthenticationVendorGuid,
-                   DriverHandle,
-                   UserAuthenticationDxeStrings,
-                   UserAuthenticationDxeVfrBin,
-                   NULL
-                   );
+                &mUserAuthenticationVendorGuid,
+                DriverHandle,
+                UserAuthenticationDxeStrings,
+                UserAuthenticationDxeVfrBin,
+                NULL
+                );
   if (HiiHandle == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   mUserAuthenticationData->HiiHandle = HiiHandle;
 
   //
@@ -704,12 +727,12 @@ UserAuthenticationEntry (
   Status = gBS->LocateProtocol (
                   &gEfiRscHandlerProtocolGuid,
                   NULL,
-                  (VOID **) &mRscHandlerProtocol
+                  (VOID **)&mRscHandlerProtocol
                   );
   ASSERT_EFI_ERROR (Status);
 
   //
-  //Register the callback function for ReportStatusCode() notification.
+  // Register the callback function for ReportStatusCode() notification.
   //
   mRscHandlerProtocol->Register (CheckForPassword, TPL_HIGH_LEVEL);
 
@@ -729,7 +752,7 @@ UserAuthenticationEntry (
   //
   // Locates SMM Communication protocol.
   //
-  Status = gBS->LocateProtocol (&gEfiSmmCommunicationProtocolGuid, NULL, (VOID **) &mSmmCommunication);
+  Status = gBS->LocateProtocol (&gEfiSmmCommunicationProtocolGuid, NULL, (VOID **)&mSmmCommunication);
   ASSERT_EFI_ERROR (Status);
 
   return EFI_SUCCESS;
@@ -777,4 +800,3 @@ UserAuthenticationUnload (
 
   return EFI_SUCCESS;
 }
-

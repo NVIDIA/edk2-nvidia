@@ -4,6 +4,8 @@
 #  This driver provides SMM services for DXE user authentication module.
 #
 # Copyright (c) 2019 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##

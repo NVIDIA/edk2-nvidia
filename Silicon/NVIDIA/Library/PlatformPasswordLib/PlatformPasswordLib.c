@@ -5,11 +5,13 @@
   by a platform-specific method(e.g. Button pressed) in a real platform for product.
 
   Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-BOOLEAN       mPasswordCleared      = FALSE;
+BOOLEAN  mPasswordCleared = FALSE;
 
 /**
   This function is called at password driver entrypoint.
@@ -53,7 +55,6 @@ NeedEnrollPassword (
   return FALSE;
 }
 
-
 /**
   Save password clear state from a PCD to mPasswordCleared.
 
@@ -70,9 +71,7 @@ PlatformPasswordLibNullConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-
-  mPasswordCleared = PcdGetBool(PcdPasswordCleared);
+  mPasswordCleared = PcdGetBool (PcdPasswordCleared);
 
   return EFI_SUCCESS;
 }
-

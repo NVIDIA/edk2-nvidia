@@ -2,6 +2,8 @@
   Header file for key service.
 
   Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -49,7 +51,7 @@ KeyLibSlowCompareMem (
 **/
 BOOLEAN
 EFIAPI
-KeyLibGenerateSalt(
+KeyLibGenerateSalt (
   IN OUT UINT8  *SaltValue,
   IN UINTN      SaltSize
   );
@@ -75,14 +77,13 @@ KeyLibGenerateSalt(
 BOOLEAN
 EFIAPI
 KeyLibGeneratePBKDF2Hash (
-  IN   UINT32              HashType,
-  IN   VOID                *Key,
-  IN   UINTN               KeySize,
-  IN   UINT8               *SaltValue,
-  IN   UINTN               SaltSize,
-  OUT  UINT8               *KeyHash,
-  IN   UINTN               KeyHashSize
+  IN   UINT32  HashType,
+  IN   VOID    *Key,
+  IN   UINTN   KeySize,
+  IN   UINT8   *SaltValue,
+  IN   UINTN   SaltSize,
+  OUT  UINT8   *KeyHash,
+  IN   UINTN   KeyHashSize
   );
 
 #endif
-
