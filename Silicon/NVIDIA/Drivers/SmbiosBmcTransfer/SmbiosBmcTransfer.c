@@ -11,6 +11,7 @@
 
 #include <IndustryStandard/SmBios.h>
 
+#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -39,14 +40,15 @@ SmbiosBmcTransferEntry (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                   Status;
-  SMBIOS_TABLE_ENTRY_POINT     *SmbiosTable;
-  IPMI_BLOB_TRANSFER_PROTOCOL  *IpmiBlobTransfer;
-  UINT16                       Index;
-  UINT16                       SessionId;
-  UINT8                        *SendData;
-  UINT32                       SendDataSize;
-  UINT32                       RemainingDataSize;
+  EFI_STATUS                    Status;
+  SMBIOS_TABLE_3_0_ENTRY_POINT  *Smbios30Table;
+  SMBIOS_TABLE_3_0_ENTRY_POINT  *Smbios30TableModified;
+  IPMI_BLOB_TRANSFER_PROTOCOL   *IpmiBlobTransfer;
+  UINT16                        Index;
+  UINT16                        SessionId;
+  UINT8                         *SendData;
+  UINT32                        SendDataSize;
+  UINT32                        RemainingDataSize;
 
   Status = gBS->LocateProtocol (&gNVIDIAIpmiBlobTransferProtocolGuid, NULL, (VOID **)&IpmiBlobTransfer);
   if (EFI_ERROR (Status)) {
@@ -54,23 +56,43 @@ SmbiosBmcTransferEntry (
     return Status;
   }
 
-  SmbiosTable = NULL;
-  Status      = EfiGetSystemConfigurationTable (&gEfiSmbiosTableGuid, (VOID **)&SmbiosTable);
-  if (EFI_ERROR (Status) || (SmbiosTable == NULL)) {
+  Smbios30Table = NULL;
+  Status        = EfiGetSystemConfigurationTable (&gEfiSmbios3TableGuid, (VOID **)&Smbios30Table);
+  if (EFI_ERROR (Status) || (Smbios30Table == NULL)) {
     DEBUG ((DEBUG_ERROR, "%a: No SMBIOS Table found: %r\n", __FUNCTION__, Status));
     return EFI_NOT_FOUND;
   }
 
+  //
+  // BMC expects the Smbios Entry Point to point to the address within the binary data sent
+  // The value is initially pointing to the location in memory where the table lives
+  // So we will save off that value and then modify the entry point to make the BMC happy
+  Smbios30TableModified = AllocateZeroPool (sizeof (SMBIOS_TABLE_3_0_ENTRY_POINT));
+  CopyMem (Smbios30TableModified, Smbios30Table, sizeof (SMBIOS_TABLE_3_0_ENTRY_POINT));
+  Smbios30TableModified->TableAddress = sizeof (SMBIOS_TABLE_3_0_ENTRY_POINT);
+  //
+  // Fixup checksums in the Entry Point Structure
+  //
+  Smbios30TableModified->EntryPointStructureChecksum = 0;
+  Smbios30TableModified->EntryPointStructureChecksum =
+    CalculateCheckSum8 ((UINT8 *)Smbios30TableModified, Smbios30TableModified->EntryPointLength);
+
+  SendData = AllocateZeroPool (sizeof (SMBIOS_TABLE_3_0_ENTRY_POINT) + Smbios30Table->TableMaximumSize);
+  CopyMem (SendData, Smbios30TableModified, sizeof (SMBIOS_TABLE_3_0_ENTRY_POINT));
+  CopyMem (SendData + sizeof (SMBIOS_TABLE_3_0_ENTRY_POINT), (UINT8 *)Smbios30Table->TableAddress, Smbios30Table->TableMaximumSize);
+  SendDataSize      = sizeof (SMBIOS_TABLE_3_0_ENTRY_POINT) + Smbios30Table->TableMaximumSize;
+  RemainingDataSize = SendDataSize;
+
  #if SMBIOS_TRANSFER_DEBUG
   DEBUG ((DEBUG_INFO, "%a: SMBIOS BINARY DATA OUTPUT\n", __FUNCTION__));
-  DEBUG ((DEBUG_INFO, "%a: Table Address: %x\n", __FUNCTION__, SmbiosTable->TableAddress));
-  DEBUG ((DEBUG_INFO, "%a: Table Length: %x\n", __FUNCTION__, SmbiosTable->TableLength));
-  DEBUG ((DEBUG_INFO, "------------------------------------------\nIndex:0"));
-  for (Index = 0; Index < SmbiosTable->TableLength; Index++) {
-    DEBUG ((DEBUG_INFO, "%02x ", *((UINT8 *)((UINTN)SmbiosTable->TableAddress + Index))));
+  DEBUG ((DEBUG_INFO, "%a: Table Address: %x\n", __FUNCTION__, Smbios30Table->TableAddress));
+  DEBUG ((DEBUG_INFO, "%a: Table Length: %x\n", __FUNCTION__, Smbios30Table->TableMaximumSize));
+  for (Index = 0; Index < SendDataSize; Index++) {
     if ((Index % IPMI_OEM_BLOB_MAX_DATA_PER_PACKET) == 0) {
       DEBUG ((DEBUG_INFO, "\nIndex:%x ", Index));
     }
+
+    DEBUG ((DEBUG_INFO, "%02x ", *(SendData + Index)));
   }
 
  #endif
@@ -80,10 +102,6 @@ SmbiosBmcTransferEntry (
     DEBUG ((DEBUG_ERROR, "%a: Unable to open Blob with Id %a: %r\n", __FUNCTION__, PcdGetPtr (PcdBmcSmbiosBlobTransferId), Status));
     return EFI_DEVICE_ERROR;
   }
-
-  SendData          = (UINT8 *)(UINTN)SmbiosTable->TableAddress;
-  SendDataSize      = SmbiosTable->TableLength;
-  RemainingDataSize = SendDataSize;
 
   for (Index = 0; Index < (SendDataSize / IPMI_OEM_BLOB_MAX_DATA_PER_PACKET); Index++) {
     Status = IpmiBlobTransfer->BlobWrite (SessionId, Index * IPMI_OEM_BLOB_MAX_DATA_PER_PACKET, SendData, IPMI_OEM_BLOB_MAX_DATA_PER_PACKET);
@@ -100,7 +118,7 @@ SmbiosBmcTransferEntry (
   if (RemainingDataSize) {
     Status = IpmiBlobTransfer->BlobWrite (SessionId, Index * IPMI_OEM_BLOB_MAX_DATA_PER_PACKET, SendData, RemainingDataSize);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failure writing to blob: %r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failure writing final block to blob: %r\n", __FUNCTION__, Status));
       return EFI_ABORTED;
     }
   }
