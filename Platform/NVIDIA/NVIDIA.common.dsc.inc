@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2011-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -685,6 +685,7 @@
   MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf {
      <LibraryClasses>
        NULL|SecurityPkg/Library/DxeImageVerificationLib/DxeImageVerificationLib.inf
+       NULL|SecurityPkg/Library/DxeTpm2MeasureBootLib/DxeTpm2MeasureBootLib.inf
   }
   MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
   MdeModulePkg/Universal/MonotonicCounterRuntimeDxe/MonotonicCounterRuntimeDxe.inf
