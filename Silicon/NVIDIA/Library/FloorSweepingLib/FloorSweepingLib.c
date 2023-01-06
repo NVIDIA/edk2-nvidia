@@ -395,19 +395,15 @@ UpdateCpuFloorsweepingConfig (
   CHAR8   ClusterNodeStr[] = "cluster10";
   UINT32  AddressCells;
   INT32   NodeOffset;
-  INT32   PrevNodeOffset;
+  INT32   TmpOffset;
 
   AddressCells = fdt_address_cells (Dtb, CpusOffset);
 
   /* Update the correct MPIDR and enable the DT nodes of each enabled CPU;
    * disable the DT nodes of the floorswept cores.*/
-  NodeOffset     = 0;
-  Cpu            = 0;
-  PrevNodeOffset = 0;
-  for (NodeOffset = fdt_first_subnode (Dtb, CpusOffset);
-       NodeOffset > 0;
-       NodeOffset = fdt_next_subnode (Dtb, PrevNodeOffset))
-  {
+  Cpu        = 0;
+  NodeOffset = fdt_first_subnode (Dtb, CpusOffset);
+  while (NodeOffset > 0) {
     CONST VOID   *Property;
     INT32        Length;
     EFI_STATUS   Status;
@@ -416,7 +412,7 @@ UpdateCpuFloorsweepingConfig (
 
     Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
     if ((Property == NULL) || (AsciiStrCmp (Property, "cpu") != 0)) {
-      PrevNodeOffset = NodeOffset;
+      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
       continue;
     }
 
@@ -469,9 +465,12 @@ UpdateCpuFloorsweepingConfig (
         Cpu,
         Mpidr
         ));
-      PrevNodeOffset = NodeOffset;
+      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
     } else {
-      FdtErr = fdt_del_node (Dtb, NodeOffset);
+      TmpOffset  = NodeOffset;
+      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+
+      FdtErr = fdt_nop_node (Dtb, TmpOffset);
       if (FdtErr < 0) {
         DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu@%u node: %a\r\n", Cpu, fdt_strerror (FdtErr)));
         return EFI_DEVICE_ERROR;
@@ -509,33 +508,30 @@ UpdateCpuFloorsweepingConfig (
 
         DEBUG ((DEBUG_INFO, "Deleted cluster%u node in FDT\r\n", Cluster));
       } else {
-        INT32        ClusterCpuNodeOffset = 0;
-        INT32        PrevClusterCpuNodeOffset;
-        CONST VOID   *Property;
-        CONST CHAR8  *NodeName;
-        PrevClusterCpuNodeOffset = 0;
-        fdt_for_each_subnode (ClusterCpuNodeOffset, Dtb, NodeOffset) {
+        INT32       ClusterCpuNodeOffset;
+        CONST VOID  *Property;
+
+        ClusterCpuNodeOffset = fdt_first_subnode (Dtb, NodeOffset);
+        while (ClusterCpuNodeOffset > 0) {
           Property = fdt_getprop (Dtb, ClusterCpuNodeOffset, "cpu", NULL);
+
+          TmpOffset            = ClusterCpuNodeOffset;
+          ClusterCpuNodeOffset = fdt_next_subnode (Dtb, ClusterCpuNodeOffset);
+
           if (Property != NULL) {
             if (fdt_node_offset_by_phandle (Dtb, fdt32_to_cpu (*(UINT32 *)Property)) < 0) {
-              NodeName = fdt_get_name (Dtb, ClusterCpuNodeOffset, NULL);
-              FdtErr   = fdt_del_node (Dtb, ClusterCpuNodeOffset);
+              FdtErr = fdt_nop_node (Dtb, TmpOffset);
               if (FdtErr < 0) {
                 DEBUG ((
                   DEBUG_ERROR,
-                  "Failed to delete /cpus/cpu-map/%a/%a node: %a\r\n",
+                  "Failed to delete /cpus/cpu-map/%a cpu node: %a\r\n",
                   ClusterNodeStr,
-                  NodeName,
                   fdt_strerror (FdtErr)
                   ));
                 return EFI_DEVICE_ERROR;
               }
-
-              ClusterCpuNodeOffset = PrevClusterCpuNodeOffset;
             }
           }
-
-          PrevClusterCpuNodeOffset = ClusterCpuNodeOffset;
         }
       }
 
@@ -585,7 +581,6 @@ FloorSweepGlobalThermals (
   INT32        ThermSubNodeOffset;
   INT32        CoolingMapsSubNodeOffset;
   INT32        MapSubNodeOffset;
-  INT32        PrevMapSubNodeOffset;
   UINT32       Phandle;
   INT32        Length;
   CONST UINT8  *CoolingDeviceList;
@@ -597,6 +592,7 @@ FloorSweepGlobalThermals (
   INT32        EntrySize;
   INT32        FdtErr;
   UINTN        NumMaps;
+  INT32        TmpOffset;
 
   ThermsOffset = fdt_path_offset (Dtb, "/thermal-zones");
   if (ThermsOffset < 0) {
@@ -615,16 +611,15 @@ FloorSweepGlobalThermals (
       continue;
     }
 
-    NumMaps              = 0;
-    MapSubNodeOffset     = 0;
-    PrevMapSubNodeOffset = CoolingMapsSubNodeOffset;
-    fdt_for_each_subnode (MapSubNodeOffset, Dtb, CoolingMapsSubNodeOffset) {
+    NumMaps          = 0;
+    MapSubNodeOffset = fdt_first_subnode (Dtb, CoolingMapsSubNodeOffset);
+    while (MapSubNodeOffset > 0) {
       NumMaps++;
       MapName           = fdt_get_name (Dtb, MapSubNodeOffset, NULL);
       CoolingDeviceList = (CONST UINT8 *)fdt_getprop (Dtb, MapSubNodeOffset, "cooling-device", &Length);
       if (CoolingDeviceList == NULL) {
         DEBUG ((DEBUG_ERROR, "/thermal-zones/%a/cooling-maps/%a missing cooling-device property\n", ThermNodeName, MapName));
-        PrevMapSubNodeOffset = MapSubNodeOffset;
+        MapSubNodeOffset = fdt_next_subnode (Dtb, MapSubNodeOffset);
         continue;
       }
 
@@ -635,8 +630,6 @@ FloorSweepGlobalThermals (
       for (Index = 0; Index < Length; Index += EntrySize) {
         Phandle = fdt32_to_cpu (*(CONST UINT32 *)&CoolingDeviceList[Index]);
         if (fdt_node_offset_by_phandle (Dtb, Phandle) < 0) {
-          DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a deleting Phandle=0x%x\n", ThermNodeName, MapName, Phandle));
-
           if (Buffer == NULL) {
             Buffer = (UINT8 *)AllocateCopyPool (Length, CoolingDeviceList);
             if (Buffer == NULL) {
@@ -649,6 +642,8 @@ FloorSweepGlobalThermals (
 
           CopyMem (&Buffer[Index], &Buffer[Index + EntrySize], Length - Index - EntrySize);
           BufferLength -= EntrySize;
+
+          DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a deleted Phandle=0x%x, size=%u\n", ThermNodeName, MapName, Phandle, BufferLength));
         }
       }
 
@@ -656,16 +651,19 @@ FloorSweepGlobalThermals (
         if (BufferLength != 0) {
           fdt_delprop (Dtb, MapSubNodeOffset, "cooling-device");
           fdt_setprop (Dtb, MapSubNodeOffset, "cooling-device", Buffer, BufferLength);
+          MapSubNodeOffset = fdt_next_subnode (Dtb, MapSubNodeOffset);
         } else {
           DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a cooling-device empty, deleting\n", ThermNodeName, MapName));
 
-          FdtErr = fdt_del_node (Dtb, MapSubNodeOffset);
+          TmpOffset        = MapSubNodeOffset;
+          MapSubNodeOffset = fdt_next_subnode (Dtb, MapSubNodeOffset);
+
+          FdtErr = fdt_nop_node (Dtb, TmpOffset);
           if (FdtErr < 0) {
             DEBUG ((
               DEBUG_ERROR,
-              "Failed to delete /thermal-zones/%a/cooling-maps/%a: %a\r\n",
+              "Failed to delete /thermal-zones/%a/cooling-maps map: %a\r\n",
               ThermNodeName,
-              MapName,
               fdt_strerror (FdtErr)
               ));
             FreePool (Buffer);
@@ -673,13 +671,12 @@ FloorSweepGlobalThermals (
           }
 
           NumMaps--;
-          MapSubNodeOffset = PrevMapSubNodeOffset;
         }
 
         FreePool (Buffer);
+      } else {
+        MapSubNodeOffset = fdt_next_subnode (Dtb, MapSubNodeOffset);
       }
-
-      PrevMapSubNodeOffset = MapSubNodeOffset;
     }
 
     DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps has %u maps\n", ThermNodeName, NumMaps));
