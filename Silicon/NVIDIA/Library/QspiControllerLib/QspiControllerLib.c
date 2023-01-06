@@ -2,7 +2,7 @@
 
   QSPI Controller Library
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -561,6 +561,13 @@ QspiInitialize (
     QSPI_COMMAND_0_CS_SW_HW_BIT,
     QSPI_COMMAND_0_CS_SW_HW_BIT,
     QSPI_COMMAND_0_CS_SW_HW_SOFTWARE
+    );
+  // Configure byte order to be big-endian.
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_EN_LE_BYTE_BIT,
+    QSPI_COMMAND_0_EN_LE_BYTE_BIT,
+    QSPI_COMMAND_0_EN_LE_BYTE_DISABLE
     );
   for (ChipSelect = 0; ChipSelect < NumChipSelects; ChipSelect++) {
     // Configure CS to be inactive high.
