@@ -30,7 +30,7 @@
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
-  UserAuthFeaturePkg/UserAuthFeaturePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   BaseLib
@@ -49,16 +49,15 @@
 [Guids]
   gUserAuthenticationGuid                       ## CONSUMES  ## GUID
   gEfiEventExitBootServicesGuid                 ## CONSUMES  ## Event
-  gEdkiiPiSmmCommunicationRegionTableGuid       ## CONSUMES  ## SystemTable
 
 [Protocols]
   gEfiRscHandlerProtocolGuid                    ## CONSUMES
   gEfiDevicePathProtocolGuid                    ## PRODUCES
   gEfiHiiConfigAccessProtocolGuid               ## PRODUCES
-  gEfiSmmCommunicationProtocolGuid              ## CONSUMES
+  gEfiMmCommunication2ProtocolGuid              ## CONSUMES
 
 [Depex]
   gEfiSimpleTextOutProtocolGuid      AND
-  gEfiSmmCommunicationProtocolGuid   AND
+  gEfiMmCommunication2ProtocolGuid   AND
   gEfiVariableArchProtocolGuid       AND
   gEfiVariableWriteArchProtocolGuid

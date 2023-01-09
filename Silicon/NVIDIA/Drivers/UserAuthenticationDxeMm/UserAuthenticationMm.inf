@@ -1,7 +1,7 @@
 ## @file
-#  User Authentication Smm Driver.
+#  User Authentication MM Driver.
 #
-#  This driver provides SMM services for DXE user authentication module.
+#  This driver provides MM services for DXE user authentication module.
 #
 # Copyright (c) 2019 - 2021, Intel Corporation. All rights reserved.<BR>
 # Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -12,16 +12,16 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = UserAuthenticationSmm
-  FILE_GUID                      = 8fc6aaaa-4561-4815-8cf7-b87312992dce
-  MODULE_TYPE                    = DXE_SMM_DRIVER
+  BASE_NAME                      = UserAuthenticationMm
+  FILE_GUID                      = 46897a37-580a-4eac-91f7-c613f36d2846
+  MODULE_TYPE                    = MM_STANDALONE
   VERSION_STRING                 = 1.0
-  PI_SPECIFICATION_VERSION       = 0x0001000A
-  ENTRY_POINT                    = PasswordSmmInit
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  ENTRY_POINT                    = PasswordMmInit
 
 [Sources]
-  UserAuthenticationSmm.c
-  UserAuthenticationSmm.h
+  UserAuthenticationMm.c
+  UserAuthenticationMm.h
   KeyService.c
   KeyService.h
 
@@ -29,29 +29,24 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   CryptoPkg/CryptoPkg.dec
-  UserAuthFeaturePkg/UserAuthFeaturePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
-  UefiBootServicesTableLib
-  UefiDriverEntryPoint
+  StandaloneMmDriverEntryPoint
   DebugLib
   BaseLib
   BaseMemoryLib
   PrintLib
-  SmmServicesTableLib
+  MmServicesTableLib
   MemoryAllocationLib
-  UefiLib
   BaseCryptLib
-  PlatformPasswordLib
+  PlatformPasswordLibMm
 
 [Guids]
   gUserAuthenticationGuid                       ## CONSUMES  ## GUID
 
 [Protocols]
-  gEdkiiVariableLockProtocolGuid                ## CONSUMES
   gEfiSmmVariableProtocolGuid                   ## CONSUMES
-  gEdkiiSmmExitBootServicesProtocolGuid         ## CONSUMES
-  gEdkiiSmmLegacyBootProtocolGuid               ## CONSUMES
 
 [Depex]
-  gEfiSmmVariableProtocolGuid AND gEfiVariableWriteArchProtocolGuid
+  TRUE

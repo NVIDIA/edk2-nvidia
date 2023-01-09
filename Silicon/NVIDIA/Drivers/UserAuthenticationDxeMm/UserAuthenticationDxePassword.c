@@ -14,7 +14,7 @@
   Initialize the communicate buffer using DataSize and Function.
 
   @param[out]      DataPtr          Points to the data in the communicate buffer.
-  @param[in]       DataSize         The data size to send to SMM.
+  @param[in]       DataSize         The data size to send to MM.
   @param[in]       Function         The function number to initialize the communicate header.
 
   @return Communicate buffer.
@@ -26,64 +26,51 @@ InitCommunicateBuffer (
   IN      UINTN  Function
   )
 {
-  EFI_SMM_COMMUNICATE_HEADER               *SmmCommunicateHeader;
-  SMM_PASSWORD_COMMUNICATE_HEADER          *SmmPasswordFunctionHeader;
-  VOID                                     *Buffer;
-  EDKII_PI_SMM_COMMUNICATION_REGION_TABLE  *SmmCommRegionTable;
-  EFI_MEMORY_DESCRIPTOR                    *SmmCommMemRegion;
-  UINTN                                    Index;
-  UINTN                                    Size;
-  EFI_STATUS                               Status;
+  EFI_MM_COMMUNICATE_HEADER       *MmCommunicateHeader;
+  MM_PASSWORD_COMMUNICATE_HEADER  *MmPasswordFunctionHeader;
+  VOID                            *Buffer;
 
   Buffer = NULL;
-  Status = EfiGetSystemConfigurationTable (
-             &gEdkiiPiSmmCommunicationRegionTableGuid,
-             (VOID **)&SmmCommRegionTable
-             );
-  if (EFI_ERROR (Status)) {
-    return NULL;
+
+  if (DataSize + OFFSET_OF (EFI_MM_COMMUNICATE_HEADER, Data) +
+      sizeof (MM_PASSWORD_COMMUNICATE_HEADER) > PASSWORD_COMM_BUFFER_SIZE)
+  {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameters\n", __FUNCTION__));
   }
 
-  ASSERT (SmmCommRegionTable != NULL);
-  SmmCommMemRegion = (EFI_MEMORY_DESCRIPTOR *)(SmmCommRegionTable + 1);
-  Size             = 0;
-  for (Index = 0; Index < SmmCommRegionTable->NumberOfEntries; Index++) {
-    if (SmmCommMemRegion->Type == EfiConventionalMemory) {
-      Size = EFI_PAGES_TO_SIZE ((UINTN)SmmCommMemRegion->NumberOfPages);
-      if (Size >= (DataSize + OFFSET_OF (EFI_SMM_COMMUNICATE_HEADER, Data) + sizeof (SMM_PASSWORD_COMMUNICATE_HEADER))) {
-        break;
-      }
-    }
-
-    SmmCommMemRegion = (EFI_MEMORY_DESCRIPTOR *)((UINT8 *)SmmCommMemRegion + SmmCommRegionTable->DescriptorSize);
+  // Allocate the buffer for MM communication
+  mMmCommBuffer = AllocateRuntimePool (PASSWORD_COMM_BUFFER_SIZE);
+  if (mMmCommBuffer == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Buffer allocation for MM comm. failed\n", __FUNCTION__));
   }
 
-  ASSERT (Index < SmmCommRegionTable->NumberOfEntries);
-
-  Buffer = (VOID *)(UINTN)SmmCommMemRegion->PhysicalStart;
+  mMmCommBufferPhysical = mMmCommBuffer;
+  Buffer                = mMmCommBufferPhysical;
   ASSERT (Buffer != NULL);
-  SmmCommunicateHeader = (EFI_SMM_COMMUNICATE_HEADER *)Buffer;
-  CopyGuid (&SmmCommunicateHeader->HeaderGuid, &gUserAuthenticationGuid);
-  SmmCommunicateHeader->MessageLength = DataSize + sizeof (SMM_PASSWORD_COMMUNICATE_HEADER);
 
-  SmmPasswordFunctionHeader = (SMM_PASSWORD_COMMUNICATE_HEADER *)SmmCommunicateHeader->Data;
-  ZeroMem (SmmPasswordFunctionHeader, DataSize + sizeof (SMM_PASSWORD_COMMUNICATE_HEADER));
-  SmmPasswordFunctionHeader->Function = Function;
+  // Initialize EFI_MM_COMMUNICATE_HEADER structure
+  MmCommunicateHeader = (EFI_MM_COMMUNICATE_HEADER *)mMmCommBuffer;
+  CopyGuid (&MmCommunicateHeader->HeaderGuid, &gUserAuthenticationGuid);
+  MmCommunicateHeader->MessageLength = DataSize + sizeof (MM_PASSWORD_COMMUNICATE_HEADER);
+
+  MmPasswordFunctionHeader = (MM_PASSWORD_COMMUNICATE_HEADER *)MmCommunicateHeader->Data;
+  ZeroMem (MmPasswordFunctionHeader, DataSize + sizeof (MM_PASSWORD_COMMUNICATE_HEADER));
+  MmPasswordFunctionHeader->Function = Function;
   if (DataPtr != NULL) {
-    *DataPtr = SmmPasswordFunctionHeader + 1;
+    *DataPtr = MmPasswordFunctionHeader + 1;
   }
 
   return Buffer;
 }
 
 /**
-  Send the data in communicate buffer to SMM.
+  Send the data in communicate buffer to MM.
 
   @param[in]   Buffer                 Points to the data in the communicate buffer.
-  @param[in]   DataSize               The data size to send to SMM.
+  @param[in]   DataSize               The data size to send to MM.
 
-  @retval      EFI_SUCCESS            Success is returned from the function in SMM.
-  @retval      Others                 Failure is returned from the function in SMM.
+  @retval      EFI_SUCCESS            Success is returned from the function in MM.
+  @retval      Others                 Failure is returned from the function in MM.
 
 **/
 EFI_STATUS
@@ -92,19 +79,22 @@ SendCommunicateBuffer (
   IN      UINTN  DataSize
   )
 {
-  EFI_STATUS                       Status;
-  UINTN                            CommSize;
-  EFI_SMM_COMMUNICATE_HEADER       *SmmCommunicateHeader;
-  SMM_PASSWORD_COMMUNICATE_HEADER  *SmmPasswordFunctionHeader;
+  EFI_STATUS                      Status;
+  UINTN                           CommSize;
+  EFI_MM_COMMUNICATE_HEADER       *MmCommunicateHeader;
+  MM_PASSWORD_COMMUNICATE_HEADER  *MmPasswordFunctionHeader;
 
-  CommSize = DataSize + OFFSET_OF (EFI_SMM_COMMUNICATE_HEADER, Data) + sizeof (SMM_PASSWORD_COMMUNICATE_HEADER);
+  CommSize = DataSize + OFFSET_OF (EFI_MM_COMMUNICATE_HEADER, Data) + sizeof (MM_PASSWORD_COMMUNICATE_HEADER);
 
-  Status = mSmmCommunication->Communicate (mSmmCommunication, Buffer, &CommSize);
-  ASSERT_EFI_ERROR (Status);
+  Status = mMmCommunication2->Communicate (mMmCommunication2, Buffer, Buffer, &CommSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Mm communicate failed!", __FUNCTION__));
+    return Status;
+  }
 
-  SmmCommunicateHeader      = (EFI_SMM_COMMUNICATE_HEADER *)Buffer;
-  SmmPasswordFunctionHeader = (SMM_PASSWORD_COMMUNICATE_HEADER *)SmmCommunicateHeader->Data;
-  return SmmPasswordFunctionHeader->ReturnStatus;
+  MmCommunicateHeader      = (EFI_MM_COMMUNICATE_HEADER *)Buffer;
+  MmPasswordFunctionHeader = (MM_PASSWORD_COMMUNICATE_HEADER *)MmCommunicateHeader->Data;
+  return MmPasswordFunctionHeader->ReturnStatus;
 }
 
 /**
@@ -125,9 +115,9 @@ VerifyPassword (
   IN   UINTN   PasswordSize
   )
 {
-  EFI_STATUS                                Status;
-  VOID                                      *Buffer;
-  SMM_PASSWORD_COMMUNICATE_VERIFY_PASSWORD  *VerifyPassword;
+  EFI_STATUS                               Status;
+  VOID                                     *Buffer;
+  MM_PASSWORD_COMMUNICATE_VERIFY_PASSWORD  *VerifyPassword;
 
   ASSERT (Password != NULL);
 
@@ -138,7 +128,7 @@ VerifyPassword (
   Buffer = InitCommunicateBuffer (
              (VOID **)&VerifyPassword,
              sizeof (*VerifyPassword),
-             SMM_PASSWORD_FUNCTION_VERIFY_PASSWORD
+             MM_PASSWORD_FUNCTION_VERIFY_PASSWORD
              );
   if (Buffer == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -182,9 +172,9 @@ SetPassword (
   IN   UINTN        OldPasswordSize
   )
 {
-  EFI_STATUS                             Status;
-  VOID                                   *Buffer;
-  SMM_PASSWORD_COMMUNICATE_SET_PASSWORD  *SetPassword;
+  EFI_STATUS                            Status;
+  VOID                                  *Buffer;
+  MM_PASSWORD_COMMUNICATE_SET_PASSWORD  *SetPassword;
 
   if (NewPasswordSize > sizeof (SetPassword->NewPassword) * sizeof (CHAR16)) {
     return EFI_INVALID_PARAMETER;
@@ -197,7 +187,7 @@ SetPassword (
   Buffer = InitCommunicateBuffer (
              (VOID **)&SetPassword,
              sizeof (*SetPassword),
-             SMM_PASSWORD_FUNCTION_SET_PASSWORD
+             MM_PASSWORD_FUNCTION_SET_PASSWORD
              );
   if (Buffer == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -245,7 +235,7 @@ IsPasswordInstalled (
   Buffer = InitCommunicateBuffer (
              NULL,
              0,
-             SMM_PASSWORD_FUNCTION_IS_PASSWORD_SET
+             MM_PASSWORD_FUNCTION_IS_PASSWORD_SET
              );
   if (Buffer == NULL) {
     return FALSE;
@@ -269,17 +259,17 @@ IsPasswordInstalled (
 **/
 EFI_STATUS
 GetPasswordVerificationPolicy (
-  OUT SMM_PASSWORD_COMMUNICATE_VERIFY_POLICY  *VerifyPolicy
+  OUT MM_PASSWORD_COMMUNICATE_VERIFY_POLICY  *VerifyPolicy
   )
 {
-  EFI_STATUS                              Status;
-  VOID                                    *Buffer;
-  SMM_PASSWORD_COMMUNICATE_VERIFY_POLICY  *GetVerifyPolicy;
+  EFI_STATUS                             Status;
+  VOID                                   *Buffer;
+  MM_PASSWORD_COMMUNICATE_VERIFY_POLICY  *GetVerifyPolicy;
 
   Buffer = InitCommunicateBuffer (
              (VOID **)&GetVerifyPolicy,
              sizeof (*GetVerifyPolicy),
-             SMM_PASSWORD_FUNCTION_GET_VERIFY_POLICY
+             MM_PASSWORD_FUNCTION_GET_VERIFY_POLICY
              );
   if (Buffer == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -287,7 +277,7 @@ GetPasswordVerificationPolicy (
 
   Status = SendCommunicateBuffer (Buffer, sizeof (*GetVerifyPolicy));
   if (!EFI_ERROR (Status)) {
-    CopyMem (VerifyPolicy, GetVerifyPolicy, sizeof (SMM_PASSWORD_COMMUNICATE_VERIFY_POLICY));
+    CopyMem (VerifyPolicy, GetVerifyPolicy, sizeof (MM_PASSWORD_COMMUNICATE_VERIFY_POLICY));
   }
 
   return Status;
@@ -310,7 +300,7 @@ WasPasswordVerified (
   Buffer = InitCommunicateBuffer (
              NULL,
              0,
-             SMM_PASSWORD_FUNCTION_WAS_PASSWORD_VERIFIED
+             MM_PASSWORD_FUNCTION_WAS_PASSWORD_VERIFIED
              );
   if (Buffer == NULL) {
     return FALSE;

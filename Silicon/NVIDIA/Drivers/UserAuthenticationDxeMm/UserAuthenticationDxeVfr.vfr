@@ -20,22 +20,22 @@ formset
   form formid = 1,
       title  = STRING_TOKEN(STR_FORM_TITLE);
 
-      grayoutif  TRUE;
-        text
+grayoutif  TRUE;
+text
           help  = STRING_TOKEN(STR_ADMIN_PASSWORD_STS_HELP),
           text  = STRING_TOKEN(STR_ADMIN_PASSWORD_STS_PROMPT),
           text  = STRING_TOKEN(STR_ADMIN_PASSWORD_STS_CONTENT);
-      endif;
+endif;
 
-      password
+password
           prompt  = STRING_TOKEN(STR_ADMIN_PASSWORD_PROMPT),
           help    = STRING_TOKEN(STR_ADMIN_PASSWORD_HELP),
-          flags   = INTERACTIVE,
-          key     = ADMIN_PASSWORD_KEY_ID,
-          minsize = MIN_PASSWORD_LEN,
-          maxsize = MAX_PASSWORD_LEN,
-      endpassword;
+  flags   = INTERACTIVE,
+  key     = ADMIN_PASSWORD_KEY_ID,
+  minsize = MIN_PASSWORD_LEN,
+  maxsize = MAX_PASSWORD_LEN,
+  endpassword;
 
-  endform;
+endform;
 
 endformset;

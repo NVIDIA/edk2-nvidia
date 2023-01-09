@@ -8,13 +8,12 @@
 
 **/
 
-#ifndef __USER_AUTHENTICATION_SMM_H__
-#define __USER_AUTHENTICATION_SMM_H__
+#ifndef __USER_AUTHENTICATION_MM_H__
+#define __USER_AUTHENTICATION_MM_H__
 
-#include <PiSmm.h>
+#include <PiMm.h>
 
 #include <Protocol/SmmVariable.h>
-#include <Protocol/VariableLock.h>
 
 #include <Guid/UserAuthentication.h>
 
@@ -22,10 +21,9 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/PrintLib.h>
-#include <Library/UefiBootServicesTableLib.h>
-#include <Library/SmmServicesTableLib.h>
+
 #include <Library/MemoryAllocationLib.h>
-#include <Library/SmmServicesTableLib.h>
+#include <Library/MmServicesTableLib.h>
 #include <Library/BaseCryptLib.h>
 #include <Library/PlatformPasswordLib.h>
 
@@ -34,7 +32,7 @@
 #define PASSWORD_SALT_SIZE  32
 #define PASSWORD_HASH_SIZE  32  // SHA256_DIGEST_SIZE
 
-#define PASSWORD_MAX_TRY_COUNT        3
+#define PASSWORD_MAX_TRY_COUNT        5
 #define PASSWORD_HISTORY_CHECK_COUNT  5
 
 //

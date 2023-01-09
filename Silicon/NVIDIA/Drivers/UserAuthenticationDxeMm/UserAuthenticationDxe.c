@@ -14,7 +14,10 @@
 EFI_EVENT                         mExitBootServicesEvent   = NULL;
 EFI_RSC_HANDLER_PROTOCOL          *mRscHandlerProtocol     = NULL;
 USER_AUTHENTICATION_PRIVATE_DATA  *mUserAuthenticationData = NULL;
-EFI_SMM_COMMUNICATION_PROTOCOL    *mSmmCommunication       = NULL;
+EFI_MM_COMMUNICATION2_PROTOCOL    *mMmCommunication2       = NULL;
+
+VOID  *mMmCommBuffer         = NULL;
+VOID  *mMmCommBufferPhysical = NULL;
 
 EFI_GUID                mUserAuthenticationVendorGuid = USER_AUTHENTICATION_FORMSET_GUID;
 HII_VENDOR_DEVICE_PATH  mHiiVendorDevicePath          = {
@@ -180,7 +183,7 @@ PrintSetPasswordStatus (
 
   if (ReturnStatus == EFI_UNSUPPORTED) {
     DisplayString  = L"New password is not strong enough!";
-    DisplayString2 = L"Password must at least 8 chars and include lowercase, uppercase alphabetic, number and symbol";
+    DisplayString2 = L"Check the help text for password requirements.";
 
     do {
       CreatePopUp (
@@ -228,14 +231,13 @@ RequireUserPassword (
   VOID
   )
 {
-  EFI_STATUS                              Status;
-  CHAR16                                  UserInputPw[PASSWORD_MAX_SIZE];
-  CHAR16                                  *PopUpString;
-  SMM_PASSWORD_COMMUNICATE_VERIFY_POLICY  VerifyPolicy;
+  EFI_STATUS                             Status;
+  CHAR16                                 UserInputPw[PASSWORD_MAX_SIZE];
+  CHAR16                                 *PopUpString;
+  MM_PASSWORD_COMMUNICATE_VERIFY_POLICY  VerifyPolicy;
 
   Status = EFI_SUCCESS;
   ZeroMem (UserInputPw, sizeof (UserInputPw));
-
   if (!IsPasswordInstalled ()) {
     return FALSE;
   }
@@ -750,9 +752,9 @@ UserAuthenticationEntry (
   ASSERT_EFI_ERROR (Status);
 
   //
-  // Locates SMM Communication protocol.
+  // Locates EFI MM Communication 2 protocol.
   //
-  Status = gBS->LocateProtocol (&gEfiSmmCommunicationProtocolGuid, NULL, (VOID **)&mSmmCommunication);
+  Status = gBS->LocateProtocol (&gEfiMmCommunication2ProtocolGuid, NULL, (VOID **)&mMmCommunication2);
   ASSERT_EFI_ERROR (Status);
 
   return EFI_SUCCESS;

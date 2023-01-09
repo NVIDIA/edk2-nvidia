@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2022 NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2022-2023 NVIDIA CORPORATION. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -40,6 +40,11 @@
   INF Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordComm.inf
 
   !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
+
+  #
+  # MM User Authentication Driver
+  #
+  INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
 ################################################################################
 #

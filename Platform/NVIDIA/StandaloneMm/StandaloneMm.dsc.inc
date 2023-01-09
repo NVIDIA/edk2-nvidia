@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -28,6 +28,7 @@
   QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
   ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerVirtCounterLib/ArmGenericTimerVirtCounterLib.inf
   ErotQspiLib|Silicon/NVIDIA/Library/ErotQspiLib/ErotQspiLib.inf
+  PlatformPasswordLibMm|Silicon/NVIDIA/Library/PlatformPasswordLibMm/PlatformPasswordLibMm.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 
@@ -160,6 +161,11 @@
   # Sequential Record client driver
   #
   Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordComm.inf
+
+  #
+  # MM User Authentication Driver
+  #
+  Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
 [Components.AARCH64]
 

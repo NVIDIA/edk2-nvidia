@@ -173,6 +173,10 @@
   # guid to request MM services by RAS SP to write CMET records.
   gNVIDIARasCmetMmGuid = { 0x0e50d946, 0x65fa, 0x11ed, { 0xb4, 0x79, 0x00, 0x50, 0x56, 0x8f, 0x46, 0x25 } }
 
+  #User authentication for BIOS Setup Menu
+  gUserAuthFeaturePkgTokenSpaceGuid               = { 0xa2793a6e, 0x6af1, 0x45c4, { 0x88, 0x4d, 0x3d, 0x0c, 0x7a, 0xfe, 0x91, 0xc6 } }
+  gUserAuthenticationGuid                         = { 0xee24a7f7, 0x606b, 0x4724, { 0xb3, 0xc9, 0xf5, 0xae, 0x4a, 0x3b, 0x81, 0x65 } }
+
 [Protocols]
   gNVIDIADeviceTreeCompatibilityProtocolGuid      = { 0x1e710608, 0x28a3, 0x4c0b, { 0x9b, 0xec, 0x1c, 0x75, 0x49, 0xa7, 0x0d, 0x90 } }
   gNVIDIADeviceTreeNodeProtocolGuid               = { 0x149670c5, 0xb07b, 0x407a, { 0xae, 0x57, 0x39, 0xd0, 0xca, 0x51, 0x37, 0x80 } }
@@ -394,6 +398,9 @@
 #QuickBoot Support
   gNVIDIATokenSpaceGuid.PcdQuickBootSupported|TRUE|BOOLEAN|0x00000101
 
+#User Authentication for BIOS Setup Menu feature - This PCD specifies whether StatusCode is reported via USB3 Serial port.
+  gUserAuthFeaturePkgTokenSpaceGuid.PcdUserAuthenticationFeatureEnable|FALSE|BOOLEAN|0x00000103
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C
@@ -581,3 +588,11 @@
 
 # Platform supports NS QSPI controllers
   gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|FALSE|BOOLEAN|0x00000080
+
+[PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
+  # User Authentication for BIOS Setup Menu feature
+  # Indicate whether the password is cleared.
+  # When it is configured to Dynamic or DynamicEx, it can be set through detection using
+  # a platform-specific method (e.g. Board Jumper set) in a actual platform in early boot phase.<BR><BR>
+  # @Prompt The password clear status
+  gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE|BOOLEAN|0x00000104

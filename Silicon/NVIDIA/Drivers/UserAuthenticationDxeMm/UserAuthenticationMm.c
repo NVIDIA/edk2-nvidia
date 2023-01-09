@@ -7,7 +7,7 @@
 
 **/
 
-#include "UserAuthenticationSmm.h"
+#include "UserAuthenticationMm.h"
 
 EFI_SMM_VARIABLE_PROTOCOL  *mSmmVariable;
 
@@ -15,7 +15,7 @@ UINTN  mAdminPasswordTryCount = 0;
 
 BOOLEAN     mNeedReVerify     = TRUE;
 BOOLEAN     mPasswordVerified = FALSE;
-EFI_HANDLE  mSmmHandle        = NULL;
+EFI_HANDLE  mHandle           = NULL;
 
 /**
   Verify if the password is correct.
@@ -413,15 +413,15 @@ IsPasswordInHistory (
 }
 
 /**
-  Communication service SMI Handler entry.
+  Communication service MMI Handler entry.
 
-  This SMI handler provides services for password management.
+  This MMI handler provides services for password management.
 
-  @param[in]     DispatchHandle  The unique handle assigned to this handler by SmiHandlerRegister().
+  @param[in]     DispatchHandle  The unique handle assigned to this handler by MmiHandlerRegister().
   @param[in]     RegisterContext Points to an optional handler context which was specified when the
                                  handler was registered.
   @param[in, out] CommBuffer     A pointer to a collection of data in memory that will
-                                 be conveyed from a non-SMM environment into an SMM environment.
+                                 be conveyed from a non-MM environment into an MM environment.
   @param[in, out] CommBufferSize The size of the CommBuffer.
 
   @retval EFI_SUCCESS                         The interrupt was handled and quiesced. No other handlers
@@ -434,53 +434,54 @@ IsPasswordInHistory (
 **/
 EFI_STATUS
 EFIAPI
-SmmPasswordHandler (
+MmPasswordHandler (
   IN     EFI_HANDLE  DispatchHandle,
   IN     CONST VOID  *RegisterContext,
   IN OUT VOID        *CommBuffer,
   IN OUT UINTN       *CommBufferSize
   )
 {
-  EFI_STATUS                                Status;
-  SMM_PASSWORD_COMMUNICATE_HEADER           *SmmFunctionHeader;
-  UINTN                                     CommBufferPayloadSize;
-  UINTN                                     TempCommBufferSize;
-  SMM_PASSWORD_COMMUNICATE_SET_PASSWORD     SmmCommunicateSetPassword;
-  SMM_PASSWORD_COMMUNICATE_VERIFY_PASSWORD  SmmCommunicateVerifyPassword;
-  SMM_PASSWORD_COMMUNICATE_VERIFY_POLICY    SmmCommunicateSetVerifyPolicy;
-  SMM_PASSWORD_COMMUNICATE_VERIFY_POLICY    *SmmCommunicateGetVerifyPolicy;
-  UINTN                                     PasswordLen;
-  EFI_GUID                                  *UserGuid;
-  UINTN                                     *PasswordTryCount;
+  EFI_STATUS                               Status;
+  MM_PASSWORD_COMMUNICATE_HEADER           *MmFunctionHeader;
+  UINTN                                    CommBufferPayloadSize;
+  UINTN                                    TempCommBufferSize;
+  MM_PASSWORD_COMMUNICATE_SET_PASSWORD     MmCommunicateSetPassword;
+  MM_PASSWORD_COMMUNICATE_VERIFY_PASSWORD  MmCommunicateVerifyPassword;
+  MM_PASSWORD_COMMUNICATE_VERIFY_POLICY    MmCommunicateSetVerifyPolicy;
+  MM_PASSWORD_COMMUNICATE_VERIFY_POLICY    *MmCommunicateGetVerifyPolicy;
+  UINTN                                    PasswordLen;
+  EFI_GUID                                 *UserGuid;
+  UINTN                                    *PasswordTryCount;
 
   //
   // If input is invalid, stop processing this SMI
   //
   if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Input is INVALID", __FUNCTION__));
     return EFI_SUCCESS;
   }
 
   TempCommBufferSize = *CommBufferSize;
   PasswordLen        = 0;
 
-  if (TempCommBufferSize < sizeof (SMM_PASSWORD_COMMUNICATE_HEADER)) {
-    DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: SMM communication buffer size invalid!\n"));
+  if (TempCommBufferSize < sizeof (MM_PASSWORD_COMMUNICATE_HEADER)) {
+    DEBUG ((DEBUG_ERROR, "%a: MM communication buffer size invalid!\n", __FUNCTION__));
     return EFI_SUCCESS;
   }
 
-  CommBufferPayloadSize = TempCommBufferSize - sizeof (SMM_PASSWORD_COMMUNICATE_HEADER);
+  CommBufferPayloadSize = TempCommBufferSize - sizeof (MM_PASSWORD_COMMUNICATE_HEADER);
 
-  Status            = EFI_SUCCESS;
-  SmmFunctionHeader = (SMM_PASSWORD_COMMUNICATE_HEADER *)CommBuffer;
+  Status           = EFI_SUCCESS;
+  MmFunctionHeader = (MM_PASSWORD_COMMUNICATE_HEADER *)CommBuffer;
 
   UserGuid         = &gUserAuthenticationGuid;
   PasswordTryCount = &mAdminPasswordTryCount;
 
-  switch (SmmFunctionHeader->Function) {
-    case SMM_PASSWORD_FUNCTION_IS_PASSWORD_SET:
+  switch (MmFunctionHeader->Function) {
+    case MM_PASSWORD_FUNCTION_IS_PASSWORD_SET:
       PasswordTryCount = NULL;
       if (CommBufferPayloadSize != 0) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: IS_PASSWORD_SET payload buffer invalid!\n"));
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: IS_PASSWORD_SET payload buffer invalid!\n"));
         Status = EFI_INVALID_PARAMETER;
         goto EXIT;
       }
@@ -492,33 +493,33 @@ SmmPasswordHandler (
       }
 
       break;
-    case SMM_PASSWORD_FUNCTION_SET_PASSWORD:
+    case MM_PASSWORD_FUNCTION_SET_PASSWORD:
       if (*PasswordTryCount >= PASSWORD_MAX_TRY_COUNT) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: SET_PASSWORD try count reach!\n"));
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: SET_PASSWORD try count reach!\n"));
         PasswordTryCount = NULL;
         Status           = EFI_ACCESS_DENIED;
         goto EXIT;
       }
 
-      if (CommBufferPayloadSize != sizeof (SMM_PASSWORD_COMMUNICATE_SET_PASSWORD)) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: SET_PASSWORD payload buffer invalid!\n"));
+      if (CommBufferPayloadSize != sizeof (MM_PASSWORD_COMMUNICATE_SET_PASSWORD)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: SET_PASSWORD payload buffer invalid!\n"));
         Status = EFI_INVALID_PARAMETER;
         goto EXIT;
       }
 
-      CopyMem (&SmmCommunicateSetPassword, SmmFunctionHeader + 1, sizeof (SmmCommunicateSetPassword));
+      CopyMem (&MmCommunicateSetPassword, MmFunctionHeader + 1, sizeof (MmCommunicateSetPassword));
 
-      PasswordLen = AsciiStrnLenS (SmmCommunicateSetPassword.OldPassword, sizeof (SmmCommunicateSetPassword.OldPassword));
-      if (PasswordLen == sizeof (SmmCommunicateSetPassword.OldPassword)) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: OldPassword invalid!\n"));
+      PasswordLen = AsciiStrnLenS (MmCommunicateSetPassword.OldPassword, sizeof (MmCommunicateSetPassword.OldPassword));
+      if (PasswordLen == sizeof (MmCommunicateSetPassword.OldPassword)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: OldPassword invalid!\n"));
         Status = EFI_INVALID_PARAMETER;
         goto EXIT;
       }
 
-      if (!IsPasswordVerified (UserGuid, SmmCommunicateSetPassword.OldPassword, PasswordLen + 1)) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: PasswordVerify - FAIL\n"));
+      if (!IsPasswordVerified (UserGuid, MmCommunicateSetPassword.OldPassword, PasswordLen + 1)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: PasswordVerify - FAIL\n"));
         if (*PasswordTryCount >= PASSWORD_MAX_TRY_COUNT) {
-          DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: SET_PASSWORD try count reach!\n"));
+          DEBUG ((DEBUG_ERROR, "MmPasswordHandler: SET_PASSWORD try count reach!\n"));
           Status = EFI_ACCESS_DENIED;
         } else {
           Status = EFI_SECURITY_VIOLATION;
@@ -527,21 +528,21 @@ SmmPasswordHandler (
         goto EXIT;
       }
 
-      PasswordLen = AsciiStrnLenS (SmmCommunicateSetPassword.NewPassword, sizeof (SmmCommunicateSetPassword.NewPassword));
-      if (PasswordLen == sizeof (SmmCommunicateSetPassword.NewPassword)) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: NewPassword invalid!\n"));
+      PasswordLen = AsciiStrnLenS (MmCommunicateSetPassword.NewPassword, sizeof (MmCommunicateSetPassword.NewPassword));
+      if (PasswordLen == sizeof (MmCommunicateSetPassword.NewPassword)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: NewPassword invalid!\n"));
         Status = EFI_INVALID_PARAMETER;
         goto EXIT;
       }
 
-      if ((PasswordLen != 0) && !IsPasswordStrong (SmmCommunicateSetPassword.NewPassword, PasswordLen + 1)) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: NewPassword too weak!\n"));
+      if ((PasswordLen != 0) && !IsPasswordStrong (MmCommunicateSetPassword.NewPassword, PasswordLen + 1)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: NewPassword too weak!\n"));
         Status = EFI_UNSUPPORTED;
         goto EXIT;
       }
 
-      if ((PasswordLen != 0) && IsPasswordInHistory (UserGuid, SmmCommunicateSetPassword.NewPassword, PasswordLen + 1)) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: NewPassword in history!\n"));
+      if ((PasswordLen != 0) && IsPasswordInHistory (UserGuid, MmCommunicateSetPassword.NewPassword, PasswordLen + 1)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: NewPassword in history!\n"));
         Status = EFI_ALREADY_STARTED;
         goto EXIT;
       }
@@ -549,38 +550,38 @@ SmmPasswordHandler (
       if (PasswordLen == 0) {
         Status = SavePasswordToVariable (UserGuid, NULL, 0);
       } else {
-        Status = SavePasswordToVariable (UserGuid, SmmCommunicateSetPassword.NewPassword, PasswordLen + 1);
+        Status = SavePasswordToVariable (UserGuid, MmCommunicateSetPassword.NewPassword, PasswordLen + 1);
       }
 
       break;
 
-    case SMM_PASSWORD_FUNCTION_VERIFY_PASSWORD:
+    case MM_PASSWORD_FUNCTION_VERIFY_PASSWORD:
       if (*PasswordTryCount >= PASSWORD_MAX_TRY_COUNT) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: VERIFY_PASSWORD try count reach!\n"));
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: VERIFY_PASSWORD try count reach!\n"));
         PasswordTryCount = NULL;
         Status           = EFI_ACCESS_DENIED;
         goto EXIT;
       }
 
-      if (CommBufferPayloadSize != sizeof (SMM_PASSWORD_COMMUNICATE_VERIFY_PASSWORD)) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: VERIFY_PASSWORD payload buffer invalid!\n"));
+      if (CommBufferPayloadSize != sizeof (MM_PASSWORD_COMMUNICATE_VERIFY_PASSWORD)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: VERIFY_PASSWORD payload buffer invalid!\n"));
         Status = EFI_INVALID_PARAMETER;
         goto EXIT;
       }
 
-      CopyMem (&SmmCommunicateVerifyPassword, SmmFunctionHeader + 1, sizeof (SmmCommunicateVerifyPassword));
+      CopyMem (&MmCommunicateVerifyPassword, MmFunctionHeader + 1, sizeof (MmCommunicateVerifyPassword));
 
-      PasswordLen = AsciiStrnLenS (SmmCommunicateVerifyPassword.Password, sizeof (SmmCommunicateVerifyPassword.Password));
-      if (PasswordLen == sizeof (SmmCommunicateVerifyPassword.Password)) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: Password invalid!\n"));
+      PasswordLen = AsciiStrnLenS (MmCommunicateVerifyPassword.Password, sizeof (MmCommunicateVerifyPassword.Password));
+      if (PasswordLen == sizeof (MmCommunicateVerifyPassword.Password)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: Password invalid!\n"));
         Status = EFI_INVALID_PARAMETER;
         goto EXIT;
       }
 
-      if (!IsPasswordVerified (UserGuid, SmmCommunicateVerifyPassword.Password, PasswordLen + 1)) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: PasswordVerify - FAIL\n"));
+      if (!IsPasswordVerified (UserGuid, MmCommunicateVerifyPassword.Password, PasswordLen + 1)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: PasswordVerify - FAIL\n"));
         if (*PasswordTryCount >= PASSWORD_MAX_TRY_COUNT) {
-          DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: VERIFY_PASSWORD try count reach!\n"));
+          DEBUG ((DEBUG_ERROR, "MmPasswordHandler: VERIFY_PASSWORD try count reach!\n"));
           Status = EFI_ACCESS_DENIED;
         } else {
           Status = EFI_SECURITY_VIOLATION;
@@ -593,33 +594,33 @@ SmmPasswordHandler (
       Status            = EFI_SUCCESS;
       break;
 
-    case SMM_PASSWORD_FUNCTION_SET_VERIFY_POLICY:
+    case MM_PASSWORD_FUNCTION_SET_VERIFY_POLICY:
       PasswordTryCount = NULL;
-      if (CommBufferPayloadSize != sizeof (SMM_PASSWORD_COMMUNICATE_VERIFY_POLICY)) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: SET_VERIFY_POLICY payload buffer invalid!\n"));
+      if (CommBufferPayloadSize != sizeof (MM_PASSWORD_COMMUNICATE_VERIFY_POLICY)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: SET_VERIFY_POLICY payload buffer invalid!\n"));
         Status = EFI_INVALID_PARAMETER;
         goto EXIT;
       }
 
-      CopyMem (&SmmCommunicateSetVerifyPolicy, SmmFunctionHeader + 1, sizeof (SmmCommunicateSetVerifyPolicy));
-      mNeedReVerify = SmmCommunicateSetVerifyPolicy.NeedReVerify;
+      CopyMem (&MmCommunicateSetVerifyPolicy, MmFunctionHeader + 1, sizeof (MmCommunicateSetVerifyPolicy));
+      mNeedReVerify = MmCommunicateSetVerifyPolicy.NeedReVerify;
       break;
 
-    case SMM_PASSWORD_FUNCTION_GET_VERIFY_POLICY:
+    case MM_PASSWORD_FUNCTION_GET_VERIFY_POLICY:
       PasswordTryCount = NULL;
-      if (CommBufferPayloadSize != sizeof (SMM_PASSWORD_COMMUNICATE_VERIFY_POLICY)) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: GET_VERIFY_POLICY payload buffer invalid!\n"));
+      if (CommBufferPayloadSize != sizeof (MM_PASSWORD_COMMUNICATE_VERIFY_POLICY)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: GET_VERIFY_POLICY payload buffer invalid!\n"));
         Status = EFI_INVALID_PARAMETER;
         goto EXIT;
       }
 
-      SmmCommunicateGetVerifyPolicy               = (SMM_PASSWORD_COMMUNICATE_VERIFY_POLICY *)(SmmFunctionHeader + 1);
-      SmmCommunicateGetVerifyPolicy->NeedReVerify = mNeedReVerify;
+      MmCommunicateGetVerifyPolicy               = (MM_PASSWORD_COMMUNICATE_VERIFY_POLICY *)(MmFunctionHeader + 1);
+      MmCommunicateGetVerifyPolicy->NeedReVerify = mNeedReVerify;
       break;
-    case SMM_PASSWORD_FUNCTION_WAS_PASSWORD_VERIFIED:
+    case MM_PASSWORD_FUNCTION_WAS_PASSWORD_VERIFIED:
       PasswordTryCount = NULL;
       if (CommBufferPayloadSize != 0) {
-        DEBUG ((DEBUG_ERROR, "SmmPasswordHandler: WAS_PASSWORD_VERIFIED payload buffer invalid!\n"));
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: WAS_PASSWORD_VERIFIED payload buffer invalid!\n"));
         Status = EFI_INVALID_PARAMETER;
         goto EXIT;
       }
@@ -645,31 +646,7 @@ EXIT:
     }
   }
 
-  SmmFunctionHeader->ReturnStatus = Status;
-
-  return EFI_SUCCESS;
-}
-
-/**
-  Performs Exit Boot Services UserAuthentication actions
-
-  @param[in] Protocol   Points to the protocol's unique identifier.
-  @param[in] Interface  Points to the interface instance.
-  @param[in] Handle     The handle on which the interface was installed.
-
-  @retval EFI_SUCCESS   Notification runs successfully.
-**/
-EFI_STATUS
-EFIAPI
-UaExitBootServices (
-  IN CONST EFI_GUID  *Protocol,
-  IN VOID            *Interface,
-  IN EFI_HANDLE      Handle
-  )
-{
-  DEBUG ((DEBUG_INFO, "Unregister User Authentication Smi\n"));
-
-  gSmst->SmiHandlerUnRegister (mSmmHandle);
+  MmFunctionHeader->ReturnStatus = Status;
 
   return EFI_SUCCESS;
 }
@@ -685,55 +662,28 @@ UaExitBootServices (
 **/
 EFI_STATUS
 EFIAPI
-PasswordSmmInit (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+PasswordMmInit (
+  IN EFI_HANDLE           ImageHandle,
+  IN EFI_MM_SYSTEM_TABLE  *MmSystemTable
   )
 {
-  EFI_STATUS                    Status;
-  EDKII_VARIABLE_LOCK_PROTOCOL  *VariableLock;
-  CHAR16                        PasswordHistoryName[sizeof (USER_AUTHENTICATION_VAR_NAME)/sizeof (CHAR16) + 5];
-  UINTN                         Index;
-  EFI_EVENT                     ExitBootServicesEvent;
-  EFI_EVENT                     LegacyBootEvent;
+  EFI_STATUS  Status;
 
   ASSERT (PASSWORD_HASH_SIZE == SHA256_DIGEST_SIZE);
   ASSERT (PASSWORD_HISTORY_CHECK_COUNT < 0xFFFF);
 
-  Status = gSmst->SmmLocateProtocol (&gEfiSmmVariableProtocolGuid, NULL, (VOID **)&mSmmVariable);
-  ASSERT_EFI_ERROR (Status);
-
-  //
-  // Make password variables read-only for DXE driver for security concern.
-  //
-  Status = gBS->LocateProtocol (&gEdkiiVariableLockProtocolGuid, NULL, (VOID **)&VariableLock);
-  if (!EFI_ERROR (Status)) {
-    Status = VariableLock->RequestToLock (VariableLock, USER_AUTHENTICATION_VAR_NAME, &gUserAuthenticationGuid);
-    ASSERT_EFI_ERROR (Status);
-
-    for (Index = 1; Index <= PASSWORD_HISTORY_CHECK_COUNT; Index++) {
-      UnicodeSPrint (PasswordHistoryName, sizeof (PasswordHistoryName), L"%s%04x", USER_AUTHENTICATION_VAR_NAME, Index);
-      Status = VariableLock->RequestToLock (VariableLock, PasswordHistoryName, &gUserAuthenticationGuid);
-      ASSERT_EFI_ERROR (Status);
-    }
-
-    Status = VariableLock->RequestToLock (VariableLock, USER_AUTHENTICATION_HISTORY_LAST_VAR_NAME, &gUserAuthenticationGuid);
-    ASSERT_EFI_ERROR (Status);
+  Status = gMmst->MmLocateProtocol (&gEfiSmmVariableProtocolGuid, NULL, (VOID **)&mSmmVariable);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: gEfiSmmVariableProtocolGuid: NOT LOCATED!\n", __FUNCTION__));
   }
 
-  Status = gSmst->SmiHandlerRegister (SmmPasswordHandler, &gUserAuthenticationGuid, &mSmmHandle);
+  ASSERT_EFI_ERROR (Status);
+
+  Status = gMmst->MmiHandlerRegister (MmPasswordHandler, &gUserAuthenticationGuid, &mHandle);
   ASSERT_EFI_ERROR (Status);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
-  //
-  // Register for SmmExitBootServices and SmmLegacyBoot notification.
-  //
-  Status = gSmst->SmmRegisterProtocolNotify (&gEdkiiSmmExitBootServicesProtocolGuid, UaExitBootServices, &ExitBootServicesEvent);
-  ASSERT_EFI_ERROR (Status);
-  Status = gSmst->SmmRegisterProtocolNotify (&gEdkiiSmmLegacyBootProtocolGuid, UaExitBootServices, &LegacyBootEvent);
-  ASSERT_EFI_ERROR (Status);
 
   if (IsPasswordCleared ()) {
     DEBUG ((DEBUG_INFO, "IsPasswordCleared\n"));

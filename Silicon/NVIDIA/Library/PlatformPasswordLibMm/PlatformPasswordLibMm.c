@@ -1,5 +1,7 @@
 /** @file
-  NULL PlatformPasswordLib instance does NOT really detect whether the password is cleared
+  PlatformPasswordLib for MM environment.
+
+  PlatformPasswordLibMm instance does NOT really detect whether the password is cleared
   but returns the PCD value directly. This instance can be used to verify security
   related features during platform enabling and development. It should be replaced
   by a platform-specific method(e.g. Button pressed) in a real platform for product.
@@ -11,7 +13,9 @@
 
 **/
 
-BOOLEAN  mPasswordCleared = FALSE;
+#include <Library/MmServicesTableLib.h>
+
+STATIC BOOLEAN  mPasswordCleared = FALSE;
 
 /**
   This function is called at password driver entrypoint.
@@ -58,17 +62,17 @@ NeedEnrollPassword (
 /**
   Save password clear state from a PCD to mPasswordCleared.
 
-  @param  ImageHandle   ImageHandle of the loaded driver.
-  @param  SystemTable   Pointer to the EFI System Table.
+  @param  ImageHandle     ImageHandle of the loaded driver.
+  @param  MmSystemTable   Pointer to the MM System Table.
 
   @retval  EFI_SUCCESS          PcdPasswordCleared is got successfully.
 
 **/
 EFI_STATUS
 EFIAPI
-PlatformPasswordLibNullConstructor (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+PlatformPasswordLibMmConstructor (
+  IN EFI_HANDLE           ImageHandle,
+  IN EFI_MM_SYSTEM_TABLE  *MmSystemTable
   )
 {
   mPasswordCleared = PcdGetBool (PcdPasswordCleared);

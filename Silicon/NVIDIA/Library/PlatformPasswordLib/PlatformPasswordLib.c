@@ -1,5 +1,5 @@
 /** @file
-  NULL PlatformPasswordLib instance does NOT really detect whether the password is cleared
+  PlatformPasswordLib instance does NOT really detect whether the password is cleared
   but returns the PCD value directly. This instance can be used to verify security
   related features during platform enabling and development. It should be replaced
   by a platform-specific method(e.g. Button pressed) in a real platform for product.
@@ -11,7 +11,7 @@
 
 **/
 
-BOOLEAN  mPasswordCleared = FALSE;
+STATIC BOOLEAN  mPasswordCleared = FALSE;
 
 /**
   This function is called at password driver entrypoint.
@@ -66,7 +66,7 @@ NeedEnrollPassword (
 **/
 EFI_STATUS
 EFIAPI
-PlatformPasswordLibNullConstructor (
+PlatformPasswordLibConstructor (
   IN EFI_HANDLE        ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
