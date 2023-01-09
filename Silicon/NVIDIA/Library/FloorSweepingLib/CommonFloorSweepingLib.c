@@ -291,7 +291,7 @@ CommonFloorSweepPcie (
   UINTN                Socket;
   INT32                ParentOffset;
   INT32                NodeOffset;
-  INT32                PrevNodeOffset;
+  INT32                TmpOffset;
   CHAR8                SocketStr[] = "/socket@00";
   TEGRA_PLATFORM_TYPE  Platform;
   UINTN                ChipId;
@@ -353,10 +353,8 @@ CommonFloorSweepPcie (
       }
     }
 
-    for (NodeOffset = fdt_first_subnode (Dtb, ParentOffset);
-         NodeOffset > 0;
-         NodeOffset = fdt_next_subnode (Dtb, PrevNodeOffset))
-    {
+    NodeOffset = fdt_first_subnode (Dtb, ParentOffset);
+    while (NodeOffset > 0) {
       CONST VOID  *Property;
       INT32       Length;
       UINT32      Tmp32;
@@ -364,7 +362,7 @@ CommonFloorSweepPcie (
 
       Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
       if ((Property == NULL) || (AsciiStrCmp (Property, "pci") != 0)) {
-        PrevNodeOffset = NodeOffset;
+        NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
         continue;
       }
 
@@ -387,7 +385,10 @@ CommonFloorSweepPcie (
       if ((PcieDisableReg & (1UL << PCIE_ID_TO_INTERFACE (PcieId))) != 0) {
         INT32  FdtErr;
 
-        FdtErr = fdt_del_node (Dtb, NodeOffset);
+        TmpOffset  = NodeOffset;
+        NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+
+        FdtErr = fdt_nop_node (Dtb, TmpOffset);
         if (FdtErr < 0) {
           DEBUG ((
             DEBUG_ERROR,
@@ -557,7 +558,7 @@ CommonFloorSweepPcie (
           }
         }
 
-        PrevNodeOffset = NodeOffset;
+        NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
       }
     }
   }
