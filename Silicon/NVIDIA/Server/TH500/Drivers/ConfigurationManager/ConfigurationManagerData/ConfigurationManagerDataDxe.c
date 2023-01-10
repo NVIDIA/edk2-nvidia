@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe
 
-  Copyright (c) 2019 - 2022, NVIDIA Corporation. All rights reserved.
+  Copyright (c) 2019 - 2023, NVIDIA Corporation. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -724,6 +724,7 @@ InitializePlatformRepository (
   BOOLEAN                         SkipMpam;
   BOOLEAN                         SkipApmt;
   BOOLEAN                         SkipSpmi;
+  BOOLEAN                         SkipTpm2;
   UINTN                           SocketId;
   TEGRA_PLATFORM_TYPE             PlatformType;
 
@@ -801,6 +802,7 @@ InitializePlatformRepository (
   SkipMpam = FALSE;
   SkipApmt = FALSE;
   SkipSpmi = FALSE;
+  SkipTpm2 = FALSE;
   Status   = DtPlatformLoadDtb (&DtbBase, &DtbSize);
   if (EFI_ERROR (Status)) {
     return Status;
@@ -841,6 +843,11 @@ InitializePlatformRepository (
     if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-spmi-table", NULL)) {
       SkipSpmi = TRUE;
       DEBUG ((DEBUG_ERROR, "%a: Skip SPMI Table\r\n", __FUNCTION__));
+    }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-tpm2-table", NULL)) {
+      SkipTpm2 = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip TPM2 Table\r\n", __FUNCTION__));
     }
   }
 
@@ -945,6 +952,13 @@ InitializePlatformRepository (
 
   if (!SkipSpmi) {
     Status = InstallServiceProcessorManagementInterfaceTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  }
+
+  if (!SkipTpm2) {
+    Status = InstallTrustedComputingPlatform2Table (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
     if (EFI_ERROR (Status)) {
       return Status;
     }

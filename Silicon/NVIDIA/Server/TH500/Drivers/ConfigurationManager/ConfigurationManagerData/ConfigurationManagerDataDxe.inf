@@ -32,6 +32,7 @@
   ConfigurationSlit.c
   ConfigurationHmat.c
   ConfigurationSpmi.c
+  ConfigurationTpm2.c
   ConfigurationSmbios.c
   ConfigurationSmbiosType1.c
   ConfigurationSmbiosType2.c
@@ -92,6 +93,9 @@
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass
+  gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
