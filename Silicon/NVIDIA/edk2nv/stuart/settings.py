@@ -71,6 +71,15 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
 
         return packages_paths
 
+    def GetSkippedDirectories(self):
+        ''' Return tuple containing workspace-relative directory paths that should be skipped for processing.
+        Absolute paths are not supported. '''
+        # NOTE: These paths must use a trailing slash to ensure stuart treats
+        # them properly when computing relative paths.
+        skipped_dirs = [path + "/" for path in self._skipped_dirs]
+
+        return skipped_dirs
+
     def GetActiveScopes(self):
         ''' List of scopes we need for this platform. '''
         return ['edk2-build']
@@ -85,6 +94,11 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
             'package paths.  Allows build time overrides.',
             action="append", default=[])
         parserObj.add_argument(
+            '--insert-skipped-dir', dest='nvidia_skipped_dirs', type=str,
+            help='Insert the given path into the beginning of the list of '
+            'skipped paths.  Allows build time overrides.',
+            action="append", default=[])
+        parserObj.add_argument(
             '--require-submodule', dest='nvidia_submodules', type=str,
             help='Add a required submodule.',
             action="append", default=[])
@@ -94,6 +108,7 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         super().RetrieveCommandLineOptions(args)
 
         self._insert_pkgs_paths = args.nvidia_pkgs_paths
+        self._skipped_dirs = args.nvidia_skipped_dirs
         self._added_submodules = args.nvidia_submodules
 
     #######################################
