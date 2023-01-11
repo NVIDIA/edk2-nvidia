@@ -2,7 +2,7 @@
 
   PLDM FW update definitions and helper functions
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -117,14 +117,25 @@
 #define PLDM_FW_DESCRIPTOR_TYPE_SCSI_VENDOR      0x0006
 #define PLDM_FW_DESCRIPTOR_TYPE_VENDOR           0xffff
 
-// Component compatibility response
+// field values
+#define PLDM_FW_UPDATE_COMPONENT_REQUEST_FORCE_UPDATE  BIT0
+
+#define PLDM_FW_APPLY_RESULT_SUCCESS                 0x0
+#define PLDM_FW_APPLY_RESULT_SUCCESS_NEW_ACTIVATION  0x1
+
+#define PLDM_FW_ACTIVATION_RESERVED               0xffc0
+#define PLDM_FW_ACTIVATION_AC_POWER_CYCLE         0x0020
+#define PLDM_FW_ACTIVATION_DC_POWER_CYCLE         0x0010
+#define PLDM_FW_ACTIVATION_SYSTEM_REBOOT          0x0008
+#define PLDM_FW_ACTIVATION_MEDIUM_SPECIFIC_RESET  0x0004
+#define PLDM_FW_ACTIVATION_SELF_CONTAINED         0x0002
+#define PLDM_FW_ACTIVATION_AUTOMATIC              0x0001
+
 #define PLDM_FW_COMPONENT_COMPATIBILITY_OK     0
 #define PLDM_FW_COMPONENT_COMPATIBILITY_ERROR  1
 
-// Component compatibility response code
 #define PLDM_FW_COMPONENT_COMPATIBILITY_CODE_OK  0
 
-// Multi-request transfer flag
 #define PLDM_FW_TRANSFER_FLAG_START   0x01
 #define PLDM_FW_TRANSFER_FLAG_MIDDLE  0x02
 #define PLDM_FW_TRANSFER_FLAG_END     0x04
@@ -136,6 +147,12 @@ typedef struct {
   UINT16    Length;
   UINT8     Data[1];
 } PLDM_FW_DESCRIPTOR;
+
+typedef struct {
+  UINT16    Type;
+  UINT16    Length;
+  UINT32    Id;
+} PLDM_FW_DESCRIPTOR_IANA_ID;
 
 typedef MCTP_PLDM_REQUEST_HEADER PLDM_FW_QUERY_DEVICE_IDS_REQUEST;
 
@@ -345,6 +362,29 @@ PldmFwCheckRspCompletion (
   );
 
 /**
+  Check PLDM FW response completion code and length.
+
+  @param[in]  RspBuffer         Pointer to PLDM response message buffer.
+  @param[in]  RspLength         Response message length.
+  @param[in]  RspLengthExpected Expected response message length.
+  @param[in]  Function          Caller's function name for error messages.
+  @param[in]  DeviceName        Device name where message was received.
+
+  @retval EFI_SUCCESS           Operation completed normally.
+  @retval Others                Failure occurred.
+
+**/
+EFI_STATUS
+EFIAPI
+PldmFwCheckRspCompletionAndLength (
+  IN CONST VOID    *RspBuffer,
+  IN UINTN         RspLength,
+  IN UINTN         RspLengthExpected,
+  IN CONST CHAR8   *Function,
+  IN CONST CHAR16  *DeviceName
+  );
+
+/**
   Check Get FW Params response payload for errors.
 
   @param[in]  Rsp                   Pointer to Get FW Params response.
@@ -482,6 +522,23 @@ EFIAPI
 PldmFwPrintQueryDeviceIdsRsp (
   IN CONST PLDM_FW_QUERY_DEVICE_IDS_RESPONSE  *Rsp,
   IN CONST CHAR16                             *DeviceName
+  );
+
+/**
+  Check if descriptor is in list.
+
+  @param[in]  Descriptor                FW Descriptor.
+  @param[in]  List                      List of descriptors to check.
+
+  @retval BOOLEAN                       TRUE if descriptor is in list.
+
+**/
+BOOLEAN
+EFIAPI
+PldmFwDescriptorIsInList (
+  IN CONST PLDM_FW_DESCRIPTOR  *Descriptor,
+  IN CONST PLDM_FW_DESCRIPTOR  *List,
+  UINTN                        Count
   );
 
 #endif

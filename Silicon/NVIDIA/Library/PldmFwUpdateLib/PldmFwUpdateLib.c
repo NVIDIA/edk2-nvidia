@@ -2,12 +2,13 @@
 
   PLDM FW update functions
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PldmFwUpdateLib.h>
 
@@ -43,6 +44,31 @@ PldmFwCheckRspCompletion (
 
   if (Rsp->CompletionCode != PLDM_SUCCESS) {
     DEBUG ((DEBUG_ERROR, "%a: %s failed: 0x%x\n", Function, DeviceName, Rsp->CompletionCode));
+    return EFI_DEVICE_ERROR;
+  }
+
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
+PldmFwCheckRspCompletionAndLength (
+  IN CONST VOID    *RspBuffer,
+  IN UINTN         RspLength,
+  IN UINTN         RspLengthExpected,
+  IN CONST CHAR8   *Function,
+  IN CONST CHAR16  *DeviceName
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = PldmFwCheckRspCompletion (RspBuffer, Function, DeviceName);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (RspLength != RspLengthExpected) {
+    DEBUG ((DEBUG_ERROR, "%a: %s response len=%u, exp=%u\n", Function, DeviceName, RspLength, RspLengthExpected));
     return EFI_DEVICE_ERROR;
   }
 
@@ -224,4 +250,30 @@ PldmFwGetFwParamsCheckRsp (
   }
 
   return EFI_SUCCESS;
+}
+
+BOOLEAN
+EFIAPI
+PldmFwDescriptorIsInList (
+  IN CONST PLDM_FW_DESCRIPTOR  *Descriptor,
+  IN CONST PLDM_FW_DESCRIPTOR  *List,
+  UINTN                        Count
+  )
+{
+  UINTN                     Index;
+  CONST PLDM_FW_DESCRIPTOR  *ListDescriptor;
+
+  ListDescriptor = List;
+  for (Index = 0; Index < Count; Index++) {
+    if ((Descriptor->Type == ListDescriptor->Type) &&
+        (Descriptor->Length == ListDescriptor->Length) &&
+        (CompareMem (Descriptor->Data, ListDescriptor->Data, Descriptor->Length) == 0))
+    {
+      return TRUE;
+    }
+
+    ListDescriptor = PldmFwDescNext (ListDescriptor);
+  }
+
+  return FALSE;
 }
