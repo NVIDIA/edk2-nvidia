@@ -2,7 +2,7 @@
 
   Erot Qspi library
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,6 +12,7 @@
 #include <Library/DebugLib.h>
 #include <Library/ErotQspiLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PldmBaseLib.h>
 #include <Library/PrintLib.h>
 #include <Library/TimerLib.h>
 #include "ErotQspiCore.h"
@@ -311,17 +312,14 @@ ErotQspiDoRequest (
                             ResponseLength,
                             &RecvMsgTag
                             );
-  if (Status == EFI_SUCCESS) {
-    if (RecvMsgTag != MsgTag) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: invalid msg tag %u != %u\n",
-        __FUNCTION__,
-        MsgTag,
-        RecvMsgTag
-        ));
-      Status = EFI_PROTOCOL_ERROR;
-    }
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (((CONST MCTP_CONTROL_COMMON *)Request)->Type == MCTP_TYPE_PLDM) {
+    Status = PldmValidateResponse (Request, ResponseBuffer, *ResponseLength, MsgTag, RecvMsgTag, Private->Name);
+  } else {
+    Status = MctpValidateResponse (Request, ResponseBuffer, MsgTag, RecvMsgTag, Private->Name);
   }
 
   return Status;
@@ -533,7 +531,7 @@ ErotQspiSend (
   Header = &Private->Packet.TransportHdr;
 
   if (IsRequest) {
-    *MsgTag = Private->MsgTag++;
+    *MsgTag = Private->MsgTag++ & MCTP_TRANSPORT_MESSAGE_TAG_MASK;
   }
 
   PktSeq       = 0;

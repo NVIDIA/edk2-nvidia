@@ -2,7 +2,7 @@
 
   PLDM base protocol and helper functions
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -30,4 +30,40 @@ PldmFillCommon (
   Common->InstanceId = (InstanceId & PLDM_INSTANCE_ID_MASK) | Control;
   Common->PldmType   = (PldmType & PLDM_TYPE_MASK) | PLDM_HDR_VER;
   Common->Command    = Command;
+}
+
+EFI_STATUS
+EFIAPI
+PldmValidateResponse (
+  IN CONST VOID    *ReqBuffer,
+  IN CONST VOID    *RspBuffer,
+  IN UINTN         RspLength,
+  IN UINT8         ReqMsgTag,
+  IN UINT8         RspMsgTag,
+  IN CONST CHAR16  *DeviceName
+  )
+{
+  CONST MCTP_PLDM_COMMON  *Req;
+  CONST MCTP_PLDM_COMMON  *Rsp;
+  EFI_STATUS              Status;
+
+  Req = (MCTP_PLDM_COMMON *)ReqBuffer;
+  Rsp = (MCTP_PLDM_COMMON *)RspBuffer;
+
+  Status = MctpValidateResponse (Req, Rsp, ReqMsgTag, RspMsgTag, DeviceName);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (RspLength < sizeof (MCTP_PLDM_RESPONSE_HEADER)) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Cmd=0x%x bad rsplen=%u\n", __FUNCTION__, DeviceName, Req->Command, RspLength));
+    return EFI_PROTOCOL_ERROR;
+  }
+
+  if (Req->Command != Rsp->Command) {
+    DEBUG ((DEBUG_ERROR, "%a: %s cmd mismatch req/rsp=%u/%u\n", __FUNCTION__, DeviceName, Req->Command, Rsp->Command));
+    return EFI_PROTOCOL_ERROR;
+  }
+
+  return EFI_SUCCESS;
 }

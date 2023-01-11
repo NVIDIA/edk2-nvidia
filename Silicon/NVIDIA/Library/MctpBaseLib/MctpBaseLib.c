@@ -2,7 +2,7 @@
 
   MCTP base protocol and helper functions
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -100,4 +100,45 @@ MctpControlReqFillCommon (
   Common->Type       = MCTP_TYPE_CONTROL;
   Common->InstanceId = MCTP_RQ;
   Common->Command    = Command;
+}
+
+EFI_STATUS
+EFIAPI
+MctpValidateResponse (
+  IN CONST VOID    *ReqBuffer,
+  IN CONST VOID    *RspBuffer,
+  IN UINT8         ReqMsgTag,
+  IN UINT8         RspMsgTag,
+  IN CONST CHAR16  *DeviceName
+  )
+{
+  CONST MCTP_CONTROL_COMMON  *Req;
+  CONST MCTP_CONTROL_COMMON  *Rsp;
+
+  Req = (MCTP_CONTROL_COMMON *)ReqBuffer;
+  Rsp = (MCTP_CONTROL_COMMON *)RspBuffer;
+
+  if ((ReqMsgTag != RspMsgTag) ||
+      (Req->Command != Rsp->Command) ||
+      ((Req->InstanceId & MCTP_INSTANCE_ID_MASK) != (Rsp->InstanceId & MCTP_INSTANCE_ID_MASK)) ||
+      ((Req->Type & MCTP_TYPE_MASK) != (Rsp->Type & MCTP_TYPE_MASK)))
+  {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: %s Err req/rsp cmd=%u/%u IID=%u/%u Type=%u/%u tag=%u/%u\n",
+      __FUNCTION__,
+      DeviceName,
+      Req->Command,
+      Rsp->Command,
+      Req->InstanceId & MCTP_INSTANCE_ID_MASK,
+      Rsp->InstanceId & MCTP_INSTANCE_ID_MASK,
+      Req->Type & MCTP_TYPE_MASK,
+      Rsp->Type & MCTP_TYPE_MASK,
+      ReqMsgTag,
+      RspMsgTag
+      ));
+    return EFI_PROTOCOL_ERROR;
+  }
+
+  return EFI_SUCCESS;
 }

@@ -2,7 +2,7 @@
 
   PLDM base protocol and helper functions
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -63,6 +63,10 @@ typedef struct {
 } PLDM_TIMESTAMP104;
 
 typedef struct {
+  UINT8    Data[16];
+} PLDM_UUID;
+
+typedef struct {
   UINT8    MctpType;
   UINT8    InstanceId;
   UINT8    PldmType;
@@ -111,6 +115,31 @@ PldmFillCommon (
   IN  UINT8             InstanceId,
   IN  UINT8             PldmType,
   IN  UINT8             Command
+  );
+
+/**
+  Check PLDM response for errors.
+
+  @param[in]  ReqBuffer         Pointer to PLDM request message buffer.
+  @param[in]  RspBuffer         Pointer to PLDM response message buffer.
+  @param[in]  RspLength         Response message length.
+  @param[in]  ReqMsgTag         Request message tag.
+  @param[in]  RspMsgTag         Response message tag.
+  @param[in]  DeviceName        Device name where message was received.
+
+  @retval EFI_SUCCESS           Operation completed normally.
+  @retval Others                Failure occurred.
+
+**/
+EFI_STATUS
+EFIAPI
+PldmValidateResponse (
+  IN CONST VOID    *ReqBuffer,
+  IN CONST VOID    *RspBuffer,
+  IN UINTN         RspLength,
+  IN UINT8         ReqMsgTag,
+  IN UINT8         RspMsgTag,
+  IN CONST CHAR16  *DeviceName
   );
 
 #endif

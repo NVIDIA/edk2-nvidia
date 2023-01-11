@@ -2,7 +2,7 @@
 
   MCTP base protocol definitions and helper function library
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -183,6 +183,29 @@ EFIAPI
 MctpUint16ToBEBuffer (
   UINT8   *Buffer,
   UINT16  Value
+  );
+
+/**
+  Check MCTP response for errors.
+
+  @param[in]  ReqBuffer         Pointer to MCTP request message buffer.
+  @param[in]  RspBuffer         Pointer to MCTP response message buffer.
+  @param[in]  ReqMsgTag         Request message tag.
+  @param[in]  RspMsgTag         Response message tag.
+  @param[in]  DeviceName        Device name where message was received.
+
+  @retval EFI_SUCCESS           Operation completed normally.
+  @retval Others                Failure occurred.
+
+**/
+EFI_STATUS
+EFIAPI
+MctpValidateResponse (
+  IN CONST VOID    *ReqBuffer,
+  IN CONST VOID    *RspBuffer,
+  IN UINT8         ReqMsgTag,
+  IN UINT8         RspMsgTag,
+  IN CONST CHAR16  *DeviceName
   );
 
 #endif
