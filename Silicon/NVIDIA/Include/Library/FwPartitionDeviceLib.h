@@ -2,7 +2,7 @@
 
   FW Partition Device Library
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,7 +16,7 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
-#define MAX_FW_PARTITIONS                    64
+#define MAX_FW_PARTITIONS                    80
 #define FW_PARTITION_PRIVATE_DATA_SIGNATURE  SIGNATURE_32 ('F','W','P','A')
 
 typedef struct _FW_PARTITION_PRIVATE_DATA  FW_PARTITION_PRIVATE_DATA;
