@@ -2,7 +2,7 @@
 
   Tegra Platform Init Driver.
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -801,6 +801,7 @@ TegraPlatformInitialize (
   UefiNode = fdt_path_offset (DtbBase, "/firmware/uefi");
   if (UefiNode >= 0) {
     if (NULL != fdt_get_property (DtbBase, UefiNode, "use-emulated-variables", NULL)) {
+      DEBUG ((DEBUG_ERROR, "Platform Override To Use Emulated Variable Store\n"));
       EmulatedVariablesUsed = TRUE;
     }
   }
