@@ -2,7 +2,7 @@
   Provides firmware device specific services to support updates of a firmware
   image stored in a firmware device.
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) Microsoft Corporation.<BR>
   Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
 
@@ -13,7 +13,7 @@
 #include <PiDxe.h>
 #include <Guid/SystemResourceTable.h>
 #include <Library/FmpDeviceLib.h>
-#include "FmpErotLibPrivate.h"
+#include "FmpErotSupport.h"
 
 /**
   Provide a function to install the Firmware Management Protocol instance onto a
@@ -468,9 +468,12 @@ FmpDeviceCheckImageWithStatus (
   OUT UINT32      *LastAttemptStatus
   )
 {
-  *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
-
-  return EFI_SUCCESS;
+  return FmpErotCheckImage (
+           Image,
+           ImageSize,
+           ImageUpdatable,
+           LastAttemptStatus
+           );
 }
 
 /**
@@ -624,9 +627,15 @@ FmpDeviceSetImageWithStatus (
   OUT UINT32                                         *LastAttemptStatus
   )
 {
-  *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
-
-  return EFI_UNSUPPORTED;
+  return FmpErotSetImage (
+           Image,
+           ImageSize,
+           VendorCode,
+           Progress,
+           CapsuleFwVersion,
+           AbortReason,
+           LastAttemptStatus
+           );
 }
 
 /**
