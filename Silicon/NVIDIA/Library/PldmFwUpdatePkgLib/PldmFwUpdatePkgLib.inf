@@ -1,0 +1,30 @@
+## @file
+#
+#  PLDM FW update package library
+#
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 1.25
+  BASE_NAME                      = PldmFwUpdatePkgLib
+  FILE_GUID                      = f4f74d26-e173-4d29-8f6a-091abf5ba68b
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PldmFwUpdatePkgLib
+
+[Sources.common]
+  PldmFwUpdatePkgLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  PldmFwUpdateLib
