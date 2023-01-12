@@ -39,6 +39,7 @@
   PldmBaseLib|Silicon/NVIDIA/Library/PldmBaseLib/PldmBaseLib.inf
   PldmFwUpdateLib|Silicon/NVIDIA/Library/PldmFwUpdateLib/PldmFwUpdateLib.inf
   PldmFwUpdatePkgLib|Silicon/NVIDIA/Library/PldmFwUpdatePkgLib/PldmFwUpdatePkgLib.inf
+  PldmFwUpdateTaskLib|Silicon/NVIDIA/Library/PldmFwUpdateTaskLib/PldmFwUpdateTaskLib.inf
 
   # TPM
   Tpm2DeviceLib|SecurityPkg/Library/Tpm2DeviceLibTcg2/Tpm2DeviceLibTcg2.inf
