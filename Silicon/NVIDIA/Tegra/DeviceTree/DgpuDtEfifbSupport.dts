@@ -1,0 +1,37 @@
+/** @file
+*
+*  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "dGPU EFIFB Support (DT Mode)";
+
+	fragment@0 {
+		target-path = "/";
+		board_config {
+			sw-modules = "uefi";
+		};
+
+		__overlay__ {
+			firmware {
+				uefi {
+					variables {
+						gNVIDIAPublicVariableGuid {
+							DgpuDtEfifbSupport {
+								data = [01];
+								runtime;
+								non-volatile;
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};
