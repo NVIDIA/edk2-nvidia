@@ -126,6 +126,7 @@
 
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
   gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|TRUE
+  gNVIDIATokenSpaceGuid.PcdActivateFwMethod|0x1
 
 [PcdsDynamicHii.common.DEFAULT]
  gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV

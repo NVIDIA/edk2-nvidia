@@ -1,7 +1,7 @@
 ## @file
 #  Implementation for PlatformBootManagerLib library class interfaces.
 #
-#  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (C) 2015-2016, Red Hat, Inc.
 #  Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
 #  Copyright (c) 2007 - 2014, Intel Corporation. All rights reserved.<BR>
@@ -81,6 +81,7 @@
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
   gNVIDIATokenSpaceGuid.PcdBootMenuAppFile
   gNVIDIATokenSpaceGuid.PcdBootManagerWaitMessage
+  gNVIDIATokenSpaceGuid.PcdActivateFwMethod
 
 [Guids]
   gEfiFileInfoGuid
