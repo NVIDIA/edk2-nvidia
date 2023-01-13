@@ -831,6 +831,7 @@ TegraPlatformInitialize (
     }
 
     if (PlatformType == TEGRA_PLATFORM_SILICON) {
+      DEBUG ((DEBUG_ERROR, "Do not use STMM as emulated variables are being used.\n"));
       PcdSetBoolS (PcdTegraStmmEnabled, FALSE);
     }
   }

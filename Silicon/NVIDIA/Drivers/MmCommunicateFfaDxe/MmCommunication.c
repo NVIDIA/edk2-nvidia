@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2016-2021, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -331,6 +331,11 @@ GetMmCompatibility (
   EFI_STATUS    Status;
   UINT32        MmVersion;
   ARM_SMC_ARGS  MmVersionArgs;
+
+  if (PcdGetBool (PcdTegraStmmEnabled) == FALSE) {
+    DEBUG ((DEBUG_INFO, "PCD to Enable MM set to False\n"));
+    return EFI_UNSUPPORTED;
+  }
 
   if (FeaturePcdGet (PcdFfaEnable)) {
     MmVersionArgs.Arg0  = ARM_SVC_ID_FFA_VERSION_AARCH32;

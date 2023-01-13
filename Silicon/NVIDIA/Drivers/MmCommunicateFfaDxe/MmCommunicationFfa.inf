@@ -2,7 +2,7 @@
 #
 #  DXE MM Communicate driver
 #
-#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2016 - 2021, Arm Limited. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -55,6 +55,7 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdVariableRtProperties
+  gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled
 
 [Pcd.common]
   gArmTokenSpaceGuid.PcdMmBufferBase
