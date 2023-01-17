@@ -40,6 +40,7 @@
   ConfigurationSmbiosType8.c
   ConfigurationSmbiosType9.c
   ConfigurationSmbiosType11.c
+  ConfigurationSmbiosType13.c
   ConfigurationSmbiosType38.c
   ConfigurationSmbiosType41.c
   ConfigurationSmbiosType43.c
@@ -60,6 +61,7 @@
 [LibraryClasses]
   TegraPlatformInfoLib
   PlatformAslTablesLib
+  UefiRuntimeServicesTableLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   DxeServicesTableLib
@@ -109,6 +111,8 @@
   gArmTokenSpaceGuid.PcdBiosCharacteristics
   gArmTokenSpaceGuid.PcdBiosCharacteristicsExtension
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString
+  gEfiMdePkgTokenSpaceGuid.PcdUefiVariableDefaultPlatformLangCodes
+  gEfiMdePkgTokenSpaceGuid.PcdUefiVariableDefaultPlatformLang
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid

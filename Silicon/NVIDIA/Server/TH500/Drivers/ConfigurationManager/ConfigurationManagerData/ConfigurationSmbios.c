@@ -110,6 +110,7 @@ InstallCmSmbiosTableList (
     { EFI_SMBIOS_TYPE_PORT_CONNECTOR_INFORMATION,           InstallSmbiosType8Cm  },
     { EFI_SMBIOS_TYPE_SYSTEM_SLOTS,                         InstallSmbiosType9Cm  },
     { EFI_SMBIOS_TYPE_OEM_STRINGS,                          InstallSmbiosType11Cm },
+    { EFI_SMBIOS_TYPE_BIOS_LANGUAGE_INFORMATION,            InstallSmbiosType13Cm },
     { EFI_SMBIOS_TYPE_IPMI_DEVICE_INFORMATION,              InstallSmbiosType38Cm },
     { EFI_SMBIOS_TYPE_ONBOARD_DEVICES_EXTENDED_INFORMATION, InstallSmbiosType41Cm },
     { SMBIOS_TYPE_TPM_DEVICE,                               InstallSmbiosType43Cm }
