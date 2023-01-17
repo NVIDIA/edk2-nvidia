@@ -127,3 +127,8 @@
   FILE DRIVER = b403dcf9-8b43-44f7-b9ea-383eb33e548d {
     SECTION PE32 = Drivers/ASpeed/ASpeedGopBinPkg/AArch64/ASpeedAst2600Gop.efi
   }
+
+  #
+  # Default TLS Cipher Suites
+  #
+  INF Silicon/NVIDIA/Drivers/RedfishCipherDxe/RedfishCipherDxe.inf

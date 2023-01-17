@@ -1,0 +1,43 @@
+## @file
+#  Redfish TLS Cipher suites driver
+#
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = RedfishCipherDxe
+  FILE_GUID                      = 66E2160D-1FC2-4882-907E-3A87D8E21069
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = RedfishCipherEntryPoint
+  UNLOAD_IMAGE                   = RedfishCipherUnload
+
+[Sources]
+  RedfishCipherDxe.c
+  RedfishCipherDxe.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  RedfishPkg/RedfishPkg.dec
+  RedfishClientPkg/RedfishClientPkg.dec
+  NetworkPkg/NetworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  DebugLib
+  RedfishEventLib
+
+[Guids]
+  gEfiRedfishClientFeatureReadyToProvisioningGuid
+  gEdkiiHttpTlsCipherListGuid
+
+[Depex]
+  TRUE

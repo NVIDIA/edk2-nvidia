@@ -169,6 +169,11 @@
   ## TPM
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass|1
 
+  #
+  # Redfish HTTPS support
+  #
+  gEfiCryptoPkgTokenSpaceGuid.PcdOpensslEcEnabled|TRUE
+
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdQuickBootSupported|FALSE
@@ -351,4 +356,12 @@
   RedfishPkg/RedfishHostInterfaceDxe/RedfishHostInterfaceDxe.inf {
     <LibraryClasses>
       RedfishPlatformHostInterfaceLib|Silicon/NVIDIA/Library/RedfishPlatformHostInterfaceOemLib/RedfishPlatformHostInterfaceOemLib.inf
+  }
+
+  #
+  # Default TLS Cipher Suites for Redfish HTTPS support
+  #
+  Silicon/NVIDIA/Drivers/RedfishCipherDxe/RedfishCipherDxe.inf {
+    <LibraryClasses>
+      RedfishEventLib|RedfishClientPkg/Library/RedfishEventLib/RedfishEventLib.inf
   }
