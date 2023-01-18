@@ -2,7 +2,7 @@
 #
 #  Tegra Platform Specific Configuration
 #
-#  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -27,6 +27,7 @@
   ArmPlatformPkg/ArmPlatformPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
   EmbeddedPkg/EmbeddedPkg.dec
+  SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -43,6 +44,7 @@
   DtPlatformDtbLoaderLib
   FloorSweepingLib
   FdtLib
+  SecureBootVariableLib
 
 [Guids]
   gEdkiiNvVarStoreFormattedGuid
@@ -64,6 +66,7 @@
   gNVIDIATokenSpaceGuid.PcdGpuToOwnCpuDistance
   gNVIDIATokenSpaceGuid.PcdGpuToOtherCpuDistance
   gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled
+  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence
 
 [Depex]
   TRUE
