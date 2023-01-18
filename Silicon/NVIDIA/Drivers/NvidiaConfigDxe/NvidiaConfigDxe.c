@@ -33,13 +33,12 @@
 #include <Library/UefiHiiServicesLib.h>
 #include <Library/UefiLib.h>
 #include <Library/VariablePolicyHelperLib.h>
+#include <Library/FwVariableLib.h>
 
 #include <Guid/NVIDIAMmMb1Record.h>
 #include <TH500/TH500Definitions.h>
 #include <TH500/TH500MB1Configuration.h>
 #include "NvidiaConfigHii.h"
-
-#define MAX_VARIABLE_NAME  (256 * sizeof(CHAR16))
 
 extern EFI_GUID  gNVIDIAResourceConfigFormsetGuid;
 
@@ -1119,12 +1118,6 @@ ConfigCallback (
   )
 {
   EFI_STATUS  Status;
-  EFI_STATUS  VarDeleteStatus;
-  CHAR16      *CurrentName;
-  CHAR16      *NextName;
-  EFI_GUID    CurrentGuid;
-  EFI_GUID    NextGuid;
-  UINTN       NameSize;
 
   Status = EFI_UNSUPPORTED;
   if ((Action == EFI_BROWSER_ACTION_FORM_OPEN) ||
@@ -1137,43 +1130,10 @@ ConfigCallback (
   } else if (Action == EFI_BROWSER_ACTION_CHANGED) {
     switch (QuestionId) {
       case KEY_RESET_VARIABLES:
-        CurrentName = AllocateZeroPool (MAX_VARIABLE_NAME);
-        if (CurrentName == NULL) {
-          Status = EFI_OUT_OF_RESOURCES;
-          break;
+        Status = FwVariableDeleteAll ();
+        if (Status != EFI_OUT_OF_RESOURCES) {
+          Status = EFI_SUCCESS;
         }
-
-        NextName = AllocateZeroPool (MAX_VARIABLE_NAME);
-        if (NextName == NULL) {
-          Status = EFI_OUT_OF_RESOURCES;
-          FreePool (CurrentName);
-          break;
-        }
-
-        NameSize = MAX_VARIABLE_NAME;
-        Status   = gRT->GetNextVariableName (&NameSize, NextName, &NextGuid);
-
-        while (!EFI_ERROR (Status)) {
-          CopyMem (CurrentName, NextName, NameSize);
-          CopyGuid (&CurrentGuid, &NextGuid);
-
-          NameSize = MAX_VARIABLE_NAME;
-          Status   = gRT->GetNextVariableName (&NameSize, NextName, &NextGuid);
-
-          // Delete Current Name variable
-          VarDeleteStatus = gRT->SetVariable (
-                                   CurrentName,
-                                   &CurrentGuid,
-                                   0,
-                                   0,
-                                   NULL
-                                   );
-          DEBUG ((DEBUG_ERROR, "Delete Variable %g:%s %r\r\n", &CurrentGuid, CurrentName, VarDeleteStatus));
-        }
-
-        FreePool (NextName);
-        FreePool (CurrentName);
-        Status = EFI_SUCCESS;
 
         break;
 

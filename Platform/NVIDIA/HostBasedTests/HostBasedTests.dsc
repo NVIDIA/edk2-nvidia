@@ -105,6 +105,7 @@
       PeiServicesTablePointerLib|EmulatorPkg/Library/PeiServicesTablePointerLib/PeiServicesTablePointerLib.inf
       HobLib|MdeModulePkg/Library/BaseHobLibNull/BaseHobLibNull.inf
       PcdLib|Silicon/NVIDIA/Drivers/FvbDxe/UnitTest/FvbPcdStubLib/FvbPcdStubLib.inf
+      FwVariableLib|Silicon/NVIDIA/Library/FwVariableLib/FwVariableLib.inf
   }
 
 [PcdsDynamicDefault]

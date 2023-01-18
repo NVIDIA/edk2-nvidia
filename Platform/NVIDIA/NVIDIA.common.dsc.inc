@@ -218,6 +218,8 @@
   MctpNvVdmLib|Silicon/NVIDIA/Library/MctpNvVdmLib/MctpNvVdmLib.inf
   ErotLib|Silicon/NVIDIA/Library/ErotLib/ErotLib.inf
 
+  FwVariableLib|Silicon/NVIDIA/Library/FwVariableLib/FwVariableLib.inf
+
 !if $(BUILD_PROJECT_TYPE) == PROJECT_MU
   BaseBinSecurityLib|MdePkg/Library/BaseBinSecurityLibNull/BaseBinSecurityLibNull.inf
   MemoryProtectionLib|MdeModulePkg/Library/BaseMemoryProtectionLibNull/BaseMemoryProtectionLibNull.inf

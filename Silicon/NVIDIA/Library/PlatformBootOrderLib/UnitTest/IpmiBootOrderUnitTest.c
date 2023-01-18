@@ -788,6 +788,7 @@ IBO_IpmiRequest (
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
   CheckIPMIForBootOrderUpdates ();
+  ProcessIPMIBootOrderUpdates ();
 
   return IBO_CheckResults (Context);
 }

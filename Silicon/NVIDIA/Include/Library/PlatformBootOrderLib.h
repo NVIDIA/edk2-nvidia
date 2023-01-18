@@ -21,4 +21,10 @@ CheckIPMIForBootOrderUpdates (
   VOID
   );
 
+VOID
+EFIAPI
+ProcessIPMIBootOrderUpdates (
+  VOID
+  );
+
 #endif

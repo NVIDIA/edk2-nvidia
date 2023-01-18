@@ -1218,6 +1218,9 @@ PlatformBootManagerBeforeConsole (
   EFI_STATUS  Status;
   EFI_HANDLE  BdsHandle = NULL;
 
+  // Check IPMI for BootOrder commands, and clear and reset CMOS here if requested
+  CheckIPMIForBootOrderUpdates ();
+
   //
   // Signal EndOfDxe PI Event
   //
@@ -1325,9 +1328,9 @@ PlatformBootManagerBeforeConsole (
   }
 
   //
-  // Check for IPMI-directed changes to the boot order
+  // Process IPMI-directed BootOrder updates
   //
-  CheckIPMIForBootOrderUpdates ();
+  ProcessIPMIBootOrderUpdates ();
 
   //
   // Add the hardcoded short-form USB keyboard device path to ConIn.
