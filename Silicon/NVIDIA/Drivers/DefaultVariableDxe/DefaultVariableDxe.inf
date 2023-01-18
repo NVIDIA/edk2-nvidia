@@ -1,7 +1,7 @@
 ## @file
 #  Provides support for default variable creation.
 #
-#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -29,6 +29,7 @@
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
   UefiBootServicesTableLib
@@ -42,9 +43,13 @@
   FileHandleLib
   DevicePathLib
   PcdLib
+  SecureBootVariableLib
+  TegraPlatformInfoLib
+  DeviceTreeHelperLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize                  ## CONSUMES
+  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence
 
 [Guids]
   gNVIDIAPublicVariableGuid
