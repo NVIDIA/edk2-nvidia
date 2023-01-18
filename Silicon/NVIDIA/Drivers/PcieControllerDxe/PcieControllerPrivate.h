@@ -2,7 +2,7 @@
 
   PCIe Controller Driver private structures
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -114,5 +114,23 @@ typedef struct {
 
 #define XTL_RC_MGMT_PERST_CONTROL            0x218
 #define XTL_RC_MGMT_PERST_CONTROL_PERST_O_N  BIT(0)
+
+/* DPC Registers */
+#define PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID  0x001D
+
+#define PCIE_DPC_CAP                      0x4
+#define PCIE_DPC_CAP_RP_EXT               BIT(5)
+#define PCIE_DPC_CTL                      0x6
+#define PCIE_DPC_CTL_DPC_TRIGGER_EN_F     0x1
+#define PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F  0x2
+#define PCIE_DPC_CTL_DPC_INT_EN           BIT(3)
+#define PCIE_DPC_CTL_DPC_ERR_COR_EN       BIT(4)
+#define PCIE_DPC_CTL_DPC_SIG_SFW_EN       BIT(8)
+
+#define PCIE_DPC_STS                 0x8
+#define PCIE_DPC_STS_TRIGGER_STATUS  BIT(0)
+#define PCIE_DPC_STS_SIG_SFW_STATUS  BIT(13)
+
+#define PCIE_DPC_ERR_SRC_ID  0xA
 
 #endif

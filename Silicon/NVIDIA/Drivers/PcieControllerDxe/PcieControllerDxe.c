@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -31,6 +31,7 @@
 #include <Protocol/PciHostBridgeResourceAllocation.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <Protocol/PciRootBridgeIo.h>
+#include <Protocol/PciIo.h>
 #include <Protocol/C2CNodeProtocol.h>
 
 #include "PcieControllerPrivate.h"
@@ -314,34 +315,6 @@ PCIeFindCap (
 STATIC
 EFI_STATUS
 EFIAPI
-InitFWFIntr (
-  PCIE_CONTROLLER_PRIVATE  *Private
-  )
-{
-  PCI_TYPE_GENERIC       *PciCap    = NULL;
-  PCI_CAPABILITY_PCIEXP  *PciExpCap = NULL;
-
-  PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);
-
-  PciExpCap->RootControl.Bits.SystemErrorOnCorrectableError = 1;
-  PciExpCap->RootControl.Bits.SystemErrorOnNonFatalError    = 1;
-  PciExpCap->RootControl.Bits.SystemErrorOnFatalError       = 1;
-
-  PciExpCap->DeviceControl.Bits.CorrectableError   = 1;
-  PciExpCap->DeviceControl.Bits.NonFatalError      = 1;
-  PciExpCap->DeviceControl.Bits.FatalError         = 1;
-  PciExpCap->DeviceControl.Bits.UnsupportedRequest = 1;
-
-  PciCap = (PCI_TYPE_GENERIC *)(Private->EcamBase);
-
-  PciCap->Bridge.Hdr.Command |= EFI_PCI_COMMAND_SERR;
-
-  return EFI_SUCCESS;
-}
-
-STATIC
-EFI_STATUS
-EFIAPI
 InitializeController (
   PCIE_CONTROLLER_PRIVATE  *Private,
   IN  EFI_HANDLE           ControllerHandle
@@ -396,14 +369,6 @@ InitializeController (
   if (!Private->PCIeCapOff) {
     DEBUG ((EFI_D_VERBOSE, "Failed to find PCIe capability registers\r\n"));
     return EFI_NOT_FOUND;
-  }
-
-  if ((Private->CtrlId & 0xF) != 8) {
-    Status = InitFWFIntr (Private);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "Failed to Enable Firmware-First Interrupt(%r)\r\n", Status));
-      return Status;
-    }
   }
 
   val  = MmioRead32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL);
@@ -493,6 +458,555 @@ OnExitBootServices (
   UninitializeController ((EFI_HANDLE)Context);
 }
 
+STATIC
+UINT8
+PcieFindCap (
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT8                CapId
+  )
+{
+  UINT16  CapabilityEntry;
+  UINT8   CapabilityPtr;
+  UINT8   CapabilityID;
+
+  CapabilityPtr = 0;
+  PciIo->Pci.Read (
+               PciIo,
+               EfiPciIoWidthUint8,
+               PCI_CAPBILITY_POINTER_OFFSET,
+               1,
+               &CapabilityPtr
+               );
+
+  while ((CapabilityPtr >= 0x40) && ((CapabilityPtr & 0x03) == 0x00)) {
+    PciIo->Pci.Read (
+                 PciIo,
+                 EfiPciIoWidthUint16,
+                 CapabilityPtr,
+                 1,
+                 &CapabilityEntry
+                 );
+
+    CapabilityID = (UINT8)CapabilityEntry;
+
+    if (CapabilityID == CapId) {
+      return CapabilityPtr;
+    }
+
+    /*
+     * Certain PCI device may incorrectly have capability pointing to itself,
+     * break to avoid dead loop.
+     */
+    if (CapabilityPtr == (UINT8)(CapabilityEntry >> 8)) {
+      return 0;
+    }
+
+    CapabilityPtr = (UINT8)(CapabilityEntry >> 8);
+  }
+
+  return 0;
+}
+
+STATIC
+UINT16
+PcieFindExtCap (
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT16               CapId
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      CapabilityPtr;
+  UINT32      CapabilityEntry;
+  UINT16      CapabilityID;
+  UINTN       Segment, Bus, Device, Function;
+
+  CapabilityPtr = EFI_PCIE_CAPABILITY_BASE_OFFSET;
+
+  while (CapabilityPtr != 0) {
+    /* Mask it to DWORD alignment per PCI spec */
+    CapabilityPtr &= 0xFFC;
+    Status         = PciIo->Pci.Read (
+                                  PciIo,
+                                  EfiPciIoWidthUint32,
+                                  CapabilityPtr,
+                                  1,
+                                  &CapabilityEntry
+                                  );
+    if (EFI_ERROR (Status)) {
+      break;
+    }
+
+    if (CapabilityEntry == MAX_UINT32) {
+      Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+      ASSERT_EFI_ERROR (Status);
+      DEBUG ((
+        DEBUG_WARN,
+        "%a: [%04x:%02x:%02x.%x] failed to access config space at offset 0x%x\n",
+        __FUNCTION__,
+        Segment,
+        Bus,
+        Device,
+        Function,
+        CapabilityPtr
+        ));
+      break;
+    }
+
+    CapabilityID = (UINT16)CapabilityEntry;
+
+    if (CapabilityID == CapId) {
+      return CapabilityPtr;
+    }
+
+    CapabilityPtr = (CapabilityEntry >> 20) & 0xFFF;
+  }
+
+  return 0;
+}
+
+typedef
+EFI_STATUS
+(EFIAPI *PROTOCOL_INSTANCE_CALLBACK)(
+  IN EFI_HANDLE           Handle,
+  IN VOID                 *Instance,
+  IN VOID                 *Context
+  );
+
+STATIC
+EFI_STATUS
+VisitAllInstancesOfProtocol (
+  IN EFI_GUID                    *Id,
+  IN PROTOCOL_INSTANCE_CALLBACK  CallBackFunction,
+  IN VOID                        *Context
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       HandleCount;
+  EFI_HANDLE  *HandleBuffer;
+  UINTN       Index;
+  VOID        *Instance;
+
+  /* Start to check all the PciIo to find all possible device */
+  HandleCount  = 0;
+  HandleBuffer = NULL;
+  Status       = gBS->LocateHandleBuffer (
+                        ByProtocol,
+                        Id,
+                        NULL,
+                        &HandleCount,
+                        &HandleBuffer
+                        );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  for (Index = 0; Index < HandleCount; Index++) {
+    Status = gBS->HandleProtocol (HandleBuffer[Index], Id, &Instance);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    Status = (*CallBackFunction)(HandleBuffer[Index], Instance, Context);
+  }
+
+  gBS->FreePool (HandleBuffer);
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+PcieEnableErrorReporting (
+  EFI_PCI_IO_PROTOCOL  *PciIo
+  )
+{
+  EFI_STATUS                   Status;
+  UINTN                        Segment, Bus, Device, Function;
+  PCI_REG_PCIE_CAPABILITY      Capability;
+  UINT32                       PciExpCapOffset, AerCapOffset, Offset;
+  PCI_REG_PCIE_ROOT_CONTROL    RootControl;
+  PCI_REG_PCIE_DEVICE_CONTROL  DeviceControl;
+  PCI_REG_PCIE_DEVICE_STATUS   DeviceStatus;
+  UINT32                       Val_32;
+  UINT16                       Val_16;
+
+  Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  ASSERT_EFI_ERROR (Status);
+
+  /* Skip Error reporting and DPC enablement for C8 controller for now */
+  if ((Segment & 0xF) == 8) {
+    return EFI_SUCCESS;
+  }
+
+  PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
+
+  if (!PciExpCapOffset) {
+    DEBUG ((
+      DEBUG_WARN,
+      "Device [%04x:%02x:%02x.%x] Doesn't have PCIe Express capability...!\n",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+    return EFI_UNSUPPORTED;
+  }
+
+  Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, Capability);
+  Status = PciIo->Pci.Read (
+                        PciIo,
+                        EfiPciIoWidthUint16,
+                        Offset,
+                        1,
+                        &Capability
+                        );
+  if (EFI_ERROR (Status)) {
+    return EFI_UNSUPPORTED;
+  }
+
+  switch (Capability.Bits.DevicePortType) {
+    case PCIE_DEVICE_PORT_TYPE_ROOT_PORT:
+      /* Enable root port specific error reporting/forwarding */
+      Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, RootControl);
+      Status = PciIo->Pci.Read (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            Offset,
+                            1,
+                            &RootControl.Uint16
+                            );
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
+
+      RootControl.Bits.SystemErrorOnCorrectableError = 1;
+      RootControl.Bits.SystemErrorOnNonFatalError    = 1;
+      RootControl.Bits.SystemErrorOnFatalError       = 1;
+
+      Status = PciIo->Pci.Write (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            Offset,
+                            1,
+                            &RootControl.Uint16
+                            );
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
+
+      DEBUG ((
+        DEBUG_INFO,
+        "Device [%04x:%02x:%02x.%x] : Enabled error reporting in RootControl register\n",
+        Segment,
+        Bus,
+        Device,
+        Function
+        ));
+
+    /* fall through */
+
+    case PCIE_DEVICE_PORT_TYPE_DOWNSTREAM_PORT:
+      /* Enable DPC which is applicable only for Root Ports and Switch Downstream ports */
+
+      Offset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID);
+      if (Offset) {
+        /* First clear the stale status */
+        Val_16 = (PCIE_DPC_STS_TRIGGER_STATUS | PCIE_DPC_STS_SIG_SFW_STATUS);
+        Status = PciIo->Pci.Write (
+                              PciIo,
+                              EfiPciIoWidthUint16,
+                              Offset + PCIE_DPC_STS,
+                              1,
+                              &Val_16
+                              );
+        if (EFI_ERROR (Status)) {
+          return EFI_DEVICE_ERROR;
+        }
+
+        /* Enable DPC */
+        Status = PciIo->Pci.Read (
+                              PciIo,
+                              EfiPciIoWidthUint16,
+                              Offset + PCIE_DPC_CTL,
+                              1,
+                              &Val_16
+                              );
+        if (EFI_ERROR (Status)) {
+          return EFI_DEVICE_ERROR;
+        }
+
+        Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_INT_EN |
+                   PCIE_DPC_CTL_DPC_ERR_COR_EN | PCIE_DPC_CTL_DPC_SIG_SFW_EN);
+
+        Status = PciIo->Pci.Write (
+                              PciIo,
+                              EfiPciIoWidthUint16,
+                              Offset + PCIE_DPC_CTL,
+                              1,
+                              &Val_16
+                              );
+        if (EFI_ERROR (Status)) {
+          return EFI_DEVICE_ERROR;
+        }
+
+        DEBUG ((
+          DEBUG_INFO,
+          "Device [%04x:%02x:%02x.%x] : Enabled DPC\n",
+          Segment,
+          Bus,
+          Device,
+          Function
+          ));
+      } else {
+        DEBUG ((
+          DEBUG_INFO,
+          "Device [%04x:%02x:%02x.%x] Doesn't have DPC capability...!\n",
+          Segment,
+          Bus,
+          Device,
+          Function
+          ));
+      }
+
+    /* fall through */
+
+    case PCIE_DEVICE_PORT_TYPE_UPSTREAM_PORT:
+      /*
+       * Enable SERR in Bridge Control register.
+       * Applicalbe for all Type-1 config space devices
+       * i.e.RPs, SWitch DPs and UPs
+       */
+      Status = PciIo->Pci.Read (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            PCI_BRIDGE_CONTROL_REGISTER_OFFSET,
+                            1,
+                            &Val_16
+                            );
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
+
+      Val_16 |= EFI_PCI_BRIDGE_CONTROL_SERR;
+
+      Status = PciIo->Pci.Write (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            PCI_BRIDGE_CONTROL_REGISTER_OFFSET,
+                            1,
+                            &Val_16
+                            );
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
+
+      DEBUG ((
+        DEBUG_INFO,
+        "Device [%04x:%02x:%02x.%x] : Enabled SERR in BridgeControl register\n",
+        Segment,
+        Bus,
+        Device,
+        Function
+        ));
+
+    /* fall through */
+
+    case PCIE_DEVICE_PORT_TYPE_PCIE_ENDPOINT:
+      /*
+       * Enable error reporting in Device Control register in PCI Express
+       * capability register which is applicable for all PCIe devices
+       */
+
+      /* Clear stale error status in Device Status register */
+      Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceStatus);
+      Status = PciIo->Pci.Read (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            Offset,
+                            1,
+                            &DeviceStatus.Uint16
+                            );
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
+
+      /* Write the same values back as they are RW1C bits */
+      Status = PciIo->Pci.Write (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            Offset,
+                            1,
+                            &DeviceStatus.Uint16
+                            );
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
+
+      /* Clear stale error status in AER status registers */
+      AerCapOffset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID);
+      if (AerCapOffset) {
+        /* Clear AER Uncorrectable Errror Status */
+        Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, UncorrectableErrorStatus);
+        Status = PciIo->Pci.Read (
+                              PciIo,
+                              EfiPciIoWidthUint32,
+                              Offset,
+                              1,
+                              &Val_32
+                              );
+        if (EFI_ERROR (Status)) {
+          return EFI_DEVICE_ERROR;
+        }
+
+        /* Write the same values back as they are RW1C bits */
+        Status = PciIo->Pci.Write (
+                              PciIo,
+                              EfiPciIoWidthUint32,
+                              Offset,
+                              1,
+                              &Val_32
+                              );
+        if (EFI_ERROR (Status)) {
+          return EFI_DEVICE_ERROR;
+        }
+
+        /* Clear AER Correctable Errror Status */
+        Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, CorrectableErrorStatus);
+        Status = PciIo->Pci.Read (
+                              PciIo,
+                              EfiPciIoWidthUint32,
+                              Offset,
+                              1,
+                              &Val_32
+                              );
+        if (EFI_ERROR (Status)) {
+          return EFI_DEVICE_ERROR;
+        }
+
+        /* Write the same values back as they are RW1C bits */
+        Status = PciIo->Pci.Write (
+                              PciIo,
+                              EfiPciIoWidthUint32,
+                              Offset,
+                              1,
+                              &Val_32
+                              );
+        if (EFI_ERROR (Status)) {
+          return EFI_DEVICE_ERROR;
+        }
+      }
+
+      /* Enable error reporting */
+      Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl);
+      Status = PciIo->Pci.Read (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            Offset,
+                            1,
+                            &DeviceControl.Uint16
+                            );
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
+
+      DeviceControl.Bits.CorrectableError   = 1;
+      DeviceControl.Bits.NonFatalError      = 1;
+      DeviceControl.Bits.FatalError         = 1;
+      DeviceControl.Bits.UnsupportedRequest = 1;
+
+      Status = PciIo->Pci.Write (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            Offset,
+                            1,
+                            &DeviceControl.Uint16
+                            );
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
+
+      DEBUG ((
+        DEBUG_INFO,
+        "Device [%04x:%02x:%02x.%x] : Enabled error reporting in DeviceControl register\n",
+        Segment,
+        Bus,
+        Device,
+        Function
+        ));
+
+    /* fall through */
+
+    default:
+      /* Enable SERR in COMMAND register */
+      Status = PciIo->Pci.Read (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            PCI_COMMAND_OFFSET,
+                            1,
+                            &Val_16
+                            );
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
+
+      Val_16 |= EFI_PCI_COMMAND_SERR;
+
+      Status = PciIo->Pci.Write (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            PCI_COMMAND_OFFSET,
+                            1,
+                            &Val_16
+                            );
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
+
+      DEBUG ((
+        DEBUG_INFO,
+        "Device [%04x:%02x:%02x.%x] : Enabled SERR in Command register\n",
+        Segment,
+        Bus,
+        Device,
+        Function
+        ));
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+VisitEachPcieDevice (
+  IN EFI_HANDLE  Handle,
+  IN VOID        *Instance,
+  IN VOID        *Context
+  )
+{
+  EFI_PCI_IO_PROTOCOL  *PciIo;
+
+  PciIo = Instance;
+
+  PcieEnableErrorReporting (PciIo);
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+VOID
+PcieConfigDevices (
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
+  )
+{
+  VisitAllInstancesOfProtocol (
+    &gEfiPciIoProtocolGuid,
+    VisitEachPcieDevice,
+    NULL
+    );
+}
+
 /**
   Callback that will be invoked at various phases of the driver initialization
 
@@ -538,6 +1052,7 @@ DeviceDiscoveryNotify (
   BOOLEAN                   PcieFound;
   CONST UINT32              *InterruptMap;
   INT32                     RPNodeOffset;
+  VOID                      *Registration;
 
   Status    = EFI_SUCCESS;
   PcieFound = FALSE;
@@ -999,6 +1514,15 @@ DeviceDiscoveryNotify (
       break;
 
     case DeviceDiscoveryEnumerationCompleted:
+
+      EfiCreateProtocolNotifyEvent (
+        &gNVIDIABdsDeviceConnectCompleteGuid,
+        TPL_CALLBACK,
+        PcieConfigDevices,
+        NULL,
+        &Registration
+        );
+
       Status = gBS->InstallMultipleProtocolInterfaces (
                       &DriverHandle,
                       &gNVIDIAPcieControllerInitCompleteProtocolGuid,
