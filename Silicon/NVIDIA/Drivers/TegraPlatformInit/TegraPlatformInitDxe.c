@@ -24,6 +24,59 @@
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/FloorSweepingLib.h>
 #include <libfdt.h>
+#include <Guid/ImageAuthentication.h>
+#include <UefiSecureBoot.h>
+#include <Library/SecureBootVariableLib.h>
+#include <Library/TegraPlatformInfoLib.h>
+
+/**
+  Check if the Device is an AGX Xavier Device type.
+
+  @retval TRUE  Device is an AGX Xavier.
+  @retval FALSE Not an AGX Xavier Device.
+
+**/
+STATIC
+BOOLEAN
+IsAgxXavier (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      NumberOfPlatformNodes;
+
+  NumberOfPlatformNodes = 0;
+  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
+  if (Status != EFI_NOT_FOUND) {
+    return TRUE;
+  }
+
+  NumberOfPlatformNodes = 0;
+  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,galen", NULL, &NumberOfPlatformNodes);
+  if (Status != EFI_NOT_FOUND) {
+    return TRUE;
+  }
+
+  NumberOfPlatformNodes = 0;
+  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,e3360_1099", NULL, &NumberOfPlatformNodes);
+  if (Status != EFI_NOT_FOUND) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+STATIC
+VOID
+SetPhysicalPresencePcd (
+  VOID
+  )
+{
+  if ((IsAgxXavier () == TRUE)) {
+    DEBUG ((DEBUG_ERROR, "Setting Physical Presence to TRUE\n"));
+    PcdSetBoolS (PcdUserPhysicalPresence, TRUE);
+  }
+}
 
 STATIC
 VOID
@@ -465,6 +518,7 @@ TegraPlatformInitialize (
   // Set Pcds
   SetCpuInfoPcdsFromDtb ();
   SetGicInfoPcdsFromDtb (ChipID);
+  SetPhysicalPresencePcd ();
 
   Status = FloorSweepDtb (DtbBase);
   if (EFI_ERROR (Status)) {
