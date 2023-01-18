@@ -1,7 +1,7 @@
 /** @file
   Provides support for default variable creation.
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -23,6 +23,11 @@
 #include <Library/PcdLib.h>
 #include <Protocol/PartitionInfo.h>
 #include <libfdt.h>
+#include <Guid/ImageAuthentication.h>
+#include <UefiSecureBoot.h>
+#include <Library/SecureBootVariableLib.h>
+#include <Library/TegraPlatformInfoLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 
 #define VARIABLE_NODE_PATH     "/firmware/uefi/variables"
 #define VARIABLE_GUID_BASED    "guid-based"
@@ -41,6 +46,67 @@
 STATIC VOID     *Registration       = NULL;
 STATIC VOID     *RegistrationPolicy = NULL;
 STATIC BOOLEAN  VariablesParsed     = FALSE;
+
+/**
+  Check if the Device is an AGX Xavier Device type.
+
+  @retval TRUE  Device is an AGX Xavier.
+  @retval FALSE Not an AGX Xavier Device.
+
+**/
+STATIC
+BOOLEAN
+IsAgxXavier (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      NumberOfPlatformNodes;
+
+  NumberOfPlatformNodes = 0;
+  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
+  if (Status != EFI_NOT_FOUND) {
+    return TRUE;
+  }
+
+  NumberOfPlatformNodes = 0;
+  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,galen", NULL, &NumberOfPlatformNodes);
+  if (Status != EFI_NOT_FOUND) {
+    return TRUE;
+  }
+
+  NumberOfPlatformNodes = 0;
+  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,e3360_1099", NULL, &NumberOfPlatformNodes);
+  if (Status != EFI_NOT_FOUND) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+
+  Set the Physical Presence PCD for certain SOCs.
+
+**/
+STATIC
+VOID
+SetSecurityPcd (
+  VOID
+  )
+{
+  if ((IsAgxXavier () == TRUE) &&
+      (IsSecureBootEnabled () == TRUE) &&
+      (PcdGetBool (PcdUserPhysicalPresence) == TRUE))
+  {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Setting Physical Presence PCD to FALSE\n",
+      __FUNCTION__
+      ));
+    PcdSetBoolS (PcdUserPhysicalPresence, FALSE);
+  }
+}
 
 /**
   Requests the variable to be locked.
@@ -713,6 +779,8 @@ EspVar:
       Status
       ));
   }
+
+  SetSecurityPcd ();
 }
 
 /**
