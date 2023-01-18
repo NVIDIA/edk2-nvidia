@@ -625,29 +625,26 @@ FloorSweepGlobalThermals (
 
       DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a len=%u\n", ThermNodeName, MapName, Length));
 
-      // Remove any list entries that have a deleted phandle
-      Buffer = NULL;
+      Buffer = (UINT8 *)AllocatePool (Length);
+      if (Buffer == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: alloc failed\n", __FUNCTION__));
+        return EFI_OUT_OF_RESOURCES;
+      }
+
+      // build new list, skipping entries that have a deleted phandle
+      BufferLength = 0;
       for (Index = 0; Index < Length; Index += EntrySize) {
         Phandle = fdt32_to_cpu (*(CONST UINT32 *)&CoolingDeviceList[Index]);
         if (fdt_node_offset_by_phandle (Dtb, Phandle) < 0) {
-          if (Buffer == NULL) {
-            Buffer = (UINT8 *)AllocateCopyPool (Length, CoolingDeviceList);
-            if (Buffer == NULL) {
-              DEBUG ((DEBUG_ERROR, "%a: alloc failed\n", __FUNCTION__));
-              return EFI_OUT_OF_RESOURCES;
-            }
-
-            BufferLength = Length;
-          }
-
-          CopyMem (&Buffer[Index], &Buffer[Index + EntrySize], Length - Index - EntrySize);
-          BufferLength -= EntrySize;
-
-          DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a deleted Phandle=0x%x, size=%u\n", ThermNodeName, MapName, Phandle, BufferLength));
+          DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a deleted Phandle=0x%x\n", ThermNodeName, MapName, Phandle));
+        } else {
+          CopyMem (&Buffer[BufferLength], &CoolingDeviceList[Index], EntrySize);
+          BufferLength += EntrySize;
         }
       }
 
-      if (Buffer != NULL) {
+      // update DT if new list is different than original
+      if (BufferLength != Length) {
         if (BufferLength != 0) {
           fdt_delprop (Dtb, MapSubNodeOffset, "cooling-device");
           fdt_setprop (Dtb, MapSubNodeOffset, "cooling-device", Buffer, BufferLength);
@@ -672,11 +669,11 @@ FloorSweepGlobalThermals (
 
           NumMaps--;
         }
-
-        FreePool (Buffer);
       } else {
         MapSubNodeOffset = fdt_next_subnode (Dtb, MapSubNodeOffset);
       }
+
+      FreePool (Buffer);
     }
 
     DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps has %u maps\n", ThermNodeName, NumMaps));
