@@ -118,6 +118,8 @@
 #string STR_PCIE_DISABLE_DLFE_HELP       #language en-US "Disable DL Feature Exchange"
 #string STR_PCIE_ENABLE_ECRC_TITLE       #language en-US "Enable ECRC"
 #string STR_PCIE_ENABLE_ECRC_HELP        #language en-US "Enable ECRC in the controller's hierarchy"
+#string STR_PCIE_DISABLE_OPT_ROM_TITLE   #language en-US "Disable Option ROM"
+#string STR_PCIE_DISABLE_OPT_ROM_HELP    #language en-US "Disable Option ROM"
 
 #string STR_IPMI_NETWORK_BOOT_MODE_PROMPT #language en-US "IP mode for IPMI-requested BootOrder changes"
 #string STR_IPMI_NETWORK_BOOT_MODE_HELP   #language en-US "IPv4/v6 selection for IPMI requested PXE and HTTP BootOrder changes. No effect without relevant IPMI BootOrder request"

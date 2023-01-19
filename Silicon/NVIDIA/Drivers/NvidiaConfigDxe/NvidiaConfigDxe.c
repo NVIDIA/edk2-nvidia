@@ -119,6 +119,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PCIE_DISABLE_DLFE_HELP),
   STRING_TOKEN (STR_PCIE_ENABLE_ECRC_TITLE),
   STRING_TOKEN (STR_PCIE_ENABLE_ECRC_HELP),
+  STRING_TOKEN (STR_PCIE_DISABLE_OPT_ROM_TITLE),
+  STRING_TOKEN (STR_PCIE_DISABLE_OPT_ROM_HELP),
 };
 
 STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
@@ -167,6 +169,7 @@ TEGRABL_EARLY_BOOT_VARIABLES    mLastWrittenMb1Config   = { 0 };
 TEGRABL_EARLY_BOOT_VARIABLES    mVariableMb1Config      = { 0 };
 EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2        = NULL;
 VOID                            *mMmCommunicationBuffer = NULL;
+UINT64                          mOpRomDisMask           = 0;
 
 // Talk to MB1 actual storage
 EFI_STATUS
@@ -722,6 +725,11 @@ SyncHiiSettings (
       mHiiControlSettings.SupportsClkReq3[Index]   = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].SupportsClkReq;
       mHiiControlSettings.DisableDLFE3[Index]      = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].DisableDLFE;
       mHiiControlSettings.EnableECRC_3[Index]      = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].EnableECRC;
+
+      mHiiControlSettings.DisableOptionRom0[Index] = (mOpRomDisMask & (1ULL << PCIE_SEG (0, Index))) != 0ULL;
+      mHiiControlSettings.DisableOptionRom1[Index] = (mOpRomDisMask & (1ULL << PCIE_SEG (1, Index))) != 0ULL;
+      mHiiControlSettings.DisableOptionRom2[Index] = (mOpRomDisMask & (1ULL << PCIE_SEG (2, Index))) != 0ULL;
+      mHiiControlSettings.DisableOptionRom3[Index] = (mOpRomDisMask & (1ULL << PCIE_SEG (3, Index))) != 0ULL;
     }
   } else {
     mMb1Config.Data.Mb1Data.FeatureData.EgmEnable        = mHiiControlSettings.EgmEnabled;
@@ -735,6 +743,7 @@ SyncHiiSettings (
       mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[3][Index] = mHiiControlSettings.UphySetting3[Index];
     }
 
+    mOpRomDisMask = 0ULL;
     for (Index = 0; Index < TEGRABL_MAX_PCIE_PER_SOCKET; Index++) {
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxSpeed        = mHiiControlSettings.MaxSpeed0[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxWidth        = mHiiControlSettings.MaxWidth0[Index];
@@ -776,6 +785,11 @@ SyncHiiSettings (
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].SupportsClkReq  = mHiiControlSettings.SupportsClkReq3[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].DisableDLFE     = mHiiControlSettings.DisableDLFE3[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].EnableECRC      = mHiiControlSettings.EnableECRC_3[Index];
+
+      mOpRomDisMask |= mHiiControlSettings.DisableOptionRom0[Index] ? (1ULL << PCIE_SEG (0, Index)) : 0ULL;
+      mOpRomDisMask |= mHiiControlSettings.DisableOptionRom1[Index] ? (1ULL << PCIE_SEG (1, Index)) : 0ULL;
+      mOpRomDisMask |= mHiiControlSettings.DisableOptionRom2[Index] ? (1ULL << PCIE_SEG (2, Index)) : 0ULL;
+      mOpRomDisMask |= mHiiControlSettings.DisableOptionRom3[Index] ? (1ULL << PCIE_SEG (3, Index)) : 0ULL;
     }
   }
 }
@@ -863,6 +877,18 @@ InitializeSettings (
                       );
   if (EFI_ERROR (Status)) {
     mHiiControlSettings.RootfsRedundancyLevel = 0;
+  }
+
+  BufferSize = sizeof (mOpRomDisMask);
+  Status     = gRT->GetVariable (
+                      L"OpRomDisSegMask",
+                      &gNVIDIAPublicVariableGuid,
+                      NULL,
+                      &BufferSize,
+                      &mOpRomDisMask
+                      );
+  if (EFI_ERROR (Status)) {
+    mOpRomDisMask = 0;
   }
 
   mHiiControlSettings.L4TSupported       = PcdGetBool (PcdL4TConfigurationSupport);
@@ -1094,14 +1120,30 @@ ConfigRouteConfig (
   }
 
   SyncHiiSettings (FALSE);
+
   if (mHiiControlSettings.TH500Config) {
     if (CompareMem (&mMb1Config, &mLastWrittenMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES)) != 0) {
       Status = AccessMb1Record (&mMb1Config, TRUE);
       if (!EFI_ERROR (Status)) {
         CopyMem (&mLastWrittenMb1Config, &mMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
-        WriteMb1Variables (&mMb1Config, &mVariableMb1Config);
+        Status = WriteMb1Variables (&mMb1Config, &mVariableMb1Config);
+      }
+
+      if (EFI_ERROR (Status)) {
+        return Status;
       }
     }
+  }
+
+  Status = gRT->SetVariable (
+                  L"OpRomDisSegMask",
+                  &gNVIDIAPublicVariableGuid,
+                  EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                  sizeof (mOpRomDisMask),
+                  &mOpRomDisMask
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   return Status;

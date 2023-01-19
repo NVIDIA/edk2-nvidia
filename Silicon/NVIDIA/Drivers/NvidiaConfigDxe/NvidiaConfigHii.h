@@ -177,6 +177,10 @@ typedef struct {
   BOOLEAN    EnableECRC_1[MAX_PCIE];
   BOOLEAN    EnableECRC_2[MAX_PCIE];
   BOOLEAN    EnableECRC_3[MAX_PCIE];
+  BOOLEAN    DisableOptionRom0[MAX_PCIE];
+  BOOLEAN    DisableOptionRom1[MAX_PCIE];
+  BOOLEAN    DisableOptionRom2[MAX_PCIE];
+  BOOLEAN    DisableOptionRom3[MAX_PCIE];
 } NVIDIA_CONFIG_HII_CONTROL;
 
 #define ADD_GOTO_SOCKET_FORM(socket)                                       \
@@ -324,6 +328,14 @@ typedef struct {
         flags  = RESET_REQUIRED, \
         default = FALSE, \
     endcheckbox; \
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.DisableOptionRom##socket[pcie], \
+        prompt = STRING_TOKEN(STR_PCIE_DISABLE_OPT_ROM_TITLE), \
+        help   = STRING_TOKEN(STR_PCIE_DISABLE_OPT_ROM_HELP), \
+        flags  = RESET_REQUIRED, \
+        default = FALSE, \
+    endcheckbox; \
   endform;
+
+#define PCIE_SEG(socket, pcie)  (((socket) << 4) | ((pcie) & 0xF))
 
 #endif // __NVIDIA_CONFIG_HII_H__

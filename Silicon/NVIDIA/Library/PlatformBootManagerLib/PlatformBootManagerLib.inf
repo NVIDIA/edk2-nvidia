@@ -113,3 +113,4 @@
   gEfiLoadFileProtocolGuid
   gEfiAcpiSdtProtocolGuid
   gNVIDIABdsDeviceConnectCompleteGuid
+  gEfiDeferredImageLoadProtocolGuid             ## CONSUMES

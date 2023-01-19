@@ -29,6 +29,7 @@
 #include <Library/DxeCapsuleLibFmp/CapsuleOnDisk.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Protocol/BootChainProtocol.h>
+#include <Protocol/DeferredImageLoad.h>
 #include <Protocol/DevicePath.h>
 #include <Protocol/EsrtManagement.h>
 #include <Protocol/GenericMemoryTest.h>
@@ -1193,6 +1194,192 @@ PlatformRegisterConsoles (
   }
 }
 
+/**
+  Checks if the image is an option ROM and it has been configured to be disabled.
+
+  @param[in] DevicePath   Device path of the image being checked.
+
+  @retval    TRUE         The image is configured to be disabled.
+  @retval    FALSE        Other cases
+**/
+BOOLEAN
+PciOpRomDisabled (
+  IN EFI_DEVICE_PATH_PROTOCOL  *DevicePath
+  )
+{
+  EFI_STATUS           Status;
+  EFI_PCI_IO_PROTOCOL  *PciIo;
+  EFI_HANDLE           Handle;
+  UINTN                Segment, Bus, Device, Function;
+  UINT64               OpRomDis;
+  UINTN                VarSize;
+
+  Status = gBS->LocateDevicePath (&gEfiPciIoProtocolGuid, &DevicePath, &Handle);
+  if (EFI_ERROR (Status) || (Handle == NULL)) {
+    return FALSE;
+  }
+
+  Status = gBS->HandleProtocol (Handle, &gEfiPciIoProtocolGuid, (VOID **)&PciIo);
+  if (EFI_ERROR (Status) || (PciIo == NULL)) {
+    return FALSE;
+  }
+
+  Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  if (EFI_ERROR (Status)) {
+    ASSERT_EFI_ERROR (Status);
+    return FALSE;
+  }
+
+  VarSize = sizeof (OpRomDis);
+  Status  = gRT->GetVariable (L"OpRomDisSegMask", &gNVIDIAPublicVariableGuid, NULL, &VarSize, &OpRomDis);
+  if (EFI_ERROR (Status) || (VarSize != sizeof (OpRomDis))) {
+    return FALSE;
+  }
+
+  if ((OpRomDis & (1ULL << Segment)) == 0ULL) {
+    return FALSE;
+  }
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Skip Loading Deferred Image - %s\n",
+    __FUNCTION__,
+    ConvertDevicePathToText (DevicePath, FALSE, FALSE)
+    ));
+
+  return TRUE;
+}
+
+/**
+  This function is copied from EfiBootManagerDispatchDeferredImages. But instead of
+  dispatching all the deferred images, it checks and only dispatches the images
+  that are not specified as disabled.
+
+  @retval EFI_SUCCESS       At least one deferred image is loaded successfully and started.
+  @retval EFI_NOT_FOUND     There is no deferred image.
+  @retval EFI_ACCESS_DENIED There are deferred images but all of them are failed to load.
+**/
+EFI_STATUS
+EFIAPI
+VerifyAndDispatchDeferredImages (
+  VOID
+  )
+{
+  EFI_STATUS                        Status;
+  EFI_DEFERRED_IMAGE_LOAD_PROTOCOL  *DeferredImage;
+  UINTN                             HandleCount;
+  EFI_HANDLE                        *Handles;
+  UINTN                             Index;
+  UINTN                             ImageIndex;
+  EFI_DEVICE_PATH_PROTOCOL          *ImageDevicePath;
+  VOID                              *Image;
+  UINTN                             ImageSize;
+  BOOLEAN                           BootOption;
+  EFI_HANDLE                        ImageHandle;
+  UINTN                             ImageCount;
+  UINTN                             LoadCount;
+
+  //
+  // Find all the deferred image load protocols.
+  //
+  HandleCount = 0;
+  Handles     = NULL;
+  Status      = gBS->LocateHandleBuffer (
+                       ByProtocol,
+                       &gEfiDeferredImageLoadProtocolGuid,
+                       NULL,
+                       &HandleCount,
+                       &Handles
+                       );
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_FOUND;
+  }
+
+  ImageCount = 0;
+  LoadCount  = 0;
+  for (Index = 0; Index < HandleCount; Index++) {
+    Status = gBS->HandleProtocol (Handles[Index], &gEfiDeferredImageLoadProtocolGuid, (VOID **)&DeferredImage);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    for (ImageIndex = 0; ; ImageIndex++) {
+      //
+      // Load all the deferred images in this protocol instance.
+      //
+      Status = DeferredImage->GetImageInfo (
+                                DeferredImage,
+                                ImageIndex,
+                                &ImageDevicePath,
+                                (VOID **)&Image,
+                                &ImageSize,
+                                &BootOption
+                                );
+      if (EFI_ERROR (Status)) {
+        break;
+      }
+
+      //
+      // Skip loading option ROM if it is disabled
+      //
+      if (PciOpRomDisabled (ImageDevicePath)) {
+        continue;
+      }
+
+      ImageCount++;
+      //
+      // Load and start the image.
+      //
+      Status = gBS->LoadImage (
+                      BootOption,
+                      gImageHandle,
+                      ImageDevicePath,
+                      NULL,
+                      0,
+                      &ImageHandle
+                      );
+      if (EFI_ERROR (Status)) {
+        //
+        // With EFI_SECURITY_VIOLATION retval, the Image was loaded and an ImageHandle was created
+        // with a valid EFI_LOADED_IMAGE_PROTOCOL, but the image can not be started right now.
+        // If the caller doesn't have the option to defer the execution of an image, we should
+        // unload image for the EFI_SECURITY_VIOLATION to avoid resource leak.
+        //
+        if (Status == EFI_SECURITY_VIOLATION) {
+          gBS->UnloadImage (ImageHandle);
+        }
+      } else {
+        LoadCount++;
+        //
+        // Before calling the image, enable the Watchdog Timer for
+        // a 5 Minute period
+        //
+        gBS->SetWatchdogTimer (5 * 60, 0x0000, 0x00, NULL);
+        gBS->StartImage (ImageHandle, NULL, NULL);
+
+        //
+        // Clear the Watchdog Timer after the image returns.
+        //
+        gBS->SetWatchdogTimer (0x0000, 0x0000, 0x0000, NULL);
+      }
+    }
+  }
+
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
+
+  if (ImageCount == 0) {
+    return EFI_NOT_FOUND;
+  } else {
+    if (LoadCount == 0) {
+      return EFI_ACCESS_DENIED;
+    } else {
+      return EFI_SUCCESS;
+    }
+  }
+}
+
 //
 // BDS Platform Functions
 //
@@ -1228,8 +1415,10 @@ PlatformBootManagerBeforeConsole (
 
   //
   // Dispatch deferred images after EndOfDxe event.
+  // Call customized version of EfiBootManagerDispatchDeferredImages to bypass
+  // pre-specified PCI option ROMs.
   //
-  EfiBootManagerDispatchDeferredImages ();
+  VerifyAndDispatchDeferredImages ();
 
   //
   // Locate the PCI root bridges and make the PCI bus driver connect each,
