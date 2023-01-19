@@ -642,6 +642,7 @@
   gNVIDIATokenSpaceGuid.PcdOsChainStatusA|L"RootfsStatusSlotA"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdOsChainStatusB|L"RootfsStatusSlotB"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode|L"L4TDefaultBootMode"|gNVIDIAPublicVariableGuid|0x00|0xFF|BS,NV,RT
+  gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled|L"AcpiTimerEnabled"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV
 
 [Components.common]
   #

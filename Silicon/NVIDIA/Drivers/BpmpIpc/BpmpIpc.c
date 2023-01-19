@@ -1,7 +1,7 @@
 /** @file
   BpmpIpc protocol implementation for BPMP IPC driver.
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -377,8 +377,8 @@ BpmpIpcCommunicate (
 
   PrivateData->ActiveChannel = ChannelNo;
 
-  if ((TxData == NULL) ||
-      (TxDataSize == 0) ||
+  if (((TxData != NULL) && (TxDataSize == 0)) ||
+      ((TxData == NULL) && (TxDataSize != 0)) ||
       (TxDataSize > IVC_DATA_SIZE_BYTES) ||
       ((RxData != NULL) && (RxDataSize == 0)) ||
       ((RxData == NULL) && (RxDataSize != 0)) ||
@@ -656,7 +656,6 @@ BpmpIpcProtocolInit (
         PrivateData->Channels[Index].TxChannel = PrivateData->Channels[Index].RxChannel;
         PrivateData->Channels[Index].RxChannel = (IVC_CHANNEL *)(VOID *)Desc->AddrRangeMin;
       }
-
     }
 
     if ((NULL == PrivateData->Channels[Index].TxChannel) ||

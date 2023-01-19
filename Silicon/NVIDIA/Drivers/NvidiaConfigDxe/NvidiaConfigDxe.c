@@ -806,6 +806,9 @@ InitializeSettings (
   // Initialize L4T boot mode form settings
   PcdSet32S (PcdL4TDefaultBootMode, PcdGet32 (PcdL4TDefaultBootMode));
 
+  // Initialize Acpi Timer Form Settings
+  PcdSet8S (PcdAcpiTimerEnabled, PcdGet8 (PcdAcpiTimerEnabled));
+
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;
   Status           = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, NULL, &KernelCmdLineLen, NULL);

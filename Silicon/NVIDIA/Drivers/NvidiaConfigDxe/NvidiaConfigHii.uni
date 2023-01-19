@@ -114,6 +114,9 @@
 #string STR_PCIE_SUPPORTS_CLK_REQ_HELP   #language en-US "Availability of CLKREQ signal from RP to EP"
 
 
+#string STR_ACPI_TIMER_ENABLED_PROMPT    #language en-US "Enable ACPI Timer"
+#string STR_ACPI_TIMER_ENABLED_HELP      #language en-US "Enable/Disable ACPI Timer"
+
 #string STR_NULL                         #language en-US ""
 
 #string STR_DISABLED                     #language en-US  "Disabled"

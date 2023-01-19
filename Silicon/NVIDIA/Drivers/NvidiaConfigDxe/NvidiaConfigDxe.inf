@@ -78,6 +78,7 @@
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport
   gNVIDIATokenSpaceGuid.PcdFloorsweepingRuntimeVariables
+  gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

@@ -1,7 +1,7 @@
 /** @file
   SSDT for TH500 Socket 1 devices
 
-  Copyright (c) 2022, NVIDIA Corporation. All rights reserved.
+  Copyright (c) 2022 - 2023, NVIDIA Corporation. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,6 +24,8 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
       Name (_UID, "BPMP IPC Socket 2")
       Name (PSVT, ((TH500_THERMAL_ZONE_PSV * 10) + 2732))
       Name (CRTT, ((TH500_THERMAL_ZONE_CRT * 10) + 2732))
+      Name (TBUF, 0xFFFFFFFFFFFFFFFF)
+      Name (TIME, 0xFF)
       OperationRegion (BPTX, SystemMemory, BPMP_TX_MAILBOX_SOCKET_2, BPMP_CHANNEL_SIZE)
       Field (BPTX, AnyAcc, NoLock, Preserve) {
         TWCT, 32,
@@ -86,6 +88,42 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
         Local4 = 2732
         Add (Local3, Local4, Local3)
         Return (Local3)
+      }
+
+      Name (LSTM, 0)
+
+      Method (TELM, 1, Serialized, 0, IntObj, IntObj) {
+        Local0 = Buffer(8) {}
+        Local1 = Buffer(384) {}
+        Local2 = 500000
+        Local3 = 0
+        Local4 = 0
+        If (TIME != 0) {
+          If (LSTM > Timer()) {
+            Store(Timer(), LSTM)
+          }
+          Add (LSTM, Local2, Local3)
+          If (LGreater (Timer(), Local3)) {
+            Local4 = 1
+          } Else {
+            Local4 = 0
+          }
+          If (LOr (Local4, (Arg0 != 0))) {
+            Local1 = \_SB.BPM2.BIPC (MRQ_TELEMETRY, Local0)
+            CreateDWordField (DerefOf (Index (Local1, 0)), 0x00, ERR)
+            If (ERR != 0) {
+              Return (0)
+            }
+            Store (Timer(), LSTM)
+          }
+        } Else {
+          Local1 = \_SB.BPM2.BIPC (MRQ_TELEMETRY, Local0)
+          CreateDWordField (DerefOf (Index (Local1, 0)), 0x00, ERRR)
+          If (ERRR != 0) {
+            Return (0)
+          }
+        }
+        Return (TBUF)
       }
     }
 
@@ -382,6 +420,402 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
       Name(_TSP, 1)  // TODO: get correct values
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 TJAvg"))
+    }
+
+    //---------------------------------------------------------------------
+    // Module Power Device Socket 2
+    //---------------------------------------------------------------------
+    Device (PM20)
+    {
+      Name (_HID, "ACPI000D")
+      Name (_UID, 20)
+      Name (CAI, 50)
+      Name (CNT, 0)
+      Name (MFLG, 16)
+      Name (MAFG, 256)
+
+      // _PMD method return code - List of power meter devices
+      Name (PMD, Package() {
+        \_SB.PM20
+      })
+
+      // _PMC method result code
+      Name (PMC, Package() {
+        0x00000001,                           // Supported capabilities - Measurement
+        0x00000000,                           // Measurement Unit - mW
+        0x00000001,                           // Measurement Type - Output Power
+        0x000186A0,                           // Measurement Accuracy - 100.000%
+        0x00000032,                           // Measurement Sampling Time - 50ms
+        0x00000032,                           // Minimum Averaging Interval - 50ms
+        0x000003E8,                           // Maximum Averaging Interval - 1s
+        0xFFFFFFFF,                           // Hysteresis Margin - Information is unavailable
+        0x00000000,                           // Hardware Limit Is Configurable - The limit is read-only
+        0x00000000,                           // Minimum Configurable Hardware Limit - Ignored
+        0x00000000,                           // Maximum Configurable Hardware Limit - Ignored
+        "",                                   // Model Number - NULL
+        "",                                   // Serial Number - NULL
+        "Module Power Socket 2"               // OEM Information - "Module Power Socket 2"
+      })
+
+      Method (_PMC) {
+        Return (PMC)
+      }
+
+      Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
+        If (Arg0 == 50) {
+          Store (50, CAI)
+          Return (0)
+        } ElseIf (Arg0 == 1000) {
+          Store (1000, CAI)
+          Return (0)
+        }
+        Return (1)
+      }
+
+      Method (_GAI) {
+        Return (CAI)
+      }
+
+      Method (_PMD) {
+        Return (PMD)
+      }
+
+      Method (_PMM) {
+        Local0 = 0
+        Local1 = 0
+        Local0 = \_SB.BPM2.TELM(0)
+        If (Local0 == 0) {
+          Return (0xFFFFFFFF)
+        }
+        CreateQWordField (Local0, 0x00, TELB)
+        OperationRegion (TELD, SystemMemory, TELB,  0x180)
+        Field (TELD, AnyAcc, NoLock, Preserve) {
+          Offset (16),
+          MPWR, 32,
+          TPWR, 32,
+          CPWR, 32,
+          SPWR, 32,
+          Offset (288),
+          MAPW, 32,
+          TAPW, 32,
+          CAPW, 32,
+          SAPR, 32,
+          Offset (360),
+          VFG0, 32,
+          VFG1, 32,
+          VFG2, 32
+        }
+
+        If (CAI == 50) {
+          And (VFG0, MFLG, Local1)
+          If (Local1 > 0) {
+            Return (MPWR)
+          }
+        } Else {
+          And (VFG2, MAFG, Local1)
+          If (Local1 > 0) {
+            Return (MAPW)
+          }
+        }
+        Return (0xFFFFFFFF)
+      }
+    }
+
+    //---------------------------------------------------------------------
+    // TH500 Power Device Socket 2
+    //---------------------------------------------------------------------
+    Device (PM21)
+    {
+      Name (_HID, "ACPI000D")
+      Name (_UID, 21)
+      Name (CAI, 50)
+      Name (CNT, 0)
+      Name (MFLG, 32)
+      Name (MAFG, 512)
+
+      // _PMD method return code - List of power meter devices
+      Name (PMD, Package() {
+        \_SB.PM21
+      })
+
+      // _PMC method result code
+      Name (PMC, Package() {
+        0x00000001,                          // Supported capabilities - Measurement
+        0x00000000,                          // Measurement Unit - mW
+        0x00000001,                          // Measurement Type - Output Power
+        0x000186A0,                          // Measurement Accuracy - 100.000%
+        0x00000032,                          // Measurement Sampling Time - 50ms
+        0x00000032,                          // Minimum Averaging Interval - 50ms
+        0x000003E8,                          // Maximum Averaging Interval - 1s
+        0xFFFFFFFF,                          // Hysteresis Margin - Information is unavailable
+        0x00000000,                          // Hardware Limit Is Configurable - The limit is read-only
+        0x00000000,                          // Minimum Configurable Hardware Limit - Ignored
+        0x00000000,                          // Maximum Configurable Hardware Limit - Ignored
+        "",                                  // Model Number - NULL
+        "",                                  // Serial Number - NULL
+        "TH500 Power Socket 2"               // OEM Information - "TH500 Power Socket 2"
+      })
+
+      Method (_PMC) {
+        Return (PMC)
+      }
+
+      Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
+        If (Arg0 == 50) {
+          Store (50, CAI)
+          Return (0)
+        } ElseIf (Arg0 == 1000) {
+          Store (1000, CAI)
+          Return (0)
+        }
+        Return (1)
+      }
+
+      Method (_GAI) {
+        Return (CAI)
+      }
+
+      Method (_PMD) {
+        Return (PMD)
+      }
+
+      Method (_PMM) {
+        Local0 = 0
+        Local1 = 0
+        Local0 = \_SB.BPM2.TELM(0)
+        If (Local0 == 0) {
+          Return (0xFFFFFFFF)
+        }
+        CreateQWordField (Local0, 0x00, TELB)
+        OperationRegion (TELD, SystemMemory, TELB,  0x180)
+        Field (TELD, AnyAcc, NoLock, Preserve) {
+          Offset (16),
+          MPWR, 32,
+          TPWR, 32,
+          CPWR, 32,
+          SPWR, 32,
+          Offset (288),
+          MAPW, 32,
+          TAPW, 32,
+          CAPW, 32,
+          SAPR, 32,
+          Offset (360),
+          VFG0, 32,
+          VFG1, 32,
+          VFG2, 32
+        }
+
+        If (CAI == 50) {
+          And (VFG0, MFLG, Local1)
+          If (Local1 > 0) {
+            Return (TPWR)
+          }
+        } Else {
+          And (VFG2, MAFG, Local1)
+          If (Local1 > 0) {
+            Return (TAPW)
+          }
+        }
+        Return (0xFFFFFFFF)
+      }
+    }
+
+    //---------------------------------------------------------------------
+    // CPU Power Device Socket 2
+    //---------------------------------------------------------------------
+    Device (PM22)
+    {
+      Name (_HID, "ACPI000D")
+      Name (_UID, 12)
+      Name (CAI, 50)
+      Name (CNT, 0)
+      Name (MFLG, 64)
+      Name (MAFG, 1024)
+
+      // _PMD method return code - List of power meter devices
+      Name (PMD, Package() {
+        \_SB.PM22
+      })
+
+      // _PMC method result code
+      Name (PMC, Package() {
+        0x00000001,                        // Supported capabilities - Measurement
+        0x00000000,                        // Measurement Unit - mW
+        0x00000001,                        // Measurement Type - Output Power
+        0x000186A0,                        // Measurement Accuracy - 100.000%
+        0x00000032,                        // Measurement Sampling Time - 50ms
+        0x00000032,                        // Minimum Averaging Interval - 50ms
+        0x000003E8,                        // Maximum Averaging Interval - 1s
+        0xFFFFFFFF,                        // Hysteresis Margin - Information is unavailable
+        0x00000000,                        // Hardware Limit Is Configurable - The limit is read-only
+        0x00000000,                        // Minimum Configurable Hardware Limit - Ignored
+        0x00000000,                        // Maximum Configurable Hardware Limit - Ignored
+        "",                                // Model Number - NULL
+        "",                                // Serial Number - NULL
+        "CPU Power Socket 2"               // OEM Information - "CPU Power Socket 2"
+      })
+
+      Method (_PMC) {
+        Return (PMC)
+      }
+
+      Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
+        If (Arg0 == 50) {
+          Store (50, CAI)
+          Return (0)
+        } ElseIf (Arg0 == 1000) {
+          Store (1000, CAI)
+          Return (0)
+        }
+        Return (1)
+      }
+
+      Method (_GAI) {
+        Return (CAI)
+      }
+
+      Method (_PMD) {
+        Return (PMD)
+      }
+
+      Method (_PMM) {
+        Local0 = 0
+        Local1 = 0
+        Local0 = \_SB.BPM2.TELM(0)
+        If (Local0 == 0) {
+          Return (0xFFFFFFFF)
+        }
+        CreateQWordField (Local0, 0x00, TELB)
+        OperationRegion (TELD, SystemMemory, TELB,  0x180)
+        Field (TELD, AnyAcc, NoLock, Preserve) {
+          Offset (16),
+          MPWR, 32,
+          TPWR, 32,
+          CPWR, 32,
+          SPWR, 32,
+          Offset (288),
+          MAPW, 32,
+          TAPW, 32,
+          CAPW, 32,
+          SAPR, 32,
+          Offset (360),
+          VFG0, 32,
+          VFG1, 32,
+          VFG2, 32
+        }
+
+        If (CAI == 50) {
+          And (VFG0, MFLG, Local1)
+          If (Local1 > 0) {
+            Return (CPWR)
+          }
+        } Else {
+          And (VFG2, MAFG, Local1)
+          If (Local1 > 0) {
+            Return (CAPW)
+          }
+        }
+        Return (0xFFFFFFFF)
+      }
+    }
+
+    //---------------------------------------------------------------------
+    // SOC Power Device Socket 2
+    //---------------------------------------------------------------------
+    Device (PM23)
+    {
+      Name (_HID, "ACPI000D")
+      Name (_UID, 23)
+      Name (CAI, 50)
+      Name (CNT, 0)
+      Name (MFLG, 128)
+      Name (MAFG, 2048)
+
+      // _PMD method return code - List of power meter devices
+      Name (PMD, Package() {
+        \_SB.PM23
+      })
+
+      // _PMC method result code
+      Name (PMC, Package() {
+        0x00000001,                        // Supported capabilities - Measurement
+        0x00000000,                        // Measurement Unit - mW
+        0x00000001,                        // Measurement Type - Output Power
+        0x000186A0,                        // Measurement Accuracy - 100.000%
+        0x00000032,                        // Measurement Sampling Time - 50ms
+        0x00000032,                        // Minimum Averaging Interval - 50ms
+        0x000003E8,                        // Maximum Averaging Interval - 1s
+        0xFFFFFFFF,                        // Hysteresis Margin - Information is unavailable
+        0x00000000,                        // Hardware Limit Is Configurable - The limit is read-only
+        0x00000000,                        // Minimum Configurable Hardware Limit - Ignored
+        0x00000000,                        // Maximum Configurable Hardware Limit - Ignored
+        "",                                // Model Number - NULL
+        "",                                // Serial Number - NULL
+        "SoC Power Socket 2"               // OEM Information - "SoC Power Socket 2"
+      })
+
+      Method (_PMC) {
+        Return (PMC)
+      }
+
+      Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
+        If (Arg0 == 50) {
+          Store (50, CAI)
+          Return (0)
+        } ElseIf (Arg0 == 1000) {
+          Store (1000, CAI)
+          Return (0)
+        }
+        Return (1)
+      }
+
+      Method (_GAI) {
+        Return (CAI)
+      }
+
+      Method (_PMD) {
+        Return (PMD)
+      }
+
+      Method (_PMM) {
+        Local0 = 0
+        Local1 = 0
+        Local0 = \_SB.BPM2.TELM(0)
+        If (Local0 == 0) {
+          Return (0xFFFFFFFF)
+        }
+        CreateQWordField (Local0, 0x00, TELB)
+        OperationRegion (TELD, SystemMemory, TELB,  0x180)
+        Field (TELD, AnyAcc, NoLock, Preserve) {
+          Offset (16),
+          MPWR, 32,
+          TPWR, 32,
+          CPWR, 32,
+          SPWR, 32,
+          Offset (288),
+          MAPW, 32,
+          TAPW, 32,
+          CAPW, 32,
+          SAPR, 32,
+          Offset (360),
+          VFG0, 32,
+          VFG1, 32,
+          VFG2, 32
+        }
+
+        If (CAI == 50) {
+          And (VFG0, MFLG, Local1)
+          If (Local1 > 0) {
+            Return (SPWR)
+          }
+        } Else {
+          And (VFG2, MAFG, Local1)
+          If (Local1 > 0) {
+            Return (SAPR)
+          }
+        }
+        Return (0xFFFFFFFF)
+      }
     }
   } //Scope(_SB)
 }

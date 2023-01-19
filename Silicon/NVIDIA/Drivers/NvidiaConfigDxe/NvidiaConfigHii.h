@@ -79,6 +79,7 @@
 #define KEY_OS_CHAIN_STATUS_B         0x0109
 #define KEY_L4T_CONFIG                0x010A
 #define KEY_BOOT_CONFIG               0x010B
+#define KEY_ENABLE_ACPI_TIMER         0x010D
 
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 
@@ -87,6 +88,9 @@
 
 #define QUICK_BOOT_DISABLE  0x0
 #define QUICK_BOOT_ENABLE   0x1
+
+#define ACPI_TIMER_DISABLE  0x0
+#define ACPI_TIMER_ENABLE   0x1
 
 #define NEW_DEVICE_HIERARCHY_BOTTOM  0x0
 #define NEW_DEVICE_HIERARCHY_TOP     0x1

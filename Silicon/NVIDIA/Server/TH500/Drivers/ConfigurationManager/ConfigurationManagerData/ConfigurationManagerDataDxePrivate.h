@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe Private Definitions
 
-  Copyright (c) 2022, NVIDIA Corporation. All rights reserved.
+  Copyright (c) 2022 - 2023, NVIDIA Corporation. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -37,6 +37,7 @@
 #include <Protocol/AmlPatchProtocol.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <Protocol/RasNsCommPcieDpcDataProtocol.h>
+#include <Protocol/BpmpIpc.h>
 
 #include <NVIDIAConfiguration.h>
 

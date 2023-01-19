@@ -103,6 +103,7 @@
   gNVIDIARasNsCommPcieDpcDataProtocolGuid
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
   gEfiPciIoProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
@@ -144,6 +145,7 @@
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmReadLatency
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
 
 [Depex]
   gEfiVariableArchProtocolGuid AND

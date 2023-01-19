@@ -77,6 +77,11 @@ formset
     name  = L4TDefaultBootMode,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+  efivarstore NVIDIA_ACPI_TIMER_ENABLED,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name  = AcpiTimerEnabled,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
   //
   // Main form for NVIDIA Configuration
   //
@@ -169,6 +174,14 @@ formset
         option text = STRING_TOKEN(STR_TOP),  value = NEW_DEVICE_HIERARCHY_TOP, flags = 0;
     endoneof;
 
+    oneof varid = AcpiTimerEnabled.Enabled,
+        questionid = KEY_ENABLE_ACPI_TIMER,
+        prompt = STRING_TOKEN(STR_ACPI_TIMER_ENABLED_PROMPT),
+        help   = STRING_TOKEN(STR_ACPI_TIMER_ENABLED_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_DISABLED), value = ACPI_TIMER_DISABLE, flags = 0;
+        option text = STRING_TOKEN(STR_ENABLED),  value = ACPI_TIMER_ENABLE, flags = 0;
+    endoneof;
   endform;
 
   //

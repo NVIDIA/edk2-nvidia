@@ -89,4 +89,8 @@ typedef struct {
   UINT32    BootMode;
 } NVIDIA_L4T_BOOT_MODE;
 
+typedef struct {
+  UINT8    Enabled;
+} NVIDIA_ACPI_TIMER_ENABLED;
+
 #endif //__NVIDIA_CONFIGURATION_H__

@@ -19,6 +19,9 @@
 #define PLATFORM_MAX_CPUS               (PLATFORM_MAX_CLUSTERS * \
                                          PLATFORM_MAX_CORES_PER_CLUSTER)
 
+// ACPI Timer enable
+#define ACPI_TIMER_INSTRUCTION_ENABLE  (PcdGet8 (PcdAcpiTimerEnabled))
+
 /** The platform configuration repository information.
 */
 STATIC
@@ -700,6 +703,187 @@ UpdateThermalZoneTempInfo (
   return EFI_SUCCESS;
 }
 
+/** patch MRQ_TELEMETRY data in DSDT.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateTelemetryInfo (
+  VOID
+  )
+{
+  EFI_STATUS                Status;
+  NVIDIA_AML_NODE_INFO      AcpiNodeInfo;
+  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol      = NULL;
+  UINT64                    TelemetryDataBuffAddr = 0;
+  UINTN                     ResponseSize          = sizeof (TelemetryDataBuffAddr);
+  UINT32                    BpmpHandle;
+  VOID                      *Dtb = NULL;
+  INT32                     NodeOffset;
+  UINT32                    NumberOfMrqTelemeteryNodes;
+  UINT32                    *MrqTelemetryHandles = NULL;
+  UINT32                    Index;
+  CONST VOID                *Property           = NULL;
+  INT32                     PropertySize        = 0;
+  UINT32                    SocketId            = 0;
+  UINT8                     AcpiTimerEnableFlag = 0;
+
+  STATIC CHAR8 *CONST  AcpiMrqTelemetryBufferPatchName[] = {
+    "_SB_.BPM0.TBUF",
+    "_SB_.BPM1.TBUF",
+    "_SB_.BPM2.TBUF",
+    "_SB_.BPM3.TBUF",
+  };
+
+  STATIC CHAR8 *CONST  AcpiTimerInstructionEnableVarName[] = {
+    "_SB_.BPM0.TIME",
+    "_SB_.BPM1.TIME",
+    "_SB_.BPM2.TIME",
+    "_SB_.BPM3.TIME",
+  };
+
+  NumberOfMrqTelemeteryNodes = 0;
+  Status                     = GetMatchingEnabledDeviceTreeNodes ("nvidia,th500-mrqtelemetry", NULL, &NumberOfMrqTelemeteryNodes);
+  if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DEBUG_ERROR, "%a: nvidia,th500-mrqtelemetry nodes absent in device tree\r\n", __FUNCTION__));
+    Status = EFI_SUCCESS;
+    goto ErrorExit;
+  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+    goto ErrorExit;
+  }
+
+  MrqTelemetryHandles = NULL;
+  MrqTelemetryHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfMrqTelemeteryNodes);
+  if (MrqTelemetryHandles == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ErrorExit;
+  }
+
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,th500-mrqtelemetry", MrqTelemetryHandles, &NumberOfMrqTelemeteryNodes);
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    Status = EFI_NOT_READY;
+    goto ErrorExit;
+  }
+
+  if (BpmpIpcProtocol == NULL) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ErrorExit;
+  }
+
+  for (Index = 0; Index < NumberOfMrqTelemeteryNodes; Index++) {
+    BpmpHandle = 0;
+    Status     = GetDeviceTreeNode (MrqTelemetryHandles[Index], &Dtb, &NodeOffset);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get device node info - %r\r\n", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
+
+    Property = fdt_getprop (Dtb, NodeOffset, "nvidia,bpmp", &PropertySize);
+    if ((Property == NULL) || (PropertySize < sizeof (UINT32))) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get Bpmp node phandle for index - %d\n", __FUNCTION__, Index));
+      goto ErrorExit;
+    } else {
+      CopyMem ((VOID *)&BpmpHandle, Property, sizeof (UINT32));
+      BpmpHandle = SwapBytes32 (BpmpHandle);
+    }
+
+    SocketId = 0;
+    Property = fdt_getprop (Dtb, NodeOffset, "nvidia,hw-instance-id", &PropertySize);
+    if ((Property == NULL) || (PropertySize < sizeof (UINT32))) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get Socket Id for index - %d\n", __FUNCTION__, Index));
+      goto ErrorExit;
+    } else {
+      CopyMem ((VOID *)&SocketId, Property, sizeof (UINT32));
+      SocketId = SwapBytes32 (SocketId);
+    }
+
+    if (SocketId >= PcdGet32 (PcdTegraMaxSockets)) {
+      DEBUG ((DEBUG_ERROR, "%a: SocketId %d exceeds number of sockets\r\n", __FUNCTION__, SocketId));
+      Status = EFI_SUCCESS;
+      goto ErrorExit;
+    }
+
+    if (!IsSocketEnabled (SocketId)) {
+      continue;
+    }
+
+    Status = BpmpIpcProtocol->Communicate (
+                                BpmpIpcProtocol,
+                                NULL,
+                                BpmpHandle,
+                                MRQ_TELEMETRY,
+                                NULL,
+                                0,
+                                (VOID *)&TelemetryDataBuffAddr,
+                                ResponseSize,
+                                NULL
+                                );
+
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error in BPMP communication: %r\r\n", __FUNCTION__, Status));
+      Status = EFI_SUCCESS;
+      goto ErrorExit;
+    }
+
+    TelemetryDataBuffAddr = TH500_AMAP_GET_ADD (TelemetryDataBuffAddr, SocketId);
+
+    if (Index >= ARRAY_SIZE (AcpiMrqTelemetryBufferPatchName)) {
+      DEBUG ((DEBUG_ERROR, "%a: Index %d exceeding AcpiMrqTelemetryBufferPatchName size\r\n", __FUNCTION__, Index));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->FindNode (PatchProtocol, AcpiMrqTelemetryBufferPatchName[Index], &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: MRQ_TELEMETRY node is not found for patching %a - %r\r\n", __FUNCTION__, AcpiMrqTelemetryBufferPatchName[Index], Status));
+      Status = EFI_SUCCESS;
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &TelemetryDataBuffAddr, sizeof (TelemetryDataBuffAddr));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiMrqTelemetryBufferPatchName[Index], Status));
+      Status = EFI_SUCCESS;
+      goto ErrorExit;
+    }
+
+    AcpiTimerEnableFlag = ACPI_TIMER_INSTRUCTION_ENABLE;
+
+    if (Index >= ARRAY_SIZE (AcpiTimerInstructionEnableVarName)) {
+      DEBUG ((DEBUG_ERROR, "%a: Index %d exceeding AcpiTimerInstructionEnableVarName size\r\n", __FUNCTION__, Index));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->FindNode (PatchProtocol, AcpiTimerInstructionEnableVarName[Index], &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Acpi timer enable node is not found for patching %a - %r\r\n", __FUNCTION__, AcpiTimerInstructionEnableVarName[Index], Status));
+      Status = EFI_SUCCESS;
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &AcpiTimerEnableFlag, sizeof (AcpiTimerEnableFlag));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiTimerInstructionEnableVarName[Index], Status));
+      Status = EFI_SUCCESS;
+      goto ErrorExit;
+    }
+  }
+
+ErrorExit:
+  if (MrqTelemetryHandles != NULL) {
+    FreePool (MrqTelemetryHandles);
+  }
+
+  return Status;
+}
+
 /** Initialize the platform configuration repository.
   @retval EFI_SUCCESS   Success
 **/
@@ -867,6 +1051,11 @@ InitializePlatformRepository (
   }
 
   Status = UpdateGedInfo ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateTelemetryInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }
