@@ -419,8 +419,8 @@ ParseFruChassisArea (
     do {
       PrevOffset = Offset;
       FruString  = GetFruAreaStr (FruChassisArea, &Offset, FruLen);
-      if (FruString) {
-        DEBUG ((DEBUG_WARN, "%a: Chassis Extra %a\n", FruString));
+      if (FruString != NULL) {
+        DEBUG ((DEBUG_WARN, "%a: Chassis Extra %a\n", __FUNCTION__, FruString));
       }
     } while (PrevOffset != Offset);
   }
@@ -484,8 +484,8 @@ ParseFruBoardArea (
     do {
       PrevOffset = Offset;
       FruString  = GetFruAreaStr (FruBoardArea, &Offset, FruLen);
-      if (FruString) {
-        DEBUG ((DEBUG_WARN, "%a: Board Extra %a\n", FruString));
+      if (FruString != NULL) {
+        DEBUG ((DEBUG_WARN, "%a: Board Extra %a\n", __FUNCTION__, FruString));
       }
     } while (PrevOffset != Offset);
   }
@@ -544,8 +544,8 @@ ParseFruProductArea (
     do {
       PrevOffset = Offset;
       FruString  = GetFruAreaStr (FruProductArea, &Offset, FruLen);
-      if (FruString) {
-        DEBUG ((DEBUG_WARN, "%a: Product Extra %a\n", FruString));
+      if (FruString != NULL) {
+        DEBUG ((DEBUG_WARN, "%a: Product Extra %a\n", __FUNCTION__, FruString));
       }
     } while (PrevOffset != Offset);
   }
