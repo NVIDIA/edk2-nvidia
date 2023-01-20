@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -111,6 +111,11 @@
   INF Silicon/NVIDIA/Drivers/I2cIoBmcSsifDxe/I2cIoBmcSsifDxe.inf
   INF Silicon/NVIDIA/Drivers/ArmSbmrStatusCodeDxe/ArmSbmrStatusCodeDxe.inf
   INF IpmiFeaturePkg/Frb/FrbDxe.inf
+
+  #
+  # IPMI Null Driver
+  #
+  INF Silicon/NVIDIA/Drivers/IpmiNullDxe/IpmiNullDxe.inf
 
   #
   # Graphics console support

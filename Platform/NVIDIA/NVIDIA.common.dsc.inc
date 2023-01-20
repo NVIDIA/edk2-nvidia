@@ -749,6 +749,11 @@
   IpmiFeaturePkg/Frb/FrbDxe.inf
 
   #
+  # IPMI Null Driver
+  #
+  Silicon/NVIDIA/Drivers/IpmiNullDxe/IpmiNullDxe.inf
+
+  #
   # Graphics console support
   #
   Silicon/NVIDIA/Drivers/Logo/LogoDxe.inf
