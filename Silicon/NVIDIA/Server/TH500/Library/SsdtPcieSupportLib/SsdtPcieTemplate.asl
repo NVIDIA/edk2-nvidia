@@ -97,24 +97,41 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
 
     Method (_DSM, 4, Serialized) {
       If (LEqual (Arg0, ToUUID ("E5C937D0-3553-4D7A-9117-EA4D19C3434D"))) {
+        // Check for Revision ID
         If (LEqual (Arg1, 0x5)) {
-          // Check for Revision ID
-          If (LEqual (Arg2, 0xD)) {
-            // Check for Function Index
-            // return BDF of port that experienced containment
-            Local0                   = 0xFFFFFFFF
-                              Local1 = 0xFFFFFFFF
-                                       Store (DPC0, Local0)
-                                       If (LEqual (Local0, 0x1)) {
+          Switch(ToInteger(Arg2)) {
+            //
+            // Function Index:0
+            // Standard query - A bitmask of functions supported
+            //
+            Case (0) {
+              Name(OPTS, Buffer(2) {0, 0})
+              CreateBitField(OPTS, 0, FUN0)
+              CreateBitField(OPTS, 13, FUND)
+
+              Store(1, FUN0)
+              Store(1, FUND)
+              Return(OPTS)
+            }
+            //
+            // Function Index: D
+            // Downstream Port Containment Device Location
+            //
+            Case(13) {
+              Local0 = 0xFFFFFFFF
+              Local1 = 0xFFFFFFFF
+              Store (DPC0, Local0)
               // Only if an active DPC is going on
-              Store (ESR0, Local1)
+              If (LEqual (Local0, 0x1)) {
+                Store (ESR0, Local1)
+                Return (Local1)
+              }
               Return (Local1)
             }
-            Return (Local1)
-          }   // end Check for Function Index
-        }   // end Check for Revision ID
-      }   // end Check UUID
-    }   // end _DSM
+          } // End of switch(Arg2)
+        } // end Check for Revision ID
+      } // end Check UUID
+    } // end _DSM
 
     OperationRegion (LIC4, SystemMemory, LICA, TH500_SW_IO4_SIZE)
     Field (LIC4, DWordAcc, NoLock, Preserve) {
