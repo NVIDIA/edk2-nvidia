@@ -604,12 +604,6 @@
 # Platform supports NS QSPI controllers
   gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|FALSE|BOOLEAN|0x00000080
 
-#
-# FW activation metod
-#   0x00 - reset
-#   0x01 - power cycle
-  gNVIDIATokenSpaceGuid.PcdActivateFwMethod|0x0|UINT8|0x000000A2
-
 #Option to enable/disable ACPI Timer
   gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled|0x00|UINT8|0x0000009b
 

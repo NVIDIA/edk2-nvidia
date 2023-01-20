@@ -1419,19 +1419,9 @@ HandleCapsules (
   // Activate new FW if any capsules installed
   //
   if (NeedReset) {
-    switch (PcdGet8 (PcdActivateFwMethod)) {
-      case 0x0:
-        DEBUG ((DEBUG_WARN, "%a: resetting to activate new firmware ...\n", __FUNCTION__));
-        gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
-        break;
-      case 0x1:
-        Print (L"Waiting for power cycle.\n");
-        break;
-      default:
-        ASSERT (FALSE);
-        break;
-    }
+    DEBUG ((DEBUG_WARN, "%a: resetting to activate new firmware ...\n", __FUNCTION__));
 
+    gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
     CpuDeadLoop ();
   }
 }

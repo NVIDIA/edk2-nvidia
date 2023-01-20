@@ -18,7 +18,6 @@
 #include <Library/PldmFwUpdatePkgLib.h>
 #include <Library/PldmFwUpdateTaskLib.h>
 #include <Library/PrintLib.h>
-#include <Library/UefiLib.h>
 #include "FmpErotSupport.h"
 
 #define FMP_EROT_SOCKET                        0
@@ -234,10 +233,6 @@ FmpErotSetImage (
 
   *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
   DEBUG ((DEBUG_INFO, "%a: exit success\n", __FUNCTION__));
-
-  if (ActivationMethod >= PLDM_FW_ACTIVATION_DC_POWER_CYCLE) {
-    Print (L"\nPower cycle required to activate new firmware.\n");
-  }
 
   return EFI_SUCCESS;
 }

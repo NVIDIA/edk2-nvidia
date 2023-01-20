@@ -46,7 +46,6 @@
   PldmFwUpdatePkgLib
   PldmFwUpdateTaskLib
   PrintLib
-  UefiLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
