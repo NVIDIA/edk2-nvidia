@@ -20,6 +20,7 @@
 #include "ConfigurationSmbiosPrivate.h"
 
 CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType11 = {
+  SMBIOS_TYPE_OEM_STRINGS,
   CREATE_STD_SMBIOS_TABLE_GEN_ID (EStdSmbiosTableIdType11),
   NULL
 };

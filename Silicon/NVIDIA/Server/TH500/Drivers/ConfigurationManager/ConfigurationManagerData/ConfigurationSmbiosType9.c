@@ -27,6 +27,7 @@
 #include "ConfigurationSmbiosPrivate.h"
 
 CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType9 = {
+  SMBIOS_TYPE_SYSTEM_SLOTS,
   CREATE_STD_SMBIOS_TABLE_GEN_ID (EStdSmbiosTableIdType09),
   NULL
 };

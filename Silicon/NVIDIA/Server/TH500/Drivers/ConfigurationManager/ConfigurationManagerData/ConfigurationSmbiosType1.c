@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 1 table
 
-  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -24,6 +24,7 @@
 #include "ConfigurationSmbiosPrivate.h"
 
 CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType1 = {
+  SMBIOS_TYPE_SYSTEM_INFORMATION,
   CREATE_STD_SMBIOS_TABLE_GEN_ID (EStdSmbiosTableIdType01),
   NULL
 };

@@ -18,6 +18,7 @@
 #include "ConfigurationSmbiosPrivate.h"
 
 CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType32 = {
+  SMBIOS_TYPE_SYSTEM_BOOT_INFORMATION,
   CREATE_STD_SMBIOS_TABLE_GEN_ID (EStdSmbiosTableIdType32),
   NULL
 };

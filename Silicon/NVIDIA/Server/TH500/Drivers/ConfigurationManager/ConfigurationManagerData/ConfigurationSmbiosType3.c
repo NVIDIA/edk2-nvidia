@@ -19,6 +19,7 @@
 #include "ConfigurationSmbiosPrivate.h"
 
 CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType3 = {
+  SMBIOS_TYPE_SYSTEM_ENCLOSURE,
   CREATE_STD_SMBIOS_TABLE_GEN_ID (EStdSmbiosTableIdType03),
   NULL
 };
