@@ -23,7 +23,7 @@
 #include <Library/PrintLib.h>
 #include <libfdt.h>
 
-#include "TH500FloorSweepingLib.h"
+#include "CommonFloorSweepingLib.h"
 
 #define THERMAL_COOLING_DEVICE_ENTRY_SIZE  (3 * sizeof (INT32))
 
@@ -76,7 +76,7 @@ GetCpuInfo (
       Status = MceAriGetEnabledCoresBitMap (EnabledCoresBitMap);
       break;
     case TH500_CHIP_ID:
-      Status = TH500GetEnabledCoresBitMap (
+      Status = CommonGetEnabledCoresBitMap (
                  SocketMask,
                  MaxSupportedCores,
                  EnabledCoresBitMap
@@ -277,7 +277,7 @@ CheckAndRemapCpu (
       *DtCpuFormat = "cpu@%u";
       break;
     case TH500_CHIP_ID:
-      Status = TH500CheckAndRemapCpu (LogicalCore, Mpidr, DtCpuFormat, DtCpuId);
+      Status = CommonCheckAndRemapCpu (LogicalCore, Mpidr, DtCpuFormat, DtCpuId);
       break;
     default:
       Status = EFI_UNSUPPORTED;
@@ -762,14 +762,14 @@ FloorSweepDtb (
 
       break;
     case TH500_CHIP_ID:
-      Status = TH500FloorSweepCpus (Info->SocketMask, Dtb);
+      Status = CommonFloorSweepCpus (Info->SocketMask, Dtb);
 
       if (!EFI_ERROR (Status)) {
-        Status = TH500FloorSweepPcie (Info->SocketMask, Dtb);
+        Status = CommonFloorSweepPcie (Info->SocketMask, Dtb);
       }
 
       if (!EFI_ERROR (Status)) {
-        Status = TH500FloorSweepScfCache (Info->SocketMask, Dtb);
+        Status = CommonFloorSweepScfCache (Info->SocketMask, Dtb);
       }
 
       break;

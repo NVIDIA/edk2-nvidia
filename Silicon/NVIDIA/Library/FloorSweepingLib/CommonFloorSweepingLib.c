@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -21,7 +21,7 @@
 #include <Library/PrintLib.h>
 #include <libfdt.h>
 
-#include "TH500FloorSweepingLib.h"
+#include "CommonFloorSweepingLib.h"
 
 #define TH500_MAX_SOCKETS                  4
 #define TH500_MAX_CORE_DISABLE_WORDS       3
@@ -139,7 +139,7 @@ AddSocketCoresToEnabledCoresBitMap (
 **/
 EFI_STATUS
 EFIAPI
-TH500GetEnabledCoresBitMap (
+CommonGetEnabledCoresBitMap (
   IN  UINT32  SocketMask,
   IN  UINTN   MaxSupportedCores,
   IN  UINT64  *EnabledCoresBitMap
@@ -217,7 +217,7 @@ TH500GetEnabledCoresBitMap (
 **/
 EFI_STATUS
 EFIAPI
-TH500FloorSweepPcie (
+CommonFloorSweepPcie (
   IN  UINT32  SocketMask,
   IN  VOID    *Dtb
   )
@@ -484,7 +484,7 @@ BitsSet (
 **/
 EFI_STATUS
 EFIAPI
-TH500FloorSweepScfCache (
+CommonFloorSweepScfCache (
   IN  UINT32  SocketMask,
   IN  VOID    *Dtb
   )
@@ -580,7 +580,7 @@ TH500FloorSweepScfCache (
 **/
 EFI_STATUS
 EFIAPI
-TH500FloorSweepCpus (
+CommonFloorSweepCpus (
   IN  UINT32  SocketMask,
   IN  VOID    *Dtb
   )
@@ -655,7 +655,7 @@ GetLinearCoreIDFromMpidr (
 
 EFI_STATUS
 EFIAPI
-TH500CheckAndRemapCpu (
+CommonCheckAndRemapCpu (
   IN UINT32        LogicalCore,
   IN OUT UINT64    *Mpidr,
   OUT CONST CHAR8  **DtCpuFormat,
