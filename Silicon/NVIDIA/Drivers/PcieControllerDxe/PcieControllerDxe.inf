@@ -2,7 +2,7 @@
 #
 #  PCIe Controller Driver
 #
-#  Copyright (c) 2019-2022, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -11,7 +11,7 @@
 [Defines]
   INF_VERSION                    = 0x00010019
   BASE_NAME                      = PcieControllerDxe
-  FILE_GUID                      = 89815ce0-782d-4c64-96ff-4ce4b68bc0e4
+  FILE_GUID                      = cc866397-b784-4c6b-b9f6-3a9e4e98a6b2
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
