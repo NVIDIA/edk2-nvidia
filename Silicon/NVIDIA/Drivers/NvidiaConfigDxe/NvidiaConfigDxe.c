@@ -117,7 +117,7 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PCIE_SUPPORTS_CLK_REQ_HELP),
 };
 
-UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
+STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_SCRATCH_BASE_SOCKET_0,
   TH500_SCRATCH_BASE_SOCKET_1,
   TH500_SCRATCH_BASE_SOCKET_2,
@@ -549,8 +549,8 @@ WriteFloorsweepingVariables (
     }
 
     if ((ExposeVariableControl & EXPOSE_PCIE_FLOORSWEEPING_VARIABLE) != 0) {
-      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + PCIE_FLOORSWEEPING_DISABLE_OFFSET);
-      VariableData[0] &= ~PCIE_FLOORSWEEPING_DISABLE_MASK;
+      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + TH500_PCIE_FLOORSWEEPING_DISABLE_OFFSET);
+      VariableData[0] &= ~TH500_PCIE_FLOORSWEEPING_DISABLE_MASK;
       VariableSize     = 2;
       UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.PCIeDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
@@ -600,12 +600,12 @@ WriteFloorsweepingVariables (
     }
 
     if ((ExposeVariableControl & EXPOSE_CCPLEX_CORE_DISABLED_VARIABLE) != 0) {
-      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + CPU_FLOORSWEEPING_DISABLE_OFFSET_0);
-      VariableData[0] &= ~CPU_FLOORSWEEPING_DISABLE_MASK_0;
-      VariableData[1]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + CPU_FLOORSWEEPING_DISABLE_OFFSET_1);
-      VariableData[1] &= ~CPU_FLOORSWEEPING_DISABLE_MASK_1;
-      VariableData[2]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + CPU_FLOORSWEEPING_DISABLE_OFFSET_2);
-      VariableData[2] &= ~CPU_FLOORSWEEPING_DISABLE_MASK_2;
+      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_0);
+      VariableData[0] &= ~TH500_CPU_FLOORSWEEPING_DISABLE_MASK_0;
+      VariableData[1]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_1);
+      VariableData[1] &= ~TH500_CPU_FLOORSWEEPING_DISABLE_MASK_1;
+      VariableData[2]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_2);
+      VariableData[2] &= ~TH500_CPU_FLOORSWEEPING_DISABLE_MASK_2;
       VariableSize     = 3*sizeof (UINT32);
       UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.CcplexCoreDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
@@ -640,12 +640,12 @@ WriteFloorsweepingVariables (
     }
 
     if ((ExposeVariableControl & EXPOSE_SCF_CACHE_DISABLED_VARIABLE) != 0) {
-      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_0);
-      VariableData[0] &= ~SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_0;
-      VariableData[1]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_1);
-      VariableData[1] &= ~SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_1;
-      VariableData[2]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_2);
-      VariableData[2] &= ~SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2;
+      VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_0);
+      VariableData[0] &= ~TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_0;
+      VariableData[1]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_1);
+      VariableData[1] &= ~TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_1;
+      VariableData[2]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_2);
+      VariableData[2] &= ~TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2;
       VariableSize     = 3*sizeof (UINT32);
       UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.ScfCacheDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);

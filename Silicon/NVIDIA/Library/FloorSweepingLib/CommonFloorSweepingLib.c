@@ -23,9 +23,9 @@
 
 #include "CommonFloorSweepingLib.h"
 
-#define TH500_MAX_SOCKETS                  4
-#define TH500_MAX_CORE_DISABLE_WORDS       3
-#define TH500_MAX_SCF_CACHE_DISABLE_WORDS  3
+#define TH500_MAX_SOCKETS            4
+#define MAX_CORE_DISABLE_WORDS       3
+#define MAX_SCF_CACHE_DISABLE_WORDS  3
 
 EFI_STATUS
 EFIAPI
@@ -35,50 +35,59 @@ UpdateCpuFloorsweepingConfig (
   IN VOID   *Dtb
   );
 
-UINT64  SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
+STATIC UINT64  *SocketScratchBaseAddr;
+STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_SCRATCH_BASE_SOCKET_0,
   TH500_SCRATCH_BASE_SOCKET_1,
   TH500_SCRATCH_BASE_SOCKET_2,
   TH500_SCRATCH_BASE_SOCKET_3,
 };
 
-UINT64  SocketCbbFabricBaseAddr[TH500_MAX_SOCKETS] = {
+STATIC UINT64  *SocketCbbFabricBaseAddr;
+STATIC UINT64  TH500SocketCbbFabricBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_CBB_FABRIC_BASE_SOCKET_0,
   TH500_CBB_FABRIC_BASE_SOCKET_1,
   TH500_CBB_FABRIC_BASE_SOCKET_2,
   TH500_CBB_FABRIC_BASE_SOCKET_3,
 };
 
-UINT64  SocketMssBaseAddr[TH500_MAX_SOCKETS] = {
+STATIC UINT64  *SocketMssBaseAddr;
+STATIC UINT64  TH500SocketMssBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_MSS_BASE_SOCKET_0,
   TH500_MSS_BASE_SOCKET_1,
   TH500_MSS_BASE_SOCKET_2,
   TH500_MSS_BASE_SOCKET_3,
 };
 
-UINT32  CoreDisableScratchOffset[TH500_MAX_CORE_DISABLE_WORDS] = {
-  CPU_FLOORSWEEPING_DISABLE_OFFSET_0,
-  CPU_FLOORSWEEPING_DISABLE_OFFSET_1,
-  CPU_FLOORSWEEPING_DISABLE_OFFSET_2,
+STATIC UINT32  *CoreDisableScratchOffset;
+STATIC UINT32  TH500CoreDisableScratchOffset[MAX_CORE_DISABLE_WORDS] = {
+  TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_0,
+  TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_1,
+  TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_2,
 };
 
-UINT32  CoreDisableScratchMask[TH500_MAX_CORE_DISABLE_WORDS] = {
-  CPU_FLOORSWEEPING_DISABLE_MASK_0,
-  CPU_FLOORSWEEPING_DISABLE_MASK_1,
-  CPU_FLOORSWEEPING_DISABLE_MASK_2,
+STATIC UINT32  *CoreDisableScratchMask;
+STATIC UINT32  TH500CoreDisableScratchMask[MAX_CORE_DISABLE_WORDS] = {
+  TH500_CPU_FLOORSWEEPING_DISABLE_MASK_0,
+  TH500_CPU_FLOORSWEEPING_DISABLE_MASK_1,
+  TH500_CPU_FLOORSWEEPING_DISABLE_MASK_2,
 };
 
-UINT32  ScfCacheDisableScratchOffset[TH500_MAX_SCF_CACHE_DISABLE_WORDS] = {
-  SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_0,
-  SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_1,
-  SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_2,
+STATIC UINT32  *ScfCacheDisableScratchOffset;
+STATIC UINT32  TH500ScfCacheDisableScratchOffset[MAX_SCF_CACHE_DISABLE_WORDS] = {
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_0,
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_1,
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_2,
 };
 
-UINT32  ScfCacheDisableScratchMask[TH500_MAX_SCF_CACHE_DISABLE_WORDS] = {
-  SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_0,
-  SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_1,
-  SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2,
+STATIC UINT32  *ScfCacheDisableScratchMask;
+STATIC UINT32  TH500ScfCacheDisableScratchMask[MAX_SCF_CACHE_DISABLE_WORDS] = {
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_0,
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_1,
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2,
 };
+
+STATIC BOOLEAN  SatMcSupported = FALSE;
 
 /**
   Add one socket's enabled cores bit map array to the EnabledCoresBitMap
@@ -88,10 +97,10 @@ STATIC
 VOID
 EFIAPI
 AddSocketCoresToEnabledCoresBitMap (
-  IN  UINTN   SocketNumber,
-  IN  UINT32  *SocketCores,
-  IN  UINTN   MaxSupportedCores,
-  IN  UINT64  *EnabledCoresBitMap
+  IN UINTN   SocketNumber,
+  IN UINT32  *SocketCores,
+  IN UINTN   MaxSupportedCores,
+  IN UINT64  *EnabledCoresBitMap
   )
 {
   UINTN  CoresPerSocket;
@@ -106,7 +115,7 @@ AddSocketCoresToEnabledCoresBitMap (
   SocketStartingCore = CoresPerSocket * SocketNumber;
 
   ASSERT ((SocketStartingCore + CoresPerSocket) <= MaxSupportedCores);
-  ASSERT ((ALIGN_VALUE (CoresPerSocket, 32) / 32) <= TH500_MAX_CORE_DISABLE_WORDS);
+  ASSERT ((ALIGN_VALUE (CoresPerSocket, 32) / 32) <= MAX_CORE_DISABLE_WORDS);
 
   for (Core = 0; Core < CoresPerSocket; Core++) {
     SocketCoresIndex = Core / 32;
@@ -116,8 +125,7 @@ AddSocketCoresToEnabledCoresBitMap (
     EnabledCoresBit   = (Core + SocketStartingCore) % 64;
 
     EnabledCoresBitMap[EnabledCoresIndex] |=
-      (SocketCores[SocketCoresIndex] & (1UL << SocketCoresBit)) ?
-      (1ULL << EnabledCoresBit) : 0;
+      (SocketCores[SocketCoresIndex] & (1UL << SocketCoresBit)) ? (1ULL << EnabledCoresBit) : 0;
   }
 
   DEBUG ((
@@ -134,6 +142,44 @@ AddSocketCoresToEnabledCoresBitMap (
 }
 
 /**
+  Initialize global structures
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+CommonInitializeGlobalStructures (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       ChipId;
+
+  ChipId = TegraGetChipID ();
+
+  switch (ChipId) {
+    case TH500_CHIP_ID:
+      SocketScratchBaseAddr        = TH500SocketScratchBaseAddr;
+      CoreDisableScratchOffset     = TH500CoreDisableScratchOffset;
+      SatMcSupported               = TRUE;
+      CoreDisableScratchMask       = TH500CoreDisableScratchMask;
+      ScfCacheDisableScratchOffset = TH500ScfCacheDisableScratchOffset;
+      ScfCacheDisableScratchMask   = TH500ScfCacheDisableScratchMask;
+      SocketMssBaseAddr            = TH500SocketMssBaseAddr;
+      SocketCbbFabricBaseAddr      = TH500SocketCbbFabricBaseAddr;
+      Status                       = EFI_SUCCESS;
+
+      break;
+
+    default:
+      Status = EFI_UNSUPPORTED;
+      break;
+  }
+
+  return Status;
+}
+
+/**
   Fills in the EnabledCoresBitMap
 
 **/
@@ -145,37 +191,56 @@ CommonGetEnabledCoresBitMap (
   IN  UINT64  *EnabledCoresBitMap
   )
 {
-  UINT32  ScratchDisable0Reg;
-  UINT32  ScratchDisable1Reg;
-  UINT32  ScratchDisable2Reg;
-  UINT32  SatMcCore;
-  UINT32  CoresPerSocket;
-  UINT32  EnaBitMap[TH500_MAX_CORE_DISABLE_WORDS];
-  UINTN   Socket;
+  EFI_STATUS  Status;
+  UINT32      ScratchDisable0Reg;
+  UINT32      ScratchDisable1Reg;
+  UINT32      ScratchDisable2Reg;
+  UINT32      SatMcCore;
+  UINT32      CoresPerSocket;
+  UINT32      EnaBitMap[MAX_CORE_DISABLE_WORDS];
+  UINTN       Socket;
+
+  Status = CommonInitializeGlobalStructures ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   // SatMC core is reserved on socket 0.
   CoresPerSocket = (PLATFORM_MAX_CLUSTERS * PLATFORM_MAX_CORES_PER_CLUSTER) / PLATFORM_MAX_SOCKETS;
-  SatMcCore      = MmioBitFieldRead32 (
-                     SocketScratchBaseAddr[0] + CoreDisableScratchOffset[2],
-                     CPU_FLOORSWEEPING_SATMC_CORE_BIT_LO,
-                     CPU_FLOORSWEEPING_SATMC_CORE_BIT_HI
-                     );
-  if (SatMcCore != CPU_FLOORSWEEPING_SATMC_CORE_INVALID) {
-    ASSERT (SatMcCore <= CoresPerSocket);
+
+  if (SatMcSupported) {
+    SatMcCore = MmioBitFieldRead32 (
+                  SocketScratchBaseAddr[0] + CoreDisableScratchOffset[2],
+                  TH500_CPU_FLOORSWEEPING_SATMC_CORE_BIT_LO,
+                  TH500_CPU_FLOORSWEEPING_SATMC_CORE_BIT_HI
+                  );
+    if (SatMcCore != TH500_CPU_FLOORSWEEPING_SATMC_CORE_INVALID) {
+      ASSERT (SatMcCore <= CoresPerSocket);
+    }
   }
 
-  for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
+  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     UINT64  ScratchBase = SocketScratchBaseAddr[Socket];
 
     if (!(SocketMask & (1UL << Socket))) {
       continue;
     }
 
-    ScratchDisable0Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[0]);
-    ScratchDisable1Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[1]);
-    ScratchDisable2Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[2]);
+    if (ScratchBase == 0) {
+      continue;
+    }
 
-    if ((SatMcCore != CPU_FLOORSWEEPING_SATMC_CORE_INVALID) &&
+    ScratchDisable0Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[0]);
+    if (CoreDisableScratchOffset[1] != MAX_UINT32) {
+      ScratchDisable1Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[1]);
+    }
+
+    if (CoreDisableScratchOffset[2] != MAX_UINT32) {
+      ScratchDisable2Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[2]);
+    }
+
+    if (SatMcSupported &&
+        (SatMcCore != TH500_CPU_FLOORSWEEPING_SATMC_CORE_INVALID) &&
         (Socket == 0))
     {
       DEBUG ((DEBUG_ERROR, "%a: Mask core %d on socket 0 for SatMC\n", __FUNCTION__, SatMcCore));
@@ -222,14 +287,24 @@ CommonFloorSweepPcie (
   IN  VOID    *Dtb
   )
 {
+  EFI_STATUS           Status;
   UINTN                Socket;
   INT32                ParentOffset;
   INT32                NodeOffset;
   INT32                PrevNodeOffset;
   CHAR8                SocketStr[] = "/socket@00";
   TEGRA_PLATFORM_TYPE  Platform;
+  UINTN                ChipId;
 
-  for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
+  Status = CommonInitializeGlobalStructures ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  ChipId   = TegraGetChipID ();
+  Platform = TegraGetPlatform ();
+
+  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     UINT32  PcieDisableReg;
     UINT64  ScratchBase;
 
@@ -238,17 +313,28 @@ CommonFloorSweepPcie (
     }
 
     ScratchBase = SocketScratchBaseAddr[Socket];
-    Platform    = TegraGetPlatform ();
-    if (Platform == TEGRA_PLATFORM_VDK) {
-      PcieDisableReg = PCIE_SIM_FLOORSWEEPING_INFO;
-    } else if (Platform == TEGRA_PLATFORM_SYSTEM_FPGA) {
-      PcieDisableReg = PCIE_FPGA_FLOORSWEEPING_INFO;
-    } else {
-      PcieDisableReg = MmioRead32 (ScratchBase + PCIE_FLOORSWEEPING_DISABLE_OFFSET);
+    if (ScratchBase == 0) {
+      continue;
     }
 
-    PcieDisableReg |= PCIE_FLOORSWEEPING_DISABLE_MASK;
-    PcieDisableReg &= ~PCIE_FLOORSWEEPING_DISABLE_MASK;
+    switch (ChipId) {
+      case TH500_CHIP_ID:
+        if (Platform == TEGRA_PLATFORM_VDK) {
+          PcieDisableReg = TH500_PCIE_SIM_FLOORSWEEPING_INFO;
+        } else if (Platform == TEGRA_PLATFORM_SYSTEM_FPGA) {
+          PcieDisableReg = TH500_PCIE_FPGA_FLOORSWEEPING_INFO;
+        } else {
+          PcieDisableReg = MmioRead32 (ScratchBase + TH500_PCIE_FLOORSWEEPING_DISABLE_OFFSET);
+        }
+
+        PcieDisableReg |= TH500_PCIE_FLOORSWEEPING_DISABLE_MASK;
+        PcieDisableReg &= ~TH500_PCIE_FLOORSWEEPING_DISABLE_MASK;
+        break;
+
+      default:
+        return EFI_UNSUPPORTED;
+    }
+
     DEBUG ((
       DEBUG_INFO,
       "Socket %u PcieDisableReg=0x%x\n",
@@ -259,8 +345,12 @@ CommonFloorSweepPcie (
     AsciiSPrint (SocketStr, sizeof (SocketStr), "/socket@%u", Socket);
     ParentOffset = fdt_path_offset (Dtb, SocketStr);
     if (ParentOffset < 0) {
-      DEBUG ((DEBUG_ERROR, "Failed to find %a subnode\n", SocketStr));
-      return EFI_DEVICE_ERROR;
+      if (Socket == 0) {
+        ParentOffset = 0;
+      } else {
+        DEBUG ((DEBUG_ERROR, "Failed to find %a subnode\n", SocketStr));
+        return EFI_DEVICE_ERROR;
+      }
     }
 
     for (NodeOffset = fdt_first_subnode (Dtb, ParentOffset);
@@ -327,14 +417,26 @@ CommonFloorSweepPcie (
         UINT32  C2CMode;
         INT32   RPNodeOffset;
 
-        CbbFabricBase  = SocketCbbFabricBaseAddr[Socket];
-        CbbCtlOffset   = CbbFabricBase + 0x20 * PCIE_ID_TO_INTERFACE (PcieId);
-        Aperture64Base = (((UINT64)MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_HIGH)) << 32) |
-                         MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_LOW);
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 64-bit Aperture Base = 0x%llX\n", PcieId, Aperture64Base));
+        CbbFabricBase = SocketCbbFabricBaseAddr[Socket];
+        if (CbbFabricBase == 0) {
+          continue;
+        }
 
-        Aperture64Size = MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_SIZE);
-        Aperture64Size = Aperture64Size << 16;
+        switch (ChipId) {
+          case TH500_CHIP_ID:
+            CbbCtlOffset   = CbbFabricBase + 0x20 * PCIE_ID_TO_INTERFACE (PcieId);
+            Aperture64Base = (((UINT64)MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_HIGH)) << 32) |
+                             MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_LOW);
+
+            Aperture64Size = MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_SIZE);
+            Aperture64Size = Aperture64Size << 16;
+            break;
+
+          default:
+            return EFI_UNSUPPORTED;
+        }
+
+        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 64-bit Aperture Base = 0x%llX\n", PcieId, Aperture64Base));
         DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 64-bit Aperture Size = 0x%llX\n", PcieId, Aperture64Size));
 
         /*
@@ -376,13 +478,16 @@ CommonFloorSweepPcie (
 
         /* Patch 'ranges' property */
         Property = fdt_getprop (Dtb, NodeOffset, "ranges", &Length);
-        if ((Property == NULL) || (Length != sizeof (Tmp32) * 21)) {
+        if ((Property == NULL) ||
+            ((Length != sizeof (Tmp32) * 21) &&
+             (Length != sizeof (Tmp32) * 14)))
+        {
           DEBUG ((DEBUG_ERROR, "Unexpected \"ranges\" property. Length = %d\n", Length));
           return EFI_UNSUPPORTED;
         }
 
         NonPrefBase = EcamBase + EcamSize + 0x20000000;
-        NonPrefSize = 0x80000000;  /* 2 GB fixed size */
+        NonPrefSize = 0x80000000;   /* 2 GB fixed size */
         PrefSize   -= (NonPrefSize + 0x20000000);
         DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Base = 0x%llX\n", PcieId, NonPrefBase));
         DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Size = 0x%llX\n", PcieId, NonPrefSize));
@@ -405,20 +510,24 @@ CommonFloorSweepPcie (
         ((UINT32 *)Property)[12] = cpu_to_fdt32 (PrefSize >> 32);
         ((UINT32 *)Property)[13] = cpu_to_fdt32 (PrefSize);
 
-        IoBase = EcamBase + EcamSize;
-        IoSize = SIZE_64KB; /* 64K fixed size I/O aperture */
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: IO Base = 0x%llX\n", PcieId, IoBase));
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: IO Size = 0x%llX\n", PcieId, IoSize));
+        if (Length == (sizeof (Tmp32) * 21)) {
+          IoBase = EcamBase + EcamSize;
+          IoSize = SIZE_64KB; /* 64K fixed size I/O aperture */
+          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: IO Base = 0x%llX\n", PcieId, IoBase));
+          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: IO Size = 0x%llX\n", PcieId, IoSize));
 
-        ((UINT32 *)Property)[15] = cpu_to_fdt32 (0x0);
-        ((UINT32 *)Property)[16] = cpu_to_fdt32 (0x0);
-        ((UINT32 *)Property)[17] = cpu_to_fdt32 (IoBase >> 32);
-        ((UINT32 *)Property)[18] = cpu_to_fdt32 (IoBase);
-        ((UINT32 *)Property)[19] = cpu_to_fdt32 (IoSize>> 32);
-        ((UINT32 *)Property)[20] = cpu_to_fdt32 (IoSize);
+          ((UINT32 *)Property)[15] = cpu_to_fdt32 (0x0);
+          ((UINT32 *)Property)[16] = cpu_to_fdt32 (0x0);
+          ((UINT32 *)Property)[17] = cpu_to_fdt32 (IoBase >> 32);
+          ((UINT32 *)Property)[18] = cpu_to_fdt32 (IoBase);
+          ((UINT32 *)Property)[19] = cpu_to_fdt32 (IoSize>> 32);
+          ((UINT32 *)Property)[20] = cpu_to_fdt32 (IoSize);
+        }
 
         /* Patch 'external-facing' property only for C8 controller */
-        if (PCIE_ID_TO_INTERFACE (PcieId) == 8) {
+        if ((SocketMssBaseAddr != NULL) &&
+            (PCIE_ID_TO_INTERFACE (PcieId) == 8))
+        {
           MSSBase  = SocketMssBaseAddr[Socket];
           C2CMode  = MmioRead32 (MSSBase + TH500_MSS_C2C_MODE);
           C2CMode &= 0x3;
@@ -489,21 +598,32 @@ CommonFloorSweepScfCache (
   IN  VOID    *Dtb
   )
 {
-  UINTN   Socket;
-  UINTN   CoresPerSocket;
-  UINTN   ScfCacheCount;
-  UINT32  ScfCacheSize;
-  UINT32  ScfCacheSets;
-  INT32   NodeOffset;
-  INT32   FdtErr;
-  UINT32  Tmp32;
-  CHAR8   SocketNodeStr[] = "/socket@xxxxxxxxxx";
+  EFI_STATUS  Status;
+  UINTN       Socket;
+  UINTN       CoresPerSocket;
+  UINTN       ScfCacheCount;
+  UINT32      ScfCacheSize;
+  UINT32      ScfCacheSets;
+  INT32       NodeOffset;
+  INT32       FdtErr;
+  UINT32      Tmp32;
+  CHAR8       SocketNodeStr[] = "/socket@xxxxxxxxxx";
+
+  Status = CommonInitializeGlobalStructures ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if (ScfCacheDisableScratchOffset == NULL) {
+    // SCF floorsweeping is not supported
+    return EFI_SUCCESS;
+  }
 
   CoresPerSocket = ((PLATFORM_MAX_CLUSTERS * PLATFORM_MAX_CORES_PER_CLUSTER) /
                     PLATFORM_MAX_SOCKETS);
 
   // SCF Cache is distributed as l3cache over all possible sockets
-  for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
+  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     if (!(SocketMask & (1UL << Socket))) {
       continue;
     }
@@ -513,8 +633,12 @@ CommonFloorSweepScfCache (
     UINT64  ScratchBase = SocketScratchBaseAddr[Socket];
     UINTN   ScfScratchWord;
 
+    if (ScratchBase == 0) {
+      continue;
+    }
+
     for (ScfScratchWord = 0;
-         ScfScratchWord < TH500_MAX_SCF_CACHE_DISABLE_WORDS;
+         ScfScratchWord < MAX_SCF_CACHE_DISABLE_WORDS;
          ScfScratchWord++)
     {
       UINT32  DisableScratchReg;
@@ -587,9 +711,15 @@ CommonFloorSweepCpus (
 {
   UINTN       Socket;
   CHAR8       SocketCpusStr[] = "/socket@00/cpus";
+  CHAR8       CpusStr[]       = "/cpus";
   EFI_STATUS  Status;
 
-  for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
+  Status = CommonInitializeGlobalStructures ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     INT32  CpusOffset;
 
     if (!(SocketMask & (1UL << Socket))) {
@@ -599,11 +729,19 @@ CommonFloorSweepCpus (
     AsciiSPrint (SocketCpusStr, sizeof (SocketCpusStr), "/socket@%u/cpus", Socket);
     CpusOffset = fdt_path_offset (Dtb, SocketCpusStr);
     if (CpusOffset < 0) {
-      DEBUG ((DEBUG_ERROR, "Failed to find %a subnode\n", SocketCpusStr));
-      return EFI_DEVICE_ERROR;
+      if (Socket == 0) {
+        CpusOffset = fdt_path_offset (Dtb, CpusStr);
+        if (CpusOffset < 0) {
+          DEBUG ((DEBUG_ERROR, "Failed to find %a subnode\n", CpusStr));
+          return EFI_DEVICE_ERROR;
+        }
+      } else {
+        DEBUG ((DEBUG_ERROR, "Failed to find %a subnode\n", SocketCpusStr));
+        return EFI_DEVICE_ERROR;
+      }
+    } else {
+      DEBUG ((DEBUG_INFO, "Floorsweeping cpus in %a\n", SocketCpusStr));
     }
-
-    DEBUG ((DEBUG_INFO, "Floorsweeping cpus in %a\n", SocketCpusStr));
 
     Status = UpdateCpuFloorsweepingConfig (Socket, CpusOffset, Dtb);
     if (EFI_ERROR (Status)) {
