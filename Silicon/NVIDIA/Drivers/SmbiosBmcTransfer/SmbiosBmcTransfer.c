@@ -22,22 +22,16 @@
 #define SMBIOS_TRANSFER_DEBUG  0
 
 /**
-  This is the declaration of an EFI image entry point. This entry point is
-  the same for UEFI Applications, UEFI OS Loaders, and UEFI Drivers including
-  both device drivers and bus drivers.
+  This function will send all installed SMBIOS tables to the BMC
 
-  @param[in]  ImageHandle       The firmware allocated handle for the UEFI image.
-  @param[in]  SystemTable       A pointer to the EFI System Table.
-
-  @retval EFI_SUCCESS           The operation completed successfully.
-  @retval Others                An unexpected error occurred.
-
+  @param  Event    The event of notify protocol.
+  @param  Context  Notify event context.
 **/
-EFI_STATUS
+VOID
 EFIAPI
-SmbiosBmcTransferEntry (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+SmbiosBmcTransferSendTables (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
   EFI_STATUS                    Status;
@@ -50,17 +44,19 @@ SmbiosBmcTransferEntry (
   UINT32                        SendDataSize;
   UINT32                        RemainingDataSize;
 
+  gBS->CloseEvent (Event);
+
   Status = gBS->LocateProtocol (&gNVIDIAIpmiBlobTransferProtocolGuid, NULL, (VOID **)&IpmiBlobTransfer);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: No IpmiBlobTransferProtocol available. Exiting\n", __FUNCTION__));
-    return Status;
+    return;
   }
 
   Smbios30Table = NULL;
   Status        = EfiGetSystemConfigurationTable (&gEfiSmbios3TableGuid, (VOID **)&Smbios30Table);
   if (EFI_ERROR (Status) || (Smbios30Table == NULL)) {
     DEBUG ((DEBUG_ERROR, "%a: No SMBIOS Table found: %r\n", __FUNCTION__, Status));
-    return EFI_NOT_FOUND;
+    return;
   }
 
   //
@@ -100,14 +96,14 @@ SmbiosBmcTransferEntry (
   Status = IpmiBlobTransfer->BlobOpen ((CHAR8 *)PcdGetPtr (PcdBmcSmbiosBlobTransferId), BLOB_TRANSFER_STAT_OPEN_W, &SessionId);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to open Blob with Id %a: %r\n", __FUNCTION__, PcdGetPtr (PcdBmcSmbiosBlobTransferId), Status));
-    return EFI_DEVICE_ERROR;
+    return;
   }
 
   for (Index = 0; Index < (SendDataSize / IPMI_OEM_BLOB_MAX_DATA_PER_PACKET); Index++) {
     Status = IpmiBlobTransfer->BlobWrite (SessionId, Index * IPMI_OEM_BLOB_MAX_DATA_PER_PACKET, SendData, IPMI_OEM_BLOB_MAX_DATA_PER_PACKET);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failure writing to blob: %r\n", __FUNCTION__, Status));
-      return EFI_ABORTED;
+      return;
     }
 
     SendData           = (UINT8 *)SendData + IPMI_OEM_BLOB_MAX_DATA_PER_PACKET;
@@ -119,17 +115,55 @@ SmbiosBmcTransferEntry (
     Status = IpmiBlobTransfer->BlobWrite (SessionId, Index * IPMI_OEM_BLOB_MAX_DATA_PER_PACKET, SendData, RemainingDataSize);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failure writing final block to blob: %r\n", __FUNCTION__, Status));
-      return EFI_ABORTED;
+      return;
     }
   }
 
   Status = IpmiBlobTransfer->BlobCommit (SessionId, 0, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failure sending commit to blob: %r\n", __FUNCTION__, Status));
-    return EFI_ABORTED;
+    return;
   }
 
   Status = IpmiBlobTransfer->BlobClose (SessionId);
-  DEBUG ((DEBUG_INFO, "%a: Exiting: %r\n", __FUNCTION__, Status));
+  DEBUG ((DEBUG_ERROR, "%a: Sent SMBIOS Tables to BMC: %r\n", __FUNCTION__, Status));
+  return;
+}
+
+/**
+  This is the declaration of an EFI image entry point. This entry point is
+  the same for UEFI Applications, UEFI OS Loaders, and UEFI Drivers including
+  both device drivers and bus drivers.
+
+  @param[in]  ImageHandle       The firmware allocated handle for the UEFI image.
+  @param[in]  SystemTable       A pointer to the EFI System Table.
+
+  @retval EFI_SUCCESS           The operation completed successfully.
+  @retval Others                An unexpected error occurred.
+
+**/
+EFI_STATUS
+EFIAPI
+SmbiosBmcTransferEntry (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  EFI_STATUS  Status;
+  EFI_EVENT   ReadyToBootEvent;
+
+  //
+  // Register ReadyToBoot event to send the SMBIOS tables once they have all been installed
+  //
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  SmbiosBmcTransferSendTables,
+                  NULL,
+                  &gEfiEventReadyToBootGuid,
+                  &ReadyToBootEvent
+                  );
+
+  ASSERT_EFI_ERROR (Status);
   return Status;
 }

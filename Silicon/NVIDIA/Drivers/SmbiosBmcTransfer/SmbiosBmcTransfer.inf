@@ -45,7 +45,8 @@
   gNVIDIATokenSpaceGuid.PcdBmcSmbiosBlobTransferId
 
 [Guids]
-  gEfiSmbios3TableGuid                           ## CONSUMES ##SystemTable
+  gEfiSmbios3TableGuid                    ## CONSUMES ## SystemTable
+  gEfiEventReadyToBootGuid                ## CONSUMES ## Event
 
 [Protocols]
   gNVIDIAIpmiBlobTransferProtocolGuid    ## CONSUMES
