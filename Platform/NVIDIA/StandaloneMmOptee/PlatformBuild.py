@@ -16,7 +16,7 @@ class StandaloneMmOpteeSettingsManager(NVIDIASettingsManager):
         return "StandaloneMmOptee"
 
     def GetFirmwareVersionBase(self):
-        return "202210.0"
+        return "202210.2"
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_MM.Fv"
