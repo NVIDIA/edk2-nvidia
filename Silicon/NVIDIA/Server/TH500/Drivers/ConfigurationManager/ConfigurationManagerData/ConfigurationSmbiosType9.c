@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 9 table
 
-  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -65,6 +65,19 @@ InstallSmbiosType9Cm (
   UINTN                           Device;
   UINTN                           Function;
   UINT32                          VendorDeviceId;
+  VOID                            *Hob;
+  UINT32                          SocketMask;
+  UINT32                          SocketNum;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    SocketMask = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->SocketMask;
+  } else {
+    ASSERT (FALSE);
+    SocketMask = 0x1;
+  }
 
   Status = gBS->LocateHandleBuffer (
                   ByProtocol,
@@ -182,7 +195,12 @@ InstallSmbiosType9Cm (
       SystemSlotInfo[NumSystemSlots].SlotHeight = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
     }
 
-    SystemSlotInfo[NumSystemSlots].CurrentUsage = 0x03;  // Default Available
+    SocketNum = (SystemSlotInfo[NumSystemSlots].SegmentGroupNum) >> 4;
+    if (SocketMask & (0x01 << SocketNum)) {
+      SystemSlotInfo[NumSystemSlots].CurrentUsage = SlotUsageAvailable;
+    } else {
+      SystemSlotInfo[NumSystemSlots].CurrentUsage = SlotUsageUnavailable;
+    }
 
     for (Index2 = 0; Index2 < HandleCount; Index2++) {
       Status = gBS->HandleProtocol (
@@ -199,7 +217,7 @@ InstallSmbiosType9Cm (
         {
           Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, 0x00, 1, &VendorDeviceId);
           if (!EFI_ERROR (Status) && (VendorDeviceId != 0xFFFF)) {
-            SystemSlotInfo[NumSystemSlots].CurrentUsage = 0x04;  // In use
+            SystemSlotInfo[NumSystemSlots].CurrentUsage = SlotUsageInUse;
           }
         }
       }
