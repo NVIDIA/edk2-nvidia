@@ -133,4 +133,9 @@ typedef struct {
 
 #define PCIE_DPC_ERR_SRC_ID  0xA
 
+#define PCIE_AER_ECRC_GEN_CAP  BIT(5)
+#define PCIE_AER_ECRC_GEN_EN   BIT(6)
+#define PCIE_AER_ECRC_CHK_CAP  BIT(7)
+#define PCIE_AER_ECRC_CHK_EN   BIT(8)
+
 #endif

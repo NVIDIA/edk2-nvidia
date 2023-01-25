@@ -21,8 +21,10 @@
 #include <Library/DevicePathLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/DxeServicesTableLib.h>
+#include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PcdLib.h>
 #include <Library/PciHostBridgeLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -33,6 +35,9 @@
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PciIo.h>
 #include <Protocol/C2CNodeProtocol.h>
+
+#include <TH500/TH500Definitions.h>
+#include <TH500/TH500MB1Configuration.h>
 
 #include "PcieControllerPrivate.h"
 
@@ -977,6 +982,98 @@ PcieEnableErrorReporting (
 
 STATIC
 EFI_STATUS
+PcieEnableECRC (
+  EFI_PCI_IO_PROTOCOL  *PciIo
+  )
+{
+  EFI_STATUS                    Status;
+  UINTN                         Segment, Bus, Device, Function;
+  UINT32                        AerCapOffset, Offset;
+  UINT32                        Val, New_Val;
+  UINT32                        Socket, Ctrl;
+  VOID                          *Hob;
+  TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
+
+  Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
+  {
+    Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+  }
+
+  ASSERT (Mb1Config);
+
+  Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  ASSERT_EFI_ERROR (Status);
+
+  Socket = (Segment >> 4) & 0xF;
+  Ctrl   = (Segment) & 0xF;
+
+  if (!Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].EnableECRC) {
+    DEBUG ((
+      DEBUG_INFO,
+      "Device [%04x:%02x:%02x.%x] : Skipping ECRC Enable\n",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+
+    return EFI_SUCCESS;
+  }
+
+  AerCapOffset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID);
+  if (AerCapOffset) {
+    Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, AdvancedErrorCapabilitiesAndControl);
+    Status = PciIo->Pci.Read (
+                          PciIo,
+                          EfiPciIoWidthUint32,
+                          Offset,
+                          1,
+                          &Val
+                          );
+    if (EFI_ERROR (Status)) {
+      return EFI_DEVICE_ERROR;
+    }
+
+    New_Val = Val;
+
+    if (Val & PCIE_AER_ECRC_GEN_CAP) {
+      New_Val |= PCIE_AER_ECRC_GEN_EN;
+    }
+
+    if (Val & PCIE_AER_ECRC_CHK_CAP) {
+      New_Val |= PCIE_AER_ECRC_CHK_EN;
+    }
+
+    if (New_Val != Val) {
+      Status = PciIo->Pci.Write (
+                            PciIo,
+                            EfiPciIoWidthUint32,
+                            Offset,
+                            1,
+                            &New_Val
+                            );
+      if (EFI_ERROR (Status)) {
+        return EFI_DEVICE_ERROR;
+      }
+
+      DEBUG ((
+        DEBUG_INFO,
+        "Device [%04x:%02x:%02x.%x] : Enabled ECRC\n",
+        Segment,
+        Bus,
+        Device,
+        Function
+        ));
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
 EFIAPI
 VisitEachPcieDevice (
   IN EFI_HANDLE  Handle,
@@ -989,6 +1086,7 @@ VisitEachPcieDevice (
   PciIo = Instance;
 
   PcieEnableErrorReporting (PciIo);
+  PcieEnableECRC (PciIo);
 
   return EFI_SUCCESS;
 }

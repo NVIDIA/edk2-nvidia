@@ -47,6 +47,7 @@
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
@@ -64,6 +65,7 @@
 [Guids]
   gNVIDIANonDiscoverableTH500PcieDeviceGuid
   gEfiEventExitBootServicesGuid
+  gNVIDIATH500MB1DataGuid
 
 [Depex]
   gNVIDIAAllRegulatorsPresentProtocolGuid
