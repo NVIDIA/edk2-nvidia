@@ -12,8 +12,11 @@
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/ReportStatusCodeLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/FwVariableLib.h>
+
+#include <OemStatusCodes.h>
 
 #define FREE_NON_NULL(a) \
   if ((a) != NULL) { \
@@ -57,6 +60,13 @@ FwVariableDeleteAll (
     Status = EFI_OUT_OF_RESOURCES;
     goto CleanupAndReturn;
   }
+
+  REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+    EFI_PROGRESS_CODE | EFI_OEM_PROGRESS_MAJOR,
+    EFI_SOFTWARE_EFI_BOOT_SERVICE | EFI_SW_DXE_BS_PC_CONFIG_RESET,
+    OEM_PC_DESC_RESET_NS_VARIABLES,
+    sizeof (OEM_PC_DESC_RESET_NS_VARIABLES)
+    );
 
   NameSize     = MAX_VARIABLE_NAME;
   VarGetStatus = gRT->GetNextVariableName (&NameSize, NextName, &NextGuid);

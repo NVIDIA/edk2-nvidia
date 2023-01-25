@@ -2,7 +2,7 @@
 
   OEM Status code handler to log addtional data as string
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -25,6 +25,7 @@
 #include <IndustryStandard/Ipmi.h>
 #include <Protocol/ReportStatusCodeHandler.h>
 
+#include <OemStatusCodes.h>
 #include "OemDescStatusCodeDxe.h"
 
 STATIC EFI_RSC_HANDLER_PROTOCOL  *mRscHandler           = NULL;
@@ -92,6 +93,7 @@ OemDescStatusCodeCallback (
   UINTN                        ErrorLevel       = 0;
   CHAR16                       *Str;
   CHAR8                        *DevicePathStr = NULL;
+  INT32                        NumRetries;
 
   if (!mEnableOemDesc) {
     return EFI_UNSUPPORTED;
@@ -116,7 +118,12 @@ OemDescStatusCodeCallback (
       ErrorLevel = DEBUG_ERROR;
     }
   } else if ((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_PROGRESS_CODE) {
-    ErrorLevel = DEBUG_INFO;
+    if ((CodeType & EFI_STATUS_CODE_SEVERITY_MASK) == EFI_OEM_PROGRESS_MINOR) {
+      ErrorLevel = DEBUG_INFO;
+    } else {
+      // Escalate Progress Code logging level if it is important
+      ErrorLevel = DEBUG_ERROR;
+    }
   } else if ((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_DEBUG_CODE) {
     ErrorLevel = DEBUG_VERBOSE;
   }
@@ -176,16 +183,28 @@ OemDescStatusCodeCallback (
   CopyMem (RequestData->Description, DataPtr, DataSize);
 
   //
+  // Retry on errors for the important messages
+  //
+  if (ErrorLevel == DEBUG_ERROR) {
+    NumRetries = 5;
+  } else {
+    NumRetries = 0;
+  }
+
+  //
   // Send IPMI packet to BMC
   //
-  Status = IpmiSubmitCommand (
-             IPMI_NETFN_OEM,
-             IPMI_CMD_OEM_SEND_DESCRIPTION,
-             (UINT8 *)RequestData,
-             RequestDataSize,
-             (UINT8 *)&ResponseData,
-             &ResponseDataSize
-             );
+  do {
+    Status = IpmiSubmitCommand (
+               IPMI_NETFN_OEM,
+               IPMI_CMD_OEM_SEND_DESCRIPTION,
+               (UINT8 *)RequestData,
+               RequestDataSize,
+               (UINT8 *)&ResponseData,
+               &ResponseDataSize
+               );
+  } while (EFI_ERROR (Status) && (NumRetries-- > 0));
+
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to send IPMI command - %r\r\n", __FUNCTION__, Status));
     goto Exit;
