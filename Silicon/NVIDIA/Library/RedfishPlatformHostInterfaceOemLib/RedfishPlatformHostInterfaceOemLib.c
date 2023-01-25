@@ -579,3 +579,26 @@ RedfishPlatformHostInterfaceUSBSerialNumber (
   *SerialNumber = SerialNum;
   return EFI_SUCCESS;
 }
+
+/**
+  Get the EFI protocol GUID installed by platform library which
+  indicates the necessary information is ready for building
+  SMBIOS 42h record.
+
+  @param[out] InformationReadinessGuid  Pointer to retrive the protocol
+                                        GUID.
+
+  @retval EFI_SUCCESS          Notification is required for building up
+                               SMBIOS type 42h record.
+  @retval EFI_UNSUPPORTED      Notification is not required for building up
+                               SMBIOS type 42h record.
+  @retval EFI_ALREADY_STARTED  Platform host information is already ready.
+  @retval Others               Other errors.
+**/
+EFI_STATUS
+RedfishPlatformHostInterfaceNotification (
+  OUT EFI_GUID  **InformationReadinessGuid
+  )
+{
+  return EFI_UNSUPPORTED;
+}
