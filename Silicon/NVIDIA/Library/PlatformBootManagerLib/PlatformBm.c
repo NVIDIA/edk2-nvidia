@@ -1470,12 +1470,12 @@ PrintBmcIpAddresses (
     return;
   }
 
-  GetLanConfigRequest.ChannelNumber.Uint8 = 0;
+  GetLanConfigRequest.ChannelNumber.Uint8 = 1;
   GetLanConfigRequest.ParameterSelector   = IpmiLanIpAddress;
   GetLanConfigRequest.SetSelector         = 0;
   GetLanConfigRequest.BlockSelector       = 0;
 
-  ResponseDataSize = sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE) + sizeof (IPMI_LAN_IPV6_STATUS);
+  ResponseDataSize = sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE) + sizeof (IPMI_LAN_IP_ADDRESS);
   Status           = IpmiTransport->IpmiSubmitCommand (
                                       IpmiTransport,
                                       IPMI_NETFN_TRANSPORT,
@@ -1492,7 +1492,7 @@ PrintBmcIpAddresses (
     Print (L"BMC IPv4 Address: %d.%d.%d.%d\r\n", IpV4Address->IpAddress[0], IpV4Address->IpAddress[1], IpV4Address->IpAddress[2], IpV4Address->IpAddress[3]);
   }
 
-  GetLanConfigRequest.ChannelNumber.Uint8 = 0;
+  GetLanConfigRequest.ChannelNumber.Uint8 = 1;
   GetLanConfigRequest.ParameterSelector   = IpmiIpv6Status;
   GetLanConfigRequest.SetSelector         = 0;
   GetLanConfigRequest.BlockSelector       = 0;
