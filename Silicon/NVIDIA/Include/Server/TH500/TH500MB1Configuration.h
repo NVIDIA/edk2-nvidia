@@ -58,8 +58,10 @@ typedef struct {
       UINT64    SupportsClkReq  : 1;
       /* Disable DLFE */
       UINT64    DisableDLFE     : 1;
+      /* Enable ECRC in the PCIe hierarchy */
+      UINT64    EnableECRC      : 1;
       /* Reserved */
-      UINT64    reserved        : 58;
+      UINT64    reserved        : 57;
     };
   };
 

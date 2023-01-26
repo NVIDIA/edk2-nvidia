@@ -173,6 +173,10 @@ typedef struct {
   BOOLEAN    DisableDLFE1[MAX_PCIE];
   BOOLEAN    DisableDLFE2[MAX_PCIE];
   BOOLEAN    DisableDLFE3[MAX_PCIE];
+  BOOLEAN    EnableECRC_0[MAX_PCIE];
+  BOOLEAN    EnableECRC_1[MAX_PCIE];
+  BOOLEAN    EnableECRC_2[MAX_PCIE];
+  BOOLEAN    EnableECRC_3[MAX_PCIE];
 } NVIDIA_CONFIG_HII_CONTROL;
 
 #define ADD_GOTO_SOCKET_FORM(socket)                                       \
@@ -311,6 +315,12 @@ typedef struct {
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.DisableDLFE##socket[pcie], \
         prompt = STRING_TOKEN(STR_PCIE_DISABLE_DLFE_TITLE), \
         help   = STRING_TOKEN(STR_PCIE_DISABLE_DLFE_HELP), \
+        flags  = RESET_REQUIRED, \
+        default = FALSE, \
+    endcheckbox; \
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableECRC_##socket[pcie], \
+        prompt = STRING_TOKEN(STR_PCIE_ENABLE_ECRC_TITLE), \
+        help   = STRING_TOKEN(STR_PCIE_ENABLE_ECRC_HELP), \
         flags  = RESET_REQUIRED, \
         default = FALSE, \
     endcheckbox; \
