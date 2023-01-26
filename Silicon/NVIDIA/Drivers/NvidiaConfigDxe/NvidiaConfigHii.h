@@ -169,6 +169,10 @@ typedef struct {
   BOOLEAN    SupportsClkReq1[MAX_PCIE];
   BOOLEAN    SupportsClkReq2[MAX_PCIE];
   BOOLEAN    SupportsClkReq3[MAX_PCIE];
+  BOOLEAN    DisableDLFE0[MAX_PCIE];
+  BOOLEAN    DisableDLFE1[MAX_PCIE];
+  BOOLEAN    DisableDLFE2[MAX_PCIE];
+  BOOLEAN    DisableDLFE3[MAX_PCIE];
 } NVIDIA_CONFIG_HII_CONTROL;
 
 #define ADD_GOTO_SOCKET_FORM(socket)                                       \
@@ -301,6 +305,12 @@ typedef struct {
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.SupportsClkReq##socket[pcie], \
         prompt = STRING_TOKEN(STR_PCIE_SUPPORTS_CLK_REQ_TITLE), \
         help   = STRING_TOKEN(STR_PCIE_SUPPORTS_CLK_REQ_HELP), \
+        flags  = RESET_REQUIRED, \
+        default = FALSE, \
+    endcheckbox; \
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.DisableDLFE##socket[pcie], \
+        prompt = STRING_TOKEN(STR_PCIE_DISABLE_DLFE_TITLE), \
+        help   = STRING_TOKEN(STR_PCIE_DISABLE_DLFE_HELP), \
         flags  = RESET_REQUIRED, \
         default = FALSE, \
     endcheckbox; \

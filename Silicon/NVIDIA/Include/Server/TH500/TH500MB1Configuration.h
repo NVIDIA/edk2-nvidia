@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -56,8 +56,10 @@ typedef struct {
       UINT64    EnablePciPmL1_2 : 1;
       /* Availability of CLKREQ signal from RP to EP */
       UINT64    SupportsClkReq  : 1;
+      /* Disable DLFE */
+      UINT64    DisableDLFE     : 1;
       /* Reserved */
-      UINT64    reserved        : 59;
+      UINT64    reserved        : 58;
     };
   };
 

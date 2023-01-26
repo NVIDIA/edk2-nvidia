@@ -114,6 +114,8 @@
 #string STR_PCIE_ENABLE_PCIPM_L1_2_TITLE #language en-US "PCI-PM L1.2 support"
 #string STR_PCIE_SUPPORTS_CLK_REQ_TITLE  #language en-US "Supports ClkReq"
 #string STR_PCIE_SUPPORTS_CLK_REQ_HELP   #language en-US "Availability of CLKREQ signal from RP to EP"
+#string STR_PCIE_DISABLE_DLFE_TITLE      #language en-US "Disable DLFE"
+#string STR_PCIE_DISABLE_DLFE_HELP       #language en-US "Disable DL Feature Exchange"
 
 #string STR_IPMI_NETWORK_BOOT_MODE_PROMPT #language en-US "IP mode for IPMI-requested BootOrder changes"
 #string STR_IPMI_NETWORK_BOOT_MODE_HELP   #language en-US "IPv4/v6 selection for IPMI requested PXE and HTTP BootOrder changes. No effect without relevant IPMI BootOrder request"
