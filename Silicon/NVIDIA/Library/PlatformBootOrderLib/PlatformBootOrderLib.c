@@ -457,7 +457,7 @@ CheckIPMIForBootOrderUpdates (
       }
 
       // Reset
-      gRT->ResetSystem (EfiResetWarm, EFI_SUCCESS, 0, NULL);
+      gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
       ASSERT (FALSE);
     }
 
