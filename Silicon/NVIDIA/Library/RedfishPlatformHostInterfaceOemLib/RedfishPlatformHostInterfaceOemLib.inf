@@ -23,6 +23,7 @@
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = RedfishPlatformHostInterfaceLib
+  CONSTRUCTOR                    = RedfishPlatformHostInterfaceConstructor
 
 [Sources]
   RedfishPlatformHostInterfaceIpmi.h
@@ -50,6 +51,8 @@
 
 [Protocols]
   gEfiSmbiosProtocolGuid                       # PROTOCOL ALWAYS_CONSUMES
+  gNVIDIAUsbNicInfoProtocolGuid                # PROTOCOL ALWAYS_CONSUMES
+  gNVIDIAHostInterfaceReadyProtocolGuid        # PROTOCOL ALWAYS_PRODUCED
 
 [Guids]
   gEfiSmbiosTableGuid                          # ALWAYS_CONSUMES ## SystemTable

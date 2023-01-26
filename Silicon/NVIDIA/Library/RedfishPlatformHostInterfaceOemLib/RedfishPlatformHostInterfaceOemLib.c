@@ -23,13 +23,21 @@
 #include <Library/UefiLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Protocol/UsbNicInfoProtocol.h>
 #include <RedfishPlatformHostInterfaceIpmi.h>
 
 #define VERBOSE_COLUMN_SIZE      (16)
 #define MAX_IP_ADDRESS_STR_SIZE  30
 #define DEFAULT_REDFISH_IP_PORT  443
+#define REDFISH_HI_DEBUG         DEBUG_INFO
+
 // Channel number for Redfish Host Interface
 UINT8  Channel;
+
+EFI_MAC_ADDRESS  mBmcMacAddress;
+BOOLEAN          mBmcMacReady = FALSE;
+EFI_HANDLE       mImageHandle = NULL;
+EFI_EVENT        mEvent       = NULL;
 
 /**
   Dump IPv4 address.
@@ -44,13 +52,13 @@ InternalDumpIp4Addr (
   UINTN  Index;
 
   for (Index = 0; Index < 4; Index++) {
-    DEBUG ((DEBUG_INFO, "%d", Ip->Addr[Index]));
+    DEBUG ((REDFISH_HI_DEBUG, "%d", Ip->Addr[Index]));
     if (Index < 3) {
-      DEBUG ((DEBUG_INFO, "."));
+      DEBUG ((REDFISH_HI_DEBUG, "."));
     }
   }
 
-  DEBUG ((DEBUG_INFO, "\n"));
+  DEBUG ((REDFISH_HI_DEBUG, "\n"));
 }
 
 /**
@@ -67,7 +75,7 @@ InternalDumpIp6Addr (
 
   for (Index = 0; Index < 16; Index++) {
     if (Ip->Addr[Index] != 0) {
-      DEBUG ((DEBUG_INFO, "%x", Ip->Addr[Index]));
+      DEBUG ((REDFISH_HI_DEBUG, "%x", Ip->Addr[Index]));
     }
 
     Index++;
@@ -77,17 +85,17 @@ InternalDumpIp6Addr (
     }
 
     if (((Ip->Addr[Index] & 0xf0) == 0) && (Ip->Addr[Index - 1] != 0)) {
-      DEBUG ((DEBUG_INFO, "0"));
+      DEBUG ((REDFISH_HI_DEBUG, "0"));
     }
 
-    DEBUG ((DEBUG_INFO, "%x", Ip->Addr[Index]));
+    DEBUG ((REDFISH_HI_DEBUG, "%x", Ip->Addr[Index]));
 
     if (Index < 15) {
-      DEBUG ((DEBUG_INFO, ":"));
+      DEBUG ((REDFISH_HI_DEBUG, ":"));
     }
   }
 
-  DEBUG ((DEBUG_INFO, "\n"));
+  DEBUG ((REDFISH_HI_DEBUG, "\n"));
 }
 
 /**
@@ -105,7 +113,7 @@ InternalDumpData (
   UINTN  Index;
 
   for (Index = 0; Index < Size; Index++) {
-    DEBUG ((DEBUG_INFO, "%02x ", (UINTN)Data[Index]));
+    DEBUG ((REDFISH_HI_DEBUG, "%02x ", (UINTN)Data[Index]));
   }
 }
 
@@ -129,15 +137,15 @@ InternalDumpHex (
   Left  = Size % VERBOSE_COLUMN_SIZE;
   for (Index = 0; Index < Count; Index++) {
     InternalDumpData (Data + Index * VERBOSE_COLUMN_SIZE, VERBOSE_COLUMN_SIZE);
-    DEBUG ((DEBUG_INFO, "\n"));
+    DEBUG ((REDFISH_HI_DEBUG, "\n"));
   }
 
   if (Left != 0) {
     InternalDumpData (Data + Index * VERBOSE_COLUMN_SIZE, Left);
-    DEBUG ((DEBUG_INFO, "\n"));
+    DEBUG ((REDFISH_HI_DEBUG, "\n"));
   }
 
-  DEBUG ((DEBUG_INFO, "\n"));
+  DEBUG ((REDFISH_HI_DEBUG, "\n"));
 }
 
 /**
@@ -152,56 +160,56 @@ DumpRedfishIpProtocolData (
   IN UINT8                          RedfishProtocolDataSize
   )
 {
-  DEBUG ((DEBUG_ERROR, "RedfishProtocolData: \n"));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData: \n"));
   InternalDumpHex ((UINT8 *)RedfishProtocolData, RedfishProtocolDataSize);
 
-  DEBUG ((DEBUG_INFO, "Parsing as below: \n"));
+  DEBUG ((REDFISH_HI_DEBUG, "Parsing as below: \n"));
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->ServiceUuid - %g\n", &(RedfishProtocolData->ServiceUuid)));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->ServiceUuid - %g\n", &(RedfishProtocolData->ServiceUuid)));
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->HostIpAssignmentType - %d\n", RedfishProtocolData->HostIpAssignmentType));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->HostIpAssignmentType - %d\n", RedfishProtocolData->HostIpAssignmentType));
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->HostIpAddressFormat - %d\n", RedfishProtocolData->HostIpAddressFormat));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->HostIpAddressFormat - %d\n", RedfishProtocolData->HostIpAddressFormat));
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->HostIpAddress: \n"));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->HostIpAddress: \n"));
   if (RedfishProtocolData->HostIpAddressFormat == REDFISH_HOST_INTERFACE_HOST_IP_ADDRESS_FORMAT_IP4) {
     InternalDumpIp4Addr ((EFI_IPv4_ADDRESS *)(RedfishProtocolData->HostIpAddress));
   } else {
     InternalDumpIp6Addr ((EFI_IPv6_ADDRESS *)(RedfishProtocolData->HostIpAddress));
   }
 
-  DEBUG ((DEBUG_ERROR, "RedfishProtocolData->HostIpMask: \n"));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->HostIpMask: \n"));
   if (RedfishProtocolData->HostIpAddressFormat == REDFISH_HOST_INTERFACE_HOST_IP_ADDRESS_FORMAT_IP4) {
     InternalDumpIp4Addr ((EFI_IPv4_ADDRESS *)(RedfishProtocolData->HostIpMask));
   } else {
     InternalDumpIp6Addr ((EFI_IPv6_ADDRESS *)(RedfishProtocolData->HostIpMask));
   }
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->RedfishServiceIpDiscoveryType - %d\n", RedfishProtocolData->RedfishServiceIpDiscoveryType));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->RedfishServiceIpDiscoveryType - %d\n", RedfishProtocolData->RedfishServiceIpDiscoveryType));
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->RedfishServiceIpAddressFormat - %d\n", RedfishProtocolData->RedfishServiceIpAddressFormat));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->RedfishServiceIpAddressFormat - %d\n", RedfishProtocolData->RedfishServiceIpAddressFormat));
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->RedfishServiceIpAddress: \n"));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->RedfishServiceIpAddress: \n"));
   if (RedfishProtocolData->RedfishServiceIpAddressFormat == REDFISH_HOST_INTERFACE_HOST_IP_ADDRESS_FORMAT_IP4) {
     InternalDumpIp4Addr ((EFI_IPv4_ADDRESS *)(RedfishProtocolData->RedfishServiceIpAddress));
   } else {
     InternalDumpIp6Addr ((EFI_IPv6_ADDRESS *)(RedfishProtocolData->RedfishServiceIpAddress));
   }
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->RedfishServiceIpMask: \n"));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->RedfishServiceIpMask: \n"));
   if (RedfishProtocolData->RedfishServiceIpAddressFormat == REDFISH_HOST_INTERFACE_HOST_IP_ADDRESS_FORMAT_IP4) {
     InternalDumpIp4Addr ((EFI_IPv4_ADDRESS *)(RedfishProtocolData->RedfishServiceIpMask));
   } else {
     InternalDumpIp6Addr ((EFI_IPv6_ADDRESS *)(RedfishProtocolData->RedfishServiceIpMask));
   }
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->RedfishServiceIpPort - %d\n", RedfishProtocolData->RedfishServiceIpPort));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->RedfishServiceIpPort - %d\n", RedfishProtocolData->RedfishServiceIpPort));
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->RedfishServiceVlanId - %d\n", RedfishProtocolData->RedfishServiceVlanId));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->RedfishServiceVlanId - %d\n", RedfishProtocolData->RedfishServiceVlanId));
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->RedfishServiceHostnameLength - %d\n", RedfishProtocolData->RedfishServiceHostnameLength));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->RedfishServiceHostnameLength - %d\n", RedfishProtocolData->RedfishServiceHostnameLength));
 
-  DEBUG ((DEBUG_INFO, "RedfishProtocolData->RedfishserviceHostname - %a\n", RedfishProtocolData->RedfishServiceHostname));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishProtocolData->RedfishserviceHostname - %a\n", RedfishProtocolData->RedfishServiceHostname));
 }
 
 /**
@@ -216,15 +224,15 @@ DumpRedfishDeviceDescriptorData (
   IN UINT8                               RedfishDescriptorDataSize
   )
 {
-  DEBUG ((DEBUG_ERROR, "RedfishDeviceDescriptorData: \n"));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishDeviceDescriptorData: \n"));
   InternalDumpHex ((UINT8 *)RedfishDescriptorData, RedfishDescriptorDataSize);
 
-  DEBUG ((DEBUG_INFO, "RedfishDeviceDescriptor->Length - %d\n", RedfishDescriptorData->Length));
-  DEBUG ((DEBUG_INFO, "RedfishDeviceDescriptor->IdVendor - %d\n", RedfishDescriptorData->IdVendor));
-  DEBUG ((DEBUG_INFO, "RedfishDeviceDescriptor->IdProduct - %d\n", RedfishDescriptorData->IdProduct));
-  DEBUG ((DEBUG_INFO, "RedfishDeviceDescriptor->MacAddress -  %x %x %x %x %x %x\n", RedfishDescriptorData->MacAddress[0], RedfishDescriptorData->MacAddress[1], RedfishDescriptorData->MacAddress[2], RedfishDescriptorData->MacAddress[3], RedfishDescriptorData->MacAddress[4], RedfishDescriptorData->MacAddress[5]));
-  DEBUG ((DEBUG_INFO, "RedfishDeviceDescriptor->Characteristics - %d\n", RedfishDescriptorData->Characteristics));
-  DEBUG ((DEBUG_INFO, "RedfishDeviceDescriptor->CBHandle - %d\n", RedfishDescriptorData->CredentialBootstrappingHandle));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishDeviceDescriptor->Length - %d\n", RedfishDescriptorData->Length));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishDeviceDescriptor->IdVendor - %d\n", RedfishDescriptorData->IdVendor));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishDeviceDescriptor->IdProduct - %d\n", RedfishDescriptorData->IdProduct));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishDeviceDescriptor->MacAddress -  %x %x %x %x %x %x\n", RedfishDescriptorData->MacAddress[0], RedfishDescriptorData->MacAddress[1], RedfishDescriptorData->MacAddress[2], RedfishDescriptorData->MacAddress[3], RedfishDescriptorData->MacAddress[4], RedfishDescriptorData->MacAddress[5]));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishDeviceDescriptor->Characteristics - %d\n", RedfishDescriptorData->Characteristics));
+  DEBUG ((REDFISH_HI_DEBUG, "RedfishDeviceDescriptor->CBHandle - %d\n", RedfishDescriptorData->CredentialBootstrappingHandle));
 }
 
 /**
@@ -316,7 +324,6 @@ RedfishPlatformHostInterfaceDeviceDescriptor (
   )
 {
   EFI_STATUS                          Status;
-  UINT8                               MacAddress[6];
   REDFISH_INTERFACE_DATA              *RedfishInterfaceData;
   USB_INTERFACE_DEVICE_DESCRIPTOR_V2  *DeviceDesc;
   UINT16                              VendorID;
@@ -349,12 +356,11 @@ RedfishPlatformHostInterfaceDeviceDescriptor (
     return Status;
   }
 
-  Status = GetRFHIMACAddress (Channel, MacAddress);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: MAC Address Retrieval failed\n", __FUNCTION__));
-  } else {
-    CopyMem ((VOID *)&DeviceDesc->MacAddress, (VOID *)&MacAddress, sizeof (DeviceDesc->MacAddress));
-  }
+  //
+  // Return the USB NIC MAC address on host side.
+  // MAC Address is came from UsbRndisDxe driver.
+  //
+  CopyMem ((VOID *)&DeviceDesc->MacAddress, (VOID *)&mBmcMacAddress.Addr, sizeof (DeviceDesc->MacAddress));
 
   // Credential Bootstrapping is an IPMI command, the handle of the interface is SSIF
   // Get the BIOS generated handle for the SMBIOS table type 38 - SSIF
@@ -502,8 +508,8 @@ RedfishPlatformHostInterfaceProtocolData (
     if (RfSHostname != NULL) {
       Status = GetRFHIHostname (RfSHostname);
       if (Status == EFI_SUCCESS) {
-        RfSHostnameLength  = AsciiStrLen (RfSHostname);
-        ProtocolRecordSize = sizeof (REDFISH_OVER_IP_PROTOCOL_DATA) + RfSHostnameLength;
+        RfSHostnameLength  = AsciiStrLen (RfSHostname) + 1;
+        ProtocolRecordSize = sizeof (REDFISH_OVER_IP_PROTOCOL_DATA) + RfSHostnameLength - 1;
       }
     }
 
@@ -534,7 +540,7 @@ RedfishPlatformHostInterfaceProtocolData (
     ProtocolData->RedfishServiceVlanId         = (UINT32)RfSVlanId;
     ProtocolData->RedfishServiceHostnameLength = RfSHostnameLength;
     if (RfSHostnameLength) {
-      AsciiStrCpyS ((CHAR8 *)ProtocolData->RedfishServiceHostname, RfSHostnameLength + 1, RfSHostname);
+      AsciiStrCpyS ((CHAR8 *)ProtocolData->RedfishServiceHostname, RfSHostnameLength, RfSHostname);
       FreePool (RfSHostname);
     }
 
@@ -581,6 +587,81 @@ RedfishPlatformHostInterfaceUSBSerialNumber (
 }
 
 /**
+  Get the MAC address of NIC.
+
+  @param[out] MacAddress      Pointer to retrieve MAC address
+
+  @retval   EFI_SUCCESS      MAC address is returned in MacAddress
+
+**/
+EFI_STATUS
+GetMacAddressInformation (
+  OUT EFI_MAC_ADDRESS  *MacAddress
+  )
+{
+  EFI_STATUS                    Status;
+  NVIDIA_USB_NIC_INFO_PROTOCOL  *UsbNicInfo;
+
+  if (MacAddress == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = gBS->LocateProtocol (&gNVIDIAUsbNicInfoProtocolGuid, NULL, (VOID **)&UsbNicInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a, failed to locate gNVIDIAUsbNicInfoProtocolGuid: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = UsbNicInfo->GetMacAddress (UsbNicInfo, MacAddress);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a, failed to get MAC address: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Callback function when gNVIDIAUsbNicInfoProtocolGuid is installed.
+
+  @param[in] Event    Event whose notification function is being invoked.
+  @param[in] Context  Pointer to the notification function's context.
+**/
+VOID
+EFIAPI
+EfiUsbNicProtocolIsReady (
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = GetMacAddressInformation (&mBmcMacAddress);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a, GetMacAddressInformation: %r\n", __FUNCTION__, Status));
+    return;
+  }
+
+  DEBUG ((REDFISH_HI_DEBUG, "%a, MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", __FUNCTION__, mBmcMacAddress.Addr[0], mBmcMacAddress.Addr[1], mBmcMacAddress.Addr[2], mBmcMacAddress.Addr[3], mBmcMacAddress.Addr[4], mBmcMacAddress.Addr[5]));
+  mBmcMacReady = TRUE;
+
+  //
+  // Notify RedfishHostInterfaceDxe to generate SMBIOS type 42.
+  //
+  Status = gBS->InstallProtocolInterface (
+                  &mImageHandle,
+                  &gNVIDIAHostInterfaceReadyProtocolGuid,
+                  EFI_NATIVE_INTERFACE,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a, failed to notify RedfishHostInterfaceDxe: %r\n", __FUNCTION__, Status));
+  }
+
+  gBS->CloseEvent (Event);
+}
+
+/**
   Get the EFI protocol GUID installed by platform library which
   indicates the necessary information is ready for building
   SMBIOS 42h record.
@@ -600,5 +681,54 @@ RedfishPlatformHostInterfaceNotification (
   OUT EFI_GUID  **InformationReadinessGuid
   )
 {
-  return EFI_UNSUPPORTED;
+  if (InformationReadinessGuid == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (mBmcMacReady) {
+    return EFI_ALREADY_STARTED;
+  }
+
+  *InformationReadinessGuid = AllocatePool (sizeof (EFI_GUID));
+  if (*InformationReadinessGuid == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  CopyGuid (*InformationReadinessGuid, &gNVIDIAHostInterfaceReadyProtocolGuid);
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Construct Redfish host interface protocol data.
+
+  @param ImageHandle     The image handle.
+  @param SystemTable     The system table.
+
+  @retval  EFI_SUCEESS  Install Boot manager menu success.
+  @retval  Other        Return error status.
+
+**/
+EFI_STATUS
+EFIAPI
+RedfishPlatformHostInterfaceConstructor (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  VOID  *Registration;
+
+  mImageHandle = ImageHandle;
+  mBmcMacReady = FALSE;
+  ZeroMem (&mBmcMacAddress, sizeof (EFI_MAC_ADDRESS));
+
+  mEvent =   EfiCreateProtocolNotifyEvent (
+               &gNVIDIAUsbNicInfoProtocolGuid,
+               TPL_CALLBACK,
+               EfiUsbNicProtocolIsReady,
+               NULL,
+               &Registration
+               );
+
+  return EFI_SUCCESS;
 }
