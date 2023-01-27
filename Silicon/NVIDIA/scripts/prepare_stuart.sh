@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -34,13 +34,6 @@ if [ ! -e venv/bin/activate ]; then
 else
   _msg "Activating Python virtual environment."
   . venv/bin/activate
-fi
-
-if [ -d .git ]; then
-  _msg "Updating submodules (${PLATFORM_BUILD})."
-  stuart_setup ${STUART_SETUP_OPTIONS} -c ${PLATFORM_BUILD}
-else
-  _msg "Building from tarball"
 fi
 
 _msg "Updating build environment (${PLATFORM_BUILD})."

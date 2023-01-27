@@ -7,9 +7,7 @@ import os
 import sys
 from pathlib import Path
 from edk2toolext.invocables.edk2_update import UpdateSettingsManager
-from edk2toolext.invocables.edk2_setup import (
-    SetupSettingsManager, RequiredSubmodule
-)
+from edk2toolext.invocables.edk2_setup import SetupSettingsManager
 from edk2toolext.invocables.edk2_pr_eval import PrEvalSettingsManager
 from edk2toolext.invocables.edk2_platform_build import BuildSettingsManager
 from edk2toolext.invocables.edk2_ci_setup import CiSetupSettingsManager
@@ -137,36 +135,6 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
             method.
         '''
         return []
-
-    #######################################
-    # SetupSettingsManager
-
-    def GetRequiredSubmodules(self):
-        ''' Return a list of git submodules required for NVIDIA builds.
-
-            These will be populated during the stuart setup step.  Subclasses
-            can override and append to the list.
-        '''
-        # We might like to be more selective in which submodules to load, but
-        # stuart_setup doesn't handle nested submodules selectively.  You can
-        # choose which top-level submodules to load and whether to recursively
-        # load them, but you can't say "don't load jansson inside edk2". You
-        # either get edk2 with jansson or no edk2 at all.
-        #
-        # Given this limitation, the best we can do is tell stuart about our
-        # top-level package paths and let it load them recursively.
-        submodules = []
-        submodules.extend([
-            RequiredSubmodule(submodule)
-            for submodule in self._added_submodules
-        ])
-        submodules.extend([
-            RequiredSubmodule("edk2"),
-            RequiredSubmodule("edk2-platforms"),
-            RequiredSubmodule("edk2-nvidia"),
-            RequiredSubmodule("edk2-nvidia-non-osi"),
-        ])
-        return submodules
 
 
 class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
