@@ -98,6 +98,8 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass
   gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableLaml
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableLasa
   gArmTokenSpaceGuid.PcdFdSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString

@@ -70,13 +70,14 @@ InstallTrustedComputingPlatform2Table (
 
   if (Tpm2TableRev >= EFI_TPM2_ACPI_TABLE_REVISION_4) {
     TpmInfo->PlatformClass = PcdGet8 (PcdTpmPlatformClass);
+    TpmInfo->Laml          = PcdGet32 (PcdTpm2AcpiTableLaml);
+    TpmInfo->Lasa          = PcdGet64 (PcdTpm2AcpiTableLasa);
   }
 
   switch (TpmInterfaceType) {
     case Tpm2PtpInterfaceTis:
       TpmInfo->AddressOfControlArea = 0;
       TpmInfo->StartMethod          = EFI_TPM2_ACPI_TABLE_START_METHOD_TIS;
-      // Other fields are not applicable to TIS
       break;
 
     default:
