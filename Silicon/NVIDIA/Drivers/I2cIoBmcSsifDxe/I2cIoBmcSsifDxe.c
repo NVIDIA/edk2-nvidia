@@ -2,7 +2,7 @@
 
   I2C IO IPMI driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright 1999 - 2021 Intel Corporation. <BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -228,8 +228,6 @@ I2cIoBmcSsifIpmiSubmitCommand (
 
         if (Timeout == 0) {
           DEBUG ((DEBUG_ERROR, "%a: Timeout reading SMBALERT gpio\r\n", __FUNCTION__));
-          Status = EFI_TIMEOUT;
-          continue;
         } else {
           EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
           DEBUG ((DEBUG_INFO, "%a: SMBALERT gpio Time %dus\r\n", __FUNCTION__, (EndTime-StartTime)/1000));
@@ -255,7 +253,9 @@ I2cIoBmcSsifIpmiSubmitCommand (
           BmcSsifPrivate->SoftErrorCount++;
           BmcSsifPrivate->BmcStatus = BMC_SOFTFAIL;
           DEBUG ((DEBUG_ERROR, "%a: Failed to send read command - %r\r\n", __FUNCTION__, Status));
-          if (Status == EFI_NO_RESPONSE) {
+          if ((Status == EFI_NO_RESPONSE) &&
+              !BmcSsifPrivate->SmbAlertSupported)
+          {
             gBS->Stall (BMC_RETRY_DELAY);
             continue;
           } else {
