@@ -1,0 +1,28 @@
+## @file
+# Component description file for StandaloneMmOpteeStubLib module.
+#
+# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = StandaloneMmOpteeStubLib
+  FILE_GUID                      = c7f6dd04-699d-4f4f-ba4d-196f49259f32
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = StandaloneMmOpteeStubLib
+
+[Sources]
+  StandaloneMmOpteeStubLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  DebugLib
+  UnitTestLib
