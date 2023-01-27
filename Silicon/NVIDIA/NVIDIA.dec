@@ -530,6 +530,12 @@
 #Force disable high speed modes in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciHighSpeedDisable|TRUE|BOOLEAN|0x0000000E
 
+#Force disable ADMA2 in SDHCi.
+  gNVIDIATokenSpaceGuid.PcdSdhciAdma2Disable|FALSE|BOOLEAN|0x00000010
+
+#Force Clear of HC2 register in SDHCi.
+  gNVIDIATokenSpaceGuid.PcdSdhciClearHc2RegOnExit|FALSE|BOOLEAN|0x00000011
+
 #Explicit PCIe Controller Enable
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|FALSE|BOOLEAN|0x00000017
 

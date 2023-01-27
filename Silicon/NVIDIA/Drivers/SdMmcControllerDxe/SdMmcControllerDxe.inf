@@ -2,7 +2,7 @@
 #
 #  SD MMC Controller Driver
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -54,6 +54,8 @@
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable
   gNVIDIATokenSpaceGuid.PcdSdhciHighSpeedDisable
+  gNVIDIATokenSpaceGuid.PcdSdhciAdma2Disable
+  gNVIDIATokenSpaceGuid.PcdSdhciClearHc2RegOnExit
 
 [Depex]
   gNVIDIAAllRegulatorsPresentProtocolGuid

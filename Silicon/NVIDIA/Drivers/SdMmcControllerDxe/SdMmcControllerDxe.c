@@ -2,7 +2,7 @@
 
   SD MMC Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -72,6 +72,10 @@ SdMmcCapability (
     Capability->Hs400 = 0;
   }
 
+  if (PcdGetBool (PcdSdhciAdma2Disable)) {
+    Capability->Adma2 = 0;
+  }
+
   return EFI_SUCCESS;
 }
 
@@ -136,6 +140,10 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .SkipEdkiiNondiscoverableInstall = FALSE
 };
 
+#define MAX_SD_CONTROLLERS  16
+STATIC EFI_PHYSICAL_ADDRESS  mSdhciBaseAddress[MAX_SD_CONTROLLERS];
+STATIC UINT32                mNumberOfSdhciControllers = 0;
+
 /**
   Callback that will be invoked at various phases of the driver initialization
 
@@ -180,6 +188,7 @@ DeviceDiscoveryNotify (
   INT32                                          ClocksLength;
   VOID                                           *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO                   *PlatformResourceInfo;
+  UINT32                                         CurrentController;
 
   RegulatorPointer          = NULL;
   RegulatorProtocol         = NULL;
@@ -297,6 +306,11 @@ DeviceDiscoveryNotify (
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
         return EFI_UNSUPPORTED;
+      }
+
+      if (mNumberOfSdhciControllers != MAX_SD_CONTROLLERS) {
+        mSdhciBaseAddress[mNumberOfSdhciControllers] = BaseAddress;
+        mNumberOfSdhciControllers++;
       }
 
       // DeviceTreeNode becomes a required argument at this point.
@@ -434,6 +448,32 @@ DeviceDiscoveryNotify (
       }
 
       return Status;
+
+    case DeviceDiscoveryOnExit:
+      if (PcdGetBool (PcdSdhciClearHc2RegOnExit)) {
+        for (CurrentController = 0; CurrentController < mNumberOfSdhciControllers; CurrentController++) {
+          MmioBitFieldWrite16 (
+            mSdhciBaseAddress[CurrentController] + SD_MMC_HC_HOST_CTRL2,
+            SD_MMC_HC_V4_EN,
+            SD_MMC_HC_V4_EN,
+            0
+            );
+          MmioBitFieldWrite16 (
+            mSdhciBaseAddress[CurrentController] + SD_MMC_HC_HOST_CTRL2,
+            SD_MMC_HC_64_ADDR_EN,
+            SD_MMC_HC_64_ADDR_EN,
+            0
+            );
+          MmioBitFieldWrite16 (
+            mSdhciBaseAddress[CurrentController] + SD_MMC_HC_HOST_CTRL2,
+            SD_MMC_HC_26_DATA_LEN_ADMA_EN,
+            SD_MMC_HC_26_DATA_LEN_ADMA_EN,
+            0
+            );
+        }
+      }
+
+      return EFI_SUCCESS;
 
     default:
       return EFI_SUCCESS;
