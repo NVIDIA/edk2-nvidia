@@ -28,7 +28,6 @@
 #include <libfdt.h>
 
 #include <IndustryStandard/DebugPort2Table.h>
-#include <IndustryStandard/Slit.h>
 #include <IndustryStandard/IoRemappingTable.h>
 #include <IndustryStandard/Mpam.h>
 #include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>

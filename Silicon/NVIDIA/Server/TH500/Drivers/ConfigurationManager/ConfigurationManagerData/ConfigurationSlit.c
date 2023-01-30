@@ -12,7 +12,6 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/FloorSweepingLib.h>
 
-#include <IndustryStandard/Slit.h>
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <ConfigurationManagerDataPrivate.h>
@@ -36,54 +35,17 @@
 EFI_STATUS
 EFIAPI
 InstallStaticLocalityInformationTable (
-  IN OUT  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo,
-  IN      UINTN                           PlatformRepositoryInfoEnd,
-  IN      EDKII_PLATFORM_REPOSITORY_INFO  *NVIDIAPlatformRepositoryInfo
+  IN      EDKII_PLATFORM_REPOSITORY_INFO  *PlatformRepositoryInfo
   )
 {
-  EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
-  CM_STD_OBJ_ACPI_TABLE_INFO      *NewAcpiTables;
-  UINTN                           Index;
-  CM_ARM_SYSTEM_LOCALITY_INFO     *SysLocalityInfo;
-  UINTN                           ProximityDomains;
-  UINT8                           *Distance;
-  UINT32                          RowIndex;
-  UINT32                          ColIndex;
-  UINT32                          MaxEnabledHbmDmns;
-
-  // Create a ACPI Table Entry
-  for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
-    if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
-      NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (
-                                                      NVIDIAPlatformRepositoryInfo[Index].CmObjectSize +
-                                                      (sizeof (CM_STD_OBJ_ACPI_TABLE_INFO)),
-                                                      NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr
-                                                      );
-
-      if (NewAcpiTables == NULL) {
-        return EFI_OUT_OF_RESOURCES;
-      }
-
-      NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
-
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_SYSTEM_LOCALITY_INFORMATION_TABLE_SIGNATURE;
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision  = EFI_ACPI_6_4_SYSTEM_LOCALITY_INFORMATION_TABLE_REVISION;
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSlit);
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = NULL;
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = 0;
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
-      NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
-      NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-
-      break;
-    } else if (NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr == NULL) {
-      break;
-    }
-  }
-
-  Repo = *PlatformRepositoryInfo;
-
-  SysLocalityInfo = (CM_ARM_SYSTEM_LOCALITY_INFO *)AllocateZeroPool (sizeof (CM_ARM_SYSTEM_LOCALITY_INFO));
+  CM_STD_OBJ_ACPI_TABLE_INFO                                      *NewAcpiTables;
+  UINTN                                                           Index;
+  UINTN                                                           ProximityDomains;
+  UINT8                                                           *Distance;
+  UINT32                                                          RowIndex;
+  UINT32                                                          ColIndex;
+  UINT32                                                          MaxEnabledHbmDmns;
+  EFI_ACPI_6_4_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_HEADER  *SlitHeader;
 
   // Create a 2D distance matrix with locality information across all possible proximity domains
   // Each CPU, GPU and GPU HBM is a proximity domain
@@ -91,11 +53,31 @@ InstallStaticLocalityInformationTable (
   MaxEnabledHbmDmns = GetMaxHbmPxmDomains ();
   ProximityDomains  = (TH500_GPU_HBM_PXM_DOMAIN_START > MaxEnabledHbmDmns) ? TH500_GPU_HBM_PXM_DOMAIN_START : MaxEnabledHbmDmns;
 
-  Distance = (UINT8 *)AllocateZeroPool (sizeof (UINT8) * ProximityDomains * ProximityDomains);
-  if (Distance == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate distance matrix entry\r\n", __FUNCTION__));
+  // Allocate table
+  SlitHeader = AllocateZeroPool (
+                 sizeof (EFI_ACPI_6_4_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_HEADER) +
+                 sizeof (UINT8) * ProximityDomains * ProximityDomains
+                 );
+
+  if (SlitHeader == NULL) {
+    ASSERT (FALSE);
     return EFI_OUT_OF_RESOURCES;
   }
+
+  //
+  Distance = (UINT8 *)(SlitHeader + 1);
+
+  // Populate header
+  SlitHeader->Header.Signature = EFI_ACPI_6_4_SYSTEM_LOCALITY_INFORMATION_TABLE_SIGNATURE;
+  SlitHeader->Header.Revision  = EFI_ACPI_6_4_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_REVISION;
+  CopyMem (SlitHeader->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (SlitHeader->Header.OemId));
+  SlitHeader->Header.OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId);
+  SlitHeader->Header.OemRevision     = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+  SlitHeader->Header.CreatorId       = FixedPcdGet64 (PcdAcpiDefaultCreatorId);
+  SlitHeader->Header.CreatorRevision = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+
+  // Populate entries
+  SlitHeader->NumberOfSystemLocalities = ProximityDomains;
 
   // Assign normalized local and unreachable distances for all domains
   for (RowIndex = 0; RowIndex < ProximityDomains; RowIndex++ ) {
@@ -213,19 +195,38 @@ InstallStaticLocalityInformationTable (
     }
   }
 
-  SysLocalityInfo->NumSystemLocalities = ProximityDomains;
-  SysLocalityInfo->Distance            = Distance;
+  SlitHeader->Header.Length = sizeof (EFI_ACPI_6_4_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_HEADER) +
+                              sizeof (UINT8) * ProximityDomains * ProximityDomains;
 
-  Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjSystemLocalityInfo);
-  Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = sizeof (CM_ARM_SYSTEM_LOCALITY_INFO);
-  Repo->CmObjectCount = 1;
-  Repo->CmObjectPtr   = SysLocalityInfo;
-  Repo++;
+  // Install Table
+  for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
+    if (PlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
+      NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (
+                                                      PlatformRepositoryInfo[Index].CmObjectSize +
+                                                      (sizeof (CM_STD_OBJ_ACPI_TABLE_INFO)),
+                                                      PlatformRepositoryInfo[Index].CmObjectPtr
+                                                      );
 
-  ASSERT ((UINTN)Repo <= PlatformRepositoryInfoEnd);
+      if (NewAcpiTables == NULL) {
+        return EFI_OUT_OF_RESOURCES;
+      }
 
-  *PlatformRepositoryInfo = Repo;
+      PlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
+
+      NewAcpiTables[PlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = EFI_ACPI_6_4_SYSTEM_LOCALITY_INFORMATION_TABLE_SIGNATURE;
+      NewAcpiTables[PlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision  = EFI_ACPI_6_4_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_REVISION;
+      NewAcpiTables[PlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdRaw);
+      NewAcpiTables[PlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)SlitHeader;
+      NewAcpiTables[PlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
+      NewAcpiTables[PlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      PlatformRepositoryInfo[Index].CmObjectCount++;
+      PlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+
+      break;
+    } else if (PlatformRepositoryInfo[Index].CmObjectPtr == NULL) {
+      break;
+    }
+  }
 
   return EFI_SUCCESS;
 }

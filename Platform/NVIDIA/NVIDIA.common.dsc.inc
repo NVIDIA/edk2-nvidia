@@ -977,7 +977,6 @@
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiPpttLibArm/AcpiPpttLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiRawLibArm/AcpiRawLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSpcrLibArm/AcpiSpcrLibArm.inf
-      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSlitLibArm/AcpiSlitLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSratLibArm/AcpiSratLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiHmatLibArm/AcpiHmatLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSpmiLibArm/AcpiSpmiLibArm.inf

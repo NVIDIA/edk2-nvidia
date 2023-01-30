@@ -1402,7 +1402,7 @@ InitializePlatformRepository (
   }
 
   if (!SkipSlit) {
-    Status = InstallStaticLocalityInformationTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
+    Status = InstallStaticLocalityInformationTable (NVIDIAPlatformRepositoryInfo);
     if (EFI_ERROR (Status)) {
       return Status;
     }

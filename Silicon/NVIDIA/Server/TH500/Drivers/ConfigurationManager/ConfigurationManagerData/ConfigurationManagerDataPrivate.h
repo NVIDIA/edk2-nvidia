@@ -141,9 +141,7 @@ GetCacheIdFrompHandle (
 EFI_STATUS
 EFIAPI
 InstallStaticLocalityInformationTable (
-  IN OUT  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo,
-  IN      UINTN                           PlatformRepositoryInfoEnd,
-  IN      EDKII_PLATFORM_REPOSITORY_INFO  *NVIDIAPlatformRepositoryInfo
+  IN      EDKII_PLATFORM_REPOSITORY_INFO  *PlatformRepositoryInfo
   );
 
 /**
