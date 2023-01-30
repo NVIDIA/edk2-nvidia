@@ -418,6 +418,9 @@
 #User Authentication for BIOS Setup Menu feature - This PCD specifies whether StatusCode is reported via USB3 Serial port.
   gUserAuthFeaturePkgTokenSpaceGuid.PcdUserAuthenticationFeatureEnable|FALSE|BOOLEAN|0x00000103
 
+#Debug HII Menu support
+  gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|FALSE|BOOLEAN|0x00000105
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C

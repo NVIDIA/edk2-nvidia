@@ -26,6 +26,9 @@
 #string STR_TH500_CONFIG_FORM_TITLE       #language en-US "TH500 Configuration"
 #string STR_TH500_CONFIG_FORM_HELP        #language en-US "TH500 configuration options"
 
+#string STR_DEBUG_CONFIG_FORM_TITLE       #language en-US "Debug Configuration"
+#string STR_DEBUG_CONFIG_FORM_HELP        #language en-US "Debug configuration options"
+
 #string STR_SOCKET0_CONFIG_FORM_TITLE        #language en-US "Socket 0 configuration"
 #string STR_SOCKET0_CONFIG_FORM_HELP         #language en-US "Socket 0 configuration options"
 #string STR_SOCKET1_CONFIG_FORM_TITLE        #language en-US "Socket 1 configuration"
@@ -122,6 +125,9 @@
 #string STR_PCIE_DISABLE_OPT_ROM_HELP    #language en-US "Disable Option ROM"
 #string STR_PCIE_DISABLE_DPC_AT_RP_TITLE #language en-US "Disable DPC at RP"
 #string STR_PCIE_DISABLE_DPC_AT_RP_HELP  #language en-US "Disable DPC at RP if a DPC capable PCIe switch is connected to RP"
+
+#string STR_UEFI_DEBUG_LEVEL_PROMPT      #language en-US "UEFI Debug Log Level"
+#string STR_UEFI_DEBUG_LEVEL_HELP        #language en-US "32 bit field matching the definition of gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel"
 
 #string STR_IPMI_NETWORK_BOOT_MODE_PROMPT #language en-US "IP mode for IPMI-requested BootOrder changes"
 #string STR_IPMI_NETWORK_BOOT_MODE_HELP   #language en-US "IPv4/v6 selection for IPMI requested PXE and HTTP BootOrder changes. No effect without relevant IPMI BootOrder request"

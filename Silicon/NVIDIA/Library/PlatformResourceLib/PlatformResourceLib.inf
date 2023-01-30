@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -48,3 +48,4 @@
   gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT234
   gNVIDIATokenSpaceGuid.PcdRootfsRegisterBaseAddressT194
   gNVIDIATokenSpaceGuid.PcdRootfsRegisterBaseAddressT234
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel

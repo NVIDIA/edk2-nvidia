@@ -82,6 +82,7 @@
   gNVIDIATokenSpaceGuid.PcdIpmiNetworkBootMode
   gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
   gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport
+  gNVIDIATokenSpaceGuid.PcdDebugMenuSupport
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

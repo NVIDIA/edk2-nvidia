@@ -51,6 +51,9 @@
   # User Authentication for BIOS Setup Menu
   PlatformPasswordLib|Silicon/NVIDIA/Library/PlatformPasswordLib/PlatformPasswordLib.inf
 
+  # Configurable DebugLib
+  DebugPrintErrorLevelLib|Silicon/NVIDIA/Library/DebugPrintErrorLevelLib/DebugPrintErrorLevelLib.inf
+
 [LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
 
@@ -168,6 +171,7 @@
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdQuickBootSupported|FALSE
+  gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|TRUE
 
 ################################################################################
 #

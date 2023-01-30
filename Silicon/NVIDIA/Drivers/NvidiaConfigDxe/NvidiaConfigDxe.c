@@ -719,6 +719,7 @@ SyncHiiSettings (
     mHiiControlSettings.EgmEnabled           = mMb1Config.Data.Mb1Data.FeatureData.EgmEnable;
     mHiiControlSettings.EgmHvSizeMb          = mMb1Config.Data.Mb1Data.HvRsvdMemSize;
     mHiiControlSettings.SpreadSpectrumEnable = mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable;
+    mHiiControlSettings.UefiDebugLevel       = mMb1Config.Data.Mb1Data.UefiDebugLevel;
 
     for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {
       mHiiControlSettings.UphySetting0[Index] = mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[0][Index];
@@ -782,6 +783,7 @@ SyncHiiSettings (
     mMb1Config.Data.Mb1Data.FeatureData.EgmEnable        = mHiiControlSettings.EgmEnabled;
     mMb1Config.Data.Mb1Data.HvRsvdMemSize                = mHiiControlSettings.EgmHvSizeMb;
     mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable = mHiiControlSettings.SpreadSpectrumEnable;
+    mMb1Config.Data.Mb1Data.UefiDebugLevel               = mHiiControlSettings.UefiDebugLevel;
 
     for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {
       mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[0][Index] = mHiiControlSettings.UphySetting0[Index];
@@ -944,6 +946,7 @@ InitializeSettings (
 
   mHiiControlSettings.L4TSupported       = PcdGetBool (PcdL4TConfigurationSupport);
   mHiiControlSettings.QuickBootSupported = FeaturePcdGet (PcdQuickBootSupported);
+  mHiiControlSettings.DebugMenuSupported = FeaturePcdGet (PcdDebugMenuSupport);
 
   HobPointer = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
   if (HobPointer != NULL) {
@@ -991,6 +994,10 @@ InitializeSettings (
           ASSERT (FALSE);
         }
       }
+    }
+
+    if (mHiiControlSettings.DebugMenuSupported) {
+      mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
     }
 
     WriteMb1Variables (&mMb1Config, &mVariableMb1Config);

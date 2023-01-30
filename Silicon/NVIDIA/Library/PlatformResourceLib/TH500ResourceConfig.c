@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2022, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -397,6 +397,10 @@ TH500GetResourceConfig (
 
   PlatformInfo->CarveoutRegions      = CarveoutRegions;
   PlatformInfo->CarveoutRegionsCount = CarveoutRegionsCount;
+
+  if (CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.UefiDebugLevel == 0) {
+    CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.UefiDebugLevel = PcdGet32 (PcdDebugPrintErrorLevel);
+  }
 
   return EFI_SUCCESS;
 }

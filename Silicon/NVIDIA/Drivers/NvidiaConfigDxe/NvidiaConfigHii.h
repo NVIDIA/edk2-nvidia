@@ -66,6 +66,7 @@
 #define TH500_SOCKET3_PCIE7_CONFIGURATION_FORM_ID  0x002F
 #define TH500_SOCKET3_PCIE8_CONFIGURATION_FORM_ID  0x0030
 #define TH500_SOCKET3_PCIE9_CONFIGURATION_FORM_ID  0x0031
+#define DEBUG_CONFIGURATION_FORM_ID                0x0032
 
 #define KEY_ENABLE_PCIE_CONFIG        0x0100
 #define KEY_ENABLE_PCIE_IN_OS_CONFIG  0x0101
@@ -122,6 +123,7 @@
 typedef struct {
   UINT32     L4TSupported;
   BOOLEAN    QuickBootSupported;
+  BOOLEAN    DebugMenuSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];
@@ -132,6 +134,7 @@ typedef struct {
   // MB1 DATA
   BOOLEAN    EgmEnabled;
   UINT32     EgmHvSizeMb;
+  UINT32     UefiDebugLevel;
   BOOLEAN    SpreadSpectrumEnable;
   UINT8      UphySetting0[MAX_UPHY];
   UINT8      UphySetting1[MAX_UPHY];

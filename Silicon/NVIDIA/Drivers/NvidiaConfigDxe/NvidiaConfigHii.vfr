@@ -147,6 +147,12 @@ formset
         help   = STRING_TOKEN(STR_TH500_CONFIG_FORM_HELP);
     endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DebugMenuSupported == 0;
+    goto DEBUG_CONFIGURATION_FORM_ID,
+        prompt = STRING_TOKEN(STR_DEBUG_CONFIG_FORM_TITLE),
+        help   = STRING_TOKEN(STR_DEBUG_CONFIG_FORM_HELP);
+    endif;
+
     text
       help   = STRING_TOKEN(STR_RESET_VARIABLES_HELP),
       text   = STRING_TOKEN(STR_RESET_VARIABLES_PROMPT),
@@ -368,5 +374,21 @@ formset
   ADD_PCIE_FORM(3,7)
   ADD_PCIE_FORM(3,8)
   ADD_PCIE_FORM(3,9)
+
+  form formid = DEBUG_CONFIGURATION_FORM_ID,
+    title = STRING_TOKEN(STR_DEBUG_CONFIG_FORM_TITLE);
+    subtitle text = STRING_TOKEN(STR_NULL);
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DebugMenuSupported == 0;
+      numeric varid = NVIDIA_CONFIG_HII_CONTROL.UefiDebugLevel,
+          prompt = STRING_TOKEN(STR_UEFI_DEBUG_LEVEL_PROMPT),
+          help   = STRING_TOKEN(STR_UEFI_DEBUG_LEVEL_HELP),
+          flags = RESET_REQUIRED | DISPLAY_UINT_HEX,
+          minimum = 0,
+          maximum = 4294967295,
+          step = 1,
+          default = 0,
+      endnumeric;
+    endif; // suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DebugMenuSupported == 0;
+  endform;
 
 endformset;
