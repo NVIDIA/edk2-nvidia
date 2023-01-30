@@ -2,7 +2,7 @@
 
   Private Sequential record protocol/header definitions.
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -23,6 +23,7 @@
 
 #define READ_LAST_RECORD   (0)
 #define WRITE_NEXT_RECORD  (1)
+#define ERASE_PARTITION    (2)
 
 typedef struct {
   /* Operation to perform */

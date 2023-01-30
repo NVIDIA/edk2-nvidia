@@ -3,7 +3,7 @@
   MM driver to write Sequential records to Flash. This File handles the
   communications bit.
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -274,6 +274,17 @@ EarlyVarsMsgHandler (
     goto ExitEarlyVarsMsgHandler;
   }
 
+  Status = GetCpuBlParamsAddrStMm (&CpuBlAddr);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get CPU BL Addr %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitEarlyVarsMsgHandler;
+  }
+
   Record = EarlyVars->Data;
   DEBUG ((
     DEBUG_ERROR,
@@ -292,17 +303,6 @@ EarlyVarsMsgHandler (
                                  );
       break;
     case WRITE_NEXT_RECORD:
-      Status = GetCpuBlParamsAddrStMm (&CpuBlAddr);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: Failed to get CPU BL Addr %r\n",
-          __FUNCTION__,
-          Status
-          ));
-        goto ExitEarlyVarsMsgHandler;
-      }
-
       for (SocketIdx = 0; SocketIdx < MAX_SOCKETS; SocketIdx++) {
         if (IsSocketEnabledStMm (CpuBlAddr, SocketIdx) == TRUE) {
           Status = EarlyVarsProto->WriteNext (
@@ -325,6 +325,26 @@ EarlyVarsMsgHandler (
       }
 
       break;
+    case ERASE_PARTITION:
+      for (SocketIdx = 0; SocketIdx < MAX_SOCKETS; SocketIdx++) {
+        if (IsSocketEnabledStMm (CpuBlAddr, SocketIdx) == TRUE) {
+          Status = EarlyVarsProto->ErasePartition (
+                                     EarlyVarsProto,
+                                     SocketIdx
+                                     );
+          if (EFI_ERROR (Status)) {
+            DEBUG ((
+              DEBUG_ERROR,
+              "%a: Erase Failed Socket %u\n",
+              __FUNCTION__,
+              SocketIdx
+              ));
+            break;
+          }
+        }
+      }
+
+      break;
     default:
       DEBUG ((
         DEBUG_ERROR,
@@ -337,7 +357,7 @@ EarlyVarsMsgHandler (
   }
 
   DEBUG ((
-    DEBUG_ERROR,
+    DEBUG_INFO,
     "%a: Got Function %u Return %r\n",
     __FUNCTION__,
     EarlyVars->Command,
