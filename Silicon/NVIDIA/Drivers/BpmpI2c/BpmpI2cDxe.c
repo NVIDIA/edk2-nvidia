@@ -685,42 +685,40 @@ BuildI2cDevices (
       if (0 == fdt_node_check_compatible (Private->DeviceTreeBase, Node, MapEntry->Compatibility)) {
         Property = fdt_getprop (Private->DeviceTreeBase, Node, "status", NULL);
         if ((Property == NULL) || (AsciiStrCmp (Property, "okay") == 0)) {
-          if (0 != fdt_get_phandle (Private->DeviceTreeBase, Node)) {
-            DEBUG ((DEBUG_ERROR, "%a: %a detected\r\n", __FUNCTION__, MapEntry->Compatibility));
-            Private->I2cDevices[Index].DeviceGuid          = MapEntry->DeviceType;
-            AdditionalSlaves                               = MapEntry->AdditionalSlaves;
-            Private->I2cDevices[Index].DeviceIndex         = fdt_get_phandle (Private->DeviceTreeBase, Node);
-            Private->I2cDevices[Index].HardwareRevision    = 1;
-            Private->I2cDevices[Index].I2cBusConfiguration = 0;
-            RegEntry                                       = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Node, "reg", &RegLength);
-            if ((RegEntry == NULL) || (RegLength != sizeof (UINT32))) {
-              DEBUG ((EFI_D_ERROR, "%a: Failed to locate reg property\r\n", __FUNCTION__));
-              Private->I2cDevices[Index].SlaveAddressCount = 0;
-              Private->I2cDevices[Index].SlaveAddressArray = NULL;
-              break;
-            } else {
-              Private->I2cDevices[Index].SlaveAddressCount                   = 1;
-              Private->I2cDevices[Index].SlaveAddressArray                   = &Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)];
-              Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)] = SwapBytes32 (*RegEntry);
-              DEBUG ((DEBUG_ERROR, "%a: Address %02x\r\n", __FUNCTION__, Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)]));
-            }
-
-            for (SlaveIndex = 0; SlaveIndex < AdditionalSlaves; SlaveIndex++) {
-              UINTN  NewSlave = Private->I2cDevices[Index].SlaveAddressArray[0];
-              NewSlave                                                                       &= MapEntry->SlaveMasks[SlaveIndex][BPMP_I2C_SLAVE_AND];
-              NewSlave                                                                       |= MapEntry->SlaveMasks[SlaveIndex][BPMP_I2C_SLAVE_OR];
-              Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES) + SlaveIndex + 1] = NewSlave;
-              Private->I2cDevices[Index].SlaveAddressCount++;
-            }
-
-            Index++;
+          DEBUG ((DEBUG_ERROR, "%a: %a detected\r\n", __FUNCTION__, MapEntry->Compatibility));
+          Private->I2cDevices[Index].DeviceGuid          = MapEntry->DeviceType;
+          AdditionalSlaves                               = MapEntry->AdditionalSlaves;
+          Private->I2cDevices[Index].DeviceIndex         = fdt_get_phandle (Private->DeviceTreeBase, Node);
+          Private->I2cDevices[Index].HardwareRevision    = 1;
+          Private->I2cDevices[Index].I2cBusConfiguration = 0;
+          RegEntry                                       = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Node, "reg", &RegLength);
+          if ((RegEntry == NULL) || (RegLength != sizeof (UINT32))) {
+            DEBUG ((EFI_D_ERROR, "%a: Failed to locate reg property\r\n", __FUNCTION__));
+            Private->I2cDevices[Index].SlaveAddressCount = 0;
+            Private->I2cDevices[Index].SlaveAddressArray = NULL;
             break;
+          } else {
+            Private->I2cDevices[Index].SlaveAddressCount                   = 1;
+            Private->I2cDevices[Index].SlaveAddressArray                   = &Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)];
+            Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)] = SwapBytes32 (*RegEntry);
+            DEBUG ((DEBUG_ERROR, "%a: Address %02x\r\n", __FUNCTION__, Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES)]));
           }
+
+          for (SlaveIndex = 0; SlaveIndex < AdditionalSlaves; SlaveIndex++) {
+            UINTN  NewSlave = Private->I2cDevices[Index].SlaveAddressArray[0];
+            NewSlave                                                                       &= MapEntry->SlaveMasks[SlaveIndex][BPMP_I2C_SLAVE_AND];
+            NewSlave                                                                       |= MapEntry->SlaveMasks[SlaveIndex][BPMP_I2C_SLAVE_OR];
+            Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES) + SlaveIndex + 1] = NewSlave;
+            Private->I2cDevices[Index].SlaveAddressCount++;
+          }
+
+          break;
         }
       }
 
       MapEntry++;
     }
+    Index++;
   }
   if (Index == Private->NumberOfI2cDevices) {
     return EFI_SUCCESS;
