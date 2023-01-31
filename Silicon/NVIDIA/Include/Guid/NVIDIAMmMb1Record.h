@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -14,6 +14,7 @@
 
 #define NVIDIA_MM_MB1_RECORD_READ_CMD   0x0
 #define NVIDIA_MM_MB1_RECORD_WRITE_CMD  0x1
+#define NVIDIA_MM_MB1_ERASE_PARTITION   0x2
 
 typedef struct {
   UINT32        Command;

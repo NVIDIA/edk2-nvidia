@@ -13,8 +13,11 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/ReportStatusCodeLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/FwVariableLib.h>
+#include <Protocol/MmCommunication2.h>
+#include <Guid/NVIDIAMmMb1Record.h>
 
 #include <OemStatusCodes.h>
 
@@ -23,6 +26,73 @@
     FreePool ((a));  \
     (a) = NULL;      \
   }
+
+STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2        = NULL;
+STATIC VOID                            *mMmCommunicationBuffer = NULL;
+
+/**
+  Erase the Mb1 Variables partition.
+
+  @retval         EFI_SUCCESS         Partition Erased.
+  @retval         others              Error Erasing Partition.
+
+**/
+EFI_STATUS
+EFIAPI
+EraseMb1VariablePartition (
+  VOID
+  )
+{
+  EFI_STATUS                    Status;
+  EFI_MM_COMMUNICATE_HEADER     *Header;
+  NVIDIA_MM_MB1_RECORD_PAYLOAD  *Payload;
+  UINTN                         MmBufferSize;
+
+  MmBufferSize = sizeof (EFI_MM_COMMUNICATE_HEADER) + sizeof (NVIDIA_MM_MB1_RECORD_PAYLOAD) - 1;
+
+  if (mMmCommunicate2 == NULL) {
+    Status = gBS->LocateProtocol (&gEfiMmCommunication2ProtocolGuid, NULL, (VOID **)&mMmCommunicate2);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    if (mMmCommunicationBuffer == NULL) {
+      mMmCommunicationBuffer = AllocateZeroPool (MmBufferSize);
+      if (mMmCommunicationBuffer == NULL) {
+        mMmCommunicate2 = NULL;
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate buffer \r\n", __FUNCTION__));
+        return EFI_OUT_OF_RESOURCES;
+      }
+    }
+
+    Header = (EFI_MM_COMMUNICATE_HEADER *)mMmCommunicationBuffer;
+    CopyGuid (&Header->HeaderGuid, &gNVIDIAMmMb1RecordGuid);
+    Header->MessageLength = sizeof (NVIDIA_MM_MB1_RECORD_PAYLOAD);
+  }
+
+  Header  = (EFI_MM_COMMUNICATE_HEADER *)mMmCommunicationBuffer;
+  Payload = (NVIDIA_MM_MB1_RECORD_PAYLOAD *)&Header->Data;
+
+  Payload->Command = NVIDIA_MM_MB1_ERASE_PARTITION;
+
+  Status = mMmCommunicate2->Communicate (
+                              mMmCommunicate2,
+                              mMmCommunicationBuffer,
+                              mMmCommunicationBuffer,
+                              &MmBufferSize
+                              );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to dispatch Mb1 MM command %r \r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  if (EFI_ERROR (Payload->Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error in Mb1 MM command %r \r\n", __FUNCTION__, Payload->Status));
+    return Payload->Status;
+  }
+
+  return Status;
+}
 
 /**
   Delete all Firmware Variables
@@ -97,6 +167,17 @@ FwVariableDeleteAll (
 
   if (EFI_ERROR (VarDeleteStatus) && (VarDeleteStatus != EFI_ACCESS_DENIED)) {
     Status = VarDeleteStatus;
+    goto CleanupAndReturn;
+  }
+
+  Status = EraseMb1VariablePartition ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to Erase Mb1 Var Partition %r\n",
+      __FUNCTION__,
+      Status
+      ));
     goto CleanupAndReturn;
   }
 

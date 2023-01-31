@@ -160,16 +160,16 @@ HII_VENDOR_DEVICE_PATH  mNvidiaConfigHiiVendorDevicePath = {
   }
 };
 
-EFI_HII_CONFIG_ACCESS_PROTOCOL  mConfigAccess;
-CHAR16                          mHiiControlStorageName[] = L"NVIDIA_CONFIG_HII_CONTROL";
-NVIDIA_CONFIG_HII_CONTROL       mHiiControlSettings      = { 0 };
-EFI_HANDLE                      mDriverHandle;
-TEGRABL_EARLY_BOOT_VARIABLES    mMb1Config              = { 0 };
-TEGRABL_EARLY_BOOT_VARIABLES    mLastWrittenMb1Config   = { 0 };
-TEGRABL_EARLY_BOOT_VARIABLES    mVariableMb1Config      = { 0 };
-EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2        = NULL;
-VOID                            *mMmCommunicationBuffer = NULL;
-UINT64                          mOpRomDisMask           = 0;
+EFI_HII_CONFIG_ACCESS_PROTOCOL         mConfigAccess;
+CHAR16                                 mHiiControlStorageName[] = L"NVIDIA_CONFIG_HII_CONTROL";
+NVIDIA_CONFIG_HII_CONTROL              mHiiControlSettings      = { 0 };
+EFI_HANDLE                             mDriverHandle;
+TEGRABL_EARLY_BOOT_VARIABLES           mMb1Config              = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES           mLastWrittenMb1Config   = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES           mVariableMb1Config      = { 0 };
+STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2        = NULL;
+STATIC VOID                            *mMmCommunicationBuffer = NULL;
+UINT64                                 mOpRomDisMask           = 0;
 
 // Talk to MB1 actual storage
 EFI_STATUS
@@ -192,11 +192,13 @@ AccessMb1Record (
       return Status;
     }
 
-    mMmCommunicationBuffer = AllocateZeroPool (MmBufferSize);
     if (mMmCommunicationBuffer == NULL) {
-      mMmCommunicate2 = NULL;
-      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate buffer \r\n", __FUNCTION__));
-      return EFI_OUT_OF_RESOURCES;
+      mMmCommunicationBuffer = AllocateZeroPool (MmBufferSize);
+      if (mMmCommunicationBuffer == NULL) {
+        mMmCommunicate2 = NULL;
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate buffer \r\n", __FUNCTION__));
+        return EFI_OUT_OF_RESOURCES;
+      }
     }
 
     Header = (EFI_MM_COMMUNICATE_HEADER *)mMmCommunicationBuffer;

@@ -28,4 +28,17 @@ EFIAPI
 FwVariableDeleteAll (
   );
 
+/**
+  Erase the Mb1 Variables partition.
+
+  @retval         EFI_SUCCESS         Partition Erased.
+  @retval         others              Error Erasing Partition.
+
+**/
+EFI_STATUS
+EFIAPI
+EraseMb1VariablePartition (
+  VOID
+  );
+
 #endif

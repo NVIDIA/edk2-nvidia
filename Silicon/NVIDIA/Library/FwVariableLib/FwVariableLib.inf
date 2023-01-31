@@ -26,3 +26,9 @@
 [LibraryClasses]
   BaseLib
   ReportStatusCodeLib
+
+[Guids]
+  gNVIDIAMmMb1RecordGuid
+
+[Protocols]
+  gEfiMmCommunication2ProtocolGuid              ## CONSUMES
