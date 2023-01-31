@@ -565,7 +565,7 @@
   #
   # SMBIOS entry point version
   #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosVersion|0x0300
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosVersion|0x0306
   gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosDocRev|0x0
 
   # SMBIOS Type0 Firmware BIOS characteristics.
