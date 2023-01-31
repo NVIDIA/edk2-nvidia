@@ -2,7 +2,7 @@
 #
 #  Platform Resource Lib stubs for host based tests
 #
-#  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -25,6 +25,7 @@
   BaseLib
   CmockaLib
   DebugLib
+  MemoryAllocationLib
 
 [Sources.common]
   PlatformResourceStubLib.c
