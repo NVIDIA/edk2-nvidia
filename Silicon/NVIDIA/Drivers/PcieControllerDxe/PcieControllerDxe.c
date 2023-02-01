@@ -625,18 +625,33 @@ PcieEnableErrorReporting (
   EFI_PCI_IO_PROTOCOL  *PciIo
   )
 {
-  EFI_STATUS                   Status;
-  UINTN                        Segment, Bus, Device, Function;
-  PCI_REG_PCIE_CAPABILITY      Capability;
-  UINT32                       PciExpCapOffset, AerCapOffset, Offset;
-  PCI_REG_PCIE_ROOT_CONTROL    RootControl;
-  PCI_REG_PCIE_DEVICE_CONTROL  DeviceControl;
-  PCI_REG_PCIE_DEVICE_STATUS   DeviceStatus;
-  UINT32                       Val_32;
-  UINT16                       Val_16;
+  EFI_STATUS                    Status;
+  UINTN                         Segment, Bus, Device, Function;
+  PCI_REG_PCIE_CAPABILITY       Capability;
+  UINT32                        PciExpCapOffset, AerCapOffset, Offset;
+  PCI_REG_PCIE_ROOT_CONTROL     RootControl;
+  PCI_REG_PCIE_DEVICE_CONTROL   DeviceControl;
+  PCI_REG_PCIE_DEVICE_STATUS    DeviceStatus;
+  UINT32                        Val_32;
+  UINT16                        Val_16;
+  UINT32                        Socket, Ctrl;
+  VOID                          *Hob;
+  TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
+
+  Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
+  {
+    Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+  }
+
+  ASSERT (Mb1Config);
 
   Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
   ASSERT_EFI_ERROR (Status);
+
+  Socket = (Segment >> 4) & 0xF;
+  Ctrl   = (Segment) & 0xF;
 
   /* Skip Error reporting and DPC enablement for C8 controller for now */
   if ((Segment & 0xF) == 8) {
@@ -713,6 +728,18 @@ PcieEnableErrorReporting (
     case PCIE_DEVICE_PORT_TYPE_DOWNSTREAM_PORT:
       /* Enable DPC which is applicable only for Root Ports and Switch Downstream ports */
 
+      /*
+       * In the case of DPC capable PCIe switch connected to RP, disable the
+       * DPC at RP and keep DPC enabled in the PCIe switch. This makes sure that
+       * any malfunctioning device is contained at switch downstream port
+       * level and RP is saved from going into containment
+       */
+      if ((Bus == 0) &&
+          Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].DisableDPCAtRP)
+      {
+        goto SkipDPCEnable;
+      }
+
       Offset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID);
       if (Offset) {
         /* First clear the stale status */
@@ -773,6 +800,7 @@ PcieEnableErrorReporting (
           ));
       }
 
+SkipDPCEnable:
     /* fall through */
 
     case PCIE_DEVICE_PORT_TYPE_UPSTREAM_PORT:
