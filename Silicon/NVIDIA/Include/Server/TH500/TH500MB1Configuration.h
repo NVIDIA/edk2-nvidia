@@ -60,8 +60,10 @@ typedef struct {
       UINT64    DisableDLFE     : 1;
       /* Enable ECRC in the PCIe hierarchy */
       UINT64    EnableECRC      : 1;
+      /* Disable DPC at RP */
+      UINT64    DisableDPCAtRP  : 1;
       /* Reserved */
-      UINT64    reserved        : 57;
+      UINT64    reserved        : 56;
     };
   };
 
