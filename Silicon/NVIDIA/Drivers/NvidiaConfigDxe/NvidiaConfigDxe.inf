@@ -82,6 +82,7 @@
   gNVIDIATokenSpaceGuid.PcdFloorsweepingRuntimeVariables
   gNVIDIATokenSpaceGuid.PcdIpmiNetworkBootMode
   gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
+  gNVIDIATokenSpaceGuid.PcdUefiShellEnabled
   gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport
   gNVIDIATokenSpaceGuid.PcdRedfishHostInterface

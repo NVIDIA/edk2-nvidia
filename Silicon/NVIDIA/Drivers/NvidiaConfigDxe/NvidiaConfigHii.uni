@@ -628,6 +628,9 @@
 #string STR_ACPI_TIMER_ENABLED_PROMPT    #language en-US "Enable ACPI Timer"
 #string STR_ACPI_TIMER_ENABLED_HELP      #language en-US "Enable/Disable ACPI Timer"
 
+#string STR_EMBEDDED_UEFI_SHELL_PROMPT   #language en-US "Embedded UEFI Shell"
+#string STR_EMBEDDED_UEFI_SHELL_HELP     #language en-US "Enable/Disable embedded UEFI Shell"
+
 #string STR_HOST_INTERFACE_ENABLED_PROMPT #language en-US "Enable Redfish Host Interface"
 #string STR_HOST_INTERFACE_ENABLED_HELP   #language en-US "Enable/Disable Redfish Host Interface. When Redfish Host Interface is disabled, host OS can not communicate with BMC via Host interface."
 
@@ -671,4 +674,3 @@
 #string STR_RESET_VARIABLES_PROMPT       #language en-US  "Reset Settings"
 
 #string STR_EXIT_STRING                  #language en-US  "Press ESC to exit."
-

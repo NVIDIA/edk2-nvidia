@@ -102,6 +102,10 @@ typedef struct {
 
 typedef struct {
   UINT8    Enabled;
+} NVIDIA_UEFI_SHELL_ENABLED;
+
+typedef struct {
+  UINT8    Enabled;
 } NVIDIA_DGPU_DT_EFIFB_SUPPORT;
 
 typedef struct {

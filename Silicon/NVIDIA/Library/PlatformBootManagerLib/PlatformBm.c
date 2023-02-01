@@ -1394,6 +1394,56 @@ VerifyAndDispatchDeferredImages (
 // BDS Platform Functions
 //
 
+VOID
+EFIAPI
+CheckUefiShellLoadOption (
+  OUT BOOLEAN  *UefiShellEnabled
+  )
+{
+  EFI_STATUS                    Status;
+  NVIDIA_UEFI_SHELL_ENABLED     UefiShell;
+  UINTN                         VariableSize;
+  EFI_BOOT_MANAGER_LOAD_OPTION  *NvBootOptions;
+  UINTN                         NvBootOptionCount;
+  UINTN                         Index;
+
+  //
+  // Get Embedded UEFI Shell Setup Option
+  //
+  VariableSize = sizeof (NVIDIA_UEFI_SHELL_ENABLED);
+  Status       = gRT->GetVariable (
+                        L"UefiShellEnabled",
+                        &gNVIDIAPublicVariableGuid,
+                        NULL,
+                        &VariableSize,
+                        (VOID *)&UefiShell
+                        );
+  if (EFI_ERROR (Status) || UefiShell.Enabled) {
+    *UefiShellEnabled = 1;
+    return;
+  }
+
+  //
+  // Remove Embedded UEFI Shell Setup Option
+  //
+  *UefiShellEnabled = 0;
+  NvBootOptions     = EfiBootManagerGetLoadOptions (
+                        &NvBootOptionCount,
+                        LoadOptionTypeBoot
+                        );
+
+  for (Index = 0; Index < NvBootOptionCount; Index++) {
+    if (StrCmp (NvBootOptions[Index].Description, L"UEFI Shell") == 0) {
+      EfiBootManagerDeleteLoadOptionVariable (
+        NvBootOptions[Index].OptionNumber,
+        LoadOptionTypeBoot
+        );
+    }
+  }
+
+  EfiBootManagerFreeLoadOptions (NvBootOptions, NvBootOptionCount);
+}
+
 /**
   Do the platform init, can be customized by OEM/IBV
   Possible things that can be done in PlatformBootManagerBeforeConsole:
@@ -1414,6 +1464,10 @@ PlatformBootManagerBeforeConsole (
   UINT8       *EnrollDefaultKeys;
   EFI_STATUS  Status;
   EFI_HANDLE  BdsHandle = NULL;
+  BOOLEAN     UefiShellEnabled;
+
+  // Check Embedded UEFI Shell Setup Option
+  CheckUefiShellLoadOption (&UefiShellEnabled);
 
   //
   // Check IPMI for BootOrder commands, and clear and reset CMOS here if requested
@@ -1515,12 +1569,14 @@ PlatformBootManagerBeforeConsole (
     //
     // Register UEFI Shell
     //
-    PlatformRegisterFvBootOption (
-      &gUefiShellFileGuid,
-      L"UEFI Shell",
-      LOAD_OPTION_ACTIVE,
-      LoadOptionTypeBoot
-      );
+    if (UefiShellEnabled) {
+      PlatformRegisterFvBootOption (
+        &gUefiShellFileGuid,
+        L"UEFI Shell",
+        LOAD_OPTION_ACTIVE,
+        LoadOptionTypeBoot
+        );
+    }
 
     //
     // Set Boot Order

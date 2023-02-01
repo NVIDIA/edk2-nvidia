@@ -1352,6 +1352,9 @@ InitializeSettings (
   // Initialize Acpi Timer Form Settings
   PcdSet8S (PcdAcpiTimerEnabled, PcdGet8 (PcdAcpiTimerEnabled));
 
+  // Initialize UEFI Shell Form Settings
+  PcdSet8S (PcdUefiShellEnabled, PcdGet8 (PcdUefiShellEnabled));
+
   // Initialize dGPU DT EFIFB support form settings
   PcdSet8S (PcdDgpuDtEfifbSupport, PcdGet8 (PcdDgpuDtEfifbSupport));
 

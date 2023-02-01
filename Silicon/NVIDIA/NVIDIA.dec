@@ -645,6 +645,9 @@
 #Indicate whether initial console device registration should be done.
   gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration|TRUE|BOOLEAN|0x0000010A
 
+#Option to enable/disable Embedded UEFI Shell
+  gNVIDIATokenSpaceGuid.PcdUefiShellEnabled|0x01|UINT8|0x0000010B
+
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature
   # Indicate whether the password is cleared.

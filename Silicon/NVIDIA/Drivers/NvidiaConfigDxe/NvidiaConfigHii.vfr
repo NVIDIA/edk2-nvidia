@@ -12,6 +12,9 @@
 #include <Uefi/UefiMultiPhase.h>
 #include "NvidiaConfigHii.h"
 
+#define EFI_USER_INFO_ACCESS_SETUP_ADMIN_GUID \
+  { 0x85b75607, 0xf7ce, 0x471e, { 0xb7, 0xe4, 0x2a, 0xea, 0x5f, 0x72, 0x32, 0xee } }
+
 formset
   guid      = NVIDIA_CONFIG_FORMSET_GUID,
   title     = STRING_TOKEN(STR_NVIDIA_CONFIG_TITLE),
@@ -92,6 +95,10 @@ formset
     name  = DgpuDtEfifbSupport,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+  efivarstore NVIDIA_UEFI_SHELL_ENABLED,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name  = UefiShellEnabled,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
   efivarstore NVIDIA_REDFISH_HOST_INTERFACE_ENABLED,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
@@ -231,6 +238,17 @@ formset
         flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
         option text = STRING_TOKEN(STR_DISABLED), value = HOST_INTERFACE_DISABLE, flags = 0;
         option text = STRING_TOKEN(STR_ENABLED),  value = HOST_INTERFACE_ENABLE, flags = DEFAULT;
+    endoneof;
+    endif;
+
+    grayoutif NOT security (EFI_USER_INFO_ACCESS_SETUP_ADMIN_GUID);
+    oneof varid = UefiShellEnabled.Enabled,
+        questionid = KEY_ENABLE_UEFI_SHELL,
+        prompt = STRING_TOKEN(STR_EMBEDDED_UEFI_SHELL_PROMPT),
+        help   = STRING_TOKEN(STR_EMBEDDED_UEFI_SHELL_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_DISABLED), value = 0x00, flags = 0;
+        option text = STRING_TOKEN(STR_ENABLED),  value = 0x01, flags = DEFAULT;
     endoneof;
     endif;
   endform;
