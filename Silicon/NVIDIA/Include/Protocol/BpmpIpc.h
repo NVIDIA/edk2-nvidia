@@ -47,7 +47,37 @@
 #define MRQ_PG                66
 #define MRQ_CPU_NDIV_LIMITS   67
 #define MRQ_TELEMETRY         80
+#define MRQ_PWR_LIMIT         81
 #define MRQ_C2C               85
+
+/**
+ * @ingroup MRQ_PWR_LIMIT Commands
+ * @name Commands used to control MRQ_PWR_LIMITs
+ * These are the legal values for mrq_pwr_limit_request
+ */
+#define TH500_PWR_LIMIT_QUERY_ABI  0
+#define TH500_PWR_LIMIT_SET        1
+#define TH500_PWR_LIMIT_GET        2
+#define TH500_PWR_LIMIT_CURR_CAP   3
+
+// BPMP PWR Limit Id
+#define TH500_PWR_LIMIT_ID_TH500_INP_EDPC_MW  0
+#define TH500_PWR_LIMIT_ID_TH500_INP_EDPP_MW  1
+#define TH500_PWR_LIMIT_ID_CPU_OUT_EDPC_MA    2
+#define TH500_PWR_LIMIT_ID_NUM                3
+
+// BPMP PWR Limit Src
+#define TH500_PWR_LIMIT_SRC_INB     0
+#define TH500_PWR_LIMIT_SRC_OOB     1
+#define TH500_PWR_LIMIT_SRC_ODMCAL  2
+#define TH500_PWR_LIMIT_SRC_NVCAL   3
+#define TH500_PWR_LIMIT_SRC_NUM     4
+
+// BPMP PWR Limit Type
+#define TH500_PWR_LIMIT_TYPE_TARGET_CAP  0
+#define TH500_PWR_LIMIT_TYPE_BOUND_MAX   1
+#define TH500_PWR_LIMIT_TYPE_BOUND_MIN   2
+#define TH500_PWR_LIMIT_TYPE_NUM         3
 
 #define   BPMP_ENOENT      (-2)   // No such file or directory.
 #define   BPMP_ENOHANDLER  (-3)   // No MRQ handler.

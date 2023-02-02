@@ -174,6 +174,17 @@ CM_ARM_SERIAL_PORT_INFO  SpcrSerialPort = {
   EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_ARM_SBSA_GENERIC_UART   // Port subtype
 };
 
+/** MRQ_PWR_LIMIT get sub-command (CMD_PWR_LIMIT_GET) packet
+*/
+#pragma pack (1)
+typedef struct {
+  UINT32    Command;
+  UINT32    LimitId;
+  UINT32    LimitSrc;
+  UINT32    LimitType;
+} MRQ_PWR_LIMIT_COMMAND_PACKET;
+#pragma pack ()
+
 /** Initialize the Serial Port entries in the platform configuration repository and patch DSDT.
  *
  * @param Repo Pointer to a repo structure that will be added to and updated with the data updated
@@ -703,6 +714,195 @@ UpdateThermalZoneTempInfo (
   return EFI_SUCCESS;
 }
 
+/** patch MRQ_PWR_LIMIT data in DSDT.
+
+  @param[in]     BpmpIpcProtocol     The instance of the NVIDIA_BPMP_IPC_PROTOCOL
+  @param[in]     BpmpHandle          Bpmp handle
+  @param[in]     SocketId            Socket Id
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdatePowerLimitInfo (
+  IN  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol,
+  IN  UINT32                    BpmpHandle,
+  IN  UINT32                    SocketId
+  )
+{
+  EFI_STATUS                    Status;
+  NVIDIA_AML_NODE_INFO          AcpiNodeInfo;
+  MRQ_PWR_LIMIT_COMMAND_PACKET  Request;
+  UINT32                        PwrLimit;
+
+  STATIC CHAR8 *CONST  AcpiMrqPwrLimitMinPatchName[] = {
+    "_SB_.PM01.MINP",
+    "_SB_.PM11.MINP",
+    "_SB_.PM21.MINP",
+    "_SB_.PM31.MINP",
+  };
+
+  STATIC CHAR8 *CONST  AcpiMrqPwrLimitMaxPatchName[] = {
+    "_SB_.PM01.MAXP",
+    "_SB_.PM11.MAXP",
+    "_SB_.PM21.MAXP",
+    "_SB_.PM31.MAXP",
+  };
+
+  // Get power meter limits
+  Request.Command   = TH500_PWR_LIMIT_GET;
+  Request.LimitId   = TH500_PWR_LIMIT_ID_TH500_INP_EDPC_MW;
+  Request.LimitSrc  = TH500_PWR_LIMIT_SRC_INB;
+  Request.LimitType = TH500_PWR_LIMIT_TYPE_BOUND_MAX;
+
+  Status = BpmpIpcProtocol->Communicate (
+                              BpmpIpcProtocol,
+                              NULL,
+                              BpmpHandle,
+                              MRQ_PWR_LIMIT,
+                              (VOID *)&Request,
+                              sizeof (MRQ_PWR_LIMIT_COMMAND_PACKET),
+                              (VOID *)&PwrLimit,
+                              sizeof (UINT32),
+                              NULL
+                              );
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error in BPMP communication for max pwr limit: %r\r\n", __FUNCTION__, Status));
+    Status = EFI_SUCCESS;
+    goto ErrorExit;
+  }
+
+  if (PwrLimit == 0) {
+    PwrLimit = 0xFFFFFFFF;
+  }
+
+  if (SocketId >= ARRAY_SIZE (AcpiMrqPwrLimitMaxPatchName)) {
+    DEBUG ((DEBUG_ERROR, "%a: SocketId %d exceeding AcpiMrqPwrLimitMaxPatchName size\r\n", __FUNCTION__, SocketId));
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->FindNode (PatchProtocol, AcpiMrqPwrLimitMaxPatchName[SocketId], &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Max power limit node is not found for patching %a - %r\r\n",
+      __FUNCTION__,
+      AcpiMrqPwrLimitMaxPatchName[SocketId],
+      Status
+      ));
+    Status = EFI_SUCCESS;
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &PwrLimit, sizeof (PwrLimit));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiMrqPwrLimitMaxPatchName[SocketId], Status));
+    Status = EFI_SUCCESS;
+    goto ErrorExit;
+  }
+
+  Request.LimitType = TH500_PWR_LIMIT_TYPE_BOUND_MIN;
+
+  Status = BpmpIpcProtocol->Communicate (
+                              BpmpIpcProtocol,
+                              NULL,
+                              BpmpHandle,
+                              MRQ_PWR_LIMIT,
+                              (VOID *)&Request,
+                              sizeof (MRQ_PWR_LIMIT_COMMAND_PACKET),
+                              (VOID *)&PwrLimit,
+                              sizeof (UINT32),
+                              NULL
+                              );
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error in BPMP communication for min pwr limit: %r\r\n", __FUNCTION__, Status));
+    Status = EFI_SUCCESS;
+    goto ErrorExit;
+  }
+
+  if (SocketId >= ARRAY_SIZE (AcpiMrqPwrLimitMinPatchName)) {
+    DEBUG ((DEBUG_ERROR, "%a: SocketId %d exceeding AcpiMrqPwrLimitMinPatchName size\r\n", __FUNCTION__, SocketId));
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->FindNode (PatchProtocol, AcpiMrqPwrLimitMinPatchName[SocketId], &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Min power limit node is not found for patching %a - %r\r\n",
+      __FUNCTION__,
+      AcpiMrqPwrLimitMinPatchName[SocketId],
+      Status
+      ));
+    Status = EFI_SUCCESS;
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &PwrLimit, sizeof (PwrLimit));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiMrqPwrLimitMinPatchName[SocketId], Status));
+    Status = EFI_SUCCESS;
+    goto ErrorExit;
+  }
+
+ErrorExit:
+  return Status;
+}
+
+/** patch ACPI Timer operator enable/disable status from Nvidia boot configuration in DSDT.
+
+  @param[in]     SocketId            Socket Id
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateAcpiTimerOprInfo (
+  IN  UINT32  SocketId
+  )
+{
+  EFI_STATUS            Status;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+  UINT8                 AcpiTimerEnableFlag;
+
+  STATIC CHAR8 *CONST  AcpiTimerInstructionEnableVarName[] = {
+    "_SB_.BPM0.TIME",
+    "_SB_.BPM1.TIME",
+    "_SB_.BPM2.TIME",
+    "_SB_.BPM3.TIME",
+  };
+
+  AcpiTimerEnableFlag = ACPI_TIMER_INSTRUCTION_ENABLE;
+
+  if (SocketId >= ARRAY_SIZE (AcpiTimerInstructionEnableVarName)) {
+    DEBUG ((DEBUG_ERROR, "%a: Index %d exceeding AcpiTimerInstructionEnableVarName size\r\n", __FUNCTION__, SocketId));
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->FindNode (PatchProtocol, AcpiTimerInstructionEnableVarName[SocketId], &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Acpi timer enable node is not found for patching %a - %r\r\n", __FUNCTION__, AcpiTimerInstructionEnableVarName[SocketId], Status));
+    Status = EFI_SUCCESS;
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &AcpiTimerEnableFlag, sizeof (AcpiTimerEnableFlag));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiTimerInstructionEnableVarName[SocketId], Status));
+    Status = EFI_SUCCESS;
+    goto ErrorExit;
+  }
+
+ErrorExit:
+  return Status;
+}
+
 /** patch MRQ_TELEMETRY data in DSDT.
 
   @retval EFI_SUCCESS   Success
@@ -717,19 +917,18 @@ UpdateTelemetryInfo (
 {
   EFI_STATUS                Status;
   NVIDIA_AML_NODE_INFO      AcpiNodeInfo;
-  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol      = NULL;
-  UINT64                    TelemetryDataBuffAddr = 0;
-  UINTN                     ResponseSize          = sizeof (TelemetryDataBuffAddr);
+  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol;
+  UINT64                    TelemetryDataBuffAddr;
+  UINTN                     ResponseSize;
   UINT32                    BpmpHandle;
-  VOID                      *Dtb = NULL;
+  VOID                      *Dtb;
   INT32                     NodeOffset;
   UINT32                    NumberOfMrqTelemeteryNodes;
-  UINT32                    *MrqTelemetryHandles = NULL;
+  UINT32                    *MrqTelemetryHandles;
   UINT32                    Index;
-  CONST VOID                *Property           = NULL;
-  INT32                     PropertySize        = 0;
-  UINT32                    SocketId            = 0;
-  UINT8                     AcpiTimerEnableFlag = 0;
+  CONST VOID                *Property;
+  INT32                     PropertySize;
+  UINT32                    SocketId;
 
   STATIC CHAR8 *CONST  AcpiMrqTelemetryBufferPatchName[] = {
     "_SB_.BPM0.TBUF",
@@ -738,15 +937,17 @@ UpdateTelemetryInfo (
     "_SB_.BPM3.TBUF",
   };
 
-  STATIC CHAR8 *CONST  AcpiTimerInstructionEnableVarName[] = {
-    "_SB_.BPM0.TIME",
-    "_SB_.BPM1.TIME",
-    "_SB_.BPM2.TIME",
-    "_SB_.BPM3.TIME",
-  };
-
+  BpmpIpcProtocol            = NULL;
+  TelemetryDataBuffAddr      = 0;
+  ResponseSize               = sizeof (TelemetryDataBuffAddr);
+  Dtb                        = NULL;
+  MrqTelemetryHandles        = NULL;
+  Property                   = NULL;
+  PropertySize               = 0;
+  SocketId                   = 0;
   NumberOfMrqTelemeteryNodes = 0;
-  Status                     = GetMatchingEnabledDeviceTreeNodes ("nvidia,th500-mrqtelemetry", NULL, &NumberOfMrqTelemeteryNodes);
+
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,th500-mrqtelemetry", NULL, &NumberOfMrqTelemeteryNodes);
   if (Status == EFI_NOT_FOUND) {
     DEBUG ((DEBUG_ERROR, "%a: nvidia,th500-mrqtelemetry nodes absent in device tree\r\n", __FUNCTION__));
     Status = EFI_SUCCESS;
@@ -854,23 +1055,14 @@ UpdateTelemetryInfo (
       goto ErrorExit;
     }
 
-    AcpiTimerEnableFlag = ACPI_TIMER_INSTRUCTION_ENABLE;
-
-    if (Index >= ARRAY_SIZE (AcpiTimerInstructionEnableVarName)) {
-      DEBUG ((DEBUG_ERROR, "%a: Index %d exceeding AcpiTimerInstructionEnableVarName size\r\n", __FUNCTION__, Index));
-      goto ErrorExit;
-    }
-
-    Status = PatchProtocol->FindNode (PatchProtocol, AcpiTimerInstructionEnableVarName[Index], &AcpiNodeInfo);
+    Status = UpdateAcpiTimerOprInfo (SocketId);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Acpi timer enable node is not found for patching %a - %r\r\n", __FUNCTION__, AcpiTimerInstructionEnableVarName[Index], Status));
       Status = EFI_SUCCESS;
       goto ErrorExit;
     }
 
-    Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &AcpiTimerEnableFlag, sizeof (AcpiTimerEnableFlag));
+    Status = UpdatePowerLimitInfo (BpmpIpcProtocol, BpmpHandle, SocketId);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiTimerInstructionEnableVarName[Index], Status));
       Status = EFI_SUCCESS;
       goto ErrorExit;
     }

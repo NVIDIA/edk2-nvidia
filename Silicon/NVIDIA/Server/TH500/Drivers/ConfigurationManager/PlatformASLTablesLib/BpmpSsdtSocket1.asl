@@ -10,6 +10,7 @@
 
 #include <TH500/TH500Definitions.h>
 #include <Protocol/BpmpIpc.h>
+#include <AcpiPowerMeter.h>
 
 DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x00000001)
 {
@@ -26,6 +27,9 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
       Name (CRTT, ((TH500_THERMAL_ZONE_CRT * 10) + 2732))
       Name (TBUF, 0xFFFFFFFFFFFFFFFF)
       Name (TIME, 0xFF)
+      Name (LSTM, 0)
+      Name (PWRV, 0x00000000)
+
       OperationRegion (BPTX, SystemMemory, BPMP_TX_MAILBOX_SOCKET_1, BPMP_CHANNEL_SIZE)
       Field (BPTX, AnyAcc, NoLock, Preserve) {
         TWCT, 32,
@@ -90,14 +94,22 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
         Return (Local3)
       }
 
-      Name (LSTM, 0)
-
-      Method (TELM, 1, Serialized, 0, IntObj, IntObj) {
-        Local0 = Buffer(8) {}
-        Local1 = Buffer(384) {}
-        Local2 = 500000
+      Method (TELM, 2, Serialized, 0, IntObj, {IntObj, IntObj}) {
+        Local0 = 0
+        Local1 = 0
+        Local2 = TH500_BPMP_IPC_CALL_INTERVAL_50MS
         Local3 = 0
         Local4 = 0
+        Local5 = 0
+
+        If ((Arg0 < TH500_MODULE_PWR) || (Arg0 > TH500_SOC_PWR)) {
+          Return (PWR_METER_ERR_RETURN)
+        }
+
+        If ((Arg1 != PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) && (Arg1 != PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC)) {
+          Return (PWR_METER_ERR_RETURN)
+        }
+
         If (TIME != 0) {
           If (LSTM > Timer()) {
             Store(Timer(), LSTM)
@@ -108,22 +120,150 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
           } Else {
             Local4 = 0
           }
-          If (LOr (Local4, (Arg0 != 0))) {
-            Local1 = \_SB.BPM1.BIPC (MRQ_TELEMETRY, Local0)
-            CreateDWordField (DerefOf (Index (Local1, 0)), 0x00, ERR)
-            If (ERR != 0) {
-              Return (0)
+        }
+
+        If (LOr((TIME == 0), Local4)) {
+          Local1 = \_SB.BPM1.BIPC (MRQ_TELEMETRY, Local0)
+          CreateDWordField (DerefOf (Index (Local1, 0)), 0x00, ERR)
+          If (ERR != 0) {
+            Return (PWR_METER_ERR_RETURN)
+          }
+          CreateQWordField (DerefOf (Index (Local1, 1)), 0x00, BUFF)
+
+          OperationRegion (TELD, SystemMemory, BUFF, 0x180)
+          Field (TELD, AnyAcc, NoLock, Preserve) {
+            Offset (16),
+            MPWR, 32,
+            TPWR, 32,
+            CPWR, 32,
+            SPWR, 32,
+            Offset (288),
+            MAPW, 32,
+            TAPW, 32,
+            CAPW, 32,
+            SAPW, 32,
+            Offset (360),
+            VFG0, 32,
+            VFG1, 32,
+            VFG2, 32
+          }
+
+          Switch (Arg0) {
+            Case (TH500_MODULE_PWR) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+                And (VFG0, TH500_MODULE_PWR_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (MPWR, PWRV)
+                }
+              }
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+                And (VFG2, TH500_MODULE_PWR_1SEC_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (MAPW, PWRV)
+                }
+              }
+              Break
             }
+
+            Case (TH500_TH500_PWR) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+                And (VFG0, TH500_TH500_PWR_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (TPWR, PWRV)
+                }
+              }
+              If (Arg1 = PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+                And (VFG2, TH500_TH500_PWR_1SEC_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (TAPW, PWRV)
+                }
+              }
+              Break
+            }
+
+            Case (TH500_CPU_PWR) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+                And (VFG0, TH500_CPU_PWR_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (CPWR, PWRV)
+                }
+              }
+              If (Arg1 = PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+                And (VFG2, TH500_CPU_PWR_1SEC_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (CAPW, PWRV)
+                }
+              }
+              Break
+            }
+
+            Case (TH500_SOC_PWR) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+                And (VFG0, TH500_SOC_PWR_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (SPWR, PWRV)
+                }
+              }
+              If (Arg1 = PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+                And (VFG2, TH500_SOC_PWR_1SEC_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (SAPW, PWRV)
+                }
+              }
+              Break
+            }
+          }
+
+          If (TIME != 0) {
             Store (Timer(), LSTM)
           }
-        } Else {
-          Local1 = \_SB.BPM1.BIPC (MRQ_TELEMETRY, Local0)
-          CreateDWordField (DerefOf (Index (Local1, 0)), 0x00, ERRR)
-          If (ERRR != 0) {
-            Return (0)
-          }
         }
-        Return (TBUF)
+        Return (PWRV)
+      }
+
+      Method (SPRL, 2, Serialized, 0, IntObj, {IntObj, IntObj}) {
+        Local0 = Buffer (20) {}
+
+        CreateDWordField (Local0, 0x00, CMD)
+        CreateDWordField (Local0, 0x04, LIID)
+        CreateDWordField (Local0, 0x08, LISR)
+        CreateDWordField (Local0, 0x0C, LITY)
+        CreateDWordField (Local0, 0x10, LISE)
+
+        CMD = TH500_PWR_LIMIT_SET
+        LIID = Arg0
+        LISR = TH500_PWR_LIMIT_SRC_INB
+        LITY = TH500_PWR_LIMIT_TYPE_TARGET_CAP
+        LISE = Arg1
+
+        Local1 = \_SB.BPM1.BIPC (MRQ_PWR_LIMIT, Local0)
+        CreateDWordField (DerefOf (Index (Local1, 0)), 0x00, ERR)
+        if (ERR != 0) {
+          Return (PWR_METER_UNKNOWN_HW_ERR)
+        }
+        Return (PWR_METER_SUCCESS)
+      }
+
+      Method (GPRL, 1, Serialized, 0, IntObj, IntObj) {
+        Local0 = Buffer (16) {}
+
+        CreateDWordField (Local0, 0x00, CMD)
+        CreateDWordField (Local0, 0x04, LIID)
+        CreateDWordField (Local0, 0x08, LISR)
+        CreateDWordField (Local0, 0x0C, LITY)
+
+        CMD = TH500_PWR_LIMIT_GET
+        LIID = Arg0
+        LISR = TH500_PWR_LIMIT_SRC_INB
+        LITY = TH500_PWR_LIMIT_TYPE_TARGET_CAP
+
+        Local1 = \_SB.BPM1.BIPC (MRQ_PWR_LIMIT, Local0)
+        CreateDWordField (DerefOf (Index (Local1, 0)), 0x00, ERR)
+        if (ERR != 0) {
+          Return (PWR_METER_ERR_RETURN)
+        }
+        CreateDWordField (DerefOf (Index (Local1, 1)), 0x00, PLIM)
+        Return (PLIM)
       }
     }
 
@@ -429,10 +569,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 10)
-      Name (CAI, 50)
-      Name (CNT, 0)
-      Name (MFLG, 16)
-      Name (MAFG, 256)
+      Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
+      Name (HWLT, 0)
+      Name (MINP, 0x00000000)
+      Name (MAXP, 0x00000000)
 
       // _PMD method return code - List of power meter devices
       Name (PMD, Package() {
@@ -441,17 +581,17 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
 
       // _PMC method result code
       Name (PMC, Package() {
-        0x00000001,                           // Supported capabilities - Measurement
-        0x00000000,                           // Measurement Unit - mW
-        0x00000001,                           // Measurement Type - Output Power
-        0x000186A0,                           // Measurement Accuracy - 100.000%
-        0x00000032,                           // Measurement Sampling Time - 50ms
-        0x00000032,                           // Minimum Averaging Interval - 50ms
-        0x000003E8,                           // Maximum Averaging Interval - 1s
-        0xFFFFFFFF,                           // Hysteresis Margin - Information is unavailable
-        0x00000000,                           // Hardware Limit Is Configurable - The limit is read-only
-        0x00000000,                           // Minimum Configurable Hardware Limit - Ignored
-        0x00000000,                           // Maximum Configurable Hardware Limit - Ignored
+        BIT (PWR_METER_SUPPORTS_MEASUREMENT),
+        PWR_METER_MEASUREMENT_IN_MW,
+        PWR_METER_MEASURE_OP_PWR,
+        PWR_METER_MEASUREMENT_ACCURACY_100,
+        \_SB.PM10.CAI,
+        PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS,
+        PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC,
+        PWR_METER_HYSTERESIS_MARGIN_UNKNOWN,
+        PWR_METER_HW_LIMIT_RW,
+        \_SB.PM10.MINP,
+        \_SB.PM10.MAXP,
         "",                                   // Model Number - NULL
         "",                                   // Serial Number - NULL
         "Module Power Socket 1"               // OEM Information - "Module Power Socket 1"
@@ -462,14 +602,14 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
       }
 
       Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
-        If (Arg0 == 50) {
-          Store (50, CAI)
-          Return (0)
-        } ElseIf (Arg0 == 1000) {
-          Store (1000, CAI)
-          Return (0)
+        If (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+          Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS, CAI)
+          Return (PWR_METER_SUCCESS)
+        } ElseIf (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+          Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC, CAI)
+          Return (PWR_METER_SUCCESS)
         }
-        Return (1)
+        Return (PWR_METER_OUT_OF_RANGE)
       }
 
       Method (_GAI) {
@@ -482,42 +622,17 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
 
       Method (_PMM) {
         Local0 = 0
-        Local1 = 0
-        Local0 = \_SB.BPM1.TELM(0)
-        If (Local0 == 0) {
-          Return (0xFFFFFFFF)
-        }
-        CreateQWordField (Local0, 0x00, TELB)
-        OperationRegion (TELD, SystemMemory, TELB,  0x180)
-        Field (TELD, AnyAcc, NoLock, Preserve) {
-          Offset (16),
-          MPWR, 32,
-          TPWR, 32,
-          CPWR, 32,
-          SPWR, 32,
-          Offset (288),
-          MAPW, 32,
-          TAPW, 32,
-          CAPW, 32,
-          SAPR, 32,
-          Offset (360),
-          VFG0, 32,
-          VFG1, 32,
-          VFG2, 32
-        }
+        Local0 = \_SB.BPM1.TELM(TH500_MODULE_PWR, CAI)
+        Return (Local0)
+      }
 
-        If (CAI == 50) {
-          And (VFG0, MFLG, Local1)
-          If (Local1 > 0) {
-            Return (MPWR)
-          }
-        } Else {
-          And (VFG2, MAFG, Local1)
-          If (Local1 > 0) {
-            Return (MAPW)
-          }
-        }
-        Return (0xFFFFFFFF)
+      Method (_GHL) {
+        Return (PWR_METER_ERR_RETURN)
+      }
+
+      Method (_SHL, 1, Serialized, 0, IntObj, IntObj) {
+        Store (Arg0, HWLT)
+        Return (PWR_METER_UNKNOWN_HW_ERR)
       }
     }
 
@@ -528,10 +643,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 11)
-      Name (CAI, 50)
-      Name (CNT, 0)
-      Name (MFLG, 32)
-      Name (MAFG, 512)
+      Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
+      Name (HWLT, 0)
+      Name (MINP, 0xAAAAAAAA)
+      Name (MAXP, 0xAAAAAAAA)
 
       // _PMD method return code - List of power meter devices
       Name (PMD, Package() {
@@ -540,17 +655,18 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
 
       // _PMC method result code
       Name (PMC, Package() {
-        0x00000001,                          // Supported capabilities - Measurement
-        0x00000000,                          // Measurement Unit - mW
-        0x00000001,                          // Measurement Type - Output Power
-        0x000186A0,                          // Measurement Accuracy - 100.000%
-        0x00000032,                          // Measurement Sampling Time - 50ms
-        0x00000032,                          // Minimum Averaging Interval - 50ms
-        0x000003E8,                          // Maximum Averaging Interval - 1s
-        0xFFFFFFFF,                          // Hysteresis Margin - Information is unavailable
-        0x00000000,                          // Hardware Limit Is Configurable - The limit is read-only
-        0x00000000,                          // Minimum Configurable Hardware Limit - Ignored
-        0x00000000,                          // Maximum Configurable Hardware Limit - Ignored
+        BIT (PWR_METER_SUPPORTS_MEASUREMENT) | BIT (PWR_METER_SUPPORTS_HW_LIMITS) |
+        BIT (PWR_METER_SUPPORTS_NOTIFY_HW_LIMITS),
+        PWR_METER_MEASUREMENT_IN_MW,
+        PWR_METER_MEASURE_OP_PWR,
+        PWR_METER_MEASUREMENT_ACCURACY_100,
+        \_SB.PM11.CAI,
+        PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS,
+        PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC,
+        PWR_METER_HYSTERESIS_MARGIN_UNKNOWN,
+        PWR_METER_HW_LIMIT_RW,
+        \_SB.PM11.MINP,
+        \_SB.PM11.MAXP,
         "",                                  // Model Number - NULL
         "",                                  // Serial Number - NULL
         "TH500 Power Socket 1"               // OEM Information - "TH500 Power Socket 1"
@@ -561,14 +677,14 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
       }
 
       Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
-        If (Arg0 == 50) {
-          Store (50, CAI)
-          Return (0)
-        } ElseIf (Arg0 == 1000) {
-          Store (1000, CAI)
-          Return (0)
+        If (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+          Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS, CAI)
+          Return (PWR_METER_SUCCESS)
+        } ElseIf (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+          Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC, CAI)
+          Return (PWR_METER_SUCCESS)
         }
-        Return (1)
+        Return (PWR_METER_OUT_OF_RANGE)
       }
 
       Method (_GAI) {
@@ -581,42 +697,32 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
 
       Method (_PMM) {
         Local0 = 0
-        Local1 = 0
-        Local0 = \_SB.BPM1.TELM(0)
-        If (Local0 == 0) {
-          Return (0xFFFFFFFF)
-        }
-        CreateQWordField (Local0, 0x00, TELB)
-        OperationRegion (TELD, SystemMemory, TELB,  0x180)
-        Field (TELD, AnyAcc, NoLock, Preserve) {
-          Offset (16),
-          MPWR, 32,
-          TPWR, 32,
-          CPWR, 32,
-          SPWR, 32,
-          Offset (288),
-          MAPW, 32,
-          TAPW, 32,
-          CAPW, 32,
-          SAPR, 32,
-          Offset (360),
-          VFG0, 32,
-          VFG1, 32,
-          VFG2, 32
-        }
+        Local0 = \_SB.BPM1.TELM(TH500_TH500_PWR, CAI)
+        Return (Local0)
+      }
 
-        If (CAI == 50) {
-          And (VFG0, MFLG, Local1)
-          If (Local1 > 0) {
-            Return (TPWR)
-          }
-        } Else {
-          And (VFG2, MAFG, Local1)
-          If (Local1 > 0) {
-            Return (TAPW)
-          }
+      Method(_GHL) {
+        Local0 = 0
+        Local1 = TH500_PWR_LIMIT_ID_TH500_INP_EDPC_MW
+        Local0 = \_SB.BPM1.GPRL (Local1)
+        Return (Local0)
+      }
+
+      Method (_SHL, 1, Serialized, 0, IntObj, IntObj) {
+        Local0 = 0
+        Local1 = TH500_PWR_LIMIT_ID_TH500_INP_EDPC_MW
+        If ((Arg0 <= MINP) && (Arg0 >= MAXP)) {
+          Return (PWR_METER_OUT_OF_RANGE)
         }
-        Return (0xFFFFFFFF)
+        Local0 = \_SB.BPM1.SPRL (Local1, Arg0)
+        If (Local0 == 0) {
+          If (Arg0 != HWLT) {
+            Store (Arg0, HWLT)
+            Notify (\_SB.PM11, 0x82)
+          }
+          Notify (\_SB.PM11, 0x83)
+        }
+        Return (Local0)
       }
     }
 
@@ -627,10 +733,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 12)
-      Name (CAI, 50)
-      Name (CNT, 0)
-      Name (MFLG, 64)
-      Name (MAFG, 1024)
+      Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
+      Name (HWLT, 0)
+      Name (MINP, 0x00000000)
+      Name (MAXP, 0x00000000)
 
       // _PMD method return code - List of power meter devices
       Name (PMD, Package() {
@@ -639,17 +745,17 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
 
       // _PMC method result code
       Name (PMC, Package() {
-        0x00000001,                        // Supported capabilities - Measurement
-        0x00000000,                        // Measurement Unit - mW
-        0x00000001,                        // Measurement Type - Output Power
-        0x000186A0,                        // Measurement Accuracy - 100.000%
-        0x00000032,                        // Measurement Sampling Time - 50ms
-        0x00000032,                        // Minimum Averaging Interval - 50ms
-        0x000003E8,                        // Maximum Averaging Interval - 1s
-        0xFFFFFFFF,                        // Hysteresis Margin - Information is unavailable
-        0x00000000,                        // Hardware Limit Is Configurable - The limit is read-only
-        0x00000000,                        // Minimum Configurable Hardware Limit - Ignored
-        0x00000000,                        // Maximum Configurable Hardware Limit - Ignored
+        BIT (PWR_METER_SUPPORTS_MEASUREMENT),
+        PWR_METER_MEASUREMENT_IN_MW,
+        PWR_METER_MEASURE_OP_PWR,
+        PWR_METER_MEASUREMENT_ACCURACY_100,
+        \_SB.PM12.CAI,
+        PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS,
+        PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC,
+        PWR_METER_HYSTERESIS_MARGIN_UNKNOWN,
+        PWR_METER_HW_LIMIT_RW,
+        \_SB.PM12.MINP,
+        \_SB.PM12.MAXP,
         "",                                // Model Number - NULL
         "",                                // Serial Number - NULL
         "CPU Power Socket 1"               // OEM Information - "CPU Power Socket 1"
@@ -660,14 +766,14 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
       }
 
       Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
-        If (Arg0 == 50) {
-          Store (50, CAI)
-          Return (0)
-        } ElseIf (Arg0 == 1000) {
-          Store (1000, CAI)
-          Return (0)
+        If (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+          Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS, CAI)
+          Return (PWR_METER_SUCCESS)
+        } ElseIf (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+          Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC, CAI)
+          Return (PWR_METER_SUCCESS)
         }
-        Return (1)
+        Return (PWR_METER_OUT_OF_RANGE)
       }
 
       Method (_GAI) {
@@ -680,42 +786,17 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
 
       Method (_PMM) {
         Local0 = 0
-        Local1 = 0
-        Local0 = \_SB.BPM1.TELM(0)
-        If (Local0 == 0) {
-          Return (0xFFFFFFFF)
-        }
-        CreateQWordField (Local0, 0x00, TELB)
-        OperationRegion (TELD, SystemMemory, TELB,  0x180)
-        Field (TELD, AnyAcc, NoLock, Preserve) {
-          Offset (16),
-          MPWR, 32,
-          TPWR, 32,
-          CPWR, 32,
-          SPWR, 32,
-          Offset (288),
-          MAPW, 32,
-          TAPW, 32,
-          CAPW, 32,
-          SAPR, 32,
-          Offset (360),
-          VFG0, 32,
-          VFG1, 32,
-          VFG2, 32
-        }
+        Local0 = \_SB.BPM1.TELM(TH500_CPU_PWR, CAI)
+        Return (Local0)
+      }
 
-        If (CAI == 50) {
-          And (VFG0, MFLG, Local1)
-          If (Local1 > 0) {
-            Return (CPWR)
-          }
-        } Else {
-          And (VFG2, MAFG, Local1)
-          If (Local1 > 0) {
-            Return (CAPW)
-          }
-        }
-        Return (0xFFFFFFFF)
+      Method (_GHL) {
+        Return (PWR_METER_ERR_RETURN)
+      }
+
+      Method (_SHL, 1, Serialized, 0, IntObj, IntObj) {
+        Store (Arg0, HWLT)
+        Return (PWR_METER_UNKNOWN_HW_ERR)
       }
     }
 
@@ -726,10 +807,10 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 13)
-      Name (CAI, 50)
-      Name (CNT, 0)
-      Name (MFLG, 128)
-      Name (MAFG, 2048)
+      Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
+      Name (HWLT, 0)
+      Name (MINP, 0x00000000)
+      Name (MAXP, 0x00000000)
 
       // _PMD method return code - List of power meter devices
       Name (PMD, Package() {
@@ -738,17 +819,17 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
 
       // _PMC method result code
       Name (PMC, Package() {
-        0x00000001,                        // Supported capabilities - Measurement
-        0x00000000,                        // Measurement Unit - mW
-        0x00000001,                        // Measurement Type - Output Power
-        0x000186A0,                        // Measurement Accuracy - 100.000%
-        0x00000032,                        // Measurement Sampling Time - 50ms
-        0x00000032,                        // Minimum Averaging Interval - 50ms
-        0x000003E8,                        // Maximum Averaging Interval - 1s
-        0xFFFFFFFF,                        // Hysteresis Margin - Information is unavailable
-        0x00000000,                        // Hardware Limit Is Configurable - The limit is read-only
-        0x00000000,                        // Minimum Configurable Hardware Limit - Ignored
-        0x00000000,                        // Maximum Configurable Hardware Limit - Ignored
+        BIT (PWR_METER_SUPPORTS_MEASUREMENT),
+        PWR_METER_MEASUREMENT_IN_MW,
+        PWR_METER_MEASURE_OP_PWR,
+        PWR_METER_MEASUREMENT_ACCURACY_100,
+        \_SB.PM13.CAI,
+        PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS,
+        PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC,
+        PWR_METER_HYSTERESIS_MARGIN_UNKNOWN,
+        PWR_METER_HW_LIMIT_RW,
+        \_SB.PM13.MINP,
+        \_SB.PM13.MAXP,
         "",                                // Model Number - NULL
         "",                                // Serial Number - NULL
         "SoC Power Socket 1"               // OEM Information - "SoC Power Socket 1"
@@ -759,14 +840,14 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
       }
 
       Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
-        If (Arg0 == 50) {
-          Store (50, CAI)
-          Return (0)
-        } ElseIf (Arg0 == 1000) {
-          Store (1000, CAI)
-          Return (0)
+        If (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+          Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS, CAI)
+          Return (PWR_METER_SUCCESS)
+        } ElseIf (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+          Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC, CAI)
+          Return (PWR_METER_SUCCESS)
         }
-        Return (1)
+        Return (PWR_METER_OUT_OF_RANGE)
       }
 
       Method (_GAI) {
@@ -779,42 +860,17 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
 
       Method (_PMM) {
         Local0 = 0
-        Local1 = 0
-        Local0 = \_SB.BPM1.TELM(0)
-        If (Local0 == 0) {
-          Return (0xFFFFFFFF)
-        }
-        CreateQWordField (Local0, 0x00, TELB)
-        OperationRegion (TELD, SystemMemory, TELB,  0x180)
-        Field (TELD, AnyAcc, NoLock, Preserve) {
-          Offset (16),
-          MPWR, 32,
-          TPWR, 32,
-          CPWR, 32,
-          SPWR, 32,
-          Offset (288),
-          MAPW, 32,
-          TAPW, 32,
-          CAPW, 32,
-          SAPR, 32,
-          Offset (360),
-          VFG0, 32,
-          VFG1, 32,
-          VFG2, 32
-        }
+        Local0 = \_SB.BPM1.TELM(TH500_SOC_PWR, CAI)
+        Return (Local0)
+      }
 
-        If (CAI == 50) {
-          And (VFG0, MFLG, Local1)
-          If (Local1 > 0) {
-            Return (SPWR)
-          }
-        } Else {
-          And (VFG2, MAFG, Local1)
-          If (Local1 > 0) {
-            Return (SAPR)
-          }
-        }
-        Return (0xFFFFFFFF)
+      Method (_GHL) {
+        Return (PWR_METER_ERR_RETURN)
+      }
+
+      Method (_SHL, 1, Serialized, 0, IntObj, IntObj) {
+        Store (Arg0, HWLT)
+        Return (PWR_METER_UNKNOWN_HW_ERR)
       }
     }
   } //Scope(_SB)
