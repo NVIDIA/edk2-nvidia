@@ -226,9 +226,16 @@ UpdateFruDeviceIdList (
       }
 
       mFruRecordInfo[DevIndex]->FruDeviceId = SdrFruRecord->FruDeviceData.Bits.FruDeviceId;
+      // Fru description can be maximum of 16 bytes in length as per IPMI spec.
+      if (SdrFruRecord->StringTypeLength.Bits.Length > MAX_FRU_STR_LENGTH) {
+        DEBUG ((DEBUG_ERROR, "%a: Error, Fru description string size is more than 16 characters \n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "size: %d, fru dev id: %d\n", SdrFruRecord->StringTypeLength.Bits.Length, mFruRecordInfo[DevIndex]->FruDeviceId));
+        // set length to max value - 16 bytes
+        SdrFruRecord->StringTypeLength.Bits.Length = MAX_FRU_STR_LENGTH;
+      }
+
       CopyMem (mFruRecordInfo[DevIndex]->FruDeviceDescription, SdrFruRecord->String, (UINTN)SdrFruRecord->StringTypeLength.Bits.Length);
       mFruRecordInfo[DevIndex]->FruDeviceDescription[SdrFruRecord->StringTypeLength.Bits.Length] = '\0';
-
       DevIndex++;
     }
 

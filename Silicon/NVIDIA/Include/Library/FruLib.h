@@ -2,7 +2,7 @@
 
   FRU Library
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,6 +18,8 @@
 // entries.
 #define MAX_EXTRA_FRU_AREA_ENTRIES  10
 
+#define MAX_FRU_STR_LENGTH  16
+
 /** A structure that defines the FRU Device Info for various planes/boards
  *
  *  The Board specific information for various boards is described by this structure
@@ -25,7 +27,7 @@
 **/
 typedef struct FruDeviceInfo {
   UINT8     FruDeviceId;
-  CHAR8     FruDeviceDescription[16];
+  CHAR8     FruDeviceDescription[MAX_FRU_STR_LENGTH + 1];
   /// The enumeration value of the chassis type, refer SMBIOS Spec, Table 16 - System Enclosure or Chassis Types
   UINT8     ChassisType;
   CHAR8     *ChassisPartNum;
