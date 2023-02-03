@@ -67,11 +67,20 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
         Increment (TWCT)
         Store (One, TRIG)
 
-        While (RWCT == RRCT) {
+        Local0 = 0
+        While ((RWCT == RRCT) && (Local0 < 10)) {
           Sleep (10)
+          Local0++
         }
-        Increment (RRCT)
-        Return (Package() {RERR, RDAT})
+        If (Local0 < 10) {
+          Increment (RRCT)
+          Return (Package() {RERR, RDAT})
+        } Else {
+          // Returning an error code that is ASL compatible
+          // instead of a BPMP Timeout error code
+          RERR = 1
+          Return (Package() {RERR, RDAT})
+        }
       }
 
       Method (TEMP, 1, Serialized, 0, IntObj, IntObj) {
