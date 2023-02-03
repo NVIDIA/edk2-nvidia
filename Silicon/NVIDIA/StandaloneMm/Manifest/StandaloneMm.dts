@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -29,6 +29,8 @@
 	boot-order = <0>;
 	messaging-method = <3>; /* Direct messaging with managed exit */
 	run-time-model = <0>; /* Run to completion */
+	ns-interrupts-action = <0>; /* Non-secure interrupt is queued */
+	other-s-interrupts-action = <0>; /* Other-Secure interrupt is queued */
 
 	/* Boot protocol */
 	gp-register-num = <0x0>;
