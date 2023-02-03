@@ -1,7 +1,7 @@
 /** @file
   Tegra Device Tree Overlay Library
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -147,8 +147,7 @@ MatchId (
   BOARD_ID_MATCH_TYPE  MatchType = BOARD_ID_MATCH_EXACT;
   INTN                 FabId, BoardFabId, i;
   INTN                 BoardIdLen;
-  CONST CHAR8          *BoardId        = NULL;
-  CONST CHAR8          *NvidiaIdPrefix = "699";
+  CONST CHAR8          *BoardId = NULL;
 
   BOOLEAN  Matched = FALSE;
 
@@ -209,7 +208,7 @@ match_type_done:
   }
 
   for (i = 0; i < BoardInfo->IdCount; i++) {
-    BoardId    = (CHAR8 *)(&BoardInfo->ProductIds[i].Id);
+    BoardId    = TegraBoardIdFromPartNumber (&BoardInfo->ProductIds[i]);
     BoardIdLen = strlen (BoardId);
     BoardFabId = GetFabId (BoardId);
     DEBUG ((
@@ -217,21 +216,13 @@ match_type_done:
       "%a: check if overlay node id %a match with %a\n",
       __FUNCTION__,
       Id,
-      BoardInfo->ProductIds[i]
+      BoardId
       ));
 
     switch (MatchType) {
       case BOARD_ID_MATCH_EXACT:
-        // Check if it is a Nvidia board.
-        if (!CompareMem (&BoardInfo->ProductIds[i], NvidiaIdPrefix, 3)) {
-          if (!CompareMem (IdStr, BoardId, IdLen)) {
-            Matched = TRUE;
-          }
-        } else if (IdLen < PRODUCT_ID_LEN) {
-          // Non-nvidia sensor board ids starts from byte 21 instead of 20.
-          if (!CompareMem (IdStr, ((void *)&BoardInfo->ProductIds[i])+1, IdLen)) {
-            Matched = TRUE;
-          }
+        if (!CompareMem (IdStr, BoardId, IdLen)) {
+          Matched = TRUE;
         }
 
         break;

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -61,11 +61,9 @@ typedef struct {
   UINTN              FuseBaseAddr;
   TEGRA_FUSE_INFO    *FuseList;
   UINTN              FuseCount;
-  CHAR8              CvmBoardId[BOARD_ID_LEN + 1];
-  CHAR8              CvbBoardId[BOARD_ID_LEN + 1];
-  CHAR8              CvmProductId[PRODUCT_ID_LEN + 1];
-  CHAR8              CvbProductId[PRODUCT_ID_LEN + 1];
-  CHAR8              SerialNumber[SERIAL_NUM_LEN];
+  CHAR8              CvmProductId[TEGRA_PRODUCT_ID_LEN + 1];
+  CHAR8              CvbProductId[TEGRA_PRODUCT_ID_LEN + 1];
+  CHAR8              SerialNumber[TEGRA_SERIAL_NUM_LEN];
 } TEGRA_BOARD_INFO;
 
 #pragma pack(1)

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -13,11 +13,11 @@
 #include <Library/PlatformResourceLib.h>
 
 typedef struct {
-  UINTN                       FuseBaseAddr;
-  TEGRA_FUSE_INFO             *FuseList;
-  UINTN                       FuseCount;
-  TEGRA_EEPROM_PART_NUMBER    *ProductIds;
-  UINTN                       IdCount;
+  UINTN                 FuseBaseAddr;
+  TEGRA_FUSE_INFO       *FuseList;
+  UINTN                 FuseCount;
+  EEPROM_PART_NUMBER    *ProductIds;
+  UINTN                 IdCount;
 } OVERLAY_BOARD_INFO;
 
 EFI_STATUS

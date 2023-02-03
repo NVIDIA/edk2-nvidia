@@ -1,7 +1,7 @@
 /** @file
   Tegra Device Tree Overlay Library
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -67,7 +67,7 @@ ReadBoardInfo (
   }
 
   BoardInfo->IdCount    = ProtocolCount;
-  BoardInfo->ProductIds = (TEGRA_EEPROM_PART_NUMBER *)AllocateZeroPool (BoardInfo->IdCount * sizeof (TEGRA_EEPROM_PART_NUMBER));
+  BoardInfo->ProductIds = (EEPROM_PART_NUMBER *)AllocateZeroPool (BoardInfo->IdCount * sizeof (EEPROM_PART_NUMBER));
 
   for (i = 0; i < ProtocolCount; i++) {
     Status = gBS->HandleProtocol (
@@ -80,7 +80,7 @@ ReadBoardInfo (
       return EFI_NOT_FOUND;
     }
 
-    CopyMem ((VOID *)(&BoardInfo->ProductIds[i]), (VOID *)&Eeprom->ProductId, PRODUCT_ID_LEN);
+    CopyMem ((VOID *)(&BoardInfo->ProductIds[i]), (VOID *)&Eeprom->ProductId, TEGRA_PRODUCT_ID_LEN);
   }
 
   if (BoardInfo->IdCount == 0) {
