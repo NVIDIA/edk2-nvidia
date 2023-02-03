@@ -35,7 +35,7 @@ SeRngLibConstructor (
   Status = gBS->LocateProtocol (&gNVIDIASeRngProtocolGuid, NULL, (VOID **)&mRngProtocol);
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to locate RNG protocol (%r)\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate RNG protocol (%r)\r\n", __FUNCTION__, Status));
   }
 
   return Status;

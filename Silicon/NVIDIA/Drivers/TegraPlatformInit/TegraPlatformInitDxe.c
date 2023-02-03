@@ -189,7 +189,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       CpuToCpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToCpuDistance, CpuToCpuDistance);
-      DEBUG ((EFI_D_INFO, "Cpu To Cpu Distance = 0x%X\n", PcdGet32 (PcdCpuToCpuDistance)));
+      DEBUG ((DEBUG_INFO, "Cpu To Cpu Distance = 0x%X\n", PcdGet32 (PcdCpuToCpuDistance)));
     } else {
       DEBUG ((DEBUG_ERROR, "Cpu To Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToCpuDistance)));
     }
@@ -198,7 +198,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       GpuToGpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToGpuDistance, GpuToGpuDistance);
-      DEBUG ((EFI_D_INFO, "Gpu To Gpu Distance = 0x%X\n", PcdGet32 (PcdGpuToGpuDistance)));
+      DEBUG ((DEBUG_INFO, "Gpu To Gpu Distance = 0x%X\n", PcdGet32 (PcdGpuToGpuDistance)));
     } else {
       DEBUG ((DEBUG_ERROR, "Gpu To Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToGpuDistance)));
     }
@@ -207,7 +207,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       CpuToOtherGpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToOtherGpuDistance, CpuToOtherGpuDistance);
-      DEBUG ((EFI_D_INFO, "Cpu To Other Gpu Distance = 0x%X\n", PcdGet32 (PcdCpuToOtherGpuDistance)));
+      DEBUG ((DEBUG_INFO, "Cpu To Other Gpu Distance = 0x%X\n", PcdGet32 (PcdCpuToOtherGpuDistance)));
     } else {
       DEBUG ((DEBUG_ERROR, "Cpu To Other Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToOtherGpuDistance)));
     }
@@ -216,7 +216,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       CpuToOwnGpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToOwnGpuDistance, CpuToOwnGpuDistance);
-      DEBUG ((EFI_D_INFO, "Cpu To Own Gpu Distance = 0x%X\n", PcdGet32 (PcdCpuToOwnGpuDistance)));
+      DEBUG ((DEBUG_INFO, "Cpu To Own Gpu Distance = 0x%X\n", PcdGet32 (PcdCpuToOwnGpuDistance)));
     } else {
       DEBUG ((DEBUG_ERROR, "Cpu To Own Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToOwnGpuDistance)));
     }
@@ -225,7 +225,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       GpuToOtherCpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToOtherCpuDistance, GpuToOtherCpuDistance);
-      DEBUG ((EFI_D_INFO, "Gpu To Other Cpu Distance = 0x%X\n", PcdGet32 (PcdGpuToOtherCpuDistance)));
+      DEBUG ((DEBUG_INFO, "Gpu To Other Cpu Distance = 0x%X\n", PcdGet32 (PcdGpuToOtherCpuDistance)));
     } else {
       DEBUG ((DEBUG_ERROR, "Gpu To Other Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToOtherCpuDistance)));
     }
@@ -234,7 +234,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       GpuToOwnCpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToOwnCpuDistance, GpuToOwnCpuDistance);
-      DEBUG ((EFI_D_INFO, "Gpu To Own Cpu Distance = 0x%X\n", PcdGet32 (PcdGpuToOwnCpuDistance)));
+      DEBUG ((DEBUG_INFO, "Gpu To Own Cpu Distance = 0x%X\n", PcdGet32 (PcdGpuToOwnCpuDistance)));
     } else {
       DEBUG ((DEBUG_ERROR, "Gpu To Own Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToOwnCpuDistance)));
     }
@@ -270,7 +270,7 @@ SetGicInfoPcdsFromDtb (
   }
 
   if (!GetGicInfo (GicInfo)) {
-    Status = EFI_D_ERROR;
+    Status = DEBUG_ERROR;
     goto Exit;
   }
 
@@ -323,7 +323,7 @@ SetGicInfoPcdsFromDtb (
     PcdSet64S (PcdGicInterruptInterfaceBase, RegisterData[1].BaseAddress);
 
     DEBUG ((
-      EFI_D_INFO,
+      DEBUG_INFO,
       "Found GIC distributor and Interrupt Interface Base@ 0x%Lx (0x%Lx)\n",
       PcdGet64 (PcdGicDistributorBase),
       PcdGet64 (PcdGicInterruptInterfaceBase)
@@ -339,7 +339,7 @@ SetGicInfoPcdsFromDtb (
     // RegisterData[3] has GicV Base and Size
 
     DEBUG ((
-      EFI_D_INFO,
+      DEBUG_INFO,
       "Found GIC distributor and (re)distributor Base @ 0x%Lx (0x%Lx)\n",
       PcdGet64 (PcdGicDistributorBase),
       PcdGet64 (PcdGicRedistributorsBase)
@@ -468,7 +468,7 @@ TegraPlatformInitialize (
 
   Status = FloorSweepDtb (DtbBase);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "DTB floorsweeping failed.\n"));
+    DEBUG ((DEBUG_ERROR, "DTB floorsweeping failed.\n"));
     return Status;
   }
 

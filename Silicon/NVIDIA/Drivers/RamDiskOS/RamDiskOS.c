@@ -52,7 +52,7 @@ RamDiskOSEntryPoint (
 
   Status = gBS->LocateProtocol (&gEfiRamDiskProtocolGuid, NULL, (VOID **)&RamDisk);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Couldn't find the RAM Disk protocol - %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Couldn't find the RAM Disk protocol - %r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -65,7 +65,7 @@ RamDiskOSEntryPoint (
                           &DevicePath
                           );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to register RAM Disk - %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to register RAM Disk - %r\n", __FUNCTION__, Status));
   }
 
   return Status;

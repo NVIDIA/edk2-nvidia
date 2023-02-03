@@ -70,7 +70,7 @@ QspiFlushFifo (
           if (Timeout == TIMEOUT) {
             Timeout = 0;
             if (TimeOutMessage == FALSE) {
-              DEBUG ((EFI_D_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
+              DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
               TimeOutMessage = TRUE;
             }
           }
@@ -105,7 +105,7 @@ QspiFlushFifo (
           if (Timeout == TIMEOUT) {
             Timeout = 0;
             if (TimeOutMessage == FALSE) {
-              DEBUG ((EFI_D_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
+              DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
               TimeOutMessage = TRUE;
             }
           }
@@ -150,7 +150,7 @@ QspiConfigureCS (
       );
   }
 
-  DEBUG ((EFI_D_INFO, "QSPI CS Configured.\n"));
+  DEBUG ((DEBUG_INFO, "QSPI CS Configured.\n"));
 }
 
 /**
@@ -214,7 +214,7 @@ QspiWaitTransactionStatusReady (
       if (Timeout == TIMEOUT) {
         Timeout = 0;
         if (TimeOutMessage == FALSE) {
-          DEBUG ((EFI_D_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
+          DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
           TimeOutMessage = TRUE;
         }
       }
@@ -368,7 +368,7 @@ QspiPerformReceive (
                                            QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT
                                            ))
     {
-      DEBUG ((EFI_D_ERROR, "%a QSPI Rx FIFO Empty.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a QSPI Rx FIFO Empty.\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
@@ -401,7 +401,7 @@ QspiPerformReceive (
     QSPI_COMMAND_0_PIO_DIS
     );
 
-  DEBUG ((EFI_D_INFO, "QSPI Data Received.\n"));
+  DEBUG ((DEBUG_INFO, "QSPI Data Received.\n"));
 
   return EFI_SUCCESS;
 }
@@ -458,7 +458,7 @@ QspiPerformTransmit (
                                           QSPI_FIFO_STATUS_0_TX_FIFO_FULL_BIT
                                           ))
     {
-      DEBUG ((EFI_D_ERROR, "%a QSPI Tx FIFO Full.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a QSPI Tx FIFO Full.\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
@@ -504,7 +504,7 @@ QspiPerformTransmit (
     QSPI_COMMAND_0_PIO_DIS
     );
 
-  DEBUG ((EFI_D_INFO, "QSPI Data Transmitted.\n"));
+  DEBUG ((DEBUG_INFO, "QSPI Data Transmitted.\n"));
 
   return EFI_SUCCESS;
 }
@@ -589,7 +589,7 @@ QspiInitialize (
     return Status;
   }
 
-  DEBUG ((EFI_D_INFO, "QSPI Initialized.\n"));
+  DEBUG ((DEBUG_INFO, "QSPI Initialized.\n"));
 
   return EFI_SUCCESS;
 }
@@ -642,7 +642,7 @@ QspiPerformTransaction (
   QspiConfigureCS (QspiBaseAddress, TRUE);
   // If transmission buffer address valid, start transmission
   if (Packet->TxBuf != NULL) {
-    DEBUG ((EFI_D_INFO, "QSPI Tx Args: 0x%x %d.\n", Packet->TxBuf, Packet->TxLen));
+    DEBUG ((DEBUG_INFO, "QSPI Tx Args: 0x%x %d.\n", Packet->TxBuf, Packet->TxLen));
     Buffer = Packet->TxBuf;
     Count  = Packet->TxLen;
     // Based on transmission buffer length, calculate packet width and packets in current transaction.
@@ -650,7 +650,7 @@ QspiPerformTransaction (
     while (Count > 0) {
       TransactionWidth = (Count % sizeof (UINT32)) ? sizeof (UINT8) : sizeof (UINT32);
       TransactionCount = MIN (MAX_FIFO_PACKETS, (Count / TransactionWidth));
-      DEBUG ((EFI_D_INFO, "QSPI Tx Transaction: Count: %d Width: %d.\n", TransactionCount, TransactionWidth));
+      DEBUG ((DEBUG_INFO, "QSPI Tx Transaction: Count: %d Width: %d.\n", TransactionCount, TransactionWidth));
       Status = QspiPerformTransmit (QspiBaseAddress, Buffer, TransactionCount, TransactionWidth);
       if (EFI_ERROR (Status)) {
         return Status;
@@ -663,7 +663,7 @@ QspiPerformTransaction (
 
   // If reception buffer address valid, start reception
   if (Packet->RxBuf != NULL) {
-    DEBUG ((EFI_D_INFO, "QSPI Rx Args: 0x%x %d.\n", Packet->RxBuf, Packet->RxLen));
+    DEBUG ((DEBUG_INFO, "QSPI Rx Args: 0x%x %d.\n", Packet->RxBuf, Packet->RxLen));
     Buffer = Packet->RxBuf;
     Count  = Packet->RxLen;
     // Based on reception buffer length, calculate packet width and packets in current transaction.
@@ -671,7 +671,7 @@ QspiPerformTransaction (
     while (Count > 0) {
       TransactionWidth = (Count % sizeof (UINT32)) ? sizeof (UINT8) : sizeof (UINT32);
       TransactionCount = MIN (MAX_FIFO_PACKETS, (Count / TransactionWidth));
-      DEBUG ((EFI_D_INFO, "QSPI Rx Transaction: Count: %d Width: %d.\n", TransactionCount, TransactionWidth));
+      DEBUG ((DEBUG_INFO, "QSPI Rx Transaction: Count: %d Width: %d.\n", TransactionCount, TransactionWidth));
       Status = QspiPerformReceive (QspiBaseAddress, Buffer, TransactionCount, TransactionWidth);
       if (EFI_ERROR (Status)) {
         return Status;

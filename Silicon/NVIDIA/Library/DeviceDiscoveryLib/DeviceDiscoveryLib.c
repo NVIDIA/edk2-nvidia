@@ -64,7 +64,7 @@ AddMemoryRegion (
 
     Status = gDS->GetMemorySpaceDescriptor (ScanLocation, &MemorySpace);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to GetMemorySpaceDescriptor (0x%llx): %r.\r\n", __FUNCTION__, ScanLocation, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to GetMemorySpaceDescriptor (0x%llx): %r.\r\n", __FUNCTION__, ScanLocation, Status));
       return Status;
     }
 
@@ -77,7 +77,7 @@ AddMemoryRegion (
                       EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to AddMemorySpace: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to AddMemorySpace: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
         return Status;
       }
 
@@ -87,7 +87,7 @@ AddMemoryRegion (
                       EFI_MEMORY_UC
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to SetMemorySpaceAttributes: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to SetMemorySpaceAttributes: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
         return Status;
       }
     }
@@ -153,7 +153,7 @@ GetResources (
       (SizeCells > 2) ||
       (SizeCells == 0))
   {
-    DEBUG ((EFI_D_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
+    DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
     return EFI_UNSUPPORTED;
   }
 
@@ -187,7 +187,7 @@ GetResources (
 
     AllocResources = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)AllocateZeroPool (AllocationSize);
     if (NULL == AllocResources) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate ACPI resources.\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate ACPI resources.\r\n", __FUNCTION__));
       return EFI_OUT_OF_RESOURCES;
     }
   } else {
@@ -228,7 +228,7 @@ GetResources (
     Status = AddMemoryRegion (AddressBase, RegionSize);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed to add region 0x%016lx, 0x%016lx: %r.\r\n",
         __FUNCTION__,
         AddressBase,
@@ -252,7 +252,7 @@ GetResources (
 
     if (SharedMemOffset <= 0) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Unable to locate shared memory handle %u\r\n",
         __FUNCTION__,
         Handle
@@ -265,7 +265,7 @@ GetResources (
     ParentOffset = fdt_parent_offset (DeviceTreeBase, SharedMemOffset);
     if (ParentOffset < 0) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Unable to locate shared memory handle's parent %u\r\n",
         __FUNCTION__,
         Handle
@@ -283,7 +283,7 @@ GetResources (
         (SizeCells > 2) ||
         (SizeCells == 0))
     {
-      DEBUG ((EFI_D_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
+      DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
       return EFI_UNSUPPORTED;
     }
 
@@ -295,7 +295,7 @@ GetResources (
                     );
     if ((RegProperty == NULL) || (PropertySize == 0)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Invalid reg entry %p, %u, for handle %u\r\n",
         __FUNCTION__,
         RegProperty,
@@ -306,7 +306,7 @@ GetResources (
       EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
       ASSERT ((PropertySize % EntrySize) == 0);
       if (PropertySize != EntrySize) {
-        DEBUG ((EFI_D_ERROR, "%a: Ignoring secondary parent regions\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Ignoring secondary parent regions\r\n", __FUNCTION__));
       }
 
       CopyMem ((VOID *)&ParentAddressBase, RegProperty, AddressCells * sizeof (UINT32));
@@ -325,7 +325,7 @@ GetResources (
         (SizeCells > 2) ||
         (SizeCells == 0))
     {
-      DEBUG ((EFI_D_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
+      DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
       return EFI_UNSUPPORTED;
     }
 
@@ -337,7 +337,7 @@ GetResources (
                     );
     if ((RegProperty == NULL) || (PropertySize == 0)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Invalid reg entry %p, %u, for handle %u\r\n",
         __FUNCTION__,
         RegProperty,
@@ -352,7 +352,7 @@ GetResources (
     EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
     ASSERT ((PropertySize % EntrySize) == 0);
     if (PropertySize != EntrySize) {
-      DEBUG ((EFI_D_ERROR, "%a: Ignoring secondary smem regions\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Ignoring secondary smem regions\r\n", __FUNCTION__));
     }
 
     CopyMem ((VOID *)&AddressBase, RegProperty, AddressCells * sizeof (UINT32));
@@ -385,7 +385,7 @@ GetResources (
     Status = AddMemoryRegion (AddressBase, RegionSize);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed to add region 0x%016lx, 0x%016lx: %r.\r\n",
         __FUNCTION__,
         AddressBase,
@@ -759,7 +759,7 @@ GetResetNodeProtocol (
     NumberOfResets = 0;
   } else {
     if ((ResetsLength % (sizeof (UINT32) * 2)) != 0) {
-      DEBUG ((EFI_D_ERROR, "%a, Resets length unexpected %d\r\n", __FUNCTION__, ResetsLength));
+      DEBUG ((DEBUG_ERROR, "%a, Resets length unexpected %d\r\n", __FUNCTION__, ResetsLength));
       return;
     }
 
@@ -768,7 +768,7 @@ GetResetNodeProtocol (
 
   ResetNode = (NVIDIA_RESET_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_RESET_NODE_PROTOCOL) + (NumberOfResets * sizeof (NVIDIA_RESET_NODE_ENTRY)));
   if (NULL == ResetNode) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to allocate reset node\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to allocate reset node\r\n", __FUNCTION__));
     return;
   }
 
@@ -957,7 +957,7 @@ GetClockNodeProtocol (
     NumberOfClocks = 0;
   } else {
     if ((ClocksLength % (sizeof (UINT32) * 2)) != 0) {
-      DEBUG ((EFI_D_ERROR, "%a, Clock length unexpected %d\r\n", __FUNCTION__, ClocksLength));
+      DEBUG ((DEBUG_ERROR, "%a, Clock length unexpected %d\r\n", __FUNCTION__, ClocksLength));
       return;
     }
 
@@ -966,7 +966,7 @@ GetClockNodeProtocol (
 
   ClockNode = (NVIDIA_CLOCK_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_CLOCK_NODE_PROTOCOL) + (NumberOfClocks * sizeof (NVIDIA_CLOCK_NODE_ENTRY)));
   if (NULL == ClockNode) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to allocate clock node\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to allocate clock node\r\n", __FUNCTION__));
     return;
   }
 
@@ -1195,7 +1195,7 @@ GetPowerGateNodeProtocol (
   }
 
   if ((PgLength % (sizeof (UINT32) * 2)) != 0) {
-    DEBUG ((EFI_D_ERROR, "%a, Power Gate length unexpected %d\r\n", __FUNCTION__, PgLength));
+    DEBUG ((DEBUG_ERROR, "%a, Power Gate length unexpected %d\r\n", __FUNCTION__, PgLength));
     return;
   }
 
@@ -1203,7 +1203,7 @@ GetPowerGateNodeProtocol (
 
   PgNode = (NVIDIA_POWER_GATE_NODE_PROTOCOL *)AllocatePool (sizeof (NVIDIA_POWER_GATE_NODE_PROTOCOL) + (NumberOfPgs * sizeof (UINT32)));
   if (NULL == PgNode) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to allocate power gate node\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to allocate power gate node\r\n", __FUNCTION__));
     return;
   }
 
@@ -1269,7 +1269,7 @@ ProcessDeviceTreeNodeWithHandle (
 
   Status = GetResources (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, &Device->Resources);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get node resources: %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get node resources: %r.\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -1297,7 +1297,7 @@ ProcessDeviceTreeNodeWithHandle (
     if ((Device->Resources->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
         (Device->Resources->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM))
     {
-      DEBUG ((EFI_D_ERROR, "%a: Invalid node resources.\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Invalid node resources.\r\n", __FUNCTION__));
       goto ErrorExit;
     } else {
       DevicePath->MemMap.MemMap.Header.Type     = HARDWARE_DEVICE_PATH;
@@ -1317,7 +1317,7 @@ ProcessDeviceTreeNodeWithHandle (
 
   NodeProtocolCopy = AllocateCopyPool (sizeof (NodeProtocol), (VOID *)&NodeProtocol);
   if (NULL == NodeProtocolCopy) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate node protocol.\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate node protocol.\r\n", __FUNCTION__));
     goto ErrorExit;
   }
 
@@ -1336,7 +1336,7 @@ ProcessDeviceTreeNodeWithHandle (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get install protocols: %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get install protocols: %r.\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -1352,7 +1352,7 @@ ProcessDeviceTreeNodeWithHandle (
                     NULL
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to get install optional protocols: %r.\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get install optional protocols: %r.\r\n", __FUNCTION__, Status));
       UINTN  ProtocolUninstallIndex = 0;
       for (ProtocolUninstallIndex = 0; ProtocolUninstallIndex < ProtocolIndex; ProtocolUninstallIndex++) {
         gBS->UninstallMultipleProtocolInterfaces (

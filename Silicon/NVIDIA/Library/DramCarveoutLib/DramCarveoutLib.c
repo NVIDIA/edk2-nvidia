@@ -169,7 +169,7 @@ InstallDramWithCarveouts (
     );
   for (DramIndex = 0; DramIndex < DramRegionsCount; DramIndex++) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "InstallDramWithCarveouts() Dram Region: Base: 0x%016lx, Size: 0x%016lx\n",
       DramRegions[DramIndex].MemoryBaseAddress,
       DramRegions[DramIndex].MemoryLength
@@ -186,7 +186,7 @@ InstallDramWithCarveouts (
     );
   for (CarveoutIndex = 0; CarveoutIndex < CarveoutRegionsCount; CarveoutIndex++) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "InstallDramWithCarveouts() Carveout Region: Base: 0x%016lx, Size: 0x%016lx\n",
       CarveoutRegions[CarveoutIndex].MemoryBaseAddress,
       CarveoutRegions[CarveoutIndex].MemoryLength

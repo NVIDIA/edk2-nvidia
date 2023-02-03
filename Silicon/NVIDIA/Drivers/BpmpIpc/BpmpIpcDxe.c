@@ -179,7 +179,7 @@ BpmpIpcInitialize (
                     NULL
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
     }
 
     return Status;
@@ -204,7 +204,7 @@ BpmpIpcInitialize (
     DeviceHandle = NULL;
     Device       = (NON_DISCOVERABLE_DEVICE *)AllocatePool (sizeof (NON_DISCOVERABLE_DEVICE));
     if (NULL == Device) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 

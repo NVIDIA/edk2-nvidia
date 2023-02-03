@@ -58,14 +58,14 @@ PciHostBridgeGetRootBridges (
                   &Handles
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to locate host bridge protocols, %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate host bridge protocols, %r.\r\n", __FUNCTION__, Status));
     goto Done;
   }
 
   RootBridges = (PCI_ROOT_BRIDGE *)AllocatePool (sizeof (PCI_ROOT_BRIDGE) * NumberOfHandles);
   if (RootBridges == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate root bridge array.\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate root bridge array.\r\n", __FUNCTION__));
     goto Done;
   }
 
@@ -78,7 +78,7 @@ PciHostBridgeGetRootBridges (
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed to get protocol for handle %p, %r.\r\n",
         __FUNCTION__,
         Handles[CurrentHandle],

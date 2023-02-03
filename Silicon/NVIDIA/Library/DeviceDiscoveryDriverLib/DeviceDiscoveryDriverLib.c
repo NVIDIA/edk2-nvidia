@@ -71,14 +71,14 @@ DeviceDiscoveryOnExitBootServices (
   if (gDeviceDiscoverDriverConfig.AutoDeassertPg) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no Pg node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no Pg node protocol\r\n", __FUNCTION__));
       return;
     }
 
     for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
       Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, failed to assert Pg %x: %r\r\n", __FUNCTION__, PgProtocol->PowerGateId[Index], Status));
+        DEBUG ((DEBUG_ERROR, "%a, failed to assert Pg %x: %r\r\n", __FUNCTION__, PgProtocol->PowerGateId[Index], Status));
         return;
       }
     }
@@ -87,13 +87,13 @@ DeviceDiscoveryOnExitBootServices (
   if (gDeviceDiscoverDriverConfig.AutoEnableClocks) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAClockNodeProtocolGuid, (VOID **)&ClockProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no clock node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no clock node protocol\r\n", __FUNCTION__));
       return;
     }
 
     Status = ClockProtocol->DisableAll (ClockProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to disable clocks %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to disable clocks %r\r\n", __FUNCTION__, Status));
       return;
     }
   }
@@ -101,25 +101,25 @@ DeviceDiscoveryOnExitBootServices (
   if (gDeviceDiscoverDriverConfig.AutoResetModule) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
       return;
     }
 
     Status = ResetProtocol->ModuleResetAll (ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to reset module%r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to reset module%r\r\n", __FUNCTION__, Status));
       return;
     }
   } else if (gDeviceDiscoverDriverConfig.AutoDeassertReset) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
       return;
     }
 
     Status = ResetProtocol->AssertAll (ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to assert resets %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to assert resets %r\r\n", __FUNCTION__, Status));
       return;
     }
   }
@@ -249,7 +249,7 @@ DeviceDiscoveryBindingStart (
                   EFI_OPEN_PROTOCOL_BY_DRIVER
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, no NonDiscoverableProtocol\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a, no NonDiscoverableProtocol\r\n", __FUNCTION__));
     return Status;
   }
 
@@ -269,21 +269,21 @@ DeviceDiscoveryBindingStart (
   }
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, no guid mapping\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a, no guid mapping\r\n", __FUNCTION__));
     goto ErrorExit;
   }
 
   if (gDeviceDiscoverDriverConfig.AutoDeassertPg) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no Pg node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no Pg node protocol\r\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
       Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, failed to deassert Pg %x: %r\r\n", __FUNCTION__, PgProtocol->PowerGateId[Index], Status));
+        DEBUG ((DEBUG_ERROR, "%a, failed to deassert Pg %x: %r\r\n", __FUNCTION__, PgProtocol->PowerGateId[Index], Status));
         goto ErrorExit;
       }
     }
@@ -292,13 +292,13 @@ DeviceDiscoveryBindingStart (
   if (gDeviceDiscoverDriverConfig.AutoEnableClocks) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAClockNodeProtocolGuid, (VOID **)&ClockProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no clock node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no clock node protocol\r\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     Status = ClockProtocol->EnableAll (ClockProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to enable clocks %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to enable clocks %r\r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
   }
@@ -306,25 +306,25 @@ DeviceDiscoveryBindingStart (
   if (gDeviceDiscoverDriverConfig.AutoResetModule) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     Status = ResetProtocol->ModuleResetAll (ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to reset module%r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to reset module%r\r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
   } else if (gDeviceDiscoverDriverConfig.AutoDeassertReset) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     Status = ResetProtocol->DeassertAll (ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to deassert resets %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to deassert resets %r\r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
   }
@@ -335,7 +335,7 @@ DeviceDiscoveryBindingStart (
                   (VOID **)&DeviceDiscoveryContext
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to allocate context\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, driver returned %r to allocate context\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -355,7 +355,7 @@ DeviceDiscoveryBindingStart (
                     &DeviceDiscoveryContext->OnExitBootServicesEvent
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, driver returned %r to create event callback\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, driver returned %r to create event callback\r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
   }
@@ -367,7 +367,7 @@ DeviceDiscoveryBindingStart (
              Node
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to start notification\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, driver returned %r to start notification\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -378,7 +378,7 @@ DeviceDiscoveryBindingStart (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to install device discovery context guid\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, driver returned %r to install device discovery context guid\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -528,7 +528,7 @@ DeviceDiscoveryBindingStop (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to uninstall device discovery context guid\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, driver returned %r to uninstall device discovery context guid\r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -707,7 +707,7 @@ EnumerateDevices (
     DeviceHandle = NULL;
     Device       = (NON_DISCOVERABLE_DEVICE *)AllocatePool (sizeof (NON_DISCOVERABLE_DEVICE));
     if (Device == NULL) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
@@ -789,7 +789,7 @@ DeviceDiscoveryDriverInitialize (
                );
 
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to install driver binding protocol: %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install driver binding protocol: %r\r\n", __FUNCTION__, Status));
       return Status;
     }
   }

@@ -431,7 +431,7 @@ FvbWrite (
                                         );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
     ASSERT (FALSE);
     if (Private->PartitionData != NULL) {
       Private->NorFlashProtocol->Read (
@@ -583,7 +583,7 @@ FvbEraseBlocks (
                                           NumOfLba
                                           );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
       ASSERT (FALSE);
       if (Private->PartitionData != NULL) {
         Private->NorFlashProtocol->Read (
@@ -837,20 +837,20 @@ ValidateFvHeader (
       (FwVolHeader->Signature != EFI_FVH_SIGNATURE) ||
       (FwVolHeader->FvLength  > PartitionSize))
   {
-    DEBUG ((EFI_D_INFO, "%a: No Firmware Volume header present\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: No Firmware Volume header present\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   // Check the Firmware Volume Guid
   if ( CompareGuid (&FwVolHeader->FileSystemGuid, &gEfiSystemNvDataFvGuid) == FALSE ) {
-    DEBUG ((EFI_D_INFO, "%a: Firmware Volume Guid non-compatible\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: Firmware Volume Guid non-compatible\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   // Verify the header checksum
   Checksum = CalculateSum16 ((UINT16 *)FwVolHeader, FwVolHeader->HeaderLength);
   if (Checksum != 0) {
-    DEBUG ((EFI_D_INFO, "%a: FV checksum is invalid (Checksum:0x%X)\n", __FUNCTION__, Checksum));
+    DEBUG ((DEBUG_INFO, "%a: FV checksum is invalid (Checksum:0x%X)\n", __FUNCTION__, Checksum));
     return EFI_NOT_FOUND;
   }
 
@@ -861,14 +861,14 @@ ValidateFvHeader (
     if (!CompareGuid (&VariableStoreHeader->Signature, &gEfiVariableGuid) &&
         !CompareGuid (&VariableStoreHeader->Signature, &gEfiAuthenticatedVariableGuid))
     {
-      DEBUG ((EFI_D_INFO, "%a: Variable Store Guid non-compatible\n", __FUNCTION__));
+      DEBUG ((DEBUG_INFO, "%a: Variable Store Guid non-compatible\n", __FUNCTION__));
       return EFI_NOT_FOUND;
     }
 
     VariableStoreLength = FwVolHeader->FvLength - FwVolHeader->HeaderLength;
 
     if (VariableStoreHeader->Size != VariableStoreLength) {
-      DEBUG ((EFI_D_INFO, "%a: Variable Store Length does not match\n", __FUNCTION__));
+      DEBUG ((DEBUG_INFO, "%a: Variable Store Length does not match\n", __FUNCTION__));
       return EFI_NOT_FOUND;
     }
   }

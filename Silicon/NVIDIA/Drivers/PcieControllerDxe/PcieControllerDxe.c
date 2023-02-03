@@ -327,7 +327,7 @@ ConfigureSidebandSignals (
                   );
   if (EFI_ERROR (Status) || (mPmux == NULL)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: Couldn't get gNVIDIAPinMuxProtocolGuid Handle: %r\n",
       __FUNCTION__,
       Status
@@ -686,7 +686,7 @@ PrepareHost (
       val |= (0xF << PORT_LINK_CAP_SHIFT);
       break;
     default:
-      DEBUG ((EFI_D_ERROR, "Invalid num-lanes %u, Setting default to '1'\r\n", Private->NumLanes));
+      DEBUG ((DEBUG_ERROR, "Invalid num-lanes %u, Setting default to '1'\r\n", Private->NumLanes));
       val |= (0x1 << PORT_LINK_CAP_SHIFT);
   }
 
@@ -750,19 +750,19 @@ PrepareHost (
   /* Disable write permission to DBI_RO_WR_EN protected registers */
   MmioAnd32 (Private->DbiBase + PCIE_MISC_CONTROL_1_OFF, ~PCIE_DBI_RO_WR_EN);
 
-  DEBUG ((EFI_D_INFO, "Programming CORE registers is done\r\n"));
+  DEBUG ((DEBUG_INFO, "Programming CORE registers is done\r\n"));
 
   Count = sizeof (CoreClockNames)/sizeof (CoreClockNames[0]);
   for (Index = 0; Index < Count; Index++) {
     Status = DeviceDiscoverySetClockFreq (ControllerHandle, CoreClockNames[Index], 500000000);
     if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_INFO, "Core clock is set\r\n"));
+      DEBUG ((DEBUG_INFO, "Core clock is set\r\n"));
       break;
     }
   }
 
   if (Index == Count) {
-    DEBUG ((EFI_D_ERROR, "Failed to set core_clk\r\n"));
+    DEBUG ((DEBUG_ERROR, "Failed to set core_clk\r\n"));
     return Status;
   }
 
@@ -802,14 +802,14 @@ CheckLinkUp (
   if (val & PCI_EXP_LNKCTL_STATUS_DLL_ACTIVE) {
     Private->LinkUp = TRUE;
     DEBUG ((
-      EFI_D_INFO,
+      DEBUG_INFO,
       "PCIe Controller-%d Link is UP (Speed: %d)\r\n",
       Private->CtrlId,
       (val & 0xf0000) >> 16
       ));
   } else {
     Private->LinkUp = FALSE;
-    DEBUG ((EFI_D_ERROR, "PCIe Controller-%d Link is DOWN\r\n", Private->CtrlId));
+    DEBUG ((DEBUG_ERROR, "PCIe Controller-%d Link is DOWN\r\n", Private->CtrlId));
   }
 
   return Private->LinkUp;
@@ -862,13 +862,13 @@ InitializeController (
   for (Index = 0; Index < Count; Index++) {
     Status = DeviceDiscoveryEnableClock (ControllerHandle, CoreClockNames[Index], 1);
     if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_INFO, "Enabled Core clock\r\n"));
+      DEBUG ((DEBUG_INFO, "Enabled Core clock\r\n"));
       break;
     }
   }
 
   if (Index == Count) {
-    DEBUG ((EFI_D_ERROR, "Failed to enable core_clk\r\n"));
+    DEBUG ((DEBUG_ERROR, "Failed to enable core_clk\r\n"));
     return Status;
   }
 
@@ -877,20 +877,20 @@ InitializeController (
   for (Index = 0; Index < Count; Index++) {
     Status = DeviceDiscoveryConfigReset (ControllerHandle, CoreAPBResetNames[Index], 0);
     if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_INFO, "De-asserted Core APB reset\r\n"));
+      DEBUG ((DEBUG_INFO, "De-asserted Core APB reset\r\n"));
       break;
     }
   }
 
   if (Index == Count) {
-    DEBUG ((EFI_D_ERROR, "Failed to de-assert Core APB reset\r\n"));
+    DEBUG ((DEBUG_ERROR, "Failed to de-assert Core APB reset\r\n"));
     return Status;
   }
 
   /* Configure P2U */
   Status = gBS->LocateProtocol (&gNVIDIATegraP2UProtocolGuid, NULL, (VOID **)&P2U);
   if (EFI_ERROR (Status) || (P2U == NULL)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get gNVIDIATegraP2UProtocolGuid Handle: %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get gNVIDIATegraP2UProtocolGuid Handle: %r\n", __FUNCTION__, Status));
     return EFI_UNSUPPORTED;
   }
 
@@ -901,7 +901,7 @@ InitializeController (
                &PropertySize
                );
   if (Property == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get P2U PHY entries\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get P2U PHY entries\n", __FUNCTION__));
     return EFI_UNSUPPORTED;
   }
 
@@ -912,7 +912,7 @@ InitializeController (
     P2UId = SwapBytes32 (P2UId);
 
     if (EFI_ERROR (P2U->Init (P2U, P2UId))) {
-      DEBUG ((EFI_D_ERROR, "Failed to Initialize P2U\n"));
+      DEBUG ((DEBUG_ERROR, "Failed to Initialize P2U\n"));
     }
   }
 
@@ -1004,7 +1004,7 @@ InitializeController (
   val |= APPL_INTR_EN_L1_8_INTX_EN;
   MmioWrite32 (Private->ApplSpace + APPL_INTR_EN_L1_8_0, val);
 
-  DEBUG ((EFI_D_INFO, "Programming APPL registers is done\r\n"));
+  DEBUG ((DEBUG_INFO, "Programming APPL registers is done\r\n"));
 
   /* De-assert reset to CORE */
   Count = sizeof (CoreResetNames)/sizeof (CoreResetNames[0]);
@@ -1015,13 +1015,13 @@ InitializeController (
                0
                );
     if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_INFO, "De-asserted Core reset\r\n"));
+      DEBUG ((DEBUG_INFO, "De-asserted Core reset\r\n"));
       break;
     }
   }
 
   if (Index == Count) {
-    DEBUG ((EFI_D_ERROR, "Failed to De-assert Core reset\r\n"));
+    DEBUG ((DEBUG_ERROR, "Failed to De-assert Core reset\r\n"));
     return Status;
   }
 
@@ -1040,7 +1040,7 @@ InitializeController (
 
   Status = PrepareHost (Private, ControllerHandle, DeviceTreeNode);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Unable to Prepare Host controller (%r)\r\n", Status));
+    DEBUG ((DEBUG_ERROR, "Unable to Prepare Host controller (%r)\r\n", Status));
     return Status;
   }
 
@@ -1066,8 +1066,8 @@ InitializeController (
       goto exit;
     }
 
-    DEBUG ((EFI_D_INFO, "Link is down in DLL"));
-    DEBUG ((EFI_D_INFO, "Trying again with DLFE disabled\n"));
+    DEBUG ((DEBUG_INFO, "Link is down in DLL"));
+    DEBUG ((DEBUG_INFO, "Trying again with DLFE disabled\n"));
 
     /* Disable LTSSM */
     val  = MmioRead32 (Private->ApplSpace + APPL_CTRL);
@@ -1083,13 +1083,13 @@ InitializeController (
                  1
                  );
       if (!EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_INFO, "Asserted Core reset\r\n"));
+        DEBUG ((DEBUG_INFO, "Asserted Core reset\r\n"));
         break;
       }
     }
 
     if (Index == Count) {
-      DEBUG ((EFI_D_ERROR, "Failed to Assert Core reset\r\n"));
+      DEBUG ((DEBUG_ERROR, "Failed to Assert Core reset\r\n"));
       return Status;
     }
 
@@ -1102,13 +1102,13 @@ InitializeController (
                  0
                  );
       if (!EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_INFO, "De-asserted Core reset\r\n"));
+        DEBUG ((DEBUG_INFO, "De-asserted Core reset\r\n"));
         break;
       }
     }
 
     if (Index == Count) {
-      DEBUG ((EFI_D_ERROR, "Failed to De-assert Core reset\r\n"));
+      DEBUG ((DEBUG_ERROR, "Failed to De-assert Core reset\r\n"));
       return Status;
     }
 
@@ -1119,7 +1119,7 @@ InitializeController (
 
     Status = PrepareHost (Private, ControllerHandle, DeviceTreeNode);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "Unable to Prepare Host controller (%r)\r\n", Status));
+      DEBUG ((DEBUG_ERROR, "Unable to Prepare Host controller (%r)\r\n", Status));
       return Status;
     }
 
@@ -1199,7 +1199,7 @@ TegraPciePMETurnOff (
 
   if (!Private->LinkUp) {
     DEBUG ((
-      EFI_D_INFO,
+      DEBUG_INFO,
       "PCIe Controller-%d Link is not UP\r\n",
       Private->CtrlId
       ));
@@ -1212,7 +1212,7 @@ TegraPciePMETurnOff (
   }
 
   if (TegraPcieTryLinkL2 (Private)) {
-    DEBUG ((EFI_D_ERROR, "Link didn't transition to L2 state\r\n"));
+    DEBUG ((DEBUG_ERROR, "Link didn't transition to L2 state\r\n"));
 
     /*
      * TX lane clock freq will reset to Gen1 only if link is in L2
@@ -1234,7 +1234,7 @@ TegraPciePMETurnOff (
           ((data & APPL_DEBUG_LTSSM_STATE_MASK) == LTSSM_STATE_DETECT_WAIT))
         )
     {
-      DEBUG ((EFI_D_ERROR, "Link didn't go to detect state as well\r\n"));
+      DEBUG ((DEBUG_ERROR, "Link didn't go to detect state as well\r\n"));
     }
 
     data  = MmioRead32 (Private->ApplSpace + APPL_CTRL);
@@ -1277,13 +1277,13 @@ UninitializeController (
                1
                );
     if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_INFO, "Asserted Core reset\r\n"));
+      DEBUG ((DEBUG_INFO, "Asserted Core reset\r\n"));
       break;
     }
   }
 
   if (Index == Count) {
-    DEBUG ((EFI_D_ERROR, "Failed to assert Core reset\r\n"));
+    DEBUG ((DEBUG_ERROR, "Failed to assert Core reset\r\n"));
     return Status;
   }
 
@@ -1296,13 +1296,13 @@ UninitializeController (
                1
                );
     if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_INFO, "Asserted Core APB reset\r\n"));
+      DEBUG ((DEBUG_INFO, "Asserted Core APB reset\r\n"));
       break;
     }
   }
 
   if (Index == Count) {
-    DEBUG ((EFI_D_ERROR, "Failed to assert Core APB reset\r\n"));
+    DEBUG ((DEBUG_ERROR, "Failed to assert Core APB reset\r\n"));
     return Status;
   }
 
@@ -1315,13 +1315,13 @@ UninitializeController (
                0
                );
     if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_INFO, "Disabled Core clock\r\n"));
+      DEBUG ((DEBUG_INFO, "Disabled Core clock\r\n"));
       break;
     }
   }
 
   if (Index == Count) {
-    DEBUG ((EFI_D_ERROR, "Failed to Disable core_clk\r\n"));
+    DEBUG ((DEBUG_ERROR, "Failed to Disable core_clk\r\n"));
     return Status;
   }
 
@@ -1329,11 +1329,11 @@ UninitializeController (
     if (PcdGetBool (PcdBPMPPCIeControllerEnable)) {
       Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->CtrlId, 0);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "Failed to disable Controller-%u\n", Private->CtrlId));
+        DEBUG ((DEBUG_ERROR, "Failed to disable Controller-%u\n", Private->CtrlId));
         return Status;
       }
 
-      DEBUG ((EFI_D_INFO, "Disabled Controller-%u through BPMP-FW\n", Private->CtrlId));
+      DEBUG ((DEBUG_INFO, "Disabled Controller-%u through BPMP-FW\n", Private->CtrlId));
     }
   }
 
@@ -1635,7 +1635,7 @@ DeviceDiscoveryNotify (
         Private->PcieRootBridgeConfigurationIo.SegmentNumber = SwapBytes32 (Private->PcieRootBridgeConfigurationIo.SegmentNumber);
       }
 
-      DEBUG ((EFI_D_INFO, "Segment Number = %u\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
+      DEBUG ((DEBUG_INFO, "Segment Number = %u\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
 
       Private->CtrlId = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
 
@@ -1652,7 +1652,7 @@ DeviceDiscoveryNotify (
         Private->CtrlId = SwapBytes32 (Private->CtrlId);
       }
 
-      DEBUG ((EFI_D_INFO, "Controller-ID = %u\n", Private->CtrlId));
+      DEBUG ((DEBUG_INFO, "Controller-ID = %u\n", Private->CtrlId));
 
       Property = fdt_getprop (
                    DeviceTreeNode->DeviceTreeBase,
@@ -1680,7 +1680,7 @@ DeviceDiscoveryNotify (
         Private->MaxLinkSpeed = 4;
       }
 
-      DEBUG ((EFI_D_INFO, "Max Link Speed = %u\n", Private->MaxLinkSpeed));
+      DEBUG ((DEBUG_INFO, "Max Link Speed = %u\n", Private->MaxLinkSpeed));
 
       Private->EnableGicV2m = ParseGicMsiBase (DeviceTreeNode, &Private->GicBase, &Private->MsiBase);
       if (Private->EnableGicV2m) {
@@ -1704,7 +1704,7 @@ DeviceDiscoveryNotify (
         Private->NumLanes = 1;
       }
 
-      DEBUG ((EFI_D_INFO, "Number of lanes = %u\n", Private->NumLanes));
+      DEBUG ((DEBUG_INFO, "Number of lanes = %u\n", Private->NumLanes));
 
       if (NULL != fdt_get_property (
                     DeviceTreeNode->DeviceTreeBase,
@@ -1721,7 +1721,7 @@ DeviceDiscoveryNotify (
       /* Enable slot supplies */
       Status = gBS->LocateProtocol (&gNVIDIARegulatorProtocolGuid, NULL, (VOID **)&Regulator);
       if (EFI_ERROR (Status) || (Regulator == NULL)) {
-        DEBUG ((EFI_D_ERROR, "%a: Couldn't get gNVIDIARegulatorProtocolGuid Handle: %r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Couldn't get gNVIDIARegulatorProtocolGuid Handle: %r\n", __FUNCTION__, Status));
         Status = EFI_UNSUPPORTED;
         goto ErrorExit;
       }
@@ -1737,10 +1737,10 @@ DeviceDiscoveryNotify (
         Val = SwapBytes32 (*(UINT32 *)Property);
         /* Enable the vddio-pex-ctl supply */
         if (EFI_ERROR (Regulator->Enable (Regulator, Val, TRUE))) {
-          DEBUG ((EFI_D_ERROR, "Failed to Enable vddio-pex-ctl supply regulator\n"));
+          DEBUG ((DEBUG_ERROR, "Failed to Enable vddio-pex-ctl supply regulator\n"));
         }
       } else {
-        DEBUG ((EFI_D_INFO, "Failed to find vddio-pex-ctl supply regulator\n"));
+        DEBUG ((DEBUG_INFO, "Failed to find vddio-pex-ctl supply regulator\n"));
       }
 
       /* Get the 3v3 supply */
@@ -1754,10 +1754,10 @@ DeviceDiscoveryNotify (
         Val = SwapBytes32 (*(UINT32 *)Property);
         /* Enable the 3v3 supply */
         if (EFI_ERROR (Regulator->Enable (Regulator, Val, TRUE))) {
-          DEBUG ((EFI_D_ERROR, "Failed to Enable 3v3 Regulator\n"));
+          DEBUG ((DEBUG_ERROR, "Failed to Enable 3v3 Regulator\n"));
         }
       } else {
-        DEBUG ((EFI_D_INFO, "Failed to find 3v3 slot supply regulator\n"));
+        DEBUG ((DEBUG_INFO, "Failed to find 3v3 slot supply regulator\n"));
       }
 
       /* Get the 12v supply */
@@ -1771,10 +1771,10 @@ DeviceDiscoveryNotify (
         Val = SwapBytes32 (*(UINT32 *)Property);
         /* Enable the 12v supply */
         if (EFI_ERROR (Regulator->Enable (Regulator, Val, TRUE))) {
-          DEBUG ((EFI_D_ERROR, "Failed to Enable 12v Regulator\n"));
+          DEBUG ((DEBUG_ERROR, "Failed to Enable 12v Regulator\n"));
         }
       } else {
-        DEBUG ((EFI_D_INFO, "Failed to find 12v slot supply regulator\n"));
+        DEBUG ((DEBUG_INFO, "Failed to find 12v slot supply regulator\n"));
       }
 
       /* Spec defined T_PVPERL delay (100ms) after enabling power to the slot */
@@ -1787,7 +1787,7 @@ DeviceDiscoveryNotify (
 
         Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&Private->BpmpIpcProtocol);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "Failed to get BPMP-FW handle\n"));
+          DEBUG ((DEBUG_ERROR, "Failed to get BPMP-FW handle\n"));
           Status = EFI_NOT_READY;
           goto ErrorExit;
         }
@@ -1795,12 +1795,12 @@ DeviceDiscoveryNotify (
         if (PcdGetBool (PcdBPMPPCIeControllerEnable)) {
           Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->CtrlId, 1);
           if (EFI_ERROR (Status)) {
-            DEBUG ((EFI_D_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));
+            DEBUG ((DEBUG_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));
             Status = EFI_NOT_READY;
             goto ErrorExit;
           }
 
-          DEBUG ((EFI_D_INFO, "Enabled Controller-%u through BPMP-FW\n", Private->CtrlId));
+          DEBUG ((DEBUG_INFO, "Enabled Controller-%u through BPMP-FW\n", Private->CtrlId));
         }
       }
 
@@ -1832,7 +1832,7 @@ DeviceDiscoveryNotify (
 
       Status = InitializeController (Private, ControllerHandle, DeviceTreeNode);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
         goto ErrorExit;
       }
 
@@ -1845,7 +1845,7 @@ DeviceDiscoveryNotify (
                       &ExitBootServiceEvent
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Unable to setup exit boot services uninitialize. (%r)\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Unable to setup exit boot services uninitialize. (%r)\r\n", __FUNCTION__, Status));
         goto ErrorExit;
       }
 
@@ -1864,7 +1864,7 @@ DeviceDiscoveryNotify (
                       &PropertySize
                       );
       if ((BusProperty == NULL) || (PropertySize != 2 * sizeof (UINT32))) {
-        DEBUG ((EFI_D_INFO, "PCIe Controller: unknown bus size in fdt, default to 0-255\r\n"));
+        DEBUG ((DEBUG_INFO, "PCIe Controller: unknown bus size in fdt, default to 0-255\r\n"));
         RootBridge->Bus.Base  = 0x0;
         RootBridge->Bus.Limit = 0xff;
       } else {
@@ -1883,7 +1883,7 @@ DeviceDiscoveryNotify (
       RangeSize       = (AddressCells + PciAddressCells + SizeCells) * sizeof (UINT32);
 
       if (PciAddressCells != 3) {
-        DEBUG ((EFI_D_ERROR, "PCIe Controller, size 3 is required for address-cells, got %d\r\n", PciAddressCells));
+        DEBUG ((DEBUG_ERROR, "PCIe Controller, size 3 is required for address-cells, got %d\r\n", PciAddressCells));
         Status = EFI_DEVICE_ERROR;
         goto ErrorExit;
       }
@@ -1902,7 +1902,7 @@ DeviceDiscoveryNotify (
       RootBridge->PMemAbove4G.Base = MAX_UINT64;
 
       if ((RangesProperty == NULL) || ((PropertySize % RangeSize) != 0)) {
-        DEBUG ((EFI_D_ERROR, "PCIe Controller: Unsupported ranges configuration\r\n"));
+        DEBUG ((DEBUG_ERROR, "PCIe Controller: Unsupported ranges configuration\r\n"));
         Status = EFI_UNSUPPORTED;
         goto ErrorExit;
       }
@@ -1932,7 +1932,7 @@ DeviceDiscoveryNotify (
           CopyMem (&HostAddress, RangesProperty + (PciAddressCells * sizeof (UINT32)), sizeof (UINT32));
           HostAddress = SwapBytes32 (HostAddress);
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
           Status = EFI_DEVICE_ERROR;
           break;
         }
@@ -1944,7 +1944,7 @@ DeviceDiscoveryNotify (
           CopyMem (&Size, RangesProperty + ((PciAddressCells + AddressCells) * sizeof (UINT32)), sizeof (UINT32));
           Size = SwapBytes32 (Size);
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
           Status = EFI_DEVICE_ERROR;
           goto ErrorExit;
         }
@@ -2002,7 +2002,7 @@ DeviceDiscoveryNotify (
             );
           Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 3;
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Unknown region 0x%08x 0x%016llx-0x%016llx T 0x%016llx\r\n", Flags, DeviceAddress, Limit, Translation));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Unknown region 0x%08x 0x%016llx-0x%016llx T 0x%016llx\r\n", Flags, DeviceAddress, Limit, Translation));
           ASSERT (FALSE);
           Status = EFI_DEVICE_ERROR;
           goto ErrorExit;

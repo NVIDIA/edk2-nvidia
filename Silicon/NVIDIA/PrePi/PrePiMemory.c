@@ -68,7 +68,7 @@ GetVirtualMemoryMap (
   while (NULL != HobList) {
     EFI_HOB_RESOURCE_DESCRIPTOR  *Resource = (EFI_HOB_RESOURCE_DESCRIPTOR *)HobList;
     DEBUG ((
-      EFI_D_VERBOSE,
+      DEBUG_VERBOSE,
       "ArmPlatformGetVirtualMemoryMap() Resource: Base: 0x%016lx, Size: 0x%016lx, Type: 0x%x\n",
       Resource->PhysicalStart,
       Resource->ResourceLength,
