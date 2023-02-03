@@ -43,7 +43,7 @@ RegisterDeviceTree (
 
       EFI_PHYSICAL_ADDRESS  DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize * 2));
       if (fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 2 * DtbSize) != 0) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to increase device tree size\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to increase device tree size\r\n", __FUNCTION__));
         return;
       }
 
@@ -51,7 +51,7 @@ RegisterDeviceTree (
       if (fdt_check_header ((VOID *)DtbNext) == 0) {
         Status = ApplyTegraDeviceTreeOverlay ((VOID *)DtbCopy, (VOID *)DtbNext, SWModule);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "DTB Overlay failed. Using base DTB.\n"));
+          DEBUG ((DEBUG_ERROR, "DTB Overlay failed. Using base DTB.\n"));
           fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 2 * DtbSize);
         }
       }
@@ -65,7 +65,7 @@ RegisterDeviceTree (
       if (NULL != DeviceTreeHobData) {
         *DeviceTreeHobData = DtbCopy;
       } else {
-        DEBUG ((EFI_D_ERROR, "Failed to build guid hob\r\n"));
+        DEBUG ((DEBUG_ERROR, "Failed to build guid hob\r\n"));
       }
     }
   }

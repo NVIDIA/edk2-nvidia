@@ -73,7 +73,7 @@ ReadNorFlashRegister (
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash register.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash register.\n", __FUNCTION__));
   }
 
   return Status;
@@ -110,7 +110,7 @@ WaitNorFlashWriteComplete (
     if (Count == NOR_SR1_WIP_RETRY_CNT) {
       Count = 0;
       if (TimeOutMessage == FALSE) {
-        DEBUG ((EFI_D_ERROR, "%a: NOR flash write transactions slower than usual.\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: NOR flash write transactions slower than usual.\n", __FUNCTION__));
         TimeOutMessage = TRUE;
       }
     }
@@ -120,14 +120,14 @@ WaitNorFlashWriteComplete (
     // Read WIP status
     Status = ReadNorFlashRegister (Private, &RegCmd, sizeof (RegCmd), &Resp);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash status 1 register.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash status 1 register.\n", __FUNCTION__));
       return Status;
     }
 
     Count++;
   } while ((Resp & NOR_SR1_WIP_BMSK) != 0);
 
-  DEBUG ((EFI_D_INFO, "%a: NOR flash write complete.\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: NOR flash write complete.\n", __FUNCTION__));
   return Status;
 }
 
@@ -176,7 +176,7 @@ ConfigureNorFlashWriteEnLatch (
     if (Count == NOR_SR1_WEL_RETRY_CNT) {
       Count = 0;
       if (TimeOutMessage == FALSE) {
-        DEBUG ((EFI_D_ERROR, "%a: NOR flash write enable latch slower than usual.\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: NOR flash write enable latch slower than usual.\n", __FUNCTION__));
         TimeOutMessage = TRUE;
       }
     }
@@ -184,7 +184,7 @@ ConfigureNorFlashWriteEnLatch (
     // Configure WREN
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not program WREN latch.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not program WREN latch.\n", __FUNCTION__));
       return Status;
     }
 
@@ -193,14 +193,14 @@ ConfigureNorFlashWriteEnLatch (
     // Read WREN status
     Status = ReadNorFlashRegister (Private, &RegCmd, sizeof (RegCmd), &Resp);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash status 1 register.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash status 1 register.\n", __FUNCTION__));
       return Status;
     }
 
     Count++;
   } while ((Resp & NOR_SR1_WEL_BMSK) != Cmp);
 
-  DEBUG ((EFI_D_INFO, "%a: NOR flash WREN %s.\n", __FUNCTION__, Enable ? L"enabled" : L"disabled"));
+  DEBUG ((DEBUG_INFO, "%a: NOR flash WREN %s.\n", __FUNCTION__, Enable ? L"enabled" : L"disabled"));
   return Status;
 }
 
@@ -270,14 +270,14 @@ ReadNorFlashSFDP (
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP header.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash's SFDP header.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
   // Verify the read SFDP signature
   SFDPSignature = NOR_SFDP_SIGNATURE;
   if (0 != CompareMem (&SFDPHeader.SFDPSignature, &SFDPSignature, sizeof (SFDPHeader.SFDPSignature))) {
-    DEBUG ((EFI_D_ERROR, "%a: NOR flash's SFDP signature invalid.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: NOR flash's SFDP signature invalid.\n", __FUNCTION__));
     Status = EFI_NOT_FOUND;
     goto ErrorExit;
   }
@@ -306,7 +306,7 @@ ReadNorFlashSFDP (
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP parameter table headers.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash's SFDP parameter table headers.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
@@ -320,7 +320,7 @@ ReadNorFlashSFDP (
   }
 
   if (Count < 0) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP parameter table header.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP parameter table header.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -352,7 +352,7 @@ ReadNorFlashSFDP (
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP parameters.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash's SFDP parameters.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
@@ -366,7 +366,7 @@ ReadNorFlashSFDP (
   }
 
   if (Count < 0) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP 4 byte instruction parameter table header.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP 4 byte instruction parameter table header.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -398,7 +398,7 @@ ReadNorFlashSFDP (
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP 4 byte instruction parameters.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash's SFDP 4 byte instruction parameters.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
@@ -406,7 +406,7 @@ ReadNorFlashSFDP (
   if ((SFDPParam4ByteInstructionTbl->ReadCmd0C == FALSE) ||
       (SFDPParam4ByteInstructionTbl->ReadCmd13 == FALSE))
   {
-    DEBUG ((EFI_D_ERROR, "%a: NOR flash's single bit Read unsupported.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: NOR flash's single bit Read unsupported.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -419,7 +419,7 @@ ReadNorFlashSFDP (
 
   // Page write has to be supported
   if (SFDPParam4ByteInstructionTbl->WriteCmd12 == FALSE) {
-    DEBUG ((EFI_D_ERROR, "%a: NOR flash's single bit Write unsupported.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: NOR flash's single bit Write unsupported.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -430,7 +430,7 @@ ReadNorFlashSFDP (
   if (MemoryDensity & BIT31) {
     MemoryDensity &= ~BIT31;
     if (MemoryDensity < 32) {
-      DEBUG ((EFI_D_ERROR, "%a: NOR flash's memory density unsupported.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: NOR flash's memory density unsupported.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -465,7 +465,7 @@ ReadNorFlashSFDP (
     }
 
     if (Count < 0) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter table header.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter table header.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -497,7 +497,7 @@ ReadNorFlashSFDP (
 
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP sector parameters.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash's SFDP sector parameters.\n", __FUNCTION__));
       goto ErrorExit;
     }
 
@@ -518,7 +518,7 @@ ReadNorFlashSFDP (
     }
 
     if (Count >=  SFDPParamSectorTblHeader->ParamTblLen) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter mapping table.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter mapping table.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -544,7 +544,7 @@ ReadNorFlashSFDP (
     }
 
     if (Count >=  NOR_SFDP_ERASE_COUNT) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter erase table.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter erase table.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -559,7 +559,7 @@ ReadNorFlashSFDP (
     }
 
     if (Count >=  NOR_SFDP_ERASE_COUNT) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP first sector parameter erase table.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP first sector parameter erase table.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -579,13 +579,13 @@ ReadNorFlashSFDP (
   }
 
   if (Count >=  NOR_SFDP_ERASE_COUNT) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's uniform block size in SFDP sector parameter erase table.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's uniform block size in SFDP sector parameter erase table.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
 
   if (!(SFDPParam4ByteInstructionTbl->EraseTypeSupported & (1 << Count))) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's uniform erase table supported in SFDP.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's uniform erase table supported in SFDP.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -604,13 +604,13 @@ ReadNorFlashSFDP (
     }
 
     if (Count >=  NOR_SFDP_ERASE_COUNT) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's hybrid block size in SFDP sector parameter erase table.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's hybrid block size in SFDP sector parameter erase table.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
 
     if (!(SFDPParam4ByteInstructionTbl->EraseTypeSupported & (1 << Count))) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's hybrid erase table supported in SFDP.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's hybrid erase table supported in SFDP.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -779,11 +779,11 @@ NorFlashRead (
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read data from NOR flash.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read data from NOR flash.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
-  DEBUG ((EFI_D_INFO, "%a: Successfully read data from NOR flash.\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: Successfully read data from NOR flash.\n", __FUNCTION__));
 
 ErrorExit:
 
@@ -912,7 +912,7 @@ NorFlashErase (
                );
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed hybrid erase: %r\n",
         __FUNCTION__,
         Status
@@ -927,7 +927,7 @@ NorFlashErase (
   for (Block = Lba; Block < (Lba + NumLba); Block++) {
     Status = ConfigureNorFlashWriteEnLatch (Private, TRUE);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
       goto ErrorExit;
     }
 
@@ -948,24 +948,24 @@ NorFlashErase (
 
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not erase data from NOR flash.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not erase data from NOR flash.\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     Status = WaitNorFlashWriteComplete (Private);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not complete NOR flash write.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not complete NOR flash write.\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     Status = ConfigureNorFlashWriteEnLatch (Private, FALSE);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
       goto ErrorExit;
     }
   }
 
-  DEBUG ((EFI_D_INFO, "%a: Successfully erased data from NOR flash.\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: Successfully erased data from NOR flash.\n", __FUNCTION__));
 
 ErrorExit:
 
@@ -1094,7 +1094,7 @@ NorFlashWriteSinglePage (
   ZeroMem (Private->CommandBuffer, CmdSize + Size);
   Status = ConfigureNorFlashWriteEnLatch (Private, TRUE);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
@@ -1115,23 +1115,23 @@ NorFlashWriteSinglePage (
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not write data to NOR flash.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not write data to NOR flash.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
   Status = WaitNorFlashWriteComplete (Private);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not complete NOR flash write.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not complete NOR flash write.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
   Status = ConfigureNorFlashWriteEnLatch (Private, FALSE);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not disable NOR flash WREN.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not disable NOR flash WREN.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
-  DEBUG ((EFI_D_INFO, "%a: Successfully wrote data to NOR flash.\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: Successfully wrote data to NOR flash.\n", __FUNCTION__));
 
 ErrorExit:
 
@@ -1190,7 +1190,7 @@ NorFlashWrite (
 
     Status = NorFlashWriteSinglePage (This, Offset, BytesToWrite, Buffer);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not write data to NOR flash.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not write data to NOR flash.\n", __FUNCTION__));
       return Status;
     }
 
@@ -1199,7 +1199,7 @@ NorFlashWrite (
     Size   -= BytesToWrite;
   }
 
-  DEBUG ((EFI_D_INFO, "%a: Successfully wrote data to NOR flash.\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: Successfully wrote data to NOR flash.\n", __FUNCTION__));
 
   return Status;
 }
@@ -1721,7 +1721,7 @@ NorFlashDxeDriverBindingStart (
                   &Private->VirtualAddrChangeEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create virtual address callback event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create virtual address callback event\r\n", __FUNCTION__));
     goto ErrorExit;
   }
 
@@ -1733,7 +1733,7 @@ NorFlashDxeDriverBindingStart (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to install callerid protocol\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to install callerid protocol\n", __FUNCTION__));
     goto ErrorExit;
   }
 

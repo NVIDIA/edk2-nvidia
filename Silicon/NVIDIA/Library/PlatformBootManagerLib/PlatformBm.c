@@ -154,7 +154,7 @@ FilterAndProcess (
     // This is not an error, just an informative condition.
     //
     DEBUG ((
-      EFI_D_VERBOSE,
+      DEBUG_VERBOSE,
       "%a: %g: %r\n",
       __FUNCTION__,
       ProtocolGuid,
@@ -300,7 +300,7 @@ IsPciDisplay (
                         &Pci
                         );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: %s: %r\n", __FUNCTION__, ReportText, Status));
+    DEBUG ((DEBUG_ERROR, "%a: %s: %r\n", __FUNCTION__, ReportText, Status));
     return FALSE;
   }
 
@@ -328,7 +328,7 @@ Connect (
                   FALSE   // Recursive
                   );
   DEBUG ((
-    EFI_ERROR (Status) ? EFI_D_ERROR : EFI_D_VERBOSE,
+    EFI_ERROR (Status) ? DEBUG_ERROR : DEBUG_VERBOSE,
     "%a: %s: %r\n",
     __FUNCTION__,
     ReportText,
@@ -354,7 +354,7 @@ AddOutput (
   DevicePath = DevicePathFromHandle (Handle);
   if (DevicePath == NULL) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: %s: handle %p: device path not found\n",
       __FUNCTION__,
       ReportText,
@@ -366,7 +366,7 @@ AddOutput (
   Status = EfiBootManagerUpdateConsoleVariable (ConOut, DevicePath, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: %s: adding to ConOut: %r\n",
       __FUNCTION__,
       ReportText,
@@ -378,7 +378,7 @@ AddOutput (
   Status = EfiBootManagerUpdateConsoleVariable (ErrOut, DevicePath, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: %s: adding to ErrOut: %r\n",
       __FUNCTION__,
       ReportText,
@@ -388,7 +388,7 @@ AddOutput (
   }
 
   DEBUG ((
-    EFI_D_VERBOSE,
+    DEBUG_VERBOSE,
     "%a: %s: added to ConOut and ErrOut\n",
     __FUNCTION__,
     ReportText

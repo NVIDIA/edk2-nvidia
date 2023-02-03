@@ -98,7 +98,7 @@ LibGetTime (
                                                sizeof (TimePacket.Control);
       Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to read time registers: %r.\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to read time registers: %r.\r\n", __FUNCTION__, Status));
         return EFI_DEVICE_ERROR;
       }
 
@@ -106,7 +106,7 @@ LibGetTime (
       // If RTC is stopped, it is unusable.
       //
       if (TimePacket.Control.ST == NUVOTON_RTC_CONTROL_ST_STOP) {
-        DEBUG ((EFI_D_ERROR, "%a: RTC is stopped.\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: RTC is stopped.\r\n", __FUNCTION__));
         return EFI_DEVICE_ERROR;
       }
 
@@ -168,7 +168,7 @@ LibGetTime (
                                                  sizeof (WDayPacket.DayOfWeek);
         Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a: Failed to program day of week register: %r.\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a: Failed to program day of week register: %r.\r\n", __FUNCTION__, Status));
         }
       }
 
@@ -316,7 +316,7 @@ LibSetTime (
 
     Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to read control registers: %r.\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to read control registers: %r.\r\n", __FUNCTION__, Status));
       return EFI_DEVICE_ERROR;
     }
 
@@ -324,7 +324,7 @@ LibSetTime (
     // If RTC is stopped, it is unusable.
     //
     if (ControlPacket.Control.ST == NUVOTON_RTC_CONTROL_ST_STOP) {
-      DEBUG ((EFI_D_ERROR, "%a: RTC is stopped.\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: RTC is stopped.\r\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
@@ -334,7 +334,7 @@ LibSetTime (
     if (!PcdGetBool (PcdCpuHasRtcControl) &&
         (ControlPacket.Control.TWO == NUVOTON_RTC_CONTROL_TWO_PRIMARY))
     {
-      DEBUG ((EFI_D_ERROR, "%a: CPU is not holding the write ownership.\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: CPU is not holding the write ownership.\r\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
@@ -390,7 +390,7 @@ LibSetTime (
                                              sizeof (TimePacket.DateTime);
     Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to store time: %r.\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to store time: %r.\r\n", __FUNCTION__, Status));
       return EFI_DEVICE_ERROR;
     }
 
@@ -532,7 +532,7 @@ LibRtcConfigure (
                                              sizeof (ControlPacket.Status);
     Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to program control register: %r.\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to program control register: %r.\r\n", __FUNCTION__, Status));
     }
 
     //
@@ -548,7 +548,7 @@ LibRtcConfigure (
                                              sizeof (PrimaryAccessPacket.PrimaryAccess);
     Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to program primary access register: %r.\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to program primary access register: %r.\r\n", __FUNCTION__, Status));
     }
   }
 }
@@ -595,7 +595,7 @@ I2cIoRegistrationEvent (
                       (VOID **)&I2cIo
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to get i2c interface: %r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to get i2c interface: %r\n", __FUNCTION__, Status));
         continue;
       }
 
@@ -682,7 +682,7 @@ LibRtcInitialize (
             &mI2cIoSearchToken
             );
   if (Event == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -698,7 +698,7 @@ LibRtcInitialize (
                   &mRtcExitBootServicesEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
     gBS->CloseEvent (Event);
     return EFI_OUT_OF_RESOURCES;
   }

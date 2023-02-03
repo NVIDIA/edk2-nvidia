@@ -607,13 +607,13 @@ FfaAllocateAndMapRxTxBuffers (
 
   Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesData, pages, rx);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: RX buffer allocation failed\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: RX buffer allocation failed\n", __FUNCTION__));
     goto out;
   }
 
   Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesData, pages, tx);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: TX buffer allocation failed\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: TX buffer allocation failed\n", __FUNCTION__));
     goto out_rx;
   }
 
@@ -626,7 +626,7 @@ FfaAllocateAndMapRxTxBuffers (
 
   if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_RXTX_MAP failed: 0x%x\n",
       __FUNCTION__,
       ArmSmcArgs.Arg2
@@ -675,7 +675,7 @@ FfaFreeRxTxBuffers (
 
   if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_RXTX_UNMAP failed: 0x%x\n",
       __FUNCTION__,
       ArmSmcArgs.Arg2
@@ -771,7 +771,7 @@ GetStmmVmId (
   /* One SP should have been found */
   if (ArmSmcArgs.Arg2 != 1) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_PARTITION_INFO_GET failed: 0x%x\n",
       __FUNCTION__,
       ArmSmcArgs.Arg2

@@ -305,7 +305,7 @@ OemDescStatusCodeDxeDriverEntryPoint (
                   &mExitBootServicesEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
     return Status;
   }
 

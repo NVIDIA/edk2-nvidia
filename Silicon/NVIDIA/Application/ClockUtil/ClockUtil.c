@@ -109,7 +109,7 @@ DisplayClockInfo (
   Status = mClockProtocol->GetClockAttributes (mClockProtocol, ClockId, &Enabled, ClockName);
   if (EFI_ERROR (Status)) {
     if (Status != EFI_NOT_FOUND) {
-      DEBUG ((EFI_D_ERROR, "Failed to get clock attributes - %d: %r\r\n", ClockId, Status));
+      DEBUG ((DEBUG_ERROR, "Failed to get clock attributes - %d: %r\r\n", ClockId, Status));
     }
 
     return;
@@ -117,7 +117,7 @@ DisplayClockInfo (
 
   Status = mClockParents->GetParent (mClockParents, ClockId, &ParentId);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Failed to get parent for clock %d\r\n", ClockId));
+    DEBUG ((DEBUG_ERROR, "Failed to get parent for clock %d\r\n", ClockId));
     ParentId = MAX_UINT32;
   }
 

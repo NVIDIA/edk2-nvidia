@@ -165,7 +165,7 @@ InitializeFalconUtil (
                   );
   if (EFI_ERROR (Status) || (mXhciControllerProtocol == NULL)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: Can't get XhciController Protocol Handle:%r\n",
       __FUNCTION__,
       Status
@@ -176,7 +176,7 @@ InitializeFalconUtil (
   /* Get the XHCI Config Registers Base Address */
   mXhciControllerProtocol->GetCfgAddr (mXhciControllerProtocol, &CfgAddress);
   if (CfgAddress == 0) {
-    DEBUG ((EFI_D_ERROR, "%a: Invalid Xhci Config Address Received\n"));
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Xhci Config Address Received\n"));
     goto Done;
   }
 
@@ -276,7 +276,7 @@ InitializeFalconUtil (
     /* data */
     ValueStr = ShellCommandLineGetRawValue (ParamPackage, 1);
     if (ValueStr == NULL) {
-      DEBUG ((EFI_D_ERROR, "\nwrite value not provided\n\n", Value));
+      DEBUG ((DEBUG_ERROR, "\nwrite value not provided\n\n", Value));
       goto Done;
     }
 
@@ -301,7 +301,7 @@ InitializeFalconUtil (
     Value = ShellStrToUintn (ValueStr);
     if (Value >= DDIRECT_OFFSET) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "\nDMEM Offset should be less than DMEM Size(0x2000)\n\n"
         ));
       goto Done;
@@ -313,7 +313,7 @@ InitializeFalconUtil (
     ValueStr = ShellCommandLineGetRawValue (ParamPackage, 1);
     if (ValueStr == NULL) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "\nProvide number of DWORDS to read from DMEM\n\n"
         ));
       goto Done;
@@ -364,7 +364,7 @@ InitializeFalconUtil (
     Value = ShellStrToUintn (ValueStr);
     if (Value < DDIRECT_OFFSET) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "\nAddress should be more than DDIRECT Start Address(0x2000)\n\n"
         ));
       goto Done;
@@ -376,7 +376,7 @@ InitializeFalconUtil (
     ValueStr = ShellCommandLineGetRawValue (ParamPackage, 1);
     if (ValueStr == NULL) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "\nProvide number of DWORDS to Read from DDIRECT\n\n"
         ));
       goto Done;

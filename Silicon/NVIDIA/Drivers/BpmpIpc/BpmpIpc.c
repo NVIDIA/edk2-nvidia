@@ -162,7 +162,7 @@ ProcessTransaction (
 
   // Validate channels are empty
   if (!ChannelFree (PrivateData->RxChannel) || !ChannelFree (PrivateData->TxChannel)) {
-    DEBUG ((EFI_D_ERROR, "%a: Channel not idle\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Channel not idle\r\n", __FUNCTION__));
     ASSERT (FALSE);
 
     OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
@@ -202,7 +202,7 @@ ProcessTransaction (
                        TimerTick
                        );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to set timer:%r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set timer:%r\r\n", __FUNCTION__, Status));
 
       OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
       RemoveEntryList (List);
@@ -455,7 +455,7 @@ MoveTxChannelState (
                                                                    HspDoorbellBpmp
                                                                    );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to ring doorbell: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to ring doorbell: %r\r\n", __FUNCTION__, Status));
   }
 
   return Status;
@@ -559,7 +559,7 @@ HspProtocolNotify (
                   );
 
   if (EFI_ERROR (Status) || (NumberOfHandles == 0)) {
-    DEBUG ((EFI_D_ERROR, "%a: Locate Handle:%r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Locate Handle:%r\r\n", __FUNCTION__, Status));
     return;
   }
 
@@ -572,7 +572,7 @@ HspProtocolNotify (
                   (VOID **)&PrivateData->DoorbellProtocol
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Handle Protocol %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Handle Protocol %r\r\n", __FUNCTION__, Status));
     PrivateData->DoorbellHandle = NULL;
     return;
   }
@@ -588,13 +588,13 @@ HspProtocolNotify (
                                             );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to enable doorbell channel: %r", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to enable doorbell channel: %r", __FUNCTION__, Status));
     return;
   }
 
   Status = InitializeIvcChannel (PrivateData);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to initialize channel: %r", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to initialize channel: %r", __FUNCTION__, Status));
     return;
   }
 
@@ -605,7 +605,7 @@ HspProtocolNotify (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
     return;
   }
 
@@ -659,7 +659,7 @@ BpmpIpcProtocolInit (
                   &PrivateData->TimerEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create timer event: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create timer event: %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -707,7 +707,7 @@ BpmpIpcProtocolInit (
                                        &PrivateData->ProtocolNotifyToken
                                        );
   if (NULL == PrivateData->RegisterNotifyEvent) {
-    DEBUG ((EFI_D_ERROR, "%a: Enable Channel\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Enable Channel\r\n", __FUNCTION__));
     Status = EFI_DEVICE_ERROR;
     goto ErrorExit;
   }

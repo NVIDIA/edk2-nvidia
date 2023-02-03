@@ -101,7 +101,7 @@ LibGetTime (
           RequestData.Operation[1].Flags         = I2C_FLAG_READ;
           Status                                 = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
           if (EFI_ERROR (Status)) {
-            DEBUG ((EFI_D_ERROR, "%a: Failed to get rtc register %02x: %r.\r\n", __FUNCTION__, Register, Status));
+            DEBUG ((DEBUG_ERROR, "%a: Failed to get rtc register %02x: %r.\r\n", __FUNCTION__, Register, Status));
             return EFI_DEVICE_ERROR;
           }
         }
@@ -128,7 +128,7 @@ LibGetTime (
         RequestData.Operation[1].Flags         = I2C_FLAG_READ;
         Status                                 = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a: Failed to get control register: %r.\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a: Failed to get control register: %r.\r\n", __FUNCTION__, Status));
           return EFI_DEVICE_ERROR;
         }
 
@@ -159,7 +159,7 @@ LibGetTime (
 
         Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a: Failed to request read update: %r.\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a: Failed to request read update: %r.\r\n", __FUNCTION__, Status));
           return EFI_DEVICE_ERROR;
         }
 
@@ -175,7 +175,7 @@ LibGetTime (
         RequestData.Operation[1].Flags         = I2C_FLAG_READ;
         Status                                 = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a: Failed to get time: %r.\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a: Failed to get time: %r.\r\n", __FUNCTION__, Status));
           return EFI_DEVICE_ERROR;
         }
 
@@ -341,7 +341,7 @@ LibSetTime (
       RequestData.Operation[1].Flags         = I2C_FLAG_READ;
       Status                                 = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to get rtc control register: %r.\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to get rtc control register: %r.\r\n", __FUNCTION__, Status));
         return EFI_DEVICE_ERROR;
       }
 
@@ -364,7 +364,7 @@ LibSetTime (
           RequestData.Operation[1].Flags         = I2C_FLAG_READ;
           Status                                 = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
           if (EFI_ERROR (Status)) {
-            DEBUG ((EFI_D_ERROR, "%a: Failed to get rtc register %02x: %r.\r\n", __FUNCTION__, VrsBuffer[0], Status));
+            DEBUG ((DEBUG_ERROR, "%a: Failed to get rtc register %02x: %r.\r\n", __FUNCTION__, VrsBuffer[0], Status));
             return EFI_DEVICE_ERROR;
           }
         }
@@ -384,7 +384,7 @@ LibSetTime (
           RequestData.Operation[0].Flags         = WriteFlags;
           Status                                 = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
           if (EFI_ERROR (Status)) {
-            DEBUG ((EFI_D_ERROR, "%a: Failed to set rtc register %x: %r.\r\n", __FUNCTION__, VrsBuffer[0], Status));
+            DEBUG ((DEBUG_ERROR, "%a: Failed to set rtc register %x: %r.\r\n", __FUNCTION__, VrsBuffer[0], Status));
             return EFI_DEVICE_ERROR;
           }
         }
@@ -399,7 +399,7 @@ LibSetTime (
           RequestData.Operation[0].Flags         = WriteFlags;
           Status                                 = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
           if (EFI_ERROR (Status)) {
-            DEBUG ((EFI_D_ERROR, "%a: Failed to set rtc register %x: %r.\r\n", __FUNCTION__, VrsBuffer[0], Status));
+            DEBUG ((DEBUG_ERROR, "%a: Failed to set rtc register %x: %r.\r\n", __FUNCTION__, VrsBuffer[0], Status));
             return EFI_DEVICE_ERROR;
           }
         }
@@ -426,7 +426,7 @@ LibSetTime (
       TimeUpdate.Control.Reserved            = 0;
       Status                                 = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to set control setting: %r.\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to set control setting: %r.\r\n", __FUNCTION__, Status));
         return EFI_DEVICE_ERROR;
       }
 
@@ -454,7 +454,7 @@ LibSetTime (
 
       Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to commit control settings: %r.\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to commit control settings: %r.\r\n", __FUNCTION__, Status));
         return EFI_DEVICE_ERROR;
       }
 
@@ -472,7 +472,7 @@ LibSetTime (
       TimeUpdate.DateTime.Years              = Time->Year - MAXIM_BASE_YEAR;
       Status                                 = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to store time: %r.\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to store time: %r.\r\n", __FUNCTION__, Status));
         return EFI_DEVICE_ERROR;
       }
 
@@ -500,7 +500,7 @@ LibSetTime (
 
       Status = mI2cIo->QueueRequest (mI2cIo, MAXIM_I2C_ADDRESS_INDEX, NULL, RequestPacket, NULL);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to commit time: %r.\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to commit time: %r.\r\n", __FUNCTION__, Status));
         return EFI_DEVICE_ERROR;
       }
 
@@ -622,7 +622,7 @@ I2cIoRegistrationEvent (
                       (VOID **)&I2cIo
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to get i2c interface: %r", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to get i2c interface: %r", __FUNCTION__, Status));
         continue;
       }
 
@@ -717,7 +717,7 @@ LibRtcInitialize (
             &mI2cIoSearchToken
             );
   if (Event == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -733,7 +733,7 @@ LibRtcInitialize (
                   &mRtcExitBootServicesEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
     gBS->CloseEvent (Event);
   }
 

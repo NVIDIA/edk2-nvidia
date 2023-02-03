@@ -386,7 +386,7 @@ UpdateGicInfo (
   GicInfo = (TEGRA_GIC_INFO *)AllocatePool (sizeof (TEGRA_GIC_INFO));
 
   if (!GetGicInfo (GicInfo)) {
-    Status = EFI_D_ERROR;
+    Status = DEBUG_ERROR;
     goto Exit;
   }
 

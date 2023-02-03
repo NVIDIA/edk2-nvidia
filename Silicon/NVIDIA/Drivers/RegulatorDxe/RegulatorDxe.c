@@ -209,7 +209,7 @@ ReadPmicRegister (
                                                             (EFI_I2C_REQUEST_PACKET *)&Operation,
                                                             NULL
                                                             );
-    DEBUG ((EFI_D_VERBOSE, "%a: 0x%02x <- 0x%02x, %r\r\n", __FUNCTION__, *Value, Address, Status));
+    DEBUG ((DEBUG_VERBOSE, "%a: 0x%02x <- 0x%02x, %r\r\n", __FUNCTION__, *Value, Address, Status));
   } else {
     Operation.OperationCount             = 2;
     Operation.Operation[0].Flags         = 0;
@@ -225,7 +225,7 @@ ReadPmicRegister (
                                                             (EFI_I2C_REQUEST_PACKET *)&Operation,
                                                             NULL
                                                             );
-    DEBUG ((EFI_D_VERBOSE, "%a: 0x%02x <- 0x%02x, %r\r\n", __FUNCTION__, *Value, Address, Status));
+    DEBUG ((DEBUG_VERBOSE, "%a: 0x%02x <- 0x%02x, %r\r\n", __FUNCTION__, *Value, Address, Status));
   }
 
   return Status;
@@ -270,7 +270,7 @@ WritePmicRegister (
                                                           &Operation,
                                                           NULL
                                                           );
-  DEBUG ((EFI_D_VERBOSE, "%a: 0x%02x -> 0x%02x, %r\r\n", __FUNCTION__, Value, Address, Status));
+  DEBUG ((DEBUG_VERBOSE, "%a: 0x%02x -> 0x%02x, %r\r\n", __FUNCTION__, Value, Address, Status));
   return Status;
 }
 
@@ -337,7 +337,7 @@ RegulatorGetInfo (
       UINT8  Data;
       Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, &Data, Entry->I2cDeviceGuid);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to read configuration register: %r\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a, Failed to read configuration register: %r\r\n", __FUNCTION__, Status));
         return Status;
       }
 
@@ -350,7 +350,7 @@ RegulatorGetInfo (
       if (Entry->MicrovoltStep != 0x00) {
         Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->VoltageRegister, &Data, Entry->I2cDeviceGuid);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to read voltage register: %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to read voltage register: %r\r\n", __FUNCTION__, Status));
           return Status;
         }
 
@@ -585,7 +585,7 @@ RegulatorEnable (
                                       GpioMode
                                       );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to set gpio 0x%x mode: %r\r\n", __FUNCTION__, Entry->Gpio, Status));
+      DEBUG ((DEBUG_ERROR, "%a, Failed to set gpio 0x%x mode: %r\r\n", __FUNCTION__, Entry->Gpio, Status));
       return EFI_DEVICE_ERROR;
     }
 
@@ -596,7 +596,7 @@ RegulatorEnable (
     UINT8  DataNew;
     Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, &DataOriginal, Entry->I2cDeviceGuid);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to read configuration register: %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, Failed to read configuration register: %r\r\n", __FUNCTION__, Status));
       return Status;
     }
 
@@ -611,7 +611,7 @@ RegulatorEnable (
     if (DataNew != DataOriginal) {
       Status = WritePmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, DataNew, Entry->I2cDeviceGuid);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to write configuration register: %r\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a, Failed to write configuration register: %r\r\n", __FUNCTION__, Status));
         return Status;
       }
 
@@ -681,7 +681,7 @@ RegulatorSetVoltage (
       UINT8  DataNew;
       Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->VoltageRegister, &DataOriginal, Entry->I2cDeviceGuid);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to read voltage register: %r\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a, Failed to read voltage register: %r\r\n", __FUNCTION__, Status));
         return Status;
       }
 
@@ -693,7 +693,7 @@ RegulatorSetVoltage (
       if (DataNew != DataOriginal) {
         Status = WritePmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->VoltageRegister, DataNew, Entry->I2cDeviceGuid);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to write voltage register: %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to write voltage register: %r\r\n", __FUNCTION__, Status));
           return Status;
         }
 
@@ -797,7 +797,7 @@ I2cIoProtocolReady (
     }
   }
 
-  DEBUG ((EFI_D_VERBOSE, "%a: Ready!!!\r\n", __FUNCTION__));
+  DEBUG ((DEBUG_VERBOSE, "%a: Ready!!!\r\n", __FUNCTION__));
   ListNode = GetFirstNode (&Private->RegulatorList);
   while (ListNode != &Private->RegulatorList) {
     REGULATOR_LIST_ENTRY  *Entry;
@@ -863,7 +863,7 @@ GpioProtocolReady (
 
   gBS->CloseEvent (Event);
 
-  DEBUG ((EFI_D_VERBOSE, "%a: Ready!!!\r\n", __FUNCTION__));
+  DEBUG ((DEBUG_VERBOSE, "%a: Ready!!!\r\n", __FUNCTION__));
   ListNode = GetFirstNode (&Private->RegulatorList);
   while (ListNode != &Private->RegulatorList) {
     REGULATOR_LIST_ENTRY  *Entry;
@@ -941,7 +941,7 @@ AddFixedRegulators (
 
     ListEntry = AllocateZeroPool (sizeof (REGULATOR_LIST_ENTRY));
     if (NULL == ListEntry) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
       return EFI_OUT_OF_RESOURCES;
     }
 
@@ -1104,7 +1104,7 @@ AddPmicRegulators (
           for (RegulatorIndex = 0; RegulatorIndex < PmicSupported[PmicIndex].SettingsSize; RegulatorIndex++) {
             ListEntry = AllocateZeroPool (sizeof (REGULATOR_LIST_ENTRY));
             if (NULL == ListEntry) {
-              DEBUG ((EFI_D_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
+              DEBUG ((DEBUG_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
               return EFI_OUT_OF_RESOURCES;
             }
 
@@ -1112,7 +1112,7 @@ AddPmicRegulators (
             ListEntry->Name        = fdt_get_name (Private->DeviceTreeBase, NodeOffset, NULL);
             Status                 = SetupPmicInfo (Private, ListEntry, PmicSupported[PmicIndex].RegulatorSettings[RegulatorIndex].Name, &PmicSupported[PmicIndex]);
             if (EFI_ERROR (Status)) {
-              DEBUG ((EFI_D_ERROR, "%a: Failed to get pmic info: %x, %r\r\n", __FUNCTION__, ListEntry->RegulatorId, Status));
+              DEBUG ((DEBUG_ERROR, "%a: Failed to get pmic info: %x, %r\r\n", __FUNCTION__, ListEntry->RegulatorId, Status));
               FreePool (ListEntry);
             } else {
               InsertTailList (&Private->RegulatorList, &ListEntry->Link);
@@ -1126,7 +1126,7 @@ AddPmicRegulators (
 
             ListEntry = AllocateZeroPool (sizeof (REGULATOR_LIST_ENTRY));
             if (NULL == ListEntry) {
-              DEBUG ((EFI_D_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
+              DEBUG ((DEBUG_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
               return EFI_OUT_OF_RESOURCES;
             }
 
@@ -1150,7 +1150,7 @@ AddPmicRegulators (
             ListEntry->Name          = (CONST CHAR8 *)fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-name", NULL);
             Status                   = SetupPmicInfo (Private, ListEntry, fdt_get_name (Private->DeviceTreeBase, SubNodeOffset, NULL), &PmicSupported[PmicIndex]);
             if (EFI_ERROR (Status)) {
-              DEBUG ((EFI_D_ERROR, "%a: Failed to get pmic info: %x, %r\r\n", __FUNCTION__, ListEntry->RegulatorId, Status));
+              DEBUG ((DEBUG_ERROR, "%a: Failed to get pmic info: %x, %r\r\n", __FUNCTION__, ListEntry->RegulatorId, Status));
               FreePool (ListEntry);
             } else {
               InsertTailList (&Private->RegulatorList, &ListEntry->Link);
@@ -1191,19 +1191,19 @@ BuildRegulatorNodes (
 
   Status = DtPlatformLoadDtb (&Private->DeviceTreeBase, &Private->DeviceTreeSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a failed to get device tree: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a failed to get device tree: %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
   Status = AddFixedRegulators (Private);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a failed to add fixed regulators: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a failed to add fixed regulators: %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
   Status = AddPmicRegulators (Private);
   if (EFI_ERROR ((Status))) {
-    DEBUG ((EFI_D_ERROR, "%a failed to add pmic regulators: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a failed to add pmic regulators: %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -1214,7 +1214,7 @@ BuildRegulatorNodes (
     if (NULL != Entry) {
       if (Entry->PmicSetting != NULL) {
         DEBUG ((
-          EFI_D_VERBOSE,
+          DEBUG_VERBOSE,
           "%a: Node 0x%04x, Name %a, PMIC Name %a, AlwaysEnabled %u, Available %u, Min %u, Max %u, Step, %u\r\n",
           __FUNCTION__,
           Entry->RegulatorId,
@@ -1228,7 +1228,7 @@ BuildRegulatorNodes (
           ));
       } else if (Entry->Gpio != 0) {
         DEBUG ((
-          EFI_D_VERBOSE,
+          DEBUG_VERBOSE,
           "%a: Node 0x%04x, Name %a, Gpio 0x%08x, AlwaysEnabled %u, Available %u, Min %u, Max %u, Step, %u\r\n",
           __FUNCTION__,
           Entry->RegulatorId,
@@ -1242,7 +1242,7 @@ BuildRegulatorNodes (
           ));
       } else {
         DEBUG ((
-          EFI_D_VERBOSE,
+          DEBUG_VERBOSE,
           "%a: Node 0x%04x, Name %a, AlwaysEnabled %u, Available %u, Min %u, Max %u, Step, %u\r\n",
           __FUNCTION__,
           Entry->RegulatorId,
@@ -1301,7 +1301,7 @@ RegulatorDxeInitialize (
 
   Private = AllocatePool (sizeof (REGULATOR_DXE_PRIVATE));
   if (NULL == Private) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate private data stucture: %r\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate private data stucture: %r\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -1319,7 +1319,7 @@ RegulatorDxeInitialize (
 
   Status = BuildRegulatorNodes (Private);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to parse regulator data: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to parse regulator data: %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -1331,7 +1331,7 @@ RegulatorDxeInitialize (
                      &Private->GpioSearchToken
                      );
   if (NULL == GpioReadyEvent) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to create gpio notification event\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to create gpio notification event\r\n", __FUNCTION__, Status));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
@@ -1344,7 +1344,7 @@ RegulatorDxeInitialize (
                       &Private->I2cIoSearchToken
                       );
   if (NULL == I2cIoReadyEvent) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to create I2cIo notification event\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to create I2cIo notification event\r\n", __FUNCTION__, Status));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
@@ -1356,7 +1356,7 @@ RegulatorDxeInitialize (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to install protocols: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to install protocols: %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
