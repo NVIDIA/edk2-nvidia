@@ -14,7 +14,6 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
-#include <Library/HobLib.h>
 #include <Library/DxeServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
@@ -120,25 +119,6 @@ Base2ToByteWith64KUnit (
 }
 
 /**
- Fetches the BIOS size from the FV HOB.
-
- @return Returns UINT64 type BIOS size.
-**/
-UINT64
-GetBiosSize (
-  VOID
-  )
-{
-  UINT16                   BiosSize;
-  EFI_HOB_FIRMWARE_VOLUME  *FvHob;
-
-  FvHob    = GetFirstHob (EFI_HOB_TYPE_FV);
-  BiosSize = FvHob->Length;
-
-  return BiosSize;
-}
-
-/**
   Install CM object for SMBIOS Type 0
 
    @param[in, out] Private   Pointer to the private data of SMBIOS creators
@@ -183,23 +163,14 @@ InstallSmbiosType0Cm (
   DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, "type0");
   if (DtbOffset < 0) {
     DEBUG ((DEBUG_ERROR, "%a: Device tree node for SMBIOS Type 0 not found.\n", __FUNCTION__));
-    BiosInfo->SystemBiosMajorRelease = 0xFF;
-    BiosInfo->SystemBiosMinorRelease = 0xFF;
+    BiosPhysicalSize = 0x00;
   } else {
-    Property = fdt_getprop (DtbBase, DtbOffset, "system-bios-major-release", &Length);
+    Property = fdt_getprop (DtbBase, DtbOffset, "rom_size", &Length);
     if ((Property == NULL) || (Length == 0)) {
-      DEBUG ((DEBUG_ERROR, "%a: Device tree property 'system-bios-major-release' not found.\n", __FUNCTION__));
-      BiosInfo->SystemBiosMajorRelease = 0xFF;
+      DEBUG ((DEBUG_ERROR, "%a: Device tree property 'rom_size' not found.\n", __FUNCTION__));
+      BiosPhysicalSize = 0x00;
     } else {
-      BiosInfo->SystemBiosMajorRelease = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
-    }
-
-    Property = fdt_getprop (DtbBase, DtbOffset, "system-bios-minor-release", &Length);
-    if ((Property == NULL) || (Length == 0)) {
-      DEBUG ((DEBUG_ERROR, "%a: Device tree property 'system-bios-minor-release' not found.\n", __FUNCTION__));
-      BiosInfo->SystemBiosMinorRelease = 0xFF;
-    } else {
-      BiosInfo->SystemBiosMinorRelease = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+      BiosPhysicalSize = (UINT64)fdt32_to_cpu (*(UINT32 *)Property);
     }
   }
 
@@ -235,7 +206,6 @@ InstallSmbiosType0Cm (
     BiosInfo->BiosReleaseDate = ReleaseDateAsciiStr;
   }
 
-  BiosPhysicalSize = GetBiosSize ();
   if (BiosPhysicalSize < SIZE_16MB) {
     BiosInfo->BiosSize = Base2ToByteWith64KUnit (BiosPhysicalSize) - 1;
   } else {
@@ -253,6 +223,9 @@ InstallSmbiosType0Cm (
   BiosInfo->BiosCharacteristics                  = *(BiosChar);
   BiosInfo->BIOSCharacteristicsExtensionBytes[0] = (UINT8)(PcdGet16 (PcdBiosCharacteristicsExtension) & 0xFF);
   BiosInfo->BIOSCharacteristicsExtensionBytes[1] = (UINT8)(PcdGet16 (PcdBiosCharacteristicsExtension) >> 8);
+
+  BiosInfo->SystemBiosMajorRelease = 0xFF;
+  BiosInfo->SystemBiosMinorRelease = 0xFF;
 
   Status = GetBmcRelease (&BmcRelease);
   if (Status == EFI_SUCCESS) {
