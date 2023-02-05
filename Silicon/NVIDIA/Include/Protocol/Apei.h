@@ -3,7 +3,7 @@
 
   This protocol provides a means of locating/updating APEI Tables.
 
-  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2017, ARM Limited. All rights reserved.
 
   This program and the accompanying materials
@@ -113,5 +113,6 @@ typedef struct _EFI_APEI_PROTOCOL {
 
 extern EFI_GUID  gEfiApeiProtocolGuid;
 extern EFI_GUID  gEfiApeiGetErrorSourcesGuid;
+extern EFI_GUID  gEfiApeiSetTimeOfDayGuid;
 
 #endif

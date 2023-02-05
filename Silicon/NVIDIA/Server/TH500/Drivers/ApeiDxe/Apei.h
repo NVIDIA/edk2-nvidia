@@ -101,6 +101,18 @@ HestBertSetupTables (
   );
 
 /**
+ * Set Time Of Day in RAS FW
+ *
+ * @param[in] RasFwBufferInfo  Details about the RAS_FW/NS buffer
+ *
+ * @return EFI_SUCCESS         If ToD was sent successfully
+**/
+EFI_STATUS
+SetTimeOfDay (
+  IN RAS_FW_BUFFER  *RasFwBufferInfo
+  );
+
+/**
  * Build the EINJ table based on data from the shared NS buffer from RAS_FW.
  *
  * @param[in] RasFwBufferInfo  Details about the RAS_FW/NS buffer

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -144,6 +144,11 @@ ApeiDxeInitialize (
     }
 
     Status = HestBertSetupTables (&RasFwBufferInfo, SkipHest, SkipBert);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    Status = SetTimeOfDay (&RasFwBufferInfo);
     if (EFI_ERROR (Status)) {
       return Status;
     }

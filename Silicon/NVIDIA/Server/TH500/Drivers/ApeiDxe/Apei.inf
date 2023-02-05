@@ -1,6 +1,6 @@
 #/** @file
 #
-#  Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -19,6 +19,7 @@
   HestBertTables.c
   EinjTable.c
   RASFwInterface.c
+  RASTimeOfDay.c
 
 [Sources.AARCH64]
   AArch64/FfaSmc.S
@@ -35,10 +36,13 @@
   DxeServicesTableLib
   IoLib
   DtPlatformDtbLoaderLib
+  TimerLib
+  TimeBaseLib
 
 [Protocols]
   gEfiAcpiTableProtocolGuid       # PROTOCOL ALWAYS_CONSUMED
   gEfiApeiGetErrorSourcesGuid     # PROTOCOL ALWAYS_CONSUMED
+  gEfiApeiSetTimeOfDayGuid        # PROTOCOL ALWAYS CONSUMED
   gNVIDIARasNsCommPcieDpcDataProtocolGuid
 
 [Depex]
