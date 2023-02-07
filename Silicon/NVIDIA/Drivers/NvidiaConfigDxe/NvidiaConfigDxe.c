@@ -173,6 +173,45 @@ STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2        = NULL;
 STATIC VOID                            *mMmCommunicationBuffer = NULL;
 UINT64                                 mOpRomDisMask           = 0;
 
+// Print TEGRABL_EARLY_BOOT_VARIABLES
+VOID
+EFIAPI
+PrintMb1Variables (
+  TEGRABL_EARLY_BOOT_VARIABLES  *EarlyVariable
+  )
+{
+  UINTN  Index;
+  UINTN  Index2;
+
+  DEBUG ((DEBUG_ERROR, "---------MB1 Variable Printout---------\n"));
+  DEBUG ((DEBUG_ERROR, "TH500.MB1.FeatureData: %010x\n", EarlyVariable->Data.Mb1Data.FeatureData));
+  DEBUG ((DEBUG_ERROR, "TH500.MB1.HvRsvdMemSize: %08x\n", EarlyVariable->Data.Mb1Data.HvRsvdMemSize));
+  DEBUG ((DEBUG_ERROR, "TH500.MB1.UefiDebugLevel: %08x\n", EarlyVariable->Data.Mb1Data.UefiDebugLevel));
+
+  for (Index = 0; Index < TEGRABL_SOC_MAX_SOCKETS; Index++) {
+    if (!mHiiControlSettings.SocketEnabled[Index]) {
+      continue;
+    }
+
+    for (Index2 = 0; Index2 < TEGRABL_MAX_UPHY_PER_SOCKET; Index2++) {
+      DEBUG ((DEBUG_ERROR, "TH500.MB1.UphyConfig.%x.%x: 0x%02x\n", Index, Index2, EarlyVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]));
+    }
+  }
+
+  for (Index = 0; Index < TEGRABL_SOC_MAX_SOCKETS; Index++) {
+    if (!mHiiControlSettings.SocketEnabled[Index]) {
+      continue;
+    }
+
+    for (Index2 = 0; Index2 < TEGRABL_MAX_PCIE_PER_SOCKET; Index2++) {
+      DEBUG ((DEBUG_ERROR, "TH500.MB1.PcieConfig.%x.%x.features: 0x%010x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].features));
+      DEBUG ((DEBUG_ERROR, "TH500.MB1.PcieConfig.%x.%x.MaxSpeed: 0x%08x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].MaxSpeed));
+      DEBUG ((DEBUG_ERROR, "TH500.MB1.PcieConfig.%x.%x.MaxWidth: 0x%08x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].MaxWidth));
+      DEBUG ((DEBUG_ERROR, "TH500.MB1.PcieConfig.%x.%x.SlotType: 0x%02x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].SlotType));
+    }
+  }
+}
+
 // Talk to MB1 actual storage
 EFI_STATUS
 EFIAPI
@@ -357,7 +396,7 @@ ReadMb1Variables (
   return EFI_SUCCESS;
 }
 
-// Update the variables based on MB1 data
+// Update the UEFI variables based on MB1 data
 EFI_STATUS
 EFIAPI
 WriteMb1Variables (
@@ -435,7 +474,7 @@ WriteMb1Variables (
       UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.MB1.UphyConfig.%x.%x", Index, Index2);
       SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]);
       DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]);
-      Size    = sizeof (UINT8);
+      Size    = sizeof (NewVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]);
       if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
         Status = gRT->SetVariable (
                         VariableName,
@@ -458,7 +497,7 @@ WriteMb1Variables (
       UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.MB1.PcieConfig.%x.%x", Index, Index2);
       SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.PcieConfig[Index][Index2]);
       DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.PcieConfig[Index][Index2]);
-      Size    = sizeof (UINT8);
+      Size    = sizeof (NewVariable->Data.Mb1Data.PcieConfig[Index][Index2]);
       if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
         Status = gRT->SetVariable (
                         VariableName,
@@ -797,11 +836,11 @@ SyncHiiSettings (
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].DisableDLFE     = mHiiControlSettings.DisableDLFE3[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].EnableECRC      = mHiiControlSettings.EnableECRC_3[Index];
 
-      mOpRomDisMask |= mHiiControlSettings.DisableOptionRom0[Index] ? (1ULL << PCIE_SEG (0, Index)) : 0ULL;
-      mOpRomDisMask |= mHiiControlSettings.DisableOptionRom1[Index] ? (1ULL << PCIE_SEG (1, Index)) : 0ULL;
-      mOpRomDisMask |= mHiiControlSettings.DisableOptionRom2[Index] ? (1ULL << PCIE_SEG (2, Index)) : 0ULL;
-      mOpRomDisMask |= mHiiControlSettings.DisableOptionRom3[Index] ? (1ULL << PCIE_SEG (3, Index)) : 0ULL;
-      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].DisableDPCAtRP  = mHiiControlSettings.DisableDPCAtRP_3[Index];
+      mOpRomDisMask                                              |= mHiiControlSettings.DisableOptionRom0[Index] ? (1ULL << PCIE_SEG (0, Index)) : 0ULL;
+      mOpRomDisMask                                              |= mHiiControlSettings.DisableOptionRom1[Index] ? (1ULL << PCIE_SEG (1, Index)) : 0ULL;
+      mOpRomDisMask                                              |= mHiiControlSettings.DisableOptionRom2[Index] ? (1ULL << PCIE_SEG (2, Index)) : 0ULL;
+      mOpRomDisMask                                              |= mHiiControlSettings.DisableOptionRom3[Index] ? (1ULL << PCIE_SEG (3, Index)) : 0ULL;
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].DisableDPCAtRP = mHiiControlSettings.DisableDPCAtRP_3[Index];
     }
   }
 }
