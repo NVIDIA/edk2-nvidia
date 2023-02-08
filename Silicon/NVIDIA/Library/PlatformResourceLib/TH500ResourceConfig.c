@@ -358,14 +358,13 @@ TH500GetResourceConfig (
         if (Socket == TH500_PRIMARY_SOCKET) {
           // For primary socket, add memory in DRAM CO CARVEOUT_CCPLEX_INTERWORLD_SHMEM in its placeholder
           // in TH500MmioInfo for MMIO mapping.
-          TH500MmioInfo[ARRAY_SIZE (TH500MmioInfo)-2].Base        = CpuBootloaderParams->CarveoutInfo[Socket][Index].Base;
-          TH500MmioInfo[ARRAY_SIZE (TH500MmioInfo)-2].Size        = CpuBootloaderParams->CarveoutInfo[Socket][Index].Size;
-          CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][Index].Base;
-          CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][Index].Size;
-          CarveoutRegionsCount++;
-        } else {
-          continue;
+          TH500MmioInfo[ARRAY_SIZE (TH500MmioInfo)-2].Base = CpuBootloaderParams->CarveoutInfo[Socket][Index].Base;
+          TH500MmioInfo[ARRAY_SIZE (TH500MmioInfo)-2].Size = CpuBootloaderParams->CarveoutInfo[Socket][Index].Size;
         }
+
+        CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][Index].Base;
+        CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][Index].Size;
+        CarveoutRegionsCount++;
       } else if ((Index == CARVEOUT_RCM_BLOB) ||
                  (Index == CARVEOUT_UEFI) ||
                  (Index == CARVEOUT_OS))
