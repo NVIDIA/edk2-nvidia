@@ -110,6 +110,12 @@ typedef struct {
 #define TEGRABL_BINARY_COPY_MAX             (4)
 #define TEGRABL_PARTITION_DEVICE_TYPE_QSPI  (1)
 
+#define MAX_DIGEST_SIZE       48
+#define MAX_NUM_MEASUREMENTS  50
+
+#define ALGO_TYPE_SHA384  0
+#define ALGO_TYPE_SHA256  1
+
 typedef struct {
   /* Partition Device (QSPI/RCM/NONE). On TH500 this can be QSPI only */
   UINT32    DeviceType;
@@ -141,6 +147,19 @@ typedef struct {
   UINT32    DataSize;
   UINT32    Reserved;
 } TEGRABL_FRU_EEPROM_DATA;
+
+typedef struct {
+  UINT32    MagicId;                 /// Unique ID to indentify each measurement
+  UINT32    SocketId;                /// Socket id where the measurement was made
+  UINT32    PcrIndex;                /// PCR index to which the measurement was extended
+  UINT8     Digest[MAX_DIGEST_SIZE]; /// if (algo_type ? SHA384) then consume 48 bytes else 32 bytes.
+} TEGRABL_TPM_COMMIT_LOG_ENTRY;
+
+typedef struct {
+  UINT32                          AlgoType;        /// if (algo_type = 0) then SHA384 else SHA256
+  UINT32                          NumMeasurements; /// Total number of entries in event log
+  TEGRABL_TPM_COMMIT_LOG_ENTRY    Measurements[MAX_NUM_MEASUREMENTS];
+} TEGRABL_TPM_COMMIT_LOG;
 
 #pragma pack()
 typedef struct {
@@ -204,6 +223,8 @@ typedef struct {
   UEFI_DECLARE_ALIGNED (TEGRABL_PARTITION_DESC PartitionInfo[TEGRABL_BINARY_MAX][TEGRABL_BINARY_COPY_MAX], 8);
 
   UEFI_DECLARE_ALIGNED (TEGRABL_EARLY_BOOT_VARIABLES EarlyBootVariables[TH500_MAX_SOCKETS], 8);
+
+  UEFI_DECLARE_ALIGNED (TEGRABL_TPM_COMMIT_LOG EarlyTpmCommitLog, 8);
 } TEGRA_CPUBL_PARAMS;
 
 #endif //__TH500_RESOURCE_CONFIG_PRIVATE_H__

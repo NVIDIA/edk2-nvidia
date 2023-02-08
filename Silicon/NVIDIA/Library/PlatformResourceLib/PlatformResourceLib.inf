@@ -16,6 +16,7 @@
   MdePkg/MdePkg.dec
   NetworkPkg/NetworkPkg.dec
   CryptoPkg/CryptoPkg.dec
+  SecurityPkg/SecurityPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
@@ -28,10 +29,12 @@
   T194ResourceConfig.c
   T234ResourceConfig.c
   TH500ResourceConfig.c
+  TH500Tcg2EventLog.c
 
 [Guids]
   gNVIDIAOSCarveoutHob
   gNVIDIATH500MB1DataGuid
+  gTcgEvent2EntryHobGuid
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -67,6 +67,19 @@ UINT32
 EFIAPI
 TH500GetSocketMask (
   IN UINTN  CpuBootloaderAddress
+  );
+
+/**
+  Register TPM Events
+
+  This function copies and registers Pre-UEFI TPM Events into the GUID HOB list.
+
+  @param  TpmLog  Physical address to Pre-UEFI TPM measurement data
+**/
+EFI_STATUS
+EFIAPI
+TH500BuildTcgEventHob (
+  IN UINTN  TpmLogAddress
   );
 
 #endif //__TH500_RESOURCE_CONFIG_H__
