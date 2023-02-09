@@ -113,7 +113,7 @@ OemDescStatusCodeCallback (
   //
   if ((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_ERROR_CODE) {
     if ((CodeType & EFI_STATUS_CODE_SEVERITY_MASK) == EFI_ERROR_MINOR) {
-      ErrorLevel = DEBUG_WARN;
+      ErrorLevel = DEBUG_INFO;
     } else {
       ErrorLevel = DEBUG_ERROR;
     }

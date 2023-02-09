@@ -2,7 +2,7 @@
 
   OEM Status code handling unit test
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -592,9 +592,9 @@ OemDescFilterSend (
   Status = mOemDescCallback (EFI_ERROR_CODE | EFI_ERROR_MAJOR, ShortDesc1.Value, 0, NULL, mData);
   UT_ASSERT_NOT_EFI_ERROR (Status);
   //
-  // Disable DEBUG_WARN, and verify that no description sent for minor errors
+  // Disable DEBUG_INFO, and verify that no description sent for minor errors
   //
-  will_return (__wrap_GetDebugPrintErrorLevel, ~DEBUG_WARN);
+  will_return (__wrap_GetDebugPrintErrorLevel, ~DEBUG_INFO);
   Status = mOemDescCallback (EFI_ERROR_CODE | EFI_ERROR_MINOR, ShortDesc1.Value, 0, NULL, mData);
   UT_ASSERT_NOT_EFI_ERROR (Status);
   //
