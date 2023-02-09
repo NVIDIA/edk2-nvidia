@@ -51,10 +51,6 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define SP_PKG_HEADER_SIZE    0x18
 /* Request the PA of the STMM_FW NS shared buffer */
 #define STMM_GET_NS_BUFFER  0xC0270001
-#define RASFW_VMID          0x8003
-#define SATMC_VMID          0x8001
-
-#define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
 
 ARM_MEMORY_REGION_DESCRIPTOR        MemoryTable[MAX_MANIFEST_REGIONS+1];
 PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;

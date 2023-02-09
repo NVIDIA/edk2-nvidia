@@ -22,6 +22,10 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define OPTEE_OS_UID2               0xaf630002
 #define OPTEE_OS_UID3               0xa5d5c51b
 #define VERSION_STR_MAX             0x100
+#define RASFW_VMID                  0x8003
+#define SATMC_VMID                  0x8001
+
+#define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
 
 typedef struct _EFI_MM_DEVICE_REGION {
   EFI_VIRTUAL_ADDRESS    DeviceRegionStart;
@@ -210,6 +214,22 @@ EFI_STATUS
 GetPartitionData (
   IN  UINT32          PartitionIndex,
   OUT PARTITION_INFO  *PartitionInfo
+  );
+
+/**
+ * Check if a Buffer address is in the Mailbox of a given SP.
+ *
+ * @param[in] Buf   Buffer Address to check.
+ * @param[in] SpId  SP Id used in FF-A messages.
+
+ * @retval    TRUE    Buffer is in Range of the Mailbox.
+ *            FALSE   Buffer is not in the Mailbox.
+ **/
+EFIAPI
+BOOLEAN
+IsBufInSecSpMbox (
+  IN UINTN   Buf,
+  IN UINT16  SpId
   );
 
 #endif //STANDALONEMM_OPTEE_DEVICE_MEM_H

@@ -732,3 +732,56 @@ GetPartitionData (
 ExitGetPartitionData:
   return Status;
 }
+
+/**
+ * Check if a Buffer address is in the Mailbox of a given SP.
+ *
+ * @param[in] Buf   Buffer Address to check.
+ * @param[in] SpId  SP Id used in FF-A messages.
+
+ * @retval    TRUE    Buffer is in Range of the Mailbox.
+ *            FALSE   Buffer is not in the Mailbox.
+ **/
+EFIAPI
+BOOLEAN
+IsBufInSecSpMbox (
+  UINTN   Buf,
+  UINT16  SpId
+  )
+{
+  BOOLEAN            IsBufInSpRange;
+  EFI_HOB_GUID_TYPE  *GuidHob;
+  STMM_COMM_BUFFERS  *StmmCommBuffers;
+  UINT64             SecBufStart;
+  UINT32             SecBufRange;
+  UINT64             SecBufEnd;
+
+  IsBufInSpRange = FALSE;
+
+  GuidHob = GetFirstGuidHob (&gNVIDIAStMMBuffersGuid);
+  if (GuidHob == NULL) {
+    DEBUG ((DEBUG_ERROR, "Failed to find Buffers GUID HOB\n"));
+    goto ExitIsBufInSecSpMbox;
+  }
+
+  StmmCommBuffers = (STMM_COMM_BUFFERS *)GET_GUID_HOB_DATA (GuidHob);
+  if (SpId == RASFW_VMID) {
+    SecBufStart = StmmCommBuffers->RasMmBufferAddr;
+    SecBufRange = StmmCommBuffers->RasMmBufferSize;
+    SecBufEnd   = SecBufStart + SecBufRange;
+  } else if (SpId == SATMC_VMID) {
+    SecBufStart = StmmCommBuffers->SatMcMmBufferAddr;
+    SecBufRange = StmmCommBuffers->SatMcMmBufferSize;
+    SecBufEnd   = SecBufStart + SecBufRange;
+  } else {
+    goto ExitIsBufInSecSpMbox;
+  }
+
+  if (ADDRESS_IN_RANGE (Buf, SecBufStart, SecBufEnd)) {
+    IsBufInSpRange = TRUE;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a:%d %u\n", __FUNCTION__, __LINE__, IsBufInSpRange));
+ExitIsBufInSecSpMbox:
+  return IsBufInSpRange;
+}

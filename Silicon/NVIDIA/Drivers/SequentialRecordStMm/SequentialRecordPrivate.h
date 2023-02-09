@@ -21,9 +21,10 @@
 #include <TH500/TH500MB1Configuration.h>
 #include <Guid/NVIDIAMmMb1Record.h>
 
-#define READ_LAST_RECORD   (0)
-#define WRITE_NEXT_RECORD  (1)
-#define ERASE_PARTITION    (2)
+#define READ_LAST_RECORD     (0)
+#define WRITE_NEXT_RECORD    (1)
+#define ERASE_PARTITION      (2)
+#define CLEAR_EFI_VARIABLES  (3)
 
 typedef struct {
   /* Operation to perform */
@@ -38,10 +39,11 @@ typedef struct {
   UINT8         Data[]; /* Flexible array member */
 } RAS_MM_COMMUNICATE_PAYLOAD;
 
-EFI_STATUS
-EFIAPI
-CmetRecordTest (
-  VOID
-  );
+typedef struct {
+  /* Operation to perform */
+  UINTN         Command;
+  /* Return value in the EFI standard. Initialized as EFI_SUCCESS when making a request. */
+  EFI_STATUS    ReturnStatus;
+} SATMC_MM_COMMUNICATE_PAYLOAD;
 
 #endif // SEQUENTIAL_RECORD_PVT_H

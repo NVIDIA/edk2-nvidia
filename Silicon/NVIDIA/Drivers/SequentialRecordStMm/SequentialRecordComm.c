@@ -10,12 +10,14 @@
 **/
 
 #include "SequentialRecordPrivate.h"
+#include <Protocol/FirmwareVolumeBlock.h>
 
 NVIDIA_SEQ_RECORD_PROTOCOL   *RasSeqProto;
 NVIDIA_CMET_RECORD_PROTOCOL  *CmetSeqProto;
 NVIDIA_SEQ_RECORD_PROTOCOL   *EarlyVarsProto;
 
 #define EARLY_VARS_RD_SOCKET  (0)
+#define UEFI_VARS_SOCKET      (0)
 
 /**
  * GetSeqProto
@@ -87,6 +89,106 @@ ExitGetSeqProto:
 }
 
 /**
+ * CorruptFvHeader.
+ * Utility function to corrupt the UEFI Variable store by corrupting
+ * the FV header forcing a re-build of the variable store during the next
+ * boot.
+ *
+ * @params[in]   None.
+ *
+ * @retval       EFI_SUCCESS      Succesfully corrupted the FV Header.
+ *               Other            Failure to get the partition Info or while
+ *                                transacting with the device.
+ **/
+STATIC
+EFI_STATUS
+CorruptFvHeader (
+  VOID
+  )
+{
+  UINT32                      FvHeaderLength;
+  UINT64                      FvHeaderOffset;
+  NVIDIA_NOR_FLASH_PROTOCOL   *NorFlashProtocol;
+  EFI_PHYSICAL_ADDRESS        CpuBlParamsAddr;
+  EFI_STATUS                  Status;
+  UINT64                      PartitionSize;
+  UINT16                      DeviceInstance;
+  EFI_FIRMWARE_VOLUME_HEADER  FvHeaderData;
+
+  NorFlashProtocol = GetSocketNorFlashProtocol (UEFI_VARS_SOCKET);
+  if (NorFlashProtocol == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get NorFlashProtocol for Socket 0\n",
+      __FUNCTION__
+      ));
+    Status = EFI_UNSUPPORTED;
+    goto ExitCorruptFvHeader;
+  }
+
+  Status = GetCpuBlParamsAddrStMm (&CpuBlParamsAddr);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get CpuBl Addr %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitCorruptFvHeader;
+  }
+
+  Status = GetPartitionInfoStMm (
+             (UINTN)CpuBlParamsAddr,
+             TEGRABL_VARIABLE_IMAGE_INDEX,
+             &DeviceInstance,
+             &FvHeaderOffset,
+             &PartitionSize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:Failed to get Variable PartitionInfo %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitCorruptFvHeader;
+  }
+
+  FvHeaderLength = sizeof (EFI_FIRMWARE_VOLUME_HEADER);
+  Status         = NorFlashProtocol->Read (
+                                       NorFlashProtocol,
+                                       FvHeaderOffset,
+                                       FvHeaderLength,
+                                       &FvHeaderData
+                                       );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to Read FV header %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitCorruptFvHeader;
+  }
+
+  /* Corrupt the signature/revision .*/
+  FvHeaderData.Signature = FvHeaderData.Revision = 0;
+  Status                 = NorFlashProtocol->Write (
+                                               NorFlashProtocol,
+                                               FvHeaderOffset,
+                                               FvHeaderData.HeaderLength,
+                                               &FvHeaderData
+                                               );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to Write Partition header\r\n", __FUNCTION__));
+    goto ExitCorruptFvHeader;
+  }
+
+ExitCorruptFvHeader:
+  return Status;
+}
+
+/**
  * MMI handler for CMET Log service.
  *
  * @params[in]   DispatchHandle   Handle of the registered MMI..
@@ -117,6 +219,17 @@ CmetMsgHandler (
   if (CmetSeqProto == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: No Storage support for Cmet Vars\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
+    goto ExitCmetMsgHandler;
+  }
+
+  if (IsBufInSecSpMbox ((UINTN)CommBuffer, RASFW_VMID) == FALSE) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: ComBuffer %lu is not in the RAS FW Mbox\n",
+      __FUNCTION__,
+      (UINT64)(CommBuffer)
+      ));
+    Status = EFI_INVALID_PARAMETER;
     goto ExitCmetMsgHandler;
   }
 
@@ -198,6 +311,17 @@ RasLogMsgHandler (
     goto ExitRasMsgHandler;
   }
 
+  if (IsBufInSecSpMbox ((UINTN)CommBuffer, RASFW_VMID) == FALSE) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: ComBuffer %lu is not in the RAS FW Mbox\n",
+      __FUNCTION__,
+      (UINT64)(CommBuffer)
+      ));
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitRasMsgHandler;
+  }
+
   switch (RasHeader->Function) {
     case READ_LAST_RECORD:
       Status = RasSeqProto->ReadLast (
@@ -238,6 +362,62 @@ RasLogMsgHandler (
 ExitRasMsgHandler:
   RasHeader->ReturnStatus = Status;
   return EFI_SUCCESS;
+}
+
+/**
+ * Utility Function to delete the Early Vars Partition.
+ *
+ * @params[in/out]   None.
+ *
+ * @retval       EFI_SUCCESS     Succesfully erased the EarlyVars Partition.
+ *                Other          Failed to erase partition.
+ **/
+STATIC
+EFI_STATUS
+EraseEarlyVarsPartition (
+  VOID
+  )
+{
+  UINTN                 SocketIdx;
+  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS  CpuBlParams;
+
+  if (EarlyVarsProto == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: No Storage support for Early Vars\n", __FUNCTION__));
+    Status = EFI_UNSUPPORTED;
+    goto ExitEraseEarlyVarsPartition;
+  }
+
+  Status = GetCpuBlParamsAddrStMm (&CpuBlParams);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get CPU BL Addr %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitEraseEarlyVarsPartition;
+  }
+
+  for (SocketIdx = 0; SocketIdx < MAX_SOCKETS; SocketIdx++) {
+    if (IsSocketEnabledStMm (CpuBlParams, SocketIdx) == TRUE) {
+      Status = EarlyVarsProto->ErasePartition (
+                                 EarlyVarsProto,
+                                 SocketIdx
+                                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Erase Failed Socket %u\n",
+          __FUNCTION__,
+          SocketIdx
+          ));
+      }
+    }
+  }
+
+ExitEraseEarlyVarsPartition:
+  return Status;
 }
 
 /**
@@ -328,22 +508,14 @@ EarlyVarsMsgHandler (
 
       break;
     case ERASE_PARTITION:
-      for (SocketIdx = 0; SocketIdx < MAX_SOCKETS; SocketIdx++) {
-        if (IsSocketEnabledStMm (CpuBlAddr, SocketIdx) == TRUE) {
-          Status = EarlyVarsProto->ErasePartition (
-                                     EarlyVarsProto,
-                                     SocketIdx
-                                     );
-          if (EFI_ERROR (Status)) {
-            DEBUG ((
-              DEBUG_ERROR,
-              "%a: Erase Failed Socket %u\n",
-              __FUNCTION__,
-              SocketIdx
-              ));
-            break;
-          }
-        }
+      Status = EraseEarlyVarsPartition ();
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Erase Failed Earlyvars Partition %r\n",
+          __FUNCTION__,
+          Status
+          ));
       }
 
       break;
@@ -367,6 +539,89 @@ EarlyVarsMsgHandler (
     ));
 ExitEarlyVarsMsgHandler:
   EarlyVars->Status = Status;
+  return EFI_SUCCESS;
+}
+
+/**
+ * MMI handler for SatMc service.
+ *
+ * @params[in]   DispatchHandle   Handle of the registered MMI..
+ * @params[in]   RegisterContext  Context Info from MMI root handler.
+ * @params[out]  CommBuffer       Comm Buffer sent by the client.
+ * @params[out]  CommBufferSize   Comm Buffer Size sent from the client.
+ *
+ * @retval       EFI_SUCCESS     Always return Success to the MMI root handler
+ *                               The error from the service will be in-band of
+ *                               the service call.
+ **/
+STATIC
+EFI_STATUS
+SatMcMsgHandler (
+  IN     EFI_HANDLE  DispatchHandle,
+  IN     CONST VOID  *RegisterContext,
+  IN OUT VOID        *CommBuffer,
+  IN OUT UINTN       *CommBufferSize
+  )
+{
+  EFI_STATUS                    Status;
+  SATMC_MM_COMMUNICATE_PAYLOAD  *SatMcMmMsg;
+
+  SatMcMmMsg = (SATMC_MM_COMMUNICATE_PAYLOAD *)CommBuffer;
+
+  if (IsBufInSecSpMbox ((UINTN)CommBuffer, SATMC_VMID) == FALSE) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: ComBuffer %lu is not in the SATMC Mbox\n",
+      __FUNCTION__,
+      (UINT64)(CommBuffer)
+      ));
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitSatMcMsgHandler;
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Fn %u Size %u\n ",
+    __FUNCTION__,
+    SatMcMmMsg->Command,
+    *CommBufferSize
+    ));
+
+  switch (SatMcMmMsg->Command) {
+    case CLEAR_EFI_VARIABLES:
+      Status = CorruptFvHeader ();
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to Corrupt FV Header %r",
+          __FUNCTION__,
+          Status
+          ));
+        goto ExitSatMcMsgHandler;
+      }
+
+      Status = EraseEarlyVarsPartition ();
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to Erase Early Vars Partition %r",
+          __FUNCTION__,
+          Status
+          ));
+        goto ExitSatMcMsgHandler;
+      }
+
+      break;
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: Unknown command %u\n", __FUNCTION__, SatMcMmMsg->Command));
+      Status = EFI_INVALID_PARAMETER;
+      break;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Returning %a \n", __FUNCTION__, Status));
+
+ExitSatMcMsgHandler:
+  SatMcMmMsg->ReturnStatus = Status;
   return EFI_SUCCESS;
 }
 
@@ -484,7 +739,7 @@ ExitEarlyVarsHandler:
 }
 
 /**
- * Register handler for Early Variables service.
+ * Register handler for RAS CMET service.
  *
  * @params[]     None.
  *
@@ -544,6 +799,47 @@ ExitCmetRegister:
 }
 
 /**
+ * Register handler for SatMc service.
+ *
+ * @params[]     None.
+ *
+ * @retval       EFI_SUCCESS     Successfully registered the Early Vars MMI
+ *                               handler. Note that even if we failed to look
+ *                               up the partition we return success.
+ *               OTHER           When trying to register an MMI handler, return
+ *                               Status code and stop the rest of the driver
+ *                               from progressing.
+ **/
+STATIC
+EFI_STATUS
+RegisterSatMcHandler (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  EFI_HANDLE  Handle;
+
+  Handle = NULL;
+  Status = gMmst->MmiHandlerRegister (
+                    SatMcMsgHandler,
+                    &gNVIDIASatMcMmGuid,
+                    &Handle
+                    );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Register MMI handler failed (%r)\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitSatMcRegister;
+  }
+
+ExitSatMcRegister:
+  return Status;
+}
+
+/**
   Initialize the Sequential Record Communications Driver
 
   @param[in]  ImageHandle   of the loaded driver
@@ -580,6 +876,16 @@ SequentialRecordCommInitialize (
   }
 
   Status = RegisterCmetHandler ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to Register CMET log handler%r\n",
+      __FUNCTION__,
+      Status
+      ));
+  }
+
+  Status = RegisterSatMcHandler ();
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,

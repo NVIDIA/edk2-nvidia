@@ -50,6 +50,7 @@
   gNVIDIARasLogMmGuid
   gNVIDIARasCmetMmGuid
   gNVIDIAMmMb1RecordGuid
+  gNVIDIASatMcMmGuid
 
 [Depex]
   TRUE
