@@ -75,6 +75,12 @@ STATIC CONST FMP_EROT_SYSTEM_FW_DESCRIPTOR  mSystemFwDesc = {
 
 EFI_STATUS
 EFIAPI
+UpdateImageProgress (
+  IN  UINTN  Completion
+  );
+
+EFI_STATUS
+EFIAPI
 FmpErotGetVersion (
   OUT UINT32 *Version, OPTIONAL
   OUT CHAR16  **VersionString   OPTIONAL
@@ -204,11 +210,13 @@ FmpErotSetImage (
     return EFI_NOT_READY;
   }
 
+  UpdateImageProgress (0);
+
   Hdr      = (CONST PLDM_FW_PKG_HDR *)Image;
   Failed   = FALSE;
   NumErots = ErotGetNumErots ();
 
-  Status = PldmFwUpdateTaskLibInit (NumErots);
+  Status = PldmFwUpdateTaskLibInit (NumErots, UpdateImageProgress);
   if (EFI_ERROR (Status)) {
     *LastAttemptStatus = LAS_ERROR_TASK_LIB_INIT_FAILED;
     return EFI_ABORTED;

@@ -46,6 +46,12 @@ typedef enum {
   PLDM_FW_UPDATE_TASK_ERROR_MAX
 } PLDM_FW_UPDATE_TASK_ERROR;
 
+typedef
+EFI_STATUS
+(EFIAPI *PLDM_FW_UPDATE_TASK_PROGRESS)(
+  IN UINTN Completion
+  );
+
 /**
   Create FW update task for Firmware Device.
 
@@ -86,6 +92,7 @@ PldmFwUpdateTaskExecuteAll (
   Initialize FW update task library.
 
   @param[in]  NumDevices            Number of firmware devices.
+  @param[in]  ProgressFunction      Progress update function OPTIONAL
 
   @retval EFI_SUCCESS               Operation completed normally.
   @retval Others                    Failure occurred.
@@ -94,7 +101,8 @@ PldmFwUpdateTaskExecuteAll (
 EFI_STATUS
 EFIAPI
 PldmFwUpdateTaskLibInit (
-  IN  UINTN  NumDevices
+  IN  UINTN                         NumDevices,
+  IN  PLDM_FW_UPDATE_TASK_PROGRESS  ProgressFunction OPTIONAL
   );
 
 #endif

@@ -129,6 +129,7 @@ typedef struct {
 
   // package meta-data
   CONST PLDM_FW_PKG_HDR                          *PkgHdr;
+  UINTN                                          PkgLen;
   CONST PLDM_FW_PKG_DEVICE_ID_RECORD             *DeviceIdRecord;
   CONST PLDM_FW_PKG_COMPONENT_IMAGE_INFO_AREA    *ImageInfoArea;
   CONST PLDM_FW_PKG_COMPONENT_IMAGE_INFO         *ImageInfo;
@@ -137,6 +138,7 @@ typedef struct {
   UINTN                                          ComponentImageIndex;
   UINTN                                          NumUpdateComponents;
   UINTN                                          UpdateComponentIndex;
+  UINTN                                          LastFwDataRequested;
 
   // FD info
   UINT8                                          GetFwParamsResponseBuffer[PLDM_FW_TASK_FW_PARAMS_SIZE];
@@ -159,13 +161,68 @@ typedef struct {
   PLDM_FW_TASK_STATE_FUNC    Func;
 } PLDM_FW_TASK_STATE_TABLE;
 
-UINTN                      mNumDevices       = 0;
-UINTN                      mNumTasks         = 0;
-UINTN                      mNumTasksComplete = 0;
-EFI_STATUS                 mStatus           = EFI_SUCCESS;
-UINT16                     mActivationMethod = 0;
-PLDM_FW_UPDATE_TASK        *mTasks           = NULL;
-PLDM_FW_UPDATE_TASK_ERROR  mError            = PLDM_FW_UPDATE_TASK_ERROR_NONE;
+UINTN                         mNumDevices       = 0;
+UINTN                         mNumTasks         = 0;
+UINTN                         mNumTasksComplete = 0;
+EFI_STATUS                    mStatus           = EFI_SUCCESS;
+UINT16                        mActivationMethod = 0;
+PLDM_FW_UPDATE_TASK           *mTasks           = NULL;
+PLDM_FW_UPDATE_TASK_ERROR     mError            = PLDM_FW_UPDATE_TASK_ERROR_NONE;
+PLDM_FW_UPDATE_TASK_PROGRESS  mProgressFunction = NULL;
+UINTN                         mCompletion       = 0;
+
+/**
+  Call optional client progress function with percent complete.
+
+  @param[in]  Completion                   Completion percentage (0-100).
+
+  @retval None
+
+**/
+STATIC
+VOID
+EFIAPI
+PldmFwTaskProgress (
+  IN UINTN  Completion
+  )
+{
+  if ((mProgressFunction != NULL) && (Completion > mCompletion)) {
+    mProgressFunction (Completion);
+    mCompletion = Completion;
+  }
+}
+
+/**
+  Compute data transfer progress across all tasks.
+
+  @retval None
+
+**/
+STATIC
+VOID
+EFIAPI
+PldmFwTaskDataProgressCompute (
+  VOID
+  )
+{
+  UINTN                      Index;
+  CONST PLDM_FW_UPDATE_TASK  *Task;
+  UINTN                      TotalCompleted;
+  UINTN                      TotalLength;
+
+  TotalCompleted = 0;
+  TotalLength    = 0;
+  for (Index = 0; Index < mNumTasks; Index++) {
+    Task            = &mTasks[Index];
+    TotalCompleted += Task->LastFwDataRequested;
+    TotalLength    += Task->PkgLen;
+  }
+
+  ASSERT (TotalLength != 0);
+
+  // data transfer accounts for 99% of progress
+  PldmFwTaskProgress ((TotalCompleted * 99) / TotalLength);
+}
 
 /**
   Set global error value, if not previously set.
@@ -269,47 +326,6 @@ PldmFwTaskSetFDState (
 }
 
 /**
-  Get next matching component in component table.
-
-  @param[in]  Task                     Pointer to task.
-  @param[in]  Classification           Component classification.
-  @param[in]  Id                       Component ID.
-
-  @retval PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY * Next matching component or
-                                                    NULL if not found.
-
-**/
-STATIC
-CONST PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY *
-EFIAPI
-PldmFwTaskGetNextFwParamsMatchingComponent (
-  IN PLDM_FW_UPDATE_TASK  *Task,
-  IN UINT16               Classification,
-  IN UINT16               Id
-  )
-{
-  CONST PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY  *FwParamsComponent;
-  UINTN                                          Index;
-
-  for (Index = Task->FwParamsComponentIndex;
-       Index < Task->GetFwParamsResponse->ComponentCount;
-       Index++)
-  {
-    FwParamsComponent = PldmFwGetFwParamsComponent (Task->GetFwParamsResponse, Index);
-
-    if ((FwParamsComponent->Classification == Classification) &&
-        (FwParamsComponent->Id == Id))
-    {
-      Task->FwParamsComponentIndex = Index;
-      return FwParamsComponent;
-    }
-  }
-
-  Task->FwParamsComponentIndex = 0;
-  return NULL;
-}
-
-/**
   Reset task component information.
 
   @param[in]  Task                     Pointer to task.
@@ -330,6 +346,7 @@ PldmFwTaskResetComponentInfo (
 
   Task->FwParamsComponentIndex = 0;
   Task->UpdateComponentIndex   = 0;
+  Task->LastFwDataRequested    = 0;
 }
 
 /**
@@ -724,8 +741,9 @@ PldmFwTaskPassComponentTableSetupReq (
     return StatePassComponentTableNextComponent;
   }
 
-  if (PldmFwTaskGetNextFwParamsMatchingComponent (
-        Task,
+  if (PldmFwGetNextFwParamsMatchingComponent (
+        Task->GetFwParamsResponse,
+        &Task->FwParamsComponentIndex,
         ImageInfo->Classification,
         ImageInfo->Id
         ) == NULL)
@@ -841,8 +859,9 @@ PldmFwTaskPassComponentTableNextComponent (
   )
 {
   Task->FwParamsComponentIndex++;
-  if (PldmFwTaskGetNextFwParamsMatchingComponent (
-        Task,
+  if (PldmFwGetNextFwParamsMatchingComponent (
+        Task->GetFwParamsResponse,
+        &Task->FwParamsComponentIndex,
         Task->ImageInfo->Classification,
         Task->ImageInfo->Id
         ) != NULL)
@@ -893,8 +912,9 @@ PldmFwTaskUpdateComponentSetupReq (
     return StateNextComponent;
   }
 
-  if (PldmFwTaskGetNextFwParamsMatchingComponent (
-        Task,
+  if (PldmFwGetNextFwParamsMatchingComponent (
+        Task->GetFwParamsResponse,
+        &Task->FwParamsComponentIndex,
         ImageInfo->Classification,
         ImageInfo->Id
         ) == NULL)
@@ -1038,7 +1058,13 @@ PldmFwTaskRequestFwDataHandleReq (
 
   Request = (PLDM_FW_REQUEST_FW_DATA_REQUEST *)Task->RecvBuffer;
 
-  DEBUG ((DEBUG_ERROR, "%a: off=0x%x len=0x%x\n", __FUNCTION__, Request->Offset, Request->Length));
+  DEBUG ((DEBUG_VERBOSE, "%a: off=0x%x len=0x%x\n", __FUNCTION__, Request->Offset, Request->Length));
+  if (Request->Offset + Request->Length <= Task->LastFwDataRequested) {
+    DEBUG ((DEBUG_WARN, "%a: WARNING offset=0x%x length=0x%x retried last=0x%x\n", __FUNCTION__, Request->Offset, Request->Length, Task->LastFwDataRequested));
+  }
+
+  Task->LastFwDataRequested = Request->Offset + Request->Length;
+  PldmFwTaskDataProgressCompute ();
 
   if (Task->FDState != FDStateDownload) {
     DEBUG ((DEBUG_ERROR, "%a: %s req in FD state=%d\n", __FUNCTION__, Task->DeviceName, Task->FDState));
@@ -1119,6 +1145,8 @@ PldmFwTaskTransferCompleteHandleReq (
     return StateFatalError;
   }
 
+  DEBUG ((DEBUG_INFO, "%a: %s transfer result: 0x%x\n", __FUNCTION__, Task->DeviceName, Request->TransferResult));
+
   Response->Common         = Request->Common;
   Response->CompletionCode = PLDM_SUCCESS;
   Task->ResponseLength     = sizeof (*Response);
@@ -1141,6 +1169,8 @@ PldmFwTaskTransferCompleteHandleReq (
     return StateFatalError;
   }
 
+  Task->LastFwDataRequested = Task->PkgLen;
+  PldmFwTaskDataProgressCompute ();
   PldmFwTaskSetFDState (Task, FDStateVerify);
 
   return StateWaitForRequests;
@@ -1172,6 +1202,8 @@ PldmFwTaskVerifyCompleteHandleReq (
     PldmFwTaskSetError (PLDM_FW_UPDATE_TASK_ERROR_VERIFY_COMPLETE_BAD_LEN);
     return StateFatalError;
   }
+
+  DEBUG ((DEBUG_INFO, "%a: %s verify result: 0x%x\n", __FUNCTION__, Task->DeviceName, Request->VerifyResult));
 
   Response->Common         = Request->Common;
   Response->CompletionCode = PLDM_SUCCESS;
@@ -1227,6 +1259,16 @@ PldmFwTaskApplyCompleteHandleReq (
     return StateFatalError;
   }
 
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: mActivationMethod=0x%x, AR=0x%x CAMM=0x%x, RAM=0x%x\n",
+    __FUNCTION__,
+    mActivationMethod,
+    Request->ApplyResult,
+    Request->ComponentActivationMethodsModification,
+    Task->ImageInfo->RequestedActivationMethod
+    ));
+
   Response->Common         = Request->Common;
   Response->CompletionCode = PLDM_SUCCESS;
   Task->ResponseLength     = sizeof (*Response);
@@ -1278,8 +1320,9 @@ PldmFwTaskNextComponent (
   )
 {
   Task->FwParamsComponentIndex++;
-  if (PldmFwTaskGetNextFwParamsMatchingComponent (
-        Task,
+  if (PldmFwGetNextFwParamsMatchingComponent (
+        Task->GetFwParamsResponse,
+        &Task->FwParamsComponentIndex,
         Task->ImageInfo->Classification,
         Task->ImageInfo->Id
         ) != NULL)
@@ -1451,8 +1494,6 @@ PldmFwTaskReceive (
 
   Command = RecvHeader->Command;
   if (RecvHeader->InstanceId & PLDM_RQ) {
-    DEBUG ((DEBUG_INFO, "%a: %s command=0x%x\n", __FUNCTION__, Task->DeviceName, Command));
-
     switch (Command) {
       case PLDM_FW_REQUEST_FW_DATA:
         return StateRequestFwDataHandleReq;
@@ -1826,17 +1867,23 @@ PldmFwTaskStateMachineLoop (
         EndNs = GetTimeInNanoSecond (GetPerformanceCounter ());
         DEBUG ((
           DEBUG_INFO,
-          "%a: State machine %u complete %llums: %r\n",
+          "%a: State machine %u %s complete %llums: %r\n",
           __FUNCTION__,
           Index,
+          Task->DeviceName,
           (EndNs - Task->StartNs) / PLDM_FW_TASK_MS_TO_NS (1),
           Task->Status
           ));
+
         if (EFI_ERROR (Task->Status)) {
           mStatus = EFI_PROTOCOL_ERROR;
         }
 
         if (++mNumTasksComplete == mNumTasks) {
+          if (mStatus == EFI_SUCCESS) {
+            PldmFwTaskProgress (100);
+          }
+
           return;
         }
       }
@@ -1878,6 +1925,7 @@ PldmFwUpdateTaskCreate (
 
   Task->FD      = FD;
   Task->PkgHdr  = (CONST PLDM_FW_PKG_HDR *)Package;
+  Task->PkgLen  = Length;
   Task->StartNs = GetTimeInNanoSecond (GetPerformanceCounter ());
 
   Status = FD->GetDeviceAttributes (FD, &Attributes);
@@ -1893,7 +1941,8 @@ PldmFwUpdateTaskCreate (
 EFI_STATUS
 EFIAPI
 PldmFwUpdateTaskLibInit (
-  IN  UINTN  NumDevices
+  IN  UINTN                         NumDevices,
+  IN  PLDM_FW_UPDATE_TASK_PROGRESS  ProgressFunction
   )
 {
   UINTN  Index;
@@ -1918,6 +1967,10 @@ PldmFwUpdateTaskLibInit (
     DEBUG ((DEBUG_ERROR, "%a: mTasks allocation failed\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
+
+  mError            = PLDM_FW_UPDATE_TASK_ERROR_NONE;
+  mProgressFunction = ProgressFunction;
+  mCompletion       = 0;
 
   return EFI_SUCCESS;
 }

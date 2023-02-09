@@ -58,7 +58,7 @@
 #define PLDM_FW_NO_DEVICE_METADATA                       0x8d
 #define PLDM_FW_RETRY_REQUEST_UPDATE                     0x8e
 #define PLDM_FW_NO_PACKAGE_DATA                          0x8f
-#define PLDM_FW_NVALID_TRANSFER_HANDLE                   0x90
+#define PLDM_FW_INVALID_TRANSFER_HANDLE                  0x90
 #define PLDM_FW_INVALID_TRANSFER_OPERATION_FLAG          0x91
 #define PLDM_FW_ACTIVATE_PENDING_IMAGE_NOT_PERMITTED     0x92
 #define PLDM_FW_PACKAGE_DATA_ERROR                       0x93
@@ -539,6 +539,27 @@ PldmFwDescriptorIsInList (
   IN CONST PLDM_FW_DESCRIPTOR  *Descriptor,
   IN CONST PLDM_FW_DESCRIPTOR  *List,
   UINTN                        Count
+  );
+
+/**
+  Get next matching component in FW params component table.
+
+  @param[in]      GetFwParamsRsp           Pointer to Get FW Params response
+  @param[in][out] FwParamsComponentIndex   Pointer to FW Params Component Index
+  @param[in]      Classification           Component classification.
+  @param[in]      Id                       Component ID.
+
+  @retval PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY * Next matching component or
+                                                    NULL if not found.
+
+**/
+CONST PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY *
+EFIAPI
+PldmFwGetNextFwParamsMatchingComponent (
+  IN CONST PLDM_FW_GET_FW_PARAMS_RESPONSE  *GetFwParamsRsp,
+  IN OUT UINTN                             *FwParamsComponentIndex,
+  IN UINT16                                Classification,
+  IN UINT16                                Id
   );
 
 #endif

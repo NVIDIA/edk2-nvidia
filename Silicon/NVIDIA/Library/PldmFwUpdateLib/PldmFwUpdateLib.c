@@ -277,3 +277,33 @@ PldmFwDescriptorIsInList (
 
   return FALSE;
 }
+
+CONST PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY *
+EFIAPI
+PldmFwGetNextFwParamsMatchingComponent (
+  IN CONST PLDM_FW_GET_FW_PARAMS_RESPONSE  *GetFwParamsRsp,
+  IN OUT UINTN                             *FwParamsComponentIndex,
+  IN UINT16                                Classification,
+  IN UINT16                                Id
+  )
+{
+  CONST PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY  *FwParamsComponent;
+  UINTN                                          Index;
+
+  for (Index = *FwParamsComponentIndex;
+       Index < GetFwParamsRsp->ComponentCount;
+       Index++)
+  {
+    FwParamsComponent = PldmFwGetFwParamsComponent (GetFwParamsRsp, Index);
+
+    if ((FwParamsComponent->Classification == Classification) &&
+        (FwParamsComponent->Id == Id))
+    {
+      *FwParamsComponentIndex = Index;
+      return FwParamsComponent;
+    }
+  }
+
+  *FwParamsComponentIndex = 0;
+  return NULL;
+}

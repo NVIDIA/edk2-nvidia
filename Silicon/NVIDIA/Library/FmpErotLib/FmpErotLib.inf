@@ -28,6 +28,7 @@
 [Sources]
   FmpErotLib.c
   FmpErotSupport.c
+  UpdateProgress.c
 
 [Packages]
   MdePkg/MdePkg.dec
