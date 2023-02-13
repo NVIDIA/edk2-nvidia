@@ -431,8 +431,7 @@ HandleRpcCmd (
   ARM_SMC_ARGS  *Regs
   )
 {
-  OPTEE_SHM_COOKIE   *Cookie = (VOID *)(UINT64)(((UINT64)Regs->Arg1 << 32) | Regs->Arg2);
-  OPTEE_MESSAGE_ARG  *Msg    = Cookie->Addr;
+  OPTEE_MESSAGE_ARG  *Msg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.VBase;
 
   switch (Msg->Command) {
     case OPTEE_MSG_RPC_CMD_SHM_ALLOC:
