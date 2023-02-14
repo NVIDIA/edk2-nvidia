@@ -2,7 +2,7 @@
   Api's to communicate with OP-TEE OS (Trusted OS based on ARM TrustZone) via
   secure monitor calls.
 
-  Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -575,6 +575,9 @@ OpteeCallWithArg (
       }
 
       ArmSmcArgs.Arg0 = OPTEE_SMC_RETURN_FROM_RPC;
+    } else if (ArmSmcArgs.Arg0 == OPTEE_SMC_RETURN_ETHREAD_LIMIT) {
+      DEBUG ((DEBUG_INFO, "SecureWorld is busy, do an unconditional 500ms Stall"));
+      gBS->Stall (500000);
     } else {
       break;
     }

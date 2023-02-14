@@ -1,7 +1,7 @@
 /** @file
   OP-TEE SMC header file.
 
-  Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,7 +11,8 @@
 #define OPTEE_SMC_H_
 
 /* Returned in Arg0 only from Trusted OS functions */
-#define OPTEE_SMC_RETURN_OK  0x0
+#define OPTEE_SMC_RETURN_OK             0x0
+#define OPTEE_SMC_RETURN_ETHREAD_LIMIT  0x1
 
 #define OPTEE_SMC_RETURN_FROM_RPC           0x32000003
 #define OPTEE_SMC_CALL_WITH_ARG             0x32000004
