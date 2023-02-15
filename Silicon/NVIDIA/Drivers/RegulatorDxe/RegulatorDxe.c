@@ -2,7 +2,7 @@
 
   Regulator Driver
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -379,7 +379,7 @@ RegulatorGetInfo (
   @param[out]    RegulatorId         Pointer to the id of the regulator.
 
   @return EFI_SUCCESS                Regulator id returned.
-  @return EFI_NOT_FOUND         Pointer to the i     Regulator is not supported on target.
+  @return EFI_NOT_FOUND              Regulator is not supported on target.
   @return EFI_DEVICE_ERROR           Other error occured.
 **/
 STATIC
@@ -541,6 +541,7 @@ RegulatorEnable (
   REGULATOR_DXE_PRIVATE  *Private;
   REGULATOR_LIST_ENTRY   *Entry;
   EFI_STATUS             Status;
+  EMBEDDED_GPIO_MODE     GpioMode;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -566,17 +567,10 @@ RegulatorEnable (
   }
 
   if (Entry->Gpio != 0) {
-    EMBEDDED_GPIO_MODE  GpioMode;
-    if (Enable && !Entry->ActiveLow) {
+    if (Enable != Entry->ActiveLow) {
       GpioMode = GPIO_MODE_OUTPUT_1;
     } else {
       GpioMode = GPIO_MODE_OUTPUT_0;
-    }
-
-    if (Enable && Entry->ActiveLow) {
-      GpioMode = GPIO_MODE_OUTPUT_0;
-    } else {
-      GpioMode = GPIO_MODE_OUTPUT_1;
     }
 
     Status = Private->GpioProtocol->Set (
@@ -770,6 +764,7 @@ I2cIoProtocolReady (
   LIST_ENTRY             *ListNode;
   UINTN                  Index;
   EFI_I2C_IO_PROTOCOL    *I2cIoProtocol;
+  REGULATOR_LIST_ENTRY   *Entry;
   BOOLEAN                AllPmicReady =  TRUE;
 
   if (Private == NULL) {
@@ -800,15 +795,14 @@ I2cIoProtocolReady (
   DEBUG ((EFI_D_VERBOSE, "%a: Ready!!!\r\n", __FUNCTION__));
   ListNode = GetFirstNode (&Private->RegulatorList);
   while (ListNode != &Private->RegulatorList) {
-    REGULATOR_LIST_ENTRY  *Entry;
     Entry = REGULATOR_LIST_FROM_LINK (ListNode);
-    if ((Entry != NULL) &&
-        (Entry->PmicSetting != NULL))
-    {
+    if ((Entry != NULL) && (Entry->PmicSetting != NULL)) {
       if (CompareGuid (I2cIoProtocol->DeviceGuid, Entry->I2cDeviceGuid)) {
         Entry->I2cIoProtocol = I2cIoProtocol;
-        Entry->IsAvailable   = TRUE;
-        NotifyEntry (Entry);
+        if (!Entry->IsAvailable) {
+          Entry->IsAvailable = TRUE;
+          NotifyEntry (Entry);
+        }
       }
 
       if (!Entry->IsAvailable) {
@@ -847,6 +841,7 @@ GpioProtocolReady (
   EFI_STATUS             Status;
   REGULATOR_DXE_PRIVATE  *Private = (REGULATOR_DXE_PRIVATE *)Context;
   LIST_ENTRY             *ListNode;
+  REGULATOR_LIST_ENTRY   *Entry;
 
   if (Private == NULL) {
     return;
@@ -866,13 +861,10 @@ GpioProtocolReady (
   DEBUG ((EFI_D_VERBOSE, "%a: Ready!!!\r\n", __FUNCTION__));
   ListNode = GetFirstNode (&Private->RegulatorList);
   while (ListNode != &Private->RegulatorList) {
-    REGULATOR_LIST_ENTRY  *Entry;
     Entry = REGULATOR_LIST_FROM_LINK (ListNode);
-    if (NULL != Entry) {
-      if (Entry->Gpio != 0) {
-        Entry->IsAvailable = TRUE;
-        NotifyEntry (Entry);
-      }
+    if ((Entry != NULL) && (Entry->Gpio != 0) && !Entry->IsAvailable) {
+      Entry->IsAvailable = TRUE;
+      NotifyEntry (Entry);
     }
 
     ListNode = GetNextNode (&Private->RegulatorList, ListNode);
@@ -960,14 +952,10 @@ AddFixedRegulators (
       UINT32        Controller = SwapBytes32 (Data[0]);
       UINT32        Gpio       = SwapBytes32 (Data[1]);
       ListEntry->Gpio        = GPIO (Controller, Gpio);
-      ListEntry->IsAvailable = FALSE;
+      ListEntry->IsAvailable = ListEntry->AlwaysEnabled;
     } else {
       ListEntry->Gpio        = 0;
       ListEntry->IsAvailable = TRUE;
-    }
-
-    if (!ListEntry->IsAvailable) {
-      ListEntry->IsAvailable = ListEntry->AlwaysEnabled;
     }
 
     Property = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "regulator-min-microvolt", &PropertySize);
