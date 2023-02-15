@@ -40,7 +40,7 @@ GetDebugPrintErrorLevel (
 
   if (mDebugLevelSet == FALSE) {
     Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
-    if ((GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * TH500_MAX_SOCKETS))) {
+    if ((Hob != NULL) && (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * TH500_MAX_SOCKETS))) {
       TH500HobConfig = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
       mDebugLevel    = TH500HobConfig->Data.Mb1Data.UefiDebugLevel;
     } else {
