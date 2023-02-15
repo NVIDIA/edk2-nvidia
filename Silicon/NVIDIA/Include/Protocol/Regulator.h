@@ -1,7 +1,7 @@
 /** @file
   Regulator Control Protocol
 
-  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -57,7 +57,7 @@ EFI_STATUS
   @param[out]    RegulatorId         Pointer to the id of the regulator.
 
   @return EFI_SUCCESS                Regulator id returned.
-  @return EFI_NOT_FOUND         Pointer to the i     Regulator is not supported on target.
+  @return EFI_NOT_FOUND              Regulator is not supported on target.
   @return EFI_DEVICE_ERROR           Other error occured.
 **/
 typedef
