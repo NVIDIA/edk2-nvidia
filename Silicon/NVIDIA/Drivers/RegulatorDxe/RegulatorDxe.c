@@ -275,6 +275,90 @@ WritePmicRegister (
 }
 
 /**
+ * This function enables or disables the specified regulator.
+ *
+ * Unlike RegulatorEnable, RegulatorEnableInternal does not check if
+ * the regulator is available or always enabled.
+ *
+ * @param[in] Private                The instance of the REGULATOR_DXE_PRIVATE.
+ * @param[in] Entry                  Entry of the regulator to enable/disable.
+ * @param[in] Enable                 TRUE to enable, FALSE to disable.
+ * @param[in] DoNotify               Send state change notifications.
+ *
+ * @return EFI_SUCCESS               Regulator state change occurred.
+ * @return EFI_UNSUPPORTED           Regulator does not support being enabled or disabled
+ * @return EFI_DEVICE_ERROR          Other error occurred.
+ */
+STATIC
+EFI_STATUS
+RegulatorEnableInternal (
+  IN REGULATOR_DXE_PRIVATE *CONST  Private,
+  IN REGULATOR_LIST_ENTRY *CONST   Entry,
+  IN CONST BOOLEAN                 Enable,
+  IN CONST BOOLEAN                 DoNotify
+  )
+{
+  EFI_STATUS          Status;
+  EMBEDDED_GPIO_MODE  GpioMode;
+  UINT8               DataOriginal;
+  UINT8               DataNew;
+
+  if (Entry->Gpio != 0) {
+    if (Enable != Entry->ActiveLow) {
+      GpioMode = GPIO_MODE_OUTPUT_1;
+    } else {
+      GpioMode = GPIO_MODE_OUTPUT_0;
+    }
+
+    Status = Private->GpioProtocol->Set (
+                                      Private->GpioProtocol,
+                                      Entry->Gpio,
+                                      GpioMode
+                                      );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a, Failed to set gpio 0x%x mode: %r\r\n", __FUNCTION__, Entry->Gpio, Status));
+      return EFI_DEVICE_ERROR;
+    }
+
+    if (DoNotify) {
+      /* We don't know if the state actually changed since we don't have
+         the original state, but fire off a notification anyway. */
+      NotifyEntry (Entry);
+    }
+  } else if (Entry->PmicSetting != NULL) {
+    Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, &DataOriginal, Entry->I2cDeviceGuid);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a, Failed to read configuration register: %r\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    DataNew  = DataOriginal;
+    DataNew &= ~Entry->PmicSetting->ConfigMask;
+    if (Enable) {
+      DataNew |= (Entry->PmicSetting->ConfigSetting << Entry->PmicSetting->ConfigShift);
+    } else {
+      DataNew |= (Entry->PmicSetting->ConfigSettingDisabled << Entry->PmicSetting->ConfigShift);
+    }
+
+    if (DataNew != DataOriginal) {
+      Status = WritePmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, DataNew, Entry->I2cDeviceGuid);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a, Failed to write configuration register: %r\r\n", __FUNCTION__, Status));
+        return Status;
+      }
+
+      if (DoNotify) {
+        NotifyEntry (Entry);
+      }
+    }
+  } else {
+    Status = EFI_UNSUPPORTED;
+  }
+
+  return Status;
+}
+
+/**
   This function gets information about the specified regulator.
 
   @param[in]     This                The instance of the NVIDIA_REGULATOR_PROTOCOL.
@@ -540,8 +624,7 @@ RegulatorEnable (
 {
   REGULATOR_DXE_PRIVATE  *Private;
   REGULATOR_LIST_ENTRY   *Entry;
-  EFI_STATUS             Status;
-  EMBEDDED_GPIO_MODE     GpioMode;
+  CONST BOOLEAN          DoNotify = TRUE;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -566,56 +649,7 @@ RegulatorEnable (
     }
   }
 
-  if (Entry->Gpio != 0) {
-    if (Enable != Entry->ActiveLow) {
-      GpioMode = GPIO_MODE_OUTPUT_1;
-    } else {
-      GpioMode = GPIO_MODE_OUTPUT_0;
-    }
-
-    Status = Private->GpioProtocol->Set (
-                                      Private->GpioProtocol,
-                                      Entry->Gpio,
-                                      GpioMode
-                                      );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to set gpio 0x%x mode: %r\r\n", __FUNCTION__, Entry->Gpio, Status));
-      return EFI_DEVICE_ERROR;
-    }
-
-    NotifyEntry (Entry);
-    return EFI_SUCCESS;
-  } else if (Entry->PmicSetting != NULL) {
-    UINT8  DataOriginal;
-    UINT8  DataNew;
-    Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, &DataOriginal, Entry->I2cDeviceGuid);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to read configuration register: %r\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-
-    DataNew  = DataOriginal;
-    DataNew &= ~Entry->PmicSetting->ConfigMask;
-    if (Enable) {
-      DataNew |= (Entry->PmicSetting->ConfigSetting << Entry->PmicSetting->ConfigShift);
-    } else {
-      DataNew |= (Entry->PmicSetting->ConfigSettingDisabled << Entry->PmicSetting->ConfigShift);
-    }
-
-    if (DataNew != DataOriginal) {
-      Status = WritePmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, DataNew, Entry->I2cDeviceGuid);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to write configuration register: %r\r\n", __FUNCTION__, Status));
-        return Status;
-      }
-
-      NotifyEntry (Entry);
-    }
-
-    return Status;
-  } else {
-    return EFI_UNSUPPORTED;
-  }
+  return RegulatorEnableInternal (Private, Entry, Enable, DoNotify);
 }
 
 /**
@@ -765,6 +799,7 @@ I2cIoProtocolReady (
   UINTN                  Index;
   EFI_I2C_IO_PROTOCOL    *I2cIoProtocol;
   REGULATOR_LIST_ENTRY   *Entry;
+  CONST BOOLEAN          DoNotify     = FALSE;
   BOOLEAN                AllPmicReady =  TRUE;
 
   if (Private == NULL) {
@@ -799,6 +834,23 @@ I2cIoProtocolReady (
     if ((Entry != NULL) && (Entry->PmicSetting != NULL)) {
       if (CompareGuid (I2cIoProtocol->DeviceGuid, Entry->I2cDeviceGuid)) {
         Entry->I2cIoProtocol = I2cIoProtocol;
+
+        if (Entry->AlwaysEnabled) {
+          /* Make sure the always-on regulator is enabled, but send no
+             notifications since we pretend it has been enabled all
+             along. */
+          Status = RegulatorEnableInternal (Private, Entry, TRUE, DoNotify);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((
+              DEBUG_ERROR,
+              "%a: failed to enable always-on regulator '%a': %r\r\n",
+              __FUNCTION__,
+              Entry->Name,
+              Status
+              ));
+          }
+        }
+
         if (!Entry->IsAvailable) {
           Entry->IsAvailable = TRUE;
           NotifyEntry (Entry);
@@ -842,6 +894,7 @@ GpioProtocolReady (
   REGULATOR_DXE_PRIVATE  *Private = (REGULATOR_DXE_PRIVATE *)Context;
   LIST_ENTRY             *ListNode;
   REGULATOR_LIST_ENTRY   *Entry;
+  CONST BOOLEAN          DoNotify = FALSE;
 
   if (Private == NULL) {
     return;
@@ -862,9 +915,27 @@ GpioProtocolReady (
   ListNode = GetFirstNode (&Private->RegulatorList);
   while (ListNode != &Private->RegulatorList) {
     Entry = REGULATOR_LIST_FROM_LINK (ListNode);
-    if ((Entry != NULL) && (Entry->Gpio != 0) && !Entry->IsAvailable) {
-      Entry->IsAvailable = TRUE;
-      NotifyEntry (Entry);
+    if ((Entry != NULL) && (Entry->Gpio != 0)) {
+      if (Entry->AlwaysEnabled) {
+        /* Make sure the always-on regulator is enabled, but send no
+           notifications since we pretend it has been enabled all
+           along. */
+        Status = RegulatorEnableInternal (Private, Entry, TRUE, DoNotify);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((
+            DEBUG_ERROR,
+            "%a: failed to enable always-on regulator '%a': %r\r\n",
+            __FUNCTION__,
+            Entry->Name,
+            Status
+            ));
+        }
+      }
+
+      if (!Entry->IsAvailable) {
+        Entry->IsAvailable = TRUE;
+        NotifyEntry (Entry);
+      }
     }
 
     ListNode = GetNextNode (&Private->RegulatorList, ListNode);
