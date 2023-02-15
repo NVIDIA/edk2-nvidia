@@ -2,7 +2,7 @@
 
   SD MMC Controller Driver
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -440,19 +440,19 @@ InstallGpioProtocols (
   }
 
   CopyMem (GpioController->GpioController + CurrentController, I2cExpanderGpioController->GpioController, I2cExpanderGpioController->GpioControllerCount * sizeof (GPIO_CONTROLLER));
+  mGpioController = GpioController;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &DriverHandle,
                   &gPlatformGpioProtocolGuid,
-                  GpioController,
+                  mGpioController,
                   &gEmbeddedGpioProtocolGuid,
                   &mGpioEmbeddedProtocol,
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    FreePool (GpioController);
-  } else {
-    mGpioController = GpioController;
+    FreePool (mGpioController);
+    mGpioController = NULL;
   }
 
   return Status;
