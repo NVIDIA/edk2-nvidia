@@ -90,8 +90,7 @@ T194GetResourceConfig (
 
   // Build Carveout regions
   CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (
-                                            (sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_NUM)) +
-                                            (sizeof (UINT64) * NUM_DRAM_BAD_PAGES)
+                                            (sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_NUM + NUM_DRAM_BAD_PAGES))
                                             );
   ASSERT (CarveoutRegions != NULL);
   if (CarveoutRegions == NULL) {

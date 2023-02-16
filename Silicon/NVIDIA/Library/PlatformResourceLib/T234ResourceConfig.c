@@ -150,6 +150,7 @@ T234GetResourceConfig (
   EFI_MEMORY_DESCRIPTOR  Descriptor;
   UINTN                  Index;
   BOOLEAN                BanketDramEnabled;
+  UINT64                 *DramPageRetirementInfo;
 
   CpuBootloaderParams          = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   PlatformInfo->DtbLoadAddress = T234GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
@@ -190,7 +191,7 @@ T234GetResourceConfig (
   }
 
   // Build Carveout regions
-  CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_OEM_COUNT));
+  CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_OEM_COUNT + NUM_DRAM_BAD_PAGES));
   ASSERT (CarveoutRegions != NULL);
   if (CarveoutRegions == NULL) {
     return EFI_DEVICE_ERROR;
@@ -269,6 +270,19 @@ T234GetResourceConfig (
       CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
       CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size);
       CarveoutRegionsCount++;
+    }
+  }
+
+  if (CPUBL_PARAMS (CpuBootloaderParams, FeatureFlagData.EnableDramPageRetirement)) {
+    DramPageRetirementInfo = (UINT64 *)CPUBL_PARAMS (CpuBootloaderParams, DramPageRetirementInfoAddress);
+    for (Index = 0; Index < NUM_DRAM_BAD_PAGES; Index++) {
+      if (DramPageRetirementInfo[Index] == 0) {
+        break;
+      } else {
+        CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = DramPageRetirementInfo[Index];
+        CarveoutRegions[CarveoutRegionsCount].MemoryLength      = SIZE_4KB;
+        CarveoutRegionsCount++;
+      }
     }
   }
 

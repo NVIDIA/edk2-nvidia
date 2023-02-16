@@ -209,6 +209,7 @@ InstallSystemResources (
   TEGRA_RESOURCE_INFO  *PlatformInfo;
   UINTN                FinalDramRegionsCount;
   VOID                 *Hob;
+  UINTN                CarveoutSize;
 
   if (NULL == MemoryRegionsCount) {
     return EFI_INVALID_PARAMETER;
@@ -246,7 +247,8 @@ InstallSystemResources (
     sizeof (NVDA_MEMORY_REGION) * PlatformInfo->DramRegionsCount
     );
 
-  PlatformInfo->InputCarveoutRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * PlatformInfo->CarveoutRegionsCount);
+  CarveoutSize                       = sizeof (NVDA_MEMORY_REGION) * PlatformInfo->CarveoutRegionsCount;
+  PlatformInfo->InputCarveoutRegions = AllocatePages (EFI_SIZE_TO_PAGES (CarveoutSize));
   ASSERT (PlatformInfo->InputCarveoutRegions != NULL);
   if (PlatformInfo->InputCarveoutRegions == NULL) {
     return EFI_DEVICE_ERROR;

@@ -41,6 +41,7 @@
 #define TEGRA_UART_ADDRESS_J  0x0c270000
 
 #define TEGRABL_MAX_VERSION_STRING  128       /* chars including null */
+#define NUM_DRAM_BAD_PAGES          1024
 
 #define BRBCT_UNSIGNED_CUSTOMER_DATA_SIZE  1024
 #define BRBCT_SIGNED_CUSTOMER_DATA_SIZE    1024
@@ -262,7 +263,7 @@ typedef struct {
     union {
     UINT64 FeatureFlagRaw;
     struct {
-      UINT64 EnableDramPageBlacklisting: 1;
+      UINT64 EnableDramPageRetirement: 1;
       UINT64 EnableCombinedUart: 1;
       UINT64 EnableDramStagedScrubbing: 1;
       UINT64 SwitchBootchain: 1;
@@ -287,7 +288,7 @@ typedef struct {
   /**< Start address of DRAM ECC page blacklisting information
      structure
    */
-  UEFI_DECLARE_ALIGNED (UINT64 DramPageBlacklistInfoAddress, 8);
+  UEFI_DECLARE_ALIGNED (UINT64 DramPageRetirementInfoAddress, 8);
 
   /**< Start address of Golden register data region */
   UEFI_DECLARE_ALIGNED (UINT64 GoldenRegisterAddress, 8);

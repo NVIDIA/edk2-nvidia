@@ -212,10 +212,12 @@ TH500GetResourceConfig (
   NVDA_MEMORY_REGION  *DramRegions;
   NVDA_MEMORY_REGION  *CarveoutRegions;
   UINTN               CarveoutRegionsCount = 0;
+  UINTN               CarveoutSize;
   UINTN               Index;
   UINTN               Socket;
   UINT32              SocketMask;
   TH500_MEMORY_MODE   MemoryMode;
+  UINT64              *DramPageRetirementInfo;
 
   Index       = 0;
   DramRegions = NULL;
@@ -328,7 +330,8 @@ TH500GetResourceConfig (
   PlatformInfo->UefiDramRegionIndex = 0;
 
   // Build Carveout regions
-  CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS * CARVEOUT_OEM_COUNT);
+  CarveoutSize    = sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS * (CARVEOUT_OEM_COUNT + MAX_RETIRED_DRAM_PAGES);
+  CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePages (EFI_SIZE_TO_PAGES (CarveoutSize));
   ASSERT (CarveoutRegions != NULL);
   if (CarveoutRegions == NULL) {
     return EFI_DEVICE_ERROR;
@@ -390,6 +393,27 @@ TH500GetResourceConfig (
       } else {
         CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][Index].Base;
         CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][Index].Size;
+        CarveoutRegionsCount++;
+      }
+    }
+  }
+
+  for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
+    if (!(SocketMask & (1 << Socket))) {
+      continue;
+    }
+
+    DramPageRetirementInfo = (UINT64 *)CpuBootloaderParams->RetiredDramPageListAddr[Socket];
+    if (DramPageRetirementInfo == NULL) {
+      continue;
+    }
+
+    for (Index = 0; Index < MAX_RETIRED_DRAM_PAGES; Index++) {
+      if (DramPageRetirementInfo[Index] == 0) {
+        break;
+      } else {
+        CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = DramPageRetirementInfo[Index];
+        CarveoutRegions[CarveoutRegionsCount].MemoryLength      = SIZE_64KB;
         CarveoutRegionsCount++;
       }
     }
