@@ -72,6 +72,14 @@
 			attributes = <0x3>; /* read-write */
 			nv-sp-shared-buffer-id = <2>;
 		};
+		/* Buffer for shared communication from SATMC to MM */
+		common-shared-buffer-satmc-mm {
+			description = "satmc-mm";
+			pages-count = <1>;
+			base-address = <0x00000000 0x8ACF1000>;
+			attributes = <0x3>; /* read-write */
+			nv-sp-shared-buffer-id = <1>;
+		};
 		rxbuffer: rx-buffer {
 			description = "rx-buffer";
 			pages-count = <1>;
