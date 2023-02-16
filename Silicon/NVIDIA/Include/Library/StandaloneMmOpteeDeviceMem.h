@@ -1,6 +1,7 @@
 /** @file
 
-Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
+Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -55,6 +56,21 @@ EFIAPI
 BOOLEAN
 IsOpteePresent (
   VOID
+  );
+
+EFIAPI
+BOOLEAN
+IsDeviceTypePresent (
+  CONST CHAR8  *DeviceType,
+  UINT32       *NumRegions   OPTIONAL
+  );
+
+EFIAPI
+EFI_STATUS
+GetDeviceTypeRegions (
+  CONST CHAR8           *DeviceType,
+  EFI_MM_DEVICE_REGION  **DeviceRegions,
+  UINT32                *NumRegions
   );
 
 EFIAPI

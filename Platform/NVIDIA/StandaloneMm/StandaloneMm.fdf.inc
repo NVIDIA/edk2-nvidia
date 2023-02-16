@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2022-2023 NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -22,6 +22,11 @@
   # FTW Driver
   #
   INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf
+
+  #
+  # GPIO Driver
+  #
+  INF Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioStandaloneMm.inf
 
   #
   # MM MCTP/ERoT Drivers

@@ -1,0 +1,44 @@
+#/** @file
+#
+#  Tegra GPIO Standalone MM Driver
+#
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = TegraGpioStandaloneMm
+  FILE_GUID                      = 41808a9d-7f9a-46fa-b78f-5e79c5c08a40
+  MODULE_TYPE                    = MM_STANDALONE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  ENTRY_POINT                    = TegraGpioStmmInitialize
+
+[Sources.common]
+  TegraGpioStandaloneMm.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  IoLib
+  MemoryAllocationLib
+  MmServicesTableLib
+  StandaloneMmDriverEntryPoint
+  StandaloneMmOpteeLib
+
+[Protocols]
+  gEmbeddedGpioProtocolGuid
+
+[Depex]
+  TRUE

@@ -149,6 +149,11 @@
   }
 
   #
+  # GPIO Driver
+  #
+  Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioStandaloneMm.inf
+
+  #
   # MM MCTP/ERoT Drivers
   #
   Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiStmm.inf

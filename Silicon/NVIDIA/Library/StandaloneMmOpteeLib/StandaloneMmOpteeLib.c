@@ -68,16 +68,17 @@ GetDeviceRegion (
 
 EFIAPI
 BOOLEAN
-IsQspi0Present (
-  UINT32  *NumRegions
+IsDeviceTypePresent (
+  CONST CHAR8  *DeviceType,
+  UINT32       *NumRegions   OPTIONAL
   )
 {
   EFI_STATUS            Status           = EFI_NOT_FOUND;
   EFI_MM_DEVICE_REGION  *DeviceRegionMap = NULL;
   UINTN                 Index;
   EFI_HOB_GUID_TYPE     *GuidHob;
-  BOOLEAN               QspiPresent = FALSE;
-  UINT32                NumQspi;
+  BOOLEAN               DeviceTypePresent = FALSE;
+  UINT32                NumDevices;
 
   GuidHob = GetFirstGuidHob (&gEfiStandaloneMmDeviceMemoryRegions);
   if (GuidHob == NULL) {
@@ -85,75 +86,88 @@ IsQspi0Present (
   }
 
   DeviceRegionMap = GET_GUID_HOB_DATA (GuidHob);
-  NumQspi         = 0;
+  NumDevices      = 0;
   for (Index = 0; Index < MAX_DEVICE_REGIONS; Index++) {
-    if (AsciiStrStr (DeviceRegionMap[Index].DeviceRegionName, "qspi0") != NULL) {
-      QspiPresent = TRUE;
-      NumQspi++;
+    if (AsciiStrStr (DeviceRegionMap[Index].DeviceRegionName, DeviceType) != NULL) {
+      DeviceTypePresent = TRUE;
+      NumDevices++;
     }
   }
 
   if (NumRegions != NULL) {
-    *NumRegions = NumQspi;
+    *NumRegions = NumDevices;
   }
 
-  return QspiPresent;
+  return DeviceTypePresent;
+}
+
+EFIAPI
+BOOLEAN
+IsQspi0Present (
+  UINT32  *NumRegions
+  )
+{
+  return IsDeviceTypePresent ("qspi0", NumRegions);
 }
 
 /**
-  * GetQspi0DeviceRegions
-  * Get all the MMIO regions for QSPI controller 0 across all the sockets.
+  * GetDeviceTypeRegions
+  * Get all the MMIO regions for a device type across all the sockets.
   *
-  * @param[out]  QspiRegions  Allocated region of Qspi0 regions on success.
-  * @param[out]  NumRegions   Number of Qspi device regions.
+  * @param[in]   DeviceType    Device type substring.
+  * @param[out]  DeviceRegions Allocated region of device regions on success.
+  * @param[out]  NumRegions    Number of device regions.
   *
-  * @retval  EFI_SUCCESS           Found QSPI regions.
-  *          EFI_NOT_FOUND         Device Memory HOB not found or no Qspi0
+  * @retval  EFI_SUCCESS           Found device type regions.
+  *          EFI_NOT_FOUND         Device Memory HOB not found or no device
   *                                regions installed in the HOB.
-  *          EFI_OUT_OF_RESOURCES  Failed to allocate the QspiRegions Buffer.
+  *          EFI_OUT_OF_RESOURCES  Failed to allocate the DeviceRegions Buffer.
  **/
 EFIAPI
 EFI_STATUS
-GetQspi0DeviceRegions (
-  EFI_MM_DEVICE_REGION  **QspiRegions,
+GetDeviceTypeRegions (
+  CONST CHAR8           *DeviceType,
+  EFI_MM_DEVICE_REGION  **DeviceRegions,
   UINT32                *NumRegions
   )
 {
-  EFI_MM_DEVICE_REGION  *QspiMmio;
-  UINT32                NumQspi;
+  EFI_MM_DEVICE_REGION  *DeviceMmio;
+  UINT32                NumDevices;
   EFI_STATUS            Status;
   UINTN                 Index;
   EFI_HOB_GUID_TYPE     *GuidHob;
   EFI_MM_DEVICE_REGION  *DeviceRegionMap = NULL;
-  UINTN                 QspiIndex;
+  UINTN                 DeviceIndex;
 
   Status = EFI_SUCCESS;
-  if (IsQspi0Present (&NumQspi) == FALSE) {
+  if (IsDeviceTypePresent (DeviceType, &NumDevices) == FALSE) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: There are no QSPI0 regions present\n",
-      __FUNCTION__
+      "%a: There are no %a regions present\n",
+      __FUNCTION__,
+      DeviceType
       ));
     Status = EFI_NOT_FOUND;
-    goto ExitGetQspiDeviceRegions;
+    goto ExitGetDeviceTypeRegions;
   }
 
   DEBUG ((
     DEBUG_ERROR,
-    "%a: %u QSPI0 regions present\n",
+    "%a: %u %a regions present\n",
     __FUNCTION__,
-    NumQspi
+    NumDevices,
+    DeviceType
     ));
-  QspiMmio = AllocateRuntimeZeroPool (sizeof (EFI_MM_DEVICE_REGION) * NumQspi);
-  if (QspiMmio == NULL) {
+  DeviceMmio = AllocateRuntimeZeroPool (sizeof (EFI_MM_DEVICE_REGION) * NumDevices);
+  if (DeviceMmio == NULL) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: Failed to allocate %u bytes\n",
       __FUNCTION__,
-      (NumQspi * sizeof (EFI_MM_DEVICE_REGION))
+      (NumDevices * sizeof (EFI_MM_DEVICE_REGION))
       ));
     Status = EFI_OUT_OF_RESOURCES;
-    goto ExitGetQspiDeviceRegions;
+    goto ExitGetDeviceTypeRegions;
   }
 
   GuidHob = GetFirstGuidHob (&gEfiStandaloneMmDeviceMemoryRegions);
@@ -164,29 +178,39 @@ GetQspi0DeviceRegions (
       __FUNCTION__
       ));
     Status = EFI_NOT_FOUND;
-    FreePool (QspiMmio);
-    goto ExitGetQspiDeviceRegions;
+    FreePool (DeviceMmio);
+    goto ExitGetDeviceTypeRegions;
   }
 
   DeviceRegionMap = GET_GUID_HOB_DATA (GuidHob);
-  QspiIndex       = 0;
-  for (QspiIndex = 0, Index = 0;
-       (Index < MAX_DEVICE_REGIONS) && (QspiIndex < NumQspi);
+  DeviceIndex     = 0;
+  for (DeviceIndex = 0, Index = 0;
+       (Index < MAX_DEVICE_REGIONS) && (DeviceIndex < NumDevices);
        Index++)
   {
-    if (AsciiStrStr (DeviceRegionMap[Index].DeviceRegionName, "qspi0") != NULL) {
+    if (AsciiStrStr (DeviceRegionMap[Index].DeviceRegionName, DeviceType) != NULL) {
       CopyMem (
-        &QspiMmio[QspiIndex++],
+        &DeviceMmio[DeviceIndex++],
         &DeviceRegionMap[Index],
         sizeof (EFI_MM_DEVICE_REGION)
         );
     }
   }
 
-  *QspiRegions = QspiMmio;
-  *NumRegions  = NumQspi;
-ExitGetQspiDeviceRegions:
+  *DeviceRegions = DeviceMmio;
+  *NumRegions    = NumDevices;
+ExitGetDeviceTypeRegions:
   return Status;
+}
+
+EFIAPI
+EFI_STATUS
+GetQspi0DeviceRegions (
+  EFI_MM_DEVICE_REGION  **QspiRegions,
+  UINT32                *NumRegions
+  )
+{
+  return GetDeviceTypeRegions ("qspi0", QspiRegions, NumRegions);
 }
 
 EFIAPI

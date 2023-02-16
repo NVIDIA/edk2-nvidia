@@ -1,6 +1,6 @@
 /** @file
 
-  SD MMC Controller Driver
+  Tegra GPIO Driver
 
   Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
