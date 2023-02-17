@@ -2,7 +2,7 @@
 
   FwPackageLib - Firmware update package support library
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -116,7 +116,7 @@ FwPackageValidateImageInfo (
   if (ImageInfo->Version != FW_PACKAGE_IMAGE_INFO_VERSION) {
     DEBUG ((
       DEBUG_WARN,
-      "%a WARNING: image info for '%a' has version=%u, expected=%u\n",
+      "%a WARNING: image info for '%a' has version=%u, expected=%d\n",
       __FUNCTION__,
       ImageInfo->Name,
       ImageInfo->Version,

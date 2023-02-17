@@ -467,7 +467,7 @@ ProcessEspVariable (
   {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: %s Invalid File Size %lu (min %u max %u)\r\n",
+      "%a: %s Invalid File Size %lu (min %d max %u)\r\n",
       __FUNCTION__,
       FileInfo->FileName,
       FileSize,

@@ -2,7 +2,7 @@
   Api's to communicate with RPMB partition on the eMMC device via RPC calls
   from OP-TEE.
 
-  Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -137,7 +137,7 @@ PrintCid (
   DEBUG ((DEBUG_INFO, "==Dump Emmc Cid Register==\n"));
   DEBUG ((
     DEBUG_INFO,
-    "Manufac:0x%x ProductName:0x%x:0x%x:0x%x:0x%x:0x%x \n",
+    "Manufac:0x%x ProductName:0x%x:0x%x:0x%x:0x%x:0x%x:0x%x \n",
     Cid->ManufacturerId,
     Cid->ProductName[0],
     Cid->ProductName[1],

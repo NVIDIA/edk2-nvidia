@@ -2,7 +2,7 @@
   Entry point to the Standalone MM Foundation when initialized during the SEC
   phase on ARM platforms
 
-Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
 Copyright (c) 2017 - 2021, Arm Ltd. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1025,7 +1025,7 @@ _ModuleEntryPointC (
     );
   DebugPrint (DEBUG_ERROR, Version);
 
-  DEBUG ((DEBUG_ERROR, "EntryPoint: MemorySize=0x%x DTB@0x%x\n", TotalSPMemorySize, DTBAddress));
+  DEBUG ((DEBUG_ERROR, "EntryPoint: MemorySize=0x%x DTB@0x%p\n", TotalSPMemorySize, DTBAddress));
 
   ConfigureStage1Translations (TotalSPMemorySize, DTBAddress);
 

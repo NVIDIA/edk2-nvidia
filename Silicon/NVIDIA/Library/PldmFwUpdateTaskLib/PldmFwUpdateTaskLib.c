@@ -1041,7 +1041,7 @@ PldmFwTaskRequestFwDataHandleReq (
   DEBUG ((DEBUG_ERROR, "%a: off=0x%x len=0x%x\n", __FUNCTION__, Request->Offset, Request->Length));
 
   if (Task->FDState != FDStateDownload) {
-    DEBUG ((DEBUG_ERROR, "%a: %s req in FD state=%u\n", __FUNCTION__, Task->DeviceName, Task->FDState));
+    DEBUG ((DEBUG_ERROR, "%a: %s req in FD state=%d\n", __FUNCTION__, Task->DeviceName, Task->FDState));
     CompletionCode = PLDM_FW_COMMAND_NOT_EXPECTED;
     goto SendResponse;
   }

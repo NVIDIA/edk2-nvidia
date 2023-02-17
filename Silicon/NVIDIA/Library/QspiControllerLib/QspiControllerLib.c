@@ -653,7 +653,7 @@ QspiPerformTransaction (
   QspiConfigureCS (QspiBaseAddress, Packet->ChipSelect, TRUE);
   // If transmission buffer address valid, start transmission
   if (Packet->TxBuf != NULL) {
-    DEBUG ((EFI_D_INFO, "QSPI Tx Args: 0x%x %d.\n", Packet->TxBuf, Packet->TxLen));
+    DEBUG ((EFI_D_INFO, "QSPI Tx Args: 0x%p %d.\n", Packet->TxBuf, Packet->TxLen));
     Buffer = Packet->TxBuf;
     Count  = Packet->TxLen;
     // Based on transmission buffer length, calculate packet width and packets in current transaction.
@@ -674,7 +674,7 @@ QspiPerformTransaction (
 
   // If reception buffer address valid, start reception
   if (Packet->RxBuf != NULL) {
-    DEBUG ((EFI_D_INFO, "QSPI Rx Args: 0x%x %d.\n", Packet->RxBuf, Packet->RxLen));
+    DEBUG ((EFI_D_INFO, "QSPI Rx Args: 0x%p %d.\n", Packet->RxBuf, Packet->RxLen));
     Buffer = Packet->RxBuf;
     Count  = Packet->RxLen;
     // Based on reception buffer length, calculate packet width and packets in current transaction.

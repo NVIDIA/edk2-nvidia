@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
-  Copyright (c) 2020 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
 
@@ -151,7 +151,7 @@ PhyRealtekConfig (
   UINT32      Data32;
   EFI_STATUS  Status;
 
-  DEBUG ((DEBUG_INFO, "%s(): %u\n", __FUNCTION__, __LINE__));
+  DEBUG ((DEBUG_INFO, "%s(): %d\n", __FUNCTION__, __LINE__));
 
   PhyDriver->PhyPageSelRegister = REG_PHY_PAGE;
 

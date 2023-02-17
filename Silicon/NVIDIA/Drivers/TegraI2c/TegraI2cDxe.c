@@ -2,7 +2,7 @@
 
   Tegra I2c Driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -203,7 +203,7 @@ TegraI2cSetBusFrequency (
 
   Status = DeviceDiscoverySetClockFreq (Private->ControllerHandle, "div-clk", *BusClockHertz * ClockMultiplier);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a, failed to set clock frequency to %dHz (%r)\r\n", __FUNCTION__, *BusClockHertz * ClockMultiplier, Status));
+    DEBUG ((DEBUG_ERROR, "%a, failed to set clock frequency to %lldHz (%r)\r\n", __FUNCTION__, *BusClockHertz * ClockMultiplier, Status));
     return Status;
   }
 
@@ -1171,7 +1171,7 @@ TegraI2CDriverBindingStart (
   if (NULL != DtClockHertz) {
     Private->BusClockHertz = SwapBytes32 (*DtClockHertz);
   } else {
-    DEBUG ((DEBUG_WARN, "%a: no clock-frequency in dt, defaulting to %d\r\n", __FUNCTION__, STD_SPEED));
+    DEBUG ((DEBUG_WARN, "%a: no clock-frequency in dt, defaulting to %lu\r\n", __FUNCTION__, STD_SPEED));
     Private->BusClockHertz = STD_SPEED;
   }
 

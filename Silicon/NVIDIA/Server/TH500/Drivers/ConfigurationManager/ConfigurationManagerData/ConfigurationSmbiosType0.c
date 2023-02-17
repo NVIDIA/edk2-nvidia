@@ -154,7 +154,7 @@ InstallSmbiosType0Cm (
   //
   BiosInfo = (CM_STD_BIOS_INFO *)AllocateZeroPool (sizeof (CM_STD_BIOS_INFO));
   if (BiosInfo == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate bios info.\n"));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate bios info.\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 

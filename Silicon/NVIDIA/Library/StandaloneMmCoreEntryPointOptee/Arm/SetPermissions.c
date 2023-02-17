@@ -2,7 +2,7 @@
   Locate, get and update PE/COFF permissions during Standalone MM
   Foundation Entry point on ARM platforms.
 
-Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -359,7 +359,7 @@ GetStandaloneMmCorePeCoffSections (
   ImageContext->Handle    = TeData;
   ImageContext->ImageRead = PeCoffLoaderImageReadFromMemory;
 
-  DEBUG ((DEBUG_INFO, "Found Standalone MM PE data - 0x%x\n", TeData));
+  DEBUG ((DEBUG_INFO, "Found Standalone MM PE data - 0x%p\n", TeData));
 
   Status = GetPeCoffSectionInformation (
              ImageContext,

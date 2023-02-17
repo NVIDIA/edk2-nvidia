@@ -2,7 +2,7 @@
 
   Boot Chain Protocol Driver
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -500,8 +500,7 @@ BootChainFinishUpdate (
       DEBUG ((
         DEBUG_ERROR,
         "%a: Unable to determine original boot chain\n",
-        __FUNCTION__,
-        Status
+        __FUNCTION__
         ));
       goto Cleanup;
     }

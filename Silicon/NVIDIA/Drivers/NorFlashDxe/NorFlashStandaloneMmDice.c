@@ -2,7 +2,7 @@
 
   Addendum to NOR Flash Standalone MM Driver for DICE feature
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -233,14 +233,14 @@ NorFlashCheckLockStatus (
 
   Status = LockOps->IsInitialized (&Inited);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to check init state (%r)\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to check init state (%r)\n", __FUNCTION__, Status));
     goto exit;
   }
 
   if (Inited == FALSE) {
     Status = LockOps->Initialize (QspiBaseAddress, ChipSelect);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Failed to initialize locking (%r)\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to initialize locking (%r)\n", __FUNCTION__, Status));
       goto exit;
     }
   }

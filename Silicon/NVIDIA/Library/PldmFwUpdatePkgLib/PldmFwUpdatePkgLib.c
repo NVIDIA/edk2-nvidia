@@ -274,7 +274,7 @@ PldmFwPkgHdrValidate (
       PldmGuid = &mPldmGuidV1_1;
       break;
     default:
-      DEBUG ((DEBUG_ERROR, "%a: unsupported version=%u", __FUNCTION__, &Hdr->FormatRevision));
+      DEBUG ((DEBUG_ERROR, "%a: unsupported version=%u", __FUNCTION__, Hdr->FormatRevision));
       return EFI_UNSUPPORTED;
   }
 

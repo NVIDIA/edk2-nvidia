@@ -365,7 +365,7 @@ GpuDsdAmlGenerationGetDsdNode (
 
   Private = NVIDIA_GPU_DSD_AML_GENERATION_PRIVATE_DATA_FROM_THIS (This);
 
-  DEBUG ((DEBUG_INFO, "%a: GPU DSD AML Node generation status {%p, 0x%016x}\n", __FUNCTION__, Private, Node));
+  DEBUG ((DEBUG_INFO, "%a: GPU DSD AML Node generation status {%p, %p}\n", __FUNCTION__, Private, Node));
 
   if (NULL == Private) {
     ASSERT (0);
@@ -402,7 +402,7 @@ GpuDsdAmlGenerationGetMemorySize (
   NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL_PRIVATE_DATA  *Private;
 
   Private = NVIDIA_GPU_DSD_AML_GENERATION_PRIVATE_DATA_FROM_THIS (This);
-  DEBUG ((DEBUG_INFO, "%a: GPU Memory Size status {%p, 0x%016x}\n", __FUNCTION__, Private, MemorySize));
+  DEBUG ((DEBUG_INFO, "%a: GPU Memory Size status {%p, %p}\n", __FUNCTION__, Private, MemorySize));
 
   if (NULL == Private) {
     ASSERT (0);
@@ -414,7 +414,7 @@ GpuDsdAmlGenerationGetMemorySize (
     return EFI_INVALID_PARAMETER;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: GPU Memory Size status Handle [%p]\n", __FUNCTION__, Private->Handle));
+  DEBUG ((DEBUG_INFO, "%a: GPU Memory Size status {0x%016x} Handle [%p]\n", __FUNCTION__, *MemorySize, Private->Handle));
 
   *MemorySize = GetGPUMemSize (Private->Handle);
   DEBUG ((DEBUG_INFO, "%a: GPU Memory Size = 0x%016x\n", __FUNCTION__, *MemorySize));
@@ -443,7 +443,7 @@ GpuDsdAmlGenerationGetEgmBasePa (
   GPU_MEMORY_INFO                                      *GpuMemInfo;
 
   Private = NVIDIA_GPU_DSD_AML_GENERATION_PRIVATE_DATA_FROM_THIS (This);
-  DEBUG ((DEBUG_INFO, "%a: GPU DSD AML Node generation status {%p, 0x%016x}\n", __FUNCTION__, Private, EgmBasePa));
+  DEBUG ((DEBUG_INFO, "%a: GPU DSD AML Node generation status {%p, %p}\n", __FUNCTION__, Private, EgmBasePa));
 
   if (NULL == Private) {
     // ASSERT (0);
@@ -455,7 +455,7 @@ GpuDsdAmlGenerationGetEgmBasePa (
     return EFI_INVALID_PARAMETER;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: GPU DSD AML Node generation status Handle [%p]\n", __FUNCTION__, Private->Handle));
+  DEBUG ((DEBUG_INFO, "%a: GPU DSD AML Node generation status {0x%016x} Handle [%p]\n", __FUNCTION__, *EgmBasePa, Private->Handle));
 
   Status = GetGPUMemoryInfo (Private->Handle, &GpuMemInfo);
   DEBUG ((DEBUG_INFO, "%a: GPU Memory Info status '%r'\n", __FUNCTION__, Status));

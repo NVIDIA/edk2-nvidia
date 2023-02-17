@@ -70,11 +70,11 @@ NVIDIADriverDumpPrivateData (
   mPrivateData = NVIDIA_GPU_DRIVER_BINDING_PRIVATE_DATA_FROM_THIS (This);
   DEBUG ((DEBUG_INFO, "%a: Signature:               '0x%08x'\n", __FUNCTION__, mPrivateData->Signature));
   DEBUG ((DEBUG_INFO, "%a: Handle:                  '0x%0p'\n", __FUNCTION__, mPrivateData->Handle));
-  DEBUG ((DEBUG_INFO, "%a: DriverBinding:           '0x%0p'\n", __FUNCTION__, mPrivateData->DriverBinding));
+  DEBUG ((DEBUG_INFO, "%a: DriverBinding:           '0x%0p'\n", __FUNCTION__, &mPrivateData->DriverBinding));
   DEBUG ((DEBUG_INFO, "%a: SystemTable:             '0x%0p'\n", __FUNCTION__, mPrivateData->SystemTable));
   DEBUG ((DEBUG_INFO, "%a: BootServices:            '0x%0p'\n", __FUNCTION__, mPrivateData->BootServices));
   DEBUG ((DEBUG_INFO, "%a: ManagedControllerHandles '0x%0p'\n", __FUNCTION__, mPrivateData->ManagedControllerHandles));
-  DEBUG ((DEBUG_INFO, "%a: nManagedControllers:     '0x%0p'\n", __FUNCTION__, mPrivateData->nManagedControllers));
+  DEBUG ((DEBUG_INFO, "%a: nManagedControllers:     '0x%lu'\n", __FUNCTION__, mPrivateData->nManagedControllers));
   DEBUG_CODE_END ();
 
   return EFI_SUCCESS;

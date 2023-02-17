@@ -308,7 +308,7 @@ UsbRndisDriverStart (
   // If this is data interface, attach it to original one.
   //
   if (IsRndisDataInterface (UsbIo)) {
-    DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller Data: 0x%x\n", __FUNCTION__, Controller));
+    DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller Data: 0x%p\n", __FUNCTION__, Controller));
     Private = GetRndisPrivateData (Controller);
     if (Private == NULL) {
       return EFI_UNSUPPORTED;
@@ -338,7 +338,7 @@ UsbRndisDriverStart (
     return Status;
   }
 
-  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller: 0x%x\n", __FUNCTION__, Controller));
+  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller: 0x%p\n", __FUNCTION__, Controller));
   Private = NewUsbRndisPrivate (Controller);
   if (Private == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -440,7 +440,7 @@ UsbRndisDriverStart (
     goto OnError;
   }
 
-  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller: 0x%x done\n", __FUNCTION__, Controller));
+  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller: 0x%p done\n", __FUNCTION__, Controller));
 
   return EFI_SUCCESS;
 
@@ -480,7 +480,7 @@ UsbRndisDriverStop (
 
   ASSERT (NumberOfChildren == 0);
 
-  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller: 0x%x\n", __FUNCTION__, Controller));
+  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller: 0x%p\n", __FUNCTION__, Controller));
 
   Status = gBS->OpenProtocol (
                   Controller,
@@ -536,7 +536,7 @@ UsbRndisDriverStop (
 
   ReleaseUsbRndisPrivate (Private, This);
 
-  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller: 0x%x done\n", __FUNCTION__, Controller));
+  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller: 0x%p done\n", __FUNCTION__, Controller));
 
   return EFI_SUCCESS;
 }

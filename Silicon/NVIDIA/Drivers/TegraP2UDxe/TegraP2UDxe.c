@@ -2,7 +2,7 @@
 
   Tegra P2U (PIPE to UPHY) Driver
 
-  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -312,7 +312,7 @@ AddP2UEntries (
         "%a: Failed to add region 0x%016lx, 0x%016lx: %r.\r\n",
         __FUNCTION__,
         ListEntry->BaseAddr,
-        SIZE_64KB,
+        (unsigned long)SIZE_64KB,
         Status
         ));
       return EFI_DEVICE_ERROR;
@@ -391,7 +391,7 @@ TegraP2UDxeInitialize (
 
   Private = AllocatePool (sizeof (TEGRAP2U_DXE_PRIVATE));
   if (NULL == Private) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate private data stucture: %r\r\n", __FUNCTION__));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate private data stucture\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 

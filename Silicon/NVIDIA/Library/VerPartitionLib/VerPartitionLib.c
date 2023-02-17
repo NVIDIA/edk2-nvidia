@@ -2,7 +2,7 @@
 
   VerPartitionLib - VER partition library
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -107,7 +107,7 @@ VerPartitionGetVersion (
   // validate CRC
   Line = AsciiFindLine (VerData, VERSION_CRC32_LINE);
   if (Line == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Line %u missing\n", __FUNCTION__, VERSION_CRC32_LINE));
+    DEBUG ((DEBUG_ERROR, "%a: Line %d missing\n", __FUNCTION__, VERSION_CRC32_LINE));
     return EFI_VOLUME_CORRUPTED;
   }
 
@@ -117,7 +117,7 @@ VerPartitionGetVersion (
   if (CrcStr == NULL) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: No '%a' string on line %u\n",
+      "%a: No '%a' string on line %d\n",
       __FUNCTION__,
       VERSION_STR_CRC32,
       VERSION_CRC32_LINE

@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2016-2021, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -17,8 +17,8 @@
 #define MM_MAJOR_VER(x)  (((x) & MM_MAJOR_VER_MASK) >> MM_MAJOR_VER_SHIFT)
 #define MM_MINOR_VER(x)  ((x) & MM_MINOR_VER_MASK)
 
-#define MM_CALLER_MAJOR_VER  0x1UL
-#define MM_CALLER_MINOR_VER  0x0
+#define MM_CALLER_MAJOR_VER  0x1U
+#define MM_CALLER_MINOR_VER  0x0U
 
 /**
  * Call an SMC to send an FFA request. This function is similar to

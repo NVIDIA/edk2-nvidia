@@ -1,7 +1,7 @@
 /** @file
   The main process for FalconUtil application.
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -176,7 +176,7 @@ InitializeFalconUtil (
   /* Get the XHCI Config Registers Base Address */
   mXhciControllerProtocol->GetCfgAddr (mXhciControllerProtocol, &CfgAddress);
   if (CfgAddress == 0) {
-    DEBUG ((EFI_D_ERROR, "%a: Invalid Xhci Config Address Received\n"));
+    DEBUG ((EFI_D_ERROR, "%a: Invalid Xhci Config Address Received\n", __FUNCTION__));
     goto Done;
   }
 
@@ -276,7 +276,7 @@ InitializeFalconUtil (
     /* data */
     ValueStr = ShellCommandLineGetRawValue (ParamPackage, 1);
     if (ValueStr == NULL) {
-      DEBUG ((EFI_D_ERROR, "\nwrite value not provided\n\n", Value));
+      DEBUG ((EFI_D_ERROR, "\nwrite value not provided\n\n"));
       goto Done;
     }
 

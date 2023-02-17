@@ -2,7 +2,7 @@
 
   XUDC Driver
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2020, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -425,7 +425,7 @@ GetFirstWinForThisHead (
       if ((WindowWidth >= WIN_CROPPED_SIZE_IN_MIN_WIDTH) && (WindowHeight >= WIN_CROPPED_SIZE_IN_MIN_HEIGHT)) {
         DEBUG ((
           DEBUG_ERROR,
-          "Head index %d: Window index=%d %ux%u >= %ux%u: enabled and usable by UEFI\n",
+          "Head index %d: Window index=%d %ux%u >= %dx%d: enabled and usable by UEFI\n",
           HeadIndex,
           WindowIndex,
           WindowWidth,
@@ -439,7 +439,7 @@ GetFirstWinForThisHead (
       } else {
         DEBUG ((
           DEBUG_ERROR,
-          "Head index %d: Window index=%d %ux%u < %ux%u: enabled but NOT usable; keep searching\n",
+          "Head index %d: Window index=%d %ux%u < %dx%d: enabled but NOT usable; keep searching\n",
           HeadIndex,
           WindowIndex,
           WindowWidth,

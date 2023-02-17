@@ -67,7 +67,7 @@ GetSeqProto (
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Failed to find SocketId installed on %u %r\n",
+        "%a: Failed to find SocketId installed on %p %r\n",
         __FUNCTION__,
         HandleBuffer[Index],
         Status

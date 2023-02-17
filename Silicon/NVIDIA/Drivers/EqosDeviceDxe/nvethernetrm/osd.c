@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
  *
@@ -78,7 +78,7 @@ osd_log (
   if (level == OSI_LOG_ERR) {
     DEBUG ((
       DEBUG_ERROR,
-      "Osd: Error: Function: %a Line: %d Type: %d Err: %a Loga:0x%lx \r\n",
+      "Osd: Error: Function: %a Line: %u Type: %u Err: %a Loga:0x%llx \r\n",
       func,
       line,
       type,
@@ -88,7 +88,7 @@ osd_log (
   } else if (level == OSI_LOG_WARN) {
     DEBUG ((
       DEBUG_ERROR,
-      "Osd: Warning: Function: %a Line: %d Type: %d Err: %a Loga:0x%lx \r\n",
+      "Osd: Warning: Function: %a Line: %u Type: %u Err: %a Loga:0x%llx \r\n",
       func,
       line,
       type,
@@ -98,7 +98,7 @@ osd_log (
   } else if (level == OSI_LOG_INFO) {
     DEBUG ((
       DEBUG_ERROR,
-      "Osd: Info: Function: %a Line: %d Type: %d Err: %a Loga:0x%lx \r\n",
+      "Osd: Info: Function: %a Line: %u Type: %u Err: %a Loga:0x%llx \r\n",
       func,
       line,
       type,

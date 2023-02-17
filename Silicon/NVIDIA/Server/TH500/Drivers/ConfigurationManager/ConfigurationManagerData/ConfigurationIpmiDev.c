@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of IPMI Device Information
 
-  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -54,7 +54,7 @@ InstallIpmiDeviceInformationCm (
   //
   IpmiDeviceInfo = AllocateZeroPool (sizeof (CM_STD_IPMI_DEVICE_INFO));
   if (IpmiDeviceInfo == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Ipmi device info.\n"));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Ipmi device info.\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 

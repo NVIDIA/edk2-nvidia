@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -608,7 +608,7 @@ GetMmCompatibility (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_INFO, "Failed to open Session to StMM/OPTEE %r.\n", Status));
     } else {
-      DEBUG ((DEBUG_INFO, "Found StMM PTA managed by OPTEE.\n", Status));
+      DEBUG ((DEBUG_INFO, "Found StMM PTA managed by OPTEE.\n"));
     }
   } else {
     // MM_VERSION uses SMC32 calling conventions

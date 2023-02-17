@@ -921,7 +921,7 @@ UsbRndisInitialSnpService (
 
   Status = UsbRndisInitialRndisDevice (Private);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a, UsbRndisInitialRndisDevice: %r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a, UsbRndisInitialRndisDevice: %r\n", __FUNCTION__, Status));
     return Status;
   }
 

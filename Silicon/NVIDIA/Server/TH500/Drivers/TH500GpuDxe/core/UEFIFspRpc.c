@@ -894,7 +894,7 @@ FspConfigurationAtsRange (
   }
 
   DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   Status = uefifspRpcMsgQueueHeadTailGet (PciIo, channelId, &msgQueueHead, &msgQueueTail);
   if (EFI_ERROR (Status)) {
@@ -918,7 +918,7 @@ FspConfigurationAtsRange (
   }
 
   DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   Index = UEFI_FSP_RPC_CMD_QUEUE_POLL_TIMEOUT_INDEX;
   while ((queueHead != queueTail) && (--Index)) {
@@ -933,7 +933,7 @@ FspConfigurationAtsRange (
     }
   }
 
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   if (!Index) {
     DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: Command Queue empty check timed out.\n", __FUNCTION__, PciIo));
@@ -972,14 +972,14 @@ FspConfigurationAtsRange (
   }
 
   DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   Index = UEFI_FSP_RPC_CMD_QUEUE_POLL_TIMEOUT_INDEX;
   while ((queueHead != queueTail) && (Index--)) {
     uefifspRpcQueueHeadTailGet (PciIo, channelId, &queueHead, &queueTail);
   }
 
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   Status = PciIo->Mem.Read (
                         PciIo,
@@ -1060,7 +1060,7 @@ FspConfigurationAtsRange (
   }
 
   DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   Status = uefifspPollForMsgQueueResponse (PciIo, channelId);
   if (EFI_ERROR (Status)) {
@@ -1260,7 +1260,7 @@ FspConfigurationEgmBaseAndSize (
   BOOLEAN            bResponseAck = FALSE;
 
   DEBUG_CODE_BEGIN ();
-  DEBUG ((DEBUG_INFO, "%a: [%d] Params [egm-base-pa:0x%016lx,egm-size:0x%016lx]\n", __FUNCTION__, PciIo, EgmBasePa, EgmSize));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Params [egm-base-pa:0x%016lx,egm-size:0x%016lx]\n", __FUNCTION__, PciIo, EgmBasePa, EgmSize));
   DEBUG_CODE_END ();
 
   /* Allocate command queue buffer (DWORD aligned) */
@@ -1290,7 +1290,7 @@ FspConfigurationEgmBaseAndSize (
   }
 
   DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   Status = uefifspRpcMsgQueueHeadTailGet (PciIo, channelId, &msgQueueHead, &msgQueueTail);
   if (EFI_ERROR (Status)) {
@@ -1314,7 +1314,7 @@ FspConfigurationEgmBaseAndSize (
   }
 
   DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   Index = UEFI_FSP_RPC_CMD_QUEUE_POLL_TIMEOUT_INDEX;
   while ((queueHead != queueTail) && (--Index)) {
@@ -1329,7 +1329,7 @@ FspConfigurationEgmBaseAndSize (
     }
   }
 
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   if (!Index) {
     DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: Command Queue empty check timed out.\n", __FUNCTION__, PciIo));
@@ -1370,14 +1370,14 @@ FspConfigurationEgmBaseAndSize (
   }
 
   DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   Index = UEFI_FSP_RPC_CMD_QUEUE_POLL_TIMEOUT_INDEX;
   while ((queueHead != queueTail) && (Index--)) {
     uefifspRpcQueueHeadTailGet (PciIo, channelId, &queueHead, &queueTail);
   }
 
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   Status = PciIo->Mem.Read (
                         PciIo,
@@ -1458,7 +1458,7 @@ FspConfigurationEgmBaseAndSize (
   }
 
   DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
-  DEBUG ((DEBUG_INFO, "%a: [%d] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   Status = uefifspPollForMsgQueueResponse (PciIo, channelId);
   if (EFI_ERROR (Status)) {

@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of Static Resource Affinity Table
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -102,7 +102,7 @@ InstallStaticResourceAffinityTable (
 
   Status = gDS->GetMemorySpaceMap (&DescriptorCount, &Descriptors);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get Memory Space Map: %r\r\n", Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get Memory Space Map: %r\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
@@ -131,7 +131,7 @@ InstallStaticResourceAffinityTable (
 
   MemoryAffinityInfo = (CM_ARM_MEMORY_AFFINITY_INFO *)AllocateZeroPool (sizeof (CM_ARM_MEMORY_AFFINITY_INFO) * MemoryAffinityInfoCount);
   if (MemoryAffinityInfo == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory affinity info\r\n"));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory affinity info\r\n", __FUNCTION__));
     return EFI_DEVICE_ERROR;
   }
 
@@ -166,7 +166,7 @@ InstallStaticResourceAffinityTable (
   // Allocate space to save HBM info
   HbmMemInfo = (HBM_MEMORY_INFO *)AllocateZeroPool (sizeof (HBM_MEMORY_INFO) * TH500_TOTAL_PROXIMITY_DOMAINS);
   if (HbmMemInfo == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate HBM memory info\r\n"));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate HBM memory info\r\n", __FUNCTION__));
     return EFI_DEVICE_ERROR;
   }
 

@@ -61,7 +61,7 @@ InstallTrustedComputingPlatform2Table (
   //
   TpmInfo = AllocateZeroPool (sizeof (CM_ARM_TPM2_INTERFACE_INFO));
   if (TpmInfo == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate TPM2 interface info.\n"));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate TPM2 interface info.\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 

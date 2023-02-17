@@ -1360,7 +1360,7 @@ RegulatorDxeInitialize (
 
   Private = AllocatePool (sizeof (REGULATOR_DXE_PRIVATE));
   if (NULL == Private) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate private data stucture: %r\r\n", __FUNCTION__));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate private data stucture\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -1390,7 +1390,7 @@ RegulatorDxeInitialize (
                      &Private->GpioSearchToken
                      );
   if (NULL == GpioReadyEvent) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to create gpio notification event\r\n", __FUNCTION__, Status));
+    DEBUG ((EFI_D_ERROR, "%a, Failed to create gpio notification event\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
@@ -1403,7 +1403,7 @@ RegulatorDxeInitialize (
                       &Private->I2cIoSearchToken
                       );
   if (NULL == I2cIoReadyEvent) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to create I2cIo notification event\r\n", __FUNCTION__, Status));
+    DEBUG ((EFI_D_ERROR, "%a, Failed to create I2cIo notification event\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }

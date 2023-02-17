@@ -1,7 +1,7 @@
 /** @file
   FW Partition Protocol BlockIo Dxe
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -485,7 +485,7 @@ FPBlockIoInitDevices (
     if (mNumDevices >= FW_PARTITION_BLOCK_IO_MAX_DEVICES) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Max devices=%u exceeded\n",
+        "%a: Max devices=%d exceeded\n",
         __FUNCTION__,
         FW_PARTITION_BLOCK_IO_MAX_DEVICES
         ));
@@ -621,7 +621,7 @@ FwPartitionBlockIoDxeInitialize (
 
   Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", __FUNCTION__, Status));
     return Status;
   }
 

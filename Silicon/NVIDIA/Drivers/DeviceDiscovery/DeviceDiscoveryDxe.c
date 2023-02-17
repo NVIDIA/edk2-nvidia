@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Device Discovery Driver
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1746,7 +1746,7 @@ DeviceDiscoveryDxeEntryPoint (
                                          );
   if (NULL == Private->ProtocolNotificationEvent) {
     // Non-fatal, event will get processed later
-    DEBUG ((EFI_D_ERROR, "%a: Failed create event: %r.\r\n", __FUNCTION__));
+    DEBUG ((EFI_D_ERROR, "%a: Failed create event.\r\n", __FUNCTION__));
     Status = EFI_DEVICE_ERROR;
     goto ErrorExit;
   }

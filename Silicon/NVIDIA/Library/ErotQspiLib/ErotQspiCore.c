@@ -2,7 +2,7 @@
 
   Erot Qspi library core routines
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -911,7 +911,7 @@ ErotQspiDoReadMemCommand (
   }
 
   if ((MctpBEBufferToUint16 (ReadFifoRx.Status) & EROT_SPI_STATUS_MEM_READ_DONE) == 0) {
-    DEBUG ((DEBUG_ERROR, "%a: Got bad FIFO read status: 0x%x\n", __FUNCTION__, ReadFifoRx.Status));
+    DEBUG ((DEBUG_ERROR, "%a: Got bad FIFO read status: 0x%x\n", __FUNCTION__, MctpBEBufferToUint16 (ReadFifoRx.Status)));
   }
 
   CopyMem (Buffer, ReadFifoRx.Data, Bytes);

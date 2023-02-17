@@ -696,7 +696,7 @@ PlatformRedfishBiosUnload (
                   &mRedfishResourceAddendum
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a, failed to uninstall Redfish Resource Addendum Protocol: %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "%a: failed to uninstall Redfish Resource Addendum Protocol: %r\n", __FUNCTION__, Status));
   }
 
   return EFI_SUCCESS;
@@ -729,7 +729,7 @@ PlatformRedfishBiosEntryPoint (
                   &mRedfishResourceAddendum
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a, failed to install Redfish Resource Addendum Protocol: %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "%a: failed to install Redfish Resource Addendum Protocol: %r\n", __FUNCTION__, Status));
     return Status;
   }
 

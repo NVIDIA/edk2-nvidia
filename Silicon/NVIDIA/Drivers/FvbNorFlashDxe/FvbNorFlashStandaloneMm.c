@@ -2,7 +2,7 @@
 
   Standalone MM driver Fvb Driver
 
-  Copyright (c) 2018 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -1482,7 +1482,7 @@ FVBNORInitialize (
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Failed to install FVP protocol Index %d %x Status %r\r\n",
+        "%a: Failed to install FVP protocol Index %d %p Status %r\r\n",
         __FUNCTION__,
         Index,
         &FvpData[Index].Handle,

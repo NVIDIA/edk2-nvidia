@@ -2,7 +2,7 @@
 
   MM FW partition protocol driver
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -346,7 +346,7 @@ FwPartitionMmDxeInitialize (
 
   Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", __FUNCTION__, Status));
     return Status;
   }
 

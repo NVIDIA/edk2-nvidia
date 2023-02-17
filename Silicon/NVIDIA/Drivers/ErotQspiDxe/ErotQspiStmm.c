@@ -2,7 +2,7 @@
 
   ERoT over Stmm QSPI driver
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -62,7 +62,7 @@ ErotQspiStmmInitialize (
                               HandleBuffer
                               );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error locating QSPI handles: %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "%a: Error locating QSPI handles: %r\n", __FUNCTION__, Status));
     return Status;
   }
 

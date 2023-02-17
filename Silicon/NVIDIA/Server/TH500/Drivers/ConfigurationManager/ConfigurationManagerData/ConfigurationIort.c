@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of IO Remapping Table
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -1054,7 +1054,7 @@ InstallIoRemappingTable (
       Repo->CmObjectCount = IoNode->NumberOfNodes;
       Repo->CmObjectPtr   = IoNode->NodeArray;
       Repo++;
-      DEBUG ((EFI_D_INFO, "%a: Installed IORT %d %r\r\n", __FUNCTION__, Index + MIN_IORT_OBJID));
+      DEBUG ((EFI_D_INFO, "%a: Installed IORT %d\r\n", __FUNCTION__, Index + MIN_IORT_OBJID));
     }
   }
 
@@ -1072,7 +1072,7 @@ InstallIoRemappingTable (
       ASSERT ((UINTN)Repo <= PlatformRepositoryInfoEnd);
     }
   }
-  DEBUG ((EFI_D_INFO, "%a: Installed IORT %r\r\n", __FUNCTION__));
+  DEBUG ((EFI_D_INFO, "%a: Installed IORT\r\n", __FUNCTION__));
 
   *PlatformRepositoryInfo = Repo;
 

@@ -232,7 +232,7 @@ InstallSmbiosType13Cm (
 
   // Check if platform language matches with any of the supported language code and find its offset.
   if (!CurrentLanguageMatch (LangCodes, &Offset)) {
-    DEBUG ((DEBUG_ERROR, "Matching Lang code for platform language not found\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Matching Lang code for platform language not found\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 

@@ -3,7 +3,7 @@
   MM driver to write Sequential records to Flash.
   This file handles the storage portions.
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -978,7 +978,7 @@ WriteNextRecord (
                     );
   DEBUG ((
     DEBUG_INFO,
-    "%a: Allocated Buf %p RecBuf %p CrcBuf %p CrcBufSize\n",
+    "%a: Allocated Buf %p RecBuf %p CrcBuf %p CrcBufSize %u\n",
     __FUNCTION__,
     Buf,
     RecBuf,
@@ -1134,7 +1134,7 @@ ValidatePartitionInfo (
   {
     DEBUG ((
       DEBUG_ERROR,
-      "%a:Partition not valid.Size %lu Offset %lu Block %lu",
+      "%a:Partition not valid.Size %lu Offset %lu Block %d",
       __FUNCTION__,
       Partition->PartitionSize,
       Partition->PartitionByteOffset,
@@ -1342,7 +1342,7 @@ SequentialStorageInit (
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Failed to install FVP protocol Index %d %x Status %r\r\n",
+        "%a: Failed to install FVP protocol Index %d %p Status %r\r\n",
         __FUNCTION__,
         Index,
         SeqStoreHandle,
@@ -1354,7 +1354,7 @@ SequentialStorageInit (
 
   DEBUG ((
     DEBUG_ERROR,
-    "%a: Density %lu BlockSize %u \n",
+    "%a: Density %lu BlockSize %d \n",
     __FUNCTION__,
     NorFlashAttributes.MemoryDensity,
     SEQ_BLOCK_SIZE

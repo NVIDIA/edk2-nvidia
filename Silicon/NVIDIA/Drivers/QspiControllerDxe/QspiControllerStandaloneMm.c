@@ -2,7 +2,7 @@
 
   QSPI Driver for Standalone MM image.
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -149,7 +149,7 @@ QspiControllerStMmInitialize (
   if ((Fbc == FALSE) || (TegraBootType == TegrablBootRcm)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a:Not Initializing QSPI.FBC:%u BootType:%u\n",
+      "%a: Not Initializing QSPI.FBC:%u BootType:%d\n",
       __FUNCTION__,
       Fbc,
       TegraBootType

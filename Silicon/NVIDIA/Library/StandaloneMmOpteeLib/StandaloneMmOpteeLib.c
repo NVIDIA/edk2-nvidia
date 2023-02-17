@@ -1,7 +1,7 @@
 /** @file
 Misc Library for OPTEE related functions in Standalone MM.
 
-Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -402,7 +402,7 @@ GetDeviceSocketNum (
     if (SockNum >= MAX_SOCKETS) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: SockNum %u is out of range , max(%u)\n",
+        "%a: SockNum %u is out of range , max(%d)\n",
         __FUNCTION__,
         SockNum,
         MAX_SOCKETS
@@ -533,7 +533,7 @@ FindProtocolInSocket (
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Failed to find SocketId installed on %u %r\n",
+        "%a: Failed to find SocketId installed on %p %r\n",
         __FUNCTION__,
         HandleBuffer[Index],
         Status
@@ -556,7 +556,7 @@ FindProtocolInSocket (
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Failed to find Protocol installed on %u %r\n",
+        "%a: Failed to find Protocol installed on %p %r\n",
         __FUNCTION__,
         HandleBuffer[Index],
         Status
