@@ -25,8 +25,7 @@
 STATIC NOR_FLASH_ATTRIBUTES  NorFlashAttributes;
 STATIC UINT32                SupportedPartitions[] = {
   TEGRABL_RAS_ERROR_LOGS,
-  TEGRABL_EARLY_BOOT_VARS,
-  TEGRABL_CMET
+  TEGRABL_EARLY_BOOT_VARS
 };
 
 /**
@@ -1166,87 +1165,6 @@ ExitValidatePartitionInfo:
 }
 
 /**
- * GetPartitionData for a given Partition Index by looking up the CPUBL Params.
- *
- * @params[in]   PartitionIndex  Index into CPU BL's partition Info structure.
- * @params[out]  Partitioninfo   Data structure containing offset and size.
- *
- * @retval       EFI_SUCCESS     Successfully looked up partition info.
- *               OTHER           From the StandaloneMmOpteeLib (trying to get
- *                               CPU BL params) or PlatformResourceLib trying
- *                               to look up partition info in the CPU BL
- *                               Params).
- **/
-STATIC
-EFI_STATUS
-GetPartitionData (
-  IN  NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol,
-  IN  UINT32                     PartitionIndex,
-  OUT PARTITION_INFO             *PartitionInfo
-  )
-{
-  EFI_PHYSICAL_ADDRESS  CpuBlParamsAddr;
-  EFI_STATUS            Status;
-  UINT16                DeviceInstance;
-  UINT64                PartitionByteOffset;
-  UINT64                PartitionSize;
-
-  Status = GetCpuBlParamsAddrStMm (&CpuBlParamsAddr);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to get CpuBl Addr %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto ExitGetPartitionData;
-  }
-
-  Status = GetPartitionInfoStMm (
-             (UINTN)CpuBlParamsAddr,
-             PartitionIndex,
-             &DeviceInstance,
-             &PartitionByteOffset,
-             &PartitionSize
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a:Failed to get %u PartitionInfo %r\n",
-      __FUNCTION__,
-      PartitionIndex,
-      Status
-      ));
-
-    goto ExitGetPartitionData;
-  }
-
-  PartitionInfo->PartitionByteOffset = PartitionByteOffset;
-  PartitionInfo->PartitionSize       = PartitionSize;
-  PartitionInfo->PartitionIndex      = PartitionIndex;
-  Status                             = ValidatePartitionInfo (PartitionInfo);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Partition info is not valid %r\n",
-      __FUNCTION__,
-      Status
-      ));
-  }
-
-  DEBUG ((
-    DEBUG_ERROR,
-    "%a: PartitionInfo Start 0x%lx Size %lu Idx %u\n",
-    __FUNCTION__,
-    PartitionInfo->PartitionByteOffset,
-    PartitionInfo->PartitionSize,
-    PartitionInfo->PartitionIndex
-    ));
-ExitGetPartitionData:
-  return Status;
-}
-
-/**
  * Initialize the Storage portions of the driver
  *
  * @param[in]    ImageHandle              Image Handle of this file.
@@ -1313,15 +1231,27 @@ SequentialStorageInit (
     SeqProtocol = AllocateZeroPool (sizeof (NVIDIA_SEQ_RECORD_PROTOCOL));
 
     Status = GetPartitionData (
-               NorFlashProtocol,
                SupportedPartitions[Index],
                &SeqProtocol->PartitionInfo
                );
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "Failed to find Partition info for Partition%u %r\n",
+        "%a : Failed to find Partition info for Partition%u %r\n",
         __FUNCTION__,
+        SupportedPartitions[Index],
+        Status
+        ));
+      continue;
+    }
+
+    Status = ValidatePartitionInfo (&SeqProtocol->PartitionInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: %u Partition info is not valid %r\n",
+        __FUNCTION__,
+        SupportedPartitions[Index],
         Status
         ));
       continue;
@@ -1357,7 +1287,7 @@ SequentialStorageInit (
 
   DEBUG ((
     DEBUG_ERROR,
-    "%a: Density %lu BlockSize %d \n",
+    "%a: Density %lu Logical BlockSize %d \n",
     __FUNCTION__,
     NorFlashAttributes.MemoryDensity,
     SEQ_BLOCK_SIZE

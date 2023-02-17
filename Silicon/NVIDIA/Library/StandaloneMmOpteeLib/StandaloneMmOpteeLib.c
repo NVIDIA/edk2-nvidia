@@ -25,7 +25,6 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define HIDREV_OFFSET             0x4
 #define HIDREV_PRE_SI_PLAT_SHIFT  0x14
 #define HIDREV_PRE_SI_PLAT_MASK   0xf
-#define MAX_SOCKETS               4
 
 EFIAPI
 BOOLEAN
@@ -638,4 +637,74 @@ GetSocketQspiProtocol (
   }
 
   return QspiControllerProtocol;
+}
+
+/**
+ * GetPartitionData for a given Partition Index by looking up the CPUBL Params.
+ *
+ * @params[in]   PartitionIndex  Index into CPU BL's partition Info structure.
+ * @params[out]  Partitioninfo   Data structure containing offset and size.
+ *
+ * @retval       EFI_SUCCESS     Successfully looked up partition info.
+ *               OTHER           From the StandaloneMmOpteeLib (trying to get
+ *                               CPU BL params) or PlatformResourceLib trying
+ *                               to look up partition info in the CPU BL
+ *                               Params).
+ **/
+EFI_STATUS
+GetPartitionData (
+  IN  UINT32          PartitionIndex,
+  OUT PARTITION_INFO  *PartitionInfo
+  )
+{
+  EFI_PHYSICAL_ADDRESS  CpuBlParamsAddr;
+  EFI_STATUS            Status;
+  UINT16                DeviceInstance;
+  UINT64                PartitionByteOffset;
+  UINT64                PartitionSize;
+
+  Status = GetCpuBlParamsAddrStMm (&CpuBlParamsAddr);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get CpuBl Addr %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitGetPartitionData;
+  }
+
+  Status = GetPartitionInfoStMm (
+             (UINTN)CpuBlParamsAddr,
+             PartitionIndex,
+             &DeviceInstance,
+             &PartitionByteOffset,
+             &PartitionSize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:Failed to get %u PartitionInfo %r\n",
+      __FUNCTION__,
+      PartitionIndex,
+      Status
+      ));
+
+    goto ExitGetPartitionData;
+  }
+
+  PartitionInfo->PartitionByteOffset = PartitionByteOffset;
+  PartitionInfo->PartitionSize       = PartitionSize;
+  PartitionInfo->PartitionIndex      = PartitionIndex;
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: PartitionInfo Start 0x%lu Size %lu Idx %u\n",
+    __FUNCTION__,
+    PartitionInfo->PartitionByteOffset,
+    PartitionInfo->PartitionSize,
+    PartitionInfo->PartitionIndex
+    ));
+ExitGetPartitionData:
+  return Status;
 }

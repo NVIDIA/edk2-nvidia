@@ -1,6 +1,6 @@
 /** @file
 
-Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -12,6 +12,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/PlatformResourceLib.h>
 #include <Protocol/NorFlash.h>
 #include <Protocol/QspiController.h>
+#include <Protocol/SequentialRecord.h>
 
 #define DEVICE_REGION_NAME_MAX_LEN  32
 #define MAX_DEVICE_REGIONS          10
@@ -175,6 +176,24 @@ EFIAPI
 NVIDIA_QSPI_CONTROLLER_PROTOCOL  *
 GetSocketQspiProtocol (
   UINT32  SocketNum
+  );
+
+/**
+ * GetPartitionData for a given Partition Index by looking up the CPUBL Params.
+ *
+ * @params[in]   PartitionIndex  Index into CPU BL's partition Info structure.
+ * @params[out]  Partitioninfo   Data structure containing offset and size.
+ *
+ * @retval       EFI_SUCCESS     Successfully looked up partition info.
+ *               OTHER           From the StandaloneMmOpteeLib (trying to get
+ *                               CPU BL params) or PlatformResourceLib trying
+ *                               to look up partition info in the CPU BL
+ *                               Params).
+ **/
+EFI_STATUS
+GetPartitionData (
+  IN  UINT32          PartitionIndex,
+  OUT PARTITION_INFO  *PartitionInfo
   );
 
 #endif //STANDALONEMM_OPTEE_DEVICE_MEM_H

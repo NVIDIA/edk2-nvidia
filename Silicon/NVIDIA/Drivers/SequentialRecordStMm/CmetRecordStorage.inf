@@ -1,8 +1,8 @@
 #/** @file
 #
-#  Sequential Record Communications Driver
+#  CMET Storage driver
 #
-#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -10,15 +10,15 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = SequentialRecordComm
-  FILE_GUID                      = 1f4e2939-f337-45f9-9d16-b7b2b3165cd1
+  BASE_NAME                      = CmetRecordStorage
+  FILE_GUID                      = 9cd21c6a-0812-46a9-a767-a65ac9190d41
   MODULE_TYPE                    = MM_STANDALONE
   VERSION_STRING                 = 1.0
   PI_SPECIFICATION_VERSION       = 0x00010032
-  ENTRY_POINT                    = SequentialRecordCommInitialize
+  ENTRY_POINT                    = CmetStorageInit
 
 [Sources.common]
-  SequentialRecordComm.c
+  CmetRecordStorage.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -41,15 +41,10 @@
 
 [Protocols]
   gNVIDIANorFlashProtocolGuid
-  gEfiSmmFirmwareVolumeBlockProtocolGuid
-  gNVIDIASequentialStorageGuid
   gNVIDIACmetStorageGuid
 
 [Guids]
   gNVIDIAPlatformResourceDataGuid
-  gNVIDIARasLogMmGuid
-  gNVIDIARasCmetMmGuid
-  gNVIDIAMmMb1RecordGuid
 
 [Depex]
   TRUE

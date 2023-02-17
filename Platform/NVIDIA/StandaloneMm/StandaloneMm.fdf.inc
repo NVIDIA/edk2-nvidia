@@ -35,6 +35,11 @@
   INF Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordStorage.inf
 
   #
+  # CMET Record Storage Driver
+  #
+  INF Silicon/NVIDIA/Drivers/SequentialRecordStMm/CmetRecordStorage.inf
+
+  #
   # Sequential Record client driver
   #
   INF Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordComm.inf
@@ -45,6 +50,7 @@
   # MM User Authentication Driver
   #
   INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
+
 
 ################################################################################
 #

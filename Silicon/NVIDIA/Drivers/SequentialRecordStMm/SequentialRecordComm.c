@@ -11,9 +11,9 @@
 
 #include "SequentialRecordPrivate.h"
 
-NVIDIA_SEQ_RECORD_PROTOCOL  *RasSeqProto;
-NVIDIA_SEQ_RECORD_PROTOCOL  *CmetSeqProto;
-NVIDIA_SEQ_RECORD_PROTOCOL  *EarlyVarsProto;
+NVIDIA_SEQ_RECORD_PROTOCOL   *RasSeqProto;
+NVIDIA_CMET_RECORD_PROTOCOL  *CmetSeqProto;
+NVIDIA_SEQ_RECORD_PROTOCOL   *EarlyVarsProto;
 
 #define EARLY_VARS_RD_SOCKET  (0)
 
@@ -122,19 +122,21 @@ CmetMsgHandler (
 
   switch (CmetHeader->Function) {
     case READ_LAST_RECORD:
-      Status = CmetSeqProto->ReadLast (
+      Status = CmetSeqProto->ReadRecord (
                                CmetSeqProto,
                                CmetHeader->Socket,
                                (VOID *)CmetPayload,
-                               *CommBufferSize
+                               *CommBufferSize,
+                               CmetHeader->Flag
                                );
       break;
     case WRITE_NEXT_RECORD:
-      Status = CmetSeqProto->WriteNext (
+      Status = CmetSeqProto->WriteRecord (
                                CmetSeqProto,
                                CmetHeader->Socket,
                                (VOID *)CmetPayload,
-                               *CommBufferSize
+                               *CommBufferSize,
+                               CmetHeader->Flag
                                );
       break;
     default:
@@ -518,7 +520,11 @@ RegisterCmetHandler (
     goto ExitCmetRegister;
   }
 
-  CmetSeqProto = GetSeqProto (TEGRABL_CMET);
+  Status = gMmst->MmLocateProtocol (
+                    &gNVIDIACmetStorageGuid,
+                    NULL,
+                    (VOID **)&CmetSeqProto
+                    );
   if (CmetSeqProto == NULL) {
     DEBUG ((
       DEBUG_ERROR,

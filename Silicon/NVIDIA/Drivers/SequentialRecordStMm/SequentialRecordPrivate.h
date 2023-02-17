@@ -32,8 +32,16 @@ typedef struct {
   EFI_STATUS    ReturnStatus;
   /* Socket number [0-3] */
   UINTN         Socket;
+  /* Flag. To be used mostly in CMET record storage.*/
+  UINTN         Flag;
   /* Extra data (ie data to write when RAS_FW requests a write, or read data from MM when returning a read request */
   UINT8         Data[]; /* Flexible array member */
 } RAS_MM_COMMUNICATE_PAYLOAD;
+
+EFI_STATUS
+EFIAPI
+CmetRecordTest (
+  VOID
+  );
 
 #endif // SEQUENTIAL_RECORD_PVT_H

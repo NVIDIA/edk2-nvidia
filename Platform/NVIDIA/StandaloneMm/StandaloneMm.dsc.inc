@@ -159,6 +159,11 @@
   Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordStorage.inf
 
   #
+  # CMET Record Storage Driver
+  #
+  Silicon/NVIDIA/Drivers/SequentialRecordStMm/CmetRecordStorage.inf
+
+  #
   # Sequential Record client driver
   #
   Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordComm.inf
@@ -167,6 +172,7 @@
   # MM User Authentication Driver
   #
   Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
+
 
 [Components.AARCH64]
 

@@ -2,7 +2,7 @@
 
   Sequential record protocol/header definitions
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,7 +15,8 @@
 
 #define MAX_SOCKETS  (4)
 
-typedef struct _NVIDIA_SEQ_RECORD_PROTOCOL NVIDIA_SEQ_RECORD_PROTOCOL;
+typedef struct _NVIDIA_SEQ_RECORD_PROTOCOL   NVIDIA_SEQ_RECORD_PROTOCOL;
+typedef struct _NVIDIA_CMET_RECORD_PROTOCOL  NVIDIA_CMET_RECORD_PROTOCOL;
 
 typedef struct {
   UINT8     Flags;
@@ -55,10 +56,37 @@ EFI_STATUS
   IN  UINTN                      SocketNum
   );
 
+typedef
+EFI_STATUS
+(EFIAPI *CMET_REC_WRITE)(
+  IN  NVIDIA_CMET_RECORD_PROTOCOL *This,
+  IN  UINTN                       SocketNum,
+  IN  VOID                        *Buf,
+  IN  UINTN                       BufSize,
+  IN  UINTN                       Erase
+  );
+
+typedef
+EFI_STATUS
+(EFIAPI *CMET_REC_READ)(
+  IN  NVIDIA_CMET_RECORD_PROTOCOL *This,
+  IN  UINTN                       SocketNum,
+  IN  VOID                        *Buf,
+  IN  UINTN                       BufSize,
+  IN  UINTN                       PrimaryRecord
+  );
+
 struct _NVIDIA_SEQ_RECORD_PROTOCOL {
   SEQ_REC_READ_LAST            ReadLast;
   SEQ_REC_WRITE_NEXT           WriteNext;
   SEQ_REC_ERASE_PARTITION      ErasePartition;
+  PARTITION_INFO               PartitionInfo;
+  NVIDIA_NOR_FLASH_PROTOCOL    *NorFlashProtocol[MAX_SOCKETS];
+};
+
+struct _NVIDIA_CMET_RECORD_PROTOCOL {
+  CMET_REC_READ                ReadRecord;
+  CMET_REC_WRITE               WriteRecord;
   PARTITION_INFO               PartitionInfo;
   NVIDIA_NOR_FLASH_PROTOCOL    *NorFlashProtocol[MAX_SOCKETS];
 };
