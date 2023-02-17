@@ -604,9 +604,11 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
       Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
         If (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
           Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS, CAI)
+          Notify (\_SB.PM20, PWR_METER_NOTIFY_CONFIG)
           Return (PWR_METER_SUCCESS)
         } ElseIf (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
           Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC, CAI)
+          Notify (\_SB.PM20, PWR_METER_NOTIFY_CONFIG)
           Return (PWR_METER_SUCCESS)
         }
         Return (PWR_METER_OUT_OF_RANGE)
@@ -679,9 +681,11 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
       Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
         If (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
           Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS, CAI)
+          Notify (\_SB.PM21, PWR_METER_NOTIFY_CONFIG)
           Return (PWR_METER_SUCCESS)
         } ElseIf (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
           Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC, CAI)
+          Notify (\_SB.PM21, PWR_METER_NOTIFY_CONFIG)
           Return (PWR_METER_SUCCESS)
         }
         Return (PWR_METER_OUT_OF_RANGE)
@@ -718,9 +722,9 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
         If (Local0 == 0) {
           If (Arg0 != HWLT) {
             Store (Arg0, HWLT)
-            Notify (\_SB.PM21, 0x82)
+            Notify (\_SB.PM21, PWR_METER_NOTIFY_CAP)
           }
-          Notify (\_SB.PM21, 0x83)
+          Notify (\_SB.PM21, PWR_METER_NOTIFY_CAPPING)
         }
         Return (Local0)
       }
@@ -768,9 +772,11 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
       Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
         If (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
           Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS, CAI)
+          Notify (\_SB.PM22, PWR_METER_NOTIFY_CONFIG)
           Return (PWR_METER_SUCCESS)
         } ElseIf (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
           Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC, CAI)
+          Notify (\_SB.PM22, PWR_METER_NOTIFY_CONFIG)
           Return (PWR_METER_SUCCESS)
         }
         Return (PWR_METER_OUT_OF_RANGE)
@@ -842,9 +848,11 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
       Method (_PAI, 1, Serialized, 0, IntObj, IntObj) {
         If (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
           Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS, CAI)
+          Notify (\_SB.PM23, PWR_METER_NOTIFY_CONFIG)
           Return (PWR_METER_SUCCESS)
         } ElseIf (Arg0 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
           Store (PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC, CAI)
+          Notify (\_SB.PM23, PWR_METER_NOTIFY_CONFIG)
           Return (PWR_METER_SUCCESS)
         }
         Return (PWR_METER_OUT_OF_RANGE)
