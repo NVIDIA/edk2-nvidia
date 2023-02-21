@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -9,6 +9,8 @@
 #ifndef __QSPI_CONTROLLER_LIB_H__
 #define __QSPI_CONTROLLER_LIB_H__
 
+#define QSPI_CONTROLLER_CONTROL_FAST_MODE  0x01
+
 typedef struct {
   VOID      *TxBuf;
   UINT32    TxLen;
@@ -16,6 +18,7 @@ typedef struct {
   UINT32    RxLen;
   UINT8     WaitCycles;
   UINT8     ChipSelect;
+  UINT8     Control;
 } QSPI_TRANSACTION_PACKET;
 
 /**

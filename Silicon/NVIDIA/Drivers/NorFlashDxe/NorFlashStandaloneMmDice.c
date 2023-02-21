@@ -704,6 +704,7 @@ IsNorFlashDeviceSupported (
   Packet.RxLen      = sizeof (DeviceID);
   Packet.WaitCycles = 0;
   Packet.ChipSelect = ChipSelect;
+  Packet.Control    = 0;
 
   Status = QspiPerformTransaction ((EFI_PHYSICAL_ADDRESS)QspiBaseAddress, &Packet);
   if (EFI_ERROR (Status)) {

@@ -75,6 +75,7 @@ ReadNorFlashRegister (
   Packet.RxLen      = sizeof (UINT8);
   Packet.WaitCycles = 0;
   Packet.ChipSelect = Private->QspiChipSelect;
+  Packet.Control    = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -172,6 +173,7 @@ ConfigureNorFlashWriteEnLatch (
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
   Packet.ChipSelect = Private->QspiChipSelect;
+  Packet.Control    = 0;
 
   RegCmd = NOR_READ_SR1;
 
@@ -274,6 +276,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = sizeof (SFDPHeader);
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
+  Packet.Control    = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -311,6 +314,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = (SFDPHeader.NumParamHdrs + 1) * sizeof (NOR_SFDP_PARAM_TBL_HDR);
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
+  Packet.Control    = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -358,6 +362,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = SFDPParamBasicTblSize;
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
+  Packet.Control    = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -405,6 +410,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = SFDPParam4ByteInstructionTblSize;
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
+  Packet.Control    = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -504,6 +510,7 @@ ReadNorFlashSFDP (
     Packet.RxLen      = SFDPParamSectorTblSize;
     Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
     Packet.ChipSelect = Private->QspiChipSelect;
+    Packet.Control    = 0;
 
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
@@ -766,6 +773,8 @@ NorFlashRead (
   Packet.RxBuf      = Buffer;
   Packet.RxLen      = Size;
   Packet.ChipSelect = Private->QspiChipSelect;
+  Packet.Control    = 0;
+
   DEBUG ((
     DEBUG_INFO,
     "%a: Using Command %u to READ Wait %u  \n",
@@ -943,6 +952,7 @@ NorFlashErase (
     Packet.RxLen      = 0;
     Packet.WaitCycles = 0;
     Packet.ChipSelect = Private->QspiChipSelect;
+    Packet.Control    = 0;
 
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
@@ -1056,6 +1066,7 @@ NorFlashWriteSinglePage (
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
   Packet.ChipSelect = Private->QspiChipSelect;
+  Packet.Control    = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {

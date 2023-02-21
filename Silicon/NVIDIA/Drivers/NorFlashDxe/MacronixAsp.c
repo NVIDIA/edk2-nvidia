@@ -2,7 +2,7 @@
 
   Macronix ASP (Advanced Sector Protection) implementation
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -48,6 +48,7 @@ MxReadRegister (
   Packet.RxLen      = sizeof (UINT8);
   Packet.WaitCycles = 0;
   Packet.ChipSelect = ChipSelect;
+  Packet.Control    = 0;
 
   Status = QSPIPERFORMTRANSACTION (&Packet);
   if (EFI_ERROR (Status)) {
@@ -131,6 +132,7 @@ MxWriteRegister (
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
   Packet.ChipSelect = ChipSelect;
+  Packet.Control    = 0;
   Status            = QSPIPERFORMTRANSACTION (&Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Could not write WREN (%r).\n", __FUNCTION__, Status));
@@ -150,6 +152,7 @@ MxWriteRegister (
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
   Packet.ChipSelect = ChipSelect;
+  Packet.Control    = 0;
   Status            = QSPIPERFORMTRANSACTION (&Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((

@@ -697,7 +697,9 @@ QspiPerformTransaction (
   QspiConfigureCS (QspiBaseAddress, Packet->ChipSelect, FALSE);
 
   // Wait for the controller to clear state before starting next transaction.
-  MicroSecondDelay (TIMEOUT);
+  if ((Packet->Control & QSPI_CONTROLLER_CONTROL_FAST_MODE) == 0) {
+    MicroSecondDelay (TIMEOUT);
+  }
 
   return EFI_SUCCESS;
 }

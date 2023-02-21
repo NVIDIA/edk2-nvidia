@@ -1,7 +1,7 @@
 /** @file
   NVIDIA QSPI Controller Protocol
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,7 +14,7 @@
 
 #define NVIDIA_QSPI_CONTROLLER_PROTOCOL_GUID \
   { \
-  0xd4719e8a, 0xf980, 0x405a, { 0xbe, 0xf6, 0xb6, 0x50, 0xd1, 0x32, 0x92, 0x40 } \
+  0x01458542, 0x64b6, 0x42d9, { 0x80, 0x8c, 0x54, 0x42, 0x54, 0xd8, 0x8f, 0xc6 } \
   }
 
 //

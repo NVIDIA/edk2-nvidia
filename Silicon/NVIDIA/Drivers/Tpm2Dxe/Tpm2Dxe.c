@@ -2,7 +2,7 @@
 
   TPM2 Driver
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -92,6 +92,7 @@ Tpm2Transfer (
     Packet.RxLen      = DataSize;
     Packet.WaitCycles = 0;
     Packet.ChipSelect = Private->ChipSelect;
+    Packet.Control    = 0;
   } else {
     CopyMem (&TxBuf[TPM_SPI_CMD_SIZE], Data, DataSize);
     Packet.TxBuf      = TxBuf;
@@ -100,6 +101,7 @@ Tpm2Transfer (
     Packet.RxLen      = 0;
     Packet.WaitCycles = 0;
     Packet.ChipSelect = Private->ChipSelect;
+    Packet.Control    = 0;
   }
 
   Status = QspiInstance->PerformTransaction (QspiInstance, &Packet);
