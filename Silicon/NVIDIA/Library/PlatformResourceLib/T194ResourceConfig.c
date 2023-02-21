@@ -425,6 +425,9 @@ T194GetPlatformResourceInformation (
   PlatformResourceInfo->GrOutputInfo.Base = CpuBootloaderParams->GoldenRegisterAddress;
   PlatformResourceInfo->GrOutputInfo.Size = CpuBootloaderParams->GoldenRegisterSize;
 
+  // Populate Total Memory.
+  PlatformResourceInfo->PhysicalDramSize =  CpuBootloaderParams->SdramSize;
+
   // Populate RcmBlobInfo
   PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
   PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;

@@ -629,6 +629,15 @@ TH500GetPlatformResourceInformation (
     PlatformResourceInfo->EgmMemoryInfo[Index].Size = CpuBootloaderParams->CarveoutInfo[Index][CARVEOUT_EGM].Size;
   }
 
+  // Populate Total Memory.
+  for (Index = 0, PlatformResourceInfo->PhysicalDramSize = 0; Index < TH500_MAX_SOCKETS; Index++) {
+    if (!(SocketMask & (1UL << Index))) {
+      continue;
+    }
+
+    PlatformResourceInfo->PhysicalDramSize += CpuBootloaderParams->SdramInfo[Index].Size;
+  }
+
   BuildGuidDataHob (&gNVIDIATH500MB1DataGuid, &CpuBootloaderParams->EarlyBootVariables, sizeof (CpuBootloaderParams->EarlyBootVariables));
 
   return EFI_SUCCESS;

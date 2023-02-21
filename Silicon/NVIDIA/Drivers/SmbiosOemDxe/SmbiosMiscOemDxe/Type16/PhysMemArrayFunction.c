@@ -2,7 +2,7 @@
 *
 *  AML generation protocol implementation.
 *
-*  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -15,6 +15,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/SmbiosMiscLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/PlatformResourceLib.h>
 
 #include "SmbiosMiscOem.h"
 
@@ -24,21 +25,23 @@ GetTotalDram (
   VOID
   )
 {
-  UINT64                TotalDram = 0;
-  VOID                  *HobBase;
-  EFI_PEI_HOB_POINTERS  NextHob;
+  UINT64  TotalDram = 0;
+  VOID    *Hob;
 
-  HobBase     = GetHobList ();
-  NextHob.Raw = HobBase;
-
-  while ((NextHob.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, NextHob.Raw)) != NULL) {
-    if (NextHob.ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) {
-      TotalDram += NextHob.ResourceDescriptor->ResourceLength;
-    }
-
-    NextHob.Raw = GET_NEXT_HOB (NextHob);
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    TotalDram = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->PhysicalDramSize;
+  } else {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get Platform Resource Info\n",
+      __FUNCTION__
+      ));
   }
 
+  DEBUG ((DEBUG_INFO, "%a: Total Dram = %lu\n", __FUNCTION__, TotalDram));
   return TotalDram;
 }
 

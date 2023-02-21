@@ -109,6 +109,7 @@ typedef struct {
   TEGRA_BOOT_TYPE             BootType;
   BOOLEAN                     HypervisorMode;
   TEGRA_BASE_AND_SIZE_INFO    *EgmMemoryInfo;
+  UINT64                      PhysicalDramSize;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
