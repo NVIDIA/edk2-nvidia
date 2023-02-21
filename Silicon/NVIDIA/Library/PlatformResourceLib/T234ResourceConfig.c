@@ -525,6 +525,9 @@ T234GetPlatformResourceInformation (
   PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_RAM_OOPS].Base);
   PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_RAM_OOPS].Size);
 
+  // Populate Total Memory.
+  PlatformResourceInfo->PhysicalDramSize =  CPUBL_PARAMS (CpuBootloaderParams, SdramSize);
+
   // Populate GrOutputInfo
   PlatformResourceInfo->GrOutputInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_GR].Base);
   PlatformResourceInfo->GrOutputInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_GR].Size);
