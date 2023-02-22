@@ -831,7 +831,7 @@ OemUpdateSmbiosInfo (
       HiiString = (CHAR16 *)PcdGetPtr (PcdSystemSku);
       break;
     case AssetTagType03:
-    case AssertTagType02:
+    case AssetTagType02:
       if (SmEepromData) {
         HiiString = OemGetAssetTag (SmEepromData);
       }
@@ -1010,6 +1010,52 @@ OemGetChassisNumPowerCords (
   } else {
     return 0;
   }
+}
+
+/**
+  OemGetSystemUuid
+  Fetches the system UUID.
+
+  @param[out] SystemUuid     The pointer to the buffer to store the System UUID.
+
+**/
+VOID
+EFIAPI
+OemGetSystemUuid (
+  OUT GUID  *SystemUuid
+  )
+{
+  CopyGuid (SystemUuid, &gZeroGuid);
+}
+
+/**
+  OemGetBiosRelease
+  Fetches the BIOS release.
+
+  @return The BIOS release.
+**/
+UINT16
+EFIAPI
+OemGetBiosRelease (
+  VOID
+  )
+{
+  return 0;
+}
+
+/**
+   OemGetEmbeddedControllerFirmwareRelease
+   Fetches the embedded controller firmware release.
+
+  @return The embedded controller firmware release.
+**/
+UINT16
+EFIAPI
+OemGetEmbeddedControllerFirmwareRelease (
+  VOID
+  )
+{
+  return 0;
 }
 
 /**

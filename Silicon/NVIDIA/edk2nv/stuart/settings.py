@@ -264,8 +264,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
 
             This will be used to set BUILDREPORT_TYPES.
         '''
-        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS "
-                "HASH EXECUTION_ORDER")
+        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH")
 
     def GetReportFile(self):
         ''' Return the build report filename.
@@ -435,8 +434,7 @@ class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
 
             This will be used to set BUILDREPORT_TYPES.
         '''
-        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS "
-                "HASH EXECUTION_ORDER")
+        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH")
 
     def GetReportFile(self):
         ''' Return the build report filename.

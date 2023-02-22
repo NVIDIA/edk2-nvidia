@@ -1,7 +1,7 @@
 #/** @file
 #    OemMiscLib.inf
 #
-#    Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#    Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #    Copyright (c) 2021, NUVIA Inc. All rights reserved.
 #    Copyright (c) 2018, Hisilicon Limited. All rights reserved.
 #    Copyright (c) 2018, Linaro Limited. All rights reserved.
@@ -66,6 +66,7 @@
 
 [Guids]
   gNVIDIAPlatformResourceDataGuid
+  gZeroGuid
 
 [Depex]
   gNVIDIACvmEepromProtocolGuid

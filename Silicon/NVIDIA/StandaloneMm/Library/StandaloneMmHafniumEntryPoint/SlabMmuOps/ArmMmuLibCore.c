@@ -131,7 +131,7 @@ ReplaceTableEntry (
     *Entry = Value;
     ArmUpdateTranslationTableEntry (Entry, (VOID *)(UINTN)RegionStart);
   } else {
-    ArmReplaceLiveTranslationEntry (Entry, Value, RegionStart);
+    ArmReplaceLiveTranslationEntry (Entry, Value, RegionStart, TRUE);
   }
 }
 

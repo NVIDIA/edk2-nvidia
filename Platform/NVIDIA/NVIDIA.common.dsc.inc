@@ -76,6 +76,9 @@
   TlsLib|CryptoPkg/Library/TlsLib/TlsLib.inf
   FileExplorerLib|MdeModulePkg/Library/FileExplorerLib/FileExplorerLib.inf
 
+  ArmTrngLib|ArmPkg/Library/ArmTrngLib/ArmTrngLib.inf
+  ArmMonitorLib|ArmPkg/Library/ArmMonitorLib/ArmMonitorLib.inf
+  ArmHvcLib|ArmPkg/Library/ArmHvcLib/ArmHvcLib.inf
 
   # ARM Architectural Libraries
   CacheMaintenanceLib|ArmPkg/Library/ArmCacheMaintenanceLib/ArmCacheMaintenanceLib.inf
@@ -124,7 +127,7 @@
   # Secure Boot dependencies
   #
   IntrinsicLib|CryptoPkg/Library/IntrinsicLib/IntrinsicLib.inf
-  OpensslLib|CryptoPkg/Library/OpensslLib/OpensslLib.inf
+  OpensslLib|CryptoPkg/Library/OpensslLib/OpensslLibFull.inf
   TpmMeasurementLib|SecurityPkg/Library/DxeTpmMeasurementLib/DxeTpmMeasurementLib.inf
   AuthVariableLib|SecurityPkg/Library/AuthVariableLib/AuthVariableLib.inf
   BaseCryptLib|CryptoPkg/Library/BaseCryptLib/BaseCryptLib.inf
@@ -591,6 +594,11 @@
 
   # Use Segment numbers as PCI UID
   gEdkiiDynamicTablesPkgTokenSpaceGuid.PcdPciUseSegmentAsUid|TRUE
+
+  #
+  # Security PCDs
+  #
+  gEfiSecurityPkgTokenSpaceGuid.PcdCpuRngSupportedAlgorithm|{0xe4,0x31,0x76,0xd7,0xb6,0xe8,0x48,0x27,0xb7,0x84,0x7f,0xfd,0xc4,0xb6,0x85,0x61}
 
 [PcdsDynamicDefault]
   #

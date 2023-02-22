@@ -203,11 +203,6 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass|1
 
   #
-  # Redfish HTTPS support
-  #
-  gEfiCryptoPkgTokenSpaceGuid.PcdOpensslEcEnabled|TRUE
-
-  #
   # Redfish support
   #
   # Use gNVIDIABeforeConsoleEventGuid to startup Redfish feature drivers.

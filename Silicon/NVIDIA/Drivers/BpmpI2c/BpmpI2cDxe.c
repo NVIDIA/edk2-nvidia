@@ -874,7 +874,7 @@ BpmpI2cStart (
   Private->SlaveAddress      = 0;
   Private->RequestPacket     = NULL;
   Private->TransactionEvent  = NULL;
-  Private->TransactionStatus = EFI_SUCCESS;
+  Private->TransactionStatus = NULL;
 
   Status = gBS->CreateEvent (
                   EVT_NOTIFY_SIGNAL,
