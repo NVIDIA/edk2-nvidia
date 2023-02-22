@@ -2,7 +2,7 @@
 #
 #  TPM 2.0 functions
 #
-#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
 #  Copyright (c) Microsoft Corporation.
@@ -43,6 +43,8 @@
 
 [Pcd]
   gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType   ## PRODUCES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask             ## PRODUCES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap  ## PRODUCES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2InitializationPolicy ## CONSUMES
 
 [Depex]

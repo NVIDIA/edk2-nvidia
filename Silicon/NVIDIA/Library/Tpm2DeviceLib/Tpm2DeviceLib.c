@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved. <BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -98,6 +98,8 @@ Tpm2Initialize (
   )
 {
   EFI_STATUS  Status;
+  UINT32      TpmHashAlgorithmBitmap;
+  UINT32      ActivePCRBanks;
 
   Status = Tpm2RequestUseTpmInternal ();
   if (EFI_ERROR (Status)) {
@@ -118,6 +120,21 @@ Tpm2Initialize (
       }
     }
   }
+
+  //
+  // Select hash algorithm based on active PCR bank
+  //
+  Status = Tpm2GetCapabilitySupportedAndActivePcrs (&TpmHashAlgorithmBitmap, &ActivePCRBanks);
+  if ((ActivePCRBanks & TPM_ALG_SHA384) != 0) {
+    PcdSet32S (PcdTpm2HashMask, 0x00000004);
+  } else if ((ActivePCRBanks & TPM_ALG_SHA256) != 0) {
+    PcdSet32S (PcdTpm2HashMask, 0x00000002);
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Unsupported PCR banks - %x\n", __FUNCTION__, ActivePCRBanks));
+    ASSERT (FALSE);
+  }
+
+  PcdSet32S (PcdTcg2HashAlgorithmBitmap, 0x00000006);
 
   return EFI_SUCCESS;
 }
