@@ -24,6 +24,8 @@
   UserAuthenticationDxe.h
   UserAuthenticationDxePassword.c
   UserAuthenticationDxeFormset.h
+  UserAuthenticationIpmi.c
+  UserAuthenticationIpmi.h
   UserAuthenticationDxeVfr.vfr
   UserAuthenticationDxeStrings.uni
 
@@ -31,6 +33,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  IpmiFeaturePkg/IpmiFeaturePkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -47,6 +50,7 @@
   PrintLib
   ReportStatusCodeLib
   SecurityManagementLib
+  IpmiBaseLib
 
 [Guids]
   gUserAuthenticationGuid                       ## CONSUMES  ## GUID

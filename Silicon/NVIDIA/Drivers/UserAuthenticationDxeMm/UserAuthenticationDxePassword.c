@@ -313,3 +313,120 @@ WasPasswordVerified (
 
   return TRUE;
 }
+
+/**
+  Set a new password hash and password salt.
+
+  @param[in] NewPasswordSalt        The new password salt value.
+                                    NULL means clear password.
+  @param[in] NewPasswordSaltSize    The size of NewPasswordSalt in byte.
+  @param[in] NewPasswordHash        The new password hash value.
+                                    NULL means clear password.
+  @param[in] NewPasswordHashSize    The size of NewPasswordHash in byte.
+
+  @retval EFI_SUCCESS               The NewPassword is set successfully.
+  @retval EFI_INVALID_PARAMETER     The password or size is invalid.
+  @retval EFI_OUT_OF_RESOURCES      Insufficient resources to set the password.
+
+**/
+EFI_STATUS
+SetPasswordHash (
+  IN   UINT8 *NewPasswordSalt, OPTIONAL
+  IN   UINTN  NewPasswordSaltSize,
+  IN   UINT8  *NewPasswordHash, OPTIONAL
+  IN   UINTN  NewPasswordHashSize
+  )
+{
+  EFI_STATUS                             Status;
+  VOID                                   *Buffer;
+  MM_PASSWORD_COMMUNICATE_PASSWORD_HASH  *SetPasswordHashData;
+
+  if ((NewPasswordSaltSize > PASSWORD_SALT_SIZE) || (NewPasswordHashSize > PASSWORD_HASH_SIZE)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Buffer = InitCommunicateBuffer (
+             (VOID **)&SetPasswordHashData,
+             sizeof (*SetPasswordHashData),
+             MM_PASSWORD_FUNCTION_SET_PASSWORD_HASH
+             );
+  if (Buffer == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  if ((NewPasswordSaltSize == 0) || (NewPasswordHashSize == 0)) {
+    SetPasswordHashData->ClearPassword = TRUE;
+  } else {
+    SetPasswordHashData->ClearPassword = FALSE;
+    CopyMem (SetPasswordHashData->PasswordSalt, NewPasswordSalt, NewPasswordSaltSize);
+    CopyMem (SetPasswordHashData->PasswordHash, NewPasswordHash, NewPasswordHashSize);
+  }
+
+  Status = SendCommunicateBuffer (Buffer, sizeof (*SetPasswordHashData));
+  ZeroMem (SetPasswordHashData, sizeof (*SetPasswordHashData));
+
+  return Status;
+}
+
+/**
+  Get password hash and password salt.
+
+  @param[out]    PasswordSalt       Password salt.
+  @param[in,out] PasswordSaltSize   The size of Password in byte.
+  @param[out]    PasswordHash       Password hash.
+  @param[in,out] PasswordHashSize   The size of PasswordHash in byte.
+
+  @retval EFI_SUCCESS               The password salt and hash are returned successfully.
+  @retval EFI_INVALID_PARAMETER     One of input parameter is NULL.
+  @retval EFI_OUT_OF_RESOURCES      Insufficient resources to send get password command.
+
+**/
+EFI_STATUS
+GetPasswordHash (
+  OUT    UINT8  *PasswordSalt,
+  IN OUT UINTN  *PasswordSaltSize,
+  IN     UINT8  *PasswordHash,
+  IN OUT UINTN  *PasswordHashSize
+  )
+{
+  EFI_STATUS                             Status;
+  VOID                                   *Buffer;
+  MM_PASSWORD_COMMUNICATE_PASSWORD_HASH  *GetPasswordHashData;
+
+  if ((PasswordSalt == NULL) || (PasswordHash == NULL) || (PasswordSaltSize == NULL) || (PasswordHashSize == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (*PasswordSaltSize < PASSWORD_SALT_SIZE) {
+    *PasswordSaltSize = PASSWORD_SALT_SIZE;
+    return EFI_BUFFER_TOO_SMALL;
+  }
+
+  if (*PasswordHashSize < PASSWORD_HASH_SIZE) {
+    *PasswordHashSize = PASSWORD_HASH_SIZE;
+    return EFI_BUFFER_TOO_SMALL;
+  }
+
+  Buffer = InitCommunicateBuffer (
+             (VOID **)&GetPasswordHashData,
+             sizeof (*GetPasswordHashData),
+             MM_PASSWORD_FUNCTION_GET_PASSWORD_HASH
+             );
+  if (Buffer == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = SendCommunicateBuffer (Buffer, sizeof (*GetPasswordHashData));
+  if (EFI_ERROR (Status)) {
+    goto EXIT;
+  }
+
+  CopyMem (PasswordSalt, GetPasswordHashData->PasswordSalt, PASSWORD_SALT_SIZE);
+  CopyMem (PasswordHash, GetPasswordHashData->PasswordHash, PASSWORD_HASH_SIZE);
+  *PasswordSaltSize = PASSWORD_SALT_SIZE;
+  *PasswordHashSize = PASSWORD_HASH_SIZE;
+
+EXIT:
+  ZeroMem (GetPasswordHashData, sizeof (*GetPasswordHashData));
+  return Status;
+}

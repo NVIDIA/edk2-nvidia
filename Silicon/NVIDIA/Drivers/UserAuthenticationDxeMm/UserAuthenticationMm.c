@@ -449,6 +449,8 @@ MmPasswordHandler (
   MM_PASSWORD_COMMUNICATE_VERIFY_PASSWORD  MmCommunicateVerifyPassword;
   MM_PASSWORD_COMMUNICATE_VERIFY_POLICY    MmCommunicateSetVerifyPolicy;
   MM_PASSWORD_COMMUNICATE_VERIFY_POLICY    *MmCommunicateGetVerifyPolicy;
+  MM_PASSWORD_COMMUNICATE_PASSWORD_HASH    *MmCommunicatePasswordHash;
+  USER_PASSWORD_VAR_STRUCT                 UserPasswordVarStruct;
   UINTN                                    PasswordLen;
   EFI_GUID                                 *UserGuid;
   UINTN                                    *PasswordTryCount;
@@ -633,6 +635,54 @@ MmPasswordHandler (
 
       break;
 
+    case MM_PASSWORD_FUNCTION_GET_PASSWORD_HASH:
+
+      if (CommBufferPayloadSize != sizeof (MM_PASSWORD_COMMUNICATE_PASSWORD_HASH)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: GET_PASSWORD_HASH payload buffer invalid!\n"));
+        Status = EFI_INVALID_PARAMETER;
+        goto EXIT;
+      }
+
+      MmCommunicatePasswordHash = (MM_PASSWORD_COMMUNICATE_PASSWORD_HASH *)(MmFunctionHeader + 1);
+
+      Status = GetPasswordHashFromVariable (UserGuid, 0, &UserPasswordVarStruct);
+      if (!EFI_ERROR (Status)) {
+        CopyMem (MmCommunicatePasswordHash->PasswordSalt, UserPasswordVarStruct.PasswordSalt, sizeof (UserPasswordVarStruct.PasswordSalt));
+        CopyMem (MmCommunicatePasswordHash->PasswordHash, UserPasswordVarStruct.PasswordHash, sizeof (UserPasswordVarStruct.PasswordHash));
+      } else {
+        ZeroMem (MmCommunicatePasswordHash->PasswordSalt, PASSWORD_SALT_SIZE);
+        ZeroMem (MmCommunicatePasswordHash->PasswordHash, PASSWORD_HASH_SIZE);
+        Status = EFI_NOT_FOUND;
+      }
+
+      break;
+
+    case MM_PASSWORD_FUNCTION_SET_PASSWORD_HASH:
+
+      if (CommBufferPayloadSize != sizeof (MM_PASSWORD_COMMUNICATE_PASSWORD_HASH)) {
+        DEBUG ((DEBUG_ERROR, "MmPasswordHandler: SET_PASSWORD_HASH payload buffer invalid!\n"));
+        Status = EFI_INVALID_PARAMETER;
+        goto EXIT;
+      }
+
+      MmCommunicatePasswordHash = (MM_PASSWORD_COMMUNICATE_PASSWORD_HASH *)(MmFunctionHeader + 1);
+
+      if (MmCommunicatePasswordHash->ClearPassword) {
+        Status = SavePasswordHashToVariable (UserGuid, NULL);
+      } else {
+        ZeroMem (&UserPasswordVarStruct, sizeof (USER_PASSWORD_VAR_STRUCT));
+        CopyMem (UserPasswordVarStruct.PasswordSalt, MmCommunicatePasswordHash->PasswordSalt, sizeof (UserPasswordVarStruct.PasswordSalt));
+        CopyMem (UserPasswordVarStruct.PasswordHash, MmCommunicatePasswordHash->PasswordHash, sizeof (UserPasswordVarStruct.PasswordHash));
+        Status = SavePasswordHashToVariable (UserGuid, &UserPasswordVarStruct);
+        //
+        // Save Password data to history variable
+        //
+        if (!EFI_ERROR (Status)) {
+          SaveOldPasswordToHistory (UserGuid, &UserPasswordVarStruct);
+        }
+      }
+
+      break;
     default:
       PasswordTryCount = NULL;
       Status           = EFI_UNSUPPORTED;

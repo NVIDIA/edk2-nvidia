@@ -10,6 +10,7 @@
 **/
 
 #include "UserAuthenticationDxe.h"
+#include "UserAuthenticationIpmi.h"
 
 USER_AUTHENTICATION_PRIVATE_DATA  *mUserAuthenticationData = NULL;
 EFI_MM_COMMUNICATION2_PROTOCOL    *mMmCommunication2       = NULL;
@@ -702,8 +703,17 @@ UserAuthenticationEntry (
                   &mUserAuthenticationProtocol,
                   NULL
                   );
-  if (!EFI_ERROR (Status)) {
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: install user authentication protocol failed: %r\n", __func__, Status));
     return Status;
+  }
+
+  //
+  // BIOS password synchronization between BIOS and BMC.
+  //
+  Status = BiosPasswordSynchronization ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed to sync BIOS password with BMC: %r\n", __func__, Status));
   }
 
   return EFI_SUCCESS;
