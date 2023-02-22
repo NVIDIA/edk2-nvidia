@@ -71,6 +71,10 @@
 
 #define EROT_CMD_GET_POLL_ALL  0x2F
 
+// message field definitions
+#define EROT_QSPI_SET_CFG_MODE_SINGLE  0
+#define EROT_QSPI_SET_CFG_MODE_QUAD    1
+
 // timeouts
 #define EROT_HOST_MBOX_POLL_MSG_TIMEOUT_MS      0
 #define EROT_HOST_MBOX_POLL_DEFAULT_TIMEOUT_MS  100
@@ -79,7 +83,7 @@
 #define EROT_MEM_BUSY_TIMEOUT_MS                100
 
 #define EROT_WAIT_CYCLES      0
-#define EROT_TAR_CYCLES       1     // 1 in single, 4 in quad
+#define EROT_TAR_CYCLES       1
 #define EROT_TAR_WAIT_CYCLES  (EROT_WAIT_CYCLES + EROT_TAR_CYCLES)
 
 #pragma pack(1)
@@ -90,7 +94,6 @@ typedef struct {
 } EROT_QSPI_SREG_READ8_TX;
 
 typedef struct {
-  UINT8    Dummy[EROT_TAR_WAIT_CYCLES];
   UINT8    Status[2];
   UINT8    Data;
 } EROT_QSPI_SREG_READ8_RX;
@@ -102,7 +105,6 @@ typedef struct {
 } EROT_QSPI_SREG_WRITE8_TX;
 
 typedef struct {
-  UINT8    Dummy[EROT_TAR_WAIT_CYCLES];
   UINT8    Status[2];
 } EROT_QSPI_SREG_WRITE8_RX;
 
@@ -112,7 +114,6 @@ typedef struct {
 } EROT_QSPI_SREG_READ32_TX;
 
 typedef struct {
-  UINT8    Dummy[EROT_TAR_WAIT_CYCLES];
   UINT8    Status[2];
   UINT8    Data[4];
 } EROT_QSPI_SREG_READ32_RX;
@@ -124,7 +125,6 @@ typedef struct {
 } EROT_QSPI_SREG_WRITE32_TX;
 
 typedef struct {
-  UINT8    Dummy[EROT_TAR_WAIT_CYCLES];
   UINT8    Status[2];
 } EROT_QSPI_SREG_WRITE32_RX;
 
@@ -133,7 +133,6 @@ typedef struct {
 } EROT_QSPI_GET_POLL_ALL_TX;
 
 typedef struct {
-  UINT8    Dummy[EROT_TAR_WAIT_CYCLES];
   UINT8    Status[4];
 } EROT_QSPI_GET_POLL_ALL_RX;
 
@@ -147,7 +146,6 @@ typedef struct {
 } EROT_QSPI_READ_FIFO_TX;
 
 typedef struct {
-  UINT8    Dummy[EROT_TAR_WAIT_CYCLES];
   UINT8    Status[2];
   UINT8    Data[EROT_MEM_MAX_BYTES_PER_XFER];
 } EROT_QSPI_READ_FIFO_RX;
@@ -158,7 +156,37 @@ typedef struct {
   UINT8    Data[EROT_MEM_MAX_BYTES_PER_XFER];
 } EROT_QSPI_WRITE_MEM_TX;
 
+typedef struct {
+  UINT8    Type;
+  UINT8    Reserved;
+  UINT8    WaitCycles;
+  UINT8    Mode;
+} EROT_QSPI_SET_CFG_MSG;
+
 #pragma pack()
+
+STATIC BOOLEAN  mErotQuadMode = FALSE;
+
+STATIC
+BOOLEAN
+EFIAPI
+ErotQspiGpioIsAsserted (
+  IN EROT_QSPI_PRIVATE_DATA  *Private
+  )
+{
+  EMBEDDED_GPIO  *Protocol;
+  EFI_STATUS     Status;
+  UINTN          GpioState;
+
+  Protocol = Private->Gpio.Protocol;
+  Status   = Protocol->Get (Protocol, Private->Gpio.Pin, &GpioState);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: gpio 0x%x get failed: %r\n", __FUNCTION__, Private->Gpio.Pin, Status));
+    return FALSE;
+  }
+
+  return (GpioState != 1);
+}
 
 /**
   Copy and reverse bytes between buffers.  Last byte in src buffer becomes
@@ -222,11 +250,11 @@ ErotQspiXfer (
   Packet.TxLen      = TxLength;
   Packet.RxBuf      = RxBuffer;
   Packet.RxLen      = RxLength;
-  Packet.WaitCycles = 0;
+  Packet.WaitCycles = (RxBuffer == NULL) ? 0 : EROT_TAR_WAIT_CYCLES * 8;
   Packet.ChipSelect = Private->ChipSelect;
+  Packet.Control    = QSPI_CONTROLLER_CONTROL_FAST_MODE;
 
   Status = Private->Qspi->PerformTransaction (Private->Qspi, &Packet);
-
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: %s Failed TxLen=%u, RxLen=%u: %r\n", __FUNCTION__, Private->Name, TxLength, RxLength, Status));
     return Status;
@@ -654,6 +682,10 @@ ErotQspiPollHostMbox (
   EndNs  = ErotQspiNsCounter () + EROT_QSPI_MS_TO_NS (PollMs);
   Status = EFI_TIMEOUT;
   do {
+    if (!ErotQspiGpioIsAsserted (Private)) {
+      continue;
+    }
+
     MboxStatus = ErotQspiSregRead32 (Private, EROT_REG_HOST_MBOX, &Mbox);
     if (EFI_ERROR (MboxStatus)) {
       DEBUG ((DEBUG_ERROR, "%a: read failed: %r\n", __FUNCTION__, Status));
@@ -665,14 +697,14 @@ ErotQspiPollHostMbox (
     if (Mbox & EROT_HOST_MBOX_MSG_AVAILABLE) {
       if (Cmd == EROT_HOST_MBOX_MSG_AVAILABLE) {
         return EFI_SUCCESS;
-      } else if (!PollLengthField) {
-        DEBUG ((DEBUG_INFO, "%a: msg avail, Mbox=0x%x Cmd=0x%x\n", __FUNCTION__, Mbox, Cmd));
+      }
 
-        Private->HasMessageAvailable = TRUE;
-        // allow MSG_AVAILABLE to serve as ACK
-        if (Cmd == EROT_HOST_MBOX_CMD_ACK) {
-          return EFI_SUCCESS;
-        }
+      DEBUG ((DEBUG_VERBOSE, "%a: msg avail, Mbox=0x%x Cmd=0x%x\n", __FUNCTION__, Mbox, Cmd));
+
+      Private->HasMessageAvailable = TRUE;
+      // allow MSG_AVAILABLE to serve as ACK
+      if (Cmd == EROT_HOST_MBOX_CMD_ACK) {
+        return EFI_SUCCESS;
       }
     }
 
@@ -825,7 +857,7 @@ ErotQspiWriteMem (
         ErotQSpiCopyAndReverseBuffer (&Tx.Data[Index], &Payload[XferOffset + Index], EROT_MEM_BLOCK_SIZE);
       }
 
-      DEBUG ((DEBUG_INFO, "%a: writing %u bytes\n", __FUNCTION__, XferBytes));
+      DEBUG ((DEBUG_VERBOSE, "%a: writing %u bytes\n", __FUNCTION__, XferBytes));
       ErotQspiDoWriteMemCommand (
         Private,
         OFFSET_OF (EROT_QSPI_WRITE_MEM_TX, Data) + XferBytes,
@@ -833,7 +865,7 @@ ErotQspiWriteMem (
         );
     } else {
       for (Index = 0; Index < XferBytes; Index++) {
-        DEBUG ((DEBUG_INFO, "%a: writing single byte\n", __FUNCTION__));
+        DEBUG ((DEBUG_VERBOSE, "%a: writing single byte\n", __FUNCTION__));
         Tx.Cmd = EROT_CMD_MEM_W8;
         MctpUint16ToBEBuffer (Tx.Addr, Offset + XferOffset + Index);
         Tx.Data[0] = Payload[XferOffset + Index];
@@ -959,7 +991,7 @@ ErotQspiReadMem (
     if (XferBytes >= EROT_MEM_BLOCK_SIZE) {
       XferBytes &= ~(EROT_MEM_BLOCK_SIZE - 1);
 
-      DEBUG ((DEBUG_INFO, "%a: Reading %u bytes\n", __FUNCTION__, XferBytes));
+      DEBUG ((DEBUG_VERBOSE, "%a: Reading %u bytes\n", __FUNCTION__, XferBytes));
       Status = ErotQspiDoReadMemCommand (
                  Private,
                  EROT_CMD_MEM_BLK_R1 + ((XferBytes / EROT_MEM_BLOCK_SIZE) - 1),
@@ -977,7 +1009,7 @@ ErotQspiReadMem (
       }
     } else {
       for (Index = 0; Index < XferBytes; Index++) {
-        DEBUG ((DEBUG_INFO, "%a: Reading single byte\n", __FUNCTION__));
+        DEBUG ((DEBUG_VERBOSE, "%a: Reading single byte\n", __FUNCTION__));
         Status = ErotQspiDoReadMemCommand (
                    Private,
                    EROT_CMD_MEM_R8,
@@ -1059,6 +1091,66 @@ ErotQspiSendPacket (
 
 EFI_STATUS
 EFIAPI
+ErotQspiSendSetCfg (
+  IN EROT_QSPI_PRIVATE_DATA  *Private,
+  BOOLEAN                    QuadMode
+  )
+{
+  EROT_QSPI_SET_CFG_MSG  Packet;
+  EFI_STATUS             Status;
+
+  Packet.Type       = EROT_QSPI_MSG_TYPE_SET_CFG;
+  Packet.Reserved   = 0;
+  Packet.WaitCycles = 0;
+  Packet.Mode       = (QuadMode) ? EROT_QSPI_SET_CFG_MODE_QUAD : EROT_QSPI_SET_CFG_MODE_SINGLE;
+
+  ErotQspiPrintBuffer ("SendSetCfg", &Packet, sizeof (Packet));
+
+  Status = ErotQspiWriteErotMbox (Private, EROT_MBOX_CMD_REQUEST_WRITE);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = ErotQspiPollHostMbox (
+             Private,
+             FALSE,
+             EROT_HOST_MBOX_CMD_ACK,
+             NULL
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = ErotQspiWriteMem (
+             Private,
+             EROT_RX_MEM_START,
+             sizeof (Packet),
+             &Packet
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = ErotQspiWriteErotMbox (Private, sizeof (Packet));
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: setting qspi quad mode %u\n", __FUNCTION__, QuadMode));
+  mErotQuadMode = QuadMode;
+
+  ErotQspiPollHostMbox (
+    Private,
+    FALSE,
+    EROT_HOST_MBOX_CMD_ACK,
+    NULL
+    );
+
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
 ErotQspiSpbInit (
   IN EROT_QSPI_PRIVATE_DATA  *Private
   )
@@ -1092,12 +1184,15 @@ ErotQspiHasInterruptReq (
   EFI_STATUS  Status;
 
   if (Private->HasMessageAvailable) {
-    DEBUG ((DEBUG_INFO, "%a: HasMsgAvailable\n", __FUNCTION__));
+    DEBUG ((DEBUG_VERBOSE, "%a: HasMsgAvailable\n", __FUNCTION__));
     Private->HasMessageAvailable = FALSE;
     return TRUE;
   }
 
-  // TODO: should read gpio.
+  if (!ErotQspiGpioIsAsserted (Private)) {
+    return FALSE;
+  }
+
   Status = ErotQspiPollHostMbox (
              Private,
              FALSE,

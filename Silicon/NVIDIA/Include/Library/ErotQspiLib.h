@@ -2,7 +2,7 @@
 
   Erot Qspi Library
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,6 +12,7 @@
 #define __EROT_QSPI_LIB_H__
 
 #include <Library/MctpBaseLib.h>
+#include <Protocol/EmbeddedGpio.h>
 #include <Protocol/MctpProtocol.h>
 #include <Protocol/QspiController.h>
 
@@ -63,11 +64,17 @@ typedef struct {
 #pragma pack()
 
 typedef struct {
+  EMBEDDED_GPIO        *Protocol;
+  EMBEDDED_GPIO_PIN    Pin;
+} EROT_QSPI_GPIO;
+
+typedef struct {
   UINT32                             Signature;
   CHAR16                             Name[EROT_QSPI_NAME_LENGTH];
   NVIDIA_QSPI_CONTROLLER_PROTOCOL    *Qspi;
   UINT8                              ChipSelect;
   UINT8                              Socket;
+  EROT_QSPI_GPIO                     Gpio;
 
   // transport
   UINT8                              MyEID;
@@ -93,6 +100,7 @@ extern UINTN                   mNumErotQspis;
   @param[in]  Qspi        Qspi protocol.
   @param[in]  ChipSelect  Erot chip select.
   @param[in]  Socket      Erot chip socket.
+  @param[in]  Gpio        Pointer to GPIO info.
 
   @retval EFI_SUCCESS     Operation completed normally.
   @retval Others          Failure occurred.
@@ -103,7 +111,8 @@ EFIAPI
 ErotQspiAddErot (
   IN  NVIDIA_QSPI_CONTROLLER_PROTOCOL  *Qspi,
   IN  UINT8                            ChipSelect,
-  IN  UINT8                            Socket
+  IN  UINT8                            Socket,
+  IN  CONST EROT_QSPI_GPIO             *Gpio
   );
 
 /**

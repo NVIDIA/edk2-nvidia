@@ -21,6 +21,7 @@
 #include <Protocol/QspiController.h>
 
 #define EROT_QSPI_STMM_MAX_EROTS  4
+#define EROT_QSPI_GPIO_PIN        68    // controller J (=8), pin 4
 
 /**
   Entry point of this driver.
@@ -47,6 +48,8 @@ ErotQspiStmmInitialize (
   UINT8                            Socket;
   UINT32                           *SocketIdProtocol;
   TEGRA_PLATFORM_TYPE              PlatformType;
+  EMBEDDED_GPIO                    *GpioProtocol;
+  EROT_QSPI_GPIO                   ErotQspiGpio;
 
   PlatformType = GetPlatformTypeMm ();
   if (PlatformType == TEGRA_PLATFORM_VDK) {
@@ -63,6 +66,12 @@ ErotQspiStmmInitialize (
                               );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error locating QSPI handles: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = gMmst->MmLocateProtocol (&gEmbeddedGpioProtocolGuid, NULL, (VOID **)&GpioProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed to get gpio protocol: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -96,9 +105,12 @@ ErotQspiStmmInitialize (
       continue;
     }
 
-    ChipSelect = EROT_QSPI_CHIP_SELECT_DEFAULT;
-    Socket     = (UINT8)(*SocketIdProtocol);
-    Status     = ErotQspiAddErot (Qspi, ChipSelect, Socket);
+    ChipSelect            = EROT_QSPI_CHIP_SELECT_DEFAULT;
+    Socket                = (UINT8)(*SocketIdProtocol);
+    ErotQspiGpio.Protocol = GpioProtocol;
+    ErotQspiGpio.Pin      = GPIO (Socket, EROT_QSPI_GPIO_PIN);
+
+    Status = ErotQspiAddErot (Qspi, ChipSelect, Socket, &ErotQspiGpio);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to add device for handle index %u: %r\n", __FUNCTION__, Index, Status));
       continue;

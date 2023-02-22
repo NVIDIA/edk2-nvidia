@@ -2,7 +2,7 @@
 
   Erot Qspi library core routines
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,9 +11,10 @@
 #ifndef __EROT_QSPI_CORE_H__
 #define __EROT_QSPI_CORE_H__
 
-#define EROT_QSPI_MSG_TYPE_INFO   0x01
-#define EROT_QSPI_MSG_TYPE_MCTP   0x02
-#define EROT_QSPI_MSG_TYPE_ERROR  0xFF
+#define EROT_QSPI_MSG_TYPE_INFO     0x01
+#define EROT_QSPI_MSG_TYPE_MCTP     0x02
+#define EROT_QSPI_MSG_TYPE_SET_CFG  0x03
+#define EROT_QSPI_MSG_TYPE_ERROR    0xFF
 
 #define EROT_QSPI_MS_TO_NS(ms)  ((ms)*1000ULL*1000ULL)
 

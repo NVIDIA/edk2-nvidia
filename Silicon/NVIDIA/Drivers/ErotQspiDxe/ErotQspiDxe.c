@@ -2,7 +2,7 @@
 
   ERoT over NS SPI driver
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -57,7 +57,7 @@ ErotQspiNodeHasErot (
     }
   }
   if (SubNode < 0) {
-    DEBUG ((DEBUG_ERROR, "%a: no erot on %a\n", __FUNCTION__, QspiName));
+    DEBUG ((DEBUG_INFO, "%a: no erot on %a\n", __FUNCTION__, QspiName));
     return FALSE;
   }
 
@@ -217,7 +217,8 @@ ErotQspiDxeInitialize (
       continue;
     }
 
-    Status = ErotQspiAddErot (Qspi, ChipSelect, Socket);
+    // TODO: need to get erot gpio pin from DT for NS erot support
+    Status = ErotQspiAddErot (Qspi, ChipSelect, Socket, NULL);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: AddErot for index %u failed: %r\n", __FUNCTION__, Index, Status));
       goto Done;

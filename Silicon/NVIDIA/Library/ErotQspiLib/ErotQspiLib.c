@@ -15,6 +15,7 @@
 #include <Library/PldmBaseLib.h>
 #include <Library/PrintLib.h>
 #include <Library/TimerLib.h>
+#include <Protocol/EmbeddedGpio.h>
 #include "ErotQspiCore.h"
 
 EROT_QSPI_PRIVATE_DATA  *mPrivate     = NULL;
@@ -580,13 +581,18 @@ EFIAPI
 ErotQspiAddErot (
   IN  NVIDIA_QSPI_CONTROLLER_PROTOCOL  *Qspi,
   IN  UINT8                            ChipSelect,
-  IN  UINT8                            Socket
+  IN  UINT8                            Socket,
+  IN  CONST EROT_QSPI_GPIO             *Gpio
   )
 {
   EROT_QSPI_PRIVATE_DATA  *Private;
 
   if (mPrivate == NULL) {
     return EFI_NOT_READY;
+  }
+
+  if ((Qspi == NULL) || (Gpio == NULL)) {
+    return EFI_INVALID_PARAMETER;
   }
 
   Private            = &mPrivate[mNumErotQspis];
@@ -597,6 +603,7 @@ ErotQspiAddErot (
   Private->Qspi                         = Qspi;
   Private->ChipSelect                   = ChipSelect;
   Private->Socket                       = Socket;
+  Private->Gpio                         = *Gpio;
   Private->Protocol.GetDeviceAttributes = ErotQspiGetDeviceAttributes;
   Private->Protocol.DoRequest           = ErotQspiDoRequest;
   Private->Protocol.Recv                = ErotQspiRecv;
