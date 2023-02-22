@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library
 
-  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -278,6 +278,12 @@ DeviceDiscoveryGetClockId (
   Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAClockNodeProtocolGuid, (VOID **)&ClockNodeProtocol);
   if (EFI_ERROR (Status)) {
     return Status;
+  }
+
+  /* If there is only one clock and the clock name is not valid, then return this clock */
+  if ((ClockNodeProtocol->Clocks == 1) && (ClockNodeProtocol->ClockEntries[0].ClockName == NULL)) {
+    *ClockId = ClockNodeProtocol->ClockEntries[0].ClockId;
+    return EFI_SUCCESS;
   }
 
   for (Index = 0; Index < ClockNodeProtocol->Clocks; Index++) {
