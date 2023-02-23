@@ -65,6 +65,15 @@ typedef struct {
 } TEGRA_FUSE_INFO;
 
 typedef struct {
+  UINT64    SerialNumber;
+  UINT16    TotalWidth;
+  UINT16    DataWidth;
+  UINT8     ManufacturerId;
+  UINT8     Rank;
+  UINT64    Size;
+} TEGRA_DRAM_DEVICE_INFO;
+
+typedef struct {
   UINTN              FuseBaseAddr;
   TEGRA_FUSE_INFO    *FuseList;
   UINTN              FuseCount;
@@ -111,6 +120,7 @@ typedef struct {
   BOOLEAN                     HypervisorMode;
   TEGRA_BASE_AND_SIZE_INFO    *EgmMemoryInfo;
   UINT64                      PhysicalDramSize;
+  TEGRA_DRAM_DEVICE_INFO      *DramDeviceInfo;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**

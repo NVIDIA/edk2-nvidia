@@ -124,7 +124,8 @@ TEGRA_MMIO_INFO  TH500SocketMssMmioInfo[] = {
   },
 };
 
-TEGRA_BASE_AND_SIZE_INFO  TH500EgmMemoryInfo[TH500_MAX_SOCKETS] = { };
+TEGRA_BASE_AND_SIZE_INFO  TH500EgmMemoryInfo[TH500_MAX_SOCKETS]  = { };
+TEGRA_DRAM_DEVICE_INFO    TH500DramDeviceInfo[TH500_MAX_SOCKETS] = { };
 
 /**
   Get Socket Mask
@@ -653,13 +654,21 @@ TH500GetPlatformResourceInformation (
     PlatformResourceInfo->EgmMemoryInfo[Index].Size = CpuBootloaderParams->CarveoutInfo[Index][CARVEOUT_EGM].Size;
   }
 
+  PlatformResourceInfo->PhysicalDramSize = 0;
+  PlatformResourceInfo->DramDeviceInfo   = TH500DramDeviceInfo;
   // Populate Total Memory.
-  for (Index = 0, PlatformResourceInfo->PhysicalDramSize = 0; Index < TH500_MAX_SOCKETS; Index++) {
+  for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
     if (!(SocketMask & (1UL << Index))) {
       continue;
     }
 
-    PlatformResourceInfo->PhysicalDramSize += CpuBootloaderParams->SdramInfo[Index].Size;
+    PlatformResourceInfo->PhysicalDramSize   += CpuBootloaderParams->SdramInfo[Index].Size;
+    TH500DramDeviceInfo[Index].DataWidth      = CpuBootloaderParams->DramInfo[Index].DataWidth;
+    TH500DramDeviceInfo[Index].ManufacturerId = CpuBootloaderParams->DramInfo[Index].ManufacturerId;
+    TH500DramDeviceInfo[Index].Rank           = CpuBootloaderParams->DramInfo[Index].Rank;
+    TH500DramDeviceInfo[Index].SerialNumber   = CpuBootloaderParams->DramInfo[Index].SerialNumber;
+    TH500DramDeviceInfo[Index].TotalWidth     = CpuBootloaderParams->DramInfo[Index].TotalWidth;
+    TH500DramDeviceInfo[Index].Size           = CpuBootloaderParams->SdramInfo[Index].Size;
   }
 
   BuildGuidDataHob (&gNVIDIATH500MB1DataGuid, &CpuBootloaderParams->EarlyBootVariables, sizeof (CpuBootloaderParams->EarlyBootVariables));

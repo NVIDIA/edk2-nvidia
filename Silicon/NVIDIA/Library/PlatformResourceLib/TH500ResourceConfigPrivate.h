@@ -161,6 +161,15 @@ typedef struct {
   TEGRABL_TPM_COMMIT_LOG_ENTRY    Measurements[MAX_NUM_MEASUREMENTS];
 } TEGRABL_TPM_COMMIT_LOG;
 
+typedef struct {
+  UINT64    SerialNumber;
+  UINT16    TotalWidth;
+  UINT16    DataWidth;
+  UINT8     ManufacturerId;
+  UINT8     Rank;
+  UINT8     Reserved[34];
+} TEGRABL_DRAM_INFO;
+
 #pragma pack()
 typedef struct {
   /**< version */
@@ -225,6 +234,8 @@ typedef struct {
   UEFI_DECLARE_ALIGNED (TEGRABL_EARLY_BOOT_VARIABLES EarlyBootVariables[TH500_MAX_SOCKETS], 8);
 
   UEFI_DECLARE_ALIGNED (TEGRABL_TPM_COMMIT_LOG EarlyTpmCommitLog, 8);
+
+  UEFI_DECLARE_ALIGNED (TEGRABL_DRAM_INFO DramInfo[TH500_MAX_SOCKETS], 8);
 } TEGRA_CPUBL_PARAMS;
 
 #endif //__TH500_RESOURCE_CONFIG_PRIVATE_H__
