@@ -787,7 +787,9 @@ SetupIortNodeForPciRc (
   ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
-    IortNode->CacheCoherent |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
+    IortNode->CacheCoherent     |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
+    IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_CPM;
+    IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_DACS;
   }
 
   Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "ats-supported", NULL);
@@ -815,7 +817,7 @@ SetupIortNodeForPciRc (
     // Create Id Mapping Node for iommus and bind it to the PCI IORT node
     IdMapping->InputBase            = 0;
     IdMapping->OutputBase           = SwapBytes32 (Prop[1]);
-    IdMapping->NumIds               = 1;
+    IdMapping->NumIds               = 0;
     IdMapping->Flags                = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
     IdMapping->OutputReferenceToken = FindIortNodeByPhandle (Private, SwapBytes32 (Prop[0]));
     ASSERT (IdMapping->OutputReferenceToken != 0);
@@ -870,17 +872,18 @@ SetupIortNodeForNComp (
   IortNode->Token             = (CM_OBJECT_TOKEN)(VOID *)IortNode;
   IortNode->AllocationHints   = 0;
   IortNode->MemoryAccessFlags = 0;
-  IortNode->CacheCoherent     = 0;
   IortNode->Flags             = 0;
   IortNode->AddressSizeLimit  = GetAddressLimit (Private, PropNode);
+  IortNode->CacheCoherent     = 0;
   IortNode->ObjectName        = PropNode->ObjectName;
   IortNode->IdMappingCount    = 1;
-  IortNode->CacheCoherent     = 0;
   IortNode->Identifier        = UniqueIdentifier++;
   ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
-    IortNode->CacheCoherent |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
+    IortNode->CacheCoherent     |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
+    IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_CPM;
+    IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_DACS;
   }
 
   ASSERT (Private->IdMapIndex < Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes);
@@ -896,7 +899,7 @@ SetupIortNodeForNComp (
     // Create Id Mapping Node for iommus and bind it to the PCI IORT node
     IdMapping->InputBase            = 0;
     IdMapping->OutputBase           = SwapBytes32 (Prop[1]);
-    IdMapping->NumIds               = 1;
+    IdMapping->NumIds               = 0;
     IdMapping->Flags                = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
     IdMapping->OutputReferenceToken = FindIortNodeByPhandle (Private, SwapBytes32 (Prop[0]));
     ASSERT (IdMapping->OutputReferenceToken != 0);
