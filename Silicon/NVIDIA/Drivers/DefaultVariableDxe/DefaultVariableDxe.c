@@ -590,7 +590,7 @@ UpdateSpecialVariables (
   LockVariable (
     &gNVIDIAPublicVariableGuid,
     L"TegraPlatformCompatSpec",
-    VARIABLE_POLICY_TYPE_LOCK_ON_CREATE
+    VARIABLE_POLICY_TYPE_NO_LOCK
     );
 }
 
