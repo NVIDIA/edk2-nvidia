@@ -42,6 +42,7 @@
   ConfigurationSmbiosType9.c
   ConfigurationSmbiosType11.c
   ConfigurationSmbiosType13.c
+  ConfigurationSmbiosType32.c
   ConfigurationSmbiosType38.c
   ConfigurationSmbiosType41.c
   ConfigurationSmbiosType43.c
