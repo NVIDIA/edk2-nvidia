@@ -1717,7 +1717,7 @@ InitializePlatformRepository (
   }
 
   if (!SkipHmat) {
-    Status = InstallHeterogeneousMemoryAttributeTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
+    Status = InstallHeterogeneousMemoryAttributeTable (NVIDIAPlatformRepositoryInfo);
     if (EFI_ERROR (Status)) {
       return Status;
     }
