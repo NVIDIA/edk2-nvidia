@@ -154,3 +154,8 @@
   INF Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
   INF Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
   INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
+
+  #
+  # SMBIOS
+  #
+  INF ArmPkg/Universal/Smbios/SmbiosMiscDxe/SmbiosMiscDxe.inf
