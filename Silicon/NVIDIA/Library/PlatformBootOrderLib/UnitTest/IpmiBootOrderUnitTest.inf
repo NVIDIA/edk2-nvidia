@@ -35,6 +35,7 @@
   MemoryAllocationLib
   PlatformBootOrderLib
   UefiRuntimeServicesTableLib
+  UefiBootServicesTableLib
 
 [Guids]
   gEfiGlobalVariableGuid

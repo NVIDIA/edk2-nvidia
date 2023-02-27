@@ -14,6 +14,7 @@
 #include <Library/PrintLib.h>
 #include <Library/UefiBootManagerLib.h>
 #include <Library/UefiLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/SortLib.h>
@@ -32,6 +33,8 @@
 #define NVIDIA_BOOT_TYPE_BOOTIMG                 1
 #define IPMI_GET_BOOT_OPTIONS_PARAMETER_INVALID  1
 #define IPMI_PARAMETER_VERSION                   1
+
+#define SAVED_BOOT_ORDER_VARIABLE_NAME  L"SavedBootOrder"
 
 typedef struct {
   CHAR8    *OrderName;
@@ -61,6 +64,63 @@ STATIC  IPMI_GET_BOOT_OPTIONS_RESPONSE  *mBootOptionsResponse = NULL;
 STATIC  IPMI_SET_BOOT_OPTIONS_REQUEST   *mBootOptionsRequest  = NULL;
 
 #define DEFAULT_BOOT_ORDER_STRING  "boot.img,usb,sd,emmc,ufs"
+
+STATIC
+VOID
+PrintBootOrder (
+  IN CONST UINTN   DebugPrintLevel,
+  IN CONST CHAR16  *HeaderMessage
+  )
+{
+  EFI_STATUS                    Status;
+  UINT16                        *BootOrder;
+  UINTN                         BootOrderSize;
+  UINTN                         BootOrderLength;
+  UINTN                         BootOrderIndex;
+  CHAR16                        OptionName[sizeof ("Boot####")];
+  EFI_BOOT_MANAGER_LOAD_OPTION  Option;
+
+  if (!DebugPrintLevelEnabled (DebugPrintLevel)) {
+    return;
+  }
+
+  BootOrder = NULL;
+
+  // Gather BootOrder
+  Status = GetEfiGlobalVariable2 (EFI_BOOT_ORDER_VARIABLE_NAME, (VOID **)&BootOrder, &BootOrderSize);
+  if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DebugPrintLevel, "%a: No BootOrder found\n", __FUNCTION__));
+    goto CleanupAndReturn;
+  }
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DebugPrintLevel, "%a: Unable to determine BootOrder: %r\n", __FUNCTION__, Status));
+    goto CleanupAndReturn;
+  }
+
+  if ((BootOrder == NULL) || (BootOrderSize == 0)) {
+    DEBUG ((DebugPrintLevel, "%a: BootOrder is empty\n", __FUNCTION__));
+    goto CleanupAndReturn;
+  }
+
+  BootOrderLength = BootOrderSize/sizeof (BootOrder[0]);
+
+  DEBUG ((DebugPrintLevel, "%a: %s\n", __FUNCTION__, HeaderMessage));
+  for (BootOrderIndex = 0; BootOrderIndex < BootOrderLength; BootOrderIndex++) {
+    UnicodeSPrint (OptionName, sizeof (OptionName), L"Boot%04x", BootOrder[BootOrderIndex]);
+    Status = EfiBootManagerVariableToLoadOption (OptionName, &Option);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DebugPrintLevel, "%a: Error getting boot option for BootOrder[%lld] = 0x%04x: %r\n", __FUNCTION__, BootOrderIndex, BootOrder[BootOrderIndex], Status));
+      goto CleanupAndReturn;
+    }
+
+    DEBUG ((DebugPrintLevel, "%a: BootOrder[%lld] = 0x%04x = %s\n", __FUNCTION__, BootOrderIndex, BootOrder[BootOrderIndex], Option.Description));
+    EfiBootManagerFreeLoadOption (&Option);
+  }
+
+CleanupAndReturn:
+  FREE_NON_NULL (BootOrder);
+}
 
 NVIDIA_BOOT_ORDER_PRIORITY *
 EFIAPI
@@ -473,6 +533,147 @@ Done:
   return;
 }
 
+// When IPMI requests a temporary BootOrder change, we save the BootOrder
+// and then move one element to the beginning. This function will restore
+// the original BootOrder unless additional modifications have been made.
+VOID
+EFIAPI
+RestoreBootOrder (
+  EFI_EVENT  Event,
+  VOID       *Context
+  )
+{
+  UINT16      *SavedBootOrder;
+  UINTN       SavedBootOrderSize;
+  UINTN       SavedBootOrderLength;
+  UINT16      *BootOrder;
+  UINTN       BootOrderSize;
+  UINTN       BootOrderLength;
+  UINT16      *BootCurrent;
+  UINTN       BootCurrentSize;
+  UINTN       ReorderedIndex;
+  UINT16      ReorderedBootNum;
+  EFI_STATUS  Status;
+
+  SavedBootOrder = NULL;
+  BootOrder      = NULL;
+
+  // Gather SavedBootOrder
+  Status = GetVariable2 (SAVED_BOOT_ORDER_VARIABLE_NAME, &gNVIDIATokenSpaceGuid, (VOID **)&SavedBootOrder, &SavedBootOrderSize);
+  if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DEBUG_INFO, "%a: No SavedBootOrder found to be restored\n", __FUNCTION__));
+    goto CleanupAndReturn;
+  }
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to determine SavedBootOrder: %r\n", __FUNCTION__, Status));
+    goto CleanupAndReturn;
+  }
+
+  if ((SavedBootOrder == NULL) || (SavedBootOrderSize == 0)) {
+    DEBUG ((DEBUG_ERROR, "%a: SavedBootOrder is empty. Not restoring boot order\n", __FUNCTION__));
+    goto DeleteSaveAndCleanup;
+  }
+
+  SavedBootOrderLength = SavedBootOrderSize/sizeof (SavedBootOrder[0]);
+
+  // Gather BootOrder
+  Status = GetEfiGlobalVariable2 (EFI_BOOT_ORDER_VARIABLE_NAME, (VOID **)&BootOrder, &BootOrderSize);
+  if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DEBUG_ERROR, "%a: No BootOrder found. Not restoring boot order\n", __FUNCTION__));
+    goto DeleteSaveAndCleanup;
+  }
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to determine BootOrder: %r\n", __FUNCTION__, Status));
+    goto DeleteSaveAndCleanup;
+  }
+
+  if ((BootOrder == NULL) || (BootOrderSize == 0)) {
+    DEBUG ((DEBUG_ERROR, "%a: BootOrder is empty. Not restoring boot order\n", __FUNCTION__));
+    goto DeleteSaveAndCleanup;
+  }
+
+  BootOrderLength = BootOrderSize/sizeof (BootOrder[0]);
+
+  // Make sure BootOrder only has one device moved to the front vs. SavedBootOrder
+  if (SavedBootOrderLength != BootOrderLength) {
+    DEBUG ((DEBUG_WARN, "%a: BootOrder (len=%u) and SavedBootOrder (len=%u) differ in size. Not restoring boot order\n", __FUNCTION__, BootOrderLength, SavedBootOrderLength));
+    goto DeleteSaveAndCleanup;
+  }
+
+  ReorderedBootNum = BootOrder[0];
+  for (ReorderedIndex = 0; ReorderedIndex < BootOrderLength; ReorderedIndex++) {
+    if (SavedBootOrder[ReorderedIndex] == ReorderedBootNum) {
+      break;
+    }
+  }
+
+  if (ReorderedIndex >= BootOrderLength) {
+    DEBUG ((DEBUG_WARN, "%a: First BootOrder device is not in SavedBootOrder. Not restoring boot order\n", __FUNCTION__));
+    goto DeleteSaveAndCleanup;
+  }
+
+  if ((CompareMem (&SavedBootOrder[0], &BootOrder[1], ReorderedIndex * sizeof (BootOrder[0])) != 0) ||
+      (CompareMem (
+         &SavedBootOrder[ReorderedIndex+1],
+         &BootOrder[ReorderedIndex+1],
+         (BootOrderLength - 1 - ReorderedIndex) * sizeof (BootOrder[0])
+         ) != 0))
+  {
+    DEBUG ((DEBUG_WARN, "%a: BootOrder and SavedBootOrder have more changes than expected. Not restoring boot order\n", __FUNCTION__));
+    goto DeleteSaveAndCleanup;
+  }
+
+  // At this point, we've confirmed that BootOrder equals SavedBootOrder except with one device moved to the beginning
+
+  if (Event != NULL) {
+    Status = GetEfiGlobalVariable2 (L"BootCurrent", (VOID **)&BootCurrent, &BootCurrentSize);
+    if (EFI_ERROR (Status) || (BootCurrent == NULL) || (BootCurrentSize != sizeof (UINT16))) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to determine BootCurrent: %r\n", __FUNCTION__, Status));
+      goto DeleteSaveAndCleanup;
+    }
+
+    if (BootCurrent[0] != ReorderedBootNum) {
+      DEBUG ((DEBUG_WARN, "%a: Attempted to restore BootOrder when BootCurrent wasn't the temporary BootNum. Not restoring boot order\n", __FUNCTION__));
+      goto DeleteSaveAndCleanup;
+    }
+  }
+
+  // Restore BootOrder
+  Status = gRT->SetVariable (
+                  EFI_BOOT_ORDER_VARIABLE_NAME,
+                  &gEfiGlobalVariableGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                  SavedBootOrderSize,
+                  SavedBootOrder
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error restoring BootOrder: %r\n", __FUNCTION__, Status));
+  } else {
+    DEBUG ((DEBUG_INFO, "%a: BootOrder successfully restored\n", __FUNCTION__));
+  }
+
+DeleteSaveAndCleanup:
+  Status = gRT->SetVariable (
+                  SAVED_BOOT_ORDER_VARIABLE_NAME,
+                  &gNVIDIATokenSpaceGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                  0,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error deleting SavedBootOrder: %r\n", __FUNCTION__, Status));
+  }
+
+CleanupAndReturn:
+  FREE_NON_NULL (SavedBootOrder);
+  FREE_NON_NULL (BootOrder);
+  if (Event != NULL) {
+    gBS->CloseEvent (Event);
+  }
+}
+
 VOID
 EFIAPI
 ProcessIPMIBootOrderUpdates (
@@ -499,6 +700,7 @@ ProcessIPMIBootOrderUpdates (
   CHAR16                        OptionName[sizeof ("Boot####")];
   EFI_BOOT_MANAGER_LOAD_OPTION  Option;
   BOOLEAN                       IPv6;
+  EFI_EVENT                     ReadyToBootEvent;
 
   ClassInstanceList = NULL;
   BootOrder         = NULL;
@@ -674,34 +876,57 @@ ProcessIPMIBootOrderUpdates (
 
   if (BootOptionsParameters->Parm5.Data1.Bits.PersistentOptions) {
     DEBUG ((DEBUG_ERROR, "IPMI requested to move %a instance %d to the start of BootOrder\n", RequestedClassName, RequestedInstance));
+  } else {
+    DEBUG ((DEBUG_ERROR, "IPMI requested to use %a instance %d for this boot\n", RequestedClassName, RequestedInstance));
+
+    // Prepare to restore BootOrder after this boot
     if (BootOrderIndex > 0) {
-      BootOption = BootOrder[BootOrderIndex];
-      CopyMem (&BootOrder[1], &BootOrder[0], BootOrderIndex*sizeof (BootOrder[0]));
-      BootOrder[0] = BootOption;
+      Status = gBS->CreateEventEx (
+                      EVT_NOTIFY_SIGNAL,
+                      TPL_CALLBACK,
+                      RestoreBootOrder,
+                      NULL,
+                      &gEfiEventReadyToBootGuid,
+                      &ReadyToBootEvent
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error registering ReadyToBoot event handler to restore BootOrder: %r\n", __FUNCTION__, Status));
+        goto AcknowledgeAndCleanup;
+      }
 
       Status = gRT->SetVariable (
-                      EFI_BOOT_ORDER_VARIABLE_NAME,
-                      &gEfiGlobalVariableGuid,
-                      EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                      // This is not getting saved correctly so that it can be looked up!
+                      SAVED_BOOT_ORDER_VARIABLE_NAME,
+                      &gNVIDIATokenSpaceGuid,
+                      EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
                       BootOrderSize,
                       BootOrder
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Error moving %a instance %d to the start of BootOrder: %r\n", RequestedClassName, RequestedInstance, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Error saving current BootOrder: %r\n", __FUNCTION__, Status));
+        goto AcknowledgeAndCleanup;
       }
     }
-  } else {
-    DEBUG ((DEBUG_ERROR, "IPMI requested to use %a instance %d as BootNext\n", RequestedClassName, RequestedInstance));
+  }
+
+  // Finally, update the BootOrder
+  if (BootOrderIndex > 0) {
+    BootOption = BootOrder[BootOrderIndex];
+    CopyMem (&BootOrder[1], &BootOrder[0], BootOrderIndex*sizeof (BootOrder[0]));
+    BootOrder[0] = BootOption;
+
     Status = gRT->SetVariable (
-                    EFI_BOOT_NEXT_VARIABLE_NAME,
+                    EFI_BOOT_ORDER_VARIABLE_NAME,
                     &gEfiGlobalVariableGuid,
                     EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
-                    sizeof (BootOrder[0]),
-                    &BootOrder[BootOrderIndex]
+                    BootOrderSize,
+                    BootOrder
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Error setting BootNext to %a instance %d: %r\n", RequestedClassName, RequestedInstance, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Error moving %a instance %d to the start of BootOrder: %r\n", __FUNCTION__, RequestedClassName, RequestedInstance, Status));
     }
+
+    PrintBootOrder (DEBUG_INFO, L"BootOrder after IPMI-requested change:");
   }
 
 AcknowledgeAndCleanup:

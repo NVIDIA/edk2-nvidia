@@ -27,4 +27,11 @@ ProcessIPMIBootOrderUpdates (
   VOID
   );
 
+VOID
+EFIAPI
+RestoreBootOrder (
+  EFI_EVENT  Event,
+  VOID       *Context
+  );
+
 #endif

@@ -1405,8 +1405,15 @@ PlatformBootManagerBeforeConsole (
   EFI_STATUS  Status;
   EFI_HANDLE  BdsHandle = NULL;
 
+  //
   // Check IPMI for BootOrder commands, and clear and reset CMOS here if requested
+  //
   CheckIPMIForBootOrderUpdates ();
+
+  //
+  // Restore the BootOrder if we temporarily changed it during the previous boot and haven't restored it yet
+  //
+  RestoreBootOrder (NULL, NULL);
 
   //
   // Signal EndOfDxe PI Event
@@ -1474,7 +1481,7 @@ PlatformBootManagerBeforeConsole (
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: No Default keys to enroll %r.\n",
+        "%a: No Default keys to enroll: %r.\n",
         __FUNCTION__,
         Status
         ));
@@ -1482,7 +1489,7 @@ PlatformBootManagerBeforeConsole (
       if (*EnrollDefaultKeys == 1) {
         DEBUG ((
           DEBUG_ERROR,
-          "%a: Enroll default keys. %r\n",
+          "%a: Enroll default keys: %r\n",
           __FUNCTION__,
           Status
           ));

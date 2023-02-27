@@ -541,13 +541,6 @@
 
   gArmTokenSpaceGuid.PcdMmBufferSize|65536
 
-  ## Indicates whether PlatformBootManagerLib code can set BootNext for the current boot.
-  #  If enabled, setting BootNext in PlatformBootManagerLib controls the current boot.<BR><BR>
-  #   TRUE  - BootNext value from PlatformBootManagerLib will affect the current boot.<BR>
-  #   FALSE - BootNext value from PlatformBootManagerLib will affect the subsequent boot (or be ignored if already set).<BR>
-  # @Prompt Allow PlatformBootManagerLib to set BootNext for the current boot.
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAllowBootNextFromPlatformBootManagerLib|TRUE
-
 [PcdsFixedAtBuild]
   #
   # Variable Services PCDs.

@@ -21,6 +21,8 @@
 #include <Library/HostBasedTestStubLib/IpmiStubLib.h>
 #include <Library/UefiBootManagerLib.h>
 #include <HostBasedTestStubLib/UefiRuntimeServicesTableStubLib.h>
+#include <HostBasedTestStubLib/UefiBootServicesTableStubLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <Library/UnitTestLib.h>
 #include <Guid/GlobalVariable.h>
 #include <Library/IpmiCommandLib.h>
@@ -35,6 +37,8 @@
     FreePool ((a)); \
     (a) = NULL; \
   }
+
+#define SAVED_BOOT_ORDER_VARIABLE_NAME  L"SavedBootOrder"
 
 extern UINT8  mIpmiCommandCounter;
 
@@ -254,19 +258,21 @@ IBO_CONTEXT  NEXT_RESERVED_2_3    = { IBO_DEVICE_RESERVED_2, 3, IBO_RESULT_NO_CH
 IBO_CONTEXT  NEXT_RESERVED_3_3    = { IBO_DEVICE_RESERVED_3, 3, IBO_RESULT_NO_CHANGE, FALSE, TRUE };
 IBO_CONTEXT  NEXT_FLOPPY_3        = { IBO_DEVICE_FLOPPY, 3, IBO_RESULT_BOOT_NEXT_CHANGE, FALSE, TRUE };
 
-UINTN   ExpectedBootOrderSize;
-UINT16  *ExpectedBootOrder;
-UINT16  *ExpectedBootNext;
-UINT64  ExpectedOsIndications;
-UINT32  NextOptionNumber;
+UINTN      ExpectedBootOrderSize;
+UINTN      ExpectedSavedBootOrderSize;
+UINT16     *ExpectedBootOrder;
+UINT16     *ExpectedSavedBootOrder;
+UINT64     ExpectedOsIndications;
+UINT32     NextOptionNumber;
+EFI_EVENT  EventSavePtr;
 
-// To set up BootOrder, BootNext, and OsIndications
+// To set up BootOrder, SavedBootOrder, and OsIndications
 UNIT_TEST_STATUS
 EFIAPI
 SetupUefiVariables (
   IN  UINTN   BootOrderSize,
   IN  VOID    *BootOrderData,
-  IN  UINT16  *BootNext,
+  IN  VOID    *SavedBootOrderData,
   IN  UINT64  OsIndications
   )
 {
@@ -283,14 +289,16 @@ SetupUefiVariables (
                   );
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
-  Status = gRT->SetVariable (
-                  EFI_BOOT_NEXT_VARIABLE_NAME,
-                  &gEfiGlobalVariableGuid,
-                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
-                  (BootNext == NULL) ? 0 : sizeof (*BootNext),
-                  BootNext
-                  );
-  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  if (SavedBootOrderData) {
+    Status = gRT->SetVariable (
+                    SAVED_BOOT_ORDER_VARIABLE_NAME,
+                    &gNVIDIATokenSpaceGuid,
+                    EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                    BootOrderSize,
+                    SavedBootOrderData
+                    );
+    UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  }
 
   Status = gRT->SetVariable (
                   EFI_OS_INDICATIONS_VARIABLE_NAME,
@@ -300,6 +308,8 @@ SetupUefiVariables (
                   &OsIndications
                   );
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+
+  EventSavePtr = NULL;
 
   return UNIT_TEST_PASSED;
 }
@@ -328,7 +338,7 @@ IBO_CheckResults (
   EFI_STATUS  Status;
   UINTN       BootOrderSize;
   VOID        *BootOrderData;
-  UINT16      BootNext;
+  VOID        *SavedBootOrderData;
   UINT64      OsIndications;
   UINT32      Attributes;
   UINTN       VariableSize;
@@ -340,6 +350,13 @@ IBO_CheckResults (
   } else {
     BootOrderData = AllocatePool (BootOrderSize);
     UT_ASSERT_NOT_NULL (BootOrderData);
+  }
+
+  if (ExpectedSavedBootOrder == NULL) {
+    SavedBootOrderData = NULL;
+  } else {
+    SavedBootOrderData = AllocatePool (BootOrderSize);
+    UT_ASSERT_NOT_NULL (SavedBootOrderData);
   }
 
   Status = gRT->GetVariable (
@@ -361,21 +378,23 @@ IBO_CheckResults (
     UT_ASSERT_MEM_EQUAL (BootOrderData, ExpectedBootOrder, ExpectedBootOrderSize);
   }
 
-  VariableSize = sizeof (BootNext);
-  Status       = gRT->GetVariable (
-                        EFI_BOOT_NEXT_VARIABLE_NAME,
-                        &gEfiGlobalVariableGuid,
-                        &Attributes,
-                        &VariableSize,
-                        &BootNext
-                        );
-  if (ExpectedBootNext) {
-    UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
-    UT_ASSERT_EQUAL (VariableSize, sizeof (BootNext));
-    UT_ASSERT_EQUAL (BootNext, *ExpectedBootNext);
-  } else {
+  Status = gRT->GetVariable (
+                  SAVED_BOOT_ORDER_VARIABLE_NAME,
+                  &gNVIDIATokenSpaceGuid,
+                  &Attributes,
+                  &BootOrderSize,
+                  SavedBootOrderData
+                  );
+  if (ExpectedSavedBootOrderSize == 0) {
     UT_ASSERT_STATUS_EQUAL (Status, EFI_NOT_FOUND);
-    UT_ASSERT_EQUAL (ExpectedBootNext, NULL);
+  } else {
+    UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+    UT_ASSERT_EQUAL (BootOrderSize, ExpectedSavedBootOrderSize);
+    for (Index = 0; Index < BootOrderSize/sizeof (UINT16); Index++) {
+      DEBUG ((DEBUG_ERROR, "SBO[%d]=0x%x, ESBO=0x%x\n", Index, ((UINT16 *)SavedBootOrderData)[Index], ExpectedSavedBootOrder[Index]));
+    }
+
+    UT_ASSERT_MEM_EQUAL (SavedBootOrderData, ExpectedSavedBootOrder, ExpectedSavedBootOrderSize);
   }
 
   VariableSize = sizeof (OsIndications);
@@ -389,6 +408,49 @@ IBO_CheckResults (
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
   UT_ASSERT_EQUAL (VariableSize, sizeof (OsIndications));
   UT_ASSERT_EQUAL (OsIndications, ExpectedOsIndications);
+
+  // check that BootOrder was properly restored
+  if (EventSavePtr != NULL) {
+    Status = gRT->SetVariable (
+                    L"BootCurrent",
+                    &gEfiGlobalVariableGuid,
+                    EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
+                    sizeof (UINT16),
+                    &ExpectedBootOrder[0]
+                    );
+    UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+
+    gBS->SignalEvent (EventSavePtr);
+
+    // Check that boot order was restored properly
+    Status = gRT->GetVariable (
+                    EFI_BOOT_ORDER_VARIABLE_NAME,
+                    &gEfiGlobalVariableGuid,
+                    &Attributes,
+                    &BootOrderSize,
+                    BootOrderData
+                    );
+    if (ExpectedBootOrderSize == 0) {
+      UT_ASSERT_STATUS_EQUAL (Status, EFI_NOT_FOUND);
+    } else {
+      UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+      UT_ASSERT_EQUAL (BootOrderSize, ExpectedBootOrderSize);
+      for (Index = 0; Index < BootOrderSize/sizeof (UINT16); Index++) {
+        DEBUG ((DEBUG_ERROR, "RBO[%d]=0x%x, ESBO=0x%x\n", Index, ((UINT16 *)BootOrderData)[Index], ExpectedSavedBootOrder[Index]));
+      }
+
+      UT_ASSERT_MEM_EQUAL (BootOrderData, ExpectedSavedBootOrder, ExpectedBootOrderSize);
+    }
+
+    Status = gRT->GetVariable (
+                    SAVED_BOOT_ORDER_VARIABLE_NAME,
+                    &gNVIDIATokenSpaceGuid,
+                    &Attributes,
+                    &BootOrderSize,
+                    SavedBootOrderData
+                    );
+    UT_ASSERT_STATUS_EQUAL (Status, EFI_NOT_FOUND);
+  }
 
   FREE_NON_NULL (BootOrderData);
 
@@ -417,10 +479,10 @@ IBO_EmptyBootOrderSetup (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
-  ExpectedBootOrderSize = 0;
-  ExpectedBootOrder     = NULL;
-  ExpectedBootNext      = NULL;
-  ExpectedOsIndications = 0;
+  ExpectedBootOrderSize      = 0;
+  ExpectedSavedBootOrderSize = 0;
+  ExpectedBootOrder          = NULL;
+  ExpectedOsIndications      = 0;
 
   return SetupUefiVariables (0, NULL, NULL, 0);
 }
@@ -599,43 +661,67 @@ IBO_BootOrderSetup (
   UINT16            BootNum;
   IBO_CONTEXT       *IboContext = (IBO_CONTEXT *)Context;
   UINTN             Index;
+  BOOLEAN           WillModifyBootOrder;
 
   // Set up Initial Boot Order
 
   ExpectedBootOrderSize = Count*sizeof (UINT16);
   ExpectedBootOrder     = AllocatePool (ExpectedBootOrderSize);
   if (ExpectedBootOrder == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for ExpectedBootOrder\n", __FUNCTION__));
     return UNIT_TEST_ERROR_TEST_FAILED;
   }
 
   for (Index = 0; Index < Count; Index++) {
     Status = IBO_AddUsbDP (0, 0, &BootNum);
     if (Status != UNIT_TEST_PASSED) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to add instance %d of Usb DP\n", __FUNCTION__, Index));
       return Status;
     }
 
     ExpectedBootOrder[Index] = BootNum;
   }
 
+  // Create initial state, before expectations take effect
   Status = SetupUefiVariables (ExpectedBootOrderSize, ExpectedBootOrder, NULL, 0);
   if (Status != UNIT_TEST_PASSED) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to setup Uefi variables\n", __FUNCTION__));
     return Status;
   }
 
   // Determine Expected Boot Order
 
+  ExpectedSavedBootOrderSize = 0;
+  // JDS TODO - this assumes only USB(Floppy) in boot order!
+  if ((IboContext->Instance > 1) && (IboContext->Device == IBO_DEVICE_FLOPPY) && (IboContext->Instance <= Count) && !IboContext->AlreadyAcked && IboContext->Valid) {
+    WillModifyBootOrder = TRUE;
+  } else {
+    WillModifyBootOrder = FALSE;
+  }
+
   switch (IboContext->Result) {
     case IBO_RESULT_NO_CHANGE:
-      ExpectedBootNext      = NULL;
       ExpectedOsIndications = 0;
       break;
 
+    case IBO_RESULT_BOOT_NEXT_CHANGE:
+      if (WillModifyBootOrder) {
+        ExpectedSavedBootOrder = AllocatePool (ExpectedBootOrderSize);
+        if (ExpectedSavedBootOrder == NULL) {
+          DEBUG ((DEBUG_ERROR, "Here 4\n"));
+          return UNIT_TEST_ERROR_TEST_FAILED;
+        }
+
+        CopyMem (&ExpectedSavedBootOrder[0], &ExpectedBootOrder[0], ExpectedBootOrderSize);
+        ExpectedSavedBootOrderSize = ExpectedBootOrderSize;
+        // Note: MockUefiCreateEventEx must be called in the test, not the setup, due to how mock checking works
+      }
+
+    // fall through now that we've saved boot order
+
     case IBO_RESULT_BOOT_ORDER_CHANGE:
-      ExpectedBootNext      = NULL;
       ExpectedOsIndications = 0;
-      // JDS TODO - this assumes only USB(Floppy) in boot order!
-      // JDS TODO - if Instance > Count, treat instance as 0
-      if ((IboContext->Instance > 1) && (IboContext->Device == IBO_DEVICE_FLOPPY) && (IboContext->Instance <= Count) && !IboContext->AlreadyAcked && IboContext->Valid) {
+      if (WillModifyBootOrder) {
         BootNum = ExpectedBootOrder[IboContext->Instance-1];
         CopyMem (&ExpectedBootOrder[1], &ExpectedBootOrder[0], sizeof (ExpectedBootOrder[0])*(IboContext->Instance - 1));
         ExpectedBootOrder[0] = BootNum;
@@ -643,28 +729,7 @@ IBO_BootOrderSetup (
 
       break;
 
-    case IBO_RESULT_BOOT_NEXT_CHANGE:
-      ExpectedBootNext = AllocatePool (sizeof (UINT16));
-      if (ExpectedBootNext == NULL) {
-        return UNIT_TEST_ERROR_TEST_FAILED;
-      }
-
-      // JDS TODO - this assumes only USB(Floppy) in boot order!
-      // JDS TODO - if Instance > Count, treat instance as 0
-      if ((IboContext->Device != IBO_DEVICE_FLOPPY) || IboContext->AlreadyAcked || !IboContext->Valid) {
-        FreePool (ExpectedBootNext);
-        ExpectedBootNext = NULL;
-      } else if ((IboContext->Instance == 0) || (IboContext->Instance > Count)) {
-        *ExpectedBootNext = ExpectedBootOrder[0];
-      } else {
-        *ExpectedBootNext = ExpectedBootOrder[IboContext->Instance - 1];
-      }
-
-      ExpectedOsIndications = 0;
-      break;
-
     case IBO_RESULT_OS_INDICATIONS_CHANGE:
-      ExpectedBootNext = NULL;
       if ((IboContext->Device == IBO_DEVICE_BIOS) && !IboContext->AlreadyAcked && IboContext->Valid) {
         ExpectedOsIndications = EFI_OS_INDICATIONS_BOOT_TO_FW_UI;
       } else {
@@ -710,8 +775,8 @@ IBO_Cleanup (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
-  FREE_NON_NULL (ExpectedBootNext);
   FREE_NON_NULL (ExpectedBootOrder);
+  FREE_NON_NULL (ExpectedSavedBootOrder);
 }
 
 /**
@@ -787,6 +852,10 @@ IBO_IpmiRequest (
   Status = MockIpmiSubmitCommand ((UINT8 *)GetP4Response, P4ResponseSize, EFI_SUCCESS); // Get P4
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
+  if (ExpectedSavedBootOrder != NULL) {
+    MockUefiCreateEventEx (&gEfiEventReadyToBootGuid, &EventSavePtr, EFI_SUCCESS);
+  }
+
   CheckIPMIForBootOrderUpdates ();
   ProcessIPMIBootOrderUpdates ();
 
@@ -816,13 +885,14 @@ SetupAndRunUnitTests (
   UNIT_TEST_SUITE_HANDLE      SingleBootOrder;
   UNIT_TEST_SUITE_HANDLE      DualBootOrder;
   UNIT_TEST_SUITE_HANDLE      TripleBootOrder;
+  BOOLEAN                     RuntimePreserveVariables = FALSE;
 
   Framework = NULL;
 
   DEBUG ((DEBUG_INFO, "%a: v%a\n", UNIT_TEST_NAME, UNIT_TEST_VERSION));
 
-  UefiRuntimeServicesTableInit (FALSE);
-
+  UefiBootServicesTableInit ();
+  UefiRuntimeServicesTableInit (RuntimePreserveVariables);
   Status = InitUnitTestFramework (&Framework, UNIT_TEST_NAME, gEfiCallerBaseName, UNIT_TEST_VERSION);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to setup Test Framework. Exiting with status = %r\n", Status));
@@ -1180,6 +1250,9 @@ SetupAndRunUnitTests (
   // Execute the tests.
   //
   Status = RunAllTestSuites (Framework);
+
+  UefiBootServicesTableDeinit ();
+  UefiRuntimeServicesTableDeinit (RuntimePreserveVariables);
 
   return Status;
 }
