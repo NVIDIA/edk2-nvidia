@@ -498,11 +498,10 @@ CreateFramebufferResource (
   VOID        *Address;
   UINTN       Pitch, Size, Pages;
 
-  /* The GOP driver treats bits [25:0] as non-address bits and masks
-     them away. Require 64 MB alignment (2^26 B) to make sure the
-     low-order 26 bits are zero, so the GOP driver won't mask away
-     address bits. */
-  CONST UINTN  Alignment = SIZE_64MB;
+  /* Since we are allocating the framebuffer memory as
+     EfiRuntimeServicesData, make sure the address is aligned to
+     RUNTIME_PAGE_ALLOCATION_GRANULARITY. */
+  CONST UINTN  Alignment = RUNTIME_PAGE_ALLOCATION_GRANULARITY;
 
   ZeroMem (Desc, sizeof (*Desc));
 
@@ -515,12 +514,9 @@ CreateFramebufferResource (
 
   Size = VerticalResolution * Pitch;
 
-  /* Since we are allocating the framebuffer memory as
-     EfiRuntimeServicesData, make sure the size is a multiple of
-     RUNTIME_PAGE_ALLOCATION_GRANULARITY in order to avoid problems
-     with misaligned pointers. */
-  Size += RUNTIME_PAGE_ALLOCATION_GRANULARITY - 1;
-  Size &= ~(RUNTIME_PAGE_ALLOCATION_GRANULARITY - 1);
+  /* Align size to RUNTIME_PAGE_ALLOCATION_GRANULARITY for the same
+     reason we require such alignment. */
+  Size = ALIGN_VALUE (Size, RUNTIME_PAGE_ALLOCATION_GRANULARITY);
 
   Pages  = EFI_SIZE_TO_PAGES (Size);
   Status = DmaAllocateAlignedBuffer (EfiRuntimeServicesData, Pages, Alignment, &Address);
