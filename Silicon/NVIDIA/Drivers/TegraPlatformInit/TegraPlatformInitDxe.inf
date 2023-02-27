@@ -97,6 +97,7 @@
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
 
 [Depex]
   TRUE

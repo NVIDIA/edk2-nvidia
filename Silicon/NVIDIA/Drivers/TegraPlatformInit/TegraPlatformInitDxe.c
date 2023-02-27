@@ -29,6 +29,8 @@
 #include <Library/SecureBootVariableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
+#define TH500_PCI_COMPAT  "nvidia,th500-pcie"
+
 /**
   Check if the Device is an AGX Xavier Device type.
 
@@ -214,6 +216,82 @@ UseEmulatedVariableStore (
   }
 
   return Status;
+}
+
+/**
+  Setup PCDs for Oem Table Id based on dtb info
+  for Th500
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+SetOemTableIdPcdForTh500 (
+  VOID
+  )
+{
+  UINT32      SocketIndex;
+  CHAR8       OemTableIdStr[] = "T241xxx";
+  BOOLEAN     GpuPresent;
+  EFI_STATUS  Status;
+  UINT32      NumberOfPciHandles;
+  UINT32      *PciHandles;
+  VOID        *DeviceTreeBase;
+  INT32       NodeOffset;
+  UINT32      SocketCount;
+  UINT32      Index;
+
+  GpuPresent         = FALSE;
+  NumberOfPciHandles = 0;
+  SocketCount        = 0;
+  PciHandles         = NULL;
+
+  // Identify if a GPU is present or not
+  Status = GetMatchingEnabledDeviceTreeNodes (TH500_PCI_COMPAT, NULL, &NumberOfPciHandles);
+  if (Status != EFI_BUFFER_TOO_SMALL) {
+    NumberOfPciHandles = 0;
+  } else {
+    PciHandles = AllocateZeroPool (sizeof (UINT32) * NumberOfPciHandles);
+    if (PciHandles == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate array for cpuidle cores\r\n", __FUNCTION__));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    Status = GetMatchingEnabledDeviceTreeNodes (TH500_PCI_COMPAT, PciHandles, &NumberOfPciHandles);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get PCI handles %r\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+  }
+
+  for (Index = 0; Index < NumberOfPciHandles; Index++) {
+    GetDeviceTreeNode (PciHandles[Index], &DeviceTreeBase, &NodeOffset);
+    if ((NULL != fdt_getprop (DeviceTreeBase, NodeOffset, "c2c-partitions", NULL)) ||
+        (NULL != fdt_getprop (DeviceTreeBase, NodeOffset, "hbm-ranges", NULL)))
+    {
+      GpuPresent = TRUE;
+      break;
+    }
+  }
+
+  // Find socket count in the system
+  for (SocketIndex = 0; SocketIndex < PcdGet32 (PcdTegraMaxSockets); SocketIndex++ ) {
+    if (!IsSocketEnabled (SocketIndex)) {
+      continue;
+    }
+
+    SocketCount++;
+  }
+
+  // Set Pcd for Oem Table ID
+  if (GpuPresent) {
+    AsciiSPrint (OemTableIdStr, sizeof (OemTableIdStr), "T241x%u", SocketCount);
+  } else {
+    AsciiSPrint (OemTableIdStr, sizeof (OemTableIdStr), "T241c%u", SocketCount);
+  }
+
+  PcdSet64S (PcdAcpiDefaultOemTableId, *(UINT64 *)(OemTableIdStr));
+
+  return EFI_SUCCESS;
 }
 
 STATIC
@@ -850,6 +928,10 @@ TegraPlatformInitialize (
 
   SetCpuGpuDistanceInfoPcdsFromDtb (DtbBase);
   SetBandwidthLatencyInfoPcdsFromdtb (DtbBase);
+
+  if (ChipID == TH500_CHIP_ID) {
+    SetOemTableIdPcdForTh500 ();
+  }
 
   return EFI_SUCCESS;
 }
