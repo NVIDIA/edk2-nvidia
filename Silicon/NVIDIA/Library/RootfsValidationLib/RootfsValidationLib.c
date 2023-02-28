@@ -577,7 +577,6 @@ ValidateRootfsStatus (
   EFI_STATUS  Status;
   UINT32      RegisterValueRf;
   UINT32      NonCurrentSlot;
-  UINT32      AbRedundancyLevel;
   UINT32      Index;
 
   // If boot mode has been set to RECOVERY (via runtime service or UEFI menu),
@@ -720,7 +719,7 @@ ValidateRootfsStatus (
             DEBUG_ERROR,
             "%a: Failed to set Rootfs status of slot %d to mRootfsInfo: %r\n",
             __FUNCTION__,
-            NonCurrentSlot,
+            mRootfsInfo.CurrentSlot,
             Status
             ));
           goto Exit;
@@ -775,7 +774,7 @@ ValidateRootfsStatus (
         DEBUG_ERROR,
         "%a: Unsupported A/B redundancy level: %d\n",
         __FUNCTION__,
-        AbRedundancyLevel
+        mRootfsInfo.RootfsVar[RF_REDUNDANCY].Value
         ));
       break;
   }

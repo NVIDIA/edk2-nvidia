@@ -972,6 +972,7 @@ UpdateAcpiTimerOprInfo (
 
   if (SocketId >= ARRAY_SIZE (AcpiTimerInstructionEnableVarName)) {
     DEBUG ((DEBUG_ERROR, "%a: Index %d exceeding AcpiTimerInstructionEnableVarName size\r\n", __FUNCTION__, SocketId));
+    Status = EFI_INVALID_PARAMETER;
     goto ErrorExit;
   }
 

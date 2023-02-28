@@ -290,6 +290,7 @@ UsbRndisDriverStart (
   MAC_ADDR_DEVICE_PATH      MacDeviceNode;
   EFI_USB_IO_PROTOCOL       *UsbIo;
 
+  Private          = NULL;
   ParentDevicePath = NULL;
 
   Status = gBS->OpenProtocol (
@@ -446,7 +447,9 @@ UsbRndisDriverStart (
 
 OnError:
 
-  ReleaseUsbRndisPrivate (Private, This);
+  if (Private != NULL) {
+    ReleaseUsbRndisPrivate (Private, This);
+  }
 
   return Status;
 }

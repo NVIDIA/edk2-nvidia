@@ -220,8 +220,8 @@ GetGPUMemoryInfo (
   OUT GPU_MEMORY_INFO  **MemInfo
   )
 {
-  EFI_STATUS                    Status = EFI_SUCCESS;
-  GPU_MEMORY_INFO               *GpuMemInfo;
+  EFI_STATUS                    Status           = EFI_SUCCESS;
+  GPU_MEMORY_INFO               *GpuMemInfo      = NULL;
   PCI_LOCATION_INFO             *PciLocationInfo = NULL;
   UINT8                         index;
   VOID                          *Hob;

@@ -1747,6 +1747,8 @@ ReadAndroidStyleDtbPartition (
   UINTN                  SignatureOffset;
   CONST UINTN            SignatureSize = SIZE_2KB;
 
+  DtbBuffer = NULL;
+
   Status = FindPartitionInfo (
              DeviceHandle,
              PartitionBasename,
