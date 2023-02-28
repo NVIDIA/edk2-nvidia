@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -128,7 +128,8 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdVariableCollectStatistics|TRUE
 
 [PcdsFixedAtBuild.common]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING) $(BUILD_DATE_TIME)"
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING) $(BUILD_DATE_TIME)"
+
 
 ###################################################################################################
 #

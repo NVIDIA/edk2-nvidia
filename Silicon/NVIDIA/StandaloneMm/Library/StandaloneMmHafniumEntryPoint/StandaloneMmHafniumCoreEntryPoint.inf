@@ -1,7 +1,7 @@
 ## @file
 # Module entry point library for DXE core.
 #
-# Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -67,7 +67,7 @@
   gArmTokenSpaceGuid.PcdFfaEnable
 
 [FixedPcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString
   gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString
   gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString
 

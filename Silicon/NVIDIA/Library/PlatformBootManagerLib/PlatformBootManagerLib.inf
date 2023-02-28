@@ -65,10 +65,7 @@
   gNVIDIATokenSpaceGuid.PcdQuickBootSupported
 
 [FixedPcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName
-  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString
-  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultDataBits
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
@@ -77,6 +74,8 @@
   gNVIDIATokenSpaceGuid.PcdTegraPrintInternalBanner
 
 [Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
   gNVIDIATokenSpaceGuid.PcdBootMenuAppFile

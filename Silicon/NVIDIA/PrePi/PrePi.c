@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -401,8 +401,8 @@ CEntryPoint (
                 sizeof (Buffer),
                 "%s UEFI firmware (version %s built on %s)\n\r",
                 (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName),
-                (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString),
-                (CHAR16 *)PcdGetPtr (PcdFirmwareDateTimeBuiltString)
+                (CHAR16 *)PcdGetPtr (PcdUefiVersionString),
+                (CHAR16 *)PcdGetPtr (PcdUefiDateTimeBuiltString)
                 );
   SerialPortWrite ((UINT8 *)Buffer, CharCount);
 

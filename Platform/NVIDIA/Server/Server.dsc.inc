@@ -133,6 +133,8 @@
 
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
   gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|TRUE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
 
 [PcdsDynamicHii.common.DEFAULT]
  gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV

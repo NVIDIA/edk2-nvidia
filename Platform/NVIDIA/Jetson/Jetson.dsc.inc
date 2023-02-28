@@ -135,6 +135,8 @@
   gNVIDIATokenSpaceGuid.PcdFramebufferVerticalResolution|2160
   gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|1
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|TRUE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
 
 ################################################################################
 #

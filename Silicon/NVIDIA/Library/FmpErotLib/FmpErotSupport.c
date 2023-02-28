@@ -14,6 +14,7 @@
 #include <Library/DebugLib.h>
 #include <Library/ErotLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PcdLib.h>
 #include <Library/PldmFwUpdateLib.h>
 #include <Library/PldmFwUpdatePkgLib.h>
 #include <Library/PldmFwUpdateTaskLib.h>
@@ -351,6 +352,7 @@ FmpErotGetVersionInfo (
   UINTN                                          VersionStrLen;
   UINT64                                         Version64;
   CONST PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY  *ComponentEntry;
+  CHAR16                                         ReleaseDate[9] = { L'\0' };
 
   Protocol = ErotGetMctpProtocolBySocket (FMP_EROT_SOCKET);
   if (Protocol == NULL) {
@@ -434,6 +436,24 @@ FmpErotGetVersionInfo (
     ComponentEntry->ActiveVersionStringLength,
     ComponentEntry->ActiveVersionString
     );
+  Status = PcdSetPtrS (PcdFirmwareVersionString, &VersionStrLen, mVersionString);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed to set version pcd to %s: %r\n", __FUNCTION__, mVersionString, Status));
+  }
+
+  // convert ascii release date
+  VersionStrLen = sizeof (ReleaseDate);
+  UnicodeSPrintAsciiFormat (
+    ReleaseDate,
+    VersionStrLen,
+    "%.*a",
+    sizeof (ComponentEntry->ActiveReleaseDate),
+    ComponentEntry->ActiveReleaseDate
+    );
+  Status = PcdSetPtrS (PcdFirmwareReleaseDateString, &VersionStrLen, ReleaseDate);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed to set date pcd to %s: %r\n", __FUNCTION__, ReleaseDate, Status));
+  }
 
   // erot only returns version string, convert it to 4-byte hex version value
   Status = StrHexToUint64S (mVersionString, NULL, &Version64);
@@ -447,10 +467,11 @@ FmpErotGetVersionInfo (
 
   DEBUG ((
     DEBUG_INFO,
-    "%a: got version=0x%x (%s) Pending=%.*a\n",
+    "%a: got version=0x%x (%s %s) Pending=%.*a\n",
     __FUNCTION__,
     mVersion,
     mVersionString,
+    ReleaseDate,
     ComponentEntry->PendingVersionStringLength,
     &ComponentEntry->ActiveVersionString[ComponentEntry->ActiveVersionStringLength]
     ));

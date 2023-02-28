@@ -959,10 +959,10 @@ DisplaySystemAndHotkeyInformation (
   CharCount = UnicodeSPrint (
                 Buffer,
                 sizeof (Buffer),
-                L"%s UEFI firmware (version %s built on %s)\n\r",
+                L"%s System firmware version %s date %s\n\r",
                 (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName),
                 (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString),
-                (CHAR16 *)PcdGetPtr (PcdFirmwareDateTimeBuiltString)
+                (CHAR16 *)PcdGetPtr (PcdFirmwareReleaseDateString)
                 );
 
   //
@@ -1047,7 +1047,7 @@ IsPlatformConfigurationNeeded (
                 UEFI_VERSION_STRING_SIZE,
                 "%s %s",
                 (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString),
-                (CHAR16 *)PcdGetPtr (PcdFirmwareDateTimeBuiltString)
+                (CHAR16 *)PcdGetPtr (PcdFirmwareReleaseDateString)
                 );
 
   //

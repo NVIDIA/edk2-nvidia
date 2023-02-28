@@ -281,8 +281,9 @@
 #TH500 Sbsa UART Base
   gNVIDIATokenSpaceGuid.PcdSbsaUartBaseTH500|0x0C280000|UINT64|0x0000001F
 
-#Tegra Firmware Date Time
-  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString|L""|VOID*|0x00010022
+#Tegra UEFI version and build date
+  gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L""|VOID*|0x000000A2
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString|L""|VOID*|0x000000A3
 
 # Tegra Architectural Timer Frequency
   gNVIDIATokenSpaceGuid.PcdTegraArchTimerFreqInHz|31250000|UINT32|0x00000024

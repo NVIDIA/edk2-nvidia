@@ -387,13 +387,8 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdEnableVariableRuntimeCache|FALSE
 
 [PcdsFixedAtBuild.common]
-!ifdef $(BUILDID_STRING)
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
-!endif
-
-!ifdef $(BUILD_DATE_TIME)
-  gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
-!endif
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
+  gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdCpuStackGuard|TRUE
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize|0x22000

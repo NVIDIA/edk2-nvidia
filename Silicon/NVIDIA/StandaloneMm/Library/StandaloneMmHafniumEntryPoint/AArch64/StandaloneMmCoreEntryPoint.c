@@ -1021,7 +1021,7 @@ _ModuleEntryPointC (
     sizeof (Version),
     "%s (version %s)\r\n",
     (CHAR16 *)PcdGetPtr (PcdFirmwareFullNameString),
-    (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString)
+    (CHAR16 *)PcdGetPtr (PcdUefiVersionString)
     );
   DebugPrint (DEBUG_ERROR, Version);
 
