@@ -46,6 +46,10 @@ STATIC BPMP_I2C_DEVICE_TYPE_MAP  mDeviceTypeMap[] = {
           { 0x00,                  0x00 }
         }
   },
+  { "nxp,pca9535",         &gNVIDIAI2cPca9535,    0, {
+          { 0x00,                  0x00 }
+        }
+  },
   { NULL,                  NULL,                  0, {
           { 0x00,                  0x00 }
         }
@@ -718,6 +722,7 @@ BuildI2cDevices (
 
       MapEntry++;
     }
+
     Index++;
   }
   if (Index == Private->NumberOfI2cDevices) {

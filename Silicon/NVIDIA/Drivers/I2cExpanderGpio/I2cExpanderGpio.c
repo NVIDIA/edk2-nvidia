@@ -2,7 +2,7 @@
 
   I2C GPIO expander Driver
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -406,7 +406,9 @@ I2cIoProtocolReady (
       return;
     }
 
-    if (CompareGuid (I2cIoProtocol->DeviceGuid, &gNVIDIAI2cTca9539)) {
+    if (  CompareGuid (I2cIoProtocol->DeviceGuid, &gNVIDIAI2cTca9539)
+       || CompareGuid (I2cIoProtocol->DeviceGuid, &gNVIDIAI2cPca9535))
+    {
       Index                                                                           = mI2cExpanderData.PlatformGpioController.GpioControllerCount;
       mI2cExpanderData.I2cIoArray[Index]                                              = I2cIoProtocol;
       mI2cExpanderData.PlatformGpioController.GpioController[Index].GpioIndex         = GPIO (I2cIoProtocol->DeviceIndex, 0);
@@ -439,55 +441,79 @@ InitializeI2cExpanderGpio (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS  Status;
-  EFI_EVENT   I2cIoReadyEvent;
+  EFI_STATUS           Status;
+  UINT32               NumberOfNodes;
+  UINT32               NumberOfControllers = 0;
+  GPIO_CONTROLLER      *GpioController     = NULL;
+  EFI_I2C_IO_PROTOCOL  **I2cIoArray        = NULL;
+  EFI_EVENT            I2cIoReadyEvent     = NULL;
 
-  I2cIoReadyEvent = NULL;
+  NumberOfNodes = 0;
+  Status        = GetMatchingEnabledDeviceTreeNodes ("ti,tca9539", NULL, &NumberOfNodes);
+  if (Status == EFI_BUFFER_TOO_SMALL) {
+    NumberOfControllers += NumberOfNodes;
+  } else if (Status != EFI_NOT_FOUND) {
+    ASSERT (EFI_ERROR (Status));
+    goto Exit;
+  }
+
+  NumberOfNodes = 0;
+  Status        = GetMatchingEnabledDeviceTreeNodes ("nxp,pca9535", NULL, &NumberOfNodes);
+  if (Status == EFI_BUFFER_TOO_SMALL) {
+    NumberOfControllers += NumberOfNodes;
+  } else if (Status != EFI_NOT_FOUND) {
+    ASSERT (EFI_ERROR (Status));
+    goto Exit;
+  }
+
   ZeroMem (&mI2cExpanderData, sizeof (mI2cExpanderData));
 
-  Status = GetMatchingEnabledDeviceTreeNodes ("ti,tca9539", NULL, &mI2cExpanderData.NumberOfControllers);
-  if (Status == EFI_NOT_FOUND) {
-    mI2cExpanderData.NumberOfControllers = 0;
+  if (0 == NumberOfControllers) {
     InstallI2cExpanderProtocols ();
-    Status = EFI_SUCCESS;
-  } else if (Status == EFI_BUFFER_TOO_SMALL) {
-    Status                                                 = EFI_SUCCESS;
-    mI2cExpanderData.PlatformGpioController.GpioController = (GPIO_CONTROLLER *)AllocateZeroPool (sizeof (GPIO_CONTROLLER) * mI2cExpanderData.NumberOfControllers);
-    mI2cExpanderData.I2cIoArray                            = (EFI_I2C_IO_PROTOCOL **)AllocateZeroPool (sizeof (EFI_I2C_IO_PROTOCOL *) * mI2cExpanderData.NumberOfControllers);
+  } else {
+    GpioController = (GPIO_CONTROLLER *)AllocateZeroPool (NumberOfControllers * sizeof (*GpioController));
+    I2cIoArray     = (EFI_I2C_IO_PROTOCOL **)AllocateZeroPool (NumberOfControllers * sizeof (*I2cIoArray));
 
-    if ((mI2cExpanderData.PlatformGpioController.GpioController != NULL) &&
-        (mI2cExpanderData.I2cIoArray != NULL))
-    {
-      I2cIoReadyEvent = EfiCreateProtocolNotifyEvent (
-                          &gEfiI2cIoProtocolGuid,
-                          TPL_CALLBACK,
-                          I2cIoProtocolReady,
-                          NULL,
-                          &mI2cExpanderData.I2cIoSearchToken
-                          );
-      if (I2cIoReadyEvent == NULL) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to create I2cIo notification event\r\n", __FUNCTION__));
-        Status = EFI_OUT_OF_RESOURCES;
-      }
-    } else {
+    if ((GpioController == NULL) || (I2cIoArray == NULL)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate I2CExpander structures\r\n", __FUNCTION__));
       Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
+    /* Initialize mI2cExpanderData before creating the event, since we
+       may get a notification immediately. */
+    mI2cExpanderData.NumberOfControllers                   = NumberOfControllers;
+    mI2cExpanderData.PlatformGpioController.GpioController = GpioController;
+    mI2cExpanderData.I2cIoArray                            = I2cIoArray;
+
+    I2cIoReadyEvent = EfiCreateProtocolNotifyEvent (
+                        &gEfiI2cIoProtocolGuid,
+                        TPL_CALLBACK,
+                        I2cIoProtocolReady,
+                        NULL,
+                        &mI2cExpanderData.I2cIoSearchToken
+                        );
+    if (I2cIoReadyEvent == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a, Failed to create I2cIo notification event\r\n", __FUNCTION__));
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
     }
   }
 
+  Status = EFI_SUCCESS;
+
+Exit:
   if (EFI_ERROR (Status)) {
     if (I2cIoReadyEvent != NULL) {
       gBS->CloseEvent (I2cIoReadyEvent);
     }
 
-    if (mI2cExpanderData.PlatformGpioController.GpioController != NULL) {
-      FreePool (mI2cExpanderData.PlatformGpioController.GpioController);
-      mI2cExpanderData.PlatformGpioController.GpioController = NULL;
+    if (I2cIoArray != NULL) {
+      FreePool (I2cIoArray);
     }
 
-    if (mI2cExpanderData.I2cIoArray != NULL) {
-      FreePool (mI2cExpanderData.I2cIoArray);
-      mI2cExpanderData.I2cIoArray = NULL;
+    if (GpioController != NULL) {
+      FreePool (GpioController);
     }
   }
 

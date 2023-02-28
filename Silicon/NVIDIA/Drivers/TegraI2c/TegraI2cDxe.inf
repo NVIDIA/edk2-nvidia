@@ -2,7 +2,7 @@
 #
 #  Tegra I2c Controller Driver
 #
-#  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -51,6 +51,7 @@
   gNVIDIAI2cUnknown
   gNVIDIAEeprom
   gNVIDIAI2cTca9539
+  gNVIDIAI2cPca9535
   gNVIDIANonDiscoverableI2cDeviceGuid
   gNVIDIAI2cNcp81599
   gNVIDIAI2cNct3018y

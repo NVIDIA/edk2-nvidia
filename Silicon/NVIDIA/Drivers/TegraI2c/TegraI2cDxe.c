@@ -1229,13 +1229,11 @@ TegraI2CDriverBindingStart (
         Count++;
         DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
       }
-    }
-
-    if (fdt_node_check_compatible (
-          DeviceTreeNode->DeviceTreeBase,
-          I2cNodeOffset,
-          "ti,tca9539"
-          ) == 0)
+    } else if (fdt_node_check_compatible (
+                 DeviceTreeNode->DeviceTreeBase,
+                 I2cNodeOffset,
+                 "ti,tca9539"
+                 ) == 0)
     {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
@@ -1255,13 +1253,35 @@ TegraI2CDriverBindingStart (
 
         DEBUG ((DEBUG_INFO, "%a: TCA9539 Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
       }
-    }
+    } else if (fdt_node_check_compatible (
+                 DeviceTreeNode->DeviceTreeBase,
+                 I2cNodeOffset,
+                 "nxp,pca9535"
+                 ) == 0)
+    {
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
+        gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
+        I2cAddress = SwapBytes32 (I2cAddress);
+        DEBUG ((DEBUG_INFO, "%a: PCA9535 Found.\n", __FUNCTION__));
+        DeviceGuid = &gNVIDIAI2cPca9535;
+        Status     = TegraI2cAddDevice (
+                       Private,
+                       I2cAddress,
+                       DeviceGuid,
+                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       );
+        if (EFI_ERROR (Status)) {
+          goto ErrorExit;
+        }
 
-    if (fdt_node_check_compatible (
-          DeviceTreeNode->DeviceTreeBase,
-          I2cNodeOffset,
-          "nvidia,ncp81599"
-          ) == 0)
+        DEBUG ((DEBUG_INFO, "%a: PCA9535 Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
+      }
+    } else if (fdt_node_check_compatible (
+                 DeviceTreeNode->DeviceTreeBase,
+                 I2cNodeOffset,
+                 "nvidia,ncp81599"
+                 ) == 0)
     {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
@@ -1279,13 +1299,11 @@ TegraI2CDriverBindingStart (
           goto ErrorExit;
         }
       }
-    }
-
-    if (fdt_node_check_compatible (
-          DeviceTreeNode->DeviceTreeBase,
-          I2cNodeOffset,
-          "nuvoton,nct3018y"
-          ) == 0)
+    } else if (fdt_node_check_compatible (
+                 DeviceTreeNode->DeviceTreeBase,
+                 I2cNodeOffset,
+                 "nuvoton,nct3018y"
+                 ) == 0)
     {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
@@ -1303,13 +1321,11 @@ TegraI2CDriverBindingStart (
           goto ErrorExit;
         }
       }
-    }
-
-    if (fdt_node_check_compatible (
-          DeviceTreeNode->DeviceTreeBase,
-          I2cNodeOffset,
-          "ssif-bmc"
-          ) == 0)
+    } else if (fdt_node_check_compatible (
+                 DeviceTreeNode->DeviceTreeBase,
+                 I2cNodeOffset,
+                 "ssif-bmc"
+                 ) == 0)
     {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
