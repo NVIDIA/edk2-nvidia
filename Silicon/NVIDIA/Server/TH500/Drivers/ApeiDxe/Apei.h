@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -17,6 +17,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/ArmSmcLib.h>
 #include <Library/DxeServicesTableLib.h>
+#include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Protocol/AcpiTable.h>
@@ -29,7 +30,6 @@
 
 /* ACPI table creation default values */
 #define EFI_ACPI_OEM_ID            {'N','V','I','D','I','A'}
-#define EFI_ACPI_OEM_TABLE_ID      SIGNATURE_64('T','H','5','0','0',' ',' ',' ')
 #define EFI_ACPI_OEM_REVISION      0x00000001
 #define EFI_ACPI_CREATOR_ID        SIGNATURE_32('N','V','D','A')
 #define EFI_ACPI_CREATOR_REVISION  0x00000001

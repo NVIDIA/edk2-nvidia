@@ -28,6 +28,7 @@
   ArmPkg/ArmPkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
@@ -36,6 +37,7 @@
   DxeServicesTableLib
   IoLib
   DtPlatformDtbLoaderLib
+  PcdLib
   TimerLib
   TimeBaseLib
 
@@ -44,6 +46,9 @@
   gEfiApeiGetErrorSourcesGuid     # PROTOCOL ALWAYS_CONSUMED
   gEfiApeiSetTimeOfDayGuid        # PROTOCOL ALWAYS CONSUMED
   gNVIDIARasNsCommPcieDpcDataProtocolGuid
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
 
 [Depex]
   gEfiAcpiTableProtocolGuid

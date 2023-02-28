@@ -2,7 +2,7 @@
   SSDT Serial Port Fixup Library.
 
   Copyright (c) 2019 - 2021, Arm Limited. All rights reserved.<BR>
-  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -507,6 +507,9 @@ BuildSsdtSerialPortTable (
       Status
       ));
   }
+
+  // Patch Oem Table ID
+  (*Table)->OemTableId = PcdGet64 (PcdAcpiDefaultOemTableId);
 
 exit_handler:
   // Cleanup

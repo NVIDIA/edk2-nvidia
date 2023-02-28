@@ -232,7 +232,7 @@ UpdateSerialPortInfo (
       }
 
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = NULL;
-      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId    = PcdGet64 (PcdAcpiTegraUartOemTableId);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId    = PcdGet64 (PcdAcpiDefaultOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision   = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
@@ -713,6 +713,23 @@ ErrorExit:
   }
 
   return Status;
+}
+
+/** patch OEM Table IDs in pre compile AML code
+
+**/
+STATIC
+VOID
+EFIAPI
+PatchOemTableId (
+  VOID
+  )
+{
+  UINT32  AcpiTableArrayIndex;
+
+  for (AcpiTableArrayIndex = 0; AcpiTableArrayIndex < ARRAY_SIZE (AcpiTableArray); AcpiTableArrayIndex++) {
+    AcpiTableArray[AcpiTableArrayIndex]->OemTableId = PcdGet64 (PcdAcpiDefaultOemTableId);
+  }
 }
 
 /** patch thermal zone temperature ranges data in SSDT.
@@ -1516,6 +1533,8 @@ ConfigurationManagerDataDxeInitialize (
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
+  PatchOemTableId ();
 
   return gBS->InstallMultipleProtocolInterfaces (
                 &ImageHandle,

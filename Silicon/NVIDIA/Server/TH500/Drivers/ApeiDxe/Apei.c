@@ -39,7 +39,7 @@ SdeiSetupTable (
       .Length          = sizeof (EFI_ACPI_6_X_SDEI_TABLE),
       .Revision        = EFI_ACPI_6_X_SDEI_TABLE_REVISION,
       .OemId           = EFI_ACPI_OEM_ID,
-      .OemTableId      = EFI_ACPI_OEM_TABLE_ID,
+      .OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId),
       .OemRevision     = EFI_ACPI_OEM_REVISION,
       .CreatorId       = EFI_ACPI_CREATOR_ID,
       .CreatorRevision = EFI_ACPI_CREATOR_REVISION

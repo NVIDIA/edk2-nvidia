@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -126,7 +126,7 @@ HESTCreateAcpiTable (
       .Length          = sizeof (EFI_ACPI_6_4_HARDWARE_ERROR_SOURCE_TABLE_HEADER),
       .Revision        = EFI_ACPI_OEM_REVISION,
       .OemId           = EFI_ACPI_OEM_ID,
-      .OemTableId      = EFI_ACPI_OEM_TABLE_ID,
+      .OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId),
       .OemRevision     = EFI_ACPI_OEM_REVISION,
       .CreatorId       = EFI_ACPI_CREATOR_ID,
       .CreatorRevision = EFI_ACPI_CREATOR_REVISION
@@ -311,7 +311,7 @@ BERTCreateAcpiTable (
       .Length          = sizeof (EFI_ACPI_6_4_BOOT_ERROR_RECORD_TABLE_HEADER),
       .Revision        = EFI_ACPI_6_4_BOOT_ERROR_RECORD_TABLE_REVISION,
       .OemId           = EFI_ACPI_OEM_ID,
-      .OemTableId      = EFI_ACPI_OEM_TABLE_ID,
+      .OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId),
       .OemRevision     = EFI_ACPI_OEM_REVISION,
       .CreatorId       = EFI_ACPI_CREATOR_ID,
       .CreatorRevision = EFI_ACPI_CREATOR_REVISION
