@@ -361,10 +361,10 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
                             \_SB.C002.C008,
                             \_SB.C002.C009 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 CPU0"))
     }
@@ -382,10 +382,10 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
                             \_SB.C002.C013,
                             \_SB.C002.C014 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 CPU1"))
     }
@@ -403,10 +403,10 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
                             \_SB.C002.C01D,
                             \_SB.C002.C01E }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 CPU2"))
     }
@@ -424,10 +424,10 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
                             \_SB.C002.C026,
                             \_SB.C002.C027 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 CPU3"))
     }
@@ -445,10 +445,10 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
                             \_SB.C002.C02F,
                             \_SB.C002.C030 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 SOC0"))
     }
@@ -466,10 +466,10 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
                             \_SB.C002.C038,
                             \_SB.C002.C03A }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 SOC1"))
     }
@@ -487,10 +487,10 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
                             \_SB.C002.C042,
                             \_SB.C002.C043 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 SOC2"))
     }
@@ -508,10 +508,10 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
                             \_SB.C002.C04D,
                             \_SB.C002.C04E }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 SOC3"))
     }
@@ -524,40 +524,40 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
                             \_SB.C002.C051,
                             \_SB.C002.C052 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 SOC4"))
     }
 
     ThermalZone (TZ29) {
       Method(_TMP) { Return (\_SB.BPM2.TEMP (TH500_THERMAL_ZONE_TJ_MAX) )} // get current temp
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 TJMax"))
     }
 
     ThermalZone (TZ2A) {
       Method(_TMP) { Return (\_SB.BPM2.TEMP (TH500_THERMAL_ZONE_TJ_MIN) )} // get current temp
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 TJMin"))
     }
 
     ThermalZone (TZ2B) {
       Method(_TMP) { Return (\_SB.BPM2.TEMP (TH500_THERMAL_ZONE_TJ_AVG) )} // get current temp
-      Name(_TC1, 1)  // TODO: get correct values
-      Name(_TC2, 1)  // TODO: get correct values
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
-      Name(_TSP, 1)  // TODO: get correct values
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
       Name (_STR, Unicode ("Thermal Zone Skt2 TJAvg"))
     }

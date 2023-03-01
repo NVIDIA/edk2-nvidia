@@ -251,6 +251,9 @@
 #define TEMP_POLL_TIME_100MS       1                  // 100ms
 #define TH500_THERMAL_ZONE_PSV     90
 #define TH500_THERMAL_ZONE_CRT     95
+#define TH500_THERMAL_ZONE_TC1     2
+#define TH500_THERMAL_ZONE_TC2     8
+#define TH500_THERMAL_ZONE_TSP     1                  // 100ms
 
 // Power Meter
 #define TH500_MODULE_PWR                      0
