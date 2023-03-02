@@ -18,7 +18,7 @@ jobs:
   # Build a draft release.  After it is posted, the draft release can be edited
   # manually and published.
   Build-Draft-Release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     permissions:
       contents: write
     steps:
