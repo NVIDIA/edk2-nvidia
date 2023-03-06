@@ -181,13 +181,14 @@ IsValidRecord (
   UINT32      BufSize;
   VOID        *CrcBuf;
 
-  Buf    = NULL;
-  Status = NorFlashProtocol->Read (
-                               NorFlashProtocol,
-                               CurOffset,
-                               sizeof (DataHdr),
-                               &DataHdr
-                               );
+  Buf     = NULL;
+  IsValid = TRUE;
+  Status  = NorFlashProtocol->Read (
+                                NorFlashProtocol,
+                                CurOffset,
+                                sizeof (DataHdr),
+                                &DataHdr
+                                );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -833,6 +834,8 @@ WriteNextRecord (
   VOID                       *Buf;
   VOID                       *RecBuf;
   VOID                       *CrcBuf;
+
+  Buf = NULL;
 
   if (SocketNum >= MAX_SOCKETS) {
     DEBUG ((

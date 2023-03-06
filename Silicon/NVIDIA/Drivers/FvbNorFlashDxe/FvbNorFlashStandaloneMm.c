@@ -1277,10 +1277,9 @@ FVBNORInitialize (
   if (NorFlashProtocol == NULL) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a:%d Failed to get Socket0 NORFlash proto(%r)\n",
+      "%a:%d Failed to get Socket0 NORFlash proto\n",
       __FUNCTION__,
-      __LINE__,
-      Status
+      __LINE__
       ));
     return EFI_SUCCESS;
   }

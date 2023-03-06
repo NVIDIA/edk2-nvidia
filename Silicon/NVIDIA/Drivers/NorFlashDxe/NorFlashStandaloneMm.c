@@ -2,7 +2,7 @@
 
   NOR Flash Standalone MM Driver
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -991,61 +991,6 @@ NorFlashUniformErase (
 }
 
 /**
-  Erase data from NOR Flash.
-
-  @param[in]       This            Instance to protocol
-  @param[in]       MediaId         Media ID for the device
-  @param[in]       LBA             Logical block to start erasing from
-  @param[in, out]  Token           A pointer to the token associated with the
-                                   transaction.
-  @param[in]       Size            Number of bytes to be erased
-
-
-  @retval EFI_SUCCESS              Operation successful.
-  @retval others                   Error occurred
-**/
-EFI_STATUS
-NorFlashEraseBlock (
-  IN     EFI_ERASE_BLOCK_PROTOCOL  *This,
-  IN     UINT32                    MediaId,
-  IN     EFI_LBA                   LBA,
-  IN OUT EFI_ERASE_BLOCK_TOKEN     *Token,
-  IN     UINTN                     Size
-  )
-{
-  EFI_STATUS              Status;
-  NOR_FLASH_PRIVATE_DATA  *Private;
-
-  if ((This == NULL) ||
-      (Token == NULL) ||
-      (Size == 0))
-  {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  Private = NOR_FLASH_PRIVATE_DATA_FROM_ERASE_BLOCK_PROTOCOL (This);
-
-  if (MediaId != Private->FlashInstance) {
-    return EFI_MEDIA_CHANGED;
-  }
-
-  Status = NorFlashErase (
-             &Private->NorFlashProtocol,
-             LBA,
-             Size / Private->PrivateFlashAttributes.FlashAttributes.BlockSize,
-             FALSE
-             );
-
-  if (Token->Event != NULL) {
-    Token->TransactionStatus = Status;
-    Status                   = EFI_SUCCESS;
-    gBS->SignalEvent (Token->Event);
-  }
-
-  return Status;
-}
-
-/**
   Write single page data to NOR Flash.
 
   @param[in] This                  Instance to protocol
@@ -1277,74 +1222,6 @@ NorFlashWriteBlock (
 }
 
 /**
-  Check for flash part in device tree.
-
-  Looks through all subnodes of the QSPI node to see if any of them has
-  spiflash subnode.
-
-  @param[in]   Controller          The handle of the controller to test. This handle
-                                   must support a protocol interface that supplies
-                                   an I/O abstraction to the driver.
-
-  @retval EFI_SUCCESS              Operation successful.
-  @retval others                   Error occurred
-**/
-EFI_STATUS
-CheckNorFlashCompatibility (
-  IN EFI_HANDLE  Controller
-  )
-{
-  EFI_STATUS                        Status;
-  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode;
-  INTN                              Offset;
-  CONST VOID                        *Property;
-  INT32                             Length;
-
-  // Check whether device tree node protocol is available.
-  DeviceTreeNode = NULL;
-  Status         = gBS->HandleProtocol (
-                          Controller,
-                          &gNVIDIADeviceTreeNodeProtocolGuid,
-                          (VOID **)&DeviceTreeNode
-                          );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Offset = fdt_subnode_offset (
-             DeviceTreeNode->DeviceTreeBase,
-             DeviceTreeNode->NodeOffset,
-             "flash@0"
-             );
-  if (Offset >= 0) {
-    return EFI_SUCCESS;
-  }
-
-  Offset = fdt_subnode_offset (
-             DeviceTreeNode->DeviceTreeBase,
-             DeviceTreeNode->NodeOffset,
-             "spiflash@0"
-             );
-  if (Offset >= 0) {
-    Offset = fdt_subnode_offset (
-               DeviceTreeNode->DeviceTreeBase,
-               Offset,
-               "partition@0"
-               );
-    if (Offset >= 0) {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, Offset, "label", &Length);
-      if ((Property != NULL) && (Length != 0)) {
-        if (AsciiStrStr (Property, "flash") != NULL) {
-          return EFI_SUCCESS;
-        }
-      }
-    }
-  }
-
-  return EFI_UNSUPPORTED;
-}
-
-/**
   Starts a device controller or a bus controller.
 
   The Start() function is designed to be invoked from the EFI boot service ConnectController().
@@ -1520,37 +1397,6 @@ NorFlashInitialise (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to install NOR flash protocols\n", __FUNCTION__));
       goto ErrorExit;
-    }
-
-    if (PcdGetBool (PcdTegraNorBlockProtocols)) {
-      Media.MediaId   = Private->FlashInstance;
-      Media.BlockSize = Private->PrivateFlashAttributes.FlashAttributes.BlockSize;
-      Media.LastBlock = (Private->PrivateFlashAttributes.FlashAttributes.MemoryDensity /
-                         Private->PrivateFlashAttributes.FlashAttributes.BlockSize) - 1;
-
-      Private->BlockIoProtocol.Reset       = NULL;
-      Private->BlockIoProtocol.ReadBlocks  = NorFlashReadBlock;
-      Private->BlockIoProtocol.WriteBlocks = NorFlashWriteBlock;
-      Private->BlockIoProtocol.FlushBlocks = NULL;
-      Private->BlockIoProtocol.Revision    = EFI_BLOCK_IO_PROTOCOL_REVISION;
-      Private->BlockIoProtocol.Media       = &Media;
-
-      Private->EraseBlockProtocol.Revision               = EFI_ERASE_BLOCK_PROTOCOL_REVISION;
-      Private->EraseBlockProtocol.EraseLengthGranularity = 1;
-      Private->EraseBlockProtocol.EraseBlocks            = NorFlashEraseBlock;
-
-      Status = gBS->InstallMultipleProtocolInterfaces (
-                      &Private->NorFlashHandle,
-                      &gEfiBlockIoProtocolGuid,
-                      &Private->BlockIoProtocol,
-                      &gEfiEraseBlockProtocolGuid,
-                      &Private->EraseBlockProtocol,
-                      NULL
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Failed to install NOR flash block protocols\n", __FUNCTION__));
-        goto ErrorExit;
-      }
     }
 
     Private->ProtocolsInstalled = TRUE;
