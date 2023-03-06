@@ -318,6 +318,76 @@ PCIeFindCap (
 }
 
 STATIC
+BOOLEAN
+WaitForBit16 (
+  UINT32   cid,
+  UINT16   *feat,
+  UINT16   pos,
+  UINT32   count,
+  UINT32   time_us,
+  BOOLEAN  status
+  )
+{
+  UINT32  i = 0;
+
+  while (i < count) {
+    if (!!(*feat & BIT (pos)) != status) {
+      MicroSecondDelay (time_us);
+      i++;
+    } else {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+STATIC
+VOID
+RetrainLink (
+  PCIE_CONTROLLER_PRIVATE  *Private
+  )
+{
+  PCI_CAPABILITY_PCIEXP  *PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);
+
+  /* Wait for previous link training to complete */
+  if (WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 11, 10000, 100, FALSE)) {
+    /* Clear Link Bandwith */
+    PciExpCap->LinkStatus.Bits.LinkBandwidthManagement = 1;
+
+    /* Set Retrain Link */
+    PciExpCap->LinkControl2.Bits.TargetLinkSpeed = PciExpCap->LinkCapability.Bits.MaxLinkSpeed;
+    PciExpCap->LinkControl.Bits.RetrainLink      = 1;
+
+    /* Retraining: Wait for link training to clear */
+    if (WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 11, 10000, 100, FALSE)) {
+      /* Wait for Link Bandwith set */
+      if (WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 14, 10000, 100, TRUE)) {
+        /* Clear Link Bandwith */
+        PciExpCap->LinkStatus.Bits.LinkBandwidthManagement = 1;
+        /* Wait for 20 ms for link to appear */
+        MicroSecondDelay (20*1000);
+        DEBUG ((
+          EFI_D_ERROR,
+          "PCIe Controller-0x%x Link Status after re-train (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
+          Private->CtrlId,
+          PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
+          PciExpCap->LinkCapability.Bits.MaxLinkWidth,
+          PciExpCap->LinkStatus.Bits.CurrentLinkSpeed,
+          PciExpCap->LinkStatus.Bits.NegotiatedLinkWidth
+          ));
+      } else {
+        DEBUG ((EFI_D_ERROR, "PCIe Controller-0x%x wait for Link Bandwith Timeout\r\n", Private->CtrlId));
+      }
+    } else {
+      DEBUG ((EFI_D_ERROR, "PCIe Controller-0x%x Link Retrain Timeout\r\n", Private->CtrlId));
+    }
+  } else {
+    DEBUG ((EFI_D_ERROR, "PCIe Controller-0x%x Previous Link train Timeout\r\n", Private->CtrlId));
+  }
+}
+
+STATIC
 EFI_STATUS
 EFIAPI
 InitializeController (
@@ -325,12 +395,26 @@ InitializeController (
   IN  EFI_HANDLE           ControllerHandle
   )
 {
-  UINT64                    val;
-  UINT32                    count;
-  EFI_STATUS                Status;
-  NVIDIA_C2C_NODE_PROTOCOL  *C2cProtocol = NULL;
-  PCI_CAPABILITY_PCIEXP     *PciExpCap   = NULL;
-  UINT8                     C2cStatus;
+  UINT64                        val;
+  UINT32                        Socket, Ctrl;
+  EFI_STATUS                    Status;
+  NVIDIA_C2C_NODE_PROTOCOL      *C2cProtocol = NULL;
+  PCI_CAPABILITY_PCIEXP         *PciExpCap   = NULL;
+  UINT8                         C2cStatus;
+  VOID                          *Hob;
+  TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
+
+  Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
+  {
+    Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+  }
+
+  ASSERT (Mb1Config);
+
+  Socket = (Private->CtrlId >> 4) & 0xF;
+  Ctrl   = (Private->CtrlId) & 0xF;
 
   /* Program XAL */
   MmioWrite32 (Private->XalBase + XAL_RC_MEM_32BIT_BASE_HI, upper_32_bits (Private->MemBase));
@@ -382,42 +466,41 @@ InitializeController (
 
   /* Wait for link up */
   PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);
-  count     = 0;
-  do {
-    MicroSecondDelay (100);
-    if (PciExpCap->LinkStatus.Bits.DataLinkLayerLinkActive) {
-      DEBUG ((
-        EFI_D_ERROR,
-        "PCIe Controller-0x%x Link is UP (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
-        Private->CtrlId,
-        PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
-        PciExpCap->LinkCapability.Bits.MaxLinkWidth,
-        PciExpCap->LinkStatus.Bits.CurrentLinkSpeed,
-        PciExpCap->LinkStatus.Bits.NegotiatedLinkWidth
-        ));
-      Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&C2cProtocol);
-      if (!EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Requesting C2C Initialization\r\n", __FUNCTION__));
-        Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions, &C2cStatus);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a: C2C initialization mrq failed: %r\r\n", __FUNCTION__, Status));
-        } else {
-          DEBUG ((EFI_D_ERROR, "%a: C2C initialization mrq successful.\r\n", __FUNCTION__));
-          if (C2cStatus == C2C_STATUS_C2C_LINK_TRAIN_PASS) {
-            DEBUG ((EFI_D_ERROR, "%a: C2C link training successful.\r\n", __FUNCTION__));
-          } else {
-            DEBUG ((EFI_D_ERROR, "%a: C2C link training failed with error code: 0x%x\r\n", __FUNCTION__, C2cStatus));
-          }
-        }
-      }
 
-      break;
+  if ( WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 13, 10000, 100, TRUE)) {
+    DEBUG ((
+      EFI_D_ERROR,
+      "PCIe Controller-0x%x Link is UP (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
+      Private->CtrlId,
+      PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
+      PciExpCap->LinkCapability.Bits.MaxLinkWidth,
+      PciExpCap->LinkStatus.Bits.CurrentLinkSpeed,
+      PciExpCap->LinkStatus.Bits.NegotiatedLinkWidth
+      ));
+
+    /**
+     * Re-train link if disable_ltssm_auto_train set in BCT.
+     */
+    if (Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].DisableLTSSMAutoTrain) {
+      RetrainLink (Private);
     }
 
-    count++;
-  } while (count < 10000);
-
-  if (count == 10000) {
+    Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&C2cProtocol);
+    if (!EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Requesting C2C Initialization\r\n", __FUNCTION__));
+      Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions, &C2cStatus);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a: C2C initialization mrq failed: %r\r\n", __FUNCTION__, Status));
+      } else {
+        DEBUG ((EFI_D_ERROR, "%a: C2C initialization mrq successful.\r\n", __FUNCTION__));
+        if (C2cStatus == C2C_STATUS_C2C_LINK_TRAIN_PASS) {
+          DEBUG ((EFI_D_ERROR, "%a: C2C link training successful.\r\n", __FUNCTION__));
+        } else {
+          DEBUG ((EFI_D_ERROR, "%a: C2C link training failed with error code: 0x%x\r\n", __FUNCTION__, C2cStatus));
+        }
+      }
+    }
+  } else {
     DEBUG ((
       EFI_D_ERROR,
       "PCIe Controller-0x%x Link is DOWN (Capable: Gen-%d,x%d)\r\n",

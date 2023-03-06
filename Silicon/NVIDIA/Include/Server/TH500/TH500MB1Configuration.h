@@ -47,23 +47,25 @@ typedef struct {
     UINT64    features;
     struct {
       /* ASPM L1 support */
-      UINT64    EnableAspmL1    : 1;
+      UINT64    EnableAspmL1          : 1;
       /* ASPM L1.1 support */
-      UINT64    EnableAspmL1_1  : 1;
+      UINT64    EnableAspmL1_1        : 1;
       /* ASPM L1.2 support */
-      UINT64    EnableAspmL1_2  : 1;
+      UINT64    EnableAspmL1_2        : 1;
       /* PCI-PM L1.2 support */
-      UINT64    EnablePciPmL1_2 : 1;
+      UINT64    EnablePciPmL1_2       : 1;
       /* Availability of CLKREQ signal from RP to EP */
-      UINT64    SupportsClkReq  : 1;
+      UINT64    SupportsClkReq        : 1;
       /* Disable DLFE */
-      UINT64    DisableDLFE     : 1;
+      UINT64    DisableDLFE           : 1;
       /* Enable ECRC in the PCIe hierarchy */
-      UINT64    EnableECRC      : 1;
+      UINT64    EnableECRC            : 1;
       /* Disable DPC at RP */
-      UINT64    DisableDPCAtRP  : 1;
+      UINT64    DisableDPCAtRP        : 1;
+      /* Disable LTSSM link auto training */
+      UINT64    DisableLTSSMAutoTrain : 1;
       /* Reserved */
-      UINT64    reserved        : 56;
+      UINT64    reserved              : 55;
     };
   };
 
