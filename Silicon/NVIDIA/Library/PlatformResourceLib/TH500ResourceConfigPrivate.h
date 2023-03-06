@@ -16,7 +16,7 @@
 // NOTE The register map would change
 #define TEGRA_UART_SUPPORT_FLAG  0x6        // UART_0..1
 
-#define MAX_RETIRED_DRAM_PAGES  1024
+#define MAX_RETIRED_DRAM_PAGES  4096
 
 #define TEGRA_UART_ADDRESS_0  0x0c280000
 #define TEGRA_UART_ADDRESS_1  0x03100000
@@ -156,8 +156,8 @@ typedef struct {
   /**< CVB EEPROM data */
   UEFI_DECLARE_ALIGNED (TEGRABL_FRU_EEPROM_DATA CvbEeprom, 8);
 
-  /**< List of physical addresses of retired pages */
-  UEFI_DECLARE_ALIGNED (UINT64 RetiredDramPages[TH500_MAX_SOCKETS][MAX_RETIRED_DRAM_PAGES], 8);
+  /**< Address of list of physical addresses of retired pages */
+  UEFI_DECLARE_ALIGNED (UINT64 RetiredDramPageListAddr[TH500_MAX_SOCKETS], 8);
 
   /**< Bit mask to specify which sockets are enabled */
   UEFI_DECLARE_ALIGNED (UINT32 SocketMask, 8);
