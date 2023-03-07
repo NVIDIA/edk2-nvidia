@@ -303,4 +303,10 @@ InstallSmbiosType43Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
 
+EFI_STATUS
+EFIAPI
+InstallSmbiosTypeMemCm (
+  IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
+  );
+
 #endif

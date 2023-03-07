@@ -48,6 +48,7 @@
   ConfigurationSmbiosType43.c
   ConfigurationHbm.c
   ConfigurationIpmiDev.c
+  ConfigurationSmbiosMem.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

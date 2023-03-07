@@ -221,7 +221,6 @@
   #
   INF MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
   INF ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
-  INF Silicon/NVIDIA/Drivers/SmbiosOemDxe/SmbiosMiscOemDxe/SmbiosMiscOemDxe.inf
 
   #
   # Bds

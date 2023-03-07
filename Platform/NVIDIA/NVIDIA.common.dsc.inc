@@ -772,7 +772,6 @@
   #
   MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
   ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
-  Silicon/NVIDIA/Drivers/SmbiosOemDxe/SmbiosMiscOemDxe/SmbiosMiscOemDxe.inf
 
   #
   # Bds
@@ -995,6 +994,7 @@
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType38Lib/SmbiosType38Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType41Lib/SmbiosType41Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType43Lib/SmbiosType43Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType16Lib/SmbiosType16Lib.inf
 
       # AML Fixup
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtSerialPortLibArm/SsdtSerialPortLibArm.inf
