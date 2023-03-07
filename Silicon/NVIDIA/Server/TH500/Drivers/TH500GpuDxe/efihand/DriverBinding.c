@@ -43,6 +43,8 @@
 ///
 
 #define NVIDIA_GPUDEVICELIBDRIVER_VERSION  0x10
+#define EGM_SOCKET_ADDRESS_MASK            ((UINT64)(~(BIT45|BIT44)))
+#define MaskEgmBaseSocketAddress(addr)  ((addr) & EGM_SOCKET_ADDRESS_MASK)
 
 /** Diagnostic dump of GPU Driver Binding Private Data
     @param[in] This                         Private Data structure.
@@ -423,7 +425,7 @@ NVIDIAGpuDriverStart (
         goto ErrorHandler_RestorePCIAttributes;
       }
 
-      DEBUG ((DEBUG_INFO, "%a: GpuDsdAmlNodeProtocol 'GetEgmBasePa' for instance:'%p', base PA = 0x%lx\n", __FUNCTION__, GpuDsdAmlGeneration, EgmBasePa));
+      DEBUG ((DEBUG_INFO, "%a: GpuDsdAmlNodeProtocol 'GetEgmBasePa' for instance:'%p', base PA = 0x%016lx\n", __FUNCTION__, GpuDsdAmlGeneration, EgmBasePa));
 
       Status = GpuDsdAmlGeneration->GetEgmSize (GpuDsdAmlGeneration, &EgmSize);
       if (EFI_ERROR (Status)) {
@@ -431,10 +433,14 @@ NVIDIAGpuDriverStart (
         goto ErrorHandler_RestorePCIAttributes;
       }
 
-      DEBUG ((DEBUG_INFO, "%a: GpuDsdAmlNodeProtocol 'GetEgmSize' for instance:'%p', size = 0x%lx\n", __FUNCTION__, GpuDsdAmlGeneration, EgmSize));
+      DEBUG ((DEBUG_INFO, "%a: GpuDsdAmlNodeProtocol 'GetEgmSize' for instance:'%p', size = 0x%016lx\n", __FUNCTION__, GpuDsdAmlGeneration, EgmSize));
 
       if (GpuMode == GPU_MODE_SHH) {
-        Status = FspConfigurationEgmBaseAndSize (PciIo, EgmBasePa, EgmSize);
+        UINT64  EgmBasePaSocketMasked = MaskEgmBaseSocketAddress (EgmBasePa);
+        DEBUG ((DEBUG_ERROR, "%a: [Controller:%p] EGM_SOCKET_ADDRESS_MASK = 0x%016lx\n", __FUNCTION__, ControllerHandle, EGM_SOCKET_ADDRESS_MASK));
+        DEBUG ((DEBUG_ERROR, "%a: [Controller:%p] EgmBasePaSocketMasked = 0x%016lx\n", __FUNCTION__, ControllerHandle, EgmBasePaSocketMasked));
+        /* Need to adjust for size */
+        Status = FspConfigurationEgmBaseAndSize (PciIo, EgmBasePaSocketMasked, EgmSize);
         /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
         ASSERT_EFI_ERROR (Status);
 
