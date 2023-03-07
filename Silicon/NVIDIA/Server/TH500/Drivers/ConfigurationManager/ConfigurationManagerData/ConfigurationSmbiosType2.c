@@ -40,7 +40,7 @@ InstallSmbiosType2Cm (
 {
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo    = Private->Repo;
   VOID                            *DtbBase = Private->DtbBase;
-  CM_STD_BASEBOARD_INFO           *BaseboardInfo;
+  CM_SMBIOS_BASEBOARD_INFO        *BaseboardInfo;
   UINT32                          NumBaseboards;
   CONST VOID                      *Property;
   CONST CHAR8                     *PropertyStr;
@@ -63,8 +63,8 @@ InstallSmbiosType2Cm (
     }
 
     BaseboardInfo = ReallocatePool (
-                      sizeof (CM_STD_BASEBOARD_INFO) * (NumBaseboards),
-                      sizeof (CM_STD_BASEBOARD_INFO) * (NumBaseboards + 1),
+                      sizeof (CM_SMBIOS_BASEBOARD_INFO) * (NumBaseboards),
+                      sizeof (CM_SMBIOS_BASEBOARD_INFO) * (NumBaseboards + 1),
                       BaseboardInfo
                       );
     if (BaseboardInfo == NULL) {
@@ -157,9 +157,9 @@ InstallSmbiosType2Cm (
     );
   Private->CmSmbiosTableCount++;
 
-  Repo->CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjBaseboardInfo);
+  Repo->CmObjectId    = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjBaseboardInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = NumBaseboards * sizeof (CM_STD_BASEBOARD_INFO);
+  Repo->CmObjectSize  = NumBaseboards * sizeof (CM_SMBIOS_BASEBOARD_INFO);
   Repo->CmObjectCount = NumBaseboards;
   Repo->CmObjectPtr   = BaseboardInfo;
   Repo++;

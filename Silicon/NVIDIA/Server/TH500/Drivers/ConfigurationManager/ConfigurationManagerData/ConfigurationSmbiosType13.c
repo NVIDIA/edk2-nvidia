@@ -204,7 +204,7 @@ InstallSmbiosType13Cm (
   )
 {
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
-  CM_STD_BIOS_LANGUAGE_INFO       *BiosLanguageInfo;
+  CM_SMBIOS_BIOS_LANGUAGE_INFO    *BiosLanguageInfo;
   EFI_STATUS                      Status;
   CHAR8                           *LangCodes;
   UINT8                           CodeSize;
@@ -237,7 +237,7 @@ InstallSmbiosType13Cm (
     return EFI_NOT_FOUND;
   }
 
-  BiosLanguageInfo = (CM_STD_BIOS_LANGUAGE_INFO *)AllocateZeroPool (sizeof (CM_STD_BIOS_LANGUAGE_INFO));
+  BiosLanguageInfo = (CM_SMBIOS_BIOS_LANGUAGE_INFO *)AllocateZeroPool (sizeof (CM_SMBIOS_BIOS_LANGUAGE_INFO));
 
   Language = (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * LANG_SIZE_RFC4646);
 
@@ -283,9 +283,9 @@ InstallSmbiosType13Cm (
   //
   // Install CM object for type 13
   //
-  Repo->CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjBiosLanguageInfo);
+  Repo->CmObjectId    = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjBiosLanguageInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = sizeof (CM_STD_BIOS_LANGUAGE_INFO);
+  Repo->CmObjectSize  = sizeof (CM_SMBIOS_BIOS_LANGUAGE_INFO);
   Repo->CmObjectCount = 1;
   Repo->CmObjectPtr   = BiosLanguageInfo;
   Repo++;

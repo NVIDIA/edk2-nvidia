@@ -89,24 +89,24 @@ InstallSmbiosType41Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   )
 {
-  EDKII_PLATFORM_REPOSITORY_INFO       *Repo    = Private->Repo;
-  VOID                                 *DtbBase = Private->DtbBase;
-  CM_STD_ONBOARD_DEVICE_EXTENDED_INFO  *OnboardDeviceExInfo;
-  EFI_STATUS                           Status;
-  CONST VOID                           *Property;
-  CONST CHAR8                          *PropertyStr;
-  INT32                                Length;
-  UINTN                                Index;
-  UINTN                                NumOnboardDevices;
-  INT32                                NodeOffset;
-  UINT8                                DeviceType;
-  CHAR8                                Type41NodeStr[] = "/firmware/smbios/type41@xx";
-  DEVICE_TYPE_INSTANCE                 *DeviceTypeInstances;
-  UINTN                                DeviceTypeInstanceCount;
-  UINT32                               VendorDeviceId;
-  UINT32                               SegmentNum;
-  UINT32                               BusNum;
-  UINT32                               DevFuncNum;
+  EDKII_PLATFORM_REPOSITORY_INFO          *Repo    = Private->Repo;
+  VOID                                    *DtbBase = Private->DtbBase;
+  CM_SMBIOS_ONBOARD_DEVICE_EXTENDED_INFO  *OnboardDeviceExInfo;
+  EFI_STATUS                              Status;
+  CONST VOID                              *Property;
+  CONST CHAR8                             *PropertyStr;
+  INT32                                   Length;
+  UINTN                                   Index;
+  UINTN                                   NumOnboardDevices;
+  INT32                                   NodeOffset;
+  UINT8                                   DeviceType;
+  CHAR8                                   Type41NodeStr[] = "/firmware/smbios/type41@xx";
+  DEVICE_TYPE_INSTANCE                    *DeviceTypeInstances;
+  UINTN                                   DeviceTypeInstanceCount;
+  UINT32                                  VendorDeviceId;
+  UINT32                                  SegmentNum;
+  UINT32                                  BusNum;
+  UINT32                                  DevFuncNum;
 
   NumOnboardDevices       = 0;
   OnboardDeviceExInfo     = NULL;
@@ -123,8 +123,8 @@ InstallSmbiosType41Cm (
     }
 
     OnboardDeviceExInfo = ReallocatePool (
-                            sizeof (CM_STD_ONBOARD_DEVICE_EXTENDED_INFO) * (NumOnboardDevices),
-                            sizeof (CM_STD_ONBOARD_DEVICE_EXTENDED_INFO) * (NumOnboardDevices + 1),
+                            sizeof (CM_SMBIOS_ONBOARD_DEVICE_EXTENDED_INFO) * (NumOnboardDevices),
+                            sizeof (CM_SMBIOS_ONBOARD_DEVICE_EXTENDED_INFO) * (NumOnboardDevices + 1),
                             OnboardDeviceExInfo
                             );
     if (OnboardDeviceExInfo == NULL) {
@@ -215,9 +215,9 @@ InstallSmbiosType41Cm (
   //
   // Install CM object for type 41
   //
-  Repo->CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjOnboardDeviceExInfo);
+  Repo->CmObjectId    = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjOnboardDeviceExInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = sizeof (CM_STD_ONBOARD_DEVICE_EXTENDED_INFO) * NumOnboardDevices;
+  Repo->CmObjectSize  = sizeof (CM_SMBIOS_ONBOARD_DEVICE_EXTENDED_INFO) * NumOnboardDevices;
   Repo->CmObjectCount = NumOnboardDevices;
   Repo->CmObjectPtr   = OnboardDeviceExInfo;
   if ((UINTN)Repo < Private->RepoEnd) {

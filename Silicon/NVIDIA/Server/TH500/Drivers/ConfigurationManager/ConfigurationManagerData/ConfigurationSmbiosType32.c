@@ -39,13 +39,13 @@ InstallSmbiosType32Cm (
   )
 {
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
-  CM_STD_SYSTEM_BOOT_INFO         *SystemBootInfo;
+  CM_SMBIOS_SYSTEM_BOOT_INFO      *SystemBootInfo;
   EFI_STATUS                      Status;
 
   Repo   = Private->Repo;
   Status =  EFI_SUCCESS;
 
-  SystemBootInfo = (CM_STD_SYSTEM_BOOT_INFO *)AllocateZeroPool (sizeof (CM_STD_SYSTEM_BOOT_INFO));
+  SystemBootInfo = (CM_SMBIOS_SYSTEM_BOOT_INFO *)AllocateZeroPool (sizeof (CM_SMBIOS_SYSTEM_BOOT_INFO));
   if (SystemBootInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: memory allocation failed\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
@@ -68,9 +68,9 @@ InstallSmbiosType32Cm (
   //
   // Install CM object for type 32
   //
-  Repo->CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjSystemBootInfo);
+  Repo->CmObjectId    = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjSystemBootInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = sizeof (CM_STD_SYSTEM_BOOT_INFO);
+  Repo->CmObjectSize  = sizeof (CM_SMBIOS_SYSTEM_BOOT_INFO);
   Repo->CmObjectCount = 1;
   Repo->CmObjectPtr   = SystemBootInfo;
   Repo++;

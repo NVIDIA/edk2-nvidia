@@ -102,7 +102,7 @@ InstallSmbiosType1Cm (
 {
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo    = Private->Repo;
   VOID                            *DtbBase = Private->DtbBase;
-  CM_STD_SYSTEM_INFO              *SystemInfo;
+  CM_SMBIOS_SYSTEM_INFO           *SystemInfo;
   EFI_STATUS                      Status;
   INTN                            DtbOffset;
   CONST VOID                      *Property;
@@ -115,7 +115,7 @@ InstallSmbiosType1Cm (
   //
   // Allocate and zero out System Info. The strings that are NULL will be set as "Unknown"
   //
-  SystemInfo = (CM_STD_SYSTEM_INFO *)AllocateZeroPool (sizeof (CM_STD_SYSTEM_INFO));
+  SystemInfo = (CM_SMBIOS_SYSTEM_INFO *)AllocateZeroPool (sizeof (CM_SMBIOS_SYSTEM_INFO));
   if (SystemInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for system info\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
@@ -202,9 +202,9 @@ InstallSmbiosType1Cm (
   //
   // Install CM object for type 1
   //
-  Repo->CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjSystemInfo);
+  Repo->CmObjectId    = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjSystemInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = sizeof (CM_STD_SYSTEM_INFO);
+  Repo->CmObjectSize  = sizeof (CM_SMBIOS_SYSTEM_INFO);
   Repo->CmObjectCount = 1;
   Repo->CmObjectPtr   = SystemInfo;
   Repo++;

@@ -132,7 +132,7 @@ InstallSmbiosType0Cm (
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo    = Private->Repo;
   VOID                            *DtbBase = Private->DtbBase;
   INTN                            DtbOffset;
-  CM_STD_BIOS_INFO                *BiosInfo;
+  CM_SMBIOS_BIOS_INFO             *BiosInfo;
   CHAR16                          *Vendor;
   CHAR16                          *Version;
   CHAR16                          *ReleaseDate;
@@ -148,7 +148,7 @@ InstallSmbiosType0Cm (
   //
   // Allocate and zero out Bios Info
   //
-  BiosInfo = (CM_STD_BIOS_INFO *)AllocateZeroPool (sizeof (CM_STD_BIOS_INFO));
+  BiosInfo = (CM_SMBIOS_BIOS_INFO *)AllocateZeroPool (sizeof (CM_SMBIOS_BIOS_INFO));
   if (BiosInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate bios info.\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
@@ -246,9 +246,9 @@ InstallSmbiosType0Cm (
   //
   // Install CM object for type 0
   //
-  Repo->CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjBiosInfo);
+  Repo->CmObjectId    = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjBiosInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = sizeof (CM_STD_BIOS_INFO);
+  Repo->CmObjectSize  = sizeof (CM_SMBIOS_BIOS_INFO);
   Repo->CmObjectCount = 1;
   Repo->CmObjectPtr   = BiosInfo;
   Repo++;

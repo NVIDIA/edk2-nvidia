@@ -41,7 +41,7 @@ InstallSmbiosType11Cm (
 {
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo    = Private->Repo;
   VOID                            *DtbBase = Private->DtbBase;
-  CM_STD_OEM_STRINGS              *OemStrings;
+  CM_SMBIOS_OEM_STRINGS           *OemStrings;
   UINT32                          NumOemStrings;
   CONST CHAR8                     *PropertyStr;
   INT32                           Length;
@@ -59,7 +59,7 @@ InstallSmbiosType11Cm (
     return RETURN_NOT_FOUND;
   }
 
-  OemStrings = (CM_STD_OEM_STRINGS *)AllocateZeroPool (sizeof (CM_STD_OEM_STRINGS));
+  OemStrings = (CM_SMBIOS_OEM_STRINGS *)AllocateZeroPool (sizeof (CM_SMBIOS_OEM_STRINGS));
   if (OemStrings == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for OEM Strings\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
@@ -104,9 +104,9 @@ InstallSmbiosType11Cm (
     );
   Private->CmSmbiosTableCount++;
 
-  Repo->CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjOemStrings);
+  Repo->CmObjectId    = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjOemStrings);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = sizeof (CM_STD_OEM_STRINGS);
+  Repo->CmObjectSize  = sizeof (CM_SMBIOS_OEM_STRINGS);
   Repo->CmObjectCount = 1;
   Repo->CmObjectPtr   = OemStrings;
   Repo++;

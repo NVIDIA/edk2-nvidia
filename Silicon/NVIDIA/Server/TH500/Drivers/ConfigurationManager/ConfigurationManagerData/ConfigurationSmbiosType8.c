@@ -39,7 +39,7 @@ InstallSmbiosType8Cm (
 {
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo    = Private->Repo;
   VOID                            *DtbBase = Private->DtbBase;
-  CM_STD_PORT_CONNECTOR_INFO      *PortConnectorInfo;
+  CM_SMBIOS_PORT_CONNECTOR_INFO   *PortConnectorInfo;
   CONST VOID                      *Property;
   CONST CHAR8                     *PropertyStr;
   INT32                           Length;
@@ -59,8 +59,8 @@ InstallSmbiosType8Cm (
     }
 
     PortConnectorInfo = ReallocatePool (
-                          sizeof (CM_STD_PORT_CONNECTOR_INFO) * (NumPortConnectors),
-                          sizeof (CM_STD_PORT_CONNECTOR_INFO) * (NumPortConnectors + 1),
+                          sizeof (CM_SMBIOS_PORT_CONNECTOR_INFO) * (NumPortConnectors),
+                          sizeof (CM_SMBIOS_PORT_CONNECTOR_INFO) * (NumPortConnectors + 1),
                           PortConnectorInfo
                           );
     if (PortConnectorInfo == NULL) {
@@ -119,9 +119,9 @@ InstallSmbiosType8Cm (
   //
   // Install CM object for type 8
   //
-  Repo->CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjPortConnectorInfo);
+  Repo->CmObjectId    = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjPortConnectorInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = sizeof (CM_STD_PORT_CONNECTOR_INFO) * NumPortConnectors;
+  Repo->CmObjectSize  = sizeof (CM_SMBIOS_PORT_CONNECTOR_INFO) * NumPortConnectors;
   Repo->CmObjectCount = NumPortConnectors;
   Repo->CmObjectPtr   = PortConnectorInfo;
   if ((UINTN)Repo < Private->RepoEnd) {

@@ -90,7 +90,7 @@ InstallSmbiosType3Cm (
 {
   EDKII_PLATFORM_REPOSITORY_INFO    *Repo    = Private->Repo;
   VOID                              *DtbBase = Private->DtbBase;
-  CM_STD_ENCLOSURE_INFO             *EnclosureInfo;
+  CM_SMBIOS_ENCLOSURE_INFO          *EnclosureInfo;
   EFI_STATUS                        Status;
   INTN                              Type3ContainedElementOffset;
   CONST VOID                        *Property;
@@ -149,8 +149,8 @@ InstallSmbiosType3Cm (
     }
 
     EnclosureInfo = ReallocatePool (
-                      sizeof (CM_STD_ENCLOSURE_INFO) * (NumEnclosures),
-                      sizeof (CM_STD_ENCLOSURE_INFO) * (NumEnclosures + 1),
+                      sizeof (CM_SMBIOS_ENCLOSURE_INFO) * (NumEnclosures),
+                      sizeof (CM_SMBIOS_ENCLOSURE_INFO) * (NumEnclosures + 1),
                       EnclosureInfo
                       );
     if (EnclosureInfo == NULL) {
@@ -318,9 +318,9 @@ InstallSmbiosType3Cm (
   //
   // Install CM object for type 3
   //
-  Repo->CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjEnclosureInfo);
+  Repo->CmObjectId    = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjEnclosureInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = NumEnclosures * sizeof (CM_STD_ENCLOSURE_INFO);
+  Repo->CmObjectSize  = NumEnclosures * sizeof (CM_SMBIOS_ENCLOSURE_INFO);
   Repo->CmObjectCount = NumEnclosures;
   Repo->CmObjectPtr   = EnclosureInfo;
   if ((UINTN)Repo < Private->RepoEnd) {

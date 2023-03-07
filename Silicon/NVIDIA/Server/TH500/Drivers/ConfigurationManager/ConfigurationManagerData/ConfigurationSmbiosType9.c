@@ -48,7 +48,7 @@ InstallSmbiosType9Cm (
 {
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo    = Private->Repo;
   VOID                            *DtbBase = Private->DtbBase;
-  CM_STD_SYSTEM_SLOTS_INFO        *SystemSlotInfo;
+  CM_SMBIOS_SYSTEM_SLOTS_INFO     *SystemSlotInfo;
   UINT32                          NumSystemSlots;
   CONST VOID                      *Property;
   CONST CHAR8                     *PropertyStr;
@@ -104,8 +104,8 @@ InstallSmbiosType9Cm (
     }
 
     SystemSlotInfo = ReallocatePool (
-                       sizeof (CM_STD_SYSTEM_SLOTS_INFO) * (NumSystemSlots),
-                       sizeof (CM_STD_SYSTEM_SLOTS_INFO) * (NumSystemSlots + 1),
+                       sizeof (CM_SMBIOS_SYSTEM_SLOTS_INFO) * (NumSystemSlots),
+                       sizeof (CM_SMBIOS_SYSTEM_SLOTS_INFO) * (NumSystemSlots + 1),
                        SystemSlotInfo
                        );
     if (SystemSlotInfo == NULL) {
@@ -254,9 +254,9 @@ InstallSmbiosType9Cm (
   //
   // Install CM object for type 9
   //
-  Repo->CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjSystemSlotInfo);
+  Repo->CmObjectId    = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjSystemSlotInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = NumSystemSlots * sizeof (CM_STD_SYSTEM_SLOTS_INFO);
+  Repo->CmObjectSize  = NumSystemSlots * sizeof (CM_SMBIOS_SYSTEM_SLOTS_INFO);
   Repo->CmObjectCount = NumSystemSlots;
   Repo->CmObjectPtr   = SystemSlotInfo;
   Repo++;

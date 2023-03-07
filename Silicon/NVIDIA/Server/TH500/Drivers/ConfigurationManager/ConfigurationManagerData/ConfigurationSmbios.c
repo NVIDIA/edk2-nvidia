@@ -160,7 +160,9 @@ InstallCmSmbiosTableList (
   //
   for (Index = 0; Index < ARRAY_SIZE (CmInstallSmbiosRecords); Index++) {
     Status = CmInstallSmbiosRecords[Index].Function (Private);
-    DEBUG ((DEBUG_INFO, "%a: Install CM object of SMBIOS Type %d, Status = %r.\n", __FUNCTION__, CmInstallSmbiosRecords[Index].Type, Status));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Install CM object of SMBIOS Type %d, Status = %r.\n", __FUNCTION__, CmInstallSmbiosRecords[Index].Type, Status));
+    }
   }
 
   //

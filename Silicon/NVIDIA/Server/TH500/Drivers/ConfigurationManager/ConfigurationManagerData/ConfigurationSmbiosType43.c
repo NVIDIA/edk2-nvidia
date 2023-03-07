@@ -46,7 +46,7 @@ InstallSmbiosType43Cm (
 {
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo    = Private->Repo;
   VOID                            *DtbBase = Private->DtbBase;
-  CM_STD_TPM_DEVICE_INFO          *TpmInfo;
+  CM_SMBIOS_TPM_DEVICE_INFO       *TpmInfo;
   EFI_STATUS                      Status;
   INTN                            DtbOffset;
   CONST VOID                      *Property;
@@ -92,7 +92,7 @@ InstallSmbiosType43Cm (
   //
   // Allocate and zero out TPM Info. The strings that are NULL will be set as "Unknown"
   //
-  TpmInfo = (CM_STD_TPM_DEVICE_INFO *)AllocateZeroPool (sizeof (CM_STD_TPM_DEVICE_INFO));
+  TpmInfo = (CM_SMBIOS_TPM_DEVICE_INFO *)AllocateZeroPool (sizeof (CM_SMBIOS_TPM_DEVICE_INFO));
   if (TpmInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for TPM info\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
@@ -121,9 +121,9 @@ InstallSmbiosType43Cm (
   //
   // Install CM object for type 43
   //
-  Repo->CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjTpmDeviceInfo);
+  Repo->CmObjectId    = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjTpmDeviceInfo);
   Repo->CmObjectToken = CM_NULL_TOKEN;
-  Repo->CmObjectSize  = sizeof (CM_STD_TPM_DEVICE_INFO);
+  Repo->CmObjectSize  = sizeof (CM_SMBIOS_TPM_DEVICE_INFO);
   Repo->CmObjectCount = 1;
   Repo->CmObjectPtr   = TpmInfo;
   Repo++;
