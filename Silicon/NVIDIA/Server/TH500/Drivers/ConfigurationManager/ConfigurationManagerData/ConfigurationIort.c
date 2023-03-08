@@ -926,7 +926,6 @@ STATIC CONST IORT_DEVICE_NODE_MAP  mIortDevTypeMap[] = {
   { EArmObjSmmuV3,         "arm,smmu-v3",           SetupIortNodeForSmmuV3,   NULL,            NULL          },
   { EArmObjRootComplex,    "nvidia,th500-pcie",     SetupIortNodeForPciRc,    NULL,            NULL          },
   { EArmObjNamedComponent, "nvidia,tegra186-qspi",  SetupIortNodeForNComp,    "socket0_qspi1", "\\_SB_.QSP1" },
-  { EArmObjNamedComponent, "nvidia,smmu_test",      SetupIortNodeForNComp,    NULL,            "\\_SB_.TEST" },
   { EArmObjNamedComponent, "nvidia,th500-soc-hwpm", SetupIortNodeForNComp,    NULL,            "\\_SB_.HWP0" },
   { EArmObjNamedComponent, "nvidia,th500-psc",      SetupIortNodeForNComp,    NULL,            "\\_SB_.PSC0" },
   { EArmObjMax,            NULL,                    NULL,                     NULL,            NULL          }
