@@ -92,11 +92,16 @@ formset
     name  = DgpuDtEfifbSupport,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+
   efivarstore NVIDIA_REDFISH_HOST_INTERFACE_ENABLED,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
     name  = RedfishHostInterface,
     guid  = NVIDIA_TOKEN_SPACE_GUID;
 
+  efivarstore NVIDIA_PRODUCT_INFO,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name = ProductInfo,
+    guid = NVIDIA_PUBLIC_VARIABLE_GUID;
   //
   // Main form for NVIDIA Configuration
   //
@@ -157,6 +162,11 @@ formset
         prompt = STRING_TOKEN(STR_DEBUG_CONFIG_FORM_TITLE),
         help   = STRING_TOKEN(STR_DEBUG_CONFIG_FORM_HELP);
     endif;
+
+    goto NVIDIA_PRODUCT_INFO_FORM_ID,
+        prompt = STRING_TOKEN(STR_PRODUCT_INFO_TITLE),
+        help   = STRING_TOKEN(STR_PRODUCT_INFO_HELP),
+        key    = KEY_PRODUCT_INFO;
 
     text
       help   = STRING_TOKEN(STR_RESET_VARIABLES_HELP),
@@ -355,6 +365,18 @@ formset
 
   endform;
 
+  form formid = NVIDIA_PRODUCT_INFO_FORM_ID,
+    title = STRING_TOKEN(STR_PRODUCT_INFO_TITLE);
+    subtitle text = STRING_TOKEN(STR_NULL);
+    string varid = ProductInfo.ChassisAssetTag,
+      questionid = KEY_PRODUCT_CHASSIS_ASSET_TAG,
+      prompt   = STRING_TOKEN(STR_PRODUCT_CHASSIS_ASSET_TAG),
+      help     = STRING_TOKEN(STR_PRODUCT_CHASSIS_ASSET_TAG_HELP),
+      flags   = INTERACTIVE | RESET_REQUIRED,
+      minsize  = 0,
+      maxsize  = ASSET_TAG_MAX_LEN,
+    endstring;
+  endform;
   ADD_SOCKET_FORM(0)
   ADD_SOCKET_FORM(1)
   ADD_SOCKET_FORM(2)

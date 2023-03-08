@@ -15,7 +15,7 @@
 #include <ConfigurationManagerObject.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
-
+#include <NVIDIAConfiguration.h>
 #include "ConfigurationSmbiosPrivate.h"
 
 CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType3 = {
@@ -103,14 +103,16 @@ InstallSmbiosType3Cm (
   UINT32                            NumEnclosures;
   CONTAINED_ELEMENT                 *ContainedElements;
   UINT8                             ContainedElementCount;
-  UINTN                             AssetTagStrSize;
+  UINTN                             ProductInfoSize;
   CHAR8                             *ManufacturerStr = NULL;
   CHAR8                             *SkuNumberStr    = NULL;
   CHAR8                             *SerialNumberStr = NULL;
   CHAR8                             *AssetTagStr     = NULL;
   CHAR8                             *VersionStr      = NULL;
   SMBIOS_TABLE_TYPE3                *Type3RecordPcd;
-  CHAR16                            AssetTagVariableName[]     = L"ChassisAssetTag??";
+  NVIDIA_PRODUCT_INFO               ProductInfo;
+  UINTN                             AssetTagLenWithNullTerminator;
+  CHAR16                            ProductInfoVariableName[]  = L"ProductInfo";
   CHAR8                             Type3NodeStr[]             = "/firmware/smbios/type3@xx";
   CHAR8                             DtContainedElementFormat[] = "/firmware/smbios/type3@xx/contained-element@xx";
   TYPE3_STRING_OVERRIDE_PARAMETERS  StringOverrideArray[]      = {
@@ -118,10 +120,16 @@ InstallSmbiosType3Cm (
     { &VersionStr,      "version"      }
   };
 
-  NumEnclosures   = 0;
-  AssetTagStrSize = 0;
-  EnclosureInfo   = NULL;
-  Type3RecordPcd  = (SMBIOS_TABLE_TYPE3 *)PcdGetPtr (PcdType3Info);
+  NumEnclosures                 = 0;
+  ProductInfoSize               = sizeof (ProductInfo);
+  EnclosureInfo                 = NULL;
+  Type3RecordPcd                = (SMBIOS_TABLE_TYPE3 *)PcdGetPtr (PcdType3Info);
+  AssetTagLenWithNullTerminator = 0;
+
+  Status = gRT->GetVariable (ProductInfoVariableName, &gNVIDIAPublicVariableGuid, NULL, &ProductInfoSize, &ProductInfo);
+  if (Status == EFI_SUCCESS) {
+    AssetTagLenWithNullTerminator = StrSize (ProductInfo.ChassisAssetTag);
+  }
 
   for (Type3Index = 0; Type3Index < MAX_TYPE3_COUNT; Type3Index++) {
     //
@@ -251,27 +259,15 @@ InstallSmbiosType3Cm (
     EnclosureInfo[NumEnclosures].ThermalState     = Type3RecordPcd->ThermalState;
     EnclosureInfo[NumEnclosures].SecurityStatus   = Type3RecordPcd->SecurityStatus;
 
-    UnicodeSPrint (AssetTagVariableName, sizeof (AssetTagVariableName), L"ChassisAssetTag%d", Type3Index);
     //
     // Get asset tag info from UEFI variable.
     //
     AssetTagStr = NULL;
-    Status      = gRT->GetVariable (AssetTagVariableName, &gNVIDIAPublicVariableGuid, NULL, &AssetTagStrSize, AssetTagStr);
-    if (Status == EFI_BUFFER_TOO_SMALL) {
-      AssetTagStr = AllocateZeroPool (AssetTagStrSize + 1);
-      if (AssetTagStr == NULL) {
-        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate asset tag info, size: %u\n", __FUNCTION__, AssetTagStrSize));
-      } else {
-        Status = gRT->GetVariable (AssetTagVariableName, &gNVIDIAPublicVariableGuid, NULL, &AssetTagStrSize, AssetTagStr);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((
-            DEBUG_ERROR,
-            "%a: Failed getting %s: %r\n",
-            __FUNCTION__,
-            AssetTagVariableName,
-            Status
-            ));
-        }
+
+    if ((ChassisType != MiscChassisBladeEnclosure) && (AssetTagLenWithNullTerminator != 0)) {
+      AssetTagStr = AllocateZeroPool (AssetTagLenWithNullTerminator);
+      if (AssetTagStr != NULL) {
+        UnicodeStrToAsciiStrS (ProductInfo.ChassisAssetTag, AssetTagStr, AssetTagLenWithNullTerminator);
       }
     }
 

@@ -631,6 +631,11 @@
 #string STR_HOST_INTERFACE_ENABLED_PROMPT #language en-US "Enable Redfish Host Interface"
 #string STR_HOST_INTERFACE_ENABLED_HELP   #language en-US "Enable/Disable Redfish Host Interface. When Redfish Host Interface is disabled, host OS can not communicate with BMC via Host interface."
 
+#string STR_PRODUCT_INFO_TITLE             #language en-US "Product Information"
+#string STR_PRODUCT_INFO_HELP              #language en-US "Product Information"
+#string STR_PRODUCT_CHASSIS_ASSET_TAG      #language en-US "Product Asset Tag"
+#string STR_PRODUCT_CHASSIS_ASSET_TAG_HELP #language en-US "Set the Product Asset Tag. The maximum length is 32 characters."
+
 #string STR_NULL                         #language en-US ""
 
 #string STR_DISABLED                     #language en-US  "Disabled"

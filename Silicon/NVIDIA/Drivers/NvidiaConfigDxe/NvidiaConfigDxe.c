@@ -1311,10 +1311,13 @@ InitializeSettings (
   VOID                                *AcpiBase;
   NVIDIA_KERNEL_COMMAND_LINE          CmdLine;
   UINTN                               KernelCmdLineLen;
+  NVIDIA_PRODUCT_INFO                 ProductInfo;
+  UINTN                               ProductInfoLen;
   UINTN                               BufferSize;
   UINTN                               Index;
   CONST TEGRABL_EARLY_BOOT_VARIABLES  *TH500HobConfig;
   VOID                                *HobPointer;
+  CHAR16                              ProductInfoVariableName[] = L"ProductInfo";
 
   // Initialize PCIe Form Settings
   PcdSet8S (PcdPcieResourceConfigNeeded, PcdGet8 (PcdPcieResourceConfigNeeded));
@@ -1371,6 +1374,25 @@ InitializeSettings (
     Status = gRT->SetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS, KernelCmdLineLen, (VOID *)&CmdLine);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Error setting command line variable %r\r\n", __FUNCTION__, Status));
+    }
+  }
+
+  ProductInfoLen = 0;
+
+  Status = gRT->GetVariable (ProductInfoVariableName, &gNVIDIAPublicVariableGuid, NULL, &ProductInfoLen, NULL);
+  if (Status == EFI_NOT_FOUND) {
+    ProductInfoLen = 0;
+  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+    DEBUG ((DEBUG_ERROR, "%a: Error Requesting %s variable %r\r\n", __FUNCTION__, ProductInfoVariableName, Status));
+    ProductInfoLen = 0;
+  }
+
+  if (ProductInfoLen < sizeof (ProductInfo)) {
+    ProductInfoLen = sizeof (ProductInfo);
+    ZeroMem (&ProductInfo, ProductInfoLen);
+    Status = gRT->SetVariable (ProductInfoVariableName, &gNVIDIAPublicVariableGuid, EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS, ProductInfoLen, (VOID *)&ProductInfo);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error setting %s variable %r\r\n", __FUNCTION__, ProductInfoVariableName, Status));
     }
   }
 

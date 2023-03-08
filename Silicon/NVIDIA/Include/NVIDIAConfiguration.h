@@ -37,6 +37,9 @@
 #define KERNEL_CMD_STR_MIN_SIZE  0
 #define KERNEL_CMD_STR_MAX_SIZE  255
 
+#define ASSET_TAG_MAX_LEN   32
+#define ASSET_TAG_MAX_SIZE  33
+
 // Option to expose PCIe in OS
 typedef struct {
   UINT8    Enabled;
@@ -104,5 +107,9 @@ typedef struct {
 typedef struct {
   UINT8    Enabled;
 } NVIDIA_REDFISH_HOST_INTERFACE_ENABLED;
+
+typedef struct {
+  CHAR16    ChassisAssetTag[ASSET_TAG_MAX_SIZE];
+} NVIDIA_PRODUCT_INFO;
 
 #endif //__NVIDIA_CONFIGURATION_H__
