@@ -2,7 +2,7 @@
 
   QSPI Driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -430,6 +430,7 @@ DeviceDiscoveryNotify (
   VOID                             *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO     *PlatformResourceInfo;
   UINT8                            NumChipSelects;
+  BOOLEAN                          MMPresent;
 
   Device  = NULL;
   Private = NULL;
@@ -462,13 +463,22 @@ DeviceDiscoveryNotify (
                       NULL,
                       &Interface
                       );
-      if (EFI_ERROR (Status)) {
-        return EFI_SUCCESS;
+      MMPresent = !EFI_ERROR (Status);
+
+      if (SecureController == NULL) {
+        // Non-secure controller
+        if (!MMPresent || PcdGetBool (PcdNonSecureQspiAvailable)) {
+          return EFI_SUCCESS;
+        } else {
+          return EFI_UNSUPPORTED;
+        }
       } else {
-        if (PcdGetBool (PcdNonSecureQspiAvailable)) {
-          if (SecureController == NULL) {
-            return EFI_SUCCESS;
-          }
+        // Secure controller
+        // If MM is not available and we are not using emulated variable expose the SPI controllers to NS UEFI
+        if (!MMPresent &&
+            !PcdGetBool (PcdEmuVariableNvModeEnable))
+        {
+          return EFI_SUCCESS;
         } else {
           return EFI_UNSUPPORTED;
         }
