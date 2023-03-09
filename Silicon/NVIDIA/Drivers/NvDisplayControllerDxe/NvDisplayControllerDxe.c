@@ -2,7 +2,7 @@
 
   NV Display Controller Driver
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -23,7 +23,9 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 
 #include <Protocol/ClockNodeProtocol.h>
+#include <Protocol/DevicePath.h>
 #include <Protocol/EmbeddedGpio.h>
+#include <Protocol/KernelCmdLineUpdate.h>
 
 #include <libfdt.h>
 
@@ -42,6 +44,7 @@ typedef struct {
   BOOLEAN                              ResetsDeasserted;
   BOOLEAN                              ClocksEnabled;
   BOOLEAN                              OutputGpiosConfigured;
+  EFI_EVENT                            OnReadyToBootEvent;
   EFI_EVENT                            OnExitBootServicesEvent;
 } NVIDIA_DISPLAY_CONTROLLER_CONTEXT;
 
@@ -67,6 +70,16 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoResetModule                 = FALSE,
   .AutoDeassertPg                  = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE
+};
+
+/* Extra command-line arguments passed to the kernel to disable EFIFB
+   support. This is used to prevent the kernel from using the EFI
+   framebuffer that becomes unusable after we turn the display off at
+   UEFI exit.
+*/
+STATIC CONST NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL  mEfifbOffKernelCmdLineUpdateProtocol = {
+  .ExistingCommandLineArgument = NULL,
+  .NewCommandLineArgument      = L"video=efifb:off",
 };
 
 /**
@@ -709,6 +722,22 @@ DisplayStop (
       Context->OnExitBootServicesEvent = NULL;
     }
 
+    if (Context->OnReadyToBootEvent != NULL) {
+      Status1 = gBS->CloseEvent (Context->OnReadyToBootEvent);
+      if (EFI_ERROR (Status1)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to close OnReadyToBoot event: %r\r\n",
+          __FUNCTION__,
+          Status1
+          ));
+      }
+
+      if (!EFI_ERROR (Status)) {
+        Status = Status1;
+      }
+    }
+
     if (Context->OutputGpiosConfigured) {
       Status1 = ConfigureOutputGpios (ControllerHandle, FALSE, UseDpOutput);
       if (!EFI_ERROR (Status)) {
@@ -751,6 +780,132 @@ DisplayStop (
   }
 
   return Status;
+}
+
+STATIC
+EFI_STATUS
+DisplayDisableEfiFrameBuffer (
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
+  )
+{
+  EFI_STATUS                Status;
+  EFI_HANDLE                ParentHandle, *Handles = NULL;
+  UINTN                     HandleIndex, HandleCount;
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
+
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gEfiGraphicsOutputProtocolGuid,
+                  NULL,
+                  &HandleCount,
+                  &Handles
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to enumerate graphics output device handles: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto Exit;
+  }
+
+  for (HandleIndex = 0; HandleIndex < HandleCount; ++HandleIndex) {
+    Status = gBS->OpenProtocol (
+                    Handles[HandleIndex],
+                    &gEfiDevicePathProtocolGuid,
+                    (VOID **)&DevicePath,
+                    Context->DriverHandle,
+                    Context->ControllerHandle,
+                    EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                    );
+    if (EFI_ERROR (Status)) {
+      if (Status != EFI_UNSUPPORTED) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to retrieve device path from handle %p: %r\r\n",
+          __FUNCTION__,
+          Handles[HandleIndex],
+          Status
+          ));
+      }
+
+      continue;
+    }
+
+    Status = gBS->LocateDevicePath (
+                    &gEdkiiNonDiscoverableDeviceProtocolGuid,
+                    &DevicePath,
+                    &ParentHandle
+                    );
+    if (EFI_ERROR (Status)) {
+      if (Status != EFI_NOT_FOUND) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to locate parent handle: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+      }
+
+      continue;
+    }
+
+    if (ParentHandle == Context->ControllerHandle) {
+      /* This handle is our child handle. */
+      break;
+    }
+  }
+
+  if (HandleIndex < HandleCount) {
+    /* We have a child handle with GOP protocol installed, disable the
+       kernel EFI FB driver. Ignore "protocol already installed" error
+       since this function may be run more than once. */
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &gImageHandle,
+                    &gNVIDIAKernelCmdLineUpdateGuid,
+                    (VOID **)&mEfifbOffKernelCmdLineUpdateProtocol,
+                    NULL
+                    );
+    if (EFI_ERROR (Status) && (Status != EFI_INVALID_PARAMETER)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to install the kernel command-line update protocol: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
+      goto Exit;
+    }
+  }
+
+  Status = EFI_SUCCESS;
+
+Exit:
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
+
+  return Status;
+}
+
+STATIC
+VOID
+EFIAPI
+DisplayOnReadyToBoot (
+  IN EFI_EVENT                                 Event,
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
+  )
+{
+  VOID        *AcpiBase;
+  EFI_STATUS  Status;
+
+  /* Leave display active for ACPI boot. */
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    return;
+  }
+
+  DisplayDisableEfiFrameBuffer (Context);
 }
 
 STATIC
@@ -956,10 +1111,29 @@ DisplayStart (
 
   Status = ConfigureOutputGpios (ControllerHandle, TRUE, UseDpOutput);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto Exit;
   }
 
   Result->OutputGpiosConfigured = TRUE;
+
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_NOTIFY,
+                  (EFI_EVENT_NOTIFY)DisplayOnReadyToBoot,
+                  Result,
+                  &gEfiEventReadyToBootGuid,
+                  &Result->OnReadyToBootEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to create OnReadyToBoot event: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    Result->OnReadyToBootEvent = NULL;
+    goto Exit;
+  }
 
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
@@ -980,11 +1154,11 @@ DisplayStart (
     goto Exit;
   }
 
+  *Context = Result;
+
 Exit:
   if (EFI_ERROR (Status)) {
     DisplayStop (Result, OnExitBootServices);
-  } else {
-    *Context = Result;
   }
 
   if (FramebufferResource != NULL) {
