@@ -72,51 +72,6 @@ NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL_PRIVATE_DATA  mPrivateDataTemplate = {
 /// Private functions
 ///
 
-/** Validate the HBM GpuMemoryInfo structure
-
-  @param  GpuMemoryInfo [IN]      - NVIDIA GPU Memory Information structure
-                                    for the supported controller.
-  @retval Status of the GPU Memory Information structure
-            EFI_SUCCESS           - Memory structure validation succeeded
-            EFI_INVALID_PARAMETER - GpuMemoryInfo structure pointer is NULL
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-ValidateHbmInfo (
-  IN  CONST  GPU_MEMORY_INFO  *GpuMemoryInfo
-  )
-{
-  EFI_STATUS  Status = EFI_SUCCESS;
-
-  if (NULL == GpuMemoryInfo) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  /* Simple zero check for now */
-  if ((GpuMemoryInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_BASE_PA].PropertyValue != 0) &&
-      (GpuMemoryInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_START].PropertyValue != 0) &&
-      (GpuMemoryInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_COUNT].PropertyValue != 0) &&
-      (GpuMemoryInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_SIZE].PropertyValue != 0))
-  {
-    Status = EFI_INVALID_PARAMETER;
-  }
-
-  DEBUG_CODE_BEGIN ();
-  if ( EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "DEBUG: HBM validation failed [%p:%r].\n",
-      GpuMemoryInfo,
-      Status
-      ));
-  }
-
-  DEBUG_CODE_END ();
-
-  return EFI_SUCCESS;
-}
-
 ///
 /// Public functions
 ///
@@ -178,34 +133,19 @@ GenerateGpuAmlDsdNode (
     return EFI_INVALID_PARAMETER;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: GPU DSD AML Node generation status 2{%p, %p}\n", __FUNCTION__, ControllerHandle, &GpuMemInfo));
-
-  /* Run a validation check on the Memory Info being provided */
-  Status = ValidateHbmInfo (GpuMemInfo);
-  DEBUG ((DEBUG_INFO, "%a: GPU DSD AML Node generation status 3{%p, %p}\n", __FUNCTION__, ControllerHandle, &GpuMemInfo));
-
-  if (EFI_ERROR (Status)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
   DsdNode = NULL;
 
   // ASL: Name (_DSD, Package () {})
   Status = AmlCodeGenNamePackage ("_DSD", NULL, &DsdNode);
-  DEBUG ((DEBUG_INFO, "%a: GPU DSD AML Node generation status 4{%p, %p}\n", __FUNCTION__, ControllerHandle, &GpuMemInfo));
 
   if (EFI_ERROR (Status)) {
     goto error_handler;
   }
-
-  DEBUG ((DEBUG_INFO, "%a: GPU DSD AML Node generation status 5{%p, %p}\n", __FUNCTION__, ControllerHandle, &GpuMemInfo));
 
   Status = AmlAddDeviceDataDescriptorPackage (&gDsdDevicePropertyGuid, DsdNode, &PackageNode);
   if (EFI_ERROR (Status)) {
     goto error_handler;
   }
-
-  DEBUG ((DEBUG_INFO, "%a: GPU DSD AML Node generation status 6{%p, %p}\n", __FUNCTION__, ControllerHandle, &GpuMemInfo));
 
   //
   // Add _DSD Package containing properties
