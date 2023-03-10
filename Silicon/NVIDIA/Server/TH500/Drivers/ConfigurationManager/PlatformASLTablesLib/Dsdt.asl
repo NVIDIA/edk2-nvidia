@@ -655,8 +655,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
       Name (_DSD, Package () {
         ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
         Package () {
-          Package () { "compatible", "tegra-tpm-spi" },
-          Package () { "nvidia,wait-polling", 1 }
+          Package () { "compatible", "tpm_tis_spi" },
         }
       })
       Method (_CRS, 0, NotSerialized) {
