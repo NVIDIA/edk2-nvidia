@@ -2,6 +2,7 @@
 #
 #  Copyright (c) 2011-2015, ARM Ltd. All rights reserved.<BR>
 #  Copyright (c) 2015, Linaro Ltd. All rights reserved.<BR>
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -9,8 +10,8 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = ArmVirtPrePiUniCoreRelocatable
-  FILE_GUID                      = f7d9fd14-9335-4389-80c5-334d6abfcced
+  BASE_NAME                      = TegraVirtPrePi
+  FILE_GUID                      = a41a58ec-4542-426a-8d76-768188151199
   MODULE_TYPE                    = SEC
   VALID_ARCHITECTURES            = AARCH64
   VERSION_STRING                 = 1.0

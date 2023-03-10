@@ -1,6 +1,5 @@
-#  @file
-#  Workspace file for KVMTool virtual platform.
 #
+#  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018 - 2022, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -13,19 +12,15 @@
 #
 ################################################################################
 [Defines]
-  PLATFORM_NAME                  = ArmVirtKvmTool
-  PLATFORM_GUID                  = 4CB2C61E-FA32-4130-8E37-54ABC71A1A43
+  PLATFORM_NAME                  = TegraVirt
+  PLATFORM_GUID                  = 5cf4bdba-e714-4a39-8d6d-440ba19e4b4e
   PLATFORM_VERSION               = 0.1
   DSC_SPECIFICATION              = 0x0001001B
-!ifdef $(EDK2_OUT_DIR)
-  OUTPUT_DIRECTORY               = $(EDK2_OUT_DIR)
-!else
-  OUTPUT_DIRECTORY               = Build/ArmVirtKvmTool-$(ARCH)
-!endif
-  SUPPORTED_ARCHITECTURES        = AARCH64|ARM
+  OUTPUT_DIRECTORY               = Build/TegraVirt
+  SUPPORTED_ARCHITECTURES        = AARCH64
   BUILD_TARGETS                  = DEBUG|RELEASE
   SKUID_IDENTIFIER               = DEFAULT
-  FLASH_DEFINITION               = ArmVirtPkg/ArmVirtKvmTool.fdf
+  FLASH_DEFINITION               = Platform/NVIDIA/TegraVirt/TegraVirt.fdf
 
 [Defines.AARCH64]
   DEFINE ACPIVIEW_ENABLE         = TRUE
@@ -227,7 +222,7 @@
   #
   # PEI Phase modules
   #
-  ArmVirtPkg/PrePi/ArmVirtPrePiUniCoreRelocatable.inf {
+  Silicon/NVIDIA/TegraVirt/PrePi/TegraVirtPrePi.inf {
     <LibraryClasses>
       ExtractGuidedSectionLib|EmbeddedPkg/Library/PrePiExtractGuidedSectionLib/PrePiExtractGuidedSectionLib.inf
       LzmaDecompressLib|MdeModulePkg/Library/LzmaCustomDecompressLib/LzmaCustomDecompressLib.inf
