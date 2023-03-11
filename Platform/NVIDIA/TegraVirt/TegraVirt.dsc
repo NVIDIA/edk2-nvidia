@@ -116,7 +116,7 @@
   gArmTokenSpaceGuid.PcdVFPEnabled|1
 !endif
 
-  gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize|0x4000
+  gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize|0x22000
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxAuthVariableSize|0x2800
 
@@ -148,16 +148,10 @@
 
 [PcdsPatchableInModule.common]
   #
-  # This will be overridden in the code
+  # These will be set at boot time.
   #
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x0
   gArmTokenSpaceGuid.PcdSystemMemorySize|0x0
-
-  #
-  # The device tree base address is handed off by kvmtool.
-  # We are booting from RAM using the Linux kernel boot protocol,
-  # x0 will point to the DTB image in memory.
-  #
   gArmVirtTokenSpaceGuid.PcdDeviceTreeInitialBaseAddress|0x0
 
   gArmTokenSpaceGuid.PcdFdBaseAddress|0x0

@@ -1,6 +1,7 @@
 //
 //  Copyright (c) 2011-2013, ARM Limited. All rights reserved.
 //  Copyright (c) 2015-2016, Linaro Limited. All rights reserved.
+//  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 //  SPDX-License-Identifier: BSD-2-Clause-Patent
 //
@@ -9,83 +10,37 @@
 #include <AsmMacroIoLibV8.h>
 
 ASM_FUNC(_ModuleEntryPoint)
+
+  // x0 will be the beginning of the DTB
+  // sp will be something we can use, but might not be sufficiently sized.
+
+  // Share the DTB location
+  adr   x8, PcdGet64 (PcdDeviceTreeInitialBaseAddress)
+  str   x0, [x8]
+
+  // Discover our MemoryBase and MemorySize from the DTB.
+  // This will call a C function, so the sp must be valid.
   bl    ASM_PFX(DiscoverDramFromDt)
 
-  // Get ID of this CPU in Multicore system
-  bl    ASM_PFX(ArmReadMpidr)
-  // Keep a copy of the MpId register value
-  mov   x20, x0
-
-// Check if we can install the stack at the top of the System Memory or if we need
-// to install the stacks at the bottom of the Firmware Device (case the FD is located
-// at the top of the DRAM)
-_SetupStackPosition:
-  // Compute Top of System Memory
+  // Load the MemoryBase and MemorySize discovered from the DTB.
   ldr   x1, PcdGet64 (PcdSystemMemoryBase)
-  ldr   x2, PcdGet64 (PcdSystemMemorySize)
-  sub   x2, x2, #1
-  add   x1, x1, x2      // x1 = SystemMemoryTop = PcdSystemMemoryBase + PcdSystemMemorySize
+  ldr   x9, PcdGet64 (PcdSystemMemorySize)
 
-  // Calculate Top of the Firmware Device
-  ldr   x2, PcdGet64 (PcdFdBaseAddress)
-  MOV32 (w3, FixedPcdGet32 (PcdFdSize) - 1)
-  add   x3, x3, x2      // x3 = FdTop = PcdFdBaseAddress + PcdFdSize
+  // Use the top of memory for the stack.
+  // - Leave a page we can guard to detect overflows
+  sub x9, x9, #SIZE_4KB
+  // - Set the stack pointer.
+  add sp, x1, x9
 
-  // UEFI Memory Size (stacks are allocated in this region)
-  MOV32 (x4, FixedPcdGet32(PcdSystemMemoryUefiRegionSize))
+  // Calculate the stack base and leave it in x2.
+  MOV32 (x8, FixedPcdGet32(PcdCPUCorePrimaryStackSize))
+  sub   x2, sp, x8
 
-  //
-  // Reserve the memory for the UEFI region (contain stacks on its top)
-  //
-
-  // Calculate how much space there is between the top of the Firmware and the Top of the System Memory
-  subs  x0, x1, x3   // x0 = SystemMemoryTop - FdTop
-  b.mi  _SetupStack  // Jump if negative (FdTop > SystemMemoryTop). Case when the PrePi is in XIP memory outside of the DRAM
-  cmp   x0, x4
-  b.ge  _SetupStack
-
-  // Case the top of stacks is the FdBaseAddress
-  mov   x1, x2
-
-_SetupStack:
-  // x1 contains the top of the stack (and the UEFI Memory)
-
-  // Because the 'push' instruction is equivalent to 'stmdb' (decrement before), we need to increment
-  // one to the top of the stack. We check if incrementing one does not overflow (case of DRAM at the
-  // top of the memory space)
-  adds  x21, x1, #1
-  b.cs  _SetupOverflowStack
-
-_SetupAlignedStack:
-  mov   x1, x21
-  b     _GetBaseUefiMemory
-
-_SetupOverflowStack:
-  // Case memory at the top of the address space. Ensure the top of the stack is EFI_PAGE_SIZE
-  // aligned (4KB)
-  and   x1, x1, ~EFI_PAGE_MASK
-
-_GetBaseUefiMemory:
-  // Calculate the Base of the UEFI Memory
-  sub   x21, x1, x4
-
-_GetStackBase:
-  // r1 = The top of the Mpcore Stacks
-  mov   sp, x1
-
-  // Stack for the primary core = PrimaryCoreStack
-  MOV32 (x2, FixedPcdGet32(PcdCPUCorePrimaryStackSize))
-  sub   x22, x1, x2
-
-  mov   x0, x20
-  mov   x1, x21
-  mov   x2, x22
-
-  // Set the frame pointer to NULL so any backtraces terminate here
-  mov   x29, xzr
+  // Zero out the MpId. We don't use this parameter.
+  mov x0, xzr
 
   // Jump to PrePiCore C code
-  //    x0 = MpId
+  //    x0 = MpId -> always zero
   //    x1 = UefiMemoryBase
   //    x2 = StacksBase
   bl    ASM_PFX(CEntryPoint)
@@ -95,83 +50,23 @@ _NeverReturn:
 
 // VOID
 // DiscoverDramFromDt (
-//   VOID   *DeviceTreeBaseAddress,   // passed by loader in x0
-//   VOID   *ImageBase                // passed by FDF trampoline in x1
+//   VOID   *DeviceTreeBaseAddress   // passed by loader in x0
 //   );
+// Fills PcdSystemMemoryBase and PcdSystemMemorySize
 ASM_PFX(DiscoverDramFromDt):
-  //
-  // If we are booting from RAM using the Linux kernel boot protocol, x0 will
-  // point to the DTB image in memory. Otherwise, use the default value defined
-  // by the platform.
-  //
-  cbnz  x0, 0f
-  ldr   x0, PcdGet64 (PcdDeviceTreeInitialBaseAddress)
 
-0:mov   x29, x30            // preserve LR
-  mov   x28, x0             // preserve DTB pointer
-  mov   x27, x1             // preserve base of image pointer
+  mov   x29, x30            // preserve LR
 
-  //
-  // The base of the runtime image has been preserved in x1. Check whether
-  // the expected magic number can be found in the header.
-  //
-  ldr   w8, .LArm64LinuxMagic
-  ldr   w9, [x1, #0x38]
-  cmp   w8, w9
-  bne   .Lout
+  // Save registers
+  mov   x28, x0
 
-  //
-  //
-  // OK, so far so good. We have confirmed that we likely have a DTB and are
-  // booting via the arm64 Linux boot protocol. Update the base-of-image PCD
-  // to the actual relocated value, and add the shift of PcdFdBaseAddress to
-  // PcdFvBaseAddress as well
-  //
-  adr   x8, PcdGet64 (PcdFdBaseAddress)
-  adr   x9, PcdGet64 (PcdFvBaseAddress)
-  ldr   x6, [x8]
-  ldr   x7, [x9]
-  sub   x7, x7, x6
-  add   x7, x7, x1
-  str   x1, [x8]
-  str   x7, [x9]
-
-  //
-  // The runtime address may be different from the link time address so fix
-  // up the PE/COFF relocations. Since we are calling a C function, use the
-  // window at the beginning of the FD image as a temp stack.
-  //
-  mov   x0, x7
-  adr   x1, PeCoffLoaderImageReadFromMemory
-  mov   sp, x7
-  bl    RelocatePeCoffImage
-
-  //
-  // Discover the memory size and offset from the DTB, and record in the
-  // respective PCDs. This will also return false if a corrupt DTB is
-  // encountered.
-  //
-  mov   x0, x28
+  // Retrieve the MemoryBase and MemorySize from the DTB's /memory node.
   adr   x1, PcdGet64 (PcdSystemMemoryBase)
   adr   x2, PcdGet64 (PcdSystemMemorySize)
   bl    FindMemnode
-  cbz   x0, .Lout
 
-  //
-  // Copy the DTB to the slack space right after the 64 byte arm64/Linux style
-  // image header at the base of this image (defined in the FDF), and record the
-  // pointer in PcdDeviceTreeInitialBaseAddress.
-  //
-  adr   x8, PcdGet64 (PcdDeviceTreeInitialBaseAddress)
-  add   x27, x27, #0x40
-  str   x27, [x8]
+  // Restore registers
+  mov   x0, x28
 
-  mov   x0, x27
-  mov   x1, x28
-  bl    CopyFdt
-
-.Lout:
+  // Return
   ret    x29
-
-.LArm64LinuxMagic:
-  .byte   0x41, 0x52, 0x4d, 0x64
