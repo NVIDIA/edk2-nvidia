@@ -1,7 +1,8 @@
 ## @file
-#  Kvmtool platform PEI library.
+#  TegraVirt platform PEI library.
 #
 #  Copyright (c) 2020, ARM Limited. All rights reserved.
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -9,14 +10,14 @@
 
 [Defines]
   INF_VERSION                    = 0x0001001B
-  BASE_NAME                      = PlatformPeiLib
-  FILE_GUID                      = 21073FB3-BA6F-43EB-83F0-4A840C648165
+  BASE_NAME                      = TegraVirtPlatformPeiLib
+  FILE_GUID                      = b2598bd2-8179-4af7-89a6-c022bee5c00e
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = KvmtoolPlatformPeiLib
+  LIBRARY_CLASS                  = TegraVirtPlatformPeiLib
 
 [Sources]
-  KvmtoolPlatformPeiLib.c
+  TegraVirtPlatformPeiLib.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
