@@ -20,6 +20,7 @@
 
 #include <Ppi/GuidedSectionExtraction.h>
 #include <Ppi/ArmMpCoreInfo.h>
+#include <libfdt.h>
 
 #include "PrePi.h"
 
@@ -41,6 +42,14 @@ PrePiMain (
   CHAR8                       Buffer[120];
   UINTN                       CharCount;
   UINTN                       StacksSize;
+  UINTN                       UefiMemorySize;
+  UINTN                       HobBase;
+  UINTN                       HobSize;
+  UINTN                       DtbBase;
+  UINTN                       DtbSize;
+  EFI_FIRMWARE_VOLUME_HEADER  *FvHeader;
+  UINT64                      FvSize;
+  UINT64                      FvOffset = 0;
 
   // Initialize the architecture specific bits
   ArchInitialize ();
@@ -62,32 +71,152 @@ PrePiMain (
                 );
   SerialPortWrite ((UINT8 *)Buffer, CharCount);
 
-  // Declare the PI/UEFI memory region
+  /////////////////////////////
+  // Memory
+  /////////////////////////////
+
+  UefiMemorySize = PcdGet64 (PcdSystemMemorySize);
+
+  DEBUG_CODE_BEGIN ();
+  CharCount = AsciiSPrint (
+                Buffer,
+                sizeof (Buffer),
+                "Memory: 0x%lx-0x%lx (0x%lx)\n\r",
+                UefiMemoryBase,
+                UefiMemoryBase + UefiMemorySize,
+                UefiMemorySize
+                );
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
+  DEBUG_CODE_END ();
+
+  /////////////////////////////
+  // Stack
+  /////////////////////////////
+
+  StacksSize = FixedPcdGet32 (PcdCPUCorePrimaryStackSize);
+
+  DEBUG_CODE_BEGIN ();
+  CharCount = AsciiSPrint (
+                Buffer,
+                sizeof (Buffer),
+                "Stack : 0x%lx-0x%lx (0x%lx)\n\r",
+                StacksBase,
+                StacksBase + StacksSize,
+                StacksSize
+                );
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
+  DEBUG_CODE_END ();
+
+  /////////////////////////////
+  // FV
+  /////////////////////////////
+
+  FvSize = FixedPcdGet32 (PcdFvSize);
+
+  // Find the FV header.  We expect it on a 64KB boundary.
+  FvHeader = NULL;
+  while (FvOffset < UefiMemorySize) {
+    FvHeader = (EFI_FIRMWARE_VOLUME_HEADER *)(VOID *)(UefiMemoryBase + FvOffset);
+    if (FvHeader->Signature == EFI_FVH_SIGNATURE) {
+      break;
+    }
+
+    FvOffset += SIZE_64KB;
+  }
+
+  ASSERT (FvOffset < UefiMemorySize);
+  ASSERT (FvHeader != NULL);
+
+  // Share Fv location with Arm libraries
+  PatchPcdSet64 (PcdFvBaseAddress, (UINT64)FvHeader);
+
+  DEBUG_CODE_BEGIN ();
+  CharCount = AsciiSPrint (
+                Buffer,
+                sizeof (Buffer),
+                "FV    : 0x%lx-0x%lx (0x%lx)\n\r",
+                (EFI_PHYSICAL_ADDRESS)FvHeader,
+                (EFI_PHYSICAL_ADDRESS)FvHeader + FvSize,
+                FvSize
+                );
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
+  DEBUG_CODE_END ();
+
+  /////////////////////////////
+  // DTB
+  /////////////////////////////
+
+  DtbBase = PcdGet64 (PcdDeviceTreeInitialBaseAddress);
+  ASSERT ((VOID *)DtbBase != NULL);
+  DtbSize = fdt_totalsize ((VOID *)DtbBase);
+  DtbSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize));
+
+  DEBUG_CODE_BEGIN ();
+  CharCount = AsciiSPrint (
+                Buffer,
+                sizeof (Buffer),
+                "DTB   : 0x%lx-0x%lx (0x%lx)\n\r",
+                DtbBase,
+                DtbBase + DtbSize,
+                DtbSize
+                );
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
+  DEBUG_CODE_END ();
+
+  /////////////////////////////
+  // HOB
+  /////////////////////////////
+
+  // Use the memory region between the DTB and the Stack for the HOB.
+  HobBase = DtbBase + DtbSize;
+  HobSize = StacksBase - HobBase;
+
+  DEBUG_CODE_BEGIN ();
+  CharCount = AsciiSPrint (
+                Buffer,
+                sizeof (Buffer),
+                "Hob   : 0x%lx-0x%lx (0x%lx)\n\r",
+                HobBase,
+                HobBase + HobSize,
+                HobSize
+                );
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
+  DEBUG_CODE_END ();
+
+  /////////////////////////////
+  // HOB init
+  /////////////////////////////
+
+  // Create the HOB and declare the PI/UEFI memory region
   HobList = HobConstructor (
-              (VOID *)UefiMemoryBase,
-              FixedPcdGet32 (PcdSystemMemoryUefiRegionSize),
-              (VOID *)UefiMemoryBase,
-              (VOID *)StacksBase // The top of the UEFI Memory is reserved for the stacks
+              (VOID *)HobBase,
+              HobSize,
+              (VOID *)HobBase,
+              (VOID *)HobBase + HobSize
               );
   PrePeiSetHobList (HobList);
 
-  //
-  // Ensure that the loaded image is invalidated in the caches, so that any
-  // modifications we made with the caches and MMU off (such as the applied
-  // relocations) don't become invisible once we turn them on.
-  //
-  InvalidateDataCacheRange ((VOID *)(UINTN)PcdGet64 (PcdFdBaseAddress), PcdGet32 (PcdFdSize));
-
-  // Initialize MMU and Memory HOBs (Resource Descriptor HOBs)
-  Status = MemoryPeim (UefiMemoryBase, FixedPcdGet32 (PcdSystemMemoryUefiRegionSize));
-  ASSERT_EFI_ERROR (Status);
-
-  // Create the Stacks HOB (reserve the memory for all stacks)
-  StacksSize = PcdGet32 (PcdCPUCorePrimaryStackSize);
+  // Create the Stack HOB (reserve the memory for all stacks)
   BuildStackHob (StacksBase, StacksSize);
+
+  // Create DTB memory allocation HOB
+  BuildMemoryAllocationHob (DtbBase, DtbSize, EfiBootServicesData);
 
   // TODO: Call CpuPei as a library
   BuildCpuHob (ArmGetPhysicalAddressBits (), PcdGet8 (PcdPrePiCpuIoSize));
+
+  /////////////////////////////
+  // MMU
+  /////////////////////////////
+
+  // Ensure that the loaded image is invalidated in the caches, so that any
+  // modifications we made with the caches and MMU off (such as the applied
+  // relocations) don't become invisible once we turn them on.
+  InvalidateDataCacheRange ((VOID *)FvHeader, FvSize);
+
+  // Initialize MMU and Memory HOBs (Resource Descriptor HOBs)
+  Status = MemoryPeim (UefiMemoryBase, UefiMemorySize);
+  ASSERT_EFI_ERROR (Status);
 
   // Set the Boot Mode
   SetBootMode (BOOT_WITH_FULL_CONFIGURATION);
@@ -101,6 +230,10 @@ PrePiMain (
 
   // SEC phase needs to run library constructors by hand.
   ProcessLibraryConstructorList ();
+
+  /////////////////////////////
+  // Launch DXE
+  /////////////////////////////
 
   // Assume the FV that contains the SEC (our code) also contains a compressed FV.
   Status = DecompressFirstFv ();

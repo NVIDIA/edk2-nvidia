@@ -144,9 +144,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxAuthVariableSize|0x2800
 
-  # Size of the region used by UEFI in permanent memory (Reserved 64MB)
-  gArmPlatformTokenSpaceGuid.PcdSystemMemoryUefiRegionSize|0x04000000
-
   #
   # TTY Terminal Type
   # 0-PCANSI, 1-VT100, 2-VT00+, 3-UTF8, 4-TTYTERM
@@ -191,7 +188,6 @@
   gArmTokenSpaceGuid.PcdSystemMemorySize|0x0
   gArmVirtTokenSpaceGuid.PcdDeviceTreeInitialBaseAddress|0x0
 
-  gArmTokenSpaceGuid.PcdFdBaseAddress|0x0
   gArmTokenSpaceGuid.PcdFvBaseAddress|0x0
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0c280000

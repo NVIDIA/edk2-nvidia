@@ -74,13 +74,10 @@
 
   gArmTokenSpaceGuid.PcdVFPEnabled
 
-  gArmTokenSpaceGuid.PcdFdSize
   gArmTokenSpaceGuid.PcdFvSize
 
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize
   gArmPlatformTokenSpaceGuid.PcdCPUCoreSecondaryStackSize
-
-  gArmPlatformTokenSpaceGuid.PcdSystemMemoryUefiRegionSize
 
   gEmbeddedTokenSpaceGuid.PcdPrePiCpuIoSize
 
@@ -98,5 +95,4 @@
   gArmTokenSpaceGuid.PcdSystemMemoryBase
   gArmTokenSpaceGuid.PcdSystemMemorySize
   gArmVirtTokenSpaceGuid.PcdDeviceTreeInitialBaseAddress
-  gArmTokenSpaceGuid.PcdFdBaseAddress
   gArmTokenSpaceGuid.PcdFvBaseAddress
