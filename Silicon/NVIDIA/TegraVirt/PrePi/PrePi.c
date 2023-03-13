@@ -1,5 +1,6 @@
 /** @file
 *
+*  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2014, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -37,12 +38,29 @@ PrePiMain (
 {
   EFI_HOB_HANDOFF_INFO_TABLE  *HobList;
   EFI_STATUS                  Status;
-  CHAR8                       Buffer[100];
+  CHAR8                       Buffer[120];
   UINTN                       CharCount;
   UINTN                       StacksSize;
 
   // Initialize the architecture specific bits
   ArchInitialize ();
+
+  /////////////////////////////
+  // Serial port
+  /////////////////////////////
+
+  // Initialize the Serial Port
+  SerialPortInitialize ();
+
+  CharCount = AsciiSPrint (
+                Buffer,
+                sizeof (Buffer),
+                "%s UEFI firmware (version %s built on %s)\n\r",
+                (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName),
+                (CHAR16 *)PcdGetPtr (PcdUefiVersionString),
+                (CHAR16 *)PcdGetPtr (PcdUefiDateTimeBuiltString)
+                );
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
 
   // Declare the PI/UEFI memory region
   HobList = HobConstructor (
@@ -63,18 +81,6 @@ PrePiMain (
   // Initialize MMU and Memory HOBs (Resource Descriptor HOBs)
   Status = MemoryPeim (UefiMemoryBase, FixedPcdGet32 (PcdSystemMemoryUefiRegionSize));
   ASSERT_EFI_ERROR (Status);
-
-  // Initialize the Serial Port
-  SerialPortInitialize ();
-  CharCount = AsciiSPrint (
-                Buffer,
-                sizeof (Buffer),
-                "UEFI firmware (version %s built at %a on %a)\n\r",
-                (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString),
-                __TIME__,
-                __DATE__
-                );
-  SerialPortWrite ((UINT8 *)Buffer, CharCount);
 
   // Create the Stacks HOB (reserve the memory for all stacks)
   StacksSize = PcdGet32 (PcdCPUCorePrimaryStackSize);

@@ -36,6 +36,7 @@
   ArmPkg/ArmPkg.dec
   ArmPlatformPkg/ArmPlatformPkg.dec
   ArmVirtPkg/ArmVirtPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   BaseLib
@@ -67,7 +68,9 @@
   gArmPlatformTokenSpaceGuid.PcdSendSgiToBringUpSecondaryCores
 
 [FixedPcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gNVIDIATokenSpaceGuid.PcdPlatformFamilyName
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString
+  gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString
 
   gArmTokenSpaceGuid.PcdVFPEnabled
 
