@@ -82,6 +82,12 @@
   gArmTokenSpaceGuid.PcdMmBufferBase|0x8B5FE000
   gArmTokenSpaceGuid.PcdMmBufferSize|0x20000
 
+[PcdsDynamicDefault.common.DEFAULT]
+  #
+  # Allow physical presence activities
+  #
+  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
+
 [PcdsDynamicDefault.common.TH500]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TH500   '
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID(8655e5cf-297b-4213-84d5-b6817203a432)}

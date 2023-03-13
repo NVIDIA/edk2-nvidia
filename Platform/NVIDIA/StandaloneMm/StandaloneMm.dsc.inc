@@ -68,6 +68,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
   gArmTokenSpaceGuid.PcdMmBufferSize|65536
   gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead|FALSE
+  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
 
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
