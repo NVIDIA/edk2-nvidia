@@ -1542,6 +1542,11 @@ PlatformBootManagerBeforeConsole (
   //
   PlatformRegisterConsoles ();
 
+  //
+  // Signal BeforeConsoleEvent.
+  //
+  EfiEventGroupSignal (&gNVIDIABeforeConsoleEventGuid);
+
   // Install protocol to indicate that devices are connected
   gBS->InstallMultipleProtocolInterfaces (
          &BdsHandle,
@@ -1863,11 +1868,6 @@ PlatformBootManagerAfterConsole (
   VOID
   )
 {
-  //
-  // Signal Redfish startup event.
-  //
-  EfiEventGroupSignal (&gNVIDIAAfterConsoleEventGuid);
-
   //
   // Show the splash screen.
   //
