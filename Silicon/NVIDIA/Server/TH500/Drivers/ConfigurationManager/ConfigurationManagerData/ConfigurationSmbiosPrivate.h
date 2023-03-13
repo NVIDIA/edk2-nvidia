@@ -13,10 +13,17 @@
 
 #include <Library/FruLib.h>
 
-#define MAX_SMBIOS_TABLE_TYPES_SUPPORTED   64
-#define MAX_TYPE2_COUNT                    10
-#define MAX_TYPE3_COUNT                    100
-#define MAX_TYPE3_CONTAINED_ELEMENT_COUNT  100
+#define MAX_SMBIOS_TABLE_TYPES_SUPPORTED       64
+#define MAX_TYPE2_COUNT                        10
+#define MAX_TYPE3_COUNT                        100
+#define MAX_TYPE3_CONTAINED_ELEMENT_COUNT      100
+#define MAX_TYPE41_COUNT                       100
+#define TYPE41_DEVICE_NOT_PRESENT              0xFFFFFFFF
+#define TYPE41_ONBOARD_DEVICE_ENABLED          0x80
+#define MAX_TPM_VERSION_LEN                    14
+#define MAX_FIRMWARE_INVENTORY_ENTRIES         50
+#define MAX_FIRMWARE_INVENTORY_FMP_DESC_COUNT  50
+#define MAX_FIRMWARE_INVENTORY_PCIIO_COUNT     50
 
 //
 // CM SMBIOS record population struct
@@ -25,10 +32,6 @@ typedef struct {
   UINT8              FruDeviceId;
   CM_OBJECT_TOKEN    ChassisCmToken;
 } CM_ENCLOSURE_BASEBOARD_INFO;
-
-#define MAX_TYPE41_COUNT               100
-#define TYPE41_DEVICE_NOT_PRESENT      0xFFFFFFFF
-#define TYPE41_ONBOARD_DEVICE_ENABLED  0x80
 
 /** This structure contains data used by SMBIOS CM object creators */
 typedef struct CmSmbiosPrivateData {
@@ -64,6 +67,8 @@ typedef struct CmSmbiosPrivateData {
     CM_ENCLOSURE_BASEBOARD_INFO    *Info;
     UINT8                          Count;
   } EnclosureBaseboardBinding;
+
+  EDKII_PLATFORM_REPOSITORY_INFO    *PlatformRepositoryInfo;
 } CM_SMBIOS_PRIVATE_DATA;
 
 typedef EFI_STATUS
@@ -84,6 +89,7 @@ typedef struct {
 
   @param[in, out] PlatformRepositoryInfo      Pointer to the available Platform Repository
   @param[in]      PlatformRepositoryInfoEnd   End address of the Platform Repository
+  @param[in]      PlatformRepositoryInfo      Pointer to the platform repository info
 
   @return EFI_SUCCESS       Successful installation
   @retval !(EFI_SUCCESS)    Other errors
@@ -93,7 +99,8 @@ EFI_STATUS
 EFIAPI
 InstallCmSmbiosTableList (
   IN OUT  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo,
-  IN      UINTN                           PlatformRepositoryInfoEnd
+  IN      UINTN                           PlatformRepositoryInfoEnd,
+  IN      EDKII_PLATFORM_REPOSITORY_INFO  *NVIDIAPlatformRepositoryInfo
   );
 
 /**
@@ -332,9 +339,33 @@ InstallSmbiosType43Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
 
+/**
+  Install CM object for SMBIOS Type Mem
+
+  @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
 EFI_STATUS
 EFIAPI
 InstallSmbiosTypeMemCm (
+  IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
+  );
+
+/**
+  Install CM object for SMBIOS Type 45
+
+  @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+InstallSmbiosType45Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
 

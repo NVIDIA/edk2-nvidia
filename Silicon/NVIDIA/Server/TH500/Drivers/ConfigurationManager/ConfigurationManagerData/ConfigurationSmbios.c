@@ -7,9 +7,11 @@
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/DxeServicesTableLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <Library/FruLib.h>
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -123,6 +125,7 @@ AllocateCopyString (
 
   @param[in, out] PlatformRepositoryInfo      Pointer to the available Platform Repository
   @param[in]      PlatformRepositoryInfoEnd   End address of the Platform Repository
+  @param[in]      PlatformRepositoryInfo      Pointer to the platform repository info
 
   @return EFI_SUCCESS       Successful installation
   @retval !(EFI_SUCCESS)    Other errors
@@ -132,7 +135,8 @@ EFI_STATUS
 EFIAPI
 InstallCmSmbiosTableList (
   IN OUT  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo,
-  IN      UINTN                           PlatformRepositoryInfoEnd
+  IN      UINTN                           PlatformRepositoryInfoEnd,
+  IN      EDKII_PLATFORM_REPOSITORY_INFO  *NVIDIAPlatformRepositoryInfo
   )
 {
   CM_SMBIOS_PRIVATE_DATA          *Private;
@@ -153,7 +157,8 @@ InstallCmSmbiosTableList (
     { EFI_SMBIOS_TYPE_IPMI_DEVICE_INFORMATION,              InstallSmbiosType38Cm  },
     { EFI_SMBIOS_TYPE_SYSTEM_POWER_SUPPLY,                  InstallSmbiosType39Cm  },
     { EFI_SMBIOS_TYPE_ONBOARD_DEVICES_EXTENDED_INFORMATION, InstallSmbiosType41Cm  },
-    { SMBIOS_TYPE_TPM_DEVICE,                               InstallSmbiosType43Cm  }
+    { SMBIOS_TYPE_TPM_DEVICE,                               InstallSmbiosType43Cm  },
+    { SMBIOS_TYPE_FIRMWARE_INVENTORY_INFORMATION,           InstallSmbiosType45Cm  }
   };
 
   Private = AllocatePool (sizeof (CM_SMBIOS_PRIVATE_DATA));
@@ -166,7 +171,7 @@ InstallCmSmbiosTableList (
   Private->RepoEnd                         = PlatformRepositoryInfoEnd;
   Private->EnclosureBaseboardBinding.Count = 0;
   Private->EnclosureBaseboardBinding.Info  = NULL;
-
+  Private->PlatformRepositoryInfo          = NVIDIAPlatformRepositoryInfo;
   //
   // Load device tree SMBIOS node
   //

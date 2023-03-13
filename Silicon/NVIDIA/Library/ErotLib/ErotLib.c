@@ -16,6 +16,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/MctpProtocol.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 STATIC BOOLEAN               mErotLibInitialized = FALSE;
 STATIC UINTN                 mNumErots           = 0;
@@ -248,8 +249,20 @@ ErotSendBootComplete (
   UINTN                           ResponseLength;
   EFI_HANDLE                      Handle;
 
+  if (TegraGetPlatform () != TEGRA_PLATFORM_SILICON) {
+    goto Done;
+  }
+
   Status = ErotLibInit ();
   if (EFI_ERROR (Status)) {
+    if (Status == EFI_NOT_FOUND) {
+      //
+      // For EROT-less system, go ahead to install eROT boot complete protocol to
+      // satisfy FmpDxe dependency for SMBIOS type 45.
+      //
+      goto Done;
+    }
+
     return Status;
   }
 
@@ -300,6 +313,7 @@ ErotSendBootComplete (
     return EFI_DEVICE_ERROR;
   }
 
+Done:
   if (Socket == 0) {
     Handle = NULL;
     Status = gBS->InstallMultipleProtocolInterfaces (

@@ -35,18 +35,18 @@ STATIC UINTN  ThermalZoneSoc4_List[]  = { MAX_UINTN };
 STATIC UINTN  ThermalZoneTjMax_List[] = { 0x00, MAX_UINTN };
 
 STATIC CONST THERMAL_ZONE_DATA  ThermalZoneData[] = {
-  { TH500_THERMAL_ZONE_CPU0,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneCpu0_List,  L"Thermal Zone Skt%d CPU0"  },
-  { TH500_THERMAL_ZONE_CPU1,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneCpu1_List,  L"Thermal Zone Skt%d CPU1"  },
-  { TH500_THERMAL_ZONE_CPU2,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneCpu2_List,  L"Thermal Zone Skt%d CPU2"  },
-  { TH500_THERMAL_ZONE_CPU3,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneCpu3_List,  L"Thermal Zone Skt%d CPU3"  },
-  { TH500_THERMAL_ZONE_SOC0,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc0_List,  L"Thermal Zone Skt%d SOC0"  },
-  { TH500_THERMAL_ZONE_SOC1,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc1_List,  L"Thermal Zone Skt%d SOC1"  },
-  { TH500_THERMAL_ZONE_SOC2,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc2_List,  L"Thermal Zone Skt%d SOC2"  },
-  { TH500_THERMAL_ZONE_SOC3,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc3_List,  L"Thermal Zone Skt%d SOC3"  },
-  { TH500_THERMAL_ZONE_SOC4,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc4_List,  L"Thermal Zone Skt%d SOC4"  },
-  { TH500_THERMAL_ZONE_TJ_MAX, FixedPcdGetBool (PcdUseSinglePassiveThermalZone),  TRUE,  ThermalZoneTjMax_List, L"Thermal Zone Skt%d TJMax" },
-  { TH500_THERMAL_ZONE_TJ_MIN, FALSE,                                             TRUE,  NULL,                  L"Thermal Zone Skt%d TJMin" },
-  { TH500_THERMAL_ZONE_TJ_AVG, FALSE,                                             TRUE,  NULL,                  L"Thermal Zone Skt%d TJAvg" }
+  { TH500_THERMAL_ZONE_CPU0,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneCpu0_List,  L"Thermal Zone Skt%d CPU0"  },
+  { TH500_THERMAL_ZONE_CPU1,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneCpu1_List,  L"Thermal Zone Skt%d CPU1"  },
+  { TH500_THERMAL_ZONE_CPU2,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneCpu2_List,  L"Thermal Zone Skt%d CPU2"  },
+  { TH500_THERMAL_ZONE_CPU3,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneCpu3_List,  L"Thermal Zone Skt%d CPU3"  },
+  { TH500_THERMAL_ZONE_SOC0,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneSoc0_List,  L"Thermal Zone Skt%d SOC0"  },
+  { TH500_THERMAL_ZONE_SOC1,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneSoc1_List,  L"Thermal Zone Skt%d SOC1"  },
+  { TH500_THERMAL_ZONE_SOC2,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneSoc2_List,  L"Thermal Zone Skt%d SOC2"  },
+  { TH500_THERMAL_ZONE_SOC3,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneSoc3_List,  L"Thermal Zone Skt%d SOC3"  },
+  { TH500_THERMAL_ZONE_SOC4,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneSoc4_List,  L"Thermal Zone Skt%d SOC4"  },
+  { TH500_THERMAL_ZONE_TJ_MAX, FixedPcdGetBool (PcdUseSinglePassiveThermalZone),  TRUE, ThermalZoneTjMax_List, L"Thermal Zone Skt%d TJMax" },
+  { TH500_THERMAL_ZONE_TJ_MIN, FALSE,                                             TRUE, NULL,                  L"Thermal Zone Skt%d TJMin" },
+  { TH500_THERMAL_ZONE_TJ_AVG, FALSE,                                             TRUE, NULL,                  L"Thermal Zone Skt%d TJAvg" }
 };
 
 /** The platform configuration repository information.
@@ -1646,7 +1646,7 @@ InitializePlatformRepository (
     }
   }
 
-  Status = InstallCmSmbiosTableList (&Repo, (UINTN)RepoEnd);
+  Status = InstallCmSmbiosTableList (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }

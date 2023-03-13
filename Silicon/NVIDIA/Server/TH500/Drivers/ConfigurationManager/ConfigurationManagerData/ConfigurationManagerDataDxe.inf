@@ -47,6 +47,7 @@
   ConfigurationSmbiosType39.c
   ConfigurationSmbiosType41.c
   ConfigurationSmbiosType43.c
+  ConfigurationSmbiosType45.c
   ConfigurationHbm.c
   ConfigurationIpmiDev.c
   ConfigurationSmbiosMem.c
@@ -66,6 +67,7 @@
   Silicon/NVIDIA/NVIDIA.dec
   IpmiFeaturePkg/IpmiFeaturePkg.dec
   SecurityPkg/SecurityPkg.dec
+  FmpDevicePkg/FmpDevicePkg.dec
 
 [LibraryClasses]
   AmlLib
@@ -87,6 +89,8 @@
   Tpm2CommandLib
   PcdLib
   UefiRuntimeServicesTableLib
+  DevicePathLib
+  FmpDeviceLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
@@ -134,6 +138,8 @@
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
   gEfiPciIoProtocolGuid
   gNVIDIABpmpIpcProtocolGuid
+  gEfiFirmwareManagementProtocolGuid
+  gEfiTcg2ProtocolGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
@@ -182,4 +188,6 @@
 
 [Depex]
   gEfiVariableArchProtocolGuid AND
-  gNVIDIARasNsCommPcieDpcDataProtocolGuid
+  gNVIDIARasNsCommPcieDpcDataProtocolGuid AND
+  gEfiFirmwareManagementProtocolGuid AND
+  gNVIDIABdsDeviceConnectCompleteGuid
