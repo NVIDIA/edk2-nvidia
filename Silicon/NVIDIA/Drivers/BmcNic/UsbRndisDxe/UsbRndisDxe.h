@@ -87,6 +87,7 @@ typedef struct {
   UINT32               MediaStatus;
   UINT32               LinkSpeed;
   UINT32               MaxFrameSize;
+  UINT32               MaxFrameSizeWithHeader;
   UINT32               Filter;
   UINT32               Medium;
   UINT32               MaxPacketsPerTransfer;

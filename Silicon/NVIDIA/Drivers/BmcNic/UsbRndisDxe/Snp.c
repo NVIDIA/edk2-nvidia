@@ -597,7 +597,7 @@ UsbRndisSnpTransmit (
   )
 {
   USB_RNDIS_PRIVATE_DATA  *Private;
-  ETHERNET_HEADER         *EhternetHeader;
+  ETHERNET_HEADER         *EthernetHeader;
   RNDIS_PACKET_MSG_DATA   *RndisPacketMsg;
   UINTN                   Length;
   EFI_TPL                 TplPrevious;
@@ -629,9 +629,9 @@ UsbRndisSnpTransmit (
 
   if (BufferSize > Private->UsbData.MaxTransferSize) {
     DEBUG ((DEBUG_ERROR, "%a, buffer size exceeds Max Transfer Size: (%u/%d)\n", __FUNCTION__, BufferSize, Private->UsbData.MaxTransferSize));
-    return EFI_UNSUPPORTED;
-  } else if (BufferSize > Private->UsbData.MaxFrameSize) {
-    DEBUG ((DEBUG_ERROR, "%a, buffer size exceeds MTU: (%u/%d)\n", __FUNCTION__, BufferSize, Private->UsbData.MaxFrameSize));
+    return EFI_DEVICE_ERROR;
+  } else if (BufferSize > Private->UsbData.MaxFrameSizeWithHeader) {
+    DEBUG ((DEBUG_WARN, "%a, buffer size exceeds MTU: (%u/%d)\n", __FUNCTION__, BufferSize, Private->UsbData.MaxFrameSize));
   }
 
   DEBUG_CODE_BEGIN ();
@@ -656,15 +656,15 @@ UsbRndisSnpTransmit (
   // Fill the media header in buffer
   //
   if (HeaderSize > 0) {
-    EhternetHeader = (ETHERNET_HEADER *)Buffer;
+    EthernetHeader = (ETHERNET_HEADER *)Buffer;
     if (SrcAddr != NULL) {
-      CopyMem (&EhternetHeader->SrcAddr, SrcAddr, Private->SnpModeData.HwAddressSize);
+      CopyMem (&EthernetHeader->SrcAddr, SrcAddr, Private->SnpModeData.HwAddressSize);
     } else {
-      CopyMem (&EhternetHeader->SrcAddr, &Private->SnpModeData.CurrentAddress.Addr[0], Private->SnpModeData.HwAddressSize);
+      CopyMem (&EthernetHeader->SrcAddr, &Private->SnpModeData.CurrentAddress.Addr[0], Private->SnpModeData.HwAddressSize);
     }
 
-    CopyMem (&EhternetHeader->DstAddr, DestAddr, Private->SnpModeData.HwAddressSize);
-    EhternetHeader->Type = PXE_SWAP_UINT16 (*Protocol);
+    CopyMem (&EthernetHeader->DstAddr, DestAddr, Private->SnpModeData.HwAddressSize);
+    EthernetHeader->Type = PXE_SWAP_UINT16 (*Protocol);
   }
 
   //
@@ -752,7 +752,7 @@ UsbRndisSnpReceive (
   )
 {
   USB_RNDIS_PRIVATE_DATA  *Private;
-  ETHERNET_HEADER         *EhternetHeader;
+  ETHERNET_HEADER         *EthernetHeader;
   RNDIS_PACKET_MSG_DATA   *RndisPacketMsg;
   UINT8                   *RndisBuffer;
   UINTN                   Length;
@@ -823,18 +823,18 @@ UsbRndisSnpReceive (
   if (HeaderSize != NULL) {
     *HeaderSize = Private->SnpModeData.MediaHeaderSize;
 
-    EhternetHeader = (ETHERNET_HEADER *)Buffer;
+    EthernetHeader = (ETHERNET_HEADER *)Buffer;
 
     if (SrcAddr != NULL) {
-      CopyMem (SrcAddr, &EhternetHeader->SrcAddr[0], Private->SnpModeData.HwAddressSize);
+      CopyMem (SrcAddr, &EthernetHeader->SrcAddr[0], Private->SnpModeData.HwAddressSize);
     }
 
     if (DestAddr != NULL) {
-      CopyMem (DestAddr, &EhternetHeader->DstAddr[0], Private->SnpModeData.HwAddressSize);
+      CopyMem (DestAddr, &EthernetHeader->DstAddr[0], Private->SnpModeData.HwAddressSize);
     }
 
     if (Protocol != NULL) {
-      *Protocol = (UINT16)PXE_SWAP_UINT16 (EhternetHeader->Type);
+      *Protocol = (UINT16)PXE_SWAP_UINT16 (EthernetHeader->Type);
     }
 
     DEBUG_CODE_BEGIN ();

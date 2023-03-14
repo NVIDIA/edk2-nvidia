@@ -8,6 +8,7 @@
 **/
 
 #include "Rndis.h"
+#include "Snp.h"
 #include "Debug.h"
 
 /**
@@ -1018,6 +1019,12 @@ UsbRndisInitialRndisDevice (
   }
 
   DEBUG ((USB_DEBUG_RNDIS, "%a, OID_GEN_MAXIMUM_FRAME_SIZE 0x%x\n", __FUNCTION__, Private->UsbData.MaxFrameSize));
+
+  //
+  // MaxFrameSize is came from OID_GEN_MAXIMUM_FRAME_SIZE. By definition,
+  // it is the maximum frame size that the transports can send, excluding the header.
+  //
+  Private->UsbData.MaxFrameSizeWithHeader = Private->UsbData.MaxFrameSize + sizeof (ETHERNET_HEADER);
 
   //
   // OID_GEN_CURRENT_PACKET_FILTER
