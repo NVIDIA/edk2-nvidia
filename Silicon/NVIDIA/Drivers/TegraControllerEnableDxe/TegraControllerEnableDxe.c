@@ -2,7 +2,7 @@
 
   Tegra Controller Enable Driver
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,10 +11,11 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,gv11b",       &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra30-hda", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,ga10b",       &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { NULL,                 NULL                                        }
+  { "nvidia,gv11b",        &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra30-hda",  &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra194-hda", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,ga10b",        &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { NULL,                  NULL                                        }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
