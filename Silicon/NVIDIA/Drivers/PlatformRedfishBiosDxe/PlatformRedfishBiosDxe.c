@@ -46,12 +46,12 @@ DumpJsonData (
   CHAR8  *JsonString;
 
   if (Message != NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: ", Message));
+    DEBUG ((REDFISH_BIOS_DEBUG_DUMP, "%a: ", Message));
   }
 
   JsonString = JsonDumpString (JsonValue, EDKII_JSON_COMPACT);
   if (JsonString != NULL) {
-    DEBUG ((DEBUG_ERROR, "%a\n", JsonString));
+    DEBUG ((REDFISH_BIOS_DEBUG_DUMP, "%a\n", JsonString));
     FreePool (JsonString);
   }
 }
@@ -516,7 +516,7 @@ RELEASE:
 }
 
 /**
-  Provising redfish resource with with addendum data in given schema.
+  Provision redfish resource with with addendum data in given schema.
 
   @param[in]      This             Pointer to EDKII_REDFISH_RESOURCE_ADDENDUM_PROTOCOL instance.
   @param[in]      SchemaInfo       Redfish schema information.
@@ -642,7 +642,7 @@ PlatformRedfishBiosAddendumData (
 }
 
 /**
-  Provising redfish OEM resource in given schema information.
+  Provision redfish OEM resource in given schema information.
 
   @param[in]   This             Pointer to EDKII_REDFISH_RESOURCE_ADDENDUM_PROTOCOL instance.
   @param[in]   SchemaInfo       Redfish schema information.
