@@ -345,125 +345,127 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
     External(\_SB.C003.C051)
     External(\_SB.C003.C052)
 
-    // Thermal Zones (upto 12 per socket)
-    // TZ30 to TZ3B
+    // Thermal Zones
+    // TZ30 to TZ3F
 
     ThermalZone (TZ30) {
       Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_CPU0) )} // get current temp
       Name(_PSL, Package (){
-                            \_SB.C003.C000,
-                            \_SB.C003.C002,
-                            \_SB.C003.C003,
                             \_SB.C003.C004,
-                            \_SB.C003.C005,
-                            \_SB.C003.C006,
-                            \_SB.C003.C007,
-                            \_SB.C003.C008,
-                            \_SB.C003.C009 }) // passive cooling devices
+                            \_SB.C003.C002,
+                            \_SB.C003.C000,
+                            \_SB.C003.C00E }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM3.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM3.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 CPU0"))
+      Name (_STR, Unicode ("Thermal Zone Skt3 CPU0"))
     }
 
     ThermalZone (TZ31) {
       Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_CPU1) )} // get current temp
       Name(_PSL, Package (){
                             \_SB.C003.C00A,
-                            \_SB.C003.C00B,
+                            \_SB.C003.C006,
+                            \_SB.C003.C008,
                             \_SB.C003.C00C,
-                            \_SB.C003.C00E,
-                            \_SB.C003.C010,
-                            \_SB.C003.C011,
-                            \_SB.C003.C012,
-                            \_SB.C003.C013,
-                            \_SB.C003.C014 }) // passive cooling devices
+                            \_SB.C003.C01A }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM3.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM3.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 CPU1"))
+      Name (_STR, Unicode ("Thermal Zone Skt3 CPU1"))
     }
 
     ThermalZone (TZ32) {
       Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_CPU2) )} // get current temp
       Name(_PSL, Package (){
-                            \_SB.C003.C015,
-                            \_SB.C003.C016,
-                            \_SB.C003.C017,
-                            \_SB.C003.C018,
-                            \_SB.C003.C019,
-                            \_SB.C003.C01A,
-                            \_SB.C003.C01C,
-                            \_SB.C003.C01D,
-                            \_SB.C003.C01E }) // passive cooling devices
+                            \_SB.C003.C005,
+                            \_SB.C003.C012,
+                            \_SB.C003.C013,
+                            \_SB.C003.C020,
+                            \_SB.C003.C021,
+                            \_SB.C003.C01C }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM3.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM3.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 CPU2"))
+      Name (_STR, Unicode ("Thermal Zone Skt3 CPU2"))
     }
 
     ThermalZone (TZ33) {
-      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_CPU3) )} // get current temp
+      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_CPU2) )} // get current temp
       Name(_PSL, Package (){
-                            \_SB.C003.C01F,
-                            \_SB.C003.C020,
-                            \_SB.C003.C021,
-                            \_SB.C003.C022,
-                            \_SB.C003.C023,
-                            \_SB.C003.C024,
-                            \_SB.C003.C025,
-                            \_SB.C003.C026,
-                            \_SB.C003.C027 }) // passive cooling devices
+                            \_SB.C003.C01D,
+                            \_SB.C003.C003,
+                            \_SB.C003.C010,
+                            \_SB.C003.C011,
+                            \_SB.C003.C01E,
+                            \_SB.C003.C01F }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM3.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM3.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 CPU3"))
+      Name (_STR, Unicode ("Thermal Zone Skt3 CPU2"))
     }
 
     ThermalZone (TZ34) {
-      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC0) )} // get current temp
+      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_CPU3) )} // get current temp
       Name(_PSL, Package (){
-                            \_SB.C003.C028,
-                            \_SB.C003.C029,
-                            \_SB.C003.C02A,
-                            \_SB.C003.C02B,
-                            \_SB.C003.C02C,
-                            \_SB.C003.C02D,
-                            \_SB.C003.C02E,
-                            \_SB.C003.C02F,
-                            \_SB.C003.C030 }) // passive cooling devices
+                            \_SB.C003.C007,
+                            \_SB.C003.C014,
+                            \_SB.C003.C015,
+                            \_SB.C003.C022,
+                            \_SB.C003.C023,
+                            \_SB.C003.C00B,
+                            \_SB.C003.C018,
+                            \_SB.C003.C019,
+                            \_SB.C003.C026 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM3.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM3.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 SOC0"))
+      Name (_STR, Unicode ("Thermal Zone Skt3 CPU3"))
     }
 
     ThermalZone (TZ35) {
-      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC1) )} // get current temp
+      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_CPU3) )} // get current temp
       Name(_PSL, Package (){
-                            \_SB.C003.C031,
-                            \_SB.C003.C032,
-                            \_SB.C003.C033,
-                            \_SB.C003.C034,
-                            \_SB.C003.C035,
-                            \_SB.C003.C036,
-                            \_SB.C003.C037,
-                            \_SB.C003.C038,
+                            \_SB.C003.C027,
+                            \_SB.C003.C028,
+                            \_SB.C003.C029,
+                            \_SB.C003.C009,
+                            \_SB.C003.C016,
+                            \_SB.C003.C017,
+                            \_SB.C003.C024,
+                            \_SB.C003.C025 }) // passive cooling devices
+      Method(_PSV) { Return (\_SB.BPM3.PSVT) }
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_CRT) { Return (\_SB.BPM3.CRTT) }
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
+      Name(_TZP, TEMP_POLL_TIME_100MS)
+      Name (_STR, Unicode ("Thermal Zone Skt3 CPU3"))
+    }
+
+    ThermalZone (TZ36) {
+      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC0) )} // get current temp
+      Name(_PSL, Package (){
+                            \_SB.C003.C02A,
+                            \_SB.C003.C02B,
+                            \_SB.C003.C02D,
+                            \_SB.C003.C02C,
+                            \_SB.C003.C03B,
                             \_SB.C003.C03A }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM3.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
@@ -471,57 +473,91 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
       Method(_CRT) { Return (\_SB.BPM3.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 SOC1"))
-    }
-
-    ThermalZone (TZ36) {
-      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC2) )} // get current temp
-      Name(_PSL, Package (){,
-                            \_SB.C003.C03B,
-                            \_SB.C003.C03C,
-                            \_SB.C003.C03D,
-                            \_SB.C003.C03E,
-                            \_SB.C003.C03F,
-                            \_SB.C003.C040,
-                            \_SB.C003.C041,
-                            \_SB.C003.C042,
-                            \_SB.C003.C043 }) // passive cooling devices
-      Method(_PSV) { Return (\_SB.BPM3.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
-      Method(_CRT) { Return (\_SB.BPM3.CRTT) }
-      Name(_TSP, TH500_THERMAL_ZONE_TSP)
-      Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 SOC2"))
+      Name (_STR, Unicode ("Thermal Zone Skt3 SOC0"))
     }
 
     ThermalZone (TZ37) {
-      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC3) )} // get current temp
+      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC0) )} // get current temp
       Name(_PSL, Package (){
-                            \_SB.C003.C044,
-                            \_SB.C003.C046,
-                            \_SB.C003.C048,
                             \_SB.C003.C049,
-                            \_SB.C003.C04A,
-                            \_SB.C003.C04B,
-                            \_SB.C003.C04C,
-                            \_SB.C003.C04D,
-                            \_SB.C003.C04E }) // passive cooling devices
+                            \_SB.C003.C02F,
+                            \_SB.C003.C02E,
+                            \_SB.C003.C03D,
+                            \_SB.C003.C03C,
+                            \_SB.C003.C04B }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM3.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM3.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 SOC3"))
+      Name (_STR, Unicode ("Thermal Zone Skt3 SOC0"))
     }
 
     ThermalZone (TZ38) {
-      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC4) )} // get current temp
+      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC1) )} // get current temp
+      Name(_PSL, Package (){
+                            \_SB.C003.C031,
+                            \_SB.C003.C030,
+                            \_SB.C003.C03F,
+                            \_SB.C003.C03E,
+                            \_SB.C003.C04D,
+                            \_SB.C003.C033,
+                            \_SB.C003.C032,
+                            \_SB.C003.C041,
+                            \_SB.C003.C040 }) // passive cooling devices
+      Method(_PSV) { Return (\_SB.BPM3.PSVT) }
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_CRT) { Return (\_SB.BPM3.CRTT) }
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
+      Name(_TZP, TEMP_POLL_TIME_100MS)
+      Name (_STR, Unicode ("Thermal Zone Skt3 SOC1"))
+    }
+
+    ThermalZone (TZ39) {
+      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC1) )} // get current temp
       Name(_PSL, Package (){
                             \_SB.C003.C04F,
-                            \_SB.C003.C050,
+                            \_SB.C003.C035,
+                            \_SB.C003.C034,
+                            \_SB.C003.C043,
+                            \_SB.C003.C042,
                             \_SB.C003.C051,
+                            \_SB.C003.C036,
+                            \_SB.C003.C037 }) // passive cooling devices
+      Method(_PSV) { Return (\_SB.BPM3.PSVT) }
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_CRT) { Return (\_SB.BPM3.CRTT) }
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
+      Name(_TZP, TEMP_POLL_TIME_100MS)
+      Name (_STR, Unicode ("Thermal Zone Skt3 SOC1"))
+    }
+
+    ThermalZone (TZ3A) {
+      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC2) )} // get current temp
+      Name(_PSL, Package (){,
+                            \_SB.C003.C048,
+                            \_SB.C003.C038,
+                            \_SB.C003.C046,
+                            \_SB.C003.C04A }) // passive cooling devices
+      Method(_PSV) { Return (\_SB.BPM3.PSVT) }
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_CRT) { Return (\_SB.BPM3.CRTT) }
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
+      Name(_TZP, TEMP_POLL_TIME_100MS)
+      Name (_STR, Unicode ("Thermal Zone Skt3 SOC2"))
+    }
+
+    ThermalZone (TZ3B) {
+      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC3) )} // get current temp
+      Name(_PSL, Package (){
+                            \_SB.C003.C04C,
+                            \_SB.C003.C04E,
+                            \_SB.C003.C050,
+                            \_SB.C003.C044,
                             \_SB.C003.C052 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM3.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
@@ -529,37 +565,47 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
       Method(_CRT) { Return (\_SB.BPM3.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 SOC4"))
+      Name (_STR, Unicode ("Thermal Zone Skt3 SOC3"))
     }
 
-    ThermalZone (TZ39) {
+    ThermalZone (TZ3C) {
+      Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_SOC4) )} // get current temp
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_CRT) { Return (\_SB.BPM3.CRTT) }
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
+      Name(_TZP, TEMP_POLL_TIME_100MS)
+      Name (_STR, Unicode ("Thermal Zone Skt3 SOC4"))
+    }
+
+    ThermalZone (TZ3D) {
       Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_TJ_MAX) )} // get current temp
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM3.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 TJMax"))
+      Name (_STR, Unicode ("Thermal Zone Skt3 TJMax"))
     }
 
-    ThermalZone (TZ3A) {
+    ThermalZone (TZ3E) {
       Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_TJ_MIN) )} // get current temp
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM3.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 TJMin"))
+      Name (_STR, Unicode ("Thermal Zone Skt3 TJMin"))
     }
 
-    ThermalZone (TZ3B) {
+    ThermalZone (TZ3F) {
       Method(_TMP) { Return (\_SB.BPM3.TEMP (TH500_THERMAL_ZONE_TJ_AVG) )} // get current temp
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM3.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
-      Name (_STR, Unicode ("Thermal Zone Skt 3 TJAvg"))
+      Name (_STR, Unicode ("Thermal Zone Skt3 TJAvg"))
     }
 
     //---------------------------------------------------------------------

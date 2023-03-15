@@ -347,21 +347,16 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
     External(\_SB.C000.C051)
     External(\_SB.C000.C052)
 
-    // Thermal Zones (upto 12 per socket)
-    // TZ00 to TZ0B
+    // Thermal Zones
+    // TZ00 to TZ0F
 
     ThermalZone (TZ00) {
       Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_CPU0) )} // get current temp
       Name(_PSL, Package (){
-                            \_SB.C000.C000,
-                            \_SB.C000.C002,
-                            \_SB.C000.C003,
                             \_SB.C000.C004,
-                            \_SB.C000.C005,
-                            \_SB.C000.C006,
-                            \_SB.C000.C007,
-                            \_SB.C000.C008,
-                            \_SB.C000.C009 }) // passive cooling devices
+                            \_SB.C000.C002,
+                            \_SB.C000.C000,
+                            \_SB.C000.C00E }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM0.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
@@ -375,14 +370,10 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
       Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_CPU1) )} // get current temp
       Name(_PSL, Package (){
                             \_SB.C000.C00A,
-                            \_SB.C000.C00B,
+                            \_SB.C000.C006,
+                            \_SB.C000.C008,
                             \_SB.C000.C00C,
-                            \_SB.C000.C00E,
-                            \_SB.C000.C010,
-                            \_SB.C000.C011,
-                            \_SB.C000.C012,
-                            \_SB.C000.C013,
-                            \_SB.C000.C014 }) // passive cooling devices
+                            \_SB.C000.C01A }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM0.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
@@ -395,15 +386,12 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
     ThermalZone (TZ02) {
       Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_CPU2) )} // get current temp
       Name(_PSL, Package (){
-                            \_SB.C000.C015,
-                            \_SB.C000.C016,
-                            \_SB.C000.C017,
-                            \_SB.C000.C018,
-                            \_SB.C000.C019,
-                            \_SB.C000.C01A,
-                            \_SB.C000.C01C,
-                            \_SB.C000.C01D,
-                            \_SB.C000.C01E }) // passive cooling devices
+                            \_SB.C000.C005,
+                            \_SB.C000.C012,
+                            \_SB.C000.C013,
+                            \_SB.C000.C020,
+                            \_SB.C000.C021,
+                            \_SB.C000.C01C }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM0.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
@@ -414,17 +402,35 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
     }
 
     ThermalZone (TZ03) {
+      Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_CPU2) )} // get current temp
+      Name(_PSL, Package (){
+                            \_SB.C000.C01D,
+                            \_SB.C000.C003,
+                            \_SB.C000.C010,
+                            \_SB.C000.C011,
+                            \_SB.C000.C01E,
+                            \_SB.C000.C01F }) // passive cooling devices
+      Method(_PSV) { Return (\_SB.BPM0.PSVT) }
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_CRT) { Return (\_SB.BPM0.CRTT) }
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
+      Name(_TZP, TEMP_POLL_TIME_100MS)
+      Name (_STR, Unicode ("Thermal Zone Skt0 CPU2"))
+    }
+
+    ThermalZone (TZ04) {
       Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_CPU3) )} // get current temp
       Name(_PSL, Package (){
-                            \_SB.C000.C01F,
-                            \_SB.C000.C020,
-                            \_SB.C000.C021,
+                            \_SB.C000.C007,
+                            \_SB.C000.C014,
+                            \_SB.C000.C015,
                             \_SB.C000.C022,
                             \_SB.C000.C023,
-                            \_SB.C000.C024,
-                            \_SB.C000.C025,
-                            \_SB.C000.C026,
-                            \_SB.C000.C027 }) // passive cooling devices
+                            \_SB.C000.C00B,
+                            \_SB.C000.C018,
+                            \_SB.C000.C019,
+                            \_SB.C000.C026 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM0.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
@@ -434,18 +440,35 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
       Name (_STR, Unicode ("Thermal Zone Skt0 CPU3"))
     }
 
-    ThermalZone (TZ04) {
-      Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_SOC0) )} // get current temp
+    ThermalZone (TZ05) {
+      Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_CPU3) )} // get current temp
       Name(_PSL, Package (){
+                            \_SB.C000.C027,
                             \_SB.C000.C028,
                             \_SB.C000.C029,
+                            \_SB.C000.C009,
+                            \_SB.C000.C016,
+                            \_SB.C000.C017,
+                            \_SB.C000.C024,
+                            \_SB.C000.C025 }) // passive cooling devices
+      Method(_PSV) { Return (\_SB.BPM0.PSVT) }
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_CRT) { Return (\_SB.BPM0.CRTT) }
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
+      Name(_TZP, TEMP_POLL_TIME_100MS)
+      Name (_STR, Unicode ("Thermal Zone Skt0 CPU3"))
+    }
+
+    ThermalZone (TZ06) {
+      Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_SOC0) )} // get current temp
+      Name(_PSL, Package (){
                             \_SB.C000.C02A,
                             \_SB.C000.C02B,
-                            \_SB.C000.C02C,
                             \_SB.C000.C02D,
-                            \_SB.C000.C02E,
-                            \_SB.C000.C02F,
-                            \_SB.C000.C030 }) // passive cooling devices
+                            \_SB.C000.C02C,
+                            \_SB.C000.C03B,
+                            \_SB.C000.C03A }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM0.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
@@ -455,18 +478,36 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
       Name (_STR, Unicode ("Thermal Zone Skt0 SOC0"))
     }
 
-    ThermalZone (TZ05) {
+    ThermalZone (TZ07) {
+      Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_SOC0) )} // get current temp
+      Name(_PSL, Package (){
+                            \_SB.C000.C049,
+                            \_SB.C000.C02F,
+                            \_SB.C000.C02E,
+                            \_SB.C000.C03D,
+                            \_SB.C000.C03C,
+                            \_SB.C000.C04B }) // passive cooling devices
+      Method(_PSV) { Return (\_SB.BPM0.PSVT) }
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_CRT) { Return (\_SB.BPM0.CRTT) }
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
+      Name(_TZP, TEMP_POLL_TIME_100MS)
+      Name (_STR, Unicode ("Thermal Zone Skt0 SOC0"))
+    }
+
+    ThermalZone (TZ08) {
       Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_SOC1) )} // get current temp
       Name(_PSL, Package (){
                             \_SB.C000.C031,
-                            \_SB.C000.C032,
+                            \_SB.C000.C030,
+                            \_SB.C000.C03F,
+                            \_SB.C000.C03E,
+                            \_SB.C000.C04D,
                             \_SB.C000.C033,
-                            \_SB.C000.C034,
-                            \_SB.C000.C035,
-                            \_SB.C000.C036,
-                            \_SB.C000.C037,
-                            \_SB.C000.C038,
-                            \_SB.C000.C03A }) // passive cooling devices
+                            \_SB.C000.C032,
+                            \_SB.C000.C041,
+                            \_SB.C000.C040 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM0.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
@@ -476,18 +517,33 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
       Name (_STR, Unicode ("Thermal Zone Skt0 SOC1"))
     }
 
-    ThermalZone (TZ06) {
+    ThermalZone (TZ09) {
+      Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_SOC1) )} // get current temp
+      Name(_PSL, Package (){
+                            \_SB.C000.C04F,
+                            \_SB.C000.C035,
+                            \_SB.C000.C034,
+                            \_SB.C000.C043,
+                            \_SB.C000.C042,
+                            \_SB.C000.C051,
+                            \_SB.C000.C036,
+                            \_SB.C000.C037 }) // passive cooling devices
+      Method(_PSV) { Return (\_SB.BPM0.PSVT) }
+      Name(_TC1, TH500_THERMAL_ZONE_TC1)
+      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_CRT) { Return (\_SB.BPM0.CRTT) }
+      Name(_TSP, TH500_THERMAL_ZONE_TSP)
+      Name(_TZP, TEMP_POLL_TIME_100MS)
+      Name (_STR, Unicode ("Thermal Zone Skt0 SOC1"))
+    }
+
+    ThermalZone (TZ0A) {
       Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_SOC2) )} // get current temp
       Name(_PSL, Package (){,
-                            \_SB.C000.C03B,
-                            \_SB.C000.C03C,
-                            \_SB.C000.C03D,
-                            \_SB.C000.C03E,
-                            \_SB.C000.C03F,
-                            \_SB.C000.C040,
-                            \_SB.C000.C041,
-                            \_SB.C000.C042,
-                            \_SB.C000.C043 }) // passive cooling devices
+                            \_SB.C000.C048,
+                            \_SB.C000.C038,
+                            \_SB.C000.C046,
+                            \_SB.C000.C04A }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM0.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
@@ -497,18 +553,14 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
       Name (_STR, Unicode ("Thermal Zone Skt0 SOC2"))
     }
 
-    ThermalZone (TZ07) {
+    ThermalZone (TZ0B) {
       Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_SOC3) )} // get current temp
       Name(_PSL, Package (){
-                            \_SB.C000.C044,
-                            \_SB.C000.C046,
-                            \_SB.C000.C048,
-                            \_SB.C000.C049,
-                            \_SB.C000.C04A,
-                            \_SB.C000.C04B,
                             \_SB.C000.C04C,
-                            \_SB.C000.C04D,
-                            \_SB.C000.C04E }) // passive cooling devices
+                            \_SB.C000.C04E,
+                            \_SB.C000.C050,
+                            \_SB.C000.C044,
+                            \_SB.C000.C052 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM0.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
@@ -518,14 +570,8 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
       Name (_STR, Unicode ("Thermal Zone Skt0 SOC3"))
     }
 
-    ThermalZone (TZ08) {
+    ThermalZone (TZ0C) {
       Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_SOC4) )} // get current temp
-      Name(_PSL, Package (){
-                            \_SB.C000.C04F,
-                            \_SB.C000.C050,
-                            \_SB.C000.C051,
-                            \_SB.C000.C052 }) // passive cooling devices
-      Method(_PSV) { Return (\_SB.BPM0.PSVT) }
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
       Method(_CRT) { Return (\_SB.BPM0.CRTT) }
@@ -534,7 +580,7 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
       Name (_STR, Unicode ("Thermal Zone Skt0 SOC4"))
     }
 
-    ThermalZone (TZ09) {
+    ThermalZone (TZ0D) {
       Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_TJ_MAX) )} // get current temp
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
@@ -544,7 +590,7 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
       Name (_STR, Unicode ("Thermal Zone Skt0 TJMax"))
     }
 
-    ThermalZone (TZ0A) {
+    ThermalZone (TZ0E) {
       Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_TJ_MIN) )} // get current temp
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
@@ -554,7 +600,7 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
       Name (_STR, Unicode ("Thermal Zone Skt0 TJMin"))
     }
 
-    ThermalZone (TZ0B) {
+    ThermalZone (TZ0F) {
       Method(_TMP) { Return (\_SB.BPM0.TEMP (TH500_THERMAL_ZONE_TJ_AVG) )} // get current temp
       Name(_TC1, TH500_THERMAL_ZONE_TC1)
       Name(_TC2, TH500_THERMAL_ZONE_TC2)
