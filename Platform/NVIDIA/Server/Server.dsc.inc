@@ -90,9 +90,9 @@
   gArmTokenSpaceGuid.PcdPciBusMax|1
   gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x2DA00000
   # SBSA Watchdog
-  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|0x000000000c6a9000
-  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|0x000000000c6a8000
-  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|37
+  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|0x000000000c6ab000
+  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|0x000000000c6aa000
+  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|39
   # SMBIOS for TH500
   ## Type 0 Table (BIOS Information)
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor|L"NVIDIA"
