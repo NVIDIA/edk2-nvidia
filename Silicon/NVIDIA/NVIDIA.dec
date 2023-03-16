@@ -428,6 +428,9 @@
 #Force system to use single passive thermal zone
   gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|FALSE|BOOLEAN|0x00000106
 
+#Redfish Support
+  gNVIDIATokenSpaceGuid.PcdRedfishSupported|FALSE|BOOLEAN|0x00000107
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C
@@ -629,6 +632,9 @@
 # Description of the Erst buffer
   gNVIDIATokenSpaceGuid.PcdErstBufferBase|0x0|UINT64|0x0000009D
   gNVIDIATokenSpaceGuid.PcdErstBufferSize|0x0|UINT64|0x0000009E
+
+#Option to enable/disable Redfish Host Interface
+  gNVIDIATokenSpaceGuid.PcdRedfishHostInterface|0x00|UINT8|0x0000009F
 
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature

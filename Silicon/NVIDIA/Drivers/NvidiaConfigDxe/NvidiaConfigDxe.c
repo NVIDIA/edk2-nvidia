@@ -1352,6 +1352,9 @@ InitializeSettings (
   // Initialize dGPU DT EFIFB support form settings
   PcdSet8S (PcdDgpuDtEfifbSupport, PcdGet8 (PcdDgpuDtEfifbSupport));
 
+  // Initialize Redfish Host Interface
+  PcdSet8S (PcdRedfishHostInterface, PcdGet8 (PcdRedfishHostInterface));
+
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;
   Status           = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, NULL, &KernelCmdLineLen, NULL);
@@ -1398,6 +1401,7 @@ InitializeSettings (
   mHiiControlSettings.L4TSupported       = PcdGetBool (PcdL4TConfigurationSupport);
   mHiiControlSettings.QuickBootSupported = FeaturePcdGet (PcdQuickBootSupported);
   mHiiControlSettings.DebugMenuSupported = FeaturePcdGet (PcdDebugMenuSupport);
+  mHiiControlSettings.RedfishSupported   = FeaturePcdGet (PcdRedfishSupported);
 
   HobPointer = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
   if (HobPointer != NULL) {

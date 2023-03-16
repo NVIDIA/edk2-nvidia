@@ -1,0 +1,47 @@
+## @file
+#  Redfish Host Interface Control driver
+#
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = RedfishHostInterfaceControlDxe
+  FILE_GUID                      = 131F1CCD-CA02-4547-9D45-C204AC93B395
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = RedfishHostInterfaceControlEntryPoint
+  UNLOAD_IMAGE                   = RedfishHostInterfaceControlUnload
+
+[Sources]
+  RedfishHostInterfaceControlDxe.c
+  RedfishHostInterfaceControlDxe.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  RedfishPkg/RedfishPkg.dec
+  RedfishClientPkg/RedfishClientPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  DebugLib
+  RedfishEventLib
+
+[Protocols]
+  gEfiSmbiosProtocolGuid                ## TO_START
+
+[Guids]
+  gEfiRedfishClientFeatureAfterProvisioningGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdRedfishHostInterface
+
+[Depex]
+  TRUE

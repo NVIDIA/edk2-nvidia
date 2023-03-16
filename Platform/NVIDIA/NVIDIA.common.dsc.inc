@@ -658,6 +658,7 @@
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi|L"EnablePcieInOS"|gNVIDIATokenSpaceGuid|0x0|0|BS,NV
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|L"SerialTypeConfig"|gNVIDIATokenSpaceGuid|0x0|0xFF|BS
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig|L"SerialPortConfig"|gNVIDIATokenSpaceGuid|0x0|0xFF|BS,NV
+  gNVIDIATokenSpaceGuid.PcdRedfishHostInterface|L"RedfishHostInterface"|gNVIDIATokenSpaceGuid|0x0|0x01|BS,NV
   # NVIDIA Public variables
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIAPublicVariableGuid|0x0|1|BS,NV
   gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy|L"NewDeviceHierarchy"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV

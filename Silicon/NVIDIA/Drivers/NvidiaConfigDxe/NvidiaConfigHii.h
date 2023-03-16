@@ -83,6 +83,7 @@
 #define KEY_IPMI_NETWORK_BOOT_MODE    0x010C
 #define KEY_ENABLE_ACPI_TIMER         0x010D
 #define KEY_DGPU_DT_EFIFB_SUPPORT     0x010E
+#define KEY_ENABLE_HOST_INTERFACE     0x010F
 
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 
@@ -97,6 +98,9 @@
 
 #define ACPI_TIMER_DISABLE  0x0
 #define ACPI_TIMER_ENABLE   0x1
+
+#define HOST_INTERFACE_DISABLE  0x0
+#define HOST_INTERFACE_ENABLE   0x1
 
 #define NEW_DEVICE_HIERARCHY_BOTTOM  0x0
 #define NEW_DEVICE_HIERARCHY_TOP     0x1
@@ -124,6 +128,7 @@ typedef struct {
   UINT32     L4TSupported;
   BOOLEAN    QuickBootSupported;
   BOOLEAN    DebugMenuSupported;
+  BOOLEAN    RedfishSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];

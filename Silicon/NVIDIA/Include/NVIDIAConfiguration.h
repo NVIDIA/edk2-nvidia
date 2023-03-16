@@ -101,4 +101,8 @@ typedef struct {
   UINT8    Enabled;
 } NVIDIA_DGPU_DT_EFIFB_SUPPORT;
 
+typedef struct {
+  UINT8    Enabled;
+} NVIDIA_REDFISH_HOST_INTERFACE_ENABLED;
+
 #endif //__NVIDIA_CONFIGURATION_H__

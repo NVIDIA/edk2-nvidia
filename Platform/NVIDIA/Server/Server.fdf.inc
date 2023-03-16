@@ -116,6 +116,7 @@
   # Redfish Host Interface Support
   #
   INF RedfishPkg/RedfishHostInterfaceDxe/RedfishHostInterfaceDxe.inf
+  INF Silicon/NVIDIA/Drivers/RedfishHostInterfaceControlDxe/RedfishHostInterfaceControlDxe.inf
 
   #
   # AST2600 VGA GOP Support

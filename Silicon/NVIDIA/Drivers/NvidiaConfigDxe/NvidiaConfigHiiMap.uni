@@ -48,6 +48,7 @@
 #string STR_SPREAD_SPECTRUM_PROMPT        #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/UPHYSpreadSpectrum"
 #string STR_ATS_PAGE_GRANULE_PROMPT       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/AtsPageGranule4k"
 #string STR_UEFI_DEBUG_LEVEL_PROMPT       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/UefiDebugLogLevel"
+#string STR_HOST_INTERFACE_ENABLED_PROMPT #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/RedfishHostInterface"
 
 #string STR_UPHY0_SOCKET0_PROMPT          #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0UPHY0config"
 #string STR_UPHY0_SOCKET1_PROMPT          #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1UPHY0config"

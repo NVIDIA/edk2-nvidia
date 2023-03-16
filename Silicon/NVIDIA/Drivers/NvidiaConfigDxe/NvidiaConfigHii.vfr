@@ -92,6 +92,11 @@ formset
     name  = DgpuDtEfifbSupport,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+  efivarstore NVIDIA_REDFISH_HOST_INTERFACE_ENABLED,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name  = RedfishHostInterface,
+    guid  = NVIDIA_TOKEN_SPACE_GUID;
+
   //
   // Main form for NVIDIA Configuration
   //
@@ -207,6 +212,17 @@ formset
         option text = STRING_TOKEN(STR_DISABLED), value = ACPI_TIMER_DISABLE, flags = 0;
         option text = STRING_TOKEN(STR_ENABLED),  value = ACPI_TIMER_ENABLE, flags = 0;
     endoneof;
+
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.RedfishSupported == 0;
+    oneof varid = RedfishHostInterface.Enabled,
+        questionid = KEY_ENABLE_HOST_INTERFACE,
+        prompt = STRING_TOKEN(STR_HOST_INTERFACE_ENABLED_PROMPT),
+        help   = STRING_TOKEN(STR_HOST_INTERFACE_ENABLED_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_DISABLED), value = HOST_INTERFACE_DISABLE, flags = 0;
+        option text = STRING_TOKEN(STR_ENABLED),  value = HOST_INTERFACE_ENABLE, flags = DEFAULT;
+    endoneof;
+    endif;
   endform;
 
   //

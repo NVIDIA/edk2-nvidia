@@ -84,6 +84,8 @@
   gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
   gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport
+  gNVIDIATokenSpaceGuid.PcdRedfishHostInterface
+  gNVIDIATokenSpaceGuid.PcdRedfishSupported
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

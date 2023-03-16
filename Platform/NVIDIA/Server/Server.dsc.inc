@@ -217,6 +217,7 @@
   gNVIDIATokenSpaceGuid.PcdQuickBootSupported|FALSE
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|TRUE
   gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|TRUE
+  gNVIDIATokenSpaceGuid.PcdRedfishSupported|TRUE
 
   #
   # Redfish support
@@ -395,6 +396,10 @@
   RedfishPkg/RedfishHostInterfaceDxe/RedfishHostInterfaceDxe.inf {
     <LibraryClasses>
       RedfishPlatformHostInterfaceLib|Silicon/NVIDIA/Library/RedfishPlatformHostInterfaceOemLib/RedfishPlatformHostInterfaceOemLib.inf
+  }
+  Silicon/NVIDIA/Drivers/RedfishHostInterfaceControlDxe/RedfishHostInterfaceControlDxe.inf {
+    <LibraryClasses>
+      RedfishEventLib|RedfishClientPkg/Library/RedfishEventLib/RedfishEventLib.inf
   }
 
   #
