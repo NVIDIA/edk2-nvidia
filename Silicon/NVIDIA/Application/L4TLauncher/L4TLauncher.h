@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -66,6 +66,8 @@ typedef struct {
   UINT32                  NumberOfBootOptions;
   UINT32                  Timeout;
 } EXTLINUX_BOOT_CONFIG;
+
+STATIC BOOLEAN  ImageEncrypted = FALSE;
 
 STATIC VOID   *mRamdiskData = NULL;
 STATIC UINTN  mRamdiskSize  = 0;
