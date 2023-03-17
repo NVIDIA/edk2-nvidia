@@ -44,6 +44,7 @@
 #include <Library/TegraDeviceTreeOverlayLib.h>
 #include "L4TLauncher.h"
 #include "L4TRootfsValidation.h"
+#include "L4TOpteeDecrypt.h"
 
 /**
   Causes the driver to load a specified file.
@@ -822,13 +823,137 @@ Exit:
 }
 
 /**
-  Do exactly what OpenAndReadUntrustedFileToBuffer does, except when
-  UEFI Secure Boot is enabled, also check detached signature of the
-  file. A valid signature establishes trust in the file's contents.
+  Utility function to open and decrypt the encrypted file named FileName to
+  buffer.
+
+  This function will open the encrypted file, allocate a block of shared
+  memory with fixed size, read the encrypted contents to shared memory and
+  call optee to decrypted the content block by block. Finally, get the clear
+  image in the buffer FileData.
+
+  Upon successful return, the caller is responsible for freeing all allocated
+  resources (OpteeSession & Shared Memory).
 
   @param[in]   PartitionHandle  Handle of the partition where this file lives on.
   @param[in]   FileName         Name of file to be processed
-  @param[out]  FileHandle       File handle of the opened file.
+  @param[out]  FileData         Buffer with file data.
+  @param[out]  FileDataSize     Size of the opened file.
+
+  @retval EFI_SUCCESS           The operation completed successfully.
+  @retval EFI_OUT_OF_RESOURCES  Failed buffer allocation.
+  @retval !(EFI_SUCCESS)        Error status from other APIs called.
+*/
+STATIC
+EFI_STATUS
+OpenAndDecryptFileToBuffer (
+  IN  CONST EFI_HANDLE          PartitionHandle,
+  IN  CONST CHAR16      *CONST  FileName,
+  OUT VOID             **CONST  FileData,
+  OUT UINT64            *CONST  FileDataSize
+  )
+{
+  EFI_STATUS       Status = EFI_SUCCESS;
+  EFI_DEVICE_PATH  *NextDevicePath;
+  EFI_DEVICE_PATH  *DevicePath = NULL;
+  EFI_FILE_HANDLE  Handle      = NULL;
+  UINT64           DataSize;
+
+  if ((FileData == NULL) || (FileDataSize == NULL)) {
+    ErrorPrint (L"%a: FileData and FileDataSize can not be NULL\r\n", __FUNCTION__);
+    Status = EFI_INVALID_PARAMETER;
+    goto Exit;
+  }
+
+  DevicePath = FileDevicePath (PartitionHandle, FileName);
+  if (DevicePath == NULL) {
+    ErrorPrint (L"%a: Failed to create file device path\r\n", __FUNCTION__);
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
+
+  NextDevicePath = DevicePath;
+  Status         = EfiOpenFileByDevicePath (
+                     &NextDevicePath,
+                     &Handle,
+                     EFI_FILE_MODE_READ,
+                     0
+                     );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (
+      L"%a: Failed to open %s: %r\r\n",
+      __FUNCTION__,
+      FileName,
+      Status
+      );
+    goto Exit;
+  }
+
+  Status = FileHandleGetSize (Handle, &DataSize);
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (
+      L"%a: Failed to get size of file %s: %r\r\n",
+      __FUNCTION__,
+      FileName,
+      Status
+      );
+    goto Exit;
+  }
+
+  *FileData = AllocatePool (DataSize);
+  if (*FileData == NULL) {
+    ErrorPrint (
+      L"%a: Failed to allocate buffer for %s\r\n",
+      __FUNCTION__,
+      FileName
+      );
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
+
+  Status = OpteeDecryptImage (
+             &Handle,
+             NULL,
+             NULL,
+             DataSize,
+             FileData,
+             FileDataSize
+             );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: OpteeDecryptImage failed for %s\r\n", __FUNCTION__, FileName);
+    goto Exit;
+  }
+
+Exit:
+
+  if (Handle != NULL) {
+    FileHandleClose (Handle);
+  }
+
+  if (DevicePath != NULL) {
+    FreePool (DevicePath);
+  }
+
+  return Status;
+}
+
+/**
+  Utility function to open and read file to buffer.
+
+  If UEFI Secure Boot is not enabled. This function do exactly what
+  OpenAndReadUntrustedFileToBuffer does.
+
+  If UEFI Secure Boot is enabled, and image encryption is enabled. This
+  function first call OpenAndDecryptFileToBuffer to read and decrypt
+  encrypted file to buffer, then check detached signature of the file.
+
+  If UEFI Secure Boot is enabled, but image encryption is not enabled.
+  This function first call OpenAndReadUntrustedFileToBuffer to read file
+  to buffer, then check detached signature of the file.
+
+  @param[in]   PartitionHandle  Handle of the partition where this file lives on.
+  @param[in]   FileName         Name of file to be processed
+  @param[out]  FileHandle       File handle of the opened file. Not support for
+  the encrypted File.
   @param[out]  FileData         Buffer with file data.
   @param[out]  FileDataSize     Size of the opened file.
 
@@ -866,13 +991,24 @@ OpenAndReadFileToBuffer (
              );
   }
 
-  Status = OpenAndReadUntrustedFileToBuffer (
-             PartitionHandle,
-             FileName,
-             FileHandle != NULL ? &Handle : NULL,
-             &Data,
-             &DataSize
-             );
+  // Encryption of extlinux.conf is not supported
+  if (ImageEncrypted && StrCmp (FileName, EXTLINUX_CONF_PATH)) {
+    Status = OpenAndDecryptFileToBuffer (
+               PartitionHandle,
+               FileName,
+               &Data,
+               &DataSize
+               );
+  } else {
+    Status = OpenAndReadUntrustedFileToBuffer (
+               PartitionHandle,
+               FileName,
+               FileHandle != NULL ? &Handle : NULL,
+               &Data,
+               &DataSize
+               );
+  }
+
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
@@ -1266,6 +1402,8 @@ ExtLinuxBoot (
   ANDROID_BOOTIMG_PROTOCOL   *AndroidBootProtocol;
   EFI_HANDLE                 RamDiskLoadFileHandle = NULL;
   UINTN                      FdtSize;
+  UINTN                      KernelSize;
+  VOID                       *KernelBase       = NULL;
   VOID                       *AcpiBase         = NULL;
   VOID                       *OldFdtBase       = NULL;
   VOID                       *NewFdtBase       = NULL;
@@ -1418,17 +1556,36 @@ ExtLinuxBoot (
 
   // Load and start the kernel
   if (BootOption->LinuxPath != NULL) {
-    KernelDevicePath = FileDevicePath (DeviceHandle, BootOption->LinuxPath);
-    if (KernelDevicePath == NULL) {
-      ErrorPrint (L"%a: Failed to create device path\r\n", __FUNCTION__);
-      Status = EFI_OUT_OF_RESOURCES;
-      goto Exit;
-    }
+    if (ImageEncrypted) {
+      Status = OpenAndDecryptFileToBuffer (
+                 DeviceHandle,
+                 BootOption->LinuxPath,
+                 &KernelBase,
+                 &KernelSize
+                 );
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"%a: Unable to decrypt image: %s %r\r\n", __FUNCTION__, BootOption->LinuxPath, Status);
+        goto Exit;
+      }
 
-    Status = gBS->LoadImage (FALSE, ImageHandle, KernelDevicePath, NULL, 0, &KernelHandle);
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"%a: Unable to load image: %s %r\r\n", __FUNCTION__, BootOption->LinuxPath, Status);
-      goto Exit;
+      Status = gBS->LoadImage (TRUE, ImageHandle, NULL, KernelBase, KernelSize, &KernelHandle);
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"%a: Unable to load image: %s %r\r\n", __FUNCTION__, BootOption->LinuxPath, Status);
+        goto Exit;
+      }
+    } else {
+      KernelDevicePath = FileDevicePath (DeviceHandle, BootOption->LinuxPath);
+      if (KernelDevicePath == NULL) {
+        ErrorPrint (L"%a: Failed to create device path\r\n", __FUNCTION__);
+        Status = EFI_OUT_OF_RESOURCES;
+        goto Exit;
+      }
+
+      Status = gBS->LoadImage (FALSE, ImageHandle, KernelDevicePath, NULL, 0, &KernelHandle);
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"%a: Unable to load image: %s %r\r\n", __FUNCTION__, BootOption->LinuxPath, Status);
+        goto Exit;
+      }
     }
 
     if (NewArgs != NULL) {
@@ -1490,6 +1647,13 @@ Exit:
     FreePages (ExpandedFdtBase, EFI_SIZE_TO_PAGES (2 * fdt_totalsize (NewFdtBase)));
     ExpandedFdtBase = NULL;
   }
+
+  if (KernelBase != NULL) {
+    FreePool (KernelBase);
+    KernelBase = NULL;
+  }
+
+  KernelSize = 0;
 
   if (NewFdtBase != NULL) {
     FreePool (NewFdtBase);
@@ -2064,6 +2228,13 @@ L4TLauncher (
   if (EFI_ERROR (Status)) {
     ErrorPrint (L"%a: Unable to process boot parameters: %r\r\n", __FUNCTION__, Status);
     return Status;
+  }
+
+  if (IsSecureBootEnabled ()) {
+    Status = IsImageEncryptionEnable (&ImageEncrypted);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: Unable to get image status: %r\r\n", __FUNCTION__, Status);
+    }
   }
 
   if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_GRUB) {

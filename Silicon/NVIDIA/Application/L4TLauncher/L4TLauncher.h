@@ -69,6 +69,8 @@ typedef struct {
   UINT32                  Timeout;
 } EXTLINUX_BOOT_CONFIG;
 
+STATIC BOOLEAN  ImageEncrypted = FALSE;
+
 STATIC VOID   *mRamdiskData = NULL;
 STATIC UINTN  mRamdiskSize  = 0;
 
