@@ -1,7 +1,7 @@
 /** @file
   The main process for L4TLauncher application.
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1331,8 +1331,8 @@ ExtLinuxBoot (
       goto Exit;
     }
 
-    ExpandedFdtBase = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (NewFdtBase)));
-    if (fdt_open_into (NewFdtBase, ExpandedFdtBase, 2 * fdt_totalsize (NewFdtBase)) != 0) {
+    ExpandedFdtBase = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (NewFdtBase)));
+    if (fdt_open_into (NewFdtBase, ExpandedFdtBase, 4 * fdt_totalsize (NewFdtBase)) != 0) {
       Status = EFI_NOT_FOUND;
       goto Exit;
     }

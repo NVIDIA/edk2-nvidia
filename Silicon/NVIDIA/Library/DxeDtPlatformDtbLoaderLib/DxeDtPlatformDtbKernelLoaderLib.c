@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -675,9 +675,9 @@ InstallFdt (
   }
 
   DtbCopy = NULL;
-  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (Dtb)));
+  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (Dtb)));
   if ((DtbCopy != NULL) &&
-      (fdt_open_into (Dtb, DtbCopy, 2 * fdt_totalsize (Dtb)) == 0))
+      (fdt_open_into (Dtb, DtbCopy, 4 * fdt_totalsize (Dtb)) == 0))
   {
     DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB\r\n", __FUNCTION__));
     Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);

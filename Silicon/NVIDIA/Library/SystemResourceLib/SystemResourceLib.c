@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -41,8 +41,8 @@ RegisterDeviceTree (
     if (fdt_check_header ((VOID *)BlDtbLoadAddress) == 0) {
       UINTN  DtbSize = fdt_totalsize ((VOID *)BlDtbLoadAddress);
 
-      EFI_PHYSICAL_ADDRESS  DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize * 2));
-      if (fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 2 * DtbSize) != 0) {
+      EFI_PHYSICAL_ADDRESS  DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize * 4));
+      if (fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 4 * DtbSize) != 0) {
         DEBUG ((EFI_D_ERROR, "%a: Failed to increase device tree size\r\n", __FUNCTION__));
         return;
       }
@@ -52,7 +52,7 @@ RegisterDeviceTree (
         Status = ApplyTegraDeviceTreeOverlay ((VOID *)DtbCopy, (VOID *)DtbNext, SWModule);
         if (EFI_ERROR (Status)) {
           DEBUG ((EFI_D_ERROR, "DTB Overlay failed. Using base DTB.\n"));
-          fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 2 * DtbSize);
+          fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 4 * DtbSize);
         }
       }
 
