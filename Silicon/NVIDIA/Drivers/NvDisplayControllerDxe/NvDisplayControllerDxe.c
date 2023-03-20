@@ -717,10 +717,20 @@ DisplayStop (
   return Status;
 }
 
+/**
+   Locates a child handle with the GOP protocol installed.
+
+   @param[in]  Context  Context whose child handle shall be located.
+   @param[out] Handle   The located child handle.
+
+   @retval EFI_SUCCESS    Child handle found successfully.
+   @retval !=EFI_SUCCESS  Error occurred.
+*/
 STATIC
 EFI_STATUS
-DisplayDisableEfiFrameBuffer (
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
+DisplayLocateGopChildHandle (
+  IN  NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
+  OUT EFI_HANDLE *CONST                         Handle
   )
 {
   EFI_STATUS                Status;
@@ -793,27 +803,11 @@ DisplayDisableEfiFrameBuffer (
   }
 
   if (HandleIndex < HandleCount) {
-    /* We have a child handle with GOP protocol installed, disable the
-       kernel EFI FB driver. Ignore "protocol already installed" error
-       since this function may be run more than once. */
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &gImageHandle,
-                    &gNVIDIAKernelCmdLineUpdateGuid,
-                    (VOID **)&mEfifbOffKernelCmdLineUpdateProtocol,
-                    NULL
-                    );
-    if (EFI_ERROR (Status) && (Status != EFI_INVALID_PARAMETER)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to install the kernel command-line update protocol: %r\r\n",
-        __FUNCTION__,
-        Status
-        ));
-      goto Exit;
-    }
+    *Handle = Handles[HandleIndex];
+    Status  = EFI_SUCCESS;
+  } else {
+    Status = EFI_NOT_FOUND;
   }
-
-  Status = EFI_SUCCESS;
 
 Exit:
   if (Handles != NULL) {
@@ -833,6 +827,7 @@ DisplayOnReadyToBoot (
 {
   VOID        *AcpiBase;
   EFI_STATUS  Status;
+  EFI_HANDLE  GopHandle;
 
   /* Leave display active for ACPI boot. */
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
@@ -840,7 +835,26 @@ DisplayOnReadyToBoot (
     return;
   }
 
-  DisplayDisableEfiFrameBuffer (Context);
+  Status = DisplayLocateGopChildHandle (Context, &GopHandle);
+  if (!EFI_ERROR (Status)) {
+    /* We have a child handle with GOP protocol installed, disable the
+       kernel EFI FB driver. Ignore "protocol already installed" error
+       since this function may be run more than once. */
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &gImageHandle,
+                    &gNVIDIAKernelCmdLineUpdateGuid,
+                    (VOID **)&mEfifbOffKernelCmdLineUpdateProtocol,
+                    NULL
+                    );
+    if (EFI_ERROR (Status) && (Status != EFI_INVALID_PARAMETER)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to install the kernel command-line update protocol: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
+    }
+  }
 }
 
 STATIC
