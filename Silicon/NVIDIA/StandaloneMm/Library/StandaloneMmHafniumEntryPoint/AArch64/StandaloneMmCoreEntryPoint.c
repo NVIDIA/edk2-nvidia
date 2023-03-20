@@ -50,7 +50,13 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define MAX_MANIFEST_REGIONS  255
 #define SP_PKG_HEADER_SIZE    0x18
 /* Request the PA of the STMM_FW NS shared buffer */
-#define STMM_GET_NS_BUFFER  0xC0270001
+#define STMM_GET_NS_BUFFER             0xC0270001
+#define STMM_GET_ERST_UNCACHED_BUFFER  0xC0270002
+#define STMM_GET_ERST_CACHED_BUFFER    0xC0270003
+#define RASFW_VMID                     0x8003
+#define SATMC_VMID                     0x8001
+
+#define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
 
 ARM_MEMORY_REGION_DESCRIPTOR        MemoryTable[MAX_MANIFEST_REGIONS+1];
 PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
@@ -344,6 +350,8 @@ GetAndPrintManifestinformation (
   UINT64      LowestRegion, HighestRegion;
   UINT64      RegionAddress;
   UINT32      RegionSize;
+  UINT32      ErstUncachedSize;
+  UINT32      ErstCachedSize;
 
   ParentOffset = fdt_path_offset (DtbAddress, "/");
 
@@ -375,10 +383,52 @@ GetAndPrintManifestinformation (
 
     /* For each known resource type, extract information */
     if (AsciiStrCmp (NodeName, "stmmns-memory") == 0) {
+      ErstCachedSize   = FDTGetProperty32 (DtbAddress, NodeOffset, "nv-erst-cached-pages-count") * DEFAULT_PAGE_SIZE;
+      ErstUncachedSize = FDTGetProperty32 (DtbAddress, NodeOffset, "nv-erst-uncached-pages-count") * DEFAULT_PAGE_SIZE;
+
+      /* Publish the Ns Buffer Addr Size to what StMM needs.*/
       PayloadBootInfo.SpNsCommBufBase = RegionAddress;
-      PayloadBootInfo.SpNsCommBufSize = RegionSize;
-      StmmCommBuffers.NsBufferAddr    = PayloadBootInfo.SpNsCommBufBase;
-      StmmCommBuffers.NsBufferSize    = PayloadBootInfo.SpNsCommBufSize;
+      PayloadBootInfo.SpNsCommBufSize = (RegionSize - ErstUncachedSize - ErstCachedSize);
+
+      /**
+       * STMM Buffer Base and Size.
+      */
+      StmmCommBuffers.NsBufferAddr = PayloadBootInfo.SpNsCommBufBase;
+      StmmCommBuffers.NsBufferSize = PayloadBootInfo.SpNsCommBufSize;
+
+      /**
+       * ERST Uncached Base and Size.
+      */
+      StmmCommBuffers.NsErstUncachedBufAddr = (PayloadBootInfo.SpNsCommBufBase + PayloadBootInfo.SpNsCommBufSize);
+      StmmCommBuffers.NsErstUncachedBufSize = ErstUncachedSize;
+
+      /**
+       * ERST Cached Base and Size.
+      */
+      StmmCommBuffers.NsErstCachedBufAddr = StmmCommBuffers.NsErstUncachedBufAddr + StmmCommBuffers.NsErstUncachedBufSize;
+      StmmCommBuffers.NsErstCachedBufSize = ErstCachedSize;
+
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: StMM Base 0x%lx Size 0x%x\n",
+        __FUNCTION__,
+        PayloadBootInfo.SpNsCommBufBase,
+        PayloadBootInfo.SpNsCommBufSize
+        ));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: ERST-Uncached Base 0x%lx Size 0x%x\n",
+        __FUNCTION__,
+        StmmCommBuffers.NsBufferAddr,
+        StmmCommBuffers.NsBufferSize
+        ));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: ERST-Cached Base 0x%lx Size 0x%x\n",
+        __FUNCTION__,
+        StmmCommBuffers.NsErstUncachedBufAddr,
+        StmmCommBuffers.NsErstUncachedBufSize
+        ));
     } else if (AsciiStrCmp (NodeName, "rx-buffer") == 0) {
       FfaRxBufferAddr = RegionAddress;
       FfaRxBufferSize = RegionSize;
@@ -654,6 +704,16 @@ DelegatedEventLoop (
           EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsBufferSize;
           Status                     = EFI_SUCCESS;
           break;
+        case STMM_GET_ERST_UNCACHED_BUFFER:
+          EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsErstUncachedBufAddr;
+          EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsErstUncachedBufSize;
+          Status                     = EFI_SUCCESS;
+          break;
+        case STMM_GET_ERST_CACHED_BUFFER:
+          EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsErstCachedBufAddr;
+          EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsErstCachedBufSize;
+          Status                     = EFI_SUCCESS;
+          break;
         case ARM_SMC_ID_MM_COMMUNICATE_AARCH64:
           if (SenderPartId == 0) {
             Status = CpuDriverEntryPoint (
@@ -861,10 +921,13 @@ ConfigureStage1Translations (
   UINT64      RegionAddress, RegionSize;
   UINT64      NsBufferAddress, NsBufferSize;
   EFI_STATUS  Status;
-  UINT16      NumRegions     = 0;
-  INT32       ParentOffset   = 0;
-  INT32       NodeOffset     = 0;
-  INT32       PrevNodeOffset = 0;
+  UINT16      NumRegions       = 0;
+  INT32       ParentOffset     = 0;
+  INT32       NodeOffset       = 0;
+  INT32       PrevNodeOffset   = 0;
+  UINT32      ErstCachedSize   = 0;
+  UINT32      ErstUnCachedSize = 0;
+  UINT32      NsUncachedSize   = 0;
 
  #ifdef FAST_STAGE1_SETUP
   /*In "Fast" mode, simply allocate the MMIO range of socket 0. That's sufficient for FPGA-based testing. */
@@ -929,13 +992,38 @@ ConfigureStage1Translations (
     }
 
     if (fdt_getprop (DTBAddress, NodeOffset, "nv-non-secure-memory", &Length) != NULL) {
-      NsBufferAddress = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address"), DEFAULT_PAGE_SIZE);
-      NsBufferSize    = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count") * DEFAULT_PAGE_SIZE;
-      /* NS Buffer */
+      NsBufferAddress  = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address"), DEFAULT_PAGE_SIZE);
+      NsBufferSize     = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count") * DEFAULT_PAGE_SIZE;
+      ErstCachedSize   = FDTGetProperty32 (DTBAddress, NodeOffset, "nv-erst-cached-pages-count") * DEFAULT_PAGE_SIZE;
+      ErstUnCachedSize = FDTGetProperty32 (DTBAddress, NodeOffset, "nv-erst-uncached-pages-count") * DEFAULT_PAGE_SIZE;
+      NsUncachedSize   = (NsBufferSize - ErstCachedSize);
+
+      /* NS Uncached region (StMM Buffer + Part of ERST) */
       MemoryTable[NumRegions].PhysicalBase = NsBufferAddress;
       MemoryTable[NumRegions].VirtualBase  = NsBufferAddress;
-      MemoryTable[NumRegions].Length       = NsBufferSize;
+      MemoryTable[NumRegions].Length       = NsUncachedSize;
       MemoryTable[NumRegions].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_UNCACHED_UNBUFFERED;
+      DEBUG ((
+        DEBUG_ERROR,
+        "UnCached NS Address = 0x%llx Size 0x%lx Attr 0x%x \n",
+        MemoryTable[NumRegions].PhysicalBase,
+        MemoryTable[NumRegions].Length,
+        MemoryTable[NumRegions].Attributes
+        ));
+      NumRegions++;
+
+      /* NS Cached region (erst)*/
+      MemoryTable[NumRegions].PhysicalBase = (NsBufferAddress + NsUncachedSize);
+      MemoryTable[NumRegions].VirtualBase  = (NsBufferAddress + NsUncachedSize);
+      MemoryTable[NumRegions].Length       = ErstCachedSize;
+      MemoryTable[NumRegions].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_BACK;
+      DEBUG ((
+        DEBUG_ERROR,
+        "Cached NS Address = 0x%llx Size 0x%lx Attr 0x%x \n",
+        MemoryTable[NumRegions].PhysicalBase,
+        MemoryTable[NumRegions].Length,
+        MemoryTable[NumRegions].Attributes
+        ));
       NumRegions++;
     }
 

@@ -100,6 +100,8 @@
 			base-address = <0x00000000 0x8B5F0000>;
 			attributes = <0x3>; /* read-write */
 			nv-non-secure-memory = <0x1>;
+			nv-erst-cached-pages-count = <16>;
+			nv-erst-uncached-pages-count = <1>;
 		};
 		/* Shared memory between StMM and Secure world (TF-A) */
 		stmmsec-memory {

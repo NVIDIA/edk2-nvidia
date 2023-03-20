@@ -36,6 +36,10 @@ typedef struct _EFI_MM_DEVICE_REGION {
 typedef struct {
   PHYSICAL_ADDRESS    NsBufferAddr;
   UINTN               NsBufferSize;
+  PHYSICAL_ADDRESS    NsErstUncachedBufAddr;
+  UINTN               NsErstUncachedBufSize;
+  PHYSICAL_ADDRESS    NsErstCachedBufAddr;
+  UINTN               NsErstCachedBufSize;
   PHYSICAL_ADDRESS    SecBufferAddr;
   UINTN               SecBufferSize;
   PHYSICAL_ADDRESS    DTBAddress;
