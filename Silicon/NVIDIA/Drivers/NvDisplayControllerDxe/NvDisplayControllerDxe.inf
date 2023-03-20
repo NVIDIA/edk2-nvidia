@@ -28,17 +28,17 @@
 
 [LibraryClasses]
   BaseLib
-  UefiLib
-  UefiBootServicesTableLib
   DebugLib
-  PrintLib
+  DeviceDiscoveryDriverLib
+  HobLib
   IoLib
-  DmaLib
   MemoryAllocationLib
   PcdLib
+  PlatformResourceLib
   TegraPlatformInfoLib
+  UefiBootServicesTableLib
   UefiDriverEntryPoint
-  DeviceDiscoveryDriverLib
+  UefiLib
 
 [Guids]
   gEfiAcpiTableGuid
@@ -46,6 +46,7 @@
   gEfiEventReadyToBootGuid
   gNVIDIAKernelCmdLineUpdateGuid
   gNVIDIANonDiscoverableT234DisplayDeviceGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
@@ -57,9 +58,6 @@
   gNVIDIADeviceTreeNodeProtocolGuid             ## CONSUMES
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdFramebufferHorizontalResolution
-  gNVIDIATokenSpaceGuid.PcdFramebufferVerticalResolution
-  gNVIDIATokenSpaceGuid.PcdFramebufferPixelSize
   gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex
 
 [Depex]
