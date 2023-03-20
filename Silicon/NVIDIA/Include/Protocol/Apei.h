@@ -6,6 +6,8 @@
   Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2017, ARM Limited. All rights reserved.
 
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD
   License which accompanies this distribution.  The full text of the license may
