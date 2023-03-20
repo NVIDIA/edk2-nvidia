@@ -11,16 +11,17 @@
 #include <PiDxe.h>
 
 #include <Library/BaseLib.h>
-#include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/DebugLib.h>
+#include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/HobLib.h>
 #include <Library/IoLib.h>
-#include <Library/DmaLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
-#include <Library/DeviceDiscoveryDriverLib.h>
 
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/DevicePath.h>
@@ -36,16 +37,15 @@
 #define DISPLAY_CONTROLLER_SIGNATURE  SIGNATURE_32('N','V','D','C')
 
 typedef struct {
-  UINT32                               Signature;
-  EFI_HANDLE                           DriverHandle;
-  EFI_HANDLE                           ControllerHandle;
-  NON_DISCOVERABLE_DEVICE              EdkiiNonDiscoverableDevice;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR    *FramebufferResource;
-  BOOLEAN                              ResetsDeasserted;
-  BOOLEAN                              ClocksEnabled;
-  BOOLEAN                              OutputGpiosConfigured;
-  EFI_EVENT                            OnReadyToBootEvent;
-  EFI_EVENT                            OnExitBootServicesEvent;
+  UINT32                     Signature;
+  EFI_HANDLE                 DriverHandle;
+  EFI_HANDLE                 ControllerHandle;
+  NON_DISCOVERABLE_DEVICE    EdkiiNonDiscoverableDevice;
+  BOOLEAN                    ResetsDeasserted;
+  BOOLEAN                    ClocksEnabled;
+  BOOLEAN                    OutputGpiosConfigured;
+  EFI_EVENT                  OnReadyToBootEvent;
+  EFI_EVENT                  OnExitBootServicesEvent;
 } NVIDIA_DISPLAY_CONTROLLER_CONTEXT;
 
 #define DISPLAY_CONTROLLER_CONTEXT_FROM_EDKII_DEVICE(a)  CR(\
@@ -477,10 +477,7 @@ ConfigureOutputGpios (
    Creates an ACPI address space descriptor suitable for use as a
    framebuffer.
 
-   @param[out] Desc                 Resulting descriptor
-   @param[in]  HorizontalResolution Horizontal resolution of the framebuffer
-   @param[in]  VerticalResolution   Vertical resolution of the framebuffer
-   @param[in]  PixelSize            Size of a single pixel in bytes
+   @param[out] Desc  Resulting descriptor
 
    @retval EFI_SUCCESS Descriptor successfully created
    @retval others      Failed to create the descriptor
@@ -488,96 +485,47 @@ ConfigureOutputGpios (
 STATIC
 EFI_STATUS
 CreateFramebufferResource (
-  OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *CONST  Desc,
-  IN  CONST UINTN                               HorizontalResolution,
-  IN  CONST UINTN                               VerticalResolution,
-  IN  CONST UINTN                               PixelSize
+  OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *CONST  Desc
   )
 {
-  EFI_STATUS  Status;
-  VOID        *Address;
-  UINTN       Pitch, Size, Pages;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  EFI_PHYSICAL_ADDRESS          Address;
+  UINTN                         Size;
 
-  /* Since we are allocating the framebuffer memory as
-     EfiRuntimeServicesData, make sure the address is aligned to
-     RUNTIME_PAGE_ALLOCATION_GRANULARITY. */
-  CONST UINTN  Alignment = RUNTIME_PAGE_ALLOCATION_GRANULARITY;
-
-  ZeroMem (Desc, sizeof (*Desc));
-
-  /* Calculate pitch as the size of a framebuffer row, rounded up to
-     the next power of two. */
-  Pitch = HorizontalResolution * PixelSize;
-  if ((Pitch & -Pitch) != Pitch) {
-    Pitch = (UINTN)GetPowerOfTwo32 ((UINT32)Pitch) << 1;
-  }
-
-  Size = VerticalResolution * Pitch;
-
-  /* Align size to RUNTIME_PAGE_ALLOCATION_GRANULARITY for the same
-     reason we require such alignment. */
-  Size = ALIGN_VALUE (Size, RUNTIME_PAGE_ALLOCATION_GRANULARITY);
-
-  Pages  = EFI_SIZE_TO_PAGES (Size);
-  Status = DmaAllocateAlignedBuffer (EfiRuntimeServicesData, Pages, Alignment, &Address);
-  if (EFI_ERROR (Status)) {
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob == NULL) || (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (*PlatformResourceInfo))) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: failed to allocate %u framebuffer pages (%u bytes): %r\r\n",
-      __FUNCTION__,
-      Pages,
-      Size,
-      Status
+      "%a: failed to retrieve platform resource information\r\n",
+      __FUNCTION__
       ));
-    return Status;
+    return EFI_NOT_FOUND;
   }
 
-  ZeroMem (Address, Size);
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  Address              = PlatformResourceInfo->FrameBufferInfo.Base;
+  Size                 = PlatformResourceInfo->FrameBufferInfo.Size;
 
-  Desc->Desc                  = ACPI_ADDRESS_SPACE_DESCRIPTOR;
-  Desc->Len                   = sizeof (*Desc) - 3;
-  Desc->AddrRangeMin          = (EFI_PHYSICAL_ADDRESS)Address;
-  Desc->AddrLen               = Size;
-  Desc->AddrRangeMax          = (EFI_PHYSICAL_ADDRESS)Address + Size - 1;
-  Desc->ResType               = ACPI_ADDRESS_SPACE_TYPE_MEM;
-  Desc->AddrSpaceGranularity  = (EFI_PHYSICAL_ADDRESS)Address + Size > SIZE_4GB ? 64 : 32;
-  Desc->AddrTranslationOffset = 0;
+  if ((Address == 0) || (Size == 0)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: no framebuffer region present\r\n",
+      __FUNCTION__
+      ));
+    return EFI_NOT_FOUND;
+  }
+
+  ZeroMem (Desc, sizeof (*Desc));
+  Desc->Desc                 = ACPI_ADDRESS_SPACE_DESCRIPTOR;
+  Desc->Len                  = sizeof (*Desc) - 3;
+  Desc->AddrRangeMin         = Address;
+  Desc->AddrLen              = Size;
+  Desc->AddrRangeMax         = Address + Size - 1;
+  Desc->ResType              = ACPI_ADDRESS_SPACE_TYPE_MEM;
+  Desc->AddrSpaceGranularity = Address + Size > SIZE_4GB ? 64 : 32;
+
   return EFI_SUCCESS;
-}
-
-/**
-   Destroys a framebuffer resource previously created by
-   CreateFramebufferResource.
-
-   @param[in] Desc Framebuffer resource descriptor
-*/
-STATIC
-EFI_STATUS
-DestroyFramebufferResource (
-  IN EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *CONST  Desc
-  )
-{
-  EFI_STATUS  Status = EFI_SUCCESS;
-  VOID        *Address;
-  UINTN       Pages;
-
-  Address = (VOID *)(EFI_PHYSICAL_ADDRESS)Desc->AddrRangeMin;
-  if (Address != NULL) {
-    Pages  = EFI_SIZE_TO_PAGES (Desc->AddrLen);
-    Status = DmaFreeBuffer (Pages, Address);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to free %u framebuffer pages (%lu bytes): %r\r\n",
-        __FUNCTION__,
-        Pages,
-        Desc->AddrLen,
-        Status
-        ));
-    }
-  }
-
-  return Status;
 }
 
 /**
@@ -594,11 +542,11 @@ DestroyFramebufferResource (
    Note that @a DestinationResources is assumed to have enough space
    available.
 
-   @param[out] DestinationResources     Where to put the result
-   @param[out] DestinationResourcesSize Size of the result
-   @param[in]  SourceResources          Resources to copy
-   @param[in]  NewResource              Resource to insert on call; inserted resource on return
-   @param[in]  NewResourceIndex         Index to insert the resource at
+   @param[out]     DestinationResources      Where to put the result
+   @param[out]     DestinationResourcesSize  Size of the result
+   @param[in]      SourceResources           Resources to copy
+   @param[in,out]  NewResource               Resource to insert on call; inserted resource on return
+   @param[in]      NewResourceIndex          Index to insert the resource at
 
    @retval EFI_SUCCESS           Operation completed successfully
    @retval EFI_INVALID_PARAMETER SourceResources is NULL
@@ -759,15 +707,6 @@ DisplayStop (
       }
 
       Context->ResetsDeasserted = FALSE;
-    }
-
-    if (!OnExitBootServices && (Context->FramebufferResource != NULL)) {
-      Status1 = DestroyFramebufferResource (Context->FramebufferResource);
-      if (!EFI_ERROR (Status)) {
-        Status = Status1;
-      }
-
-      Context->FramebufferResource = NULL;
     }
 
     if (!OnExitBootServices) {
@@ -992,10 +931,7 @@ DisplayStart (
   CONST BOOLEAN                      UseDpOutput        = FALSE;
   CONST BOOLEAN                      OnExitBootServices = FALSE;
 
-  CONST UINTN  FramebufferHorizontalResolution = (UINTN)PcdGet32 (PcdFramebufferHorizontalResolution);
-  CONST UINTN  FramebufferVerticalResolution   = (UINTN)PcdGet32 (PcdFramebufferVerticalResolution);
-  CONST UINTN  FramebufferPixelSize            = (UINTN)PcdGet8 (PcdFramebufferPixelSize);
-  CONST UINTN  FramebufferResourceIndex        = (UINTN)(PcdGet8 (PcdFramebufferBarIndex) + 1) - 1;
+  CONST UINTN  FramebufferResourceIndex = (UINTN)(PcdGet8 (PcdFramebufferBarIndex) + 1) - 1;
 
   Status = gBS->OpenProtocol (
                   ControllerHandle,
@@ -1016,12 +952,7 @@ DisplayStart (
   }
 
   if (FramebufferResourceIndex != MAX_UINTN) {
-    Status = CreateFramebufferResource (
-               &FramebufferDescriptor,
-               FramebufferHorizontalResolution,
-               FramebufferVerticalResolution,
-               FramebufferPixelSize
-               );
+    Status = CreateFramebufferResource (&FramebufferDescriptor);
     if (EFI_ERROR (Status)) {
       goto Exit;
     }
@@ -1088,9 +1019,6 @@ DisplayStart (
     goto Exit;
   }
 
-  Result->FramebufferResource = FramebufferResource;
-  FramebufferResource         = NULL;
-
   Status = ResetRequiredDisplayEngines (ControllerHandle, FALSE);
   if (EFI_ERROR (Status)) {
     goto Exit;
@@ -1155,10 +1083,6 @@ DisplayStart (
 Exit:
   if (EFI_ERROR (Status)) {
     DisplayStop (Result, OnExitBootServices);
-  }
-
-  if (FramebufferResource != NULL) {
-    DestroyFramebufferResource (FramebufferResource);
   }
 
   return Status;

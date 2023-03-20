@@ -318,12 +318,6 @@
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported|0xf|UINT64|0x00000056
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting|0xf|UINT64|0x00000057
 
-#The maximum supported horizontal resolution of the framebuffer
-  gNVIDIATokenSpaceGuid.PcdFramebufferHorizontalResolution|0|UINT32|0x00000061
-#The maximum supported vertical resolution of the framebuffer
-  gNVIDIATokenSpaceGuid.PcdFramebufferVerticalResolution|0|UINT32|0x00000062
-#The maximum supported number of bytes per a framebuffer pixel
-  gNVIDIATokenSpaceGuid.PcdFramebufferPixelSize|4|UINT8|0x00000063
 #Index of the PCI BAR register through which the framebuffer should be
 #accessible. The value of -1 (0xFF) means no framebuffer will be
 #allocated.
