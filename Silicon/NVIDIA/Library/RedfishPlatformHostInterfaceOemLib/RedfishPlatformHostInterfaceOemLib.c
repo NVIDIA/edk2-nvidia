@@ -29,6 +29,7 @@
 #define VERBOSE_COLUMN_SIZE      (16)
 #define MAX_IP_ADDRESS_STR_SIZE  30
 #define DEFAULT_REDFISH_IP_PORT  443
+#define REDFISH_HI_IP_ADDR_SIZE  16
 #define REDFISH_HI_DEBUG         DEBUG_INFO
 
 // Channel number for Redfish Host Interface
@@ -400,9 +401,9 @@ RedfishPlatformHostInterfaceProtocolData (
   // Redfish Service Protocol data
   UINT8                              RfSIpDiscoveryType;
   UINT8                              RfSIpAddressFormat;
-  UINT8                              RfSIpAddress[16];
-  UINT8                              HostIpAddress[16];
-  UINT8                              RfSIpMask[16];
+  UINT8                              RfSIpAddress[REDFISH_HI_IP_ADDR_SIZE];
+  UINT8                              HostIpAddress[REDFISH_HI_IP_ADDR_SIZE];
+  UINT8                              RfSIpMask[REDFISH_HI_IP_ADDR_SIZE];
   UINT16                             RfSIpPort;            // Used for Static and AutoConfigure.
   UINT16                             RfSVlanId;            // Used for Static and AutoConfigure.
   UINT8                              RfSHostnameLength;    // length of the hostname string
@@ -412,6 +413,13 @@ RedfishPlatformHostInterfaceProtocolData (
   EFI_STATUS                         Status;
   UINT8                              Index;
   UINT8                              Size;
+
+  //
+  // Initial IP address to all zeros
+  //
+  ZeroMem (RfSIpAddress, REDFISH_HI_IP_ADDR_SIZE);
+  ZeroMem (HostIpAddress, REDFISH_HI_IP_ADDR_SIZE);
+  ZeroMem (RfSIpMask, REDFISH_HI_IP_ADDR_SIZE);
 
   if (IndexOfProtocolData != 0) {
     return EFI_NOT_FOUND;
@@ -466,12 +474,8 @@ RedfishPlatformHostInterfaceProtocolData (
     }
 
     Status = GetRFHIIpAddress (Channel, RfSIpAddress);
-    if (Status != EFI_SUCCESS) {
-      // Initialize both Host Ip and Redfish Ip to all zeroes
-      for (UINT8 i = 0; i < sizeof (RfSIpAddress); i++) {
-        RfSIpAddress[i]  = 0;
-        HostIpAddress[i] = 0;
-      }
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: failed to get IP address: %r\n", __FUNCTION__, Status));
     } else {
       // Host IP and Redfish IP are of same subnet, with same network id, differ the host id by 1.
       for (Index = 0; Index < sizeof (RfSIpAddress); Index++) {
@@ -483,11 +487,8 @@ RedfishPlatformHostInterfaceProtocolData (
     }
 
     Status = GetRFHIIpMask (Channel, RfSIpMask);
-    if (Status != EFI_SUCCESS) {
-      // Intialize IP mask to all zeroes
-      for (int Index = 0; Index < sizeof (RfSIpMask); Index++) {
-        RfSIpMask[Index] = 0;
-      }
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: failed to get IP mask: %r\n", __FUNCTION__, Status));
     }
 
     Status =   GetRFHIIpPort (&RfSIpPort);
