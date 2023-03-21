@@ -35,6 +35,7 @@
   MemoryAllocationLib
   PcdLib
   PlatformResourceLib
+  PrintLib
   TegraPlatformInfoLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
@@ -44,6 +45,7 @@
   gEfiAcpiTableGuid
   gEfiEventExitBootServicesGuid
   gEfiEventReadyToBootGuid
+  gFdtTableGuid
   gNVIDIAKernelCmdLineUpdateGuid
   gNVIDIANonDiscoverableT234DisplayDeviceGuid
   gNVIDIAPlatformResourceDataGuid

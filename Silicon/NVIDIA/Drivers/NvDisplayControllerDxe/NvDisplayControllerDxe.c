@@ -19,6 +19,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/PrintLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -44,6 +45,7 @@ typedef struct {
   BOOLEAN                    ResetsDeasserted;
   BOOLEAN                    ClocksEnabled;
   BOOLEAN                    OutputGpiosConfigured;
+  EFI_EVENT                  OnFdtInstalledEvent;
   EFI_EVENT                  OnReadyToBootEvent;
   EFI_EVENT                  OnExitBootServicesEvent;
 } NVIDIA_DISPLAY_CONTROLLER_CONTEXT;
@@ -628,6 +630,315 @@ CopyAndInsertResource (
 }
 
 /**
+   Updates Device Tree simple-framebuffer node(s) with details about
+   the given graphics output mode.
+
+   @param[in] Fdt   Device Tree to update.
+   @param[in] Info  Pointer to the mode information to use.
+
+   @retval TRUE   Update successful.
+   @retval FALSE  Update failed.
+*/
+STATIC
+BOOLEAN
+UpdateFdtSimpleFramebufferModeInfo (
+  IN VOID *CONST                                  Fdt,
+  IN EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *CONST  Info
+  )
+{
+  STATIC CONST CHAR8  FbRgbxFormat[] = "x8b8g8r8";
+  STATIC CONST CHAR8  FbBgrxFormat[] = "x8r8g8b8";
+
+  CONST CHAR8  *FbFormat;
+  UINTN        PixelSize;
+  INT32        Result, NodeOffset;
+
+  switch (Info->PixelFormat) {
+    case PixelRedGreenBlueReserved8BitPerColor:
+      FbFormat  = FbRgbxFormat;
+      PixelSize = 4;
+      break;
+    case PixelBlueGreenRedReserved8BitPerColor:
+      FbFormat  = FbBgrxFormat;
+      PixelSize = 4;
+      break;
+    default:
+      return FALSE;
+  }
+
+  Result = fdt_path_offset (Fdt, "/chosen");
+  if (Result < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: cannot find node '/chosen': %a",
+      __FUNCTION__,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  fdt_for_each_subnode (NodeOffset, Fdt, Result) {
+    Result = fdt_node_check_compatible (Fdt, NodeOffset, "simple-framebuffer");
+    if (Result != 0) {
+      continue;
+    }
+
+    Result = fdt_setprop_u32 (
+               Fdt,
+               NodeOffset,
+               "width",
+               Info->HorizontalResolution
+               );
+    if (Result != 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to set 'width' property: %a\r\n",
+        __FUNCTION__,
+        fdt_strerror (Result)
+        ));
+      return FALSE;
+    }
+
+    Result = fdt_setprop_u32 (
+               Fdt,
+               NodeOffset,
+               "height",
+               Info->VerticalResolution
+               );
+    if (Result != 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to set 'height' property: %a\r\n",
+        __FUNCTION__,
+        fdt_strerror (Result)
+        ));
+      return FALSE;
+    }
+
+    Result = fdt_setprop_u32 (
+               Fdt,
+               NodeOffset,
+               "stride",
+               Info->PixelsPerScanLine * PixelSize
+               );
+    if (Result != 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to set 'stride' property: %a\r\n",
+        __FUNCTION__,
+        fdt_strerror (Result)
+        ));
+      return FALSE;
+    }
+
+    Result = fdt_setprop_string (
+               Fdt,
+               NodeOffset,
+               "format",
+               FbFormat
+               );
+    if (Result != 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to set 'format' property: %a\r\n",
+        __FUNCTION__,
+        fdt_strerror (Result)
+        ));
+      return FALSE;
+    }
+
+    Result = fdt_setprop_string (
+               Fdt,
+               NodeOffset,
+               "status",
+               "okay"
+               );
+    if (Result != 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to set 'status' property: %a\r\n",
+        __FUNCTION__,
+        fdt_strerror (Result)
+        ));
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+/**
+   Updates Device Tree framebuffer node(s) under /reserved-memory with
+   the framebuffer region address and size.
+
+   @param[in] Fdt   Device Tree to update.
+   @param[in] Base  Base address of the framebuffer region.
+   @param[in] Size  Size of the framebuffer region.
+
+   @retval TRUE   Update successful.
+   @retval FALSE  Update failed.
+*/
+STATIC
+BOOLEAN
+UpdateFdtFramebufferReservedMemory (
+  IN VOID *CONST   Fdt,
+  IN CONST UINT64  Base,
+  IN CONST UINT64  Size
+  )
+{
+  INT32        Result;
+  INT32        NodeOffset;
+  CONST VOID   *Property;
+  UINT32       IommuAddressesProperty[5];
+  CONST CHAR8  *Name, *NameEnd;
+  CHAR8        NameBuffer[64];
+
+  CONST UINT32  BaseLo = (UINT32)Base;
+  CONST UINT32  BaseHi = (UINT32)(Base >> 32);
+
+  CONST UINT64  RegProperty[2] = {
+    SwapBytes64 (Base),
+    SwapBytes64 (Size),
+  };
+
+  /* Setting up IOMMU identity mapping */
+  CopyMem (&IommuAddressesProperty[1], RegProperty, sizeof (RegProperty));
+
+  Result = fdt_path_offset (Fdt, "/reserved-memory");
+  if (Result < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: cannot find node '/reserved-memory': %a\r\n",
+      __FUNCTION__,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  fdt_for_each_subnode (NodeOffset, Fdt, Result) {
+    Result = fdt_node_check_compatible (Fdt, NodeOffset, "framebuffer");
+    if (Result != 0) {
+      continue;
+    }
+
+    Name = fdt_get_name (Fdt, NodeOffset, &Result);
+    if (Name == NULL) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to get name: %r\r\n",
+        __FUNCTION__,
+        fdt_strerror (Result)
+        ));
+      return FALSE;
+    }
+
+    NameEnd = AsciiStrStr (Name, "@");
+    if (NameEnd == NULL) {
+      NameEnd = Name + Result;
+    }
+
+    if (BaseHi != 0) {
+      Result = (INT32)AsciiSPrint (
+                        NameBuffer,
+                        sizeof (NameBuffer),
+                        "%.*a@%x,%x",
+                        (UINTN)(NameEnd - Name),
+                        Name,
+                        BaseHi,
+                        BaseLo
+                        );
+    } else {
+      Result = (INT32)AsciiSPrint (
+                        NameBuffer,
+                        sizeof (NameBuffer),
+                        "%.*a@%x",
+                        (UINTN)(NameEnd - Name),
+                        Name,
+                        BaseLo
+                        );
+    }
+
+    /* AsciiSPrint returns the number of written ASCII charaters not
+       including the Null-terminator. Adding +1 ensures we would have
+       had room for another character, therefore the result was not
+       truncated. */
+    if (!(Result + 1 < ARRAY_SIZE (NameBuffer))) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: name '%a' is too long\r\n",
+        __FUNCTION__,
+        Name
+        ));
+      return FALSE;
+    }
+
+    Result = fdt_set_name (Fdt, NodeOffset, NameBuffer);
+    if (Result != 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to set name: %r\r\n",
+        __FUNCTION__,
+        fdt_strerror (Result)
+        ));
+      return FALSE;
+    }
+
+    Result = fdt_setprop_inplace (
+               Fdt,
+               NodeOffset,
+               "reg",
+               RegProperty,
+               sizeof (RegProperty)
+               );
+    if (Result != 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to set 'reg' property: %a\r\n",
+        __FUNCTION__,
+        fdt_strerror (Result)
+        ));
+      return FALSE;
+    }
+
+    Property = fdt_getprop (Fdt, NodeOffset, "iommu-addresses", &Result);
+    if (Property != NULL) {
+      if (Result != sizeof (IommuAddressesProperty)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: 'iommu-addresses' property size mismatch: expected %lu, got %lu\r\n",
+          __FUNCTION__,
+          (UINT64)sizeof (IommuAddressesProperty),
+          (UINT64)Result
+          ));
+        return FALSE;
+      }
+
+      /* Copy device phandle */
+      IommuAddressesProperty[0] = *(CONST UINT32 *)Property;
+
+      Result = fdt_setprop_inplace (
+                 Fdt,
+                 NodeOffset,
+                 "iommu-addresses",
+                 IommuAddressesProperty,
+                 sizeof (IommuAddressesProperty)
+                 );
+      if (Result != 0) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to set 'iommu-addresses' property: %a\r\n",
+          __FUNCTION__,
+          fdt_strerror (Result)
+          ));
+        return FALSE;
+      }
+    }
+  }
+
+  return TRUE;
+}
+
+/**
   Performs the necessary teardown of the display hardware.
 
   @retval EFI_SUCCESS              Operation successful.
@@ -664,6 +975,22 @@ DisplayStop (
       }
 
       Context->OnExitBootServicesEvent = NULL;
+    }
+
+    if (Context->OnFdtInstalledEvent != NULL) {
+      Status1 = gBS->CloseEvent (Context->OnFdtInstalledEvent);
+      if (EFI_ERROR (Status1)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to close OnFdtInstalled event: %r\r\n",
+          __FUNCTION__,
+          Status1
+          ));
+      }
+
+      if (!EFI_ERROR (Status)) {
+        Status = Status1;
+      }
     }
 
     if (Context->OnReadyToBootEvent != NULL) {
@@ -817,6 +1144,109 @@ Exit:
   return Status;
 }
 
+/**
+   Updates the given Device Tree with information about the currently
+   set mode (including framebuffer address and size) using the GOP
+   protocol installed on the given handle.
+
+   @param[in] Context    Controller context to use.
+   @param[in] Fdt        Device Tree to update.
+   @param[in] GopHandle  Handle with GOP protocol instance to use.
+*/
+STATIC
+VOID
+DisplayUpdateFdtFramebuffer (
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
+  IN VOID *CONST                               Fdt,
+  IN CONST EFI_HANDLE                          GopHandle
+  )
+{
+  EFI_STATUS                            Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL          *Gop;
+  EFI_GRAPHICS_OUTPUT_MODE_INFORMATION  *Info;
+  EFI_PHYSICAL_ADDRESS                  FrameBufferBase;
+  UINTN                                 FrameBufferSize;
+
+  Status = gBS->OpenProtocol (
+                  GopHandle,
+                  &gEfiGraphicsOutputProtocolGuid,
+                  (VOID **)&Gop,
+                  Context->DriverHandle,
+                  Context->ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve graphics output protocol from handle %p: %r\r\n",
+      __FUNCTION__,
+      GopHandle,
+      Status
+      ));
+    return;
+  }
+
+  if (Gop->Mode != NULL) {
+    Info            = Gop->Mode->Info;
+    FrameBufferBase = Gop->Mode->FrameBufferBase;
+    FrameBufferSize = Gop->Mode->FrameBufferSize;
+
+    if (Info != NULL) {
+      if (!UpdateFdtSimpleFramebufferModeInfo (Fdt, Info)) {
+        return;
+      }
+    }
+
+    if ((FrameBufferBase != 0) && (FrameBufferSize != 0)) {
+      if (!UpdateFdtFramebufferReservedMemory (Fdt, (UINT64)FrameBufferBase, (UINT64)FrameBufferSize)) {
+        return;
+      }
+    }
+  }
+}
+
+/**
+   Event handler for whenever a new Device Tree is installed on the
+   system.
+
+   @param[in] Event    Event used for the notification.
+   @param[in] Context  Controller context to use.
+*/
+STATIC
+VOID
+EFIAPI
+DisplayOnFdtInstalled (
+  IN EFI_EVENT                                 Event,
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
+  )
+{
+  VOID        *Fdt;
+  EFI_STATUS  Status;
+  EFI_HANDLE  GopHandle;
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve FDT: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return;
+  }
+
+  Status = DisplayLocateGopChildHandle (Context, &GopHandle);
+  if (!EFI_ERROR (Status)) {
+    DisplayUpdateFdtFramebuffer (Context, Fdt, GopHandle);
+  }
+}
+
+/**
+   Event handler for when the read-to-boot event is signalled.
+
+   @param[in] Event    Event used for the notification.
+   @param[in] Context  Controller context to use.
+*/
 STATIC
 VOID
 EFIAPI
@@ -825,7 +1255,7 @@ DisplayOnReadyToBoot (
   IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
   )
 {
-  VOID        *AcpiBase;
+  VOID        *AcpiBase, *Fdt;
   EFI_STATUS  Status;
   EFI_HANDLE  GopHandle;
 
@@ -837,6 +1267,11 @@ DisplayOnReadyToBoot (
 
   Status = DisplayLocateGopChildHandle (Context, &GopHandle);
   if (!EFI_ERROR (Status)) {
+    Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
+    if (!EFI_ERROR (Status)) {
+      DisplayUpdateFdtFramebuffer (Context, Fdt, GopHandle);
+    }
+
     /* We have a child handle with GOP protocol installed, disable the
        kernel EFI FB driver. Ignore "protocol already installed" error
        since this function may be run more than once. */
@@ -1053,6 +1488,25 @@ DisplayStart (
   }
 
   Result->OutputGpiosConfigured = TRUE;
+
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_NOTIFY,
+                  (EFI_EVENT_NOTIFY)DisplayOnFdtInstalled,
+                  Result,
+                  &gFdtTableGuid,
+                  &Result->OnFdtInstalledEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to create OnFdtInstalled event: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    Result->OnFdtInstalledEvent = NULL;
+    goto Exit;
+  }
 
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
