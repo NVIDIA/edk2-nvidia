@@ -430,7 +430,7 @@ CmetStorageInit (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Failed to install CMET protocol Index %d %p Status %r\r\n",
+      "%a: Failed to install CMET protocol Index %u %p Status %r\r\n",
       __FUNCTION__,
       Index,
       CmetHandle,

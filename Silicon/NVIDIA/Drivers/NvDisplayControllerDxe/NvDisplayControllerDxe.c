@@ -103,7 +103,7 @@ ResetRequiredDisplayEngines (
     "dpaux0_reset",
   };
 
-  EFI_STATUS   Status;
+  EFI_STATUS   Status = EFI_SUCCESS;
   UINTN        Index;
   CONST CHAR8  *ResetName;
 

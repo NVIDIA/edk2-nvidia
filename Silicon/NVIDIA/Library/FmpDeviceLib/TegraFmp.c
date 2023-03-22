@@ -2,7 +2,7 @@
 
   Tegra Firmware Management Protocol support
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1493,7 +1493,7 @@ FmpTegraSetImage (
 
   DEBUG ((
     DEBUG_INFO,
-    "%a: Image=0x%p, ImageSize=%d Version=0x%x\n",
+    "%a: Image=0x%p, ImageSize=%u Version=0x%x\n",
     __FUNCTION__,
     Image,
     ImageSize,

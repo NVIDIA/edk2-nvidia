@@ -173,7 +173,7 @@ Tpm2RegistrationEvent (
   }
 
   if (NumHandles > 1) {
-    DEBUG ((DEBUG_ERROR, "%a: Only support one TPM. But there are %d TPMs present.\n", __FUNCTION__, NumHandles));
+    DEBUG ((DEBUG_ERROR, "%a: Only support one TPM. But there are %u TPMs present.\n", __FUNCTION__, NumHandles));
     ASSERT (FALSE);
   }
 

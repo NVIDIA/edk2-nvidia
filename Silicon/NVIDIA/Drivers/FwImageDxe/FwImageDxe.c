@@ -1,7 +1,7 @@
 /** @file
   FW Image Protocol Dxe
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -355,7 +355,7 @@ FwImageRead (
 
   DEBUG ((
     DEBUG_VERBOSE,
-    "Starting read of %s, Offset=%lld, Bytes=%d\n",
+    "Starting read of %s, Offset=%lld, Bytes=%u\n",
     Partition->PartitionName,
     Offset,
     Bytes

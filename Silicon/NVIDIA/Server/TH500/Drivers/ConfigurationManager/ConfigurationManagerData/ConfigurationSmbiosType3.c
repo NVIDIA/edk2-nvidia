@@ -189,7 +189,7 @@ InstallSmbiosType3Cm (
       AsciiSPrint (DtContainedElementFormat, sizeof (DtContainedElementFormat), "%a/contained-element@%u", Type3NodeStr, Index);
       Type3ContainedElementOffset = fdt_path_offset (DtbBase, DtContainedElementFormat);
       if (Type3ContainedElementOffset < 0) {
-        DEBUG ((DEBUG_INFO, "%a: SMBIOS Type 3 enclosure[%d] contained element count = %d.\n", __FUNCTION__, Type3Index, ContainedElementCount));
+        DEBUG ((DEBUG_INFO, "%a: SMBIOS Type 3 enclosure[%u] contained element count = %d.\n", __FUNCTION__, Type3Index, ContainedElementCount));
         break;
       } else {
         ContainedElements = ReallocatePool (
@@ -259,7 +259,7 @@ InstallSmbiosType3Cm (
     if (Status == EFI_BUFFER_TOO_SMALL) {
       AssetTagStr = AllocateZeroPool (AssetTagStrSize + 1);
       if (AssetTagStr == NULL) {
-        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate asset tag info, size: %d\n", __FUNCTION__, AssetTagStrSize));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate asset tag info, size: %u\n", __FUNCTION__, AssetTagStrSize));
       } else {
         Status = gRT->GetVariable (AssetTagVariableName, &gNVIDIAPublicVariableGuid, NULL, &AssetTagStrSize, AssetTagStr);
         if (EFI_ERROR (Status)) {

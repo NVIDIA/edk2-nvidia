@@ -348,7 +348,7 @@ TH500GetResourceConfig (
 
       DEBUG ((
         EFI_D_ERROR,
-        "Socket: %d Carveout %d Region: Base: 0x%016lx, Size: 0x%016lx\n",
+        "Socket: %u Carveout %u Region: Base: 0x%016lx, Size: 0x%016lx\n",
         Socket,
         Index,
         CpuBootloaderParams->CarveoutInfo[Socket][Index].Base,

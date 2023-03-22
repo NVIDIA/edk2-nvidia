@@ -2,7 +2,7 @@
 
   Erot library
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -60,7 +60,7 @@ ErotLocateProtocols (
     goto Done;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: got %d MCTP protocol handles\n", __FUNCTION__, NumHandles));
+  DEBUG ((DEBUG_INFO, "%a: got %u MCTP protocol handles\n", __FUNCTION__, NumHandles));
 
   mErots = (NVIDIA_MCTP_PROTOCOL **)
            AllocateRuntimeZeroPool (NumHandles * sizeof (VOID *));

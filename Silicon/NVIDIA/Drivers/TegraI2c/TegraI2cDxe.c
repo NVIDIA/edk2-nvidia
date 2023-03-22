@@ -1086,7 +1086,7 @@ TegraI2CDriverBindingStart (
     for (Index = 0; Index <= 9; Index++) {
       INT32        AliasOffset;
       CONST CHAR8  *AliasName;
-      AsciiSPrint (I2cName, sizeof (I2cName), "i2c%d", Index);
+      AsciiSPrint (I2cName, sizeof (I2cName), "i2c%u", Index);
       AliasName = fdt_get_alias (DeviceTreeNode->DeviceTreeBase, I2cName);
       if (AliasName == NULL) {
         break;

@@ -1,7 +1,7 @@
 /** @file
   Logo DXE Driver, install Edkii Platform Logo protocol.
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -88,7 +88,7 @@ GetImage (
       continue;
     }
 
-    DEBUG ((DEBUG_ERROR, "Found %dx%d\r\n", PixelWidth, PixelHeight));
+    DEBUG ((DEBUG_ERROR, "Found %ux%u\r\n", PixelWidth, PixelHeight));
     // If larger that display or this is smaller then previous image skip
     if ((PixelHeight > GraphicsOutput->Mode->Info->VerticalResolution) ||
         (PixelWidth > GraphicsOutput->Mode->Info->HorizontalResolution) ||

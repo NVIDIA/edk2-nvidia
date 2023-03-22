@@ -347,7 +347,7 @@ HestBertSetupTables (
 
   Status = GetErrorSources (RasFwBufferInfo);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get ErrorSourceInfo: %d\n", __FUNCTION__, Status));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to get ErrorSourceInfo: %u\n", __FUNCTION__, Status));
     return Status;
   }
 

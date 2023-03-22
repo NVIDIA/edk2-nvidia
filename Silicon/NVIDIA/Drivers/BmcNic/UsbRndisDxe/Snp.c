@@ -628,14 +628,14 @@ UsbRndisSnpTransmit (
   }
 
   if (BufferSize > Private->UsbData.MaxTransferSize) {
-    DEBUG ((DEBUG_ERROR, "%a, buffer size exceeds Max Transfer Size: (%d/%d)\n", __FUNCTION__, BufferSize, Private->UsbData.MaxTransferSize));
+    DEBUG ((DEBUG_ERROR, "%a, buffer size exceeds Max Transfer Size: (%u/%d)\n", __FUNCTION__, BufferSize, Private->UsbData.MaxTransferSize));
     return EFI_UNSUPPORTED;
   } else if (BufferSize > Private->UsbData.MaxFrameSize) {
-    DEBUG ((DEBUG_ERROR, "%a, buffer size exceeds MTU: (%d/%d)\n", __FUNCTION__, BufferSize, Private->UsbData.MaxFrameSize));
+    DEBUG ((DEBUG_ERROR, "%a, buffer size exceeds MTU: (%u/%d)\n", __FUNCTION__, BufferSize, Private->UsbData.MaxFrameSize));
   }
 
   DEBUG_CODE_BEGIN ();
-  DEBUG ((USB_DEBUG_SNP, "%a, HeaderSize: %d BufferSize: %d\n", __FUNCTION__, HeaderSize, BufferSize));
+  DEBUG ((USB_DEBUG_SNP, "%a, HeaderSize: %u BufferSize: %u\n", __FUNCTION__, HeaderSize, BufferSize));
   if (SrcAddr != NULL) {
     DEBUG ((USB_DEBUG_SNP, "%a, SrcAddr: 0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x\n", __FUNCTION__, SrcAddr->Addr[0], SrcAddr->Addr[1], SrcAddr->Addr[2], SrcAddr->Addr[3], SrcAddr->Addr[4], SrcAddr->Addr[5]));
   }
@@ -691,7 +691,7 @@ UsbRndisSnpTransmit (
              &Length
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a, RndisTransmitMessage: %r Length: %d\n", __FUNCTION__, Status, Length));
+    DEBUG ((DEBUG_ERROR, "%a, RndisTransmitMessage: %r Length: %u\n", __FUNCTION__, Status, Length));
   }
 
   FreePool (RndisPacketMsg);

@@ -737,7 +737,7 @@ HandleRpmbWrite (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a [0]:Failed to set BlockCount %d (%r)\n",
+      "%a [0]:Failed to set BlockCount %u (%r)\n",
       __FUNCTION__,
       NumReqFrames,
       Status
@@ -771,7 +771,7 @@ HandleRpmbWrite (
   U16ToBytes (RPMB_MSG_TYPE_REQ_RESULT_READ, RespFrame->Request);
   Status = RpmbWriteBlocks (PassThru, Slot, 1, RespFrame);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "[3]:Failed to Read %d %r\n", NumRespFrames, Status));
+    DEBUG ((DEBUG_ERROR, "[3]:Failed to Read %u %r\n", NumRespFrames, Status));
     return Status;
   }
 
@@ -788,7 +788,7 @@ HandleRpmbWrite (
 
   Status = RpmbReadBlocks (PassThru, Slot, 1, RespFrame);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "[3]:Failed to Read %d %r\n", NumRespFrames, Status));
+    DEBUG ((DEBUG_ERROR, "[3]:Failed to Read %u %r\n", NumRespFrames, Status));
     return Status;
   }
 
@@ -841,7 +841,7 @@ HandleRpmbRead (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "[2]:Failed to set BlockCount %d %r\n",
+      "[2]:Failed to set BlockCount %u %r\n",
       NumRespFrames,
       Status
       ));
@@ -850,7 +850,7 @@ HandleRpmbRead (
 
   Status = RpmbReadBlocks (PassThru, Slot, NumRespFrames, RespFrame);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "[3]:Failed to Read %d %r\n", NumRespFrames, Status));
+    DEBUG ((DEBUG_ERROR, "[3]:Failed to Read %u %r\n", NumRespFrames, Status));
     return Status;
   }
 
@@ -899,7 +899,7 @@ HandleRpmbDataReq (
       if ((NumReqFrames != 1) || (NumRespFrames != 1)) {
         DEBUG ((
           DEBUG_ERROR,
-          "Invalid NumFrames (Resp %d Req %d) for Cmd %d\n",
+          "Invalid NumFrames (Resp %u Req %u) for Cmd %d\n",
           NumRespFrames,
           NumReqFrames,
           Request

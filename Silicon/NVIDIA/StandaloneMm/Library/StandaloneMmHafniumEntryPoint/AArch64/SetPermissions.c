@@ -88,7 +88,7 @@ UpdateMmFoundationPeCoffPermissions (
 
     DEBUG ((
       DEBUG_INFO,
-      "%a: Section %d of image at 0x%lx has 0x%x permissions\n",
+      "%a: Section %u of image at 0x%lx has 0x%x permissions\n",
       __FUNCTION__,
       Index,
       ImageContext->ImageAddress,
@@ -96,7 +96,7 @@ UpdateMmFoundationPeCoffPermissions (
       ));
     DEBUG ((
       DEBUG_INFO,
-      "%a: Section %d of image at 0x%lx has %a name\n",
+      "%a: Section %u of image at 0x%lx has %a name\n",
       __FUNCTION__,
       Index,
       ImageContext->ImageAddress,
@@ -104,7 +104,7 @@ UpdateMmFoundationPeCoffPermissions (
       ));
     DEBUG ((
       DEBUG_INFO,
-      "%a: Section %d of image at 0x%lx has 0x%x address\n",
+      "%a: Section %u of image at 0x%lx has 0x%x address\n",
       __FUNCTION__,
       Index,
       ImageContext->ImageAddress,
@@ -112,7 +112,7 @@ UpdateMmFoundationPeCoffPermissions (
       ));
     DEBUG ((
       DEBUG_INFO,
-      "%a: Section %d of image at 0x%lx has 0x%x data\n",
+      "%a: Section %u of image at 0x%lx has 0x%x data\n",
       __FUNCTION__,
       Index,
       ImageContext->ImageAddress,
@@ -132,7 +132,7 @@ UpdateMmFoundationPeCoffPermissions (
         ReadWriteUpdater (Base, SectionHeader.Misc.VirtualSize);
         DEBUG ((
           DEBUG_INFO,
-          "%a: Mapping section %d of image at 0x%lx with RW-XN permissions\n",
+          "%a: Mapping section %u of image at 0x%lx with RW-XN permissions\n",
           __FUNCTION__,
           Index,
           ImageContext->ImageAddress
@@ -140,7 +140,7 @@ UpdateMmFoundationPeCoffPermissions (
       } else {
         DEBUG ((
           DEBUG_INFO,
-          "%a: Mapping section %d of image at 0x%lx with RO-XN permissions\n",
+          "%a: Mapping section %u of image at 0x%lx with RO-XN permissions\n",
           __FUNCTION__,
           Index,
           ImageContext->ImageAddress
@@ -149,7 +149,7 @@ UpdateMmFoundationPeCoffPermissions (
     } else {
       DEBUG ((
         DEBUG_INFO,
-        "%a: Ignoring section %d of image at 0x%lx with 0x%x permissions\n",
+        "%a: Ignoring section %u of image at 0x%lx with 0x%x permissions\n",
         __FUNCTION__,
         Index,
         ImageContext->ImageAddress,

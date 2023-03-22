@@ -708,7 +708,7 @@ UsbRndisReceive (
              &Length
              );
   if (EFI_ERROR (Status) || (Length == 0)) {
-    DEBUG ((USB_DEBUG_SNP_TRACE, "%a, RndisReceiveMessage: %r Length: %d\n", __FUNCTION__, Status, Length));
+    DEBUG ((USB_DEBUG_SNP_TRACE, "%a, RndisReceiveMessage: %r Length: %u\n", __FUNCTION__, Status, Length));
     Status = EFI_NOT_READY;
     goto OnRelease;
   }

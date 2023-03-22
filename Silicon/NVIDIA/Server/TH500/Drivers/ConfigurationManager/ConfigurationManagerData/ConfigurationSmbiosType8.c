@@ -96,7 +96,7 @@ InstallSmbiosType8Cm (
     NumPortConnectors++;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: Number of Port Connectors = %d\n", __FUNCTION__, NumPortConnectors));
+  DEBUG ((DEBUG_INFO, "%a: Number of Port Connectors = %u\n", __FUNCTION__, NumPortConnectors));
   if (NumPortConnectors == 0) {
     return EFI_SUCCESS;
   }

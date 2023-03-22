@@ -1,7 +1,7 @@
 /** @file
   Update Image Progress support from DxeCapsuleLibFmp
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2016 - 2019, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -37,7 +37,7 @@ UpdateImageProgress (
   UINTN                                Seconds;
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL_UNION  *Color;
 
-  DEBUG ((DEBUG_INFO, "Update Progress - %d%%\n", Completion));
+  DEBUG ((DEBUG_INFO, "Update Progress - %u%%\n", Completion));
 
   if (Completion > 100) {
     return EFI_INVALID_PARAMETER;
@@ -56,7 +56,7 @@ UpdateImageProgress (
     // Arm the watchdog timer from PCD setting
     //
     if (Seconds != 0) {
-      DEBUG ((DEBUG_VERBOSE, "Arm watchdog timer %d seconds\n", Seconds));
+      DEBUG ((DEBUG_VERBOSE, "Arm watchdog timer %u seconds\n", Seconds));
       gBS->SetWatchdogTimer (Seconds, 0x0000, 0, NULL);
     }
   }

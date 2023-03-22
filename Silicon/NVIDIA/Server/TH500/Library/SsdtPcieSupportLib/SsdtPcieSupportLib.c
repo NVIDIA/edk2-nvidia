@@ -347,7 +347,7 @@ GeneratePciSlots (
                    );
   DEBUG ((
     DEBUG_ERROR,
-    "DEBUG: SSDT-PCI: GpuDSDAMLGeneration Proocol(s) [handles:%d handle buffer:%p]"      " Status = %r\n",
+    "DEBUG: SSDT-PCI: GpuDSDAMLGeneration Proocol(s) [handles:%u handle buffer:%p]"      " Status = %r\n",
     NumberOfHandles,
     HandleBuffer,
     Status1
@@ -380,7 +380,7 @@ GeneratePciSlots (
                       );
       DEBUG ((
         DEBUG_ERROR,
-        "DEBUG: SSDT-PCI: GpuDSDAMLGeneration Proocol(s) [HandleIndex:%d Protocol:%p]"      " Status = %r\n",
+        "DEBUG: SSDT-PCI: GpuDSDAMLGeneration Proocol(s) [HandleIndex:%u Protocol:%p]"      " Status = %r\n",
         HandleIndex,
         GpuDsdGeneration,
         Status1

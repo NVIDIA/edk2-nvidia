@@ -2,7 +2,7 @@
 
   BR-BCT Update Device Library
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -280,7 +280,7 @@ BrBctUpdateBctSlots (
   )
 {
   UINTN       Index;
-  EFI_STATUS  Status;
+  EFI_STATUS  Status = EFI_SUCCESS;
 
   for (Index = 0; Index < Private->BctPartitionSlots; Index++) {
     Status = BrBctWriteAndVerifySlot (

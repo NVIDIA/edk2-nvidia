@@ -2,7 +2,7 @@
 
   Fvb Driver
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -1420,7 +1420,7 @@ FVBInitialize (
                    &NorFlashAttributes
                    );
         if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "%a: Failed to init FVB %d\r\n", __FUNCTION__, Index));
+          DEBUG ((DEBUG_ERROR, "%a: Failed to init FVB %u\r\n", __FUNCTION__, Index));
           goto Exit;
         }
       }

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -311,7 +311,7 @@ FfaGuidedCommunication (
   if (BufferSize > RasFwBufferInfo->CommSize) {
     DEBUG ((
       EFI_D_ERROR,
-      "%a: buffer size too small: %d\n",
+      "%a: buffer size too small: %u\n",
       __FUNCTION__,
       BufferSize
       ));

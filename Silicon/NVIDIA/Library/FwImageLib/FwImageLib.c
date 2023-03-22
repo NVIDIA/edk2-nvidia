@@ -2,7 +2,7 @@
 
   FW Image Library
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -102,7 +102,7 @@ FwImageLibConstructor (
     goto Done;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: got %d FW image handles", __FUNCTION__, NumHandles));
+  DEBUG ((DEBUG_INFO, "%a: got %u FW image handles", __FUNCTION__, NumHandles));
 
   mFwImages = (NVIDIA_FW_IMAGE_PROTOCOL **)
               AllocateRuntimeZeroPool (NumHandles * sizeof (VOID *));

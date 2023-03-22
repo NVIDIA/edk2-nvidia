@@ -5,7 +5,7 @@
 *  - dynamic memory allocations replaced by a slab-based allocator since dynamic allocations are not yet possible this
 *    early in the boot
 *
-*  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -219,7 +219,7 @@ UpdateRegionMappingRecursive (
 
   DEBUG ((
     DEBUG_VERBOSE,
-    "%a(%d): %llx - %llx set %lx clr %lx\n",
+    "%a(%u): %llx - %llx set %lx clr %lx\n",
     __FUNCTION__,
     Level,
     RegionStart,

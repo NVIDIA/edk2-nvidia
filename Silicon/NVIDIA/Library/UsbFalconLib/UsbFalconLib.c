@@ -2,7 +2,7 @@
 
   Falcon Register Access
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -169,7 +169,7 @@ FalconDumpDMEM (
   FalconWrite32 (0x1c0, Value);
   for (i = 0; i < 16; i++) {
     Value = FalconRead32 (0x1c4);
-    DEBUG ((EFI_D_VERBOSE, "%a: [%d] 0x1c4 = %x\r\n", __FUNCTION__, i, Value));
+    DEBUG ((EFI_D_VERBOSE, "%a: [%u] 0x1c4 = %x\r\n", __FUNCTION__, i, Value));
   }
 }
 
@@ -322,7 +322,7 @@ FalconFirmwareLoad (
   CopyMem (FirmwareBuffer, Firmware, FirmwareSize);
   for (i = 0; i < FirmwareSize; i++) {
     if (FirmwareBuffer[i] != Firmware[i]) {
-      DEBUG ((EFI_D_VERBOSE, "%a: FirmwareBuffer[%d] != Firmware[%d]\r\n", __FUNCTION__, i, i));
+      DEBUG ((EFI_D_VERBOSE, "%a: FirmwareBuffer[%u] != Firmware[%u]\r\n", __FUNCTION__, i, i));
       return Status;
     }
   }

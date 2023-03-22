@@ -372,7 +372,7 @@ IBO_CheckResults (
     UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
     UT_ASSERT_EQUAL (BootOrderSize, ExpectedBootOrderSize);
     for (Index = 0; Index < BootOrderSize/sizeof (UINT16); Index++) {
-      DEBUG ((DEBUG_ERROR, "BO[%d]=0x%x, EBO=0x%x\n", Index, ((UINT16 *)BootOrderData)[Index], ExpectedBootOrder[Index]));
+      DEBUG ((DEBUG_ERROR, "BO[%u]=0x%x, EBO=0x%x\n", Index, ((UINT16 *)BootOrderData)[Index], ExpectedBootOrder[Index]));
     }
 
     UT_ASSERT_MEM_EQUAL (BootOrderData, ExpectedBootOrder, ExpectedBootOrderSize);
@@ -391,7 +391,7 @@ IBO_CheckResults (
     UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
     UT_ASSERT_EQUAL (BootOrderSize, ExpectedSavedBootOrderSize);
     for (Index = 0; Index < BootOrderSize/sizeof (UINT16); Index++) {
-      DEBUG ((DEBUG_ERROR, "SBO[%d]=0x%x, ESBO=0x%x\n", Index, ((UINT16 *)SavedBootOrderData)[Index], ExpectedSavedBootOrder[Index]));
+      DEBUG ((DEBUG_ERROR, "SBO[%u]=0x%x, ESBO=0x%x\n", Index, ((UINT16 *)SavedBootOrderData)[Index], ExpectedSavedBootOrder[Index]));
     }
 
     UT_ASSERT_MEM_EQUAL (SavedBootOrderData, ExpectedSavedBootOrder, ExpectedSavedBootOrderSize);
@@ -436,7 +436,7 @@ IBO_CheckResults (
       UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
       UT_ASSERT_EQUAL (BootOrderSize, ExpectedBootOrderSize);
       for (Index = 0; Index < BootOrderSize/sizeof (UINT16); Index++) {
-        DEBUG ((DEBUG_ERROR, "RBO[%d]=0x%x, ESBO=0x%x\n", Index, ((UINT16 *)BootOrderData)[Index], ExpectedSavedBootOrder[Index]));
+        DEBUG ((DEBUG_ERROR, "RBO[%u]=0x%x, ESBO=0x%x\n", Index, ((UINT16 *)BootOrderData)[Index], ExpectedSavedBootOrder[Index]));
       }
 
       UT_ASSERT_MEM_EQUAL (BootOrderData, ExpectedSavedBootOrder, ExpectedBootOrderSize);
@@ -675,7 +675,7 @@ IBO_BootOrderSetup (
   for (Index = 0; Index < Count; Index++) {
     Status = IBO_AddUsbDP (0, 0, &BootNum);
     if (Status != UNIT_TEST_PASSED) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to add instance %d of Usb DP\n", __FUNCTION__, Index));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to add instance %u of Usb DP\n", __FUNCTION__, Index));
       return Status;
     }
 

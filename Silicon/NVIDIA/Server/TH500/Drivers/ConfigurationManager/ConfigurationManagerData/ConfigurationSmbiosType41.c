@@ -193,7 +193,7 @@ InstallSmbiosType41Cm (
     FreePool (DeviceTypeInstances);
   }
 
-  DEBUG ((DEBUG_INFO, "%a: Number of onboard devices = %d\n", __FUNCTION__, NumOnboardDevices));
+  DEBUG ((DEBUG_INFO, "%a: Number of onboard devices = %u\n", __FUNCTION__, NumOnboardDevices));
   if (NumOnboardDevices == 0) {
     return EFI_SUCCESS;
   }

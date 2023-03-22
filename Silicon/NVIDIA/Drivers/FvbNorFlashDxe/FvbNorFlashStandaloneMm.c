@@ -1458,7 +1458,7 @@ FVBNORInitialize (
                    &NorFlashAttributes
                    );
         if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "%a: Failed to init FVB %d\r\n", __FUNCTION__, Index));
+          DEBUG ((DEBUG_ERROR, "%a: Failed to init FVB %u\r\n", __FUNCTION__, Index));
           goto Exit;
         }
       }
@@ -1481,7 +1481,7 @@ FVBNORInitialize (
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Failed to install FVP protocol Index %d %p Status %r\r\n",
+        "%a: Failed to install FVP protocol Index %u %p Status %r\r\n",
         __FUNCTION__,
         Index,
         &FvpData[Index].Handle,

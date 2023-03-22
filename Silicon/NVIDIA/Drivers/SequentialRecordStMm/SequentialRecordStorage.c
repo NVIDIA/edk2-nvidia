@@ -1275,7 +1275,7 @@ SequentialStorageInit (
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Failed to install FVP protocol Index %d %p Status %r\r\n",
+        "%a: Failed to install FVP protocol Index %u %p Status %r\r\n",
         __FUNCTION__,
         Index,
         SeqStoreHandle,

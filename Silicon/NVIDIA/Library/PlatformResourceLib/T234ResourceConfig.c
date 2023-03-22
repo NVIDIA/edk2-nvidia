@@ -205,7 +205,7 @@ T234GetResourceConfig (
 
     DEBUG ((
       EFI_D_ERROR,
-      "Carveout %d Region: Base: 0x%016lx, Size: 0x%016lx\n",
+      "Carveout %u Region: Base: 0x%016lx, Size: 0x%016lx\n",
       Index,
       CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base),
       CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size)

@@ -4,7 +4,7 @@
 
   Based on files under Nt32Pkg/MiscSubClassPlatformDxe/
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2021, NUVIA Inc. All rights reserved.<BR>
   Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
   Copyright (c) 2015, Hisilicon Limited. All rights reserved.<BR>
@@ -82,7 +82,7 @@ SmbiosMiscOemEntryPoint (
       if (EFI_ERROR (EfiStatus)) {
         DEBUG ((
           DEBUG_ERROR,
-          "Misc smbios store error.  Index=%d,"
+          "Misc smbios store error.  Index=%u,"
           "ReturnStatus=%r\n",
           Index,
           EfiStatus

@@ -499,7 +499,7 @@ NVIDIAGpuDriverStop (
 
   DEBUG ((DEBUG_INFO, "%a: DriverBindingProtocol*: '%p'\n", __FUNCTION__, This));
   DEBUG ((DEBUG_INFO, "%a: ControllerHandle: '%p'\n", __FUNCTION__, ControllerHandle));
-  DEBUG ((DEBUG_INFO, "%a: NumberOfChildren: '%d'\n", __FUNCTION__, NumberOfChildren));
+  DEBUG ((DEBUG_INFO, "%a: NumberOfChildren: '%u'\n", __FUNCTION__, NumberOfChildren));
   DEBUG ((DEBUG_INFO, "%a: ChildHandleBuffer*: '%p'\n", __FUNCTION__, ChildHandleBuffer));
 
   if (ControllerHandle == NULL) {

@@ -90,7 +90,7 @@ InstallSmbiosType9Cm (
     HandleCount = 0;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: PCIIO HandleCount = %d\n", __FUNCTION__, HandleCount));
+  DEBUG ((DEBUG_INFO, "%a: PCIIO HandleCount = %u\n", __FUNCTION__, HandleCount));
 
   NumSystemSlots = 0;
   SystemSlotInfo = NULL;

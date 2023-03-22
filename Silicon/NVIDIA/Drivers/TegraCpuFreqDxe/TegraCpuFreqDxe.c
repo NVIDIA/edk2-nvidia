@@ -2,7 +2,7 @@
 
   Tegra CPU Frequency Driver.
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -162,7 +162,7 @@ GetCpuFreqAddresses (
     FreePool (HandleBuffer);
     return EFI_SUCCESS;
   } else if (HandleCount != 0) {
-    DEBUG ((DEBUG_ERROR, "%a: Unexpected number of cpu frequency controllers - %d\r\n", __FUNCTION__, HandleCount));
+    DEBUG ((DEBUG_ERROR, "%a: Unexpected number of cpu frequency controllers - %u\r\n", __FUNCTION__, HandleCount));
     FreePool (HandleBuffer);
     return EFI_UNSUPPORTED;
   }

@@ -130,7 +130,7 @@ AddSocketCoresToEnabledCoresBitMap (
 
   DEBUG ((
     DEBUG_INFO,
-    "%a: Socket %d cores 0x%x 0x%x 0x%x added as EnabledCores bits %u-%u\n",
+    "%a: Socket %u cores 0x%x 0x%x 0x%x added as EnabledCores bits %u-%u\n",
     __FUNCTION__,
     SocketNumber,
     SocketCores[2],

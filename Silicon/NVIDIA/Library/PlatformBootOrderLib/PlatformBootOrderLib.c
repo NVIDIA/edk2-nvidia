@@ -110,11 +110,11 @@ PrintBootOrder (
     UnicodeSPrint (OptionName, sizeof (OptionName), L"Boot%04x", BootOrder[BootOrderIndex]);
     Status = EfiBootManagerVariableToLoadOption (OptionName, &Option);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DebugPrintLevel, "%a: Error getting boot option for BootOrder[%lld] = 0x%04x: %r\n", __FUNCTION__, BootOrderIndex, BootOrder[BootOrderIndex], Status));
+      DEBUG ((DebugPrintLevel, "%a: Error getting boot option for BootOrder[%llu] = 0x%04x: %r\n", __FUNCTION__, BootOrderIndex, BootOrder[BootOrderIndex], Status));
       goto CleanupAndReturn;
     }
 
-    DEBUG ((DebugPrintLevel, "%a: BootOrder[%lld] = 0x%04x = %s\n", __FUNCTION__, BootOrderIndex, BootOrder[BootOrderIndex], Option.Description));
+    DEBUG ((DebugPrintLevel, "%a: BootOrder[%llu] = 0x%04x = %s\n", __FUNCTION__, BootOrderIndex, BootOrder[BootOrderIndex], Option.Description));
     EfiBootManagerFreeLoadOption (&Option);
   }
 
