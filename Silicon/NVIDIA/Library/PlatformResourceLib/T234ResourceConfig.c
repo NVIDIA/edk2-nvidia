@@ -51,11 +51,19 @@ TEGRA_MMIO_INFO  T234MmioInfo[] = {
     T234_FUSE_BASE_ADDRESS,
     SIZE_128KB
   },
+  // Placeholder for memory in DRAM CO CARVEOUT_DISP_EARLY_BOOT_FB
+  // that would be treated as MMIO memory.
+  {
+    0,
+    0
+  },
   {
     0,
     0
   }
 };
+
+#define T234_FRAME_BUFFER_MMIO_INFO_INDEX  (ARRAY_SIZE (T234MmioInfo) - 2)
 
 TEGRA_FUSE_INFO  T234FloorsweepingFuseList[] = {
   { "fuse-disable-isp",   FUSE_OPT_ISP_DISABLE,   BIT (0)         },
@@ -143,13 +151,14 @@ T234GetResourceConfig (
   OUT TEGRA_RESOURCE_INFO  *PlatformInfo
   )
 {
-  TEGRA_CPUBL_PARAMS     *CpuBootloaderParams;
-  NVDA_MEMORY_REGION     *DramRegions;
-  NVDA_MEMORY_REGION     *CarveoutRegions;
-  UINTN                  CarveoutRegionsCount = 0;
-  EFI_MEMORY_DESCRIPTOR  Descriptor;
-  UINTN                  Index;
-  BOOLEAN                BanketDramEnabled;
+  TEGRA_CPUBL_PARAMS      *CpuBootloaderParams;
+  NVDA_MEMORY_REGION      *DramRegions;
+  NVDA_MEMORY_REGION      *CarveoutRegions;
+  UINTN                   CarveoutRegionsCount = 0;
+  EFI_MEMORY_DESCRIPTOR   Descriptor;
+  UINTN                   Index;
+  BOOLEAN                 BanketDramEnabled;
+  TEGRA_MMIO_INFO *CONST  FrameBufferMmioInfo = &T234MmioInfo[T234_FRAME_BUFFER_MMIO_INFO_INDEX];
 
   CpuBootloaderParams          = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   PlatformInfo->DtbLoadAddress = T234GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
@@ -229,6 +238,10 @@ T234GetResourceConfig (
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size))),
         MemoryType
         );
+    } else if ((Index == CARVEOUT_BLANKET_NSDRAM) && BanketDramEnabled) {
+      // Skip CARVEOUT_BLANKET_NSDRAM if blanket dram is enabled as this is a placeholder
+      // for BL carveout for BL to program GSC for usable DRAM.
+      continue;
     } else if (Index == CARVEOUT_RCM_BLOB) {
       // Leave in memory map but marked as used
       BuildMemoryAllocationHob (
@@ -236,6 +249,8 @@ T234GetResourceConfig (
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size))),
         EfiBootServicesData
         );
+    } else if (Index == CARVEOUT_UEFI) {
+      continue;
     } else if (Index == CARVEOUT_OS) {
       // Leave in memory map but marked as used
       BuildMemoryAllocationHob (
@@ -257,13 +272,10 @@ T234GetResourceConfig (
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size))),
         EfiReservedMemoryType
         );
-    } else if (Index != CARVEOUT_UEFI) {
-      // Skip CARVEOUT_BLANKET_NSDRAM if blanket dram is enabled as this is a placeholder
-      // for BL carveout for BL to program GSC for usable DRAM.
-      if ((BanketDramEnabled == TRUE) &&
-          (Index == CARVEOUT_BLANKET_NSDRAM))
-      {
-        continue;
+    } else {
+      if (Index == CARVEOUT_DISP_EARLY_BOOT_FB) {
+        FrameBufferMmioInfo->Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
+        FrameBufferMmioInfo->Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size);
       }
 
       CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
@@ -539,6 +551,10 @@ T234GetPlatformResourceInformation (
   // Populate RcmBlobInfo
   PlatformResourceInfo->RcmBlobInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_RCM_BLOB].Base);
   PlatformResourceInfo->RcmBlobInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_RCM_BLOB].Size);
+
+  // Populate FrameBufferInfo
+  PlatformResourceInfo->FrameBufferInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_DISP_EARLY_BOOT_FB].Base);
+  PlatformResourceInfo->FrameBufferInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_DISP_EARLY_BOOT_FB].Size);
 
   PlatformResourceInfo->BootType = CPUBL_PARAMS (CpuBootloaderParams, BootType);
 

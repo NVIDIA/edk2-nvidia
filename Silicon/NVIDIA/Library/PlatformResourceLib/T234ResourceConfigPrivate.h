@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -98,6 +98,7 @@
 #define CARVEOUT_VM_ENCRYPT                 38
 #define CARVEOUT_BLANKET_NSDRAM             CARVEOUT_VM_ENCRYPT
 #define CARVEOUT_CCPLEX_SMMU_PTW            39
+#define CARVEOUT_DISP_EARLY_BOOT_FB         CARVEOUT_CCPLEX_SMMU_PTW
 #define CARVEOUT_BPMP_CPU_NS                40
 #define CARVEOUT_FSI_CPU_NS                 41
 #define CARVEOUT_TSEC_DCE                   42
