@@ -566,6 +566,14 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   PciSegmentLib|Silicon/NVIDIA/Library/PciSegmentLibPciRootBridgeConfigurationIo/PciSegmentLibPciRootBridgeConfigurationIo.inf
   PciLib|MdePkg/Library/BasePciLibPciExpress/BasePciLibPciExpress.inf
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
+!ifdef CONFIG_VIRTIO
+  PciCapLib|OvmfPkg/Library/BasePciCapLib/BasePciCapLib.inf
+  PciCapPciSegmentLib|OvmfPkg/Library/BasePciCapPciSegmentLib/BasePciCapPciSegmentLib.inf
+  PciCapPciIoLib|OvmfPkg/Library/UefiPciCapPciIoLib/UefiPciCapPciIoLib.inf
+
+  VirtioLib|OvmfPkg/Library/VirtioLib/VirtioLib.inf
+  VirtioMmioDeviceLib|OvmfPkg/Library/VirtioMmioDeviceLib/VirtioMmioDeviceLib.inf
+!endif
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
   DisplayUpdateProgressLib|MdeModulePkg/Library/DisplayUpdateProgressLibText/DisplayUpdateProgressLibText.inf
   AndroidBootImgLib|EmbeddedPkg/Library/AndroidBootImgLib/AndroidBootImgLib.inf
@@ -2434,6 +2442,18 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
 !ifdef CONFIG_SERVER_POWER_CONTROLLERS
   Silicon/NVIDIA/Drivers/ServerPowerControlDxe/ServerPowerControlDxe.inf
+!endif
+
+  #
+  # VIRTIO support
+  #
+!ifdef CONFIG_VIRTIO
+  Silicon/NVIDIA/Drivers/VirtioMmioDxe/VirtioMmioDxe.inf
+  OvmfPkg/VirtioPciDeviceDxe/VirtioPciDeviceDxe.inf
+  OvmfPkg/Virtio10Dxe/Virtio10.inf
+!ifdef CONFIG_NETWORKING_DEVICE_VIRTIO
+  OvmfPkg/VirtioNetDxe/VirtioNet.inf
+!endif
 !endif
 
 [Components.AARCH64]

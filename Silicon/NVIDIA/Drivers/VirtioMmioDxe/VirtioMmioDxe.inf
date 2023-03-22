@@ -1,0 +1,44 @@
+#/** @file
+#
+#  Device discovery based  Virtio MMIO driver
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023- 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = VirtioMmioDxe
+  FILE_GUID                      = 6315ea79-d57b-44a1-abfe-ddece435dc1e
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  VirtioMmioDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  OvmfPkg/OvmfPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  DeviceDiscoveryDriverLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  VirtioMmioDeviceLib
+
+[Guids]
+  gVirtioMmioTransportGuid
+
+[Depex]
+  TRUE

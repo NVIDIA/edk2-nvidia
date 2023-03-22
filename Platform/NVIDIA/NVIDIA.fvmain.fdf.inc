@@ -918,3 +918,15 @@ FvNameGuid         = $(PLATFORM_GUID)
 !ifdef CONFIG_SERVER_POWER_CONTROLLERS
   INF Silicon/NVIDIA/Drivers/ServerPowerControlDxe/ServerPowerControlDxe.inf
 !endif
+
+  #
+  # VIRTIO support
+  #
+!ifdef CONFIG_VIRTIO
+  INF Silicon/NVIDIA/Drivers/VirtioMmioDxe/VirtioMmioDxe.inf
+  INF OvmfPkg/VirtioPciDeviceDxe/VirtioPciDeviceDxe.inf
+  INF OvmfPkg/Virtio10Dxe/Virtio10.inf
+!ifdef CONFIG_NETWORKING_DEVICE_VIRTIO
+  INF OvmfPkg/VirtioNetDxe/VirtioNet.inf
+!endif
+!endif

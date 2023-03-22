@@ -185,6 +185,11 @@ menu "Hardware support"
   bool
   default y if (SATA || UFS || NETWORKING_ISCSI)
 
+  config VIRTIO
+  bool "Virtio support"
+  help
+    Support for Virtio devices
+
   config NETWORKING_DEVICE_NVIDIA
   bool
   default y if SOC_JETSON
@@ -754,6 +759,12 @@ if NETWORKING
     depends on USB
     help
       Support for USB RNDIS NICs
+
+    config NETWORKING_DEVICE_VIRTIO
+    bool "Virtio NIC"
+    depends on VIRTIO
+    help
+      Support for Virtio NICs
   endmenu
 
 endif
