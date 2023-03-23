@@ -25,4 +25,15 @@
         "Reset non-authenticated UEFI settings"
 ///@}
 
+///
+/// OEM Error Code Descriptions
+///
+///@{
+#define OEM_EC_DESC_INVALID_PASSWORD \
+        "Invalid password"
+
+#define OEM_EC_DESC_INVALID_PASSWORD_MAX \
+        "Resetting system - Password retry limit reached"
+///@}
+
 #endif

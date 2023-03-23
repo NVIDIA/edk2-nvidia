@@ -45,6 +45,7 @@
   MemoryAllocationLib
   PlatformPasswordLib
   PrintLib
+  ReportStatusCodeLib
   SecurityManagementLib
 
 [Guids]

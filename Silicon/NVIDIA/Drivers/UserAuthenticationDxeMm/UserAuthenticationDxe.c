@@ -263,7 +263,21 @@ RequireUserPassword (
       //
       // Password retry count reach.
       //
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_SOFTWARE_EFI_BOOT_SERVICE | EFI_SW_DXE_BS_EC_INVALID_PASSWORD,
+        OEM_EC_DESC_INVALID_PASSWORD_MAX,
+        sizeof (OEM_EC_DESC_INVALID_PASSWORD_MAX)
+        );
+
       ForceSystemReset ();
+    } else {
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MINOR,
+        EFI_SOFTWARE_EFI_BOOT_SERVICE | EFI_SW_DXE_BS_EC_INVALID_PASSWORD,
+        OEM_EC_DESC_INVALID_PASSWORD,
+        sizeof (OEM_EC_DESC_INVALID_PASSWORD)
+        );
     }
 
     MessageBox (L"Incorrect password!");

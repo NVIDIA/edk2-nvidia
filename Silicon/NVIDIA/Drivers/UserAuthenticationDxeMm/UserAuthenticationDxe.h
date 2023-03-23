@@ -33,9 +33,12 @@
 #include <Library/DevicePathLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformPasswordLib.h>
+#include <Library/ReportStatusCodeLib.h>
 #include <Library/SecurityManagementLib.h>
 
 #include "UserAuthenticationDxeFormset.h"
+
+#include <OemStatusCodes.h>
 
 extern UINT8                           UserAuthenticationDxeVfrBin[];
 extern UINT8                           UserAuthenticationDxeStrings[];
