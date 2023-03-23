@@ -45,16 +45,16 @@
   MemoryAllocationLib
   PlatformPasswordLib
   PrintLib
+  SecurityManagementLib
 
 [Guids]
   gUserAuthenticationGuid                       ## CONSUMES  ## GUID
-  gEfiEventExitBootServicesGuid                 ## CONSUMES  ## Event
 
 [Protocols]
-  gEfiRscHandlerProtocolGuid                    ## CONSUMES
   gEfiDevicePathProtocolGuid                    ## PRODUCES
   gEfiHiiConfigAccessProtocolGuid               ## PRODUCES
   gEfiMmCommunication2ProtocolGuid              ## CONSUMES
+  gNVIDIAUserAuthenticationProtocolGuid         ## PRODUCES
 
 [Depex]
   gEfiSimpleTextOutProtocolGuid      AND

@@ -14,6 +14,7 @@
 #include <Protocol/ReportStatusCodeHandler.h>
 #include <Protocol/HiiConfigAccess.h>
 #include <Protocol/MmCommunication2.h>
+#include <Protocol/UserAuthentication.h>
 
 #include <Guid/MdeModuleHii.h>
 #include <Guid/HiiPlatformSetupFormset.h>
@@ -32,6 +33,7 @@
 #include <Library/DevicePathLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformPasswordLib.h>
+#include <Library/SecurityManagementLib.h>
 
 #include "UserAuthenticationDxeFormset.h"
 

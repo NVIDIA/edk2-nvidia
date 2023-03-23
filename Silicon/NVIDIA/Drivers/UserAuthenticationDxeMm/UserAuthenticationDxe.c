@@ -11,8 +11,6 @@
 
 #include "UserAuthenticationDxe.h"
 
-EFI_EVENT                         mExitBootServicesEvent   = NULL;
-EFI_RSC_HANDLER_PROTOCOL          *mRscHandlerProtocol     = NULL;
 USER_AUTHENTICATION_PRIVATE_DATA  *mUserAuthenticationData = NULL;
 EFI_MM_COMMUNICATION2_PROTOCOL    *mMmCommunication2       = NULL;
 
@@ -324,66 +322,35 @@ SetUserPassword (
 }
 
 /**
-  Check password before entering into setup.
+  Prompt user to enter password and check if it is valid.
 
-  @param  CodeType      Indicates the type of status code being reported.  Type EFI_STATUS_CODE_TYPE is defined in "Related Definitions" below.
+  @param  This         pointer to NVIDIA_USER_AUTH_PROTOCOL
 
-  @param  Value         Describes the current status of a hardware or software entity.
-                        This included information about the class and subclass that is used to classify the entity
-                        as well as an operation.  For progress codes, the operation is the current activity.
-                        For error codes, it is the exception.  For debug codes, it is not defined at this time.
-                        Type EFI_STATUS_CODE_VALUE is defined in "Related Definitions" below.
-                        Specific values are discussed in the Intel? Platform Innovation Framework for EFI Status Code Specification.
-
-  @param  Instance      The enumeration of a hardware or software entity within the system.
-                        A system may contain multiple entities that match a class/subclass pairing.
-                        The instance differentiates between them.  An instance of 0 indicates that instance information is unavailable,
-                        not meaningful, or not relevant.  Valid instance numbers start with 1.
-
-
-  @param  CallerId      This optional parameter may be used to identify the caller.
-                        This parameter allows the status code driver to apply different rules to different callers.
-                        Type EFI_GUID is defined in InstallProtocolInterface() in the UEFI 2.0 Specification.
-
-
-  @param  Data          This optional parameter may be used to pass additional data
-
-  @retval EFI_SUCCESS             Status code is what we expected.
-  @retval EFI_UNSUPPORTED         Status code not supported.
-
+  @retval EFI_SUCCESS              Valid password
+  @retval EFI_SECURITY_VIOLATION   Invalid password
 **/
 EFI_STATUS
 EFIAPI
 CheckForPassword (
-  IN EFI_STATUS_CODE_TYPE CodeType,
-  IN EFI_STATUS_CODE_VALUE Value,
-  IN UINT32 Instance,
-  IN EFI_GUID *CallerId, OPTIONAL
-  IN EFI_STATUS_CODE_DATA     *Data      OPTIONAL
+  IN     NVIDIA_USER_AUTH_PROTOCOL  *This
   )
 {
   BOOLEAN  PasswordSet;
 
-  if (((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_PROGRESS_CODE) &&
-      (Value == (EFI_SOFTWARE_DXE_BS_DRIVER | EFI_SW_PC_USER_SETUP)))
-  {
-    //
-    // Check whether enter setup page.
-    //
-    PasswordSet = RequireUserPassword ();
-    if (PasswordSet) {
-      DEBUG ((DEBUG_INFO, "Welcome Admin!\n"));
-    } else {
-      DEBUG ((DEBUG_INFO, "Admin password is not set!\n"));
-      if (NeedEnrollPassword ()) {
-        SetUserPassword ();
-      }
-    }
-
-    return EFI_SUCCESS;
+  //
+  // Check whether enter setup page.
+  //
+  PasswordSet = RequireUserPassword ();
+  if (PasswordSet) {
+    DEBUG ((DEBUG_INFO, "Welcome Admin!\n"));
   } else {
-    return EFI_UNSUPPORTED;
+    DEBUG ((DEBUG_INFO, "Admin password is not set!\n"));
+    if (NeedEnrollPassword ()) {
+      SetUserPassword ();
+    }
   }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -642,23 +609,9 @@ UserAuthenticationCallback (
   return Status;
 }
 
-/**
-  Unregister status code callback functions.
-
-  @param  Event         Event whose notification function is being invoked.
-  @param  Context       Pointer to the notification function's context, which is
-                        always zero in current implementation.
-
-**/
-VOID
-EFIAPI
-UnregisterBootTimeHandlers (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
-  )
-{
-  mRscHandlerProtocol->Unregister (CheckForPassword);
-}
+NVIDIA_USER_AUTH_PROTOCOL  mUserAuthenticationProtocol = {
+  CheckForPassword
+};
 
 /**
   User Authentication entry point.
@@ -724,38 +677,20 @@ UserAuthenticationEntry (
   mUserAuthenticationData->HiiHandle = HiiHandle;
 
   //
-  // Locate report status code protocol.
-  //
-  Status = gBS->LocateProtocol (
-                  &gEfiRscHandlerProtocolGuid,
-                  NULL,
-                  (VOID **)&mRscHandlerProtocol
-                  );
-  ASSERT_EFI_ERROR (Status);
-
-  //
-  // Register the callback function for ReportStatusCode() notification.
-  //
-  mRscHandlerProtocol->Register (CheckForPassword, TPL_HIGH_LEVEL);
-
-  //
-  // Unregister boot time report status code listener at ExitBootService Event.
-  //
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_NOTIFY,
-                  UnregisterBootTimeHandlers,
-                  NULL,
-                  &gEfiEventExitBootServicesGuid,
-                  &mExitBootServicesEvent
-                  );
-  ASSERT_EFI_ERROR (Status);
-
-  //
   // Locates EFI MM Communication 2 protocol.
   //
   Status = gBS->LocateProtocol (&gEfiMmCommunication2ProtocolGuid, NULL, (VOID **)&mMmCommunication2);
   ASSERT_EFI_ERROR (Status);
+
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &ImageHandle,
+                  &gNVIDIAUserAuthenticationProtocolGuid,
+                  &mUserAuthenticationProtocol,
+                  NULL
+                  );
+  if (!EFI_ERROR (Status)) {
+    return Status;
+  }
 
   return EFI_SUCCESS;
 }
