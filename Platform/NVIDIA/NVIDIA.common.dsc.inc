@@ -699,6 +699,7 @@
   MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
   MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf {
      <LibraryClasses>
+       NULL|Silicon/NVIDIA/Library/UserAuthenticationLib/UserAuthenticationLib.inf
        NULL|SecurityPkg/Library/DxeImageVerificationLib/DxeImageVerificationLib.inf
        NULL|SecurityPkg/Library/DxeTpm2MeasureBootLib/DxeTpm2MeasureBootLib.inf
   }
