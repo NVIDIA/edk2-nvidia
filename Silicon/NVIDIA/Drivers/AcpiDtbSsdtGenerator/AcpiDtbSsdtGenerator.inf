@@ -1,0 +1,42 @@
+#/** @file
+#
+#  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = AcpiDtbSsdtGenerator
+  FILE_GUID                      = b1f458bb-8ddc-47d4-8693-fe04707c3fbc
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = AcpiDtbSsdtGeneratorEntryPoint
+
+[Sources]
+  AcpiDtbSsdtGenerator.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
+
+[Protocols]
+  gEfiAcpiTableProtocolGuid
+
+[LibraryClasses]
+  AmlLib
+  BaseLib
+  DeviceTreeHelperLib
+  UefiDriverEntryPoint
+  UefiLib

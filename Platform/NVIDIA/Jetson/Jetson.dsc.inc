@@ -194,6 +194,7 @@
     <LibraryClasses>
       NULL|EmbeddedPkg/Library/PlatformHasAcpiLib/PlatformHasAcpiLib.inf
   }
+  Silicon/NVIDIA/Drivers/AcpiDtbSsdtGenerator/AcpiDtbSsdtGenerator.inf
 
   # Boot support for mkbootimg partitions
   Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
