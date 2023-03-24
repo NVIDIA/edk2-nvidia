@@ -20,6 +20,7 @@
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 
 #include <TH500/TH500Definitions.h>
+#include "ConfigurationManagerDataPrivate.h"
 
 typedef struct {
   UINT32    PxmDmn;
@@ -48,6 +49,7 @@ InstallStaticResourceAffinityTable (
   UINTN                            MemoryAffinityInfoIndex;
   UINTN                            GpuMemoryAffinityId;
   UINT8                            NumEnabledSockets;
+  UINT8                            NumGpuEnabledSockets;
   EFI_HANDLE                       *Handles = NULL;
   UINTN                            NumberOfHandles;
   UINTN                            HandleIdx;
@@ -99,6 +101,7 @@ InstallStaticResourceAffinityTable (
 
   MemoryAffinityInfoCount = 0;
   NumEnabledSockets       = 0;
+  NumGpuEnabledSockets    = 0;
 
   Status = gDS->GetMemorySpaceMap (&DescriptorCount, &Descriptors);
   if (EFI_ERROR (Status)) {
@@ -119,6 +122,10 @@ InstallStaticResourceAffinityTable (
     if (IsSocketEnabled (Socket)) {
       NumEnabledSockets++;
     }
+
+    if (IsGpuEnabledOnSocket (Socket)) {
+      NumGpuEnabledSockets++;
+    }
   }
 
   // Increment to hold entries for EGM memory in case of hypervisor
@@ -127,7 +134,7 @@ InstallStaticResourceAffinityTable (
   }
 
   // Increment to hold entries for GPU memory
-  MemoryAffinityInfoCount += TH500_GPU_MAX_NR_MEM_PARTITIONS * NumEnabledSockets;
+  MemoryAffinityInfoCount += TH500_GPU_MAX_NR_MEM_PARTITIONS * NumGpuEnabledSockets;
 
   MemoryAffinityInfo = (CM_ARM_MEMORY_AFFINITY_INFO *)AllocateZeroPool (sizeof (CM_ARM_MEMORY_AFFINITY_INFO) * MemoryAffinityInfoCount);
   if (MemoryAffinityInfo == NULL) {
@@ -213,8 +220,9 @@ InstallStaticResourceAffinityTable (
   }
 
   // Placeholder node for all domains, actual entries will be present in DSDT
+  // Create structure entries for enabled GPUs
   for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
-    if (!IsSocketEnabled (Socket)) {
+    if (!IsGpuEnabledOnSocket (Socket)) {
       continue;
     }
 

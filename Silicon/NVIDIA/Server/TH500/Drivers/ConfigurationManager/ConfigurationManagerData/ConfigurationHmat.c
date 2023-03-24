@@ -47,7 +47,6 @@ InstallHeterogeneousMemoryAttributeTable (
   UINT32                                  *InitiatorProximityDomainList;
   UINT32                                  *TargetProximityDomainList;
   UINT32                                  Index;
-  UINT32                                  MaxEnabledHbmDmns;
 
   // Create a ACPI Table Entry
   for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
@@ -91,9 +90,8 @@ InstallHeterogeneousMemoryAttributeTable (
   }
 
   // Proximity Domains
-  MaxEnabledHbmDmns            = GetMaxHbmPxmDomains ();
-  NumInitiatorProximityDomains = (TH500_GPU_HBM_PXM_DOMAIN_START > MaxEnabledHbmDmns) ? TH500_GPU_HBM_PXM_DOMAIN_START : MaxEnabledHbmDmns;
-  NumTargetProximityDomains    = (TH500_GPU_HBM_PXM_DOMAIN_START > MaxEnabledHbmDmns) ? TH500_GPU_HBM_PXM_DOMAIN_START : MaxEnabledHbmDmns;
+  NumInitiatorProximityDomains = GetMaxPxmDomains ();
+  NumTargetProximityDomains    = GetMaxPxmDomains ();
 
   // Generate and populate Initiator proximity domain list
   InitiatorProximityDomainList = (UINT32 *)AllocateZeroPool (sizeof (UINT32) * NumInitiatorProximityDomains);
@@ -178,7 +176,7 @@ InstallHeterogeneousMemoryAttributeTable (
     }
 
     for (UINTN TargIndex = TH500_GPU_HBM_PXM_DOMAIN_START; TargIndex < NumTargetProximityDomains; TargIndex++) {
-      if (!IsSocketEnabled ((TargIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
+      if (!IsGpuEnabledOnSocket ((TargIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
         continue;
       }
 
@@ -201,7 +199,7 @@ InstallHeterogeneousMemoryAttributeTable (
   // gpu to local hbm and remote hbm
   for (UINTN InitIndex = TH500_GPU_PXM_DOMAIN_START; InitIndex < TH500_GPU_PXM_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets); InitIndex++) {
     // check if CPU socket enabled for this GPU Index
-    if (!IsSocketEnabled (InitIndex - TH500_GPU_PXM_DOMAIN_START)) {
+    if (!IsGpuEnabledOnSocket (InitIndex - TH500_GPU_PXM_DOMAIN_START)) {
       continue;
     }
 
@@ -210,7 +208,7 @@ InstallHeterogeneousMemoryAttributeTable (
          TargIndex < NumTargetProximityDomains;
          TargIndex++)
     {
-      if (!IsSocketEnabled ((TargIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
+      if (!IsGpuEnabledOnSocket ((TargIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
         continue;
       }
 
@@ -233,7 +231,7 @@ InstallHeterogeneousMemoryAttributeTable (
   // gpu to local cpu and remote cpu
   for (UINTN InitIndex = TH500_GPU_PXM_DOMAIN_START; InitIndex < TH500_GPU_PXM_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets); InitIndex++) {
     // check if CPU socket enabled for this GPU Index
-    if (!IsSocketEnabled (InitIndex - TH500_GPU_PXM_DOMAIN_START)) {
+    if (!IsGpuEnabledOnSocket (InitIndex - TH500_GPU_PXM_DOMAIN_START)) {
       continue;
     }
 

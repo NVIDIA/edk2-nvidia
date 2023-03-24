@@ -371,10 +371,10 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     Property = fdt_getprop (Dtb, AcpiNode, "cpu-remotehbm-read-latency", NULL);
     if (Property != NULL) {
       CpuToRemoteHbmReadLatency = SwapBytes32 (Property[0]);
-      PcdSet32S (PcdCpuToLocalHbmReadLatency, CpuToRemoteHbmReadLatency);
-      DEBUG ((EFI_D_INFO, "Cpu To local HBM Read Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmReadLatency)));
+      PcdSet32S (PcdCpuToRemoteHbmReadLatency, CpuToRemoteHbmReadLatency);
+      DEBUG ((EFI_D_INFO, "Cpu To RemoteHbm Read Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmReadLatency)));
     } else {
-      DEBUG ((DEBUG_INFO, "Cpu To Local HBM Read Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmReadLatency)));
+      DEBUG ((DEBUG_INFO, "Cpu To RemoteHbm Read Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmReadLatency)));
     }
 
     Property = fdt_getprop (Dtb, AcpiNode, "cpu-remotehbm-write-latency", NULL);

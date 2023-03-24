@@ -1,7 +1,7 @@
 /** @file
   HBM Memory Proximity domain config
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -10,20 +10,21 @@
 #include <Library/DebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/FloorSweepingLib.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 
 #include <TH500/TH500Definitions.h>
 
 UINT64  EnabledHbmBitMap;
 
-UINTN
+UINT32
 EFIAPI
 GetMaxHbmPxmDomains (
   VOID
   )
 {
-  UINTN  MaxDmns;
-  UINT8  BitMapIdx;
+  UINT32  MaxDmns;
+  UINT8   BitMapIdx;
 
   MaxDmns = 0;
   for (UINT8 Idx = 0; Idx <= TH500_GPU_MAX_PXM_DOMAINS; Idx++) {
@@ -35,6 +36,49 @@ GetMaxHbmPxmDomains (
   }
 
   return 0;
+}
+
+UINT32
+EFIAPI
+GetMaxPxmDomains (
+  VOID
+  )
+{
+  UINT32  MaxPxmDmns;
+  UINT32  MaxHbmDmns;
+  UINT32  MaxCpuSocketEnabled;
+  UINT8   SocketIdx;
+
+  MaxPxmDmns          = 0;
+  MaxHbmDmns          = 0;
+  MaxCpuSocketEnabled = 0;
+
+  for (UINT32 Socket = 0; Socket <= PLATFORM_MAX_SOCKETS; Socket++) {
+    SocketIdx = PLATFORM_MAX_SOCKETS - Socket;
+    if (IsSocketEnabled (SocketIdx)) {
+      // bit position to number of bits adjustment, add 1
+      MaxCpuSocketEnabled = SocketIdx + 1;
+      break;
+    }
+  }
+
+  MaxHbmDmns = GetMaxHbmPxmDomains ();
+  MaxPxmDmns = (MaxCpuSocketEnabled > MaxHbmDmns) ? MaxCpuSocketEnabled : (TH500_GPU_HBM_PXM_DOMAIN_START + MaxHbmDmns);
+
+  return MaxPxmDmns;
+}
+
+BOOLEAN
+EFIAPI
+IsGpuEnabledOnSocket (
+  UINT32  SocketId
+  )
+{
+  if (EnabledHbmBitMap & (1ULL << (SocketId * TH500_GPU_MAX_NR_MEM_PARTITIONS))) {
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 BOOLEAN
@@ -104,6 +148,9 @@ GenerateHbmMemPxmDmnMap (
       }
     }
   }
+
+  // account for non HBM pxm domain in the info obtained from PCI RB config
+  EnabledHbmBitMap = EnabledHbmBitMap >> TH500_GPU_HBM_PXM_DOMAIN_START;
 
 Exit:
   FreePool (Handles);

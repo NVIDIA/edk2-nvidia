@@ -160,6 +160,21 @@ InstallArmPerformanceMonitoringUnitTable (
   );
 
 /**
+  Check if GPU is enabled on given Socket ID
+
+  @param[in] UINT32      SocketId
+
+  @return    BOOLEAN     (TRUE if enabled
+                          FALSE if disabled)
+
+**/
+BOOLEAN
+EFIAPI
+IsGpuEnabledOnSocket (
+  UINTN  SocketId
+  );
+
+/**
   Check if a given HBM domain is enabled or not
 
   @param[in] UINT32      DmnIdx
@@ -187,12 +202,25 @@ GenerateHbmMemPxmDmnMap (
   );
 
 /**
+  Obtain the total number of proximity domains
+  This includes, CPU, GPU and GPU HBM domains
+
+  @param[in] VOID
+
+**/
+UINT32
+EFIAPI
+GetMaxPxmDomains (
+  VOID
+  );
+
+/**
   Obtain the max number of HBM memory proximity domains
 
   @param[in] VOID
 
 **/
-UINTN
+UINT32
 EFIAPI
 GetMaxHbmPxmDomains (
   VOID
