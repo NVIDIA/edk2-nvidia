@@ -42,6 +42,7 @@
 #include <libfdt.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/RootfsValidationLib.h>
+#include <Library/TegraDeviceTreeOverlayLib.h>
 #include "L4TLauncher.h"
 
 /**
@@ -1104,6 +1105,11 @@ ProcessExtLinuxConfig (
           continue;
         }
 
+        Status = CheckCommandString (CleanLine, EXTLINUX_KEY_OVERLAYS, &BootConfig->BootOptions[BootConfig->NumberOfBootOptions-1].Overlays);
+        if (!EFI_ERROR (Status)) {
+          continue;
+        }
+
         Status = CheckCommandString (CleanLine, EXTLINUX_KEY_APPEND, &BootConfig->BootOptions[BootConfig->NumberOfBootOptions-1].BootArgs);
         if (!EFI_ERROR (Status)) {
           CbootArg = StrStr (BootConfig->BootOptions[BootConfig->NumberOfBootOptions-1].BootArgs, EXTLINUX_CBOOT_ARG);
@@ -1149,6 +1155,10 @@ ProcessExtLinuxConfig (
 
     if (BootConfig->BootOptions[Index].LinuxPath != NULL) {
       PathCleanUpDirectories (BootConfig->BootOptions[Index].LinuxPath);
+    }
+
+    if (BootConfig->BootOptions[Index].Overlays != NULL) {
+      PathCleanUpDirectories (BootConfig->BootOptions[Index].Overlays);
     }
   }
 
@@ -1264,6 +1274,13 @@ ExtLinuxBoot (
   EFI_DEVICE_PATH_PROTOCOL   *KernelDevicePath = NULL;
   EFI_HANDLE                 KernelHandle      = NULL;
   EFI_LOADED_IMAGE_PROTOCOL  *ImageInfo;
+  VOID                       *OverlayBuffer = NULL;
+  UINTN                      OverlaySize;
+  CHAR16                     *Overlays = NULL;
+  CHAR16                     *OverlayPath;
+  UINTN                      Index;
+  CHAR8                      SWModule[] = "kernel";
+  INTN                       FdtStatus;
 
   // Process Args
   ArgSize = StrSize (BootOption->BootArgs) + MAX_CBOOTARG_SIZE;
@@ -1335,6 +1352,59 @@ ExtLinuxBoot (
     if (fdt_open_into (NewFdtBase, ExpandedFdtBase, 4 * fdt_totalsize (NewFdtBase)) != 0) {
       Status = EFI_NOT_FOUND;
       goto Exit;
+    }
+
+    if (BootOption->Overlays != NULL) {
+      DEBUG ((DEBUG_INFO, "%a: applying overlays %s\r\n", __FUNCTION__, BootOption->Overlays));
+      Overlays = AllocateCopyPool (StrSize (BootOption->Overlays) * sizeof (CHAR16), BootOption->Overlays);
+      if (Overlays == NULL) {
+        Status = EFI_OUT_OF_RESOURCES;
+        goto Exit;
+      }
+
+      OverlayPath = Overlays;
+      for (Index = 0; Index < StrSize (BootOption->Overlays) / sizeof (CHAR16); Index++) {
+        switch (Overlays[Index]) {
+          case L',':
+          case L'\0':
+            break;
+          default:
+            continue;
+        }
+
+        Overlays[Index] = L'\0';
+
+        DEBUG ((DEBUG_INFO, "%a: OverlayPath '%s'\r\n", __FUNCTION__, OverlayPath));
+        Status = OpenAndReadFileToBuffer (
+                   DeviceHandle,
+                   OverlayPath,
+                   NULL,
+                   &OverlayBuffer,
+                   &OverlaySize
+                   );
+        if (EFI_ERROR (Status)) {
+          ErrorPrint (L"%a: Failed to load overlay %s: %r\r\n", __FUNCTION__, OverlayPath, Status);
+          goto Exit;
+        }
+
+        FdtStatus = fdt_check_header (OverlayBuffer);
+        if (FdtStatus != 0) {
+          ErrorPrint (L"%a: Overlay %s bad header: %lld\r\n", __FUNCTION__, OverlayPath, FdtStatus);
+          goto Exit;
+        }
+
+        Status = ApplyTegraDeviceTreeOverlay (ExpandedFdtBase, OverlayBuffer, SWModule);
+        if (EFI_ERROR (Status)) {
+          goto Exit;
+        }
+
+        FreePool (OverlayBuffer);
+        OverlayBuffer = NULL;
+        OverlayPath   = &Overlays[Index + 1];
+      }
+
+      FreePool (Overlays);
+      Overlays = NULL;
     }
 
     Status = gBS->InstallConfigurationTable (&gFdtTableGuid, ExpandedFdtBase);
@@ -1438,6 +1508,16 @@ Exit:
   if (NewArgs != NULL) {
     FreePool (NewArgs);
     NewArgs = NULL;
+  }
+
+  if (Overlays != NULL) {
+    FreePool (Overlays);
+    Overlays = NULL;
+  }
+
+  if (OverlayBuffer != NULL) {
+    FreePool (OverlayBuffer);
+    OverlayBuffer = NULL;
   }
 
   return Status;

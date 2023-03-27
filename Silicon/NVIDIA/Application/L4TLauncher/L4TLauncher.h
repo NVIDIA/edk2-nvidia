@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -45,6 +45,7 @@
 #define EXTLINUX_KEY_INITRD      L"INITRD"
 #define EXTLINUX_KEY_FDT         L"FDT"
 #define EXTLINUX_KEY_APPEND      L"APPEND"
+#define EXTLINUX_KEY_OVERLAYS    L"OVERLAYS"
 
 #define EXTLINUX_CBOOT_ARG  L"${cbootargs}"
 
@@ -57,6 +58,7 @@ typedef struct {
   CHAR16    *DtbPath;
   CHAR16    *InitrdPath;
   CHAR16    *BootArgs;
+  CHAR16    *Overlays;
 } EXTLINUX_BOOT_OPTION;
 
 typedef struct {
