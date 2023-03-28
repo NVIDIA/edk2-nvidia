@@ -1,15 +1,16 @@
-# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
-# Workflow for pushes to a rel-* release
+# Workflow to build and stage releases
 
-name: Push to rel branch
+name: Build and release
 on:
   push:
     branches:
       - 'main'
-      - 'rel-*'
+      - 'main.*'
+      - 'r*'
 env:
   EDKREPO_URL: https://github.com/tianocore/edk2-edkrepo/releases/download/edkrepo-v2.1.2/edkrepo-2.1.2.tar.gz
   EDKREPO_NVIDIA_MANIFEST_REPO: https://github.com/NVIDIA/edk2-edkrepo-manifest.git
@@ -17,7 +18,7 @@ jobs:
   # Build a draft release.  After it is posted, the draft release can be edited
   # manually and published.
   Build-Draft-Release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     permissions:
       contents: write
     steps:
@@ -50,7 +51,7 @@ jobs:
           set -x
           cd ${{ github.workspace }}
           # Start with the edkrepo combo that matches this branch
-          edkrepo clone -v workspace NVIDIA-Jetson ${GITHUB_REF_NAME/.*/}
+          edkrepo clone -v workspace NVIDIA-Jetson ${GITHUB_REF_NAME%.*}
           cd workspace
           # Checkout the ref that triggered this build
           git -C edk2-nvidia fetch --verbose "${{ github.server_url }}/${{ github.repository }}" "${{ github.ref }}"
@@ -67,6 +68,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/workspace
           edk2-nvidia/Platform/NVIDIA/Jetson/build.sh
+          edk2-nvidia/Platform/NVIDIA/StandaloneMmOptee/build.sh
       - name: Package
         id: package
         run: |
