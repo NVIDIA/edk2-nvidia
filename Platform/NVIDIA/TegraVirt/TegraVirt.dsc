@@ -112,6 +112,11 @@
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
 
+  #
+  # Enable emulated variable NV mode in variable driver.
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|TRUE
+
   #  DEBUG_INIT      0x00000001  // Initialization
   #  DEBUG_WARN      0x00000002  // Warnings
   #  DEBUG_LOAD      0x00000004  // Load events
@@ -280,16 +285,11 @@
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf {
     <LibraryClasses>
       NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
-      NULL|EmbeddedPkg/Library/NvVarStoreFormattedLib/NvVarStoreFormattedLib.inf
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
 
   MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
   MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
-  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf {
-    <LibraryClasses>
-      NULL|ArmVirtPkg/Library/NorFlashKvmtoolLib/NorFlashKvmtoolLib.inf
-  }
 
   MdeModulePkg/Universal/MonotonicCounterRuntimeDxe/MonotonicCounterRuntimeDxe.inf
   MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
@@ -312,8 +312,6 @@
     <LibraryClasses>
       NULL|ArmVirtPkg/Library/ArmVirtTimerFdtClientLib/ArmVirtTimerFdtClientLib.inf
   }
-
-  ArmPlatformPkg/Drivers/NorFlashDxe/NorFlashDxe.inf
 
   MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
 
