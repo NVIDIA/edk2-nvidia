@@ -110,9 +110,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdConOutGopSupport|TRUE
   gEfiMdeModulePkgTokenSpaceGuid.PcdConOutUgaSupport|FALSE
 
-  # Use MMIO for accessing RTC controller registers.
-  gPcAtChipsetPkgTokenSpaceGuid.PcdRtcUseMmio|TRUE
-
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L"TegraVirt"
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
@@ -247,10 +244,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase|0
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize|0x40000
 
-  ## RTC Register address in MMIO space.
-  gPcAtChipsetPkgTokenSpaceGuid.PcdRtcIndexRegister64|0x0
-  gPcAtChipsetPkgTokenSpaceGuid.PcdRtcTargetRegister64|0x0
-
 ################################################################################
 #
 # Components Section - list of all EDK II Modules needed by this Platform
@@ -300,10 +293,7 @@
   MdeModulePkg/Universal/MonotonicCounterRuntimeDxe/MonotonicCounterRuntimeDxe.inf
   MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
   MdeModulePkg/Universal/Metronome/Metronome.inf
-  PcAtChipsetPkg/PcatRealTimeClockRuntimeDxe/PcatRealTimeClockRuntimeDxe.inf {
-    <LibraryClasses>
-      NULL|ArmVirtPkg/Library/KvmtoolRtcFdtClientLib/KvmtoolRtcFdtClientLib.inf
-  }
+  EmbeddedPkg/RealTimeClockRuntimeDxe/RealTimeClockRuntimeDxe.inf
 
   MdeModulePkg/Universal/Console/ConPlatformDxe/ConPlatformDxe.inf
   MdeModulePkg/Universal/Console/ConSplitterDxe/ConSplitterDxe.inf
