@@ -1,5 +1,6 @@
 /** @file
 *
+*  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2012, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -9,18 +10,11 @@
 #ifndef _PREPI_H_
 #define _PREPI_H_
 
-#include <PiPei.h>
-
 #include <Library/PcdLib.h>
 #include <Library/ArmLib.h>
-#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
-#include <Library/IoLib.h>
-#include <Library/MemoryAllocationLib.h>
 #include <Library/HobLib.h>
 #include <Library/SerialPortLib.h>
-
-#define SerialPrint(txt)  SerialPortWrite (txt, AsciiStrLen(txt)+1);
 
 RETURN_STATUS
 EFIAPI
@@ -45,6 +39,12 @@ MemoryPeim (
 EFI_STATUS
 EFIAPI
 PlatformPeim (
+  VOID
+  );
+
+VOID
+EFIAPI
+ProcessLibraryConstructorList (
   VOID
   );
 

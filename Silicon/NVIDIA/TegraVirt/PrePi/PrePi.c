@@ -7,10 +7,6 @@
 *
 **/
 
-#include <PiPei.h>
-#include <Pi/PiBootMode.h>
-
-#include <Library/PeCoffLib.h>
 #include <Library/PrePiLib.h>
 #include <Library/PrintLib.h>
 #include <Library/PrePiHobListPointerLib.h>
@@ -18,17 +14,9 @@
 #include <Library/PerformanceLib.h>
 #include <Library/CacheMaintenanceLib.h>
 
-#include <Ppi/GuidedSectionExtraction.h>
-#include <Ppi/ArmMpCoreInfo.h>
 #include <libfdt.h>
 
 #include "PrePi.h"
-
-VOID
-EFIAPI
-ProcessLibraryConstructorList (
-  VOID
-  );
 
 VOID
 PrePiMain (
@@ -273,42 +261,4 @@ CEntryPoint (
 
   // DXE Core should always load and never return
   ASSERT (FALSE);
-}
-
-VOID
-RelocatePeCoffImage (
-  IN  EFI_PEI_FV_HANDLE         FwVolHeader,
-  IN  PE_COFF_LOADER_READ_FILE  ImageRead
-  )
-{
-  EFI_PEI_FILE_HANDLE           FileHandle;
-  VOID                          *SectionData;
-  PE_COFF_LOADER_IMAGE_CONTEXT  ImageContext;
-  EFI_STATUS                    Status;
-
-  FileHandle = NULL;
-  Status     = FfsFindNextFile (
-                 EFI_FV_FILETYPE_SECURITY_CORE,
-                 FwVolHeader,
-                 &FileHandle
-                 );
-  ASSERT_EFI_ERROR (Status);
-
-  Status = FfsFindSectionData (EFI_SECTION_PE32, FileHandle, &SectionData);
-  if (EFI_ERROR (Status)) {
-    Status = FfsFindSectionData (EFI_SECTION_TE, FileHandle, &SectionData);
-  }
-
-  ASSERT_EFI_ERROR (Status);
-
-  ZeroMem (&ImageContext, sizeof ImageContext);
-
-  ImageContext.Handle    = (EFI_HANDLE)SectionData;
-  ImageContext.ImageRead = ImageRead;
-  PeCoffLoaderGetImageInfo (&ImageContext);
-
-  if (ImageContext.ImageAddress != (UINTN)SectionData) {
-    ImageContext.ImageAddress = (UINTN)SectionData;
-    PeCoffLoaderRelocateImage (&ImageContext);
-  }
 }
