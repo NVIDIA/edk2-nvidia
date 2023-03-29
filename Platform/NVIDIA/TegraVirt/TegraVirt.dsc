@@ -314,14 +314,8 @@
   #
   # Platform Driver
   #
-  ArmVirtPkg/KvmtoolPlatformDxe/KvmtoolPlatformDxe.inf
-  OvmfPkg/Fdt/VirtioFdtDxe/VirtioFdtDxe.inf
   EmbeddedPkg/Drivers/FdtClientDxe/FdtClientDxe.inf
   OvmfPkg/Fdt/HighMemDxe/HighMemDxe.inf
-  OvmfPkg/VirtioBlkDxe/VirtioBlk.inf
-  OvmfPkg/VirtioScsiDxe/VirtioScsi.inf
-  OvmfPkg/VirtioNetDxe/VirtioNet.inf
-  OvmfPkg/VirtioRngDxe/VirtioRng.inf
 
   #
   # FAT filesystem + GPT/MBR partitioning + UDF filesystem
@@ -351,36 +345,3 @@
       NULL|MdeModulePkg/Library/BootManagerUiLib/BootManagerUiLib.inf
       NULL|MdeModulePkg/Library/BootMaintenanceManagerUiLib/BootMaintenanceManagerUiLib.inf
   }
-
-  #
-  # SCSI Bus and Disk Driver
-  #
-  MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
-  MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
-  #
-  # PCI support
-  #
-  ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf {
-    <LibraryClasses>
-      NULL|OvmfPkg/Fdt/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
-      NULL|OvmfPkg/Library/BaseCachingPciExpressLib/BaseCachingPciExpressLib.inf
-  }
-  MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf {
-    <LibraryClasses>
-      NULL|OvmfPkg/Fdt/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
-      NULL|OvmfPkg/Library/BaseCachingPciExpressLib/BaseCachingPciExpressLib.inf
-  }
-  MdeModulePkg/Bus/Pci/PciBusDxe/PciBusDxe.inf {
-    <LibraryClasses>
-      NULL|OvmfPkg/Fdt/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
-      NULL|OvmfPkg/Library/BaseCachingPciExpressLib/BaseCachingPciExpressLib.inf
-  }
-  OvmfPkg/VirtioPciDeviceDxe/VirtioPciDeviceDxe.inf
-  OvmfPkg/Virtio10Dxe/Virtio10.inf
-
-!if $(ARCH) == AARCH64
-  #
-  # ACPI Support
-  #
-  ArmVirtPkg/KvmtoolCfgMgrDxe/ConfigurationManagerDxe.inf
-!endif

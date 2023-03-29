@@ -120,9 +120,7 @@ READ_LOCK_STATUS   = TRUE
 
   INF MdeModulePkg/Core/Dxe/DxeMain.inf
   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
-  INF OvmfPkg/Fdt/VirtioFdtDxe/VirtioFdtDxe.inf
   INF EmbeddedPkg/Drivers/FdtClientDxe/FdtClientDxe.inf
-  INF ArmVirtPkg/KvmtoolPlatformDxe/KvmtoolPlatformDxe.inf
   INF OvmfPkg/Fdt/HighMemDxe/HighMemDxe.inf
 
   #
@@ -164,14 +162,6 @@ READ_LOCK_STATUS   = TRUE
   INF MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
   INF MdeModulePkg/Universal/Disk/UdfDxe/UdfDxe.inf
 
-  #
-  # Platform Driver
-  #
-  INF OvmfPkg/VirtioBlkDxe/VirtioBlk.inf
-  INF OvmfPkg/VirtioNetDxe/VirtioNet.inf
-  INF OvmfPkg/VirtioScsiDxe/VirtioScsi.inf
-  INF OvmfPkg/VirtioRngDxe/VirtioRng.inf
-
   INF ShellPkg/Application/Shell/Shell.inf
   INF ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf
 
@@ -184,34 +174,6 @@ READ_LOCK_STATUS   = TRUE
   INF MdeModulePkg/Universal/DriverHealthManagerDxe/DriverHealthManagerDxe.inf
   INF MdeModulePkg/Universal/BdsDxe/BdsDxe.inf
   INF MdeModulePkg/Application/UiApp/UiApp.inf
-
-  #
-  # SCSI Bus and Disk Driver
-  #
-  INF MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
-  INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
-
-  #
-  # PCI support
-  #
-  INF ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
-  INF MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf
-  INF MdeModulePkg/Bus/Pci/PciBusDxe/PciBusDxe.inf
-  INF OvmfPkg/VirtioPciDeviceDxe/VirtioPciDeviceDxe.inf
-  INF OvmfPkg/Virtio10Dxe/Virtio10.inf
-
-!if $(ARCH) == AARCH64
-  #
-  # ACPI Support
-  #
-  INF MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
-  #
-  # Dynamic Table fdf
-  #
-  !include DynamicTablesPkg/DynamicTables.fdf.inc
-
-  INF ArmVirtPkg/KvmtoolCfgMgrDxe/ConfigurationManagerDxe.inf
-!endif
 
   #
   # TianoCore logo (splash screen)
