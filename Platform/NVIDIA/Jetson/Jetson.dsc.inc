@@ -256,11 +256,6 @@
   #
   Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
 
-  #Security drivers
-  SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
-  SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
-  SecurityPkg/Pkcs7Verify/Pkcs7VerifyDxe/Pkcs7VerifyDxe.inf
-
   #
   # EQOS NIC Support
   #

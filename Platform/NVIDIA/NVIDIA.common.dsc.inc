@@ -1019,6 +1019,13 @@
   SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
 
   #
+  # Security drivers
+  #
+  SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
+  SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
+  SecurityPkg/Pkcs7Verify/Pkcs7VerifyDxe/Pkcs7VerifyDxe.inf
+
+  #
   # RCM Support
   #
   Silicon/NVIDIA/Drivers/RcmDxe/RcmDxe.inf
