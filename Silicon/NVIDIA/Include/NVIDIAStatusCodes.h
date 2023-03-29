@@ -6,6 +6,9 @@
 *
 **/
 
+#ifndef _NVIDIA_STATUS_CODES_H_
+#define _NVIDIA_STATUS_CODES_H_
+
 ///
 /// A Status Code Value is made up of the class, subclass, and an operation.
 ///
@@ -44,6 +47,7 @@
 #define EFI_NV_FIRMWARE_UNSPECIFIED  (EFI_CLASS_NV_FIRMWARE | 0x00000000)
 #define EFI_NV_FIRMWARE_BOOT         (EFI_CLASS_NV_FIRMWARE | 0x00010000)
 #define EFI_NV_FIRMWARE_MON          (EFI_CLASS_NV_FIRMWARE | 0x00020000)
+#define EFI_NV_FIRMWARE_UEFI         (EFI_CLASS_NV_FIRMWARE | 0x00030000)
 ///@}
 
 ///
@@ -144,3 +148,13 @@
 #define EFI_NV_FW_BOOT_DC_BINARY_LOAD  (EFI_NV_FIRMWARE_BOOT | 0x00000000)
 #define EFI_NV_FW_BOOT_DC_CSA_START    (EFI_NV_FIRMWARE_BOOT | 0x00000001)
 ///@}
+
+///
+/// Nvidia Firmware UEFI error code definitions.
+///
+///@{
+#define EFI_NV_FW_UEFI_EC_NO_SMBIOS_TABLE         (EFI_NV_FIRMWARE_UEFI | 0x00000000)
+#define EFI_NV_FW_UEFI_EC_SMBIOS_TRANSFER_FAILED  (EFI_NV_FIRMWARE_UEFI | 0x00000001)
+///@}
+
+#endif

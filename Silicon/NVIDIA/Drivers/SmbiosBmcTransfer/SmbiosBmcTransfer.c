@@ -16,8 +16,12 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/ReportStatusCodeLib.h>
 
 #include <Protocol/IpmiBlobTransfer.h>
+
+#include <NVIDIAStatusCodes.h>
+#include <OemStatusCodes.h>
 
 #define SMBIOS_TRANSFER_DEBUG  0
 
@@ -49,13 +53,19 @@ SmbiosBmcTransferSendTables (
   Status = gBS->LocateProtocol (&gNVIDIAIpmiBlobTransferProtocolGuid, NULL, (VOID **)&IpmiBlobTransfer);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: No IpmiBlobTransferProtocol available. Exiting\n", __FUNCTION__));
-    return;
+    goto ErrorExit;
   }
 
   Smbios30Table = NULL;
   Status        = EfiGetSystemConfigurationTable (&gEfiSmbios3TableGuid, (VOID **)&Smbios30Table);
   if (EFI_ERROR (Status) || (Smbios30Table == NULL)) {
     DEBUG ((DEBUG_ERROR, "%a: No SMBIOS Table found: %r\n", __FUNCTION__, Status));
+    REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+      EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+      EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_NO_SMBIOS_TABLE,
+      OEM_EC_DESC_NO_SMBIOS_TABLE,
+      sizeof (OEM_EC_DESC_NO_SMBIOS_TABLE)
+      );
     return;
   }
 
@@ -96,14 +106,14 @@ SmbiosBmcTransferSendTables (
   Status = IpmiBlobTransfer->BlobOpen ((CHAR8 *)PcdGetPtr (PcdBmcSmbiosBlobTransferId), BLOB_TRANSFER_STAT_OPEN_W, &SessionId);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to open Blob with Id %a: %r\n", __FUNCTION__, PcdGetPtr (PcdBmcSmbiosBlobTransferId), Status));
-    return;
+    goto ErrorExit;
   }
 
   for (Index = 0; Index < (SendDataSize / IPMI_OEM_BLOB_MAX_DATA_PER_PACKET); Index++) {
     Status = IpmiBlobTransfer->BlobWrite (SessionId, Index * IPMI_OEM_BLOB_MAX_DATA_PER_PACKET, SendData, IPMI_OEM_BLOB_MAX_DATA_PER_PACKET);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failure writing to blob: %r\n", __FUNCTION__, Status));
-      return;
+      goto ErrorExit;
     }
 
     SendData           = (UINT8 *)SendData + IPMI_OEM_BLOB_MAX_DATA_PER_PACKET;
@@ -115,19 +125,31 @@ SmbiosBmcTransferSendTables (
     Status = IpmiBlobTransfer->BlobWrite (SessionId, Index * IPMI_OEM_BLOB_MAX_DATA_PER_PACKET, SendData, RemainingDataSize);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failure writing final block to blob: %r\n", __FUNCTION__, Status));
-      return;
+      goto ErrorExit;
     }
   }
 
   Status = IpmiBlobTransfer->BlobCommit (SessionId, 0, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failure sending commit to blob: %r\n", __FUNCTION__, Status));
-    return;
+    goto ErrorExit;
   }
 
   Status = IpmiBlobTransfer->BlobClose (SessionId);
-  DEBUG ((DEBUG_ERROR, "%a: Sent SMBIOS Tables to BMC: %r\n", __FUNCTION__, Status));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Sent SMBIOS Tables to BMC: %r\n", __FUNCTION__, Status));
+    goto ErrorExit;
+  }
+
   return;
+
+ErrorExit:
+  REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+    EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+    EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_SMBIOS_TRANSFER_FAILED,
+    OEM_EC_DESC_SMBIOS_TRANSFER_FAILED,
+    sizeof (OEM_EC_DESC_SMBIOS_TRANSFER_FAILED)
+    );
 }
 
 /**

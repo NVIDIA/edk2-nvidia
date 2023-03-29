@@ -34,6 +34,12 @@
 
 #define OEM_EC_DESC_INVALID_PASSWORD_MAX \
         "Resetting system - Password retry limit reached"
+
+#define OEM_EC_DESC_NO_SMBIOS_TABLE \
+        "No SMBIOS table installed"
+
+#define OEM_EC_DESC_SMBIOS_TRANSFER_FAILED \
+        "Failed to send SMBIOS tables to BMC"
 ///@}
 
 #endif
