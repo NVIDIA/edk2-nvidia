@@ -18,6 +18,7 @@
   ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
 
 [Sources.common]
+  PcieControllerDt.c
   PcieControllerDxe.c
 
 [Packages]
