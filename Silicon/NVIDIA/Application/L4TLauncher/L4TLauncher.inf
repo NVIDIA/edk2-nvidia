@@ -20,6 +20,7 @@
 [Sources]
   L4TLauncher.c
   L4TRootfsValidation.c
+  L4TOpteeDecrypt.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -46,6 +47,7 @@
   PlatformResourceLib
   ResetSystemLib
   TimerLib
+  OpteeNvLib
 
 [Guids]
   gNVIDIAPublicVariableGuid
