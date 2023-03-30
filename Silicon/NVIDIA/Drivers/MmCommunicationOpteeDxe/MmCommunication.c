@@ -351,8 +351,7 @@ OpteeStmmInit (
     OpteeSetProperties (
       (UINT64)OpteeMmSession.OpteeMsgArgPa,
       (UINT64)OpteeMmSession.OpteeMsgArgVa,
-      OpteeMmSession.TotalSize,
-      RpmbPresent
+      OpteeMmSession.TotalSize
       );
 
     ZeroMem (&OpenSessionArg, sizeof (OPTEE_OPEN_SESSION_ARG));
@@ -452,8 +451,7 @@ OpteeMmConvertPointers (
   OpteeSetProperties (
     (UINT64)OpteeMmSession.OpteeMsgArgPa,
     (UINT64)OpteeMmSession.OpteeMsgArgVa,
-    OpteeMmSession.TotalSize,
-    RpmbPresent
+    OpteeMmSession.TotalSize
     );
 
   return Status;

@@ -2,7 +2,7 @@
 #
 #  MM Communicate driver for OPTEE.
 #
-#  Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+#  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -64,5 +64,3 @@
 
 [Depex]
   gEfiCpuArchProtocolGuid
-  AND
-  gEfiSdMmcPassThruProtocolGuid
