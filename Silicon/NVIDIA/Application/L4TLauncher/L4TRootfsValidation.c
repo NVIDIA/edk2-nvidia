@@ -2,7 +2,7 @@
 
   Rootfs Validation Library
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,9 +18,8 @@
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
-#include <Library/RootfsValidationLib.h>
 #include <NVIDIAConfiguration.h>
-#include "RootfsValidationPrivate.h"
+#include "L4TRootfsValidation.h"
 
 L4T_RF_AB_PARAM  mRootfsInfo = { 0 };
 
@@ -431,7 +430,7 @@ CheckAndUpdateVariable (
   VOID
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS  Status = EFI_SUCCESS;
   UINT32      Index;
 
   // Check mRootfsInfo.RootfsVar[], update the variable if UpdateFlag is set
@@ -577,7 +576,6 @@ ValidateRootfsStatus (
   EFI_STATUS  Status;
   UINT32      RegisterValueRf;
   UINT32      NonCurrentSlot;
-  UINT32      AbRedundancyLevel;
   UINT32      Index;
 
   // If boot mode has been set to RECOVERY (via runtime service or UEFI menu),
@@ -720,7 +718,7 @@ ValidateRootfsStatus (
             DEBUG_ERROR,
             "%a: Failed to set Rootfs status of slot %d to mRootfsInfo: %r\n",
             __FUNCTION__,
-            NonCurrentSlot,
+            mRootfsInfo.CurrentSlot,
             Status
             ));
           goto Exit;
@@ -775,7 +773,7 @@ ValidateRootfsStatus (
         DEBUG_ERROR,
         "%a: Unsupported A/B redundancy level: %d\n",
         __FUNCTION__,
-        AbRedundancyLevel
+        mRootfsInfo.RootfsVar[RF_REDUNDANCY].Value
         ));
       break;
   }

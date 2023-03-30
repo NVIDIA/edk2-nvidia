@@ -1,7 +1,7 @@
 ## @file
 #  Application to launch L4T A/B.
 #
-# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -19,6 +19,7 @@
 
 [Sources]
   L4TLauncher.c
+  L4TRootfsValidation.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -41,7 +42,9 @@
   UefiRuntimeServicesTableLib
   AndroidBootImgLib
   SecureBootVariableLib
-  RootfsValidationLib
+  PlatformResourceLib
+  ResetSystemLib
+  TimerLib
 
 [Guids]
   gNVIDIAPublicVariableGuid

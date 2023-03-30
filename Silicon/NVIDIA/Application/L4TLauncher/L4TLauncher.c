@@ -1,7 +1,7 @@
 /** @file
   The main process for L4TLauncher application.
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -41,8 +41,8 @@
 #include <NVIDIAConfiguration.h>
 #include <libfdt.h>
 #include <Library/PlatformResourceLib.h>
-#include <Library/RootfsValidationLib.h>
 #include "L4TLauncher.h"
+#include "L4TRootfsValidation.h"
 
 /**
   Causes the driver to load a specified file.
