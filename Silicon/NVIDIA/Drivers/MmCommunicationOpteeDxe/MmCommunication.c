@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -351,8 +351,7 @@ OpteeStmmInit (
     OpteeSetProperties (
       (UINT64)OpteeMmSession.OpteeMsgArgPa,
       (UINT64)OpteeMmSession.OpteeMsgArgVa,
-      OpteeMmSession.TotalSize,
-      RpmbPresent
+      OpteeMmSession.TotalSize
       );
 
     ZeroMem (&OpenSessionArg, sizeof (OPTEE_OPEN_SESSION_ARG));
@@ -452,8 +451,7 @@ OpteeMmConvertPointers (
   OpteeSetProperties (
     (UINT64)OpteeMmSession.OpteeMsgArgPa,
     (UINT64)OpteeMmSession.OpteeMsgArgVa,
-    OpteeMmSession.TotalSize,
-    RpmbPresent
+    OpteeMmSession.TotalSize
     );
 
   return Status;

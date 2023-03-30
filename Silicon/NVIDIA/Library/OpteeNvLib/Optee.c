@@ -24,7 +24,6 @@
 #include <OpteeSmc.h>
 
 STATIC OPTEE_SHARED_MEMORY_INFORMATION  OpteeSharedMemoryInformation = { 0 };
-STATIC BOOLEAN                          IsRpmbPresent                = FALSE;
 STATIC BOOLEAN                          InRuntime;
 
 /**
@@ -446,12 +445,6 @@ HandleRpcCmd (
       }
 
       break;
-    case OPTEE_MSG_RPC_CMD_RPMB:
-      if (IsRpmbPresent) {
-        HandleCmdRpmb (Msg);
-      }
-
-      break;
     case OPTEE_MSG_RPC_CMD_NOTIFICATION:
       HandleCmdNotification (Msg);
       break;
@@ -863,16 +856,14 @@ OpteeInvokeFunction (
 EFI_STATUS
 EFIAPI
 OpteeSetProperties (
-  UINT64   PBuf,
-  UINT64   VBuf,
-  UINT64   Size,
-  BOOLEAN  RpmbPresent
+  UINT64  PBuf,
+  UINT64  VBuf,
+  UINT64  Size
   )
 {
   OpteeSharedMemoryInformation.PBase = PBuf;
   OpteeSharedMemoryInformation.VBase = VBuf;
   OpteeSharedMemoryInformation.Size  = Size;
-  IsRpmbPresent                      = RpmbPresent;
   return EFI_SUCCESS;
 }
 
