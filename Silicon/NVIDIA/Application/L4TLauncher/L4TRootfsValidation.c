@@ -2,7 +2,7 @@
 
   Rootfs Validation Library
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,9 +18,8 @@
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
-#include <Library/RootfsValidationLib.h>
 #include <NVIDIAConfiguration.h>
-#include "RootfsValidationPrivate.h"
+#include "L4TRootfsValidation.h"
 
 L4T_RF_AB_PARAM  mRootfsInfo = { 0 };
 

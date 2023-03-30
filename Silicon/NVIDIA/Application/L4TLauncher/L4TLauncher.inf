@@ -19,6 +19,7 @@
 
 [Sources]
   L4TLauncher.c
+  L4TRootfsValidation.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -41,8 +42,10 @@
   UefiRuntimeServicesTableLib
   AndroidBootImgLib
   SecureBootVariableLib
-  RootfsValidationLib
   TegraDeviceTreeKernelOverlayLib
+  PlatformResourceLib
+  ResetSystemLib
+  TimerLib
 
 [Guids]
   gNVIDIAPublicVariableGuid

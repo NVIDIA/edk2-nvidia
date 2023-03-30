@@ -41,9 +41,9 @@
 #include <NVIDIAConfiguration.h>
 #include <libfdt.h>
 #include <Library/PlatformResourceLib.h>
-#include <Library/RootfsValidationLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
 #include "L4TLauncher.h"
+#include "L4TRootfsValidation.h"
 
 /**
   Causes the driver to load a specified file.
