@@ -24,36 +24,42 @@
 L4T_RF_AB_PARAM  mRootfsInfo = { 0 };
 
 RF_AB_VARIABLE  mRFAbVariable[RF_VARIABLE_INDEX_MAX] = {
-  [RF_STATUS_A] =   { L"RootfsStatusSlotA",
-                      EFI_VARIABLE_BOOTSERVICE_ACCESS |
-                      EFI_VARIABLE_RUNTIME_ACCESS |
-                      EFI_VARIABLE_NON_VOLATILE,
-                      sizeof (UINT32),
-                      &gNVIDIAPublicVariableGuid },
-  [RF_STATUS_B] =   { L"RootfsStatusSlotB",
-                      EFI_VARIABLE_BOOTSERVICE_ACCESS |
-                      EFI_VARIABLE_RUNTIME_ACCESS |
-                      EFI_VARIABLE_NON_VOLATILE,
-                      sizeof (UINT32),
-                      &gNVIDIAPublicVariableGuid },
-  [RF_REDUNDANCY] = { L"RootfsRedundancyLevel",
-                      EFI_VARIABLE_BOOTSERVICE_ACCESS |
-                      EFI_VARIABLE_RUNTIME_ACCESS |
-                      EFI_VARIABLE_NON_VOLATILE,
-                      sizeof (UINT32),
-                      &gNVIDIAPublicVariableGuid },
-  [RF_RETRY_MAX] =  { L"RootfsRetryCountMax",
-                      EFI_VARIABLE_BOOTSERVICE_ACCESS |
-                      EFI_VARIABLE_RUNTIME_ACCESS |
-                      EFI_VARIABLE_NON_VOLATILE,
-                      sizeof (UINT32),
-                      &gNVIDIAPublicVariableGuid },
-  [RF_FW_NEXT] =    { L"BootChainFwNext",
-                      EFI_VARIABLE_BOOTSERVICE_ACCESS |
-                      EFI_VARIABLE_RUNTIME_ACCESS |
-                      EFI_VARIABLE_NON_VOLATILE,
-                      sizeof (UINT32),
-                      &gNVIDIAPublicVariableGuid },
+  [RF_STATUS_A] =    { L"RootfsStatusSlotA",
+                       EFI_VARIABLE_BOOTSERVICE_ACCESS |
+                       EFI_VARIABLE_RUNTIME_ACCESS |
+                       EFI_VARIABLE_NON_VOLATILE,
+                       sizeof (UINT32),
+                       &gNVIDIAPublicVariableGuid },
+  [RF_STATUS_B] =    { L"RootfsStatusSlotB",
+                       EFI_VARIABLE_BOOTSERVICE_ACCESS |
+                       EFI_VARIABLE_RUNTIME_ACCESS |
+                       EFI_VARIABLE_NON_VOLATILE,
+                       sizeof (UINT32),
+                       &gNVIDIAPublicVariableGuid },
+  [RF_REDUNDANCY] =  { L"RootfsRedundancyLevel",
+                       EFI_VARIABLE_BOOTSERVICE_ACCESS |
+                       EFI_VARIABLE_RUNTIME_ACCESS |
+                       EFI_VARIABLE_NON_VOLATILE,
+                       sizeof (UINT32),
+                       &gNVIDIAPublicVariableGuid },
+  [RF_RETRY_MAX] =   { L"RootfsRetryCountMax",
+                       EFI_VARIABLE_BOOTSERVICE_ACCESS |
+                       EFI_VARIABLE_RUNTIME_ACCESS |
+                       EFI_VARIABLE_NON_VOLATILE,
+                       sizeof (UINT32),
+                       &gNVIDIAPublicVariableGuid },
+  [RF_FW_NEXT] =     { L"BootChainFwNext",
+                       EFI_VARIABLE_BOOTSERVICE_ACCESS |
+                       EFI_VARIABLE_RUNTIME_ACCESS |
+                       EFI_VARIABLE_NON_VOLATILE,
+                       sizeof (UINT32),
+                       &gNVIDIAPublicVariableGuid },
+  [RF_BC_STATUS] =   { L"BootChainFwStatus",
+                       EFI_VARIABLE_BOOTSERVICE_ACCESS |
+                       EFI_VARIABLE_RUNTIME_ACCESS |
+                       EFI_VARIABLE_NON_VOLATILE,
+                       sizeof (UINT32),
+                       &gNVIDIAPublicVariableGuid },
 };
 
 /**
@@ -94,8 +100,10 @@ RFGetVariable (
                   Value
                   );
   if (EFI_ERROR (Status)) {
-    // The BootChainFwNext does not exist by default
-    if ((Status == EFI_NOT_FOUND) && (VariableIndex == RF_FW_NEXT)) {
+    // The BootChainFwNext and BootChainFwStatus does not exist by default
+    if ((Status == EFI_NOT_FOUND) &&
+        ((VariableIndex == RF_FW_NEXT) || (VariableIndex == RF_BC_STATUS)))
+    {
       DEBUG ((
         DEBUG_INFO,
         "%a: Info: %s is not found\n",
@@ -157,6 +165,52 @@ RFSetVariable (
       __FUNCTION__,
       Variable->Name,
       Value,
+      Status
+      ));
+  }
+
+  return Status;
+}
+
+/**
+  Delete rootfs A/B related variable according to input index
+
+  @param[in]  VariableIndex       Rootfs A/B related variable index
+
+  @retval EFI_SUCCESS            The operation completed successfully
+  @retval EFI_INVALID_PARAMETER  Input parameter invalid
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+RFDeleteVariable (
+  IN  RF_VARIABLE_INDEX  VariableIndex
+  )
+{
+  RF_AB_VARIABLE  *Variable;
+  EFI_STATUS      Status;
+
+  if (VariableIndex >= RF_VARIABLE_INDEX_MAX) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Variable = &mRFAbVariable[VariableIndex];
+  DEBUG ((DEBUG_INFO, "%a: Deleting %s\n", __FUNCTION__, Variable->Name));
+
+  Status = gRT->SetVariable (
+                  Variable->Name,
+                  Variable->Guid,
+                  Variable->Attributes,
+                  0,
+                  NULL
+                  );
+  if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Error deleting %s: %r\n",
+      __FUNCTION__,
+      Variable->Name,
       Status
       ));
   }
@@ -831,6 +885,9 @@ Exit:
           ));
         return Status;
       }
+
+      // Clear the BootChainFwStatus variable if it exists
+      RFDeleteVariable (RF_BC_STATUS);
 
       Print (L"Switching the bootchain. Resetting the system in 2 seconds.\r\n");
       MicroSecondDelay (2 * DELAY_SECOND);
