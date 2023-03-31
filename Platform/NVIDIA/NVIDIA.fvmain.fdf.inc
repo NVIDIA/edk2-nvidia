@@ -204,6 +204,7 @@
   #
   # Shell dynamic commands
   #
+  INF ShellPkg/DynamicCommand/HttpDynamicCommand/HttpDynamicCommand.inf
   INF ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf
   INF ShellPkg/DynamicCommand/DpDynamicCommand/DpDynamicCommand.inf
 
