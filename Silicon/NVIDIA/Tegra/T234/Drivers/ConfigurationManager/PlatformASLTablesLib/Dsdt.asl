@@ -37,18 +37,30 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
 
     //---------------------------------------------------------------------
     // dla0 @ 15880000
-    // dla1 @ 158c0000
     //---------------------------------------------------------------------
-    Device (DLA) {
+    Device (DLA0) {
       Name (_HID, "NVDA200A")
       Name (_UID, 0)
-      Name (_CCA, ZERO)
+      Name (_CCA, ONE)
 
-            Name (_CRS, ResourceTemplate() {
-                    Memory32Fixed(ReadWrite, 0x15880000, 0x40000)
-                    Memory32Fixed(ReadWrite, 0x158c0000, 0x40000)
-                    Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x10c, 0x10d }
-                    })
+      Name (_CRS, ResourceTemplate() {
+              Memory32Fixed(ReadWrite, 0x15880000, 0x40000)
+              Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x10c }
+              })
+    }
+
+    //---------------------------------------------------------------------
+    // dla1 @ 158c0000
+    //---------------------------------------------------------------------
+    Device (DLA1) {
+      Name (_HID, "NVDA200A")
+      Name (_UID, 1)
+      Name (_CCA, ONE)
+
+      Name (_CRS, ResourceTemplate() {
+              Memory32Fixed(ReadWrite, 0x158c0000, 0x40000)
+              Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x10d }
+              })
     }
 
     //---------------------------------------------------------------------

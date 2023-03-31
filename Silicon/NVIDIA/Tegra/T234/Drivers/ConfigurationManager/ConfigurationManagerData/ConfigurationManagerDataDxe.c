@@ -11,47 +11,7 @@
     - Obj or OBJ - Object
 **/
 
-#include <ConfigurationManagerObject.h>
-
-#include <Library/ArmLib.h>
-#include <Library/ArmGicLib.h>
-#include <Library/BaseLib.h>
-#include <Library/BaseMemoryLib.h>
-#include <Library/ConfigurationManagerLib.h>
-#include <Library/DebugLib.h>
-#include <Library/FloorSweepingLib.h>
-#include <Library/TegraPlatformInfoLib.h>
-#include <Library/UefiBootServicesTableLib.h>
-#include <Library/MemoryAllocationLib.h>
-#include <Library/DeviceTreeHelperLib.h>
-#include <Library/PrintLib.h>
-#include <Library/UefiRuntimeServicesTableLib.h>
-#include <libfdt.h>
-
-#include <IndustryStandard/DebugPort2Table.h>
-
-#include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
-#include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>
-
-#include <Protocol/AmlPatchProtocol.h>
-#include <Protocol/AmlGenerationProtocol.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
-
-#include <NVIDIAConfiguration.h>
-
-#include "Platform.h"
-#include <T234/T234Definitions.h>
-
-#include "Dsdt.hex"
-#include "Dsdt.offset.h"
-#include "SdcTemplate.hex"
-#include "SdcTemplate.offset.h"
-
-#define ACPI_PATCH_MAX_PATH  255
-#define ACPI_SDCT_REG0       "SDCT.REG0"
-#define ACPI_SDCT_UID        "SDCT._UID"
-#define ACPI_SDCT_INT0       "SDCT.INT0"
-#define ACPI_SDCT_RMV        "SDCT._RMV"
+#include <ConfigurationManagerDataDxePrivate.h>
 
 // Index at which Cores get listed in Proc Hierarchy Node
 #define CORE_BEGIN_INDEX  4
@@ -578,6 +538,8 @@ InitializePlatformRepository (
 {
   UINTN       Index;
   EFI_STATUS  Status;
+  UINTN       DataSize;
+  UINT32      EnableIortTableGen;
 
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
   EDKII_PLATFORM_REPOSITORY_INFO  *RepoEnd;
@@ -646,6 +608,14 @@ InitializePlatformRepository (
     return Status;
   }
 
+  Status = gRT->GetVariable (IORT_TABLE_GEN, &gNVIDIATokenSpaceGuid, NULL, &DataSize, &EnableIortTableGen);
+  if (!EFI_ERROR (Status) && (EnableIortTableGen > 0)) {
+    Status = InstallIoRemappingTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  }
+
   Status = InitializeSsdtTable ();
   if (EFI_ERROR (Status)) {
     return Status;
@@ -708,6 +678,11 @@ ConfigurationManagerDataDxeInitialize (
                             OffsetTableArray,
                             ARRAY_SIZE (AcpiTableArray)
                             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = InitializeIoRemappingNodes ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

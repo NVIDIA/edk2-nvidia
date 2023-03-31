@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -21,6 +21,8 @@
 
 #define T234_PCIE_BUS_MIN  0
 #define T234_PCIE_BUS_MAX  255
+
+#define T234_PCIE_ADDRESS_BITS  48
 
 #define T234_BL_VERSION_OFFSET  64
 
