@@ -316,6 +316,7 @@ formset
         step = 64,
         default = 0,
     endnumeric;
+    endif;
 
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.SpreadSpectrumEnable,
         prompt = STRING_TOKEN(STR_SPREAD_SPECTRUM_PROMPT),
@@ -324,7 +325,12 @@ formset
         default = FALSE,
     endcheckbox;
 
-    endif;
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.AtsPageGranule4k,
+        prompt = STRING_TOKEN(STR_ATS_PAGE_GRANULE_PROMPT),
+        help   = STRING_TOKEN(STR_ATS_PAGE_GRANULE_HELP),
+        flags  = RESET_REQUIRED,
+        default = FALSE,
+    endcheckbox;
 
     ADD_GOTO_SOCKET_FORM(0)
     ADD_GOTO_SOCKET_FORM(1)

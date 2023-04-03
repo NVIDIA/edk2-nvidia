@@ -62,6 +62,8 @@
 #string STR_EGM_HV_RESERVED_SIZE_HELP    #language en-US "Memory in MB to reserve for hypervisor."
 #string STR_SPREAD_SPECTRUM_PROMPT       #language en-US "UPHY spread spectrum"
 #string STR_SPREAD_SPECTRUM_HELP         #language en-US "Enable UPHY spread spectrum."
+#string STR_ATS_PAGE_GRANULE_PROMPT      #language en-US "4K ATS Page Granule"
+#string STR_ATS_PAGE_GRANULE_HELP        #language en-US "Enable 4K ATS Page Granule."
 #string STR_UPHY0_SOCKET0_PROMPT         #language en-US "UPHY 0 config"
 #string STR_UPHY0_SOCKET1_PROMPT         #language en-US "UPHY 0 config"
 #string STR_UPHY0_SOCKET2_PROMPT         #language en-US "UPHY 0 config"

@@ -60,6 +60,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_SOCKET3_CONFIG_FORM_HELP),
   STRING_TOKEN (STR_SPREAD_SPECTRUM_PROMPT),
   STRING_TOKEN (STR_SPREAD_SPECTRUM_HELP),
+  STRING_TOKEN (STR_ATS_PAGE_GRANULE_PROMPT),
+  STRING_TOKEN (STR_ATS_PAGE_GRANULE_HELP),
   STRING_TOKEN (STR_UPHY0_SOCKET0_PROMPT),
   STRING_TOKEN (STR_UPHY0_SOCKET1_PROMPT),
   STRING_TOKEN (STR_UPHY0_SOCKET2_PROMPT),
@@ -1166,6 +1168,7 @@ SyncHiiSettings (
     mHiiControlSettings.EgmEnabled           = mMb1Config.Data.Mb1Data.FeatureData.EgmEnable;
     mHiiControlSettings.EgmHvSizeMb          = mMb1Config.Data.Mb1Data.HvRsvdMemSize;
     mHiiControlSettings.SpreadSpectrumEnable = mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable;
+    mHiiControlSettings.AtsPageGranule4k     = mMb1Config.Data.Mb1Data.FeatureData.AtsPageGranule4k;
     mHiiControlSettings.UefiDebugLevel       = mMb1Config.Data.Mb1Data.UefiDebugLevel;
 
     for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {
@@ -1230,6 +1233,7 @@ SyncHiiSettings (
     mMb1Config.Data.Mb1Data.FeatureData.EgmEnable        = mHiiControlSettings.EgmEnabled;
     mMb1Config.Data.Mb1Data.HvRsvdMemSize                = mHiiControlSettings.EgmHvSizeMb;
     mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable = mHiiControlSettings.SpreadSpectrumEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.AtsPageGranule4k = mHiiControlSettings.AtsPageGranule4k;
     mMb1Config.Data.Mb1Data.UefiDebugLevel               = mHiiControlSettings.UefiDebugLevel;
 
     for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {

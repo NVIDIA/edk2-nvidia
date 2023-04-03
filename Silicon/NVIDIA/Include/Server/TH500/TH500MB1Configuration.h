@@ -33,7 +33,8 @@ typedef struct {
     struct {
       UINT64    EgmEnable           : 1;
       UINT64    SpreadSpecEnable    : 1;
-      UINT64    FeatureFieldsUnused : 62;
+      UINT64    AtsPageGranule4k    : 1;
+      UINT64    FeatureFieldsUnused : 61;
     };
   };
 } TEGRABL_FEATURE_DATA;
