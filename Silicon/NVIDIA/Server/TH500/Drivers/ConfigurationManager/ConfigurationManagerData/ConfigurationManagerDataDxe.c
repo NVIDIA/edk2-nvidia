@@ -733,6 +733,7 @@ PatchOemTableId (
 }
 
 /** patch thermal zone temperature ranges data in SSDT.
+    patch thermal zone coefficients in SSDT
 
   @retval EFI_SUCCESS   Success
 
@@ -740,7 +741,7 @@ PatchOemTableId (
 STATIC
 EFI_STATUS
 EFIAPI
-UpdateThermalZoneTempInfo (
+UpdateThermalZoneInfo (
   VOID
   )
 {
@@ -756,6 +757,8 @@ UpdateThermalZoneTempInfo (
   NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
   UINT16                PsvTemp;
   UINT16                CrtTemp;
+  UINT8                 ThermCoeff1;
+  UINT8                 ThermCoeff2;
 
   Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
   if (EFI_ERROR (Status)) {
@@ -767,19 +770,33 @@ UpdateThermalZoneTempInfo (
     return EFI_SUCCESS;
   }
 
-  PsvTemp = MAX_UINT16;
-  CrtTemp = MAX_UINT16;
+  PsvTemp     = MAX_UINT16;
+  CrtTemp     = MAX_UINT16;
+  ThermCoeff1 = MAX_UINT8;
+  ThermCoeff2 = MAX_UINT8;
 
   Temp = NULL;
   Temp = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-thermal-zone-passive-cooling-trip-point-temp", &TempLen);
-  if ((Temp != NULL) && (TempLen == sizeof (UINT32))) {
-    PsvTemp = (SwapBytes32 (*Temp) * 10) + 2732;
+  if ((Temp != NULL) && (TempLen == sizeof (UINT32)) && (SwapBytes32 (*Temp) != MAX_UINT16)) {
+    PsvTemp = SwapBytes32 (*Temp) + 2732;
   }
 
   Temp = NULL;
   Temp = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-thermal-zone-critical-point-temp", &TempLen);
+  if ((Temp != NULL) && (TempLen == sizeof (UINT32)) && (SwapBytes32 (*Temp) != MAX_UINT16)) {
+    CrtTemp = SwapBytes32 (*Temp) + 2732;
+  }
+
+  Temp = NULL;
+  Temp = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-thermal-coefficient-tc1", &TempLen);
   if ((Temp != NULL) && (TempLen == sizeof (UINT32))) {
-    CrtTemp = (SwapBytes32 (*Temp) * 10) + 2732;
+    ThermCoeff1 = SwapBytes32 (*Temp);
+  }
+
+  Temp = NULL;
+  Temp = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-thermal-coefficient-tc2", &TempLen);
+  if ((Temp != NULL) && (TempLen == sizeof (UINT32))) {
+    ThermCoeff2 = SwapBytes32 (*Temp);
   }
 
   for (SocketId = 0; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
@@ -791,7 +808,7 @@ UpdateThermalZoneTempInfo (
       CharCount = AsciiSPrint (Buffer, sizeof (Buffer), "_SB_.BPM%01x.PSVT", SocketId);
       Status    = PatchProtocol->FindNode (PatchProtocol, Buffer, &AcpiNodeInfo);
       if (!EFI_ERROR (Status)) {
-        if (AcpiNodeInfo.Size > sizeof (PsvTemp)) {
+        if (AcpiNodeInfo.Size < sizeof (PsvTemp)) {
           continue;
         }
 
@@ -806,11 +823,41 @@ UpdateThermalZoneTempInfo (
       CharCount = AsciiSPrint (Buffer, sizeof (Buffer), "_SB_.BPM%01x.CRTT", SocketId);
       Status    = PatchProtocol->FindNode (PatchProtocol, Buffer, &AcpiNodeInfo);
       if (!EFI_ERROR (Status)) {
-        if (AcpiNodeInfo.Size > sizeof (CrtTemp)) {
+        if (AcpiNodeInfo.Size < sizeof (CrtTemp)) {
           continue;
         }
 
         Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &CrtTemp, sizeof (CrtTemp));
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
+      }
+    }
+
+    if (ThermCoeff1 != MAX_UINT8) {
+      CharCount = AsciiSPrint (Buffer, sizeof (Buffer), "_SB_.BPM%01x.TC1T", SocketId);
+      Status    = PatchProtocol->FindNode (PatchProtocol, Buffer, &AcpiNodeInfo);
+      if (!EFI_ERROR (Status)) {
+        if (AcpiNodeInfo.Size < sizeof (ThermCoeff1)) {
+          continue;
+        }
+
+        Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &ThermCoeff1, sizeof (ThermCoeff1));
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
+      }
+    }
+
+    if (ThermCoeff2 != MAX_UINT8) {
+      CharCount = AsciiSPrint (Buffer, sizeof (Buffer), "_SB_.BPM%01x.TC2T", SocketId);
+      Status    = PatchProtocol->FindNode (PatchProtocol, Buffer, &AcpiNodeInfo);
+      if (!EFI_ERROR (Status)) {
+        if (AcpiNodeInfo.Size < sizeof (ThermCoeff2)) {
+          continue;
+        }
+
+        Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &ThermCoeff2, sizeof (ThermCoeff2));
         if (EFI_ERROR (Status)) {
           return Status;
         }
@@ -1529,7 +1576,7 @@ ConfigurationManagerDataDxeInitialize (
     return Status;
   }
 
-  Status = UpdateThermalZoneTempInfo ();
+  Status = UpdateThermalZoneInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

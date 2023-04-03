@@ -23,8 +23,10 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
     {
       Name (_HID, EISAID("PNP0C02")) // Motherboard resources
       Name (_UID, "BPMP IPC Socket 2")
-      Name (PSVT, ((TH500_THERMAL_ZONE_PSV * 10) + 2732))
-      Name (CRTT, ((TH500_THERMAL_ZONE_CRT * 10) + 2732))
+      Name (PSVT, (TH500_THERMAL_ZONE_PSV + 2732))
+      Name (CRTT, (TH500_THERMAL_ZONE_CRT + 2732))
+      Name (TC1T, TH500_THERMAL_ZONE_TC1)
+      Name (TC2T, TH500_THERMAL_ZONE_TC2)
       Name (TBUF, 0xFFFFFFFFFFFFFFFF)
       Name (TIME, 0xFF)
       Name (LSTM, 0)
@@ -356,8 +358,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C000,
                             \_SB.C002.C00E }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -373,8 +375,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C00C,
                             \_SB.C002.C01A }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -391,8 +393,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C021,
                             \_SB.C002.C01C }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -409,8 +411,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C01E,
                             \_SB.C002.C01F }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -430,8 +432,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C019,
                             \_SB.C002.C026 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -450,8 +452,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C024,
                             \_SB.C002.C025 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -468,8 +470,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C03B,
                             \_SB.C002.C03A }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -486,8 +488,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C03C,
                             \_SB.C002.C04B }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -507,8 +509,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C041,
                             \_SB.C002.C040 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -527,8 +529,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C036,
                             \_SB.C002.C037 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -543,8 +545,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C046,
                             \_SB.C002.C04A }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -560,8 +562,8 @@ ThermalZone (TZ20) {
                             \_SB.C002.C044,
                             \_SB.C002.C052 }) // passive cooling devices
       Method(_PSV) { Return (\_SB.BPM2.PSVT) }
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -570,8 +572,8 @@ ThermalZone (TZ20) {
 
     ThermalZone (TZ2C) {
       Method(_TMP) { Return (\_SB.BPM2.TEMP (TH500_THERMAL_ZONE_SOC4) )} // get current temp
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -580,8 +582,8 @@ ThermalZone (TZ20) {
 
     ThermalZone (TZ2D) {
       Method(_TMP) { Return (\_SB.BPM2.TEMP (TH500_THERMAL_ZONE_TJ_MAX) )} // get current temp
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -590,8 +592,8 @@ ThermalZone (TZ20) {
 
     ThermalZone (TZ2E) {
       Method(_TMP) { Return (\_SB.BPM2.TEMP (TH500_THERMAL_ZONE_TJ_MIN) )} // get current temp
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
@@ -600,8 +602,8 @@ ThermalZone (TZ20) {
 
     ThermalZone (TZ2F) {
       Method(_TMP) { Return (\_SB.BPM2.TEMP (TH500_THERMAL_ZONE_TJ_AVG) )} // get current temp
-      Name(_TC1, TH500_THERMAL_ZONE_TC1)
-      Name(_TC2, TH500_THERMAL_ZONE_TC2)
+      Method(_TC1) { Return (\_SB.BPM2.TC1T) }
+      Method(_TC2) { Return (\_SB.BPM2.TC2T) }
       Method(_CRT) { Return (\_SB.BPM2.CRTT) }
       Name(_TSP, TH500_THERMAL_ZONE_TSP)
       Name(_TZP, TEMP_POLL_TIME_100MS)
