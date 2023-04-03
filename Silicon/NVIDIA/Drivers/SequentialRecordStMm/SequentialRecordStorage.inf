@@ -2,7 +2,7 @@
 #
 #  Nor Flash Driver
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -19,6 +19,7 @@
 
 [Sources.common]
   SequentialRecordStorage.c
+  SequentialRecordPrivate.h
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

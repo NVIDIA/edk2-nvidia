@@ -18,6 +18,7 @@
 
 [Sources.common]
   PcieControllerDxe.c
+  PcieControllerPrivate.h
 
 [Packages]
   ArmPkg/ArmPkg.dec

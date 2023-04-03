@@ -50,6 +50,11 @@
   ConfigurationHbm.c
   ConfigurationIpmiDev.c
   ConfigurationSmbiosMem.c
+  ConfigurationIortPrivate.h
+  ConfigurationManagerDataDxePrivate.h
+  ConfigurationManagerDataPrivate.h
+  ConfigurationPpttPrivate.h
+  ConfigurationSmbiosPrivate.h
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

@@ -17,6 +17,7 @@
 [Sources]
   FloorSweepingLib.c
   CommonFloorSweepingLib.c
+  CommonFloorSweepingLib.h
 
 [Packages]
   ArmPkg/ArmPkg.dec

@@ -19,6 +19,7 @@
 [Sources.common]
   ErotQspiCore.c
   ErotQspiLib.c
+  ErotQspiCore.h
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

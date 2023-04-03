@@ -16,6 +16,7 @@
 
 [Sources.Common]
   Apei.c
+  Apei.h
   HestBertTables.c
   EinjTable.c
   RASFwInterface.c
