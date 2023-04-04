@@ -736,11 +736,6 @@ PcieEnableErrorReporting (
   Socket = (Segment >> 4) & 0xF;
   Ctrl   = (Segment) & 0xF;
 
-  /* Skip Error reporting and DPC enablement for C8 controller for now */
-  if ((Segment & 0xF) == 8) {
-    return EFI_SUCCESS;
-  }
-
   PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
 
   if (!PciExpCapOffset) {
