@@ -19,6 +19,48 @@
 
 #include "SmbiosMiscOem.h"
 
+#define EXTENDED_SIZE_THRESHOLD  (SIZE_2TB)
+
+STATIC
+UINTN
+GetNumDevices (
+  VOID
+  )
+{
+  UINTN   NumDevices = 0;
+  VOID    *Hob;
+  UINT32  SocketMask;
+  UINTN   Index;
+  UINTN   MaxSockets;
+
+  MaxSockets = PcdGet32 (PcdTegraMaxSockets);
+  Hob        = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    SocketMask = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->SocketMask;
+  } else {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get Platform Resource Info\n",
+      __FUNCTION__
+      ));
+    goto ExitGetNumDevices;
+  }
+
+  for (Index = 0; Index < MaxSockets; Index++) {
+    if (!(SocketMask & (1UL << Index))) {
+      continue;
+    }
+
+    NumDevices++;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: NumDevices = %u\n", __FUNCTION__, NumDevices));
+ExitGetNumDevices:
+  return NumDevices;
+}
+
 STATIC
 UINT64
 GetTotalDram (
@@ -61,6 +103,8 @@ SMBIOS_MISC_TABLE_FUNCTION (MiscPhysMemArray) {
   EFI_STATUS           Status;
   SMBIOS_TABLE_TYPE16  *SmbiosRecord;
   SMBIOS_TABLE_TYPE16  *Input;
+  UINT64               TotalDram;
+  UINT64               SizeKb;
 
   if (RecordData == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -79,8 +123,18 @@ SMBIOS_MISC_TABLE_FUNCTION (MiscPhysMemArray) {
   SmbiosRecord->Use                          = OemGetPhysMemArrayUse ();
   SmbiosRecord->MemoryErrorCorrection        = OemGetPhysMemErrCorrection ();
   SmbiosRecord->MemoryErrorInformationHandle = OemGetPhysMemErrInfoHandle ();
-  SmbiosRecord->NumberOfMemoryDevices        = OemGetPhysMemNumDevices ();
-  SmbiosRecord->ExtendedMaximumCapacity      = GetTotalDram ();
+  SmbiosRecord->NumberOfMemoryDevices        = GetNumDevices ();
+
+  TotalDram = GetTotalDram ();
+  SizeKb    = TotalDram / 1024;
+
+  if (TotalDram < EXTENDED_SIZE_THRESHOLD) {
+    SmbiosRecord->MaximumCapacity         = SizeKb;
+    SmbiosRecord->ExtendedMaximumCapacity = 0;
+  } else {
+    SmbiosRecord->MaximumCapacity         = 0x80000000;
+    SmbiosRecord->ExtendedMaximumCapacity = TotalDram;
+  }
 
   Status = SmbiosMiscAddRecord ((UINT8 *)SmbiosRecord, NULL);
   if (EFI_ERROR (Status)) {

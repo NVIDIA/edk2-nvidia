@@ -57,6 +57,7 @@
   gEfiSmbiosProtocolGuid                       # PROTOCOL ALWAYS_CONSUMED
 
 [Pcd]
+ gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
 
 [Guids]
   gEfiGenericVariableGuid

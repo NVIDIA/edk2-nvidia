@@ -1,7 +1,7 @@
 /** @file
 *  SmbiosMiscLib.c
 *
-*  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2021, NUVIA Inc. All rights reserved.
 *  Copyright (c) 2018, Hisilicon Limited. All rights reserved.
 *  Copyright (c) 2018, Linaro Limited. All rights reserved.
@@ -43,7 +43,7 @@ OemGetPhysMemArrayLocation (
   VOID
   )
 {
-  return MemoryArrayLocationUnknown;
+  return MemoryArrayLocationSystemBoard;
 }
 
 /** Fetches the usage of the physical memory (Type16).
@@ -56,7 +56,7 @@ OemGetPhysMemArrayUse (
   VOID
   )
 {
-  return MemoryArrayUseUnknown;
+  return MemoryArrayUseSystemMemory;
 }
 
 /** Fetches the error correction type used in the physical memory array (Type16).
@@ -69,7 +69,7 @@ OemGetPhysMemErrCorrection (
   VOID
   )
 {
-  return MemoryErrorCorrectionUnknown;
+  return MemoryErrorCorrectionSingleBitEcc;
 }
 
 /** Fetches the number of physical memory devices (Type16).
