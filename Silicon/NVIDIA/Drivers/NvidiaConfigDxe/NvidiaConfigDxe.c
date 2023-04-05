@@ -1691,7 +1691,8 @@ ConfigCallback (
   OUT EFI_BROWSER_ACTION_REQUEST           *ActionRequest
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS     Status;
+  EFI_INPUT_KEY  InputKey;
 
   Status = EFI_UNSUPPORTED;
   if ((Action == EFI_BROWSER_ACTION_FORM_OPEN) ||
@@ -1709,6 +1710,20 @@ ConfigCallback (
           Status = EFI_SUCCESS;
         }
 
+        //
+        // Popup a menu to notice user and prompt for reset
+        //
+        do {
+          CreatePopUp (
+            EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+            &InputKey,
+            L"Settings have been reset to defaults",
+            L"Press ENTER to reboot",
+            NULL
+            );
+        } while (InputKey.UnicodeChar != CHAR_CARRIAGE_RETURN);
+
+        gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
         break;
 
       default:
