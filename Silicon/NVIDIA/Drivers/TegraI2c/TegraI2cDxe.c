@@ -705,7 +705,7 @@ TegraI2cStartRequest (
       Data32 = MmioRead32 (Private->BaseAddress + I2C_INTERRUPT_STATUS_REGISTER_0_OFFSET);
       MmioWrite32 (Private->BaseAddress + I2C_INTERRUPT_STATUS_REGISTER_0_OFFSET, Data32);
       if ((Data32 & INTERRUPT_STATUS_NOACK) != 0) {
-        DEBUG ((DEBUG_ERROR, "%a: No ACK received\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_INFO, "%a: No ACK received\r\n", __FUNCTION__));
         Status = EFI_NO_RESPONSE;
         break;
       }

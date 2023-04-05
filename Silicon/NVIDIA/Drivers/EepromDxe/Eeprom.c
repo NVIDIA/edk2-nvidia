@@ -360,7 +360,7 @@ EepromDxeDriverBindingStart (
     Request->Operation[1].Buffer        = RawData;
     Status                              = I2cIo->QueueRequest (I2cIo, 0, NULL, Request, NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Failed to read eeprom (%r)\r\n", Status));
+      DEBUG ((DEBUG_INFO, "Failed to read eeprom (%r)\r\n", Status));
       goto ErrorExit;
     }
 
