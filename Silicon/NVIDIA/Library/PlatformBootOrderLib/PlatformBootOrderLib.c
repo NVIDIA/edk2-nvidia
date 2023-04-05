@@ -487,7 +487,10 @@ CheckIPMIForBootOrderUpdates (
 
   Status = GetIPMIBootOrderParameter (IPMI_BOOT_OPTIONS_PARAMETER_BOOT_INFO_ACK, mBootOptionsResponse);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Error checking for IPMI BOOT_INFO_ACK: %r\n", Status));
+    if (Status != EFI_UNSUPPORTED) {
+      DEBUG ((DEBUG_ERROR, "Error checking for IPMI BOOT_INFO_ACK: %r\n", Status));
+    }
+
     goto CleanupAndReturn;
   }
 

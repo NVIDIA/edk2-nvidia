@@ -105,6 +105,10 @@ SmbiosBmcTransferSendTables (
 
   Status = IpmiBlobTransfer->BlobOpen ((CHAR8 *)PcdGetPtr (PcdBmcSmbiosBlobTransferId), BLOB_TRANSFER_STAT_OPEN_W, &SessionId);
   if (EFI_ERROR (Status)) {
+    if (Status == EFI_UNSUPPORTED) {
+      return;
+    }
+
     DEBUG ((DEBUG_ERROR, "%a: Unable to open Blob with Id %a: %r\n", __FUNCTION__, PcdGetPtr (PcdBmcSmbiosBlobTransferId), Status));
     goto ErrorExit;
   }

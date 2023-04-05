@@ -2,7 +2,7 @@
 
   Arm SBMR Status code Driver
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -95,11 +95,14 @@ ArmSbmrStatusCodeCallback (
                        &ResponseDataSize
                        );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to send IPMI command - %r\r\n", __FUNCTION__, Status));
-    return Status;
+    if (Status == EFI_UNSUPPORTED) {
+      mDisableSbmrStatus = TRUE;
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to send IPMI command - %r\r\n", __FUNCTION__, Status));
+    }
   }
 
-  return EFI_SUCCESS;
+  return Status;
 }
 
 /**

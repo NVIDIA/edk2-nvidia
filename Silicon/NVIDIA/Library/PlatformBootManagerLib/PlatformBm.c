@@ -1687,7 +1687,10 @@ PrintBmcIpAddresses (
                                       ResponseData,
                                       &ResponseDataSize
                                       );
-  if (EFI_ERROR (Status) || (GetLanConfigResponse->CompletionCode != IPMI_COMP_CODE_NORMAL)) {
+  if (Status == EFI_UNSUPPORTED) {
+    // IPMI is not actually supported
+    return;
+  } else if (EFI_ERROR (Status) || (GetLanConfigResponse->CompletionCode != IPMI_COMP_CODE_NORMAL)) {
     Print (L"Failed to get BMC IPv4 Address\r\n");
   } else {
     Print (L"BMC IPv4 Address: %d.%d.%d.%d\r\n", IpV4Address->IpAddress[0], IpV4Address->IpAddress[1], IpV4Address->IpAddress[2], IpV4Address->IpAddress[3]);

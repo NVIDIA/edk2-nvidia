@@ -172,6 +172,10 @@ IpmiBlobTransferSendIpmi (
   DEBUG ((DEBUG_INFO, "\n"));
  #endif
 
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   CompletionCode = *ModifiedResponseData;
   if (CompletionCode != IPMI_COMP_CODE_NORMAL) {
     DEBUG ((DEBUG_ERROR, "%a: Returning because CompletionCode = 0x%x\n", __FUNCTION__, CompletionCode));
@@ -332,6 +336,10 @@ IpmiBlobTransferOpen (
   //
   Status = IpmiBlobTransferGetCount (&NumBlobs);
   if (EFI_ERROR (Status) || (NumBlobs == 0)) {
+    if (Status == EFI_UNSUPPORTED) {
+      return Status;
+    }
+
     DEBUG ((DEBUG_ERROR, "%a: Could not find any blobs: %r\n", __FUNCTION__, Status));
     return EFI_NOT_FOUND;
   }
