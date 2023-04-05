@@ -60,6 +60,7 @@ STATIC NVIDIA_BOOT_ORDER_PRIORITY  mBootPriority[] = {
   { "cdrom",    MAX_INT32, MEDIA_DEVICE_PATH,     MEDIA_CDROM_DP,        MAX_UINT8                },
   { "boot.img", MAX_INT32, MAX_UINT8,             MAX_UINT8,             NVIDIA_BOOT_TYPE_BOOTIMG },
   { "virtual",  MAX_INT32, MESSAGING_DEVICE_PATH, MSG_USB_DP,            NVIDIA_BOOT_TYPE_VIRTUAL },
+  { "shell",    MAX_INT32, MAX_UINT8,             MAX_UINT8,             MAX_UINT8                },
 };
 
 STATIC  IPMI_GET_BOOT_OPTIONS_RESPONSE  *mBootOptionsResponse = NULL;
@@ -134,6 +135,15 @@ GetBootClassOfOption (
   UINTN                     BootPriorityIndex;
   EFI_DEVICE_PATH_PROTOCOL  *DevicePathNode;
   UINT8                     ExtraSpecifier;
+
+  if (StrCmp (Option->Description, L"UEFI Shell") == 0) {
+    for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriority); BootPriorityIndex++) {
+      if (AsciiStrCmp (mBootPriority[BootPriorityIndex].OrderName, "shell") == 0) {
+        DEBUG ((DEBUG_VERBOSE, "Option %d has class %a\n", Option->OptionNumber, mBootPriority[BootPriorityIndex].OrderName));
+        return &mBootPriority[BootPriorityIndex];
+      }
+    }
+  }
 
   OptionalDataSize = 0;
   if (Option->OptionalData != NULL) {
