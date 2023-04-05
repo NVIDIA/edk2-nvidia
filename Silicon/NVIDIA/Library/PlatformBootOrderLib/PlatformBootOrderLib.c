@@ -31,6 +31,7 @@
 
 #define NVIDIA_BOOT_TYPE_HTTP                    0
 #define NVIDIA_BOOT_TYPE_BOOTIMG                 1
+#define NVIDIA_BOOT_TYPE_VIRTUAL                 2
 #define IPMI_GET_BOOT_OPTIONS_PARAMETER_INVALID  1
 #define IPMI_PARAMETER_VERSION                   1
 
@@ -58,6 +59,7 @@ STATIC NVIDIA_BOOT_ORDER_PRIORITY  mBootPriority[] = {
   { "emmc",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_EMMC_DP,           MAX_UINT8                },
   { "cdrom",    MAX_INT32, MEDIA_DEVICE_PATH,     MEDIA_CDROM_DP,        MAX_UINT8                },
   { "boot.img", MAX_INT32, MAX_UINT8,             MAX_UINT8,             NVIDIA_BOOT_TYPE_BOOTIMG },
+  { "virtual",  MAX_INT32, MESSAGING_DEVICE_PATH, MSG_USB_DP,            NVIDIA_BOOT_TYPE_VIRTUAL },
 };
 
 STATIC  IPMI_GET_BOOT_OPTIONS_RESPONSE  *mBootOptionsResponse = NULL;
@@ -160,6 +162,12 @@ GetBootClassOfOption (
         (DevicePathSubType (DevicePathNode) == MSG_URI_DP))
     {
       ExtraSpecifier = NVIDIA_BOOT_TYPE_HTTP;
+      break;
+    } else if ((DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) &&
+               (DevicePathSubType (DevicePathNode) == MSG_USB_DP) &&
+               (StrStr (Option->Description, L"Virtual")))
+    {
+      ExtraSpecifier = NVIDIA_BOOT_TYPE_VIRTUAL;
       break;
     }
 
@@ -780,9 +788,8 @@ ProcessIPMIBootOrderUpdates (
       RequestedClassName = IPv6 ? "httpv6" : "httpv4";
       break;
     case IPMI_BOOT_DEVICE_SELECTOR_PRIMARY_REMOTE_MEDIA:
-      // TODO - support BMC's USB here
-      DEBUG ((DEBUG_WARN, "Ignoring request to boot from BMC's USB - not yet supported\n"));
-      goto AcknowledgeAndCleanup;
+      RequestedClassName = "virtual";
+      break;
     case IPMI_BOOT_DEVICE_SELECTOR_REMOTE_HARDDRIVE:
       RequestedClassName = "scsi";
       break;
