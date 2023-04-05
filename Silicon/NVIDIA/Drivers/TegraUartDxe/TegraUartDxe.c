@@ -2,7 +2,7 @@
 
   TegraUart Controller Driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -78,6 +78,43 @@ DeviceDiscoveryNotify (
   SerialConfig = PcdGet8 (PcdSerialPortConfig);
 
   switch (Phase) {
+    case DeviceDiscoveryDriverBindingSupported:
+      if (((fdt_node_check_compatible (
+              DeviceTreeNode->DeviceTreeBase,
+              DeviceTreeNode->NodeOffset,
+              "nvidia,tegra20-uart"
+              )) == 0) ||
+          ((fdt_node_check_compatible (
+              DeviceTreeNode->DeviceTreeBase,
+              DeviceTreeNode->NodeOffset,
+              "nvidia,tegra186-hsuart"
+              )) == 0) ||
+          ((fdt_node_check_compatible (
+              DeviceTreeNode->DeviceTreeBase,
+              DeviceTreeNode->NodeOffset,
+              "nvidia,tegra194-hsuart"
+              )) == 0))
+      {
+        if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_16550) ||
+            (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))
+        {
+          return EFI_UNSUPPORTED;
+        }
+      } else if ((fdt_node_check_compatible (
+                    DeviceTreeNode->DeviceTreeBase,
+                    DeviceTreeNode->NodeOffset,
+                    "arm,sbsa-uart"
+                    )) == 0)
+      {
+        if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_SBSA) ||
+            (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))
+        {
+          return EFI_UNSUPPORTED;
+        }
+      }
+
+      return EFI_SUCCESS;
+
     case DeviceDiscoveryDriverBindingStart:
       if (((fdt_node_check_compatible (
               DeviceTreeNode->DeviceTreeBase,
