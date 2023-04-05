@@ -690,7 +690,7 @@ process_deletes:
             return EFI_DEVICE_ERROR;
           }
 
-          DEBUG ((DEBUG_ERROR, "Node Deleted: %a from %a\n", PropStr, TargetName));
+          DEBUG ((DEBUG_INFO, "Node Deleted: %a from %a\n", PropStr, TargetName));
         }
       }
 
@@ -704,7 +704,7 @@ process_deletes:
             return EFI_DEVICE_ERROR;
           }
 
-          DEBUG ((DEBUG_ERROR, "Property Deleted: %a from %a\n", PropStr, TargetName));
+          DEBUG ((DEBUG_INFO, "Property Deleted: %a from %a\n", PropStr, TargetName));
         }
       }
     }
@@ -714,7 +714,7 @@ process_deletes:
     }
 
 delete_fragment:
-    DEBUG ((DEBUG_ERROR, "Deleting fragment %a\n", FrName));
+    DEBUG ((DEBUG_INFO, "Deleting fragment %a\n", FrName));
     // Delete matching __fixups__
     if (EFI_ERROR (FdtCleanFixups (FdtBuf, FrName))) {
       DEBUG ((DEBUG_ERROR, "Error removing reference to %a in __fixups__.\n", FrName));
