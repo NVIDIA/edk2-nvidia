@@ -2,7 +2,7 @@
 
   Usb Pad Control Driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -170,13 +170,13 @@ DeviceDiscoveryNotify (
                       (VOID **)&mPmux
                       );
       if (EFI_ERROR (Status) || (mPmux == NULL)) {
-        DEBUG ((
-          EFI_D_ERROR,
-          "%a: Couldn't get gNVIDIAPinMuxProtocolGuid Handle: %r\n",
-          __FUNCTION__,
-          Status
-          ));
         if (T234Platform == FALSE) {
+          DEBUG ((
+            EFI_D_ERROR,
+            "%a: Couldn't get gNVIDIAPinMuxProtocolGuid Handle: %r\n",
+            __FUNCTION__,
+            Status
+            ));
           goto ErrorExit;
         }
       }

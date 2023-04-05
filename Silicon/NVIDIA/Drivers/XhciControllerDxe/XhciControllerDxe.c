@@ -2,7 +2,7 @@
 
   XHCI Controller Driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -331,7 +331,7 @@ DeviceDiscoveryNotify (
 
       // Unpowergate XUSBA/XUSBC partition first in XHCI DT
       for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
-        DEBUG ((EFI_D_ERROR, "Deassert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
+        DEBUG ((DEBUG_VERBOSE, "Deassert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
         Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
         if (EFI_ERROR (Status)) {
           DEBUG ((EFI_D_ERROR, "Deassert pg not found\r\n"));
@@ -341,7 +341,7 @@ DeviceDiscoveryNotify (
 
       // Powergate XUSBA/XUSBC partition again to make it in default state
       for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
-        DEBUG ((EFI_D_ERROR, "Assert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
+        DEBUG ((DEBUG_VERBOSE, "Assert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
         Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
         if (EFI_ERROR (Status)) {
           DEBUG ((EFI_D_ERROR, "Assert pg not found\r\n"));
@@ -350,7 +350,7 @@ DeviceDiscoveryNotify (
 
       // Only unpowergate XUSBA/XUSBC in XHCI DT
       for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
-        DEBUG ((EFI_D_ERROR, "Deassert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
+        DEBUG ((DEBUG_VERBOSE, "Deassert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
         Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
         if (EFI_ERROR (Status)) {
           DEBUG ((EFI_D_ERROR, "Deassert pg not found\r\n"));
