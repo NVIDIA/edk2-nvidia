@@ -373,7 +373,7 @@ ConfigureOutputGpios (
     GpioOffset = fdt_node_offset_by_compatible (DeviceTreeBase, GpioOffset, GpioCompatible);
     if (GpioOffset == -FDT_ERR_NOTFOUND) {
       DEBUG ((
-        DEBUG_WARN,
+        DEBUG_INFO,
         "%a: could not find compatible GPIO node in DT: not on SLT board?\r\n",
         __FUNCTION__
         ));
