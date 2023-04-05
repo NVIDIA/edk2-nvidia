@@ -1,7 +1,7 @@
 /** @file
 *  RCM Boot Dxe
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -53,7 +53,7 @@ RcmDxeInitialize (
   }
 
   if (PlatformResourceInfo->BootType != TegrablBootRcm) {
-    return EFI_NOT_FOUND;
+    return EFI_SUCCESS;
   }
 
   RcmBlobBase = PlatformResourceInfo->RcmBlobInfo.Base;

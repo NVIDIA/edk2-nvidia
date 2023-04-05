@@ -1,7 +1,7 @@
 /** @file
  *  Golden Register Dxe
  *
- *  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  *  SPDX-License-Identifier: BSD-2-Clause-Patent
  *
@@ -91,13 +91,13 @@ GoldenRegisterDxeInitialize (
 
   GrBlobBase = GetGRBlobBaseAddress ();
   if (GrBlobBase == 0) {
-    return EFI_NOT_FOUND;
+    return EFI_SUCCESS;
   }
 
   Status = ValidateGrBlobHeader (GrBlobBase);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_INFO, "Failed to validate GR blob header\n"));
-    return Status;
+    return EFI_SUCCESS;
   }
 
   Offset = 0;
