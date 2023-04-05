@@ -2,10 +2,10 @@
   FRU spec definitions from the Platform Management FRU Information Storage
   definition V 1.0, Revision 1.2.
 
+  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2003 - 2022 Sun Microsystems, Inc.  All Rights Reserved.
   This file defines the various areas in the FRU and their common format.
 
-  Copyright (c) 2022 - Nvidia Corporation.  All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -17,6 +17,11 @@
 #define END_OF_SDR_RECORDS                  0xFFFF
 #define PREDEFINED_FIELD                    0x01
 #define CUSTOM_FIELD                        0x02
+
+#define MAX_FRU_SIZE  0x1000
+
+#define IPMI_MULTI_RECORD_HEADER_RESPONSE_SIZE   \
+  (sizeof (IPMI_READ_FRU_DATA_RESPONSE) + sizeof (FRU_MULTI_RECORD_HEADER))
 
 /* IPMI FRU Information Storage Definition v1.0 rev 1.3, Table 11-1 */
 

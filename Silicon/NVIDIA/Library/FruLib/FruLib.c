@@ -1,8 +1,9 @@
 /** @file
   This file defines the various areas in the FRU and their common format.
 
+  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2003 - 2022 Sun Microsystems, Inc.  All Rights Reserved.
-  Copyright (c) 2022 - Nvidia Corporation.  All rights reserved.<BR>
+
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -559,6 +560,141 @@ ParseFruProductArea (
 }
 
 /**
+  Reads and parse FRU Multi Record Area contents
+
+  @Param IN Offset    Offset in multiples of 8 of a specific Area in the Fru
+  @Param IN DevIndex  Device Index of the FruDeviceInfo array
+
+**/
+VOID
+ReadFruMultiRecordArea (
+  IN UINT16  Offset,
+  IN UINT8   DevIndex
+  )
+{
+  EFI_STATUS                   Status;
+  IPMI_READ_FRU_DATA_REQUEST   CommandData;
+  IPMI_READ_FRU_DATA_RESPONSE  *ResponseData;
+  UINT32                       ResponseSize;
+  UINT8                        HeaderBuff[IPMI_MULTI_RECORD_HEADER_RESPONSE_SIZE];
+  UINT8                        *DataBuff = NULL;
+  FRU_MULTI_RECORD_HEADER      *MultiHdr = NULL;
+  UINT8                        RecNum    = 0;
+
+  do {
+    //
+    // Read Multi Record Header
+    //
+    CommandData.DeviceId        = mFruRecordInfo[DevIndex]->FruDeviceId;
+    CommandData.InventoryOffset = Offset;
+    CommandData.CountToRead     = sizeof (FRU_MULTI_RECORD_HEADER);
+
+    ResponseData = (IPMI_READ_FRU_DATA_RESPONSE *)HeaderBuff;
+    ResponseSize = IPMI_MULTI_RECORD_HEADER_RESPONSE_SIZE;
+
+    Status = IpmiSubmitCommand (
+               IPMI_NETFN_STORAGE,
+               IPMI_STORAGE_READ_FRU_DATA,
+               (UINT8 *)&CommandData,
+               sizeof (CommandData),
+               (UINT8 *)ResponseData,
+               &ResponseSize
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: IpmiSubmitCommand failed - %r\n", __FUNCTION__, Status));
+      break;
+    }
+
+    if (ResponseData->CompletionCode != IPMI_COMP_CODE_NORMAL) {
+      DEBUG ((DEBUG_ERROR, "%a: Completion code = 0x%x\n", __FUNCTION__, ResponseData->CompletionCode));
+      break;
+    }
+
+    //
+    // Verify Multi Record Header
+    //
+    MultiHdr = (FRU_MULTI_RECORD_HEADER *)ResponseData->Data;
+
+    if (MultiHdr->Version != FRU_MULTI_RECORD_VERSION) {
+      DEBUG ((DEBUG_ERROR, "FRU %d: Multi Record %d has unsupported version.\n", DevIndex, RecNum));
+      break;
+    }
+
+    if (CalculateSum8 ((UINT8 *)MultiHdr, sizeof (FRU_MULTI_RECORD_HEADER)) != 0) {
+      DEBUG ((DEBUG_ERROR, "FRU %d: Multi Record %d has invalid header checksum.\n", DevIndex, RecNum));
+      break;
+    }
+
+    if ((Offset > (MAX_FRU_SIZE - sizeof (FRU_MULTI_RECORD_HEADER))) ||
+        (Offset > (MAX_FRU_SIZE - sizeof (FRU_MULTI_RECORD_HEADER) - MultiHdr->Length)))
+    {
+      DEBUG ((DEBUG_ERROR, "%a: Unexpected offset\n", __FUNCTION__));
+      break;
+    }
+
+    //
+    // Read Multi Record Data
+    //
+    CommandData.DeviceId        = mFruRecordInfo[DevIndex]->FruDeviceId;
+    CommandData.InventoryOffset = Offset + sizeof (FRU_MULTI_RECORD_HEADER);
+    CommandData.CountToRead     = MultiHdr->Length;
+
+    ResponseSize = sizeof (IPMI_READ_FRU_DATA_RESPONSE) + MultiHdr->Length;
+    DataBuff     = AllocatePool (ResponseSize);
+    ResponseData = (IPMI_READ_FRU_DATA_RESPONSE *)DataBuff;
+    if (DataBuff == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate pool\n", __FUNCTION__));
+      break;
+    }
+
+    Status = IpmiSubmitCommand (
+               IPMI_NETFN_STORAGE,
+               IPMI_STORAGE_READ_FRU_DATA,
+               (UINT8 *)&CommandData,
+               sizeof (CommandData),
+               (UINT8 *)ResponseData,
+               &ResponseSize
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: IpmiSubmitCommand failed - %r\n", __FUNCTION__, Status));
+      break;
+    }
+
+    if (ResponseData->CompletionCode != IPMI_COMP_CODE_NORMAL) {
+      DEBUG ((DEBUG_ERROR, "%a: Completion code = 0x%x\n", __FUNCTION__, ResponseData->CompletionCode));
+      break;
+    }
+
+    //
+    // Verify data
+    //
+    if (((CalculateSum8 (ResponseData->Data, MultiHdr->Length) + MultiHdr->RecordChecksum) & 0xFF) != 0) {
+      DEBUG ((DEBUG_ERROR, "FRU %d: Multi Record %d has invalid data checksum.\n", DevIndex, RecNum));
+      break;
+    }
+
+    //
+    // Copy Multi Record to FRU Info
+    //
+    mFruRecordInfo[DevIndex]->MultiRecords[RecNum] = AllocatePool (sizeof (FRU_MULTI_RECORD_HEADER) + MultiHdr->Length);
+    if (mFruRecordInfo[DevIndex]->MultiRecords[RecNum] == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate pool\n", __FUNCTION__));
+      break;
+    }
+
+    CopyMem (&mFruRecordInfo[DevIndex]->MultiRecords[RecNum]->Header, MultiHdr, sizeof (FRU_MULTI_RECORD_HEADER));
+    CopyMem (&mFruRecordInfo[DevIndex]->MultiRecords[RecNum]->Data, ResponseData->Data, MultiHdr->Length);
+
+    Offset += sizeof (FRU_MULTI_RECORD_HEADER) + MultiHdr->Length;
+    RecNum++;
+  } while (!MultiHdr->EndOfList);
+
+  if (DataBuff != NULL) {
+    FreePool (DataBuff);
+  }
+}
+
+/**
   Reads the contents of a specific Fru Area
 
   @Param IN Offset    Offset in multiples of 8 of a specific Area in the Fru
@@ -663,10 +799,9 @@ ReadSpecificFruArea (
     ParseFruBoardArea (FruArea, FruSize, DevIndex);
   } else if (Type == PRODUCT_AREA) {
     ParseFruProductArea (FruArea, FruSize, DevIndex);
+  } else {
+    ASSERT (FALSE);
   }
-
-  // TODO: Should we parse Multi record Area.
-  // Currently it is not parsed as there is no known usecase.
 
   FreePool (FruResponse);
 
@@ -759,6 +894,11 @@ ReadFruHeader (
   // Read FRU Product Area
   if (Header->Offset.Product * 8 >= sizeof (FRU_HEADER)) {
     ReadSpecificFruArea (Header->Offset.Product * 8, PRODUCT_AREA, DevIndex);
+  }
+
+  // Read FRU Multi Record Area
+  if (Header->Offset.Multi * 8 >= sizeof (FRU_HEADER)) {
+    ReadFruMultiRecordArea (Header->Offset.Multi * 8, DevIndex);
   }
 
   return EFI_SUCCESS;
@@ -951,6 +1091,12 @@ FreeAllFruRecords (
     for (Count = 0; Count < MAX_EXTRA_FRU_AREA_ENTRIES; Count++) {
       if (mFruRecordInfo[Index]->ProductExtra[Count]) {
         FreePool (mFruRecordInfo[Index]->ProductExtra[Count]);
+      }
+    }
+
+    for (Count = 0; Count < MAX_FRU_MULTI_RECORDS; Count++) {
+      if (mFruRecordInfo[Index]->MultiRecords[Count] != NULL) {
+        FreePool (mFruRecordInfo[Index]->MultiRecords[Count]);
       }
     }
 
