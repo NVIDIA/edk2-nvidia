@@ -2,7 +2,7 @@
   Provides firmware device specific services to support updates of a firmware
   image stored in a firmware device.
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) Microsoft Corporation.<BR>
   Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
 
@@ -239,7 +239,22 @@ FmpDeviceGetLowestSupportedVersion (
   OUT UINT32  *LowestSupportedVersion
   )
 {
+  EFI_STATUS  Status;
+  UINT32      LsvInDtb;
+
+  // Check build PCD
   *LowestSupportedVersion = PcdGet32 (PcdFmpDeviceBuildTimeLowestSupportedVersion);
+
+  // Check the lowest supported version in DTB
+  Status = FmpTegraGetLowestSupportedVersion (&LsvInDtb);
+  if (EFI_ERROR (Status)) {
+    LsvInDtb = 0;
+  }
+
+  if (LsvInDtb > *LowestSupportedVersion) {
+    *LowestSupportedVersion = LsvInDtb;
+  }
+
   return EFI_SUCCESS;
 }
 

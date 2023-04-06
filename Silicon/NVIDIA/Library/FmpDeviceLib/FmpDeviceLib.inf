@@ -2,7 +2,7 @@
 #  Provides firmware device specific services to support updates of a firmware
 #  image stored in a firmware device.
 #
-#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2016, Microsoft Corporation. All rights reserved.<BR>
 #  Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
 #
@@ -37,6 +37,7 @@
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
 
 [LibraryClasses]
   BootChainInfoLib
@@ -47,6 +48,8 @@
   PlatformResourceLib
   HobLib
   VerPartitionLib
+  DtPlatformDtbLoaderLib
+  FdtLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
