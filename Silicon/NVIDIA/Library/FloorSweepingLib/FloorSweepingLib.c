@@ -780,3 +780,65 @@ FloorSweepDtb (
 
   return Status;
 }
+
+/**
+  Get First Enabled Core on Socket.
+
+**/
+EFI_STATUS
+EFIAPI
+GetFirstEnabledCoreOnSocket (
+  IN   UINTN  Socket,
+  OUT  UINTN  *LinearCoreId
+  )
+{
+  UINTN  SocketCore;
+
+  if (!IsSocketEnabled (Socket)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  for (SocketCore = Socket * PLATFORM_MAX_CORES_PER_SOCKET;
+       SocketCore < (Socket + 1) * PLATFORM_MAX_CORES_PER_SOCKET;
+       SocketCore++)
+  {
+    if (IsCoreEnabled (SocketCore)) {
+      *LinearCoreId = SocketCore;
+      return EFI_SUCCESS;
+    }
+  }
+
+  return EFI_NOT_FOUND;
+}
+
+/**
+  Get Number of Enabled Cores on Socket.
+
+**/
+EFI_STATUS
+EFIAPI
+GetNumEnabledCoresOnSocket (
+  IN   UINTN  Socket,
+  OUT  UINTN  *NumEnabledCores
+  )
+{
+  UINTN  SocketCore;
+  UINTN  EnabledCoreCount = 0;
+
+  if (!IsSocketEnabled (Socket)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  for (SocketCore = Socket * PLATFORM_MAX_CORES_PER_SOCKET;
+       SocketCore < (Socket + 1) * PLATFORM_MAX_CORES_PER_SOCKET;
+       SocketCore++)
+  {
+    if (IsCoreEnabled (SocketCore)) {
+      EnabledCoreCount++;
+    }
+  }
+
+  *NumEnabledCores = EnabledCoreCount;
+
+  return EFI_SUCCESS;
+}

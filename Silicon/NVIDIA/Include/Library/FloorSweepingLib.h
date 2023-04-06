@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -118,6 +118,28 @@ EFI_STATUS
 EFIAPI
 FloorSweepDtb (
   IN VOID  *Dtb
+  );
+
+/**
+  Get First Enabled Core on Socket.
+
+**/
+EFI_STATUS
+EFIAPI
+GetFirstEnabledCoreOnSocket (
+  IN   UINTN  Socket,
+  OUT  UINTN  *LinearCoreId
+  );
+
+/**
+  Get Number of Enabled Cores on Socket.
+
+**/
+EFI_STATUS
+EFIAPI
+GetNumEnabledCoresOnSocket (
+  IN   UINTN  Socket,
+  OUT  UINTN  *NumEnabledCores
   );
 
 #endif //__FLOOR_SWEEPING_LIB_H__
