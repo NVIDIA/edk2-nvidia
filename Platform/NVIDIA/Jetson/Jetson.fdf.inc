@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -23,7 +23,6 @@
   # Platform USB FW
   #
   INF Silicon/NVIDIA/Tegra/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
-  INF Silicon/NVIDIA/Tegra/T234/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #
   # BPMP-FW IPC protocol
