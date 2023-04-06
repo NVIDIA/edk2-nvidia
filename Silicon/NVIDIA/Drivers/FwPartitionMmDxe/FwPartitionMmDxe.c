@@ -21,6 +21,7 @@
 #include "FwPartitionMmDxe.h"
 
 #define FW_PARTITION_MM_INFO_SIGNATURE  SIGNATURE_32 ('F','W','M','M')
+#define FW_PARTITION_MM_TRANSFER_SIZE   (32 * 1024)
 
 // private MM info structure, one per partition
 typedef struct {
@@ -50,6 +51,7 @@ FPMmRead (
 {
   FW_PARTITION_MM_INFO  *MmInfo;
   EFI_STATUS            Status;
+  UINTN                 ReadBytes;
 
   MmInfo = CR (
              DeviceInfo,
@@ -71,15 +73,26 @@ FPMmRead (
     return Status;
   }
 
-  Status = MmSendReadData (MmInfo->PartitionName, Offset, Bytes, Buffer);
-  DEBUG ((
-    DEBUG_VERBOSE,
-    "%a: read %s Offset=%u, Bytes=%u\n",
-    __FUNCTION__,
-    MmInfo->PartitionName,
-    Offset,
-    Bytes
-    ));
+  while (Bytes > 0) {
+    ReadBytes = MIN (FW_PARTITION_MM_TRANSFER_SIZE, Bytes);
+
+    Status = MmSendReadData (MmInfo->PartitionName, Offset, ReadBytes, Buffer);
+    DEBUG ((
+      DEBUG_VERBOSE,
+      "%a: read %s Offset=%u, Bytes=%u\n",
+      __FUNCTION__,
+      MmInfo->PartitionName,
+      Offset,
+      ReadBytes
+      ));
+    if (EFI_ERROR (Status)) {
+      break;
+    }
+
+    Bytes  -= ReadBytes;
+    Offset += ReadBytes;
+    Buffer  = ((UINT8 *)Buffer + ReadBytes);
+  }
 
   return Status;
 }

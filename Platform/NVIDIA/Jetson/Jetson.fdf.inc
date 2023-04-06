@@ -23,7 +23,6 @@
   # Platform USB FW
   #
   INF Silicon/NVIDIA/Tegra/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
-  INF Silicon/NVIDIA/Tegra/T234/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #
   # Regulator support
