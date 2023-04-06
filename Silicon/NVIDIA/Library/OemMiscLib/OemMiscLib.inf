@@ -68,7 +68,10 @@
   gNVIDIAPlatformResourceDataGuid
   gZeroGuid
 
+[Protocols]
+  gNVIDIATegraCpuFrequencyProtocolGuid
+
 [Depex]
   gNVIDIACvmEepromProtocolGuid
   AND
-  gEdkiiConfigurationManagerProtocolGuid
+  gNVIDIATegraCpuFrequencyProtocolGuid

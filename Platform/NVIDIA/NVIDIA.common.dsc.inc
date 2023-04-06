@@ -570,6 +570,11 @@
   gArmTokenSpaceGuid.PcdBiosCharacteristicsExtension|0x0C01
 
   #
+  # SMBIOS Type 4 Information.
+  #
+  gArmTokenSpaceGuid.PcdProcessorManufacturer|L"NVIDIA"
+
+  #
   # SMBIOS Type13 Bios Language Information in RFC 4646 code.
   # Only support en-US language in our UEFI.
   #

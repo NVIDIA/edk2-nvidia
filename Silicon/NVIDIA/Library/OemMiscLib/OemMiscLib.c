@@ -28,12 +28,10 @@
 #include <Protocol/Eeprom.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <Protocol/ConfigurationManagerProtocol.h>
+#include <Protocol/TegraCpuFreq.h>
 #include <libfdt.h>
 
-#define LOWER_32(x)  ((UINT32)x)
-#define UPPER_32(x)  ((UINT32)(x >> 32))
-#define MAX_CNTR     (~0U)
-#define REF_CLK_MHZ  (408)
+#define HZ_TO_MHZ(x)  (x/1000000)
 
 STATIC TEGRA_EEPROM_BOARD_INFO  *SmEepromData;
 STATIC SMBIOS_TABLE_TYPE32      *Type32Record;
@@ -41,231 +39,103 @@ STATIC SMBIOS_TABLE_TYPE3       *Type3Record;
 STATIC CHAR16                   *BoardProductName;
 STATIC CHAR16                   *AssetTag;
 STATIC CHAR16                   *SerialNumber;
-STATIC UINTN                    CurCpuFreqMhz;
 STATIC UINT32                   SocketMask;
 
 /**
-  GetCpuFreqT194
-  Helper function to compute CPU frequency for T194 done using T194 specific
-  PMU counter registers.
+  GetCpuFreqHz
+  Get the Current and Max frequencies for a given socket.
 
-  @param MiscProcessorData      Pointer to the Processor Data structure which
-                                is used by the Smbios drivers.
-                                it should be ignored by device driver.
+  @param[in]  ProcessorId   SocketId to compute Frequency for.
+  @param[out] CurFreqHz     Current Frequency in Hz.
+  @param[out] MaxFreqHz     Max Frequency in Hz.
 
-  @retval                       CPU Frequency in Mhz.
-
-**/
-STATIC
-UINT16
-GetCpuFreqT194 (
-  VOID
-  )
-{
-  EFI_TPL  CurrentTpl;
-  UINT64   BeginValue;
-  UINT64   EndValue;
-  UINT32   BeginCcnt;
-  UINT32   BeginRefCnt;
-  UINT32   EndCcnt;
-  UINT32   EndRefCnt;
-  UINT32   DeltaRefCnt;
-  UINT32   DeltaCcnt;
-  UINT32   FreqMHz;
-  UINT16   ReturnFreq;
-
-  CurrentTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
-  BeginValue = NvReadPmCntr ();
-  MicroSecondDelay (100);
-  EndValue = NvReadPmCntr ();
-  gBS->RestoreTPL (CurrentTpl);
-
-  BeginRefCnt = LOWER_32 (BeginValue);
-  BeginCcnt   = UPPER_32 (BeginValue);
-  EndRefCnt   = LOWER_32 (EndValue);
-  EndCcnt     = UPPER_32 (EndValue);
-
-  if (EndRefCnt < BeginRefCnt) {
-    DeltaRefCnt = EndRefCnt + (MAX_CNTR - BeginRefCnt);
-  } else {
-    DeltaRefCnt = EndRefCnt - BeginRefCnt;
-  }
-
-  if (EndCcnt < BeginCcnt) {
-    DeltaCcnt = EndCcnt + (MAX_CNTR - BeginCcnt);
-  } else {
-    DeltaCcnt = EndCcnt - BeginCcnt;
-  }
-
-  FreqMHz    = (DeltaCcnt * REF_CLK_MHZ) / DeltaRefCnt;
-  ReturnFreq = (UINT16)FreqMHz;
-  return ReturnFreq;
-}
-
-/**
-  GetCpuFreqMhzFromCpcInfo
-  Helper function to compute CPU frequency from CpcInfo CM Object.
-
-  @param ProcessorIndex Index of the processor to get the frequency for.
-
-  @retval                       CPU Frequency in Mhz.
+  @retval EFI_SUCCESS on Success
+          OTHER       on Failure (from the TegraCpuFreq Protocol)
 
 **/
 STATIC
-UINTN
-GetCpuFreqMhzFromCpcInfo (
-  IN UINT8  ProcessorIndex
+EFI_STATUS
+GetCpuFreqHz (
+  UINT8   ProcessorId,
+  UINT64  *CurFreqHz,
+  UINT64  *MaxFreqHz
   )
 {
-  EFI_STATUS                            Status;
-  EDKII_CONFIGURATION_MANAGER_PROTOCOL  *CfgMgrProtocol;
-  CM_OBJ_DESCRIPTOR                     CmObjectDesc;
-  CM_OBJ_DESCRIPTOR                     CmObjectDesc2;
-  CM_ARM_GICC_INFO                      *GicCInfo;
-  CM_ARM_CPC_INFO                       *CpcInfo;
-  UINT32                                NumCores;
-  UINT32                                Index;
+  NVIDIA_TEGRA_CPU_FREQ_PROTOCOL  *CpuFreq;
+  UINTN                           LinearCoreId;
+  UINT64                          MpIdr;
+  EFI_STATUS                      Status;
 
-  // Locate Configuration Manager Protocol for getting GicC and Cpc CM Objects.
   Status = gBS->LocateProtocol (
-                  &gEdkiiConfigurationManagerProtocolGuid,
+                  &gNVIDIATegraCpuFrequencyProtocolGuid,
                   NULL,
-                  (VOID **)&CfgMgrProtocol
+                  (VOID **)&CpuFreq
                   );
-  if ( EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Locate CfgMgrProtocol %r", __FUNCTION__, Status));
-    return 0;
-  }
-
-  // Get GicC Info for each CPU core
-  Status = CfgMgrProtocol->GetObject (
-                             CfgMgrProtocol,
-                             CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo),
-                             CM_NULL_TOKEN,
-                             &CmObjectDesc
-                             );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Get GicC Info %r\n", __FUNCTION__, Status));
-    return 0;
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get Tegra Cpu Freq Protocol %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto exitGetFreqMhz;
   }
 
-  NumCores = CmObjectDesc.Count;
-  GicCInfo = (CM_ARM_GICC_INFO *)CmObjectDesc.Data;
-
-  for (Index = 0; Index < NumCores; Index++) {
-    // Find the core which belongs to the ProcessorIndex
-    if (GicCInfo[Index].ProximityDomain == ProcessorIndex) {
-      if (GicCInfo[Index].CpcToken == CM_NULL_TOKEN) {
-        DEBUG ((DEBUG_ERROR, "%a: CpcToken == CM_NULL_TOKEN\n", __FUNCTION__));
-        return 0;
-      }
-
-      // Get the reference Cpc Info CM object for the core.
-      Status = CfgMgrProtocol->GetObject (
-                                 CfgMgrProtocol,
-                                 CREATE_CM_ARM_OBJECT_ID (EArmObjCpcInfo),
-                                 GicCInfo[Index].CpcToken,
-                                 &CmObjectDesc2
-                                 );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Get Cpc Info %r\n", __FUNCTION__, Status));
-        return 0;
-      }
-
-      CpcInfo = (CM_ARM_CPC_INFO *)CmObjectDesc2.Data;
-
-      return CpcInfo->NominalFrequencyInteger;
-    }
+  Status = GetFirstEnabledCoreOnSocket (ProcessorId, &LinearCoreId);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get First Enabled core in Socket %u\n", __FUNCTION__, Status));
+    goto exitGetFreqMhz;
   }
 
-  return 0;
+  MpIdr  = GetMpidrFromLinearCoreID (LinearCoreId);
+  Status = CpuFreq->GetInfo (
+                      CpuFreq,
+                      MpIdr,
+                      CurFreqHz,
+                      MaxFreqHz,
+                      NULL,
+                      NULL,
+                      NULL
+                      );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to get CpuFrequency %r\n", Status));
+    goto exitGetFreqMhz;
+  }
+
+exitGetFreqMhz:
+  return Status;
 }
 
 /**
-  GetCpuFreqMhz
-  Helper Function to get current CPU Freq Cores. This is computed using
-  PMU counter registers, currently this is done only for T194.
+  GetCpuEnabledCores
+  Get the Number of Enabled Cores for a socket.
 
-  @param ChipId                 SOC Id to compute Frequency for.
-  @retval                       CPU Frequency in MHz
+  @param[in]  ProcessorId   SocketId to get enabled core count for.
+
+  @retval Number of Enabled Cores (0 on failure)
 
 **/
 STATIC
 UINTN
-GetCpuFreqMhz (
-  UINTN  ChipId
+GetCpuEnabledCores (
+  UINT8  ProcessorIndex
   )
 {
-  UINTN  CpuFreqMhz = 0;
+  UINTN       EnabledCoreCount = 0;
+  EFI_STATUS  Status;
 
-  if (ChipId == T194_CHIP_ID) {
-    CpuFreqMhz = GetCpuFreqT194 ();
-  } else {
-    // Set it to zero for updating later by OemGetCpuFreq with ProcessorIndex.
-    CpuFreqMhz = 0;
-  }
-
-  return CpuFreqMhz;
-}
-
-/**
-  GetCpuEnabledCoresFromCm
-  Helper function to get number of enabled cores from GicC CM Object.
-
-  @param ProcessorIndex Index of the processor to get the frequency for.
-
-  @retval               Number of enabled cores.
-
-**/
-STATIC
-UINTN
-GetCpuEnabledCoresFromCm (
-  IN UINT8  ProcessorIndex
-  )
-{
-  EFI_STATUS                            Status;
-  EDKII_CONFIGURATION_MANAGER_PROTOCOL  *CfgMgrProtocol;
-  CM_OBJ_DESCRIPTOR                     CmObjectDesc;
-  CM_ARM_GICC_INFO                      *GicCInfo;
-  UINT32                                TotalNumCores;
-  UINT32                                NumCores;
-  UINT32                                Index;
-
-  // Locate Configuration Manager Protocol for getting GicC and Cpc CM Objects.
-  Status = gBS->LocateProtocol (
-                  &gEdkiiConfigurationManagerProtocolGuid,
-                  NULL,
-                  (VOID **)&CfgMgrProtocol
-                  );
-  if ( EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Locate CfgMgrProtocol %r", __FUNCTION__, Status));
-    return 0;
-  }
-
-  // Get GicC Info for each CPU core
-  Status = CfgMgrProtocol->GetObject (
-                             CfgMgrProtocol,
-                             CREATE_CM_ARM_OBJECT_ID (EArmObjGicCInfo),
-                             CM_NULL_TOKEN,
-                             &CmObjectDesc
-                             );
+  Status = GetNumEnabledCoresOnSocket (ProcessorIndex, &EnabledCoreCount);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Get GicC Info %r\n", __FUNCTION__, Status));
-    return 0;
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:Failed to get Enabled Core Count for Socket %u %r\n",
+      __FUNCTION__,
+      ProcessorIndex,
+      Status
+      ));
   }
 
-  NumCores      = 0;
-  TotalNumCores = CmObjectDesc.Count;
-  GicCInfo      = (CM_ARM_GICC_INFO *)CmObjectDesc.Data;
-
-  for (Index = 0; Index < TotalNumCores; Index++) {
-    // Find the core which belongs to the ProcessorIndex
-    if (GicCInfo[Index].ProximityDomain == ProcessorIndex) {
-      NumCores++;
-    }
-  }
-
-  return NumCores;
+  return EnabledCoreCount;
 }
 
 /**
@@ -288,14 +158,24 @@ PopulateCpuData (
   OEM_MISC_PROCESSOR_DATA  *MiscProcessorData
   )
 {
-  UINTN  CoresEnabled;
+  UINTN       CoresEnabled;
+  UINT64      CurFreqHz = 0;
+  UINT64      MaxFreqHz = 0;
+  EFI_STATUS  Status;
 
-  MiscProcessorData->CurrentSpeed = CurCpuFreqMhz;
-  MiscProcessorData->MaxSpeed     = CurCpuFreqMhz;
-  CoresEnabled                    = GetCpuEnabledCoresFromCm (ProcessorIndex);
+  Status = GetCpuFreqHz (ProcessorIndex, &CurFreqHz, &MaxFreqHz);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get CPUFreq %r\n", __FUNCTION__, Status));
+    CurFreqHz = 0;
+    MaxFreqHz = 0;
+  }
+
+  MiscProcessorData->CurrentSpeed = HZ_TO_MHZ (CurFreqHz);
+  MiscProcessorData->MaxSpeed     = HZ_TO_MHZ (MaxFreqHz);
+  CoresEnabled                    = GetCpuEnabledCores (ProcessorIndex);
   MiscProcessorData->CoreCount    = CoresEnabled;
   MiscProcessorData->CoresEnabled = CoresEnabled;
-  MiscProcessorData->ThreadCount  = 1;
+  MiscProcessorData->ThreadCount  = CoresEnabled;
 }
 
 /**
@@ -343,15 +223,16 @@ OemGetCpuFreq (
   IN UINT8  ProcessorIndex
   )
 {
-  UINTN  CpuFreqMhz = 0;
+  UINT64      CurFreqHz;
+  EFI_STATUS  Status;
 
-  if (CurCpuFreqMhz) {
-    return (CurCpuFreqMhz * 1000 * 1000);
+  Status = GetCpuFreqHz (ProcessorIndex, &CurFreqHz, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get CpuFreq %r\n", __FUNCTION__, Status));
+    CurFreqHz = 0;
   }
 
-  CpuFreqMhz = GetCpuFreqMhzFromCpcInfo (ProcessorIndex);
-
-  return (CpuFreqMhz * 1000 * 1000);
+  return CurFreqHz;
 }
 
 /**
@@ -1073,7 +954,6 @@ OemMiscLibConstructor (
   )
 {
   EFI_STATUS  Status;
-  UINTN       ChipId;
   VOID        *Hob;
 
   Status = gBS->LocateProtocol (&gNVIDIACvmEepromProtocolGuid, NULL, (VOID **)&SmEepromData);
@@ -1099,9 +979,7 @@ OemMiscLibConstructor (
 
   DEBUG ((DEBUG_INFO, "%a: SocketMask = 0x%x\n", __FUNCTION__, SocketMask));
 
-  ChipId        =  TegraGetChipID ();
-  CurCpuFreqMhz =  GetCpuFreqMhz (ChipId);
-  Type32Record  = (SMBIOS_TABLE_TYPE32 *)PcdGetPtr (PcdType32Info);
-  Type3Record   = (SMBIOS_TABLE_TYPE3 *)PcdGetPtr (PcdType3Info);
+  Type32Record = (SMBIOS_TABLE_TYPE32 *)PcdGetPtr (PcdType32Info);
+  Type3Record  = (SMBIOS_TABLE_TYPE3 *)PcdGetPtr (PcdType3Info);
   return EFI_SUCCESS;
 }
