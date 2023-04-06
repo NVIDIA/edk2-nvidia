@@ -2,7 +2,7 @@
 
   Tegra Firmware Management Protocol support
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,6 +24,8 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/VerPartitionLib.h>
+#include <Library/DtPlatformDtbLoaderLib.h>
+#include <libfdt.h>
 #include <Protocol/EFuse.h>
 #include <Protocol/FirmwareManagementProgress.h>
 #include <Protocol/FwImageProtocol.h>
@@ -1200,6 +1202,54 @@ FmpTegraGetTotalBytesToFlash (
   }
 
   return TotalBytesToFlash;
+}
+
+EFI_STATUS
+EFIAPI
+FmpTegraGetLowestSupportedVersion (
+  OUT UINT32  *Lsv
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *DtbBase;
+  UINTN       DtbSize;
+  INT32       UefiNode;
+  CONST VOID  *LsvProperty;
+  INT32       LsvLength;
+
+  if (Lsv == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Invalid parameter.\n",
+      __FUNCTION__
+      ));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *Lsv   = 0;
+  Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: couldn't load DT\n", __FUNCTION__));
+    return Status;
+  }
+
+  UefiNode = fdt_path_offset (DtbBase, "/firmware/uefi");
+  if (UefiNode >= 0) {
+    LsvProperty = fdt_getprop (DtbBase, UefiNode, "fmp-lowest-supported-version", &LsvLength);
+    if ((LsvProperty != NULL) && (LsvLength == sizeof (UINT32))) {
+      *Lsv = fdt32_to_cpu (*(UINT32 *)LsvProperty);
+    }
+  }
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Read fmp-lowest-supported-version=%u: %r\n",
+    __FUNCTION__,
+    *Lsv,
+    Status
+    ));
+
+  return Status;
 }
 
 EFI_STATUS

@@ -2,7 +2,7 @@
 
   Tegra Firmware Management Protocol support
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -84,6 +84,22 @@ FmpTegraSetImage (
   IN  UINT32                                         CapsuleFwVersion,
   OUT CHAR16                                         **AbortReason,
   OUT UINT32                                         *LastAttemptStatus
+  );
+
+/**
+  Get Tegra lowest supported version number
+
+  @param[out] Lsv                   Pointer to store Lowest supported version
+                                    number or NULL
+
+  @retval EFI_SUCCESS               Valid version information returned.
+  @retval Others                    An error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+FmpTegraGetLowestSupportedVersion (
+  OUT UINT32  *Lsv
   );
 
 #endif
