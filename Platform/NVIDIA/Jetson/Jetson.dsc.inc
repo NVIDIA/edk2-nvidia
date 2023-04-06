@@ -170,7 +170,7 @@
   #
   # Platform USB FW
   #
-  Silicon/NVIDIA/Tegra/T194/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  Silicon/NVIDIA/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
 
   #
   # BPMP-FW IPC protocol
