@@ -6,23 +6,25 @@
 *
 **/
 
-#include "TH500ResourceConfig.h"
-
 #include <Uefi.h>
 #include <Pi/PiMultiPhase.h>
+
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
-#include <Library/DebugLib.h>
+#include <Library/DramCarveoutLib.h>
+#include <Library/GoldenRegisterLib.h>
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
-#include <Library/DramCarveoutLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
-#include <Library/GoldenRegisterLib.h>
-#include "TH500ResourceConfigPrivate.h"
+
 #include <TH500/TH500Definitions.h>
 #include "CommonResourceConfig.h"
+
+#include "PlatformResourceConfig.h"
+#include "TH500ResourceConfig.h"
+#include "TH500ResourceConfigPrivate.h"
 
 #define MAX_CORE_DISABLE_WORDS  3
 
@@ -74,6 +76,8 @@ TEGRA_MMIO_INFO  TH500MmioInfo[] = {
     0
   }
 };
+
+#define TH500_CCPLEX_INTERWORLD_SHMEM_MMIO_INFO_INDEX  (ARRAY_SIZE (TH500MmioInfo) - 2)
 
 TEGRA_MMIO_INFO  TH500GicRedistributorMmioInfo[] = {
   {
@@ -281,6 +285,324 @@ TH500UARTInstanceInfo (
 }
 
 /**
+   Retrieve the TH500 memory mode.
+
+   @param[in] CpuBootloaderParams  CPU BL params.
+*/
+STATIC
+TH500_MEMORY_MODE
+TH500GetMemoryMode (
+  IN CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams
+  )
+{
+  EFI_PHYSICAL_ADDRESS  EgmBase, HvBase;
+  UINT64                EgmSize, HvSize;
+
+  EgmBase = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Base;
+  EgmSize = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Size;
+
+  HvBase = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Base;
+  HvSize = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Size;
+
+  if ((EgmBase == 0) || (EgmSize == 0)) {
+    return Th500MemoryModeNormal;
+  } else if ((HvBase == 0) || (HvSize == 0)) {
+    return Th500MemoryModeEgmNoHv;
+  } else {
+    return Th500MemoryModeEgmWithHv;
+  }
+}
+
+/**
+   Builds a list of DRAM memory regions.
+
+   @param[in]  CpuBootloaderParams  CPU BL params.
+   @param[out] DramRegions          The list of DRAM regions.
+   @param[out] DramRegionCount      Number of DRAM regions in the list.
+
+   @retval EFI_SUCCESS    The list was built successfully.
+   @retval !=EFI_SUCCESS  Errors occurred.
+*/
+STATIC
+EFI_STATUS
+TH500BuildDramRegions (
+  IN  CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams,
+  OUT NVDA_MEMORY_REGION      **CONST  DramRegions,
+  OUT UINTN                    *CONST  DramRegionCount
+  )
+{
+  NVDA_MEMORY_REGION       *Regions;
+  UINTN                    RegionCount, RegionCountMax;
+  UINTN                    Socket;
+  EFI_PHYSICAL_ADDRESS     Base;
+  UINT64                   Size;
+  CONST UINT32             SocketMask = TH500GetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
+  CONST TH500_MEMORY_MODE  MemoryMode = TH500GetMemoryMode (CpuBootloaderParams);
+  CONST UINT32             MaxSocket  = HighBitSet32 (SocketMask);
+
+  DEBUG ((DEBUG_ERROR, "SocketMask=0x%x\n", SocketMask));
+
+  switch (MemoryMode) {
+    case Th500MemoryModeNormal:
+      DEBUG ((DEBUG_ERROR, "Memory Mode: Normal\n"));
+      RegionCountMax = MaxSocket + 1;
+      break;
+
+    case Th500MemoryModeEgmWithHv:
+      DEBUG ((DEBUG_ERROR, "Memory Mode: EGM With HV\n"));
+      RegionCountMax = MaxSocket + 1;
+      break;
+
+    case Th500MemoryModeEgmNoHv:
+      // When egm is enabled without hv, uefi should use only memory in
+      // egm carveout on all sockets and rcm, os and uefi carveouts only
+      // on primary socket.
+      DEBUG ((DEBUG_ERROR, "Memory Mode: EGM No HV\n"));
+      RegionCountMax = (MaxSocket + 1) + 3;
+      break;
+
+    default:
+      UNREACHABLE ();
+  }
+
+  Regions = (NVDA_MEMORY_REGION *)AllocatePool (RegionCountMax * sizeof (*Regions));
+  NV_ASSERT_RETURN (
+    Regions != NULL,
+    return EFI_DEVICE_ERROR,
+    "%a: Failed to allocate %lu DRAM regions\r\n",
+    __FUNCTION__,
+    (UINT64)RegionCountMax
+    );
+
+  RegionCount = 0;
+
+  for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
+    if (!(SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    switch (MemoryMode) {
+      case Th500MemoryModeNormal:
+      case Th500MemoryModeEgmWithHv:
+        Base = CpuBootloaderParams->SdramInfo[Socket].Base;
+        Size = CpuBootloaderParams->SdramInfo[Socket].Size;
+        PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
+        break;
+
+      case Th500MemoryModeEgmNoHv:
+        Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Base;
+        Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Size;
+        PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
+
+        if (Socket == TH500_PRIMARY_SOCKET) {
+          Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Base;
+          Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Size;
+          PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
+
+          Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Base;
+          Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Size;
+          PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
+
+          Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_UEFI].Base;
+          Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_UEFI].Size;
+          PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
+        }
+
+        break;
+
+      default:
+        UNREACHABLE ();
+    }
+  }
+
+  *DramRegions     = Regions;
+  *DramRegionCount = RegionCount;
+  return EFI_SUCCESS;
+}
+
+/**
+   Adds bootloader carveouts to a memory region list.
+
+   @param[in]     Regions            The list of memory regions.
+   @param[in,out] RegionCount        Number of regions in the list.
+   @param[in]     UsableRegions      The list of usable memory regions.
+   @param[in,out] UsableRegionCount  Number of usable regions in the list.
+   @param[in]     MemoryMode         TH500 memory mode.
+   @param[in]     Socket             CPU socket index.
+   @param[in]     Carveouts          Bootloader carveouts.
+   @param[in]     CarveoutCount      Number of bootloader carveouts.
+*/
+STATIC
+VOID
+TH500AddBootloaderCarveouts (
+  IN     NVDA_MEMORY_REGION          *CONST  Regions,
+  IN OUT UINTN                       *CONST  RegionCount,
+  IN     NVDA_MEMORY_REGION          *CONST  UsableRegions,
+  IN OUT UINTN                       *CONST  UsableRegionCount,
+  IN     CONST TH500_MEMORY_MODE             MemoryMode,
+  IN     CONST UINTN                         Socket,
+  IN     CONST TEGRABL_CARVEOUT_INFO *CONST  Carveouts,
+  IN     CONST UINTN                         CarveoutCount
+  )
+{
+  UINTN                 Index;
+  EFI_PHYSICAL_ADDRESS  Base;
+  UINT64                Size, Pages;
+
+  TEGRA_MMIO_INFO *CONST  CcplexInterworldShmemMmioInfo =
+    &TH500MmioInfo[TH500_CCPLEX_INTERWORLD_SHMEM_MMIO_INFO_INDEX];
+
+  for (Index = 0; Index < CarveoutCount; ++Index) {
+    Base = Carveouts[Index].Base;
+    Size = Carveouts[Index].Size;
+
+    if ((Base == 0) || (Size == 0)) {
+      continue;
+    }
+
+    DEBUG ((
+      DEBUG_ERROR,
+      "Socket: %u Carveout %u Region: Base: 0x%016lx, Size: 0x%016lx\n",
+      Socket,
+      Index,
+      Base,
+      Size
+      ));
+
+    switch (Index) {
+      case CARVEOUT_RCM_BLOB:
+      case CARVEOUT_UEFI:
+      case CARVEOUT_OS:
+        // Leave in memory map but marked as used on socket 0
+        if (Socket == TH500_PRIMARY_SOCKET) {
+          Pages = EFI_SIZE_TO_PAGES (Size);
+          BuildMemoryAllocationHob (Base, EFI_PAGES_TO_SIZE (Pages), EfiReservedMemoryType);
+          PlatformResourceAddMemoryRegion (UsableRegions, UsableRegionCount, Base, Size);
+        }
+
+        break;
+
+      case CARVEOUT_HV:
+        continue;
+
+      case CARVEOUT_EGM:
+        if (MemoryMode == Th500MemoryModeEgmNoHv) {
+          continue;
+        }
+
+        break;
+
+      case CARVEOUT_CCPLEX_INTERWORLD_SHMEM:
+        if (Socket == TH500_PRIMARY_SOCKET) {
+          // For primary socket, add memory in DRAM CO CARVEOUT_CCPLEX_INTERWORLD_SHMEM in its placeholder
+          // in TH500MmioInfo for MMIO mapping.
+          CcplexInterworldShmemMmioInfo->Base = Base;
+          CcplexInterworldShmemMmioInfo->Size = Size;
+        }
+
+        break;
+
+      default:
+        break;
+    }
+
+    PlatformResourceAddMemoryRegion (Regions, RegionCount, Base, Size);
+  }
+}
+
+/**
+   Builds a list of carveout memory regions.
+
+   @param[in]  CpuBootloaderParams        CPU BL params.
+   @param[out] CarveoutRegions            The list of carveout regions.
+   @param[out] CarveoutRegionCount        Number of carveout regions in the list.
+   @param[out] UsableCarveoutRegions      The list of usable carveout regions.
+   @param[out] UsableCarveoutRegionCount  Number of usable carveout regions in the list.
+
+   @retval EFI_SUCCESS    The list was built successfully.
+   @retval !=EFI_SUCCESS  Errors occurred.
+*/
+STATIC
+EFI_STATUS
+TH500BuildCarveoutRegions (
+  IN  CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams,
+  OUT NVDA_MEMORY_REGION      **CONST  CarveoutRegions,
+  OUT UINTN                    *CONST  CarveoutRegionCount,
+  OUT NVDA_MEMORY_REGION      **CONST  UsableCarveoutRegions,
+  OUT UINTN                    *CONST  UsableCarveoutRegionCount
+  )
+{
+  NVDA_MEMORY_REGION       *Regions, *UsableRegions;
+  UINTN                    RegionCount, UsableRegionCount;
+  UINTN                    Socket;
+  EFI_PHYSICAL_ADDRESS     *RetiredDramPageList;
+  CONST UINT32             SocketMask            = TH500GetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
+  CONST TH500_MEMORY_MODE  MemoryMode            = TH500GetMemoryMode (CpuBootloaderParams);
+  CONST UINT32             MaxSocket             = HighBitSet32 (SocketMask);
+  CONST UINTN              RegionCountMax        = (UINTN)(MaxSocket + 1) * (CARVEOUT_OEM_COUNT + MAX_RETIRED_DRAM_PAGES);
+  CONST UINTN              RegionsPagesMax       = EFI_SIZE_TO_PAGES (RegionCountMax * sizeof (*Regions));
+  CONST UINTN              UsableRegionCountMax  = (UINTN)(MaxSocket + 1) * CARVEOUT_OEM_COUNT;
+  CONST UINTN              UsableRegionsPagesMax = EFI_SIZE_TO_PAGES (UsableRegionCountMax * sizeof (*UsableRegions));
+
+  Regions = (NVDA_MEMORY_REGION *)AllocatePages (RegionsPagesMax);
+  NV_ASSERT_RETURN (
+    Regions != NULL,
+    return EFI_DEVICE_ERROR,
+    "%a: Failed to allocate %lu pages for carveout regions\r\n",
+    __FUNCTION__,
+    (UINT64)RegionsPagesMax
+    );
+
+  UsableRegions = (NVDA_MEMORY_REGION *)AllocatePages (UsableRegionsPagesMax);
+  NV_ASSERT_RETURN (
+    UsableRegions != NULL,
+    return EFI_DEVICE_ERROR,
+    "%a: Failed to allocate %lu pages for usable carveout regions\r\n",
+    __FUNCTION__,
+    (UINT64)UsableRegionsPagesMax
+    );
+
+  RegionCount = UsableRegionCount = 0;
+
+  for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
+    if ((SocketMask & (1 << Socket)) != 0) {
+      TH500AddBootloaderCarveouts (
+        Regions,
+        &RegionCount,
+        UsableRegions,
+        &UsableRegionCount,
+        MemoryMode,
+        Socket,
+        CpuBootloaderParams->CarveoutInfo[Socket],
+        CARVEOUT_OEM_COUNT
+        );
+    }
+  }
+
+  for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
+    if ((SocketMask & (1 << Socket)) != 0) {
+      RetiredDramPageList = (EFI_PHYSICAL_ADDRESS *)CpuBootloaderParams->RetiredDramPageListAddr[Socket];
+
+      if (RetiredDramPageList != NULL) {
+        PlatformResourceAddRetiredDramPages (
+          Regions,
+          &RegionCount,
+          RetiredDramPageList,
+          MAX_RETIRED_DRAM_PAGES,
+          SIZE_64KB
+          );
+      }
+    }
+  }
+
+  *CarveoutRegions           = Regions;
+  *CarveoutRegionCount       = RegionCount;
+  *UsableCarveoutRegions     = UsableRegions;
+  *UsableCarveoutRegionCount = UsableRegionCount;
+  return EFI_SUCCESS;
+}
+
+/**
   Installs resources into the HOB list
 
   This function install all memory regions into the HOB list.
@@ -298,235 +620,41 @@ TH500GetResourceConfig (
   OUT TEGRA_RESOURCE_INFO  *PlatformInfo
   )
 {
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-  NVDA_MEMORY_REGION  *DramRegions;
-  NVDA_MEMORY_REGION  *CarveoutRegions;
-  UINTN               CarveoutRegionsCount = 0;
-  NVDA_MEMORY_REGION  *UsableCarveoutRegions;
-  UINTN               UsableCarveoutRegionsCount = 0;
-  UINTN               CarveoutSize;
-  UINTN               Index;
-  UINTN               Socket;
-  UINTN               MaxSocket;
-  UINT32              SocketMask;
-  TH500_MEMORY_MODE   MemoryMode;
-  UINT64              *DramPageRetirementInfo;
+  EFI_STATUS          Status;
+  NVDA_MEMORY_REGION  *DramRegions, *CarveoutRegions, *UsableCarveoutRegions;
+  UINTN               DramRegionCount, CarveoutRegionCount, UsableCarveoutRegionCount;
 
-  Index       = 0;
-  DramRegions = NULL;
+  TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams =
+    (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-
-  PlatformInfo->DtbLoadAddress = TH500GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
-
-  SocketMask = TH500GetSocketMask (CpuBootloaderAddress);
-  MaxSocket  = 0;
-  for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
-    if (!(SocketMask & (1 << Socket))) {
-      continue;
-    }
-
-    MaxSocket = Socket;
+  Status = TH500BuildDramRegions (
+             CpuBootloaderParams,
+             &DramRegions,
+             &DramRegionCount
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
-  DEBUG ((DEBUG_ERROR, "SocketMask=0x%x\n", SocketMask));
-
-  // Detect the memory mode
-  MemoryMode = Th500MemoryModeNormal;
-  if ((CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Base != 0) &&
-      (CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Size != 0))
-  {
-    if ((CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Base != 0) &&
-        (CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Size != 0))
-    {
-      MemoryMode = Th500MemoryModeEgmWithHv;
-    } else {
-      MemoryMode = Th500MemoryModeEgmNoHv;
-    }
+  Status = TH500BuildCarveoutRegions (
+             CpuBootloaderParams,
+             &CarveoutRegions,
+             &CarveoutRegionCount,
+             &UsableCarveoutRegions,
+             &UsableCarveoutRegionCount
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
-  // Build dram regions
-  if (MemoryMode == Th500MemoryModeNormal) {
-    DEBUG ((DEBUG_ERROR, "Memory Mode: Normal\n"));
-    DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS);
-    ASSERT (DramRegions != NULL);
-    if (DramRegions == NULL) {
-      return EFI_DEVICE_ERROR;
-    }
-
-    Index = 0;
-    for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
-      if (!(SocketMask & (1UL << Socket))) {
-        continue;
-      }
-
-      DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->SdramInfo[Socket].Base;
-      DramRegions[Index].MemoryLength      = CpuBootloaderParams->SdramInfo[Socket].Size;
-      Index++;
-    }
-  } else if (MemoryMode == Th500MemoryModeEgmNoHv) {
-    DEBUG ((DEBUG_ERROR, "Memory Mode: EGM No HV\n"));
-    // When egm is enabled without hv, uefi should use only memory in egm carveout on all sockets and rcm, os and uefi carveouts
-    // only on primary socket.
-    DramRegions = (NVDA_MEMORY_REGION *)AllocatePool ((sizeof (NVDA_MEMORY_REGION) * (MaxSocket+1)) + (sizeof (NVDA_MEMORY_REGION) * 3));
-    ASSERT (DramRegions != NULL);
-    if (DramRegions == NULL) {
-      return EFI_DEVICE_ERROR;
-    }
-
-    Index = 0;
-    for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
-      if (!(SocketMask & (1UL << Socket))) {
-        continue;
-      }
-
-      DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Base;
-      DramRegions[Index].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Size;
-      Index++;
-
-      if (Socket == TH500_PRIMARY_SOCKET) {
-        if ((CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Base != 0) &&
-            (CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Size != 0))
-        {
-          DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Base;
-          DramRegions[Index].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Size;
-          Index++;
-        }
-
-        if ((CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Base != 0) &&
-            (CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Size != 0))
-        {
-          DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Base;
-          DramRegions[Index].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Size;
-          Index++;
-        }
-
-        DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_UEFI].Base;
-        DramRegions[Index].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_UEFI].Size;
-        Index++;
-      }
-    }
-  } else if (MemoryMode == Th500MemoryModeEgmWithHv) {
-    DEBUG ((DEBUG_ERROR, "Memory Mode: EGM With HV\n"));
-    DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS);
-    ASSERT (DramRegions != NULL);
-    if (DramRegions == NULL) {
-      return EFI_DEVICE_ERROR;
-    }
-
-    Index = 0;
-    for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
-      if (!(SocketMask & (1UL << Socket))) {
-        continue;
-      }
-
-      DramRegions[Index].MemoryBaseAddress = CpuBootloaderParams->SdramInfo[Socket].Base;
-      DramRegions[Index].MemoryLength      = CpuBootloaderParams->SdramInfo[Socket].Size;
-      Index++;
-    }
-  }
-
-  PlatformInfo->DramRegions         = DramRegions;
-  PlatformInfo->DramRegionsCount    = Index;
-  PlatformInfo->UefiDramRegionIndex = 0;
-
-  // Build Carveout regions
-  CarveoutSize    = sizeof (NVDA_MEMORY_REGION) * (MaxSocket+1) * (CARVEOUT_OEM_COUNT + MAX_RETIRED_DRAM_PAGES);
-  CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePages (EFI_SIZE_TO_PAGES (CarveoutSize));
-  ASSERT (CarveoutRegions != NULL);
-  if (CarveoutRegions == NULL) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  CarveoutSize          = sizeof (NVDA_MEMORY_REGION) * (MaxSocket+1) * CARVEOUT_OEM_COUNT;
-  UsableCarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePages (EFI_SIZE_TO_PAGES (CarveoutSize));
-  ASSERT (UsableCarveoutRegions != NULL);
-  if (UsableCarveoutRegions == NULL) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
-    if (!(SocketMask & (1 << Socket))) {
-      continue;
-    }
-
-    for (Index = CARVEOUT_NONE; Index < CARVEOUT_OEM_COUNT; Index++) {
-      if ((CpuBootloaderParams->CarveoutInfo[Socket][Index].Base == 0) ||
-          (CpuBootloaderParams->CarveoutInfo[Socket][Index].Size == 0))
-      {
-        continue;
-      }
-
-      DEBUG ((
-        DEBUG_ERROR,
-        "Socket: %u Carveout %u Region: Base: 0x%016lx, Size: 0x%016lx\n",
-        Socket,
-        Index,
-        CpuBootloaderParams->CarveoutInfo[Socket][Index].Base,
-        CpuBootloaderParams->CarveoutInfo[Socket][Index].Size
-        ));
-      if (Index == CARVEOUT_CCPLEX_INTERWORLD_SHMEM) {
-        if (Socket == TH500_PRIMARY_SOCKET) {
-          // For primary socket, add memory in DRAM CO CARVEOUT_CCPLEX_INTERWORLD_SHMEM in its placeholder
-          // in TH500MmioInfo for MMIO mapping.
-          TH500MmioInfo[ARRAY_SIZE (TH500MmioInfo)-2].Base = CpuBootloaderParams->CarveoutInfo[Socket][Index].Base;
-          TH500MmioInfo[ARRAY_SIZE (TH500MmioInfo)-2].Size = CpuBootloaderParams->CarveoutInfo[Socket][Index].Size;
-        }
-      } else if ((Index == CARVEOUT_RCM_BLOB) ||
-                 (Index == CARVEOUT_UEFI) ||
-                 (Index == CARVEOUT_OS))
-      {
-        // Leave in memory map but marked as used on socket 0
-        if (Socket == TH500_PRIMARY_SOCKET) {
-          BuildMemoryAllocationHob (
-            CpuBootloaderParams->CarveoutInfo[Socket][Index].Base,
-            EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Socket][Index].Size)),
-            EfiReservedMemoryType
-            );
-
-          UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][Index].Base;
-          UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][Index].Size;
-          UsableCarveoutRegionsCount++;
-        }
-      } else if (Index == CARVEOUT_EGM) {
-        if (MemoryMode == Th500MemoryModeEgmNoHv) {
-          continue;
-        }
-      } else if (Index == CARVEOUT_HV) {
-        continue;
-      }
-
-      CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][Index].Base;
-      CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][Index].Size;
-      CarveoutRegionsCount++;
-    }
-  }
-
-  for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
-    if (!(SocketMask & (1 << Socket))) {
-      continue;
-    }
-
-    DramPageRetirementInfo = (UINT64 *)CpuBootloaderParams->RetiredDramPageListAddr[Socket];
-    if (DramPageRetirementInfo == NULL) {
-      continue;
-    }
-
-    for (Index = 0; Index < MAX_RETIRED_DRAM_PAGES; Index++) {
-      if (DramPageRetirementInfo[Index] == 0) {
-        break;
-      } else {
-        CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = DramPageRetirementInfo[Index];
-        CarveoutRegions[CarveoutRegionsCount].MemoryLength      = SIZE_64KB;
-        CarveoutRegionsCount++;
-      }
-    }
-  }
-
+  PlatformInfo->DtbLoadAddress             = TH500GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
+  PlatformInfo->DramRegions                = DramRegions;
+  PlatformInfo->DramRegionsCount           = DramRegionCount;
+  PlatformInfo->UefiDramRegionIndex        = 0;
   PlatformInfo->CarveoutRegions            = CarveoutRegions;
-  PlatformInfo->CarveoutRegionsCount       = CarveoutRegionsCount;
+  PlatformInfo->CarveoutRegionsCount       = CarveoutRegionCount;
   PlatformInfo->UsableCarveoutRegions      = UsableCarveoutRegions;
-  PlatformInfo->UsableCarveoutRegionsCount = UsableCarveoutRegionsCount;
+  PlatformInfo->UsableCarveoutRegionsCount = UsableCarveoutRegionCount;
 
   if (CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.UefiDebugLevel == 0) {
     CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.UefiDebugLevel = PcdGet32 (PcdDebugPrintErrorLevel);
