@@ -2,7 +2,7 @@
 
   MCTP NVIDIA Vendor-defined message library
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,7 +14,7 @@
 #include <Library/MctpBaseLib.h>
 
 #define MCTP_NV_VDM_MAX_BYTES   64
-#define MCTP_NV_NVIDIA_IANA_ID  0x47160000UL    // byte-reversed 0x1647
+#define MCTP_NV_NVIDIA_IANA_ID  0x1647
 #define MCTP_NV_TYPE_EROT       0x1
 
 #define MCTP_NV_CMD_BOOT_COMPLETE  0x2

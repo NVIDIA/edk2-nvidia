@@ -267,6 +267,15 @@ ErotSendBootComplete (
   Status = Protocol->DoRequest (Protocol, &Req, sizeof (Req), &Rsp, sizeof (Rsp), &ResponseLength);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: %s request failed: %r\n", __FUNCTION__, Attributes.DeviceName, Status));
+
+    // TODO: remove this retry with old vendor id when all erots are updated
+    MctpUint32ToBEBuffer (Req.Common.Vendor.Id, 0x47160000UL);
+    Status = Protocol->DoRequest (Protocol, &Req, sizeof (Req), &Rsp, sizeof (Rsp), &ResponseLength);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: %s OLD request failed: %r\n", __FUNCTION__, Attributes.DeviceName, Status));
+      return Status;
+    }
+
     return Status;
   }
 
