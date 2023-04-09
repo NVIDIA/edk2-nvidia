@@ -34,6 +34,8 @@ enum {
   LAS_ERROR_FMP_LIB_UNINITIALIZED,
   LAS_ERROR_INVALID_PACKAGE_HEADER,
   LAS_ERROR_UNSUPPORTED_PACKAGE_TYPE,
+  LAS_ERROR_UNKNOWN_PACKAGE_FW_VERSION,
+  LAS_ERROR_FW_VERSION_MISMATCH,
   LAS_ERROR_TASK_LIB_INIT_FAILED,
   LAS_ERROR_TASK_CREATE_FAILED,
 
@@ -50,6 +52,22 @@ typedef struct {
   CHAR8     Name[FMP_EROT_SYSTEM_FW_DEVICE_NAME_LENGTH];
   UINT8     StrapId;
 } FMP_EROT_SYSTEM_FW_DESCRIPTOR;
+
+typedef struct {
+  UINT16    Id;
+  UINT16    Revision;
+  UINT32    ImageOffset;
+  UINT32    FlashOffset;
+  UINT8     ApCfgKeyIdx;
+  UINT8     ApFwImagesCount;
+  UINT8     SecVersion;
+  UINT8     ApStrap;
+  UINT32    FwVersion;
+  UINT16    BuildYear;
+  UINT8     BuildDay;
+  UINT8     BuildMonth;
+} FMP_EROT_PKG_METADATA_HDR;
+
 #pragma pack()
 
 STATIC BOOLEAN     mInitialized    = FALSE;
@@ -78,6 +96,25 @@ EFIAPI
 UpdateImageProgress (
   IN  UINTN  Completion
   );
+
+STATIC
+EFI_STATUS
+EFIAPI
+FmpErotGetPkgMetadataFwVersion (
+  CONST PLDM_FW_PKG_HDR  *Hdr,
+  UINT32                 *FwVersion
+  )
+{
+  FMP_EROT_PKG_METADATA_HDR  *PkgHdr;
+
+  PkgHdr = (FMP_EROT_PKG_METADATA_HDR *)((UINT8 *)Hdr + Hdr->Size);
+
+  DEBUG ((DEBUG_INFO, "%a: Package Rev=0x%x FwVer: 0x%x %u/%u/%u\n", __FUNCTION__, PkgHdr->Revision, PkgHdr->FwVersion, PkgHdr->BuildMonth, PkgHdr->BuildDay, PkgHdr->BuildYear));
+
+  *FwVersion = PkgHdr->FwVersion;
+
+  return EFI_SUCCESS;
+}
 
 EFI_STATUS
 EFIAPI
@@ -195,6 +232,7 @@ FmpErotSetImage (
   CONST PLDM_FW_PKG_HDR      *Hdr;
   PLDM_FW_UPDATE_TASK_ERROR  Error;
   UINT16                     ActivationMethod;
+  UINT32                     PkgFwVersion;
 
   if (LastAttemptStatus == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -215,6 +253,18 @@ FmpErotSetImage (
   Hdr      = (CONST PLDM_FW_PKG_HDR *)Image;
   Failed   = FALSE;
   NumErots = ErotGetNumErots ();
+
+  Status = FmpErotGetPkgMetadataFwVersion (Hdr, &PkgFwVersion);
+  if (EFI_ERROR (Status)) {
+    *LastAttemptStatus = LAS_ERROR_UNKNOWN_PACKAGE_FW_VERSION;
+    return EFI_ABORTED;
+  }
+
+  if (CapsuleFwVersion != PkgFwVersion) {
+    DEBUG ((DEBUG_ERROR, "%a: FwVersion mismatch capsule=0x%x, pkg=0x%x\n", __FUNCTION__, CapsuleFwVersion, PkgFwVersion));
+    *LastAttemptStatus = LAS_ERROR_FW_VERSION_MISMATCH;
+    return EFI_ABORTED;
+  }
 
   Status = PldmFwUpdateTaskLibInit (NumErots, UpdateImageProgress);
   if (EFI_ERROR (Status)) {
