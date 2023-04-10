@@ -56,7 +56,7 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
       /* Do not allow Native AER (RAS-FW handles it) */
       /* Allow Native PCIe capability */
       /* Allow Native LTR control */
-      And(CTRL,0x31,CTRL) 
+      And(CTRL,0x31,CTRL)
 
       If (LNotEqual (Arg1, One)) {  // Unknown revision
         Or (CDW1, 0x08, CDW1)
@@ -191,6 +191,17 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
       DALO, 32,
       DAHI, 32,
     }
+
+    // The "FSPA" named object is patched by UEFI to provide the correct location
+    // this is the address of the FSP Boot partition in VDM space
+    Name (FSPA, 0xFFFFFFFFFFFFFFFF)
+
+    OperationRegion (FSPB, SystemMemory, FSPA, 4)
+    Field (FSPB, DWordAcc, NoLock, Preserve)
+    {
+      TI2S, 32, // < Nv_Therm_I2Cs_Scratch
+    }
+
     Method(_RST, 0) {
       /* Issue GPU reset request via LIC IO1 interrupt */
       Store (0x1, DALO)
@@ -199,6 +210,13 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
       /* Wait for reset to complete, poll for 6sec (as per from Linux) */
       Local0 = Zero
       While ((Local0 < 60000) && (LNotEqual (DALO, 0))) {
+        Local0 += 2;
+        Sleep(2)
+      }
+
+      /* Wait for reset to complete, poll for 6sec (as per from Linux) */
+      Local0 = Zero
+      While ((Local0 < 60000) && (LNotEqual (TI2S, 0xFF))) {
         Local0 += 2;
         Sleep(2)
       }

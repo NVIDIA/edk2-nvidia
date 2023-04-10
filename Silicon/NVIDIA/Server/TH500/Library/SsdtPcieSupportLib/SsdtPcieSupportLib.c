@@ -44,6 +44,8 @@ extern CHAR8  ssdtpcietemplate_aml_code[];
 #define DSD_EXTERNAL_FACING_PORT_GUID \
 (GUID){0xEFCC06CC, 0x73AC, 0x4BC3, {0xBF, 0xF0, 0x76, 0x14, 0x38, 0x07, 0xC3, 0x89}}
 
+#define NV_THERM_I2CS_SCRATCH  0x200bc
+
 STATIC
 EFI_STATUS
 EFIAPI
@@ -222,6 +224,33 @@ UpdateLICAddr (
     return Status;
   }
 
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateFSPBootAddr (
+  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT        AML_OBJECT_NODE_HANDLE        Node
+  )
+{
+  EFI_STATUS              Status;
+  AML_OBJECT_NODE_HANDLE  FspaNode;
+  EFI_PHYSICAL_ADDRESS    Address;
+  CHAR8                   NodeName[] = "FSPA";
+
+  if (PciInfo->BaseAddress < TH500_VDM_SIZE) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = AmlFindNode (Node, NodeName, &FspaNode);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Address = PciInfo->BaseAddress - TH500_VDM_SIZE + NV_THERM_I2CS_SCRATCH;
+  Status  = AmlNameOpUpdateInteger (FspaNode, Address);
   return Status;
 }
 
@@ -421,6 +450,11 @@ GeneratePciSlots (
       }
 
       Status = UpdateLICAddr (PciInfo, Node, Uid, TH500_SW_IO1_BASE_SOCKET_0);
+      if (EFI_ERROR (Status)) {
+        goto error_handler;
+      }
+
+      Status = UpdateFSPBootAddr (PciInfo, Node);
       if (EFI_ERROR (Status)) {
         goto error_handler;
       }
