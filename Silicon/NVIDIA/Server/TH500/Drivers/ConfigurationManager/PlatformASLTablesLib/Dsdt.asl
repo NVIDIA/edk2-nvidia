@@ -627,6 +627,25 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
       })
     }
 
+    Device (MISC) {
+      Name (_HID, "NVDA2010")
+      Name (_UID, 0)
+      Name (_STA, 0xf)
+      Name (_CRS, ResourceTemplate() {
+        Memory32Fixed (ReadWrite, 0x100000, 0xf000)
+        Memory32Fixed (ReadWrite, 0x10f000, 0x1000)
+      })
+    }
+
+    Device (FUSE) {
+      Name (_HID, "NVDA200F")
+      Name (_UID, 0)
+      Name (_STA, 0xf)
+      Name (_CRS, ResourceTemplate() {
+        Memory32Fixed (ReadWrite, 0x3810000, 0x19000)
+      })
+    }
+
     Device (FLS1) {
       Name (_HID, "PRP0001")
       Name (_UID, 0)
