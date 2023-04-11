@@ -12,7 +12,6 @@
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Pi/PiHob.h>
-#include <Library/SortLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/PrePiHobListPointerLib.h>
 
@@ -97,31 +96,36 @@ MigrateHobList (
 }
 
 /**
-  Prototype for comparison function for any two element types.
+  Simple insertion sort to sort regions entries in ascending order.
 
-  @param[in] Buffer1                  The pointer to first buffer.
-  @param[in] Buffer2                  The pointer to second buffer.
-
-  @retval 0                           Buffer1 equal to Buffer2.
-  @return <0                          Buffer1 is less than Buffer2.
-  @return >0                          Buffer1 is greater than Buffer2.
+  @param Regions [IN, OUT]    Array of regions to sort
+  @param RegionsCount [IN]    Number of regions in array
 **/
 STATIC
-INTN
-MemoryRegionCompare (
-  IN CONST VOID  *Buffer1,
-  IN CONST VOID  *Buffer2
+VOID
+MemoryRegionSort (
+  IN OUT NVDA_MEMORY_REGION  *Regions,
+  IN UINTN                   RegionsCount
   )
 {
-  NVDA_MEMORY_REGION  *Region1 = (NVDA_MEMORY_REGION *)Buffer1;
-  NVDA_MEMORY_REGION  *Region2 = (NVDA_MEMORY_REGION *)Buffer2;
+  EFI_PHYSICAL_ADDRESS  Address   = 0;
+  UINTN                 Length    = 0;
+  INT32                 PrevIndex = 0;
+  INT32                 Index     = 0;
 
-  if (Region1->MemoryBaseAddress == Region2->MemoryBaseAddress) {
-    return 0;
-  } else if (Region1->MemoryBaseAddress < Region2->MemoryBaseAddress) {
-    return -1;
-  } else {
-    return 1;
+  for (Index = 1; Index < RegionsCount; Index++) {
+    PrevIndex = Index - 1;
+    Address   = Regions[Index].MemoryBaseAddress;
+    Length    = Regions[Index].MemoryLength;
+
+    while ((PrevIndex >= 0) && (Regions[PrevIndex].MemoryBaseAddress > Address)) {
+      Regions[PrevIndex + 1].MemoryBaseAddress = Regions[PrevIndex].MemoryBaseAddress;
+      Regions[PrevIndex + 1].MemoryLength      = Regions[PrevIndex].MemoryLength;
+      PrevIndex                               -= 1;
+    }
+
+    Regions[PrevIndex + 1].MemoryBaseAddress = Address;
+    Regions[PrevIndex + 1].MemoryLength      = Length;
   }
 }
 
@@ -165,12 +169,7 @@ InstallDramWithCarveouts (
   EFI_PHYSICAL_ADDRESS         DramEnd;
   UINTN                        RegionSize;
 
-  PerformQuickSort (
-    (VOID *)DramRegions,
-    DramRegionsCount,
-    sizeof (NVDA_MEMORY_REGION),
-    MemoryRegionCompare
-    );
+  MemoryRegionSort (DramRegions, DramRegionsCount);
   for (DramIndex = 0; DramIndex < DramRegionsCount; DramIndex++) {
     DEBUG ((
       EFI_D_VERBOSE,
@@ -182,12 +181,7 @@ InstallDramWithCarveouts (
 
   DramIndex = 0;
 
-  PerformQuickSort (
-    (VOID *)CarveoutRegions,
-    CarveoutRegionsCount,
-    sizeof (NVDA_MEMORY_REGION),
-    MemoryRegionCompare
-    );
+  MemoryRegionSort (CarveoutRegions, CarveoutRegionsCount);
   for (CarveoutIndex = 0; CarveoutIndex < CarveoutRegionsCount; CarveoutIndex++) {
     DEBUG ((
       EFI_D_VERBOSE,
