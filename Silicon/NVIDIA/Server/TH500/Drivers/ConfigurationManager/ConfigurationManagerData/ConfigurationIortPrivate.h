@@ -2,7 +2,7 @@
 
   Configuration Manager Data Driver private structures of IO Remapping Table
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -17,6 +17,8 @@
 #define IRQ_PROP_CELL_SIZE        3
 #define IRQ_PROP_OFFSET_TO_INTID  1
 #define IRQ_PROP_LENGTH           (IRQ_PROP_CELL_SIZE * sizeof (UINT32))
+#define REG_PROP_CELL_SIZE        2
+#define REG_PROP_LENGTH           (REG_PROP_CELL_SIZE * sizeof (UINT64))
 #define SPI_OFFSET                32
 
 #define IOMMUMAP_PROP_LENGTH  (4 * sizeof (UINT32))
