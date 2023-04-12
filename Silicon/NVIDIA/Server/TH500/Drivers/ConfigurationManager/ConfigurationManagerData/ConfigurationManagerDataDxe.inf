@@ -62,6 +62,7 @@
   SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
+  AmlLib
   TegraPlatformInfoLib
   PlatformAslTablesLib
   UefiRuntimeServicesTableLib
@@ -118,6 +119,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString
   gEfiMdePkgTokenSpaceGuid.PcdUefiVariableDefaultPlatformLangCodes
   gEfiMdePkgTokenSpaceGuid.PcdUefiVariableDefaultPlatformLang
+  gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid

@@ -12,6 +12,7 @@
 
 #include <ConfigurationManagerObject.h>
 
+#include <Library/AmlLib/AmlLib.h>
 #include <Library/ArmLib.h>
 #include <Library/ArmGicLib.h>
 #include <Library/ConfigurationManagerLib.h>
@@ -69,5 +70,15 @@
 #define ACPI_TPM1_STA        "_SB_.TPM1._STA"
 #define ACPI_I2C3_STA        "_SB_.I2C3._STA"
 #define ACPI_SSIF_STA        "_SB_.I2C3.SSIF._STA"
+
+#define MAX_DEVICES_PER_THERMAL_ZONE  10
+#define MAX_UNICODE_STRING_LEN        128
+typedef struct {
+  UINT32          ZoneId;
+  BOOLEAN         PassiveSupported;
+  BOOLEAN         CriticalSupported;
+  UINTN           *PassiveCpus;
+  CONST CHAR16    *SocketFormatString;
+} THERMAL_ZONE_DATA;
 
 #endif // __CONFIGURATION_MANAGER_DXE_PRIVATE_H__
