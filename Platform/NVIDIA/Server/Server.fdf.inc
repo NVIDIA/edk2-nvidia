@@ -21,11 +21,6 @@
   INF Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
 
   #
-  # Fuse Support
-  #
-  INF Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf
-
-  #
   # QSPI Support
   #
   INF Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerDxe.inf

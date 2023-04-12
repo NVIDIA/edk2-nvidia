@@ -276,11 +276,6 @@
   }
 
   #
-  # Fuse Support
-  #
-  Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf
-
-  #
   # Tegra Platform Configuration
   #
   Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf

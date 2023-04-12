@@ -1094,6 +1094,11 @@
   #
   Silicon/NVIDIA/Drivers/UphyConfigurationDxe/UphyConfigurationDxe.inf
 
+  #
+  # Fuse Support
+  #
+  Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf
+
 [Components.AARCH64]
   #
   # EBC

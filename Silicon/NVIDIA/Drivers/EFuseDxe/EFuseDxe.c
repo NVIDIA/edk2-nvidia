@@ -2,7 +2,7 @@
 
   EFUSE Driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -27,6 +27,7 @@
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
   { "nvidia,tegra234-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
+  { "nvidia,th500-efuse",    &gNVIDIANonDiscoverableEFuseDeviceGuid },
   { NULL,                    NULL                                   }
 };
 
@@ -145,6 +146,7 @@ DeviceDiscoveryNotify (
   EFI_STATUS             Status;
   EFI_PHYSICAL_ADDRESS   BaseAddress;
   UINTN                  RegionSize;
+  CONST VOID             *Property;
   NVIDIA_EFUSE_PROTOCOL  *EFuseProtocol;
   EFUSE_DXE_PRIVATE      *Private;
 
@@ -184,8 +186,16 @@ DeviceDiscoveryNotify (
       Private->EFuseProtocol.ReadReg  = EfuseReadRegister;
       Private->EFuseProtocol.WriteReg = EfuseWriteRegister;
 
+      Property = NULL;
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,hw-instance-id", NULL);
+      if (Property == NULL) {
+        Private->EFuseProtocol.Socket = 0;
+      } else {
+        Private->EFuseProtocol.Socket = SwapBytes32 (*(CONST UINT32 *)Property);
+      }
+
       Status = gBS->InstallMultipleProtocolInterfaces (
-                      &DriverHandle,
+                      &ControllerHandle,
                       &gNVIDIAEFuseProtocolGuid,
                       &Private->EFuseProtocol,
                       NULL
@@ -201,12 +211,13 @@ DeviceDiscoveryNotify (
         return Status;
       }
 
+      DEBUG ((EFI_D_ERROR, "%a: Efuse Installed\r\n", __FUNCTION__));
       break;
 
     case DeviceDiscoveryDriverBindingStop:
 
       Status = gBS->HandleProtocol (
-                      DriverHandle,
+                      ControllerHandle,
                       &gNVIDIAEFuseProtocolGuid,
                       (VOID **)&EFuseProtocol
                       );
@@ -217,7 +228,7 @@ DeviceDiscoveryNotify (
       Private = EFUSE_PRIVATE_DATA_FROM_PROTOCOL (EFuseProtocol);
 
       Status =  gBS->UninstallMultipleProtocolInterfaces (
-                       DriverHandle,
+                       ControllerHandle,
                        &gNVIDIAEFuseProtocolGuid,
                        &Private->EFuseProtocol,
                        NULL

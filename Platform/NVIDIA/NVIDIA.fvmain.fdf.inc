@@ -340,3 +340,8 @@
   # Uphy Configuration Driver
   #
   INF Silicon/NVIDIA/Drivers/UphyConfigurationDxe/UphyConfigurationDxe.inf
+
+  #
+  # Fuse Support
+  #
+  INF Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf

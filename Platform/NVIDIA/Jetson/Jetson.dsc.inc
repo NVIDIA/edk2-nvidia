@@ -241,7 +241,6 @@
   #
   # Usb Support
   #
-  Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf
   Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf
   Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
   Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf

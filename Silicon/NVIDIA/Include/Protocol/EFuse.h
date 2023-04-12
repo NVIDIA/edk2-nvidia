@@ -1,7 +1,7 @@
 /** @file
   EFuse Register Access Protocol
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,7 +14,7 @@
 
 #define NVIDIA_EFUSE_PROTOCOL_GUID \
   { \
-  0xb5938c29, 0xe1c0, 0x4969, { 0x8b, 0x87, 0xe1, 0x5b, 0xdf, 0xf3, 0x78, 0x89 } \
+  0xaefea0bf, 0x1963, 0x4523, { 0x98, 0xe9, 0x6f, 0x76, 0xa4, 0x6f, 0xca, 0x02 } \
   }
 
 typedef struct _NVIDIA_EFUSE_PROTOCOL NVIDIA_EFUSE_PROTOCOL;
@@ -58,6 +58,7 @@ EFI_STATUS
   );
 
 struct _NVIDIA_EFUSE_PROTOCOL {
+  UINTN                   Socket;
   EFUSE_READ_REGISTER     ReadReg;
   EFUSE_WRITE_REGISTER    WriteReg;
 };
