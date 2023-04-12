@@ -25,10 +25,6 @@
 
 TEGRA_MMIO_INFO  TH500MmioInfo[] = {
   {
-    TH500_GIC_ITS_BASE,
-    SIZE_64KB
-  },
-  {
     TH500_WDT_CTRL_BASE,
     SIZE_4KB
   },
@@ -64,6 +60,25 @@ TEGRA_MMIO_INFO  TH500GicRedistributorMmioInfo[] = {
   {
     TH500_GIC_REDISTRIBUTOR_BASE_SOCKET_3,
     SIZE_256KB *TH500_GIC_REDISTRIBUTOR_INSTANCES
+  },
+};
+
+TEGRA_MMIO_INFO  TH500GicItsMmioInfo[] = {
+  {
+    TH500_GIC_ITS_BASE_SOCKET_0,
+    SIZE_64KB
+  },
+  {
+    TH500_GIC_ITS_BASE_SOCKET_1,
+    SIZE_64KB
+  },
+  {
+    TH500_GIC_ITS_BASE_SOCKET_2,
+    SIZE_64KB
+  },
+  {
+    TH500_GIC_ITS_BASE_SOCKET_3,
+    SIZE_64KB
   },
 };
 
@@ -486,7 +501,7 @@ TH500GetMmioBaseAndSize (
 
   MmioInfo = AllocateZeroPool (
                sizeof (TH500MmioInfo) +
-               (TH500_MAX_SOCKETS * 4 * sizeof (TEGRA_MMIO_INFO))
+               (TH500_MAX_SOCKETS * 5 * sizeof (TEGRA_MMIO_INFO))
                );
   CopyMem (MmioInfo, TH500MmioInfo, sizeof (TH500MmioInfo));
 
@@ -499,6 +514,7 @@ TH500GetMmioBaseAndSize (
     }
 
     CopyMem (MmioInfoEnd++, &TH500GicRedistributorMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
+    CopyMem (MmioInfoEnd++, &TH500GicItsMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
     CopyMem (MmioInfoEnd++, &TH500SocketScratchMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
     CopyMem (MmioInfoEnd++, &TH500SocketCbbMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
     CopyMem (MmioInfoEnd++, &TH500SocketMssMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
