@@ -40,6 +40,18 @@
 
 #define OEM_EC_DESC_SMBIOS_TRANSFER_FAILED \
         "Failed to send SMBIOS tables to BMC"
+
+#define OEM_EC_M2_NOT_DETECTED \
+        "Failed to find any drive in slot"
+
+#define OEM_M2_NO_EFI_PARTITION \
+        "Drive has no EFI partition"
+
+#define OEM_M2_PARTITION_NOT_FAT \
+        "EFI partition is not FAT"
+
+#define OEM_M2_NOT_NVME \
+        "M.2 drive is not NVMe"
 ///@}
 
 #endif
