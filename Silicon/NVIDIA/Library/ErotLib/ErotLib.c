@@ -275,8 +275,6 @@ ErotSendBootComplete (
       DEBUG ((DEBUG_ERROR, "%a: %s OLD request failed: %r\n", __FUNCTION__, Attributes.DeviceName, Status));
       return Status;
     }
-
-    return Status;
   }
 
   if (ResponseLength != sizeof (Rsp)) {
