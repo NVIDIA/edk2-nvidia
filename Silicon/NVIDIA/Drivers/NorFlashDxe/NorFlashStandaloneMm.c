@@ -75,7 +75,7 @@ ReadNorFlashRegister (
   Packet.RxLen      = sizeof (UINT8);
   Packet.WaitCycles = 0;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = 0;
+  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -121,7 +121,7 @@ WaitNorFlashWriteComplete (
       }
     }
 
-    MicroSecondDelay (TIMEOUT);
+    MicroSecondDelay (Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QUICK_TIMEOUT : SAFE_TIMEOUT);
 
     // Read WIP status
     Status = ReadNorFlashRegister (Private, &RegCmd, sizeof (RegCmd), &Resp);
@@ -173,7 +173,7 @@ ConfigureNorFlashWriteEnLatch (
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = 0;
+  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
 
   RegCmd = NOR_READ_SR1;
 
@@ -196,7 +196,7 @@ ConfigureNorFlashWriteEnLatch (
       return Status;
     }
 
-    MicroSecondDelay (TIMEOUT);
+    MicroSecondDelay (Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QUICK_TIMEOUT : SAFE_TIMEOUT);
 
     // Read WREN status
     Status = ReadNorFlashRegister (Private, &RegCmd, sizeof (RegCmd), &Resp);
@@ -276,7 +276,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = sizeof (SFDPHeader);
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = 0;
+  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -314,7 +314,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = (SFDPHeader.NumParamHdrs + 1) * sizeof (NOR_SFDP_PARAM_TBL_HDR);
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = 0;
+  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -362,7 +362,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = SFDPParamBasicTblSize;
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = 0;
+  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -410,7 +410,7 @@ ReadNorFlashSFDP (
   Packet.RxLen      = SFDPParam4ByteInstructionTblSize;
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = 0;
+  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -510,7 +510,7 @@ ReadNorFlashSFDP (
     Packet.RxLen      = SFDPParamSectorTblSize;
     Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
     Packet.ChipSelect = Private->QspiChipSelect;
-    Packet.Control    = 0;
+    Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
 
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
@@ -707,6 +707,23 @@ NorFlashGetAttributes (
   return EFI_SUCCESS;
 }
 
+EFI_STATUS
+NorFlashSetMode (
+  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
+  IN NOR_FLASH_MODE             Mode
+  )
+{
+  NOR_FLASH_PRIVATE_DATA  *Private;
+
+  if (This == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Private                                    = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL (This);
+  Private->PrivateFlashAttributes.AccessMode = Mode;
+  return EFI_SUCCESS;
+}
+
 /**
   Read data from NOR Flash.
 
@@ -773,7 +790,7 @@ NorFlashRead (
   Packet.RxBuf      = Buffer;
   Packet.RxLen      = Size;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = 0;
+  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
 
   DEBUG ((
     DEBUG_INFO,
@@ -794,6 +811,42 @@ NorFlashRead (
 ErrorExit:
 
   return Status;
+}
+
+EFI_STATUS
+NorFlashReadSafe (
+  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
+  IN UINT32                     Offset,
+  IN UINT32                     Size,
+  IN VOID                       *Buffer
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = NorFlashSetMode (This, NOR_FLASH_MODE_SAFE);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return NorFlashRead (This, Offset, Size, Buffer);
+}
+
+EFI_STATUS
+NorFlashReadQuick (
+  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
+  IN UINT32                     Offset,
+  IN UINT32                     Size,
+  IN VOID                       *Buffer
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = NorFlashSetMode (This, NOR_FLASH_MODE_QUICK);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return NorFlashRead (This, Offset, Size, Buffer);
 }
 
 /**
@@ -952,7 +1005,7 @@ NorFlashErase (
     Packet.RxLen      = 0;
     Packet.WaitCycles = 0;
     Packet.ChipSelect = Private->QspiChipSelect;
-    Packet.Control    = 0;
+    Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
 
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
@@ -998,6 +1051,40 @@ NorFlashUniformErase (
   )
 {
   return NorFlashErase (This, Lba, NumLba, FALSE);
+}
+
+EFI_STATUS
+NorFlashUniformEraseSafe (
+  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
+  IN UINT32                     Lba,
+  IN UINT32                     NumLba
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = NorFlashSetMode (This, NOR_FLASH_MODE_SAFE);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return NorFlashUniformErase (This, Lba, NumLba);
+}
+
+EFI_STATUS
+NorFlashUniformEraseQuick (
+  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
+  IN UINT32                     Lba,
+  IN UINT32                     NumLba
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = NorFlashSetMode (This, NOR_FLASH_MODE_QUICK);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return NorFlashUniformErase (This, Lba, NumLba);
 }
 
 /**
@@ -1066,7 +1153,7 @@ NorFlashWriteSinglePage (
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = 0;
+  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
@@ -1157,6 +1244,42 @@ NorFlashWrite (
   DEBUG ((EFI_D_INFO, "%a: Successfully wrote data to NOR flash.\n", __FUNCTION__));
 
   return Status;
+}
+
+EFI_STATUS
+NorFlashWriteSafe (
+  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
+  IN UINT32                     Offset,
+  IN UINT32                     Size,
+  IN VOID                       *Buffer
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = NorFlashSetMode (This, NOR_FLASH_MODE_SAFE);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return NorFlashWrite (This, Offset, Size, Buffer);
+}
+
+EFI_STATUS
+NorFlashWriteQuick (
+  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
+  IN UINT32                     Offset,
+  IN UINT32                     Size,
+  IN VOID                       *Buffer
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = NorFlashSetMode (This, NOR_FLASH_MODE_QUICK);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return NorFlashWrite (This, Offset, Size, Buffer);
 }
 
 /**
@@ -1393,10 +1516,14 @@ NorFlashInitialise (
                                               EFI_FVB2_ERASE_POLARITY |
                                               EFI_FVB2_WRITE_STATUS |
                                               EFI_FVB2_WRITE_ENABLED_CAP;
-    Private->NorFlashProtocol.GetAttributes = NorFlashGetAttributes;
-    Private->NorFlashProtocol.Read          = NorFlashRead;
-    Private->NorFlashProtocol.Write         = NorFlashWrite;
-    Private->NorFlashProtocol.Erase         = NorFlashUniformErase;
+    Private->NorFlashProtocol.GetAttributes    = NorFlashGetAttributes;
+    Private->NorFlashProtocol.Read             = NorFlashReadSafe;
+    Private->NorFlashProtocol.Write            = NorFlashWriteSafe;
+    Private->NorFlashProtocol.Erase            = NorFlashUniformEraseSafe;
+    Private->NorFlashProtocol.QuickRead        = NorFlashReadQuick;
+    Private->NorFlashProtocol.QuickWrite       = NorFlashWriteQuick;
+    Private->NorFlashProtocol.QuickErase       = NorFlashUniformEraseQuick;
+    Private->PrivateFlashAttributes.AccessMode = NOR_FLASH_MODE_SAFE;
 
     Status = gMmst->MmInstallProtocolInterface (
                       &Private->NorFlashHandle,

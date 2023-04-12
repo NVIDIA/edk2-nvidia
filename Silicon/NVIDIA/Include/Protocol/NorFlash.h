@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Nor Flash Protocol
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,11 +11,6 @@
 #define __NVIDIA_NOR_FLASH_PROTOCOL_H__
 
 #include <Pi/PiFirmwareVolume.h>
-
-#define NVIDIA_NOR_FLASH_PROTOCOL_GUID \
-  { \
-  0x989b8be1, 0x18fc, 0x430d, { 0x9a, 0x4c, 0x29, 0x07, 0xf2, 0xa7, 0x28, 0xdd } \
-  }
 
 typedef struct {
   UINT64    MemoryDensity;
@@ -106,12 +101,16 @@ EFI_STATUS
   );
 
 /// NVIDIA_NOR_FLASH_PROTOCOL protocol structure.
+/// Note: The Quick functions run with a TIMEOUT of 0, rather than 100
 struct _NVIDIA_NOR_FLASH_PROTOCOL {
   EFI_FVB_ATTRIBUTES_2        FvbAttributes;
   NOR_FLASH_GET_ATTRIBUTES    GetAttributes;
   NOR_FLASH_READ              Read;
   NOR_FLASH_WRITE             Write;
   NOR_FLASH_ERASE             Erase;
+  NOR_FLASH_READ              QuickRead;
+  NOR_FLASH_WRITE             QuickWrite;
+  NOR_FLASH_ERASE             QuickErase;
 };
 
 extern EFI_GUID  gNVIDIANorFlashProtocolGuid;

@@ -2,7 +2,7 @@
 
   NOR Flash Driver Private Data
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -35,7 +35,8 @@
 #define NOR_SFDP_SIGNATURE   SIGNATURE_32('S','F','D','P')
 #define QSPI_BASE_ADDRESS    0x3270000
 
-#define TIMEOUT  100
+#define SAFE_TIMEOUT   100
+#define QUICK_TIMEOUT  0
 
 #define NOR_READ_SR1           0x5
 #define NOR_SR1_WEL_BMSK       0x2
@@ -81,6 +82,11 @@
 #define NOR_RDID_MANU_ID_OFFSET        0
 #define NOR_RDID_MEM_INTF_TYPE_OFFSET  1
 #define NOR_RDID_MEM_DENSITY_OFFSET    2
+
+typedef enum {
+  NOR_FLASH_MODE_SAFE = 0,
+  NOR_FLASH_MODE_QUICK
+} NOR_FLASH_MODE;
 
 #pragma pack(1)
 typedef struct {
@@ -161,6 +167,7 @@ typedef struct {
   UINT64                  HybridMemoryDensity;
   UINT32                  HybridBlockSize;
   BOOLEAN                 FastReadSupport;
+  NOR_FLASH_MODE          AccessMode;
 } NOR_FLASH_PRIVATE_ATTRIBUTES;
 
 typedef struct {
