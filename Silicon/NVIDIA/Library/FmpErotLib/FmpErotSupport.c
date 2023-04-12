@@ -21,12 +21,11 @@
 #include <Library/PrintLib.h>
 #include "FmpErotSupport.h"
 
-#define FMP_EROT_SOCKET                        0
-#define FMP_EROT_SYSTEM_FW_DEVICE_NAME         "GLACIERDSD"
-#define FMP_EROT_SYSTEM_FW_DEVICE_NAME_LENGTH  10
-#define FMP_EROT_NVIDIA_IANA_ID                0x1647UL
-#define FMP_EROT_QUERY_DEVICE_IDS_RSP_SIZE     128
-#define FMP_EROT_GET_FW_PARAMS_RSP_SIZE        256
+#define FMP_EROT_SOCKET                     0
+#define FMP_EROT_EC_FW_COMPONENT_ID         0xFF00
+#define FMP_EROT_NVIDIA_IANA_ID             0x1647UL
+#define FMP_EROT_QUERY_DEVICE_IDS_RSP_SIZE  128
+#define FMP_EROT_GET_FW_PARAMS_RSP_SIZE     256
 
 // last attempt status error codes
 enum {
@@ -44,14 +43,6 @@ enum {
 };
 
 #pragma pack(1)
-typedef struct {
-  UINT16    Type;
-  UINT16    Length;
-  UINT8     NameType;
-  UINT8     NameLength;
-  CHAR8     Name[FMP_EROT_SYSTEM_FW_DEVICE_NAME_LENGTH];
-  UINT8     StrapId;
-} FMP_EROT_SYSTEM_FW_DESCRIPTOR;
 
 typedef struct {
   UINT16    Id;
@@ -75,20 +66,12 @@ STATIC EFI_STATUS  mVersionStatus  = EFI_UNSUPPORTED;
 STATIC UINT32      mVersion        = 0;
 STATIC CHAR16      *mVersionString = NULL;
 
-STATIC UINT16                               mComponentId        = 0;
-STATIC PLDM_FW_QUERY_DEVICE_IDS_RESPONSE    *mQueryDeviceIdsRsp = NULL;
-STATIC PLDM_FW_GET_FW_PARAMS_RESPONSE       *mGetFwParamsRsp    = NULL;
-STATIC CONST PLDM_FW_DESCRIPTOR_IANA_ID     mNvIanaIdDesc       = {
+STATIC PLDM_FW_QUERY_DEVICE_IDS_RESPONSE  *mQueryDeviceIdsRsp = NULL;
+STATIC PLDM_FW_GET_FW_PARAMS_RESPONSE     *mGetFwParamsRsp    = NULL;
+STATIC CONST PLDM_FW_DESCRIPTOR_IANA_ID   mNvIanaIdDesc       = {
   PLDM_FW_DESCRIPTOR_TYPE_IANA_ENTERPRISE,
   sizeof (UINT32),
   FMP_EROT_NVIDIA_IANA_ID
-};
-STATIC CONST FMP_EROT_SYSTEM_FW_DESCRIPTOR  mSystemFwDesc = {
-  PLDM_FW_DESCRIPTOR_TYPE_VENDOR,
-  sizeof (FMP_EROT_SYSTEM_FW_DESCRIPTOR) - OFFSET_OF (PLDM_FW_DESCRIPTOR,Data),
-  PLDM_FW_STRING_TYPE_ASCII,
-  FMP_EROT_SYSTEM_FW_DEVICE_NAME_LENGTH,
-  FMP_EROT_SYSTEM_FW_DEVICE_NAME
 };
 
 EFI_STATUS
@@ -411,6 +394,8 @@ FmpErotGetVersionInfo (
   UINT64                                         Version64;
   CONST PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY  *ComponentEntry;
   CHAR16                                         ReleaseDate[9] = { L'\0' };
+  BOOLEAN                                        ErotComponentFound;
+  CONST PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY  *FwComponentEntry;
 
   Protocol = ErotGetMctpProtocolBySocket (FMP_EROT_SOCKET);
   if (Protocol == NULL) {
@@ -437,41 +422,32 @@ FmpErotGetVersionInfo (
     return EFI_DEVICE_ERROR;
   }
 
-  // find system firmware descriptor, get component id
-  Desc = PldmFwDescNext (Desc);
-  for (Index = 1; Index < mQueryDeviceIdsRsp->Count; Index++) {
-    PldmFwPrintFwDesc (Desc);
-    if (CompareMem (Desc, &mSystemFwDesc, OFFSET_OF (FMP_EROT_SYSTEM_FW_DESCRIPTOR, StrapId)) == 0) {
-      mComponentId = ((CONST FMP_EROT_SYSTEM_FW_DESCRIPTOR *)Desc)->StrapId;
-      break;
-    }
-
-    Desc = PldmFwDescNext (Desc);
-  }
-
-  if (Index == mQueryDeviceIdsRsp->Count) {
-    DEBUG ((DEBUG_ERROR, "%a: FD %a not found\n", __FUNCTION__, FMP_EROT_SYSTEM_FW_DEVICE_NAME));
-    return EFI_NOT_FOUND;
-  }
-
-  DEBUG ((DEBUG_INFO, "%a: FD ComponentId=0x%x\n", __FUNCTION__, mComponentId));
-
   // find component FW params
   Status = FmpErotGetFwParams (Protocol, &Attributes);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
+  if (mGetFwParamsRsp->ComponentCount != 2) {
+    DEBUG ((DEBUG_ERROR, "%a: Bad component count=%u\n", __FUNCTION__, mGetFwParamsRsp->ComponentCount));
+    return EFI_UNSUPPORTED;
+  }
+
+  ErotComponentFound = FALSE;
+  ComponentEntry     = NULL;
   for (Index = 0; Index < mGetFwParamsRsp->ComponentCount; Index++) {
-    ComponentEntry = PldmFwGetFwParamsComponent (mGetFwParamsRsp, Index);
-    if (ComponentEntry->Id == mComponentId) {
-      break;
+    FwComponentEntry = PldmFwGetFwParamsComponent (mGetFwParamsRsp, Index);
+    if (FwComponentEntry->Id == FMP_EROT_EC_FW_COMPONENT_ID) {
+      ErotComponentFound = TRUE;
+    } else {
+      ComponentEntry = FwComponentEntry;
+      DEBUG ((DEBUG_INFO, "%a: FD ComponentId=0x%x\n", __FUNCTION__, ComponentEntry->Id));
     }
   }
 
-  if (Index == mGetFwParamsRsp->ComponentCount) {
-    DEBUG ((DEBUG_ERROR, "%a: ComponentId=0x%x not found in %u entries\n", __FUNCTION__, mComponentId, mGetFwParamsRsp->ComponentCount));
-    return EFI_NOT_FOUND;
+  if ((ErotComponentFound != TRUE) || (ComponentEntry == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Bad components erot=%u fw=0x%p\n", __FUNCTION__, ErotComponentFound, ComponentEntry));
+    return EFI_UNSUPPORTED;
   }
 
   if (ComponentEntry->ActiveVersionStringType != PLDM_FW_STRING_TYPE_ASCII) {
