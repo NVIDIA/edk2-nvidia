@@ -151,8 +151,8 @@ Th500UphyConfiguration (
         goto ErrorExit;
       }
 
-      if (GpioMode != GPIO_MODE_OUTPUT_0) {
-        Status = Gpio->Set (Gpio, GpioPin, GPIO_MODE_OUTPUT_0);
+      if (GpioMode != GPIO_MODE_INPUT) {
+        Status = Gpio->Set (Gpio, GpioPin, GPIO_MODE_INPUT);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
           goto ErrorExit;
@@ -203,7 +203,7 @@ Th500UphyConfiguration (
     }
 
     for (Count = 0; Count < NumUphyConfigApply; Count++) {
-      Status = Gpio->Set (Gpio, GpioApplyPin[Count], GPIO_MODE_OUTPUT_0);
+      Status = Gpio->Set (Gpio, GpioApplyPin[Count], GPIO_MODE_INPUT);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
         goto ErrorExit;
