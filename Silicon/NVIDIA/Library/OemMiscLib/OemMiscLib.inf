@@ -45,6 +45,7 @@
 [Protocols]
   gEdkiiConfigurationManagerProtocolGuid     # PROTOCOL ALWAYS_CONSUMED
   gNVIDIACvmEepromProtocolGuid               # PROTOCOL ALWAYS_CONSUMED
+  gNVIDIAEFuseProtocolGuid                   # PROTOCOL ALWAYS_CONSUMED
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBoardChassisLocation
@@ -75,3 +76,5 @@
   gNVIDIACvmEepromProtocolGuid
   AND
   gNVIDIATegraCpuFrequencyProtocolGuid
+  AND
+  gNVIDIAEFuseProtocolGuid
