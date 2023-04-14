@@ -737,6 +737,7 @@ UpdateThermalZoneInfoAndInstallSsdt (
   UINT16                       CrtTemp;
   UINT8                        ThermCoeff1;
   UINT8                        ThermCoeff2;
+  UINT32                       FastSampPeriod;
   AML_ROOT_NODE_HANDLE         RootNode;
   AML_OBJECT_NODE_HANDLE       ScopeNode;
   AML_OBJECT_NODE_HANDLE       TZNode;
@@ -765,10 +766,11 @@ UpdateThermalZoneInfoAndInstallSsdt (
     return EFI_SUCCESS;
   }
 
-  PsvTemp     = MAX_UINT16;
-  CrtTemp     = MAX_UINT16;
-  ThermCoeff1 = MAX_UINT8;
-  ThermCoeff2 = MAX_UINT8;
+  PsvTemp        = MAX_UINT16;
+  CrtTemp        = MAX_UINT16;
+  FastSampPeriod = MAX_UINT32;
+  ThermCoeff1    = MAX_UINT8;
+  ThermCoeff2    = MAX_UINT8;
 
   Temp = NULL;
   Temp = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-thermal-zone-passive-cooling-trip-point-temp", &TempLen);
@@ -808,6 +810,16 @@ UpdateThermalZoneInfoAndInstallSsdt (
 
   if (ThermCoeff2 == MAX_UINT8) {
     ThermCoeff2 = TH500_THERMAL_ZONE_TC2;
+  }
+
+  Temp = NULL;
+  Temp = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-thermal-fast-sampling-period", &TempLen);
+  if ((Temp != NULL) && (TempLen == sizeof (UINT32))) {
+    FastSampPeriod = SwapBytes32 (*Temp);
+  }
+
+  if (FastSampPeriod == MAX_UINT32) {
+    FastSampPeriod = TH500_THERMAL_ZONE_TFP;
   }
 
   for (SocketId = 0; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
@@ -936,6 +948,13 @@ UpdateThermalZoneInfoAndInstallSsdt (
           Status = AmlCodeGenNameInteger ("_TSP", TH500_THERMAL_ZONE_TSP, TZNode, NULL);
           if (EFI_ERROR (Status)) {
             DEBUG ((DEBUG_ERROR, "Failed to create _TSP node - %r\r\n", Status));
+            ASSERT_EFI_ERROR (Status);
+            return Status;
+          }
+
+          Status = AmlCodeGenNameInteger ("_TFP", FastSampPeriod, TZNode, NULL);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "-->Failed to create _TFP node - %r\r\n", Status));
             ASSERT_EFI_ERROR (Status);
             return Status;
           }

@@ -260,6 +260,7 @@
 #define TH500_THERMAL_ZONE_TC1     2
 #define TH500_THERMAL_ZONE_TC2     8
 #define TH500_THERMAL_ZONE_TSP     1                  // 100ms
+#define TH500_THERMAL_ZONE_TFP     10                 // 10ms
 
 // Power Meter
 #define TH500_MODULE_PWR                      0
