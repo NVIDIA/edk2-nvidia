@@ -7,6 +7,7 @@
 #
 #  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 #
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
 #  which accompanies this distribution.  The full text of the license may be found at
@@ -35,6 +36,7 @@
   MdeModulePkg/MdeModulePkg.dec
   RedfishPkg/RedfishPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  NetworkPkg/NetworkPkg.dec
   IpmiFeaturePkg/IpmiFeaturePkg.dec
 
 [LibraryClasses]
@@ -48,6 +50,8 @@
   UefiLib
   UefiRuntimeServicesTableLib
   IpmiBaseLib
+  ReportStatusCodeLib
+  NetLib
 
 [Protocols]
   gEfiSmbiosProtocolGuid                       # PROTOCOL ALWAYS_CONSUMES

@@ -7,7 +7,10 @@
 **/
 
 #include "RedfishPlatformCredentialLib.h"
-
+#include <Library/PrintLib.h>
+#include <Library/ReportStatusCodeLib.h>
+#include <NVIDIAStatusCodes.h>
+#include <OemStatusCodes.h>
 //
 // Global flag of controlling credential service
 //
@@ -16,8 +19,8 @@ BOOLEAN  mRedfishServiceStopped = FALSE;
 /**
   Notify the Redfish service provide to stop provide configuration service to this platform.
 
-  This function should be called when the platfrom is about to leave the safe environment.
-  It will notify the Redfish service provider to abort all logined session, and prohibit
+  This function should be called when the platform is about to leave the safe environment.
+  It will notify the Redfish service provider to abort all logged-in session, and prohibit
   further login with original auth info. GetAuthInfo() will return EFI_UNSUPPORTED once this
   function is returned.
 
@@ -232,7 +235,7 @@ GetBootstrapAccountCredentials (
 
   @retval  EFI_SUCCESS                Credentials were successfully fetched and returned
   @retval  EFI_INVALID_PARAMETER      BootstrapUsername or BootstrapPassword is NULL
-  @retval  EFI_NOT_FOUND              No variable found for account and credentails
+  @retval  EFI_NOT_FOUND              No variable found for account and credentials
 **/
 EFI_STATUS
 GetBootstrapAccountCredentialsFromVariable (
@@ -391,6 +394,7 @@ LibCredentialGetAuthInfo (
   )
 {
   EFI_STATUS  Status;
+  CHAR8       ErrorDescriptionBuffer[sizeof (OEM_EC_DESC_REDFISH_BOOTSTRAP_CREDENTIAL) + 20];
 
   if ((AuthMethod == NULL) || (UserId == NULL) || (Password == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -429,7 +433,17 @@ LibCredentialGetAuthInfo (
   //
   Status = GetBootstrapAccountCredentials (FALSE, *UserId, *Password);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: fail to get bootstrap credential: %r\n", __FUNCTION__, Status));
+    ZeroMem (ErrorDescriptionBuffer, sizeof (ErrorDescriptionBuffer));
+
+    AsciiSPrint (ErrorDescriptionBuffer, sizeof (ErrorDescriptionBuffer), OEM_EC_DESC_REDFISH_BOOTSTRAP_CREDENTIAL, Status);
+
+    REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+      EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+      EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_REDFISH_BOOTSTRAP_CREDENTIAL_FAILED,
+      ErrorDescriptionBuffer,
+      AsciiStrSize (ErrorDescriptionBuffer)
+      );
+
     return Status;
   }
 

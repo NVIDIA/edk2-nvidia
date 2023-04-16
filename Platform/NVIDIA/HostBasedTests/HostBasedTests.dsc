@@ -81,6 +81,7 @@
   Silicon/NVIDIA/Library/RedfishPlatformHostInterfaceOemLib/UnitTest/RedfishHostInterfaceUnitTest.inf {
     <LibraryClasses>
       NULL|Silicon/NVIDIA/Library/RedfishPlatformHostInterfaceOemLib/RedfishPlatformHostInterfaceOemLib.inf
+      NetLib|NetworkPkg/Library/DxeNetLib/DxeNetLib.inf
       IpmiBaseLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/IpmiStubLib/IpmiStubLib.inf
       UefiRuntimeServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiRuntimeServicesTableStubLib/UefiRuntimeServicesTableStubLib.inf
   }

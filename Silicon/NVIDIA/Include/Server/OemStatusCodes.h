@@ -52,6 +52,25 @@
 
 #define OEM_M2_NOT_NVME \
         "M.2 drive is not NVMe"
+
+#define OEM_EC_DESC_HOST_INTERFACE_INVALID_MAC_ADDRESS \
+        "Host interface : Invalid MAC address"
+
+#define OEM_EC_DESC_HOST_INTERFACE_INVALID_IP_ADDRESS \
+        "Host interface : Invalid IP address"
+
+#define OEM_EC_DESC_HOST_INTERFACE_INVALID_SUBNET_MASK_ADDRESS \
+        "Host interface : Invalid subnet mask address"
+
+#define OEM_EC_DESC_REDFISH_SERVICE_INVALID_IP_ADDRESS \
+        "Redfish service : Invalid IP address"
+
+#define OEM_EC_DESC_REDFISH_SERVICE_INVALID_SUBNET_MASK_ADDRESS \
+        "Redfish service : Invalid subnet mask address"
+
+#define OEM_EC_DESC_REDFISH_BOOTSTRAP_CREDENTIAL \
+        "Fail to get Redfish credential from BMC. Status = %r"
+
 ///@}
 
 #endif
