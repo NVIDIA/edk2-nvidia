@@ -494,3 +494,6 @@
 
 #Option to enable/disable EFI FB for dGPU
   gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport|0x00|UINT8|0x0000009C
+
+#Indicate whether initial console device registration should be done.
+  gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration|TRUE|BOOLEAN|0x0000010A

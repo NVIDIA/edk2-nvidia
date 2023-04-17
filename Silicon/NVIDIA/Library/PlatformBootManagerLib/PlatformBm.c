@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -1062,10 +1062,19 @@ PlatformConfigured (
                   &CurrentPlatformConfigData
                   );
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error setting Platform Config data: %r\r\n", __FUNCTION__, Status));
     // TODO: Evaluate what should be done in this case.
   }
 }
 
+/**
+  Update ConOut, ErrOut, ConIn variables to contain all available devices.
+  Normally, this function is only executed after the initial device flash.
+
+  @param  none
+  @retval none
+
+**/
 STATIC
 VOID
 PlatformRegisterConsoles (
@@ -1079,6 +1088,7 @@ PlatformRegisterConsoles (
   EFI_DEVICE_PATH_PROTOCOL  *Interface;
 
   ASSERT (FixedPcdGet8 (PcdDefaultTerminalType) == 4);
+
   Status = gBS->LocateHandleBuffer (
                   ByProtocol,
                   &gEfiSimpleTextOutProtocolGuid,
@@ -1259,9 +1269,13 @@ PlatformBootManagerBeforeConsole (
     );
 
   //
-  // Register all available consoles.
+  // Register all available consoles once.
   //
-  PlatformRegisterConsoles ();
+  if (PcdGetBool (PcdDoInitialConsoleRegistration) == TRUE) {
+    PlatformRegisterConsoles ();
+    // Set PCD to FALSE after initial registration
+    PcdSetBoolS (PcdDoInitialConsoleRegistration, FALSE);
+  }
 }
 
 STATIC
