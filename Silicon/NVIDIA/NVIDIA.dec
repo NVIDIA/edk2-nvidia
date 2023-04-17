@@ -642,6 +642,8 @@
 #Option to enable/disable Redfish Host Interface
   gNVIDIATokenSpaceGuid.PcdRedfishHostInterface|0x00|UINT8|0x0000009F
 
+#Indicate whether initial console device registration should be done.
+  gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration|TRUE|BOOLEAN|0x0000010A
 
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature

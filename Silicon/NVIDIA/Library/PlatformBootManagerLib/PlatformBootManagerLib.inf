@@ -80,6 +80,7 @@
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
   gNVIDIATokenSpaceGuid.PcdBootMenuAppFile
   gNVIDIATokenSpaceGuid.PcdBootManagerWaitMessage
+  gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration
 
 [Guids]
   gEfiFileInfoGuid
