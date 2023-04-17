@@ -224,9 +224,6 @@ VirtualNorFlashInitialize (
   Device->Protocol.Read            = VirtualNorFlashRead;
   Device->Protocol.Write           = VirtualNorFlashWrite;
   Device->Protocol.Erase           = VirtualNorFlashErase;
-  Device->Protocol.QuickRead       = VirtualNorFlashRead;
-  Device->Protocol.QuickWrite      = VirtualNorFlashWrite;
-  Device->Protocol.QuickErase      = VirtualNorFlashErase;
   *Protocol                        = &Device->Protocol;
   return EFI_SUCCESS;
 }

@@ -208,9 +208,6 @@ FaultyNorFlashInitialize (
   Device->Protocol.Read            = FaultyNorFlashRead;
   Device->Protocol.Write           = FaultyNorFlashWrite;
   Device->Protocol.Erase           = FaultyNorFlashErase;
-  Device->Protocol.QuickRead       = FaultyNorFlashRead;
-  Device->Protocol.QuickWrite      = FaultyNorFlashWrite;
-  Device->Protocol.QuickErase      = FaultyNorFlashErase;
   *Protocol                        = &Device->Protocol;
   return EFI_SUCCESS;
 }

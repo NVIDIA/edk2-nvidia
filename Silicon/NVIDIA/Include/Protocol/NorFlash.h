@@ -101,16 +101,12 @@ EFI_STATUS
   );
 
 /// NVIDIA_NOR_FLASH_PROTOCOL protocol structure.
-/// Note: The Quick functions run with a TIMEOUT of 0, rather than 100
 struct _NVIDIA_NOR_FLASH_PROTOCOL {
   EFI_FVB_ATTRIBUTES_2        FvbAttributes;
   NOR_FLASH_GET_ATTRIBUTES    GetAttributes;
   NOR_FLASH_READ              Read;
   NOR_FLASH_WRITE             Write;
   NOR_FLASH_ERASE             Erase;
-  NOR_FLASH_READ              QuickRead;
-  NOR_FLASH_WRITE             QuickWrite;
-  NOR_FLASH_ERASE             QuickErase;
 };
 
 extern EFI_GUID  gNVIDIANorFlashProtocolGuid;

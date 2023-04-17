@@ -182,7 +182,7 @@ ErstReadSpiNor (
   DEBUG_CODE (
     StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     );
-  Status = mErrorSerialization.NorFlashProtocol->QuickRead (
+  Status = mErrorSerialization.NorFlashProtocol->Read (
                                                    mErrorSerialization.NorFlashProtocol,
                                                    Offset + mErrorSerialization.NorErstOffset,
                                                    Length,
@@ -220,7 +220,7 @@ ErstWriteSpiNor (
     StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     );
 
-  Status = mErrorSerialization.NorFlashProtocol->QuickWrite (
+  Status = mErrorSerialization.NorFlashProtocol->Write (
                                                    mErrorSerialization.NorFlashProtocol,
                                                    Offset + mErrorSerialization.NorErstOffset,
                                                    Length,
@@ -275,7 +275,7 @@ ErstEraseSpiNor (
     StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     );
 
-  Status = mErrorSerialization.NorFlashProtocol->QuickErase (
+  Status = mErrorSerialization.NorFlashProtocol->Erase (
                                                    mErrorSerialization.NorFlashProtocol,
                                                    Lba,
                                                    NumLba
