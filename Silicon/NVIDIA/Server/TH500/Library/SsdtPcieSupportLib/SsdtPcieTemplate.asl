@@ -244,6 +244,48 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
             Sleep(2)
           }
         }
+
+        Method (_DSM, 4, Serialized) {
+          If (LEqual (Arg0, ToUUID (NVIDIA_GPU_STATUS_DSM_GUID_STR))) {
+            // Check for Revision ID
+            If (Arg1 >= NVIDIA_GPU_STATUS_DSM_REV) {
+              Switch(ToInteger(Arg2)) {
+                //
+                // Function Index:0
+                // Standard query - A bitmask of functions supported
+                //
+                Case (0) {
+                  Local0 = Buffer(2) {0, 0}
+                  CreateBitField(Local0, 0, FUN0)
+                  CreateBitField(Local0, 1, FUN1)
+
+                  Store(1, FUN0)
+                  Store(1, FUN1)
+                  Return(Local0)
+                }
+                //
+                // Function Index: 1
+                // Get GPU Containment status
+                //
+                Case(1) {
+                  If ((^^^_SEG & 0xF) == 8) {
+                    Return (C8CO)
+                  } ElseIf ((^^^_SEG & 0xF) == 9) {
+                    Return (C9CO)
+                  } Else {
+                    Return (0)
+                  }
+                }
+              } // End of switch(Arg2)
+            } // end Check for Revision ID
+          } // end Check UUID
+          //
+          // If not one of the UUIDs we recognize, then return a buffer
+          // with bit 0 set to 0 indicating no functions supported.
+          //
+          Return (Buffer () {0})
+        } // end _DSM
+
       }
     }
   }
