@@ -111,15 +111,34 @@ InstallSmbiosType2Cm (
       FruDesc      = (CHAR8 *)Property;
       Type2FruInfo = FindFruByDescription (Private, FruDesc);
       if (Type2FruInfo != NULL) {
-        if (BaseboardInfo[NumBaseboards].Manufacturer == NULL) {
-          // If not override by DTB. Copy from FRU.
-          BaseboardInfo[NumBaseboards].Manufacturer = AllocateCopyString (Type2FruInfo->ProductManufacturer);
+        //
+        // Not all board FRUs have product info. Hence, use FRU product info if it is present.
+        //
+        if (Type2FruInfo->ProductName != NULL) {
+          if (BaseboardInfo[NumBaseboards].Manufacturer == NULL) {
+            // If not override by DTB. Copy from FRU.
+            BaseboardInfo[NumBaseboards].Manufacturer = AllocateCopyString (Type2FruInfo->ProductManufacturer);
+          }
+
+          BaseboardInfo[NumBaseboards].ProductName  = AllocateCopyString (Type2FruInfo->ProductName);
+          BaseboardInfo[NumBaseboards].Version      = AllocateCopyString (Type2FruInfo->ProductVersion);
+          BaseboardInfo[NumBaseboards].SerialNumber = AllocateCopyString (Type2FruInfo->ProductSerial);
+          BaseboardInfo[NumBaseboards].AssetTag     = AllocateCopyString (Type2FruInfo->ProductAssetTag);
+        } else {
+          //
+          // And if FRU does not have product info, use board info instead
+          //
+          if (BaseboardInfo[NumBaseboards].Manufacturer == NULL) {
+            // If not override by DTB. Copy from FRU.
+            BaseboardInfo[NumBaseboards].Manufacturer = AllocateCopyString (Type2FruInfo->BoardManufacturer);
+          }
+
+          BaseboardInfo[NumBaseboards].ProductName  = AllocateCopyString (Type2FruInfo->BoardProduct);
+          BaseboardInfo[NumBaseboards].SerialNumber = AllocateCopyString (Type2FruInfo->BoardSerial);
+          BaseboardInfo[NumBaseboards].Version      = GetFruExtraStr (Type2FruInfo->BoardExtra, "Version: ");
+          BaseboardInfo[NumBaseboards].AssetTag     = NULL;
         }
 
-        BaseboardInfo[NumBaseboards].ProductName        = AllocateCopyString (Type2FruInfo->ProductName);
-        BaseboardInfo[NumBaseboards].Version            = AllocateCopyString (Type2FruInfo->ProductVersion);
-        BaseboardInfo[NumBaseboards].SerialNumber       = AllocateCopyString (Type2FruInfo->ProductSerial);
-        BaseboardInfo[NumBaseboards].AssetTag           = AllocateCopyString (Type2FruInfo->ProductAssetTag);
         BaseboardInfo[NumBaseboards].BaseboardInfoToken = REFERENCE_TOKEN (BaseboardInfo[NumBaseboards]);
 
         if (Private->EnclosureBaseboardBinding.Info != NULL) {

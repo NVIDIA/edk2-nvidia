@@ -63,6 +63,42 @@ FindFruByDescription (
 }
 
 /**
+  Find and get FRU extra string that has a certain prefix
+
+  @param[in] FruExtra  Pointer to the array of FRU (chassis/board/product) extra
+  @param[in] Prefix    FRU extra prefix to search for
+
+  @return A pointer to an allocated string
+
+**/
+CHAR8 *
+GetFruExtraStr (
+  IN CHAR8        **FruExtra,
+  IN CONST CHAR8  *Prefix
+  )
+{
+  UINT32  Index;
+  UINTN   PrefixLen;
+
+  ASSERT (FruExtra != NULL);
+  ASSERT (Prefix != NULL);
+
+  PrefixLen = AsciiStrLen (Prefix);
+
+  for (Index = 0; Index < MAX_EXTRA_FRU_AREA_ENTRIES; Index++) {
+    if (FruExtra[Index] == NULL) {
+      break;
+    }
+
+    if (AsciiStrnCmp (FruExtra[Index], Prefix, PrefixLen) == 0) {
+      return AllocateCopyString (FruExtra[Index] + PrefixLen);
+    }
+  }
+
+  return NULL;
+}
+
+/**
   Allocate and copy string
 
   @param[in] String     String to be copied

@@ -112,6 +112,21 @@ FindFruByDescription (
   );
 
 /**
+  Find and get FRU extra string that has a certain prefix
+
+  @param[in] FruExtra  Pointer to the array of FRU (chassis/board/product) extra
+  @param[in] Prefix    FRU extra prefix to search for
+
+  @return A pointer to an allocated string
+
+**/
+CHAR8 *
+GetFruExtraStr (
+  IN CHAR8        **FruExtra,
+  IN CONST CHAR8  *Prefix
+  );
+
+/**
   Allocate and copy string
 
   @param[in] String     String to be copied
