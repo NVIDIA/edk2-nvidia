@@ -509,7 +509,7 @@ UsbRndisSnpNvData (
 
 **/
 EFI_STATUS
-UsbRndisSnpGetSatus (
+UsbRndisSnpGetStatus (
   IN EFI_SIMPLE_NETWORK_PROTOCOL  *This,
   OUT UINT32                      *InterruptStatus OPTIONAL,
   OUT VOID                        **TxBuf OPTIONAL
@@ -700,7 +700,7 @@ UsbRndisSnpTransmit (
     //
     // Transmit successfully. Switch to fast receive mode because we are expecting packets.
     //
-    UndisReceiveNow (Private);
+    RndisReceiveNow (Private);
   }
 
   gBS->RestoreTPL (TplPrevious);
@@ -879,7 +879,7 @@ OnRelease:
 /**
   Initial RNDIS SNP service
 
-  @param[in]      Private       Poniter to private data
+  @param[in]      Private       Pointer to private data
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.
@@ -913,7 +913,7 @@ UsbRndisInitialSnpService (
   Private->SnpProtocol.Statistics     = UsbRndisSnpStatistics;
   Private->SnpProtocol.MCastIpToMac   = UsbRndisSnpMcastIpToMac;
   Private->SnpProtocol.NvData         = UsbRndisSnpNvData;
-  Private->SnpProtocol.GetStatus      = UsbRndisSnpGetSatus;
+  Private->SnpProtocol.GetStatus      = UsbRndisSnpGetStatus;
   Private->SnpProtocol.Transmit       = UsbRndisSnpTransmit;
   Private->SnpProtocol.Receive        = UsbRndisSnpReceive;
   Private->SnpProtocol.WaitForPacket  = NULL;

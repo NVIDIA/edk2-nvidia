@@ -63,7 +63,7 @@ NewUsbRndisPrivate (
 /**
   Release private data and stop corresponding timer event.
 
-  @param[in]      Private       Poniter to private data
+  @param[in]      Private       Pointer to private data
   @param[in]      DriverBinding Driver binding handle
 
   @retval EFI_SUCCESS           function is finished successfully.
@@ -122,7 +122,7 @@ ReleaseUsbRndisPrivate (
 }
 
 /**
-  Find private data from early propulated handle
+  Find private data from early populated handle
 
   @param[in]      Controller    Controller handle
 

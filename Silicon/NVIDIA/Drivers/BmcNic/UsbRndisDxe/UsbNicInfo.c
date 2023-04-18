@@ -41,7 +41,7 @@ RndisGetMacAddress (
 /**
   Initial RNDIS USB NIC Information protocol.
 
-  @param[in]      Private       Poniter to private data
+  @param[in]      Private       Pointer to private data
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.

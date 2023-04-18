@@ -77,7 +77,7 @@ IsRndisDataInterface (
 
   DEBUG ((USB_DEBUG_RNDIS_TRACE, "%a, InterfaceDescriptor class: 0x%02x subclass: 0x%02x protocol: 0x%02x\n", __FUNCTION__, InterfaceDescriptor.InterfaceClass, InterfaceDescriptor.InterfaceSubClass, InterfaceDescriptor.InterfaceProtocol));
 
-  if ((InterfaceDescriptor.InterfaceClass == USB_BSSE_CLASS_CDC_DATA) &&
+  if ((InterfaceDescriptor.InterfaceClass == USB_BASE_CLASS_CDC_DATA) &&
       (InterfaceDescriptor.InterfaceSubClass == USB_SUB_CLASS_CODE_CDC_DATA_NONE) &&
       (InterfaceDescriptor.InterfaceProtocol == USB_SUB_CLASS_CODE_CDC_DATA_NONE))
   {
@@ -127,7 +127,7 @@ RndisConfigureUsbDevice (
   DEBUG ((USB_DEBUG_RNDIS, "%a, vendor: 0x%x product: 0x%x\n", __FUNCTION__, Device.IdVendor, Device.IdProduct));
 
   //
-  // Find manufactor string
+  // Find manufacturer string
   //
   ManufacturerString = NULL;
   Status             = UsbIo->UsbGetStringDescriptor (
@@ -316,7 +316,7 @@ RndisControlMessage (
   @param[in]      RequestId         RNDIS message request ID
   @param[in]      Oid               RNDIS OID
   @param[in]      Length            Buffer length in byte
-  @param[in]      Buffer            Bufer to send
+  @param[in]      Buffer            Buffer to send
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.
@@ -407,7 +407,7 @@ RndisQueryMessage (
   )
 {
   RNDIS_QUERY_MSG_DATA    *RndisQueryMessage;
-  RNDIS_QUERY_CMPLT_DATA  *RndisQueryCmpleteMessage;
+  RNDIS_QUERY_CMPLT_DATA  *RndisQueryCmpltMessage;
   EFI_STATUS              Status;
 
   DEBUG ((USB_DEBUG_RNDIS_TRACE, "%a\n", __FUNCTION__));
@@ -424,16 +424,16 @@ RndisQueryMessage (
     return EFI_INVALID_PARAMETER;
   }
 
-  RndisQueryMessage        = NULL;
-  RndisQueryCmpleteMessage = NULL;
+  RndisQueryMessage      = NULL;
+  RndisQueryCmpltMessage = NULL;
 
   RndisQueryMessage = AllocateZeroPool (sizeof (RNDIS_QUERY_MSG_DATA) + InputLength);
   if (RndisQueryMessage == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  RndisQueryCmpleteMessage = AllocateZeroPool (sizeof (RNDIS_QUERY_CMPLT_DATA) + OutputLength);
-  if (RndisQueryCmpleteMessage == NULL) {
+  RndisQueryCmpltMessage = AllocateZeroPool (sizeof (RNDIS_QUERY_CMPLT_DATA) + OutputLength);
+  if (RndisQueryCmpltMessage == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Release;
   }
@@ -447,24 +447,24 @@ RndisQueryMessage (
 
   CopyMem (((UINT8 *)RndisQueryMessage) + sizeof (RNDIS_QUERY_MSG_DATA), InputBuf, InputLength);
 
-  RndisQueryCmpleteMessage->MessageType   = RNDIS_QUERY_CMPLT;
-  RndisQueryCmpleteMessage->MessageLength = sizeof (RNDIS_QUERY_CMPLT_DATA) + OutputLength;
+  RndisQueryCmpltMessage->MessageType   = RNDIS_QUERY_CMPLT;
+  RndisQueryCmpltMessage->MessageLength = sizeof (RNDIS_QUERY_CMPLT_DATA) + OutputLength;
 
   Status = RndisControlMessage (
              UsbIo,
              (RNDIS_MSG_HEADER *)RndisQueryMessage,
-             (RNDIS_MSG_HEADER *)RndisQueryCmpleteMessage
+             (RNDIS_MSG_HEADER *)RndisQueryCmpltMessage
              );
-  if (EFI_ERROR (Status) || (RndisQueryCmpleteMessage->Status != RNDIS_STATUS_SUCCESS)) {
-    DEBUG ((DEBUG_ERROR, "%a, RNDIS_QUERY_MSG to OID: 0x%x failed: %r status: 0x%x\n", __FUNCTION__, Oid, Status, RndisQueryCmpleteMessage->Status));
+  if (EFI_ERROR (Status) || (RndisQueryCmpltMessage->Status != RNDIS_STATUS_SUCCESS)) {
+    DEBUG ((DEBUG_ERROR, "%a, RNDIS_QUERY_MSG to OID: 0x%x failed: %r status: 0x%x\n", __FUNCTION__, Oid, Status, RndisQueryCmpltMessage->Status));
   } else {
-    CopyMem (OutputBuf, ((UINT8 *)RndisQueryCmpleteMessage) + sizeof (RNDIS_QUERY_CMPLT_DATA), OutputLength);
+    CopyMem (OutputBuf, ((UINT8 *)RndisQueryCmpltMessage) + sizeof (RNDIS_QUERY_CMPLT_DATA), OutputLength);
   }
 
 Release:
 
   FREE_NON_NULL (RndisQueryMessage);
-  FREE_NON_NULL (RndisQueryCmpleteMessage);
+  FREE_NON_NULL (RndisQueryCmpltMessage);
 
   return Status;
 }
@@ -927,7 +927,7 @@ UsbRndisInitialDevice (
 /**
   Initial RNDIS device and query corresponding data for SNP use.
 
-  @param[in]      Private       Poniter to private data
+  @param[in]      Private       Pointer to private data
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.
@@ -1109,14 +1109,14 @@ UsbRndisInitialRndisDevice (
 /**
   Ask receiver control to receive data immediately.
 
-  @param[in]      Private       Poniter to private data
+  @param[in]      Private       Pointer to private data
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.
 
 **/
 VOID
-UndisReceiveNow (
+RndisReceiveNow (
   IN USB_RNDIS_PRIVATE_DATA  *Private
   )
 {
@@ -1137,14 +1137,14 @@ UndisReceiveNow (
 /**
   Ask receiver control to slow down receive ratio.
 
-  @param[in]      Private       Poniter to private data
+  @param[in]      Private       Pointer to private data
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.
 
 **/
 VOID
-UndisReceiveSlowDown (
+RndisReceiveSlowDown (
   IN USB_RNDIS_PRIVATE_DATA  *Private
   )
 {
@@ -1240,7 +1240,7 @@ RndisReceiveWorker (
   //
   // When receive error happens, slow down to USB_BACKGROUND_PULL_INTERVAL receive ratio.
   //
-  UndisReceiveSlowDown (Private);
+  RndisReceiveSlowDown (Private);
 
   return Status;
 }
