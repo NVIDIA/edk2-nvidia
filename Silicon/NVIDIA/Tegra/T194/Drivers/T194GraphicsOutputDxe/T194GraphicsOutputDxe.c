@@ -11,17 +11,19 @@
 
 #include <PiDxe.h>
 
+#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/DmaLib.h>
 #include <Library/IoLib.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
-#include <Library/DeviceDiscoveryDriverLib.h>
-#include <Library/MemoryAllocationLib.h>
-#include <Library/DmaLib.h>
-#include <Library/BaseMemoryLib.h>
 
 #include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/ClockNodeProtocol.h>
+
 #include <libfdt.h>
 
 #include "T194GraphicsOutputDxe.h"
@@ -38,13 +40,6 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .UseDriverBinding                = TRUE,
   .AutoResetModule                 = FALSE,
   .SkipEdkiiNondiscoverableInstall = TRUE
-};
-
-STATIC CONST CHAR8  *mFbCarveoutPaths[] = {
-  "/reserved-memory/fb0_carveout",
-  "/reserved-memory/fb1_carveout",
-  "/reserved-memory/fb2_carveout",
-  "/reserved-memory/fb3_carveout"
 };
 
 /** GraphicsOutput Protocol function, mapping to
@@ -573,103 +568,148 @@ IsHeadActive (
   to update the appropriate fb?_carveout node.
 
   @param [in]  DtBlob      ptr to Device Tree blob
-  @param [in]  Private     ptr to GOP_INSTANCE
-  @param [in,out] Data     array of UINT64 items
-  @param [in]  DataItems   number of items in Data
   @param [in]  HeadIndex   Head index to update
+  @param [in]  FbAddress   Address of FB
+  @param [in]  FbSize      Size of FB
+  @param [in]  LutAddress  Address of LUT
+  @param [in]  LutSize     Size of LUT
 
-  @retval EFI_SUCCESS      Operation successful.
-  @retval others           Error occurred
+  @retval TRUE   Operation successful.
+  @retval FALSE  Error occurred
  ***************************************/
 STATIC
-EFI_STATUS
+BOOLEAN
 UpdateFbCarveoutNode (
-  IN VOID                       *DtBlob,
-  IN GOP_INSTANCE       *CONST  Private,
-  IN OUT UINT64                 Data[],
-  IN UINTN                      DataItems,
-  IN INTN                       HeadIndex
+  IN VOID         *CONST         DtBlob,
+  IN CONST INTN                  HeadIndex,
+  IN CONST EFI_PHYSICAL_ADDRESS  FbAddress,
+  IN CONST UINTN                 FbSize,
+  IN CONST EFI_PHYSICAL_ADDRESS  LutAddress,
+  IN CONST UINTN                 LutSize
+  )
+{
+  INT32   Result;
+  CHAR8   FbCarveoutPath[32];
+  UINT64  RegProp[4];
+
+  AsciiSPrint (
+    FbCarveoutPath,
+    sizeof (FbCarveoutPath),
+    "/reserved-memory/fb%d_carveout",
+    HeadIndex
+    );
+
+  Result = fdt_path_offset (DtBlob, FbCarveoutPath);
+  if (Result < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Error getting '%a' DT node offset: %a\n",
+      __FUNCTION__,
+      FbCarveoutPath,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  /* update the DT blob with the new FB and LUT details */
+  RegProp[0] = SwapBytes64 (FbAddress);
+  RegProp[1] = SwapBytes64 (FbSize);
+  RegProp[2] = SwapBytes64 (LutAddress);
+  RegProp[3] = SwapBytes64 (LutSize);
+
+  Result = fdt_setprop_inplace (DtBlob, Result, "reg", RegProp, sizeof (RegProp));
+  if (Result != 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Error updating '%a' DT node: %a\n",
+      __FUNCTION__,
+      FbCarveoutPath,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Updated '%a': FbAddress  = 0x%016lx FbSize  = 0x%lx (%lu)\n"
+    "%a: Updated '%a': LutAddress = 0x%016lx LutSize = 0x%lx (%lu)\n",
+    __FUNCTION__,
+    FbCarveoutPath,
+    FbAddress,
+    FbSize,
+    FbSize,
+    __FUNCTION__,
+    FbCarveoutPath,
+    LutAddress,
+    LutSize,
+    LutSize
+    ));
+
+  return TRUE;
+}
+
+/***************************************
+  support function for FdtInstalled callback
+  to update DT for given head
+
+  @param [in]  DtBlob      ptr to Device Tree blob
+  @param [in]  Private     ptr to GOP_INSTANCE
+  @param [in]  HeadIndex   Head index to update
+
+  @retval TRUE   Update successful
+  @retval FALSE  Errors occurred
+ ***************************************/
+STATIC
+BOOLEAN
+UpdateDtForHead (
+  IN VOID         *CONST  DtBlob,
+  IN GOP_INSTANCE *CONST  Private,
+  IN CONST INTN           HeadIndex
   )
 {
   EFI_STATUS            Status;
-  INT32                 Result;
-  CONST CHAR8           *FbCarveoutPath;
-  INTN                  FbCarveoutNodeOffset;
   EFI_PHYSICAL_ADDRESS  FbAddress, LutAddress;
   UINTN                 FbSize, LutSize;
 
-  Status = GetLutRegion (Private, HeadIndex, &LutAddress, &LutSize);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error getting LUT region, force LutAddress and LutSize to 0: %r\n", __FUNCTION__, Status));
-    LutAddress = 0;
-    LutSize    = 0;
-  }
+  EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE *CONST  Mode =
+    &Private->Mode[HeadIndex];
 
-  FbAddress = Private->Mode[HeadIndex].FrameBufferBase;
-  FbSize    = Private->Mode[HeadIndex].FrameBufferSize;
-  DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferBase = 0x%p\n", HeadIndex, Private->Mode[HeadIndex].FrameBufferBase));
-  DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferSize = %u\n", HeadIndex, Private->Mode[HeadIndex].FrameBufferSize));
-  FbCarveoutPath       = mFbCarveoutPaths[HeadIndex];
-  FbCarveoutNodeOffset = fdt_path_offset (DtBlob, FbCarveoutPath);
-  if (FbCarveoutNodeOffset < 0) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Error getting %a DT node offset: %a\n",
-      __FUNCTION__,
-      FbCarveoutPath,
-      fdt_strerror (FbCarveoutNodeOffset)
-      ));
-    return EFI_NOT_FOUND;
-  }
+  DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferBase = 0x%p\n", HeadIndex, Mode->FrameBufferBase));
+  DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferSize = %u\n", HeadIndex, Mode->FrameBufferSize));
 
   if (IsHeadActive (Private, HeadIndex)) {
     /* Active head: use FB and LUT settings from CBoot */
-
     if (HeadIndex == Private->ActiveHeadIndex) {
       DEBUG ((DEBUG_ERROR, "Head index %d is active and used by UEFI\n", HeadIndex));
     } else {
       DEBUG ((DEBUG_ERROR, "Head index %d is active but not used by UEFI\n", HeadIndex));
     }
 
-    Data[0] = SwapBytes64 (FbAddress);
-    Data[1] = SwapBytes64 (FbSize);
-    Data[2] = SwapBytes64 (LutAddress);
-    Data[3] = SwapBytes64 (LutSize);
+    FbAddress = Mode->FrameBufferBase;
+    FbSize    = Mode->FrameBufferSize;
+
+    Status = GetLutRegion (Private, HeadIndex, &LutAddress, &LutSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error getting LUT region, force LutAddress and LutSize to 0: %r\n", __FUNCTION__, Status));
+      LutAddress = 0;
+      LutSize    = 0;
+    }
   } else {
     /* inactive head: zero-fill everything */
     DEBUG ((DEBUG_ERROR, "Head index %d is NOT active\n", HeadIndex));
-    ZeroMem (Data, sizeof (Data[0])*DataItems);
+
+    FbAddress = LutAddress = 0;
+    FbSize    = LutSize    = 0;
   }
 
-  /* update the DT blob with the new FB and LUT details */
-  Result = fdt_setprop_inplace (DtBlob, FbCarveoutNodeOffset, "reg", Data, sizeof (Data[0])*DataItems);
-  if (Result != 0) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Error updating %a DT node\n",
-      __FUNCTION__,
-      FbCarveoutPath
-      ));
-    return EFI_NOT_FOUND;
-  }
-
-  DEBUG ((
-    DEBUG_ERROR,
-    "%a: Updated %a: FbAddress  = 0x%016lx FbSize  = 0x%lx (%lu)\n"
-    "%a: Updated %a: LutAddress = 0x%016lx LutSize = 0x%lx (%lu)\n",
-    __FUNCTION__,
-    FbCarveoutPath,
-    Data[0],
-    Data[1],
-    Data[1],
-    __FUNCTION__,
-    FbCarveoutPath,
-    Data[2],
-    Data[3],
-    Data[3]
-    ));
-
-  return Status;
+  return UpdateFbCarveoutNode (
+           DtBlob,
+           HeadIndex,
+           FbAddress,
+           FbSize,
+           LutAddress,
+           LutSize
+           );
 }
 
 /***************************************
@@ -690,18 +730,16 @@ STATIC
 VOID
 EFIAPI
 FdtInstalled (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+  IN EFI_EVENT            Event,
+  IN GOP_INSTANCE *CONST  Private
   )
 {
-  EFI_STATUS                    Status;
-  INT32                         Result;
-  VOID                          *DtBlob;
-  UINT64                        Data[4];
-  GOP_INSTANCE          *CONST  GopInstance = (GOP_INSTANCE *)Context;
-  INTN                          HeadIndex, HeadIndexLimit;
+  EFI_STATUS  Status;
+  INT32       Result;
+  VOID        *DtBlob;
+  INTN        HeadIndex, HeadCount;
 
-  if (GopInstance == NULL) {
+  if (Private == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Invalid context\n", __FUNCTION__));
     return;
   }
@@ -719,15 +757,14 @@ FdtInstalled (
     return;
   }
 
-  if (GopInstance->MaxHeadIndex == DC_HEAD_INDEX_UNKNOWN) {
-    DEBUG ((DEBUG_ERROR, "%a: unsupported MaxHeadIndex=%d\n", __FUNCTION__, GopInstance->MaxHeadIndex));
+  if (Private->MaxHeadIndex == DC_HEAD_INDEX_UNKNOWN) {
+    DEBUG ((DEBUG_ERROR, "%a: unsupported MaxHeadIndex=%d\n", __FUNCTION__, Private->MaxHeadIndex));
     return;
   }
 
-  HeadIndexLimit = GopInstance->MaxHeadIndex + 1;
-
-  for (HeadIndex = 0; HeadIndex < HeadIndexLimit; HeadIndex++) {
-    Status = UpdateFbCarveoutNode (DtBlob, GopInstance, Data, DC_HEAD_INDEX_MAX+1, HeadIndex);
+  HeadCount = Private->MaxHeadIndex + 1;
+  for (HeadIndex = 0; HeadIndex < HeadCount; HeadIndex++) {
+    UpdateDtForHead (DtBlob, Private, HeadIndex);
   }
 }
 
@@ -1037,8 +1074,8 @@ DeviceDiscoveryNotify (
         Status = gBS->CreateEventEx (
                         EVT_NOTIFY_SIGNAL,                  // Type
                         TPL_CALLBACK,                       // NotifyTpl
-                        FdtInstalled,                       // NotifyFunction / callback
-                        (void *)Private,                    // NotifyContext
+                        (EFI_EVENT_NOTIFY)FdtInstalled,     // NotifyFunction / callback
+                        (VOID *)Private,                    // NotifyContext
                         &gFdtTableGuid,                     // EventGroup
                         &FdtInstallEvent
                         );                                  // Event
