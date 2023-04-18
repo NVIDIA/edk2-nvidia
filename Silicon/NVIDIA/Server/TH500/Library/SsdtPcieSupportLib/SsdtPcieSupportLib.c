@@ -420,7 +420,7 @@ GeneratePciSlots (
         goto error_handler;
       }
 
-      Status = AmlFindNode (TemplateRoot, "\\GPU0", &Node);
+      Status = AmlFindNode (TemplateRoot, "\\PCIx.RPxx.GPU0", &Node);
       if (EFI_ERROR (Status)) {
         goto error_handler;
       }

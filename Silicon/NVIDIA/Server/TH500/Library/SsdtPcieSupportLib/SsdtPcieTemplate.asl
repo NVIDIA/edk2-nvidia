@@ -15,6 +15,7 @@
 **/
 
 #include <TH500/TH500Definitions.h>
+#include <Guid/NVIDIADsmApi.h>
 
 DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
 
@@ -176,51 +177,73 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
     }   // End _OST
   }
 
-  Device(GPU0) {
-    Name(_ADR, 0x0000)
+  Device(PCIx) {
+    Name (_HID, EisaId ("PNP0A08"))
+    Name (_SEG, 0xFF)
+    Device (RPxx) {
+      Name (_ADR, 0x0000)  // _ADR: Address
+      Device(GPU0) {
+        Name (_ADR, 0x0000)
 
-    // The "LICA" named object would be patched by UEFI to have the correct
-    // address of the LIC region of this particular instance.
-    Name (LICA, 0xFFFFFFFFFFFFFFFF)
+        // The "LICA" named object would be patched by UEFI to have the correct
+        // address of the LIC region of this particular instance.
+        Name (LICA, 0xFFFFFFFFFFFFFFFF)
 
-    OperationRegion (LIC1, SystemMemory, LICA, TH500_SW_IO1_SIZE)
-    Field (LIC1, DWordAcc, NoLock, Preserve)
-    {
-      STAT, 32,
-      SET, 32,
-      CLR, 32,
-      RSV0, 32,
-      DALO, 32,
-      DAHI, 32,
-    }
+        OperationRegion (LIC1, SystemMemory, LICA, TH500_SW_IO1_SIZE)
+        Field (LIC1, DWordAcc, NoLock, Preserve)
+        {
+          STAT, 32,
+          SET, 32,
+          CLR, 32,
+          RSV0, 32,
+          C9RS, 1,
+          C8RS, 1,
+          RSV1, 30,
+          C9CO, 2,
+          C8CO, 2,
+          RSV2, 28
+        }
 
-    // The "FSPA" named object is patched by UEFI to provide the correct location
-    // this is the address of the FSP Boot partition in VDM space
-    Name (FSPA, 0xFFFFFFFFFFFFFFFF)
+        // The "FSPA" named object is patched by UEFI to provide the correct location
+        // this is the address of the FSP Boot partition in VDM space
+        Name (FSPA, 0xFFFFFFFFFFFFFFFF)
 
-    OperationRegion (FSPB, SystemMemory, FSPA, 4)
-    Field (FSPB, DWordAcc, NoLock, Preserve)
-    {
-      TI2S, 32, // < Nv_Therm_I2Cs_Scratch
-    }
+        OperationRegion (FSPB, SystemMemory, FSPA, 4)
+        Field (FSPB, DWordAcc, NoLock, Preserve)
+        {
+          TI2S, 32, // < Nv_Therm_I2Cs_Scratch
+        }
 
-    Method(_RST, 0) {
-      /* Issue GPU reset request via LIC IO1 interrupt */
-      Store (0x1, DALO)
-      Store (0x1, SET)
+        Method(_RST, 0) {
+          /* Issue GPU reset request via LIC IO1 interrupt */
+          If ((^^^_SEG & 0xF) == 8) {
+            C8RS = 1
+          } ElseIf ((^^^_SEG & 0xF) == 9) {
+            C9RS = 1
+          } Else {
+            Return
+          }
 
-      /* Wait for reset to complete, poll for 6sec (as per from Linux) */
-      Local0 = Zero
-      While ((Local0 < 60000) && (LNotEqual (DALO, 0))) {
-        Local0 += 2;
-        Sleep(2)
-      }
+          SET = 1
 
-      /* Wait for reset to complete, poll for 6sec (as per from Linux) */
-      Local0 = Zero
-      While ((Local0 < 60000) && (LNotEqual (TI2S, 0xFF))) {
-        Local0 += 2;
-        Sleep(2)
+          /* Wait for reset to complete, poll for 6sec (as per from Linux) */
+          For (Local0 = 0, Local0 < 60000, Local0 +=2) {
+            If (((^^^_SEG & 0xF) == 8) && (C8RS == 0)) {
+              Break
+            } ElseIf (((^^^_SEG & 0xF) == 9) && (C9RS == 0)){
+              Break
+            }
+            Sleep(2)
+          }
+
+          /* Wait for reset to complete, poll for 6sec (as per from Linux) */
+          For (Local0 = 0, Local0 < 60000, Local0 +=2) {
+            If (TI2S == 0xFF) {
+              Break
+            }
+            Sleep(2)
+          }
+        }
       }
     }
   }
