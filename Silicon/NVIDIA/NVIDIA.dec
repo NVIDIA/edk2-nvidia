@@ -412,6 +412,12 @@
 # EXPOSE_SCF_CACHE_DISABLED_VARIABLE          0x0400
   gNVIDIATokenSpaceGuid.PcdFloorsweepingRuntimeVariables|0x7FF|UINT32|0x00000102
 
+# Retry tunables for MM Communicate
+## PcdMmMaxRetries - Max Retries (Default:3)
+  gNVIDIATokenSpaceGuid.PcdMmCommMaxRetries|0x03|UINT8|0x00000108
+## PcdMmCommRetryBackOffUs - Backoff in us between retries (Default:0x7A120 (500 ms))
+  gNVIDIATokenSpaceGuid.PcdMmCommRetryBackOffUs|0x7A120|UINT64|0x00000109
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
@@ -635,6 +641,7 @@
 
 #Option to enable/disable Redfish Host Interface
   gNVIDIATokenSpaceGuid.PcdRedfishHostInterface|0x00|UINT8|0x0000009F
+
 
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature

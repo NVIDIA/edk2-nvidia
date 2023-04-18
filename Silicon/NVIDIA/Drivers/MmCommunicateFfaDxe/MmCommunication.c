@@ -17,6 +17,7 @@
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Library/TimerLib.h>
 #include <Guid/RtPropertiesTable.h>
 
 #include <Protocol/MmCommunication2.h>
@@ -69,6 +70,78 @@ STATIC EFI_EVENT  mSetVirtualAddressMapEvent;
 // Handle to install the MM Communication Protocol
 //
 STATIC EFI_HANDLE  mMmCommunicateHandle;
+
+/**
+ * Wrapper function to send an FF-A Direct Message, this
+ * includes retry mechanism.
+
+  @param[in, out] Args ARM SMC Args that caller has setup.
+
+  @return EFI_SUCCESS        On Success.
+          EFI_ACCESS_DENIED  Secure World didn't respond favorably.
+ **/
+STATIC
+EFI_STATUS
+SendFfaDirectReqStMm (
+  ARM_SMC_ARGS  *Args
+  )
+{
+  UINT8         MaxRetries;
+  UINT64        BackOffTimeUsec;
+  UINTN         Index;
+  EFI_STATUS    Status;
+  ARM_SMC_ARGS  LocalArgs;
+
+  ZeroMem (&LocalArgs, sizeof (ARM_SMC_ARGS));
+  CopyMem ((VOID *)&LocalArgs, (VOID *)Args, sizeof (ARM_SMC_ARGS));
+  Status          = EFI_ACCESS_DENIED;
+  MaxRetries      = PcdGet8 (PcdMmCommMaxRetries);
+  BackOffTimeUsec = PcdGet64 (PcdMmCommRetryBackOffUs);
+
+  StmmFfaSmc (&LocalArgs);
+
+  if (LocalArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Invalid Response 0x%x, \n",
+      __FUNCTION__,
+      LocalArgs.Arg0
+      ));
+    for (Index = 0; Index < MaxRetries; Index++) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Sleep %lu us before Retry %u of %u\n",
+        __FUNCTION__,
+        BackOffTimeUsec,
+        (Index + 1),
+        MaxRetries
+        ));
+      MicroSecondDelay (BackOffTimeUsec);
+      ZeroMem (&LocalArgs, sizeof (ARM_SMC_ARGS));
+      CopyMem ((VOID *)&LocalArgs, (VOID *)Args, sizeof (ARM_SMC_ARGS));
+      StmmFfaSmc (&LocalArgs);
+
+      if (LocalArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a:%d Invalid Response 0x%x\n",
+          __FUNCTION__,
+          __LINE__,
+          LocalArgs.Arg0
+          ));
+        continue;
+      } else {
+        Status = EFI_SUCCESS;
+        break;
+      }
+    }
+  } else {
+    Status = EFI_SUCCESS;
+  }
+
+  CopyMem ((VOID *)Args, (VOID *)&LocalArgs, sizeof (ARM_SMC_ARGS));
+  return Status;
+}
 
 /**
   Communicates with a registered handler.
@@ -214,34 +287,16 @@ MmCommunication2Communicate (
     CommunicateSmcArgs.Arg3 = 0;
   }
 
-  // Call the Standalone MM environment.
-  ArmCallSmc (&CommunicateSmcArgs);
-
-  Ret = CommunicateSmcArgs.Arg0;
-
-  if ((FeaturePcdGet (PcdFfaEnable) &&
-       (Ret == ARM_SVC_ID_FFA_SUCCESS_AARCH64)) ||
-      (Ret == ARM_SMC_MM_RET_SUCCESS))
-  {
-    ZeroMem (CommBufferVirtual, BufferSize);
-    // On successful return, the size of data being returned is inferred from
-    // MessageLength + Header.
-    CommunicateHeader = (EFI_MM_COMMUNICATE_HEADER *)mNsCommBuffMemRegion.VirtualBase;
-    BufferSize        = CommunicateHeader->MessageLength +
-                        sizeof (CommunicateHeader->HeaderGuid) +
-                        sizeof (CommunicateHeader->MessageLength);
-
-    CopyMem (
-      CommBufferVirtual,
-      (VOID *)mNsCommBuffMemRegion.VirtualBase,
-      BufferSize
-      );
-    Status = EFI_SUCCESS;
-    return Status;
+  Status = SendFfaDirectReqStMm (&CommunicateSmcArgs);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: FF-A Direct Msg Failed %r\n", __FUNCTION__, Status));
+    goto ExitMmCommunication2Communicate;
   }
 
   if (FeaturePcdGet (PcdFfaEnable)) {
     Ret = CommunicateSmcArgs.Arg2;
+  } else {
+    Ret = CommunicateSmcArgs.Arg0;
   }
 
   switch (Ret) {
@@ -282,6 +337,7 @@ MmCommunication2Communicate (
       ASSERT (0);
   }
 
+ExitMmCommunication2Communicate:
   return Status;
 }
 
@@ -710,16 +766,15 @@ GetBufferAddr (
   ArmSmcArgs.Arg1 = StmmVmId;
   ArmSmcArgs.Arg3 = BufferId;
 
-  StmmFfaSmc (&ArmSmcArgs);
+  Status = SendFfaDirectReqStMm (&ArmSmcArgs);
 
-  if (ArmSmcArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
+  if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Invalid FFA response: 0x%x\n",
+      "%a: Invalid FFA response: %r\n",
       __FUNCTION__,
-      ArmSmcArgs.Arg0
+      Status
       ));
-    Status = EFI_INVALID_PARAMETER;
     goto exit;
   }
 
@@ -747,7 +802,7 @@ GetNsBufferAddr (
 
   DEBUG ((
     DEBUG_ERROR,
-    "%a: Set NsBufferBase to %lu Size %lu\n",
+    "%a: Set NsBufferBase to 0x%lx Size %lu\n",
     __FUNCTION__,
     NsBufferBase,
     NsBufferSize
