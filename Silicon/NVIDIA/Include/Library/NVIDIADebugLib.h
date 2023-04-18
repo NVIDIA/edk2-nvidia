@@ -43,7 +43,10 @@
       }                                             \
     } while (FALSE)
 #else
-#define NV_ASSERT_RETURN(Expression, Action, Msg ...)
+#define NV_ASSERT_RETURN(Expression, Action, Msg ...)  \
+    do {                                               \
+      if (!(Expression)) { Action; }                   \
+    } while (FALSE)
 #endif
 
 /**
@@ -71,7 +74,10 @@
       }                                                                                  \
     } while (FALSE)
 #else
-#define NV_ASSERT_EFI_ERROR_RETURN(StatusParameter, Action)
+#define NV_ASSERT_EFI_ERROR_RETURN(StatusParameter, Action)  \
+    do {                                                     \
+      if (EFI_ERROR (StatusParameter)) { Action; }           \
+    } while (FALSE)
 #endif
 
 #endif

@@ -18,7 +18,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <IndustryStandard/ArmFfaSvc.h>
 #include <IndustryStandard/ArmStdSmc.h>
 #include <Library/BaseLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 
@@ -49,9 +49,12 @@ GetDeviceRegion (
   EFI_HOB_GUID_TYPE     *GuidHob;
 
   GuidHob = GetFirstGuidHob (&gEfiStandaloneMmDeviceMemoryRegions);
-  if (GuidHob == NULL) {
-    return Status;
-  }
+  NV_ASSERT_RETURN (
+    GuidHob != NULL,
+    return Status,
+    "%a: Unable to find HOB for gEfiStandaloneMmDeviceMemoryRegions\n",
+    __FUNCTION__
+    );
 
   DeviceRegionMap = GET_GUID_HOB_DATA (GuidHob);
   for (Index = 0; Index < MAX_DEVICE_REGIONS; Index++) {
@@ -73,7 +76,6 @@ IsDeviceTypePresent (
   UINT32       *NumRegions   OPTIONAL
   )
 {
-  EFI_STATUS            Status           = EFI_NOT_FOUND;
   EFI_MM_DEVICE_REGION  *DeviceRegionMap = NULL;
   UINTN                 Index;
   EFI_HOB_GUID_TYPE     *GuidHob;
@@ -81,9 +83,12 @@ IsDeviceTypePresent (
   UINT32                NumDevices;
 
   GuidHob = GetFirstGuidHob (&gEfiStandaloneMmDeviceMemoryRegions);
-  if (GuidHob == NULL) {
-    return Status;
-  }
+  NV_ASSERT_RETURN (
+    GuidHob != NULL,
+    return DeviceTypePresent,
+    "%a: Unable to find HOB for gEfiStandaloneMmDeviceMemoryRegions\n",
+    __FUNCTION__
+    );
 
   DeviceRegionMap = GET_GUID_HOB_DATA (GuidHob);
   NumDevices      = 0;
@@ -310,9 +315,12 @@ GetCpuBlParamsAddrStMm (
   STMM_COMM_BUFFERS  *StmmCommBuffers;
 
   GuidHob = GetFirstGuidHob (&gNVIDIAStMMBuffersGuid);
-  if (GuidHob == NULL) {
-    return EFI_NOT_FOUND;
-  }
+  NV_ASSERT_RETURN (
+    GuidHob != NULL,
+    return EFI_NOT_FOUND,
+    "%a: Unable to find HOB for gNVIDIAStMMBuffersGuid\n",
+    __FUNCTION__
+    );
 
   StmmCommBuffers = (STMM_COMM_BUFFERS *)GET_GUID_HOB_DATA (GuidHob);
   *CpuBlAddr      = StmmCommBuffers->CpuBlParamsAddr;
@@ -759,10 +767,11 @@ IsBufInSecSpMbox (
   IsBufInSpRange = FALSE;
 
   GuidHob = GetFirstGuidHob (&gNVIDIAStMMBuffersGuid);
-  if (GuidHob == NULL) {
-    DEBUG ((DEBUG_ERROR, "Failed to find Buffers GUID HOB\n"));
-    goto ExitIsBufInSecSpMbox;
-  }
+  NV_ASSERT_RETURN (
+    GuidHob != NULL,
+    goto ExitIsBufInSecSpMbox,
+    "Failed to find Buffers GUID HOB"
+    );
 
   StmmCommBuffers = (STMM_COMM_BUFFERS *)GET_GUID_HOB_DATA (GuidHob);
   if (SpId == RASFW_VMID) {

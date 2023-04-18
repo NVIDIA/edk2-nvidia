@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2013-2015, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -8,7 +8,7 @@
 **/
 
 #include <Library/ArmPlatformLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Pi/PiHob.h>
 #include <Library/HobLib.h>
 #include <Library/PcdLib.h>
@@ -44,25 +44,16 @@ GetVirtualMemoryMap (
   ASSERT (VirtualMemoryMap != NULL);
 
   Status = InstallSystemResources (&ResourcesCount);
-  ASSERT_EFI_ERROR (Status);
-  if (EFI_ERROR (Status)) {
-    return;
-  }
+  NV_ASSERT_EFI_ERROR_RETURN (Status, return );
 
   ASSERT (ResourcesCount != 0);
 
   VirtualMemoryTable = (ARM_MEMORY_REGION_DESCRIPTOR *)AllocatePages (EFI_SIZE_TO_PAGES (sizeof (ARM_MEMORY_REGION_DESCRIPTOR) * (ResourcesCount + 1)));
-  if (VirtualMemoryTable == NULL) {
-    ASSERT (FALSE);
-    return;
-  }
+  NV_ASSERT_RETURN (VirtualMemoryTable != NULL, return );
 
   // Walk HOB list for resources
   HobList = GetHobList ();
-  if (NULL == HobList) {
-    ASSERT (FALSE);
-    return;
-  }
+  NV_ASSERT_RETURN (HobList != NULL, return , "Missing HobList\n");
 
   HobList = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, HobList);
   while (NULL != HobList) {

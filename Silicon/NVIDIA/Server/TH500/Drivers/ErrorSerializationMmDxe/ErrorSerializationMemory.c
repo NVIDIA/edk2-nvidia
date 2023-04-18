@@ -9,7 +9,7 @@
 
 #include "ErrorSerializationMemory.h"
 #include <Uefi.h>
-#include <Library/DebugLib.h>            // ASSERT
+#include <Library/NVIDIADebugLib.h>      // ASSERT
 #include <Library/MemoryAllocationLib.h> // AllocatePool
 #include <Guid/Cper.h>                   // From MdePkg
 
@@ -140,7 +140,7 @@ ErstFreePoolRecord (
     }
   }
 
-  ASSERT (0 && "UNABLE TO FREE RECORD POOL");
+  NV_ASSERT_RETURN (0, return , "UNABLE TO FREE RECORD POOL");
 }
 
 #define GENERATE_POOL_ALLOCATE_FREE_FOR(PoolName, PoolIndex) \

@@ -10,7 +10,7 @@
 #include <Library/IoLib.h>               // MMIO calls
 #include <Library/BaseMemoryLib.h>       // CopyMem
 #include <Library/MemoryAllocationLib.h> // AllocatePool
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/StandaloneMmOpteeDeviceMem.h> // STMM_COMM_BUFFERS
 #include <Library/HobLib.h>
 
@@ -2309,9 +2309,12 @@ ErrorSerializationGatherBufferData (
   STMM_COMM_BUFFERS  *StmmCommBuffers;
 
   GuidHob = GetFirstGuidHob (&gNVIDIAStMMBuffersGuid);
-  if (GuidHob == NULL) {
-    ASSERT_EFI_ERROR (EFI_NOT_FOUND);
-  }
+  NV_ASSERT_RETURN (
+    GuidHob != NULL,
+    return EFI_NOT_FOUND,
+    "%a: Unable to find HOB for gNVIDIAStMMBuffersGuid\n",
+    __FUNCTION__
+    );
 
   StmmCommBuffers         = (STMM_COMM_BUFFERS *)GET_GUID_HOB_DATA (GuidHob);
   NsCommBuffMemRegionBase = StmmCommBuffers->NsBufferAddr;

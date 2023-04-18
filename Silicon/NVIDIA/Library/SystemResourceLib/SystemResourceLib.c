@@ -9,7 +9,7 @@
 #include <libfdt.h>
 #include <Library/DramCarveoutLib.h>
 #include <Pi/PiPeiCis.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/PrintLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -221,10 +221,7 @@ InstallSystemResources (
 
   // Install MMIO regions
   Status = InstallMmioRegions (ChipID, MemoryRegionsCount);
-  ASSERT_EFI_ERROR (Status);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
+  NV_ASSERT_EFI_ERROR_RETURN (Status, return Status);
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   if ((Hob != NULL) &&
@@ -236,10 +233,7 @@ InstallSystemResources (
   }
 
   PlatformInfo->InputDramRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * PlatformInfo->DramRegionsCount);
-  ASSERT (PlatformInfo->InputDramRegions != NULL);
-  if (PlatformInfo->InputDramRegions == NULL) {
-    return EFI_DEVICE_ERROR;
-  }
+  NV_ASSERT_RETURN (PlatformInfo->InputDramRegions != NULL, return EFI_DEVICE_ERROR);
 
   CopyMem (
     PlatformInfo->InputDramRegions,
@@ -249,10 +243,7 @@ InstallSystemResources (
 
   CarveoutSize                       = sizeof (NVDA_MEMORY_REGION) * PlatformInfo->CarveoutRegionsCount;
   PlatformInfo->InputCarveoutRegions = AllocatePages (EFI_SIZE_TO_PAGES (CarveoutSize));
-  ASSERT (PlatformInfo->InputCarveoutRegions != NULL);
-  if (PlatformInfo->InputCarveoutRegions == NULL) {
-    return EFI_DEVICE_ERROR;
-  }
+  NV_ASSERT_RETURN (PlatformInfo->InputCarveoutRegions != NULL, return EFI_DEVICE_ERROR);
 
   CopyMem (
     PlatformInfo->InputCarveoutRegions,
