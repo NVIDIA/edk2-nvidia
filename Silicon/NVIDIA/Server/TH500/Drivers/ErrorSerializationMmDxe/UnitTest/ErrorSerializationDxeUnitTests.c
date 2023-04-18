@@ -30,6 +30,13 @@
 #include <ErrorSerializationDxeTestPrivate.h>
 
 #include <Library/StandaloneMmOpteeDeviceMem.h>
+
+#define FREE_NON_NULL(a) \
+  if ((a) != NULL) { \
+    FreePool ((a));  \
+    (a) = NULL;      \
+  }
+
 typedef struct {
   EFI_HOB_GUID_TYPE    GUID;
   STMM_COMM_BUFFERS    Buffers;
@@ -106,6 +113,7 @@ IsBufferValue (
 // * Collecting Block with invalid header
 
 extern ERST_PRIVATE_INFO  mErrorSerialization;
+extern UINT8              *mShadowFlash;
 
 // STATIC UINT8 *TestVariablePartition;
 STATIC UINT8                      *TestFlashStorage;
@@ -2733,14 +2741,20 @@ FaultyFlashTest (
   TestInfo = (COMMON_TEST_CONTEXT *)Context;
   ErstComm = (ERST_COMM_STRUCT *)TestErstBuffer;
 
+  // Can't use shadow flash because these tests expect to touch faulty flash
+  FREE_NON_NULL (mShadowFlash);
+
+  DEBUG ((DEBUG_INFO, "FaultyFlash - Write tests\n"));
   // Test Writing with a broken flash while it's empty
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   E2EWrite (Context, 0x1, 0x0, 0x0, 0xaa, EFI_ACPI_6_4_ERST_STATUS_FAILED);
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - DummyWrite tests\n"));
   // Test Dummy Writing with a broken flash while it's empty
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   E2EDummyWrite (Context, 0x1, 0x0, 0x0, 0xaa, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - Fill\n"));
   // Make sure there's valid data, written with the good protocol
   mErrorSerialization.NorFlashProtocol = TestNorFlashProtocol;
   E2ESimpleFillTest (Context);
@@ -2751,6 +2765,7 @@ FaultyFlashTest (
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
   PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - Read tests\n"));
   // E2E Read broken flash
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   E2ERead (
@@ -2762,6 +2777,7 @@ FaultyFlashTest (
     EFI_ACPI_6_4_ERST_STATUS_FAILED
     );
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - Clear tests\n"));
   // E2E Clear broken flash
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   E2EClear (
@@ -2773,6 +2789,7 @@ FaultyFlashTest (
     EFI_ACPI_6_4_ERST_STATUS_FAILED
     );
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - CPER tests\n"));
   // ErstWriteCperStatus
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   Status                               = ErstWriteCperStatus (&CperPI->Status, CperInfo);
@@ -2783,6 +2800,7 @@ FaultyFlashTest (
   Status                               = ErstCopyOutgoingToIncomingCper (&mErrorSerialization.CperInfo[0], &mErrorSerialization.CperInfo[mErrorSerialization.RecordCount-1]);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - Erase tests\n"));
   // ErstFindFreeSpace when Erase is required
   // 1. Clear the block
   // 2. Fill it again
@@ -2799,6 +2817,13 @@ FaultyFlashTest (
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   E2EWrite (Context, 0xabcd, 0x0, 0x0, 0xbb, EFI_ACPI_6_4_ERST_STATUS_FAILED);
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - CollectBlock tests\n"));
+  // ErstCollectBlock when ReadSpinor fails
+  mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
+  Status                               = ErstCollectBlock ((ERST_BLOCK_INFO *)TestBuffer, 0, 0);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
+
+  DEBUG ((DEBUG_INFO, "FaultyFlash - InitProtocol tests\n"));
   // Make sure initprotocol fails when we can't get flash attributes
   // WARNING: This clears the tracking information, so will break subequent tests
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
@@ -2807,16 +2832,12 @@ FaultyFlashTest (
   Status = ErrorSerializationReInit ();
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - E2E tests\n"));
   // E2E Op broken flash when out of sync
   // Note: can't check anything, since mErrorSerialization is left in a bad state
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   mErrorSerialization.UnsyncedSpinorChanges++;
   ErrorSerializationEventHandler (NULL, NULL, NULL, NULL);
-
-  // ErstCollectBlock when ReadSpinor fails
-  mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
-  Status                               = ErstCollectBlock ((ERST_BLOCK_INFO *)TestBuffer, 0, 0);
-  UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
   return UNIT_TEST_PASSED;
 }
@@ -4153,6 +4174,8 @@ ValidateRecordTest (
   ERST_CPER_INFO                  *CperInfo;
   EFI_COMMON_ERROR_RECORD_HEADER  *Cper;
   CPER_ERST_PERSISTENCE_INFO      *CperPI;
+  EFI_COMMON_ERROR_RECORD_HEADER  *ShadowCper;
+  CPER_ERST_PERSISTENCE_INFO      *ShadowCperPI;
   UINT64                          RecordId;
   UINT32                          PayloadSize;
 
@@ -4173,8 +4196,10 @@ ValidateRecordTest (
 
   CperInfo = ErstFindRecord (RecordId);
   UT_ASSERT_NOT_NULL (CperInfo);
-  Cper   = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
-  CperPI = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
+  Cper         = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
+  CperPI       = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
+  ShadowCper   = (EFI_COMMON_ERROR_RECORD_HEADER *)(mShadowFlash + CperInfo->RecordOffset);
+  ShadowCperPI = (CPER_ERST_PERSISTENCE_INFO *)&ShadowCper->PersistenceInfo;
 
   // Pass in FIRST record ID
   Status = ErstValidateRecord (Cper, ERST_FIRST_RECORD_ID, PayloadSize+sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
@@ -4251,10 +4276,12 @@ ValidateRecordTest (
   CperPI->Status = ~CperPI->Status;
 
   // RelocateRecord when ValidateRecord fails
-  CperPI->Status = ~CperPI->Status;
-  Status         = ErstRelocateRecord (CperInfo);
+  CperPI->Status       = ~CperPI->Status;
+  ShadowCperPI->Status = CperPI->Status;
+  Status               = ErstRelocateRecord (CperInfo);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_COMPROMISED_DATA);
-  CperPI->Status = ~CperPI->Status;
+  CperPI->Status       = ~CperPI->Status;
+  ShadowCperPI->Status = CperPI->Status;
 
   return UNIT_TEST_PASSED;
 }
@@ -4577,6 +4604,7 @@ DefaultUnitTestCleanup (
   ErstFreeRuntimeMemory ();
   mErrorSerialization.BlockInfo = NULL;
   mErrorSerialization.CperInfo  = NULL;
+  FREE_NON_NULL (mShadowFlash);
 }
 
 /**

@@ -86,6 +86,7 @@ typedef struct {
   ERST_CPER_INFO               *IncomingCperInfo;     // Which CperInfo entry is INCOMING, if any
   ERST_CPER_INFO               *OutgoingCperInfo;     // Which CperInfo entry is OUTGOING, if any
   EFI_STATUS                   InitStatus;            // The status returned from the Init call
+  UINTN                        PartitionSize;         // The size of the ERST flash partition
 } ERST_PRIVATE_INFO;
 
 typedef

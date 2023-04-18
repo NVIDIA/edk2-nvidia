@@ -142,6 +142,7 @@ STATIC UINT64  SpiTime         __attribute__ ((unused)) = 0;
 
 ERST_PRIVATE_INFO                       mErrorSerialization;
 STATIC ERROR_SERIALIZATION_MM_PROTOCOL  ErrorSerializationProtocol;
+UINT8                                   *mShadowFlash = NULL;
 
 STATIC
 BOOLEAN
@@ -167,6 +168,53 @@ IsErasedBuffer (
   return IsEmpty;
 }
 
+EFI_STATUS
+EFIAPI
+ErstInitShadowFlash (
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      StartTime __attribute__ ((unused));
+
+  mShadowFlash = AllocatePool (mErrorSerialization.PartitionSize);
+  if (mShadowFlash == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Error allocating 0x%x bytes of memory to cache the Flash contents. Will run witohut a cache\n", __FUNCTION__, mErrorSerialization.PartitionSize));
+    Status = EFI_OUT_OF_RESOURCES;
+  } else {
+    DEBUG_CODE (
+      StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+      );
+    Status = mErrorSerialization.NorFlashProtocol->Read (
+                                                     mErrorSerialization.NorFlashProtocol,
+                                                     mErrorSerialization.NorErstOffset,
+                                                     mErrorSerialization.PartitionSize,
+                                                     mShadowFlash
+                                                     );
+    DEBUG_CODE (
+    {
+      UINT64 EndTime;
+      UINT64 ElapsedTime;
+      EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+      if (EndTime > StartTime) {
+        ElapsedTime = EndTime-StartTime;
+      } else {
+        ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+      }
+
+      DEBUG ((DEBUG_ERROR, "%a: Initing the cache of the Flash contents took %llu ns\n", __FUNCTION__, ElapsedTime));
+    }
+      );
+
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to initialize the cache of the Flash contents (rc=%r). Will try to run witohut a cache\n", __FUNCTION__, Status));
+      FreePool (mShadowFlash);
+      mShadowFlash = NULL;
+    }
+  }
+
+  return Status;
+}
+
 // Read data from the SPINOR
 EFI_STATUS
 EFIAPI
@@ -179,28 +227,42 @@ ErstReadSpiNor (
   EFI_STATUS  Status;
   UINT64      StartTime __attribute__ ((unused));
 
-  DEBUG_CODE (
-    StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
-    );
-  Status = mErrorSerialization.NorFlashProtocol->Read (
-                                                   mErrorSerialization.NorFlashProtocol,
-                                                   Offset + mErrorSerialization.NorErstOffset,
-                                                   Length,
-                                                   Data
-                                                   );
-
-  DEBUG_CODE (
-    UINT64 EndTime;
-    UINT64 ElapsedTime;
-    EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
-    if (EndTime > StartTime) {
-    ElapsedTime = EndTime-StartTime;
-  } else {
-    ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+  if (Offset + Length > mErrorSerialization.PartitionSize) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ReturnStatus;
   }
 
-    SpiTime += ElapsedTime;
-    );
+  if (mShadowFlash) {
+    CopyMem (Data, &mShadowFlash[Offset], Length);
+    Status = EFI_SUCCESS;
+  } else {
+    DEBUG_CODE (
+      StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+      );
+    Status = mErrorSerialization.NorFlashProtocol->Read (
+                                                     mErrorSerialization.NorFlashProtocol,
+                                                     Offset + mErrorSerialization.NorErstOffset,
+                                                     Length,
+                                                     Data
+                                                     );
+
+    DEBUG_CODE (
+    {
+      UINT64 EndTime;
+      UINT64 ElapsedTime;
+      EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+      if (EndTime > StartTime) {
+        ElapsedTime = EndTime-StartTime;
+      } else {
+        ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+      }
+
+      SpiTime += ElapsedTime;
+    }
+      );
+  }
+
+ReturnStatus:
   return Status;
 }
 
@@ -216,9 +278,18 @@ ErstWriteSpiNor (
   EFI_STATUS  Status;
   UINT64      StartTime __attribute__ ((unused));
 
+  if (Offset + Length > mErrorSerialization.PartitionSize) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ReturnStatus;
+  }
+
   DEBUG_CODE (
     StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     );
+
+  if (mShadowFlash) {
+    CopyMem (&mShadowFlash[Offset], Data, Length);
+  }
 
   Status = mErrorSerialization.NorFlashProtocol->Write (
                                                    mErrorSerialization.NorFlashProtocol,
@@ -228,18 +299,22 @@ ErstWriteSpiNor (
                                                    );
 
   DEBUG_CODE (
-    UINT64 EndTime;
-    UINT64 ElapsedTime;
+  {
+    UINT64  EndTime;
+    UINT64  ElapsedTime;
+
     EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     if (EndTime > StartTime) {
-    ElapsedTime = EndTime-StartTime;
-  } else {
-    ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
-  }
+      ElapsedTime = EndTime-StartTime;
+    } else {
+      ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+    }
 
     SpiTime += ElapsedTime;
+  }
     );
 
+ReturnStatus:
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: NorFlashWrite returned Status 0x%x\n", __FUNCTION__, Status));
   }
@@ -282,26 +357,31 @@ ErstEraseSpiNor (
                                                    );
 
   DEBUG_CODE (
+  {
     UINT64 EndTime;
     UINT64 ElapsedTime;
     EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     if (EndTime > StartTime) {
-    ElapsedTime = EndTime-StartTime;
-  } else {
-    ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
-  }
+      ElapsedTime = EndTime-StartTime;
+    } else {
+      ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+    }
 
     SpiTime += ElapsedTime;
 
-    UINT8 *Data = ErstAllocatePoolBlock (mErrorSerialization.BlockSize);
-    ErstReadSpiNor (Data, Offset, Length);
+    UINT8 *Data            = ErstAllocatePoolBlock (mErrorSerialization.BlockSize);
+    VOID *SavedShadowFlash = mShadowFlash;
+    mShadowFlash           = NULL;
+    ErstReadSpiNor (Data, Offset, Length); // Want this to access actual spinor, not cache
+    mShadowFlash = SavedShadowFlash;
     if (!IsErasedBuffer (Data, Length, 0xFF)) {
-    DEBUG ((DEBUG_ERROR, "%a: Spinor block isn't erased after Erase operation!\n", __FUNCTION__));
-  } else {
-    DEBUG ((DEBUG_INFO, "%a: Erased block successfully!\n", __FUNCTION__));
-  }
+      DEBUG ((DEBUG_ERROR, "%a: Spinor block isn't erased after Erase operation!\n", __FUNCTION__));
+    } else {
+      DEBUG ((DEBUG_INFO, "%a: Erased block successfully!\n", __FUNCTION__));
+    }
 
     ErstFreePoolBlock (Data);
+  }
     );
 
   return Status;
@@ -1160,16 +1240,18 @@ ReturnStatus:
   }
 
   DEBUG_CODE (
+  {
     UINT64 EndTime;
     UINT64 ElapsedTime;
     EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     if (EndTime > StartTime) {
-    ElapsedTime = EndTime-StartTime;
-  } else {
-    ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
-  }
+      ElapsedTime = EndTime-StartTime;
+    } else {
+      ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+    }
 
     WriteRecordTime = ElapsedTime;
+  }
     );
 
   return Status;
@@ -1396,69 +1478,71 @@ ErrorSerializationEventHandler (
 
       Cper = (EFI_COMMON_ERROR_RECORD_HEADER *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset);
       DEBUG_CODE (
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: PhysicalBase = 0x%p OsRecordOffset = 0x%p Cper = 0x%p\n",
-          __FUNCTION__,
-          (void *)mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase,
-          (void *)OSRecordOffset,
-          Cper
-          ));
-        DEBUG ((DEBUG_INFO, "%a: CPER->SignatureStart = 0x%08x Revision      = 0x%04x     SigantureEnd   = 0x%08x\n", __FUNCTION__, Cper->SignatureStart, Cper->Revision, Cper->SignatureEnd));
-        DEBUG ((DEBUG_INFO, "%a: CPER->SectionCount   = 0x%04x     ErrorSeverity = 0x%08x ValidationBits = 0x%08x\n", __FUNCTION__, Cper->SectionCount, Cper->ErrorSeverity, Cper->ValidationBits));
-        DEBUG ((DEBUG_INFO, "%a: CPER->RecordLength   = 0x%08x TimeStamp(Sec)= 0x%02x       RecordID       = 0x%016llx\n", __FUNCTION__, Cper->RecordLength, Cper->TimeStamp.Seconds, Cper->RecordID));
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: CPER->Header1 = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
-          __FUNCTION__,
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[0],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[1],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[2],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[3],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[4],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[5],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[6],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[7]
-          ));
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: CPER->Header2 = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
-          __FUNCTION__,
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[8],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[9],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[10],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[11],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[12],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[13],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[14],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[15]
-          ));
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: CPER->Data = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
-          __FUNCTION__,
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[0],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[1],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[2],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[3],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[4],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[5],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[6],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[7]
-          ));
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: CPER->Data = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
-          __FUNCTION__,
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[8],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[9],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[10],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[11],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[12],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[13],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[14],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[15]
-          ));
+    {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: PhysicalBase = 0x%p OsRecordOffset = 0x%p Cper = 0x%p\n",
+        __FUNCTION__,
+        (void *)mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase,
+        (void *)OSRecordOffset,
+        Cper
+        ));
+      DEBUG ((DEBUG_INFO, "%a: CPER->SignatureStart = 0x%08x Revision      = 0x%04x     SigantureEnd   = 0x%08x\n", __FUNCTION__, Cper->SignatureStart, Cper->Revision, Cper->SignatureEnd));
+      DEBUG ((DEBUG_INFO, "%a: CPER->SectionCount   = 0x%04x     ErrorSeverity = 0x%08x ValidationBits = 0x%08x\n", __FUNCTION__, Cper->SectionCount, Cper->ErrorSeverity, Cper->ValidationBits));
+      DEBUG ((DEBUG_INFO, "%a: CPER->RecordLength   = 0x%08x TimeStamp(Sec)= 0x%02x       RecordID       = 0x%016llx\n", __FUNCTION__, Cper->RecordLength, Cper->TimeStamp.Seconds, Cper->RecordID));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: CPER->Header1 = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
+        __FUNCTION__,
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[0],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[1],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[2],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[3],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[4],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[5],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[6],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[7]
+        ));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: CPER->Header2 = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
+        __FUNCTION__,
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[8],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[9],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[10],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[11],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[12],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[13],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[14],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[15]
+        ));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: CPER->Data = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
+        __FUNCTION__,
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[0],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[1],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[2],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[3],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[4],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[5],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[6],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[7]
+        ));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: CPER->Data = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
+        __FUNCTION__,
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[8],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[9],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[10],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[11],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[12],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[13],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[14],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[15]
+        ));
+    }
         );
       // Save off the length and ID before validating them
       OSRecordLength = Cper->RecordLength;
@@ -1591,18 +1675,20 @@ ReturnStatus:
   ErstClearBusy ();
 
   DEBUG_CODE (
+  {
     UINT64 EndTime;
     UINT64 ElapsedTime;
     EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     if (EndTime > StartTime) {
-    ElapsedTime = EndTime-StartTime;
-  } else {
-    ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
-  }
+      ElapsedTime = EndTime-StartTime;
+    } else {
+      ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+    }
 
     DEBUG ((DEBUG_ERROR, "%a: Function took %llu ns from start to clear busy (WriteRecordTime=%llu = %d%%, SpiTime=%llu = %d%%)\n", __FUNCTION__, ElapsedTime, WriteRecordTime, 100*WriteRecordTime/ElapsedTime, SpiTime, 100*SpiTime/ElapsedTime));
     WriteRecordTime = 0;
     SpiTime         = 0;
+  }
     );
 
   if (NewCper != NULL) {
@@ -2232,6 +2318,8 @@ ErrorSerializationInitProtocol (
     goto Done;
   }
 
+  mErrorSerialization.PartitionSize = mErrorSerialization.NumBlocks * (UINTN)mErrorSerialization.BlockSize;
+
 Done:
   return Status;
 }
@@ -2270,6 +2358,9 @@ ErrorSerializationGatherSpinorData (
   }
 
   ZeroMem (mErrorSerialization.CperInfo, CperInfoLength);
+
+  // Try to create the ShadowFlash. Ignore the returned Status because we can run without it
+  ErstInitShadowFlash ();
 
   mErrorSerialization.UnsyncedSpinorChanges = 1; // Make sure it's non-zero until after Collecting
   Status                                    = ErstCollectBlockInfo (mErrorSerialization.BlockInfo);
