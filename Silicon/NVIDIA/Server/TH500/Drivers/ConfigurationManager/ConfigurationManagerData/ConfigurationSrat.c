@@ -228,8 +228,6 @@ InstallStaticResourceAffinityTable (
 
     for (GpuMemoryAffinityId = 0; GpuMemoryAffinityId < TH500_GPU_MAX_NR_MEM_PARTITIONS; GpuMemoryAffinityId++) {
       MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (Socket) + GpuMemoryAffinityId;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = HbmMemInfo[MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain].HbmBase;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = HbmMemInfo[MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain].HbmSize;
       MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED|EFI_ACPI_6_4_MEMORY_HOT_PLUGGABLE;
       MemoryAffinityInfoIndex++;
     }
