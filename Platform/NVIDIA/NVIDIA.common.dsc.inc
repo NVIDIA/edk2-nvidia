@@ -210,6 +210,7 @@
   NvgLib|Silicon/NVIDIA/Library/NvgLib/NvgLib.inf
   FloorSweepingLib|Silicon/NVIDIA/Library/FloorSweepingLib/FloorSweepingLib.inf
   DeviceTreeHelperLib|Silicon/NVIDIA/Library/DeviceTreeHelperLib/DeviceTreeHelperLib.inf
+  DisplayDeviceTreeHelperLib|Silicon/NVIDIA/Library/DisplayDeviceTreeHelperLib/DisplayDeviceTreeHelperLib.inf
 
   Crc8Lib|Silicon/NVIDIA/Library/Crc8Lib/Crc8Lib.inf
 
