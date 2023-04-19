@@ -30,6 +30,7 @@
   BaseLib
   DebugLib
   DeviceDiscoveryDriverLib
+  DisplayDeviceTreeHelperLib
   HobLib
   IoLib
   MemoryAllocationLib
