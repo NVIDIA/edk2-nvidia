@@ -137,7 +137,7 @@ STATIC UINT64  SpiTime         __attribute__ ((unused)) = 0;
 */
 
 ERST_PRIVATE_INFO                       mErrorSerialization;
-STATIC ERROR_SERIALIZATION_MM_PROTOCOL  ErrorSerializationProtocol = { ErrorSerializationEventHandler };
+STATIC ERROR_SERIALIZATION_MM_PROTOCOL  ErrorSerializationProtocol;
 
 STATIC
 BOOLEAN
@@ -2497,6 +2497,8 @@ RegisterErrorSerializationHandler (
   )
 {
   EFI_STATUS  Status;
+
+  ErrorSerializationProtocol.InterruptHandler = ErrorSerializationEventHandler;
 
   Status = EFI_SUCCESS;
   Status = gMmst->MmInstallProtocolInterface (
