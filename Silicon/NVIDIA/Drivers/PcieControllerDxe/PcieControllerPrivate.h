@@ -15,6 +15,7 @@
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
+#include <Protocol/EmbeddedGpio.h>
 #include <TH500/TH500Definitions.h>
 
 #define BIT(x)  (1 << (x))
@@ -26,6 +27,11 @@
 #define PCIE_NUMBER_OF_INTERUPT_MAP   4
 #define PCIE_REPO_OBJECTS             (5 + PCIE_NUMBER_OF_MAPPING_SPACE + PCIE_NUMBER_OF_INTERUPT_MAP)// Config Space, 2 Reference Arrays, Mappings, Acpi tables, End of list
 #define SPI_OFFSET                    (32U)
+
+#define GPU_SENSE_MAX_COUNT  500
+#define GPU_KICK_MAX_COUNT   5
+#define GPU_SENSE_DELAY      1
+#define GPU_RESET_DELAY      30000
 
 #define PCIE_CHILD_ADDRESS_OFFSET           0
 #define PCIE_CHILD_INT_OFFSET               3
@@ -66,6 +72,11 @@ typedef struct {
   UINT64                                              IoBase;
   UINT64                                              IoLimit;
   UINT32                                              BusMask;
+
+  // GPU Kick Information
+  BOOLEAN                                             GpuKickGpioSupported;
+  EMBEDDED_GPIO_PIN                                   GpuKickGpioSense;
+  EMBEDDED_GPIO_PIN                                   GpuKickGpioReset;
 
   // Configuration data
   CM_ARM_PCI_CONFIG_SPACE_INFO                        ConfigSpaceInfo;

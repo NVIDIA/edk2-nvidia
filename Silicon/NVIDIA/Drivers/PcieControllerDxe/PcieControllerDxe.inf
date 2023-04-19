@@ -62,6 +62,7 @@
   gNVIDIAC2cNodeProtocolGuid
   gNVIDIABdsDeviceConnectCompleteGuid
   gEfiPciIoProtocolGuid
+  gEmbeddedGpioProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableTH500PcieDeviceGuid
@@ -72,3 +73,5 @@
   gNVIDIAAllRegulatorsPresentProtocolGuid
   AND
   gNVIDIAUphyConfigurationCompleteGuid
+  AND
+  gEmbeddedGpioProtocolGuid

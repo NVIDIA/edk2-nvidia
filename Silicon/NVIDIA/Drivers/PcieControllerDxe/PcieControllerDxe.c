@@ -390,6 +390,74 @@ RetrainLink (
 STATIC
 EFI_STATUS
 EFIAPI
+KickGpu (
+  PCIE_CONTROLLER_PRIVATE  *Private,
+  IN  EFI_HANDLE           ControllerHandle
+  )
+{
+  EFI_STATUS     Status;
+  EMBEDDED_GPIO  *Gpio;
+  UINTN          SenseCount;
+  UINTN          Value;
+  BOOLEAN        GPUSensed;
+  UINT32         KickCount;
+
+  if (!Private->GpuKickGpioSupported) {
+    return EFI_SUCCESS;
+  }
+
+  Status = gBS->LocateProtocol (&gEmbeddedGpioProtocolGuid, NULL, (VOID **)&Gpio);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get GPIO protocol - %r\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  KickCount = 0;
+  GPUSensed = FALSE;
+
+  for (KickCount = 0; KickCount <= GPU_KICK_MAX_COUNT; KickCount++) {
+    for (SenseCount = 0; SenseCount < GPU_SENSE_MAX_COUNT; SenseCount++) {
+      Status = Gpio->Get (Gpio, Private->GpuKickGpioSense, &Value);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "ERROR: Gpio get failed: %r\r\n", Status));
+        return Status;
+      }
+
+      if (Value == 0) {
+        GPUSensed = TRUE;
+        break;
+      }
+
+      gBS->Stall (GPU_SENSE_DELAY);
+    }
+
+    if (GPUSensed) {
+      return EFI_SUCCESS;
+    } else {
+      Status = Gpio->Set (Gpio, Private->GpuKickGpioReset, GPIO_MODE_OUTPUT_0);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
+        return Status;
+      }
+
+      gBS->Stall (GPU_RESET_DELAY);
+
+      Status = Gpio->Set (Gpio, Private->GpuKickGpioReset, GPIO_MODE_OUTPUT_1);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
+        return Status;
+      }
+
+      gBS->Stall (GPU_SENSE_DELAY);
+    }
+  }
+
+  return EFI_NOT_READY;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
 InitializeController (
   PCIE_CONTROLLER_PRIVATE  *Private,
   IN  EFI_HANDLE           ControllerHandle
@@ -1236,12 +1304,13 @@ DeviceDiscoveryNotify (
   )
 {
   EFI_STATUS                Status;
-  PCI_ROOT_BRIDGE           *RootBridge        = NULL;
-  EFI_DEVICE_PATH_PROTOCOL  *ParentDevicePath  = NULL;
-  CONST VOID                *BusProperty       = NULL;
-  CONST VOID                *RangesProperty    = NULL;
-  CONST VOID                *HbmRangesProperty = NULL;
-  INT32                     PropertySize       = 0;
+  PCI_ROOT_BRIDGE           *RootBridge          = NULL;
+  EFI_DEVICE_PATH_PROTOCOL  *ParentDevicePath    = NULL;
+  CONST VOID                *BusProperty         = NULL;
+  CONST VOID                *RangesProperty      = NULL;
+  CONST VOID                *HbmRangesProperty   = NULL;
+  CONST UINT32              *GpuKickGpioProperty = NULL;
+  INT32                     PropertySize         = 0;
   INT32                     AddressCells;
   INT32                     PciAddressCells;
   INT32                     SizeCells;
@@ -1555,11 +1624,29 @@ DeviceDiscoveryNotify (
         Private->PcieRootBridgeConfigurationIo.NumProximityDomains  = TH500_GPU_MAX_NR_MEM_PARTITIONS;
       }
 
+      GpuKickGpioProperty = fdt_getprop (
+                              DeviceTreeNode->DeviceTreeBase,
+                              DeviceTreeNode->NodeOffset,
+                              "nvidia,gpukick-gpio",
+                              &PropertySize
+                              );
+      if ((GpuKickGpioProperty != NULL) && (PropertySize == (6 * sizeof (UINT32)))) {
+        Private->GpuKickGpioSense     = GPIO (SwapBytes32 (GpuKickGpioProperty[0]), SwapBytes32 (GpuKickGpioProperty[1]));
+        Private->GpuKickGpioReset     = GPIO (SwapBytes32 (GpuKickGpioProperty[3]), SwapBytes32 (GpuKickGpioProperty[4]));
+        Private->GpuKickGpioSupported = TRUE;
+      }
+
       if ((RootBridge->PMem.Base == MAX_UINT64) && (RootBridge->PMemAbove4G.Base == MAX_UINT64)) {
         RootBridge->AllocationAttributes |= EFI_PCI_HOST_BRIDGE_COMBINE_MEM_PMEM;
       }
 
       Private->BusMask = RootBridge->Bus.Limit;
+
+      Status = KickGpu (Private, ControllerHandle);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((EFI_D_ERROR, "%a: Unable to kick gpu (%r)\r\n", __FUNCTION__, Status));
+        break;
+      }
 
       Status = InitializeController (Private, ControllerHandle);
       if (EFI_ERROR (Status)) {
