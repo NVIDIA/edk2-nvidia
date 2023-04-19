@@ -14,6 +14,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/DisplayDeviceTreeHelperLib.h>
 #include <Library/DmaLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -668,6 +669,7 @@ UpdateDtForHead (
   )
 {
   EFI_STATUS            Status;
+  BOOLEAN               IsActive;
   EFI_PHYSICAL_ADDRESS  FbAddress, LutAddress;
   UINTN                 FbSize, LutSize;
 
@@ -677,7 +679,8 @@ UpdateDtForHead (
   DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferBase = 0x%p\n", HeadIndex, Mode->FrameBufferBase));
   DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferSize = %u\n", HeadIndex, Mode->FrameBufferSize));
 
-  if (IsHeadActive (Private, HeadIndex)) {
+  IsActive = IsHeadActive (Private, HeadIndex);
+  if (IsActive) {
     /* Active head: use FB and LUT settings from CBoot */
     if (HeadIndex == Private->ActiveHeadIndex) {
       DEBUG ((DEBUG_ERROR, "Head index %d is active and used by UEFI\n", HeadIndex));
@@ -702,14 +705,31 @@ UpdateDtForHead (
     FbSize    = LutSize    = 0;
   }
 
-  return UpdateFbCarveoutNode (
+  if (!UpdateFbCarveoutNode (
+         DtBlob,
+         HeadIndex,
+         FbAddress,
+         FbSize,
+         LutAddress,
+         LutSize
+         ))
+  {
+    return FALSE;
+  }
+
+  if (IsActive) {
+    if (!UpdateDeviceTreeSimpleFramebufferInfo (
            DtBlob,
-           HeadIndex,
-           FbAddress,
-           FbSize,
-           LutAddress,
-           LutSize
-           );
+           Mode->Info,
+           (UINT64)FbAddress,
+           (UINT64)FbSize
+           ))
+    {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
 }
 
 /***************************************
