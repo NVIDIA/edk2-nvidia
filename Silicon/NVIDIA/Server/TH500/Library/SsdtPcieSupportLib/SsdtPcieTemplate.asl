@@ -36,38 +36,35 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
     //
     // OS Control Handoff
     //
-    Name (SUPP, Zero) // PCI _OSC Support Field value
-    Name (CTRL, Zero) // PCI _OSC Control Field value
+    Local1 = Zero // PCI _OSC Control Field value
 
     // Create DWord-addressable fields from the Capabilities Buffer
     CreateDWordField (Arg3, 0, CDW1)
-    CreateDWordField (Arg3, 4, CDW2)
     CreateDWordField (Arg3, 8, CDW3)
 
     // Check for proper UUID
     If (LEqual (Arg0,ToUUID ("33DB4D5B-1FF7-401C-9657-7441C03DD766"))) {
 
-      // Save Capabilities DWord2 & 3
-      Store (CDW2, SUPP)
-      Store (CDW3, CTRL)
+      // Save Capabilities DWord3
+      Store (CDW3, Local1)
 
       /* Do not allow SHPC (No SHPC controller in this system) */
       /* Do not allow Native PME (TODO: Confirm it) */
       /* Do not allow Native AER (RAS-FW handles it) */
       /* Allow Native PCIe capability */
       /* Allow Native LTR control */
-      And(CTRL,0x31,CTRL)
+      And(Local1,0x31,Local1)
 
       If (LNotEqual (Arg1, One)) {  // Unknown revision
         Or (CDW1, 0x08, CDW1)
       }
 
-      If (LNotEqual (CDW3, CTRL)) {  // Capabilities bits were masked
+      If (LNotEqual (CDW3, Local1)) {  // Capabilities bits were masked
         Or (CDW1, 0x10, CDW1)
       }
 
       // Update DWORD3 in the buffer
-      Store (CTRL,CDW3)
+      Store (Local1,CDW3)
       Return (Arg3)
     } Else {
       Or (CDW1, 4, CDW1) // Unrecognized UUID
@@ -77,7 +74,7 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
 
   Device (RP00)
   {
-      Name (_ADR, 0x0000)  // _ADR: Address
+    Name (_ADR, 0x0000)  // _ADR: Address
 
     // The "ADDR" named object would be patched by UEFI to have the correct
     // address of the NS shared memory region of this particular instance.
@@ -105,13 +102,13 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
             // Standard query - A bitmask of functions supported
             //
             Case (0) {
-              Name(OPTS, Buffer(2) {0, 0})
-              CreateBitField(OPTS, 0, FUN0)
-              CreateBitField(OPTS, 13, FUND)
+              Local0 = Buffer(2) {0, 0}
+              CreateBitField(Local0, 0, FUN0)
+              CreateBitField(Local0, 13, FUND)
 
               Store(1, FUN0)
               Store(1, FUND)
-              Return(OPTS)
+              Return(Local0)
             }
             //
             // Function Index: D
@@ -131,6 +128,11 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
           } // End of switch(Arg2)
         } // end Check for Revision ID
       } // end Check UUID
+      //
+      // If not one of the UUIDs we recognize, then return a buffer
+      // with bit 0 set to 0 indicating no functions supported.
+      //
+      Return (Buffer () {0})
     } // end _DSM
 
     OperationRegion (LIC4, SystemMemory, LICA, TH500_SW_IO4_SIZE)
