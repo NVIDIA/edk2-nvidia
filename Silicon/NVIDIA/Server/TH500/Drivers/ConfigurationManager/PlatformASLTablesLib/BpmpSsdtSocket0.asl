@@ -172,7 +172,7 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
                   Store (TPWR, PWRV)
                 }
               }
-              If (Arg1 = PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
                 And (VFG2, TH500_TH500_PWR_1SEC_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (TAPW, PWRV)
@@ -188,7 +188,7 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
                   Store (CPWR, PWRV)
                 }
               }
-              If (Arg1 = PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
                 And (VFG2, TH500_CPU_PWR_1SEC_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (CAPW, PWRV)
@@ -204,7 +204,7 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
                   Store (SPWR, PWRV)
                 }
               }
-              If (Arg1 = PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
                 And (VFG2, TH500_SOC_PWR_1SEC_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (SAPW, PWRV)
