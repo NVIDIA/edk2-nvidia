@@ -3954,6 +3954,7 @@ WriteCperStatusTest (
   TestInfo   = (COMMON_TEST_CONTEXT *)Context;
   TestCper   = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + TestInfo->Offset);
   TestCperPI = (CPER_ERST_PERSISTENCE_INFO *)&TestCper->PersistenceInfo;
+  CperInfo   = (ERST_CPER_INFO) { };
 
   StatusVal = (UINT8)TestInfo->TestValue;
 
@@ -4041,6 +4042,7 @@ WriteCperStatusErrorTest (
   ERST_CPER_INFO       OtherCperInfo;
 
   TestInfo = (COMMON_TEST_CONTEXT *)Context;
+  CperInfo = (ERST_CPER_INFO) { };
 
   CperInfo.RecordOffset      = TestInfo->Offset;
   OtherCperInfo.RecordOffset = TestInfo->Offset + 1;
