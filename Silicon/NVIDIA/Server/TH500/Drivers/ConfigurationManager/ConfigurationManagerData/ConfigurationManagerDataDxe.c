@@ -45,7 +45,7 @@ STATIC CONST THERMAL_ZONE_DATA  ThermalZoneData[] = {
   { TH500_THERMAL_ZONE_SOC3,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc3_List,  L"Thermal Zone Skt%d SOC3"  },
   { TH500_THERMAL_ZONE_SOC4,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc4_List,  L"Thermal Zone Skt%d SOC4"  },
   { TH500_THERMAL_ZONE_TJ_MAX, FixedPcdGetBool (PcdUseSinglePassiveThermalZone),  TRUE,  ThermalZoneTjMax_List, L"Thermal Zone Skt%d TJMax" },
-  { TH500_THERMAL_ZONE_TJ_MIN, FALSE,                                             FALSE, NULL,                  L"Thermal Zone Skt%d TJMin" },
+  { TH500_THERMAL_ZONE_TJ_MIN, FALSE,                                             TRUE,  NULL,                  L"Thermal Zone Skt%d TJMin" },
   { TH500_THERMAL_ZONE_TJ_AVG, FALSE,                                             TRUE,  NULL,                  L"Thermal Zone Skt%d TJAvg" }
 };
 
