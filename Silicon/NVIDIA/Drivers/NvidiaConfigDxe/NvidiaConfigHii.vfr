@@ -376,6 +376,16 @@ formset
         default = FALSE,
     endcheckbox;
 
+    numeric varid = NVIDIA_CONFIG_HII_CONTROL.PerfVersion,
+        prompt = STRING_TOKEN(STR_PERF_VERSION_PROMPT),
+        help   = STRING_TOKEN(STR_PERF_VERSION_HELP),
+        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 255,
+        step = 1,
+        default = 0,
+    endnumeric;
+
     ADD_GOTO_SOCKET_FORM(0)
     ADD_GOTO_SOCKET_FORM(1)
     ADD_GOTO_SOCKET_FORM(2)

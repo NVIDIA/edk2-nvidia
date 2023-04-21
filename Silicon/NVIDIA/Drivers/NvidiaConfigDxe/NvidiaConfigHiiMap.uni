@@ -47,6 +47,7 @@
 #string STR_EGM_HV_RESERVED_SIZE_PROMPT   #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/EGMHypervisorReservedMemory"
 #string STR_SPREAD_SPECTRUM_PROMPT        #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/UPHYSpreadSpectrum"
 #string STR_ATS_PAGE_GRANULE_PROMPT       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/AtsPageGranule4k"
+#string STR_PERF_VERSION_PROMPT           #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/PerformanceVersion"
 #string STR_UEFI_DEBUG_LEVEL_PROMPT       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/UefiDebugLogLevel"
 #string STR_HOST_INTERFACE_ENABLED_PROMPT #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/RedfishHostInterface"
 

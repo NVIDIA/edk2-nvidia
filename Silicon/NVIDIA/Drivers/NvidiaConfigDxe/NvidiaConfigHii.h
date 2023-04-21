@@ -146,6 +146,7 @@ typedef struct {
   UINT32     UefiDebugLevel;
   BOOLEAN    SpreadSpectrumEnable;
   BOOLEAN    AtsPageGranule4k;
+  UINT8      PerfVersion;
   UINT8      UphySetting0[MAX_UPHY];
   UINT8      UphySetting1[MAX_UPHY];
   UINT8      UphySetting2[MAX_UPHY];
