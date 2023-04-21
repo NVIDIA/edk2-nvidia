@@ -38,6 +38,7 @@
   MemoryAllocationLib
   UefiLib
   Tpm2CommandLib
+  TpmPlatformHierarchyLib
 
 [Protocols]
   gNVIDIATpm2ProtocolGuid  ## CONSUMES

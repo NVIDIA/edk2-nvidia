@@ -16,6 +16,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/Tpm2CommandLib.h>
+#include <Library/TpmPlatformHierarchyLib.h>
 
 #include <Guid/TpmInstance.h>
 #include <IndustryStandard/TpmPtp.h>
@@ -135,6 +136,11 @@ Tpm2Initialize (
   }
 
   PcdSet32S (PcdTcg2HashAlgorithmBitmap, 0x00000006);
+
+  //
+  // Prevent OS from using commands that require platform hierarchy authorization
+  //
+  ConfigureTpmPlatformHierarchy ();
 
   return EFI_SUCCESS;
 }

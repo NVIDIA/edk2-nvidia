@@ -46,6 +46,7 @@
   Tpm2CommandLib|SecurityPkg/Library/Tpm2CommandLib/Tpm2CommandLib.inf
   Tcg2PhysicalPresenceLib|SecurityPkg/Library/DxeTcg2PhysicalPresenceLib/DxeTcg2PhysicalPresenceLib.inf
   Tcg2PpVendorLib|SecurityPkg/Library/Tcg2PpVendorLibNull/Tcg2PpVendorLibNull.inf
+  TpmPlatformHierarchyLib|SecurityPkg/Library/PeiDxeTpmPlatformHierarchyLib/PeiDxeTpmPlatformHierarchyLib.inf
 
   # User Authentication for BIOS Setup Menu
   PlatformPasswordLib|Silicon/NVIDIA/Library/PlatformPasswordLib/PlatformPasswordLib.inf
@@ -162,6 +163,7 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev|4
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask|0x00000006
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap|0x00000006
+  gEfiSecurityPkgTokenSpaceGuid.PcdRandomizePlatformHierarchy|TRUE
 
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
   gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|TRUE
