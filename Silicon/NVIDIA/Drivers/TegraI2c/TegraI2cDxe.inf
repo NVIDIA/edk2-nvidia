@@ -56,6 +56,7 @@
   gNVIDIAI2cNcp81599
   gNVIDIAI2cNct3018y
   gNVIDIAI2cBmcSSIF
+  gNVIDIAI2cFpga
 
 [Depex]
   gNVIDIAPinControlProtocolGuid

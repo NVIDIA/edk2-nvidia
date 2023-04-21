@@ -446,3 +446,8 @@
   RedfishClientPkg/Converter/Bios/v1_2_0/RedfishBios_V1_2_0_Dxe.inf
   Silicon/NVIDIA/Drivers/PlatformRedfishBiosDxe/PlatformRedfishBiosDxe.inf
   Silicon/NVIDIA/Drivers/RedfishFirmwareInfoDxe/RedfishFirmwareInfoDxe.inf
+
+  #
+  # FPGA I2C Support
+  #
+  Silicon/NVIDIA/Drivers/FpgaI2c/FpgaI2c.inf

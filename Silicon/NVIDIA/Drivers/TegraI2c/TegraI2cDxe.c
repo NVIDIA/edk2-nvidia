@@ -1328,6 +1328,28 @@ TegraI2CDriverBindingStart (
         // Leave i2c for bmc activated on exit boot services
         Private->SkipOnExitDisabled = TRUE;
       }
+    } else if (fdt_node_check_compatible (
+                 DeviceTreeNode->DeviceTreeBase,
+                 I2cNodeOffset,
+                 "nvidia,fpga-cfr"
+                 ) == 0)
+    {
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
+        gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
+        I2cAddress = SwapBytes32 (I2cAddress);
+        DEBUG ((DEBUG_INFO, "%a: FPGA I2C Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
+        DeviceGuid = &gNVIDIAI2cFpga;
+        Status     = TegraI2cAddDevice (
+                       Private,
+                       I2cAddress,
+                       DeviceGuid,
+                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       );
+        if (EFI_ERROR (Status)) {
+          goto ErrorExit;
+        }
+      }
     }
   }
 
