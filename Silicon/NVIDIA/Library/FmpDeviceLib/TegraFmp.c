@@ -171,7 +171,8 @@ GetFuseSettings (
     return EFI_SUCCESS;
   }
 
-  mPlatformSpec = (CHAR8 *)AllocateRuntimeZeroPool (Size);
+  // ensure null termination
+  mPlatformSpec = (CHAR8 *)AllocateRuntimeZeroPool (Size + 1);
   if (mPlatformSpec == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Spec alloc failed\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
@@ -264,7 +265,8 @@ GetTnSpec (
     goto UseDefault;
   }
 
-  mPlatformCompatSpec = (CHAR8 *)AllocateRuntimeZeroPool (Size);
+  // ensure null termination
+  mPlatformCompatSpec = (CHAR8 *)AllocateRuntimeZeroPool (Size + 1);
   if (mPlatformCompatSpec == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: CompatSpec alloc failed\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
