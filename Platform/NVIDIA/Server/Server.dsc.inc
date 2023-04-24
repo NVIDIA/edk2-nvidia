@@ -347,6 +347,15 @@
     <BuildOptions>
       *_*_*_PLATFORM_FLAGS = -Wno-unused-value -Wno-multistatement-macros
   }
+  #
+  # Intel 700 series NIC
+  #
+  IntelUndiPkg/I40eUndiDxe/I40eUndiDxe.inf {
+    <LibraryClasses>
+      StdLibC|IntelUndiPkg/LibC/LibC.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -Wno-unused -Wno-multistatement-macros -Wno-incompatible-pointer-types
+  }
 !endif
 
   #

@@ -80,6 +80,10 @@
   # Intel 500 series NIC
   #
   INF IntelUndiPkg/XGigUndiDxe/XGigUndiDxe.inf
+  #
+  # Intel 700 series NIC
+  #
+  INF IntelUndiPkg/I40eUndiDxe/I40eUndiDxe.inf
 !endif
 
   #
