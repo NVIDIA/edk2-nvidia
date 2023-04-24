@@ -27,11 +27,13 @@
 /**
   Set the return values for the stub implementation of DiskIo.ReadDisk.
 
+  @param[In]  ExpectedOffset  Expected value of Offset
   @param[In]  ReadBuffer    Will be copied into Buffer.
   @param[In]  DiskIoReturn  Will be returned.
  */
 VOID
 MockDiskIoReadDisk (
+  UINT64      ExpectedOffset,
   VOID        *ReadBuffer,
   EFI_STATUS  ReadStatus
   );

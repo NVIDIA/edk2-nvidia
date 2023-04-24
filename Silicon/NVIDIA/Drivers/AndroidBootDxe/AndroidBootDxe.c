@@ -11,6 +11,7 @@
 **/
 
 #include "AndroidBootDxe.h"
+#include <libfdt.h>
 #include <Library/PcdLib.h>
 #include <PiDxe.h>
 #include <Library/HobLib.h>
@@ -209,7 +210,7 @@ AndroidBootRead (
   IN EFI_BLOCK_IO_PROTOCOL  *BlockIo,
   IN EFI_DISK_IO_PROTOCOL   *DiskIo,
   IN UINT32                 Offset,
-  IN VOID                   *Buffer,
+  OUT VOID                  *Buffer,
   IN UINTN                  BufferSize
   )
 {

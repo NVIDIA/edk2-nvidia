@@ -122,6 +122,18 @@
       FwVariableLib|Silicon/NVIDIA/Library/FwVariableLib/FwVariableLib.inf
   }
 
+  #
+  # AndroidBootDxe Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/AndroidBootDxe/UnitTest/AndroidBootDxeUnitTest.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+      HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
+      ShellLib|ShellPkg/Library/UefiShellLib/UefiShellLib.inf
+      ShellCommandLib|ShellPkg/Library/UefiShellCommandLib/UefiShellCommandLib.inf
+  }
+
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0

@@ -19,6 +19,7 @@ typedef struct {
   UINTN         TokenNumber;
   union {
     BOOLEAN    Boolean;
+    UINT64     UInt64;
   } Value;
 } UEFI_PCD;
 
@@ -164,4 +165,47 @@ MockLibPcdGetBool (
 
   Pcd                = UefiFindOrAddPcd (TokenNumber);
   Pcd->Value.Boolean = ReturnValue;
+}
+
+/**
+  Mocked version of LibPcdGet64().
+
+  Returns values set by MockLibPcdGet64 ().
+**/
+UINT64
+EFIAPI
+LibPcdGet64 (
+  IN UINTN  TokenNumber
+  )
+{
+  UEFI_PCD  *Pcd;
+
+  Pcd = UefiFindPcd (TokenNumber);
+  if (Pcd == NULL) {
+    DEBUG ((DEBUG_ERROR, "Missing mocked value for PCD %lx\n", TokenNumber));
+    ASSERT (Pcd != NULL);
+    return FALSE;
+  }
+
+  return Pcd->Value.UInt64;
+}
+
+/**
+  Set the return of LibPcdGet64 () for a PCD TokenNumber.
+
+  @param[In]  TokenNumber   PCD request
+  @param[In]  ReturnValue   Value to return when requested
+
+  @retval None
+ **/
+VOID
+MockLibPcdGet64 (
+  IN UINTN   TokenNumber,
+  IN UINT64  ReturnValue
+  )
+{
+  UEFI_PCD  *Pcd;
+
+  Pcd               = UefiFindOrAddPcd (TokenNumber);
+  Pcd->Value.UInt64 = ReturnValue;
 }

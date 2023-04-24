@@ -13,6 +13,13 @@
   UefiDriverEntryPoint|MdePkg/Library/UefiDriverEntryPoint/UefiDriverEntryPoint.inf
   UefiRuntimeLib|MdePkg/Library/UefiRuntimeLib/UefiRuntimeLib.inf
   ResetSystemLib|MdeModulePkg/Library/BaseResetSystemLibNull/BaseResetSystemLibNull.inf
+  FdtLib|EmbeddedPkg/Library/FdtLib/FdtLib.inf
+  FileHandleLib|MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf
+  HiiLib|MdeModulePkg/Library/UefiHiiLib/UefiHiiLib.inf
+  SortLib|MdeModulePkg/Library/UefiSortLib/UefiSortLib.inf
+  PeCoffGetEntryPointLib|MdePkg/Library/BasePeCoffGetEntryPointLib/BasePeCoffGetEntryPointLib.inf
+  UefiHiiServicesLib|MdeModulePkg/Library/UefiHiiServicesLib/UefiHiiServicesLib.inf
+  OrderedCollectionLib|MdePkg/Library/BaseOrderedCollectionRedBlackTreeLib/BaseOrderedCollectionRedBlackTreeLib.inf
 
   # stub libs
   FlashStubLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/FlashStubLib/FlashStubLib.inf
@@ -24,6 +31,9 @@
   UefiBootServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiBootServicesTableStubLib/UefiBootServicesTableStubLib.inf
   UefiRuntimeServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiRuntimeServicesTableStubLib/UefiRuntimeServicesTableStubLib.inf
   StandaloneMmOpteeLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/StandaloneMmOpteeStubLib/StandaloneMmOpteeStubLib.inf
+  BlockIoStubProtocol|Silicon/NVIDIA/Library/HostBasedTestStubLib/BlockIoStubProtocol/BlockIoStubProtocol.inf
+  DiskIoStubProtocol|Silicon/NVIDIA/Library/HostBasedTestStubLib/DiskIoStubProtocol/DiskIoStubProtocol.inf
+  MemoryAllocationLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/MemoryAllocationStubLib/MemoryAllocationStubLib.inf
 
 [BuildOptions.common.EDKII.HOST_APPLICATION]
 !ifdef $(HOSTAPP_STATIC_LINK)

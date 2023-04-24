@@ -31,6 +31,8 @@ DiskIoStubReadDisk (
   VOID        *Data;
   EFI_STATUS  Status;
 
+  check_expected (Offset);
+
   Data   = (VOID *)mock ();
   Status = (EFI_STATUS)mock ();
 
@@ -42,15 +44,18 @@ DiskIoStubReadDisk (
 /**
   Set the return values for the stub implementation of DiskIo.ReadDisk.
 
-  @param[In]  ReadBuffer    Will be copied into Buffer.
-  @param[In]  ReadStatus    Will be returned.
+  @param[In]  ExpectedOffset  Expected value of Offset
+  @param[In]  ReadBuffer      Will be copied into Buffer.
+  @param[In]  ReadStatus      Will be returned.
  */
 VOID
 MockDiskIoReadDisk (
+  UINT64      ExpectedOffset,
   VOID        *ReadBuffer,
   EFI_STATUS  ReadStatus
   )
 {
+  expect_value (DiskIoStubReadDisk, Offset, ExpectedOffset);
   will_return (DiskIoStubReadDisk, ReadBuffer);
   will_return (DiskIoStubReadDisk, ReadStatus);
 }

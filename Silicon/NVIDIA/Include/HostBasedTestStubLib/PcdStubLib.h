@@ -56,4 +56,18 @@ MockLibPcdGetBool (
   IN BOOLEAN  ReturnValue
   );
 
+/**
+  Set the return of LibPcdGet64 ().
+
+  @param[In]  ExpectedTokenNumber   PCD request expected
+  @param[In]  ReturnValue           Value to return when requested
+
+  @retval None
+ **/
+VOID
+MockLibPcdGet64 (
+  IN UINTN   ExpectedTokenNumber,
+  IN UINT64  ReturnValue
+  );
+
 #endif

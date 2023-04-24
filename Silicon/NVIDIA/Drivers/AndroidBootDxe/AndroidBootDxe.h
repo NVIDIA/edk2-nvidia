@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver's private data structure and interfaces declaration
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro.
 
@@ -14,7 +14,6 @@
 #define __EFI_ANDROID_BOOT_DXE_H__
 
 #include <Uefi.h>
-#include <libfdt.h>
 
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
@@ -87,5 +86,13 @@ typedef struct {
 
 #define ANDROID_BOOT_PRIVATE_DATA_FROM_ID(a)        CR (a, ANDROID_BOOT_PRIVATE_DATA, Id, ANDROID_BOOT_SIGNATURE)
 #define ANDROID_BOOT_PRIVATE_DATA_FROM_LOADFILE(a)  CR (a, ANDROID_BOOT_PRIVATE_DATA, LoadFile, ANDROID_BOOT_SIGNATURE)
+
+EFI_STATUS
+AndroidBootGetVerify (
+  IN  EFI_BLOCK_IO_PROTOCOL  *BlockIo,
+  IN  EFI_DISK_IO_PROTOCOL   *DiskIo,
+  OUT ANDROID_BOOT_DATA      *ImgData OPTIONAL,
+  OUT CHAR16                 *KernelArgs OPTIONAL
+  );
 
 #endif // __EFI_ANDROID_BOOT_DXE_H__
