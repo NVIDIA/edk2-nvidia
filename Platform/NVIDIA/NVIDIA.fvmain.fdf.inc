@@ -127,6 +127,7 @@
   INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
   INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
   INF MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
+  INF Silicon/NVIDIA/Drivers/BootWatchdog/BootWatchdog.inf
 
   #
   # FAT filesystem + GPT/MBR partitioning

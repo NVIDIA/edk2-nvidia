@@ -822,6 +822,7 @@
   ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
   ArmPkg/Drivers/TimerDxe/TimerDxe.inf
   MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
+  Silicon/NVIDIA/Drivers/BootWatchdog/BootWatchdog.inf
 
   #
   # Firmware Performance Data Table (FPDT)

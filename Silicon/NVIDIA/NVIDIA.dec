@@ -424,6 +424,9 @@
 ## PcdMmCommRetryBackOffUs - Backoff in us between retries (Default:0x7A120 (500 ms))
   gNVIDIATokenSpaceGuid.PcdMmCommRetryBackOffUs|0x7A120|UINT64|0x00000109
 
+  #Time in minutes to register boot watchdog (DXE->ReadyToBoot), 0 to disable
+  gNVIDIATokenSpaceGuid.PcdBootWatchdogTime|5|UINT16|0x00000110
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
