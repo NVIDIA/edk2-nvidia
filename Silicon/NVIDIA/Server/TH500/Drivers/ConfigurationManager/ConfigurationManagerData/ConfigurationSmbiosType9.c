@@ -227,7 +227,7 @@ InstallSmbiosType9Cm (
     NumSystemSlots++;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: NumSystemSlots = %d\n", __FUNCTION__, NumSystemSlots));
+  DEBUG ((DEBUG_INFO, "%a: NumSystemSlots = %u\n", __FUNCTION__, NumSystemSlots));
 
   for (Index = 0; Index < NumSystemSlots; Index++) {
     SystemSlotInfo[Index].SystemSlotInfoToken = REFERENCE_TOKEN (SystemSlotInfo[Index]);

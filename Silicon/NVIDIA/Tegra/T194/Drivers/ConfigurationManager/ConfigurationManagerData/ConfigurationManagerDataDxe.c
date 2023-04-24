@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe
 
-  Copyright (c) 2019 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -761,7 +761,7 @@ UpdateSdhciInfo (
       goto ErrorExit;
     }
 
-    AsciiSPrint (SdcPathString, sizeof (SdcPathString), "SDC%d", Index);
+    AsciiSPrint (SdcPathString, sizeof (SdcPathString), "SDC%u", Index);
     Status = PatchProtocol->UpdateNodeName (PatchProtocol, &AcpiNodeInfo, SdcPathString);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to update name to %a\n", __FUNCTION__, SdcPathString));
@@ -911,7 +911,7 @@ UpdateI2cInfo (
       goto ErrorExit;
     }
 
-    AsciiSPrint (I2cPathString, sizeof (I2cPathString), "I2C%d", Index);
+    AsciiSPrint (I2cPathString, sizeof (I2cPathString), "I2C%u", Index);
     Status = PatchProtocol->UpdateNodeName (PatchProtocol, &AcpiNodeInfo, I2cPathString);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to update name to %a\n", __FUNCTION__, I2cPathString));

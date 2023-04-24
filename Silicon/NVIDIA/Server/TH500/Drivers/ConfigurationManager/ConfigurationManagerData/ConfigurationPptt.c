@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Library for Processor Topology
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -636,7 +636,7 @@ UpdateCpuInfo (
          Cluster < PLATFORM_MAX_CLUSTERS/PLATFORM_MAX_SOCKETS;
          Cluster++)
     {
-      AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
+      AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%d", Cluster);
       ClusterOffset = fdt_subnode_offset (Dtb, CpuMapOffset, ClusterNodeStr);
       if (ClusterOffset >= 0) {
         // Loop through all cores and collect resources
@@ -651,7 +651,7 @@ UpdateCpuInfo (
         for (Core = 0; Core < PLATFORM_MAX_CORES_PER_CLUSTER; Core++) {
           CorePrivateResourceCntr = 0;
           ResIndex                = 0;
-          AsciiSPrint (CoreNodeStr, sizeof (CoreNodeStr), "core%u", Core);
+          AsciiSPrint (CoreNodeStr, sizeof (CoreNodeStr), "core%d", Core);
           CoreOffset = fdt_subnode_offset (Dtb, ClusterOffset, CoreNodeStr);
 
           // check if core exists

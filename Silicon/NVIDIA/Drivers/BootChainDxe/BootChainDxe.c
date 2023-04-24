@@ -465,7 +465,7 @@ BootOs:
 
   DEBUG ((
     DEBUG_INFO,
-    "%a: Booting OS, FW BootChain=%u, Status=%d\n",
+    "%a: Booting OS, FW BootChain=%u, Status=%u\n",
     __FUNCTION__,
     mBootChain,
     BCStatus

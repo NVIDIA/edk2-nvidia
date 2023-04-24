@@ -661,7 +661,7 @@ QspiPerformTransaction (
     while (Count > 0) {
       TransactionWidth = (Count % sizeof (UINT32)) ? sizeof (UINT8) : sizeof (UINT32);
       TransactionCount = MIN (MAX_FIFO_PACKETS, (Count / TransactionWidth));
-      DEBUG ((EFI_D_INFO, "QSPI Tx Transaction: Count: %d Width: %d.\n", TransactionCount, TransactionWidth));
+      DEBUG ((EFI_D_INFO, "QSPI Tx Transaction: Count: %u Width: %u.\n", TransactionCount, TransactionWidth));
       Status = QspiPerformTransmit (QspiBaseAddress, Buffer, TransactionCount, TransactionWidth);
       if (EFI_ERROR (Status)) {
         return Status;
@@ -682,7 +682,7 @@ QspiPerformTransaction (
     while (Count > 0) {
       TransactionWidth = (Count % sizeof (UINT32)) ? sizeof (UINT8) : sizeof (UINT32);
       TransactionCount = MIN (MAX_FIFO_PACKETS, (Count / TransactionWidth));
-      DEBUG ((EFI_D_INFO, "QSPI Rx Transaction: Count: %d Width: %d.\n", TransactionCount, TransactionWidth));
+      DEBUG ((EFI_D_INFO, "QSPI Rx Transaction: Count: %u Width: %u.\n", TransactionCount, TransactionWidth));
       Status = QspiPerformReceive (QspiBaseAddress, Buffer, TransactionCount, TransactionWidth);
       if (EFI_ERROR (Status)) {
         return Status;

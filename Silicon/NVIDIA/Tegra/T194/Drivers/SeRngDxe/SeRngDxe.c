@@ -2,7 +2,7 @@
 
   SE RNG Controller Driver
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -83,7 +83,7 @@ ExecuteRng1ControlCommand (
       break;
     case RNG1_CMD_NOP:
     default:
-      DEBUG ((DEBUG_ERROR, "Cmd %d has nothing to do (or) invalid\r\n", Command));
+      DEBUG ((DEBUG_ERROR, "Cmd %u has nothing to do (or) invalid\r\n", Command));
       return EFI_DEVICE_ERROR;
   }
 
@@ -93,7 +93,7 @@ ExecuteRng1ControlCommand (
   do {
     if (MaxPollCount == 0) {
       DEBUG ((DEBUG_ERROR, "RNG1 ISTAT poll timed out\r\n"));
-      DEBUG ((DEBUG_ERROR, "Command %d\r\n", Command));
+      DEBUG ((DEBUG_ERROR, "Command %u\r\n", Command));
       return EFI_DEVICE_ERROR;
     }
 
@@ -122,7 +122,7 @@ ExecuteRng1ControlCommand (
   if ((Data32 & TEGRA_SE_RNG1_INT_STATUS_EIP0) != 0) {
     DEBUG ((
       DEBUG_ERROR,
-      "RNG1 interupt not cleared (0x%x) after cmd %d execution\r\n",
+      "RNG1 interupt not cleared (0x%x) after cmd %u execution\r\n",
       Data32,
       Command
       ));

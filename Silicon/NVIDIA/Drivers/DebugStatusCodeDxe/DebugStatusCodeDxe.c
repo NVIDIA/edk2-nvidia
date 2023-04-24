@@ -55,7 +55,7 @@ DebugStatusCodeCallback (
     //
     // Print ASSERT() information into output buffer.
     //
-    DEBUG ((DEBUG_ERROR, "\r\nDXE_ASSERT!: %a (%d): %a\r\n", Filename, LineNumber, Description));
+    DEBUG ((DEBUG_ERROR, "\r\nDXE_ASSERT!: %a (%u): %a\r\n", Filename, LineNumber, Description));
   } else if ((Data != NULL) &&
              ReportStatusCodeExtractDebugInfo (Data, &ErrorLevel, &Marker, &Format))
   {

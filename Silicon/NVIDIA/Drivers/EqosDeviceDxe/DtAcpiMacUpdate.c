@@ -5,7 +5,7 @@
 
   The original software modules are licensed as follows:
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
   Copyright (c) 2014, Applied Micro Curcuit Corporation. All rights reserved.<BR>
@@ -599,7 +599,7 @@ UpdateDTACPIMacAddress (
       ChipID = TegraGetChipID ();
       if (ChipID == T234_CHIP_ID) {
         for (Count = 0; Count < Snp->NumMacs; Count++) {
-          CharCount = AsciiSPrint (Buffer, sizeof (Buffer), "nvidia,ether-mac%d", Count);
+          CharCount = AsciiSPrint (Buffer, sizeof (Buffer), "nvidia,ether-mac%u", Count);
           CharCount = AsciiSPrint (
                         MacBuffer,
                         sizeof (MacBuffer),

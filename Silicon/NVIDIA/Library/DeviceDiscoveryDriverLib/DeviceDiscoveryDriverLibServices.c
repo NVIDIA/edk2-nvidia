@@ -496,7 +496,7 @@ DeviceDiscoverySetProd (
   LastRegion = 0;
   Status     = DeviceDiscoveryGetMmioRegion (ControllerHandle, LastRegion, &RegionBase, &RegionSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %d\r\n", LastRegion));
+    DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %u\r\n", LastRegion));
     return Status;
   }
 
@@ -512,7 +512,7 @@ DeviceDiscoverySetProd (
       if (Region != LastRegion) {
         Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, Region, &RegionBase, &RegionSize);
         if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %d\r\n", Region));
+          DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %u\r\n", Region));
           return Status;
         }
 

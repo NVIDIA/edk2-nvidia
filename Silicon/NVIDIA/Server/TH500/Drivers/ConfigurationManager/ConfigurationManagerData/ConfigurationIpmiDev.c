@@ -73,7 +73,7 @@ InstallIpmiDeviceInformationCm (
   }
 
   if (Status == EFI_BUFFER_TOO_SMALL) {
-    DEBUG ((DEBUG_ERROR, "%a: Error: %d SSIF interfaces found in DT\n", __FUNCTION__, Count));
+    DEBUG ((DEBUG_ERROR, "%a: Error: %u SSIF interfaces found in DT\n", __FUNCTION__, Count));
     return EFI_UNSUPPORTED;
   }
 

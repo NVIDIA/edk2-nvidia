@@ -150,11 +150,11 @@ PcieConfigurationAccess (
   }
 
   if (Register >= SIZE_4KB) {
-    DEBUG ((DEBUG_ERROR, "Register = %d\n", Register));
+    DEBUG ((DEBUG_ERROR, "Register = %u\n", Register));
   }
 
   if (Register + Length > SIZE_4KB) {
-    DEBUG ((DEBUG_ERROR, "Register = %d, Length = %d\n", Register, Length));
+    DEBUG ((DEBUG_ERROR, "Register = %u, Length = %u\n", Register, Length));
   }
 
   //
@@ -1725,7 +1725,7 @@ DeviceDiscoveryNotify (
         }
       } else {
         Status = EFI_DEVICE_ERROR;
-        DEBUG ((DEBUG_ERROR, "%a: Expected %d interrupts, got %d\r\n", __FUNCTION__, PCIE_NUMBER_OF_INTERUPT_MAP, NumberOfInterrupts));
+        DEBUG ((DEBUG_ERROR, "%a: Expected %d interrupts, got %u\r\n", __FUNCTION__, PCIE_NUMBER_OF_INTERUPT_MAP, NumberOfInterrupts));
         break;
       }
 

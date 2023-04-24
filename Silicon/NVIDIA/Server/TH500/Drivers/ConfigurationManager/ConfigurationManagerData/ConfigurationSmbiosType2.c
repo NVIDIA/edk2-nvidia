@@ -160,7 +160,7 @@ InstallSmbiosType2Cm (
     FreePool (Private->EnclosureBaseboardBinding.Info);
   }
 
-  DEBUG ((DEBUG_INFO, "%a: NumBaseboards = %d\n", __FUNCTION__, NumBaseboards));
+  DEBUG ((DEBUG_INFO, "%a: NumBaseboards = %u\n", __FUNCTION__, NumBaseboards));
 
   if (BaseboardInfo == NULL) {
     return EFI_NOT_FOUND;

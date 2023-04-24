@@ -68,7 +68,7 @@ GraphicsQueryMode (
       ((This != NULL) && (This->Mode == NULL)) ||
       (ModeNumber >= This->Mode->MaxMode))
   {
-    DEBUG ((DEBUG_ERROR, "GraphicsQueryMode: ERROR - For mode number %d : Invalid Parameter.\n", ModeNumber));
+    DEBUG ((DEBUG_ERROR, "GraphicsQueryMode: ERROR - For mode number %u : Invalid Parameter.\n", ModeNumber));
     Status = EFI_INVALID_PARAMETER;
     goto EXIT;
   }
@@ -103,7 +103,7 @@ GraphicsSetMode (
 
   // Check if this mode is supported
   if (ModeNumber >= This->Mode->MaxMode) {
-    DEBUG ((DEBUG_ERROR, "GraphicsSetMode: ERROR - Unsupported mode number %d .\n", ModeNumber));
+    DEBUG ((DEBUG_ERROR, "GraphicsSetMode: ERROR - Unsupported mode number %u .\n", ModeNumber));
     return EFI_UNSUPPORTED;
   }
 

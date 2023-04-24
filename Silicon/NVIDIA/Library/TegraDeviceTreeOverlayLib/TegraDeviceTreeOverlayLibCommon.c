@@ -295,7 +295,7 @@ match_type_done:
   }
 
 finish:
-  DEBUG ((DEBUG_INFO, "%a: Board Id match result: %d\n", __FUNCTION__, Matched));
+  DEBUG ((DEBUG_INFO, "%a: Board Id match result: %u\n", __FUNCTION__, Matched));
   return Matched;
 }
 
@@ -320,7 +320,7 @@ MatchOdmData (
   }
 
 ret_odm_match:
-  DEBUG ((DEBUG_INFO, "%a: Matching odm-data %a. Result: %d\n", __FUNCTION__, OdmData, Matched));
+  DEBUG ((DEBUG_INFO, "%a: Matching odm-data %a. Result: %u\n", __FUNCTION__, OdmData, Matched));
   return Matched;
 }
 
@@ -361,7 +361,7 @@ MatchFuseInfo (
     }
   }
 
-  DEBUG ((DEBUG_INFO, "%a: Matching fuse-info %a. Result: %d\n", __FUNCTION__, FuseStr, Matched));
+  DEBUG ((DEBUG_INFO, "%a: Matching fuse-info %a. Result: %u\n", __FUNCTION__, FuseStr, Matched));
   return Matched;
 }
 

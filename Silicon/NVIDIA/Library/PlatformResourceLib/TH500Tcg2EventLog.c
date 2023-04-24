@@ -253,7 +253,7 @@ TH500BuildTcgEventHob (
     if (Status != EFI_SUCCESS) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Failed to process entry %d - %r (Magic Id: %08X)\n",
+        "%a: Failed to process entry %u - %r (Magic Id: %08X)\n",
         __FUNCTION__,
         Index,
         Status,
@@ -277,7 +277,7 @@ TH500BuildTcgEventHob (
                 EventSize
                 );
     if (HobData == NULL) {
-      DEBUG ((DEBUG_ERROR, "%a: Fail to build HOB for TcgEvent %d\n", __FUNCTION__, Index));
+      DEBUG ((DEBUG_ERROR, "%a: Fail to build HOB for TcgEvent %u\n", __FUNCTION__, Index));
       ASSERT (FALSE);
       return EFI_OUT_OF_RESOURCES;
     }

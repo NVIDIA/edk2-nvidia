@@ -202,13 +202,13 @@ uefifspPollForMsgQueueEmpty (
 
   while ((!fspRpcIsMsgQueueEmpty (PciIo, channelId)) && (!TimeoutIdx--)) {
     DEBUG_CODE_BEGIN ();
-    DEBUG ((DEBUG_INFO, "%a: [%p][TimeoutIdx:%d]\n", __FUNCTION__, PciIo, TimeoutIdx));
+    DEBUG ((DEBUG_INFO, "%a: [%p][TimeoutIdx:%u]\n", __FUNCTION__, PciIo, TimeoutIdx));
     DEBUG_CODE_END ();
     gBS->Stall (UEFI_STALL_DELAY_UNITS);
   }
 
   if (TimeoutIdx == 0) {
-    DEBUG ((DEBUG_ERROR, "%a: [%p][TimeoutIdx:%d] Poll for Message Queue empty timed out.\n", __FUNCTION__, PciIo, TimeoutIdx));
+    DEBUG ((DEBUG_ERROR, "%a: [%p][TimeoutIdx:%u] Poll for Message Queue empty timed out.\n", __FUNCTION__, PciIo, TimeoutIdx));
     Status = EFI_TIMEOUT;
   }
 
@@ -235,13 +235,13 @@ uefifspPollForMsgQueueResponse (
 
   while ((fspRpcIsMsgQueueEmpty (PciIo, channelId)) && (!TimeoutIdx--)) {
     DEBUG_CODE_BEGIN ();
-    DEBUG ((DEBUG_INFO, "%a: [%p][TimeoutIdx:%d]\n", __FUNCTION__, PciIo, TimeoutIdx));
+    DEBUG ((DEBUG_INFO, "%a: [%p][TimeoutIdx:%u]\n", __FUNCTION__, PciIo, TimeoutIdx));
     DEBUG_CODE_END ();
     gBS->Stall (UEFI_STALL_DELAY_UNITS);
   }
 
   if (TimeoutIdx == 0) {
-    DEBUG ((DEBUG_ERROR, "%a: [%p][TimeoutIdx:%d] Poll for Message Queue response timed out.\n", __FUNCTION__, PciIo, TimeoutIdx));
+    DEBUG ((DEBUG_ERROR, "%a: [%p][TimeoutIdx:%u] Poll for Message Queue response timed out.\n", __FUNCTION__, PciIo, TimeoutIdx));
     Status = EFI_TIMEOUT;
   }
 
@@ -885,7 +885,7 @@ FspConfigurationAtsRange (
     ASSERT (0);
   }
 
-  DEBUG ((DEBUG_INFO, "%a: Message Queue [Channel:%d, Head:0x%04x, Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, channelId, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: Message Queue [Channel:%u, Head:0x%04x, Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, channelId, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
   Status = uefifspDumpDebugState (PciIo);
   if (EFI_ERROR (Status)) {
     ASSERT (0);
@@ -992,12 +992,12 @@ FspConfigurationAtsRange (
                           &(((UINT32 *)(VOID *)cmdQueueBuffer)[Index])
                           );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMD(%d) write returned '%r'\n", __FUNCTION__, PciIo, Index, Status));
+      DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMD(%u) write returned '%r'\n", __FUNCTION__, PciIo, Index, Status));
       ASSERT (0);
       goto uefifspRpcResponseReceivePacket_exit;
     }
 
-    DEBUG ((DEBUG_ERROR, "%a: [%p] PciIo write of '%a', Index '%d' returned '%r'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMD(channelId)", Index, Status));
+    DEBUG ((DEBUG_ERROR, "%a: [%p] PciIo write of '%a', Index '%u' returned '%r'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMD(channelId)", Index, Status));
   }
 
   DEBUG ((DEBUG_ERROR, "%a: [%p] PciIo write of '%a' returned '%r'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMD(channelId)", Status));
@@ -1066,7 +1066,7 @@ FspConfigurationAtsRange (
   if (msgQueueHead != msgQueueTail) {
     msgQueueSizeBytes  = MIN ((msgQueueTail-msgQueueHead+FSP_RPC_BYTES_PER_DWORD), FSP_RPC_RESPONSE_PACKET_SIZE) + sizeof (UINT32);
     msgQueueSizeDwords = (NV_ALIGN_UP (msgQueueSizeBytes, sizeof (UINT32))/FSP_RPC_BYTES_PER_DWORD);
-    DEBUG ((DEBUG_INFO, "%a: MsgQueue [Max byte index:%d, Max dword index:%d]\n", __FUNCTION__, msgQueueSizeBytes, msgQueueSizeDwords));
+    DEBUG ((DEBUG_INFO, "%a: MsgQueue [Max byte index:%u, Max dword index:%u]\n", __FUNCTION__, msgQueueSizeBytes, msgQueueSizeDwords));
 
     /*                                         PciIo, offset, writeAutoInc, readAutoInc */
     Status = FspConfigurationSetAutoIncrement (PciIo, 0, FALSE, TRUE);
@@ -1087,12 +1087,12 @@ FspConfigurationAtsRange (
                             &RegVal
                             );
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMD Index=%d check returned '%r'\n", __FUNCTION__, PciIo, Index, Status));
+        DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMD Index=%u check returned '%r'\n", __FUNCTION__, PciIo, Index, Status));
         ASSERT (0);
         goto uefifspRpcResponseReceivePacket_exit;
       }
 
-      DEBUG ((DEBUG_INFO, "%a: [%p][Index:%d] PciIo read of '%a' [0x%08x] = '0x%08x'\n", __FUNCTION__, PciIo, Index, "NV_PFSP_EMEMD (channelId)", NV_PFSP_EMEMD (channelId), RegVal));
+      DEBUG ((DEBUG_INFO, "%a: [%p][Index:%u] PciIo read of '%a' [0x%08x] = '0x%08x'\n", __FUNCTION__, PciIo, Index, "NV_PFSP_EMEMD (channelId)", NV_PFSP_EMEMD (channelId), RegVal));
       msgQueueBuffer[Index] = RegVal;
     }
 
@@ -1281,7 +1281,7 @@ FspConfigurationEgmBaseAndSize (
     ASSERT (0);
   }
 
-  DEBUG ((DEBUG_INFO, "%a: Message Queue [Channel:%d, Head:0x%04x, Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, channelId, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
+  DEBUG ((DEBUG_INFO, "%a: Message Queue [Channel:%u, Head:0x%04x, Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, channelId, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
   Status = uefifspDumpDebugState (PciIo);
   if (EFI_ERROR (Status)) {
     ASSERT (0);
@@ -1390,12 +1390,12 @@ FspConfigurationEgmBaseAndSize (
                           &(((UINT32 *)(VOID *)cmdQueueBuffer)[Index])
                           );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMD(%d) write returned '%r'\n", __FUNCTION__, PciIo, Index, Status));
+      DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMD(%u) write returned '%r'\n", __FUNCTION__, PciIo, Index, Status));
       ASSERT (0);
       goto uefifspRpcResponseReceivePacket_exit;
     }
 
-    DEBUG ((DEBUG_ERROR, "%a: [%p] PciIo write of '%a', Index '%d' returned '%r'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMD(channelId)", Index, Status));
+    DEBUG ((DEBUG_ERROR, "%a: [%p] PciIo write of '%a', Index '%u' returned '%r'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMD(channelId)", Index, Status));
   }
 
   DEBUG ((DEBUG_ERROR, "%a: [%p] PciIo write of '%a' returned '%r'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMD(channelId)", Status));
@@ -1464,7 +1464,7 @@ FspConfigurationEgmBaseAndSize (
   if (msgQueueHead != msgQueueTail) {
     msgQueueSizeBytes  = MIN ((msgQueueTail-msgQueueHead+FSP_RPC_BYTES_PER_DWORD), FSP_RPC_RESPONSE_PACKET_SIZE) + sizeof (UINT32);
     msgQueueSizeDwords = (NV_ALIGN_UP (msgQueueSizeBytes, sizeof (UINT32))/FSP_RPC_BYTES_PER_DWORD);
-    DEBUG ((DEBUG_INFO, "%a: MsgQueue [Max byte index:%d, Max dword index:%d]\n", __FUNCTION__, msgQueueSizeBytes, msgQueueSizeDwords));
+    DEBUG ((DEBUG_INFO, "%a: MsgQueue [Max byte index:%u, Max dword index:%u]\n", __FUNCTION__, msgQueueSizeBytes, msgQueueSizeDwords));
 
     /*                                         PciIo, offset, writeAutoInc, readAutoInc */
     Status = FspConfigurationSetAutoIncrement (PciIo, 0, FALSE, TRUE);
@@ -1485,12 +1485,12 @@ FspConfigurationEgmBaseAndSize (
                             &RegVal
                             );
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMD Index=%d check returned '%r'\n", __FUNCTION__, PciIo, Index, Status));
+        DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMD Index=%u check returned '%r'\n", __FUNCTION__, PciIo, Index, Status));
         ASSERT (0);
         goto uefifspRpcResponseReceivePacket_exit;
       }
 
-      DEBUG ((DEBUG_INFO, "%a: [%p][Index:%d] PciIo read of '%a' [0x%08x] = '0x%08x'\n", __FUNCTION__, PciIo, Index, "NV_PFSP_EMEMD (channelId)", NV_PFSP_EMEMD (channelId), RegVal));
+      DEBUG ((DEBUG_INFO, "%a: [%p][Index:%u] PciIo read of '%a' [0x%08x] = '0x%08x'\n", __FUNCTION__, PciIo, Index, "NV_PFSP_EMEMD (channelId)", NV_PFSP_EMEMD (channelId), RegVal));
       msgQueueBuffer[Index] = RegVal;
     }
 

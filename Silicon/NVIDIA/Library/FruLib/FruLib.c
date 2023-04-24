@@ -38,11 +38,11 @@ PrintRecords (
   UINT8  Index;
   UINT8  Count;
 
-  DEBUG ((DEBUG_VERBOSE, "%a, Number of Fru Records is: %d\n", __FUNCTION__, mRecordCount));
+  DEBUG ((DEBUG_VERBOSE, "%a, Number of Fru Records is: %u\n", __FUNCTION__, mRecordCount));
   for (Index = 0; Index < mRecordCount; Index++) {
-    DEBUG ((DEBUG_VERBOSE, "Fru Device id: %d\n", mFruRecordInfo[Index]->FruDeviceId));
+    DEBUG ((DEBUG_VERBOSE, "Fru Device id: %u\n", mFruRecordInfo[Index]->FruDeviceId));
     DEBUG ((DEBUG_VERBOSE, "Fru Device Description:%a\n", mFruRecordInfo[Index]->FruDeviceDescription));
-    DEBUG ((DEBUG_VERBOSE, "Chassis Type: %d \n", mFruRecordInfo[Index]->ChassisType));
+    DEBUG ((DEBUG_VERBOSE, "Chassis Type: %u \n", mFruRecordInfo[Index]->ChassisType));
     DEBUG ((DEBUG_VERBOSE, "Chassis partnum: %a\n", mFruRecordInfo[Index]->ChassisPartNum));
     DEBUG ((DEBUG_VERBOSE, "Chassis serial: %a\n", mFruRecordInfo[Index]->ChassisSerial));
     for (Count = 0; Count < MAX_EXTRA_FRU_AREA_ENTRIES; Count++) {
@@ -51,7 +51,7 @@ PrintRecords (
       }
     }
 
-    DEBUG ((DEBUG_VERBOSE, "Board Manufacturing date: %d\n", mFruRecordInfo[Index]->ManufacturingDate));
+    DEBUG ((DEBUG_VERBOSE, "Board Manufacturing date: %u\n", mFruRecordInfo[Index]->ManufacturingDate));
     DEBUG ((DEBUG_VERBOSE, "Board Manufacturer: %a\n", mFruRecordInfo[Index]->BoardManufacturer));
     DEBUG ((DEBUG_VERBOSE, "Board Product: %a\n", mFruRecordInfo[Index]->BoardProduct));
     DEBUG ((DEBUG_VERBOSE, "Board serial: %a\n", mFruRecordInfo[Index]->BoardSerial));
@@ -230,7 +230,7 @@ UpdateFruDeviceIdList (
       // Fru description can be maximum of 16 bytes in length as per IPMI spec.
       if (SdrFruRecord->StringTypeLength.Bits.Length > MAX_FRU_STR_LENGTH) {
         DEBUG ((DEBUG_ERROR, "%a: Error, Fru description string size is more than 16 characters \n", __FUNCTION__));
-        DEBUG ((DEBUG_ERROR, "size: %d, fru dev id: %d\n", SdrFruRecord->StringTypeLength.Bits.Length, mFruRecordInfo[DevIndex]->FruDeviceId));
+        DEBUG ((DEBUG_ERROR, "size: %d, fru dev id: %u\n", SdrFruRecord->StringTypeLength.Bits.Length, mFruRecordInfo[DevIndex]->FruDeviceId));
         // set length to max value - 16 bytes
         SdrFruRecord->StringTypeLength.Bits.Length = MAX_FRU_STR_LENGTH;
       }
@@ -252,7 +252,7 @@ UpdateFruDeviceIdList (
   // Print the list of Fru device IDS with the Device Description
   for (UINT8 i = 0; i < mRecordCount; i++) {
     DEBUG ((DEBUG_INFO, "%a: List of Frus found\n", __FUNCTION__));
-    DEBUG ((DEBUG_INFO, "%d \t %a\n", mFruRecordInfo[i]->FruDeviceId, mFruRecordInfo[i]->FruDeviceDescription));
+    DEBUG ((DEBUG_INFO, "%u \t %a\n", mFruRecordInfo[i]->FruDeviceId, mFruRecordInfo[i]->FruDeviceDescription));
   }
 
   return EFI_SUCCESS;
@@ -616,12 +616,12 @@ ReadFruMultiRecordArea (
     MultiHdr = (FRU_MULTI_RECORD_HEADER *)ResponseData->Data;
 
     if (MultiHdr->Version != FRU_MULTI_RECORD_VERSION) {
-      DEBUG ((DEBUG_ERROR, "FRU %d: Multi Record %d has unsupported version.\n", DevIndex, RecNum));
+      DEBUG ((DEBUG_ERROR, "FRU %u: Multi Record %u has unsupported version.\n", DevIndex, RecNum));
       break;
     }
 
     if (CalculateSum8 ((UINT8 *)MultiHdr, sizeof (FRU_MULTI_RECORD_HEADER)) != 0) {
-      DEBUG ((DEBUG_ERROR, "FRU %d: Multi Record %d has invalid header checksum.\n", DevIndex, RecNum));
+      DEBUG ((DEBUG_ERROR, "FRU %u: Multi Record %u has invalid header checksum.\n", DevIndex, RecNum));
       break;
     }
 
@@ -669,7 +669,7 @@ ReadFruMultiRecordArea (
     // Verify data
     //
     if (((CalculateSum8 (ResponseData->Data, MultiHdr->Length) + MultiHdr->RecordChecksum) & 0xFF) != 0) {
-      DEBUG ((DEBUG_ERROR, "FRU %d: Multi Record %d has invalid data checksum.\n", DevIndex, RecNum));
+      DEBUG ((DEBUG_ERROR, "FRU %u: Multi Record %u has invalid data checksum.\n", DevIndex, RecNum));
       break;
     }
 
@@ -872,7 +872,7 @@ ReadFruHeader (
 
   // Print the header data
   // Each of the area offsets are converted in to bytes and printed
-  DEBUG ((DEBUG_VERBOSE, "%a: FRU Area Offsets for Device Id: %d\n", __FUNCTION__, DevId));
+  DEBUG ((DEBUG_VERBOSE, "%a: FRU Area Offsets for Device Id: %u\n", __FUNCTION__, DevId));
   DEBUG ((DEBUG_VERBOSE, " Header.Version = 0x%x\n", Header->Version));
   DEBUG ((DEBUG_VERBOSE, " Internal Area Offset = 0x%x\n", Header->Offset.Internal * 8));
   DEBUG ((DEBUG_VERBOSE, " Chassis Area Offset = 0x%x\n", Header->Offset.Chassis * 8));
@@ -959,7 +959,7 @@ ReadFru (
     FruSize = FruInventoryInfo->InventoryAreaSize;
 
     if (FruSize < 1) {
-      DEBUG ((DEBUG_ERROR, "%a: Invalid FRU Size : %d\n", __FUNCTION__, FruSize));
+      DEBUG ((DEBUG_ERROR, "%a: Invalid FRU Size : %u\n", __FUNCTION__, FruSize));
       continue;
     }
 

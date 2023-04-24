@@ -297,7 +297,7 @@ GetResources (
     if ((RegProperty == NULL) || (PropertySize == 0)) {
       DEBUG ((
         EFI_D_ERROR,
-        "%a: Invalid reg entry %p, %u, for handle %u\r\n",
+        "%a: Invalid reg entry %p, %d, for handle %u\r\n",
         __FUNCTION__,
         RegProperty,
         PropertySize,
@@ -339,7 +339,7 @@ GetResources (
     if ((RegProperty == NULL) || (PropertySize == 0)) {
       DEBUG ((
         EFI_D_ERROR,
-        "%a: Invalid reg entry %p, %u, for handle %u\r\n",
+        "%a: Invalid reg entry %p, %d, for handle %u\r\n",
         __FUNCTION__,
         RegProperty,
         PropertySize,

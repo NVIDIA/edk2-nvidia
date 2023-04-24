@@ -2,7 +2,7 @@
 
   PCD Patching module for SPI-NOR Data.
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -129,7 +129,7 @@ StandaloneMmFixupPcdConstructor (
     PatchPcdSetBool (PcdEmuVariableNvModeEnable, TRUE);
     DEBUG ((
       DEBUG_ERROR,
-      "Falling back to emulated store Boot Type %d fbc %d\n",
+      "Falling back to emulated store Boot Type %d fbc %u\n",
       TegraBootType,
       Fbc
       ));

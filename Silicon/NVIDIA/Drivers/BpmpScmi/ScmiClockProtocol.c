@@ -349,7 +349,7 @@ ClockSetParentByDesiredRate (
     UINT64  Divider;
     Status = This->RateGet (This, NVIDIA_CLOCK_ID(ParentIds[ParentIndex]), &ParentRate);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to get parent rate for parent %d\r\n", __FUNCTION__, ParentIds[ParentIndex]));
+      DEBUG ((EFI_D_ERROR, "%a: Failed to get parent rate for parent %u\r\n", __FUNCTION__, ParentIds[ParentIndex]));
       return Status;
     }
 
@@ -370,7 +370,7 @@ ClockSetParentByDesiredRate (
   // Enable and set the parent
   Status = ScmiClock2Protocol.Enable (&ScmiClock2Protocol, NVIDIA_CLOCK_ID(ClosestParent), TRUE);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to enable parent %d\r\n", __FUNCTION__, ClosestParent));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to enable parent %u\r\n", __FUNCTION__, ClosestParent));
     return Status;
   }
 
@@ -446,7 +446,7 @@ ClockRateSet (
   } else if (Rate != NewRate) {
     DEBUG ((
       EFI_D_INFO,
-      "%a: Clock %d, attempt set to %16ld, was set to %16ld\r\n",
+      "%a: Clock %d, attempt set to %16lu, was set to %16lu\r\n",
       __FUNCTION__,
       NVIDIA_CLOCK_ID (ClockId),
       Rate,

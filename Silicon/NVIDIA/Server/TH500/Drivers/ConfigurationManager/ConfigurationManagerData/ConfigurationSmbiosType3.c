@@ -198,7 +198,7 @@ InstallSmbiosType3Cm (
       AsciiSPrint (DtContainedElementFormat, sizeof (DtContainedElementFormat), "%a/contained-element@%u", Type3NodeStr, Index);
       Type3ContainedElementOffset = fdt_path_offset (DtbBase, DtContainedElementFormat);
       if (Type3ContainedElementOffset < 0) {
-        DEBUG ((DEBUG_INFO, "%a: SMBIOS Type 3 enclosure[%u] contained element count = %d.\n", __FUNCTION__, Type3Index, ContainedElementCount));
+        DEBUG ((DEBUG_INFO, "%a: SMBIOS Type 3 enclosure[%u] contained element count = %u.\n", __FUNCTION__, Type3Index, ContainedElementCount));
         break;
       } else {
         ContainedElements = ReallocatePool (
@@ -298,7 +298,7 @@ InstallSmbiosType3Cm (
 
   Private->EnclosureBaseboardBinding.Count = NumEnclosures;
   DEBUG (
-    (DEBUG_INFO, "%a: NumEnclosures = %d\n", __FUNCTION__, NumEnclosures)
+    (DEBUG_INFO, "%a: NumEnclosures = %u\n", __FUNCTION__, NumEnclosures)
     );
 
   //

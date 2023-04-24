@@ -569,7 +569,7 @@ DisableVbus (
       if (EFI_ERROR (mRegulator->Enable (mRegulator, Usb2Ports[i].VbusSupply, FALSE))) {
         DEBUG ((
           EFI_D_ERROR,
-          "%a: Couldn't Disable Regulator: %d for USB Port: %d\n",
+          "%a: Couldn't Disable Regulator: %d for USB Port: %u\n",
           __FUNCTION__,
           Usb2Ports[i].VbusSupply,
           i
@@ -612,7 +612,7 @@ EnableVbus (
       if (EFI_ERROR (mRegulator->Enable (mRegulator, Usb2Ports[i].VbusSupply, TRUE))) {
         DEBUG ((
           EFI_D_ERROR,
-          "Couldn't Enable Regulator: %d for USB Port: %d\n",
+          "Couldn't Enable Regulator: %d for USB Port: %u\n",
           Usb2Ports[i].VbusSupply,
           i
           ));
@@ -743,7 +743,7 @@ InitPlatInfo (
     /* The Port is disabled by default */
     Usb2Ports[i].PortEnabled = FALSE;
 
-    CharCount  = AsciiSPrint (Name, sizeof (Name), "usb2-%d", i);
+    CharCount  = AsciiSPrint (Name, sizeof (Name), "usb2-%u", i);
     NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, PortsOffset, Name);
     if (NodeOffset < 0) {
       continue;
@@ -799,7 +799,7 @@ InitPlatInfo (
     /* The Port is disabled by default */
     Usb3Ports[i].PortEnabled = FALSE;
 
-    CharCount  = AsciiSPrint (Name, sizeof (Name), "usb3-%d", i);
+    CharCount  = AsciiSPrint (Name, sizeof (Name), "usb3-%u", i);
     NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, PortsOffset, Name);
     if (NodeOffset < 0) {
       continue;
@@ -851,7 +851,7 @@ InitPlatInfo (
 
     /* Enable the USB3 Port as we got all the necessary Information */
     Usb3Ports[i].PortEnabled = TRUE;
-    DEBUG ((EFI_D_INFO, "Usb SS Port: %d Enabled\n", i));
+    DEBUG ((EFI_D_INFO, "Usb SS Port: %u Enabled\n", i));
   }
 
   /* If atleast one port is enabled, return Success */

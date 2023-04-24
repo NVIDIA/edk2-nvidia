@@ -75,7 +75,7 @@ GpuFirmwareBootCompletGetBootStatus (
 
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_INFO, "%a: GPU Firmware Boot Complete Protocol status:'%r'\n", __FUNCTION__, Status));
-    DEBUG ((DEBUG_INFO, "%a: GpuFirmwareBootCompleteProtocol 'CheckGfwInitComplete' for instance:'%p', complete '%d'\n", __FUNCTION__, PciIo, bFirmwareComplete));
+    DEBUG ((DEBUG_INFO, "%a: GpuFirmwareBootCompleteProtocol 'CheckGfwInitComplete' for instance:'%p', complete '%u'\n", __FUNCTION__, PciIo, bFirmwareComplete));
     DEBUG_CODE_END ();
 
     if (NULL != BootComplete) {

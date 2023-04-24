@@ -532,7 +532,7 @@ IsRootfsSlotBootable (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Failed to Get Rootfs retry count of slot %d from mRootfsInfo: %r\n",
+      "%a: Failed to Get Rootfs retry count of slot %u from mRootfsInfo: %r\n",
       __FUNCTION__,
       RootfsSlot,
       Status
@@ -575,7 +575,7 @@ DecreaseRootfsRetryCount (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Failed to Get Rootfs retry count of slot %d from mRootfsInfo: %r\n",
+      "%a: Failed to Get Rootfs retry count of slot %u from mRootfsInfo: %r\n",
       __FUNCTION__,
       RootfsSlot,
       Status
@@ -590,7 +590,7 @@ DecreaseRootfsRetryCount (
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Failed to set retry count of slot %d to mRootfsInfo: %r\n",
+        "%a: Failed to set retry count of slot %u to mRootfsInfo: %r\n",
         __FUNCTION__,
         RootfsSlot,
         Status
@@ -788,7 +788,7 @@ ValidateRootfsStatus (
           if (EFI_ERROR (Status)) {
             DEBUG ((
               DEBUG_ERROR,
-              "%a: Failed to decrease the RetryCount of slot %d: %r\n",
+              "%a: Failed to decrease the RetryCount of slot %u: %r\n",
               __FUNCTION__,
               NonCurrentSlot,
               Status
@@ -806,7 +806,7 @@ ValidateRootfsStatus (
           if (EFI_ERROR (Status)) {
             DEBUG ((
               DEBUG_ERROR,
-              "%a: Failed to set Rootfs status of slot %d to mRootfsInfo: %r\n",
+              "%a: Failed to set Rootfs status of slot %u to mRootfsInfo: %r\n",
               __FUNCTION__,
               NonCurrentSlot,
               Status

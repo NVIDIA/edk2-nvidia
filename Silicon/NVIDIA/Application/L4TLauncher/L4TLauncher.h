@@ -13,7 +13,7 @@
 #define GRUB_BOOTCONFIG_FILE            L"EFI\\BOOT\\boot.cfg"
 #define MAX_BOOTCONFIG_CONTENT_SIZE     512
 #define MAX_CBOOTARG_SIZE               256
-#define GRUB_BOOTCONFIG_CONTENT_FORMAT  "set cbootargs=\"%s\"\r\nset root_partition_number=%d\r\nset bootimg_present=%d\r\nset recovery_present=%d\r\n"
+#define GRUB_BOOTCONFIG_CONTENT_FORMAT  "set cbootargs=\"%s\"\r\nset root_partition_number=%u\r\nset bootimg_present=%u\r\nset recovery_present=%u\r\n"
 #define DETACHED_SIG_FILE_EXTENSION     L".sig"
 
 #define EXTLINUX_CONF_PATH  L"boot\\extlinux\\extlinux.conf"

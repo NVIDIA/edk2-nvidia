@@ -881,7 +881,7 @@ UpdateThermalZoneInfoAndInstallSsdt (
           return Status;
         }
 
-        AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB.BPM%0d.TEMP", SocketId);
+        AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB.BPM%0u.TEMP", SocketId);
         Status = AmlCodeGenMethodRetNameStringIntegerArgument (
                    "_TMP",
                    ThermalZoneString,
@@ -1086,7 +1086,7 @@ UpdatePowerLimitInfo (
   }
 
   if (SocketId >= ARRAY_SIZE (AcpiMrqPwrLimitMaxPatchName)) {
-    DEBUG ((DEBUG_ERROR, "%a: SocketId %d exceeding AcpiMrqPwrLimitMaxPatchName size\r\n", __FUNCTION__, SocketId));
+    DEBUG ((DEBUG_ERROR, "%a: SocketId %u exceeding AcpiMrqPwrLimitMaxPatchName size\r\n", __FUNCTION__, SocketId));
     goto ErrorExit;
   }
 
@@ -1131,7 +1131,7 @@ UpdatePowerLimitInfo (
   }
 
   if (SocketId >= ARRAY_SIZE (AcpiMrqPwrLimitMinPatchName)) {
-    DEBUG ((DEBUG_ERROR, "%a: SocketId %d exceeding AcpiMrqPwrLimitMinPatchName size\r\n", __FUNCTION__, SocketId));
+    DEBUG ((DEBUG_ERROR, "%a: SocketId %u exceeding AcpiMrqPwrLimitMinPatchName size\r\n", __FUNCTION__, SocketId));
     goto ErrorExit;
   }
 
@@ -1187,7 +1187,7 @@ UpdateAcpiTimerOprInfo (
   AcpiTimerEnableFlag = ACPI_TIMER_INSTRUCTION_ENABLE;
 
   if (SocketId >= ARRAY_SIZE (AcpiTimerInstructionEnableVarName)) {
-    DEBUG ((DEBUG_ERROR, "%a: Index %d exceeding AcpiTimerInstructionEnableVarName size\r\n", __FUNCTION__, SocketId));
+    DEBUG ((DEBUG_ERROR, "%a: Index %u exceeding AcpiTimerInstructionEnableVarName size\r\n", __FUNCTION__, SocketId));
     Status = EFI_INVALID_PARAMETER;
     goto ErrorExit;
   }
@@ -1296,7 +1296,7 @@ UpdateTelemetryInfo (
 
     Property = fdt_getprop (Dtb, NodeOffset, "nvidia,bpmp", &PropertySize);
     if ((Property == NULL) || (PropertySize < sizeof (UINT32))) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get Bpmp node phandle for index - %d\n", __FUNCTION__, Index));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get Bpmp node phandle for index - %u\n", __FUNCTION__, Index));
       goto ErrorExit;
     } else {
       CopyMem ((VOID *)&BpmpHandle, Property, sizeof (UINT32));
@@ -1306,7 +1306,7 @@ UpdateTelemetryInfo (
     SocketId = 0;
     Property = fdt_getprop (Dtb, NodeOffset, "nvidia,hw-instance-id", &PropertySize);
     if ((Property == NULL) || (PropertySize < sizeof (UINT32))) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get Socket Id for index - %d\n", __FUNCTION__, Index));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get Socket Id for index - %u\n", __FUNCTION__, Index));
       goto ErrorExit;
     } else {
       CopyMem ((VOID *)&SocketId, Property, sizeof (UINT32));
@@ -1314,7 +1314,7 @@ UpdateTelemetryInfo (
     }
 
     if (SocketId >= PcdGet32 (PcdTegraMaxSockets)) {
-      DEBUG ((DEBUG_ERROR, "%a: SocketId %d exceeds number of sockets\r\n", __FUNCTION__, SocketId));
+      DEBUG ((DEBUG_ERROR, "%a: SocketId %u exceeds number of sockets\r\n", __FUNCTION__, SocketId));
       Status = EFI_SUCCESS;
       goto ErrorExit;
     }
@@ -1344,7 +1344,7 @@ UpdateTelemetryInfo (
     TelemetryDataBuffAddr = TH500_AMAP_GET_ADD (TelemetryDataBuffAddr, SocketId);
 
     if (Index >= ARRAY_SIZE (AcpiMrqTelemetryBufferPatchName)) {
-      DEBUG ((DEBUG_ERROR, "%a: Index %d exceeding AcpiMrqTelemetryBufferPatchName size\r\n", __FUNCTION__, Index));
+      DEBUG ((DEBUG_ERROR, "%a: Index %u exceeding AcpiMrqTelemetryBufferPatchName size\r\n", __FUNCTION__, Index));
       goto ErrorExit;
     }
 

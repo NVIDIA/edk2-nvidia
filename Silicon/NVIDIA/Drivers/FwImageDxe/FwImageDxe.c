@@ -355,7 +355,7 @@ FwImageRead (
 
   DEBUG ((
     DEBUG_VERBOSE,
-    "Starting read of %s, Offset=%lld, Bytes=%u\n",
+    "Starting read of %s, Offset=%llu, Bytes=%u\n",
     Partition->PartitionName,
     Offset,
     Bytes
@@ -370,7 +370,7 @@ FwImageRead (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "Error reading %s, Offset=%lld: %r\n",
+      "Error reading %s, Offset=%llu: %r\n",
       Partition->PartitionName,
       Offset,
       Status

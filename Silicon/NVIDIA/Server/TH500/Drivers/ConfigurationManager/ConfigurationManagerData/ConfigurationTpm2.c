@@ -81,7 +81,7 @@ InstallTrustedComputingPlatform2Table (
       break;
 
     default:
-      DEBUG ((DEBUG_ERROR, "%a: Unsupported TpmInterfaceType %d\n", __FUNCTION__, TpmInterfaceType));
+      DEBUG ((DEBUG_ERROR, "%a: Unsupported TpmInterfaceType %u\n", __FUNCTION__, TpmInterfaceType));
       FreePool (TpmInfo);
       return EFI_DEVICE_ERROR;
   }

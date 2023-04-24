@@ -2,7 +2,7 @@
 
   MCE ARI library
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -300,7 +300,7 @@ AriRequestWait (
 
     // timeout error
     if (Retries == 0) {
-      DEBUG ((DEBUG_ERROR, "ARI request timed out: Request=%d\n", Request));
+      DEBUG ((DEBUG_ERROR, "ARI request timed out: Request=%u\n", Request));
       return ARI_REQ_TIMEOUT;
     }
   } else {

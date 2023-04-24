@@ -2352,7 +2352,7 @@ DeviceDiscoveryNotify (
         }
       } else {
         Status = EFI_DEVICE_ERROR;
-        DEBUG ((DEBUG_ERROR, "%a: Expected %d interrupts, got %d\r\n", __FUNCTION__, PCIE_NUMBER_OF_INTERUPT_MAP, NumberOfInterrupts));
+        DEBUG ((DEBUG_ERROR, "%a: Expected %d interrupts, got %u\r\n", __FUNCTION__, PCIE_NUMBER_OF_INTERUPT_MAP, NumberOfInterrupts));
         break;
       }
 

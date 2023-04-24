@@ -227,7 +227,7 @@ FalconFirmwareIfrLoad (
   CopyMem (FirmwareBuffer, Firmware, FirmwareSize);
   for (i = 0; i < FirmwareSize; i++) {
     if (FirmwareBuffer[i] != Firmware[i]) {
-      DEBUG ((EFI_D_ERROR, "%a: FirmwareBuffer[%d] != Firmware[%d]\r\n", __FUNCTION__, i, i));
+      DEBUG ((EFI_D_ERROR, "%a: FirmwareBuffer[%u] != Firmware[%u]\r\n", __FUNCTION__, i, i));
       return Status;
     }
   }

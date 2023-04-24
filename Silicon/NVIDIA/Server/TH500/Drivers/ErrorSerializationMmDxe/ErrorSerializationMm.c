@@ -639,7 +639,7 @@ ErstFindFreeSpace (
   do {
     AdjustedBlockIndex = (BlockIndex + mErrorSerialization.MostRecentBlock)%mErrorSerialization.NumBlocks;
     BlockInfo          = &mErrorSerialization.BlockInfo[AdjustedBlockIndex];
-    DEBUG ((DEBUG_VERBOSE, "%a: Block %d has UsedSize 0x%x, WastedSize 0x%x\n", __FUNCTION__, AdjustedBlockIndex, BlockInfo->UsedSize, BlockInfo->WastedSize));
+    DEBUG ((DEBUG_VERBOSE, "%a: Block %u has UsedSize 0x%x, WastedSize 0x%x\n", __FUNCTION__, AdjustedBlockIndex, BlockInfo->UsedSize, BlockInfo->WastedSize));
     if ((BlockInfo->ValidEntries > 0) &&
         (BlockInfo->UsedSize + RecordLength <= mErrorSerialization.BlockSize))
     {
@@ -1199,7 +1199,7 @@ ErstReadRecord (
     if (!EFI_ERROR (Status)) {
       Status = ErstValidateCperHeader (Cper);
     } else {
-      DEBUG ((DEBUG_ERROR, "%a: Spinor read failed with Status=%d\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Spinor read failed with Status=%u\n", __FUNCTION__, Status));
     }
   }
 
@@ -1600,7 +1600,7 @@ ReturnStatus:
     ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
   }
 
-    DEBUG ((DEBUG_ERROR, "%a: Function took %lld ns from start to clear busy (WriteRecordTime=%lld = %d%%, SpiTime=%lld = %d%%)\n", __FUNCTION__, ElapsedTime, WriteRecordTime, 100*WriteRecordTime/ElapsedTime, SpiTime, 100*SpiTime/ElapsedTime));
+    DEBUG ((DEBUG_ERROR, "%a: Function took %llu ns from start to clear busy (WriteRecordTime=%llu = %d%%, SpiTime=%llu = %d%%)\n", __FUNCTION__, ElapsedTime, WriteRecordTime, 100*WriteRecordTime/ElapsedTime, SpiTime, 100*SpiTime/ElapsedTime));
     WriteRecordTime = 0;
     SpiTime         = 0;
     );

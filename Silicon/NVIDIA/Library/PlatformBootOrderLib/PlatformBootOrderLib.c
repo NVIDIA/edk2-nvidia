@@ -420,7 +420,7 @@ GetIPMIBootOrderParameter (
       (BootOptionsResponse->ParameterValid.Bits.ParameterSelector != ParameterSelector) ||
       (BootOptionsResponse->ParameterVersion.Bits.ParameterVersion != IPMI_PARAMETER_VERSION))
   {
-    DEBUG ((DEBUG_ERROR, "Failed to get BMC Boot Options Parameter %d (IPMI CompCode = 0x%x)\r\n", ParameterSelector, BootOptionsResponse->CompletionCode));
+    DEBUG ((DEBUG_ERROR, "Failed to get BMC Boot Options Parameter %u (IPMI CompCode = 0x%x)\r\n", ParameterSelector, BootOptionsResponse->CompletionCode));
     return Status;
   }
 
@@ -463,7 +463,7 @@ SetIPMIBootOrderParameter (
   if (EFI_ERROR (Status) ||
       (BootOptionsResponse.CompletionCode != IPMI_COMP_CODE_NORMAL))
   {
-    DEBUG ((DEBUG_ERROR, "Failed to set BMC Boot Options Parameter %d (IPMI CompCode = 0x%x)\r\n", ParameterSelector, BootOptionsResponse.CompletionCode));
+    DEBUG ((DEBUG_ERROR, "Failed to set BMC Boot Options Parameter %u (IPMI CompCode = 0x%x)\r\n", ParameterSelector, BootOptionsResponse.CompletionCode));
     return Status;
   }
 
@@ -837,7 +837,7 @@ ProcessIPMIBootOrderUpdates (
 
   Status = GetEfiGlobalVariable2 (EFI_BOOT_ORDER_VARIABLE_NAME, (VOID **)&BootOrder, &BootOrderSize);
   if (EFI_ERROR (Status) || (BootOrder == NULL)) {
-    DEBUG ((DEBUG_ERROR, "Unable to determine BootOrder (Status %r) - ignoring request to prioritize %a instance %d\n", Status, RequestedClassName, RequestedInstance));
+    DEBUG ((DEBUG_ERROR, "Unable to determine BootOrder (Status %r) - ignoring request to prioritize %a instance %u\n", Status, RequestedClassName, RequestedInstance));
     goto AcknowledgeAndCleanup;
   }
 
@@ -846,7 +846,7 @@ ProcessIPMIBootOrderUpdates (
   if (RequestedInstance > 0) {
     ClassInstanceList = AllocatePool (BootOrderSize);
     if (ClassInstanceList == NULL) {
-      DEBUG ((DEBUG_ERROR, "Unable to allocate memory to process BootOrder - ignoring request to prioritize %a instance %d\n", RequestedClassName, RequestedInstance));
+      DEBUG ((DEBUG_ERROR, "Unable to allocate memory to process BootOrder - ignoring request to prioritize %a instance %u\n", RequestedClassName, RequestedInstance));
       goto AcknowledgeAndCleanup;
     }
 
@@ -860,7 +860,7 @@ ProcessIPMIBootOrderUpdates (
     UnicodeSPrint (OptionName, sizeof (OptionName), L"Boot%04x", BootOrder[BootOrderIndex]);
     Status = EfiBootManagerVariableToLoadOption (OptionName, &Option);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Error (%r) parsing BootOrder - ignoring request to prioritize %a instance %d\n", Status, RequestedClassName, RequestedInstance));
+      DEBUG ((DEBUG_ERROR, "Error (%r) parsing BootOrder - ignoring request to prioritize %a instance %u\n", Status, RequestedClassName, RequestedInstance));
       goto AcknowledgeAndCleanup;
     }
 
@@ -898,7 +898,7 @@ ProcessIPMIBootOrderUpdates (
         }
       }
     } else {
-      DEBUG ((DEBUG_WARN, "Unable to find requested instance %d of %a - Using first found instance instead\n", RequestedInstance, RequestedClassName));
+      DEBUG ((DEBUG_WARN, "Unable to find requested instance %u of %a - Using first found instance instead\n", RequestedInstance, RequestedClassName));
       BootOrderIndex = FirstBootOrderIndex;
     }
   }
@@ -906,9 +906,9 @@ ProcessIPMIBootOrderUpdates (
   // At this point BootOrderIndex is the entry to move to the start of the list
 
   if (BootOptionsParameters->Parm5.Data1.Bits.PersistentOptions) {
-    DEBUG ((DEBUG_ERROR, "IPMI requested to move %a instance %d to the start of BootOrder\n", RequestedClassName, RequestedInstance));
+    DEBUG ((DEBUG_ERROR, "IPMI requested to move %a instance %u to the start of BootOrder\n", RequestedClassName, RequestedInstance));
   } else {
-    DEBUG ((DEBUG_ERROR, "IPMI requested to use %a instance %d for this boot\n", RequestedClassName, RequestedInstance));
+    DEBUG ((DEBUG_ERROR, "IPMI requested to use %a instance %u for this boot\n", RequestedClassName, RequestedInstance));
 
     // Prepare to restore BootOrder after this boot
     if (BootOrderIndex > 0) {
@@ -954,7 +954,7 @@ ProcessIPMIBootOrderUpdates (
                     BootOrder
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Error moving %a instance %d to the start of BootOrder: %r\n", __FUNCTION__, RequestedClassName, RequestedInstance, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Error moving %a instance %u to the start of BootOrder: %r\n", __FUNCTION__, RequestedClassName, RequestedInstance, Status));
     }
 
     PrintBootOrder (DEBUG_INFO, L"BootOrder after IPMI-requested change:");

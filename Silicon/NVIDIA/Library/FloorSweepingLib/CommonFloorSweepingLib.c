@@ -237,7 +237,7 @@ CommonGetEnabledCoresBitMap (
         (SatMcCore != TH500_CPU_FLOORSWEEPING_SATMC_CORE_INVALID) &&
         (Socket == 0))
     {
-      DEBUG ((DEBUG_ERROR, "%a: Mask core %d on socket 0 for SatMC\n", __FUNCTION__, SatMcCore));
+      DEBUG ((DEBUG_ERROR, "%a: Mask core %u on socket 0 for SatMC\n", __FUNCTION__, SatMcCore));
       if (SatMcCore < 32) {
         ScratchDisable0Reg |= (1U << SatMcCore);
       } else if (SatMcCore < 64) {
@@ -526,7 +526,7 @@ CommonFloorSweepPcie (
           MSSBase  = SocketMssBaseAddr[Socket];
           C2CMode  = MmioRead32 (MSSBase + TH500_MSS_C2C_MODE);
           C2CMode &= 0x3;
-          DEBUG ((DEBUG_INFO, "C2C Mode = %d\n", C2CMode));
+          DEBUG ((DEBUG_INFO, "C2C Mode = %u\n", C2CMode));
 
           if (C2CMode == TH500_MSS_C2C_MODE_TWO_GPU) {
             RPNodeOffset = fdt_first_subnode (Dtb, NodeOffset);

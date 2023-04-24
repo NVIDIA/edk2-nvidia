@@ -415,7 +415,7 @@ UpdateCpuFloorsweepingConfig (
     if ((Property == NULL) || ((Length != sizeof (Tmp64)) && (Length != sizeof (Tmp32)))) {
       DEBUG ((
         DEBUG_ERROR,
-        "Failed to get MPIDR for /cpus/%a, len=%u\n",
+        "Failed to get MPIDR for /cpus/%a, len=%d\n",
         fdt_get_name (Dtb, NodeOffset, NULL),
         Length
         ));
@@ -617,7 +617,7 @@ FloorSweepGlobalThermals (
         continue;
       }
 
-      DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a len=%u\n", ThermNodeName, MapName, Length));
+      DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a len=%d\n", ThermNodeName, MapName, Length));
 
       Buffer = (UINT8 *)AllocatePool (Length);
       if (Buffer == NULL) {

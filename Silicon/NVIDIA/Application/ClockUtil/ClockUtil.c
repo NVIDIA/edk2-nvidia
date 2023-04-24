@@ -1,7 +1,7 @@
 /** @file
   The main process for ClockUtil application.
 
-  Copyright (c) 2018-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -109,7 +109,7 @@ DisplayClockInfo (
   Status = mClockProtocol->GetClockAttributes (mClockProtocol, ClockId, &Enabled, ClockName);
   if (EFI_ERROR (Status)) {
     if (Status != EFI_NOT_FOUND) {
-      DEBUG ((EFI_D_ERROR, "Failed to get clock attributes - %d: %r\r\n", ClockId, Status));
+      DEBUG ((EFI_D_ERROR, "Failed to get clock attributes - %u: %r\r\n", ClockId, Status));
     }
 
     return;
@@ -117,7 +117,7 @@ DisplayClockInfo (
 
   Status = mClockParents->GetParent (mClockParents, ClockId, &ParentId);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Failed to get parent for clock %d\r\n", ClockId));
+    DEBUG ((EFI_D_ERROR, "Failed to get parent for clock %u\r\n", ClockId));
     ParentId = MAX_UINT32;
   }
 
