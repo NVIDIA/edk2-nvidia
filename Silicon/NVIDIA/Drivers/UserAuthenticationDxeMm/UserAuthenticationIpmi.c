@@ -35,14 +35,14 @@ DumpBiosPasswordHash (
   }
 
   if ((Message != NULL) && (Message[0] != '\0')) {
-    DEBUG ((DEBUG_ERROR, "%a\n", Message));
+    DEBUG ((IPMI_BIOS_PASSWORD_DEBUG, "%a\n", Message));
   }
 
   for (Index = 0; Index < DataSize; Index++) {
-    DEBUG ((DEBUG_ERROR, " 0x%02X", Data[Index]));
+    DEBUG ((IPMI_BIOS_PASSWORD_DEBUG, " 0x%02X", Data[Index]));
   }
 
-  DEBUG ((DEBUG_ERROR, "\n"));
+  DEBUG ((IPMI_BIOS_PASSWORD_DEBUG, "\n"));
 
   return EFI_SUCCESS;
 }
@@ -68,11 +68,11 @@ DumpIpmiBiosPasswordResponse (
   }
 
   if ((Message != NULL) && (Message[0] != '\0')) {
-    DEBUG ((DEBUG_ERROR, "%a\n", Message));
+    DEBUG ((IPMI_BIOS_PASSWORD_DEBUG, "%a\n", Message));
   }
 
-  DEBUG ((DEBUG_ERROR, " CompletionCode: 0x%x\n", PasswdResponse->CompletionCode));
-  DEBUG ((DEBUG_ERROR, " Action: 0x%x\n", PasswdResponse->PasswordAction));
+  DEBUG ((IPMI_BIOS_PASSWORD_DEBUG, " CompletionCode: 0x%x\n", PasswdResponse->CompletionCode));
+  DEBUG ((IPMI_BIOS_PASSWORD_DEBUG, " Action: 0x%x\n", PasswdResponse->PasswordAction));
   DumpBiosPasswordHash ("Salt:", PasswdResponse->PasswordSalt, BIOS_PASSWORD_SALT_SIZE);
   DumpBiosPasswordHash ("Hash:", PasswdResponse->PasswordHash, BIOS_PASSWORD_HASH_SIZE);
 
@@ -100,11 +100,11 @@ DumpIpmiBiosPasswordRequest (
   }
 
   if ((Message != NULL) && (Message[0] != '\0')) {
-    DEBUG ((DEBUG_ERROR, "%a\n", Message));
+    DEBUG ((IPMI_BIOS_PASSWORD_DEBUG, "%a\n", Message));
   }
 
-  DEBUG ((DEBUG_ERROR, " ID selector: 0x%x\n", PasswdRequest->PasswordIdSelector));
-  DEBUG ((DEBUG_ERROR, " Type: 0x%x\n", PasswdRequest->PasswordType));
+  DEBUG ((IPMI_BIOS_PASSWORD_DEBUG, " ID selector: 0x%x\n", PasswdRequest->PasswordIdSelector));
+  DEBUG ((IPMI_BIOS_PASSWORD_DEBUG, " Type: 0x%x\n", PasswdRequest->PasswordType));
   DumpBiosPasswordHash ("Salt:", PasswdRequest->PasswordSalt, BIOS_PASSWORD_SALT_SIZE);
   DumpBiosPasswordHash ("Hash:", PasswdRequest->PasswordHash, BIOS_PASSWORD_HASH_SIZE);
 
