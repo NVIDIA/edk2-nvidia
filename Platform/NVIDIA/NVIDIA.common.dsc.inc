@@ -821,7 +821,18 @@
 
   ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
   ArmPkg/Drivers/TimerDxe/TimerDxe.inf
+!if ($(CONFIG_ARM_WATCHDOG) == y)
+  ArmPkg/Drivers/GenericWatchdogDxe/GenericWatchdogDxe.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Library/PlatformIsSiliconLib/PlatformIsSiliconLib.inf
+  }
+  MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Library/PlatformIsPresiliconLib/PlatformIsPresiliconLib.inf
+  }
+!else
   MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
+!endif
   Silicon/NVIDIA/Drivers/BootWatchdog/BootWatchdog.inf
 
   #

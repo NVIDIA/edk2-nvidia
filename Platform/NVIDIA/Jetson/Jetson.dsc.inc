@@ -10,6 +10,7 @@
   DSC_SPECIFICATION           = 0x00010005
   SUPPORTED_ARCHITECTURES     = AARCH64
   BUILD_TARGETS               = DEBUG|RELEASE|NOOPT
+  CONFIG_ARM_WATCHDOG         = n
 
   #
   # Define ESRT GUIDs for Firmware Management Protocol instances

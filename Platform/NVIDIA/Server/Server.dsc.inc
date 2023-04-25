@@ -10,6 +10,7 @@
   DSC_SPECIFICATION              = 0x00010005
   SUPPORTED_ARCHITECTURES        = AARCH64
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
+  CONFIG_ARM_WATCHDOG            = y
 
   #
   # Define ESRT GUIDs for Firmware Management Protocol instances
@@ -122,10 +123,6 @@
   gArmTokenSpaceGuid.PcdPciBusMin|0
   gArmTokenSpaceGuid.PcdPciBusMax|1
   gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x2DA00000
-  # SBSA Watchdog
-  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|0x000000000c6ab000
-  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|0x000000000c6aa000
-  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|39
   # SMBIOS for TH500
   ## Type 0 Table (BIOS Information)
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor|L"NVIDIA"
@@ -213,6 +210,12 @@
   gEfiRedfishPkgTokenSpaceGuid.PcdRedfishRestExServiceAccessModeInBand|False
   gEfiRedfishPkgTokenSpaceGuid.PcdRedfishDiscoverAccessModeInBand|False
   gEfiRedfishClientPkgTokenSpaceGuid.PcdDefaultRedfishVersion|L"/v1/"
+
+  # SBSA Watchdog
+  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|0x000000000c6ab000
+  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|0x000000000c6aa000
+  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|39
+
 
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE

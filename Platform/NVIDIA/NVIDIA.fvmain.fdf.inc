@@ -126,7 +126,12 @@
 
   INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
   INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
+!if $(CONFIG_ARM_WATCHDOG) == y
+  INF ArmPkg/Drivers/GenericWatchdogDxe/GenericWatchdogDxe.inf
   INF MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
+!else
+  INF MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
+!endif
   INF Silicon/NVIDIA/Drivers/BootWatchdog/BootWatchdog.inf
 
   #
