@@ -4532,10 +4532,10 @@ InitTestData (
 
   StmmCommBuffersData.Buffers.NsErstUncachedBufAddr = ErstUncachedBufferBase;
   StmmCommBuffersData.Buffers.NsErstUncachedBufSize = ErstUncachedBufferSize;
-  DEBUG ((DEBUG_ERROR, "Erst Uncached Base=0x%llx Size=0x%llx\n", StmmCommBuffersData.Buffers.NsErstUncachedBufAddr, StmmCommBuffersData.Buffers.NsErstUncachedBufSize));
+  DEBUG ((DEBUG_INFO, "Erst Uncached Base=0x%llx Size=0x%llx\n", StmmCommBuffersData.Buffers.NsErstUncachedBufAddr, StmmCommBuffersData.Buffers.NsErstUncachedBufSize));
   StmmCommBuffersData.Buffers.NsErstCachedBufAddr = ErstCachedBufferBase;
   StmmCommBuffersData.Buffers.NsErstCachedBufSize = ErstCachedBufferSize;
-  DEBUG ((DEBUG_ERROR, "Erst Cached Base=0x%llx Size=0x%llx\n", StmmCommBuffersData.Buffers.NsErstCachedBufAddr, StmmCommBuffersData.Buffers.NsErstCachedBufSize));
+  DEBUG ((DEBUG_INFO, "Erst Cached Base=0x%llx Size=0x%llx\n", StmmCommBuffersData.Buffers.NsErstCachedBufAddr, StmmCommBuffersData.Buffers.NsErstCachedBufSize));
 }
 
 /**

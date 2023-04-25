@@ -13,6 +13,13 @@
 #include <Library/MemoryAllocationLib.h> // AllocatePool
 #include <Guid/Cper.h>                   // From MdePkg
 
+#ifdef EDKII_UNIT_TEST_FRAMEWORK_ENABLED
+  #undef DEBUG_ERROR
+#define DEBUG_ERROR  DEBUG_INFO
+  #undef DEBUG_WARN
+#define DEBUG_WARN  DEBUG_INFO
+#endif
+
 typedef struct {
   VOID       *Memory;
   UINTN      Size;

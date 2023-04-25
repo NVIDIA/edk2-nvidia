@@ -27,6 +27,10 @@
 #ifdef EDKII_UNIT_TEST_FRAMEWORK_ENABLED
   #undef DEBUG_CODE
 #define DEBUG_CODE(X)
+  #undef DEBUG_ERROR
+#define DEBUG_ERROR  DEBUG_INFO
+  #undef DEBUG_WARN
+#define DEBUG_WARN  DEBUG_INFO
 #else
   #include <Library/TimerLib.h>
 STATIC UINT64  WriteRecordTime __attribute__ ((unused)) = 0;

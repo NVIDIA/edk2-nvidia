@@ -24,6 +24,13 @@
 #include <IndustryStandard/Ipmi.h>
 #include <Guid/GlobalVariable.h>
 
+#ifdef EDKII_UNIT_TEST_FRAMEWORK_ENABLED
+  #undef DEBUG_ERROR
+#define DEBUG_ERROR  DEBUG_INFO
+  #undef DEBUG_WARN
+#define DEBUG_WARN  DEBUG_INFO
+#endif
+
 #define FREE_NON_NULL(a) \
   if ((a) != NULL) { \
     FreePool ((a));  \
