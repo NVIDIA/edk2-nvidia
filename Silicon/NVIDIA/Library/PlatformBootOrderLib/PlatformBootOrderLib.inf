@@ -33,6 +33,7 @@
   IpmiBaseLib
   PcdLib
   FwVariableLib
+  PlatformResourceLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdIpmiNetworkBootMode

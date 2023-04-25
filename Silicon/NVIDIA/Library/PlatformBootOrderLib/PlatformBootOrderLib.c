@@ -20,6 +20,7 @@
 #include <Library/SortLib.h>
 #include <Library/DebugLib.h>
 #include <Library/FwVariableLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <IndustryStandard/Ipmi.h>
 #include <Guid/GlobalVariable.h>
 
@@ -536,6 +537,9 @@ CheckIPMIForBootOrderUpdates (
         // Don't reset the system, but instead process the rest of the command to avoid a reboot cycle
         goto Done;
       }
+
+      // Mark existing boot chain as good.
+      ValidateActiveBootChain ();
 
       // Reset
       gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
