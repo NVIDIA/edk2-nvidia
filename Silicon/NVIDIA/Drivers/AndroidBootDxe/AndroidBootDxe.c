@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro. All rights reserved.
 
@@ -263,7 +263,6 @@ AndroidBootGetVerify (
   ANDROID_BOOTIMG_HEADER  *Header;
   UINT32                  Offset;
   UINT32                  SignatureHeaderSize;
-  VOID                    *RcmKernelBase;
   UINT64                  RcmKernelSize;
   UINTN                   PartitionSize;
   UINTN                   ImageSize;
@@ -275,7 +274,6 @@ AndroidBootGetVerify (
   }
 
   SignatureHeaderSize = PcdGet32 (PcdSignedImageHeaderSize);
-  RcmKernelBase       = (VOID *)PcdGet64 (PcdRcmKernelBase);
   RcmKernelSize       = PcdGet64 (PcdRcmKernelSize);
 
   Offset = 0;
