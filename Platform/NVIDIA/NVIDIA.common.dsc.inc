@@ -4,6 +4,9 @@
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 [Defines]
+!ifndef CONFIG_ARM_WATCHDOG
+CONFIG_ARM_WATCHDOG = n
+!endif
 !ifndef CONFIG_MEMORY_TEST
 CONFIG_MEMORY_TEST=n
 !endif

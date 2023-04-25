@@ -29,6 +29,7 @@ if [ ! -e venv/bin/activate ]; then
   . venv/bin/activate
   _msg "Installing required Python packages..."
   pip install --upgrade -r edk2/pip-requirements.txt
+  pip install --upgrade kconfiglib
 else
   _msg "Activating Python virtual environment."
   . venv/bin/activate

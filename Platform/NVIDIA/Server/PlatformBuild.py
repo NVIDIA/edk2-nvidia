@@ -30,6 +30,8 @@ class ServerSettingsManager(NVIDIASettingsManager):
     def GetDscName(self):
         return ("edk2-nvidia/Platform/NVIDIA/Server/Server.dsc")
 
+    def GetConfigFiles(self):
+        return ["edk2-nvidia/Platform/NVIDIA/Server/Server.defconfig"]
 
 class PlatformBuilder(NVIDIAPlatformBuilder):
     ''' PlatformBuilder for NVIDIA's Server. '''

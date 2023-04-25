@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -31,6 +31,8 @@ class JetsonSettingsManager(NVIDIASettingsManager):
     def GetDtbPath(self):
         return "AARCH64/Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree/OUTPUT"
 
+    def GetConfigFiles(self):
+        return ["edk2-nvidia/Platform/NVIDIA/Jetson/Jetson.defconfig"]
 
 class PlatformBuilder(NVIDIAPlatformBuilder):
     ''' PlatformBuilder for NVIDIA's Jetson. '''

@@ -1,0 +1,23 @@
+# @file
+#
+#  Config file for NVIDIA UEFI builds
+#
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+menu	"Watchdog settings"
+
+  config	BOOT_WATCHDOG_TIMEOUT
+  int	"Boot watchdog timeout"
+  default	5
+  help
+    Time in minutes to reboot system before boot options are processed
+
+  config	ARM_WATCHDOG
+    bool "Use ARM watchdog instead of timer"
+    default	y
+    help
+      Use the ARM generic watchdog timer driver
+endmenu

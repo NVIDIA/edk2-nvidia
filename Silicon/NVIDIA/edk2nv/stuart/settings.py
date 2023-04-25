@@ -62,10 +62,20 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         # NOTE: These paths must use a trailing slash to ensure stuart treats
         # them properly when computing relative paths.
         packages_paths = [path + "/" for path in self._insert_pkgs_paths]
+
         packages_paths.extend([
             "edk2/BaseTools/", "edk2/", "edk2-platforms/", "edk2-nvidia/",
             "edk2-nvidia-non-osi/", "edk2-non-osi", "edk2-platforms/Features/Intel/OutOfBandManagement/"
         ])
+
+        if self.GetConfigFiles ():
+            ws_dir = Path(self.GetWorkspaceRoot())
+            config_path = "nvidia-config/" + self.GetName()
+            config_fullpath = ws_dir / config_path
+            config_fullpath.mkdir(parents=True, exist_ok=True)
+            packages_paths.extend([
+                config_path
+            ])
 
         return packages_paths
 
@@ -136,6 +146,11 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         '''
         return []
 
+    def GetConfigFiles(self):
+        ''' Return the list of config files that will used for this build
+            these will be applied in order and are relative to the workspace
+        '''
+        return None
 
 class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
                             PrEvalSettingsManager, BuildSettingsManager,
@@ -367,6 +382,15 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         target = self.GetTarget()
         return str(Path("images") / f"builddir_{platform_name}_{target}.txt")
 
+    def GetKConfigFile(self):
+        ''' Return the file name of the main Kconfig configuration.
+
+            This file will is used with the platform Kconfig file to generate the
+            specific configuration.
+
+            The path must be relative to GetWorkspaceRoot().
+        '''
+        return "edk2-nvidia/Silicon/NVIDIA/Kconfig"
 
 class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
                               CiSetupSettingsManager, CiBuildSettingsManager,
