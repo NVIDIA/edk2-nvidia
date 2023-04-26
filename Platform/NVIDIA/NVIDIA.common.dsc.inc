@@ -1129,6 +1129,11 @@
   #
   Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf
 
+  #
+  # Secure Boot Provision
+  #
+  Silicon/NVIDIA/Drivers/NvSecureBootProvisionDxe/NvSecureBootProvisionDxe.inf
+
 [Components.AARCH64]
   #
   # EBC

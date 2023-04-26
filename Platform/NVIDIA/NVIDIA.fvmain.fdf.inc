@@ -351,3 +351,8 @@
   # Fuse Support
   #
   INF Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf
+
+  #
+  # Secure Boot Provision
+  #
+  INF Silicon/NVIDIA/Drivers/NvSecureBootProvisionDxe/NvSecureBootProvisionDxe.inf

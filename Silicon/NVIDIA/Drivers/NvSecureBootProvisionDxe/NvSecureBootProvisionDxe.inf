@@ -1,0 +1,56 @@
+## @file
+#  NVIDIA Secure Boot Provision
+#
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION               = 0x00010019
+  BASE_NAME                 = NvSecureBootProvisionDxe
+  FILE_GUID                 = 3e74631b-64b7-48b1-aec0-25035a3a5d1a
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = NvSecureBootProvisionDxeInitialize
+
+
+[Sources]
+  NvSecureBootProvisionDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  SecurityPkg/SecurityPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  CryptoPkg/CryptoPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  UefiDriverEntryPoint
+  UefiLib
+  UefiRuntimeServicesTableLib
+  UefiBootServicesTableLib
+  SecureBootVariableLib
+  BaseCryptLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  PrintLib
+
+[Guids]
+  gEfiEndOfDxeEventGroupGuid
+  gEnrollFromDefaultKeysAppFileGuid
+  gNVIDIAPublicVariableGuid
+  gEfiGlobalVariableGuid
+  gEfiImageSecurityDatabaseGuid
+  gNVIDIATokenSpaceGuid
+
+[Protocols]
+  gEfiDevicePathProtocolGuid
+  gEfiLoadedImageProtocolGuid
+
+[Depex]
+  TRUE
