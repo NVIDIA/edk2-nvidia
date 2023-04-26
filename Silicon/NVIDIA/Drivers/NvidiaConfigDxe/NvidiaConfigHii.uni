@@ -691,3 +691,17 @@
 #string STR_RESET_VARIABLES_PROMPT       #language en-US  "Reset Settings"
 
 #string STR_EXIT_STRING                  #language en-US  "Press ESC to exit."
+
+#string STR_MEMORY_TEST_FORM_TITLE       #language en-US  "Memory Test options"
+#string STR_MEMORY_TEST_FORM_HELP        #language en-US  "Options for configuring memory tests."
+
+#string STR_MEMORY_TEST_LEVEL_PROMPT     #language en-US  "Test Level"
+#string STR_MEMORY_TEST_LEVEL_HELP       #language en-US  "Memory test level to use when enabled."
+#string STR_IGNORE                       #language en-US  "Ignore"
+#string STR_QUICK                        #language en-US  "Quick"
+#string STR_SPARSE                       #language en-US  "Sparse"
+#string STR_EXTENSIVE                    #language en-US  "Extensive"
+#string STR_MEMORY_TEST_NEXT_BOOT_PROMPT #language en-US  "Test on next boot"
+#string STR_MEMORY_TEST_NEXT_BOOT_HELP   #language en-US  "Run memory tests on next boot"
+#string STR_MEMORY_TEST_SINGLE_BOOT_PROMPT #language en-US  "Single boot memory test"
+#string STR_MEMORY_TEST_SINGLE_BOOT_HELP   #language en-US  "Disable next boot setting after memory test."

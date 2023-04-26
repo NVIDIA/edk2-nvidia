@@ -131,4 +131,10 @@ typedef struct {
   BOOLEAN    Enabled;
 } NVIDIA_GPU_SMMU_BYPASS_ENABLE;
 
+typedef struct {
+  UINT8      TestLevel;
+  BOOLEAN    NextBoot;
+  BOOLEAN    SingleBoot;
+} NVIDIA_MEMORY_TEST_OPTIONS;
+
 #endif //__NVIDIA_CONFIGURATION_H__

@@ -68,6 +68,7 @@
 #define TH500_SOCKET3_PCIE9_CONFIGURATION_FORM_ID  0x0031
 #define DEBUG_CONFIGURATION_FORM_ID                0x0032
 #define NVIDIA_PRODUCT_INFO_FORM_ID                0x0033
+#define MEMORY_TEST_FORM_ID                        0x0034
 
 #define KEY_ENABLE_PCIE_CONFIG         0x0100
 #define KEY_ENABLE_PCIE_IN_OS_CONFIG   0x0101
@@ -92,6 +93,8 @@
 #define KEY_GRACE_CONFIG               0x0114
 #define KEY_DEBUG_CONFIG               0x0115
 #define KEY_ENABLE_TPM                 0x0116
+#define KEY_MEMORY_TEST                0x0117
+#define KEY_MEMORY_TEST_LEVEL          0x0118
 
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 
@@ -134,6 +137,12 @@
 #define EXPOSE_CCPLEX_SOC_BRIDGE_DISABLED_VARIABLE  0x0100
 #define EXPOSE_CCPLEX_CSN_DISABLED_VARIABLE         0x0200
 #define EXPOSE_SCF_CACHE_DISABLED_VARIABLE          0x0400
+
+// Memory test levels
+#define MEMORY_TEST_LEVEL_IGNORE     0
+#define MEMORY_TEST_LEVEL_QUICK      1
+#define MEMORY_TEST_LEVEL_SPARSE     2
+#define MEMORY_TEST_LEVEL_EXTENSIVE  3
 
 typedef struct {
   UINT32     L4TSupported;

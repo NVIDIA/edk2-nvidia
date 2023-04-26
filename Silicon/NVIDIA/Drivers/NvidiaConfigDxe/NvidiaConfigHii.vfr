@@ -120,6 +120,12 @@ formset
     name  = GpuSmmuBypassEnable,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+
+  efivarstore NVIDIA_MEMORY_TEST_OPTIONS,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name = MemoryTestControl,
+    guid = NVIDIA_PUBLIC_VARIABLE_GUID;
+
   //
   // Main form for NVIDIA Configuration
   //
@@ -168,6 +174,12 @@ formset
         help   = STRING_TOKEN(STR_BOOT_CONFIG_FORM_HELP),
         flags  = INTERACTIVE,
         key    = KEY_BOOT_CONFIG;
+
+    goto MEMORY_TEST_FORM_ID,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_FORM_TITLE),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_FORM_HELP),
+        flags  = INTERACTIVE,
+        key    = KEY_MEMORY_TEST;
 
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 0;
     goto TH500_CONFIGURATION_FORM_ID,
@@ -324,6 +336,39 @@ formset
         default = 255,
     endnumeric;
     endif;
+
+  endform;
+
+  //
+  // Form for Boot Config
+  //
+  form formid = MEMORY_TEST_FORM_ID,
+    title = STRING_TOKEN(STR_MEMORY_TEST_FORM_TITLE);
+
+    subtitle text = STRING_TOKEN(STR_NULL);
+
+    oneof varid = MemoryTestControl.TestLevel,
+        questionid = KEY_MEMORY_TEST_LEVEL,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_LEVEL_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_LEVEL_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1,
+        option text = STRING_TOKEN(STR_IGNORE), value = MEMORY_TEST_LEVEL_IGNORE, flags = 0;
+        option text = STRING_TOKEN(STR_QUICK),  value = MEMORY_TEST_LEVEL_QUICK, flags = 0;
+        option text = STRING_TOKEN(STR_SPARSE),  value = MEMORY_TEST_LEVEL_SPARSE, flags = 0;
+        option text = STRING_TOKEN(STR_EXTENSIVE),  value = MEMORY_TEST_LEVEL_EXTENSIVE , flags = 0;
+    endoneof;
+
+    checkbox varid = MemoryTestControl.NextBoot,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_NEXT_BOOT_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_NEXT_BOOT_HELP),
+        default = FALSE,
+    endcheckbox;
+
+    checkbox varid = MemoryTestControl.SingleBoot,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_SINGLE_BOOT_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_SINGLE_BOOT_HELP),
+        default = FALSE,
+    endcheckbox;
 
   endform;
 

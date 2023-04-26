@@ -689,6 +689,10 @@ CONFIG_MEMORY_TEST=n
   gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport|L"DgpuDtEfifbSupport"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|L"EnabledPcieNicTopology"|gNVIDIAPublicVariableGuid|0x0|{ 0x0, 0xFF, 0xFF, 0xFF, 0xFF }|BS,NV
   gNVIDIATokenSpaceGuid.PcdGpuSmmuBypassEnable|L"GpuSmmuBypassEnable"|gNVIDIAPublicVariableGuid|0x0|0x0|BS,NV
+  # Memory Test options
+  gNVIDIATokenSpaceGuid.PcdMemoryTestLevel|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x0|2|BS,NV
+  gNVIDIATokenSpaceGuid.PcdMemoryTestNextBoot|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x1|TRUE|BS,NV
+  gNVIDIATokenSpaceGuid.PcdMemoryTestSingleBoot|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x2|FALSE|BS,NV
 
 [PcdsPatchableInModule]
   gArmTokenSpaceGuid.PcdFvBaseAddress|0x0

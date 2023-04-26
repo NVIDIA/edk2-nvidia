@@ -674,6 +674,20 @@
 #Indicate whether initial console device registration should be done.
   gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration|TRUE|BOOLEAN|0x0000010A
 
+#Memory test options
+
+#Memory test level
+#0 - IGNORE
+#1 - QUICK
+#2 - SPARSE
+#3 - EXTENSIVE
+  gNVIDIATokenSpaceGuid.PcdMemoryTestLevel|0|UINT8|0x00000112
+#Should memory test be run on next boot
+  gNVIDIATokenSpaceGuid.PcdMemoryTestNextBoot|TRUE|BOOLEAN|0x00000113
+#Causes memory test to be disabled after running so that is only runs on the
+#next boot
+  gNVIDIATokenSpaceGuid.PcdMemoryTestSingleBoot|TRUE|BOOLEAN|0x00000114
+
 #Option to enable/disable Embedded UEFI Shell
   gNVIDIATokenSpaceGuid.PcdUefiShellEnabled|0x01|UINT8|0x0000010B
 

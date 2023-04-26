@@ -591,3 +591,11 @@
 #string STR_PCIE_DISABLE_DPC_AT_RP_SOCKET3_PCIE7_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie7DisableDPCatRP"
 #string STR_PCIE_DISABLE_DPC_AT_RP_SOCKET3_PCIE8_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie8DisableDPCatRP"
 #string STR_PCIE_DISABLE_DPC_AT_RP_SOCKET3_PCIE9_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie9DisableDPCatRP"
+
+#string STR_MEMORY_TEST_LEVEL_PROMPT        #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/MemoryTestLevel"
+#string STR_IGNORE                          #language x-uefi-redfish-Bios.v1_2_0 "Ignore"
+#string STR_QUICK                           #language x-uefi-redfish-Bios.v1_2_0 "Quick"
+#string STR_SPARSE                          #language x-uefi-redfish-Bios.v1_2_0 "Sparse"
+#string STR_EXTENSIVE                       #language x-uefi-redfish-Bios.v1_2_0 "Extensive"
+#string STR_MEMORY_TEST_NEXT_BOOT_PROMPT    #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/MemoryTestNextBoot"
+#string STR_MEMORY_TEST_SINGLE_BOOT_PROMPT  #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/MemoryTestSingleBoot"

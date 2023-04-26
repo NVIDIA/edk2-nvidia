@@ -91,6 +91,9 @@
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology
   gNVIDIATokenSpaceGuid.PcdGpuSmmuBypassEnable
   gNVIDIATokenSpaceGuid.PcdTpmPresent
+  gNVIDIATokenSpaceGuid.PcdMemoryTestLevel
+  gNVIDIATokenSpaceGuid.PcdMemoryTestNextBoot
+  gNVIDIATokenSpaceGuid.PcdMemoryTestSingleBoot
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND
