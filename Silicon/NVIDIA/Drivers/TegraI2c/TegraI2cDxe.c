@@ -159,32 +159,24 @@ TegraI2cSetBusFrequency (
       DEBUG ((DEBUG_ERROR, "%a: Failed to set HS prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
-
-    ClockDivisor = 0x2;
   } else if (*BusClockHertz >= FM_PLUS_SPEED) {
     Status = DeviceDiscoverySetProd (Private->ControllerHandle, Private->DeviceTreeNode, "prod_c_fmplus");
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to set FM+ prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
-
-    ClockDivisor = 0x10;
   } else if (*BusClockHertz >= FM_SPEED) {
     Status = DeviceDiscoverySetProd (Private->ControllerHandle, Private->DeviceTreeNode, "prod_c_fm");
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to set FM prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
-
-    ClockDivisor = 0x19;
   } else {
     Status = DeviceDiscoverySetProd (Private->ControllerHandle, Private->DeviceTreeNode, "prod_c_sm");
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to set SM prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
-
-    ClockDivisor = 0x19;
   }
 
   if (*BusClockHertz < HS_SPEED) {
@@ -192,11 +184,15 @@ TegraI2cSetBusFrequency (
     Data32             = MmioRead32 (Private->BaseAddress + I2C_I2C_INTERFACE_TIMING_0_OFFSET);
     TLow               = (Data32 & I2C_I2C_INTERFACE_TIMING_0_TLOW_MASK) >> I2C_I2C_INTERFACE_TIMING_0_TLOW_SHIFT;
     THigh              = (Data32 & I2C_I2C_INTERFACE_TIMING_0_THIGH_MASK) >> I2C_I2C_INTERFACE_TIMING_0_THIGH_SHIFT;
+    Data32             = MmioRead32 (Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET);
+    ClockDivisor       = (Data32 & I2C_CLK_DIVISOR_STD_FAST_MODE_MASK) >> I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT;
   } else {
     Private->HighSpeed = TRUE;
     Data32             = MmioRead32 (Private->BaseAddress + I2C_I2C_HS_INTERFACE_TIMING_0_OFFSET);
     TLow               = (Data32 & I2C_I2C_HS_INTERFACE_TIMING_0_TLOW_MASK) >> I2C_I2C_HS_INTERFACE_TIMING_0_TLOW_SHIFT;
     THigh              = (Data32 & I2C_I2C_HS_INTERFACE_TIMING_0_THIGH_MASK) >> I2C_I2C_HS_INTERFACE_TIMING_0_THIGH_SHIFT;
+    Data32             = MmioRead32 (Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET);
+    ClockDivisor       = (Data32 & I2C_CLK_DIVISOR_HSMODE_MASK) >> I2C_CLK_DIVISOR_HSMODE_SHIFT;
   }
 
   ClockMultiplier = (TLow + THigh + 2) * (ClockDivisor + 1);
@@ -205,20 +201,6 @@ TegraI2cSetBusFrequency (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a, failed to set clock frequency to %lldHz (%r)\r\n", __FUNCTION__, *BusClockHertz * ClockMultiplier, Status));
     return Status;
-  }
-
-  if (*BusClockHertz < HS_SPEED) {
-    MmioAndThenOr32 (
-      Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET,
-      ~I2C_CLK_DIVISOR_STD_FAST_MODE_MASK,
-      ClockDivisor << I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT
-      );
-  } else {
-    MmioAndThenOr32 (
-      Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET,
-      ~I2C_CLK_DIVISOR_HSMODE_MASK,
-      ClockDivisor << I2C_CLK_DIVISOR_HSMODE_SHIFT
-      );
   }
 
   Private->ConfigurationChanged = TRUE;
