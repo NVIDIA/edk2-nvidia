@@ -228,7 +228,7 @@ CEntryPoint (
 {
   EFI_HOB_HANDOFF_INFO_TABLE    *HobList;
   EFI_STATUS                    Status;
-  CHAR8                         Buffer[100];
+  CHAR8                         Buffer[150];
   UINTN                         CharCount;
   FIRMWARE_SEC_PERFORMANCE      Performance;
   UINT64                        StartTimeStamp;
