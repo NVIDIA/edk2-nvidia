@@ -1,7 +1,7 @@
 ## @file
 #  FW Partition Protocol BlockIo Dxe
 #
-#  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
@@ -36,6 +36,7 @@
 [Protocols]
   gNVIDIAFwPartitionProtocolGuid            ## PRODUCES
   gNVIDIABrBctUpdateProtocolGuid            ## PRODUCES
+  gNVIDIAFwPartitionBlockIoLoadedGuid       ## PRODUCES
   gEfiBlockIoProtocolGuid                   ## CONSUMES
   gEfiDevicePathProtocolGuid                ## CONSUMES
 
