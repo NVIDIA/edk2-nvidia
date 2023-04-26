@@ -15,6 +15,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/PrePiHobListPointerLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Guid/MemoryTypeInformation.h>
 
 /**
   Simple insertion sort to sort regions entries in ascending order.
@@ -47,6 +48,67 @@ MemoryRegionSort (
 
     Regions[PrevIndex + 1].MemoryBaseAddress = Address;
     Regions[PrevIndex + 1].MemoryLength      = Length;
+  }
+}
+
+/**
+  Finds a memory hob that contains the specified address
+
+  @param[in] MemoryAddress      Address to look for in a HOB.
+
+  @return Hob that contains the address, NULL if not found
+**/
+STATIC
+EFI_HOB_RESOURCE_DESCRIPTOR *
+FindMemoryHob (
+  IN EFI_PHYSICAL_ADDRESS  MemoryAddress
+  )
+{
+  EFI_PEI_HOB_POINTERS  HobPtr;
+
+  HobPtr.Raw = GetHobList ();
+  while ((HobPtr.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, HobPtr.Raw)) != NULL) {
+    if ((HobPtr.ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) &&
+        (MemoryAddress >= HobPtr.ResourceDescriptor->PhysicalStart) &&
+        (MemoryAddress <= (HobPtr.ResourceDescriptor->PhysicalStart + HobPtr.ResourceDescriptor->ResourceLength - 1)))
+    {
+      return HobPtr.ResourceDescriptor;
+    }
+
+    HobPtr.Raw = GET_NEXT_HOB (HobPtr);
+  }
+
+  return NULL;
+}
+
+/**
+  Mark memory regions that are in use as tested.
+**/
+STATIC
+VOID
+MarkUsedMemoryTested (
+  VOID
+  )
+{
+  EFI_PHYSICAL_ADDRESS         Address;
+  EFI_HOB_RESOURCE_DESCRIPTOR  *ResourceHob;
+  EFI_PEI_HOB_POINTERS         HobPtr;
+
+  HobPtr.Raw  = GetHobList ();
+  Address     = (EFI_PHYSICAL_ADDRESS)HobPtr.Raw;
+  ResourceHob = FindMemoryHob (Address);
+  if (ResourceHob != NULL) {
+    ResourceHob->ResourceAttribute |= EFI_RESOURCE_ATTRIBUTE_TESTED;
+  }
+
+  // Find all memory allocations
+  while ((HobPtr.Raw = GetNextHob (EFI_HOB_TYPE_MEMORY_ALLOCATION, HobPtr.Raw)) != NULL) {
+    ResourceHob = FindMemoryHob (HobPtr.MemoryAllocation->AllocDescriptor.MemoryBaseAddress);
+    if (ResourceHob != NULL) {
+      ResourceHob->ResourceAttribute |= EFI_RESOURCE_ATTRIBUTE_TESTED;
+    }
+
+    HobPtr.Raw = GET_NEXT_HOB (HobPtr);
   }
 }
 
@@ -148,7 +210,6 @@ InstallDramWithCarveouts (
   ResourceAttributes = (
                         EFI_RESOURCE_ATTRIBUTE_PRESENT |
                         EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
-                        EFI_RESOURCE_ATTRIBUTE_TESTED |
                         EFI_RESOURCE_ATTRIBUTE_UNCACHEABLE |
                         EFI_RESOURCE_ATTRIBUTE_WRITE_COMBINEABLE |
                         EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
@@ -158,6 +219,10 @@ InstallDramWithCarveouts (
                         EFI_RESOURCE_ATTRIBUTE_EXECUTION_PROTECTABLE |
                         EFI_RESOURCE_ATTRIBUTE_READ_ONLY_PROTECTABLE
                         );
+
+  if (PcdGet64 (PcdExpectedPeiMemoryUsage) == 0) {
+    ResourceAttributes |= EFI_RESOURCE_ATTRIBUTE_TESTED;
+  }
 
   while (DramIndex < DramRegionsCount) {
     if (CarveoutIndex < CarveoutRegionsCount) {
@@ -230,6 +295,8 @@ InstallDramWithCarveouts (
 
     InstalledRegions++;
   }
+
+  MarkUsedMemoryTested ();
 
   *MaxRegionStart    = LargestRegionStart;
   *MaxRegionSize     = MaxSize;

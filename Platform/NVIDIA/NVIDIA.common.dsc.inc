@@ -3,6 +3,10 @@
 #  Copyright (c) 2011-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+!ifndef CONFIG_MEMORY_TEST
+CONFIG_MEMORY_TEST=n
+!endif
 
 [BuildOptions.common.EDKII.DXE_CORE,BuildOptions.common.EDKII.DXE_DRIVER,BuildOptions.common.EDKII.UEFI_DRIVER,BuildOptions.common.EDKII.UEFI_APPLICATION]
   GCC:*_*_*_DLINK_FLAGS = -z common-page-size=0x1000
@@ -612,6 +616,10 @@
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdImageLargeAddressLoad|FALSE
 
+!if ($(CONFIG_MEMORY_TEST) == y)
+  gNVIDIATokenSpaceGuid.PcdExpectedPeiMemoryUsage|0x06000000
+!endif
+
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.
@@ -1152,7 +1160,9 @@
   #
   # Memory Tests
   #
+!if ($(CONFIG_MEMORY_TEST) == y)
   MdeModulePkg/Universal/MemoryTest/GenericMemoryTestDxe/GenericMemoryTestDxe.inf
+!endif
 
 [Components.AARCH64]
   #

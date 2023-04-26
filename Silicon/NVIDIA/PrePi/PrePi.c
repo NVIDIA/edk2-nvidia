@@ -460,6 +460,11 @@ CEntryPoint (
   ASSERT_EFI_ERROR (Status);
   BuildGuidDataHob (&gNVIDIAPlatformResourceDataGuid, &PlatformResourceInfo, sizeof (PlatformResourceInfo));
 
+  if (FeaturePcdGet (PcdPrePiProduceMemoryTypeInformationHob)) {
+    // Optional feature that helps prevent EFI memory map fragmentation.
+    BuildMemoryTypeInformationHob ();
+  }
+
   // Add all new entries to memory map and relocate HOB if needed
   UpdateMemoryMap ();
 
@@ -471,11 +476,6 @@ CEntryPoint (
 
   // Print platform model info from UEFI DTB
   PrintModel ();
-
-  if (FeaturePcdGet (PcdPrePiProduceMemoryTypeInformationHob)) {
-    // Optional feature that helps prevent EFI memory map fragmentation.
-    BuildMemoryTypeInformationHob ();
-  }
 
   // Create DTB memory allocation HOB
   BuildMemoryAllocationHob (DtbBase, DtbSize, EfiBootServicesData);

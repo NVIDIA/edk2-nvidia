@@ -440,6 +440,10 @@
   #Size of Buffer used to communicate with fTPM TA in OP-TEE
   gNVIDIATokenSpaceGuid.PcdFtpmShmSize|0|UINT64|0x000010D
 
+# PEI memory usage, expected needs of PEI memory in the HOB list
+# set to 0 to skip memory testing
+  gNVIDIATokenSpaceGuid.PcdExpectedPeiMemoryUsage|0|UINT64|0x00000111
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067

@@ -69,6 +69,7 @@
   gNVIDIATokenSpaceGuid.PcdUefiVersionString
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString
   gArmTokenSpaceGuid.PcdFvBaseAddress
+  gNVIDIATokenSpaceGuid.PcdExpectedPeiMemoryUsage
 
 [FixedPcd]
   gArmTokenSpaceGuid.PcdVFPEnabled
