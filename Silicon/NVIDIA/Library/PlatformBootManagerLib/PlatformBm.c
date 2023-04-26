@@ -1156,9 +1156,6 @@ PlatformBootManagerBeforeConsole (
   VOID
   )
 {
-  UINT8       *EnrollDefaultKeys;
-  EFI_STATUS  Status;
-
   //
   // Signal EndOfDxe PI Event
   //
@@ -1204,39 +1201,6 @@ PlatformBootManagerBeforeConsole (
     // Register platform-specific boot options and keyboard shortcuts.
     //
     PlatformRegisterOptionsAndKeys ();
-
-    //
-    // Register EnrollDefaultKeysApp as a SysPrep Option.
-    //
-    Status = GetVariable2 (
-               L"EnrollDefaultSecurityKeys",
-               &gNVIDIAPublicVariableGuid,
-               (VOID **)&EnrollDefaultKeys,
-               NULL
-               );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: No Default keys to enroll %r.\n",
-        __FUNCTION__,
-        Status
-        ));
-    } else {
-      if (*EnrollDefaultKeys == 1) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: Enroll default keys. %r\n",
-          __FUNCTION__,
-          Status
-          ));
-        PlatformRegisterFvBootOption (
-          &gEnrollFromDefaultKeysAppFileGuid,
-          L"Enroll Default Keys App",
-          LOAD_OPTION_ACTIVE,
-          LoadOptionTypeSysPrep
-          );
-      }
-    }
 
     //
     // Register UEFI Shell

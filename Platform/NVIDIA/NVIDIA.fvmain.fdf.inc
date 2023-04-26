@@ -303,3 +303,8 @@
   # CPU Frequency support
   #
   INF Silicon/NVIDIA/Drivers/TegraCpuFreqDxe/TegraCpuFreqDxe.inf
+
+  #
+  # Secure Boot Provision
+  #
+  INF Silicon/NVIDIA/Drivers/NvSecureBootProvisionDxe/NvSecureBootProvisionDxe.inf

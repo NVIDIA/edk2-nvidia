@@ -92,7 +92,6 @@
   gNVIDIAPublicVariableGuid
   gNVIDIATokenSpaceGuid
   gEfiRtPropertiesTableGuid
-  gEnrollFromDefaultKeysAppFileGuid
 
 [Protocols]
   gEfiDevicePathProtocolGuid
