@@ -26,8 +26,11 @@
   PrePiHobListPointerLib
   SortLib
 
+[Guids]
+  gEfiMemoryTypeInformationGuid
+
 [Sources.common]
   DramCarveoutLib.c
 
-[FixedPcd]
-
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdExpectedPeiMemoryUsage

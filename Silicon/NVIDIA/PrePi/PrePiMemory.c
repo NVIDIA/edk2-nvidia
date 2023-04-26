@@ -21,6 +21,77 @@
 #include <Library/SystemResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Guid/MemoryTypeInformation.h>
+
+// Initial memory needed for GCD
+#define MINIMUM_INITIAL_MEMORY_SIZE  SIZE_64KB
+
+/**
+  Calculate total memory bin size neeeded.
+
+  @return The total memory bin size neeeded.
+
+**/
+UINT64
+CalculateTotalMemoryBinSizeNeeded (
+  VOID
+  )
+{
+  UINTN                        Index;
+  UINT64                       TotalSize;
+  EFI_HOB_GUID_TYPE            *GuidHob;
+  EFI_MEMORY_TYPE_INFORMATION  *EfiMemoryTypeInformation;
+  UINTN                        DataSize;
+
+  TotalSize = 0;
+  //
+  // Loop through each memory type in the order specified by the gMemoryTypeInformation[] array
+  //
+
+  GuidHob = GetFirstGuidHob (&gEfiMemoryTypeInformationGuid);
+  if (GuidHob != NULL) {
+    EfiMemoryTypeInformation = GET_GUID_HOB_DATA (GuidHob);
+    DataSize                 = GET_GUID_HOB_DATA_SIZE (GuidHob);
+    if ((EfiMemoryTypeInformation != NULL) && (DataSize > 0) && (DataSize <= (EfiMaxMemoryType + 1) * sizeof (EFI_MEMORY_TYPE_INFORMATION))) {
+      TotalSize = 0;
+      for (Index = 0; EfiMemoryTypeInformation[Index].Type != EfiMaxMemoryType; Index++) {
+        TotalSize += EFI_PAGES_TO_SIZE (EfiMemoryTypeInformation[Index].NumberOfPages);
+      }
+    }
+  }
+
+  return TotalSize;
+}
+
+/**
+  Finds a memory hob that contains the specified address
+
+  @param[in] MemoryAddress      Address to look for in a HOB.
+
+  @return Hob that contains the address, NULL if not found
+**/
+STATIC
+EFI_HOB_RESOURCE_DESCRIPTOR *
+FindMemoryHob (
+  IN EFI_PHYSICAL_ADDRESS  MemoryAddress
+  )
+{
+  EFI_PEI_HOB_POINTERS  HobPtr;
+
+  HobPtr.Raw = GetHobList ();
+  while ((HobPtr.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, HobPtr.Raw)) != NULL) {
+    if ((HobPtr.ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) &&
+        (MemoryAddress >= HobPtr.ResourceDescriptor->PhysicalStart) &&
+        (MemoryAddress <= (HobPtr.ResourceDescriptor->PhysicalStart + HobPtr.ResourceDescriptor->ResourceLength - 1)))
+    {
+      return HobPtr.ResourceDescriptor;
+    }
+
+    HobPtr.Raw = GET_NEXT_HOB (HobPtr);
+  }
+
+  return NULL;
+}
 
 /**
   Migrate Hob list to the new region.
@@ -38,16 +109,49 @@ MigrateHobList (
   IN UINTN                 RegionSize
   )
 {
-  EFI_HOB_HANDOFF_INFO_TABLE  *OldHob;
-  EFI_PHYSICAL_ADDRESS        OldHobAddress;
-  EFI_HOB_HANDOFF_INFO_TABLE  *NewHob;
+  EFI_HOB_HANDOFF_INFO_TABLE   *OldHob;
+  EFI_PHYSICAL_ADDRESS         OldHobAddress;
+  EFI_HOB_HANDOFF_INFO_TABLE   *NewHob;
+  EFI_HOB_RESOURCE_DESCRIPTOR  *ResourceHob;
+  UINTN                        MemorySizeNeeded;
 
   OldHob        = (EFI_HOB_HANDOFF_INFO_TABLE *)PrePeiGetHobList ();
   OldHobAddress = (EFI_PHYSICAL_ADDRESS)OldHob;
 
+  // These are corrupt checks if these fail boot can't happen
   ASSERT (OldHob->EfiFreeMemoryBottom > OldHobAddress);
   ASSERT (OldHob->EfiFreeMemoryTop >= OldHob->EfiFreeMemoryBottom);
   ASSERT (OldHob->EfiEndOfHobList > OldHobAddress);
+
+  MemorySizeNeeded = PcdGet64 (PcdExpectedPeiMemoryUsage);
+  if (MemorySizeNeeded != 0) {
+    MemorySizeNeeded += CalculateTotalMemoryBinSizeNeeded () + MINIMUM_INITIAL_MEMORY_SIZE;
+    MemorySizeNeeded  = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (MemorySizeNeeded));
+
+    if ((OldHob->EfiMemoryTop - OldHob->EfiMemoryBottom) >= MemorySizeNeeded) {
+      return EFI_SUCCESS;
+    }
+
+    // Split the region so only specified size is marked as tested
+    ResourceHob = FindMemoryHob (RegionStart);
+    // This should never happen as we create this hob in same module
+    ASSERT ((ResourceHob != NULL) && (ResourceHob->PhysicalStart == RegionStart));
+
+    if (RegionSize > MemorySizeNeeded) {
+      ResourceHob->ResourceLength = MemorySizeNeeded;
+      BuildResourceDescriptorHob (
+        EFI_RESOURCE_SYSTEM_MEMORY,
+        ResourceHob->ResourceAttribute,
+        RegionStart + MemorySizeNeeded,
+        RegionSize - MemorySizeNeeded
+        );
+      RegionSize = MemorySizeNeeded;
+    } else if (RegionSize > MemorySizeNeeded) {
+      DEBUG ((DEBUG_WARN, "Memory needed 0x%llx is more than region size 0x%llx\r\n", MemorySizeNeeded, RegionSize));
+    }
+
+    ResourceHob->ResourceAttribute |= EFI_RESOURCE_ATTRIBUTE_TESTED;
+  }
 
   if (RegionSize <= (OldHob->EfiFreeMemoryTop - OldHobAddress)) {
     // Free area is not larger then current, do not move Hob list.

@@ -67,6 +67,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName
   gNVIDIATokenSpaceGuid.PcdFirmwareDateTimeBuiltString
+  gNVIDIATokenSpaceGuid.PcdExpectedPeiMemoryUsage
 
 [FixedPcd]
   gArmTokenSpaceGuid.PcdVFPEnabled
