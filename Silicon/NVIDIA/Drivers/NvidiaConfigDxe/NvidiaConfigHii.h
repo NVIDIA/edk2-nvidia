@@ -21,6 +21,7 @@
 #define PCIE_CONFIGURATION_FORM_ID  0x0002
 #define BOOT_CONFIGURATION_FORM_ID  0x0003
 #define L4T_CONFIGURATION_FORM_ID   0x0004
+#define MEMORY_TEST_FORM_ID         0x0034
 
 #define KEY_ENABLE_PCIE_CONFIG        0x0100
 #define KEY_ENABLE_PCIE_IN_OS_CONFIG  0x0101
@@ -35,6 +36,8 @@
 #define KEY_L4T_CONFIG                0x010A
 #define KEY_BOOT_CONFIG               0x010B
 #define KEY_DGPU_DT_EFIFB_SUPPORT     0x010C
+#define KEY_MEMORY_TEST               0x0117
+#define KEY_MEMORY_TEST_LEVEL         0x0118
 
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 
@@ -49,6 +52,12 @@
 
 #define DGPU_DT_EFIFB_DISABLE  0x0
 #define DGPU_DT_EFIFB_ENABLE   0x1
+
+// Memory test levels
+#define MEMORY_TEST_LEVEL_IGNORE     0
+#define MEMORY_TEST_LEVEL_QUICK      1
+#define MEMORY_TEST_LEVEL_SPARSE     2
+#define MEMORY_TEST_LEVEL_EXTENSIVE  3
 
 typedef struct {
   UINT32    L4TSupported;

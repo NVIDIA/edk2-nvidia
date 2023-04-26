@@ -58,6 +58,7 @@
   BaseCryptLib
   PlatformResourceLib
   DtPlatformDtbLoaderLib
+  TimerLib
 
 [FeaturePcd]
   gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport
@@ -81,6 +82,9 @@
   gNVIDIATokenSpaceGuid.PcdBootMenuAppFile
   gNVIDIATokenSpaceGuid.PcdBootManagerWaitMessage
   gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration
+  gNVIDIATokenSpaceGuid.PcdMemoryTestLevel
+  gNVIDIATokenSpaceGuid.PcdMemoryTestNextBoot
+  gNVIDIATokenSpaceGuid.PcdMemoryTestSingleBoot
 
 [Guids]
   gEfiFileInfoGuid

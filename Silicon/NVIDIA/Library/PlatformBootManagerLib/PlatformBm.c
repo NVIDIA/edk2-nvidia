@@ -27,6 +27,8 @@
 #include <Library/PrintLib.h>
 #include <Library/DxeCapsuleLibFmp/CapsuleOnDisk.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/NVIDIADebugLib.h>
+#include <Library/TimerLib.h>
 #include <Protocol/BootChainProtocol.h>
 #include <Protocol/DevicePath.h>
 #include <Protocol/EsrtManagement.h>
@@ -196,15 +198,13 @@ FilterAndProcess (
   Perform the memory test base on the memory test intensive level,
   and update the memory resource.
 
-  @param  Level         The memory test intensive level.
-
   @retval EFI_STATUS    Success test all the system memory and update
                         the memory resource
 
 **/
 EFI_STATUS
 MemoryTest (
-  IN EXTENDMEM_COVERAGE_LEVEL  Level
+  VOID
   )
 {
   EFI_STATUS                        Status;
@@ -216,12 +216,17 @@ MemoryTest (
   BOOLEAN                           ErrorOut;
   BOOLEAN                           TestAbort;
   EFI_INPUT_KEY                     Key;
+  EXTENDMEM_COVERAGE_LEVEL          Level;
+  UINT64                            StartTime;
+  UINT64                            EndTime;
+  UINT64                            TimeTaken;
 
   TestedMemorySize   = 0;
   TotalMemorySize    = 0;
   ErrorOut           = FALSE;
   TestAbort          = FALSE;
   RequireSoftECCInit = FALSE;
+  Level              = PcdGet8 (PcdMemoryTestLevel);
   ZeroMem (&Key, sizeof (EFI_INPUT_KEY));
 
   Status = gBS->LocateProtocol (
@@ -249,36 +254,46 @@ MemoryTest (
     return EFI_SUCCESS;
   }
 
-  Print (L"Perform memory test (ESC to skip).\r\n");
+  if (PcdGetBool (PcdMemoryTestNextBoot)) {
+    StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+    Print (L"Perform memory test (ESC to skip).\r\n");
 
-  do {
-    Status = GenMemoryTest->PerformMemoryTest (
-                              GenMemoryTest,
-                              &TestedMemorySize,
-                              &TotalMemorySize,
-                              &ErrorOut,
-                              TestAbort
-                              );
-    if (ErrorOut && (Status == EFI_DEVICE_ERROR)) {
-      Print (L"Memory Testing failed!");
-      ASSERT (0);
-    }
+    do {
+      Status = GenMemoryTest->PerformMemoryTest (
+                                GenMemoryTest,
+                                &TestedMemorySize,
+                                &TotalMemorySize,
+                                &ErrorOut,
+                                TestAbort
+                                );
+      NV_ASSERT_RETURN (
+        !(ErrorOut && (Status == EFI_DEVICE_ERROR)),
+        return EFI_DEVICE_ERROR,
+        "Memory Testing failed!\r\n"
+        );
 
-    Print (L"Tested %8lld MB/%8lld MB\r", TestedMemorySize / SIZE_1MB, TotalMemorySize / SIZE_1MB);
+      Print (L"Tested %8lld MB/%8lld MB\r", TestedMemorySize / SIZE_1MB, TotalMemorySize / SIZE_1MB);
 
-    if (!PcdGetBool (PcdConInConnectOnDemand)) {
-      KeyStatus = gST->ConIn->ReadKeyStroke (gST->ConIn, &Key);
-      if (!EFI_ERROR (KeyStatus) && (Key.ScanCode == SCAN_ESC)) {
-        if (!RequireSoftECCInit) {
-          break;
+      if (!PcdGetBool (PcdConInConnectOnDemand)) {
+        KeyStatus = gST->ConIn->ReadKeyStroke (gST->ConIn, &Key);
+        if (!EFI_ERROR (KeyStatus) && (Key.ScanCode == SCAN_ESC)) {
+          if (!RequireSoftECCInit) {
+            break;
+          }
+
+          TestAbort = TRUE;
         }
-
-        TestAbort = TRUE;
       }
-    }
-  } while (Status != EFI_NOT_FOUND);
+    } while (Status != EFI_NOT_FOUND);
 
-  Print (L"\r\n%llu bytes of system memory tested OK\r\n", TotalMemorySize);
+    EndTime   = GetTimeInNanoSecond (GetPerformanceCounter ());
+    TimeTaken = EndTime - StartTime;
+    Print (L"\r\n%llu bytes of system memory tested OK in %llu ms\r\n", TotalMemorySize, TimeTaken/1000000);
+
+    if (PcdGetBool (PcdMemoryTestSingleBoot)) {
+      PcdSetBoolS (PcdMemoryTestNextBoot, FALSE);
+    }
+  }
 
   Status = GenMemoryTest->Finished (GenMemoryTest);
 
@@ -1550,9 +1565,9 @@ PlatformBootManagerAfterConsole (
   DisplaySystemAndHotkeyInformation ();
 
   //
-  // Run Sparse memory test
+  // Run memory test
   //
-  MemoryTest (SPARSE);
+  MemoryTest ();
 
   // Ipmi communication
   PrintBmcIpAddresses ();
