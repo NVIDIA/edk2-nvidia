@@ -601,6 +601,8 @@ FwPartitionBlockIoDxeInitialize (
   FW_PARTITION_PRIVATE_DATA   *FwPartitionPrivate;
   VOID                        *Hob;
   BOOLEAN                     PcdOverwriteActiveFwPartition;
+  EFI_HANDLE                  Handle;
+  EFI_STATUS                  LoadedStatus;
 
   PcdOverwriteActiveFwPartition = PcdGetBool (PcdOverwriteActiveFwPartition);
   BrBctUpdatePrivate            = NULL;
@@ -802,6 +804,15 @@ Done:
 
     mNumDevices = 0;
   }
+
+  Handle       = NULL;
+  LoadedStatus = gBS->InstallMultipleProtocolInterfaces (
+                        &Handle,
+                        &gNVIDIAFwPartitionBlockIoLoadedGuid,
+                        NULL,
+                        NULL
+                        );
+  ASSERT_EFI_ERROR (LoadedStatus);
 
   return Status;
 }
