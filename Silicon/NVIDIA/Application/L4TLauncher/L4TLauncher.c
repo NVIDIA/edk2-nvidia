@@ -1655,7 +1655,6 @@ ReadAndroidStyleKernelPartition (
   EFI_HANDLE              PartitionHandle;
   EFI_BLOCK_IO_PROTOCOL   *BlockIo;
   EFI_DISK_IO_PROTOCOL    *DiskIo;
-  UINTN                   Offset;
   ANDROID_BOOTIMG_HEADER  ImageHeader;
   VOID                    *ImageBuffer = NULL;
   UINTN                   ImageBufferSize;
@@ -1695,11 +1694,10 @@ ReadAndroidStyleKernelPartition (
     goto Exit;
   }
 
-  Offset = 0;
   Status = DiskIo->ReadDisk (
                      DiskIo,
                      BlockIo->Media->MediaId,
-                     Offset,
+                     0,
                      sizeof (ANDROID_BOOTIMG_HEADER),
                      &ImageHeader
                      );
@@ -1710,24 +1708,8 @@ ReadAndroidStyleKernelPartition (
 
   Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
   if (EFI_ERROR (Status)) {
-    Offset = FixedPcdGet32 (PcdSignedImageHeaderSize);
-    Status = DiskIo->ReadDisk (
-                       DiskIo,
-                       BlockIo->Media->MediaId,
-                       Offset,
-                       sizeof (ANDROID_BOOTIMG_HEADER),
-                       &ImageHeader
-                       );
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Failed to read disk\r\n");
-      goto Exit;
-    }
-
-    Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Header not seen at either offset 0 or offset 0x%x\r\n", Offset);
-      goto Exit;
-    }
+    ErrorPrint (L"Android image header not seen\r\n");
+    goto Exit;
   }
 
   ImageBuffer = AllocatePool (ImageBufferSize);
@@ -1740,7 +1722,7 @@ ReadAndroidStyleKernelPartition (
   Status = DiskIo->ReadDisk (
                      DiskIo,
                      BlockIo->Media->MediaId,
-                     Offset,
+                     0,
                      ImageBufferSize,
                      ImageBuffer
                      );
@@ -1750,7 +1732,7 @@ ReadAndroidStyleKernelPartition (
   }
 
   if (IsSecureBootEnabled ()) {
-    SignatureOffset = Offset + ALIGN_VALUE (ImageBufferSize, SignatureSize);
+    SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
     Status          = DiskIo->ReadDisk (
                                 DiskIo,
                                 BlockIo->Media->MediaId,
@@ -1798,7 +1780,6 @@ Exit:
   @param[in]  PartitionBasename The base name of the partion where the image to boot is located.
   @param[in]  BootParams        Boot params for L4T.
   @param[out] Dtb               Pointer to the allocated dtb buffer.
-  @param[out] DtbOffset         Offset where dtb starts.
   @param[out] DtbSize           Size of the dtb buffer.
 
   @retval EFI_SUCCESS    The operation completed successfully.
@@ -1812,7 +1793,6 @@ ReadAndroidStyleDtbPartition (
   IN  CONST CHAR16           *CONST  PartitionBasename,
   IN  CONST L4T_BOOT_PARAMS  *CONST  BootParams,
   OUT       VOID            **CONST  Dtb,
-  OUT       UINTN            *CONST  DtbOffset,
   OUT       UINTN            *CONST  DtbSize
   )
 {
@@ -1822,7 +1802,6 @@ ReadAndroidStyleDtbPartition (
   EFI_DISK_IO_PROTOCOL   *DiskIo;
   VOID                   *DtbBuffer;
   UINT64                 DtbBufferSize;
-  UINTN                  Offset;
   UINTN                  Size;
   UINTN                  SignatureOffset;
   CONST UINTN            SignatureSize = SIZE_2KB;
@@ -1882,19 +1861,15 @@ ReadAndroidStyleDtbPartition (
     goto Exit;
   }
 
-  Offset = 0;
-  if (fdt_check_header ((UINT8 *)DtbBuffer + Offset) != 0) {
-    Offset = PcdGet32 (PcdSignedImageHeaderSize);
-    if (fdt_check_header ((UINT8 *)DtbBuffer + Offset) != 0) {
-      ErrorPrint (L"DTB on partition was corrupted, attempt use to UEFI DTB\r\n");
-      goto Exit;
-    }
+  if (fdt_check_header ((UINT8 *)DtbBuffer) != 0) {
+    ErrorPrint (L"DTB on partition was corrupted, trying to use UEFI DTB\r\n");
+    goto Exit;
   }
 
-  Size = fdt_totalsize ((UINT8 *)DtbBuffer + Offset);
+  Size = fdt_totalsize ((UINT8 *)DtbBuffer);
 
   if (IsSecureBootEnabled ()) {
-    SignatureOffset = Offset + ALIGN_VALUE (Size, SignatureSize);
+    SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
     if (SignatureOffset + SignatureSize > DtbBufferSize) {
       ErrorPrint (L"DTB signature missing\r\n");
       Status = EFI_SECURITY_VIOLATION;
@@ -1904,7 +1879,7 @@ ReadAndroidStyleDtbPartition (
     Status = VerifyDetachedSignature (
                (UINT8 *)DtbBuffer + SignatureOffset,
                SignatureSize,
-               (UINT8 *)DtbBuffer + Offset,
+               (UINT8 *)DtbBuffer,
                Size
                );
     if (EFI_ERROR (Status)) {
@@ -1913,10 +1888,9 @@ ReadAndroidStyleDtbPartition (
     }
   }
 
-  *Dtb       = DtbBuffer;
-  DtbBuffer  = NULL;
-  *DtbOffset = Offset;
-  *DtbSize   = Size;
+  *Dtb      = DtbBuffer;
+  DtbBuffer = NULL;
+  *DtbSize  = Size;
 
 Exit:
   if (DtbBuffer != NULL) {
@@ -1953,7 +1927,6 @@ BootAndroidStylePartition (
   UINTN       ImageSize;
   VOID        *AcpiBase;
   VOID        *Dtb = NULL;
-  UINTN       DtbOffset;
   UINTN       DtbSize;
   VOID        *OldDtb;
   VOID        *NewDtb = NULL;
@@ -1982,7 +1955,6 @@ BootAndroidStylePartition (
                BootImgDtbPartitionBasename,
                BootParams,
                &Dtb,
-               &DtbOffset,
                &DtbSize
                );
     if (EFI_ERROR (Status)) {
@@ -1996,7 +1968,7 @@ BootAndroidStylePartition (
       break;
     }
 
-    if (fdt_open_into ((UINT8 *)Dtb + DtbOffset, NewDtb, EFI_PAGES_TO_SIZE (NewDtbPages)) != 0) {
+    if (fdt_open_into ((UINT8 *)Dtb, NewDtb, EFI_PAGES_TO_SIZE (NewDtbPages)) != 0) {
       DEBUG ((DEBUG_WARN, "%a: failed to relocate kernel DTB\r\n", __FUNCTION__));
       break;
     }
