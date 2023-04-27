@@ -55,6 +55,7 @@
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid|{GUID("$(SYSTEM_FMP_ESRT_GUID)")}
   gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleOnDiskSupport|TRUE
   gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleInRamSupport|TRUE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxSizeNonPopulateCapsule|0xc00000
 
 [PcdsDynamicDefault.common]
   # Console Resolution
