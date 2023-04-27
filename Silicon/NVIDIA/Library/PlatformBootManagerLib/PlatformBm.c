@@ -208,19 +208,21 @@ MemoryTest (
   )
 {
   EFI_STATUS                        Status;
+  EFI_STATUS                        KeyStatus;
   BOOLEAN                           RequireSoftECCInit;
   EFI_GENERIC_MEMORY_TEST_PROTOCOL  *GenMemoryTest;
   UINT64                            TestedMemorySize;
   UINT64                            TotalMemorySize;
   BOOLEAN                           ErrorOut;
   BOOLEAN                           TestAbort;
+  EFI_INPUT_KEY                     Key;
 
-  TestedMemorySize = 0;
-  TotalMemorySize  = 0;
-  ErrorOut         = FALSE;
-  TestAbort        = FALSE;
-
+  TestedMemorySize   = 0;
+  TotalMemorySize    = 0;
+  ErrorOut           = FALSE;
+  TestAbort          = FALSE;
   RequireSoftECCInit = FALSE;
+  ZeroMem (&Key, sizeof (EFI_INPUT_KEY));
 
   Status = gBS->LocateProtocol (
                   &gEfiGenericMemTestProtocolGuid,
@@ -247,6 +249,8 @@ MemoryTest (
     return EFI_SUCCESS;
   }
 
+  Print (L"Perform memory test (ESC to skip).\r\n");
+
   do {
     Status = GenMemoryTest->PerformMemoryTest (
                               GenMemoryTest,
@@ -256,9 +260,25 @@ MemoryTest (
                               TestAbort
                               );
     if (ErrorOut && (Status == EFI_DEVICE_ERROR)) {
+      Print (L"Memory Testing failed!");
       ASSERT (0);
     }
+
+    Print (L"Tested %8lld MB/%8lld MB\r", TestedMemorySize / SIZE_1MB, TotalMemorySize / SIZE_1MB);
+
+    if (!PcdGetBool (PcdConInConnectOnDemand)) {
+      KeyStatus = gST->ConIn->ReadKeyStroke (gST->ConIn, &Key);
+      if (!EFI_ERROR (KeyStatus) && (Key.ScanCode == SCAN_ESC)) {
+        if (!RequireSoftECCInit) {
+          break;
+        }
+
+        TestAbort = TRUE;
+      }
+    }
   } while (Status != EFI_NOT_FOUND);
+
+  Print (L"\r\n%llu bytes of system memory tested OK\r\n", TotalMemorySize);
 
   Status = GenMemoryTest->Finished (GenMemoryTest);
 
