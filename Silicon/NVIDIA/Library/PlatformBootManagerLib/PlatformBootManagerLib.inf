@@ -80,6 +80,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
+  gEfiMdeModulePkgTokenSpaceGuid.PcdConInConnectOnDemand
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
   gNVIDIATokenSpaceGuid.PcdBootMenuAppFile
   gNVIDIATokenSpaceGuid.PcdBootManagerWaitMessage
