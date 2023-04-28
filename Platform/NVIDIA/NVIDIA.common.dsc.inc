@@ -581,6 +581,11 @@
   # Use Segment numbers as PCI UID
   gEdkiiDynamicTablesPkgTokenSpaceGuid.PcdPciUseSegmentAsUid|TRUE
 
+  #
+  # Do not attempt to load at large specified address
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdImageLargeAddressLoad|FALSE
+
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.
