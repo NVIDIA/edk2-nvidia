@@ -309,3 +309,8 @@
   # Secure Boot Provision
   #
   INF Silicon/NVIDIA/Drivers/NvSecureBootProvisionDxe/NvSecureBootProvisionDxe.inf
+
+  #
+  # Memory Tests
+  #
+  INF MdeModulePkg/Universal/MemoryTest/GenericMemoryTestDxe/GenericMemoryTestDxe.inf
