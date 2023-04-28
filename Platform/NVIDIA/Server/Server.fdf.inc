@@ -44,11 +44,6 @@
   INF Silicon/NVIDIA/Drivers/PcieControllerDxe/PcieControllerDxe.inf
 
   #
-  # Memory Tests
-  #
-  INF MdeModulePkg/Universal/MemoryTest/GenericMemoryTestDxe/GenericMemoryTestDxe.inf
-
-  #
   # Ramloaded OS
   #
   INF Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf

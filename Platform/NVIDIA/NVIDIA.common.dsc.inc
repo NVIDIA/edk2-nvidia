@@ -1149,6 +1149,11 @@
   #
   Silicon/NVIDIA/Drivers/NvSecureBootProvisionDxe/NvSecureBootProvisionDxe.inf
 
+  #
+  # Memory Tests
+  #
+  MdeModulePkg/Universal/MemoryTest/GenericMemoryTestDxe/GenericMemoryTestDxe.inf
+
 [Components.AARCH64]
   #
   # EBC
