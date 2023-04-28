@@ -88,7 +88,7 @@ GetImage (
       continue;
     }
 
-    DEBUG ((DEBUG_ERROR, "Found %dx%d\r\n", PixelWidth, PixelHeight));
+    DEBUG ((DEBUG_VERBOSE, "Found logo %ux%u\r\n", PixelWidth, PixelHeight));
     // If larger that display or this is smaller then previous image skip
     if ((PixelHeight > GraphicsOutput->Mode->Info->VerticalResolution) ||
         (PixelWidth > GraphicsOutput->Mode->Info->HorizontalResolution) ||
