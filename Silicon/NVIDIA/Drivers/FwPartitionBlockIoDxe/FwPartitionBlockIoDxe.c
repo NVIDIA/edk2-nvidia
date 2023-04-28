@@ -345,6 +345,7 @@ FPBlockIoWriteBootPartition (
 /**
   Check if device path is a supported BlockIo device:
      eMMC: Type == MESSAGING_DEVICE_PATH (3),  SubType == MSG_EMMC_DP (0x1D)
+     SD:   Type == MESSAGING_DEVICE_PATH (3),  SubType == MSG_SD_DP   (0x1A)
 
 
   @param[in]  DeviceInfo        Pointer to device info struct
@@ -364,29 +365,39 @@ FPBlockIoIsSupportedDevicePath (
 {
   BOOLEAN  ValidFlash;
 
-  // Check for device path ending with eMMC(M)/Ctrl(N)
   ValidFlash = FALSE;
+
+  // Check for device with eMMC/Ctrl or SD
   while (IsDevicePathEnd (DevicePath) == FALSE) {
-    if ((DevicePath->Type == MESSAGING_DEVICE_PATH) &&
-        (DevicePath->SubType == MSG_EMMC_DP))
-    {
-      DevicePath = NextDevicePathNode (DevicePath);
-      if ((DevicePath->Type == HARDWARE_DEVICE_PATH) &&
-          (DevicePath->SubType == HW_CONTROLLER_DP))
-      {
+    if (DevicePath->Type == MESSAGING_DEVICE_PATH) {
+      if (DevicePath->SubType == MSG_EMMC_DP) {
         DevicePath = NextDevicePathNode (DevicePath);
-        if (IsDevicePathEnd (DevicePath)) {
+        if ((DevicePath->Type == HARDWARE_DEVICE_PATH) &&
+            (DevicePath->SubType == HW_CONTROLLER_DP))
+        {
           ValidFlash = TRUE;
+          break;
         }
       }
 
-      break;
+      if (DevicePath->SubType == MSG_SD_DP) {
+        ValidFlash = TRUE;
+        break;
+      }
     }
 
     DevicePath = NextDevicePathNode (DevicePath);
   }
 
-  return ValidFlash;
+  // if valid so far, check that path has no HD node
+  if (ValidFlash) {
+    DevicePath = NextDevicePathNode (DevicePath);
+    if (IsDevicePathEnd (DevicePath)) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
 }
 
 /**
