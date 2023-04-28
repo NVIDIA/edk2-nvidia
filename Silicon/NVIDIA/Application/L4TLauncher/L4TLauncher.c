@@ -1822,9 +1822,12 @@ ReadAndroidStyleKernelPartition (
   ANDROID_BOOTIMG_HEADER  ImageHeader;
   VOID                    *ImageBuffer = NULL;
   UINTN                   ImageBufferSize;
+  UINTN                   EncryptedImageBufferSize;
+  UINTN                   DecryptedImageBufferSize;
   UINTN                   SignatureOffset;
   UINT8                   Signature[SIZE_2KB];
-  CONST UINTN             SignatureSize = sizeof (Signature);
+  UINTN                   SignatureSize = sizeof (Signature);
+  UINT8                   BCH[BOOT_COMPONENT_HEADER_SIZE];
 
   Status = FindPartitionInfo (
              DeviceHandle,
@@ -1858,57 +1861,107 @@ ReadAndroidStyleKernelPartition (
     goto Exit;
   }
 
-  Status = DiskIo->ReadDisk (
-                     DiskIo,
-                     BlockIo->Media->MediaId,
-                     0,
-                     sizeof (ANDROID_BOOTIMG_HEADER),
-                     &ImageHeader
-                     );
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"Failed to read disk\r\n");
-    goto Exit;
-  }
-
-  Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"Android image header not seen\r\n");
-    goto Exit;
-  }
-
-  ImageBuffer = AllocatePool (ImageBufferSize);
-  if (ImageBuffer == NULL) {
-    ErrorPrint (L"Failed to allocate buffer for Image\r\n");
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Exit;
-  }
-
-  Status = DiskIo->ReadDisk (
-                     DiskIo,
-                     BlockIo->Media->MediaId,
-                     0,
-                     ImageBufferSize,
-                     ImageBuffer
-                     );
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"Failed to read disk\r\n");
-    goto Exit;
-  }
-
-  if (IsSecureBootEnabled ()) {
-    SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
-    Status          = DiskIo->ReadDisk (
-                                DiskIo,
-                                BlockIo->Media->MediaId,
-                                SignatureOffset,
-                                SignatureSize,
-                                Signature
-                                );
+  if (ImageEncrypted) {
+    Status = DiskIo->ReadDisk (
+                       DiskIo,
+                       BlockIo->Media->MediaId,
+                       0,
+                       BOOT_COMPONENT_HEADER_SIZE,
+                       BCH
+                       );
     if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Failed to read kernel image signature\r\n");
+      ErrorPrint (L"Failed to read disk\r\n");
       goto Exit;
     }
 
+    DecryptedImageBufferSize = *(UINT32 *)(BCH + BCH_BINARY_LEN_OFFSET);
+    EncryptedImageBufferSize = DecryptedImageBufferSize + BOOT_COMPONENT_HEADER_SIZE;
+
+    ImageBuffer = AllocatePool (DecryptedImageBufferSize);
+    if (ImageBuffer == NULL) {
+      ErrorPrint (L"Failed to allocate buffer for decrypted image\r\n");
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
+    Status = OpteeDecryptImage (
+               NULL,
+               DiskIo,
+               BlockIo,
+               EncryptedImageBufferSize,
+               &ImageBuffer,
+               &DecryptedImageBufferSize
+               );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: OpteeDecryptImage failed \r\n", __FUNCTION__);
+      goto Exit;
+    }
+
+    memcpy (&ImageHeader, ImageBuffer, sizeof (ANDROID_BOOTIMG_HEADER));
+    Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Header not seen\r\n");
+      goto Exit;
+    }
+
+    SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
+    SignatureSize   = DecryptedImageBufferSize - SignatureOffset;
+    memcpy (Signature, ImageBuffer + SignatureOffset, SignatureSize);
+  } else {
+    Status = DiskIo->ReadDisk (
+                       DiskIo,
+                       BlockIo->Media->MediaId,
+                       0,
+                       sizeof (ANDROID_BOOTIMG_HEADER),
+                       &ImageHeader
+                       );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to read disk\r\n");
+      goto Exit;
+    }
+
+    Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Android image header not seen\r\n");
+      goto Exit;
+    }
+
+    ImageBuffer = AllocatePool (ImageBufferSize);
+    if (ImageBuffer == NULL) {
+      ErrorPrint (L"Failed to allocate buffer for Image\r\n");
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
+    Status = DiskIo->ReadDisk (
+                       DiskIo,
+                       BlockIo->Media->MediaId,
+                       0,
+                       ImageBufferSize,
+                       ImageBuffer
+                       );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to read disk\r\n");
+      goto Exit;
+    }
+
+    if (IsSecureBootEnabled ()) {
+      SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
+      Status          = DiskIo->ReadDisk (
+                                  DiskIo,
+                                  BlockIo->Media->MediaId,
+                                  SignatureOffset,
+                                  SignatureSize,
+                                  Signature
+                                  );
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"Failed to read kernel image signature\r\n");
+        goto Exit;
+      }
+    }
+  }
+
+  if (IsSecureBootEnabled ()) {
     Status = VerifyDetachedSignature (
                Signature,
                SignatureSize,
@@ -1966,9 +2019,11 @@ ReadAndroidStyleDtbPartition (
   EFI_DISK_IO_PROTOCOL   *DiskIo;
   VOID                   *DtbBuffer;
   UINT64                 DtbBufferSize;
+  UINT64                 EncryptedDtbBufferSize;
   UINTN                  Size;
   UINTN                  SignatureOffset;
-  CONST UINTN            SignatureSize = SIZE_2KB;
+  UINTN                  SignatureSize = SIZE_2KB;
+  UINT8                  BCH[BOOT_COMPONENT_HEADER_SIZE];
 
   DtbBuffer = NULL;
 
@@ -2004,42 +2059,89 @@ ReadAndroidStyleDtbPartition (
     goto Exit;
   }
 
-  DtbBufferSize = MultU64x32 (BlockIo->Media->LastBlock + 1, BlockIo->Media->BlockSize);
-
-  DtbBuffer = AllocatePool (DtbBufferSize);
-  if (DtbBuffer == NULL) {
-    ErrorPrint (L"Failed to allocate buffer for dtb\r\n");
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Exit;
-  }
-
-  Status = DiskIo->ReadDisk (
-                     DiskIo,
-                     BlockIo->Media->MediaId,
-                     0,
-                     DtbBufferSize,
-                     DtbBuffer
-                     );
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"Failed to read disk\r\n");
-    goto Exit;
-  }
-
-  if (fdt_check_header ((UINT8 *)DtbBuffer) != 0) {
-    ErrorPrint (L"DTB on partition was corrupted, trying to use UEFI DTB\r\n");
-    goto Exit;
-  }
-
-  Size = fdt_totalsize ((UINT8 *)DtbBuffer);
-
-  if (IsSecureBootEnabled ()) {
-    SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
-    if (SignatureOffset + SignatureSize > DtbBufferSize) {
-      ErrorPrint (L"DTB signature missing\r\n");
-      Status = EFI_SECURITY_VIOLATION;
+  if (ImageEncrypted) {
+    Status = DiskIo->ReadDisk (
+                       DiskIo,
+                       BlockIo->Media->MediaId,
+                       0,
+                       BOOT_COMPONENT_HEADER_SIZE,
+                       &BCH
+                       );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to read disk\r\n");
       goto Exit;
     }
 
+    DtbBufferSize          = *(UINT32 *)(BCH + BCH_BINARY_LEN_OFFSET);
+    EncryptedDtbBufferSize = DtbBufferSize + BOOT_COMPONENT_HEADER_SIZE;
+
+    DtbBuffer = AllocatePool (DtbBufferSize);
+    if (DtbBuffer == NULL) {
+      ErrorPrint (L"Failed to allocate buffer for dtb\r\n");
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
+    Status = OpteeDecryptImage (
+               NULL,
+               DiskIo,
+               BlockIo,
+               EncryptedDtbBufferSize,
+               &DtbBuffer,
+               &DtbBufferSize
+               );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: OpteeDecryptImage failed \r\n", __FUNCTION__);
+      goto Exit;
+    }
+
+    if (fdt_check_header ((UINT8 *)DtbBuffer) != 0) {
+      ErrorPrint (L"DTB on partition was corrupted, attempt use to UEFI DTB\r\n");
+      goto Exit;
+    }
+
+    Size            = fdt_totalsize ((UINT8 *)DtbBuffer);
+    SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
+    SignatureSize   = DtbBufferSize - SignatureOffset;
+  } else {
+    DtbBufferSize = MultU64x32 (BlockIo->Media->LastBlock + 1, BlockIo->Media->BlockSize);
+
+    DtbBuffer = AllocatePool (DtbBufferSize);
+    if (DtbBuffer == NULL) {
+      ErrorPrint (L"Failed to allocate buffer for dtb\r\n");
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
+    Status = DiskIo->ReadDisk (
+                       DiskIo,
+                       BlockIo->Media->MediaId,
+                       0,
+                       DtbBufferSize,
+                       DtbBuffer
+                       );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to read disk\r\n");
+      goto Exit;
+    }
+
+    if (fdt_check_header ((UINT8 *)DtbBuffer) != 0) {
+      ErrorPrint (L"DTB on partition was corrupted, try using UEFI DTB\r\n");
+      goto Exit;
+    }
+
+    Size = fdt_totalsize ((UINT8 *)DtbBuffer);
+    if (IsSecureBootEnabled ()) {
+      SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
+      if (SignatureOffset + SignatureSize > DtbBufferSize) {
+        ErrorPrint (L"DTB signature missing\r\n");
+        Status = EFI_SECURITY_VIOLATION;
+        goto Exit;
+      }
+    }
+  }
+
+  if (IsSecureBootEnabled ()) {
     Status = VerifyDetachedSignature (
                (UINT8 *)DtbBuffer + SignatureOffset,
                SignatureSize,
@@ -2154,6 +2256,7 @@ BootAndroidStylePartition (
   } while (FALSE);
 
   DEBUG ((DEBUG_ERROR, "%a: Cmdline: \n", __FUNCTION__));
+
   DEBUG ((DEBUG_ERROR, "%a", ((ANDROID_BOOTIMG_HEADER *)Image)->KernelArgs));
 
   Status = AndroidBootImgBoot (Image, ImageSize);

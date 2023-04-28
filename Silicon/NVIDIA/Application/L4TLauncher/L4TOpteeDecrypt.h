@@ -23,6 +23,8 @@
 #define JETSON_CPUBL_PAYLOAD_DECRYPTION_UPDATE  2
 #define JETSON_CPUBL_PAYLOAD_DECRYPTION_FINAL   3
 
+#define BCH_BINARY_LEN_OFFSET  0x1404
+
 /* Default BCH Image Header Size is 8K */
 #define BOOT_COMPONENT_HEADER_SIZE  SIZE_8KB
 /* Default decryption init block size is BOOT_COMPONENT_HEADER_SIZE */
