@@ -1,0 +1,43 @@
+#/** @file
+#
+# Status code handler via debug lib
+#
+# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = DebugStatusCodeDxe
+  FILE_GUID                 = d99918f5-45c7-4281-be74-a731cd9c694f
+  MODULE_TYPE               = DXE_RUNTIME_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = DebugStatusCodeDxeDriverEntryPoint
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Sources]
+  DebugStatusCodeDxe.c
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  DebugLib
+  ReportStatusCodeLib
+
+[Protocols]
+  gEfiRscHandlerProtocolGuid
+
+[Depex]
+  gEfiRscHandlerProtocolGuid
+
+[Guids]
+  gEfiStatusCodeDataTypeStringGuid
