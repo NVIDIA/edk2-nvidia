@@ -600,6 +600,11 @@
   #
   gEfiSecurityPkgTokenSpaceGuid.PcdCpuRngSupportedAlgorithm|{0xe4,0x31,0x76,0xd7,0xb6,0xe8,0x48,0x27,0xb7,0x84,0x7f,0xfd,0xc4,0xb6,0x85,0x61}
 
+  #
+  # Do not attempt to load at large specified address
+  #
+  gEfiMdeModulePkgTokenSpaceGuid.PcdImageLargeAddressLoad|FALSE
+
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.
