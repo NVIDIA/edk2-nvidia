@@ -472,11 +472,11 @@ CONFIG_MEMORY_TEST=n
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIReclaimMemory|0
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIMemoryNVS|0
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiReservedMemoryType|0
-  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesData|80
-  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesCode|65
-  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesCode|400
-  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesData|20000
-  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderCode|20
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesData|4000
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesCode|4000
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesCode|4000
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesData|50000
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderCode|500
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderData|0
 
   #
