@@ -737,8 +737,8 @@ DtPlatformLoadDtb (
   // Double the size taken by DTB to have enough buffer to accommodate
   // any runtime additions made to it.
   DtbCopy = NULL;
-  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (UefiDtb)));
-  if (fdt_open_into (UefiDtb, DtbCopy, 2 * fdt_totalsize (UefiDtb)) != 0) {
+  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (UefiDtb)));
+  if (fdt_open_into (UefiDtb, DtbCopy, 4 * fdt_totalsize (UefiDtb)) != 0) {
     Status = EFI_NOT_FOUND;
     goto Exit;
   }
