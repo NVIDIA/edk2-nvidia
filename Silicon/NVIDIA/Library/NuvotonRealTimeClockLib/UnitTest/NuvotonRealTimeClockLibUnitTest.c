@@ -2,7 +2,7 @@
 
   Nuvoton RTC Unit Test
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -26,6 +26,8 @@
 #include <Library/RealTimeClockLib.h>
 #include <Library/TimeBaseLib.h>
 #include <Guid/RtPropertiesTable.h>
+
+#include <HostBasedTestStubLib/PcdStubLib.h>
 
 #include "../NuvotonRealTimeClockLib.h"
 
@@ -160,23 +162,6 @@ CheckMockedQueueRequest (
   }
 
   return 1;
-}
-
-/**
-  Mocked function to retrieve a value for a given PCD token.
-
-  @param[in]  TokenNumber The PCD token number to retrieve a current value for.
-
-  @return Returns the Boolean value of the token specified by TokenNumber.
-**/
-BOOLEAN
-EFIAPI
-__wrap_LibPcdGetBool (
-  IN UINTN  TokenNumber
-  )
-{
-  check_expected (TokenNumber);
-  return (BOOLEAN)mock ();
 }
 
 /**
@@ -738,8 +723,7 @@ NRtcInitErrors (
   //
   // Test case 1: fail to create protocol notify event
   //
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdVirtualRTC);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdVirtualRTC, FALSE);
   will_return (__wrap_EfiGetVariable, EFI_NOT_FOUND);
   will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_NOT_READY);
   Status = LibRtcInitialize (NULL, NULL);
@@ -747,8 +731,7 @@ NRtcInitErrors (
   //
   // Test case 2: fail to create notify ExitBootServices event
   //
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdVirtualRTC);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdVirtualRTC, FALSE);
   will_return (__wrap_EfiGetVariable, EFI_NOT_FOUND);
   will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_OUT_OF_RESOURCES);
@@ -780,8 +763,7 @@ NRtcNotFound (
   gBS->LocateHandleBuffer = MockedLocateHandleBuffer;
   gBS->HandleProtocol     = MockedHandleProtocol;
 
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdVirtualRTC);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdVirtualRTC, FALSE);
   will_return (__wrap_EfiGetVariable, EFI_NOT_FOUND);
   will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
@@ -855,8 +837,7 @@ NRtcInitPrimary (
   // gain write access to the time registers.
 
   // Inject error to I2C write to control register
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdVirtualRTC);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdVirtualRTC, FALSE);
   will_return (__wrap_EfiGetVariable, EFI_NOT_FOUND);
   will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
@@ -864,8 +845,7 @@ NRtcInitPrimary (
   UT_ASSERT_TRUE (Status == EFI_SUCCESS);
   UT_ASSERT_TRUE (mI2cIoNotify != NULL);
 
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdCpuHasRtcControl);
-  will_return (__wrap_LibPcdGetBool, TRUE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdCpuHasRtcControl, TRUE);
   will_return (MockedLocateHandleBuffer, EFI_SUCCESS);
   will_return (MockedHandleProtocol, EFI_SUCCESS);
   will_return (MockedHandleProtocol, &gNVIDIAI2cNct3018y);
@@ -879,8 +859,7 @@ NRtcInitPrimary (
   UT_ASSERT_TRUE (mI2cIoNotify == NULL);
 
   // Initialization successful
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdVirtualRTC);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdVirtualRTC, FALSE);
   will_return (__wrap_EfiGetVariable, EFI_NOT_FOUND);
   will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
@@ -888,8 +867,7 @@ NRtcInitPrimary (
   UT_ASSERT_TRUE (Status == EFI_SUCCESS);
   UT_ASSERT_TRUE (mI2cIoNotify != NULL);
 
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdCpuHasRtcControl);
-  will_return (__wrap_LibPcdGetBool, TRUE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdCpuHasRtcControl, TRUE);
   will_return (MockedLocateHandleBuffer, EFI_SUCCESS);
   will_return (MockedHandleProtocol, EFI_SUCCESS);
   will_return (MockedHandleProtocol, &gNVIDIAI2cNct3018y);
@@ -926,8 +904,7 @@ NRtcInitSuccess (
   gBS->LocateHandleBuffer = MockedLocateHandleBuffer;
   gBS->HandleProtocol     = MockedHandleProtocol;
 
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdVirtualRTC);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdVirtualRTC, FALSE);
   will_return (__wrap_EfiGetVariable, EFI_NOT_FOUND);
   will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
@@ -935,8 +912,7 @@ NRtcInitSuccess (
   UT_ASSERT_TRUE (Status == EFI_SUCCESS);
   UT_ASSERT_TRUE (mI2cIoNotify != NULL);
 
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdCpuHasRtcControl);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdCpuHasRtcControl, FALSE);
   will_return (MockedLocateHandleBuffer, EFI_SUCCESS);
   will_return (MockedHandleProtocol, EFI_SUCCESS);
   will_return (MockedHandleProtocol, &gNVIDIAI2cNct3018y);
@@ -1167,8 +1143,7 @@ NRtcSetTimeErrors (
   // CPU does not have time write ownership
   will_return (__wrap_GetPerformanceCounter, 0x210051890ull);
   will_return (__wrap_EfiAtRuntime, FALSE);
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdCpuHasRtcControl);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdCpuHasRtcControl, FALSE);
   expect_check (MockedI2cIoProtocolQueueRequest, RequestPacket, CheckMockedQueueRequest, &I2cRequestCtlTwo1);
   will_return (MockedI2cIoProtocolQueueRequest, EFI_SUCCESS);
   Status = LibSetTime (&Time);
@@ -1177,8 +1152,7 @@ NRtcSetTimeErrors (
   // I2C write fails
   will_return (__wrap_GetPerformanceCounter, 0x210051988ull);
   will_return (__wrap_EfiAtRuntime, FALSE);
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdCpuHasRtcControl);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdCpuHasRtcControl, FALSE);
   expect_check (MockedI2cIoProtocolQueueRequest, RequestPacket, CheckMockedQueueRequest, &I2cRequestCtl12Hour);
   will_return (MockedI2cIoProtocolQueueRequest, EFI_SUCCESS);
   expect_check (MockedI2cIoProtocolQueueRequest, RequestPacket, CheckMockedQueueRequest, &I2cRequestSetTimePdt);
@@ -1217,8 +1191,7 @@ NRtcSetTimeBoot (
 
   will_return (__wrap_GetPerformanceCounter, FIRST_SET_TIME_PERF_COUNT);
   will_return (__wrap_EfiAtRuntime, FALSE);
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdCpuHasRtcControl);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdCpuHasRtcControl, FALSE);
   expect_check (MockedI2cIoProtocolQueueRequest, RequestPacket, CheckMockedQueueRequest, &I2cRequestCtl12Hour);
   will_return (MockedI2cIoProtocolQueueRequest, EFI_SUCCESS);
   expect_check (MockedI2cIoProtocolQueueRequest, RequestPacket, CheckMockedQueueRequest, &I2cRequestSetTimePdt);
@@ -1414,8 +1387,7 @@ NRtcGetTimeNextBootWithUpdate (
   //
   // Reinitialize to simulate a reboot
   //
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdVirtualRTC);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdVirtualRTC, FALSE);
   will_return (__wrap_EfiGetVariable, EFI_SUCCESS);
   will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
@@ -1423,8 +1395,7 @@ NRtcGetTimeNextBootWithUpdate (
   UT_ASSERT_TRUE (Status == EFI_SUCCESS);
   UT_ASSERT_TRUE (mI2cIoNotify != NULL);
 
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdCpuHasRtcControl);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdCpuHasRtcControl, FALSE);
   will_return (MockedLocateHandleBuffer, EFI_SUCCESS);
   will_return (MockedHandleProtocol, EFI_SUCCESS);
   will_return (MockedHandleProtocol, &gNVIDIAI2cNct3018y);
@@ -1444,8 +1415,7 @@ NRtcGetTimeNextBootWithUpdate (
   // Mocked values for SetTime, called by GetTime to update RTC time and clear RTC_OFFSET variable
   will_return (__wrap_GetPerformanceCounter, SECOND_GET_TIME_PERF_COUNT + 1000);
   will_return (__wrap_EfiAtRuntime, FALSE);
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdCpuHasRtcControl);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdCpuHasRtcControl, FALSE);
   expect_check (MockedI2cIoProtocolQueueRequest, RequestPacket, CheckMockedQueueRequest, &I2cRequestCtl24Hour);
   will_return (MockedI2cIoProtocolQueueRequest, EFI_SUCCESS);
   expect_check (MockedI2cIoProtocolQueueRequest, RequestPacket, CheckMockedQueueRequest, &I2cRequestSetTimePst);
@@ -1488,8 +1458,7 @@ NRtcGetTimeNextBootNoUpdate (
   //
   // Reinitialize to simulate a reboot
   //
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdVirtualRTC);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdVirtualRTC, FALSE);
   will_return (__wrap_EfiGetVariable, EFI_SUCCESS);
   will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
@@ -1497,8 +1466,7 @@ NRtcGetTimeNextBootNoUpdate (
   UT_ASSERT_TRUE (Status == EFI_SUCCESS);
   UT_ASSERT_TRUE (mI2cIoNotify != NULL);
 
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdCpuHasRtcControl);
-  will_return (__wrap_LibPcdGetBool, FALSE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdCpuHasRtcControl, FALSE);
   will_return (MockedLocateHandleBuffer, EFI_SUCCESS);
   will_return (MockedHandleProtocol, EFI_SUCCESS);
   will_return (MockedHandleProtocol, &gNVIDIAI2cNct3018y);
@@ -1554,8 +1522,7 @@ NRtcVirtualRtc (
   EFI_TIME_CAPABILITIES  Capabilities;
 
   // Re-initialize with Virtual RTC enabled
-  expect_value (__wrap_LibPcdGetBool, TokenNumber, _PCD_TOKEN_PcdVirtualRTC);
-  will_return (__wrap_LibPcdGetBool, TRUE);
+  MockLibPcdGetBool (_PCD_TOKEN_PcdVirtualRTC, TRUE);
   will_return (__wrap_EfiGetVariable, EFI_NOT_FOUND);
   will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
@@ -1617,6 +1584,23 @@ NRtcVirtualRtc (
 }
 
 /**
+  Prepare for a unit test run
+
+  @param Context                      Ignored
+  @retval UNIT_TEST_PASSED            Setup succeeded.
+**/
+STATIC
+UNIT_TEST_STATUS
+EFIAPI
+NRtcSetup (
+  IN UNIT_TEST_CONTEXT  Context
+  )
+{
+  UefiPcdClear ();
+  return UNIT_TEST_PASSED;
+}
+
+/**
   Initialize the unit test framework, suite, and unit tests for Nuvoton RTC
   unit tests and run the unit tests.
 
@@ -1645,6 +1629,8 @@ SetupAndRunUnitTests (
     return Status;
   }
 
+  UefiPcdInit ();
+
   //
   // Populate the Nuvoton RTC Unit Test Suite.
   //
@@ -1655,26 +1641,26 @@ SetupAndRunUnitTests (
     return Status;
   }
 
-  Status = AddTestCase (NRtcTests, "Error handling cases during library entry point", "NRtcInitErrors", NRtcInitErrors, NULL, NULL, NULL);
-  Status = AddTestCase (NRtcTests, "Error handling when no Nuvoton RTC found", "NRtcNotFound", NRtcNotFound, NULL, NULL, NULL);
-  Status = AddTestCase (NRtcTests, "RTC library initializes successfully", "RtcLibInitSuccess", NRtcInitSuccess, NULL, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "Error handling cases during library entry point", "NRtcInitErrors", NRtcInitErrors, NRtcSetup, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "Error handling when no Nuvoton RTC found", "NRtcNotFound", NRtcNotFound, NRtcSetup, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "RTC library initializes successfully", "RtcLibInitSuccess", NRtcInitSuccess, NRtcSetup, NULL, NULL);
 
-  Status = AddTestCase (NRtcTests, "Calls to Get/SetWakeupTime are unsupported", "GetSetWakeup", NRtcGetSetWakeup, NULL, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "Calls to Get/SetWakeupTime are unsupported", "GetSetWakeup", NRtcGetSetWakeup, NRtcSetup, NULL, NULL);
 
-  Status = AddTestCase (NRtcTests, "Error handling cases of GetTime", "GetTimeErrors", NRtcGetTimeErrors, NULL, NULL, NULL);
-  Status = AddTestCase (NRtcTests, "GetTime the first time during boot (read from RTC, sync with ARM counter)", "GetTimeBootFirst", NRtcGetTimeBootFirst, NULL, NULL, NULL);
-  Status = AddTestCase (NRtcTests, "GetTime the second time (read from ARM counter, not RTC)", "GetTimeBootSecond", NRtcGetTimeBootSecond, NULL, NULL, NULL);
-  Status = AddTestCase (NRtcTests, "Error handling cases of SetTime", "SetTimeErrors", NRtcSetTimeErrors, NULL, NULL, NULL);
-  Status = AddTestCase (NRtcTests, "SetTime during boot with TimeZone set (update RTC time)", "SetTimeBoot", NRtcSetTimeBoot, NULL, NULL, NULL);
-  Status = AddTestCase (NRtcTests, "GetTime after SetTime during boot", "GetTimeAfterSet", NRtcGetTimeAfterSet, NULL, NULL, NULL);
-  Status = AddTestCase (NRtcTests, "SetTime during OS runtime (new time is staged in 'RTC_OFFSET' variable, but RTC is not updated)", "SetTimeOs", NRtcSetTimeOs, NULL, NULL, NULL);
-  Status = AddTestCase (NRtcTests, "GetTime after SetTime during OS runtime", "GetTimeOs", NRtcGetTimeOs, NULL, NULL, NULL);
-  Status = AddTestCase (NRtcTests, "GetTime on next boot (RTC is updated with new time from 'RTC_OFFSET')", "GetTimeNextBootWithUpdate", NRtcGetTimeNextBootWithUpdate, NULL, NULL, NULL);
-  Status = AddTestCase (NRtcTests, "GetTime on next boot, but RTC had been changed by BMC (discard 'RTC_OFFSET')", "GetTimeNextBootNoUpdate", NRtcGetTimeNextBootNoUpdate, NULL, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "Error handling cases of GetTime", "GetTimeErrors", NRtcGetTimeErrors, NRtcSetup, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "GetTime the first time during boot (read from RTC, sync with ARM counter)", "GetTimeBootFirst", NRtcGetTimeBootFirst, NRtcSetup, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "GetTime the second time (read from ARM counter, not RTC)", "GetTimeBootSecond", NRtcGetTimeBootSecond, NRtcSetup, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "Error handling cases of SetTime", "SetTimeErrors", NRtcSetTimeErrors, NRtcSetup, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "SetTime during boot with TimeZone set (update RTC time)", "SetTimeBoot", NRtcSetTimeBoot, NRtcSetup, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "GetTime after SetTime during boot", "GetTimeAfterSet", NRtcGetTimeAfterSet, NRtcSetup, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "SetTime during OS runtime (new time is staged in 'RTC_OFFSET' variable, but RTC is not updated)", "SetTimeOs", NRtcSetTimeOs, NRtcSetup, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "GetTime after SetTime during OS runtime", "GetTimeOs", NRtcGetTimeOs, NRtcSetup, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "GetTime on next boot (RTC is updated with new time from 'RTC_OFFSET')", "GetTimeNextBootWithUpdate", NRtcGetTimeNextBootWithUpdate, NRtcSetup, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "GetTime on next boot, but RTC had been changed by BMC (discard 'RTC_OFFSET')", "GetTimeNextBootNoUpdate", NRtcGetTimeNextBootNoUpdate, NRtcSetup, NULL, NULL);
 
-  Status = AddTestCase (NRtcTests, "RTC library initializes with CPU on primary I2C", "RtcLibInitPrimary", NRtcInitPrimary, NULL, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "RTC library initializes with CPU on primary I2C", "RtcLibInitPrimary", NRtcInitPrimary, NRtcSetup, NULL, NULL);
 
-  Status = AddTestCase (NRtcTests, "GetTime/SetTime with Virtual RTC", "VirtualRtc", NRtcVirtualRtc, NULL, NULL, NULL);
+  Status = AddTestCase (NRtcTests, "GetTime/SetTime with Virtual RTC", "VirtualRtc", NRtcVirtualRtc, NRtcSetup, NULL, NULL);
 
   // Execute the tests.
   Status = RunAllTestSuites (Framework);
