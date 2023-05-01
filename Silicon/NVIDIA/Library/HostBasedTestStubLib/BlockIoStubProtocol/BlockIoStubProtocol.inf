@@ -1,0 +1,30 @@
+## @file
+#
+#  BlockIo Protocol stubs for host based tests
+#
+#  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BlockIoStubProtocol
+  FILE_GUID                      = bc640a5d-df43-477d-bb9b-7bc593cab232
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = BlockIoStubProtocol
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  CmockaLib
+  DebugLib
+
+[Sources.common]
+  BlockIoStubProtocol.c
