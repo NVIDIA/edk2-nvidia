@@ -50,6 +50,10 @@
   gEdkiiNvVarStoreFormattedGuid
   gNVIDIAPlatformResourceDataGuid
 
+[Protocols]
+  gNVIDIAIsPresiliconDeviceGuid
+  gNVIDIAIsSiliconDeviceGuid
+
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut

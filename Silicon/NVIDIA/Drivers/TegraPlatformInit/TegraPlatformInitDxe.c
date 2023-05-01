@@ -861,6 +861,16 @@ TegraPlatformInitialize (
     } else if (ChipID == TH500_CHIP_ID) {
       LibPcdSetSku (TH500_SKU);
     }
+
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &ImageHandle,
+                    &gNVIDIAIsSiliconDeviceGuid,
+                    NULL,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error installing gNVIDIAIsSiliconDeviceGuid\n", __FUNCTION__));
+    }
   } else {
     if (ChipID == T234_CHIP_ID) {
       LibPcdSetSku (T234_PRESIL_SKU);
@@ -872,6 +882,16 @@ TegraPlatformInitialize (
     EmmcMagic = *((UINTN *)(TegraGetSystemMemoryBaseAddress (ChipID) + SYSIMG_EMMC_MAGIC_OFFSET));
     if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {
       EmulatedVariablesUsed = TRUE;
+    }
+
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &ImageHandle,
+                    &gNVIDIAIsPresiliconDeviceGuid,
+                    NULL,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error installing gNVIDIAIsPresiliconDeviceGuid\n", __FUNCTION__));
     }
   }
 
