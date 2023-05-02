@@ -2,7 +2,7 @@
 
   Null IPMI driver
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright 1999 - 2021 Intel Corporation. <BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -100,6 +100,7 @@ IpmiNullDxeEntryPoint (
   EFI_STATUS  Status;
   UINT32      Count;
 
+  Count  = 0;
   Status = GetMatchingEnabledDeviceTreeNodes ("ssif-bmc", NULL, &Count);
   if (Status != EFI_NOT_FOUND) {
     return EFI_UNSUPPORTED;
