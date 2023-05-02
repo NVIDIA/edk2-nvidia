@@ -511,7 +511,7 @@ FmpFirmwareInventoryUpdate (
         // Update Firmware image version.
         //
         FirmwareInventoryInfoElement->FirmwareVersionFormat = VersionFormatTypeFreeForm;
-        FirmwareInventoryInfoElement->Manufacturer          =  AllocateCopyString (BiosInfo->BiosVersion);
+        FirmwareInventoryInfoElement->FirmwareVersion       =  AllocateCopyString (BiosInfo->BiosVersion);
       }
     } else {
       //
