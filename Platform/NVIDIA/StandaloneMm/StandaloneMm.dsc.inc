@@ -175,14 +175,16 @@
   Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordComm.inf
 
   #
+  # MM Error Serialization Driver
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
+
+  #
   # MM User Authentication Driver
   #
   Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
-  #
-  # MM Error Serialization Driver
-  #
-  Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
+
 
 [Components.AARCH64]
 
@@ -208,7 +210,7 @@
 
 [BuildOptions]
   RELEASE_*_*_CC_FLAGS  = -DMDEPKG_NDEBUG
-  *_*_*_CC_FLAGS  = -DDISABLE_NEW_DEPRECATED_INTERFACES -fpie -mstrict-align
+  *_*_*_CC_FLAGS  = -DDISABLE_NEW_DEPRECATED_INTERFACES -fpie
 
   # Avoid absolute symbols when linking, which will cause a failure in GenFw.
   # This happens in GCC toolchains not configured with --enable-default-pie,
