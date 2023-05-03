@@ -79,7 +79,7 @@ FPMmRead (
     Status = MmSendReadData (MmInfo->PartitionName, Offset, ReadBytes, Buffer);
     DEBUG ((
       DEBUG_VERBOSE,
-      "%a: read %s Offset=%u, Bytes=%u\n",
+      "%a: read %s Offset=%lu, Bytes=%u\n",
       __FUNCTION__,
       MmInfo->PartitionName,
       Offset,
@@ -133,7 +133,7 @@ FPMmWrite (
   Status = MmSendWriteData (MmInfo->PartitionName, Offset, Bytes, Buffer);
   DEBUG ((
     DEBUG_VERBOSE,
-    "%a: write %s Offset=%u, Bytes=%u\n",
+    "%a: write %s Offset=%lu, Bytes=%u\n",
     __FUNCTION__,
     MmInfo->PartitionName,
     Offset,

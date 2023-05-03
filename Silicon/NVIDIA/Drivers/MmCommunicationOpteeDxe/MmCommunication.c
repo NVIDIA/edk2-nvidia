@@ -386,7 +386,7 @@ OpteeStmmInit (
   } else {
     DEBUG ((
       DEBUG_ERROR,
-      "Unsupported OP-TEE Communication Method.(%x)\n",
+      "Unsupported OP-TEE Communication Method.(%lx)\n",
       Capabilities
       ));
     return EFI_UNSUPPORTED;

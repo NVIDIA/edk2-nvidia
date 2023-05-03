@@ -1208,7 +1208,7 @@ _ModuleEntryPointC (
     );
   DebugPrint (DEBUG_ERROR, Version);
 
-  DEBUG ((DEBUG_ERROR, "EntryPoint: MemorySize=0x%x DTB@0x%p\n", TotalSPMemorySize, DTBAddress));
+  DEBUG ((DEBUG_ERROR, "EntryPoint: MemorySize=0x%lx DTB@0x%p\n", TotalSPMemorySize, DTBAddress));
 
   ConfigureStage1Translations (TotalSPMemorySize, DTBAddress);
 

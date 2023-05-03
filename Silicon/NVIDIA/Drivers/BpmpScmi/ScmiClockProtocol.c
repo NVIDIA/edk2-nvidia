@@ -418,7 +418,7 @@ ClockRateSet (
 
   Status = ClockSetParentByDesiredRate (This, NVIDIA_CLOCK_ID (ClockId), Rate);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to set parent for clock %d, rate %d\r\n", __FUNCTION__, NVIDIA_CLOCK_ID (ClockId), Rate));
+    DEBUG ((EFI_D_ERROR, "%a: Failed to set parent for clock %d, rate %lu\r\n", __FUNCTION__, NVIDIA_CLOCK_ID (ClockId), Rate));
     return Status;
   }
 

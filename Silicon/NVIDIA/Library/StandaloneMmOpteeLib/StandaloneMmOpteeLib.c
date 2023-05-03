@@ -386,7 +386,7 @@ GetVarStoreCs (
     DEBUG ((
       DEBUG_ERROR,
       "%a:PartitionIndex[%u] VarOffset %lu VarSize %lu"
-      "Device Instance %lx\n",
+      "Device Instance %x\n",
       __FUNCTION__,
       TEGRABL_VARIABLE_IMAGE_INDEX,
       VarOffset,

@@ -552,8 +552,8 @@ ErstValidateRecord (
       (RecordLength != Cper->RecordLength))
   {
     DEBUG ((DEBUG_ERROR, "%a: RecordId or RecordLength doesn't match tracking data\n", __FUNCTION__));
-    DEBUG ((DEBUG_INFO, "%a: RecordId 0x%x has ID 0x%x in Flash\n", __FUNCTION__, RecordID, Cper->RecordID));
-    DEBUG ((DEBUG_INFO, "%a: RecordLength 0x%x is Length 0x%x in Flash\n", __FUNCTION__, RecordLength, Cper->RecordLength));
+    DEBUG ((DEBUG_INFO, "%a: RecordId 0x%lx has ID 0x%x in Flash\n", __FUNCTION__, RecordID, Cper->RecordID));
+    DEBUG ((DEBUG_INFO, "%a: RecordLength 0x%lx is Length 0x%x in Flash\n", __FUNCTION__, RecordLength, Cper->RecordLength));
     return EFI_COMPROMISED_DATA;
   }
 
@@ -1465,7 +1465,7 @@ ErrorSerializationEventHandler (
       OSRecordID     = Cper->RecordID;
 
       if (OSRecordOffset + OSRecordLength > mErrorSerialization.BufferInfo.ErrorLogInfo.Length) {
-        DEBUG ((DEBUG_WARN, "%a: RecordOffset (0x%x) + RecordLength (0x%x) overflows ErrorLogBuffer Length (0x%x)\n", __FUNCTION__, OSRecordOffset, OSRecordLength, mErrorSerialization.BufferInfo.ErrorLogInfo.Length));
+        DEBUG ((DEBUG_WARN, "%a: RecordOffset (0x%lx) + RecordLength (0x%lx) overflows ErrorLogBuffer Length (0x%x)\n", __FUNCTION__, OSRecordOffset, OSRecordLength, mErrorSerialization.BufferInfo.ErrorLogInfo.Length));
         AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_FAILED;
         break;
       }
