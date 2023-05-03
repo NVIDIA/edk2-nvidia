@@ -236,7 +236,7 @@ GetDeviceMemRegions (
   INT32                 ParentOffset   = 0;
   INT32                 NodeOffset     = 0;
   INT32                 PrevNodeOffset = 0;
-  CONST VOID            *NodeName;
+  CONST CHAR8           *NodeName;
   EFI_MM_DEVICE_REGION  *DeviceRegions;
   UINTN                 NumRegions;
   UINTN                 BufferSize;
