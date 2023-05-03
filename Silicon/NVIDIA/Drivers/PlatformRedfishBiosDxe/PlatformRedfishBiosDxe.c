@@ -136,16 +136,16 @@ JsonValueToRedfishValue (
   type = JsonGetType (Value);
   switch (type) {
     case EdkiiJsonTypeString:
-      RedfishValue->Type         = REDFISH_VALUE_TYPE_STRING;
+      RedfishValue->Type         = RedfishValueTypeString;
       RedfishValue->Value.Buffer = (CHAR8 *)JsonValueGetAsciiString (Value);
       break;
     case EdkiiJsonTypeInteger:
-      RedfishValue->Type          = REDFISH_VALUE_TYPE_INTEGER;
+      RedfishValue->Type          = RedfishValueTypeInteger;
       RedfishValue->Value.Integer = JsonValueGetInteger (Value);
       break;
     case EdkiiJsonTypeTrue:
     case EdkiiJsonTypeFalse:
-      RedfishValue->Type          = REDFISH_VALUE_TYPE_BOOLEAN;
+      RedfishValue->Type          = RedfishValueTypeBoolean;
       RedfishValue->Value.Boolean = JsonValueGetBoolean (Value);
       break;
     default:
@@ -178,13 +178,13 @@ RedfishValueToJsonValue (
   }
 
   switch (RedfishValue->Type) {
-    case REDFISH_VALUE_TYPE_STRING:
+    case RedfishValueTypeString:
       *Value = JsonValueInitAsciiString (RedfishValue->Value.Buffer);
       break;
-    case REDFISH_VALUE_TYPE_INTEGER:
+    case RedfishValueTypeInteger:
       *Value = JsonValueInitInteger (RedfishValue->Value.Integer);
       break;
-    case REDFISH_VALUE_TYPE_BOOLEAN:
+    case RedfishValueTypeBoolean:
       *Value = JsonValueInitBoolean (RedfishValue->Value.Boolean);
       break;
     default:
@@ -217,16 +217,16 @@ AttributeTypeToJsonValue (
   }
 
   switch (Type) {
-    case REDFISH_ATTRIBUTE_TYPE_ENUMERATION:
+    case RedfishAttributeTypeEnumeration:
       *Value = JsonValueInitAsciiString ("Enumeration");
       break;
-    case REDFISH_ATTRIBUTE_TYPE_STRING:
+    case RedfishAttributeTypeString:
       *Value = JsonValueInitAsciiString ("String");
       break;
-    case REDFISH_ATTRIBUTE_TYPE_INTEGER:
+    case RedfishAttributeTypeInteger:
       *Value = JsonValueInitAsciiString ("Integer");
       break;
-    case REDFISH_ATTRIBUTE_TYPE_BOOLEAN:
+    case RedfishAttributeTypeBoolean:
       *Value = JsonValueInitAsciiString ("Boolean");
       break;
     default:
@@ -414,7 +414,7 @@ GenerateAttributeDetails (
   //
   // String length
   //
-  if (Attribute.Type == REDFISH_ATTRIBUTE_TYPE_STRING) {
+  if (Attribute.Type == RedfishAttributeTypeString) {
     //
     // MaxLength
     //
@@ -441,7 +441,7 @@ GenerateAttributeDetails (
   //
   // Numeric boundary
   //
-  if (Attribute.Type == REDFISH_ATTRIBUTE_TYPE_INTEGER) {
+  if (Attribute.Type == RedfishAttributeTypeInteger) {
     //
     // UpperBound
     //
@@ -479,7 +479,7 @@ GenerateAttributeDetails (
   //
   // Values
   //
-  if ((Attribute.Type == REDFISH_ATTRIBUTE_TYPE_ENUMERATION) && (Attribute.Values.ValueCount > 0)) {
+  if ((Attribute.Type == RedfishAttributeTypeEnumeration) && (Attribute.Values.ValueCount > 0)) {
     AttributeArray = JsonValueInitArray ();
 
     for (Index = 0; Index < Attribute.Values.ValueCount; Index++) {
