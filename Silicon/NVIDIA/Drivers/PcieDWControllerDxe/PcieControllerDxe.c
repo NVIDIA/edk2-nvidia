@@ -1341,6 +1341,8 @@ UninitializeController (
   UINT32                   Count;
   PCIE_CONTROLLER_PRIVATE  *Private = (PCIE_CONTROLLER_PRIVATE *)Handle;
 
+  Status = EFI_NOT_FOUND;
+
   TegraPciePMETurnOff (Private);
 
   /* Assert reset to CORE */
