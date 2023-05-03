@@ -636,6 +636,8 @@ WriteImageFromBuffer (
   UINTN       WriteOffset;
   UINTN       BytesPerLoop;
 
+  Status = EFI_SUCCESS;
+
   DEBUG ((
     DEBUG_VERBOSE,
     "Writing %s, bytes=%u\n",
