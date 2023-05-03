@@ -534,7 +534,7 @@ CommonFloorSweepPcie (
               DEBUG ((DEBUG_ERROR, "RP Sub-Node is not found. Can't patch 'external-facing' property\n"));
             } else {
               INTN  Err;
-              Err = fdt_delprop (Dtb, RPNodeOffset, "external-facing");
+              Err = fdt_nop_property (Dtb, RPNodeOffset, "external-facing");
               if (0 != Err) {
                 DEBUG ((
                   DEBUG_ERROR,

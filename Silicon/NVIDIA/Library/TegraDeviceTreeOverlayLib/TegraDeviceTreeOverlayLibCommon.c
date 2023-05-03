@@ -413,7 +413,7 @@ FdtDeleteProperty (
     return EFI_DEVICE_ERROR;
   }
 
-  Err = fdt_delprop (FdtBase, TargetNode, PropName);
+  Err = fdt_nop_property (FdtBase, TargetNode, PropName);
   if ( 0 != Err) {
     return EFI_DEVICE_ERROR;
   }
@@ -500,7 +500,7 @@ FdtCleanFixups (
       if (PropLen >= NodeLen+2) {
         if (0 == CompareMem (NodePath, PropStr, NodeLen+1)) {
           if (PropStr[NodeLen+1] == '/') {
-            fdt_delprop (FdtBase, SymbolsNode, PropName);
+            fdt_nop_property (FdtBase, SymbolsNode, PropName);
           }
         }
       }
@@ -573,7 +573,7 @@ FdtCleanFixups (
       }
 
       if (NewPropLen == 0) {
-        Err = fdt_delprop (FdtBase, FixupsNodeNew, PropName);
+        Err = fdt_nop_property (FdtBase, FixupsNodeNew, PropName);
       } else {
         Err = fdt_setprop (FdtBase, FixupsNodeNew, PropName, NewProp, NewPropLen);
       }

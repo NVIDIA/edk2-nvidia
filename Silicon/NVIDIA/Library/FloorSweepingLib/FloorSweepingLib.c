@@ -640,7 +640,7 @@ FloorSweepGlobalThermals (
       // update DT if new list is different than original
       if (BufferLength != Length) {
         if (BufferLength != 0) {
-          fdt_delprop (Dtb, MapSubNodeOffset, "cooling-device");
+          fdt_nop_property (Dtb, MapSubNodeOffset, "cooling-device");
           fdt_setprop (Dtb, MapSubNodeOffset, "cooling-device", Buffer, BufferLength);
           MapSubNodeOffset = fdt_next_subnode (Dtb, MapSubNodeOffset);
         } else {
