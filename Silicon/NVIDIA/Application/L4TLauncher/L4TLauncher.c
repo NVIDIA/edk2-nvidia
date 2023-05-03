@@ -1354,6 +1354,14 @@ ExtLinuxBoot (
       goto Exit;
     }
 
+    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, ExpandedFdtBase);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: Failed to install fdt\r\n", __FUNCTION__);
+      goto Exit;
+    }
+
+    FdtUpdated = TRUE;
+
     if (BootOption->Overlays != NULL) {
       DEBUG ((DEBUG_INFO, "%a: applying overlays %s\r\n", __FUNCTION__, BootOption->Overlays));
       Overlays = AllocateCopyPool (StrSize (BootOption->Overlays) * sizeof (CHAR16), BootOption->Overlays);
@@ -1406,14 +1414,6 @@ ExtLinuxBoot (
       FreePool (Overlays);
       Overlays = NULL;
     }
-
-    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, ExpandedFdtBase);
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"%a: Failed to install fdt\r\n", __FUNCTION__);
-      goto Exit;
-    }
-
-    FdtUpdated = TRUE;
   }
 
   // Load and start the kernel
