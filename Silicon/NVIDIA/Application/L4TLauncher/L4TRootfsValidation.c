@@ -494,7 +494,7 @@ CheckAndUpdateVariable (
       if (EFI_ERROR (Status)) {
         DEBUG ((
           DEBUG_ERROR,
-          "%a: Failed to write: %a\n",
+          "%a: Failed to write: %s\n",
           __FUNCTION__,
           mRFAbVariable[Index].Name
           ));
@@ -654,7 +654,7 @@ ValidateRootfsStatus (
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Failed to read: %a\n",
+        "%a: Failed to read: %s\n",
         __FUNCTION__,
         mRFAbVariable[Index].Name
         ));

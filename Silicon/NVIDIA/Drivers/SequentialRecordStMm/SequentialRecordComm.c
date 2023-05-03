@@ -618,7 +618,7 @@ SatMcMsgHandler (
       break;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: Returning %a \n", __FUNCTION__, Status));
+  DEBUG ((DEBUG_INFO, "%a: Returning %r \n", __FUNCTION__, Status));
 
 ExitSatMcMsgHandler:
   SatMcMmMsg->ReturnStatus = Status;

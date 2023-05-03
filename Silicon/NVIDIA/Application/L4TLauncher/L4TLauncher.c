@@ -1444,7 +1444,7 @@ ExtLinuxBoot (
 
       ImageInfo->LoadOptions     = NewArgs;
       ImageInfo->LoadOptionsSize = StrLen (NewArgs) * sizeof (CHAR16);
-      DEBUG ((DEBUG_ERROR, "%s", ImageInfo->LoadOptions));
+      DEBUG ((DEBUG_ERROR, "%s", (CHAR16 *)ImageInfo->LoadOptions));
     }
 
     // Before calling the image, enable the Watchdog Timer for  the 5 Minute period

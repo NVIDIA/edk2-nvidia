@@ -2,7 +2,7 @@
 
   USB Pad Control Driver Platform Specific Definitions/Functions
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -762,7 +762,7 @@ InitPlatInfo (
 
     Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "mode", &PropertySize);
     if (Property == NULL) {
-      DEBUG ((EFI_D_ERROR, "%a: Couldn't Find the %s Port Mode\n", __FUNCTION__, Name));
+      DEBUG ((EFI_D_ERROR, "%a: Couldn't Find the %a Port Mode\n", __FUNCTION__, Name));
       continue;
     }
 
