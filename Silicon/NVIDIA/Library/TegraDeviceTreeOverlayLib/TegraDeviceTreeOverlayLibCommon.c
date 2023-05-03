@@ -462,6 +462,7 @@ FdtCleanFixups (
   VOID         *FdtBuf;
   UINTN        FdtSize;
   UINTN        BufPageCount;
+  INTN         SymbolsNode;
   INTN         FixupsNode;
   INTN         FixupsNodeNew;
   INTN         SubNode;
@@ -485,20 +486,42 @@ FdtCleanFixups (
     return EFI_DEVICE_ERROR;
   }
 
+  FdtBuf = NULL;
+
+  NodeLen  = strlen (NodeName);
+  NodePath = (CHAR8 *)AllocateZeroPool (NodeLen+2);
+  CopyMem ((VOID *)NodePath+1, (VOID *)NodeName, NodeLen);
+  NodePath[0] = '/';
+
+  SymbolsNode = fdt_subnode_offset (FdtBase, 0, "__symbols__");
+  if (SymbolsNode >= 0) {
+    fdt_for_each_property_offset (PropOffset, FdtBase, SymbolsNode) {
+      PropStr = fdt_getprop_by_offset (FdtBase, PropOffset, &PropName, &PropLen);
+      if (PropLen >= NodeLen+2) {
+        if (0 == CompareMem (NodePath, PropStr, NodeLen+1)) {
+          if (PropStr[NodeLen+1] == '/') {
+            fdt_delprop (FdtBase, SymbolsNode, PropName);
+          }
+        }
+      }
+    }
+  }
+
   FixupsNode = fdt_subnode_offset (FdtBase, 0, "__local_fixups__");
   if (FixupsNode >= 0) {
     SubNode = fdt_subnode_offset (FdtBase, FixupsNode, NodeName);
     if (SubNode >= 0) {
       if (0 > fdt_del_node (FdtBase, SubNode)) {
         DEBUG ((DEBUG_ERROR, "Error deleting fragment %a from __local_fixups__\n", NodeName));
-        return EFI_DEVICE_ERROR;
+        Status = EFI_DEVICE_ERROR;
+        goto ExitFixups;
       }
     }
   }
 
   FixupsNode = fdt_subnode_offset (FdtBase, 0, "__fixups__");
   if (FixupsNode < 0) {
-    return Status;
+    goto ExitFixups;
   }
 
   FdtSize      = fdt_totalsize (FdtBase);
@@ -507,7 +530,8 @@ FdtCleanFixups (
 
   if (FdtBuf == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for overlay dtb. \n", __FUNCTION__));
-    return EFI_DEVICE_ERROR;
+    Status = EFI_DEVICE_ERROR;
+    goto ExitFixups;
   }
 
   if (fdt_open_into (FdtBase, FdtBuf, FdtSize)) {
@@ -516,10 +540,6 @@ FdtCleanFixups (
     goto ExitFixups;
   }
 
-  NodeLen  = strlen (NodeName);
-  NodePath = (CHAR8 *)AllocateZeroPool (NodeLen+2);
-  CopyMem ((VOID *)NodePath+1, (VOID *)NodeName, NodeLen);
-  NodePath[0] = '/';
   DEBUG ((DEBUG_INFO, "Removing fixups for fragment: %a\n", NodePath));
 
   fdt_for_each_property_offset (PropOffset, FdtBuf, FixupsNode) {
@@ -573,7 +593,10 @@ ExitFixups:
     FreePool (NodePath);
   }
 
-  FreePages (FdtBuf, BufPageCount);
+  if (FdtBuf) {
+    FreePages (FdtBuf, BufPageCount);
+  }
+
   return Status;
 }
 
