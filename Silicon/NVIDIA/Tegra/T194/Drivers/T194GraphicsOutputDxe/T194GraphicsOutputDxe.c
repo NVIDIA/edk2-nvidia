@@ -656,12 +656,9 @@ UpdateFbCarveoutNode (
   @param [in]  DtBlob      ptr to Device Tree blob
   @param [in]  Private     ptr to GOP_INSTANCE
   @param [in]  HeadIndex   Head index to update
-
-  @retval TRUE   Update successful
-  @retval FALSE  Errors occurred
  ***************************************/
 STATIC
-BOOLEAN
+VOID
 UpdateDtForHead (
   IN VOID         *CONST  DtBlob,
   IN GOP_INSTANCE *CONST  Private,
@@ -705,31 +702,19 @@ UpdateDtForHead (
     FbSize    = LutSize    = 0;
   }
 
-  if (!UpdateFbCarveoutNode (
-         DtBlob,
-         HeadIndex,
-         FbAddress,
-         FbSize,
-         LutAddress,
-         LutSize
-         ))
-  {
-    return FALSE;
+  /* In general, we are not guaranteed the DT nodes we wish to update
+     will be present, so ignore any errors during DT updates and just
+     print an info message. */
+
+  if (!UpdateFbCarveoutNode (DtBlob, HeadIndex, FbAddress, FbSize, LutAddress, LutSize)) {
+    DEBUG ((DEBUG_INFO, "%a: FB carveout update failed, DT node is likely missing\r\n", __FUNCTION__));
   }
 
   if (IsActive) {
-    if (!UpdateDeviceTreeSimpleFramebufferInfo (
-           DtBlob,
-           Mode->Info,
-           (UINT64)FbAddress,
-           (UINT64)FbSize
-           ))
-    {
-      return FALSE;
+    if (!UpdateDeviceTreeSimpleFramebufferInfo (DtBlob, Mode->Info, (UINT64)FbAddress, (UINT64)FbSize)) {
+      DEBUG ((DEBUG_INFO, "%a: simple-framebuffer info update failed, DT nodes are likely missing\r\n", __FUNCTION__));
     }
   }
-
-  return TRUE;
 }
 
 /***************************************
