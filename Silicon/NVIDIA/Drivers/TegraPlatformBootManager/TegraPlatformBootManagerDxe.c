@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -32,6 +32,17 @@ extern EFI_GUID  mBmAutoCreateBootOptionGuid;
 EFI_EVENT  mEndOfDxeEvent;
 CHAR16     KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
   L"console="
+};
+
+UINT8  RemovableMessagingDeviceSubType[] = {
+  MSG_SD_DP,
+  MSG_USB_DP,
+  MSG_USB_CLASS_DP,
+  MSG_USB_WWID_DP
+};
+
+UINT8  RemovableHardwareDeviceSubType[] = {
+  HW_PCI_DP
 };
 
 /*
@@ -89,6 +100,48 @@ IsValidLoadOption (
   }
 
   return TRUE;
+}
+
+/*
+  Checks whether the auto-enumerated boot option is removable or not.
+
+  @param[in] LoadOption            Load option buffer.
+
+  @retval TRUE                     Load option valid.
+
+  @retval FALSE                    Load option invalid.
+*/
+STATIC
+BOOLEAN
+IsRemovableLoadOption (
+  IN  EFI_BOOT_MANAGER_LOAD_OPTION  *LoadOption
+  )
+{
+  EFI_DEVICE_PATH  *DevicePath;
+  VOID             *DevicePathNode;
+  UINTN            Count;
+
+  DevicePath     = LoadOption->FilePath;
+  DevicePathNode = DevicePath;
+  while (!IsDevicePathEndType (DevicePathNode)) {
+    if (DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) {
+      for (Count = 0; Count < sizeof (RemovableMessagingDeviceSubType)/sizeof (RemovableMessagingDeviceSubType[0]); Count++) {
+        if (DevicePathSubType (DevicePathNode) == RemovableMessagingDeviceSubType[Count]) {
+          return TRUE;
+        }
+      }
+    } else if (DevicePathType (DevicePathNode) == HARDWARE_DEVICE_PATH) {
+      for (Count = 0; Count < sizeof (RemovableHardwareDeviceSubType)/sizeof (RemovableHardwareDeviceSubType[0]); Count++) {
+        if (DevicePathSubType (DevicePathNode) == RemovableHardwareDeviceSubType[Count]) {
+          return TRUE;
+        }
+      }
+    }
+
+    DevicePathNode = NextDevicePathNode (DevicePathNode);
+  }
+
+  return FALSE;
 }
 
 /*
@@ -803,9 +856,11 @@ RefreshNvBootOptions (
 
     for (Index = 0; Index < BootOptionsCount; Index++) {
       if (EfiBootManagerFindLoadOption (&BootOptions[Index], NvBootOptions, NvBootOptionsCount) == -1) {
-        Status = EfiBootManagerAddLoadOptionVariable (&BootOptions[Index], 0);
-        if (EFI_ERROR (Status)) {
-          goto Error;
+        if (IsRemovableLoadOption (&BootOptions[Index])) {
+          Status = EfiBootManagerAddLoadOptionVariable (&BootOptions[Index], 0);
+          if (EFI_ERROR (Status)) {
+            goto Error;
+          }
         }
       }
     }
