@@ -713,9 +713,9 @@ TpmFirmwareInventoryUpdate (
   // Update associated component information.
   //
   NewFirmwareInventoryInfo = NULL;
-  NewFirmwareInventoryInfo = AllocateCopyPool (
-                               ((*NumFirmwareComponents) + 1) *
-                               (sizeof (CM_SMBIOS_FIRMWARE_INVENTORY_INFO)),
+  NewFirmwareInventoryInfo = ReallocatePool (
+                               ((*NumFirmwareComponents)) * (sizeof (CM_SMBIOS_FIRMWARE_INVENTORY_INFO)),
+                               ((*NumFirmwareComponents) + 1) * (sizeof (CM_SMBIOS_FIRMWARE_INVENTORY_INFO)),
                                *FirmwareInventoryInfo
                                );
   if (NewFirmwareInventoryInfo == NULL) {
