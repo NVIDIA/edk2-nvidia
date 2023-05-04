@@ -29,6 +29,7 @@
 
 [Guids]
   gNVIDIAMmMb1RecordGuid
+  gUserAuthenticationGuid
 
 [Protocols]
   gEfiMmCommunication2ProtocolGuid              ## CONSUMES

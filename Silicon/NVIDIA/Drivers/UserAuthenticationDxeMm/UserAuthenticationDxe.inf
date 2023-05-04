@@ -51,6 +51,7 @@
   ReportStatusCodeLib
   SecurityManagementLib
   IpmiBaseLib
+  VariablePolicyHelperLib
 
 [Guids]
   gUserAuthenticationGuid                       ## CONSUMES  ## GUID
@@ -60,6 +61,7 @@
   gEfiHiiConfigAccessProtocolGuid               ## PRODUCES
   gEfiMmCommunication2ProtocolGuid              ## CONSUMES
   gNVIDIAUserAuthenticationProtocolGuid         ## PRODUCES
+  gEdkiiVariablePolicyProtocolGuid              ## CONSUMES
 
 [Depex]
   gEfiSimpleTextOutProtocolGuid      AND

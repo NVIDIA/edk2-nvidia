@@ -148,6 +148,12 @@ FwVariableDeleteAll (
     NameSize     = MAX_VARIABLE_NAME;
     VarGetStatus = gRT->GetNextVariableName (&NameSize, NextName, &NextGuid);
 
+    // Avoid deleting user password variables
+    if (CompareGuid (&CurrentGuid, &gUserAuthenticationGuid)) {
+      DEBUG ((DEBUG_ERROR, "Delete Variable %g:%s Write Protected\r\n", &CurrentGuid, CurrentName));
+      continue;
+    }
+
     // Delete Current Name variable
     VarDeleteStatus = gRT->SetVariable (
                              CurrentName,

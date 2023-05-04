@@ -36,6 +36,7 @@
 #include <Library/PlatformPasswordLib.h>
 #include <Library/ReportStatusCodeLib.h>
 #include <Library/SecurityManagementLib.h>
+#include <Library/VariablePolicyHelperLib.h>
 
 #include "UserAuthenticationDxeFormset.h"
 
