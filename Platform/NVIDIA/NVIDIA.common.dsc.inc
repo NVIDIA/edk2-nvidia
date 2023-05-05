@@ -1168,6 +1168,11 @@ CONFIG_MEMORY_TEST=n
   MdeModulePkg/Universal/MemoryTest/GenericMemoryTestDxe/GenericMemoryTestDxe.inf
 !endif
 
+  #
+  # Multiprocessor support
+  #
+  ArmPkg/Drivers/ArmPsciMpServicesDxe/ArmPsciMpServicesDxe.inf
+
 [Components.AARCH64]
   #
   # EBC

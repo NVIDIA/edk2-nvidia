@@ -363,3 +363,8 @@
 !if ($(CONFIG_MEMORY_TEST) == y)
   INF MdeModulePkg/Universal/MemoryTest/GenericMemoryTestDxe/GenericMemoryTestDxe.inf
 !endif
+
+  #
+  # Multiprocessor support
+  #
+  INF ArmPkg/Drivers/ArmPsciMpServicesDxe/ArmPsciMpServicesDxe.inf
