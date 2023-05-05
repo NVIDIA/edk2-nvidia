@@ -1,0 +1,50 @@
+### Maciej Rabeda - Threading
+# Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = ThreadingDxe
+  FILE_GUID                 = 2743dd6a-ad3b-46a6-9f14-b8f7f54ea876
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = ThreadingDriverEntryPoint
+  UNLOAD_IMAGE              = ThreadingDriverUnload
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES      = IA32 X64 IPF EBC
+#
+
+[Sources]
+  Threading.c
+
+[BuildOptions.common]
+*_*_*_ASM_FLAGS = /D THREADING_SUPPORTED_CPUS=16
+*_*_*_CC_FLAGS  = /D THREADING_SUPPORTED_CPUS=16 /FAcs
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UefiCpuPkg/UefiCpuPkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  BaseLib
+  DebugLib
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  SynchronizationLib
+  ThreadingStructLib
+  UefiLib
+
+[Protocols]
+  gEfiThreadingProtocolGuid                           ## PRODUCES
+  gEfiMpServiceProtocolGuid                           ## CONSUMES
+  gEfiTimerArchProtocolGuid
+
+[Depex]
+  gEfiMpServiceProtocolGuid AND gEfiTimerArchProtocolGuid
