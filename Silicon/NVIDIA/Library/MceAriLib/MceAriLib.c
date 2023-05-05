@@ -8,16 +8,19 @@
 
 **/
 
+#include <PiPei.h>
+#include <Library/BaseLib.h>
 #include <ArmMpidr.h>
 #include <Library/ArmLib.h>
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/MceAriLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/TimerLib.h>
-
-#define BIT(Number)  (1 << (Number))
 
 // ARI Version numbers
 #define TEGRA_ARI_VERSION_MAJOR  8
@@ -60,12 +63,6 @@
 
 // Default timeout to wait for ARI completion
 #define ARI_MAX_RETRY_US  2000000U
-
-// Platform CPU configuration
-#define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
-#define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdTegraMaxClusters))
-#define PLATFORM_MAX_CPUS               (PLATFORM_MAX_CLUSTERS * \
-                                         PLATFORM_MAX_CORES_PER_CLUSTER)
 
 /**
   Returns flag indicating execution environment support for the MCE ARI interface.
@@ -399,17 +396,41 @@ MceAriMpidrToLinearCoreId (
   UINT64  Mpidr
   )
 {
-  UINTN  Cluster;
-  UINTN  Core;
-  UINTN  LinearCoreId;
+  UINTN                         Cluster;
+  UINTN                         Core;
+  UINTN                         LinearCoreId;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  NV_ASSERT_RETURN (
+    (Hob != NULL) &&
+    (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)),
+    return EFI_DEVICE_ERROR,
+    "Failed to get PlatformResourceInfo\r\n"
+    );
+
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
 
   Cluster = (Mpidr >> MPIDR_AFF2_SHIFT) & MPIDR_AFFLVL_MASK;
-  ASSERT (Cluster < PLATFORM_MAX_CLUSTERS);
+  NV_ASSERT_RETURN (
+    Cluster < PlatformResourceInfo->MaxPossibleClusters,
+    return 0,
+    "Invalid Cluster %u < %u\r\n",
+    Cluster,
+    PlatformResourceInfo->MaxPossibleClusters
+    );
 
   Core = (Mpidr >> MPIDR_AFF1_SHIFT) & MPIDR_AFFLVL_MASK;
-  ASSERT (Core < PLATFORM_MAX_CORES_PER_CLUSTER);
+  NV_ASSERT_RETURN (
+    Core < PlatformResourceInfo->MaxPossibleCoresPerCluster,
+    return 0,
+    "Invalid Core %u < %u\r\n",
+    Core,
+    PlatformResourceInfo->MaxPossibleCoresPerCluster
+    );
 
-  LinearCoreId = (Cluster * PLATFORM_MAX_CORES_PER_CLUSTER) + Core;
+  LinearCoreId = (Cluster * PlatformResourceInfo->MaxPossibleCoresPerCluster) + Core;
 
   DEBUG ((
     DEBUG_INFO,
@@ -488,9 +509,7 @@ MceAriCheckCoreEnabled (
   UINTN   LinearCoreId;
   UINT32  LinearCoreIdBitmap;
 
-  LinearCoreId = MceAriMpidrToLinearCoreId (*Mpidr);
-  ASSERT (LinearCoreId < PLATFORM_MAX_CPUS);
-
+  LinearCoreId       = MceAriMpidrToLinearCoreId (*Mpidr);
   AriBase            = MceAriGetApertureBase ();
   LinearCoreIdBitmap = AriGetCoresEnabledBitMask (AriBase);
   if (!(LinearCoreIdBitmap & BIT (LinearCoreId))) {
@@ -511,8 +530,6 @@ MceAriGetEnabledCoresBitMap (
   )
 {
   UINTN  AriBase;
-
-  ASSERT (PLATFORM_MAX_CPUS <= 64);
 
   AriBase               = MceAriGetApertureBase ();
   EnabledCoresBitMap[0] = AriGetCoresEnabledBitMask (AriBase);

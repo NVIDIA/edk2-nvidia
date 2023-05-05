@@ -2,7 +2,7 @@
 #
 #  MCE ARI library
 #
-#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -27,12 +27,12 @@
 [LibraryClasses]
   ArmLib
   BaseLib
+  HobLib
   IoLib
   TimerLib
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress
 
-[Pcd]
-  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
-  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
+[Guids]
+  gNVIDIAPlatformResourceDataGuid

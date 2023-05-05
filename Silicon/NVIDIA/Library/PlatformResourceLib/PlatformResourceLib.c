@@ -6,16 +6,24 @@
 *
 **/
 
+#include <PiPei.h>
+#include <Library/ArmLib.h>
 #include <Library/IoLib.h>
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PlatformResourceLib.h>
-#include <Library/MceAriLib.h>
-#include <Library/NvgLib.h>
+#include <Library/PrintLib.h>
+#include <Guid/ArmMpCoreInfo.h>
+#include <libfdt.h>
 #include <Library/PlatformResourceInternalLib.h>
 #include "T194ResourceConfig.h"
 #include "T234ResourceConfig.h"
+
+#define GET_AFFINITY_BASED_MPID(Aff3, Aff2, Aff1, Aff0)         \
+  (((UINT64)(Aff3) << 32) | ((Aff2) << 16) | ((Aff1) << 8) | (Aff0))
 
 STATIC
 EFI_PHYSICAL_ADDRESS  TegraUARTBaseAddress = 0x0;
@@ -370,7 +378,204 @@ SetNextBootChain (
 }
 
 /**
+  Get Max Core info from DTB
+
+*/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateCoreInfoFromDtb (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  CONST VOID  *Dtb;
+  UINTN       MaxClusters;
+  UINTN       MaxCoresPerCluster;
+  UINTN       MaxSockets;
+  INT32       CpuMapOffset;
+  INT32       Cluster0Offset;
+  INT32       NodeOffset;
+  CHAR8       ClusterNodeStr[] = "clusterxxx";
+  CHAR8       CoreNodeStr[]    = "corexx";
+  CHAR8       SocketNodeStr[]  = "/socket@xx";
+  INT32       SocketOffset;
+  CHAR8       CpuMapPathStr[] = "/socket@xx/cpus/cpu-map";
+  CHAR8       *CpuMapPathFormat;
+  UINTN       Socket;
+
+  Dtb = (VOID *)PlatformResourceInfo->ResourceInfo->DtbLoadAddress;
+
+  // count number of socket nodes, 100 limit due to socket@xx string
+  for (MaxSockets = 0; MaxSockets < 100; MaxSockets++) {
+    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", MaxSockets);
+    SocketOffset = fdt_path_offset (Dtb, SocketNodeStr);
+    if (SocketOffset < 0) {
+      break;
+    }
+  }
+
+  // handle global vs per-socket cpu map
+  if (MaxSockets == 0) {
+    PlatformResourceInfo->MaxPossibleSockets = 1;
+    CpuMapPathFormat                         = "/cpus/cpu-map";
+  } else {
+    PlatformResourceInfo->MaxPossibleSockets = MaxSockets;
+    CpuMapPathFormat                         = "/socket@%u/cpus/cpu-map";
+  }
+
+  DEBUG ((DEBUG_ERROR, "MaxSockets=%u\n", PlatformResourceInfo->MaxPossibleSockets));
+
+  // count clusters across all sockets
+  MaxClusters = 0;
+  for (Socket = 0; Socket < PlatformResourceInfo->MaxPossibleSockets; Socket++) {
+    UINTN  Cluster;
+
+    AsciiSPrint (CpuMapPathStr, sizeof (CpuMapPathStr), CpuMapPathFormat, Socket);
+    CpuMapOffset = fdt_path_offset (Dtb, CpuMapPathStr);
+    if (CpuMapOffset < 0) {
+      PlatformResourceInfo->MaxPossibleClusters        = 1;
+      PlatformResourceInfo->MaxPossibleCoresPerCluster = 1;
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: %a missing in DTB, using Clusters=%u, CoresPerCluster=%u\n",
+        __FUNCTION__,
+        CpuMapPathStr,
+        PlatformResourceInfo->MaxPossibleClusters,
+        PlatformResourceInfo->MaxPossibleCoresPerCluster
+        ));
+      return EFI_SUCCESS;
+    }
+
+    Cluster = 0;
+    while (TRUE) {
+      AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
+      NodeOffset = fdt_subnode_offset (Dtb, CpuMapOffset, ClusterNodeStr);
+      if (NodeOffset < 0) {
+        break;
+      }
+
+      MaxClusters++;
+      Cluster++;
+      NV_ASSERT_RETURN (Cluster < 1000, return EFI_DEVICE_ERROR, "Too many clusters seen\r\n");
+    }
+
+    DEBUG ((DEBUG_ERROR, "Socket=%u MaxClusters=%u\n", Socket, MaxClusters));
+  }
+
+  PlatformResourceInfo->MaxPossibleClusters = MaxClusters;
+  DEBUG ((DEBUG_ERROR, "MaxClusters=%u\n", PlatformResourceInfo->MaxPossibleClusters));
+
+  // Use cluster0 node to find max core subnode
+  Cluster0Offset = fdt_subnode_offset (Dtb, CpuMapOffset, "cluster0");
+  if (Cluster0Offset < 0) {
+    PlatformResourceInfo->MaxPossibleCoresPerCluster = 1;
+    DEBUG ((
+      DEBUG_ERROR,
+      "No cluster0 in %a, using CoresPerCluster=%u\n",
+      CpuMapPathStr,
+      PlatformResourceInfo->MaxPossibleCoresPerCluster
+      ));
+    return EFI_SUCCESS;
+  }
+
+  MaxCoresPerCluster = 1;
+  while (TRUE) {
+    AsciiSPrint (CoreNodeStr, sizeof (CoreNodeStr), "core%u", MaxCoresPerCluster);
+    NodeOffset = fdt_subnode_offset (Dtb, Cluster0Offset, CoreNodeStr);
+    if (NodeOffset < 0) {
+      break;
+    }
+
+    MaxCoresPerCluster++;
+    NV_ASSERT_RETURN (MaxCoresPerCluster < 100, return EFI_DEVICE_ERROR, "Too many cores seen\r\n");
+  }
+
+  PlatformResourceInfo->MaxPossibleCoresPerCluster = MaxCoresPerCluster;
+  DEBUG ((DEBUG_ERROR, "MaxCoresPerCluster=%u\n", PlatformResourceInfo->MaxPossibleCoresPerCluster));
+  return EFI_SUCCESS;
+}
+
+/**
+  Check if given core is enabled
+
+**/
+STATIC
+BOOLEAN
+EFIAPI
+PlatformResourceIsCoreEnabled (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
+  IN  UINT32                       CpuIndex
+  )
+{
+  UINTN  Index;
+  UINTN  Bit;
+
+  Index = CpuIndex /  (8*sizeof (PlatformResourceInfo->EnabledCoresBitMap[0]));
+  Bit   = CpuIndex %  (8*sizeof (PlatformResourceInfo->EnabledCoresBitMap[0]));
+
+  return ((PlatformResourceInfo->EnabledCoresBitMap[Index] & (1ULL << Bit)) != 0);
+}
+
+STATIC
+UINT64
+EFIAPI
+GetMpidrFromCoreIndex (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
+  IN UINT32                        CpuIndex
+  )
+{
+  UINTN   Socket;
+  UINTN   Cluster;
+  UINTN   Core;
+  UINT64  Mpidr;
+  UINT32  SocketCoreId;
+  UINTN   MaxCoresPerSocket;
+
+  MaxCoresPerSocket = PlatformResourceInfo->MaxPossibleCores / PlatformResourceInfo->MaxPossibleSockets;
+
+  Socket = CpuIndex / MaxCoresPerSocket;
+  NV_ASSERT_RETURN (
+    Socket < PlatformResourceInfo->MaxPossibleSockets,
+    return 0,
+    "Invalid Socket %d >= %d \r\n",
+    Socket,
+    PlatformResourceInfo->MaxPossibleSockets
+    );
+
+  SocketCoreId = CpuIndex - (Socket * MaxCoresPerSocket);
+
+  Cluster = SocketCoreId / PlatformResourceInfo->MaxPossibleCoresPerCluster;
+  NV_ASSERT_RETURN (
+    Cluster < PlatformResourceInfo->MaxPossibleClusters,
+    return 0,
+    "Invalid Cluster %d >= %d \r\n",
+    Cluster,
+    PlatformResourceInfo->MaxPossibleClusters
+    );
+
+  Core = SocketCoreId % PlatformResourceInfo->MaxPossibleCoresPerCluster;
+  NV_ASSERT_RETURN (
+    Core < PlatformResourceInfo->MaxPossibleCoresPerCluster,
+    return 0,
+    "Invalid Core %d >= %d \r\n",
+    Core,
+    PlatformResourceInfo->MaxPossibleCoresPerCluster
+    );
+
+  // Check the Pcd and modify MPIDR generation if required
+  if (!PlatformResourceInfo->AffinityMpIdrSupported) {
+    ASSERT (Socket == 0);
+    Mpidr = (UINT64)GET_MPID (Cluster, Core);
+  } else {
+    Mpidr = (UINT64)GET_AFFINITY_BASED_MPID (Socket, Cluster, Core, 0);
+  }
+
+  return Mpidr;
+}
+
+/**
   Get Platform Resource Information
+  Does not update the CPU info structures.
 
 **/
 EFI_STATUS
@@ -410,6 +615,86 @@ GetPlatformResourceInformation (
     default:
       return EFI_UNSUPPORTED;
   }
+}
+
+/**
+  Update CPU info in Platform Resource Information
+
+**/
+EFI_STATUS
+EFIAPI
+UpdatePlatformResourceCpuInformation (
+  VOID
+  )
+{
+  EFI_STATUS                    Status;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  UINTN                         ChipID;
+  UINTN                         CoreIndex;
+  UINTN                         CoreInfoIndex;
+  ARM_CORE_INFO                 *ArmCoreInfo;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  NV_ASSERT_RETURN (
+    (Hob != NULL) &&
+    (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)),
+    return EFI_DEVICE_ERROR,
+    "Failed to get PlatformResourceInfo\r\n"
+    );
+
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+
+  Status = UpdateCoreInfoFromDtb (PlatformResourceInfo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  PlatformResourceInfo->MaxPossibleCores = PlatformResourceInfo->MaxPossibleCoresPerCluster * PlatformResourceInfo->MaxPossibleClusters;
+
+  ChipID = TegraGetChipID ();
+
+  switch (ChipID) {
+    case T194_CHIP_ID:
+      Status = T194GetEnabledCoresBitMap (PlatformResourceInfo);
+      break;
+    case T234_CHIP_ID:
+      Status = T234GetEnabledCoresBitMap (PlatformResourceInfo);
+      break;
+    default:
+      return EFI_UNSUPPORTED;
+  }
+
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  for (CoreIndex = 0; CoreIndex < PlatformResourceInfo->MaxPossibleCores; CoreIndex++) {
+    if (PlatformResourceIsCoreEnabled (PlatformResourceInfo, CoreIndex)) {
+      PlatformResourceInfo->NumberOfEnabledCores++;
+    }
+  }
+
+  // No CPUs detected assume single core pre-silicon targets
+  if (PlatformResourceInfo->NumberOfEnabledCores == 0) {
+    PlatformResourceInfo->EnabledCoresBitMap[0] = 1;
+    PlatformResourceInfo->NumberOfEnabledCores++;
+  }
+
+  ArmCoreInfo = (ARM_CORE_INFO *)BuildGuidHob (&gArmMpCoreInfoGuid, sizeof (ARM_CORE_INFO) * PlatformResourceInfo->NumberOfEnabledCores);
+  if (ArmCoreInfo == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  CoreInfoIndex = 0;
+  for (CoreIndex = 0; CoreIndex < PlatformResourceInfo->MaxPossibleCores; CoreIndex++) {
+    if (PlatformResourceIsCoreEnabled (PlatformResourceInfo, CoreIndex)) {
+      ArmCoreInfo[CoreInfoIndex].Mpidr = GetMpidrFromCoreIndex (PlatformResourceInfo, CoreIndex);
+      CoreInfoIndex++;
+    }
+  }
+
+  return EFI_SUCCESS;
 }
 
 EFI_STATUS

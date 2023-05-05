@@ -62,6 +62,9 @@
   NULL|ArmPkg/Library/CompilerIntrinsicsLib/CompilerIntrinsicsLib.inf
   NULL|MdePkg/Library/BaseStackCheckLib/BaseStackCheckLib.inf
 
+  MceAriLib|Silicon/NVIDIA/Library/MceAriLib/MceAriLib.inf
+  NvgLib|Silicon/NVIDIA/Library/NvgLib/NvgLib.inf
+
 [LibraryClasses.common.MM_STANDALONE]
   HobLib|StandaloneMmPkg/Library/StandaloneMmHobLib/StandaloneMmHobLib.inf
   MmServicesTableLib|MdePkg/Library/StandaloneMmServicesTableLib/StandaloneMmServicesTableLib.inf

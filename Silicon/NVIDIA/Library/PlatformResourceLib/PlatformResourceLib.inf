@@ -13,6 +13,8 @@
   LIBRARY_CLASS                  = PlatformResourceLib
 
 [Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   NetworkPkg/NetworkPkg.dec
   CryptoPkg/CryptoPkg.dec
@@ -22,6 +24,9 @@
   TegraPlatformInfoLib
   PlatformResourceInternalLib
   GoldenRegisterLib
+  HobLib
+  MceAriLib
+  NvgLib
 
 [Sources.common]
   PlatformResourceLib.c
@@ -30,6 +35,8 @@
 
 [Guids]
   gNVIDIAOSCarveoutHob
+  gArmMpCoreInfoGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
