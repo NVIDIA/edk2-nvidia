@@ -5,8 +5,10 @@
  *      Author: mrabeda
  *
  *  Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
+ *  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  *  SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
  */
 
 #ifndef MDEMODULEPKG_THREADINGDXE_THREADING_H_
@@ -19,30 +21,9 @@
 EFI_STATUS
 EFIAPI
 ThreadingIdentifyCpu (
-  OUT UINT32   *CpuId,
+  OUT UINTN    *CpuId,
   OUT BOOLEAN  *IsBsp
   );
-
-////
-//// Return array of checkpoints registered by specific CPUs
-//// Used mainly for debugging multithreading
-////
-// EFI_STATUS
-// ThreadingGetCpuCheckpoints (
-//  IN      UINT32          CpuId,
-//  IN OUT  CPU_CHECKPOINT  **Checkpoints,
-//  IN OUT  UINTN           *Length
-//  );
-//
-////
-//// Register the checkpoint on CPU calling it
-//// Used mainly for debugging multithreading
-////
-// VOID
-// ThreadingRegisterCpuCheckpoint (
-//  IN  CHAR8*            File,
-//  IN  UINTN             Line
-//  );
 
 //
 // Create a new thread, enqueue it for execution. If there is an idle CPU,
@@ -65,7 +46,7 @@ ThreadingSpawnThread (
 EFI_STATUS
 EFIAPI
 ThreadingWaitForThread (
-  IN  EFI_THREAD  *Thread
+  IN  EFI_THREAD  Thread
   );
 
 //
@@ -93,7 +74,7 @@ ThreadingGetCpuCount (
 EFI_STATUS
 EFIAPI
 ThreadingAbortThread (
-  IN  EFI_THREAD  *Thread
+  IN  EFI_THREAD  Thread
   );
 
 #endif /* MDEMODULEPKG_THREADINGDXE_THREADING_H_ */

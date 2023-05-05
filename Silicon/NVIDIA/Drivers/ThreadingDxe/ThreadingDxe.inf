@@ -1,5 +1,6 @@
 ### Maciej Rabeda - Threading
 # Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,16 +21,12 @@
 #
 
 [Sources]
-  Threading.c
-
-[BuildOptions.common]
-*_*_*_ASM_FLAGS = /D THREADING_SUPPORTED_CPUS=16
-*_*_*_CC_FLAGS  = /D THREADING_SUPPORTED_CPUS=16 /FAcs
+  ThreadingDxe.c
 
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
-  UefiCpuPkg/UefiCpuPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   UefiDriverEntryPoint
@@ -38,7 +35,6 @@
   UefiBootServicesTableLib
   MemoryAllocationLib
   SynchronizationLib
-  ThreadingStructLib
   UefiLib
 
 [Protocols]

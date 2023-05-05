@@ -5,6 +5,7 @@
  *      Author: mrabeda
  *
  *  Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
+ *  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  *  SPDX-License-Identifier: BSD-2-Clause-Patent
  *
@@ -14,16 +15,13 @@
 #include <Library/BaseLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/DxeThreadingStructLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/SynchronizationLib.h>
 
 #include <Protocol/MpService.h>
 #include <Protocol/Threading.h>
 
-#include "Threading.h"
-
-#define MSR_IA32_TSC_AUX  0xC0000103
-// #define THREADING_CHECKPOINTS_LENGTH     1
+#include "ThreadingDxe.h"
 
 //
 // Enum defining state in which CPU currently is
@@ -62,8 +60,6 @@ typedef struct _THREADING_CPU_INFO {
   INTERNAL_EFI_THREAD    *CurrentThread;
   THREADING_CPU_STATE    State;
   BOOLEAN                Initialized;
-  //  SPIN_LOCK       CheckpointLock;
-  //  CPU_CHECKPOINT  Checkpoints[THREADING_CHECKPOINTS_LENGTH];
 } THREADING_CPU_INFO;
 
 typedef struct _THREADING_DATA {
@@ -72,18 +68,15 @@ typedef struct _THREADING_DATA {
   THREADING_CPU_INFO    *CpuInfo;
   SPIN_LOCK             ThreadsQueuedLock;
   LIST_ENTRY            ThreadsQueued;
-  SPIN_LOCK             ThreadsRunningLock;
-  LIST_ENTRY            ThreadsRunning;
 } THREADING_DATA;
 
 EFI_MP_SERVICES_PROTOCOL  *mMultiProc      = NULL;
 THREADING_DATA            mThreadingData   = { 0 };
 EFI_HANDLE                mThreadingHandle = NULL;
+UINTN                     mBspCpuId        = 0;
 
 EFI_THREADING_PROTOCOL  gThreading = {
   ThreadingIdentifyCpu,
-  //  ThreadingGetCpuCheckpoints,
-  //  ThreadingRegisterCpuCheckpoint,
   ThreadingSpawnThread,
   ThreadingWaitForThread,
   ThreadingCleanupThread,
@@ -101,29 +94,6 @@ ThreadingRunThread (
   );
 
 //
-// Locate MP Services protocol within UEFI system
-//
-EFI_STATUS
-ThreadingLocateMpProtocol (
-  )
-{
-  EFI_STATUS  Status;
-
-  DEBUG ((EFI_D_ERROR, "[T][INIT] Locating MP service protocol\n"));
-
-  Status = gBS->LocateProtocol (&gEfiMpServiceProtocolGuid, NULL, &mMultiProc);
-
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "[T][INIT] MP service protocol not found\n"));
-    mMultiProc = NULL;
-  } else {
-    DEBUG ((EFI_D_ERROR, "[T][INIT] MP service protocol found\n"));
-  }
-
-  return Status;
-}
-
-//
 // Verify whether specific CPU is currently busy running tasks.
 // This information is based on saved CPU status
 //
@@ -132,7 +102,7 @@ ThreadingIsCpuBusy (
   UINTN  CpuId
   )
 {
-  if (CpuId > THREADING_SUPPORTED_CPUS) {
+  if (CpuId >= mThreadingData.CpuCount) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -156,16 +126,14 @@ ThreadingFindFreeCpu (
   )
 {
   UINTN  i;
-  UINTN  Result = 0;
 
   for (i = 0; i < mThreadingData.CpuCount; i++) {
     if ((ThreadingIsCpuBusy (i) == EFI_SUCCESS) && (mThreadingData.CpuInfo[i].Initialized == TRUE)) {
-      Result = i;
-      break;
+      return i;
     }
   }
 
-  return Result;
+  return MAX_UINTN;
 }
 
 //
@@ -181,17 +149,20 @@ ThreadingGenericOnThreadExit (
 {
   INTERNAL_EFI_THREAD  *Thread;
   INTERNAL_EFI_THREAD  *NewThread;
-  UINT32               CpuId;
+  UINTN                CpuId;
   BOOLEAN              IsBsp;
 
   Thread = (INTERNAL_EFI_THREAD *)Arg;
 
+  gBS->CloseEvent (Event);
+  Thread->FinishedEvent = NULL;
+
   ThreadingIdentifyCpu (&CpuId, &IsBsp);
 
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] Generic OnThreadExit\n", CpuId, (UINT64)Thread, Thread->CpuId));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Generic OnThreadExit\n", CpuId, (UINT64)Thread, Thread->CpuId));
 
   if (Thread->OnThreadExit) {
-    DEBUG ((EFI_D_ERROR, "[T][CPU %d][THREAD %lX, CPU %d] Calling user OnThreadExit\n", CpuId, (UINT64)Thread, Thread->CpuId));
+    DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Calling user OnThreadExit\n", CpuId, (UINT64)Thread, Thread->CpuId));
     Thread->OnThreadExit (Thread->OnThreadExitArgument);
   }
 
@@ -207,18 +178,18 @@ ThreadingGenericOnThreadExit (
 
   ReleaseSpinLock (&mThreadingData.ThreadsQueuedLock);
 
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] Thread completed\n", CpuId, (UINT64)Thread, Thread->CpuId));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Thread completed\n", CpuId, (UINT64)Thread, Thread->CpuId));
 
   gBS->CloseEvent (Event);
 
   mThreadingData.CpuInfo[Thread->CpuId].State = THREADING_CPU_IDLE;
 
   if (NewThread != NULL) {
-    DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] Found threads enqueued for execution. Starting\n", CpuId, (UINT64)Thread, Thread->CpuId));
+    DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Found threads enqueued for execution. Starting\n", CpuId, (UINT64)Thread, Thread->CpuId));
     ThreadingRunThread (NewThread, Thread->CpuId);
   }
 
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] Generic OnThreadExit exit\n", CpuId, (UINT64)Thread, Thread->CpuId));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Generic OnThreadExit exit\n", CpuId, (UINT64)Thread, Thread->CpuId));
 }
 
 //
@@ -231,52 +202,24 @@ ThreadingGenericProcedure (
   )
 {
   INTERNAL_EFI_THREAD  *Thread;
-  UINT32               CpuId;
+  UINTN                CpuId;
   BOOLEAN              IsBsp;
 
   Thread = (INTERNAL_EFI_THREAD *)Arg;
 
   ThreadingIdentifyCpu (&CpuId, &IsBsp);
 
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX] Generic procedure start\n", CpuId, (UINT64)Thread));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX] Generic procedure start\n", CpuId, (UINT64)Thread));
 
   while (Thread->State != THREADING_THREAD_READY) {
     CpuPause ();
   }
 
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] Calling user procedure\n", CpuId, (UINT64)Thread, Thread->CpuId));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Calling user procedure\n", CpuId, (UINT64)Thread, Thread->CpuId));
 
   Thread->State = THREADING_THREAD_RUNNING;
   Thread->Procedure (Thread->ProcedureArgument);
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX] User procedure done\n", CpuId, (UINT64)Thread));
-}
-
-//
-// Function to be called at the beginning on each core to update debug register
-// in order to hold APIC ID in there
-//
-VOID
-ThreadingCoreInitProcedure (
-  VOID  *Arg
-  )
-{
-  THREADING_CPU_INFO  *CpuInfo;
-  UINT32              TscAux;
-
-  CpuInfo = (THREADING_CPU_INFO *)Arg;
-
-  DEBUG ((EFI_D_INFO, "[T][INIT][CPU %d] Core init procedure start\n", CpuInfo->CpuId));
-
-  //
-  // Update MSR with CPU ID (index in CpuInfo array)
-  //
-  TscAux = (UINT32)(CpuInfo - mThreadingData.CpuInfo);
-
-  AsmWriteMsr32 (MSR_IA32_TSC_AUX, TscAux);
-  TscAux = AsmReadMsr32 (MSR_IA32_TSC_AUX);
-  DEBUG ((EFI_D_INFO, "[T][INIT][CPU %d] TscAux after update: %lX\n", CpuInfo->CpuId, TscAux));
-
-  CpuInfo->Initialized = TRUE;
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX] User procedure done\n", CpuId, (UINT64)Thread));
 }
 
 //
@@ -291,14 +234,10 @@ ThreadingGetCpuCount (
 {
   EFI_STATUS  Status = EFI_SUCCESS;
 
-  DEBUG ((EFI_D_INFO, "[T] Getting CPU count\n"));
+  DEBUG ((DEBUG_VERBOSE, "[T] Getting CPU count\n"));
 
   if ((CpuCount == NULL) || (EnabledCpuCount == NULL)) {
     return EFI_INVALID_PARAMETER;
-  }
-
-  if (mMultiProc == NULL) {
-    return EFI_NOT_STARTED;
   }
 
   if (mThreadingData.CpuCount == 0) {
@@ -313,8 +252,8 @@ ThreadingGetCpuCount (
     *EnabledCpuCount = mThreadingData.EnabledCpuCount;
   }
 
-  DEBUG ((EFI_D_INFO, "[T] GetCpuCount status = %r\n", Status));
-  DEBUG ((EFI_D_INFO, "[T] CPUs = %d, Enabled CPUs = %d\n", *CpuCount, *EnabledCpuCount));
+  DEBUG ((DEBUG_VERBOSE, "[T] GetCpuCount status = %r\n", Status));
+  DEBUG ((DEBUG_VERBOSE, "[T] CPUs = %u, Enabled CPUs = %u\n", *CpuCount, *EnabledCpuCount));
 
   return Status;
 }
@@ -326,19 +265,18 @@ ThreadingGetCpuCount (
 EFI_STATUS
 EFIAPI
 ThreadingIdentifyCpu (
-  OUT UINT32   *CpuId,
+  OUT UINTN    *CpuId,
   OUT BOOLEAN  *IsBsp
   )
 {
-  THREADING_CPU_INFO  *CpuInfo;
-  UINT32              TscAux;
+  EFI_STATUS  Status;
 
-  TscAux  = (UINT32)AsmReadTscp ();           // This is somehow faster :O
-  CpuInfo = &mThreadingData.CpuInfo[TscAux];
+  Status = mMultiProc->WhoAmI (mMultiProc, CpuId);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
-  *CpuId = (UINT32)CpuInfo->CpuId;
-  *IsBsp = (BOOLEAN)(CpuInfo->State == THREADING_CPU_BSP);
-
+  *IsBsp = (*CpuId == mBspCpuId);
   return EFI_SUCCESS;
 }
 
@@ -352,14 +290,14 @@ ThreadingRunThread (
   )
 {
   EFI_STATUS  Status;
-  UINT32      MyCpuId;
+  UINTN       MyCpuId;
   BOOLEAN     IsBsp;
 
   ThreadingIdentifyCpu (&MyCpuId, &IsBsp);
 
-  DEBUG ((EFI_D_ERROR, "[T][CPU %d][THREAD %lX, CPU %d] RunThread start\n", MyCpuId, (UINT64)Thread, CpuId));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] RunThread start\n", MyCpuId, (UINT64)Thread, CpuId));
 
-  if ((CpuId == 0) || (Thread == NULL) || (MyCpuId == CpuId)) {
+  if ((Thread == NULL) || (MyCpuId == CpuId)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -383,7 +321,7 @@ ThreadingRunThread (
     goto ON_ERROR;
   }
 
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] OnThreadExit event created\n", MyCpuId, (UINT64)Thread, CpuId));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] OnThreadExit event created\n", MyCpuId, (UINT64)Thread, CpuId));
 
   //
   // Start thread on selected CPU. It will stop waiting for thread to move
@@ -407,13 +345,10 @@ ThreadingRunThread (
   //
   // Add thread to running queue
   //
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] AP started\n", MyCpuId, (UINT64)Thread, CpuId));
-  AcquireSpinLock (&mThreadingData.ThreadsRunningLock);
-  InsertTailList (&mThreadingData.ThreadsRunning, &Thread->Entry);
-  ReleaseSpinLock (&mThreadingData.ThreadsRunningLock);
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] AP started\n", MyCpuId, (UINT64)Thread, CpuId));
   Thread->CpuId                               = CpuId;
   mThreadingData.CpuInfo[CpuId].CurrentThread = Thread;
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] Thread ready\n", MyCpuId, (UINT64)Thread, CpuId));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Thread ready\n", MyCpuId, (UINT64)Thread, CpuId));
 
   //
   // Move thread state to READY to begin proper thread execution
@@ -450,10 +385,8 @@ ThreadingSpawnThread (
 {
   INTERNAL_EFI_THREAD  *Thread;
   UINTN                CpuId = 0;
-  UINT32               MyCpuId;
+  UINTN                MyCpuId;
   BOOLEAN              IsBsp;
-
-  ASSERT (mMultiProc != NULL);
 
   if (ThreadProcedure == 0) {
     return EFI_INVALID_PARAMETER;
@@ -461,7 +394,7 @@ ThreadingSpawnThread (
 
   ThreadingIdentifyCpu (&MyCpuId, &IsBsp);
 
-  DEBUG ((EFI_D_INFO, "[T][CPU %d] SpawnThread start\n", MyCpuId));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u] SpawnThread start\n", MyCpuId));
 
   //
   // Create thread object
@@ -471,7 +404,7 @@ ThreadingSpawnThread (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX] Thread object allocated\n", MyCpuId, (UINT64)Thread));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX] Thread object allocated\n", MyCpuId, (UINT64)Thread));
 
   Thread->Procedure            = ThreadProcedure;
   Thread->ProcedureArgument    = ThreadArgument;
@@ -486,18 +419,18 @@ ThreadingSpawnThread (
 
   CpuId = ThreadingFindFreeCpu ();
 
-  if (CpuId == 0) {
+  if (CpuId == MAX_UINTN) {
     //
     // No free CPU now, enqueue it for later execution.
     //
-    DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX] No free CPU. Caching\n", MyCpuId, (UINT64)Thread));
+    DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX] No free CPU. Caching\n", MyCpuId, (UINT64)Thread));
     AcquireSpinLock (&mThreadingData.ThreadsQueuedLock);
     InsertTailList (&mThreadingData.ThreadsQueued, &Thread->Entry);
     ReleaseSpinLock (&mThreadingData.ThreadsQueuedLock);
     return EFI_SUCCESS;
   }
 
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] Free CPU found. Attempting to run thread\n", MyCpuId, (UINT64)Thread, CpuId));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Free CPU found. Attempting to run thread\n", MyCpuId, (UINT64)Thread, CpuId));
 
   return ThreadingRunThread (Thread, CpuId);
 }
@@ -508,11 +441,11 @@ ThreadingSpawnThread (
 EFI_STATUS
 EFIAPI
 ThreadingWaitForThread (
-  IN  EFI_THREAD  *Thread
+  IN  EFI_THREAD  Thread
   )
 {
   INTERNAL_EFI_THREAD  *IThread;
-  UINT32               CpuId;
+  UINTN                CpuId;
   BOOLEAN              IsBsp;
   EFI_TPL              OldTpl;
 
@@ -524,7 +457,7 @@ ThreadingWaitForThread (
 
   ThreadingIdentifyCpu (&CpuId, &IsBsp);
 
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] Waiting for thread to finish\n", CpuId, (UINT64)Thread, IThread->CpuId));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Waiting for thread to finish\n", CpuId, (UINT64)Thread, IThread->CpuId));
 
   switch (IThread->State) {
     case THREADING_THREAD_SPAWNED:
@@ -532,7 +465,7 @@ ThreadingWaitForThread (
     case THREADING_THREAD_RUNNING:
       break;
     case THREADING_THREAD_FINISHED:
-      DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] Instant finish detected\n", CpuId, (UINT64)Thread, IThread->CpuId));
+      DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Instant finish detected\n", CpuId, (UINT64)Thread, IThread->CpuId));
       return EFI_SUCCESS;
     default:
       return EFI_NOT_STARTED;
@@ -550,7 +483,7 @@ ThreadingWaitForThread (
     }
   }
 
-  DEBUG ((EFI_D_INFO, "[T][CPU %d][THREAD %lX, CPU %d] Thread finished\n", CpuId, (UINT64)Thread, IThread->CpuId));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Thread finished\n", CpuId, (UINT64)Thread, IThread->CpuId));
 
   return EFI_SUCCESS;
 }
@@ -565,12 +498,12 @@ ThreadingCleanupThread (
   )
 {
   INTERNAL_EFI_THREAD  *IThread;
-  UINT32               CpuId;
+  UINTN                CpuId;
   BOOLEAN              IsBsp;
 
   ThreadingIdentifyCpu (&CpuId, &IsBsp);
 
-  DEBUG ((EFI_D_ERROR, "[T][CPU %d][THREAD %lX] Cleaning up thread\n", CpuId, (UINT64)Thread));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX] Cleaning up thread\n", CpuId, (UINT64)Thread));
 
   if (Thread == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -592,70 +525,14 @@ ThreadingCleanupThread (
 
   FreePool (IThread);
 
-  DEBUG ((EFI_D_ERROR, "[T][CPU %d][THREAD %lX] Thread cleaned\n", CpuId, (UINT64)IThread));
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX] Thread cleaned\n", CpuId, (UINT64)IThread));
   return EFI_SUCCESS;
 }
-
-// EFI_STATUS
-// ThreadingGetCpuCheckpoints (
-//  IN      UINT32          CpuId,
-//  IN OUT  CPU_CHECKPOINT  **Checkpoints,
-//  IN OUT  UINTN           *Length
-//  )
-// {
-//  CPU_CHECKPOINT    *Chkpts;
-//
-//  if (Checkpoints == NULL || Length == NULL) {
-//    return EFI_INVALID_PARAMETER;
-//  }
-//
-//  if (CpuId > THREADING_SUPPORTED_CPUS) {
-//    return EFI_INVALID_PARAMETER;
-//  }
-//
-//  Chkpts = AllocateZeroPool (sizeof (CPU_CHECKPOINT) * THREADING_CHECKPOINTS_LENGTH);
-//
-//  if (Chkpts == NULL) {
-//    return EFI_OUT_OF_RESOURCES;
-//  }
-//
-//  *Length = THREADING_CHECKPOINTS_LENGTH;
-//
-//  AcquireSpinLock (&mCpuInfo[CpuId].CheckpointLock);
-//  CopyMem (Chkpts, mCpuInfo[CpuId].Checkpoints, sizeof (CPU_CHECKPOINT) * THREADING_CHECKPOINTS_LENGTH);
-//  *Checkpoints = Chkpts;
-//  ReleaseSpinLock (&mCpuInfo[CpuId].CheckpointLock);
-//
-//  return EFI_SUCCESS;
-// }
-//
-// VOID
-// ThreadingRegisterCpuCheckpoint (
-//  IN  CHAR8*            File,
-//  IN  UINTN             Line
-//  )
-// {
-//  UINT32    CpuId;
-//  BOOLEAN   IsBsp;
-//  EFI_TPL   OldTpl;
-//
-//  OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
-//
-//  ThreadingIdentifyCpu (&CpuId, &IsBsp);
-//
-//  AcquireSpinLock (&mCpuInfo[CpuId].CheckpointLock);
-//  mCpuInfo[CpuId].Checkpoints[0].File = File;
-//  mCpuInfo[CpuId].Checkpoints[0].Line = Line;
-//  mCpuInfo[CpuId].Checkpoints[0].Timestamp = AsmReadTsc();
-//  ReleaseSpinLock (&mCpuInfo[CpuId].CheckpointLock);
-//
-//  gBS->RestoreTPL (OldTpl);
-// }
 
 EFI_STATUS
 EFIAPI
 ThreadingAbortThread (
-  IN  EFI_THREAD  *Thread
+  IN  EFI_THREAD  Thread
   )
 {
   INTERNAL_EFI_THREAD  *IThread;
@@ -671,14 +548,16 @@ ThreadingAbortThread (
   // Case 2: Spawned
   //
   switch (IThread->State) {
+    case THREADING_THREAD_READY:
     case THREADING_THREAD_RUNNING:
       //
       // Terminate running thread. Switch to new thread.
       //
-      DEBUG ((EFI_D_INFO, "[T] AbortThread: Stopping AP...\n"));
-      mMultiProc->EnableDisableAP (mMultiProc, IThread->CpuId, TRUE, NULL);
-      DEBUG ((EFI_D_INFO, "[T] AbortThread: Notifying finished event...\n"));
-      gBS->SignalEvent (IThread->FinishedEvent);
+      DEBUG ((DEBUG_ERROR, "[T] AbortThread: Stopping AP...\n"));
+      ThreadingWaitForThread (Thread);
+      DEBUG ((DEBUG_ERROR, "[T] AbortThread: Notifying finished event...\n"));
+      break;
+    default:
       break;
   }
 
@@ -696,15 +575,7 @@ ThreadingInitCores (
   EFI_STATUS  Status;
   UINTN       i /*, j*/;
 
-  DEBUG ((EFI_D_INFO, "[T][INIT] Commencing second init stage\n"));
-
-  //
-  // Find MP services protocol
-  //
-  if (!mMultiProc) {
-    Status = ThreadingLocateMpProtocol ();
-    ASSERT_EFI_ERROR (Status);
-  }
+  DEBUG ((DEBUG_VERBOSE, "[T][INIT] Commencing second init stage\n"));
 
   //
   // Obtain processor count
@@ -730,68 +601,28 @@ ThreadingInitCores (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  //
-  // Initialize first entry (BSP)
-  //
-  mThreadingData.CpuInfo[0].CpuId       = 0;
-  mThreadingData.CpuInfo[0].State       = THREADING_CPU_BSP;
-  mThreadingData.CpuInfo[0].Initialized = FALSE;
+  Status = mMultiProc->WhoAmI (mMultiProc, &mBspCpuId);
+  ASSERT_EFI_ERROR (Status);
 
-  //
-  // Initialize info about APs
-  //
-  for (i = 1; i < mThreadingData.CpuCount; i++) {
+  for (i = 0; i < mThreadingData.CpuCount; i++) {
     mThreadingData.CpuInfo[i].CpuId         = i;
     mThreadingData.CpuInfo[i].CurrentThread = NULL;
-    mThreadingData.CpuInfo[i].State         = THREADING_CPU_IDLE;
-    mThreadingData.CpuInfo[i].Initialized   = FALSE;
+    if (i == mBspCpuId) {
+      mThreadingData.CpuInfo[i].State = THREADING_CPU_BSP;
+    } else {
+      mThreadingData.CpuInfo[i].State = THREADING_CPU_IDLE;
+    }
+
+    mThreadingData.CpuInfo[i].Initialized = TRUE;
   }
 
   //
   // Initialize thread queues (for control reasons)
   //
   InitializeListHead (&mThreadingData.ThreadsQueued);
-  InitializeListHead (&mThreadingData.ThreadsRunning);
   InitializeSpinLock (&mThreadingData.ThreadsQueuedLock);
-  InitializeSpinLock (&mThreadingData.ThreadsRunningLock);
 
-  DEBUG ((EFI_D_INFO, "[T][INIT] CPU data initialized\n"));
-
-  //
-  // Checkpoints
-  //
-  //  for (i = 0; i < CpuCount; i++) {
-  //    InitializeSpinLock (&mCpuInfo[i].CheckpointLock);
-  //    DEBUG ((EFI_D_INFO, "[THREAD] Checkpoint %d lock: %lX\n", i, &mCpuInfo[i].CheckpointLock));
-  //    for (j = 0; j < THREADING_CHECKPOINTS_LENGTH; j++) {
-  //      mCpuInfo[i].Checkpoints[j].File = "N/A";
-  //      mCpuInfo[i].Checkpoints[j].Line = 0;
-  //      mCpuInfo[i].Checkpoints[j].Timestamp = 0;
-  //    }
-  //  }
-
-  //
-  // Initialize APs
-  //
-  ThreadingCoreInitProcedure (&mThreadingData.CpuInfo[0]);
-
-  for (i = 1; i < mThreadingData.CpuCount; i++) {
-    //
-    // Blocking MP call for each offload core
-    //
-    Status = mMultiProc->StartupThisAP (
-                           mMultiProc,
-                           ThreadingCoreInitProcedure,
-                           i,
-                           NULL,
-                           0,
-                           &mThreadingData.CpuInfo[i],
-                           NULL
-                           );
-    ASSERT_EFI_ERROR (Status);
-  }
-
-  DEBUG ((EFI_D_INFO, "[T][INIT] AP init finished\n"));
+  DEBUG ((DEBUG_VERBOSE, "[T][INIT] CPU data initialized\n"));
 
   //
   // Initialize threading protocol
@@ -804,7 +635,7 @@ ThreadingInitCores (
                   );
   ASSERT_EFI_ERROR (Status);
 
-  DEBUG ((EFI_D_INFO, "[T][INIT] Threading protocol is now installed\n"));
+  DEBUG ((DEBUG_VERBOSE, "[T][INIT] Threading protocol is now installed\n"));
 
   return EFI_SUCCESS;
 }
@@ -828,21 +659,27 @@ ThreadingDriverEntryPoint (
   //
   ASSERT_PROTOCOL_ALREADY_INSTALLED (NULL, &gEfiThreadingProtocolGuid);
 
-  DEBUG ((EFI_D_INFO, "[T][INIT] ThreadingLib entry point\n"));
+  DEBUG ((DEBUG_VERBOSE, "[T][INIT] ThreadingLib entry point\n"));
 
   //
   // Test if MP Services protocol is installed
   //
-  Status = gBS->LocateProtocol (&gEfiMpServiceProtocolGuid, NULL, &mMultiProc);
+  Status = gBS->LocateProtocol (&gEfiMpServiceProtocolGuid, NULL, (VOID **)&mMultiProc);
   ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   //
   // Test if Timer protocol is installed
   //
   Status = gBS->LocateProtocol (&gEfiTimerArchProtocolGuid, NULL, &TimerInit);
   ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
-  DEBUG ((EFI_D_INFO, "[T][INIT] Found both MP & Timer. OK!\n"));
+  DEBUG ((DEBUG_VERBOSE, "[T][INIT] Found both MP & Timer. OK!\n"));
 
   //
   // Initialize APs
