@@ -101,4 +101,14 @@ T234SetNextBootChain (
   IN  UINT32  BootChain
   );
 
+/**
+  Fills in the EnabledCoresBitMap
+
+**/
+EFI_STATUS
+EFIAPI
+T234GetEnabledCoresBitMap (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  );
+
 #endif //__T234_RESOURCE_CONFIG_H__

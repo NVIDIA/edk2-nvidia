@@ -17,10 +17,32 @@
 #include <Library/IoLib.h>
 #include <Library/DramCarveoutLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/GoldenRegisterLib.h>
 #include "TH500ResourceConfigPrivate.h"
 #include <TH500/TH500Definitions.h>
+
+#define MAX_CORE_DISABLE_WORDS  3
+
+STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
+  TH500_SCRATCH_BASE_SOCKET_0,
+  TH500_SCRATCH_BASE_SOCKET_1,
+  TH500_SCRATCH_BASE_SOCKET_2,
+  TH500_SCRATCH_BASE_SOCKET_3,
+};
+
+STATIC UINT32  TH500CoreDisableScratchOffset[MAX_CORE_DISABLE_WORDS] = {
+  TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_0,
+  TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_1,
+  TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_2,
+};
+
+STATIC UINT32  TH500CoreDisableScratchMask[MAX_CORE_DISABLE_WORDS] = {
+  TH500_CPU_FLOORSWEEPING_DISABLE_MASK_0,
+  TH500_CPU_FLOORSWEEPING_DISABLE_MASK_1,
+  TH500_CPU_FLOORSWEEPING_DISABLE_MASK_2,
+};
 
 TEGRA_MMIO_INFO  TH500MmioInfo[] = {
   {
@@ -652,6 +674,143 @@ TH500ValidateActiveBootChain (
       );
   }
 
+  return EFI_SUCCESS;
+}
+
+/**
+  Add one socket's enabled cores bit map array to the EnabledCoresBitMap
+
+**/
+STATIC
+VOID
+EFIAPI
+AddSocketCoresToEnabledCoresBitMap (
+  IN UINTN   SocketNumber,
+  IN UINT32  *SocketCores,
+  IN UINTN   MaxSupportedCores,
+  IN UINT64  *EnabledCoresBitMap,
+  IN UINT32  CoresPerSocket
+  )
+{
+  UINTN  SocketStartingCore;
+  UINTN  EnabledCoresBit;
+  UINTN  EnabledCoresIndex;
+  UINTN  SocketCoresBit;
+  UINTN  SocketCoresIndex;
+  UINTN  Core;
+
+  SocketStartingCore = CoresPerSocket * SocketNumber;
+
+  ASSERT ((SocketStartingCore + CoresPerSocket) <= MaxSupportedCores);
+  NV_ASSERT_RETURN (
+    (SocketStartingCore + CoresPerSocket) <= MaxSupportedCores,
+    return ,
+    "Invalid core info\r\n"
+    );
+  ASSERT ((ALIGN_VALUE (CoresPerSocket, 32) / 32) <= MAX_CORE_DISABLE_WORDS);
+  NV_ASSERT_RETURN (
+    (ALIGN_VALUE (CoresPerSocket, 32) / 32) <= MAX_CORE_DISABLE_WORDS,
+    return ,
+    "Invalid core info\r\n"
+    );
+
+  for (Core = 0; Core < CoresPerSocket; Core++) {
+    SocketCoresIndex = Core / 32;
+    SocketCoresBit   = Core % 32;
+
+    EnabledCoresIndex = (Core + SocketStartingCore) / 64;
+    EnabledCoresBit   = (Core + SocketStartingCore) % 64;
+
+    EnabledCoresBitMap[EnabledCoresIndex] |=
+      (SocketCores[SocketCoresIndex] & (1UL << SocketCoresBit)) ? (1ULL << EnabledCoresBit) : 0;
+  }
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Socket %u cores 0x%x 0x%x 0x%x added as EnabledCores bits %u-%u\n",
+    __FUNCTION__,
+    SocketNumber,
+    SocketCores[2],
+    SocketCores[1],
+    SocketCores[0],
+    SocketStartingCore + CoresPerSocket - 1,
+    SocketStartingCore
+    ));
+}
+
+/**
+  Fills in the EnabledCoresBitMap
+
+**/
+EFI_STATUS
+EFIAPI
+TH500GetEnabledCoresBitMap (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  UINT32  ScratchDisableReg[MAX_CORE_DISABLE_WORDS];
+  UINT32  SatMcCore;
+  UINT32  CoresPerSocket;
+  UINT32  EnaBitMap[MAX_CORE_DISABLE_WORDS];
+  UINTN   Socket;
+  UINTN   Index;
+
+  // SatMC core is reserved on socket 0.
+  CoresPerSocket = PlatformResourceInfo->MaxPossibleCores / PlatformResourceInfo->MaxPossibleSockets;
+
+  SatMcCore = MmioBitFieldRead32 (
+                TH500SocketScratchBaseAddr[0] + TH500CoreDisableScratchOffset[MAX_CORE_DISABLE_WORDS-1],
+                TH500_CPU_FLOORSWEEPING_SATMC_CORE_BIT_LO,
+                TH500_CPU_FLOORSWEEPING_SATMC_CORE_BIT_HI
+                );
+  if (SatMcCore != TH500_CPU_FLOORSWEEPING_SATMC_CORE_INVALID) {
+    ASSERT (SatMcCore <= CoresPerSocket);
+  }
+
+  for (Socket = 0; Socket < PlatformResourceInfo->MaxPossibleSockets; Socket++) {
+    UINT64  ScratchBase = TH500SocketScratchBaseAddr[Socket];
+
+    if (!(PlatformResourceInfo->SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    if (ScratchBase == 0) {
+      continue;
+    }
+
+    for (Index = 0; Index < MAX_CORE_DISABLE_WORDS; Index++) {
+      ScratchDisableReg[Index] = MmioRead32 (ScratchBase + TH500CoreDisableScratchOffset[Index]);
+    }
+
+    if ((SatMcCore != TH500_CPU_FLOORSWEEPING_SATMC_CORE_INVALID) &&
+        (Socket == 0))
+    {
+      DEBUG ((DEBUG_ERROR, "%a: Mask core %u on socket 0 for SatMC\n", __FUNCTION__, SatMcCore));
+      if (SatMcCore < 32) {
+        ScratchDisableReg[0] |= (1U << SatMcCore);
+      } else if (SatMcCore < 64) {
+        ScratchDisableReg[1] |= (1U << (SatMcCore - 32));
+      } else if (SatMcCore < CoresPerSocket) {
+        ScratchDisableReg[2] |= (1U << (SatMcCore - 64));
+      }
+    }
+
+    for (Index = 0; Index < MAX_CORE_DISABLE_WORDS; Index++) {
+      ScratchDisableReg[Index] |= TH500CoreDisableScratchMask[Index];
+      ScratchDisableReg[Index] &= ~TH500CoreDisableScratchMask[Index];
+      EnaBitMap[Index]          = ~ScratchDisableReg[Index];
+    }
+
+    AddSocketCoresToEnabledCoresBitMap (
+      Socket,
+      EnaBitMap,
+      PlatformResourceInfo->MaxPossibleCores,
+      PlatformResourceInfo->EnabledCoresBitMap,
+      CoresPerSocket
+      );
+  }
+
+  PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
   return EFI_SUCCESS;
 }
 

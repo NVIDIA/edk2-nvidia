@@ -23,6 +23,7 @@
 #include "T234ResourceConfigPrivate.h"
 #include <T234/T234Definitions.h>
 #include <Protocol/Eeprom.h>
+#include <Library/MceAriLib.h>
 
 #define T234_MAX_CPUS  12
 
@@ -570,6 +571,20 @@ T234GetUpdateBrBct (
     ));
 
   return UpdateBrBct;
+}
+
+/**
+  Fills in the EnabledCoresBitMap
+
+**/
+EFI_STATUS
+EFIAPI
+T234GetEnabledCoresBitMap (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
+  return MceAriGetEnabledCoresBitMap (PlatformResourceInfo->EnabledCoresBitMap);
 }
 
 /**

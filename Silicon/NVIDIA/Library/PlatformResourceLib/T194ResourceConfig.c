@@ -20,6 +20,7 @@
 #include <T194/T194Definitions.h>
 #include <Protocol/Eeprom.h>
 #include <Library/IoLib.h>
+#include <Library/NvgLib.h>
 
 TEGRA_MMIO_INFO  T194MmioInfo[] = {
   {
@@ -419,6 +420,20 @@ T194GetUpdateBrBct (
            BL_UPDATE_BR_BCT_BIT_FIELD,
            BL_UPDATE_BR_BCT_BIT_FIELD
            );
+}
+
+/**
+  Fills in the EnabledCoresBitMap
+
+**/
+EFI_STATUS
+EFIAPI
+T194GetEnabledCoresBitMap (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  PlatformResourceInfo->AffinityMpIdrSupported = FALSE;
+  return NvgGetEnabledCoresBitMap (PlatformResourceInfo->EnabledCoresBitMap);
 }
 
 /**

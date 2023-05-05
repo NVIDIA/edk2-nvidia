@@ -34,6 +34,7 @@
 #define TEGRABL_ERST                  (29U)
 #define DEVICE_CS_MASK                (0xFF00)
 #define DEVICE_CS_SHIFT               (8)
+#define MAX_SUPPORTED_CORES           1024
 
 typedef enum {
   TegrablBootInvalid,
@@ -107,6 +108,13 @@ typedef struct {
 
 typedef struct {
   UINT32                      SocketMask;
+  UINT32                      MaxPossibleSockets;
+  UINT32                      MaxPossibleClusters;
+  UINT32                      MaxPossibleCoresPerCluster;
+  UINT32                      MaxPossibleCores;
+  UINT64                      EnabledCoresBitMap[ALIGN_VALUE (MAX_SUPPORTED_CORES, 64) / 64];
+  BOOLEAN                     AffinityMpIdrSupported;
+  UINT32                      NumberOfEnabledCores;
   UINT32                      ActiveBootChain;
   BOOLEAN                     BrBctUpdateFlag;
   TEGRA_RESOURCE_INFO         *ResourceInfo;
@@ -238,12 +246,23 @@ SetNextBootChain (
 
 /**
   Get Platform Resource Information
+  Does not update the CPU info structures.
 
 **/
 EFI_STATUS
 EFIAPI
 GetPlatformResourceInformation (
   IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  );
+
+/**
+  Update CPU info in Platform Resource Information
+
+**/
+EFI_STATUS
+EFIAPI
+UpdatePlatformResourceCpuInformation (
+  VOID
   );
 
 /**

@@ -92,12 +92,22 @@ TH500BuildTcgEventHob (
   );
 
 /**
- * Get Partition information.
+ * Check TPM Status
 **/
 BOOLEAN
 EFIAPI
 TH500IsTpmToBeEnabled (
   IN  UINTN  CpuBootloaderAddress
+  );
+
+/**
+  Fills in the EnabledCoresBitMap
+
+**/
+EFI_STATUS
+EFIAPI
+TH500GetEnabledCoresBitMap (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   );
 
 #endif //__TH500_RESOURCE_CONFIG_H__

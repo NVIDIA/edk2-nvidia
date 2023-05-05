@@ -81,121 +81,6 @@ SetPhysicalPresencePcd (
 }
 
 STATIC
-VOID
-EFIAPI
-SetCpuInfoPcdsFromDtb (
-  VOID
-  )
-{
-  VOID        *Dtb;
-  UINTN       DtbSize;
-  UINTN       MaxClusters;
-  UINTN       MaxCoresPerCluster;
-  UINTN       MaxSockets;
-  INT32       CpuMapOffset;
-  INT32       Cluster0Offset;
-  INT32       NodeOffset;
-  CHAR8       ClusterNodeStr[] = "clusterxxx";
-  CHAR8       CoreNodeStr[]    = "corexx";
-  EFI_STATUS  Status;
-  CHAR8       SocketNodeStr[] = "/socket@xx";
-  INT32       SocketOffset;
-  CHAR8       CpuMapPathStr[] = "/socket@xx/cpus/cpu-map";
-  CHAR8       *CpuMapPathFormat;
-  UINTN       Socket;
-
-  Status = DtPlatformLoadDtb (&Dtb, &DtbSize);
-  if (EFI_ERROR (Status)) {
-    return;
-  }
-
-  // count number of socket nodes, 100 limit due to socket@xx string
-  for (MaxSockets = 0; MaxSockets < 100; MaxSockets++) {
-    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", MaxSockets);
-    SocketOffset = fdt_path_offset (Dtb, SocketNodeStr);
-    if (SocketOffset < 0) {
-      break;
-    }
-  }
-
-  // handle global vs per-socket cpu map
-  if (MaxSockets == 0) {
-    MaxSockets       = 1;
-    CpuMapPathFormat = "/cpus/cpu-map";
-  } else {
-    CpuMapPathFormat = "/socket@%u/cpus/cpu-map";
-  }
-
-  DEBUG ((DEBUG_INFO, "MaxSockets=%u\n", MaxSockets));
-  PcdSet32S (PcdTegraMaxSockets, MaxSockets);
-
-  // count clusters across all sockets
-  MaxClusters = 0;
-  for (Socket = 0; Socket < MaxSockets; Socket++) {
-    UINTN  Cluster;
-
-    AsciiSPrint (CpuMapPathStr, sizeof (CpuMapPathStr), CpuMapPathFormat, Socket);
-    CpuMapOffset = fdt_path_offset (Dtb, CpuMapPathStr);
-    if (CpuMapOffset < 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: %a missing in DTB, using Clusters=%u, CoresPerCluster=%u\n",
-        __FUNCTION__,
-        CpuMapPathStr,
-        PcdGet32 (PcdTegraMaxClusters),
-        PcdGet32 (PcdTegraMaxCoresPerCluster)
-        ));
-      return;
-    }
-
-    Cluster = 0;
-    while (TRUE) {
-      AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
-      NodeOffset = fdt_subnode_offset (Dtb, CpuMapOffset, ClusterNodeStr);
-      if (NodeOffset < 0) {
-        break;
-      }
-
-      MaxClusters++;
-      Cluster++;
-      ASSERT (Cluster < 1000);    // "clusterxxx" max
-    }
-
-    DEBUG ((DEBUG_INFO, "Socket=%u MaxClusters=%u\n", Socket, MaxClusters));
-  }
-
-  DEBUG ((DEBUG_INFO, "MaxClusters=%u\n", MaxClusters));
-  PcdSet32S (PcdTegraMaxClusters, MaxClusters);
-
-  // Use cluster0 node to find max core subnode
-  Cluster0Offset = fdt_subnode_offset (Dtb, CpuMapOffset, "cluster0");
-  if (Cluster0Offset < 0) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "No cluster0 in %a, using CoresPerCluster=%u\n",
-      CpuMapPathStr,
-      PcdGet32 (PcdTegraMaxCoresPerCluster)
-      ));
-    return;
-  }
-
-  MaxCoresPerCluster = 1;
-  while (TRUE) {
-    AsciiSPrint (CoreNodeStr, sizeof (CoreNodeStr), "core%u", MaxCoresPerCluster);
-    NodeOffset = fdt_subnode_offset (Dtb, Cluster0Offset, CoreNodeStr);
-    if (NodeOffset < 0) {
-      break;
-    }
-
-    MaxCoresPerCluster++;
-    ASSERT (MaxCoresPerCluster < 100);     // "corexx" max
-  }
-
-  DEBUG ((DEBUG_INFO, "MaxCoresPerCluster=%u\n", MaxCoresPerCluster));
-  PcdSet32S (PcdTegraMaxCoresPerCluster, MaxCoresPerCluster);
-}
-
-STATIC
 EFI_STATUS
 EFIAPI
 UseEmulatedVariableStore (
@@ -935,7 +820,9 @@ TegraPlatformInitialize (
   }
 
   // Set Pcds
-  SetCpuInfoPcdsFromDtb ();
+  PcdSet32S (PcdTegraMaxSockets, PlatformResourceInfo->MaxPossibleSockets);
+  PcdSet32S (PcdTegraMaxClusters, PlatformResourceInfo->MaxPossibleClusters);
+  PcdSet32S (PcdTegraMaxCoresPerCluster, PlatformResourceInfo->MaxPossibleCoresPerCluster);
   SetGicInfoPcdsFromDtb (ChipID);
   SetPhysicalPresencePcd ();
 

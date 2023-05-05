@@ -23,6 +23,7 @@
 #include <Library/TegraSerialPortLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/CpuExceptionHandlerLib.h>
+#include <Library/NVIDIADebugLib.h>
 
 #include <Ppi/GuidedSectionExtraction.h>
 #include <Ppi/SecPerformance.h>
@@ -245,7 +246,7 @@ CEntryPoint (
   UINT64                        DtbSize;
   UINT64                        DtbOffset;
   UINT64                        DtbNext;
-  TEGRA_PLATFORM_RESOURCE_INFO  PlatformResourceInfo;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
   ARM_MEMORY_REGION_DESCRIPTOR  InitialMemory[2];
   SERIAL_MAPPING                *Mapping;
 
@@ -455,10 +456,11 @@ CEntryPoint (
   BuildFvHob ((EFI_PHYSICAL_ADDRESS)FvHeader, FvSize);
 
   // Build Platform Resource Data HOB
-  ZeroMem (&PlatformResourceInfo, sizeof (PlatformResourceInfo));
-  Status = GetPlatformResourceInformation (&PlatformResourceInfo);
-  ASSERT_EFI_ERROR (Status);
-  BuildGuidDataHob (&gNVIDIAPlatformResourceDataGuid, &PlatformResourceInfo, sizeof (PlatformResourceInfo));
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)BuildGuidHob (&gNVIDIAPlatformResourceDataGuid, sizeof (TEGRA_PLATFORM_RESOURCE_INFO));
+  NV_ASSERT_RETURN (PlatformResourceInfo != NULL, CpuDeadLoop (), "Failed to allocate platform resource!\r\n");
+  ZeroMem (PlatformResourceInfo, sizeof (TEGRA_PLATFORM_RESOURCE_INFO));
+  Status = GetPlatformResourceInformation (PlatformResourceInfo);
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to GetPlatformResourceInformation - %r!\r\n", Status);
 
   if (FeaturePcdGet (PcdPrePiProduceMemoryTypeInformationHob)) {
     // Optional feature that helps prevent EFI memory map fragmentation.
@@ -473,6 +475,10 @@ CEntryPoint (
 
   // Register UEFI DTB
   RegisterDeviceTree (DtbBase);
+
+  // Get CPU info from platform
+  Status = UpdatePlatformResourceCpuInformation ();
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to UpdatePlatformResourceCpuInformation - %r!\r\n", Status);
 
   // Print platform model info from UEFI DTB
   PrintModel ();
