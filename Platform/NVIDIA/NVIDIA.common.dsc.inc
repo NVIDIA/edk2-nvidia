@@ -1056,6 +1056,7 @@ CONFIG_MEMORY_TEST=n
   # Multiprocessor support
   #
   ArmPkg/Drivers/ArmPsciMpServicesDxe/ArmPsciMpServicesDxe.inf
+  Silicon/NVIDIA/Drivers/ThreadingDxe/ThreadingDxe.inf
 
 [Components.AARCH64]
   #

@@ -321,3 +321,4 @@
   # Multiprocessor support
   #
   INF ArmPkg/Drivers/ArmPsciMpServicesDxe/ArmPsciMpServicesDxe.inf
+  INF Silicon/NVIDIA/Drivers/ThreadingDxe/ThreadingDxe.inf
