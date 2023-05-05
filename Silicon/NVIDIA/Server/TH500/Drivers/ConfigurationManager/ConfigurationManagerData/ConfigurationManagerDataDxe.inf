@@ -85,10 +85,8 @@
   ConfigurationManagerLib
   FruLib
   IpmiBaseLib
-  PciSegmentLib
   Tpm2CommandLib
   PcdLib
-  UefiRuntimeServicesTableLib
   DevicePathLib
   FmpDeviceLib
 
