@@ -2,6 +2,7 @@
   The generic memory test driver definition
 
   Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,7 +13,7 @@
 
 #include <Guid/StatusCodeDataTypeId.h>
 #include <Protocol/GenericMemoryTest.h>
-#include <Protocol/Cpu.h>
+#include <Protocol/Threading.h>
 
 #include <Library/DebugLib.h>
 #include <Library/UefiDriverEntryPoint.h>
@@ -22,12 +23,9 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/MemoryVerificationLib.h>
+#include <Library/SynchronizationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
-
-//
-// Some global define
-//
-#define GENERIC_CACHELINE_SIZE  0x40
 
 //
 // attributes for reserved memory before it is promoted to system memory
@@ -44,6 +42,33 @@
 #define SPARSE_SPAN_SIZE  (TEST_BLOCK_SIZE >> 4)
 
 //
+// This structure records every memory test range
+//
+#define EFI_MEMORY_TEST_RANGE_SIGNATURE  SIGNATURE_32 ('M', 'T', 'R', 'G')
+
+typedef struct {
+  UINTN                   Signature;
+  LIST_ENTRY              Link;
+  EFI_PHYSICAL_ADDRESS    StartAddress;
+  UINT64                  Length;
+  UINTN                   CoverageSpan;
+  EFI_PHYSICAL_ADDRESS    BadAddress;
+  EFI_STATUS              TestStatus;
+  BOOLEAN                 TestDone;
+  BOOLEAN                 *MemoryError;
+  UINTN                   *TestedMemory;
+  EFI_THREAD              Thread;
+} MEMORY_TEST_RANGE;
+
+#define MEMORY_TEST_RANGE_FROM_LINK(link) \
+  CR ( \
+  link, \
+  MEMORY_TEST_RANGE, \
+  Link, \
+  EFI_MEMORY_TEST_RANGE_SIGNATURE \
+  )
+
+//
 // This structure records every nontested memory range parsed through GCD
 // service.
 //
@@ -55,8 +80,6 @@ typedef struct {
   EFI_PHYSICAL_ADDRESS    StartAddress;
   UINT64                  Length;
   UINT64                  Capabilities;
-  BOOLEAN                 Above4G;
-  BOOLEAN                 AlreadyMapped;
 } NONTESTED_MEMORY_RANGE;
 
 #define NONTESTED_MEMORY_RANGE_FROM_LINK(link) \
@@ -74,12 +97,6 @@ typedef struct {
 
 typedef struct {
   UINTN                               Signature;
-  EFI_HANDLE                          Handle;
-
-  //
-  // Cpu arch protocol's pointer
-  //
-  EFI_CPU_ARCH_PROTOCOL               *Cpu;
 
   //
   // generic memory test driver's protocol
@@ -94,20 +111,26 @@ typedef struct {
   UINT64                              BdsBlockSize;
 
   //
-  // the memory test pattern and size every time R/W/V memory
-  //
-  VOID                                *MonoPattern;
-  UINTN                               MonoTestSize;
-
-  //
   // base memory's size which tested in PEI phase
   //
   UINT64                              BaseMemorySize;
 
+  UINT64                              TestedMemory;
+  UINT64                              NonTestedSystemMemory;
+
   //
   // memory range list
   //
-  LIST_ENTRY                          NonTestedMemRanList;
+  LIST_ENTRY                          NonTestedMemList;
+
+  //
+  // memory range list
+  //
+  LIST_ENTRY                          MemoryTestList;
+  EFI_THREADING_PROTOCOL              *ThreadingProtocol;
+  BOOLEAN                             ThreadsSpawned;
+  BOOLEAN                             TestDone;
+  BOOLEAN                             MemoryError;
 } GENERIC_MEMORY_TEST_PRIVATE;
 
 #define GENERIC_MEMORY_TEST_PRIVATE_FROM_THIS(a) \

@@ -1,6 +1,7 @@
 ## @file
 # This driver first constructs the non-tested memory range, then performs the R/W/V memory test.
 #
+# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -9,9 +10,9 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = GenericMemoryTestDxe
-  MODULE_UNI_FILE                = GenericMemoryTestDxe.uni
-  FILE_GUID                      = 9C1080EE-D02E-487f-9432-F3BF086EC180
+  BASE_NAME                      = GenericMpMemoryTestDxe
+  MODULE_UNI_FILE                = GenericMpMemoryTestDxe.uni
+  FILE_GUID                      = 3358254a-2b97-481e-9bcf-141c951a3aa7
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
 
@@ -24,12 +25,13 @@
 #
 
 [Sources]
-  LightMemoryTest.h
-  LightMemoryTest.c
+  GenericMpMemoryTestDxe.h
+  GenericMpMemoryTestDxe.c
 
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   UefiBootServicesTableLib
@@ -39,15 +41,17 @@
   ReportStatusCodeLib
   DxeServicesTableLib
   HobLib
+  MemoryVerificationLib
   UefiDriverEntryPoint
+  SynchronizationLib
   DebugLib
 
-[Protocols]
-  gEfiCpuArchProtocolGuid                       ## CONSUMES
-  gEfiGenericMemTestProtocolGuid                ## PRODUCES
-
 [Depex]
-  gEfiCpuArchProtocolGuid
+  TRUE
+
+[Protocols]
+  gEfiGenericMemTestProtocolGuid                ## PRODUCES
+  gEfiThreadingProtocolGuid                     ## CONSUMES
 
 [UserExtensions.TianoCore."ExtraFiles"]
   GenericMemoryTestDxeExtra.uni

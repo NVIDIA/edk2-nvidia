@@ -314,7 +314,7 @@
   # Memory Tests
   #
 !if ($(CONFIG_MEMORY_TEST) == y)
-  INF MdeModulePkg/Universal/MemoryTest/GenericMemoryTestDxe/GenericMemoryTestDxe.inf
+  INF Silicon/NVIDIA/Drivers/GenericMpMemoryTestDxe/GenericMemoryTestDxe.inf
 !endif
 
   #
