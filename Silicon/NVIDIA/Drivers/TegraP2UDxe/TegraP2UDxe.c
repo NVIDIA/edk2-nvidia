@@ -245,6 +245,7 @@ AddP2UEntries (
 
   do {
     TEGRAP2U_LIST_ENTRY  *ListEntry = NULL;
+    INT32                AddressCells;
     INT32                PropertySize;
     CONST VOID           *RegProperty = NULL;
     EFI_STATUS           Status;
@@ -285,6 +286,12 @@ AddP2UEntries (
     Private->TegraP2Us++;
     ListEntry->P2UId = fdt_get_phandle (Private->DeviceTreeBase, NodeOffset);
 
+    AddressCells = fdt_address_cells (Private->DeviceTreeBase, fdt_parent_offset (Private->DeviceTreeBase, NodeOffset));
+    if ((AddressCells > 2) || (AddressCells == 0)) {
+      DEBUG ((EFI_D_ERROR, "%a: Bad cell value, %d\r\n", __FUNCTION__, AddressCells));
+      return EFI_UNSUPPORTED;
+    }
+
     RegProperty = fdt_getprop (
                     Private->DeviceTreeBase,
                     NodeOffset,
@@ -296,11 +303,20 @@ AddP2UEntries (
       return EFI_NOT_FOUND;
     }
 
-    CopyMem ((VOID *)&ListEntry->BaseAddr, RegProperty, sizeof (UINT32));
-    ListEntry->BaseAddr = SwapBytes32 (ListEntry->BaseAddr);
+    if (PropertySize < sizeof (UINT32) * AddressCells) {
+      DEBUG ((EFI_D_ERROR, "%a: Wrongly formatted \"reg\" entry\r\n", __FUNCTION__));
+      return EFI_NOT_FOUND;
+    }
+
+    if (AddressCells == 2) {
+      ListEntry->BaseAddr = fdt64_to_cpu (*((UINT64 *)RegProperty));
+    } else {
+      ListEntry->BaseAddr = fdt32_to_cpu (*((UINT32 *)RegProperty));
+    }
+
     DEBUG ((
       EFI_D_VERBOSE,
-      "%a: P2U Base Addr = 0x%08X\r\n",
+      "%a: P2U Base Addr = 0x%llX\r\n",
       __FUNCTION__,
       ListEntry->BaseAddr
       ));
