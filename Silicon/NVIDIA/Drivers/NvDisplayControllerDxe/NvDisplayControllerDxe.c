@@ -815,6 +815,7 @@ UpdateFdtFramebufferReservedMemory (
     return FALSE;
   }
 
+  NodeOffset = 0;
   fdt_for_each_subnode (NodeOffset, Fdt, Result) {
     Result = fdt_node_check_compatible (Fdt, NodeOffset, "framebuffer");
     if (Result != 0) {
