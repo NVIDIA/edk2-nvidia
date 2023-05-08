@@ -34,6 +34,11 @@ jobs:
           sudo apt install -y build-essential uuid-dev git gcc python3 virtualenv gcc-aarch64-linux-gnu device-tree-compiler mono-devel
           # Make sure everything is up-to-date
           sudo apt upgrade
+      - name: Upgrade python
+        run: |
+          sudo apt install -y python3.9 python3-pip python3.9-venv
+          sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
+          sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
       - name: Install edkrepo
         run: |
           mkdir ${{ github.workspace }}/edkrepo
