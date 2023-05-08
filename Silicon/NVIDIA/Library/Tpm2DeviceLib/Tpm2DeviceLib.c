@@ -123,9 +123,19 @@ Tpm2Initialize (
   }
 
   //
-  // Select hash algorithm based on active PCR bank
+  // If PcdTpm2InitializationPolicy=0, TPM is assumed to be started by pre-UEFI images.
+  // If TPM is not accessible here, it has not been started successfully, possibly TPM is
+  // disabled in the fuse, or TPM is disabled or not present on the platform,...
   //
   Status = Tpm2GetCapabilitySupportedAndActivePcrs (&TpmHashAlgorithmBitmap, &ActivePCRBanks);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: TPM has not been started successfully.\n", __FUNCTION__));
+    return Status;
+  }
+
+  //
+  // Select hash algorithm based on active PCR bank
+  //
   if ((ActivePCRBanks & TPM_ALG_SHA384) != 0) {
     PcdSet32S (PcdTpm2HashMask, 0x00000004);
   } else if ((ActivePCRBanks & TPM_ALG_SHA256) != 0) {
@@ -208,6 +218,7 @@ Tpm2RegistrationEvent (
       //
       // Disable if fail to initialize TPM
       //
+      DEBUG ((DEBUG_ERROR, "%a: Disable TPM driver.\n", __FUNCTION__));
       mTpm2 = NULL;
     }
   } else {

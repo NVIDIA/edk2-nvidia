@@ -25,6 +25,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/Tpm2CommandLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <libfdt.h>
 
