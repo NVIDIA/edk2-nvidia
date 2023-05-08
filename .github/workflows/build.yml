@@ -81,9 +81,10 @@ jobs:
         run: |
           mkdir package
           # Extract details about the build (BUILDID, sha, etc.)
-          cat workspace/Build/BUILDLOG_Jetson.txt | grep BUILDID_STRING= |sed -e 's/.*BUILDID_STRING=\([^ ]*\)/\1/' > package/buildid
+          grep -m 1 BUILDID_STRING= workspace/Build/BUILDLOG_Jetson.txt | sed -e 's/.*BUILDID_STRING=\([^ ]*\)/\1/' > package/buildid
           BUILDID=$(cat package/buildid)
-          echo "::set-output name=version::${BUILDID}"
+          echo "version=${BUILDID}"
+          echo "version=${BUILDID}" >> $GITHUB_OUTPUT
           echo ${{ github.ref_name }} > package/ref_name
           echo ${{ github.sha }} > package/sha
           # Copy the images
