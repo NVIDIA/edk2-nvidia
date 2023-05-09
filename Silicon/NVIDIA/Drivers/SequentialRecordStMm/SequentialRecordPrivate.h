@@ -24,7 +24,8 @@
 #define READ_LAST_RECORD     (0)
 #define WRITE_NEXT_RECORD    (1)
 #define ERASE_PARTITION      (2)
-#define CLEAR_EFI_VARIABLES  (3)
+#define CLEAR_EFI_NSVARS     (3)
+#define CLEAR_EFI_VARIABLES  (4)
 
 typedef struct {
   /* Operation to perform */

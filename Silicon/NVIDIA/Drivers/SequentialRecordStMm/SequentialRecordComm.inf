@@ -40,10 +40,11 @@
   BaseLib
 
 [Protocols]
-  gNVIDIANorFlashProtocolGuid
-  gEfiSmmFirmwareVolumeBlockProtocolGuid
-  gNVIDIASequentialStorageGuid
-  gNVIDIACmetStorageGuid
+  gNVIDIANorFlashProtocolGuid             ## CONSUMES
+  gEfiSmmFirmwareVolumeBlockProtocolGuid  ## CONSUMES
+  gNVIDIASequentialStorageGuid            ## PRODUCES
+  gNVIDIACmetStorageGuid                  ## PRODUCES
+  gEfiSmmVariableProtocolGuid             ## CONSUMES
 
 [Guids]
   gNVIDIAPlatformResourceDataGuid

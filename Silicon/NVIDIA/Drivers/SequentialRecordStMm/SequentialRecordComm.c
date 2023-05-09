@@ -11,13 +11,16 @@
 
 #include "SequentialRecordPrivate.h"
 #include <Protocol/FirmwareVolumeBlock.h>
+#include <Protocol/SmmVariable.h>
 
-NVIDIA_SEQ_RECORD_PROTOCOL   *RasSeqProto;
-NVIDIA_CMET_RECORD_PROTOCOL  *CmetSeqProto;
-NVIDIA_SEQ_RECORD_PROTOCOL   *EarlyVarsProto;
+STATIC NVIDIA_SEQ_RECORD_PROTOCOL   *RasSeqProto;
+STATIC NVIDIA_CMET_RECORD_PROTOCOL  *CmetSeqProto;
+STATIC NVIDIA_SEQ_RECORD_PROTOCOL   *EarlyVarsProto;
+STATIC EFI_SMM_VARIABLE_PROTOCOL    *SmmVar;
 
 #define EARLY_VARS_RD_SOCKET  (0)
 #define UEFI_VARS_SOCKET      (0)
+#define MAX_VAR_NAME          (256 * sizeof (CHAR16))
 
 /**
  * GetSeqProto
@@ -543,6 +546,97 @@ ExitEarlyVarsMsgHandler:
 }
 
 /**
+ * DeleteNsVars
+ * Function to delete all the non-secure variables and locked variables.
+ * This function is usually called from SatMc SP.
+ *
+ *
+ * @retval EFI_SUCCESS Deleted all the NS and locked variables.
+ *         Other       Fail to delete.
+ **/
+STATIC
+EFI_STATUS
+DeleteNsVars (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  EFI_STATUS  GetVarStatus;
+  EFI_STATUS  ClearVarStatus;
+  CHAR16      *CurVarName;
+  CHAR16      *NextVarName;
+  EFI_GUID    CurVarGuid;
+  EFI_GUID    NextVarGuid;
+  UINTN       NameSize;
+
+  CurVarName  = NULL;
+  NextVarName = NULL;
+  Status      = EFI_SUCCESS;
+
+  if (SmmVar == NULL) {
+    Status = EFI_UNSUPPORTED;
+    goto ExitDeleteNsVars;
+  }
+
+  CurVarName = AllocateZeroPool (MAX_VAR_NAME);
+  if (CurVarName == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ExitDeleteNsVars;
+  }
+
+  NextVarName = AllocateZeroPool (MAX_VAR_NAME);
+  if (NextVarName == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ExitDeleteNsVars;
+  }
+
+  NameSize = MAX_VAR_NAME;
+
+  GetVarStatus = SmmVar->SmmGetNextVariableName (
+                           &NameSize,
+                           NextVarName,
+                           &NextVarGuid
+                           );
+  while (!EFI_ERROR (GetVarStatus)) {
+    CopyMem (CurVarName, NextVarName, NameSize);
+    CopyGuid (&CurVarGuid, &NextVarGuid);
+    NameSize = MAX_VAR_NAME;
+
+    GetVarStatus = SmmVar->SmmGetNextVariableName (
+                             &NameSize,
+                             NextVarName,
+                             &NextVarGuid
+                             );
+
+    ClearVarStatus = SmmVar->SmmSetVariable (
+                               CurVarName,
+                               &CurVarGuid,
+                               0,
+                               0,
+                               NULL
+                               );
+    DEBUG ((
+      DEBUG_ERROR,
+      "Delete Variable %g:%s %r\r\n",
+      &CurVarGuid,
+      CurVarName,
+      ClearVarStatus
+      ));
+  }
+
+ExitDeleteNsVars:
+  if (CurVarName) {
+    FreePool (CurVarName);
+  }
+
+  if (NextVarName) {
+    FreePool (NextVarName);
+  }
+
+  return Status;
+}
+
+/**
  * MMI handler for SatMc service.
  *
  * @params[in]   DispatchHandle   Handle of the registered MMI..
@@ -607,6 +701,32 @@ SatMcMsgHandler (
           "%a: Failed to Erase Early Vars Partition %r",
           __FUNCTION__,
           Status
+          ));
+        goto ExitSatMcMsgHandler;
+      }
+
+      break;
+    case CLEAR_EFI_NSVARS:
+      Status = DeleteNsVars ();
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to Erase Early Vars Partition %r, Cmd %u",
+          __FUNCTION__,
+          Status,
+          SatMcMmMsg->Command
+          ));
+        goto ExitSatMcMsgHandler;
+      }
+
+      Status = EraseEarlyVarsPartition ();
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to Erase Early Vars Partition %r, Cmd %u",
+          __FUNCTION__,
+          Status,
+          SatMcMmMsg->Command
           ));
         goto ExitSatMcMsgHandler;
       }
@@ -832,6 +952,21 @@ RegisterSatMcHandler (
       __FUNCTION__,
       Status
       ));
+    goto ExitSatMcRegister;
+  }
+
+  Status = gMmst->MmLocateProtocol (
+                    &gEfiSmmVariableProtocolGuid,
+                    NULL,
+                    (VOID **)&SmmVar
+                    );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: gEfiSmmVariableProtocolGuid: NOT LOCATED!\n",
+      __FUNCTION__
+      ));
+    SmmVar = NULL;
     goto ExitSatMcRegister;
   }
 
