@@ -115,6 +115,7 @@ GetFmpInfoSet (
   )
 {
   EFI_STATUS                        Status;
+  EFI_STATUS                        FmpStatus;
   EFI_HANDLE                        *HandleBuffer;
   EFI_FIRMWARE_MANAGEMENT_PROTOCOL  *Fmp;
   UINTN                             HandleIndex;
@@ -145,11 +146,11 @@ GetFmpInfoSet (
                   &HandleBuffer
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_INFO, "%a: Cannot locate Firmware management Protocol handle buffer. Status = %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Cannot locate Firmware management Protocol handle buffer. Status = %r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
-  *PrivateInfoSet = AllocateZeroPool (sizeof (*PrivateInfoSet) * MAX_FIRMWARE_INVENTORY_FMP_DESC_COUNT);
+  *PrivateInfoSet = AllocateZeroPool (sizeof (FMP_HANDLE_INFO_SET) * MAX_FIRMWARE_INVENTORY_FMP_DESC_COUNT);
   if (*PrivateInfoSet == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
   } else {
@@ -169,7 +170,7 @@ GetFmpInfoSet (
                       (VOID **)&Fmp
                       );
       if (EFI_ERROR (Status)) {
-        continue;
+        break;
       }
 
       DevicePath = DevicePathFromHandle (HandleBuffer[HandleIndex]);
@@ -177,40 +178,40 @@ GetFmpInfoSet (
       //
       // First call to get buffer size to allocate memory for ImageInfo.
       //
-      Status = Fmp->GetImageInfo (
-                      Fmp,
-                      &ImageInfoSize,
-                      NULL,
-                      NULL,
-                      NULL,
-                      NULL,
-                      NULL,
-                      NULL
-                      );
-      if (Status != EFI_BUFFER_TOO_SMALL) {
+      FmpStatus = Fmp->GetImageInfo (
+                         Fmp,
+                         &ImageInfoSize,
+                         NULL,
+                         NULL,
+                         NULL,
+                         NULL,
+                         NULL,
+                         NULL
+                         );
+      if (FmpStatus != EFI_BUFFER_TOO_SMALL) {
         continue;
       }
 
       ImageInfo = (EFI_FIRMWARE_IMAGE_DESCRIPTOR *)AllocateZeroPool (ImageInfoSize);
       if (ImageInfo == NULL) {
-        Status = EFI_OUT_OF_RESOURCES;
+        FmpStatus = EFI_OUT_OF_RESOURCES;
         break;
       }
 
       //
       // Get current image info in the device.
       //
-      Status = Fmp->GetImageInfo (
-                      Fmp,
-                      &ImageInfoSize,
-                      ImageInfo,
-                      &DescriptorVersion,
-                      &DescriptorCount,
-                      &DescriptorSize,
-                      &PackageVersion,
-                      &PackageVersionName
-                      );
-      if (EFI_ERROR (Status)) {
+      FmpStatus = Fmp->GetImageInfo (
+                         Fmp,
+                         &ImageInfoSize,
+                         ImageInfo,
+                         &DescriptorVersion,
+                         &DescriptorCount,
+                         &DescriptorSize,
+                         &PackageVersion,
+                         &PackageVersionName
+                         );
+      if (EFI_ERROR (FmpStatus)) {
         FreePool (ImageInfo);
         continue;
       }
@@ -224,7 +225,7 @@ GetFmpInfoSet (
             PrivateInfoSetPtr->ImageInfoHead = NULL;
           }
 
-          PrivateInfoSetPtr->ImageInfo          = &ImageInfo[DescriptorIndex];
+          PrivateInfoSetPtr->ImageInfo          = (EFI_FIRMWARE_IMAGE_DESCRIPTOR *)((UINT8 *)ImageInfo + (DescriptorIndex * DescriptorSize));
           PrivateInfoSetPtr->DescriptorVersion  = DescriptorVersion;
           PrivateInfoSetPtr->PackageVersion     = PackageVersion;
           PrivateInfoSetPtr->PackageVersionName = PackageVersionName;
@@ -235,12 +236,20 @@ GetFmpInfoSet (
 
           (*NumHandles)++;
         } else {
+          if (DescriptorIndex == 0) {
+            FreePool (ImageInfo);
+          }
+
+          DEBUG ((DEBUG_WARN, "%a: FmpHandleInfoSet buffer is too small. \n", __FUNCTION__));
           Status = EFI_BUFFER_TOO_SMALL;
+          ASSERT_EFI_ERROR (Status);
+          goto Done;
         }
       }
     }
   }
 
+Done:
   FreePool (HandleBuffer);
   return Status;
 }
@@ -298,6 +307,7 @@ GetPciIoInfoSet (
   )
 {
   EFI_STATUS                Status;
+  EFI_STATUS                PciioStatus;
   EFI_HANDLE                *HandleBuffer;
   EFI_PCI_IO_PROTOCOL       *PciIo;
   UINTN                     HandleIndex;
@@ -323,11 +333,11 @@ GetPciIoInfoSet (
                   &HandleBuffer
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_INFO, "%a: Cannot locate PciIo Protocol handle buffer. Status = %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_WARN, "%a: Cannot locate PciIo Protocol handle buffer. Status = %r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
-  *PrivateInfoSet = AllocateZeroPool (sizeof (PCIIO_HANDLE_INFO_SET) * (MAX_FIRMWARE_INVENTORY_PCIIO_COUNT));
+  *PrivateInfoSet = AllocateZeroPool (sizeof (PCIIO_HANDLE_INFO_SET) * NumPciIoHandles);
   if (*PrivateInfoSet == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
   } else {
@@ -344,27 +354,24 @@ GetPciIoInfoSet (
                       (VOID **)&PciIo
                       );
       if (EFI_ERROR (Status)) {
-        continue;
+        break;
       }
 
-      DevicePath = DevicePathFromHandle (HandleBuffer[HandleIndex]);
-      Status     = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
-      if (!EFI_ERROR (Status)) {
-        if (*NumHandles < MAX_FIRMWARE_INVENTORY_PCIIO_COUNT) {
-          PrivateInfoSetPtr = (*PrivateInfoSet) + *NumHandles;
+      DevicePath  = DevicePathFromHandle (HandleBuffer[HandleIndex]);
+      PciioStatus = EFI_SUCCESS;
+      PciioStatus = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+      if (!EFI_ERROR (PciioStatus)) {
+        PrivateInfoSetPtr = (*PrivateInfoSet) + *NumHandles;
 
-          PrivateInfoSetPtr->Segment  = Segment;
-          PrivateInfoSetPtr->Bus      = Bus;
-          PrivateInfoSetPtr->Device   = Device;
-          PrivateInfoSetPtr->Function = Function;
-          if (DevicePath != NULL) {
-            PrivateInfoSetPtr->DevicePathString = ConvertDevicePathToText (DevicePath, FALSE, FALSE);
-          }
-
-          (*NumHandles)++;
-        } else {
-          Status = EFI_BUFFER_TOO_SMALL;
+        PrivateInfoSetPtr->Segment  = Segment;
+        PrivateInfoSetPtr->Bus      = Bus;
+        PrivateInfoSetPtr->Device   = Device;
+        PrivateInfoSetPtr->Function = Function;
+        if (DevicePath != NULL) {
+          PrivateInfoSetPtr->DevicePathString = ConvertDevicePathToText (DevicePath, FALSE, FALSE);
         }
+
+        (*NumHandles)++;
       }
     }
   }
@@ -397,6 +404,7 @@ FmpFirmwareInventoryUpdate (
   )
 {
   EFI_STATUS                         Status;
+  EFI_STATUS                         PciioFmpPairingStatus;
   UINT32                             NumFmpHandles;
   UINTN                              HandleIndex;
   UINT32                             DescriptorVersion;
@@ -431,21 +439,26 @@ FmpFirmwareInventoryUpdate (
   PciIoHandleInfoSet  = NULL;
 
   Status = GetFmpInfoSet (&NumFmpHandles, &FmpHandleInfoSet);
-  if ((FmpHandleInfoSet == NULL) || EFI_ERROR (Status)) {
-    Status =  EFI_DEVICE_ERROR;
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get Fmp info set. Status = %r\n", __FUNCTION__, Status));
+  }
+
+  if ((FmpHandleInfoSet == NULL) || (NumFmpHandles == 0)) {
+    //
+    // No valid FMP info to smbios type 45.
+    //
+    Status = EFI_NOT_FOUND;
     goto Exit;
   }
 
-  Status = GetPciIoInfoSet (&NumPciIoHandles, &PciIoHandleInfoSet);
-  if ((PciIoHandleInfoSet == NULL) || EFI_ERROR (Status)) {
-    Status = EFI_DEVICE_ERROR;
-    goto Exit;
+  PciioFmpPairingStatus = GetPciIoInfoSet (&NumPciIoHandles, &PciIoHandleInfoSet);
+  if (EFI_ERROR (PciioFmpPairingStatus)) {
+    DEBUG ((DEBUG_WARN, "%a: Failed to get PCIIO info for association. Status = %r\n", __FUNCTION__, PciioFmpPairingStatus));
   }
 
-  Status = FmpDeviceGetImageTypeIdGuidPtr (&SbiosDeviceGuid);
-  if ((SbiosDeviceGuid == NULL) || EFI_ERROR (Status)) {
-    Status = EFI_DEVICE_ERROR;
-    goto Exit;
+  PciioFmpPairingStatus = FmpDeviceGetImageTypeIdGuidPtr (&SbiosDeviceGuid);
+  if ((SbiosDeviceGuid == NULL) || EFI_ERROR (PciioFmpPairingStatus)) {
+    DEBUG ((DEBUG_WARN, "%a: Failed to get SbiosDeviceGuid. Status = %r\n", __FUNCTION__, PciioFmpPairingStatus));
   }
 
   //
@@ -462,7 +475,7 @@ FmpFirmwareInventoryUpdate (
                                  *FirmwareInventoryInfo
                                  );
     if (NewFirmwareInventoryInfo == NULL) {
-      Status =  EFI_OUT_OF_RESOURCES;
+      Status = EFI_OUT_OF_RESOURCES;
       goto Exit;
     }
 
@@ -471,7 +484,7 @@ FmpFirmwareInventoryUpdate (
     FirmwareInventoryInfoElement = (*FirmwareInventoryInfo) + *NumFirmwareComponents;
     ZeroMem (FirmwareInventoryInfoElement, sizeof (*FirmwareInventoryInfoElement));
 
-    if (CompareGuid (&ImageInfo->ImageTypeId, SbiosDeviceGuid)) {
+    if ((SbiosDeviceGuid != NULL) && CompareGuid (&ImageInfo->ImageTypeId, SbiosDeviceGuid)) {
       //
       // SBIOS specific firmware handle for below fields.
       //   a1. Component name
@@ -560,60 +573,62 @@ FmpFirmwareInventoryUpdate (
         }
       }
 
-      //
-      // Update associated component information.
-      //
-      Segment  = 0;
-      Bus      = 0;
-      Device   = 0;
-      Function = 0;
-      Status   = EFI_NOT_FOUND;
-      if (FmpHandleInfoSet[HandleIndex].DevicePathString != NULL) {
-        for (PciIoHandleIndex = NumPciIoHandles - 1; PciIoHandleIndex >= 0; PciIoHandleIndex--) {
-          if (PciIoHandleInfoSet[PciIoHandleIndex].DevicePathString != NULL) {
-            if (StrnCmp (
-                  PciIoHandleInfoSet[PciIoHandleIndex].DevicePathString,
-                  FmpHandleInfoSet[HandleIndex].DevicePathString,
-                  StrLen (PciIoHandleInfoSet[PciIoHandleIndex].DevicePathString)
-                  ) == 0)
+      if ((PciIoHandleInfoSet != NULL) && (NumPciIoHandles != 0)) {
+        //
+        // Update associated component information, if pairing Pciio and FMP successfully.
+        //
+        Segment               = 0;
+        Bus                   = 0;
+        Device                = 0;
+        Function              = 0;
+        PciioFmpPairingStatus = EFI_NOT_FOUND;
+        if (FmpHandleInfoSet[HandleIndex].DevicePathString != NULL) {
+          for (PciIoHandleIndex = NumPciIoHandles - 1; PciIoHandleIndex >= 0; PciIoHandleIndex--) {
+            if (PciIoHandleInfoSet[PciIoHandleIndex].DevicePathString != NULL) {
+              if (StrnCmp (
+                    PciIoHandleInfoSet[PciIoHandleIndex].DevicePathString,
+                    FmpHandleInfoSet[HandleIndex].DevicePathString,
+                    StrLen (PciIoHandleInfoSet[PciIoHandleIndex].DevicePathString)
+                    ) == 0)
+              {
+                Segment               = PciIoHandleInfoSet[PciIoHandleIndex].Segment;
+                Bus                   = PciIoHandleInfoSet[PciIoHandleIndex].Bus;
+                Device                = PciIoHandleInfoSet[PciIoHandleIndex].Device;
+                Function              = PciIoHandleInfoSet[PciIoHandleIndex].Function;
+                PciioFmpPairingStatus = EFI_SUCCESS;
+                break;
+              }
+            }
+          }
+        }
+
+        AssociatedComponentCount  = 0;
+        AssociatedComponentBuffer = NULL;
+        if (PciioFmpPairingStatus == EFI_SUCCESS) {
+          for (SystemSlotInfoIndex = 0; SystemSlotInfoIndex < NumSystemSlots; SystemSlotInfoIndex++) {
+            if ((SystemSlotInfo[SystemSlotInfoIndex].SegmentGroupNum == Segment) &&
+                (SystemSlotInfo[SystemSlotInfoIndex].BusNum == Bus) &&
+                (((SystemSlotInfo[SystemSlotInfoIndex].DevFuncNum >> 3) & 0x1) == Device) &&
+                ((SystemSlotInfo[SystemSlotInfoIndex].DevFuncNum & 0x07) == Function)
+                )
             {
-              Segment  = PciIoHandleInfoSet[PciIoHandleIndex].Segment;
-              Bus      = PciIoHandleInfoSet[PciIoHandleIndex].Bus;
-              Device   = PciIoHandleInfoSet[PciIoHandleIndex].Device;
-              Function = PciIoHandleInfoSet[PciIoHandleIndex].Function;
-              Status   = EFI_SUCCESS;
+              AssociatedComponentBuffer = AllocateZeroPool (sizeof (*AssociatedComponentBuffer));
+
+              if (AssociatedComponentBuffer == NULL) {
+                DEBUG ((DEBUG_ERROR, "%a: Failed to allocate associated component buffer\n", __FUNCTION__));
+                break;
+              }
+
+              AssociatedComponentBuffer[0] = SystemSlotInfo[SystemSlotInfoIndex].SystemSlotInfoToken;
+              AssociatedComponentCount     = 1;
               break;
             }
           }
         }
+
+        FirmwareInventoryInfoElement->AssociatedComponentCount   = AssociatedComponentCount;
+        FirmwareInventoryInfoElement->AssociatedComponentHandles = AssociatedComponentBuffer;
       }
-
-      AssociatedComponentCount  = 0;
-      AssociatedComponentBuffer = NULL;
-      if (Status == EFI_SUCCESS) {
-        for (SystemSlotInfoIndex = 0; SystemSlotInfoIndex < NumSystemSlots; SystemSlotInfoIndex++) {
-          if ((SystemSlotInfo[SystemSlotInfoIndex].SegmentGroupNum == Segment) &&
-              (SystemSlotInfo[SystemSlotInfoIndex].BusNum == Bus) &&
-              (((SystemSlotInfo[SystemSlotInfoIndex].DevFuncNum >> 3) & 0x1) == Device) &&
-              ((SystemSlotInfo[SystemSlotInfoIndex].DevFuncNum & 0x07) == Function)
-              )
-          {
-            AssociatedComponentBuffer = AllocateZeroPool (sizeof (*AssociatedComponentBuffer));
-
-            if (AssociatedComponentBuffer == NULL) {
-              DEBUG ((DEBUG_ERROR, "%a: Failed to allocate associated component buffer\n", __FUNCTION__));
-              break;
-            }
-
-            AssociatedComponentBuffer[0] = SystemSlotInfo[SystemSlotInfoIndex].SystemSlotInfoToken;
-            AssociatedComponentCount     = 1;
-            break;
-          }
-        }
-      }
-
-      FirmwareInventoryInfoElement->AssociatedComponentCount   = AssociatedComponentCount;
-      FirmwareInventoryInfoElement->AssociatedComponentHandles = AssociatedComponentBuffer;
     }
 
     //
@@ -621,7 +636,6 @@ FmpFirmwareInventoryUpdate (
     //   c1. Firmware ID and ID format.
     //   c2. Firmware Characteristics
     //   c3. Firmware State.
-    //   c4. associated component information
     //
 
     //
