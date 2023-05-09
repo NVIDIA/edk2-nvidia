@@ -29,12 +29,26 @@
 
 #define ACPI_HID_CID_STR_SIZE  (8+1)
 
+#define FREE_NON_NULL(a) \
+  if ((a) != NULL) { \
+    FreePool ((a));  \
+    (a) = NULL;      \
+  }
+
+typedef enum {
+  UID_INDEX_VRT = 0,
+
+  UID_INDEX_COUNT
+} UID_INDEX;
+
+STATIC UINTN  mUids[UID_INDEX_COUNT];
+
 typedef struct {
   CONST CHAR8    *CompatibleId;
   CHAR8          *Hid;
   CHAR8          *Cid;
   CHAR8          *Name;
-  UINTN          Uid;
+  UID_INDEX      UidIndex;
   BOOLEAN        Cca;
 } ACPI_DEVICE_TABLE_INFO;
 
@@ -44,7 +58,7 @@ STATIC ACPI_DEVICE_TABLE_INFO  AcpiTableInfo[] = {
     "LNRO0005",
     NULL,
     "VIRx",
-    0,
+    UID_INDEX_VRT,
     FALSE
   }
 };
@@ -71,7 +85,26 @@ typedef struct {
   ACPI_DEVICE_OBJECT    AcpiDevice;
 } ACPI_DEVICE_ENTRY;
 
-LIST_ENTRY  gDeviceList = INITIALIZE_LIST_HEAD_VARIABLE (gDeviceList);
+STATIC LIST_ENTRY  mDeviceList = INITIALIZE_LIST_HEAD_VARIABLE (mDeviceList);
+
+/**
+  Frees up the memory used by an ACPI_DEVICE_ENTRY
+
+  @param[in]  DeviceListEntry   Object that describes the device
+
+**/
+STATIC
+VOID
+FreeDeviceEntry (
+  IN ACPI_DEVICE_ENTRY  *DeviceListEntry
+  )
+{
+  if (DeviceListEntry) {
+    FREE_NON_NULL (DeviceListEntry->AcpiDevice.MemoryRangeArray);
+    FREE_NON_NULL (DeviceListEntry->AcpiDevice.InterruptArray);
+    FreePool (DeviceListEntry);
+  }
+}
 
 /**
   Creates and adds a device to the ACPI SSDT scope
@@ -232,13 +265,17 @@ AcpiProtocolReady (
   UINTN                        TableHandle;
   LIST_ENTRY                   *ListHead;
   LIST_ENTRY                   *CurrentNode;
-  ACPI_DEVICE_ENTRY            *DeviceObject;
+  LIST_ENTRY                   *NextNode;
+  ACPI_DEVICE_ENTRY            *DeviceEntry;
 
-  ListHead = (LIST_ENTRY *)Context;
+  ListHead  = (LIST_ENTRY *)Context;
+  RootNode  = NULL;
+  ScopeNode = NULL;
+  AcpiTable = NULL;
 
   Status = gBS->LocateProtocol (&gEfiAcpiTableProtocolGuid, NULL, (VOID **)&AcpiTableProtocol);
   if (EFI_ERROR (Status)) {
-    return;
+    goto Cleanup;
   }
 
   gBS->CloseEvent (Event);
@@ -256,18 +293,18 @@ AcpiProtocolReady (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to create SSDT header - %r\r\n", __FUNCTION__, Status));
     ASSERT_EFI_ERROR (Status);
-    return;
+    goto Cleanup;
   }
 
   Status = AmlCodeGenScope (SB_SCOPE, RootNode, &ScopeNode);
   if (EFI_ERROR (Status)) {
     ASSERT (0);
-    return;
+    goto Cleanup;
   }
 
   BASE_LIST_FOR_EACH (CurrentNode, ListHead) {
-    DeviceObject = (ACPI_DEVICE_ENTRY *)CurrentNode;
-    AddAcpiDevice (ScopeNode, &DeviceObject->AcpiDevice);
+    DeviceEntry = (ACPI_DEVICE_ENTRY *)CurrentNode;
+    AddAcpiDevice (ScopeNode, &DeviceEntry->AcpiDevice);
   }
 
   // Serialize the tree.
@@ -283,6 +320,7 @@ AcpiProtocolReady (
       __FUNCTION__,
       Status
       ));
+    ASSERT_EFI_ERROR (Status);
   } else {
     Status = AcpiTableProtocol->InstallAcpiTable (
                                   AcpiTableProtocol,
@@ -297,8 +335,21 @@ AcpiProtocolReady (
         __FUNCTION__,
         Status
         ));
+      ASSERT_EFI_ERROR (Status);
     }
   }
+
+Cleanup:
+  BASE_LIST_FOR_EACH_SAFE (CurrentNode, NextNode, ListHead) {
+    FreeDeviceEntry ((ACPI_DEVICE_ENTRY *)CurrentNode);
+  }
+
+  if (EFI_ERROR (Status)) {
+    FREE_NON_NULL (AcpiTable);
+  }
+
+  FREE_NON_NULL (ScopeNode);
+  FREE_NON_NULL (RootNode);
 }
 
 /**
@@ -327,6 +378,7 @@ AddDeviceObjectList (
   NVIDIA_DEVICE_TREE_INTERRUPT_DATA  *InterruptArray;
   UINT32                             NumberOfInterrupts;
   UINT32                             Index;
+  UINTN                              Uid;
 
   DeviceListEntry = (ACPI_DEVICE_ENTRY *)AllocateZeroPool (sizeof (ACPI_DEVICE_ENTRY));
   if (DeviceListEntry == NULL) {
@@ -336,7 +388,7 @@ AddDeviceObjectList (
   // Get resources
   RegisterArray      = NULL;
   NumberOfRegisters  = 0;
-  InterruptArray     = 0;
+  InterruptArray     = NULL;
   NumberOfInterrupts = 0;
 
   Status = GetDeviceTreeRegisters (DeviceHandle, NULL, &NumberOfRegisters);
@@ -354,6 +406,11 @@ AddDeviceObjectList (
       DEBUG ((DEBUG_ERROR, "%a: Failed to get register array - %r\r\n", __FUNCTION__, Status));
       goto Exit;
     }
+  } else if (Status == EFI_NOT_FOUND) {
+    Status = EFI_SUCCESS;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to determine number of registers - %r\r\n", __FUNCTION__, Status));
+    goto Exit;
   }
 
   Status = GetDeviceTreeInterrupts (DeviceHandle, NULL, &NumberOfInterrupts);
@@ -371,14 +428,20 @@ AddDeviceObjectList (
       DEBUG ((DEBUG_ERROR, "%a: Failed to get interrupt array - %r\r\n", __FUNCTION__, Status));
       goto Exit;
     }
+  } else if (Status == EFI_NOT_FOUND) {
+    Status = EFI_SUCCESS;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to determine number of interrupts - %r\r\n", __FUNCTION__, Status));
+    goto Exit;
   }
 
   // Build Device
-  // Write the name of the PCI device.
+  // Write the name of the device.
+  Uid = mUids[DeviceInfo->UidIndex];
   CopyMem (DeviceListEntry->AcpiDevice.Name, DeviceInfo->Name, AML_NAME_SEG_SIZE + 1);
-  DeviceListEntry->AcpiDevice.Name[AML_NAME_SEG_SIZE - 1] = AsciiFromHex (DeviceInfo->Uid & 0xF);
-  if (DeviceInfo->Uid > 0xF) {
-    DeviceListEntry->AcpiDevice.Name[AML_NAME_SEG_SIZE - 2] = AsciiFromHex ((DeviceInfo->Uid >> 4) & 0xF);
+  DeviceListEntry->AcpiDevice.Name[AML_NAME_SEG_SIZE - 1] = AsciiFromHex (Uid & 0xF);
+  if (Uid > 0xF) {
+    DeviceListEntry->AcpiDevice.Name[AML_NAME_SEG_SIZE - 2] = AsciiFromHex ((Uid >> 4) & 0xF);
   }
 
   CopyMem (DeviceListEntry->AcpiDevice.Hid, DeviceInfo->Hid, ACPI_HID_CID_STR_SIZE);
@@ -389,7 +452,7 @@ AddDeviceObjectList (
     ZeroMem (DeviceListEntry->AcpiDevice.Cid, ACPI_HID_CID_STR_SIZE);
   }
 
-  DeviceListEntry->AcpiDevice.Uid = DeviceInfo->Uid;
+  DeviceListEntry->AcpiDevice.Uid = Uid;
   DeviceListEntry->AcpiDevice.Cca = DeviceInfo->Cca;
 
   if (NumberOfRegisters != 0) {
@@ -437,21 +500,16 @@ AddDeviceObjectList (
     }
   }
 
-  DeviceInfo->Uid++;
+  mUids[DeviceInfo->UidIndex]++;
   InsertTailList (ListHead, &DeviceListEntry->Link);
 
 Exit:
   if (EFI_ERROR (Status)) {
-    if (DeviceListEntry->AcpiDevice.MemoryRangeArray != NULL) {
-      FreePool (DeviceListEntry->AcpiDevice.MemoryRangeArray);
-    }
-
-    if (DeviceListEntry->AcpiDevice.InterruptArray != NULL) {
-      FreePool (DeviceListEntry->AcpiDevice.InterruptArray);
-    }
-
-    FreePool (DeviceListEntry);
+    FreeDeviceEntry (DeviceListEntry);
   }
+
+  FREE_NON_NULL (RegisterArray);
+  FREE_NON_NULL (InterruptArray);
 
   return Status;
 }
@@ -476,6 +534,13 @@ BuildDeviceList (
   UINT32      DeviceIndex;
   UINT32      NumberOfNodes;
   UINT32      *NodeHandles;
+  UINT32      UidIndex;
+
+  NodeHandles = NULL;
+
+  for (UidIndex = 0; UidIndex < UID_INDEX_COUNT; UidIndex++) {
+    mUids[UidIndex] = 0;
+  }
 
   for (DeviceTypeIndex = 0; DeviceTypeIndex < ARRAY_SIZE (AcpiTableInfo); DeviceTypeIndex++) {
     NumberOfNodes = 0;
@@ -484,6 +549,7 @@ BuildDeviceList (
       continue;
     }
 
+    FREE_NON_NULL (NodeHandles);
     NodeHandles = (UINT32 *)AllocatePool (NumberOfNodes * sizeof (UINT32));
     if (NodeHandles == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate node handles\r\n", __FUNCTION__));
@@ -494,7 +560,6 @@ BuildDeviceList (
     Status = GetMatchingEnabledDeviceTreeNodes (AcpiTableInfo[DeviceTypeIndex].CompatibleId, NodeHandles, &NumberOfNodes);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to get node handles - %r\r\n", __FUNCTION__, Status));
-      FreePool (NodeHandles);
       continue;
     }
 
@@ -505,6 +570,8 @@ BuildDeviceList (
       }
     }
   }
+
+  FREE_NON_NULL (NodeHandles);
 
   if (!EFI_ERROR (Status)) {
     if (IsListEmpty (ListHead)) {
@@ -522,7 +589,7 @@ BuildDeviceList (
   @param[in]  SystemTable   Pointer to the System Table
 
   @retval EFI_SUCCESS           Initialization succeeded.
-  @retval EFI_OUT_OF_RESOURCES  Not enough memory for initialization.
+  @retval EFI_DEVICE_ERROR      Failed to register callback
 **/
 EFI_STATUS
 AcpiDtbSsdtGeneratorEntryPoint (
@@ -534,16 +601,20 @@ AcpiDtbSsdtGeneratorEntryPoint (
   EFI_EVENT   mAcpiNotificationEvent;
   VOID        *AcpiNotificationRegistration;
 
-  Status = BuildDeviceList (&gDeviceList);
+  Status = BuildDeviceList (&mDeviceList);
   if (EFI_ERROR (Status)) {
-    return EFI_SUCCESS;
+    if (Status == EFI_NOT_FOUND) {
+      return EFI_SUCCESS;
+    } else {
+      return Status;
+    }
   }
 
   mAcpiNotificationEvent = EfiCreateProtocolNotifyEvent (
                              &gEfiAcpiTableProtocolGuid,
                              TPL_CALLBACK,
                              AcpiProtocolReady,
-                             (VOID *)&gDeviceList,
+                             (VOID *)&mDeviceList,
                              &AcpiNotificationRegistration
                              );
   if (mAcpiNotificationEvent == NULL) {
