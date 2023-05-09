@@ -103,14 +103,6 @@
 			nv-erst-cached-pages-count = <16>;
 			nv-erst-uncached-pages-count = <1>;
 		};
-		/* Shared memory between StMM and Secure world (TF-A) */
-		stmmsec-memory {
-			description = "stmmsec-memory";
-			pages-count = <1>;
-			base-address = <0x00000000 0x8B7FE000>;
-			attributes = <0x3>; /* read-write */
-			nv-sp-shared-buffer-id = <4>;
-		};
 		txbuffer: tx-buffer {
 			description = "tx-buffer";
 			pages-count = <1>;
