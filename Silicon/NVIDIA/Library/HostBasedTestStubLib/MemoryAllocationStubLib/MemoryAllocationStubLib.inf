@@ -1,24 +1,27 @@
 ## @file
-#  Instance of Memory Allocation Library based on POSIX APIs
 #
-#  Uses POSIX APIs malloc() and free() to allocate and free memory.
+#  Stubbable instance of Memory Allocation Library based on POSIX APIs
 #
+#  Uses POSIX APIs malloc() and free() to allocate and free memory.  But also
+#  allow failures in malloc to be simulated.
+#
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018 - 2020, Intel Corporation. All rights reserved.<BR>
-#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
 
 [Defines]
   INF_VERSION     = 0x00010005
-  BASE_NAME       = MemoryAllocationLibPosix
-  MODULE_UNI_FILE = MemoryAllocationLibPosix.uni
-  FILE_GUID       = A1672454-A3D3-4AAC-A86B-8D63132BBB91
+  BASE_NAME       = MemoryAllocationStubLib
+  MODULE_UNI_FILE = MemoryAllocationStubLib.uni
+  FILE_GUID       = 407d32a7-9b64-4d04-ac84-4c998c56c53b
   MODULE_TYPE     = UEFI_DRIVER
   VERSION_STRING  = 1.0
   LIBRARY_CLASS   = MemoryAllocationLib|HOST_APPLICATION
 
 [Sources]
-  MemoryAllocationLibPosix.c
+  MemoryAllocationStubLib.c
 
 [Packages]
   MdePkg/MdePkg.dec

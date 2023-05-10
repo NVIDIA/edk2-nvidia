@@ -1,8 +1,12 @@
 // /** @file
-// Instance of Memory Allocation Library based on POSIX APIs
+// Stubbable instance of Memory Allocation Library based on POSIX APIs
 //
-// Uses POSIX APIs malloc() and free() to allocate and free memory.
+// Uses POSIX APIs malloc() and free() to allocate and free memory.  But also
+// allow failures in malloc to be simulated.
 //
+// This was originally a fork of MemoryAllocationLibPosix.
+//
+// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
 //
 // SPDX-License-Identifier: BSD-2-Clause-Patent

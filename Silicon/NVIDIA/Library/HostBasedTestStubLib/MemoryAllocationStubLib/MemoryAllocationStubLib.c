@@ -1,9 +1,16 @@
 /** @file
-  Instance of Memory Allocation Library based on POSIX APIs
+  Stubbable instance of Memory Allocation Library based on POSIX APIs
 
-  Uses POSIX APIs malloc() and free() to allocate and free memory.
+  Uses POSIX APIs malloc() and free() to allocate and free memory.  But also
+  allow failures in malloc to be simulated.
 
+  This can be used as a drop-in replacement for MemoryAllocationLibPosix.
+  However, if Mock calls are used to simulate allocation failures, then
+  MemoryAllocationStubLibInit() must be called to reset state.
+
+  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2018 - 2020, Intel Corporation. All rights reserved.<BR>
+
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -13,6 +20,8 @@
 #include <Uefi.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DebugLib.h>
+
+UINT32  mAvailableAllocations = MAX_UINT32;
 
 ///
 /// Signature for PAGE_HEAD structure
@@ -181,6 +190,7 @@ AllocateAlignedPages (
   PageHeadPtr = (VOID *)((UINTN)PageHead.AlignedBuffer - sizeof (PAGE_HEAD));
   memcpy (PageHeadPtr, &PageHead, sizeof (PAGE_HEAD));
 
+  // cppcheck-suppress memleak
   return PageHead.AlignedBuffer;
 }
 
@@ -299,7 +309,28 @@ AllocatePool (
   IN UINTN  AllocationSize
   )
 {
-  return malloc (AllocationSize);
+  if (mAvailableAllocations > 0) {
+    mAvailableAllocations--;
+    return malloc (AllocationSize);
+  }
+
+  // Simulate an allocation failure.
+  return NULL;
+}
+
+/**
+  Set the number of allocations available before AllocatePool() begins failing.
+
+  Allows tests to simulate memory allocation failures.
+
+  @param[In]  AvailableAllocations  Number of available allocations
+ */
+VOID
+MockAllocatePool (
+  UINT64  AvailableAllocations
+  )
+{
+  mAvailableAllocations = AvailableAllocations;
 }
 
 /**
@@ -635,4 +666,22 @@ FreePool (
   )
 {
   free (Buffer);
+}
+
+/**
+  Initialize MemoryAllocationLib stub support.
+
+  This should be called once before running tests to reset state after a test
+  runs with Mock calls to this library.  If the test does not make Mock calls,
+  this init is not necessary.
+
+  @retval None
+
+**/
+VOID
+MemoryAllocationStubLibInit (
+  VOID
+  )
+{
+  MockAllocatePool (MAX_UINT32);
 }
