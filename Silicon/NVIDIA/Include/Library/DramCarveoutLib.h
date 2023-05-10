@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -26,7 +26,7 @@ typedef struct {
   the carveout regions.
   This function is called by the platform memory initialization library.
 
-  @param  DramRegions              Sorted list of available DRAM regions
+  @param  InputDramRegions         Sorted list of available DRAM regions
   @param  DramRegionsCount         Number of regions in DramRegions.
   @param  UefiDramRegionIndex      Index of uefi usable regions in DramRegions.
   @param  CarveoutRegions          Sorted list of carveout regions that will be
@@ -40,12 +40,12 @@ typedef struct {
 **/
 EFI_STATUS
 InstallDramWithCarveouts (
-  IN  NVDA_MEMORY_REGION  *DramRegions,
-  IN  UINTN               DramRegionsCount,
-  IN  UINTN               UefiDramRegionIndex,
-  IN  NVDA_MEMORY_REGION  *CarveoutRegions,
-  IN  UINTN               CarveoutRegionsCount,
-  OUT UINTN               *FinalRegionsCount
+  IN  CONST NVDA_MEMORY_REGION  *InputDramRegions,
+  IN  UINTN                     DramRegionsCount,
+  IN  UINTN                     UefiDramRegionIndex,
+  IN  NVDA_MEMORY_REGION        *CarveoutRegions,
+  IN  UINTN                     CarveoutRegionsCount,
+  OUT UINTN                     *FinalRegionsCount
   );
 
 #endif //__DRAM_CARVEOUT_LIB_H__

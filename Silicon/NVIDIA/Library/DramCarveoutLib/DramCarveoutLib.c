@@ -14,6 +14,7 @@
 #include <Pi/PiHob.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/PrePiHobListPointerLib.h>
+#include <Library/MemoryAllocationLib.h>
 
 /**
   Migrate Hob list to the new region.
@@ -136,7 +137,7 @@ MemoryRegionSort (
   removing the carveout regions.
   This function is called by the platform memory initialization library.
 
-  @param  DramRegions              Sorted list of available DRAM regions
+  @param  InputDramRegions              Sorted list of available DRAM regions
   @param  DramRegionsCount         Number of regions in DramRegions.
   @param  UefiDramRegionIndex      Index of uefi usable regions in DramRegions.
   @param  CarveoutRegions          Sorted list of carveout regions that will be
@@ -150,14 +151,15 @@ MemoryRegionSort (
 **/
 EFI_STATUS
 InstallDramWithCarveouts (
-  IN  NVDA_MEMORY_REGION  *DramRegions,
-  IN  UINTN               DramRegionsCount,
-  IN  UINTN               UefiDramRegionIndex,
-  IN  NVDA_MEMORY_REGION  *CarveoutRegions,
-  IN  UINTN               CarveoutRegionsCount,
-  OUT UINTN               *FinalRegionsCount
+  IN  CONST NVDA_MEMORY_REGION  *InputDramRegions,
+  IN  UINTN                     DramRegionsCount,
+  IN  UINTN                     UefiDramRegionIndex,
+  IN  NVDA_MEMORY_REGION        *CarveoutRegions,
+  IN  UINTN                     CarveoutRegionsCount,
+  OUT UINTN                     *FinalRegionsCount
   )
 {
+  NVDA_MEMORY_REGION           *DramRegions       = NULL;
   UINTN                        DramIndex          = 0;
   UINTN                        CarveoutIndex      = 0;
   UINTN                        InstalledRegions   = 0;
@@ -168,6 +170,14 @@ InstallDramWithCarveouts (
   EFI_PHYSICAL_ADDRESS         CarveoutEnd;
   EFI_PHYSICAL_ADDRESS         DramEnd;
   UINTN                        RegionSize;
+
+  DramRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * DramRegionsCount);
+  ASSERT (DramRegions != NULL);
+  if (DramRegions == NULL) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  CopyMem (DramRegions, InputDramRegions, sizeof (NVDA_MEMORY_REGION) * DramRegionsCount);
 
   MemoryRegionSort (DramRegions, DramRegionsCount);
   for (DramIndex = 0; DramIndex < DramRegionsCount; DramIndex++) {

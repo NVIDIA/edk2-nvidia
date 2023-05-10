@@ -43,7 +43,6 @@ typedef enum {
 } TEGRA_BOOT_TYPE;
 
 typedef struct {
-  NVDA_MEMORY_REGION    *InputDramRegions;
   NVDA_MEMORY_REGION    *DramRegions;
   UINTN                 DramRegionsCount;
   UINTN                 UefiDramRegionIndex;
