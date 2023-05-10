@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -15,6 +15,7 @@
 #include <Library/SortLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/PrePiHobListPointerLib.h>
+#include <Library/MemoryAllocationLib.h>
 
 /**
   Migrate Hob list to the new region.
@@ -132,7 +133,7 @@ MemoryRegionCompare (
   removing the carveout regions.
   This function is called by the platform memory initialization library.
 
-  @param  DramRegions              Sorted list of available DRAM regions
+  @param  InputDramRegions              Sorted list of available DRAM regions
   @param  DramRegionsCount         Number of regions in DramRegions.
   @param  UefiDramRegionsCount     Number of uefi usable regions in DramRegions.
   @param  CarveoutRegions          Sorted list of carveout regions that will be
@@ -146,20 +147,29 @@ MemoryRegionCompare (
 **/
 EFI_STATUS
 InstallDramWithCarveouts (
-  IN  NVDA_MEMORY_REGION  *DramRegions,
-  IN  UINTN               DramRegionsCount,
-  IN  UINTN               UefiDramRegionsCount,
-  IN  NVDA_MEMORY_REGION  *CarveoutRegions,
-  IN  UINTN               CarveoutRegionsCount,
-  OUT UINTN               *FinalRegionsCount
+  IN  CONST NVDA_MEMORY_REGION  *InputDramRegions,
+  IN  UINTN                     DramRegionsCount,
+  IN  UINTN                     UefiDramRegionsCount,
+  IN  NVDA_MEMORY_REGION        *CarveoutRegions,
+  IN  UINTN                     CarveoutRegionsCount,
+  OUT UINTN                     *FinalRegionsCount
   )
 {
+  NVDA_MEMORY_REGION           *DramRegions       = NULL;
   UINTN                        DramIndex          = 0;
   UINTN                        CarveoutIndex      = 0;
   UINTN                        InstalledRegions   = 0;
   EFI_PHYSICAL_ADDRESS         LargestRegionStart = 0;
   UINTN                        MaxSize            = 0;
   EFI_RESOURCE_ATTRIBUTE_TYPE  ResourceAttributes;
+
+  DramRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * DramRegionsCount);
+  ASSERT (DramRegions != NULL);
+  if (DramRegions == NULL) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  CopyMem (DramRegions, InputDramRegions, sizeof (NVDA_MEMORY_REGION) * DramRegionsCount);
 
   PerformQuickSort (
     (VOID *)DramRegions,
