@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -233,18 +233,6 @@ InstallSystemResources (
     return EFI_DEVICE_ERROR;
   }
 
-  PlatformInfo->InputDramRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * PlatformInfo->DramRegionsCount);
-  ASSERT (PlatformInfo->InputDramRegions != NULL);
-  if (PlatformInfo->InputDramRegions == NULL) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  CopyMem (
-    PlatformInfo->InputDramRegions,
-    PlatformInfo->DramRegions,
-    sizeof (NVDA_MEMORY_REGION) * PlatformInfo->DramRegionsCount
-    );
-
   PlatformInfo->InputCarveoutRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * PlatformInfo->CarveoutRegionsCount);
   ASSERT (PlatformInfo->InputCarveoutRegions != NULL);
   if (PlatformInfo->InputCarveoutRegions == NULL) {
@@ -261,7 +249,7 @@ InstallSystemResources (
 
   FinalDramRegionsCount = 0;
   Status                = InstallDramWithCarveouts (
-                            PlatformInfo->DramRegions,
+                            (CONST NVDA_MEMORY_REGION *)PlatformInfo->DramRegions,
                             PlatformInfo->DramRegionsCount,
                             PlatformInfo->UefiDramRegionsCount,
                             PlatformInfo->CarveoutRegions,
