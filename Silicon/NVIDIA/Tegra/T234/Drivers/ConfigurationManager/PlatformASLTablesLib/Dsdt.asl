@@ -35,18 +35,6 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
       Return (Arg3)
     }
 
-    Device(USB0) {
-      Name (_HID, "NVDA0214")
-      Name (_CID, "PNP0D10")
-      Name (_UID, 0)
-      Name (_CCA, ZERO)
-
-      Name(_CRS, ResourceTemplate () {
-        Memory32Fixed(ReadWrite, 0x03610000, 0x40000)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xc3 }
-      })
-    }
-
     //---------------------------------------------------------------------
     // dla0 @ 15880000
     // dla1 @ 158c0000

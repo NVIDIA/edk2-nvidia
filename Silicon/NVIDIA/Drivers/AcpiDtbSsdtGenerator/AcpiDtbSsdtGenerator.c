@@ -37,6 +37,7 @@
 
 typedef enum {
   UID_INDEX_VRT = 0,
+  UID_INDEX_USB = 1,
 
   UID_INDEX_COUNT
 } UID_INDEX;
@@ -59,6 +60,55 @@ STATIC ACPI_DEVICE_TABLE_INFO  AcpiTableInfo[] = {
     NULL,
     "VIRx",
     UID_INDEX_VRT,
+    FALSE
+  },
+  // USB
+  {
+    "nvidia,tegra186-xhci",
+    "NVDA0214",
+    "PNP0D10",
+    "USBx",
+    UID_INDEX_USB,
+    FALSE
+  },
+  {
+    "nvidia,tegra186-xusb",
+    "NVDA0214",
+    "PNP0D10",
+    "USBx",
+    UID_INDEX_USB,
+    FALSE
+  },
+  {
+    "nvidia,tegra194-xhci",
+    "NVDA0214",
+    "PNP0D10",
+    "USBx",
+    UID_INDEX_USB,
+    FALSE
+  },
+  {
+    "nvidia,tegra194-xusb",
+    "NVDA0214",
+    "PNP0D10",
+    "USBx",
+    UID_INDEX_USB,
+    FALSE
+  },
+  {
+    "nvidia,tegra234-xhci",
+    "NVDA0214",
+    "PNP0D10",
+    "USBx",
+    UID_INDEX_USB,
+    FALSE
+  },
+  {
+    "nvidia,tegra234-xusb",
+    "NVDA0214",
+    "PNP0D10",
+    "USBx",
+    UID_INDEX_USB,
     FALSE
   }
 };
@@ -407,6 +457,7 @@ AddDeviceObjectList (
       goto Exit;
     }
   } else if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DEBUG_INFO, "%a: Device has no registers\n", __FUNCTION__));
     Status = EFI_SUCCESS;
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Failed to determine number of registers - %r\r\n", __FUNCTION__, Status));
@@ -429,6 +480,7 @@ AddDeviceObjectList (
       goto Exit;
     }
   } else if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DEBUG_INFO, "%a: Device has no interrupts\n", __FUNCTION__));
     Status = EFI_SUCCESS;
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Failed to determine number of interrupts - %r\r\n", __FUNCTION__, Status));
@@ -466,6 +518,14 @@ AddDeviceObjectList (
     for (Index = 0; Index < NumberOfRegisters; Index++) {
       DeviceListEntry->AcpiDevice.MemoryRangeArray[Index].BaseAddress = RegisterArray[Index].BaseAddress;
       DeviceListEntry->AcpiDevice.MemoryRangeArray[Index].Size        = RegisterArray[Index].Size;
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: Added Register %a 0x%llx++0x%llx\n",
+        __FUNCTION__,
+        RegisterArray[Index].Name,
+        DeviceListEntry->AcpiDevice.MemoryRangeArray[Index].BaseAddress,
+        DeviceListEntry->AcpiDevice.MemoryRangeArray[Index].Size
+        ));
     }
   }
 
@@ -478,24 +538,39 @@ AddDeviceObjectList (
 
     DeviceListEntry->AcpiDevice.InterruptArrayCount = NumberOfInterrupts;
     for (Index = 0; Index < NumberOfInterrupts; Index++) {
-      DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt = InterruptArray[Index].Interrupt;
-      if (InterruptArray[Index].Type == INTERRUPT_SPI_TYPE) {
-        DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt += DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET;
-      } else if (InterruptArray[Index].Type == INTERRUPT_PPI_TYPE) {
-        DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt += DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET;
-      }
-
-      DeviceListEntry->AcpiDevice.InterruptArray[Index].Flags = 0;
-      if ((InterruptArray[Index].Flag == INTERRUPT_LO_TO_HI_EDGE) ||
-          (InterruptArray[Index].Flag == INTERRUPT_HI_TO_LO_EDGE))
+      //Ignore the PMC interrupts
+      if (InterruptArray[Index].ControllerCompatible && AsciiStrStr(InterruptArray[Index].ControllerCompatible, "pmc") == NULL)
       {
-        DeviceListEntry->AcpiDevice.InterruptArray[Index].Flags |= BIT0;
-      }
+        DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt = InterruptArray[Index].Interrupt;
+        if (InterruptArray[Index].Type == INTERRUPT_SPI_TYPE) {
+          DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt += DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET;
+        } else if (InterruptArray[Index].Type == INTERRUPT_PPI_TYPE) {
+          DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt += DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET;
+        }
 
-      if ((InterruptArray[Index].Flag == INTERRUPT_LO_LEVEL) ||
-          (InterruptArray[Index].Flag == INTERRUPT_HI_TO_LO_EDGE))
-      {
-        DeviceListEntry->AcpiDevice.InterruptArray[Index].Flags |= BIT1;
+        DeviceListEntry->AcpiDevice.InterruptArray[Index].Flags = 0;
+        if ((InterruptArray[Index].Flag == INTERRUPT_LO_TO_HI_EDGE) ||
+            (InterruptArray[Index].Flag == INTERRUPT_HI_TO_LO_EDGE))
+        {
+          DeviceListEntry->AcpiDevice.InterruptArray[Index].Flags |= BIT0;
+        }
+
+        if ((InterruptArray[Index].Flag == INTERRUPT_LO_LEVEL) ||
+            (InterruptArray[Index].Flag == INTERRUPT_HI_TO_LO_EDGE))
+        {
+          DeviceListEntry->AcpiDevice.InterruptArray[Index].Flags |= BIT1;
+        }
+
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: Added Interrupt %a %d, Flags %d\n",
+          __FUNCTION__,
+          InterruptArray[Index].Name,
+          DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt,
+          DeviceListEntry->AcpiDevice.InterruptArray[Index].Flags
+          ));
+      } else {
+        DEBUG ((DEBUG_INFO, "%a: Skipping interrupt for controller %a\n", __FUNCTION__, InterruptArray[Index].ControllerCompatible));
       }
     }
   }
@@ -530,10 +605,15 @@ BuildDeviceList (
   )
 {
   EFI_STATUS  Status;
+  EFI_STATUS  ReturnStatus;
   UINT32      DeviceTypeIndex;
-  UINT32      DeviceIndex;
-  UINT32      NumberOfNodes;
+  UINT32      NumberOfNodes[ARRAY_SIZE (AcpiTableInfo)];
+  UINT32      TotalNumberOfNodes;
+  UINT32      NodeBaseIndex;
+  UINT32      NodeIndex;
+  UINT32      CompareNodeIndex;
   UINT32      *NodeHandles;
+  UINT32      NodeHandle;
   UINT32      UidIndex;
 
   NodeHandles = NULL;
@@ -542,44 +622,83 @@ BuildDeviceList (
     mUids[UidIndex] = 0;
   }
 
+  // Count total nodes
+  TotalNumberOfNodes = 0;
   for (DeviceTypeIndex = 0; DeviceTypeIndex < ARRAY_SIZE (AcpiTableInfo); DeviceTypeIndex++) {
-    NumberOfNodes = 0;
-    Status        = GetMatchingEnabledDeviceTreeNodes (AcpiTableInfo[DeviceTypeIndex].CompatibleId, NULL, &NumberOfNodes);
+    NumberOfNodes[DeviceTypeIndex] = 0;
+    Status                         = GetMatchingEnabledDeviceTreeNodes (AcpiTableInfo[DeviceTypeIndex].CompatibleId, NULL, &NumberOfNodes[DeviceTypeIndex]);
     if (Status != EFI_BUFFER_TOO_SMALL) {
       continue;
     }
 
-    FREE_NON_NULL (NodeHandles);
-    NodeHandles = (UINT32 *)AllocatePool (NumberOfNodes * sizeof (UINT32));
-    if (NodeHandles == NULL) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate node handles\r\n", __FUNCTION__));
-      ASSERT (FALSE);
-      continue;
-    }
+    TotalNumberOfNodes += NumberOfNodes[DeviceTypeIndex];
+  }
 
-    Status = GetMatchingEnabledDeviceTreeNodes (AcpiTableInfo[DeviceTypeIndex].CompatibleId, NodeHandles, &NumberOfNodes);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get node handles - %r\r\n", __FUNCTION__, Status));
-      continue;
-    }
+  // Get all the nodes
+  NodeHandles = (UINT32 *)AllocateZeroPool (TotalNumberOfNodes * sizeof (UINT32));
+  if (NodeHandles == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate node handles\r\n", __FUNCTION__)); // JDS TODO - use new asserts
+    ASSERT (FALSE);
+    return EFI_OUT_OF_RESOURCES;
+  }
 
-    for (DeviceIndex = 0; DeviceIndex < NumberOfNodes; DeviceIndex++) {
-      Status = AddDeviceObjectList (ListHead, NodeHandles[DeviceIndex], &AcpiTableInfo[DeviceTypeIndex]);
-      if (!EFI_ERROR (Status)) {
-        break;
+  NodeBaseIndex = 0;
+  for (DeviceTypeIndex = 0; DeviceTypeIndex < ARRAY_SIZE (AcpiTableInfo); DeviceTypeIndex++) {
+    if (NumberOfNodes[DeviceTypeIndex] > 0) {
+      Status = GetMatchingEnabledDeviceTreeNodes (AcpiTableInfo[DeviceTypeIndex].CompatibleId, &NodeHandles[NodeBaseIndex], &NumberOfNodes[DeviceTypeIndex]);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to get node handles for %a - %r\r\n", __FUNCTION__, AcpiTableInfo[DeviceTypeIndex].CompatibleId, Status));
+      }
+
+      NodeBaseIndex += NumberOfNodes[DeviceTypeIndex];
+    }
+  }
+
+  // Add only the unique nodes
+  ReturnStatus  = EFI_SUCCESS;
+  NodeBaseIndex = 0;
+  for (DeviceTypeIndex = 0; DeviceTypeIndex < ARRAY_SIZE (AcpiTableInfo); DeviceTypeIndex++) {
+    for (NodeIndex = 0; NodeIndex < NumberOfNodes[DeviceTypeIndex]; NodeIndex++) {
+      NodeHandle = NodeHandles[NodeBaseIndex + NodeIndex];
+      if (NodeHandle == 0) {
+        continue;
+      } else {
+        // Search previous nodes for duplicate, and skip this if found. Assume no duplicates within DeviceType
+        for (CompareNodeIndex = 0; CompareNodeIndex < NodeBaseIndex; CompareNodeIndex++) {
+          if (NodeHandles[CompareNodeIndex] == NodeHandle) {
+            DEBUG ((DEBUG_INFO, "%a: Skipping %a Node %d as duplicate of previously added node\n", __FUNCTION__, AcpiTableInfo[DeviceTypeIndex].CompatibleId, NodeIndex));
+            break;
+          }
+        }
+
+        // Stop processing this node if we found a duplicate
+        if (CompareNodeIndex < NodeBaseIndex) {
+          continue;
+        }
+      }
+
+      DEBUG ((DEBUG_INFO, "%a: Adding %a Node %d\n", __FUNCTION__, AcpiTableInfo[DeviceTypeIndex].CompatibleId, NodeIndex));
+      Status = AddDeviceObjectList (ListHead, NodeHandle, &AcpiTableInfo[DeviceTypeIndex]);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error adding %a Node %d: %r\n", __FUNCTION__, AcpiTableInfo[DeviceTypeIndex].CompatibleId, NodeIndex, Status));
+        if (!EFI_ERROR (ReturnStatus)) {
+          ReturnStatus = Status;
+        }
       }
     }
+
+    NodeBaseIndex += NodeIndex;
   }
 
   FREE_NON_NULL (NodeHandles);
 
-  if (!EFI_ERROR (Status)) {
+  if (!EFI_ERROR (ReturnStatus)) {
     if (IsListEmpty (ListHead)) {
-      Status = EFI_NOT_FOUND;
+      ReturnStatus = EFI_NOT_FOUND;
     }
   }
 
-  return Status;
+  return ReturnStatus;
 }
 
 /**
