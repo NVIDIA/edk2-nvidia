@@ -163,3 +163,9 @@
   # BasicProfiler Support
   #
   INF Silicon/NVIDIA/Drivers/BasicProfilerDxe/BasicProfilerDxe.inf
+
+  #
+  # TPM
+  #
+  INF SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf
+  INF SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf
