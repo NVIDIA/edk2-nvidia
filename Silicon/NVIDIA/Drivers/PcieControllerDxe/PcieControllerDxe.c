@@ -390,15 +390,81 @@ RetrainLink (
 STATIC
 EFI_STATUS
 EFIAPI
-KickGpu (
-  PCIE_CONTROLLER_PRIVATE  *Private,
-  IN  EFI_HANDLE           ControllerHandle
+ReadSenseGpio (
+  IN  PCIE_CONTROLLER_PRIVATE  *Private,
+  IN  EMBEDDED_GPIO            *Gpio,
+  OUT BOOLEAN                  *Sensed
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       SenseCount;
+  UINTN       Value;
+
+  if ((Private == NULL) || (Gpio == NULL) || (Sensed == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  for (SenseCount = 0; SenseCount < GPU_SENSE_MAX_COUNT; SenseCount++) {
+    Status = Gpio->Get (Gpio, Private->GpuKickGpioSense, &Value);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "ERROR: Gpio get failed: %r\r\n", Status));
+      return Status;
+    }
+
+    if (Value == 0) {
+      *Sensed = TRUE;
+      break;
+    }
+
+    gBS->Stall (GPU_SENSE_DELAY);
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+ToggleKickGpio (
+  IN PCIE_CONTROLLER_PRIVATE  *Private,
+  IN EMBEDDED_GPIO            *Gpio
+  )
+{
+  EFI_STATUS  Status;
+
+  if ((Private == NULL) || (Gpio == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = Gpio->Set (Gpio, Private->GpuKickGpioReset, GPIO_MODE_OUTPUT_0);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
+    return Status;
+  }
+
+  gBS->Stall (GPU_RESET_DELAY);
+
+  Status = Gpio->Set (Gpio, Private->GpuKickGpioReset, GPIO_MODE_OUTPUT_1);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
+    return Status;
+  }
+
+  gBS->Stall (2 * GPU_RESET_DELAY);
+
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+SenseGpu (
+  IN PCIE_CONTROLLER_PRIVATE  *Private,
+  IN EFI_HANDLE               ControllerHandle
   )
 {
   EFI_STATUS     Status;
   EMBEDDED_GPIO  *Gpio;
-  UINTN          SenseCount;
-  UINTN          Value;
   BOOLEAN        GPUSensed;
   UINT32         KickCount;
 
@@ -415,40 +481,31 @@ KickGpu (
   KickCount = 0;
   GPUSensed = FALSE;
 
-  for (KickCount = 0; KickCount <= GPU_KICK_MAX_COUNT; KickCount++) {
-    for (SenseCount = 0; SenseCount < GPU_SENSE_MAX_COUNT; SenseCount++) {
-      Status = Gpio->Get (Gpio, Private->GpuKickGpioSense, &Value);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "ERROR: Gpio get failed: %r\r\n", Status));
-        return Status;
-      }
+  Status = ReadSenseGpio (Private, Gpio, &GPUSensed);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "ERROR: Gpio sense failed: %r\r\n", Status));
+    return Status;
+  }
 
-      if (Value == 0) {
-        GPUSensed = TRUE;
-        break;
-      }
+  if (GPUSensed == TRUE) {
+    return Status;
+  }
 
-      gBS->Stall (GPU_SENSE_DELAY);
+  for (KickCount = 0; KickCount < GPU_KICK_MAX_COUNT; KickCount++) {
+    Status = ToggleKickGpio (Private, Gpio);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "ERROR: Gpio kick toggle failed: %r\r\n", Status));
+      return Status;
     }
 
-    if (GPUSensed) {
-      return EFI_SUCCESS;
-    } else {
-      Status = Gpio->Set (Gpio, Private->GpuKickGpioReset, GPIO_MODE_OUTPUT_0);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
-        return Status;
-      }
+    Status = ReadSenseGpio (Private, Gpio, &GPUSensed);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "ERROR: Gpio sense failed: %r\r\n", Status));
+      return Status;
+    }
 
-      gBS->Stall (GPU_RESET_DELAY);
-
-      Status = Gpio->Set (Gpio, Private->GpuKickGpioReset, GPIO_MODE_OUTPUT_1);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
-        return Status;
-      }
-
-      gBS->Stall (GPU_SENSE_DELAY);
+    if (GPUSensed == TRUE) {
+      return Status;
     }
   }
 
@@ -1642,9 +1699,9 @@ DeviceDiscoveryNotify (
 
       Private->BusMask = RootBridge->Bus.Limit;
 
-      Status = KickGpu (Private, ControllerHandle);
+      Status = SenseGpu (Private, ControllerHandle);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Unable to kick gpu (%r)\r\n", __FUNCTION__, Status));
+        DEBUG ((EFI_D_ERROR, "%a: Unable to sense gpu (%r)\r\n", __FUNCTION__, Status));
       }
 
       Status = InitializeController (Private, ControllerHandle);
