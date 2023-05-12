@@ -1645,7 +1645,6 @@ DeviceDiscoveryNotify (
       Status = KickGpu (Private, ControllerHandle);
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "%a: Unable to kick gpu (%r)\r\n", __FUNCTION__, Status));
-        break;
       }
 
       Status = InitializeController (Private, ControllerHandle);
