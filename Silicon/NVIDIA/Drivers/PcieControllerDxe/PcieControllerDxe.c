@@ -1367,6 +1367,8 @@ DeviceDiscoveryNotify (
   CONST VOID                *RangesProperty      = NULL;
   CONST VOID                *HbmRangesProperty   = NULL;
   CONST UINT32              *GpuKickGpioProperty = NULL;
+  CONST UINT32              *PxmDmnStartProperty = NULL;
+  CONST UINT32              *NumPxmDmnProperty   = NULL;
   INT32                     PropertySize         = 0;
   INT32                     AddressCells;
   INT32                     PciAddressCells;
@@ -1677,8 +1679,29 @@ DeviceDiscoveryNotify (
           break;
         }
 
-        Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID ((Private->PcieRootBridgeConfigurationIo.SegmentNumber >> 4) & 0xF);
-        Private->PcieRootBridgeConfigurationIo.NumProximityDomains  = TH500_GPU_MAX_NR_MEM_PARTITIONS;
+        PxmDmnStartProperty = fdt_getprop (
+                                DeviceTreeNode->DeviceTreeBase,
+                                DeviceTreeNode->NodeOffset,
+                                "pxm-domain-start",
+                                &PropertySize
+                                );
+        if (PxmDmnStartProperty != NULL) {
+          Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = SwapBytes32 (PxmDmnStartProperty[0]);
+        } else {
+          Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID ((Private->PcieRootBridgeConfigurationIo.SegmentNumber >> 4) & 0xF);
+        }
+
+        NumPxmDmnProperty = fdt_getprop (
+                              DeviceTreeNode->DeviceTreeBase,
+                              DeviceTreeNode->NodeOffset,
+                              "num-pxm-domain",
+                              &PropertySize
+                              );
+        if (NumPxmDmnProperty != NULL) {
+          Private->PcieRootBridgeConfigurationIo.NumProximityDomains = SwapBytes32 (NumPxmDmnProperty[0]);
+        } else {
+          Private->PcieRootBridgeConfigurationIo.NumProximityDomains = TH500_GPU_MAX_NR_MEM_PARTITIONS;
+        }
       }
 
       GpuKickGpioProperty = fdt_getprop (
