@@ -24,6 +24,104 @@ CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType2 = {
   NULL
 };
 
+UINT8
+EFIAPI
+GetMemoryDeviceCount (
+  IN  CM_SMBIOS_PRIVATE_DATA  *Private
+  )
+{
+  VOID        *DtbBase = Private->DtbBase;
+  CONST VOID  *Property;
+  INT32       Length;
+  UINTN       Index;
+  INT32       NodeOffset;
+  CHAR8       Type2tNodeStr[] = "/firmware/smbios/type2@xx";
+  UINT8       HandleCount;
+  UINT8       CurrentCount;
+
+  HandleCount = 0;
+
+  for (Index = 0; Index < MAX_TYPE2_COUNT; Index++) {
+    AsciiSPrint (Type2tNodeStr, sizeof (Type2tNodeStr), "/firmware/smbios/type2@%u", Index);
+    NodeOffset = fdt_path_offset (DtbBase, Type2tNodeStr);
+    if (NodeOffset < 0) {
+      break;
+    }
+
+    Property = fdt_getprop (DtbBase, NodeOffset, "memory-device-count", &Length);
+    if (Property != NULL) {
+      CurrentCount = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+
+      //
+      // Make sure every Type 2 has the the same number of memory devices, if it has.
+      //
+      if (HandleCount == 0) {
+        HandleCount = CurrentCount;
+      } else if (HandleCount != CurrentCount) {
+        DEBUG ((DEBUG_ERROR, "%a: Memory device count for every Type 2 is not the same\n", __FUNCTION__));
+        HandleCount = 0;
+        ASSERT (FALSE);
+        break;
+      }
+    }
+  }
+
+  return HandleCount;
+}
+
+CONTAINED_CM_OBJECTS *
+EFIAPI
+GetMemoryDeviceInfoToken (
+  IN  CM_SMBIOS_PRIVATE_DATA  *Private,
+  IN  UINT8                   SocketNum,
+  IN  UINT8                   HandleCount
+  )
+{
+  UINTN                           Index;
+  UINTN                           Index2;
+  UINTN                           DramIndex;
+  EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
+  CONTAINED_CM_OBJECTS            *Objects;
+  CM_SMBIOS_MEMORY_DEVICE_INFO    *CmMemDevicesInfo;
+
+  if ((HandleCount == 0) || (SocketNum == 0)) {
+    return NULL;
+  } else {
+    // 0 based.
+    SocketNum--;
+  }
+
+  Objects   = NULL;
+  Repo      = Private->Repo;
+  DramIndex = HandleCount * SocketNum;
+
+  for (Index = 0; Index < Private->CmSmbiosTableCount; Index++) {
+    Repo--;
+    if (Repo->CmObjectId == CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjMemoryDeviceInfo)) {
+      CmMemDevicesInfo = (CM_SMBIOS_MEMORY_DEVICE_INFO *)Repo->CmObjectPtr;
+      Objects          = AllocateZeroPool (HandleCount * sizeof (CONTAINED_CM_OBJECTS));
+      if (Objects != NULL) {
+        for (Index2 = 0; Index2 < HandleCount; Index2++) {
+          if (Repo->CmObjectCount > DramIndex) {
+            Objects[Index2].GeneratorId = Repo->CmObjectId;
+            Objects[Index2].CmObjToken  = CmMemDevicesInfo[DramIndex].MemoryDeviceInfoToken;
+          } else {
+            DEBUG ((DEBUG_ERROR, "%a: Not enough memory devices for Type2\n", __FUNCTION__));
+            FreePool (Objects);
+            return NULL;
+          }
+
+          DramIndex++;
+        }
+      }
+
+      break;
+    }
+  }
+
+  return Objects;
+}
+
 /**
   Install CM object for SMBIOS Type 2
 
@@ -51,9 +149,12 @@ InstallSmbiosType2Cm (
   CHAR8                           Type2tNodeStr[] = "/firmware/smbios/type2@xx";
   FRU_DEVICE_INFO                 *Type2FruInfo;
   CHAR8                           *FruDesc;
+  UINT8                           HandleCount;
+  UINT8                           SocketNum;
 
   NumBaseboards = 0;
   BaseboardInfo = NULL;
+  HandleCount   = GetMemoryDeviceCount (Private);
 
   for (Index = 0; Index < MAX_TYPE2_COUNT; Index++) {
     AsciiSPrint (Type2tNodeStr, sizeof (Type2tNodeStr), "/firmware/smbios/type2@%u", Index);
@@ -106,6 +207,7 @@ InstallSmbiosType2Cm (
     }
 
     // Get data from FRU.
+    FruDesc  = NULL;
     Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", &Length);
     if (Property != NULL) {
       FruDesc      = (CHAR8 *)Property;
@@ -152,6 +254,21 @@ InstallSmbiosType2Cm (
     }
 
     BaseboardInfo[NumBaseboards].NumberOfContainedObjectHandles = 0;
+    BaseboardInfo[NumBaseboards].ContainedCmObjects             = NULL;
+
+    if (BaseboardInfo[NumBaseboards].BoardType == BaseBoardTypeProcessorMemoryModule) {
+      SocketNum = 0;
+      Property  = fdt_getprop (DtbBase, NodeOffset, "socket-num", &Length);
+      if (Property != NULL) {
+        SocketNum = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+      }
+
+      BaseboardInfo[NumBaseboards].ContainedCmObjects = GetMemoryDeviceInfoToken (Private, SocketNum, HandleCount);
+
+      if (BaseboardInfo[NumBaseboards].ContainedCmObjects != NULL) {
+        BaseboardInfo[NumBaseboards].NumberOfContainedObjectHandles += HandleCount;
+      }
+    }
 
     NumBaseboards++;
   }
@@ -159,8 +276,6 @@ InstallSmbiosType2Cm (
   if (Private->EnclosureBaseboardBinding.Info != NULL) {
     FreePool (Private->EnclosureBaseboardBinding.Info);
   }
-
-  DEBUG ((DEBUG_INFO, "%a: NumBaseboards = %u\n", __FUNCTION__, NumBaseboards));
 
   if (BaseboardInfo == NULL) {
     return EFI_NOT_FOUND;
