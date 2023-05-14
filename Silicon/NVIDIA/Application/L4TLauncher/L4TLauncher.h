@@ -8,6 +8,7 @@
 
 #ifndef __L4T_LAUNCHER_H_
 #define __L4T_LAUNCHER_H_
+#include "L4TOpteeDecrypt.h"
 
 #define GRUB_PATH                       L"EFI\\BOOT\\grubaa64.efi"
 #define GRUB_BOOTCONFIG_FILE            L"EFI\\BOOT\\boot.cfg"
@@ -69,7 +70,7 @@ typedef struct {
   UINT32                  Timeout;
 } EXTLINUX_BOOT_CONFIG;
 
-STATIC BOOLEAN  ImageEncrypted = FALSE;
+STATIC ImageEncryptionInfo  EncryptionInfo;
 
 STATIC VOID   *mRamdiskData = NULL;
 STATIC UINTN  mRamdiskSize  = 0;

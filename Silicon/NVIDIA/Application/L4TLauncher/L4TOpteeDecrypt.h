@@ -23,12 +23,13 @@
 #define JETSON_CPUBL_PAYLOAD_DECRYPTION_UPDATE  2
 #define JETSON_CPUBL_PAYLOAD_DECRYPTION_FINAL   3
 
-#define BCH_BINARY_LEN_OFFSET  0x1404
-
-/* Default BCH Image Header Size is 8K */
-#define BOOT_COMPONENT_HEADER_SIZE  SIZE_8KB
-/* Default decryption init block size is BOOT_COMPONENT_HEADER_SIZE */
-#define OPTEE_DECRYPT_INIT_BLOCK_SIZE  BOOT_COMPONENT_HEADER_SIZE
+/* BCH Image Header Size for T234 is 8K, and for T194 is 4K */
+#define BOOT_COMPONENT_HEADER_SIZE_8K   SIZE_8KB
+#define BOOT_COMPONENT_HEADER_SIZE_4K   SIZE_4KB
+#define MAX_BOOT_COMPONENT_HEADER_SIZE  BOOT_COMPONENT_HEADER_SIZE_8K
+/* Binary length offset in BCH Header: The size is 0x1404 for T234, and 0xbb4 for T194 */
+#define BINARY_LEN_OFFSET_IN_8K_BCH  0x1404
+#define BINARY_LEN_OFFSET_IN_4K_BCH  0xbb4
 /* Set the default decryption update block size to 2M Bytes */
 #define OPTEE_DECRYPT_UPDATE_BLOCK_SIZE  SIZE_2MB
 
@@ -45,10 +46,16 @@ typedef struct {
   OPTEE_SHM_PAGE_LIST    *ShmListVa;
 } OPTEE_SESSION;
 
+typedef struct {
+  BOOLEAN    ImageEncrypted;
+  UINTN      ImageHeaderSize;
+  UINTN      ImageLengthOffset;
+} ImageEncryptionInfo;
+
 EFI_STATUS
 EFIAPI
-IsImageEncryptionEnable (
-  OUT BOOLEAN  *Enabled
+GetImageEncryptionInfo (
+  OUT ImageEncryptionInfo  *Info
   );
 
 EFI_STATUS
@@ -57,6 +64,7 @@ OpteeDecryptImage (
   IN EFI_FILE_HANDLE        *Handle OPTIONAL,
   IN EFI_DISK_IO_PROTOCOL   *DiskIo OPTIONAL,
   IN EFI_BLOCK_IO_PROTOCOL  *BlockIo OPTIONAL,
+  IN UINTN                  ImageHeaderSize,
   IN UINT64                 SrcFileSize,
   OUT VOID                  **DstBuffer,
   OUT UINT64                *DstFileSize

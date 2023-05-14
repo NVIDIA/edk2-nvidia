@@ -12,6 +12,7 @@
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/HandleParsingLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/PrintLib.h>
 #include <Library/OpteeNvLib.h>
 #include <Library/FileHandleLib.h>
@@ -91,11 +92,11 @@ AllocateAlignedPagesForSharedMemory (
 
 /*
  *
-  IsImageEncryptionEnable
+  GetImageEncryptionInfo
 
-  Utility function to get the status that if image encryption is enabled.
+  Utility function to get the encryption information of the image
 
-  @param[out]  Enabled         If image encryption is enabled
+  @param[out]  Info            The information of the image
 
   @retval EFI_SUCCESS          The operation completed successfully.
           EFI_OUT_OF_RESOURCES Failed buffer allocation.
@@ -104,8 +105,8 @@ AllocateAlignedPagesForSharedMemory (
  */
 EFI_STATUS
 EFIAPI
-IsImageEncryptionEnable (
-  OUT BOOLEAN  *Enabled
+GetImageEncryptionInfo (
+  OUT ImageEncryptionInfo  *Info
   )
 {
   EFI_STATUS              Status;
@@ -114,6 +115,7 @@ IsImageEncryptionEnable (
   OPTEE_OPEN_SESSION_ARG  OpenSessionArg;
   EFI_GUID                CPD_TA_UUID   = TA_CPUBL_PAYLOAD_DECRYPTION_UUID;
   OPTEE_SESSION           *OpteeSession = NULL;
+  UINTN                   ChipID;
 
   if (!IsOpteePresent ()) {
     ErrorPrint (L"%a: optee is not present\r\n", __FUNCTION__);
@@ -182,10 +184,21 @@ IsImageEncryptionEnable (
     goto CloseSession;
   }
 
+  Info->ImageEncrypted    = FALSE;
+  Info->ImageHeaderSize   = 0;
+  Info->ImageLengthOffset = 0;
+
   if (MessageArg->Params[1].Union.Value.A == 1) {
-    *Enabled = TRUE;
-  } else {
-    *Enabled = FALSE;
+    Info->ImageEncrypted = TRUE;
+
+    ChipID = TegraGetChipID ();
+    if (ChipID == T194_CHIP_ID) {
+      Info->ImageHeaderSize   = BOOT_COMPONENT_HEADER_SIZE_4K;
+      Info->ImageLengthOffset = BINARY_LEN_OFFSET_IN_4K_BCH;
+    } else {
+      Info->ImageHeaderSize   = BOOT_COMPONENT_HEADER_SIZE_8K;
+      Info->ImageLengthOffset = BINARY_LEN_OFFSET_IN_8K_BCH;
+    }
   }
 
 CloseSession:
@@ -502,6 +515,7 @@ ReadEncryptedImage (
   @param[in]  Handle           Handle of encrypted image file
   @param[in]  DiskIo           DiskIo structure of encrypted image in partition
   @param[in]  BlockIo          BlockIo structure of encrypted image in partition
+  @param[in]  ImageHeaderSize  The image header size of the encrypted image
   @param[in]  SrcFileSize      File Size of encrypted image file
   @param[out] DstBuffer        Destination Buffer of decrypt image
   @param[out] DstFileSize      Size of the decrypt image
@@ -516,6 +530,7 @@ OpteeDecryptImage (
   IN EFI_FILE_HANDLE        *Handle OPTIONAL,
   IN EFI_DISK_IO_PROTOCOL   *DiskIo OPTIONAL,
   IN EFI_BLOCK_IO_PROTOCOL  *BlockIo OPTIONAL,
+  IN UINTN                  ImageHeaderSize,
   IN UINT64                 SrcFileSize,
   OUT VOID                  **DstBuffer,
   OUT UINT64                *DstFileSize
@@ -526,7 +541,7 @@ OpteeDecryptImage (
   VOID           *Data          = NULL;
   VOID           *Block         = NULL;
   UINT64         BlockSize      = OPTEE_DECRYPT_UPDATE_BLOCK_SIZE;
-  UINT64         FirstBlockSize = OPTEE_DECRYPT_INIT_BLOCK_SIZE;
+  UINT64         FirstBlockSize = ImageHeaderSize;
   UINT64         LastBlockSize;
   UINT64         num_block, i;
   UINT64         OutSize = 0;
@@ -544,7 +559,7 @@ OpteeDecryptImage (
     goto Exit;
   }
 
-  if (SrcFileSize < BOOT_COMPONENT_HEADER_SIZE) {
+  if (SrcFileSize < ImageHeaderSize) {
     ErrorPrint (L"%a: SrcFileSize can not be less than 8K \r\n", __FUNCTION__);
     Status = EFI_INVALID_PARAMETER;
     goto Exit;
