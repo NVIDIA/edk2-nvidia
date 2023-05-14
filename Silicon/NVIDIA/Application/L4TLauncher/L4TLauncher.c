@@ -43,7 +43,6 @@
 #include <Library/PlatformResourceLib.h>
 #include "L4TLauncher.h"
 #include "L4TRootfsValidation.h"
-#include "L4TOpteeDecrypt.h"
 
 /**
   Causes the driver to load a specified file.
@@ -913,6 +912,7 @@ OpenAndDecryptFileToBuffer (
              &Handle,
              NULL,
              NULL,
+             EncryptionInfo.ImageHeaderSize,
              DataSize,
              FileData,
              FileDataSize
@@ -991,7 +991,7 @@ OpenAndReadFileToBuffer (
   }
 
   // Encryption of extlinux.conf is not supported
-  if (ImageEncrypted && StrCmp (FileName, EXTLINUX_CONF_PATH)) {
+  if (EncryptionInfo.ImageEncrypted && StrCmp (FileName, EXTLINUX_CONF_PATH)) {
     Status = OpenAndDecryptFileToBuffer (
                PartitionHandle,
                FileName,
@@ -1486,7 +1486,7 @@ ExtLinuxBoot (
 
   // Load and start the kernel
   if (BootOption->LinuxPath != NULL) {
-    if (ImageEncrypted) {
+    if (EncryptionInfo.ImageEncrypted) {
       Status = OpenAndDecryptFileToBuffer (
                  DeviceHandle,
                  BootOption->LinuxPath,
@@ -1747,7 +1747,7 @@ ReadAndroidStyleKernelPartition (
   UINTN                   SignatureOffset;
   UINT8                   Signature[SIZE_2KB];
   UINTN                   SignatureSize = sizeof (Signature);
-  UINT8                   BCH[BOOT_COMPONENT_HEADER_SIZE];
+  UINT8                   BCH[MAX_BOOT_COMPONENT_HEADER_SIZE];
 
   Status = FindPartitionInfo (
              DeviceHandle,
@@ -1781,12 +1781,12 @@ ReadAndroidStyleKernelPartition (
     goto Exit;
   }
 
-  if (ImageEncrypted) {
+  if (EncryptionInfo.ImageEncrypted) {
     Status = DiskIo->ReadDisk (
                        DiskIo,
                        BlockIo->Media->MediaId,
                        0,
-                       BOOT_COMPONENT_HEADER_SIZE,
+                       EncryptionInfo.ImageHeaderSize,
                        BCH
                        );
     if (EFI_ERROR (Status)) {
@@ -1794,8 +1794,8 @@ ReadAndroidStyleKernelPartition (
       goto Exit;
     }
 
-    DecryptedImageBufferSize = *(UINT32 *)(BCH + BCH_BINARY_LEN_OFFSET);
-    EncryptedImageBufferSize = DecryptedImageBufferSize + BOOT_COMPONENT_HEADER_SIZE;
+    DecryptedImageBufferSize = *(UINT32 *)(BCH + EncryptionInfo.ImageLengthOffset);
+    EncryptedImageBufferSize = DecryptedImageBufferSize + EncryptionInfo.ImageHeaderSize;
 
     ImageBuffer = AllocatePool (DecryptedImageBufferSize);
     if (ImageBuffer == NULL) {
@@ -1808,6 +1808,7 @@ ReadAndroidStyleKernelPartition (
                NULL,
                DiskIo,
                BlockIo,
+               EncryptionInfo.ImageHeaderSize,
                EncryptedImageBufferSize,
                &ImageBuffer,
                &DecryptedImageBufferSize
@@ -1943,7 +1944,7 @@ ReadAndroidStyleDtbPartition (
   UINTN                  Size;
   UINTN                  SignatureOffset;
   UINTN                  SignatureSize = SIZE_2KB;
-  UINT8                  BCH[BOOT_COMPONENT_HEADER_SIZE];
+  UINT8                  BCH[MAX_BOOT_COMPONENT_HEADER_SIZE];
 
   Status = FindPartitionInfo (
              DeviceHandle,
@@ -1977,12 +1978,12 @@ ReadAndroidStyleDtbPartition (
     goto Exit;
   }
 
-  if (ImageEncrypted) {
+  if (EncryptionInfo.ImageEncrypted) {
     Status = DiskIo->ReadDisk (
                        DiskIo,
                        BlockIo->Media->MediaId,
                        0,
-                       BOOT_COMPONENT_HEADER_SIZE,
+                       EncryptionInfo.ImageHeaderSize,
                        &BCH
                        );
     if (EFI_ERROR (Status)) {
@@ -1990,8 +1991,8 @@ ReadAndroidStyleDtbPartition (
       goto Exit;
     }
 
-    DtbBufferSize          = *(UINT32 *)(BCH + BCH_BINARY_LEN_OFFSET);
-    EncryptedDtbBufferSize = DtbBufferSize + BOOT_COMPONENT_HEADER_SIZE;
+    DtbBufferSize          = *(UINT32 *)(BCH + EncryptionInfo.ImageLengthOffset);
+    EncryptedDtbBufferSize = DtbBufferSize + EncryptionInfo.ImageHeaderSize;
 
     DtbBuffer = AllocatePool (DtbBufferSize);
     if (DtbBuffer == NULL) {
@@ -2004,6 +2005,7 @@ ReadAndroidStyleDtbPartition (
                NULL,
                DiskIo,
                BlockIo,
+               EncryptionInfo.ImageHeaderSize,
                EncryptedDtbBufferSize,
                &DtbBuffer,
                &DtbBufferSize
@@ -2252,7 +2254,7 @@ L4TLauncher (
   }
 
   if (IsSecureBootEnabled ()) {
-    Status = IsImageEncryptionEnable (&ImageEncrypted);
+    Status = GetImageEncryptionInfo (&EncryptionInfo);
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"%a: Unable to get image status: %r\r\n", __FUNCTION__, Status);
     }

@@ -47,6 +47,7 @@
   ResetSystemLib
   TimerLib
   OpteeNvLib
+  TegraPlatformInfoLib
 
 [Guids]
   gNVIDIAPublicVariableGuid
