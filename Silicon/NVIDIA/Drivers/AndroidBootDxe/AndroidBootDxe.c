@@ -264,17 +264,25 @@ AndroidBootGetVerify (
   VOID                            *Header;
   ANDROID_BOOTIMG_VERSION_HEADER  *VersionHeader;
   ANDROID_BOOTIMG_TYPE0_HEADER    *Type0Header;
+  ANDROID_BOOTIMG_TYPE1_HEADER    *Type1Header;
   UINT32                          Offset;
   UINT32                          SignatureHeaderSize;
   UINT64                          RcmKernelSize;
   UINTN                           PartitionSize;
   UINTN                           ImageSize;
+  UINT32                          PageSize;
+  UINT32                          KernelSize;
+  UINT32                          RamdiskSize;
+  CHAR8                           *HeaderKernelArgs;
 
   // Allocate a buffer large enough to hold any header type.
   Header = AllocatePool (
              MAX (
-               sizeof (ANDROID_BOOTIMG_TYPE0_HEADER),
-               sizeof (ANDROID_BOOTIMG_VERSION_HEADER)
+               MAX (
+                 sizeof (ANDROID_BOOTIMG_TYPE0_HEADER),
+                 sizeof (ANDROID_BOOTIMG_VERSION_HEADER)
+                 ),
+               sizeof (ANDROID_BOOTIMG_TYPE1_HEADER)
                )
              );
   if (Header == NULL) {
@@ -357,44 +365,32 @@ AndroidBootGetVerify (
         goto Exit;
       }
 
-      Type0Header = (ANDROID_BOOTIMG_TYPE0_HEADER *)Header;
+      Type0Header      = (ANDROID_BOOTIMG_TYPE0_HEADER *)Header;
+      PageSize         = Type0Header->PageSize;
+      KernelSize       = Type0Header->KernelSize;
+      RamdiskSize      = Type0Header->RamdiskSize;
+      HeaderKernelArgs = Type0Header->KernelArgs;
 
-      // The page size is not specified, but it should be power of 2 at least
-      if (!IS_VALID_ANDROID_PAGE_SIZE (Type0Header->PageSize)) {
-        Status = EFI_NOT_FOUND;
+      break;
+
+    case 1:
+      // Read the full Type0 header.
+      Status = AndroidBootRead (
+                 BlockIo,
+                 DiskIo,
+                 Offset,
+                 Header,
+                 sizeof (ANDROID_BOOTIMG_TYPE1_HEADER)
+                 );
+      if (EFI_ERROR (Status)) {
         goto Exit;
       }
 
-      // Make sure that the image fits in the partition
-      if ((BlockIo != NULL) && (DiskIo != NULL)) {
-        PartitionSize = (UINTN)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
-      } else {
-        PartitionSize = RcmKernelSize;
-      }
-
-      ImageSize = Offset + Type0Header->PageSize
-                  + ALIGN_VALUE (Type0Header->KernelSize, Type0Header->PageSize)
-                  + ALIGN_VALUE (Type0Header->RamdiskSize, Type0Header->PageSize);
-      if (ImageSize > PartitionSize) {
-        Status = EFI_NOT_FOUND;
-        goto Exit;
-      }
-
-      // Set up the internal data structure when ImgData is not NULL
-      if (ImgData != NULL) {
-        // Calculate a size of the kernel image, aligned in BlockSize
-        // This size will be a reference when boot manger allocates a pool for LoadFile service
-        // Kernel image to be loaded to a buffer allocated by boot manager
-        // Ramdisk image to be loaded to a buffer allocated by this LoadFile service
-        ImgData->Offset      = Offset;
-        ImgData->KernelSize  = Type0Header->KernelSize;
-        ImgData->RamdiskSize = Type0Header->RamdiskSize;
-        ImgData->PageSize    = Type0Header->PageSize;
-      }
-
-      if (KernelArgs != NULL) {
-        AsciiStrToUnicodeStrS (Type0Header->KernelArgs, KernelArgs, ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
-      }
+      Type1Header      = (ANDROID_BOOTIMG_TYPE1_HEADER *)Header;
+      PageSize         = Type1Header->PageSize;
+      KernelSize       = Type1Header->KernelSize;
+      RamdiskSize      = Type1Header->RamdiskSize;
+      HeaderKernelArgs = Type1Header->KernelArgs;
 
       break;
 
@@ -403,6 +399,43 @@ AndroidBootGetVerify (
       Status = EFI_INCOMPATIBLE_VERSION;
       DEBUG ((DEBUG_ERROR, "%a: Unsupported header type %x\n", __FUNCTION__, VersionHeader->HeaderVersion));
       goto Exit;
+  }
+
+  // The page size is not specified, but it should be power of 2 at least
+  if (!IS_VALID_ANDROID_PAGE_SIZE (PageSize)) {
+    Status = EFI_NOT_FOUND;
+    goto Exit;
+  }
+
+  // Make sure that the image fits in the partition
+  if ((BlockIo != NULL) && (DiskIo != NULL)) {
+    PartitionSize = (UINTN)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
+  } else {
+    PartitionSize = RcmKernelSize;
+  }
+
+  ImageSize = Offset + PageSize
+              + ALIGN_VALUE (KernelSize, PageSize)
+              + ALIGN_VALUE (RamdiskSize, PageSize);
+  if (ImageSize > PartitionSize) {
+    Status = EFI_NOT_FOUND;
+    goto Exit;
+  }
+
+  // Set up the internal data structure when ImgData is not NULL
+  if (ImgData != NULL) {
+    // Calculate a size of the kernel image, aligned in BlockSize
+    // This size will be a reference when boot manger allocates a pool for LoadFile service
+    // Kernel image to be loaded to a buffer allocated by boot manager
+    // Ramdisk image to be loaded to a buffer allocated by this LoadFile service
+    ImgData->Offset      = Offset;
+    ImgData->KernelSize  = KernelSize;
+    ImgData->RamdiskSize = RamdiskSize;
+    ImgData->PageSize    = PageSize;
+  }
+
+  if (KernelArgs != NULL) {
+    AsciiStrToUnicodeStrS (HeaderKernelArgs, KernelArgs, ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
   }
 
   Status = EFI_SUCCESS;
