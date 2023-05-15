@@ -50,7 +50,6 @@
 #string STR_PERF_VERSION_PROMPT           #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/PerformanceVersion"
 #string STR_UEFI_DEBUG_LEVEL_PROMPT       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/UefiDebugLogLevel"
 #string STR_HOST_INTERFACE_ENABLED_PROMPT #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/RedfishHostInterface"
-#string STR_PRODUCT_CHASSIS_ASSET_TAG     #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/ProductAssetTag"
 
 #string STR_UPHY0_SOCKET0_PROMPT          #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0UPHY0config"
 #string STR_UPHY0_SOCKET1_PROMPT          #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1UPHY0config"
