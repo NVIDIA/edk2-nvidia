@@ -29,7 +29,7 @@ EFI_BLOCK_IO_MEDIA  Media_Small = {
   Boot.img header:
   Valid type0
  */
-ANDROID_BOOTIMG_HEADER  Hdr_Type0_Valid = {
+ANDROID_BOOTIMG_TYPE0_HEADER  Hdr_Type0_Valid = {
   .BootMagic      = { 'A', 'N', 'D', 'R', 'O', 'I', 'D', '!' },
   .KernelSize     = 0x42000,
   .KernelAddress  = 0x4000,
@@ -72,7 +72,7 @@ CHAR16  ExpectedKernelArgs_Type0_Valid[] = { 'B', 'O', 'O', 'M', 0 };
   Boot.img header:
   Signature, which is anything that's not a valid boot.img header.
  */
-ANDROID_BOOTIMG_HEADER  Hdr_Sig = {
+ANDROID_BOOTIMG_VERSION_HEADER  Hdr_Sig = {
   .BootMagic = { 'N', 'O', 'T', 'D', 'R', 'O', 'I', 'D' },
 };
 
@@ -80,7 +80,7 @@ ANDROID_BOOTIMG_HEADER  Hdr_Sig = {
   Boot.img header:
   Invalid with the wrong magic.
  */
-ANDROID_BOOTIMG_HEADER  Hdr_Invalid_Magic = {
+ANDROID_BOOTIMG_VERSION_HEADER  Hdr_Invalid_Magic = {
   .BootMagic = { 'I', 'N', 'V', 'A', 'L', 'I', 'D', '!' },
 };
 
@@ -88,9 +88,18 @@ ANDROID_BOOTIMG_HEADER  Hdr_Invalid_Magic = {
   Boot.img header:
   Invalid with a bad page size.
  */
-ANDROID_BOOTIMG_HEADER  Hdr_Invalid_PageSize = {
+ANDROID_BOOTIMG_TYPE0_HEADER  Hdr_Invalid_PageSize = {
   .BootMagic = { 'A', 'N', 'D', 'R', 'O', 'I', 'D', '!' },
   .PageSize  = 0x0010,
+};
+
+/**
+  Boot.img header:
+  Invalid type
+ */
+ANDROID_BOOTIMG_VERSION_HEADER  Hdr_Invalid_Version = {
+  .BootMagic     = { 'A', 'N', 'D', 'R', 'O', 'I', 'D', '!' },
+  .HeaderVersion = 0x42
 };
 
 /**
@@ -117,6 +126,17 @@ TEST_PLAN_ANDROID_BOOT_READ  ABR_Type0_DiskIo = {
 
 /**
   Test Plan for AndroidBootRead:
+  Fail fead after sig
+ */
+TEST_PLAN_ANDROID_BOOT_READ  ABR_Failure = {
+  .WithDiskIo     = TRUE,
+  .ReadReturn     = EFI_ACCESS_DENIED,
+  .ReadBuffer     = &Hdr_Type0_Valid,
+  .ExpectedOffset = 0
+};
+
+/**
+  Test Plan for AndroidBootRead:
   Read a Type0 header from DiskIo protocol.
  */
 TEST_PLAN_ANDROID_BOOT_READ  ABR_Type0_DiskIo_After_Sig = {
@@ -128,7 +148,7 @@ TEST_PLAN_ANDROID_BOOT_READ  ABR_Type0_DiskIo_After_Sig = {
 
 /**
   Test Plan for AndroidBootRead:
-  Fail fead after sig
+  Fail read after sig
  */
 TEST_PLAN_ANDROID_BOOT_READ  ABR_Failure_After_Sig = {
   .WithDiskIo     = TRUE,
@@ -139,7 +159,7 @@ TEST_PLAN_ANDROID_BOOT_READ  ABR_Failure_After_Sig = {
 
 /**
   Test Plan for AndroidBootRead:
-  Fail fead after sig
+  Invalid magic after sig
  */
 TEST_PLAN_ANDROID_BOOT_READ  ABR_Invalid_After_Sig = {
   .WithDiskIo     = TRUE,
@@ -150,12 +170,23 @@ TEST_PLAN_ANDROID_BOOT_READ  ABR_Invalid_After_Sig = {
 
 /**
   Test Plan for AndroidBootRead:
-  Fail fead after sig
+  Invalid page size.
  */
 TEST_PLAN_ANDROID_BOOT_READ  ABR_Invalid_PageSize = {
   .WithDiskIo     = TRUE,
   .ReadReturn     = EFI_SUCCESS,
   .ReadBuffer     = &Hdr_Invalid_PageSize,
+  .ExpectedOffset = 0
+};
+
+/**
+  Test Plan for AndroidBootRead:
+  Invalid header version
+ */
+TEST_PLAN_ANDROID_BOOT_READ  ABR_Invalid_Version = {
+  .WithDiskIo     = TRUE,
+  .ReadReturn     = EFI_SUCCESS,
+  .ReadBuffer     = &Hdr_Invalid_Version,
   .ExpectedOffset = 0
 };
 
@@ -187,6 +218,7 @@ TEST_PLAN_ANDROID_BOOT_GET_VERIFY  TP_Type0_Disk_Valid = {
   .WithKernelArgs   = TRUE,
   .AndroidBootReads = {
     &ABR_Type0_DiskIo,
+    &ABR_Type0_DiskIo,
     NULL
   },
   .Media              = &Media_Large,
@@ -212,6 +244,7 @@ TEST_PLAN_ANDROID_BOOT_GET_VERIFY  TP_Type0_Disk_Valid_Small = {
   .WithBlockIo      = TRUE,
   .AndroidBootReads = {
     &ABR_Type0_DiskIo,
+    &ABR_Type0_DiskIo,
     NULL
   },
   .Media           = &Media_Small,
@@ -229,10 +262,40 @@ TEST_PLAN_ANDROID_BOOT_GET_VERIFY  TP_Type0_Rcm_Valid = {
   .PcdRcmKernelSize = 0xF5670,
   .AndroidBootReads = {
     &ABR_Type0_Rcm,
+    &ABR_Type0_Rcm,
     NULL
   },
   .ExpectedImgData = &ExpectedImgData_Type0_Valid,
   .ExpectedReturn  = EFI_SUCCESS
+};
+
+/**
+  Test Plan for AndroidBootGetVerify:
+  Fail to read a Type0 header after reading version
+ */
+TEST_PLAN_ANDROID_BOOT_GET_VERIFY  TP_Type0_Fail = {
+  .WithBlockIo      = TRUE,
+  .AndroidBootReads = {
+    &ABR_Type0_DiskIo,
+    &ABR_Failure,
+    NULL
+  },
+  .Media          = &Media_Large,
+  .ExpectedReturn = EFI_ACCESS_DENIED
+};
+
+/**
+  Test Plan for AndroidBootGetVerify:
+  Fail to read header because of invalid version
+ */
+TEST_PLAN_ANDROID_BOOT_GET_VERIFY  TP_Invalid_Version = {
+  .WithBlockIo      = TRUE,
+  .AndroidBootReads = {
+    &ABR_Invalid_Version,
+    NULL
+  },
+  .Media          = &Media_Large,
+  .ExpectedReturn = EFI_INCOMPATIBLE_VERSION
 };
 
 /**
@@ -258,6 +321,7 @@ TEST_PLAN_ANDROID_BOOT_GET_VERIFY  TP_Sig_Type0_Disk_Valid = {
   .WithImgData      = TRUE,
   .AndroidBootReads = {
     &ABR_Sig_DiskIo,
+    &ABR_Type0_DiskIo_After_Sig,
     &ABR_Type0_DiskIo_After_Sig,
     NULL
   },
@@ -303,6 +367,7 @@ TEST_PLAN_ANDROID_BOOT_GET_VERIFY  TP_Sig_Invalid = {
 TEST_PLAN_ANDROID_BOOT_GET_VERIFY  TP_Invalid_PageSize = {
   .WithBlockIo      = TRUE,
   .AndroidBootReads = {
+    &ABR_Invalid_PageSize,
     &ABR_Invalid_PageSize,
     NULL
   },
@@ -451,6 +516,8 @@ BootImgHeader_PopulateSuite (
   )
 {
   ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Type0_Disk_Valid);
+  ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Type0_Fail);
+  ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Invalid_Version);
   ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Fail_Alloc);
   ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Type0_Disk_Valid_Small);
   ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Type0_Rcm_Valid);

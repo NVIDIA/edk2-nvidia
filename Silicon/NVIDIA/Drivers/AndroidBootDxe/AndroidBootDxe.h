@@ -24,7 +24,7 @@
 #include <Library/DevicePathLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PrintLib.h>
-#include <Library/AndroidBootImgLib.h>
+#include <AndroidBootImgHeader.h>
 #include <Library/TegraPlatformInfoLib.h>
 
 #include <Guid/LinuxEfiInitrdMedia.h>
