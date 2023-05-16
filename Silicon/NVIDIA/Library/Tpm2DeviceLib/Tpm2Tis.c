@@ -4,7 +4,7 @@
 
   Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
   (C) Copyright 2015 Hewlett Packard Enterprise Development LP<BR>
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -249,7 +249,7 @@ TisTpmCommand (
   EFI_STATUS  Status;
   UINT16      BurstCount;
   UINT32      Index;
-  UINT32      TpmOutSize;
+  UINT32      TpmOutSize = 0;
   UINT16      Data16;
   UINT32      Data32;
   UINT16      TransferSize;
@@ -328,8 +328,8 @@ TisTpmCommand (
              TIS_TIMEOUT_C
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Tpm2 The send buffer too small!\n"));
-    Status = EFI_BUFFER_TOO_SMALL;
+    DEBUG ((DEBUG_ERROR, "Tpm2 STS_EXPECT timeout. TPM failed to receive command.\n"));
+    Status = EFI_DEVICE_ERROR;
     goto Exit;
   }
 
@@ -465,6 +465,7 @@ Exit:
 
   DEBUG ((DEBUG_VERBOSE, "\n"));
   DEBUG_CODE_END ();
+
   TisWrite8 (Tpm2, TPM_STS_0, TIS_PC_STS_READY);
   return Status;
 }
