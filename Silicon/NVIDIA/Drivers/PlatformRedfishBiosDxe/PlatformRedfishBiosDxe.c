@@ -554,7 +554,7 @@ PlatformRedfishBiosAddendumData (
   }
 
   if (!IsSupportedBiosSchema (SchemaInfo)) {
-    DEBUG ((DEBUG_ERROR, "%a, unsupported schema: %a version: %a at %a\n", __FUNCTION__, SchemaInfo->Schema, SchemaInfo->Version, SchemaInfo->Uri));
+    DEBUG ((REDFISH_BIOS_DEBUG_DUMP, "%a, unsupported schema: %a version: %a at %a\n", __FUNCTION__, SchemaInfo->Schema, SchemaInfo->Version, SchemaInfo->Uri));
     return EFI_UNSUPPORTED;
   }
 
@@ -625,11 +625,11 @@ PlatformRedfishBiosAddendumData (
   // If array is not empty, replace input JSON object with this one.
   //
   if (JsonArrayCount (AttributeArray) > 0) {
-    JsonValueFree (JsonData);
-    JsonData = JsonValueInitObject ();
-    if (JsonData == NULL) {
+    Status = JsonObjectClear (JsonValueGetObject (JsonData));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: failed to clear JSON object\n", __func__));
       JsonValueFree (AttributeArray);
-      return EFI_OUT_OF_RESOURCES;
+      return EFI_DEVICE_ERROR;
     }
 
     JsonObjectSetValue (JsonData, REDFISH_BIOS_ATTRIBUTES_NAME, AttributeArray);

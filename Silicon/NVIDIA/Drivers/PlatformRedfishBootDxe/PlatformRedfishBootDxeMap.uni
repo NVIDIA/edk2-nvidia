@@ -1,0 +1,14 @@
+/** @file
+  Platform Redfish boot order driver.
+
+  (C) Copyright 2022 Hewlett Packard Enterprise Development LP<BR>
+  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+/=#
+#langdef   x-uefi-redfish-ComputerSystem.v1_17_0 "ComputerSystem.v1_17_0"
+
+#string STR_BOOT_ORDER_LIST   #language x-uefi-redfish-ComputerSystem.v1_17_0   "/Systems/{1}/Boot/BootOrder"
