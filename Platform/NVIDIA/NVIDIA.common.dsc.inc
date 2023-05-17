@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2011-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -235,6 +235,8 @@ CONFIG_MEMORY_TEST=n
   FwVariableLib|Silicon/NVIDIA/Library/FwVariableLib/FwVariableLib.inf
 
   MemoryVerificationLib|Silicon/NVIDIA/Library/MemoryVerificationLib/MemoryVerificationLib.inf
+
+  SystemContextLib|Silicon/NVIDIA/Library/SystemContextLib/SystemContextLib.inf
 
 !if $(BUILD_PROJECT_TYPE) == PROJECT_MU
   BaseBinSecurityLib|MdePkg/Library/BaseBinSecurityLibNull/BaseBinSecurityLibNull.inf

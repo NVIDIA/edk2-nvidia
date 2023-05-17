@@ -1,0 +1,24 @@
+#/** @file
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = SystemContextLib
+  FILE_GUID                      = 61c79fb5-bafd-4028-9e6e-5d58f4813f53
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = SystemContextLib
+
+
+[Sources.AARCH64]
+  AArch64/SystemContextLib.S
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
