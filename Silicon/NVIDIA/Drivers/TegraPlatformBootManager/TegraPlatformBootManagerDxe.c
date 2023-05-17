@@ -20,6 +20,7 @@
 #include <libfdt.h>
 
 #include <Protocol/PlatformBootManager.h>
+#include <Protocol/PciIo.h>
 #include <Protocol/KernelCmdLineUpdate.h>
 #include <Protocol/AndroidBootImg.h>
 
@@ -60,20 +61,36 @@ IsValidLoadOption (
   IN  EFI_BOOT_MANAGER_LOAD_OPTION  *LoadOption
   )
 {
-  EFI_STATUS              Status;
-  EFI_HANDLE              Handle;
-  EFI_DEVICE_PATH         *DevicePath;
-  VOID                    *DevicePathNode;
-  CONTROLLER_DEVICE_PATH  *Controller;
+  EFI_STATUS                        Status;
+  EFI_HANDLE                        Handle;
+  EFI_DEVICE_PATH                   *DevicePath;
+  VOID                              *DevicePathNode;
+  CONTROLLER_DEVICE_PATH            *Controller;
+  EFI_PCI_IO_PROTOCOL               *PciIo;
+  NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY  *EnabledPcieNicTopology;
+  BOOLEAN                           NicFilteringEnabled;
+  UINTN                             Segment;
+  UINTN                             Bus;
+  UINTN                             Device;
+  UINTN                             Function;
 
   if (CompareGuid ((EFI_GUID *)LoadOption->OptionalData, &mBmAutoCreateBootOptionGuid)) {
     DevicePath = LoadOption->FilePath;
 
     // Load options with FirmwareVolume2 protocol are not supported
     // on the platform.
+    Handle = NULL;
     Status = gBS->LocateDevicePath (&gEfiFirmwareVolume2ProtocolGuid, &DevicePath, &Handle);
     if (!EFI_ERROR (Status)) {
       return FALSE;
+    }
+
+    EnabledPcieNicTopology = PcdGetPtr (PcdEnabledPcieNicTopology);
+    NicFilteringEnabled    = FALSE;
+    if ((EnabledPcieNicTopology != NULL) &&
+        (EnabledPcieNicTopology->Enabled))
+    {
+      NicFilteringEnabled = TRUE;
     }
 
     DevicePathNode = DevicePath;
@@ -93,6 +110,58 @@ IsValidLoadOption (
         }
 
         break;
+      }
+
+      if (NicFilteringEnabled) {
+        if ((DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) &&
+            (DevicePathSubType (DevicePathNode) == MSG_MAC_ADDR_DP))
+        {
+          while (TRUE) {
+            Handle = NULL;
+            Status = gBS->LocateDevicePath (&gEfiPciIoProtocolGuid, &DevicePath, &Handle);
+            if (EFI_ERROR (Status)) {
+              break;
+            }
+
+            Status = gBS->HandleProtocol (Handle, &gEfiPciIoProtocolGuid, (VOID **)&PciIo);
+            if (EFI_ERROR (Status)) {
+              break;
+            }
+
+            Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+            if (EFI_ERROR (Status)) {
+              break;
+            }
+
+            if (EnabledPcieNicTopology->Segment == ENABLED_PCIE_ALLOW_ALL) {
+              Segment = ENABLED_PCIE_ALLOW_ALL;
+            }
+
+            if (EnabledPcieNicTopology->Bus == ENABLED_PCIE_ALLOW_ALL) {
+              Bus = ENABLED_PCIE_ALLOW_ALL;
+            }
+
+            if (EnabledPcieNicTopology->Device == ENABLED_PCIE_ALLOW_ALL) {
+              Device = ENABLED_PCIE_ALLOW_ALL;
+            }
+
+            if (EnabledPcieNicTopology->Function == ENABLED_PCIE_ALLOW_ALL) {
+              Function = ENABLED_PCIE_ALLOW_ALL;
+            }
+
+            if ((EnabledPcieNicTopology->Segment != Segment) ||
+                (EnabledPcieNicTopology->Bus != Bus) ||
+                (EnabledPcieNicTopology->Device != Device) ||
+                (EnabledPcieNicTopology->Function != Function))
+            {
+              return FALSE;
+            }
+
+            break;
+          }
+
+          break;
+        }
       }
 
       DevicePathNode = NextDevicePathNode (DevicePathNode);

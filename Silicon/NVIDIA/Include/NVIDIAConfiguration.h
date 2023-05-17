@@ -40,6 +40,8 @@
 #define ASSET_TAG_MAX_LEN   32
 #define ASSET_TAG_MAX_SIZE  33
 
+#define ENABLED_PCIE_ALLOW_ALL  0xFF
+
 // Option to expose PCIe in OS
 typedef struct {
   UINT8    Enabled;
@@ -115,5 +117,13 @@ typedef struct {
 typedef struct {
   CHAR16    ChassisAssetTag[ASSET_TAG_MAX_SIZE];
 } NVIDIA_PRODUCT_INFO;
+
+typedef struct {
+  UINT8    Enabled;
+  UINT8    Segment;
+  UINT8    Bus;
+  UINT8    Device;
+  UINT8    Function;
+} NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY;
 
 #endif //__NVIDIA_CONFIGURATION_H__

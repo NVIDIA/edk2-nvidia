@@ -1365,6 +1365,10 @@ InitializeSettings (
   // Initialize Redfish Host Interface
   PcdSet8S (PcdRedfishHostInterface, PcdGet8 (PcdRedfishHostInterface));
 
+  // Initialize Enabled PCIe NIC topology
+  BufferSize = sizeof (NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY);
+  PcdSetPtrS (PcdEnabledPcieNicTopology, &BufferSize, PcdGetPtr (PcdEnabledPcieNicTopology));
+
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;
   Status           = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, NULL, &KernelCmdLineLen, NULL);

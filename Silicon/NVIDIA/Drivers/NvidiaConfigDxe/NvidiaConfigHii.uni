@@ -641,6 +641,14 @@
 #string STR_PRODUCT_CHASSIS_ASSET_TAG      #language en-US "Product Asset Tag"
 #string STR_PRODUCT_CHASSIS_ASSET_TAG_HELP #language en-US "Set the Product Asset Tag. The maximum length is 32 characters."
 
+#string STR_ENABLED_PCIE_NIC_TOPOLOGY_PROMPT    #language en-US "Enable Bootable NIC Filtering"
+#string STR_ENABLED_PCIE_NIC_TOPOLOGY_HELP      #language en-US "Used To Enable PCIe Tolopoly Based Bootable NIC Filtering"
+#string STR_PCIE_SEGMENT_ENABLE_PROMPT          #language en-US "Enabled PCIe Segment"
+#string STR_PCIE_BUS_ENABLE_PROMPT              #language en-US "Enabled PCIe Bus"
+#string STR_PCIE_DEVICE_ENABLE_PROMPT           #language en-US "Enabled PCIe Device"
+#string STR_PCIE_FUNCTION_ENABLE_PROMPT         #language en-US "Enabled PCIe Function"
+#string STR_PCIE_ALLOW_ALL_HELP                 #language en-US "Use 255 to allow all"
+
 #string STR_NULL                         #language en-US ""
 
 #string STR_DISABLED                     #language en-US  "Disabled"

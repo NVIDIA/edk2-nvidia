@@ -87,6 +87,7 @@
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport
   gNVIDIATokenSpaceGuid.PcdRedfishHostInterface
   gNVIDIATokenSpaceGuid.PcdRedfishSupported
+  gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

@@ -105,6 +105,11 @@ formset
     name  = RedfishHostInterface,
     guid  = NVIDIA_TOKEN_SPACE_GUID;
 
+  efivarstore NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name  = EnabledPcieNicTopology,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
   efivarstore NVIDIA_PRODUCT_INFO,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
     name = ProductInfo,
@@ -251,6 +256,53 @@ formset
         option text = STRING_TOKEN(STR_ENABLED),  value = 0x01, flags = DEFAULT;
     endoneof;
     endif;
+
+    checkbox varid = EnabledPcieNicTopology.Enabled,
+        prompt = STRING_TOKEN(STR_ENABLED_PCIE_NIC_TOPOLOGY_PROMPT),
+        help   = STRING_TOKEN(STR_ENABLED_PCIE_NIC_TOPOLOGY_HELP),
+        flags  = RESET_REQUIRED,
+        default = FALSE,
+    endcheckbox;
+
+    grayoutif ideqval EnabledPcieNicTopology.Enabled == 0;
+    numeric varid = EnabledPcieNicTopology.Segment,
+        prompt = STRING_TOKEN(STR_PCIE_SEGMENT_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
+        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 255,
+        step = 1,
+        default = 255,
+    endnumeric;
+        numeric varid = EnabledPcieNicTopology.Bus,
+        prompt = STRING_TOKEN(STR_PCIE_BUS_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
+        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 255,
+        step = 1,
+        default = 255,
+    endnumeric;
+    numeric varid = EnabledPcieNicTopology.Device,
+        prompt = STRING_TOKEN(STR_PCIE_DEVICE_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
+        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 255,
+        step = 1,
+        default = 255,
+    endnumeric;
+    numeric varid = EnabledPcieNicTopology.Function,
+        prompt = STRING_TOKEN(STR_PCIE_FUNCTION_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
+        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 255,
+        step = 1,
+        default = 255,
+    endnumeric;
+    endif;
+
   endform;
 
   //
