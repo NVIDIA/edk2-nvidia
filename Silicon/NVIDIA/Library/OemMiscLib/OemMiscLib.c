@@ -48,6 +48,7 @@ STATIC TEGRA_EEPROM_BOARD_INFO  *SmEepromData;
 STATIC SMBIOS_TABLE_TYPE32      *Type32Record;
 STATIC SMBIOS_TABLE_TYPE3       *Type3Record;
 STATIC CHAR16                   *BoardProductName;
+STATIC CHAR16                   *ProcessorVersion;
 STATIC CHAR16                   *AssetTag;
 STATIC CHAR16                   *SerialNumber;
 STATIC UINT32                   SocketMask;
@@ -577,6 +578,64 @@ OemGetProductName (
 }
 
 /**
+  GetProcessorVersion
+  Get the processor version from the DT. For multisocket designs,
+  we can assume all processors in the system are same version.
+
+  @param  NONE.
+
+  @return Null terminated unicode string for the processor version.
+**/
+STATIC
+CHAR16 *
+GetProcessorVersion (
+  VOID
+  )
+{
+  VOID        *DtbBase;
+  UINTN       DtbSize;
+  CONST VOID  *Property;
+  INT32       Length;
+  EFI_STATUS  Status;
+  INTN        DtbSmbiosOffset;
+  INTN        Type4Offset;
+
+  if (ProcessorVersion == NULL) {
+    Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
+    if (EFI_ERROR (Status)) {
+      return NULL;
+    }
+
+    DtbSmbiosOffset = fdt_path_offset (DtbBase, "/firmware/smbios");
+    if (DtbSmbiosOffset < 0) {
+      return NULL;
+    }
+
+    Type4Offset = fdt_subnode_offset (DtbBase, DtbSmbiosOffset, "type4@0");
+    if (Type4Offset < 0) {
+      return NULL;
+    }
+
+    Property = fdt_getprop (DtbBase, Type4Offset, "processor-version", &Length);
+    if ((Property != NULL) && (Length != 0)) {
+      ProcessorVersion = AllocateZeroPool ((Length + 1) * sizeof (CHAR16));
+      if (ProcessorVersion == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
+        return NULL;
+      }
+
+      AsciiStrToUnicodeStrS (
+        Property,
+        ProcessorVersion,
+        ((Length + 1) * sizeof (CHAR16))
+        );
+    }
+  }
+
+  return ProcessorVersion;
+}
+
+/**
   OemGetAssetTag
   Get the AssetTag of the current product from the EEPROM Info.
   This should match the tag physically present on the board.
@@ -931,6 +990,9 @@ OemUpdateSmbiosInfo (
       break;
     case ProcessorSerialNumType04_0 ... ProcessorSerialNumType04_15:
       HiiString = GetCpuSerialNum (FIELD_TO_INDEX (Field, ProcessorSerialNumType04_0));
+      break;
+    case ProcessorVersionType04:
+      HiiString = GetProcessorVersion ();
       break;
     default:
       break;
