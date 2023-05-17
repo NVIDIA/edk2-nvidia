@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -34,7 +34,7 @@
 #define TEGRABL_ERST                  (29U)
 #define DEVICE_CS_MASK                (0xFF00)
 #define DEVICE_CS_SHIFT               (8)
-#define MAX_SUPPORTED_CORES           1024
+#define MAX_SUPPORTED_CORES           1024U
 
 typedef enum {
   TegrablBootInvalid,

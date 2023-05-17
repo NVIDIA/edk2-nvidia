@@ -1,8 +1,8 @@
 #
-#  Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
-# SPDX-License-Identifier: BSD-2-Clause-Patent
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 [Defines]
   SKUID_IDENTIFIER               = ALL
@@ -69,9 +69,10 @@
   RedfishLib|RedfishPkg/PrivateLibrary/RedfishLib/RedfishLib.inf
   HiiUtilityLib|RedfishPkg/Library/HiiUtilityLib/HiiUtilityLib.inf
   RedfishPlatformConfigLib|RedfishPkg/Library/RedfishPlatformConfigLib/RedfishPlatformConfigLib.inf
-  RedfishDebugLib|RedfishClientPkg/Library/RedfishDebugLib/RedfishDebugLib.inf
+  RedfishDebugLib|RedfishPkg/Library/RedfishDebugLib/RedfishDebugLib.inf
   RedfishHttpCacheLib|RedfishClientPkg/Library/RedfishHttpCacheLib/RedfishHttpCacheLib.inf
   RedfishAddendumLib|RedfishClientPkg/Library/RedfishAddendumLib/RedfishAddendumLib.inf
+  RedfishClientDebugLib|RedfishClientPkg/Library/RedfishClientDebugLib/RedfishClientDebugLib.inf
 
   RedfishLib|RedfishClientPkg/PrivateLibrary/RedfishLib/RedfishLib.inf
   RedfishFeatureUtilityLib|RedfishClientPkg/Library/RedfishFeatureUtilityLib/RedfishFeatureUtilityLib.inf
@@ -193,8 +194,6 @@
   # HACK: Disable SR-IOV support to workaround a simulator bug
   # TODO: Remove once the simulator issue is fixed.
   gEfiMdeModulePkgTokenSpaceGuid.PcdSrIovSupport|FALSE
-
-  gEdkiiDynamicTablesPkgTokenSpaceGuid.PcdForceTopLevelProcessorContainer|TRUE
 
   ## TPM
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass|1
@@ -352,7 +351,7 @@
     <LibraryClasses>
       StdLibC|IntelUndiPkg/LibC/LibC.inf
     <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -Wno-unused -Wno-multistatement-macros -Wno-incompatible-pointer-types
+      *_*_*_PLATFORM_FLAGS = -Wno-unused -Wno-multistatement-macros -Wno-incompatible-pointer-types -Wno-deprecated-non-prototype
   }
 !endif
 

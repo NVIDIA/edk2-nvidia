@@ -1,7 +1,7 @@
 /** @file
   OP-TEE specific header file.
 
-  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -61,8 +61,6 @@
 #define OPTEE_MSG_PAGE_SIZE  0x1000
 #define MAX_PAGELIST_ENTRIES \
  ((OPTEE_MSG_PAGE_SIZE / sizeof(UINT64)) - 1)
-
-#define IS_ALIGNED(addr, size)  (((UINTN) (addr) & (size - 1)) == 0)
 
 typedef struct {
   UINT64    BufferAddress;

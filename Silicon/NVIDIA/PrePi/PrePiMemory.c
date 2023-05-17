@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2013-2015, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -184,18 +184,18 @@ MapCorePlatformMemory (
   UINTN               ChipID;
   NVDA_MEMORY_REGION  *DramPageBlacklistInfo;
 
-  ArmSetMemoryAttributes (FixedPcdGet64 (PcdMiscRegBaseAddress), SIZE_4KB, EFI_MEMORY_UC);
+  ArmSetMemoryAttributes (FixedPcdGet64 (PcdMiscRegBaseAddress), SIZE_4KB, EFI_MEMORY_UC, 0);
   ChipID = TegraGetChipID ();
-  ArmSetMemoryAttributes ((TegraGetBLInfoLocationAddress (ChipID) & ~EFI_PAGE_MASK), SIZE_4KB, EFI_MEMORY_UC);
-  ArmSetMemoryAttributes (GetCPUBLBaseAddress (), SIZE_64KB, EFI_MEMORY_WB);
-  ArmSetMemoryAttributes (GetDTBBaseAddress (), SIZE_64KB, EFI_MEMORY_WB);
-  ArmSetMemoryAttributes ((UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox), SIZE_4KB, EFI_MEMORY_UC);
+  ArmSetMemoryAttributes ((TegraGetBLInfoLocationAddress (ChipID) & ~EFI_PAGE_MASK), SIZE_4KB, EFI_MEMORY_UC, 0);
+  ArmSetMemoryAttributes (GetCPUBLBaseAddress (), SIZE_64KB, EFI_MEMORY_WB, 0);
+  ArmSetMemoryAttributes (GetDTBBaseAddress (), SIZE_64KB, EFI_MEMORY_WB, 0);
+  ArmSetMemoryAttributes ((UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox), SIZE_4KB, EFI_MEMORY_UC, 0);
   DramPageBlacklistInfo = GetDramPageBlacklistInfoAddress ();
   if (DramPageBlacklistInfo != NULL) {
     while (DramPageBlacklistInfo->MemoryBaseAddress != 0 &&
            DramPageBlacklistInfo->MemoryLength != 0)
     {
-      ArmSetMemoryAttributes (DramPageBlacklistInfo->MemoryBaseAddress, DramPageBlacklistInfo->MemoryLength, EFI_MEMORY_WB);
+      ArmSetMemoryAttributes (DramPageBlacklistInfo->MemoryBaseAddress, DramPageBlacklistInfo->MemoryLength, EFI_MEMORY_WB, 0);
       DramPageBlacklistInfo++;
     }
   }
@@ -240,9 +240,9 @@ UpdateMemoryMap (
       ));
 
     if (Resource->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) {
-      ArmSetMemoryAttributes (Resource->PhysicalStart, Resource->ResourceLength, EFI_MEMORY_WB);
+      ArmSetMemoryAttributes (Resource->PhysicalStart, Resource->ResourceLength, EFI_MEMORY_WB, 0);
     } else {
-      ArmSetMemoryAttributes (Resource->PhysicalStart, Resource->ResourceLength, EFI_MEMORY_UC);
+      ArmSetMemoryAttributes (Resource->PhysicalStart, Resource->ResourceLength, EFI_MEMORY_UC, 0);
     }
 
     Index++;

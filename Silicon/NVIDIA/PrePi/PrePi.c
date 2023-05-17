@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -426,7 +426,7 @@ CEntryPoint (
   SerialPortIdentify (&Mapping);
   while (Mapping->Compatibility != NULL) {
     if (Mapping->IsFound) {
-      ArmSetMemoryAttributes (Mapping->BaseAddress, SIZE_4KB, EFI_MEMORY_UC);
+      ArmSetMemoryAttributes (Mapping->BaseAddress, SIZE_4KB, EFI_MEMORY_UC, 0);
     }
 
     Mapping++;
