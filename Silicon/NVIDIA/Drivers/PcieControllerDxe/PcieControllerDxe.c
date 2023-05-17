@@ -1756,10 +1756,11 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      RootBridge->DevicePath = AppendDevicePathNode (
-                                 ParentDevicePath,
-                                 (EFI_DEVICE_PATH_PROTOCOL  *)&mPciRootBridgeDevicePathNode
-                                 );
+      mPciRootBridgeDevicePathNode.UID = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
+      RootBridge->DevicePath           = AppendDevicePathNode (
+                                           ParentDevicePath,
+                                           (EFI_DEVICE_PATH_PROTOCOL  *)&mPciRootBridgeDevicePathNode
+                                           );
 
       // Setup configuration structure
       Private->ConfigSpaceInfo.BaseAddress           = Private->EcamBase;
