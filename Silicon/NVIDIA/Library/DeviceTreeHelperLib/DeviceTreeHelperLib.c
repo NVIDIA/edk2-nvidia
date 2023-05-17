@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -244,7 +244,7 @@ GetDeviceTreeHandle (
   @param  NumberOfRegisters - On input contains size of RegisterArray, on output number of required registers.
 
   @retval EFI_SUCCESS           - Operation successful
-  @retval EFI_BUFFER_TO_SMALL   - NumberOfRegisters is less than required registers
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfRegisters is less than required registers
   @retval EFI_INVALID_PARAMETER - Handle is invalid
   @retval EFI_INVALID_PARAMETER - NumberOfRegisters pointer is NULL
   @retval EFI_INVALID_PARAMETER - RegisterArray is NULL when *NumberOfRegisters is not 0
@@ -363,14 +363,108 @@ GetDeviceTreeRegisters (
 }
 
 /**
-  Returns information about the interrupts of a given device tree node
+  Gets the value of a 32-bit field within the specified node
 
-  @param  NodeHandle         - NodeHandle
-  @param  InterruptArray     - Buffer of size NumberOfInterrupts that will contain the list of interrupt information
-  @param  NumberOfInterrupts - On input contains size of InterruptArray, on output number of required registers.
+  @param  [in]  DeviceTreeBase  - Base Address of the device tree.
+  @param  [in]  NodeOffset      - Offset from DeviceTreeBase to the specified node.
+  @param  [in]  Name            - Name of the field to look up
+  @param  [out] Value           - The resulting value of the field
 
   @retval EFI_SUCCESS           - Operation successful
-  @retval EFI_BUFFER_TO_SMALL   - NumberOfInterrupts is less than required registers
+  @retval EFI_INVALID_PARAMETER - DeviceTreeBase pointer is NULL
+  @retval EFI_INVALID_PARAMETER - NodeOffset is 0
+  @retval EFI_INVALID_PARAMETER - Name pointer is NULL
+  @retval EFI_NOT_FOUND         - Name wasn't found in the specified node
+
+**/
+EFI_STATUS
+EFIAPI
+GetNodeFieldByName32 (
+  IN CONST VOID   *DeviceTree,
+  IN INT32        NodeOffset,
+  IN CONST CHAR8  *Name,
+  OUT UINT32      *Value
+  )
+{
+  CONST UINT32  *Field;
+  INT32         FieldSize;
+
+  if ((DeviceTree == NULL) || (NodeOffset == 0) || (Name == NULL) || (Value == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Field = (CONST UINT32 *)fdt_getprop (
+                            DeviceTree,
+                            NodeOffset,
+                            Name,
+                            &FieldSize
+                            );
+
+  if ((Field != NULL) && (FieldSize == sizeof (UINT32))) {
+    *Value = SwapBytes32 (*Field);
+    return EFI_SUCCESS;
+  } else {
+    return EFI_NOT_FOUND;
+  }
+}
+
+/**
+  Gets the offset of the interrupt-parent of the specified node
+
+  @param  [in]  DeviceTreeBase   - Base Address of the device tree.
+  @param  [in]  NodeOffset       - Offset from DeviceTreeBase to the specified node.
+  @param  [out] ParentNodeOffset - The interrupt parent node offset
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - DeviceTreeBase pointer is NULL
+  @retval EFI_INVALID_PARAMETER - NodeOffset is 0
+  @retval EFI_INVALID_PARAMETER - ParentNodeOffset pointer is NULL
+
+**/
+EFI_STATUS
+EFIAPI
+GetInterruptParentOffset (
+  IN CONST VOID  *DeviceTree,
+  IN INT32       NodeOffset,
+  OUT INT32      *ParentNodeOffset
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      ParentPhandle;
+  CONST VOID  *InterruptControllerProperty;
+
+  if ((DeviceTree == NULL) || (NodeOffset == 0) || (ParentNodeOffset == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetNodeFieldByName32 (DeviceTree, NodeOffset, "interrupt-parent", &ParentPhandle);
+
+  if (!EFI_ERROR (Status)) {
+    *ParentNodeOffset = fdt_node_offset_by_phandle (DeviceTree, ParentPhandle);
+  } else if (Status == EFI_NOT_FOUND) {
+    *ParentNodeOffset = fdt_parent_offset (DeviceTree, NodeOffset);
+  } else {
+    return Status;
+  }
+
+  // Verify that this node is an interrupt-controller, and if not, recursively look for its parent
+  InterruptControllerProperty = fdt_get_property_namelen (DeviceTree, *ParentNodeOffset, "interrupt-controller", strlen ("interrupt-controller"), NULL);
+  if (InterruptControllerProperty != NULL) {
+    return EFI_SUCCESS;
+  } else {
+    return GetInterruptParentOffset (DeviceTree, *ParentNodeOffset, ParentNodeOffset);
+  }
+}
+
+/**
+  Returns information about the interrupts of a given device tree node
+
+  @param  [in]      NodeHandle         - NodeHandle
+  @param  [out]     InterruptArray     - Buffer of size NumberOfInterrupts that will contain the list of interrupt information
+  @param  [in, out] NumberOfInterrupts - On input contains size of InterruptArray, on output number of required registers.
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfInterrupts is less than required registers
   @retval EFI_INVALID_PARAMETER - Handle is invalid
   @retval EFI_INVALID_PARAMETER - NumberOfInterrupts pointer is NULL
   @retval EFI_INVALID_PARAMETER - InterruptArray is NULL when *NumberOfInterrupts is not 0
@@ -397,9 +491,10 @@ GetDeviceTreeInterrupts (
   UINT32        IntIndex;
   INT32         NameSize;
   INT32         NameOffset;
-
-  // Three cells per interrupt
-  InterruptCells = 3;
+  INT32         ParentNodeOffset;
+  UINT32        CellIndex;
+  UINT32        NumCells;
+  BOOLEAN       ExtendedInterrupts;
 
   if ((NumberOfInterrupts == NULL) ||
       ((*NumberOfInterrupts != 0) && (InterruptArray == NULL)))
@@ -412,18 +507,74 @@ GetDeviceTreeInterrupts (
     return Status;
   }
 
+  // Spec says to use "interrupts-extended" if both it and "interrupts" exist
   IntProperty = (CONST UINT32 *)fdt_getprop (
                                   DeviceTree,
                                   NodeOffset,
-                                  "interrupts",
+                                  "interrupts-extended",
                                   &PropertySize
                                   );
-  if (IntProperty == NULL) {
-    return EFI_NOT_FOUND;
-  }
 
-  ASSERT ((PropertySize % InterruptCells) == 0);
-  IntPropertyEntries = PropertySize / (InterruptCells * sizeof (UINT32));
+  if (IntProperty != NULL) {
+    ExtendedInterrupts = TRUE;
+    NumCells           = PropertySize/sizeof (UINT32);
+
+    CellIndex          = 0;
+    IntPropertyEntries = 0;
+    while (CellIndex < NumCells) {
+      ParentNodeOffset = fdt_node_offset_by_phandle (DeviceTree, SwapBytes32 (IntProperty[CellIndex++]));
+      Status           = GetNodeFieldByName32 (DeviceTree, ParentNodeOffset, "#interrupt-cells", &InterruptCells);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error getting #interrupt-cells count for interrupt controller \"%a\" (rc=%r)\n", __FUNCTION__, fdt_getprop (DeviceTree, ParentNodeOffset, "compatible", NULL), Status));
+        return Status;
+      }
+
+      ASSERT (InterruptCells > 0);
+      if (InterruptCells == 0) {
+        DEBUG ((DEBUG_ERROR, "%a: Didn't get a valid #interrupt-cells count for interrupt controller \"%a\" (rc=%r)\n", __FUNCTION__, fdt_getprop (DeviceTree, ParentNodeOffset, "compatible", NULL), Status));
+        return EFI_DEVICE_ERROR;
+      }
+
+      DEBUG ((DEBUG_VERBOSE, "%a: Parent has %d interrupt cells\n", __FUNCTION__, InterruptCells));
+      ASSERT (CellIndex + InterruptCells <= NumCells);
+      IntPropertyEntries++;
+      CellIndex += InterruptCells;
+    }
+
+    ASSERT (CellIndex == NumCells);
+  } else {
+    // Didn't find extended interrupts, so look for normal ones
+    ExtendedInterrupts = FALSE;
+
+    IntProperty = (CONST UINT32 *)fdt_getprop (
+                                    DeviceTree,
+                                    NodeOffset,
+                                    "interrupts",
+                                    &PropertySize
+                                    );
+
+    if (IntProperty == NULL) {
+      return EFI_NOT_FOUND;
+    }
+
+    NumCells = PropertySize/sizeof (UINT32);
+    Status   = GetInterruptParentOffset (DeviceTree, NodeOffset, &ParentNodeOffset);
+
+    if (!EFI_ERROR (Status)) {
+      Status = GetNodeFieldByName32 (DeviceTree, ParentNodeOffset, "#interrupt-cells", &InterruptCells);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error getting #interrupt-cells count for interrupt controller \"%a\" (rc=%r)\n", __FUNCTION__, fdt_getprop (DeviceTree, ParentNodeOffset, "compatible", NULL), Status));
+        return Status;
+      }
+    } else {
+      // Maintain legacy behavior of assuming it's 3 for all interrupts where we haven't determined that it shouldn't be
+      DEBUG ((DEBUG_WARN, "%a: Error determining interrupt controller (possible incorrect DeviceTree). Using legacy #interrupt-cells of 3\n", __FUNCTION__));
+      InterruptCells = 3;
+    }
+
+    ASSERT ((PropertySize % InterruptCells) == 0);
+    IntPropertyEntries = PropertySize / (InterruptCells * sizeof (UINT32));
+  }
 
   if (*NumberOfInterrupts < IntPropertyEntries) {
     *NumberOfInterrupts = IntPropertyEntries;
@@ -442,17 +593,48 @@ GetDeviceTreeInterrupts (
 
   NameOffset = 0;
 
+  CellIndex = 0;
   for (IntIndex = 0; IntIndex < IntPropertyEntries; IntIndex++) {
-    InterruptArray[IntIndex].Type      = SwapBytes32 (IntProperty[(IntIndex * InterruptCells)]);
-    InterruptArray[IntIndex].Interrupt = SwapBytes32 (IntProperty[(IntIndex * InterruptCells) + 1]);
-    InterruptArray[IntIndex].Flag      = SwapBytes32 (IntProperty[(IntIndex * InterruptCells) + 2]);
+    ASSERT (CellIndex < NumCells);
+    if (ExtendedInterrupts) {
+      ParentNodeOffset = fdt_node_offset_by_phandle (DeviceTree, SwapBytes32 (IntProperty[CellIndex++]));
+      Status           = GetNodeFieldByName32 (DeviceTree, ParentNodeOffset, "#interrupt-cells", &InterruptCells);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error getting #interrupt-cells count for interrupt controller \"%a\" (rc=%r)\n", __FUNCTION__, fdt_getprop (DeviceTree, ParentNodeOffset, "compatible", NULL), Status));
+        return Status;
+      }
+
+      ASSERT (InterruptCells > 0);
+      if (InterruptCells == 0) {
+        DEBUG ((DEBUG_ERROR, "%a: Didn't get a valid #interrupt-cells count for interrupt controller \"%a\" (rc=%r)\n", __FUNCTION__, fdt_getprop (DeviceTree, ParentNodeOffset, "compatible", NULL), Status));
+        return EFI_DEVICE_ERROR;
+      }
+    }
+
+    InterruptArray[IntIndex].ControllerCompatible = fdt_getprop (DeviceTree, ParentNodeOffset, "compatible", NULL);
+    if (InterruptCells >= 3) {
+      DEBUG ((DEBUG_INFO, "%a: IntProperty[%d] - Type = %d\n", __FUNCTION__, CellIndex, SwapBytes32 (IntProperty[CellIndex])));
+      InterruptArray[IntIndex].Type = SwapBytes32 (IntProperty[CellIndex++]);
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: IntProperty[%d] - Interrupt = %d\n", __FUNCTION__, CellIndex, SwapBytes32 (IntProperty[CellIndex])));
+    InterruptArray[IntIndex].Interrupt = SwapBytes32 (IntProperty[CellIndex++]);
+    if (InterruptCells >= 2) {
+      DEBUG ((DEBUG_INFO, "%a: IntProperty[%d] - Flag = %d\n", __FUNCTION__, CellIndex, SwapBytes32 (IntProperty[CellIndex])));
+      InterruptArray[IntIndex].Flag = SwapBytes32 (IntProperty[CellIndex++]);
+    }
+
     if (NameOffset < NameSize) {
       InterruptArray[IntIndex].Name = IntNames + NameOffset;
       NameOffset                   += AsciiStrSize (InterruptArray[IntIndex].Name);
     } else {
       InterruptArray[IntIndex].Name = NULL;
     }
+
+    DEBUG ((DEBUG_INFO, "%a: Parent interrupt controller \"%a\"\n", __FUNCTION__, InterruptArray[IntIndex].ControllerCompatible));
   }
+
+  ASSERT (CellIndex == NumCells);
 
   *NumberOfInterrupts = IntPropertyEntries;
   return EFI_SUCCESS;

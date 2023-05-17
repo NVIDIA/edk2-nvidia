@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -39,6 +39,7 @@ typedef struct {
   HARDWARE_INTERRUPT_SOURCE            Interrupt;
   NVIDIA_DEVICE_TREE_INTERRUPT_FLAG    Flag;
   CONST CHAR8                          *Name;
+  CONST CHAR8                          *ControllerCompatible;
 } NVIDIA_DEVICE_TREE_INTERRUPT_DATA;
 
 /**
@@ -148,11 +149,56 @@ GetDeviceTreeRegisters (
   );
 
 /**
+  Gets the value of a 32-bit field within the specified node
+
+  @param  [in]  DeviceTreeBase  - Base Address of the device tree.
+  @param  [in]  NodeOffset      - Offset from DeviceTreeBase to the specified node.
+  @param  [in]  Name            - Name of the field to look up
+  @param  [out] Value           - The resulting value of the field
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - DeviceTreeBase pointer is NULL
+  @retval EFI_INVALID_PARAMETER - NodeOffset is 0
+  @retval EFI_INVALID_PARAMETER - Name pointer is NULL
+  @retval EFI_NOT_FOUND         - Name wasn't found in the specified node
+
+**/
+EFI_STATUS
+EFIAPI
+GetNodeFieldByName32 (
+  IN CONST VOID   *DeviceTree,
+  IN INT32        NodeOffset,
+  IN CONST CHAR8  *Name,
+  OUT UINT32      *Value
+  );
+
+/**
+  Gets the offset of the interrupt-parent of the specified node
+
+  @param  [in]  DeviceTreeBase   - Base Address of the device tree.
+  @param  [in]  NodeOffset       - Offset from DeviceTreeBase to the specified node.
+  @param  [out] ParentNodeOffset - The interrupt parent node offset
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - DeviceTreeBase pointer is NULL
+  @retval EFI_INVALID_PARAMETER - NodeOffset is 0
+  @retval EFI_INVALID_PARAMETER - ParentNodeOffset pointer is NULL
+
+**/
+EFI_STATUS
+EFIAPI
+GetInterruptParentOffset (
+  IN CONST VOID  *DeviceTree,
+  IN INT32       NodeOffset,
+  OUT INT32      *ParentNodeOffset
+  );
+
+/**
   Returns information about the interrupts of a given device tree node
 
-  @param  NodeHandle         - NodeHandle
-  @param  InterruptArray     - Buffer of size NumberOfInterrupts that will contain the list of interrupt information
-  @param  NumberOfInterrupts - On input contains size of InterruptArray, on output number of required registers.
+  @param  [in]      NodeHandle         - NodeHandle
+  @param  [out]     InterruptArray     - Buffer of size NumberOfInterrupts that will contain the list of interrupt information
+  @param  [in, out] NumberOfInterrupts - On input contains size of InterruptArray, on output number of required registers.
 
   @retval EFI_SUCCESS           - Operation successful
   @retval EFI_BUFFER_TOO_SMALL  - NumberOfInterrupts is less than required registers
