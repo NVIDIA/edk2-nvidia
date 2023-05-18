@@ -456,6 +456,16 @@ formset
       minsize  = 0,
       maxsize  = ASSET_TAG_MAX_LEN,
     endstring;
+
+    oneof varid = ProductInfo.AssetTagProtection,
+        questionid = KEY_ASSET_TAG_PROTECTION,
+        prompt = STRING_TOKEN(STR_PRODUCT_ASSET_TAG_PROTECTION),
+        help   = STRING_TOKEN(STR_PRODUCT_ASSET_TAG_PROTECTION_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_DISABLED), value = ASSET_TAG_PROTECTION_DISABLE, flags = 0;
+        option text = STRING_TOKEN(STR_ENABLED),  value = ASSET_TAG_PROTECTION_ENABLE, flags = 0;
+    endoneof;
+
   endform;
   ADD_SOCKET_FORM(0)
   ADD_SOCKET_FORM(1)

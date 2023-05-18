@@ -640,6 +640,8 @@
 #string STR_PRODUCT_INFO_HELP              #language en-US "Product Information"
 #string STR_PRODUCT_CHASSIS_ASSET_TAG      #language en-US "Product Asset Tag"
 #string STR_PRODUCT_CHASSIS_ASSET_TAG_HELP #language en-US "Set the Product Asset Tag. The maximum length is 32 characters."
+#string STR_PRODUCT_ASSET_TAG_PROTECTION      #language en-US "Asset Tag Protection"
+#string STR_PRODUCT_ASSET_TAG_PROTECTION_HELP #language en-US "Locks product asset tag information. The asset tag is not erased if restoring default system settings."
 
 #string STR_ENABLED_PCIE_NIC_TOPOLOGY_PROMPT    #language en-US "Enable Bootable NIC Filtering"
 #string STR_ENABLED_PCIE_NIC_TOPOLOGY_HELP      #language en-US "Used To Enable PCIe Tolopoly Based Bootable NIC Filtering"

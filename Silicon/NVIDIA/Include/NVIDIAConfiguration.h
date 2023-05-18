@@ -116,6 +116,7 @@ typedef struct {
 
 typedef struct {
   CHAR16    ChassisAssetTag[ASSET_TAG_MAX_SIZE];
+  UINT8     AssetTagProtection;
 } NVIDIA_PRODUCT_INFO;
 
 typedef struct {
