@@ -201,7 +201,7 @@ ErstInitShadowFlash (
         ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
       }
 
-      DEBUG ((DEBUG_ERROR, "%a: Initing the cache of the Flash contents took %llu ns\n", __FUNCTION__, ElapsedTime));
+      DEBUG ((DEBUG_INFO, "%a: Initing the cache of the Flash contents took %lu ns\n", __FUNCTION__, ElapsedTime));
     }
       );
 
@@ -1685,7 +1685,7 @@ ReturnStatus:
       ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
     }
 
-    DEBUG ((DEBUG_ERROR, "%a: Function took %llu ns from start to clear busy (WriteRecordTime=%llu = %d%%, SpiTime=%llu = %d%%)\n", __FUNCTION__, ElapsedTime, WriteRecordTime, 100*WriteRecordTime/ElapsedTime, SpiTime, 100*SpiTime/ElapsedTime));
+    DEBUG ((DEBUG_INFO, "%a: Function took %lu ns from start to clear busy (WriteRecordTime=%lu = %u%%, SpiTime=%lu = %u%%)\n", __FUNCTION__, ElapsedTime, WriteRecordTime, 100*WriteRecordTime/ElapsedTime, SpiTime, 100*SpiTime/ElapsedTime));
     WriteRecordTime = 0;
     SpiTime         = 0;
   }
