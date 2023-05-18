@@ -168,6 +168,7 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev|4
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask|0x00000006
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap|0x00000006
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2PhysicalPresenceFlags|0x00002
   gEfiSecurityPkgTokenSpaceGuid.PcdRandomizePlatformHierarchy|TRUE
 
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
