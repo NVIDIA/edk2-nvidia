@@ -3,6 +3,7 @@
   configuration module.
 
 Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -17,7 +18,6 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Protocol/HiiConfigAccess.h>
 #include <Protocol/HiiConfigRouting.h>
 #include <Protocol/Tcg2Protocol.h>
-#include <Protocol/VariableLock.h>
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
@@ -32,6 +32,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/PcdLib.h>
 #include <Library/PrintLib.h>
 #include <Library/Tcg2PhysicalPresenceLib.h>
+#include <Library/VariablePolicyHelperLib.h>
 
 #include <Guid/MdeModuleHii.h>
 

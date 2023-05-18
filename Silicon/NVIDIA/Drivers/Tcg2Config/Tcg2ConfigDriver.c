@@ -2,6 +2,7 @@
   The module entry point for Tcg2 configuration module.
 
 Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -257,14 +258,14 @@ Tcg2ConfigDriverEntryPoint (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                    Status;
-  TCG2_CONFIG_PRIVATE_DATA      *PrivateData;
-  TCG2_CONFIGURATION            Tcg2Configuration;
-  TCG2_DEVICE_DETECTION         Tcg2DeviceDetection;
-  UINTN                         Index;
-  UINTN                         DataSize;
-  EDKII_VARIABLE_LOCK_PROTOCOL  *VariableLockProtocol;
-  UINT32                        CurrentActivePCRBanks;
+  EFI_STATUS                      Status;
+  TCG2_CONFIG_PRIVATE_DATA        *PrivateData;
+  TCG2_CONFIGURATION              Tcg2Configuration;
+  TCG2_DEVICE_DETECTION           Tcg2DeviceDetection;
+  UINTN                           Index;
+  UINTN                           DataSize;
+  EDKII_VARIABLE_POLICY_PROTOCOL  *PolicyProtocol;
+  UINT32                          CurrentActivePCRBanks;
 
   Status = gBS->OpenProtocol (
                   ImageHandle,
@@ -389,13 +390,22 @@ Tcg2ConfigDriverEntryPoint (
   //
   // We should lock Tcg2DeviceDetection, because it contains information needed at S3.
   //
-  Status = gBS->LocateProtocol (&gEdkiiVariableLockProtocolGuid, NULL, (VOID **)&VariableLockProtocol);
+  Status = gBS->LocateProtocol (
+                  &gEdkiiVariablePolicyProtocolGuid,
+                  NULL,
+                  (VOID **)&PolicyProtocol
+                  );
   if (!EFI_ERROR (Status)) {
-    Status = VariableLockProtocol->RequestToLock (
-                                     VariableLockProtocol,
-                                     TCG2_DEVICE_DETECTION_NAME,
-                                     &gTcg2ConfigFormSetGuid
-                                     );
+    Status = RegisterBasicVariablePolicy (
+               PolicyProtocol,
+               &gTcg2ConfigFormSetGuid,
+               TCG2_DEVICE_DETECTION_NAME,
+               VARIABLE_POLICY_NO_MIN_SIZE,
+               VARIABLE_POLICY_NO_MAX_SIZE,
+               VARIABLE_POLICY_NO_MUST_ATTR,
+               VARIABLE_POLICY_NO_CANT_ATTR,
+               VARIABLE_POLICY_TYPE_LOCK_NOW
+               );
     ASSERT_EFI_ERROR (Status);
   }
 

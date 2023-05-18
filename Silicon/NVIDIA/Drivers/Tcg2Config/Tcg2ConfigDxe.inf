@@ -5,6 +5,7 @@
 #  NOTE: This module is only for reference only, each platform should have its own setup page.
 #
 # Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
@@ -13,7 +14,7 @@
   INF_VERSION                    = 0x00010005
   BASE_NAME                      = Tcg2ConfigDxe
   MODULE_UNI_FILE                = Tcg2ConfigDxe.uni
-  FILE_GUID                      = 4D9CBEF0-15A0-4D0C-83DB-5213E710C23F
+  FILE_GUID                      = 2caafd0a-f5e1-11ed-912f-2bbe379ba5f4
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = Tcg2ConfigDriverEntryPoint
@@ -54,6 +55,7 @@
   Tpm2CommandLib
   Tcg2PhysicalPresenceLib
   IoLib
+  VariablePolicyHelperLib
 
 [Guids]
   ## PRODUCES           ## HII
@@ -66,8 +68,8 @@
 [Protocols]
   gEfiHiiConfigAccessProtocolGuid               ## PRODUCES
   gEfiDevicePathProtocolGuid                    ## PRODUCES
-  gEdkiiVariableLockProtocolGuid                ## SOMETIMES_CONSUMES
   gEfiTcg2ProtocolGuid                          ## CONSUMES
+  gEdkiiVariablePolicyProtocolGuid              ## CONSUMES
 
 [Pcd]
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmInstanceGuid            ## CONSUMES
