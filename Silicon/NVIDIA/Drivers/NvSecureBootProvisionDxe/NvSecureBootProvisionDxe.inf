@@ -47,6 +47,7 @@
   gEfiGlobalVariableGuid
   gEfiImageSecurityDatabaseGuid
   gNVIDIATokenSpaceGuid
+  gNVIDIADefaultVarDoneGuid
 
 [Protocols]
   gEfiDevicePathProtocolGuid

@@ -58,6 +58,7 @@
   gNVIDIATokenSpaceGuid
   gEfiPartTypeSystemPartGuid
   gEfiImageSecurityDatabaseGuid
+  gNVIDIADefaultVarDoneGuid
 
 [Protocols]
   gEfiVariableWriteArchProtocolGuid

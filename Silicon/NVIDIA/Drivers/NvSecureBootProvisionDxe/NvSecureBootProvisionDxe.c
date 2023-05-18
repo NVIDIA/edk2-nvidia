@@ -23,8 +23,47 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PrintLib.h>
+#include <Library/AuthVariableLib.h>
 
-#define HASH_EXT  L"Hash"
+#define NUM_DBS          (3)
+#define MAX_DB_STRLEN    (10)
+#define MAX_SIGNED_KEYS  (50)
+#define MAX_KEY_STRLEN   (14)
+#define HASH_EXT         L"Hash"
+
+typedef struct {
+  CHAR16      SignedCertName[MAX_KEY_STRLEN];
+  CHAR16      CertName[MAX_KEY_STRLEN];
+  EFI_GUID    *CertGuid;
+  CHAR16      DefaultName[MAX_KEY_STRLEN];
+  EFI_GUID    *DefaultGuid;
+} SignedKeysType;
+
+STATIC VOID  *Registration = NULL;
+
+STATIC SignedKeysType  SupportedKeys[NUM_DBS] = {
+  [0] = {
+    .SignedCertName = L"dbxSigned",
+    .CertName       = L"dbx",
+    .CertGuid       = &gEfiImageSecurityDatabaseGuid,
+    .DefaultName    = L"dbxDefault",
+    .DefaultGuid    = &gEfiGlobalVariableGuid
+  },
+  [1] = {
+    .SignedCertName = L"dbSigned",
+    .CertName       = L"db",
+    .CertGuid       = &gEfiImageSecurityDatabaseGuid,
+    .DefaultName    = L"dbDefault",
+    .DefaultGuid    = &gEfiGlobalVariableGuid
+  },
+  [2] = {
+    .SignedCertName = L"kekSigned",
+    .CertName       = L"KEK",
+    .CertGuid       = &gEfiGlobalVariableGuid,
+    .DefaultName    = L"KEKDefault",
+    .DefaultGuid    = &gEfiGlobalVariableGuid
+  },
+};
 
 /**
  * Utility function to determine if EnrollSecurityKeysApp should be run.
@@ -255,12 +294,12 @@ UpdateSecVar (
              &StoredHashValueSize
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a:%d Failed to get %s %r\n", __FUNCTION__, __LINE__, InputVarName, Status));
+    DEBUG ((DEBUG_INFO, "%a:%d Failed to get %s %r\n", __FUNCTION__, __LINE__, InputHashVarName, Status));
     goto ExitUpdateSecVar;
   }
 
   if (StoredHashValueSize != SHA256_DIGEST_SIZE) {
-    DEBUG ((DEBUG_ERROR, "%a: Invalid Hash Size %u\n", __FUNCTION__, StoredHashValueSize));
+    DEBUG ((DEBUG_INFO, "%a: Invalid Hash Size %u\n", __FUNCTION__, StoredHashValueSize));
     goto ExitUpdateSecVar;
   }
 
@@ -271,6 +310,73 @@ UpdateSecVar (
 
 ExitUpdateSecVar:
   return UpdateVar;
+}
+
+/**
+ Append to the default secure boot keys.
+ Util function to take a signed key variable, strip out the
+ header and append to existing default variables to enable
+ secure boot, this function is called when secure boot hasn't been
+ enabled.
+
+ @param[in] DefaultName        Name of the Default Variable (e.g dbdefault).
+ @param[in] DefaultGuid        Guid that the Default var belongs to.
+ @param[in] SignedPayload      Pointer to the signed payload.
+ @param[in] SignedPayloadSize  Size of the signed payload.
+
+ @return EFI_SUCCESS  On Success.
+         other        Failure.
+ **/
+STATIC
+EFI_STATUS
+AppendToDefault (
+  IN CHAR16    *DefaultName,
+  IN EFI_GUID  *DefaultGuid,
+  IN VOID      *SignedPayload,
+  IN UINTN     SignedPayloadSize
+  )
+{
+  EFI_STATUS                     Status;
+  EFI_VARIABLE_AUTHENTICATION_2  *CertData;
+  UINT8                          *SigData;
+  UINT32                         SigDataSize;
+  UINT8                          *PayloadPtr;
+  UINTN                          PayloadSize;
+  UINT32                         Attributes;
+  UINTN                          DataSize = 0;
+
+  CertData = (EFI_VARIABLE_AUTHENTICATION_2 *)SignedPayload;
+
+  SigData     = CertData->AuthInfo.CertData;
+  SigDataSize = CertData->AuthInfo.Hdr.dwLength - (UINT32)(OFFSET_OF (WIN_CERTIFICATE_UEFI_GUID, CertData));
+  PayloadPtr  = SigData + SigDataSize;
+  PayloadSize = SignedPayloadSize - OFFSET_OF_AUTHINFO2_CERT_DATA - (UINTN)SigDataSize;
+
+  Status = gRT->GetVariable (
+                  DefaultName,
+                  DefaultGuid,
+                  &Attributes,
+                  &DataSize,
+                  NULL
+                  );
+  if (Status == EFI_BUFFER_TOO_SMALL) {
+    Attributes |= EFI_VARIABLE_APPEND_WRITE;
+  } else {
+    Attributes = EFI_VARIABLE_BOOTSERVICE_ACCESS;
+  }
+
+  Status = gRT->SetVariable (
+                  DefaultName,
+                  DefaultGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                  PayloadSize,
+                  PayloadPtr
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a Failed to update %s %r\n", __FUNCTION__, DefaultName, Status));
+  }
+
+  return Status;
 }
 
 /**
@@ -293,7 +399,10 @@ AppendKeys (
   IN CHAR16    *InputVarName,
   IN EFI_GUID  *InputVarGuid,
   IN CHAR16    *SecDbToUpdate,
-  IN EFI_GUID  *SecDbGuid
+  IN EFI_GUID  *SecDbGuid,
+  IN CHAR16    *DefaultVarName OPTIONAL,
+  IN EFI_GUID  *DefaultVarGuid OPTIONAL,
+  IN UINT8     SetupMode
   )
 {
   EFI_STATUS  Status;
@@ -356,33 +465,50 @@ AppendKeys (
         SecDbToUpdate
         ));
 
-      Status = gRT->SetVariable (
-                      SecDbToUpdate,
-                      SecDbGuid,
-                      (EFI_VARIABLE_NON_VOLATILE |
-                       EFI_VARIABLE_BOOTSERVICE_ACCESS |
-                       EFI_VARIABLE_RUNTIME_ACCESS |
-                       EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS |
-                       EFI_VARIABLE_APPEND_WRITE),
-                      SignedPayloadSize,
-                      SignedPayload
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Failed to update %s %r\n", SecDbToUpdate, Status));
-        goto ExitAppendKeys;
+      /*
+       * If we're here then we haven't processed the signed payload and we
+       * need to append it to the secure keys.
+       * If secure boot has been enabled then append to the key db variable
+       * else append/create the default key variable.
+       */
+      if (SetupMode == USER_MODE) {
+        Status = gRT->SetVariable (
+                        SecDbToUpdate,
+                        SecDbGuid,
+                        (EFI_VARIABLE_NON_VOLATILE |
+                         EFI_VARIABLE_BOOTSERVICE_ACCESS |
+                         EFI_VARIABLE_RUNTIME_ACCESS |
+                         EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS |
+                         EFI_VARIABLE_APPEND_WRITE),
+                        SignedPayloadSize,
+                        SignedPayload
+                        );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "Failed to update %s %r\n", SecDbToUpdate, Status));
+          goto ExitAppendKeys;
+        }
+      } else {
+        Status = AppendToDefault (
+                   DefaultVarName,
+                   DefaultVarGuid,
+                   SignedPayload,
+                   SignedPayloadSize
+                   );
       }
 
       /* Store the hash of the payload that was used to update the secure key */
-      Status = gRT->SetVariable (
-                      HashVarName,
-                      &gNVIDIATokenSpaceGuid,
-                      (EFI_VARIABLE_NON_VOLATILE |
-                       EFI_VARIABLE_BOOTSERVICE_ACCESS),
-                      SHA256_DIGEST_SIZE,
-                      ComputedHashValue
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Faile to update %s %r\n", HashVarName, Status));
+      if (!EFI_ERROR (Status)) {
+        Status = gRT->SetVariable (
+                        HashVarName,
+                        &gNVIDIATokenSpaceGuid,
+                        (EFI_VARIABLE_NON_VOLATILE |
+                         EFI_VARIABLE_BOOTSERVICE_ACCESS),
+                        SHA256_DIGEST_SIZE,
+                        ComputedHashValue
+                        );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "Faile to update %s %r\n", HashVarName, Status));
+        }
       }
     }
   }
@@ -412,45 +538,47 @@ NvSecureBootUpdateSignedKeys (
 {
   EFI_STATUS  Status;
   UINT8       SetupMode;
+  CHAR16      KeyName[MAX_KEY_STRLEN];
+  UINTN       Index;
+  UINTN       KeyIdx;
 
   Status = GetSetupMode (&SetupMode);
 
   if (!EFI_ERROR (Status)) {
-    if (SetupMode == USER_MODE) {
-      AppendKeys (
-        L"dbxSignedMsft",
-        &gNVIDIAPublicVariableGuid,
-        EFI_IMAGE_SECURITY_DATABASE1,
-        &gEfiImageSecurityDatabaseGuid
-        );
+    for (Index = 0; Index < NUM_DBS; Index++) {
+      for (KeyIdx = 0; KeyIdx < MAX_SIGNED_KEYS; KeyIdx++) {
+        ZeroMem (KeyName, (sizeof (CHAR16) * MAX_KEY_STRLEN));
+        UnicodeSPrint (
+          KeyName,
+          (sizeof (CHAR16) * MAX_KEY_STRLEN),
+          L"%s_%u",
+          SupportedKeys[Index].SignedCertName,
+          KeyIdx
+          );
 
-      AppendKeys (
-        L"dbxSignedOem",
-        &gNVIDIAPublicVariableGuid,
-        EFI_IMAGE_SECURITY_DATABASE1,
-        &gEfiImageSecurityDatabaseGuid
-        );
-
-      AppendKeys (
-        L"dbSignedOem",
-        &gNVIDIAPublicVariableGuid,
-        EFI_IMAGE_SECURITY_DATABASE,
-        &gEfiImageSecurityDatabaseGuid
-        );
-
-      AppendKeys (
-        L"dbSignedMsft",
-        &gNVIDIAPublicVariableGuid,
-        EFI_IMAGE_SECURITY_DATABASE,
-        &gEfiImageSecurityDatabaseGuid
-        );
-
-      AppendKeys (
-        L"kekSignedOem",
-        &gNVIDIAPublicVariableGuid,
-        EFI_KEY_EXCHANGE_KEY_NAME,
-        &gEfiGlobalVariableGuid
-        );
+        Status = AppendKeys (
+                   KeyName,
+                   &gNVIDIAPublicVariableGuid,
+                   SupportedKeys[Index].CertName,
+                   SupportedKeys[Index].CertGuid,
+                   SupportedKeys[Index].DefaultName,
+                   SupportedKeys[Index].DefaultGuid,
+                   SetupMode
+                   );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((
+            DEBUG_INFO,
+            "%a:%d Key %s Status %r\n",
+            __FUNCTION__,
+            __LINE__,
+            KeyName,
+            Status
+            ));
+          if (Status == EFI_NOT_FOUND) {
+            break;
+          }
+        }
+      }
     }
   }
 }
@@ -499,6 +627,29 @@ ExitNvSecureBootProvisionEndOfDxe:
 }
 
 /**
+  Default Variable Driver Ready Callback
+
+  This function is the callback after the Default Variable Driver has
+  run.
+  Security Keys and updates the keys if needed.
+
+  @param[in]  Event     Callback Event pointer.
+  @param[in]  Context   User Data passed as part of the callback.
+
+  @retval None
+
+**/
+STATIC
+VOID
+DefaultVarDriverReady (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  NvSecureBootUpdateSignedKeys ();
+}
+
+/**
   Entrypoint of this module.
 
   This function is the entrypoint of this module. It installs a EndOfDxe
@@ -520,6 +671,24 @@ NvSecureBootProvisionDxeInitialize (
 {
   EFI_STATUS  Status;
   EFI_EVENT   EndOfDxeEvent;
+  EFI_EVENT   NotifyEvent;
+
+  /**
+   * Notification for when the Default Variable Driver is done.
+   * Need that driver to parse the dtbo first.
+   **/
+  NotifyEvent = EfiCreateProtocolNotifyEvent (
+                  &gNVIDIADefaultVarDoneGuid,
+                  TPL_CALLBACK,
+                  DefaultVarDriverReady,
+                  NULL,
+                  &Registration
+                  );
+  if (NotifyEvent == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create notify event\n", __FUNCTION__));
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ExitNvSecureBootProvisionDxeInitialize;
+  }
 
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
@@ -530,5 +699,6 @@ NvSecureBootProvisionDxeInitialize (
                   &EndOfDxeEvent
                   );
 
+ExitNvSecureBootProvisionDxeInitialize:
   return Status;
 }
