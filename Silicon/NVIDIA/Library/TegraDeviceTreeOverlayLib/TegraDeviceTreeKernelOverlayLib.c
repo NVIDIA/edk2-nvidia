@@ -68,6 +68,7 @@ ReadBoardInfo (
 
   BoardInfo->IdCount    = ProtocolCount;
   BoardInfo->ProductIds = (EEPROM_PART_NUMBER *)AllocateZeroPool (BoardInfo->IdCount * sizeof (EEPROM_PART_NUMBER));
+  BoardInfo->EepromDeviceTreePaths = (CHAR8 **)AllocateZeroPool (BoardInfo->IdCount * sizeof (CHAR8 *));
 
   for (i = 0; i < ProtocolCount; i++) {
     Status = gBS->HandleProtocol (
@@ -81,6 +82,7 @@ ReadBoardInfo (
     }
 
     CopyMem ((VOID *)(&BoardInfo->ProductIds[i]), (VOID *)&Eeprom->ProductId, TEGRA_PRODUCT_ID_LEN);
+    BoardInfo->EepromDeviceTreePaths[i] = Eeprom->EepromDeviceTreePath;
   }
 
   if (BoardInfo->IdCount == 0) {
@@ -90,7 +92,7 @@ ReadBoardInfo (
 
   DEBUG ((DEBUG_INFO, "Eeprom product Ids: \n"));
   for (i = 0; i < BoardInfo->IdCount; i++) {
-    DEBUG ((DEBUG_INFO, "%d. %a \n", i+1, BoardInfo->ProductIds[i]));
+    DEBUG ((DEBUG_INFO, "%d. %a (%a)\n", i+1, BoardInfo->ProductIds[i], BoardInfo->EepromDeviceTreePaths[i]));
   }
 
   return EFI_SUCCESS;

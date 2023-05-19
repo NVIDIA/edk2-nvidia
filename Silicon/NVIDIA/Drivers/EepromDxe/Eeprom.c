@@ -317,6 +317,7 @@ EepromDxeDriverBindingStart (
   TEGRA_EEPROM_BOARD_INFO  *CvmBoardInfo;
   TEGRA_EEPROM_BOARD_INFO  *IdBoardInfo;
   BOOLEAN                  SkipEepromCRC;
+  INT32                    DeviceTreePathLen;
 
   NVIDIA_TEGRA_I2C_SLAVE_DEVICE_TREE_NODE_PROTOCOL *I2cSlaveDeviceTreeNode = NULL;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL                 EepromDeviceTreeNode;
@@ -422,6 +423,14 @@ EepromDxeDriverBindingStart (
     if (IdBoardInfo == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       goto ErrorExit;
+    }
+
+    DeviceTreePathLen = fdt_get_path(EepromDeviceTreeNode.DeviceTreeBase, EepromDeviceTreeNode.NodeOffset, IdBoardInfo->EepromDeviceTreePath, MAX_I2C_DEVICE_DT_PATH);
+
+    if (DeviceTreePathLen != 0) {
+      DEBUG((DEBUG_ERROR, "%a: Failed to get device tree path length for I2c sub-device 0x%lx on I2c Bus 0x%lx (error: %d).\n", __FUNCTION__, I2cIo->DeviceIndex >> 16, I2cIo->DeviceIndex & 0xFFFF, DeviceTreePathLen));
+    } else {
+      DEBUG ((DEBUG_INFO, "%a: Starting (TEGRA_PLATFORM_SILICON) Bus %x Device %x %a\r\n", __FUNCTION__,   I2cIo->DeviceIndex >> 16, I2cIo->DeviceIndex & 0xFFFF, IdBoardInfo->EepromDeviceTreePath));
     }
 
     Status = PopulateEepromData (RawData, IdBoardInfo);

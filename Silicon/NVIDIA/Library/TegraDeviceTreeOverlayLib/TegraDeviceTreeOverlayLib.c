@@ -45,6 +45,7 @@ ReadBoardInfo (
   BoardInfo->FuseCount    = TegraBoardInfo->FuseCount;
   BoardInfo->IdCount      = 2; /*CVM and CVB*/
   BoardInfo->ProductIds   = (EEPROM_PART_NUMBER *)AllocateZeroPool (BoardInfo->IdCount * sizeof (EEPROM_PART_NUMBER));
+  BoardInfo->EepromDeviceTreePaths   = (CHAR8 **)AllocateZeroPool (BoardInfo->IdCount * sizeof (CHAR8*));
   CopyMem ((VOID *)&BoardInfo->ProductIds[0], (VOID *)TegraBoardInfo->CvmProductId, TEGRA_PRODUCT_ID_LEN);
   CopyMem ((VOID *)&BoardInfo->ProductIds[1], (VOID *)TegraBoardInfo->CvbProductId, TEGRA_PRODUCT_ID_LEN);
 
