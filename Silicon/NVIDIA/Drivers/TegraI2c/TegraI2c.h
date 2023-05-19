@@ -57,6 +57,8 @@ typedef struct {
   EFI_I2C_ENUMERATE_PROTOCOL                       I2cEnumerate;
   EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL    I2CConfiguration;
 
+  NVIDIA_TEGRA_I2C_SLAVE_DEVICE_TREE_NODE_PROTOCOL I2cSlaveDeviceTreeNode;
+
   //
   // Indicates if the protocols are installed
   //
@@ -83,6 +85,7 @@ typedef struct {
   //
   EFI_I2C_DEVICE                                   I2cDevices[MAX_I2C_DEVICES];
   UINT32                                           SlaveAddressArray[MAX_I2C_DEVICES*MAX_SLAVES_PER_DEVICE];
+  UINT32                                           SlaveDeviceTreeNodeOffsets[MAX_I2C_DEVICES];
   UINTN                                            NumberOfI2cDevices;
 
   UINT32                                           PinControlId;
@@ -93,6 +96,7 @@ typedef struct {
 #define TEGRA_I2C_PRIVATE_DATA_FROM_MASTER(a)                   CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2cMaster, TEGRA_I2C_SIGNATURE)
 #define TEGRA_I2C_PRIVATE_DATA_FROM_ENUMERATE(a)                CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2cEnumerate, TEGRA_I2C_SIGNATURE)
 #define TEGRA_I2C_PRIVATE_DATA_FROM_BUS_CONFIGURATION(a)        CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2CConfiguration, TEGRA_I2C_SIGNATURE)
+#define TEGRA_I2C_PRIVATE_DATA_FROM_SLAVE_DEVICE_TREE_NODE(a)   CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2cSlaveDeviceTreeNode, TEGRA_I2C_SIGNATURE)
 
 /**
  * @addtogroup SPEED_MODES I2C Mode frequencies

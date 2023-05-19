@@ -46,6 +46,7 @@
   gNVIDIADeviceTreeNodeProtocolGuid
   gNVIDIAPinControlProtocolGuid
   gNVIDIATegraI2cInitCompleteProtocolGuid
+  gNVIDIAI2cSlaveDeviceTreeNodeProtocolGuid
 
 [Guids]
   gNVIDIAI2cUnknown

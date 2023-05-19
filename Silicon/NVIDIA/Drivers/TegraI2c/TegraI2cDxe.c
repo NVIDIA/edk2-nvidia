@@ -11,19 +11,20 @@
 #include <PiDxe.h>
 
 #include <Library/BaseLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/Crc8Lib.h>
 #include <Library/DebugLib.h>
-#include <Library/BaseMemoryLib.h>
-#include <Library/UefiBootServicesTableLib.h>
 #include <Library/DevicePathLib.h>
-#include <Library/MemoryAllocationLib.h>
-#include <Library/UefiLib.h>
-#include <Library/TimerLib.h>
 #include <Library/IoLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/PrintLib.h>
-#include <libfdt.h>
+#include <Library/TimerLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiLib.h>
 #include <Protocol/DeviceTreeNode.h>
 #include <Protocol/PinControl.h>
+#include <Protocol/TegraI2cSlaveDeviceTreeNode.h>
+#include <libfdt.h>
 
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include "TegraI2c.h"
@@ -962,16 +963,43 @@ TegraI2cEnableI2cBusConfiguration (
   return EFI_SUCCESS;
 }
 
+EFI_STATUS
+TegraI2cLookupSlaveDeviceTreeNode(
+  IN CONST NVIDIA_TEGRA_I2C_SLAVE_DEVICE_TREE_NODE_PROTOCOL *This,
+  IN CONST EFI_GUID                                         *DeviceGuid,
+  IN UINT32                                                 DeviceIndex,
+  OUT NVIDIA_DEVICE_TREE_NODE_PROTOCOL                      *DeviceTreeNode
+  )
+{
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
+
+  if (DeviceTreeNode == NULL || DeviceGuid == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: NULL DeviceTreeNode or DeviceGuid received\r\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Private = TEGRA_I2C_PRIVATE_DATA_FROM_SLAVE_DEVICE_TREE_NODE(This);
+  for (INT32 i = 0; i < Private->NumberOfI2cDevices; i++) {
+    if (CompareGuid (Private->I2cDevices[i].DeviceGuid, DeviceGuid ) && Private->I2cDevices[i].DeviceIndex == DeviceIndex) {
+      DeviceTreeNode->DeviceTreeBase = Private->DeviceTreeBase;
+      DeviceTreeNode->NodeOffset = Private->SlaveDeviceTreeNodeOffsets[i];
+      return EFI_SUCCESS;
+    }
+  }
+  return EFI_NOT_FOUND;
+}
+
 /**
   This routine is called to add an I2C device to the controller.
 
-  @param[in] Private             Driver's private data.
-  @param[in] I2cAddress          Address of the device.
-  @param[in] DeviceGuid          GUID to identify the device type.
-  @param[in] I2cBusConfiguration The bus configuration (mux + switch settings) needed to access the device
+  @param[in] Private              Driver's private data.
+  @param[in] I2cAddress           Address of the device.
+  @param[in] DeviceGuid           GUID to identify the device type.
+  @param[in] I2cBusConfiguration  The bus configuration (mux + switch settings) needed to access the device
+  @param[in] DeviceTreeNodeOffset The offset of this device within the FDT
 
-  @retval EFI_SUCCESS            Device added.
-  @retval other                  Some error occurs when device is being added.
+  @retval EFI_SUCCESS             Device added.
+  @retval other                   Some error occurs when device is being added.
 
 **/
 EFI_STATUS
@@ -979,7 +1007,8 @@ TegraI2cAddDevice (
   IN NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private,
   IN UINT32                         I2cAddress,
   IN EFI_GUID                       *DeviceGuid,
-  IN UINT32                         I2cBusConfiguration
+  IN UINT32                         I2cBusConfiguration,
+  IN UINT32                         DeviceTreeNodeOffset
   )
 {
   if (Private->NumberOfI2cDevices >= MAX_I2C_DEVICES) {
@@ -995,6 +1024,8 @@ TegraI2cAddDevice (
   Private->I2cDevices[Private->NumberOfI2cDevices].I2cBusConfiguration            = I2cBusConfiguration;
   Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressCount              = 1;
   Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressArray              = &Private->SlaveAddressArray[Private->NumberOfI2cDevices * MAX_SLAVES_PER_DEVICE];
+  Private->SlaveDeviceTreeNodeOffsets[Private->NumberOfI2cDevices]                = DeviceTreeNodeOffset;
+
   Private->NumberOfI2cDevices++;
 
   return EFI_SUCCESS;
@@ -1074,6 +1105,8 @@ TegraI2CDriverBindingStart (
   Private->I2cEnumerate.Enumerate                         = TegraI2cEnumerate;
   Private->I2cEnumerate.GetBusFrequency                   = TegraI2cGetBusFrequency;
   Private->I2CConfiguration.EnableI2cBusConfiguration     = TegraI2cEnableI2cBusConfiguration;
+  Private->I2cSlaveDeviceTreeNode.LookupNode              = TegraI2cLookupSlaveDeviceTreeNode;
+
   Private->ProtocolsInstalled                             = FALSE;
   Private->DeviceTreeBase                                 = DeviceTreeNode->DeviceTreeBase;
   Private->DeviceTreeNodeOffset                           = DeviceTreeNode->NodeOffset;
@@ -1238,7 +1271,8 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       0
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1261,7 +1295,8 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       0
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1285,7 +1320,8 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       0
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1329,7 +1365,8 @@ TegraI2CDriverBindingStart (
                 Private,
                 I2cAddress,
                 DeviceGuid,
-                0
+                0,
+                I2cNodeOffset
 		);
         if (EFI_ERROR(Status)) {
           goto ErrorExit;
@@ -1374,7 +1411,8 @@ TegraI2CDriverBindingStart (
                             Private,
                             I2cAddressEeprom,
                             DeviceGuid,
-			    BusConfiguration.Value
+			    BusConfiguration.Value,
+			    I2cMuxSubNodeOffset
 			    );
 
                     if (EFI_ERROR(Status)) {
@@ -1405,7 +1443,8 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       0
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1427,7 +1466,8 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       0
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1449,7 +1489,8 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       0
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1489,7 +1530,8 @@ TegraI2CDriverBindingStart (
                          Private,
                          I2cAddress,
                          DeviceGuid,
-                         0
+                         0,
+                         EepromNodeOffset
                          );
           if (EFI_ERROR (Status)) {
             goto ErrorExit;
@@ -1509,6 +1551,8 @@ TegraI2CDriverBindingStart (
                   &Private->I2cEnumerate,
                   &gEfiI2cBusConfigurationManagementProtocolGuid,
                   &Private->I2CConfiguration,
+                  &gNVIDIAI2cSlaveDeviceTreeNodeProtocolGuid,
+                  &Private->I2cSlaveDeviceTreeNode,
                   NULL
                   );
   if (EFI_ERROR (Status)) {
@@ -1529,6 +1573,8 @@ ErrorExit:
                &Private->I2cEnumerate,
                &gEfiI2cBusConfigurationManagementProtocolGuid,
                &Private->I2CConfiguration,
+               &gNVIDIAI2cSlaveDeviceTreeNodeProtocolGuid,
+               &Private->I2cSlaveDeviceTreeNode,
                NULL
                );
       }
@@ -1590,6 +1636,8 @@ TegraI2CDriverBindingStop (
                   &Private->I2cEnumerate,
                   &gEfiI2cBusConfigurationManagementProtocolGuid,
                   &Private->I2CConfiguration,
+                  &gNVIDIAI2cSlaveDeviceTreeNodeProtocolGuid,
+                  &Private->I2cSlaveDeviceTreeNode,
                   NULL
                   );
   if (EFI_ERROR (Status)) {
