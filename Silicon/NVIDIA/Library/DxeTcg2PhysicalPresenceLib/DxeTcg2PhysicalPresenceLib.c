@@ -8,6 +8,7 @@
   Tpm2ExecutePendingTpmRequest() will receive untrusted input and do validation.
 
 Copyright (c) 2013 - 2020, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -15,7 +16,6 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <PiDxe.h>
 
 #include <Protocol/Tcg2Protocol.h>
-#include <Protocol/VariableLock.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
@@ -31,6 +31,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/Tpm2CommandLib.h>
 #include <Library/Tcg2PhysicalPresenceLib.h>
 #include <Library/Tcg2PpVendorLib.h>
+#include <Library/VariablePolicyHelperLib.h>
 
 #define CONFIRM_BUFFER_SIZE  4096
 
@@ -918,25 +919,7 @@ Tcg2PhysicalPresenceLibProcessRequest (
   EFI_STATUS                        Status;
   UINTN                             DataSize;
   EFI_TCG2_PHYSICAL_PRESENCE        TcgPpData;
-  EDKII_VARIABLE_LOCK_PROTOCOL      *VariableLockProtocol;
   EFI_TCG2_PHYSICAL_PRESENCE_FLAGS  PpiFlags;
-
-  //
-  // This flags variable controls whether physical presence is required for TPM command.
-  // It should be protected from malicious software. We set it as read-only variable here.
-  //
-  Status = gBS->LocateProtocol (&gEdkiiVariableLockProtocolGuid, NULL, (VOID **)&VariableLockProtocol);
-  if (!EFI_ERROR (Status)) {
-    Status = VariableLockProtocol->RequestToLock (
-                                     VariableLockProtocol,
-                                     TCG2_PHYSICAL_PRESENCE_FLAGS_VARIABLE,
-                                     &gEfiTcg2PhysicalPresenceGuid
-                                     );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "[TPM2] Error when lock variable %s, Status = %r\n", TCG2_PHYSICAL_PRESENCE_FLAGS_VARIABLE, Status));
-      ASSERT_EFI_ERROR (Status);
-    }
-  }
 
   //
   // Check S4 resume
@@ -946,9 +929,6 @@ Tcg2PhysicalPresenceLibProcessRequest (
     return;
   }
 
-  //
-  // Initialize physical presence flags.
-  //
   DataSize = sizeof (EFI_TCG2_PHYSICAL_PRESENCE_FLAGS);
   Status   = gRT->GetVariable (
                     TCG2_PHYSICAL_PRESENCE_FLAGS_VARIABLE,
@@ -957,26 +937,8 @@ Tcg2PhysicalPresenceLibProcessRequest (
                     &DataSize,
                     &PpiFlags
                     );
-  if (EFI_ERROR (Status)) {
-    PpiFlags.PPFlags = PcdGet32 (PcdTcg2PhysicalPresenceFlags);
-    Status           = gRT->SetVariable (
-                              TCG2_PHYSICAL_PRESENCE_FLAGS_VARIABLE,
-                              &gEfiTcg2PhysicalPresenceGuid,
-                              EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
-                              sizeof (EFI_TCG2_PHYSICAL_PRESENCE_FLAGS),
-                              &PpiFlags
-                              );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "[TPM2] Set physical presence flag failed, Status = %r\n", Status));
-      return;
-    }
+  ASSERT_EFI_ERROR (Status);
 
-    DEBUG ((DEBUG_INFO, "[TPM2] Initial physical presence flags value is 0x%x\n", PpiFlags.PPFlags));
-  }
-
-  //
-  // Initialize physical presence variable.
-  //
   DataSize = sizeof (EFI_TCG2_PHYSICAL_PRESENCE);
   Status   = gRT->GetVariable (
                     TCG2_PHYSICAL_PRESENCE_VARIABLE,
@@ -985,23 +947,7 @@ Tcg2PhysicalPresenceLibProcessRequest (
                     &DataSize,
                     &TcgPpData
                     );
-  if (EFI_ERROR (Status)) {
-    ZeroMem ((VOID *)&TcgPpData, sizeof (TcgPpData));
-    DataSize = sizeof (EFI_TCG2_PHYSICAL_PRESENCE);
-    Status   = gRT->SetVariable (
-                      TCG2_PHYSICAL_PRESENCE_VARIABLE,
-                      &gEfiTcg2PhysicalPresenceGuid,
-                      EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
-                      DataSize,
-                      &TcgPpData
-                      );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "[TPM2] Set physical presence variable failed, Status = %r\n", Status));
-      return;
-    }
-  }
-
-  DEBUG ((DEBUG_INFO, "[TPM2] Flags=%x, PPRequest=%x (LastPPRequest=%x)\n", PpiFlags.PPFlags, TcgPpData.PPRequest, TcgPpData.LastPPRequest));
+  ASSERT_EFI_ERROR (Status);
 
   //
   // Execute pending TPM request.
@@ -1254,4 +1200,114 @@ Tcg2PhysicalPresenceLibGetManagementFlags (
   }
 
   return PpiFlags.PPFlags;
+}
+
+/**
+  Library entry point
+
+  @param  ImageHandle           Handle that identifies the loaded image.
+  @param  SystemTable           System Table for this image.
+
+  @retval EFI_SUCCESS           The operation completed successfully.
+
+**/
+EFI_STATUS
+EFIAPI
+Tcg2PhysicalPresenceConstructor (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  EFI_STATUS                        Status;
+  UINTN                             DataSize;
+  EFI_TCG2_PHYSICAL_PRESENCE        TcgPpData;
+  EFI_TCG2_PHYSICAL_PRESENCE_FLAGS  PpiFlags;
+  EDKII_VARIABLE_POLICY_PROTOCOL    *PolicyProtocol;
+
+  //
+  // This flags variable controls whether physical presence is required for TPM command.
+  // It should be protected from malicious software. We set it as read-only variable here.
+  //
+  Status = gBS->LocateProtocol (
+                  &gEdkiiVariablePolicyProtocolGuid,
+                  NULL,
+                  (VOID **)&PolicyProtocol
+                  );
+  if (!EFI_ERROR (Status)) {
+    Status = RegisterBasicVariablePolicy (
+               PolicyProtocol,
+               &gEfiTcg2PhysicalPresenceGuid,
+               TCG2_PHYSICAL_PRESENCE_FLAGS_VARIABLE,
+               VARIABLE_POLICY_NO_MIN_SIZE,
+               VARIABLE_POLICY_NO_MAX_SIZE,
+               VARIABLE_POLICY_NO_MUST_ATTR,
+               VARIABLE_POLICY_NO_CANT_ATTR,
+               VARIABLE_POLICY_TYPE_LOCK_NOW
+               );
+    if (EFI_ERROR (Status) && (Status != EFI_ALREADY_STARTED)) {
+      DEBUG ((DEBUG_ERROR, "[TPM2] Error when lock variable %s, Status = %r\n", TCG2_PHYSICAL_PRESENCE_FLAGS_VARIABLE, Status));
+      ASSERT_EFI_ERROR (Status);
+    }
+  }
+
+  //
+  // Initialize physical presence flags.
+  //
+  DataSize = sizeof (EFI_TCG2_PHYSICAL_PRESENCE_FLAGS);
+  Status   = gRT->GetVariable (
+                    TCG2_PHYSICAL_PRESENCE_FLAGS_VARIABLE,
+                    &gEfiTcg2PhysicalPresenceGuid,
+                    NULL,
+                    &DataSize,
+                    &PpiFlags
+                    );
+  if (EFI_ERROR (Status)) {
+    PpiFlags.PPFlags = PcdGet32 (PcdTcg2PhysicalPresenceFlags);
+    Status           = gRT->SetVariable (
+                              TCG2_PHYSICAL_PRESENCE_FLAGS_VARIABLE,
+                              &gEfiTcg2PhysicalPresenceGuid,
+                              EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
+                              sizeof (EFI_TCG2_PHYSICAL_PRESENCE_FLAGS),
+                              &PpiFlags
+                              );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "[TPM2] Set physical presence flag failed, Status = %r\n", Status));
+      ASSERT_EFI_ERROR (Status);
+      return EFI_DEVICE_ERROR;
+    }
+
+    DEBUG ((DEBUG_INFO, "[TPM2] Initial physical presence flags value is 0x%x\n", PpiFlags.PPFlags));
+  }
+
+  //
+  // Initialize physical presence variable.
+  //
+  DataSize = sizeof (EFI_TCG2_PHYSICAL_PRESENCE);
+  Status   = gRT->GetVariable (
+                    TCG2_PHYSICAL_PRESENCE_VARIABLE,
+                    &gEfiTcg2PhysicalPresenceGuid,
+                    NULL,
+                    &DataSize,
+                    &TcgPpData
+                    );
+  if (EFI_ERROR (Status)) {
+    ZeroMem ((VOID *)&TcgPpData, sizeof (TcgPpData));
+    DataSize = sizeof (EFI_TCG2_PHYSICAL_PRESENCE);
+    Status   = gRT->SetVariable (
+                      TCG2_PHYSICAL_PRESENCE_VARIABLE,
+                      &gEfiTcg2PhysicalPresenceGuid,
+                      EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
+                      DataSize,
+                      &TcgPpData
+                      );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "[TPM2] Set physical presence variable failed, Status = %r\n", Status));
+      ASSERT_EFI_ERROR (Status);
+      return EFI_DEVICE_ERROR;
+    }
+  }
+
+  DEBUG ((DEBUG_INFO, "[TPM2] Flags=%x, PPRequest=%x (LastPPRequest=%x)\n", PpiFlags.PPFlags, TcgPpData.PPRequest, TcgPpData.LastPPRequest));
+
+  return EFI_SUCCESS;
 }
