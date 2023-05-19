@@ -54,7 +54,6 @@ typedef struct {
   UINT32                                           ControllerId;
   UINTN                                            BusClockHertz;
 
-  UINT32                                           BusId;
   VOID                                             *DeviceTreeBase;
   INT32                                            DeviceTreeNodeOffset;
 
