@@ -52,6 +52,7 @@
   gNVIDIAEeprom
   gNVIDIAI2cTca9539
   gNVIDIAI2cPca9535
+  gNVIDIAI2cPca954x
   gNVIDIANonDiscoverableI2cDeviceGuid
   gNVIDIAI2cNcp81599
   gNVIDIAI2cNct3018y
