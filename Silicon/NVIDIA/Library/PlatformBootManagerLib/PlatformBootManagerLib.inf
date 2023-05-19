@@ -37,6 +37,7 @@
   Silicon/NVIDIA/NVIDIA.dec
   CryptoPkg/CryptoPkg.dec
   IpmiFeaturePkg/IpmiFeaturePkg.dec
+  SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -59,6 +60,8 @@
   BaseCryptLib
   PlatformResourceLib
   DtPlatformDtbLoaderLib
+  Tcg2PhysicalPresenceLib
+  TpmPlatformHierarchyLib
 
 [FeaturePcd]
   gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport

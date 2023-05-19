@@ -28,6 +28,8 @@
 #include <Library/PrintLib.h>
 #include <Library/DxeCapsuleLibFmp/CapsuleOnDisk.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/Tcg2PhysicalPresenceLib.h>
+#include <Library/TpmPlatformHierarchyLib.h>
 #include <Protocol/BootChainProtocol.h>
 #include <Protocol/DeferredImageLoad.h>
 #include <Protocol/DevicePath.h>
@@ -1445,6 +1447,25 @@ CheckUefiShellLoadOption (
 }
 
 /**
+  Process TPM commands that need to be done before handing off to OS
+**/
+VOID
+ProcessTpmBeforeBooting (
+  VOID
+  )
+{
+  //
+  // Process TCG2 PPI
+  //
+  Tcg2PhysicalPresenceLibProcessRequest (NULL);
+
+  //
+  // Prevent OS from using commands that require platform hierarchy authorization
+  //
+  ConfigureTpmPlatformHierarchy ();
+}
+
+/**
   Do the platform init, can be customized by OEM/IBV
   Possible things that can be done in PlatformBootManagerBeforeConsole:
   > Update console variable: 1. include hot-plug devices;
@@ -1464,7 +1485,9 @@ PlatformBootManagerBeforeConsole (
   EFI_HANDLE  BdsHandle = NULL;
   BOOLEAN     UefiShellEnabled;
 
+  //
   // Check Embedded UEFI Shell Setup Option
+  //
   CheckUefiShellLoadOption (&UefiShellEnabled);
 
   //
@@ -1581,6 +1604,11 @@ PlatformBootManagerBeforeConsole (
   // Signal BeforeConsoleEvent.
   //
   EfiEventGroupSignal (&gNVIDIABeforeConsoleEventGuid);
+
+  //
+  // Process TPM before booting to OS
+  //
+  ProcessTpmBeforeBooting ();
 
   // Install protocol to indicate that devices are connected
   gBS->InstallMultipleProtocolInterfaces (

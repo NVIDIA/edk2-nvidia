@@ -1111,6 +1111,15 @@ Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction (
   DEBUG ((DEBUG_INFO, "[TPM2] SubmitRequestToPreOSFunction, Request = %x, %x\n", OperationRequest, RequestParameter));
 
   //
+  // Only support TPM Clear for now
+  //
+  if ((OperationRequest != TCG2_PHYSICAL_PRESENCE_NO_ACTION) &&
+      (OperationRequest != TCG2_PHYSICAL_PRESENCE_CLEAR))
+  {
+    return TCG_PP_SUBMIT_REQUEST_TO_PREOS_NOT_IMPLEMENTED;
+  }
+
+  //
   // Get the Physical Presence variable
   //
   DataSize = sizeof (EFI_TCG2_PHYSICAL_PRESENCE);
@@ -1124,12 +1133,6 @@ Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "[TPM2] Get PP variable failure! Status = %r\n", Status));
     return TCG_PP_SUBMIT_REQUEST_TO_PREOS_GENERAL_FAILURE;
-  }
-
-  if ((OperationRequest > TCG2_PHYSICAL_PRESENCE_NO_ACTION_MAX) &&
-      (OperationRequest < TCG2_PHYSICAL_PRESENCE_STORAGE_MANAGEMENT_BEGIN))
-  {
-    return TCG_PP_SUBMIT_REQUEST_TO_PREOS_NOT_IMPLEMENTED;
   }
 
   if ((PpData.PPRequest != OperationRequest) ||
