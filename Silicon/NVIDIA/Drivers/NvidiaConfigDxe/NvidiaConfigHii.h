@@ -167,18 +167,6 @@ typedef struct {
   BOOLEAN    EnableAspmL1_1[MAX_PCIE];
   BOOLEAN    EnableAspmL1_2[MAX_PCIE];
   BOOLEAN    EnableAspmL1_3[MAX_PCIE];
-  BOOLEAN    EnableAspmL1_1_0[MAX_PCIE];
-  BOOLEAN    EnableAspmL1_1_1[MAX_PCIE];
-  BOOLEAN    EnableAspmL1_1_2[MAX_PCIE];
-  BOOLEAN    EnableAspmL1_1_3[MAX_PCIE];
-  BOOLEAN    EnableAspmL1_2_0[MAX_PCIE];
-  BOOLEAN    EnableAspmL1_2_1[MAX_PCIE];
-  BOOLEAN    EnableAspmL1_2_2[MAX_PCIE];
-  BOOLEAN    EnableAspmL1_2_3[MAX_PCIE];
-  BOOLEAN    EnablePciPmL1_2_0[MAX_PCIE];
-  BOOLEAN    EnablePciPmL1_2_1[MAX_PCIE];
-  BOOLEAN    EnablePciPmL1_2_2[MAX_PCIE];
-  BOOLEAN    EnablePciPmL1_2_3[MAX_PCIE];
   BOOLEAN    SupportsClkReq0[MAX_PCIE];
   BOOLEAN    SupportsClkReq1[MAX_PCIE];
   BOOLEAN    SupportsClkReq2[MAX_PCIE];
@@ -307,26 +295,6 @@ typedef struct {
       endoneof;\
       checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_##socket[pcie], \
         prompt = STRING_TOKEN(STR_PCIE_ENABLE_ASPM_L1_SOCKET##socket##_PCIE##pcie##_TITLE), \
-        help   = STRING_TOKEN(STR_NULL), \
-        flags  = RESET_REQUIRED, \
-        default = FALSE, \
-      endcheckbox; \
-      grayoutif ideqval NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_##socket[pcie] == 0; \
-        checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_1_##socket[pcie], \
-          prompt = STRING_TOKEN(STR_PCIE_ENABLE_ASPM_L1_1_SOCKET##socket##_PCIE##pcie##_TITLE), \
-          help   = STRING_TOKEN(STR_NULL), \
-          flags  = RESET_REQUIRED, \
-          default = FALSE, \
-        endcheckbox; \
-        checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_2_##socket[pcie], \
-          prompt = STRING_TOKEN(STR_PCIE_ENABLE_ASPM_L1_2_SOCKET##socket##_PCIE##pcie##_TITLE), \
-          help   = STRING_TOKEN(STR_NULL), \
-          flags  = RESET_REQUIRED, \
-          default = FALSE, \
-        endcheckbox; \
-      endif; \
-      checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnablePciPmL1_2_##socket[pcie], \
-        prompt = STRING_TOKEN(STR_PCIE_ENABLE_PCIPM_L1_2_SOCKET##socket##_PCIE##pcie##_TITLE), \
         help   = STRING_TOKEN(STR_NULL), \
         flags  = RESET_REQUIRED, \
         default = FALSE, \
