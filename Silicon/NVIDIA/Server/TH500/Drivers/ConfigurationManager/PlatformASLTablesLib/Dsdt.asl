@@ -645,7 +645,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
 
     Device (TPM1) {
       Name (_HID, "PRP0001")
-      Name (_UID, 0)
+      Name (_UID, 1)
       Name (_STA, 0)
       Name(RBUF, ResourceTemplate() {
         SPISerialBus(0, PolarityLow, FourWireMode, 8,
@@ -849,7 +849,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     Device (FUN0)
     {
       Name (_HID , "ARMHC9FF")
-      Name (_UID , 0x00)
+      Name (_UID , 0x01)
       Name (_CID , "ARMHC500")
 
       Name (_CRS , ResourceTemplate () {

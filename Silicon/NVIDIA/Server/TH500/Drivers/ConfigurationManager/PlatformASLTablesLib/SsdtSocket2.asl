@@ -109,7 +109,7 @@ DefinitionBlock("SsdtSocket2.aml", "SSDT", 2, "NVIDIA", "TH500_S2", 0x00000001) 
     Device (FUN2)
     {
       Name (_HID , "ARMHC9FF")
-      Name (_UID , 0x02)
+      Name (_UID , 0x05)
       Name (_CID , "ARMHC500")
 
       Name (_CRS , ResourceTemplate () {
@@ -160,7 +160,7 @@ DefinitionBlock("SsdtSocket2.aml", "SSDT", 2, "NVIDIA", "TH500_S2", 0x00000001) 
     // Coresight ETF
     Device (ETF2) {
       Name (_HID , "ARMHC97C")
-      Name (_UID , 0x02)
+      Name (_UID , 0x04)
       Name (_CID , "ARMHC500")
 
       Name (_CRS , ResourceTemplate () {
