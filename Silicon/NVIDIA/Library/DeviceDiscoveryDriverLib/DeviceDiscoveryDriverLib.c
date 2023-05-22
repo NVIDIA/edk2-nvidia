@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,8 +19,11 @@
 #include <Library/DeviceDiscoveryLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/TimerLib.h>
+#include <Library/SystemContextLib.h>
 #include <libfdt.h>
 
+#include <Protocol/AsyncDriverStatus.h>
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
 #include <Protocol/ClockNodeProtocol.h>
@@ -30,9 +33,39 @@
 
 #include "DeviceDiscoveryDriverLibPrivate.h"
 
-SCMI_CLOCK2_PROTOCOL           *gScmiClockProtocol    = NULL;
-NVIDIA_CLOCK_PARENTS_PROTOCOL  *gClockParentsProtocol = NULL;
-STATIC EFI_HANDLE              mImageHandle           = NULL;
+// These globals are defined be driver not for the full system context
+SCMI_CLOCK2_PROTOCOL                           *gScmiClockProtocol    = NULL;
+NVIDIA_CLOCK_PARENTS_PROTOCOL                  *gClockParentsProtocol = NULL;
+STATIC EFI_HANDLE                              mImageHandle           = NULL;
+STATIC EFI_SYSTEM_CONTEXT_AARCH64              MainContext            = { 0 };
+STATIC UINTN                                   SubThreadsRunning      = 0;
+STATIC NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL     *AsyncProtocol         = NULL;
+STATIC NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT  *CurrentThread         = NULL;
+BOOLEAN                                        EnumerationCompleted   = FALSE;
+
+/**
+  Gets info on if an async driver is still running.
+
+  @param[in]     This                The instance of the NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL.
+  @param[out]    StillPending        This driver is still running setup
+
+  @retval EFI_SUCCESS                Status was returned.
+  @retval EFI_INVALID_PARAMETER      StillPending is NULL.
+  @retval others                     Error processing status
+**/
+EFI_STATUS
+DeviceDiscoveryAsyncStatus (
+  IN  NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL  *This,
+  IN  BOOLEAN                              *StillPending
+  )
+{
+  if (StillPending == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *StillPending = (SubThreadsRunning != 0);
+  return EFI_SUCCESS;
+}
 
 VOID
 EFIAPI
@@ -205,6 +238,211 @@ DeviceDiscoveryBindingSupported (
 }
 
 /**
+  @brief Timer event callback. When this fires we switch back to the driver
+  context until it yields again.
+
+  @param Context Thread Context
+**/
+VOID
+DeviceDiscoveryThreadCallback (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  CurrentThread = (NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT *)Context;
+  SwapSystemContext (
+    (EFI_SYSTEM_CONTEXT)&MainContext,
+    (EFI_SYSTEM_CONTEXT)&CurrentThread->Context
+    );
+}
+
+/**
+  Stalls for at least the given number of microseconds.
+
+  Switches back to main thread for at least the given number of microseconds
+
+  @param  MicroSeconds  The minimum number of microseconds to delay.
+
+  @return The value of MicroSeconds specified.
+
+**/
+UINTN
+EFIAPI
+DeviceDiscoveryThreadMicroSecondDelay (
+  IN      UINTN  MicroSeconds
+  )
+{
+  NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT  *ThreadContext;
+
+  if (CurrentThread == NULL) {
+    return MicroSecondDelay (MicroSeconds);
+  }
+
+  ThreadContext = CurrentThread;
+  gBS->SetTimer (ThreadContext->Timer, TimerRelative, MicroSeconds*10);
+  CurrentThread = NULL;
+  SwapSystemContext (
+    (EFI_SYSTEM_CONTEXT)&ThreadContext->Context,
+    (EFI_SYSTEM_CONTEXT)&MainContext
+    );
+  return MicroSeconds;
+}
+
+/**
+  @brief Wrapper function for driver start
+
+  @param ThreadContext Thread context info
+
+**/
+STATIC
+VOID
+DeviceThreadMain (
+  IN NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT  *ThreadContext
+  )
+{
+  EFI_STATUS  Status;
+
+  CurrentThread = ThreadContext;
+  SubThreadsRunning++;
+
+  Status = DeviceDiscoveryNotify (
+             DeviceDiscoveryDriverBindingStart,
+             ThreadContext->DriverHandle,
+             ThreadContext->Controller,
+             ThreadContext->Node
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to start notification\r\n", __FUNCTION__, Status));
+  }
+
+  CurrentThread = NULL;
+  SubThreadsRunning--;
+  gBS->CloseEvent (ThreadContext->Timer);
+
+  if (EnumerationCompleted && (SubThreadsRunning == 0)) {
+    Status = DeviceDiscoveryNotify (
+               DeviceDiscoveryEnumerationCompleted,
+               mImageHandle,
+               NULL,
+               NULL
+               );
+  }
+
+  SwapSystemContext (
+    (EFI_SYSTEM_CONTEXT)&ThreadContext->Context,
+    (EFI_SYSTEM_CONTEXT)&MainContext
+    );
+
+  // Should never get here
+  ASSERT (FALSE);
+  CpuDeadLoop ();
+}
+
+/**
+  @brief Start device initialization in a subthread
+
+  @param DriverHandle  Handle of Driver
+  @param Controller    Handle of Contoller
+  @param Node          DeviceTree Node of controller
+
+  @retval EFI_SUCCESS  Thread was started
+  @retval others       Failure to start thread
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+ThreadedDeviceStart (
+  IN EFI_HANDLE                        DriverHandle,
+  IN EFI_HANDLE                        Controller,
+  IN NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node
+  )
+{
+  EFI_STATUS                              Status;
+  NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT  *NewContext;
+  EFI_TPL                                 OldTpl;
+  UINTN                                   ThreadStackPages;
+
+  NewContext = (NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT *)AllocateZeroPool (sizeof (NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT));
+  if (NewContext == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ErrorExit;
+  }
+
+  ThreadStackPages = EFI_SIZE_TO_PAGES (THREAD_STACK_SIZE);
+
+  NewContext->StackBase = (EFI_PHYSICAL_ADDRESS)AllocatePages (ThreadStackPages);
+  if (NewContext->StackBase == 0) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ErrorExit;
+  }
+
+  Status = gBS->CreateEvent (
+                  EVT_TIMER|EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  DeviceDiscoveryThreadCallback,
+                  NewContext,
+                  &NewContext->Timer
+                  );
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  NewContext->Controller   = Controller;
+  NewContext->DriverHandle = DriverHandle;
+  NewContext->Node         = Node;
+
+  // Don't change the special registers
+  GetSystemContext ((EFI_SYSTEM_CONTEXT)&MainContext);
+  NewContext->Context.ELR  = MainContext.ELR;
+  NewContext->Context.SPSR = MainContext.SPSR;
+  NewContext->Context.FPSR = MainContext.FPSR;
+  NewContext->Context.ESR  = MainContext.ESR;
+  NewContext->Context.FAR  = MainContext.FAR;
+
+  NewContext->Context.LR = (UINT64)DeviceThreadMain;
+  NewContext->Context.SP = NewContext->StackBase + THREAD_STACK_SIZE;
+  NewContext->Context.X0 = (UINT64)NewContext;
+
+  if (AsyncProtocol == NULL) {
+    AsyncProtocol = (NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL *)AllocatePool (sizeof (NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL));
+    if (AsyncProtocol == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto ErrorExit;
+    }
+
+    AsyncProtocol->GetStatus = DeviceDiscoveryAsyncStatus;
+    gBS->InstallMultipleProtocolInterfaces (&DriverHandle, &gNVIDIAAsyncDriverStatusProtocol, (VOID *)AsyncProtocol, NULL);
+  }
+
+  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
+  SwapSystemContext (
+    (EFI_SYSTEM_CONTEXT)&MainContext,
+    (EFI_SYSTEM_CONTEXT)&NewContext->Context
+    );
+  gBS->RestoreTPL (OldTpl);
+
+ErrorExit:
+  if (EFI_ERROR (Status)) {
+    if (NewContext != NULL) {
+      if (NewContext->Timer != 0) {
+        gBS->CloseEvent (NewContext->Timer);
+        NewContext->Timer = 0;
+      }
+
+      if (NewContext->StackBase != 0) {
+        FreePages ((VOID *)NewContext->StackBase, ThreadStackPages);
+        NewContext->StackBase = 0;
+      }
+
+      FreePool (NewContext);
+      NewContext = NULL;
+    }
+  }
+
+  return Status;
+}
+
+/**
   This routine is called right after the .Supported() called and
   Start this driver on ControllerHandle.
 
@@ -360,15 +598,27 @@ DeviceDiscoveryBindingStart (
     }
   }
 
-  Status = DeviceDiscoveryNotify (
-             DeviceDiscoveryDriverBindingStart,
-             This->DriverBindingHandle,
-             Controller,
-             Node
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to start notification\r\n", __FUNCTION__, Status));
-    goto ErrorExit;
+  if (gDeviceDiscoverDriverConfig.ThreadedDeviceStart) {
+    Status = ThreadedDeviceStart (
+               This->DriverBindingHandle,
+               Controller,
+               Node
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, threaded device start returned %r\r\n", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
+  } else {
+    Status = DeviceDiscoveryNotify (
+               DeviceDiscoveryDriverBindingStart,
+               This->DriverBindingHandle,
+               Controller,
+               Node
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a, driver returned %r to start notification\r\n", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
   }
 
   Status = gBS->InstallMultipleProtocolInterfaces (
@@ -383,6 +633,7 @@ DeviceDiscoveryBindingStart (
   }
 
   if (!gDeviceDiscoverDriverConfig.SkipEdkiiNondiscoverableInstall) {
+    ASSERT (!gDeviceDiscoverDriverConfig.ThreadedDeviceStart);
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &Controller,
                     &gEdkiiNonDiscoverableDeviceProtocolGuid,
@@ -653,11 +904,17 @@ EnumerationIsNodeSupported (
 }
 
 /**
-  Enumerate all matching devices
+  Enumerate all matching devices. Called automatically if DelayEnumeration is
+  false. Used if device enumeration needs to not happen at driver start.
+  For example, if device needs to wait for a protocol notification.
+
+  Requires DirectEnumerationSupport is enabled in configuration.
+
+  @retval EFI_SUCCESS             Device Enumeration started
+  @retval others                  Error occured
 **/
-STATIC
 EFI_STATUS
-EnumerateDevices (
+DeviceDiscoveryEnumerateDevices (
   VOID
   )
 {
@@ -670,6 +927,8 @@ EnumerateDevices (
 
   DeviceCount = 0;
   DtNodeInfo  = NULL;
+
+  ASSERT (gDeviceDiscoverDriverConfig.DirectEnumerationSupport);
 
   Status = GetSupportedDeviceTreeNodes (
              NULL,
@@ -746,12 +1005,16 @@ EnumerateDevices (
     DtNodeInfo = NULL;
   }
 
-  Status = DeviceDiscoveryNotify (
-             DeviceDiscoveryEnumerationCompleted,
-             mImageHandle,
-             NULL,
-             NULL
-             );
+  EnumerationCompleted = TRUE;
+  if (!gDeviceDiscoverDriverConfig.ThreadedDeviceStart || (SubThreadsRunning == 0)) {
+    Status = DeviceDiscoveryNotify (
+               DeviceDiscoveryEnumerationCompleted,
+               mImageHandle,
+               NULL,
+               NULL
+               );
+  }
+
   return Status;
 }
 
@@ -814,6 +1077,10 @@ DeviceDiscoveryDriverInitialize (
   }
 
   if (!gDeviceDiscoverDriverConfig.DirectEnumerationSupport) {
+    ASSERT (
+      !gDeviceDiscoverDriverConfig.DelayEnumeration &&
+      !gDeviceDiscoverDriverConfig.ThreadedDeviceStart
+      );
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &mDriverBindingProtocol.DriverBindingHandle,
                     &gNVIDIADeviceTreeCompatibilityProtocolGuid,
@@ -822,8 +1089,11 @@ DeviceDiscoveryDriverInitialize (
                     );
     ASSERT_EFI_ERROR (Status);
   } else {
-    Status = EnumerateDevices ();
-    ASSERT_EFI_ERROR (Status);
+    ASSERT (!gDeviceDiscoverDriverConfig.UseDriverBinding);
+    if (!gDeviceDiscoverDriverConfig.DelayEnumeration) {
+      Status = DeviceDiscoveryEnumerateDevices ();
+      ASSERT_EFI_ERROR (Status);
+    }
   }
 
   return Status;

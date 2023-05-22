@@ -552,6 +552,8 @@ CONFIG_MEMORY_TEST=n
 
   gArmTokenSpaceGuid.PcdMmBufferSize|65536
 
+  gEmbeddedTokenSpaceGuid.PcdTimerPeriod|1000
+
 [PcdsFixedAtBuild]
   #
   # Variable Services PCDs.
