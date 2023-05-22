@@ -3,7 +3,7 @@
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
-  Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020 - 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -51,7 +51,7 @@ PhyReset (
     return Status;
   }
 
-  MicroSecondDelay (PhyDriver->ResetDelay);
+  DeviceDiscoveryThreadMicroSecondDelay (PhyDriver->ResetDelay);
 
   Status = GpioProtocol->Set (GpioProtocol, PhyDriver->ResetPin, PhyDriver->ResetMode1);
   if (EFI_ERROR (Status)) {
@@ -59,7 +59,7 @@ PhyReset (
     return Status;
   }
 
-  MicroSecondDelay (PhyDriver->PostResetDelay);
+  DeviceDiscoveryThreadMicroSecondDelay (PhyDriver->PostResetDelay);
   return PhySoftReset (PhyDriver);
 }
 
@@ -79,7 +79,7 @@ PhyRead (
       (PhyDriver->PhyPageSelRegister != 0))
   {
     osi_write_phy_reg (PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, PhyDriver->PhyPageSelRegister, Page);
-    MicroSecondDelay (PHY_PAGE_SWITCH_DELAY_USEC);
+    DeviceDiscoveryThreadMicroSecondDelay (PHY_PAGE_SWITCH_DELAY_USEC);
     PhyDriver->PhyPage = Page;
   }
 
@@ -116,7 +116,7 @@ PhyWrite (
       (PhyDriver->PhyPageSelRegister != 0))
   {
     osi_write_phy_reg (PhyDriver->MacDriver->osi_core, PhyDriver->PhyAddress, PhyDriver->PhyPageSelRegister, Page);
-    MicroSecondDelay (PHY_PAGE_SWITCH_DELAY_USEC);
+    DeviceDiscoveryThreadMicroSecondDelay (PHY_PAGE_SWITCH_DELAY_USEC);
     PhyDriver->PhyPage = Page;
   }
 
@@ -167,7 +167,7 @@ PhySoftReset (
       break;
     }
 
-    MicroSecondDelay (1);
+    DeviceDiscoveryThreadMicroSecondDelay (1);
   } while (TimeOut++ < PHY_TIMEOUT);
 
   if (TimeOut >= PHY_TIMEOUT) {

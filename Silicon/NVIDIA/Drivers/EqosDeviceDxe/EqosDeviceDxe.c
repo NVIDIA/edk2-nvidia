@@ -2,7 +2,7 @@
 
   DW EQoS device tree binding driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -47,7 +47,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoEnableClocks                = TRUE,
   .AutoResetModule                 = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE
+  .DirectEnumerationSupport        = TRUE,
+  .ThreadedDeviceStart             = TRUE
 };
 
 STATIC

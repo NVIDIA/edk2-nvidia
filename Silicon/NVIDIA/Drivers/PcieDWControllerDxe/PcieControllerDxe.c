@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -126,7 +126,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoDeassertReset               = FALSE,
   .AutoDeassertPg                  = FALSE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE
+  .DirectEnumerationSupport        = TRUE,
+  .ThreadedDeviceStart             = TRUE
 };
 
 CHAR8  CoreClockNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
@@ -839,7 +840,7 @@ PrepareHost (
   val &= ~(0x1);
   MmioWrite32 (Private->ApplSpace + 0x0, val);
 
-  MicroSecondDelay (1000);
+  DeviceDiscoveryThreadMicroSecondDelay (1000);
 
   /* enable LTSSM */
   val  = MmioRead32 (Private->ApplSpace + 0x4);
@@ -851,7 +852,7 @@ PrepareHost (
   val |= (0x1);
   MmioWrite32 (Private->ApplSpace + 0x0, val);
 
-  MicroSecondDelay (200000);
+  DeviceDiscoveryThreadMicroSecondDelay (200000);
 
   return EFI_SUCCESS;
 }
@@ -1254,7 +1255,7 @@ TegraPcieTryLinkL2 (
   val |= APPL_PM_XMT_TURNOFF_STATE;
   MmioWrite32 (Private->ApplSpace + APPL_RADM_STATUS, val);
 
-  MicroSecondDelay (10000);
+  DeviceDiscoveryThreadMicroSecondDelay (10000);
 
   val = MmioRead32 (Private->ApplSpace + APPL_DEBUG);
   if (val & APPL_DEBUG_PM_LINKST_IN_L2_LAT) {
@@ -1299,7 +1300,7 @@ TegraPciePMETurnOff (
     data &= ~APPL_PINMUX_PEX_RST;
     MmioWrite32 (Private->ApplSpace + APPL_PINMUX, data);
 
-    MicroSecondDelay (120000);
+    DeviceDiscoveryThreadMicroSecondDelay (120000);
 
     data = MmioRead32 (Private->ApplSpace + APPL_DEBUG);
     if (!(
@@ -2031,7 +2032,7 @@ DeviceDiscoveryNotify (
       }
 
       /* Spec defined T_PVPERL delay (100ms) after enabling power to the slot */
-      MicroSecondDelay (100000);
+      DeviceDiscoveryThreadMicroSecondDelay (100000);
 
       if ((Private->CtrlId == 5) && Private->IsT194) {
         ConfigureSidebandSignals (Private);

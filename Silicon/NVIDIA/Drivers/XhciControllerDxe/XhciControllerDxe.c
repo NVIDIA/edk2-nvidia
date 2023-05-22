@@ -2,7 +2,7 @@
 
   XHCI Controller Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -49,8 +49,9 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoDeassertReset               = TRUE,
   .AutoResetModule                 = FALSE,
   .AutoDeassertPg                  = FALSE,
-  .SkipEdkiiNondiscoverableInstall = FALSE,
-  .DirectEnumerationSupport        = TRUE
+  .SkipEdkiiNondiscoverableInstall = TRUE,
+  .DirectEnumerationSupport        = TRUE,
+  .ThreadedDeviceStart             = TRUE
 };
 
 /* XhciController Protocol Function used to return the Xhci
@@ -415,7 +416,7 @@ DeviceDiscoveryNotify (
                  (Private->XusbSoc->Cfg4AddrMask << Private->XusbSoc->Cfg4AddrShift);
       MmioWrite32 (CfgAddress + XUSB_CFG_4_0, reg_val);
 
-      gBS->Stall (200);
+      DeviceDiscoveryThreadMicroSecondDelay (200);
 
       if (T234Platform) {
         reg_val  = MmioRead32 (CfgAddress + XUSB_CFG_7_0);
@@ -424,7 +425,7 @@ DeviceDiscoveryNotify (
                    (Private->XusbSoc->Cfg7AddrMask << Private->XusbSoc->Cfg7AddrShift);
         MmioWrite32 (CfgAddress + XUSB_CFG_7_0, reg_val);
 
-        gBS->Stall (200);
+        DeviceDiscoveryThreadMicroSecondDelay (200);
       }
 
       reg_val = MmioRead32 (CfgAddress + XUSB_CFG_1_0);
@@ -445,7 +446,7 @@ DeviceDiscoveryNotify (
             break;
           }
 
-          gBS->Stall (1000);
+          DeviceDiscoveryThreadMicroSecondDelay (1000);
         }
 
         if ((StatusRegister & USBSTS_CNR)) {
@@ -511,7 +512,17 @@ DeviceDiscoveryNotify (
           break;
         }
 
-        gBS->Stall (1000);
+        DeviceDiscoveryThreadMicroSecondDelay (1000);
+      }
+
+      if (gDeviceDiscoverDriverConfig.SkipEdkiiNondiscoverableInstall) {
+        Status = gBS->InstallMultipleProtocolInterfaces (
+                        &ControllerHandle,
+                        &gEdkiiNonDiscoverableDeviceProtocolGuid,
+                        Device,
+                        NULL
+                        );
+        ASSERT_EFI_ERROR (Status);
       }
 
 skipXusbFwLoad:

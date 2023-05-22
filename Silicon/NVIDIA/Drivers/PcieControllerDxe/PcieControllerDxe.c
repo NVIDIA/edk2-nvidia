@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -92,7 +92,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoDeassertReset               = FALSE,
   .AutoDeassertPg                  = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE
+  .DirectEnumerationSupport        = TRUE,
+  .ThreadedDeviceStart             = TRUE
 };
 
 /**
@@ -332,7 +333,7 @@ WaitForBit16 (
 
   while (i < count) {
     if (!!(*feat & BIT (pos)) != status) {
-      MicroSecondDelay (time_us);
+      DeviceDiscoveryThreadMicroSecondDelay (time_us);
       i++;
     } else {
       return TRUE;
@@ -366,7 +367,7 @@ RetrainLink (
         /* Clear Link Bandwith */
         PciExpCap->LinkStatus.Bits.LinkBandwidthManagement = 1;
         /* Wait for 20 ms for link to appear */
-        MicroSecondDelay (20*1000);
+        DeviceDiscoveryThreadMicroSecondDelay (20*1000);
         DEBUG ((
           EFI_D_ERROR,
           "PCIe Controller-0x%x Link Status after re-train (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
@@ -416,7 +417,7 @@ ReadSenseGpio (
       break;
     }
 
-    gBS->Stall (GPU_SENSE_DELAY);
+    MicroSecondDelay (GPU_SENSE_DELAY);
   }
 
   return EFI_SUCCESS;
@@ -442,7 +443,7 @@ ToggleKickGpio (
     return Status;
   }
 
-  gBS->Stall (GPU_RESET_DELAY);
+  DeviceDiscoveryThreadMicroSecondDelay (GPU_RESET_DELAY);
 
   Status = Gpio->Set (Gpio, Private->GpuKickGpioReset, GPIO_MODE_OUTPUT_1);
   if (EFI_ERROR (Status)) {
@@ -450,7 +451,7 @@ ToggleKickGpio (
     return Status;
   }
 
-  gBS->Stall (2 * GPU_RESET_DELAY);
+  DeviceDiscoveryThreadMicroSecondDelay (2 * GPU_RESET_DELAY);
 
   return Status;
 }
