@@ -1929,9 +1929,13 @@ DeviceDiscoveryNotify (
             }
           }
         } else if (Space == PCIE_DEVICETREE_SPACE_MEM32) {
-          DEBUG ((DEBUG_ERROR, "32-bit aperture usage for memory is not supported\n"));
-          Status = EFI_DEVICE_ERROR;
-          break;
+          RootBridge->Mem.Base                                        = DeviceAddress;
+          RootBridge->Mem.Limit                                       = Limit;
+          RootBridge->Mem.Translation                                 = Translation;
+          Private->MemBase                                            = HostAddress;
+          Private->MemLimit                                           = HostAddress + Size - 1;
+          Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 3;
+          DEBUG ((DEBUG_INFO, "MEM32: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
         } else {
           DEBUG ((DEBUG_ERROR, "PCIe Controller: Unknown region 0x%08x 0x%016llx-0x%016llx T 0x%016llx\r\n", Flags, DeviceAddress, Limit, Translation));
           ASSERT (FALSE);

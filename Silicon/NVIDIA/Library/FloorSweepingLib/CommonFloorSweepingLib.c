@@ -233,6 +233,8 @@ CommonFloorSweepPcie (
         /* Patching PCIe DT node */
         UINT64                        Aperture64Base;
         UINT64                        Aperture64Size;
+        UINT32                        Aperture32Base;
+        UINT32                        Aperture32Size;
         UINT64                        CbbFabricBase;
         UINT64                        CbbCtlOffset;
         UINT64                        EcamBase;
@@ -262,6 +264,13 @@ CommonFloorSweepPcie (
 
             Aperture64Size = MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_SIZE);
             Aperture64Size = Aperture64Size << 16;
+
+            Aperture32Base = (((UINT64)MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_32BIT_HIGH)) << 32) |
+                             MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_32BIT_LOW);
+
+            Aperture32Size = MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_32BIT_SIZE);
+            Aperture32Size = Aperture32Size << 16;
+
             break;
 
           default:
@@ -270,6 +279,9 @@ CommonFloorSweepPcie (
 
         DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 64-bit Aperture Base = 0x%llX\n", PcieId, Aperture64Base));
         DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 64-bit Aperture Size = 0x%llX\n", PcieId, Aperture64Size));
+
+        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 32-bit Aperture Base = 0x%llX\n", PcieId, Aperture32Base));
+        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 32-bit Aperture Size = 0x%llX\n", PcieId, Aperture32Size));
 
         /*
          * +-----------------------------------------------------+
@@ -282,6 +294,7 @@ CommonFloorSweepPcie (
          * | 512 MB   | RSVD (64K of this is used for I/O)       |
          * +----------+------------------------------------------+
          * | 2 GB     | Non-Prefetchable Region                  |
+         * |          | (if 32-bit space is not used)            |
          * +----------+------------------------------------------+
          * | Rest all | Prefetchable Region                      |
          * +----------+------------------------------------------+
@@ -318,20 +331,39 @@ CommonFloorSweepPcie (
           return EFI_UNSUPPORTED;
         }
 
-        NonPrefBase = EcamBase + EcamSize + 0x20000000;
-        NonPrefSize = 0x80000000;   /* 2 GB fixed size */
-        PrefSize   -= (NonPrefSize + 0x20000000);
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Base = 0x%llX\n", PcieId, NonPrefBase));
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Size = 0x%llX\n", PcieId, NonPrefSize));
+        if (Aperture32Base != 0) {
+          NonPrefBase = Aperture32Base;
+          NonPrefSize = Aperture32Size;
+          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Base = 0x%llX\n", PcieId, NonPrefBase));
+          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Size = 0x%llX\n", PcieId, NonPrefSize));
 
-        ((UINT32 *)Property)[1] = cpu_to_fdt32 (0x0);
-        ((UINT32 *)Property)[2] = cpu_to_fdt32 (0x40000000);
-        ((UINT32 *)Property)[3] = cpu_to_fdt32 (NonPrefBase >> 32);
-        ((UINT32 *)Property)[4] = cpu_to_fdt32 (NonPrefBase);
-        ((UINT32 *)Property)[5] = cpu_to_fdt32 (NonPrefSize >> 32);
-        ((UINT32 *)Property)[6] = cpu_to_fdt32 (NonPrefSize);
+          ((UINT32 *)Property)[0] = cpu_to_fdt32 (0x82000000);
+          ((UINT32 *)Property)[1] = cpu_to_fdt32 (NonPrefBase >> 32);
+          ((UINT32 *)Property)[2] = cpu_to_fdt32 (NonPrefBase);
+          ((UINT32 *)Property)[3] = cpu_to_fdt32 (NonPrefBase >> 32);
+          ((UINT32 *)Property)[4] = cpu_to_fdt32 (NonPrefBase);
+          ((UINT32 *)Property)[5] = cpu_to_fdt32 (NonPrefSize >> 32);
+          ((UINT32 *)Property)[6] = cpu_to_fdt32 (NonPrefSize);
 
-        PrefBase = NonPrefBase + NonPrefSize;
+          PrefBase  = EcamBase + EcamSize + 0x20000000;
+          PrefSize -= 0x20000000;
+        } else {
+          NonPrefBase = EcamBase + EcamSize + 0x20000000;
+          NonPrefSize = 0x80000000;   /* 2 GB fixed size */
+          PrefSize   -= (NonPrefSize + 0x20000000);
+          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Base = 0x%llX\n", PcieId, NonPrefBase));
+          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Size = 0x%llX\n", PcieId, NonPrefSize));
+
+          ((UINT32 *)Property)[1] = cpu_to_fdt32 (0x0);
+          ((UINT32 *)Property)[2] = cpu_to_fdt32 (0x40000000);
+          ((UINT32 *)Property)[3] = cpu_to_fdt32 (NonPrefBase >> 32);
+          ((UINT32 *)Property)[4] = cpu_to_fdt32 (NonPrefBase);
+          ((UINT32 *)Property)[5] = cpu_to_fdt32 (NonPrefSize >> 32);
+          ((UINT32 *)Property)[6] = cpu_to_fdt32 (NonPrefSize);
+
+          PrefBase = NonPrefBase + NonPrefSize;
+        }
+
         DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Prefetchable Base = 0x%llX\n", PcieId, PrefBase));
         DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Prefetchable Size = 0x%llX\n", PcieId, PrefSize));
 
