@@ -520,7 +520,7 @@ FmpFirmwareInventoryUpdate (
       //   b2. Release date
       //   b3. Manufacturer
       //   b4. Image size
-      //   b5. FirmwareVersionFormat/LowestSupportedVersion/FirmwareVersion
+      //   b5. FirmwareVersionFormat/FirmwareVersion
       //   b6. Associated component information
       //
 
@@ -547,21 +547,6 @@ FmpFirmwareInventoryUpdate (
       // Update Firmware image size.
       //
       FirmwareInventoryInfoElement->ImageSize = ImageInfo->Size;
-
-      //
-      // Update firmware version, lowest supported image version and version format.
-      //
-      if (DescriptorVersion >= 2) {
-        //
-        // If LowestSupportedImageVersion is valid in FMP image descriptor, FirmwareVersion in FirmwareInventoryInfo
-        // will use Version field, instead of VersionName. FirmwareVersionFormat turns to VersionFormatType32BitHex.
-        //  EXAMPLE: "0x0001002d"
-        //
-        StrLength              = ((sizeof (UINT32) * 2) + 2 + 1);
-        LowestSupportedVersion = (CHAR8 *)AllocateZeroPool (StrLength);
-        AsciiSPrint (LowestSupportedVersion, StrLength, "0x%08X", ImageInfo->LowestSupportedImageVersion);
-        FirmwareInventoryInfoElement->LowestSupportedVersion = LowestSupportedVersion;
-      }
 
       //
       // FirmwareVersionFormat turns to VersionFormatTypeFreeForm.
@@ -668,6 +653,16 @@ FmpFirmwareInventoryUpdate (
       FirmwareInventoryInfoElement->State = FirmwareInventoryStateDisabled;
     } else {
       FirmwareInventoryInfoElement->State = FirmwareInventoryStateEnabled;
+    }
+
+    //
+    // Update lowest supported image version.
+    //
+    if (DescriptorVersion >= 2) {
+      StrLength              = ((sizeof (UINT32) * 2) + 2 + 1);
+      LowestSupportedVersion = (CHAR8 *)AllocateZeroPool (StrLength);
+      AsciiSPrint (LowestSupportedVersion, StrLength, "0x%08X", ImageInfo->LowestSupportedImageVersion);
+      FirmwareInventoryInfoElement->LowestSupportedVersion = LowestSupportedVersion;
     }
 
     (*NumFirmwareComponents)++;
