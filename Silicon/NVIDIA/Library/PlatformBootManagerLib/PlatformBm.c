@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -25,6 +25,7 @@
 #include <Library/PlatformBootOrderLib.h>
 #include <Library/PlatformBootOrderIpmiLib.h>
 #include <Library/BaseCryptLib.h>
+#include <Library/PerformanceLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
 #include <Library/DxeCapsuleLibFmp/CapsuleOnDisk.h>
@@ -33,6 +34,7 @@
 #include <Library/TimerLib.h>
 #include <Library/Tcg2PhysicalPresenceLib.h>
 #include <Library/TpmPlatformHierarchyLib.h>
+#include <Protocol/AsyncDriverStatus.h>
 #include <Protocol/BootChainProtocol.h>
 #include <Protocol/DeferredImageLoad.h>
 #include <Protocol/DevicePath.h>
@@ -1638,6 +1640,61 @@ ProcessTpmBeforeBooting (
 }
 
 /**
+  Wait for all async drivers to complete
+**/
+VOID
+EFIAPI
+WaitForAsyncDrivers (
+  VOID
+  )
+{
+  EFI_STATUS                           Status;
+  UINTN                                Handles;
+  EFI_HANDLE                           *HandleBuffer;
+  UINTN                                HandleIndex;
+  NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL  *AsyncProtocol;
+  BOOLEAN                              StillPending;
+  BOOLEAN                              PrintedForDriver;
+
+  Status = gBS->LocateHandleBuffer (ByProtocol, &gNVIDIAAsyncDriverStatusProtocol, NULL, &Handles, &HandleBuffer);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  PERF_START (&gEfiCallerIdGuid, "AsyncDriverWait", NULL, 0);
+  for (HandleIndex = 0; HandleIndex < Handles; HandleIndex++) {
+    Status = gBS->HandleProtocol (
+                    HandleBuffer[HandleIndex],
+                    &gNVIDIAAsyncDriverStatusProtocol,
+                    (VOID **)&AsyncProtocol
+                    );
+    ASSERT_EFI_ERROR (Status);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    PrintedForDriver = FALSE;
+    do {
+      AsyncProtocol->GetStatus (AsyncProtocol, &StillPending);
+      if (StillPending) {
+        if (!PrintedForDriver) {
+          DEBUG ((DEBUG_ERROR, "Waiting for driver %u of %u to complete\r\n.", HandleIndex+1, Handles));
+          PrintedForDriver = TRUE;
+        }
+
+        CpuPause ();
+      }
+    } while (StillPending);
+  }
+
+  if (Handles != 0) {
+    gDS->Dispatch ();
+  }
+
+  PERF_END (&gEfiCallerIdGuid, "AsyncDriverWait", NULL, 0);
+}
+
+/**
   Do the platform init, can be customized by OEM/IBV
   Possible things that can be done in PlatformBootManagerBeforeConsole:
   > Update console variable: 1. include hot-plug devices;
@@ -1671,6 +1728,11 @@ PlatformBootManagerBeforeConsole (
   // Restore the BootOrder if we temporarily changed it during the previous boot and haven't restored it yet
   //
   RestoreBootOrder (NULL, NULL);
+
+  //
+  // Wait for all async drivers to complete
+  //
+  WaitForAsyncDrivers ();
 
   //
   // Signal EndOfDxe PI Event
