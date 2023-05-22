@@ -516,7 +516,7 @@ ErstValidateCperHeader (
   CPER_ERST_PERSISTENCE_INFO  *CperPI;
 
   if ((Cper->SignatureStart != EFI_ERROR_RECORD_SIGNATURE_START) ||
-      (Cper->Revision != EFI_ERROR_RECORD_REVISION) ||
+      ((Cper->Revision & EFI_ERROR_RECORD_REVISION_MAJOR_MASK) != (EFI_ERROR_RECORD_REVISION & EFI_ERROR_RECORD_REVISION_MAJOR_MASK)) ||
       (Cper->SignatureEnd != EFI_ERROR_RECORD_SIGNATURE_END))
   {
     DEBUG ((DEBUG_ERROR, "%a: Cper Signature/Revision validation failed\n", __FUNCTION__));
