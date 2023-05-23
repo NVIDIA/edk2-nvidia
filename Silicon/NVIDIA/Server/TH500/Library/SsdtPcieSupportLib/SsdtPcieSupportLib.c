@@ -36,7 +36,7 @@
 #include <Protocol/ConfigurationManagerProtocol.h>
 #include <Protocol/PciIo.h>
 #include <Protocol/RasNsCommPcieDpcDataProtocol.h>
-#include <GpuDsdAmlGenerationProtocol.h>
+#include <Protocol/GpuDsdAmlGenerationProtocol.h>
 #include <TH500/TH500Definitions.h>
 
 extern CHAR8  ssdtpcietemplate_aml_code[];

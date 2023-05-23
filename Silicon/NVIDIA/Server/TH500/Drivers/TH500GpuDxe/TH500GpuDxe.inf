@@ -50,13 +50,11 @@
   gEfiPciIoProtocolGuid
   gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid
   gEfiNVIDIAGpuFirmwareBootCompleteGuid
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
 
 [Ppis]
 
 [Guids]
-  # Used to set and get shell and nvram variables
-  gShellEnvProtocolGuid
-
   # EDK guids
   gEfiSmbiosTableGuid
   gEfiEventReadyToBootGuid
@@ -66,7 +64,6 @@
 
   gNVIDIAPlatformResourceDataGuid
 
-  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
 
 [Pcd]
 
@@ -93,6 +90,5 @@
   MdeModulePkg/MdeModulePkg.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
-  Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.dec
   $(TH500GPUDXE_SDK_PREFIX)TH500GpuDxe-sdk.dec
 
