@@ -635,9 +635,9 @@ PrintMb1Variables (
   UINTN  Index2;
 
   DEBUG ((DEBUG_ERROR, "---------MB1 Variable Printout---------\n"));
-  DEBUG ((DEBUG_ERROR, "TH500.MB1.FeatureData: %010x\n", EarlyVariable->Data.Mb1Data.FeatureData));
-  DEBUG ((DEBUG_ERROR, "TH500.MB1.HvRsvdMemSize: %08x\n", EarlyVariable->Data.Mb1Data.HvRsvdMemSize));
-  DEBUG ((DEBUG_ERROR, "TH500.MB1.UefiDebugLevel: %08x\n", EarlyVariable->Data.Mb1Data.UefiDebugLevel));
+  DEBUG ((DEBUG_ERROR, "Grace.MB1.FeatureData: %010x\n", EarlyVariable->Data.Mb1Data.FeatureData));
+  DEBUG ((DEBUG_ERROR, "Grace.MB1.HvRsvdMemSize: %08x\n", EarlyVariable->Data.Mb1Data.HvRsvdMemSize));
+  DEBUG ((DEBUG_ERROR, "Grace.MB1.UefiDebugLevel: %08x\n", EarlyVariable->Data.Mb1Data.UefiDebugLevel));
 
   for (Index = 0; Index < TEGRABL_SOC_MAX_SOCKETS; Index++) {
     if (!mHiiControlSettings.SocketEnabled[Index]) {
@@ -645,7 +645,7 @@ PrintMb1Variables (
     }
 
     for (Index2 = 0; Index2 < TEGRABL_MAX_UPHY_PER_SOCKET; Index2++) {
-      DEBUG ((DEBUG_ERROR, "TH500.MB1.UphyConfig.%x.%x: 0x%02x\n", Index, Index2, EarlyVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]));
+      DEBUG ((DEBUG_ERROR, "Grace.MB1.UphyConfig.%x.%x: 0x%02x\n", Index, Index2, EarlyVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]));
     }
   }
 
@@ -655,10 +655,10 @@ PrintMb1Variables (
     }
 
     for (Index2 = 0; Index2 < TEGRABL_MAX_PCIE_PER_SOCKET; Index2++) {
-      DEBUG ((DEBUG_ERROR, "TH500.MB1.PcieConfig.%x.%x.features: 0x%010x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].features));
-      DEBUG ((DEBUG_ERROR, "TH500.MB1.PcieConfig.%x.%x.MaxSpeed: 0x%08x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].MaxSpeed));
-      DEBUG ((DEBUG_ERROR, "TH500.MB1.PcieConfig.%x.%x.MaxWidth: 0x%08x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].MaxWidth));
-      DEBUG ((DEBUG_ERROR, "TH500.MB1.PcieConfig.%x.%x.SlotType: 0x%02x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].SlotType));
+      DEBUG ((DEBUG_ERROR, "Grace.MB1.PcieConfig.%x.%x.features: 0x%010x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].features));
+      DEBUG ((DEBUG_ERROR, "Grace.MB1.PcieConfig.%x.%x.MaxSpeed: 0x%08x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].MaxSpeed));
+      DEBUG ((DEBUG_ERROR, "Grace.MB1.PcieConfig.%x.%x.MaxWidth: 0x%08x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].MaxWidth));
+      DEBUG ((DEBUG_ERROR, "Grace.MB1.PcieConfig.%x.%x.SlotType: 0x%02x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].SlotType));
     }
   }
 }
@@ -782,7 +782,7 @@ ReadMb1Variables (
   UINTN       Index2;
 
   Status = GetMb1Variable (
-             L"TH500.MB1.FeatureData",
+             L"Grace.MB1.FeatureData",
              (VOID *)&(EarlyVariable->Data.Mb1Data.FeatureData),
              sizeof (EarlyVariable->Data.Mb1Data.FeatureData)
              );
@@ -791,7 +791,7 @@ ReadMb1Variables (
   }
 
   Status = GetMb1Variable (
-             L"TH500.MB1.HvRsvdMemSize",
+             L"Grace.MB1.HvRsvdMemSize",
              (VOID *)&(EarlyVariable->Data.Mb1Data.HvRsvdMemSize),
              sizeof (EarlyVariable->Data.Mb1Data.HvRsvdMemSize)
              );
@@ -800,7 +800,7 @@ ReadMb1Variables (
   }
 
   Status = GetMb1Variable (
-             L"TH500.MB1.UefiDebugLevel",
+             L"Grace.MB1.UefiDebugLevel",
              (VOID *)&(EarlyVariable->Data.Mb1Data.UefiDebugLevel),
              sizeof (EarlyVariable->Data.Mb1Data.UefiDebugLevel)
              );
@@ -814,7 +814,7 @@ ReadMb1Variables (
     }
 
     for (Index2 = 0; Index2 < TEGRABL_MAX_UPHY_PER_SOCKET; Index2++) {
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.MB1.UphyConfig.%x.%x", Index, Index2);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.MB1.UphyConfig.%x.%x", Index, Index2);
       Status = GetMb1Variable (
                  VariableName,
                  (VOID *)&(EarlyVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]),
@@ -832,7 +832,7 @@ ReadMb1Variables (
     }
 
     for (Index2 = 0; Index2 < TEGRABL_MAX_PCIE_PER_SOCKET; Index2++) {
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.MB1.PcieConfig.%x.%x", Index, Index2);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.MB1.PcieConfig.%x.%x", Index, Index2);
       Status = GetMb1Variable (
                  VariableName,
                  (VOID *)&(EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2]),
@@ -871,7 +871,7 @@ WriteMb1Variables (
   Size    = sizeof (NewVariable->Data.Mb1Data.FeatureData);
   if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
     Status = gRT->SetVariable (
-                    L"TH500.MB1.FeatureData",
+                    L"Grace.MB1.FeatureData",
                     &gNVIDIAPublicVariableGuid,
                     Attributes,
                     Size,
@@ -889,7 +889,7 @@ WriteMb1Variables (
   Size    = sizeof (NewVariable->Data.Mb1Data.HvRsvdMemSize);
   if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
     Status = gRT->SetVariable (
-                    L"TH500.MB1.HvRsvdMemSize",
+                    L"Grace.MB1.HvRsvdMemSize",
                     &gNVIDIAPublicVariableGuid,
                     Attributes,
                     Size,
@@ -907,7 +907,7 @@ WriteMb1Variables (
   Size    = sizeof (NewVariable->Data.Mb1Data.UefiDebugLevel);
   if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
     Status = gRT->SetVariable (
-                    L"TH500.MB1.UefiDebugLevel",
+                    L"Grace.MB1.UefiDebugLevel",
                     &gNVIDIAPublicVariableGuid,
                     Attributes,
                     Size,
@@ -922,7 +922,7 @@ WriteMb1Variables (
 
   for (Index = 0; Index < TEGRABL_SOC_MAX_SOCKETS; Index++) {
     for (Index2 = 0; Index2 < TEGRABL_MAX_UPHY_PER_SOCKET; Index2++) {
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.MB1.UphyConfig.%x.%x", Index, Index2);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.MB1.UphyConfig.%x.%x", Index, Index2);
       SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]);
       DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]);
       Size    = sizeof (NewVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]);
@@ -945,7 +945,7 @@ WriteMb1Variables (
 
   for (Index = 0; Index < TEGRABL_SOC_MAX_SOCKETS; Index++) {
     for (Index2 = 0; Index2 < TEGRABL_MAX_PCIE_PER_SOCKET; Index2++) {
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.MB1.PcieConfig.%x.%x", Index, Index2);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.MB1.PcieConfig.%x.%x", Index, Index2);
       SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.PcieConfig[Index][Index2]);
       DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.PcieConfig[Index][Index2]);
       Size    = sizeof (NewVariable->Data.Mb1Data.PcieConfig[Index][Index2]);
@@ -1053,7 +1053,7 @@ WriteFloorsweepingVariables (
       VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + TH500_PCIE_FLOORSWEEPING_DISABLE_OFFSET);
       VariableData[0] &= ~TH500_PCIE_FLOORSWEEPING_DISABLE_MASK;
       VariableSize     = 2;
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.PCIeDisabled.%x", Socket);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.Status.PCIeDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
     }
 
@@ -1062,7 +1062,7 @@ WriteFloorsweepingVariables (
       VariableData[0]  &= ~NVLM_DISABLE_MASK;
       VariableData[0] >>= NVLM_DISABLE_SHIFT;
       VariableSize      = 1;
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.NvlmDisabled.%x", Socket);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.Status.NvlmDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
     }
 
@@ -1071,7 +1071,7 @@ WriteFloorsweepingVariables (
       VariableData[0]  &= ~C2C_DISABLE_MASK;
       VariableData[0] >>= C2C_DISABLE_SHIFT;
       VariableSize      = 1;
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.C2CDisabled.%x", Socket);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.Status.C2CDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
     }
 
@@ -1080,7 +1080,7 @@ WriteFloorsweepingVariables (
       VariableData[0]  &= ~HALF_CHIP_DISABLE_MASK;
       VariableData[0] >>= HALF_CHIP_DISABLE_SHIFT;
       VariableSize      = 1;
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.HalfChipDisabled.%x", Socket);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.Status.HalfChipDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
     }
 
@@ -1088,7 +1088,7 @@ WriteFloorsweepingVariables (
       VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + MCF_CHANNEL_DISABLE_OFFSET);
       VariableData[0] &= ~MCF_CHANNEL_DISABLE_MASK;
       VariableSize     = sizeof (UINT32);
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.McfChannelDisabled.%x", Socket);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.Status.McfChannelDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
     }
 
@@ -1096,7 +1096,7 @@ WriteFloorsweepingVariables (
       VariableData[0]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + UPHY_LANE_OWNERSHIP_OFFSET);
       VariableData[0] &= ~UPHY_LANE_OWNERSHIP_MASK;
       VariableSize     = sizeof (UINT32);
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.UphyLaneOwnership.%x", Socket);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.Status.UphyLaneOwnership.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
     }
 
@@ -1108,7 +1108,7 @@ WriteFloorsweepingVariables (
       VariableData[2]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_2);
       VariableData[2] &= ~TH500_CPU_FLOORSWEEPING_DISABLE_MASK_2;
       VariableSize     = 3*sizeof (UINT32);
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.CcplexCoreDisabled.%x", Socket);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.Status.CcplexCoreDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
     }
 
@@ -1117,7 +1117,7 @@ WriteFloorsweepingVariables (
       VariableData[0]  &= ~CCPLEX_MCF_BR_DISABLE_MASK;
       VariableData[0] >>= CCPLEX_MCF_BR_DISABLE_SHIFT;
       VariableSize      = sizeof (UINT32);
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.CcplexMcfBridgeDisabled.%x", Socket);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.Status.CcplexMcfBridgeDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
     }
 
@@ -1126,7 +1126,7 @@ WriteFloorsweepingVariables (
       VariableData[0]  &= ~CCPLEX_SOC_BR_DISABLE_MASK;
       VariableData[0] >>= CCPLEX_SOC_BR_DISABLE_SHIFT;
       VariableSize      = 1;
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.CcplexSocBridgeDisabled.%x", Socket);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.Status.CcplexSocBridgeDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
     }
 
@@ -1136,7 +1136,7 @@ WriteFloorsweepingVariables (
       VariableData[1]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + CCPLEX_CSN_DISABLE_OFFSET_1);
       VariableData[1] &= ~CCPLEX_CSN_DISABLE_MASK_1;
       VariableSize     = 2*sizeof (UINT32);
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.CcplexCsnDisabled.%x", Socket);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.Status.CcplexCsnDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
     }
 
@@ -1148,7 +1148,7 @@ WriteFloorsweepingVariables (
       VariableData[2]  = MmioRead32 (TH500SocketScratchBaseAddr[Socket] + TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_2);
       VariableData[2] &= ~TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2;
       VariableSize     = 3*sizeof (UINT32);
-      UnicodeSPrint (VariableName, sizeof (VariableName), L"TH500.Status.ScfCacheDisabled.%x", Socket);
+      UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.Status.ScfCacheDisabled.%x", Socket);
       WriteAndLockPublicVariables (PolicyProtocol, VariableData, VariableSize, VariableName);
     }
   }
