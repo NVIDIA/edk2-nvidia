@@ -69,6 +69,3 @@ export PYTHONPATH=${SCRIPT_DIR}/..:${PYTHONPATH}
 
 # Use the cross-compiler installed on the host
 export CROSS_COMPILER_PREFIX=/usr/bin/aarch64-linux-gnu-
-
-# For now, disable edk2toollib's checking for nested package paths.
-export PYTOOL_TEMPORARILY_IGNORE_NESTED_EDK_PACKAGES=true
