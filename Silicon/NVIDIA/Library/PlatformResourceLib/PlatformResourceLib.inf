@@ -22,7 +22,6 @@
 [LibraryClasses]
   TegraPlatformInfoLib
   GoldenRegisterLib
-  ErotLib
 
 [Sources.common]
   PlatformResourceLib.c

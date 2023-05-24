@@ -106,7 +106,6 @@ STATIC UINTN  mCurrentCompletion  = 0;
 
 // module variables
 STATIC EFI_EVENT   mAddressChangeEvent      = NULL;
-STATIC EFI_EVENT   mExitBootServicesEvent   = NULL;
 STATIC BOOLEAN     mPcdFmpWriteVerifyImage  = FALSE;
 STATIC BOOLEAN     mPcdFmpSingleImageUpdate = FALSE;
 STATIC VOID        *mFmpDataBuffer          = NULL;
@@ -1161,27 +1160,6 @@ FmpTegraSetSingleImage (
   return EFI_SUCCESS;
 }
 
-/**
-  Handle ExitBootServices() notification to update BCT if the reboot after
-  a FW update successfully booted the new FW.
-
-  @param[in]  Event         Event being handled
-  @param[in]  Context       Event context
-
-  @retval None
-
-**/
-STATIC
-VOID
-EFIAPI
-FmpTegraExitBootServicesNotify (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
-  )
-{
-  DEBUG ((DEBUG_INFO, "%a: ExitBootServices\n", __FUNCTION__));
-}
-
 STATIC
 UINTN
 EFIAPI
@@ -1676,24 +1654,6 @@ FmpDeviceLibConstructor (
     goto Done;
   }
 
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_NOTIFY,
-                  FmpTegraExitBootServicesNotify,
-                  NULL,
-                  &gEfiEventExitBootServicesGuid,
-                  &mExitBootServicesEvent
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Error creating exit boot services event: %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto Done;
-  }
-
   Status = GetVersionInfo ();
   if (EFI_ERROR (Status)) {
     DEBUG ((
@@ -1734,11 +1694,6 @@ Done:
     if (mFmpDataBuffer != NULL) {
       FreePool (mFmpDataBuffer);
       mFmpDataBuffer = NULL;
-    }
-
-    if (mExitBootServicesEvent != NULL) {
-      gBS->CloseEvent (mExitBootServicesEvent);
-      mExitBootServicesEvent = NULL;
     }
 
     if (mAddressChangeEvent != NULL) {

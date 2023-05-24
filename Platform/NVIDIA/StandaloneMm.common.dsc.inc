@@ -51,7 +51,6 @@
   GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
   MctpBaseLib|Silicon/NVIDIA/Library/MctpBaseLib/MctpBaseLib.inf
   MctpNvVdmLib|Silicon/NVIDIA/Library/MctpNvVdmLib/MctpNvVdmLib.inf
-  ErotLib|Silicon/NVIDIA/Library/ErotLib/ErotLib.inf
 
   # Use the NULL Serial/Debug Lib as this changes based on platforms.
   SerialPortLib|MdePkg/Library/BaseSerialPortLibNull/BaseSerialPortLibNull.inf

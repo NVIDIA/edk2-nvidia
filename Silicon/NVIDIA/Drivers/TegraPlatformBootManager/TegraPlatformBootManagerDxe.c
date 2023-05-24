@@ -30,8 +30,7 @@
 
 extern EFI_GUID  mBmAutoCreateBootOptionGuid;
 
-EFI_EVENT  mEndOfDxeEvent;
-CHAR16     KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
+CHAR16  KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
   L"console="
 };
 

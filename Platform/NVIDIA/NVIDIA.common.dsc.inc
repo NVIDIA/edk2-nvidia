@@ -224,7 +224,6 @@
   IpmiCommandLib|IpmiFeaturePkg/Library/IpmiCommandLib/IpmiCommandLib.inf
   MctpBaseLib|Silicon/NVIDIA/Library/MctpBaseLib/MctpBaseLib.inf
   MctpNvVdmLib|Silicon/NVIDIA/Library/MctpNvVdmLib/MctpNvVdmLib.inf
-  ErotLib|Silicon/NVIDIA/Library/ErotLib/ErotLib.inf
 
   FwVariableLib|Silicon/NVIDIA/Library/FwVariableLib/FwVariableLib.inf
 

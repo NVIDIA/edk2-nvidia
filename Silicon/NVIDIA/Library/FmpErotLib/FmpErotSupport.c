@@ -13,12 +13,16 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/ErotLib.h>
+#include <Library/FmpDeviceLib.h>
+#include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/PldmFwUpdateLib.h>
 #include <Library/PldmFwUpdatePkgLib.h>
 #include <Library/PldmFwUpdateTaskLib.h>
 #include <Library/PrintLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include "FmpErotSupport.h"
 
 #define FMP_EROT_SOCKET                     0
@@ -61,10 +65,14 @@ typedef struct {
 
 #pragma pack()
 
-STATIC BOOLEAN     mInitialized    = FALSE;
-STATIC EFI_STATUS  mVersionStatus  = EFI_UNSUPPORTED;
-STATIC UINT32      mVersion        = 0;
-STATIC CHAR16      *mVersionString = NULL;
+STATIC BOOLEAN     mInitialized     = FALSE;
+STATIC EFI_STATUS  mVersionStatus   = EFI_UNSUPPORTED;
+STATIC UINT32      mVersion         = 0;
+STATIC CHAR16      *mVersionString  = NULL;
+STATIC UINT32      mActiveBootChain = MAX_UINT32;
+STATIC EFI_EVENT   mEndOfDxeEvent   = NULL;
+STATIC EFI_HANDLE  mImageHandle     = NULL;
+STATIC UINT32      mSocketMask      = 0;
 
 STATIC PLDM_FW_QUERY_DEVICE_IDS_RESPONSE  *mQueryDeviceIdsRsp = NULL;
 STATIC PLDM_FW_GET_FW_PARAMS_RESPONSE     *mGetFwParamsRsp    = NULL;
@@ -73,6 +81,8 @@ STATIC CONST PLDM_FW_DESCRIPTOR_IANA_ID   mNvIanaIdDesc       = {
   sizeof (UINT32),
   FMP_EROT_NVIDIA_IANA_ID
 };
+
+FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  mInstaller = NULL;
 
 EFI_STATUS
 EFIAPI
@@ -514,22 +524,23 @@ FmpErotGetVersionInfo (
 }
 
 /**
-  FmpErotLib constructor.
+  Handle EndOfDxe event - send BootComplete and install FMP protocol.
 
-  @param[in]  ImageHandle       Image handle
-  @param[in]  SystemTable       Pointer to system table
+  @param[in]  Event         Event pointer.
+  @param[in]  Context       Event notification context.
 
-  @retval EFI_SUCCESS           Initialization successful
-  @retval others                Error occurred
+  @retval None
 
 **/
-EFI_STATUS
+STATIC
+VOID
 EFIAPI
-FmpErotLibConstructor (
-  IN  EFI_HANDLE        ImageHandle,
-  IN  EFI_SYSTEM_TABLE  *SystemTable
+FmpErotEndOfDxeNotify (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
+  UINTN       Socket;
   EFI_STATUS  Status;
 
   FmpParamLibInit ();
@@ -540,15 +551,39 @@ FmpErotLibConstructor (
     goto Done;
   }
 
+  for (Socket = 0; Socket <= HighBitSet32 (mSocketMask); Socket++) {
+    if (!(mSocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    Status = ErotSendBootComplete (Socket, mActiveBootChain);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: ErotSendBootComplete failed socket %u: %r\n", __FUNCTION__, Socket, Status));
+    } else {
+      DEBUG ((DEBUG_ERROR, "BootComplete successful, socket %u\n", Socket));
+    }
+  }
+
   Status = FmpErotGetVersionInfo ();
   if (EFI_ERROR (Status)) {
     goto Done;
   }
 
+  if (mInstaller == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: installer not registered!\n", __FUNCTION__));
+    Status = EFI_UNSUPPORTED;
+    goto Done;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: installing FMP\n", __FUNCTION__));
   mInitialized = TRUE;
+  Status       = mInstaller (mImageHandle);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: FMP installer failed: %r\n", __FUNCTION__, Status));
+    mInitialized = FALSE;
+  }
 
 Done:
-  // must exit with good status, API disabled if errors occurred above
   if (EFI_ERROR (Status)) {
     if (mQueryDeviceIdsRsp != NULL) {
       FreePool (mQueryDeviceIdsRsp);
@@ -566,6 +601,77 @@ Done:
     }
 
     ErotLibDeinit ();
+
+    // Install FMP protocol even on failure, library API is disabled
+    if (mInstaller != NULL) {
+      Status = mInstaller (mImageHandle);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: no erot, FMP installer failed: %r\n", __FUNCTION__, Status));
+      }
+    }
+  }
+}
+
+/**
+  FmpErotLib constructor.
+
+  @param[in]  ImageHandle       Image handle
+  @param[in]  SystemTable       Pointer to system table
+
+  @retval EFI_SUCCESS           Initialization successful
+  @retval others                Error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+FmpErotLibConstructor (
+  IN  EFI_HANDLE        ImageHandle,
+  IN  EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  EFI_STATUS                          Status;
+  CONST TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  VOID                                *Hob;
+
+  mImageHandle = ImageHandle;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+    mActiveBootChain     = PlatformResourceInfo->ActiveBootChain;
+    mSocketMask          = PlatformResourceInfo->SocketMask;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting active boot chain\n", __FUNCTION__));
+    Status = EFI_NOT_FOUND;
+    goto Done;
+  }
+
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  FmpErotEndOfDxeNotify,
+                  NULL,
+                  &gEfiEndOfDxeEventGroupGuid,
+                  &mEndOfDxeEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error creating exit boot services event: %r\n", __FUNCTION__, Status));
+    goto Done;
+  }
+
+Done:
+  // must exit with good status, API disabled if errors occurred above
+  if (EFI_ERROR (Status)) {
+    if (mEndOfDxeEvent != NULL) {
+      gBS->CloseEvent (mEndOfDxeEvent);
+      mEndOfDxeEvent = NULL;
+    }
+
+    mImageHandle     = NULL;
+    mActiveBootChain = MAX_UINT32;
+    mSocketMask      = 0;
   }
 
   return EFI_SUCCESS;

@@ -48,6 +48,7 @@
   PldmFwUpdatePkgLib
   PldmFwUpdateTaskLib
   PrintLib
+  UefiBootServicesTableLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
@@ -61,6 +62,8 @@
 
 [Guids]
   gEfiEventVirtualAddressChangeGuid
+  gEfiEndOfDxeEventGroupGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
-  gNVIDIAErotBootCompleteProtocolGuid
+  TRUE

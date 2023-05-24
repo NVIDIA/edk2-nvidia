@@ -13,7 +13,6 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
-#include <Library/ErotLib.h>
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/DramCarveoutLib.h>
@@ -631,8 +630,6 @@ TH500ValidateActiveBootChain (
   EFI_STATUS  Status;
   UINT32      BootChain;
 
-  DEBUG ((DEBUG_INFO, "%a: Entry\n", __FUNCTION__));
-
   SocketMask = TH500GetSocketMask (CpuBootloaderAddress);
   for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
     if (!(SocketMask & (1UL << Socket))) {
@@ -653,13 +650,6 @@ TH500ValidateActiveBootChain (
       BOOT_CHAIN_STATUS_LO + BootChain,
       BOOT_CHAIN_GOOD
       );
-
-    Status = ErotSendBootComplete (Socket, BootChain);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: ErotSendBootComplete failed socket %u: %r\n", __FUNCTION__, Socket, Status));
-    } else {
-      DEBUG ((DEBUG_ERROR, "BootComplete successful, socket %u\n", Socket));
-    }
   }
 
   return EFI_SUCCESS;
