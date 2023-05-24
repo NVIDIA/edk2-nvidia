@@ -2,7 +2,7 @@
 
   Boot Chain Protocol Driver
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,7 +22,7 @@ UINT32                         mBootChain                          = MAX_UINT32;
 BOOLEAN                        mUpdateBrBctFlag                    = FALSE;
 NVIDIA_BR_BCT_UPDATE_PROTOCOL  *mBrBctUpdateProtocol               = NULL;
 NVIDIA_BOOT_CHAIN_PROTOCOL     mProtocol                           = { 0 };
-EFI_EVENT                      mEndOfDxeEvent                      = NULL;
+EFI_EVENT                      mReadyToBootEvent                   = NULL;
 BC_VARIABLE                    mBCVariables[BC_VARIABLE_INDEX_MAX] = {
   [BC_CURRENT] =         { L"BootChainFwCurrent",
                            EFI_VARIABLE_BOOTSERVICE_ACCESS |
@@ -250,7 +250,7 @@ BootChainCheckAndCancelUpdate (
 
 VOID
 EFIAPI
-BootChainEndOfDxeNotify (
+BootChainReadyToBootNotify (
   IN EFI_EVENT  Event,
   IN VOID       *Context
   )
@@ -575,10 +575,10 @@ BootChainDxeInitialize (
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
-                  BootChainEndOfDxeNotify,
+                  BootChainReadyToBootNotify,
                   NULL,
-                  &gEfiEndOfDxeEventGroupGuid,
-                  &mEndOfDxeEvent
+                  &gEfiEventReadyToBootGuid,
+                  &mReadyToBootEvent
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
@@ -631,6 +631,6 @@ BootChainDxeInitialize (
 Done:
   BCSetVariable (BC_CURRENT, mBootChain);
 
-  // EndOfDxe event handler always needs to run even if there are other errors
+  // ReadyToBoot event handler always needs to run even if there are other errors
   return ExitStatus;
 }
