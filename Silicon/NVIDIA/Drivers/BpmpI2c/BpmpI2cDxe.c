@@ -1033,7 +1033,7 @@ BpmpI2cStop (
         return EFI_DEVICE_ERROR;
       }
 
-      Private = BPMP_I2C_PRIVATE_DATA_FROM_MASTER (This);
+      Private = BPMP_I2C_PRIVATE_DATA_FROM_MASTER (I2cMaster);
       if (Private == NULL) {
         return EFI_DEVICE_ERROR;
       }

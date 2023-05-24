@@ -1989,16 +1989,30 @@ NorFlashDxeDriverBindingStop (
   IN  EFI_HANDLE                   *ChildHandleBuffer
   )
 {
-  EFI_STATUS              Status;
-  NOR_FLASH_PRIVATE_DATA  *Private;
-  UINT32                  Index;
+  EFI_STATUS                 Status;
+  NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol;
+  NOR_FLASH_PRIVATE_DATA     *Private;
+  UINT32                     Index;
+
+  if (NumberOfChildren == 0) {
+    return EFI_SUCCESS;
+  }
 
   for (Index = 0; Index < NumberOfChildren; Index++) {
-    Private = NULL;
-    Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL (This);
-    if (Private == NULL) {
-      return EFI_DEVICE_ERROR;
+    Status = gBS->OpenProtocol (
+                    ChildHandleBuffer[Index],
+                    &gNVIDIANorFlashProtocolGuid,
+                    (VOID **)&NorFlashProtocol,
+                    This->DriverBindingHandle,
+                    Controller,
+                    EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                    );
+    if (EFI_ERROR (Status)) {
+      // Not handled by this driver
+      continue;
     }
+
+    Private = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL (NorFlashProtocol);
 
     Status = gBS->CloseProtocol (
                     Controller,

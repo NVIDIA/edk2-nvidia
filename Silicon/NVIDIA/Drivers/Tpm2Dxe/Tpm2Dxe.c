@@ -529,16 +529,30 @@ Tpm2DxeDriverBindingStop (
   IN  EFI_HANDLE                   *ChildHandleBuffer
   )
 {
-  EFI_STATUS         Status;
-  TPM2_PRIVATE_DATA  *Private;
-  UINT32             Index;
+  EFI_STATUS            Status;
+  NVIDIA_TPM2_PROTOCOL  *Tpm2Protocol;
+  TPM2_PRIVATE_DATA     *Private;
+  UINT32                Index;
+
+  if (NumberOfChildren == 0) {
+    return EFI_SUCCESS;
+  }
 
   for (Index = 0; Index < NumberOfChildren; Index++) {
-    Private = NULL;
-    Private = TPM2_PRIVATE_DATA (This);
-    if (Private == NULL) {
-      return EFI_DEVICE_ERROR;
+    Status = gBS->OpenProtocol (
+                    ChildHandleBuffer[Index],
+                    &gNVIDIATpm2ProtocolGuid,
+                    (VOID **)&Tpm2Protocol,
+                    This->DriverBindingHandle,
+                    Controller,
+                    EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                    );
+    if (EFI_ERROR (Status)) {
+      // Not handled by this driver
+      continue;
     }
+
+    Private = TPM2_PRIVATE_DATA (Tpm2Protocol);
 
     Status = gBS->CloseProtocol (
                     Controller,
