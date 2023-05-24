@@ -367,4 +367,19 @@ InstallSmbiosType45Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
 
+/**
+  Install CM object for SMBIOS Type 4 and Type 7
+
+  @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+InstallSmbiosProcSubCm (
+  IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
+  );
+
 #endif

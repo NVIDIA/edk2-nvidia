@@ -816,7 +816,6 @@ CONFIG_MEMORY_TEST=n
   # SMBIOS/DMI
   #
   MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
-  ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
 
   #
   # Bds
@@ -1056,6 +1055,8 @@ CONFIG_MEMORY_TEST=n
       NULL|DynamicTablesPkg/Library/Smbios/SmbiosType16Lib/SmbiosType16Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/SmbiosType17Lib/SmbiosType17Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/SmbiosType19Lib/SmbiosType19Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType4Lib/SmbiosType4Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType7Lib/SmbiosType7Lib.inf
 
       # AML Fixup
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtSerialPortLibArm/SsdtSerialPortLibArm.inf

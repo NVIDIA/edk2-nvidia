@@ -127,8 +127,8 @@ exitGetFreqMhz:
   @retval Number of Enabled Cores (0 on failure)
 
 **/
-STATIC
 UINTN
+EFIAPI
 GetCpuEnabledCores (
   UINT8  ProcessorIndex
   )
@@ -765,8 +765,8 @@ GetCpuSerialNumTh500 (
  * @return Null terminated Unicode string containing SerialNum on Success.
  *         NULL string on failure.
  **/
-STATIC
 CHAR16 *
+EFIAPI
 GetCpuSerialNum (
   UINT8  ProcessorIndex
   )

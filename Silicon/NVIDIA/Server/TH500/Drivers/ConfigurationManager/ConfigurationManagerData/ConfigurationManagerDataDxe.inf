@@ -38,6 +38,7 @@
   ConfigurationSmbiosType1.c
   ConfigurationSmbiosType2.c
   ConfigurationSmbiosType3.c
+  ConfigurationSmbiosProcSub.c
   ConfigurationSmbiosType8.c
   ConfigurationSmbiosType9.c
   ConfigurationSmbiosType11.c
@@ -88,6 +89,7 @@
   Tpm2CommandLib
   PcdLib
   DevicePathLib
+  OemMiscLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId

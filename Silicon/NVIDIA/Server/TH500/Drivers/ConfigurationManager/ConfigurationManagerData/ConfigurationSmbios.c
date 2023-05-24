@@ -147,6 +147,7 @@ InstallCmSmbiosTableList (
     { EFI_SMBIOS_TYPE_BIOS_INFORMATION,                     InstallSmbiosType0Cm   },
     { EFI_SMBIOS_TYPE_SYSTEM_INFORMATION,                   InstallSmbiosType1Cm   },
     { EFI_SMBIOS_TYPE_SYSTEM_ENCLOSURE,                     InstallSmbiosType3Cm   },
+    { EFI_SMBIOS_TYPE_PROCESSOR_INFORMATION,                InstallSmbiosProcSubCm },
     { EFI_SMBIOS_TYPE_PORT_CONNECTOR_INFORMATION,           InstallSmbiosType8Cm   },
     { EFI_SMBIOS_TYPE_SYSTEM_SLOTS,                         InstallSmbiosType9Cm   },
     { EFI_SMBIOS_TYPE_OEM_STRINGS,                          InstallSmbiosType11Cm  },

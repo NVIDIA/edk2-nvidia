@@ -227,7 +227,6 @@
   # SMBIOS/DMI
   #
   INF MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
-  INF ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
 
   #
   # Bds
