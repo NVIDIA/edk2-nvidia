@@ -114,12 +114,34 @@ InstallSmbiosType17Type19Cm (
 
   for (Index = 0; Index < DramDevicesCount; Index++) {
     CmMemDevicesInfo[Index].SerialNum = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
-    AsciiSPrint (
-      CmMemDevicesInfo[Index].SerialNum,
-      SMBIOS_TYPE17_MAX_STRLEN,
-      "%lu",
-      DramInfo[Index].SerialNumber
-      );
+    if (CmMemDevicesInfo[Index].SerialNum != NULL) {
+      AsciiSPrint (
+        CmMemDevicesInfo[Index].SerialNum,
+        SMBIOS_TYPE17_MAX_STRLEN,
+        "%lu",
+        DramInfo[Index].SerialNumber
+        );
+    }
+
+    CmMemDevicesInfo[Index].DeviceLocator = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
+    if (CmMemDevicesInfo[Index].DeviceLocator != NULL) {
+      AsciiSPrint (
+        CmMemDevicesInfo[Index].DeviceLocator,
+        SMBIOS_TYPE17_MAX_STRLEN,
+        "LP5x_%u",
+        Index
+        );
+    }
+
+    CmMemDevicesInfo[Index].BankLocator = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
+    if (CmMemDevicesInfo[Index].BankLocator != NULL) {
+      AsciiSPrint (
+        CmMemDevicesInfo[Index].BankLocator,
+        SMBIOS_TYPE17_MAX_STRLEN,
+        "LP5x_%u",
+        Index
+        );
+    }
 
     CmMemDevicesInfo[Index].Size                  = DramInfo[Index].Size;
     CmMemDevicesInfo[Index].DataWidth             = DramInfo[Index].DataWidth;
