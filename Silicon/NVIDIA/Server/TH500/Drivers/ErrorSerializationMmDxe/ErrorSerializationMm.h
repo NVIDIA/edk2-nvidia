@@ -196,14 +196,15 @@ ErstReadRecord (
 
 EFI_STATUS
 EFIAPI
-ErstCopyOutgoingToIncomingCper (
-  IN ERST_CPER_INFO  *OutgoingCperInfo,
+ErstCopyValidToIncomingCper (
+  IN ERST_CPER_INFO  *ValidCperInfo,
   IN ERST_CPER_INFO  *IncomingCperInfo
   );
 
 EFI_STATUS
 EFIAPI
-ErstRelocateOutgoing (
+ErstMarkAsInvalid (
+  IN ERST_CPER_INFO  *CperInfo
   );
 
 EFI_STATUS
@@ -274,7 +275,8 @@ ErstFindRecord (
 EFI_STATUS
 EFIAPI
 ErstValidateCperHeader (
-  IN EFI_COMMON_ERROR_RECORD_HEADER  *Cper
+  IN EFI_COMMON_ERROR_RECORD_HEADER  *Cper,
+  IN UINT64                          MaxRecordLength
   );
 
 EFI_STATUS

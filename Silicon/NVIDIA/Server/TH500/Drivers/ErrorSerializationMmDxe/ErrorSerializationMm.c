@@ -350,6 +350,10 @@ ErstEraseSpiNor (
     StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     );
 
+  if (mShadowFlash) {
+    SetMem (&mShadowFlash[Offset], Length, 0xFF);
+  }
+
   Status = mErrorSerialization.NorFlashProtocol->Erase (
                                                    mErrorSerialization.NorFlashProtocol,
                                                    Lba,
@@ -396,6 +400,7 @@ ErstWriteCperStatus (
   )
 {
   EFI_STATUS  Status;
+  UINT32      Offset;
 
   if ((*CperStatus == ERST_RECORD_STATUS_INCOMING) &&
       (mErrorSerialization.IncomingCperInfo != NULL) &&
@@ -415,11 +420,20 @@ ErstWriteCperStatus (
     goto ReturnStatus;
   }
 
+  Offset = CperInfo->RecordOffset +
+           OFFSET_OF (EFI_COMMON_ERROR_RECORD_HEADER, PersistenceInfo) +
+           OFFSET_OF (CPER_ERST_PERSISTENCE_INFO, Status);
+  if (mShadowFlash) {
+    if ((mShadowFlash[Offset] & *CperStatus) != *CperStatus) {
+      DEBUG ((DEBUG_ERROR, "%a: Attempted illegal CPER status change from 0x%X to 0x%X\n", __FUNCTION__, mShadowFlash[Offset], *CperStatus));
+      Status = EFI_UNSUPPORTED;
+      goto ReturnStatus;
+    }
+  }
+
   Status = ErstWriteSpiNor (
              CperStatus,
-             CperInfo->RecordOffset +
-             OFFSET_OF (EFI_COMMON_ERROR_RECORD_HEADER, PersistenceInfo) +
-             OFFSET_OF (CPER_ERST_PERSISTENCE_INFO, Status),
+             Offset,
              1
              );
   if (EFI_ERROR (Status)) {
@@ -510,7 +524,8 @@ ErstEraseBlock (
 EFI_STATUS
 EFIAPI
 ErstValidateCperHeader (
-  IN EFI_COMMON_ERROR_RECORD_HEADER  *Cper
+  IN EFI_COMMON_ERROR_RECORD_HEADER  *Cper,
+  IN UINT64                          MaxRecordLength
   )
 {
   CPER_ERST_PERSISTENCE_INFO  *CperPI;
@@ -520,9 +535,9 @@ ErstValidateCperHeader (
       (Cper->SignatureEnd != EFI_ERROR_RECORD_SIGNATURE_END))
   {
     DEBUG ((DEBUG_ERROR, "%a: Cper Signature/Revision validation failed\n", __FUNCTION__));
-    DEBUG ((DEBUG_INFO, "%a: Cper SignatureStart = 0x%x expected 0x%x\n", __FUNCTION__, Cper->SignatureStart, EFI_ERROR_RECORD_SIGNATURE_START));
-    DEBUG ((DEBUG_INFO, "%a: Cper Revision = 0x%x expected 0x%x\n", __FUNCTION__, Cper->Revision, EFI_ERROR_RECORD_REVISION));
-    DEBUG ((DEBUG_INFO, "%a: Cper SignatureEnd = 0x%x expected 0x%x\n", __FUNCTION__, Cper->SignatureEnd, EFI_ERROR_RECORD_SIGNATURE_END));
+    DEBUG ((DEBUG_ERROR, "%a: Cper SignatureStart = 0x%x expected 0x%x\n", __FUNCTION__, Cper->SignatureStart, EFI_ERROR_RECORD_SIGNATURE_START));
+    DEBUG ((DEBUG_ERROR, "%a: Cper Revision = 0x%x expected 0x%x\n", __FUNCTION__, Cper->Revision, EFI_ERROR_RECORD_REVISION));
+    DEBUG ((DEBUG_ERROR, "%a: Cper SignatureEnd = 0x%x expected 0x%x\n", __FUNCTION__, Cper->SignatureEnd, EFI_ERROR_RECORD_SIGNATURE_END));
     return EFI_INCOMPATIBLE_VERSION;
   }
 
@@ -537,9 +552,9 @@ ErstValidateCperHeader (
       (CperPI->Minor != ERST_RECORD_VERSION_MINOR))
   {
     DEBUG ((DEBUG_ERROR, "%a: PersistenceInfo Signature/Revision validation failed\n", __FUNCTION__));
-    DEBUG ((DEBUG_INFO, "%a: PersistenceInfo Signature = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Signature, ERST_RECORD_SIGNATURE));
-    DEBUG ((DEBUG_INFO, "%a: PersistenceInfo Major = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Major, ERST_RECORD_VERSION_MAJOR));
-    DEBUG ((DEBUG_INFO, "%a: PersistenceInfo Minor = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Minor, ERST_RECORD_VERSION_MINOR));
+    DEBUG ((DEBUG_ERROR, "%a: PersistenceInfo Signature = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Signature, ERST_RECORD_SIGNATURE));
+    DEBUG ((DEBUG_ERROR, "%a: PersistenceInfo Major = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Major, ERST_RECORD_VERSION_MAJOR));
+    DEBUG ((DEBUG_ERROR, "%a: PersistenceInfo Minor = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Minor, ERST_RECORD_VERSION_MINOR));
     return EFI_INCOMPATIBLE_VERSION;
   }
 
@@ -611,6 +626,20 @@ ErstValidateCperHeader (
     return EFI_COMPROMISED_DATA;
   }
 
+  if ((Cper->RecordLength > MaxRecordLength) ||
+      (Cper->RecordLength < sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))
+  {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Found impossible RecordLength 0x%lx (min is 0x%lx, max is 0x%lx)\n",
+      __FUNCTION__,
+      Cper->RecordLength,
+      sizeof (EFI_COMMON_ERROR_RECORD_HEADER),
+      MaxRecordLength
+      ));
+    return EFI_COMPROMISED_DATA;
+  }
+
   return EFI_SUCCESS;
 }
 
@@ -637,7 +666,7 @@ ErstValidateRecord (
     return EFI_COMPROMISED_DATA;
   }
 
-  return ErstValidateCperHeader (Cper);
+  return ErstValidateCperHeader (Cper, RecordLength);
 }
 
 // Copies all valid records to another block, so that this block can be erased when needed
@@ -655,15 +684,6 @@ ErstReclaimBlock (
   // Mark block as being reclaimed
   if (BlockInfo->ValidEntries > 0) {
     BlockInfo->ValidEntries = -BlockInfo->ValidEntries;
-  }
-
-  // Make sure there's no OUTGOING before we try to move other records around
-  // This happens when RelocateOutgoing requires reclaiming its own block to make space
-  if (mErrorSerialization.OutgoingCperInfo != NULL) {
-    Status = ErstRelocateOutgoing ();
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
   }
 
   while (BlockInfo->ValidEntries < 0) {
@@ -1078,6 +1098,7 @@ ErstAllocateNewRecord (
       *AllocatedRecord = &mErrorSerialization.CperInfo[mErrorSerialization.RecordCount];
     }
 
+    DEBUG ((DEBUG_VERBOSE, "Added record 0x%x at index %d\n", NewRecord->RecordId, mErrorSerialization.RecordCount));
     mErrorSerialization.RecordCount++;
     mErrorSerialization.UnsyncedSpinorChanges++;
     return EFI_SUCCESS;
@@ -1137,7 +1158,7 @@ ErstWriteRecord (
   CperPI->Minor     = ERST_RECORD_VERSION_MINOR;
   CperPI->Status    = ERST_RECORD_STATUS_INCOMING;
 
-  Status = ErstValidateCperHeader (Cper);
+  Status = ErstValidateCperHeader (Cper, NewRecord->RecordLength);
   if (EFI_ERROR (Status)) {
     goto ReturnStatus;
   }
@@ -1279,7 +1300,7 @@ ErstReadRecord (
   } else {
     Status = ErstReadSpiNor (Cper, Record->RecordOffset, Record->RecordLength);
     if (!EFI_ERROR (Status)) {
-      Status = ErstValidateCperHeader (Cper);
+      Status = ErstValidateCperHeader (Cper, Record->RecordLength);
     } else {
       DEBUG ((DEBUG_ERROR, "%a: Spinor read failed with Status=%u\n", __FUNCTION__, Status));
     }
@@ -1424,6 +1445,7 @@ ErrorSerializationEventHandler (
     );
 
   DEBUG ((DEBUG_INFO, "%a: ERST Handler Entered\n", __FUNCTION__));
+  DEBUG ((DEBUG_VERBOSE, "RecordCount is %d\n", mErrorSerialization.RecordCount));
 
   // Note: must be initialized before any gotos
   ERSTComm = (ERST_COMM_STRUCT *)mErrorSerialization.BufferInfo.ErstBase;
@@ -1445,6 +1467,7 @@ ErrorSerializationEventHandler (
       (mErrorSerialization.OutgoingCperInfo != NULL))
   {
     EfiStatus = ErrorSerializationReInit ();
+    DEBUG ((DEBUG_VERBOSE, "RecordCount is %d after Handler's ReInit\n", mErrorSerialization.RecordCount));
     if (EFI_ERROR (EfiStatus)) {
       DEBUG ((DEBUG_ERROR, "%a: ErrorSerialization driver is out of sync with the SPINOR and failed recovery attempt!\n", __FUNCTION__));
       goto ReturnStatus;
@@ -1801,48 +1824,36 @@ ErstCollectBlock (
       break; // FREE/INVALID is last entry in block
     }
 
-    // INCOMING is an incomplete write, so other info might not be valid,
-    // and only comes at the end of a block
-    if (CperPI->Status == ERST_RECORD_STATUS_INCOMING) {
-      Status = ErstAddCperToList (Cper, Base + Offset);
-      if (!EFI_ERROR (Status)) {
-        BlockInfo->ValidEntries++;
-        BlockInfo->UsedSize += mErrorSerialization.BlockSize-Offset;
-      }
-
-      break; // INCOMING is last entry in block
-    }
-
     if ((CperPI->Status == ERST_RECORD_STATUS_VALID) ||
         (CperPI->Status == ERST_RECORD_STATUS_OUTGOING) ||
-        (CperPI->Status == ERST_RECORD_STATUS_DELETED))
+        (CperPI->Status == ERST_RECORD_STATUS_DELETED) ||
+        (CperPI->Status == ERST_RECORD_STATUS_INCOMING))
     {
-      // Attempt to validate the header if it's expected to be correct
-      Status = ErstValidateCperHeader (Cper);
+      // Attempt to validate the header
+      Status = ErstValidateCperHeader (Cper, mErrorSerialization.BlockSize-Offset);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Found invalid CPER header, so marking the rest of the block INVALID\n", __FUNCTION__));
         CperPI->Status = ERST_RECORD_STATUS_INVALID;
+        Status         = EFI_SUCCESS;
         break; // INVALID is the last entry in block
       }
 
-      // Header is valid, so process it
-      if ((CperPI->Status == ERST_RECORD_STATUS_VALID) ||
-          (CperPI->Status == ERST_RECORD_STATUS_OUTGOING))
-      {
+      if (CperPI->Status == ERST_RECORD_STATUS_DELETED) {
+        BlockInfo->UsedSize   += Cper->RecordLength;
+        BlockInfo->WastedSize += Cper->RecordLength;
+      } else {
         Status = ErstAddCperToList (Cper, Base + Offset);
         if (EFI_ERROR (Status)) {
           goto ReturnStatus;
         }
 
         BlockInfo->ValidEntries++;
-        BlockInfo->UsedSize += Cper->RecordLength;
-      } else if (CperPI->Status == ERST_RECORD_STATUS_DELETED) {
-        BlockInfo->UsedSize   += Cper->RecordLength;
-        BlockInfo->WastedSize += Cper->RecordLength;
-      } else {
-        // This should be impossible without a code bug
-        CperPI->Status = ERST_RECORD_STATUS_INVALID;
-        break; // INVALID is the last entry in block
+        if (CperPI->Status == ERST_RECORD_STATUS_INCOMING) {
+          BlockInfo->UsedSize += mErrorSerialization.BlockSize-Offset;
+          break; // INCOMING is last entry in block
+        } else {
+          BlockInfo->UsedSize += Cper->RecordLength;
+        }
       }
     } else {
       // All other status values are INVALID
@@ -1851,7 +1862,7 @@ ErstCollectBlock (
     }
 
     Offset += Cper->RecordLength;
-  } while (Offset < (mErrorSerialization.BlockSize - sizeof (EFI_COMMON_ERROR_RECORD_HEADER)));
+  } while (Offset <= (mErrorSerialization.BlockSize - sizeof (EFI_COMMON_ERROR_RECORD_HEADER)));
 
   if (CperPI->Status == ERST_RECORD_STATUS_INVALID) {
     // INVALID, so other info isn't valid, and goes to the end of a block
@@ -1860,8 +1871,8 @@ ErstCollectBlock (
     BlockInfo->WastedSize += mErrorSerialization.BlockSize-Offset;
   }
 
-  if (ReclaimBlock) {
-    // Mark for reclaim
+  // Mark block as being reclaimed
+  if (ReclaimBlock && (BlockInfo->ValidEntries > 0)) {
     BlockInfo->ValidEntries = -BlockInfo->ValidEntries;
   }
 
@@ -1895,49 +1906,48 @@ ReturnStatus:
 
 EFI_STATUS
 EFIAPI
-ErstCopyOutgoingToIncomingCper (
-  IN ERST_CPER_INFO  *OutgoingCperInfo,
+ErstCopyValidToIncomingCper (
+  IN ERST_CPER_INFO  *ValidCperInfo,
   IN ERST_CPER_INFO  *IncomingCperInfo
   )
 {
-  EFI_STATUS                  Status;
-  UINT8                       *OutgoingCper;
-  UINT8                       *IncomingCper;
-  CPER_ERST_PERSISTENCE_INFO  *OutgoingCperPI;
-  UINT8                       *Space;
-  ERST_BLOCK_INFO             *IncomingBlockInfo;
-  UINT32                      ByteIndex;
-  UINT32                      RemainingBlockSize;
+  EFI_STATUS       Status;
+  UINT8            *ValidCper;
+  UINT8            *IncomingCper;
+  UINT8            *Space;
+  ERST_BLOCK_INFO  *IncomingBlockInfo;
+  UINT32           ByteIndex;
+  UINT32           RemainingBlockSize;
 
-  OutgoingCper = NULL;
+  ValidCper    = NULL;
   IncomingCper = NULL;
   Space        = NULL;
 
   // Make sure length and ID are compatible
   // Note: This only works if SPINOR erases to 1s
-  if ((IncomingCperInfo->RecordLength < OutgoingCperInfo->RecordLength) ||
-      ((IncomingCperInfo->RecordId & OutgoingCperInfo->RecordId) != OutgoingCperInfo->RecordId))
+  if ((IncomingCperInfo->RecordLength < ValidCperInfo->RecordLength) ||
+      ((IncomingCperInfo->RecordId & ValidCperInfo->RecordId) != ValidCperInfo->RecordId))
   {
     DEBUG ((DEBUG_WARN, "%a: RecordLength or RecordID isn't commpatible\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
   }
 
-  OutgoingCper = ErstAllocatePoolRecord (OutgoingCperInfo->RecordLength);
-  if (OutgoingCper == NULL) {
+  ValidCper = ErstAllocatePoolRecord (ValidCperInfo->RecordLength);
+  if (ValidCper == NULL) {
     // GCOVR_EXCL_START - won't test allocation errors
-    DEBUG ((DEBUG_ERROR, "%a: Couldn't allocate space to read Outgoing CPER\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Couldn't allocate space to read VALID CPER\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ReturnStatus;
     // GCOVR_EXCL_STOP
   }
 
-  Status = ErstReadSpiNor (OutgoingCper, OutgoingCperInfo->RecordOffset, OutgoingCperInfo->RecordLength);
+  Status = ErstReadSpiNor (ValidCper, ValidCperInfo->RecordOffset, ValidCperInfo->RecordLength);
   if (EFI_ERROR (Status)) {
     goto ReturnStatus;
   }
 
-  IncomingCperInfo->RecordId     = OutgoingCperInfo->RecordId;
-  IncomingCperInfo->RecordLength = OutgoingCperInfo->RecordLength;
+  IncomingCperInfo->RecordId     = ValidCperInfo->RecordId;
+  IncomingCperInfo->RecordLength = ValidCperInfo->RecordLength;
 
   IncomingCper = ErstAllocatePoolRecord (IncomingCperInfo->RecordLength);
   if (IncomingCper == NULL) {
@@ -1955,13 +1965,11 @@ ErstCopyOutgoingToIncomingCper (
     // GCOVR_EXCL_STOP
   }
 
-  // Make sure we can copy a VALID copy of the OUTGOING CPER onto the INCOMING one
-  OutgoingCperPI         = (CPER_ERST_PERSISTENCE_INFO *)(&((EFI_COMMON_ERROR_RECORD_HEADER *)OutgoingCper)->PersistenceInfo);
-  OutgoingCperPI->Status = ERST_RECORD_STATUS_VALID;
-  for (ByteIndex = 0; ByteIndex < OutgoingCperInfo->RecordLength; ByteIndex++) {
-    if ((OutgoingCper[ByteIndex] & IncomingCper[ByteIndex]) != OutgoingCper[ByteIndex]) {
+  // Make sure we can copy the VALID CPER onto the INCOMING one
+  for (ByteIndex = 0; ByteIndex < ValidCperInfo->RecordLength; ByteIndex++) {
+    if ((ValidCper[ByteIndex] & IncomingCper[ByteIndex]) != ValidCper[ByteIndex]) {
       DEBUG ((DEBUG_WARN, "%a: CPER data isn't commpatible at byte 0x%x\n", __FUNCTION__, ByteIndex));
-      DEBUG ((DEBUG_INFO, "%a: Outgoing 0x%x Incoming 0x%x\n", __FUNCTION__, OutgoingCper[ByteIndex], IncomingCper[ByteIndex]));
+      DEBUG ((DEBUG_INFO, "%a: Valid 0x%x Incoming 0x%x\n", __FUNCTION__, ValidCper[ByteIndex], IncomingCper[ByteIndex]));
       Status = EFI_INVALID_PARAMETER;
       goto ReturnStatus;
     }
@@ -1977,7 +1985,7 @@ ErstCopyOutgoingToIncomingCper (
     // GCOVR_EXCL_STOP
   }
 
-  RemainingBlockSize = mErrorSerialization.BlockSize - ((IncomingCperInfo->RecordOffset - IncomingBlockInfo->Base) + OutgoingCperInfo->RecordLength);
+  RemainingBlockSize = mErrorSerialization.BlockSize - ((IncomingCperInfo->RecordOffset - IncomingBlockInfo->Base) + ValidCperInfo->RecordLength);
   if (RemainingBlockSize > 0) {
     Space = ErstAllocatePoolBlock (RemainingBlockSize);
     if (Space == NULL) {
@@ -1988,7 +1996,7 @@ ErstCopyOutgoingToIncomingCper (
       // GCOVR_EXCL_STOP
     }
 
-    Status = ErstReadSpiNor (Space, IncomingCperInfo->RecordOffset + OutgoingCperInfo->RecordLength, RemainingBlockSize);
+    Status = ErstReadSpiNor (Space, IncomingCperInfo->RecordOffset + ValidCperInfo->RecordLength, RemainingBlockSize);
     if (EFI_ERROR (Status)) {
       // GCOVR_EXCL_START - can't test flash errors after the first read succeeds
       goto ReturnStatus;
@@ -2011,7 +2019,7 @@ ErstCopyOutgoingToIncomingCper (
     }
   }
 
-  Status = ErstWriteRecord ((EFI_COMMON_ERROR_RECORD_HEADER *)OutgoingCper, OutgoingCperInfo, IncomingCperInfo, FALSE);
+  Status = ErstWriteRecord ((EFI_COMMON_ERROR_RECORD_HEADER *)ValidCper, ValidCperInfo, IncomingCperInfo, FALSE);
   if (EFI_ERROR (Status)) {
     // GCOVR_EXCL_START - can't test flash errors after the first read succeeds
     goto ReturnStatus;
@@ -2022,9 +2030,9 @@ ErstCopyOutgoingToIncomingCper (
   IncomingBlockInfo->UsedSize = (IncomingCperInfo->RecordOffset)%mErrorSerialization.BlockSize + IncomingCperInfo->RecordLength;
 
 ReturnStatus:
-  if (OutgoingCper != NULL) {
-    ErstFreePoolRecord (OutgoingCper);
-    OutgoingCper = NULL;
+  if (ValidCper != NULL) {
+    ErstFreePoolRecord (ValidCper);
+    ValidCper = NULL;
   }
 
   if (IncomingCper != NULL) {
@@ -2042,45 +2050,51 @@ ReturnStatus:
 
 EFI_STATUS
 EFIAPI
-ErstRelocateOutgoing (
+ErstMarkAsInvalid (
+  IN ERST_CPER_INFO  *CperInfo
   )
 {
   EFI_STATUS       Status;
+  UINT8            CperStatus;
   ERST_BLOCK_INFO  *BlockInfo;
 
-  if ((mErrorSerialization.OutgoingCperInfo == NULL) ||
-      (mErrorSerialization.IncomingCperInfo != NULL))
-  {
-    Status = EFI_UNSUPPORTED;
+  CperStatus = ERST_RECORD_STATUS_INVALID;
+  Status     = ErstWriteCperStatus (&CperStatus, CperInfo);
+  if (EFI_ERROR (Status)) {
+    // GCOVR_EXCL_START
     goto ReturnStatus;
+    // GCOVR_EXCL_STOP
   }
 
-  // Try to relocate just the outgoing record
-  Status = ErstRelocateRecord (mErrorSerialization.OutgoingCperInfo);
+  mErrorSerialization.UnsyncedSpinorChanges++; // Wrote SPINOR
 
-  // May need to relocate the whole block due to lack of resources
-  if (Status == EFI_OUT_OF_RESOURCES) {
-    BlockInfo = ErstGetBlockOfRecord (mErrorSerialization.OutgoingCperInfo);
-    if (BlockInfo == NULL) {
-      // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
-      goto ReturnStatus;
-      // GCOVR_EXCL_STOP
-    }
+  // Mark the block for reclaim
+  BlockInfo = ErstGetBlockOfRecord (CperInfo);
+  if (BlockInfo == NULL) {
+    // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
+    DEBUG ((DEBUG_ERROR, "%a: Unable to find the block for the CPER record being marked as INVALID\n", __FUNCTION__));
+    Status = EFI_NOT_FOUND;
+    goto ReturnStatus;
+    // GCOVR_EXCL_STOP
+  }
 
-    // Mark the OUTGOING block for reclaim, allowing using the last free block
+  // Mark block as being reclaimed
+  if (BlockInfo->ValidEntries > 0) {
     BlockInfo->ValidEntries = -BlockInfo->ValidEntries;
+  }
 
-    // Must relocate the OUTGOING record first, to avoid creating a second OUTGOING
-    Status = ErstRelocateRecord (mErrorSerialization.OutgoingCperInfo);
-    if (EFI_ERROR (Status)) {
-      goto ReturnStatus;
-    }
+  Status = ErstFreeRecord (CperInfo);
+  if (EFI_ERROR (Status)) {
+    // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
+    goto ReturnStatus;
+    // GCOVR_EXCL_STOP
+  }
 
-    // Now that OUTGOING is gone, relocate the rest of the records from its block
-    Status = ErstReclaimBlock (BlockInfo);
-    if (EFI_ERROR (Status)) {
-      goto ReturnStatus;
-    }
+  Status = ErstDeallocateRecord (CperInfo);
+  if (EFI_ERROR (Status)) {
+    // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
+    goto ReturnStatus;
+    // GCOVR_EXCL_STOP
   }
 
 ReturnStatus:
@@ -2093,12 +2107,12 @@ ErstCollectBlockInfo (
   IN ERST_BLOCK_INFO  *ErstBlockInfo
   )
 {
-  UINT32           BlockNum;
-  EFI_STATUS       Status;
-  UINT8            FreeBlocks = 0;
-  UINT8            CperStatus;
-  ERST_CPER_INFO   *CperInfo;
-  ERST_BLOCK_INFO  *BlockInfo;
+  UINT32          BlockNum;
+  EFI_STATUS      Status;
+  UINT8           FreeBlocks = 0;
+  ERST_CPER_INFO  *CperInfo;
+  UINT8           NewOutgoingStatus;
+  UINT8           NewIncomingStatus;
 
   // Get ERST block info
   for (BlockNum = 0; BlockNum < mErrorSerialization.NumBlocks; BlockNum++) {
@@ -2111,92 +2125,103 @@ ErstCollectBlockInfo (
   DEBUG ((DEBUG_VERBOSE, "%a: INCOMING 0x%p OUTGOING 0x%p\n", __FUNCTION__, mErrorSerialization.IncomingCperInfo, mErrorSerialization.OutgoingCperInfo));
 
   /*
-    During Init, if an OUTGOING Status is seen and a VALID Status for the same RecordID
-    is seen, the OUTGOING will be marked as DELETED.
+    During Init, if an OUTGOING Status is seen then there should either be a completely valid INCOMING
+    record or VALID record with the same ID, which is meant to replace OUTGOING, so
+    1. Mark INCOMING as VALID (if INCOMING)
+    2. Mark OUTGOING as DELETED (always)
 
-    But if no VALID is seen and an INCOMING Status is seen for that RecordID, it is possible that the record was being
-    moved, and if possible the driver will continue the move of OUTGOING to INCOMING.
+    Otherwise, OUTGOING shouldn't be possible, so mark it as INVALID
 
-    If an OUTGOING Status is seen but no corresponding INCOMING is seen, the OUTGOING
-    will be moved to restore it to VALID Status.
-
+    Then, if an INCOMING status is still seen, then either it is incomplete new data or an incomplete
+    relocation of VALID data, so either
+    1. Finish the relocation of the VALID data (if VALID exists and is compatible)
+    2. Mark INCOMING as INVALID (if no VALID exists or if not compatible)
   */
+
+  NewOutgoingStatus = ERST_RECORD_STATUS_OUTGOING;
+  NewIncomingStatus = ERST_RECORD_STATUS_INCOMING;
+
   if (mErrorSerialization.OutgoingCperInfo != NULL) {
-    CperInfo = ErstFindRecord (mErrorSerialization.OutgoingCperInfo->RecordId);
-    if (CperInfo != NULL) {
-      DEBUG ((DEBUG_VERBOSE, "%a: Deleting OUTGOING record\n", __FUNCTION__));
-      // Valid exists, so delete Outgoing
-      Status = ErstClearRecord (mErrorSerialization.OutgoingCperInfo);
-      if (EFI_ERROR (Status)) {
-        // GCOVR_EXCL_START - Can't test clear failure after reading blocks succeeded
-        goto ReturnStatus;
-        // GCOVR_EXCL_STOP
+    if (mErrorSerialization.IncomingCperInfo == NULL) {
+      CperInfo = ErstFindRecord (mErrorSerialization.OutgoingCperInfo->RecordId);
+      if (CperInfo != NULL) {
+        // VALID exists, so OUTGOING can be DELETED
+        NewOutgoingStatus = ERST_RECORD_STATUS_DELETED;
+      } else {
+        // VALID and INCOMING don't exist, so OUTGOING is INVALID
+        NewOutgoingStatus = ERST_RECORD_STATUS_INVALID;
       }
-    } else if (mErrorSerialization.IncomingCperInfo != NULL) {
-      DEBUG ((DEBUG_VERBOSE, "%a: Trying to merge OUTGOING record\n", __FUNCTION__));
-      // Valid doesn't exist, but Incoming does, so try to merge Outgoing and Incoming //JDS TODO - this is wrong - INCOMING must be VALID in all but name at this point
-      Status = ErstCopyOutgoingToIncomingCper (mErrorSerialization.OutgoingCperInfo, mErrorSerialization.IncomingCperInfo);
-      if ((EFI_ERROR (Status)) &&
-          (Status != EFI_INVALID_PARAMETER)) // Indicates inability to merge
-      {
+    } else {
+      if (mErrorSerialization.IncomingCperInfo->RecordId == mErrorSerialization.OutgoingCperInfo->RecordId) {
+        // INCOMING exists and matches ID, so it is the complete, new VALID data and OUTGOING can be DELETED
+        NewIncomingStatus = ERST_RECORD_STATUS_VALID;
+        NewOutgoingStatus = ERST_RECORD_STATUS_DELETED;
+      } else {
+        // INCOMING exists but doesn't match, so we're in a bad state and both are INVALID
+        NewIncomingStatus = ERST_RECORD_STATUS_INVALID;
+        NewOutgoingStatus = ERST_RECORD_STATUS_INVALID;
+      }
+    }
+  } else if (mErrorSerialization.IncomingCperInfo != NULL) {
+    CperInfo = ErstFindRecord (mErrorSerialization.IncomingCperInfo->RecordId);
+    if (CperInfo != NULL) {
+      // VALID exists, so INCOMING might be an in-progress relocation of VALID
+      DEBUG ((DEBUG_VERBOSE, "%a: Trying to merge INCOMING record with VALID\n", __FUNCTION__));
+      Status = ErstCopyValidToIncomingCper (CperInfo, mErrorSerialization.IncomingCperInfo);
+      if (Status == EFI_INVALID_PARAMETER) {
+        // Indicates inability to merge, so INCOMING should be INVALID
+        NewIncomingStatus = ERST_RECORD_STATUS_INVALID;
+      } else if (EFI_ERROR (Status)) {
         // GCOVR_EXCL_START - Can't test read/write failure after reading blocks succeeded
         goto ReturnStatus;
         // GCOVR_EXCL_STOP
       }
+    } else {
+      // VALID doesn't exist, so INCOMING is INVALID
+      NewIncomingStatus = ERST_RECORD_STATUS_INVALID;
     }
   }
 
-  // If an INCOMING Status is seen but no corresponding OUTGOING is seen, it is impossible
-  // to determine how much of the INCOMING CPER is missing, and it will be marked as INVALID.
-  if (mErrorSerialization.IncomingCperInfo != NULL) {
+  // INCOMING -> VALID or INVALID
+  if (NewIncomingStatus == ERST_RECORD_STATUS_VALID) {
+    DEBUG ((DEBUG_VERBOSE, "%a: Marking INCOMING record as VALID\n", __FUNCTION__));
+    Status = ErstWriteCperStatus (&NewIncomingStatus, mErrorSerialization.IncomingCperInfo);
+    if (EFI_ERROR (Status)) {
+      // GCOVR_EXCL_START
+      goto ReturnStatus;
+      // GCOVR_EXCL_STOP
+    }
+  } else if (NewIncomingStatus == ERST_RECORD_STATUS_INVALID) {
     DEBUG ((DEBUG_VERBOSE, "%a: Marking INCOMING record as INVALID\n", __FUNCTION__));
-    CperStatus = ERST_RECORD_STATUS_INVALID;
-    CperInfo   = mErrorSerialization.IncomingCperInfo;
-    Status     = ErstWriteCperStatus (&CperStatus, CperInfo);
+    Status = ErstMarkAsInvalid (mErrorSerialization.IncomingCperInfo);
     if (EFI_ERROR (Status)) {
-      // GCOVR_EXCL_START - Can't test write failure after reading blocks succeeded
+      // GCOVR_EXCL_START
       goto ReturnStatus;
       // GCOVR_EXCL_STOP
     }
-
-    mErrorSerialization.UnsyncedSpinorChanges++; // Wrote SPINOR
-
-    // Mark the block for reclaim
-    BlockInfo = ErstGetBlockOfRecord (CperInfo);
-    if (BlockInfo == NULL) {
-      // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
-      DEBUG ((DEBUG_ERROR, "%a: Unable to find the block for the Incoming record\n", __FUNCTION__));
-      Status = EFI_NOT_FOUND;
-      goto ReturnStatus;
-      // GCOVR_EXCL_STOP
-    }
-
-    BlockInfo->ValidEntries = -BlockInfo->ValidEntries;
-
-    Status = ErstFreeRecord (CperInfo);
-    if (EFI_ERROR (Status)) {
-      // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
-      goto ReturnStatus;
-      // GCOVR_EXCL_STOP
-    }
-
-    Status = ErstDeallocateRecord (CperInfo);
-    if (EFI_ERROR (Status)) {
-      // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
-      goto ReturnStatus;
-      // GCOVR_EXCL_STOP
-    }
+  } else {
+    ASSERT (NewIncomingStatus == ERST_RECORD_STATUS_INCOMING);
   }
 
-  // Outgoing couldn't be deleted or merged, so relocate it now that there's no INCOMING
-  if (mErrorSerialization.OutgoingCperInfo != NULL) {
-    DEBUG ((DEBUG_VERBOSE, "%a: Relocating OUTGOING record\n", __FUNCTION__));
-    Status = ErstRelocateOutgoing ();
+  // OUTGOING -> DELETED or INVALID
+  if (NewOutgoingStatus == ERST_RECORD_STATUS_DELETED) {
+    DEBUG ((DEBUG_VERBOSE, "%a: Deleting OUTGOING record\n", __FUNCTION__));
+    Status = ErstClearRecord (mErrorSerialization.OutgoingCperInfo);
     if (EFI_ERROR (Status)) {
-      // GCOVR_EXCL_START - Can't test write failure after reading blocks succeeded
+      // GCOVR_EXCL_START
       goto ReturnStatus;
       // GCOVR_EXCL_STOP
     }
+  } else if (NewOutgoingStatus == ERST_RECORD_STATUS_INVALID) {
+    DEBUG ((DEBUG_VERBOSE, "%a: Marking OUTGOING record as INVALID\n", __FUNCTION__));
+    Status = ErstMarkAsInvalid (mErrorSerialization.OutgoingCperInfo);
+    if (EFI_ERROR (Status)) {
+      // GCOVR_EXCL_START
+      goto ReturnStatus;
+      // GCOVR_EXCL_STOP
+    }
+  } else {
+    ASSERT (NewOutgoingStatus == ERST_RECORD_STATUS_OUTGOING);
   }
 
   // Reclaim any remaining blocks that are marked for reclaim
@@ -2218,6 +2243,10 @@ ErstCollectBlockInfo (
   }
 
   ASSERT (FreeBlocks > 0);
+  if (FreeBlocks < 1) {
+    DEBUG ((DEBUG_ERROR, "%a: All blocks are used, which shouldn't be possible\n", __FUNCTION__));
+    Status = EFI_OUT_OF_RESOURCES;
+  }
 
 ReturnStatus:
   return Status;
