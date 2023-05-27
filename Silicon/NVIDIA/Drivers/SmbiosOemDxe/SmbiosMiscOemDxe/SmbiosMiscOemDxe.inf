@@ -31,6 +31,8 @@
   SmbiosMiscOemDxeStrings.uni
   Type16/PhysMemArrayData.c
   Type16/PhysMemArrayFunction.c
+  Type19/MemArrayMappedAddressData.c
+  Type19/MemArrayMappedAddressFunction.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
