@@ -42,6 +42,7 @@
   UefiDriverEntryPoint
   FdtLib
   DtPlatformDtbLoaderLib
+  RedfishHttpCacheLib
 
 [Guids]
   gEfiRegexSyntaxTypePerlGuid

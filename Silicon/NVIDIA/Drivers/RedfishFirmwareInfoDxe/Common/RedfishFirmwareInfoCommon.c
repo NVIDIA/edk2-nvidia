@@ -48,7 +48,7 @@ GetFirmwareComponentInfo (
   UINT64                    ImageAttributes;
   EFI_STRING                ImageIdName;
 
-  Status = GetResourceByUri (Private->RedfishService, Uri, &Response);
+  Status = RedfishHttpGetResource (Private->RedfishService, Uri, &Response, TRUE);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: get resource from: %s failed\n", __FUNCTION__, Uri));
     return Status;
@@ -151,6 +151,7 @@ RedfishConsumeResourceCommon (
   EFI_STRING        DtbFirmwareId[MAX_REDFISH_FMP_COUNT];
   CONST VOID        *Property;
   INT32             Length;
+  REDFISH_PAYLOAD   Payload;
 
   if (Private == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -177,9 +178,8 @@ RedfishConsumeResourceCommon (
     for (DtbFirmwareIdIndex = 1; DtbFirmwareIdIndex < MAX_REDFISH_FMP_COUNT; DtbFirmwareIdIndex++) {
       AsciiSPrint (FirmwareIdProperty, sizeof (FirmwareIdProperty), "id%u", DtbFirmwareIdIndex);
       Property = fdt_getprop (DeviceTreeBase, FirmwareInventoryOffset, FirmwareIdProperty, &Length);
-
-      if ((Property != NULL) && (Length != 0)) {
-        DtbFirmwareId[DtbFirmwareIdIndex] = AllocateZeroPool ((Length * sizeof (EFI_STRING)) + 1);
+      if ((Property != NULL) && (Length > 0)) {
+        DtbFirmwareId[DtbFirmwareIdIndex] = AllocateZeroPool ((Length * sizeof (CHAR16)));
         if (DtbFirmwareId[DtbFirmwareIdIndex] == NULL) {
           DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
           break;
@@ -188,7 +188,7 @@ RedfishConsumeResourceCommon (
         AsciiStrToUnicodeStrS (
           Property,
           DtbFirmwareId[DtbFirmwareIdIndex],
-          (Length * sizeof (CHAR16))
+          Length
           );
       } else {
         break;
@@ -209,7 +209,12 @@ RedfishConsumeResourceCommon (
   //
   if (mRegularExpressionProtocol != NULL) {
     for (Index = 0; Index < FirmwareComponentCount; Index++) {
-      JsonValue                   = RedfishJsonInPayload (RedfishGetPayloadByIndex (Response.Payload, Index));
+      Payload = RedfishGetPayloadByIndex (Response.Payload, Index);
+      if (Payload == NULL) {
+        continue;
+      }
+
+      JsonValue                   = RedfishJsonInPayload (Payload);
       JsonValue                   = JsonObjectGetValue (JsonValueGetObject (JsonValue), "@odata.id");
       FirmwareComponentUri[Index] = JsonValueGetUnicodeString (JsonValue);
 
