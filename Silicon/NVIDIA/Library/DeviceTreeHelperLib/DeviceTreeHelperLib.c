@@ -535,7 +535,7 @@ GetDeviceTreeInterrupts (
         return EFI_DEVICE_ERROR;
       }
 
-      DEBUG ((DEBUG_VERBOSE, "%a: Parent has %d interrupt cells\n", __FUNCTION__, InterruptCells));
+      DEBUG ((DEBUG_VERBOSE, "%a: Parent has %u interrupt cells\n", __FUNCTION__, InterruptCells));
       ASSERT (CellIndex + InterruptCells <= NumCells);
       IntPropertyEntries++;
       CellIndex += InterruptCells;
@@ -613,14 +613,14 @@ GetDeviceTreeInterrupts (
 
     InterruptArray[IntIndex].ControllerCompatible = fdt_getprop (DeviceTree, ParentNodeOffset, "compatible", NULL);
     if (InterruptCells >= 3) {
-      DEBUG ((DEBUG_INFO, "%a: IntProperty[%d] - Type = %d\n", __FUNCTION__, CellIndex, SwapBytes32 (IntProperty[CellIndex])));
+      DEBUG ((DEBUG_INFO, "%a: IntProperty[%u] - Type = %u\n", __FUNCTION__, CellIndex, SwapBytes32 (IntProperty[CellIndex])));
       InterruptArray[IntIndex].Type = SwapBytes32 (IntProperty[CellIndex++]);
     }
 
-    DEBUG ((DEBUG_INFO, "%a: IntProperty[%d] - Interrupt = %d\n", __FUNCTION__, CellIndex, SwapBytes32 (IntProperty[CellIndex])));
+    DEBUG ((DEBUG_INFO, "%a: IntProperty[%u] - Interrupt = %u\n", __FUNCTION__, CellIndex, SwapBytes32 (IntProperty[CellIndex])));
     InterruptArray[IntIndex].Interrupt = SwapBytes32 (IntProperty[CellIndex++]);
     if (InterruptCells >= 2) {
-      DEBUG ((DEBUG_INFO, "%a: IntProperty[%d] - Flag = %d\n", __FUNCTION__, CellIndex, SwapBytes32 (IntProperty[CellIndex])));
+      DEBUG ((DEBUG_INFO, "%a: IntProperty[%u] - Flag = %u\n", __FUNCTION__, CellIndex, SwapBytes32 (IntProperty[CellIndex])));
       InterruptArray[IntIndex].Flag = SwapBytes32 (IntProperty[CellIndex++]);
     }
 

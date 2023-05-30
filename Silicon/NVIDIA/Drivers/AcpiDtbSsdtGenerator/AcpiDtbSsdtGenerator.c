@@ -538,9 +538,8 @@ AddDeviceObjectList (
 
     DeviceListEntry->AcpiDevice.InterruptArrayCount = NumberOfInterrupts;
     for (Index = 0; Index < NumberOfInterrupts; Index++) {
-      //Ignore the PMC interrupts
-      if (InterruptArray[Index].ControllerCompatible && AsciiStrStr(InterruptArray[Index].ControllerCompatible, "pmc") == NULL)
-      {
+      // Ignore the PMC interrupts
+      if (InterruptArray[Index].ControllerCompatible && (AsciiStrStr (InterruptArray[Index].ControllerCompatible, "pmc") == NULL)) {
         DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt = InterruptArray[Index].Interrupt;
         if (InterruptArray[Index].Type == INTERRUPT_SPI_TYPE) {
           DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt += DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET;
@@ -666,7 +665,7 @@ BuildDeviceList (
         // Search previous nodes for duplicate, and skip this if found. Assume no duplicates within DeviceType
         for (CompareNodeIndex = 0; CompareNodeIndex < NodeBaseIndex; CompareNodeIndex++) {
           if (NodeHandles[CompareNodeIndex] == NodeHandle) {
-            DEBUG ((DEBUG_INFO, "%a: Skipping %a Node %d as duplicate of previously added node\n", __FUNCTION__, AcpiTableInfo[DeviceTypeIndex].CompatibleId, NodeIndex));
+            DEBUG ((DEBUG_INFO, "%a: Skipping %a Node %u as duplicate of previously added node\n", __FUNCTION__, AcpiTableInfo[DeviceTypeIndex].CompatibleId, NodeIndex));
             break;
           }
         }
@@ -677,10 +676,10 @@ BuildDeviceList (
         }
       }
 
-      DEBUG ((DEBUG_INFO, "%a: Adding %a Node %d\n", __FUNCTION__, AcpiTableInfo[DeviceTypeIndex].CompatibleId, NodeIndex));
+      DEBUG ((DEBUG_INFO, "%a: Adding %a Node %u\n", __FUNCTION__, AcpiTableInfo[DeviceTypeIndex].CompatibleId, NodeIndex));
       Status = AddDeviceObjectList (ListHead, NodeHandle, &AcpiTableInfo[DeviceTypeIndex]);
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Error adding %a Node %d: %r\n", __FUNCTION__, AcpiTableInfo[DeviceTypeIndex].CompatibleId, NodeIndex, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Error adding %a Node %u: %r\n", __FUNCTION__, AcpiTableInfo[DeviceTypeIndex].CompatibleId, NodeIndex, Status));
         if (!EFI_ERROR (ReturnStatus)) {
           ReturnStatus = Status;
         }
