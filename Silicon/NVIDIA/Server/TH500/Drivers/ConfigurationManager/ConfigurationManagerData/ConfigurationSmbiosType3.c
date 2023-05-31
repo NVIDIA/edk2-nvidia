@@ -24,11 +24,6 @@ CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType3 = {
   NULL
 };
 
-typedef struct  {
-  CHAR8    **CmAsciiString;
-  CHAR8    *DtbPropertyName;
-} TYPE3_STRING_OVERRIDE_PARAMETERS;
-
 /**
   Get system fru data for SMBIOS Type 3 data collection.
 
@@ -88,37 +83,33 @@ InstallSmbiosType3Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   )
 {
-  EDKII_PLATFORM_REPOSITORY_INFO    *Repo    = Private->Repo;
-  VOID                              *DtbBase = Private->DtbBase;
-  CM_SMBIOS_ENCLOSURE_INFO          *EnclosureInfo;
-  EFI_STATUS                        Status;
-  INTN                              Type3ContainedElementOffset;
-  CONST VOID                        *Property;
-  INT32                             Length;
-  FRU_DEVICE_INFO                   *Type3FruInfo;
-  UINT8                             ChassisType;
-  UINTN                             Type3Index;
-  UINTN                             Index;
-  INT32                             NodeOffset;
-  UINT32                            NumEnclosures;
-  CONTAINED_ELEMENT                 *ContainedElements;
-  UINT8                             ContainedElementCount;
-  UINTN                             ProductInfoSize;
-  CHAR8                             *ManufacturerStr = NULL;
-  CHAR8                             *SkuNumberStr    = NULL;
-  CHAR8                             *SerialNumberStr = NULL;
-  CHAR8                             *AssetTagStr     = NULL;
-  CHAR8                             *VersionStr      = NULL;
-  SMBIOS_TABLE_TYPE3                *Type3RecordPcd;
-  NVIDIA_PRODUCT_INFO               ProductInfo;
-  UINTN                             AssetTagLenWithNullTerminator;
-  CHAR16                            ProductInfoVariableName[]  = L"ProductInfo";
-  CHAR8                             Type3NodeStr[]             = "/firmware/smbios/type3@xx";
-  CHAR8                             DtContainedElementFormat[] = "/firmware/smbios/type3@xx/contained-element@xx";
-  TYPE3_STRING_OVERRIDE_PARAMETERS  StringOverrideArray[]      = {
-    { &ManufacturerStr, "manufacturer" },
-    { &VersionStr,      "version"      }
-  };
+  EDKII_PLATFORM_REPOSITORY_INFO  *Repo    = Private->Repo;
+  VOID                            *DtbBase = Private->DtbBase;
+  CM_SMBIOS_ENCLOSURE_INFO        *EnclosureInfo;
+  EFI_STATUS                      Status;
+  INTN                            Type3ContainedElementOffset;
+  CONST VOID                      *Property;
+  INT32                           Length;
+  FRU_DEVICE_INFO                 *Type3FruInfo;
+  UINT8                           ChassisType;
+  UINTN                           Type3Index;
+  UINTN                           Index;
+  INT32                           NodeOffset;
+  UINT32                          NumEnclosures;
+  CONTAINED_ELEMENT               *ContainedElements;
+  UINT8                           ContainedElementCount;
+  UINTN                           ProductInfoSize;
+  CHAR8                           *ManufacturerStr = NULL;
+  CHAR8                           *SkuNumberStr    = NULL;
+  CHAR8                           *SerialNumberStr = NULL;
+  CHAR8                           *AssetTagStr     = NULL;
+  CHAR8                           *VersionStr      = NULL;
+  SMBIOS_TABLE_TYPE3              *Type3RecordPcd;
+  NVIDIA_PRODUCT_INFO             ProductInfo;
+  UINTN                           AssetTagLenWithNullTerminator;
+  CHAR16                          ProductInfoVariableName[]  = L"ProductInfo";
+  CHAR8                           Type3NodeStr[]             = "/firmware/smbios/type3@xx";
+  CHAR8                           DtContainedElementFormat[] = "/firmware/smbios/type3@xx/contained-element@xx";
 
   NumEnclosures                 = 0;
   ProductInfoSize               = sizeof (ProductInfo);
@@ -152,6 +143,8 @@ InstallSmbiosType3Cm (
       SerialNumberStr = Type3FruInfo->ChassisSerial;
       SkuNumberStr    = Type3FruInfo->ChassisPartNum;
       ChassisType     = Type3FruInfo->ChassisType;
+      ManufacturerStr = Type3FruInfo->ProductManufacturer;
+      VersionStr      = Type3FruInfo->ProductVersion;
     } else {
       continue;
     }
@@ -174,19 +167,6 @@ InstallSmbiosType3Cm (
     if (Private->EnclosureBaseboardBinding.Info == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate enclosure baseboard binding info\r\n", __FUNCTION__));
       return EFI_OUT_OF_RESOURCES;
-    }
-
-    //
-    // Check if there are OEM overrides from DTB.
-    //
-    for (Index = 0; Index < ARRAY_SIZE (StringOverrideArray); Index++) {
-      *StringOverrideArray[Index].CmAsciiString = NULL;
-      Property                                  = fdt_getprop (DtbBase, NodeOffset, StringOverrideArray[Index].DtbPropertyName, &Length);
-      if ((Property != NULL) && (Length != 0)) {
-        *StringOverrideArray[Index].CmAsciiString = (CHAR8 *)Property;
-      } else {
-        *StringOverrideArray[Index].CmAsciiString = " ";
-      }
     }
 
     //
