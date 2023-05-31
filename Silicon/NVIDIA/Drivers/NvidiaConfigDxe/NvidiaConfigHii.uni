@@ -649,7 +649,7 @@
 #string STR_PRODUCT_ASSET_TAG_PROTECTION_HELP #language en-US "Locks product asset tag information. The asset tag is not erased if restoring default system settings."
 
 #string STR_ENABLED_PCIE_NIC_TOPOLOGY_PROMPT    #language en-US "Enable Bootable NIC Filtering"
-#string STR_ENABLED_PCIE_NIC_TOPOLOGY_HELP      #language en-US "Used To Enable PCIe Tolopoly Based Bootable NIC Filtering"
+#string STR_ENABLED_PCIE_NIC_TOPOLOGY_HELP      #language en-US "Used To Enable PCIe Topology Based Bootable NIC Filtering"
 #string STR_PCIE_SEGMENT_ENABLE_PROMPT          #language en-US "Enabled PCIe Segment"
 #string STR_PCIE_BUS_ENABLE_PROMPT              #language en-US "Enabled PCIe Bus"
 #string STR_PCIE_DEVICE_ENABLE_PROMPT           #language en-US "Enabled PCIe Device"
