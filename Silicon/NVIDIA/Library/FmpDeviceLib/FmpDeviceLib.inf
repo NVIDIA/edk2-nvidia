@@ -42,19 +42,17 @@
 [LibraryClasses]
   BootChainInfoLib
   DisplayUpdateProgressLib
+  FmpParamLib
   FwImageLib
   FwPackageLib
   PcdLib
   PlatformResourceLib
   HobLib
   VerPartitionLib
-  DtPlatformDtbLoaderLib
-  FdtLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
-  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting
   gNVIDIATokenSpaceGuid.PcdFmpWriteVerifyImage

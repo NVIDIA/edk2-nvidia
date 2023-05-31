@@ -41,6 +41,7 @@
   BaseMemoryLib
   DisplayUpdateProgressLib
   ErotLib
+  FmpParamLib
   MemoryAllocationLib
   PcdLib
   PldmFwUpdateLib
@@ -50,7 +51,6 @@
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
-  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString

@@ -191,6 +191,7 @@
   FwImageLib|Silicon/NVIDIA/Library/FwImageLib/FwImageLib.inf
   FwPackageLib|Silicon/NVIDIA/Library/FwPackageLib/FwPackageLib.inf
   VerPartitionLib|Silicon/NVIDIA/Library/VerPartitionLib/VerPartitionLib.inf
+  FmpParamLib|Silicon/NVIDIA/Library/FmpParamLib/FmpParamLib.inf
 
   AmlLib|DynamicTablesPkg/Library/Common/AmlLib/AmlLib.inf
   SsdtSerialPortFixupLib|Silicon/NVIDIA/Library/SsdtSerialPortFixupLib/SsdtSerialPortFixupLib.inf

@@ -532,6 +532,8 @@ FmpErotLibConstructor (
 {
   EFI_STATUS  Status;
 
+  FmpParamLibInit ();
+
   Status = ErotLibInit ();
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: lib init error: %r\n", __FUNCTION__, Status));

@@ -19,7 +19,6 @@
 #include <Library/PcdLib.h>
 #include <Library/UefiLib.h>
 #include <Library/DevicePathLib.h>
-#include <Library/FmpDeviceLib.h>
 #include "ConfigurationSmbiosPrivate.h"
 
 #define BIT_IS_SET(Data, Bit)  ((BOOLEAN)(((Data) & (Bit)) == (Bit)))
@@ -456,10 +455,7 @@ FmpFirmwareInventoryUpdate (
     DEBUG ((DEBUG_WARN, "%a: Failed to get PCIIO info for association. Status = %r\n", __FUNCTION__, PciioFmpPairingStatus));
   }
 
-  PciioFmpPairingStatus = FmpDeviceGetImageTypeIdGuidPtr (&SbiosDeviceGuid);
-  if ((SbiosDeviceGuid == NULL) || EFI_ERROR (PciioFmpPairingStatus)) {
-    DEBUG ((DEBUG_WARN, "%a: Failed to get SbiosDeviceGuid. Status = %r\n", __FUNCTION__, PciioFmpPairingStatus));
-  }
+  SbiosDeviceGuid = PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuid);
 
   //
   // For each handle, get the FW info and add it to the SMBIOS table.

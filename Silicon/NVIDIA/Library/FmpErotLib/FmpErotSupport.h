@@ -12,6 +12,7 @@
 #define __FMP_EROT_SUPPORT_H__
 
 #include <Uefi/UefiBaseType.h>
+#include <Library/FmpParamLib.h>
 #include <Protocol/FirmwareManagement.h>
 
 /**

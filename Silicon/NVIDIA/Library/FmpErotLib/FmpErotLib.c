@@ -237,8 +237,7 @@ FmpDeviceGetLowestSupportedVersion (
   OUT UINT32  *LowestSupportedVersion
   )
 {
-  *LowestSupportedVersion = PcdGet32 (PcdFmpDeviceBuildTimeLowestSupportedVersion);
-  return EFI_SUCCESS;
+  return FmpParamGetLowestSupportedVersion (LowestSupportedVersion);
 }
 
 /**
