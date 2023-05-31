@@ -733,7 +733,6 @@ ProcessIPMIBootOrderUpdates (
   UINTN                         BootOrderLength;
   UINT16                        *ClassInstanceList;
   UINTN                         ClassInstanceLength;
-  UINTN                         ClassInstanceIndex;
   UINT16                        BootOption;
   UINT64                        OsIndications;
   UINTN                         OsIndicationsSize;
@@ -741,9 +740,16 @@ ProcessIPMIBootOrderUpdates (
   EFI_BOOT_MANAGER_LOAD_OPTION  Option;
   BOOLEAN                       IPv6;
   EFI_EVENT                     ReadyToBootEvent;
+  NVIDIA_BOOT_ORDER_PRIORITY    *VirtualBootClass;
+  UINT16                        *VirtualInstanceList;
+  UINTN                         VirtualInstanceLength;
+  INTN                          FirstVirtualBootOrderIndex;
+  UINT16                        DesiredOptionNumber;
 
-  ClassInstanceList = NULL;
-  BootOrder         = NULL;
+  ClassInstanceList   = NULL;
+  BootOrder           = NULL;
+  VirtualBootClass    = NULL;
+  VirtualInstanceList = NULL;
 
   if ((mBootOptionsResponse == NULL) || (mBootOptionsRequest == NULL)) {
     goto CleanupAndReturn;
@@ -820,13 +826,15 @@ ProcessIPMIBootOrderUpdates (
       RequestedClassName = IPv6 ? "httpv6" : "httpv4";
       break;
     case IPMI_BOOT_DEVICE_SELECTOR_PRIMARY_REMOTE_MEDIA:
-      RequestedClassName = "virtual";
-      break;
+      DEBUG ((DEBUG_WARN, "Ignoring unsupported boot device selector IPMI_BOOT_DEVICE_SELECTOR_PRIMARY_REMOTE_MEDIA\n"));
+      goto AcknowledgeAndCleanup;
     case IPMI_BOOT_DEVICE_SELECTOR_REMOTE_HARDDRIVE:
       RequestedClassName = "scsi";
       break;
     case IPMI_BOOT_DEVICE_SELECTOR_FLOPPY:
       RequestedClassName = "usb";
+      // Redfish wants "usb" to treat "virtual" as higher priority USB devices than normal USB devices
+      VirtualBootClass = GetBootClassOfName ("virtual", AsciiStrLen ("virtual"));
       break;
     default:
       DEBUG ((DEBUG_WARN, "Ignoring unknown boot device selector %d\n", BootOptionsParameters->Parm5.Data2.Bits.BootDeviceSelector));
@@ -858,12 +866,22 @@ ProcessIPMIBootOrderUpdates (
       goto AcknowledgeAndCleanup;
     }
 
-    ClassInstanceLength = 0;
+    ClassInstanceLength   = 0;
+    VirtualInstanceLength = 0;
+
+    if (VirtualBootClass != NULL) {
+      VirtualInstanceList = AllocatePool (BootOrderSize);
+      if (VirtualInstanceList == NULL) {
+        DEBUG ((DEBUG_ERROR, "Unable to allocate memory to process virtual devices - ignoring request to prioritize %a instance %u\n", RequestedClassName, RequestedInstance));
+        goto AcknowledgeAndCleanup;
+      }
+    }
   }
 
   // Find the index of the first occurance of RequestedClass in BootOrder
   // and the list of instances of RequestedClass in BootOrder [if RequestedInstance > 0]
-  FirstBootOrderIndex = -1;
+  FirstBootOrderIndex        = -1;
+  FirstVirtualBootOrderIndex = -1;
   for (BootOrderIndex = 0; BootOrderIndex < BootOrderLength; BootOrderIndex++) {
     UnicodeSPrint (OptionName, sizeof (OptionName), L"Boot%04x", BootOrder[BootOrderIndex]);
     Status = EfiBootManagerVariableToLoadOption (OptionName, &Option);
@@ -875,44 +893,61 @@ ProcessIPMIBootOrderUpdates (
     OptionBootClass = GetBootClassOfOption (&Option);
     EfiBootManagerFreeLoadOption (&Option);
 
-    if (OptionBootClass == RequestedBootClass) {
-      if (FirstBootOrderIndex == -1) {
-        FirstBootOrderIndex = BootOrderIndex;
+    if (VirtualBootClass && (OptionBootClass == VirtualBootClass)) {
+      if (FirstVirtualBootOrderIndex == -1) {
+        FirstVirtualBootOrderIndex = BootOrderIndex;
         if (RequestedInstance == 0) {
           break;
         }
       }
 
-      ClassInstanceList[ClassInstanceLength] = BootOrder[BootOrderIndex];
-      ClassInstanceLength++;
+      VirtualInstanceList[VirtualInstanceLength] = BootOrder[BootOrderIndex];
+      VirtualInstanceLength++;
+    } else if (OptionBootClass == RequestedBootClass) {
+      if (FirstBootOrderIndex == -1) {
+        FirstBootOrderIndex = BootOrderIndex;
+        if ((RequestedInstance == 0) && (VirtualBootClass == NULL)) {
+          break;
+        }
+      }
+
+      if (RequestedInstance > 0) {
+        ClassInstanceList[ClassInstanceLength] = BootOrder[BootOrderIndex];
+        ClassInstanceLength++;
+      }
     }
   }
 
-  if (FirstBootOrderIndex == -1) {
+  if ((FirstBootOrderIndex == -1) && (FirstVirtualBootOrderIndex == -1)) {
     DEBUG ((DEBUG_ERROR, "Unable to find any instance of %a in BootOrder - Ignoring boot order change request from IPMI\n", RequestedClassName));
     goto AcknowledgeAndCleanup;
   }
 
   // Find the index of the N-th occurance of RequestedClass in BootOrder when sorted by number
   if (RequestedInstance == 0) {
-    BootOrderIndex = FirstBootOrderIndex;
+    BootOrderIndex = (FirstVirtualBootOrderIndex != -1) ? FirstVirtualBootOrderIndex : FirstBootOrderIndex;
   } else {
-    if (RequestedInstance-1 < ClassInstanceLength) {
+    if (RequestedInstance-1 < VirtualInstanceLength) {
+      PerformQuickSort (VirtualInstanceList, VirtualInstanceLength, sizeof (VirtualInstanceList[0]), Uint16SortCompare);
+      DesiredOptionNumber = VirtualInstanceList[RequestedInstance-1];
+    } else if ((RequestedInstance - 1 - VirtualInstanceLength) < ClassInstanceLength) {
       PerformQuickSort (ClassInstanceList, ClassInstanceLength, sizeof (ClassInstanceList[0]), Uint16SortCompare);
-      ClassInstanceIndex = RequestedInstance-1;
-      for (BootOrderIndex = 0; BootOrderIndex < BootOrderLength; BootOrderIndex++) {
-        if (BootOrder[BootOrderIndex] == ClassInstanceList[ClassInstanceIndex]) {
-          break;
-        }
-      }
+      DesiredOptionNumber = ClassInstanceList[RequestedInstance - 1 - VirtualInstanceLength];
     } else {
       DEBUG ((DEBUG_WARN, "Unable to find requested instance %u of %a - Using first found instance instead\n", RequestedInstance, RequestedClassName));
-      BootOrderIndex = FirstBootOrderIndex;
+      BootOrderIndex = (FirstVirtualBootOrderIndex != -1) ? FirstVirtualBootOrderIndex : FirstBootOrderIndex;
+      goto UpdateBootOrder;
+    }
+
+    for (BootOrderIndex = 0; BootOrderIndex < BootOrderLength; BootOrderIndex++) {
+      if (BootOrder[BootOrderIndex] == DesiredOptionNumber) {
+        break;
+      }
     }
   }
 
   // At this point BootOrderIndex is the entry to move to the start of the list
-
+UpdateBootOrder:
   if (BootOptionsParameters->Parm5.Data1.Bits.PersistentOptions) {
     DEBUG ((DEBUG_ERROR, "IPMI requested to move %a instance %u to the start of BootOrder\n", RequestedClassName, RequestedInstance));
   } else {
@@ -989,6 +1024,7 @@ CleanupAndReturn:
   FREE_NON_NULL (mBootOptionsRequest);
   FREE_NON_NULL (mBootOptionsResponse);
   FREE_NON_NULL (ClassInstanceList);
+  FREE_NON_NULL (VirtualInstanceList);
   FREE_NON_NULL (BootOrder);
 
   return;

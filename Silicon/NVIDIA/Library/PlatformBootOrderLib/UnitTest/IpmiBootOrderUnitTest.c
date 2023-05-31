@@ -27,6 +27,7 @@
 #include <Guid/GlobalVariable.h>
 #include <Library/IpmiCommandLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/PrintLib.h>
 
 #define UNIT_TEST_NAME     "IPMI Boot Order Test"
 #define UNIT_TEST_VERSION  "1.0"
@@ -52,13 +53,13 @@ typedef enum {
   IBO_DEVICE_BIOS          = 0b0110, // UEFI Menu
   IBO_DEVICE_REMOTE_FLOPPY = 0b0111, // Sata
   IBO_DEVICE_REMOTE_CD     = 0b1000, // Http
-  IBO_DEVICE_REMOTE_MEDIA  = 0b1001, // BMC's USB
+  IBO_DEVICE_REMOTE_MEDIA  = 0b1001,
   IBO_DEVICE_RESERVED_0    = 0b1010,
   IBO_DEVICE_REMOTE_HD     = 0b1011, // Scsi
   IBO_DEVICE_RESERVED_1    = 0b1100,
   IBO_DEVICE_RESERVED_2    = 0b1101,
   IBO_DEVICE_RESERVED_3    = 0b1110,
-  IBO_DEVICE_FLOPPY        = 0b1111  // USB
+  IBO_DEVICE_FLOPPY        = 0b1111  // USB (preferring Virtual to real)
 } IBO_DEVICE;
 
 typedef enum {
@@ -147,6 +148,11 @@ IBO_CONTEXT  RESERVED_1_3    = { IBO_DEVICE_RESERVED_1, 3, IBO_RESULT_NO_CHANGE,
 IBO_CONTEXT  RESERVED_2_3    = { IBO_DEVICE_RESERVED_2, 3, IBO_RESULT_NO_CHANGE, FALSE, TRUE };
 IBO_CONTEXT  RESERVED_3_3    = { IBO_DEVICE_RESERVED_3, 3, IBO_RESULT_NO_CHANGE, FALSE, TRUE };
 IBO_CONTEXT  FLOPPY_3        = { IBO_DEVICE_FLOPPY, 3, IBO_RESULT_BOOT_ORDER_CHANGE, FALSE, TRUE };
+
+// USB Device 4-6, Persistent, Unacked, Valid
+IBO_CONTEXT  FLOPPY_4 = { IBO_DEVICE_FLOPPY, 4, IBO_RESULT_BOOT_ORDER_CHANGE, FALSE, TRUE };
+IBO_CONTEXT  FLOPPY_5 = { IBO_DEVICE_FLOPPY, 5, IBO_RESULT_BOOT_ORDER_CHANGE, FALSE, TRUE };
+IBO_CONTEXT  FLOPPY_6 = { IBO_DEVICE_FLOPPY, 6, IBO_RESULT_BOOT_ORDER_CHANGE, FALSE, TRUE };
 
 // Acked
 IBO_CONTEXT  ACKED_PXE_0 = { IBO_DEVICE_PXE, 0, IBO_RESULT_NO_CHANGE, TRUE, TRUE };
@@ -278,7 +284,7 @@ SetupUefiVariables (
 {
   EFI_STATUS  Status;
 
-  NextOptionNumber = 0;
+  NextOptionNumber = 1;
 
   Status = gRT->SetVariable (
                   EFI_BOOT_ORDER_VARIABLE_NAME,
@@ -602,7 +608,8 @@ UNIT_TEST_STATUS
 EFIAPI
 IBO_AddDP (
   EFI_DEVICE_PATH_PROTOCOL  *DevicePath,
-  UINT16                    *BootNum
+  UINT16                    *BootNum,
+  CHAR16                    *Description
   )
 {
   EFI_STATUS                    Status;
@@ -612,6 +619,7 @@ IBO_AddDP (
   Option.FilePath     = DevicePath;
   Option.OptionType   = LoadOptionTypeBoot;
   Option.OptionNumber = NextOptionNumber++;
+  Option.Description  = Description;
   *BootNum            = Option.OptionNumber;
 
   Status = EfiBootManagerLoadOptionToVariable (&Option);
@@ -646,54 +654,179 @@ IBO_AddUsbDP (
     return UNIT_TEST_ERROR_TEST_FAILED;
   }
 
-  return IBO_AddDP (&DevicePath[0].Header, BootNum);
+  return IBO_AddDP (&DevicePath[0].Header, BootNum, L"UEFI USB Device");
 }
 
-// Note: Currently this only puts USB devices into the boot order
 UNIT_TEST_STATUS
 EFIAPI
-IBO_BootOrderSetup (
-  IN UNIT_TEST_CONTEXT  Context,
-  IN UINTN              Count
+IBO_AddVirtualUsbDP (
+  UINT8   Port,
+  UINT8   Interface,
+  UINT16  *BootNum
   )
 {
-  UNIT_TEST_STATUS  Status;
-  UINT16            BootNum;
-  IBO_CONTEXT       *IboContext = (IBO_CONTEXT *)Context;
-  UINTN             Index;
-  BOOLEAN           WillModifyBootOrder;
+  USB_DEVICE_PATH  DevicePath[2];
 
-  // Set up Initial Boot Order
+  DevicePath[0].Header.Type      = MESSAGING_DEVICE_PATH;
+  DevicePath[0].Header.SubType   = MSG_USB_DP;
+  DevicePath[0].Header.Length[0] = sizeof (DevicePath[0]);
+  DevicePath[0].ParentPortNumber = Port;
+  DevicePath[0].InterfaceNumber  = Interface;
+  DevicePath[1].Header.Type      = END_DEVICE_PATH_TYPE;
+  DevicePath[1].Header.SubType   = END_ENTIRE_DEVICE_PATH_SUBTYPE;
+  DevicePath[1].Header.Length[0] = END_DEVICE_PATH_LENGTH;
 
-  ExpectedBootOrderSize = Count*sizeof (UINT16);
-  ExpectedBootOrder     = AllocatePool (ExpectedBootOrderSize);
-  if (ExpectedBootOrder == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for ExpectedBootOrder\n", __FUNCTION__));
+  if (!IsDevicePathValid (&DevicePath[0].Header, sizeof (DevicePath))) {
+    DEBUG ((DEBUG_ERROR, "DevicePath isn't valid!\n"));
     return UNIT_TEST_ERROR_TEST_FAILED;
   }
 
-  for (Index = 0; Index < Count; Index++) {
-    Status = IBO_AddUsbDP (0, 0, &BootNum);
-    if (Status != UNIT_TEST_PASSED) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to add instance %u of Usb DP\n", __FUNCTION__, Index));
-      return Status;
-    }
+  return IBO_AddDP (&DevicePath[0].Header, BootNum, L"UEFI OpenBMC Virtual Media Device");
+}
 
-    ExpectedBootOrder[Index] = BootNum;
+VOID
+EFIAPI
+IBO_Cleanup (
+  IN UNIT_TEST_CONTEXT  Context
+  )
+{
+  FREE_NON_NULL (ExpectedBootOrder);
+  FREE_NON_NULL (ExpectedSavedBootOrder);
+}
+
+VOID
+IBO_ArrangeDevices (
+  IN UINTN       DeviceCount,
+  IN OUT UINT16  *DeviceList,
+  IN INTN        *Order
+  )
+{
+  UINT16  Device[DeviceCount];
+  UINTN   OrderIndex;
+  UINTN   OrderVal;
+
+  // Initial list
+  CopyMem (Device, DeviceList, sizeof (UINT16) * DeviceCount);
+
+  for (OrderIndex = 0; OrderIndex < DeviceCount; OrderIndex++) {
+    OrderVal               = ABS (Order[OrderIndex]) - 1;
+    DeviceList[OrderIndex] = Device[OrderVal];
   }
 
-  // Create initial state, before expectations take effect
-  Status = SetupUefiVariables (ExpectedBootOrderSize, ExpectedBootOrder, NULL, 0);
+  for (OrderIndex = 0; OrderIndex < DeviceCount; OrderIndex++) {
+    DEBUG ((DEBUG_INFO, "BootOrder[%u] = 0x%u\n", OrderIndex, DeviceList[OrderIndex]));
+  }
+}
+
+// Note: Currently this only puts USB and Virtual USB devices into the boot order
+UNIT_TEST_STATUS
+EFIAPI
+IBO_VirtualUsbBootOrderSetup (
+  IN UNIT_TEST_CONTEXT  Context,
+  IN UINTN              Count,
+  IN INTN               *Configuration // negative for virtual, positive for real, abs is enumeration order, position is boot order
+  )
+{
+  UNIT_TEST_STATUS  Status;
+  IBO_CONTEXT       *IboContext = (IBO_CONTEXT *)Context;
+  UINTN             Index;
+  UINTN             DeviceListIndex;
+  BOOLEAN           WillModifyBootOrder;
+  UINTN             OriginalBootOrderSize;
+  UINT16            *OriginalBootOrder;
+  UINT16            TargetDeviceNum;
+  UINTN             TargetDeviceNumIndex;
+  UINTN             VirtualDeviceCount;
+
+  // Set up Initial Boot Order
+  OriginalBootOrderSize = Count*sizeof (UINT16);
+  OriginalBootOrder     = AllocatePool (OriginalBootOrderSize);
+  if (OriginalBootOrder == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for OriginalBootOrder\n", __FUNCTION__));
+    return UNIT_TEST_ERROR_TEST_FAILED;
+  }
+
+  // Create the devices
+  DeviceListIndex = 0;
+
+  // First, create all the virtual USB devices [index < 0]
+  for (Index = 0; Index < Count; Index++) {
+    if (Configuration[Index] < 0) {
+      Status = IBO_AddVirtualUsbDP (0, 0, &OriginalBootOrder[DeviceListIndex++]);
+      if (Status != UNIT_TEST_PASSED) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to create Virtual USB device for test\n", __FUNCTION__));
+        return UNIT_TEST_ERROR_TEST_FAILED;
+      }
+    }
+  }
+
+  VirtualDeviceCount = DeviceListIndex;
+
+  // The rest of the devices are real
+  while (DeviceListIndex < Count) {
+    Status = IBO_AddUsbDP (0, 0, &OriginalBootOrder[DeviceListIndex++]);
+    if (Status != UNIT_TEST_PASSED) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to create USB device for test\n", __FUNCTION__));
+      return UNIT_TEST_ERROR_TEST_FAILED;
+    }
+  }
+
+  // Determine which USB device will move to start of BootOrder when using enumeration order
+  TargetDeviceNum = UINT16_MAX; // Need to calculate later
+  if ((IboContext->Device == IBO_DEVICE_FLOPPY) && !IboContext->AlreadyAcked && IboContext->Valid) {
+    if ((IboContext->Instance <= Count) && (IboContext->Instance > 0)) {
+      TargetDeviceNum = OriginalBootOrder[IboContext->Instance - 1];
+    }
+  }
+
+  // Now, order the devices as intended for OriginalBootOrder
+  IBO_ArrangeDevices (Count, OriginalBootOrder, Configuration);
+
+  // Then determine which device will move when using first found in boot order
+  TargetDeviceNumIndex = 0;
+  if ((IboContext->Device == IBO_DEVICE_FLOPPY) &&
+      !IboContext->AlreadyAcked &&
+      IboContext->Valid)
+  {
+    if (TargetDeviceNum == UINT16_MAX) {
+      // Use first found in boot order, preferring first virtual found
+      if (VirtualDeviceCount == 0) {
+        TargetDeviceNum = OriginalBootOrder[0];
+      } else {
+        for (TargetDeviceNumIndex = 0; TargetDeviceNumIndex < Count; TargetDeviceNumIndex++) {
+          if (Configuration[TargetDeviceNumIndex] < 0) {
+            TargetDeviceNum = OriginalBootOrder[TargetDeviceNumIndex];
+            break;
+          }
+        }
+      }
+    } else {
+      // Determine index of the device being moved
+      for (TargetDeviceNumIndex = 0; TargetDeviceNumIndex < Count; TargetDeviceNumIndex++) {
+        if (OriginalBootOrder[TargetDeviceNumIndex] == TargetDeviceNum) {
+          break;
+        }
+      }
+    }
+  }
+
+  // Create initial state
+  Status = SetupUefiVariables (OriginalBootOrderSize, OriginalBootOrder, NULL, 0);
   if (Status != UNIT_TEST_PASSED) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to setup Uefi variables\n", __FUNCTION__));
     return Status;
   }
 
   // Determine Expected Boot Order
+  ExpectedBootOrderSize = Count*sizeof (UINT16);
+  ExpectedBootOrder     = AllocateCopyPool (ExpectedBootOrderSize, OriginalBootOrder);
+  if (ExpectedBootOrder == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for ExpectedBootOrder\n", __FUNCTION__));
+    return UNIT_TEST_ERROR_TEST_FAILED;
+  }
 
   ExpectedSavedBootOrderSize = 0;
-  // JDS TODO - this assumes only USB(Floppy) in boot order!
-  if ((IboContext->Instance > 1) && (IboContext->Device == IBO_DEVICE_FLOPPY) && (IboContext->Instance <= Count) && !IboContext->AlreadyAcked && IboContext->Valid) {
+  if (TargetDeviceNumIndex != 0) {
     WillModifyBootOrder = TRUE;
   } else {
     WillModifyBootOrder = FALSE;
@@ -711,7 +844,7 @@ IBO_BootOrderSetup (
           return UNIT_TEST_ERROR_TEST_FAILED;
         }
 
-        CopyMem (&ExpectedSavedBootOrder[0], &ExpectedBootOrder[0], ExpectedBootOrderSize);
+        CopyMem (&ExpectedSavedBootOrder[0], &OriginalBootOrder[0], ExpectedBootOrderSize);
         ExpectedSavedBootOrderSize = ExpectedBootOrderSize;
         // Note: MockUefiCreateEventEx must be called in the test, not the setup, due to how mock checking works
       }
@@ -721,9 +854,8 @@ IBO_BootOrderSetup (
     case IBO_RESULT_BOOT_ORDER_CHANGE:
       ExpectedOsIndications = 0;
       if (WillModifyBootOrder) {
-        BootNum = ExpectedBootOrder[IboContext->Instance-1];
-        CopyMem (&ExpectedBootOrder[1], &ExpectedBootOrder[0], sizeof (ExpectedBootOrder[0])*(IboContext->Instance - 1));
-        ExpectedBootOrder[0] = BootNum;
+        CopyMem (&ExpectedBootOrder[1], &ExpectedBootOrder[0], sizeof (ExpectedBootOrder[0])*(TargetDeviceNumIndex));
+        ExpectedBootOrder[0] = TargetDeviceNum;
       }
 
       break;
@@ -747,7 +879,9 @@ IBO_SingleBootOrderSetup (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
-  return IBO_BootOrderSetup (Context, 1);
+  INTN  Order[] = { 1 };
+
+  return IBO_VirtualUsbBootOrderSetup (Context, ARRAY_SIZE (Order), &Order[0]);
 }
 
 UNIT_TEST_STATUS
@@ -756,7 +890,9 @@ IBO_DualBootOrderSetup (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
-  return IBO_BootOrderSetup (Context, 2);
+  INTN  Order[] = { 1, 2 };
+
+  return IBO_VirtualUsbBootOrderSetup (Context, ARRAY_SIZE (Order), &Order[0]);
 }
 
 UNIT_TEST_STATUS
@@ -765,17 +901,33 @@ IBO_TripleBootOrderSetup (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
-  return IBO_BootOrderSetup (Context, 3);
+  INTN  Order[] = { 1, 2, 3 };
+
+  return IBO_VirtualUsbBootOrderSetup (Context, ARRAY_SIZE (Order), &Order[0]);
 }
 
-VOID
+UNIT_TEST_STATUS
 EFIAPI
-IBO_Cleanup (
+IBO_V3V1V2R1R2_BootOrderSetup (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
-  FREE_NON_NULL (ExpectedBootOrder);
-  FREE_NON_NULL (ExpectedSavedBootOrder);
+  // [V3, V1, V2, R1, R2]
+  INTN  Order[] = { -3, -1, -2, 4, 5 };
+
+  return IBO_VirtualUsbBootOrderSetup (Context, ARRAY_SIZE (Order), &Order[0]);
+}
+
+UNIT_TEST_STATUS
+EFIAPI
+IBO_R3V1V2R1R2_BootOrderSetup (
+  IN UNIT_TEST_CONTEXT  Context
+  )
+{
+  // [R3, V1, V2, R1, R2]
+  INTN  Order[] = { 5, -1, -2, 3, 4 };
+
+  return IBO_VirtualUsbBootOrderSetup (Context, ARRAY_SIZE (Order), &Order[0]);
 }
 
 /**
@@ -864,6 +1016,27 @@ IBO_IpmiRequest (
 #define ADD_IPMI_TEST(TEST_SUITE, TEST_SETUP, TEST_CONTEXT) \
   Status = AddTestCase (TEST_SUITE, #TEST_SETUP " with " #TEST_CONTEXT, #TEST_SETUP "_" #TEST_CONTEXT, IBO_IpmiRequest, TEST_SETUP, IBO_Cleanup, &TEST_CONTEXT);
 
+#define ADD_IPMI_TESTS(TEST_SUITE, TEST_SETUP, TEST_CONTEXT_LIST) \
+  {\
+    CHAR8 _TestName[256];\
+    for (int i = 0; i < ARRAY_SIZE(TEST_CONTEXT_LIST); i++) {\
+      AsciiSPrint(_TestName, sizeof(_TestName), "%a with %a", #TEST_SETUP, TEST_CONTEXT_LIST[i].ContextName);\
+      Status = AddTestCase (TEST_SUITE, _TestName, _TestName, IBO_IpmiRequest, TEST_SETUP, IBO_Cleanup, TEST_CONTEXT_LIST[i].Context);\
+      if (EFI_ERROR(Status)) {\
+        DEBUG ((DEBUG_ERROR, "Unable to create test %a\n", _TestName));\
+        ASSERT(FALSE);\
+        return Status;\
+      }\
+    }\
+  }
+
+typedef struct {
+  IBO_CONTEXT    *Context;
+  CHAR8          *ContextName;
+} IBO_CONTEXT_ENTRY;
+
+#define GEN_IBO_CONTEXT_ENTRY(Entry)  {&Entry, #Entry}
+
 /**
   Initialize the unit test framework, suite, and unit tests for the
   sample unit tests and run the unit tests.
@@ -884,7 +1057,171 @@ SetupAndRunUnitTests (
   UNIT_TEST_SUITE_HANDLE      SingleBootOrder;
   UNIT_TEST_SUITE_HANDLE      DualBootOrder;
   UNIT_TEST_SUITE_HANDLE      TripleBootOrder;
+  UNIT_TEST_SUITE_HANDLE      VirtualUsbBootOrder;
   BOOLEAN                     RuntimePreserveVariables = FALSE;
+  IBO_CONTEXT_ENTRY           Contexts[]               = {
+    GEN_IBO_CONTEXT_ENTRY (NO_CHANGE_0),
+    GEN_IBO_CONTEXT_ENTRY (PXE_0),
+    GEN_IBO_CONTEXT_ENTRY (HD_0),
+    GEN_IBO_CONTEXT_ENTRY (HD_SAFE_0),
+    GEN_IBO_CONTEXT_ENTRY (DIAG_0),
+    GEN_IBO_CONTEXT_ENTRY (CD_0),
+    GEN_IBO_CONTEXT_ENTRY (BIOS_0),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_FLOPPY_0),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_CD_0),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_MEDIA_0),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_0_0),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_HD_0),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_1_0),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_2_0),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_3_0),
+    GEN_IBO_CONTEXT_ENTRY (FLOPPY_0),
+    GEN_IBO_CONTEXT_ENTRY (NO_CHANGE_1),
+    GEN_IBO_CONTEXT_ENTRY (PXE_1),
+    GEN_IBO_CONTEXT_ENTRY (HD_1),
+    GEN_IBO_CONTEXT_ENTRY (HD_SAFE_1),
+    GEN_IBO_CONTEXT_ENTRY (DIAG_1),
+    GEN_IBO_CONTEXT_ENTRY (CD_1),
+    GEN_IBO_CONTEXT_ENTRY (BIOS_1),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_FLOPPY_1),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_CD_1),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_MEDIA_1),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_0_1),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_HD_1),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_1_1),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_2_1),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_3_1),
+    GEN_IBO_CONTEXT_ENTRY (FLOPPY_1),
+    GEN_IBO_CONTEXT_ENTRY (NO_CHANGE_2),
+    GEN_IBO_CONTEXT_ENTRY (PXE_2),
+    GEN_IBO_CONTEXT_ENTRY (HD_2),
+    GEN_IBO_CONTEXT_ENTRY (HD_SAFE_2),
+    GEN_IBO_CONTEXT_ENTRY (DIAG_2),
+    GEN_IBO_CONTEXT_ENTRY (CD_2),
+    GEN_IBO_CONTEXT_ENTRY (BIOS_2),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_FLOPPY_2),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_CD_2),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_MEDIA_2),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_0_2),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_HD_2),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_1_2),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_2_2),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_3_2),
+    GEN_IBO_CONTEXT_ENTRY (FLOPPY_2),
+    GEN_IBO_CONTEXT_ENTRY (NO_CHANGE_3),
+    GEN_IBO_CONTEXT_ENTRY (PXE_3),
+    GEN_IBO_CONTEXT_ENTRY (HD_3),
+    GEN_IBO_CONTEXT_ENTRY (HD_SAFE_3),
+    GEN_IBO_CONTEXT_ENTRY (DIAG_3),
+    GEN_IBO_CONTEXT_ENTRY (CD_3),
+    GEN_IBO_CONTEXT_ENTRY (BIOS_3),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_FLOPPY_3),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_CD_3),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_MEDIA_3),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_0_3),
+    GEN_IBO_CONTEXT_ENTRY (REMOTE_HD_3),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_1_3),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_2_3),
+    GEN_IBO_CONTEXT_ENTRY (RESERVED_3_3),
+    GEN_IBO_CONTEXT_ENTRY (FLOPPY_3),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_PXE_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_HD_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_HD_SAFE_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_DIAG_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_CD_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_BIOS_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_REMOTE_FLOPPY_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_REMOTE_CD_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_REMOTE_MEDIA_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_RESERVED_0_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_REMOTE_HD_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_RESERVED_1_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_RESERVED_2_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_RESERVED_3_2),
+    GEN_IBO_CONTEXT_ENTRY (ACKED_FLOPPY_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_PXE_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_HD_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_HD_SAFE_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_DIAG_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_CD_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_BIOS_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_REMOTE_FLOPPY_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_REMOTE_CD_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_REMOTE_MEDIA_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_RESERVED_0_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_REMOTE_HD_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_RESERVED_1_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_RESERVED_2_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_RESERVED_3_2),
+    GEN_IBO_CONTEXT_ENTRY (INVALID_FLOPPY_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_NO_CHANGE_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_PXE_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_HD_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_HD_SAFE_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_DIAG_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_CD_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_BIOS_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_FLOPPY_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_CD_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_MEDIA_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_0_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_HD_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_1_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_2_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_3_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_FLOPPY_0),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_NO_CHANGE_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_PXE_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_HD_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_HD_SAFE_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_DIAG_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_CD_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_BIOS_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_FLOPPY_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_CD_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_MEDIA_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_0_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_HD_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_1_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_2_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_3_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_FLOPPY_1),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_NO_CHANGE_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_PXE_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_HD_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_HD_SAFE_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_DIAG_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_CD_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_BIOS_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_FLOPPY_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_CD_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_MEDIA_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_0_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_HD_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_1_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_2_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_3_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_FLOPPY_2),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_NO_CHANGE_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_PXE_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_HD_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_HD_SAFE_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_DIAG_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_CD_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_BIOS_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_FLOPPY_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_CD_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_MEDIA_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_0_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_REMOTE_HD_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_1_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_2_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_RESERVED_3_3),
+    GEN_IBO_CONTEXT_ENTRY (NEXT_FLOPPY_3),
+    GEN_IBO_CONTEXT_ENTRY (FLOPPY_4),
+    GEN_IBO_CONTEXT_ENTRY (FLOPPY_5),
+    GEN_IBO_CONTEXT_ENTRY (FLOPPY_6)
+  };
 
   Framework = NULL;
 
@@ -928,28 +1265,7 @@ SetupAndRunUnitTests (
     return Status;
   }
 
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, NO_CHANGE_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, PXE_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, HD_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, HD_SAFE_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, DIAG_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, CD_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, BIOS_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, REMOTE_FLOPPY_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, REMOTE_CD_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, REMOTE_MEDIA_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, RESERVED_0_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, REMOTE_HD_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, RESERVED_1_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, RESERVED_2_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, RESERVED_3_0);
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, FLOPPY_0);
-
-  // Already-acknowledged change requests
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, ACKED_PXE_0);
-
-  // Invalid change requests
-  ADD_IPMI_TEST (SingleBootOrder, IBO_SingleBootOrderSetup, INVALID_PXE_0);
+  ADD_IPMI_TESTS (SingleBootOrder, IBO_SingleBootOrderSetup, Contexts);
 
   //
   // Populate the Dual Boot Order Unit Test Suite.
@@ -961,107 +1277,7 @@ SetupAndRunUnitTests (
     return Status;
   }
 
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, NO_CHANGE_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, PXE_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, HD_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, HD_SAFE_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, DIAG_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, CD_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, BIOS_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_FLOPPY_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_CD_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_MEDIA_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_0_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_HD_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_1_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_2_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_3_0);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, FLOPPY_0);
-
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, NO_CHANGE_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, PXE_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, HD_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, HD_SAFE_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, DIAG_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, CD_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, BIOS_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_FLOPPY_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_CD_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_MEDIA_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_0_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_HD_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_1_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_2_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_3_1);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, FLOPPY_1);
-
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, NO_CHANGE_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, PXE_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, HD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, HD_SAFE_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, DIAG_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, CD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, BIOS_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_FLOPPY_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_CD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_MEDIA_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_0_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_HD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_1_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_2_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_3_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, FLOPPY_2);
-
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, NO_CHANGE_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, PXE_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, HD_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, HD_SAFE_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, DIAG_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, CD_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, BIOS_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_FLOPPY_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_CD_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_MEDIA_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_0_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, REMOTE_HD_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_1_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_2_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, RESERVED_3_3);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, FLOPPY_3);
-
-  // Already-acknowledged change requests
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_PXE_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_HD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_HD_SAFE_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_DIAG_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_CD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_BIOS_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_REMOTE_FLOPPY_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_REMOTE_CD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_REMOTE_MEDIA_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_RESERVED_0_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_REMOTE_HD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_RESERVED_1_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_RESERVED_2_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_RESERVED_3_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, ACKED_FLOPPY_2);
-
-  // Invalid change requests
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_PXE_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_HD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_HD_SAFE_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_DIAG_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_CD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_BIOS_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_REMOTE_FLOPPY_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_REMOTE_CD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_REMOTE_MEDIA_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_RESERVED_0_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_REMOTE_HD_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_RESERVED_1_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_RESERVED_2_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_RESERVED_3_2);
-  ADD_IPMI_TEST (DualBootOrder, IBO_DualBootOrderSetup, INVALID_FLOPPY_2);
+  ADD_IPMI_TESTS (DualBootOrder, IBO_DualBootOrderSetup, Contexts);
 
   //
   // Populate the Triple Boot Order Unit Test Suite.
@@ -1073,177 +1289,20 @@ SetupAndRunUnitTests (
     return Status;
   }
 
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NO_CHANGE_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, PXE_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, HD_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, HD_SAFE_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, DIAG_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, CD_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, BIOS_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_FLOPPY_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_CD_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_MEDIA_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_0_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_HD_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_1_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_2_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_3_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, FLOPPY_0);
+  ADD_IPMI_TESTS (TripleBootOrder, IBO_TripleBootOrderSetup, Contexts);
 
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NO_CHANGE_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, PXE_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, HD_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, HD_SAFE_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, DIAG_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, CD_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, BIOS_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_FLOPPY_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_CD_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_MEDIA_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_0_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_HD_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_1_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_2_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_3_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, FLOPPY_1);
+  //
+  // Populate the Virtual USB Boot Order Unit Test Suite.
+  //
+  Status = CreateUnitTestSuite (&VirtualUsbBootOrder, Framework, "Virtual USB Boot Order Tests", "UnitTest.VirtualUsbBootOrder", NULL, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed in CreateUnitTestSuite for Virtual USB Boot Order Tests\n"));
+    Status = EFI_OUT_OF_RESOURCES;
+    return Status;
+  }
 
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NO_CHANGE_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, PXE_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, HD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, HD_SAFE_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, DIAG_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, CD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, BIOS_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_FLOPPY_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_CD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_MEDIA_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_0_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_HD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_1_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_2_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_3_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, FLOPPY_2);
-
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NO_CHANGE_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, PXE_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, HD_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, HD_SAFE_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, DIAG_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, CD_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, BIOS_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_FLOPPY_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_CD_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_MEDIA_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_0_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, REMOTE_HD_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_1_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_2_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, RESERVED_3_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, FLOPPY_3);
-
-  // Already-acknowledged change requests
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_PXE_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_HD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_HD_SAFE_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_DIAG_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_CD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_BIOS_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_REMOTE_FLOPPY_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_REMOTE_CD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_REMOTE_MEDIA_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_RESERVED_0_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_REMOTE_HD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_RESERVED_1_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_RESERVED_2_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_RESERVED_3_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, ACKED_FLOPPY_2);
-
-  // Invalid change requests
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_PXE_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_HD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_HD_SAFE_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_DIAG_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_CD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_BIOS_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_REMOTE_FLOPPY_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_REMOTE_CD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_REMOTE_MEDIA_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_RESERVED_0_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_REMOTE_HD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_RESERVED_1_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_RESERVED_2_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_RESERVED_3_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, INVALID_FLOPPY_2);
-
-  // Boot Next change
-
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_NO_CHANGE_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_PXE_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_HD_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_HD_SAFE_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_DIAG_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_CD_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_BIOS_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_FLOPPY_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_CD_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_MEDIA_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_0_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_HD_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_1_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_2_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_3_0);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_FLOPPY_0);
-
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_NO_CHANGE_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_PXE_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_HD_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_HD_SAFE_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_DIAG_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_CD_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_BIOS_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_FLOPPY_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_CD_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_MEDIA_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_0_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_HD_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_1_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_2_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_3_1);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_FLOPPY_1);
-
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_NO_CHANGE_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_PXE_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_HD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_HD_SAFE_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_DIAG_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_CD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_BIOS_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_FLOPPY_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_CD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_MEDIA_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_0_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_HD_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_1_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_2_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_3_2);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_FLOPPY_2);
-
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_NO_CHANGE_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_PXE_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_HD_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_HD_SAFE_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_DIAG_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_CD_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_BIOS_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_FLOPPY_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_CD_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_MEDIA_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_0_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_REMOTE_HD_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_1_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_2_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_RESERVED_3_3);
-  ADD_IPMI_TEST (TripleBootOrder, IBO_TripleBootOrderSetup, NEXT_FLOPPY_3);
+  ADD_IPMI_TESTS (VirtualUsbBootOrder, IBO_V3V1V2R1R2_BootOrderSetup, Contexts);
+  ADD_IPMI_TESTS (VirtualUsbBootOrder, IBO_R3V1V2R1R2_BootOrderSetup, Contexts);
 
   //
   // Execute the tests.
