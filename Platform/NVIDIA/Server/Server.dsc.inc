@@ -26,11 +26,6 @@
 
 [LibraryClasses.common]
 
-  # PL011 Uart
-  SerialPortLib|ArmPlatformPkg/Library/PL011SerialPortLib/PL011SerialPortLib.inf
-  PL011UartClockLib|ArmPlatformPkg/Library/PL011UartClockLib/PL011UartClockLib.inf
-  PL011UartLib|ArmPlatformPkg/Library/PL011UartLib/PL011UartLib.inf
-
   RealTimeClockLib|Silicon/NVIDIA/Library/NuvotonRealTimeClockLib/NuvotonRealTimeClockLib.inf
 
   SsdtPcieSupportLib|Silicon/NVIDIA/Server/TH500/Library/SsdtPcieSupportLib/SsdtPcieSupportLib.inf
@@ -185,21 +180,6 @@
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
 
 [PcdsFixedAtBuild.common]
-  #
-  # PL011 Serial Port Library & UART Parameters
-  #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0C280000
-
-  gArmPlatformTokenSpaceGuid.PL011UartClkInHz|1843200
-  gArmPlatformTokenSpaceGuid.PL011UartInteger|0
-  gArmPlatformTokenSpaceGuid.PL011UartFractional|0
-  gArmPlatformTokenSpaceGuid.PL011UartRegOffsetVariant|0
-
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultDataBits|8
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity|1
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultStopBits|1
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultReceiveFifoDepth|32
-
   # HACK: Disable SR-IOV support to workaround a simulator bug
   # TODO: Remove once the simulator issue is fixed.
   gEfiMdeModulePkgTokenSpaceGuid.PcdSrIovSupport|FALSE

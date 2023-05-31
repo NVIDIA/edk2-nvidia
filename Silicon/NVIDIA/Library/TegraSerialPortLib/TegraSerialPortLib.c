@@ -20,13 +20,22 @@
 #include "TegraSerialPortLibPrivate.h"
 
 STATIC
-SERIAL_MAPPING  gSerialCompatibilityMap[] = {
+SERIAL_MAPPING  gSiliconSerialCompatibilityMap[] = {
   { TEGRA_UART_TYPE_TCU,   TegraCombinedSerialPortGetObject, "nvidia,tegra194-tcu" },
   { TEGRA_UART_TYPE_TCU,   TegraCombinedSerialPortGetObject, "nvidia,tegra186-tcu" },
   { TEGRA_UART_TYPE_SBSA,  TegraSbsaSerialPortGetObject,     "arm,sbsa-uart"       },
   { TEGRA_UART_TYPE_16550, Tegra16550SerialPortGetObject,    "nvidia,tegra20-uart" },
   { TEGRA_UART_TYPE_NONE,  NULL,                             NULL                  },
 };
+
+STATIC
+SERIAL_MAPPING  gPresilSerialCompatibilityMap[] = {
+  { TEGRA_UART_TYPE_SBSA, TegraSbsaSerialPortGetObject, "arm,sbsa-uart" },
+  { TEGRA_UART_TYPE_NONE, NULL,                         NULL            },
+};
+
+STATIC
+SERIAL_MAPPING  *gSerialCompatibilityMap = NULL;
 
 /** Identify the serial device hardware
 
@@ -83,6 +92,13 @@ SerialPortIdentify (
 
   UartFound = FALSE;
   Platform  = TegraGetPlatform ();
+
+  if (Platform == TEGRA_PLATFORM_SILICON) {
+    gSerialCompatibilityMap = gSiliconSerialCompatibilityMap;
+  } else {
+    gSerialCompatibilityMap = gPresilSerialCompatibilityMap;
+  }
+
   for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
     if ((Platform == TEGRA_PLATFORM_SILICON) &&
         (Mapping->Type == TEGRA_UART_TYPE_16550))
