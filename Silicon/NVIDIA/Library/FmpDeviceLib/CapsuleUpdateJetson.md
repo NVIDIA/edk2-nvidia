@@ -42,6 +42,15 @@ DXE module that produces the Firmware Partition Protocol for NS NOR Flash partit
 ### edk2-nvidia/Silicon/NVIDIA/Library/FwPackageLib
 Description:
 Library to access system firmware images within a capsule's FMP data area.
+### edk2-nvidia/Silicon/NVIDIA/Library/FmpParamLib
+Description:
+Library to access FMP parameters from PCDs and/or DTB.
+
+## Parameters and Options
+### FMP Lowest Supported Version
+The FMP Lowest Supported Version is a 32-bit unsigned integer that is set to either the value in the PCD PcdFmpDeviceBuildTimeLowestSupportedVersion or the value of the DTB /firmware/uefi node's fmp-lowest-supported-version property, whichever numeric value is larger.
+### FMP Capsule Image Type ID GUID
+The FMP Capsule Image Type ID GUID is used to uniquely identify the system FW and is reported in the ESRT.  This GUID is set by the PCD PcdSystemFmpCapsuleImageTypeIdGuid or that value can be overriden by setting the DTB /firmware/uefi node's fmp-image-type-id-guid property to a GUID string with format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
 
 ## Special Features
 ### Single Image Capsule Update
