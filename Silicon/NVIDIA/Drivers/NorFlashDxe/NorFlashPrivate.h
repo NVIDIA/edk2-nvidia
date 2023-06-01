@@ -59,7 +59,6 @@
 #define NOR_SFDP_PRM_TBL_BSC_HDR_LSB  0x0
 #define NOR_SFDP_PRM_TBL_SEC_HDR_LSB  0x81
 #define NOR_SFDP_PRM_TBL_4BI_HDR_LSB  0x84
-#define NOR_SFDP_PRM_TBL_LEN_JESD216  36
 
 #define NOR_SFDP_4KB_ERS_SUPPORTED    0x1
 #define NOR_SFDP_4KB_ERS_UNSUPPORTED  0xFF
@@ -68,7 +67,11 @@
 
 #define NOR_SFDP_ERASE_COUNT  4
 
-#define NOR_SFDP_WRITE_DEF_PAGE  256
+#define NOR_SFDP_WRITE_DEF_PAGE                        256
+#define NOR_SFDP_PROGRAM_FIRST_BYTE_TIME_DEFAULT       15
+#define NOR_SFDP_PROGRAM_ADDITIONAL_BYTE_TIME_DEFAULT  1
+#define NOR_SFDP_PROGRAM_PAGE_TIME_DEFAULT             120
+#define NOR_SFDP_PROGRAM_MAX_TIME_MULTIPLIER_DEFAULT   24
 
 #define NOR_SFDP_ERASE_REGION_SIZE  256
 
@@ -106,24 +109,83 @@ typedef struct {
 } NOR_SFDP_PARAM_ERASE_TYPE;
 
 typedef struct {
-  UINT8                        EraseSupport4KB   : 2;
-  UINT8                        Reserved          : 6;
+  // 1st DWORD
+  UINT8                        EraseSupport4KB      : 2;
+  UINT8                        Reserved             : 6;
   UINT8                        EraseInstruction4KB;
-  UINT16                       Reserved2;
+  UINT8                        Supports1s1s2s       : 1;
+  UINT8                        AddressBytes         : 2;
+  UINT8                        SupportsDTR          : 1;
+  UINT8                        Supports1s2s2s       : 1;
+  UINT8                        Supports1s4s4s       : 1;
+  UINT8                        Supports1s1s4s       : 1;
+  UINT8                        Reserved1_1          : 1;
+  UINT8                        Reserved1_2;
+  // 2nd DWORD
   UINT32                       MemoryDensity;
-  UINT32                       Reserved3;
+  // 3rd DWORD
+  UINT8                        Read1s4s4sWaitCycles : 4;
+  UINT8                        Read1s4s4sModeClocks : 4;
+  UINT8                        Read1s4s4sCmd;
+  UINT8                        Read1s1s4sWaitCycles : 4;
+  UINT8                        Read1s1s4sModeClocks : 4;
+  UINT8                        Read1s1s4sCmd;
+  // 4th DWORD
   UINT16                       Reserved4;
-  UINT8                        DualIODummyCycles : 5;
-  UINT8                        DualIOModeCycles  : 3;
+  UINT8                        DualIODummyCycles    : 5;
+  UINT8                        DualIOModeCycles     : 3;
   UINT8                        DualIOInstruction;
-  UINT32                       Reserved5;
+  // 5th DWORD
+  UINT32                       Supports2s2s2s       : 1;
+  UINT32                       Reserved5_1          : 3;
+  UINT32                       Supports4s4s4s       : 1;
+  UINT32                       Reserved5            : 27;
+  // 6th DWORD
   UINT32                       Reserved6;
-  UINT32                       Reserved7;
+  // 7th DWORD
+  UINT16                       Reserved7;
+  UINT8                        Read4s4s4sWaitCycles : 5;
+  UINT8                        Read4s4s4sModeClocks : 3;
+  UINT8                        Read4s4s4sCmd;
+  // 8th & 9th DWORD
   NOR_SFDP_PARAM_ERASE_TYPE    EraseType[NOR_SFDP_ERASE_COUNT];
-  UINT32                       Reserved8;
-  UINT8                        Reserved9         : 4;
-  UINT8                        PageSize          : 4;
-  UINT32                       Reserved10        : 24;
+  // 10th DWORD
+  UINT32                       Reserved10;
+  // 11th DWORD
+  union {
+    UINT32    Dword11;
+    struct {
+      UINT32    ProgramMaxTimeMultiplier              : 4;
+      UINT32    PageSize                              : 4;
+      UINT32    PageProgramTypicalTime                : 5;
+      UINT32    PageProgramTypicalTimeUnits           : 1;
+      UINT32    ByteProgramTypicalTimeFirst           : 4;
+      UINT32    ByteProgramTypicalTimeFirstUnits      : 1;
+      UINT32    ByteProgramTypicalTimeAdditional      : 4;
+      UINT32    ByteProgramTypicalTimeAdditionalUnits : 1;
+      UINT32    ChipEraseTypicalTime                  : 5;
+      UINT32    ChipEraseTypicalTimeUnits             : 2;
+      UINT32    Reserved11                            : 1;
+    };
+  };
+
+  // 12th DWORD
+  UINT32    Reserved12;
+  // 13th DWORD
+  UINT32    Reserved13;
+  // 14th DWORD
+  UINT32    Reserved14;
+  // 15th DWORD
+  UINT16    Disable4s4s4sSequence : 4;
+  UINT16    Enable4s4s4sSequence  : 5;
+  UINT16    SupportsXIP           : 1;
+  UINT16    ExitXIP               : 6;
+  UINT8     EnterXIP              : 4;
+  UINT8     QER                   : 3;
+  UINT8     HoldResetDisable      : 1;
+  UINT8     Reserved15;
+  // 16th DWORD
+  UINT32    Reserved16;
 } NOR_SFDP_PARAM_BASIC_TBL;
 
 typedef struct {

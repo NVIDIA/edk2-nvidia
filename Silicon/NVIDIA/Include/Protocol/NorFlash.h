@@ -15,6 +15,11 @@
 typedef struct {
   UINT64    MemoryDensity;
   UINT32    BlockSize;
+  UINT32    ProgramFirstByteTimeUs;
+  UINT32    ProgramAdditionalByteTimeUs;
+  UINT32    ProgramPageTimeUs;
+  UINT32    ProgramPageSize;
+  UINT32    ProgramMaxTimeMultiplier;
 } NOR_FLASH_ATTRIBUTES;
 
 //

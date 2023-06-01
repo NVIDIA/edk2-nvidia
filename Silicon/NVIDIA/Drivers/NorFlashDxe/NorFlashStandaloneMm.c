@@ -414,7 +414,7 @@ ReadNorFlashSFDP (
     goto ErrorExit;
   }
 
-  if ((SFDPParam4ByteInstructionTbl->ReadCmd0C == FALSE) ||
+  if ((SFDPParam4ByteInstructionTbl->ReadCmd0C == FALSE) &&
       (SFDPParam4ByteInstructionTbl->ReadCmd13 == FALSE))
   {
     DEBUG ((EFI_D_ERROR, "%a: NOR flash's single bit RW unsupported.\n", __FUNCTION__));
@@ -631,9 +631,9 @@ ReadNorFlashSFDP (
     Private->PrivateFlashAttributes.HybridEraseCmd = SFDPParam4ByteInstructionTbl->EraseInstruction[Count];
   }
 
-  // If basic parameter table size is more than NOR_SFDP_PRM_TBL_LEN_JESD216,
-  // read page size from the table. Otherwise default to NOR_SFDP_WRITE_DEF_PAGE
-  if (SFDPParamBasicTblSize > NOR_SFDP_PRM_TBL_LEN_JESD216) {
+  // If basic parameter table size is large enough to contain the 11th DWORD,
+  // parse it. Otherwise use default values
+  if (SFDPParamBasicTblSize > OFFSET_OF (NOR_SFDP_PARAM_BASIC_TBL, Dword11)) {
     Private->PrivateFlashAttributes.PageSize = 1 << SFDPParamBasicTbl->PageSize;
     // Override page size for newer flashes
     if (Private->PrivateFlashAttributes.PageSize > NOR_SFDP_WRITE_DEF_PAGE) {
@@ -642,8 +642,61 @@ ReadNorFlashSFDP (
       // to support higher page sizes.
       Private->PrivateFlashAttributes.PageSize = NOR_SFDP_WRITE_DEF_PAGE;
     }
+
+    // Calculate program times based on JEDEC Standard 216F.02
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramFirstByteTimeUs =
+      (SFDPParamBasicTbl->ByteProgramTypicalTimeFirst + 1) * (SFDPParamBasicTbl->ByteProgramTypicalTimeFirstUnits ? 8 : 1);
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: ProgramFirstByteTimeUs = %u (FirstByte = %u, Units = %u)\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.ProgramFirstByteTimeUs,
+      SFDPParamBasicTbl->ByteProgramTypicalTimeFirst,
+      SFDPParamBasicTbl->ByteProgramTypicalTimeFirstUnits
+      ));
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramAdditionalByteTimeUs =
+      (SFDPParamBasicTbl->ByteProgramTypicalTimeAdditional + 1) * (SFDPParamBasicTbl->ByteProgramTypicalTimeAdditionalUnits ? 8 : 1);
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: ProgramAdditionalByteTimeUs = %u (AdditionalByte = %u, Units = %u)\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.ProgramAdditionalByteTimeUs,
+      SFDPParamBasicTbl->ByteProgramTypicalTimeAdditional,
+      SFDPParamBasicTbl->ByteProgramTypicalTimeAdditionalUnits
+      ));
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramPageTimeUs =
+      (SFDPParamBasicTbl->PageProgramTypicalTime + 1) * (SFDPParamBasicTbl->PageProgramTypicalTimeUnits ? 64 : 8);
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: ProgramPageTimeUs = %u (Page = %u, Units = %u)\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.ProgramPageTimeUs,
+      SFDPParamBasicTbl->PageProgramTypicalTime,
+      SFDPParamBasicTbl->PageProgramTypicalTimeUnits
+      ));
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramPageSize = 1 << SFDPParamBasicTbl->PageSize;
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: ProgramPageSize = %u (PageSize = %u)\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.ProgramPageSize,
+      SFDPParamBasicTbl->PageSize
+      ));
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramMaxTimeMultiplier = 2 * (SFDPParamBasicTbl->ProgramMaxTimeMultiplier + 1);
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: ProgramMaxTimeMultiplier = %u (Multiplier = %u)\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.ProgramMaxTimeMultiplier,
+      SFDPParamBasicTbl->ProgramMaxTimeMultiplier
+      ));
   } else {
-    Private->PrivateFlashAttributes.PageSize = NOR_SFDP_WRITE_DEF_PAGE;
+    Private->PrivateFlashAttributes.PageSize                                    = NOR_SFDP_WRITE_DEF_PAGE;
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramFirstByteTimeUs      = NOR_SFDP_PROGRAM_FIRST_BYTE_TIME_DEFAULT;
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramAdditionalByteTimeUs = NOR_SFDP_PROGRAM_ADDITIONAL_BYTE_TIME_DEFAULT;
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramPageTimeUs           = NOR_SFDP_PROGRAM_PAGE_TIME_DEFAULT;
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramPageSize             = NOR_SFDP_WRITE_DEF_PAGE;
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramMaxTimeMultiplier    = NOR_SFDP_PROGRAM_MAX_TIME_MULTIPLIER_DEFAULT;
   }
 
   Private->FlashInstance = NOR_SFDP_SIGNATURE;
