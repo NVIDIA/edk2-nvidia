@@ -88,12 +88,12 @@ STATIC_ASSERT ((sizeof (ERST_COMM_STRUCT) == 8*8), "Expected ERST_COMM_STRUCT to
 /* Per ACPI spec: "QWORD:
  * [63:32] value in microseconds that the platform expects would be the maximum amount of time it will take to process and complete an EXECUTE_OPERATION.
  * [31:0] value in microseconds that the platform expects would be the nominal amount of time it will take to process and complete an EXECUTE_OPERATION."
- *
- * Setting it at 10ms (10000 us) for both.
  */
-#define ERST_DEFAULT_TIMING       10000
 #define ERST_MAX_TIMING_SHIFT     32
 #define ERST_NOMINAL_TIMING_MASK  0xFFFFFFFF
+// Default to 50 ms typical, 1000 ms max. Default is put in the structure only until the Nor protocol
+// is located, at which time the actual timing values are calculated based on the Nor attributes.
+#define ERST_DEFAULT_TIMINGS  (((1000ul * 1000) << ERST_MAX_TIMING_SHIFT) | (50 * 1000))
 
 VOID
 ErstSetupTable (

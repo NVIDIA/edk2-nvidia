@@ -2260,7 +2260,8 @@ ErrorSerializationInitProtocol (
   UINT32                     NorErstSize
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS        Status;
+  ERST_COMM_STRUCT  *ErstComm;
 
   mErrorSerialization.NorFlashProtocol = NorFlashProtocol;
 
@@ -2348,6 +2349,20 @@ ErrorSerializationInitProtocol (
   }
 
   mErrorSerialization.PartitionSize = mErrorSerialization.NumBlocks * (UINTN)mErrorSerialization.BlockSize;
+
+  ErstComm = (ERST_COMM_STRUCT *)mErrorSerialization.BufferInfo.ErstBase;
+  if (ErstComm != NULL) {
+    Status = ErrorSerializationPopulateTimings (&ErstComm->Timings);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to populate the actual NorFlash timings: %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      goto Done;
+    }
+  }
 
 Done:
   return Status;
@@ -2445,7 +2460,7 @@ ErrorSerializationGatherBufferData (
   mErrorSerialization.BufferInfo.ErstSize                  = StmmCommBuffers->NsErstUncachedBufSize;
   mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase = StmmCommBuffers->NsErstCachedBufAddr;
   mErrorSerialization.BufferInfo.ErrorLogInfo.Length       = StmmCommBuffers->NsErstCachedBufSize;
-  mErrorSerialization.BufferInfo.ErrorLogInfo.Attributes   = 0;
+  mErrorSerialization.BufferInfo.ErrorLogInfo.Attributes   = ERST_LOG_ATTRIBUTE_SLOW;
 
   if (mErrorSerialization.BufferInfo.ErstSize < (sizeof (ERST_COMM_STRUCT))) {
     DEBUG ((
@@ -2474,6 +2489,44 @@ ErrorSerializationGatherBufferData (
 
 EFI_STATUS
 EFIAPI
+ErrorSerializationPopulateTimings (
+  UINT64  *Timings
+  )
+{
+  UINT64                TypicalAccessTime;
+  UINT64                MaxAccessTime;
+  UINT64                MaxWriteLength;
+  UINT64                MaxPageWrites;
+  NOR_FLASH_ATTRIBUTES  *Attr;
+
+  if (Timings == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Write is potentially comprised of:
+  // Write INCOMING (1 byte write)
+  // Write whole record (at most ErrorLogInfo.Length)
+  // Write OUTGOING (1 byte write)
+  // Write VALID (1 byte write)
+  // Write DELETED (1 byte write)
+  // Total time is N pages for the record + 4 single byte writes
+
+  Attr              = &mErrorSerialization.NorAttributes;
+  MaxWriteLength    = mErrorSerialization.BufferInfo.ErrorLogInfo.Length;
+  MaxPageWrites     = ((MaxWriteLength + Attr->ProgramPageSize - 1) / Attr->ProgramPageSize);
+  TypicalAccessTime = (MaxPageWrites * Attr->ProgramPageTimeUs) + (4 * Attr->ProgramFirstByteTimeUs);
+  MaxAccessTime     = TypicalAccessTime * Attr->ProgramMaxTimeMultiplier;
+
+  DEBUG ((DEBUG_INFO, "%a: Typical access time is %lu us\n", __FUNCTION__, TypicalAccessTime));
+  DEBUG ((DEBUG_INFO, "%a: Maximum access time is %lu us\n", __FUNCTION__, MaxAccessTime));
+
+  *Timings = (MaxAccessTime << ERST_MAX_TIMING_SHIFT) | (TypicalAccessTime & ERST_NOMINAL_TIMING_MASK);
+
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
 ErrorSerializationSetupOsCommunication (
   VOID
   )
@@ -2486,12 +2539,10 @@ ErrorSerializationSetupOsCommunication (
   ErstComm->Operation = ERST_OPERATION_INVALID;
   CopyMem (&ErstComm->ErrorLogAddressRange, &mErrorSerialization.BufferInfo.ErrorLogInfo, sizeof (ERST_ERROR_LOG_INFO));
   ErstComm->Status       = EFI_ACPI_6_4_ERST_STATUS_SUCCESS;
-  ErstComm->Timings      = ERST_DEFAULT_TIMING;
-  ErstComm->Timings    <<= ERST_MAX_TIMING_SHIFT;
-  ErstComm->Timings     |= (ERST_DEFAULT_TIMING & ERST_NOMINAL_TIMING_MASK);
   ErstComm->RecordCount  = 0;
   ErstComm->RecordID     = ERST_INVALID_RECORD_ID;
   ErstComm->RecordOffset = 0;
+  ErstComm->Timings      = ERST_DEFAULT_TIMINGS; // Will be populated when we look up Spinor Info
 
   return EFI_SUCCESS;
 }

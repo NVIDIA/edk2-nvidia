@@ -1085,11 +1085,13 @@ E2EEmptyFlashSetup (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
-  EFI_STATUS           Status;
-  UNIT_TEST_STATUS     UTStatus;
-  COMMON_TEST_CONTEXT  *TestInfo;
-  UINT32               ErstSize;
-  ERST_COMM_STRUCT     *TestErstComm;
+  EFI_STATUS            Status;
+  UNIT_TEST_STATUS      UTStatus;
+  COMMON_TEST_CONTEXT   *TestInfo;
+  UINT32                ErstSize;
+  ERST_COMM_STRUCT      *TestErstComm;
+  UINT64                TypicalTime;
+  NOR_FLASH_ATTRIBUTES  NorAttributes;
 
   TestInfo = (COMMON_TEST_CONTEXT *)Context;
   ErstSize = TestInfo->TestValue;
@@ -1119,7 +1121,10 @@ E2EEmptyFlashSetup (
 
   TestErstComm = (ERST_COMM_STRUCT *)TestErstBuffer;
   UT_ASSERT_STATUS_EQUAL (GetStatus (TestErstComm), EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  UT_ASSERT_EQUAL (TestErstComm->Timings, ((UINT64)ERST_DEFAULT_TIMING << ERST_MAX_TIMING_SHIFT) | ERST_DEFAULT_TIMING);
+  Status = TestNorFlashProtocol->GetAttributes (TestNorFlashProtocol, &NorAttributes);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  TypicalTime = NorAttributes.ProgramFirstByteTimeUs*4 + NorAttributes.ProgramPageTimeUs*((ERROR_LOG_INFO_BUFFER_SIZE+NorAttributes.ProgramPageSize-1)/NorAttributes.ProgramPageSize);
+  UT_ASSERT_EQUAL (TestErstComm->Timings, ((TypicalTime*NorAttributes.ProgramMaxTimeMultiplier) << ERST_MAX_TIMING_SHIFT) | TypicalTime);
   // Note: ReInit restores these fields to their previous value, so don't check them
   //  UT_ASSERT_EQUAL (TestErstComm->Operation, ERST_OPERATION_INVALID);
   //  UT_ASSERT_EQUAL (TestErstComm->RecordOffset, 0);

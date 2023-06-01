@@ -22,7 +22,7 @@
 #define EFI_ERROR_RECORD_REVISION_MAJOR_MASK  0x0000FF00
 #define EFI_ERROR_RECORD_REVISION_MINOR_MASK  0x000000FF
 
-#define ERST_MIN_BLOCK_SIZE  SIZE_16KB
+#define ERST_MIN_BLOCK_SIZE  SIZE_32KB
 
 #define MAX_NORFLASH_HANDLES  8
 
@@ -233,6 +233,12 @@ EFI_STATUS
 EFIAPI
 ErrorSerializationGatherBufferData (
   VOID
+  );
+
+EFI_STATUS
+EFIAPI
+ErrorSerializationPopulateTimings (
+  UINT64  *Timings
   );
 
 EFI_STATUS
