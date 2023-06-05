@@ -14,10 +14,7 @@
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <libfdt.h>
 
-STATIC UINT32       mDtbLsv                  = 0;
-STATIC CONST CHAR8  *mNonUniqueTypeIdGuids[] = {
-  "8655e5cf-297b-4213-84d5-b6817203a432",   // th500
-};
+STATIC UINT32  mDtbLsv = 0;
 
 EFI_STATUS
 EFIAPI
@@ -44,18 +41,18 @@ FmpParamLibInit (
   VOID
   )
 {
-  EFI_STATUS   Status;
-  VOID         *DtbBase;
-  UINTN        DtbSize;
-  INT32        UefiNode;
-  CONST VOID   *Property;
-  INT32        Length;
-  EFI_GUID     DtbImageTypeIdGuid;
-  UINTN        GuidSize;
-  BOOLEAN      DtbGuidValid = FALSE;
-  UINTN        Index;
-  CONST CHAR8  **NonUniqueGuid;
-  EFI_GUID     GuidData;
+  EFI_STATUS  Status;
+  VOID        *DtbBase;
+  UINTN       DtbSize;
+  INT32       UefiNode;
+  CONST VOID  *Property;
+  INT32       Length;
+  EFI_GUID    DtbImageTypeIdGuid;
+  UINTN       GuidSize;
+  BOOLEAN     DtbGuidValid = FALSE;
+  UINTN       Index;
+  EFI_GUID    *NonUniqueGuid;
+  UINTN       NonUniqueGuidCount;
 
   Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
   if (EFI_ERROR (Status)) {
@@ -86,10 +83,15 @@ FmpParamLibInit (
   }
 
 Done:
-  NonUniqueGuid = mNonUniqueTypeIdGuids;
-  for (Index = 0; Index < ARRAY_SIZE (mNonUniqueTypeIdGuids); Index++, NonUniqueGuid++) {
-    AsciiStrToGuid (*NonUniqueGuid, &GuidData);
-    if (CompareGuid (&GuidData, PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuid))) {
+  NonUniqueGuid      = PcdGetPtr (PcdNonUniqueSystemFmpCapsuleImageTypeIdGuid);
+  NonUniqueGuidCount = PcdGetSize (PcdNonUniqueSystemFmpCapsuleImageTypeIdGuid) / sizeof (EFI_GUID);
+
+  for (Index = 0; Index < NonUniqueGuidCount; Index++, NonUniqueGuid++) {
+    if (NonUniqueGuid == NULL) {
+      break;
+    }
+
+    if (CompareGuid (NonUniqueGuid, PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuid))) {
       DEBUG ((DEBUG_WARN, "%a: WARNING: Default FMP image type ID GUID is not unique to this platform! (%g)\n", __FUNCTION__, PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuid)));
       break;
     }
