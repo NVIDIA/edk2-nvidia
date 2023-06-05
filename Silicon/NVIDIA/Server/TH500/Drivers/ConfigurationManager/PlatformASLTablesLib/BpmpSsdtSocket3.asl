@@ -52,13 +52,47 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
         RDAT, 960
       }
 
+      OperationRegion (DRBL, SystemMemory, BPMP_DOORBELL_SOCKET_3, BPMP_DOORBELL_SIZE)
+      Field (DRBL, AnyAcc, NoLock, Preserve) {
+        TRIG, 4,
+        ENA,  4,
+        RAW,  4,
+        PEND, 4
+      }
+
       Method (BIPC, 2, Serialized, 0, PkgObj, {IntObj, BuffObj}) {
-        OperationRegion (DRBL, SystemMemory, BPMP_DOORBELL_SOCKET_3, BPMP_DOORBELL_SIZE)
-        Field (DRBL, AnyAcc, NoLock, Preserve) {
-          TRIG, 4,
-          ENA,  4,
-          RAW,  4,
-          PEND, 4
+        If ((TSTA != IVC_STATE_ESTABLISHED) ||
+            (RSTA != IVC_STATE_ESTABLISHED) ||
+            (RWCT != RRCT) || (TWCT != TRCT)) {
+          //Reset IVC channel
+          TSTA = IVC_STATE_SYNC
+          Store (One, TRIG)
+
+          Local0 = 0
+          While ((TSTA != IVC_STATE_ESTABLISHED) ||
+                 (RSTA != IVC_STATE_ESTABLISHED)) {
+            If (Local0 == BPMP_RESPONSE_TIMEOUT_US) {
+              RERR = 1
+              Return (Package() {RERR, RDAT})
+            }
+
+            If (RSTA == IVC_STATE_SYNC) {
+              TWCT = 0
+              RRCT = 0
+              TSTA = IVC_STATE_ACK
+              Store (One, TRIG)
+            } ElseIf (TSTA == IVC_STATE_ACK) {
+              TSTA = IVC_STATE_ESTABLISHED
+              Store (One, TRIG)
+            } ElseIf ((TSTA == IVC_STATE_SYNC) && (RSTA == IVC_STATE_ACK)) {
+              TWCT = 0
+              RRCT = 0
+              TSTA = IVC_STATE_ESTABLISHED
+              Store (One, TRIG)
+            }
+            Local0++
+            Stall(1)
+          }
         }
 
         TMRQ = Arg0
@@ -68,19 +102,16 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
         Store (One, TRIG)
 
         Local0 = 0
-        While ((RWCT == RRCT) && (Local0 < 10)) {
-          Sleep (10)
+        While (RWCT == RRCT) {
+          If (Local0 == BPMP_RESPONSE_TIMEOUT_US) {
+            RERR = 1
+            Return (Package() {RERR, RDAT})
+          }
+          Stall (1)
           Local0++
         }
-        If (Local0 < 10) {
-          Increment (RRCT)
-          Return (Package() {RERR, RDAT})
-        } Else {
-          // Returning an error code that is ASL compatible
-          // instead of a BPMP Timeout error code
-          RERR = 1
-          Return (Package() {RERR, RDAT})
-        }
+        Increment (RRCT)
+        Return (Package() {RERR, RDAT})
       }
 
       Method (TEMP, 1, Serialized, 0, IntObj, IntObj) {
