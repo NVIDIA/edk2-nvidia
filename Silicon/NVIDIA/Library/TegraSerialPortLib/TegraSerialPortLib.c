@@ -1,7 +1,7 @@
 /** @file
   Serial I/O Port wrapper library
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,8 +16,6 @@
 #include <Library/SerialPortLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <libfdt.h>
-
-#include "TegraSerialPortLibPrivate.h"
 
 STATIC
 SERIAL_MAPPING  gSiliconSerialCompatibilityMap[] = {
@@ -69,7 +67,7 @@ GetRawDeviceTreePointer (
 VOID
 EFIAPI
 SerialPortIdentify (
-  VOID
+  SERIAL_MAPPING  **SerialMapping OPTIONAL
   )
 {
   EFI_STATUS                        Status;
@@ -82,6 +80,17 @@ SerialPortIdentify (
   VOID                              *DeviceTree;
   UINTN                             DeviceTreeSize;
   NVIDIA_DEVICE_TREE_REGISTER_DATA  RegData;
+
+  Platform = TegraGetPlatform ();
+  if (Platform == TEGRA_PLATFORM_SILICON) {
+    gSerialCompatibilityMap = gSiliconSerialCompatibilityMap;
+  } else {
+    gSerialCompatibilityMap = gPresilSerialCompatibilityMap;
+  }
+
+  if (SerialMapping != NULL) {
+    *SerialMapping = gSerialCompatibilityMap;
+  }
 
   // Ensure the fallback resource ready
   SetTegraUARTBaseAddress (0);
@@ -122,6 +131,8 @@ SerialPortIdentify (
         Mapping->BaseAddress = RegData.BaseAddress;
         // Update UART base address
         SetTegraUARTBaseAddress (Mapping->BaseAddress);
+      } else {
+        Mapping->BaseAddress = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
       }
 
       Mapping->IsFound = TRUE;
@@ -153,7 +164,7 @@ SerialPortInitialize (
   RETURN_STATUS   Status;
   SERIAL_MAPPING  *Mapping;
 
-  SerialPortIdentify ();
+  SerialPortIdentify (NULL);
 
   for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
     if (Mapping->IsFound == TRUE) {
