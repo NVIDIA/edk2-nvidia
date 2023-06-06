@@ -180,6 +180,7 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
   Device(PCIx) {
     Name (_HID, EisaId ("PNP0A08"))
     Name (_SEG, 0xFF)
+
     Device (RPxx) {
       Name (_ADR, 0x0000)  // _ADR: Address
       Device(GPU0) {
@@ -214,11 +215,37 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
           TI2S, 32, // < Nv_Therm_I2Cs_Scratch
         }
 
+        // The "UVAR" named object is added by UEFI when generating the GPU0
+        // node and has the value of the GpuSmmuBypassEnable UEFI option
+        // (0=disable 1=enable)
+        External (UVAR)
+
+        OperationRegion (MS0, SystemMemory, TH500_MCF_SMMU_SOCKET_0, 8)
+        Field (MS0, DWordAcc, NoLock, Preserve) {
+          Offset (TH500_MCF_SMMU_BYPASS_0_OFFSET),
+          MS0B, 32,
+        }
+        OperationRegion (MS1, SystemMemory, TH500_MCF_SMMU_SOCKET_1, 8)
+        Field (MS1, DWordAcc, NoLock, Preserve) {
+          Offset (TH500_MCF_SMMU_BYPASS_0_OFFSET),
+          MS1B, 32,
+        }
+        OperationRegion (MS2, SystemMemory, TH500_MCF_SMMU_SOCKET_2, 8)
+        Field (MS2, DWordAcc, NoLock, Preserve) {
+          Offset (TH500_MCF_SMMU_BYPASS_0_OFFSET),
+          MS2B, 32,
+        }
+        OperationRegion (MS3, SystemMemory, TH500_MCF_SMMU_SOCKET_3, 8)
+        Field (MS3, DWordAcc, NoLock, Preserve) {
+          Offset (TH500_MCF_SMMU_BYPASS_0_OFFSET),
+          MS3B, 32,
+        }
+
         Method(_RST, 0) {
           /* Issue GPU reset request via LIC IO1 interrupt */
-          If ((^^^_SEG & 0xF) == 8) {
+          If ((_SEG & 0xF) == 8) {
             C8RS = 1
-          } ElseIf ((^^^_SEG & 0xF) == 9) {
+          } ElseIf ((_SEG & 0xF) == 9) {
             C9RS = 1
           } Else {
             Return
@@ -228,9 +255,9 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
 
           /* Wait for reset to complete, poll for 6sec (as per from Linux) */
           For (Local0 = 0, Local0 < 60000, Local0 +=2) {
-            If (((^^^_SEG & 0xF) == 8) && (C8RS == 0)) {
+            If (((_SEG & 0xF) == 8) && (C8RS == 0)) {
               Break
-            } ElseIf (((^^^_SEG & 0xF) == 9) && (C9RS == 0)){
+            } ElseIf (((_SEG & 0xF) == 9) && (C9RS == 0)){
               Break
             }
             Sleep(2)
@@ -268,9 +295,9 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
                 // Get GPU Containment status
                 //
                 Case(1) {
-                  If ((^^^_SEG & 0xF) == 8) {
+                  If ((_SEG & 0xF) == 8) {
                     Return (C8CO)
-                  } ElseIf ((^^^_SEG & 0xF) == 9) {
+                  } ElseIf ((_SEG & 0xF) == 9) {
                     Return (C9CO)
                   } Else {
                     Return (0)
@@ -279,6 +306,50 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
               } // End of switch(Arg2)
             } // end Check for Revision ID
           } // end Check UUID
+
+          // GPU SMMU Bypass
+          If (LEqual (Arg0, ToUUID (NVIDIA_GPU_SMMU_BYPASS_DSM_GUID_STR))) {
+            // Check for Revision ID
+            If (Arg1 >= NVIDIA_GPU_SMMU_BYPASS_DSM_REV) {
+              Switch(ToInteger(Arg2)) {
+                //
+                // Function Index:0
+                // Standard query - A bitmask of functions supported
+                //
+                Case (0) {
+                  Return (Buffer () {0x3})
+                }
+                //
+                // Function Index: 1
+                // Enable/Disable GPU SMMU Bypass
+                //
+                Case(1) {
+                  // if UEFI variable disabled SMMU bypass, return error
+                  If (LEqual (UVAR, 0x0)) {
+                    Return (1)
+                  }
+
+                  Local0 = (_SEG & 0xF0) >> 4
+                  Local1 = Arg3 & 0x1
+
+                  If (LEqual (Local0, 0)) {
+                    Store(Local1, MS0B)
+                  } ElseIf (LEqual (Local0, 1)) {
+                    Store(Local1, MS1B)
+                  } ElseIf (LEqual (Local0, 2)) {
+                    Store(Local1, MS2B)
+                  } ElseIf (LEqual (Local0, 3)) {
+                    Store(Local1, MS3B)
+                  } Else {
+                    Return (2)
+                  }
+
+                  Return (0)
+                }
+              } // End of switch(Arg2)
+            } // end Check for Revision ID
+          } // end GPU SMMU Bypass UUID
+
           //
           // If not one of the UUIDs we recognize, then return a buffer
           // with bit 0 set to 0 indicating no functions supported.

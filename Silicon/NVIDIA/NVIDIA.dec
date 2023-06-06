@@ -667,6 +667,9 @@
 #Option to configure the enabled PCIe NIC interface
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|{ 0x0, 0x0, 0x0, 0x0, 0x0 }|VOID*|0x0000010C
 
+#Option to enable GPU SMMU bypass support
+  gNVIDIATokenSpaceGuid.PcdGpuSmmuBypassEnable|FALSE|BOOLEAN|0x000000A5
+
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature
   # Indicate whether the password is cleared.

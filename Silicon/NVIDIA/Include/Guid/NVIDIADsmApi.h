@@ -24,4 +24,17 @@
       2 - Software containment
 */
 
-#endif //NVIDIA_MM_MB1_RECORD_H__
+#define NVIDIA_GPU_SMMU_BYPASS_DSM_GUID_STR  "6c8f20d6-1567-493d-979e-7abf18907624"
+#define NVIDIA_GPU_SMMU_BYPASS_DSM_REV       0
+
+/*
+  - Function 1 - Set SMMU Bypass
+    Arguments:
+      Enable flag (1=enable, 0=disable)
+    Return Value:
+      0 - Success
+      1 - UEFI support option not enabled
+      2 - Error detecting socket
+*/
+
+#endif

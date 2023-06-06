@@ -29,12 +29,19 @@
   AcpiHelperLib
   AmlLib
   BaseLib
+  PcdLib
 
 [Protocols]
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
   gNVIDIARasNsCommPcieDpcDataProtocolGuid
   gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid
   gEfiPciIoProtocolGuid
+
+[Guids]
+  gNVIDIAPublicVariableGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdGpuSmmuBypassEnable
 
 [Depex]
   gNVIDIAPcieControllerInitCompleteProtocolGuid AND

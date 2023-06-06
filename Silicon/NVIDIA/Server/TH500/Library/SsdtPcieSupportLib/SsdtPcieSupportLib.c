@@ -21,6 +21,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <Protocol/AcpiTable.h>
@@ -217,12 +218,39 @@ UpdateLICAddr (
     return Status;
   }
 
-  Address = Base | (Socket << 44);
+  Address = Base | (Socket << TH500_SOCKET_SHFT);
 
   Status = AmlNameOpUpdateInteger (LicaNode, Address);
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+InsertUVARValue (
+  IN  OUT        AML_OBJECT_NODE_HANDLE  Node
+  )
+{
+  EFI_STATUS  Status;
+  BOOLEAN     UvarValue;
+
+  UvarValue = PcdGetBool (PcdGpuSmmuBypassEnable);
+
+  Status = AmlCodeGenNameInteger (
+             "UVAR",
+             UvarValue,
+             Node,
+             NULL
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Updated UVAR value=%u\n", __FUNCTION__, UvarValue));
 
   return Status;
 }
@@ -455,6 +483,11 @@ GeneratePciSlots (
       }
 
       Status = UpdateFSPBootAddr (PciInfo, Node);
+      if (EFI_ERROR (Status)) {
+        goto error_handler;
+      }
+
+      Status = InsertUVARValue (Node);
       if (EFI_ERROR (Status)) {
         goto error_handler;
       }
