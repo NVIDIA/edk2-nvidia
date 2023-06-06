@@ -2,7 +2,7 @@
 #
 #  Component description file for TegraSerialPortLib module
 #
-#  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -34,3 +34,6 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
