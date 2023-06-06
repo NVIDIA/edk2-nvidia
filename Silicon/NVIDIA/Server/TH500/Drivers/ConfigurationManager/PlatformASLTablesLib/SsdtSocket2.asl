@@ -46,7 +46,8 @@ DefinitionBlock("SsdtSocket2.aml", "SSDT", 2, "NVIDIA", "TH500_S2", 0x00000001) 
     // Coresight STM
     Device (STM2)
     {
-      Name (_CID, "ARMHC502")
+      Name (_HID, "ARMHC502")
+      Name (_UID, 0x2)
 
       Name (_CRS, ResourceTemplate () {
         //STM control register

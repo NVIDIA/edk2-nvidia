@@ -786,7 +786,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     // Coresight STM
     Device (STM0)
     {
-      Name (_CID, "ARMHC502")
+      Name (_HID, "ARMHC502")
+      Name (_UID, 0x0)
 
       Name (_CRS, ResourceTemplate () {
         //STM control register
