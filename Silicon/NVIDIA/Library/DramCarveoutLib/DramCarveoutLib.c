@@ -17,86 +17,6 @@
 #include <Library/MemoryAllocationLib.h>
 
 /**
-  Migrate Hob list to the new region.
-
-  @param[in] RegionStart              The region to migrate the HOB list to.
-  @param[in] RegionSize               Region size of the new region.
-
-  @retval EFI_SUCCESS                 Hob list moved.
-  @return others                      Other error.
-**/
-STATIC
-EFI_STATUS
-MigrateHobList (
-  IN EFI_PHYSICAL_ADDRESS  RegionStart,
-  IN UINTN                 RegionSize
-  )
-{
-  EFI_HOB_HANDOFF_INFO_TABLE  *OldHob;
-  EFI_PHYSICAL_ADDRESS        OldHobAddress;
-  EFI_PHYSICAL_ADDRESS        RegionEndAddress;
-  EFI_HOB_HANDOFF_INFO_TABLE  *NewHob;
-  EFI_HOB_MEMORY_ALLOCATION   *Allocation;
-
-  OldHob        = (EFI_HOB_HANDOFF_INFO_TABLE *)PrePeiGetHobList ();
-  OldHobAddress = (EFI_PHYSICAL_ADDRESS)OldHob;
-
-  ASSERT (OldHob->EfiFreeMemoryBottom > OldHobAddress);
-  ASSERT (OldHob->EfiFreeMemoryTop >= OldHob->EfiFreeMemoryBottom);
-  ASSERT (OldHob->EfiEndOfHobList > OldHobAddress);
-
-  if ((OldHobAddress >= RegionStart) &&
-      (OldHobAddress < (RegionStart + RegionSize)))
-  {
-    // Hob list is already in the correct region, check if memory at end of region is larger
-    if ((RegionStart + RegionSize - OldHob->EfiMemoryTop) > (OldHob->EfiFreeMemoryTop - OldHobAddress)) {
-      RegionSize  = RegionStart + RegionSize - OldHob->EfiMemoryTop;
-      RegionStart = OldHob->EfiMemoryTop;
-    } else {
-      // Free area is smaller then current, do not move
-      return EFI_SUCCESS;
-    }
-  }
-
-  RegionEndAddress = RegionStart + RegionSize;
-  // Filter out any prior allocations
-  Allocation = (EFI_HOB_MEMORY_ALLOCATION *)(VOID *)OldHob;
-  while ((Allocation = (EFI_HOB_MEMORY_ALLOCATION *)GetNextHob (EFI_HOB_TYPE_MEMORY_ALLOCATION, GET_NEXT_HOB (Allocation))) != NULL) {
-    if ((Allocation->AllocDescriptor.MemoryBaseAddress >= RegionStart) &&
-        (Allocation->AllocDescriptor.MemoryBaseAddress < (RegionStart + RegionSize)))
-    {
-      EFI_PHYSICAL_ADDRESS  EndAddress = Allocation->AllocDescriptor.MemoryBaseAddress + Allocation->AllocDescriptor.MemoryLength;
-      if ((Allocation->AllocDescriptor.MemoryBaseAddress - RegionStart) > (RegionEndAddress - EndAddress)) {
-        RegionSize       = Allocation->AllocDescriptor.MemoryBaseAddress - RegionStart;
-        RegionEndAddress = RegionStart + RegionSize;
-      } else {
-        RegionStart = EndAddress;
-        RegionSize  = RegionEndAddress - EndAddress;
-      }
-    }
-  }
-
-  ASSERT (RegionSize != 0);
-
-  if ((RegionStart + RegionSize - OldHob->EfiMemoryTop) <= (OldHob->EfiFreeMemoryTop - OldHobAddress)) {
-    // Free area is smaller then current, do not move
-    return EFI_SUCCESS;
-  }
-
-  // Move Hob list to take full region
-  NewHob = (VOID *)RegionStart;
-  CopyMem (NewHob, OldHob, OldHob->EfiFreeMemoryBottom - OldHobAddress);
-  NewHob->EfiEndOfHobList     = RegionStart + OldHob->EfiEndOfHobList - OldHobAddress;
-  NewHob->EfiFreeMemoryBottom = RegionStart + OldHob->EfiFreeMemoryBottom - OldHobAddress;
-  NewHob->EfiFreeMemoryTop    = RegionStart + RegionSize;
-  NewHob->EfiMemoryBottom     = RegionStart;
-  NewHob->EfiMemoryTop        = RegionStart + RegionSize;
-
-  PrePeiSetHobList ((VOID *)NewHob);
-  return EFI_SUCCESS;
-}
-
-/**
   Simple insertion sort to sort regions entries in ascending order.
 
   @param Regions [IN, OUT]    Array of regions to sort
@@ -131,22 +51,27 @@ MemoryRegionSort (
 }
 
 /**
-  Installs DRAM regions into the HOB list
+  Installs DRAM resources to the HOB list
 
-  This function installs the specified DRAM regions into HOB list while
-  removing the carveout regions.
+  This function install the specified DRAM regions into memory while removing
+  the carveout regions.
   This function is called by the platform memory initialization library.
 
-  @param  InputDramRegions              Sorted list of available DRAM regions
-  @param  DramRegionsCount         Number of regions in DramRegions.
-  @param  UefiDramRegionIndex      Index of uefi usable regions in DramRegions.
-  @param  CarveoutRegions          Sorted list of carveout regions that will be
-                                   removed from DramRegions.
-  @param  CarveoutRegionsCount     Number of regions in CarveoutRegions.
-  @param  FinalRegionsCount        Number of regions installed into HOB list.
+  @param  InputDramRegions            Sorted list of available DRAM regions
+  @param  DramRegionsCount            Number of regions in DramRegions.
+  @param  UefiDramRegionIndex         Index of uefi usable regions in DramRegions.
+  @param  CarveoutRegions             Sorted list of carveout regions that will be
+                                      removed from DramRegions.
+  @param  CarveoutRegionsCount        Number of regions in CarveoutRegions.
+  @param  UsableCarveoutRegions       Sorted list of usable carveout regions that will be
+                                      added to DramRegions.
+  @param  UsableCarveoutRegionsCount  Number of regions in UsableCarveoutRegions.
+  @param  FinalRegionsCount           Number of regions installed into HOB list.
+  @param  MaxRegionStart              Base address of largest region in dram
+  @param  MaxRegionSize               Size of largest region
 
-  @retval EFI_SUCCESS              Resources have been installed
-  @retval EFI_DEVICE_ERROR         Error setting up memory
+  @retval EFI_SUCCESS                 Resources have been installed
+  @retval EFI_DEVICE_ERROR            Error setting up memory
 
 **/
 EFI_STATUS
@@ -156,15 +81,20 @@ InstallDramWithCarveouts (
   IN  UINTN                     UefiDramRegionIndex,
   IN  NVDA_MEMORY_REGION        *CarveoutRegions,
   IN  UINTN                     CarveoutRegionsCount,
-  OUT UINTN                     *FinalRegionsCount
+  IN  NVDA_MEMORY_REGION        *UsableCarveoutRegions,
+  IN  UINTN                     UsableCarveoutRegionsCount,
+  OUT UINTN                     *FinalRegionsCount,
+  OUT EFI_PHYSICAL_ADDRESS      *MaxRegionStart,
+  OUT UINTN                     *MaxRegionSize
   )
 {
-  NVDA_MEMORY_REGION           *DramRegions       = NULL;
-  UINTN                        DramIndex          = 0;
-  UINTN                        CarveoutIndex      = 0;
-  UINTN                        InstalledRegions   = 0;
-  EFI_PHYSICAL_ADDRESS         LargestRegionStart = 0;
-  UINTN                        MaxSize            = 0;
+  NVDA_MEMORY_REGION           *DramRegions        = NULL;
+  UINTN                        DramIndex           = 0;
+  UINTN                        CarveoutIndex       = 0;
+  UINTN                        UsableCarveoutIndex = 0;
+  UINTN                        InstalledRegions    = 0;
+  EFI_PHYSICAL_ADDRESS         LargestRegionStart  = 0;
+  UINTN                        MaxSize             = 0;
   EFI_RESOURCE_ATTRIBUTE_TYPE  ResourceAttributes;
   EFI_PHYSICAL_ADDRESS         CarveoutStart;
   EFI_PHYSICAL_ADDRESS         CarveoutEnd;
@@ -202,6 +132,18 @@ InstallDramWithCarveouts (
   }
 
   CarveoutIndex = 0;
+
+  MemoryRegionSort (UsableCarveoutRegions, UsableCarveoutRegionsCount);
+  for (UsableCarveoutIndex = 0; UsableCarveoutIndex < UsableCarveoutRegionsCount; UsableCarveoutIndex++) {
+    DEBUG ((
+      EFI_D_VERBOSE,
+      "InstallDramWithCarveouts() Usable Carveout Region: Base: 0x%016lx, Size: 0x%016lx\n",
+      UsableCarveoutRegions[UsableCarveoutIndex].MemoryBaseAddress,
+      UsableCarveoutRegions[UsableCarveoutIndex].MemoryLength
+      ));
+  }
+
+  UsableCarveoutIndex = 0;
 
   ResourceAttributes = (
                         EFI_RESOURCE_ATTRIBUTE_PRESENT |
@@ -278,7 +220,19 @@ InstallDramWithCarveouts (
     }
   }
 
-  MigrateHobList (LargestRegionStart, MaxSize);
+  for (UsableCarveoutIndex = 0; UsableCarveoutIndex < UsableCarveoutRegionsCount; UsableCarveoutIndex++) {
+    BuildResourceDescriptorHob (
+      EFI_RESOURCE_SYSTEM_MEMORY,
+      ResourceAttributes,
+      UsableCarveoutRegions[UsableCarveoutIndex].MemoryBaseAddress,
+      UsableCarveoutRegions[UsableCarveoutIndex].MemoryLength
+      );
+
+    InstalledRegions++;
+  }
+
+  *MaxRegionStart    = LargestRegionStart;
+  *MaxRegionSize     = MaxSize;
   *FinalRegionsCount = InstalledRegions;
   return EFI_SUCCESS;
 }

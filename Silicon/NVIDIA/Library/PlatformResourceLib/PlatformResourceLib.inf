@@ -41,7 +41,6 @@
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
-  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
   gNVIDIATokenSpaceGuid.PcdSbsaUartBaseTH500
   gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress

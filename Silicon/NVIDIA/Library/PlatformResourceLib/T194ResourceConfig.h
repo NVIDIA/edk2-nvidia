@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -10,6 +10,15 @@
 #define __T194_RESOURCE_CONFIG_H__
 
 #include <Library/PlatformResourceLib.h>
+
+/**
+  Retrieve Dram Page Blacklist Info Address
+
+**/
+NVDA_MEMORY_REGION *
+T194GetDramPageBlacklistInfoAddress (
+  IN  UINTN  CpuBootloaderAddress
+  );
 
 UINT64
 T194GetDTBBaseAddress (

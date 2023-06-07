@@ -18,6 +18,15 @@ TH500UARTInstanceInfo (
   OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
   );
 
+/**
+  Retrieve Dram Page Blacklist Info Address
+
+**/
+NVDA_MEMORY_REGION *
+TH500GetDramPageBlacklistInfoAddress (
+  IN  UINTN  CpuBootloaderAddress
+  );
+
 UINT64
 TH500GetDTBBaseAddress (
   IN UINTN  CpuBootloaderAddress

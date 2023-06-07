@@ -84,6 +84,8 @@
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesData
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderCode
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderData
+  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
 
 [BuildOptions]
   GCC:*_*_*_DLINK_FLAGS = -pie -Wl,-T,$(MODULE_DIR)/Scripts/PrePi-PIE.lds
