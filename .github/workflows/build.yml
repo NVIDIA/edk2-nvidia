@@ -6,10 +6,10 @@
 
 name: Build and release
 on:
+  pull_request: {}
   push:
     branches:
       - 'main'
-      - 'main.*'
       - 'r*'
 env:
   EDKREPO_URL: https://github.com/tianocore/edk2-edkrepo/releases/download/edkrepo-v2.1.2/edkrepo-2.1.2.tar.gz
@@ -55,8 +55,13 @@ jobs:
         run: |
           set -x
           cd ${{ github.workspace }}
+          # Derive the edkrepo combo.  We'll assume it matches the branch name.
+          EDKREPO_COMBO=${{ github.head_ref	}}
+          if [[ ${{ github.event_name }} = pull-request ]]; then
+            EDKREPO_COMBO=${{ github.base_ref	}}
+          fi
           # Start with the edkrepo combo that matches this branch
-          edkrepo clone -v workspace NVIDIA-Jetson ${GITHUB_REF_NAME%.*}
+          edkrepo clone -v workspace NVIDIA-Platforms ${EDKREPO_COMBO}
           cd workspace
           # Checkout the ref that triggered this build
           git -C edk2-nvidia fetch --verbose "${{ github.server_url }}/${{ github.repository }}" "${{ github.ref }}"
