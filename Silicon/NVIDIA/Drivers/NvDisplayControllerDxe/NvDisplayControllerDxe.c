@@ -917,6 +917,22 @@ UpdateFdtFramebufferReservedMemory (
         return FALSE;
       }
     }
+
+    Result = fdt_setprop_string (
+               Fdt,
+               NodeOffset,
+               "status",
+               "okay"
+               );
+    if (Result != 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to set 'status' property: %a\r\n",
+        __FUNCTION__,
+        fdt_strerror (Result)
+        ));
+      return FALSE;
+    }
   }
 
   return TRUE;
