@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -162,6 +162,22 @@ UpdateDeviceTreeFrameBufferRegionNode (
         ));
       return FALSE;
     }
+  }
+
+  Result = fdt_setprop_string (
+             DeviceTree,
+             NodeOffset,
+             "status",
+             "okay"
+             );
+  if (Result != 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to set 'status' property: %a\r\n",
+      __FUNCTION__,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
   }
 
   return TRUE;
