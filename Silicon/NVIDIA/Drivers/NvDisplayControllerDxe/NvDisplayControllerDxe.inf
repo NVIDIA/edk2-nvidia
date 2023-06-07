@@ -44,13 +44,11 @@
 [Guids]
   gEfiEventReadyToBootGuid
   gFdtTableGuid
-  gNVIDIAKernelCmdLineUpdateGuid
   gNVIDIANonDiscoverableT234DisplayDeviceGuid
   gNVIDIAPlatformResourceDataGuid
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
-  gEfiDevicePathProtocolGuid
   gEfiGraphicsOutputProtocolGuid
   gNVIDIAClockNodeProtocolGuid
   gNVIDIANonDiscoverableDeviceProtocolGuid

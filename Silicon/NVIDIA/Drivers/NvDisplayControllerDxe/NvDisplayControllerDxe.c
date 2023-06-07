@@ -25,9 +25,7 @@
 #include <Library/UefiLib.h>
 
 #include <Protocol/ClockNodeProtocol.h>
-#include <Protocol/DevicePath.h>
 #include <Protocol/EmbeddedGpio.h>
-#include <Protocol/KernelCmdLineUpdate.h>
 
 #include <libfdt.h>
 
@@ -69,16 +67,6 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .SkipEdkiiNondiscoverableInstall            = TRUE,
   .SkipAutoDeinitControllerOnExitBootServices = TRUE,
   .DirectEnumerationSupport                   = TRUE,
-};
-
-/* Extra command-line arguments passed to the kernel to disable EFIFB
-   support. This is used to prevent the kernel from using the EFI
-   framebuffer that becomes unusable after we turn the display off at
-   UEFI exit.
-*/
-STATIC CONST NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL  mEfifbOffKernelCmdLineUpdateProtocol = {
-  .ExistingCommandLineArgument = NULL,
-  .NewCommandLineArgument      = L"video=efifb:off",
 };
 
 /**
@@ -882,8 +870,8 @@ DisplayOnFdtInstalled (
   IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
   )
 {
-  VOID        *Fdt;
   EFI_STATUS  Status;
+  VOID        *Fdt;
   EFI_HANDLE  GopHandle;
 
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
@@ -898,9 +886,11 @@ DisplayOnFdtInstalled (
   }
 
   Status = DisplayLocateGopChildHandle (Context, &GopHandle);
-  if (!EFI_ERROR (Status)) {
-    DisplayUpdateFdtFramebuffer (Context, Fdt, GopHandle);
+  if (EFI_ERROR (Status)) {
+    return;
   }
+
+  DisplayUpdateFdtFramebuffer (Context, Fdt, GopHandle);
 }
 
 /**
@@ -917,35 +907,21 @@ DisplayOnReadyToBoot (
   IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
   )
 {
-  VOID        *Fdt;
   EFI_STATUS  Status;
+  VOID        *Fdt;
   EFI_HANDLE  GopHandle;
 
-  Status = DisplayLocateGopChildHandle (Context, &GopHandle);
-  if (!EFI_ERROR (Status)) {
-    Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
-    if (!EFI_ERROR (Status)) {
-      DisplayUpdateFdtFramebuffer (Context, Fdt, GopHandle);
-    }
-
-    /* We have a child handle with GOP protocol installed, disable the
-       kernel EFI FB driver. Ignore "protocol already installed" error
-       since this function may be run more than once. */
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &gImageHandle,
-                    &gNVIDIAKernelCmdLineUpdateGuid,
-                    (VOID **)&mEfifbOffKernelCmdLineUpdateProtocol,
-                    NULL
-                    );
-    if (EFI_ERROR (Status) && (Status != EFI_INVALID_PARAMETER)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to install the kernel command-line update protocol: %r\r\n",
-        __FUNCTION__,
-        Status
-        ));
-    }
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
+  if (EFI_ERROR (Status)) {
+    return;
   }
+
+  Status = DisplayLocateGopChildHandle (Context, &GopHandle);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  DisplayUpdateFdtFramebuffer (Context, Fdt, GopHandle);
 }
 
 /**
