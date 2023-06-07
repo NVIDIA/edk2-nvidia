@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -206,6 +206,33 @@ GetCPUBLBaseAddress (
   }
 
   return CpuBootloaderAddress;
+}
+
+/**
+  Retrieve Dram Page Blacklist Info Address
+
+**/
+NVDA_MEMORY_REGION *
+EFIAPI
+GetDramPageBlacklistInfoAddress (
+  VOID
+  )
+{
+  UINTN  ChipID;
+  UINTN  CpuBootloaderAddress;
+
+  ChipID = TegraGetChipID ();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case T194_CHIP_ID:
+      return T194GetDramPageBlacklistInfoAddress (CpuBootloaderAddress);
+    case T234_CHIP_ID:
+      return T234GetDramPageBlacklistInfoAddress (CpuBootloaderAddress);
+    default:
+      return 0x0;
+  }
 }
 
 /**

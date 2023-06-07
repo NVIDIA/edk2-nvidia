@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -34,7 +34,6 @@
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
-  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress
   gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress

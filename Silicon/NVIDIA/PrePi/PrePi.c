@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -8,6 +8,7 @@
 **/
 
 #include <PiPei.h>
+#include <Uefi.h>
 
 #include <Library/DebugAgentLib.h>
 #include <Library/PrePiLib.h>
@@ -19,6 +20,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/GoldenRegisterLib.h>
 #include <Library/SystemResourceLib.h>
+#include <Library/TegraSerialPortLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 
 #include <Ppi/GuidedSectionExtraction.h>
@@ -232,7 +234,6 @@ CEntryPoint (
   UINTN                         CharCount;
   FIRMWARE_SEC_PERFORMANCE      Performance;
   UINT64                        StartTimeStamp;
-  ARM_MEMORY_REGION_DESCRIPTOR  *MemoryTable;
   EFI_FIRMWARE_VOLUME_HEADER    *FvHeader;
   UINT64                        FvSize;
   UINT64                        FvOffset = 0;
@@ -244,6 +245,20 @@ CEntryPoint (
   UINT64                        DtbOffset;
   UINT64                        DtbNext;
   TEGRA_PLATFORM_RESOURCE_INFO  PlatformResourceInfo;
+  ARM_MEMORY_REGION_DESCRIPTOR  InitialMemory[2];
+  SERIAL_MAPPING                *Mapping;
+
+  if (PerformanceMeasurementEnabled ()) {
+    // Initialize the Timer Library to setup the Timer HW controller
+    if (!EFI_ERROR (TimerConstructor ())) {
+      // We cannot call yet the PerformanceLib because the HOB List has not been initialized
+      StartTimeStamp = GetPerformanceCounter ();
+    } else {
+      StartTimeStamp = 0;
+    }
+  } else {
+    StartTimeStamp = 0;
+  }
 
   while (FvOffset < MemorySize) {
     FvHeader = (EFI_FIRMWARE_VOLUME_HEADER *)(VOID *)(MemoryBase + FvOffset);
@@ -369,18 +384,6 @@ CEntryPoint (
     }
   }
 
-  if (PerformanceMeasurementEnabled ()) {
-    // Initialize the Timer Library to setup the Timer HW controller
-    if (!EFI_ERROR (TimerConstructor ())) {
-      // We cannot call yet the PerformanceLib because the HOB List has not been initialized
-      StartTimeStamp = GetPerformanceCounter ();
-    } else {
-      StartTimeStamp = 0;
-    }
-  } else {
-    StartTimeStamp = 0;
-  }
-
   // Data Cache enabled on Primary core when MMU is enabled.
   ArmDisableDataCache ();
   // Invalidate instruction cache
@@ -390,6 +393,36 @@ CEntryPoint (
 
   // Initialize the architecture specific bits
   ArchInitialize ();
+
+  // Declare the PI/UEFI memory region
+  HobFree = HobBase + HobSize;
+  HobList = HobConstructor (
+              (VOID *)HobBase,
+              HobSize,
+              (VOID *)HobBase,
+              (VOID *)HobFree
+              );
+  PrePeiSetHobList (HobList);
+
+  InitialMemory[0].PhysicalBase = MemoryBase;
+  InitialMemory[0].VirtualBase  = MemoryBase;
+  InitialMemory[0].Length       = MemorySize;
+  InitialMemory[0].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK;
+  InitialMemory[1].PhysicalBase = 0;
+  InitialMemory[1].VirtualBase  = 0;
+  InitialMemory[1].Length       = 0;
+  InitialMemory[1].Attributes   = (ARM_MEMORY_REGION_ATTRIBUTES)0;
+  InitMmu (InitialMemory);
+  MapCorePlatformMemory ();
+
+  SerialPortIdentify (&Mapping);
+  while (Mapping->Compatibility != NULL) {
+    if (Mapping->IsFound) {
+      ArmSetMemoryAttributes (Mapping->BaseAddress, SIZE_4KB, EFI_MEMORY_UC);
+    }
+
+    Mapping++;
+  }
 
   // Initialize the Serial Port
   SerialPortInitialize ();
@@ -407,16 +440,6 @@ CEntryPoint (
   // InitializeDebugAgent (DEBUG_AGENT_INIT_POSTMEM_SEC, NULL, NULL);
   SaveAndSetDebugTimerInterrupt (TRUE);
 
-  // Declare the PI/UEFI memory region
-  HobFree = HobBase + HobSize;
-  HobList = HobConstructor (
-              (VOID *)HobBase,
-              HobSize,
-              (VOID *)HobBase,
-              (VOID *)HobFree
-              );
-  PrePeiSetHobList (HobList);
-
   // Register Firmware volume
   BuildFvHob ((EFI_PHYSICAL_ADDRESS)FvHeader, FvSize);
 
@@ -426,12 +449,8 @@ CEntryPoint (
   ASSERT_EFI_ERROR (Status);
   BuildGuidDataHob (&gNVIDIAPlatformResourceDataGuid, &PlatformResourceInfo, sizeof (PlatformResourceInfo));
 
-  // Initialize MMU and Memory HOBs (Resource Descriptor HOBs)
-  // Get Virtual Memory Map from the Platform Library
-  GetVirtualMemoryMap (&MemoryTable);
-
-  // Build Memory Allocation Hob
-  InitMmu (MemoryTable);
+  // Add all new entries to memory map and relocate HOB if needed
+  UpdateMemoryMap ();
 
   Status = ArmSetMemoryRegionReadOnly (StackBase + StackSize, SIZE_4KB);
   ASSERT_EFI_ERROR (Status);

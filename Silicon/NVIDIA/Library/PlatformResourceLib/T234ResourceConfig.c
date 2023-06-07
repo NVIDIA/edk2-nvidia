@@ -32,10 +32,6 @@ TEGRA_MMIO_INFO  T234MmioInfo[] = {
     SIZE_4KB
   },
   {
-    FixedPcdGet64 (PcdTegraCombinedUartRxMailbox),
-    SIZE_4KB
-  },
-  {
     FixedPcdGet64 (PcdTegraMCBBaseAddress),
     SIZE_4KB
   },
@@ -65,6 +61,17 @@ TEGRA_FUSE_INFO  T234FloorsweepingFuseList[] = {
   { "fuse-disable-dla1",  FUSE_OPT_DLA_DISABLE,   BIT (1)         },
   { "fuse-disable-cv",    FUSE_OPT_CV_DISABLE,    BIT (0)         },
   { "fuse-disable-nvdec", FUSE_OPT_NVDEC_DISABLE, BIT (0)|BIT (1) }
+};
+
+NVDA_MEMORY_REGION  T234DramPageBlacklistInfoAddress[] = {
+  {
+    0,
+    0
+  },
+  {
+    0,
+    0
+  }
 };
 
 /**
@@ -143,13 +150,16 @@ T234GetResourceConfig (
   OUT TEGRA_RESOURCE_INFO  *PlatformInfo
   )
 {
-  TEGRA_CPUBL_PARAMS     *CpuBootloaderParams;
-  NVDA_MEMORY_REGION     *DramRegions;
-  NVDA_MEMORY_REGION     *CarveoutRegions;
-  UINTN                  CarveoutRegionsCount = 0;
-  EFI_MEMORY_DESCRIPTOR  Descriptor;
-  UINTN                  Index;
-  BOOLEAN                BanketDramEnabled;
+  TEGRA_CPUBL_PARAMS      *CpuBootloaderParams;
+  NVDA_MEMORY_REGION      *DramRegions;
+  NVDA_MEMORY_REGION      *CarveoutRegions;
+  UINTN                   CarveoutRegionsCount = 0;
+  NVDA_MEMORY_REGION      *UsableCarveoutRegions;
+  UINTN                   UsableCarveoutRegionsCount = 0;
+  EFI_MEMORY_DESCRIPTOR   Descriptor;
+  UINTN                   Index;
+  BOOLEAN                 BanketDramEnabled;
+  UINT64                  *DramPageRetirementInfo;
 
   CpuBootloaderParams          = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   PlatformInfo->DtbLoadAddress = T234GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
@@ -190,9 +200,15 @@ T234GetResourceConfig (
   }
 
   // Build Carveout regions
-  CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_OEM_COUNT));
+  CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_OEM_COUNT + NUM_DRAM_BAD_PAGES));
   ASSERT (CarveoutRegions != NULL);
   if (CarveoutRegions == NULL) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  UsableCarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * CARVEOUT_OEM_COUNT);
+  ASSERT (UsableCarveoutRegions != NULL);
+  if (UsableCarveoutRegions == NULL) {
     return EFI_DEVICE_ERROR;
   }
 
@@ -229,6 +245,16 @@ T234GetResourceConfig (
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size))),
         MemoryType
         );
+
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size);
+      UsableCarveoutRegionsCount++;
+    } else if (Index == CARVEOUT_BLANKET_NSDRAM) {
+      // Skip CARVEOUT_BLANKET_NSDRAM if blanket dram is enabled as this is a placeholder
+      // for BL carveout for BL to program GSC for usable DRAM.
+      if (BanketDramEnabled) {
+        continue;
+      }
     } else if (Index == CARVEOUT_RCM_BLOB) {
       // Leave in memory map but marked as used
       BuildMemoryAllocationHob (
@@ -236,6 +262,14 @@ T234GetResourceConfig (
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size))),
         EfiBootServicesData
         );
+
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size);
+      UsableCarveoutRegionsCount++;
+    } else if (Index == CARVEOUT_UEFI) {
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size);
+      UsableCarveoutRegionsCount++;
     } else if (Index == CARVEOUT_OS) {
       // Leave in memory map but marked as used
       BuildMemoryAllocationHob (
@@ -243,6 +277,10 @@ T234GetResourceConfig (
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size))),
         EfiReservedMemoryType
         );
+
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size);
+      UsableCarveoutRegionsCount++;
 
       Descriptor.Type          = EfiReservedMemoryType;
       Descriptor.PhysicalStart = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
@@ -257,25 +295,55 @@ T234GetResourceConfig (
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size))),
         EfiReservedMemoryType
         );
-    } else if (Index != CARVEOUT_UEFI) {
-      // Skip CARVEOUT_BLANKET_NSDRAM if blanket dram is enabled as this is a placeholder
-      // for BL carveout for BL to program GSC for usable DRAM.
-      if ((BanketDramEnabled == TRUE) &&
-          (Index == CARVEOUT_BLANKET_NSDRAM))
-      {
-        continue;
-      }
 
-      CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
-      CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size);
-      CarveoutRegionsCount++;
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size);
+      UsableCarveoutRegionsCount++;
+    }
+
+    CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base);
+    CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size);
+    CarveoutRegionsCount++;
+  }
+
+  if (CPUBL_PARAMS (CpuBootloaderParams, FeatureFlagData.EnableDramPageRetirement)) {
+    DramPageRetirementInfo = (UINT64 *)CPUBL_PARAMS (CpuBootloaderParams, DramPageRetirementInfoAddress);
+    for (Index = 0; Index < NUM_DRAM_BAD_PAGES; Index++) {
+      if (DramPageRetirementInfo[Index] == 0) {
+        break;
+      } else {
+        CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = DramPageRetirementInfo[Index];
+        CarveoutRegions[CarveoutRegionsCount].MemoryLength      = SIZE_4KB;
+        CarveoutRegionsCount++;
+      }
     }
   }
 
-  PlatformInfo->CarveoutRegions      = CarveoutRegions;
-  PlatformInfo->CarveoutRegionsCount = CarveoutRegionsCount;
+  PlatformInfo->CarveoutRegions            = CarveoutRegions;
+  PlatformInfo->CarveoutRegionsCount       = CarveoutRegionsCount;
+  PlatformInfo->UsableCarveoutRegions      = UsableCarveoutRegions;
+  PlatformInfo->UsableCarveoutRegionsCount = UsableCarveoutRegionsCount;
 
   return EFI_SUCCESS;
+}
+
+/**
+  Retrieve Dram Page Blacklist Info Address
+
+**/
+NVDA_MEMORY_REGION *
+T234GetDramPageBlacklistInfoAddress (
+  IN  UINTN  CpuBootloaderAddress
+  )
+{
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  T234DramPageBlacklistInfoAddress[0].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, DramPageRetirementInfoAddress) & ~EFI_PAGE_MASK;
+  T234DramPageBlacklistInfoAddress[0].MemoryLength      = SIZE_64KB;
+
+  return T234DramPageBlacklistInfoAddress;
 }
 
 /**

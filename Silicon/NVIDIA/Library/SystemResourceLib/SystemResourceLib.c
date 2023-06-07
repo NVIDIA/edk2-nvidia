@@ -153,10 +153,6 @@ InstallMmioRegions (
                          SIZE_4KB
                          );
   *MmioRegionsCount += InstallMmioRegion (
-                         FixedPcdGet64 (PcdMiscRegBaseAddress),
-                         SIZE_4KB
-                         );
-  *MmioRegionsCount += InstallMmioRegion (
                          TegraGetGicDistributorBaseAddress (ChipID),
                          SIZE_64KB
                          );
@@ -193,6 +189,8 @@ InstallMmioRegions (
   This function is called by the platform memory initialization library.
 
   @param  NumberOfMemoryRegions Number of regions installed into HOB list.
+  @param  MaxRegionStart        Base address of largest region in dram
+  @param  MaxRegionSize         Size of largest region
 
   @retval EFI_SUCCESS           Resources have been installed
   @retval EFI_DEVICE_ERROR      Error setting up memory
@@ -200,7 +198,9 @@ InstallMmioRegions (
 **/
 EFI_STATUS
 InstallSystemResources (
-  OUT UINTN  *MemoryRegionsCount
+  OUT UINTN                 *MemoryRegionsCount,
+  OUT EFI_PHYSICAL_ADDRESS  *MaxRegionStart,
+  OUT UINTN                 *MaxRegionSize
   )
 {
   EFI_STATUS           Status;
@@ -246,6 +246,7 @@ InstallSystemResources (
     );
 
   AlignCarveoutRegions64KiB (PlatformInfo->CarveoutRegions, PlatformInfo->CarveoutRegionsCount);
+  AlignCarveoutRegions64KiB (PlatformInfo->UsableCarveoutRegions, PlatformInfo->UsableCarveoutRegionsCount);
 
   FinalDramRegionsCount = 0;
   Status                = InstallDramWithCarveouts (
@@ -254,7 +255,11 @@ InstallSystemResources (
                             PlatformInfo->UefiDramRegionsCount,
                             PlatformInfo->CarveoutRegions,
                             PlatformInfo->CarveoutRegionsCount,
-                            &FinalDramRegionsCount
+                            PlatformInfo->UsableCarveoutRegions,
+                            PlatformInfo->UsableCarveoutRegionsCount,
+                            &FinalDramRegionsCount,
+                            MaxRegionStart,
+                            MaxRegionSize
                             );
 
   if (!EFI_ERROR (Status)) {
