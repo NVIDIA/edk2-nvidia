@@ -27,10 +27,6 @@ TEGRA_MMIO_INFO  T194MmioInfo[] = {
     SIZE_4KB
   },
   {
-    FixedPcdGet64 (PcdTegraCombinedUartRxMailbox),
-    SIZE_4KB
-  },
-  {
     FixedPcdGet64 (PcdTegraMCBBaseAddress),
     SIZE_4KB
   },
@@ -45,6 +41,17 @@ TEGRA_MMIO_INFO  T194MmioInfo[] = {
 };
 
 TEGRA_FUSE_INFO  T194FloorsweepingFuseList[] = {
+};
+
+NVDA_MEMORY_REGION  T194DramPageBlacklistInfoAddress[] = {
+  {
+    0,
+    0
+  },
+  {
+    0,
+    0
+  }
 };
 
 /**
@@ -69,6 +76,8 @@ T194GetResourceConfig (
   NVDA_MEMORY_REGION  *DramRegions;
   NVDA_MEMORY_REGION  *CarveoutRegions;
   UINTN               CarveoutRegionsCount = 0;
+  NVDA_MEMORY_REGION  *UsableCarveoutRegions;
+  UINTN               UsableCarveoutRegionsCount = 0;
   UINTN               Index;
   UINT64              *DramPageBlacklistInfo;
 
@@ -98,6 +107,14 @@ T194GetResourceConfig (
     return EFI_DEVICE_ERROR;
   }
 
+  UsableCarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (
+                                                  sizeof (NVDA_MEMORY_REGION) * CARVEOUT_NUM
+                                                  );
+  ASSERT (UsableCarveoutRegions != NULL);
+  if (UsableCarveoutRegions == NULL) {
+    return EFI_DEVICE_ERROR;
+  }
+
   for (Index = CARVEOUT_NONE; Index < CARVEOUT_NUM; Index++) {
     if ((CpuBootloaderParams->CarveoutInfo[Index].Base == 0) ||
         (CpuBootloaderParams->CarveoutInfo[Index].Size == 0))
@@ -119,16 +136,22 @@ T194GetResourceConfig (
         EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
         (ValidateGrBlobHeader (GetGRBlobBaseAddress ()) == EFI_SUCCESS) ? EfiReservedMemoryType : EfiBootServicesData
         );
-    } else if ((Index != CARVEOUT_CPUBL) &&
-               (Index != CARVEOUT_OS) &&
-               (Index != CARVEOUT_MB2) &&
-               (Index != CARVEOUT_RCM_BLOB) &&
-               (CpuBootloaderParams->CarveoutInfo[Index].Size != 0))
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
+      UsableCarveoutRegionsCount++;
+    } else if ((Index == CARVEOUT_CPUBL) ||
+               (Index == CARVEOUT_OS) ||
+               (Index == CARVEOUT_MB2) ||
+               (Index == CARVEOUT_RCM_BLOB))
     {
-      CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
-      CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
-      CarveoutRegionsCount++;
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
+      UsableCarveoutRegions[UsableCarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
+      UsableCarveoutRegionsCount++;
     }
+
+    CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
+    CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
+    CarveoutRegionsCount++;
   }
 
   if (CpuBootloaderParams->FeatureFlag.EnableDramPageBlacklisting) {
@@ -144,10 +167,31 @@ T194GetResourceConfig (
     }
   }
 
-  PlatformInfo->CarveoutRegions      = CarveoutRegions;
-  PlatformInfo->CarveoutRegionsCount = CarveoutRegionsCount;
+  PlatformInfo->CarveoutRegions            = CarveoutRegions;
+  PlatformInfo->CarveoutRegionsCount       = CarveoutRegionsCount;
+  PlatformInfo->UsableCarveoutRegions      = UsableCarveoutRegions;
+  PlatformInfo->UsableCarveoutRegionsCount = UsableCarveoutRegionsCount;
 
   return EFI_SUCCESS;
+}
+
+/**
+  Retrieve Dram Page Blacklist Info Address
+
+**/
+NVDA_MEMORY_REGION *
+T194GetDramPageBlacklistInfoAddress (
+  IN  UINTN  CpuBootloaderAddress
+  )
+{
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  T194DramPageBlacklistInfoAddress[0].MemoryBaseAddress = CpuBootloaderParams->DramPageBlacklistInfoAddress & ~EFI_PAGE_MASK;
+  T194DramPageBlacklistInfoAddress[0].MemoryLength      = SIZE_64KB;
+
+  return T194DramPageBlacklistInfoAddress;
 }
 
 /**

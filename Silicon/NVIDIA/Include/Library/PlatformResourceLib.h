@@ -41,6 +41,8 @@ typedef struct {
   NVDA_MEMORY_REGION    *InputCarveoutRegions;
   NVDA_MEMORY_REGION    *CarveoutRegions;
   UINTN                 CarveoutRegionsCount;
+  NVDA_MEMORY_REGION    *UsableCarveoutRegions;
+  UINTN                 UsableCarveoutRegionsCount;
   UINTN                 DtbLoadAddress;
   NVDA_MEMORY_REGION    RamOopsRegion;
 } TEGRA_RESOURCE_INFO;
@@ -102,6 +104,16 @@ typedef struct {
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
+  Retrieve CPU BL Address
+
+**/
+UINTN
+EFIAPI
+GetCPUBLBaseAddress (
+  VOID
+  );
+
+/**
   Set Tegra UART Base Address
 
   @param[in]    UART base address
@@ -142,6 +154,16 @@ BOOLEAN
 EFIAPI
 GetGicInfo (
   OUT TEGRA_GIC_INFO  *GicInfo
+  );
+
+/**
+  Retrieve Dram Page Blacklist Info Address
+
+**/
+NVDA_MEMORY_REGION *
+EFIAPI
+GetDramPageBlacklistInfoAddress (
+  VOID
   );
 
 /**

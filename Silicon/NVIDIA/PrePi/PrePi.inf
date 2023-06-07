@@ -1,6 +1,6 @@
 #/** @file
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  (C) Copyright 2015 Hewlett-Packard Development Company, L.P.<BR>
 #  Copyright (c) 2011-2017, ARM Ltd. All rights reserved.<BR>
 #
@@ -84,6 +84,8 @@
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesData
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderCode
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderData
+  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
 
 [BuildOptions]
   GCC:*_*_*_DLINK_FLAGS = -pie -Wl,-T,$(MODULE_DIR)/Scripts/PrePi-PIE.lds
