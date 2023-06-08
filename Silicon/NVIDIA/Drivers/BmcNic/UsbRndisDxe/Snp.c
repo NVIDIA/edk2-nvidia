@@ -315,7 +315,12 @@ UsbRndisSnpReceiveFilters (
 
   Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
   if (Private->DeviceLost) {
-    return EFI_DEVICE_ERROR;
+    //
+    // MNP can not uninstall its protocol in driver binding stop when
+    // we return EFI_DEVICE_ERROR. Return EFI_SUCCESS when device is
+    // not there.
+    //
+    return EFI_SUCCESS;
   }
 
   TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
@@ -811,7 +816,7 @@ UsbRndisSnpReceive (
   }
 
   DEBUG_CODE_BEGIN ();
-  DumpRndisMessage (USB_DEBUG_RNDIS_TRANSFER, __FUNCTION__, (RNDIS_MSG_HEADER *)RndisPacketMsg);
+  DumpRndisMessage (USB_DEBUG_SNP, __FUNCTION__, (RNDIS_MSG_HEADER *)RndisPacketMsg);
   DEBUG_CODE_END ();
 
   //

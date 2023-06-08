@@ -404,7 +404,7 @@ UsbRndisDriverStart (
 
   DevicePathStr = ConvertDevicePathToText (Private->DevicePathProtocol, TRUE, TRUE);
   if (DevicePathStr != NULL) {
-    DEBUG ((USB_DEBUG_RNDIS, "%a, device path: %s\n", __FUNCTION__, DevicePathStr));
+    DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, device path: %s\n", __FUNCTION__, DevicePathStr));
     FreePool (DevicePathStr);
   }
 
@@ -423,6 +423,8 @@ UsbRndisDriverStart (
     DEBUG ((DEBUG_ERROR, "%a, install caller id failed: %r\n", __FUNCTION__, Status));
     goto OnError;
   }
+
+  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, install caller ID: %g\n", __FUNCTION__, &gEfiCallerIdGuid));
 
   Private->Handle = NULL;
   Status          = gBS->InstallMultipleProtocolInterfaces (
@@ -495,7 +497,7 @@ UsbRndisDriverStop (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a, no caller id found: %r\n", __FUNCTION__, Status));
-    return EFI_UNSUPPORTED;
+    return EFI_SUCCESS;
   }
 
   Private = USB_RNDIS_PRIVATE_DATA_FROM_ID (Id);
@@ -510,6 +512,7 @@ UsbRndisDriverStop (
   //
   // Uninstall caller id.
   //
+  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, uninstall caller id: %g\n", __FUNCTION__, &gEfiCallerIdGuid));
   Status = gBS->UninstallProtocolInterface (
                   Controller,
                   &gEfiCallerIdGuid,
@@ -522,6 +525,7 @@ UsbRndisDriverStop (
   //
   // Uninstall protocols
   //
+  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, uninstall protocols\n", __FUNCTION__));
   Status = gBS->UninstallMultipleProtocolInterfaces (
                   Private->Handle,
                   &gEfiDevicePathProtocolGuid,
