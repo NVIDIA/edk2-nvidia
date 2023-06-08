@@ -127,4 +127,8 @@ typedef struct {
   UINT8    Function;
 } NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY;
 
+typedef struct {
+  BOOLEAN    Enabled;
+} NVIDIA_GPU_SMMU_BYPASS_ENABLE;
+
 #endif //__NVIDIA_CONFIGURATION_H__

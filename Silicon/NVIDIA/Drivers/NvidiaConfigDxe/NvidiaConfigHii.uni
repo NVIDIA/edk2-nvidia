@@ -38,6 +38,9 @@
 #string STR_SOCKET3_CONFIG_FORM_TITLE        #language en-US "Socket 3 configuration"
 #string STR_SOCKET3_CONFIG_FORM_HELP         #language en-US "Socket 3 configuration options"
 
+#string STR_GPU_SMMU_BYPASS_ENABLE_PROMPT    #language en-US "GPU SMMU Bypass Enable"
+#string STR_GPU_SMMU_BYPASS_ENABLE_HELP      #language en-US "Allow OS to enable GPU SMMU bypass when kernel SMMU driver is configured to work in passthrough mode.  This allows the SMMU to be externally bypassed such that the GPU stream ID is not subject to any SMMUv3 controls when the kernel is using an SMMU bypass configuration in baremetal."
+
 #string STR_PCIE_IN_OS_PROMPT            #language en-US "Enable PCIe in OS"
 #string STR_PCIE_IN_OS_HELP              #language en-US "Enable/Disable PCIe's ACPI Entry to be exposed to the O/S."
 #string STR_QUICK_BOOT_ENABLED_PROMPT    #language en-US "Enable UEFI Quick Boot"

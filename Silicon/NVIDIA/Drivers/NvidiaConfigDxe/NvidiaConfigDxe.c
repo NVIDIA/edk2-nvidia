@@ -1369,6 +1369,9 @@ InitializeSettings (
   BufferSize = sizeof (NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY);
   PcdSetPtrS (PcdEnabledPcieNicTopology, &BufferSize, PcdGetPtr (PcdEnabledPcieNicTopology));
 
+  // Initialize GPU SMMU Bypass enable
+  PcdSetBoolS (PcdGpuSmmuBypassEnable, PcdGetBool (PcdGpuSmmuBypassEnable));
+
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;
   Status           = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, NULL, &KernelCmdLineLen, NULL);
