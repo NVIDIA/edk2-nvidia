@@ -1,0 +1,7 @@
+prerelease: true
+template: |
+  ## What’s Changed
+
+  ## Details
+
+  $CHANGES
