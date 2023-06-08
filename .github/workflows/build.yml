@@ -6,10 +6,12 @@
 
 name: Build and release
 on:
+  pull_request: {}
   push:
     branches:
       - 'main'
-      - 'main.*'
+      - 'r*updates'
+    tags:
       - 'r*'
 env:
   EDKREPO_URL: https://github.com/tianocore/edk2-edkrepo/releases/download/edkrepo-v2.1.2/edkrepo-2.1.2.tar.gz
@@ -50,8 +52,13 @@ jobs:
         run: |
           set -x
           cd ${{ github.workspace }}
+          # Derive the edkrepo combo.  We'll assume it matches the branch name.
+          EDKREPO_COMBO=${{ github.head_ref	}}
+          if [[ ${{ github.event_name }} = pull_request ]]; then
+            EDKREPO_COMBO=${{ github.base_ref	}}
+          fi
           # Start with the edkrepo combo that matches this branch
-          edkrepo clone -v workspace NVIDIA-Jetson ${GITHUB_REF_NAME%.*}
+          edkrepo clone -v workspace NVIDIA-Platforms ${EDKREPO_COMBO}
           cd workspace
           # Checkout the ref that triggered this build
           git -C edk2-nvidia fetch --verbose "${{ github.server_url }}/${{ github.repository }}" "${{ github.ref }}"
@@ -74,9 +81,10 @@ jobs:
         run: |
           mkdir package
           # Extract details about the build (BUILDID, sha, etc.)
-          cat workspace/Build/BUILDLOG_Jetson.txt | grep BUILDID_STRING= |sed -e 's/.*BUILDID_STRING=\([^ ]*\)/\1/' > package/buildid
+          grep -m 1 BUILDID_STRING= workspace/Build/BUILDLOG_Jetson.txt | sed -e 's/.*BUILDID_STRING=\([^ ]*\)/\1/' > package/buildid
           BUILDID=$(cat package/buildid)
-          echo "::set-output name=version::${BUILDID}"
+          echo "version=${BUILDID}"
+          echo "version=${BUILDID}" >> $GITHUB_OUTPUT
           echo ${{ github.ref_name }} > package/ref_name
           echo ${{ github.sha }} > package/sha
           # Copy the images
@@ -97,11 +105,10 @@ jobs:
           name: package
           path: upload
       - name: Release
-        uses: ncipollo/release-action@v1.10.0
-        with:
-          draft: true
-          prerelease: true
-          name: edk2-nvidia-${{ steps.package.outputs.version }}
-          tag: ${{ github.ref_name }}-${{ steps.package.outputs.version }}
-          commit: ${{ github.sha }}
-          artifacts: edk2-nvidia-${{ steps.package.outputs.version }}.tar.gz
+        if: github.event_name != 'pull_request'
+        uses: release-drafter/release-drafter@v5
+        env:
+          VERSION: ${{ steps.package.outputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
