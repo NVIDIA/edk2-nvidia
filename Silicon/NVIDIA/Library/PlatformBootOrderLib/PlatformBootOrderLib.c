@@ -139,16 +139,18 @@ GetBootClassOfOption (
   IN EFI_BOOT_MANAGER_LOAD_OPTION  *Option
   )
 {
-  UINTN                     OptionalDataSize;
-  UINTN                     BootPriorityIndex;
-  EFI_DEVICE_PATH_PROTOCOL  *DevicePathNode;
-  UINT8                     ExtraSpecifier;
+  UINTN                       OptionalDataSize;
+  UINTN                       BootPriorityIndex;
+  EFI_DEVICE_PATH_PROTOCOL    *DevicePathNode;
+  UINT8                       ExtraSpecifier;
+  NVIDIA_BOOT_ORDER_PRIORITY  *Result;
 
+  Result = NULL;
   if (StrCmp (Option->Description, L"UEFI Shell") == 0) {
     for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriority); BootPriorityIndex++) {
       if (AsciiStrCmp (mBootPriority[BootPriorityIndex].OrderName, "shell") == 0) {
-        DEBUG ((DEBUG_VERBOSE, "Option %d has class %a\n", Option->OptionNumber, mBootPriority[BootPriorityIndex].OrderName));
-        return &mBootPriority[BootPriorityIndex];
+        Result = &mBootPriority[BootPriorityIndex];
+        goto ReturnResult;
       }
     }
   }
@@ -167,8 +169,8 @@ GetBootClassOfOption (
   {
     for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriority); BootPriorityIndex++) {
       if (mBootPriority[BootPriorityIndex].ExtraSpecifier == NVIDIA_BOOT_TYPE_BOOTIMG) {
-        DEBUG ((DEBUG_VERBOSE, "Option %d has class %a\n", Option->OptionNumber, mBootPriority[BootPriorityIndex].OrderName));
-        return &mBootPriority[BootPriorityIndex];
+        Result = &mBootPriority[BootPriorityIndex];
+        goto ReturnResult;
       }
     }
   }
@@ -199,15 +201,21 @@ GetBootClassOfOption (
           (DevicePathSubType (DevicePathNode) == mBootPriority[BootPriorityIndex].SubType) &&
           (ExtraSpecifier == mBootPriority[BootPriorityIndex].ExtraSpecifier))
       {
-        DEBUG ((DEBUG_VERBOSE, "Option %d has class %a\n", Option->OptionNumber, mBootPriority[BootPriorityIndex].OrderName));
-        return &mBootPriority[BootPriorityIndex];
+        Result = &mBootPriority[BootPriorityIndex];
       }
     }
 
     DevicePathNode = NextDevicePathNode (DevicePathNode);
   }
 
-  return NULL;
+ReturnResult:
+  if (Result != NULL) {
+    DEBUG ((DEBUG_VERBOSE, "Option %d (%s) has class %a\n", Option->OptionNumber, Option->Description, Result->OrderName));
+  } else {
+    DEBUG ((DEBUG_VERBOSE, "Option %d (%s) has unknown class\n", Option->OptionNumber, Option->Description));
+  }
+
+  return Result;
 }
 
 NVIDIA_BOOT_ORDER_PRIORITY *
