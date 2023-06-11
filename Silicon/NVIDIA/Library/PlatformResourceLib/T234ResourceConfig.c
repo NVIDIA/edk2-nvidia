@@ -297,7 +297,7 @@ T234GetResourceConfig (
       Descriptor.NumberOfPages = EFI_SIZE_TO_PAGES (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size));
       Descriptor.Attribute     = 0;
       BuildGuidDataHob (&gNVIDIAOSCarveoutHob, &Descriptor, sizeof (Descriptor));
-    } else if (Index == CARVEOUT_GR) {
+    } else if ((Index == CARVEOUT_GR) || (Index == CARVEOUT_PROFILING)) {
       // Leave in memory map but marked as used
       BuildMemoryAllocationHob (
         CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base),
@@ -637,6 +637,10 @@ T234GetPlatformResourceInformation (
   // Populate FrameBufferInfo
   PlatformResourceInfo->FrameBufferInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_DISP_EARLY_BOOT_FB].Base);
   PlatformResourceInfo->FrameBufferInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_DISP_EARLY_BOOT_FB].Size);
+
+  // Populate ProfilerInfo
+  PlatformResourceInfo->ProfilerInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_PROFILING].Base);
+  PlatformResourceInfo->ProfilerInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_PROFILING].Size);
 
   PlatformResourceInfo->BootType = CPUBL_PARAMS (CpuBootloaderParams, BootType);
 
