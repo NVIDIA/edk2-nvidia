@@ -173,3 +173,8 @@
   INF Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
   INF Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
   INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
+
+  #
+  # BasicProfiler Support
+  #
+  INF Silicon/NVIDIA/Drivers/BasicProfilerDxe/BasicProfilerDxe.inf

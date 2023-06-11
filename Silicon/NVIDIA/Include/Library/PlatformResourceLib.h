@@ -100,6 +100,7 @@ typedef struct {
   TEGRA_BASE_AND_SIZE_INFO    RamdiskOSInfo;
   TEGRA_BASE_AND_SIZE_INFO    RcmBlobInfo;
   TEGRA_BASE_AND_SIZE_INFO    FrameBufferInfo;
+  TEGRA_BASE_AND_SIZE_INFO    ProfilerInfo;
   TEGRA_BOOT_TYPE             BootType;
   UINT64                      PhysicalDramSize;
 } TEGRA_PLATFORM_RESOURCE_INFO;
