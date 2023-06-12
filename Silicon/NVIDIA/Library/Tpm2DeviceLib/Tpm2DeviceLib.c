@@ -237,6 +237,8 @@ Tpm2RegistrationEvent (
   }
 
   if (NumHandles > 0) {
+    gBS->CloseEvent (Event);
+
     Status = gBS->HandleProtocol (
                     Handles[0],
                     &gNVIDIATpm2ProtocolGuid,
