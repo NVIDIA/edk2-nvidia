@@ -23,37 +23,9 @@
 #include <Library/PlatformResourceLib.h>
 #include <IndustryStandard/Ipmi.h>
 #include <Guid/GlobalVariable.h>
+#include "InternalPlatformBootOrderLib.h"
 
-#ifdef EDKII_UNIT_TEST_FRAMEWORK_ENABLED
-  #undef DEBUG_ERROR
-#define DEBUG_ERROR  DEBUG_INFO
-  #undef DEBUG_WARN
-#define DEBUG_WARN  DEBUG_INFO
-#endif
-
-#define FREE_NON_NULL(a) \
-  if ((a) != NULL) { \
-    FreePool ((a));  \
-    (a) = NULL;      \
-  }
-
-#define NVIDIA_BOOT_TYPE_HTTP                    0
-#define NVIDIA_BOOT_TYPE_BOOTIMG                 1
-#define NVIDIA_BOOT_TYPE_VIRTUAL                 2
-#define IPMI_GET_BOOT_OPTIONS_PARAMETER_INVALID  1
-#define IPMI_PARAMETER_VERSION                   1
-
-#define SAVED_BOOT_ORDER_VARIABLE_NAME  L"SavedBootOrder"
-
-typedef struct {
-  CHAR8    *OrderName;
-  INT32    PriorityOrder;
-  UINT8    Type;
-  UINT8    SubType;
-  UINT8    ExtraSpecifier;
-} NVIDIA_BOOT_ORDER_PRIORITY;
-
-STATIC NVIDIA_BOOT_ORDER_PRIORITY  mBootPriority[] = {
+STATIC CONST NVIDIA_BOOT_ORDER_PRIORITY  mBootPriorityTemplate[] = {
   { "scsi",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_SCSI_DP,           MAX_UINT8                },
   { "usb",      MAX_INT32, MESSAGING_DEVICE_PATH, MSG_USB_DP,            MAX_UINT8                },
   { "sata",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_SATA_DP,           MAX_UINT8                },
@@ -68,13 +40,13 @@ STATIC NVIDIA_BOOT_ORDER_PRIORITY  mBootPriority[] = {
   { "cdrom",    MAX_INT32, MEDIA_DEVICE_PATH,     MEDIA_CDROM_DP,        MAX_UINT8                },
   { "boot.img", MAX_INT32, MAX_UINT8,             MAX_UINT8,             NVIDIA_BOOT_TYPE_BOOTIMG },
   { "virtual",  MAX_INT32, MESSAGING_DEVICE_PATH, MSG_USB_DP,            NVIDIA_BOOT_TYPE_VIRTUAL },
-  { "shell",    MAX_INT32, MAX_UINT8,             MAX_UINT8,             MAX_UINT8                },
+  { "shell",    MAX_INT32, MAX_UINT8,             MAX_UINT8,             MAX_UINT8                }
 };
 
+STATIC  NVIDIA_BOOT_ORDER_PRIORITY      *mBootPriorityTable   = NULL;
+STATIC  UINTN                           mBootPriorityCount    = 0;
 STATIC  IPMI_GET_BOOT_OPTIONS_RESPONSE  *mBootOptionsResponse = NULL;
 STATIC  IPMI_SET_BOOT_OPTIONS_REQUEST   *mBootOptionsRequest  = NULL;
-
-#define DEFAULT_BOOT_ORDER_STRING  "boot.img,usb,sd,emmc,ufs"
 
 STATIC
 VOID
@@ -147,9 +119,9 @@ GetBootClassOfOption (
 
   Result = NULL;
   if (StrCmp (Option->Description, L"UEFI Shell") == 0) {
-    for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriority); BootPriorityIndex++) {
-      if (AsciiStrCmp (mBootPriority[BootPriorityIndex].OrderName, "shell") == 0) {
-        Result = &mBootPriority[BootPriorityIndex];
+    for (BootPriorityIndex = 0; BootPriorityIndex < mBootPriorityCount; BootPriorityIndex++) {
+      if (AsciiStrCmp (mBootPriorityTable[BootPriorityIndex].OrderName, "shell") == 0) {
+        Result = &mBootPriorityTable[BootPriorityIndex];
         goto ReturnResult;
       }
     }
@@ -167,9 +139,9 @@ GetBootClassOfOption (
         &gNVIDIABmBootOptionGuid
         ))
   {
-    for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriority); BootPriorityIndex++) {
-      if (mBootPriority[BootPriorityIndex].ExtraSpecifier == NVIDIA_BOOT_TYPE_BOOTIMG) {
-        Result = &mBootPriority[BootPriorityIndex];
+    for (BootPriorityIndex = 0; BootPriorityIndex < mBootPriorityCount; BootPriorityIndex++) {
+      if (mBootPriorityTable[BootPriorityIndex].ExtraSpecifier == NVIDIA_BOOT_TYPE_BOOTIMG) {
+        Result = &mBootPriorityTable[BootPriorityIndex];
         goto ReturnResult;
       }
     }
@@ -196,12 +168,12 @@ GetBootClassOfOption (
 
   DevicePathNode = Option->FilePath;
   while (!IsDevicePathEndType (DevicePathNode)) {
-    for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriority); BootPriorityIndex++) {
-      if ((DevicePathType (DevicePathNode) == mBootPriority[BootPriorityIndex].Type) &&
-          (DevicePathSubType (DevicePathNode) == mBootPriority[BootPriorityIndex].SubType) &&
-          (ExtraSpecifier == mBootPriority[BootPriorityIndex].ExtraSpecifier))
+    for (BootPriorityIndex = 0; BootPriorityIndex < mBootPriorityCount; BootPriorityIndex++) {
+      if ((DevicePathType (DevicePathNode) == mBootPriorityTable[BootPriorityIndex].Type) &&
+          (DevicePathSubType (DevicePathNode) == mBootPriorityTable[BootPriorityIndex].SubType) &&
+          (ExtraSpecifier == mBootPriorityTable[BootPriorityIndex].ExtraSpecifier))
       {
-        Result = &mBootPriority[BootPriorityIndex];
+        Result = &mBootPriorityTable[BootPriorityIndex];
       }
     }
 
@@ -218,6 +190,55 @@ ReturnResult:
   return Result;
 }
 
+EFI_STATUS
+EFIAPI
+AppendBootOrderPriority (
+  CHAR8                       *ClassName,
+  UINTN                       ClassNameLen,
+  NVIDIA_BOOT_ORDER_PRIORITY  **BootPriority
+  )
+{
+  EFI_STATUS                  Status;
+  UINTN                       BootPriorityIndex;
+  UINTN                       BootPriorityMatchLen;
+  NVIDIA_BOOT_ORDER_PRIORITY  *NewBuffer;
+
+  NewBuffer     = NULL;
+  *BootPriority = NULL;
+  Status        = EFI_NOT_FOUND;
+
+  for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriorityTemplate); BootPriorityIndex++) {
+    BootPriorityMatchLen = AsciiStrLen (mBootPriorityTemplate[BootPriorityIndex].OrderName);
+    if ((BootPriorityMatchLen == ClassNameLen) &&
+        (CompareMem (ClassName, mBootPriorityTemplate[BootPriorityIndex].OrderName, ClassNameLen) == 0))
+    {
+      NewBuffer = (NVIDIA_BOOT_ORDER_PRIORITY *)ReallocatePool (
+                                                  mBootPriorityCount * sizeof (NVIDIA_BOOT_ORDER_PRIORITY),
+                                                  (mBootPriorityCount + 1) * sizeof (NVIDIA_BOOT_ORDER_PRIORITY),
+                                                  (VOID *)mBootPriorityTable
+                                                  );
+
+      if (NewBuffer == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate new buffer\r\n", __FUNCTION__));
+        return EFI_OUT_OF_RESOURCES;
+      }
+
+      mBootPriorityTable = NewBuffer;
+      CopyMem (
+        &mBootPriorityTable[mBootPriorityCount],
+        &mBootPriorityTemplate[BootPriorityIndex],
+        sizeof (mBootPriorityTemplate[BootPriorityIndex])
+        );
+      *BootPriority = &mBootPriorityTable[mBootPriorityCount++];
+
+      Status = EFI_SUCCESS;
+      break;
+    }
+  }
+
+  return Status;
+}
+
 NVIDIA_BOOT_ORDER_PRIORITY *
 EFIAPI
 GetBootClassOfName (
@@ -225,19 +246,33 @@ GetBootClassOfName (
   UINTN  ClassNameLen
   )
 {
-  UINTN  BootPriorityIndex;
-  UINTN  BootPriorityMatchLen;
+  EFI_STATUS                  Status;
+  UINTN                       BootPriorityIndex;
+  UINTN                       BootPriorityMatchLen;
+  NVIDIA_BOOT_ORDER_PRIORITY  *ClassBootPriority;
 
-  for (BootPriorityIndex = 0; BootPriorityIndex < ARRAY_SIZE (mBootPriority); BootPriorityIndex++) {
-    BootPriorityMatchLen = AsciiStrLen (mBootPriority[BootPriorityIndex].OrderName);
+  for (BootPriorityIndex = 0; BootPriorityIndex < mBootPriorityCount; BootPriorityIndex++) {
+    BootPriorityMatchLen = AsciiStrLen (mBootPriorityTable[BootPriorityIndex].OrderName);
     if ((BootPriorityMatchLen == ClassNameLen) &&
-        (CompareMem (ClassName, mBootPriority[BootPriorityIndex].OrderName, ClassNameLen) == 0))
+        (CompareMem (ClassName, mBootPriorityTable[BootPriorityIndex].OrderName, ClassNameLen) == 0))
     {
-      return &mBootPriority[BootPriorityIndex];
+      return &mBootPriorityTable[BootPriorityIndex];
     }
   }
 
-  DEBUG ((DEBUG_ERROR, "Unable to determine class of boot device type \"%a\"\r\n", ClassName));
+  ClassBootPriority = NULL;
+  Status            = AppendBootOrderPriority (ClassName, ClassNameLen, &ClassBootPriority);
+  if (Status == EFI_NOT_FOUND) {
+    //
+    // The boot device type is not in mBootPriorityTemplate.
+    //
+    DEBUG ((DEBUG_ERROR, "Unable to determine class of boot device type \"%a\"\r\n", ClassName));
+  } else if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Fail to append boot class %a, Status= %r\r\n", ClassName, Status));
+  } else {
+    return ClassBootPriority;
+  }
+
   return NULL;
 }
 
@@ -333,14 +368,21 @@ ParseDefaultBootPriority (
 
     CurrentBootPriorityLen = CurrentBootPriorityEnd - CurrentBootPriorityStr;
 
-    ClassBootPriority = GetBootClassOfName (CurrentBootPriorityStr, CurrentBootPriorityLen);
-    if (ClassBootPriority != NULL) {
-      DEBUG ((DEBUG_INFO, "Setting %a priority to %d\r\n", ClassBootPriority->OrderName, Priority));
-      ClassBootPriority->PriorityOrder = Priority;
-      Priority++;
+    //
+    // Build default Boot Priority table by DefaultBootOrder.
+    //
+    Status = AppendBootOrderPriority (CurrentBootPriorityStr, CurrentBootPriorityLen, &ClassBootPriority);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Fail to append boot class %a, Status= %r\r\n", CurrentBootPriorityStr, Status));
     } else {
-      *CurrentBootPriorityEnd = '\0';
-      DEBUG ((DEBUG_ERROR, "Ignoring unknown boot class %a\r\n", CurrentBootPriorityStr));
+      if (ClassBootPriority != NULL) {
+        DEBUG ((DEBUG_INFO, "Setting %a priority to %d\r\n", ClassBootPriority->OrderName, Priority));
+        ClassBootPriority->PriorityOrder = Priority;
+        Priority++;
+      } else {
+        *CurrentBootPriorityEnd = '\0';
+        DEBUG ((DEBUG_ERROR, "Ignoring unknown boot class %a\r\n", CurrentBootPriorityStr));
+      }
     }
 
     CurrentBootPriorityStr += CurrentBootPriorityLen + 1;
