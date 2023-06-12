@@ -62,7 +62,7 @@ GetSystemGuid (
   if (ResponseDataSize != sizeof (ResponseData)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Unexpected response size, Got: %u, Expected: %d\n",
+      "%a: Unexpected response size, Got: %u, Expected: %u\n",
       __FUNCTION__,
       ResponseDataSize,
       sizeof (ResponseData)

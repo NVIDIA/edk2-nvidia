@@ -213,7 +213,7 @@ OemDescStatusCodeCallback (
   if (ResponseDataSize != sizeof (ResponseData)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Failed unexpected response size, Got: %u, Expected: %d\r\n",
+      "%a: Failed unexpected response size, Got: %u, Expected: %u\r\n",
       __FUNCTION__,
       ResponseDataSize,
       sizeof (ResponseData)

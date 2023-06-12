@@ -264,7 +264,7 @@ GetBootstrapAccountCredentialsFromVariable (
   }
 
   if (DataSize != sizeof (BOOTSTRAP_CREDENTIALS_VARIABLE)) {
-    DEBUG ((DEBUG_ERROR, "%a: data corruption. returned size: %u != structure size: %d\n", __FUNCTION__, DataSize, sizeof (BOOTSTRAP_CREDENTIALS_VARIABLE)));
+    DEBUG ((DEBUG_ERROR, "%a: data corruption. returned size: %u != structure size: %u\n", __FUNCTION__, DataSize, sizeof (BOOTSTRAP_CREDENTIALS_VARIABLE)));
     return EFI_NOT_FOUND;
   }
 

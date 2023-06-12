@@ -178,8 +178,6 @@ CheckGfwInitComplete (
                         );
   DEBUG ((DEBUG_ERROR, "%a: [%p] PciIo read of '%a' returned '%r'\n", __FUNCTION__, PciIo, "NV_THERM_I2CS_SCRATCH", Status));
 
-  // Suppress automated test error bug with expansion of FLD_TEST_DRF macro (ternary needs ':')
-  // cppcheck-suppress internalAstError
   if (FLD_TEST_DRF (_THERM, _I2CS_SCRATCH_FSP_BOOT_COMPLETE, _STATUS, _SUCCESS, RegVal)) {
     *bInitComplete = TRUE;
   } else {
