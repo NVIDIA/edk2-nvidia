@@ -188,6 +188,8 @@ Tpm2RegistrationEvent (
   }
 
   if (NumHandles > 0) {
+    gBS->CloseEvent (Event);
+
     Status = gBS->HandleProtocol (
                     Handles[0],
                     &gNVIDIATpm2ProtocolGuid,
@@ -199,6 +201,7 @@ Tpm2RegistrationEvent (
       //
       DEBUG ((DEBUG_ERROR, "%a: Fail to handle TPM protocol.\n", __FUNCTION__));
       mTpm2 = NULL;
+      goto Exit;
     }
 
     if ((mTpm2 != NULL) && (mTpm2 != Tpm2)) {
@@ -222,6 +225,7 @@ Tpm2RegistrationEvent (
     mTpm2 = NULL;
   }
 
+Exit:
   FreePool (Handles);
 }
 
