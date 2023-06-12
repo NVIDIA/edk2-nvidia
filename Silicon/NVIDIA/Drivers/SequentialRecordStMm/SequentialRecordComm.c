@@ -900,7 +900,7 @@ RegisterCmetHandler (
                     NULL,
                     (VOID **)&CmetSeqProto
                     );
-  if (CmetSeqProto == NULL) {
+  if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: Failed to Get Sequential Proto for Cmet\n",
@@ -1014,7 +1014,7 @@ SequentialRecordCommInitialize (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: failed to Register CMET log handler%r\n",
+      "%a: failed to Register CMET log handler %r\n",
       __FUNCTION__,
       Status
       ));
@@ -1024,7 +1024,7 @@ SequentialRecordCommInitialize (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: failed to Register CMET log handler%r\n",
+      "%a: failed to Register SatMc log handler %r\n",
       __FUNCTION__,
       Status
       ));
