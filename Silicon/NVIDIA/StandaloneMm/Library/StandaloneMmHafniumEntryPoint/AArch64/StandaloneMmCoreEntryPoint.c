@@ -1229,11 +1229,14 @@ _ModuleEntryPointC (
 
   /* Locate PE/COFF File information for the Standalone MM core module */
   PayloadBootInfo.SpImageBase = GetSpImageBase (DTBAddress);
-  Status                      = LocateStandaloneMmCorePeCoffData (
-                                  (EFI_FIRMWARE_VOLUME_HEADER *)PayloadBootInfo.SpImageBase,
-                                  &TeData,
-                                  &TeDataSize
-                                  );
+  PayloadBootInfo.SpImageSize = ((EFI_FIRMWARE_VOLUME_HEADER *)PayloadBootInfo.SpImageBase)->FvLength;
+  PayloadBootInfo.SpImageSize = PAGE_ALIGN (PayloadBootInfo.SpImageSize + DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE);
+
+  Status = LocateStandaloneMmCorePeCoffData (
+             (EFI_FIRMWARE_VOLUME_HEADER *)PayloadBootInfo.SpImageBase,
+             &TeData,
+             &TeDataSize
+             );
   if (EFI_ERROR (Status)) {
     goto finish;
   }
@@ -1250,8 +1253,6 @@ _ModuleEntryPointC (
   if (EFI_ERROR (Status)) {
     goto finish;
   }
-
-  PayloadBootInfo.SpImageSize = ImageContext.ImageSize;
 
   /*
    * ImageBase may deviate from ImageContext.ImageAddress if we are dealing
