@@ -2,7 +2,7 @@
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
   Copyright (c) 2016, Linaro, Ltd. All rights reserved.<BR>
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,6 +13,7 @@
 #include <Library/DxeServicesTableLib.h>
 
 #include <IndustryStandard/Acpi.h>
+#include <IndustryStandard/Pci22.h>
 
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PlatformToDriverConfiguration.h>
@@ -1777,26 +1778,32 @@ T234DisplayInitializePciIoProtocol (
   EFI_HANDLE                   ControllerHandle
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                Status;
+  VOID                      *RomImage;
+  UINT64                    RomSize;
+  PCI_EXPANSION_ROM_HEADER  *RomHdr;
+  PCI_DATA_STRUCTURE        *Pcir;
 
-  Dev->ConfigSpace.Hdr.VendorId     = PCI_ID_VENDOR_NVIDIA;
-  Dev->ConfigSpace.Hdr.DeviceId     = PCI_ID_DEVICE_T234_DISP;
-  Dev->ConfigSpace.Hdr.ClassCode[0] = PCI_IF_VGA_VGA;
-  Dev->ConfigSpace.Hdr.ClassCode[1] = PCI_CLASS_DISPLAY_VGA;
-  Dev->ConfigSpace.Hdr.ClassCode[2] = PCI_CLASS_DISPLAY;
+  Status = T234DisplayGetDcbImage (ControllerHandle, &RomImage, &RomSize);
+  NV_ASSERT_RETURN (
+    !EFI_ERROR (Status),
+    return ,
+    "%a: failed to retrieve DCB image: %r\r\n",
+    __FUNCTION__,
+    Status
+    );
+
+  RomHdr = (PCI_EXPANSION_ROM_HEADER *)RomImage;
+  Pcir   = (PCI_DATA_STRUCTURE *)((UINT8 *)RomHdr + RomHdr->PcirOffset);
+
+  Dev->PciIo.RomImage               = RomImage;
+  Dev->PciIo.RomSize                = RomSize;
+  Dev->ConfigSpace.Hdr.VendorId     = Pcir->VendorId;
+  Dev->ConfigSpace.Hdr.DeviceId     = Pcir->DeviceId;
+  Dev->ConfigSpace.Hdr.ClassCode[0] = Pcir->ClassCode[0];
+  Dev->ConfigSpace.Hdr.ClassCode[1] = Pcir->ClassCode[1];
+  Dev->ConfigSpace.Hdr.ClassCode[2] = Pcir->ClassCode[2];
   Dev->BarOffset                    = 0;
-
-  Status = T234DisplayGetDcbImage (ControllerHandle, &Dev->PciIo.RomImage, &Dev->PciIo.RomSize);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to retrieve DCB image: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    Dev->PciIo.RomImage = NULL;
-    Dev->PciIo.RomSize  = 0;
-  }
 }
 
 STATIC CONST EFI_PCI_IO_PROTOCOL  PciIoTemplate =

@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (C) 2016, Linaro Ltd. All rights reserved.<BR>
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,8 +13,8 @@
 #include <PiDxe.h>
 
 #include <Library/BaseMemoryLib.h>
-#include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 
@@ -34,10 +34,8 @@
 #define DEV_SUPPORTED_ATTRIBUTES \
     (EFI_PCI_DEVICE_ENABLE | EFI_PCI_IO_ATTRIBUTE_DUAL_ADDRESS_CYCLE)
 
-#define PCI_ID_VENDOR_UNKNOWN    0xffff
-#define PCI_ID_VENDOR_NVIDIA     0x10de
-#define PCI_ID_DEVICE_DONTCARE   0x0000
-#define PCI_ID_DEVICE_T234_DISP  0x2294
+#define PCI_ID_VENDOR_UNKNOWN   0xffff
+#define PCI_ID_DEVICE_DONTCARE  0x0000
 
 extern EFI_CPU_ARCH_PROTOCOL  *mCpu;
 
