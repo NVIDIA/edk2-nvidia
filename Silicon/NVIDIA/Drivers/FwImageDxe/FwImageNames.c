@@ -1,7 +1,7 @@
 /** @file
   FW Image Protocol Image Names support
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -50,6 +50,7 @@ STATIC CONST CHAR16  *SystemFwImageNamesT234[] = {
   L"pscrf",
   L"smm-fw",
   L"tsec-fw",
+  L"fsi-fw",
   NULL
 };
 

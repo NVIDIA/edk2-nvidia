@@ -97,6 +97,12 @@ STATIC CONST CHAR16  *OptionalImageNames[] = {
   NULL
 };
 
+// optional partitions are only updated if present
+STATIC CONST CHAR16  *OptionalPartitionNames[] = {
+  L"fsi-fw",
+  NULL
+};
+
 // progress tracking variables
 STATIC UINTN  mTotalBytesToFlash  = 0;
 STATIC UINTN  mTotalBytesFlashed  = 0;
@@ -1439,6 +1445,11 @@ FmpTegraCheckImage (
 
     FwImageProtocol = FwImageFindProtocol (ImageName);
     if (FwImageProtocol == NULL) {
+      if (NameIsInList (ImageName, OptionalPartitionNames)) {
+        DEBUG ((DEBUG_INFO, "%a: Image %u, optional %s partitions missing\n", __FUNCTION__, Index, ImageName));
+        continue;
+      }
+
       DEBUG ((
         DEBUG_ERROR,
         "%a: Image %u, no protocol for %s\n",
