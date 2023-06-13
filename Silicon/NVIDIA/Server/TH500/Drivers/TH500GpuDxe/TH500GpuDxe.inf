@@ -17,7 +17,7 @@
 
   ENTRY_POINT                   = NVIDIAGpuDriverEntryPoint
   UNLOAD_IMAGE                  = NVIDIAGpuDriverUnloadImage
-  DEFINE TH500GPUDXE_SDK_PREFIX = Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/sdk/
+  DEFINE TH500GPUDXE_SDK_PREFIX = Sdk/TH500Gpu/
 
 [Sources]
   core/GPUMemoryInfo.c
@@ -90,5 +90,5 @@
   MdeModulePkg/MdeModulePkg.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
-  $(TH500GPUDXE_SDK_PREFIX)TH500GpuDxe-sdk.dec
+  $(TH500GPUDXE_SDK_PREFIX)TH500GpuSdk.dec
 
