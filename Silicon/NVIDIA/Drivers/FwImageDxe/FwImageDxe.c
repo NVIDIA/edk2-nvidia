@@ -1,7 +1,7 @@
 /** @file
   FW Image Protocol Dxe
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -684,7 +684,7 @@ FwImageDxeInitialize (
 
   // initialize a private image tracking structure for every FW image
   Private = mPrivate;
-  for (Index = 0; Index < ImageCount; Index++, Private++) {
+  for (Index = 0; Index < ImageCount; Index++) {
     CONST CHAR16  *Name;
 
     Name = ImageList[Index];
@@ -703,9 +703,8 @@ FwImageDxeInitialize (
                               BOOT_CHAIN_A
                               );
     if (Private->FwPartitionA == NULL) {
-      DEBUG ((DEBUG_ERROR, "%a: missing A partition for %s\n", __FUNCTION__, Name));
-      Status = EFI_UNSUPPORTED;
-      goto Done;
+      DEBUG ((DEBUG_INFO, "%a: missing A partition for %s\n", __FUNCTION__, Name));
+      continue;
     }
 
     if (PcdGetBool (PcdFwImageEnableBPartitions)) {
@@ -751,6 +750,7 @@ FwImageDxeInitialize (
     }
 
     mNumFwImages++;
+    Private++;
   }
 
   Status = gBS->CreateEventEx (
