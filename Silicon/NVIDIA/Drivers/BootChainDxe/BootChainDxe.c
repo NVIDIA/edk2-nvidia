@@ -256,6 +256,7 @@ BootChainReadyToBootNotify (
   )
 {
   ValidateActiveBootChain ();
+  gBS->CloseEvent (Event);
 }
 
 // NVIDIA_BOOT_CHAIN_PROTOCOL.ExecuteUpdate()
@@ -582,7 +583,7 @@ BootChainDxeInitialize (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Error creating exit boot services event: %r\n",
+      "%a: Error creating Ready to Boot event: %r\n",
       __FUNCTION__,
       Status
       ));

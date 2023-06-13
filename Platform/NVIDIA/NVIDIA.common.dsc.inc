@@ -811,6 +811,7 @@
       NULL|MdeModulePkg/Library/BootManagerUiLib/BootManagerUiLib.inf
       NULL|MdeModulePkg/Library/BootMaintenanceManagerUiLib/BootMaintenanceManagerUiLib.inf
       NULL|Silicon/NVIDIA/Library/PlatformBootManagerBootDescriptionLib/PlatformBootManagerBootDescriptionLib.inf
+      NULL|Silicon/NVIDIA/Library/UiMenuStartupLib/UiMenuStartupLib.inf
   }
   MdeModulePkg/Universal/DriverHealthManagerDxe/DriverHealthManagerDxe.inf
 
