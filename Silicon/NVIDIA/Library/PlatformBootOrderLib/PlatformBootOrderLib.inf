@@ -35,6 +35,9 @@
   FwVariableLib
   PlatformResourceLib
 
+[Protocols]
+  gEfiPciIoProtocolGuid          ## CONSUMES
+
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdIpmiNetworkBootMode
 

@@ -23,30 +23,194 @@
 #include <Library/PlatformResourceLib.h>
 #include <IndustryStandard/Ipmi.h>
 #include <Guid/GlobalVariable.h>
+#include <Protocol/PciIo.h>
 #include "InternalPlatformBootOrderLib.h"
 
 STATIC CONST NVIDIA_BOOT_ORDER_PRIORITY  mBootPriorityTemplate[] = {
-  { "scsi",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_SCSI_DP,           MAX_UINT8                },
-  { "usb",      MAX_INT32, MESSAGING_DEVICE_PATH, MSG_USB_DP,            MAX_UINT8                },
-  { "sata",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_SATA_DP,           MAX_UINT8                },
-  { "pxev4",    MAX_INT32, MESSAGING_DEVICE_PATH, MSG_IPv4_DP,           MAX_UINT8                },
-  { "httpv4",   MAX_INT32, MESSAGING_DEVICE_PATH, MSG_IPv4_DP,           NVIDIA_BOOT_TYPE_HTTP    },
-  { "pxev6",    MAX_INT32, MESSAGING_DEVICE_PATH, MSG_IPv6_DP,           MAX_UINT8                },
-  { "httpv6",   MAX_INT32, MESSAGING_DEVICE_PATH, MSG_IPv6_DP,           NVIDIA_BOOT_TYPE_HTTP    },
-  { "nvme",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_NVME_NAMESPACE_DP, MAX_UINT8                },
-  { "ufs",      MAX_INT32, MESSAGING_DEVICE_PATH, MSG_UFS_DP,            MAX_UINT8                },
-  { "sd",       MAX_INT32, MESSAGING_DEVICE_PATH, MSG_SD_DP,             MAX_UINT8                },
-  { "emmc",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_EMMC_DP,           MAX_UINT8                },
-  { "cdrom",    MAX_INT32, MEDIA_DEVICE_PATH,     MEDIA_CDROM_DP,        MAX_UINT8                },
-  { "boot.img", MAX_INT32, MAX_UINT8,             MAX_UINT8,             NVIDIA_BOOT_TYPE_BOOTIMG },
-  { "virtual",  MAX_INT32, MESSAGING_DEVICE_PATH, MSG_USB_DP,            NVIDIA_BOOT_TYPE_VIRTUAL },
-  { "shell",    MAX_INT32, MAX_UINT8,             MAX_UINT8,             MAX_UINT8                }
+  { "scsi",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_SCSI_DP,           MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "usb",      MAX_INT32, MESSAGING_DEVICE_PATH, MSG_USB_DP,            MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "sata",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_SATA_DP,           MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "pxev4",    MAX_INT32, MESSAGING_DEVICE_PATH, MSG_IPv4_DP,           MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "httpv4",   MAX_INT32, MESSAGING_DEVICE_PATH, MSG_IPv4_DP,           NVIDIA_BOOT_TYPE_HTTP,    MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "pxev6",    MAX_INT32, MESSAGING_DEVICE_PATH, MSG_IPv6_DP,           MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "httpv6",   MAX_INT32, MESSAGING_DEVICE_PATH, MSG_IPv6_DP,           NVIDIA_BOOT_TYPE_HTTP,    MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "nvme",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_NVME_NAMESPACE_DP, MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "ufs",      MAX_INT32, MESSAGING_DEVICE_PATH, MSG_UFS_DP,            MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "sd",       MAX_INT32, MESSAGING_DEVICE_PATH, MSG_SD_DP,             MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "emmc",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_EMMC_DP,           MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "cdrom",    MAX_INT32, MEDIA_DEVICE_PATH,     MEDIA_CDROM_DP,        MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "boot.img", MAX_INT32, MAX_UINT8,             MAX_UINT8,             NVIDIA_BOOT_TYPE_BOOTIMG, MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "virtual",  MAX_INT32, MESSAGING_DEVICE_PATH, MSG_USB_DP,            NVIDIA_BOOT_TYPE_VIRTUAL, MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "shell",    MAX_INT32, MAX_UINT8,             MAX_UINT8,             MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN }
 };
 
 STATIC  NVIDIA_BOOT_ORDER_PRIORITY      *mBootPriorityTable   = NULL;
 STATIC  UINTN                           mBootPriorityCount    = 0;
 STATIC  IPMI_GET_BOOT_OPTIONS_RESPONSE  *mBootOptionsResponse = NULL;
 STATIC  IPMI_SET_BOOT_OPTIONS_REQUEST   *mBootOptionsRequest  = NULL;
+
+STATIC
+EFI_PCI_IO_PROTOCOL *
+GetBootOptPciIoProtocol (
+  IN EFI_BOOT_MANAGER_LOAD_OPTION  *Option
+  )
+{
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
+  EFI_DEVICE_PATH_PROTOCOL  *LatestPciDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL  *TempDevicePath;
+  UINTN                     HandleCount;
+  EFI_HANDLE                *HandleBuffer;
+  EFI_STRING                DevicePathText;
+  EFI_STRING                TempDevicePathText;
+  EFI_STRING                PciIoDevicePathText;
+  UINTN                     Index;
+  UINTN                     TailingCharCount;
+  UINTN                     FullLength;
+  UINTN                     BootOptPciIoDevicePathTextLen;
+  EFI_PCI_IO_PROTOCOL       *PciIo;
+  EFI_STATUS                Status;
+
+  DevicePath                    = Option->FilePath;
+  LatestPciDevicePath           = NULL;
+  TempDevicePath                = NULL;
+  TailingCharCount              = 0;
+  PciIo                         = NULL;
+  TempDevicePathText            = NULL;
+  PciIoDevicePathText           = NULL;
+  HandleBuffer                  = NULL;
+  BootOptPciIoDevicePathTextLen = 0;
+
+  DevicePathText = ConvertDevicePathToText (DevicePath, TRUE, FALSE);
+  if (DevicePathText == NULL) {
+    goto Done;
+  }
+
+  FullLength = StrLen (DevicePathText);
+
+  for ( ; !IsDevicePathEnd (DevicePath); DevicePath = NextDevicePathNode (DevicePath)) {
+    if ((DevicePath->Type == HARDWARE_DEVICE_PATH) && (DevicePath->SubType == HW_PCI_DP)) {
+      LatestPciDevicePath = DevicePath;
+    }
+  }
+
+  if ((LatestPciDevicePath != NULL) && (LatestPciDevicePath != DevicePath)) {
+    TempDevicePathText = ConvertDevicePathToText (
+                           NextDevicePathNode (LatestPciDevicePath),
+                           TRUE,    // DisplayOnly
+                           FALSE    // AllowShortcuts
+                           );
+    if (TempDevicePathText != NULL) {
+      TailingCharCount = StrLen (TempDevicePathText) + 1;
+      FreePool (TempDevicePathText);
+    }
+  }
+
+  BootOptPciIoDevicePathTextLen = FullLength - TailingCharCount;
+
+  if (gBS->LocateHandleBuffer != NULL) {
+    Status = gBS->LocateHandleBuffer (
+                    ByProtocol,
+                    &gEfiPciIoProtocolGuid,
+                    NULL,
+                    &HandleCount,
+                    &HandleBuffer
+                    );
+    if (!EFI_ERROR (Status) && (HandleCount > 0)) {
+      for (Index = 0; Index < HandleCount; Index++) {
+        TempDevicePath = DevicePathFromHandle (HandleBuffer[Index]);
+        if (TempDevicePath == NULL) {
+          continue;
+        }
+
+        PciIoDevicePathText = ConvertDevicePathToText (
+                                TempDevicePath,
+                                TRUE, // DisplayOnly
+                                FALSE // AllowShortcuts
+                                );
+        if (PciIoDevicePathText != NULL) {
+          if (StrnCmp (PciIoDevicePathText, DevicePathText, BootOptPciIoDevicePathTextLen) == 0) {
+            gBS->HandleProtocol (
+                   HandleBuffer[Index],
+                   &gEfiPciIoProtocolGuid,
+                   (VOID **)&PciIo
+                   );
+            goto Done;
+          }
+
+          FreePool (PciIoDevicePathText);
+          PciIoDevicePathText = NULL;
+        }
+      }
+    }
+  }
+
+Done:
+
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+  }
+
+  if (DevicePathText != NULL) {
+    FreePool (DevicePathText);
+  }
+
+  if (PciIoDevicePathText != NULL) {
+    FreePool (PciIoDevicePathText);
+  }
+
+  return PciIo;
+}
+
+/**
+  Extract Boot Order Sbdf text string to get PCI location information.
+
+  @param   SbdfText      Pointer to Hex text string with colon sign as separator. Format is like <Seg>:<Bus>:<Dev>:<Func>
+  @param   SbdfTextLen   Input Hex text string length.
+  @param   Segment       The Boot Order's PCI segment number.
+  @param   Bus           The Boot Order's PCI bus number.
+  @param   Device        The Boot Order's PCI device number.
+  @param   Function      The Boot Order's PCI function number.
+
+  @return   VOID.
+**/
+VOID
+EFIAPI
+GetBootOrderSbdf (
+  IN  CHAR8  *BootOrderSbdfText,
+  IN  UINTN  BootOrderSbdfTextLen,
+  OUT UINTN  *Segment,
+  OUT UINTN  *Bus,
+  OUT UINTN  *Device,
+  OUT UINTN  *Function
+  )
+{
+  EFI_STATUS  Status;
+  CHAR8       *HexTextStart;
+  CHAR8       *HexTextEnd;
+  UINTN       Index;
+  UINTN       SbdfNum[4] = { MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN };
+
+  ASSERT (*BootOrderSbdfText == BOOT_ORDER_SBDF_STARTER);
+
+  HexTextStart = BootOrderSbdfText + 1;
+
+  for (Index = 0; Index < 4; Index++) {
+    Status = AsciiStrHexToUintnS (HexTextStart, &HexTextEnd, &SbdfNum[Index]);
+
+    ASSERT_EFI_ERROR (Status);
+
+    if (EFI_ERROR (Status) || (*HexTextEnd != BOOT_ORDER_SBDF_SEPARATOR)) {
+      break;
+    }
+
+    HexTextStart = HexTextEnd + 1;
+  }
+
+  *Segment  = SbdfNum[0];
+  *Bus      = SbdfNum[1];
+  *Device   = SbdfNum[2];
+  *Function = SbdfNum[3];
+}
 
 STATIC
 VOID
@@ -115,9 +279,19 @@ GetBootClassOfOption (
   UINTN                       BootPriorityIndex;
   EFI_DEVICE_PATH_PROTOCOL    *DevicePathNode;
   UINT8                       ExtraSpecifier;
+  EFI_PCI_IO_PROTOCOL         *PciIo;
+  UINTN                       Segment;
+  UINTN                       Bus;
+  UINTN                       Device;
+  UINTN                       Function;
   NVIDIA_BOOT_ORDER_PRIORITY  *Result;
 
-  Result = NULL;
+  Result   = NULL;
+  PciIo    = NULL;
+  Segment  = MAX_UINTN;
+  Bus      = MAX_UINTN;
+  Device   = MAX_UINTN;
+  Function = MAX_UINTN;
   if (StrCmp (Option->Description, L"UEFI Shell") == 0) {
     for (BootPriorityIndex = 0; BootPriorityIndex < mBootPriorityCount; BootPriorityIndex++) {
       if (AsciiStrCmp (mBootPriorityTable[BootPriorityIndex].OrderName, "shell") == 0) {
@@ -166,6 +340,11 @@ GetBootClassOfOption (
     DevicePathNode = NextDevicePathNode (DevicePathNode);
   }
 
+  PciIo = GetBootOptPciIoProtocol (Option);
+  if (PciIo != NULL) {
+    PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  }
+
   DevicePathNode = Option->FilePath;
   while (!IsDevicePathEndType (DevicePathNode)) {
     for (BootPriorityIndex = 0; BootPriorityIndex < mBootPriorityCount; BootPriorityIndex++) {
@@ -173,7 +352,16 @@ GetBootClassOfOption (
           (DevicePathSubType (DevicePathNode) == mBootPriorityTable[BootPriorityIndex].SubType) &&
           (ExtraSpecifier == mBootPriorityTable[BootPriorityIndex].ExtraSpecifier))
       {
-        Result = &mBootPriorityTable[BootPriorityIndex];
+        //
+        // Check Boot device PCI location. MAX_UINTN in mBootPriorityTable queue means "don't check".
+        //
+        if (((Segment == mBootPriorityTable[BootPriorityIndex].SegmentNum) || (MAX_UINTN == mBootPriorityTable[BootPriorityIndex].SegmentNum)) &&
+            ((Bus == mBootPriorityTable[BootPriorityIndex].BusNum) || (MAX_UINTN == mBootPriorityTable[BootPriorityIndex].BusNum)) &&
+            ((Device == mBootPriorityTable[BootPriorityIndex].DevNum) || (MAX_UINTN == mBootPriorityTable[BootPriorityIndex].DevNum)) &&
+            (((Function == mBootPriorityTable[BootPriorityIndex].FuncNum) || (MAX_UINTN == mBootPriorityTable[BootPriorityIndex].FuncNum))))
+        {
+          Result = &mBootPriorityTable[BootPriorityIndex];
+        }
       }
     }
 
@@ -337,8 +525,14 @@ ParseDefaultBootPriority (
   UINTN                       DefaultBootOrderSize;
   CHAR8                       *CurrentBootPriorityStr;
   CHAR8                       *CurrentBootPriorityEnd;
-  UINTN                       CurrentBootPriorityLen;
+  UINTN                       BootPriorityClassLen;
   NVIDIA_BOOT_ORDER_PRIORITY  *ClassBootPriority;
+  CHAR8                       *BootPriorityClass;
+  CHAR8                       *BootPriorityClassStart;
+  CHAR8                       *BootPriorityClassEnd;
+  CHAR8                       *BootPrioritySbdfStart;
+  CHAR8                       *BootPrioritySbdfEnd;
+  UINTN                       BootPrioritySbdfLen;
 
   Priority = 0;
   // Process the priority order
@@ -355,37 +549,82 @@ ParseDefaultBootPriority (
 
   CurrentBootPriorityStr = DefaultBootOrder;
   while (CurrentBootPriorityStr < (DefaultBootOrder + DefaultBootOrderSize)) {
+    BootPriorityClassStart = CurrentBootPriorityStr;
     CurrentBootPriorityEnd = CurrentBootPriorityStr;
     while (CurrentBootPriorityEnd < (DefaultBootOrder + DefaultBootOrderSize)) {
-      if ((*CurrentBootPriorityEnd == ',') ||
-          (*CurrentBootPriorityEnd == '\0'))
+      if ((*CurrentBootPriorityEnd == BOOT_ORDER_CLASS_SEPARATOR) ||
+          (*CurrentBootPriorityEnd == BOOT_ORDER_SBDF_STARTER) ||
+          (*CurrentBootPriorityEnd == BOOT_ORDER_TERMINATOR))
       {
+        BootPriorityClassEnd  = CurrentBootPriorityEnd;
+        BootPrioritySbdfStart = CurrentBootPriorityEnd;
+        while (CurrentBootPriorityEnd < (DefaultBootOrder + DefaultBootOrderSize) &&
+               !((*CurrentBootPriorityEnd == BOOT_ORDER_CLASS_SEPARATOR) ||
+                 (*CurrentBootPriorityEnd == BOOT_ORDER_TERMINATOR)))
+        {
+          CurrentBootPriorityEnd++;
+        }
+
+        BootPrioritySbdfEnd = CurrentBootPriorityEnd;
         break;
       }
 
       CurrentBootPriorityEnd++;
     }
 
-    CurrentBootPriorityLen = CurrentBootPriorityEnd - CurrentBootPriorityStr;
+    BootPriorityClassLen = BootPriorityClassEnd - BootPriorityClassStart;
+    BootPrioritySbdfLen  = BootPrioritySbdfEnd  - BootPrioritySbdfStart;
 
     //
     // Build default Boot Priority table by DefaultBootOrder.
     //
-    Status = AppendBootOrderPriority (CurrentBootPriorityStr, CurrentBootPriorityLen, &ClassBootPriority);
+    Status = AppendBootOrderPriority (CurrentBootPriorityStr, BootPriorityClassLen, &ClassBootPriority);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Fail to append boot class %a, Status= %r\r\n", CurrentBootPriorityStr, Status));
+      DEBUG_CODE_BEGIN ();
+      BootPriorityClass = (CHAR8 *)AllocateZeroPool (BootPriorityClassLen + 1);
+
+      if (BootPriorityClass != NULL) {
+        CopyMem (BootPriorityClass, BootPriorityClassStart, BootPriorityClassLen);
+        DEBUG ((DEBUG_ERROR, "Fail to append boot class %a, Status= %r\r\n", BootPriorityClass, Status));
+        FreePool (BootPriorityClass);
+        BootPriorityClass = NULL;
+      }
+
+      DEBUG_CODE_END ();
     } else {
       if (ClassBootPriority != NULL) {
         DEBUG ((DEBUG_INFO, "Setting %a priority to %d\r\n", ClassBootPriority->OrderName, Priority));
         ClassBootPriority->PriorityOrder = Priority;
+
+        if (BootPrioritySbdfLen != 0) {
+          GetBootOrderSbdf (
+            BootPrioritySbdfStart,
+            BootPrioritySbdfLen,
+            &ClassBootPriority->SegmentNum,
+            &ClassBootPriority->BusNum,
+            &ClassBootPriority->DevNum,
+            &ClassBootPriority->FuncNum
+            );
+        }
+
         Priority++;
       } else {
-        *CurrentBootPriorityEnd = '\0';
-        DEBUG ((DEBUG_ERROR, "Ignoring unknown boot class %a\r\n", CurrentBootPriorityStr));
+        *CurrentBootPriorityEnd = BOOT_ORDER_TERMINATOR;
+        DEBUG_CODE_BEGIN ();
+        BootPriorityClass = (CHAR8 *)AllocateZeroPool (BootPriorityClassLen + 1);
+
+        if (BootPriorityClass != NULL) {
+          CopyMem (BootPriorityClass, BootPriorityClassStart, BootPriorityClassLen);
+          DEBUG ((DEBUG_ERROR, "Ignoring unknown boot class %a\r\n", BootPriorityClass));
+          FreePool (BootPriorityClass);
+          BootPriorityClass = NULL;
+        }
+
+        DEBUG_CODE_END ();
       }
     }
 
-    CurrentBootPriorityStr += CurrentBootPriorityLen + 1;
+    CurrentBootPriorityStr += BootPriorityClassLen + BootPrioritySbdfLen + 1;
   }
 
   return;

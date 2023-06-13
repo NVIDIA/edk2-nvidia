@@ -36,8 +36,16 @@ typedef struct {
   UINT8    Type;
   UINT8    SubType;
   UINT8    ExtraSpecifier;
+  UINTN    SegmentNum;
+  UINTN    BusNum;
+  UINTN    DevNum;
+  UINTN    FuncNum;
 } NVIDIA_BOOT_ORDER_PRIORITY;
 
-#define DEFAULT_BOOT_ORDER_STRING  "boot.img,usb,sd,emmc,ufs"
+#define DEFAULT_BOOT_ORDER_STRING   "boot.img,usb,sd,emmc,ufs"
+#define BOOT_ORDER_CLASS_SEPARATOR  ','
+#define BOOT_ORDER_SBDF_SEPARATOR   ':'
+#define BOOT_ORDER_SBDF_STARTER     '|'
+#define BOOT_ORDER_TERMINATOR       '\0'
 
 #endif
