@@ -200,6 +200,49 @@ EnableOpteeNode (
   }
 }
 
+STATIC
+VOID
+EnableFtpmNode (
+  IN VOID  *Dtb
+  )
+{
+  VOID        *Ftpm;
+  EFI_STATUS  Status;
+  INT32       FtpmNodeOffset;
+  INT32       Ret;
+
+  Status = gBS->LocateProtocol (&gNVIDIAFtpmPresentProtocolGuid, NULL, (VOID **)&Ftpm);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "FtpmProtocol Not Found - %r\n", Status));
+    goto ExitEnableFtpmNode;
+  }
+
+  FtpmNodeOffset = fdt_path_offset (Dtb, "/firmware/ftpm");
+  if (FtpmNodeOffset < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Ftpm Node not found %d\n",
+      __FUNCTION__,
+      FtpmNodeOffset
+      ));
+    goto ExitEnableFtpmNode;
+  }
+
+  Ret = fdt_setprop (Dtb, FtpmNodeOffset, "status", "okay", sizeof ("okay"));
+  if (Ret != 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to add status Property %d\n",
+      __FUNCTION__,
+      Ret
+      ));
+    goto ExitEnableFtpmNode;
+  }
+
+ExitEnableFtpmNode:
+  return;
+}
+
 VOID
 EFIAPI
 RemoveQspiNodes (
@@ -532,6 +575,8 @@ UpdateFdt (
   } else if (IsTrustyPresent ()) {
     EnableTrustyNode (Dtb);
   }
+
+  EnableFtpmNode (Dtb);
 }
 
 VOID
