@@ -498,8 +498,11 @@ TH500GetDramPageBlacklistInfoAddress (
       continue;
     }
 
-    TH500DramPageBlacklistInfoAddress[Index].MemoryBaseAddress = CpuBootloaderParams->RetiredDramPageListAddr[Socket] & ~EFI_PAGE_MASK;
-    TH500DramPageBlacklistInfoAddress[Index].MemoryLength      = SIZE_64KB;
+    if (CpuBootloaderParams->RetiredDramPageListAddr[Socket] != 0) {
+      TH500DramPageBlacklistInfoAddress[Index].MemoryBaseAddress = CpuBootloaderParams->RetiredDramPageListAddr[Socket] & ~EFI_PAGE_MASK;
+      TH500DramPageBlacklistInfoAddress[Index].MemoryLength      = SIZE_64KB;
+      Index++;
+    }
   }
 
   return TH500DramPageBlacklistInfoAddress;
