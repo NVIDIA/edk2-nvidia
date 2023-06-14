@@ -290,7 +290,8 @@ GetFruAreaStr (
   Size  = 0;
   Index = *Offset;
 
-  if ((Index >= FruLen) || (Data[Index] == FRU_END_OF_FIELDS)) {
+  if (Index >= FruLen) {
+    DEBUG ((DEBUG_ERROR, "%a: Fru area index: %u crossed area length:%u\n", __FUNCTION__, Index, FruLen));
     return NULL;
   }
 
@@ -339,7 +340,7 @@ GetFruAreaStr (
       if (RawBytesToStr) {
         AsciiStrCpyS (Str, Size+1, RawBytesToStr);
       } else {
-        DEBUG ((DEBUG_INFO, "%a: Coversion of raw type0 buffer to string failed\n", __FUNCTION__));
+        DEBUG ((DEBUG_INFO, "%a: Conversion of raw type0 buffer to string failed\n", __FUNCTION__));
         FreePool (Str);
         return NULL;
       }
@@ -415,6 +416,10 @@ ParseFruChassisArea (
   // Read any extra customized fields
   // Extra fields may or maynot exist, hence end of fields check is needed.
   for (Count = 0; (Count < MAX_EXTRA_FRU_AREA_ENTRIES); Count++) {
+    if (FruChassisArea[Offset] == FRU_END_OF_FIELDS) {
+      break;
+    }
+
     PrevOffset                                           = Offset;
     mFruRecordInfo[CurrentDevIndex]->ChassisExtra[Count] = GetFruAreaStr (FruChassisArea, &Offset, FruLen);
     if (PrevOffset == Offset) {
@@ -422,9 +427,14 @@ ParseFruChassisArea (
     }
   }
 
+  DEBUG_CODE_BEGIN ();
   if (Count == MAX_EXTRA_FRU_AREA_ENTRIES) {
     // Check if there is more extra customized fields
     do {
+      if (FruChassisArea[Offset] == FRU_END_OF_FIELDS) {
+        break;
+      }
+
       PrevOffset = Offset;
       FruString  = GetFruAreaStr (FruChassisArea, &Offset, FruLen);
       if (FruString != NULL) {
@@ -432,6 +442,8 @@ ParseFruChassisArea (
       }
     } while (PrevOffset != Offset);
   }
+
+  DEBUG_CODE_END ();
 }
 
 /**
@@ -480,6 +492,10 @@ ParseFruBoardArea (
   // Read any extra customized fields
   // Extra fields may or maynot exist, hence end of fields check is needed.
   for (Count = 0; (Count < MAX_EXTRA_FRU_AREA_ENTRIES); Count++) {
+    if (FruBoardArea[Offset] == FRU_END_OF_FIELDS) {
+      break;
+    }
+
     PrevOffset                                         = Offset;
     mFruRecordInfo[CurrentDevIndex]->BoardExtra[Count] = GetFruAreaStr (FruBoardArea, &Offset, FruLen);
     if (PrevOffset == Offset) {
@@ -487,9 +503,14 @@ ParseFruBoardArea (
     }
   }
 
+  DEBUG_CODE_BEGIN ();
   if (Count == MAX_EXTRA_FRU_AREA_ENTRIES) {
     // Check if there is more extra customized fields
     do {
+      if (FruBoardArea[Offset] == FRU_END_OF_FIELDS) {
+        break;
+      }
+
       PrevOffset = Offset;
       FruString  = GetFruAreaStr (FruBoardArea, &Offset, FruLen);
       if (FruString != NULL) {
@@ -497,6 +518,8 @@ ParseFruBoardArea (
       }
     } while (PrevOffset != Offset);
   }
+
+  DEBUG_CODE_END ();
 }
 
 /**
@@ -540,6 +563,10 @@ ParseFruProductArea (
   // Read any extra customized fields
   // Extra fields may or maynot exist, hence end of fields check is needed.
   for (Count = 0; (Count < MAX_EXTRA_FRU_AREA_ENTRIES); Count++) {
+    if (FruProductArea[Offset] == FRU_END_OF_FIELDS) {
+      break;
+    }
+
     PrevOffset                                           = Offset;
     mFruRecordInfo[CurrentDevIndex]->ProductExtra[Count] = GetFruAreaStr (FruProductArea, &Offset, FruLen);
     if (Offset == PrevOffset) {
@@ -547,9 +574,14 @@ ParseFruProductArea (
     }
   }
 
+  DEBUG_CODE_BEGIN ();
   if (Count == MAX_EXTRA_FRU_AREA_ENTRIES) {
     // Check if there is more extra customized fields
     do {
+      if (FruProductArea[Offset] == FRU_END_OF_FIELDS) {
+        break;
+      }
+
       PrevOffset = Offset;
       FruString  = GetFruAreaStr (FruProductArea, &Offset, FruLen);
       if (FruString != NULL) {
@@ -557,6 +589,8 @@ ParseFruProductArea (
       }
     } while (PrevOffset != Offset);
   }
+
+  DEBUG_CODE_END ();
 }
 
 /**
