@@ -100,9 +100,9 @@ NotifyEntry (
 
   NotifyListNode = GetFirstNode (&Entry->NotifyList);
   while (NotifyListNode != &Entry->NotifyList) {
-    REGULATOR_NOTIFY_LIST_ENTRY  *NotifyEntry = REGULATOR_NOTIFY_LIST_FROM_LINK (NotifyListNode);
-    if (NotifyEntry != NULL) {
-      gBS->SignalEvent (NotifyEntry->Event);
+    REGULATOR_NOTIFY_LIST_ENTRY  *ListEntry = REGULATOR_NOTIFY_LIST_FROM_LINK (NotifyListNode);
+    if (ListEntry != NULL) {
+      gBS->SignalEvent (ListEntry->Event);
     }
 
     NotifyListNode = GetNextNode (&Entry->NotifyList, NotifyListNode);
@@ -578,7 +578,7 @@ RegulatorNotifyStateChange (
 {
   REGULATOR_DXE_PRIVATE        *Private;
   REGULATOR_LIST_ENTRY         *Entry;
-  REGULATOR_NOTIFY_LIST_ENTRY  *NotifyEntry;
+  REGULATOR_NOTIFY_LIST_ENTRY  *ListEntry;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -591,14 +591,14 @@ RegulatorNotifyStateChange (
     return EFI_NOT_FOUND;
   }
 
-  NotifyEntry = (REGULATOR_NOTIFY_LIST_ENTRY *)AllocatePool (sizeof (REGULATOR_NOTIFY_LIST_ENTRY));
-  if (NULL == NotifyEntry) {
+  ListEntry = (REGULATOR_NOTIFY_LIST_ENTRY *)AllocatePool (sizeof (REGULATOR_NOTIFY_LIST_ENTRY));
+  if (NULL == ListEntry) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  NotifyEntry->Signature = REGULATOR_NOFITY_LIST_SIGNATURE;
-  NotifyEntry->Event     = Event;
-  InsertTailList (&Entry->NotifyList, &NotifyEntry->Link);
+  ListEntry->Signature = REGULATOR_NOFITY_LIST_SIGNATURE;
+  ListEntry->Event     = Event;
+  InsertTailList (&Entry->NotifyList, &ListEntry->Link);
   return EFI_SUCCESS;
 }
 

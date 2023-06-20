@@ -794,20 +794,20 @@ SetupIortNodeForSmmuV3 (
     IortNode->SyncInterrupt  = InterruptId;
   } else if ((IrqPropCnt <= MAX_NUM_IRQS_OF_SMMU_V3) && (IrqPropSize >= MIN_NUM_IRQS_OF_SMMU_V3)) {
     UINT32       IrqPropIndex;
-    UINT32       StrSize;
+    UINT32       StrLength;
     CONST CHAR8  *IrqPropNames[MAX_NUM_IRQS_OF_SMMU_V3] = {
       "eventq", "priq", "gerror", "cmdq-sync"
     };
     UINT32       *Interrupts = &IortNode->EventInterrupt;
 
     while (PropSize > 0) {
-      StrSize = AsciiStrSize (Prop);
-      if ((StrSize == 0) || (StrSize > (UINT32)PropSize)) {
+      StrLength = AsciiStrSize (Prop);
+      if ((StrLength == 0) || (StrLength > (UINT32)PropSize)) {
         return EFI_NOT_FOUND;
       }
 
       for (IrqPropIndex = 0; IrqPropIndex < MAX_NUM_IRQS_OF_SMMU_V3; IrqPropIndex++) {
-        if (0 == AsciiStrnCmp (Prop, IrqPropNames[IrqPropIndex], StrSize)) {
+        if (0 == AsciiStrnCmp (Prop, IrqPropNames[IrqPropIndex], StrLength)) {
           break;
         }
       }
@@ -815,8 +815,8 @@ SetupIortNodeForSmmuV3 (
       InterruptId              = SwapBytes32 (*(IrqProp + IRQ_PROP_OFFSET_TO_INTID)) + SPI_OFFSET;
       Interrupts[IrqPropIndex] = InterruptId;
 
-      PropSize -= StrSize;
-      Prop     += StrSize;
+      PropSize -= StrLength;
+      Prop     += StrLength;
       IrqProp  += IRQ_PROP_CELL_SIZE;
     }
   } else {
