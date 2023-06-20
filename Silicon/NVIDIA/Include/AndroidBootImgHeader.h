@@ -91,6 +91,34 @@ typedef struct {
   UINT32    HeaderSize;
 } ANDROID_BOOTIMG_TYPE1_HEADER;
 
+/**
+  Type2 Android boot.img header.
+
+  https://source.android.com/docs/core/architecture/bootloader/boot-image-header
+*/
+typedef struct {
+  UINT8     BootMagic[ANDROID_BOOT_MAGIC_LENGTH];
+  UINT32    KernelSize;
+  UINT32    KernelAddress;
+  UINT32    RamdiskSize;
+  UINT32    RamdiskAddress;
+  UINT32    SecondStageBootloaderSize;
+  UINT32    SecondStageBootloaderAddress;
+  UINT32    KernelTagsAddress;
+  UINT32    PageSize;
+  UINT32    HeaderVersion;
+  UINT32    OsVersion;
+  CHAR8     ProductName[ANDROID_BOOTIMG_NAME_SIZE];
+  CHAR8     KernelArgs[ANDROID_BOOTIMG_KERNEL_ARGS_SIZE];
+  UINT32    Id[8];
+  CHAR8     KernelExtraArgs[ANDROID_BOOTIMG_KERNEL_EXTRA_ARGS_SIZE];
+  UINT32    RecoveryOverlaySize;
+  UINT64    RecoveryOverlayOffset;
+  UINT32    HeaderSize;
+  UINT32    DtbSize;
+  UINT32    DtbAddr;
+} ANDROID_BOOTIMG_TYPE2_HEADER;
+
 #pragma pack ()
 
 /* Check Val (unsigned) is a power of 2 (has only one bit set) */

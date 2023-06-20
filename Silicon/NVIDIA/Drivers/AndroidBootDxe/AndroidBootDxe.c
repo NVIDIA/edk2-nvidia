@@ -265,6 +265,7 @@ AndroidBootGetVerify (
   ANDROID_BOOTIMG_VERSION_HEADER  *VersionHeader;
   ANDROID_BOOTIMG_TYPE0_HEADER    *Type0Header;
   ANDROID_BOOTIMG_TYPE1_HEADER    *Type1Header;
+  ANDROID_BOOTIMG_TYPE2_HEADER    *Type2Header;
   UINT32                          Offset;
   UINT32                          SignatureHeaderSize;
   UINT64                          RcmKernelSize;
@@ -279,10 +280,13 @@ AndroidBootGetVerify (
   Header = AllocatePool (
              MAX (
                MAX (
-                 sizeof (ANDROID_BOOTIMG_TYPE0_HEADER),
-                 sizeof (ANDROID_BOOTIMG_VERSION_HEADER)
+                 MAX (
+                   sizeof (ANDROID_BOOTIMG_TYPE0_HEADER),
+                   sizeof (ANDROID_BOOTIMG_VERSION_HEADER)
+                   ),
+                 sizeof (ANDROID_BOOTIMG_TYPE1_HEADER)
                  ),
-               sizeof (ANDROID_BOOTIMG_TYPE1_HEADER)
+               sizeof (ANDROID_BOOTIMG_TYPE2_HEADER)
                )
              );
   if (Header == NULL) {
@@ -374,7 +378,7 @@ AndroidBootGetVerify (
       break;
 
     case 1:
-      // Read the full Type0 header.
+      // Read the full Type1 header.
       Status = AndroidBootRead (
                  BlockIo,
                  DiskIo,
@@ -391,6 +395,27 @@ AndroidBootGetVerify (
       KernelSize       = Type1Header->KernelSize;
       RamdiskSize      = Type1Header->RamdiskSize;
       HeaderKernelArgs = Type1Header->KernelArgs;
+
+      break;
+
+    case 2:
+      // Read the full Type2 header.
+      Status = AndroidBootRead (
+                 BlockIo,
+                 DiskIo,
+                 Offset,
+                 Header,
+                 sizeof (ANDROID_BOOTIMG_TYPE2_HEADER)
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+
+      Type2Header      = (ANDROID_BOOTIMG_TYPE2_HEADER *)Header;
+      PageSize         = Type2Header->PageSize;
+      KernelSize       = Type2Header->KernelSize;
+      RamdiskSize      = Type2Header->RamdiskSize;
+      HeaderKernelArgs = Type2Header->KernelArgs;
 
       break;
 

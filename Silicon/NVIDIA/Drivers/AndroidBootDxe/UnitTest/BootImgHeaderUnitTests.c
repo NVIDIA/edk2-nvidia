@@ -114,6 +114,50 @@ CHAR16  ExpectedKernelArgs_Type1_Valid[] = { 'D', 'O', 'U', 'B', 'T', 0 };
 
 /**
   Boot.img header:
+  Valid type2
+ */
+ANDROID_BOOTIMG_TYPE2_HEADER  Hdr_Type2_Valid = {
+  .BootMagic      = { 'A', 'N', 'D', 'R', 'O', 'I', 'D', '!' },
+  .KernelSize     = 0x49000,
+  .KernelAddress  = 0x9000,
+  .RamdiskSize    = 0x69000,
+  .RamdiskAddress = 0x99000,
+  .PageSize       = 0x2000,
+  .HeaderVersion  = 2,
+  .ProductName    = { 'L', 'E', 'V', 'E', 'R', '!' },
+  .KernelArgs     = { 'D', 'O', 'G', 'B', 'I', 'T' }
+};
+
+/**
+  Expected ANDROID_BOOT_DATA:
+  Valid type2
+ */
+ANDROID_BOOT_DATA  ExpectedImgData_Type2_Valid = {
+  .Offset      = 0,
+  .KernelSize  = 0x49000,
+  .RamdiskSize = 0x69000,
+  .PageSize    = 0x2000
+};
+
+/**
+  Expected ANDROID_BOOT_DATA:
+  Valid type2 after signature
+ */
+ANDROID_BOOT_DATA  ExpectedImgData_Sig_Type2_Valid = {
+  .Offset      = 0x1000,
+  .KernelSize  = 0x49000,
+  .RamdiskSize = 0x69000,
+  .PageSize    = 0x2000
+};
+
+/**
+ Expected KernelArgs:
+ Valid type2
+ */
+CHAR16  ExpectedKernelArgs_Type2_Valid[] = { 'D', 'O', 'G', 'B', 'I', 'T', 0 };
+
+/**
+  Boot.img header:
   Signature, which is anything that's not a valid boot.img header.
  */
 ANDROID_BOOTIMG_VERSION_HEADER  Hdr_Sig = {
@@ -260,6 +304,17 @@ TEST_PLAN_ANDROID_BOOT_READ  ABR_Type1_DiskIo = {
   .WithDiskIo     = TRUE,
   .ReadReturn     = EFI_SUCCESS,
   .ReadBuffer     = &Hdr_Type1_Valid,
+  .ExpectedOffset = 0
+};
+
+/**
+  Test Plan for AndroidBootRead:
+  Read a Type2 header from DiskIo protocol.
+ */
+TEST_PLAN_ANDROID_BOOT_READ  ABR_Type2_DiskIo = {
+  .WithDiskIo     = TRUE,
+  .ReadReturn     = EFI_SUCCESS,
+  .ReadBuffer     = &Hdr_Type2_Valid,
   .ExpectedOffset = 0
 };
 
@@ -465,6 +520,40 @@ TEST_PLAN_ANDROID_BOOT_GET_VERIFY  TP_Type1_Fail = {
 };
 
 /**
+  Test Plan for AndroidBootGetVerify:
+  Read a Type2 header from Disk.
+ */
+TEST_PLAN_ANDROID_BOOT_GET_VERIFY  TP_Type2_Disk_Valid = {
+  .WithBlockIo      = TRUE,
+  .WithImgData      = TRUE,
+  .WithKernelArgs   = TRUE,
+  .AndroidBootReads = {
+    &ABR_Type2_DiskIo,
+    &ABR_Type2_DiskIo,
+    NULL
+  },
+  .Media              = &Media_Large,
+  .ExpectedImgData    = &ExpectedImgData_Type2_Valid,
+  .ExpectedKernelArgs = ExpectedKernelArgs_Type2_Valid,
+  .ExpectedReturn     = EFI_SUCCESS
+};
+
+/**
+  Test Plan for AndroidBootGetVerify:
+  Fail to read a Type2 header after reading version
+ */
+TEST_PLAN_ANDROID_BOOT_GET_VERIFY  TP_Type2_Fail = {
+  .WithBlockIo      = TRUE,
+  .AndroidBootReads = {
+    &ABR_Type2_DiskIo,
+    &ABR_Failure,
+    NULL
+  },
+  .Media          = &Media_Large,
+  .ExpectedReturn = EFI_ACCESS_DENIED
+};
+
+/**
   Test AndroidBootGetVerify function.
 
   Depends on an instance of TEST_PLAN_ANDROID_BOOT_GET_VERIFY
@@ -606,8 +695,10 @@ BootImgHeader_PopulateSuite (
 {
   ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Type0_Disk_Valid);
   ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Type1_Disk_Valid);
+  ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Type2_Disk_Valid);
   ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Type0_Fail);
   ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Type1_Fail);
+  ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Type2_Fail);
   ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Invalid_Version);
   ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Fail_Alloc);
   ADD_TEST_CASE (Test_AndroidBootGetVerify, TP_Type0_Disk_Valid_Small);
