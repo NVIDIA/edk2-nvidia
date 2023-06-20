@@ -267,6 +267,8 @@ GenerateAttributeDetails (
   EDKII_REDFISH_ATTRIBUTE  Attribute;
   EDKII_REDFISH_VALUE      DefaultValue;
   CHAR16                   ConfigureLang[REDFISH_BIOS_CONFIG_LANG_SIZE];
+  CHAR8                    *FullMenuPath;
+  UINTN                    MenuPathSize;
   UINTN                    Index;
   BOOLEAN                  NoDefaultValue;
 
@@ -276,6 +278,8 @@ GenerateAttributeDetails (
 
   AttributeArray = NULL;
   AttributeValue = NULL;
+  FullMenuPath   = NULL;
+  MenuPathSize   = 0;
   ZeroMem (&DefaultValue, sizeof (EDKII_REDFISH_VALUE));
   ZeroMem (&Attribute, sizeof (EDKII_REDFISH_ATTRIBUTE));
 
@@ -371,13 +375,19 @@ GenerateAttributeDetails (
   //
   // MenuPath
   //
-  AttributeValue = JsonValueInitAsciiString (Attribute.MenuPath);
-  if (AttributeValue == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto RELEASE;
-  }
+  MenuPathSize = AsciiStrLen (REDFISH_TOP_MENU_PATH) + AsciiStrLen (Attribute.MenuPath) + 1;
+  FullMenuPath = AllocateZeroPool (MenuPathSize);
+  if (FullMenuPath != NULL) {
+    AsciiSPrint (FullMenuPath, MenuPathSize, "%a%a", REDFISH_TOP_MENU_PATH, Attribute.MenuPath);
 
-  JsonObjectSetValue (*AttributeObj, "MenuPath", AttributeValue);
+    AttributeValue = JsonValueInitAsciiString (FullMenuPath);
+    if (AttributeValue == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto RELEASE;
+    }
+
+    JsonObjectSetValue (*AttributeObj, "MenuPath", AttributeValue);
+  }
 
   //
   // ReadOnly
@@ -510,6 +520,10 @@ RELEASE:
 
   if (Attribute.MenuPath != NULL) {
     FreePool (Attribute.MenuPath);
+  }
+
+  if (FullMenuPath != NULL) {
+    FreePool (FullMenuPath);
   }
 
   return Status;

@@ -35,6 +35,7 @@
 #define REDFISH_BIOS_ATTRIBUTES_NAME     "Attributes"
 #define REDFISH_BIOS_CONFIG_LANG_PREFIX  L"/Bios/Attributes/"
 #define REDFISH_BIOS_CONFIG_LANG_SIZE    64
+#define REDFISH_TOP_MENU_PATH            "./Device Manager"
 #define REDFISH_BIOS_DEBUG_DUMP          DEBUG_INFO
 
 #endif
