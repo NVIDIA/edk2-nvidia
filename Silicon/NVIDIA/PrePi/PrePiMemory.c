@@ -40,9 +40,7 @@ MigrateHobList (
 {
   EFI_HOB_HANDOFF_INFO_TABLE  *OldHob;
   EFI_PHYSICAL_ADDRESS        OldHobAddress;
-  EFI_PHYSICAL_ADDRESS        RegionEndAddress;
   EFI_HOB_HANDOFF_INFO_TABLE  *NewHob;
-  EFI_HOB_MEMORY_ALLOCATION   *Allocation;
 
   OldHob        = (EFI_HOB_HANDOFF_INFO_TABLE *)PrePeiGetHobList ();
   OldHobAddress = (EFI_PHYSICAL_ADDRESS)OldHob;
@@ -51,41 +49,8 @@ MigrateHobList (
   ASSERT (OldHob->EfiFreeMemoryTop >= OldHob->EfiFreeMemoryBottom);
   ASSERT (OldHob->EfiEndOfHobList > OldHobAddress);
 
-  if ((OldHobAddress >= RegionStart) &&
-      (OldHobAddress < (RegionStart + RegionSize)))
-  {
-    // Hob list is already in the correct region, check if memory at end of region is larger
-    if ((RegionStart + RegionSize - OldHob->EfiMemoryTop) > (OldHob->EfiFreeMemoryTop - OldHobAddress)) {
-      RegionSize  = RegionStart + RegionSize - OldHob->EfiMemoryTop;
-      RegionStart = OldHob->EfiMemoryTop;
-    } else {
-      // Free area is smaller then current, do not move
-      return EFI_SUCCESS;
-    }
-  }
-
-  RegionEndAddress = RegionStart + RegionSize;
-  // Filter out any prior allocations
-  Allocation = (EFI_HOB_MEMORY_ALLOCATION *)(VOID *)OldHob;
-  while ((Allocation = (EFI_HOB_MEMORY_ALLOCATION *)GetNextHob (EFI_HOB_TYPE_MEMORY_ALLOCATION, GET_NEXT_HOB (Allocation))) != NULL) {
-    if ((Allocation->AllocDescriptor.MemoryBaseAddress >= RegionStart) &&
-        (Allocation->AllocDescriptor.MemoryBaseAddress < (RegionStart + RegionSize)))
-    {
-      EFI_PHYSICAL_ADDRESS  EndAddress = Allocation->AllocDescriptor.MemoryBaseAddress + Allocation->AllocDescriptor.MemoryLength;
-      if ((Allocation->AllocDescriptor.MemoryBaseAddress - RegionStart) > (RegionEndAddress - EndAddress)) {
-        RegionSize       = Allocation->AllocDescriptor.MemoryBaseAddress - RegionStart;
-        RegionEndAddress = RegionStart + RegionSize;
-      } else {
-        RegionStart = EndAddress;
-        RegionSize  = RegionEndAddress - EndAddress;
-      }
-    }
-  }
-
-  ASSERT (RegionSize != 0);
-
-  if ((RegionStart + RegionSize - OldHob->EfiMemoryTop) <= (OldHob->EfiFreeMemoryTop - OldHobAddress)) {
-    // Free area is smaller then current, do not move
+  if (RegionSize <= (OldHob->EfiFreeMemoryTop - OldHobAddress)) {
+    // Free area is not larger then current, do not move Hob list.
     return EFI_SUCCESS;
   }
 
