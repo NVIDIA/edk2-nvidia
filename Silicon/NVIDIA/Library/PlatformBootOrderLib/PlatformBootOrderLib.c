@@ -549,8 +549,6 @@ CheckIPMIForBootOrderUpdates (
       Status = SetIPMIBootOrderParameter (IPMI_BOOT_OPTIONS_PARAMETER_BOOT_FLAGS, mBootOptionsRequest);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_WARN, "Error clearing IPMI CmosClear bit: %r\n", Status));
-        // Don't reset the system, but instead process the rest of the command to avoid a reboot cycle
-        goto Done;
       }
 
       // Mark existing boot chain as good.
