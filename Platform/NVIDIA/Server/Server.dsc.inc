@@ -335,7 +335,7 @@
       NULL|SecurityPkg/Library/HashInstanceLibSha256/HashInstanceLibSha256.inf
       NULL|SecurityPkg/Library/HashInstanceLibSha384/HashInstanceLibSha384.inf
   }
-  SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf
+  Silicon/NVIDIA/Drivers/Tcg2Config/Tcg2ConfigDxe.inf
 
 !ifdef $(ENABLE_INTELUNDI)
   #
