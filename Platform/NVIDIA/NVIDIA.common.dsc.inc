@@ -660,9 +660,8 @@ CONFIG_MEMORY_TEST=n
   gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode|L"L4TDefaultBootMode"|gNVIDIAPublicVariableGuid|0x00|0xFF|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport|L"DgpuDtEfifbSupport"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   # Memory Test options
-  gNVIDIATokenSpaceGuid.PcdMemoryTestLevel|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x0|2|BS,NV
-  gNVIDIATokenSpaceGuid.PcdMemoryTestNextBoot|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x1|TRUE|BS,NV
-  gNVIDIATokenSpaceGuid.PcdMemoryTestSingleBoot|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x2|FALSE|BS,NV
+  gNVIDIATokenSpaceGuid.PcdMemoryTest|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x0|{0}|BS,NV,RT
+
 
 [Components.common]
   #

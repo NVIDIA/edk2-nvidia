@@ -43,6 +43,7 @@
   HobLib
   MemoryVerificationLib
   UefiDriverEntryPoint
+  RngLib
   SynchronizationLib
   DebugLib
 
@@ -52,6 +53,7 @@
 [Protocols]
   gEfiGenericMemTestProtocolGuid                ## PRODUCES
   gEfiThreadingProtocolGuid                     ## CONSUMES
+  gNVIDIAMemoryTestConfig                       ## PRODUCES
 
 [UserExtensions.TianoCore."ExtraFiles"]
   GenericMemoryTestDxeExtra.uni

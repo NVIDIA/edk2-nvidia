@@ -68,9 +68,7 @@
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport
   gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport
-  gNVIDIATokenSpaceGuid.PcdMemoryTestLevel
-  gNVIDIATokenSpaceGuid.PcdMemoryTestNextBoot
-  gNVIDIATokenSpaceGuid.PcdMemoryTestSingleBoot
+  gNVIDIATokenSpaceGuid.PcdMemoryTest
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

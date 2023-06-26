@@ -9,11 +9,6 @@
 
 #include "GenericMpMemoryTestDxe.h"
 
-UINT32  GenericMemoryTestMonoPattern[] = {
-  0x5a5a5a5a,
-  0xa5a5a5a5,
-};
-
 /**
   Construct the system base memory range through GCD service.
 
@@ -174,7 +169,15 @@ DirectRangeTest (
   //
   // Verify the memory range
   //
-  Status = MemoryVerificationTestRegion (StartAddress, Length, Private->CoverageSpan, NULL);
+  Status = MemoryVerificationTestRegion (
+             Private->MemoryTestConfig.TestMode,
+             Private->MemoryTestConfig.Parameter1,
+             Private->MemoryTestConfig.Parameter2,
+             StartAddress,
+             Length,
+             Private->CoverageSpan,
+             NULL
+             );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -235,6 +238,7 @@ ConstructMemoryTestRanges (
       MemoryTestRange->Thread       = NULL;
       MemoryTestRange->MemoryError  = &Private->MemoryError;
       MemoryTestRange->TestedMemory = &Private->TestedMemory;
+      MemoryTestRange->TestConfig   = &Private->MemoryTestConfig;
       InsertTailList (&Private->MemoryTestList, &MemoryTestRange->Link);
       Offset += Private->BdsBlockSize;
     }
@@ -322,6 +326,8 @@ InitializeMemoryTest (
 {
   EFI_STATUS                   Status;
   GENERIC_MEMORY_TEST_PRIVATE  *Private;
+  LIST_ENTRY                   *MemoryTestRangeNode;
+  MEMORY_TEST_RANGE            *MemoryTestRange;
 
   Private             = GENERIC_MEMORY_TEST_PRIVATE_FROM_THIS (This);
   *RequireSoftECCInit = FALSE;
@@ -351,6 +357,51 @@ InitializeMemoryTest (
     default:
       Private->CoverageSpan = QUICK_SPAN_SIZE;
       break;
+  }
+
+  // Initialize test parameters
+  switch (Private->MemoryTestConfig.TestMode) {
+    case MemoryTestMovingInversions01:
+      Private->MemoryTestConfig.Parameter1 = 0;
+      break;
+    case MemoryTestMovingInversions8Bit:
+      Private->MemoryTestConfig.Parameter1 = 0x8080808080808080;
+      break;
+    case MemoryTestMovingInversionsRandom:
+    case MemoryTestRandomNumberSequence:
+    case MemoryTestModulo20Random:
+      GetRandomNumber64 (&Private->MemoryTestConfig.Parameter1);
+      break;
+    default:
+      break;
+  }
+
+  if (!IsListEmpty (&Private->NonTestedMemList)) {
+    // Re-init the memory test
+    MemoryTestRangeNode = GetFirstNode (&Private->MemoryTestList);
+
+    while (MemoryTestRangeNode != &Private->MemoryTestList) {
+      MemoryTestRange = MEMORY_TEST_RANGE_FROM_LINK (MemoryTestRangeNode);
+
+      if (MemoryTestRange->Thread) {
+        Private->ThreadingProtocol->AbortThread (MemoryTestRange->Thread);
+        Private->ThreadingProtocol->CleanupThread (MemoryTestRange->Thread);
+      }
+
+      MemoryTestRange->CoverageSpan = Private->CoverageSpan;
+      MemoryTestRange->BadAddress   = 0;
+      MemoryTestRange->TestDone     = FALSE;
+      MemoryTestRange->TestStatus   = EFI_SUCCESS;
+      MemoryTestRange->Thread       = NULL;
+      MemoryTestRangeNode           = GetNextNode (&Private->MemoryTestList, MemoryTestRangeNode);
+    }
+
+    Private->MemoryError    = FALSE;
+    Private->TestedMemory   = 0;
+    Private->ThreadsSpawned = FALSE;
+    Private->TestDone       = FALSE;
+
+    return EFI_SUCCESS;
   }
 
   //
@@ -391,11 +442,18 @@ TestMemoryThread (
   MEMORY_TEST_RANGE  *MemoryTestRange = (MEMORY_TEST_RANGE *)Parameter;
 
   MemoryTestRange->TestStatus = MemoryVerificationTestRegion (
+                                  MemoryTestRange->TestConfig->TestMode,
+                                  MemoryTestRange->TestConfig->Parameter1,
+                                  MemoryTestRange->TestConfig->Parameter2,
                                   MemoryTestRange->StartAddress,
                                   MemoryTestRange->Length,
                                   MemoryTestRange->CoverageSpan,
                                   &MemoryTestRange->BadAddress
                                   );
+  if (MemoryTestRange->TestStatus == EFI_UNSUPPORTED) {
+    // Mask unsupported test requests
+    MemoryTestRange->TestStatus = EFI_SUCCESS;
+  }
 }
 
 VOID
@@ -750,17 +808,16 @@ GenericMemoryTestEntryPoint (
   //
   InitializeListHead (&mGenericMemoryTestPrivate.NonTestedMemList);
 
-  MemoryVerificationAddPattern (GenericMemoryTestMonoPattern, sizeof (GenericMemoryTestMonoPattern));
-
   //
   // Install the protocol
   //
-  Status = gBS->InstallProtocolInterface (
+  Status = gBS->InstallMultipleProtocolInterfaces (
                   &ImageHandle,
                   &gEfiGenericMemTestProtocolGuid,
-                  EFI_NATIVE_INTERFACE,
-                  &mGenericMemoryTestPrivate.GenericMemoryTest
+                  &mGenericMemoryTestPrivate.GenericMemoryTest,
+                  &gNVIDIAMemoryTestConfig,
+                  &mGenericMemoryTestPrivate.MemoryTestConfig,
+                  NULL
                   );
-
   return Status;
 }

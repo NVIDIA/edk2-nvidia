@@ -53,12 +53,6 @@
 #define DGPU_DT_EFIFB_DISABLE  0x0
 #define DGPU_DT_EFIFB_ENABLE   0x1
 
-// Memory test levels
-#define MEMORY_TEST_LEVEL_IGNORE     0
-#define MEMORY_TEST_LEVEL_QUICK      1
-#define MEMORY_TEST_LEVEL_SPARSE     2
-#define MEMORY_TEST_LEVEL_EXTENSIVE  3
-
 typedef struct {
   UINT32    L4TSupported;
   UINT32    RootfsRedundancyLevel;

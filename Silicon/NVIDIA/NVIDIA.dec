@@ -210,6 +210,7 @@
   gNVIDIAFtpmPresentProtocolGuid                  = { 0x0d427a37, 0xc4fb, 0x41fb, { 0x92, 0x37, 0xa7, 0x66, 0x98, 0x2a, 0xf3, 0xba } }
   ## Include/Protocol/Threading.h
   gEfiThreadingProtocolGuid                       = {0x99fc2222, 0x5c4d, 0x472b, { 0x84, 0xf9, 0x9f, 0xda, 0xf8, 0xe9, 0x9c, 0x03 }}
+  gNVIDIAMemoryTestConfig                         = {0x78bb2dfe, 0xe17b, 0x4ca1, { 0x9b, 0x82, 0xa3, 0x1e, 0x33, 0xf1, 0x1f, 0xac }}
 
 
 [PcdsFixedAtBuild.common]
@@ -511,15 +512,10 @@
 
 #Memory test options
 
-#Memory test level
-#0 - IGNORE
-#1 - QUICK
-#2 - SPARSE
-#3 - EXTENSIVE
-  gNVIDIATokenSpaceGuid.PcdMemoryTestLevel|0|UINT8|0x00000112
-#Should memory test be run on next boot
-  gNVIDIATokenSpaceGuid.PcdMemoryTestNextBoot|TRUE|BOOLEAN|0x00000113
-#Causes memory test to be disabled after running so that is only runs on the
-#next boot
-  gNVIDIATokenSpaceGuid.PcdMemoryTestSingleBoot|TRUE|BOOLEAN|0x00000114
+  gNVIDIATokenSpaceGuid.PcdMemoryTest|{0}|NVIDIA_MEMORY_TEST_OPTIONS|0x00000112 {
+    <Packages>
+      Silicon/NVIDIA/NVIDIA.dec
+    <HeaderFiles>
+      NVIDIAConfiguration.h
+  }
 

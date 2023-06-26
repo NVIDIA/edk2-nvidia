@@ -13,6 +13,7 @@
 
 #include <Guid/StatusCodeDataTypeId.h>
 #include <Protocol/GenericMemoryTest.h>
+#include <Protocol/MemoryTestConfig.h>
 #include <Protocol/Threading.h>
 
 #include <Library/DebugLib.h>
@@ -24,6 +25,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/MemoryVerificationLib.h>
+#include <Library/RngLib.h>
 #include <Library/SynchronizationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
@@ -47,17 +49,18 @@
 #define EFI_MEMORY_TEST_RANGE_SIGNATURE  SIGNATURE_32 ('M', 'T', 'R', 'G')
 
 typedef struct {
-  UINTN                   Signature;
-  LIST_ENTRY              Link;
-  EFI_PHYSICAL_ADDRESS    StartAddress;
-  UINT64                  Length;
-  UINTN                   CoverageSpan;
-  EFI_PHYSICAL_ADDRESS    BadAddress;
-  EFI_STATUS              TestStatus;
-  BOOLEAN                 TestDone;
-  BOOLEAN                 *MemoryError;
-  UINTN                   *TestedMemory;
-  EFI_THREAD              Thread;
+  UINTN                                 Signature;
+  LIST_ENTRY                            Link;
+  EFI_PHYSICAL_ADDRESS                  StartAddress;
+  UINT64                                Length;
+  UINTN                                 CoverageSpan;
+  EFI_PHYSICAL_ADDRESS                  BadAddress;
+  EFI_STATUS                            TestStatus;
+  BOOLEAN                               TestDone;
+  BOOLEAN                               *MemoryError;
+  UINTN                                 *TestedMemory;
+  EFI_THREAD                            Thread;
+  NVIDIA_MEMORY_TEST_CONFIG_PROTOCOL    *TestConfig;
 } MEMORY_TEST_RANGE;
 
 #define MEMORY_TEST_RANGE_FROM_LINK(link) \
@@ -96,41 +99,42 @@ typedef struct {
 #define EFI_GENERIC_MEMORY_TEST_PRIVATE_SIGNATURE  SIGNATURE_32 ('G', 'E', 'M', 'T')
 
 typedef struct {
-  UINTN                               Signature;
+  UINTN                                 Signature;
 
   //
   // generic memory test driver's protocol
   //
-  EFI_GENERIC_MEMORY_TEST_PROTOCOL    GenericMemoryTest;
+  EFI_GENERIC_MEMORY_TEST_PROTOCOL      GenericMemoryTest;
 
   //
   // memory test covered spans
   //
-  EXTENDMEM_COVERAGE_LEVEL            CoverLevel;
-  UINTN                               CoverageSpan;
-  UINT64                              BdsBlockSize;
+  EXTENDMEM_COVERAGE_LEVEL              CoverLevel;
+  UINTN                                 CoverageSpan;
+  UINT64                                BdsBlockSize;
 
   //
   // base memory's size which tested in PEI phase
   //
-  UINT64                              BaseMemorySize;
+  UINT64                                BaseMemorySize;
 
-  UINT64                              TestedMemory;
-  UINT64                              NonTestedSystemMemory;
-
-  //
-  // memory range list
-  //
-  LIST_ENTRY                          NonTestedMemList;
+  UINT64                                TestedMemory;
+  UINT64                                NonTestedSystemMemory;
 
   //
   // memory range list
   //
-  LIST_ENTRY                          MemoryTestList;
-  EFI_THREADING_PROTOCOL              *ThreadingProtocol;
-  BOOLEAN                             ThreadsSpawned;
-  BOOLEAN                             TestDone;
-  BOOLEAN                             MemoryError;
+  LIST_ENTRY                            NonTestedMemList;
+
+  //
+  // memory range list
+  //
+  LIST_ENTRY                            MemoryTestList;
+  EFI_THREADING_PROTOCOL                *ThreadingProtocol;
+  BOOLEAN                               ThreadsSpawned;
+  BOOLEAN                               TestDone;
+  BOOLEAN                               MemoryError;
+  NVIDIA_MEMORY_TEST_CONFIG_PROTOCOL    MemoryTestConfig;
 } GENERIC_MEMORY_TEST_PRIVATE;
 
 #define GENERIC_MEMORY_TEST_PRIVATE_FROM_THIS(a) \
