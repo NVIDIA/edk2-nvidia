@@ -610,6 +610,8 @@ GetProcessorVersion (
   EFI_STATUS  Status;
   INTN        DtbSmbiosOffset;
   INTN        Type4Offset;
+  CHAR8       *ProcessorStep = NULL;
+  UINTN       ProcessorStrLen;
 
   if (ProcessorVersion == NULL) {
     Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
@@ -629,16 +631,26 @@ GetProcessorVersion (
 
     Property = fdt_getprop (DtbBase, Type4Offset, "processor-version", &Length);
     if ((Property != NULL) && (Length != 0)) {
-      ProcessorVersion = AllocateZeroPool ((Length + 1) * sizeof (CHAR16));
+      ProcessorStep = TegraGetMinorVersion ();
+      if (ProcessorStep == NULL) {
+        DEBUG ((DEBUG_INFO, "%a: No Processor Step Found\n", __FUNCTION__));
+      } else {
+        DEBUG ((DEBUG_INFO, "%a: Processor Step %a %u\n", __FUNCTION__, ProcessorStep, AsciiStrLen (ProcessorStep)));
+      }
+
+      ProcessorStrLen  = ((Length + AsciiStrLen (ProcessorStep) + 2) * sizeof (CHAR16));
+      ProcessorVersion = AllocateZeroPool (ProcessorStrLen);
       if (ProcessorVersion == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
         return NULL;
       }
 
-      AsciiStrToUnicodeStrS (
-        Property,
+      UnicodeSPrint (
         ProcessorVersion,
-        ((Length + 1) * sizeof (CHAR16))
+        ProcessorStrLen,
+        L"%a %a",
+        Property,
+        ProcessorStep
         );
     }
   }
