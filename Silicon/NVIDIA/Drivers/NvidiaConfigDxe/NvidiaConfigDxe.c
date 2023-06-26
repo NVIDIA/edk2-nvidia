@@ -1376,9 +1376,8 @@ InitializeSettings (
   PcdSetBoolS (PcdGpuSmmuBypassEnable, PcdGetBool (PcdGpuSmmuBypassEnable));
 
   // Initialize Memory Test settings
-  PcdSet8S (PcdMemoryTestLevel, PcdGet8 (PcdMemoryTestLevel));
-  PcdSetBoolS (PcdMemoryTestNextBoot, PcdGetBool (PcdMemoryTestNextBoot));
-  PcdSetBoolS (PcdMemoryTestSingleBoot, PcdGetBool (PcdMemoryTestSingleBoot));
+  BufferSize = sizeof (NVIDIA_MEMORY_TEST_OPTIONS);
+  PcdSetPtrS (PcdMemoryTest, &BufferSize, PcdGetPtr (PcdMemoryTest));
 
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;

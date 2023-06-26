@@ -138,12 +138,6 @@
 #define EXPOSE_CCPLEX_CSN_DISABLED_VARIABLE         0x0200
 #define EXPOSE_SCF_CACHE_DISABLED_VARIABLE          0x0400
 
-// Memory test levels
-#define MEMORY_TEST_LEVEL_IGNORE     0
-#define MEMORY_TEST_LEVEL_QUICK      1
-#define MEMORY_TEST_LEVEL_SPARSE     2
-#define MEMORY_TEST_LEVEL_EXTENSIVE  3
-
 typedef struct {
   UINT32     L4TSupported;
   BOOLEAN    QuickBootSupported;

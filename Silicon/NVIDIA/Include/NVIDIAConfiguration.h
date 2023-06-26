@@ -42,6 +42,12 @@
 
 #define ENABLED_PCIE_ALLOW_ALL  0xFF
 
+// Memory test levels
+#define MEMORY_TEST_LEVEL_IGNORE     0
+#define MEMORY_TEST_LEVEL_QUICK      1
+#define MEMORY_TEST_LEVEL_SPARSE     2
+#define MEMORY_TEST_LEVEL_EXTENSIVE  3
+
 // Option to expose PCIe in OS
 typedef struct {
   UINT8    Enabled;
@@ -135,6 +141,19 @@ typedef struct {
   UINT8      TestLevel;
   BOOLEAN    NextBoot;
   BOOLEAN    SingleBoot;
+  UINT8      TestIterations;
+  BOOLEAN    Walking1BitEnabled;
+  BOOLEAN    AddressCheckEnabled;
+  BOOLEAN    MovingInversions01Enabled;
+  BOOLEAN    MovingInversions8BitEnabled;
+  BOOLEAN    MovingInversionsRandomEnabled;
+  BOOLEAN    BlockMoveEnabled;
+  BOOLEAN    MovingInversions64BitEnabled;
+  BOOLEAN    RandomNumberSequenceEnabled;
+  BOOLEAN    Modulo20RandomEnabled;
+  BOOLEAN    BitFadeEnabled;
+  UINT64     BitFadePattern;
+  UINT64     BitFadeWait;
 } NVIDIA_MEMORY_TEST_OPTIONS;
 
 #endif //__NVIDIA_CONFIGURATION_H__

@@ -40,6 +40,7 @@
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/LoadedImage.h>
 #include <Protocol/IpmiTransportProtocol.h>
+#include <Protocol/MemoryTestConfig.h>
 #include <Protocol/PciIo.h>
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PlatformBootManager.h>
@@ -212,27 +213,35 @@ MemoryTest (
   VOID
   )
 {
-  EFI_STATUS                        Status;
-  EFI_STATUS                        KeyStatus;
-  BOOLEAN                           RequireSoftECCInit;
-  EFI_GENERIC_MEMORY_TEST_PROTOCOL  *GenMemoryTest;
-  UINT64                            TestedMemorySize;
-  UINT64                            TotalMemorySize;
-  BOOLEAN                           ErrorOut;
-  BOOLEAN                           TestAbort;
-  EFI_INPUT_KEY                     Key;
-  EXTENDMEM_COVERAGE_LEVEL          Level;
-  UINT64                            StartTime;
-  UINT64                            EndTime;
-  UINT64                            TimeTaken;
+  EFI_STATUS                          Status;
+  EFI_STATUS                          KeyStatus;
+  BOOLEAN                             RequireSoftECCInit;
+  EFI_GENERIC_MEMORY_TEST_PROTOCOL    *GenMemoryTest;
+  UINT64                              TestedMemorySize;
+  UINT64                              TotalMemorySize;
+  BOOLEAN                             ErrorOut;
+  BOOLEAN                             TestAbort;
+  EFI_INPUT_KEY                       Key;
+  EXTENDMEM_COVERAGE_LEVEL            Level;
+  UINT64                              StartTime;
+  UINT64                              EndTime;
+  UINT64                              TimeTaken;
+  NVIDIA_MEMORY_TEST_OPTIONS          *MemoryTestOptions;
+  UINTN                               SizeOfBuffer;
+  UINT8                               Iteration;
+  NVIDIA_MEMORY_TEST_CONFIG_PROTOCOL  *TestConfig;
+  CONST CHAR8                         *TestName;
 
   TestedMemorySize   = 0;
   TotalMemorySize    = 0;
   ErrorOut           = FALSE;
   TestAbort          = FALSE;
   RequireSoftECCInit = FALSE;
-  Level              = PcdGet8 (PcdMemoryTestLevel);
   ZeroMem (&Key, sizeof (EFI_INPUT_KEY));
+
+  MemoryTestOptions = PcdGetPtr (PcdMemoryTest);
+  NV_ASSERT_RETURN (MemoryTestOptions != NULL, return EFI_DEVICE_ERROR, "Failed to get memory test info\r\n");
+  Level = MemoryTestOptions->TestLevel;
 
   Status = gBS->LocateProtocol (
                   &gEfiGenericMemTestProtocolGuid,
@@ -240,64 +249,187 @@ MemoryTest (
                   (VOID **)&GenMemoryTest
                   );
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to find memory test protocol\r\n"));
     return EFI_SUCCESS;
   }
 
-  Status = GenMemoryTest->MemoryTestInit (
-                            GenMemoryTest,
-                            Level,
-                            &RequireSoftECCInit
-                            );
-  if (Status == EFI_NO_MEDIA) {
-    //
-    // The PEI codes also have the relevant memory test code to check the memory,
-    // it can select to test some range of the memory or all of them. If PEI code
-    // checks all the memory, this BDS memory test will has no not-test memory to
-    // do the test, and then the status of EFI_NO_MEDIA will be returned by
-    // "MemoryTestInit". So it does not need to test memory again, just return.
-    //
+  Status = gBS->LocateProtocol (
+                  &gNVIDIAMemoryTestConfig,
+                  NULL,
+                  (VOID **)&TestConfig
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to find gNVIDIAMemoryTestConfig protocol\r\n"));
     return EFI_SUCCESS;
   }
 
-  if (PcdGetBool (PcdMemoryTestNextBoot)) {
-    StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
-    Print (L"Perform memory test (ESC to skip).\r\n");
+  if ((MemoryTestOptions->TestIterations < 0) ||
+      (MemoryTestOptions->TestIterations > MAX_UINT8))
+  {
+    DEBUG ((DEBUG_ERROR, "TestIterations out of bounds\r\n"));
+    return EFI_SUCCESS;
+  }
 
-    do {
-      Status = GenMemoryTest->PerformMemoryTest (
-                                GenMemoryTest,
-                                &TestedMemorySize,
-                                &TotalMemorySize,
-                                &ErrorOut,
-                                TestAbort
-                                );
-      NV_ASSERT_RETURN (
-        !(ErrorOut && (Status == EFI_DEVICE_ERROR)),
-        return EFI_DEVICE_ERROR,
-        "Memory Testing failed!\r\n"
-        );
-
-      Print (L"Tested %8lld MB/%8lld MB\r", TestedMemorySize / SIZE_1MB, TotalMemorySize / SIZE_1MB);
-
-      if (!PcdGetBool (PcdConInConnectOnDemand)) {
-        KeyStatus = gST->ConIn->ReadKeyStroke (gST->ConIn, &Key);
-        if (!EFI_ERROR (KeyStatus) && (Key.ScanCode == SCAN_ESC)) {
-          if (!RequireSoftECCInit) {
-            break;
+  for (Iteration = 0; Iteration < MemoryTestOptions->TestIterations; Iteration++) {
+    for (TestConfig->TestMode = MemoryTestWalking1Bit;
+         TestConfig->TestMode < MemoryTestMaxTest;
+         TestConfig->TestMode++)
+    {
+      switch (TestConfig->TestMode) {
+        case MemoryTestWalking1Bit:
+          if (!MemoryTestOptions->Walking1BitEnabled) {
+            continue;
           }
 
-          TestAbort = TRUE;
-        }
+          TestName = "Walking 1 bit";
+
+          break;
+        case MemoryTestAddressCheck:
+          if (!MemoryTestOptions->AddressCheckEnabled) {
+            continue;
+          }
+
+          TestName = "Address Check";
+
+          break;
+        case MemoryTestMovingInversions01:
+          if (!MemoryTestOptions->MovingInversions01Enabled) {
+            continue;
+          }
+
+          TestName = "Moving inversions, ones&zeros";
+
+          break;
+        case MemoryTestMovingInversions8Bit:
+          if (!MemoryTestOptions->MovingInversions8BitEnabled) {
+            continue;
+          }
+
+          TestName = "Moving inversions, 8 bit pattern";
+          break;
+
+        case MemoryTestMovingInversionsRandom:
+          if (!MemoryTestOptions->MovingInversionsRandomEnabled) {
+            continue;
+          }
+
+          TestName = "Moving inversions, random pattern";
+          break;
+
+        /*
+                case MemoryTestBlockMode:
+                  if (!MemoryTestOptions->BlockMoveEnabled) {
+                    continue;
+                  }
+
+                  TestName = "Block move, 64 moves";
+                  break;
+        */
+        case MemoryTestMovingInversions64Bit:
+          if (!MemoryTestOptions->MovingInversions64BitEnabled) {
+            continue;
+          }
+
+          TestName = "Moving inversions, 64 bit pattern";
+          break;
+        case MemoryTestRandomNumberSequence:
+          if (!MemoryTestOptions->RandomNumberSequenceEnabled) {
+            continue;
+          }
+
+          TestName = "Random number sequence";
+          break;
+        case MemoryTestModulo20Random:
+          if (!MemoryTestOptions->Modulo20RandomEnabled) {
+            continue;
+          }
+
+          TestName = "Modulo 20, random pattern";
+          break;
+        case MemoryTestBitFadeTest:
+          if (!MemoryTestOptions->BitFadeEnabled) {
+            continue;
+          }
+
+          TestName               = "Bit Fade";
+          TestConfig->Parameter1 = MemoryTestOptions->BitFadePattern;
+          TestConfig->Parameter2 = MemoryTestOptions->BitFadeWait;
+
+          break;
+        default:
+          continue;
       }
-    } while (Status != EFI_NOT_FOUND);
 
-    EndTime   = GetTimeInNanoSecond (GetPerformanceCounter ());
-    TimeTaken = EndTime - StartTime;
-    Print (L"\r\n%llu bytes of system memory tested OK in %llu ms\r\n", TotalMemorySize, TimeTaken/1000000);
+      Print (L"[%03u] %a test starting\r\n", Iteration+1, TestName);
+      Status = GenMemoryTest->MemoryTestInit (
+                                GenMemoryTest,
+                                Level,
+                                &RequireSoftECCInit
+                                );
+      if (Status == EFI_NO_MEDIA) {
+        //
+        // The PEI codes also have the relevant memory test code to check the memory,
+        // it can select to test some range of the memory or all of them. If PEI code
+        // checks all the memory, this BDS memory test will has no not-test memory to
+        // do the test, and then the status of EFI_NO_MEDIA will be returned by
+        // "MemoryTestInit". So it does not need to test memory again, just return.
+        //
+        return EFI_SUCCESS;
+      }
 
-    if (PcdGetBool (PcdMemoryTestSingleBoot)) {
-      PcdSetBoolS (PcdMemoryTestNextBoot, FALSE);
+      if (MemoryTestOptions->NextBoot) {
+        // Disable watchdog as memory tests can take a while.
+        gBS->SetWatchdogTimer (0, 0, 0, NULL);
+        StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+        Print (L"Perform memory test (ESC to skip).\r\n");
+
+        do {
+          Status = GenMemoryTest->PerformMemoryTest (
+                                    GenMemoryTest,
+                                    &TestedMemorySize,
+                                    &TotalMemorySize,
+                                    &ErrorOut,
+                                    TestAbort
+                                    );
+          NV_ASSERT_RETURN (
+            !(ErrorOut && (Status == EFI_DEVICE_ERROR)),
+            return EFI_DEVICE_ERROR,
+            "Memory Testing failed!\r\n"
+            );
+
+          Print (L"[%03u] Tested %8lld MB/%8lld MB\r", Iteration+1, TestedMemorySize / SIZE_1MB, TotalMemorySize / SIZE_1MB);
+
+          if (!PcdGetBool (PcdConInConnectOnDemand)) {
+            KeyStatus = gST->ConIn->ReadKeyStroke (gST->ConIn, &Key);
+            if (!EFI_ERROR (KeyStatus) && (Key.ScanCode == SCAN_ESC)) {
+              if (!RequireSoftECCInit) {
+                break;
+              }
+
+              TestAbort = TRUE;
+            }
+          }
+        } while (Status != EFI_NOT_FOUND);
+
+        EndTime   = GetTimeInNanoSecond (GetPerformanceCounter ());
+        TimeTaken = EndTime - StartTime;
+        Print (L"\r\n%llu bytes of system memory tested OK in %llu ms\r\n", TotalMemorySize, TimeTaken/1000000);
+      }
+
+      if (TestAbort) {
+        break;
+      }
     }
+
+    if (TestAbort) {
+      break;
+    }
+  }
+
+  if (MemoryTestOptions->SingleBoot) {
+    MemoryTestOptions->NextBoot = FALSE;
+    SizeOfBuffer                = sizeof (NVIDIA_MEMORY_TEST_OPTIONS);
+    PcdSetPtrS (PcdMemoryTest, &SizeOfBuffer, MemoryTestOptions);
   }
 
   Status = GenMemoryTest->Finished (GenMemoryTest);

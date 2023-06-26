@@ -27,4 +27,5 @@
   BaseMemoryLib
   CacheMaintenanceLib
   DebugLib
+  TimerLib
   MemoryAllocationLib

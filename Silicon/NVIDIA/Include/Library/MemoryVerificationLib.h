@@ -13,6 +13,20 @@
 
 #include <Uefi/UefiBaseType.h>
 
+typedef enum {
+  MemoryTestWalking1Bit,
+  MemoryTestAddressCheck,
+  MemoryTestMovingInversions01,
+  MemoryTestMovingInversions8Bit,
+  MemoryTestMovingInversionsRandom,
+  // MemoryTestBlockMode,
+  MemoryTestMovingInversions64Bit,
+  MemoryTestRandomNumberSequence,
+  MemoryTestModulo20Random,
+  MemoryTestBitFadeTest,
+  MemoryTestMaxTest
+} MEMORY_TEST_MODE;
+
 /**
  * @brief Return cache line length of system.
  *
@@ -25,25 +39,11 @@ MemoryVerificationGetCacheLineLength (
   );
 
 /**
- * @brief Sets the memory test pattern, will be repeated and copied to a buffer
- * of cache line length
- *
- * @param[in] TestPattern    Test pattern to use
- * @param[in] TestPatterSize Size of the test pattern buffer
- *
- * @retval EFI_SUCCESS Test pattern initialized
- * @retval others error
- */
-EFI_STATUS
-EFIAPI
-MemoryVerificationAddPattern (
-  IN VOID   *TestPattern,
-  IN UINTN  TestPatternSize
-  );
-
-/**
  * @brief Runs the memory test over the specified memory
  *
+ * @param[in]  TestMode            Which memory test mode to use
+ * @param[in]  TestParameter1      Mode specific test parameter
+ * @param[in]  TestParameter2      Mode specific test parameter
  * @param[in]  TestAddress         Base address to start testing at
  * @param[in]  TestLength          Length of memory to test
  * @param[in]  TestSpan            Span between memory tests
@@ -55,6 +55,9 @@ MemoryVerificationAddPattern (
 EFI_STATUS
 EFIAPI
 MemoryVerificationTestRegion (
+  MEMORY_TEST_MODE          TestMode,
+  UINT64                    TestParameter1,
+  UINT64                    TestParameter2,
   IN EFI_PHYSICAL_ADDRESS   TestAddress,
   IN UINTN                  TestLength,
   IN UINTN                  TestSpan,

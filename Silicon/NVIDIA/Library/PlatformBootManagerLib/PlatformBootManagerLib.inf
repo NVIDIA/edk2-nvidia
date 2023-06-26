@@ -87,9 +87,7 @@
   gNVIDIATokenSpaceGuid.PcdBootManagerWaitMessage
   gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration
   gNVIDIATokenSpaceGuid.PcdTpmEnable
-  gNVIDIATokenSpaceGuid.PcdMemoryTestLevel
-  gNVIDIATokenSpaceGuid.PcdMemoryTestNextBoot
-  gNVIDIATokenSpaceGuid.PcdMemoryTestSingleBoot
+  gNVIDIATokenSpaceGuid.PcdMemoryTest
 
 [Guids]
   gEfiFileInfoGuid
@@ -123,3 +121,4 @@
   gEfiAcpiSdtProtocolGuid
   gNVIDIABdsDeviceConnectCompleteGuid
   gEfiDeferredImageLoadProtocolGuid             ## CONSUMES
+  gNVIDIAMemoryTestConfig
