@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -160,6 +160,19 @@ TegraGetPlatform (
 **/
 UINT32
 TegraGetMajorVersion (
+  VOID
+  );
+
+/**
+  Returns the Minor Chip Rev of the of the tegra platform.
+
+  This function returns the chip id of the underlying tegra platform.
+
+  @retval MAX_UINT32  ERROR
+  @retval <MAX_UINT32 Tegra Chip ID
+**/
+CHAR8 *
+TegraGetMinorVersion (
   VOID
   );
 
