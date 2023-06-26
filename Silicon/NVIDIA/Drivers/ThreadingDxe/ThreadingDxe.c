@@ -17,11 +17,14 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/SynchronizationLib.h>
+#include <Library/TimerLib.h>
 
 #include <Protocol/MpService.h>
 #include <Protocol/Threading.h>
 
 #include "ThreadingDxe.h"
+
+#define THREADING_CPU_RETRY_COUNT  10
 
 //
 // Enum defining state in which CPU currently is
@@ -37,6 +40,7 @@ typedef enum _THREADING_CPU_STATE {
 
 typedef enum _THREAD_STATE {
   THREADING_THREAD_SPAWNED,
+  THREADING_THREAD_STARTING,
   THREADING_THREAD_READY,
   THREADING_THREAD_RUNNING,
   THREADING_THREAD_FINISHED
@@ -292,6 +296,7 @@ ThreadingRunThread (
   EFI_STATUS  Status;
   UINTN       MyCpuId;
   BOOLEAN     IsBsp;
+  UINTN       RetryCount;
 
   ThreadingIdentifyCpu (&MyCpuId, &IsBsp);
 
@@ -305,6 +310,7 @@ ThreadingRunThread (
   // Reserve CPU
   //
   mThreadingData.CpuInfo[CpuId].State = THREADING_CPU_BUSY;
+  Thread->State                       = THREADING_THREAD_STARTING;
 
   //
   // Create OnThreadExit event
@@ -327,17 +333,26 @@ ThreadingRunThread (
   // Start thread on selected CPU. It will stop waiting for thread to move
   // to READY state.
   //
-  Status = mMultiProc->StartupThisAP (
-                         mMultiProc,
-                         ThreadingGenericProcedure,
-                         CpuId,
-                         Thread->FinishedEvent,
-                         Thread->Timeout,
-                         Thread,
-                         NULL
-                         );
+  for (RetryCount = 0; RetryCount < THREADING_CPU_RETRY_COUNT; RetryCount++) {
+    Status = mMultiProc->StartupThisAP (
+                           mMultiProc,
+                           ThreadingGenericProcedure,
+                           CpuId,
+                           Thread->FinishedEvent,
+                           Thread->Timeout,
+                           Thread,
+                           NULL
+                           );
+    if (Status == EFI_NOT_READY) {
+      DEBUG ((DEBUG_ERROR, "[T][CPU %u][THREAD %lX, CPU %u] Failed to start AP, retrying\n", MyCpuId, (UINT64)Thread, CpuId));
+      MicroSecondDelay (10);
+    } else {
+      break;
+    }
+  }
 
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "[T][CPU %u][THREAD %lX, CPU %u] Failed to start AP\n", MyCpuId, (UINT64)Thread, CpuId));
     ThreadingCleanupThread ((EFI_THREAD *)Thread);
     goto ON_ERROR;
   }
@@ -461,6 +476,7 @@ ThreadingWaitForThread (
 
   switch (IThread->State) {
     case THREADING_THREAD_SPAWNED:
+    case THREADING_THREAD_STARTING:
     case THREADING_THREAD_READY:
     case THREADING_THREAD_RUNNING:
       break;
@@ -518,6 +534,7 @@ ThreadingCleanupThread (
   AcquireSpinLock (&mThreadingData.ThreadsQueuedLock);
   if (IThread->State == THREADING_THREAD_SPAWNED) {
     RemoveEntryList (&IThread->Entry);
+  } else if (IThread->State == THREADING_THREAD_STARTING) {
     gBS->CloseEvent (IThread->FinishedEvent);
   }
 
