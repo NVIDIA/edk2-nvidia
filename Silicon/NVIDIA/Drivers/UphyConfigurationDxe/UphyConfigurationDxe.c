@@ -7,7 +7,7 @@
 
 **/
 #include <Library/HobLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -237,6 +237,8 @@ ErrorExit:
   if (GpioApplyPin != NULL) {
     FreePool (GpioApplyPin);
   }
+
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), return Status, "UPHY Configuration Failure.\n");
 
   return Status;
 }
