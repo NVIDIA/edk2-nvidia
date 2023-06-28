@@ -134,12 +134,22 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
         Return (Local3)
       }
 
-      Method (TELM, 1, Serialized, 0, IntObj, IntObj) {
+      Method (TELM, 2, Serialized, 0, IntObj, {IntObj, IntObj}) {
         Local0 = 0
         Local1 = 0
         Local2 = TH500_BPMP_IPC_CALL_INTERVAL_50MS
         Local3 = 0
         Local4 = 0
+        Local5 = 0
+        Local6 = 0
+
+        If ((Arg0 < TH500_MODULE_PWR) || (Arg0 > TH500_SOC_PWR)) {
+          Return (PWR_METER_ERR_RETURN)
+        }
+
+        If ((Arg1 != PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) && (Arg1 != PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC)) {
+          Return (PWR_METER_ERR_RETURN)
+        }
 
         If (TIME != 0) {
           If (LSTM > Timer()) {
@@ -159,12 +169,116 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
           If (ERR != 0) {
             Return (PWR_METER_ERR_RETURN)
           }
+          Store (DerefOf (Index (Local1, 1)), Local6)
+          Or (Local6, TH500_AMAP_START_SOCKET_0, Local6)
+          CreateQWordField (Local6, 0x00, BUFF)
+
+          OperationRegion (TELD, SystemMemory, BUFF, 0x180)
+          Field (TELD, AnyAcc, NoLock, Preserve) {
+            Offset (16),
+            MPWR, 32,
+            TPWR, 32,
+            CPWR, 32,
+            SPWR, 32,
+            Offset (288),
+            MAPW, 32,
+            TAPW, 32,
+            CAPW, 32,
+            SAPW, 32,
+            Offset (360),
+            VFG0, 32,
+            VFG1, 32,
+            VFG2, 32
+          }
+
+          Store (Zero, PWRV)
+          Switch (Arg0) {
+            Case (TH500_MODULE_PWR) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+                And (VFG0, TH500_MODULE_PWR_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (MPWR, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
+                }
+              }
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+                And (VFG2, TH500_MODULE_PWR_1SEC_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (MAPW, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
+                }
+              }
+              Break
+            }
+
+            Case (TH500_TH500_PWR) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+                And (VFG0, TH500_TH500_PWR_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (TPWR, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
+                }
+              }
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+                And (VFG2, TH500_TH500_PWR_1SEC_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (TAPW, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
+                }
+              }
+              Break
+            }
+
+            Case (TH500_CPU_PWR) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+                And (VFG0, TH500_CPU_PWR_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (CPWR, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
+                }
+              }
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+                And (VFG2, TH500_CPU_PWR_1SEC_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (CAPW, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
+                }
+              }
+              Break
+            }
+
+            Case (TH500_SOC_PWR) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
+                And (VFG0, TH500_SOC_PWR_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (SPWR, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
+                }
+              }
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+                And (VFG2, TH500_SOC_PWR_1SEC_IDX_VALID_FLAG, Local5)
+                If (Local5 > 0) {
+                  Store (SAPW, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
+                }
+              }
+              Break
+            }
+          }
 
           If (TIME != 0) {
             Store (Timer(), LSTM)
           }
         }
-        Return (TBUF)
+        Return (PWRV)
       }
 
       Method (SPRL, 2, Serialized, 0, IntObj, {IntObj, IntObj}) {
@@ -353,42 +467,8 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
 
       Method (_PMM) {
         Local0 = 0
-        Local1 = 0
-        Local0 = \_SB.BPM0.TELM(0)
-        If (Local0 == PWR_METER_ERR_RETURN) {
-          Return (PWR_METER_ERR_RETURN)
-        }
-        CreateQWordField (Local0, 0x00, TELB)
-        OperationRegion (TELD, SystemMemory, TELB,  0x180)
-        Field (TELD, AnyAcc, NoLock, Preserve) {
-          Offset (16),
-          MPWR, 32,
-          TPWR, 32,
-          CPWR, 32,
-          SPWR, 32,
-          Offset (288),
-          MAPW, 32,
-          TAPW, 32,
-          CAPW, 32,
-          SAPR, 32,
-          Offset (360),
-          VFG0, 32,
-          VFG1, 32,
-          VFG2, 32
-        }
-
-        If (CAI == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
-          And (VFG0, TH500_MODULE_PWR_IDX_VALID_FLAG, Local1)
-          If (Local1 > 0) {
-            Return (MPWR)
-          }
-        } Else {
-          And (VFG2, TH500_MODULE_PWR_1SEC_IDX_VALID_FLAG, Local1)
-          If (Local1 > 0) {
-            Return (MAPW)
-          }
-        }
-        Return (PWR_METER_ERR_RETURN)
+        Local0 = \_SB.BPM0.TELM(TH500_MODULE_PWR, CAI)
+        Return (Local0)
       }
 
       Method (_GHL) {
@@ -464,42 +544,8 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
 
       Method (_PMM) {
         Local0 = 0
-        Local1 = 0
-        Local0 = \_SB.BPM0.TELM(0)
-        If (Local0 == PWR_METER_ERR_RETURN) {
-          Return (PWR_METER_ERR_RETURN)
-        }
-        CreateQWordField (Local0, 0x00, TELB)
-        OperationRegion (TELD, SystemMemory, TELB,  0x180)
-        Field (TELD, AnyAcc, NoLock, Preserve) {
-          Offset (16),
-          MPWR, 32,
-          TPWR, 32,
-          CPWR, 32,
-          SPWR, 32,
-          Offset (288),
-          MAPW, 32,
-          TAPW, 32,
-          CAPW, 32,
-          SAPR, 32,
-          Offset (360),
-          VFG0, 32,
-          VFG1, 32,
-          VFG2, 32
-        }
-
-        If (CAI == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
-          And (VFG0, TH500_TH500_PWR_IDX_VALID_FLAG, Local1)
-          If (Local1 > 0) {
-            Return (TPWR)
-          }
-        } Else {
-          And (VFG2, TH500_TH500_PWR_1SEC_IDX_VALID_FLAG, Local1)
-          If (Local1 > 0) {
-            Return (TAPW)
-          }
-        }
-        Return (PWR_METER_ERR_RETURN)
+        Local0 = \_SB.BPM0.TELM(TH500_TH500_PWR, CAI)
+        Return (Local0)
       }
 
       Method(_GHL) {
@@ -589,42 +635,8 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
 
       Method (_PMM) {
         Local0 = 0
-        Local1 = 0
-        Local0 = \_SB.BPM0.TELM(0)
-        If (Local0 == PWR_METER_ERR_RETURN) {
-          Return (PWR_METER_ERR_RETURN)
-        }
-        CreateQWordField (Local0, 0x00, TELB)
-        OperationRegion (TELD, SystemMemory, TELB,  0x180)
-        Field (TELD, AnyAcc, NoLock, Preserve) {
-          Offset (16),
-          MPWR, 32,
-          TPWR, 32,
-          CPWR, 32,
-          SPWR, 32,
-          Offset (288),
-          MAPW, 32,
-          TAPW, 32,
-          CAPW, 32,
-          SAPR, 32,
-          Offset (360),
-          VFG0, 32,
-          VFG1, 32,
-          VFG2, 32
-        }
-
-        If (CAI == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
-          And (VFG0, TH500_CPU_PWR_IDX_VALID_FLAG, Local1)
-          If (Local1 > 0) {
-            Return (CPWR)
-          }
-        } Else {
-          And (VFG2, TH500_CPU_PWR_1SEC_IDX_VALID_FLAG, Local1)
-          If (Local1 > 0) {
-            Return (CAPW)
-          }
-        }
-        Return (PWR_METER_ERR_RETURN)
+        Local0 = \_SB.BPM0.TELM(TH500_CPU_PWR, CAI)
+        Return (Local0)
       }
 
       Method (_GHL) {
@@ -699,42 +711,8 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
 
       Method (_PMM) {
         Local0 = 0
-        Local1 = 0
-        Local0 = \_SB.BPM0.TELM(0)
-        If (Local0 == PWR_METER_ERR_RETURN) {
-          Return (PWR_METER_ERR_RETURN)
-        }
-        CreateQWordField (Local0, 0x00, TELB)
-        OperationRegion (TELD, SystemMemory, TELB,  0x180)
-        Field (TELD, AnyAcc, NoLock, Preserve) {
-          Offset (16),
-          MPWR, 32,
-          TPWR, 32,
-          CPWR, 32,
-          SPWR, 32,
-          Offset (288),
-          MAPW, 32,
-          TAPW, 32,
-          CAPW, 32,
-          SAPR, 32,
-          Offset (360),
-          VFG0, 32,
-          VFG1, 32,
-          VFG2, 32
-        }
-
-        If (CAI == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
-          And (VFG0, TH500_SOC_PWR_IDX_VALID_FLAG, Local1)
-          If (Local1 > 0) {
-            Return (SPWR)
-          }
-        } Else {
-          And (VFG2, TH500_SOC_PWR_1SEC_IDX_VALID_FLAG, Local1)
-          If (Local1 > 0) {
-            Return (SAPR)
-          }
-        }
-        Return (PWR_METER_ERR_RETURN)
+        Local0 = \_SB.BPM0.TELM(TH500_SOC_PWR, CAI)
+        Return (Local0)
       }
 
       Method (_GHL) {
