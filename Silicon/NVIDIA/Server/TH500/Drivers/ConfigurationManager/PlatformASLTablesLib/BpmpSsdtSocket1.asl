@@ -410,6 +410,7 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 10)
+      Name (_STA, 0)
       Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
       Name (HWLT, 0)
       Name (MINP, 0x00000000)
@@ -486,6 +487,7 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 11)
+      Name (_STA, 0)
       Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
       Name (HWLT, 0)
       Name (MINP, 0xAAAAAAAA)
@@ -578,6 +580,7 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 12)
+      Name (_STA, 0)
       Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
       Name (HWLT, 0)
       Name (MINP, 0x00000000)
@@ -654,6 +657,7 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 13)
+      Name (_STA, 0)
       Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
       Name (HWLT, 0)
       Name (MINP, 0x00000000)

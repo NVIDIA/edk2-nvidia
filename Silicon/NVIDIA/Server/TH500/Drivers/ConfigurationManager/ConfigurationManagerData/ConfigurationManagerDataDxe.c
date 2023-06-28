@@ -1167,6 +1167,96 @@ ErrorExit:
   return Status;
 }
 
+/** patch _STA to enable/disable power meter device
+
+  @param[in]     SocketId                Socket Id
+  @param[in]     TelemetryDataBuffAddr   Telemetry Data Buff Addr
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdatePowerMeterStaInfo (
+  IN  UINT32  SocketId,
+  IN  UINT64  TelemetryDataBuffAddr
+  )
+{
+  EFI_STATUS            Status;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+  UINT32                Index;
+  UINT32                TelLayoutValidFlags0;
+  UINT32                TelLayoutValidFlags1;
+  UINT32                TelLayoutValidFlags2;
+  UINT32                PwrMeterIndex;
+  UINT8                 PwrMeterStatus;
+  UINT32                *TelemetryData;
+
+  STATIC CHAR8 *CONST  AcpiPwrMeterStaPatchName[] = {
+    "_SB_.PM00._STA",
+    "_SB_.PM01._STA",
+    "_SB_.PM02._STA",
+    "_SB_.PM03._STA",
+    "_SB_.PM10._STA",
+    "_SB_.PM11._STA",
+    "_SB_.PM12._STA",
+    "_SB_.PM13._STA",
+    "_SB_.PM20._STA",
+    "_SB_.PM21._STA",
+    "_SB_.PM22._STA",
+    "_SB_.PM23._STA",
+    "_SB_.PM30._STA",
+    "_SB_.PM31._STA",
+    "_SB_.PM32._STA",
+    "_SB_.PM33._STA",
+  };
+
+  Status               = EFI_SUCCESS;
+  TelemetryData        = NULL;
+  TelemetryData        = (UINT32 *)TelemetryDataBuffAddr;
+  TelLayoutValidFlags0 = TelemetryData[TH500_TEL_LAYOUT_VALID_FLAGS0_IDX];
+  TelLayoutValidFlags1 = TelemetryData[TH500_TEL_LAYOUT_VALID_FLAGS1_IDX];
+  TelLayoutValidFlags2 = TelemetryData[TH500_TEL_LAYOUT_VALID_FLAGS2_IDX];
+
+  if (SocketId >= ((ARRAY_SIZE (AcpiPwrMeterStaPatchName)) / TH500_MAX_PWR_METER)) {
+    DEBUG ((DEBUG_ERROR, "%a: Index %u exceeding AcpiPwrMeterStaPatchName size\r\n", __FUNCTION__, SocketId));
+    Status = EFI_INVALID_PARAMETER;
+    goto ErrorExit;
+  }
+
+  for (Index = 0; Index < TH500_MAX_PWR_METER; Index++) {
+    if ((TelLayoutValidFlags0 & (TH500_MODULE_PWR_IDX_VALID_FLAG << Index)) ||
+        (TelLayoutValidFlags2 & (TH500_MODULE_PWR_1SEC_IDX_VALID_FLAG << Index)))
+    {
+      PwrMeterIndex = (SocketId * TH500_MAX_PWR_METER) + Index;
+      Status        = PatchProtocol->FindNode (PatchProtocol, AcpiPwrMeterStaPatchName[PwrMeterIndex], &AcpiNodeInfo);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Acpi pwr meter sta node is not found for patching %a - %r\r\n",
+          __FUNCTION__,
+          AcpiPwrMeterStaPatchName[PwrMeterIndex],
+          Status
+          ));
+        Status = EFI_SUCCESS;
+        goto ErrorExit;
+      }
+
+      PwrMeterStatus = 0xF;
+      Status         = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &PwrMeterStatus, sizeof (PwrMeterStatus));
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiPwrMeterStaPatchName[PwrMeterIndex], Status));
+        Status = EFI_SUCCESS;
+        goto ErrorExit;
+      }
+    }
+  }
+
+ErrorExit:
+  return Status;
+}
+
 /** patch MRQ_TELEMETRY data in DSDT.
 
   @retval EFI_SUCCESS   Success
@@ -1315,6 +1405,12 @@ UpdateTelemetryInfo (
     Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &TelemetryDataBuffAddr, sizeof (TelemetryDataBuffAddr));
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiMrqTelemetryBufferPatchName[Index], Status));
+      Status = EFI_SUCCESS;
+      goto ErrorExit;
+    }
+
+    Status = UpdatePowerMeterStaInfo (SocketId, TelemetryDataBuffAddr);
+    if (EFI_ERROR (Status)) {
       Status = EFI_SUCCESS;
       goto ErrorExit;
     }
