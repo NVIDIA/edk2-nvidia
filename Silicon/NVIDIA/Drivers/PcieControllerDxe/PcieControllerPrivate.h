@@ -126,6 +126,9 @@ typedef struct {
 #define XTL_RC_MGMT_PERST_CONTROL            0x218
 #define XTL_RC_MGMT_PERST_CONTROL_PERST_O_N  BIT(0)
 
+/* AER Registers */
+#define  PCIE_AER_CORR_ERR_ADV_NONFATAL  0x2000
+
 /* DPC Registers */
 #define PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID  0x001D
 

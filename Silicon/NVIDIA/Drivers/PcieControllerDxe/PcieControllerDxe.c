@@ -929,6 +929,35 @@ PcieEnableErrorReporting (
         Function
         ));
 
+      /* unmask Advisory non-Fatal interrupt */
+      AerCapOffset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID);
+      if (AerCapOffset) {
+        Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, CorrectableErrorMask);
+        Status = PciIo->Pci.Read (
+                              PciIo,
+                              EfiPciIoWidthUint32,
+                              Offset,
+                              1,
+                              &Val_32
+                              );
+        if (EFI_ERROR (Status)) {
+          return EFI_DEVICE_ERROR;
+        }
+
+        Val_32 &= ~PCIE_AER_CORR_ERR_ADV_NONFATAL;
+
+        Status = PciIo->Pci.Write (
+                              PciIo,
+                              EfiPciIoWidthUint32,
+                              Offset,
+                              1,
+                              &Val_32
+                              );
+        if (EFI_ERROR (Status)) {
+          return EFI_DEVICE_ERROR;
+        }
+      }
+
     /* fall through */
 
     case PCIE_DEVICE_PORT_TYPE_DOWNSTREAM_PORT:
