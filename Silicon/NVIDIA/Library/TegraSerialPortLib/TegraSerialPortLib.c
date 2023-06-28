@@ -179,6 +179,38 @@ SerialPortInitialize (
 }
 
 /**
+  Return the active SERIAL_MAPPING or NULL.
+
+  @retval SERIAL_MAPPING*  If a mapping is active
+  @retval NULL             If no mapping is active
+
+**/
+STATIC
+SERIAL_MAPPING *
+EFIAPI
+GetActiveMapping (
+  )
+{
+  SERIAL_MAPPING  *Mapping;
+
+  Mapping = NULL;
+
+  if (gSerialCompatibilityMap != NULL) {
+    for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+      if (Mapping->IsFound == TRUE) {
+        break;
+      }
+    }
+  }
+
+  if ((Mapping == NULL) || (Mapping->Compatibility == NULL)) {
+    return NULL;
+  }
+
+  return Mapping;
+}
+
+/**
   Write data to serial device.
 
   @param  Buffer           Point of data buffer which need to be written.
@@ -198,16 +230,16 @@ SerialPortWrite (
   RETURN_STATUS   Status;
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      Status = Mapping->GetObject ()->SerialPortWrite (Mapping->BaseAddress, Buffer, NumberOfBytes);
-      if (RETURN_ERROR (Status)) {
-        return 0;
-      }
+  Mapping = GetActiveMapping ();
+
+  if (Mapping != NULL) {
+    Status = Mapping->GetObject ()->SerialPortWrite (Mapping->BaseAddress, Buffer, NumberOfBytes);
+    if (!RETURN_ERROR (Status)) {
+      return NumberOfBytes;
     }
   }
 
-  return NumberOfBytes;
+  return 0;
 }
 
 /**
@@ -229,13 +261,9 @@ SerialPortRead (
 {
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      break;
-    }
-  }
+  Mapping = GetActiveMapping ();
 
-  if (Mapping->Compatibility == NULL) {
+  if (Mapping == NULL) {
     return 0;
   }
 
@@ -257,13 +285,9 @@ SerialPortPoll (
 {
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      break;
-    }
-  }
+  Mapping = GetActiveMapping ();
 
-  if (Mapping->Compatibility == NULL) {
+  if (Mapping == NULL) {
     return FALSE;
   }
 
@@ -304,13 +328,9 @@ SerialPortSetControl (
 {
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      break;
-    }
-  }
+  Mapping = GetActiveMapping ();
 
-  if (Mapping->Compatibility == NULL) {
+  if (Mapping == NULL) {
     return RETURN_DEVICE_ERROR;
   }
 
@@ -357,13 +377,9 @@ SerialPortGetControl (
 {
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      break;
-    }
-  }
+  Mapping = GetActiveMapping ();
 
-  if (Mapping->Compatibility == NULL) {
+  if (Mapping == NULL) {
     return RETURN_DEVICE_ERROR;
   }
 
@@ -414,13 +430,9 @@ SerialPortSetAttributes (
 {
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      break;
-    }
-  }
+  Mapping = GetActiveMapping ();
 
-  if (Mapping->Compatibility == NULL) {
+  if (Mapping == NULL) {
     return RETURN_DEVICE_ERROR;
   }
 
