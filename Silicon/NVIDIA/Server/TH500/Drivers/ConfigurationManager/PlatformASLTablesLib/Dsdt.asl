@@ -948,7 +948,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     //---------------------------------------------------------------------
     Device (SQ00) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_SMMU0_BASE_SOCKET_0)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -968,7 +968,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     //---------------------------------------------------------------------
     Device (SQ01) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_SMMU1_BASE_SOCKET_0)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -988,7 +988,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     //---------------------------------------------------------------------
     Device (SQ02) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_SMMU2_BASE_SOCKET_0)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -1008,7 +1008,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     //---------------------------------------------------------------------
     Device (GQ00) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_GSMMU0_BASE_SOCKET_0)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -1028,7 +1028,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     //---------------------------------------------------------------------
     Device (GQ01) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_GSMMU1_BASE_SOCKET_0)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {

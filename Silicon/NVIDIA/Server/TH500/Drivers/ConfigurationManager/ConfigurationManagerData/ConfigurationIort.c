@@ -16,6 +16,7 @@
 
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
+#include <Protocol/AmlPatchProtocol.h>
 
 #include <TH500/TH500Definitions.h>
 #include "ConfigurationIortPrivate.h"
@@ -24,6 +25,8 @@
         for (tmp = GetFirstNode (list);      \
              !IsNull (list, tmp);            \
              tmp = GetNextNode (list, tmp))
+
+extern NVIDIA_AML_PATCH_PROTOCOL  *PatchProtocol;
 
 STATIC IORT_PRIVATE_DATA  mIortPrivate = {
   .Signature                                               = IORT_DATA_SIGNATURE,
@@ -636,6 +639,83 @@ SetupIortIdMappingForSmmuV3 (
 }
 
 /**
+  patch SMMUv3 _UID info in dsdt/ssdt table to SMMUv3 iort identifier
+
+  @param[in] IortNode       Pointer to the CM_ARM_SMMUV3_NODE
+
+  @retval EFI_SUCCESS       Success
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+STATIC
+EFI_STATUS
+UpdateSmmuV3UidInfo (
+  IN  CM_ARM_SMMUV3_NODE  *IortNode
+  )
+{
+  EFI_STATUS            Status;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+  UINT32                Identifier;
+  UINT32                AcpiSmmuUidPatchNameSize;
+  STATIC UINT32         Index = 0;
+
+  STATIC CHAR8 *CONST  AcpiSmmuUidPatchName[] = {
+    "_SB_.SQ00._UID",
+    "_SB_.SQ01._UID",
+    "_SB_.SQ02._UID",
+    "_SB_.GQ00._UID",
+    "_SB_.GQ01._UID",
+    "_SB_.SQ10._UID",
+    "_SB_.SQ11._UID",
+    "_SB_.SQ12._UID",
+    "_SB_.GQ10._UID",
+    "_SB_.GQ11._UID",
+    "_SB_.SQ20._UID",
+    "_SB_.SQ21._UID",
+    "_SB_.SQ22._UID",
+    "_SB_.GQ20._UID",
+    "_SB_.GQ21._UID",
+    "_SB_.SQ30._UID",
+    "_SB_.SQ31._UID",
+    "_SB_.SQ32._UID",
+    "_SB_.GQ30._UID",
+    "_SB_.GQ31._UID",
+  };
+
+  Status = EFI_SUCCESS;
+
+  AcpiSmmuUidPatchNameSize = ARRAY_SIZE (AcpiSmmuUidPatchName);
+  if (Index >= AcpiSmmuUidPatchNameSize) {
+    DEBUG ((DEBUG_ERROR, "%a: Index %u is larger than AcpiSmmuUidPatchNameSize %u\n", __FUNCTION__, Index, AcpiSmmuUidPatchNameSize));
+    goto ErrorExit;
+  }
+
+  Identifier = 0;
+
+  Status = PatchProtocol->FindNode (PatchProtocol, AcpiSmmuUidPatchName[Index], &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, AcpiSmmuUidPatchName[Index]));
+    goto ErrorExit;
+  }
+
+  if (AcpiNodeInfo.Size != sizeof (Identifier)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d\n", __FUNCTION__, AcpiSmmuUidPatchName[Index], AcpiNodeInfo.Size));
+    goto ErrorExit;
+  }
+
+  Identifier = IortNode->Identifier;
+  Status     = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &Identifier, sizeof (Identifier));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, AcpiSmmuUidPatchName[Index]));
+    goto ErrorExit;
+  }
+
+ErrorExit:
+  Index++;
+  return Status;
+}
+
+/**
   Populate data of SMMUv3 from the device tree and install the IORT nodes of SmmuV3
 
   @param[in, out] Private   Pointer to the module private data
@@ -678,6 +758,8 @@ SetupIortNodeForSmmuV3 (
   IortNode->Flags           = EFI_ACPI_IORT_SMMUv3_FLAG_PROXIMITY_DOMAIN;
   IortNode->Identifier      = UniqueIdentifier++;
   ASSERT (UniqueIdentifier < 0xFFFFFFFF);
+
+  UpdateSmmuV3UidInfo (IortNode);
 
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
     IortNode->Flags |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;

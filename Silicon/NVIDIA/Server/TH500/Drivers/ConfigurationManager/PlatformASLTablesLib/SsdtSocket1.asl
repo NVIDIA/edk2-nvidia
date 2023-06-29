@@ -208,7 +208,7 @@ DefinitionBlock("SsdtSocket1.aml", "SSDT", 2, "NVIDIA", "TH500_S1", 0x00000001) 
     //---------------------------------------------------------------------
     Device (SQ10) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_SMMU0_BASE_SOCKET_1)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -228,7 +228,7 @@ DefinitionBlock("SsdtSocket1.aml", "SSDT", 2, "NVIDIA", "TH500_S1", 0x00000001) 
     //---------------------------------------------------------------------
     Device (SQ11) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_SMMU1_BASE_SOCKET_1)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -248,7 +248,7 @@ DefinitionBlock("SsdtSocket1.aml", "SSDT", 2, "NVIDIA", "TH500_S1", 0x00000001) 
     //---------------------------------------------------------------------
     Device (SQ12) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_SMMU2_BASE_SOCKET_1)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -268,7 +268,7 @@ DefinitionBlock("SsdtSocket1.aml", "SSDT", 2, "NVIDIA", "TH500_S1", 0x00000001) 
     //---------------------------------------------------------------------
     Device (GQ10) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_GSMMU0_BASE_SOCKET_1)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -288,7 +288,7 @@ DefinitionBlock("SsdtSocket1.aml", "SSDT", 2, "NVIDIA", "TH500_S1", 0x00000001) 
     //---------------------------------------------------------------------
     Device (GQ11) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_GSMMU1_BASE_SOCKET_1)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
