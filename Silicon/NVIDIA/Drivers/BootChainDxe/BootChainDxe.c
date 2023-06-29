@@ -409,6 +409,9 @@ BootChainExecuteUpdate (
     BCNext
     ));
 
+  // Mark existing boot chain as good.
+  ValidateActiveBootChain ();
+
   Status = mBrBctUpdateProtocol->UpdateFwChain (mBrBctUpdateProtocol, BCNext);
   if (EFI_ERROR (Status)) {
     BCStatus = STATUS_ERROR_UPDATING_FW_CHAIN;
