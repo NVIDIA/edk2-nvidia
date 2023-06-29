@@ -1297,6 +1297,9 @@ HandleCapsules (
   // Check for capsules on disk
   //
   if (CoDCheckCapsuleOnDiskFlag ()) {
+    // Mark existing boot chain as good.
+    ValidateActiveBootChain ();
+
     NeedReset = TRUE;
     Status    = CoDRelocateCapsule (0);
     if (EFI_ERROR (Status)) {
