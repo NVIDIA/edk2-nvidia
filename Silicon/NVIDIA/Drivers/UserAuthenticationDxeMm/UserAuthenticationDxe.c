@@ -11,6 +11,7 @@
 
 #include "UserAuthenticationDxe.h"
 #include "UserAuthenticationIpmi.h"
+#include <Library/PlatformResourceLib.h>
 
 USER_AUTHENTICATION_PRIVATE_DATA  *mUserAuthenticationData = NULL;
 EFI_MM_COMMUNICATION2_PROTOCOL    *mMmCommunication2       = NULL;
@@ -161,6 +162,10 @@ ForceSystemReset (
   )
 {
   MessageBox (L"Password retry count reach, reset system!");
+
+  // Mark existing boot chain as good.
+  ValidateActiveBootChain ();
+
   gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
   CpuDeadLoop ();
 }

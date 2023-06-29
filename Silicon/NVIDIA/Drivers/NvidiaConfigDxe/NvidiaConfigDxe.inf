@@ -48,6 +48,7 @@
   UefiLib
   VariablePolicyHelperLib
   FwVariableLib
+  PlatformResourceLib
 
 [Guids]
   gEfiHiiPlatformSetupFormsetGuid               ## CONSUMES ## GUID (Indicate the formset class guid to be displayed)

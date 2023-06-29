@@ -32,6 +32,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/Tcg2PhysicalPresenceLib.h>
 #include <Library/Tcg2PpVendorLib.h>
 #include <Library/VariablePolicyHelperLib.h>
+#include <Library/PlatformResourceLib.h>
 
 #define CONFIRM_BUFFER_SIZE  4096
 
@@ -893,6 +894,10 @@ Tcg2ExecutePendingTpmRequest (
   }
 
   Print (L"Rebooting system to make TPM2 settings in effect\n");
+
+  // Mark existing boot chain as good.
+  ValidateActiveBootChain ();
+
   gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
   ASSERT (FALSE);
 }

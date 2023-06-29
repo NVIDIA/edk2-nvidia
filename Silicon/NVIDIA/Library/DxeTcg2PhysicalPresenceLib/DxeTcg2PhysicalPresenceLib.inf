@@ -38,6 +38,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   SecurityPkg/SecurityPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   MemoryAllocationLib
@@ -53,6 +54,7 @@
   Tpm2CommandLib
   Tcg2PpVendorLib
   VariablePolicyHelperLib
+  PlatformResourceLib
 
 [Protocols]
   gEfiTcg2ProtocolGuid                 ## SOMETIMES_CONSUMES

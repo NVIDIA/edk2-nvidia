@@ -34,6 +34,7 @@
 #include <Library/UefiLib.h>
 #include <Library/VariablePolicyHelperLib.h>
 #include <Library/FwVariableLib.h>
+#include <Library/PlatformResourceLib.h>
 
 #include <Guid/NVIDIAMmMb1Record.h>
 #include <TH500/TH500Definitions.h>
@@ -1481,6 +1482,9 @@ InitializeSettings (
       {
         Status = AccessMb1Record (&mVariableMb1Config, TRUE);
         if (!EFI_ERROR (Status)) {
+          // Mark existing boot chain as good.
+          ValidateActiveBootChain ();
+
           gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
           ASSERT (FALSE);
         }
@@ -1762,6 +1766,9 @@ ConfigCallback (
             NULL
             );
         } while (InputKey.UnicodeChar != CHAR_CARRIAGE_RETURN);
+
+        // Mark existing boot chain as good.
+        ValidateActiveBootChain ();
 
         gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
         break;

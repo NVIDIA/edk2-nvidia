@@ -52,6 +52,7 @@
   SecurityManagementLib
   IpmiBaseLib
   VariablePolicyHelperLib
+  PlatformResourceLib
 
 [Guids]
   gUserAuthenticationGuid                       ## CONSUMES  ## GUID
