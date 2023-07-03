@@ -564,3 +564,29 @@ IsSocketEnabledStMm (
   SocketEnabled = ((SocketMask & (1U << SocketNum)) ? TRUE : FALSE);
   return SocketEnabled;
 }
+
+/**
+ * Check if TPM is requested to be enabled.
+ *
+ * @retval  TRUE      TPM is enabled.
+ * @retval  FALSE     TPM is disabled.
+**/
+BOOLEAN
+EFIAPI
+IsTpmToBeEnabled (
+  VOID
+  )
+{
+  UINTN  ChipID;
+  UINTN  CpuBootloaderAddress;
+
+  ChipID               = TegraGetChipID ();
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case TH500_CHIP_ID:
+      return TH500IsTpmToBeEnabled (CpuBootloaderAddress);
+    default:
+      return FALSE;
+  }
+}

@@ -91,4 +91,13 @@ TH500BuildTcgEventHob (
   IN UINTN  TpmLogAddress
   );
 
+/**
+ * Get Partition information.
+**/
+BOOLEAN
+EFIAPI
+TH500IsTpmToBeEnabled (
+  IN  UINTN  CpuBootloaderAddress
+  );
+
 #endif //__TH500_RESOURCE_CONFIG_H__

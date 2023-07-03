@@ -787,3 +787,19 @@ TH500GetPartitionInfo (
 
   return EFI_SUCCESS;
 }
+
+/**
+ * Check if TPM is requested to be enabled.
+**/
+BOOLEAN
+EFIAPI
+TH500IsTpmToBeEnabled (
+  IN  UINTN  CpuBootloaderAddress
+  )
+{
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  return CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.FeatureData.TpmEnable;
+}

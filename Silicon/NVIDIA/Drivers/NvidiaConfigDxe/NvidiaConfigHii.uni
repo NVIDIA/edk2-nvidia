@@ -67,6 +67,8 @@
 #string STR_SPREAD_SPECTRUM_HELP         #language en-US "Enable UPHY spread spectrum."
 #string STR_ATS_PAGE_GRANULE_PROMPT      #language en-US "4K ATS Page Granule"
 #string STR_ATS_PAGE_GRANULE_HELP        #language en-US "Enable 4K ATS Page Granule."
+#string STR_TPM_ENABLE_PROMPT            #language en-US "TPM"
+#string STR_TPM_ENABLE_HELP              #language en-US "Enable/Diable TPM device."
 #string STR_PERF_VERSION_PROMPT          #language en-US "Performance Version"
 #string STR_PERF_VERSION_HELP            #language en-US "Specify Desired Performance Version."
 #string STR_UPHY0_SOCKET0_PROMPT         #language en-US "UPHY 0 config"

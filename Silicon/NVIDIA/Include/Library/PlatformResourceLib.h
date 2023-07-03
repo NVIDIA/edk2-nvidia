@@ -351,4 +351,16 @@ IsSocketEnabledStMm (
   IN UINT32  SocketNum
   );
 
+/**
+ * Check if TPM is requested to be enabled.
+ *
+ * @retval  TRUE      TPM is enabled.
+ * @retval  FALSE     TPM is disabled.
+**/
+BOOLEAN
+EFIAPI
+IsTpmToBeEnabled (
+  VOID
+  );
+
 #endif //__PLATFORM_RESOURCE_LIB_H__

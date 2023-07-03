@@ -14,6 +14,8 @@
 #include <Library/DevicePathLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PlatformResourceLib.h>
+#include <Library/PcdLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -300,7 +302,16 @@ Tpm2DxeDriverBindingSupported (
                   );
   ASSERT_EFI_ERROR (Status);
 
-  return CompatibilityStatus;
+  if (EFI_ERROR (CompatibilityStatus)) {
+    DEBUG ((DEBUG_INFO, "%a: TPM is not present.\n", __FUNCTION__));
+    PcdSetBoolS (PcdTpmPresent, FALSE);
+    PcdSetBoolS (PcdTpmEnable, FALSE);
+    return CompatibilityStatus;
+  }
+
+  PcdSetBoolS (PcdTpmPresent, TRUE);
+  PcdSetBoolS (PcdTpmEnable, IsTpmToBeEnabled ());
+  return EFI_SUCCESS;
 }
 
 /**

@@ -1172,6 +1172,7 @@ SyncHiiSettings (
     mHiiControlSettings.EgmHvSizeMb          = mMb1Config.Data.Mb1Data.HvRsvdMemSize;
     mHiiControlSettings.SpreadSpectrumEnable = mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable;
     mHiiControlSettings.AtsPageGranule4k     = mMb1Config.Data.Mb1Data.FeatureData.AtsPageGranule4k;
+    mHiiControlSettings.TpmEnable            = mMb1Config.Data.Mb1Data.FeatureData.TpmEnable;
     mHiiControlSettings.PerfVersion          = mMb1Config.Data.Mb1Data.PerfVersion;
     mHiiControlSettings.UefiDebugLevel       = mMb1Config.Data.Mb1Data.UefiDebugLevel;
 
@@ -1238,6 +1239,7 @@ SyncHiiSettings (
     mMb1Config.Data.Mb1Data.HvRsvdMemSize                = mHiiControlSettings.EgmHvSizeMb;
     mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable = mHiiControlSettings.SpreadSpectrumEnable;
     mMb1Config.Data.Mb1Data.FeatureData.AtsPageGranule4k = mHiiControlSettings.AtsPageGranule4k;
+    mMb1Config.Data.Mb1Data.FeatureData.TpmEnable        = mHiiControlSettings.TpmEnable;
     mMb1Config.Data.Mb1Data.PerfVersion                  = mHiiControlSettings.PerfVersion;
     mMb1Config.Data.Mb1Data.UefiDebugLevel               = mHiiControlSettings.UefiDebugLevel;
 
@@ -1439,6 +1441,7 @@ InitializeSettings (
   mHiiControlSettings.QuickBootSupported = FeaturePcdGet (PcdQuickBootSupported);
   mHiiControlSettings.DebugMenuSupported = FeaturePcdGet (PcdDebugMenuSupport);
   mHiiControlSettings.RedfishSupported   = FeaturePcdGet (PcdRedfishSupported);
+  mHiiControlSettings.TpmPresent         = PcdGetBool (PcdTpmPresent);
 
   HobPointer = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
   if (HobPointer != NULL) {

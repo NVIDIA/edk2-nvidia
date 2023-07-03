@@ -90,6 +90,7 @@
   gNVIDIATokenSpaceGuid.PcdRedfishSupported
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology
   gNVIDIATokenSpaceGuid.PcdGpuSmmuBypassEnable
+  gNVIDIATokenSpaceGuid.PcdTpmPresent
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

@@ -91,6 +91,7 @@
 #define KEY_ASSET_TAG_PROTECTION       0x0113
 #define KEY_GRACE_CONFIG               0x0114
 #define KEY_DEBUG_CONFIG               0x0115
+#define KEY_ENABLE_TPM                 0x0116
 
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 
@@ -152,6 +153,8 @@ typedef struct {
   UINT32     UefiDebugLevel;
   BOOLEAN    SpreadSpectrumEnable;
   BOOLEAN    AtsPageGranule4k;
+  BOOLEAN    TpmPresent;
+  UINT8      TpmEnable;
   UINT8      PerfVersion;
   UINT8      UphySetting0[MAX_UPHY];
   UINT8      UphySetting1[MAX_UPHY];

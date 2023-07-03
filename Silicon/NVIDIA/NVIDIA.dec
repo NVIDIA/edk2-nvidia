@@ -673,6 +673,12 @@
 #Option to enable GPU SMMU bypass support
   gNVIDIATokenSpaceGuid.PcdGpuSmmuBypassEnable|FALSE|BOOLEAN|0x000000A5
 
+#Indicate whether TPM device is present and accessible on the system.
+  gNVIDIATokenSpaceGuid.PcdTpmPresent|FALSE|BOOLEAN|0x0000010E
+
+#Indicate whether TPM device is enabled or disabled.
+  gNVIDIATokenSpaceGuid.PcdTpmEnable|FALSE|BOOLEAN|0x0000010F
+
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature
   # Indicate whether the password is cleared.
