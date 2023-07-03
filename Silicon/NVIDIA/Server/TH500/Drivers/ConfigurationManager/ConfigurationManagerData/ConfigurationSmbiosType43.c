@@ -56,6 +56,10 @@ InstallSmbiosType43Cm (
   UINT32                          FirmwareVersion1;
   UINT32                          FirmwareVersion2;
 
+  if (!PcdGetBool (PcdTpmEnable)) {
+    return EFI_NOT_FOUND;
+  }
+
   //
   // Read Vendor ID from TPM device
   //

@@ -606,22 +606,27 @@ ErrorExit:
   return Status;
 }
 
-/** patch TPM1 data in DSDT.
+/** Install SSDT for TPM
 
-  @retval EFI_SUCCESS   Success
+  @param Repo Pointer to a repo structure that will be added to and updated with the data updated
+
+  @retval EFI_SUCCESS       Success
+  @retval !(EFI_SUCCESS)    Other errors
 
 **/
 STATIC
 EFI_STATUS
 EFIAPI
 UpdateTpmInfo (
-  VOID
+  EDKII_PLATFORM_REPOSITORY_INFO  *PlatformRepositoryInfo
   )
 {
-  EFI_STATUS            Status;
-  UINT32                ManufacturerID;
-  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
-  UINT8                 TpmStatus;
+  EFI_STATUS  Status;
+  UINT32      ManufacturerID;
+
+  if (!PcdGetBool (PcdTpmEnable)) {
+    return EFI_SUCCESS;
+  }
 
   //
   // Check if TPM is accessible
@@ -633,24 +638,15 @@ UpdateTpmInfo (
   }
 
   //
-  // Patch to enable TPM1 device
+  // Install SSDT with TPM node
   //
-  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_TPM1_STA, &AcpiNodeInfo);
+  Status = AddAcpiTable (PlatformRepositoryInfo, (EFI_ACPI_DESCRIPTION_HEADER *)ssdttpm_aml_code);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to add SSDT for TPM - %r\r\n", Status));
     return Status;
   }
 
-  if (AcpiNodeInfo.Size > sizeof (TpmStatus)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  TpmStatus = 0xF;
-  Status    = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &TpmStatus, sizeof (TpmStatus));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_TPM1_STA, Status));
-  }
-
-  return Status;
+  return EFI_SUCCESS;
 }
 
 /** patch OEM Table IDs in pre compile AML code
@@ -1656,6 +1652,11 @@ InitializePlatformRepository (
     return Status;
   }
 
+  Status = UpdateTpmInfo (NVIDIAPlatformRepositoryInfo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   // SSDT for socket1 onwards
   for (SocketId = 1; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
     if (!IsSocketEnabled (SocketId)) {
@@ -1810,11 +1811,6 @@ ConfigurationManagerDataDxeInitialize (
   }
 
   Status = UpdateSSIFInfo ();
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = UpdateTpmInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

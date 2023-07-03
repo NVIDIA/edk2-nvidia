@@ -1,7 +1,7 @@
 ## @file
 #  Platform ASL Tables
 #
-#  Copyright (c) 2019 - 2022, NVIDIA Corporation. All rights reserved.
+#  Copyright (c) 2019 - 2023, NVIDIA Corporation. All rights reserved.
 #  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -32,6 +32,7 @@
   BpmpSsdtSocket1.asl
   BpmpSsdtSocket2.asl
   BpmpSsdtSocket3.asl
+  SsdtTpm.asl
 
 [Packages]
   ArmPkg/ArmPkg.dec

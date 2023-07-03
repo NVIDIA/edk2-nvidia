@@ -84,6 +84,7 @@
   gNVIDIATokenSpaceGuid.PcdBootMenuAppFile
   gNVIDIATokenSpaceGuid.PcdBootManagerWaitMessage
   gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration
+  gNVIDIATokenSpaceGuid.PcdTpmEnable
 
 [Guids]
   gEfiFileInfoGuid

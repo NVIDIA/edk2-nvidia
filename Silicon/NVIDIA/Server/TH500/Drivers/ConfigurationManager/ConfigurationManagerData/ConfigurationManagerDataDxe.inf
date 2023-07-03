@@ -127,6 +127,7 @@
   gEfiMdePkgTokenSpaceGuid.PcdUefiVariableDefaultPlatformLangCodes
   gEfiMdePkgTokenSpaceGuid.PcdUefiVariableDefaultPlatformLang
   gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone
+  gNVIDIATokenSpaceGuid.PcdTpmEnable
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid

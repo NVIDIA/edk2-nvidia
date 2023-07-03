@@ -64,6 +64,7 @@
 #include <BpmpSsdtSocket2.offset.h>
 #include <BpmpSsdtSocket3.hex>
 #include <BpmpSsdtSocket3.offset.h>
+#include <SsdtTpm.hex>
 
 #define ACPI_PATCH_MAX_PATH  255
 #define ACPI_GED1_SMR1       "_SB_.GED1.SMR1"

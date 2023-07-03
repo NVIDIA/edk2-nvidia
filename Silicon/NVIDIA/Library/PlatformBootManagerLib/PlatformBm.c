@@ -1454,6 +1454,10 @@ ProcessTpmBeforeBooting (
   VOID
   )
 {
+  if (!PcdGetBool (PcdTpmEnable)) {
+    return;
+  }
+
   //
   // Process TCG2 PPI
   //

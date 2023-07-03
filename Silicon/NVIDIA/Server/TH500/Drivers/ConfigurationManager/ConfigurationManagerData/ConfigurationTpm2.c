@@ -47,6 +47,10 @@ InstallTrustedComputingPlatform2Table (
   UINT8                           Tpm2TableRev;
   UINT8                           TpmInterfaceType;
 
+  if (!PcdGetBool (PcdTpmEnable)) {
+    return EFI_SUCCESS;
+  }
+
   //
   // Check if TPM2 interface is supported
   //
