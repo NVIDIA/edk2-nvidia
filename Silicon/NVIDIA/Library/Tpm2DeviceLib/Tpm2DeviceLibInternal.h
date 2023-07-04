@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -70,6 +70,16 @@ TisTpmCommand (
 **/
 EFI_STATUS
 TisRequestUseTpm (
+  IN NVIDIA_TPM2_PROTOCOL  *Tpm2
+  );
+
+/**
+  Release the control of TPM chip
+
+  @param[in] Tpm2             Pointer to NVIDIA_TPM2_PROTOCOL
+**/
+VOID
+TisReleaseTpm (
   IN NVIDIA_TPM2_PROTOCOL  *Tpm2
   );
 

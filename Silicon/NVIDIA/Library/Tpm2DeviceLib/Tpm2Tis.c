@@ -469,3 +469,22 @@ Exit:
   TisWrite8 (Tpm2, TPM_STS_0, TIS_PC_STS_READY);
   return Status;
 }
+
+/**
+  Release the control of TPM chip
+
+  @param[in] Tpm2             Pointer to NVIDIA_TPM2_PROTOCOL
+**/
+VOID
+TisReleaseTpm (
+  IN NVIDIA_TPM2_PROTOCOL  *Tpm2
+  )
+{
+  ASSERT (Tpm2 != NULL);
+
+  //
+  // According to TIS spec, software relinquishes the TPM’s locality by
+  // writing a “1” to the TPM_ACCESS_x.activeLocality field.
+  //
+  TisWrite8 (Tpm2, TPM_ACCESS_0, TIS_PC_ACC_ACTIVE);
+}

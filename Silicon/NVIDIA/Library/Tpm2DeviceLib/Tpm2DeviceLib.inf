@@ -39,6 +39,7 @@
   MemoryAllocationLib
   UefiLib
   Tpm2CommandLib
+  HashLib
 
 [Protocols]
   gNVIDIATpm2ProtocolGuid  ## CONSUMES
@@ -48,6 +49,8 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask             ## PRODUCES
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap  ## PRODUCES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2InitializationPolicy ## CONSUMES
+  gNVIDIATokenSpaceGuid.PcdTpmEnable                        ## CONSUMES
+
 
 [Depex]
   gNVIDIATpm2ProtocolGuid

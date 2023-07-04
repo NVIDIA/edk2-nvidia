@@ -10,6 +10,7 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/HashLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/Tpm2DeviceLib.h>
@@ -98,9 +99,12 @@ Tpm2Initialize (
   VOID
   )
 {
-  EFI_STATUS  Status;
-  UINT32      TpmHashAlgorithmBitmap;
-  UINT32      ActivePCRBanks;
+  EFI_STATUS          Status;
+  UINT32              TpmHashAlgorithmBitmap;
+  UINT32              ActivePCRBanks;
+  UINT32              Pcr;
+  UINT32              Event;
+  TPML_DIGEST_VALUES  DigestList;
 
   Status = Tpm2RequestUseTpmInternal ();
   if (EFI_ERROR (Status)) {
@@ -146,6 +150,50 @@ Tpm2Initialize (
   }
 
   PcdSet32S (PcdTcg2HashAlgorithmBitmap, 0x00000006);
+
+  //
+  // If TPM is disabled by users, lock down the TPM and remove the driver
+  //
+  if (!PcdGetBool (PcdTpmEnable)) {
+    //
+    // Disable Storage and Endorsement hierarchies
+    //
+    Status = Tpm2HierarchyControl (TPM_RH_PLATFORM, NULL, TPM_RH_OWNER, NO);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Disable Owner Hierarchy Failed! %r\n", __FUNCTION__, Status));
+    }
+
+    Status = Tpm2HierarchyControl (TPM_RH_PLATFORM, NULL, TPM_RH_ENDORSEMENT, NO);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Disable Endorsement Hierarchy Failed! %r\n", __FUNCTION__, Status));
+    }
+
+    //
+    // Cap PCRs 0-7 by extending EV_SEPARATOR to them
+    //
+    Event = 0;
+    for (Pcr = 0; Pcr < 8; Pcr++) {
+      Status = HashAndExtend (Pcr, (UINT8 *)&Event, sizeof (Event), &DigestList);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Fail to extend EV_SEPARATOR to PCR%u - %r\n", __FUNCTION__, Pcr, Status));
+      }
+    }
+
+    //
+    // Disable Platform hierarchy
+    //
+    Status = Tpm2HierarchyControl (TPM_RH_PLATFORM, NULL, TPM_RH_PLATFORM, NO);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Disable Platform Hierarchy Failed! %r\n", __FUNCTION__, Status));
+    }
+
+    //
+    // Relinqish TPM locality to allow TPM to enter low power state
+    //
+    TisReleaseTpm (mTpm2);
+
+    return EFI_UNSUPPORTED;
+  }
 
   return EFI_SUCCESS;
 }
