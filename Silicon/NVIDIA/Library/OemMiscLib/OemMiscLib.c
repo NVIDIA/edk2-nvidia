@@ -170,9 +170,11 @@ PopulateCpuData (
   OEM_MISC_PROCESSOR_DATA  *MiscProcessorData
   )
 {
-  UINTN       CoresEnabled;
-  UINT64      CurFreqHz = 0;
-  UINT64      MaxFreqHz = 0;
+  UINTN   CoresEnabled;
+  UINT64  CurFreqHz = 0;
+  UINT64  MaxFreqHz = 0;
+  UINTN   ChipId;
+
   EFI_STATUS  Status;
 
   Status = GetCpuFreqHz (ProcessorIndex, &CurFreqHz, &MaxFreqHz);
@@ -182,8 +184,17 @@ PopulateCpuData (
     MaxFreqHz = 0;
   }
 
+  ChipId = TegraGetChipID ();
+  switch (ChipId) {
+    case TH500_CHIP_ID:
+      MiscProcessorData->MaxSpeed = 0;
+      break;
+    default:
+      MiscProcessorData->MaxSpeed = HZ_TO_MHZ (MaxFreqHz);
+      break;
+  }
+
   MiscProcessorData->CurrentSpeed = HZ_TO_MHZ (CurFreqHz);
-  MiscProcessorData->MaxSpeed     = HZ_TO_MHZ (MaxFreqHz);
   CoresEnabled                    = GetCpuEnabledCores (ProcessorIndex);
   MiscProcessorData->CoreCount    = CoresEnabled;
   MiscProcessorData->CoresEnabled = CoresEnabled;
