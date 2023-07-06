@@ -8,6 +8,7 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/DxeServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
@@ -712,6 +713,7 @@ UpdateSmmuV3UidInfo (
 
 ErrorExit:
   Index++;
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), return Status, "SMMUv3 UID Patching Failure.\n");
   return Status;
 }
 
