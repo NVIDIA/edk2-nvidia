@@ -18,6 +18,7 @@
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = Tpm2DeviceLib
   CONSTRUCTOR                    = Tpm2DeviceLibConstructor
+  DESTRUCTOR                     = Tpm2DeviceLibDestructor
 
 [Sources.common]
   Tpm2DeviceLib.c

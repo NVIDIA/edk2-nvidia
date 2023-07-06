@@ -24,6 +24,7 @@
 
 STATIC VOID                  *mSearchToken = NULL;
 STATIC NVIDIA_TPM2_PROTOCOL  *mTpm2        = NULL;
+STATIC EFI_EVENT             mTpm2Event    = NULL;
 
 /**
   This service enables the sending of commands to the TPM2.
@@ -188,8 +189,6 @@ Tpm2RegistrationEvent (
   }
 
   if (NumHandles > 0) {
-    gBS->CloseEvent (Event);
-
     Status = gBS->HandleProtocol (
                     Handles[0],
                     &gNVIDIATpm2ProtocolGuid,
@@ -230,13 +229,25 @@ Exit:
 }
 
 /**
-  Library entry point
+  Destructor for TPM2 device library.
 
-  @param  ImageHandle           Handle that identifies the loaded image.
-  @param  SystemTable           System Table for this image.
+  @retval EFI_SUCCESS on Success.
+ **/
+EFI_STATUS
+EFIAPI
+Tpm2DeviceLibDestructor (
+  VOID
+  )
+{
+  gBS->CloseEvent (mTpm2Event);
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Constructor for TPM2 device library.
 
   @retval EFI_SUCCESS           The operation completed successfully.
-
 **/
 EFI_STATUS
 EFIAPI
@@ -244,7 +255,6 @@ Tpm2DeviceLibConstructor (
   VOID
   )
 {
-  EFI_EVENT   Event;
   EFI_STATUS  Status;
 
   //
@@ -265,14 +275,14 @@ Tpm2DeviceLibConstructor (
   // protocol. This will notify us even if the protocol instance we are looking
   // for has already been installed or reinstalled.
   //
-  Event = EfiCreateProtocolNotifyEvent (
-            &gNVIDIATpm2ProtocolGuid,
-            TPL_CALLBACK,
-            Tpm2RegistrationEvent,
-            NULL,
-            &mSearchToken
-            );
-  if (Event == NULL) {
+  mTpm2Event = EfiCreateProtocolNotifyEvent (
+                 &gNVIDIATpm2ProtocolGuid,
+                 TPL_CALLBACK,
+                 Tpm2RegistrationEvent,
+                 NULL,
+                 &mSearchToken
+                 );
+  if (mTpm2Event == NULL) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
