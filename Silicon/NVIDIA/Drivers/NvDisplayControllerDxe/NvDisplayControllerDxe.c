@@ -67,12 +67,13 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NV Display Controller Driver",
-  .UseDriverBinding                = TRUE,
+  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = FALSE,
   .AutoDeassertReset               = FALSE,
   .AutoResetModule                 = FALSE,
   .AutoDeassertPg                  = TRUE,
-  .SkipEdkiiNondiscoverableInstall = TRUE
+  .SkipEdkiiNondiscoverableInstall = TRUE,
+  .DirectEnumerationSupport        = TRUE
 };
 
 /* Extra command-line arguments passed to the kernel to disable EFIFB

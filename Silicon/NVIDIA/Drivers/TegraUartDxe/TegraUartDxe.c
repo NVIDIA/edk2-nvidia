@@ -33,11 +33,12 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                                 = L"NVIDIA Serial Driver",
-  .UseDriverBinding                           = TRUE,
+  .UseDriverBinding                           = FALSE,
   .AutoEnableClocks                           = TRUE,
   .AutoResetModule                            = TRUE,
   .SkipEdkiiNondiscoverableInstall            = FALSE,
-  .SkipAutoDeinitControllerOnExitBootServices = TRUE
+  .SkipAutoDeinitControllerOnExitBootServices = TRUE,
+  .DirectEnumerationSupport                   = TRUE
 };
 
 #define UART_CLOCK_NAME  "serial"

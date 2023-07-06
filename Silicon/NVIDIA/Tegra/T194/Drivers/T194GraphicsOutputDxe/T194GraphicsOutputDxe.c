@@ -38,9 +38,10 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA T194 display driver",
-  .UseDriverBinding                = TRUE,
+  .UseDriverBinding                = FALSE,
   .AutoResetModule                 = FALSE,
-  .SkipEdkiiNondiscoverableInstall = TRUE
+  .SkipEdkiiNondiscoverableInstall = TRUE,
+  .DirectEnumerationSupport        = TRUE
 };
 
 /** GraphicsOutput Protocol function, mapping to

@@ -2,7 +2,7 @@
 
   UFS Controller Driver
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -30,11 +30,12 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                                 = L"NVIDIA Ufs controller driver",
-  .UseDriverBinding                           = TRUE,
+  .UseDriverBinding                           = FALSE,
   .AutoEnableClocks                           = TRUE,
   .AutoDeassertReset                          = TRUE,
   .SkipEdkiiNondiscoverableInstall            = FALSE,
-  .SkipAutoDeinitControllerOnExitBootServices = TRUE
+  .SkipAutoDeinitControllerOnExitBootServices = TRUE,
+  .DirectEnumerationSupport                   = TRUE
 };
 
 //

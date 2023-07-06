@@ -29,12 +29,13 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                                 = L"NVIDIA Controller Enable Driver",
-  .UseDriverBinding                           = TRUE,
+  .UseDriverBinding                           = FALSE,
   .AutoEnableClocks                           = TRUE,
   .AutoResetModule                            = TRUE,
   .AutoDeassertPg                             = TRUE,
   .SkipEdkiiNondiscoverableInstall            = TRUE,
-  .SkipAutoDeinitControllerOnExitBootServices = TRUE
+  .SkipAutoDeinitControllerOnExitBootServices = TRUE,
+  .DirectEnumerationSupport                   = TRUE
 };
 
 /**

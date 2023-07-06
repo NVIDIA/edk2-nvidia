@@ -131,10 +131,11 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA SdMmc controller driver",
-  .UseDriverBinding                = TRUE,
+  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = TRUE,
   .AutoResetModule                 = TRUE,
-  .SkipEdkiiNondiscoverableInstall = FALSE
+  .SkipEdkiiNondiscoverableInstall = FALSE,
+  .DirectEnumerationSupport        = TRUE
 };
 
 /**
