@@ -103,6 +103,12 @@ ReleaseUsbRndisPrivate (
            DriverBinding->DriverBindingHandle,
            Private->ControllerData
            );
+    gBS->CloseProtocol (
+           Private->ControllerData,
+           &gEfiUsbIoProtocolGuid,
+           DriverBinding->DriverBindingHandle,
+           Private->Handle
+           );
     Private->UsbIoDataProtocol = NULL;
   }
 
@@ -332,9 +338,26 @@ UsbRndisDriverStart (
                     &Private->UsbNicInfoProtocol,
                     NULL
                     );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a, install SNP protocol failed: %r\n", __FUNCTION__, Status));
+    if (!EFI_ERROR (Status)) {
+      //
+      // Open For Child Device
+      //
+      Status = gBS->OpenProtocol (
+                      Controller,
+                      &gEfiUsbIoProtocolGuid,
+                      (VOID **)&UsbIo,
+                      This->DriverBindingHandle,
+                      Private->Handle,
+                      EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: open protocol by child controller failed: %r\n", __FUNCTION__, Status));
+      }
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: install SNP and corresponding protocols failed: %r\n", __FUNCTION__, Status));
     }
+
+    DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a: Controller Data: 0x%p done, new handle: 0x%p\n", __FUNCTION__, Controller, Private->Handle));
 
     return Status;
   }
