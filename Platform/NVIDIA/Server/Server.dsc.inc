@@ -180,7 +180,7 @@
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV
 
 [PcdsDynamicHii.common.TH500]
-  gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|L"EnabledPcieNicTopology"|gNVIDIAPublicVariableGuid|0x0|{ 0x1, 0x8, 0xFF, 0xFF, 0xFF }|BS,NV
+  gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|L"EnabledPcieNicTopology"|gNVIDIAPublicVariableGuid|0x0|{ 0x0, 0x0, 0x0, 0x0, 0x0 }|BS,NV
 
 [PcdsDynamicHii.common.TH500Presil]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
