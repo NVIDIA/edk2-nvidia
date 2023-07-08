@@ -2,7 +2,7 @@
 
   MM FW partition protocol communication
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2010 - 2019, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -43,6 +43,7 @@ typedef struct {
   // request fields
   UINTN      ActiveBootChain;
   BOOLEAN    OverwriteActiveFwPartition;
+  UINTN      ChipId;
 } FW_PARTITION_COMM_INITIALIZE;
 
 typedef struct {
@@ -89,7 +90,8 @@ EFI_STATUS
 EFIAPI
 MmSendInitialize  (
   UINTN    ActiveBootChain,
-  BOOLEAN  OverwriteActiveFwPartitions
+  BOOLEAN  OverwriteActiveFwPartitions,
+  UINTN    ChipId
   );
 
 EFI_STATUS

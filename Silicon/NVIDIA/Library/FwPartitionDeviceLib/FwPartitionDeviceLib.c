@@ -2,7 +2,7 @@
 
   FW Partition Device Library
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,11 +17,20 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Uefi/UefiBaseType.h>
 
+CONST CHAR16 **
+EFIAPI
+FwImageGetList (
+  IN  UINTN  ChipId,
+  OUT UINTN  *ImageCount
+  );
+
 STATIC FW_PARTITION_PRIVATE_DATA  *mPrivate                   = NULL;
 STATIC UINTN                      mNumFwPartitions            = 0;
 STATIC UINTN                      mMaxFwPartitions            = 0;
 STATIC UINT32                     mActiveBootChain            = MAX_UINT32;
 STATIC BOOLEAN                    mOverwriteActiveFwPartition = FALSE;
+STATIC CONST CHAR16               **mFwImageList              = NULL;
+STATIC UINTN                      mFwImageCount               = 0;
 
 // non-A/B partition names
 STATIC CONST CHAR16  *NonABPartitionNames[] = {
@@ -57,6 +66,34 @@ NameIsInList (
   }
 
   return FALSE;
+}
+
+/**
+  Check if partition is in image list.
+
+  @param[in]  PartitionName             Name of partition to check.
+
+  @retval BOOLEAN                       TRUE if partition is in image list.
+
+**/
+STATIC
+BOOLEAN
+EFIAPI
+FwPartitionIsInImageList (
+  CONST CHAR16  *PartitionName
+  )
+{
+  CHAR16      ImageName[MAX_PARTITION_NAME_LEN];
+  UINTN       BootChain;
+  EFI_STATUS  Status;
+
+  Status = GetPartitionBaseNameAndBootChainAny (PartitionName, ImageName, &BootChain);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to get base name for %s: %r\n", PartitionName, Status));
+    return FALSE;
+  }
+
+  return NameIsInList (ImageName, mFwImageList);
 }
 
 /**
@@ -291,6 +328,11 @@ FwPartitionAdd (
 {
   FW_PARTITION_PRIVATE_DATA  *Private;
   FW_PARTITION_INFO          *PartitionInfo;
+
+  if (!FwPartitionIsInImageList (Name)) {
+    DEBUG ((DEBUG_INFO, "%a: %s not in image list\n", __FUNCTION__, Name));
+    return EFI_SUCCESS;
+  }
 
   if (mNumFwPartitions >= mMaxFwPartitions) {
     DEBUG ((
@@ -631,7 +673,8 @@ EFIAPI
 FwPartitionDeviceLibInit (
   IN  UINT32   ActiveBootChain,
   IN  UINTN    MaxFwPartitions,
-  IN  BOOLEAN  OverwriteActiveFwPartition
+  IN  BOOLEAN  OverwriteActiveFwPartition,
+  IN  UINTN    ChipId
   )
 {
   mActiveBootChain            = ActiveBootChain;
@@ -650,6 +693,8 @@ FwPartitionDeviceLibInit (
       ));
     return EFI_OUT_OF_RESOURCES;
   }
+
+  mFwImageList = FwImageGetList (ChipId, &mFwImageCount);
 
   return EFI_SUCCESS;
 }

@@ -19,6 +19,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeLib.h>
@@ -612,8 +613,6 @@ FwPartitionBlockIoDxeInitialize (
   FW_PARTITION_PRIVATE_DATA   *FwPartitionPrivate;
   VOID                        *Hob;
   BOOLEAN                     PcdOverwriteActiveFwPartition;
-  EFI_HANDLE                  Handle;
-  EFI_STATUS                  LoadedStatus;
 
   PcdOverwriteActiveFwPartition = PcdGetBool (PcdOverwriteActiveFwPartition);
   BrBctUpdatePrivate            = NULL;
@@ -632,7 +631,7 @@ FwPartitionBlockIoDxeInitialize (
     return EFI_UNSUPPORTED;
   }
 
-  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition);
+  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition, TegraGetChipID ());
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", Status));
     return Status;
@@ -815,15 +814,6 @@ Done:
 
     mNumDevices = 0;
   }
-
-  Handle       = NULL;
-  LoadedStatus = gBS->InstallMultipleProtocolInterfaces (
-                        &Handle,
-                        &gNVIDIAFwPartitionBlockIoLoadedGuid,
-                        NULL,
-                        NULL
-                        );
-  ASSERT_EFI_ERROR (LoadedStatus);
 
   return Status;
 }

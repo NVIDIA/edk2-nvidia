@@ -2,7 +2,7 @@
 
   MM FW partition protocol communication
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2010 - 2019, Intel Corporation. All rights reserved.<BR>
   Copyright (c) Microsoft Corporation.<BR>
 
@@ -82,7 +82,8 @@ EFI_STATUS
 EFIAPI
 MmSendInitialize  (
   UINTN    ActiveBootChain,
-  BOOLEAN  OverwriteActiveFwPartition
+  BOOLEAN  OverwriteActiveFwPartition,
+  UINTN    ChipId
   )
 {
   FW_PARTITION_COMM_INITIALIZE  *InitPayload;
@@ -104,6 +105,7 @@ MmSendInitialize  (
   ZeroMem (InitPayload, sizeof (*InitPayload));
   InitPayload->ActiveBootChain            = ActiveBootChain;
   InitPayload->OverwriteActiveFwPartition = OverwriteActiveFwPartition;
+  InitPayload->ChipId                     = ChipId;
 
   Status = MmSendCommBuffer (PayloadSize);
   if (EFI_ERROR (Status)) {

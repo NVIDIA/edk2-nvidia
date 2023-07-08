@@ -220,8 +220,10 @@ FwPartitionDeviceLibDeinit (
 /**
   Initialize the FwPartitionDeviceLib.
 
-  @param[in]  ActiveBootChain   The active FW boot chain (0=a, 1=b)
-  @param[in]  MaxFwPartitions   Maximum number of FW partitions to support
+  @param[in]  ActiveBootChain             The active FW boot chain (0=a, 1=b)
+  @param[in]  MaxFwPartitions             Maximum number of FW partitions to support
+  @param[in]  OverwriteActiveFwPartition  Flag if ok to overwrite active partitions
+  @param[in]  ChipId                      Chip Id of system
 
   @retval EFI_SUCCESS           Operation successful
   @retval others                Error occurred
@@ -232,7 +234,8 @@ EFIAPI
 FwPartitionDeviceLibInit (
   IN  UINT32   ActiveBootChain,
   IN  UINTN    MaxFwPartitions,
-  IN  BOOLEAN  OverwriteActiveFwPartition
+  IN  BOOLEAN  OverwriteActiveFwPartition,
+  IN  UINTN    ChipId
   );
 
 /**

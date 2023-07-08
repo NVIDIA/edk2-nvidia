@@ -2,7 +2,7 @@
 
   FW partition standalone MM
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,7 +15,8 @@ EFI_STATUS
 EFIAPI
 FwPartitionNorFlashStmmInitialize (
   UINTN    ActiveBootChain,
-  BOOLEAN  OverwriteActiveFwPartition
+  BOOLEAN  OverwriteActiveFwPartition,
+  UINTN    ChipId
   );
 
 EFI_STATUS
@@ -45,7 +46,8 @@ FwPartitionMmHandler (
       InitPayload = (FW_PARTITION_COMM_INITIALIZE *)FwImageCommHeader->Data;
       Status      = FwPartitionNorFlashStmmInitialize (
                       InitPayload->ActiveBootChain,
-                      InitPayload->OverwriteActiveFwPartition
+                      InitPayload->OverwriteActiveFwPartition,
+                      InitPayload->ChipId
                       );
 
       FwImageCommHeader->ReturnStatus = Status;

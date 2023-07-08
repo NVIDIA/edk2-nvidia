@@ -12,6 +12,7 @@
 #define __TEGRA_FMP_H__
 
 #include <Uefi/UefiBaseType.h>
+#include <Library/FmpDeviceLib.h>
 #include <Protocol/FirmwareManagement.h>
 
 /**
@@ -100,6 +101,20 @@ EFI_STATUS
 EFIAPI
 FmpTegraGetLowestSupportedVersion (
   OUT UINT32  *Lsv
+  );
+
+/**
+  Register FmpDxe installer function.
+
+  @param[in]  Function              Installer function pointer.
+
+  @retval None
+
+**/
+VOID
+EFIAPI
+FmpTegraRegisterInstaller (
+  IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
   );
 
 #endif

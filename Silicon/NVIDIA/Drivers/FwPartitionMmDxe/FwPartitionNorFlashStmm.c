@@ -2,7 +2,7 @@
 
   FW Partition Protocol NorFlash Dxe
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -376,13 +376,14 @@ EFI_STATUS
 EFIAPI
 FwPartitionNorFlashStmmInitialize (
   UINTN    ActiveBootChain,
-  BOOLEAN  OverwriteActiveFwPartition
+  BOOLEAN  OverwriteActiveFwPartition,
+  UINTN    ChipId
   )
 {
   EFI_STATUS  Status;
   UINTN       Index;
 
-  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, OverwriteActiveFwPartition);
+  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, OverwriteActiveFwPartition, ChipId);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", Status));
     return Status;

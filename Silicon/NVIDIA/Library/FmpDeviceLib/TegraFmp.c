@@ -119,6 +119,7 @@ STATIC BOOLEAN     mPcdFmpSingleImageUpdate = FALSE;
 STATIC VOID        *mFmpDataBuffer          = NULL;
 STATIC UINTN       mFmpDataBufferSize       = 0;
 STATIC BOOLEAN     mFmpLibInitialized       = FALSE;
+STATIC BOOLEAN     mFmpLibInitializeFailed  = FALSE;
 STATIC CHAR8       *mPlatformCompatSpec     = NULL;
 STATIC CHAR8       *mPlatformSpec           = NULL;
 STATIC BOOLEAN     mIsProductionFused       = FALSE;
@@ -130,6 +131,8 @@ STATIC EFI_STATUS  mTegraVersionStatus      = EFI_UNSUPPORTED;
 STATIC NVIDIA_BOOT_CHAIN_PROTOCOL                     *mBootChainProtocol   = NULL;
 STATIC NVIDIA_BR_BCT_UPDATE_PROTOCOL                  *mBrBctUpdateProtocol = NULL;
 STATIC EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  mProgress             = NULL;
+STATIC EFI_HANDLE                                     mImageHandle          = NULL;
+FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER                 mInstaller            = NULL;
 
 /**
   Get production fuse setting from 5th field in TnSpec.  The field must contain
@@ -325,6 +328,7 @@ Done:
   Get version info.
 
   @retval EFI_SUCCESS                   Operation completed successfully
+  @retval EFI_NOT_FOUND                 The VER partition wasn't found
   @retval Others                        An error occurred
 
 **/
@@ -345,8 +349,7 @@ GetVersionInfo (
   VerStr = NULL;
   Image  = FwImageFindProtocol (VER_PARTITION_NAME);
   if (Image == NULL) {
-    Status = EFI_NOT_FOUND;
-    goto Done;
+    return EFI_NOT_FOUND;
   }
 
   Status = Image->GetAttributes (Image, &Attributes);
@@ -1636,6 +1639,79 @@ Done:
 }
 
 /**
+  Install FMP by calling installer function.
+
+  @return None
+
+**/
+VOID
+EFIAPI
+FwImageInstallFmp (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+
+  if (mInstaller == NULL) {
+    DEBUG ((DEBUG_INFO, "%a: no installer\n", __FUNCTION__));
+    return;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: installing FMP\n", __FUNCTION__));
+
+  Status = mInstaller (mImageHandle);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: FMP installer failed: %r\n", __FUNCTION__, Status));
+  }
+
+  mInstaller = NULL;
+}
+
+/**
+  Function to handle new FwImage found or FmpDxe registers installer function.
+
+  @return None
+
+**/
+VOID
+EFIAPI
+FmpDeviceFwImageCallback (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+
+  if (mTegraVersionStatus == EFI_UNSUPPORTED) {
+    Status = GetVersionInfo ();
+    if (!EFI_ERROR (Status)) {
+      mFmpLibInitialized = TRUE;
+    } else if (Status == EFI_NOT_FOUND) {
+      return;
+    }
+  }
+
+  FwImageInstallFmp ();
+  FwImageRegisterImageAddedCallback (NULL);
+}
+
+VOID
+EFIAPI
+FmpTegraRegisterInstaller (
+  IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
+  )
+{
+  mInstaller = Function;
+
+  if (mFmpLibInitializeFailed) {
+    DEBUG ((DEBUG_ERROR, "%a: init failed\n", __FUNCTION__));
+    FwImageInstallFmp ();
+    return;
+  }
+
+  FmpDeviceFwImageCallback ();
+}
+
+/**
   FmpDeviceLib constructor.
 
   @param[in]  ImageHandle       Image handle
@@ -1654,6 +1730,8 @@ FmpDeviceLibConstructor (
 {
   EFI_STATUS  Status;
   VOID        *Hob;
+
+  mImageHandle = ImageHandle;
 
   mPcdFmpWriteVerifyImage  = PcdGetBool (PcdFmpWriteVerifyImage);
   mPcdFmpSingleImageUpdate = PcdGetBool (PcdFmpSingleImageUpdate);
@@ -1711,17 +1789,6 @@ FmpDeviceLibConstructor (
     goto Done;
   }
 
-  Status = GetVersionInfo ();
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Error getting version info: %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto Done;
-  }
-
   Status = GetFuseSettings ();
   if (EFI_ERROR (Status)) {
     DEBUG ((
@@ -1744,7 +1811,8 @@ FmpDeviceLibConstructor (
     goto Done;
   }
 
-  mFmpLibInitialized = TRUE;
+  FwImageRegisterImageAddedCallback (FmpDeviceFwImageCallback);
+  Status = EFI_SUCCESS;
 
 Done:
   if (EFI_ERROR (Status)) {
@@ -1768,10 +1836,11 @@ Done:
       mPlatformSpec = NULL;
     }
 
-    mFmpDataBufferSize   = 0;
-    mBrBctUpdateProtocol = NULL;
-    mBootChainProtocol   = NULL;
-    mActiveBootChain     = MAX_UINT32;
+    mFmpDataBufferSize      = 0;
+    mBrBctUpdateProtocol    = NULL;
+    mBootChainProtocol      = NULL;
+    mActiveBootChain        = MAX_UINT32;
+    mFmpLibInitializeFailed = TRUE;
   }
 
   // mFmpLibInitialized flag inibits API if there was an error

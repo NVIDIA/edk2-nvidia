@@ -1,5 +1,5 @@
 /** @file
-  FW Image Protocol Image Names support
+  FW Partition Protocol Image Names support
 
   Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
@@ -11,9 +11,11 @@
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Protocol/FwImageProtocol.h>
 
 STATIC CONST CHAR16  *SystemFwImageNamesCommon[] = {
   L"adsp-fw",
+  L"BCT",
   L"BCT-boot-chain_backup",
   L"bpmp-fw",
   L"bpmp-fw-dtb",
@@ -124,6 +126,7 @@ CombineLists (
 /**
   Get list of FW image names for the platform.
 
+  @param[in]   ChipId               Chip ID of list to get
   @param[out]  ImageCount           Number of images in list
 
   @retval CONST CHAR16**            Pointer to array of image names,
@@ -134,13 +137,12 @@ CombineLists (
 CONST CHAR16 **
 EFIAPI
 FwImageGetList (
+  IN  UINTN  ChipId,
   OUT UINTN  *ImageCount
   )
 {
   CONST CHAR16  **ImageList;
-  UINTN         ChipId;
 
-  ChipId = TegraGetChipID ();
   switch (ChipId) {
     case T194_CHIP_ID:
       ImageList = CombineLists (
@@ -162,6 +164,8 @@ FwImageGetList (
       *ImageCount = 0;
       break;
   }
+
+  ASSERT (*ImageCount <= FW_IMAGE_MAX_IMAGES);
 
   return ImageList;
 }

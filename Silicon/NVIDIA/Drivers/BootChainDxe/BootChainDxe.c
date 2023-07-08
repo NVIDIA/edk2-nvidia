@@ -18,6 +18,9 @@
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include "BootChainDxePrivate.h"
 
+STATIC EFI_EVENT  mNewImageEvent         = NULL;
+STATIC VOID       *mNewImageRegistration = NULL;
+
 UINT32                         mBootChain                          = MAX_UINT32;
 BOOLEAN                        mUpdateBrBctFlag                    = FALSE;
 NVIDIA_BR_BCT_UPDATE_PROTOCOL  *mBrBctUpdateProtocol               = NULL;
@@ -273,6 +276,11 @@ BootChainExecuteUpdate (
 
   if (This != &mProtocol) {
     return EFI_INVALID_PARAMETER;
+  }
+
+  if (mBrBctUpdateProtocol == NULL) {
+    DEBUG ((DEBUG_INFO, "%a: no BrBct protocol\n", __FUNCTION__));
+    return EFI_NOT_READY;
   }
 
   BCStatus = MAX_UINT32;
@@ -544,6 +552,35 @@ Cleanup:
   }
 }
 
+/**
+  Event notification for installation of BrBctUpdate protocol instance.
+
+  @param  Event                 The Event that is being processed.
+  @param  Context               Event Context.
+
+**/
+STATIC
+VOID
+EFIAPI
+BrBctProtocolCallback (
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = gBS->LocateProtocol (
+                  &gNVIDIABrBctUpdateProtocolGuid,
+                  NULL,
+                  (VOID **)&mBrBctUpdateProtocol
+                  );
+  DEBUG ((DEBUG_INFO, "%a: BrBctUpdate protocol: %r\n", __FUNCTION__, Status));
+
+  if (!EFI_ERROR (Status)) {
+    gBS->CloseEvent (Event);
+  }
+}
+
 EFI_STATUS
 EFIAPI
 BootChainDxeInitialize (
@@ -595,20 +632,15 @@ BootChainDxeInitialize (
     goto Done;
   }
 
-  Status = gBS->LocateProtocol (
-                  &gNVIDIABrBctUpdateProtocolGuid,
-                  NULL,
-                  (VOID **)&mBrBctUpdateProtocol
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: BrBctUpdate Protocol Guid=%g not found: %r\n",
-      __FUNCTION__,
-      &gNVIDIABrBctUpdateProtocolGuid,
-      Status
-      ));
-    goto Done;
+  mNewImageEvent = EfiCreateProtocolNotifyEvent (
+                     &gNVIDIABrBctUpdateProtocolGuid,
+                     TPL_CALLBACK,
+                     BrBctProtocolCallback,
+                     NULL,
+                     &mNewImageRegistration
+                     );
+  if (mNewImageEvent == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: protocol notify failed\n", __FUNCTION__));
   }
 
   mProtocol.ActiveBootChain      = mBootChain;

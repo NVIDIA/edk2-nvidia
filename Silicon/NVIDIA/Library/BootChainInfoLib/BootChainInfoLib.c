@@ -2,7 +2,7 @@
 
   Boot Chain Information Library
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -156,7 +156,10 @@ GetPartitionBaseNameAndBootChain (
         }
       }
 
-      break;
+      // no prefix, base name is partition name
+      StrCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName);
+      *BootChain = 0;
+      return EFI_SUCCESS;
     }
     case T194_CHIP_ID:
     {
