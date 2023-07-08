@@ -14,10 +14,14 @@
 #include <Library/FwImageLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiLib.h>
 #include <Uefi/UefiBaseType.h>
 
-STATIC UINTN                     mNumImages  = 0;
-STATIC NVIDIA_FW_IMAGE_PROTOCOL  **mFwImages = NULL;
+STATIC UINTN                     mNumImages             = 0;
+STATIC NVIDIA_FW_IMAGE_PROTOCOL  **mFwImages            = NULL;
+STATIC FW_IMAGE_ADDED_CALLBACK   mImageAddedCallback    = NULL;
+STATIC EFI_EVENT                 mNewImageEvent         = NULL;
+STATIC VOID                      *mNewImageRegistration = NULL;
 
 NVIDIA_FW_IMAGE_PROTOCOL *
 EFIAPI
@@ -62,6 +66,90 @@ FwImageGetProtocolArray (
   return mFwImages;
 }
 
+VOID
+EFIAPI
+FwImageRegisterImageAddedCallback (
+  FW_IMAGE_ADDED_CALLBACK  Callback
+  )
+{
+  mImageAddedCallback = Callback;
+
+  if ((Callback != NULL) && (mNumImages > 0)) {
+    mImageAddedCallback ();
+  }
+}
+
+/**
+  Event notification that is fired when FwImage protocol instance is installed.
+
+  @param  Event                 The Event that is being processed.
+  @param  Context               Event Context.
+
+**/
+VOID
+EFIAPI
+FwImageLibProtocolCallback (
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       HandleSize;
+  EFI_HANDLE  Handle;
+
+  while (TRUE) {
+    HandleSize = sizeof (Handle);
+    Status     = gBS->LocateHandle (
+                        ByRegisterNotify,
+                        &gNVIDIAFwImageProtocolGuid,
+                        mNewImageRegistration,
+                        &HandleSize,
+                        &Handle
+                        );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a: No handles: %r\n", __FUNCTION__, Status));
+
+      if (mImageAddedCallback != NULL) {
+        mImageAddedCallback ();
+      }
+
+      return;
+    }
+
+    Status = gBS->HandleProtocol (
+                    Handle,
+                    &gNVIDIAFwImageProtocolGuid,
+                    (VOID **)&mFwImages[mNumImages]
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get FW Image Protocol: %r\n", __FUNCTION__, Status));
+      goto Done;
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: Got FW Image protocol, Name=%s\n", __FUNCTION__, mFwImages[mNumImages]->ImageName));
+
+    if (FwImageFindProtocol (mFwImages[mNumImages]->ImageName) != NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: duplicate %s image\n", __FUNCTION__, mFwImages[mNumImages]->ImageName));
+      Status = EFI_UNSUPPORTED;
+      goto Done;
+    }
+
+    mNumImages++;
+  }
+
+Done:
+  if (EFI_ERROR (Status)) {
+    if (mFwImages != NULL) {
+      FreePool (mFwImages);
+      mFwImages = NULL;
+    }
+
+    mNumImages = 0;
+
+    gBS->CloseEvent (Event);
+  }
+}
+
 /**
   Fw Image Lib constructor entry point.
 
@@ -79,94 +167,26 @@ FwImageLibConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS  Status;
-  UINTN       Index;
-  UINTN       NumHandles;
-  EFI_HANDLE  *HandleBuffer;
-
-  HandleBuffer = NULL;
-  Status       = gBS->LocateHandleBuffer (
-                        ByProtocol,
-                        &gNVIDIAFwImageProtocolGuid,
-                        NULL,
-                        &NumHandles,
-                        &HandleBuffer
-                        );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: LocateHandleBuffer failed for gNVIDIAFwImageProtocolGuid (%r)\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto Done;
-  }
-
-  DEBUG ((DEBUG_INFO, "%a: got %u FW image handles", __FUNCTION__, NumHandles));
-
   mFwImages = (NVIDIA_FW_IMAGE_PROTOCOL **)
-              AllocateRuntimeZeroPool (NumHandles * sizeof (VOID *));
+              AllocateRuntimePool (FW_IMAGE_MAX_IMAGES * sizeof (NVIDIA_FW_IMAGE_PROTOCOL *));
   if (mFwImages == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
     DEBUG ((DEBUG_ERROR, "%a: mFwImages allocate failed\n", __FUNCTION__));
     goto Done;
   }
 
-  mNumImages = 0;
-  for (Index = 0; Index < NumHandles; Index++) {
-    Status = gBS->HandleProtocol (
-                    HandleBuffer[Index],
-                    &gNVIDIAFwImageProtocolGuid,
-                    (VOID **)&mFwImages[Index]
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Failed to get FW Image Protocol for index=%u: %r\n",
-        __FUNCTION__,
-        Index,
-        Status
-        ));
-      goto Done;
-    }
-
-    DEBUG ((
-      DEBUG_INFO,
-      "%a: Got FW Image protocol, Name=%s\n",
-      __FUNCTION__,
-      mFwImages[Index]->ImageName
-      ));
-
-    if (FwImageFindProtocol (mFwImages[Index]->ImageName) != NULL) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: duplicate %s image index=%u\n",
-        __FUNCTION__,
-        mFwImages[Index]->ImageName,
-        Index
-        ));
-      Status = EFI_UNSUPPORTED;
-      goto Done;
-    }
-
-    mNumImages++;
+  mNewImageEvent = EfiCreateProtocolNotifyEvent (
+                     &gNVIDIAFwImageProtocolGuid,
+                     TPL_CALLBACK,
+                     FwImageLibProtocolCallback,
+                     NULL,
+                     &mNewImageRegistration
+                     );
+  if (mNewImageEvent == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: protocol notify failed\n", __FUNCTION__));
+    goto Done;
   }
 
 Done:
-  if (HandleBuffer != NULL) {
-    FreePool (HandleBuffer);
-    HandleBuffer = NULL;
-  }
-
-  if (EFI_ERROR (Status)) {
-    if (mFwImages != NULL) {
-      FreePool (mFwImages);
-      mFwImages = NULL;
-    }
-
-    mNumImages = 0;
-  }
-
   // If an error occurred above, library API reports no images.
   return EFI_SUCCESS;
 }

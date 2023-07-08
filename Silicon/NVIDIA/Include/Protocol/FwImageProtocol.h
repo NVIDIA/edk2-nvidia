@@ -1,7 +1,7 @@
 /** @file
   FW Image Protocol
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,6 +16,7 @@
 #define NVIDIA_FW_IMAGE_PROTOCOL_GUID  {0x39a68588, 0x8251, 0x4e57, \
   {0x8a, 0x92, 0x86, 0x70, 0x03, 0x68, 0x58, 0x13}}
 
+#define FW_IMAGE_MAX_IMAGES  50
 #define FW_IMAGE_NAME_LENGTH                                    \
   (sizeof (((EFI_PARTITION_ENTRY *) 0)->PartitionName) /        \
    sizeof (((EFI_PARTITION_ENTRY *) 0)->PartitionName[0]))

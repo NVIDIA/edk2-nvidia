@@ -376,13 +376,14 @@ EFI_STATUS
 EFIAPI
 FwPartitionNorFlashStmmInitialize (
   UINTN    ActiveBootChain,
-  BOOLEAN  OverwriteActiveFwPartition
+  BOOLEAN  OverwriteActiveFwPartition,
+  UINTN    ChipId
   )
 {
   EFI_STATUS  Status;
   UINTN       Index;
 
-  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, OverwriteActiveFwPartition);
+  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, OverwriteActiveFwPartition, ChipId);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", __FUNCTION__, Status));
     return Status;

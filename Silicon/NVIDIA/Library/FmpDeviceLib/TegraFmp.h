@@ -13,6 +13,7 @@
 
 #include <Uefi/UefiBaseType.h>
 #include <Library/FmpParamLib.h>
+#include <Library/FmpDeviceLib.h>
 #include <Protocol/FirmwareManagement.h>
 
 /**
@@ -85,6 +86,20 @@ FmpTegraSetImage (
   IN  UINT32                                         CapsuleFwVersion,
   OUT CHAR16                                         **AbortReason,
   OUT UINT32                                         *LastAttemptStatus
+  );
+
+/**
+  Register FmpDxe installer function.
+
+  @param[in]  Function              Installer function pointer.
+
+  @retval None
+
+**/
+VOID
+EFIAPI
+FmpTegraRegisterInstaller (
+  IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
   );
 
 #endif

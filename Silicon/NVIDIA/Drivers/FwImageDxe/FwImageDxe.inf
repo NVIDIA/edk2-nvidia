@@ -17,7 +17,6 @@
 
 [Sources.common]
   FwImageDxe.c
-  FwImageNames.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -47,5 +46,4 @@
   gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions
 
 [Depex]
-  gNVIDIABrBctUpdateProtocolGuid AND
-  gNVIDIAFwPartitionBlockIoLoadedGuid
+  TRUE

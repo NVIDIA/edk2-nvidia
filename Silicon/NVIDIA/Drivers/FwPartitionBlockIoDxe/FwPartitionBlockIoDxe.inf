@@ -28,6 +28,7 @@
   HobLib
   FwPartitionDeviceLib
   MemoryAllocationLib
+  TegraPlatformInfoLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   UefiLib
@@ -36,7 +37,6 @@
 [Protocols]
   gNVIDIAFwPartitionProtocolGuid            ## PRODUCES
   gNVIDIABrBctUpdateProtocolGuid            ## PRODUCES
-  gNVIDIAFwPartitionBlockIoLoadedGuid       ## PRODUCES
   gEfiBlockIoProtocolGuid                   ## CONSUMES
   gEfiDevicePathProtocolGuid                ## CONSUMES
 

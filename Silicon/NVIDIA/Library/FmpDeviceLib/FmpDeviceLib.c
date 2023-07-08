@@ -42,7 +42,9 @@ RegisterFmpInstaller (
   IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
   )
 {
-  return EFI_UNSUPPORTED;
+  FmpTegraRegisterInstaller (Function);
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -70,7 +72,7 @@ RegisterFmpUninstaller (
   IN FMP_DEVICE_LIB_REGISTER_FMP_UNINSTALLER  Function
   )
 {
-  return EFI_UNSUPPORTED;
+  return EFI_SUCCESS;
 }
 
 /**
@@ -104,7 +106,7 @@ FmpDeviceSetContext (
   IN OUT VOID    **Context
   )
 {
-  return EFI_UNSUPPORTED;
+  return EFI_SUCCESS;
 }
 
 /**

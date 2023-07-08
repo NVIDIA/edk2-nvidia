@@ -19,7 +19,8 @@
 
 #define USB_FW_IMAGE_NAME  L"xusb-fw"
 
-NVIDIA_USBFW_PROTOCOL  mUsbFwData;
+STATIC NVIDIA_USBFW_PROTOCOL  mUsbFwData;
+STATIC EFI_HANDLE             mImageHandle;
 
 STATIC
 BOOLEAN
@@ -51,6 +52,70 @@ UsbFirmwarePlatformIsSupported (
 }
 
 /**
+  Callback when new FwImage available.
+
+  @return None
+
+**/
+STATIC
+VOID
+EFIAPI
+UsbFirmwareImageCallback (
+  VOID
+  )
+{
+  EFI_STATUS                Status;
+  CHAR8                     *UsbFwBuffer;
+  NVIDIA_FW_IMAGE_PROTOCOL  *FwImage;
+  FW_IMAGE_ATTRIBUTES       Attributes;
+
+  FwImage = FwImageFindProtocol (USB_FW_IMAGE_NAME);
+  if (FwImage == NULL) {
+    DEBUG ((DEBUG_INFO, "USB FW image %s not found\r\n", USB_FW_IMAGE_NAME));
+    return;
+  }
+
+  Status = FwImage->GetAttributes (FwImage, &Attributes);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to get %s attributes\r\n", USB_FW_IMAGE_NAME));
+    goto Done;
+  }
+
+  mUsbFwData.UsbFwSize = Attributes.Bytes;
+  UsbFwBuffer          = AllocateZeroPool (mUsbFwData.UsbFwSize);
+  mUsbFwData.UsbFwBase = UsbFwBuffer;
+  Status               = FwImage->Read (FwImage, 0, mUsbFwData.UsbFwSize, mUsbFwData.UsbFwBase, FW_IMAGE_RW_FLAG_NONE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to read Partition\r\n"));
+    goto Done;
+  }
+
+  if (0 == AsciiStrnCmp (
+             (CONST CHAR8 *)mUsbFwData.UsbFwBase,
+             (CONST CHAR8 *)PcdGetPtr (PcdSignedImageHeaderSignature),
+             sizeof (UINT32)
+             ))
+  {
+    mUsbFwData.UsbFwSize -= PcdGet32 (PcdSignedImageHeaderSize);
+    mUsbFwData.UsbFwBase  = UsbFwBuffer + PcdGet32 (PcdSignedImageHeaderSize);
+  }
+
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &mImageHandle,
+                  &gNVIDIAUsbFwProtocolGuid,
+                  (VOID *)&mUsbFwData,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to install USB firmware protocol - %r\r\n", __FUNCTION__, Status));
+    goto Done;
+  }
+
+Done:
+  FwImageRegisterImageAddedCallback (NULL);
+}
+
+/**
   Entrypoint of USB Firmware Dxe.
 
   @param  ImageHandle
@@ -68,55 +133,12 @@ UsbFirmwareDxeInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                Status;
-  CHAR8                     *UsbFwBuffer;
-  NVIDIA_FW_IMAGE_PROTOCOL  *FwImage;
-  FW_IMAGE_ATTRIBUTES       Attributes;
-
   if (!UsbFirmwarePlatformIsSupported ()) {
     return EFI_UNSUPPORTED;
   }
 
-  FwImage = FwImageFindProtocol (USB_FW_IMAGE_NAME);
-  if (FwImage == NULL) {
-    DEBUG ((DEBUG_ERROR, "USB FW image %s not found\r\n", USB_FW_IMAGE_NAME));
-    return EFI_NOT_FOUND;
-  }
+  mImageHandle = ImageHandle;
+  FwImageRegisterImageAddedCallback (UsbFirmwareImageCallback);
 
-  Status = FwImage->GetAttributes (FwImage, &Attributes);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to get %s attributes\r\n", USB_FW_IMAGE_NAME));
-    return Status;
-  }
-
-  mUsbFwData.UsbFwSize = Attributes.Bytes;
-  UsbFwBuffer          = AllocateZeroPool (mUsbFwData.UsbFwSize);
-  mUsbFwData.UsbFwBase = UsbFwBuffer;
-  Status               = FwImage->Read (FwImage, 0, mUsbFwData.UsbFwSize, mUsbFwData.UsbFwBase, FW_IMAGE_RW_FLAG_NONE);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to read Partition\r\n"));
-    return Status;
-  }
-
-  if (0 == AsciiStrnCmp (
-             (CONST CHAR8 *)mUsbFwData.UsbFwBase,
-             (CONST CHAR8 *)PcdGetPtr (PcdSignedImageHeaderSignature),
-             sizeof (UINT32)
-             ))
-  {
-    mUsbFwData.UsbFwSize -= PcdGet32 (PcdSignedImageHeaderSize);
-    mUsbFwData.UsbFwBase  = UsbFwBuffer + PcdGet32 (PcdSignedImageHeaderSize);
-  }
-
-  Status = gBS->InstallMultipleProtocolInterfaces (
-                  &ImageHandle,
-                  &gNVIDIAUsbFwProtocolGuid,
-                  (VOID *)&mUsbFwData,
-                  NULL
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to install USB firmware protocol - %r\r\n", __FUNCTION__, Status));
-  }
-
-  return Status;
+  return EFI_SUCCESS;
 }

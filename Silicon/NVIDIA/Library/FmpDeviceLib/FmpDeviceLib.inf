@@ -70,4 +70,5 @@
   gNVIDIAPlatformResourceDataGuid
 
 [Depex]
+  gNVIDIABrBctUpdateProtocolGuid AND
   gNVIDIABootChainProtocolGuid

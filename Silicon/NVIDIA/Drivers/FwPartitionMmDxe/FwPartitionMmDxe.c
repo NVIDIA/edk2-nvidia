@@ -14,6 +14,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeLib.h>
@@ -315,7 +316,9 @@ FwPartitionMmDxeInitialize (
   VOID                        *Hob;
   UINTN                       BrBctEraseBlockSize;
   BOOLEAN                     PcdOverwriteActiveFwPartition;
+  UINTN                       ChipId;
 
+  ChipId                        = TegraGetChipID ();
   PcdOverwriteActiveFwPartition = PcdGetBool (PcdOverwriteActiveFwPartition);
   BrBctUpdatePrivate            = NULL;
 
@@ -357,7 +360,7 @@ FwPartitionMmDxeInitialize (
 
   mMmCommBufferPhysical = mMmCommBuffer;
 
-  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition);
+  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition, ChipId);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", __FUNCTION__, Status));
     return Status;
@@ -374,7 +377,8 @@ FwPartitionMmDxeInitialize (
 
   Status = MmSendInitialize (
              ActiveBootChain,
-             PcdOverwriteActiveFwPartition
+             PcdOverwriteActiveFwPartition,
+             ChipId
              );
   if (EFI_ERROR (Status)) {
     DEBUG ((

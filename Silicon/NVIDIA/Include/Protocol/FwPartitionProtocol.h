@@ -99,6 +99,5 @@ struct _NVIDIA_FW_PARTITION_PROTOCOL {
 };
 
 extern EFI_GUID  gNVIDIAFwPartitionProtocolGuid;
-extern EFI_GUID  gNVIDIAFwPartitionBlockIoLoadedGuid;
 
 #endif
