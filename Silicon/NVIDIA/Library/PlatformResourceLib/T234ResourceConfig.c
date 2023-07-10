@@ -167,7 +167,7 @@ T234GetResourceConfig (
   EFI_MEMORY_DESCRIPTOR   Descriptor;
   UINTN                   Index;
   BOOLEAN                 BanketDramEnabled;
-  UINT64                  *DramPageRetirementInfo;
+  UINT32                  *DramPageRetirementInfo;
   TEGRA_MMIO_INFO *CONST  FrameBufferMmioInfo = &T234MmioInfo[T234_FRAME_BUFFER_MMIO_INFO_INDEX];
 
   CpuBootloaderParams          = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
@@ -319,13 +319,21 @@ T234GetResourceConfig (
   }
 
   if (CPUBL_PARAMS (CpuBootloaderParams, FeatureFlagData.EnableDramPageRetirement)) {
-    DramPageRetirementInfo = (UINT64 *)CPUBL_PARAMS (CpuBootloaderParams, DramPageRetirementInfoAddress);
+    DramPageRetirementInfo = (UINT32 *)CPUBL_PARAMS (CpuBootloaderParams, DramPageRetirementInfoAddress);
     for (Index = 0; Index < NUM_DRAM_BAD_PAGES; Index++) {
       if (DramPageRetirementInfo[Index] == 0) {
         break;
       } else {
-        CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = DramPageRetirementInfo[Index];
-        CarveoutRegions[CarveoutRegionsCount].MemoryLength      = SIZE_4KB;
+        /* Convert badpage index to 64K badpage address */
+        CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = DramPageRetirementInfo[Index] * ((UINT64)SIZE_64KB);
+        CarveoutRegions[CarveoutRegionsCount].MemoryLength      = SIZE_64KB;
+        DEBUG ((
+          EFI_D_ERROR,
+          "Retired DRAM Region %u: Base: 0x%016lx, Size: 0x%016lx\n",
+          Index,
+          CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Base),
+          CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index].Size)
+          ));
         CarveoutRegionsCount++;
       }
     }
