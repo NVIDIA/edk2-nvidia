@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -47,8 +47,6 @@ GetMpidrFromLinearCoreID (
   @param[in]     LogicalCore        Logical CPU core ID
   @param[in/out] Mpidr              In: MPIDR from cpu DT node
                                     Out: MPIDR to use in cpu DT node
-  @param[out]    DtCpuFormat        Format specification string for DT cpu label
-  @param[out]    DtCpuId            Dt Cpu Id value to print using DtCpuFormat
 
   @return       EFI_SUCCESS         CPU enabled and other values returned
   @return       EFI_NOT_FOUND       CPU not enabled
@@ -57,10 +55,8 @@ GetMpidrFromLinearCoreID (
 EFI_STATUS
 EFIAPI
 CheckAndRemapCpu (
-  IN UINT32        LogicalCore,
-  IN OUT UINT64    *Mpidr,
-  OUT CONST CHAR8  **DtCpuFormat,
-  OUT UINTN        *DtCpuId
+  IN UINT32      LogicalCore,
+  IN OUT UINT64  *Mpidr
   );
 
 /**

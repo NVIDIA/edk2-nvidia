@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -40,11 +40,9 @@ FloorSweepDtbInternal (
 BOOLEAN
 EFIAPI
 CheckAndRemapCpuInternal (
-  IN UINT32        LogicalCore,
-  IN OUT UINT64    *Mpidr,
-  OUT CONST CHAR8  **DtCpuFormat,
-  OUT UINTN        *DtCpuId,
-  OUT EFI_STATUS   *Status
+  IN UINT32       LogicalCore,
+  IN OUT UINT64   *Mpidr,
+  OUT EFI_STATUS  *Status
   )
 {
   return FALSE;
