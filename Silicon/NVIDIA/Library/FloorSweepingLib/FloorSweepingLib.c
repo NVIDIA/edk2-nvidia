@@ -254,10 +254,8 @@ GetMpidrFromLinearCoreID (
 EFI_STATUS
 EFIAPI
 CheckAndRemapCpu (
-  IN UINT32        LogicalCore,
-  IN OUT UINT64    *Mpidr,
-  OUT CONST CHAR8  **DtCpuFormat,
-  OUT UINTN        *DtCpuId
+  IN UINT32      LogicalCore,
+  IN OUT UINT64  *Mpidr
   )
 {
   UINTN       ChipId;
@@ -267,17 +265,14 @@ CheckAndRemapCpu (
 
   switch (ChipId) {
     case T194_CHIP_ID:
-      Status       = NvgConvertCpuLogicalToMpidr (LogicalCore, Mpidr);
-      *Mpidr      &= MPIDR_AFFINITY_MASK;
-      *DtCpuFormat = "cpu@%x";
-      *DtCpuId     = *Mpidr;
+      Status  = NvgConvertCpuLogicalToMpidr (LogicalCore, Mpidr);
+      *Mpidr &= MPIDR_AFFINITY_MASK;
       break;
     case T234_CHIP_ID:
-      Status       = MceAriCheckCoreEnabled (Mpidr, DtCpuId);
-      *DtCpuFormat = "cpu@%u";
+      Status = MceAriCheckCoreEnabled (Mpidr);
       break;
     case TH500_CHIP_ID:
-      Status = CommonCheckAndRemapCpu (LogicalCore, Mpidr, DtCpuFormat, DtCpuId);
+      Status = CommonCheckAndRemapCpu (LogicalCore, Mpidr);
       break;
     default:
       Status = EFI_UNSUPPORTED;
@@ -378,18 +373,18 @@ UpdateCpuFloorsweepingConfig (
   IN VOID   *Dtb
   )
 {
-  UINTN   Cpu;
-  UINT32  Cluster;
-  UINT64  Mpidr;
-  INT32   CpuMapOffset;
-  INT32   FdtErr;
-  UINT64  Tmp64;
-  UINT32  Tmp32;
-  CHAR8   CpuNodeStr[]     = "cpu@ffffffff";
-  CHAR8   ClusterNodeStr[] = "cluster10";
-  UINT32  AddressCells;
-  INT32   NodeOffset;
-  INT32   TmpOffset;
+  UINTN        Cpu;
+  UINT32       Cluster;
+  UINT64       Mpidr;
+  INT32        CpuMapOffset;
+  INT32        FdtErr;
+  UINT64       Tmp64;
+  UINT32       Tmp32;
+  CONST CHAR8  *CpuNodeStr;
+  CHAR8        ClusterNodeStr[] = "cluster10";
+  UINT32       AddressCells;
+  INT32        NodeOffset;
+  INT32        TmpOffset;
 
   AddressCells = fdt_address_cells (Dtb, CpusOffset);
 
@@ -398,11 +393,9 @@ UpdateCpuFloorsweepingConfig (
   Cpu        = 0;
   NodeOffset = fdt_first_subnode (Dtb, CpusOffset);
   while (NodeOffset > 0) {
-    CONST VOID   *Property;
-    INT32        Length;
-    EFI_STATUS   Status;
-    UINTN        DtCpuId;
-    CONST CHAR8  *DtCpuFormat;
+    CONST VOID  *Property;
+    INT32       Length;
+    EFI_STATUS  Status;
 
     Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
     if ((Property == NULL) || (AsciiStrCmp (Property, "cpu") != 0)) {
@@ -430,12 +423,11 @@ UpdateCpuFloorsweepingConfig (
       Mpidr = fdt32_to_cpu (Tmp32);
     }
 
-    Status = CheckAndRemapCpu (Cpu, &Mpidr, &DtCpuFormat, &DtCpuId);
+    Status = CheckAndRemapCpu (Cpu, &Mpidr);
     if (!EFI_ERROR (Status)) {
-      AsciiSPrint (CpuNodeStr, sizeof (CpuNodeStr), DtCpuFormat, DtCpuId);
-      FdtErr = fdt_set_name (Dtb, NodeOffset, CpuNodeStr);
-      if (FdtErr < 0) {
-        DEBUG ((DEBUG_ERROR, "Failed to set name to %a: %a\r\n", CpuNodeStr, fdt_strerror (FdtErr)));
+      CpuNodeStr = fdt_get_name (Dtb, NodeOffset, NULL);
+      if (CpuNodeStr == NULL) {
+        DEBUG ((DEBUG_ERROR, "Failed to get name of CPU node\r\n"));
         return EFI_DEVICE_ERROR;
       }
 

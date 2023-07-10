@@ -789,10 +789,8 @@ GetLinearCoreIDFromMpidr (
 EFI_STATUS
 EFIAPI
 CommonCheckAndRemapCpu (
-  IN UINT32        LogicalCore,
-  IN OUT UINT64    *Mpidr,
-  OUT CONST CHAR8  **DtCpuFormat,
-  OUT UINTN        *DtCpuId
+  IN UINT32      LogicalCore,
+  IN OUT UINT64  *Mpidr
   )
 {
   EFI_STATUS  Status;
@@ -800,9 +798,7 @@ CommonCheckAndRemapCpu (
 
   LinearCoreId = GetLinearCoreIDFromMpidr (*Mpidr);
   if (IsCoreEnabled (LinearCoreId)) {
-    *DtCpuFormat = "cpu@%u";
-    *DtCpuId     = LinearCoreId % PLATFORM_MAX_CORES_PER_SOCKET;
-    Status       = EFI_SUCCESS;
+    Status = EFI_SUCCESS;
   } else {
     Status = EFI_UNSUPPORTED;
   }

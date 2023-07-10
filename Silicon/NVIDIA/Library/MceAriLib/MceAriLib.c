@@ -481,8 +481,7 @@ MceAriGetVersion (
 EFI_STATUS
 EFIAPI
 MceAriCheckCoreEnabled (
-  IN UINT64  *Mpidr,
-  OUT UINTN  *DtCpuId
+  IN UINT64  *Mpidr
   )
 {
   UINTN   AriBase;
@@ -498,7 +497,6 @@ MceAriCheckCoreEnabled (
     return EFI_NOT_FOUND;
   }
 
-  *DtCpuId = LinearCoreId;
   return EFI_SUCCESS;
 }
 
