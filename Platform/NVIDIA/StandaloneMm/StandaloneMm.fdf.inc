@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -41,7 +41,7 @@
   #
   INF Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordStorage.inf
 
-  #
+ #
   # CMET Record Storage Driver
   #
   INF Silicon/NVIDIA/Drivers/SequentialRecordStMm/CmetRecordStorage.inf

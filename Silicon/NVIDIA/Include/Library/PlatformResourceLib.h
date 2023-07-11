@@ -31,6 +31,7 @@
 #define TEGRABL_RAS_ERROR_LOGS        (24U)
 #define TEGRABL_EARLY_BOOT_VARS       (16U)
 #define TEGRABL_CMET                  (17U)
+#define TEGRABL_OEM                   (28U)
 #define TEGRABL_ERST                  (29U)
 #define DEVICE_CS_MASK                (0xFF00)
 #define DEVICE_CS_SHIFT               (8)

@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -178,6 +178,11 @@
   # MM Error Serialization Driver
   #
   Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
+
+  #
+  # MM Oem Partition Sample Driver.
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/OemPartitionDxeMm/OemPartitionMm.inf
 
   #
   # MM User Authentication Driver
