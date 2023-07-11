@@ -200,7 +200,7 @@ uefifspPollForMsgQueueEmpty (
   EFI_STATUS  Status     = EFI_SUCCESS;
   UINT32      TimeoutIdx = UEFI_FSP_RPC_MSG_QUEUE_POLL_TIMEOUT_INDEX;
 
-  while ((!fspRpcIsMsgQueueEmpty (PciIo, channelId)) && (!TimeoutIdx--)) {
+  while ((!fspRpcIsMsgQueueEmpty (PciIo, channelId)) && (TimeoutIdx--)) {
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_INFO, "%a: [%p][TimeoutIdx:%u]\n", __FUNCTION__, PciIo, TimeoutIdx));
     DEBUG_CODE_END ();
@@ -233,7 +233,7 @@ uefifspPollForMsgQueueResponse (
   EFI_STATUS  Status     = EFI_SUCCESS;
   UINT32      TimeoutIdx = UEFI_FSP_RPC_MSG_QUEUE_POLL_TIMEOUT_INDEX;
 
-  while ((fspRpcIsMsgQueueEmpty (PciIo, channelId)) && (!TimeoutIdx--)) {
+  while ((fspRpcIsMsgQueueEmpty (PciIo, channelId)) && (TimeoutIdx--)) {
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_INFO, "%a: [%p][TimeoutIdx:%u]\n", __FUNCTION__, PciIo, TimeoutIdx));
     DEBUG_CODE_END ();
