@@ -46,6 +46,9 @@
 #define EGM_SOCKET_ADDRESS_MASK            ((UINT64)(~(BIT45|BIT44)))
 #define MaskEgmBaseSocketAddress(addr)  ((addr) & EGM_SOCKET_ADDRESS_MASK)
 
+#define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX      500
+#define UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS  5
+
 /** Diagnostic dump of GPU Driver Binding Private Data
     @param[in] This                         Private Data structure.
     @retval Status  EFI_SUCCESS             Private Data successfully dumped.
@@ -261,6 +264,7 @@ NVIDIAGpuDriverStart (
   )
 {
   EFI_STATUS                                  Status        = EFI_SUCCESS;
+  EFI_STATUS                                  ErrorStatus   = EFI_UNSUPPORTED;
   NVIDIA_GPU_DRIVER_BINDING_PRIVATE_DATA      *mPrivateData = NULL;
   EFI_PCI_IO_PROTOCOL                         *PciIo        = NULL;
   NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL      *GpuDsdAmlGeneration;
@@ -362,10 +366,23 @@ NVIDIAGpuDriverStart (
 
     if (GpuFirmwareBootCompleteProtocol != NULL) {
       BOOLEAN  bFirmwareComplete = FALSE;
-      /* Note: PciIo protocol required. Obtained from Protocol PrivateData Controller lookup. */
-      Status = GpuFirmwareBootCompleteProtocol->GetBootCompleteState (GpuFirmwareBootCompleteProtocol, &bFirmwareComplete);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
+      UINT32   TimeoutIdx        = UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX;
+
+      while ((!bFirmwareComplete) && (TimeoutIdx--)) {
+        /* Note: PciIo protocol required. Obtained from Protocol PrivateData Controller lookup. */
+        Status = GpuFirmwareBootCompleteProtocol->GetBootCompleteState (GpuFirmwareBootCompleteProtocol, &bFirmwareComplete);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
+          ErrorStatus = Status;
+          goto ErrorHandler_RestorePCIAttributes;
+        }
+
+        gBS->Stall (UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS);
+      }
+
+      if ((TimeoutIdx == 0) && (!bFirmwareComplete)) {
+        DEBUG ((DEBUG_ERROR, "ERROR: [TimeoutIdx:%u] Poll for Firmware Boot Complete timed out.\n", TimeoutIdx));
+        ErrorStatus = EFI_TIMEOUT;
         goto ErrorHandler_RestorePCIAttributes;
       }
 
@@ -473,7 +490,7 @@ ErrorHandler_CloseProtocol:
                   ControllerHandle
                   );
 
-  return EFI_UNSUPPORTED;
+  return ErrorStatus;
 }
 
 /** Driver Binding protocol interface to stop the driver on the controller handle supplied
