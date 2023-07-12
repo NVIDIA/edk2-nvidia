@@ -183,6 +183,7 @@
 
 [Guids]
   gNVIDIAPublicVariableGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
   gEfiVariableArchProtocolGuid AND

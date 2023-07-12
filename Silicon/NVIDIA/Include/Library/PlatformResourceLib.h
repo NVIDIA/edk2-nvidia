@@ -73,6 +73,7 @@ typedef struct {
   UINT8     ManufacturerId;
   UINT8     Rank;
   UINT64    Size;
+  UINT32    SpeedKhz;
 } TEGRA_DRAM_DEVICE_INFO;
 
 typedef struct {

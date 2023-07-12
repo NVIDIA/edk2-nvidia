@@ -12,6 +12,7 @@
 **/
 
 #include <ConfigurationManagerDataDxePrivate.h>
+#include <Library/HobLib.h>
 
 // Platform CPU configuration
 #define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
@@ -1257,6 +1258,43 @@ ErrorExit:
   return Status;
 }
 
+/** Get the Dram speed from the telemtry data and update the dram info in the
+    PlatformResourceData Hob.
+
+  @param[in]     SocketId                Socket Id
+  @param[in]     TelemetryDataBuffAddr   Telemetry Data Buff Addr
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateDramSpeed (
+  IN  UINT32  SocketId,
+  IN  UINT64  TelemetryDataBuffAddr
+  )
+{
+  TEGRA_DRAM_DEVICE_INFO  *DramInfo;
+  VOID                    *Hob;
+  UINT32                  *TelemetryData;
+
+  TelemetryData = NULL;
+  TelemetryData = (UINT32 *)TelemetryDataBuffAddr;
+  Hob           = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    DramInfo                    = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->DramDeviceInfo;
+    DramInfo[SocketId].SpeedKhz = TelemetryData[TH500_TEL_LAYOUT_DRAM_RATE_IDX];
+    DEBUG ((DEBUG_INFO, "Setting Dram Speed to %u for Socket %u\n", DramInfo[SocketId].SpeedKhz, SocketId));
+  } else {
+    return EFI_NOT_FOUND;
+  }
+
+  return EFI_SUCCESS;
+}
+
 /** patch MRQ_TELEMETRY data in DSDT.
 
   @retval EFI_SUCCESS   Success
@@ -1425,6 +1463,12 @@ UpdateTelemetryInfo (
     if (EFI_ERROR (Status)) {
       Status = EFI_SUCCESS;
       goto ErrorExit;
+    }
+
+    Status = UpdateDramSpeed (SocketId, TelemetryDataBuffAddr);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to update Dram speed %r\n", __FUNCTION__, Status));
+      Status = EFI_SUCCESS;
     }
   }
 

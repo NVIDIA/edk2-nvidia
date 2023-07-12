@@ -738,6 +738,7 @@ TH500GetPlatformResourceInformation (
     TH500DramDeviceInfo[Index].SerialNumber   = CpuBootloaderParams->DramInfo[Index].SerialNumber;
     TH500DramDeviceInfo[Index].TotalWidth     = CpuBootloaderParams->DramInfo[Index].TotalWidth;
     TH500DramDeviceInfo[Index].Size           = CpuBootloaderParams->SdramInfo[Index].Size;
+    TH500DramDeviceInfo[Index].SpeedKhz       = 0;
   }
 
   BuildGuidDataHob (&gNVIDIATH500MB1DataGuid, &CpuBootloaderParams->EarlyBootVariables, sizeof (CpuBootloaderParams->EarlyBootVariables));
