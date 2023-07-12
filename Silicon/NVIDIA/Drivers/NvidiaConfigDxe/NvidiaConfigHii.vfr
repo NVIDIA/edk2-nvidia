@@ -172,18 +172,23 @@ formset
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 0;
     goto TH500_CONFIGURATION_FORM_ID,
         prompt = STRING_TOKEN(STR_TH500_CONFIG_FORM_TITLE),
-        help   = STRING_TOKEN(STR_TH500_CONFIG_FORM_HELP);
+        help   = STRING_TOKEN(STR_TH500_CONFIG_FORM_HELP),
+        flags  = INTERACTIVE,
+        key    = KEY_GRACE_CONFIG;
     endif;
 
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DebugMenuSupported == 0;
     goto DEBUG_CONFIGURATION_FORM_ID,
         prompt = STRING_TOKEN(STR_DEBUG_CONFIG_FORM_TITLE),
-        help   = STRING_TOKEN(STR_DEBUG_CONFIG_FORM_HELP);
+        help   = STRING_TOKEN(STR_DEBUG_CONFIG_FORM_HELP),
+        flags  = INTERACTIVE,
+        key    = KEY_DEBUG_CONFIG;
     endif;
 
     goto NVIDIA_PRODUCT_INFO_FORM_ID,
         prompt = STRING_TOKEN(STR_PRODUCT_INFO_TITLE),
         help   = STRING_TOKEN(STR_PRODUCT_INFO_HELP),
+        flags  = INTERACTIVE,
         key    = KEY_PRODUCT_INFO;
 
     text
@@ -266,7 +271,7 @@ formset
     checkbox varid = EnabledPcieNicTopology.Enabled,
         prompt = STRING_TOKEN(STR_ENABLED_PCIE_NIC_TOPOLOGY_PROMPT),
         help   = STRING_TOKEN(STR_ENABLED_PCIE_NIC_TOPOLOGY_HELP),
-        flags  = RESET_REQUIRED,
+        flags  = INTERACTIVE | RESET_REQUIRED,
         default = FALSE,
     endcheckbox;
 
@@ -274,7 +279,7 @@ formset
     numeric varid = EnabledPcieNicTopology.Segment,
         prompt = STRING_TOKEN(STR_PCIE_SEGMENT_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
-        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
         minimum = 0,
         maximum = 255,
         step = 1,
@@ -283,7 +288,7 @@ formset
         numeric varid = EnabledPcieNicTopology.Bus,
         prompt = STRING_TOKEN(STR_PCIE_BUS_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
-        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
         minimum = 0,
         maximum = 255,
         step = 1,
@@ -292,7 +297,7 @@ formset
     numeric varid = EnabledPcieNicTopology.Device,
         prompt = STRING_TOKEN(STR_PCIE_DEVICE_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
-        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
         minimum = 0,
         maximum = 255,
         step = 1,
@@ -301,7 +306,7 @@ formset
     numeric varid = EnabledPcieNicTopology.Function,
         prompt = STRING_TOKEN(STR_PCIE_FUNCTION_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
-        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
         minimum = 0,
         maximum = 255,
         step = 1,
@@ -404,7 +409,7 @@ formset
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EgmEnabled,
         prompt = STRING_TOKEN(STR_EGM_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_EGM_ENABLE_HELP),
-        flags  = RESET_REQUIRED,
+        flags  = INTERACTIVE | RESET_REQUIRED,
         default = FALSE,
     endcheckbox;
 
@@ -412,7 +417,7 @@ formset
     numeric varid = NVIDIA_CONFIG_HII_CONTROL.EgmHvSizeMb,
         prompt = STRING_TOKEN(STR_EGM_HV_RESERVED_SIZE_PROMPT),
         help   = STRING_TOKEN(STR_EGM_HV_RESERVED_SIZE_HELP),
-        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
         minimum = 0,
         maximum = 4294967295,
         step = 64,
@@ -423,21 +428,21 @@ formset
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.SpreadSpectrumEnable,
         prompt = STRING_TOKEN(STR_SPREAD_SPECTRUM_PROMPT),
         help   = STRING_TOKEN(STR_SPREAD_SPECTRUM_HELP),
-        flags  = RESET_REQUIRED,
+        flags  = INTERACTIVE | RESET_REQUIRED,
         default = FALSE,
     endcheckbox;
 
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.AtsPageGranule4k,
         prompt = STRING_TOKEN(STR_ATS_PAGE_GRANULE_PROMPT),
         help   = STRING_TOKEN(STR_ATS_PAGE_GRANULE_HELP),
-        flags  = RESET_REQUIRED,
+        flags  = INTERACTIVE | RESET_REQUIRED,
         default = FALSE,
     endcheckbox;
 
     numeric varid = NVIDIA_CONFIG_HII_CONTROL.PerfVersion,
         prompt = STRING_TOKEN(STR_PERF_VERSION_PROMPT),
         help   = STRING_TOKEN(STR_PERF_VERSION_HELP),
-        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
         minimum = 0,
         maximum = 255,
         step = 1,
@@ -447,7 +452,7 @@ formset
     checkbox varid = GpuSmmuBypassEnable.Enabled,
         prompt = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_HELP),
-        flags  = RESET_REQUIRED,
+        flags  = INTERACTIVE | RESET_REQUIRED,
         default = FALSE,
     endcheckbox;
 
@@ -532,7 +537,7 @@ formset
       numeric varid = NVIDIA_CONFIG_HII_CONTROL.UefiDebugLevel,
           prompt = STRING_TOKEN(STR_UEFI_DEBUG_LEVEL_PROMPT),
           help   = STRING_TOKEN(STR_UEFI_DEBUG_LEVEL_HELP),
-          flags = RESET_REQUIRED | DISPLAY_UINT_HEX,
+          flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_HEX,
           minimum = 0,
           maximum = 4294967295,
           step = 1,

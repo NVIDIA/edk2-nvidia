@@ -1776,6 +1776,14 @@ ConfigCallback (
       default:
         break;
     }
+  } else if ((Action == EFI_BROWSER_ACTION_DEFAULT_STANDARD) ||
+             (Action == EFI_BROWSER_ACTION_DEFAULT_MANUFACTURING) ||
+             (Action == EFI_BROWSER_ACTION_DEFAULT_SAFE) ||
+             (Action == EFI_BROWSER_ACTION_DEFAULT_PLATFORM) ||
+             (Action == EFI_BROWSER_ACTION_DEFAULT_HARDWARE) ||
+             (Action == EFI_BROWSER_ACTION_DEFAULT_FIRMWARE))
+  {
+    Status = EFI_SUCCESS;
   }
 
   return Status;
