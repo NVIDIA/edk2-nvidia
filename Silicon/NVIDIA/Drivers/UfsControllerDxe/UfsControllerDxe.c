@@ -2,7 +2,7 @@
 
   UFS Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,6 +15,7 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -24,15 +25,16 @@
 #include <Protocol/UfsHostControllerPlatform.h>
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "tegra,ufs_variant", &gEdkiiNonDiscoverableUfsDeviceGuid },
-  { NULL,                NULL                                }
+  { "tegra,ufs_variant",    &gEdkiiNonDiscoverableUfsDeviceGuid },
+  { "tegra234,ufs_variant", &gEdkiiNonDiscoverableUfsDeviceGuid },
+  { NULL,                   NULL                                }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                                 = L"NVIDIA Ufs controller driver",
   .AutoEnableClocks                           = TRUE,
   .AutoDeassertReset                          = TRUE,
-  .SkipEdkiiNondiscoverableInstall            = FALSE,
+  .SkipEdkiiNondiscoverableInstall            = TRUE,
   .SkipAutoDeinitControllerOnExitBootServices = TRUE
 };
 
@@ -319,6 +321,121 @@ EDKII_UFS_HC_PLATFORM_PROTOCOL  gUfsOverride = {
   UfsCallback
 };
 
+STATIC
+EFI_STATUS
+EFIAPI
+UfsDriverBindingStart (
+  IN  EFI_HANDLE  DriverHandle,
+  IN  EFI_HANDLE  ControllerHandle
+  )
+{
+  EFI_STATUS                         Status;
+  EFI_PHYSICAL_ADDRESS               BaseAddress;
+  EFI_PHYSICAL_ADDRESS               BaseAddressAux;
+  UINTN                              Size;
+  NON_DISCOVERABLE_DEVICE            *Device;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Desc;
+  NON_DISCOVERABLE_DEVICE            *EdkiiDevice;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *EdkiiDesc;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *EdkiiResources;
+  EFI_ACPI_END_TAG_DESCRIPTOR        *EdkiiEnd;
+  UINTN                              Index;
+  UINTN                              ResourcesSize;
+
+  Status = gBS->HandleProtocol (
+                  ControllerHandle,
+                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                  (VOID **)&Device
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to locate non discoverable device\n", __FUNCTION__));
+    return Status;
+  }
+
+  Device->DmaType = NonDiscoverableDeviceDmaTypeNonCoherent;
+
+  Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &Size);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Base region not correct\n", __FUNCTION__));
+    return EFI_UNSUPPORTED;
+  }
+
+  Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 1, &BaseAddressAux, &Size);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Aux region not correct\n", __FUNCTION__));
+    return EFI_UNSUPPORTED;
+  }
+
+  Status = DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", TRUE);
+  if (!EFI_ERROR (Status)) {
+    MicroSecondDelay (1000);
+    DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", FALSE);
+  }
+
+  MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_CLK_EN);
+  MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
+  MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
+  MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
+
+  // create new device for edk2 with only 2 registers to meet PciIo limits
+  EdkiiResources = NULL;
+  EdkiiDevice    = AllocateCopyPool (sizeof (*EdkiiDevice), Device);
+  if (NULL == EdkiiDevice) {
+    DEBUG ((DEBUG_ERROR, "%a: EdkiiDevice alloc failed\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  ResourcesSize  = (2 * sizeof (*EdkiiDesc)) + sizeof (*EdkiiEnd);
+  EdkiiResources = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)AllocateZeroPool (ResourcesSize);
+  if (NULL == EdkiiResources) {
+    DEBUG ((DEBUG_ERROR, "%a: EdkiiResources alloc failed\n", __FUNCTION__));
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Done;
+  }
+
+  Desc      = Device->Resources;
+  EdkiiDesc = EdkiiResources;
+  for (Index = 0; Index < 2; Index++, Desc++, EdkiiDesc++) {
+    if ((Desc->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
+        (Desc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM))
+    {
+      Status = EFI_UNSUPPORTED;
+      goto Done;
+    }
+
+    *EdkiiDesc = *Desc;
+  }
+
+  EdkiiEnd           = (EFI_ACPI_END_TAG_DESCRIPTOR *)EdkiiDesc;
+  EdkiiEnd->Desc     = ACPI_END_TAG_DESCRIPTOR;
+  EdkiiEnd->Checksum = 0;
+
+  EdkiiDevice->Resources = EdkiiResources;
+  Status                 = gBS->InstallMultipleProtocolInterfaces (
+                                  &ControllerHandle,
+                                  &gEdkiiNonDiscoverableDeviceProtocolGuid,
+                                  EdkiiDevice,
+                                  NULL
+                                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Edkii install failed: %r\n", __FUNCTION__, Status));
+    goto Done;
+  }
+
+Done:
+  if (EFI_ERROR (Status)) {
+    if (EdkiiDevice != NULL) {
+      FreePool (EdkiiDevice);
+    }
+
+    if (EdkiiResources != NULL) {
+      FreePool (EdkiiResources);
+    }
+  }
+
+  return Status;
+}
+
 /**
   Callback that will be invoked at various phases of the driver initialization
 
@@ -345,10 +462,6 @@ DeviceDiscoveryNotify (
 {
   EFI_STATUS                    Status;
   UINTN                         RegionCount;
-  NON_DISCOVERABLE_DEVICE       *Device;
-  EFI_PHYSICAL_ADDRESS          BaseAddress;
-  EFI_PHYSICAL_ADDRESS          BaseAddressAux;
-  UINTN                         Size;
   VOID                          *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
@@ -383,41 +496,7 @@ DeviceDiscoveryNotify (
       break;
 
     case DeviceDiscoveryDriverBindingStart:
-      Status = gBS->HandleProtocol (
-                      ControllerHandle,
-                      &gNVIDIANonDiscoverableDeviceProtocolGuid,
-                      (VOID **)&Device
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to locate non discoverable device\n", __FUNCTION__));
-        return Status;
-      }
-
-      Device->DmaType = NonDiscoverableDeviceDmaTypeNonCoherent;
-
-      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &Size);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Base region not correct\n", __FUNCTION__));
-        return EFI_UNSUPPORTED;
-      }
-
-      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 1, &BaseAddressAux, &Size);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Aux region not correct\n", __FUNCTION__));
-        return EFI_UNSUPPORTED;
-      }
-
-      Status = DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", TRUE);
-      if (!EFI_ERROR (Status)) {
-        MicroSecondDelay (1000);
-        DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", FALSE);
-      }
-
-      MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_CLK_EN);
-      MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
-      MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
-      MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
-      break;
+      return UfsDriverBindingStart (DriverHandle, ControllerHandle);
 
     default:
       return EFI_SUCCESS;

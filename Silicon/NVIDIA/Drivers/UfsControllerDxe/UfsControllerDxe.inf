@@ -2,7 +2,7 @@
 #
 #  UFS Controller Driver
 #
-#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -33,6 +33,7 @@
   UefiDriverEntryPoint
   DeviceDiscoveryDriverLib
   PlatformResourceLib
+  MemoryAllocationLib
 
 [Protocols]
   gEdkiiUfsHcPlatformProtocolGuid
