@@ -91,7 +91,7 @@ TegraGetMinorVersion (
   UINTN            Index;
   UINT32           ChipId;
   ChipMinorRevTbl  *MinorRevTbl = NULL;
-  CHAR8            *MinorRevStr = NULL;
+  CHAR8            *MinorRevStr = " ";
   UINTN            NumEncodings = 0;
 
   MinorRev = ((HidRev >> HIDREV_MINORREV_SHIFT) & HIDREV_MINORREV_MASK);
@@ -113,8 +113,8 @@ TegraGetMinorVersion (
   }
 
   for (Index = 0; Index <= NumEncodings; Index++) {
-    if (MinorRev == MinorRevTbl->Val) {
-      MinorRevStr = MinorRevTbl->Rev;
+    if (MinorRev == MinorRevTbl[Index].Val) {
+      MinorRevStr = MinorRevTbl[Index].Rev;
       break;
     }
   }
