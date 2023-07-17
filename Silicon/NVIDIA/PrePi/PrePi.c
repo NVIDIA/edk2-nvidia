@@ -22,6 +22,7 @@
 #include <Library/SystemResourceLib.h>
 #include <Library/TegraSerialPortLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/CpuExceptionHandlerLib.h>
 
 #include <Ppi/GuidedSectionExtraction.h>
 #include <Ppi/SecPerformance.h>
@@ -283,6 +284,9 @@ CEntryPoint (
     FvSize += GrBlobBinarySize (GetGRBlobBaseAddress ());
   }
 
+  // Share Fv location with Arm libraries
+  PatchPcdSet64 (PcdFvBaseAddress, (UINT64)FvHeader);
+
   DtbBase = GetDTBBaseAddress ();
   ASSERT ((VOID *)DtbBase != NULL);
   DtbSize = fdt_totalsize ((VOID *)DtbBase);
@@ -438,6 +442,10 @@ CEntryPoint (
                 (CHAR16 *)PcdGetPtr (PcdUefiDateTimeBuiltString)
                 );
   SerialPortWrite ((UINT8 *)Buffer, CharCount);
+
+  // Enable exception handlers, now that we have a serial port to write to.
+  Status = InitializeCpuExceptionHandlers (NULL);
+  ASSERT_EFI_ERROR (Status);
 
   // Initialize the Debug Agent for Source Level Debugging
   // InitializeDebugAgent (DEBUG_AGENT_INIT_POSTMEM_SEC, NULL, NULL);

@@ -53,6 +53,7 @@
   GoldenRegisterLib
   SystemResourceLib
   DtPlatformDtbLoaderLib
+  CpuExceptionHandlerLib
 
 [Guids]
   gEfiFirmwarePerformanceGuid
@@ -67,6 +68,7 @@
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName
   gNVIDIATokenSpaceGuid.PcdUefiVersionString
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString
+  gArmTokenSpaceGuid.PcdFvBaseAddress
 
 [FixedPcd]
   gArmTokenSpaceGuid.PcdVFPEnabled

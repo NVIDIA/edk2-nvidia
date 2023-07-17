@@ -682,11 +682,17 @@
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|L"EnabledPcieNicTopology"|gNVIDIAPublicVariableGuid|0x0|{ 0x0, 0xFF, 0xFF, 0xFF, 0xFF }|BS,NV
   gNVIDIATokenSpaceGuid.PcdGpuSmmuBypassEnable|L"GpuSmmuBypassEnable"|gNVIDIAPublicVariableGuid|0x0|0x0|BS,NV
 
+[PcdsPatchableInModule]
+  gArmTokenSpaceGuid.PcdFvBaseAddress|0x0
+
 [Components.common]
   #
   # PEI Phase modules
   #
-  Silicon/NVIDIA/PrePi/PrePi.inf
+  Silicon/NVIDIA/PrePi/PrePi.inf {
+    <LibraryClasses>
+      DefaultExceptionHandlerLib|Silicon/NVIDIA/Library/PrePiDefaultExceptionHandlerLib/PrePiDefaultExceptionHandlerLib.inf
+  }
 
   #
   # DXE
