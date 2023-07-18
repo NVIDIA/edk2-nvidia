@@ -58,14 +58,6 @@ typedef UINT32 NvU32;
 
 /* ------------------------- Type Definitions ------------------------------- */
 /* ------------------------- Macros and Defines ----------------------------- */
-/* Debug logging escalation, currently fixes missing message queue response error */
-#ifdef DEBUG_INFO
-  #undef DEBUG_INFO
-#define DEBUG_INFO  DEBUG_ERROR
-#else
-#define DEBUG_INFO  DEBUG_ERROR
-#endif
-
 #ifndef FSP_RPC_RESPONSE_PACKET_SIZE
 #define FSP_RPC_RESPONSE_PACKET_SIZE  (0x10+4)
 #endif
