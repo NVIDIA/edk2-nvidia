@@ -516,7 +516,7 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
         \_SB.PM01.MAXP,
         "",                                  // Model Number - NULL
         "",                                  // Serial Number - NULL
-        "TH500 Power Socket 0"               // OEM Information - "TH500 Power Socket 0"
+        "Grace Power Socket 0"               // OEM Information - "Grace Power Socket 0"
       })
 
       Method (_PMC) {
@@ -685,7 +685,7 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
         \_SB.PM03.MAXP,
         "",                                // Model Number - NULL
         "",                                // Serial Number - NULL
-        "SoC Power Socket 0"               // OEM Information - "SoC Power Socket 0"
+        "SysIO Power Socket 0"             // OEM Information - "SysIO Power Socket 0"
       })
 
       Method (_PMC) {
