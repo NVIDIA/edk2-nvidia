@@ -854,11 +854,9 @@ DisplayUpdateFdtFramebuffer (
   IN CONST EFI_HANDLE                          GopHandle
   )
 {
-  EFI_STATUS                            Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL          *Gop;
-  EFI_GRAPHICS_OUTPUT_MODE_INFORMATION  *Info;
-  EFI_PHYSICAL_ADDRESS                  FrameBufferBase;
-  UINTN                                 FrameBufferSize;
+  EFI_STATUS                         Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL       *Gop;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE  *Mode;
 
   Status = gBS->OpenProtocol (
                   GopHandle,
@@ -879,20 +877,18 @@ DisplayUpdateFdtFramebuffer (
     return;
   }
 
-  if (Gop->Mode != NULL) {
-    Info            = Gop->Mode->Info;
-    FrameBufferBase = Gop->Mode->FrameBufferBase;
-    FrameBufferSize = Gop->Mode->FrameBufferSize;
-
-    ASSERT (Info != NULL);
-    ASSERT (FrameBufferBase != 0);
-    ASSERT (FrameBufferSize != 0);
+  Mode = Gop->Mode;
+  if ((Mode != NULL) && (Mode->Mode < Mode->MaxMode)) {
+    ASSERT (Mode->Info != NULL);
+    ASSERT (Mode->SizeOfInfo >= sizeof (*Mode->Info));
+    ASSERT (Mode->FrameBufferBase != 0);
+    ASSERT (Mode->FrameBufferSize != 0);
 
     UpdateDeviceTreeSimpleFramebufferInfo (
       Fdt,
-      Info,
-      (UINT64)FrameBufferBase,
-      (UINT64)FrameBufferSize
+      Mode->Info,
+      (UINT64)Mode->FrameBufferBase,
+      (UINT64)Mode->FrameBufferSize
       );
   }
 }
