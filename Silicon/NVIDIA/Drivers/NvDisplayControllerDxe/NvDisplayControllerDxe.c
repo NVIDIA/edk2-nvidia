@@ -1140,11 +1140,9 @@ DisplayUpdateFdtFramebuffer (
   IN CONST EFI_HANDLE                          GopHandle
   )
 {
-  EFI_STATUS                            Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL          *Gop;
-  EFI_GRAPHICS_OUTPUT_MODE_INFORMATION  *Info;
-  EFI_PHYSICAL_ADDRESS                  FrameBufferBase;
-  UINTN                                 FrameBufferSize;
+  EFI_STATUS                         Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL       *Gop;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE  *Mode;
 
   Status = gBS->OpenProtocol (
                   GopHandle,
@@ -1165,19 +1163,21 @@ DisplayUpdateFdtFramebuffer (
     return;
   }
 
-  if (Gop->Mode != NULL) {
-    Info            = Gop->Mode->Info;
-    FrameBufferBase = Gop->Mode->FrameBufferBase;
-    FrameBufferSize = Gop->Mode->FrameBufferSize;
-
-    if (Info != NULL) {
-      if (!UpdateFdtSimpleFramebufferModeInfo (Fdt, Info)) {
+  Mode = Gop->Mode;
+  if ((Mode != NULL) && (Mode->Mode < Mode->MaxMode)) {
+    if ((Mode->Info != NULL) && (Mode->SizeOfInfo >= sizeof (*Mode->Info))) {
+      if (!UpdateFdtSimpleFramebufferModeInfo (Fdt, Mode->Info)) {
         return;
       }
     }
 
-    if ((FrameBufferBase != 0) && (FrameBufferSize != 0)) {
-      if (!UpdateFdtFramebufferReservedMemory (Fdt, (UINT64)FrameBufferBase, (UINT64)FrameBufferSize)) {
+    if ((Mode->FrameBufferBase != 0) && (Mode->FrameBufferSize != 0)) {
+      if (!UpdateFdtFramebufferReservedMemory (
+             Fdt,
+             (UINT64)Mode->FrameBufferBase,
+             (UINT64)Mode->FrameBufferSize
+             ))
+      {
         return;
       }
     }
