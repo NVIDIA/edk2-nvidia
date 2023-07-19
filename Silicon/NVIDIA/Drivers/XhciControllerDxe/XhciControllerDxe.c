@@ -20,6 +20,8 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UsbFalconLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/HobLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Protocol/UsbPadCtl.h>
 #include <Protocol/UsbFwProtocol.h>
 #include <Protocol/XhciController.h>
@@ -176,6 +178,8 @@ DeviceDiscoveryNotify (
   TEGRA_PLATFORM_TYPE              PlatformType;
   NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgProtocol;
   UINT32                           Index;
+  VOID                             *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO     *PlatformResourceInfo;
 
   T234Platform = FALSE;
   LoadIfrRom   = FALSE;
@@ -449,6 +453,22 @@ DeviceDiscoveryNotify (
         } else {
           goto skipXusbFwLoad;
         }
+      }
+
+      Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+      if ((Hob != NULL) &&
+          (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+      {
+        PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+      } else {
+        DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+        Status = EFI_UNSUPPORTED;
+        goto ErrorExit;
+      }
+
+      // In RCM boot, USB FW is already loaded.
+      if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+        goto skipXusbFwLoad;
       }
 
       /* Load xusb Firmware */
