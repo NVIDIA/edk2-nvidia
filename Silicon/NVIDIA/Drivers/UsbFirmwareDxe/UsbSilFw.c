@@ -13,6 +13,8 @@
 #include <Library/BaseLib.h>
 #include <Library/FwImageLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/HobLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <libfdt.h>
 
 #include <Protocol/UsbFwProtocol.h>
@@ -133,8 +135,37 @@ UsbFirmwareDxeInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  EFI_STATUS                    Status;
+
   if (!UsbFirmwarePlatformIsSupported ()) {
     return EFI_UNSUPPORTED;
+  }
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+    return EFI_UNSUPPORTED;
+  }
+
+  // In RCM boot, USB FW is already loaded, install NULL protocol for Xhci Depex
+  if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &mImageHandle,
+                    &gNVIDIAUsbFwProtocolGuid,
+                    NULL,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install USB firmware protocol - %r\r\n", __FUNCTION__, Status));
+    }
+
+    return Status;
   }
 
   mImageHandle = ImageHandle;
