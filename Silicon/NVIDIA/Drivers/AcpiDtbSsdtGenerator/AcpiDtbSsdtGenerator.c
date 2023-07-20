@@ -2,7 +2,7 @@
 *
 *  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
@@ -51,6 +51,8 @@ typedef struct {
   CHAR8          *Name;
   UID_INDEX      UidIndex;
   BOOLEAN        Cca;
+  UINT8          LimitMemoryRanges;
+  UINT8          LimitInterrupts;
 } ACPI_DEVICE_TABLE_INFO;
 
 STATIC ACPI_DEVICE_TABLE_INFO  AcpiTableInfo[] = {
@@ -60,7 +62,9 @@ STATIC ACPI_DEVICE_TABLE_INFO  AcpiTableInfo[] = {
     NULL,
     "VIRx",
     UID_INDEX_VRT,
-    FALSE
+    FALSE,
+    1,
+    1
   },
   // USB
   {
@@ -69,7 +73,9 @@ STATIC ACPI_DEVICE_TABLE_INFO  AcpiTableInfo[] = {
     "PNP0D10",
     "USBx",
     UID_INDEX_USB,
-    FALSE
+    FALSE,
+    1,
+    1
   },
   {
     "nvidia,tegra186-xusb",
@@ -77,7 +83,9 @@ STATIC ACPI_DEVICE_TABLE_INFO  AcpiTableInfo[] = {
     "PNP0D10",
     "USBx",
     UID_INDEX_USB,
-    FALSE
+    FALSE,
+    1,
+    1
   },
   {
     "nvidia,tegra194-xhci",
@@ -85,7 +93,9 @@ STATIC ACPI_DEVICE_TABLE_INFO  AcpiTableInfo[] = {
     "PNP0D10",
     "USBx",
     UID_INDEX_USB,
-    FALSE
+    FALSE,
+    1,
+    1
   },
   {
     "nvidia,tegra194-xusb",
@@ -93,7 +103,9 @@ STATIC ACPI_DEVICE_TABLE_INFO  AcpiTableInfo[] = {
     "PNP0D10",
     "USBx",
     UID_INDEX_USB,
-    FALSE
+    FALSE,
+    1,
+    1
   },
   {
     "nvidia,tegra234-xhci",
@@ -101,7 +113,9 @@ STATIC ACPI_DEVICE_TABLE_INFO  AcpiTableInfo[] = {
     "PNP0D10",
     "USBx",
     UID_INDEX_USB,
-    FALSE
+    FALSE,
+    1,
+    1
   },
   {
     "nvidia,tegra234-xusb",
@@ -109,7 +123,9 @@ STATIC ACPI_DEVICE_TABLE_INFO  AcpiTableInfo[] = {
     "PNP0D10",
     "USBx",
     UID_INDEX_USB,
-    FALSE
+    FALSE,
+    1,
+    1
   }
 };
 
@@ -464,6 +480,8 @@ AddDeviceObjectList (
     goto Exit;
   }
 
+  NumberOfRegisters = MIN (NumberOfRegisters, DeviceInfo->LimitMemoryRanges);
+
   Status = GetDeviceTreeInterrupts (DeviceHandle, NULL, &NumberOfInterrupts);
   if (Status == EFI_BUFFER_TOO_SMALL) {
     InterruptArray = (NVIDIA_DEVICE_TREE_INTERRUPT_DATA *)AllocatePool (NumberOfInterrupts * sizeof (NVIDIA_DEVICE_TREE_INTERRUPT_DATA));
@@ -486,6 +504,8 @@ AddDeviceObjectList (
     DEBUG ((DEBUG_ERROR, "%a: Failed to determine number of interrupts - %r\r\n", __FUNCTION__, Status));
     goto Exit;
   }
+
+  NumberOfInterrupts = MIN (NumberOfInterrupts, DeviceInfo->LimitInterrupts);
 
   // Build Device
   // Write the name of the device.
