@@ -867,7 +867,8 @@ SetupPmuIrqForSmmuV1V2 (
   NumPmuHandles = 1;
   Status        = GetMatchingEnabledDeviceTreeNodes ("arm,cortex-a78-pmu", &PmuHandle, &NumPmuHandles);
   if (EFI_ERROR (Status)) {
-    Status = GetMatchingEnabledDeviceTreeNodes ("arm,armv8-pmuv3", &PmuHandle, &NumPmuHandles);
+    NumPmuHandles = 1;
+    Status        = GetMatchingEnabledDeviceTreeNodes ("arm,armv8-pmuv3", &PmuHandle, &NumPmuHandles);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "Failed to find Pmu Irq err=%r\r\n", Status));
       NumPmuHandles = 0;
