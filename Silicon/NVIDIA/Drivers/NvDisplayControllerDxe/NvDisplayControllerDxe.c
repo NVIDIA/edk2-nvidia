@@ -57,14 +57,10 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
-  .DriverName                                 = L"NV Display Controller Driver",
-  .UseDriverBinding                           = TRUE,
-  .AutoEnableClocks                           = FALSE,
-  .AutoDeassertReset                          = FALSE,
-  .AutoResetModule                            = FALSE,
-  .AutoDeassertPg                             = TRUE,
-  .SkipEdkiiNondiscoverableInstall            = TRUE,
-  .SkipAutoDeinitControllerOnExitBootServices = TRUE,
+  .DriverName                      = L"NV Display Controller Driver",
+  .UseDriverBinding                = TRUE,
+  .AutoDeassertPg                  = TRUE,
+  .SkipEdkiiNondiscoverableInstall = TRUE,
 };
 
 /**
@@ -939,14 +935,49 @@ UpdateFdtFramebufferReservedMemory (
 }
 
 /**
-  Performs the necessary teardown of the display hardware.
+   Updates the given Device Tree with information about the currently
+   set mode (including framebuffer address and size) using the given
+   instance of the GOP protocol.
 
-  @retval EFI_SUCCESS              Operation successful.
-  @retval others                   Error occurred
+   @param[in] Context  Controller context to use.
+   @param[in] Fdt      Device Tree to update.
+   @param[in] Gop      The GOP protocol instance to use.
+*/
+STATIC
+VOID
+DisplayUpdateFdtFramebuffer (
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *CONST  Context,
+  IN VOID                               *CONST  Fdt,
+  IN CONST EFI_GRAPHICS_OUTPUT_PROTOCOL *CONST  Gop
+  )
+{
+  CONST EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE *CONST  Mode = Gop->Mode;
+
+  if (!UpdateFdtSimpleFramebufferModeInfo (Fdt, Mode->Info)) {
+    return;
+  }
+
+  if (!UpdateFdtFramebufferReservedMemory (
+         Fdt,
+         (UINT64)Mode->FrameBufferBase,
+         (UINT64)Mode->FrameBufferSize
+         ))
+  {
+    return;
+  }
+}
+
+/**
+  Performs teardown of the display hardware during ExitBootServices.
+
+  @param[in] Context  Context of the display controller.
+
+  @retval EFI_SUCCESS    Operation successful.
+  @retval !=EFI_SUCCESS  Error(s) occurred
 */
 STATIC
 EFI_STATUS
-DisplayStop (
+DisplayStopOnExitBootServices (
   IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
   )
 {
@@ -1016,7 +1047,33 @@ DisplayStop (
 
       Context->ResetsDeasserted = FALSE;
     }
+  }
 
+  return Status;
+}
+
+/**
+  Performs teardown of the display hardware.
+
+  Cannot be called during ExitBootServices since it also frees the
+  display context.
+
+  @param[in] Context  Context of the display controller.
+
+  @retval EFI_SUCCESS    Operation successful.
+  @retval !=EFI_SUCCESS  Error(s) occurred
+*/
+STATIC
+EFI_STATUS
+DisplayStop (
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = DisplayStopOnExitBootServices (Context);
+
+  if (Context != NULL) {
     FreePool (Context);
   }
 
@@ -1034,9 +1091,9 @@ DisplayStop (
 */
 STATIC
 EFI_STATUS
-DisplayLocateGopChildHandle (
+DisplayLocateChildGopHandle (
   IN  NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
-  OUT EFI_HANDLE *CONST                         Handle
+  OUT EFI_HANDLE                        *CONST  Handle
   )
 {
   EFI_STATUS                Status;
@@ -1124,30 +1181,34 @@ Exit:
 }
 
 /**
-   Updates the given Device Tree with information about the currently
-   set mode (including framebuffer address and size) using the GOP
-   protocol installed on the given handle.
+   Locates an instance of the GOP protocol installed on a child
+   handle.
 
-   @param[in] Context    Controller context to use.
-   @param[in] Fdt        Device Tree to update.
-   @param[in] GopHandle  Handle with GOP protocol instance to use.
+   @param[in]  Context   Context whose child GOP shall be located.
+   @param[out] Protocol  The located GOP instance.
+
+   @retval EFI_SUCCESS    Child handle found successfully.
+   @retval !=EFI_SUCCESS  Error occurred.
 */
 STATIC
-VOID
-DisplayUpdateFdtFramebuffer (
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
-  IN VOID *CONST                               Fdt,
-  IN CONST EFI_HANDLE                          GopHandle
+EFI_STATUS
+DisplayLocateChildGop (
+  IN  NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
+  OUT EFI_GRAPHICS_OUTPUT_PROTOCOL     **CONST  Protocol
   )
 {
-  EFI_STATUS                         Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL       *Gop;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE  *Mode;
+  EFI_STATUS  Status;
+  EFI_HANDLE  GopHandle;
+
+  Status = DisplayLocateChildGopHandle (Context, &GopHandle);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   Status = gBS->OpenProtocol (
                   GopHandle,
                   &gEfiGraphicsOutputProtocolGuid,
-                  (VOID **)&Gop,
+                  (VOID **)Protocol,
                   Context->DriverHandle,
                   Context->ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -1160,28 +1221,37 @@ DisplayUpdateFdtFramebuffer (
       GopHandle,
       Status
       ));
-    return;
+    return Status;
   }
 
-  Mode = Gop->Mode;
-  if ((Mode != NULL) && (Mode->Mode < Mode->MaxMode)) {
-    if ((Mode->Info != NULL) && (Mode->SizeOfInfo >= sizeof (*Mode->Info))) {
-      if (!UpdateFdtSimpleFramebufferModeInfo (Fdt, Mode->Info)) {
-        return;
-      }
-    }
+  return EFI_SUCCESS;
+}
 
-    if ((Mode->FrameBufferBase != 0) && (Mode->FrameBufferSize != 0)) {
-      if (!UpdateFdtFramebufferReservedMemory (
-             Fdt,
-             (UINT64)Mode->FrameBufferBase,
-             (UINT64)Mode->FrameBufferSize
-             ))
-      {
-        return;
-      }
-    }
-  }
+/**
+   Checks if the given GOP instance has an active mode with a frame
+   buffer available.
+
+   @param[in] Gop  The GOP protocol instance to check.
+
+   @return TRUE   A mode is active and a frame buffer is available.
+   @return FALSE  No mode is active.
+   @return FALSE  A mode is active, but no frame buffer is available.
+*/
+STATIC
+BOOLEAN
+CheckGopModeActiveWithFrameBuffer (
+  IN CONST EFI_GRAPHICS_OUTPUT_PROTOCOL *CONST  Gop
+  )
+{
+  CONST EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE *CONST  Mode = Gop->Mode;
+
+  return (  (Mode != NULL)
+         && (Mode->Mode < Mode->MaxMode)
+         && (Mode->Info != NULL)
+         && (Mode->SizeOfInfo >= sizeof (*Mode->Info))
+         && (Mode->Info->PixelFormat != PixelBltOnly)
+         && (Mode->FrameBufferBase != 0)
+         && (Mode->FrameBufferSize != 0));
 }
 
 /**
@@ -1199,9 +1269,9 @@ DisplayOnFdtInstalled (
   IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
   )
 {
-  EFI_STATUS  Status;
-  VOID        *Fdt;
-  EFI_HANDLE  GopHandle;
+  EFI_STATUS                    Status;
+  VOID                          *Fdt;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
 
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
   if (EFI_ERROR (Status)) {
@@ -1214,12 +1284,14 @@ DisplayOnFdtInstalled (
     return;
   }
 
-  Status = DisplayLocateGopChildHandle (Context, &GopHandle);
+  Status = DisplayLocateChildGop (Context, &Gop);
   if (EFI_ERROR (Status)) {
     return;
   }
 
-  DisplayUpdateFdtFramebuffer (Context, Fdt, GopHandle);
+  if (CheckGopModeActiveWithFrameBuffer (Gop)) {
+    DisplayUpdateFdtFramebuffer (Context, Fdt, Gop);
+  }
 }
 
 /**
@@ -1236,21 +1308,23 @@ DisplayOnReadyToBoot (
   IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
   )
 {
-  EFI_STATUS  Status;
-  VOID        *Fdt;
-  EFI_HANDLE  GopHandle;
+  EFI_STATUS                    Status;
+  VOID                          *Fdt;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
 
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
   if (EFI_ERROR (Status)) {
     return;
   }
 
-  Status = DisplayLocateGopChildHandle (Context, &GopHandle);
+  Status = DisplayLocateChildGop (Context, &Gop);
   if (EFI_ERROR (Status)) {
     return;
   }
 
-  DisplayUpdateFdtFramebuffer (Context, Fdt, GopHandle);
+  if (CheckGopModeActiveWithFrameBuffer (Gop)) {
+    DisplayUpdateFdtFramebuffer (Context, Fdt, Gop);
+  }
 }
 
 /**
@@ -1462,6 +1536,7 @@ DeviceDiscoveryNotify (
   TEGRA_PLATFORM_TYPE                Platform;
   NON_DISCOVERABLE_DEVICE            *EdkiiNonDiscoverableDevice;
   NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *Context;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL       *Gop;
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingSupported:
@@ -1497,6 +1572,7 @@ DeviceDiscoveryNotify (
       return Status;
 
     case DeviceDiscoveryDriverBindingStop:
+    case DeviceDiscoveryOnExit:
       Status = gBS->OpenProtocol (
                       ControllerHandle,
                       &gEdkiiNonDiscoverableDeviceProtocolGuid,
@@ -1517,24 +1593,36 @@ DeviceDiscoveryNotify (
         return Status;
       }
 
-      Status = gBS->UninstallMultipleProtocolInterfaces (
-                      ControllerHandle,
-                      &gEdkiiNonDiscoverableDeviceProtocolGuid,
-                      EdkiiNonDiscoverableDevice,
-                      NULL
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to uninstall non-discoverable device protocol: %r\r\n",
-          __FUNCTION__,
-          Status
-          ));
-        return Status;
-      }
-
       Context = DISPLAY_CONTROLLER_CONTEXT_FROM_EDKII_DEVICE (EdkiiNonDiscoverableDevice);
-      return DisplayStop (Context);
+
+      if (Phase == DeviceDiscoveryDriverBindingStop) {
+        Status = gBS->UninstallMultipleProtocolInterfaces (
+                        ControllerHandle,
+                        &gEdkiiNonDiscoverableDeviceProtocolGuid,
+                        EdkiiNonDiscoverableDevice,
+                        NULL
+                        );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((
+            DEBUG_ERROR,
+            "%a: failed to uninstall non-discoverable device protocol: %r\r\n",
+            __FUNCTION__,
+            Status
+            ));
+          return Status;
+        }
+
+        return DisplayStop (Context);
+      } else {
+        Status = DisplayLocateChildGop (Context, &Gop);
+        if (!EFI_ERROR (Status) && CheckGopModeActiveWithFrameBuffer (Gop)) {
+          /* We have an active GOP child, leave the display running. */
+          return EFI_ABORTED;
+        }
+
+        /* The display is inactive, reset to known good state. */
+        return DisplayStopOnExitBootServices (Context);
+      }
 
     default:
       return EFI_SUCCESS;
