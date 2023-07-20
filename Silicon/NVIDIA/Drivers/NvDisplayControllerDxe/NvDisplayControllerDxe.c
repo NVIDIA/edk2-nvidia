@@ -15,6 +15,7 @@
 #include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/HobLib.h>
+#include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
@@ -27,6 +28,10 @@
 #include <Protocol/EmbeddedGpio.h>
 
 #include <libfdt.h>
+
+#define DISPLAY_SOR_COUNT      8
+#define DISPLAY_FE_SW_SYS_CAP  0x00030000
+#define DISPLAY_FE_CMGR_CLK_SOR(i)  (0x00002300 + (i) * SIZE_2KB)
 
 #define DISPLAY_CONTROLLER_SIGNATURE  SIGNATURE_32('N','V','D','C')
 
@@ -968,6 +973,56 @@ DisplayUpdateFdtFramebuffer (
 }
 
 /**
+   Switch all SOR clocks to a safe source to prevent a lingering bad
+   display HW state.
+
+   @param[in] Context  Controller context to use.
+
+   @retval EFI_SUCCESS    Operation successful.
+   @retval !=EFI_SUCCESS  Error(s) occurred
+*/
+STATIC
+EFI_STATUS
+DisplayBypassSorClocks (
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
+  )
+{
+  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS  DisplayBase;
+  UINTN                 DisplaySize;
+  UINTN                 SorIndex;
+  UINT32                FeSwSysCap, FeCmgrClkSor;
+  CONST UINTN           DisplayRegion = 0;
+
+  Status = DeviceDiscoveryGetMmioRegion (
+             Context->ControllerHandle,
+             DisplayRegion,
+             &DisplayBase,
+             &DisplaySize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve display region: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  FeSwSysCap = MmioRead32 (DisplayBase + DISPLAY_FE_SW_SYS_CAP);
+  for (SorIndex = 0; SorIndex < DISPLAY_SOR_COUNT; ++SorIndex) {
+    if (BitFieldRead32 (FeSwSysCap, 8 + SorIndex, 8 + SorIndex) != 0) {
+      FeCmgrClkSor = MmioRead32 (DisplayBase + DISPLAY_FE_CMGR_CLK_SOR (SorIndex));
+      FeCmgrClkSor = BitFieldWrite32 (FeCmgrClkSor, 16, 17, 2);
+      MmioWrite32 (DisplayBase + DISPLAY_FE_CMGR_CLK_SOR (SorIndex), FeCmgrClkSor);
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Performs teardown of the display hardware during ExitBootServices.
 
   @param[in] Context  Context of the display controller.
@@ -1621,6 +1676,9 @@ DeviceDiscoveryNotify (
         }
 
         /* The display is inactive, reset to known good state. */
+        Status = DisplayBypassSorClocks (Context);
+        ASSERT_EFI_ERROR (Status);
+
         return DisplayStopOnExitBootServices (Context);
       }
 
