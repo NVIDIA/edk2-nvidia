@@ -18,6 +18,8 @@
 #include <Library/DevicePathLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiLib.h>
+#include <Library/UefiRuntimeLib.h>
+#include <Library/DxeServicesTableLib.h>
 #include <Library/TimerLib.h>
 #include <Library/IoLib.h>
 #include <Library/PrintLib.h>
@@ -27,6 +29,10 @@
 
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include "TegraI2c.h"
+
+STATIC NVIDIA_TEGRA_I2C_PRIVATE_DATA  *mI2cPrivate[MAX_I2C_MASTERS] = { 0 };
+STATIC UINTN                          mI2cMasterCount               = 0;
+STATIC EFI_EVENT                      mVirtualAddressChangeEvent    = NULL;
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-i2c", &gNVIDIANonDiscoverableI2cDeviceGuid },
@@ -983,30 +989,31 @@ TegraI2CDriverBindingStart (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                     Status;
-  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
-  UINTN                          RegionSize;
-  CONST UINT32                   *DtClockHertz;
-  CONST UINT32                   *DtControllerId;
-  UINT32                         Data32;
-  UINTN                          Index;
-  NON_DISCOVERABLE_DEVICE        *Device;
-  INT32                          I2cNodeOffset = 0;
-  UINT32                         I2cAddress;
-  INT32                          EepromManagerNodeOffset;
-  UINT32                         I2cNodeHandle;
-  INT32                          EepromManagerBusNodeOffset;
-  CONST UINT32                   *I2cBusProperty;
-  INT32                          I2cBusHandleLength;
-  UINT32                         I2cBusHandle;
-  INT32                          EepromNodeOffset;
-  CONST VOID                     *Property;
-  INT32                          PropertyLen;
-  EFI_GUID                       *DeviceGuid;
-  EFI_DEVICE_PATH                *OldDevicePath;
-  EFI_DEVICE_PATH                *NewDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL       *DevicePathNode;
-  UINT32                         Count;
+  EFI_STATUS                       Status;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA    *Private = NULL;
+  UINTN                            RegionSize;
+  CONST UINT32                     *DtClockHertz;
+  CONST UINT32                     *DtControllerId;
+  UINT32                           Data32;
+  UINTN                            Index;
+  NON_DISCOVERABLE_DEVICE          *Device;
+  INT32                            I2cNodeOffset = 0;
+  UINT32                           I2cAddress;
+  INT32                            EepromManagerNodeOffset;
+  UINT32                           I2cNodeHandle;
+  INT32                            EepromManagerBusNodeOffset;
+  CONST UINT32                     *I2cBusProperty;
+  INT32                            I2cBusHandleLength;
+  UINT32                           I2cBusHandle;
+  INT32                            EepromNodeOffset;
+  CONST VOID                       *Property;
+  INT32                            PropertyLen;
+  EFI_GUID                         *DeviceGuid;
+  EFI_DEVICE_PATH                  *OldDevicePath;
+  EFI_DEVICE_PATH                  *NewDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL         *DevicePathNode;
+  UINT32                           Count;
+  EFI_GCD_MEMORY_SPACE_DESCRIPTOR  Descriptor;
 
   Status = gBS->HandleProtocol (
                   ControllerHandle,
@@ -1018,12 +1025,15 @@ TegraI2CDriverBindingStart (
     return Status;
   }
 
-  Private = (NVIDIA_TEGRA_I2C_PRIVATE_DATA *)AllocateZeroPool (sizeof (NVIDIA_TEGRA_I2C_PRIVATE_DATA));
+  Private = (NVIDIA_TEGRA_I2C_PRIVATE_DATA *)AllocateRuntimeZeroPool (sizeof (NVIDIA_TEGRA_I2C_PRIVATE_DATA));
   if (NULL == Private) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate private data\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
+
+  ASSERT (mI2cMasterCount < MAX_I2C_MASTERS);
+  mI2cPrivate[mI2cMasterCount++] = Private;
 
   Private->Signature                                      = TEGRA_I2C_SIGNATURE;
   Private->I2cMaster.SetBusFrequency                      = TegraI2cSetBusFrequency;
@@ -1131,6 +1141,23 @@ TegraI2CDriverBindingStart (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "TegraI2cDxe: Failed to get region location (%r)\r\n", Status));
     goto ErrorExit;
+  }
+
+  // Convert to runtime memory
+  Status = gDS->GetMemorySpaceDescriptor (Private->BaseAddress, &Descriptor);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to be memory descriptor\r\n", __FUNCTION__));
+    return Status;
+  }
+
+  Status = gDS->SetMemorySpaceAttributes (
+                  Descriptor.BaseAddress,
+                  Descriptor.Length,
+                  Descriptor.Attributes | EFI_MEMORY_RUNTIME
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set memory as runtime\r\n", __FUNCTION__));
+    return Status;
   }
 
   // Initialize controller
@@ -1570,4 +1597,83 @@ DeviceDiscoveryNotify (
   }
 
   return Status;
+}
+
+/**
+  Notification function of EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE.
+
+  Converts all pointers to new virtual addresses.
+
+  @param  Event        Event whose notification function is being invoked.
+  @param  Context      Pointer to the notification function's context.
+
+**/
+VOID
+EFIAPI
+TegraI2cVirtualNotifyEvent (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  UINTN                          Index;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
+
+  for (Index = 0; Index < mI2cMasterCount; Index++) {
+    Private = mI2cPrivate[Index];
+    if (Private != NULL) {
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cMaster.SetBusFrequency);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cMaster.Reset);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cMaster.StartRequest);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cMaster.I2cControllerCapabilities);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cEnumerate.Enumerate);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cEnumerate.GetBusFrequency);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2CConfiguration.EnableI2cBusConfiguration);
+      EfiConvertPointer (0x0, (VOID **)&Private->DeviceTreeBase);
+      EfiConvertPointer (0x0, (VOID **)&Private->DeviceTreeNode);
+      EfiConvertPointer (0x0, (VOID **)&Private->BaseAddress);
+      EfiConvertPointer (0x0, (VOID **)&mI2cPrivate[Index]);
+    }
+  }
+}
+
+/**
+  Initialize the Tegra I2C Driver
+
+  @param  ImageHandle           Handle that identifies the loaded image.
+  @param  SystemTable           System Table for this image.
+
+  @retval EFI_SUCCESS           The operation completed successfully.
+
+**/
+EFI_STATUS
+EFIAPI
+TegraI2cInitialize (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = DeviceDiscoveryDriverInitialize (ImageHandle, SystemTable);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  //
+  // Register for the virtual address change event
+  //
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_NOTIFY,
+                  TegraI2cVirtualNotifyEvent,
+                  NULL,
+                  &gEfiEventVirtualAddressChangeGuid,
+                  &mVirtualAddressChangeEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to create virtual address change event\r\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  return EFI_SUCCESS;
 }
