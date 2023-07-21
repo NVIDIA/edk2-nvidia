@@ -65,7 +65,8 @@ typedef UINT32 NvU32;
 #define UEFI_FSP_RPC_MSG_QUEUE_POLL_TIMEOUT_INDEX  100000
 #define UEFI_FSP_RPC_CMD_QUEUE_POLL_TIMEOUT_INDEX  1000
 
-#define UEFI_STALL_DELAY_UNITS  5
+#define UEFI_STALL_DELAY_UNITS       5
+#define TIMEOUT_DEBUG_PRINT_TRIGGER  5000
 
 #define CONVERT_DWORD_COUNT_TO_BYTE_SIZE(dword)  ((dword)<<2)
 
@@ -194,7 +195,10 @@ uefifspPollForMsgQueueEmpty (
 
   while ((!fspRpcIsMsgQueueEmpty (PciIo, channelId)) && (TimeoutIdx--)) {
     DEBUG_CODE_BEGIN ();
-    DEBUG ((DEBUG_INFO, "%a: [%p][TimeoutIdx:%u]\n", __FUNCTION__, PciIo, TimeoutIdx));
+    if ((TimeoutIdx%TIMEOUT_DEBUG_PRINT_TRIGGER) == 0) {
+      DEBUG ((DEBUG_INFO, "%a: [%p][TimeoutIdx:%u]\n", __FUNCTION__, PciIo, TimeoutIdx));
+    }
+
     DEBUG_CODE_END ();
     gBS->Stall (UEFI_STALL_DELAY_UNITS);
   }
@@ -227,7 +231,10 @@ uefifspPollForMsgQueueResponse (
 
   while ((fspRpcIsMsgQueueEmpty (PciIo, channelId)) && (TimeoutIdx--)) {
     DEBUG_CODE_BEGIN ();
-    DEBUG ((DEBUG_INFO, "%a: [%p][TimeoutIdx:%u]\n", __FUNCTION__, PciIo, TimeoutIdx));
+    if ((TimeoutIdx%TIMEOUT_DEBUG_PRINT_TRIGGER) == 0) {
+      DEBUG ((DEBUG_INFO, "%a: [%p][TimeoutIdx:%u]\n", __FUNCTION__, PciIo, TimeoutIdx));
+    }
+
     DEBUG_CODE_END ();
     gBS->Stall (UEFI_STALL_DELAY_UNITS);
   }
@@ -821,6 +828,7 @@ FspConfigurationAtsRange (
   )
 {
   EFI_STATUS         Status             = EFI_SUCCESS;
+  EFI_STATUS         StatusDebugDump    = EFI_SUCCESS;
   UINT8              *cmdQueueBuffer    = NULL;
   UINT32             nvdmType           = 0;
   UINT32             packetSequence     = 0;      /* One packet */
@@ -1069,7 +1077,7 @@ FspConfigurationAtsRange (
     }
 
     /* read message queue from head to tail and then clear message queue */
-    for (Index = msgQueueHead; CONVERT_DWORD_COUNT_TO_BYTE_SIZE (Index) <= msgQueueTail; Index++) {
+    for (Index = 0; Index < cmdQueueSizeDwords; Index++) {
       Status = PciIo->Mem.Read (
                             PciIo,
                             EfiPciIoWidthUint32,
@@ -1177,8 +1185,8 @@ uefifspRpcResponseReceivePacket_exit:
   }
 
   DEBUG_CODE_BEGIN ();
-  Status = uefifspDumpDebugState (PciIo);
-  if (EFI_ERROR (Status)) {
+  StatusDebugDump = uefifspDumpDebugState (PciIo);
+  if (EFI_ERROR (StatusDebugDump)) {
     ASSERT (0);
   }
 
@@ -1213,6 +1221,7 @@ FspConfigurationEgmBaseAndSize (
   )
 {
   EFI_STATUS         Status             = EFI_SUCCESS;
+  EFI_STATUS         StatusDebugDump    = EFI_SUCCESS;
   UINT8              *cmdQueueBuffer    = NULL;
   UINT32             nvdmType           = 0;
   UINT32             packetSequence     = 0;      /* One packet */
@@ -1575,8 +1584,8 @@ uefifspRpcResponseReceivePacket_exit:
   }
 
   DEBUG_CODE_BEGIN ();
-  Status = uefifspDumpDebugState (PciIo);
-  if (EFI_ERROR (Status)) {
+  StatusDebugDump = uefifspDumpDebugState (PciIo);
+  if (EFI_ERROR (StatusDebugDump)) {
     ASSERT (0);
   }
 

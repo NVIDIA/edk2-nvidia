@@ -176,7 +176,9 @@ CheckGfwInitComplete (
                         1,
                         &RegVal
                         );
-  DEBUG ((DEBUG_ERROR, "%a: [%p] PciIo read of '%a' returned '%r'\n", __FUNCTION__, PciIo, "NV_THERM_I2CS_SCRATCH", Status));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] PciIo read of '%a' returned '%r'\n", __FUNCTION__, PciIo, "NV_THERM_I2CS_SCRATCH", Status));
+  }
 
   if (FLD_TEST_DRF (_THERM, _I2CS_SCRATCH_FSP_BOOT_COMPLETE, _STATUS, _SUCCESS, RegVal)) {
     *bInitComplete = TRUE;

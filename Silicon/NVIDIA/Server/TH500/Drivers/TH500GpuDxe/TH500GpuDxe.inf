@@ -82,6 +82,7 @@
   HobLib
   UefiLib
   UefiDriverEntryPoint
+  TegraPlatformInfoLib
   DevicePathLib
   DebugLib
 

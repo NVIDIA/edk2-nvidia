@@ -21,6 +21,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PcdLib.h>
 
@@ -46,7 +47,7 @@
 #define EGM_SOCKET_ADDRESS_MASK            ((UINT64)(~(BIT45|BIT44)))
 #define MaskEgmBaseSocketAddress(addr)  ((addr) & EGM_SOCKET_ADDRESS_MASK)
 
-#define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX      500
+#define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX      600000
 #define UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS  5
 
 /** Diagnostic dump of GPU Driver Binding Private Data
@@ -269,7 +270,8 @@ NVIDIAGpuDriverStart (
   EFI_PCI_IO_PROTOCOL                         *PciIo        = NULL;
   NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL      *GpuDsdAmlGeneration;
   NVIDIA_GPU_FIRMWARE_BOOT_COMPLETE_PROTOCOL  *GpuFirmwareBootCompleteProtocol;
-  GPU_MODE                                    GpuMode = GPU_MODE_EH;
+  GPU_MODE                                    GpuMode     = GPU_MODE_EH;
+  BOOLEAN                                     bFSPEnabled = TRUE;
 
   DEBUG ((DEBUG_ERROR, "%a: DriverBindingProtocol*: '%p'\n", __FUNCTION__, This));
   DEBUG ((DEBUG_INFO, "%a: ControllerHandle: '%p'\n", __FUNCTION__, ControllerHandle));
@@ -365,29 +367,35 @@ NVIDIAGpuDriverStart (
     }
 
     if (GpuFirmwareBootCompleteProtocol != NULL) {
-      BOOLEAN  bFirmwareComplete = FALSE;
-      UINT32   TimeoutIdx        = UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX;
+      /* FSP is not active on TEGRA_PATFORM_VDK, skip polling and FSP RCP calls */
+      bFSPEnabled = (TegraGetPlatform () != TEGRA_PLATFORM_VDK);
+      if (bFSPEnabled) {
+        BOOLEAN  bFirmwareComplete = FALSE;
+        UINT32   TimeoutIdx        = UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX;
 
-      while ((!bFirmwareComplete) && (TimeoutIdx--)) {
-        /* Note: PciIo protocol required. Obtained from Protocol PrivateData Controller lookup. */
-        Status = GpuFirmwareBootCompleteProtocol->GetBootCompleteState (GpuFirmwareBootCompleteProtocol, &bFirmwareComplete);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
-          ErrorStatus = Status;
+        while ((!bFirmwareComplete) && (TimeoutIdx--)) {
+          /* Note: PciIo protocol required. Obtained from Protocol PrivateData Controller lookup. */
+          Status = GpuFirmwareBootCompleteProtocol->GetBootCompleteState (GpuFirmwareBootCompleteProtocol, &bFirmwareComplete);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
+            ErrorStatus = Status;
+            goto ErrorHandler_RestorePCIAttributes;
+          }
+
+          gBS->Stall (UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS);
+        }
+
+        if ((TimeoutIdx == 0) && (!bFirmwareComplete)) {
+          DEBUG ((DEBUG_ERROR, "ERROR: [TimeoutIdx:%u] Poll for Firmware Boot Complete timed out.\n", TimeoutIdx));
+          ErrorStatus = EFI_TIMEOUT;
           goto ErrorHandler_RestorePCIAttributes;
         }
 
-        gBS->Stall (UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS);
+        DEBUG ((DEBUG_INFO, "INFO: 'GpuFirmwareBootCompleteProtocol->GetBootCompleteState' on Handle [%p]. Status '%r'.\n", ControllerHandle, Status));
+        DEBUG ((DEBUG_INFO, "%a: GpuFirmwareBootCompleteProtocol 'GetBootCompleteState' for instance:'%p', '%a'\n", __FUNCTION__, GpuFirmwareBootCompleteProtocol, (bFirmwareComplete ? "TRUE" : "FALSE")));
+      } else {
+        DEBUG ((DEBUG_INFO, "DEBUG: Tegra Platform VDK Detected. Disabling FSP calls.\n"));
       }
-
-      if ((TimeoutIdx == 0) && (!bFirmwareComplete)) {
-        DEBUG ((DEBUG_ERROR, "ERROR: [TimeoutIdx:%u] Poll for Firmware Boot Complete timed out.\n", TimeoutIdx));
-        ErrorStatus = EFI_TIMEOUT;
-        goto ErrorHandler_RestorePCIAttributes;
-      }
-
-      DEBUG ((DEBUG_INFO, "INFO: 'GpuFirmwareBootCompleteProtocol->GetBootCompleteState' on Handle [%p]. Status '%r'.\n", ControllerHandle, Status));
-      DEBUG ((DEBUG_INFO, "%a: GpuFirmwareBootCompleteProtocol 'GetBootCompleteState' for instance:'%p', '%a'\n", __FUNCTION__, GpuFirmwareBootCompleteProtocol, (bFirmwareComplete ? "TRUE" : "FALSE")));
     } else {
       DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
     }
@@ -452,25 +460,34 @@ NVIDIAGpuDriverStart (
 
       DEBUG ((DEBUG_INFO, "%a: GpuDsdAmlNodeProtocol 'GetEgmSize' for instance:'%p', size = 0x%016lx\n", __FUNCTION__, GpuDsdAmlGeneration, EgmSize));
 
-      if (GpuMode == GPU_MODE_SHH) {
+      /* Check FSP enabled and GPU Mode SHH before enabling FSP RPC calls */
+      if ((bFSPEnabled) && (GpuMode == GPU_MODE_SHH)) {
         UINT64  EgmBasePaSocketMasked = MaskEgmBaseSocketAddress (EgmBasePa);
         DEBUG ((DEBUG_ERROR, "%a: [Controller:%p] EGM_SOCKET_ADDRESS_MASK = 0x%016lx\n", __FUNCTION__, ControllerHandle, EGM_SOCKET_ADDRESS_MASK));
         DEBUG ((DEBUG_ERROR, "%a: [Controller:%p] EgmBasePaSocketMasked = 0x%016lx\n", __FUNCTION__, ControllerHandle, EgmBasePaSocketMasked));
         /* Need to adjust for size */
         Status = FspConfigurationEgmBaseAndSize (PciIo, EgmBasePaSocketMasked, EgmSize);
-        /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
-        ASSERT_EFI_ERROR (Status);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "ERROR: 'FspConfigurationEgmBaseAndSize' failed with status '%r'.\n", Status));
+          /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
+          ASSERT_EFI_ERROR (Status);
+        }
 
-        Status = FspConfigurationAtsRange (PciIo, HbmBasePa);
-        /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
-        ASSERT_EFI_ERROR (Status);
+        if (!EFI_ERROR (Status)) {
+          Status = FspConfigurationAtsRange (PciIo, HbmBasePa);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "ERROR: 'FspConfigurationAtsRange' failed with status '%r'.\n", Status));
+            /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
+            ASSERT_EFI_ERROR (Status);
+          }
+        }
       }
     }
 
-    DEBUG ((DEBUG_INFO, "%a: Finished, Status '%r'\n", __FUNCTION__, EFI_SUCCESS));
+    DEBUG ((DEBUG_INFO, "%a: Finished, Status '%r'\n", __FUNCTION__, Status));
   }
 
-  return EFI_SUCCESS;
+  return Status;
 
 ErrorHandler_RestorePCIAttributes:
   /* On Error, restore PCI Attributes */
