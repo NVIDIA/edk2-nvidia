@@ -151,6 +151,31 @@ Done:
 }
 
 /**
+  Fw Image Lib destructor entry point.
+
+  @param[in]  ImageHandle       Image handle
+  @param[in]  SystemTable       Pointer to system table
+
+  @retval EFI_SUCCESS           Initialization successful
+  @retval others                Error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+FwImageLibDestructor (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  if (mNewImageEvent != NULL) {
+    gBS->CloseEvent (mNewImageEvent);
+    mNewImageEvent = NULL;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Fw Image Lib constructor entry point.
 
   @param[in]  ImageHandle       Image handle
