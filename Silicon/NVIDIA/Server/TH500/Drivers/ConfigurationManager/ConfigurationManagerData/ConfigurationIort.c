@@ -293,6 +293,7 @@ AddIortPropNodes (
   CONST UINT32    *MsiProp;
   CONST UINT32    *IommusProp;
   CONST UINT32    *IommuMapProp;
+  CONST UINT32    *DevicesProp;
   INT32           PropSize;
   CONST CHAR8     *AliasName;
 
@@ -335,6 +336,7 @@ AddIortPropNodes (
       MsiProp      = NULL;
       IommusProp   = NULL;
       IommuMapProp = NULL;
+      DevicesProp  = NULL;
 
       if (DevMap->ObjectId == EArmObjItsGroup) {
         Private->IoNodes[ITSIDENT_TYPE_INDEX].NumberOfNodes++;
@@ -413,6 +415,24 @@ AddIortPropNodes (
           }
         }
       } else {
+        // Check "devices" property for all PMCG nodes
+        if (DevMap->ObjectId == EArmObjPmcg) {
+          DevicesProp = fdt_getprop (Private->DtbBase, NodeOffset, "devices", &PropSize);
+          if ((DevicesProp == NULL) || (PropSize != sizeof (UINT32))) {
+            DevicesProp = NULL;
+          } else {
+            // Skip if the target DTB node is not valid
+            if (FindPropNodeByPhandle (Private, SwapBytes32 (*DevicesProp)) == NULL) {
+              // Alias path would be unique
+              if (DevMap->Alias != NULL) {
+                break;
+              }
+
+              continue;
+            }
+          }
+        }
+
         Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes++;
       }
 
