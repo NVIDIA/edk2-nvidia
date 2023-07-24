@@ -41,7 +41,8 @@
   gEfiRtPropertiesTableGuid
 
 [Protocols]
-  gEfiI2cIoProtocolGuid                       ## CONSUMES
+  gEfiI2cEnumerateProtocolGuid           ## CONSUMES
+  gEfiI2cMasterProtocolGuid              ## CONSUMES
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdVirtualRTC

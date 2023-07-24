@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,20 +15,23 @@
 #include <Library/TimerLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Protocol/I2cIo.h>
 #include <Library/TimeBaseLib.h>
 #include <Guid/GlobalVariable.h>
 #include <Guid/RtPropertiesTable.h>
 
+#include <Protocol/I2cMaster.h>
+#include <Protocol/I2cEnumerate.h>
+
 #include "NuvotonRealTimeClockLib.h"
 
-STATIC VOID                 *mI2cIoSearchToken        = NULL;
-STATIC EFI_I2C_IO_PROTOCOL  *mI2cIo                   = NULL;
-STATIC EFI_EVENT            mRtcExitBootServicesEvent = NULL;
-STATIC INT64                mRtcOffset                = 0;
-STATIC INT64                mPerfomanceTimerOffset    = MAX_INT64;
-STATIC UINT32               mRuntimeServicesSupported = 0;
-STATIC BOOLEAN              mVirtualRtc               = FALSE;
+STATIC VOID                     *mI2cMasterSearchToken    = NULL;
+STATIC EFI_I2C_MASTER_PROTOCOL  *mI2cMaster               = NULL;
+STATIC UINT16                   mSlaveAddr                = 0;
+STATIC EFI_EVENT                mRtcExitBootServicesEvent = NULL;
+STATIC INT64                    mRtcOffset                = 0;
+STATIC INT64                    mPerfomanceTimerOffset    = MAX_INT64;
+STATIC UINT32                   mRuntimeServicesSupported = 0;
+STATIC BOOLEAN                  mVirtualRtc               = FALSE;
 
 /**
   Returns the current time and date information, and the time-keeping
@@ -81,7 +84,7 @@ LibGetTime (
       RtcEpochSeconds         = mRtcOffset;
       PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000ull;
       mPerfomanceTimerOffset  = ((UINT64)RtcEpochSeconds - (UINT64)PerformanceEpochSeconds) * 1000000000ull;
-    } else if (mI2cIo == NULL) {
+    } else if (mI2cMaster == NULL) {
       return EFI_DEVICE_ERROR;
     } else {
       //
@@ -96,7 +99,7 @@ LibGetTime (
       RequestData.Operation[1].Buffer        = (VOID *)&TimePacket.DateTime;
       RequestData.Operation[1].LengthInBytes = sizeof (TimePacket.DateTime) +
                                                sizeof (TimePacket.Control);
-      Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
+      Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "%a: Failed to read time registers: %r.\r\n", __FUNCTION__, Status));
         return EFI_DEVICE_ERROR;
@@ -166,7 +169,7 @@ LibGetTime (
         RequestData.Operation[0].Buffer        = (VOID *)&WDayPacket.Address;
         RequestData.Operation[0].LengthInBytes = sizeof (WDayPacket.Address) +
                                                  sizeof (WDayPacket.DayOfWeek);
-        Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
+        Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
         if (EFI_ERROR (Status)) {
           DEBUG ((EFI_D_ERROR, "%a: Failed to program day of week register: %r.\r\n", __FUNCTION__, Status));
         }
@@ -298,7 +301,7 @@ LibSetTime (
       );
     mPerfomanceTimerOffset = NewPerformanceOffset * 1000000000;
   } else {
-    if (mI2cIo == NULL) {
+    if (mI2cMaster == NULL) {
       return EFI_DEVICE_ERROR;
     }
 
@@ -314,7 +317,7 @@ LibSetTime (
     RequestData.Operation[1].Buffer        = (VOID *)&ControlPacket.Control;
     RequestData.Operation[1].LengthInBytes = sizeof (ControlPacket.Control);
 
-    Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
+    Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to read control registers: %r.\r\n", __FUNCTION__, Status));
       return EFI_DEVICE_ERROR;
@@ -388,7 +391,7 @@ LibSetTime (
     RequestData.Operation[0].Buffer        = (VOID *)&TimePacket.Address;
     RequestData.Operation[0].LengthInBytes = sizeof (TimePacket.Address) +
                                              sizeof (TimePacket.DateTime);
-    Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
+    Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to store time: %r.\r\n", __FUNCTION__, Status));
       return EFI_DEVICE_ERROR;
@@ -502,7 +505,7 @@ LibRtcConfigure (
   // For platforms that CPU on secondary I2C, the writes to control/status registers
   // would be ignored.
   //
-  if (PcdGetBool (PcdCpuHasRtcControl) && (mI2cIo != NULL)) {
+  if (PcdGetBool (PcdCpuHasRtcControl) && (mI2cMaster != NULL)) {
     ControlPacket.Address = NUVOTON_RTC_CONTROL_ADDRESS;
     //
     // Default settings for RTC
@@ -530,7 +533,7 @@ LibRtcConfigure (
     RequestData.Operation[0].LengthInBytes = sizeof (ControlPacket.Address) +
                                              sizeof (ControlPacket.Control) +
                                              sizeof (ControlPacket.Status);
-    Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
+    Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to program control register: %r.\r\n", __FUNCTION__, Status));
     }
@@ -546,7 +549,7 @@ LibRtcConfigure (
     RequestData.Operation[0].Buffer        = (VOID *)&PrimaryAccessPacket.Address;
     RequestData.Operation[0].LengthInBytes = sizeof (PrimaryAccessPacket.Address) +
                                              sizeof (PrimaryAccessPacket.PrimaryAccess);
-    Status = mI2cIo->QueueRequest (mI2cIo, 0, NULL, RequestPacket, NULL);
+    Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "%a: Failed to program primary access register: %r.\r\n", __FUNCTION__, Status));
     }
@@ -562,53 +565,60 @@ LibRtcConfigure (
 STATIC
 VOID
 EFIAPI
-I2cIoRegistrationEvent (
+I2cMasterRegistrationEvent (
   IN  EFI_EVENT  Event,
   IN  VOID       *Context
   )
 {
-  EFI_HANDLE           *Handles = NULL;
-  UINTN                NoHandles;
-  EFI_STATUS           Status;
-  EFI_I2C_IO_PROTOCOL  *I2cIo;
-  UINTN                Index;
+  EFI_STATUS                  Status;
+  EFI_HANDLE                  Handle;
+  UINTN                       HandleSize;
+  EFI_I2C_MASTER_PROTOCOL     *I2cMasterProtocol;
+  EFI_I2C_ENUMERATE_PROTOCOL  *I2cEnumerateProtocol;
+  CONST EFI_I2C_DEVICE        *I2cDevice;
 
   //
   // Try to connect the newly registered driver to our handle.
   //
-  while (mI2cIo == NULL) {
-    Status = gBS->LocateHandleBuffer (
-                    ByRegisterNotify,
-                    &gEfiI2cIoProtocolGuid,
-                    mI2cIoSearchToken,
-                    &NoHandles,
-                    &Handles
-                    );
+  do {
+    HandleSize = sizeof (Handle);
+    Status     = gBS->LocateHandle (ByRegisterNotify, NULL, mI2cMasterSearchToken, &HandleSize, &Handle);
     if (EFI_ERROR (Status)) {
-      break;
+      return;
     }
 
-    for (Index = 0; Index < NoHandles; Index++) {
-      Status = gBS->HandleProtocol (
-                      Handles[Index],
-                      &gEfiI2cIoProtocolGuid,
-                      (VOID **)&I2cIo
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to get i2c interface: %r\n", __FUNCTION__, Status));
-        continue;
-      }
-
-      if (CompareGuid (&gNVIDIAI2cNct3018y, I2cIo->DeviceGuid)) {
-        gBS->CloseEvent (Event);
-        mI2cIo = I2cIo;
-        LibRtcConfigure ();
-        break;
-      }
+    Status = gBS->HandleProtocol (Handle, &gEfiI2cEnumerateProtocolGuid, (VOID **)&I2cEnumerateProtocol);
+    if (EFI_ERROR (Status)) {
+      return;
     }
 
-    FreePool (Handles);
-  }
+    I2cDevice = NULL;
+    do {
+      Status = I2cEnumerateProtocol->Enumerate (I2cEnumerateProtocol, &I2cDevice);
+      if (!EFI_ERROR (Status)) {
+        if (CompareGuid (I2cDevice->DeviceGuid, &gNVIDIAI2cNct3018y)) {
+          break;
+        }
+      }
+    } while (!EFI_ERROR (Status));
+
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    mSlaveAddr = I2cDevice->SlaveAddressArray[0];
+
+    Status = gBS->HandleProtocol (Handle, &gEfiI2cMasterProtocolGuid, (VOID **)&I2cMasterProtocol);
+    if (EFI_ERROR (Status)) {
+      I2cMasterProtocol = NULL;
+    }
+  } while (I2cMasterProtocol == NULL);
+
+  gBS->CloseEvent (Event);
+
+  mI2cMaster = I2cMasterProtocol;
+
+  LibRtcConfigure ();
 }
 
 /**
@@ -655,7 +665,7 @@ LibRtcInitialize (
   EFI_STATUS  Status;
   UINTN       VariableSize = sizeof (mRtcOffset);
 
-  mI2cIo                 = NULL;
+  mI2cMaster             = NULL;
   mPerfomanceTimerOffset = MAX_INT64;
 
   mVirtualRtc = PcdGetBool (PcdVirtualRTC);
@@ -675,11 +685,11 @@ LibRtcInitialize (
   // for has already been installed.
   //
   Event = EfiCreateProtocolNotifyEvent (
-            &gEfiI2cIoProtocolGuid,
+            &gEfiI2cMasterProtocolGuid,
             TPL_CALLBACK,
-            I2cIoRegistrationEvent,
+            I2cMasterRegistrationEvent,
             NULL,
-            &mI2cIoSearchToken
+            &mI2cMasterSearchToken
             );
   if (Event == NULL) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
