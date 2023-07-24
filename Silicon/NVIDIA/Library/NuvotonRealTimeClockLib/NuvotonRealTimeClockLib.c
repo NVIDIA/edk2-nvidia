@@ -24,14 +24,16 @@
 
 #include "NuvotonRealTimeClockLib.h"
 
-STATIC VOID                     *mI2cMasterSearchToken    = NULL;
-STATIC EFI_I2C_MASTER_PROTOCOL  *mI2cMaster               = NULL;
-STATIC UINT16                   mSlaveAddr                = 0;
-STATIC EFI_EVENT                mRtcExitBootServicesEvent = NULL;
-STATIC INT64                    mRtcOffset                = 0;
-STATIC INT64                    mPerfomanceTimerOffset    = MAX_INT64;
-STATIC UINT32                   mRuntimeServicesSupported = 0;
-STATIC BOOLEAN                  mVirtualRtc               = FALSE;
+STATIC VOID                     *mI2cMasterSearchToken     = NULL;
+STATIC EFI_I2C_MASTER_PROTOCOL  *mI2cMaster                = NULL;
+STATIC UINT16                   mSlaveAddr                 = 0;
+STATIC EFI_EVENT                mRtcExitBootServicesEvent  = NULL;
+STATIC EFI_EVENT                mRtcVirtualAddrChangeEvent = NULL;
+STATIC INT64                    mRtcOffset                 = 0;
+STATIC INT64                    mPerfomanceTimerOffset     = MAX_INT64;
+STATIC UINT32                   mRuntimeServicesSupported  = 0;
+STATIC BOOLEAN                  mVirtualRtc                = FALSE;
+STATIC BOOLEAN                  mCpuHasRtcControl          = FALSE;
 
 /**
   Returns the current time and date information, and the time-keeping
@@ -55,138 +57,108 @@ LibGetTime (
   OUT EFI_TIME_CAPABILITIES  *Capabilities
   )
 {
-  EFI_STATUS                      Status;
-  NUVOTON_RTC_TIME_PACKET         TimePacket;
-  NUVOTON_RTC_DAY_OF_WEEK_PACKET  WDayPacket;
-  I2C_REQUEST_PACKET_2_OPS        RequestData;
-  EFI_I2C_REQUEST_PACKET          *RequestPacket              = (EFI_I2C_REQUEST_PACKET *)&RequestData;
-  BOOLEAN                         BcdMode                     = FALSE;
-  BOOLEAN                         TwentyFourHourMode          = FALSE;
-  UINT64                          PerformanceTimerNanoseconds = 0;
-  UINT32                          RtcEpochSeconds;
-  UINT32                          PerformanceEpochSeconds;
+  EFI_STATUS                Status;
+  NUVOTON_RTC_TIME_PACKET   TimePacket;
+  I2C_REQUEST_PACKET_2_OPS  RequestData;
+  EFI_I2C_REQUEST_PACKET    *RequestPacket              = (EFI_I2C_REQUEST_PACKET *)&RequestData;
+  BOOLEAN                   BcdMode                     = FALSE;
+  BOOLEAN                   TwentyFourHourMode          = FALSE;
+  UINT64                    PerformanceTimerNanoseconds = 0;
+  UINT32                    RtcEpochSeconds;
+  UINT32                    PerformanceEpochSeconds;
 
   if (Time == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  PerformanceTimerNanoseconds = GetTimeInNanoSecond (GetPerformanceCounter ());
-  if (EfiAtRuntime () || (mPerfomanceTimerOffset != MAX_INT64)) {
-    if (EfiAtRuntime () && ((mRuntimeServicesSupported & EFI_RT_SUPPORTED_GET_TIME) == 0)) {
-      return EFI_UNSUPPORTED;
-    }
+  if (EfiAtRuntime () && ((mRuntimeServicesSupported & EFI_RT_SUPPORTED_GET_TIME) == 0)) {
+    return EFI_UNSUPPORTED;
+  }
 
-    PerformanceTimerNanoseconds += mPerfomanceTimerOffset;
-    PerformanceEpochSeconds      = PerformanceTimerNanoseconds / 1000000000ull;
-    RtcEpochSeconds              = PerformanceEpochSeconds;
-  } else {
-    if (mVirtualRtc) {
+  PerformanceTimerNanoseconds = GetTimeInNanoSecond (GetPerformanceCounter ());
+
+  if (mVirtualRtc) {
+    if (mPerfomanceTimerOffset != MAX_INT64) {
+      PerformanceTimerNanoseconds += mPerfomanceTimerOffset;
+      PerformanceEpochSeconds      = PerformanceTimerNanoseconds / 1000000000ull;
+      RtcEpochSeconds              = PerformanceEpochSeconds;
+    } else {
       RtcEpochSeconds         = mRtcOffset;
       PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000ull;
       mPerfomanceTimerOffset  = ((UINT64)RtcEpochSeconds - (UINT64)PerformanceEpochSeconds) * 1000000000ull;
-    } else if (mI2cMaster == NULL) {
+    }
+  } else if (mI2cMaster == NULL) {
+    return EFI_DEVICE_ERROR;
+  } else {
+    //
+    // Read RTC date/time and control together in a burst read
+    //
+    TimePacket.Address                     = NUVOTON_RTC_TIME_ADDRESS;
+    RequestData.OperationCount             = 2;
+    RequestData.Operation[0].Flags         = 0; // I2C WRITE
+    RequestData.Operation[0].Buffer        = (VOID *)&TimePacket.Address;
+    RequestData.Operation[0].LengthInBytes = sizeof (TimePacket.Address);
+    RequestData.Operation[1].Flags         = I2C_FLAG_READ;
+    RequestData.Operation[1].Buffer        = (VOID *)&TimePacket.DateTime;
+    RequestData.Operation[1].LengthInBytes = sizeof (TimePacket.DateTime) +
+                                             sizeof (TimePacket.Control);
+    Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to read time registers: %r.\r\n", __FUNCTION__, Status));
       return EFI_DEVICE_ERROR;
-    } else {
-      //
-      // Read date/time and control together in a burst read
-      //
-      TimePacket.Address                     = NUVOTON_RTC_TIME_ADDRESS;
-      RequestData.OperationCount             = 2;
-      RequestData.Operation[0].Flags         = 0; // I2C WRITE
-      RequestData.Operation[0].Buffer        = (VOID *)&TimePacket.Address;
-      RequestData.Operation[0].LengthInBytes = sizeof (TimePacket.Address);
-      RequestData.Operation[1].Flags         = I2C_FLAG_READ;
-      RequestData.Operation[1].Buffer        = (VOID *)&TimePacket.DateTime;
-      RequestData.Operation[1].LengthInBytes = sizeof (TimePacket.DateTime) +
-                                               sizeof (TimePacket.Control);
-      Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to read time registers: %r.\r\n", __FUNCTION__, Status));
-        return EFI_DEVICE_ERROR;
+    }
+
+    //
+    // If RTC is stopped, it is unusable.
+    //
+    if (TimePacket.Control.ST == NUVOTON_RTC_CONTROL_ST_STOP) {
+      DEBUG ((EFI_D_ERROR, "%a: RTC is stopped.\r\n", __FUNCTION__));
+      return EFI_DEVICE_ERROR;
+    }
+
+    //
+    // Convert to UEFI time format
+    //
+    BcdMode            = (TimePacket.Control.DM == NUVOTON_RTC_CONTROL_DM_BCD);
+    TwentyFourHourMode = (TimePacket.Control.HF == NUVOTON_RTC_CONTROL_HF_24H);
+
+    Time->Second = TimePacket.DateTime.Second & NUVOTON_RTC_SECOND_MASK;
+    Time->Minute = TimePacket.DateTime.Minute & NUVOTON_RTC_MINUTE_MASK;
+    Time->Hour   = TimePacket.DateTime.Hour   & NUVOTON_RTC_HOUR_MASK;
+    Time->Day    = TimePacket.DateTime.Day    & NUVOTON_RTC_DAY_MASK;
+    Time->Month  = TimePacket.DateTime.Month  & NUVOTON_RTC_MONTH_MASK;
+    Time->Year   = TimePacket.DateTime.Year   & NUVOTON_RTC_YEAR_MASK;
+
+    if (BcdMode) {
+      Time->Second = BcdToDecimal8 (Time->Second);
+      Time->Minute = BcdToDecimal8 (Time->Minute);
+      Time->Hour   = BcdToDecimal8 (Time->Hour);
+      Time->Day    = BcdToDecimal8 (Time->Day);
+      Time->Month  = BcdToDecimal8 (Time->Month);
+      Time->Year   = BcdToDecimal8 (Time->Year);
+    }
+
+    if (!TwentyFourHourMode) {
+      Time->Hour %= 12;
+      if ((TimePacket.DateTime.Hour & NUVOTON_RTC_PM_MASK) != 0) {
+        Time->Hour += 12;
       }
+    }
 
-      //
-      // If RTC is stopped, it is unusable.
-      //
-      if (TimePacket.Control.ST == NUVOTON_RTC_CONTROL_ST_STOP) {
-        DEBUG ((EFI_D_ERROR, "%a: RTC is stopped.\r\n", __FUNCTION__));
-        return EFI_DEVICE_ERROR;
-      }
+    Time->Year += NUVOTON_RTC_BASE_YEAR;
 
-      //
-      // Convert to UEFI time format
-      //
-      BcdMode            = (TimePacket.Control.DM == NUVOTON_RTC_CONTROL_DM_BCD);
-      TwentyFourHourMode = (TimePacket.Control.HF == NUVOTON_RTC_CONTROL_HF_24H);
+    RtcEpochSeconds = EfiTimeToEpoch (Time);
 
-      Time->Second = TimePacket.DateTime.Second & NUVOTON_RTC_SECOND_MASK;
-      Time->Minute = TimePacket.DateTime.Minute & NUVOTON_RTC_MINUTE_MASK;
-      Time->Hour   = TimePacket.DateTime.Hour   & NUVOTON_RTC_HOUR_MASK;
-      Time->Day    = TimePacket.DateTime.Day    & NUVOTON_RTC_DAY_MASK;
-      Time->Month  = TimePacket.DateTime.Month  & NUVOTON_RTC_MONTH_MASK;
-      Time->Year   = TimePacket.DateTime.Year   & NUVOTON_RTC_YEAR_MASK;
-
-      if (BcdMode) {
-        Time->Second = BcdToDecimal8 (Time->Second);
-        Time->Minute = BcdToDecimal8 (Time->Minute);
-        Time->Hour   = BcdToDecimal8 (Time->Hour);
-        Time->Day    = BcdToDecimal8 (Time->Day);
-        Time->Month  = BcdToDecimal8 (Time->Month);
-        Time->Year   = BcdToDecimal8 (Time->Year);
-      }
-
-      if (!TwentyFourHourMode) {
-        Time->Hour %= 12;
-        if ((TimePacket.DateTime.Hour & NUVOTON_RTC_PM_MASK) != 0) {
-          Time->Hour += 12;
-        }
-      }
-
-      Time->Year += NUVOTON_RTC_BASE_YEAR;
-
-      RtcEpochSeconds = EfiTimeToEpoch (Time);
-      //
-      // DayOfWeek is not used by UEFI. It is repurposed to track if BMC updates RTC time.
-      // If DayOfWeek offset does not match what UEFI had previously set, discard RTC_OFFSET.
-      //
-      if (TimePacket.DateTime.DayOfWeek != ((EfiTimeToWday (Time) + NUVOTON_RTC_WDAY_OFFSET) % 7)) {
-        mRtcOffset = 0;
-        EfiSetVariable (
-          L"RTC_OFFSET",
-          &gNVIDIATokenSpaceGuid,
-          EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
-          sizeof (mRtcOffset),
-          &mRtcOffset
-          );
-        //
-        // Reset DayOfWeek offset
-        //
-        WDayPacket.Address   = NUVOTON_RTC_DAY_OF_WEEK_ADDRESS;
-        WDayPacket.DayOfWeek = (EfiTimeToWday (Time) + NUVOTON_RTC_WDAY_OFFSET) % 7;
-
-        RequestData.OperationCount             = 1;
-        RequestData.Operation[0].Flags         = 0; // I2C WRITE
-        RequestData.Operation[0].Buffer        = (VOID *)&WDayPacket.Address;
-        RequestData.Operation[0].LengthInBytes = sizeof (WDayPacket.Address) +
-                                                 sizeof (WDayPacket.DayOfWeek);
-        Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a: Failed to program day of week register: %r.\r\n", __FUNCTION__, Status));
-        }
-      }
-
-      //
-      // If mRtcOffset is set by SetTime during OS runtime, apply it and write the new time to RTC.
-      //
-      if (mRtcOffset != 0) {
-        RtcEpochSeconds += mRtcOffset;
-        EpochToEfiTime (RtcEpochSeconds, Time);
-        Time->TimeZone = 0;  // Set as UTC time
-        LibSetTime (Time);
-      }
-
+    //
+    // If performance counter time is not in sync with RTC time, sync it to RTC time.
+    // Otherwise, use counter time to have better precision.
+    //
+    PerformanceEpochSeconds = (PerformanceTimerNanoseconds + mPerfomanceTimerOffset) / 1000000000ull;
+    if ((PerformanceEpochSeconds != RtcEpochSeconds) && (PerformanceEpochSeconds != RtcEpochSeconds + 1)) {
       PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000ull;
       mPerfomanceTimerOffset  = ((UINT64)RtcEpochSeconds - (UINT64)PerformanceEpochSeconds) * 1000000000ull;
+    } else {
+      RtcEpochSeconds = PerformanceEpochSeconds;
     }
   }
 
@@ -250,6 +222,10 @@ LibSetTime (
     return EFI_INVALID_PARAMETER;
   }
 
+  if (EfiAtRuntime () && ((mRuntimeServicesSupported & EFI_RT_SUPPORTED_SET_TIME) == 0)) {
+    return EFI_UNSUPPORTED;
+  }
+
   //
   // Convert local time to UTC based on TimeZone and Daylight
   //
@@ -261,34 +237,8 @@ LibSetTime (
   }
 
   PerformanceTimerNanoseconds = GetTimeInNanoSecond (GetPerformanceCounter ());
-  if (EfiAtRuntime ()) {
-    if ((mRuntimeServicesSupported & EFI_RT_SUPPORTED_SET_TIME) == 0) {
-      return EFI_UNSUPPORTED;
-    } else {
-      // Set Variable is required.
-      // in this case the set time should also be 0 but add check to be safe.
-      if ((mRuntimeServicesSupported & EFI_RT_SUPPORTED_SET_VARIABLE) == 0) {
-        return EFI_UNSUPPORTED;
-      }
 
-      PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000;
-      NewPerformanceOffset    = (RtcEpochSeconds - PerformanceEpochSeconds);
-      if (mVirtualRtc) {
-        mRtcOffset += PerformanceEpochSeconds;
-      } else {
-        mRtcOffset += NewPerformanceOffset - (mPerfomanceTimerOffset / 1000000000);
-      }
-
-      EfiSetVariable (
-        L"RTC_OFFSET",
-        &gNVIDIATokenSpaceGuid,
-        EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
-        sizeof (mRtcOffset),
-        &mRtcOffset
-        );
-      mPerfomanceTimerOffset = NewPerformanceOffset * 1000000000;
-    }
-  } else if (mVirtualRtc) {
+  if (mVirtualRtc) {
     PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000;
     NewPerformanceOffset    = (RtcEpochSeconds - PerformanceEpochSeconds);
     mRtcOffset              = RtcEpochSeconds;
@@ -300,11 +250,9 @@ LibSetTime (
       &mRtcOffset
       );
     mPerfomanceTimerOffset = NewPerformanceOffset * 1000000000;
+  } else if (mI2cMaster == NULL) {
+    return EFI_DEVICE_ERROR;
   } else {
-    if (mI2cMaster == NULL) {
-      return EFI_DEVICE_ERROR;
-    }
-
     //
     // Read RTC control register, which is readonly for CPU.
     //
@@ -334,7 +282,7 @@ LibSetTime (
     //
     // If CPU does not have write ownership, RTC time cannot be changed.
     //
-    if (!PcdGetBool (PcdCpuHasRtcControl) &&
+    if (!mCpuHasRtcControl &&
         (ControlPacket.Control.TWO == NUVOTON_RTC_CONTROL_TWO_PRIMARY))
     {
       DEBUG ((EFI_D_ERROR, "%a: CPU is not holding the write ownership.\r\n", __FUNCTION__));
@@ -396,15 +344,6 @@ LibSetTime (
       DEBUG ((EFI_D_ERROR, "%a: Failed to store time: %r.\r\n", __FUNCTION__, Status));
       return EFI_DEVICE_ERROR;
     }
-
-    mRtcOffset = 0;
-    EfiSetVariable (
-      L"RTC_OFFSET",
-      &gNVIDIATokenSpaceGuid,
-      EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
-      sizeof (mRtcOffset),
-      &mRtcOffset
-      );
 
     PerformanceEpochSeconds = PerformanceTimerNanoseconds / 1000000000ull;
     mPerfomanceTimerOffset  = ((UINT64)RtcEpochSeconds - (UINT64)PerformanceEpochSeconds) * 1000000000ull;
@@ -646,6 +585,22 @@ LibRtcExitBootServicesEvent (
 }
 
 /**
+  Fixup pointers so Get/SetTime can be called in runtime.
+
+  @param[in]    Event   The Event that is being processed
+  @param[in]    Context Event Context
+**/
+VOID
+EFIAPI
+LibRtcVirtualNotifyEvent (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  EfiConvertPointer (0x0, (VOID **)&mI2cMaster);
+}
+
+/**
   Library entry point
 
   @param  ImageHandle           Handle that identifies the loaded image.
@@ -667,15 +622,13 @@ LibRtcInitialize (
 
   mI2cMaster             = NULL;
   mPerfomanceTimerOffset = MAX_INT64;
+  mCpuHasRtcControl      = PcdGetBool (PcdCpuHasRtcControl);
 
   mVirtualRtc = PcdGetBool (PcdVirtualRTC);
-
-  Status = EfiGetVariable (L"RTC_OFFSET", &gNVIDIATokenSpaceGuid, NULL, &VariableSize, &mRtcOffset);
-  if (EFI_ERROR (Status)) {
-    if (mVirtualRtc) {
+  if (mVirtualRtc) {
+    Status = EfiGetVariable (L"RTC_OFFSET", &gNVIDIATokenSpaceGuid, NULL, &VariableSize, &mRtcOffset);
+    if (EFI_ERROR (Status)) {
       mRtcOffset = BUILD_EPOCH;
-    } else {
-      mRtcOffset = 0;
     }
   }
 
@@ -709,6 +662,23 @@ LibRtcInitialize (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
+    gBS->CloseEvent (Event);
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  //
+  // Register for the virtual address change event
+  //
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_NOTIFY,
+                  LibRtcVirtualNotifyEvent,
+                  NULL,
+                  &gEfiEventVirtualAddressChangeGuid,
+                  &mRtcVirtualAddrChangeEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to create virtual address change event\r\n", __FUNCTION__));
     gBS->CloseEvent (Event);
     return EFI_OUT_OF_RESOURCES;
   }
