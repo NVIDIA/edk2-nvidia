@@ -23,6 +23,7 @@
 #include "PhyMarvell.h"
 #include "PhyRealtek.h"
 #include "PhyMgbe.h"
+#include "PhyMicrel.h"
 
 STATIC
 EFI_STATUS
@@ -232,6 +233,13 @@ PhyConfig (
       PhyDriver->StartAutoNeg = PhyRealtekStartAutoNeg;
       PhyDriver->CheckAutoNeg = PhyRealtekCheckAutoNeg;
       PhyDriver->DetectLink   = PhyRealtekDetectLink;
+      break;
+
+    case PHY_MICREL_OUI:
+      PhyDriver->Config		  = PhyMicrelConfig;
+      PhyDriver->StartAutoNeg = PhyMicrelStartAutoNeg;
+      PhyDriver->CheckAutoNeg = PhyMicrelCheckAutoNeg;
+      PhyDriver->DetectLink   = PhyMicrelDetectLink;
       break;
 
     case PHY_MGBE_OUI:
