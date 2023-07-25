@@ -699,6 +699,9 @@ TH500GetPlatformResourceInformation (
   PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Base;
   PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Size;
 
+  PlatformResourceInfo->CpublCoInfo.Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Base;
+  PlatformResourceInfo->CpublCoInfo.Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Size;
+
   if ((PlatformResourceInfo->RcmBlobInfo.Base != 0) &&
       (PlatformResourceInfo->RcmBlobInfo.Size != 0))
   {

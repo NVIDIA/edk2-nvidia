@@ -19,6 +19,8 @@
 #include <Library/PcdLib.h>
 #include <Library/UefiLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/HobLib.h>
+#include <Library/PlatformResourceLib.h>
 #include "ConfigurationSmbiosPrivate.h"
 
 #define BIT_IS_SET(Data, Bit)  ((BOOLEAN)(((Data) & (Bit)) == (Bit)))
@@ -377,6 +379,139 @@ GetPciIoInfoSet (
 
   FreePool (HandleBuffer);
   return Status;
+}
+
+/**
+  Appending individual firmware inventory info elements.
+
+  @param[in]                BiosInfo
+  @param[in]                SystemSlotInfo
+  @param[in]                NumSystemSlots
+  @param[in, out]           FirmwareInventoryInfo
+  @param[in, out]           NumFirmwareComponents
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+IndividualFirmwareInventoryUpdate (
+  CM_SMBIOS_BIOS_INFO                *BiosInfo,
+  CM_SMBIOS_SYSTEM_SLOTS_INFO        *SystemSlotInfo,
+  UINT32                             NumSystemSlots,
+  CM_SMBIOS_FIRMWARE_INVENTORY_INFO  **FirmwareInventoryInfo,
+  UINT32                             *NumFirmwareComponents
+  )
+{
+  CM_SMBIOS_FIRMWARE_INVENTORY_INFO  *FirmwareInventoryInfoElement;
+  CM_SMBIOS_FIRMWARE_INVENTORY_INFO  *NewFirmwareInventoryInfo;
+  UINT8                              StrLength;
+  VOID                               *Hob;
+  CONST CHAR8                        ImageName[] = "UEFI";
+  UINT64                             ImageSize;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    ImageSize = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->CpublCoInfo.Size;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get Platform Resource Info\n", __FUNCTION__));
+    return EFI_NOT_FOUND;
+  }
+
+  NewFirmwareInventoryInfo = ReallocatePool (
+                               ((*NumFirmwareComponents)) * (sizeof (CM_SMBIOS_FIRMWARE_INVENTORY_INFO)),
+                               ((*NumFirmwareComponents) + 1) * (sizeof (CM_SMBIOS_FIRMWARE_INVENTORY_INFO)),
+                               *FirmwareInventoryInfo
+                               );
+  if (NewFirmwareInventoryInfo == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  *FirmwareInventoryInfo = NewFirmwareInventoryInfo;
+
+  FirmwareInventoryInfoElement = (*FirmwareInventoryInfo) + *NumFirmwareComponents;
+  ZeroMem (FirmwareInventoryInfoElement, sizeof (*FirmwareInventoryInfoElement));
+
+  //
+  // General firmware handle for below fields.
+  //   b1. Component name
+  //   b2. Release date
+  //   b3. Manufacturer
+  //   b4. Image size
+  //   b5. FirmwareVersionFormat/FirmwareVersion
+  //   b6. Associated component information
+  //
+
+  StrLength                                           = AsciiStrLen (ImageName);
+  FirmwareInventoryInfoElement->FirmwareComponentName =  (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (StrLength + 1));
+  if (FirmwareInventoryInfoElement->FirmwareComponentName != NULL) {
+    AsciiStrCpyS (FirmwareInventoryInfoElement->FirmwareComponentName, StrLength + 1, ImageName);
+  }
+
+  //
+  // Update Firmware release date.
+  //
+  StrLength                                 = StrLen ((CHAR16 *)PcdGetPtr (PcdUefiDateTimeBuiltString));
+  FirmwareInventoryInfoElement->ReleaseDate = (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (StrLength + 1));
+  if (FirmwareInventoryInfoElement->ReleaseDate != NULL) {
+    UnicodeStrToAsciiStrS ((CHAR16 *)PcdGetPtr (PcdUefiDateTimeBuiltString), FirmwareInventoryInfoElement->ReleaseDate, StrLength + 1);
+  }
+
+  //
+  // Update Firmware manufacturer.
+  // There is no such info for individual firmware, so leave it as NULL.
+  //
+  FirmwareInventoryInfoElement->Manufacturer = NULL;
+
+  //
+  // Update Firmware image size.
+  //
+  FirmwareInventoryInfoElement->ImageSize = ImageSize;
+
+  //
+  // FirmwareVersionFormat turns to VersionFormatTypeFreeForm.
+  //
+  StrLength                                     = StrLen ((CHAR16 *)PcdGetPtr (PcdUefiVersionString));
+  FirmwareInventoryInfoElement->FirmwareVersion = (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (StrLength + 1));
+  if (FirmwareInventoryInfoElement->FirmwareVersion != NULL) {
+    FirmwareInventoryInfoElement->FirmwareVersionFormat = VersionFormatTypeFreeForm;
+    UnicodeStrToAsciiStrS ((CHAR16 *)PcdGetPtr (PcdUefiVersionString), FirmwareInventoryInfoElement->FirmwareVersion, StrLength + 1);
+  }
+
+  //
+  // Common firmware handle for below fields.
+  //   c1. Firmware ID and ID format.
+  //   c2. Firmware Characteristics
+  //   c3. Firmware State.
+  //
+
+  //
+  // Update Firmware ID and ID format.
+  //
+  StrLength                                = AsciiStrLen (ImageName);
+  FirmwareInventoryInfoElement->FirmwareId = (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (StrLength + 1));
+  if (FirmwareInventoryInfoElement->FirmwareId != NULL) {
+    FirmwareInventoryInfoElement->FirmwareIdFormat = FirmwareIdFormatTypeFreeForm;
+    AsciiStrCpyS (FirmwareInventoryInfoElement->FirmwareId, StrLength + 1, ImageName);
+  }
+
+  //
+  // Update Firmware Characteristics.
+  //
+  FirmwareInventoryInfoElement->Characteristics.Updatable      = 0;
+  FirmwareInventoryInfoElement->Characteristics.WriteProtected = 1;
+
+  //
+  // Update Firmware State.
+  //
+  FirmwareInventoryInfoElement->State = FirmwareInventoryStateEnabled;
+
+  (*NumFirmwareComponents)++;
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -867,6 +1002,11 @@ InstallSmbiosType45Cm (
     {
       break;
     }
+  }
+
+  Status = IndividualFirmwareInventoryUpdate (BiosInfo, SystemSlotInfo, NumSystemSlots, &FirmwareInventoryInfo, &NumFirmwareComponents);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: installing type 45 for individual firmware. Status = %r\n", __FUNCTION__, Status));
   }
 
   Status = FmpFirmwareInventoryUpdate (BiosInfo, SystemSlotInfo, NumSystemSlots, &FirmwareInventoryInfo, &NumFirmwareComponents);
