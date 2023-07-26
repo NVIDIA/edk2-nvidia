@@ -366,7 +366,7 @@ PlatformRedfishBootExtractConfig (
   *Progress = Request;
 
   if (Request == NULL) {
-    return EFI_UNSUPPORTED;
+    return EFI_NOT_FOUND;
   }
 
   //
@@ -426,6 +426,10 @@ PlatformRedfishBootRouteConfig (
   EFI_STATUS                                  Status;
   UINTN                                       BufferSize;
   PLATFORM_REDFISH_BOOT_OPTION_VARSTORE_DATA  BootOptionsVar;
+
+  if (Configuration == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
 
   *Progress = Configuration;
 
