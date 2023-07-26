@@ -164,7 +164,8 @@ InstallStaticResourceAffinityTable (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to locate root bridge protocols, %r.\r\n", __FUNCTION__, NumberOfHandles));
-    return Status;
+    Status = EFI_NOT_FOUND;
+    goto Exit;
   }
 
   for (HandleIdx = 0; HandleIdx < NumberOfHandles; HandleIdx++) {
@@ -182,7 +183,7 @@ InstallStaticResourceAffinityTable (
         Handles[HandleIdx],
         Status
         ));
-      return Status;
+      goto Exit;
     }
 
     if (PciRbCfg->NumProximityDomains > 0) {
@@ -224,6 +225,10 @@ InstallStaticResourceAffinityTable (
   ASSERT ((UINTN)Repo <= PlatformRepositoryInfoEnd);
 
   *PlatformRepositoryInfo = Repo;
+Exit:
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
 
-  return EFI_SUCCESS;
+  return Status;
 }

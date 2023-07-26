@@ -143,6 +143,10 @@ GeneratePciDSDForExtPort (
   }
 
 exit_handler:
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
+
   return Status;
 }
 

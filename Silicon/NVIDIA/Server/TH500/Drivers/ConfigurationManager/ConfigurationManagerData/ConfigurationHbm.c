@@ -117,6 +117,7 @@ GenerateHbmMemPxmDmnMap (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "%a: Failed to locate root bridge protocols, %r.\r\n", __FUNCTION__, NumberOfHandles));
+    Status = EFI_NOT_FOUND;
     goto Exit;
   }
 
@@ -153,7 +154,9 @@ GenerateHbmMemPxmDmnMap (
   EnabledHbmBitMap = EnabledHbmBitMap >> TH500_GPU_HBM_PXM_DOMAIN_START;
 
 Exit:
-  FreePool (Handles);
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
 
-  return Status;
+  return EFI_SUCCESS;
 }

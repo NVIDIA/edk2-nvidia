@@ -1698,13 +1698,13 @@ InitializePlatformRepository (
   }
 
   Status = GenerateHbmMemPxmDmnMap ();
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
     return Status;
   }
 
   if (!SkipSrat) {
     Status = InstallStaticResourceAffinityTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
-    if (EFI_ERROR (Status)) {
+    if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
       return Status;
     }
   }
