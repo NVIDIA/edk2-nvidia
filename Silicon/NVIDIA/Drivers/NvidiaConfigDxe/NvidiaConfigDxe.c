@@ -624,6 +624,7 @@ TEGRABL_EARLY_BOOT_VARIABLES           mVariableMb1Config      = { 0 };
 STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2        = NULL;
 STATIC VOID                            *mMmCommunicationBuffer = NULL;
 UINT64                                 mOpRomDisMask           = 0;
+EFI_HII_HANDLE                         mHiiHandle;
 
 // Print TEGRABL_EARLY_BOOT_VARIABLES
 VOID
@@ -1744,6 +1745,11 @@ ConfigCallback (
 {
   EFI_STATUS     Status;
   EFI_INPUT_KEY  InputKey;
+  EFI_STRING     TpmPopupTitle;
+  EFI_STRING     TpmPopupBody1;
+  EFI_STRING     TpmPopupBody2;
+  EFI_STRING     TpmPopupBody3;
+  EFI_STRING     TpmPopupConfirm;
 
   Status = EFI_UNSUPPORTED;
   if ((Action == EFI_BROWSER_ACTION_FORM_OPEN) ||
@@ -1783,6 +1789,48 @@ ConfigCallback (
       default:
         break;
     }
+  } else if (Action == EFI_BROWSER_ACTION_CHANGING) {
+    switch (QuestionId) {
+      case KEY_ENABLE_TPM:
+        if (Value->u8 == 1) {
+          TpmPopupTitle   = HiiGetString (mHiiHandle, STRING_TOKEN (STR_TPM_ENABLE_POPUP_TITLE), NULL);
+          TpmPopupBody1   = HiiGetString (mHiiHandle, STRING_TOKEN (STR_TPM_ENABLE_POPUP_BODY_1), NULL);
+          TpmPopupBody2   = HiiGetString (mHiiHandle, STRING_TOKEN (STR_TPM_ENABLE_POPUP_BODY_2), NULL);
+          TpmPopupBody3   = HiiGetString (mHiiHandle, STRING_TOKEN (STR_TPM_ENABLE_POPUP_BODY_3), NULL);
+          TpmPopupConfirm = HiiGetString (mHiiHandle, STRING_TOKEN (STR_TPM_ENABLE_POPUP_CONFIRM), NULL);
+
+          CreatePopUp (
+            EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+            &InputKey,
+            TpmPopupTitle,
+            L"",
+            TpmPopupBody1,
+            TpmPopupBody2,
+            TpmPopupBody3,
+            L"",
+            TpmPopupConfirm,
+            NULL
+            );
+
+          // If user enters any character other than 'y', revert the option to "Disabled"
+          if ((InputKey.UnicodeChar == L'Y') || (InputKey.UnicodeChar == L'y')) {
+            Status = EFI_SUCCESS;
+          } else {
+            Status = EFI_OUT_OF_RESOURCES;
+          }
+
+          FreePool (TpmPopupTitle);
+          FreePool (TpmPopupBody1);
+          FreePool (TpmPopupBody2);
+          FreePool (TpmPopupBody3);
+          FreePool (TpmPopupConfirm);
+        }
+
+        break;
+
+      default:
+        break;
+    }
   } else if ((Action == EFI_BROWSER_ACTION_DEFAULT_STANDARD) ||
              (Action == EFI_BROWSER_ACTION_DEFAULT_MANUFACTURING) ||
              (Action == EFI_BROWSER_ACTION_DEFAULT_SAFE) ||
@@ -1803,8 +1851,7 @@ OnEndOfDxe (
   IN VOID       *Context
   )
 {
-  EFI_STATUS      Status;
-  EFI_HII_HANDLE  HiiHandle;
+  EFI_STATUS  Status;
 
   gBS->CloseEvent (Event);
 
@@ -1824,15 +1871,15 @@ OnEndOfDxe (
                          NULL
                          );
   if (!EFI_ERROR (Status)) {
-    HiiHandle = HiiAddPackages (
-                  &gNVIDIAResourceConfigFormsetGuid,
-                  mDriverHandle,
-                  NvidiaConfigDxeStrings,
-                  NvidiaConfigHiiBin,
-                  NULL
-                  );
+    mHiiHandle = HiiAddPackages (
+                   &gNVIDIAResourceConfigFormsetGuid,
+                   mDriverHandle,
+                   NvidiaConfigDxeStrings,
+                   NvidiaConfigHiiBin,
+                   NULL
+                   );
 
-    if (HiiHandle == NULL) {
+    if (mHiiHandle == NULL) {
       gBS->UninstallMultipleProtocolInterfaces (
              mDriverHandle,
              &gEfiDevicePathProtocolGuid,
