@@ -2,7 +2,7 @@
 
   Tegra Firmware Management Protocol support
 
-  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -94,12 +94,18 @@ STATIC CONST CHAR16  *OptionalImageNames[] = {
   L"tsec-fw",
   L"xusb-fw",
   L"BCT-boot-chain_backup",
+  L"ist-ucode",
+  L"ist-bpmp",
+  L"ist-config",
   NULL
 };
 
 // optional partitions are only updated if present
 STATIC CONST CHAR16  *OptionalPartitionNames[] = {
   L"fsi-fw",
+  L"ist-ucode",
+  L"ist-bpmp",
+  L"ist-config",
   NULL
 };
 
