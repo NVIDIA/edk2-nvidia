@@ -424,8 +424,8 @@ UpdateSerialPortInfo (
   }
 
   if (*Map == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: No Matches found \n", __FUNCTION__));
-    return Status;
+    // Do not treat no serial ports as an error
+    return EFI_SUCCESS;
   }
 
   SerialHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfSerialPorts);
