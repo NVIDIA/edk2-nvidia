@@ -54,6 +54,7 @@
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
   gEfiDevicePathProtocolGuid
+  gEfiEdidOverrideProtocolGuid
   gEfiGraphicsOutputProtocolGuid
   gNVIDIAClockNodeProtocolGuid
   gNVIDIANonDiscoverableDeviceProtocolGuid
