@@ -17,6 +17,10 @@
 #include <Library/DebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/ReportStatusCodeLib.h>
+
+#include <NVIDIAStatusCodes.h>
+#include <OemStatusCodes.h>
 
 #include <Protocol/EdkIIRedfishOverrideProtocol.h>
 

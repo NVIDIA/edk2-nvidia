@@ -28,6 +28,16 @@ PlatformRedfishNotifyPhase (
   switch (PhaseType) {
     case EdkiiRedfishPhaseBeforeReboot:
       //
+      // Report BMC event log
+      //
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_PROGRESS_CODE | EFI_OEM_PROGRESS_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_REDFISH_CONFIG_CHANGED_AND_REBOOT,
+        OEM_EC_DESC_REDFISH_CONFIG_CHANGED_AND_REBOOT,
+        sizeof (OEM_EC_DESC_REDFISH_CONFIG_CHANGED_AND_REBOOT)
+        );
+
+      //
       // Mark existing boot chain as good.
       //
       ValidateActiveBootChain ();

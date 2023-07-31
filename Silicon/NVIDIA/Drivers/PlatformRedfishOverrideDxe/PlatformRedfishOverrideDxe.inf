@@ -30,6 +30,7 @@
   UefiDriverEntryPoint
   BaseLib
   DebugLib
+  ReportStatusCodeLib
   UefiBootServicesTableLib
   PlatformResourceLib
 

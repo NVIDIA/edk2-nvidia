@@ -71,6 +71,9 @@
 #define OEM_EC_DESC_REDFISH_BOOTSTRAP_CREDENTIAL \
         "Fail to get Redfish credential from BMC. Status = %r"
 
+#define OEM_EC_DESC_REDFISH_CONFIG_CHANGED_AND_REBOOT \
+        "System configuration is changed via Redfish. Reboot system"
+
 ///@}
 
 #endif
