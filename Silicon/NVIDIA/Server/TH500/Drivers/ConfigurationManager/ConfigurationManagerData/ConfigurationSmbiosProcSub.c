@@ -1,7 +1,7 @@
 /**
   Configuration Manager Data of SMBIOS Type 4 and Type 7 table.
 
-  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -32,7 +32,6 @@
 #define CACHE_OPERATION_MODE_SHIFT  8
 #define CACHE_16_SHIFT              15
 #define CACHE_32_SHIFT              31
-#define SMBIOS_TYPE4_MAX_STRLEN     65
 #define SMBIOS_TYPE4_MAX_SOCKET     4
 
 typedef enum {
@@ -403,7 +402,7 @@ InstallSmbiosType4Cm (
     // Processor serial number
     SerialNumberStr = GetCpuSerialNum (Index);
     if (SerialNumberStr != NULL) {
-      ProcessorInfo[Index].SerialNumber = AllocateZeroPool (SMBIOS_TYPE4_MAX_STRLEN);
+      ProcessorInfo[Index].SerialNumber = AllocateZeroPool ((StrLen (SerialNumberStr) + 1));
       if (ProcessorInfo[Index].SerialNumber == NULL) {
         DEBUG ((DEBUG_INFO, "%a: Out of Resources.\r\n", __FUNCTION__));
         Status = EFI_OUT_OF_RESOURCES;
@@ -412,7 +411,7 @@ InstallSmbiosType4Cm (
 
       AsciiSPrint (
         ProcessorInfo[Index].SerialNumber,
-        SMBIOS_TYPE4_MAX_STRLEN,
+        (StrLen (SerialNumberStr) + 1),
         "%s",
         SerialNumberStr
         );

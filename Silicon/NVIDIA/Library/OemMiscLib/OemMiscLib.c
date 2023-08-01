@@ -1,7 +1,7 @@
 /** @file
 *  OemMiscLib.c
 *
-*  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -32,7 +32,8 @@
 #include <Protocol/TegraCpuFreq.h>
 #include <libfdt.h>
 
-#define HZ_TO_MHZ(x)  (x/1000000)
+#define HZ_TO_MHZ(x)   (x/1000000)
+#define GENMASK_32(n)  (~(0U) >> (32 - n))
 
 #define FUSE_OPT_VENDOR_CODE_0   (0x200)
 #define FUSE_OPT_FAB_CODE_0      (0x204)
@@ -42,7 +43,7 @@
 #define FUSE_OPT_X_COORDINATE_0  (0x214)
 #define FUSE_OPT_Y_COORDINATE_0  (0x218)
 #define FUSE_OPT_OPS_RESERVED_0  (0x220)
-#define CPUSNMAXSTR              (256)
+#define CPUSNMAXSTR              (320)
 
 STATIC TEGRA_EEPROM_BOARD_INFO  *SmEepromData;
 STATIC SMBIOS_TABLE_TYPE32      *Type32Record;
@@ -723,7 +724,8 @@ GetCpuSerialNumTh500 (
   UINT32  YValue;
   UINT32  Reserved;
   UINTN   CpuBufSize;
-  CHAR16  *Serial = NULL;
+  CHAR16  *Serial    = NULL;
+  UINT64  Ecid128[2] = { 0 };
 
   CpuBufSize = CPUSNMAXSTR;
   EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_VENDOR_CODE_0, &Vendor);
@@ -741,10 +743,14 @@ GetCpuSerialNumTh500 (
     return NULL;
   }
 
+  Ecid128[0]  = Reserved | (YValue << 6) | (XValue << 15) | (Wafer << 24) | (Lot1 << 30);
+  Ecid128[0] |= (((UINT64)Lot0 & GENMASK_32 (6)) << 58);
+  Ecid128[1]  = ((Lot0 >> 6) & GENMASK_32 (26)) | (Fab << 26) | ((UINT64)Vendor << 32);
+
   UnicodeSPrint (
     Serial,
     CpuBufSize,
-    L"%x-%x-%x-%x-%x-%x-%x-%x",
+    L"%x-%x-%x-%x-%x-%x-%x-%x (FuseValues) \n 0x%lx%lx (128 bit ECID)",
     Vendor,
     Fab,
     Lot0,
@@ -752,7 +758,9 @@ GetCpuSerialNumTh500 (
     Wafer,
     XValue,
     YValue,
-    Reserved
+    Reserved,
+    Ecid128[1],
+    Ecid128[0]
     );
   return Serial;
 }
