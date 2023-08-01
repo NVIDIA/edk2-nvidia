@@ -614,7 +614,7 @@ CONFIG_MEMORY_TEST=n
   #
   # Security PCDs
   #
-  gEfiSecurityPkgTokenSpaceGuid.PcdCpuRngSupportedAlgorithm|{0xe4,0x31,0x76,0xd7,0xb6,0xe8,0x48,0x27,0xb7,0x84,0x7f,0xfd,0xc4,0xb6,0x85,0x61}
+  gEfiSecurityPkgTokenSpaceGuid.PcdCpuRngSupportedAlgorithm|{ GUID("e43176d7-b6e8-4827-b784-7ffdc4b68561") }
 
   #
   # Do not attempt to load at large specified address
