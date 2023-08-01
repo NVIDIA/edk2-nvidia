@@ -65,7 +65,7 @@
 
   gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString|L"STMM:"
   gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString|L"StandaloneMm"
-  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0xF000
   gArmTokenSpaceGuid.PcdMmBufferSize|65536
   gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead|FALSE
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
