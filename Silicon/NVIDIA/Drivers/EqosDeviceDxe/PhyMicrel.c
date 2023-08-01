@@ -93,14 +93,13 @@ PhyMicrelStartAutoNeg (
   Data32 |= REG_PHY_GB_CONTROL_ADVERTISE_1000_BASE_T_FULL;
   PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, Data32);
 
-  /* Advertise 100, 10 MBPS with full and half duplex mode */
-  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, &Data32);
-
-  Data32 |= REG_PHY_AUTONEG_ADVERTISE_100_BASE_T4      |
-            REG_PHY_AUTONEG_ADVERTISE_100_BASE_TX_FULL |
+  /* Selector Field: 0x1 = IEEE 802.3 */
+  Data32 = 0x1;
+  Data32 |= REG_PHY_AUTONEG_ADVERTISE_100_BASE_TX_FULL |
             REG_PHY_AUTONEG_ADVERTISE_100_BASE_TX_HALF |
             REG_PHY_AUTONEG_ADVERTISE_10_BASE_T_FULL   |
             REG_PHY_AUTONEG_ADVERTISE_10_BASE_T_HALF;
+
 
   PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, Data32);
 
