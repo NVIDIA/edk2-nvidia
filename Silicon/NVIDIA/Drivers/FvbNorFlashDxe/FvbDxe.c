@@ -1453,7 +1453,7 @@ FVBInitialize (
                   NULL
                   );
 
-  RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocatePool (sizeof (EFI_RT_PROPERTIES_TABLE));
+  RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocateRuntimePool (sizeof (EFI_RT_PROPERTIES_TABLE));
   if (RtProperties == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT properties table\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
