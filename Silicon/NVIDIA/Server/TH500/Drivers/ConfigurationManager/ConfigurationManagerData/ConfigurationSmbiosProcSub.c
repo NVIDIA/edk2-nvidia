@@ -583,6 +583,56 @@ SmbiosProcessorGetCacheAssociativity (
   return Associativity;
 }
 
+/** Fills the cache associativity.
+
+  @param[in] Associativity       Associativity of cache.
+  @param[out] CacheInfo          CacheInfo record to update
+
+**/
+STATIC
+VOID
+GetCacheAssociativity (
+  IN       UINT32                Associativity,
+  IN OUT   CM_SMBIOS_CACHE_INFO  *CacheInfo
+  )
+{
+  switch (Associativity) {
+    case 2:
+      CacheInfo->Associativity = CacheAssociativity2Way;
+      break;
+    case 4:
+      CacheInfo->Associativity = CacheAssociativity4Way;
+      break;
+    case 8:
+      CacheInfo->Associativity = CacheAssociativity8Way;
+      break;
+    case 12:
+      CacheInfo->Associativity = CacheAssociativity12Way;
+      break;
+    case 16:
+      CacheInfo->Associativity = CacheAssociativity16Way;
+      break;
+    case 20:
+      CacheInfo->Associativity = CacheAssociativity20Way;
+      break;
+    case 24:
+      CacheInfo->Associativity = CacheAssociativity24Way;
+      break;
+    case 32:
+      CacheInfo->Associativity = CacheAssociativity32Way;
+      break;
+    case 48:
+      CacheInfo->Associativity = CacheAssociativity48Way;
+      break;
+    case 64:
+      CacheInfo->Associativity = CacheAssociativity64Way;
+      break;
+    default:
+      CacheInfo->Associativity = CacheAssociativityOther;
+      break;
+  }
+}
+
 /** Fills in the Type 7 record with the cache architecture information
     read from the CPU registers.
 
@@ -651,41 +701,7 @@ ConfigureCacheArchitectureInformation (
   Type7Record->MaximumCacheSize2 = CacheSize32;
   Type7Record->InstalledSize2    = CacheSize32;
 
-  switch (Associativity) {
-    case 2:
-      Type7Record->Associativity = CacheAssociativity2Way;
-      break;
-    case 4:
-      Type7Record->Associativity = CacheAssociativity4Way;
-      break;
-    case 8:
-      Type7Record->Associativity = CacheAssociativity8Way;
-      break;
-    case 12:
-      Type7Record->Associativity = CacheAssociativity12Way;
-      break;
-    case 16:
-      Type7Record->Associativity = CacheAssociativity16Way;
-      break;
-    case 20:
-      Type7Record->Associativity = CacheAssociativity20Way;
-      break;
-    case 24:
-      Type7Record->Associativity = CacheAssociativity24Way;
-      break;
-    case 32:
-      Type7Record->Associativity = CacheAssociativity32Way;
-      break;
-    case 48:
-      Type7Record->Associativity = CacheAssociativity48Way;
-      break;
-    case 64:
-      Type7Record->Associativity = CacheAssociativity64Way;
-      break;
-    default:
-      Type7Record->Associativity = CacheAssociativityOther;
-      break;
-  }
+  GetCacheAssociativity (Associativity, Type7Record);
 
   Type7Record->CacheConfiguration = (CacheModeUnknown << CACHE_OPERATION_MODE_SHIFT) |
                                     (1 << CACHE_ENABLED_SHIFT) |
@@ -806,6 +822,118 @@ ProcessorGetMaxCacheLevel (
   return MaxCacheLevel;
 }
 
+/** Collect L3 cache data and fill CacheInfo record.
+
+  @param[in]  Dtb           Device Tree
+  @param[in]  SocketOffset  Socket offset to fetch socket data from DT
+  @param[in]  Index         Index of socket
+  @param[out] CacheInfo     CacheInfo record to update
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+GetL3CacheInfo (
+  IN       VOID                  *Dtb,
+  IN       INT32                 SocketOffset,
+  IN       UINTN                 Index,
+  IN       UINTN                 TableCount,
+  IN OUT   CM_SMBIOS_CACHE_INFO  *CacheInfo
+  )
+{
+  CONST UINT32  *PropertyStr;
+  CHAR8         CacheL3Str[] = "L3 Cache\0";
+  UINT32        Size         = 0;
+  UINT32        NumberOfSets = 0;
+  UINT32        Associativity;
+  UINT16        LineSize = 0;
+  UINT32        CacheSize32;
+  UINT16        CacheSize16;
+  UINT64        CacheSize64;
+
+  // Check if socket exists
+  if (SocketOffset < 0) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Get L3 Cache data from dt
+  SocketOffset = fdt_node_offset_by_compatible (Dtb, SocketOffset, "l3-cache");
+  if (SocketOffset < 0) {
+    return EFI_INVALID_PARAMETER;
+  } else {
+    PropertyStr = fdt_getprop (Dtb, SocketOffset, "cache-size", NULL);
+    if (PropertyStr != NULL) {
+      Size = SwapBytes32 (*PropertyStr);
+    }
+
+    PropertyStr = fdt_getprop (Dtb, SocketOffset, "cache-sets", NULL);
+    if (PropertyStr != NULL) {
+      NumberOfSets = SwapBytes32 (*PropertyStr);
+    }
+
+    PropertyStr = fdt_getprop (Dtb, SocketOffset, "cache-line-size", NULL);
+    if (PropertyStr != NULL) {
+      LineSize = SwapBytes32 (*PropertyStr);
+    }
+
+    // Calculate Associativity
+    Associativity = Size / (LineSize* NumberOfSets);
+    GetCacheAssociativity (Associativity, CacheInfo);
+    // Cache Configuration
+    CacheInfo->CacheConfiguration = (CacheModeUnknown << CACHE_OPERATION_MODE_SHIFT) |
+                                    (1 << CACHE_ENABLED_SHIFT) |
+                                    (CacheLocationUnknown << CACHE_LOCATION_SHIFT) |
+                                    (0 << CACHE_SOCKETED_SHIFT) |
+                                    (2);
+
+    CacheSize64  = Size;
+    CacheSize64 /= 1024;   // Minimum granularity is 1K
+
+    // Encode the cache size into the format SMBIOS wants
+    if (CacheSize64 < MAX_INT16) {
+      CacheSize16 = CacheSize64;
+      CacheSize32 = CacheSize16;
+    } else if ((CacheSize64 / 64) < MAX_INT16) {
+      CacheSize16 = (1 << CACHE_16_SHIFT) | (CacheSize64 / 64);
+      CacheSize32 = (1U << CACHE_32_SHIFT) | (CacheSize64 / 64U);
+    } else {
+      if ((CacheSize64 / 1024) <= 2047) {
+        CacheSize32 = CacheSize64;
+      } else {
+        CacheSize32 = (1U << CACHE_32_SHIFT) | (CacheSize64 / 64U);
+      }
+
+      CacheSize16 = -1;
+    }
+
+    CacheInfo->MaximumCacheSize  = CacheSize16;
+    CacheInfo->InstalledSize     = CacheSize16;
+    CacheInfo->MaximumCacheSize2 = CacheSize32;
+    CacheInfo->InstalledSize2    = CacheSize32;
+    // Cache Socket Designation
+    if (CacheL3Str != NULL) {
+      CacheInfo->SocketDesignation = AllocateZeroPool (strlen (CacheL3Str) +1);
+      if (CacheInfo->SocketDesignation == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
+        return EFI_OUT_OF_RESOURCES;
+      }
+
+      AsciiSPrint (CacheInfo->SocketDesignation, strlen (CacheL3Str) +1, CacheL3Str);
+    }
+
+    CacheInfo->SupportedSRAMType.Unknown = 1;
+    CacheInfo->CurrentSRAMType.Unknown   = 1;
+    CacheInfo->CacheSpeed                = 0;
+    CacheInfo->ErrorCorrectionType       = CacheErrorUnknown;
+    CacheInfo->SystemCacheType           = CacheTypeUnified;
+
+    CacheInfo->CacheInfoToken = (CM_OBJECT_TOKEN)CacheInfo;
+    CacheInfoTokenL3[Index]   = CacheInfo->CacheInfoToken;
+  }
+
+  return EFI_SUCCESS;
+}
+
 /**
   Install CM object for SMBIOS Type 7
 
@@ -824,7 +952,8 @@ InstallSmbiosType7Cm (
 {
   EFI_STATUS                      Status;
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
-  VOID                            *DtbBase;
+  VOID                            *Dtb;
+  UINTN                           DtbSize;
   UINTN                           ProcessorCount;
   CM_SMBIOS_CACHE_INFO            *CacheInfo;
   UINTN                           Index;
@@ -836,10 +965,11 @@ InstallSmbiosType7Cm (
   CHAR8                           *SocketDesignationAsciiStr;
   UINTN                           TableCount;
   UINTN                           CoresEnabled;
+  INT32                           SocketOffset;
+  CHAR8                           SocketNodeStr[] = "/socket@xx";
 
   Status     = EFI_SUCCESS;
   Repo       = Private->Repo;
-  DtbBase    = Private->DtbBase;
   TableCount = 0;
 
   ProcessorCount = OemGetMaxProcessors ();
@@ -864,6 +994,9 @@ InstallSmbiosType7Cm (
         TableCount++;
       }
     }
+
+    // Increment TableCount for each processor's L3 cache that is captured by dtb
+    TableCount++;
   }
 
   // Allocate memory for the cache tables
@@ -893,6 +1026,15 @@ InstallSmbiosType7Cm (
 
     // Get the Cores enabled count to calculate the total cache size
     CoresEnabled = GetCpuEnabledCores (Index);
+
+    // Get Dtb
+    Status = DtPlatformLoadDtb (&Dtb, &DtbSize);
+    if (EFI_ERROR (Status)) {
+      goto ExitInstallSmbiosType7;
+    }
+
+    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", Index);
+    SocketOffset = fdt_path_offset (Dtb, SocketNodeStr);
 
     for (CacheLevel = 1; CacheLevel <= MaxCacheLevel; CacheLevel++) {
       SeparateCaches = ProcessorHasSeparateCaches (CacheLevel);
@@ -940,12 +1082,21 @@ InstallSmbiosType7Cm (
         } else if (CacheLevel == 2) {
           CacheInfoTokenL2[Index] = CacheInfo[TableCount].CacheInfoToken;
         } else if (CacheLevel == 3) {
-          CacheInfoTokenL3[Index] = CacheInfo[TableCount].CacheInfoToken;
+          // Additional logic added below for L3 cache info
+          // CacheInfoTokenL3[Index] = CacheInfo[TableCount].CacheInfoToken;
         }
 
         TableCount++;
       }
     }
+
+    // Additional logic to generate type 7 L3 cache table
+    Status = GetL3CacheInfo (Dtb, SocketOffset, Index, TableCount, &CacheInfo[TableCount]);
+    if (EFI_ERROR (Status)) {
+      goto ExitInstallSmbiosType7;
+    }
+
+    TableCount++;
   }
 
   //
