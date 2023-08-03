@@ -36,6 +36,7 @@
   TH500Tcg2EventLog.c
   TH500ResourceConfig.h
   TH500ResourceConfigPrivate.h
+  CommonResourceConfig.c
 
 [Guids]
   gNVIDIAOSCarveoutHob
