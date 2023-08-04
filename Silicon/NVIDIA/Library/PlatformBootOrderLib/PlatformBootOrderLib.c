@@ -18,7 +18,7 @@
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/SortLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/FwVariableLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <IndustryStandard/Ipmi.h>
@@ -26,7 +26,18 @@
 #include <Protocol/PciIo.h>
 #include "InternalPlatformBootOrderLib.h"
 
-STATIC CONST NVIDIA_BOOT_ORDER_PRIORITY  mBootPriorityTemplate[] = {
+// Moves the element at INDEX to the start of the ARRAY
+#define MOVE_INDEX_TO_START(ARRAY, INDEX)                            \
+do {                                                                 \
+  __typeof__((ARRAY)[0]) Value;                                      \
+  if ((INDEX) > 0) {                                                 \
+    Value = (ARRAY)[(INDEX)];                                        \
+    CopyMem (&((ARRAY)[1]), &((ARRAY)[0]), (INDEX)*sizeof(Value));   \
+    (ARRAY)[0] = Value;                                              \
+  }                                                                  \
+} while (FALSE);
+
+STATIC NVIDIA_BOOT_ORDER_PRIORITY  mBootPriorityTemplate[] = {
   { "scsi",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_SCSI_DP,           MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
   { "usb",      MAX_INT32, MESSAGING_DEVICE_PATH, MSG_USB_DP,            MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
   { "sata",     MAX_INT32, MESSAGING_DEVICE_PATH, MSG_SATA_DP,           MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
@@ -216,12 +227,14 @@ STATIC
 VOID
 PrintBootOrder (
   IN CONST UINTN   DebugPrintLevel,
-  IN CONST CHAR16  *HeaderMessage
+  IN CONST CHAR16  *HeaderMessage,
+  IN UINT16        *BootOrder,
+  IN UINTN         BootOrderSize
   )
 {
   EFI_STATUS                    Status;
-  UINT16                        *BootOrder;
-  UINTN                         BootOrderSize;
+  UINT16                        *LocalBootOrder;
+  UINTN                         LocalBootOrderSize;
   UINTN                         BootOrderLength;
   UINTN                         BootOrderIndex;
   CHAR16                        OptionName[sizeof ("Boot####")];
@@ -231,18 +244,23 @@ PrintBootOrder (
     return;
   }
 
-  BootOrder = NULL;
+  LocalBootOrder = NULL;
 
-  // Gather BootOrder
-  Status = GetEfiGlobalVariable2 (EFI_BOOT_ORDER_VARIABLE_NAME, (VOID **)&BootOrder, &BootOrderSize);
-  if (Status == EFI_NOT_FOUND) {
-    DEBUG ((DebugPrintLevel, "%a: No BootOrder found\n", __FUNCTION__));
-    goto CleanupAndReturn;
-  }
+  // Gather BootOrder if needed
+  if ((BootOrder == NULL) || (BootOrderSize == 0)) {
+    Status = GetEfiGlobalVariable2 (EFI_BOOT_ORDER_VARIABLE_NAME, (VOID **)&LocalBootOrder, &LocalBootOrderSize);
+    if (Status == EFI_NOT_FOUND) {
+      DEBUG ((DebugPrintLevel, "%a: No BootOrder found\n", __FUNCTION__));
+      goto CleanupAndReturn;
+    }
 
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DebugPrintLevel, "%a: Unable to determine BootOrder: %r\n", __FUNCTION__, Status));
-    goto CleanupAndReturn;
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DebugPrintLevel, "%a: Unable to determine BootOrder: %r\n", __FUNCTION__, Status));
+      goto CleanupAndReturn;
+    }
+
+    BootOrder     = LocalBootOrder;
+    BootOrderSize = LocalBootOrderSize;
   }
 
   if ((BootOrder == NULL) || (BootOrderSize == 0)) {
@@ -266,13 +284,15 @@ PrintBootOrder (
   }
 
 CleanupAndReturn:
-  FREE_NON_NULL (BootOrder);
+  FREE_NON_NULL (LocalBootOrder);
 }
 
 NVIDIA_BOOT_ORDER_PRIORITY *
 EFIAPI
 GetBootClassOfOption (
-  IN EFI_BOOT_MANAGER_LOAD_OPTION  *Option
+  IN EFI_BOOT_MANAGER_LOAD_OPTION  *Option,
+  IN NVIDIA_BOOT_ORDER_PRIORITY    *Table,
+  IN UINTN                         Count
   )
 {
   UINTN                       OptionalDataSize;
@@ -293,9 +313,9 @@ GetBootClassOfOption (
   Device   = MAX_UINTN;
   Function = MAX_UINTN;
   if (StrCmp (Option->Description, L"UEFI Shell") == 0) {
-    for (BootPriorityIndex = 0; BootPriorityIndex < mBootPriorityCount; BootPriorityIndex++) {
-      if (AsciiStrCmp (mBootPriorityTable[BootPriorityIndex].OrderName, "shell") == 0) {
-        Result = &mBootPriorityTable[BootPriorityIndex];
+    for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
+      if (AsciiStrCmp (Table[BootPriorityIndex].OrderName, "shell") == 0) {
+        Result = &Table[BootPriorityIndex];
         goto ReturnResult;
       }
     }
@@ -313,9 +333,9 @@ GetBootClassOfOption (
         &gNVIDIABmBootOptionGuid
         ))
   {
-    for (BootPriorityIndex = 0; BootPriorityIndex < mBootPriorityCount; BootPriorityIndex++) {
-      if (mBootPriorityTable[BootPriorityIndex].ExtraSpecifier == NVIDIA_BOOT_TYPE_BOOTIMG) {
-        Result = &mBootPriorityTable[BootPriorityIndex];
+    for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
+      if (Table[BootPriorityIndex].ExtraSpecifier == NVIDIA_BOOT_TYPE_BOOTIMG) {
+        Result = &Table[BootPriorityIndex];
         goto ReturnResult;
       }
     }
@@ -347,20 +367,20 @@ GetBootClassOfOption (
 
   DevicePathNode = Option->FilePath;
   while (!IsDevicePathEndType (DevicePathNode)) {
-    for (BootPriorityIndex = 0; BootPriorityIndex < mBootPriorityCount; BootPriorityIndex++) {
-      if ((DevicePathType (DevicePathNode) == mBootPriorityTable[BootPriorityIndex].Type) &&
-          (DevicePathSubType (DevicePathNode) == mBootPriorityTable[BootPriorityIndex].SubType) &&
-          (ExtraSpecifier == mBootPriorityTable[BootPriorityIndex].ExtraSpecifier))
+    for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
+      if ((DevicePathType (DevicePathNode) == Table[BootPriorityIndex].Type) &&
+          (DevicePathSubType (DevicePathNode) == Table[BootPriorityIndex].SubType) &&
+          (ExtraSpecifier == Table[BootPriorityIndex].ExtraSpecifier))
       {
         //
-        // Check Boot device PCI location. MAX_UINTN in mBootPriorityTable queue means "don't check".
+        // Check Boot device PCI location. MAX_UINTN in Table queue means "don't check".
         //
-        if (((Segment == mBootPriorityTable[BootPriorityIndex].SegmentNum) || (MAX_UINTN == mBootPriorityTable[BootPriorityIndex].SegmentNum)) &&
-            ((Bus == mBootPriorityTable[BootPriorityIndex].BusNum) || (MAX_UINTN == mBootPriorityTable[BootPriorityIndex].BusNum)) &&
-            ((Device == mBootPriorityTable[BootPriorityIndex].DevNum) || (MAX_UINTN == mBootPriorityTable[BootPriorityIndex].DevNum)) &&
-            (((Function == mBootPriorityTable[BootPriorityIndex].FuncNum) || (MAX_UINTN == mBootPriorityTable[BootPriorityIndex].FuncNum))))
+        if (((Segment == Table[BootPriorityIndex].SegmentNum) || (MAX_UINTN == Table[BootPriorityIndex].SegmentNum)) &&
+            ((Bus == Table[BootPriorityIndex].BusNum) || (MAX_UINTN == Table[BootPriorityIndex].BusNum)) &&
+            ((Device == Table[BootPriorityIndex].DevNum) || (MAX_UINTN == Table[BootPriorityIndex].DevNum)) &&
+            (((Function == Table[BootPriorityIndex].FuncNum) || (MAX_UINTN == Table[BootPriorityIndex].FuncNum))))
         {
-          Result = &mBootPriorityTable[BootPriorityIndex];
+          Result = &Table[BootPriorityIndex];
         }
       }
     }
@@ -376,6 +396,39 @@ ReturnResult:
   }
 
   return Result;
+}
+
+EFI_STATUS
+EFIAPI
+GetBootClassOfOptionNum (
+  IN UINT16                          OptionNum,
+  IN OUT NVIDIA_BOOT_ORDER_PRIORITY  **Class,
+  IN NVIDIA_BOOT_ORDER_PRIORITY      *Table,
+  IN UINTN                           Count
+  )
+{
+  EFI_STATUS                    Status;
+  CHAR16                        OptionName[sizeof ("Boot####")];
+  EFI_BOOT_MANAGER_LOAD_OPTION  Option;
+
+  if (Class == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  UnicodeSPrint (OptionName, sizeof (OptionName), L"Boot%04x", OptionNum);
+  Status = EfiBootManagerVariableToLoadOption (OptionName, &Option);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got error (%r) getting BootOption for %s\n", __FUNCTION__, Status, OptionName));
+    return Status;
+  }
+
+  *Class = GetBootClassOfOption (&Option, Table, Count);
+  EfiBootManagerFreeLoadOption (&Option);
+  if (*Class == NULL) {
+    return EFI_NOT_FOUND;
+  } else {
+    return EFI_SUCCESS;
+  }
 }
 
 EFI_STATUS
@@ -430,8 +483,10 @@ AppendBootOrderPriority (
 NVIDIA_BOOT_ORDER_PRIORITY *
 EFIAPI
 GetBootClassOfName (
-  CHAR8  *ClassName,
-  UINTN  ClassNameLen
+  CHAR8                          *ClassName,
+  UINTN                          ClassNameLen,
+  IN NVIDIA_BOOT_ORDER_PRIORITY  *Table,
+  IN UINTN                       Count
   )
 {
   EFI_STATUS                  Status;
@@ -439,12 +494,12 @@ GetBootClassOfName (
   UINTN                       BootPriorityMatchLen;
   NVIDIA_BOOT_ORDER_PRIORITY  *ClassBootPriority;
 
-  for (BootPriorityIndex = 0; BootPriorityIndex < mBootPriorityCount; BootPriorityIndex++) {
-    BootPriorityMatchLen = AsciiStrLen (mBootPriorityTable[BootPriorityIndex].OrderName);
+  for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
+    BootPriorityMatchLen = AsciiStrLen (Table[BootPriorityIndex].OrderName);
     if ((BootPriorityMatchLen == ClassNameLen) &&
-        (CompareMem (ClassName, mBootPriorityTable[BootPriorityIndex].OrderName, ClassNameLen) == 0))
+        (CompareMem (ClassName, Table[BootPriorityIndex].OrderName, ClassNameLen) == 0))
     {
-      return &mBootPriorityTable[BootPriorityIndex];
+      return &Table[BootPriorityIndex];
     }
   }
 
@@ -483,7 +538,7 @@ GetDevicePriority (
     return MAX_INT32;
   }
 
-  BootPriorityClass = GetBootClassOfOption (&Option);
+  BootPriorityClass = GetBootClassOfOption (&Option, mBootPriorityTable, mBootPriorityCount);
 
   if (BootPriorityClass == NULL) {
     DevicePriority = MAX_INT32;
@@ -853,8 +908,8 @@ Done:
 }
 
 // When IPMI requests a temporary BootOrder change, we save the BootOrder
-// and then move one element to the beginning. This function will restore
-// the original BootOrder unless additional modifications have been made.
+// and then move one element (or class) to the beginning. This function will
+// restore the original BootOrder unless additional modifications have been made.
 VOID
 EFIAPI
 RestoreBootOrder (
@@ -862,20 +917,33 @@ RestoreBootOrder (
   VOID       *Context
   )
 {
-  UINT16      *SavedBootOrder;
-  UINTN       SavedBootOrderSize;
-  UINTN       SavedBootOrderLength;
-  UINT16      *BootOrder;
-  UINTN       BootOrderSize;
-  UINTN       BootOrderLength;
-  UINT16      *BootCurrent;
-  UINTN       BootCurrentSize;
-  UINTN       ReorderedIndex;
-  UINT16      ReorderedBootNum;
-  EFI_STATUS  Status;
+  UINT16                      *SavedBootOrder;
+  UINT16                      *SavedBootOrderCopy;
+  UINTN                       SavedBootOrderSize;
+  UINTN                       SavedBootOrderLength;
+  UINT16                      *BootOrder;
+  UINTN                       BootOrderSize;
+  UINTN                       BootOrderLength;
+  UINT16                      *BootCurrent;
+  UINTN                       BootCurrentSize;
+  UINTN                       ReorderedIndex;
+  UINT16                      ReorderedBootNum;
+  EFI_STATUS                  Status;
+  NVIDIA_BOOT_ORDER_PRIORITY  *BootClass;
+  NVIDIA_BOOT_ORDER_PRIORITY  *SavedBootClass;
+  NVIDIA_BOOT_ORDER_PRIORITY  *VirtualBootClass;
+  INTN                        SavedBootOrderIndex;
+  UINTN                       VirtualCount;
+  UINTN                       MovedItemCount;
+  UINT8                       *SavedBootOrderFlags;
+  UINTN                       SavedBootOrderFlagsSize;
+  BOOLEAN                     VirtualFlag;
+  BOOLEAN                     AllInstancesFlag;
 
-  SavedBootOrder = NULL;
-  BootOrder      = NULL;
+  SavedBootOrder      = NULL;
+  BootOrder           = NULL;
+  SavedBootOrderCopy  = NULL;
+  SavedBootOrderFlags = NULL;
 
   // Gather SavedBootOrder
   Status = GetVariable2 (SAVED_BOOT_ORDER_VARIABLE_NAME, &gNVIDIATokenSpaceGuid, (VOID **)&SavedBootOrder, &SavedBootOrderSize);
@@ -915,7 +983,8 @@ RestoreBootOrder (
 
   BootOrderLength = BootOrderSize/sizeof (BootOrder[0]);
 
-  // Make sure BootOrder only has one device moved to the front vs. SavedBootOrder
+  // Make sure BootOrder only has one device moved to the front vs. SavedBootOrder,
+  // or has all instances moved to the start
   if (SavedBootOrderLength != BootOrderLength) {
     DEBUG ((DEBUG_WARN, "%a: BootOrder (len=%u) and SavedBootOrder (len=%u) differ in size. Not restoring boot order\n", __FUNCTION__, BootOrderLength, SavedBootOrderLength));
     goto DeleteSaveAndCleanup;
@@ -933,18 +1002,74 @@ RestoreBootOrder (
     goto DeleteSaveAndCleanup;
   }
 
-  if ((CompareMem (&SavedBootOrder[0], &BootOrder[1], ReorderedIndex * sizeof (BootOrder[0])) != 0) ||
-      (CompareMem (
-         &SavedBootOrder[ReorderedIndex+1],
-         &BootOrder[ReorderedIndex+1],
-         (BootOrderLength - 1 - ReorderedIndex) * sizeof (BootOrder[0])
-         ) != 0))
-  {
+  // Parse the flags, if present
+  VirtualFlag      = FALSE;
+  AllInstancesFlag = FALSE;
+  Status           = GetVariable2 (SAVED_BOOT_ORDER_FLAGS_VARIABLE_NAME, &gNVIDIATokenSpaceGuid, (VOID **)&SavedBootOrderFlags, &SavedBootOrderFlagsSize);
+  if (!EFI_ERROR (Status) && (SavedBootOrderFlags != NULL) && (SavedBootOrderFlagsSize == sizeof (UINT8))) {
+    if (*SavedBootOrderFlags & SAVED_BOOT_ORDER_VIRTUAL_FLAG) {
+      VirtualFlag = TRUE;
+    }
+
+    if (*SavedBootOrderFlags & SAVED_BOOT_ORDER_ALL_INSTANCES_FLAG) {
+      AllInstancesFlag = TRUE;
+    }
+  }
+
+  SavedBootOrderCopy = AllocateCopyPool (SavedBootOrderSize, SavedBootOrder);
+  if (!AllInstancesFlag) {
+    // See if we can recreate BootOrder by simply moving one item from SavedBootOrder to the front
+    MOVE_INDEX_TO_START (SavedBootOrderCopy, ReorderedIndex);
+  } else {
+    // See if we can recreate BootOrder by moving all items of the class from SavedBootOrder to the front
+    Status = GetBootClassOfOptionNum (BootOrder[0], &BootClass, mBootPriorityTemplate, ARRAY_SIZE (mBootPriorityTemplate));
+    if (Status == EFI_NOT_FOUND) {
+      BootClass = NULL; // eg. the "ubuntu" option
+    } else if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_WARN, "%a: Error (%r) checking if we can restore boot order. Not restoring boot order\n", __FUNCTION__, Status));
+      goto DeleteSaveAndCleanup;
+    }
+
+    // If VirtualFlag is set, then we moved "virtual" to start and "usb" to after virtual
+    VirtualCount = 0;
+    if (VirtualFlag && BootClass && (AsciiStrCmp (BootClass->OrderName, "virtual") == 0)) {
+      VirtualBootClass = BootClass;
+      BootClass        = GetBootClassOfName ("usb", AsciiStrLen ("usb"), mBootPriorityTemplate, ARRAY_SIZE (mBootPriorityTemplate));
+    } else {
+      VirtualBootClass = NULL;
+    }
+
+    MovedItemCount = 0;
+    for (SavedBootOrderIndex = SavedBootOrderLength-1; SavedBootOrderIndex >= MovedItemCount; ) {
+      Status = GetBootClassOfOptionNum (SavedBootOrderCopy[SavedBootOrderIndex], &SavedBootClass, mBootPriorityTemplate, ARRAY_SIZE (mBootPriorityTemplate));
+      if (Status == EFI_NOT_FOUND) {
+        SavedBootClass = NULL; // eg. the "ubuntu" option
+      } else if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_WARN, "%a: Error (%r) checking if we can restore boot order. Not restoring boot order\n", __FUNCTION__, Status));
+        goto DeleteSaveAndCleanup;
+      }
+
+      if (SavedBootClass == BootClass) {
+        MOVE_INDEX_TO_START (&SavedBootOrderCopy[VirtualCount], SavedBootOrderIndex);
+        MovedItemCount++;
+      } else if (SavedBootClass && (SavedBootClass == VirtualBootClass)) {
+        MOVE_INDEX_TO_START (SavedBootOrderCopy, SavedBootOrderIndex);
+        MovedItemCount++;
+        VirtualCount++;
+      } else {
+        SavedBootOrderIndex--;
+      }
+    }
+  }
+
+  if (CompareMem (BootOrder, SavedBootOrderCopy, BootOrderSize) != 0) {
     DEBUG ((DEBUG_WARN, "%a: BootOrder and SavedBootOrder have more changes than expected. Not restoring boot order\n", __FUNCTION__));
+    PrintBootOrder (DEBUG_WARN, L"CurrentBootOrder:", BootOrder, BootOrderSize);
+    PrintBootOrder (DEBUG_WARN, L"SavedBootOrder:", SavedBootOrder, SavedBootOrderSize);
     goto DeleteSaveAndCleanup;
   }
 
-  // At this point, we've confirmed that BootOrder equals SavedBootOrder except with one device moved to the beginning
+  // At this point, we've confirmed that BootOrder equals SavedBootOrder except with one device or class moved to the beginning
 
   if (Event != NULL) {
     Status = GetEfiGlobalVariable2 (L"BootCurrent", (VOID **)&BootCurrent, &BootCurrentSize);
@@ -985,9 +1110,22 @@ DeleteSaveAndCleanup:
     DEBUG ((DEBUG_ERROR, "%a: Error deleting SavedBootOrder: %r\n", __FUNCTION__, Status));
   }
 
+  Status = gRT->SetVariable (
+                  SAVED_BOOT_ORDER_FLAGS_VARIABLE_NAME,
+                  &gNVIDIATokenSpaceGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                  0,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error deleting SavedBootOrderFlags: %r\n", __FUNCTION__, Status));
+  }
+
 CleanupAndReturn:
   FREE_NON_NULL (SavedBootOrder);
   FREE_NON_NULL (BootOrder);
+  FREE_NON_NULL (SavedBootOrderCopy);
+  FREE_NON_NULL (SavedBootOrderFlags);
   if (Event != NULL) {
     gBS->CloseEvent (Event);
   }
@@ -1006,24 +1144,21 @@ ProcessIPMIBootOrderUpdates (
   CHAR8                         *RequestedClassName;
   UINT8                         RequestedInstance;
   UINTN                         BootOrderIndex;
-  INTN                          FirstBootOrderIndex;
   UINT16                        *BootOrder;
   UINTN                         BootOrderSize;
   UINTN                         BootOrderLength;
   UINT16                        *ClassInstanceList;
   UINTN                         ClassInstanceLength;
-  UINT16                        BootOption;
   UINT64                        OsIndications;
   UINTN                         OsIndicationsSize;
-  CHAR16                        OptionName[sizeof ("Boot####")];
-  EFI_BOOT_MANAGER_LOAD_OPTION  Option;
   BOOLEAN                       IPv6;
   EFI_EVENT                     ReadyToBootEvent;
   NVIDIA_BOOT_ORDER_PRIORITY    *VirtualBootClass;
   UINT16                        *VirtualInstanceList;
   UINTN                         VirtualInstanceLength;
-  INTN                          FirstVirtualBootOrderIndex;
   UINT16                        DesiredOptionNumber;
+  BOOLEAN                       WillModifyBootOrder;
+  UINT8                         BootOrderFlags;
 
   ClassInstanceList   = NULL;
   BootOrder           = NULL;
@@ -1113,14 +1248,14 @@ ProcessIPMIBootOrderUpdates (
     case IPMI_BOOT_DEVICE_SELECTOR_FLOPPY:
       RequestedClassName = "usb";
       // Redfish wants "usb" to treat "virtual" as higher priority USB devices than normal USB devices
-      VirtualBootClass = GetBootClassOfName ("virtual", AsciiStrLen ("virtual"));
+      VirtualBootClass = GetBootClassOfName ("virtual", AsciiStrLen ("virtual"), mBootPriorityTemplate, ARRAY_SIZE (mBootPriorityTemplate));
       break;
     default:
       DEBUG ((DEBUG_WARN, "Ignoring unknown boot device selector %d\n", BootOptionsParameters->Parm5.Data2.Bits.BootDeviceSelector));
       goto AcknowledgeAndCleanup;
   }
 
-  RequestedBootClass = GetBootClassOfName (RequestedClassName, AsciiStrLen (RequestedClassName));
+  RequestedBootClass = GetBootClassOfName (RequestedClassName, AsciiStrLen (RequestedClassName), mBootPriorityTemplate, ARRAY_SIZE (mBootPriorityTemplate));
   if (RequestedBootClass == NULL) {
     DEBUG ((DEBUG_WARN, "Ignoring unsupported boot class \"%a\"\n", RequestedClassName));
     goto AcknowledgeAndCleanup;
@@ -1138,102 +1273,95 @@ ProcessIPMIBootOrderUpdates (
 
   BootOrderLength = BootOrderSize/sizeof (BootOrder[0]);
 
-  if (RequestedInstance > 0) {
-    ClassInstanceList = AllocatePool (BootOrderSize);
-    if (ClassInstanceList == NULL) {
-      DEBUG ((DEBUG_ERROR, "Unable to allocate memory to process BootOrder - ignoring request to prioritize %a instance %u\n", RequestedClassName, RequestedInstance));
+  ClassInstanceLength = 0;
+  ClassInstanceList   = AllocatePool (BootOrderSize);
+  if (ClassInstanceList == NULL) {
+    DEBUG ((DEBUG_ERROR, "Unable to allocate memory to process BootOrder - ignoring request to prioritize %a instance %u\n", RequestedClassName, RequestedInstance));
+    goto AcknowledgeAndCleanup;
+  }
+
+  VirtualInstanceLength = 0;
+  if (VirtualBootClass != NULL) {
+    VirtualInstanceList = AllocatePool (BootOrderSize);
+    if (VirtualInstanceList == NULL) {
+      DEBUG ((DEBUG_ERROR, "Unable to allocate memory to process virtual devices - ignoring request to prioritize %a instance %u\n", RequestedClassName, RequestedInstance));
       goto AcknowledgeAndCleanup;
-    }
-
-    ClassInstanceLength   = 0;
-    VirtualInstanceLength = 0;
-
-    if (VirtualBootClass != NULL) {
-      VirtualInstanceList = AllocatePool (BootOrderSize);
-      if (VirtualInstanceList == NULL) {
-        DEBUG ((DEBUG_ERROR, "Unable to allocate memory to process virtual devices - ignoring request to prioritize %a instance %u\n", RequestedClassName, RequestedInstance));
-        goto AcknowledgeAndCleanup;
-      }
     }
   }
 
-  // Find the index of the first occurance of RequestedClass in BootOrder
-  // and the list of instances of RequestedClass in BootOrder [if RequestedInstance > 0]
-  FirstBootOrderIndex        = -1;
-  FirstVirtualBootOrderIndex = -1;
+  // Find the list of instances of RequestedClass in BootOrder
   for (BootOrderIndex = 0; BootOrderIndex < BootOrderLength; BootOrderIndex++) {
-    UnicodeSPrint (OptionName, sizeof (OptionName), L"Boot%04x", BootOrder[BootOrderIndex]);
-    Status = EfiBootManagerVariableToLoadOption (OptionName, &Option);
-    if (EFI_ERROR (Status)) {
+    Status = GetBootClassOfOptionNum (BootOrder[BootOrderIndex], &OptionBootClass, mBootPriorityTemplate, ARRAY_SIZE (mBootPriorityTemplate));
+    if (Status == EFI_NOT_FOUND) {
+      OptionBootClass = NULL; // eg. the "ubuntu" option
+    } else if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Error (%r) parsing BootOrder - ignoring request to prioritize %a instance %u\n", Status, RequestedClassName, RequestedInstance));
       goto AcknowledgeAndCleanup;
     }
 
-    OptionBootClass = GetBootClassOfOption (&Option);
-    EfiBootManagerFreeLoadOption (&Option);
-
     if (VirtualBootClass && (OptionBootClass == VirtualBootClass)) {
-      if (FirstVirtualBootOrderIndex == -1) {
-        FirstVirtualBootOrderIndex = BootOrderIndex;
-        if (RequestedInstance == 0) {
-          break;
-        }
-      }
-
       VirtualInstanceList[VirtualInstanceLength] = BootOrder[BootOrderIndex];
       VirtualInstanceLength++;
     } else if (OptionBootClass == RequestedBootClass) {
-      if (FirstBootOrderIndex == -1) {
-        FirstBootOrderIndex = BootOrderIndex;
-        if ((RequestedInstance == 0) && (VirtualBootClass == NULL)) {
-          break;
-        }
-      }
-
-      if (RequestedInstance > 0) {
-        ClassInstanceList[ClassInstanceLength] = BootOrder[BootOrderIndex];
-        ClassInstanceLength++;
-      }
+      ClassInstanceList[ClassInstanceLength] = BootOrder[BootOrderIndex];
+      ClassInstanceLength++;
     }
   }
 
-  if ((FirstBootOrderIndex == -1) && (FirstVirtualBootOrderIndex == -1)) {
+  if ((ClassInstanceLength == 0) && (VirtualInstanceLength == 0)) {
     DEBUG ((DEBUG_ERROR, "Unable to find any instance of %a in BootOrder - Ignoring boot order change request from IPMI\n", RequestedClassName));
     goto AcknowledgeAndCleanup;
   }
 
   // Find the index of the N-th occurance of RequestedClass in BootOrder when sorted by number
   if (RequestedInstance == 0) {
-    BootOrderIndex = (FirstVirtualBootOrderIndex != -1) ? FirstVirtualBootOrderIndex : FirstBootOrderIndex;
-  } else {
-    if (RequestedInstance-1 < VirtualInstanceLength) {
-      PerformQuickSort (VirtualInstanceList, VirtualInstanceLength, sizeof (VirtualInstanceList[0]), Uint16SortCompare);
-      DesiredOptionNumber = VirtualInstanceList[RequestedInstance-1];
-    } else if ((RequestedInstance - 1 - VirtualInstanceLength) < ClassInstanceLength) {
-      PerformQuickSort (ClassInstanceList, ClassInstanceLength, sizeof (ClassInstanceList[0]), Uint16SortCompare);
-      DesiredOptionNumber = ClassInstanceList[RequestedInstance - 1 - VirtualInstanceLength];
+    // We will move all instances to the start of boot order, going through the list backwards to preserve relative ordering
+    // We want to end with Virtual classes at the front of the list, so start with real classes if available
+    if (ClassInstanceLength > 0) {
+      DesiredOptionNumber = ClassInstanceList[--ClassInstanceLength];
     } else {
-      DEBUG ((DEBUG_WARN, "Unable to find requested instance %u of %a - Using first found instance instead\n", RequestedInstance, RequestedClassName));
-      BootOrderIndex = (FirstVirtualBootOrderIndex != -1) ? FirstVirtualBootOrderIndex : FirstBootOrderIndex;
-      goto UpdateBootOrder;
+      DesiredOptionNumber = VirtualInstanceList[--VirtualInstanceLength];
     }
-
-    for (BootOrderIndex = 0; BootOrderIndex < BootOrderLength; BootOrderIndex++) {
-      if (BootOrder[BootOrderIndex] == DesiredOptionNumber) {
-        break;
-      }
+  } else if (RequestedInstance-1 < VirtualInstanceLength) {
+    PerformQuickSort (VirtualInstanceList, VirtualInstanceLength, sizeof (VirtualInstanceList[0]), Uint16SortCompare);
+    DesiredOptionNumber = VirtualInstanceList[RequestedInstance-1];
+  } else if ((RequestedInstance - 1 - VirtualInstanceLength) < ClassInstanceLength) {
+    PerformQuickSort (ClassInstanceList, ClassInstanceLength, sizeof (ClassInstanceList[0]), Uint16SortCompare);
+    DesiredOptionNumber = ClassInstanceList[RequestedInstance - 1 - VirtualInstanceLength];
+  } else {
+    DEBUG ((DEBUG_WARN, "Unable to find requested instance %u of %a - Using all instances instead\n", RequestedInstance, RequestedClassName));
+    RequestedInstance = 0;
+    if (ClassInstanceLength > 0) {
+      DesiredOptionNumber = ClassInstanceList[--ClassInstanceLength];
+    } else {
+      DesiredOptionNumber = VirtualInstanceList[--VirtualInstanceLength];
     }
   }
 
-  // At this point BootOrderIndex is the entry to move to the start of the list
-UpdateBootOrder:
+  for (BootOrderIndex = 0; BootOrderIndex < BootOrderLength; BootOrderIndex++) {
+    if (BootOrder[BootOrderIndex] == DesiredOptionNumber) {
+      break;
+    }
+  }
+
+  WillModifyBootOrder = (BootOrderIndex > 0) || ((RequestedInstance == 0) && (ClassInstanceLength + VirtualInstanceLength > 1));
+
+  // At this point BootOrderIndex is the entry to move to the start of the list first
   if (BootOptionsParameters->Parm5.Data1.Bits.PersistentOptions) {
-    DEBUG ((DEBUG_ERROR, "IPMI requested to move %a instance %u to the start of BootOrder\n", RequestedClassName, RequestedInstance));
+    if (RequestedInstance == 0) {
+      DEBUG ((DEBUG_ERROR, "IPMI requested to move all instances of %a to the start of BootOrder\n", RequestedClassName));
+    } else {
+      DEBUG ((DEBUG_ERROR, "IPMI requested to move %a instance %u to the start of BootOrder\n", RequestedClassName, RequestedInstance));
+    }
   } else {
-    DEBUG ((DEBUG_ERROR, "IPMI requested to use %a instance %u for this boot\n", RequestedClassName, RequestedInstance));
+    if (RequestedInstance == 0) {
+      DEBUG ((DEBUG_ERROR, "IPMI requested to use all instances of %a for this boot\n", RequestedClassName));
+    } else {
+      DEBUG ((DEBUG_ERROR, "IPMI requested to use %a instance %u for this boot\n", RequestedClassName, RequestedInstance));
+    }
 
     // Prepare to restore BootOrder after this boot
-    if (BootOrderIndex > 0) {
+    if (WillModifyBootOrder) {
       Status = gBS->CreateEventEx (
                       EVT_NOTIFY_SIGNAL,
                       TPL_CALLBACK,
@@ -1259,14 +1387,63 @@ UpdateBootOrder:
         DEBUG ((DEBUG_ERROR, "%a: Error saving current BootOrder: %r\n", __FUNCTION__, Status));
         goto AcknowledgeAndCleanup;
       }
+
+      BootOrderFlags = 0;
+      if (RequestedInstance == 0) {
+        BootOrderFlags |= SAVED_BOOT_ORDER_ALL_INSTANCES_FLAG;
+      }
+
+      if (VirtualBootClass != NULL) {
+        BootOrderFlags |= SAVED_BOOT_ORDER_VIRTUAL_FLAG;
+      }
+
+      if (BootOrderFlags != 0) {
+        // Save some flags for Restore
+        Status = gRT->SetVariable (
+                        SAVED_BOOT_ORDER_FLAGS_VARIABLE_NAME,
+                        &gNVIDIATokenSpaceGuid,
+                        EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                        sizeof (BootOrderFlags),
+                        &BootOrderFlags
+                        );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Error saving BootOrder flags: %r\n", __FUNCTION__, Status));
+          goto AcknowledgeAndCleanup;
+        }
+      }
     }
   }
 
-  // Finally, update the BootOrder
-  if (BootOrderIndex > 0) {
-    BootOption = BootOrder[BootOrderIndex];
-    CopyMem (&BootOrder[1], &BootOrder[0], BootOrderIndex*sizeof (BootOrder[0]));
-    BootOrder[0] = BootOption;
+  // Finally, update the BootOrder if necessary
+  if (WillModifyBootOrder) {
+    if (BootOrderIndex > 0) {
+      MOVE_INDEX_TO_START (BootOrder, BootOrderIndex);
+    }
+
+    if (RequestedInstance == 0) {
+      // Note: In this case the unmoved ClassInstanceList and VirtualInstanceList elements are ordered
+      // in the same order as in BootOrder, so we can be smart when searching BootOrder for them
+      while (ClassInstanceLength > 0) {
+        DesiredOptionNumber = ClassInstanceList[--ClassInstanceLength];
+        while ((BootOrderIndex > 0) && (BootOrder[BootOrderIndex] != DesiredOptionNumber)) {
+          BootOrderIndex--;
+        }
+
+        NV_ASSERT_RETURN (BootOrderIndex > 0, goto AcknowledgeAndCleanup, "%a: Failed to parse BootOrder correctly to find ClassInstance\n", __FUNCTION__);
+        MOVE_INDEX_TO_START (BootOrder, BootOrderIndex);
+      }
+
+      BootOrderIndex = BootOrderLength;
+      while (VirtualInstanceLength > 0) {
+        DesiredOptionNumber = VirtualInstanceList[--VirtualInstanceLength];
+        while ((BootOrderIndex > 0) && (BootOrder[BootOrderIndex] != DesiredOptionNumber)) {
+          BootOrderIndex--;
+        }
+
+        NV_ASSERT_RETURN (BootOrderIndex > 0, goto AcknowledgeAndCleanup, "%a: Failed to parse BootOrder correctly to find VirtualInstance\n", __FUNCTION__);
+        MOVE_INDEX_TO_START (BootOrder, BootOrderIndex);
+      }
+    }
 
     Status = gRT->SetVariable (
                     EFI_BOOT_ORDER_VARIABLE_NAME,
@@ -1276,10 +1453,16 @@ UpdateBootOrder:
                     BootOrder
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Error moving %a instance %u to the start of BootOrder: %r\n", __FUNCTION__, RequestedClassName, RequestedInstance, Status));
+      if (RequestedInstance == 0) {
+        DEBUG ((DEBUG_ERROR, "%a: Error moving all instances of %a to the start of BootOrder: %r\n", __FUNCTION__, RequestedClassName, Status));
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: Error moving %a instance %u to the start of BootOrder: %r\n", __FUNCTION__, RequestedClassName, RequestedInstance, Status));
+      }
     }
 
-    PrintBootOrder (DEBUG_INFO, L"BootOrder after IPMI-requested change:");
+    PrintBootOrder (DEBUG_INFO, L"BootOrder after IPMI-requested change:", NULL, 0);
+  } else {
+    DEBUG ((DEBUG_INFO, "%a: IPMI request doesn't modify BootOrder\n", __FUNCTION__));
   }
 
 AcknowledgeAndCleanup:

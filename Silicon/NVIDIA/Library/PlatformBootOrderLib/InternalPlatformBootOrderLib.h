@@ -28,7 +28,11 @@
 #define IPMI_GET_BOOT_OPTIONS_PARAMETER_INVALID  1
 #define IPMI_PARAMETER_VERSION                   1
 
-#define SAVED_BOOT_ORDER_VARIABLE_NAME  L"SavedBootOrder"
+#define SAVED_BOOT_ORDER_VARIABLE_NAME        L"SavedBootOrder"
+#define SAVED_BOOT_ORDER_FLAGS_VARIABLE_NAME  L"SavedBootOrderFlags"
+
+#define SAVED_BOOT_ORDER_ALL_INSTANCES_FLAG  0x1
+#define SAVED_BOOT_ORDER_VIRTUAL_FLAG        0x2
 
 typedef struct {
   CHAR8    *OrderName;
