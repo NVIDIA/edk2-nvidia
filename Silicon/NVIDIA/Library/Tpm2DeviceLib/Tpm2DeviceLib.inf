@@ -48,6 +48,7 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType   ## PRODUCES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask             ## PRODUCES
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap  ## PRODUCES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2SelfTestPolicy       ## CONSUMES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2InitializationPolicy ## CONSUMES
   gNVIDIATokenSpaceGuid.PcdTpmEnable                        ## CONSUMES
 

@@ -140,13 +140,14 @@ Tpm2Initialize (
   //
   // Select hash algorithm based on active PCR bank
   //
-  if ((ActivePCRBanks & TPM_ALG_SHA384) != 0) {
-    PcdSet32S (PcdTpm2HashMask, 0x00000004);
-  } else if ((ActivePCRBanks & TPM_ALG_SHA256) != 0) {
-    PcdSet32S (PcdTpm2HashMask, 0x00000002);
+  if ((ActivePCRBanks & HASH_ALG_SHA384) != 0) {
+    PcdSet32S (PcdTpm2HashMask, HASH_ALG_SHA384);
+  } else if ((ActivePCRBanks & HASH_ALG_SHA256) != 0) {
+    PcdSet32S (PcdTpm2HashMask, HASH_ALG_SHA256);
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Unsupported PCR banks - %x\n", __FUNCTION__, ActivePCRBanks));
     ASSERT (FALSE);
+    return EFI_UNSUPPORTED;
   }
 
   PcdSet32S (PcdTcg2HashAlgorithmBitmap, 0x00000006);
@@ -193,6 +194,17 @@ Tpm2Initialize (
     TisReleaseTpm (mTpm2);
 
     return EFI_UNSUPPORTED;
+  }
+
+  //
+  // Run self-test to check if TPM is working, if not, disable TPM
+  //
+  if (PcdGet8 (PcdTpm2SelfTestPolicy) == 1) {
+    Status = Tpm2SelfTest (NO);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: TPM self-test failed - %r\n", __FUNCTION__, Status));
+      return Status;
+    }
   }
 
   return EFI_SUCCESS;
