@@ -89,6 +89,12 @@
   SecureBootV1_1_0Lib|RedfishClientPkg/ConverterLib/edk2library/SecureBoot/v1_1_0/Lib.inf
   BootOptionCollectionLib|RedfishClientPkg/ConverterLib/edk2library/BootOptionCollection/Lib.inf
   BootOptionV1_0_4Lib|RedfishClientPkg/ConverterLib/edk2library/BootOption/v1_0_4/Lib.inf
+  SecureBootDatabaseCollectionLib|RedfishClientPkg/ConverterLib/edk2library/SecureBootDatabaseCollection/Lib.inf
+  SecureBootDatabaseV1_0_1Lib|RedfishClientPkg/ConverterLib/edk2library/SecureBootDatabase/v1_0_1/Lib.inf
+  RedfishJsonBlobLib|RedfishClientPkg/Library/RedfishJsonBlobLib/RedfishJsonBlobLib.inf
+  RedfishSecureBootKeysLib|RedfishClientPkg/Library/RedfishSecureBootKeysLib/RedfishSecureBootKeysLib.inf
+  RedfishMessageLib|RedfishClientPkg/Library/RedfishMessageLib/RedfishMessageLib.inf
+  RedfishTaskLib|Silicon/NVIDIA/Library/RedfishPlatformTaskLib/RedfishPlatformTaskLib.inf
 
 [LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
@@ -207,7 +213,7 @@
   gEfiRedfishPkgTokenSpaceGuid.PcdRedfishRestExServiceAccessModeInBand|False
   gEfiRedfishPkgTokenSpaceGuid.PcdRedfishDiscoverAccessModeInBand|False
   gEfiRedfishPkgTokenSpaceGuid.PcdRedfishDisableBootstrapCredentialService|TRUE
-  gEfiRedfishClientPkgTokenSpaceGuid.PcdDefaultRedfishVersion|L"/v1/"
+  gEfiRedfishClientPkgTokenSpaceGuid.PcdDefaultRedfishVersion|L"/redfish/v1/"
 
   # SBSA Watchdog
   gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|0x000000000c6ab000
@@ -461,6 +467,12 @@
   Silicon/NVIDIA/Drivers/RedfishFirmwareInfoDxe/RedfishFirmwareInfoDxe.inf
   Silicon/NVIDIA/Drivers/PlatformRedfishBootDxe/PlatformRedfishBootDxe.inf
   Silicon/NVIDIA/Drivers/PlatformRedfishOverrideDxe/PlatformRedfishOverrideDxe.inf
+  RedfishClientPkg/Features/SecureBootDatabaseCollectionDxe/SecureBootDatabaseCollectionDxe.inf
+  RedfishClientPkg/Converter/SecureBootDatabaseCollection/RedfishSecureBootDatabaseCollection_Dxe.inf
+  RedfishClientPkg/Features/SecureBootDatabase/v1_0_1/Dxe/SecureBootDatabaseDxe.inf
+  RedfishClientPkg/Converter/SecureBootDatabase/v1_0_1/RedfishSecureBootDatabase_V1_0_1_Dxe.inf
+  RedfishClientPkg/RedfishTaskServiceDxe/RedfishTaskServiceDxe.inf
+  RedfishClientPkg/RedfishSecureBootKeysDxe/RedfishSecureBootKeysDxe.inf
 
   #
   # FPGA I2C Support

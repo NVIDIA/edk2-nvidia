@@ -1,0 +1,43 @@
+## @file
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010006
+  BASE_NAME                      = RedfishPlatformTaskLib
+  FILE_GUID                      = 51D572C7-06EC-47B9-A739-4FAD159B0A9E
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = RedfishTaskLib| DXE_DRIVER UEFI_DRIVER
+
+#
+#  VALID_ARCHITECTURES           = IA32 X64 EBC
+#
+
+[Sources]
+  RedfishPlatformTaskInternal.h
+  RedfishPlatformTaskLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  RedfishClientPkg/RedfishClientPkg.dec
+  RedfishPkg/RedfishPkg.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  JsonLib
+  MemoryAllocationLib
+  PrintLib
+  RedfishLib
+  RedfishDebugLib
+  RedfishMessageLib
+  RedfishFeatureUtilityLib
+
+[Depex]
+  TRUE
