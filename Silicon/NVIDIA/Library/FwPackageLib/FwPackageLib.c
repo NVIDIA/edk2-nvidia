@@ -2,7 +2,7 @@
 
   FwPackageLib - Firmware update package support library
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -208,9 +208,11 @@ FwPackageGetImageIndex (
   OUT UINTN       *ImageIndex
   )
 {
-  UINTN    Index;
-  CHAR8    AsciiName[FW_PACKAGE_NAME_LENGTH];
-  BOOLEAN  Found;
+  UINTN                        Index;
+  CHAR8                        AsciiName[FW_PACKAGE_NAME_LENGTH];
+  BOOLEAN                      Found;
+  EFI_STATUS                   Status;
+  CONST FW_PACKAGE_IMAGE_INFO  *FoundImageInfo;
 
   Found = FALSE;
   AsciiSPrintUnicodeFormat (AsciiName, sizeof (AsciiName), Name);
@@ -230,43 +232,40 @@ FwPackageGetImageIndex (
         continue;
       }
 
-      if ((AsciiStrLen (ImageInfo->TnSpec) > 0) && (CompatSpec != NULL)) {
-        EFI_STATUS  Status;
+      if (AsciiStrLen (ImageInfo->TnSpec) > 0) {
+        if (FullSpec != NULL) {
+          Status = FwPackageCheckTnSpec (FullSpec, ImageInfo->TnSpec);
+          DEBUG ((DEBUG_INFO, "%a:  %a / %a: %r\n", __FUNCTION__, FullSpec, ImageInfo->TnSpec, Status));
+          if (!EFI_ERROR (Status)) {
+            Found          = TRUE;
+            *ImageIndex    = Index;
+            FoundImageInfo = ImageInfo;
+            break;
+          }
+        }
 
-        Status = FwPackageCheckTnSpec (CompatSpec, ImageInfo->TnSpec);
-        if (EFI_ERROR (Status)) {
-          if (FullSpec != NULL) {
-            Status = FwPackageCheckTnSpec (FullSpec, ImageInfo->TnSpec);
-            if (EFI_ERROR (Status)) {
-              DEBUG ((
-                DEBUG_INFO,
-                "%a:  %a / %a: %r\n",
-                __FUNCTION__,
-                FullSpec,
-                ImageInfo->TnSpec,
-                Status
-                ));
-              continue;
-            }
-          } else {
-            DEBUG ((
-              DEBUG_INFO,
-              "%a:  %a / %a: %r\n",
-              __FUNCTION__,
-              CompatSpec,
-              ImageInfo->TnSpec,
-              Status
-              ));
+        if (CompatSpec != NULL) {
+          Status = FwPackageCheckTnSpec (CompatSpec, ImageInfo->TnSpec);
+          DEBUG ((DEBUG_INFO, "%a:  %a / %a: %r\n", __FUNCTION__, CompatSpec, ImageInfo->TnSpec, Status));
+          if (EFI_ERROR (Status)) {
             continue;
           }
         }
       }
 
       if (!Found) {
-        *ImageIndex = Index;
-        Found       = TRUE;
+        *ImageIndex    = Index;
+        Found          = TRUE;
+        FoundImageInfo = ImageInfo;
       } else {
-        return EFI_UNSUPPORTED;
+        DEBUG ((
+          DEBUG_WARN,
+          "%a WARNING: %a using match '%a', ignoring '%a'\n",
+          __FUNCTION__,
+          ImageInfo->Name,
+          FoundImageInfo->TnSpec,
+          ImageInfo->TnSpec
+          ));
       }
     }
   }
