@@ -29,6 +29,7 @@
 							};
 							NewDeviceHierarchy {
 								data = [01];
+								runtime;
 								non-volatile;
 							};
 							RootfsRetryCountMax {
