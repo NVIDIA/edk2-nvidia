@@ -1050,7 +1050,7 @@ RestoreBootOrder (
       }
 
       if (SavedBootClass == BootClass) {
-        MOVE_INDEX_TO_START (&SavedBootOrderCopy[VirtualCount], SavedBootOrderIndex);
+        MOVE_INDEX_TO_START (&SavedBootOrderCopy[VirtualCount], SavedBootOrderIndex-VirtualCount);
         MovedItemCount++;
       } else if (SavedBootClass && (SavedBootClass == VirtualBootClass)) {
         MOVE_INDEX_TO_START (SavedBootOrderCopy, SavedBootOrderIndex);
@@ -1059,6 +1059,8 @@ RestoreBootOrder (
       } else {
         SavedBootOrderIndex--;
       }
+
+      PrintBootOrder (DEBUG_VERBOSE, L"SavedBootOrderCopy during loop:", SavedBootOrderCopy, SavedBootOrderSize);
     }
   }
 
@@ -1066,6 +1068,7 @@ RestoreBootOrder (
     DEBUG ((DEBUG_WARN, "%a: BootOrder and SavedBootOrder have more changes than expected. Not restoring boot order\n", __FUNCTION__));
     PrintBootOrder (DEBUG_WARN, L"CurrentBootOrder:", BootOrder, BootOrderSize);
     PrintBootOrder (DEBUG_WARN, L"SavedBootOrder:", SavedBootOrder, SavedBootOrderSize);
+    PrintBootOrder (DEBUG_INFO, L"SavedBootOrderCopy:", SavedBootOrderCopy, SavedBootOrderSize);
     goto DeleteSaveAndCleanup;
   }
 
@@ -1344,7 +1347,18 @@ ProcessIPMIBootOrderUpdates (
     }
   }
 
-  WillModifyBootOrder = (BootOrderIndex > 0) || ((RequestedInstance == 0) && (ClassInstanceLength + VirtualInstanceLength > 1));
+  if (RequestedInstance == 0) {
+    WillModifyBootOrder = FALSE;
+    if (VirtualInstanceLength) {
+      WillModifyBootOrder |= CompareMem (BootOrder, VirtualInstanceList, VirtualInstanceLength*sizeof (BootOrder[0])) != 0;
+    }
+
+    if (ClassInstanceLength) {
+      WillModifyBootOrder |= CompareMem (&BootOrder[VirtualInstanceLength], ClassInstanceList, ClassInstanceLength*sizeof (BootOrder[0])) != 0;
+    }
+  } else {
+    WillModifyBootOrder = (BootOrderIndex > 0);
+  }
 
   // At this point BootOrderIndex is the entry to move to the start of the list first
   if (BootOptionsParameters->Parm5.Data1.Bits.PersistentOptions) {

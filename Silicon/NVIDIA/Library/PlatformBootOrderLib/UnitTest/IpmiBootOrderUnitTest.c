@@ -304,6 +304,15 @@ SetupUefiVariables (
                     SavedBootOrderData
                     );
     UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  } else {
+    Status = gRT->SetVariable (
+                    SAVED_BOOT_ORDER_VARIABLE_NAME,
+                    &gNVIDIATokenSpaceGuid,
+                    EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                    0,
+                    SavedBootOrderData
+                    );
+    UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
   }
 
   Status = gRT->SetVariable (
@@ -782,14 +791,14 @@ IBO_VirtualUsbBootOrderSetup (
   // Now, order the devices as intended for OriginalBootOrder
   IBO_ArrangeDevices (Count, OriginalBootOrder, Configuration);
 
-  // Then determine which device will move when using first found in boot order
+  // Then determine which device will move
   TargetDeviceNumIndex = 0;
   if ((IboContext->Device == IBO_DEVICE_FLOPPY) &&
       !IboContext->AlreadyAcked &&
       IboContext->Valid)
   {
     if (TargetDeviceNum == UINT16_MAX) {
-      // Use first found in boot order, preferring first virtual found
+      // Determine index of the first device being moved
       if (VirtualDeviceCount == 0) {
         TargetDeviceNum = OriginalBootOrder[0];
       } else {
@@ -808,6 +817,23 @@ IBO_VirtualUsbBootOrderSetup (
         }
       }
     }
+
+    if (TargetDeviceNumIndex != 0) {
+      WillModifyBootOrder = TRUE;
+    } else if (VirtualDeviceCount > 0) {
+      WillModifyBootOrder = FALSE;
+      // Unless all the virtual devices are first, they will move to be first
+      for (int i = 0; i < VirtualDeviceCount; i++) {
+        if (Configuration[i] >= 0) {
+          WillModifyBootOrder = TRUE;
+          break;
+        }
+      }
+    } else {
+      WillModifyBootOrder = FALSE;
+    }
+  } else {
+    WillModifyBootOrder = FALSE;
   }
 
   // Create initial state
@@ -826,10 +852,11 @@ IBO_VirtualUsbBootOrderSetup (
   }
 
   ExpectedSavedBootOrderSize = 0;
-  if (TargetDeviceNumIndex != 0) {
-    WillModifyBootOrder = TRUE;
+
+  if (WillModifyBootOrder) {
+    DEBUG ((DEBUG_INFO, "Test will modify boot order\n"));
   } else {
-    WillModifyBootOrder = FALSE;
+    DEBUG ((DEBUG_INFO, "Test won't modify boot order\n"));
   }
 
   switch (IboContext->Result) {
@@ -839,12 +866,11 @@ IBO_VirtualUsbBootOrderSetup (
 
     case IBO_RESULT_BOOT_NEXT_CHANGE:
       if (WillModifyBootOrder) {
-        ExpectedSavedBootOrder = AllocatePool (ExpectedBootOrderSize);
+        ExpectedSavedBootOrder = AllocateCopyPool (ExpectedBootOrderSize, OriginalBootOrder);
         if (ExpectedSavedBootOrder == NULL) {
           return UNIT_TEST_ERROR_TEST_FAILED;
         }
 
-        CopyMem (&ExpectedSavedBootOrder[0], &OriginalBootOrder[0], ExpectedBootOrderSize);
         ExpectedSavedBootOrderSize = ExpectedBootOrderSize;
         // Note: MockUefiCreateEventEx must be called in the test, not the setup, due to how mock checking works
       }
@@ -856,6 +882,22 @@ IBO_VirtualUsbBootOrderSetup (
       if (WillModifyBootOrder) {
         CopyMem (&ExpectedBootOrder[1], &ExpectedBootOrder[0], sizeof (ExpectedBootOrder[0])*(TargetDeviceNumIndex));
         ExpectedBootOrder[0] = TargetDeviceNum;
+
+        if ((IboContext->Instance == 0) || (IboContext->Instance > Count)) {
+          // All the other virtual devices must move too
+          int  VirtualDeviceIndex = 1;
+          TargetDeviceNumIndex = VirtualDeviceIndex+1;
+          while ((VirtualDeviceIndex < VirtualDeviceCount) && (TargetDeviceNumIndex < Count)) {
+            if (Configuration[TargetDeviceNumIndex] < 0) {
+              TargetDeviceNum = ExpectedBootOrder[TargetDeviceNumIndex];
+              CopyMem (&ExpectedBootOrder[VirtualDeviceIndex+1], &ExpectedBootOrder[VirtualDeviceIndex], sizeof (ExpectedBootOrder[0])*(TargetDeviceNumIndex - VirtualDeviceIndex));
+              ExpectedBootOrder[VirtualDeviceIndex] = TargetDeviceNum;
+              VirtualDeviceIndex++;
+            }
+
+            TargetDeviceNumIndex++;
+          }
+        }
       }
 
       break;
