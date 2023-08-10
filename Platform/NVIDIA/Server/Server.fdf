@@ -48,6 +48,11 @@ FvNameGuid         = 9aef2e52-dead-4f63-b895-3a504a3e63c4
     INF MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
     }
 
+  #
+  # Capsule application (EFI Services)
+  #
+  INF MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf
+
 !include Platform/NVIDIA/NVIDIA.fvmain.fdf.inc
 !include Platform/NVIDIA/Server/Server.fdf.inc
 !include Platform/NVIDIA/NVIDIA.common.fdf.inc

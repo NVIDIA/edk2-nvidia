@@ -20,3 +20,7 @@
 
 [PcdsFixedAtBuild]
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L"Server"
+
+[Components.common]
+  # Capsule Application
+  MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf

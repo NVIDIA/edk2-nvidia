@@ -360,3 +360,8 @@
       NULL|SecurityPkg/Library/HashInstanceLibSha384/HashInstanceLibSha384.inf
   }
   SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf
+
+  #
+  # Capsule Application
+  #
+  MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf

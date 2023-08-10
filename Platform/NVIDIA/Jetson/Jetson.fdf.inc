@@ -170,3 +170,8 @@
   #
   INF SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf
   INF SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf
+
+  #
+  # Capsule application (EFI Services)
+  #
+  INF MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf

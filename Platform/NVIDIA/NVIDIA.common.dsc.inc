@@ -996,11 +996,6 @@ CONFIG_MEMORY_TEST=n
   SecurityPkg/EnrollFromDefaultKeysApp/EnrollFromDefaultKeysApp.inf
 
   #
-  # Capsule Application
-  #
-  MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf
-
-  #
   # Esrt - EFI System Resource Table
   #
   MdeModulePkg/Universal/EsrtFmpDxe/EsrtFmpDxe.inf
