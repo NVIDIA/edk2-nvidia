@@ -38,17 +38,17 @@ AddSocketCoresToEnabledCoresBitMap (
 
   SocketStartingCore = CoresPerSocket * SocketNumber;
 
-  ASSERT ((SocketStartingCore + CoresPerSocket) <= MaxSupportedCores);
   NV_ASSERT_RETURN (
     (SocketStartingCore + CoresPerSocket) <= MaxSupportedCores,
     return ,
-    "Invalid core info\r\n"
+    "Invalid core info for socket %llu\r\n",
+    SocketNumber
     );
-  ASSERT ((ALIGN_VALUE (CoresPerSocket, 32) / 32) <= MaxCoreDisableWords);
   NV_ASSERT_RETURN (
     (ALIGN_VALUE (CoresPerSocket, 32) / 32) <= MaxCoreDisableWords,
     return ,
-    "Invalid core info\r\n"
+    "Socket %llu: too many DisableWords\r\n",
+    SocketNumber
     );
 
   for (Core = 0; Core < CoresPerSocket; Core++) {
