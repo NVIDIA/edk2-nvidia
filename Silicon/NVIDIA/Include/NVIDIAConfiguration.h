@@ -134,10 +134,6 @@ typedef struct {
 } NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY;
 
 typedef struct {
-  BOOLEAN    Enabled;
-} NVIDIA_GPU_SMMU_BYPASS_ENABLE;
-
-typedef struct {
   UINT8      TestLevel;
   BOOLEAN    NextBoot;
   BOOLEAN    SingleBoot;

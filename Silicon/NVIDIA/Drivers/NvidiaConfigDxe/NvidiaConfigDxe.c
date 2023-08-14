@@ -61,6 +61,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_SOCKET3_CONFIG_FORM_HELP),
   STRING_TOKEN (STR_SPREAD_SPECTRUM_PROMPT),
   STRING_TOKEN (STR_SPREAD_SPECTRUM_HELP),
+  STRING_TOKEN (STR_MCF_SMMU_BYPASS_ENABLE_PROMPT),
+  STRING_TOKEN (STR_MCF_SMMU_BYPASS_ENABLE_HELP),
   STRING_TOKEN (STR_PERF_VERSION_PROMPT),
   STRING_TOKEN (STR_PERF_VERSION_HELP),
   STRING_TOKEN (STR_UPHY0_SOCKET0_PROMPT),
@@ -1171,6 +1173,7 @@ SyncHiiSettings (
     mHiiControlSettings.EgmHvSizeMb          = mMb1Config.Data.Mb1Data.HvRsvdMemSize;
     mHiiControlSettings.SpreadSpectrumEnable = mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable;
     mHiiControlSettings.TpmEnable            = mMb1Config.Data.Mb1Data.FeatureData.TpmEnable;
+    mHiiControlSettings.McfSmmuBypassEnable  = mMb1Config.Data.Mb1Data.FeatureData.McfSmmuBypassEnable;
     mHiiControlSettings.PerfVersion          = mMb1Config.Data.Mb1Data.PerfVersion;
     mHiiControlSettings.UefiDebugLevel       = mMb1Config.Data.Mb1Data.UefiDebugLevel;
 
@@ -1233,12 +1236,13 @@ SyncHiiSettings (
       mHiiControlSettings.DisableDPCAtRP_3[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].DisableDPCAtRP;
     }
   } else {
-    mMb1Config.Data.Mb1Data.FeatureData.EgmEnable        = mHiiControlSettings.EgmEnabled;
-    mMb1Config.Data.Mb1Data.HvRsvdMemSize                = mHiiControlSettings.EgmHvSizeMb;
-    mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable = mHiiControlSettings.SpreadSpectrumEnable;
-    mMb1Config.Data.Mb1Data.FeatureData.TpmEnable        = mHiiControlSettings.TpmEnable;
-    mMb1Config.Data.Mb1Data.PerfVersion                  = mHiiControlSettings.PerfVersion;
-    mMb1Config.Data.Mb1Data.UefiDebugLevel               = mHiiControlSettings.UefiDebugLevel;
+    mMb1Config.Data.Mb1Data.FeatureData.EgmEnable           = mHiiControlSettings.EgmEnabled;
+    mMb1Config.Data.Mb1Data.HvRsvdMemSize                   = mHiiControlSettings.EgmHvSizeMb;
+    mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable    = mHiiControlSettings.SpreadSpectrumEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.TpmEnable           = mHiiControlSettings.TpmEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.McfSmmuBypassEnable = mHiiControlSettings.McfSmmuBypassEnable;
+    mMb1Config.Data.Mb1Data.PerfVersion                     = mHiiControlSettings.PerfVersion;
+    mMb1Config.Data.Mb1Data.UefiDebugLevel                  = mHiiControlSettings.UefiDebugLevel;
 
     for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {
       mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[0][Index] = mHiiControlSettings.UphySetting0[Index];
@@ -1369,9 +1373,6 @@ InitializeSettings (
   BufferSize = sizeof (NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY);
   PcdSetPtrS (PcdEnabledPcieNicTopology, &BufferSize, PcdGetPtr (PcdEnabledPcieNicTopology));
 
-  // Initialize GPU SMMU Bypass enable
-  PcdSetBoolS (PcdGpuSmmuBypassEnable, PcdGetBool (PcdGpuSmmuBypassEnable));
-
   // Initialize Memory Test settings
   BufferSize = sizeof (NVIDIA_MEMORY_TEST_OPTIONS);
   PcdSetPtrS (PcdMemoryTest, &BufferSize, PcdGetPtr (PcdMemoryTest));
@@ -1498,6 +1499,8 @@ InitializeSettings (
     if (mHiiControlSettings.DebugMenuSupported) {
       mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
     }
+
+    PcdSetBoolS (PcdMcfSmmuBypassEnable, mMb1Config.Data.Mb1Data.FeatureData.McfSmmuBypassEnable);
 
     WriteMb1Variables (&mMb1Config, &mVariableMb1Config);
   }

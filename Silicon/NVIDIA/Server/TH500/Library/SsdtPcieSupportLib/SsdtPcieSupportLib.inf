@@ -42,7 +42,7 @@
   gNVIDIAPublicVariableGuid
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdGpuSmmuBypassEnable
+  gNVIDIATokenSpaceGuid.PcdMcfSmmuBypassEnable
 
 [Depex]
   gNVIDIAPcieControllerInitCompleteProtocolGuid AND

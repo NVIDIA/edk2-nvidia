@@ -35,7 +35,8 @@ typedef struct {
       UINT64    SpreadSpecEnable           : 1;
       UINT64    DeprecatedAtsPageGranule4k : 1;
       UINT64    TpmEnable                  : 1;
-      UINT64    FeatureFieldsUnused        : 60;
+      UINT64    McfSmmuBypassEnable        : 1;
+      UINT64    FeatureFieldsUnused        : 59;
     };
   };
 } TEGRABL_FEATURE_DATA;

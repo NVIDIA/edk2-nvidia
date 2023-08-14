@@ -214,7 +214,7 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
     }
 
     // The "UVAR" named object is added by UEFI when generating the GPU0
-    // node and has the value of the GpuSmmuBypassEnable UEFI option
+    // node and has the value of the McfSmmuBypassEnable UEFI option
     // (0=disable 1=enable)
     External (UVAR)
 

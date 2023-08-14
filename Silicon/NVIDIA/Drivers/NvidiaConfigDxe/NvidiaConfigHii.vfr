@@ -115,12 +115,6 @@ formset
     name = ProductInfo,
     guid = NVIDIA_PUBLIC_VARIABLE_GUID;
 
-  efivarstore NVIDIA_GPU_SMMU_BYPASS_ENABLE,
-    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
-    name  = GpuSmmuBypassEnable,
-    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
-
-
   efivarstore NVIDIA_MEMORY_TEST_OPTIONS,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
     name = MemoryTestControl,
@@ -568,6 +562,13 @@ formset
         default = FALSE,
     endcheckbox;
 
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.McfSmmuBypassEnable,
+        prompt = STRING_TOKEN(STR_MCF_SMMU_BYPASS_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_MCF_SMMU_BYPASS_ENABLE_HELP),
+        flags  = INTERACTIVE | RESET_REQUIRED,
+        default = FALSE,
+    endcheckbox;
+
     numeric varid = NVIDIA_CONFIG_HII_CONTROL.PerfVersion,
         prompt = STRING_TOKEN(STR_PERF_VERSION_PROMPT),
         help   = STRING_TOKEN(STR_PERF_VERSION_HELP),
@@ -577,13 +578,6 @@ formset
         step = 1,
         default = 0,
     endnumeric;
-
-    checkbox varid = GpuSmmuBypassEnable.Enabled,
-        prompt = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_PROMPT),
-        help   = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_HELP),
-        flags  = INTERACTIVE | RESET_REQUIRED,
-        default = FALSE,
-    endcheckbox;
 
     ADD_GOTO_SOCKET_FORM(0)
     ADD_GOTO_SOCKET_FORM(1)

@@ -89,7 +89,7 @@
   gNVIDIATokenSpaceGuid.PcdRedfishHostInterface
   gNVIDIATokenSpaceGuid.PcdRedfishSupported
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology
-  gNVIDIATokenSpaceGuid.PcdGpuSmmuBypassEnable
+  gNVIDIATokenSpaceGuid.PcdMcfSmmuBypassEnable
   gNVIDIATokenSpaceGuid.PcdTpmPresent
   gNVIDIATokenSpaceGuid.PcdMemoryTest
 

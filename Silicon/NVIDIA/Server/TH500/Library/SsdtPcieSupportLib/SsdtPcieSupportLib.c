@@ -244,7 +244,7 @@ InsertUVARValue (
   EFI_STATUS  Status;
   BOOLEAN     UvarValue;
 
-  UvarValue = PcdGetBool (PcdGpuSmmuBypassEnable);
+  UvarValue = PcdGetBool (PcdMcfSmmuBypassEnable);
 
   Status = AmlCodeGenNameInteger (
              "UVAR",
