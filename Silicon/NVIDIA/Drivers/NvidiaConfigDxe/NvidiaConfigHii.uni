@@ -65,8 +65,6 @@
 #string STR_EGM_HV_RESERVED_SIZE_HELP    #language en-US "Memory in MB to reserve for hypervisor."
 #string STR_SPREAD_SPECTRUM_PROMPT       #language en-US "UPHY spread spectrum"
 #string STR_SPREAD_SPECTRUM_HELP         #language en-US "Enable UPHY spread spectrum."
-#string STR_ATS_PAGE_GRANULE_PROMPT      #language en-US "4K ATS Page Granule"
-#string STR_ATS_PAGE_GRANULE_HELP        #language en-US "Enable 4K ATS Page Granule."
 #string STR_TPM_ENABLE_PROMPT            #language en-US "TPM"
 #string STR_TPM_ENABLE_HELP              #language en-US "Enable TPM device. WARNING: TPM usage may be restricted in your region! Before enabling TPM functionality on this system, you must ensure that your intended use of TPM complies with relevant local laws and regulations, and any required licenses or approval had been obtained."
 #string STR_TPM_ENABLE_POPUP_TITLE       #language en-US "WARNING: TPM usage may be restricted in your region!"

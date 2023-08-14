@@ -155,7 +155,6 @@ typedef struct {
   UINT32     EgmHvSizeMb;
   UINT32     UefiDebugLevel;
   BOOLEAN    SpreadSpectrumEnable;
-  BOOLEAN    AtsPageGranule4k;
   BOOLEAN    TpmPresent;
   UINT8      TpmEnable;
   UINT8      PerfVersion;

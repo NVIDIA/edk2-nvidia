@@ -568,13 +568,6 @@ formset
         default = FALSE,
     endcheckbox;
 
-    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.AtsPageGranule4k,
-        prompt = STRING_TOKEN(STR_ATS_PAGE_GRANULE_PROMPT),
-        help   = STRING_TOKEN(STR_ATS_PAGE_GRANULE_HELP),
-        flags  = INTERACTIVE | RESET_REQUIRED,
-        default = FALSE,
-    endcheckbox;
-
     numeric varid = NVIDIA_CONFIG_HII_CONTROL.PerfVersion,
         prompt = STRING_TOKEN(STR_PERF_VERSION_PROMPT),
         help   = STRING_TOKEN(STR_PERF_VERSION_HELP),
