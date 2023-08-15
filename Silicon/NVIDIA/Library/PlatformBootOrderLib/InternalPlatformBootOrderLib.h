@@ -16,23 +16,16 @@
 #define DEBUG_WARN  DEBUG_INFO
 #endif
 
+// Frees a pointer if non-NULL, and sets it to NULL
 #define FREE_NON_NULL(a) \
   if ((a) != NULL) { \
     FreePool ((a));  \
     (a) = NULL;      \
   }
 
-#define NVIDIA_BOOT_TYPE_HTTP                    0
-#define NVIDIA_BOOT_TYPE_BOOTIMG                 1
-#define NVIDIA_BOOT_TYPE_VIRTUAL                 2
-#define IPMI_GET_BOOT_OPTIONS_PARAMETER_INVALID  1
-#define IPMI_PARAMETER_VERSION                   1
-
-#define SAVED_BOOT_ORDER_VARIABLE_NAME        L"SavedBootOrder"
-#define SAVED_BOOT_ORDER_FLAGS_VARIABLE_NAME  L"SavedBootOrderFlags"
-
-#define SAVED_BOOT_ORDER_ALL_INSTANCES_FLAG  0x1
-#define SAVED_BOOT_ORDER_VIRTUAL_FLAG        0x2
+#define NVIDIA_BOOT_TYPE_HTTP     0
+#define NVIDIA_BOOT_TYPE_BOOTIMG  1
+#define NVIDIA_BOOT_TYPE_VIRTUAL  2
 
 typedef struct {
   CHAR8    *OrderName;
@@ -51,5 +44,42 @@ typedef struct {
 #define BOOT_ORDER_SBDF_SEPARATOR   ':'
 #define BOOT_ORDER_SBDF_STARTER     '|'
 #define BOOT_ORDER_TERMINATOR       '\0'
+
+#define BOOT_ORDER_TEMPLATE_CLASS_COUNT  15
+extern NVIDIA_BOOT_ORDER_PRIORITY  mBootPriorityTemplate[BOOT_ORDER_TEMPLATE_CLASS_COUNT];
+
+VOID
+PrintBootOrder (
+  IN CONST UINTN   DebugPrintLevel,
+  IN CONST CHAR16  *HeaderMessage,
+  IN UINT16        *BootOrder,
+  IN UINTN         BootOrderSize
+  );
+
+NVIDIA_BOOT_ORDER_PRIORITY *
+EFIAPI
+GetBootClassOfOption (
+  IN EFI_BOOT_MANAGER_LOAD_OPTION  *Option,
+  IN NVIDIA_BOOT_ORDER_PRIORITY    *Table,
+  IN UINTN                         Count
+  );
+
+EFI_STATUS
+EFIAPI
+GetBootClassOfOptionNum (
+  IN UINT16                          OptionNum,
+  IN OUT NVIDIA_BOOT_ORDER_PRIORITY  **Class,
+  IN NVIDIA_BOOT_ORDER_PRIORITY      *Table,
+  IN UINTN                           Count
+  );
+
+NVIDIA_BOOT_ORDER_PRIORITY *
+EFIAPI
+GetBootClassOfName (
+  CHAR8                          *ClassName,
+  UINTN                          ClassNameLen,
+  IN NVIDIA_BOOT_ORDER_PRIORITY  *Table,
+  IN UINTN                       Count
+  );
 
 #endif

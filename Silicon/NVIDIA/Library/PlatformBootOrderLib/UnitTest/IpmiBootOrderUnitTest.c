@@ -16,7 +16,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PcdLib.h>
-#include <Library/PlatformBootOrderLib.h>
+#include <Library/PlatformBootOrderIpmiLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/HostBasedTestStubLib/IpmiStubLib.h>
 #include <Library/UefiBootManagerLib.h>
@@ -28,6 +28,7 @@
 #include <Library/IpmiCommandLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/PrintLib.h>
+#include "../InternalPlatformBootOrderIpmiLib.h"
 
 #define UNIT_TEST_NAME     "IPMI Boot Order Test"
 #define UNIT_TEST_VERSION  "1.0"
@@ -38,8 +39,6 @@
     FreePool ((a)); \
     (a) = NULL; \
   }
-
-#define SAVED_BOOT_ORDER_VARIABLE_NAME  L"SavedBootOrder"
 
 extern UINT8  mIpmiCommandCounter;
 

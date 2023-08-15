@@ -23,6 +23,7 @@
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/PlatformBootOrderLib.h>
+#include <Library/PlatformBootOrderIpmiLib.h>
 #include <Library/BaseCryptLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>

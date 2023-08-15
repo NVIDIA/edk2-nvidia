@@ -16,6 +16,7 @@
 
 [Sources.common]
   PlatformBootOrderLib.c
+  PlatformBootOrderIpmiLib.c
 
 [Packages]
   MdeModulePkg/MdeModulePkg.dec

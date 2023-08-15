@@ -16,25 +16,6 @@ SetBootOrder (
   );
 
 VOID
-EFIAPI
-CheckIPMIForBootOrderUpdates (
-  VOID
-  );
-
-VOID
-EFIAPI
-ProcessIPMIBootOrderUpdates (
-  VOID
-  );
-
-VOID
-EFIAPI
-RestoreBootOrder (
-  EFI_EVENT  Event,
-  VOID       *Context
-  );
-
-VOID
 PrintCurrentBootOrder (
   IN CONST UINTN  DebugPrintLevel
   );
