@@ -12,11 +12,11 @@ CONFIG_MEMORY_TEST=n
 !endif
 
 [BuildOptions.common.EDKII.DXE_CORE,BuildOptions.common.EDKII.DXE_DRIVER,BuildOptions.common.EDKII.UEFI_DRIVER,BuildOptions.common.EDKII.UEFI_APPLICATION]
-  GCC:*_*_*_DLINK_FLAGS = -z common-page-size=0x1000
+  GCC:*_*_*_DLINK_FLAGS = -Wl,-z,common-page-size=0x1000
 
 [BuildOptions.common.EDKII.DXE_RUNTIME_DRIVER]
-  GCC:*_*_ARM_DLINK_FLAGS = -z common-page-size=0x1000
-  GCC:*_*_AARCH64_DLINK_FLAGS = -z common-page-size=0x10000
+  GCC:*_*_ARM_DLINK_FLAGS = -Wl,-z,common-page-size=0x1000
+  GCC:*_*_AARCH64_DLINK_FLAGS = -Wl,-z,common-page-size=0x10000
 
 [BuildOptions.common]
   GCC:*_*_*_PLATFORM_FLAGS = -fstack-protector-strong

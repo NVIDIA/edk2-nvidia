@@ -197,7 +197,7 @@
 #
 ###################################################################################################
 [BuildOptions.AARCH64]
-  GCC:*_*_*_DLINK_FLAGS = -z common-page-size=0x1000 -Wl,-z,text,-Bsymbolic,-pie
+  GCC:*_*_*_DLINK_FLAGS = -Wl,-z,common-page-size=0x1000 -Wl,-z,text,-Bsymbolic,-pie
 
 [BuildOptions.AARCH64]
   # Avoid absolute symbols when linking, which will cause a failure in GenFw.
