@@ -586,22 +586,26 @@ InstallFdt (
   IN VOID       *Context
   )
 {
-  EFI_STATUS                   Status;
-  VOID                         *AcpiBase;
-  VOID                         *CurrentDtb;
-  CHAR16                       PartitionName[MAX_PARTITION_NAME_LEN];
-  UINTN                        NumOfHandles;
-  EFI_HANDLE                   *HandleBuffer;
-  UINT64                       Size;
-  EFI_PARTITION_INFO_PROTOCOL  *PartitionInfo;
-  BOOLEAN                      DtbLocAdjusted;
-  UINTN                        Index;
-  EFI_BLOCK_IO_PROTOCOL        *BlockIo;
-  VOID                         *KernelDtb;
-  VOID                         *Dtb;
-  VOID                         *DtbCopy;
-  UINTN                        DataSize;
-  UINT32                       BootMode;
+  EFI_STATUS                    Status;
+  VOID                          *AcpiBase;
+  VOID                          *CurrentDtb;
+  CHAR16                        PartitionName[MAX_PARTITION_NAME_LEN];
+  UINTN                         NumOfHandles;
+  EFI_HANDLE                    *HandleBuffer;
+  UINT64                        Size;
+  EFI_PARTITION_INFO_PROTOCOL   *PartitionInfo;
+  BOOLEAN                       DtbLocAdjusted;
+  UINTN                         Index;
+  EFI_BLOCK_IO_PROTOCOL         *BlockIo;
+  VOID                          *KernelDtb;
+  VOID                          *Dtb;
+  VOID                          *DtbCopy;
+  UINTN                         DataSize;
+  UINT32                        BootMode;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  TEGRA_PLATFORM_TYPE           PlatformType;
+  BOOLEAN                       UefiDtb;
 
   HandleBuffer   = NULL;
   PartitionInfo  = NULL;
@@ -609,6 +613,7 @@ InstallFdt (
   KernelDtb      = NULL;
   Dtb            = NULL;
   DtbCopy        = NULL;
+  UefiDtb        = FALSE;
 
   gBS->CloseEvent (Event);
 
@@ -620,6 +625,31 @@ InstallFdt (
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &CurrentDtb);
   if (EFI_ERROR (Status)) {
     return;
+  }
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+    return;
+  }
+
+  PlatformType = TegraGetPlatform ();
+  if ((PlatformType != TEGRA_PLATFORM_SILICON) ||
+      (PlatformResourceInfo->BootType == TegrablBootRcm))
+  {
+    Dtb = (VOID *)GetDTBBaseAddress ();
+    if (fdt_check_header (Dtb) != 0) {
+      DEBUG ((DEBUG_ERROR, "%a: UEFI DTB corrupted\n", __FUNCTION__));
+      return;
+    }
+
+    UefiDtb = TRUE;
+    DEBUG ((DEBUG_ERROR, "%a: Installing UEFI DTB as Kernel DTB\r\n", __FUNCTION__));
+    goto Install;
   }
 
   DataSize = sizeof (BootMode);
@@ -719,12 +749,16 @@ InstallFdt (
     }
   }
 
+Install:
   DtbCopy = NULL;
   DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (Dtb)));
   if ((DtbCopy != NULL) &&
       (fdt_open_into (Dtb, DtbCopy, 4 * fdt_totalsize (Dtb)) == 0))
   {
-    DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB\r\n", __FUNCTION__));
+    if (!UefiDtb) {
+      DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB\r\n", __FUNCTION__));
+    }
+
     Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
     if (EFI_ERROR (Status)) {
       gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (fdt_totalsize (DtbCopy)));
@@ -765,13 +799,9 @@ DtPlatformLoadDtb (
   OUT   UINTN  *DtbSize
   )
 {
-  EFI_STATUS                    Status;
-  VOID                          *UefiDtb;
-  VOID                          *DtbCopy;
-  VOID                          *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
-  TEGRA_PLATFORM_TYPE           PlatformType;
-  BOOLEAN                       UefiDtbBoot;
+  EFI_STATUS  Status;
+  VOID        *UefiDtb;
+  VOID        *DtbCopy;
 
   UefiDtb = (VOID *)(UINTN)GetDTBBaseAddress ();
   if (fdt_check_header (UefiDtb) != 0) {
@@ -792,16 +822,6 @@ DtPlatformLoadDtb (
   *Dtb     = DtbCopy;
   *DtbSize = fdt_totalsize (*Dtb);
 
-  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-  if ((Hob != NULL) &&
-      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
-  {
-    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-  } else {
-    DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
-    return EFI_NOT_FOUND;
-  }
-
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_NOTIFY,
@@ -815,20 +835,9 @@ DtPlatformLoadDtb (
     goto Exit;
   }
 
-  PlatformType = TegraGetPlatform ();
-
-  UefiDtbBoot = FALSE;
-  if ((PlatformType != TEGRA_PLATFORM_SILICON) ||
-      (PlatformResourceInfo->BootType == TegrablBootRcm))
-  {
-    UefiDtbBoot = TRUE;
-  }
-
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
-                  UefiDtbBoot ?
-                  UpdateFdt :
                   InstallFdt,
                   NULL,
                   &gEfiEventReadyToBootGuid,
