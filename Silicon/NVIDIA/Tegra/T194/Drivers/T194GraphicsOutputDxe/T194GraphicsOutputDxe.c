@@ -1,8 +1,8 @@
 /** @file
 
-  XUDC Driver
+  Graphics Output Protocol Driver for T194
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2020, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -219,6 +219,14 @@ WriteDcReg32 (
     return EFI_INVALID_PARAMETER;
   }
 
+  DEBUG ((
+    DEBUG_VERBOSE,
+    "%a: HeadIndex=%d: write address = 0x%08x == 0x%08x\n",
+    __FUNCTION__,
+    HeadIndex,
+    DC_HEAD_0_BASE_ADDR + DC_PER_HEAD_OFFSET*HeadIndex + RegOffset,
+    Data
+    ));
   MmioWrite32 (DC_HEAD_0_BASE_ADDR + DC_PER_HEAD_OFFSET*HeadIndex + RegOffset, Data);
   return EFI_SUCCESS;
 }
@@ -976,6 +984,69 @@ exit:
 }
 
 /***************************************
+  This function checks Device Tree bootloader-status for the given head.
+
+  @param[in]  DeviceTreeNode       Pointer to the device tree node protocol
+  @param[in]  Head                 Head index
+  @retval     BOOLEAN              FALSE: Head 'bootloader-status' is  disabled,
+                                          or error encountered parsing Device Tree.
+                                   TRUE:  Head 'bootloader-status' is !disabled
+ ***************************************/
+STATIC
+BOOLEAN
+CheckDtEnabledForHead (
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode,
+  IN  CONST UINTN                             Head
+  )
+{
+  EFI_STATUS    Status;
+  INTN          DcNodeOffset;
+  CONST UINT32  *DcCtrlNumProp;
+  CONST CHAR8   *BootloaderStatusProp;
+  BOOLEAN       HeadEnabled;
+
+  DcNodeOffset = 0;
+  Status       = EFI_NOT_FOUND;
+
+  DcNodeOffset = fdt_node_offset_by_compatible (DeviceTreeNode->DeviceTreeBase, -1, "nvidia,tegra194-dc");
+
+  while (DcNodeOffset != -FDT_ERR_NOTFOUND) {
+    if (0 > DcNodeOffset) {
+      Status = EFI_UNSUPPORTED;
+      break;
+    }
+
+    DcCtrlNumProp = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DcNodeOffset, "nvidia,dc-ctrlnum", NULL);
+    if (NULL == DcCtrlNumProp) {
+      Status = EFI_INVALID_PARAMETER;
+      break;
+    }
+
+    /* check for matching "nvidia,dc-ctrlnum" cell value */
+    if (Head == (UINTN)SwapBytes32 (*DcCtrlNumProp)) {
+      Status = EFI_SUCCESS;
+      break;
+    }
+
+    DcNodeOffset = fdt_node_offset_by_compatible (DeviceTreeNode->DeviceTreeBase, DcNodeOffset, "nvidia,tegra194-dc");
+  }
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: error parsing DT for Head %u enablement: %r\n", __FUNCTION__, Head, Status));
+    return FALSE;
+  }
+
+  /* we've found the correct DT Head node, now get bootloader-status */
+  BootloaderStatusProp = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DcNodeOffset, "bootloader-status", NULL);
+
+  /* treat undefined bootloader-status node as 'okay' as status node must be 'okay' to get to this point */
+  HeadEnabled = ((NULL == BootloaderStatusProp) ||
+                 (AsciiStrCmp (BootloaderStatusProp, "okay") == 0));
+
+  return HeadEnabled;
+}
+
+/***************************************
   Callback that will be invoked at various phases of the driver initialization
 
   This function allows for modification of system behavior at various points in
@@ -1016,53 +1087,65 @@ DeviceDiscoveryNotify (
 
       Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
       if (EFI_ERROR (Status)) {
-        break;
+        return EFI_UNSUPPORTED;
       }
 
       Status = GetDispHeadFromAddr (BaseAddress, &HeadIndex);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: error getting Head index\n", __FUNCTION__));
-        break;
-      }
-
-      // some debug prints to confirm programming from Cbboot nvdisp-init
-      Status = DumpRegsForThisHead (HeadIndex);
-
-      Status = GetFirstWinForThisHead (HeadIndex, WindowStateEnabled, &WindowIndex);
-      if (EFI_ERROR (Status)) {
         return EFI_UNSUPPORTED;
       }
 
-      // this head has an enabled window: do some sanity checks,
+      /* check Device Tree enablement for this head */
+      if (DeviceTreeNode == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Warning: DeviceTree enablement unknown for Head index=%d\n", __FUNCTION__, HeadIndex));
+      } else {
+        if (CheckDtEnabledForHead (DeviceTreeNode, HeadIndex) == FALSE) {
+          DEBUG ((DEBUG_INFO, "%a: Head %d is not enabled in DeviceTree\n", __FUNCTION__, HeadIndex));
+          return EFI_UNSUPPORTED;
+        }
+
+        DEBUG ((DEBUG_INFO, "%a: Head %d is enabled in DeviceTree\n", __FUNCTION__, HeadIndex));
+      }
 
       Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&ScmiClockProtocol);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Head index=%d: failed to get ScmiClockProtocol\n", __FUNCTION__, HeadIndex));
-        break;
+        return EFI_UNSUPPORTED;
       }
 
       Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAClockNodeProtocolGuid, (VOID **)&ClockNodeProtocol);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Head index=%d: failed to get ClockNodeProtocol\n", __FUNCTION__, HeadIndex));
-        break;
+        return EFI_UNSUPPORTED;
       }
 
-      // If there are clocks listed make sure the primary one is enabled
+      /* If there are clocks listed make sure the primary one 'nvdisplay_disp' is enabled */
       if ((ClockNodeProtocol != NULL) && (ClockNodeProtocol->Clocks != 0) && (ScmiClockProtocol != NULL)) {
         Status = ScmiClockProtocol->GetClockAttributes (ScmiClockProtocol, ClockNodeProtocol->ClockEntries[0].ClockId, &ClockEnabled, ClockName);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "%a: Head index=%d: failed detect clock enable state\n", __FUNCTION__, HeadIndex));
-          break;
+          return EFI_UNSUPPORTED;
         }
 
         if (!ClockEnabled) {
-          DEBUG ((DEBUG_ERROR, "%a: Clock not enabled for Head index %d\n", __FUNCTION__, HeadIndex));
+          DEBUG ((DEBUG_ERROR, "%a: clock '%a' is not enabled for Head index=%d\n", __FUNCTION__, ClockName, HeadIndex));
           return EFI_UNSUPPORTED;
+        } else {
+          DEBUG ((DEBUG_ERROR, "%a: clock '%a' is enabled for Head index=%d\n", __FUNCTION__, ClockName, HeadIndex));
         }
       }
 
-      // sanity checks passed: alloc GOP_INSTANCE Private on first Supported call
+      /* some debug prints to confirm programming from Cbboot nvdisp-init */
+      Status = DumpRegsForThisHead (HeadIndex);
 
+      /* this controller has enabled clocks: do some sanity checks */
+      Status = GetFirstWinForThisHead (HeadIndex, WindowStateEnabled, &WindowIndex);
+      if (EFI_ERROR (Status)) {
+        return EFI_UNSUPPORTED;
+      }
+
+      /* sanity checks passed: alloc GOP_INSTANCE Private on first Supported call */
       if (Private == NULL) {
         Private = AllocateZeroPool (sizeof (GOP_INSTANCE));
         if (Private == NULL) {
@@ -1140,12 +1223,13 @@ DeviceDiscoveryNotify (
         return EFI_UNSUPPORTED;
       }
 
+      /* update DC_A_WINBUF_AD_START_ADDR_OFFSET, DC_A_WINBUF_AD_START_ADDR_HI_OFFSET */
       Status = UpdateGopInfoForThisHead (Phase, ControllerHandle, BaseAddress, Private, HeadIndex, WindowIndex);
       if (EFI_ERROR (Status)) {
         break;
       }
 
-      // Install the Graphics Output Protocol and the Device Path
+      /* Install the Graphics Output Protocol and the Device Path */
       Status = gBS->InstallMultipleProtocolInterfaces (
                       &Private->Handle,
                       &gEfiGraphicsOutputProtocolGuid,
@@ -1164,9 +1248,11 @@ DeviceDiscoveryNotify (
     /******************************************************************************************/
     default:
       Status = EFI_SUCCESS;
+      DEBUG ((DEBUG_INFO, "%a: Phase=%d, default handler Status=%r\n", __FUNCTION__, Phase, Status));
       break;
   }
 
+  /* if we get here with an error, assume Private is invalid */
   if (EFI_ERROR (Status)) {
     if (Private != NULL) {
       if (Private->Mode[HeadIndex].FrameBufferBase != 0) {
@@ -1176,6 +1262,7 @@ DeviceDiscoveryNotify (
       }
 
       FreePool (Private);
+      Private = NULL;
     }
   }
 
