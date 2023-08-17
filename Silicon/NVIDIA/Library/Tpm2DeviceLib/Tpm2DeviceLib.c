@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved. <BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -13,6 +13,8 @@
 #include <Library/HashLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PrintLib.h>
+#include <Library/ReportStatusCodeLib.h>
 #include <Library/Tpm2DeviceLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -20,6 +22,9 @@
 
 #include <Guid/TpmInstance.h>
 #include <IndustryStandard/TpmPtp.h>
+
+#include <NVIDIAStatusCodes.h>
+#include <OemStatusCodes.h>
 
 #include "Tpm2DeviceLibInternal.h"
 
@@ -105,10 +110,20 @@ Tpm2Initialize (
   UINT32              Pcr;
   UINT32              Event;
   TPML_DIGEST_VALUES  DigestList;
+  CHAR8               OemDesc[sizeof (OEM_EC_DESC_TPM_PCR_BANK_NOT_SUPPORTED)];
 
   Status = Tpm2RequestUseTpmInternal ();
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Fail to request to use TPM.\n", __FUNCTION__));
+    if (PcdGetBool (PcdTpmEnable)) {
+      DEBUG ((DEBUG_ERROR, "%a: Fail to request to use TPM.\n", __FUNCTION__));
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_TPM_INACCESSIBLE,
+        OEM_EC_DESC_TPM_INACCESSIBLE,
+        sizeof (OEM_EC_DESC_TPM_INACCESSIBLE)
+        );
+    }
+
     return EFI_DEVICE_ERROR;
   }
 
@@ -133,7 +148,16 @@ Tpm2Initialize (
   //
   Status = Tpm2GetCapabilitySupportedAndActivePcrs (&TpmHashAlgorithmBitmap, &ActivePCRBanks);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: TPM has not been started successfully.\n", __FUNCTION__));
+    if (PcdGetBool (PcdTpmEnable)) {
+      DEBUG ((DEBUG_ERROR, "%a: TPM has not been started successfully.\n", __FUNCTION__));
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_TPM_NOT_INITIALIZED,
+        OEM_EC_DESC_TPM_NOT_INITIALIZED,
+        sizeof (OEM_EC_DESC_TPM_NOT_INITIALIZED)
+        );
+    }
+
     return Status;
   }
 
@@ -146,7 +170,13 @@ Tpm2Initialize (
     PcdSet32S (PcdTpm2HashMask, HASH_ALG_SHA256);
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Unsupported PCR banks - %x\n", __FUNCTION__, ActivePCRBanks));
-    ASSERT (FALSE);
+    AsciiSPrint (OemDesc, sizeof (OemDesc), OEM_EC_DESC_TPM_PCR_BANK_NOT_SUPPORTED, ActivePCRBanks);
+    REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+      EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+      EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_TPM_PCR_BANK_NOT_SUPPORTED,
+      OemDesc,
+      AsciiStrSize (OemDesc)
+      );
     return EFI_UNSUPPORTED;
   }
 
@@ -203,6 +233,12 @@ Tpm2Initialize (
     Status = Tpm2SelfTest (NO);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: TPM self-test failed - %r\n", __FUNCTION__, Status));
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_TPM_SELF_TEST_FAILED,
+        OEM_EC_DESC_TPM_SELF_TEST_FAILED,
+        sizeof (OEM_EC_DESC_TPM_SELF_TEST_FAILED)
+        );
       return Status;
     }
   }

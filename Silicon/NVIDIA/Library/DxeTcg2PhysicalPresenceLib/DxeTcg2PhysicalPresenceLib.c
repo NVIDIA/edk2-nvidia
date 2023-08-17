@@ -8,7 +8,7 @@
   Tpm2ExecutePendingTpmRequest() will receive untrusted input and do validation.
 
 Copyright (c) 2013 - 2020, Intel Corporation. All rights reserved.<BR>
-Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -33,6 +33,10 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/Tcg2PpVendorLib.h>
 #include <Library/VariablePolicyHelperLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/ReportStatusCodeLib.h>
+
+#include <NVIDIAStatusCodes.h>
+#include <OemStatusCodes.h>
 
 #define CONFIRM_BUFFER_SIZE  4096
 
@@ -159,6 +163,15 @@ Tcg2ExecutePhysicalPresence (
   EFI_STATUS                       Status;
   EFI_TCG2_EVENT_ALGORITHM_BITMAP  TpmHashAlgorithmBitmap;
   UINT32                           ActivePcrBanks;
+  CHAR8                            OemDesc[sizeof (OEM_EC_DESC_TPM_PPI_EXECUTE)];
+
+  AsciiSPrint (OemDesc, sizeof (OemDesc), OEM_EC_DESC_TPM_PPI_EXECUTE, CommandCode);
+  REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+    EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+    EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_TPM_PPI_EXECUTE,
+    OemDesc,
+    AsciiStrSize (OemDesc)
+    );
 
   switch (CommandCode) {
     case TCG2_PHYSICAL_PRESENCE_CLEAR:
@@ -167,6 +180,12 @@ Tcg2ExecutePhysicalPresence (
     case TCG2_PHYSICAL_PRESENCE_ENABLE_CLEAR_3:
       Status = Tpm2CommandClear (PlatformAuth);
       if (EFI_ERROR (Status)) {
+        REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+          EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+          EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_TPM_CLEAR_FAILED,
+          OEM_EC_DESC_TPM_CLEAR_FAILED,
+          sizeof (OEM_EC_DESC_TPM_CLEAR_FAILED)
+          );
         return TCG_PP_OPERATION_RESPONSE_BIOS_FAILURE;
       } else {
         return TCG_PP_OPERATION_RESPONSE_SUCCESS;

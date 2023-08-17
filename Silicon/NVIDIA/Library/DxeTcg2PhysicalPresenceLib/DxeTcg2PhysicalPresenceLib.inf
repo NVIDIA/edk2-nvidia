@@ -9,7 +9,7 @@
 #  This external input must be validated carefully to avoid security issue.
 #
 # Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
-# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##

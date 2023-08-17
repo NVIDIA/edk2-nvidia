@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -73,6 +73,24 @@
 
 #define OEM_EC_DESC_REDFISH_CONFIG_CHANGED_AND_REBOOT \
         "System configuration is changed via Redfish. Reboot system"
+
+#define OEM_EC_DESC_TPM_INACCESSIBLE \
+        "TPM inaccessible"
+
+#define OEM_EC_DESC_TPM_NOT_INITIALIZED \
+        "TPM not initialized"
+
+#define OEM_EC_DESC_TPM_PCR_BANK_NOT_SUPPORTED \
+        "TPM PCR bank not supported - 0x%02X"
+
+#define OEM_EC_DESC_TPM_SELF_TEST_FAILED \
+        "TPM self test failed"
+
+#define OEM_EC_DESC_TPM_PPI_EXECUTE \
+        "Execute TPM PPI command %2d"
+
+#define OEM_EC_DESC_TPM_CLEAR_FAILED \
+        "TPM Clear failed"
 
 ///@}
 
