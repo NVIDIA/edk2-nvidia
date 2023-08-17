@@ -215,7 +215,6 @@ ConstructMemoryTestRanges (
   MEMORY_TEST_RANGE       *MemoryTestRange;
   UINTN                   Offset;
 
-  InitializeListHead (&Private->MemoryTestList);
   NonTestedRangeNode = GetFirstNode (&Private->NonTestedMemList);
 
   while (NonTestedRangeNode != &Private->NonTestedMemList) {
@@ -804,9 +803,10 @@ GenericMemoryTestEntryPoint (
   }
 
   //
-  // Initialize several internal link list
+  // Initialize several internal link lists
   //
   InitializeListHead (&mGenericMemoryTestPrivate.NonTestedMemList);
+  InitializeListHead (&mGenericMemoryTestPrivate.MemoryTestList);
 
   //
   // Install the protocol
