@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018 - 2022, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -261,6 +261,7 @@
       HobLib|EmbeddedPkg/Library/PrePiHobLib/PrePiHobLib.inf
       PrePiHobListPointerLib|ArmPlatformPkg/Library/PrePiHobListPointerLib/PrePiHobListPointerLib.inf
       MemoryAllocationLib|EmbeddedPkg/Library/PrePiMemoryAllocationLib/PrePiMemoryAllocationLib.inf
+      DefaultExceptionHandlerLib|Silicon/NVIDIA/Library/PrePiDefaultExceptionHandlerLib/PrePiDefaultExceptionHandlerLib.inf
   }
 
   #

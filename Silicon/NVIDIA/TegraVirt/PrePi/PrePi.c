@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2014, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -13,6 +13,7 @@
 #include <Library/TimerLib.h>
 #include <Library/PerformanceLib.h>
 #include <Library/CacheMaintenanceLib.h>
+#include <Library/CpuExceptionHandlerLib.h>
 
 #include <libfdt.h>
 
@@ -129,6 +130,10 @@ PrePiMain (
                 );
   SerialPortWrite ((UINT8 *)Buffer, CharCount);
   DEBUG_CODE_END ();
+
+  // Enable exception handlers, now that we have a serial port to write to and
+  // have set PcdFvBaseAddress
+  Status = InitializeCpuExceptionHandlers (NULL);
 
   /////////////////////////////
   // DTB
