@@ -61,6 +61,7 @@
   gNVIDIATokenSpaceGuid
   gNVIDIATH500MB1DataGuid
   gNVIDIAMmMb1RecordGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Protocols]
   gEfiHiiConfigAccessProtocolGuid               ## CONSUMES

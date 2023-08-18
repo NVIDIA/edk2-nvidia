@@ -214,6 +214,7 @@ NVDA_MEMORY_REGION  TH500DramPageBlacklistInfoAddress[] = {
 
 TEGRA_BASE_AND_SIZE_INFO  TH500EgmMemoryInfo[TH500_MAX_SOCKETS]  = { };
 TEGRA_DRAM_DEVICE_INFO    TH500DramDeviceInfo[TH500_MAX_SOCKETS] = { };
+UINT8                     TH500C2cMode[TH500_MAX_SOCKETS]        = { };
 
 /**
   Get Socket Mask
@@ -737,6 +738,35 @@ TH500GetEnabledCoresBitMap (
   PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
 
   return CommonConfigGetEnabledCoresBitMap (&TH500CommonResourceConfigInfo, PlatformResourceInfo);
+}
+
+/**
+  Get CPU C2C mode from enabled socket. Needs to be called after
+  ArmSetMemoryRegionReadOnly to prevent exception.
+
+**/
+EFI_STATUS
+EFIAPI
+Th500CpuC2cMode (
+  IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  UINTN  Socket;
+
+  if (PlatformResourceInfo == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  PlatformResourceInfo->C2cMode = TH500C2cMode;
+  for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
+    if ((PlatformResourceInfo->SocketMask & (1UL << Socket)) == 0) {
+      continue;
+    }
+
+    TH500C2cMode[Socket] = MmioRead32 (TH500SocketMssMmioInfo[Socket].Base + TH500_MSS_C2C_MODE) & 0x03;
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**

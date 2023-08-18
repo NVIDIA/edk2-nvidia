@@ -630,6 +630,11 @@ UpdatePlatformResourceCpuInformation (
       break;
     case TH500_CHIP_ID:
       Status = TH500GetEnabledCoresBitMap (PlatformResourceInfo);
+      if (EFI_ERROR (Status)) {
+        break;
+      }
+
+      Status = Th500CpuC2cMode (PlatformResourceInfo);
       break;
     default:
       return EFI_UNSUPPORTED;

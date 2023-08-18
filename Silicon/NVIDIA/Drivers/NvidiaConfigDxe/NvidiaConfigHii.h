@@ -160,6 +160,7 @@ typedef struct {
   UINT8      PhysicalPcieWidth1[MAX_PCIE];
   UINT8      PhysicalPcieWidth2[MAX_PCIE];
   UINT8      PhysicalPcieWidth3[MAX_PCIE];
+  BOOLEAN    UphyNvlinkForceEnabled;
   // MB1 DATA
   BOOLEAN    EgmEnabled;
   UINT32     EgmHvSizeMb;
@@ -237,73 +238,85 @@ typedef struct {
       prompt = STRING_TOKEN(STR_PCIE##pcie##_CONFIG_FORM_TITLE),  \
       help = STRING_TOKEN(STR_NULL);
 
-#define ADD_SOCKET_FORM(socket)                                                    \
-  form formid = TH500_SOCKET##socket##_CONFIGURATION_FORM_ID,                      \
-       title = STRING_TOKEN(STR_SOCKET##socket##_CONFIG_FORM_TITLE);               \
-  subtitle text = STRING_TOKEN(STR_NULL);                                          \
-  suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.SocketEnabled[socket] == 0;         \
-  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[0],                  \
-        prompt = STRING_TOKEN(STR_UPHY0_SOCKET##socket##_PROMPT),                  \
-        help = STRING_TOKEN(STR_UPHY0_HELP),                                       \
-        flags = INTERACTIVE | RESET_REQUIRED,                                      \
-        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;            \
-  option text = STRING_TOKEN(STR_PCIE_C0_X16), value = 1, flags = 0;               \
-  option text = STRING_TOKEN(STR_PCIE_C0_X8_C1_X8), value = 2, flags = 0;          \
-  endoneof;                                                                        \
-  ADD_GOTO_PCIE_FORM(socket, 0)                                                    \
-  ADD_GOTO_PCIE_FORM(socket, 1)                                                    \
-  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[1],                  \
-        prompt = STRING_TOKEN(STR_UPHY1_SOCKET##socket##_PROMPT),                  \
-        help = STRING_TOKEN(STR_UPHY1_HELP),                                       \
-        flags = INTERACTIVE | RESET_REQUIRED,                                      \
-        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;            \
-  option text = STRING_TOKEN(STR_PCIE_C2_X16), value = 1, flags = 0;               \
-  option text = STRING_TOKEN(STR_PCIE_C2_X8_C3_X8), value = 2, flags = 0;          \
-  endoneof;                                                                        \
-  ADD_GOTO_PCIE_FORM(socket, 2)                                                    \
-  ADD_GOTO_PCIE_FORM(socket, 3)                                                    \
-  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[2],                  \
-        prompt = STRING_TOKEN(STR_UPHY2_SOCKET##socket##_PROMPT),                  \
-        help = STRING_TOKEN(STR_UPHY2_HELP),                                       \
-        flags = INTERACTIVE | RESET_REQUIRED,                                      \
-        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;            \
-  option text = STRING_TOKEN(STR_PCIE_C4_X16), value = 1, flags = 0;               \
-  option text = STRING_TOKEN(STR_PCIE_C4_X8_C5_X8), value = 2, flags = 0;          \
-  option text = STRING_TOKEN(STR_PCIE_C5_X4_NVLINK_X12), value = 3, flags = 0;     \
-  option text = STRING_TOKEN(STR_PCIE_C5_X4_NVLINK_NO_PCIE), value = 4, flags = 0; \
-  endoneof;                                                                        \
-  ADD_GOTO_PCIE_FORM(socket, 4)                                                    \
-  ADD_GOTO_PCIE_FORM(socket, 5)                                                    \
-  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[3],                  \
-        prompt = STRING_TOKEN(STR_UPHY3_SOCKET##socket##_PROMPT),                  \
-        help = STRING_TOKEN(STR_UPHY3_HELP),                                       \
-        flags = INTERACTIVE | RESET_REQUIRED,                                      \
-        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;            \
-  option text = STRING_TOKEN(STR_PCIE_C6_X16), value = 1, flags = 0;               \
-  option text = STRING_TOKEN(STR_PCIE_C6_X8_C7_X8), value = 2, flags = 0;          \
-  option text = STRING_TOKEN(STR_PCIE_C7_X4_NVLINK_X12), value = 3, flags = 0;     \
-  option text = STRING_TOKEN(STR_PCIE_C7_X4_NVLINK_NO_PCIE), value = 4, flags = 0; \
-  endoneof;                                                                        \
-  ADD_GOTO_PCIE_FORM(socket, 6)                                                    \
-  ADD_GOTO_PCIE_FORM(socket, 7)                                                    \
-  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[4],                  \
-        prompt = STRING_TOKEN(STR_UPHY4_SOCKET##socket##_PROMPT),                  \
-        help = STRING_TOKEN(STR_UPHY4_HELP),                                       \
-        flags = INTERACTIVE | RESET_REQUIRED,                                      \
-        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;            \
-  option text = STRING_TOKEN(STR_PCIE_C8_X2), value = 1, flags = 0;                \
-  option text = STRING_TOKEN(STR_PCIE_C8_X1_USB), value = 2, flags = 0;            \
-  endoneof;                                                                        \
-  ADD_GOTO_PCIE_FORM(socket, 8)                                                    \
-  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[5],                  \
-        prompt = STRING_TOKEN(STR_UPHY5_SOCKET##socket##_PROMPT),                  \
-        help = STRING_TOKEN(STR_UPHY5_HELP),                                       \
-        flags = INTERACTIVE | RESET_REQUIRED,                                      \
-        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;            \
-  option text = STRING_TOKEN(STR_PCIE_C9_X2), value = 1, flags = 0;                \
-  endoneof;                                                                        \
-  ADD_GOTO_PCIE_FORM(socket, 9)                                                    \
-  endif;                                                                           \
+#define ADD_SOCKET_FORM(socket)                                                          \
+  form formid = TH500_SOCKET##socket##_CONFIGURATION_FORM_ID,                            \
+       title = STRING_TOKEN(STR_SOCKET##socket##_CONFIG_FORM_TITLE);                     \
+  subtitle text = STRING_TOKEN(STR_NULL);                                                \
+  suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.SocketEnabled[socket] == 0;               \
+  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[0],                        \
+        prompt = STRING_TOKEN(STR_UPHY0_SOCKET##socket##_PROMPT),                        \
+        help = STRING_TOKEN(STR_UPHY0_HELP),                                             \
+        flags = INTERACTIVE | RESET_REQUIRED,                                            \
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;                  \
+        option text = STRING_TOKEN(STR_PCIE_C0_X16), value = 1, flags = 0;               \
+        option text = STRING_TOKEN(STR_PCIE_C0_X8_C1_X8), value = 2, flags = 0;          \
+  endoneof;                                                                              \
+  ADD_GOTO_PCIE_FORM(socket, 0)                                                          \
+  ADD_GOTO_PCIE_FORM(socket, 1)                                                          \
+  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[1],                        \
+        prompt = STRING_TOKEN(STR_UPHY1_SOCKET##socket##_PROMPT),                        \
+        help = STRING_TOKEN(STR_UPHY1_HELP),                                             \
+        flags = INTERACTIVE | RESET_REQUIRED,                                            \
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;                  \
+        option text = STRING_TOKEN(STR_PCIE_C2_X16), value = 1, flags = 0;               \
+        option text = STRING_TOKEN(STR_PCIE_C2_X8_C3_X8), value = 2, flags = 0;          \
+  endoneof;                                                                              \
+  ADD_GOTO_PCIE_FORM(socket, 2)                                                          \
+  ADD_GOTO_PCIE_FORM(socket, 3)                                                          \
+  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[2],                        \
+        prompt = STRING_TOKEN(STR_UPHY2_SOCKET##socket##_PROMPT),                        \
+        help = STRING_TOKEN(STR_UPHY2_HELP),                                             \
+        flags = INTERACTIVE | RESET_REQUIRED,                                            \
+        suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 1 AND                \
+                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphyNvlinkForceEnabled == 1 ;       \
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;                  \
+        option text = STRING_TOKEN(STR_PCIE_C4_X16), value = 1, flags = 0;               \
+        option text = STRING_TOKEN(STR_PCIE_C4_X8_C5_X8), value = 2, flags = 0;          \
+        endif;                                                                           \
+        suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 1 AND                \
+                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphyNvlinkForceEnabled == 0 ;       \
+        option text = STRING_TOKEN(STR_PCIE_C5_X4_NVLINK_X12), value = 3, flags = 0;     \
+        option text = STRING_TOKEN(STR_PCIE_C5_X4_NVLINK_NO_PCIE), value = 4, flags = 0; \
+        endif;                                                                           \
+  endoneof;                                                                              \
+  ADD_GOTO_PCIE_FORM(socket, 4)                                                          \
+  ADD_GOTO_PCIE_FORM(socket, 5)                                                          \
+  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[3],                        \
+        prompt = STRING_TOKEN(STR_UPHY3_SOCKET##socket##_PROMPT),                        \
+        help = STRING_TOKEN(STR_UPHY3_HELP),                                             \
+        flags = INTERACTIVE | RESET_REQUIRED,                                            \
+        suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 1 AND                \
+                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphyNvlinkForceEnabled == 1 ;       \
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;                  \
+        option text = STRING_TOKEN(STR_PCIE_C6_X16), value = 1, flags = 0;               \
+        option text = STRING_TOKEN(STR_PCIE_C6_X8_C7_X8), value = 2, flags = 0;          \
+        endif;                                                                           \
+        suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 1 AND                \
+                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphyNvlinkForceEnabled == 0 ;       \
+        option text = STRING_TOKEN(STR_PCIE_C7_X4_NVLINK_X12), value = 3, flags = 0;     \
+        option text = STRING_TOKEN(STR_PCIE_C7_X4_NVLINK_NO_PCIE), value = 4, flags = 0; \
+        endif;                                                                           \
+  endoneof;                                                                              \
+  ADD_GOTO_PCIE_FORM(socket, 6)                                                          \
+  ADD_GOTO_PCIE_FORM(socket, 7)                                                          \
+  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[4],                        \
+        prompt = STRING_TOKEN(STR_UPHY4_SOCKET##socket##_PROMPT),                        \
+        help = STRING_TOKEN(STR_UPHY4_HELP),                                             \
+        flags = INTERACTIVE | RESET_REQUIRED,                                            \
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;                  \
+        option text = STRING_TOKEN(STR_PCIE_C8_X2), value = 1, flags = 0;                \
+        option text = STRING_TOKEN(STR_PCIE_C8_X1_USB), value = 2, flags = 0;            \
+  endoneof;                                                                              \
+  ADD_GOTO_PCIE_FORM(socket, 8)                                                          \
+  oneof varid = NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[5],                        \
+        prompt = STRING_TOKEN(STR_UPHY5_SOCKET##socket##_PROMPT),                        \
+        help = STRING_TOKEN(STR_UPHY5_HELP),                                             \
+        flags = INTERACTIVE | RESET_REQUIRED,                                            \
+        option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;                  \
+        option text = STRING_TOKEN(STR_PCIE_C9_X2), value = 1, flags = 0;                \
+  endoneof;                                                                              \
+  ADD_GOTO_PCIE_FORM(socket, 9)                                                          \
+  endif;                                                                                 \
   endform;
 
 #define ADD_PCIE_FORM(socket, pcie)                                                               \

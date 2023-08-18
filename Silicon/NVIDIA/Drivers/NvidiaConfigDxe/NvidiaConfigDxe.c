@@ -1338,8 +1338,11 @@ InitializeSettings (
   UINTN                               ProductInfoLen;
   UINTN                               BufferSize;
   UINTN                               Index;
+  UINTN                               SocketIndex;
   CONST TEGRABL_EARLY_BOOT_VARIABLES  *TH500HobConfig;
   VOID                                *HobPointer;
+  TEGRA_PLATFORM_RESOURCE_INFO        *PlatformResourceInfo;
+  UINTN                               EnabledSocketCount;
   CHAR16                              ProductInfoVariableName[] = L"ProductInfo";
 
   // Initialize PCIe Form Settings
@@ -1493,8 +1496,12 @@ InitializeSettings (
     }
   }
 
+  EnabledSocketCount = 0;
   for (Index = 0; Index < MAX_SOCKETS; Index++) {
     mHiiControlSettings.SocketEnabled[Index] = IsSocketEnabled (Index);
+    if (mHiiControlSettings.SocketEnabled[Index]) {
+      EnabledSocketCount++;
+    }
   }
 
   if (mHiiControlSettings.TH500Config) {
@@ -1520,6 +1527,36 @@ InitializeSettings (
           ASSERT (FALSE);
         }
       }
+    }
+
+    //
+    // For 1 socket and 2 sockets which are linked by C2C-link,
+    // allow to populate UPHY PCIe config knobs only. The other
+    // multi-socket cases, will force the UPHY's NvLink always
+    // be enabled for linking to remote processors.
+    //
+    mHiiControlSettings.UphyNvlinkForceEnabled = TRUE;
+    HobPointer                                 = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+    if ((HobPointer != NULL) &&
+        (GET_GUID_HOB_DATA_SIZE (HobPointer) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+    {
+      PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (HobPointer);
+      if (PlatformResourceInfo->C2cMode != NULL ) {
+        for (SocketIndex = 0; SocketIndex < MAX_SOCKETS; SocketIndex++) {
+          if (SocketIndex >= PlatformResourceInfo->MaxPossibleSockets) {
+            break;
+          }
+
+          if ((EnabledSocketCount <= 1) ||
+              ((EnabledSocketCount <= 2) && (PlatformResourceInfo->C2cMode[SocketIndex] == TH500_MSS_C2C_MODE_REMOTE)))
+          {
+            mHiiControlSettings.UphyNvlinkForceEnabled = FALSE;
+            break;
+          }
+        }
+      }
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get platform resource data\n", __FUNCTION__));
     }
 
     if (mHiiControlSettings.DebugMenuSupported) {

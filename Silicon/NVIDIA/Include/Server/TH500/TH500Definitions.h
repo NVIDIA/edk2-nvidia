@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -205,6 +205,7 @@
 #define TH500_MSS_C2C_MODE          0xC910
 #define TH500_MSS_C2C_MODE_ONE_GPU  0x0
 #define TH500_MSS_C2C_MODE_TWO_GPU  0x1
+#define TH500_MSS_C2C_MODE_REMOTE   0x2
 
 // SOCKET AMAP
 #define TH500_AMAP_START_SOCKET_0  0x000000000000ULL

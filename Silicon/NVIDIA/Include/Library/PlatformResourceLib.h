@@ -135,6 +135,7 @@ typedef struct {
   TEGRA_BASE_AND_SIZE_INFO    *EgmMemoryInfo;
   UINT64                      PhysicalDramSize;
   TEGRA_DRAM_DEVICE_INFO      *DramDeviceInfo;
+  UINT8                       *C2cMode;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
