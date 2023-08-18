@@ -383,4 +383,10 @@
 #define TH500_MCF_SMMU_CLKEN_OVERRIDE_0_OFFSET  0x0
 #define TH500_MCF_SMMU_BYPASS_0_OFFSET          0x4
 
+// Maximum time ACPI loops before abort */
+#define TH500_ACPI_MAX_LOOP_TIMEOUT  30
+
+// Maximum time ACPI loops before abort during GPU _RST */
+#define TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT  10
+
 #endif //__TH500_DEFINES_H__

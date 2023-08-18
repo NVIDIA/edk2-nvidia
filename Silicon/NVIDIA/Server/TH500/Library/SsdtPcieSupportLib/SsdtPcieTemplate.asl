@@ -166,7 +166,7 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
         /* Make sure DAH4 is zero to avoid overwriting the value of
            an ongoing RAS-FW handling of _OST() call */
         Local1 = Zero
-        While ((Local1 < 60000) && (LNotEqual (DAH4, 0))) {
+        While ((Local1 < (TH500_ACPI_MAX_LOOP_TIMEOUT * 1000)) && (LNotEqual (DAH4, 0))) {
           Local1 += 2;
           Sleep (2)
         }
@@ -251,8 +251,8 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
 
       SET = 1
 
-      /* Wait for reset to complete, poll for 6sec (as per from Linux) */
-      For (Local0 = 0, Local0 < 60000, Local0 +=2) {
+      /* Wait for reset to complete, poll for TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT sec */
+      For (Local0 = 0, Local0 < (TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT * 1000), Local0 +=2) {
         If (((_SEG & 0xF) == 8) && (C8RS == 0)) {
           Break
         } ElseIf (((_SEG & 0xF) == 9) && (C9RS == 0)){
@@ -261,8 +261,8 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
         Sleep(2)
       }
 
-      /* Wait for reset to complete, poll for 6sec (as per from Linux) */
-      For (Local0 = 0, Local0 < 60000, Local0 +=2) {
+      /* Wait for reset to complete, poll for TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT sec */
+      For (Local0 = 0, Local0 < (TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT * 1000), Local0 +=2) {
         If (TI2S == 0xFF) {
           Break
         }
