@@ -152,15 +152,6 @@ STATIC UINT32  TxBurstClosureDelay = 0;
 #define UFSHC_DEV_CLK_EN                       BIT0
 #define UFSHC_DEV_RESET                        BIT1
 
-/* vendor specific pre-defined parameters */
-
-/*
- * HCLKFrequency in MHz.
- * HCLKDIV is used to generate 1usec tick signal used by Unipro.
- */
-#define UFS_VNDR_HCLKDIV_1US_TICK_OFFSET  0xCC
-#define REG_UFS_VNDR_HCLKDIV              0xFC
-
 STATIC
 EFI_STATUS
 UfsDmeCmd (
@@ -250,7 +241,6 @@ UfsCallback (
       MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
       MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
       MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
-      MmioWrite32 (BaseAddress + UFS_VNDR_HCLKDIV_1US_TICK_OFFSET, REG_UFS_VNDR_HCLKDIV);
       DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", FALSE);
       break;
 
@@ -429,7 +419,6 @@ DeviceDiscoveryNotify (
       MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
       MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
       MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
-      MmioWrite32 (BaseAddress + UFS_VNDR_HCLKDIV_1US_TICK_OFFSET, REG_UFS_VNDR_HCLKDIV);
       break;
 
     default:
