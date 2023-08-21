@@ -34,4 +34,9 @@ RestoreBootOrder (
   VOID       *Context
   );
 
+VOID
+PrintCurrentBootOrder (
+  IN CONST UINTN  DebugPrintLevel
+  );
+
 #endif

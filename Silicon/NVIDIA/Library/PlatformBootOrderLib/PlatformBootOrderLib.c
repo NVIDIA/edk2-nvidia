@@ -287,6 +287,30 @@ CleanupAndReturn:
   FREE_NON_NULL (LocalBootOrder);
 }
 
+VOID
+PrintCurrentBootOrder (
+  IN CONST UINTN  DebugPrintLevel
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       BootNextSize;
+  UINT16      *BootNext;
+
+  // Print BootNext if it exists
+  BootNext = NULL;
+  Status   = GetEfiGlobalVariable2 (EFI_BOOT_NEXT_VARIABLE_NAME, (VOID **)&BootNext, &BootNextSize);
+  if ((Status == EFI_SUCCESS) && (BootNextSize == sizeof (UINT16)) && (BootNext != NULL)) {
+    PrintBootOrder (DebugPrintLevel, L"BootNext:", BootNext, BootNextSize);
+  }
+
+  if (BootNext != NULL) {
+    FreePool (BootNext);
+  }
+
+  // Print the BootOrder
+  PrintBootOrder (DebugPrintLevel, L"Current BootOrder:", NULL, 0);
+}
+
 NVIDIA_BOOT_ORDER_PRIORITY *
 EFIAPI
 GetBootClassOfOption (

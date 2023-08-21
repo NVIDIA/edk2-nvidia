@@ -2108,6 +2108,9 @@ PlatformBootManagerAfterConsole (
   VOID
   )
 {
+  // Print the BootOrder information
+  PrintCurrentBootOrder (DEBUG_ERROR);
+
   //
   // Show the splash screen.
   //
