@@ -1176,6 +1176,7 @@ ProcessIPMIBootOrderUpdates (
   UINTN                         BootOrderLength;
   UINT16                        *ClassInstanceList;
   UINTN                         ClassInstanceLength;
+  UINTN                         ClassInstanceLengthRemaining;
   UINT64                        OsIndications;
   UINTN                         OsIndicationsSize;
   BOOLEAN                       IPv6;
@@ -1183,6 +1184,7 @@ ProcessIPMIBootOrderUpdates (
   NVIDIA_BOOT_ORDER_PRIORITY    *VirtualBootClass;
   UINT16                        *VirtualInstanceList;
   UINTN                         VirtualInstanceLength;
+  UINTN                         VirtualInstanceLengthRemaining;
   UINT16                        DesiredOptionNumber;
   BOOLEAN                       WillModifyBootOrder;
   UINT8                         BootOrderFlags;
@@ -1340,28 +1342,30 @@ ProcessIPMIBootOrderUpdates (
     goto AcknowledgeAndCleanup;
   }
 
+  ClassInstanceLengthRemaining   = ClassInstanceLength;
+  VirtualInstanceLengthRemaining = VirtualInstanceLength;
   // Find the index of the N-th occurance of RequestedClass in BootOrder when sorted by number
   if (RequestedInstance == 0) {
     // We will move all instances to the start of boot order, going through the list backwards to preserve relative ordering
     // We want to end with Virtual classes at the front of the list, so start with real classes if available
-    if (ClassInstanceLength > 0) {
-      DesiredOptionNumber = ClassInstanceList[--ClassInstanceLength];
+    if (ClassInstanceLengthRemaining > 0) {
+      DesiredOptionNumber = ClassInstanceList[--ClassInstanceLengthRemaining];
     } else {
-      DesiredOptionNumber = VirtualInstanceList[--VirtualInstanceLength];
+      DesiredOptionNumber = VirtualInstanceList[--VirtualInstanceLengthRemaining];
     }
-  } else if (RequestedInstance-1 < VirtualInstanceLength) {
-    PerformQuickSort (VirtualInstanceList, VirtualInstanceLength, sizeof (VirtualInstanceList[0]), Uint16SortCompare);
+  } else if (RequestedInstance-1 < VirtualInstanceLengthRemaining) {
+    PerformQuickSort (VirtualInstanceList, VirtualInstanceLengthRemaining, sizeof (VirtualInstanceList[0]), Uint16SortCompare);
     DesiredOptionNumber = VirtualInstanceList[RequestedInstance-1];
-  } else if ((RequestedInstance - 1 - VirtualInstanceLength) < ClassInstanceLength) {
-    PerformQuickSort (ClassInstanceList, ClassInstanceLength, sizeof (ClassInstanceList[0]), Uint16SortCompare);
-    DesiredOptionNumber = ClassInstanceList[RequestedInstance - 1 - VirtualInstanceLength];
+  } else if ((RequestedInstance - 1 - VirtualInstanceLengthRemaining) < ClassInstanceLengthRemaining) {
+    PerformQuickSort (ClassInstanceList, ClassInstanceLengthRemaining, sizeof (ClassInstanceList[0]), Uint16SortCompare);
+    DesiredOptionNumber = ClassInstanceList[RequestedInstance - 1 - VirtualInstanceLengthRemaining];
   } else {
     DEBUG ((DEBUG_WARN, "Unable to find requested instance %u of %a - Using all instances instead\n", RequestedInstance, RequestedClassName));
     RequestedInstance = 0;
-    if (ClassInstanceLength > 0) {
-      DesiredOptionNumber = ClassInstanceList[--ClassInstanceLength];
+    if (ClassInstanceLengthRemaining > 0) {
+      DesiredOptionNumber = ClassInstanceList[--ClassInstanceLengthRemaining];
     } else {
-      DesiredOptionNumber = VirtualInstanceList[--VirtualInstanceLength];
+      DesiredOptionNumber = VirtualInstanceList[--VirtualInstanceLengthRemaining];
     }
   }
 
@@ -1461,8 +1465,8 @@ ProcessIPMIBootOrderUpdates (
     if (RequestedInstance == 0) {
       // Note: In this case the unmoved ClassInstanceList and VirtualInstanceList elements are ordered
       // in the same order as in BootOrder, so we can be smart when searching BootOrder for them
-      while (ClassInstanceLength > 0) {
-        DesiredOptionNumber = ClassInstanceList[--ClassInstanceLength];
+      while (ClassInstanceLengthRemaining > 0) {
+        DesiredOptionNumber = ClassInstanceList[--ClassInstanceLengthRemaining];
         while ((BootOrderIndex > 0) && (BootOrder[BootOrderIndex] != DesiredOptionNumber)) {
           BootOrderIndex--;
         }
@@ -1472,8 +1476,8 @@ ProcessIPMIBootOrderUpdates (
       }
 
       BootOrderIndex = BootOrderLength;
-      while (VirtualInstanceLength > 0) {
-        DesiredOptionNumber = VirtualInstanceList[--VirtualInstanceLength];
+      while (VirtualInstanceLengthRemaining > 0) {
+        DesiredOptionNumber = VirtualInstanceList[--VirtualInstanceLengthRemaining];
         while ((BootOrderIndex > 0) && (BootOrder[BootOrderIndex] != DesiredOptionNumber)) {
           BootOrderIndex--;
         }

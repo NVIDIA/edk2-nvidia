@@ -733,7 +733,7 @@ EFIAPI
 IBO_VirtualUsbBootOrderSetup (
   IN UNIT_TEST_CONTEXT  Context,
   IN UINTN              Count,
-  IN INTN               *Configuration // negative for virtual, positive for real, abs is enumeration order, position is boot order
+  IN INTN               *Configuration // negative for virtual, positive for real, abs is enumeration order (ALL virtual enumerated first!), position is boot order
   )
 {
   UNIT_TEST_STATUS  Status;
@@ -822,11 +822,13 @@ IBO_VirtualUsbBootOrderSetup (
       WillModifyBootOrder = TRUE;
     } else if (VirtualDeviceCount > 0) {
       WillModifyBootOrder = FALSE;
-      // Unless all the virtual devices are first, they will move to be first
-      for (int i = 0; i < VirtualDeviceCount; i++) {
-        if (Configuration[i] >= 0) {
-          WillModifyBootOrder = TRUE;
-          break;
+      if (IboContext->Instance == 0) {
+        // Unless all the virtual devices are first, they will move to be first
+        for (int i = 0; i < VirtualDeviceCount; i++) {
+          if (Configuration[i] >= 0) {
+            WillModifyBootOrder = TRUE;
+            break;
+          }
         }
       }
     } else {
@@ -968,6 +970,18 @@ IBO_R3V1V2R1R2_BootOrderSetup (
 {
   // [R3, V1, V2, R1, R2]
   INTN  Order[] = { 5, -1, -2, 3, 4 };
+
+  return IBO_VirtualUsbBootOrderSetup (Context, ARRAY_SIZE (Order), &Order[0]);
+}
+
+UNIT_TEST_STATUS
+EFIAPI
+IBO_GVS_BootOrderSetup (
+  IN UNIT_TEST_CONTEXT  Context
+  )
+{
+  // [V1, R1, R2, R3, V2, R4, R5, R6, R7, R8]
+  INTN  Order[] = { -1, 3, 4, 5, -2, 6, 7, 8, 9, 10 };
 
   return IBO_VirtualUsbBootOrderSetup (Context, ARRAY_SIZE (Order), &Order[0]);
 }
@@ -1345,6 +1359,7 @@ SetupAndRunUnitTests (
 
   ADD_IPMI_TESTS (VirtualUsbBootOrder, IBO_V3V1V2R1R2_BootOrderSetup, Contexts);
   ADD_IPMI_TESTS (VirtualUsbBootOrder, IBO_R3V1V2R1R2_BootOrderSetup, Contexts);
+  ADD_IPMI_TESTS (VirtualUsbBootOrder, IBO_GVS_BootOrderSetup, Contexts);
 
   //
   // Execute the tests.
