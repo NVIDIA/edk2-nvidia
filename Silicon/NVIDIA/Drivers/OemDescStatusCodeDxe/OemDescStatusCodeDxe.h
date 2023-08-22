@@ -2,7 +2,7 @@
 
   OEM Status code handler to log addtional data as string
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,6 +18,8 @@
 
 #define VARIABLE_LEN  1
 
+#define MAX_STAGED_OEM_DESC_ENTRIES  16
+
 //
 // IPMI OEM Send Description Request/Response structures
 //
@@ -32,5 +34,24 @@ typedef struct {
   UINT8    CompletionCode;
 } IPMI_OEM_SEND_DESC_RSP_DATA;
 #pragma pack()
+
+typedef struct {
+  IPMI_OEM_SEND_DESC_REQ_DATA    *RequestData;
+  UINT32                         RequestDataSize;
+} OEM_DESC_FIFO_ENTRY;
+
+/**
+  Helper function for sending OEM IPMI command
+
+  @param[in]    RequestData     IPMI request data
+  @param[in]    RequestDataSize IPMI request data size
+  @param[in]    NumRetries      Number of retries if error
+**/
+EFI_STATUS
+OemDescSend (
+  IN  IPMI_OEM_SEND_DESC_REQ_DATA  *RequestData,
+  IN  UINT32                       RequestDataSize,
+  IN  INT32                        NumRetries
+  );
 
 #endif // __OEM_DESC_STATUS_CODE_DXE_H__

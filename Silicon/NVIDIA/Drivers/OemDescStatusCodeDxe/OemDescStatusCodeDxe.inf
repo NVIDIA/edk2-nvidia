@@ -2,7 +2,7 @@
 #
 # OEM Status code handler to log addtional data as string
 #
-# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -33,16 +33,13 @@
   MemoryAllocationLib
   DebugLib
   DebugPrintErrorLevelLib
-  IpmiBaseLib
 
 [Guids]
   gEfiEventExitBootServicesGuid
 
 [Protocols]
-  gIpmiProtocolGuid              ## CONSUMES
+  gIpmiTransportProtocolGuid     ## CONSUMES
   gEfiRscHandlerProtocolGuid     ## CONSUMES
 
 [Depex]
-  gIpmiTransportProtocolGuid
-  AND
   gEfiRscHandlerProtocolGuid
