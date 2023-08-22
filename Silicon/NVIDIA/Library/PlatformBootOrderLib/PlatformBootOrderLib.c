@@ -389,6 +389,8 @@ GetBootClassOfOption (
     PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
   }
 
+  // Result will be the deepest device path node that matches
+  // the earliest type in the table.
   DevicePathNode = Option->FilePath;
   while (!IsDevicePathEndType (DevicePathNode)) {
     for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
@@ -405,6 +407,7 @@ GetBootClassOfOption (
             (((Function == Table[BootPriorityIndex].FuncNum) || (MAX_UINTN == Table[BootPriorityIndex].FuncNum))))
         {
           Result = &Table[BootPriorityIndex];
+          break;
         }
       }
     }
@@ -543,6 +546,7 @@ GetBootClassOfName (
   return NULL;
 }
 
+// Note: This function only works when called after ParseDefaultBootPriority() has created mBootPriorityTable
 STATIC
 INT32
 EFIAPI
@@ -612,6 +616,7 @@ ParseDefaultBootPriority (
   CHAR8                       *BootPrioritySbdfStart;
   CHAR8                       *BootPrioritySbdfEnd;
   UINTN                       BootPrioritySbdfLen;
+  UINTN                       BootClassIndex;
 
   Priority = 0;
   // Process the priority order
@@ -704,6 +709,17 @@ ParseDefaultBootPriority (
     }
 
     CurrentBootPriorityStr += BootPriorityClassLen + BootPrioritySbdfLen + 1;
+  }
+
+  // Add all the template classes to the table with default priority, so that they won't accidentally
+  // be treated as the wrong class in lookups if they were not in the default boot order
+  for (BootClassIndex = 0; BootClassIndex < ARRAY_SIZE (mBootPriorityTemplate); BootClassIndex++) {
+    BootPriorityClassLen = AsciiStrLen (mBootPriorityTemplate[BootClassIndex].OrderName);
+
+    Status = AppendBootOrderPriority (mBootPriorityTemplate[BootClassIndex].OrderName, BootPriorityClassLen, &ClassBootPriority);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Fail to append boot class %a, Status= %r\r\n", mBootPriorityTemplate[BootClassIndex].OrderName, Status));
+    }
   }
 
   return;
