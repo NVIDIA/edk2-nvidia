@@ -258,6 +258,7 @@ typedef struct {
         option text = STRING_TOKEN(STR_PCIE_C4_X16),  value = 1, flags = 0;\
         option text = STRING_TOKEN(STR_PCIE_C4_X8_C5_X8),  value = 2, flags = 0;\
         option text = STRING_TOKEN(STR_PCIE_C5_X4_NVLINK_X12),  value = 3, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C5_X4_NVLINK_NO_PCIE),  value = 4, flags = 0;\
       endoneof;\
       ADD_GOTO_PCIE_FORM(socket,4) \
       ADD_GOTO_PCIE_FORM(socket,5) \
@@ -269,6 +270,7 @@ typedef struct {
         option text = STRING_TOKEN(STR_PCIE_C6_X16),  value = 1, flags = 0;\
         option text = STRING_TOKEN(STR_PCIE_C6_X8_C7_X8),  value = 2, flags = 0;\
         option text = STRING_TOKEN(STR_PCIE_C7_X4_NVLINK_X12),  value = 3, flags = 0;\
+        option text = STRING_TOKEN(STR_PCIE_C7_X4_NVLINK_NO_PCIE),  value = 4, flags = 0;\
       endoneof;\
       ADD_GOTO_PCIE_FORM(socket,6) \
       ADD_GOTO_PCIE_FORM(socket,7) \

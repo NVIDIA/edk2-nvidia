@@ -76,6 +76,7 @@
 #string STR_PCIE_C4_X16                         #language x-uefi-redfish-Bios.v1_2_0 "PCIeC4x16"
 #string STR_PCIE_C4_X8_C5_X8                    #language x-uefi-redfish-Bios.v1_2_0 "PCIeC4x8C5x8"
 #string STR_PCIE_C5_X4_NVLINK_X12               #language x-uefi-redfish-Bios.v1_2_0 "PCIeC5x4NVLINKx12"
+#string STR_PCIE_C5_X4_NVLINK_NO_PCIE           #language x-uefi-redfish-Bios.v1_2_0 "PCIeC5x4NVLINKNoPCIe"
 
 #string STR_UPHY3_SOCKET0_PROMPT                #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0UPHY3config"
 #string STR_UPHY3_SOCKET1_PROMPT                #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1UPHY3config"
@@ -84,6 +85,7 @@
 #string STR_PCIE_C6_X16                         #language x-uefi-redfish-Bios.v1_2_0 "PCIeC6x16"
 #string STR_PCIE_C6_X8_C7_X8                    #language x-uefi-redfish-Bios.v1_2_0 "PCIeC6x8C7x8"
 #string STR_PCIE_C7_X4_NVLINK_X12               #language x-uefi-redfish-Bios.v1_2_0 "PCIeC7x4NVLINKx12"
+#string STR_PCIE_C7_X4_NVLINK_NO_PCIE           #language x-uefi-redfish-Bios.v1_2_0 "PCIeC7x4NVLINKNoPCIe"
 
 #string STR_UPHY4_SOCKET0_PROMPT                #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0UPHY4config"
 #string STR_UPHY4_SOCKET1_PROMPT                #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1UPHY4config"
