@@ -266,6 +266,7 @@ AndroidBootGetVerify (
   ANDROID_BOOTIMG_TYPE0_HEADER    *Type0Header;
   ANDROID_BOOTIMG_TYPE1_HEADER    *Type1Header;
   ANDROID_BOOTIMG_TYPE2_HEADER    *Type2Header;
+  ANDROID_BOOTIMG_TYPE3_HEADER    *Type3Header;
   UINT32                          Offset;
   UINT32                          SignatureHeaderSize;
   UINT64                          RcmKernelSize;
@@ -281,12 +282,15 @@ AndroidBootGetVerify (
              MAX (
                MAX (
                  MAX (
-                   sizeof (ANDROID_BOOTIMG_TYPE0_HEADER),
-                   sizeof (ANDROID_BOOTIMG_VERSION_HEADER)
+                   MAX (
+                     sizeof (ANDROID_BOOTIMG_TYPE0_HEADER),
+                     sizeof (ANDROID_BOOTIMG_VERSION_HEADER)
+                     ),
+                   sizeof (ANDROID_BOOTIMG_TYPE1_HEADER)
                    ),
-                 sizeof (ANDROID_BOOTIMG_TYPE1_HEADER)
+                 sizeof (ANDROID_BOOTIMG_TYPE2_HEADER)
                  ),
-               sizeof (ANDROID_BOOTIMG_TYPE2_HEADER)
+               sizeof (ANDROID_BOOTIMG_TYPE3_HEADER)
                )
              );
   if (Header == NULL) {
@@ -416,6 +420,27 @@ AndroidBootGetVerify (
       KernelSize       = Type2Header->KernelSize;
       RamdiskSize      = Type2Header->RamdiskSize;
       HeaderKernelArgs = Type2Header->KernelArgs;
+
+      break;
+
+    case 3:
+      // Read the full Type3 header.
+      Status = AndroidBootRead (
+                 BlockIo,
+                 DiskIo,
+                 Offset,
+                 Header,
+                 sizeof (ANDROID_BOOTIMG_TYPE3_HEADER)
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+
+      Type3Header      = (ANDROID_BOOTIMG_TYPE3_HEADER *)Header;
+      PageSize         = SIZE_4KB;
+      KernelSize       = Type3Header->KernelSize;
+      RamdiskSize      = Type3Header->RamdiskSize;
+      HeaderKernelArgs = Type3Header->KernelArgs;
 
       break;
 
