@@ -48,6 +48,7 @@
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
 
   AndroidBootImgLib|EmbeddedPkg/Library/AndroidBootImgLib/AndroidBootImgLib.inf
+  AndroidBcbLib|Silicon/NVIDIA/Library/AndroidBcbLib/AndroidBcbLib.inf
 
 ################################################################################
 #

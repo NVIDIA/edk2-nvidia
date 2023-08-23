@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro. All rights reserved.
 
@@ -18,6 +18,7 @@
 #include <Protocol/LoadedImage.h>
 #include <Library/HandleParsingLib.h>
 #include <Library/BootChainInfoLib.h>
+#include <Library/AndroidBcbLib.h>
 #include <NVIDIAConfiguration.h>
 
 STATIC EFI_PHYSICAL_ADDRESS       mRamLoadedBaseAddress  = 0;
@@ -838,8 +839,10 @@ AndroidBootDriverBindingSupported (
   UINTN                        ChildCount;
   UINTN                        ChildIndex;
   VOID                         *Protocol;
+  BOOLEAN                      RecoveryMode;
   UINTN                        DataSize;
   UINT32                       BootMode;
+  MiscCmdType                  MiscCmd;
 
   // This driver will be accessed while boot manager attempts to connect
   // all drivers to the controllers for each partition entry.
@@ -899,9 +902,20 @@ AndroidBootDriverBindingSupported (
     goto ErrorExit;
   }
 
+  RecoveryMode = FALSE;
+
   DataSize = sizeof (BootMode);
   Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
   if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
+    RecoveryMode = TRUE;
+  }
+
+  Status = GetCmdFromMiscPartition (&MiscCmd);
+  if (!EFI_ERROR (Status) && ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE))) {
+    RecoveryMode = TRUE;
+  }
+
+  if (RecoveryMode == TRUE) {
     StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, L"recovery");
   } else {
     Status = GetActivePartitionName (L"kernel", PartitionName);

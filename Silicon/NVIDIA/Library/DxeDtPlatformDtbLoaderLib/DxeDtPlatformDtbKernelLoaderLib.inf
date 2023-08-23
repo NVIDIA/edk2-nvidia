@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -39,6 +39,7 @@
   TegraDeviceTreeKernelOverlayLib
   OpteeNvLib
   BootChainInfoLib
+  AndroidBcbLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid

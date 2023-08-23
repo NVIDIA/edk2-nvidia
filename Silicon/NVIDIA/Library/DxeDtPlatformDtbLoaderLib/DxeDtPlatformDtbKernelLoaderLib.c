@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -23,6 +23,7 @@
 #include <Library/BootChainInfoLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/AndroidBcbLib.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/Eeprom.h>
@@ -600,12 +601,14 @@ InstallFdt (
   VOID                          *KernelDtb;
   VOID                          *Dtb;
   VOID                          *DtbCopy;
-  UINTN                         DataSize;
-  UINT32                        BootMode;
   VOID                          *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
   TEGRA_PLATFORM_TYPE           PlatformType;
   BOOLEAN                       UefiDtb;
+  BOOLEAN                       RecoveryMode;
+  UINTN                         DataSize;
+  UINT32                        BootMode;
+  MiscCmdType                   MiscCmd;
 
   HandleBuffer   = NULL;
   PartitionInfo  = NULL;
@@ -652,9 +655,20 @@ InstallFdt (
     goto Install;
   }
 
+  RecoveryMode = FALSE;
+
   DataSize = sizeof (BootMode);
   Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
   if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
+    RecoveryMode = TRUE;
+  }
+
+  Status = GetCmdFromMiscPartition (&MiscCmd);
+  if (!EFI_ERROR (Status) && ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE))) {
+    RecoveryMode = TRUE;
+  }
+
+  if (RecoveryMode == TRUE) {
     StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, PcdGetPtr (PcdRecoveryKernelDtbPartitionName));
   } else {
     Status = GetActivePartitionName (PcdGetPtr (PcdKernelDtbPartitionName), PartitionName);
