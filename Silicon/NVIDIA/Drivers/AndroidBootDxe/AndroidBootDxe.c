@@ -267,6 +267,7 @@ AndroidBootGetVerify (
   ANDROID_BOOTIMG_TYPE1_HEADER    *Type1Header;
   ANDROID_BOOTIMG_TYPE2_HEADER    *Type2Header;
   ANDROID_BOOTIMG_TYPE3_HEADER    *Type3Header;
+  ANDROID_BOOTIMG_TYPE4_HEADER    *Type4Header;
   UINT32                          Offset;
   UINT32                          SignatureHeaderSize;
   UINT64                          RcmKernelSize;
@@ -278,19 +279,21 @@ AndroidBootGetVerify (
   CHAR8                           *HeaderKernelArgs;
 
   // Allocate a buffer large enough to hold any header type.
+  // - This chain of MAX's is awkward looking, but it's safe and the compiler
+  // will optimize this down to a single number anyway.
   Header = AllocatePool (
              MAX (
                MAX (
                  MAX (
                    MAX (
                      sizeof (ANDROID_BOOTIMG_TYPE0_HEADER),
-                     sizeof (ANDROID_BOOTIMG_VERSION_HEADER)
+                     sizeof (ANDROID_BOOTIMG_TYPE1_HEADER)
                      ),
-                   sizeof (ANDROID_BOOTIMG_TYPE1_HEADER)
+                   sizeof (ANDROID_BOOTIMG_TYPE2_HEADER)
                    ),
-                 sizeof (ANDROID_BOOTIMG_TYPE2_HEADER)
+                 sizeof (ANDROID_BOOTIMG_TYPE3_HEADER)
                  ),
-               sizeof (ANDROID_BOOTIMG_TYPE3_HEADER)
+               sizeof (ANDROID_BOOTIMG_TYPE4_HEADER)
                )
              );
   if (Header == NULL) {
@@ -301,6 +304,8 @@ AndroidBootGetVerify (
   RcmKernelSize       = PcdGet64 (PcdRcmKernelSize);
 
   // Read enough to get the header version.
+  // - This is a minimal read.  We can assume it will fit in Header as it was
+  // sized for a full header.
   Offset = 0;
   Status = AndroidBootRead (
              BlockIo,
@@ -441,6 +446,27 @@ AndroidBootGetVerify (
       KernelSize       = Type3Header->KernelSize;
       RamdiskSize      = Type3Header->RamdiskSize;
       HeaderKernelArgs = Type3Header->KernelArgs;
+
+      break;
+
+    case 4:
+      // Read the full Type4 header.
+      Status = AndroidBootRead (
+                 BlockIo,
+                 DiskIo,
+                 Offset,
+                 Header,
+                 sizeof (ANDROID_BOOTIMG_TYPE4_HEADER)
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+
+      Type4Header      = (ANDROID_BOOTIMG_TYPE4_HEADER *)Header;
+      PageSize         = SIZE_4KB;
+      KernelSize       = Type4Header->KernelSize;
+      RamdiskSize      = Type4Header->RamdiskSize;
+      HeaderKernelArgs = Type4Header->KernelArgs;
 
       break;
 

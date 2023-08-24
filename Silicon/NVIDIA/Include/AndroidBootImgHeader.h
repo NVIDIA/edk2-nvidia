@@ -135,6 +135,23 @@ typedef struct {
   CHAR8     KernelArgs[ANDROID_BOOTIMG_KERNEL_ARGS_SIZE + ANDROID_BOOTIMG_KERNEL_EXTRA_ARGS_SIZE];
 } ANDROID_BOOTIMG_TYPE3_HEADER;
 
+/**
+  Type4 Android boot.img header.
+
+  https://source.android.com/docs/core/architecture/bootloader/boot-image-header
+*/
+typedef struct {
+  UINT8     BootMagic[ANDROID_BOOT_MAGIC_LENGTH];
+  UINT32    KernelSize;
+  UINT32    RamdiskSize;
+  UINT32    OsVersion;
+  UINT32    HeaderSize;
+  UINT32    Reserved[4];
+  UINT32    HeaderVersion;
+  CHAR8     KernelArgs[ANDROID_BOOTIMG_KERNEL_ARGS_SIZE + ANDROID_BOOTIMG_KERNEL_EXTRA_ARGS_SIZE];
+  UINT32    SignatureSize;
+} ANDROID_BOOTIMG_TYPE4_HEADER;
+
 #pragma pack ()
 
 /* Check Val (unsigned) is a power of 2 (has only one bit set) */
