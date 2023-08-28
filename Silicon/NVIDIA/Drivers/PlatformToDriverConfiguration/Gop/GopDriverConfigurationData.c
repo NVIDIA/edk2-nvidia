@@ -1,7 +1,7 @@
 /** @file
   GOP Driver specific Query and Response functions
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,21 +22,13 @@ ResponseGopParameters (
   IN CONST  EFI_PLATFORM_CONFIGURATION_ACTION  ConfigurationAction
   )
 {
-  GOP_PARAMETER_INFO  *GopParameterBlock;
-
   if (ParameterBlock == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  GopParameterBlock = (GOP_PARAMETER_INFO *)ParameterBlock;
-
   switch (ConfigurationAction) {
     case EfiPlatformConfigurationActionNone:
     case EfiPlatformConfigurationActionUnsupportedGuid:
-      if (GopParameterBlock->DcbImage != NULL) {
-        FreePool (GopParameterBlock->DcbImage);
-      }
-
       FreePool ((VOID *)ParameterBlock);
       return EFI_SUCCESS;
 
@@ -44,7 +36,12 @@ ResponseGopParameters (
     case EfiPlatformConfigurationActionRestartController:
     case EfiPlatformConfigurationActionRestartPlatform:
     case EfiPlatformConfigurationActionNvramFailed:
-      DEBUG ((DEBUG_ERROR, "Handling not supported for ConfigurationAction %d\r\n", ConfigurationAction));
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: unhandled configuration action: %lu\r\n",
+        __FUNCTION__,
+        (UINT64)ConfigurationAction
+        ));
       return EFI_INVALID_PARAMETER;
 
     default:
@@ -71,11 +68,6 @@ QueryGopParameters (
     return EFI_INVALID_PARAMETER;
   }
 
-  GopParameterInfo = (GOP_PARAMETER_INFO *)AllocateZeroPool (sizeof (GOP_PARAMETER_INFO));
-  if (GopParameterInfo == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
-
   // Obtaining display info from the device tree
   DcbImage = (UINT8 *)fdt_getprop (
                         DtNode->DeviceTreeBase,
@@ -83,23 +75,34 @@ QueryGopParameters (
                         "nvidia,dcb-image",
                         &DcbImageLen
                         );
-
-  if ((DcbImage != NULL) &&
-      (DcbImageLen > 0))
-  {
-    GopParameterInfo->DcbImage = AllocateZeroPool (DcbImageLen);
-    if (GopParameterInfo->DcbImage == NULL) {
-      FreePool (GopParameterInfo);
-      return EFI_OUT_OF_RESOURCES;
+  if (DcbImage == NULL) {
+    if (DcbImageLen != -FDT_ERR_NOTFOUND) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to retrieve property 'nvidia,dcb-image': %a\r\n",
+        __FUNCTION__,
+        fdt_strerror (DcbImageLen)
+        ));
     }
+
+    DcbImageLen = 0;
+  }
+
+  GopParameterInfo = (GOP_PARAMETER_INFO *)AllocateZeroPool (sizeof (*GopParameterInfo) + DcbImageLen);
+  if (GopParameterInfo == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  if (DcbImageLen > 0) {
+    GopParameterInfo->DcbImage    = (UINT8 *)(GopParameterInfo + 1);
+    GopParameterInfo->DcbImageLen = DcbImageLen;
 
     // Copy contents of DCB image
     CopyMem (GopParameterInfo->DcbImage, DcbImage, DcbImageLen);
-    GopParameterInfo->DcbImageLen = (UINT32)DcbImageLen;
   }
 
   *ParameterBlock     = (VOID *)GopParameterInfo;
-  *ParameterBlockSize = sizeof (GOP_PARAMETER_INFO);
+  *ParameterBlockSize = sizeof (*GopParameterInfo);
 
   return EFI_SUCCESS;
 }
