@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (C) 2016, Linaro Ltd. All rights reserved.<BR>
-  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,8 +13,8 @@
 #include <PiDxe.h>
 
 #include <Library/BaseMemoryLib.h>
+#include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/NVIDIADebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 
@@ -110,8 +110,10 @@ typedef struct {
   @param  Device            Point to NON_DISCOVERABLE_PCI_DEVICE instance.
   @param  ControllerHandle  Handle of controller to bind driver to.
 
+  @retval EFI_SUCCESS       Protocol successfully initialized.
+  @retval EFI_DEVICE_ERROR  Protocol could not be initialized.
 **/
-VOID
+EFI_STATUS
 InitializePciIoProtocol (
   NON_DISCOVERABLE_PCI_DEVICE  *Device,
   EFI_HANDLE                   ControllerHandle
