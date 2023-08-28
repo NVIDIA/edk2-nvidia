@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro. All rights reserved.
 
@@ -20,6 +20,7 @@
 #include <Library/BootChainInfoLib.h>
 #include <Library/AndroidBcbLib.h>
 #include <NVIDIAConfiguration.h>
+#include <Library/DeviceTreeHelperLib.h>
 
 STATIC EFI_PHYSICAL_ADDRESS       mRamLoadedBaseAddress  = 0;
 STATIC UINT64                     mRamLoadedSize         = 0;
@@ -195,10 +196,13 @@ EFI_LOAD_FILE2_PROTOCOL  mAndroidBootDxeLoadFile2 = {
 };
 
 /**
-  Attempt to read the data from source to destination buffer.
+  Attempt to read data from an Android boot.img to destination buffer. If
+  BlockIo and DiskIo are provided, the data will be read from there. Otherwise,
+  we'll next try to read from the kernel address set in the DTB. Finally, we'll
+  try to use the RCM kernel address.
 
-  @param[in]  BlockIo             BlockIo protocol interface which is already located.
-  @param[in]  DiskIo              DiskIo protocol interface which is already located.
+  @param[in]  BlockIo             Optional. BlockIo protocol interface which is already located.
+  @param[in]  DiskIo              Optional. DiskIo protocol interface which is already located.
   @param[in]  Offset              Data offset to read from.
   @param[in]  Buffer              The memory buffer to transfer the data to.
   @param[in]  BufferSize          Size of the memory buffer to transfer the data to.
@@ -215,10 +219,12 @@ AndroidBootRead (
   IN UINTN                  BufferSize
   )
 {
-  VOID  *RcmKernelBase;
+  VOID        *RcmKernelBase;
+  UINT64      KernelStart;
+  UINT64      KernelDtbStart;
+  EFI_STATUS  Status;
 
-  RcmKernelBase = (VOID *)PcdGet64 (PcdRcmKernelBase);
-
+  // Read from BlockIo and DiskIo, if provided.
   if ((BlockIo != NULL) && (DiskIo != NULL)) {
     return DiskIo->ReadDisk (
                      DiskIo,
@@ -229,6 +235,15 @@ AndroidBootRead (
                      );
   }
 
+  // Otherwise, try the address specified by the DTB.
+  Status = GetKernelAddress (&KernelStart, &KernelDtbStart);
+  if (Status == EFI_SUCCESS) {
+    gBS->CopyMem (Buffer, (VOID *)((UINTN)KernelStart + Offset), BufferSize);
+    return EFI_SUCCESS;
+  }
+
+  // Finally, fallback to an RCM boot
+  RcmKernelBase = (VOID *)PcdGet64 (PcdRcmKernelBase);
   if (RcmKernelBase != NULL) {
     gBS->CopyMem (Buffer, (VOID *)((UINTN)RcmKernelBase + Offset), BufferSize);
     return EFI_SUCCESS;
@@ -271,13 +286,14 @@ AndroidBootGetVerify (
   ANDROID_BOOTIMG_TYPE4_HEADER    *Type4Header;
   UINT32                          Offset;
   UINT32                          SignatureHeaderSize;
-  UINT64                          RcmKernelSize;
   UINTN                           PartitionSize;
   UINTN                           ImageSize;
   UINT32                          PageSize;
   UINT32                          KernelSize;
   UINT32                          RamdiskSize;
   CHAR8                           *HeaderKernelArgs;
+  UINT64                          KernelStart;
+  UINT64                          KernelDtbStart;
 
   // Allocate a buffer large enough to hold any header type.
   // - This chain of MAX's is awkward looking, but it's safe and the compiler
@@ -302,7 +318,6 @@ AndroidBootGetVerify (
   }
 
   SignatureHeaderSize = PcdGet32 (PcdSignedImageHeaderSize);
-  RcmKernelSize       = PcdGet64 (PcdRcmKernelSize);
 
   // Read enough to get the header version.
   // - This is a minimal read.  We can assume it will fit in Header as it was
@@ -484,16 +499,29 @@ AndroidBootGetVerify (
     goto Exit;
   }
 
-  // Make sure that the image fits in the partition
-  if ((BlockIo != NULL) && (DiskIo != NULL)) {
-    PartitionSize = (UINTN)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
-  } else {
-    PartitionSize = RcmKernelSize;
-  }
-
+  // Make sure that the image fits in the partition.  If the image is bigger
+  // than the space allocated, then we have to assume it has been truncated and
+  // we don't want to use it.
   ImageSize = Offset + PageSize
               + ALIGN_VALUE (KernelSize, PageSize)
               + ALIGN_VALUE (RamdiskSize, PageSize);
+
+  if ((BlockIo != NULL) && (DiskIo != NULL)) {
+    // We're booting from a partition.  Get the size from the Media descriptor.
+    PartitionSize = (UINTN)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
+  } else {
+    // We're booting from memory.
+    Status = GetKernelAddress (&KernelStart, &KernelDtbStart);
+    if (Status == EFI_SUCCESS) {
+      // When the kernel is handed off to us via the DTB, a size is not provided.
+      // Just assume the partition is big enough.
+      PartitionSize = ImageSize;
+    } else {
+      // Otherwise, assume this is an RCM load.
+      PartitionSize = PcdGet64 (PcdRcmKernelSize);
+    }
+  }
+
   if (ImageSize > PartitionSize) {
     Status = EFI_NOT_FOUND;
     goto Exit;
@@ -1550,6 +1578,58 @@ EFI_DRIVER_BINDING_PROTOCOL  mAndroidBootDriverBinding = {
 };
 
 /**
+  Setup to boot from an image in memory.
+
+  @param[in]  ImageHandle       The firmware allocated handle for the UEFI image.
+
+  @retval EFI_SUCCESS           The operation completed successfully.
+  @retval Others                An unexpected error occurred.
+
+**/
+STATIC
+EFI_STATUS
+AndroidBootPrepareBootFromMemory (
+  IN EFI_HANDLE  ImageHandle
+  )
+{
+  EFI_STATUS  Status;
+  CHAR16      *KernelArgs = NULL;
+
+  // Allocate KernelArgs
+  KernelArgs = AllocateZeroPool (sizeof (CHAR16) * ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
+  if (KernelArgs == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  // Verify the image header
+  Status = AndroidBootGetVerify (NULL, NULL, NULL, KernelArgs);
+  if (EFI_ERROR (Status)) {
+    FreePool (KernelArgs);
+    return Status;
+  }
+
+  // Copy NVIDIA RCM Kernel GUID to device path
+  CopyMem (&mRcmLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARcmKernelGuid, sizeof (EFI_GUID));
+
+  // Install Rcm Loadfile protocol
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &ImageHandle,
+                  &gEfiLoadFileProtocolGuid,
+                  &mRcmLoadFile,
+                  &gNVIDIALoadfileKernelArgsGuid,
+                  KernelArgs,
+                  &gEfiDevicePathProtocolGuid,
+                  &mRcmLoadFileDevicePath,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to install Load File Protocol (%r)\r\n", __FUNCTION__, Status));
+  }
+
+  return Status;
+}
+
+/**
   This is the declaration of an EFI image entry point. This entry point is
   the same for UEFI Applications, UEFI OS Loaders, and UEFI Drivers including
   both device drivers and bus drivers.
@@ -1571,7 +1651,11 @@ AndroidBootDxeDriverEntryPoint (
   EFI_STATUS  Status;
   VOID        *Hob;
   UINTN       EmmcMagic;
-  CHAR16      *KernelArgs;
+  UINT64      KernelStart;
+  UINT64      KernelDtbStart;
+  UINTN       NewKernelDtbPages;
+  VOID        *NewKernelDtb = NULL;
+  INT32       MemoryNode;
 
   // Install UEFI Driver Model protocol(s).
   Status = EfiLibInstallDriverBinding (
@@ -1584,41 +1668,60 @@ AndroidBootDxeDriverEntryPoint (
     return Status;
   }
 
-  if ((PcdGet64 (PcdRcmKernelBase) != 0) &&
-      (PcdGet64 (PcdRcmKernelSize) != 0))
+  // Look for a kernel address in the DTB.  If found, then a boot.img has
+  // already been loaded for us.  We'll boot it.
+  Status = GetKernelAddress (&KernelStart, &KernelDtbStart);
+
+  if (Status == EFI_SUCCESS) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Booting image at %lx with DTB %lx\r\n",
+      __FUNCTION__,
+      KernelStart,
+      KernelDtbStart
+      ));
+
+    Status = AndroidBootPrepareBootFromMemory (ImageHandle);
+    if (EFI_ERROR (Status)) {
+      goto Done;
+    }
+
+    // Copy the kernel DTB.  We need to provide a modified version.
+    NewKernelDtbPages = EFI_SIZE_TO_PAGES (2 * fdt_totalsize ((VOID *)KernelDtbStart));
+    NewKernelDtb      = AllocatePages (NewKernelDtbPages);
+    if (NewKernelDtb == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: failed to allocate pages for expanded kernel DTB\r\n", __FUNCTION__));
+      goto Done;
+    }
+
+    if (fdt_open_into ((UINT8 *)KernelDtbStart, NewKernelDtb, EFI_PAGES_TO_SIZE (NewKernelDtbPages)) != 0) {
+      DEBUG ((DEBUG_ERROR, "%a: failed to relocate kernel DTB\r\n", __FUNCTION__));
+      goto Done;
+    }
+
+    // Remove the /memory node.  We want to be sure the kernel gets its memory
+    // information from UEFI instead of the DTB.
+    MemoryNode = fdt_path_offset (NewKernelDtb, "/memory");
+    if (MemoryNode > 0) {
+      DEBUG ((DEBUG_INFO, "%a: Deleting /memory at %x\r\n", __FUNCTION__, MemoryNode));
+      fdt_del_node (NewKernelDtb, MemoryNode);
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: Using DTB %p\r\n", __FUNCTION__, NewKernelDtb));
+
+    // Install the modified DTB
+    gBS->InstallConfigurationTable (&gFdtTableGuid, NewKernelDtb);
+  } else if ((PcdGet64 (PcdRcmKernelBase) != 0) &&
+             (PcdGet64 (PcdRcmKernelSize) != 0))
   {
-    // Allocate KernelArgs
-    KernelArgs = AllocateZeroPool (sizeof (CHAR16) * ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
-    if (KernelArgs == NULL) {
-      DEBUG ((DEBUG_ERROR, "%a: alloc failed\n", __FUNCTION__));
-      goto Done;
-    }
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Booting image at %lx with RCM\r\n",
+      __FUNCTION__,
+      PcdGet64 (PcdRcmKernelBase)
+      ));
 
-    // Verify the image header and set the internal data structure ImgData
-    Status = AndroidBootGetVerify (NULL, NULL, NULL, KernelArgs);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: verify failed: %r\n", __FUNCTION__, Status));
-      FreePool (KernelArgs);
-      goto Done;
-    }
-
-    // Copy NVIDIA RCM Kernel GUID to device path
-    CopyMem (&mRcmLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARcmKernelGuid, sizeof (EFI_GUID));
-
-    // Install Rcm Loadfile protocol
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &ImageHandle,
-                    &gEfiLoadFileProtocolGuid,
-                    &mRcmLoadFile,
-                    &gNVIDIALoadfileKernelArgsGuid,
-                    KernelArgs,
-                    &gEfiDevicePathProtocolGuid,
-                    &mRcmLoadFileDevicePath,
-                    NULL
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to image Load File Protocol (%r)\r\n", __FUNCTION__, Status));
-    }
+    AndroidBootPrepareBootFromMemory (ImageHandle);
   } else {
     EmmcMagic = *((UINTN *)(TegraGetSystemMemoryBaseAddress (TegraGetChipID ()) + SYSIMG_EMMC_MAGIC_OFFSET));
     if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {

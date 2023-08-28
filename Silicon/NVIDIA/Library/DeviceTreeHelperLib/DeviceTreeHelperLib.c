@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -140,6 +140,61 @@ GetMatchingEnabledDeviceTreeNodes (
   }
 
   return Status;
+}
+
+/**
+  Return kernel and kernel DTB address.
+
+  Look for the /chosen/kernel-start and /chosen/kernel-dtb-start properties. If
+  they are set, return them.  These may be set if a kernel was loaded for us.
+
+  @param  KernelStart     - Output the kernel's base address
+  @param  KernelDtbStart  - Output the kernel DTB's base address
+
+  @retval EFI_SUCCESS           - Nodes located
+  @retval EFI_INVALID_PARAMETER - KernelStart is NULL
+  @retval EFI_INVALID_PARAMETER - KernelDtbStart is NULL
+  @retval EFI_NOT_FOUND         - No matching nodes
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+GetKernelAddress (
+  OUT UINT64  *KernelStart,
+  OUT UINT64  *KernelDtbStart
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *DeviceTree;
+  UINTN       DeviceTreeSize;
+  INT32       Offset;
+
+  if ((KernelStart == NULL) || (KernelDtbStart == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetDeviceTreePointer (&DeviceTree, &DeviceTreeSize);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  Offset = fdt_path_offset (DeviceTree, "/chosen");
+  if (Offset == -FDT_ERR_NOTFOUND) {
+    return EFI_NOT_FOUND;
+  }
+
+  Status = GetNodeFieldByName64 (DeviceTree, Offset, "kernel-start", KernelStart);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = GetNodeFieldByName64 (DeviceTree, Offset, "kernel-dtb-start", KernelDtbStart);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -402,6 +457,50 @@ GetNodeFieldByName32 (
 
   if ((Field != NULL) && (FieldSize == sizeof (UINT32))) {
     *Value = SwapBytes32 (*Field);
+    return EFI_SUCCESS;
+  } else {
+    return EFI_NOT_FOUND;
+  }
+}
+
+/**
+  Gets the value of a 64-bit field within the specified node
+
+  @param  [in]  DeviceTreeBase  - Base Address of the device tree.
+  @param  [in]  NodeOffset      - Offset from DeviceTreeBase to the specified node.
+  @param  [in]  Name            - Name of the field to look up
+  @param  [out] Value           - The resulting value of the field
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - DeviceTreeBase pointer is NULL
+  @retval EFI_INVALID_PARAMETER - NodeOffset is 0
+  @retval EFI_INVALID_PARAMETER - Name pointer is NULL
+  @retval EFI_NOT_FOUND         - Name wasn't found in the specified node
+
+**/
+EFI_STATUS
+EFIAPI
+GetNodeFieldByName64 (
+  IN CONST VOID   *DeviceTree,
+  IN INT32        NodeOffset,
+  IN CONST CHAR8  *Name,
+  OUT UINT64      *Value
+  )
+{
+  CONST VOID  *Field;
+  INT32       FieldSize;
+
+  if ((DeviceTree == NULL) || (NodeOffset == 0) || (Name == NULL) || (Value == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Field = fdt_getprop (DeviceTree, NodeOffset, Name, &FieldSize);
+  if ((Field == NULL) || (FieldSize != sizeof (UINT64))) {
+    return EFI_NOT_FOUND;
+  }
+
+  if ((Field != NULL) && (FieldSize == sizeof (UINT64))) {
+    *Value = fdt64_to_cpu (ReadUnaligned64 ((CONST UINT64 *)Field));
     return EFI_SUCCESS;
   } else {
     return EFI_NOT_FOUND;

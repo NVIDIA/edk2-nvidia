@@ -9,3 +9,13 @@
 **/
 
 #include <HostBasedTestStubLib/DeviceTreeHelperStubLib.h>
+
+EFI_STATUS
+EFIAPI
+GetKernelAddress (
+  OUT UINT64  *KernelStart,
+  OUT UINT64  *KernelDtbStart
+  )
+{
+  return EFI_UNSUPPORTED;
+}
