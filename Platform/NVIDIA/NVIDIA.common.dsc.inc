@@ -342,6 +342,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   Tegra16550SerialPortLib|Silicon/NVIDIA/Library/Tegra16550SerialPortLib/Tegra16550SerialPortLib.inf
   TegraSbsaSerialPortLib|Silicon/NVIDIA/Library/TegraSbsaSerialPortLib/TegraSbsaSerialPortLib.inf
   SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraSerialPortLib.inf
+  TegraUtcSerialPortLib|Silicon/NVIDIA/Library/TegraUtcSerialPortLib/TegraUtcSerialPortLib.inf
 
   MceAriLib|Silicon/NVIDIA/Library/MceAriLib/MceAriLib.inf
   NvgLib|Silicon/NVIDIA/Library/NvgLib/NvgLib.inf

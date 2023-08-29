@@ -17,6 +17,8 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <libfdt.h>
 
+#define TEGRA_SERIAL_PORT_UTC_REGISTERS  2
+
 typedef struct {
   UINT32         Type;
   CONST CHAR8    **CompatibilityStrings;
@@ -26,9 +28,10 @@ typedef struct {
 // This structure must end with Type == TEGRA_UART_TYPE_NONE
 STATIC
 SERIAL_MAPPING  gSerialCompatibilityMap[] = {
-  { TEGRA_UART_TYPE_TCU,  TegraCombinedSerialPortGetObject, FALSE, 0 },
-  { TEGRA_UART_TYPE_SBSA, TegraSbsaSerialPortGetObject,     FALSE, 0 },
-  { TEGRA_UART_TYPE_NONE, NULL,                             FALSE, 0 }
+  { TEGRA_UART_TYPE_UTC,  TegraUtcSerialPortGetObject,      SIZE_64KB, FALSE, 0 },
+  { TEGRA_UART_TYPE_TCU,  TegraCombinedSerialPortGetObject, SIZE_4KB,  FALSE, 0 },
+  { TEGRA_UART_TYPE_SBSA, TegraSbsaSerialPortGetObject,     SIZE_4KB,  FALSE, 0 },
+  { TEGRA_UART_TYPE_NONE, NULL,                             0,         FALSE, 0 }
 };
 
 STATIC
@@ -45,12 +48,20 @@ CONST CHAR8  *gSerialTcuCompatibilityStrings[] = {
   NULL
 };
 
+STATIC
+CONST CHAR8  *gSerialUtcCompatibilityStrings[] = {
+  "nvidia,tegra264-utc",
+  NULL
+};
+
 #define MAX_COMPATIBLE_STRINGS  (ARRAY_SIZE (gSerialSbsaCompatibilityStrings) + \
-                                 ARRAY_SIZE (gSerialTcuCompatibilityStrings))
+                                 ARRAY_SIZE (gSerialTcuCompatibilityStrings) + \
+                                 ARRAY_SIZE (gSerialUtcCompatibilityStrings))
 
 STATIC
 SERIAL_COMPATIBILITY_INFO  gSerialCompatibilityInfo[] = {
   { TEGRA_UART_TYPE_SBSA, gSerialSbsaCompatibilityStrings },
+  { TEGRA_UART_TYPE_UTC,  gSerialUtcCompatibilityStrings  },
   { TEGRA_UART_TYPE_TCU,  gSerialTcuCompatibilityStrings  }
 };
 
@@ -93,7 +104,7 @@ SerialPortIdentify (
   UINT32                            Size;
   VOID                              *DeviceTree;
   UINTN                             DeviceTreeSize;
-  NVIDIA_DEVICE_TREE_REGISTER_DATA  RegData;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA  RegData[2];
   INT32                             NodeOffset;
   UINTN                             Index;
   UINTN                             Index2;
@@ -170,13 +181,32 @@ SerialPortIdentify (
         // TCU is a special case, it doesn't have a base address in node
         gSerialCompatibilityMap[MappingIndex].BaseAddress = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
       } else {
-        Size   = 1;
-        Status = DeviceTreeGetRegisters (NodeOffset, &RegData, &Size);
+        if (gSerialCompatibilityInfo[Index].Type == TEGRA_UART_TYPE_UTC) {
+          Size = TEGRA_SERIAL_PORT_UTC_REGISTERS;
+        } else {
+          Size = 1;
+        }
+
+        Status = DeviceTreeGetRegisters (NodeOffset, RegData, &Size);
         if (EFI_ERROR (Status)) {
           break;
         }
 
-        gSerialCompatibilityMap[MappingIndex].BaseAddress = RegData.BaseAddress;
+        if (gSerialCompatibilityInfo[Index].Type == TEGRA_UART_TYPE_UTC) {
+          for (Index2 = 0; Index2 < TEGRA_SERIAL_PORT_UTC_REGISTERS; Index2++) {
+            if (AsciiStrCmp (RegData[Index2].Name, "tx") == 0) {
+              break;
+            }
+          }
+
+          if (Index2 == TEGRA_SERIAL_PORT_UTC_REGISTERS) {
+            break;
+          }
+
+          gSerialCompatibilityMap[MappingIndex].BaseAddress = RegData[Index2].BaseAddress;
+        } else {
+          gSerialCompatibilityMap[MappingIndex].BaseAddress = RegData[0].BaseAddress;
+        }
       }
 
       gSerialCompatibilityMap[MappingIndex].IsFound = TRUE;

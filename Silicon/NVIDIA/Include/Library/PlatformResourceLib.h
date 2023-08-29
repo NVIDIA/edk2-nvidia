@@ -20,6 +20,7 @@
  */
 #define TEGRA_UART_TYPE_16550  0x00
 #define TEGRA_UART_TYPE_SBSA   0x01
+#define TEGRA_UART_TYPE_UTC    0x02
 #define TEGRA_UART_TYPE_TCU    0xFE
 #define TEGRA_UART_TYPE_NONE   0xFF
 

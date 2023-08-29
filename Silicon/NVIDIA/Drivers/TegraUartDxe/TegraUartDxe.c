@@ -29,6 +29,7 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,*-tcu",    &gNVIDIANonDiscoverableCombinedUartDeviceGuid },
   { "arm,sbsa-uart",   &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
   { "arm,pl011",       &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
+  { "nvidia,*-utc",    &gNVIDIANonDiscoverableUtcUartDeviceGuid      },
   { NULL,              NULL                                          }
 };
 
@@ -159,9 +160,27 @@ DeviceDiscoveryNotify (
         }
 
         InstallSerialIO = (SerialConfig != NVIDIA_SERIAL_PORT_DBG2_SBSA);
-      } else {
+      } else if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility ("nvidia,*-utc", DeviceTreeNode->NodeOffset))) {
+        // Region 1 is TX base
+        Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 1, &BaseAddress, &RegionSize);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Utc Unable to locate address range\n", __FUNCTION__));
+          return Status;
+        }
+
+        Interface = SerialUtcIoInitialize (BaseAddress);
+        if (Interface == NULL) {
+          return EFI_NOT_STARTED;
+        }
+
+        InstallSerialIO = TRUE;
+      } else if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility ("nvidia,*-tcu", DeviceTreeNode->NodeOffset))) {
         Interface       = SerialTCUIoInitialize ();
         InstallSerialIO = TRUE;
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: no init for %a\n", __FUNCTION__, DeviceTreeGetNodeName (DeviceTreeNode->NodeOffset)));
+        ASSERT (FALSE);
+        return EFI_NOT_FOUND;
       }
 
       Status = Interface->Reset (Interface);

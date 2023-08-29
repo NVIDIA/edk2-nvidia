@@ -423,7 +423,7 @@ CEntryPoint (
   SerialPortIdentify (&Mapping);
   while (Mapping->Type != TEGRA_UART_TYPE_NONE) {
     if (Mapping->IsFound) {
-      ArmSetMemoryAttributes (Mapping->BaseAddress, SIZE_4KB, EFI_MEMORY_UC, 0);
+      ArmSetMemoryAttributes (Mapping->BaseAddress, Mapping->Size, EFI_MEMORY_UC, 0);
     }
 
     Mapping++;

@@ -199,6 +199,18 @@ TegraSbsaSerialPortGetObject (
   );
 
 /**
+  Retrieve the object of tegra UTC serial port library.
+
+  @param[out]  Tegra UTC uart library object
+
+**/
+TEGRA_UART_OBJ *
+EFIAPI
+TegraUtcSerialPortGetObject (
+  VOID
+  );
+
+/**
   Retrieve the object of tegra combined serial port library.
 
   @param[out]  Tegra combined uart library object
@@ -229,6 +241,16 @@ Tegra16550SerialPortGetObject (
 EFI_SERIAL_IO_PROTOCOL *
 EFIAPI
 SerialSbsaIoInitialize (
+  IN UINTN  SerialBaseAddress
+  );
+
+/**
+  Initialize UTC Serial Console
+
+**/
+EFI_SERIAL_IO_PROTOCOL *
+EFIAPI
+SerialUtcIoInitialize (
   IN UINTN  SerialBaseAddress
   );
 
@@ -269,6 +291,7 @@ TEGRA_UART_OBJ *
 typedef struct {
   UINT32                    Type;
   SERIAL_PORT_GET_OBJECT    GetObject;
+  UINTN                     Size;
   BOOLEAN                   IsFound;
   EFI_PHYSICAL_ADDRESS      BaseAddress;
 } SERIAL_MAPPING;

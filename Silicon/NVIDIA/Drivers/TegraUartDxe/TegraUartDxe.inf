@@ -22,6 +22,7 @@
   Serial16550.c
   SerialSbsa.c
   SerialTCU.c
+  SerialUtc.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -62,4 +63,4 @@
   gNVIDIANonDiscoverableSbsaUartDeviceGuid
   gNVIDIANonDiscoverable16550UartDeviceGuid
   gNVIDIANonDiscoverableCombinedUartDeviceGuid
-
+  gNVIDIANonDiscoverableUtcUartDeviceGuid

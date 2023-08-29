@@ -1,0 +1,30 @@
+#/** @file
+#
+#  SerialPortLib instance for UTC.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = TegraUtcSerialPortLib
+  FILE_GUID                      = c0586dcc-9cce-4176-8998-b6fa519ceb44
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.1
+  LIBRARY_CLASS                  = TegraUtcSerialPortLib
+
+[Sources.common]
+  TegraUtcSerialPortLib.c
+
+[LibraryClasses]
+  PcdLib
+  IoLib
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
