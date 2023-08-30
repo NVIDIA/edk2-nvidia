@@ -1,0 +1,42 @@
+## @file
+#  Oem partition Dxe Sample Driver.
+#
+# Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
+# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = OemPartitionDxe
+  FILE_GUID                      = 29522b87-dba3-4e9d-8c67-b7bc07a4fa22
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 2.0
+  ENTRY_POINT                    = OemPartitionEntry
+
+[Sources]
+  OemPartitionDxe.c
+  OemPartitionDxe.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+
+[Guids]
+  gNVIDIAOemPartitionGuid                       ## CONSUMES  ## GUID
+
+[Protocols]
+  gEfiMmCommunication2ProtocolGuid              ## CONSUMES
+  gNVIDIAOemPartitionProtocolGuid               ## PRODUCES
+
+[Depex]
+  gEfiMmCommunication2ProtocolGuid

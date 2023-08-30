@@ -417,6 +417,11 @@
   Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.inf
 
   #
+  # Oem Partition Sample Driver.
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/OemPartitionDxeMm/OemPartitionDxe.inf
+
+  #
   # Redfish Host Interface Support
   #
   RedfishPkg/RedfishHostInterfaceDxe/RedfishHostInterfaceDxe.inf {
