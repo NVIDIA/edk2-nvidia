@@ -178,6 +178,8 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2PhysicalPresenceFlags|0x00002
   gEfiSecurityPkgTokenSpaceGuid.PcdRandomizePlatformHierarchy|TRUE
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2SelfTestPolicy|1
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcgLogAreaMinLen|0x20000
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2FinalLogAreaLen|0x10000
 
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
   gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|TRUE
