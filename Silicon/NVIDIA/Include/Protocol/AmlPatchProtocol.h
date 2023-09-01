@@ -2,7 +2,7 @@
 *
 *  AML patching protocol definition.
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText:  Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -30,6 +30,8 @@ typedef struct {
   #include <Uefi/UefiBaseType.h>
   #include <Library/BaseLib.h>
   #include <IndustryStandard/Acpi10.h>
+
+#define ACPI_PATCH_MAX_PATH  255
 
 //
 // Define for forward reference.

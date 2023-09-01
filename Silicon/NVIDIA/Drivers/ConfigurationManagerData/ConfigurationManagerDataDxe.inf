@@ -1,0 +1,135 @@
+## @file
+#  Configuration Manager Data Dxe
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2020 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = ConfigurationManagerDataDxe
+  FILE_GUID                      = b680f144-5f4a-461d-88a6-2c00ef567516
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = ConfigurationManagerDataDxeInitialize
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+
+[Sources]
+  ConfigurationManagerDataDxe.c
+  NvCmObjectDescUtility.c
+  AcpiTableList/AcpiTableListParser.c
+  AhciInfo/AhciInfoParser.c
+  BootArchInfo/BootArchInfoParser.c
+  CacheInfo/CacheInfoParser.c
+  CacheInfo/CacheInfoParserT194.c
+  FanInfo/FanInfoParser.c
+  FixedFeatureFlags/FixedFeatureFlagsParser.c
+  GenericTimer/GenericTimerParser.c
+  Gic/GicCParser.c
+  Gic/GicDParser.c
+  Gic/GicDParserT194.c
+  Gic/GicItsParser.c
+  Gic/LpiParser.c
+  Gic/GicMsiFrameParser.c
+  Gic/GicRedistributorParser.c
+  I2cInfo/I2cInfoParser.c
+  Iort/IortInfoParser.c
+  PowerManagementProfile/PowerManagementProfileParser.c
+  ProcHierarchyInfo/ProcHierarchyInfoParser.c
+  ProtocolBasedObjects/ProtocolBasedObjectsParser.c
+  SdhciInfo/SdhciInfoParser.c
+  SerialPortInfo/SerialPortInfoParser.c
+  SsdtTableGenerator/SsdtTableGeneratorParser.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  ArmPlatformPkg/ArmPlatformPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  ConfigurationManagerLib
+  DeviceTreeHelperLib
+  DxeServicesTableLib
+  FdtLib
+  NvgLib
+  MemoryAllocationLib
+  TegraPlatformInfoLib
+  PlatformAslTablesLib
+  AslTemplateTablesLib
+  PrintLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiDriverEntryPoint
+  TableHelperLib
+  HwInfoParserLib
+  PlatformResourceLib
+  MpCoreInfoLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorRevision
+  gArmTokenSpaceGuid.PcdArmArchTimerSecIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerHypIntrNum
+  gArmTokenSpaceGuid.PcdGicDistributorBase
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
+  gArmTokenSpaceGuid.PcdPciBusMin
+  gArmTokenSpaceGuid.PcdPciBusMax
+  gArmPlatformTokenSpaceGuid.PL011UartClkInHz
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
+  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
+  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+  gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
+  gNVIDIATokenSpaceGuid.PcdSpeOverflowIntrNum
+
+[Guids]
+  gNVIDIATokenSpaceGuid
+  gEfiEndOfDxeEventGroupGuid
+
+[Protocols]
+  gNVIDIAConfigurationManagerDataProtocolGuid
+  gNVIDIAConfigurationManagerDataObjectGuid
+  gNVIDIAAmlPatchProtocolGuid
+  gNVIDIAAmlGenerationProtocolGuid
+  gEfiPciRootBridgeIoProtocolGuid
+  gNVIDIATegraCpuFrequencyProtocolGuid
+  gNVIDIAConfigurationManagerTokenProtocolGuid
+
+[Depex]
+  gEfiVariableArchProtocolGuid
+  AND
+  gNVIDIAAmlPatchProtocolGuid
+  AND
+  gNVIDIAAmlGenerationProtocolGuid
+  AND
+  gNVIDIAPcieControllerInitCompleteProtocolGuid
+  AND
+  gNVIDIATegraCpuFrequencyProtocolGuid
+  AND
+  gNVIDIAConfigurationManagerTokenProtocolGuid

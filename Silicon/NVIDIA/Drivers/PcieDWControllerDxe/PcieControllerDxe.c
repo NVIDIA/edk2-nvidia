@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -34,6 +34,7 @@
 #include <Protocol/PowerGateNodeProtocol.h>
 #include <Protocol/Regulator.h>
 #include <Protocol/TegraP2U.h>
+#include <Protocol/ConfigurationManagerTokenProtocol.h>
 
 #include <libfdt.h>
 
@@ -1717,31 +1718,33 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                 Status;
-  PCI_ROOT_BRIDGE            *RootBridge       = NULL;
-  EFI_DEVICE_PATH_PROTOCOL   *ParentDevicePath = NULL;
-  CONST VOID                 *BusProperty      = NULL;
-  CONST VOID                 *RangesProperty   = NULL;
-  INT32                      PropertySize      = 0;
-  INT32                      AddressCells;
-  INT32                      PciAddressCells;
-  INT32                      SizeCells;
-  INT32                      RangeSize;
-  CONST VOID                 *SegmentNumber = NULL;
-  CONST VOID                 *ControllerId  = NULL;
-  CONST VOID                 *BpmpPhandle   = NULL;
-  PCIE_CONTROLLER_PRIVATE    *Private       = NULL;
-  NVIDIA_REGULATOR_PROTOCOL  *Regulator     = NULL;
-  CONST VOID                 *Property      = NULL;
-  UINT32                     Val;
-  UINTN                      ChipID;
-  UINT32                     DeviceTreeHandle;
-  UINT32                     NumberOfInterrupts;
-  UINT32                     Index;
-  UINT32                     Index2;
-  BOOLEAN                    RegisterConfigurationData;
-  BOOLEAN                    PcieFound;
-  CONST UINT32               *InterruptMap;
+  EFI_STATUS                                   Status;
+  PCI_ROOT_BRIDGE                              *RootBridge       = NULL;
+  EFI_DEVICE_PATH_PROTOCOL                     *ParentDevicePath = NULL;
+  CONST VOID                                   *BusProperty      = NULL;
+  CONST VOID                                   *RangesProperty   = NULL;
+  INT32                                        PropertySize      = 0;
+  INT32                                        AddressCells;
+  INT32                                        PciAddressCells;
+  INT32                                        SizeCells;
+  INT32                                        RangeSize;
+  CONST VOID                                   *SegmentNumber = NULL;
+  CONST VOID                                   *ControllerId  = NULL;
+  CONST VOID                                   *BpmpPhandle   = NULL;
+  PCIE_CONTROLLER_PRIVATE                      *Private       = NULL;
+  NVIDIA_REGULATOR_PROTOCOL                    *Regulator     = NULL;
+  CONST VOID                                   *Property      = NULL;
+  UINT32                                       Val;
+  UINTN                                        ChipID;
+  UINT32                                       DeviceTreeHandle;
+  UINT32                                       NumberOfInterrupts;
+  UINT32                                       Index;
+  UINT32                                       Index2;
+  BOOLEAN                                      RegisterConfigurationData;
+  BOOLEAN                                      PcieFound;
+  CONST UINT32                                 *InterruptMap;
+  NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL  *CMTokenProtocol;
+  CM_OBJECT_TOKEN                              *TokenMap;
 
   NumberOfInterrupts        = 2;
   RegisterConfigurationData = TRUE;
@@ -1791,6 +1794,12 @@ DeviceDiscoveryNotify (
       break;
 
     case DeviceDiscoveryDriverBindingStart:
+      Status = gBS->LocateProtocol (&gNVIDIAConfigurationManagerTokenProtocolGuid, NULL, (VOID **)&CMTokenProtocol);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to fird ConfigurationManagerTokenProtocol\n", __FUNCTION__));
+        break;
+      }
+
       RootBridge = AllocateZeroPool (sizeof (PCI_ROOT_BRIDGE));
       if (RootBridge == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to allocate device bridge structure\r\n", __FUNCTION__));
@@ -2312,8 +2321,16 @@ DeviceDiscoveryNotify (
         Private->ConfigSpaceInfo.EndBusNumber   = Private->PcieRootBridgeConfigurationIo.MaxBusNumber;
       }
 
-      Private->ConfigSpaceInfo.AddressMapToken   = REFERENCE_TOKEN (Private->AddressMapRefInfo);
-      Private->ConfigSpaceInfo.InterruptMapToken = REFERENCE_TOKEN (Private->InterruptRefInfo);
+      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, 2, &TokenMap);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate 2 tokens for the ConfigSpaceInfo token maps\n", __FUNCTION__));
+        break;
+      }
+
+      Private->ConfigSpaceInfo.AddressMapToken   = TokenMap[0];
+      Private->ConfigSpaceInfo.InterruptMapToken = TokenMap[1];
+      FreePool (TokenMap);
+      TokenMap = NULL;
 
       Status = GetDeviceTreeHandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, &DeviceTreeHandle);
       if (EFI_ERROR (Status)) {
@@ -2334,17 +2351,23 @@ DeviceDiscoveryNotify (
         break;
       }
 
+      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, PCIE_NUMBER_OF_INTERUPT_MAP, &TokenMap);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %d tokens for the InterruptMap token map\n", __FUNCTION__, PCIE_NUMBER_OF_INTERUPT_MAP));
+        break;
+      }
+
       NumberOfInterrupts = PropertySize / PCIE_INTERRUPT_MAP_ENTRY_SIZE;
       if (NumberOfInterrupts == 1) {
         for (Index = 0; Index < PCIE_NUMBER_OF_INTERUPT_MAP; Index++) {
-          Private->InterruptRefInfo[Index].ReferenceToken          = REFERENCE_TOKEN (Private->InterruptMapInfo[Index]);
+          Private->InterruptRefInfo[Index].ReferenceToken          = TokenMap[Index];
           Private->InterruptMapInfo[Index].PciInterrupt            = Index;
           Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = SwapBytes32 (InterruptMap[PCIE_PARENT_INTERRUPT_OFFSET]) + SPI_OFFSET;
           Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = BIT2;
         }
       } else if (NumberOfInterrupts == PCIE_NUMBER_OF_INTERUPT_MAP) {
         for (Index = 0; Index < PCIE_NUMBER_OF_INTERUPT_MAP; Index++) {
-          Private->InterruptRefInfo[Index].ReferenceToken          = REFERENCE_TOKEN (Private->InterruptMapInfo[Index]);
+          Private->InterruptRefInfo[Index].ReferenceToken          = TokenMap[Index];
           Private->InterruptMapInfo[Index].PciInterrupt            = SwapBytes32 (InterruptMap[(Index * PCIE_INTERRUPT_MAP_ENTRIES) + PCIE_CHILD_INT_OFFSET])-1;
           Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = SwapBytes32 (InterruptMap[(Index * PCIE_INTERRUPT_MAP_ENTRIES) + PCIE_PARENT_INTERRUPT_OFFSET]) + SPI_OFFSET;
           Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = BIT2;
@@ -2359,9 +2382,21 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      for (Index = 0; Index < Private->AddressMapCount; Index++) {
-        Private->AddressMapRefInfo[Index].ReferenceToken = REFERENCE_TOKEN (Private->AddressMapInfo[Index]);
+      FreePool (TokenMap);
+      TokenMap = NULL;
+
+      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, Private->AddressMapCount, &TokenMap);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %u tokens for the AddressMap token map\n", __FUNCTION__, Private->AddressMapCount));
+        break;
       }
+
+      for (Index = 0; Index < Private->AddressMapCount; Index++) {
+        Private->AddressMapRefInfo[Index].ReferenceToken = TokenMap[Index];
+      }
+
+      FreePool (TokenMap);
+      TokenMap = NULL;
 
       // Limit configuration manager entries for T194 as it does not support ECAM so needs special OS support
       if (Private->IsT194) {
@@ -2385,14 +2420,14 @@ DeviceDiscoveryNotify (
         Index++;
 
         Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
-        Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->InterruptRefInfo);
+        Private->RepoInfo[Index].CmObjectToken = Private->ConfigSpaceInfo.InterruptMapToken;
         Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARM_OBJ_REF) * PCIE_NUMBER_OF_INTERUPT_MAP;
         Private->RepoInfo[Index].CmObjectCount = PCIE_NUMBER_OF_INTERUPT_MAP;
         Private->RepoInfo[Index].CmObjectPtr   = Private->InterruptRefInfo;
         Index++;
 
         Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
-        Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->AddressMapRefInfo);
+        Private->RepoInfo[Index].CmObjectToken = Private->ConfigSpaceInfo.AddressMapToken;
         Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARM_OBJ_REF) * Private->AddressMapCount;
         Private->RepoInfo[Index].CmObjectCount = Private->AddressMapCount;
         Private->RepoInfo[Index].CmObjectPtr   = Private->AddressMapRefInfo;
@@ -2400,7 +2435,7 @@ DeviceDiscoveryNotify (
 
         for (Index2 = 0; Index2 < PCIE_NUMBER_OF_MAPPING_SPACE; Index2++) {
           Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciAddressMapInfo);
-          Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->AddressMapInfo[Index2]);
+          Private->RepoInfo[Index].CmObjectToken = Private->AddressMapRefInfo[Index2].ReferenceToken;
           Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->AddressMapInfo[Index2]);
           Private->RepoInfo[Index].CmObjectCount = 1;
           Private->RepoInfo[Index].CmObjectPtr   = &Private->AddressMapInfo[Index2];
@@ -2409,7 +2444,7 @@ DeviceDiscoveryNotify (
 
         for (Index2 = 0; Index2 < PCIE_NUMBER_OF_INTERUPT_MAP; Index2++) {
           Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciInterruptMapInfo);
-          Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->InterruptMapInfo[Index2]);
+          Private->RepoInfo[Index].CmObjectToken = Private->InterruptRefInfo[Index2].ReferenceToken;
           Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->InterruptMapInfo[Index2]);
           Private->RepoInfo[Index].CmObjectCount = 1;
           Private->RepoInfo[Index].CmObjectPtr   = &Private->InterruptMapInfo[Index2];

@@ -1,0 +1,38 @@
+#/** @file
+#
+#  Configuration Manager Token Protocol
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = ConfigurationManagerTokenDxe
+  FILE_GUID                      = 099698ca-d918-4fea-bab7-7f035ef408f3
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = ConfigurationManagerTokenProtocolInit
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+
+[Sources]
+  ConfigurationManagerTokenDxe.c
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  DebugLib
+
+[Protocols]
+  gNVIDIAConfigurationManagerTokenProtocolGuid
+
+[Depex]
+  TRUE

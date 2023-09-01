@@ -162,6 +162,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   # Configuration Manager
   #
+  INF Silicon/NVIDIA/Drivers/ConfigurationManagerTokenDxe/ConfigurationManagerTokenDxe.inf
   INF Silicon/NVIDIA/Drivers/ConfigurationManager/ConfigurationManagerDxe.inf
 
   #
@@ -646,11 +647,8 @@ FvNameGuid         = $(PLATFORM_GUID)
   # Platform Configuration Manager Data
   #
 !ifdef CONFIG_CONFIG_MANAGER
-!ifdef CONFIG_SOC_XAVIER
-  INF Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
-!endif
-!ifdef CONFIG_SOC_ORIN
-  INF Silicon/NVIDIA/Tegra/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+!ifdef CONFIG_SOC_JETSON
+  INF Silicon/NVIDIA/Drivers/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
 !endif
 !ifdef CONFIG_SOC_GRACE
   INF Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
