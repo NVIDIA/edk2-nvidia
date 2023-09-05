@@ -2,11 +2,64 @@
 #
 #  Config file for NVIDIA UEFI builds
 #
-#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #
+menu "Boot Options"
+  config BOOT_QUICK_BOOT
+  bool "Quick boot support"
+  default n
+  help
+    UEFI quick boot supported
+
+  config BOOT_DEFAULT_TIMEOUT
+  int "Boot timeout"
+  depends on SINGLE_BOOT_NONE
+  default 5
+  help
+    UEFI boot timeout
+
+  config BOOT_NATIVE_ANDROID_PARTITION_SUPPORT
+  bool "Android partition support"
+  default n
+  help
+    Support for native android boot partition, without EFI system partition
+
+  config BOOT_NVIDIA_CUSTOM_OPTION_DESCRIPTION
+  bool "NVIDIA Custom boot order description"
+  default n
+  help
+    Support for nvidia specific overrides for boot options
+
+  choice SINGLE_BOOT_SUPPORT
+    prompt "Single boot built-in boot application support"
+
+    config SINGLE_BOOT_NONE
+    bool "Not supported"
+    help
+      Normal boot operation
+
+    config SINGLE_BOOT_DEADLOOP_APP
+    bool "Deadloop application"
+    select BOOT_UI_MENU_DISABLED
+    help
+       Launch application that deadloops
+
+    config SINGLE_BOOT_L4T_LAUNCHER
+    bool "L4T Launcher"
+    select BOOT_UI_MENU_DISABLED
+    help
+      L4T Launcher default
+
+  endchoice
+
+  config BOOT_UI_MENU_DISABLED
+  depends on SINGLE_BOOT_DEADLOOP_APP || SINGLE_BOOT_L4T_LAUNCHER
+  bool "UI Menu Application disabled"
+
+endmenu
 menu	"Watchdog settings"
 
   config	BOOT_WATCHDOG_TIMEOUT

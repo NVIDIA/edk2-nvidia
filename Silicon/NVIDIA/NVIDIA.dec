@@ -452,6 +452,9 @@
 # set to 0 to skip memory testing
   gNVIDIATokenSpaceGuid.PcdExpectedPeiMemoryUsage|0|UINT64|0x00000111
 
+  #Application to launch if single boot is supported
+  gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}|VOID*|0x00010001
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
@@ -470,6 +473,9 @@
 
 #Redfish Support
   gNVIDIATokenSpaceGuid.PcdRedfishSupported|FALSE|BOOLEAN|0x00000107
+
+#Single Launch Application
+  gNVIDIATokenSpaceGuid.PcdSingleBootSupport|FALSE|BOOLEAN|0x00010000
 
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.

@@ -1714,20 +1714,22 @@ PlatformBootManagerBeforeConsole (
   EFI_HANDLE  BdsHandle = NULL;
   BOOLEAN     UefiShellEnabled;
 
-  //
-  // Check Embedded UEFI Shell Setup Option
-  //
-  CheckUefiShellLoadOption (&UefiShellEnabled);
+  if (!FeaturePcdGet (PcdSingleBootSupport)) {
+    //
+    // Check Embedded UEFI Shell Setup Option
+    //
+    CheckUefiShellLoadOption (&UefiShellEnabled);
 
-  //
-  // Check IPMI for BootOrder commands, and clear and reset CMOS here if requested
-  //
-  CheckIPMIForBootOrderUpdates ();
+    //
+    // Check IPMI for BootOrder commands, and clear and reset CMOS here if requested
+    //
+    CheckIPMIForBootOrderUpdates ();
 
-  //
-  // Restore the BootOrder if we temporarily changed it during the previous boot and haven't restored it yet
-  //
-  RestoreBootOrder (NULL, NULL);
+    //
+    // Restore the BootOrder if we temporarily changed it during the previous boot and haven't restored it yet
+    //
+    RestoreBootOrder (NULL, NULL);
+  }
 
   //
   // Wait for all async drivers to complete
@@ -1772,49 +1774,63 @@ PlatformBootManagerBeforeConsole (
   //
   FilterAndProcess (&gEfiPciIoProtocolGuid, NULL, ListPciDevices);
 
-  if (IsPlatformConfigurationNeeded ()) {
+  if (!FeaturePcdGet (PcdSingleBootSupport)) {
+    if (IsPlatformConfigurationNeeded ()) {
+      //
+      // Connect the rest of the devices.
+      //
+      EfiBootManagerConnectAll ();
+
+      //
+      // Enumerate all possible boot options.
+      //
+      EfiBootManagerRefreshAllBootOption ();
+
+      //
+      // Register platform-specific boot options and keyboard shortcuts.
+      //
+      PlatformRegisterOptionsAndKeys ();
+
+      //
+      // Register UEFI Shell
+      //
+      if (UefiShellEnabled) {
+        PlatformRegisterFvBootOption (
+          &gUefiShellFileGuid,
+          L"UEFI Shell",
+          LOAD_OPTION_ACTIVE,
+          LoadOptionTypeBoot
+          );
+      }
+
+      //
+      // Set Boot Order
+      //
+      SetBootOrder ();
+
+      //
+      // Set platform has been configured
+      //
+      PlatformConfigured ();
+    }
+
+    //
+    // Process IPMI-directed BootOrder updates
+    //
+    ProcessIPMIBootOrderUpdates ();
+  } else {
     //
     // Connect the rest of the devices.
     //
     EfiBootManagerConnectAll ();
 
-    //
-    // Enumerate all possible boot options.
-    //
-    EfiBootManagerRefreshAllBootOption ();
-
-    //
-    // Register platform-specific boot options and keyboard shortcuts.
-    //
-    PlatformRegisterOptionsAndKeys ();
-
-    //
-    // Register UEFI Shell
-    //
-    if (UefiShellEnabled) {
-      PlatformRegisterFvBootOption (
-        &gUefiShellFileGuid,
-        L"UEFI Shell",
-        LOAD_OPTION_ACTIVE,
-        LoadOptionTypeBoot
-        );
-    }
-
-    //
-    // Set Boot Order
-    //
-    SetBootOrder ();
-
-    //
-    // Set platform has been configured
-    //
-    PlatformConfigured ();
+    PlatformRegisterFvBootOption (
+      FixedPcdGetPtr (PcdSingleBootApplicationGuid),
+      L"Boot Application",
+      LOAD_OPTION_ACTIVE,
+      LoadOptionTypeBoot
+      );
   }
-
-  //
-  // Process IPMI-directed BootOrder updates
-  //
-  ProcessIPMIBootOrderUpdates ();
 
   //
   // Add the hardcoded short-form USB keyboard device path to ConIn.
@@ -2182,7 +2198,9 @@ PlatformBootManagerAfterConsole (
   //
   // Display system and hotkey information after console is ready.
   //
-  DisplaySystemAndHotkeyInformation ();
+  if (!FeaturePcdGet (PcdSingleBootSupport)) {
+    DisplaySystemAndHotkeyInformation ();
+  }
 
   //
   // Run memory test

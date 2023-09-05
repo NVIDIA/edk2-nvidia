@@ -7,6 +7,9 @@
 !ifndef CONFIG_MEMORY_TEST
 CONFIG_MEMORY_TEST=n
 !endif
+!ifndef CONFIG_BOOT_DEFAULT_TIMEOUT
+CONFIG_BOOT_DEFAULT_TIMEOUT=0
+!endif
 
 [BuildOptions.common.EDKII.DXE_CORE,BuildOptions.common.EDKII.DXE_DRIVER,BuildOptions.common.EDKII.UEFI_DRIVER,BuildOptions.common.EDKII.UEFI_APPLICATION]
   GCC:*_*_*_DLINK_FLAGS = -Wl,-z,common-page-size=0x1000
@@ -345,6 +348,7 @@ CONFIG_MEMORY_TEST=n
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
   DisplayUpdateProgressLib|MdeModulePkg/Library/DisplayUpdateProgressLibText/DisplayUpdateProgressLibText.inf
+  AndroidBootImgLib|EmbeddedPkg/Library/AndroidBootImgLib/AndroidBootImgLib.inf
 
 [LibraryClasses.ARM, LibraryClasses.AARCH64]
   #
@@ -400,6 +404,10 @@ CONFIG_MEMORY_TEST=n
   gEfiMdeModulePkgTokenSpaceGuid.PcdRequireIommu|FALSE
 !endif
   gEfiMdeModulePkgTokenSpaceGuid.PcdEnableVariableRuntimeCache|FALSE
+
+!ifndef CONFIG_SINGLE_BOOT_NONE
+  gNVIDIATokenSpaceGuid.PcdSingleBootSupport|TRUE
+!endif
 
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
@@ -551,6 +559,10 @@ CONFIG_MEMORY_TEST=n
 
   gEmbeddedTokenSpaceGuid.PcdTimerPeriod|1000
 
+!ifdef CONFIG_BOOT_UI_MENU_DISABLED
+  gEfiMdeModulePkgTokenSpaceGuid.PcdDriverHealthConfigureForm|{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+!endif
+
 [PcdsFixedAtBuild]
   #
   # Variable Services PCDs.
@@ -626,6 +638,13 @@ CONFIG_MEMORY_TEST=n
   gNVIDIATokenSpaceGuid.PcdExpectedPeiMemoryUsage|0x06000000
 !endif
 
+!ifdef CONFIG_SINGLE_BOOT_DEADLOOP_APP
+gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("2ecc727c-9d50-4467-a5f1-768ca4e9c23e") }
+!else
+!ifdef CONFIG_SINGLE_BOOT_L4T_LAUNCHER
+gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373-4e78-aa7e-8631858e0217") }
+!endif
+!endif
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.
@@ -674,7 +693,7 @@ CONFIG_MEMORY_TEST=n
 
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables
-  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|5
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|$(CONFIG_BOOT_DEFAULT_TIMEOUT)
   # NVIDIA internal variables
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|0|BS
@@ -684,7 +703,11 @@ CONFIG_MEMORY_TEST=n
   gNVIDIATokenSpaceGuid.PcdRedfishHostInterface|L"RedfishHostInterface"|gNVIDIATokenSpaceGuid|0x0|0x01|BS,NV
   gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration|L"DoInitialConsoleRegistration"|gNVIDIAPublicVariableGuid|0x0|1|BS,NV
   # NVIDIA Public variables
+!ifdef CONFIG_BOOT_QUICK_BOOT
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIAPublicVariableGuid|0x0|1|BS,NV
+!else
+  gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV
+!endif
   gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy|L"NewDeviceHierarchy"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdOsChainStatusA|L"RootfsStatusSlotA"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdOsChainStatusB|L"RootfsStatusSlotB"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
@@ -822,8 +845,26 @@ CONFIG_MEMORY_TEST=n
   #
   MdeModulePkg/Universal/DevicePathDxe/DevicePathDxe.inf
   MdeModulePkg/Universal/DisplayEngineDxe/DisplayEngineDxe.inf
+  MdeModulePkg/Universal/BdsDxe/BdsDxe.inf {
+    <LibraryClasses>
+!ifdef CONFIG_BOOT_NVIDIA_CUSTOM_OPTION_DESCRIPTION
+      NULL|Silicon/NVIDIA/Library/PlatformBootManagerBootDescriptionLib/PlatformBootManagerBootDescriptionLib.inf
+!endif
+  }
+!ifndef CONFIG_BOOT_UI_MENU_DISABLED
   MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
+  MdeModulePkg/Application/UiApp/UiApp.inf {
+    <LibraryClasses>
+      NULL|MdeModulePkg/Library/DeviceManagerUiLib/DeviceManagerUiLib.inf
+      NULL|MdeModulePkg/Library/BootManagerUiLib/BootManagerUiLib.inf
+      NULL|MdeModulePkg/Library/BootMaintenanceManagerUiLib/BootMaintenanceManagerUiLib.inf
+!ifdef CONFIG_BOOT_NVIDIA_CUSTOM_OPTION_DESCRIPTION
+      NULL|Silicon/NVIDIA/Library/PlatformBootManagerBootDescriptionLib/PlatformBootManagerBootDescriptionLib.inf
+!endif
+      NULL|Silicon/NVIDIA/Library/UiMenuStartupLib/UiMenuStartupLib.inf
+  }
   MdeModulePkg/Universal/DriverHealthManagerDxe/DriverHealthManagerDxe.inf
+!endif
 
   #
   # Test Applications
@@ -1161,6 +1202,21 @@ CONFIG_MEMORY_TEST=n
   #
   ArmPkg/Drivers/ArmPsciMpServicesDxe/ArmPsciMpServicesDxe.inf
   Silicon/NVIDIA/Drivers/ThreadingDxe/ThreadingDxe.inf
+
+  #
+  # L4T launcher
+  #
+  Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf
+
+  # WFI App
+!ifdef CONFIG_SINGLE_BOOT_DEADLOOP_APP
+  Silicon/NVIDIA/Application/WfiApp/WfiApp.inf
+!endif
+
+  # Boot support for mkbootimg partitions
+!ifdef CONFIG_BOOT_NATIVE_ANDROID_PARTITION_SUPPORT
+  Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
+!endif
 
 [Components.AARCH64]
   #

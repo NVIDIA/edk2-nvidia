@@ -89,6 +89,8 @@
   gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration
   gNVIDIATokenSpaceGuid.PcdTpmEnable
   gNVIDIATokenSpaceGuid.PcdMemoryTest
+  gNVIDIATokenSpaceGuid.PcdSingleBootSupport
+  gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid
 
 [Guids]
   gEfiFileInfoGuid

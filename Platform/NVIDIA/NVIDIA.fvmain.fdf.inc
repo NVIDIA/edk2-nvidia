@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -232,10 +232,12 @@
   #
   INF MdeModulePkg/Universal/DevicePathDxe/DevicePathDxe.inf
   INF MdeModulePkg/Universal/DisplayEngineDxe/DisplayEngineDxe.inf
-  INF MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
   INF MdeModulePkg/Universal/BdsDxe/BdsDxe.inf
+!ifndef CONFIG_BOOT_UI_MENU_DISABLED
+  INF MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
   INF RuleOverride = UI MdeModulePkg/Application/UiApp/UiApp.inf
   INF MdeModulePkg/Universal/DriverHealthManagerDxe/DriverHealthManagerDxe.inf
+!endif
 
   #
   # EBC
@@ -367,3 +369,20 @@
   #
   INF ArmPkg/Drivers/ArmPsciMpServicesDxe/ArmPsciMpServicesDxe.inf
   INF Silicon/NVIDIA/Drivers/ThreadingDxe/ThreadingDxe.inf
+
+  #
+  # L4T launcher
+  #
+!ifdef CONFIG_SINGLE_BOOT_L4T_LAUNCHER
+  INF Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf
+!endif
+
+  # WFI App
+!ifdef CONFIG_SINGLE_BOOT_DEADLOOP_APP
+  INF Silicon/NVIDIA/Application/WfiApp/WfiApp.inf
+!endif
+
+  # Boot support for mkbootimg partitions
+!ifdef CONFIG_BOOT_NATIVE_ANDROID_PARTITION_SUPPORT
+  INF Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
+!endif

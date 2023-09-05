@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -68,11 +68,6 @@
   # NOR Flash Support
   #
   INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
-
-  #
-  # Android Boot Support
-  #
-  INF Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
 
   #
   # PCI Support
