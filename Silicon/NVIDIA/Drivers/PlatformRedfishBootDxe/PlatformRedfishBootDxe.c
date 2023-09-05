@@ -2,7 +2,7 @@
   Platform Redfish boot order driver.
 
   (C) Copyright 2022 Hewlett Packard Enterprise Development LP<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -113,6 +113,10 @@ RefreshBootOrderList (
   BOOLEAN                       IsLegacyOption;
   VOID                          *OptionsOpCodeHandle;
   UINTN                         OptionIndex;
+
+  if (FeaturePcdGet (PcdSingleBootSupport)) {
+    return EFI_SUCCESS;
+  }
 
   //
   // for better user experience
