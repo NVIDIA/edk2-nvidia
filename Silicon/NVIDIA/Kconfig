@@ -60,6 +60,94 @@ menu "Boot Options"
   bool "UI Menu Application disabled"
 
 endmenu
+
+menu "Debug Options"
+  config HALT_ON_ASSERT
+  bool "Halt on assert"
+  help
+    Should system halt or reboot on ASSERT
+
+  menuconfig MEMORY_TEST
+  bool "Memory Test support"
+  help
+    Memory test support enabled
+
+  if MEMORY_TEST
+    choice MEMORY_TEST_LEVEL
+    prompt "Memory Test Level"
+      config MEMORY_TEST_LEVEL_IGNORE
+      bool "Ignore memory test"
+
+      config MEMORY_TEST_LEVEL_QUICK
+      bool "Quick"
+
+      config MEMORY_TEST_LEVEL_SPARSE
+      bool "Sparse"
+
+      config MEMORY_TEST_LEVEL_EXTENSIVE
+      bool "Extensive"
+    endchoice
+
+    config MEMORY_TEST_NEXT_BOOT
+    bool "Enable memory test on next boot"
+    help
+      Should the memory tests run on the next boot
+
+    config MEMORY_TEST_SINGLE_BOOT
+    bool "Single boot memory test"
+    help
+      Should memory tests be disabled after next run
+
+    config MEMORY_TEST_ITERATIONS
+    int "Number of memory test iterations"
+    default 1
+    help
+      How many times should each memory test be run
+
+    config MEMORY_TEST_WALKING_1_BIT
+    bool "Walking 1 bit test"
+
+    config MEMORY_TEST_ADDRESS_CHECK
+    bool "Address check test"
+
+    config MEMORY_TEST_MOVING_INVERSIONS_01
+    bool "Moving inversions 0/1 test"
+
+    config MEMORY_TEST_MOVING_INVERSIONS_8BIT
+    bool "Moving inversion 8-bit test"
+
+    config MEMORY_TEST_MOVING_INVERSIONS_RANDOM
+    bool "Moving inversions random test"
+
+    config MEMORY_TEST_BLOCK_MOVE
+    bool "Block move test"
+
+    config MEMORY_TEST_MOVING_INVERSIONS_64BIT
+    bool "Moving inversion 64-bit test"
+
+    config MEMORY_TEST_RANDOM_SEQUENCE
+    bool "Random sequence test"
+
+    config MEMORY_TEST_MODULO_20
+    bool "Modulo 20 test"
+
+    config MEMORY_TEST_BIT_FADE
+    bool "Bit fade test"
+
+    if MEMORY_TEST_BIT_FADE
+      config MEMORY_TEST_BIT_FADE_PATTERN
+      hex "Bit Fade pattern"
+      default 0xAA55AA55AA55AA55
+
+      config MEMORY_TEST_BIT_FADE_WAIT
+      int "Bit fade wait time (ms)"
+      default 0
+      help
+        Time in ms to wait for bit fade test in ms
+    endif
+  endif
+endmenu
+
 menu	"Watchdog settings"
 
   config	BOOT_WATCHDOG_TIMEOUT

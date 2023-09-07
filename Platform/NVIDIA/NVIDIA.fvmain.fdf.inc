@@ -360,7 +360,7 @@
   #
   # Memory Tests
   #
-!if ($(CONFIG_MEMORY_TEST) == y)
+!ifdef CONFIG_MEMORY_TEST
   INF Silicon/NVIDIA/Drivers/GenericMpMemoryTestDxe/GenericMemoryTestDxe.inf
 !endif
 

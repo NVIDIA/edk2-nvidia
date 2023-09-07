@@ -4,11 +4,17 @@
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 [Defines]
-!ifndef CONFIG_MEMORY_TEST
-CONFIG_MEMORY_TEST=n
-!endif
 !ifndef CONFIG_BOOT_DEFAULT_TIMEOUT
 CONFIG_BOOT_DEFAULT_TIMEOUT=0
+!endif
+!ifndef CONFIG_MEMORY_TEST_ITERATIONS
+CONFIG_MEMORY_TEST_ITERATIONS=1
+!endif
+!ifndef CONFIG_MEMORY_TEST_BIT_FADE_PATTERN
+CONFIG_MEMORY_TEST_BIT_FADE_PATTERN=0xAA55AA55AA55AA55
+!endif
+!ifndef CONFIG_MEMORY_TEST_BIT_FADE_WAIT
+CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
 !endif
 
 [BuildOptions.common.EDKII.DXE_CORE,BuildOptions.common.EDKII.DXE_DRIVER,BuildOptions.common.EDKII.UEFI_DRIVER,BuildOptions.common.EDKII.UEFI_APPLICATION]
@@ -436,12 +442,19 @@ CONFIG_BOOT_DEFAULT_TIMEOUT=0
   # ASSERT_BREAKPOINT_ENABLED  0x10
   # ASSERT_DEADLOOP_ENABLED    0x20
   # ASSERT_RESET_ENABLED       0x40
-!if $(TARGET) == RELEASE
-  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x41
+!ifdef CONFIG_HALT_ON_ASSERT
+  !if $(TARGET) == RELEASE
+    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x21
+  !else
+    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x2f
+  !endif
 !else
-  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x4f
+  !if $(TARGET) == RELEASE
+    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x41
+  !else
+    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x4f
+  !endif
 !endif
-
   gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|FALSE
 
   #  BIT0 - Enable Progress Code.
@@ -634,7 +647,7 @@ CONFIG_BOOT_DEFAULT_TIMEOUT=0
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdImageLargeAddressLoad|FALSE
 
-!if ($(CONFIG_MEMORY_TEST) == y)
+!ifdef CONFIG_MEMORY_TEST
   gNVIDIATokenSpaceGuid.PcdExpectedPeiMemoryUsage|0x06000000
 !endif
 
@@ -719,6 +732,60 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|L"EnabledPcieNicTopology"|gNVIDIAPublicVariableGuid|0x0|{ 0x0, 0xFF, 0xFF, 0xFF, 0xFF }|BS,NV
   # Memory Test options
   gNVIDIATokenSpaceGuid.PcdMemoryTest|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x0|{0}|BS,NV,RT
+!ifdef CONFIG_MEMORY_TEST
+  !ifdef CONFIG_MEMORY_TEST_LEVEL_IGNORE
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.TestLevel|MEMORY_TEST_LEVEL_IGNORE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_LEVEL_QUICK
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.TestLevel|MEMORY_TEST_LEVEL_QUICK
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_LEVEL_SPARSE
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.TestLevel|MEMORY_TEST_LEVEL_SPARSE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_LEVEL_EXTENSIVE
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.TestLevel|MEMORY_TEST_LEVEL_EXTENSIVE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_NEXT_BOOT
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.NextBoot|TRUE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_SINGLE_BOOT
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.SingleBoot|TRUE
+  !endif
+  gNVIDIATokenSpaceGuid.PcdMemoryTest.TestIterations|$(CONFIG_MEMORY_TEST_ITERATIONS)
+  !ifdef CONFIG_MEMORY_TEST_WALKING_1_BIT
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.Walking1BitEnabled|TRUE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_ADDRESS_CHECK
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.AddressCheckEnabled|TRUE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_MOVING_INVERSIONS_01
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.MovingInversions01Enabled|TRUE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_MOVING_INVERSIONS_8BIT
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.MovingInversions8BitEnabled|TRUE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_MOVING_INVERSIONS_RANDOM
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.MovingInversionsRandomEnabled|TRUE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_BLOCK_MOVE
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.BlockMoveEnabled|TRUE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_MOVING_INVERSIONS_64BIT
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.MovingInversions64BitEnabled|TRUE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_RANDOM_SEQUENCE
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.RandomNumberSequenceEnabled|TRUE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_MODULO_20
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.Modulo20RandomEnabled|TRUE
+  !endif
+  !ifdef CONFIG_MEMORY_TEST_BIT_FADE
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.BitFadeEnabled|TRUE
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.BitFadePattern|$(CONFIG_MEMORY_TEST_BIT_FADE_PATTERN)
+    gNVIDIATokenSpaceGuid.PcdMemoryTest.BitFadeWait|$(CONFIG_MEMORY_TEST_BIT_FADE_WAIT)
+  !endif
+!endif
+
   gNVIDIATokenSpaceGuid.PcdBoardRecoveryBoot|L"BoardRecoveryBoot"|gNVIDIAPublicVariableGuid|0x00|0x00|BS,NV,RT
 
 [PcdsPatchableInModule]
@@ -1193,7 +1260,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   # Memory Tests
   #
-!if ($(CONFIG_MEMORY_TEST) == y)
+!ifdef CONFIG_MEMORY_TEST
   Silicon/NVIDIA/Drivers/GenericMpMemoryTestDxe/GenericMemoryTestDxe.inf
 !endif
 
