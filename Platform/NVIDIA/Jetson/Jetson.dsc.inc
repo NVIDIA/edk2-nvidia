@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -286,6 +286,22 @@
   # L4T launcher
   #
   Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf
+
+  #
+  # Bds
+  #
+  MdeModulePkg/Universal/BdsDxe/BdsDxe.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Library/PlatformBootManagerBootDescriptionLib/PlatformBootManagerBootDescriptionLib.inf
+  }
+  MdeModulePkg/Application/UiApp/UiApp.inf {
+    <LibraryClasses>
+      NULL|MdeModulePkg/Library/DeviceManagerUiLib/DeviceManagerUiLib.inf
+      NULL|MdeModulePkg/Library/BootManagerUiLib/BootManagerUiLib.inf
+      NULL|MdeModulePkg/Library/BootMaintenanceManagerUiLib/BootMaintenanceManagerUiLib.inf
+      NULL|Silicon/NVIDIA/Library/PlatformBootManagerBootDescriptionLib/PlatformBootManagerBootDescriptionLib.inf
+      NULL|Silicon/NVIDIA/Library/UiMenuStartupLib/UiMenuStartupLib.inf
+  }
 
   #
   # UFS support
