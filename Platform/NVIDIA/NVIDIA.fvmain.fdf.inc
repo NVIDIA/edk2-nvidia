@@ -125,7 +125,7 @@
 
   INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
   INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
-!if $(CONFIG_ARM_WATCHDOG) == y
+!ifdef CONFIG_ARM_WATCHDOG
   INF ArmPkg/Drivers/GenericWatchdogDxe/GenericWatchdogDxe.inf
   INF MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
 !else

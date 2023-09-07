@@ -4,9 +4,6 @@
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 [Defines]
-!ifndef CONFIG_ARM_WATCHDOG
-CONFIG_ARM_WATCHDOG = n
-!endif
 !ifndef CONFIG_MEMORY_TEST
 CONFIG_MEMORY_TEST=n
 !endif
@@ -843,7 +840,7 @@ CONFIG_MEMORY_TEST=n
 
   ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
   ArmPkg/Drivers/TimerDxe/TimerDxe.inf
-!if ($(CONFIG_ARM_WATCHDOG) == y)
+!ifdef CONFIG_ARM_WATCHDOG
   ArmPkg/Drivers/GenericWatchdogDxe/GenericWatchdogDxe.inf {
     <LibraryClasses>
       NULL|Silicon/NVIDIA/Library/PlatformIsSiliconLib/PlatformIsSiliconLib.inf
