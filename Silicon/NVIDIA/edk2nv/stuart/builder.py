@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation.
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -146,8 +146,6 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
         ws_dir = Path(self.settings.GetWorkspaceRoot())
         config_out = ws_dir / "nvidia-config" / self.settings.GetName() / ".config"
-        if config_out.is_file ():
-            return 0
 
         kconf_file = self.settings.GetKConfigFile()
         if (kconf_file == None):
@@ -165,6 +163,9 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         for config in configs[1:]:
             # replace=False creates a merged configuration
             print(kconf.load_config(ws_dir / config, replace=False))
+
+        if config_out.is_file ():
+            print(kconf.load_config(config_out, replace=False))
 
         kconf.write_config(os.devnull)
 
