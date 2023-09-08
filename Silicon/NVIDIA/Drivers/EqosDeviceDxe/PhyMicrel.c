@@ -33,6 +33,8 @@
 
 #define PHY_STATUS_LINK  BIT2
 
+#define REG_PHY_1000T_STATUS  0x0A
+
 #define PAGE_RGMII_TIMING  2
 
 #define REG_PHY_CTRL_SKEW     0x4
@@ -89,12 +91,11 @@ PhyMicrelStartAutoNeg (
   PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, Data32);
 
   /* Selector Field: 0x1 = IEEE 802.3 */
-  Data32 = 0x1;
+  Data32  = 0x1;
   Data32 |= REG_PHY_AUTONEG_ADVERTISE_100_BASE_TX_FULL |
             REG_PHY_AUTONEG_ADVERTISE_100_BASE_TX_HALF |
             REG_PHY_AUTONEG_ADVERTISE_10_BASE_T_FULL   |
             REG_PHY_AUTONEG_ADVERTISE_10_BASE_T_HALF;
-
 
   PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, Data32);
 
@@ -243,7 +244,6 @@ PhyMicrelConfig (
   IN  PHY_DRIVER  *PhyDriver
   )
 {
-  // UINT32      Data32;
   EFI_STATUS  Status;
 
   Status = PhyMicrelSetTimings (PhyDriver);
@@ -269,6 +269,19 @@ PhyMicrelDetectLink (
 {
   UINT32      Data32;
   EFI_STATUS  Status;
+
+  Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_1000T_STATUS, &Data32);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Micrel: Failed to read 1000T_STATUS register\r\n"));
+    return;
+  }
+
+  // If idle error maxed out the KSZ needs a reset
+  if ((Data32 & 0xFF) == 0xFF) {
+    DEBUG ((DEBUG_ERROR, "Micrel: Idle error maxed, resetting\r\n"));
+    PhySoftReset (PhyDriver);
+    return;
+  }
 
   Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_STATUS, &Data32);
   if (EFI_ERROR (Status)) {
