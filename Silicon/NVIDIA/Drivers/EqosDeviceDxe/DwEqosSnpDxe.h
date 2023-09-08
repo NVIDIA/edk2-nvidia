@@ -16,6 +16,7 @@
 #include <Protocol/ComponentName2.h>
 #include <Protocol/DevicePath.h>
 #include <Protocol/NonDiscoverableDevice.h>
+#include <Protocol/AdapterInformation.h>
 
 #include <Library/UefiLib.h>
 
@@ -39,6 +40,7 @@ typedef struct {
   // EFI SNP protocol instances
   EFI_SIMPLE_NETWORK_PROTOCOL    Snp;
   EFI_SIMPLE_NETWORK_MODE        SnpMode;
+  EFI_ADAPTER_INFORMATION_PROTOCOL Aip;
 
   EMAC_DRIVER                    MacDriver;
   PHY_DRIVER                     PhyDriver;
@@ -67,6 +69,7 @@ extern EFI_COMPONENT_NAME2_PROTOCOL  gSnpComponentName2;
 
 #define SNP_DRIVER_SIGNATURE  SIGNATURE_32('A', 'S', 'N', 'P')
 #define INSTANCE_FROM_SNP_THIS(a)  CR(a, SIMPLE_NETWORK_DRIVER, Snp, SNP_DRIVER_SIGNATURE)
+#define INSTANCE_FROM_AIP_THIS(a)  CR(a, SIMPLE_NETWORK_DRIVER, Aip, SNP_DRIVER_SIGNATURE)
 
 #define ETHERNET_MAC_ADDRESS_INDEX    0
 #define ETHERNET_MAC_BROADCAST_INDEX  1
@@ -191,6 +194,34 @@ SnpReceive (
   OUT  EFI_MAC_ADDRESS                  *DstAddr      OPTIONAL,
   OUT  UINT16                           *Protocol     OPTIONAL
   );
+
+// Adapter Information Protocol Functions
+EFI_STATUS
+EFIAPI
+EqosAipGetInformation (
+  IN  EFI_ADAPTER_INFORMATION_PROTOCOL  *This,
+  IN  EFI_GUID                          *InformationType,
+  OUT VOID                              **InformationBlock,
+  OUT UINTN                             *InformationBlockSize
+  );
+
+EFI_STATUS
+EFIAPI
+EqosAipSetInformation (
+  IN  EFI_ADAPTER_INFORMATION_PROTOCOL  *This,
+  IN  EFI_GUID                          *InformationType,
+  IN  VOID                              *InformationBlock,
+  IN  UINTN                             InformationBlockSize
+  );
+
+EFI_STATUS
+EFIAPI
+EqosAipGetSupportedTypes (
+  IN  EFI_ADAPTER_INFORMATION_PROTOCOL  *This,
+  OUT EFI_GUID                          **InfoTypesBuffer,
+  OUT UINTN                             *InfoTypesBufferCount
+  );
+
 
 // Internal helper functions
 
