@@ -269,6 +269,11 @@ DeviceDiscoveryNotify (
         return EFI_UNSUPPORTED;
       }
 
+      // Assign Adapter Information Protocol Pointers
+      Snp->Aip.GetInformation    = EqosAipGetInformation;
+      Snp->Aip.SetInformation    = EqosAipSetInformation;
+      Snp->Aip.GetSupportedTypes = EqosAipGetSupportedTypes;
+
       // Assign fields and func pointers
       Snp->Snp.Revision       = EFI_SIMPLE_NETWORK_PROTOCOL_REVISION;
       Snp->Snp.WaitForPacket  = NULL;
@@ -595,6 +600,8 @@ DeviceDiscoveryNotify (
                       &ControllerHandle,
                       &gEfiSimpleNetworkProtocolGuid,
                       &(Snp->Snp),
+                      &gEfiAdapterInformationProtocolGuid,
+                      &(Snp->Aip),
                       NULL
                       );
 
@@ -630,6 +637,8 @@ DeviceDiscoveryNotify (
                       ControllerHandle,
                       &gEfiSimpleNetworkProtocolGuid,
                       &Snp->Snp,
+                      &gEfiAdapterInformationProtocolGuid,
+                      &(Snp->Aip),
                       NULL
                       );
       if (EFI_ERROR (Status)) {

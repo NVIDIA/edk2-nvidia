@@ -2,7 +2,7 @@
 #
 #  DW EQoS device tree binding driver
 #
-#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -37,6 +37,7 @@
   PhyMicrel.c
   PhyMgbe.c
   DtAcpiMacUpdate.c
+  EqosAdapterInfo.c
 
   nvethernetrm/osd.c
   nvethernetrm/osi/core/debug.c
@@ -94,6 +95,7 @@
   gNVIDIACvmEepromProtocolGuid
   gEfiAcpiTableProtocolGuid                     # PROTOCOL ALWAYS_CONSUMED
   gEfiAcpiSdtProtocolGuid                       # PROTOCOL ALWAYS_CONSUMED
+  gEfiAdapterInformationProtocolGuid
 
 [Guids]
   gDwEqosNetNonDiscoverableDeviceGuid
@@ -103,6 +105,7 @@
   gFdtTableGuid
   gEfiAcpiTableGuid
   gEfiEventExitBootServicesGuid
+  gEfiAdapterInfoMediaStateGuid
 
 [Depex]
   gEmbeddedGpioProtocolGuid
