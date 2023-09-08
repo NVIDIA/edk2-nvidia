@@ -129,7 +129,7 @@ GetGpioState (
   RequestData.Operation[1].Flags         = I2C_FLAG_READ;
   Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get input register: %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get input register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
@@ -187,7 +187,7 @@ SetGpioState (
   RequestData.Operation[1].Flags         = I2C_FLAG_READ;
   Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
@@ -201,7 +201,7 @@ SetGpioState (
   RequestData.Operation[1].Flags         = I2C_FLAG_READ;
   Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
@@ -235,7 +235,7 @@ SetGpioState (
   RequestData.Operation[0].Flags         = 0;
   Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to set config register: %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set config register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
@@ -248,7 +248,7 @@ SetGpioState (
     RequestData.Operation[0].Flags         = 0;
     Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to set output register: %r.\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set output register: %r.\r\n", __FUNCTION__, Status));
       return EFI_DEVICE_ERROR;
     }
   }
@@ -304,7 +304,7 @@ GetGpioMode (
   RequestData.Operation[1].Flags         = I2C_FLAG_READ;
   Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 
@@ -318,7 +318,7 @@ GetGpioMode (
   RequestData.Operation[1].Flags         = I2C_FLAG_READ;
   Status                                 = I2cIo->QueueRequest (I2cIo, 0, NULL, RequestPacket, NULL);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get config register: %r.\r\n", __FUNCTION__, Status));
     return EFI_DEVICE_ERROR;
   }
 

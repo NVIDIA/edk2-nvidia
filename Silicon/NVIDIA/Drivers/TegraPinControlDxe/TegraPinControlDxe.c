@@ -152,7 +152,7 @@ DeviceDiscoveryNotify (
                  );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Couldn't find PadCtl address range\n",
           __FUNCTION__
           ));

@@ -535,7 +535,7 @@ FdtCleanFixups (
   }
 
   if (fdt_open_into (FdtBase, FdtBuf, FdtSize)) {
-    DEBUG ((EFI_D_ERROR, "Failed to copy overlay device tree.\r\n"));
+    DEBUG ((DEBUG_ERROR, "Failed to copy overlay device tree.\r\n"));
     Status =  EFI_LOAD_ERROR;
     goto ExitFixups;
   }
@@ -808,7 +808,7 @@ ApplyTegraDeviceTreeOverlayCommon (
     FdtSize = fdt_totalsize (FdtNext);
 
     if (fdt_open_into (FdtNext, FdtBuf, FdtSize)) {
-      DEBUG ((EFI_D_ERROR, "Failed to copy overlay device tree.\r\n"));
+      DEBUG ((DEBUG_ERROR, "Failed to copy overlay device tree.\r\n"));
       Status =  EFI_LOAD_ERROR;
       goto Exit;
     }
@@ -820,12 +820,12 @@ ApplyTegraDeviceTreeOverlayCommon (
     if (EFI_SUCCESS == Status) {
       Err = fdt_overlay_apply (FdtBase, FdtBuf);
       if (Err != 0) {
-        DEBUG ((EFI_D_ERROR, "Failed to apply device tree overlay. Error Code = %d\n", Err));
+        DEBUG ((DEBUG_ERROR, "Failed to apply device tree overlay. Error Code = %d\n", Err));
         Status = EFI_DEVICE_ERROR;
         goto Exit;
       }
     } else {
-      DEBUG ((EFI_D_INFO, "Overlay skipped.\n"));
+      DEBUG ((DEBUG_INFO, "Overlay skipped.\n"));
       Status = EFI_SUCCESS;
     }
 

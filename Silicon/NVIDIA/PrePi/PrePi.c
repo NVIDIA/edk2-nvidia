@@ -46,7 +46,7 @@ InitMmu (
   //      DRAM (even at the top of DRAM as it is the first permanent memory allocation)
   Status = ArmConfigureMmu (MemoryTable, &TranslationTableBase, &TranslationTableSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Error: Failed to enable MMU\n"));
+    DEBUG ((DEBUG_ERROR, "Error: Failed to enable MMU\n"));
   }
 }
 
@@ -177,7 +177,7 @@ DisplayHobResource (
         ((UINTN)HobBase < NextHob.ResourceDescriptor->PhysicalStart + NextHob.ResourceDescriptor->ResourceLength))
     {
       DEBUG ((
-        EFI_D_INIT,
+        DEBUG_INIT,
         "Main memory region: (0x%016llx, 0x%016llx)\r\n",
         NextHob.ResourceDescriptor->PhysicalStart,
         NextHob.ResourceDescriptor->ResourceLength
@@ -218,7 +218,7 @@ PrintModel (
       return;
     }
 
-    DEBUG ((EFI_D_ERROR, "Model: %a\n", Data));
+    DEBUG ((DEBUG_ERROR, "Model: %a\n", Data));
   }
 }
 

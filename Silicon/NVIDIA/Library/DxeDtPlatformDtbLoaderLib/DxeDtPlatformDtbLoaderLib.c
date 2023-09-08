@@ -44,7 +44,7 @@ DtPlatformLoadDtb (
 
   if (fdt_check_header (*Dtb) != 0) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: No DTB found @ 0x%p\n",
       __FUNCTION__,
       *Dtb

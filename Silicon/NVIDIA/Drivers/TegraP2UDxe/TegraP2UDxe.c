@@ -75,7 +75,7 @@ AddMemoryRegion (
 
     Status = gDS->GetMemorySpaceDescriptor (ScanLocation, &MemorySpace);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to GetMemorySpaceDescriptor (0x%llx): %r.\r\n", __FUNCTION__, ScanLocation, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to GetMemorySpaceDescriptor (0x%llx): %r.\r\n", __FUNCTION__, ScanLocation, Status));
       return Status;
     }
 
@@ -88,7 +88,7 @@ AddMemoryRegion (
                       EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to AddMemorySpace: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to AddMemorySpace: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
         return Status;
       }
 
@@ -98,7 +98,7 @@ AddMemoryRegion (
                       EFI_MEMORY_UC
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to SetMemorySpaceAttributes: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to SetMemorySpaceAttributes: (0x%llx, 0x%llx) %r.\r\n", __FUNCTION__, ScanLocation, OverlapSize, Status));
         return Status;
       }
     }
@@ -180,12 +180,12 @@ TegraP2UInit (
 
   Entry = FindP2UEntry (&Private->TegraP2UList, P2UId);
   if (Entry == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to find P2U Entry\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find P2U Entry\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   DEBUG ((
-    EFI_D_VERBOSE,
+    DEBUG_VERBOSE,
     "%a: P2U Base Addr = 0x%08X\r\n",
     __FUNCTION__,
     Entry->BaseAddr
@@ -276,7 +276,7 @@ AddP2UEntries (
 
     ListEntry = AllocateZeroPool (sizeof (TEGRAP2U_LIST_ENTRY));
     if (NULL == ListEntry) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
       return EFI_OUT_OF_RESOURCES;
     }
 
@@ -288,7 +288,7 @@ AddP2UEntries (
 
     AddressCells = fdt_address_cells (Private->DeviceTreeBase, fdt_parent_offset (Private->DeviceTreeBase, NodeOffset));
     if ((AddressCells > 2) || (AddressCells == 0)) {
-      DEBUG ((EFI_D_ERROR, "%a: Bad cell value, %d\r\n", __FUNCTION__, AddressCells));
+      DEBUG ((DEBUG_ERROR, "%a: Bad cell value, %d\r\n", __FUNCTION__, AddressCells));
       return EFI_UNSUPPORTED;
     }
 
@@ -299,12 +299,12 @@ AddP2UEntries (
                     &PropertySize
                     );
     if (RegProperty == NULL) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to find \"reg\" entry\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find \"reg\" entry\r\n", __FUNCTION__));
       return EFI_NOT_FOUND;
     }
 
     if (PropertySize < sizeof (UINT32) * AddressCells) {
-      DEBUG ((EFI_D_ERROR, "%a: Wrongly formatted \"reg\" entry\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Wrongly formatted \"reg\" entry\r\n", __FUNCTION__));
       return EFI_NOT_FOUND;
     }
 
@@ -315,7 +315,7 @@ AddP2UEntries (
     }
 
     DEBUG ((
-      EFI_D_VERBOSE,
+      DEBUG_VERBOSE,
       "%a: P2U Base Addr = 0x%llX\r\n",
       __FUNCTION__,
       ListEntry->BaseAddr
@@ -324,7 +324,7 @@ AddP2UEntries (
     Status = AddMemoryRegion (ListEntry->BaseAddr, SIZE_64KB);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed to add region 0x%016lx, 0x%016lx: %r.\r\n",
         __FUNCTION__,
         ListEntry->BaseAddr,
@@ -372,13 +372,13 @@ BuildP2UNodes (
 
   Status = DtPlatformLoadDtb (&Private->DeviceTreeBase, &Private->DeviceTreeSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a failed to get device tree: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a failed to get device tree: %r\r\n", __FUNCTION__, Status));
     return Status;
   }
 
   Status = AddP2UEntries (Private);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a failed to add P2U entries: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a failed to add P2U entries: %r\r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -407,7 +407,7 @@ TegraP2UDxeInitialize (
 
   Private = AllocatePool (sizeof (TEGRAP2U_DXE_PRIVATE));
   if (NULL == Private) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate private data stucture\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate private data stucture\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -432,7 +432,7 @@ TegraP2UDxeInitialize (
    */
   Status = BuildP2UNodes (Private);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to parse P2U instances data: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to parse P2U instances data: %r\r\n", __FUNCTION__, Status));
     goto ErrorBuildP2UNodes;
   }
 
@@ -443,7 +443,7 @@ TegraP2UDxeInitialize (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to install protocols: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to install protocols: %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 

@@ -410,7 +410,7 @@ UpdateGedInfo (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: Couldn't get gNVIDIARasNsCommPcieDpcDataProtocolGuid protocol: %r\n",
       __FUNCTION__,
       Status

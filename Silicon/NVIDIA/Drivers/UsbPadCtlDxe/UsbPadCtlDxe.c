@@ -91,7 +91,7 @@ DeviceDiscoveryNotify (
       Private = AllocatePool (sizeof (USBPADCTL_DXE_PRIVATE));
       if (NULL == Private) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Failed to allocate private data stucture\r\n",
           __FUNCTION__
           ));
@@ -105,7 +105,7 @@ DeviceDiscoveryNotify (
                       );
       if (EFI_ERROR (Status) || (mRegulator == NULL)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Couldn't get gNVIDIARegulatorProtocolGuid Handle: %r\n",
           __FUNCTION__,
           Status
@@ -120,7 +120,7 @@ DeviceDiscoveryNotify (
                       );
       if (EFI_ERROR (Status) || (mEfuse == NULL)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Couldn't get gNVIDIAEFuseProtocolGuid Handle: %r\n",
           __FUNCTION__,
           Status
@@ -135,7 +135,7 @@ DeviceDiscoveryNotify (
                       );
       if (EFI_ERROR (Status) || (mClockProtocol == NULL)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Couldn't get gArmScmiClock2ProtocolGuid Handle: %r\n",
           __FUNCTION__,
           Status
@@ -173,7 +173,7 @@ DeviceDiscoveryNotify (
       if (EFI_ERROR (Status) || (mPmux == NULL)) {
         if (T234Platform == FALSE) {
           DEBUG ((
-            EFI_D_ERROR,
+            DEBUG_ERROR,
             "%a: Couldn't get gNVIDIAPinMuxProtocolGuid Handle: %r\n",
             __FUNCTION__,
             Status
@@ -191,7 +191,7 @@ DeviceDiscoveryNotify (
                    );
         if (EFI_ERROR (Status)) {
           DEBUG ((
-            EFI_D_ERROR,
+            DEBUG_ERROR,
             "%a: Unable to locate Xhci AO address range\n",
             __FUNCTION__
             ));
@@ -209,7 +209,7 @@ DeviceDiscoveryNotify (
                  );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Unable to locate UsbPadCtl Base address range\n",
           __FUNCTION__
           ));

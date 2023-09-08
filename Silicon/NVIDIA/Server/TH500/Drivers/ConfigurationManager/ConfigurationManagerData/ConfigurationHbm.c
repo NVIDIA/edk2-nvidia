@@ -116,7 +116,7 @@ GenerateHbmMemPxmDmnMap (
                   &Handles
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to locate root bridge protocols, %r.\r\n", __FUNCTION__, NumberOfHandles));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate root bridge protocols, %r.\r\n", __FUNCTION__, NumberOfHandles));
     Status = EFI_NOT_FOUND;
     goto Exit;
   }
@@ -130,7 +130,7 @@ GenerateHbmMemPxmDmnMap (
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed to get protocol for handle %p, %r.\r\n",
         __FUNCTION__,
         Handles[HandleIdx],

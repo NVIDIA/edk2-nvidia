@@ -152,7 +152,7 @@ DeviceDiscoveryNotify (
                  );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Couldn't find PinMux address range\n",
           __FUNCTION__
           ));
@@ -161,7 +161,7 @@ DeviceDiscoveryNotify (
 
       Private = AllocatePool (sizeof (PINMUX_DXE_PRIVATE));
       if (NULL == Private) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Memory\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Memory\r\n", __FUNCTION__));
         Status = EFI_OUT_OF_RESOURCES;
         return Status;
       }

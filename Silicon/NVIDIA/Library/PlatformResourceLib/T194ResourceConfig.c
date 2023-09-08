@@ -127,7 +127,7 @@ T194GetResourceConfig (
     }
 
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "Carveout %u Region: Base: 0x%016lx, Size: 0x%016lx\n",
       Index,
       CpuBootloaderParams->CarveoutInfo[Index].Base,

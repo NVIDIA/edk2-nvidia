@@ -369,7 +369,7 @@ RetrainLink (
         /* Wait for 20 ms for link to appear */
         DeviceDiscoveryThreadMicroSecondDelay (20*1000);
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "PCIe Controller-0x%x Link Status after re-train (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
           Private->CtrlId,
           PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
@@ -378,13 +378,13 @@ RetrainLink (
           PciExpCap->LinkStatus.Bits.NegotiatedLinkWidth
           ));
       } else {
-        DEBUG ((EFI_D_ERROR, "PCIe Controller-0x%x wait for Link Bandwith Timeout\r\n", Private->CtrlId));
+        DEBUG ((DEBUG_ERROR, "PCIe Controller-0x%x wait for Link Bandwith Timeout\r\n", Private->CtrlId));
       }
     } else {
-      DEBUG ((EFI_D_ERROR, "PCIe Controller-0x%x Link Retrain Timeout\r\n", Private->CtrlId));
+      DEBUG ((DEBUG_ERROR, "PCIe Controller-0x%x Link Retrain Timeout\r\n", Private->CtrlId));
     }
   } else {
-    DEBUG ((EFI_D_ERROR, "PCIe Controller-0x%x Previous Link train Timeout\r\n", Private->CtrlId));
+    DEBUG ((DEBUG_ERROR, "PCIe Controller-0x%x Previous Link train Timeout\r\n", Private->CtrlId));
   }
 }
 
@@ -565,7 +565,7 @@ InitializeController (
         XAL_RC_BAR_CNTL_STANDARD_64B_BAR_EN;
   MmioWrite32 (Private->XalBase + XAL_RC_BAR_CNTL_STANDARD, val);
 
-  DEBUG ((EFI_D_VERBOSE, "Programming XAL_RC registers is done\r\n"));
+  DEBUG ((DEBUG_VERBOSE, "Programming XAL_RC registers is done\r\n"));
 
   /* Setup bus numbers */
   MmioAndThenOr32 (Private->EcamBase + PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET, 0xff000000, 0x00ff0100);
@@ -582,7 +582,7 @@ InitializeController (
 
   Private->PCIeCapOff = PCIeFindCap (Private->EcamBase, EFI_PCI_CAPABILITY_ID_PCIEXP);
   if (!Private->PCIeCapOff) {
-    DEBUG ((EFI_D_VERBOSE, "Failed to find PCIe capability registers\r\n"));
+    DEBUG ((DEBUG_VERBOSE, "Failed to find PCIe capability registers\r\n"));
     return EFI_NOT_FOUND;
   }
 
@@ -595,7 +595,7 @@ InitializeController (
 
   if ( WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 13, 10000, 100, TRUE)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "PCIe Controller-0x%x Link is UP (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
       Private->CtrlId,
       PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
@@ -613,22 +613,22 @@ InitializeController (
 
     Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&C2cProtocol);
     if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Requesting C2C Initialization\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Requesting C2C Initialization\r\n", __FUNCTION__));
       Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions, &C2cStatus);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: C2C initialization mrq failed: %r\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: C2C initialization mrq failed: %r\r\n", __FUNCTION__, Status));
       } else {
-        DEBUG ((EFI_D_ERROR, "%a: C2C initialization mrq successful.\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: C2C initialization mrq successful.\r\n", __FUNCTION__));
         if (C2cStatus == C2C_STATUS_C2C_LINK_TRAIN_PASS) {
-          DEBUG ((EFI_D_ERROR, "%a: C2C link training successful.\r\n", __FUNCTION__));
+          DEBUG ((DEBUG_ERROR, "%a: C2C link training successful.\r\n", __FUNCTION__));
         } else {
-          DEBUG ((EFI_D_ERROR, "%a: C2C link training failed with error code: 0x%x\r\n", __FUNCTION__, C2cStatus));
+          DEBUG ((DEBUG_ERROR, "%a: C2C link training failed with error code: 0x%x\r\n", __FUNCTION__, C2cStatus));
         }
       }
     }
   } else {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "PCIe Controller-0x%x Link is DOWN (Capable: Gen-%d,x%d)\r\n",
       Private->CtrlId,
       PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
@@ -1496,7 +1496,7 @@ DeviceDiscoveryNotify (
                       &PropertySize
                       );
       if ((BusProperty == NULL) || (PropertySize != 2 * sizeof (UINT32))) {
-        DEBUG ((EFI_D_INFO, "PCIe Controller: unknown bus size in fdt, default to 0-255\r\n"));
+        DEBUG ((DEBUG_INFO, "PCIe Controller: unknown bus size in fdt, default to 0-255\r\n"));
         RootBridge->Bus.Base  = 0x0;
         RootBridge->Bus.Limit = 0xff;
       } else {
@@ -1515,7 +1515,7 @@ DeviceDiscoveryNotify (
       RangeSize       = (AddressCells + PciAddressCells + SizeCells) * sizeof (UINT32);
 
       if (PciAddressCells != 3) {
-        DEBUG ((EFI_D_ERROR, "PCIe Controller, size 3 is required for address-cells, got %d\r\n", PciAddressCells));
+        DEBUG ((DEBUG_ERROR, "PCIe Controller, size 3 is required for address-cells, got %d\r\n", PciAddressCells));
         Status = EFI_DEVICE_ERROR;
         break;
       }
@@ -1534,7 +1534,7 @@ DeviceDiscoveryNotify (
       RootBridge->PMemAbove4G.Base = MAX_UINT64;
 
       if ((RangesProperty == NULL) || ((PropertySize % RangeSize) != 0)) {
-        DEBUG ((EFI_D_ERROR, "PCIe Controller: Unsupported ranges configuration\r\n"));
+        DEBUG ((DEBUG_ERROR, "PCIe Controller: Unsupported ranges configuration\r\n"));
         Status = EFI_UNSUPPORTED;
         break;
       }
@@ -1564,7 +1564,7 @@ DeviceDiscoveryNotify (
           CopyMem (&HostAddress, RangesProperty + (PciAddressCells * sizeof (UINT32)), sizeof (UINT32));
           HostAddress = SwapBytes32 (HostAddress);
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
           Status = EFI_DEVICE_ERROR;
           break;
         }
@@ -1576,7 +1576,7 @@ DeviceDiscoveryNotify (
           CopyMem (&Size, RangesProperty + ((PciAddressCells + AddressCells) * sizeof (UINT32)), sizeof (UINT32));
           Size = SwapBytes32 (Size);
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
           Status = EFI_DEVICE_ERROR;
           break;
         }
@@ -1597,7 +1597,7 @@ DeviceDiscoveryNotify (
         } else if (Space == PCIE_DEVICETREE_SPACE_MEM64) {
           if (Prefetchable) {
             if (Translation) {
-              DEBUG ((EFI_D_ERROR, "Non 1:1 mapping is NOT supported for Prefetchable aperture\n"));
+              DEBUG ((DEBUG_ERROR, "Non 1:1 mapping is NOT supported for Prefetchable aperture\n"));
               Status = EFI_DEVICE_ERROR;
               break;
             }
@@ -1608,7 +1608,7 @@ DeviceDiscoveryNotify (
             Private->PrefetchMemBase                                    = HostAddress;
             Private->PrefetchMemLimit                                   = HostAddress + Size - 1;
             Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 3;
-            DEBUG ((EFI_D_INFO, "PREF64: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
+            DEBUG ((DEBUG_INFO, "PREF64: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
           } else {
             if (Translation) {
               RootBridge->Mem.Base                                        = DeviceAddress;
@@ -1617,19 +1617,19 @@ DeviceDiscoveryNotify (
               Private->MemBase                                            = HostAddress;
               Private->MemLimit                                           = HostAddress + Size - 1;
               Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 3;
-              DEBUG ((EFI_D_INFO, "MEM32: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
+              DEBUG ((DEBUG_INFO, "MEM32: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
             } else {
-              DEBUG ((EFI_D_ERROR, "1:1 mapping is NOT supported for Non-Prefetchable aperture\n"));
+              DEBUG ((DEBUG_ERROR, "1:1 mapping is NOT supported for Non-Prefetchable aperture\n"));
               Status = EFI_DEVICE_ERROR;
               break;
             }
           }
         } else if (Space == PCIE_DEVICETREE_SPACE_MEM32) {
-          DEBUG ((EFI_D_ERROR, "32-bit aperture usage for memory is not supported\n"));
+          DEBUG ((DEBUG_ERROR, "32-bit aperture usage for memory is not supported\n"));
           Status = EFI_DEVICE_ERROR;
           break;
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Unknown region 0x%08x 0x%016llx-0x%016llx T 0x%016llx\r\n", Flags, DeviceAddress, Limit, Translation));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Unknown region 0x%08x 0x%016llx-0x%016llx T 0x%016llx\r\n", Flags, DeviceAddress, Limit, Translation));
           ASSERT (FALSE);
           Status = EFI_DEVICE_ERROR;
           break;
@@ -1663,7 +1663,7 @@ DeviceDiscoveryNotify (
           CopyMem (&Private->PcieRootBridgeConfigurationIo.HbmRangeStart, HbmRangesProperty, sizeof (UINT32));
           Private->PcieRootBridgeConfigurationIo.HbmRangeStart = SwapBytes32 (Private->PcieRootBridgeConfigurationIo.HbmRangeStart);
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
           Status = EFI_DEVICE_ERROR;
           break;
         }
@@ -1675,7 +1675,7 @@ DeviceDiscoveryNotify (
           CopyMem (&Private->PcieRootBridgeConfigurationIo.HbmRangeSize, HbmRangesProperty + (AddressCells * sizeof (UINT32)), sizeof (UINT32));
           Private->PcieRootBridgeConfigurationIo.HbmRangeSize = SwapBytes32 (Private->PcieRootBridgeConfigurationIo.HbmRangeSize);
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
           Status = EFI_DEVICE_ERROR;
           break;
         }
@@ -1725,12 +1725,12 @@ DeviceDiscoveryNotify (
 
       Status = SenseGpu (Private, ControllerHandle);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Unable to sense gpu (%r)\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Unable to sense gpu (%r)\r\n", __FUNCTION__, Status));
       }
 
       Status = InitializeController (Private, ControllerHandle);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
         break;
       }
 
@@ -1743,7 +1743,7 @@ DeviceDiscoveryNotify (
                       &ExitBootServiceEvent
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Unable to setup exit boot services uninitialize. (%r)\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Unable to setup exit boot services uninitialize. (%r)\r\n", __FUNCTION__, Status));
         break;
       }
 

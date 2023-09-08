@@ -229,7 +229,7 @@ InstallHeterogeneousMemoryAttributeTable (
   // Generate and populate Initiator proximity domain list
   InitiatorProximityDomainList = (UINT32 *)AllocateZeroPool (sizeof (UINT32) * NumInitProxDmns);
   if (InitiatorProximityDomainList == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Initiator Proximity DomainList entry\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Initiator Proximity DomainList entry\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
@@ -241,7 +241,7 @@ InstallHeterogeneousMemoryAttributeTable (
   // Generate and populate Target proximity domain list
   TargetProximityDomainList = (UINT32 *)AllocateZeroPool (sizeof (UINT32) * NumTarProxDmns);
   if (TargetProximityDomainList == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Target Proximity DomainList entry\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Target Proximity DomainList entry\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
@@ -253,21 +253,21 @@ InstallHeterogeneousMemoryAttributeTable (
   // Collect Read/Write Latency and bandwidth info
   ReadLatencyList = (UINT16 *)AllocateZeroPool (sizeof (UINT16) * NumInitProxDmns * NumTarProxDmns);
   if (ReadLatencyList == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Read Latency list entry\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Read Latency list entry\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
 
   WriteLatencyList = (UINT16 *)AllocateZeroPool (sizeof (UINT16) * NumInitProxDmns * NumTarProxDmns);
   if (WriteLatencyList == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Write Latency list entry\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Write Latency list entry\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
 
   AccessBandwidthList = (UINT16 *)AllocateZeroPool (sizeof (UINT16) * NumInitProxDmns * NumTarProxDmns);
   if (AccessBandwidthList == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Access Bandwidth list entry\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Access Bandwidth list entry\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }

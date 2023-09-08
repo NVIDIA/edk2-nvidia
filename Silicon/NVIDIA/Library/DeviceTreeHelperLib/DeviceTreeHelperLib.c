@@ -293,7 +293,7 @@ GetDeviceTreeRegisters (
       (SizeCells > 2) ||
       (SizeCells == 0))
   {
-    DEBUG ((EFI_D_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
+    DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
     return EFI_DEVICE_ERROR;
   }
 

@@ -165,7 +165,7 @@ RedfishConsumeResourceCommon (
   //
   Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to load device tree..\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to load device tree..\r\n", __FUNCTION__));
     return EFI_DEVICE_ERROR;
   }
 

@@ -74,7 +74,7 @@ GeneratePciDSDForExtPort (
                   &Handles
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to locate host bridge protocols, %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate host bridge protocols, %r.\r\n", __FUNCTION__, Status));
     goto exit_handler;
   }
 
@@ -87,7 +87,7 @@ GeneratePciDSDForExtPort (
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed to get protocol for handle %p, %r.\r\n",
         __FUNCTION__,
         Handles[CurrentHandle],
@@ -171,7 +171,7 @@ UpdateSharedNSMemAddr (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: Couldn't get gNVIDIARasNsCommPcieDpcDataProtocolGuid protocol: %r\n",
       __FUNCTION__,
       Status
@@ -186,7 +186,7 @@ UpdateSharedNSMemAddr (
   DpcComm  = (RAS_FW_PCIE_DPC_COMM_STRUCT *)DpcCommBuf->PcieBase;
   Socket   = Uid >> 4;
   Instance = Uid & 0xF;
-  DEBUG ((EFI_D_VERBOSE, "%a: Socket = %u, Instance = %u\r\n", __FUNCTION__, Socket, Instance));
+  DEBUG ((DEBUG_VERBOSE, "%a: Socket = %u, Instance = %u\r\n", __FUNCTION__, Socket, Instance));
 
   Status = AmlFindNode (RpNode, "ADDR", &AddrNode);
   if (EFI_ERROR (Status)) {

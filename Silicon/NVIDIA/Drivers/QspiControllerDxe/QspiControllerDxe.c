@@ -599,7 +599,7 @@ DeviceDiscoveryNotify (
 
       Status = QspiInitialize (Private->QspiBaseAddress, NumChipSelects);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "QSPI Initialization Failed.\n"));
+        DEBUG ((DEBUG_ERROR, "QSPI Initialization Failed.\n"));
         goto ErrorExit;
       }
 
@@ -620,7 +620,7 @@ DeviceDiscoveryNotify (
                       &Private->VirtualAddrChangeEvent
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "Failed to create virtual address event\r\n"));
+        DEBUG ((DEBUG_ERROR, "Failed to create virtual address event\r\n"));
         goto ErrorExit;
       }
 

@@ -535,14 +535,14 @@ UpdateCpuInfo (
       // Allocate space for this Cache node
       CacheNode = (CACHE_NODE *)AllocateZeroPool (sizeof (CACHE_NODE));
       if (CacheNode == NULL) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
         Status = EFI_OUT_OF_RESOURCES;
         goto Exit;
       }
 
       CacheInfo = (CM_ARM_CACHE_INFO *)AllocateZeroPool (sizeof (CM_ARM_CACHE_INFO));
       if (CacheInfo == NULL) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
         Status = EFI_OUT_OF_RESOURCES;
         goto Exit;
       }
@@ -621,13 +621,13 @@ UpdateCpuInfo (
     AsciiSPrint (CpusNodeStr, sizeof (CpusNodeStr), "/socket@%u/cpus", Socket);
     CpusOffset = fdt_path_offset (Dtb, CpusNodeStr);
     if (CpusOffset < 0) {
-      DEBUG ((EFI_D_ERROR, "Failed to find /cpus node\n"));
+      DEBUG ((DEBUG_ERROR, "Failed to find /cpus node\n"));
       continue;
     }
 
     CpuMapOffset = fdt_subnode_offset (Dtb, CpusOffset, "cpu-map");
     if (CpuMapOffset < 0) {
-      DEBUG ((EFI_D_ERROR, "/cpus/cpu-map does not exist\r\n"));
+      DEBUG ((DEBUG_ERROR, "/cpus/cpu-map does not exist\r\n"));
       continue;
     }
 
@@ -668,7 +668,7 @@ UpdateCpuInfo (
               // Allocate space for this Cache node
               CacheInfo = (CM_ARM_CACHE_INFO *)AllocateZeroPool (sizeof (CM_ARM_CACHE_INFO));
               if (CacheInfo == NULL) {
-                DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
+                DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
                 Status = EFI_OUT_OF_RESOURCES;
                 goto Exit;
               }
@@ -677,7 +677,7 @@ UpdateCpuInfo (
               CacheInfo->CacheId = GET_CACHE_ID (2, CACHE_TYPE_UNIFIED, Core, Cluster, Socket);
               CacheNode          = (CACHE_NODE *)AllocateZeroPool (sizeof (CACHE_NODE));
               if (CacheNode == NULL) {
-                DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
+                DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
                 Status = EFI_OUT_OF_RESOURCES;
                 goto Exit;
               }
@@ -695,7 +695,7 @@ UpdateCpuInfo (
               // Allocate space for I cache and D cache for this cache node
               CacheInfo = (CM_ARM_CACHE_INFO *)AllocateZeroPool (sizeof (CM_ARM_CACHE_INFO) * 2);
               if (CacheInfo == NULL) {
-                DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
+                DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
                 Status = EFI_OUT_OF_RESOURCES;
                 goto Exit;
               }
@@ -707,7 +707,7 @@ UpdateCpuInfo (
               // I Cache
               CacheNode = (CACHE_NODE *)AllocateZeroPool (sizeof (CACHE_NODE));
               if (CacheNode == NULL) {
-                DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
+                DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
                 Status = EFI_OUT_OF_RESOURCES;
                 goto Exit;
               }
@@ -722,7 +722,7 @@ UpdateCpuInfo (
               // D Cache
               CacheNode = (CACHE_NODE *)AllocateZeroPool (sizeof (CACHE_NODE));
               if (CacheNode == NULL) {
-                DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
+                DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
                 Status = EFI_OUT_OF_RESOURCES;
                 goto Exit;
               }
@@ -798,7 +798,7 @@ UpdateCpuInfo (
   if (CacheNodeCntr > 0) {
     CacheInfoStruct = (CM_ARM_CACHE_INFO *)AllocatePool (sizeof (CM_ARM_CACHE_INFO) * CacheNodeCntr);
     if (CacheInfoStruct == NULL) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheInfoStruct\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheInfoStruct\r\n", __FUNCTION__));
       Status = EFI_OUT_OF_RESOURCES;
       goto Exit;
     }

@@ -221,7 +221,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToLocalCpuReadLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToLocalCpuReadLatency, CpuToLocalCpuReadLatency);
-      DEBUG ((EFI_D_INFO, "Cpu To Local Cpu Read Latency = 0x%X\n", PcdGet32 (PcdCpuToLocalCpuReadLatency)));
+      DEBUG ((DEBUG_INFO, "Cpu To Local Cpu Read Latency = 0x%X\n", PcdGet32 (PcdCpuToLocalCpuReadLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To Local Cpu Read Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalCpuReadLatency)));
     }
@@ -230,7 +230,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToLocalCpuWriteLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToLocalCpuWriteLatency, CpuToLocalCpuWriteLatency);
-      DEBUG ((EFI_D_INFO, "Cpu To Local Cpu Write Latency = 0x%X\n", PcdGet32 (PcdCpuToLocalCpuWriteLatency)));
+      DEBUG ((DEBUG_INFO, "Cpu To Local Cpu Write Latency = 0x%X\n", PcdGet32 (PcdCpuToLocalCpuWriteLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To Local Cpu Write Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalCpuWriteLatency)));
     }
@@ -239,7 +239,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToLocalHbmReadLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToLocalHbmReadLatency, CpuToLocalHbmReadLatency);
-      DEBUG ((EFI_D_INFO, "Cpu To local HBM Read Latency = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmReadLatency)));
+      DEBUG ((DEBUG_INFO, "Cpu To local HBM Read Latency = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmReadLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To Local HBM Read Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalHbmReadLatency)));
     }
@@ -248,7 +248,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToLocalHbmWriteLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToLocalHbmWriteLatency, CpuToLocalHbmWriteLatency);
-      DEBUG ((EFI_D_INFO, "Cpu To LocalHbm Write Latency = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmWriteLatency)));
+      DEBUG ((DEBUG_INFO, "Cpu To LocalHbm Write Latency = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmWriteLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To LocalHbm Write Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalHbmWriteLatency)));
     }
@@ -257,7 +257,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToRemoteHbmReadLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToRemoteHbmReadLatency, CpuToRemoteHbmReadLatency);
-      DEBUG ((EFI_D_INFO, "Cpu To RemoteHbm Read Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmReadLatency)));
+      DEBUG ((DEBUG_INFO, "Cpu To RemoteHbm Read Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmReadLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To RemoteHbm Read Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmReadLatency)));
     }
@@ -266,7 +266,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToRemoteHbmWriteLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToRemoteHbmWriteLatency, CpuToRemoteHbmWriteLatency);
-      DEBUG ((EFI_D_INFO, "Cpu To RemoteHbm Write Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmWriteLatency)));
+      DEBUG ((DEBUG_INFO, "Cpu To RemoteHbm Write Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmWriteLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To RemoteHbm Write Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmWriteLatency)));
     }
@@ -275,7 +275,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToRemoteCpuReadLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToRemoteCpuReadLatency, CpuToRemoteCpuReadLatency);
-      DEBUG ((EFI_D_INFO, "Cpu To Remote Cpu Read Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuReadLatency)));
+      DEBUG ((DEBUG_INFO, "Cpu To Remote Cpu Read Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuReadLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To Remote Cpu Read Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuReadLatency)));
     }
@@ -284,7 +284,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToRemoteCpuWriteLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToRemoteCpuWriteLatency, CpuToRemoteCpuWriteLatency);
-      DEBUG ((EFI_D_INFO, "Cpu To Remote Cpu Write Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuWriteLatency)));
+      DEBUG ((DEBUG_INFO, "Cpu To Remote Cpu Write Latency = 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuWriteLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To Remote Cpu Write Latency not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuWriteLatency)));
     }
@@ -293,7 +293,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToLocalHbmReadLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToLocalHbmReadLatency, GpuToLocalHbmReadLatency);
-      DEBUG ((EFI_D_INFO, "Gpu To Local HBM Read Latency = 0x%X\n", PcdGet32 (PcdGpuToLocalHbmReadLatency)));
+      DEBUG ((DEBUG_INFO, "Gpu To Local HBM Read Latency = 0x%X\n", PcdGet32 (PcdGpuToLocalHbmReadLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Local HBM Read Latency not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalHbmReadLatency)));
     }
@@ -302,7 +302,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToLocalHbmWriteLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToLocalHbmWriteLatency, GpuToLocalHbmWriteLatency);
-      DEBUG ((EFI_D_INFO, "Gpu To Local HBM Write Latency = 0x%X\n", PcdGet32 (PcdGpuToLocalHbmWriteLatency)));
+      DEBUG ((DEBUG_INFO, "Gpu To Local HBM Write Latency = 0x%X\n", PcdGet32 (PcdGpuToLocalHbmWriteLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Local HBM Write Latency not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalHbmWriteLatency)));
     }
@@ -311,7 +311,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToLocalCpuReadLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToLocalCpuReadLatency, GpuToLocalCpuReadLatency);
-      DEBUG ((EFI_D_INFO, "Gpu To Local Cpu Read Latency = 0x%X\n", PcdGet32 (PcdGpuToLocalCpuReadLatency)));
+      DEBUG ((DEBUG_INFO, "Gpu To Local Cpu Read Latency = 0x%X\n", PcdGet32 (PcdGpuToLocalCpuReadLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Local Cpu Read Latency not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalCpuReadLatency)));
     }
@@ -320,7 +320,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToLocalCpuWriteLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToLocalCpuWriteLatency, GpuToLocalCpuWriteLatency);
-      DEBUG ((EFI_D_INFO, "Gpu To Local Cpu Write Latency = 0x%X\n", PcdGet32 (PcdGpuToLocalCpuWriteLatency)));
+      DEBUG ((DEBUG_INFO, "Gpu To Local Cpu Write Latency = 0x%X\n", PcdGet32 (PcdGpuToLocalCpuWriteLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Local Cpu Write Latency not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalCpuWriteLatency)));
     }
@@ -329,7 +329,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToRemoteHbmReadLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToRemoteHbmReadLatency, GpuToRemoteHbmReadLatency);
-      DEBUG ((EFI_D_INFO, "Gpu To Remote Gpu HBM Read Latency = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmReadLatency)));
+      DEBUG ((DEBUG_INFO, "Gpu To Remote Gpu HBM Read Latency = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmReadLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Remote Gpu HBM Read Latency not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmReadLatency)));
     }
@@ -338,7 +338,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToRemoteHbmWriteLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToRemoteHbmWriteLatency, GpuToRemoteHbmWriteLatency);
-      DEBUG ((EFI_D_INFO, "Gpu To Remote Gpu HBM Write Latency = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmWriteLatency)));
+      DEBUG ((DEBUG_INFO, "Gpu To Remote Gpu HBM Write Latency = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmWriteLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Remote Gpu HBM Write Latency not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmWriteLatency)));
     }
@@ -347,7 +347,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToRemoteCpuReadLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToRemoteCpuReadLatency, GpuToRemoteCpuReadLatency);
-      DEBUG ((EFI_D_INFO, "Gpu To Remote Cpu Read Latency = 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuReadLatency)));
+      DEBUG ((DEBUG_INFO, "Gpu To Remote Cpu Read Latency = 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuReadLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Remote Cpu Read Latency not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuReadLatency)));
     }
@@ -356,7 +356,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToRemoteCpuWriteLatency = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToRemoteCpuWriteLatency, GpuToRemoteCpuWriteLatency);
-      DEBUG ((EFI_D_INFO, "Gpu To Remote Cpu Write Latency = 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuWriteLatency)));
+      DEBUG ((DEBUG_INFO, "Gpu To Remote Cpu Write Latency = 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuWriteLatency)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Remote Cpu Write Latency not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuWriteLatency)));
     }
@@ -366,7 +366,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToLocalCpuAccessBandwidth = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToLocalCpuAccessBandwidth, CpuToLocalCpuAccessBandwidth);
-      DEBUG ((EFI_D_INFO, "Cpu To Local Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToLocalCpuAccessBandwidth)));
+      DEBUG ((DEBUG_INFO, "Cpu To Local Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToLocalCpuAccessBandwidth)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To Local Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalCpuAccessBandwidth)));
     }
@@ -375,7 +375,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToLocalHbmAccessBandwidth = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToLocalHbmAccessBandwidth, CpuToLocalHbmAccessBandwidth);
-      DEBUG ((EFI_D_INFO, "Cpu To LocalHbm Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmAccessBandwidth)));
+      DEBUG ((DEBUG_INFO, "Cpu To LocalHbm Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmAccessBandwidth)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To LocalHbm Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalHbmAccessBandwidth)));
     }
@@ -384,7 +384,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToRemoteCpuAccessBandwidth = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToRemoteCpuAccessBandwidth, CpuToRemoteCpuAccessBandwidth);
-      DEBUG ((EFI_D_INFO, "Cpu To Remote Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuAccessBandwidth)));
+      DEBUG ((DEBUG_INFO, "Cpu To Remote Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuAccessBandwidth)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To Remote Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuAccessBandwidth)));
     }
@@ -393,7 +393,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       CpuToRemoteHbmAccessBandwidth = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToRemoteHbmAccessBandwidth, CpuToRemoteHbmAccessBandwidth);
-      DEBUG ((EFI_D_INFO, "Cpu To Remote Hbm Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmAccessBandwidth)));
+      DEBUG ((DEBUG_INFO, "Cpu To Remote Hbm Access Bandwidth = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmAccessBandwidth)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To Remote Hbm Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmAccessBandwidth)));
     }
@@ -402,7 +402,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToLocalHbmAccessBandwidth = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToLocalHbmAccessBandwidth, GpuToLocalHbmAccessBandwidth);
-      DEBUG ((EFI_D_INFO, "Gpu To Local HBM Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToLocalHbmAccessBandwidth)));
+      DEBUG ((DEBUG_INFO, "Gpu To Local HBM Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToLocalHbmAccessBandwidth)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Local HBM Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalHbmAccessBandwidth)));
     }
@@ -411,7 +411,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToRemoteHbmAccessBandwidth = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToRemoteHbmAccessBandwidth, GpuToRemoteHbmAccessBandwidth);
-      DEBUG ((EFI_D_INFO, "Gpu To Remote HBM Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth)));
+      DEBUG ((DEBUG_INFO, "Gpu To Remote HBM Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Remote HBM Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth)));
     }
@@ -420,7 +420,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToLocalCpuAccessBandwidth = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToLocalCpuAccessBandwidth, GpuToLocalCpuAccessBandwidth);
-      DEBUG ((EFI_D_INFO, "Gpu To Local Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToLocalCpuAccessBandwidth)));
+      DEBUG ((DEBUG_INFO, "Gpu To Local Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToLocalCpuAccessBandwidth)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Local Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalCpuAccessBandwidth)));
     }
@@ -429,7 +429,7 @@ SetBandwidthLatencyInfoPcdsFromdtb (
     if (Property != NULL) {
       GpuToRemoteCpuAccessBandwidth = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToRemoteCpuAccessBandwidth, GpuToRemoteCpuAccessBandwidth);
-      DEBUG ((EFI_D_INFO, "Gpu To Remote Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuAccessBandwidth)));
+      DEBUG ((DEBUG_INFO, "Gpu To Remote Cpu Access Bandwidth = 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuAccessBandwidth)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Remote Cpu Access Bandwidth not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteCpuAccessBandwidth)));
     }
@@ -466,7 +466,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       CpuToRemoteCpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToRemoteCpuDistance, CpuToRemoteCpuDistance);
-      DEBUG ((EFI_D_INFO, "Cpu To Remote Cpu Distance = 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuDistance)));
+      DEBUG ((DEBUG_INFO, "Cpu To Remote Cpu Distance = 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To Remote Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteCpuDistance)));
     }
@@ -475,7 +475,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       GpuToRemoteGpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToRemoteGpuDistance, GpuToRemoteGpuDistance);
-      DEBUG ((EFI_D_INFO, "Gpu To Remote Gpu Distance = 0x%X\n", PcdGet32 (PcdGpuToRemoteGpuDistance)));
+      DEBUG ((DEBUG_INFO, "Gpu To Remote Gpu Distance = 0x%X\n", PcdGet32 (PcdGpuToRemoteGpuDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Remote Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteGpuDistance)));
     }
@@ -484,7 +484,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       CpuToLocalHbmDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToLocalHbmDistance, CpuToLocalHbmDistance);
-      DEBUG ((EFI_D_INFO, "Cpu To Local Hbm Distance = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmDistance)));
+      DEBUG ((DEBUG_INFO, "Cpu To Local Hbm Distance = 0x%X\n", PcdGet32 (PcdCpuToLocalHbmDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To Local Hbm Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToLocalHbmDistance)));
     }
@@ -493,7 +493,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       CpuToRemoteHbmDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdCpuToRemoteHbmDistance, CpuToRemoteHbmDistance);
-      DEBUG ((EFI_D_INFO, "Cpu To Other Hbm Distance = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmDistance)));
+      DEBUG ((DEBUG_INFO, "Cpu To Other Hbm Distance = 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Cpu To Other Hbm Distance not found, using 0x%X\n", PcdGet32 (PcdCpuToRemoteHbmDistance)));
     }
@@ -502,7 +502,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       HbmToLocalCpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdHbmToLocalCpuDistance, HbmToLocalCpuDistance);
-      DEBUG ((EFI_D_INFO, "Local Hbm To Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToLocalCpuDistance)));
+      DEBUG ((DEBUG_INFO, "Local Hbm To Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToLocalCpuDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Local Hbm To Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToLocalCpuDistance)));
     }
@@ -511,7 +511,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       HbmToRemoteCpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdHbmToRemoteCpuDistance, HbmToRemoteCpuDistance);
-      DEBUG ((EFI_D_INFO, "Remote Hbm To Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToRemoteCpuDistance)));
+      DEBUG ((DEBUG_INFO, "Remote Hbm To Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToRemoteCpuDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Remote Hbm To Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToRemoteCpuDistance)));
     }
@@ -520,7 +520,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       HbmToLocalCpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdHbmToLocalCpuDistance, HbmToLocalCpuDistance);
-      DEBUG ((EFI_D_INFO, "Hbm To Local Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToLocalCpuDistance)));
+      DEBUG ((DEBUG_INFO, "Hbm To Local Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToLocalCpuDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Hbm To Local Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToLocalCpuDistance)));
     }
@@ -529,7 +529,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       HbmToRemoteCpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdHbmToRemoteCpuDistance, HbmToRemoteCpuDistance);
-      DEBUG ((EFI_D_INFO, "Hbm To Remote Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToRemoteCpuDistance)));
+      DEBUG ((DEBUG_INFO, "Hbm To Remote Cpu Distance = 0x%X\n", PcdGet32 (PcdHbmToRemoteCpuDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Hbm To Remote Cpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToRemoteCpuDistance)));
     }
@@ -538,7 +538,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       GpuToLocalHbmDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToLocalHbmDistance, GpuToLocalHbmDistance);
-      DEBUG ((EFI_D_INFO, "Gpu To Local Hbm Distance = 0x%X\n", PcdGet32 (PcdGpuToLocalHbmDistance)));
+      DEBUG ((DEBUG_INFO, "Gpu To Local Hbm Distance = 0x%X\n", PcdGet32 (PcdGpuToLocalHbmDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Local Hbm Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToLocalHbmDistance)));
     }
@@ -547,7 +547,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       GpuToRemoteHbmDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdGpuToRemoteHbmDistance, GpuToRemoteHbmDistance);
-      DEBUG ((EFI_D_INFO, "Gpu To Other Hbm Distance = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmDistance)));
+      DEBUG ((DEBUG_INFO, "Gpu To Other Hbm Distance = 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Gpu To Other Hbm Distance not found, using 0x%X\n", PcdGet32 (PcdGpuToRemoteHbmDistance)));
     }
@@ -556,7 +556,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       HbmToLocalGpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdHbmToLocalGpuDistance, HbmToLocalGpuDistance);
-      DEBUG ((EFI_D_INFO, "Local Hbm To Gpu Distance = 0x%X\n", PcdGet32 (PcdHbmToLocalGpuDistance)));
+      DEBUG ((DEBUG_INFO, "Local Hbm To Gpu Distance = 0x%X\n", PcdGet32 (PcdHbmToLocalGpuDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Local Hbm To Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToLocalGpuDistance)));
     }
@@ -565,7 +565,7 @@ SetCpuGpuDistanceInfoPcdsFromDtb (
     if (Property != NULL) {
       HbmToRemoteGpuDistance = SwapBytes32 (Property[0]);
       PcdSet32S (PcdHbmToRemoteGpuDistance, HbmToRemoteGpuDistance);
-      DEBUG ((EFI_D_INFO, "Remote Hbm To Gpu Distance = 0x%X\n", PcdGet32 (PcdHbmToRemoteGpuDistance)));
+      DEBUG ((DEBUG_INFO, "Remote Hbm To Gpu Distance = 0x%X\n", PcdGet32 (PcdHbmToRemoteGpuDistance)));
     } else {
       DEBUG ((DEBUG_INFO, "Remote Hbm To Gpu Distance not found, using 0x%X\n", PcdGet32 (PcdHbmToRemoteGpuDistance)));
     }
@@ -601,7 +601,7 @@ SetGicInfoPcdsFromDtb (
   }
 
   if (!GetGicInfo (GicInfo)) {
-    Status = EFI_D_ERROR;
+    Status = DEBUG_ERROR;
     goto Exit;
   }
 
@@ -654,7 +654,7 @@ SetGicInfoPcdsFromDtb (
     PcdSet64S (PcdGicInterruptInterfaceBase, RegisterData[1].BaseAddress);
 
     DEBUG ((
-      EFI_D_INFO,
+      DEBUG_INFO,
       "Found GIC distributor and Interrupt Interface Base@ 0x%Lx (0x%Lx)\n",
       PcdGet64 (PcdGicDistributorBase),
       PcdGet64 (PcdGicInterruptInterfaceBase)
@@ -670,7 +670,7 @@ SetGicInfoPcdsFromDtb (
     // RegisterData[3] has GicV Base and Size
 
     DEBUG ((
-      EFI_D_INFO,
+      DEBUG_INFO,
       "Found GIC distributor and (re)distributor Base @ 0x%Lx (0x%Lx)\n",
       PcdGet64 (PcdGicDistributorBase),
       PcdGet64 (PcdGicRedistributorsBase)
@@ -828,7 +828,7 @@ TegraPlatformInitialize (
 
   Status = FloorSweepDtb (DtbBase);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "DTB floorsweeping failed.\n"));
+    DEBUG ((DEBUG_ERROR, "DTB floorsweeping failed.\n"));
     ASSERT (FALSE);
     return Status;
   }

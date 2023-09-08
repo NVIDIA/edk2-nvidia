@@ -186,7 +186,7 @@ QspiControllerStMmInitialize (
     Status = QspiInitialize (Private->QspiBaseAddress, NumChipSelects);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "QSPI Initialization Failed for 0x%x %r.\n",
         Private->QspiBaseAddress,
         Status

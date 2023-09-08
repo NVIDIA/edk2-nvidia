@@ -319,7 +319,7 @@ TH500GetResourceConfig (
 
   SocketMask = TH500GetSocketMask (CpuBootloaderAddress);
 
-  DEBUG ((EFI_D_ERROR, "SocketMask=0x%x\n", SocketMask));
+  DEBUG ((DEBUG_ERROR, "SocketMask=0x%x\n", SocketMask));
 
   // Detect the memory mode
   MemoryMode = Th500MemoryModeNormal;
@@ -337,7 +337,7 @@ TH500GetResourceConfig (
 
   // Build dram regions
   if (MemoryMode == Th500MemoryModeNormal) {
-    DEBUG ((EFI_D_ERROR, "Memory Mode: Normal\n"));
+    DEBUG ((DEBUG_ERROR, "Memory Mode: Normal\n"));
     DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS);
     ASSERT (DramRegions != NULL);
     if (DramRegions == NULL) {
@@ -355,7 +355,7 @@ TH500GetResourceConfig (
       Index++;
     }
   } else if (MemoryMode == Th500MemoryModeEgmNoHv) {
-    DEBUG ((EFI_D_ERROR, "Memory Mode: EGM No HV\n"));
+    DEBUG ((DEBUG_ERROR, "Memory Mode: EGM No HV\n"));
     // When egm is enabled without hv, uefi should use only memory in egm carveout on all sockets and rcm, os and uefi carveouts
     // only on primary socket.
     DramRegions = (NVDA_MEMORY_REGION *)AllocatePool ((sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS) + (sizeof (NVDA_MEMORY_REGION) * 3));
@@ -397,7 +397,7 @@ TH500GetResourceConfig (
       }
     }
   } else if (MemoryMode == Th500MemoryModeEgmWithHv) {
-    DEBUG ((EFI_D_ERROR, "Memory Mode: EGM With HV\n"));
+    DEBUG ((DEBUG_ERROR, "Memory Mode: EGM With HV\n"));
     DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS);
     ASSERT (DramRegions != NULL);
     if (DramRegions == NULL) {
@@ -448,7 +448,7 @@ TH500GetResourceConfig (
       }
 
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "Socket: %u Carveout %u Region: Base: 0x%016lx, Size: 0x%016lx\n",
         Socket,
         Index,

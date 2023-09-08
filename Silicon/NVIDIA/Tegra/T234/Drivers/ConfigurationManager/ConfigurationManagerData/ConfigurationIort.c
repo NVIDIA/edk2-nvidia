@@ -76,7 +76,7 @@ AddIortMemoryRegion (
     Status = gDS->GetMemorySpaceDescriptor (ScanLocation, &MemorySpace);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_INFO,
+        DEBUG_INFO,
         "%a: Failed to GetMemorySpaceDescriptor (0x%llx): %r.\r\n",
         __FUNCTION__,
         ScanLocation,
@@ -95,7 +95,7 @@ AddIortMemoryRegion (
                       );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_INFO,
+          DEBUG_INFO,
           "%a: Failed to AddMemorySpace: (0x%llx, 0x%llx) %r.\r\n",
           __FUNCTION__,
           ScanLocation,
@@ -112,7 +112,7 @@ AddIortMemoryRegion (
                       );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_INFO,
+          DEBUG_INFO,
           "%a: Failed to SetMemorySpaceAttributes: (0x%llx, 0x%llx) %r.\r\n",
           __FUNCTION__,
           ScanLocation,
@@ -314,7 +314,7 @@ GetAddressSizeCells (
 
   Prop = fdt_getprop (Private->DtbBase, NodeOffset, "#address-cells", &Length);
   if (Prop == NULL) {
-    DEBUG ((EFI_D_WARN, "%a: Device does not have #address-cells property.\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_WARN, "%a: Device does not have #address-cells property.\r\n", __FUNCTION__));
   }
 
   if (Length == 4) {
@@ -323,7 +323,7 @@ GetAddressSizeCells (
 
   Prop = fdt_getprop (Private->DtbBase, NodeOffset, "#size-cells", &Length);
   if (Prop == NULL) {
-    DEBUG ((EFI_D_WARN, "%a: Device does not have #size-cells property.\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_WARN, "%a: Device does not have #size-cells property.\r\n", __FUNCTION__));
   }
 
   if (Length == 4) {
@@ -375,7 +375,7 @@ AddIortPropNodes (
 
   for ( ; DevMap->Compatibility != NULL; DevMap++) {
     if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->ObjectName == NULL)) {
-      DEBUG ((EFI_D_WARN, "%a: Invalid named component \r\n", __FUNCTION__));
+      DEBUG ((DEBUG_WARN, "%a: Invalid named component \r\n", __FUNCTION__));
       continue;
     }
 
@@ -384,7 +384,7 @@ AddIortPropNodes (
       if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->Alias != NULL)) {
         AliasName = fdt_get_alias (Private->DtbBase, DevMap->Alias);
         if (AliasName == NULL) {
-          DEBUG ((EFI_D_WARN, "%a: Invalid alias for named component %a \r\n", __FUNCTION__, AliasName));
+          DEBUG ((DEBUG_WARN, "%a: Invalid alias for named component %a \r\n", __FUNCTION__, AliasName));
           break;
         }
 
@@ -405,11 +405,11 @@ AddIortPropNodes (
       // The reg property is mandatory with requested entries
       RegProp = fdt_getprop (Private->DtbBase, NodeOffset, "reg", &RegPropSize);
       if (RegProp == NULL) {
-        DEBUG ((EFI_D_WARN, "%a: Device does not have a reg property. It could be a test device.\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_WARN, "%a: Device does not have a reg property. It could be a test device.\r\n", __FUNCTION__));
       }
 
       if (RegPropSize < (AddressCells + SizeCells) * sizeof (INT32)) {
-        DEBUG ((EFI_D_WARN, "%a: Reg property size is smaller than expected\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_WARN, "%a: Reg property size is smaller than expected\r\n", __FUNCTION__));
         break;
       }
 
@@ -509,7 +509,7 @@ AddIortPropNodes (
 AllocatePropNode:
         PropNode = AllocateZeroPool (sizeof (IORT_PROP_NODE));
         if (PropNode == NULL) {
-          DEBUG ((EFI_D_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
+          DEBUG ((DEBUG_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
           return EFI_OUT_OF_RESOURCES;
         }
 
@@ -565,14 +565,14 @@ AllocateIortNodes (
     }
 
     if (IoNode->NumberOfNodes == 0) {
-      DEBUG ((EFI_D_INFO, "%a: No IORT nodes of %d\r\n", __FUNCTION__, (Index + MIN_IORT_OBJID)));
+      DEBUG ((DEBUG_INFO, "%a: No IORT nodes of %d\r\n", __FUNCTION__, (Index + MIN_IORT_OBJID)));
       continue;
     }
 
     IoNode->NodeArray = AllocateZeroPool (IoNode->NumberOfNodes * IoNode->SizeOfNode);
     if (IoNode->NodeArray == NULL) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed to allocate IORT node of %d\r\n",
         __FUNCTION__,
         (Index + MIN_IORT_OBJID)
@@ -747,7 +747,7 @@ SetupGlobalContextIrqForSmmuV1V2 (
 
   Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "#global-interrupts", &PropSize);
   if ((Prop == NULL) || (PropSize == 0)) {
-    DEBUG ((EFI_D_VERBOSE, "%a: Failed to find \"#global-interrupts\"\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find \"#global-interrupts\"\r\n", __FUNCTION__));
     Status = EFI_NOT_FOUND;
     goto ErrorExit;
   }
@@ -870,7 +870,7 @@ SetupPmuIrqForSmmuV1V2 (
     NumPmuHandles = 1;
     Status        = GetMatchingEnabledDeviceTreeNodes ("arm,armv8-pmuv3", &PmuHandle, &NumPmuHandles);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "Failed to find Pmu Irq err=%r\r\n", Status));
+      DEBUG ((DEBUG_ERROR, "Failed to find Pmu Irq err=%r\r\n", Status));
       NumPmuHandles = 0;
       goto ErrorExit;
     }
@@ -1300,7 +1300,7 @@ InitializeIoRemappingNodes (
 
   Status = DtPlatformLoadDtb (&Private->DtbBase, &Private->DtbSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a failed to get device tree: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a failed to get device tree: %r\r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -1330,7 +1330,7 @@ InitializeIoRemappingNodes (
 
       Status = DevMap->SetupIortNode (Private, PropNode);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "Failed to setup IORT ObjectId=%d err=%r\r\n", PropNode->ObjectId, Status));
+        DEBUG ((DEBUG_ERROR, "Failed to setup IORT ObjectId=%d err=%r\r\n", PropNode->ObjectId, Status));
         goto ErrorExit;
       }
     }
@@ -1402,7 +1402,7 @@ InstallIoRemappingTable (
       Repo->CmObjectCount = IoNode->NumberOfNodes;
       Repo->CmObjectPtr   = IoNode->NodeArray;
       Repo++;
-      DEBUG ((EFI_D_INFO, "%a: Installed IORT %d \r\r\n", __FUNCTION__, Index + MIN_IORT_OBJID));
+      DEBUG ((DEBUG_INFO, "%a: Installed IORT %d \r\r\n", __FUNCTION__, Index + MIN_IORT_OBJID));
     }
   }
 
@@ -1440,7 +1440,7 @@ InstallIoRemappingTable (
       ASSERT ((UINTN)Repo <= PlatformRepositoryInfoEnd);
     }
   }
-  DEBUG ((EFI_D_INFO, "%a: Installed IORT \r\r\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: Installed IORT \r\r\n", __FUNCTION__));
 
   *PlatformRepositoryInfo = Repo;
 

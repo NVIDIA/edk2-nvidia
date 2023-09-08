@@ -1671,7 +1671,7 @@ TegraI2cInitialize (
                   &mVirtualAddressChangeEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create virtual address change event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create virtual address change event\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 

@@ -104,7 +104,7 @@ LibGetTime (
                                              sizeof (TimePacket.Control);
     Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to read time registers: %r.\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to read time registers: %r.\r\n", __FUNCTION__, Status));
       return EFI_DEVICE_ERROR;
     }
 
@@ -112,7 +112,7 @@ LibGetTime (
     // If RTC is stopped, it is unusable.
     //
     if (TimePacket.Control.ST == NUVOTON_RTC_CONTROL_ST_STOP) {
-      DEBUG ((EFI_D_ERROR, "%a: RTC is stopped.\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: RTC is stopped.\r\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
@@ -267,7 +267,7 @@ LibSetTime (
 
     Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to read control registers: %r.\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to read control registers: %r.\r\n", __FUNCTION__, Status));
       return EFI_DEVICE_ERROR;
     }
 
@@ -275,7 +275,7 @@ LibSetTime (
     // If RTC is stopped, it is unusable.
     //
     if (ControlPacket.Control.ST == NUVOTON_RTC_CONTROL_ST_STOP) {
-      DEBUG ((EFI_D_ERROR, "%a: RTC is stopped.\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: RTC is stopped.\r\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
@@ -285,7 +285,7 @@ LibSetTime (
     if (!mCpuHasRtcControl &&
         (ControlPacket.Control.TWO == NUVOTON_RTC_CONTROL_TWO_PRIMARY))
     {
-      DEBUG ((EFI_D_ERROR, "%a: CPU is not holding the write ownership.\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: CPU is not holding the write ownership.\r\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
@@ -341,7 +341,7 @@ LibSetTime (
                                              sizeof (TimePacket.DateTime);
     Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to store time: %r.\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to store time: %r.\r\n", __FUNCTION__, Status));
       return EFI_DEVICE_ERROR;
     }
 
@@ -474,7 +474,7 @@ LibRtcConfigure (
                                              sizeof (ControlPacket.Status);
     Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to program control register: %r.\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to program control register: %r.\r\n", __FUNCTION__, Status));
     }
 
     //
@@ -490,7 +490,7 @@ LibRtcConfigure (
                                              sizeof (PrimaryAccessPacket.PrimaryAccess);
     Status = mI2cMaster->StartRequest (mI2cMaster, mSlaveAddr, RequestPacket, NULL, NULL);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to program primary access register: %r.\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to program primary access register: %r.\r\n", __FUNCTION__, Status));
     }
   }
 }
@@ -645,7 +645,7 @@ LibRtcInitialize (
             &mI2cMasterSearchToken
             );
   if (Event == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -661,7 +661,7 @@ LibRtcInitialize (
                   &mRtcExitBootServicesEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
     gBS->CloseEvent (Event);
     return EFI_OUT_OF_RESOURCES;
   }
@@ -678,7 +678,7 @@ LibRtcInitialize (
                   &mRtcVirtualAddrChangeEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create virtual address change event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create virtual address change event\r\n", __FUNCTION__));
     gBS->CloseEvent (Event);
     return EFI_OUT_OF_RESOURCES;
   }

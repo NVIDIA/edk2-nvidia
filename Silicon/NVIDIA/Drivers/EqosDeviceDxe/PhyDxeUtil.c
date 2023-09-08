@@ -317,62 +317,62 @@ PhyLinkAdjustEmacConfig (
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "rx-input", ETHER_MGBE_RX_CLK_USXGMII_10G);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set rx-input clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set rx-input clock frequency %r\r\n", __FUNCTION__, Status));
         }
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "rx-pcs-input", ETHER_MGBE_RX_PCS_CLK_USXGMII_10G);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set rx-pcs-input clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set rx-pcs-input clock frequency %r\r\n", __FUNCTION__, Status));
         }
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "rx-pcs", ETHER_MGBE_RX_PCS_CLK_USXGMII_10G);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set rx-pcs clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set rx-pcs clock frequency %r\r\n", __FUNCTION__, Status));
         }
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "tx", ETHER_MGBE_TX_CLK_USXGMII_10G);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set tx clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set tx clock frequency %r\r\n", __FUNCTION__, Status));
         }
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "tx-pcs", ETHER_MGBE_TX_PCS_CLK_USXGMII_10G);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set tx-pcs clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set tx-pcs clock frequency %r\r\n", __FUNCTION__, Status));
         }
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "mac-divider", ETHER_MGBE_MAC_DIV_RATE_10G);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set mac-divider clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set mac-divider clock frequency %r\r\n", __FUNCTION__, Status));
         }
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "mac", ETHER_MGBE_MAC_DIV_RATE_10G);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set mac clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set mac clock frequency %r\r\n", __FUNCTION__, Status));
         }
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "eee-pcs", ETHER_EEE_PCS_CLK_RATE);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set eee-pcs clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set eee-pcs clock frequency %r\r\n", __FUNCTION__, Status));
         }
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "mgbe", ETHER_MGBE_APP_CLK_RATE);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set eee-pcs clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set eee-pcs clock frequency %r\r\n", __FUNCTION__, Status));
         }
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "ptp-ref", ETHER_MGBE_PTP_REF_CLK_10G);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set ptp-ref clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set ptp-ref clock frequency %r\r\n", __FUNCTION__, Status));
         }
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "rx-pcs-m", ETHER_MGBE_RX_PCS_CLK_USXGMII_10G);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set rx-pcs-m clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set rx-pcs-m clock frequency %r\r\n", __FUNCTION__, Status));
         }
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "rx-input-m", ETHER_MGBE_RX_CLK_USXGMII_10G);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to set rx-input-m clock frequency %r\r\n", __FUNCTION__, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to set rx-input-m clock frequency %r\r\n", __FUNCTION__, Status));
         }
       } else if (PhyDriver->Speed == SPEED_1000) {
         ClockRate = TX_CLK_RATE_1G;
@@ -393,7 +393,7 @@ PhyLinkAdjustEmacConfig (
 
       Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "tx", ClockRate);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
         Status = EFI_SUCCESS;
       }
     } else {

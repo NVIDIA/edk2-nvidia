@@ -45,7 +45,7 @@ UsbFirmwarePlatformIsSupported (
   Model = (CONST CHAR8 *)fdt_getprop (Dtb, 0, "model", &Length);
   if ((Length > 0) && (Model != NULL)) {
     if (0 == AsciiStrCmp (Model, "e3360_1099")) {
-      DEBUG ((EFI_D_ERROR, "%a: Xavier-SLT unsupported\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Xavier-SLT unsupported\r\n", __FUNCTION__));
       return FALSE;
     }
   }

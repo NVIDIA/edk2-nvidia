@@ -379,7 +379,7 @@ Tpm2DeviceLibConstructor (
                  &mSearchToken
                  );
   if (mTpm2Event == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 

@@ -76,7 +76,7 @@ DeviceDiscoveryNotify (
           if (!EFI_ERROR (Status)) {
             Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, HWPM_LA_MAX_CLOCK);
             if (EFI_ERROR (Status)) {
-              DEBUG ((EFI_D_ERROR, "%a, Failed to set hwpm la clock frequency %r\r\n", __FUNCTION__, Status));
+              DEBUG ((DEBUG_ERROR, "%a, Failed to set hwpm la clock frequency %r\r\n", __FUNCTION__, Status));
             }
           }
         }
