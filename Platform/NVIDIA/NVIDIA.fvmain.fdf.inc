@@ -46,6 +46,7 @@
   #
   INF Silicon/NVIDIA/Drivers/DeviceDiscovery/DeviceDiscoveryDxe.inf
 
+!ifdef CONFIG_ACPI
   #
   # Aml Generation
   #
@@ -60,8 +61,14 @@
   # ACPI Support
   #
   INF MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
-  #INF MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
 
+  #
+  # ACPI device from DTB
+  #
+  INF Silicon/NVIDIA/Drivers/AcpiDtbSsdtGenerator/AcpiDtbSsdtGenerator.inf
+!endif
+
+!ifdef CONFIG_CONFIG_MANAGER
   #
   # Configuration Manager
   #
@@ -71,6 +78,7 @@
   # Dynamic Tables support
   #
   !include DynamicTablesPkg/DynamicTables.fdf.inc
+!endif
 
   INF MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
 
@@ -121,7 +129,9 @@
   # Graphics console support
   #
   INF Silicon/NVIDIA/Drivers/Logo/LogoDxe.inf
+!ifdef CONFIG_ACPI
   INF MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
+!endif
 
   INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
   INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
@@ -225,7 +235,9 @@
   #
   # SMBIOS/DMI
   #
+!ifdef CONFIG_SMBIOS
   INF MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
+!endif
 
   #
   # Bds

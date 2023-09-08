@@ -12,7 +12,9 @@
   #
   # Platform Configuration Manager Data
   #
+!ifdef CONFIG_CONFIG_MANAGER
   INF Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+!endif
 
   #
   # Regulator support
@@ -169,7 +171,3 @@
   # FPGA I2C Support
   #
   INF Silicon/NVIDIA/Drivers/FpgaI2c/FpgaI2c.inf
-
-  # ACPI device from DTB
-  #
-  INF Silicon/NVIDIA/Drivers/AcpiDtbSsdtGenerator/AcpiDtbSsdtGenerator.inf

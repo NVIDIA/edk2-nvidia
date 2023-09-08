@@ -245,6 +245,7 @@
   #
   # Platform Configuration Manager Data
   #
+!ifdef CONFIG_CONFIG_MANAGER
   Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
     <LibraryClasses>
       # Platform ASL Tables
@@ -252,18 +253,13 @@
     <BuildOptions>
       *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
   }
+!endif
 
   #
   # Regulator support
   #
   Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
   Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
-
-  #
-  # ACPI Support
-  #
-  MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
-  Silicon/NVIDIA/Drivers/AcpiDtbSsdtGenerator/AcpiDtbSsdtGenerator.inf
 
   #
   # QSPI Support

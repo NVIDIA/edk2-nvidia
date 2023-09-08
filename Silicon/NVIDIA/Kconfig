@@ -7,6 +7,31 @@
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #
+
+menu "OS Hardware description"
+  config CONFIG_MANAGER
+  bool
+
+  config ACPI
+  bool "ACPI support"
+  default y
+  select CONFIG_MANAGER
+  help
+    Platform supports ACPI
+
+  config DEVICETREE
+  bool "Device tree support"
+  help
+    Platform supports Devicetree
+
+  config SMBIOS
+  bool "SMBIOS support"
+  default y
+  select CONFIG_MANAGER
+  help
+    Platform supports SMBIOS
+endmenu
+
 menu "Boot Options"
   config BOOT_QUICK_BOOT
   bool "Quick boot support"

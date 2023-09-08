@@ -16,8 +16,10 @@
   #
   # Platform Configuration Manager Data
   #
+!ifdef CONFIG_CONFIG_MANAGER
   INF Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
   INF Silicon/NVIDIA/Tegra/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+!endif
 
   #
   # Platform USB FW
@@ -33,8 +35,13 @@
   #
   # FDT Support
   #
-  INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
-
+!ifdef CONFIG_DEVICETREE
+  !ifdef CONFIG_ACPI
+    INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+  !else
+    INF Silicon/NVIDIA/Drivers/DtOnlyPlatformDxe/DtOnlyPlatformDxe.inf
+  !endif
+!endif
 
   #
   # Usb Support
@@ -146,14 +153,11 @@
   #
   # SMBIOS
   #
+!ifdef CONFIG_SMBIOS
   INF ArmPkg/Universal/Smbios/SmbiosMiscDxe/SmbiosMiscDxe.inf
   INF Silicon/NVIDIA/Drivers/SmbiosOemDxe/SmbiosMiscOemDxe/SmbiosMiscOemDxe.inf
   INF ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
-
-  #
-  # ACPI device from DTB
-  #
-  INF Silicon/NVIDIA/Drivers/AcpiDtbSsdtGenerator/AcpiDtbSsdtGenerator.inf
+!endif
 
   #
   # BasicProfiler Support

@@ -164,6 +164,7 @@
   #
   # Platform Configuration Manager Data
   #
+!ifdef CONFIG_CONFIG_MANAGER
   Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
     <LibraryClasses>
       PlatformAslTablesLib|Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
@@ -176,6 +177,7 @@
     <BuildOptions>
       *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Tegra/T234/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT -I$(BIN_DIR)/Silicon/NVIDIA/Library/ASLTemplateTablesLib/ASLTemplateTablesLib/OUTPUT
   }
+!endif
 
   #
   # Platform USB FW
@@ -191,19 +193,19 @@
   #
   # FDT Support
   #
-  EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf {
-    <LibraryClasses>
-      DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbKernelLoaderLib.inf
-  }
-
-  #
-  # ACPI Support
-  #
-  MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf {
-    <LibraryClasses>
-      NULL|EmbeddedPkg/Library/PlatformHasAcpiLib/PlatformHasAcpiLib.inf
-  }
-  Silicon/NVIDIA/Drivers/AcpiDtbSsdtGenerator/AcpiDtbSsdtGenerator.inf
+  !ifdef CONFIG_DEVICETREE
+    !ifdef CONFIG_ACPI
+    EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf {
+      <LibraryClasses>
+        DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbKernelLoaderLib.inf
+    }
+    !else
+    Silicon/NVIDIA/Drivers/DtOnlyPlatformDxe/DtOnlyPlatformDxe.inf {
+      <LibraryClasses>
+        DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbKernelLoaderLib.inf
+    }
+    !endif
+  !endif
 
   #
   # QSPI Support
@@ -332,9 +334,11 @@
   #
   # SMBIOS
   #
+!ifdef CONFIG_SMBIOS
   ArmPkg/Universal/Smbios/SmbiosMiscDxe/SmbiosMiscDxe.inf
   Silicon/NVIDIA/Drivers/SmbiosOemDxe/SmbiosMiscOemDxe/SmbiosMiscOemDxe.inf
   ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
+!endif
 
   #
   # BasicProfiler Support

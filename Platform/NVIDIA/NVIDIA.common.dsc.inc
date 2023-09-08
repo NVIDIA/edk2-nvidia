@@ -809,6 +809,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       NULL|MdeModulePkg/Library/DxeCrc32GuidedSectionExtractLib/DxeCrc32GuidedSectionExtractLib.inf
   }
 
+!ifdef CONFIG_ACPI
   #
   # Aml Generation
   #
@@ -818,6 +819,18 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # Aml Patching
   #
   Silicon/NVIDIA/Drivers/AmlPatchDxe/AmlPatchDxe.inf
+
+  #
+  # ACPI Support
+  #
+  MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf {
+    <LibraryClasses>
+!ifdef CONFIG_DEVICETREE
+      NULL|EmbeddedPkg/Library/PlatformHasAcpiLib/PlatformHasAcpiLib.inf
+!endif
+  }
+  Silicon/NVIDIA/Drivers/AcpiDtbSsdtGenerator/AcpiDtbSsdtGenerator.inf
+!endif
 
   #
   # Device discovery protocol
@@ -900,12 +913,16 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # Graphics console support
   #
   Silicon/NVIDIA/Drivers/Logo/LogoDxe.inf
+!ifdef CONFIG_ACPI
   MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
+!endif
 
   #
   # SMBIOS/DMI
   #
+!ifdef CONFIG_SMBIOS
   MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
+!endif
 
   #
   # Bds
@@ -1107,11 +1124,13 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       FILE_GUID = $(SYSTEM_FMP_ESRT_GUID)
   }
 
+!ifdef CONFIG_CONFIG_MANAGER
   #
   # Dynamic Table Factory Dxe
   #
   DynamicTablesPkg/Drivers/DynamicTableFactoryDxe/DynamicTableFactoryDxe.inf {
     <LibraryClasses>
+!ifdef CONFIG_ACPI
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiDbg2LibArm/AcpiDbg2LibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiFadtLibArm/AcpiFadtLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiGtdtLibArm/AcpiGtdtLibArm.inf
@@ -1127,7 +1146,11 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiTpm2LibArm/AcpiTpm2LibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtCpuTopologyLibArm/SsdtCpuTopologyLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtPcieLibArm/SsdtPcieLibArm.inf
+      # AML Fixup
+      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtSerialPortLibArm/SsdtSerialPortLibArm.inf
+!endif
 
+!ifdef CONFIG_SMBIOS
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType1Lib/SmbiosType1Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType0Lib/SmbiosType0Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType2Lib/SmbiosType2Lib.inf
@@ -1148,9 +1171,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       NULL|DynamicTablesPkg/Library/Smbios/SmbiosType19Lib/SmbiosType19Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/SmbiosType4Lib/SmbiosType4Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/SmbiosType7Lib/SmbiosType7Lib.inf
-
-      # AML Fixup
-      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtSerialPortLibArm/SsdtSerialPortLibArm.inf
+!endif
   }
 
   #
@@ -1161,6 +1182,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # Configuration Manager
   #
   Silicon/NVIDIA/Drivers/ConfigurationManager/ConfigurationManagerDxe.inf
+!endif
 
   #
   # Tegra Platform Boot Manager
