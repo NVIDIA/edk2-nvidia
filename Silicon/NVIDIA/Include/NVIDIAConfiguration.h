@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -26,7 +26,8 @@
 #define NVIDIA_OS_REDUNDANCY_BOOT_ONLY    0x0
 #define NVIDIA_OS_REDUNDANCY_BOOT_ROOTFS  0x1
 
-#define L4T_BOOTMODE_VARIABLE_NAME  L"L4TDefaultBootMode"
+#define L4T_BOOTMODE_VARIABLE_NAME             L"L4TDefaultBootMode"
+#define L4T_BOARD_RECOVERY_BOOT_VARIABLE_NAME  L"BoardRecoveryBoot"
 
 #define NVIDIA_L4T_BOOTMODE_GRUB      0x0
 #define NVIDIA_L4T_BOOTMODE_DIRECT    0x1
@@ -99,6 +100,10 @@ typedef struct {
 typedef struct {
   UINT32    BootMode;
 } NVIDIA_L4T_BOOT_MODE;
+
+typedef struct {
+  BOOLEAN    BoardRecoveryBoot;
+} NVIDIA_BOARD_RECOVERY_BOOT;
 
 typedef struct {
   UINT8    IpMode;

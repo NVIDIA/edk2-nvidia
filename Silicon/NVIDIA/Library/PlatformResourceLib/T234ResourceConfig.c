@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -47,6 +47,10 @@ TEGRA_MMIO_INFO  T234MmioInfo[] = {
   {
     T234_FUSE_BASE_ADDRESS,
     SIZE_128KB
+  },
+  {
+    T234_SCRATCH_BASE,
+    SIZE_64KB
   },
   // Placeholder for memory in DRAM CO CARVEOUT_DISP_EARLY_BOOT_FB
   // that would be treated as MMIO memory.
@@ -723,4 +727,22 @@ T234SetNextBootChain (
     );
 
   return EFI_SUCCESS;
+}
+
+/**
+  Set next boot into recovery
+
+**/
+VOID
+EFIAPI
+T234SetNextBootRecovery (
+  IN  VOID
+  )
+{
+  MmioBitFieldWrite32 (
+    T234_SCRATCH_BASE + SCRATCH_RECOVERY_BOOT_OFFSET,
+    RECOVERY_BOOT_BIT,
+    RECOVERY_BOOT_BIT,
+    1
+    );
 }

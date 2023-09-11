@@ -702,6 +702,9 @@
 #Indicate whether TPM device is enabled or disabled.
   gNVIDIATokenSpaceGuid.PcdTpmEnable|FALSE|BOOLEAN|0x0000010F
 
+#Option to boot board in recovery mode
+  gNVIDIATokenSpaceGuid.PcdBoardRecoveryBoot|FALSE|BOOLEAN|0x00000113
+
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature
   # Indicate whether the password is cleared.

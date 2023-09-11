@@ -120,6 +120,11 @@ formset
     name = MemoryTestControl,
     guid = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+  efivarstore NVIDIA_BOARD_RECOVERY_BOOT,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
+    name  = BoardRecoveryBoot,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
   //
   // Main form for NVIDIA Configuration
   //
@@ -331,10 +336,19 @@ formset
     endnumeric;
     endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.L4TSupported == 0;
+      checkbox varid = BoardRecoveryBoot.BoardRecoveryBoot,
+          prompt  = STRING_TOKEN(STR_BOARD_RECOVERY_BOOT_PROMPT),
+          help    = STRING_TOKEN(STR_BOARD_RECOVERY_BOOT_HELP),
+          flags   = INTERACTIVE | RESET_REQUIRED,
+          default = FALSE,
+      endcheckbox;
+    endif;
+
   endform;
 
   //
-  // Form for Boot Config
+  // Form for Memory Test
   //
   form formid = MEMORY_TEST_FORM_ID,
     title = STRING_TOKEN(STR_MEMORY_TEST_FORM_TITLE);

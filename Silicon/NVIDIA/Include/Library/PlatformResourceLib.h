@@ -384,4 +384,14 @@ IsTpmToBeEnabled (
   VOID
   );
 
+/**
+  Set next boot into recovery
+
+**/
+VOID
+EFIAPI
+SetNextBootRecovery (
+  IN  VOID
+  );
+
 #endif //__PLATFORM_RESOURCE_LIB_H__

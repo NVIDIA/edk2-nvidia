@@ -1383,6 +1383,17 @@ InitializeSettings (
   BufferSize = sizeof (NVIDIA_MEMORY_TEST_OPTIONS);
   PcdSetPtrS (PcdMemoryTest, &BufferSize, PcdGetPtr (PcdMemoryTest));
 
+  // Initialize board recovery boot mode Form Settings
+  if (PcdGetBool (PcdBoardRecoveryBoot)) {
+    PcdSetBoolS (PcdBoardRecoveryBoot, FALSE);
+    ValidateActiveBootChain ();
+    SetNextBootRecovery ();
+    DEBUG ((DEBUG_ERROR, "%a: Rebooting into recovery.\r\n", __FUNCTION__));
+    gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
+  }
+
+  PcdSetBoolS (PcdBoardRecoveryBoot, FALSE);
+
   // Initialize Kernel Command Line Form Setting
   KernelCmdLineLen = 0;
   Status           = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, NULL, &KernelCmdLineLen, NULL);

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -34,6 +34,10 @@ TEGRA_MMIO_INFO  T194MmioInfo[] = {
   {
     T194_GIC_INTERRUPT_INTERFACE_BASE,
     SIZE_4KB
+  },
+  {
+    T194_SCRATCH_BASE,
+    SIZE_64KB
   },
   {
     0,
@@ -565,4 +569,22 @@ T194SetNextBootChain (
   }
 
   return EFI_SUCCESS;
+}
+
+/**
+  Set next boot into recovery
+
+**/
+VOID
+EFIAPI
+T194SetNextBootRecovery (
+  IN  VOID
+  )
+{
+  MmioBitFieldWrite32 (
+    T194_SCRATCH_BASE + SCRATCH_RECOVERY_BOOT_OFFSET,
+    RECOVERY_BOOT_BIT,
+    RECOVERY_BOOT_BIT,
+    1
+    );
 }

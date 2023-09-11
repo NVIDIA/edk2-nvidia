@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -109,6 +109,16 @@ EFI_STATUS
 EFIAPI
 T234GetEnabledCoresBitMap (
   IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  );
+
+/**
+  Set next boot into recovery
+
+**/
+VOID
+EFIAPI
+T234SetNextBootRecovery (
+  IN  VOID
   );
 
 #endif //__T234_RESOURCE_CONFIG_H__

@@ -700,7 +700,7 @@ CONFIG_MEMORY_TEST=n
   gNVIDIATokenSpaceGuid.PcdMcfSmmuBypassEnable|L"McfSmmuBypassEnable"|gNVIDIAPublicVariableGuid|0x0|0x0|BS,NV
   # Memory Test options
   gNVIDIATokenSpaceGuid.PcdMemoryTest|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x0|{0}|BS,NV,RT
-
+  gNVIDIATokenSpaceGuid.PcdBoardRecoveryBoot|L"BoardRecoveryBoot"|gNVIDIAPublicVariableGuid|0x00|0x00|BS,NV,RT
 
 [PcdsPatchableInModule]
   gArmTokenSpaceGuid.PcdFvBaseAddress|0x0

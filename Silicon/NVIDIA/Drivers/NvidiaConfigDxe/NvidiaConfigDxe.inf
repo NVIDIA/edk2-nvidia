@@ -1,7 +1,7 @@
 ## @file
 #  NVIDIA Configuration Dxe
 #
-#  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2017, Linaro, Ltd. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -92,6 +92,7 @@
   gNVIDIATokenSpaceGuid.PcdMcfSmmuBypassEnable
   gNVIDIATokenSpaceGuid.PcdTpmPresent
   gNVIDIATokenSpaceGuid.PcdMemoryTest
+  gNVIDIATokenSpaceGuid.PcdBoardRecoveryBoot
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

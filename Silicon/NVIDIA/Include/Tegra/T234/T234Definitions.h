@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -25,6 +25,9 @@
 #define T234_PCIE_ADDRESS_BITS  48
 
 #define T234_BL_VERSION_OFFSET  64
+
+// SCRATCH
+#define T234_SCRATCH_BASE  0x0C390000
 
 // BL CARVEOUT OFFSET
 #define T234_BL_CARVEOUT_OFFSET_V0  0x588

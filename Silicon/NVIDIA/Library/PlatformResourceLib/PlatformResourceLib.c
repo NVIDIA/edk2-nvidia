@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -876,5 +876,31 @@ IsTpmToBeEnabled (
       return TH500IsTpmToBeEnabled (CpuBootloaderAddress);
     default:
       return FALSE;
+  }
+}
+
+/**
+  Set next boot recovery
+
+**/
+VOID
+EFIAPI
+SetNextBootRecovery (
+  VOID
+  )
+{
+  UINTN  ChipID;
+
+  ChipID = TegraGetChipID ();
+
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      T234SetNextBootRecovery ();
+      break;
+    case T194_CHIP_ID:
+      T194SetNextBootRecovery ();
+      break;
+    default:
+      break;
   }
 }

@@ -737,3 +737,6 @@
 #string STR_MEMORY_TEST_BIT_FADE_PATTERN_HELP           #language en-US "Pattern to be used for bit fade test."
 #string STR_MEMORY_TEST_BIT_FADE_DELAY_PROMPT           #language en-US "Bit fade delay"
 #string STR_MEMORY_TEST_BIT_FADE_DELAY_HELP             #language en-US "How many msec to wait between write and verification."
+
+#string STR_BOARD_RECOVERY_BOOT_PROMPT  #language en-US "Boot Into Recovery"
+#string STR_BOARD_RECOVERY_BOOT_HELP    #language en-US "Reboot the board into recovery mode."

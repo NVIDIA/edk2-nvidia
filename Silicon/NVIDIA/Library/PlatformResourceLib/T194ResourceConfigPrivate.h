@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -108,6 +108,9 @@
 #define BOOT_CHAIN_A                        0
 #define BOOT_CHAIN_B                        1
 #define BL_UPDATE_BR_BCT_BIT_FIELD          26
+
+#define SCRATCH_RECOVERY_BOOT_OFFSET  0x2000
+#define RECOVERY_BOOT_BIT             1
 
 /*
  * Bootloader Scratch register

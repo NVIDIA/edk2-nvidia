@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -34,6 +34,9 @@
 // GIC
 #define T194_GIC_DISTRIBUTOR_BASE          0x03881000
 #define T194_GIC_INTERRUPT_INTERFACE_BASE  0x03882000
+
+// SCRATCH
+#define T194_SCRATCH_BASE  0x0C390000
 
 // BL CARVEOUT OFFSET
 #define T194_BL_CARVEOUT_OFFSET  0x448
