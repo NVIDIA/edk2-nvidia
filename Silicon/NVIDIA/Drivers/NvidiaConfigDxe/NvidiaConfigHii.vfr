@@ -562,6 +562,13 @@ formset
         default = FALSE,
     endcheckbox;
 
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.ModsSpEnable,
+        prompt = STRING_TOKEN(STR_MODS_SP_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_MODS_SP_ENABLE_HELP),
+        flags  = INTERACTIVE | RESET_REQUIRED,
+        default = TRUE,
+    endcheckbox;
+
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.McfSmmuBypassEnable,
         prompt = STRING_TOKEN(STR_MCF_SMMU_BYPASS_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_MCF_SMMU_BYPASS_ENABLE_HELP),

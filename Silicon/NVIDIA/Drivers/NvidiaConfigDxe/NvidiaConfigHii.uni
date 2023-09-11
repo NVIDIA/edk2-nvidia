@@ -2,7 +2,7 @@
 *
 *  String definitions for the NVIDIA Config.
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -62,6 +62,8 @@
 #string STR_EGM_HV_RESERVED_SIZE_HELP        #language en-US "Memory in MB to reserve for hypervisor."
 #string STR_SPREAD_SPECTRUM_PROMPT           #language en-US "UPHY spread spectrum"
 #string STR_SPREAD_SPECTRUM_HELP             #language en-US "Enable UPHY spread spectrum."
+#string STR_MODS_SP_ENABLE_PROMPT            #language en-US "Mods Secure Partition."
+#string STR_MODS_SP_ENABLE_HELP              #language en-US "Enable mods secure partition to allow running system diagnostics."
 #string STR_MCF_SMMU_BYPASS_ENABLE_PROMPT    #language en-US "MCF SMMU Bypass Enable"
 #string STR_MCF_SMMU_BYPASS_ENABLE_HELP      #language en-US "Allow OS to enable MCF SMMU bypass when kernel SMMU driver is configured to work in passthrough mode.  This allows the SMMU to be externally bypassed such that the data stream ID is not subject to any SMMUv3 controls when the kernel is using an SMMU bypass configuration in baremetal."
 #string STR_TPM_ENABLE_PROMPT                #language en-US "TPM"

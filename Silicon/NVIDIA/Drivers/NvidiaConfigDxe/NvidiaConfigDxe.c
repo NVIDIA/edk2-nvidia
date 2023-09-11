@@ -1,7 +1,7 @@
 /** @file
 *  NVIDIA Configuration Dxe
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -61,6 +61,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_SOCKET3_CONFIG_FORM_HELP),
   STRING_TOKEN (STR_SPREAD_SPECTRUM_PROMPT),
   STRING_TOKEN (STR_SPREAD_SPECTRUM_HELP),
+  STRING_TOKEN (STR_MODS_SP_ENABLE_PROMPT),
+  STRING_TOKEN (STR_MODS_SP_ENABLE_HELP),
   STRING_TOKEN (STR_MCF_SMMU_BYPASS_ENABLE_PROMPT),
   STRING_TOKEN (STR_MCF_SMMU_BYPASS_ENABLE_HELP),
   STRING_TOKEN (STR_PERF_VERSION_PROMPT),
@@ -1174,6 +1176,7 @@ SyncHiiSettings (
     mHiiControlSettings.EgmEnabled           = mMb1Config.Data.Mb1Data.FeatureData.EgmEnable;
     mHiiControlSettings.EgmHvSizeMb          = mMb1Config.Data.Mb1Data.HvRsvdMemSize;
     mHiiControlSettings.SpreadSpectrumEnable = mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable;
+    mHiiControlSettings.ModsSpEnable         = mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable;
     mHiiControlSettings.TpmEnable            = mMb1Config.Data.Mb1Data.FeatureData.TpmEnable;
     mHiiControlSettings.McfSmmuBypassEnable  = mMb1Config.Data.Mb1Data.FeatureData.McfSmmuBypassEnable;
     mHiiControlSettings.PerfVersion          = mMb1Config.Data.Mb1Data.PerfVersion;
@@ -1241,6 +1244,7 @@ SyncHiiSettings (
     mMb1Config.Data.Mb1Data.FeatureData.EgmEnable           = mHiiControlSettings.EgmEnabled;
     mMb1Config.Data.Mb1Data.HvRsvdMemSize                   = mHiiControlSettings.EgmHvSizeMb;
     mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable    = mHiiControlSettings.SpreadSpectrumEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable        = mHiiControlSettings.ModsSpEnable;
     mMb1Config.Data.Mb1Data.FeatureData.TpmEnable           = mHiiControlSettings.TpmEnable;
     mMb1Config.Data.Mb1Data.FeatureData.McfSmmuBypassEnable = mHiiControlSettings.McfSmmuBypassEnable;
     mMb1Config.Data.Mb1Data.PerfVersion                     = mHiiControlSettings.PerfVersion;

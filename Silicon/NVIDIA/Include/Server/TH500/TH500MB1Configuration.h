@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -18,7 +18,7 @@
 #define TEGRABL_MAX_PCIE_PER_SOCKET       10
 
 #define TEGRABL_MB1_BCT_MAJOR_VERSION  0
-#define TEGRABL_MB1_BCT_MINOR_VERSION  4
+#define TEGRABL_MB1_BCT_MINOR_VERSION  5
 
 #pragma pack(1)
 
@@ -31,12 +31,12 @@ typedef struct {
   union {
     UINT64    FeatureFields;
     struct {
-      UINT64    EgmEnable                  : 1;
-      UINT64    SpreadSpecEnable           : 1;
-      UINT64    DeprecatedAtsPageGranule4k : 1;
-      UINT64    TpmEnable                  : 1;
-      UINT64    McfSmmuBypassEnable        : 1;
-      UINT64    FeatureFieldsUnused        : 59;
+      UINT64    EgmEnable           : 1;
+      UINT64    SpreadSpecEnable    : 1;
+      UINT64    ModsSpEnable        : 1;
+      UINT64    TpmEnable           : 1;
+      UINT64    McfSmmuBypassEnable : 1;
+      UINT64    FeatureFieldsUnused : 59;
     };
   };
 } TEGRABL_FEATURE_DATA;

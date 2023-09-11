@@ -2,7 +2,7 @@
 *
 *  x-uefi string definitions for the NVIDIA Config.
 *
-*  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -47,6 +47,7 @@
 #string STR_EGM_ENABLE_PROMPT                   #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/EGM"
 #string STR_EGM_HV_RESERVED_SIZE_PROMPT         #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/EGMHypervisorReservedMemory"
 #string STR_SPREAD_SPECTRUM_PROMPT              #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/UPHYSpreadSpectrum"
+#string STR_MODS_SP_ENABLE_PROMPT               #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/ModsSpEnable"
 #string STR_TPM_ENABLE_PROMPT                   #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/TPM"
 #string STR_MCF_SMMU_BYPASS_ENABLE_PROMPT       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/McfSmmuBypassEnable"
 #string STR_PERF_VERSION_PROMPT                 #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/PerformanceVersion"

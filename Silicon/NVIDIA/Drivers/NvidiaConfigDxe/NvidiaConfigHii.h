@@ -1,7 +1,7 @@
 /** @file
 *  Nvidia Configuration Dxe
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -155,6 +155,7 @@ typedef struct {
   UINT32     EgmHvSizeMb;
   UINT32     UefiDebugLevel;
   BOOLEAN    SpreadSpectrumEnable;
+  BOOLEAN    ModsSpEnable;
   BOOLEAN    TpmPresent;
   UINT8      TpmEnable;
   BOOLEAN    McfSmmuBypassEnable;
