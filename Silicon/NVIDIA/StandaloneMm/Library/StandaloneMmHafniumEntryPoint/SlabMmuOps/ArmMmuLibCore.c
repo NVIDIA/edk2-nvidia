@@ -5,7 +5,7 @@
 *  - dynamic memory allocations replaced by a slab-based allocator since dynamic allocations are not yet possible this
 *    early in the boot
 *
-*  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -16,10 +16,11 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/CacheMaintenanceLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/ArmLib.h>
 #include <Library/ArmMmuLib.h>
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
+
+#include "../StandaloneMmArmLib.h"
 
 /*
  * Dynamic Memory is not enabled at this early point, so implement a simple slab-based allocator to replace
@@ -63,41 +64,41 @@ AllocatePagesFromSlab (
 STATIC
 UINT64
 ArmMemoryAttributeToPageAttribute (
-  IN ARM_MEMORY_REGION_ATTRIBUTES  Attributes
+  IN STMM_ARM_MEMORY_REGION_ATTRIBUTES  Attributes
   )
 {
   switch (Attributes) {
-    case ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK_NONSHAREABLE:
+    case STMM_ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK_NONSHAREABLE:
       return TT_ATTR_INDX_MEMORY_WRITE_BACK;
-    case ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_BACK_NONSHAREABLE:
+    case STMM_ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_BACK_NONSHAREABLE:
       return TT_ATTR_INDX_MEMORY_WRITE_BACK | TT_NS;
 
-    case ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK:
+    case STMM_ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK:
       return TT_ATTR_INDX_MEMORY_WRITE_BACK | TT_SH_INNER_SHAREABLE;
-    case ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_BACK:
+    case STMM_ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_BACK:
       return TT_ATTR_INDX_MEMORY_WRITE_BACK | TT_SH_INNER_SHAREABLE | TT_NS;
 
-    case ARM_MEMORY_REGION_ATTRIBUTE_WRITE_THROUGH:
+    case STMM_ARM_MEMORY_REGION_ATTRIBUTE_WRITE_THROUGH:
       return TT_ATTR_INDX_MEMORY_WRITE_THROUGH | TT_SH_INNER_SHAREABLE;
-    case ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_THROUGH:
+    case STMM_ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_THROUGH:
       return TT_ATTR_INDX_MEMORY_WRITE_THROUGH | TT_SH_INNER_SHAREABLE | TT_NS;
 
     // Uncached and device mappings are treated as outer shareable by default,
-    case ARM_MEMORY_REGION_ATTRIBUTE_UNCACHED_UNBUFFERED:
+    case STMM_ARM_MEMORY_REGION_ATTRIBUTE_UNCACHED_UNBUFFERED:
       return TT_ATTR_INDX_MEMORY_NON_CACHEABLE;
-    case ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_UNCACHED_UNBUFFERED:
+    case STMM_ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_UNCACHED_UNBUFFERED:
       return TT_ATTR_INDX_MEMORY_NON_CACHEABLE | TT_NS;
 
     default:
       ASSERT (0);
-    case ARM_MEMORY_REGION_ATTRIBUTE_DEVICE:
+    case STMM_ARM_MEMORY_REGION_ATTRIBUTE_DEVICE:
       if (ArmReadCurrentEL () == AARCH64_EL2) {
         return TT_ATTR_INDX_DEVICE_MEMORY | TT_XN_MASK;
       } else {
         return TT_ATTR_INDX_DEVICE_MEMORY | TT_UXN_MASK | TT_PXN_MASK;
       }
 
-    case ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_DEVICE:
+    case STMM_ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_DEVICE:
       if (ArmReadCurrentEL () == AARCH64_EL2) {
         return TT_ATTR_INDX_DEVICE_MEMORY | TT_XN_MASK | TT_NS;
       } else {
@@ -395,8 +396,8 @@ UpdateRegionMapping (
 STATIC
 EFI_STATUS
 FillTranslationTable (
-  IN  UINT64                        *RootTable,
-  IN  ARM_MEMORY_REGION_DESCRIPTOR  *MemoryRegion
+  IN  UINT64                             *RootTable,
+  IN  STMM_ARM_MEMORY_REGION_DESCRIPTOR  *MemoryRegion
   )
 {
   return UpdateRegionMapping (
@@ -410,9 +411,9 @@ FillTranslationTable (
 EFI_STATUS
 EFIAPI
 SlabArmConfigureMmu (
-  IN  ARM_MEMORY_REGION_DESCRIPTOR  *MemoryTable,
-  OUT VOID                          **TranslationTableBase OPTIONAL,
-  OUT UINTN                         *TranslationTableSize OPTIONAL
+  IN  STMM_ARM_MEMORY_REGION_DESCRIPTOR  *MemoryTable,
+  OUT VOID                               **TranslationTableBase OPTIONAL,
+  OUT UINTN                              *TranslationTableSize OPTIONAL
   )
 {
   VOID        *TranslationTable;
