@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -27,5 +27,6 @@
 // BL CARVEOUT OFFSET
 #define T234_BL_CARVEOUT_OFFSET_V0  0x588
 #define T234_BL_CARVEOUT_OFFSET_V1  0x10F8
+#define T234_BL_CARVEOUT_OFFSET_V2  0x11B8
 
 #endif //__T234_DEFINES_H__

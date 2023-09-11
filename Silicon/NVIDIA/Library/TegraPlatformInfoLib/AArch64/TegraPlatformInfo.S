@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 //  SPDX-License-Identifier: BSD-2-Clause-Patent
 //
@@ -46,7 +46,13 @@ _T234Carveout:
   cmp w0, 0
   beq _T234Carveout_V0
   cmp w0, 1
+  beq _T234Carveout_V1
+  cmp w0, 2
   bne _DefaultCarveout
+  MOV64 (x0, T234_BL_CARVEOUT_OFFSET_V2)
+  b _ReturnCarveout
+
+_T234Carveout_V1:
   MOV64 (x0, T234_BL_CARVEOUT_OFFSET_V1)
   b _ReturnCarveout
 
