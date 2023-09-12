@@ -72,7 +72,6 @@
   RedfishDebugLib|RedfishPkg/Library/RedfishDebugLib/RedfishDebugLib.inf
   RedfishHttpCacheLib|RedfishClientPkg/Library/RedfishHttpCacheLib/RedfishHttpCacheLib.inf
   RedfishAddendumLib|RedfishClientPkg/Library/RedfishAddendumLib/RedfishAddendumLib.inf
-  RedfishClientDebugLib|RedfishClientPkg/Library/RedfishClientDebugLib/RedfishClientDebugLib.inf
 
   RedfishLib|RedfishClientPkg/PrivateLibrary/RedfishLib/RedfishLib.inf
   RedfishFeatureUtilityLib|RedfishClientPkg/Library/RedfishFeatureUtilityLib/RedfishFeatureUtilityLib.inf
