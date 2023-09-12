@@ -446,7 +446,6 @@ SyncSrRfAndmRootfsInfo (
   @retval FALSE    There is no valid rootfs
 
 **/
-STATIC
 BOOLEAN
 EFIAPI
 IsValidRootfs (
