@@ -2,7 +2,7 @@
   Entry point to the Standalone MM Foundation when initialized during the SEC
   phase on ARM platforms
 
-Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -16,6 +16,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Guid/MpInformation.h>
 
 #include <Library/ArmMmuLib.h>
+#include <Library/StandaloneMmMmuLib.h>
 #include <Library/ArmSvcLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>

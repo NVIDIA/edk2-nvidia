@@ -472,7 +472,7 @@ CEntryPoint (
   // Add all new entries to memory map and relocate HOB if needed
   UpdateMemoryMap ();
 
-  Status = ArmSetMemoryRegionReadOnly (StackBase + StackSize, SIZE_4KB);
+  Status = ArmSetMemoryAttributes (StackBase + StackSize, SIZE_4KB, EFI_MEMORY_RO, EFI_MEMORY_RO);
   ASSERT_EFI_ERROR (Status);
 
   // Register UEFI DTB
