@@ -1590,14 +1590,16 @@ AndroidBootDxeDriverEntryPoint (
     // Allocate KernelArgs
     KernelArgs = AllocateZeroPool (sizeof (CHAR16) * ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
     if (KernelArgs == NULL) {
-      Status = EFI_OUT_OF_RESOURCES;
-      return Status;
+      DEBUG ((DEBUG_ERROR, "%a: alloc failed\n", __FUNCTION__));
+      goto Done;
     }
 
     // Verify the image header and set the internal data structure ImgData
     Status = AndroidBootGetVerify (NULL, NULL, NULL, KernelArgs);
     if (EFI_ERROR (Status)) {
-      return Status;
+      DEBUG ((DEBUG_ERROR, "%a: verify failed: %r\n", __FUNCTION__, Status));
+      FreePool (KernelArgs);
+      goto Done;
     }
 
     // Copy NVIDIA RCM Kernel GUID to device path
@@ -1673,5 +1675,6 @@ AndroidBootDxeDriverEntryPoint (
     }
   }
 
+Done:
   return EFI_SUCCESS;
 }
