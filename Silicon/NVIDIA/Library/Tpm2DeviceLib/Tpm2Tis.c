@@ -158,6 +158,7 @@ TisReadBurstCount (
 
     *BurstCount = (UINT16)((StsReg[2] << 8) | StsReg[1]);
     if (*BurstCount != 0) {
+      *BurstCount = MIN (TPM_MAX_TRANSFER_SIZE, *BurstCount);
       return EFI_SUCCESS;
     }
 
@@ -301,7 +302,7 @@ TisTpmCommand (
       goto Exit;
     }
 
-    TransferSize = MIN (TPM_MAX_TRANSFER_SIZE, MIN (BurstCount, (SizeIn - Index)));
+    TransferSize = MIN (BurstCount, (SizeIn - Index));
     Status       = Tpm2->Transfer (
                            Tpm2,
                            FALSE,
@@ -388,12 +389,7 @@ TisTpmCommand (
       goto Exit;
     }
 
-    if (*SizeOut < (Index + BurstCount)) {
-      Status = EFI_BUFFER_TOO_SMALL;
-      goto Exit;
-    }
-
-    TransferSize = MIN (TPM_MAX_TRANSFER_SIZE, BurstCount);
+    TransferSize = MIN (*SizeOut - Index, BurstCount);
     Status       = Tpm2->Transfer (
                            Tpm2,
                            TRUE,
@@ -438,9 +434,7 @@ TisTpmCommand (
       goto Exit;
     }
 
-    ASSERT (*SizeOut >= (Index + BurstCount));
-
-    TransferSize = MIN (TPM_MAX_TRANSFER_SIZE, BurstCount);
+    TransferSize = MIN (BurstCount, TpmOutSize - Index);
     Status       = Tpm2->Transfer (
                            Tpm2,
                            TRUE,
