@@ -41,6 +41,7 @@
 #include <NVIDIAConfiguration.h>
 #include <libfdt.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/ResetSystemLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
 #include "L4TLauncher.h"
 #include "L4TRootfsValidation.h"
@@ -2448,6 +2449,10 @@ L4TLauncher (
     Status = BootAndroidStylePartition (LoadedImage->DeviceHandle, BOOTIMG_BASE_NAME, BOOTIMG_DTB_BASE_NAME, &BootParams);
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"Failed to boot %s:%d partition\r\n", BOOTIMG_BASE_NAME, BootParams.BootChain);
+      // Warm reset if there is valid rootfs
+      if (IsValidRootfs ()) {
+        ResetCold ();
+      }
     }
   } else if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY) {
     ErrorPrint (L"%a: Attempting Recovery Boot\r\n", __FUNCTION__);
