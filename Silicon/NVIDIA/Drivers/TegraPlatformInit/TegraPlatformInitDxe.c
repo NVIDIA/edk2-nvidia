@@ -2,7 +2,7 @@
 
   Tegra Platform Init Driver.
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -838,6 +838,11 @@ TegraPlatformInitialize (
 
   if (ChipID == TH500_CHIP_ID) {
     SetOemTableIdPcdForTh500 ();
+  }
+
+  // Set PCD to reflect android kernel boot for later stages
+  if (fdt_path_offset (DtbBase, "/firmware/android") >= 0) {
+    PcdSetBoolS (PcdBootAndroidImage, TRUE);
   }
 
   return EFI_SUCCESS;

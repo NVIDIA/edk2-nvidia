@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -986,7 +986,7 @@ RefreshNvBootOptions (
 
     for (Index = 0; Index < BootOptionsCount; Index++) {
       if (EfiBootManagerFindLoadOption (&BootOptions[Index], NvBootOptions, NvBootOptionsCount) == -1) {
-        if (IsRemovableLoadOption (&BootOptions[Index])) {
+        if (PcdGetBool (PcdBootAndroidImage) || IsRemovableLoadOption (&BootOptions[Index])) {
           Status = EfiBootManagerAddLoadOptionVariable (&BootOptions[Index], 0);
           if (EFI_ERROR (Status)) {
             goto Error;
