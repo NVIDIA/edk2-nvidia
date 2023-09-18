@@ -35,7 +35,7 @@ typedef struct {
       UINT64    SpreadSpecEnable    : 1;
       UINT64    ModsSpEnable        : 1;
       UINT64    TpmEnable           : 1;
-      UINT64    McfSmmuBypassEnable : 1;
+      UINT64    GpuSmmuBypassEnable : 1;
       UINT64    FeatureFieldsUnused : 59;
     };
   };

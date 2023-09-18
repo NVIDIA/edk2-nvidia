@@ -158,7 +158,7 @@ typedef struct {
   BOOLEAN    ModsSpEnable;
   BOOLEAN    TpmPresent;
   UINT8      TpmEnable;
-  BOOLEAN    McfSmmuBypassEnable;
+  BOOLEAN    GpuSmmuBypassEnable;
   UINT8      PerfVersion;
   UINT8      UphySetting0[MAX_UPHY];
   UINT8      UphySetting1[MAX_UPHY];

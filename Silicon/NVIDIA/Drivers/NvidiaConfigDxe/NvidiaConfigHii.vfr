@@ -583,9 +583,9 @@ formset
         default = TRUE,
     endcheckbox;
 
-    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.McfSmmuBypassEnable,
-        prompt = STRING_TOKEN(STR_MCF_SMMU_BYPASS_ENABLE_PROMPT),
-        help   = STRING_TOKEN(STR_MCF_SMMU_BYPASS_ENABLE_HELP),
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.GpuSmmuBypassEnable,
+        prompt = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_HELP),
         flags  = INTERACTIVE | RESET_REQUIRED,
         default = FALSE,
     endcheckbox;

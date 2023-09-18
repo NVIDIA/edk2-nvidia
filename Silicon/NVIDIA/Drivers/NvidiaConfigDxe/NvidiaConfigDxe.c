@@ -63,8 +63,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_SPREAD_SPECTRUM_HELP),
   STRING_TOKEN (STR_MODS_SP_ENABLE_PROMPT),
   STRING_TOKEN (STR_MODS_SP_ENABLE_HELP),
-  STRING_TOKEN (STR_MCF_SMMU_BYPASS_ENABLE_PROMPT),
-  STRING_TOKEN (STR_MCF_SMMU_BYPASS_ENABLE_HELP),
+  STRING_TOKEN (STR_GPU_SMMU_BYPASS_ENABLE_PROMPT),
+  STRING_TOKEN (STR_GPU_SMMU_BYPASS_ENABLE_HELP),
   STRING_TOKEN (STR_PERF_VERSION_PROMPT),
   STRING_TOKEN (STR_PERF_VERSION_HELP),
   STRING_TOKEN (STR_UPHY0_SOCKET0_PROMPT),
@@ -1178,7 +1178,7 @@ SyncHiiSettings (
     mHiiControlSettings.SpreadSpectrumEnable = mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable;
     mHiiControlSettings.ModsSpEnable         = mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable;
     mHiiControlSettings.TpmEnable            = mMb1Config.Data.Mb1Data.FeatureData.TpmEnable;
-    mHiiControlSettings.McfSmmuBypassEnable  = mMb1Config.Data.Mb1Data.FeatureData.McfSmmuBypassEnable;
+    mHiiControlSettings.GpuSmmuBypassEnable  = mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable;
     mHiiControlSettings.PerfVersion          = mMb1Config.Data.Mb1Data.PerfVersion;
     mHiiControlSettings.UefiDebugLevel       = mMb1Config.Data.Mb1Data.UefiDebugLevel;
 
@@ -1246,7 +1246,7 @@ SyncHiiSettings (
     mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable    = mHiiControlSettings.SpreadSpectrumEnable;
     mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable        = mHiiControlSettings.ModsSpEnable;
     mMb1Config.Data.Mb1Data.FeatureData.TpmEnable           = mHiiControlSettings.TpmEnable;
-    mMb1Config.Data.Mb1Data.FeatureData.McfSmmuBypassEnable = mHiiControlSettings.McfSmmuBypassEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable = mHiiControlSettings.GpuSmmuBypassEnable;
     mMb1Config.Data.Mb1Data.PerfVersion                     = mHiiControlSettings.PerfVersion;
     mMb1Config.Data.Mb1Data.UefiDebugLevel                  = mHiiControlSettings.UefiDebugLevel;
 
@@ -1517,7 +1517,18 @@ InitializeSettings (
       mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
     }
 
-    PcdSetBoolS (PcdMcfSmmuBypassEnable, mMb1Config.Data.Mb1Data.FeatureData.McfSmmuBypassEnable);
+    if (mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable == TRUE) {
+      for (Index = 0; Index < MAX_SOCKETS; Index++) {
+        if (!IsSocketEnabled (Index)) {
+          continue;
+        }
+
+        MmioWrite32 (
+          (Index << TH500_SOCKET_SHFT) + TH500_MCF_SMMU_SOCKET_0 + TH500_MCF_SMMU_BYPASS_0_OFFSET,
+          0x1
+          );
+      }
+    }
 
     WriteMb1Variables (&mMb1Config, &mVariableMb1Config);
   }

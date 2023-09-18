@@ -1,7 +1,7 @@
 /** @file
   SSDT Pcie Table Generator.
 
-  Copyright (c) 2022 - 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2021 - 2022, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -22,7 +22,6 @@
 #include <Library/DebugLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/PcdLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
@@ -230,33 +229,6 @@ UpdateLICAddr (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
-  return Status;
-}
-
-STATIC
-EFI_STATUS
-EFIAPI
-InsertUVARValue (
-  IN  OUT        AML_OBJECT_NODE_HANDLE  Node
-  )
-{
-  EFI_STATUS  Status;
-  BOOLEAN     UvarValue;
-
-  UvarValue = PcdGetBool (PcdMcfSmmuBypassEnable);
-
-  Status = AmlCodeGenNameInteger (
-             "UVAR",
-             UvarValue,
-             Node,
-             NULL
-             );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  DEBUG ((DEBUG_INFO, "%a: Updated UVAR value=%u\n", __FUNCTION__, UvarValue));
 
   return Status;
 }
@@ -558,11 +530,6 @@ GeneratePciSlots (
       }
 
       Status = UpdateFSPBootAddr (PciInfo, GpuNode);
-      if (EFI_ERROR (Status)) {
-        goto error_handler;
-      }
-
-      Status = InsertUVARValue (GpuNode);
       if (EFI_ERROR (Status)) {
         goto error_handler;
       }

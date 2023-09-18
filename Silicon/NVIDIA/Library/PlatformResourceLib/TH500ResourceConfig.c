@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -167,6 +167,25 @@ TEGRA_MMIO_INFO  TH500SocketMssMmioInfo[] = {
   {
     TH500_MSS_BASE_SOCKET_3,
     TH500_MSS_SIZE
+  },
+};
+
+TEGRA_MMIO_INFO  TH500SocketMcfSmmuMmioInfo[] = {
+  {
+    TH500_MCF_SMMU_SOCKET_0,
+    SIZE_4KB
+  },
+  {
+    TH500_MCF_SMMU_SOCKET_1,
+    SIZE_4KB
+  },
+  {
+    TH500_MCF_SMMU_SOCKET_2,
+    SIZE_4KB
+  },
+  {
+    TH500_MCF_SMMU_SOCKET_3,
+    SIZE_4KB
   },
 };
 
@@ -595,7 +614,7 @@ TH500GetMmioBaseAndSize (
 
   MmioInfo = AllocateZeroPool (
                sizeof (TH500MmioInfo) +
-               (TH500_MAX_SOCKETS * 5 * sizeof (TEGRA_MMIO_INFO))
+               (TH500_MAX_SOCKETS * 6 * sizeof (TEGRA_MMIO_INFO))
                );
   CopyMem (MmioInfo, TH500MmioInfo, sizeof (TH500MmioInfo));
 
@@ -612,6 +631,7 @@ TH500GetMmioBaseAndSize (
     CopyMem (MmioInfoEnd++, &TH500SocketScratchMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
     CopyMem (MmioInfoEnd++, &TH500SocketCbbMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
     CopyMem (MmioInfoEnd++, &TH500SocketMssMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
+    CopyMem (MmioInfoEnd++, &TH500SocketMcfSmmuMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
   }
 
   return MmioInfo;

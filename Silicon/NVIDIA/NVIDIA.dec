@@ -693,9 +693,6 @@
 #Option to configure the enabled PCIe NIC interface
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|{ 0x0, 0x0, 0x0, 0x0, 0x0 }|VOID*|0x0000010C
 
-#Option to enable MCF SMMU bypass support
-  gNVIDIATokenSpaceGuid.PcdMcfSmmuBypassEnable|FALSE|BOOLEAN|0x000000A5
-
 #Indicate whether TPM device is present and accessible on the system.
   gNVIDIATokenSpaceGuid.PcdTpmPresent|FALSE|BOOLEAN|0x0000010E
 
