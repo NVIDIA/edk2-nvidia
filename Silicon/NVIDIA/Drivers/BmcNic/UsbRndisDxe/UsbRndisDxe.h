@@ -1,7 +1,7 @@
 /** @file
   Definition of USB RNDIS driver.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -73,9 +73,10 @@ typedef struct {
 // USB endpoint data
 //
 typedef struct {
-  UINT8    BulkIn;
-  UINT8    BulkOut;
-  UINT8    Interrupt;
+  UINT8     BulkIn;
+  UINT8     BulkOut;
+  UINT8     Interrupt;
+  UINT16    MaxPacketSize;
 } USB_ENDPOINT_DATA;
 
 //

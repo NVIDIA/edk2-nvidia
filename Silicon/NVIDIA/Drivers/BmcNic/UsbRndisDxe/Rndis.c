@@ -1,7 +1,7 @@
 /** @file
   Implement the RNDIS interface.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -186,7 +186,8 @@ RndisConfigureUsbDevice (
       if (USB_IS_IN_ENDPOINT (EndpointDescriptor.EndpointAddress)) {
         UsbEndpoint->BulkIn = EndpointDescriptor.EndpointAddress;
       } else if (USB_IS_OUT_ENDPOINT (EndpointDescriptor.EndpointAddress)) {
-        UsbEndpoint->BulkOut = EndpointDescriptor.EndpointAddress;
+        UsbEndpoint->BulkOut       = EndpointDescriptor.EndpointAddress;
+        UsbEndpoint->MaxPacketSize = EndpointDescriptor.MaxPacketSize;
       }
     } else if (USB_IS_INTERRUPT_ENDPOINT (EndpointDescriptor.Attributes)) {
       UsbEndpoint->Interrupt = EndpointDescriptor.EndpointAddress;
@@ -916,10 +917,11 @@ UsbRndisInitialDevice (
   UsbData->MaxTransferSize       = RndisInitMsgCmplt.MaxTransferSize;
   UsbData->PacketAlignmentFactor = RndisInitMsgCmplt.PacketAlignmentFactor;
 
-  DEBUG ((USB_DEBUG_RNDIS, "%a, Medium : %x \n", __FUNCTION__, UsbData->Medium));
-  DEBUG ((USB_DEBUG_RNDIS, "%a, MaxPacketsPerTransfer : %x \n", __FUNCTION__, UsbData->MaxPacketsPerTransfer));
-  DEBUG ((USB_DEBUG_RNDIS, "%a, MaxTransferSize : %x\n", __FUNCTION__, UsbData->MaxTransferSize));
-  DEBUG ((USB_DEBUG_RNDIS, "%a, PacketAlignmentFactor : %x\n", __FUNCTION__, UsbData->PacketAlignmentFactor));
+  DEBUG ((USB_DEBUG_RNDIS, "%a, Medium:                0x%x\n", __FUNCTION__, UsbData->Medium));
+  DEBUG ((USB_DEBUG_RNDIS, "%a, MaxPacketsPerTransfer: 0x%x\n", __FUNCTION__, UsbData->MaxPacketsPerTransfer));
+  DEBUG ((USB_DEBUG_RNDIS, "%a, MaxTransferSize:       0x%x\n", __FUNCTION__, UsbData->MaxTransferSize));
+  DEBUG ((USB_DEBUG_RNDIS, "%a, MaxPacketSize:         0x%x\n", __FUNCTION__, UsbData->EndPoint.MaxPacketSize));
+  DEBUG ((USB_DEBUG_RNDIS, "%a, PacketAlignmentFactor: 0x%x\n", __FUNCTION__, UsbData->PacketAlignmentFactor));
 
   return EFI_SUCCESS;
 }

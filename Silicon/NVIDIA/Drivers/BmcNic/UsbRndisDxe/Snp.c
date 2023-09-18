@@ -1,7 +1,7 @@
 /** @file
   Provides the Simple Network functions.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -605,6 +605,7 @@ UsbRndisSnpTransmit (
   ETHERNET_HEADER         *EthernetHeader;
   RNDIS_PACKET_MSG_DATA   *RndisPacketMsg;
   UINTN                   Length;
+  UINTN                   DataSize;
   EFI_TPL                 TplPrevious;
   UINT8                   *DataPointer;
   EFI_STATUS              Status;
@@ -675,7 +676,12 @@ UsbRndisSnpTransmit (
   //
   // Prepare RNDIS package
   //
-  Length         = sizeof (RNDIS_PACKET_MSG_DATA) + (UINT32)BufferSize;
+  DataSize = BufferSize;
+  if ((sizeof (RNDIS_PACKET_MSG_DATA) + (UINT32)BufferSize) % Private->UsbData.EndPoint.MaxPacketSize == 0) {
+    DataSize += 1;
+  }
+
+  Length         = sizeof (RNDIS_PACKET_MSG_DATA) + (UINT32)DataSize;
   RndisPacketMsg = AllocateZeroPool (Length);
   if (RndisPacketMsg == NULL) {
     gBS->RestoreTPL (TplPrevious);
@@ -685,7 +691,7 @@ UsbRndisSnpTransmit (
   RndisPacketMsg->MessageType   = RNDIS_PACKET_MSG;
   RndisPacketMsg->MessageLength = Length;
   RndisPacketMsg->DataOffset    = sizeof (RNDIS_PACKET_MSG_DATA) - 8;
-  RndisPacketMsg->DataLength    = (UINT32)BufferSize;
+  RndisPacketMsg->DataLength    = (UINT32)DataSize;
   DataPointer                   = ((UINT8 *)RndisPacketMsg) + sizeof (RNDIS_PACKET_MSG_DATA);
 
   CopyMem (DataPointer, Buffer, BufferSize);
