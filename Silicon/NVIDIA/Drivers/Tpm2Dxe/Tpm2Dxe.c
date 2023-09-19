@@ -2,7 +2,7 @@
 
   TPM2 Driver
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -70,7 +70,7 @@ Tpm2Transfer (
 {
   EFI_STATUS                       Status;
   QSPI_TRANSACTION_PACKET          Packet;
-  UINT8                            TxBuf[TPM_SPI_CMD_SIZE + TPM_MAX_TRANSFER_SIZE];
+  UINT8                            TxBuf[TPM_MAX_TRANSFER_SIZE];
   TPM2_PRIVATE_DATA                *Private;
   NVIDIA_QSPI_CONTROLLER_PROTOCOL  *QspiInstance;
 
@@ -82,33 +82,41 @@ Tpm2Transfer (
   Private      = TPM2_PRIVATE_DATA (This);
   QspiInstance = Private->QspiController;
 
-  TxBuf[0] = (ReadAccess ? 0x80 : 0x00) | (DataSize - 1);
-  TxBuf[1] = TPM_SPI_ADDR_PREFIX;
-  TxBuf[2] = (UINT8)(Addr >> 8);
-  TxBuf[3] = (UINT8)Addr;
+  Packet.Command = (ReadAccess ? 0x80 : 0x00) | (DataSize - 1);
+  Packet.Address = ((Addr & 0xFF) << 16) | (Addr & 0xFF00) | TPM_SPI_ADDR_PREFIX;
 
   if (ReadAccess) {
-    Packet.TxBuf      = TxBuf;
-    Packet.TxLen      = TPM_SPI_CMD_SIZE;
+    Packet.TxBuf      = NULL;
+    Packet.TxLen      = 0;
     Packet.RxBuf      = Data;
     Packet.RxLen      = DataSize;
     Packet.WaitCycles = 0;
     Packet.ChipSelect = Private->ChipSelect;
-    Packet.Control    = 0;
+    Packet.Control    = QSPI_CONTROLLER_CONTROL_CMB_SEQ_MODE_3B_ADDR;
   } else {
-    CopyMem (&TxBuf[TPM_SPI_CMD_SIZE], Data, DataSize);
+    CopyMem (TxBuf, Data, DataSize);
     Packet.TxBuf      = TxBuf;
-    Packet.TxLen      = TPM_SPI_CMD_SIZE + DataSize;
+    Packet.TxLen      = DataSize;
     Packet.RxBuf      = NULL;
     Packet.RxLen      = 0;
     Packet.WaitCycles = 0;
     Packet.ChipSelect = Private->ChipSelect;
-    Packet.Control    = 0;
+    Packet.Control    = QSPI_CONTROLLER_CONTROL_CMB_SEQ_MODE_3B_ADDR;
+  }
+
+  Status = QspiInstance->ApplyDeviceSpecificSettings (QspiInstance, QspiDevFeatWaitStateEn);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   Status = QspiInstance->PerformTransaction (QspiInstance, &Packet);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Fail to %a %04x. %r\n", __FUNCTION__, ReadAccess ? "read" : "write", Addr, Status));
+    return Status;
+  }
+
+  Status = QspiInstance->ApplyDeviceSpecificSettings (QspiInstance, QspiDevFeatWaitStateDis);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
@@ -388,11 +396,6 @@ Tpm2DxeDriverBindingStart (
   Private->QspiController = QspiInstance;
 
   Status = GetTpmProperties (Private, Controller);
-  if (EFI_ERROR (Status)) {
-    goto ErrorExit;
-  }
-
-  Status = QspiInstance->DeviceSpecificInit (QspiInstance, QspiDevFeatWaitState);
   if (EFI_ERROR (Status)) {
     goto ErrorExit;
   }

@@ -1,7 +1,7 @@
 /** @file
   NVIDIA QSPI Controller Protocol
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -26,8 +26,9 @@ typedef struct _NVIDIA_QSPI_CONTROLLER_PROTOCOL NVIDIA_QSPI_CONTROLLER_PROTOCOL;
   Device specific features
 **/
 typedef enum QspiDevFeature {
-  QspiDevFeatUnknown,     ///< 0 - Unknown feature
-  QspiDevFeatWaitState,   ///< 1 - Wait state
+  QspiDevFeatUnknown,      ///< 0 - Unknown feature
+  QspiDevFeatWaitStateEn,  ///< 1 - Enable wait state
+  QspiDevFeatWaitStateDis, ///< 2 - Disable wait state
   QspiDevFeatMax
 } QSPI_DEV_FEATURE;
 
@@ -100,7 +101,7 @@ EFI_STATUS
   );
 
 /**
-  Initialize QSPI controller for a specific device
+  Apply QSPI controller settings for a specific device
 
   @param[in] This                  Instance of protocol
   @param[in] DeviceFeature         Device feature to initialize
@@ -111,18 +112,18 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *QSPI_CONTROLLER_DEVICE_SPECIFIC_INIT)(
+(EFIAPI *QSPI_CONTROLLER_APPLY_DEVICE_SPECIFIC_SETTINGS)(
   IN NVIDIA_QSPI_CONTROLLER_PROTOCOL *This,
   IN QSPI_DEV_FEATURE                DeviceFeature
   );
 
 /// NVIDIA_QSPI_CONTROLLER_PROTOCOL protocol structure.
 struct _NVIDIA_QSPI_CONTROLLER_PROTOCOL {
-  QSPI_CONTROLLER_PERFORM_TRANSACTION     PerformTransaction;
-  QSPI_CONTROLLER_GET_CLOCK_SPEED         GetClockSpeed;
-  QSPI_CONTROLLER_SET_CLOCK_SPEED         SetClockSpeed;
-  QSPI_CONTROLLER_GET_NUM_CHIP_SELECTS    GetNumChipSelects;
-  QSPI_CONTROLLER_DEVICE_SPECIFIC_INIT    DeviceSpecificInit;
+  QSPI_CONTROLLER_PERFORM_TRANSACTION               PerformTransaction;
+  QSPI_CONTROLLER_GET_CLOCK_SPEED                   GetClockSpeed;
+  QSPI_CONTROLLER_SET_CLOCK_SPEED                   SetClockSpeed;
+  QSPI_CONTROLLER_GET_NUM_CHIP_SELECTS              GetNumChipSelects;
+  QSPI_CONTROLLER_APPLY_DEVICE_SPECIFIC_SETTINGS    ApplyDeviceSpecificSettings;
 };
 
 extern EFI_GUID  gNVIDIAQspiControllerProtocolGuid;
