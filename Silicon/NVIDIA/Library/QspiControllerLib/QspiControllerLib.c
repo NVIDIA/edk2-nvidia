@@ -2,7 +2,7 @@
 
   QSPI Controller Library
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -256,6 +256,87 @@ QspiPerformWaitCycleConfiguration (
     QSPI_MISC_0_WAIT_CYCLES_MSB,
     WaitCycles
     );
+}
+
+/**
+  Enable/disable Combined sequence mode
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  Packet                   QSPI transaction context
+  @param  Enable                   TRUE: enable wait state, FALSE: disable wait state
+**/
+VOID
+QspiConfigureCombinedSequenceMode (
+  IN EFI_PHYSICAL_ADDRESS     QspiBaseAddress,
+  IN QSPI_TRANSACTION_PACKET  *Packet,
+  IN BOOLEAN                  Enable
+  )
+{
+  UINT8  CmdSize  = 1;
+  UINT8  AddrSize = 0;
+
+  if ((Packet->Control & QSPI_CONTROLLER_CONTROL_CMB_SEQ_MODE_3B_ADDR) != 0) {
+    AddrSize = 3;
+  } else if ((Packet->Control & QSPI_CONTROLLER_CONTROL_CMB_SEQ_MODE_4B_ADDR) != 0) {
+    AddrSize = 4;
+  } else {
+    // Exit if not Combined sequence mode
+    return;
+  }
+
+  if (Enable) {
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_GLOBAL_CONFIG_0,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_ENABLE
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_CMD_CFG_0,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_X1_X2_X4_LSB,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_X1_X2_X4_MSB,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_X1_X2_X4_SINGLE
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_CMD_CFG_0,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_SDR_DDR_BIT,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_SDR_DDR_BIT,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_SDR_DDR_SDR
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_CMD_CFG_0,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_SIZE_LSB,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_SIZE_MSB,
+      (8 * CmdSize) - 1
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_ADDR_CFG_0,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_X1_X2_X4_LSB,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_X1_X2_X4_MSB,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_X1_X2_X4_SINGLE
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_ADDR_CFG_0,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_SDR_DDR_BIT,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_SDR_DDR_BIT,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_SDR_DDR_SDR
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_ADDR_CFG_0,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_SIZE_LSB,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_SIZE_MSB,
+      (8 * AddrSize) - 1
+      );
+    MmioWrite32 (QspiBaseAddress + QSPI_CMB_SEQ_CMD_0, Packet->Command);
+    MmioWrite32 (QspiBaseAddress + QSPI_CMB_SEQ_ADDR_0, Packet->Address);
+  } else {
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_GLOBAL_CONFIG_0,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_DISABLE
+      );
+  }
 }
 
 /**
@@ -651,6 +732,9 @@ QspiPerformTransaction (
   QspiPerformWaitCycleConfiguration (QspiBaseAddress, Packet->WaitCycles);
   // Enable CS
   QspiConfigureCS (QspiBaseAddress, Packet->ChipSelect, TRUE);
+  // Enable Combined sequence mode
+  QspiConfigureCombinedSequenceMode (QspiBaseAddress, Packet, TRUE);
+
   // If transmission buffer address valid, start transmission
   if (Packet->TxBuf != NULL) {
     DEBUG ((DEBUG_INFO, "QSPI Tx Args: 0x%p %d.\n", Packet->TxBuf, Packet->TxLen));
@@ -693,6 +777,8 @@ QspiPerformTransaction (
     }
   }
 
+  // Disable Combined sequence mode
+  QspiConfigureCombinedSequenceMode (QspiBaseAddress, Packet, FALSE);
   // Disable CS
   QspiConfigureCS (QspiBaseAddress, Packet->ChipSelect, FALSE);
 

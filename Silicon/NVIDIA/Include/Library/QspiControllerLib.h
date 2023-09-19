@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -9,7 +9,9 @@
 #ifndef __QSPI_CONTROLLER_LIB_H__
 #define __QSPI_CONTROLLER_LIB_H__
 
-#define QSPI_CONTROLLER_CONTROL_FAST_MODE  0x01
+#define QSPI_CONTROLLER_CONTROL_FAST_MODE             0x01
+#define QSPI_CONTROLLER_CONTROL_CMB_SEQ_MODE_3B_ADDR  0x02
+#define QSPI_CONTROLLER_CONTROL_CMB_SEQ_MODE_4B_ADDR  0x04
 
 typedef struct {
   VOID      *TxBuf;
@@ -19,6 +21,8 @@ typedef struct {
   UINT8     WaitCycles;
   UINT8     ChipSelect;
   UINT8     Control;
+  UINT32    Command;    // Only valid if 'Control' = CMB_SEQ_MODE_xxx
+  UINT32    Address;    // Only valid if 'Control' = CMB_SEQ_MODE_xxx
 } QSPI_TRANSACTION_PACKET;
 
 /**
