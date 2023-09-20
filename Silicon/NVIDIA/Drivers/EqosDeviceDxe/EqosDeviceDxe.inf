@@ -110,4 +110,7 @@
 
 [BuildOptions]
   *_*_*_PP_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT
-  *_*_*_CC_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT -Wno-unused-function -Wno-self-assign
+  # -mno-outline-atomics is required for GCC 10.x and later, which makes
+  # -moutline-atomics the default.  nvethernetrm uses atomics not currently
+  # supported by CompilerIntrinsicsLib.
+  *_*_*_CC_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT -Wno-unused-function -Wno-self-assign -mno-outline-atomics
