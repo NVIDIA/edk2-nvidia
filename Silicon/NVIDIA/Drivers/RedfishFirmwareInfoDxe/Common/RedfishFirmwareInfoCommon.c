@@ -3,7 +3,7 @@
 
   (C) Copyright 2020-2022 Hewlett Packard Enterprise Development LP<BR>
   Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved.<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -106,12 +106,7 @@ GetFirmwareComponentInfo (
   // Release resource
   //
   if (Response.Payload != NULL) {
-    RedfishFreeResponse (
-      Response.StatusCode,
-      Response.HeaderCount,
-      Response.Headers,
-      Response.Payload
-      );
+    RedfishHttpFreeResource (&Response);
   }
 
   return Status;

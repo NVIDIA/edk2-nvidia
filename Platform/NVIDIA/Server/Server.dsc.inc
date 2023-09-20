@@ -70,7 +70,7 @@
   HiiUtilityLib|RedfishPkg/Library/HiiUtilityLib/HiiUtilityLib.inf
   RedfishPlatformConfigLib|RedfishPkg/Library/RedfishPlatformConfigLib/RedfishPlatformConfigLib.inf
   RedfishDebugLib|RedfishPkg/Library/RedfishDebugLib/RedfishDebugLib.inf
-  RedfishHttpCacheLib|RedfishClientPkg/Library/RedfishHttpCacheLib/RedfishHttpCacheLib.inf
+  RedfishHttpLib|RedfishClientPkg/Library/RedfishHttpLib/RedfishHttpLib.inf
   RedfishAddendumLib|RedfishClientPkg/Library/RedfishAddendumLib/RedfishAddendumLib.inf
 
   RedfishLib|RedfishClientPkg/PrivateLibrary/RedfishLib/RedfishLib.inf
@@ -212,6 +212,8 @@
   gEfiRedfishPkgTokenSpaceGuid.PcdRedfishDiscoverAccessModeInBand|False
   gEfiRedfishPkgTokenSpaceGuid.PcdRedfishDisableBootstrapCredentialService|TRUE
   gEfiRedfishClientPkgTokenSpaceGuid.PcdDefaultRedfishVersion|L"/redfish/v1/"
+  gEfiRedfishClientPkgTokenSpaceGuid.PcdHttpGetRetry|0x05
+  gEfiRedfishClientPkgTokenSpaceGuid.PcdHttpRetryWaitInSecond|2
 
   # SBSA Watchdog
   gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|0x000000000c6ab000
@@ -437,6 +439,7 @@
   RedfishClientPkg/RedfishFeatureCoreDxe/RedfishFeatureCoreDxe.inf
   RedfishClientPkg/RedfishETagDxe/RedfishETagDxe.inf
   RedfishClientPkg/RedfishConfigLangMapDxe/RedfishConfigLangMapDxe.inf
+  RedfishClientPkg/RedfishHttpDxe/RedfishHttpDxe.inf
   RedfishClientPkg/Features/ComputerSystemCollectionDxe/ComputerSystemCollectionDxe.inf
   RedfishClientPkg/Features/ComputerSystem/v1_17_0/Dxe/ComputerSystemDxe.inf
   RedfishClientPkg/Features/Bios/v1_2_0/Dxe/BiosDxe.inf
