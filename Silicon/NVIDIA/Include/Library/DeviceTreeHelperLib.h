@@ -176,54 +176,6 @@ GetDeviceTreeRegisters (
   );
 
 /**
-  Gets the value of a 32-bit field within the specified node
-
-  @param  [in]  DeviceTreeBase  - Base Address of the device tree.
-  @param  [in]  NodeOffset      - Offset from DeviceTreeBase to the specified node.
-  @param  [in]  Name            - Name of the field to look up
-  @param  [out] Value           - The resulting value of the field
-
-  @retval EFI_SUCCESS           - Operation successful
-  @retval EFI_INVALID_PARAMETER - DeviceTreeBase pointer is NULL
-  @retval EFI_INVALID_PARAMETER - NodeOffset is 0
-  @retval EFI_INVALID_PARAMETER - Name pointer is NULL
-  @retval EFI_NOT_FOUND         - Name wasn't found in the specified node
-
-**/
-EFI_STATUS
-EFIAPI
-GetNodeFieldByName32 (
-  IN CONST VOID   *DeviceTree,
-  IN INT32        NodeOffset,
-  IN CONST CHAR8  *Name,
-  OUT UINT32      *Value
-  );
-
-/**
-  Gets the value of a 64-bit field within the specified node
-
-  @param  [in]  DeviceTreeBase  - Base Address of the device tree.
-  @param  [in]  NodeOffset      - Offset from DeviceTreeBase to the specified node.
-  @param  [in]  Name            - Name of the field to look up
-  @param  [out] Value           - The resulting value of the field
-
-  @retval EFI_SUCCESS           - Operation successful
-  @retval EFI_INVALID_PARAMETER - DeviceTreeBase pointer is NULL
-  @retval EFI_INVALID_PARAMETER - NodeOffset is 0
-  @retval EFI_INVALID_PARAMETER - Name pointer is NULL
-  @retval EFI_NOT_FOUND         - Name wasn't found in the specified node
-
-**/
-EFI_STATUS
-EFIAPI
-GetNodeFieldByName64 (
-  IN CONST VOID   *DeviceTree,
-  IN INT32        NodeOffset,
-  IN CONST CHAR8  *Name,
-  OUT UINT64      *Value
-  );
-
-/**
   Gets the offset of the interrupt-parent of the specified node
 
   @param  [in]  DeviceTreeBase   - Base Address of the device tree.

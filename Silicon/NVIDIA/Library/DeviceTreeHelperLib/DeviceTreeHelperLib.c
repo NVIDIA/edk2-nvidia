@@ -63,6 +63,96 @@ GetDeviceTreePointer (
 }
 
 /**
+  Gets the value of a 32-bit field within the specified node
+
+  @param  [in]  DeviceTreeBase  - Base Address of the device tree.
+  @param  [in]  NodeOffset      - Offset from DeviceTreeBase to the specified node.
+  @param  [in]  Name            - Name of the field to look up
+  @param  [out] Value           - The resulting value of the field
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - DeviceTreeBase pointer is NULL
+  @retval EFI_INVALID_PARAMETER - NodeOffset is 0
+  @retval EFI_INVALID_PARAMETER - Name pointer is NULL
+  @retval EFI_NOT_FOUND         - Name wasn't found in the specified node
+
+**/
+STATIC
+EFI_STATUS
+GetNodeFieldByName32 (
+  IN CONST VOID   *DeviceTree,
+  IN INT32        NodeOffset,
+  IN CONST CHAR8  *Name,
+  OUT UINT32      *Value
+  )
+{
+  CONST UINT32  *Field;
+  INT32         FieldSize;
+
+  if ((DeviceTree == NULL) || (NodeOffset == 0) || (Name == NULL) || (Value == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Field = (CONST UINT32 *)fdt_getprop (
+                            DeviceTree,
+                            NodeOffset,
+                            Name,
+                            &FieldSize
+                            );
+
+  if ((Field != NULL) && (FieldSize == sizeof (UINT32))) {
+    *Value = SwapBytes32 (*Field);
+    return EFI_SUCCESS;
+  } else {
+    return EFI_NOT_FOUND;
+  }
+}
+
+/**
+  Gets the value of a 64-bit field within the specified node
+
+  @param  [in]  DeviceTreeBase  - Base Address of the device tree.
+  @param  [in]  NodeOffset      - Offset from DeviceTreeBase to the specified node.
+  @param  [in]  Name            - Name of the field to look up
+  @param  [out] Value           - The resulting value of the field
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - DeviceTreeBase pointer is NULL
+  @retval EFI_INVALID_PARAMETER - NodeOffset is 0
+  @retval EFI_INVALID_PARAMETER - Name pointer is NULL
+  @retval EFI_NOT_FOUND         - Name wasn't found in the specified node
+
+**/
+STATIC
+EFI_STATUS
+GetNodeFieldByName64 (
+  IN CONST VOID   *DeviceTree,
+  IN INT32        NodeOffset,
+  IN CONST CHAR8  *Name,
+  OUT UINT64      *Value
+  )
+{
+  CONST VOID  *Field;
+  INT32       FieldSize;
+
+  if ((DeviceTree == NULL) || (NodeOffset == 0) || (Name == NULL) || (Value == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Field = fdt_getprop (DeviceTree, NodeOffset, Name, &FieldSize);
+  if ((Field == NULL) || (FieldSize != sizeof (UINT64))) {
+    return EFI_NOT_FOUND;
+  }
+
+  if ((Field != NULL) && (FieldSize == sizeof (UINT64))) {
+    *Value = fdt64_to_cpu (ReadUnaligned64 ((CONST UINT64 *)Field));
+    return EFI_SUCCESS;
+  } else {
+    return EFI_NOT_FOUND;
+  }
+}
+
+/**
   Returns the enabled nodes that match the compatible string
 
   @param  CompatibleString - String to located devices for
@@ -415,96 +505,6 @@ GetDeviceTreeRegisters (
 
   *NumberOfRegisters = NumberOfRegRegions;
   return EFI_SUCCESS;
-}
-
-/**
-  Gets the value of a 32-bit field within the specified node
-
-  @param  [in]  DeviceTreeBase  - Base Address of the device tree.
-  @param  [in]  NodeOffset      - Offset from DeviceTreeBase to the specified node.
-  @param  [in]  Name            - Name of the field to look up
-  @param  [out] Value           - The resulting value of the field
-
-  @retval EFI_SUCCESS           - Operation successful
-  @retval EFI_INVALID_PARAMETER - DeviceTreeBase pointer is NULL
-  @retval EFI_INVALID_PARAMETER - NodeOffset is 0
-  @retval EFI_INVALID_PARAMETER - Name pointer is NULL
-  @retval EFI_NOT_FOUND         - Name wasn't found in the specified node
-
-**/
-EFI_STATUS
-EFIAPI
-GetNodeFieldByName32 (
-  IN CONST VOID   *DeviceTree,
-  IN INT32        NodeOffset,
-  IN CONST CHAR8  *Name,
-  OUT UINT32      *Value
-  )
-{
-  CONST UINT32  *Field;
-  INT32         FieldSize;
-
-  if ((DeviceTree == NULL) || (NodeOffset == 0) || (Name == NULL) || (Value == NULL)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  Field = (CONST UINT32 *)fdt_getprop (
-                            DeviceTree,
-                            NodeOffset,
-                            Name,
-                            &FieldSize
-                            );
-
-  if ((Field != NULL) && (FieldSize == sizeof (UINT32))) {
-    *Value = SwapBytes32 (*Field);
-    return EFI_SUCCESS;
-  } else {
-    return EFI_NOT_FOUND;
-  }
-}
-
-/**
-  Gets the value of a 64-bit field within the specified node
-
-  @param  [in]  DeviceTreeBase  - Base Address of the device tree.
-  @param  [in]  NodeOffset      - Offset from DeviceTreeBase to the specified node.
-  @param  [in]  Name            - Name of the field to look up
-  @param  [out] Value           - The resulting value of the field
-
-  @retval EFI_SUCCESS           - Operation successful
-  @retval EFI_INVALID_PARAMETER - DeviceTreeBase pointer is NULL
-  @retval EFI_INVALID_PARAMETER - NodeOffset is 0
-  @retval EFI_INVALID_PARAMETER - Name pointer is NULL
-  @retval EFI_NOT_FOUND         - Name wasn't found in the specified node
-
-**/
-EFI_STATUS
-EFIAPI
-GetNodeFieldByName64 (
-  IN CONST VOID   *DeviceTree,
-  IN INT32        NodeOffset,
-  IN CONST CHAR8  *Name,
-  OUT UINT64      *Value
-  )
-{
-  CONST VOID  *Field;
-  INT32       FieldSize;
-
-  if ((DeviceTree == NULL) || (NodeOffset == 0) || (Name == NULL) || (Value == NULL)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  Field = fdt_getprop (DeviceTree, NodeOffset, Name, &FieldSize);
-  if ((Field == NULL) || (FieldSize != sizeof (UINT64))) {
-    return EFI_NOT_FOUND;
-  }
-
-  if ((Field != NULL) && (FieldSize == sizeof (UINT64))) {
-    *Value = fdt64_to_cpu (ReadUnaligned64 ((CONST UINT64 *)Field));
-    return EFI_SUCCESS;
-  } else {
-    return EFI_NOT_FOUND;
-  }
 }
 
 /**
