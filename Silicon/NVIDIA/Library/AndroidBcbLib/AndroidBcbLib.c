@@ -81,7 +81,7 @@ GetCmdFromMiscPartition (
 
   if (Index >= NumOfHandles) {
     Status = EFI_NOT_FOUND;
-    DEBUG ((DEBUG_ERROR, "%a: Unable to locate MSC partition\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: Unable to locate MSC partition\r\n", __FUNCTION__));
     goto Exit;
   }
 
