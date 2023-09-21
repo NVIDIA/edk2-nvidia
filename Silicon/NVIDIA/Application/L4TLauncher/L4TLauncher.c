@@ -1,7 +1,7 @@
 /** @file
   The main process for L4TLauncher application.
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -2229,7 +2229,7 @@ BootAndroidStylePartition (
       break;
     }
 
-    NewDtbPages = EFI_SIZE_TO_PAGES (2 * DtbSize);
+    NewDtbPages = EFI_SIZE_TO_PAGES (4 * DtbSize);
     NewDtb      = AllocatePages (NewDtbPages);
     if (NewDtb == NULL) {
       DEBUG ((DEBUG_WARN, "%a: failed to allocate pages for expanded kernel DTB\r\n", __FUNCTION__));
