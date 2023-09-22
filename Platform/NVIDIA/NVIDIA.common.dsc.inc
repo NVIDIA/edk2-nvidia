@@ -685,7 +685,7 @@ CONFIG_MEMORY_TEST=n
   gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration|L"DoInitialConsoleRegistration"|gNVIDIAPublicVariableGuid|0x0|1|BS,NV
   # NVIDIA Public variables
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIAPublicVariableGuid|0x0|1|BS,NV
-  gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy|L"NewDeviceHierarchy"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV
+  gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy|L"NewDeviceHierarchy"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdOsChainStatusA|L"RootfsStatusSlotA"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdOsChainStatusB|L"RootfsStatusSlotB"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode|L"L4TDefaultBootMode"|gNVIDIAPublicVariableGuid|0x00|0xFF|BS,NV,RT
