@@ -945,7 +945,7 @@ UpdateThermalZoneInfoAndInstallSsdt (
             }
 
             AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB_.C%03x.C%03x", SocketId, CurrentCpu);
-            Status = AmlAddStringToNamedPackage (ThermalZoneString, Node);
+            Status = AmlAddNameStringToNamedPackage (ThermalZoneString, Node);
             if (EFI_ERROR (Status)) {
               DEBUG ((DEBUG_ERROR, "Failed to add %a to _PSL node - %r\r\n", ThermalZoneString, Status));
               ASSERT_EFI_ERROR (Status);
