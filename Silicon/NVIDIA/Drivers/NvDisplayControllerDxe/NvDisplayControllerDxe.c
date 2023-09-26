@@ -958,8 +958,8 @@ CheckGopModeActiveWithFrameBuffer (
 }
 
 /**
-   Event handler for whenever a new Device Tree is installed on the
-   system.
+   Event handler for updating the Device Tree with mode and
+   framebuffer info.
 
    @param[in] Event    Event used for the notification.
    @param[in] Context  Controller context to use.
@@ -967,51 +967,7 @@ CheckGopModeActiveWithFrameBuffer (
 STATIC
 VOID
 EFIAPI
-DisplayOnFdtInstalled (
-  IN EFI_EVENT                                 Event,
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
-  )
-{
-  EFI_STATUS                    Status;
-  VOID                          *Fdt;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
-
-  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to retrieve FDT: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    return;
-  }
-
-  Status = DisplayLocateChildGop (Context, &Gop);
-  if (EFI_ERROR (Status)) {
-    return;
-  }
-
-  if (CheckGopModeActiveWithFrameBuffer (Gop)) {
-    UpdateDeviceTreeSimpleFramebufferInfo (
-      Fdt,
-      Gop->Mode->Info,
-      (UINT64)Gop->Mode->FrameBufferBase,
-      (UINT64)Gop->Mode->FrameBufferSize
-      );
-  }
-}
-
-/**
-   Event handler for when the read-to-boot event is signalled.
-
-   @param[in] Event    Event used for the notification.
-   @param[in] Context  Controller context to use.
-*/
-STATIC
-VOID
-EFIAPI
-DisplayOnReadyToBoot (
+DisplayUpdateFdtTable (
   IN EFI_EVENT                                 Event,
   IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
   )
@@ -1176,7 +1132,7 @@ DisplayStart (
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
-                  (EFI_EVENT_NOTIFY)DisplayOnFdtInstalled,
+                  (EFI_EVENT_NOTIFY)DisplayUpdateFdtTable,
                   Result,
                   &gFdtTableGuid,
                   &Result->OnFdtInstalledEvent
@@ -1195,7 +1151,7 @@ DisplayStart (
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
-                  (EFI_EVENT_NOTIFY)DisplayOnReadyToBoot,
+                  (EFI_EVENT_NOTIFY)DisplayUpdateFdtTable,
                   Result,
                   &gEfiEventReadyToBootGuid,
                   &Result->OnReadyToBootEvent
