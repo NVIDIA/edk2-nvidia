@@ -12,7 +12,7 @@
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/DisplayDeviceTreeHelperLib.h>
 #include <Library/HobLib.h>
@@ -464,6 +464,54 @@ ConfigureOutputGpios (
 }
 
 /**
+   Retrieves base and size of the framebuffer region.
+
+   @param[out] Base  Base of the framebuffer region.
+   @param[out] Size  Size of the framebuffer region.
+
+   @retval EFI_SUCCESS    Region details retrieved successfully.
+   @retval EFI_NOT_FOUND  No framebuffer region was not found.
+*/
+STATIC
+EFI_STATUS
+GetFramebufferRegion (
+  OUT EFI_PHYSICAL_ADDRESS *CONST  Base,
+  OUT UINTN                *CONST  Size
+  )
+{
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  TEGRA_BASE_AND_SIZE_INFO      *FbInfo;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob == NULL) || (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (*PlatformResourceInfo))) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve platform resource information\r\n",
+      __FUNCTION__
+      ));
+    return EFI_NOT_FOUND;
+  }
+
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  FbInfo               = &PlatformResourceInfo->FrameBufferInfo;
+
+  if ((FbInfo->Base == 0) || (FbInfo->Size == 0)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: no framebuffer region present\r\n",
+      __FUNCTION__
+      ));
+    return EFI_NOT_FOUND;
+  }
+
+  *Base = FbInfo->Base;
+  *Size = FbInfo->Size;
+
+  return EFI_SUCCESS;
+}
+
+/**
    Creates an ACPI address space descriptor suitable for use as a
    framebuffer.
 
@@ -478,42 +526,23 @@ CreateFramebufferResource (
   OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *CONST  Desc
   )
 {
-  VOID                          *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
-  EFI_PHYSICAL_ADDRESS          Address;
-  UINTN                         Size;
+  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS  Base;
+  UINTN                 Size;
 
-  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-  if ((Hob == NULL) || (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (*PlatformResourceInfo))) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to retrieve platform resource information\r\n",
-      __FUNCTION__
-      ));
-    return EFI_NOT_FOUND;
-  }
-
-  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-  Address              = PlatformResourceInfo->FrameBufferInfo.Base;
-  Size                 = PlatformResourceInfo->FrameBufferInfo.Size;
-
-  if ((Address == 0) || (Size == 0)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: no framebuffer region present\r\n",
-      __FUNCTION__
-      ));
-    return EFI_NOT_FOUND;
+  Status = GetFramebufferRegion (&Base, &Size);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   ZeroMem (Desc, sizeof (*Desc));
   Desc->Desc                 = ACPI_ADDRESS_SPACE_DESCRIPTOR;
   Desc->Len                  = sizeof (*Desc) - 3;
-  Desc->AddrRangeMin         = Address;
+  Desc->AddrRangeMin         = Base;
   Desc->AddrLen              = Size;
-  Desc->AddrRangeMax         = Address + Size - 1;
+  Desc->AddrRangeMax         = Base + Size - 1;
   Desc->ResType              = ACPI_ADDRESS_SPACE_TYPE_MEM;
-  Desc->AddrSpaceGranularity = Address + Size > SIZE_4GB ? 64 : 32;
+  Desc->AddrSpaceGranularity = Base + Size > SIZE_4GB ? 64 : 32;
 
   return EFI_SUCCESS;
 }
@@ -931,18 +960,16 @@ DisplayLocateChildGop (
 }
 
 /**
-   Checks if the given GOP instance has an active mode with a frame
-   buffer available.
+   Checks if the given GOP instance has an active mode.
 
    @param[in] Gop  The GOP protocol instance to check.
 
-   @return TRUE   A mode is active and a frame buffer is available.
+   @return TRUE   A mode is active.
    @return FALSE  No mode is active.
-   @return FALSE  A mode is active, but no frame buffer is available.
 */
 STATIC
 BOOLEAN
-CheckGopModeActiveWithFrameBuffer (
+CheckGopModeActive (
   IN CONST EFI_GRAPHICS_OUTPUT_PROTOCOL *CONST  Gop
   )
 {
@@ -951,10 +978,7 @@ CheckGopModeActiveWithFrameBuffer (
   return (  (Mode != NULL)
          && (Mode->Mode < Mode->MaxMode)
          && (Mode->Info != NULL)
-         && (Mode->SizeOfInfo >= sizeof (*Mode->Info))
-         && (Mode->Info->PixelFormat != PixelBltOnly)
-         && (Mode->FrameBufferBase != 0)
-         && (Mode->FrameBufferSize != 0));
+         && (Mode->SizeOfInfo >= sizeof (*Mode->Info)));
 }
 
 /**
@@ -975,6 +999,8 @@ DisplayUpdateFdtTable (
   EFI_STATUS                    Status;
   VOID                          *Fdt;
   EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
+  EFI_PHYSICAL_ADDRESS          FrameBufferBase;
+  UINT64                        FrameBufferSize;
 
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
   if (EFI_ERROR (Status)) {
@@ -986,12 +1012,24 @@ DisplayUpdateFdtTable (
     return;
   }
 
-  if (CheckGopModeActiveWithFrameBuffer (Gop)) {
+  if (CheckGopModeActive (Gop)) {
+    FrameBufferBase = Gop->Mode->FrameBufferBase;
+    FrameBufferSize = Gop->Mode->FrameBufferSize;
+
+    if (  (Gop->Mode->Info->PixelFormat == PixelBltOnly)
+       || (FrameBufferBase == 0) || (FrameBufferSize == 0))
+    {
+      /* We must have a framebuffer region since the display cannot
+         work without one, so this should always succeed. */
+      Status = GetFramebufferRegion (&FrameBufferBase, &FrameBufferSize);
+      NV_ASSERT_EFI_ERROR_RETURN (Status, return );
+    }
+
     UpdateDeviceTreeSimpleFramebufferInfo (
       Fdt,
       Gop->Mode->Info,
-      (UINT64)Gop->Mode->FrameBufferBase,
-      (UINT64)Gop->Mode->FrameBufferSize
+      (UINT64)FrameBufferBase,
+      (UINT64)FrameBufferSize
       );
   }
 }
@@ -1284,7 +1322,7 @@ DeviceDiscoveryNotify (
         return DisplayStop (Context);
       } else {
         Status = DisplayLocateChildGop (Context, &Gop);
-        if (!EFI_ERROR (Status) && CheckGopModeActiveWithFrameBuffer (Gop)) {
+        if (!EFI_ERROR (Status) && CheckGopModeActive (Gop)) {
           /* We have an active GOP child, leave the display running. */
           return EFI_ABORTED;
         }
