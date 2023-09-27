@@ -349,29 +349,34 @@ UpdateGicInfo (
   EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo
   )
 {
-  EFI_STATUS                        Status;
-  UINT32                            NumberOfGicCtlrs;
-  UINT32                            NumberOfGicEntries;
-  UINT32                            *GicHandles;
-  EDKII_PLATFORM_REPOSITORY_INFO    *Repo;
-  TEGRA_GIC_INFO                    *GicInfo;
-  CM_ARM_GICD_INFO                  *GicDInfo;
-  CM_ARM_GIC_REDIST_INFO            *GicRedistInfo;
-  NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterData;
-  UINT32                            Index;
-  UINT32                            CoreIndex;
-  UINT32                            RegisterSize;
-  CONST UINT64                      *Prop;
-  UINT64                            MpIdr;
-  UINT64                            PmuBaseInterrupt;
-  UINT32                            NumCores;
-  UINT32                            EnabledCoreCntr;
-  NVIDIA_TEGRA_CPU_FREQ_PROTOCOL    *CpuFreq;
-  CM_ARM_CPC_INFO                   *CpcInfo;
-  UINT64                            DbgFeatures;
-  UINT16                            TrbeInterrupt;
-  CM_ARM_ET_INFO                    *EtInfo;
-  CM_OBJECT_TOKEN                   EtToken;
+  EFI_STATUS                         Status;
+  UINT32                             NumberOfGicCtlrs;
+  UINT32                             NumberOfGicEntries;
+  UINT32                             *GicHandles;
+  EDKII_PLATFORM_REPOSITORY_INFO     *Repo;
+  TEGRA_GIC_INFO                     *GicInfo;
+  CM_ARM_GICD_INFO                   *GicDInfo;
+  CM_ARM_GIC_REDIST_INFO             *GicRedistInfo;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA   *RegisterData;
+  UINT32                             Index;
+  UINT32                             CoreIndex;
+  UINT32                             RegisterSize;
+  CONST UINT64                       *Prop;
+  UINT64                             MpIdr;
+  UINT64                             PmuBaseInterrupt;
+  UINT32                             NumCores;
+  UINT32                             EnabledCoreCntr;
+  NVIDIA_TEGRA_CPU_FREQ_PROTOCOL     *CpuFreq;
+  CM_ARM_CPC_INFO                    *CpcInfo;
+  UINT64                             DbgFeatures;
+  UINT16                             TrbeInterrupt;
+  CM_ARM_ET_INFO                     *EtInfo;
+  CM_OBJECT_TOKEN                    EtToken;
+  UINT32                             NumberOfSpeHandles;
+  UINT32                             SpeOverflowInterruptHandle;
+  UINT32                             NumberOfSpeInterrupts;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA  SpeOverflowInterrupt;
+  UINT32                             SpeOverflowInterruptNum;
 
   NumberOfGicCtlrs   = 0;
   NumberOfGicEntries = 0;
@@ -518,6 +523,24 @@ UpdateGicInfo (
     Repo++;
   }
 
+  // Get SpeOverflow interrupt information
+  NumberOfSpeHandles      = 1;
+  SpeOverflowInterruptNum = 0;
+  Status                  = GetMatchingEnabledDeviceTreeNodes ("arm,statistical-profiling-extension-v1", &SpeOverflowInterruptHandle, &NumberOfSpeHandles);
+  if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DEBUG_INFO, "%a: SPE not found in DTB. SpeOverflowInterrupt will be 0\n", __FUNCTION__));
+  } else if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error checking for SPE nodes in DTB: %r\n", __FUNCTION__, Status));
+  } else {
+    NumberOfSpeInterrupts = 1;
+    Status                = GetDeviceTreeInterrupts (SpeOverflowInterruptHandle, &SpeOverflowInterrupt, &NumberOfSpeInterrupts);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error getting SPE node interrupt: %r\n", __FUNCTION__, Status));
+    } else {
+      SpeOverflowInterruptNum = DEVICETREE_TO_ACPI_INTERRUPT_NUM (SpeOverflowInterrupt);
+    }
+  }
+
   // Populate GICC structures for all enabled cores
   EnabledCoreCntr = 0;
   for (CoreIndex = 0; CoreIndex < PLATFORM_MAX_CPUS; CoreIndex++) {
@@ -546,8 +569,7 @@ UpdateGicInfo (
     GicCInfo[EnabledCoreCntr].MPIDR                         = MpIdr;
     GicCInfo[EnabledCoreCntr].ProcessorPowerEfficiencyClass = 0;
 
-    // TODO: check for compat string "arm,statistical-profiling-extension-v1"
-    GicCInfo[EnabledCoreCntr].SpeOverflowInterrupt = 0;
+    GicCInfo[EnabledCoreCntr].SpeOverflowInterrupt = SpeOverflowInterruptNum;
 
     // Obtain SocketID
     GicCInfo[EnabledCoreCntr].ProximityDomain = CoreIndex/PLATFORM_CPUS_PER_SOCKET;
