@@ -207,8 +207,10 @@ UpdateDeviceTreeSimpleFramebufferNode (
   IN CONST UINT64                                       FrameBufferSize
   )
 {
-  STATIC CONST CHAR8  FbRgbxFormat[] = "x8b8g8r8";
-  STATIC CONST CHAR8  FbBgrxFormat[] = "x8r8g8b8";
+  STATIC CONST CHAR8              FbRgbxFormat[]   = "x8b8g8r8";
+  STATIC CONST CHAR8              FbBgrxFormat[]   = "x8r8g8b8";
+  STATIC CONST EFI_PIXEL_BITMASK  PixelBitMaskRgbx = { 0xFFU <<  0, 0xFFU << 8, 0xFFU << 16, 0xFFU << 24 };
+  STATIC CONST EFI_PIXEL_BITMASK  PixelBitMaskBgrx = { 0xFFU << 16, 0xFFU << 8, 0xFFU <<  0, 0xFFU << 24 };
 
   INT32        Result;
   CONST CHAR8  *FbFormat;
@@ -222,11 +224,48 @@ UpdateDeviceTreeSimpleFramebufferNode (
       FbFormat  = FbRgbxFormat;
       PixelSize = 4;
       break;
+
     case PixelBlueGreenRedReserved8BitPerColor:
       FbFormat  = FbBgrxFormat;
       PixelSize = 4;
       break;
+
+    case PixelBitMask:
+    case PixelBltOnly:
+      /* UEFI spec says PixelInformation is only valid if PixelFormat
+         is PixelBitMask, but attempt to recover the real pixel format
+         for PixelBltOnly too. */
+      if (0 == CompareMem (
+                 &ModeInfo->PixelInformation,
+                 &PixelBitMaskRgbx,
+                 sizeof (ModeInfo->PixelInformation)
+                 ))
+      {
+        FbFormat  = FbRgbxFormat;
+        PixelSize = 4;
+        break;
+      }
+
+      if (0 == CompareMem (
+                 &ModeInfo->PixelInformation,
+                 &PixelBitMaskBgrx,
+                 sizeof (ModeInfo->PixelInformation)
+                 ))
+      {
+        FbFormat  = FbBgrxFormat;
+        PixelSize = 4;
+        break;
+      }
+
+    /* fallthrough */
+
     default:
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: unsupported pixel format: %lu\r\n",
+        __FUNCTION__,
+        (UINT64)ModeInfo->PixelFormat
+        ));
       return FALSE;
   }
 
