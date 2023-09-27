@@ -214,7 +214,9 @@ UpdateDeviceTreeSimpleFramebufferNode (
 
   INT32        Result;
   CONST CHAR8  *FbFormat;
-  UINTN        PixelSize;
+  UINT32       PixelSize;
+  UINT32       Stride;
+  UINT64       FrameBufferSizeMin;
   CONST VOID   *Prop;
   UINT32       MemoryRegionPhandle;
   INT32        MemoryRegionOffset;
@@ -267,6 +269,19 @@ UpdateDeviceTreeSimpleFramebufferNode (
         (UINT64)ModeInfo->PixelFormat
         ));
       return FALSE;
+  }
+
+  Stride             = ModeInfo->PixelsPerScanLine * PixelSize;
+  FrameBufferSizeMin = (UINT64)ModeInfo->VerticalResolution * (UINT64)Stride;
+  if (FrameBufferSize < FrameBufferSizeMin) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: framebuffer too small: got %lu bytes, but need at least %lu bytes\r\n",
+      __FUNCTION__,
+      FrameBufferSize,
+      FrameBufferSizeMin
+      ));
+    return FALSE;
   }
 
   Prop = fdt_getprop (DeviceTree, NodeOffset, "memory-region", &Result);
@@ -327,7 +342,7 @@ UpdateDeviceTreeSimpleFramebufferNode (
              DeviceTree,
              NodeOffset,
              "stride",
-             ModeInfo->PixelsPerScanLine * PixelSize
+             Stride
              );
   if (Result != 0) {
     DEBUG ((
@@ -387,7 +402,7 @@ UpdateDeviceTreeSimpleFramebufferNode (
            DeviceTree,
            MemoryRegionOffset,
            FrameBufferBase,
-           FrameBufferSize
+           FrameBufferSizeMin
            );
 }
 
