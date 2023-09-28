@@ -145,9 +145,8 @@
 #define UART_BAUD_RATE_57600   1
 #define UART_BAUD_RATE_38400   2
 #define UART_BAUD_RATE_19200   3
-#define UART_BAUD_RATE_4800    4
-#define UART_BAUD_RATE_2400    5
-#define UART_BAUD_RATE_1200    6
+#define UART_BAUD_RATE_9600    4
+#define UART_BAUD_RATE_MAX     5
 
 typedef struct {
   UINT32     L4TSupported;

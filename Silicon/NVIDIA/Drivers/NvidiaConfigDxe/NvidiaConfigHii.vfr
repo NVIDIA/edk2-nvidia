@@ -598,9 +598,7 @@ formset
         option text = STRING_TOKEN(STR_UART_BAUD_RATE_57600),  value = UART_BAUD_RATE_57600,  flags = 0;
         option text = STRING_TOKEN(STR_UART_BAUD_RATE_38400),  value = UART_BAUD_RATE_38400,  flags = 0;
         option text = STRING_TOKEN(STR_UART_BAUD_RATE_19200),  value = UART_BAUD_RATE_19200,  flags = 0;
-        option text = STRING_TOKEN(STR_UART_BAUD_RATE_4800),   value = UART_BAUD_RATE_4800,   flags = 0;
-        option text = STRING_TOKEN(STR_UART_BAUD_RATE_2400),   value = UART_BAUD_RATE_2400,   flags = 0;
-        option text = STRING_TOKEN(STR_UART_BAUD_RATE_1200),   value = UART_BAUD_RATE_1200,   flags = 0;
+        option text = STRING_TOKEN(STR_UART_BAUD_RATE_9600),   value = UART_BAUD_RATE_9600,   flags = 0;
     endoneof;
 
     numeric varid = NVIDIA_CONFIG_HII_CONTROL.PerfVersion,

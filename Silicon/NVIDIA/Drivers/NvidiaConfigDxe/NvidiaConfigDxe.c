@@ -1181,9 +1181,14 @@ SyncHiiSettings (
     mHiiControlSettings.ModsSpEnable         = mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable;
     mHiiControlSettings.TpmEnable            = mMb1Config.Data.Mb1Data.FeatureData.TpmEnable;
     mHiiControlSettings.GpuSmmuBypassEnable  = mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable;
-    mHiiControlSettings.UartBaudRate         = mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate;
-    mHiiControlSettings.PerfVersion          = mMb1Config.Data.Mb1Data.PerfVersion;
-    mHiiControlSettings.UefiDebugLevel       = mMb1Config.Data.Mb1Data.UefiDebugLevel;
+    if (mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate >= UART_BAUD_RATE_MAX) {
+      mHiiControlSettings.UartBaudRate = UART_BAUD_RATE_115200;
+    } else {
+      mHiiControlSettings.UartBaudRate = mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate;
+    }
+
+    mHiiControlSettings.PerfVersion    = mMb1Config.Data.Mb1Data.PerfVersion;
+    mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
 
     for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {
       mHiiControlSettings.UphySetting0[Index] = mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[0][Index];
