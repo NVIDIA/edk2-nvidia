@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Library
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -95,10 +95,7 @@ GetPmuBaseInterrupt (
   }
 
   ASSERT (InterruptData.Type == INTERRUPT_PPI_TYPE);
-  *PmuBaseInterrupt = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                 DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                 DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-
+  *PmuBaseInterrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
   return Status;
 }
 

@@ -162,7 +162,7 @@ InstallArmPerformanceMonitoringUnitTable (
       ApmtNodes[ApmtNodeIndex].Identifier             = ApmtNodeIndex;
       ApmtNodes[ApmtNodeIndex].BaseAddress0           = Register.BaseAddress;
       ApmtNodes[ApmtNodeIndex].BaseAddress1           = 0;
-      ApmtNodes[ApmtNodeIndex].OverflowInterrupt      = Interrupt.Interrupt + DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET;
+      ApmtNodes[ApmtNodeIndex].OverflowInterrupt      = DEVICETREE_TO_ACPI_INTERRUPT_NUM (Interrupt);
       ApmtNodes[ApmtNodeIndex].Reserved1              = 0;
       ApmtNodes[ApmtNodeIndex].OverflowInterruptFlags = EFI_ACPI_APMT_INTERRUPT_MODE_LEVEL_TRIGGERED;
       ApmtNodes[ApmtNodeIndex].ProcessorAffinity      = Socket;

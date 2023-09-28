@@ -786,24 +786,18 @@ SetupGlobalContextIrqForSmmuV1V2 (
   IortNode->ContextInterruptCount = IrqCnt - GlobalInterruptCnt;
 
   if (GlobalInterruptCnt == 1) {
-    IortNode->SMMU_NSgIrpt = InterruptData[0].Interrupt + (InterruptData[0].Type == INTERRUPT_SPI_TYPE ?
-                                                           DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                           DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
+    IortNode->SMMU_NSgIrpt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[0]);
 
     IortNode->SMMU_NSgIrptFlags = (InterruptData[0].Flag == INTERRUPT_HI_LEVEL ?
                                    EFI_ACPI_IRQ_LEVEL_TRIGGERED : EFI_ACPI_IRQ_EDGE_TRIGGERED);
   }
 
   if (GlobalInterruptCnt == 2) {
-    IortNode->SMMU_NSgIrpt = InterruptData[0].Interrupt + (InterruptData[0].Type == INTERRUPT_SPI_TYPE ?
-                                                           DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                           DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
+    IortNode->SMMU_NSgIrpt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[0]);
 
     IortNode->SMMU_NSgIrptFlags = (InterruptData[0].Flag == INTERRUPT_HI_LEVEL ?
                                    EFI_ACPI_IRQ_LEVEL_TRIGGERED : EFI_ACPI_IRQ_EDGE_TRIGGERED);
-    IortNode->SMMU_NSgCfgIrpt = InterruptData[1].Interrupt + (InterruptData[1].Type == INTERRUPT_SPI_TYPE ?
-                                                              DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                              DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
+    IortNode->SMMU_NSgCfgIrpt      = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[1]);
     IortNode->SMMU_NSgCfgIrptFlags = (InterruptData[1].Flag == INTERRUPT_HI_LEVEL ?
                                       EFI_ACPI_IRQ_LEVEL_TRIGGERED : EFI_ACPI_IRQ_EDGE_TRIGGERED);
   }
@@ -816,11 +810,9 @@ SetupGlobalContextIrqForSmmuV1V2 (
   }
 
   for (InterruptIndx = 0; InterruptIndx < IortNode->ContextInterruptCount; InterruptIndx++) {
-    ContextInterruptArray[InterruptIndx].Interrupt = InterruptData[InterruptIndx + GlobalInterruptCnt].Interrupt +
-                                                     (InterruptData[InterruptIndx + GlobalInterruptCnt].Type == INTERRUPT_SPI_TYPE ?
-                                                      DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET : DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-    ContextInterruptArray[InterruptIndx].Flags = (InterruptData[InterruptIndx + GlobalInterruptCnt].Flag == INTERRUPT_HI_LEVEL ?
-                                                  EFI_ACPI_IRQ_LEVEL_TRIGGERED : EFI_ACPI_IRQ_EDGE_TRIGGERED);
+    ContextInterruptArray[InterruptIndx].Interrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[InterruptIndx + GlobalInterruptCnt]);
+    ContextInterruptArray[InterruptIndx].Flags     = (InterruptData[InterruptIndx + GlobalInterruptCnt].Flag == INTERRUPT_HI_LEVEL ?
+                                                      EFI_ACPI_IRQ_LEVEL_TRIGGERED : EFI_ACPI_IRQ_EDGE_TRIGGERED);
   }
 
   IortNode->ContextInterruptToken = (CM_OBJECT_TOKEN)(VOID *)ContextInterruptArray;
@@ -908,12 +900,9 @@ SetupPmuIrqForSmmuV1V2 (
   }
 
   for (PmuInterruptIndx = 0; PmuInterruptIndx < IortNode->PmuInterruptCount; PmuInterruptIndx++) {
-    PmuInterruptArray[PmuInterruptIndx].Interrupt = PmuInterruptData[PmuInterruptIndx].Interrupt +
-                                                    (PmuInterruptData[PmuInterruptIndx].Type == INTERRUPT_SPI_TYPE ?
-                                                     DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                     DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-    PmuInterruptArray[PmuInterruptIndx].Flags = (PmuInterruptData[PmuInterruptIndx].Flag == INTERRUPT_HI_LEVEL ?
-                                                 EFI_ACPI_IRQ_LEVEL_TRIGGERED : EFI_ACPI_IRQ_EDGE_TRIGGERED);
+    PmuInterruptArray[PmuInterruptIndx].Interrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (PmuInterruptData[PmuInterruptIndx]);
+    PmuInterruptArray[PmuInterruptIndx].Flags     = (PmuInterruptData[PmuInterruptIndx].Flag == INTERRUPT_HI_LEVEL ?
+                                                     EFI_ACPI_IRQ_LEVEL_TRIGGERED : EFI_ACPI_IRQ_EDGE_TRIGGERED);
   }
 
   IortNode->PmuInterruptToken = (CM_OBJECT_TOKEN)(VOID *)PmuInterruptArray;

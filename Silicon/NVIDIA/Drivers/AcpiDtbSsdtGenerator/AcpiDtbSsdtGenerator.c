@@ -1,8 +1,7 @@
 /** @file
 *
-*  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
@@ -560,12 +559,7 @@ AddDeviceObjectList (
     for (Index = 0; Index < NumberOfInterrupts; Index++) {
       // Ignore the PMC interrupts
       if (InterruptArray[Index].ControllerCompatible && (AsciiStrStr (InterruptArray[Index].ControllerCompatible, "pmc") == NULL)) {
-        DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt = InterruptArray[Index].Interrupt;
-        if (InterruptArray[Index].Type == INTERRUPT_SPI_TYPE) {
-          DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt += DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET;
-        } else if (InterruptArray[Index].Type == INTERRUPT_PPI_TYPE) {
-          DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt += DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET;
-        }
+        DeviceListEntry->AcpiDevice.InterruptArray[Index].Interrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptArray[Index]);
 
         DeviceListEntry->AcpiDevice.InterruptArray[Index].Flags = 0;
         if ((InterruptArray[Index].Flag == INTERRUPT_LO_TO_HI_EDGE) ||

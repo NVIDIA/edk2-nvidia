@@ -14,6 +14,10 @@
 
 #define DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET  0x20
 #define DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET  0x10
+#define DEVICETREE_TO_ACPI_INTERRUPT_NUM(InterruptData) \
+  (InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ? \
+                                                 DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :\
+                                                 DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET))
 
 typedef enum {
   INTERRUPT_SPI_TYPE,

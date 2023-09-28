@@ -461,10 +461,8 @@ UpdateSerialPortInfo (
 
     SpcrSerialPort[Index].BaseAddress       = RegisterData.BaseAddress;
     SpcrSerialPort[Index].BaseAddressLength = RegisterData.Size;
-    SpcrSerialPort[Index].Interrupt         = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                                         DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                                         DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-    SpcrSerialPort[Index].BaudRate = FixedPcdGet64 (PcdUartDefaultBaudRate);
+    SpcrSerialPort[Index].Interrupt         = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
+    SpcrSerialPort[Index].BaudRate          = FixedPcdGet64 (PcdUartDefaultBaudRate);
     if (SerialPortConfig == NVIDIA_SERIAL_PORT_SPCR_FULL_16550) {
       SpcrSerialPort[Index].PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550;
     } else {
@@ -748,11 +746,8 @@ UpdateSdhciInfo (
       goto ErrorExit;
     }
 
-    InterruptDescriptor.InterruptNumber[0] = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                                        DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                                        DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-
-    Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
+    InterruptDescriptor.InterruptNumber[0] = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
+    Status                                 = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_SDCT_INT0));
       goto ErrorExit;
@@ -898,11 +893,8 @@ UpdateI2cInfo (
       goto ErrorExit;
     }
 
-    InterruptDescriptor.InterruptNumber[0] = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                                        DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                                        DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-
-    Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
+    InterruptDescriptor.InterruptNumber[0] = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
+    Status                                 = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_I2CT_INT0));
       goto ErrorExit;

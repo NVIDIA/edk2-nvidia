@@ -253,10 +253,7 @@ UpdateMscNodeInfo (
             (AsciiStrCmp (InterruptData[InterruptIndex].Name, "error") == 0))
         {
           ASSERT (InterruptData[InterruptIndex].Type == INTERRUPT_SPI_TYPE);
-          MscNodeInfo[Index].ErrorInterrupt = InterruptData[InterruptIndex].Interrupt +
-                                              (InterruptData[InterruptIndex].Type == INTERRUPT_SPI_TYPE ?
-                                               DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                               DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
+          MscNodeInfo[Index].ErrorInterrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[InterruptIndex]);
 
           // Affinity routed to the socket ID
           MscNodeInfo[Index].ErrorInterruptAff = Index;
@@ -272,10 +269,7 @@ UpdateMscNodeInfo (
                    (AsciiStrCmp (InterruptData[InterruptIndex].Name, "overflow") == 0))
         {
           ASSERT (InterruptData[InterruptIndex].Type == INTERRUPT_SPI_TYPE);
-          MscNodeInfo[Index].OverflowInterrupt = InterruptData[InterruptIndex].Interrupt +
-                                                 (InterruptData[InterruptIndex].Type == INTERRUPT_SPI_TYPE ?
-                                                  DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                  DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
+          MscNodeInfo[Index].OverflowInterrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[InterruptIndex]);
 
           // Affinity routed to the socket ID
           MscNodeInfo[Index].OverflowInterruptAff = Index;
