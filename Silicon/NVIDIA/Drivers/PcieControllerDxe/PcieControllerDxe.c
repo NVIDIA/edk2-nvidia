@@ -54,7 +54,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMcfg),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // SSDT Table - PCIe
   {
@@ -63,7 +64,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdtPciExpress),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   }
 };
 

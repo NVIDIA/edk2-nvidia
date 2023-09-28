@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe
 
-  Copyright (c) 2019 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -54,7 +54,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdFadt),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // GTDT Table
   {
@@ -63,7 +64,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdGtdt),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // MADT Table
   {
@@ -72,7 +74,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMadt),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // DSDT Table
   {
@@ -81,7 +84,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDsdt),
     (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_aml_code,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // SSDT Table - Cpu Topology
   {
@@ -90,7 +94,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdtCpuTopology),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
 };
 
@@ -238,6 +243,7 @@ UpdateSerialPortInfo (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = NULL;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId    = PcdGet64 (PcdAcpiTegraUartOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision   = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 
@@ -341,6 +347,7 @@ FinalizeSsdtTable (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)TestTable;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = TestTable->OemTableId;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = TestTable->OemRevision;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
       Status                                            = EFI_SUCCESS;
