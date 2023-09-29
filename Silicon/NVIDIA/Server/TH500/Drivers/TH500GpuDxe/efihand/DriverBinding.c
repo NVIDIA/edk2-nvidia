@@ -17,6 +17,8 @@
 #include <Protocol/DriverBinding.h>
 #include <Protocol/LoadedImage.h>
 #include <Protocol/PciIo.h>
+#include <Protocol/BpmpIpc.h>
+#include <Protocol/PciRootBridgeConfigurationIo.h>
 
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -24,6 +26,8 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PciHostBridgeLib.h>
+#include <Library/DeviceDiscoveryLib/DeviceDiscoveryLibPrivate.h>
 
 #include <IndustryStandard/Pci.h>
 
@@ -247,6 +251,167 @@ NVIDIAGpuDriverSupported (
   return Status;
 }
 
+/** Helper function to get BPMP phandle
+    @param[in]  This                  EFI_DRIVER_BINDING_PROTOCOL instance
+    @param[in]  Segment               PCI Segment
+    @param[out] *Phandle              returned BPMP phandle
+
+    @retval EFI_SUCCESS               BPMP phandle succesfully returned
+    @retval EFI_UNSUPPORTED           failed obtaining PCI HostBridge | RootBridgeConfigurationIo Protocol
+    @retval EFI_OUT_OF_RESOURCES      failed allocating storage for Root Bridge handles
+    @retval other                     BPMP phandle not valid
+**/
+STATIC
+EFI_STATUS
+GetBpmpPhandle (
+  IN UINTN       Segment,
+  IN OUT UINT32  *Phandle
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL                          *BpmpIpcProtocol = NULL;
+  EFI_STATUS                                        Status           = EFI_SUCCESS;
+  EFI_HANDLE                                        *HandleBuffer    = NULL;
+  EFI_HANDLE                                        Handle;
+  UINTN                                             NoHandles;
+  UINTN                                             Index;
+  PCI_ROOT_BRIDGE                                   *RootBridgeBuffer = NULL;
+  PCI_ROOT_BRIDGE                                   *RootBridge;
+  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *RootBridgeCfgIo;
+
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gNVIDIAPciHostBridgeProtocolGuid,
+                  NULL,
+                  &NoHandles,
+                  &HandleBuffer
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  /* If the buffer is NULL, assume the Host Bridge protocol isn't available instead of OUT_OF_RESOURCES */
+  if (HandleBuffer == NULL) {
+    Status = EFI_UNSUPPORTED;
+    return Status;
+  }
+
+  RootBridgeBuffer = (PCI_ROOT_BRIDGE *)AllocatePool (sizeof (PCI_ROOT_BRIDGE) * NoHandles);
+  if (RootBridgeBuffer == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    return Status;
+  }
+
+  for (Index = 0; Index < NoHandles; Index++) {
+    Handle     = HandleBuffer[Index];
+    RootBridge = NULL;
+    Status     = gBS->HandleProtocol (
+                        Handle,
+                        &gNVIDIAPciHostBridgeProtocolGuid,
+                        (VOID **)&RootBridge
+                        );
+    if (EFI_ERROR (Status)) {
+      FreePool (RootBridgeBuffer);
+      Status = EFI_UNSUPPORTED;
+      return Status;
+    }
+
+    if (RootBridge->Segment != Segment) {
+      continue;
+    }
+
+    /* segments match, get BPMP phandle */
+    RootBridgeCfgIo = NULL;
+    Status          = gBS->HandleProtocol (
+                             Handle,
+                             &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                             (VOID **)&RootBridgeCfgIo
+                             );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: error getting RootBridgeCfgIo protocol: %r\n", __FUNCTION__, Status));
+      FreePool (RootBridgeBuffer);
+      Status = EFI_UNSUPPORTED;
+      return Status;
+    }
+
+    *Phandle = RootBridgeCfgIo->BpmpPhandle;
+    Status   = EFI_SUCCESS;
+    break;
+  }
+
+  if (RootBridgeBuffer != NULL) {
+    FreePool (RootBridgeBuffer);
+  }
+
+  return Status;
+}
+
+/** Update VDM with PCI Bus Device Function for the given NV GPU
+
+    @param[in]  This                  EFI_DRIVER_BINDING_PROTOCOL instance
+    @param[in]  Segment               PCI Segment
+    @param[in]  Bus                   PCI Bus
+    @param[in]  Device                PCI Device
+    @param[in]  Function              PCI Function
+
+    @retval EFI_SUCCESS               PCI VDM updated succesfully.
+    @retval EFI_NOT_READY             BPMP IPC protocol unavailable.
+    @retval EFI_DEVICE_ERROR          BPMP IPC communication error.
+    @retval other                     UPHY phandle not valid
+**/
+STATIC
+EFI_STATUS
+UpdateVDM (
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN UINTN                        Segment,
+  IN UINTN                        Bus,
+  IN UINTN                        Device,
+  IN UINTN                        Function
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol;
+  MRQ_UPHY_COMMAND_PACKET   Request;
+  UINT32                    BpmpPhandle;
+  EFI_STATUS                Status;
+  EFI_STATUS                BpmpStatus;
+  INT32                     BpmpMessageError;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed getting BpmpIPC Protocol: %r\n", __FUNCTION__, Status));
+    return EFI_NOT_READY;
+  }
+
+  Request.Lane              = (UINT16)0;
+  Request.Command           = (UINT16)CmdUphyPcieConfigVdm;
+  Request.Controller        = (UINT8)Segment;
+  Request.BusDeviceFunction = (UINT16)(((Bus      & 0xff) << 8) ||
+                                       ((Device   & 0x1f) << 3) ||
+                                       ((Function & 0x07) << 0));
+  Status = GetBpmpPhandle (Segment, &BpmpPhandle);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed getting UPHY phandle: %r\n", __FUNCTION__, Status));
+    Status = EFI_ABORTED;
+  } else {
+    BpmpStatus = BpmpIpcProtocol->Communicate (
+                                    BpmpIpcProtocol,
+                                    NULL,           /* Token */
+                                    BpmpPhandle,
+                                    MRQ_UPHY,
+                                    (VOID *)&Request,
+                                    sizeof (MRQ_UPHY_COMMAND_PACKET),
+                                    NULL,           /* Response     */
+                                    0,              /* ResponseSize */
+                                    &BpmpMessageError
+                                    );
+    if (EFI_ERROR (BpmpStatus)) {
+      DEBUG ((DEBUG_ERROR, "%a: BpmpMessageError: %d\n", __FUNCTION__, BpmpMessageError));
+      Status = EFI_DEVICE_ERROR;
+    }
+  }
+
+  return Status;
+}
+
 /** Driver Binding protocol interface to start the driver on the controller handle supplied
     @param[in] EFI_DRIVER_BINDING_PROTOCOL*      Pointer to the Driver Binding protocol
     @param[in] EFI_HANDLE                        Device Handle of the controller to start the driver on
@@ -272,6 +437,10 @@ NVIDIAGpuDriverStart (
   NVIDIA_GPU_FIRMWARE_BOOT_COMPLETE_PROTOCOL  *GpuFirmwareBootCompleteProtocol;
   GPU_MODE                                    GpuMode     = GPU_MODE_EH;
   BOOLEAN                                     bFSPEnabled = TRUE;
+  UINTN                                       Segment;
+  UINTN                                       Bus;
+  UINTN                                       Device;
+  UINTN                                       Function;
 
   DEBUG ((DEBUG_ERROR, "%a: DriverBindingProtocol*: '%p'\n", __FUNCTION__, This));
   DEBUG ((DEBUG_INFO, "%a: ControllerHandle: '%p'\n", __FUNCTION__, ControllerHandle));
@@ -334,6 +503,25 @@ NVIDIAGpuDriverStart (
   DEBUG ((DEBUG_ERROR, "DEBUG: Set Attributes [%x] on Handle [%p]. Status '%r'.\n", EFI_PCI_DEVICE_ENABLE, ControllerHandle, Status));
   if (EFI_ERROR (Status)) {
     goto ErrorHandler_RestorePCIAttributes;
+  }
+
+  /* update VDM with PCIE BDF for supported downstream controllers */
+  Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  if (!EFI_ERROR (Status)) {
+    Status = UpdateVDM (This, Segment, Bus, Device, Function);
+    /* note that a failed VDM update is non-fatal */
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: VDM%aupdated for Segment,Bus,Device,Function %u,%u,%u,%u\n",
+      __FUNCTION__,
+      EFI_ERROR (Status) ? " NOT " : " ",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: ERROR: VDM update failed; PciIo GetLocation Status '%r'.\n", Status));
   }
 
   /* Check GPU Mode */

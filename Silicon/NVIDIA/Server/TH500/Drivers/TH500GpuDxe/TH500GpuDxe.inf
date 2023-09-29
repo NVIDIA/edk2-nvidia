@@ -51,6 +51,8 @@
   gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid
   gEfiNVIDIAGpuFirmwareBootCompleteGuid
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
+  gNVIDIAPciHostBridgeProtocolGuid
 
 [Ppis]
 

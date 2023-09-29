@@ -58,6 +58,7 @@
 #define MRQ_TRACE_ITER        64
 #define MRQ_PG                66
 #define MRQ_CPU_NDIV_LIMITS   67
+#define MRQ_UPHY              69
 #define MRQ_TELEMETRY         80
 #define MRQ_PWR_LIMIT         81
 #define MRQ_C2C               85
