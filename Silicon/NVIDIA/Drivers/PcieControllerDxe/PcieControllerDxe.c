@@ -627,6 +627,8 @@ InitializeController (
           DEBUG ((DEBUG_ERROR, "%a: C2C link training failed with error code: 0x%x\r\n", __FUNCTION__, C2cStatus));
         }
       }
+
+      Private->PcieRootBridgeConfigurationIo.BpmpPhandle = C2cProtocol->BpmpPhandle;
     }
   } else {
     DEBUG ((
@@ -1759,7 +1761,8 @@ DeviceDiscoveryNotify (
         DEBUG ((DEBUG_ERROR, "%a: Unable to sense gpu (%r)\r\n", __FUNCTION__, Status));
       }
 
-      Status = InitializeController (Private, ControllerHandle);
+      Private->PcieRootBridgeConfigurationIo.BpmpPhandle = MAX_UINT32;
+      Status                                             = InitializeController (Private, ControllerHandle);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
         break;
