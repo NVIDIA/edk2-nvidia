@@ -42,6 +42,7 @@
 #include <TH500/TH500Definitions.h>
 #include <TH500/TH500MB1Configuration.h>
 
+#include "PcieControllerConfigGPU.h"
 #include "PcieControllerPrivate.h"
 
 /** The platform ACPI table list.
@@ -1373,6 +1374,7 @@ VisitEachPcieDevice (
 
   PciIo = Instance;
 
+  PcieConfigGPUDevice (PciIo);
   PcieEnableErrorReporting (PciIo);
   PcieEnableECRC (PciIo);
 

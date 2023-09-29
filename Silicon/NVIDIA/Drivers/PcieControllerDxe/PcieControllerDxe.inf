@@ -17,6 +17,7 @@
   ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
 
 [Sources.common]
+  PcieControllerConfigGPU.c
   PcieControllerDxe.c
   PcieControllerPrivate.h
 
