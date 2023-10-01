@@ -1311,23 +1311,26 @@ PlatformConfigured (
 
 /**
   Update ConOut, ErrOut, ConIn variables to contain all available devices.
-  Normally, this function is only executed after the initial device flash.
+  For initial boot, all consoles are registered. Afterwards, only GOP consoles
+  are registered, as external display devices are dynamically attached.
 
+  @param[in] InitialConsoleRegistration  TRUE:  register all  available ConOut/ErrOut consoles
+                                         FALSE: register just NvDisplay ConOut/ErrOut consoles
   @param  none
   @retval none
-
 **/
 STATIC
 VOID
 PlatformRegisterConsoles (
-  VOID
+  BOOLEAN  InitialConsoleRegistration
   )
 {
-  EFI_STATUS                Status;
-  EFI_HANDLE                *Handles;
-  UINTN                     NoHandles;
-  UINTN                     Count;
-  EFI_DEVICE_PATH_PROTOCOL  *Interface;
+  EFI_STATUS                    Status;
+  EFI_HANDLE                    *Handles;
+  UINTN                         NoHandles;
+  UINTN                         Count;
+  EFI_DEVICE_PATH_PROTOCOL      *Interface;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
 
   ASSERT (FixedPcdGet8 (PcdDefaultTerminalType) == 4);
 
@@ -1342,12 +1345,36 @@ PlatformRegisterConsoles (
     for (Count = 0; Count < NoHandles; Count++) {
       Status = gBS->HandleProtocol (
                       Handles[Count],
+                      &gEfiGraphicsOutputProtocolGuid,
+                      (VOID **)&Gop
+                      );
+      if (!EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: GraphicsOutputProtocol supported on SimpleTextOutProtocol handle 0x%p\n",
+          __FUNCTION__,
+          Handles[Count]
+          ));
+      } else {
+        Gop = NULL;
+      }
+
+      Status = gBS->HandleProtocol (
+                      Handles[Count],
                       &gEfiDevicePathProtocolGuid,
                       (VOID **)&Interface
                       );
       if (!EFI_ERROR (Status)) {
-        EfiBootManagerUpdateConsoleVariable (ConOut, Interface, NULL);
-        EfiBootManagerUpdateConsoleVariable (ErrOut, Interface, NULL);
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: DevicePathProtocol supported on SimpleTextOutProtocol handle 0x%p\n",
+          __FUNCTION__,
+          Handles[Count]
+          ));
+        if ((InitialConsoleRegistration == TRUE) || (Gop != NULL)) {
+          EfiBootManagerUpdateConsoleVariable (ConOut, Interface, NULL);
+          EfiBootManagerUpdateConsoleVariable (ErrOut, Interface, NULL);
+        }
       }
     }
 
@@ -1843,11 +1870,11 @@ PlatformBootManagerBeforeConsole (
     );
 
   //
-  // Register all available consoles once.
+  // Register all available consoles during intitial
+  // boot, then set PCD to FALSE afterwards.
   //
+  PlatformRegisterConsoles (PcdGetBool (PcdDoInitialConsoleRegistration));
   if (PcdGetBool (PcdDoInitialConsoleRegistration) == TRUE) {
-    PlatformRegisterConsoles ();
-    // Set PCD to FALSE after initial registration
     PcdSetBoolS (PcdDoInitialConsoleRegistration, FALSE);
   }
 
