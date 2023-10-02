@@ -179,6 +179,7 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2SelfTestPolicy|1
   gEfiSecurityPkgTokenSpaceGuid.PcdTcgLogAreaMinLen|0x20000
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2FinalLogAreaLen|0x10000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdTcgPfpMeasurementRevision|105
 
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
   gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|TRUE
@@ -335,6 +336,7 @@
       NULL|Silicon/NVIDIA/Library/Tpm2DeviceLib/Tpm2DeviceLib.inf
   }
   Silicon/NVIDIA/Drivers/Tcg2Config/Tcg2ConfigDxe.inf
+  MdeModulePkg/Universal/SmbiosMeasurementDxe/SmbiosMeasurementDxe.inf
 
 !ifdef $(ENABLE_INTELUNDI)
   #

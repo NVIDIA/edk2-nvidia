@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe Private Definitions
 
-  Copyright (c) 2022 - 2023, NVIDIA Corporation. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022 - 2023, NVIDIA Corporation. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -26,6 +26,7 @@
 #include <Library/PrintLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/Tpm2CommandLib.h>
+#include <Library/TpmMeasurementLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <libfdt.h>
 
@@ -34,6 +35,7 @@
 #include <IndustryStandard/Mpam.h>
 #include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
+#include <IndustryStandard/UefiTcgPlatform.h>
 
 #include <Protocol/AmlPatchProtocol.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>

@@ -676,6 +676,21 @@ UpdateTpmInfo (
   }
 
   //
+  // Measure to PCR[0] with event EV_POST_CODE ACPI DATA.
+  // The measurement has to be done before any update.
+  // Otherwise, the PCR record would be different after TPM FW update
+  // or the PCD configuration change.
+  //
+  TpmMeasureAndLogData (
+    0,
+    EV_POST_CODE,
+    EV_POSTCODE_INFO_ACPI_DATA,
+    ACPI_DATA_LEN,
+    ssdttpm_aml_code,
+    ((EFI_ACPI_DESCRIPTION_HEADER *)ssdttpm_aml_code)->Length
+    );
+
+  //
   // Install SSDT with TPM node
   //
   Status = AddAcpiTable (PlatformRepositoryInfo, (EFI_ACPI_DESCRIPTION_HEADER *)ssdttpm_aml_code);

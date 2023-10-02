@@ -71,6 +71,7 @@
   INF Silicon/NVIDIA/Drivers/Tpm2Dxe/Tpm2Dxe.inf
   INF SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf
   INF Silicon/NVIDIA/Drivers/Tcg2Config/Tcg2ConfigDxe.inf
+  INF MdeModulePkg/Universal/SmbiosMeasurementDxe/SmbiosMeasurementDxe.inf
 
 !ifdef $(ENABLE_INTELUNDI)
   #
