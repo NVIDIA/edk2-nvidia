@@ -263,6 +263,11 @@
 #define TH500_THERMAL_ZONE_TC2     8
 #define TH500_THERMAL_ZONE_TSP     1                  // 100ms
 #define TH500_THERMAL_ZONE_TFP     10                 // 10ms
+#define TH500_TLIMIT_SOCKET_0      0x00000C3900BCULL
+#define TH500_TLIMIT_SOCKET_1      0x10000C3900BCULL
+#define TH500_TLIMIT_SOCKET_2      0x20000C3900BCULL
+#define TH500_TLIMIT_SOCKET_3      0x30000C3900BCULL
+#define TH500_TLIMIT_REGSIZE       4
 
 // Power Meter
 #define TH500_MODULE_PWR                      0

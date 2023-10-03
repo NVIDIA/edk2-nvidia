@@ -400,6 +400,20 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
     External(\_SB.C001.C052)
 
     //---------------------------------------------------------------------
+    // Thermal Zone for TLimit
+    //---------------------------------------------------------------------
+
+    ThermalZone (TZL1) {
+      OperationRegion (TL10, SystemMemory, TH500_TLIMIT_SOCKET_1, TH500_TLIMIT_REGSIZE)
+      Field (TL10, AnyAcc, NoLock, Preserve) {
+        TLIM, 32
+      }
+      Method(_TMP) { Return ((TLIM / 100) + 2732) }
+      Method(_CRT) { Return (TH500_THERMAL_ZONE_CRT + 2732) }
+      Name (_STR, Unicode ("Thermal Zone Skt1 TLimit"))
+    }
+
+    //---------------------------------------------------------------------
     // Module Power Device Socket 1
     //---------------------------------------------------------------------
     Device (PM10)

@@ -747,10 +747,12 @@ UpdateThermalZoneInfoAndInstallSsdt (
   UINT32                       FastSampPeriod;
   AML_ROOT_NODE_HANDLE         RootNode;
   AML_OBJECT_NODE_HANDLE       ScopeNode;
+  AML_OBJECT_NODE_HANDLE       LimitNode;
   AML_OBJECT_NODE_HANDLE       TZNode;
   AML_OBJECT_NODE_HANDLE       Node;
   EFI_ACPI_DESCRIPTION_HEADER  *BpmpTable;
   CHAR8                        ThermalZoneString[ACPI_PATCH_MAX_PATH];
+  CHAR8                        LimitString[ACPI_PATCH_MAX_PATH];
   CHAR16                       UnicodeString[MAX_UNICODE_STRING_LEN];
   UINTN                        ThermalZoneIndex;
   UINTN                        ThermalZoneUid = 0;
@@ -842,7 +844,22 @@ UpdateThermalZoneInfoAndInstallSsdt (
 
     Status = AmlFindNode (RootNode, "_SB", &ScopeNode);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Failed to find node %a\r\n", ThermalZoneString));
+      DEBUG ((DEBUG_ERROR, "Failed to find scope node %a\r\n"));
+      ASSERT_EFI_ERROR (Status);
+      return Status;
+    }
+
+    AsciiSPrint (LimitString, sizeof (LimitString), "_SB_.TZL%01x", SocketId);
+    Status = AmlFindNode (RootNode, LimitString, &LimitNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to find node %a\r\n", LimitString));
+      ASSERT_EFI_ERROR (Status);
+      return Status;
+    }
+
+    Status = AmlDetachNode (LimitNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to detach node %a\r\n", LimitString));
       ASSERT_EFI_ERROR (Status);
       return Status;
     }
@@ -1009,6 +1026,15 @@ UpdateThermalZoneInfoAndInstallSsdt (
           }
         }
       }
+    }
+
+    Status = AmlAttachNode (RootNode, LimitNode);
+    if (EFI_ERROR (Status)) {
+      // Free the detached node.
+      AmlDeleteTree (LimitNode);
+      DEBUG ((DEBUG_ERROR, "Failed to detach node %a\r\n", LimitString));
+      ASSERT_EFI_ERROR (Status);
+      return Status;
     }
 
     Status = AmlSerializeDefinitionBlock (RootNode, &BpmpTable);
