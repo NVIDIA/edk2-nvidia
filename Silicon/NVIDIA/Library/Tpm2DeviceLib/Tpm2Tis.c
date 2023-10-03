@@ -47,7 +47,6 @@ TisRead8 (
 
   Status = Tpm2->Transfer (Tpm2, TRUE, Addr, &Value, sizeof (Value));
   if (EFI_ERROR (Status)) {
-    ASSERT_EFI_ERROR (Status);
     Value = TIS_INVALID_VALUE;
   }
 
@@ -71,7 +70,6 @@ TisWrite8 (
   EFI_STATUS  Status;
 
   Status = Tpm2->Transfer (Tpm2, FALSE, Addr, &Value, sizeof (Value));
-  ASSERT_EFI_ERROR (Status);
 }
 
 /**
@@ -154,7 +152,9 @@ TisReadBurstCount (
   WaitTime = 0;
   do {
     Status = Tpm2->Transfer (Tpm2, TRUE, TPM_STS_0, StsReg, sizeof (StsReg));
-    ASSERT_EFI_ERROR (Status);
+    if (EFI_ERROR (Status)) {
+      return EFI_TIMEOUT;
+    }
 
     *BurstCount = (UINT16)((StsReg[2] << 8) | StsReg[1]);
     if (*BurstCount != 0) {

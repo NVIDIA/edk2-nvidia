@@ -68,11 +68,12 @@ QspiFlushFifo (
         if (Timeout != TIMEOUT) {
           Timeout++;
           if (Timeout == TIMEOUT) {
-            Timeout = 0;
             if (TimeOutMessage == FALSE) {
               DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
               TimeOutMessage = TRUE;
             }
+
+            return EFI_NOT_READY;
           }
         }
       }
@@ -103,11 +104,12 @@ QspiFlushFifo (
         if (Timeout != TIMEOUT) {
           Timeout++;
           if (Timeout == TIMEOUT) {
-            Timeout = 0;
             if (TimeOutMessage == FALSE) {
               DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
               TimeOutMessage = TRUE;
             }
+
+            return EFI_NOT_READY;
           }
         }
       }
@@ -222,11 +224,12 @@ QspiWaitTransactionStatusReady (
     if (Timeout != TIMEOUT) {
       Timeout++;
       if (Timeout == TIMEOUT) {
-        Timeout = 0;
         if (TimeOutMessage == FALSE) {
           DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
           TimeOutMessage = TRUE;
         }
+
+        return EFI_NOT_READY;
       }
     }
   }
@@ -784,7 +787,7 @@ QspiPerformTransaction (
 
   // Wait for the controller to clear state before starting next transaction.
   if ((Packet->Control & QSPI_CONTROLLER_CONTROL_FAST_MODE) == 0) {
-    MicroSecondDelay (TIMEOUT);
+    MicroSecondDelay (QSPI_CLEAR_STATE_DELAY);
   }
 
   return EFI_SUCCESS;
