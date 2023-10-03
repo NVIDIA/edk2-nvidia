@@ -143,6 +143,8 @@
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L"TegraVirt"
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
 
   #
   # Enable emulated variable NV mode in variable driver.
