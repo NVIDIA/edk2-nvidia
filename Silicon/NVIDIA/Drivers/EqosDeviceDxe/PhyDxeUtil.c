@@ -391,7 +391,7 @@ PhyLinkAdjustEmacConfig (
         osi_set_mode (PhyDriver->MacDriver->osi_core, OSI_HALF_DUPLEX);
       }
 
-      Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "tx", ClockRate);
+      Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "eqos_tx", ClockRate);
       if (EFI_ERROR (Status)) {
         DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
         Status = EFI_SUCCESS;
