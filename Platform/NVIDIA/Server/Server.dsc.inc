@@ -26,8 +26,8 @@
 
 [SkuIds]
   0|DEFAULT
-  1|TH500
-  255|TH500Presil|TH500
+  5|TH500
+  253|TH500Presil|TH500
 
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
