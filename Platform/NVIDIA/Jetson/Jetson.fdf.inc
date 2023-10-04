@@ -174,3 +174,10 @@
   # Capsule application (EFI Services)
   #
   INF MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf
+
+  #
+  # Android Fastboot
+  #
+  INF EmbeddedPkg/Application/AndroidFastboot/AndroidFastbootApp.inf
+  INF EmbeddedPkg/Drivers/AndroidFastbootTransportUsbDxe/FastbootTransportUsbDxe.inf
+  INF Silicon/NVIDIA/Drivers/TegraFastBootDxe/TegraFastBootDxe.inf
