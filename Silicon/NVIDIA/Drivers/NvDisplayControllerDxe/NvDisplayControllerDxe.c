@@ -12,7 +12,7 @@
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
-#include <Library/NVIDIADebugLib.h>
+#include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/DisplayDeviceTreeHelperLib.h>
 #include <Library/HobLib.h>
@@ -47,6 +47,7 @@ typedef struct {
   BOOLEAN                    ResetsDeasserted;
   BOOLEAN                    ClocksEnabled;
   BOOLEAN                    OutputGpiosConfigured;
+  BOOLEAN                    FdtUpdated;
   EFI_EVENT                  OnFdtInstalledEvent;
   EFI_EVENT                  OnReadyToBootEvent;
 } NVIDIA_DISPLAY_CONTROLLER_CONTEXT;
@@ -815,17 +816,19 @@ DisplayStop (
 /**
    Locates a child handle with the GOP protocol installed.
 
-   @param[in]  Context  Context whose child handle shall be located.
-   @param[out] Handle   The located child handle.
+   @param[in]  DriverHandle      Handle of the driver.
+   @param[in]  ControllerHandle  Handle of the controller.
+   @param[out] ChildHandle       The located child handle.
 
    @retval EFI_SUCCESS    Child handle found successfully.
    @retval !=EFI_SUCCESS  Error occurred.
 */
 STATIC
 EFI_STATUS
-DisplayLocateChildGopHandle (
-  IN  NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
-  OUT EFI_HANDLE                        *CONST  Handle
+LocateChildGopHandle (
+  IN  CONST EFI_HANDLE   DriverHandle,
+  IN  CONST EFI_HANDLE   ControllerHandle,
+  OUT EFI_HANDLE *CONST  ChildHandle
   )
 {
   EFI_STATUS                Status;
@@ -855,8 +858,8 @@ DisplayLocateChildGopHandle (
                     Handles[HandleIndex],
                     &gEfiDevicePathProtocolGuid,
                     (VOID **)&DevicePath,
-                    Context->DriverHandle,
-                    Context->ControllerHandle,
+                    DriverHandle,
+                    ControllerHandle,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
                     );
     if (EFI_ERROR (Status)) {
@@ -891,15 +894,15 @@ DisplayLocateChildGopHandle (
       continue;
     }
 
-    if (ParentHandle == Context->ControllerHandle) {
+    if (ParentHandle == ControllerHandle) {
       /* This handle is our child handle. */
       break;
     }
   }
 
   if (HandleIndex < HandleCount) {
-    *Handle = Handles[HandleIndex];
-    Status  = EFI_SUCCESS;
+    *ChildHandle = Handles[HandleIndex];
+    Status       = EFI_SUCCESS;
   } else {
     Status = EFI_NOT_FOUND;
   }
@@ -916,23 +919,25 @@ Exit:
    Locates an instance of the GOP protocol installed on a child
    handle.
 
-   @param[in]  Context   Context whose child GOP shall be located.
-   @param[out] Protocol  The located GOP instance.
+   @param[in]  DriverHandle      Handle of the driver.
+   @param[in]  ControllerHandle  Handle of the controller.
+   @param[out] Protocol          The located GOP instance.
 
    @retval EFI_SUCCESS    Child handle found successfully.
    @retval !=EFI_SUCCESS  Error occurred.
 */
 STATIC
 EFI_STATUS
-DisplayLocateChildGop (
-  IN  NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
-  OUT EFI_GRAPHICS_OUTPUT_PROTOCOL     **CONST  Protocol
+LocateChildGop (
+  IN  CONST EFI_HANDLE                      DriverHandle,
+  IN  CONST EFI_HANDLE                      ControllerHandle,
+  OUT EFI_GRAPHICS_OUTPUT_PROTOCOL **CONST  Protocol
   )
 {
   EFI_STATUS  Status;
   EFI_HANDLE  GopHandle;
 
-  Status = DisplayLocateChildGopHandle (Context, &GopHandle);
+  Status = LocateChildGopHandle (DriverHandle, ControllerHandle, &GopHandle);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -941,8 +946,8 @@ DisplayLocateChildGop (
                   GopHandle,
                   &gEfiGraphicsOutputProtocolGuid,
                   (VOID **)Protocol,
-                  Context->DriverHandle,
-                  Context->ControllerHandle,
+                  DriverHandle,
+                  ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
@@ -982,18 +987,24 @@ CheckGopModeActive (
 }
 
 /**
-   Event handler for updating the Device Tree with mode and
-   framebuffer info.
+   Update the Device Tree with mode and framebuffer info using a GOP
+   instance installed on a child handle.
 
-   @param[in] Event    Event used for the notification.
-   @param[in] Context  Controller context to use.
+   @param[in] DriverHandle      Handle of the driver.
+   @param[in] ControllerHandle  Handle of the controller.
+
+   @return TRUE   Device Tree updated successfully.
+   @return FALSE  No Device Tree was found.
+   @return FALSE  No GOP child handle was found.
+   @return FALSE  The GOP child handle was inactive.
+   @return FALSE  Could not retrieve the framebuffer region.
+   @return FALSE  Failed to update the Device Tree.
 */
 STATIC
-VOID
-EFIAPI
-DisplayUpdateFdtTable (
-  IN EFI_EVENT                                 Event,
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
+BOOLEAN
+UpdateFdtTableChildGop (
+  IN CONST EFI_HANDLE  DriverHandle,
+  IN CONST EFI_HANDLE  ControllerHandle
   )
 {
   EFI_STATUS                    Status;
@@ -1004,34 +1015,96 @@ DisplayUpdateFdtTable (
 
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
   if (EFI_ERROR (Status)) {
-    return;
+    return FALSE;
   }
 
-  Status = DisplayLocateChildGop (Context, &Gop);
-  if (EFI_ERROR (Status)) {
-    return;
+  Status = LocateChildGop (DriverHandle, ControllerHandle, &Gop);
+  if (EFI_ERROR (Status) || !CheckGopModeActive (Gop)) {
+    return FALSE;
   }
 
-  if (CheckGopModeActive (Gop)) {
-    FrameBufferBase = Gop->Mode->FrameBufferBase;
-    FrameBufferSize = Gop->Mode->FrameBufferSize;
+  FrameBufferBase = Gop->Mode->FrameBufferBase;
+  FrameBufferSize = Gop->Mode->FrameBufferSize;
 
-    if (  (Gop->Mode->Info->PixelFormat == PixelBltOnly)
-       || (FrameBufferBase == 0) || (FrameBufferSize == 0))
-    {
-      /* We must have a framebuffer region since the display cannot
-         work without one, so this should always succeed. */
-      Status = GetFramebufferRegion (&FrameBufferBase, &FrameBufferSize);
-      NV_ASSERT_EFI_ERROR_RETURN (Status, return );
+  if (  (Gop->Mode->Info->PixelFormat == PixelBltOnly)
+     || (FrameBufferBase == 0) || (FrameBufferSize == 0))
+  {
+    Status = GetFramebufferRegion (&FrameBufferBase, &FrameBufferSize);
+    if (EFI_ERROR (Status)) {
+      return FALSE;
     }
-
-    UpdateDeviceTreeSimpleFramebufferInfo (
-      Fdt,
-      Gop->Mode->Info,
-      (UINT64)FrameBufferBase,
-      (UINT64)FrameBufferSize
-      );
   }
+
+  return UpdateDeviceTreeSimpleFramebufferInfo (
+           Fdt,
+           Gop->Mode->Info,
+           (UINT64)FrameBufferBase,
+           (UINT64)FrameBufferSize
+           );
+}
+
+/**
+   Event notification function for updating the Device Tree with mode
+   and framebuffer info.
+
+   @param[in] Event          Event used for the notification.
+   @param[in] NotifyContext  Context for the notification.
+*/
+STATIC
+VOID
+EFIAPI
+UpdateFdtTableNotifyFunction (
+  IN EFI_EVENT    Event,
+  IN VOID *CONST  NotifyContext
+  )
+{
+  NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context =
+    (NVIDIA_DISPLAY_CONTROLLER_CONTEXT *)NotifyContext;
+
+  Context->FdtUpdated = UpdateFdtTableChildGop (
+                          Context->DriverHandle,
+                          Context->ControllerHandle
+                          );
+}
+
+/**
+  Check if we should perform display hand-off or not.
+
+  @param[in] Context  The display context to use.
+
+  @return TRUE   Leave the display running on UEFI exit.
+  @return FALSE  Reset the display on UEFI exit.
+*/
+STATIC
+BOOLEAN
+DisplayCheckPerformHandoff (
+  IN CONST NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
+  )
+{
+  EFI_STATUS                    Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
+  VOID                          *Table;
+
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &Table);
+  if (!EFI_ERROR (Status)) {
+    /* ACPI boot: reset the display unless it is active. */
+    Status = LocateChildGop (
+               Context->DriverHandle,
+               Context->ControllerHandle,
+               &Gop
+               );
+    return !EFI_ERROR (Status) && CheckGopModeActive (Gop);
+  }
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Table);
+  if (!EFI_ERROR (Status)) {
+    /* DT boot: reset the display unless the last FDT update was
+       successful. */
+    return Context->FdtUpdated;
+  }
+
+  /* Default to display reset. */
+  return FALSE;
 }
 
 /**
@@ -1170,7 +1243,7 @@ DisplayStart (
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
-                  (EFI_EVENT_NOTIFY)DisplayUpdateFdtTable,
+                  UpdateFdtTableNotifyFunction,
                   Result,
                   &gFdtTableGuid,
                   &Result->OnFdtInstalledEvent
@@ -1189,7 +1262,7 @@ DisplayStart (
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
-                  (EFI_EVENT_NOTIFY)DisplayUpdateFdtTable,
+                  UpdateFdtTableNotifyFunction,
                   Result,
                   &gEfiEventReadyToBootGuid,
                   &Result->OnReadyToBootEvent
@@ -1243,7 +1316,6 @@ DeviceDiscoveryNotify (
   TEGRA_PLATFORM_TYPE                Platform;
   NON_DISCOVERABLE_DEVICE            *EdkiiNonDiscoverableDevice;
   NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *Context;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL       *Gop;
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingSupported:
@@ -1321,17 +1393,18 @@ DeviceDiscoveryNotify (
 
         return DisplayStop (Context);
       } else {
-        Status = DisplayLocateChildGop (Context, &Gop);
-        if (!EFI_ERROR (Status) && CheckGopModeActive (Gop)) {
-          /* We have an active GOP child, leave the display running. */
+        /* Phase == DeviceDiscoveryOnExit */
+
+        if (DisplayCheckPerformHandoff (Context)) {
+          /* We should perform hand-off, leave the display running. */
           return EFI_ABORTED;
+        } else {
+          /* No hand-off, reset the display to a known good state. */
+          Status = DisplayBypassSorClocks (Context);
+          ASSERT_EFI_ERROR (Status);
+
+          return DisplayStopOnExitBootServices (Context);
         }
-
-        /* The display is inactive, reset to known good state. */
-        Status = DisplayBypassSorClocks (Context);
-        ASSERT_EFI_ERROR (Status);
-
-        return DisplayStopOnExitBootServices (Context);
       }
 
     default:

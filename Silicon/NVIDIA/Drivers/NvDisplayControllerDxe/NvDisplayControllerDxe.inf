@@ -43,6 +43,7 @@
   UefiLib
 
 [Guids]
+  gEfiAcpiTableGuid
   gEfiEventReadyToBootGuid
   gFdtTableGuid
   gNVIDIANonDiscoverableT234DisplayDeviceGuid
