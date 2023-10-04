@@ -1,7 +1,7 @@
 /** @file
   SSDT for TH500 Socket 2 devices
 
-  Copyright (c) 2022 - 2023, NVIDIA Corporation. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022 - 2023, NVIDIA Corporation. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -579,7 +579,7 @@ DefinitionBlock ("BpmpSsdtSocket2.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x000000
     Device (PM22)
     {
       Name (_HID, "ACPI000D")
-      Name (_UID, 12)
+      Name (_UID, 22)
       Name (_STA, 0)
       Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
       Name (HWLT, 0)
