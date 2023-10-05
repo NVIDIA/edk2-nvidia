@@ -64,6 +64,7 @@
   Tcg2PhysicalPresenceLib
   TpmPlatformHierarchyLib
   TimerLib
+  StatusRegLib
 
 [FeaturePcd]
   gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport

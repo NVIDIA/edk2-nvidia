@@ -243,6 +243,7 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   MemoryVerificationLib|Silicon/NVIDIA/Library/MemoryVerificationLib/MemoryVerificationLib.inf
 
   SystemContextLib|Silicon/NVIDIA/Library/SystemContextLib/SystemContextLib.inf
+  StatusRegLib|Silicon/NVIDIA/Library/StatusRegLib/StatusRegLib.inf
 
 !if $(BUILD_PROJECT_TYPE) == PROJECT_MU
   BaseBinSecurityLib|MdePkg/Library/BaseBinSecurityLibNull/BaseBinSecurityLibNull.inf

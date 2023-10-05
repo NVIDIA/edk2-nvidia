@@ -1,7 +1,7 @@
 ## @file
 #  Platform driver to provide Redfish override protocol.
 #
-#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -33,6 +33,7 @@
   ReportStatusCodeLib
   UefiBootServicesTableLib
   PlatformResourceLib
+  StatusRegLib
 
 [Protocols]
   gEdkiiRedfishOverrideProtocolGuid      ## PRODUCED ##

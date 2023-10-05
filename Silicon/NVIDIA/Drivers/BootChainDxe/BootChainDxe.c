@@ -2,7 +2,7 @@
 
   Boot Chain Protocol Driver
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,6 +16,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Library/StatusRegLib.h>
 #include "BootChainDxePrivate.h"
 
 STATIC EFI_EVENT  mNewImageEvent         = NULL;
@@ -212,6 +213,7 @@ BootChainReset (
   UINT32  BootChain
   )
 {
+  StatusRegReset ();
   ResetCold ();
 }
 

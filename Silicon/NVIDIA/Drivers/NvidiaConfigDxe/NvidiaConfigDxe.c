@@ -35,6 +35,7 @@
 #include <Library/VariablePolicyHelperLib.h>
 #include <Library/FwVariableLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/StatusRegLib.h>
 
 #include <Guid/NVIDIAMmMb1Record.h>
 #include <TH500/TH500Definitions.h>
@@ -1401,6 +1402,7 @@ InitializeSettings (
     ValidateActiveBootChain ();
     SetNextBootRecovery ();
     DEBUG ((DEBUG_ERROR, "%a: Rebooting into recovery.\r\n", __FUNCTION__));
+    StatusRegReset ();
     gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
   }
 
@@ -1523,6 +1525,7 @@ InitializeSettings (
           // Mark existing boot chain as good.
           ValidateActiveBootChain ();
 
+          StatusRegReset ();
           gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
           ASSERT (FALSE);
         }
@@ -1856,6 +1859,7 @@ ConfigCallback (
         // Mark existing boot chain as good.
         ValidateActiveBootChain ();
 
+        StatusRegReset ();
         gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
         break;
 

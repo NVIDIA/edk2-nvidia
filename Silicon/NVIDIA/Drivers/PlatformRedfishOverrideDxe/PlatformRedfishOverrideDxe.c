@@ -1,12 +1,13 @@
 /** @file
   Platform driver to provide Redfish override protocol.
 
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+#include <Library/StatusRegLib.h>
 #include "PlatformRedfishOverrideDxe.h"
 
 /**
@@ -42,6 +43,7 @@ PlatformRedfishNotifyPhase (
       //
       ValidateActiveBootChain ();
       DEBUG ((DEBUG_INFO, "%a: validate active boot chain\n", __func__));
+      StatusRegReset ();
       break;
     default:
       return EFI_SUCCESS;

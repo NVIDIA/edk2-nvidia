@@ -34,6 +34,7 @@
 #include <Library/TimerLib.h>
 #include <Library/Tcg2PhysicalPresenceLib.h>
 #include <Library/TpmPlatformHierarchyLib.h>
+#include <Library/StatusRegLib.h>
 #include <Protocol/AsyncDriverStatus.h>
 #include <Protocol/BootChainProtocol.h>
 #include <Protocol/DeferredImageLoad.h>
@@ -1946,6 +1947,7 @@ HandleCapsules (
   if (NeedReset) {
     DEBUG ((DEBUG_WARN, "%a: resetting to activate new firmware ...\n", __FUNCTION__));
 
+    StatusRegReset ();
     gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
     CpuDeadLoop ();
   }

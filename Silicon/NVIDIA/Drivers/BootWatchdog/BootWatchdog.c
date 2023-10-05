@@ -1,7 +1,7 @@
 /** @file
   This driver registers a 5 minute watchdog between when it starts and ReadyToBoot.
 
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -11,6 +11,7 @@
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
+#include <Library/StatusRegLib.h>
 #include <libfdt.h>
 
 /**
@@ -82,6 +83,8 @@ ReadyToBootSignaled (
   // Clear watchdog, will be reset for OS boot loader via boot manager
   gBS->SetWatchdogTimer (0, 0, 0, NULL);
   gBS->CloseEvent (Event);
+
+  StatusRegReset ();
 }
 
 /**

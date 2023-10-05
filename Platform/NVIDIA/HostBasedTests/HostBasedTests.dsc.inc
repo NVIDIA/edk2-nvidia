@@ -36,6 +36,7 @@
   DiskIoStubProtocol|Silicon/NVIDIA/Library/HostBasedTestStubLib/DiskIoStubProtocol/DiskIoStubProtocol.inf
   MemoryAllocationLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/MemoryAllocationStubLib/MemoryAllocationStubLib.inf
   DeviceTreeHelperLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/DeviceTreeHelperStubLib/DeviceTreeHelperStubLib.inf
+  StatusRegLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/StatusRegStubLib/StatusRegStubLib.inf
 
 [BuildOptions.common.EDKII.HOST_APPLICATION]
 !ifdef $(HOSTAPP_STATIC_LINK)

@@ -55,6 +55,7 @@
   Tcg2PpVendorLib
   VariablePolicyHelperLib
   PlatformResourceLib
+  StatusRegLib
 
 [Protocols]
   gEfiTcg2ProtocolGuid                 ## SOMETIMES_CONSUMES

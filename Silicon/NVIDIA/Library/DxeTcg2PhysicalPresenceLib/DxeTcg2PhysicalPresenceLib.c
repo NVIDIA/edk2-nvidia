@@ -34,6 +34,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/VariablePolicyHelperLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/ReportStatusCodeLib.h>
+#include <Library/StatusRegLib.h>
 
 #include <NVIDIAStatusCodes.h>
 #include <OemStatusCodes.h>
@@ -917,6 +918,7 @@ Tcg2ExecutePendingTpmRequest (
   // Mark existing boot chain as good.
   ValidateActiveBootChain ();
 
+  StatusRegReset ();
   gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
   ASSERT (FALSE);
 }

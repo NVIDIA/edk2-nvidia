@@ -3,7 +3,7 @@
   does user authentication before entering Setup.
 
   Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,6 +12,7 @@
 #include "UserAuthenticationDxe.h"
 #include "UserAuthenticationIpmi.h"
 #include <Library/PlatformResourceLib.h>
+#include <Library/StatusRegLib.h>
 
 USER_AUTHENTICATION_PRIVATE_DATA  *mUserAuthenticationData = NULL;
 EFI_MM_COMMUNICATION2_PROTOCOL    *mMmCommunication2       = NULL;
@@ -166,6 +167,7 @@ ForceSystemReset (
   // Mark existing boot chain as good.
   ValidateActiveBootChain ();
 
+  StatusRegReset ();
   gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
   CpuDeadLoop ();
 }

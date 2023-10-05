@@ -24,6 +24,7 @@
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/CpuExceptionHandlerLib.h>
 #include <Library/NVIDIADebugLib.h>
+#include <Library/StatusRegLib.h>
 
 #include <Ppi/GuidedSectionExtraction.h>
 #include <Ppi/SecPerformance.h>
@@ -422,6 +423,7 @@ CEntryPoint (
   InitialMemory[1].Attributes   = (ARM_MEMORY_REGION_ATTRIBUTES)0;
   InitMmu (InitialMemory);
   MapCorePlatformMemory ();
+  StatusRegSetPhase (STATUS_REG_PHASE_PREPI, STATUS_REG_PREPI_STARTED);
 
   SerialPortIdentify (&Mapping);
   while (Mapping->Compatibility != NULL) {

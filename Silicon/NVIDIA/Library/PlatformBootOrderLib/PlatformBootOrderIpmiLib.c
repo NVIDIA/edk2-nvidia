@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -19,6 +19,7 @@
 #include <Library/FwVariableLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/PlatformBootOrderIpmiLib.h>
+#include <Library/StatusRegLib.h>
 #include <IndustryStandard/Ipmi.h>
 #include <Guid/GlobalVariable.h>
 #include "InternalPlatformBootOrderIpmiLib.h"
@@ -190,6 +191,7 @@ CheckIPMIForBootOrderUpdates (
       ValidateActiveBootChain ();
 
       // Reset
+      StatusRegReset ();
       gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
       ASSERT (FALSE);
     }

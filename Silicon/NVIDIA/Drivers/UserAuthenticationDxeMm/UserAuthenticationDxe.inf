@@ -5,7 +5,7 @@
 #  does user authentication before entering Setup.
 #
 # Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
-# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -53,6 +53,7 @@
   IpmiBaseLib
   VariablePolicyHelperLib
   PlatformResourceLib
+  StatusRegLib
 
 [Guids]
   gUserAuthenticationGuid                       ## CONSUMES  ## GUID
