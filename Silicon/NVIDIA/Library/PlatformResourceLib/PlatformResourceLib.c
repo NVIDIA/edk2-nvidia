@@ -585,12 +585,12 @@ GetPlatformResourceInformation (
 }
 
 /**
-  Update CPU info in Platform Resource Information
+  Update info in Platform Resource Information
 
 **/
 EFI_STATUS
 EFIAPI
-UpdatePlatformResourceCpuInformation (
+UpdatePlatformResourceInformation (
   VOID
   )
 {

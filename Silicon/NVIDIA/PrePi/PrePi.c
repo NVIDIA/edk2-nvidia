@@ -478,9 +478,9 @@ CEntryPoint (
   // Register UEFI DTB
   RegisterDeviceTree (DtbBase);
 
-  // Get CPU info from platform
-  Status = UpdatePlatformResourceCpuInformation ();
-  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to UpdatePlatformResourceCpuInformation - %r!\r\n", Status);
+  // Get info from platform
+  Status = UpdatePlatformResourceInformation ();
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to UpdatePlatformResourceInformation - %r!\r\n", Status);
 
   // Print platform model info from UEFI DTB
   PrintModel ();
