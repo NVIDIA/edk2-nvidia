@@ -94,6 +94,7 @@
   gNVIDIATokenSpaceGuid.PcdTpmPresent
   gNVIDIATokenSpaceGuid.PcdMemoryTest
   gNVIDIATokenSpaceGuid.PcdBoardRecoveryBoot
+  gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

@@ -731,6 +731,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gNVIDIATokenSpaceGuid.PcdUefiShellEnabled|L"UefiShellEnabled"|gNVIDIAPublicVariableGuid|0x0|0x01|BS,NV
   gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport|L"DgpuDtEfifbSupport"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|L"EnabledPcieNicTopology"|gNVIDIAPublicVariableGuid|0x0|{ 0x0, 0xFF, 0xFF, 0xFF, 0xFF }|BS,NV
+  gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode|L"SocDisplayHandoffMode"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   # Memory Test options
   gNVIDIATokenSpaceGuid.PcdMemoryTest|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x0|{0}|BS,NV,RT
 !ifdef CONFIG_MEMORY_TEST

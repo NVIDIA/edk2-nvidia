@@ -715,6 +715,9 @@
 #Option to boot android image
   gNVIDIATokenSpaceGuid.PcdBootAndroidImage|FALSE|BOOLEAN|0x00000114
 
+#Option to configure SOC display hand-off
+  gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode|0x00|UINT8|0x00000115
+
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature
   # Indicate whether the password is cleared.

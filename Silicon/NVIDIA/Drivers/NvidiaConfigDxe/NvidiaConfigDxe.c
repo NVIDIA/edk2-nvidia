@@ -1396,6 +1396,9 @@ InitializeSettings (
   BufferSize = sizeof (NVIDIA_MEMORY_TEST_OPTIONS);
   PcdSetPtrS (PcdMemoryTest, &BufferSize, PcdGetPtr (PcdMemoryTest));
 
+  // Initialize SOC display hand-off mode
+  PcdSet8S (PcdSocDisplayHandoffMode, PcdGet8 (PcdSocDisplayHandoffMode));
+
   // Initialize board recovery boot mode Form Settings
   if (PcdGetBool (PcdBoardRecoveryBoot)) {
     PcdSetBoolS (PcdBoardRecoveryBoot, FALSE);

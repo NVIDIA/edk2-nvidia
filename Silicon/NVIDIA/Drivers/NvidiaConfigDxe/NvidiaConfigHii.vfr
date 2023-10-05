@@ -125,6 +125,11 @@ formset
     name  = BoardRecoveryBoot,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+  efivarstore NVIDIA_SOC_DISPLAY_HANDOFF_MODE,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
+    name  = SocDisplayHandoffMode,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
   //
   // Main form for NVIDIA Configuration
   //
@@ -345,6 +350,15 @@ formset
       endcheckbox;
     endif;
 
+    oneof varid = SocDisplayHandoffMode.Mode,
+      questionid = KEY_SOC_DISPLAY_HANDOFF_MODE,
+      prompt = STRING_TOKEN(STR_SOC_DISPLAY_HANDOFF_MODE_PROMPT),
+      help   = STRING_TOKEN(STR_SOC_DISPLAY_HANDOFF_MODE_HELP),
+      flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+      option text = STRING_TOKEN(STR_NEVER), value = NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER, flags = 0;
+      option text = STRING_TOKEN(STR_ALWAYS), value = NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS, flags = 0;
+      option text = STRING_TOKEN(STR_AUTO), value = NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO, flags = 0;
+    endoneof;
   endform;
 
   //

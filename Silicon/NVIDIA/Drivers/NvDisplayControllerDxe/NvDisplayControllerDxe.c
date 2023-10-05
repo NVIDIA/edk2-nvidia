@@ -29,6 +29,7 @@
 #include <Protocol/EmbeddedGpio.h>
 
 #include <libfdt.h>
+#include <NVIDIAConfiguration.h>
 
 #define DISPLAY_SOR_COUNT      8
 #define DISPLAY_FE_SW_SYS_CAP  0x00030000
@@ -43,6 +44,7 @@ typedef struct {
   UINT32                     Signature;
   EFI_HANDLE                 DriverHandle;
   EFI_HANDLE                 ControllerHandle;
+  UINT8                      HandoffMode;
   NON_DISCOVERABLE_DEVICE    EdkiiNonDiscoverableDevice;
   BOOLEAN                    ResetsDeasserted;
   BOOLEAN                    ClocksEnabled;
@@ -1085,26 +1087,36 @@ DisplayCheckPerformHandoff (
   EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
   VOID                          *Table;
 
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &Table);
-  if (!EFI_ERROR (Status)) {
-    /* ACPI boot: reset the display unless it is active. */
-    Status = LocateChildGop (
-               Context->DriverHandle,
-               Context->ControllerHandle,
-               &Gop
-               );
-    return !EFI_ERROR (Status) && CheckGopModeActive (Gop);
-  }
+  switch (Context->HandoffMode) {
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER:
+    default:
+      return FALSE;
 
-  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Table);
-  if (!EFI_ERROR (Status)) {
-    /* DT boot: reset the display unless the last FDT update was
-       successful. */
-    return Context->FdtUpdated;
-  }
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS:
+      return TRUE;
 
-  /* Default to display reset. */
-  return FALSE;
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO:
+      Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &Table);
+      if (!EFI_ERROR (Status)) {
+        /* ACPI boot: reset the display unless it is active. */
+        Status = LocateChildGop (
+                   Context->DriverHandle,
+                   Context->ControllerHandle,
+                   &Gop
+                   );
+        return !EFI_ERROR (Status) && CheckGopModeActive (Gop);
+      }
+
+      Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Table);
+      if (!EFI_ERROR (Status)) {
+        /* DT boot: reset the display unless the last FDT update was
+           successful. */
+        return Context->FdtUpdated;
+      }
+
+      /* Default to display reset. */
+      return FALSE;
+  }
 }
 
 /**
@@ -1192,6 +1204,7 @@ DisplayStart (
   Result->Signature        = DISPLAY_CONTROLLER_SIGNATURE;
   Result->DriverHandle     = DriverHandle;
   Result->ControllerHandle = ControllerHandle;
+  Result->HandoffMode      = PcdGet8 (PcdSocDisplayHandoffMode);
 
   CopyMem (
     &Result->EdkiiNonDiscoverableDevice,
@@ -1240,42 +1253,52 @@ DisplayStart (
 
   Result->OutputGpiosConfigured = TRUE;
 
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_CALLBACK,
-                  UpdateFdtTableNotifyFunction,
-                  Result,
-                  &gFdtTableGuid,
-                  &Result->OnFdtInstalledEvent
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to create OnFdtInstalled event: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    Result->OnFdtInstalledEvent = NULL;
-    goto Exit;
-  }
+  switch (Result->HandoffMode) {
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER:
+    default:
+      break;
 
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_CALLBACK,
-                  UpdateFdtTableNotifyFunction,
-                  Result,
-                  &gEfiEventReadyToBootGuid,
-                  &Result->OnReadyToBootEvent
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to create OnReadyToBoot event: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    Result->OnReadyToBootEvent = NULL;
-    goto Exit;
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS:
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO:
+      Status = gBS->CreateEventEx (
+                      EVT_NOTIFY_SIGNAL,
+                      TPL_CALLBACK,
+                      UpdateFdtTableNotifyFunction,
+                      Result,
+                      &gFdtTableGuid,
+                      &Result->OnFdtInstalledEvent
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to create OnFdtInstalled event: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+        Result->OnFdtInstalledEvent = NULL;
+        goto Exit;
+      }
+
+      Status = gBS->CreateEventEx (
+                      EVT_NOTIFY_SIGNAL,
+                      TPL_CALLBACK,
+                      UpdateFdtTableNotifyFunction,
+                      Result,
+                      &gEfiEventReadyToBootGuid,
+                      &Result->OnReadyToBootEvent
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to create OnReadyToBoot event: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+        Result->OnReadyToBootEvent = NULL;
+        goto Exit;
+      }
+
+      break;
   }
 
   *Context = Result;

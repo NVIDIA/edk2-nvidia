@@ -677,6 +677,10 @@
 #string STR_BOTTOM                       #language en-US  "Bottom"
 #string STR_TOP                          #language en-US  "Top"
 
+#string STR_NEVER                        #language en-US  "Never"
+#string STR_ALWAYS                       #language en-US  "Always"
+#string STR_AUTO                         #language en-US  "Auto"
+
 #string STR_IPV4                         #language en-US  "IPv4"
 #string STR_IPV6                         #language en-US  "IPv6"
 
@@ -747,3 +751,6 @@
 
 #string STR_BOARD_RECOVERY_BOOT_PROMPT  #language en-US "Boot Into Recovery"
 #string STR_BOARD_RECOVERY_BOOT_HELP    #language en-US "Reboot the board into recovery mode."
+
+#string STR_SOC_DISPLAY_HANDOFF_MODE_PROMPT #language en-US "SOC Display Hand-Off Mode"
+#string STR_SOC_DISPLAY_HANDOFF_MODE_HELP   #language en-US "How to hand-off the SOC display: Never - always reset the display on UEFI exit; Always - never reset the display on UEFI exit; Auto - reset the display on UEFI exit unless it is active (requires kernel support)."

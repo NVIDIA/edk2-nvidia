@@ -98,6 +98,7 @@
 #define KEY_ENABLE_TPM                 0x0116
 #define KEY_MEMORY_TEST                0x0117
 #define KEY_MEMORY_TEST_LEVEL          0x0118
+#define KEY_SOC_DISPLAY_HANDOFF_MODE   0x0119
 
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 

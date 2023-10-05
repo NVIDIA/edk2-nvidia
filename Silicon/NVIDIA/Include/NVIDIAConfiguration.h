@@ -49,6 +49,10 @@
 #define MEMORY_TEST_LEVEL_SPARSE     2
 #define MEMORY_TEST_LEVEL_EXTENSIVE  3
 
+#define NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER   0
+#define NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS  1
+#define NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO    2
+
 // Option to expose PCIe in OS
 typedef struct {
   UINT8    Enabled;
@@ -156,5 +160,9 @@ typedef struct {
   UINT64     BitFadePattern;
   UINT64     BitFadeWait;
 } NVIDIA_MEMORY_TEST_OPTIONS;
+
+typedef struct {
+  UINT8    Mode;
+} NVIDIA_SOC_DISPLAY_HANDOFF_MODE;
 
 #endif //__NVIDIA_CONFIGURATION_H__

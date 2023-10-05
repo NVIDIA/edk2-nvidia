@@ -59,6 +59,8 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex
+  gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode
 
 [Depex]
+  gEfiVariableArchProtocolGuid                  AND
   gNVIDIAI2cExpanderGpioProtocolGuid
