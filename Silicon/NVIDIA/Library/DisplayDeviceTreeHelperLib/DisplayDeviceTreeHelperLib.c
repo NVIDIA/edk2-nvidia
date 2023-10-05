@@ -427,18 +427,20 @@ UpdateDeviceTreeSimpleFramebufferInfo (
   )
 {
   INT32  Result, NodeOffset;
+  UINTN  NodeCount;
 
   Result = fdt_path_offset (DeviceTree, "/chosen");
   if (Result < 0) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: cannot find node '/chosen': %a",
+      "%a: cannot find node '/chosen': %a\r\n",
       __FUNCTION__,
       fdt_strerror (Result)
       ));
     return FALSE;
   }
 
+  NodeCount = 0;
   fdt_for_each_subnode (NodeOffset, DeviceTree, Result) {
     Result = fdt_node_check_compatible (DeviceTree, NodeOffset, "simple-framebuffer");
     if (Result != 0) {
@@ -455,6 +457,8 @@ UpdateDeviceTreeSimpleFramebufferInfo (
     {
       return FALSE;
     }
+
+    ++NodeCount;
   }
 
   if ((NodeOffset < 0) && (NodeOffset != -FDT_ERR_NOTFOUND)) {
@@ -467,5 +471,13 @@ UpdateDeviceTreeSimpleFramebufferInfo (
     return FALSE;
   }
 
-  return TRUE;
+  if (NodeCount == 0) {
+    DEBUG ((
+      DEBUG_WARN,
+      "%a: no compatible framebuffer nodes found\r\n",
+      __FUNCTION__
+      ));
+  }
+
+  return NodeCount > 0;
 }
