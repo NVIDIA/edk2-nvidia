@@ -16,6 +16,8 @@
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PcdLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -467,6 +469,7 @@ DeviceDiscoveryNotify (
 
   switch (Phase) {
     case DeviceDiscoveryDriverStart:
+      gUfsOverride.RefClkFreq = PcdGet32 (PcdUfsCardRefClkFreq);
       return gBS->InstallMultipleProtocolInterfaces (
                     &DriverHandle,
                     &gEdkiiUfsHcPlatformProtocolGuid,

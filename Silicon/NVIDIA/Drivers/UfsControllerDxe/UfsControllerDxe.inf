@@ -42,5 +42,8 @@
   gEdkiiNonDiscoverableUfsDeviceGuid
   gNVIDIAPlatformResourceDataGuid
 
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq
+
 [Depex]
   TRUE

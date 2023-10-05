@@ -770,6 +770,9 @@
 #Option to boot RCM mode using kernel cmdline from DTB instead of boot.img
   gNVIDIATokenSpaceGuid.PcdRcmUseDtbCmdline|FALSE|BOOLEAN|0x000000A7
 
+#Specify UFS refclk freq from EDKII_UFS_CARD_REF_CLK_FREQ_ATTRIBUTE enum
+  gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq|0|UINT32|0x000000A6
+
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature
   # Indicate whether the password is cleared.
