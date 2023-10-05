@@ -515,6 +515,16 @@ DeviceDiscoveryNotify (
         DeviceDiscoveryThreadMicroSecondDelay (1000);
       }
 
+skipXusbFwLoad:
+      /* Return Error if CNR is not cleared or Host Controller Error is set */
+      if (StatusRegister & (USBSTS_CNR | USBSTS_HCE)) {
+        DEBUG ((DEBUG_ERROR, "%a:%d %llx - %r\r\n", __func__, __LINE__, BaseAddress, Status));
+        DEBUG ((DEBUG_ERROR, "Usb Host Controller Initialization Failed\n"));
+        DEBUG ((DEBUG_ERROR, "UsbStatus: 0x%x Falcon CPUCTL: 0x%x\n", StatusRegister, FalconRead32 (FALCON_CPUCTL_0)));
+        Status = EFI_DEVICE_ERROR;
+        goto ErrorExit;
+      }
+
       if (gDeviceDiscoverDriverConfig.SkipEdkiiNondiscoverableInstall) {
         Status = gBS->InstallMultipleProtocolInterfaces (
                         &ControllerHandle,
@@ -523,15 +533,6 @@ DeviceDiscoveryNotify (
                         NULL
                         );
         ASSERT_EFI_ERROR (Status);
-      }
-
-skipXusbFwLoad:
-      /* Return Error if CNR is not cleared or Host Controller Error is set */
-      if (StatusRegister & (USBSTS_CNR | USBSTS_HCE)) {
-        DEBUG ((DEBUG_ERROR, "Usb Host Controller Initialization Failed\n"));
-        DEBUG ((DEBUG_ERROR, "UsbStatus: 0x%x Falcon CPUCTL: 0x%x\n", StatusRegister, FalconRead32 (FALCON_CPUCTL_0)));
-        Status = EFI_DEVICE_ERROR;
-        goto ErrorExit;
       }
 
       break;
