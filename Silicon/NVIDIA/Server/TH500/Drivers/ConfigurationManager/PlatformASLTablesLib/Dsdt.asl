@@ -1,7 +1,7 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * Copyright (c) 2020 - 2023, NVIDIA Corporation. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2020 - 2023, NVIDIA Corporation. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -671,6 +671,16 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
                                                                         0xbb,
                                                                         0xbc }
         })
+        Name(_AEI, ResourceTemplate () {
+            GpioInt(Edge, ActiveLow, ExclusiveAndWake, PullUp, , " \\\_SB.GPI0") {70}
+        })
+        Method (_EVT,1) { // Handle all ACPI Events signaled by GPIO Controller GPI0
+            Switch (Arg0) {
+                Case (70) {
+                    Notify (\_SB, 0x81)
+                }
+            }
+        }
     }
 
     //---------------------------------------------------------------------
