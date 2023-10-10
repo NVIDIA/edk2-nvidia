@@ -62,6 +62,7 @@
   gNVIDIATokenSpaceGuid.PcdRecoveryKernelDtbPartitionName
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
   gNVIDIATokenSpaceGuid.PcdAllowOsAccessQspi
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage
 
 [Depex]
   TRUE

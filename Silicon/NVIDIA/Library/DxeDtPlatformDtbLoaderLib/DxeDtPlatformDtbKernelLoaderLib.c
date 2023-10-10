@@ -547,12 +547,14 @@ UpdateFdt (
   NodeOffset                   = fdt_path_offset (Dtb, "/firmware/uefi");
   if (NodeOffset >= 0) {
     if (NULL != fdt_get_property (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL)) {
+      DEBUG ((DEBUG_ERROR, "%a: Overlays from firmware media already applied.\r\n", __FUNCTION__));
       FirmwareMediaOverlaysApplied = TRUE;
     }
   }
 
   if (!FirmwareMediaOverlaysApplied) {
     // Apply kernel-dtb overlays
+    DEBUG ((DEBUG_ERROR, "%a: Applying overlays from firmware media.\r\n", __FUNCTION__));
     CpublDtb   = (VOID *)(UINTN)GetDTBBaseAddress ();
     OverlayDtb = (VOID *)ALIGN_VALUE ((UINTN)CpublDtb + fdt_totalsize (CpublDtb), SIZE_4KB);
     if (fdt_check_header (OverlayDtb) == 0) {
@@ -889,14 +891,22 @@ DtPlatformLoadDtb (
     goto Exit;
   }
 
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_CALLBACK,
-                  InstallFdt,
-                  NULL,
-                  &gEfiEventReadyToBootGuid,
-                  &ReadyToBootEvent
-                  );
+  if (PcdGetBool (PcdBootAndroidImage) ||
+      (LibPcdGetSku () == T234SLT_SKU))
+  {
+    Status = gBS->CreateEventEx (
+                    EVT_NOTIFY_SIGNAL,
+                    TPL_CALLBACK,
+                    InstallFdt,
+                    NULL,
+                    &gEfiEventReadyToBootGuid,
+                    &ReadyToBootEvent
+                    );
+
+    if (EFI_ERROR (Status)) {
+      goto Exit;
+    }
+  }
 
 Exit:
   if (EFI_ERROR (Status)) {
