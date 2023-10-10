@@ -15,6 +15,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
 {
   Scope(_SB)
   {
+    Name(PLAT, 0xFF)
     //---------------------------------------------------------------------
     // GED to receive RAS events
     //---------------------------------------------------------------------
@@ -677,7 +678,9 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
         Method (_EVT,1) { // Handle all ACPI Events signaled by GPIO Controller GPI0
             Switch (Arg0) {
                 Case (70) {
+                  If (LEqual (\_SB.PLAT, 0x0)) {
                     Notify (\_SB, 0x81)
+                  }
                 }
             }
         }

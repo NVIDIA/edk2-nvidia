@@ -397,6 +397,35 @@ UpdateEthernetInfo (
   return EFI_SUCCESS;
 }
 
+/** patch PLAT data in DSDT.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdatePlatInfo (
+  IN TEGRA_PLATFORM_TYPE  PlatformType
+  )
+{
+  EFI_STATUS            Status;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+
+  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_PLAT_INFO, &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: STA node is not found for patching %a - %r\r\n", __FUNCTION__, ACPI_PLAT_INFO, Status));
+    return EFI_NOT_FOUND;
+  }
+
+  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &PlatformType, AcpiNodeInfo.Size);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_PLAT_INFO, Status));
+  }
+
+  return Status;
+}
+
 /** patch GED data in DSDT.
 
   @retval EFI_SUCCESS   Success
@@ -1679,6 +1708,11 @@ InitializePlatformRepository (
   }
 
   PlatformType = TegraGetPlatform ();
+  Status       = UpdatePlatInfo (PlatformType);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     Status = UpdateThermalZoneInfoAndInstallSsdt (NVIDIAPlatformRepositoryInfo);
     if (EFI_ERROR (Status)) {
