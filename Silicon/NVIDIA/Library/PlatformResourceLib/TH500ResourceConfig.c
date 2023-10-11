@@ -307,6 +307,7 @@ TH500GetResourceConfig (
   UINTN               CarveoutSize;
   UINTN               Index;
   UINTN               Socket;
+  UINTN               MaxSocket;
   UINT32              SocketMask;
   TH500_MEMORY_MODE   MemoryMode;
   UINT64              *DramPageRetirementInfo;
@@ -319,6 +320,14 @@ TH500GetResourceConfig (
   PlatformInfo->DtbLoadAddress = TH500GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
 
   SocketMask = TH500GetSocketMask (CpuBootloaderAddress);
+  MaxSocket  = 0;
+  for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
+    if (!(SocketMask & (1 << Socket))) {
+      continue;
+    }
+
+    MaxSocket = Socket;
+  }
 
   DEBUG ((DEBUG_ERROR, "SocketMask=0x%x\n", SocketMask));
 
@@ -359,7 +368,7 @@ TH500GetResourceConfig (
     DEBUG ((DEBUG_ERROR, "Memory Mode: EGM No HV\n"));
     // When egm is enabled without hv, uefi should use only memory in egm carveout on all sockets and rcm, os and uefi carveouts
     // only on primary socket.
-    DramRegions = (NVDA_MEMORY_REGION *)AllocatePool ((sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS) + (sizeof (NVDA_MEMORY_REGION) * 3));
+    DramRegions = (NVDA_MEMORY_REGION *)AllocatePool ((sizeof (NVDA_MEMORY_REGION) * (MaxSocket+1)) + (sizeof (NVDA_MEMORY_REGION) * 3));
     ASSERT (DramRegions != NULL);
     if (DramRegions == NULL) {
       return EFI_DEVICE_ERROR;
@@ -422,14 +431,14 @@ TH500GetResourceConfig (
   PlatformInfo->UefiDramRegionIndex = 0;
 
   // Build Carveout regions
-  CarveoutSize    = sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS * (CARVEOUT_OEM_COUNT + MAX_RETIRED_DRAM_PAGES);
+  CarveoutSize    = sizeof (NVDA_MEMORY_REGION) * (MaxSocket+1) * (CARVEOUT_OEM_COUNT + MAX_RETIRED_DRAM_PAGES);
   CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePages (EFI_SIZE_TO_PAGES (CarveoutSize));
   ASSERT (CarveoutRegions != NULL);
   if (CarveoutRegions == NULL) {
     return EFI_DEVICE_ERROR;
   }
 
-  CarveoutSize          = sizeof (NVDA_MEMORY_REGION) * TH500_MAX_SOCKETS * CARVEOUT_OEM_COUNT;
+  CarveoutSize          = sizeof (NVDA_MEMORY_REGION) * (MaxSocket+1) * CARVEOUT_OEM_COUNT;
   UsableCarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePages (EFI_SIZE_TO_PAGES (CarveoutSize));
   ASSERT (UsableCarveoutRegions != NULL);
   if (UsableCarveoutRegions == NULL) {
