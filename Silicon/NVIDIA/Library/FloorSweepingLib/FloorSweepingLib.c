@@ -17,6 +17,7 @@
 #include <Library/MceAriLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NvgLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -361,6 +362,48 @@ GetNumberOfEnabledCpuCores (
 }
 
 /**
+  Rename cpu-map child nodes sequentially starting at 0 to meet DTB spec.
+
+ **/
+STATIC
+EFI_STATUS
+EFIAPI
+RenameChildNodesSequentially (
+  IN VOID         *Dtb,
+  IN INT32        NodeOffset,
+  IN CONST CHAR8  *ChildNameFormat,
+  IN CHAR8        *ChildNameStr,
+  IN UINTN        ChildNameStrSize,
+  IN UINTN        MaxChildNodes
+  )
+{
+  INT32        ChildOffset;
+  UINT32       ChildIndex;
+  CONST CHAR8  *DtbChildName;
+  INT32        FdtErr;
+
+  ChildIndex = 0;
+  fdt_for_each_subnode (ChildOffset, Dtb, NodeOffset) {
+    NV_ASSERT_RETURN ((ChildIndex < MaxChildNodes), return EFI_UNSUPPORTED, "%a: hit max nodes=%u for %a\n", __FUNCTION__, MaxChildNodes, ChildNameFormat);
+
+    AsciiSPrint (ChildNameStr, ChildNameStrSize, ChildNameFormat, ChildIndex);
+    DtbChildName = fdt_get_name (Dtb, ChildOffset, NULL);
+
+    DEBUG ((DEBUG_INFO, "%a: Checking %a==%a (%u)\n", __FUNCTION__, ChildNameStr, DtbChildName, ChildIndex));
+    if (AsciiStrCmp (ChildNameStr, DtbChildName) != 0) {
+      FdtErr = fdt_set_name (Dtb, ChildOffset, ChildNameStr);
+      NV_ASSERT_RETURN ((FdtErr >= 0), return EFI_DEVICE_ERROR, "%a: Failed to update name %a: %a\n", __FUNCTION__, ChildNameStr, fdt_strerror (FdtErr));
+
+      DEBUG ((DEBUG_INFO, "%a: Updated %a\n", __FUNCTION__, ChildNameStr));
+    }
+
+    ChildIndex++;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Floorsweep CPUs in DTB
 
 **/
@@ -384,6 +427,8 @@ UpdateCpuFloorsweepingConfig (
   UINT32       AddressCells;
   INT32        NodeOffset;
   INT32        TmpOffset;
+  CHAR8        CoreNodeStr[] = "coreXX";
+  EFI_STATUS   Status;
 
   AddressCells = fdt_address_cells (Dtb, CpusOffset);
 
@@ -518,12 +563,22 @@ UpdateCpuFloorsweepingConfig (
             }
           }
         }
+
+        Status = RenameChildNodesSequentially (Dtb, NodeOffset, "core%u", CoreNodeStr, sizeof (CoreNodeStr), 100);
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
       }
 
       Cluster++;
     } else {
       break;
     }
+  }
+
+  Status = RenameChildNodesSequentially (Dtb, CpuMapOffset, "cluster%u", ClusterNodeStr, sizeof (ClusterNodeStr), 100);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   return EFI_SUCCESS;
