@@ -2,7 +2,7 @@
 
   Configuration Manager Data Driver private structures for SMBIOS tables
 
-  Copyright (c) 2022 - 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -218,6 +218,14 @@ EFIAPI
 InstallSmbiosType8Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
+
+//
+// Pci slot info and class code association structure
+//
+typedef struct {
+  UINT8    PciClass;
+  CHAR8    *SlotDescription;
+} PCI_SLOT_ASSOCIATION;
 
 /**
   Install CM object for SMBIOS Type 9

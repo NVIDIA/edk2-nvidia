@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 9 table
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -23,6 +23,7 @@
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <Protocol/PciIo.h>
+#include <IndustryStandard/Pci22.h>
 
 #include "ConfigurationSmbiosPrivate.h"
 
@@ -69,8 +70,15 @@ InstallSmbiosType9Cm (
   VOID                            *Hob;
   UINT32                          SocketMask;
   UINT32                          SocketNum;
+  UINT8                           PciClass;
+  BOOLEAN                         IsPciClassPatternMatch;
+  UINTN                           PciSlotAssociationIndex;
+  PCI_SLOT_ASSOCIATION            PciSlotAssociation[] = {
+    { PCI_CLASS_MASS_STORAGE, "NVMe" }
+  };
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+
   if ((Hob != NULL) &&
       (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
   {
@@ -93,8 +101,14 @@ InstallSmbiosType9Cm (
 
   DEBUG ((DEBUG_INFO, "%a: PCIIO HandleCount = %u\n", __FUNCTION__, HandleCount));
 
-  NumSystemSlots = 0;
-  SystemSlotInfo = NULL;
+  NumSystemSlots          = 0;
+  IsPciClassPatternMatch  = FALSE;
+  PciSlotAssociationIndex = 0;
+  SystemSlotInfo          = NULL;
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: locate EFI_REGULAR_EXPRESSION_PROTOCOL failure: %r\n", __FUNCTION__, Status));
+  }
 
   for (Index = 0; Index < 100; Index++) {
     AsciiSPrint (Type9tNodeStr, sizeof (Type9tNodeStr), "/firmware/smbios/type9@%u", Index);
@@ -216,9 +230,34 @@ InstallSmbiosType9Cm (
             (SystemSlotInfo[NumSystemSlots].BusNum == Bus) &&
             (SystemSlotInfo[NumSystemSlots].DevFuncNum == (UINT8)((Device << 3) | Function)))
         {
-          Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, 0x00, 1, &VendorDeviceId);
-          if (!EFI_ERROR (Status) && (VendorDeviceId != 0xFFFF)) {
-            SystemSlotInfo[NumSystemSlots].CurrentUsage = SlotUsageInUse;
+          IsPciClassPatternMatch = FALSE;
+
+          for (PciSlotAssociationIndex = 0;
+               (PciSlotAssociationIndex < ARRAY_SIZE (PciSlotAssociation));
+               PciSlotAssociationIndex++)
+          {
+            if (AsciiStrStr (
+                  SystemSlotInfo[NumSystemSlots].SlotDesignation,
+                  PciSlotAssociation[PciSlotAssociationIndex].SlotDescription
+                  ) != NULL)
+            {
+              IsPciClassPatternMatch = TRUE;
+              break;
+            }
+          }
+
+          PciClass = 0;
+          Status   = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, 0x00, 1, &VendorDeviceId);
+
+          if (!EFI_ERROR (Status) && (VendorDeviceId != 0xFFFFFFFF)) {
+            if (IsPciClassPatternMatch) {
+              Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint8, 0x0B, 1, &PciClass);
+              if (!EFI_ERROR (Status) && (PciClass == PciSlotAssociation[PciSlotAssociationIndex].PciClass)) {
+                SystemSlotInfo[NumSystemSlots].CurrentUsage = SlotUsageInUse;
+              }
+            } else {
+              SystemSlotInfo[NumSystemSlots].CurrentUsage = SlotUsageInUse;
+            }
           }
         }
       }
