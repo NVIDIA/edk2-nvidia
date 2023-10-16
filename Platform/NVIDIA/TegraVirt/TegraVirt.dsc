@@ -233,7 +233,11 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0c280000
 
 [PcdsDynamicHii]
+!if $(TARGET) == RELEASE
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|0
+!else
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|5
+!endif
 
 [PcdsDynamicDefault.common]
   gArmTokenSpaceGuid.PcdArmArchTimerSecIntrNum|0x0
