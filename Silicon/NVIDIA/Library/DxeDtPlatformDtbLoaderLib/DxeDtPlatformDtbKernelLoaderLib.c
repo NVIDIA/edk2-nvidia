@@ -525,6 +525,7 @@ UpdateFdt (
   EFI_STATUS  Status;
   VOID        *AcpiBase;
   VOID        *Dtb;
+  BOOLEAN     FirmwareMediaOverlaysApplied;
   VOID        *CpublDtb;
   VOID        *OverlayDtb;
   INT32       NodeOffset;
@@ -540,13 +541,30 @@ UpdateFdt (
     return;
   }
 
-  // Apply kernel-dtb overlays
-  CpublDtb   = (VOID *)(UINTN)GetDTBBaseAddress ();
-  OverlayDtb = (VOID *)ALIGN_VALUE ((UINTN)CpublDtb + fdt_totalsize (CpublDtb), SIZE_4KB);
-  if (fdt_check_header (OverlayDtb) == 0) {
-    Status = ApplyTegraDeviceTreeOverlay (Dtb, OverlayDtb, SWModule);
-    if (EFI_ERROR (Status)) {
-      return;
+  // Check if overlays from fw media are already applied
+  FirmwareMediaOverlaysApplied = FALSE;
+  NodeOffset                   = fdt_path_offset (Dtb, "/firmware/uefi");
+  if (NodeOffset >= 0) {
+    if (NULL != fdt_get_property (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL)) {
+      FirmwareMediaOverlaysApplied = TRUE;
+    }
+  }
+
+  if (!FirmwareMediaOverlaysApplied) {
+    // Apply kernel-dtb overlays
+    CpublDtb   = (VOID *)(UINTN)GetDTBBaseAddress ();
+    OverlayDtb = (VOID *)ALIGN_VALUE ((UINTN)CpublDtb + fdt_totalsize (CpublDtb), SIZE_4KB);
+    if (fdt_check_header (OverlayDtb) == 0) {
+      Status = ApplyTegraDeviceTreeOverlay (Dtb, OverlayDtb, SWModule);
+      if (EFI_ERROR (Status)) {
+        return;
+      }
+
+      // Uefi DTB node may have moved as a result of overlays
+      NodeOffset = fdt_path_offset (Dtb, "/firmware/uefi");
+      if (NodeOffset >= 0) {
+        fdt_setprop (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
+      }
     }
   }
 
