@@ -10,10 +10,12 @@
 **/
 
 #include <Library/MmServicesTableLib.h>
-#include <Library/StandaloneMmOpteeDeviceMem.h>
 #include <FvbPrivate.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/IoLib.h>
+
+STATIC BOOLEAN                  CheckVarStoreIntegrity = FALSE;
+STATIC NVIDIA_VAR_INT_PROTOCOL  *VarInt                = NULL;
 
 /**
   The GetAttributes() function retrieves the attributes and
@@ -393,6 +395,17 @@ FvbWrite (
   Private   = BASE_CR (This, NVIDIA_FVB_PRIVATE_DATA, FvbProtocol);
   BlockSize = Private->FlashAttributes.BlockSize;
   LastBlock = (Private->PartitionSize / Private->FlashAttributes.BlockSize) - 1;
+  if (CheckVarStoreIntegrity == TRUE) {
+    if (VarInt->CurMeasurement[0] == FVB_ERASED_BYTE) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Writing Measurement 0x%x\n",
+        __FUNCTION__,
+        VarInt->CurMeasurement[0]
+        ));
+      VarInt->WriteNewMeasurement (VarInt);
+    }
+  }
 
   // The write must not span FV boundaries.
   if (Lba > LastBlock) {
@@ -801,6 +814,66 @@ InitializeFvAndVariableStoreHeaders (
 }
 
 /**
+ * MmFvbSmmVarReady
+ * Callback function when the SmmVariable protocol is installed.
+ * This notify function is only installed if the VarStore Integrity feature
+ * is enabled, so when called check the validity of of the stored measurement.
+ *
+ * @param Protocol   Protocol for which the notify is installed
+ * @param Interface  Interface that is passed down when the callback is instaleld
+ * @param Handle     Handle on which this notify is called.
+ *
+ * @return EFI_SUCCESS Succesful validation of the VarStore Measurement.
+ *         Other       Assert as this means the VarStore could be tampered.
+ *
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+MmFvbSmmVarReady (
+  IN CONST EFI_GUID  *Protocol,
+  IN VOID            *Interface,
+  IN EFI_HANDLE      Handle
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = gMmst->MmLocateProtocol (
+                    &gNVIDIAVarIntGuid,
+                    NULL,
+                    (VOID **)&VarInt
+                    );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get VarInt Proto%r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  Status = VarInt->Validate (VarInt);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:Var Store Validation failed %r",
+      __FUNCTION__,
+      Status
+      ));
+
+    /* We're here, which means there is a non-erased Variable Integrity space
+     * that isn't matching our expected measurement.
+     */
+    ASSERT (FALSE);
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: VarStore validation Succesful\n", __FUNCTION__));
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Check the integrity of firmware volume header.
 
   @param PartitionData      - A pointer to the partition data
@@ -818,7 +891,9 @@ ValidateFvHeader (
   IN UINT64                     PartitionSize,
   IN BOOLEAN                    CheckVariableStore,
   IN NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol,
-  IN NOR_FLASH_ATTRIBUTES       *FlashAttributes
+  IN NOR_FLASH_ATTRIBUTES       *FlashAttributes,
+  IN UINT64                     MeasurementOffset,
+  IN UINT64                     MeasurementPartitionSize
   )
 {
   EFI_STATUS                  Status;
@@ -872,6 +947,18 @@ ValidateFvHeader (
     if (VariableStoreHeader->Size != VariableStoreLength) {
       DEBUG ((EFI_D_INFO, "%a: Variable Store Length does not match\n", __FUNCTION__));
       return EFI_NOT_FOUND;
+    }
+
+    // The FV header of the variable store is validated. If we've enabled VarStoreIntegrity feature
+    // then check if the partition is erased. If it is erased, then re-initialize the varstore, as it
+    // could be a possible tamper.
+    if (CheckVarStoreIntegrity == TRUE) {
+      if (IsMeasurementPartitionErased (NorFlashProtocol, MeasurementOffset, MeasurementPartitionSize) == TRUE) {
+        DEBUG ((DEBUG_ERROR, "%a: No Valid Measurements found. Re-initializing the Variable Store\n", __FUNCTION__));
+        return EFI_NOT_FOUND;
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: Var store is ok", __FUNCTION__));
+      }
     }
   }
 
@@ -1033,6 +1120,9 @@ FVBNORInitialize (
   VOID                        *FtwSpareBuffer;
   VOID                        *FtwWorkingBuffer;
   UINTN                       GptHeaderOffset;
+  VOID                        *MmFvbRegistration;
+  UINT64                      ReservedPartitionOffset;
+  UINT64                      ReservedPartitionSize;
 
   if (PcdGetBool (PcdEmuVariableNvModeEnable)) {
     return EFI_SUCCESS;
@@ -1147,6 +1237,42 @@ FVBNORInitialize (
 
   ASSERT (FtwSize > VariableSize);
 
+  CheckVarStoreIntegrity = FALSE;
+
+  /* If Variable Store Integrity is enabled, user the reserved partition
+   */
+  if (FeaturePcdGet (PcdVarStoreIntegritySupported) == TRUE) {
+    PartitionEntry = GptFindPartitionByName (
+                       &PartitionHeader,
+                       PartitionEntryArray,
+                       RESERVED_PARTITION_NAME
+                       );
+    if (PartitionEntry != NULL) {
+      ReservedPartitionOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
+      ReservedPartitionSize   = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
+      if (((ReservedPartitionOffset % NorFlashAttributes.BlockSize) == 0) &&
+          ((ReservedPartitionSize % NorFlashAttributes.BlockSize) == 0))
+      {
+        CheckVarStoreIntegrity = TRUE;
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a:Using Reserved Partition %lu %lu for VarStore Integrity\n",
+          __FUNCTION__,
+          ReservedPartitionOffset,
+          ReservedPartitionSize
+          ));
+      } else {
+        DEBUG ((
+          DEBUG_ERROR,
+          "Cannot store Variable measurements %lu %lu %lu\n",
+          ReservedPartitionOffset,
+          ReservedPartitionSize,
+          NorFlashAttributes.BlockSize
+          ));
+      }
+    }
+  }
+
   // Build FVB instances
   FvpData = NULL;
   FvpData = AllocateRuntimeZeroPool (sizeof (NVIDIA_FVB_PRIVATE_DATA) * FVB_TO_CREATE);
@@ -1208,6 +1334,46 @@ FVBNORInitialize (
     return EFI_DEVICE_ERROR;
   }
 
+  /* If VarStore Integrity feature is enabled, initialize and install the protocol */
+  if (CheckVarStoreIntegrity == TRUE) {
+    Status = VarIntInit (
+               ReservedPartitionOffset,
+               ReservedPartitionSize,
+               NorFlashProtocol,
+               &NorFlashAttributes
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a:%d Failed to init Variable Integrity %r\n",
+        __FUNCTION__,
+        __LINE__,
+        Status
+        ));
+      // If enabled VarStore Integrity feature is a must have.
+      ASSERT (FALSE);
+      goto Exit;
+    }
+
+    /* Register a callback for when the SmmVariable Protocol is installed
+     * to validate the measurements.
+     */
+    Status = gMmst->MmRegisterProtocolNotify (
+                      &gEfiSmmVariableProtocolGuid,
+                      MmFvbSmmVarReady,
+                      &MmFvbRegistration
+                      );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to register callback %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      ASSERT_EFI_ERROR (Status);
+    }
+  }
+
   for (Index = 0; Index < FVB_TO_CREATE; Index++) {
     if (Index == FVB_FTW_WORK_INDEX) {
       FvpData[Index].Signature = NVIDIA_FWB_SIGNATURE;
@@ -1250,7 +1416,9 @@ FVBNORInitialize (
                  FvpData[Index].PartitionSize,
                  (Index == FVB_VARIABLE_INDEX),
                  NorFlashProtocol,
-                 &NorFlashAttributes
+                 &NorFlashAttributes,
+                 ReservedPartitionOffset,
+                 ReservedPartitionSize
                  );
       if (EFI_ERROR (Status)) {
         // Re-init partition

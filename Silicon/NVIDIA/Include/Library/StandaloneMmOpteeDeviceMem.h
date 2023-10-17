@@ -11,6 +11,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Protocol/NorFlash.h>
 
 #define DEVICE_REGION_NAME_MAX_LEN  32
 #define MAX_DEVICE_REGIONS          10
@@ -18,6 +19,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define OPTEE_OS_UID1               0xe7f811e3
 #define OPTEE_OS_UID2               0xaf630002
 #define OPTEE_OS_UID3               0xa5d5c51b
+
+typedef struct _NVIDIA_VAR_INT_PROTOCOL NVIDIA_VAR_INT_PROTOCOL;
 
 typedef struct _EFI_MM_DEVICE_REGION {
   EFI_VIRTUAL_ADDRESS    DeviceRegionStart;
@@ -76,5 +79,44 @@ EFIAPI
 StmmGetBootChainForGpt (
   VOID
   );
+
+typedef
+EFI_STATUS
+(EFIAPI *VAR_INT_COMPUTE_MEASUREMENT)(
+  IN  NVIDIA_VAR_INT_PROTOCOL     *This,
+  IN  CHAR16                      *VariableName,
+  IN  EFI_GUID                    *VendorGuid,
+  IN  UINT32                      Attributes,
+  IN  VOID                        *Data,
+  IN  UINTN                       Size
+  );
+
+typedef
+EFI_STATUS
+(EFIAPI *VAR_INT_FUNCTION)(
+  IN NVIDIA_VAR_INT_PROTOCOL    *This
+  );
+
+typedef
+EFI_STATUS
+(EFIAPI *VAR_INVALIDATE_FUNCTION)(
+  IN  NVIDIA_VAR_INT_PROTOCOL   *This,
+  IN  CHAR16                    *VariableName,
+  IN  EFI_GUID                  *VendorGuid,
+  IN  EFI_STATUS                PreviousResult
+  );
+
+struct _NVIDIA_VAR_INT_PROTOCOL {
+  VAR_INT_COMPUTE_MEASUREMENT    ComputeNewMeasurement;
+  VAR_INT_FUNCTION               WriteNewMeasurement;
+  VAR_INVALIDATE_FUNCTION        InvalidateLast;
+  VAR_INT_FUNCTION               Validate;
+  UINT64                         PartitionByteOffset;
+  UINT64                         PartitionSize;
+  NVIDIA_NOR_FLASH_PROTOCOL      *NorFlashProtocol;
+  UINT64                         BlockSize;
+  UINT8                          *CurMeasurement;
+  UINT32                         MeasurementSize;
+};
 
 #endif //STANDALONEMM_OPTEE_DEVICE_MEM_H
