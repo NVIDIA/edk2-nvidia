@@ -1,0 +1,34 @@
+#/** @file
+#
+#  Tegra USB Device driver
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = TegraUsbDeviceControllerDxe
+  FILE_GUID                      = 8b4f3de3-15cd-49bb-8cc9-21bc453324de
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = TegraUsbDeviceControllerEntryPoint
+
+[Sources.common]
+  TegraUsbDeviceControllerDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gUsbDeviceProtocolGuid  ## PRODUCES

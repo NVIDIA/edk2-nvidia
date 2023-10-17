@@ -365,6 +365,7 @@
   #
   # Android Fastboot
   #
+  Silicon/NVIDIA/Drivers/TegraUsbDeviceControllerDxe/TegraUsbDeviceControllerDxe.inf
   EmbeddedPkg/Application/AndroidFastboot/AndroidFastbootApp.inf
   EmbeddedPkg/Drivers/AndroidFastbootTransportUsbDxe/FastbootTransportUsbDxe.inf
   Silicon/NVIDIA/Drivers/TegraFastBootDxe/TegraFastBootDxe.inf
