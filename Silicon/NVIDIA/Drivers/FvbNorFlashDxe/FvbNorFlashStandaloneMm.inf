@@ -2,7 +2,7 @@
 #
 #  Nor Flash Driver
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -19,6 +19,7 @@
 
 [Sources.common]
   FvbNorFlashStandaloneMm.c
+  VarIntCheck.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -27,6 +28,8 @@
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
   StandaloneMmPkg/StandaloneMmPkg.dec
+  CryptoPkg/CryptoPkg.dec
+  SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
   BaseMemoryLib
@@ -39,6 +42,7 @@
   ArmSvcLib
   StandaloneMmOpteeLib
   PlatformResourceLib
+  NvVarIntLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
@@ -48,10 +52,14 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase64
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+  gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported
+  gEfiCryptoPkgTokenSpaceGuid.PcdHashApiLibPolicy
 
 [Protocols]
   gNVIDIANorFlashProtocolGuid
   gEfiSmmFirmwareVolumeBlockProtocolGuid
+  gNVIDIAVarIntGuid
+  gEfiSmmVariableProtocolGuid
 
 [Guids]
   gEfiSystemNvDataFvGuid
@@ -60,6 +68,9 @@
   gEdkiiNvVarStoreFormattedGuid
   gEdkiiWorkingBlockSignatureGuid
   gNVIDIAPlatformResourceDataGuid
+  gEfiGlobalVariableGuid
+  gEfiImageSecurityDatabaseGuid
+  gNVIDIAPublicVariableGuid
 
 [Depex]
   TRUE

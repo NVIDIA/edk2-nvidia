@@ -43,6 +43,7 @@
   gArmTokenSpaceGuid.PcdMmBufferSize|65536
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|FALSE
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
+  gEfiCryptoPkgTokenSpaceGuid.PcdHashApiLibPolicy|0x00000002
 
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
