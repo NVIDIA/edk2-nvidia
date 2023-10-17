@@ -1,7 +1,7 @@
 /** @file
 *  NVIDIA Secure Boot Provision
 *
-*  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+* SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -313,6 +313,47 @@ ExitUpdateSecVar:
 }
 
 /**
+ * GetPayloadFromSigned
+ *
+ * Util functions to get the signed payload (get past the auth header).
+ *
+ * @param[in]   SignedPayload      Input Signed Pointer.
+ * @param[in]   SignedPayloadSize  Input Signed Payload Size.
+ * @param[out]  PayloadPtr         Output Payload Pointer.
+ * @param[out]  PayloadSize        Size of Signed payload.
+ **/
+STATIC
+VOID
+GetPayloadFromSigned (
+  IN  VOID   *SignedPayload,
+  IN  UINTN  SignedPayloadSize,
+  OUT UINT8  **PayloadPtr,
+  OUT UINTN  *PayloadSize
+  )
+{
+  EFI_VARIABLE_AUTHENTICATION_2  *CertData;
+  UINT8                          *SigData;
+  UINT32                         SigDataSize;
+
+  CertData = (EFI_VARIABLE_AUTHENTICATION_2 *)SignedPayload;
+
+  if ((CertData->AuthInfo.Hdr.wCertificateType != WIN_CERT_TYPE_EFI_GUID) ||
+      !CompareGuid (&CertData->AuthInfo.CertType, &gEfiCertPkcs7Guid))
+  {
+    DEBUG ((DEBUG_ERROR, "No Valid Signature Data Found\n"));
+    *PayloadPtr  = SignedPayload;
+    *PayloadSize = SignedPayloadSize;
+  } else {
+    SigData      = CertData->AuthInfo.CertData;
+    SigDataSize  = CertData->AuthInfo.Hdr.dwLength - (UINT32)(OFFSET_OF (WIN_CERTIFICATE_UEFI_GUID, CertData));
+    *PayloadPtr  = SigData + SigDataSize;
+    *PayloadSize = SignedPayloadSize - OFFSET_OF_AUTHINFO2_CERT_DATA - (UINTN)SigDataSize;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a:PayloadSize %u\n", __FUNCTION__, *PayloadSize));
+}
+
+/**
  Append to the default secure boot keys.
  Util function to take a signed key variable, strip out the
  header and append to existing default variables to enable
@@ -336,21 +377,18 @@ AppendToDefault (
   IN UINTN     SignedPayloadSize
   )
 {
-  EFI_STATUS                     Status;
-  EFI_VARIABLE_AUTHENTICATION_2  *CertData;
-  UINT8                          *SigData;
-  UINT32                         SigDataSize;
-  UINT8                          *PayloadPtr;
-  UINTN                          PayloadSize;
-  UINT32                         Attributes;
-  UINTN                          DataSize = 0;
+  EFI_STATUS  Status;
+  UINT8       *PayloadPtr;
+  UINTN       PayloadSize;
+  UINT32      Attributes;
+  UINTN       DataSize = 0;
 
-  CertData = (EFI_VARIABLE_AUTHENTICATION_2 *)SignedPayload;
-
-  SigData     = CertData->AuthInfo.CertData;
-  SigDataSize = CertData->AuthInfo.Hdr.dwLength - (UINT32)(OFFSET_OF (WIN_CERTIFICATE_UEFI_GUID, CertData));
-  PayloadPtr  = SigData + SigDataSize;
-  PayloadSize = SignedPayloadSize - OFFSET_OF_AUTHINFO2_CERT_DATA - (UINTN)SigDataSize;
+  GetPayloadFromSigned (
+    SignedPayload,
+    SignedPayloadSize,
+    &PayloadPtr,
+    &PayloadSize
+    );
 
   Status = gRT->GetVariable (
                   DefaultName,
@@ -411,13 +449,19 @@ AppendKeys (
   UINT8       ComputedHashValue[SHA256_DIGEST_SIZE];
   BOOLEAN     UpdateSecDb;
   CHAR16      *HashVarName = NULL;
+  UINT8       *PayloadPtr;
+  UINTN       PayloadSize;
+  UINT32      Attributes;
+  UINTN       VarSize;
 
-  Status = GetVariable2 (
-             InputVarName,
-             InputVarGuid,
-             (VOID **)&SignedPayload,
-             &SignedPayloadSize
-             );
+  PayloadPtr  = NULL;
+  PayloadSize = 0;
+  Status      = GetVariable2 (
+                  InputVarName,
+                  InputVarGuid,
+                  (VOID **)&SignedPayload,
+                  &SignedPayloadSize
+                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -464,6 +508,7 @@ AppendKeys (
         __FUNCTION__,
         SecDbToUpdate
         ));
+      VarSize = 0;
 
       /*
        * If we're here then we haven't processed the signed payload and we
@@ -472,14 +517,25 @@ AppendKeys (
        * else append/create the default key variable.
        */
       if (SetupMode == USER_MODE) {
+        Attributes = (EFI_VARIABLE_NON_VOLATILE |
+                      EFI_VARIABLE_BOOTSERVICE_ACCESS |
+                      EFI_VARIABLE_RUNTIME_ACCESS |
+                      EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS);
+        GetPayloadFromSigned (
+          SignedPayload,
+          SignedPayloadSize,
+          &PayloadPtr,
+          &PayloadSize
+          );
+        /* If the payload size is 0, then don't add the Append_write attribute */
+        if (PayloadSize != 0) {
+          Attributes |= EFI_VARIABLE_APPEND_WRITE;
+        }
+
         Status = gRT->SetVariable (
                         SecDbToUpdate,
                         SecDbGuid,
-                        (EFI_VARIABLE_NON_VOLATILE |
-                         EFI_VARIABLE_BOOTSERVICE_ACCESS |
-                         EFI_VARIABLE_RUNTIME_ACCESS |
-                         EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS |
-                         EFI_VARIABLE_APPEND_WRITE),
+                        Attributes,
                         SignedPayloadSize,
                         SignedPayload
                         );
