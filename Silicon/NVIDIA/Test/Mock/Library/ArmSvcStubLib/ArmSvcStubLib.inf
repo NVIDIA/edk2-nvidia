@@ -1,0 +1,27 @@
+## @file
+#  Mock of the ARM SVC Library.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2016 - 2017, ARM Ltd. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = ArmSvcStubLib
+  FILE_GUID                      = 8e592e43-1f03-459d-9e89-689e533d0ab5
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = ArmSvcLib
+
+[Sources]
+  ArmSvcStub.c
+
+[LibraryClasses]
+  DebugLib
+  BaseMemoryLib
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
