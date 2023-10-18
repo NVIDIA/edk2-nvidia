@@ -863,7 +863,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   gArmTokenSpaceGuid.PcdVFPEnabled|1
 
   # Use Segment numbers as PCI UID
-  gEdkiiDynamicTablesPkgTokenSpaceGuid.PcdPciUseSegmentAsUid|TRUE
+  gEdkiiDynamicTablesPkgTokenSpaceGuid.PcdPciUseSegmentAsUid|FALSE
 
   #
   # Security PCDs

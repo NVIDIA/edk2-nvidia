@@ -7,10 +7,12 @@
 **/
 
 #include <ArmMpidr.h>
+#include <PiDxe.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/PrintLib.h>
 #include <libfdt.h>
@@ -182,9 +184,9 @@ CommonFloorSweepPcie (
     NodeOffset = fdt_first_subnode (Dtb, ParentOffset);
     while (NodeOffset > 0) {
       CONST VOID  *Property;
-      INT32       Length;
+      INT32       Length, Ret;
       UINT32      Tmp32;
-      UINT32      PcieId;
+      UINT32      PcieId, CtrlId;
 
       Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
       if ((Property == NULL) || (AsciiStrCmp (Property, "pci") != 0)) {
@@ -207,6 +209,7 @@ CommonFloorSweepPcie (
         fdt_get_name (Dtb, NodeOffset, NULL)
         ));
       ASSERT (PCIE_ID_TO_SOCKET (PcieId) == Socket);
+      CtrlId = PCIE_ID_TO_INTERFACE (PcieId);
 
       if ((PcieDisableReg & (1UL << PCIE_ID_TO_INTERFACE (PcieId))) != 0) {
         INT32  FdtErr;
@@ -228,21 +231,23 @@ CommonFloorSweepPcie (
         DEBUG ((DEBUG_INFO, "Deleted PcieId=0x%x node\n", PcieId));
       } else {
         /* Patching PCIe DT node */
-        UINT64  Aperture64Base;
-        UINT64  Aperture64Size;
-        UINT64  CbbFabricBase;
-        UINT64  CbbCtlOffset;
-        UINT64  EcamBase;
-        UINT64  EcamSize;
-        UINT64  NonPrefBase;
-        UINT64  NonPrefSize;
-        UINT64  PrefBase;
-        UINT64  PrefSize;
-        UINT64  IoBase;
-        UINT64  IoSize;
-        UINT64  MSSBase;
-        UINT32  C2CMode;
-        INT32   RPNodeOffset;
+        UINT64                        Aperture64Base;
+        UINT64                        Aperture64Size;
+        UINT64                        CbbFabricBase;
+        UINT64                        CbbCtlOffset;
+        UINT64                        EcamBase;
+        UINT64                        EcamSize;
+        UINT64                        NonPrefBase;
+        UINT64                        NonPrefSize;
+        UINT64                        PrefBase;
+        UINT64                        PrefSize;
+        UINT64                        IoBase;
+        UINT64                        IoSize;
+        UINT64                        MSSBase;
+        UINT32                        C2CMode;
+        INT32                         RPNodeOffset;
+        VOID                          *Hob;
+        TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
 
         CbbFabricBase = SocketCbbFabricBaseAddr[Socket];
         if (CbbFabricBase == 0) {
@@ -382,6 +387,49 @@ CommonFloorSweepPcie (
               }
             }
           }
+        }
+
+        /* Add 'nvidia,socket-id' property */
+        Ret = fdt_appendprop_u32 (Dtb, NodeOffset, "nvidia,socket-id", Socket);
+        if (Ret) {
+          DEBUG ((DEBUG_ERROR, "Failed to add \"nvidia,socket-id\" property: %d\n", Ret));
+          return EFI_UNSUPPORTED;
+        }
+
+        /* Add 'nvidia,controller-id' property */
+        Ret = fdt_appendprop_u32 (Dtb, NodeOffset, "nvidia,controller-id", CtrlId);
+        if (Ret) {
+          DEBUG ((DEBUG_ERROR, "Failed to add \"nvidia,controller-id\" property: %d\n", Ret));
+          return EFI_UNSUPPORTED;
+        }
+
+        /* Patch 'linux,pci-domain' property from UEFI variables */
+        Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
+        if ((Hob != NULL) &&
+            (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
+        {
+          Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+        }
+
+        if (Mb1Config != NULL) {
+          if ((Mb1Config->Data.Mb1Data.Header.MajorVersion == TEGRABL_MB1_BCT_MAJOR_VERSION) &&
+              (Mb1Config->Data.Mb1Data.Header.MinorVersion >= 10))
+          {
+            Property = fdt_getprop (Dtb, NodeOffset, "linux,pci-domain", &Length);
+            if ((Property == NULL) || (Length != sizeof (Tmp32))) {
+              DEBUG ((DEBUG_ERROR, "Unexpected pcie property\n"));
+              return EFI_UNSUPPORTED;
+            }
+
+            DEBUG ((
+              DEBUG_INFO,
+              "Patching 'linux,pci-domain' with = %x\n",
+              Mb1Config->Data.Mb1Data.PcieConfig[Socket][CtrlId].Segment
+              ));
+            *(UINT32 *)Property = cpu_to_fdt32 ((UINT32)(Mb1Config->Data.Mb1Data.PcieConfig[Socket][CtrlId].Segment));
+          }
+        } else {
+          DEBUG ((DEBUG_WARN, "Failed to find UEFI early variables to patch \"linux,pci-domain\" property\n"));
         }
 
         NodeOffset = fdt_next_subnode (Dtb, NodeOffset);

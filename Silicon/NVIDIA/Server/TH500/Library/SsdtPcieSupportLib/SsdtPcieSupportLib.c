@@ -155,14 +155,14 @@ EFIAPI
 UpdateSharedNSMemAddr (
   IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
   IN  OUT        AML_OBJECT_NODE_HANDLE        RpNode,
-  IN             UINT32                        Uid
+  IN             UINT32                        Socket,
+  IN             UINT32                        Instance
   )
 {
   EFI_STATUS                   Status;
   RAS_PCIE_DPC_COMM_BUF_INFO   *DpcCommBuf = NULL;
   RAS_FW_PCIE_DPC_COMM_STRUCT  *DpcComm    = NULL;
   AML_OBJECT_NODE_HANDLE       AddrNode;
-  UINT32                       Socket, Instance;
 
   Status = gBS->LocateProtocol (
                   &gNVIDIARasNsCommPcieDpcDataProtocolGuid,
@@ -183,9 +183,7 @@ UpdateSharedNSMemAddr (
     return EFI_SUCCESS;
   }
 
-  DpcComm  = (RAS_FW_PCIE_DPC_COMM_STRUCT *)DpcCommBuf->PcieBase;
-  Socket   = Uid >> 4;
-  Instance = Uid & 0xF;
+  DpcComm = (RAS_FW_PCIE_DPC_COMM_STRUCT *)DpcCommBuf->PcieBase;
   DEBUG ((DEBUG_VERBOSE, "%a: Socket = %u, Instance = %u\r\n", __FUNCTION__, Socket, Instance));
 
   Status = AmlFindNode (RpNode, "ADDR", &AddrNode);
@@ -207,16 +205,13 @@ EFIAPI
 UpdateLICAddr (
   IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
   IN  OUT        AML_OBJECT_NODE_HANDLE        Node,
-  IN             UINT32                        Uid,
+  IN             UINT64                        Socket,
   IN             EFI_PHYSICAL_ADDRESS          Base
   )
 {
   EFI_STATUS              Status;
   AML_OBJECT_NODE_HANDLE  LicaNode;
-  UINT64                  Socket;
   EFI_PHYSICAL_ADDRESS    Address;
-
-  Socket = Uid >> 4;
 
   Status = AmlFindNode (Node, "LICA", &LicaNode);
   if (EFI_ERROR (Status)) {
@@ -264,8 +259,9 @@ STATIC
 EFI_STATUS
 EFIAPI
 UpdateLOC (
-  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
-  IN  OUT        AML_OBJECT_NODE_HANDLE        Node
+  IN  OUT        AML_OBJECT_NODE_HANDLE  Node,
+  IN             UINT8                   SocketId,
+  IN             UINT8                   ControllerId
   )
 {
   EFI_STATUS              Status;
@@ -276,7 +272,7 @@ UpdateLOC (
     return Status;
   }
 
-  Status = AmlNameOpUpdateInteger (LocNode, PciInfo->PciSegmentGroupNumber);
+  Status = AmlNameOpUpdateInteger (LocNode, (SocketId << 4) | ControllerId);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -332,6 +328,11 @@ GeneratePciSlots (
   CHAR8                                   SwitchName[5];
   UINT8                                   SwitchNumber;
   BOOLEAN                                 GpuNodeIsDetached;
+  EFI_HANDLE                              *Handles = NULL;
+  UINTN                                   CurrentHandle;
+  UINT32                                  SocketID     = 0xFFFFFFFF;
+  UINT32                                  ControllerID = 0xFFFFFFFF;
+  CHAR8                                   PCIeAslName[AML_NAME_SEG_SIZE + 1];
 
   ASSERT (
     PciNode !=  NULL
@@ -375,13 +376,74 @@ GeneratePciSlots (
     goto error_handler;
   }
 
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                  NULL,
+                  &NumberOfHandles,
+                  &Handles
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate host bridge protocols, %r.\r\n", __FUNCTION__, Status));
+    goto error_handler;
+  }
+
+  for (CurrentHandle = 0; CurrentHandle < NumberOfHandles; CurrentHandle++) {
+    NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *RootBridgeCfgIo = NULL;
+    Status = gBS->HandleProtocol (
+                    Handles[CurrentHandle],
+                    &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                    (VOID **)&RootBridgeCfgIo
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to get protocol for handle %p, %r.\r\n",
+        __FUNCTION__,
+        Handles[CurrentHandle],
+        Status
+        ));
+      goto error_handler;
+    }
+
+    if (PciInfo->PciSegmentGroupNumber == RootBridgeCfgIo->SegmentNumber) {
+      SocketID     = RootBridgeCfgIo->SocketID;
+      ControllerID = RootBridgeCfgIo->ControllerID;
+      break;
+    }
+  }
+
+  if ((SocketID == 0xFFFFFFFF) && (ControllerID == 0xFFFFFFFF)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get SocketID & ControllerID for the Segment %x.\r\n",
+      __FUNCTION__,
+      PciInfo->PciSegmentGroupNumber
+      ));
+    goto error_handler;
+  }
+
+  /*
+   * Change the name of the PCIe SSDT node to the following format
+   * PCxy where x=Socket ID and y=Controller ID
+   */
+  CopyMem (PCIeAslName, "PCIx", AML_NAME_SEG_SIZE + 1);
+  PCIeAslName[AML_NAME_SEG_SIZE - 1] = AsciiFromHex (ControllerID & 0xF);
+  if (SocketID > 0) {
+    PCIeAslName[AML_NAME_SEG_SIZE - 2] = AsciiFromHex (SocketID & 0xF);
+  }
+
+  Status = AmlDeviceOpUpdateName (PciNode, (CHAR8 *)PCIeAslName);
+  if (EFI_ERROR (Status)) {
+    goto error_handler;
+  }
+
   /*
    * Using the Socket-ID as the Proximity Domain ID.
-   * Extract the Socket-ID from the Segment number.
    */
   Status = AmlCodeGenNameInteger (
              "_PXM",
-             (PciInfo->PciSegmentGroupNumber >> 4) & 0xF,
+             SocketID & 0xF,
              PciNode,
              NULL
              );
@@ -390,7 +452,7 @@ GeneratePciSlots (
     return Status;
   }
 
-  Status = UpdateLOC (PciInfo, RpNode);
+  Status = UpdateLOC (RpNode, SocketID, ControllerID);
   if (EFI_ERROR (Status)) {
     goto error_handler;
   }
@@ -400,7 +462,7 @@ GeneratePciSlots (
     goto error_handler;
   }
 
-  Status = UpdateSharedNSMemAddr (PciInfo, RpNode, Uid);
+  Status = UpdateSharedNSMemAddr (PciInfo, RpNode, SocketID, ControllerID);
   if (EFI_ERROR (Status)) {
     goto error_handler;
   }
@@ -548,7 +610,7 @@ GeneratePciSlots (
       }
 
       GpuNodeIsDetached = FALSE;
-      Status            = UpdateLICAddr (PciInfo, GpuNode, Uid, TH500_SW_IO1_BASE_SOCKET_0);
+      Status            = UpdateLICAddr (PciInfo, GpuNode, SocketID, TH500_SW_IO1_BASE_SOCKET_0);
       if (EFI_ERROR (Status)) {
         goto error_handler;
       }

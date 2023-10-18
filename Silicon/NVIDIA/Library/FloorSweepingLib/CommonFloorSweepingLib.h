@@ -11,6 +11,7 @@
 
 #include <Uefi/UefiBaseType.h>
 #include <TH500/TH500Definitions.h>
+#include <TH500/TH500MB1Configuration.h>
 
 // Platform CPU configuration
 #define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))

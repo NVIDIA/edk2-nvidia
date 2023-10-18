@@ -53,6 +53,7 @@ typedef struct {
   NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL    PcieRootBridgeConfigurationIo;
 
   UINT32                                              CtrlId;
+  UINT32                                              SocketId;
 
   UINT64                                              XalBase;
   UINT64                                              XalSize;

@@ -382,7 +382,8 @@ RetrainLink (
 
         DEBUG ((
           DEBUG_ERROR,
-          "PCIe Controller-0x%x Link Status after re-train (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
+          "PCIe Socket-0x%x:Ctrl-0x%x Link Status after re-train (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
+          Private->SocketId,
           Private->CtrlId,
           PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
           PciExpCap->LinkCapability.Bits.MaxLinkWidth,
@@ -390,13 +391,13 @@ RetrainLink (
           PciExpCap->LinkStatus.Bits.NegotiatedLinkWidth
           ));
       } else {
-        DEBUG ((DEBUG_ERROR, "PCIe Controller-0x%x wait for Link Bandwith Timeout\r\n", Private->CtrlId));
+        DEBUG ((DEBUG_ERROR, "PCIe Socket-0x%x:Ctrl-0x%x wait for Link Bandwith Timeout\r\n", Private->SocketId, Private->CtrlId));
       }
     } else {
-      DEBUG ((DEBUG_ERROR, "PCIe Controller-0x%x Link Retrain Timeout\r\n", Private->CtrlId));
+      DEBUG ((DEBUG_ERROR, "PCIe Socket-0x%x:Ctrl-0x%x Link Retrain Timeout\r\n", Private->SocketId, Private->CtrlId));
     }
   } else {
-    DEBUG ((DEBUG_ERROR, "PCIe Controller-0x%x Previous Link train Timeout\r\n", Private->CtrlId));
+    DEBUG ((DEBUG_ERROR, "PCIe Socket-0x%x:Ctrl-0x%x Previous Link train Timeout\r\n", Private->SocketId, Private->CtrlId));
   }
 }
 
@@ -534,7 +535,6 @@ InitializeController (
   )
 {
   UINT64                        val;
-  UINT32                        Socket, Ctrl;
   EFI_STATUS                    Status;
   PCI_CAPABILITY_PCIEXP         *PciExpCap = NULL;
   UINT8                         C2cStatus;
@@ -549,9 +549,6 @@ InitializeController (
   }
 
   ASSERT (Mb1Config);
-
-  Socket = (Private->CtrlId >> 4) & 0xF;
-  Ctrl   = (Private->CtrlId) & 0xF;
 
   /* Program XAL */
   MmioWrite32 (Private->XalBase + XAL_RC_MEM_32BIT_BASE_HI, upper_32_bits (Private->MemBase));
@@ -607,7 +604,8 @@ InitializeController (
   if ( WaitForBit16 (Private, &PciExpCap->LinkStatus.Uint16, 13, 10000, 100, TRUE)) {
     DEBUG ((
       DEBUG_ERROR,
-      "PCIe Controller-0x%x Link is UP (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
+      "PCIe Socket-0x%x:Ctrl-0x%x Link is UP (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
+      Private->SocketId,
       Private->CtrlId,
       PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
       PciExpCap->LinkCapability.Bits.MaxLinkWidth,
@@ -618,7 +616,7 @@ InitializeController (
     /**
      * Re-train link if disable_ltssm_auto_train set in BCT.
      */
-    if (Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].DisableLTSSMAutoTrain) {
+    if (Mb1Config->Data.Mb1Data.PcieConfig[Private->SocketId][Private->CtrlId].DisableLTSSMAutoTrain) {
       RetrainLink (Private);
     }
 
@@ -641,7 +639,8 @@ InitializeController (
   } else {
     DEBUG ((
       DEBUG_ERROR,
-      "PCIe Controller-0x%x Link is DOWN (Capable: Gen-%d,x%d)\r\n",
+      "PCIe Socket-0x%x:Ctrl-0x%x Link is DOWN (Capable: Gen-%d,x%d)\r\n",
+      Private->SocketId,
       Private->CtrlId,
       PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
       PciExpCap->LinkCapability.Bits.MaxLinkWidth
@@ -1540,6 +1539,8 @@ DeviceDiscoveryNotify (
   INT32                                        SizeCells;
   INT32                                        RangeSize;
   CONST VOID                                   *SegmentNumber = NULL;
+  CONST VOID                                   *CtrlId        = NULL;
+  CONST VOID                                   *SocketId      = NULL;
   PCIE_CONTROLLER_PRIVATE                      *Private       = NULL;
   EFI_EVENT                                    ExitBootServiceEvent;
   UINT32                                       DeviceTreeHandle;
@@ -1631,11 +1632,39 @@ DeviceDiscoveryNotify (
         Private->PcieRootBridgeConfigurationIo.SegmentNumber = SwapBytes32 (Private->PcieRootBridgeConfigurationIo.SegmentNumber);
       }
 
-      DEBUG ((DEBUG_ERROR, "Segment Number = 0x%x\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
+      DEBUG ((DEBUG_INFO, "Segment Number = 0x%x\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
 
-      /* Currently Segment number is nothing but the controller-ID  */
-      Private->CtrlId = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
-      DEBUG ((DEBUG_ERROR, "Controller-ID = 0x%x\n", Private->CtrlId));
+      CtrlId = fdt_getprop (
+                 DeviceTreeNode->DeviceTreeBase,
+                 DeviceTreeNode->NodeOffset,
+                 "nvidia,controller-id",
+                 &PropertySize
+                 );
+      if ((CtrlId == NULL) || (PropertySize != sizeof (UINT32))) {
+        DEBUG ((DEBUG_ERROR, "Failed to read Controller ID\n"));
+      } else {
+        CopyMem (&Private->CtrlId, CtrlId, sizeof (UINT32));
+        Private->CtrlId = SwapBytes32 (Private->CtrlId);
+      }
+
+      Private->PcieRootBridgeConfigurationIo.ControllerID = Private->CtrlId;
+      DEBUG ((DEBUG_INFO, "Controller-ID = 0x%x\n", Private->CtrlId));
+
+      SocketId = fdt_getprop (
+                   DeviceTreeNode->DeviceTreeBase,
+                   DeviceTreeNode->NodeOffset,
+                   "nvidia,socket-id",
+                   &PropertySize
+                   );
+      if ((SocketId == NULL) || (PropertySize != sizeof (UINT32))) {
+        DEBUG ((DEBUG_ERROR, "Failed to read Socket ID\n"));
+      } else {
+        CopyMem (&Private->SocketId, SocketId, sizeof (UINT32));
+        Private->SocketId = SwapBytes32 (Private->SocketId);
+      }
+
+      Private->PcieRootBridgeConfigurationIo.SocketID = Private->SocketId;
+      DEBUG ((DEBUG_INFO, "Socket-ID = 0x%x\n", Private->SocketId));
 
       RPNodeOffset = fdt_first_subnode (
                        DeviceTreeNode->DeviceTreeBase,
@@ -1861,7 +1890,7 @@ DeviceDiscoveryNotify (
         if (PxmDmnStartProperty != NULL) {
           Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = SwapBytes32 (PxmDmnStartProperty[0]);
         } else {
-          Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID ((Private->PcieRootBridgeConfigurationIo.SegmentNumber >> 4) & 0xF);
+          Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (Private->PcieRootBridgeConfigurationIo.SocketID);
         }
 
         NumPxmDmnProperty = fdt_getprop (

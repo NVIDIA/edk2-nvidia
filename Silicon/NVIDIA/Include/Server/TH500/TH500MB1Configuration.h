@@ -18,7 +18,7 @@
 #define TEGRABL_MAX_PCIE_PER_SOCKET       10
 
 #define TEGRABL_MB1_BCT_MAJOR_VERSION  0
-#define TEGRABL_MB1_BCT_MINOR_VERSION  9
+#define TEGRABL_MB1_BCT_MINOR_VERSION  10
 
 #pragma pack(1)
 
@@ -84,7 +84,8 @@ typedef struct {
   UINT32    MaxWidth;
   UINT8     SlotType;
   UINT16    SlotNum;
-  UINT8     Reserved[13];
+  UINT16    Segment;
+  UINT8     Reserved[11];
 } TEGRABL_MB1BCT_PCIE_CONFIG;
 
 typedef struct {
