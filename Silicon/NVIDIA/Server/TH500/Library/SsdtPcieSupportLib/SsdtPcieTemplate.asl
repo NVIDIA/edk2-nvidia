@@ -80,9 +80,6 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
     // The "ADDR" named object would be patched by UEFI to have the correct
     // address of the NS shared memory region of this particular instance.
     Name (ADDR, 0xFFFFFFFFFFFFFFFF)
-    // The "LICA" named object would be patched by UEFI to have the correct
-    // address of the LIC region of this particular instance.
-    Name (LICA, 0xFFFFFFFFFFFFFFFF)
 
     // The "_SEG " named object would be added dynamically by UEFI at the
     // time of generating the PCIe node.
@@ -136,7 +133,7 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
       Return (Buffer () {0})
     } // end _DSM
 
-    OperationRegion (LIC4, SystemMemory, LICA, TH500_SW_IO4_SIZE)
+    OperationRegion (LIC4, SystemMemory, TH500_SW_IO4_BASE_SOCKET_0, TH500_SW_IO4_SIZE)
     Field (LIC4, DWordAcc, NoLock, Preserve) {
       STS4, 32,
       SET4, 32,

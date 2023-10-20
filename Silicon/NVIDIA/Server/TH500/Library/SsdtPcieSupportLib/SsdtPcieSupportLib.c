@@ -376,11 +376,6 @@ GeneratePciSlots (
     goto error_handler;
   }
 
-  Status = UpdateLICAddr (PciInfo, RpNode, Uid, TH500_SW_IO4_BASE_SOCKET_0);
-  if (EFI_ERROR (Status)) {
-    goto error_handler;
-  }
-
   Status1 = gBS->LocateHandleBuffer (
                    ByProtocol,
                    &gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid,
