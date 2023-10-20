@@ -51,6 +51,8 @@
 #define VENDOR_RAMDISK_NAME_SIZE                  32
 #define VENDOR_RAMDISK_TABLE_ENTRY_BOARD_ID_SIZE  16
 
+#define BOOTCONFIG_RESERVED_SIZE  1024
+
 typedef struct {
   UINT8     Magic[VENDOR_BOOT_MAGIC_SIZE];
   UINT32    HeaderVersion;
@@ -74,7 +76,7 @@ typedef struct {
   UINT32    VendorRamdiskTableSize;      /* size in bytes for the vendor ramdisk table */
   UINT32    VendorRamdiskTableEntryNum;  /* number of entries in the vendor ramdisk table */
   UINT32    VendorRamdiskTableEntrySize; /* size in bytes for a vendor ramdisk table entry */
-  UINT32    BootconfigSize;              /* size in bytes for the bootconfig section */
+  UINT32    BootConfigSize;              /* size in bytes for the bootconfig section */
 } VENDOR_BOOTIMG_TYPE4_HEADER;
 
 typedef struct {
@@ -89,6 +91,17 @@ typedef struct {
   UINT32    BoardId[VENDOR_RAMDISK_TABLE_ENTRY_BOARD_ID_SIZE];
 } VENDOR_RAMDISK_TABLE_TYPE4_ENTRY;
 
+// Android Vendor Boot Data structure
+typedef struct {
+  UINT32    Offset;
+  UINT32    VendorRamdiskSize;
+  UINT32    PageSize;
+  UINT32    HeaderVersion;
+  UINT32    DtbSize;
+  UINT32    VendorRamdiskTableSize;
+  UINT32    BootConfigSize;
+} VENDOR_BOOT_DATA;
+
 // Android Boot Data structure
 typedef struct {
   UINT32    Offset;
@@ -97,14 +110,6 @@ typedef struct {
   UINT32    PageSize;
   UINT32    HeaderVersion;
 } ANDROID_BOOT_DATA;
-
-// Android Vendor Boot Data structure
-typedef struct {
-  UINT32    Offset;
-  UINT32    VendorRamdiskSize;
-  UINT32    PageSize;
-  UINT32    HeaderVersion;
-} VENDOR_BOOT_DATA;
 
 // Private data structure
 typedef struct {

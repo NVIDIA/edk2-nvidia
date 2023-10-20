@@ -11,6 +11,7 @@
 **/
 
 #include "AndroidBootDxe.h"
+#include "AndroidBootConfig.h"
 #include <libfdt.h>
 #include <Library/PcdLib.h>
 #include <PiDxe.h>
@@ -539,6 +540,9 @@ VendorBootGetVerify (
   UINTN                        ImageSize;
   UINT32                       PageSize;
   UINT32                       VendorRamdiskSize;
+  UINT32                       BootConfigSize;
+  UINT32                       DtbSize;
+  UINT32                       VendorRamdiskTableSize;
   CHAR8                        *HeaderKernelArgs;
 
   // Allocate a buffer large enough to hold any header type.
@@ -576,9 +580,12 @@ VendorBootGetVerify (
   // Vendor boot support version 4 for GKI
   switch (Header->HeaderVersion) {
     case 4:
-      PageSize          = SIZE_4KB;
-      VendorRamdiskSize = Header->VendorRamdiskSize;
-      HeaderKernelArgs  = Header->KernelArgs;
+      PageSize               = Header->PageSize;
+      VendorRamdiskSize      = Header->VendorRamdiskSize;
+      DtbSize                = Header->DtbSize;
+      VendorRamdiskTableSize = Header->VendorRamdiskTableSize;
+      BootConfigSize         = Header->BootConfigSize;
+      HeaderKernelArgs       = Header->KernelArgs;
 
       break;
 
@@ -613,10 +620,13 @@ VendorBootGetVerify (
     // This size will be a reference when boot manger allocates a pool for LoadFile service
     // Kernel image to be loaded to a buffer allocated by boot manager
     // Ramdisk image to be loaded to a buffer allocated by this LoadFile service
-    ImgData->Offset            = Offset;
-    ImgData->VendorRamdiskSize = VendorRamdiskSize;
-    ImgData->PageSize          = PageSize;
-    ImgData->HeaderVersion     = Header->HeaderVersion;
+    ImgData->Offset                 = Offset;
+    ImgData->VendorRamdiskSize      = VendorRamdiskSize;
+    ImgData->PageSize               = PageSize;
+    ImgData->HeaderVersion          = Header->HeaderVersion;
+    ImgData->DtbSize                = DtbSize;
+    ImgData->VendorRamdiskTableSize = VendorRamdiskTableSize;
+    ImgData->BootConfigSize         = BootConfigSize;
   }
 
   if (KernelArgs != NULL) {
@@ -964,7 +974,8 @@ AndroidBootLoadFile (
   UINTN        BufSize;
   UINTN        BufBase;
   UINTN        BufBaseRamdisk;
-  UINTN        BufSizeRamdisk;
+  UINTN        BufSizeRamdisk         = 0;
+  UINTN        BootConfigReservedSize = 0;
   MiscCmdType  MiscCmd;
 
   mInitRdBaseAddress = 0;
@@ -1023,7 +1034,8 @@ AndroidBootLoadFile (
     if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
        && (VendorImgData != NULL))
     {
-      BufSize += VendorImgData->VendorRamdiskSize;
+      BufSize               += VendorImgData->VendorRamdiskSize + BOOTCONFIG_RESERVED_SIZE;
+      BootConfigReservedSize = BOOTCONFIG_RESERVED_SIZE;
     }
   }
 
@@ -1041,7 +1053,7 @@ AndroidBootLoadFile (
   }
 
   BufBaseRamdisk = BufBase;
-  BufSizeRamdisk = BufSize;
+  BufSizeRamdisk = BufSize - BootConfigReservedSize;
 
   if (PcdGetBool (PcdBootAndroidImage)) {
     // recovery kernel has dedicated ramdisk in recovery.img
@@ -1051,7 +1063,8 @@ AndroidBootLoadFile (
     {
       // ramdisk layout in memory
       // - vendor_boot ramdisk, followed by
-      // - generic_boot ramdisk
+      // - generic_boot ramdisk, then
+      // - boot_config
       Addr    = ALIGN_VALUE (sizeof (VENDOR_BOOTIMG_TYPE4_HEADER), VendorImgData->PageSize);
       BufSize = VendorImgData->VendorRamdiskSize;
       Status  = AndroidBootRead (
@@ -1105,6 +1118,52 @@ AndroidBootLoadFile (
   }
 
   DEBUG ((DEBUG_INFO, "%a: RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
+
+  if ((PcdGetBool (PcdBootAndroidImage)) && (ImgData->HeaderVersion >= 3)) {
+    Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
+    if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
+       && (VendorImgData != NULL))
+    {
+      // load BootConfig right behind the ramdisk memory
+      BufBase += BufSize;
+
+      Addr = ALIGN_VALUE (sizeof (VENDOR_BOOTIMG_TYPE4_HEADER), VendorImgData->PageSize) + \
+             ALIGN_VALUE (VendorImgData->VendorRamdiskSize, VendorImgData->PageSize) + \
+             ALIGN_VALUE (VendorImgData->DtbSize, VendorImgData->PageSize) + \
+             ALIGN_VALUE (VendorImgData->VendorRamdiskTableSize, VendorImgData->PageSize);
+      BufSize = VendorImgData->BootConfigSize;
+
+      Status = AndroidBootRead (
+                 VendorBlockIo,
+                 VendorDiskIo,
+                 Addr,
+                 (VOID *)BufBase,
+                 BufSize
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Unable to read disk for bootconfig from offset %x" \
+          " to %09p: %r\n",
+          __FUNCTION__,
+          Addr,
+          BufBase,
+          Status
+          ));
+        goto ErrorExit;
+      }
+
+      Status = AddBootConfigTrailer ((UINT64)BufBase, VendorImgData->BootConfigSize);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: BootConfig trailer create failed\n", __FUNCTION__));
+        goto ErrorExit;
+      }
+
+      BufSizeRamdisk += VendorImgData->BootConfigSize + BOOTCONFIG_TRAILER_SIZE;
+
+      DEBUG ((DEBUG_ERROR, "%a: BootConfig loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
+    }
+  }
 
   mInitRdBaseAddress = BufBaseRamdisk;
   mInitRdSize        = BufSizeRamdisk;
