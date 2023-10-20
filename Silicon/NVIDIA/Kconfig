@@ -84,6 +84,30 @@ menu "Boot Options"
   depends on SINGLE_BOOT_DEADLOOP_APP || SINGLE_BOOT_L4T_LAUNCHER
   bool "UI Menu Application disabled"
 
+  choice SOC_DISPLAY_HANDOFF_MODE
+    prompt "SOC Display Hand-Off Mode"
+    help
+      How to hand-off the SOC display.
+
+    default SOC_DISPLAY_HANDOFF_MODE_NEVER
+
+    config SOC_DISPLAY_HANDOFF_MODE_NEVER
+    bool "Never"
+    help
+      Always reset the display on UEFI exit.
+
+    config SOC_DISPLAY_HANDOFF_MODE_ALWAYS
+    bool "Always"
+    help
+      Never reset the display on UEFI exit.
+
+    config SOC_DISPLAY_HANDOFF_MODE_AUTO
+    bool "Auto"
+    help
+      Reset the display on UEFI exit unless it is active (requires
+      kernel support).
+  endchoice
+
 endmenu
 
 menu "Debug Options"

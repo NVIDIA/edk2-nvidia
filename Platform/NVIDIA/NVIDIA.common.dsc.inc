@@ -731,7 +731,15 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gNVIDIATokenSpaceGuid.PcdUefiShellEnabled|L"UefiShellEnabled"|gNVIDIAPublicVariableGuid|0x0|0x01|BS,NV
   gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport|L"DgpuDtEfifbSupport"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|L"EnabledPcieNicTopology"|gNVIDIAPublicVariableGuid|0x0|{ 0x0, 0xFF, 0xFF, 0xFF, 0xFF }|BS,NV
+!ifdef CONFIG_SOC_DISPLAY_HANDOFF_MODE_NEVER
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode|L"SocDisplayHandoffMode"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
+!endif
+!ifdef CONFIG_SOC_DISPLAY_HANDOFF_MODE_ALWAYS
+  gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode|L"SocDisplayHandoffMode"|gNVIDIAPublicVariableGuid|0x0|1|BS,NV,RT
+!endif
+!ifdef CONFIG_SOC_DISPLAY_HANDOFF_MODE_AUTO
+  gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode|L"SocDisplayHandoffMode"|gNVIDIAPublicVariableGuid|0x0|2|BS,NV,RT
+!endif
   # Memory Test options
   gNVIDIATokenSpaceGuid.PcdMemoryTest|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x0|{0}|BS,NV,RT
 !ifdef CONFIG_MEMORY_TEST
