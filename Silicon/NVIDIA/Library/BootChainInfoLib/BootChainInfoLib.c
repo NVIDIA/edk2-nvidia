@@ -2,7 +2,7 @@
 
   Boot Chain Information Library
 
-  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,6 +16,8 @@
 #include <Library/HobLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/PcdLib.h>
+#include <Library/NVIDIADebugLib.h>
 
 #define MAX_BOOT_CHAIN_INFO_MAPPING  2
 #define PARTITION_PREFIX_LENGTH      2
@@ -249,4 +251,52 @@ GetPartitionBaseNameAndBootChainAny (
     *BootChain = 0;
     return EFI_SUCCESS;
   }
+}
+
+EFI_STATUS
+EFIAPI
+GetBootChainPartitionNameAny (
+  IN  CONST CHAR16  *BasePartitionName,
+  IN  UINTN         BootChain,
+  OUT CHAR16        *BootChainPartitionName
+  )
+{
+  if ((BasePartitionName == NULL) || (BootChainPartitionName == NULL) ||
+      (BootChain >= MAX_BOOT_CHAIN_INFO_MAPPING))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  UnicodeSPrint (
+    BootChainPartitionName,
+    sizeof (CHAR16) * MAX_PARTITION_NAME_LEN,
+    L"%s%s",
+    T234PartitionNameId[BootChain],
+    BasePartitionName
+    );
+
+  return EFI_SUCCESS;
+}
+
+UINT32
+EFIAPI
+GetBootChainForGpt (
+  VOID
+  )
+{
+  VOID  *Hob;
+
+  if (!PcdGetBool (PcdGptIsPerBootChain)) {
+    return BOOT_CHAIN_A;
+  }
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  NV_ASSERT_RETURN (
+    ((Hob != NULL) && (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))),
+    return BOOT_CHAIN_A,
+    "%a: Error getting boot chain\n",
+    __FUNCTION__
+    );
+
+  return ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ActiveBootChain;
 }

@@ -1,6 +1,6 @@
 /** @file
 
-Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -234,6 +234,31 @@ BOOLEAN
 IsBufInSecSpMbox (
   IN UINTN   Buf,
   IN UINT16  SpId
+  );
+
+/**
+ * Check if system is T234
+ *
+ * @retval    TRUE    System is T234
+ *            FALSE   System is not T234
+ **/
+BOOLEAN
+EFIAPI
+IsT234 (
+  VOID
+  );
+
+/**
+ * Get boot chain value to use for GPT location.  If system does not
+ * support per-boot-chain GPT, 0 is returned.
+ *
+ * @retval UINT32     Boot chain value to use for GPT location
+ *
+ **/
+UINT32
+EFIAPI
+StmmGetBootChainForGpt (
+  VOID
   );
 
 #endif //STANDALONEMM_OPTEE_DEVICE_MEM_H

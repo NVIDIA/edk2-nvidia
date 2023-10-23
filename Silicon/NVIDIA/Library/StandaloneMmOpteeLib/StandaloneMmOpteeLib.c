@@ -1,7 +1,7 @@
 /** @file
 Misc Library for OPTEE related functions in Standalone MM.
 
-Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -793,4 +793,35 @@ IsBufInSecSpMbox (
   DEBUG ((DEBUG_INFO, "%a:%d %u\n", __FUNCTION__, __LINE__, IsBufInSpRange));
 ExitIsBufInSecSpMbox:
   return IsBufInSpRange;
+}
+
+BOOLEAN
+EFIAPI
+IsT234 (
+  VOID
+  )
+{
+  return (IsOpteePresent () && IsDeviceTypePresent ("-t234", NULL));
+}
+
+UINT32
+EFIAPI
+StmmGetBootChainForGpt (
+  VOID
+  )
+{
+  UINT32                BootChain = 0;
+  EFI_MM_DEVICE_REGION  *ScratchRegions;
+  UINT32                NumRegions;
+  EFI_STATUS            Status;
+
+  if (IsT234 ()) {
+    Status = GetDeviceTypeRegions ("scratch-t234", &ScratchRegions, &NumRegions);
+    NV_ASSERT_RETURN ((!EFI_ERROR (Status) && NumRegions == 1), return BootChain, "%a: failed to get scratch region: %r\n", __FUNCTION__, Status);
+
+    Status = GetActiveBootChainStMm (T234_CHIP_ID, ScratchRegions[0].DeviceRegionStart, &BootChain);
+    ASSERT_EFI_ERROR (Status);
+  }
+
+  return BootChain;
 }

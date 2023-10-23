@@ -2,7 +2,7 @@
 
   Standalone MM driver Fvb Driver
 
-  Copyright (c) 2018 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -13,6 +13,7 @@
 #include <Library/StandaloneMmOpteeDeviceMem.h>
 #include <FvbPrivate.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/IoLib.h>
 
 /* FVB transactions will only be made to socket 0. */
 #define FVB_DEVICE_SOCKET  (0)
@@ -1157,11 +1158,17 @@ FvbInitializeGpt (
   EFI_PARTITION_TABLE_HEADER  PartitionHeader;
   VOID                        *PartitionEntryArray;
   CONST EFI_PARTITION_ENTRY   *PartitionEntry;
+  UINTN                       GptHeaderOffset;
 
-  // Validate GPT and get table entries, always 512 bytes from the end
+  GptHeaderOffset = GptGetHeaderOffset (
+                      StmmGetBootChainForGpt (),
+                      NorFlashAttributes->MemoryDensity,
+                      NorFlashAttributes->BlockSize
+                      );
+
   Status = NorFlashProtocol->Read (
                                NorFlashProtocol,
-                               NorFlashAttributes->MemoryDensity - GPT_PARTITION_BLOCK_SIZE,
+                               GptHeaderOffset,
                                sizeof (PartitionHeader),
                                &PartitionHeader
                                );

@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -13,13 +13,14 @@
 #include <Library/BaseCryptLib.h>
 #include <Library/PlatformResourceLib.h>
 
-#define BOOT_CHAIN_MAX           2
-#define BOOT_CHAIN_BIT_FIELD_LO  4
-#define BOOT_CHAIN_BIT_FIELD_HI  5
-#define BOOT_CHAIN_STATUS_LO     0
-#define BOOT_CHAIN_STATUS_HI     3
-#define BOOT_CHAIN_GOOD          0
-#define BOOT_CHAIN_BAD           1
+#define BOOT_CHAIN_SCRATCH_OFFSET  0x3cc
+#define BOOT_CHAIN_MAX             2
+#define BOOT_CHAIN_BIT_FIELD_LO    4
+#define BOOT_CHAIN_BIT_FIELD_HI    5
+#define BOOT_CHAIN_STATUS_LO       0
+#define BOOT_CHAIN_STATUS_HI       3
+#define BOOT_CHAIN_GOOD            0
+#define BOOT_CHAIN_BAD             1
 
 #define SCRATCH_RECOVERY_BOOT_OFFSET  0x2000
 #define RECOVERY_BOOT_BIT             1

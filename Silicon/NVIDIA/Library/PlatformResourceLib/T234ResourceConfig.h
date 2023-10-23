@@ -131,4 +131,20 @@ T234UpdatePlatformResourceInformation (
   IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   );
 
+/**
+  Retrieve T234 Active Boot Chain Information for StMm.
+
+  @param[in]  ScratchBase           Base address of scratch register space.
+  @param[out] BootChain             Active boot chain (0=A, 1=B).
+ *
+ * @retval  EFI_SUCCESS             Boot chain retrieved successfully.
+ * @retval  others                  Error retrieving boot chain.
+**/
+EFI_STATUS
+EFIAPI
+T234GetActiveBootChainStMm (
+  IN  UINTN   ScratchBase,
+  OUT UINT32  *BootChain
+  );
+
 #endif //__T234_RESOURCE_CONFIG_H__

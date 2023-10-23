@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -122,6 +122,7 @@
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x10000
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
+  gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain|TRUE
 
 [PcdsDynamicHii.common.T234SLT]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2

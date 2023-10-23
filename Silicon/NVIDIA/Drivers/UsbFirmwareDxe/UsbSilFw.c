@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -83,7 +83,7 @@ UsbFirmwareImageCallback (
     goto Done;
   }
 
-  mUsbFwData.UsbFwSize = Attributes.Bytes;
+  mUsbFwData.UsbFwSize = Attributes.ReadBytes;
   UsbFwBuffer          = AllocateZeroPool (mUsbFwData.UsbFwSize);
   mUsbFwData.UsbFwBase = UsbFwBuffer;
   Status               = FwImage->Read (FwImage, 0, mUsbFwData.UsbFwSize, mUsbFwData.UsbFwBase, FW_IMAGE_RW_FLAG_NONE);

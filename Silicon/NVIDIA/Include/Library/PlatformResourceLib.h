@@ -402,4 +402,22 @@ SetNextBootRecovery (
   IN  VOID
   );
 
+/**
+  Retrieve Active Boot Chain Information for StMm.
+
+  @param[in]  ChipID                Chip ID
+  @param[in]  ScratchBase           Base address of scratch register space.
+  @param[out] BootChain             Active boot chain (0=A, 1=B).
+ *
+ * @retval  EFI_SUCCESS             Boot chain retrieved successfully.
+ * @retval  others                  Error retrieving boot chain.
+**/
+EFI_STATUS
+EFIAPI
+GetActiveBootChainStMm (
+  IN  UINTN   ChipID,
+  IN  UINTN   ScratchBase,
+  OUT UINT32  *BootChain
+  );
+
 #endif //__PLATFORM_RESOURCE_LIB_H__
