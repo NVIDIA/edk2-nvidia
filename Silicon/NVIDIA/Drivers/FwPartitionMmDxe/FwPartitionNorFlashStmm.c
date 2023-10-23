@@ -2,7 +2,7 @@
 
   FW Partition Protocol NorFlash Dxe
 
-  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,6 +11,7 @@
 #include <PiDxe.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/BootChainInfoLib.h>
 #include <Library/BrBctUpdateDeviceLib.h>
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
@@ -20,6 +21,7 @@
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/MmServicesTableLib.h>
+#include <Library/StandaloneMmOpteeDeviceMem.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeLib.h>
 #include <Protocol/NorFlash.h>
@@ -34,10 +36,12 @@ typedef struct {
   NOR_FLASH_ATTRIBUTES         Attributes;
   NVIDIA_NOR_FLASH_PROTOCOL    *NorFlash;
   FW_PARTITION_DEVICE_INFO     DeviceInfo;
+  UINTN                        UnalignedGptStart;
 } FW_PARTITION_NOR_FLASH_INFO;
 
-STATIC FW_PARTITION_NOR_FLASH_INFO  *mNorFlashInfo = NULL;
-STATIC UINTN                        mNumDevices    = 0;
+STATIC FW_PARTITION_NOR_FLASH_INFO  *mNorFlashInfo   = NULL;
+STATIC UINTN                        mNumDevices      = 0;
+STATIC UINT32                       mActiveBootChain = 0;
 
 /**
   Erase data from device.
@@ -245,6 +249,24 @@ FPNorFlashWrite (
         ));
       return Status;
     }
+  } else if (Offset == NorFlashInfo->UnalignedGptStart) {
+    Status = FPNorFlashErase (
+               DeviceInfo,
+               Offset - (Offset % NorFlashInfo->Attributes.BlockSize),
+               Bytes + (Offset % NorFlashInfo->Attributes.BlockSize)
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: GPT erase offset=%llu, bytes=%u error: %r\n",
+        __FUNCTION__,
+        Offset - (Offset % NorFlashInfo->Attributes.BlockSize),
+        Bytes + (Offset % NorFlashInfo->Attributes.BlockSize),
+
+        Status
+        ));
+      return Status;
+    }
   }
 
   DEBUG ((
@@ -344,11 +366,12 @@ FPNorFlashInitDevices (
       break;
     }
 
-    NorFlashInfo              = &mNorFlashInfo[mNumDevices];
-    NorFlashInfo->Signature   = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
-    mNorFlashInfo->Bytes      = Attributes.MemoryDensity;
-    mNorFlashInfo->Attributes = Attributes;
-    mNorFlashInfo->NorFlash   = NorFlash;
+    NorFlashInfo                     = &mNorFlashInfo[mNumDevices];
+    NorFlashInfo->Signature          = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
+    mNorFlashInfo->Bytes             = Attributes.MemoryDensity;
+    mNorFlashInfo->Attributes        = Attributes;
+    mNorFlashInfo->NorFlash          = NorFlash;
+    mNorFlashInfo->UnalignedGptStart = GptGetGptDataOffset (OTHER_BOOT_CHAIN (mActiveBootChain), Attributes.MemoryDensity, Attributes.BlockSize);
 
     DeviceInfo              = &NorFlashInfo->DeviceInfo;
     DeviceInfo->DeviceName  = L"MM-NorFlash";
@@ -383,7 +406,9 @@ FwPartitionNorFlashStmmInitialize (
   EFI_STATUS  Status;
   UINTN       Index;
 
-  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, OverwriteActiveFwPartition, ChipId);
+  mActiveBootChain = ActiveBootChain;
+
+  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, OverwriteActiveFwPartition, ChipId, StmmGetBootChainForGpt ());
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", Status));
     return Status;

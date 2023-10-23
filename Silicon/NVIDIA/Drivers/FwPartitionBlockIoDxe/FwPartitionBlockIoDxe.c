@@ -1,7 +1,7 @@
 /** @file
   FW Partition Protocol BlockIo Dxe
 
-  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -10,6 +10,7 @@
 #include <PiDxe.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/BootChainInfoLib.h>
 #include <Library/BrBctUpdateDeviceLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
@@ -631,7 +632,7 @@ FwPartitionBlockIoDxeInitialize (
     return EFI_UNSUPPORTED;
   }
 
-  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition, TegraGetChipID ());
+  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition, TegraGetChipID (), GetBootChainForGpt ());
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", Status));
     return Status;

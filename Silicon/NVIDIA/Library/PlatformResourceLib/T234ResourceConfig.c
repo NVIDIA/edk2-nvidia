@@ -718,3 +718,25 @@ T234SetNextBootChain (
 
   return EFI_SUCCESS;
 }
+
+EFI_STATUS
+EFIAPI
+T234GetActiveBootChainStMm (
+  IN  UINTN   ScratchBase,
+  OUT UINT32  *BootChain
+  )
+{
+  *BootChain = MmioBitFieldRead32 (
+                 ScratchBase + BOOT_CHAIN_SCRATCH_OFFSET,
+                 BOOT_CHAIN_BIT_FIELD_LO,
+                 BOOT_CHAIN_BIT_FIELD_HI
+                 );
+
+  DEBUG ((DEBUG_INFO, "%a: addr=0x%llx bootchain=%u\n", __FUNCTION__, ScratchBase, *BootChain));
+
+  if (*BootChain >= BOOT_CHAIN_MAX) {
+    return EFI_UNSUPPORTED;
+  }
+
+  return EFI_SUCCESS;
+}

@@ -3,7 +3,7 @@
   GPT - GUID Partition Table Library Public Interface
         This implementation of GPT uses just the secondary GPT table.
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,7 +15,11 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
-#define NVIDIA_GPT_BLOCK_SIZE  512
+#define NVIDIA_GPT_BLOCK_SIZE   512
+#define NVIDIA_GPT_MAX_ENTRIES  128
+#define NVIDIA_GPT_ALIGN_MIN    SIZE_64KB
+
+#define NVIDIA_GPT_PARTITION_TABLE_SIZE  (NVIDIA_GPT_MAX_ENTRIES * sizeof (EFI_PARTITION_ENTRY))
 
 /**
   Validate GPT header structure
@@ -105,6 +109,53 @@ UINT64
 EFIAPI
 GptPartitionSizeInBlocks (
   CONST EFI_PARTITION_ENTRY  *Partition
+  );
+
+/**
+  Return the offset of the GPT header in bytes.
+
+  @param[in]    BootChain       Active boot chain (0=A, 1=B).
+  @param[in]    DeviceSize      Size of flash device in bytes.
+  @param[in]    DeviceBlockSize Block size of flash device in bytes.
+
+  @retval       UINTN           Offset of the GPT in bytes.
+**/
+UINTN
+EFIAPI
+GptGetHeaderOffset (
+  UINT32  BootChain,
+  UINTN   DeviceSize,
+  UINT32  DeviceBlockSize
+  );
+
+/**
+  Return the offset of the GPT data in bytes.
+
+  @param[in]    BootChain       Active boot chain (0=A, 1=B).
+  @param[in]    DeviceSize      Size of flash device in bytes.
+  @param[in]    DeviceBlockSize Block size of flash device in bytes.
+
+  @retval       UINTN           Offset of the GPT data in bytes.
+
+**/
+UINTN
+EFIAPI
+GptGetGptDataOffset (
+  UINT32  BootChain,
+  UINTN   DeviceSize,
+  UINT32  DeviceBlockSize
+  );
+
+/**
+  Return the size of the GPT data in bytes.
+
+  @retval       UINTN           Size of the GPT data in bytes.
+
+**/
+UINTN
+EFIAPI
+GptGetGptDataSize (
+  VOID
   );
 
 #endif

@@ -3,7 +3,7 @@
   GPT - GUID Partition Table Library
         This implementation of GPT uses just the secondary GPT table.
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,6 +11,7 @@
 
 #include <Library/GptLib.h>
 #include <Library/BaseLib.h>
+#include <Library/NVIDIADebugLib.h>
 
 EFI_STATUS
 EFIAPI
@@ -152,4 +153,68 @@ GptPartitionSizeInBlocks (
   )
 {
   return Partition->EndingLBA - Partition->StartingLBA + 1;
+}
+
+UINTN
+EFIAPI
+GptGetHeaderOffset (
+  UINT32  BootChain,
+  UINTN   DeviceSize,
+  UINT32  DeviceBlockSize
+  )
+{
+  UINTN   GptHeaderOffset;
+  UINTN   SecondaryGptStart;
+  UINTN   GptTableSize;
+  UINT32  PartitionAlign;
+
+  PartitionAlign = MAX (DeviceBlockSize, NVIDIA_GPT_ALIGN_MIN);
+
+  switch (BootChain) {
+    case 0:
+      GptHeaderOffset = DeviceSize - NVIDIA_GPT_BLOCK_SIZE;
+      break;
+    case 1:
+      SecondaryGptStart = DeviceSize - (4 * PartitionAlign);
+      GptTableSize      = NVIDIA_GPT_PARTITION_TABLE_SIZE;
+      GptHeaderOffset   = SecondaryGptStart + GptTableSize;
+      break;
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: Invalid BootChain=%u\n", __FUNCTION__, BootChain));
+      ASSERT (FALSE);
+      GptHeaderOffset = 0;
+      break;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: 0x%x/0x%x/0x%x %u Offset=0x%x\n", __FUNCTION__, DeviceSize, PartitionAlign, DeviceBlockSize, BootChain, GptHeaderOffset));
+
+  return GptHeaderOffset;
+}
+
+UINTN
+EFIAPI
+GptGetGptDataOffset (
+  UINT32  BootChain,
+  UINTN   DeviceSize,
+  UINT32  DeviceBlockSize
+  )
+{
+  UINTN  GptHeaderOffset;
+  UINTN  GptDataOffset;
+
+  GptHeaderOffset = GptGetHeaderOffset (BootChain, DeviceSize, DeviceBlockSize);
+  GptDataOffset   = GptHeaderOffset - NVIDIA_GPT_PARTITION_TABLE_SIZE;
+
+  DEBUG ((DEBUG_INFO, "%a: %u hdr=0x%x data=0x%x\n", __FUNCTION__, BootChain, GptHeaderOffset, GptDataOffset));
+
+  return GptDataOffset;
+}
+
+UINTN
+EFIAPI
+GptGetGptDataSize (
+  VOID
+  )
+{
+  return NVIDIA_GPT_PARTITION_TABLE_SIZE + NVIDIA_GPT_BLOCK_SIZE;
 }

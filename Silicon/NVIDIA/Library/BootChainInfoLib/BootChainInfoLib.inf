@@ -2,7 +2,7 @@
 #
 #  Boot Chain Information Library
 #
-#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -28,6 +28,10 @@
   PrintLib
   PlatformResourceLib
   TegraPlatformInfoLib
+  HobLib
 
 [Guids]
   gNVIDIAPlatformResourceDataGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain

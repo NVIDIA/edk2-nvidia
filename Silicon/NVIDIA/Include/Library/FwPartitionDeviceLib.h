@@ -2,7 +2,7 @@
 
   FW Partition Device Library
 
-  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -224,6 +224,7 @@ FwPartitionDeviceLibDeinit (
   @param[in]  MaxFwPartitions             Maximum number of FW partitions to support
   @param[in]  OverwriteActiveFwPartition  Flag if ok to overwrite active partitions
   @param[in]  ChipId                      Chip Id of system
+  @param[in]  GptBootChain                Boot chain for locating GPT (0=a, 1=b)
 
   @retval EFI_SUCCESS           Operation successful
   @retval others                Error occurred
@@ -235,7 +236,8 @@ FwPartitionDeviceLibInit (
   IN  UINT32   ActiveBootChain,
   IN  UINTN    MaxFwPartitions,
   IN  BOOLEAN  OverwriteActiveFwPartition,
-  IN  UINTN    ChipId
+  IN  UINTN    ChipId,
+  IN  UINT32   GptBootChain
   );
 
 /**
@@ -275,6 +277,22 @@ FW_PARTITION_PRIVATE_DATA *
 EFIAPI
 FwPartitionGetPrivateArray (
   VOID
+  );
+
+/**
+  Add FW pseudo-partition that updates inactive partition meta-data on write.
+
+  @param[in]  MmDeviceInfo        FW_PARTITION_DEVICE_INFO pointer for MM
+                                  device or NULL if not MM.
+
+  @retval EFI_SUCCESS             Operation successful
+  @retval others                  Error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+FwPartitionAddPseudoPartition (
+  IN  FW_PARTITION_DEVICE_INFO  *MmDeviceInfo   OPTIONAL
   );
 
 #endif

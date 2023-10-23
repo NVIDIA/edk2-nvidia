@@ -2,7 +2,7 @@
 
   Fvb Driver
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -10,6 +10,7 @@
 **/
 
 #include <FvbPrivate.h>
+#include <Library/BootChainInfoLib.h>
 
 /**
   The GetAttributes() function retrieves the attributes and
@@ -1024,6 +1025,7 @@ FVBInitialize (
   VOID                        *FtwSpareBuffer;
   VOID                        *FtwWorkingBuffer;
   EFI_RT_PROPERTIES_TABLE     *RtProperties;
+  UINTN                       GptHeaderOffset;
 
   if (PcdGetBool (PcdEmuVariableNvModeEnable)) {
     return EFI_SUCCESS;
@@ -1046,10 +1048,11 @@ FVBInitialize (
     return Status;
   }
 
-  // Validate GPT and get table entries, always 512 bytes from the end
+  GptHeaderOffset = GptGetHeaderOffset (GetBootChainForGpt (), NorFlashAttributes.MemoryDensity, NorFlashAttributes.BlockSize);
+
   Status = NorFlashProtocol->Read (
                                NorFlashProtocol,
-                               NorFlashAttributes.MemoryDensity - GPT_PARTITION_BLOCK_SIZE,
+                               GptHeaderOffset,
                                sizeof (PartitionHeader),
                                &PartitionHeader
                                );

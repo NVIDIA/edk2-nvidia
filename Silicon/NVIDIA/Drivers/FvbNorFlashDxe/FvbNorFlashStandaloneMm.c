@@ -2,7 +2,7 @@
 
   Standalone MM driver Fvb Driver
 
-  Copyright (c) 2018 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -12,6 +12,8 @@
 #include <Library/MmServicesTableLib.h>
 #include <Library/StandaloneMmOpteeDeviceMem.h>
 #include <FvbPrivate.h>
+#include <Library/PlatformResourceLib.h>
+#include <Library/IoLib.h>
 
 /**
   The GetAttributes() function retrieves the attributes and
@@ -1030,6 +1032,7 @@ FVBNORInitialize (
   VOID                        *VarStoreBuffer;
   VOID                        *FtwSpareBuffer;
   VOID                        *FtwWorkingBuffer;
+  UINTN                       GptHeaderOffset;
 
   if (PcdGetBool (PcdEmuVariableNvModeEnable)) {
     return EFI_SUCCESS;
@@ -1056,10 +1059,15 @@ FVBNORInitialize (
     return Status;
   }
 
-  // Validate GPT and get table entries, always 512 bytes from the end
+  GptHeaderOffset = GptGetHeaderOffset (
+                      StmmGetBootChainForGpt (),
+                      NorFlashAttributes.MemoryDensity,
+                      NorFlashAttributes.BlockSize
+                      );
+
   Status = NorFlashProtocol->Read (
                                NorFlashProtocol,
-                               NorFlashAttributes.MemoryDensity - GPT_PARTITION_BLOCK_SIZE,
+                               GptHeaderOffset,
                                sizeof (PartitionHeader),
                                &PartitionHeader
                                );

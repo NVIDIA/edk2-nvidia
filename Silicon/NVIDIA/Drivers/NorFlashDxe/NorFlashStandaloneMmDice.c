@@ -2,7 +2,7 @@
 
   Addendum to NOR Flash Standalone MM Driver for DICE feature
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -579,6 +579,7 @@ GetWormPartitionInfo (
   EFI_PARTITION_TABLE_HEADER  PartitionHeader;
   VOID                        *PartitionEntryArray = NULL;
   CONST EFI_PARTITION_ENTRY   *PartitionEntry;
+  UINTN                       GptHeaderOffset;
 
   NorFlashProtocol   = WormInfo->NorFlashProtocol;
   NorFlashAttributes = &WormInfo->NorFlashAttributes;
@@ -588,10 +589,15 @@ GetWormPartitionInfo (
     goto exit;
   }
 
-  // Validate GPT and get table entries, always 512 bytes from the end
+  GptHeaderOffset = GptGetHeaderOffset (
+                      StmmGetBootChainForGpt (),
+                      NorFlashAttributes->MemoryDensity,
+                      NorFlashAttributes->BlockSize
+                      );
+
   Status = NorFlashProtocol->Read (
                                NorFlashProtocol,
-                               NorFlashAttributes->MemoryDensity - GPT_PARTITION_BLOCK_SIZE,
+                               GptHeaderOffset,
                                sizeof (PartitionHeader),
                                &PartitionHeader
                                );

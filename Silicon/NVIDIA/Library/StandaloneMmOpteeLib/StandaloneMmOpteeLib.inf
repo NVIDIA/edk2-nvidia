@@ -38,6 +38,7 @@
   BaseMemoryLib
   HobLib
   IoLib
+  PlatformResourceLib
 
 [FeaturePcd]
   gNVIDIATokenSpaceGuid.PcdOpteePresent

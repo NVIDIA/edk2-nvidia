@@ -2,7 +2,7 @@
 
   MM FW partition protocol driver
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -10,6 +10,7 @@
 
 #include <PiDxe.h>
 #include <Library/BrBctUpdateDeviceLib.h>
+#include <Library/BootChainInfoLib.h>
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
@@ -122,7 +123,7 @@ FPMmWrite (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: read offset=%llu, bytes=%u error: %r\n",
+      "%a: write offset=%llu, bytes=%u error: %r\n",
       __FUNCTION__,
       Offset,
       Bytes,
@@ -207,25 +208,23 @@ FPMmAddPartitions (
     DeviceInfo->DeviceWrite = FPMmWrite;
     DeviceInfo->BlockSize   = 1;
 
-    Status = FwPartitionAdd (
-               PartitionInfo->Name,
-               DeviceInfo,
-               0,
-               PartitionInfo->Bytes
-               );
+    if (StrCmp (PartitionInfo->Name, FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) == 0) {
+      Status = FwPartitionAddPseudoPartition (DeviceInfo);
+    } else {
+      Status = FwPartitionAdd (
+                 PartitionInfo->Name,
+                 DeviceInfo,
+                 0,
+                 PartitionInfo->Bytes
+                 );
+    }
+
     if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: error adding %s\n",
-        __FUNCTION__,
-        PartitionInfo->Name
-        ));
+      DEBUG ((DEBUG_ERROR, "%a: error adding %s\n", __FUNCTION__, PartitionInfo->Name));
     }
 
     mNumPartitions++;
   }
-
-  Status = EFI_SUCCESS;
 
 Done:
   if (PartitionInfoBuffer != NULL) {
@@ -360,7 +359,7 @@ FwPartitionMmDxeInitialize (
 
   mMmCommBufferPhysical = mMmCommBuffer;
 
-  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition, ChipId);
+  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition, ChipId, GetBootChainForGpt ());
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", Status));
     return Status;

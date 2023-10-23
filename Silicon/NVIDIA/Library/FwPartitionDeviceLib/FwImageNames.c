@@ -1,7 +1,7 @@
 /** @file
   FW Partition Protocol Image Names support
 
-  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,6 +21,7 @@ STATIC CONST CHAR16  *SystemFwImageNamesCommon[] = {
   L"bpmp-fw-dtb",
   L"cpu-bootloader",
   L"eks",
+  L"GPT",
   L"mb1",
   L"MB1_BCT",
   L"mb2",

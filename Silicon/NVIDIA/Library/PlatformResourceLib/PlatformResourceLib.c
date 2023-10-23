@@ -742,3 +742,25 @@ SetRootfsStatusReg (
       return EFI_UNSUPPORTED;
   }
 }
+
+EFI_STATUS
+EFIAPI
+GetActiveBootChainStMm (
+  IN  UINTN   ChipID,
+  IN  UINTN   ScratchBase,
+  OUT UINT32  *BootChain
+  )
+{
+  EFI_STATUS  Status;
+
+  switch (ChipID) {
+    case T234_CHIP_ID:
+      Status = T234GetActiveBootChainStMm (ScratchBase, BootChain);
+      break;
+    default:
+      Status = EFI_UNSUPPORTED;
+      break;
+  }
+
+  return Status;
+}

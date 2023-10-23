@@ -1,12 +1,16 @@
 /** @file
 
-Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #ifndef STANDLONEMM_OPTEE_DEVICE_MEM_H
 #define STANDLONEMM_OPTEE_DEVICE_MEM_H
+
+#include <Library/TegraPlatformInfoLib.h>
+#include <Library/PlatformResourceLib.h>
 
 #define DEVICE_REGION_NAME_MAX_LEN  32
 #define MAX_DEVICE_REGIONS          10
@@ -46,6 +50,31 @@ EFI_STATUS
 GetQspiDeviceRegion (
   UINT64  *QspiBaseAddress,
   UINTN   *QspiRegionSize
+  );
+
+/**
+ * Check if system is T234
+ *
+ * @retval    TRUE    System is T234
+ *            FALSE   System is not T234
+ **/
+BOOLEAN
+EFIAPI
+IsT234 (
+  VOID
+  );
+
+/**
+ * Get boot chain value to use for GPT location.  If system does not
+ * support per-boot-chain GPT, 0 is returned.
+ *
+ * @retval UINT32     Boot chain value to use for GPT location
+ *
+ **/
+UINT32
+EFIAPI
+StmmGetBootChainForGpt (
+  VOID
   );
 
 #endif //STANDALONEMM_OPTEE_DEVICE_MEM_H
