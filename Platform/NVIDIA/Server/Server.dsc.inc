@@ -117,6 +117,7 @@
 
 [PcdsFixedAtBuild.common]
   gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x07
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x43
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x400
 
 [PcdsDynamicDefault]

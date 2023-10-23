@@ -844,7 +844,7 @@ UpdateThermalZoneInfoAndInstallSsdt (
 
     Status = AmlFindNode (RootNode, "_SB", &ScopeNode);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Failed to find scope node %a\r\n"));
+      DEBUG ((DEBUG_ERROR, "Failed to find scope node\r\n"));
       ASSERT_EFI_ERROR (Status);
       return Status;
     }
