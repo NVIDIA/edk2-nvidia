@@ -50,6 +50,7 @@ STATIC CONST CHAR16  *SystemFwImageNamesT234[] = {
   L"psc_bl1",
   L"psc-fw",
   L"pscrf",
+  L"pva-fw",
   L"smm-fw",
   L"tsec-fw",
   L"fsi-fw",
