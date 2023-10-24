@@ -149,6 +149,9 @@
 #define UART_BAUD_RATE_9600    4
 #define UART_BAUD_RATE_MAX     5
 
+#define PERF_VERSION_DEFAULT  0
+#define PERF_VERSION_C1_NCM   1
+
 typedef struct {
   UINT32     L4TSupported;
   BOOLEAN    QuickBootSupported;
