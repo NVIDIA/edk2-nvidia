@@ -114,6 +114,19 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
         Return (Package() {RERR, RDAT})
       }
 
+      Method (CONV, 1, Serialized, 0, IntObj, IntObj) {
+        Local0 = Arg0
+        Local2 = Local0 >> TH500_TWOS_COMP_SHIFT
+        If (Local2 > 0) {
+            //two's complement for negatives
+            Local3 = (Local0 ^ XOR_MASK) + 1
+            Local1 = 2732 - (Local3 / 100)
+        } Else {
+            Local1 = (Local0 / 100) + 2732
+        }
+        Return (Local1)
+      }
+
       Method (TEMP, 1, Serialized, 0, IntObj, IntObj) {
         Local0 = Buffer(8){}
         CreateDWordField (Local0, 0x00, CMD)
@@ -126,10 +139,8 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
           Return (2732)
         }
         CreateDWordField (DerefOf (Index (Local1, 1)), 0x00, TEMP)
-        Local3 = TEMP / 100
-        Local4 = 2732
-        Add (Local3, Local4, Local3)
-        Return (Local3)
+        Local2 = \_SB.BPM1.CONV(TEMP)
+        Return (Local2)
       }
 
       Method (TELM, 2, Serialized, 0, IntObj, {IntObj, IntObj}) {
@@ -408,7 +419,11 @@ DefinitionBlock ("BpmpSsdtSocket1.aml", "SSDT", 2, "NVIDIA", "BPMP_S1", 0x000000
       Field (TL10, AnyAcc, NoLock, Preserve) {
         TLIM, 32
       }
-      Method(_TMP) { Return ((TLIM / 100) + 2732) }
+      Method(_TMP) {
+        Local0 = 0
+        Local0 = \_SB.BPM1.CONV(TLIM)
+        return (Local0)
+      }
       Method(_CRT) { Return (TH500_THERMAL_ZONE_CRT + 2732) }
       Name (_STR, Unicode ("Thermal Zone Skt1 TLimit"))
     }

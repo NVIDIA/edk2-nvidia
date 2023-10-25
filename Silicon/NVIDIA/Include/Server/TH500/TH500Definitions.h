@@ -268,6 +268,8 @@
 #define TH500_TLIMIT_SOCKET_2      0x20000C3900BCULL
 #define TH500_TLIMIT_SOCKET_3      0x30000C3900BCULL
 #define TH500_TLIMIT_REGSIZE       4
+#define TH500_TWOS_COMP_SHIFT      31
+#define XOR_MASK                   0xFFFFFFFF
 
 // Power Meter
 #define TH500_MODULE_PWR                      0
