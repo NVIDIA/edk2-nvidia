@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -142,6 +142,12 @@
       MmServicesTableLib|MdePkg/Test/Mock/Library/GoogleTest/MockMmStTableLib/MockMmStTableLib.inf
       SmmVarProtoLib|Silicon/NVIDIA/Test/Mock/Library/GoogleTest/MockSmmVarProto/MockSmmVarProto.inf
     }
+
+  Silicon/NVIDIA/Library/MpCoreInfoLib/UnitTest/MpCoreInfoLibGoogleTest.inf {
+    <LibraryClasses>
+      MpCoreInfoLib|Silicon/NVIDIA/Library/MpCoreInfoLib/MpCoreInfoLib.inf
+      HobLib|MdePkg/Test/Mock/Library/GoogleTest/MockHobLib/MockHobLib.inf
+  }
 
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000

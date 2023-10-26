@@ -1,0 +1,30 @@
+## @file
+# Unit test suite for the MpCoreInfoLib using Google Test
+#
+# SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION         = 0x00010017
+  BASE_NAME           = MpCoreInfoLibGoogleTest
+  FILE_GUID           = 15e7e686-7ef6-460a-9c4c-566e7231aa78
+  VERSION_STRING      = 1.0
+  MODULE_TYPE         = HOST_APPLICATION
+
+[Sources]
+  MpCoreInfoLibGoogleTest.cpp
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  GoogleTestLib
+  MpCoreInfoLib
+
+[Guids]
+  gArmMpCoreInfoGuid
+  gNVIDIAPlatformResourceDataGuid
