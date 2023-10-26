@@ -3,7 +3,7 @@
   Provides a driver binding protocol for supported NVIDIA GPUs
   as well as providing the NVIDIA GPU DSD AML Generation Protoocol.
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -28,6 +28,8 @@
 #include <Library/PcdLib.h>
 #include <Library/PciHostBridgeLib.h>
 #include <Library/DeviceDiscoveryLib/DeviceDiscoveryLibPrivate.h>
+
+#include <TH500/TH500Definitions.h>
 
 #include <IndustryStandard/Pci.h>
 
@@ -383,7 +385,7 @@ UpdateVDM (
 
   Request.Lane              = (UINT16)0;
   Request.Command           = (UINT16)CmdUphyPcieConfigVdm;
-  Request.Controller        = (UINT8)Segment;
+  Request.Controller        = (UINT8)PCIE_ID_TO_INTERFACE (Segment);
   Request.BusDeviceFunction = (UINT16)(((Bus      & 0xff) << 8) |
                                        ((Device   & 0x1f) << 3) |
                                        ((Function & 0x07) << 0));
@@ -512,7 +514,7 @@ NVIDIAGpuDriverStart (
     /* note that a failed VDM update is non-fatal */
     DEBUG ((
       DEBUG_ERROR,
-      "%a: VDM%aupdated for Segment,Bus,Device,Function %u,%u,%u,%u\n",
+      "%a: VDM%aupdated for Segment,Bus,Device,Function 0x%x,0x%x,0x%x,0x%x\n",
       __FUNCTION__,
       EFI_ERROR (Status) ? " NOT " : " ",
       Segment,
