@@ -384,8 +384,8 @@ UpdateVDM (
   Request.Lane              = (UINT16)0;
   Request.Command           = (UINT16)CmdUphyPcieConfigVdm;
   Request.Controller        = (UINT8)Segment;
-  Request.BusDeviceFunction = (UINT16)(((Bus      & 0xff) << 8) ||
-                                       ((Device   & 0x1f) << 3) ||
+  Request.BusDeviceFunction = (UINT16)(((Bus      & 0xff) << 8) |
+                                       ((Device   & 0x1f) << 3) |
                                        ((Function & 0x07) << 0));
   Status = GetBpmpPhandle (Segment, &BpmpPhandle);
   if (EFI_ERROR (Status)) {
