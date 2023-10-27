@@ -57,6 +57,8 @@
 #string STR_UART_BAUD_RATE_19200                #language x-uefi-redfish-Bios.v1_2_0 "19200"
 #string STR_UART_BAUD_RATE_9600                 #language x-uefi-redfish-Bios.v1_2_0 "9600"
 #string STR_PERF_VERSION_PROMPT                 #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/PerformanceVersion"
+#string STR_PERF_VERSION_DEFAULT                #language x-uefi-redfish-Bios.v1_2_0 "Default"
+#string STR_PERF_VERSION_C1_NCM                 #language x-uefi-redfish-Bios.v1_2_0 "C1-NCM"
 #string STR_UEFI_DEBUG_LEVEL_PROMPT             #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/UefiDebugLogLevel"
 #string STR_HOST_INTERFACE_ENABLED_PROMPT       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/RedfishHostInterface"
 #string STR_PRODUCT_ASSET_TAG_PROTECTION        #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/AssetTagProtection"
