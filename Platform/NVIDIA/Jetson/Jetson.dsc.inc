@@ -141,6 +141,7 @@
   gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|1
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|TRUE
   gNVIDIATokenSpaceGuid.PcdFtpmShmSize|4096
+  gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|100
 
 ################################################################################
 #
