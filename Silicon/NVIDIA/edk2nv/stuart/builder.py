@@ -76,11 +76,6 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
         ConfMgmt.populate_conf_dir = hooked_populate_conf_dir
 
-        # Add this Conf directory to UefiBuilder's search path.  When it's
-        # looking for "Conf/target.txt", for example, it will look in each of
-        # these directories.
-        self.mws.PACKAGES_PATH.append(confdir_name)
-
         # Stuart doesn't look for "<search_path>/target.txt", but looks for
         # "<search_path>/Conf/target.txt" instead.  Rather than add another
         # "Conf" to our path, we'll no-op it with a symlink.

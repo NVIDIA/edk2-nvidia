@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -54,11 +54,11 @@ verify_cmd_exists virtualenv
 verify_cmd_exists mono
 verify_cmd_exists aarch64-linux-gnu-gcc
 
-# Verify we have at least Python 3.9
-if python3 -c "import sys; sys.exit(1) if sys.version_info < (3, 9) else sys.exit(0)"; then
-  _msg "found Python 3.9 or later."
+# Verify we have at least Python 3.10
+if python3 -c "import sys; sys.exit(1) if sys.version_info < (3, 10) else sys.exit(0)"; then
+  _msg "found Python 3.10 or later."
 else
-  _die 3 "Python3 must 3.9 or later."
+  _die 3 "Python3 must 3.10 or later."
 fi
 
 # Export the root of our workspace.  The stuart build system needs this.

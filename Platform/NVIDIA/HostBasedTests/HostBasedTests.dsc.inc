@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
 !include UnitTestFrameworkPkg/UnitTestFrameworkPkgHost.dsc.inc
+!include Platform/NVIDIA/NVIDIA.global.dsc.inc
 
 [LibraryClasses.common.HOST_APPLICATION]
   # standard libs

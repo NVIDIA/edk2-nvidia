@@ -63,6 +63,16 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         # them properly when computing relative paths.
         packages_paths = [path + "/" for path in self._insert_pkgs_paths]
 
+        # The Conf directory needs to be in the package path as well.  Since we
+        # move it to a platform-specific directory, we'll need to add it here.
+        # We also need to create it now because Edk2Path verifies it exists.
+        confdir_name = self.GetConfDirName()
+        if confdir_name:
+            ws_dir = Path(self.GetWorkspaceRoot())
+            confdir_path = ws_dir / confdir_name
+            confdir_path.mkdir(parents=True, exist_ok=True)
+            packages_paths.append(confdir_name)
+
         packages_paths.extend([
             "edk2/BaseTools/", "edk2/", "edk2-platforms/", "edk2-nvidia/",
             "edk2-nvidia-non-osi/", "edk2-non-osi", "edk2-platforms/Features/Intel/OutOfBandManagement/"
@@ -151,6 +161,18 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
             these will be applied in order and are relative to the workspace
         '''
         return None
+
+    #######################################
+    # NVIDIA settings
+    def GetConfDirName(self):
+        ''' Return the name of the Conf directory.
+
+            This directory name will include the target so that targets
+            can be built in parallel.  Returned as a string.  This default
+            implementation will use "Conf/{platform_name}/{target}".
+        '''
+        return None
+
 
 class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
                             PrEvalSettingsManager, BuildSettingsManager,

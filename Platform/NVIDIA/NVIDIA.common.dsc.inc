@@ -3,6 +3,9 @@
 #  Copyright (c) 2011-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+!include Platform/NVIDIA/NVIDIA.global.dsc.inc
+
 [Defines]
 !ifndef CONFIG_BOOT_DEFAULT_TIMEOUT
 CONFIG_BOOT_DEFAULT_TIMEOUT=0
@@ -641,7 +644,7 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   #
   # Security PCDs
   #
-  gEfiSecurityPkgTokenSpaceGuid.PcdCpuRngSupportedAlgorithm|{ GUID("e43176d7-b6e8-4827-b784-7ffdc4b68561") }
+  gEfiMdePkgTokenSpaceGuid.PcdCpuRngSupportedAlgorithm|{ GUID("e43176d7-b6e8-4827-b784-7ffdc4b68561") }
 
   #
   # Do not attempt to load at large specified address

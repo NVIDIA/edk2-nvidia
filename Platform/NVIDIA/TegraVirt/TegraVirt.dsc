@@ -6,6 +6,8 @@
 #
 #
 
+!include Platform/NVIDIA/NVIDIA.global.dsc.inc
+
 ################################################################################
 #
 # Defines Section - statements that will be processed to create a Makefile.
@@ -244,6 +246,7 @@
   gArmTokenSpaceGuid.PcdArmArchTimerIntrNum|0x0
   gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum|0x0
   gArmTokenSpaceGuid.PcdArmArchTimerHypIntrNum|0x0
+  gArmTokenSpaceGuid.PcdArmArchTimerHypVirtIntrNum|0x0
 
   #
   # ARM General Interrupt Controller
