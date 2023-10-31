@@ -21,6 +21,12 @@
   DeviceTreeHelperLibUtility.c
   DeviceTreeHelperLibDeprecated.c
 
+[Sources.ARM, Sources.AARCH64]
+  DeviceTreeHelperLibParserAArch64.c
+
+[Sources.IA32, Sources.X64]
+  DeviceTreeHelperLibParserX86.c
+
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec

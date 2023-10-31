@@ -592,3 +592,202 @@ DeviceTreeGetInterrupts (
   *NumberOfInterrupts = IntPropertyEntries;
   return EFI_SUCCESS;
 }
+
+STATIC CONST NVIDIA_DEVICE_TREE_CACHE_FIELD_STRINGS  ICacheFieldStrings = {
+  "i-cache-size",
+  "i-cache-sets",
+  "i-cache-block-size",
+  "i-cache-line-size"
+};
+
+STATIC CONST NVIDIA_DEVICE_TREE_CACHE_FIELD_STRINGS  DCacheFieldStrings = {
+  "d-cache-size",
+  "d-cache-sets",
+  "d-cache-block-size",
+  "d-cache-line-size"
+};
+
+STATIC CONST NVIDIA_DEVICE_TREE_CACHE_FIELD_STRINGS  UnifiedCacheFieldStrings = {
+  "cache-size",
+  "cache-sets",
+  "cache-block-size",
+  "cache-line-size"
+};
+
+/**
+  Returns information about the cache of a given device tree node
+
+  @param  [in]      NodeOffset       - Node offset of the device
+  @param  [in, out] CacheData        - Buffer for the cache data. Type field specifies
+                                       the type of cache data to populate from the Node
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - CacheData pointer is NULL
+  @retval EFI_NOT_FOUND         - No cache data of Type found in the node
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetCacheData (
+  IN INT32                              NodeOffset,
+  IN OUT NVIDIA_DEVICE_TREE_CACHE_DATA  *CacheData
+  )
+{
+  EFI_STATUS                                    Status;
+  CONST NVIDIA_DEVICE_TREE_CACHE_FIELD_STRINGS  *FieldStrings;
+  CONST CHAR8                                   *PropertyString;
+  CHAR8                                         *NodePath;
+
+  if ((CacheData == NULL) ||
+      (CacheData->Type <= CACHE_TYPE_UNKNOWN) ||
+      (CacheData->Type >= CACHE_TYPE_MAX))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Unified caches have a "cache-unified" property, split caches don't. Verify that the node matches the requested Type
+  Status = DeviceTreeGetNodeProperty (NodeOffset, "cache-unified", NULL, NULL);
+  if ((Status == EFI_NOT_FOUND) && (CacheData->Type == CACHE_TYPE_UNIFIED)) {
+    // Requested Unified cache info, but it wasn't found in this node
+    // Older device-tree doesn't mark L3 as cache-unified, so don't error out if it's missing
+    DEBUG ((DEBUG_ERROR, "%a: Warning - trying to get unified cache data from a cache node that isn't marked as such.\nThe \"cache-unified\" property might be missing in the DTB\n", __FUNCTION__));
+  } else if ((Status == EFI_SUCCESS) && (CacheData->Type != CACHE_TYPE_UNIFIED)) {
+    // Found Unified cache info, but didn't request it for this node
+    return EFI_NOT_FOUND;
+  } else if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
+    return Status;
+  }
+
+  // Determine how to look up the fields
+  switch (CacheData->Type) {
+    case CACHE_TYPE_ICACHE:
+      FieldStrings = &ICacheFieldStrings;
+      break;
+
+    case CACHE_TYPE_DCACHE:
+      FieldStrings = &DCacheFieldStrings;
+      break;
+
+    case CACHE_TYPE_UNIFIED:
+      FieldStrings = &UnifiedCacheFieldStrings;
+      break;
+
+    default:
+      return EFI_UNSUPPORTED;
+  }
+
+  // Get the ID
+  Status = DeviceTreeGetNodePHandle (NodeOffset, &CacheData->CacheId);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got error (%r) getting PHandle for NodeOffset 0x%x\n", __FUNCTION__, Status, NodeOffset));
+    return Status;
+  }
+
+  // Get the Level
+  Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, "cache-level", &CacheData->CacheLevel);
+  if (Status == EFI_NOT_FOUND) {
+    Status = DeviceTreeGetNodeProperty (
+               NodeOffset,
+               "device_type",
+               (CONST VOID **)&PropertyString,
+               NULL
+               );
+    if (!EFI_ERROR (Status)) {
+      // Cpu node cache doesn't have "cache-level", but should be 1
+      if (AsciiStrCmp ("cpu", PropertyString) == 0) {
+        CacheData->CacheLevel = 1;
+      } else if (AsciiStrCmp ("cache", PropertyString) == 0) {
+        // Support older DTB that doesn't have the cache-level field but instead has device_type = "cache" and compatible = "l2-cache" or "l3-cache"
+        Status = DeviceTreeGetNodeProperty (
+                   NodeOffset,
+                   "compatible",
+                   (CONST VOID **)&PropertyString,
+                   NULL
+                   );
+        if (!EFI_ERROR (Status)) {
+          if (AsciiStrCmp ("l2-cache", PropertyString) == 0) {
+            CacheData->CacheLevel = 2;
+          } else if (AsciiStrCmp ("l3-cache", PropertyString) == 0) {
+            CacheData->CacheLevel = 3;
+          } else {
+            DEBUG ((DEBUG_ERROR, "%a: Cache node has unknown \"compatible\" string \"%a\"\n", __FUNCTION__, PropertyString));
+            return EFI_DEVICE_ERROR;
+          }
+        } else if (Status != EFI_NOT_FOUND) {
+          DEBUG ((DEBUG_ERROR, "%a: Got %r trying to check the \"compatible\" property of the cache node at offset 0x%x\n", __FUNCTION__, Status, NodeOffset));
+          return Status;
+        }
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: Got unknown \"device_type\" = \"%a\" for cache node at offset 0x%x\n", __FUNCTION__, PropertyString, NodeOffset));
+        return EFI_DEVICE_ERROR;
+      }
+    }
+
+    if (Status == EFI_NOT_FOUND) {
+      // Older DTB is missing "cache-level" and either "device_type" or "compatible", so try to infer level from the path
+      Status = DeviceTreeGetNodePath (NodeOffset, &NodePath, NULL);
+      if (EFI_ERROR (Status) || (NodePath == NULL)) {
+        DEBUG ((DEBUG_ERROR, "%a: The \"cache-level\" property for the cache node at offset 0x%x wasn't found, and got %r trying to get the NodePath to infer it\n", __FUNCTION__, NodeOffset, Status));
+        return Status;
+      }
+
+      if (AsciiStrStr (NodePath, "l2c") != NULL) {
+        CacheData->CacheLevel = 2;
+      } else if (AsciiStrStr (NodePath, "l3c") != NULL) {
+        CacheData->CacheLevel = 3;
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to determine cache level based on the node path \"%a\"\n", __FUNCTION__, NodePath));
+        FreePool (NodePath);
+        return EFI_DEVICE_ERROR;
+      }
+
+      FreePool (NodePath);
+    } else if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to infer the cache level of node offset 0x%x\n", __FUNCTION__, Status, NodeOffset));
+      return Status;
+    }
+  } else if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got error (%r) searching for \"cache-level\" property for NodeOffset 0x%x\n", __FUNCTION__, Status, NodeOffset));
+    return Status;
+  }
+
+  // Get the Size, Sets, BlockSize, and LineSize
+  Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, FieldStrings->SizeStr, &CacheData->CacheSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got error (%r) searching for %a property for NodeOffset 0x%x\n", __FUNCTION__, Status, FieldStrings->SizeStr, NodeOffset));
+    return Status;
+  }
+
+  Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, FieldStrings->SetsStr, &CacheData->CacheSets);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got error (%r) searching for %a property for NodeOffset 0x%x\n", __FUNCTION__, Status, FieldStrings->SetsStr, NodeOffset));
+    return Status;
+  }
+
+  Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, FieldStrings->BlockSizeStr, &CacheData->CacheBlockSize);
+  if (EFI_ERROR (Status)) {
+    // Get the value from hardware instead
+    CacheData->CacheBlockSize = DeviceTreeGetCacheBlockSizeBytesFromHW ();
+  }
+
+  // Only required if different from CacheBlockSize
+  Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, FieldStrings->LineSizeStr, &CacheData->CacheLineSize);
+  if (Status == EFI_NOT_FOUND) {
+    CacheData->CacheLineSize = CacheData->CacheBlockSize;
+  } else if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got error (%r) searching for %a property for NodeOffset 0x%x\n", __FUNCTION__, Status, FieldStrings->LineSizeStr, NodeOffset));
+    return Status;
+  }
+
+  // Get the "next-level-cache", or older "l2-cache", if present
+  Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, "next-level-cache", &CacheData->NextLevelCache);
+  if (Status == EFI_NOT_FOUND) {
+    Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, "l2-cache", &CacheData->NextLevelCache);
+    if (Status == EFI_NOT_FOUND) {
+      CacheData->NextLevelCache = 0;
+    }
+  }
+
+  return EFI_SUCCESS;
+}

@@ -54,6 +54,32 @@ typedef struct {
   CONST CHAR8                          *ControllerCompatible;
 } NVIDIA_DEVICE_TREE_INTERRUPT_DATA;
 
+typedef enum {
+  CACHE_TYPE_UNKNOWN = 0,
+  CACHE_TYPE_ICACHE,
+  CACHE_TYPE_DCACHE,
+  CACHE_TYPE_UNIFIED,
+  CACHE_TYPE_MAX
+} NVIDIA_DEVICE_TREE_CACHE_TYPE;
+
+typedef struct {
+  CONST CHAR8    *SizeStr;
+  CONST CHAR8    *SetsStr;
+  CONST CHAR8    *BlockSizeStr;
+  CONST CHAR8    *LineSizeStr;
+} NVIDIA_DEVICE_TREE_CACHE_FIELD_STRINGS;
+
+typedef struct {
+  NVIDIA_DEVICE_TREE_CACHE_TYPE    Type;
+  UINT32                           CacheId;     // This cache's phandle
+  UINT32                           CacheLevel;  // 1, 2, or 3
+  UINT32                           CacheSize;
+  UINT32                           CacheSets;
+  UINT32                           CacheBlockSize;
+  UINT32                           CacheLineSize;
+  UINT32                           NextLevelCache; // Next level's phandle
+} NVIDIA_DEVICE_TREE_CACHE_DATA;
+
 /**
   Set the base address and size of the device tree
 
@@ -670,5 +696,25 @@ GetDeviceTreeInterrupts (
   );
 
 #endif //DISABLE_DEVICETREE_HELPER_DEPRECATED_APIS
+
+/**
+  Returns information about the cache of a given device tree node
+
+  @param  [in]      NodeOffset       - Node offset of the device
+  @param  [in, out] CacheData        - Buffer for the cache data. Type field specifies
+                                       the type of cache data to populate from the Node
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - CacheData pointer is NULL
+  @retval EFI_NOT_FOUND         - No cache data of Type found in the node
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetCacheData (
+  IN INT32                              NodeOffset,
+  IN OUT NVIDIA_DEVICE_TREE_CACHE_DATA  *CacheData
+  );
 
 #endif //__DEVICE_TREE_HELPER_LIB_H__

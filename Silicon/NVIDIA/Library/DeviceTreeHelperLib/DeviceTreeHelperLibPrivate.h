@@ -54,4 +54,15 @@ GetNodeHierarchyInfo (
   IN OUT UINT32   *NodeDepth
   );
 
+/**
+  Returns the cache block size in bytes based on the hardware
+
+  @retval BlockSize - Block size in bytes
+
+**/
+UINT32
+DeviceTreeGetCacheBlockSizeBytesFromHW (
+  VOID
+  );
+
 #endif //DEVICE_TREE_HELPER_LIB_PRIVATE_H__
