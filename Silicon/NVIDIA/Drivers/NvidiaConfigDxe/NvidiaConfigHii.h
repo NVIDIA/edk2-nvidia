@@ -352,57 +352,48 @@ typedef struct {
            prompt = STRING_TOKEN(STR_PCIE_ENABLE_ASPM_L1_SOCKET##socket##_PCIE##pcie##_TITLE),    \
            help = STRING_TOKEN(STR_NULL),                                                         \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
-           default = FALSE,                                                                       \
            endcheckbox;                                                                           \
   grayoutif ideqval NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_##socket[pcie] == 0;                   \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_1_##socket[pcie],                       \
            prompt = STRING_TOKEN(STR_PCIE_ENABLE_ASPM_L1_1_SOCKET##socket##_PCIE##pcie##_TITLE),  \
            help = STRING_TOKEN(STR_NULL),                                                         \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
-           default = FALSE,                                                                       \
            endcheckbox;                                                                           \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_2_##socket[pcie],                       \
            prompt = STRING_TOKEN(STR_PCIE_ENABLE_ASPM_L1_2_SOCKET##socket##_PCIE##pcie##_TITLE),  \
            help = STRING_TOKEN(STR_NULL),                                                         \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
-           default = FALSE,                                                                       \
            endcheckbox;                                                                           \
   endif;                                                                                          \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnablePciPmL1_2_##socket[pcie],                      \
            prompt = STRING_TOKEN(STR_PCIE_ENABLE_PCIPM_L1_2_SOCKET##socket##_PCIE##pcie##_TITLE), \
            help = STRING_TOKEN(STR_NULL),                                                         \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
-           default = FALSE,                                                                       \
            endcheckbox;                                                                           \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.SupportsClkReq##socket[pcie],                        \
            prompt = STRING_TOKEN(STR_PCIE_SUPPORTS_CLK_REQ_SOCKET##socket##_PCIE##pcie##_TITLE),  \
            help = STRING_TOKEN(STR_PCIE_SUPPORTS_CLK_REQ_HELP),                                   \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
-           default = FALSE,                                                                       \
            endcheckbox;                                                                           \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.DisableDLFE##socket[pcie],                           \
            prompt = STRING_TOKEN(STR_PCIE_DISABLE_DLFE_SOCKET##socket##_PCIE##pcie##_TITLE),      \
            help = STRING_TOKEN(STR_PCIE_DISABLE_DLFE_HELP),                                       \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
-           default = FALSE,                                                                       \
            endcheckbox;                                                                           \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableECRC_##socket[pcie],                           \
            prompt = STRING_TOKEN(STR_PCIE_ENABLE_ECRC_SOCKET##socket##_PCIE##pcie##_TITLE),       \
            help = STRING_TOKEN(STR_PCIE_ENABLE_ECRC_HELP),                                        \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
-           default = FALSE,                                                                       \
            endcheckbox;                                                                           \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.DisableOptionRom##socket[pcie],                      \
            prompt = STRING_TOKEN(STR_PCIE_DISABLE_OPT_ROM_SOCKET##socket##_PCIE##pcie##_TITLE),   \
            help = STRING_TOKEN(STR_PCIE_DISABLE_OPT_ROM_HELP),                                    \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
-           default = FALSE,                                                                       \
            endcheckbox;                                                                           \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.DisableDPCAtRP_##socket[pcie],                       \
            prompt = STRING_TOKEN(STR_PCIE_DISABLE_DPC_AT_RP_SOCKET##socket##_PCIE##pcie##_TITLE), \
            help = STRING_TOKEN(STR_PCIE_DISABLE_DPC_AT_RP_HELP),                                  \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
-           default = FALSE,                                                                       \
            endcheckbox;                                                                           \
   endif;                                                                                          \
   endform;

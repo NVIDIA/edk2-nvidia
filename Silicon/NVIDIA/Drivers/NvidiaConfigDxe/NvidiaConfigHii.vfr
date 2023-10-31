@@ -568,7 +568,6 @@ formset
         prompt = STRING_TOKEN(STR_EGM_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_EGM_ENABLE_HELP),
         flags  = INTERACTIVE | RESET_REQUIRED,
-        default = FALSE,
     endcheckbox;
 
     grayoutif ideqval NVIDIA_CONFIG_HII_CONTROL.EgmEnabled == 0;
@@ -579,7 +578,6 @@ formset
         minimum = 0,
         maximum = 4294967295,
         step = 64,
-        default = 0,
     endnumeric;
     endif;
 
@@ -587,21 +585,18 @@ formset
         prompt = STRING_TOKEN(STR_SPREAD_SPECTRUM_PROMPT),
         help   = STRING_TOKEN(STR_SPREAD_SPECTRUM_HELP),
         flags  = INTERACTIVE | RESET_REQUIRED,
-        default = FALSE,
     endcheckbox;
 
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.ModsSpEnable,
         prompt = STRING_TOKEN(STR_MODS_SP_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_MODS_SP_ENABLE_HELP),
         flags  = INTERACTIVE | RESET_REQUIRED,
-        default = TRUE,
     endcheckbox;
 
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.GpuSmmuBypassEnable,
         prompt = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_HELP),
         flags  = INTERACTIVE | RESET_REQUIRED,
-        default = FALSE,
     endcheckbox;
 
     oneof varid = NVIDIA_CONFIG_HII_CONTROL.UartBaudRate,
@@ -708,7 +703,6 @@ formset
           minimum = 0,
           maximum = 4294967295,
           step = 1,
-          default = 0,
       endnumeric;
     endif; // suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DebugMenuSupported == 0;
   endform;
