@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -602,7 +602,7 @@ CommonFloorSweepScfCache (
   INT32       NodeOffset;
   INT32       FdtErr;
   UINT32      Tmp32;
-  CHAR8       SocketNodeStr[] = "/socket@xxxxxxxxxx";
+  CHAR8       SocketNodeStr[] = "/socket@xxxxxxxxxxx";
 
   Status = CommonInitializeGlobalStructures ();
   if (EFI_ERROR (Status)) {
@@ -617,7 +617,7 @@ CommonFloorSweepScfCache (
   CoresPerSocket = ((PLATFORM_MAX_CLUSTERS * PLATFORM_MAX_CORES_PER_CLUSTER) /
                     PLATFORM_MAX_SOCKETS);
 
-  // SCF Cache is distributed as l3cache over all possible sockets
+  // SCF Cache is distributed as l3-cache over all possible sockets
   for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     if (!(SocketMask & (1UL << Socket))) {
       continue;
@@ -657,11 +657,16 @@ CommonFloorSweepScfCache (
       ScfCacheSets
       ));
 
-    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u/l3cache", Socket);
+    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u/l3-cache", Socket);
     NodeOffset = fdt_path_offset (Dtb, SocketNodeStr);
+    if (NodeOffset < 0) {
+      // Attempt to use the older DTB path if the updated DTB path doesn't work
+      AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u/l3cache", Socket);
+      NodeOffset = fdt_path_offset (Dtb, SocketNodeStr);
+    }
 
     if (NodeOffset < 0) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to find /socket@%u/l3cache subnode\n", __FUNCTION__, Socket));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find /socket@%u/l3-cache subnode\n", __FUNCTION__, Socket));
       return EFI_DEVICE_ERROR;
     }
 
@@ -670,7 +675,7 @@ CommonFloorSweepScfCache (
     if (FdtErr < 0) {
       DEBUG ((
         DEBUG_ERROR,
-        "Failed to set Socket %u l3cache cache-size: %a\n",
+        "Failed to set Socket %u l3-cache cache-size: %a\n",
         Socket,
         fdt_strerror (FdtErr)
         ));
@@ -682,7 +687,7 @@ CommonFloorSweepScfCache (
     if (FdtErr < 0) {
       DEBUG ((
         DEBUG_ERROR,
-        "Failed to set Socket %u l3cache cache-sets: %a\n",
+        "Failed to set Socket %u l3-cache cache-sets: %a\n",
         Socket,
         fdt_strerror (FdtErr)
         ));

@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Library Private header file
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,9 +17,6 @@
                                          PLATFORM_MAX_CORES_PER_CLUSTER)
 #define PLATFORM_MAX_CORES_PER_SOCKET   (PLATFORM_MAX_CPUS / PLATFORM_MAX_SOCKETS)
 
-#define CACHE_TYPE_UNIFIED  0
-#define CACHE_TYPE_ICACHE   1
-#define CACHE_TYPE_DCACHE   2
 #define GET_CACHE_ID(Level, Type, Core, Cluster, Socket)  ((((3 - (Level)) << 24)) | (((Type) << 16)) | (((Core) << 12)) |(((Cluster) << 8)) | ((Socket) + 1))
 
 // CACHE_NODE structure definition.

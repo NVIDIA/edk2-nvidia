@@ -2,7 +2,7 @@
 
   Configuration Manager Data of Arm Performance Monitoring Unit Table (APMT)
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -175,7 +175,15 @@ InstallArmPerformanceMonitoringUnitTable (
 
       Property = fdt_getprop (DeviceTreeBase, DeviceOffset, "device_type", NULL);
       if (Property == NULL) {
-        continue;
+        // Correct DTB has "compatible" = "cache" for cache nodes
+        Property = fdt_getprop (DeviceTreeBase, DeviceOffset, "compatible", NULL);
+        if ((Property != NULL) && (AsciiStrCmp (Property, "cache") == 0)) {
+          ApmtNodes[ApmtNodeIndex].NodeType              = EFI_ACPI_APMT_NODE_TYPE_CPU_CACHE;
+          ApmtNodes[ApmtNodeIndex].NodeInstancePrimary   = 0;
+          ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary = GET_CACHE_ID (3, CACHE_TYPE_UNIFIED, 0, 0, Socket);
+        } else {
+          continue;
+        }
       }
 
       if (AsciiStrCmp (Property, "pci") == 0) {
@@ -189,6 +197,7 @@ InstallArmPerformanceMonitoringUnitTable (
         ApmtNodes[ApmtNodeIndex].NodeInstancePrimary   = SwapBytes32 (*(CONST UINT32 *)Property);
         ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary = 0;
       } else if (AsciiStrCmp (Property, "cache") == 0) {
+        // Old DTB has "device_type" = "cache" for cache nodes
         ApmtNodes[ApmtNodeIndex].NodeType              = EFI_ACPI_APMT_NODE_TYPE_CPU_CACHE;
         ApmtNodes[ApmtNodeIndex].NodeInstancePrimary   = 0;
         ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary = GET_CACHE_ID (3, CACHE_TYPE_UNIFIED, 0, 0, Socket);
