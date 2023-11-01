@@ -87,6 +87,9 @@
   DmaLib
   TimerLib
 
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage
+
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
   gNVIDIAClockNodeProtocolGuid

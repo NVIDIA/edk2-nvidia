@@ -178,6 +178,7 @@ DeviceDiscoveryNotify (
   )
 {
   EFI_STATUS                   Status;
+  UINTN                        ChipID;
   UINTN                        RegionSize;
   SIMPLE_NETWORK_DRIVER        *Snp;
   EFI_SIMPLE_NETWORK_PROTOCOL  *SnpProtocol;
@@ -202,6 +203,16 @@ DeviceDiscoveryNotify (
 
   PlatformType = TegraGetPlatform ();
   switch (Phase) {
+    case DeviceDiscoveryDriverBindingSupported:
+      ChipID = TegraGetChipID ();
+      if ((ChipID == T234_CHIP_ID) &&
+          (PcdGetBool (PcdBootAndroidImage)))
+      {
+        return EFI_UNSUPPORTED;
+      }
+
+      return EFI_SUCCESS;
+
     case DeviceDiscoveryDriverBindingStart:
 
       if ((DeviceTreeNode == NULL) ||
