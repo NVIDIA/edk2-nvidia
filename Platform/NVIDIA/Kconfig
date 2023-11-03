@@ -219,6 +219,13 @@ menu "Hardware support"
       bool "USB Mouse support"
       default y
     endmenu
+
+    config USB_FW_RENESAS
+    bool "Load Renesas USB FW"
+    help
+      Load FW for Renesas USB Controller. In addition, the FW must be acquired
+      from Renesas and "BLD_*_ENABLE_RENESAS_USB_FW=1" must be added as a build
+      flag.
   endif
 
   menu "Display hardware"
@@ -687,7 +694,8 @@ if NETWORKING
     config NETWORKING_DEVICE_INTEL
     bool "Intel NIC drivers"
     help
-      Support for Intel NICs
+      Support for Intel NICs.  In addition, the drivers must be acquired from
+      Intel and "BLD_*_ENABLE_INTELUNDI=1" must be added as a build flag.
 
     config NETWORKING_DEVICE_REALTEK
     bool "Realtek NIC drivers"

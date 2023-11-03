@@ -1,0 +1,47 @@
+#/** @file
+#
+#  Renesas USB Controller
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = RenesasUsbCtlr
+  FILE_GUID                      = 6395f034-7784-11ee-bf82-b7295112213e
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = RenesasUsbCtlrEntryPoint
+
+[Sources.common]
+  RenesasUsbCtlr.c
+  RenesasUsbCtlr.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  MemoryAllocationLib
+  DebugLib
+  DxeServicesLib
+  TimerLib
+
+[Protocols]
+  gEfiPciEnumerationCompleteProtocolGuid  ## CONSUMES
+  gEfiPciIoProtocolGuid                   ## CONSUMES
+
+[Guids]
+  gNVIDIAuPD72020xFirmwareGuid
+  gNVIDIAPublicVariableGuid
+
+[Depex]
+  gNVIDIADefaultVarDoneGuid
+

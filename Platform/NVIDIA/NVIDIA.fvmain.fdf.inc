@@ -302,6 +302,20 @@ FvNameGuid         = $(PLATFORM_GUID)
 !ifdef CONFIG_USB_MASS_STORAGE
   INF MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
 !endif
+!ifdef CONFIG_USB_FW_RENESAS
+!ifdef $(ENABLE_RENESAS_USB_FW)
+  #
+  # Renesas USB controller firmware upload support
+  #
+  INF Silicon/NVIDIA/Drivers/RenesasUsbCtlr/RenesasUsbCtlr.inf
+  #
+  # Renesas USB controller firmware binary
+  #
+  FILE FREEFORM = gNVIDIAuPD72020xFirmwareGuid {
+    SECTION RAW = Silicon/Renesas/uPD72020x/K2026090.mem
+  }
+!endif
+!endif
 
   #
   # Generic non-discoverable pcie used for many soc devices

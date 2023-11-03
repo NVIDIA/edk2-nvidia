@@ -1669,6 +1669,14 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !ifdef CONFIG_USB_MASS_STORAGE
   MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
 !endif
+!ifdef CONFIG_USB_FW_RENESAS
+!ifdef $(ENABLE_RENESAS_USB_FW)
+  #
+  # Renesas USB controller firmware upload support
+  #
+  Silicon/NVIDIA/Drivers/RenesasUsbCtlr/RenesasUsbCtlr.inf
+!endif
+!endif
 
   #
   # Generic non-discoverable pcie used for many soc devices
