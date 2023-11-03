@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation.
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -279,7 +279,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
 
             This will be used to set BUILDREPORT_TYPES.
         '''
-        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH")
+        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH COMPILE_INFO")
 
     def GetReportFile(self):
         ''' Return the build report filename.
@@ -458,7 +458,7 @@ class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
 
             This will be used to set BUILDREPORT_TYPES.
         '''
-        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH")
+        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH COMPILE_INFO")
 
     def GetReportFile(self):
         ''' Return the build report filename.
