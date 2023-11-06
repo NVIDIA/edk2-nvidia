@@ -51,6 +51,7 @@ typedef struct {
 } QSPI_COMPATIBILITY;
 
 EFI_EVENT  FdtInstallEvent;
+EFI_EVENT  EndOfDxeEvent;
 EFI_EVENT  ReadyToBootEvent;
 
 QSPI_COMPATIBILITY  gQspiCompatibilityMap[] = {
@@ -812,6 +813,27 @@ Exit:
   }
 }
 
+VOID
+EFIAPI
+OnEndOfDxe (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  gBS->CloseEvent (Event);
+
+  UpdateFdt (NULL, NULL);
+
+  gBS->CreateEventEx (
+         EVT_NOTIFY_SIGNAL,
+         TPL_NOTIFY,
+         UpdateFdt,
+         NULL,
+         &gFdtTableGuid,
+         &FdtInstallEvent
+         );
+}
+
 /**
   Return a pool allocated copy of the DTB image that is appropriate for
   booting the current platform via DT.
@@ -857,10 +879,10 @@ DtPlatformLoadDtb (
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_NOTIFY,
-                  UpdateFdt,
+                  OnEndOfDxe,
                   NULL,
-                  &gFdtTableGuid,
-                  &FdtInstallEvent
+                  &gEfiEndOfDxeEventGroupGuid,
+                  &EndOfDxeEvent
                   );
 
   if (EFI_ERROR (Status)) {
