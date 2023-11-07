@@ -41,11 +41,6 @@
   #
   INF FILE_GUID = $(SYSTEM_FMP_ESRT_GUID) FmpDevicePkg/FmpDxe/FmpDxe.inf
 
-  #
-  # Device discovery protocol
-  #
-  INF Silicon/NVIDIA/Drivers/DeviceDiscovery/DeviceDiscoveryDxe.inf
-
 !ifdef CONFIG_ACPI
   #
   # Aml Generation

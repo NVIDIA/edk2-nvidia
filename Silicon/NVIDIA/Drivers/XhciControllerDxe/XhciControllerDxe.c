@@ -44,13 +44,11 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Xhci controller driver",
-  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = TRUE,
   .AutoDeassertReset               = TRUE,
   .AutoResetModule                 = FALSE,
   .AutoDeassertPg                  = FALSE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE,
   .ThreadedDeviceStart             = FALSE
 };
 

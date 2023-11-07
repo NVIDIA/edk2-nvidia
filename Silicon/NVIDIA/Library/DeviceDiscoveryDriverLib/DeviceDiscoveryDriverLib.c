@@ -161,83 +161,6 @@ DeviceDiscoveryOnExitBootServices (
 }
 
 /**
-  Supported function of Driver Binding protocol for this driver.
-  Test to see if this driver supports ControllerHandle.
-
-  @param This                   Protocol instance pointer.
-  @param Controller             Handle of device to test.
-  @param RemainingDevicePath    A pointer to the device path.
-                                it should be ignored by device driver.
-
-  @retval EFI_SUCCESS           This driver supports this device.
-  @retval EFI_ALREADY_STARTED   This driver is already running on this device.
-  @retval other                 This driver does not support this device.
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-DeviceDiscoveryBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
-  )
-{
-  EFI_STATUS                        Status;
-  NON_DISCOVERABLE_DEVICE           *NonDiscoverableProtocol = NULL;
-  NVIDIA_COMPATIBILITY_MAPPING      *MappingNode             = gDeviceCompatibilityMap;
-  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node                    = NULL;
-
-  //
-  // Attempt to open NonDiscoverable Protocol
-  //
-  Status = gBS->OpenProtocol (
-                  Controller,
-                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
-                  (VOID **)&NonDiscoverableProtocol,
-                  This->DriverBindingHandle,
-                  Controller,
-                  EFI_OPEN_PROTOCOL_BY_DRIVER
-                  );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = gBS->HandleProtocol (Controller, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
-  if (EFI_ERROR (Status)) {
-    Node = NULL;
-  }
-
-  Status = EFI_UNSUPPORTED;
-  while (MappingNode->Compatibility != NULL) {
-    if (CompareGuid (NonDiscoverableProtocol->Type, MappingNode->DeviceType)) {
-      Status = EFI_SUCCESS;
-      break;
-    }
-
-    MappingNode++;
-  }
-
-  if (!EFI_ERROR (Status)) {
-    Status = DeviceDiscoveryNotify (
-               DeviceDiscoveryDriverBindingSupported,
-               This->DriverBindingHandle,
-               Controller,
-               Node
-               );
-  }
-
-  gBS->CloseProtocol (
-         Controller,
-         &gNVIDIANonDiscoverableDeviceProtocolGuid,
-         This->DriverBindingHandle,
-         Controller
-         );
-
-  return Status;
-}
-
-/**
   @brief Timer event callback. When this fires we switch back to the driver
   context until it yields again.
 
@@ -443,13 +366,9 @@ ErrorExit:
 }
 
 /**
-  This routine is called right after the .Supported() called and
   Start this driver on ControllerHandle.
 
-  @param This                   Protocol instance pointer.
   @param Controller             Handle of device to bind driver to.
-  @param RemainingDevicePath    A pointer to the device path.
-                                it should be ignored by device driver.
 
   @retval EFI_SUCCESS           This driver is added to this device.
   @retval EFI_ALREADY_STARTED   This driver is already running on this device.
@@ -459,10 +378,8 @@ ErrorExit:
 STATIC
 EFI_STATUS
 EFIAPI
-DeviceDiscoveryBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
+DeviceDiscoveryStart (
+  IN EFI_HANDLE  Controller
   )
 {
   EFI_STATUS                        Status;
@@ -482,7 +399,7 @@ DeviceDiscoveryBindingStart (
                   Controller,
                   &gNVIDIANonDiscoverableDeviceProtocolGuid,
                   (VOID **)&NonDiscoverableProtocol,
-                  This->DriverBindingHandle,
+                  mImageHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
                   );
@@ -508,6 +425,17 @@ DeviceDiscoveryBindingStart (
 
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a, no guid mapping\r\n", __FUNCTION__));
+    goto ErrorExit;
+  }
+
+  Status = DeviceDiscoveryNotify (
+             DeviceDiscoveryDriverBindingSupported,
+             mImageHandle,
+             Controller,
+             Node
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a, Failed supported check\r\n", __FUNCTION__));
     goto ErrorExit;
   }
 
@@ -600,7 +528,7 @@ DeviceDiscoveryBindingStart (
 
   if (gDeviceDiscoverDriverConfig.ThreadedDeviceStart) {
     Status = ThreadedDeviceStart (
-               This->DriverBindingHandle,
+               mImageHandle,
                Controller,
                Node
                );
@@ -611,7 +539,7 @@ DeviceDiscoveryBindingStart (
   } else {
     Status = DeviceDiscoveryNotify (
                DeviceDiscoveryDriverBindingStart,
-               This->DriverBindingHandle,
+               mImageHandle,
                Controller,
                Node
                );
@@ -643,7 +571,7 @@ DeviceDiscoveryBindingStart (
     if (EFI_ERROR (Status)) {
       DeviceDiscoveryNotify (
         DeviceDiscoveryDriverBindingStop,
-        This->DriverBindingHandle,
+        mImageHandle,
         Controller,
         Node
         );
@@ -663,150 +591,13 @@ ErrorExit:
     gBS->CloseProtocol (
            Controller,
            &gNVIDIANonDiscoverableDeviceProtocolGuid,
-           This->DriverBindingHandle,
+           mImageHandle,
            Controller
            );
   }
 
   return Status;
 }
-
-/**
-  Stop this driver on ControllerHandle.
-
-  @param This               Protocol instance pointer.
-  @param Controller         Handle of device to stop driver on.
-  @param NumberOfChildren   Not used.
-  @param ChildHandleBuffer  Not used.
-
-  @retval EFI_SUCCESS   This driver is removed from this device.
-  @retval other         Some error occurs when removing this driver from this device.
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-DeviceDiscoveryBindingStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   Controller,
-  IN UINTN                        NumberOfChildren,
-  IN EFI_HANDLE                   *ChildHandleBuffer
-  )
-{
-  EFI_STATUS                        Status;
-  NON_DISCOVERABLE_DEVICE           *NonDiscoverableProtocol = NULL;
-  NVIDIA_COMPATIBILITY_MAPPING      *MappingNode             = gDeviceCompatibilityMap;
-  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node                    = NULL;
-  NVIDIA_DEVICE_DISCOVERY_CONTEXT   *DeviceDiscoveryContext  = NULL;
-
-  if (NumberOfChildren != 0) {
-    return EFI_UNSUPPORTED;
-  }
-
-  //
-  // Attempt to open NonDiscoverable Protocol
-  //
-  Status = gBS->OpenProtocol (
-                  Controller,
-                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
-                  (VOID **)&NonDiscoverableProtocol,
-                  This->DriverBindingHandle,
-                  Controller,
-                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                  );
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  Status = EFI_UNSUPPORTED;
-  while (MappingNode->Compatibility != NULL) {
-    if (CompareGuid (NonDiscoverableProtocol->Type, MappingNode->DeviceType)) {
-      Status = EFI_SUCCESS;
-      break;
-    }
-
-    MappingNode++;
-  }
-
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = gBS->HandleProtocol (Controller, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
-  if (EFI_ERROR (Status)) {
-    Node = NULL;
-  }
-
-  if (!gDeviceDiscoverDriverConfig.SkipEdkiiNondiscoverableInstall) {
-    Status = gBS->UninstallMultipleProtocolInterfaces (
-                    This->DriverBindingHandle,
-                    &gEdkiiNonDiscoverableDeviceProtocolGuid,
-                    NonDiscoverableProtocol,
-                    NULL
-                    );
-    if (EFI_ERROR (Status)) {
-      return EFI_DEVICE_ERROR;
-    }
-  }
-
-  Status = DeviceDiscoveryNotify (
-             DeviceDiscoveryDriverBindingStop,
-             This->DriverBindingHandle,
-             Controller,
-             Node
-             );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = gBS->HandleProtocol (
-                  Controller,
-                  &gNVIDIADeviceDiscoveryContextGuid,
-                  (VOID **)&DeviceDiscoveryContext
-                  );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  if (!gDeviceDiscoverDriverConfig.SkipAutoDeinitControllerOnExitBootServices) {
-    gBS->CloseEvent (DeviceDiscoveryContext->OnExitBootServicesEvent);
-  }
-
-  Status = gBS->UninstallMultipleProtocolInterfaces (
-                  Controller,
-                  &gNVIDIADeviceDiscoveryContextGuid,
-                  DeviceDiscoveryContext,
-                  NULL
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a, driver returned %r to uninstall device discovery context guid\r\n", __FUNCTION__, Status));
-    return Status;
-  }
-
-  gBS->FreePool (DeviceDiscoveryContext);
-
-  //
-  // Close protocols opened by Controller driver
-  //
-  return gBS->CloseProtocol (
-                Controller,
-                &gNVIDIANonDiscoverableDeviceProtocolGuid,
-                This->DriverBindingHandle,
-                Controller
-                );
-}
-
-///
-/// EFI_DRIVER_BINDING_PROTOCOL instance
-///
-STATIC EFI_DRIVER_BINDING_PROTOCOL  mDriverBindingProtocol = {
-  DeviceDiscoveryBindingSupported,
-  DeviceDiscoveryBindingStart,
-  DeviceDiscoveryBindingStop,
-  0x0,
-  NULL,
-  NULL
-};
 
 /**
   This is function is caused to allow the system to check if this implementation supports
@@ -859,28 +650,18 @@ DeviceTreeIsSupported (
 
   return DeviceDiscoveryNotify (
            DeviceDiscoveryDeviceTreeCompatibility,
-           mDriverBindingProtocol.DriverBindingHandle,
+           mImageHandle,
            NULL,
            Node
            );
 }
-
-STATIC NVIDIA_DEVICE_TREE_COMPATIBILITY_PROTOCOL  gDeviceTreeCompatibilty = {
-  DeviceTreeIsSupported
-};
 
 /**
   This is function is caused to allow the system to check if this implementation supports
   the device tree node. If EFI_SUCCESS is returned then handle will be created and driver binding
   will occur.
 
-  @param[in]  This                   The instance of the NVIDIA_DEVICE_TREE_BINDING_PROTOCOL.
   @param[in]  Node                   The pointer to the requested node info structure.
-  @param[out] DeviceType             Pointer to allow the return of the device type
-  @param[out] PciIoInitialize        Pointer to allow return of function that will be called
-                                       when the PciIo subsystem connects to this device.
-                                       Note that this will may not be called if the device
-                                       is not in the boot path.
 
   @return EFI_SUCCESS               The node is supported by this instance
   @return EFI_UNSUPPORTED           The node is not supported by this instance
@@ -908,8 +689,6 @@ EnumerationIsNodeSupported (
   false. Used if device enumeration needs to not happen at driver start.
   For example, if device needs to wait for a protocol notification.
 
-  Requires DirectEnumerationSupport is enabled in configuration.
-
   @retval EFI_SUCCESS             Device Enumeration started
   @retval others                  Error occured
 **/
@@ -927,8 +706,6 @@ DeviceDiscoveryEnumerateDevices (
 
   DeviceCount = 0;
   DtNodeInfo  = NULL;
-
-  ASSERT (gDeviceDiscoverDriverConfig.DirectEnumerationSupport);
 
   Status = GetSupportedDeviceTreeNodes (
              NULL,
@@ -981,19 +758,8 @@ DeviceDiscoveryEnumerateDevices (
       continue;
     }
 
-    Status = DeviceDiscoveryBindingSupported (
-               &mDriverBindingProtocol,
-               DeviceHandle,
-               NULL
-               );
-    if (EFI_ERROR (Status)) {
-      continue;
-    }
-
-    Status = DeviceDiscoveryBindingStart (
-               &mDriverBindingProtocol,
-               DeviceHandle,
-               NULL
+    Status = DeviceDiscoveryStart (
+               DeviceHandle
                );
     if (EFI_ERROR (Status)) {
       continue;
@@ -1037,8 +803,7 @@ DeviceDiscoveryDriverInitialize (
 {
   EFI_STATUS  Status;
 
-  mDriverBindingProtocol.DriverBindingHandle = ImageHandle;
-  mImageHandle                               = ImageHandle;
+  mImageHandle = ImageHandle;
 
   Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&gScmiClockProtocol);
   if (EFI_ERROR (Status)) {
@@ -1050,25 +815,9 @@ DeviceDiscoveryDriverInitialize (
     return Status;
   }
 
-  if (gDeviceDiscoverDriverConfig.UseDriverBinding &&
-      !gDeviceDiscoverDriverConfig.DirectEnumerationSupport)
-  {
-    Status = EfiLibInstallDriverBinding (
-               ImageHandle,
-               SystemTable,
-               &mDriverBindingProtocol,
-               ImageHandle
-               );
-
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to install driver binding protocol: %r\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-  }
-
   Status = DeviceDiscoveryNotify (
              DeviceDiscoveryDriverStart,
-             mDriverBindingProtocol.DriverBindingHandle,
+             mImageHandle,
              NULL,
              NULL
              );
@@ -1076,24 +825,9 @@ DeviceDiscoveryDriverInitialize (
     return Status;
   }
 
-  if (!gDeviceDiscoverDriverConfig.DirectEnumerationSupport) {
-    ASSERT (
-      !gDeviceDiscoverDriverConfig.DelayEnumeration &&
-      !gDeviceDiscoverDriverConfig.ThreadedDeviceStart
-      );
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &mDriverBindingProtocol.DriverBindingHandle,
-                    &gNVIDIADeviceTreeCompatibilityProtocolGuid,
-                    &gDeviceTreeCompatibilty,
-                    NULL
-                    );
+  if (!gDeviceDiscoverDriverConfig.DelayEnumeration) {
+    Status = DeviceDiscoveryEnumerateDevices ();
     ASSERT_EFI_ERROR (Status);
-  } else {
-    ASSERT (!gDeviceDiscoverDriverConfig.UseDriverBinding);
-    if (!gDeviceDiscoverDriverConfig.DelayEnumeration) {
-      Status = DeviceDiscoveryEnumerateDevices ();
-      ASSERT_EFI_ERROR (Status);
-    }
   }
 
   return Status;

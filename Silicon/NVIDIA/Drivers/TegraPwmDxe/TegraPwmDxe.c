@@ -2,7 +2,7 @@
 
   TegraPwmDxe Controller Driver
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -27,11 +27,9 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA PWM driver",
-  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = TRUE,
   .AutoResetModule                 = TRUE,
-  .SkipEdkiiNondiscoverableInstall = FALSE,
-  .DirectEnumerationSupport        = TRUE
+  .SkipEdkiiNondiscoverableInstall = FALSE
 };
 
 #define PWM_FAN_HIGH    0x81000000

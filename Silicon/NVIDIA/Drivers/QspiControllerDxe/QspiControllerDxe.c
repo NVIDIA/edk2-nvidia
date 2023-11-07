@@ -67,12 +67,10 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                                 = L"NVIDIA Qspi controller driver",
-  .UseDriverBinding                           = FALSE,
   .AutoEnableClocks                           = TRUE,
   .AutoDeassertReset                          = TRUE,
   .SkipEdkiiNondiscoverableInstall            = TRUE,
-  .SkipAutoDeinitControllerOnExitBootServices = TRUE,
-  .DirectEnumerationSupport                   = TRUE
+  .SkipAutoDeinitControllerOnExitBootServices = TRUE
 };
 
 /**

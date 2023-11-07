@@ -2,7 +2,7 @@
 
   Tegra GPIO Driver
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -159,11 +159,9 @@ UINT32                        mControllerCount  = 0;
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Gpio controller driver",
-  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = FALSE,
   .AutoDeassertReset               = FALSE,
-  .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE
+  .SkipEdkiiNondiscoverableInstall = TRUE
 };
 
 STATIC PLATFORM_GPIO_CONTROLLER  *mGpioController  = NULL;

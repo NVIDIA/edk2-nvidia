@@ -43,11 +43,9 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA EQoS ethernet controller driver",
-  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = TRUE,
   .AutoResetModule                 = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE,
   .ThreadedDeviceStart             = TRUE
 };
 

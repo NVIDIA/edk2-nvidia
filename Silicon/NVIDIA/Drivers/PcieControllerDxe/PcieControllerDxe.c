@@ -89,12 +89,10 @@ STATIC ACPI_HID_DEVICE_PATH  mPciRootBridgeDevicePathNode = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Pcie controller driver",
-  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = FALSE,
   .AutoDeassertReset               = FALSE,
   .AutoDeassertPg                  = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE,
   .ThreadedDeviceStart             = TRUE
 };
 

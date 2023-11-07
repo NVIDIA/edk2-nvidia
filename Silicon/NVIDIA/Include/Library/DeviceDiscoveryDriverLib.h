@@ -28,14 +28,12 @@ extern NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[];
 
 typedef struct {
   CONST CHAR16    *DriverName;
-  BOOLEAN         UseDriverBinding;
   BOOLEAN         AutoEnableClocks;
   BOOLEAN         AutoDeassertReset;
   BOOLEAN         AutoResetModule;
   BOOLEAN         AutoDeassertPg;
   BOOLEAN         SkipEdkiiNondiscoverableInstall;
   BOOLEAN         SkipAutoDeinitControllerOnExitBootServices;
-  BOOLEAN         DirectEnumerationSupport;
   BOOLEAN         DelayEnumeration;
   BOOLEAN         ThreadedDeviceStart;
 } NVIDIA_DEVICE_DISCOVERY_CONFIG;
@@ -274,8 +272,6 @@ DeviceDiscoverySetProd (
   Enumerate all matching devices. Called automatically if DelayEnumeration is
   false. Used if device enumeration needs to not happen at driver start.
   For example, if device needs to wait for a protocol notification.
-
-  Requires DirectEnumerationSupport is enabled in configuration.
 
   @retval EFI_SUCCESS             Device Enumeration started
   @retval others                  Error occured

@@ -71,8 +71,7 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NV Display Controller Driver",
   .AutoDeassertPg                  = TRUE,
-  .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE,
+  .SkipEdkiiNondiscoverableInstall = TRUE
 };
 
 /**
