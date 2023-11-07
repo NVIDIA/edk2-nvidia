@@ -157,6 +157,11 @@ typedef struct {
   BOOLEAN    QuickBootSupported;
   BOOLEAN    DebugMenuSupported;
   BOOLEAN    RedfishSupported;
+  BOOLEAN    ModsSpEnableSettingSupported;
+  BOOLEAN    TpmEnableSettingSupported;
+  BOOLEAN    GpuSmmuBypassEnableSettingSupported;
+  BOOLEAN    UartBaudRateSettingSupported;
+  BOOLEAN    PerfVersionSettingSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];

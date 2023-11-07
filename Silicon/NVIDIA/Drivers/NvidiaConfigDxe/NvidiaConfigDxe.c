@@ -1565,21 +1565,40 @@ InitializeSettings (
       DEBUG ((DEBUG_ERROR, "%a: Failed to get platform resource data\n", __FUNCTION__));
     }
 
-    if (mHiiControlSettings.DebugMenuSupported) {
-      mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 6) {
+      mHiiControlSettings.UartBaudRateSettingSupported = TRUE;
     }
 
-    if (mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable == TRUE) {
-      for (Index = 0; Index < MAX_SOCKETS; Index++) {
-        if (!IsSocketEnabled (Index)) {
-          continue;
-        }
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 5) {
+      mHiiControlSettings.ModsSpEnableSettingSupported = TRUE;
+    }
 
-        MmioWrite32 (
-          (Index << TH500_SOCKET_SHFT) + TH500_MCF_SMMU_SOCKET_0 + TH500_MCF_SMMU_BYPASS_0_OFFSET,
-          0x1
-          );
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 4) {
+      mHiiControlSettings.GpuSmmuBypassEnableSettingSupported = TRUE;
+      if (mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable == TRUE) {
+        for (Index = 0; Index < MAX_SOCKETS; Index++) {
+          if (!IsSocketEnabled (Index)) {
+            continue;
+          }
+
+          MmioWrite32 (
+            (Index << TH500_SOCKET_SHFT) + TH500_MCF_SMMU_SOCKET_0 + TH500_MCF_SMMU_BYPASS_0_OFFSET,
+            0x1
+            );
+        }
       }
+    }
+
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 3) {
+      mHiiControlSettings.TpmEnableSettingSupported = TRUE;
+    }
+
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 2) {
+      mHiiControlSettings.PerfVersionSettingSupported = TRUE;
+    }
+
+    if (mHiiControlSettings.DebugMenuSupported) {
+      mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
     }
 
     WriteMb1Variables (&mMb1Config, &mVariableMb1Config);

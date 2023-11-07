@@ -285,6 +285,7 @@ formset
     endif;
 
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TpmPresent == 0;
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TpmEnableSettingSupported == 0;
     oneof varid = NVIDIA_CONFIG_HII_CONTROL.TpmEnable,
         questionid = KEY_ENABLE_TPM,
         prompt = STRING_TOKEN(STR_TPM_ENABLE_PROMPT),
@@ -293,6 +294,7 @@ formset
         option text = STRING_TOKEN(STR_DISABLED), value = 0x00, flags = DEFAULT;
         option text = STRING_TOKEN(STR_ENABLED),  value = 0x01, flags = 0;
     endoneof;
+    endif;
     endif;
 
     checkbox varid = EnabledPcieNicTopology.Enabled,
@@ -587,18 +589,23 @@ formset
         flags  = INTERACTIVE | RESET_REQUIRED,
     endcheckbox;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.ModsSpEnableSettingSupported == 0;
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.ModsSpEnable,
         prompt = STRING_TOKEN(STR_MODS_SP_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_MODS_SP_ENABLE_HELP),
         flags  = INTERACTIVE | RESET_REQUIRED,
     endcheckbox;
+    endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.GpuSmmuBypassEnableSettingSupported == 0;
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.GpuSmmuBypassEnable,
         prompt = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_HELP),
         flags  = INTERACTIVE | RESET_REQUIRED,
     endcheckbox;
+    endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.UartBaudRateSettingSupported == 0;
     oneof varid = NVIDIA_CONFIG_HII_CONTROL.UartBaudRate,
         prompt = STRING_TOKEN(STR_UART_BAUD_RATE_PROMPT),
         help   = STRING_TOKEN(STR_UART_BAUD_RATE_HELP),
@@ -609,7 +616,9 @@ formset
         option text = STRING_TOKEN(STR_UART_BAUD_RATE_19200),  value = UART_BAUD_RATE_19200,  flags = 0;
         option text = STRING_TOKEN(STR_UART_BAUD_RATE_9600),   value = UART_BAUD_RATE_9600,   flags = 0;
     endoneof;
+    endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.PerfVersionSettingSupported == 0;
     oneof varid = NVIDIA_CONFIG_HII_CONTROL.PerfVersion,
         prompt = STRING_TOKEN(STR_PERF_VERSION_PROMPT),
         help   = STRING_TOKEN(STR_PERF_VERSION_HELP),
@@ -617,6 +626,7 @@ formset
         option text = STRING_TOKEN(STR_PERF_VERSION_DEFAULT), value = PERF_VERSION_DEFAULT, flags = 0;
         option text = STRING_TOKEN(STR_PERF_VERSION_C1_NCM),  value = PERF_VERSION_C1_NCM,  flags = 0;
     endoneof;
+    endif;
 
     ADD_GOTO_SOCKET_FORM(0)
     ADD_GOTO_SOCKET_FORM(1)
