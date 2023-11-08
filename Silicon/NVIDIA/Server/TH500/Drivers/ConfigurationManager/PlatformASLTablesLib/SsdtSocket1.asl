@@ -1,7 +1,7 @@
 /** @file
   SSDT for TH500 Socket 1 devices
 
-  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -110,7 +110,7 @@ DefinitionBlock("SsdtSocket1.aml", "SSDT", 2, "NVIDIA", "TH500_S1", 0x00000001) 
     Device (FUN1)
     {
       Name (_HID , "ARMHC9FF")
-      Name (_UID , 0x03)
+      Name (_UID , 0x1003)
       Name (_CID , "ARMHC500")
 
       Name (_CRS , ResourceTemplate () {
@@ -161,7 +161,7 @@ DefinitionBlock("SsdtSocket1.aml", "SSDT", 2, "NVIDIA", "TH500_S1", 0x00000001) 
     // Coresight ETF
     Device (ETF1) {
       Name (_HID , "ARMHC97C")
-      Name (_UID , 0x02)
+      Name (_UID , 0x1002)
       Name (_CID , "ARMHC500")
 
       Name (_CRS , ResourceTemplate () {

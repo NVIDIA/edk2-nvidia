@@ -843,7 +843,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     Device (FUN0)
     {
       Name (_HID , "ARMHC9FF")
-      Name (_UID , 0x01)
+      Name (_UID , 0x1001)
       Name (_CID , "ARMHC500")
 
       Name (_CRS , ResourceTemplate () {
@@ -894,7 +894,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     // Coresight ETF
     Device (ETF0) {
       Name (_HID , "ARMHC97C")
-      Name (_UID , 0x00)
+      Name (_UID , 0x1000)
       Name (_CID , "ARMHC500")
 
       Name (_CRS , ResourceTemplate () {
