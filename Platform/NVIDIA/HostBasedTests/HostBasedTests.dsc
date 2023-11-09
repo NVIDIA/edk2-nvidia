@@ -134,6 +134,15 @@
       ShellCommandLib|ShellPkg/Library/UefiShellCommandLib/UefiShellCommandLib.inf
   }
 
+  #
+  # MmVarLib Host Base GoogleTest
+  Silicon/NVIDIA/Library/MmVarLib/GoogleTest/MmVarLibGoogleTest.inf {
+    <LibraryClasses>
+      MmVarLib|Silicon/NVIDIA/Library/MmVarLib/MmVarLib.inf
+      MmServicesTableLib|MdePkg/Test/Mock/Library/GoogleTest/MockMmStTableLib/MockMmStTableLib.inf
+      SmmVarProtoLib|Silicon/NVIDIA/Test/Mock/Library/GoogleTest/MockSmmVarProto/MockSmmVarProto.inf
+    }
+
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0

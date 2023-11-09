@@ -28,6 +28,7 @@
   Include
   Include/Server
   Include/Tegra
+  Test/Mock/Include
 
 [Guids.common]
   gNVIDIATokenSpaceGuid                  = { 0xed3374ef, 0x767b, 0x42fa, { 0xaf, 0x70, 0xdb, 0x52, 0x0a, 0x39, 0x28, 0x22 } }
