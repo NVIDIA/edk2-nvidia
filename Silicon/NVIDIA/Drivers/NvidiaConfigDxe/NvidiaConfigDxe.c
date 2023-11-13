@@ -1573,21 +1573,22 @@ InitializeSettings (
       mHiiControlSettings.ModsSpEnableSettingSupported = TRUE;
     }
 
-    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 4) {
-      mHiiControlSettings.GpuSmmuBypassEnableSettingSupported = TRUE;
-      if (mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable == TRUE) {
-        for (Index = 0; Index < MAX_SOCKETS; Index++) {
-          if (!IsSocketEnabled (Index)) {
-            continue;
-          }
-
-          MmioWrite32 (
-            (Index << TH500_SOCKET_SHFT) + TH500_MCF_SMMU_SOCKET_0 + TH500_MCF_SMMU_BYPASS_0_OFFSET,
-            0x1
-            );
-        }
-      }
-    }
+    // Disable GPU SMMU Bypass Support Till RM Confirms Support
+    //if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 4) {
+    //  mHiiControlSettings.GpuSmmuBypassEnableSettingSupported = TRUE;
+    //  if (mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable == TRUE) {
+    //    for (Index = 0; Index < MAX_SOCKETS; Index++) {
+    //      if (!IsSocketEnabled (Index)) {
+    //        continue;
+    //      }
+    //
+    //      MmioWrite32 (
+    //        (Index << TH500_SOCKET_SHFT) + TH500_MCF_SMMU_SOCKET_0 + TH500_MCF_SMMU_BYPASS_0_OFFSET,
+    //        0x1
+    //        );
+    //    }
+    //  }
+    //}
 
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 3) {
       mHiiControlSettings.TpmEnableSettingSupported = TRUE;
