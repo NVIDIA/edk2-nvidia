@@ -82,4 +82,64 @@ QspiEnableWaitState (
   IN BOOLEAN               Enable
   );
 
+/**
+  Transmit data over QSPI
+
+  Configure controller in TX mode and start transaction in PIO mode.
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  Buffer                   Address of buffer containing data to
+                                   be transmitted.
+  @param  Len                      Number of packets.
+  @param  PacketLen                Size of individual packet.
+
+  @retval EFI_SUCCESS              Data transmitted successfully.
+  @retval Others                   Data transmission failed.
+**/
+EFI_STATUS
+QspiPerformTransmit (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN VOID                  *Buffer,
+  IN UINT32                Len,
+  IN UINT32                PacketLen
+  );
+
+/**
+  Receive data over QSPI
+
+  Configure controller in RX mode and start transaction in PIO mode.
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  Buffer                   Address of buffer where data should be
+                                   received.
+  @param  Len                      Number of packets.
+  @param  PacketLen                Size of individual packet.
+
+  @retval EFI_SUCCESS              Data received successfully.
+  @retval Others                   Data reception failed.
+**/
+EFI_STATUS
+QspiPerformReceive (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN VOID                  *Buffer,
+  IN UINT32                Len,
+  IN UINT32                PacketLen
+  );
+
+/**
+  Configure the CS pin
+
+  Configure whether to enable or disable CS for a slave
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  ChipSelect               Chip select to configure
+  @param  Enable                   TRUE for Tx Fifo, FALSE for Rx Fifo
+**/
+VOID
+QspiConfigureCS (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN UINT8                 ChipSelect,
+  IN BOOLEAN               Enable
+  );
+
 #endif //__QSPI_CONTROLLER_LIB_H__

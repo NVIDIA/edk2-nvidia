@@ -128,7 +128,6 @@ QspiFlushFifo (
   @param  ChipSelect               Chip select to configure
   @param  Enable                   TRUE for Tx Fifo, FALSE for Rx Fifo
 **/
-STATIC
 VOID
 QspiConfigureCS (
   IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
@@ -411,7 +410,6 @@ QspiPerformTransactionConfiguration (
   @retval EFI_SUCCESS              Data received successfully.
   @retval Others                   Data reception failed.
 **/
-STATIC
 EFI_STATUS
 QspiPerformReceive (
   IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
@@ -514,7 +512,6 @@ QspiPerformReceive (
   @retval EFI_SUCCESS              Data transmitted successfully.
   @retval Others                   Data transmission failed.
 **/
-STATIC
 EFI_STATUS
 QspiPerformTransmit (
   IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
