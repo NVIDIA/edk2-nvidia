@@ -130,11 +130,11 @@ RedfishConsumeResourceCommon (
   IN  CHAR8                            *HeaderEtag OPTIONAL
   )
 {
-  REDFISH_RESPONSE  Response;
   UINTN             Index;
-  UINTN             FirmwareComponentCount;
   EDKII_JSON_VALUE  JsonValue;
-  EFI_STRING        *FirmwareComponentUri;
+  EDKII_JSON_VALUE  JsonArrayObj;
+  EDKII_JSON_VALUE  JsonObj;
+  EFI_STRING        FirmwareComponentUri;
   EFI_STATUS        Status;
   VOID              *DeviceTreeBase = NULL;
   INT32             FirmwareInventoryOffset;
@@ -146,7 +146,6 @@ RedfishConsumeResourceCommon (
   EFI_STRING        DtbFirmwareId[MAX_REDFISH_FMP_COUNT];
   CONST VOID        *Property;
   INT32             Length;
-  REDFISH_PAYLOAD   Payload;
 
   if (Private == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -191,27 +190,27 @@ RedfishConsumeResourceCommon (
     }
   }
 
-  Response.Payload = Private->Payload;
-
-  Status = RedfishGetCollectionSize (Response.Payload, &FirmwareComponentCount);
-  if (EFI_ERROR (Status)) {
+  JsonObj = RedfishJsonInPayload (Private->Payload);
+  if ((JsonObj == NULL) || !JsonValueIsObject (JsonObj)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid JSON payload\n", __FUNCTION__));
+    Status = EFI_DEVICE_ERROR;
     goto Exit;
   }
 
-  FirmwareComponentUri = (EFI_STRING *)AllocateZeroPool (FirmwareComponentCount * sizeof (EFI_STRING));
+  JsonArrayObj = JsonObjectGetValue (JsonValueGetObject (JsonObj), "Members");
+  if ((JsonArrayObj == NULL) || !JsonValueIsArray (JsonArrayObj)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid JSON payload\n", __FUNCTION__));
+    Status = EFI_DEVICE_ERROR;
+    goto Exit;
+  }
+
   //
   // Seeking valid URI link for firmware inventory info collection.
   //
   if (mRegularExpressionProtocol != NULL) {
-    for (Index = 0; Index < FirmwareComponentCount; Index++) {
-      Payload = RedfishGetPayloadByIndex (Response.Payload, Index);
-      if (Payload == NULL) {
-        continue;
-      }
-
-      JsonValue                   = RedfishJsonInPayload (Payload);
-      JsonValue                   = JsonObjectGetValue (JsonValueGetObject (JsonValue), "@odata.id");
-      FirmwareComponentUri[Index] = JsonValueGetUnicodeString (JsonValue);
+    EDKII_JSON_ARRAY_FOREACH (JsonArrayObj, Index, JsonValue) {
+      JsonValue            = JsonObjectGetValue (JsonValueGetObject (JsonValue), "@odata.id");
+      FirmwareComponentUri = JsonValueGetUnicodeString (JsonValue);
 
       //
       // Gather the necessary firmware info that DTB defined.
@@ -224,7 +223,7 @@ RedfishConsumeResourceCommon (
 
         Status = mRegularExpressionProtocol->MatchString (
                                                mRegularExpressionProtocol,
-                                               FirmwareComponentUri[Index],
+                                               FirmwareComponentUri,
                                                DtbFirmwareId[DtbFirmwareIdIndex],
                                                &gEfiRegexSyntaxTypePerlGuid,
                                                &IsMatch,
@@ -236,7 +235,7 @@ RedfishConsumeResourceCommon (
         }
 
         if (IsMatch) {
-          GetFirmwareComponentInfo (Private, FirmwareComponentUri[Index]);
+          GetFirmwareComponentInfo (Private, FirmwareComponentUri);
           break;
         }
       }
