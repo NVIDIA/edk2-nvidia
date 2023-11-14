@@ -203,16 +203,6 @@ DeviceDiscoveryNotify (
 
   PlatformType = TegraGetPlatform ();
   switch (Phase) {
-    case DeviceDiscoveryDriverBindingSupported:
-      ChipID = TegraGetChipID ();
-      if ((ChipID == T234_CHIP_ID) &&
-          (PcdGetBool (PcdBootAndroidImage)))
-      {
-        return EFI_UNSUPPORTED;
-      }
-
-      return EFI_SUCCESS;
-
     case DeviceDiscoveryDriverBindingStart:
 
       if ((DeviceTreeNode == NULL) ||
@@ -507,6 +497,14 @@ DeviceDiscoveryNotify (
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "Failed to register for ACPI installation\r\n"));
         return Status;
+      }
+
+      // If booting Android on T234, skip ethernet initialization in UEFI
+      ChipID = TegraGetChipID ();
+      if ((ChipID == T234_CHIP_ID) &&
+          (PcdGetBool (PcdBootAndroidImage)))
+      {
+        return EFI_UNSUPPORTED;
       }
 
       Snp->PhyDriver.MgbeDevice = CompareGuid (Device->Type, &gDwMgbeNetNonDiscoverableDeviceGuid);
