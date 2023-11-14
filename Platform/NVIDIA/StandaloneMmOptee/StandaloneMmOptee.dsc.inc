@@ -30,6 +30,7 @@
   SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraStandaloneMmSerialPortLib.inf
   DebugLib|MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
   QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
+  VarSetCallbacksLib|Silicon/NVIDIA/Library/VarSetCallbacksLib/VarSetCallbacksLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 
@@ -48,6 +49,7 @@
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdOpteePresent|TRUE
+  gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported|TRUE
 
 [PcdsPatchableInModule]
   #
