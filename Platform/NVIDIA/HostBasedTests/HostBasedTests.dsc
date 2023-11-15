@@ -141,12 +141,19 @@
       MmVarLib|Silicon/NVIDIA/Library/MmVarLib/MmVarLib.inf
       MmServicesTableLib|MdePkg/Test/Mock/Library/GoogleTest/MockMmStTableLib/MockMmStTableLib.inf
       SmmVarProtoLib|Silicon/NVIDIA/Test/Mock/Library/GoogleTest/MockSmmVarProto/MockSmmVarProto.inf
-    }
+  }
 
   Silicon/NVIDIA/Library/MpCoreInfoLib/UnitTest/MpCoreInfoLibGoogleTest.inf {
     <LibraryClasses>
       MpCoreInfoLib|Silicon/NVIDIA/Library/MpCoreInfoLib/MpCoreInfoLib.inf
       HobLib|MdePkg/Test/Mock/Library/GoogleTest/MockHobLib/MockHobLib.inf
+  }
+
+  Silicon/NVIDIA/Library/DeviceTreeHelperLib/UnitTest/DeviceTreeHelperLibGoogleTest.inf {
+    <LibraryClasses>
+      DeviceTreeHelperLib|Silicon/NVIDIA/Library/DeviceTreeHelperLib/DeviceTreeHelperLib.inf
+      FdtLib|MdePkg/Test/Mock/Library/GoogleTest/MockFdtLib/MockFdtLib.inf
+      DtPlatformDtbLoaderLib|EmbeddedPkg/Test/Mock/Library/GoogleTest/MockDtPlatformDtbLoaderLib/MockDtPlatformDtbLoaderLib.inf
   }
 
 [PcdsDynamicDefault]
