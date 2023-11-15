@@ -1,7 +1,7 @@
 /** @file
 *  Resource Configuration Dxe
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -125,6 +125,8 @@ VPRDxeInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
+  FdtInstalled (NULL, NULL);
+
   return gBS->CreateEventEx (
                 EVT_NOTIFY_SIGNAL,
                 TPL_CALLBACK,
