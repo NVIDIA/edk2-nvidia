@@ -563,10 +563,25 @@ UpdateFdt (
         return;
       }
 
-      // Uefi DTB node may have moved as a result of overlays
       NodeOffset = fdt_path_offset (Dtb, "/firmware/uefi");
       if (NodeOffset >= 0) {
         fdt_setprop (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
+      } else {
+        NodeOffset = fdt_path_offset (Dtb, "/firmware");
+        if (NodeOffset >= 0) {
+          NodeOffset = fdt_add_subnode (Dtb, NodeOffset, "uefi");
+          if (NodeOffset >= 0) {
+            fdt_setprop (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
+          }
+        } else {
+          NodeOffset = fdt_add_subnode (Dtb, 0, "firmware");
+          if (NodeOffset >= 0) {
+            NodeOffset = fdt_add_subnode (Dtb, NodeOffset, "uefi");
+            if (NodeOffset >= 0) {
+              fdt_setprop (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
+            }
+          }
+        }
       }
     }
   }
