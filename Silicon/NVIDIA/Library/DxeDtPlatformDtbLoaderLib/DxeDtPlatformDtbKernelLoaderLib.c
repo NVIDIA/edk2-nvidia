@@ -584,6 +584,11 @@ UpdateFdt (
         }
       }
     }
+
+    // Install DTB again so that any prior DTB updates that got skipped because of missing
+    // overlays are now applied.
+    gBS->InstallConfigurationTable (&gFdtTableGuid, Dtb);
+    return;
   }
 
   // Remove plugin-manager node for device trees.
@@ -839,8 +844,6 @@ OnEndOfDxe (
 {
   gBS->CloseEvent (Event);
 
-  UpdateFdt (NULL, NULL);
-
   gBS->CreateEventEx (
          EVT_NOTIFY_SIGNAL,
          TPL_NOTIFY,
@@ -849,6 +852,8 @@ OnEndOfDxe (
          &gFdtTableGuid,
          &FdtInstallEvent
          );
+
+  UpdateFdt (NULL, NULL);
 }
 
 /**
