@@ -169,7 +169,6 @@ typedef struct {
   UINT8      PhysicalPcieWidth1[MAX_PCIE];
   UINT8      PhysicalPcieWidth2[MAX_PCIE];
   UINT8      PhysicalPcieWidth3[MAX_PCIE];
-  BOOLEAN    UphyNvlinkForceEnabled;
   // MB1 DATA
   BOOLEAN    EgmEnabled;
   UINT32     EgmHvSizeMb;
@@ -277,13 +276,13 @@ typedef struct {
         help = STRING_TOKEN(STR_UPHY2_HELP),                                             \
         flags = INTERACTIVE | RESET_REQUIRED,                                            \
         suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 1 AND                \
-                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphyNvlinkForceEnabled == 1 ;       \
+                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[2] > 2;         \
         option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;                  \
         option text = STRING_TOKEN(STR_PCIE_C4_X16), value = 1, flags = 0;               \
         option text = STRING_TOKEN(STR_PCIE_C4_X8_C5_X8), value = 2, flags = 0;          \
         endif;                                                                           \
         suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 1 AND                \
-                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphyNvlinkForceEnabled == 0 ;       \
+                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[2] < 3;         \
         option text = STRING_TOKEN(STR_PCIE_C5_X4_NVLINK_X12), value = 3, flags = 0;     \
         option text = STRING_TOKEN(STR_PCIE_C5_X4_NVLINK_NO_PCIE), value = 4, flags = 0; \
         endif;                                                                           \
@@ -295,13 +294,13 @@ typedef struct {
         help = STRING_TOKEN(STR_UPHY3_HELP),                                             \
         flags = INTERACTIVE | RESET_REQUIRED,                                            \
         suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 1 AND                \
-                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphyNvlinkForceEnabled == 1 ;       \
+                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[3] > 2;         \
         option text = STRING_TOKEN(STR_DISABLED), value = 0, flags = 0;                  \
         option text = STRING_TOKEN(STR_PCIE_C6_X16), value = 1, flags = 0;               \
         option text = STRING_TOKEN(STR_PCIE_C6_X8_C7_X8), value = 2, flags = 0;          \
         endif;                                                                           \
         suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 1 AND                \
-                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphyNvlinkForceEnabled == 0 ;       \
+                   ideqval NVIDIA_CONFIG_HII_CONTROL.UphySetting##socket[3] < 3;         \
         option text = STRING_TOKEN(STR_PCIE_C7_X4_NVLINK_X12), value = 3, flags = 0;     \
         option text = STRING_TOKEN(STR_PCIE_C7_X4_NVLINK_NO_PCIE), value = 4, flags = 0; \
         endif;                                                                           \
