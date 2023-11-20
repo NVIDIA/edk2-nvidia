@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018, ARM Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -22,7 +22,7 @@
 [LibraryClasses]
   BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   StandaloneMmCoreEntryPoint|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumEntryPoint/StandaloneMmHafniumCoreEntryPoint.inf
-  FdtLib|EmbeddedPkg/Library/FdtLib/FdtLib.inf
+  FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
   DebugLib|Silicon/NVIDIA/Library/DebugLibHafnium/DebugLibHafnium.inf
   ArmSvcLib|Silicon/NVIDIA/Library/ArmSvcHvcLibHafnium/ArmSvcHvcLibHafnium.inf
   QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf

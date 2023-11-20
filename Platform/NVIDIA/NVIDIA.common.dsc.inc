@@ -176,7 +176,7 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   TimeBaseLib|EmbeddedPkg/Library/TimeBaseLib/TimeBaseLib.inf
   FruLib|Silicon/NVIDIA/Library/FruLib/FruLib.inf
 
-  FdtLib|EmbeddedPkg/Library/FdtLib/FdtLib.inf
+  FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
   DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbLoaderLib.inf
 
   DeviceDiscoveryDriverLib|Silicon/NVIDIA/Library/DeviceDiscoveryDriverLib/DeviceDiscoveryDriverLib.inf
