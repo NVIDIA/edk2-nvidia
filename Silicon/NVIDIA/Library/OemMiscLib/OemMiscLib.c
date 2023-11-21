@@ -750,15 +750,7 @@ GetCpuSerialNumTh500 (
   UnicodeSPrint (
     Serial,
     CpuBufSize,
-    L"%x-%x-%x-%x-%x-%x-%x-%x (FuseValues) \n 0x%lx%lx (128 bit ECID)",
-    Vendor,
-    Fab,
-    Lot0,
-    Lot1,
-    Wafer,
-    XValue,
-    YValue,
-    Reserved,
+    L"0x%016lx%016lx",
     Ecid128[1],
     Ecid128[0]
     );
