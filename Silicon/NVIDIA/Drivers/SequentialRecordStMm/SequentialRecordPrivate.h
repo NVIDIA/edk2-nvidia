@@ -2,7 +2,7 @@
 
   Private Sequential record protocol/header definitions.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -46,5 +46,43 @@ typedef struct {
   /* Return value in the EFI standard. Initialized as EFI_SUCCESS when making a request. */
   EFI_STATUS    ReturnStatus;
 } SATMC_MM_COMMUNICATE_PAYLOAD;
+
+/*
+ * The "targets" listed below are entities where a CPER record can be sent and that can be overridden by UEFI MM.
+ */
+#define PUBLISH_HEST  0x2
+#define PUBLISH_BMC   0x8
+
+/*
+ * Maximum number of thermal zones for RAS logging.
+ */
+#define RAS_MAX_THERMAL_ZONES  12
+
+/*
+ * Structure to store thermal zone values and store them with the RAS log.
+ */
+typedef struct {
+  UINT32    Valid_N;  /* Uses bits [0-11] to indicate which zones are valid, 0 for valid, 1 for invalid */
+  UINT32    Temperature[RAS_MAX_THERMAL_ZONES];
+} RAS_THERMAL_ZONES;
+
+/*
+ * Header for a RAS log
+ */
+typedef struct {
+  UINT32    LogType;
+  UINT32    TotalSize;
+} RAS_LOG_HEADER;
+
+/*
+ * Format of a RAS log entry.
+ * In particular, the Log field contains the actual CPER and begins with EFI_ACPI_6_4_GENERIC_ERROR_DATA_ENTRY_STRUCTURE
+ * that contains the severity and the actual details about the CPER (SectionType, ErrorDataLength...)
+ */
+typedef struct {
+  RAS_LOG_HEADER       Header;
+  RAS_THERMAL_ZONES    Thermal;
+  UINT8                Log[]; /* Flexible array member */
+} RAS_LOG_MM_ENTRY;
 
 #endif // SEQUENTIAL_RECORD_PVT_H

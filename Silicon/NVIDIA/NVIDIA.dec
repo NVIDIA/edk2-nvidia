@@ -477,6 +477,9 @@
 #Single Launch Application
   gNVIDIATokenSpaceGuid.PcdSingleBootSupport|FALSE|BOOLEAN|0x00010000
 
+#No Corrected Errors in HEST ACPI
+  gNVIDIATokenSpaceGuid.PcdNoCorrectedErrorsInHest|FALSE|BOOLEAN|0x00000116
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C

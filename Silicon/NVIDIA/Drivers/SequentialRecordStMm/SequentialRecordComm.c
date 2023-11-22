@@ -3,7 +3,7 @@
   MM driver to write Sequential records to Flash. This File handles the
   communications bit.
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,6 +12,7 @@
 #include "SequentialRecordPrivate.h"
 #include <Protocol/FirmwareVolumeBlock.h>
 #include <Protocol/SmmVariable.h>
+#include <IndustryStandard/Acpi64.h>
 
 STATIC NVIDIA_SEQ_RECORD_PROTOCOL   *RasSeqProto;
 STATIC NVIDIA_CMET_RECORD_PROTOCOL  *CmetSeqProto;
@@ -281,6 +282,43 @@ ExitCmetMsgHandler:
 }
 
 /**
+ * @brief Given a RAS log from RAS Firmware, this function can be used to change where any given CPER is sent and
+ * therefore override the defaults from RAS Firmware.
+ *
+ * @param RasPayload  RAS Log from RAS Firmware that can be cast to RAS_LOG_MM_ENTRY
+ * @param Target      Bit field with destination of the CPER. Only the PUBLISH_HEST and PUBLISH_BMC bits can be added or
+ *                    removed.
+ * @return UINTN      Updated target where the PUBLISH_HEST and/or PUBLISH_BMC bits may have been changed.
+ */
+STATIC
+UINTN
+RasLogOverrideTargets (
+  IN UINT8  *RasPayload,
+  IN UINTN  Target
+  )
+{
+  RAS_LOG_MM_ENTRY                                 *LogEntry;
+  EFI_ACPI_6_4_GENERIC_ERROR_DATA_ENTRY_STRUCTURE  *Gedes;
+
+  if (FeaturePcdGet (PcdNoCorrectedErrorsInHest)) {
+    LogEntry = (RAS_LOG_MM_ENTRY *)RasPayload;
+    Gedes    = (EFI_ACPI_6_4_GENERIC_ERROR_DATA_ENTRY_STRUCTURE *)LogEntry->Log;
+    DEBUG ((DEBUG_INFO, "%a: Target=0x%llx Severity=0x%lx\n", __FUNCTION__, Target, Gedes->ErrorSeverity));
+
+    /* Don't publish corrected/informational errors to HEST/OS */
+    if ((Gedes->ErrorSeverity == EFI_ACPI_6_4_ERROR_SEVERITY_CORRECTED) ||
+        (Gedes->ErrorSeverity == EFI_ACPI_6_4_ERROR_SEVERITY_NONE))
+    {
+      Target &= ~(PUBLISH_HEST);
+      Target |= PUBLISH_BMC;
+      DEBUG ((DEBUG_INFO, "%a: Corrected/Informational error. New Target=0x%llx\n", __FUNCTION__, Target));
+    }
+  }
+
+  return Target;
+}
+
+/**
  * MMI handler for RAS Log service.
  *
  * @params[in]   DispatchHandle   Handle of the registered MMI..
@@ -341,6 +379,7 @@ RasLogMsgHandler (
                               (VOID *)RasPayload,
                               *CommBufferSize
                               );
+      RasHeader->Flag = RasLogOverrideTargets (RasPayload, RasHeader->Flag);
       break;
     default:
       DEBUG ((
