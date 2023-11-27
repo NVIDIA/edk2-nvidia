@@ -1,7 +1,7 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * Copyright (c) 2020 - 2023, NVIDIA Corporation. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2020 - 2023, NVIDIA Corporation. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -305,17 +305,13 @@ DefinitionBlock ("BpmpSsdtSocket0.aml", "SSDT", 2, "NVIDIA", "BPMP_S0", 0x000000
       }
 
       Method (GPRL, 1, Serialized, 0, IntObj, IntObj) {
-        Local0 = Buffer (16) {}
+        Local0 = Buffer (8) {}
 
         CreateDWordField (Local0, 0x00, CMD)
         CreateDWordField (Local0, 0x04, LIID)
-        CreateDWordField (Local0, 0x08, LISR)
-        CreateDWordField (Local0, 0x0C, LITY)
 
-        CMD = TH500_PWR_LIMIT_GET
+        CMD = TH500_PWR_LIMIT_CURR_CAP
         LIID = Arg0
-        LISR = TH500_PWR_LIMIT_SRC_INB
-        LITY = TH500_PWR_LIMIT_TYPE_TARGET_CAP
 
         Local1 = \_SB.BPM0.BIPC (MRQ_PWR_LIMIT, Local0)
         CreateDWordField (DerefOf (Index (Local1, 0)), 0x00, ERR)
