@@ -52,6 +52,8 @@
   gNVIDIARasCmetMmGuid
   gNVIDIAMmMb1RecordGuid
   gNVIDIASatMcMmGuid
+  gUserAuthenticationGuid
+  gNVIDIAPublicVariableGuid
 
 [Pcd]
    gNVIDIATokenSpaceGuid.PcdNoCorrectedErrorsInHest

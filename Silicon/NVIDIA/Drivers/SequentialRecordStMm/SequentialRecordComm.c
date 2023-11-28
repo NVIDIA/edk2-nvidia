@@ -12,6 +12,8 @@
 #include "SequentialRecordPrivate.h"
 #include <Protocol/FirmwareVolumeBlock.h>
 #include <Protocol/SmmVariable.h>
+#include <Library/BaseLib.h>
+#include <NVIDIAConfiguration.h>
 #include <IndustryStandard/Acpi64.h>
 
 STATIC NVIDIA_SEQ_RECORD_PROTOCOL   *RasSeqProto;
@@ -585,6 +587,57 @@ ExitEarlyVarsMsgHandler:
 }
 
 /**
+  Is variable protected
+
+  @retval  True   Variable is protected.
+  @retval  False  Variable is not protected.
+
+**/
+STATIC
+BOOLEAN
+EFIAPI
+IsVariableProtectedStmm (
+  EFI_GUID  VariableGuid,
+  CHAR16    *VariableName
+  )
+{
+  EFI_STATUS           Status;
+  UINTN                ProductInfoSize;
+  NVIDIA_PRODUCT_INFO  ProductInfo;
+  CHAR16               ProductInfoVariableName[] = L"ProductInfo";
+
+  ProductInfoSize = sizeof (ProductInfo);
+
+  //
+  // Avoid deleting user password variables
+  //
+  if (CompareGuid (&VariableGuid, &gUserAuthenticationGuid)) {
+    return TRUE;
+  }
+
+  //
+  // Check if we have to protect product asset tag info.
+  //
+  Status = SmmVar->SmmGetVariable (
+                     ProductInfoVariableName,
+                     &gNVIDIAPublicVariableGuid,
+                     NULL,
+                     &ProductInfoSize,
+                     &ProductInfo
+                     );
+  if (Status == EFI_SUCCESS) {
+    if ((ProductInfo.AssetTagProtection != 0) &&
+        (StrnCmp (VariableName, ProductInfoVariableName, StrLen (ProductInfoVariableName)) == 0) &&
+        CompareGuid (&VariableGuid, &gNVIDIAPublicVariableGuid))
+    {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
  * DeleteNsVars
  * Function to delete all the non-secure variables and locked variables.
  * This function is usually called from SatMc SP.
@@ -646,6 +699,16 @@ DeleteNsVars (
                              NextVarName,
                              &NextVarGuid
                              );
+
+    if (IsVariableProtectedStmm (CurVarGuid, CurVarName)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Delete Variable %g:%s Write Protected\r\n",
+        &CurVarGuid,
+        CurVarName
+        ));
+      continue;
+    }
 
     ClearVarStatus = SmmVar->SmmSetVariable (
                                CurVarName,
