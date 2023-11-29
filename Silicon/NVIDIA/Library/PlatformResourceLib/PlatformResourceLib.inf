@@ -42,6 +42,7 @@
 [Guids]
   gNVIDIAOSCarveoutHob
   gNVIDIATH500MB1DataGuid
+  gNVIDIATH500MB1DefaultDataGuid
   gTcgEvent2EntryHobGuid
   gArmMpCoreInfoGuid
   gNVIDIAPlatformResourceDataGuid

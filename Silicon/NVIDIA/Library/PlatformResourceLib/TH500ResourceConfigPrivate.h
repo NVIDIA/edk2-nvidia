@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -236,6 +236,8 @@ typedef struct {
   UEFI_DECLARE_ALIGNED (TEGRABL_TPM_COMMIT_LOG EarlyTpmCommitLog, 8);
 
   UEFI_DECLARE_ALIGNED (TEGRABL_DRAM_INFO DramInfo[TH500_MAX_SOCKETS], 8);
+
+  UEFI_DECLARE_ALIGNED (TEGRABL_EARLY_BOOT_VARIABLES EarlyBootVariablesDefaults[TH500_MAX_SOCKETS], 8);
 } TEGRA_CPUBL_PARAMS;
 
 #endif //__TH500_RESOURCE_CONFIG_PRIVATE_H__

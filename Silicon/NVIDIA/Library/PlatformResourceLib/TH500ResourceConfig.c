@@ -996,6 +996,7 @@ TH500GetPlatformResourceInformation (
   }
 
   BuildGuidDataHob (&gNVIDIATH500MB1DataGuid, &CpuBootloaderParams->EarlyBootVariables, sizeof (CpuBootloaderParams->EarlyBootVariables));
+  BuildGuidDataHob (&gNVIDIATH500MB1DefaultDataGuid, &CpuBootloaderParams->EarlyBootVariablesDefaults, sizeof (CpuBootloaderParams->EarlyBootVariablesDefaults));
 
   Status = TH500BuildTcgEventHob ((UINTN)&CpuBootloaderParams->EarlyTpmCommitLog);
   if (EFI_ERROR (Status)) {

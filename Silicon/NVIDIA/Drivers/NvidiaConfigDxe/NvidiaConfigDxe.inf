@@ -61,6 +61,7 @@
   gNVIDIAPublicVariableGuid
   gNVIDIATokenSpaceGuid
   gNVIDIATH500MB1DataGuid
+  gNVIDIATH500MB1DefaultDataGuid
   gNVIDIAMmMb1RecordGuid
 
 [Protocols]

@@ -626,6 +626,7 @@ CHAR16                                 mHiiControlStorageName[] = L"NVIDIA_CONFI
 NVIDIA_CONFIG_HII_CONTROL              mHiiControlSettings      = { 0 };
 EFI_HANDLE                             mDriverHandle;
 TEGRABL_EARLY_BOOT_VARIABLES           mMb1Config              = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES           mMb1DefaultConfig       = { 0 };
 TEGRABL_EARLY_BOOT_VARIABLES           mLastWrittenMb1Config   = { 0 };
 TEGRABL_EARLY_BOOT_VARIABLES           mVariableMb1Config      = { 0 };
 STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2        = NULL;
@@ -1494,7 +1495,17 @@ InitializeSettings (
         mMb1Config.Data.Mb1Data.Header.MinorVersion = TEGRABL_MB1_BCT_MINOR_VERSION;
       }
     } else {
-      DEBUG ((DEBUG_ERROR, "%a: Unexpected size of TH500 HOB\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Unexpected size of TH500 MB1 Data HOB\r\n", __FUNCTION__));
+    }
+  }
+
+  HobPointer = GetFirstGuidHob (&gNVIDIATH500MB1DefaultDataGuid);
+  if (HobPointer != NULL) {
+    if ((GET_GUID_HOB_DATA_SIZE (HobPointer) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * MAX_SOCKETS))) {
+      TH500HobConfig = (CONST TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (HobPointer);
+      CopyMem (&mMb1DefaultConfig, TH500HobConfig, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Unexpected size of TH500 MB1 Default Data HOB\r\n", __FUNCTION__));
     }
   }
 
@@ -1537,7 +1548,7 @@ InitializeSettings (
     }
 
     // Disable GPU SMMU Bypass Support Till RM Confirms Support
-    //if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 4) {
+    // if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 4) {
     //  mHiiControlSettings.GpuSmmuBypassEnableSettingSupported = TRUE;
     //  if (mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable == TRUE) {
     //    for (Index = 0; Index < MAX_SOCKETS; Index++) {
@@ -1551,7 +1562,7 @@ InitializeSettings (
     //        );
     //    }
     //  }
-    //}
+    // }
 
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 3) {
       mHiiControlSettings.TpmEnableSettingSupported = TRUE;
@@ -1773,6 +1784,103 @@ ConfigRouteConfig (
 }
 
 /**
+  This function sets the default value based on type.
+
+  @param[in]   Type           The type of value for the question.
+  @param[in]   Data           The data to se set for value pointer.
+  @param[out]  Value          A pointer to the data being sent to the original
+                              exporting driver.
+
+**/
+VOID
+SetTypedValue (
+  IN     UINT8               Type,
+  IN     UINT64              Data,
+  OUT    EFI_IFR_TYPE_VALUE  *Value
+  )
+{
+  if (Value == NULL) {
+    return;
+  }
+
+  if (Type == EFI_IFR_TYPE_NUM_SIZE_8) {
+    Value->u8 = Data;
+  } else if (Type == EFI_IFR_TYPE_NUM_SIZE_16) {
+    Value->u16 = Data;
+  } else if (Type == EFI_IFR_TYPE_NUM_SIZE_32) {
+    Value->u32 = Data;
+  } else if (Type == EFI_IFR_TYPE_NUM_SIZE_64) {
+    Value->u64 = Data;
+  } else if (Type == EFI_IFR_TYPE_BOOLEAN) {
+    Value->b = Data;
+  }
+}
+
+/**
+  This function returns question default value from MB1 variable.
+
+  @param[in]   QuestionId          A unique value which is sent to the original
+                                   exporting driver so that it can identify the type
+                                   of data to expect.
+  @param[in]   Type                The type of value for the question.
+  @param[out]  Value               A pointer to the data being sent to the original
+                                   exporting driver.
+
+  @retval EFI_SUCCESS              Question default value is returned successfully.
+  @retval EFI_INVALID_PARAMETER    Input argument invalid.
+
+**/
+EFI_STATUS
+GetDefaultValue (
+  IN     EFI_QUESTION_ID     QuestionId,
+  IN     UINT8               Type,
+  IN     EFI_IFR_TYPE_VALUE  *Value
+  )
+{
+  UINT64  Data;
+
+  if (Value == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  switch (QuestionId) {
+    case KEY_ENABLE_TPM:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.TpmEnable;
+      break;
+    case KEY_ENABLE_EGM:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.EgmEnable;
+      break;
+    case KEY_EGM_HV_SIZE_MB:
+      Data = mMb1DefaultConfig.Data.Mb1Data.HvRsvdMemSize;
+      break;
+    case KEY_SPREAD_SPECTRUM:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.SpreadSpecEnable;
+      break;
+    case KEY_MODS_SP_ENABLE:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.ModsSpEnable;
+      break;
+    case KEY_GPU_SMMU_BYPASS_ENABLE:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable;
+      break;
+    case KEY_UART_BAUD_RATE:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.UartBaudRate;
+      break;
+    case KEY_PERF_VERSION:
+      Data = mMb1DefaultConfig.Data.Mb1Data.PerfVersion;
+      break;
+    case KEY_UEFI_DEBUG_LEVEL:
+      Data = mMb1DefaultConfig.Data.Mb1Data.UefiDebugLevel;
+      break;
+    default:
+      return EFI_SUCCESS;
+  }
+
+  SetTypedValue (Type, Data, Value);
+
+  return EFI_SUCCESS;
+}
+
+/**
   This function processes the results of changes in configuration.
 
   @param[in]  This           Points to the EFI_HII_CONFIG_ACCESS_PROTOCOL.
@@ -1901,7 +2009,10 @@ ConfigCallback (
              (Action == EFI_BROWSER_ACTION_DEFAULT_HARDWARE) ||
              (Action == EFI_BROWSER_ACTION_DEFAULT_FIRMWARE))
   {
-    Status = EFI_SUCCESS;
+    //
+    // Return default value of input question
+    //
+    Status = GetDefaultValue (QuestionId, Type, Value);
   }
 
   return Status;
