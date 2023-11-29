@@ -340,6 +340,9 @@ InstallSmbiosType4Cm (
   UINT8                           *LegacyVoltage;
   PROCESSOR_STATUS_DATA           ProcessorStatus;
   UINT64                          *ProcessorId;
+  FRU_DEVICE_INFO                 *Type4FruInfo;
+  CHAR8                           *FruDesc;
+  CONST VOID                      *Property;
 
   Status  = EFI_SUCCESS;
   Repo    = Private->Repo;
@@ -387,18 +390,6 @@ InstallSmbiosType4Cm (
       goto ExitInstallSmbiosType4;
     }
 
-    // Part Number
-    Status = GetPropertyFromDT (DtbBase, NodeOffset, "part-number", &ProcessorInfo[Index].PartNumber);
-    if (Status != EFI_SUCCESS) {
-      goto ExitInstallSmbiosType4;
-    }
-
-    // Assest Tag
-    Status = GetPropertyFromDT (DtbBase, NodeOffset, "assest-tag", &ProcessorInfo[Index].AssetTag);
-    if (Status != EFI_SUCCESS) {
-      goto ExitInstallSmbiosType4;
-    }
-
     // Processor serial number
     SerialNumberStr = GetCpuSerialNum (Index);
     if (SerialNumberStr != NULL) {
@@ -417,6 +408,33 @@ InstallSmbiosType4Cm (
         );
     } else {
       ProcessorInfo[Index].SerialNumber = NULL;
+    }
+
+    // Get data from FRU.
+    FruDesc  = NULL;
+    Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", NULL);
+    if (Property != NULL) {
+      FruDesc      = (CHAR8 *)Property;
+      Type4FruInfo = FindFruByDescription (Private, FruDesc);
+
+      // Part Number
+      if ((Type4FruInfo != NULL) && (Type4FruInfo->ProductPartNum != NULL)) {
+        ProcessorInfo[Index].PartNumber = AllocateCopyString (Type4FruInfo->ProductPartNum);
+      } else {
+        Status = RETURN_NOT_FOUND;
+        goto ExitInstallSmbiosType4;
+      }
+
+      // Asset Tag
+      if ((Type4FruInfo != NULL) && (Type4FruInfo->ProductSerial != NULL)) {
+        ProcessorInfo[Index].AssetTag = AllocateCopyString (Type4FruInfo->ProductSerial);
+      } else {
+        Status = RETURN_NOT_FOUND;
+        goto ExitInstallSmbiosType4;
+      }
+    } else {
+      Status = RETURN_NOT_FOUND;
+      goto ExitInstallSmbiosType4;
     }
 
     // Processor info
