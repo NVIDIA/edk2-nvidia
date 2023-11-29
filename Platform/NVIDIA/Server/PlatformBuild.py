@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,7 +21,7 @@ class ServerSettingsManager(NVIDIASettingsManager):
 
     def GetPackagesPath(self):
         return super().GetPackagesPath() + [
-            "edk2-nvidia-server-gpu-sdk"
+            "edk2-nvidia-server-gpu-sdk/", "edk2-redfish-client/"
         ]
 
     def GetFirmwareVolume(self):
