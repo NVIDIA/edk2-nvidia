@@ -583,12 +583,12 @@ UpdateFdt (
           }
         }
       }
-    }
 
-    // Install DTB again so that any prior DTB updates that got skipped because of missing
-    // overlays are now applied.
-    gBS->InstallConfigurationTable (&gFdtTableGuid, Dtb);
-    return;
+      // Install DTB again so that any prior DTB updates that got skipped because of missing
+      // overlays are now applied.
+      gBS->InstallConfigurationTable (&gFdtTableGuid, Dtb);
+      return;
+    }
   }
 
   // Remove plugin-manager node for device trees.
