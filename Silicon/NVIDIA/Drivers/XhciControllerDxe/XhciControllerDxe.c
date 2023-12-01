@@ -51,7 +51,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoDeassertPg                  = FALSE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
   .DirectEnumerationSupport        = TRUE,
-  .ThreadedDeviceStart             = TRUE
+  .ThreadedDeviceStart             = FALSE
 };
 
 /* XhciController Protocol Function used to return the Xhci
