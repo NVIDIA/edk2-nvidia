@@ -1317,6 +1317,11 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
 !endif
 
+  #
+  # Gpio Power Off Driver
+  #
+  Silicon/NVIDIA/Drivers/GpioPowerOffDxe/GpioPowerOffDxe.inf
+
 [Components.AARCH64]
   #
   # EBC

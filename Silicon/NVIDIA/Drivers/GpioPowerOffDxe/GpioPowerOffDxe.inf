@@ -1,0 +1,44 @@
+## @file
+#  Gpio Power Off Dxe
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = GpioPowerOffDxe
+  FILE_GUID                      = fe369431-30e2-4a7a-9c3d-7d1756cccc16
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = GpioPowerOffDxeInitialize
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+
+[Sources]
+  GpioPowerOffDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiDriverEntryPoint
+  DeviceTreeHelperLib
+  FdtLib
+
+[Protocols]
+  gEmbeddedGpioProtocolGuid
+
+[Depex]
+  gEmbeddedGpioProtocolGuid

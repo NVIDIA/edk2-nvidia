@@ -398,3 +398,8 @@
 !ifdef CONFIG_BOOT_NATIVE_ANDROID_PARTITION_SUPPORT
   INF Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
 !endif
+
+  #
+  # Gpio Power Off Driver
+  #
+  INF Silicon/NVIDIA/Drivers/GpioPowerOffDxe/GpioPowerOffDxe.inf
