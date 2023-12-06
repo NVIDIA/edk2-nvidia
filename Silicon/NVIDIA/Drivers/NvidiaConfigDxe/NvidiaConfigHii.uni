@@ -84,6 +84,8 @@
 #string STR_PERF_VERSION_HELP                #language en-US "Specify Desired Performance Version:\r\nDefault\r\nC1-NCM (Network Congestion Management) settings that are deemed to boost performance efficiency\r\n"
 #string STR_PERF_VERSION_DEFAULT             #language en-US "Default"
 #string STR_PERF_VERSION_C1_NCM              #language en-US "C1-NCM"
+#string STR_EINJ_ENABLE_PROMPT               #language en-US "Error Injection"
+#string STR_EINJ_ENABLE_HELP                 #language en-US "Enable Error Injection ACPI Table\r\n"
 #string STR_UPHY0_SOCKET0_PROMPT             #language en-US "UPHY 0 config"
 #string STR_UPHY0_SOCKET1_PROMPT             #language en-US "UPHY 0 config"
 #string STR_UPHY0_SOCKET2_PROMPT             #language en-US "UPHY 0 config"

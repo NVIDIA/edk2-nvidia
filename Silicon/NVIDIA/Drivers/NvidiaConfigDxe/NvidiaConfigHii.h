@@ -107,6 +107,7 @@
 #define KEY_UART_BAUD_RATE             0x101F
 #define KEY_PERF_VERSION               0x1020
 #define KEY_UEFI_DEBUG_LEVEL           0x1021
+#define KEY_EINJ_ENABLE                0x1022
 
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 
@@ -170,6 +171,7 @@ typedef struct {
   BOOLEAN    GpuSmmuBypassEnableSettingSupported;
   BOOLEAN    UartBaudRateSettingSupported;
   BOOLEAN    PerfVersionSettingSupported;
+  BOOLEAN    EInjEnableSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];
@@ -188,6 +190,7 @@ typedef struct {
   BOOLEAN    GpuSmmuBypassEnable;
   UINT8      UartBaudRate;
   UINT8      PerfVersion;
+  BOOLEAN    EInjEnable;
   UINT8      UphySetting0[MAX_UPHY];
   UINT8      UphySetting1[MAX_UPHY];
   UINT8      UphySetting2[MAX_UPHY];

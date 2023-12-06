@@ -70,6 +70,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_UART_BAUD_RATE_HELP),
   STRING_TOKEN (STR_PERF_VERSION_PROMPT),
   STRING_TOKEN (STR_PERF_VERSION_HELP),
+  STRING_TOKEN (STR_EINJ_ENABLE_PROMPT),
+  STRING_TOKEN (STR_EINJ_ENABLE_HELP),
   STRING_TOKEN (STR_UPHY0_SOCKET0_PROMPT),
   STRING_TOKEN (STR_UPHY0_SOCKET1_PROMPT),
   STRING_TOKEN (STR_UPHY0_SOCKET2_PROMPT),
@@ -1189,6 +1191,8 @@ SyncHiiSettings (
       mHiiControlSettings.UartBaudRate = mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate;
     }
 
+    mHiiControlSettings.EInjEnable = mMb1Config.Data.Mb1Data.FeatureData.EInjEnable;
+
     mHiiControlSettings.PerfVersion    = mMb1Config.Data.Mb1Data.PerfVersion;
     mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
 
@@ -1258,6 +1262,7 @@ SyncHiiSettings (
     mMb1Config.Data.Mb1Data.FeatureData.TpmEnable           = mHiiControlSettings.TpmEnable;
     mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable = mHiiControlSettings.GpuSmmuBypassEnable;
     mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate        = mHiiControlSettings.UartBaudRate;
+    mMb1Config.Data.Mb1Data.FeatureData.EInjEnable          = mHiiControlSettings.EInjEnable;
     mMb1Config.Data.Mb1Data.PerfVersion                     = mHiiControlSettings.PerfVersion;
     mMb1Config.Data.Mb1Data.UefiDebugLevel                  = mHiiControlSettings.UefiDebugLevel;
 
@@ -1537,6 +1542,10 @@ InitializeSettings (
           ASSERT (FALSE);
         }
       }
+    }
+
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 7) {
+      mHiiControlSettings.EInjEnableSupported = TRUE;
     }
 
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 6) {
@@ -1867,6 +1876,9 @@ GetDefaultValue (
       break;
     case KEY_PERF_VERSION:
       Data = mMb1DefaultConfig.Data.Mb1Data.PerfVersion;
+      break;
+    case KEY_EINJ_ENABLE:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.EInjEnable;
       break;
     case KEY_UEFI_DEBUG_LEVEL:
       Data = mMb1DefaultConfig.Data.Mb1Data.UefiDebugLevel;

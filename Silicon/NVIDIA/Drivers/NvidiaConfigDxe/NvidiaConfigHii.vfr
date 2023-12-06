@@ -635,6 +635,15 @@ formset
     endoneof;
     endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.EInjEnableSupported == 0;
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EInjEnable,
+        questionid = KEY_EINJ_ENABLE,
+        prompt = STRING_TOKEN(STR_EINJ_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_EINJ_ENABLE_HELP),
+        flags  = INTERACTIVE | RESET_REQUIRED,
+    endcheckbox;
+    endif;
+
     ADD_GOTO_SOCKET_FORM(0)
     ADD_GOTO_SOCKET_FORM(1)
     ADD_GOTO_SOCKET_FORM(2)

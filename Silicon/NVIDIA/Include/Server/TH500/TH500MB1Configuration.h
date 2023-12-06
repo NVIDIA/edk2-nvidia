@@ -18,7 +18,7 @@
 #define TEGRABL_MAX_PCIE_PER_SOCKET       10
 
 #define TEGRABL_MB1_BCT_MAJOR_VERSION  0
-#define TEGRABL_MB1_BCT_MINOR_VERSION  6
+#define TEGRABL_MB1_BCT_MINOR_VERSION  7
 
 #pragma pack(1)
 
@@ -37,7 +37,8 @@ typedef struct {
       UINT64    TpmEnable           : 1;
       UINT64    GpuSmmuBypassEnable : 1;
       UINT64    UartBaudRate        : 4;
-      UINT64    FeatureFieldsUnused : 55;
+      UINT64    EInjEnable          : 1;
+      UINT64    FeatureFieldsUnused : 54;
     };
   };
 } TEGRABL_FEATURE_DATA;
