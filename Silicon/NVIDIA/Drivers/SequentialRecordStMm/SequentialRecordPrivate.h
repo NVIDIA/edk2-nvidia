@@ -51,6 +51,7 @@ typedef struct {
  * The "targets" listed below are entities where a CPER record can be sent and that can be overridden by UEFI MM.
  */
 #define PUBLISH_HEST  0x2
+#define PUBLISH_BERT  0x4
 #define PUBLISH_BMC   0x8
 
 /*
@@ -73,6 +74,19 @@ typedef struct {
   UINT32    LogType;
   UINT32    TotalSize;
 } RAS_LOG_HEADER;
+
+/*
+ * The following types are used in the RAS_LOG_HEADER.LogType structure. RAS_FW may need to write a CPER into flash
+ * with the intent of reading it back on the next boot and presenting it to the OS then. Once consumed on the next
+ * boot, the same CPER is re-written as RAS_LOG_TYPE_VALID_BERT_CONSUMED.
+ * In the case of an administrator wanting to suppress any BERT record from being sent to the OS, 2 elements are needed:
+ * 1. When writing a record to flash (WRITE_NEXT_RECORD), the PUBLISH_BERT must be removed from the Flag.
+ * 2. When reading the last record from flash (READ_LAST_RECORD), if it is of LogType RAS_LOG_TYPE_VALID_BERT, then
+ *    it should be returned to RAS_FW as RAS_LOG_TYPE_VALID_BERT_CONSUMED so that it is not sent to the OS.
+ */
+#define RAS_LOG_TYPE_VALID_HEST           0xFFFFFFFE
+#define RAS_LOG_TYPE_VALID_BERT           0xFFFFFFFC
+#define RAS_LOG_TYPE_VALID_BERT_CONSUMED  0xFFFFFFF8
 
 /*
  * Format of a RAS log entry.
