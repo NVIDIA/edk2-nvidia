@@ -20,27 +20,40 @@ jobs:
   # Build a draft release.  After it is posted, the draft release can be edited
   # manually and published.
   Build-Draft-Release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
       - name: Install packages
         run: |
-          # Add mono's PPA
-          # - https://github.com/tianocore/edk2-pytool-extensions/blob/master/docs/usability/using_extdep.md#a-note-on-nuget-on-linux
-          sudo apt install -y gnupg ca-certificates
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-          echo "deb https://download.mono-project.com/repo/ubuntu stable-bionic main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
-          sudo apt update
           # Install required packages
-          sudo apt install -y build-essential uuid-dev git gcc python3 virtualenv gcc-aarch64-linux-gnu device-tree-compiler mono-devel
+          sudo apt-get update
+          sudo apt-get install build-essential uuid-dev git gcc-12 g++-12 python3 \
+                               virtualenv g++-12-aarch64-linux-gnu gcc-12-aarch64-linux-gnu \
+                               device-tree-compiler mono-devel lcov
           # Make sure everything is up-to-date
           sudo apt upgrade
-      - name: Upgrade python
+
+      - name: Set alternatives
         run: |
-          sudo apt install -y python3.9 python3-pip python3.9-venv
-          sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
-          sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
+          sudo update-alternatives \
+            --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 \
+            --slave /usr/bin/g++ g++ /usr/bin/g++-12 \
+            --slave /usr/bin/gcc-ar gcc-ar /usr/bin/gcc-ar-12 \
+            --slave /usr/bin/gcc-nm gcc-nm /usr/bin/gcc-nm-12 \
+            --slave /usr/bin/gcc-ranlib gcc-ranlib /usr/bin/gcc-ranlib-12 \
+            --slave /usr/bin/gcov gcov /usr/bin/gcov-12
+          sudo update-alternatives \
+            --install /usr/bin/cpp cpp /usr/bin/cpp-12 100
+          sudo update-alternatives \
+            --install /usr/bin/aarch64-linux-gnu-gcc aarch64-linux-gnu-gcc /usr/bin/aarch64-linux-gnu-gcc-12 100 \
+            --slave /usr/bin/aarch64-linux-gnu-g++ aarch64-linux-gnu-g++ /usr/bin/aarch64-linux-gnu-g++-12 \
+            --slave /usr/bin/aarch64-linux-gnu-gcc-ar aarch64-linux-gnu-gcc-ar /usr/bin/aarch64-linux-gnu-gcc-ar-12 \
+            --slave /usr/bin/aarch64-linux-gnu-gcc-nm aarch64-linux-gnu-gcc-nm /usr/bin/aarch64-linux-gnu-gcc-nm-12 \
+            --slave /usr/bin/aarch64-linux-gnu-gcc-ranlib aarch64-linux-gnu-gcc-ranlib /usr/bin/aarch64-linux-gnu-gcc-ranlib-12 \
+            --slave /usr/bin/aarch64-linux-gnu-gcov aarch64-linux-gnu-gcov /usr/bin/aarch64-linux-gnu-gcov-12
+          sudo update-alternatives \
+            --install /usr/bin/aarch64-linux-gnu-cpp aarch64-linux-gnu-cpp /usr/bin/aarch64-linux-gnu-cpp-12 100
       - name: Install edkrepo
         run: |
           mkdir ${{ github.workspace }}/edkrepo
