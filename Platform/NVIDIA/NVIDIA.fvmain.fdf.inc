@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -168,8 +168,25 @@
   #
   # PCI Support
   #
+!ifdef CONFIG_PCIE
   INF MdeModulePkg/Bus/Pci/PciBusDxe/PciBusDxe.inf
   INF MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf
+  INF ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
+!endif
+!ifdef CONFIG_DESIGNWARE_PCIE
+  INF Silicon/NVIDIA/Drivers/TegraP2UDxe/TegraP2UDxe.inf
+  INF Silicon/NVIDIA/Drivers/PcieDWControllerDxe/PcieControllerDxe.inf
+!endif
+!ifdef CONFIG_NVIDIA_PCIE
+  INF Silicon/NVIDIA/Drivers/PcieControllerDxe/PcieControllerDxe.inf
+!endif
+
+  #
+  # NVMe boot devices
+  #
+!ifdef CONFIG_NVME
+  INF  MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
+!endif
 
   #
   # SATA Controller
@@ -179,11 +196,6 @@
   INF MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
   INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
   INF MdeModulePkg/Bus/Pci/SataControllerDxe/SataControllerDxe.inf
-
-  #
-  # NVMe boot devices
-  #
-  INF  MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
 
   #
   # Networking stack

@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -290,12 +290,6 @@
   # Tegra Platform Configuration
   #
   Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
-
-  #
-  # PCI Support
-  #
-  ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
-  Silicon/NVIDIA/Drivers/PcieControllerDxe/PcieControllerDxe.inf
 
   #
   # Ramloaded OS

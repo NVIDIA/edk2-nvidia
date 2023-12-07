@@ -231,13 +231,6 @@
   Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
   Silicon/NVIDIA/Tegra/T234/Drivers/SeRngDxe/SeRngDxe.inf
 
-  #
-  # PCI Support
-  #
-  ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
-  Silicon/NVIDIA/Drivers/TegraP2UDxe/TegraP2UDxe.inf
-  Silicon/NVIDIA/Drivers/PcieDWControllerDxe/PcieControllerDxe.inf
-
   # FVB Support
   #
   Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf

@@ -1043,8 +1043,25 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   # PCI Support
   #
+!ifdef CONFIG_PCIE
   MdeModulePkg/Bus/Pci/PciBusDxe/PciBusDxe.inf
   MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf
+  ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
+!endif
+!ifdef CONFIG_DESIGNWARE_PCIE
+  Silicon/NVIDIA/Drivers/TegraP2UDxe/TegraP2UDxe.inf
+  Silicon/NVIDIA/Drivers/PcieDWControllerDxe/PcieControllerDxe.inf
+!endif
+!ifdef CONFIG_NVIDIA_PCIE
+  Silicon/NVIDIA/Drivers/PcieControllerDxe/PcieControllerDxe.inf
+!endif
+
+  #
+  # NVMe boot devices
+  #
+!ifdef CONFIG_NVME
+  MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
+!endif
 
   #
   # SATA Controller
@@ -1054,11 +1071,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
   MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
   MdeModulePkg/Bus/Pci/SataControllerDxe/SataControllerDxe.inf
-
-  #
-  # NVMe boot devices
-  #
-  MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
 
   #
   # Usb Support

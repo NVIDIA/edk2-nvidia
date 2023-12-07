@@ -8,6 +8,52 @@
 #
 #
 
+menu "SOC Support"
+  config SOC_XAVIER
+  bool "Xavier"
+  select SOC_JETSON
+  help
+    Support for Xavier (T194)
+
+  config SOC_ORIN
+  bool "Orin"
+  select SOC_JETSON
+  help
+    Support for Orin (T234)
+
+  config SOC_JETSON
+  bool
+
+  config SOC_GRACE
+  bool "Grace"
+  help
+    Support for Grace (TH500)
+endmenu
+
+menu "Hardware support"
+  menuconfig PCIE
+  bool "PCIe Support"
+  default y
+  help
+    Overall PCIe support
+
+  if PCIE
+    config DESIGNWARE_PCIE
+    bool
+    default y if SOC_JETSON
+
+    config NVIDIA_PCIE
+    bool
+    default y if SOC_GRACE
+
+    config NVME
+    bool "NVMe support"
+    default y
+    help
+      Support for NVMe drives on the system
+  endif
+endmenu
+
 menu "OS Hardware description"
   config CONFIG_MANAGER
   bool

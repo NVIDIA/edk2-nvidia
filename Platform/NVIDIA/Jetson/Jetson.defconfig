@@ -1,6 +1,8 @@
-# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
+CONFIG_SOC_XAVIER=y
+CONFIG_SOC_ORIN=y
 CONFIG_ARM_WATCHDOG=n
 CONFIG_BOOT_QUICK_BOOT=y
 CONFIG_BOOT_NATIVE_ANDROID_PARTITION_SUPPORT=y
