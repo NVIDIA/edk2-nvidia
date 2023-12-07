@@ -635,6 +635,7 @@ STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2        = NULL;
 STATIC VOID                            *mMmCommunicationBuffer = NULL;
 UINT64                                 mOpRomDisMask           = 0;
 EFI_HII_HANDLE                         mHiiHandle;
+UINT8                                  mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_FULL_16550;
 
 // Print TEGRABL_EARLY_BOOT_VARIABLES
 VOID
@@ -1847,10 +1848,17 @@ GetDefaultValue (
   )
 {
   UINT64  Data;
+  UINTN   SocketIndex;
+  UINTN   UphyIndex;
+  UINTN   PcieIndex;
 
   if (Value == NULL) {
     return EFI_INVALID_PARAMETER;
   }
+
+  SocketIndex = 0;
+  UphyIndex   = 0;
+  PcieIndex   = 0;
 
   switch (QuestionId) {
     case KEY_ENABLE_TPM:
@@ -1883,8 +1891,156 @@ GetDefaultValue (
     case KEY_UEFI_DEBUG_LEVEL:
       Data = mMb1DefaultConfig.Data.Mb1Data.UefiDebugLevel;
       break;
+    case KEY_SERIAL_PORT_CONFIG:
+      Data = mDefaultPortConfig;
+      break;
     default:
-      return EFI_SUCCESS;
+      //
+      // UPHY
+      //
+      if ((QuestionId >= KEY_UPHY0_SOCKET0_CONFIG) && (QuestionId <= KEY_UPHY5_SOCKET3_CONFIG)) {
+        SocketIndex = (QuestionId - KEY_UPHY0_SOCKET0_CONFIG) / TEGRABL_MAX_UPHY_PER_SOCKET;
+        UphyIndex   = (QuestionId - KEY_UPHY0_SOCKET0_CONFIG) % TEGRABL_MAX_UPHY_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (UphyIndex >= TEGRABL_MAX_UPHY_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.UphyConfig.UphyConfig[SocketIndex][UphyIndex];
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_MAX_SPEED) && (QuestionId <= KEY_SOCKET3_PCIE9_MAX_SPEED)) {
+        //
+        // PCIE MAX SPEED
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_MAX_SPEED) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_MAX_SPEED) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].MaxSpeed;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_MAX_WIDTH) && (QuestionId <= KEY_SOCKET3_PCIE9_MAX_WIDTH)) {
+        //
+        // PCIE MAX WIDTH
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_MAX_WIDTH) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_MAX_WIDTH) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].MaxWidth;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_ENABLE_ASPML1) && (QuestionId <= KEY_SOCKET3_PCIE9_ENABLE_ASPML1)) {
+        //
+        // PCIE ENABLE ASPML1
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_ENABLE_ASPML1) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_ENABLE_ASPML1) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].EnableAspmL1;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_ENABLE_ASPML1_1) && (QuestionId <= KEY_SOCKET3_PCIE9_ENABLE_ASPML1_1)) {
+        //
+        // PCIE ENABLE ASPML1_1
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_ENABLE_ASPML1_1) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_ENABLE_ASPML1_1) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].EnableAspmL1_1;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_ENABLE_ASPML1_2) && (QuestionId <= KEY_SOCKET3_PCIE9_ENABLE_ASPML1_2)) {
+        //
+        // PCIE ENABLE ASPML1_2
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_ENABLE_ASPML1_2) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_ENABLE_ASPML1_2) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].EnableAspmL1_2;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_ENABLE_PCIPML1_2) && (QuestionId <= KEY_SOCKET3_PCIE9_ENABLE_PCIPML1_2)) {
+        //
+        // PCIE ENABLE PCIPML1_2
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_ENABLE_PCIPML1_2) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_ENABLE_PCIPML1_2) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].EnablePciPmL1_2;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_CLK_REQ) && (QuestionId <= KEY_SOCKET3_PCIE9_CLK_REQ)) {
+        //
+        // PCIE CLK_REQ
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_CLK_REQ) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_CLK_REQ) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].SupportsClkReq;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_DISABLE_DLFE) && (QuestionId <= KEY_SOCKET3_PCIE9_DISABLE_DLFE)) {
+        //
+        // PCIE DISABLE_DLFE
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_DISABLE_DLFE) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_DISABLE_DLFE) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].DisableDLFE;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_ENABLE_ECRC) && (QuestionId <= KEY_SOCKET3_PCIE9_ENABLE_ECRC)) {
+        //
+        // PCIE ENABLE_ECRC
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_ENABLE_ECRC) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_ENABLE_ECRC) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].EnableECRC;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_DISABLE_OPT_ROM) && (QuestionId <= KEY_SOCKET3_PCIE9_DISABLE_OPT_ROM)) {
+        //
+        // PCIE DISABLE_OPT_ROM
+        // mOpRomDisMaks is came from UEFI variable. When variable does not exist, mOpRomDisMaks is set to 0x0, which means
+        // that the default value is 0x0.
+        //
+        Data = 0x0;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_DISABLE_DPC_AT_RP) && (QuestionId <= KEY_SOCKET3_PCIE9_DISABLE_DPC_AT_RP)) {
+        //
+        // PCIE ENABLE_ECRC
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_DISABLE_DPC_AT_RP) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_DISABLE_DPC_AT_RP) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].DisableDPCAtRP;
+      } else {
+        //
+        // Unsupported question ID.
+        //
+        DEBUG ((DEBUG_INFO, "%a: unsupported question ID: 0x%x\n", __func__, QuestionId));
+        return EFI_SUCCESS;
+      }
   }
 
   SetTypedValue (Type, Data, Value);
@@ -2089,7 +2245,6 @@ UpdateSerialPcds (
 {
   UINT32      NumSbsaUartControllers;
   EFI_STATUS  Status;
-  UINT8       DefaultPortConfig;
   UINTN       SerialPortVarLen;
 
   NumSbsaUartControllers = 0;
@@ -2098,16 +2253,16 @@ UpdateSerialPcds (
   Status = GetMatchingEnabledDeviceTreeNodes ("arm,sbsa-uart", NULL, &NumSbsaUartControllers);
   if (Status == EFI_NOT_FOUND) {
     PcdSet8S (PcdSerialTypeConfig, NVIDIA_SERIAL_PORT_TYPE_16550);
-    DefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_FULL_16550;
+    mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_FULL_16550;
   } else {
     PcdSet8S (PcdSerialTypeConfig, NVIDIA_SERIAL_PORT_TYPE_SBSA);
-    DefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_SBSA;
+    mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_SBSA;
   }
 
   SerialPortVarLen = 0;
   Status           = gRT->GetVariable (L"SerialPortConfig", &gNVIDIATokenSpaceGuid, NULL, &SerialPortVarLen, NULL);
   if (Status == EFI_NOT_FOUND) {
-    PcdSet8S (PcdSerialPortConfig, DefaultPortConfig);
+    PcdSet8S (PcdSerialPortConfig, mDefaultPortConfig);
   }
 
   return EFI_SUCCESS;
