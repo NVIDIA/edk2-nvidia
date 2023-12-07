@@ -53,14 +53,6 @@
   INF Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 
   #
-  # SD MMC
-  #
-  INF Silicon/NVIDIA/Drivers/SdMmcControllerDxe/SdMmcControllerDxe.inf
-  INF MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
-  INF MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
-  INF MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
-
-  #
   # SE RNG
   #
   INF Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf

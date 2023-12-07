@@ -1064,6 +1064,22 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !endif
 
   #
+  # EMMC/SD
+  #
+!ifdef CONFIG_NVIDIA_SDHCI
+  Silicon/NVIDIA/Drivers/SdMmcControllerDxe/SdMmcControllerDxe.inf
+!endif
+!ifdef CONFIG_SDCARD
+  MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
+!endif
+!ifdef CONFIG_EMMC
+  MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
+!endif
+!ifdef CONFIG_SDHCI
+  MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
+!endif
+
+  #
   # SATA Controller
   #
   MdeModulePkg/Bus/Ata/AtaBusDxe/AtaBusDxe.inf

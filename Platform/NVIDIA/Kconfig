@@ -52,6 +52,26 @@ menu "Hardware support"
     help
       Support for NVMe drives on the system
   endif
+
+  config SDHCI
+  bool
+
+  config NVIDIA_SDHCI
+  bool
+  default y if (SDHCI && SOC_JETSON)
+
+  config EMMC
+  bool "eMMC support"
+  select SDHCI
+  help
+    eMMC support
+
+  config SDCARD
+  bool "SD Card support"
+  select SDHCI
+  help
+    SD card support
+
 endmenu
 
 menu "OS Hardware description"

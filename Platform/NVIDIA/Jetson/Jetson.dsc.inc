@@ -218,14 +218,6 @@
   Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
 
   #
-  # EMMC/SD
-  #
-  Silicon/NVIDIA/Drivers/SdMmcControllerDxe/SdMmcControllerDxe.inf
-  MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
-  MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
-  MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
-
-  #
   # SE RNG
   #
   Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
