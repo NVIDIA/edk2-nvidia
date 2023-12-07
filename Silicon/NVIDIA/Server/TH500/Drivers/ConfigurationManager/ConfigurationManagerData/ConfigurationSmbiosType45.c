@@ -1,7 +1,8 @@
-/** @file
+/**
   Configuration Manager Data of SMBIOS Type 45 table
 
-  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION. All rights reserved.
+
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -441,7 +442,7 @@ IndividualFirmwareInventoryUpdate (
   //   b2. Release date
   //   b3. Manufacturer
   //   b4. Image size
-  //   b5. FirmwareVersionFormat/FirmwareVersion
+  //   b5. FirmwareVersionFormat/LowestSupportedVersion/FirmwareVersion
   //   b6. Associated component information
   //
 
@@ -462,9 +463,8 @@ IndividualFirmwareInventoryUpdate (
 
   //
   // Update Firmware manufacturer.
-  // There is no such info for individual firmware, so leave it as NULL.
   //
-  FirmwareInventoryInfoElement->Manufacturer = NULL;
+  FirmwareInventoryInfoElement->Manufacturer = AllocateCopyString (BiosInfo->BiosVendor);
 
   //
   // Update Firmware image size.
@@ -479,6 +479,15 @@ IndividualFirmwareInventoryUpdate (
   if (FirmwareInventoryInfoElement->FirmwareVersion != NULL) {
     FirmwareInventoryInfoElement->FirmwareVersionFormat = VersionFormatTypeFreeForm;
     UnicodeStrToAsciiStrS ((CHAR16 *)PcdGetPtr (PcdUefiVersionString), FirmwareInventoryInfoElement->FirmwareVersion, StrLength + 1);
+  }
+
+  //
+  // Update lowest supported image version.
+  //
+  StrLength                                            = StrLen ((CHAR16 *)PcdGetPtr (PcdUefiVersionString));
+  FirmwareInventoryInfoElement->LowestSupportedVersion = (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (StrLength + 1));
+  if (FirmwareInventoryInfoElement->LowestSupportedVersion != NULL) {
+    UnicodeStrToAsciiStrS ((CHAR16 *)PcdGetPtr (PcdUefiVersionString), FirmwareInventoryInfoElement->LowestSupportedVersion, StrLength + 1);
   }
 
   //
@@ -622,7 +631,7 @@ FmpFirmwareInventoryUpdate (
       //   a2. Release date
       //   a3. Manufacturer
       //   a4. Image size
-      //   a5. FirmwareVersionFormat/FirmwareVersion
+      //   a5. FirmwareVersionFormat/LowestSupportedVersion/FirmwareVersion
       //
       FirmwareInventoryInfoElement->FirmwareComponentName =  (CHAR8 *)AllocateZeroPool (sizeof (SbiosFirmwareComponentName) + 1);
       if (FirmwareInventoryInfoElement->FirmwareComponentName != NULL) {
@@ -656,6 +665,11 @@ FmpFirmwareInventoryUpdate (
         //
         FirmwareInventoryInfoElement->FirmwareVersionFormat = VersionFormatTypeFreeForm;
         FirmwareInventoryInfoElement->FirmwareVersion       =  AllocateCopyString (BiosInfo->BiosVersion);
+
+        //
+        // Update lowest supported image version.
+        //
+        FirmwareInventoryInfoElement->LowestSupportedVersion = AllocateCopyString (BiosInfo->BiosVersion);
       }
     } else {
       //
@@ -664,7 +678,7 @@ FmpFirmwareInventoryUpdate (
       //   b2. Release date
       //   b3. Manufacturer
       //   b4. Image size
-      //   b5. FirmwareVersionFormat/FirmwareVersion
+      //   b5. FirmwareVersionFormat/LowestSupportedVersion/FirmwareVersion
       //   b6. Associated component information
       //
 
@@ -702,6 +716,18 @@ FmpFirmwareInventoryUpdate (
         if (FirmwareInventoryInfoElement->FirmwareVersion != NULL) {
           UnicodeStrToAsciiStrS (ImageInfo->VersionName, FirmwareInventoryInfoElement->FirmwareVersion, StrLength + 1);
         }
+      }
+
+      //
+      // Update lowest supported image version.
+      //
+      if ((DescriptorVersion >= 2) && (ImageInfo->LowestSupportedImageVersion != 0x00000000)) {
+        StrLength              = ((sizeof (UINT32) * 2) + 2 + 1);
+        LowestSupportedVersion = (CHAR8 *)AllocateZeroPool (StrLength);
+        AsciiSPrint (LowestSupportedVersion, StrLength, "0x%08X", ImageInfo->LowestSupportedImageVersion);
+        FirmwareInventoryInfoElement->LowestSupportedVersion = LowestSupportedVersion;
+      } else {
+        FirmwareInventoryInfoElement->LowestSupportedVersion = FirmwareInventoryInfoElement->FirmwareVersion;
       }
 
       if ((PciIoHandleInfoSet != NULL) && (NumPciIoHandles != 0)) {
@@ -798,16 +824,6 @@ FmpFirmwareInventoryUpdate (
       FirmwareInventoryInfoElement->State = FirmwareInventoryStateDisabled;
     } else {
       FirmwareInventoryInfoElement->State = FirmwareInventoryStateEnabled;
-    }
-
-    //
-    // Update lowest supported image version.
-    //
-    if (DescriptorVersion >= 2) {
-      StrLength              = ((sizeof (UINT32) * 2) + 2 + 1);
-      LowestSupportedVersion = (CHAR8 *)AllocateZeroPool (StrLength);
-      AsciiSPrint (LowestSupportedVersion, StrLength, "0x%08X", ImageInfo->LowestSupportedImageVersion);
-      FirmwareInventoryInfoElement->LowestSupportedVersion = LowestSupportedVersion;
     }
 
     (*NumFirmwareComponents)++;
