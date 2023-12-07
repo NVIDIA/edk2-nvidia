@@ -22,11 +22,6 @@
 !endif
 
   #
-  # Platform USB FW
-  #
-  INF Silicon/NVIDIA/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
-
-  #
   # Regulator support
   #
   INF Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
@@ -44,13 +39,9 @@
 !endif
 
   #
-  # Usb Support
+  # PinMux Support
   #
   INF Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf
-  INF Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
-  INF Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
-  INF Silicon/NVIDIA/Drivers/XusbControllerDxe/XusbControllerDxe.inf
-  INF Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 
   #
   # SE RNG

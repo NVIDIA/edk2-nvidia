@@ -1111,20 +1111,47 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   # Usb Support
   #
+!ifdef CONFIG_SOC_USB
+  Silicon/NVIDIA/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
+  Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
+  Silicon/NVIDIA/Drivers/XusbControllerDxe/XusbControllerDxe.inf
+  Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
+!endif
+!ifdef CONFIG_UHCI
   MdeModulePkg/Bus/Pci/UhciDxe/UhciDxe.inf
+!endif
+!ifdef CONFIG_EHCI
   MdeModulePkg/Bus/Pci/EhciDxe/EhciDxe.inf
+!endif
+!ifdef CONFIG_XHCI
   MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf {
       <LibraryClasses>
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
       <BuildOptions>
       GCC:*_*_*_CC_FLAGS = -mstrict-align
   }
+!endif
+!ifdef CONFIG_USB
   MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf
+!endif
+!ifdef CONFIG_USB_KEYBOARD
   MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf
+!endif
+!ifdef CONFIG_USB_MOUSE
   MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf
   MdeModulePkg/Bus/Usb/UsbMouseAbsolutePointerDxe/UsbMouseAbsolutePointerDxe.inf
+!endif
+!ifdef CONFIG_USB_MASS_STORAGE
   MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
+!endif
+
+  #
+  # Generic non-discoverable pcie used for many soc devices
+  #
   MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
+
+  # USB NIC
   Drivers/ASIX/Bus/Usb/UsbNetworking/Ax88772c/Ax88772c.inf
 
   #

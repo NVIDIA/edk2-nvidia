@@ -154,15 +154,42 @@
   #
   # Usb Support
   #
+!ifdef CONFIG_SOC_USB
+  INF Silicon/NVIDIA/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
+  INF Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
+  INF Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
+  INF Silicon/NVIDIA/Drivers/XusbControllerDxe/XusbControllerDxe.inf
+  INF Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
+!endif
+!ifdef CONFIG_UHCI
   INF MdeModulePkg/Bus/Pci/UhciDxe/UhciDxe.inf
+!endif
+!ifdef CONFIG_EHCI
   INF MdeModulePkg/Bus/Pci/EhciDxe/EhciDxe.inf
+!endif
+!ifdef CONFIG_XHCI
   INF MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf
+!endif
+!ifdef CONFIG_USB
   INF MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf
+!endif
+!ifdef CONFIG_USB_KEYBOARD
   INF MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf
-  INF MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
+!endif
+!ifdef CONFIG_USB_MOUSE
   INF MdeModulePkg/Bus/Usb/UsbMouseDxe/UsbMouseDxe.inf
   INF MdeModulePkg/Bus/Usb/UsbMouseAbsolutePointerDxe/UsbMouseAbsolutePointerDxe.inf
+!endif
+!ifdef CONFIG_USB_MASS_STORAGE
+  INF MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
+!endif
+
+  #
+  # Generic non-discoverable pcie used for many soc devices
+  #
   INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
+
+  # USB NIC
   INF Drivers/ASIX/Bus/Usb/UsbNetworking/Ax88772c/Ax88772c.inf
 
   #

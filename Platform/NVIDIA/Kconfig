@@ -86,6 +86,43 @@ menu "Hardware support"
   bool
   default y #if (SATA || UFS || ISCSI)
 
+  config SOC_USB
+  bool
+  default y if SOC_JETSON
+  help
+    Support for internal SoC USB controller
+
+  menuconfig USB
+  bool "USB Support"
+  default y
+  help
+    Support for USB devices
+
+  if USB
+    config XHCI
+    default y
+    bool "XHCI controller support"
+
+    config EHCI
+    bool "EHCI controller support"
+
+    config UHCI
+    bool "UHCI controller support"
+
+    menu "USB Devices"
+      config USB_MASS_STORAGE
+      bool "USB Mass Storage support"
+      default y
+
+      config USB_KEYBOARD
+      bool "USB Keyboard support"
+      default y
+
+      config USB_MOUSE
+      bool "USB Mouse support"
+      default y
+    endmenu
+  endif
 endmenu
 
 menu "OS Hardware description"

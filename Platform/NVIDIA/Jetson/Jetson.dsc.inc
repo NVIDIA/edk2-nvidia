@@ -180,11 +180,6 @@
 !endif
 
   #
-  # Platform USB FW
-  #
-  Silicon/NVIDIA/Drivers/UsbFirmwareDxe/UsbFirmwareDxe.inf
-
-  #
   # Regulator support
   #
   Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
@@ -233,13 +228,9 @@
   }
 
   #
-  # Usb Support
+  # PinMux Support
   #
   Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf
-  Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
-  Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
-  Silicon/NVIDIA/Drivers/XusbControllerDxe/XusbControllerDxe.inf
-  Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 
   #
   # Tegra Pwm clock driver
