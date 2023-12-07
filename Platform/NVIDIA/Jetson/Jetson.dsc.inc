@@ -267,16 +267,6 @@
   Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
 
   #
-  # UFS support
-  #
-  Silicon/NVIDIA/Drivers/UfsControllerDxe/UfsControllerDxe.inf
-  MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
-  MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf {
-      <LibraryClasses>
-      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
-  }
-
-  #
   # NV Non-Discoverable PCIe Device DXE
   #
   Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf

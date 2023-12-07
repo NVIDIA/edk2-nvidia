@@ -1080,13 +1080,33 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !endif
 
   #
+  # UFS support
+  #
+!ifdef CONFIG_UFS
+  Silicon/NVIDIA/Drivers/UfsControllerDxe/UfsControllerDxe.inf
+  MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
+  MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf {
+      <LibraryClasses>
+      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  }
+!endif
+
+  #
   # SATA Controller
   #
+!ifdef CONFIG_SATA
   MdeModulePkg/Bus/Ata/AtaBusDxe/AtaBusDxe.inf
   MdeModulePkg/Bus/Ata/AtaAtapiPassThru/AtaAtapiPassThru.inf
+!endif
+
+  #
+  # SCSI support (Used for UFS, SATA, iSCSI)
+  #
+!ifdef CONFIG_SCSI
   MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
   MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
   MdeModulePkg/Bus/Pci/SataControllerDxe/SataControllerDxe.inf
+!endif
 
   #
   # Usb Support

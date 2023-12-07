@@ -2,3 +2,4 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 CONFIG_SOC_GRACE=y
+CONFIG_SATA=y

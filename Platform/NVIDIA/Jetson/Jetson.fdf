@@ -46,19 +46,25 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
 !ifdef CONFIG_SDHCI
     INF MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
 !endif
+!ifdef CONFIG_UFS
     INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
+!endif
 !ifdef CONFIG_EMMC
     INF MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
 !endif
 !ifdef CONFIG_SDCARD
     INF MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
 !endif
+!ifdef CONFIG_UFS
     INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
+!endif
     INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
     INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
     INF MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
+!ifdef CONFIG_SCSI
     INF MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
     INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
+!endif
     INF MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
     INF FatPkg/EnhancedFatDxe/Fat.inf
     }

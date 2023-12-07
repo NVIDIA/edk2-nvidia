@@ -205,13 +205,30 @@
 !endif
 
   #
+  # UFS support
+  #
+!ifdef CONFIG_UFS
+  INF Silicon/NVIDIA/Drivers/UfsControllerDxe/UfsControllerDxe.inf
+  INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
+  INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
+!endif
+
+  #
   # SATA Controller
   #
+!ifdef CONFIG_SATA
   INF MdeModulePkg/Bus/Ata/AtaBusDxe/AtaBusDxe.inf
   INF MdeModulePkg/Bus/Ata/AtaAtapiPassThru/AtaAtapiPassThru.inf
+!endif
+
+  #
+  # SCSI support (Used for UFS, SATA, iSCSI)
+  #
+!ifdef CONFIG_SCSI
   INF MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
   INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
   INF MdeModulePkg/Bus/Pci/SataControllerDxe/SataControllerDxe.inf
+!endif
 
   #
   # Networking stack

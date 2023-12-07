@@ -101,13 +101,6 @@
   INF Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
 
   #
-  # UFS support
-  #
-  INF Silicon/NVIDIA/Drivers/UfsControllerDxe/UfsControllerDxe.inf
-  INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
-  INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
-
-  #
   # NV Non-Discoverable PCI Device
   #
   INF Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf

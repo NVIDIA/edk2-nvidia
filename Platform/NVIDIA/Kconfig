@@ -72,6 +72,20 @@ menu "Hardware support"
   help
     SD card support
 
+  config UFS
+  bool "UFS Support"
+  help
+    Support for UFS devices
+
+  config SATA
+  bool "SATA Support"
+  help
+    Support for SATA devices
+
+  config SCSI
+  bool
+  default y #if (SATA || UFS || ISCSI)
+
 endmenu
 
 menu "OS Hardware description"
