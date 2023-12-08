@@ -10,36 +10,6 @@
   INF MdeModulePkg/Universal/SerialDxe/SerialDxe.inf
 
   #
-  # Platform Configuration Manager Data
-  #
-!ifdef CONFIG_CONFIG_MANAGER
-  INF Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
-!endif
-
-  #
-  # Regulator support
-  #
-  INF Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
-  INF Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
-
-  #
-  # QSPI Support
-  #
-  INF Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerDxe.inf
-
-  #
-  # NOR Flash Support
-  #
-  INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
-
-  #
-  # FVB Support
-  #
-  INF Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
-  INF Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashDxe.inf
-  INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
-
-  #
   # Ramloaded OS
   #
   INF Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf

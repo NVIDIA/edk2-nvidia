@@ -14,31 +14,6 @@
   INF Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
 
   #
-  # Platform Configuration Manager Data
-  #
-!ifdef CONFIG_CONFIG_MANAGER
-  INF Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
-  INF Silicon/NVIDIA/Tegra/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
-!endif
-
-  #
-  # Regulator support
-  #
-  INF Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
-  INF Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
-
-  #
-  # FDT Support
-  #
-!ifdef CONFIG_DEVICETREE
-  !ifdef CONFIG_ACPI
-    INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
-  !else
-    INF Silicon/NVIDIA/Drivers/DtOnlyPlatformDxe/DtOnlyPlatformDxe.inf
-  !endif
-!endif
-
-  #
   # PinMux Support
   #
   INF Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf
@@ -48,23 +23,6 @@
   #
   INF Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
   INF Silicon/NVIDIA/Tegra/T234/Drivers/SeRngDxe/SeRngDxe.inf
-
-  #
-  # QSPI Support
-  #
-  INF Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerDxe.inf
-
-  #
-  # NOR Flash Support
-  #
-  INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
-
-  #
-  # FVB Support
-  #
-  INF Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
-  INF Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashDxe.inf
-  INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
 
   #
   # Tegra PWM clock driver

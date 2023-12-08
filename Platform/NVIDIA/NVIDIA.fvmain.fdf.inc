@@ -63,6 +63,18 @@
   INF Silicon/NVIDIA/Drivers/AcpiDtbSsdtGenerator/AcpiDtbSsdtGenerator.inf
 !endif
 
+  #
+  # FDT Support
+  #
+!ifdef CONFIG_DEVICETREE
+  !ifdef CONFIG_ACPI
+    INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+  !else
+    INF Silicon/NVIDIA/Drivers/DtOnlyPlatformDxe/DtOnlyPlatformDxe.inf
+  !endif
+!endif
+
+
 !ifdef CONFIG_CONFIG_MANAGER
   #
   # Configuration Manager
@@ -345,6 +357,21 @@
   INF Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
 
   #
+  # Platform Configuration Manager Data
+  #
+!ifdef CONFIG_CONFIG_MANAGER
+!ifdef CONFIG_SOC_XAVIER
+  INF Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+!endif
+!ifdef CONFIG_SOC_ORIN
+  INF Silicon/NVIDIA/Tegra/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+!endif
+!ifdef CONFIG_SOC_GRACE
+  INF Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
+!endif
+!endif
+
+  #
   # Custom HII Support
   #
   INF Silicon/NVIDIA/Drivers/NvidiaConfigDxe/NvidiaConfigDxe.inf
@@ -380,6 +407,28 @@
     SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray1080.bmp
   }
 
+  #
+  # Regulator support
+  #
+  INF Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
+  INF Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
+
+  #
+  # QSPI Support
+  #
+  INF Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerDxe.inf
+
+  #
+  # NOR Flash Support
+  #
+  INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
+
+  #
+  # FVB Support
+  #
+  INF Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
+  INF Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashDxe.inf
+  INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
 
   #
   # Capsule Update Policy Protocol

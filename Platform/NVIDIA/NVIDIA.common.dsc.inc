@@ -20,6 +20,31 @@ CONFIG_MEMORY_TEST_BIT_FADE_PATTERN=0xAA55AA55AA55AA55
 CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
 !endif
 
+  #
+  # Define Image Type ID GUIDs for Firmware Management Protocol
+  #
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T194 = be3f5d68-7654-4ed2-838c-2a2faf901a78
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T234 = bf0d4599-20d4-414e-b2c5-3595b1cda402
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA = 8655e5cf-297b-4213-84d5-b6817203a432
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500        = $(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA)
+
+[SkuIds]
+  0|DEFAULT
+!ifdef CONFIG_SOC_XAVIER
+  1|T194
+!endif
+!ifdef CONFIG_SOC_ORIN
+  2|T234
+  3|T234SLT|T234
+!endif
+!ifdef CONFIG_SOC_GRACE
+  5|TH500
+  253|TH500Presil|TH500
+!endif
+!ifdef CONFIG_SOC_ORIN
+  255|T234Presil|T234
+!endif
+
 [BuildOptions.common.EDKII.DXE_CORE,BuildOptions.common.EDKII.DXE_DRIVER,BuildOptions.common.EDKII.UEFI_DRIVER,BuildOptions.common.EDKII.UEFI_APPLICATION]
   GCC:*_*_*_DLINK_FLAGS = -Wl,-z,common-page-size=0x1000
 
@@ -248,6 +273,10 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   SystemContextLib|Silicon/NVIDIA/Library/SystemContextLib/SystemContextLib.inf
   StatusRegLib|Silicon/NVIDIA/Library/StatusRegLib/StatusRegLib.inf
 
+  OrderedCollectionLib|MdePkg/Library/BaseOrderedCollectionRedBlackTreeLib/BaseOrderedCollectionRedBlackTreeLib.inf
+
+  FrameBufferBltLib|MdeModulePkg/Library/FrameBufferBltLib/FrameBufferBltLib.inf
+
 !if $(BUILD_PROJECT_TYPE) == PROJECT_MU
   BaseBinSecurityLib|MdePkg/Library/BaseBinSecurityLibNull/BaseBinSecurityLibNull.inf
   MemoryProtectionLib|MdeModulePkg/Library/BaseMemoryProtectionLibNull/BaseMemoryProtectionLibNull.inf
@@ -359,6 +388,7 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
   DisplayUpdateProgressLib|MdeModulePkg/Library/DisplayUpdateProgressLibText/DisplayUpdateProgressLibText.inf
   AndroidBootImgLib|EmbeddedPkg/Library/AndroidBootImgLib/AndroidBootImgLib.inf
+  AndroidBcbLib|Silicon/NVIDIA/Library/AndroidBcbLib/AndroidBcbLib.inf
 
 [LibraryClasses.ARM, LibraryClasses.AARCH64]
   #
@@ -418,6 +448,7 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
 !ifndef CONFIG_SINGLE_BOOT_NONE
   gNVIDIATokenSpaceGuid.PcdSingleBootSupport|TRUE
 !endif
+  gEmbeddedTokenSpaceGuid.PcdAndroidBootLoadFile2|TRUE
 
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
@@ -666,6 +697,14 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("2ecc727c-9d50
 gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373-4e78-aa7e-8631858e0217") }
 !endif
 !endif
+
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
+
+  gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|1
+  gNVIDIATokenSpaceGuid.PcdFtpmShmSize|4096
+  gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|512
+
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.
@@ -697,7 +736,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gArmTokenSpaceGuid.PcdPciBusMin|0
   gArmTokenSpaceGuid.PcdPciBusMax|0
 
-[PcdsDynamicDefault.common.DEFAULT]
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x00000000
 
   #
@@ -711,6 +749,38 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # Allow physical presence activities
   #
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|FALSE
+
+  # SMBIOS
+  ## Type 2 Table (Board Information)
+  gNVIDIATokenSpaceGuid.PcdBoardChassisLocation|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdBoardVersion|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdBoardManufacturer|L"Unknown"
+  ## Type 1 Table (System Information)
+  gNVIDIATokenSpaceGuid.PcdSystemSerialNum|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdSystemManufacturer|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdSystemSku|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdSystemFamilyType|L"Unknown"
+  ## Type 3 Table (Chassis Information)
+  gNVIDIATokenSpaceGuid.PcdType3Info|{ 0 }
+  gNVIDIATokenSpaceGuid.PcdType3Info.BootupState|ChassisStateUnknown
+  gNVIDIATokenSpaceGuid.PcdType3Info.PowerSupplyState|ChassisStateUnknown
+  gNVIDIATokenSpaceGuid.PcdType3Info.ThermalState|ChassisStateUnknown
+  gNVIDIATokenSpaceGuid.PcdType3Info.SecurityStatus|ChassisSecurityStatusUnknown
+  gNVIDIATokenSpaceGuid.PcdType3Info.Height|1
+  gNVIDIATokenSpaceGuid.PcdType3Info.NumberofPowerCords|1
+  gNVIDIATokenSpaceGuid.PcdType3Info.Type|1
+  gNVIDIATokenSpaceGuid.PcdChassisSku|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdChassisManufacturer|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdChassisSerialNumber|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdChassisAssetTag|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdChassisVersion|L"Unknown"
+  ##Type 32 (Boot Information)
+  gNVIDIATokenSpaceGuid.PcdType32Info|{ 0 }
+  gNVIDIATokenSpaceGuid.PcdType32Info.BootStatus|BootInformationStatusNoError
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpmInstanceGuid|{0x5a, 0xf2, 0x6b, 0x28, 0xc3, 0xc2, 0x8c, 0x40, 0xb3, 0xb4, 0x25, 0xe6, 0x75, 0x8b, 0x73, 0x17}
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2InitializationPolicy|0
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask|0x00000006
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap|0x00000006
 
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables
@@ -807,6 +877,90 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 
 [PcdsPatchableInModule]
   gArmTokenSpaceGuid.PcdFvBaseAddress|0x0
+  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid|{GUID("$(SYSTEM_FMP_ESRT_GUID)")}
+  gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleOnDiskSupport|TRUE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleInRamSupport|TRUE
+
+!ifdef CONFIG_SOC_XAVIER
+[PcdsDynamicDefault.common.T194]
+  gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA194'
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T194)")}
+  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
+  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x4000
+  gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x1000
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE
+
+[PcdsDynamicHii.common.T194]
+  gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
+  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
+!endif
+
+!ifdef CONFIG_SOC_ORIN
+[PcdsDynamicDefault.common.T234]
+  gArmTokenSpaceGuid.PcdGicDistributorBase|0X0F400000
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase|0X0F440000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA234'
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T234)")}
+  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
+  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x10000
+  gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
+  gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain|TRUE
+
+[PcdsDynamicHii.common.T234SLT]
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
+
+[PcdsDynamicHii.common.T234Presil]
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
+
+[PcdsDynamicDefault.common.T234Presil]
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
+  gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled|FALSE
+!endif
+
+!ifdef CONFIG_SOC_GRACE
+[PcdsDynamicDefault.common.TH500]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TH500   '
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500)")}
+  gNVIDIATokenSpaceGuid.PcdNonUniqueSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA)")}
+  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
+  gArmTokenSpaceGuid.PcdPciBusMin|0
+  gArmTokenSpaceGuid.PcdPciBusMax|1
+  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x2DA00000
+  # SMBIOS for TH500
+  ## Type 0 Table (BIOS Information)
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor|L"NVIDIA"
+  ## RTC
+  gNVIDIATokenSpaceGuid.PcdCpuHasRtcControl|TRUE
+  ## TPM
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev|4
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2PhysicalPresenceFlags|0x00002
+  gEfiSecurityPkgTokenSpaceGuid.PcdRandomizePlatformHierarchy|TRUE
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2SelfTestPolicy|1
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcgLogAreaMinLen|0x20000
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2FinalLogAreaLen|0x10000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdTcgPfpMeasurementRevision|105
+
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
+  gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|TRUE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
+
+[PcdsDynamicHii.common.TH500]
+  gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|L"EnabledPcieNicTopology"|gNVIDIAPublicVariableGuid|0x0|{ 0x0, 0x0, 0x0, 0x0, 0x0 }|BS,NV
+
+[PcdsDynamicHii.common.TH500Presil]
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
+
+[PcdsDynamicDefault.common.TH500Presil]
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
+!endif
 
 [Components.common]
   #
@@ -847,6 +1001,23 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !endif
   }
   Silicon/NVIDIA/Drivers/AcpiDtbSsdtGenerator/AcpiDtbSsdtGenerator.inf
+!endif
+
+  #
+  # FDT Support
+  #
+!ifdef CONFIG_DEVICETREE
+  !ifdef CONFIG_ACPI
+  EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf {
+    <LibraryClasses>
+      DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbKernelLoaderLib.inf
+  }
+  !else
+  Silicon/NVIDIA/Drivers/DtOnlyPlatformDxe/DtOnlyPlatformDxe.inf {
+    <LibraryClasses>
+      DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbKernelLoaderLib.inf
+  }
+  !endif
 !endif
 
   MdeModulePkg/Universal/PCD/Dxe/Pcd.inf {
@@ -891,6 +1062,42 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
+
+  #
+  # Tegra Platform Configuration
+  #
+  Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
+
+  #
+  # Platform Configuration Manager Data
+  #
+!ifdef CONFIG_CONFIG_MANAGER
+!ifdef CONFIG_SOC_XAVIER
+  Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
+    <LibraryClasses>
+      PlatformAslTablesLib|Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Tegra/T194/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT -I$(BIN_DIR)/Silicon/NVIDIA/Library/ASLTemplateTablesLib/ASLTemplateTablesLib/OUTPUT
+  }
+!endif
+!ifdef CONFIG_SOC_ORIN
+  Silicon/NVIDIA/Tegra/T234/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
+    <LibraryClasses>
+      PlatformAslTablesLib|Silicon/NVIDIA/Tegra/T234/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Tegra/T234/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT -I$(BIN_DIR)/Silicon/NVIDIA/Library/ASLTemplateTablesLib/ASLTemplateTablesLib/OUTPUT
+  }
+!endif
+!ifdef CONFIG_SOC_GRACE
+  Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
+    <LibraryClasses>
+      # Platform ASL Tables
+      PlatformAslTablesLib|Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
+  }
+!endif
+!endif
 
   #
   # BPMP-FW IPC protocol
@@ -1308,11 +1515,36 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   Silicon/NVIDIA/Drivers/PlatformToDriverConfiguration/PlatformToDriverConfiguration.inf
 
+  #
+  # Regulator support
+  #
+  Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
+  Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
 
   #
   # Capsule Update Policy Protocol
   #
   Silicon/NVIDIA/Drivers/CapsuleUpdatePolicyDxe/CapsuleUpdatePolicyDxe.inf
+
+  #
+  # QSPI Support
+  #
+  Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerDxe.inf
+
+  #
+  # NOR Flash Support
+  #
+  Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
+
+  #
+  # FVB Support
+  #
+  Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
+  Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashDxe.inf
+  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf {
+    <LibraryClasses>
+      NULL|EmbeddedPkg/Library/NvVarStoreFormattedLib/NvVarStoreFormattedLib.inf
+  }
 
   #
   # Tegra EEPROM Support

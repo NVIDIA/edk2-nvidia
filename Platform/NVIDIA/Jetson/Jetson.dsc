@@ -1,8 +1,8 @@
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
-# SPDX-License-Identifier: BSD-2-Clause-Patent
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 ################################################################################
@@ -15,13 +15,6 @@
   PLATFORM_GUID               = b175f7b7-0cb0-446e-b338-0e0d0f688de8
   OUTPUT_DIRECTORY            = Build/Jetson
   FLASH_DEFINITION            = Platform/NVIDIA/Jetson/Jetson.fdf
-
-[SkuIds]
-  0|DEFAULT
-  1|T194
-  2|T234
-  3|T234SLT|T234
-  255|T234Presil|T234
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
 

@@ -18,17 +18,6 @@
   #
   DEFINE SYSTEM_FMP_ESRT_GUID    = 92597B71-0ABE-48F3-9F06-93D3E8CD7EDF
 
-  #
-  # Define Image Type ID GUIDs for Firmware Management Protocol
-  #
-  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA = 8655e5cf-297b-4213-84d5-b6817203a432
-  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500        = $(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA)
-
-[SkuIds]
-  0|DEFAULT
-  5|TH500
-  253|TH500Presil|TH500
-
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
 [LibraryClasses.common]
@@ -96,9 +85,6 @@
   RedfishTaskLib|Silicon/NVIDIA/Library/RedfishPlatformTaskLib/RedfishPlatformTaskLib.inf
   RedfishProtocolFeaturesLib|RedfishClientPkg/Library/RedfishProtocolFeaturesLib/RedfishProtocolFeaturesLib.inf
 
-[LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
-  PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
-
 ################################################################################
 #
 # Pcd Section - list of all EDK II PCD Entries defined by this Platform
@@ -110,9 +96,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|1920
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|1080
 
-  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid|{GUID("$(SYSTEM_FMP_ESRT_GUID)")}
-  gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleOnDiskSupport|TRUE
-  gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleInRamSupport|TRUE
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxSizeNonPopulateCapsule|0x1400000
 
 [PcdsFixedAtBuild.common]
@@ -130,72 +113,6 @@
   # Allow physical presence activities
   #
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
-
-[PcdsDynamicDefault.common.TH500]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TH500   '
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500)")}
-  gNVIDIATokenSpaceGuid.PcdNonUniqueSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA)")}
-  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
-  gArmTokenSpaceGuid.PcdPciBusMin|0
-  gArmTokenSpaceGuid.PcdPciBusMax|1
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress|0x2DA00000
-  # SMBIOS for TH500
-  ## Type 0 Table (BIOS Information)
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor|L"NVIDIA"
-  ## Type 2 Table (Board Information)
-  gNVIDIATokenSpaceGuid.PcdBoardChassisLocation|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdBoardVersion|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdBoardManufacturer|L"Unknown"
-  ## Type 1 Table (System Information)
-  gNVIDIATokenSpaceGuid.PcdSystemSerialNum|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdSystemManufacturer|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdSystemSku|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdSystemFamilyType|L"Unknown"
-  ## Type 3 Table (Chassis Information)
-  gNVIDIATokenSpaceGuid.PcdType3Info|{ 0 }
-  gNVIDIATokenSpaceGuid.PcdType3Info.BootupState|ChassisStateUnknown
-  gNVIDIATokenSpaceGuid.PcdType3Info.PowerSupplyState|ChassisStateUnknown
-  gNVIDIATokenSpaceGuid.PcdType3Info.ThermalState|ChassisStateUnknown
-  gNVIDIATokenSpaceGuid.PcdType3Info.SecurityStatus|ChassisSecurityStatusUnknown
-  gNVIDIATokenSpaceGuid.PcdType3Info.Height|1
-  gNVIDIATokenSpaceGuid.PcdType3Info.NumberofPowerCords|1
-  gNVIDIATokenSpaceGuid.PcdType3Info.Type|1
-  gNVIDIATokenSpaceGuid.PcdChassisSku|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdChassisManufacturer|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdChassisSerialNumber|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdChassisAssetTag|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdChassisVersion|L"Unknown"
-  ##Type 32 (Boot Information)
-  gNVIDIATokenSpaceGuid.PcdType32Info|{ 0 }
-  gNVIDIATokenSpaceGuid.PcdType32Info.BootStatus|BootInformationStatusNoError
-  ## RTC
-  gNVIDIATokenSpaceGuid.PcdCpuHasRtcControl|TRUE
-  ## TPM
-  gEfiSecurityPkgTokenSpaceGuid.PcdTpmInstanceGuid|{0x5a, 0xf2, 0x6b, 0x28, 0xc3, 0xc2, 0x8c, 0x40, 0xb3, 0xb4, 0x25, 0xe6, 0x75, 0x8b, 0x73, 0x17}
-  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2InitializationPolicy|0
-  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev|4
-  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask|0x00000006
-  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap|0x00000006
-  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2PhysicalPresenceFlags|0x00002
-  gEfiSecurityPkgTokenSpaceGuid.PcdRandomizePlatformHierarchy|TRUE
-  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2SelfTestPolicy|1
-  gEfiSecurityPkgTokenSpaceGuid.PcdTcgLogAreaMinLen|0x20000
-  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2FinalLogAreaLen|0x10000
-  gEfiMdeModulePkgTokenSpaceGuid.PcdTcgPfpMeasurementRevision|105
-
-  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
-  gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|TRUE
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
-
-[PcdsDynamicHii.common.TH500]
-  gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|L"EnabledPcieNicTopology"|gNVIDIAPublicVariableGuid|0x0|{ 0x0, 0x0, 0x0, 0x0, 0x0 }|BS,NV
-
-[PcdsDynamicHii.common.TH500Presil]
-  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
-
-[PcdsDynamicDefault.common.TH500Presil]
-  gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
 
 [PcdsFixedAtBuild.common]
   # HACK: Disable SR-IOV support to workaround a simulator bug
@@ -246,50 +163,6 @@
   # Serial Console driver
   #
   MdeModulePkg/Universal/SerialDxe/SerialDxe.inf
-
-  #
-  # Platform Configuration Manager Data
-  #
-!ifdef CONFIG_CONFIG_MANAGER
-  Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
-    <LibraryClasses>
-      # Platform ASL Tables
-      PlatformAslTablesLib|Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
-    <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
-  }
-!endif
-
-  #
-  # Regulator support
-  #
-  Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
-  Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
-
-  #
-  # QSPI Support
-  #
-  Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerDxe.inf
-
-  #
-  # NOR Flash Support
-  #
-  Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
-
-  #
-  # FVB Support
-  #
-  Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
-  Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashDxe.inf
-  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf {
-    <LibraryClasses>
-      NULL|EmbeddedPkg/Library/NvVarStoreFormattedLib/NvVarStoreFormattedLib.inf
-  }
-
-  #
-  # Tegra Platform Configuration
-  #
-  Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
 
   #
   # Ramloaded OS
