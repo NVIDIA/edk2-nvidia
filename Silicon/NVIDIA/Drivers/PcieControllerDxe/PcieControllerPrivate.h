@@ -2,7 +2,7 @@
 
   PCIe Controller Driver private structures
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -77,6 +77,10 @@ typedef struct {
   BOOLEAN                                             GpuKickGpioSupported;
   EMBEDDED_GPIO_PIN                                   GpuKickGpioSense;
   EMBEDDED_GPIO_PIN                                   GpuKickGpioReset;
+
+  // C2C Init Tracking
+  BOOLEAN                                             C2cInitRequired;
+  NVIDIA_C2C_NODE_PROTOCOL                            *C2cProtocol;
 
   // Configuration data
   CM_ARM_PCI_CONFIG_SPACE_INFO                        ConfigSpaceInfo;

@@ -321,20 +321,25 @@ PCIeFindCap (
 STATIC
 BOOLEAN
 WaitForBit16 (
-  UINT32   cid,
-  UINT16   *feat,
-  UINT16   pos,
-  UINT32   count,
-  UINT32   time_us,
-  BOOLEAN  status
+  PCIE_CONTROLLER_PRIVATE  *Private,
+  UINT16                   *Feat,
+  UINT16                   Pos,
+  UINT32                   Count,
+  UINT32                   TimeUs,
+  BOOLEAN                  Status
   )
 {
-  UINT32  i = 0;
+  UINT32  Index = 0;
 
-  while (i < count) {
-    if (!!(*feat & BIT (pos)) != status) {
-      DeviceDiscoveryThreadMicroSecondDelay (time_us);
-      i++;
+  while (Index < Count) {
+    if (!!(*Feat & BIT (Pos)) != Status) {
+      if (Private->C2cInitRequired) {
+        MicroSecondDelay (TimeUs);
+      } else {
+        DeviceDiscoveryThreadMicroSecondDelay (TimeUs);
+      }
+
+      Index++;
     } else {
       return TRUE;
     }
@@ -352,7 +357,7 @@ RetrainLink (
   PCI_CAPABILITY_PCIEXP  *PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);
 
   /* Wait for previous link training to complete */
-  if (WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 11, 10000, 100, FALSE)) {
+  if (WaitForBit16 (Private, &PciExpCap->LinkStatus.Uint16, 11, 10000, 100, FALSE)) {
     /* Clear Link Bandwith */
     PciExpCap->LinkStatus.Bits.LinkBandwidthManagement = 1;
 
@@ -361,13 +366,18 @@ RetrainLink (
     PciExpCap->LinkControl.Bits.RetrainLink      = 1;
 
     /* Retraining: Wait for link training to clear */
-    if (WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 11, 10000, 100, FALSE)) {
+    if (WaitForBit16 (Private, &PciExpCap->LinkStatus.Uint16, 11, 10000, 100, FALSE)) {
       /* Wait for Link Bandwith set */
-      if (WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 14, 10000, 100, TRUE)) {
+      if (WaitForBit16 (Private, &PciExpCap->LinkStatus.Uint16, 14, 10000, 100, TRUE)) {
         /* Clear Link Bandwith */
         PciExpCap->LinkStatus.Bits.LinkBandwidthManagement = 1;
         /* Wait for 20 ms for link to appear */
-        DeviceDiscoveryThreadMicroSecondDelay (20*1000);
+        if (Private->C2cInitRequired) {
+          MicroSecondDelay (20*1000);
+        } else {
+          DeviceDiscoveryThreadMicroSecondDelay (20*1000);
+        }
+
         DEBUG ((
           DEBUG_ERROR,
           "PCIe Controller-0x%x Link Status after re-train (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
@@ -524,8 +534,7 @@ InitializeController (
   UINT64                        val;
   UINT32                        Socket, Ctrl;
   EFI_STATUS                    Status;
-  NVIDIA_C2C_NODE_PROTOCOL      *C2cProtocol = NULL;
-  PCI_CAPABILITY_PCIEXP         *PciExpCap   = NULL;
+  PCI_CAPABILITY_PCIEXP         *PciExpCap = NULL;
   UINT8                         C2cStatus;
   VOID                          *Hob;
   TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
@@ -593,7 +602,7 @@ InitializeController (
   /* Wait for link up */
   PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);
 
-  if ( WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 13, 10000, 100, TRUE)) {
+  if ( WaitForBit16 (Private, &PciExpCap->LinkStatus.Uint16, 13, 10000, 100, TRUE)) {
     DEBUG ((
       DEBUG_ERROR,
       "PCIe Controller-0x%x Link is UP (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
@@ -611,10 +620,9 @@ InitializeController (
       RetrainLink (Private);
     }
 
-    Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&C2cProtocol);
-    if (!EFI_ERROR (Status)) {
+    if (Private->C2cInitRequired) {
       DEBUG ((DEBUG_ERROR, "%a: Requesting C2C Initialization\r\n", __FUNCTION__));
-      Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions, &C2cStatus);
+      Status = Private->C2cProtocol->Init (Private->C2cProtocol, Private->C2cProtocol->Partitions, &C2cStatus);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: C2C initialization mrq failed: %r\r\n", __FUNCTION__, Status));
       } else {
@@ -626,7 +634,7 @@ InitializeController (
         }
       }
 
-      Private->PcieRootBridgeConfigurationIo.BpmpPhandle = C2cProtocol->BpmpPhandle;
+      Private->PcieRootBridgeConfigurationIo.BpmpPhandle = Private->C2cProtocol->BpmpPhandle;
     }
   } else {
     DEBUG ((
@@ -1753,6 +1761,11 @@ DeviceDiscoveryNotify (
       }
 
       Private->BusMask = RootBridge->Bus.Limit;
+
+      Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&Private->C2cProtocol);
+      if (!EFI_ERROR (Status)) {
+        Private->C2cInitRequired = TRUE;
+      }
 
       Status = SenseGpu (Private, ControllerHandle);
       if (EFI_ERROR (Status)) {
