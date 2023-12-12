@@ -398,3 +398,8 @@ if SHELL
   help
     Add support for NVIDIA test applications
 endif
+
+config EBC
+  bool "EFI Byte Code VM"
+  help
+    Adds support for EFI byte code (EBC) drivers in UEFI

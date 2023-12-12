@@ -361,7 +361,9 @@
   #
   # EBC
   #
+!ifdef CONFIG_EBC
   INF MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
+!endif
 
   #
   # Tegra Platform Boot Manager driver

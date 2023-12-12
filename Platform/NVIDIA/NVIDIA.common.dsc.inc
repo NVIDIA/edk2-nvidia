@@ -1657,4 +1657,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   # EBC
   #
+!ifdef CONFIG_EBC
   MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
+!endif
