@@ -410,6 +410,25 @@ if NETWORKING
 
 endif
 
+menu "Filesystems"
+  config FS_FAT
+  bool "FAT Filesystem support"
+  default y
+  help
+    Support for FAT file systems. Required for standard UEFI boot
+
+  config FS_EXT4
+  bool "EXT4 Filesystem support"
+  help
+    Support for EXT4 file system. Currently read-only.
+
+  config FS_FIRMWARE_VOLUME
+  bool "Firmware volume file system support"
+  default y if SHELL
+  help
+    Support for firmware volume based file systems. Normally used for shell usage.
+endmenu
+
 menuconfig SHELL
 bool "UEFI Shell support"
 default y

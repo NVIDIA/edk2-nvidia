@@ -18,7 +18,6 @@
   #
   DEFINE SYSTEM_FMP_ESRT_GUID = 7C374309-1649-4682-8BEE-04F3A8399414
 
-!include Features/Ext4Pkg/Ext4.dsc.inc
 !include Silicon/NVIDIA/Drivers/NvGopDriver/NvGopDriver.dsc.inc
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 

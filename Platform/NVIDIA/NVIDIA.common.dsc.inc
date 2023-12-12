@@ -59,6 +59,10 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   *_*_*_ASL_FLAGS = -tc -li -so -oi
   GCC:*_*_*_CC_FLAGS = -D ENABLE_MD5_DEPRECATED_INTERFACES
 
+!ifdef CONFIG_FS_EXT4
+!include Features/Ext4Pkg/Ext4.dsc.inc
+!endif
+
 [LibraryClasses.common]
   DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
   DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
@@ -540,10 +544,6 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesData|50000
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderCode|500
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderData|0
-
-  #
-  # FileSystem
-  #
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdResetOnMemoryTypeInformationChange|FALSE
 
@@ -1036,6 +1036,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
        NULL|SecurityPkg/Library/DxeImageVerificationLib/DxeImageVerificationLib.inf
        NULL|SecurityPkg/Library/DxeTpm2MeasureBootLib/DxeTpm2MeasureBootLib.inf
   }
+  MdeModulePkg/Universal/SectionExtractionDxe/SectionExtractionDxe.inf
   MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
   MdeModulePkg/Universal/Metronome/Metronome.inf
   MdeModulePkg/Universal/MonotonicCounterRuntimeDxe/MonotonicCounterRuntimeDxe.inf
@@ -1278,10 +1279,13 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf
 !endif
 
-  # FV Filesystems
+  # Filesystems
+!ifdef CONFIG_FS_FIRMWARE_VOLUME
   MdeModulePkg/Universal/FvSimpleFileSystemDxe/FvSimpleFileSystemDxe.inf
-  MdeModulePkg/Universal/SectionExtractionDxe/SectionExtractionDxe.inf
+!endif
+!ifdef CONFIG_FS_FAT
   FatPkg/EnhancedFatDxe/Fat.inf
+!endif
 
   #
   # GPT/MBR partitioning

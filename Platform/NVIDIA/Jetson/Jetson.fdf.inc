@@ -5,7 +5,6 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
-!include Features/Ext4Pkg/Ext4.fdf.inc
 !include Silicon/NVIDIA/Drivers/NvGopDriver/NvGopDriver.fdf.inc
 
   #

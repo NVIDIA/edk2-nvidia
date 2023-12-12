@@ -66,7 +66,9 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
     INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
 !endif
     INF MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
+!ifdef CONFIG_FS_FAT
     INF FatPkg/EnhancedFatDxe/Fat.inf
+!endif
     }
 
 !include Platform/NVIDIA/NVIDIA.fvmain.fdf.inc

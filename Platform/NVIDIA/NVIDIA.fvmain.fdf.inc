@@ -20,6 +20,7 @@
   INF ArmPkg/Drivers/CpuDxe/CpuDxe.inf
   INF MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
   INF MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
+  INF MdeModulePkg/Universal/SectionExtractionDxe/SectionExtractionDxe.inf
   INF MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
   INF MdeModulePkg/Universal/Metronome/Metronome.inf
   INF MdeModulePkg/Universal/MonotonicCounterRuntimeDxe/MonotonicCounterRuntimeDxe.inf
@@ -164,13 +165,19 @@
   #
   INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
   INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
-  INF FatPkg/EnhancedFatDxe/Fat.inf
   INF MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
   INF MdeModulePkg/Universal/Disk/UdfDxe/UdfDxe.inf
 
-  # FV FileSystem
+  # FileSystems
+!ifdef CONFIG_FS_FIRMWARE_VOLUME
   INF MdeModulePkg/Universal/FvSimpleFileSystemDxe/FvSimpleFileSystemDxe.inf
-  INF MdeModulePkg/Universal/SectionExtractionDxe/SectionExtractionDxe.inf
+!endif
+!ifdef CONFIG_FS_FAT
+  INF FatPkg/EnhancedFatDxe/Fat.inf
+!endif
+!ifdef CONFIG_FS_EXT4
+!include Features/Ext4Pkg/Ext4.fdf.inc
+!endif
 
   #
   # Usb Support
