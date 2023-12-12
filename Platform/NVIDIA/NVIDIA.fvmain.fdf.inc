@@ -108,7 +108,6 @@
   #
   INF Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
   INF Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
-  INF Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
   INF Silicon/NVIDIA/Drivers/BpmpI2c/BpmpI2cDxe.inf
 
   #
@@ -116,7 +115,6 @@
   #
   INF Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf
   INF Silicon/NVIDIA/Drivers/I2cExpanderGpio/I2cExpanderGpio.inf
-  INF Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
 
   #
   # I2C Support
@@ -182,7 +180,6 @@
   INF Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
   INF Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
   INF Silicon/NVIDIA/Drivers/XusbControllerDxe/XusbControllerDxe.inf
-  INF Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 !endif
 !ifdef CONFIG_UHCI
   INF MdeModulePkg/Bus/Pci/UhciDxe/UhciDxe.inf
@@ -308,18 +305,37 @@
   INF NetworkPkg/HttpBootDxe/HttpBootDxe.inf
 
   #
-  # Shell dynamic commands
+  # UEFI application (Shell Embedded Boot Loader)
   #
+!ifdef CONFIG_SHELL
+  INF ShellPkg/Application/Shell/Shell.inf
+!endif
+!ifdef CONFIG_SHELL_NETWORK_COMMANDS
   INF ShellPkg/DynamicCommand/HttpDynamicCommand/HttpDynamicCommand.inf
   INF ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf
   INF ShellPkg/DynamicCommand/DpDynamicCommand/DpDynamicCommand.inf
-
-  #
-  # UEFI applications
-  #
-  INF ShellPkg/Application/Shell/Shell.inf
-  INF MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
+!endif
   INF MdeModulePkg/Application/VariableInfo/VariableInfo.inf
+  #
+  # Test Applications
+  #
+!ifdef CONFIG_NVIDIA_SHELL_APPLICATIONS
+  INF Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
+
+!if $(TARGET) != RELEASE
+  INF Silicon/NVIDIA/Test/ShellTest/BootOrderTest/BootOrderTestUefiShell.inf
+  INF Silicon/NVIDIA/Test/ShellTest/EfiGopTest/EfiGopTestUefiShell.inf
+  INF Silicon/NVIDIA/Test/ShellTest/UefiMemMapTest/UefiMemMapTestUefiShell.inf
+!endif
+
+  INF Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
+  INF Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
+  INF Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
+!ifdef CONFIG_SOC_USB
+  INF Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
+!endif
+!endif
+
   INF SecurityPkg/EnrollFromDefaultKeysApp/EnrollFromDefaultKeysApp.inf
 
   #
@@ -338,6 +354,7 @@
 !ifndef CONFIG_BOOT_UI_MENU_DISABLED
   INF MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
   INF RuleOverride = UI MdeModulePkg/Application/UiApp/UiApp.inf
+  INF MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
   INF MdeModulePkg/Universal/DriverHealthManagerDxe/DriverHealthManagerDxe.inf
 !endif
 
@@ -345,17 +362,6 @@
   # EBC
   #
   INF MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
-
-  #
-  # Test Applications
-  #
-  INF Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
-
-!if $(TARGET) != RELEASE
-  INF Silicon/NVIDIA/Test/ShellTest/BootOrderTest/BootOrderTestUefiShell.inf
-  INF Silicon/NVIDIA/Test/ShellTest/EfiGopTest/EfiGopTestUefiShell.inf
-  INF Silicon/NVIDIA/Test/ShellTest/UefiMemMapTest/UefiMemMapTestUefiShell.inf
-!endif
 
   #
   # Tegra Platform Boot Manager driver
@@ -413,7 +419,6 @@
   # Regulator support
   #
   INF Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
-  INF Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
 
   #
   # QSPI Support

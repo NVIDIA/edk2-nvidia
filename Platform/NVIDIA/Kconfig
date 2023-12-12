@@ -334,3 +334,67 @@ menu  "Watchdog settings"
     help
       Use the ARM generic watchdog timer driver
 endmenu
+
+menuconfig SHELL
+bool "UEFI Shell support"
+default y
+help
+  Support for UEFI shell in the main UEFI firmware image
+
+if SHELL
+  choice SHELL_LEVEL
+    prompt "Shell Level support"
+    default SHELL_LEVEL_INTERACTIVE
+    help
+      Shell level supported, documented in the UEFI Shell specification
+
+    config SHELL_LEVEL_MINIMAL
+    bool "Minimal (0)"
+
+    config SHELL_LEVEL_SCRIPTING
+    select SHELL_LEVEL_1_SUPPORTED
+    bool "Scripting (1)"
+
+    config SHELL_LEVEL_BASIC
+    select SHELL_LEVEL_1_SUPPORTED
+    select SHELL_LEVEL_2_SUPPORTED
+    bool "Basic (2)"
+
+    config SHELL_LEVEL_INTERACTIVE
+    select SHELL_LEVEL_1_SUPPORTED
+    select SHELL_LEVEL_2_SUPPORTED
+    select SHELL_LEVEL_3_SUPPORTED
+    bool "Interactive (3)"
+  endchoice
+
+  config SHELL_LEVEL_1_SUPPORTED
+  bool
+  config SHELL_LEVEL_2_SUPPORTED
+  bool
+  config SHELL_LEVEL_3_SUPPORTED
+  bool
+
+  config SHELL_DEBUG_COMMANDS
+  bool "Shell debug commands"
+  default y
+  help
+    Add support for shell debug commands (comp, dblk, dmem, mm, mode, pci, setvar, etc)
+
+  config SHELL_DRIVER_COMMANDS
+  bool "Shell driver commands"
+  default y
+  help
+    Add support for shell driver commands (connect, devtree, dh, disconnect, drivers, unload, etc)
+
+  config SHELL_NETWORK_COMMANDS
+  bool "Shell network commands"
+  default y
+  help
+    Add support for shell network commands
+
+  config NVIDIA_SHELL_APPLICATIONS
+  bool "NVIDIA Test applications"
+  default y
+  help
+    Add support for NVIDIA test applications
+endif

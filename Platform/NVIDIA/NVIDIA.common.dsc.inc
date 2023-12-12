@@ -1104,7 +1104,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   Silicon/NVIDIA/Drivers/BpmpIpc/BpmpIpcDxe.inf
   Silicon/NVIDIA/Drivers/BpmpScmi/BpmpScmiDxe.inf
-  Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
   Silicon/NVIDIA/Drivers/BpmpI2c/BpmpI2cDxe.inf
 
   #
@@ -1112,7 +1111,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioDxe.inf
   Silicon/NVIDIA/Drivers/I2cExpanderGpio/I2cExpanderGpio.inf
-  Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
 
   #
   # I2C Support
@@ -1158,6 +1156,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   }
 !ifndef CONFIG_BOOT_UI_MENU_DISABLED
   MdeModulePkg/Universal/SetupBrowserDxe/SetupBrowserDxe.inf
+  MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
   MdeModulePkg/Application/UiApp/UiApp.inf {
     <LibraryClasses>
       NULL|MdeModulePkg/Library/DeviceManagerUiLib/DeviceManagerUiLib.inf
@@ -1169,17 +1168,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       NULL|Silicon/NVIDIA/Library/UiMenuStartupLib/UiMenuStartupLib.inf
   }
   MdeModulePkg/Universal/DriverHealthManagerDxe/DriverHealthManagerDxe.inf
-!endif
-
-  #
-  # Test Applications
-  #
-  Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
-
-!if $(TARGET) != RELEASE
-  Silicon/NVIDIA/Test/ShellTest/BootOrderTest/BootOrderTestUefiShell.inf
-  Silicon/NVIDIA/Test/ShellTest/EfiGopTest/EfiGopTestUefiShell.inf
-  Silicon/NVIDIA/Test/ShellTest/UefiMemMapTest/UefiMemMapTestUefiShell.inf
 !endif
 
   MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
@@ -1325,7 +1313,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   Silicon/NVIDIA/Drivers/UsbPadCtlDxe/UsbPadCtlDxe.inf
   Silicon/NVIDIA/Drivers/XhciControllerDxe/XhciControllerDxe.inf
   Silicon/NVIDIA/Drivers/XusbControllerDxe/XusbControllerDxe.inf
-  Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 !endif
 !ifdef CONFIG_UHCI
   MdeModulePkg/Bus/Pci/UhciDxe/UhciDxe.inf
@@ -1366,24 +1353,39 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   # UEFI application (Shell Embedded Boot Loader)
   #
+!ifdef CONFIG_SHELL
   ShellPkg/Application/Shell/Shell.inf {
     <PcdsFixedAtBuild>
       gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
     <LibraryClasses>
       ShellCommandLib|ShellPkg/Library/UefiShellCommandLib/UefiShellCommandLib.inf
-      NULL|ShellPkg/Library/UefiShellLevel2CommandsLib/UefiShellLevel2CommandsLib.inf
+!ifdef CONFIG_SHELL_LEVEL_1_SUPPORTED
       NULL|ShellPkg/Library/UefiShellLevel1CommandsLib/UefiShellLevel1CommandsLib.inf
-      NULL|ShellPkg/Library/UefiShellLevel3CommandsLib/UefiShellLevel3CommandsLib.inf
-      NULL|ShellPkg/Library/UefiShellDriver1CommandsLib/UefiShellDriver1CommandsLib.inf
-      NULL|ShellPkg/Library/UefiShellAcpiViewCommandLib/UefiShellAcpiViewCommandLib.inf
-      NULL|ShellPkg/Library/UefiShellDebug1CommandsLib/UefiShellDebug1CommandsLib.inf
       NULL|ShellPkg/Library/UefiShellInstall1CommandsLib/UefiShellInstall1CommandsLib.inf
+!endif
+!ifdef CONFIG_SHELL_LEVEL_2_SUPPORTED
+      NULL|ShellPkg/Library/UefiShellLevel2CommandsLib/UefiShellLevel2CommandsLib.inf
+!endif
+!ifdef CONFIG_SHELL_LEVEL_3_SUPPORTED
+      NULL|ShellPkg/Library/UefiShellLevel3CommandsLib/UefiShellLevel3CommandsLib.inf
+!endif
+!ifdef CONFIG_SHELL_DEBUG_COMMANDS
+      NULL|ShellPkg/Library/UefiShellDebug1CommandsLib/UefiShellDebug1CommandsLib.inf
+!endif
+!ifdef CONFIG_SHELL_DRIVER_COMMANDS
+      NULL|ShellPkg/Library/UefiShellDriver1CommandsLib/UefiShellDriver1CommandsLib.inf
+!endif
+!ifdef CONFIG_ACPI
+      NULL|ShellPkg/Library/UefiShellAcpiViewCommandLib/UefiShellAcpiViewCommandLib.inf
+!endif
+!ifdef CONFIG_SHELL_NETWORK_COMMANDS
       NULL|ShellPkg/Library/UefiShellNetwork1CommandsLib/UefiShellNetwork1CommandsLib.inf
       NULL|ShellPkg/Library/UefiShellNetwork2CommandsLib/UefiShellNetwork2CommandsLib.inf
-      OrderedCollectionLib|MdePkg/Library/BaseOrderedCollectionRedBlackTreeLib/BaseOrderedCollectionRedBlackTreeLib.inf
-      PrintLib|MdePkg/Library/BasePrintLib/BasePrintLib.inf
+!endif
       BcfgCommandLib|ShellPkg/Library/UefiShellBcfgCommandLib/UefiShellBcfgCommandLib.inf
   }
+!endif
+!ifdef CONFIG_SHELL_NETWORK_COMMANDS
   ShellPkg/DynamicCommand/HttpDynamicCommand/HttpDynamicCommand.inf {
     <PcdsFixedAtBuild>
       gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
@@ -1396,8 +1398,27 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
     <PcdsFixedAtBuild>
       gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
   }
-  MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
+!endif
   MdeModulePkg/Application/VariableInfo/VariableInfo.inf
+  #
+  # Test Applications
+  #
+!ifdef CONFIG_NVIDIA_SHELL_APPLICATIONS
+  Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
+
+!if $(TARGET) != RELEASE
+  Silicon/NVIDIA/Test/ShellTest/BootOrderTest/BootOrderTestUefiShell.inf
+  Silicon/NVIDIA/Test/ShellTest/EfiGopTest/EfiGopTestUefiShell.inf
+  Silicon/NVIDIA/Test/ShellTest/UefiMemMapTest/UefiMemMapTestUefiShell.inf
+!endif
+
+  Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
+  Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
+  Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
+!ifdef CONFIG_SOC_USB
+  Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
+!endif
+!endif
 
   #
   # Default Security Key Enrollment Application.
@@ -1521,7 +1542,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # Regulator support
   #
   Silicon/NVIDIA/Drivers/RegulatorDxe/RegulatorDxe.inf
-  Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
 
   #
   # Capsule Update Policy Protocol
