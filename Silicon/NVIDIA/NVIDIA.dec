@@ -442,7 +442,7 @@
   gNVIDIATokenSpaceGuid.PcdMmCommRetryBackOffUs|0x7A120|UINT64|0x00000109
 
   #Time in minutes to register boot watchdog (DXE->ReadyToBoot), 0 to disable
-  gNVIDIATokenSpaceGuid.PcdBootWatchdogTime|$(CONFIG_BOOT_WATCHDOG_TIMEOUT)|UINT16|0x00000110
+  gNVIDIATokenSpaceGuid.PcdBootWatchdogTime|0|UINT16|0x00000110
 
   #Size of Buffer used to communicate with fTPM TA in OP-TEE
   gNVIDIATokenSpaceGuid.PcdFtpmShmSize|0|UINT64|0x000010D
