@@ -207,27 +207,6 @@
   Silicon/NVIDIA/Drivers/Tcg2Config/Tcg2ConfigDxe.inf
   MdeModulePkg/Universal/SmbiosMeasurementDxe/SmbiosMeasurementDxe.inf
 
-!ifdef $(ENABLE_INTELUNDI)
-  #
-  # Intel 500 series NIC
-  #
-  IntelUndiPkg/XGigUndiDxe/XGigUndiDxe.inf {
-    <LibraryClasses>
-      StdLibC|IntelUndiPkg/LibC/LibC.inf
-    <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -Wno-unused-value -Wno-multistatement-macros
-  }
-  #
-  # Intel 700 series NIC
-  #
-  IntelUndiPkg/I40eUndiDxe/I40eUndiDxe.inf {
-    <LibraryClasses>
-      StdLibC|IntelUndiPkg/LibC/LibC.inf
-    <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -Wno-unused -Wno-multistatement-macros -Wno-incompatible-pointer-types -Wno-deprecated-non-prototype
-  }
-!endif
-
   #
   # Host Interface test Application
   #
@@ -235,16 +214,6 @@
     <LibraryClasses>
       RedfishPlatformCredentialLib|Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/RedfishPlatformCredentialLib.inf
   }
-
-  #
-  # BMC Virtual NIC support
-  #
-  Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf
-
-  #
-  # Realtek USB NIC
-  #
-  Drivers/Realtek/Bus/Usb/UsbNetworking/RtkUsbUndiDxe.inf
 
   #
   # NS ERoT

@@ -209,9 +209,6 @@
   #
   INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
 
-  # USB NIC
-  INF Drivers/ASIX/Bus/Usb/UsbNetworking/Ax88772c/Ax88772c.inf
-
   #
   # PCI Support
   #
@@ -280,29 +277,73 @@
   #
   # Networking stack
   #
+!ifdef CONFIG_NETWORKING
   INF NetworkPkg/DpcDxe/DpcDxe.inf
   INF NetworkPkg/ArpDxe/ArpDxe.inf
-  INF NetworkPkg/Dhcp4Dxe/Dhcp4Dxe.inf
-  INF NetworkPkg/Ip4Dxe/Ip4Dxe.inf
   INF NetworkPkg/MnpDxe/MnpDxe.inf
   INF NetworkPkg/SnpDxe/SnpDxe.inf
-  INF NetworkPkg/VlanConfigDxe/VlanConfigDxe.inf
-  INF NetworkPkg/Mtftp4Dxe/Mtftp4Dxe.inf
   INF NetworkPkg/TcpDxe/TcpDxe.inf
+  INF NetworkPkg/DnsDxe/DnsDxe.inf
+!ifdef CONFIG_NETWORKING_IPV4
+  INF NetworkPkg/Dhcp4Dxe/Dhcp4Dxe.inf
+  INF NetworkPkg/Ip4Dxe/Ip4Dxe.inf
+  INF NetworkPkg/Mtftp4Dxe/Mtftp4Dxe.inf
   INF NetworkPkg/Udp4Dxe/Udp4Dxe.inf
-  INF NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf
-  INF NetworkPkg/IScsiDxe/IScsiDxe.inf
-  INF NetworkPkg/Ip6Dxe/Ip6Dxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_IPV6
   INF NetworkPkg/Dhcp6Dxe/Dhcp6Dxe.inf
-  INF NetworkPkg/Udp6Dxe/Udp6Dxe.inf
+  INF NetworkPkg/Ip6Dxe/Ip6Dxe.inf
   INF NetworkPkg/Mtftp6Dxe/Mtftp6Dxe.inf
-
+  INF NetworkPkg/Udp6Dxe/Udp6Dxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_VLAN
+  INF NetworkPkg/VlanConfigDxe/VlanConfigDxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_PXE
+  INF NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_ISCSI
+  INF NetworkPkg/IScsiDxe/IScsiDxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_HTTP
   INF NetworkPkg/TlsDxe/TlsDxe.inf
   INF NetworkPkg/TlsAuthConfigDxe/TlsAuthConfigDxe.inf
-  INF NetworkPkg/DnsDxe/DnsDxe.inf
   INF NetworkPkg/HttpDxe/HttpDxe.inf
   INF NetworkPkg/HttpUtilitiesDxe/HttpUtilitiesDxe.inf
   INF NetworkPkg/HttpBootDxe/HttpBootDxe.inf
+!endif
+!endif
+
+  #
+  # NIC drivers
+  #
+!ifdef CONFIG_NETWORKING_DEVICE_NVIDIA
+  INF Silicon/NVIDIA/Drivers/EqosDeviceDxe/EqosDeviceDxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_DEVICE_INTEL
+!ifdef $(ENABLE_INTELUNDI)
+  #
+  # Intel 500 series NIC
+  #
+  INF IntelUndiPkg/XGigUndiDxe/XGigUndiDxe.inf
+  #
+  # Intel 700 series NIC
+  #
+  INF IntelUndiPkg/I40eUndiDxe/I40eUndiDxe.inf
+!endif
+!endif
+!ifdef CONFIG_NETWORKING_DEVICE_REALTEK
+!ifdef CONFIG_USB
+  INF Drivers/Realtek/Bus/Usb/UsbNetworking/RtkUsbUndiDxe.inf
+!endif
+  INF Drivers/Realtek/Bus/Pcie/PcieNetworking/RtkUndiDxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_DEVICE_ASIX
+  INF Drivers/ASIX/Bus/Usb/UsbNetworking/Ax88772c/Ax88772c.inf
+!endif
+!ifdef CONFIG_NETWORKING_DEVICE_USB_RNDIS
+  INF Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf
+!endif
 
   #
   # UEFI application (Shell Embedded Boot Loader)
@@ -311,7 +352,9 @@
   INF ShellPkg/Application/Shell/Shell.inf
 !endif
 !ifdef CONFIG_SHELL_NETWORK_COMMANDS
+!ifdef CONFIG_NETWORKING_HTTP
   INF ShellPkg/DynamicCommand/HttpDynamicCommand/HttpDynamicCommand.inf
+!endif
   INF ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf
   INF ShellPkg/DynamicCommand/DpDynamicCommand/DpDynamicCommand.inf
 !endif
@@ -448,11 +491,6 @@
   # Tegra EEPROM Support
   #
   INF Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf
-
-  #
-  # Third party drivers
-  #
-  INF Drivers/Realtek/Bus/Pcie/PcieNetworking/RtkUndiDxe.inf
 
   #
   # Tegra Pin Control support

@@ -30,11 +30,6 @@
   INF Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
 
   #
-  # EQOS NIC Support
-  #
-  INF Silicon/NVIDIA/Drivers/EqosDeviceDxe/EqosDeviceDxe.inf
-
-  #
   # VPR Support
   #
   INF Silicon/NVIDIA/Drivers/VPRDxe/VPRDxe.inf

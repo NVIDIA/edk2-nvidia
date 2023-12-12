@@ -84,7 +84,13 @@ menu "Hardware support"
 
   config SCSI
   bool
-  default y #if (SATA || UFS || ISCSI)
+  default y if (SATA || UFS || NETWORKING_ISCSI)
+
+  config NETWORKING_DEVICE_NVIDIA
+  bool
+  default y if SOC_JETSON
+  help
+    Support for internal SoC NIC
 
   config SOC_USB
   bool
@@ -335,6 +341,75 @@ menu  "Watchdog settings"
       Use the ARM generic watchdog timer driver
 endmenu
 
+menuconfig NETWORKING
+bool "Networking support"
+default y
+help
+  Overall networking support in UEFI
+
+if NETWORKING
+  config NETWORKING_HTTP
+  bool "HTTP/HTTPS support"
+  default y
+  help
+    Support for HTTP stack in UEFI
+
+  config NETWORKING_PXE
+  bool "PXE support"
+  default y
+  help
+    Support for PXE boot
+
+  config NETWORKING_ISCSI
+  bool "iSCSI support"
+  default y
+  help
+    Support for iSCSI boot
+
+  config NETWORKING_VLAN
+  bool "VLAN support"
+  default y
+  help
+    Support for VLAN configuration
+
+  config NETWORKING_IPV4
+  bool "IPv4 support"
+  default y
+  help
+    Support for IPv4
+
+  config NETWORKING_IPV6
+  bool "IPv6 support"
+  default y
+  help
+    Support for IPv6
+
+  menu "Network devices"
+    config NETWORKING_DEVICE_INTEL
+    bool "Intel NIC drivers"
+    help
+      Support for Intel NICs
+
+    config NETWORKING_DEVICE_REALTEK
+    bool "Realtek NIC drivers"
+    help
+      Support for Realtek NICs
+
+    config NETWORKING_DEVICE_ASIX
+    bool "ASIX USB NIC"
+    depends on USB
+    help
+      Support for ASIX USB devices
+
+    config NETWORKING_DEVICE_USB_RNDIS
+    bool "USB RNDIS NIC"
+    depends on USB
+    help
+      Support for USB RNDIS NICs
+  endmenu
+
+endif
+
 menuconfig SHELL
 bool "UEFI Shell support"
 default y
@@ -389,6 +464,7 @@ if SHELL
   config SHELL_NETWORK_COMMANDS
   bool "Shell network commands"
   default y
+  depends on NETWORKING
   help
     Add support for shell network commands
 

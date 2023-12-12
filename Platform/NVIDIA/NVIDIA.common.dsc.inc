@@ -1200,29 +1200,83 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   # Networking stack
   #
+!ifdef CONFIG_NETWORKING
   NetworkPkg/DpcDxe/DpcDxe.inf
   NetworkPkg/ArpDxe/ArpDxe.inf
-  NetworkPkg/Dhcp4Dxe/Dhcp4Dxe.inf
-  NetworkPkg/Ip4Dxe/Ip4Dxe.inf
   NetworkPkg/MnpDxe/MnpDxe.inf
   NetworkPkg/SnpDxe/SnpDxe.inf
-  NetworkPkg/VlanConfigDxe/VlanConfigDxe.inf
-  NetworkPkg/Mtftp4Dxe/Mtftp4Dxe.inf
   NetworkPkg/TcpDxe/TcpDxe.inf
+  NetworkPkg/DnsDxe/DnsDxe.inf
+!ifdef CONFIG_NETWORKING_IPV4
+  NetworkPkg/Dhcp4Dxe/Dhcp4Dxe.inf
+  NetworkPkg/Ip4Dxe/Ip4Dxe.inf
+  NetworkPkg/Mtftp4Dxe/Mtftp4Dxe.inf
   NetworkPkg/Udp4Dxe/Udp4Dxe.inf
-  NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf
-  NetworkPkg/IScsiDxe/IScsiDxe.inf
-  NetworkPkg/Ip6Dxe/Ip6Dxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_IPV6
   NetworkPkg/Dhcp6Dxe/Dhcp6Dxe.inf
-  NetworkPkg/Udp6Dxe/Udp6Dxe.inf
+  NetworkPkg/Ip6Dxe/Ip6Dxe.inf
   NetworkPkg/Mtftp6Dxe/Mtftp6Dxe.inf
-
+  NetworkPkg/Udp6Dxe/Udp6Dxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_VLAN
+  NetworkPkg/VlanConfigDxe/VlanConfigDxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_PXE
+  NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_ISCSI
+  NetworkPkg/IScsiDxe/IScsiDxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_HTTP
   NetworkPkg/TlsDxe/TlsDxe.inf
   NetworkPkg/TlsAuthConfigDxe/TlsAuthConfigDxe.inf
-  NetworkPkg/DnsDxe/DnsDxe.inf
   NetworkPkg/HttpDxe/HttpDxe.inf
   NetworkPkg/HttpUtilitiesDxe/HttpUtilitiesDxe.inf
   NetworkPkg/HttpBootDxe/HttpBootDxe.inf
+!endif
+!endif
+
+  #
+  # NIC drivers
+  #
+!ifdef CONFIG_NETWORKING_DEVICE_NVIDIA
+  Silicon/NVIDIA/Drivers/EqosDeviceDxe/EqosDeviceDxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_DEVICE_INTEL
+!ifdef $(ENABLE_INTELUNDI)
+  #
+  # Intel 500 series NIC
+  #
+  IntelUndiPkg/XGigUndiDxe/XGigUndiDxe.inf {
+    <LibraryClasses>
+      StdLibC|IntelUndiPkg/LibC/LibC.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -Wno-unused-value -Wno-multistatement-macros
+  }
+  #
+  # Intel 700 series NIC
+  #
+  IntelUndiPkg/I40eUndiDxe/I40eUndiDxe.inf {
+    <LibraryClasses>
+      StdLibC|IntelUndiPkg/LibC/LibC.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -Wno-unused -Wno-multistatement-macros -Wno-incompatible-pointer-types -Wno-deprecated-non-prototype
+  }
+!endif
+!endif
+!ifdef CONFIG_NETWORKING_DEVICE_REALTEK
+!ifdef CONFIG_USB
+  Drivers/Realtek/Bus/Usb/UsbNetworking/RtkUsbUndiDxe.inf
+!endif
+  Drivers/Realtek/Bus/Pcie/PcieNetworking/RtkUndiDxe.inf
+!endif
+!ifdef CONFIG_NETWORKING_DEVICE_ASIX
+  Drivers/ASIX/Bus/Usb/UsbNetworking/Ax88772c/Ax88772c.inf
+!endif
+!ifdef CONFIG_NETWORKING_DEVICE_USB_RNDIS
+  Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf
+!endif
 
   # FV Filesystems
   MdeModulePkg/Universal/FvSimpleFileSystemDxe/FvSimpleFileSystemDxe.inf
@@ -1347,9 +1401,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
 
-  # USB NIC
-  Drivers/ASIX/Bus/Usb/UsbNetworking/Ax88772c/Ax88772c.inf
-
   #
   # UEFI application (Shell Embedded Boot Loader)
   #
@@ -1386,10 +1437,12 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   }
 !endif
 !ifdef CONFIG_SHELL_NETWORK_COMMANDS
+!ifdef CONFIG_NETWORKING_HTTP
   ShellPkg/DynamicCommand/HttpDynamicCommand/HttpDynamicCommand.inf {
     <PcdsFixedAtBuild>
       gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
   }
+!endif
   ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf {
     <PcdsFixedAtBuild>
       gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
@@ -1572,11 +1625,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # Tegra EEPROM Support
   #
   Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf
-
-  #
-  # Third party drivers
-  #
-  Drivers/Realtek/Bus/Pcie/PcieNetworking/RtkUndiDxe.inf
 
   #
   # Tegra Pin Control support

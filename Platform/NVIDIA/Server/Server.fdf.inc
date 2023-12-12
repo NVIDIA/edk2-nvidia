@@ -37,27 +37,6 @@
   INF Silicon/NVIDIA/Drivers/Tcg2Config/Tcg2ConfigDxe.inf
   INF MdeModulePkg/Universal/SmbiosMeasurementDxe/SmbiosMeasurementDxe.inf
 
-!ifdef $(ENABLE_INTELUNDI)
-  #
-  # Intel 500 series NIC
-  #
-  INF IntelUndiPkg/XGigUndiDxe/XGigUndiDxe.inf
-  #
-  # Intel 700 series NIC
-  #
-  INF IntelUndiPkg/I40eUndiDxe/I40eUndiDxe.inf
-!endif
-
-  #
-  # BMC Virtual NIC support
-  #
-  INF Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf
-
-  #
-  # Realtek USB NIC
-  #
-  INF Drivers/Realtek/Bus/Usb/UsbNetworking/RtkUsbUndiDxe.inf
-
   #
   # NS ERoT
   #
