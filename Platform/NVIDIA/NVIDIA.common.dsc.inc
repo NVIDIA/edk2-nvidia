@@ -1129,11 +1129,13 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   Silicon/NVIDIA/Drivers/IpmiNullDxe/IpmiNullDxe.inf
 
   #
-  # Graphics console support
+  # Logo support
   #
+!ifdef CONFIG_LOGO
   Silicon/NVIDIA/Drivers/Logo/LogoDxe.inf
 !ifdef CONFIG_ACPI
   MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
+!endif
 !endif
 
   #

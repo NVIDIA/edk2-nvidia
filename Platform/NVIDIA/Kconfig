@@ -225,6 +225,12 @@ menu "Boot Options"
       kernel support).
   endchoice
 
+  config LOGO
+  bool "Boot Logo Support"
+  default y
+  help
+    Adds support for a boot logo during boot, will not be used if there no graphics console supported.
+
 endmenu
 
 menu "Debug Options"
