@@ -523,7 +523,7 @@ NVIDIAGpuDriverStart (
       Function
       ));
   } else {
-    DEBUG ((DEBUG_ERROR, "%a: ERROR: VDM update failed; PciIo GetLocation Status '%r'.\n", Status));
+    DEBUG ((DEBUG_ERROR, "%a: ERROR: VDM update failed; PciIo GetLocation Status '%r'.\n", __func__, Status));
   }
 
   /* Check GPU Mode */
