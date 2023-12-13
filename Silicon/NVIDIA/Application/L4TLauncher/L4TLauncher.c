@@ -1,7 +1,7 @@
 /** @file
   The main process for L4TLauncher application.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -40,6 +40,7 @@
 
 #include <NVIDIAConfiguration.h>
 #include <libfdt.h>
+#include <Library/PlatformBootOrderLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/ResetSystemLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
@@ -2296,6 +2297,114 @@ Exit:
 }
 
 /**
+ * @brief Get the Device Handle object that contains the RootFS for FV based boots
+ *
+ * If not-launched from a FV this function will return the LoadedHandle.
+ * Otherwise, it will use the DefaultBootPriority variable to attempt to find
+ * the boot device that contains a root fs to boot off of.
+ *
+ * @param LoadedHandle - Handle of the loaded device
+ * @param BootChain    - A/B info
+ * @return EFI_HANDLE of the specified device to attempt boot with.
+ *         It will be LoadedHandled for normal ESP based boots
+ **/
+EFI_HANDLE
+EFIAPI
+GetDeviceHandleForFvBoot (
+  IN EFI_HANDLE  LoadedHandle,
+  IN UINT32      BootChain
+  )
+{
+  EFI_STATUS                Status;
+  UINTN                     NumberOfBlockIo;
+  EFI_HANDLE                *BlockIoHandles;
+  UINTN                     BlockIoIndex;
+  EFI_BLOCK_IO_PROTOCOL     *BlockIo;
+  UINTN                     ChildCount;
+  EFI_HANDLE                *ChildHandles;
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
+  CHAR8                     *DefaultBootOrder;
+  UINTN                     DefaultBootOrderSize;
+  CONST CHAR8               *DeviceClass;
+
+  DefaultBootOrder = NULL;
+
+  Status = gBS->HandleProtocol (LoadedHandle, &gEfiDevicePathProtocolGuid, (VOID **)&DevicePath);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "DevicePath not found, check on this disk\r\n"));
+    return LoadedHandle;
+  }
+
+  if ((DevicePath->Type != MEDIA_DEVICE_PATH) ||
+      (DevicePath->SubType != MEDIA_PIWG_FW_VOL_DP))
+  {
+    return LoadedHandle;
+  }
+
+  Status = GetVariable2 (
+             L"DefaultBootPriority",
+             &gNVIDIATokenSpaceGuid,
+             (VOID **)&DefaultBootOrder,
+             &DefaultBootOrderSize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "DefaultBootPriority not found, expected for FV based boot!\r\n"));
+    return LoadedHandle;
+  }
+
+  Status = gBS->LocateHandleBuffer (ByProtocol, &gEfiBlockIoProtocolGuid, NULL, &NumberOfBlockIo, &BlockIoHandles);
+  if (EFI_ERROR (Status)) {
+    return LoadedHandle;
+  }
+
+  for (BlockIoIndex = 0; BlockIoIndex < NumberOfBlockIo; BlockIoIndex++) {
+    Status = gBS->HandleProtocol (BlockIoHandles[BlockIoIndex], &gEfiBlockIoProtocolGuid, (VOID **)&BlockIo);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    if (BlockIo->Media->LogicalPartition) {
+      continue;
+    }
+
+    Status = gBS->HandleProtocol (BlockIoHandles[BlockIoIndex], &gEfiDevicePathProtocolGuid, (VOID **)&DevicePath);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    Status = GetBootDeviceClass (DevicePath, &DeviceClass);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    if (AsciiStrnCmp (DefaultBootOrder, DeviceClass, DefaultBootOrderSize) != 0) {
+      continue;
+    }
+
+    Status = ParseHandleDatabaseForChildControllers (BlockIoHandles[BlockIoIndex], &ChildCount, &ChildHandles);
+    if (EFI_ERROR (Status) || (ChildCount == 0)) {
+      continue;
+    }
+
+    Status = FindPartitionInfo (ChildHandles[0], ROOTFS_BASE_NAME, BootChain, NULL, NULL);
+    if (!EFI_ERROR (Status)) {
+      if (DefaultBootOrder != NULL) {
+        FreePool (DefaultBootOrder);
+      }
+
+      return ChildHandles[0];
+    }
+  }
+
+  if (DefaultBootOrder != NULL) {
+    FreePool (DefaultBootOrder);
+  }
+
+  DEBUG ((DEBUG_ERROR, "Device specified type not found, check on this disk\r\n"));
+  return LoadedHandle;
+}
+
+/**
   This is the declaration of an EFI image entry point. This entry point is
   the same for UEFI Applications, UEFI OS Loaders, and UEFI Drivers, including
   both device drivers and bus drivers.
@@ -2320,6 +2429,7 @@ L4TLauncher (
   EFI_STATUS                 Status;
   EFI_HANDLE                 LoadedImageHandle  = 0;
   EFI_HANDLE                 RootFsDeviceHandle = 0;
+  EFI_HANDLE                 DeviceHandle       = 0;
   L4T_BOOT_PARAMS            BootParams;
   EXTLINUX_BOOT_CONFIG       ExtLinuxConfig;
   UINTN                      ExtLinuxBootOption;
@@ -2337,6 +2447,8 @@ L4TLauncher (
     return Status;
   }
 
+  DeviceHandle = GetDeviceHandleForFvBoot (LoadedImage->DeviceHandle, BootParams.BootChain);
+
   if (IsSecureBootEnabled ()) {
     Status = GetImageEncryptionInfo (&EncryptionInfo);
     if (EFI_ERROR (Status)) {
@@ -2347,7 +2459,7 @@ L4TLauncher (
   if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_GRUB) {
     ErrorPrint (L"%a: Attempting GRUB Boot\r\n", __FUNCTION__);
     do {
-      FullDevicePath = FileDevicePath (LoadedImage->DeviceHandle, GRUB_PATH);
+      FullDevicePath = FileDevicePath (DeviceHandle, GRUB_PATH);
       if (FullDevicePath == NULL) {
         ErrorPrint (L"%a: Failed to create full device path\r\n", __FUNCTION__);
         BootParams.BootMode = NVIDIA_L4T_BOOTMODE_DIRECT;
@@ -2364,7 +2476,7 @@ L4TLauncher (
         break;
       }
 
-      Status = UpdateBootConfig (LoadedImage->DeviceHandle, BootParams.BootChain);
+      Status = UpdateBootConfig (DeviceHandle, BootParams.BootChain);
       if (EFI_ERROR (Status)) {
         ErrorPrint (L"%a: Unable to update partition files\r\n", __FUNCTION__);
         BootParams.BootMode = NVIDIA_L4T_BOOTMODE_DIRECT;
@@ -2389,7 +2501,7 @@ L4TLauncher (
   if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_DIRECT) {
     ErrorPrint (L"%a: Attempting Direct Boot\r\n", __FUNCTION__);
     do {
-      Status = ProcessExtLinuxConfig (LoadedImage->DeviceHandle, BootParams.BootChain, &ExtLinuxConfig, &RootFsDeviceHandle);
+      Status = ProcessExtLinuxConfig (DeviceHandle, BootParams.BootChain, &ExtLinuxConfig, &RootFsDeviceHandle);
       if (EFI_ERROR (Status)) {
         ErrorPrint (L"%a: Unable to process extlinux config: %r\r\n", __FUNCTION__, Status);
         BootParams.BootMode = NVIDIA_L4T_BOOTMODE_BOOTIMG;
@@ -2447,7 +2559,7 @@ L4TLauncher (
   // Not in else to allow fallback
   if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_BOOTIMG) {
     ErrorPrint (L"%a: Attempting Kernel Boot\r\n", __FUNCTION__);
-    Status = BootAndroidStylePartition (LoadedImage->DeviceHandle, BOOTIMG_BASE_NAME, BOOTIMG_DTB_BASE_NAME, &BootParams);
+    Status = BootAndroidStylePartition (DeviceHandle, BOOTIMG_BASE_NAME, BOOTIMG_DTB_BASE_NAME, &BootParams);
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"Failed to boot %s:%d partition\r\n", BOOTIMG_BASE_NAME, BootParams.BootChain);
       // Warm reset if there is valid rootfs
@@ -2457,7 +2569,7 @@ L4TLauncher (
     }
   } else if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY) {
     ErrorPrint (L"%a: Attempting Recovery Boot\r\n", __FUNCTION__);
-    Status = BootAndroidStylePartition (LoadedImage->DeviceHandle, RECOVERY_BASE_NAME, RECOVERY_DTB_BASE_NAME, &BootParams);
+    Status = BootAndroidStylePartition (DeviceHandle, RECOVERY_BASE_NAME, RECOVERY_DTB_BASE_NAME, &BootParams);
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"Failed to boot %s:%d partition\r\n", RECOVERY_BASE_NAME, BootParams.BootChain);
     }
