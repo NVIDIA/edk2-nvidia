@@ -282,6 +282,25 @@
 !endif
 
   #
+  # Display hardware
+  #
+!ifdef CONFIG_NVIDIA_DISPLAY
+  !include Silicon/NVIDIA/Drivers/NvGopDriver/NvGopDriver.fdf.inc
+  INF Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
+  INF Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
+  !ifdef CONFIG_SOC_XAVIER
+    INF Silicon/NVIDIA/Tegra/T194/Drivers/T194GraphicsOutputDxe/T194GraphicsOutputDxe.inf
+  !endif
+!endif
+!ifdef CONFIG_ASPEED_2600_DISPLAY
+  #
+  # AST2600 VGA GOP Support
+  FILE DRIVER = b403dcf9-8b43-44f7-b9ea-383eb33e548d {
+    SECTION PE32 = Drivers/ASpeed/ASpeedGopBinPkg/AArch64/ASpeedAst2600Gop.efi
+  }
+!endif
+
+  #
   # Networking stack
   #
 !ifdef CONFIG_NETWORKING

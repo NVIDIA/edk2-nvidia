@@ -18,7 +18,6 @@
   #
   DEFINE SYSTEM_FMP_ESRT_GUID = 7C374309-1649-4682-8BEE-04F3A8399414
 
-!include Silicon/NVIDIA/Drivers/NvGopDriver/NvGopDriver.dsc.inc
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
 [LibraryClasses.common]
@@ -91,24 +90,6 @@
   # FSI Support
   #
   Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
-
-  #
-  # NV Non-Discoverable PCIe Device DXE
-  #
-  Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
-
-  #
-  # NV Display Controller Driver
-  #
-  Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
-
-  #
-  # T194 Display support
-  #
-  Silicon/NVIDIA/Tegra/T194/Drivers/T194GraphicsOutputDxe/T194GraphicsOutputDxe.inf {
-      <LibraryClasses>
-      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
-  }
 
   #
   # Default Variables Device Tree

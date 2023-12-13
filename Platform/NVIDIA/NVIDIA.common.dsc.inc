@@ -62,6 +62,9 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
 !ifdef CONFIG_FS_EXT4
 !include Features/Ext4Pkg/Ext4.dsc.inc
 !endif
+!ifdef CONFIG_NVIDIA_DISPLAY
+!include Silicon/NVIDIA/Drivers/NvGopDriver/NvGopDriver.dsc.inc
+!endif
 
 [LibraryClasses.common]
   DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
@@ -1404,6 +1407,20 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # Generic non-discoverable pcie used for many soc devices
   #
   MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
+
+  #
+  # Display hardware
+  #
+!ifdef CONFIG_NVIDIA_DISPLAY
+  Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
+  Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
+  !ifdef CONFIG_SOC_XAVIER
+    Silicon/NVIDIA/Tegra/T194/Drivers/T194GraphicsOutputDxe/T194GraphicsOutputDxe.inf {
+      <LibraryClasses>
+      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+    }
+  !endif
+!endif
 
   #
   # UEFI application (Shell Embedded Boot Loader)

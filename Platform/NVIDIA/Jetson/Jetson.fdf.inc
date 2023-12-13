@@ -4,9 +4,6 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
-
-!include Silicon/NVIDIA/Drivers/NvGopDriver/NvGopDriver.fdf.inc
-
   #
   # Tegra UART driver
   #
@@ -42,21 +39,6 @@
   # FSI Support
   #
   INF Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
-
-  #
-  # NV Non-Discoverable PCI Device
-  #
-  INF Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
-
-  #
-  # NV Display Controller Driver
-  #
-  INF Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
-
-  #
-  # T194 Display support
-  #
-  INF Silicon/NVIDIA/Tegra/T194/Drivers/T194GraphicsOutputDxe/T194GraphicsOutputDxe.inf
 
   #
   # MM Communication

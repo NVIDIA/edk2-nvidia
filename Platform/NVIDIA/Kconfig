@@ -129,6 +129,17 @@ menu "Hardware support"
       default y
     endmenu
   endif
+
+  menu "Display hardware"
+    config NVIDIA_DISPLAY
+    bool "NVIDIA internal display support"
+    help
+      Support for internal SoC display devices
+    config ASPEED_2600_DISPLAY
+    bool "ASPEED AST2600 BMC VGA display"
+    help
+      Support for ASPEED AST2600 BMC VGA display device
+  endmenu
 endmenu
 
 menu "OS Hardware description"
