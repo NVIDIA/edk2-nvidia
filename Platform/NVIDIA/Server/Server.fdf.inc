@@ -25,11 +25,6 @@
   INF Silicon/NVIDIA/Drivers/MmCommunicateFfaDxe/MmCommunicationFfa.inf
 
   #
-  # Report status code
-  #
-  INF Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/OemDescStatusCodeDxe.inf
-
-  #
   # TPM
   #
   INF Silicon/NVIDIA/Drivers/Tpm2Dxe/Tpm2Dxe.inf
@@ -56,55 +51,6 @@
   # GH100 GPU Driver
   #
   INF Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.inf
-
-  #
-  # Redfish Host Interface Support
-  #
-  INF RedfishPkg/RedfishHostInterfaceDxe/RedfishHostInterfaceDxe.inf
-  INF Silicon/NVIDIA/Drivers/RedfishHostInterfaceControlDxe/RedfishHostInterfaceControlDxe.inf
-
-  #
-  # Default TLS Cipher Suites
-  #
-  INF Silicon/NVIDIA/Drivers/RedfishCipherDxe/RedfishCipherDxe.inf
-
-  #
-  # Redfish support
-  #
-  INF RedfishPkg/RestJsonStructureDxe/RestJsonStructureDxe.inf
-  INF RedfishPkg/RedfishRestExDxe/RedfishRestExDxe.inf
-  INF RedfishPkg/RedfishCredentialDxe/RedfishCredentialDxe.inf
-  INF RedfishPkg/RedfishDiscoverDxe/RedfishDiscoverDxe.inf
-  INF RedfishPkg/RedfishConfigHandler/RedfishConfigHandlerDriver.inf
-  INF RedfishPkg/RedfishPlatformConfigDxe/RedfishPlatformConfigDxe.inf
-  INF MdeModulePkg/Universal/RegularExpressionDxe/RegularExpressionDxe.inf
-  INF RedfishClientPkg/RedfishFeatureCoreDxe/RedfishFeatureCoreDxe.inf
-  INF RedfishClientPkg/RedfishETagDxe/RedfishETagDxe.inf
-  INF RedfishClientPkg/RedfishConfigLangMapDxe/RedfishConfigLangMapDxe.inf
-  INF RedfishClientPkg/RedfishHttpDxe/RedfishHttpDxe.inf
-  INF RedfishClientPkg/Features/ComputerSystem/v1_17_0/Dxe/ComputerSystemDxe.inf
-  INF RedfishClientPkg/Features/ComputerSystemCollectionDxe/ComputerSystemCollectionDxe.inf
-  INF RedfishClientPkg/Features/Bios/v1_2_0/Dxe/BiosDxe.inf
-  INF RedfishClientPkg/Features/BootOptionCollection/BootOptionCollectionDxe.inf
-  INF RedfishClientPkg/Features/BootOption/v1_0_4/Dxe/BootOptionDxe.inf
-  INF RedfishClientPkg/Converter/ComputerSystem/v1_17_0/RedfishComputerSystem_V1_17_0_Dxe.inf
-  INF RedfishClientPkg/Converter/ComputerSystemCollection/RedfishComputerSystemCollection_Dxe.inf
-  INF RedfishClientPkg/Converter/SecureBoot/v1_1_0/RedfishSecureBoot_V1_1_0_Dxe.inf
-  INF RedfishClientPkg/Converter/Bios/v1_2_0/RedfishBios_V1_2_0_Dxe.inf
-  INF RedfishClientPkg/Converter/BootOptionCollection/RedfishBootOptionCollection_Dxe.inf
-  INF RedfishClientPkg/Converter/BootOption/v1_0_4/RedfishBootOption_V1_0_4_Dxe.inf
-  INF RedfishClientPkg/RedfishBootstrapAccountDxe/RedfishBootstrapAccountDxe.inf
-  INF Silicon/NVIDIA/Drivers/PlatformRedfishBiosDxe/PlatformRedfishBiosDxe.inf
-  INF Silicon/NVIDIA/Drivers/RedfishFirmwareInfoDxe/RedfishFirmwareInfoDxe.inf
-  INF RedfishClientPkg/Features/SecureBoot/v1_1_0/Dxe/SecureBootDxe.inf
-  INF Silicon/NVIDIA/Drivers/PlatformRedfishBootDxe/PlatformRedfishBootDxe.inf
-  INF Silicon/NVIDIA/Drivers/PlatformRedfishOverrideDxe/PlatformRedfishOverrideDxe.inf
-  INF RedfishClientPkg/Features/SecureBootDatabaseCollectionDxe/SecureBootDatabaseCollectionDxe.inf
-  INF RedfishClientPkg/Converter/SecureBootDatabaseCollection/RedfishSecureBootDatabaseCollection_Dxe.inf
-  INF RedfishClientPkg/Features/SecureBootDatabase/v1_0_1/Dxe/SecureBootDatabaseDxe.inf
-  INF RedfishClientPkg/Converter/SecureBootDatabase/v1_0_1/RedfishSecureBootDatabase_V1_0_1_Dxe.inf
-  INF RedfishClientPkg/RedfishTaskServiceDxe/RedfishTaskServiceDxe.inf
-  INF RedfishClientPkg/RedfishSecureBootKeysDxe/RedfishSecureBootKeysDxe.inf
 
   #
   # FPGA I2C Support

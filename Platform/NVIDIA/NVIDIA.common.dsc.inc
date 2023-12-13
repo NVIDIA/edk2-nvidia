@@ -162,7 +162,11 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   # BDS Libraries
   UefiBootManagerLib|MdeModulePkg/Library/UefiBootManagerLib/UefiBootManagerLib.inf
   PlatformBootManagerLib|Silicon/NVIDIA/Library/PlatformBootManagerLib/PlatformBootManagerLib.inf
+!ifdef CONFIG_IPMI_BMC
   PlatformBootOrderLib|Silicon/NVIDIA/Library/PlatformBootOrderLib/PlatformBootOrderLib.inf
+!else
+  PlatformBootOrderLib|Silicon/NVIDIA/Library/PlatformBootOrderLib/PlatformBootOrderLibNoIpmi.inf
+!endif
   BootLogoLib|MdeModulePkg/Library/BootLogoLib/BootLogoLib.inf
 
   AcpiLib|EmbeddedPkg/Library/AcpiLib/AcpiLib.inf
@@ -268,10 +272,52 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
 
   Crc8Lib|Silicon/NVIDIA/Library/Crc8Lib/Crc8Lib.inf
 
+!ifdef CONFIG_IPMI_BMC
   IpmiBaseLib|IpmiFeaturePkg/Library/IpmiBaseLib/IpmiBaseLib.inf
   IpmiCommandLib|IpmiFeaturePkg/Library/IpmiCommandLib/IpmiCommandLib.inf
+!endif
   MctpBaseLib|Silicon/NVIDIA/Library/MctpBaseLib/MctpBaseLib.inf
   MctpNvVdmLib|Silicon/NVIDIA/Library/MctpNvVdmLib/MctpNvVdmLib.inf
+
+!ifdef CONFIG_REDFISH
+  #
+  # Redfish support
+  #
+  RestExLib|RedfishPkg/Library/DxeRestExLib/DxeRestExLib.inf
+  Ucs2Utf8Lib|RedfishPkg/Library/BaseUcs2Utf8Lib/BaseUcs2Utf8Lib.inf
+  BaseSortLib|MdeModulePkg/Library/BaseSortLib/BaseSortLib.inf
+  RedfishCrtLib|RedfishPkg/PrivateLibrary/RedfishCrtLib/RedfishCrtLib.inf
+  JsonLib|RedfishPkg/Library/JsonLib/JsonLib.inf
+  RedfishLib|RedfishPkg/PrivateLibrary/RedfishLib/RedfishLib.inf
+  HiiUtilityLib|RedfishPkg/Library/HiiUtilityLib/HiiUtilityLib.inf
+  RedfishPlatformConfigLib|RedfishPkg/Library/RedfishPlatformConfigLib/RedfishPlatformConfigLib.inf
+  RedfishDebugLib|RedfishPkg/Library/RedfishDebugLib/RedfishDebugLib.inf
+  RedfishHttpLib|RedfishClientPkg/Library/RedfishHttpLib/RedfishHttpLib.inf
+  RedfishAddendumLib|RedfishClientPkg/Library/RedfishAddendumLib/RedfishAddendumLib.inf
+
+  RedfishLib|RedfishClientPkg/PrivateLibrary/RedfishLib/RedfishLib.inf
+  RedfishFeatureUtilityLib|RedfishClientPkg/Library/RedfishFeatureUtilityLib/RedfishFeatureUtilityLib.inf
+  RedfishContentCodingLib|RedfishPkg/Library/RedfishContentCodingLibNull/RedfishContentCodingLibNull.inf
+  ConverterCommonLib|RedfishClientPkg/ConverterLib/edk2library/ConverterCommonLib/ConverterCommonLib.inf
+  RedfishResourceIdentifyLib|RedfishClientPkg/Library/RedfishResourceIdentifyLibNull/RedfishResourceIdentifyLibNull.inf
+  EdkIIRedfishResourceConfigLib|RedfishClientPkg/Library/EdkIIRedfishResourceConfigLib/EdkIIRedfishResourceConfigLib.inf
+  RedfishEventLib|RedfishClientPkg/Library/RedfishEventLib/RedfishEventLib.inf
+  RedfishVersionLib|RedfishClientPkg/Library/RedfishVersionLib/RedfishVersionLib.inf
+  RedfishPlatformCredentialLib|Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/RedfishPlatformCredentialLib.inf
+  ComputerSystemV1_17_0Lib|RedfishClientPkg/ConverterLib/edk2library/ComputerSystem/v1_17_0/Lib.inf
+  ComputerSystemCollectionLib|RedfishClientPkg/ConverterLib/edk2library/ComputerSystemCollection/Lib.inf
+  BiosV1_2_0Lib|RedfishClientPkg/ConverterLib/edk2library/Bios/v1_2_0/Lib.inf
+  SecureBootV1_1_0Lib|RedfishClientPkg/ConverterLib/edk2library/SecureBoot/v1_1_0/Lib.inf
+  BootOptionCollectionLib|RedfishClientPkg/ConverterLib/edk2library/BootOptionCollection/Lib.inf
+  BootOptionV1_0_4Lib|RedfishClientPkg/ConverterLib/edk2library/BootOption/v1_0_4/Lib.inf
+  SecureBootDatabaseCollectionLib|RedfishClientPkg/ConverterLib/edk2library/SecureBootDatabaseCollection/Lib.inf
+  SecureBootDatabaseV1_0_1Lib|RedfishClientPkg/ConverterLib/edk2library/SecureBootDatabase/v1_0_1/Lib.inf
+  RedfishJsonBlobLib|RedfishClientPkg/Library/RedfishJsonBlobLib/RedfishJsonBlobLib.inf
+  RedfishSecureBootKeysLib|RedfishClientPkg/Library/RedfishSecureBootKeysLib/RedfishSecureBootKeysLib.inf
+  RedfishMessageLib|RedfishClientPkg/Library/RedfishMessageLib/RedfishMessageLib.inf
+  RedfishTaskLib|Silicon/NVIDIA/Library/RedfishPlatformTaskLib/RedfishPlatformTaskLib.inf
+  RedfishProtocolFeaturesLib|RedfishClientPkg/Library/RedfishProtocolFeaturesLib/RedfishProtocolFeaturesLib.inf
+!endif
 
   FwVariableLib|Silicon/NVIDIA/Library/FwVariableLib/FwVariableLib.inf
 
@@ -457,6 +503,13 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
 !endif
   gEmbeddedTokenSpaceGuid.PcdAndroidBootLoadFile2|TRUE
 
+!ifdef CONFIG_REDFISH
+  gNVIDIATokenSpaceGuid.PcdRedfishSupported|TRUE
+!endif
+!ifdef CONFIG_IPMI_BMC
+  gIpmiFeaturePkgTokenSpaceGuid.PcdIpmiFeatureEnable|True
+!endif
+
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
@@ -616,6 +669,21 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
 
 !ifdef CONFIG_BOOT_WATCHDOG_TIMEOUT
   gNVIDIATokenSpaceGuid.PcdBootWatchdogTime|$(CONFIG_BOOT_WATCHDOG_TIMEOUT)
+!endif
+
+!ifdef CONFIG_REDFISH
+  #
+  # Redfish support
+  #
+  # Use gNVIDIABeforeConsoleEventGuid to startup Redfish feature drivers.
+  # { 0x974180a0, 0xa203, 0x43c8, { 0xb1, 0x12, 0x48, 0x70, 0xe1, 0xdb, 0xd6, 0x48 } }
+  gEfiRedfishClientPkgTokenSpaceGuid.PcdEdkIIRedfishFeatureDriverStartupEventGuid|{0xA0, 0x80, 0x41, 0x97, 0x03, 0xA2, 0xC8, 0x43, 0xB1, 0x12, 0x48, 0x70, 0xE1, 0xDB, 0xD6, 0x48 }
+  gEfiRedfishPkgTokenSpaceGuid.PcdRedfishRestExServiceAccessModeInBand|False
+  gEfiRedfishPkgTokenSpaceGuid.PcdRedfishDiscoverAccessModeInBand|False
+  gEfiRedfishPkgTokenSpaceGuid.PcdRedfishDisableBootstrapCredentialService|TRUE
+  gEfiRedfishClientPkgTokenSpaceGuid.PcdDefaultRedfishVersion|L"/redfish/v1/"
+  gEfiRedfishClientPkgTokenSpaceGuid.PcdHttpGetRetry|0x05
+  gEfiRedfishClientPkgTokenSpaceGuid.PcdHttpRetryWaitInSecond|2
 !endif
 
 [PcdsFixedAtBuild]
@@ -1121,14 +1189,24 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
   Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
+
+!ifdef CONFIG_IPMI_BMC
   Silicon/NVIDIA/Drivers/I2cIoBmcSsifDxe/I2cIoBmcSsifDxe.inf
   Silicon/NVIDIA/Drivers/ArmSbmrStatusCodeDxe/ArmSbmrStatusCodeDxe.inf
+  Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/OemDescStatusCodeDxe.inf
   IpmiFeaturePkg/Frb/FrbDxe.inf
 
   #
   # IPMI Null Driver
   #
   Silicon/NVIDIA/Drivers/IpmiNullDxe/IpmiNullDxe.inf
+
+  #
+  # Ipmi Blob Transfer support
+  #
+  Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/IpmiBlobTransferDxe.inf
+  Silicon/NVIDIA/Drivers/SmbiosBmcTransfer/SmbiosBmcTransfer.inf
+!endif
 
   #
   # Logo support
@@ -1480,6 +1558,20 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !ifdef CONFIG_NVIDIA_SHELL_APPLICATIONS
   Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
 
+!ifdef CONFIG_IPMI_BMC
+  Silicon/NVIDIA/Application/IpmiUtility/IpmiUtility.inf
+!endif
+!ifdef CONFIG_REDFISH
+  #
+  # Host Interface test Application
+  #
+  Silicon/NVIDIA/Application/HostInterfaceUtil/HostInterfaceUtil.inf  {
+    <LibraryClasses>
+      RedfishPlatformCredentialLib|Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/RedfishPlatformCredentialLib.inf
+  }
+
+!endif
+
 !if $(TARGET) != RELEASE
   Silicon/NVIDIA/Test/ShellTest/BootOrderTest/BootOrderTestUefiShell.inf
   Silicon/NVIDIA/Test/ShellTest/EfiGopTest/EfiGopTestUefiShell.inf
@@ -1658,13 +1750,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   Silicon/NVIDIA/Drivers/BootChainDxe/BootChainDxe.inf
 
   #
-  # Ipmi Blob Transfer support
-  #
-  Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/IpmiBlobTransferDxe.inf
-  Silicon/NVIDIA/Drivers/SmbiosBmcTransfer/SmbiosBmcTransfer.inf
-
-
-  #
   # CPU Frequency support
   #
   Silicon/NVIDIA/Drivers/TegraCpuFreqDxe/TegraCpuFreqDxe.inf
@@ -1721,6 +1806,67 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # Gpio Power Off Driver
   #
   Silicon/NVIDIA/Drivers/GpioPowerOffDxe/GpioPowerOffDxe.inf
+
+!ifdef CONFIG_REDFISH
+#
+  # Redfish Host Interface Support
+  #
+  RedfishPkg/RedfishHostInterfaceDxe/RedfishHostInterfaceDxe.inf {
+    <LibraryClasses>
+      RedfishPlatformHostInterfaceLib|Silicon/NVIDIA/Library/RedfishPlatformHostInterfaceOemLib/RedfishPlatformHostInterfaceOemLib.inf
+  }
+  Silicon/NVIDIA/Drivers/RedfishHostInterfaceControlDxe/RedfishHostInterfaceControlDxe.inf {
+    <LibraryClasses>
+      RedfishEventLib|RedfishClientPkg/Library/RedfishEventLib/RedfishEventLib.inf
+  }
+
+  #
+  # Default TLS Cipher Suites for Redfish HTTPS support
+  #
+  Silicon/NVIDIA/Drivers/RedfishCipherDxe/RedfishCipherDxe.inf {
+    <LibraryClasses>
+      RedfishEventLib|RedfishClientPkg/Library/RedfishEventLib/RedfishEventLib.inf
+  }
+
+  #
+  # Redfish support
+  #
+  RedfishPkg/RestJsonStructureDxe/RestJsonStructureDxe.inf
+  RedfishPkg/RedfishRestExDxe/RedfishRestExDxe.inf
+  RedfishPkg/RedfishCredentialDxe/RedfishCredentialDxe.inf
+  RedfishPkg/RedfishDiscoverDxe/RedfishDiscoverDxe.inf
+  RedfishPkg/RedfishConfigHandler/RedfishConfigHandlerDriver.inf
+  RedfishPkg/RedfishPlatformConfigDxe/RedfishPlatformConfigDxe.inf
+  MdeModulePkg/Universal/RegularExpressionDxe/RegularExpressionDxe.inf
+
+  RedfishClientPkg/RedfishFeatureCoreDxe/RedfishFeatureCoreDxe.inf
+  RedfishClientPkg/RedfishETagDxe/RedfishETagDxe.inf
+  RedfishClientPkg/RedfishConfigLangMapDxe/RedfishConfigLangMapDxe.inf
+  RedfishClientPkg/RedfishHttpDxe/RedfishHttpDxe.inf
+  RedfishClientPkg/Features/ComputerSystemCollectionDxe/ComputerSystemCollectionDxe.inf
+  RedfishClientPkg/Features/ComputerSystem/v1_17_0/Dxe/ComputerSystemDxe.inf
+  RedfishClientPkg/Features/Bios/v1_2_0/Dxe/BiosDxe.inf
+  RedfishClientPkg/Features/SecureBoot/v1_1_0/Dxe/SecureBootDxe.inf
+  RedfishClientPkg/Converter/ComputerSystem/v1_17_0/RedfishComputerSystem_V1_17_0_Dxe.inf
+  RedfishClientPkg/Converter/ComputerSystemCollection/RedfishComputerSystemCollection_Dxe.inf
+  RedfishClientPkg/Features/BootOptionCollection/BootOptionCollectionDxe.inf
+  RedfishClientPkg/Features/BootOption/v1_0_4/Dxe/BootOptionDxe.inf
+  RedfishClientPkg/Converter/Bios/v1_2_0/RedfishBios_V1_2_0_Dxe.inf
+  RedfishClientPkg/Converter/BootOptionCollection/RedfishBootOptionCollection_Dxe.inf
+  RedfishClientPkg/Converter/BootOption/v1_0_4/RedfishBootOption_V1_0_4_Dxe.inf
+  RedfishClientPkg/Converter/SecureBoot/v1_1_0/RedfishSecureBoot_V1_1_0_Dxe.inf
+  RedfishClientPkg/RedfishBootstrapAccountDxe/RedfishBootstrapAccountDxe.inf
+  Silicon/NVIDIA/Drivers/PlatformRedfishBiosDxe/PlatformRedfishBiosDxe.inf
+  Silicon/NVIDIA/Drivers/RedfishFirmwareInfoDxe/RedfishFirmwareInfoDxe.inf
+  Silicon/NVIDIA/Drivers/PlatformRedfishBootDxe/PlatformRedfishBootDxe.inf
+  Silicon/NVIDIA/Drivers/PlatformRedfishOverrideDxe/PlatformRedfishOverrideDxe.inf
+  RedfishClientPkg/Features/SecureBootDatabaseCollectionDxe/SecureBootDatabaseCollectionDxe.inf
+  RedfishClientPkg/Converter/SecureBootDatabaseCollection/RedfishSecureBootDatabaseCollection_Dxe.inf
+  RedfishClientPkg/Features/SecureBootDatabase/v1_0_1/Dxe/SecureBootDatabaseDxe.inf
+  RedfishClientPkg/Converter/SecureBootDatabase/v1_0_1/RedfishSecureBootDatabase_V1_0_1_Dxe.inf
+  RedfishClientPkg/RedfishTaskServiceDxe/RedfishTaskServiceDxe.inf
+  RedfishClientPkg/RedfishSecureBootKeysDxe/RedfishSecureBootKeysDxe.inf
+!endif
 
 [Components.AARCH64]
   #

@@ -122,14 +122,23 @@
   #
   INF MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
   INF Silicon/NVIDIA/Drivers/TegraI2c/TegraI2cDxe.inf
+!ifdef CONFIG_IPMI_BMC
   INF Silicon/NVIDIA/Drivers/I2cIoBmcSsifDxe/I2cIoBmcSsifDxe.inf
   INF Silicon/NVIDIA/Drivers/ArmSbmrStatusCodeDxe/ArmSbmrStatusCodeDxe.inf
+  INF Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/OemDescStatusCodeDxe.inf
   INF IpmiFeaturePkg/Frb/FrbDxe.inf
 
   #
   # IPMI Null Driver
   #
   INF Silicon/NVIDIA/Drivers/IpmiNullDxe/IpmiNullDxe.inf
+
+  #
+  # Ipmi Blob Transfer support
+  #
+  INF Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/IpmiBlobTransferDxe.inf
+  INF Silicon/NVIDIA/Drivers/SmbiosBmcTransfer/SmbiosBmcTransfer.inf
+!endif
 
   #
   # Logo support
@@ -391,6 +400,10 @@
 !ifdef CONFIG_NVIDIA_SHELL_APPLICATIONS
   INF Silicon/NVIDIA/Application/StackCheck/StackCheck.inf
 
+!ifdef CONFIG_IPMI_BMC
+  INF Silicon/NVIDIA/Application/IpmiUtility/IpmiUtility.inf
+!endif
+
 !if $(TARGET) != RELEASE
   INF Silicon/NVIDIA/Test/ShellTest/BootOrderTest/BootOrderTestUefiShell.inf
   INF Silicon/NVIDIA/Test/ShellTest/EfiGopTest/EfiGopTestUefiShell.inf
@@ -527,11 +540,6 @@
   # Boot Chain Protocol
   #
   INF Silicon/NVIDIA/Drivers/BootChainDxe/BootChainDxe.inf
-  #
-  # Ipmi Blob Transfer support
-  #
-  INF Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/IpmiBlobTransferDxe.inf
-  INF Silicon/NVIDIA/Drivers/SmbiosBmcTransfer/SmbiosBmcTransfer.inf
 
   #
   # CPU Frequency support
@@ -592,3 +600,54 @@
   # Gpio Power Off Driver
   #
   INF Silicon/NVIDIA/Drivers/GpioPowerOffDxe/GpioPowerOffDxe.inf
+
+!ifdef CONFIG_REDFISH
+  #
+  # Redfish Host Interface Support
+  #
+  INF RedfishPkg/RedfishHostInterfaceDxe/RedfishHostInterfaceDxe.inf
+  INF Silicon/NVIDIA/Drivers/RedfishHostInterfaceControlDxe/RedfishHostInterfaceControlDxe.inf
+
+  #
+  # Default TLS Cipher Suites
+  #
+  INF Silicon/NVIDIA/Drivers/RedfishCipherDxe/RedfishCipherDxe.inf
+
+  #
+  # Redfish support
+  #
+  INF RedfishPkg/RestJsonStructureDxe/RestJsonStructureDxe.inf
+  INF RedfishPkg/RedfishRestExDxe/RedfishRestExDxe.inf
+  INF RedfishPkg/RedfishCredentialDxe/RedfishCredentialDxe.inf
+  INF RedfishPkg/RedfishDiscoverDxe/RedfishDiscoverDxe.inf
+  INF RedfishPkg/RedfishConfigHandler/RedfishConfigHandlerDriver.inf
+  INF RedfishPkg/RedfishPlatformConfigDxe/RedfishPlatformConfigDxe.inf
+  INF MdeModulePkg/Universal/RegularExpressionDxe/RegularExpressionDxe.inf
+  INF RedfishClientPkg/RedfishFeatureCoreDxe/RedfishFeatureCoreDxe.inf
+  INF RedfishClientPkg/RedfishETagDxe/RedfishETagDxe.inf
+  INF RedfishClientPkg/RedfishConfigLangMapDxe/RedfishConfigLangMapDxe.inf
+  INF RedfishClientPkg/RedfishHttpDxe/RedfishHttpDxe.inf
+  INF RedfishClientPkg/Features/ComputerSystem/v1_17_0/Dxe/ComputerSystemDxe.inf
+  INF RedfishClientPkg/Features/ComputerSystemCollectionDxe/ComputerSystemCollectionDxe.inf
+  INF RedfishClientPkg/Features/Bios/v1_2_0/Dxe/BiosDxe.inf
+  INF RedfishClientPkg/Features/BootOptionCollection/BootOptionCollectionDxe.inf
+  INF RedfishClientPkg/Features/BootOption/v1_0_4/Dxe/BootOptionDxe.inf
+  INF RedfishClientPkg/Converter/ComputerSystem/v1_17_0/RedfishComputerSystem_V1_17_0_Dxe.inf
+  INF RedfishClientPkg/Converter/ComputerSystemCollection/RedfishComputerSystemCollection_Dxe.inf
+  INF RedfishClientPkg/Converter/SecureBoot/v1_1_0/RedfishSecureBoot_V1_1_0_Dxe.inf
+  INF RedfishClientPkg/Converter/Bios/v1_2_0/RedfishBios_V1_2_0_Dxe.inf
+  INF RedfishClientPkg/Converter/BootOptionCollection/RedfishBootOptionCollection_Dxe.inf
+  INF RedfishClientPkg/Converter/BootOption/v1_0_4/RedfishBootOption_V1_0_4_Dxe.inf
+  INF RedfishClientPkg/RedfishBootstrapAccountDxe/RedfishBootstrapAccountDxe.inf
+  INF Silicon/NVIDIA/Drivers/PlatformRedfishBiosDxe/PlatformRedfishBiosDxe.inf
+  INF Silicon/NVIDIA/Drivers/RedfishFirmwareInfoDxe/RedfishFirmwareInfoDxe.inf
+  INF RedfishClientPkg/Features/SecureBoot/v1_1_0/Dxe/SecureBootDxe.inf
+  INF Silicon/NVIDIA/Drivers/PlatformRedfishBootDxe/PlatformRedfishBootDxe.inf
+  INF Silicon/NVIDIA/Drivers/PlatformRedfishOverrideDxe/PlatformRedfishOverrideDxe.inf
+  INF RedfishClientPkg/Features/SecureBootDatabaseCollectionDxe/SecureBootDatabaseCollectionDxe.inf
+  INF RedfishClientPkg/Converter/SecureBootDatabaseCollection/RedfishSecureBootDatabaseCollection_Dxe.inf
+  INF RedfishClientPkg/Features/SecureBootDatabase/v1_0_1/Dxe/SecureBootDatabaseDxe.inf
+  INF RedfishClientPkg/Converter/SecureBootDatabase/v1_0_1/RedfishSecureBootDatabase_V1_0_1_Dxe.inf
+  INF RedfishClientPkg/RedfishTaskServiceDxe/RedfishTaskServiceDxe.inf
+  INF RedfishClientPkg/RedfishSecureBootKeysDxe/RedfishSecureBootKeysDxe.inf
+!endif

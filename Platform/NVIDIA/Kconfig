@@ -140,6 +140,21 @@ menu "Hardware support"
     help
       Support for ASPEED AST2600 BMC VGA display device
   endmenu
+
+  menuconfig IPMI_BMC
+  bool "BMC support"
+  help
+     Support for IPMI based BMC
+  if IPMI_BMC
+    config REDFISH
+    bool "Redfish support"
+    select NETWORKING
+    select NETWORKING_HTTP
+    select NETWORKING_IPV4
+    select NETWORKING_IPV6
+    help
+      Redfish support for BMC communication
+  endif
 endmenu
 
 menu "OS Hardware description"
