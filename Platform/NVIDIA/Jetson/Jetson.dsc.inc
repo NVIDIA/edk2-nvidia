@@ -46,9 +46,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|0
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|0
 
-[PcdsFixedAtBuild]
-  gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|TRUE
-
 ################################################################################
 #
 # Components Section - list of all EDK II Modules needed by this Platform

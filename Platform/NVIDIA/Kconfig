@@ -257,6 +257,11 @@ menu "Boot Options"
       kernel support).
   endchoice
 
+  config L4T
+  bool "L4T Support"
+  help
+    Support for L4T configuration options
+
   config LOGO
   bool "Boot Logo Support"
   default y

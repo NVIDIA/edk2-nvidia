@@ -776,6 +776,10 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gNVIDIATokenSpaceGuid.PcdFtpmShmSize|4096
   gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|512
 
+!ifdef CONFIG_L4T
+  gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|TRUE
+!endif
+
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.
