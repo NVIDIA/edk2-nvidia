@@ -410,31 +410,33 @@ InstallSmbiosType4Cm (
       ProcessorInfo[Index].SerialNumber = NULL;
     }
 
-    // Get data from FRU.
-    FruDesc  = NULL;
-    Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", NULL);
+    //
+    // Get data from FRU
+    //
+    FruDesc                         = NULL;
+    ProcessorInfo[Index].PartNumber = NULL;
+    ProcessorInfo[Index].AssetTag   = NULL;
+    Property                        = fdt_getprop (DtbBase, NodeOffset, "fru-desc", NULL);
     if (Property != NULL) {
       FruDesc      = (CHAR8 *)Property;
       Type4FruInfo = FindFruByDescription (Private, FruDesc);
-
       // Part Number
       if ((Type4FruInfo != NULL) && (Type4FruInfo->ProductPartNum != NULL)) {
         ProcessorInfo[Index].PartNumber = AllocateCopyString (Type4FruInfo->ProductPartNum);
-      } else {
-        Status = RETURN_NOT_FOUND;
-        goto ExitInstallSmbiosType4;
       }
 
       // Asset Tag
       if ((Type4FruInfo != NULL) && (Type4FruInfo->ProductSerial != NULL)) {
         ProcessorInfo[Index].AssetTag = AllocateCopyString (Type4FruInfo->ProductSerial);
-      } else {
-        Status = RETURN_NOT_FOUND;
-        goto ExitInstallSmbiosType4;
       }
     } else {
-      Status = RETURN_NOT_FOUND;
-      goto ExitInstallSmbiosType4;
+      //
+      // Get data from DTB
+      //
+      // Part Number
+      GetPropertyFromDT (DtbBase, NodeOffset, "part-number", &ProcessorInfo[Index].PartNumber);
+      // Asset Tag
+      GetPropertyFromDT (DtbBase, NodeOffset, "asset-tag", &ProcessorInfo[Index].AssetTag);
     }
 
     // Processor info
