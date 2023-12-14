@@ -130,6 +130,9 @@ typedef struct {
 #define XTL_RC_MGMT_PERST_CONTROL            0x218
 #define XTL_RC_MGMT_PERST_CONTROL_PERST_O_N  BIT(0)
 
+/* PCIExpress Capability */
+#define PCIE_DEV_CAP_ERR_COR_SUB_CLASS  BIT(16)
+
 /* AER Registers */
 #define  PCIE_AER_CORR_ERR_ADV_NONFATAL  0x2000
 

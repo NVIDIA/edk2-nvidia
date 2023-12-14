@@ -847,7 +847,7 @@ PcieEnableErrorReporting (
   EFI_STATUS                    Status;
   UINTN                         Segment, Bus, Device, Function;
   PCI_REG_PCIE_CAPABILITY       Capability;
-  UINT32                        PciExpCapOffset, AerCapOffset, Offset;
+  UINT32                        PciExpCapOffset, AerCapOffset, Offset, DevCapOffset;
   PCI_REG_PCIE_ROOT_CONTROL     RootControl;
   PCI_REG_PCIE_DEVICE_CONTROL   DeviceControl;
   PCI_REG_PCIE_DEVICE_STATUS    DeviceStatus;
@@ -1011,7 +1011,23 @@ PcieEnableErrorReporting (
         }
 
         Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_INT_EN |
-                   PCIE_DPC_CTL_DPC_ERR_COR_EN | PCIE_DPC_CTL_DPC_SIG_SFW_EN);
+                   PCIE_DPC_CTL_DPC_ERR_COR_EN);
+
+        DevCapOffset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability);
+        Status       = PciIo->Pci.Read (
+                                    PciIo,
+                                    EfiPciIoWidthUint32,
+                                    DevCapOffset,
+                                    1,
+                                    &Val_32
+                                    );
+        if (EFI_ERROR (Status)) {
+          return EFI_UNSUPPORTED;
+        }
+
+        if (Val_32 & PCIE_DEV_CAP_ERR_COR_SUB_CLASS) {
+          Val_16 |= PCIE_DPC_CTL_DPC_SIG_SFW_EN;
+        }
 
         Status = PciIo->Pci.Write (
                               PciIo,
