@@ -55,10 +55,6 @@
 ################################################################################
 
 [PcdsPatchableInModule]
-  # Console Resolution (Full HD)
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|1920
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|1080
-
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxSizeNonPopulateCapsule|0x1400000
 
 [PcdsFixedAtBuild.common]

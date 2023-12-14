@@ -861,6 +861,21 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask|0x00000006
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap|0x00000006
 
+# Console Resolution
+!ifdef CONFIG_DEFAULT_GOP_MODE_MAX
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|0
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|0
+!endif
+!ifdef CONFIG_DEFAULT_GOP_MODE_1080p
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|1920
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|1080
+!endif
+!ifdef CONFIG_DEFAULT_GOP_MODE_800_600
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|800
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|600
+!endif
+
+
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|$(CONFIG_BOOT_DEFAULT_TIMEOUT)

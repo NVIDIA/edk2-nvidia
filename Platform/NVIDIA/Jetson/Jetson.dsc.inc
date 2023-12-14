@@ -41,11 +41,6 @@
 [PcdsPatchableInModule]
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxSizeNonPopulateCapsule|0xc00000
 
-[PcdsDynamicDefault.common]
-  # Console Resolution
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|0
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|0
-
 ################################################################################
 #
 # Components Section - list of all EDK II Modules needed by this Platform

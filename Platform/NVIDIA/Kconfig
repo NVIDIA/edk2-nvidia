@@ -269,6 +269,26 @@ menu "Boot Options"
   help
     Support for L4T configuration options
 
+  choice DEFAULT_GOP_MODE
+    prompt "Default display resolution"
+    default DEFAULT_GOP_MODE_MAX
+
+    config DEFAULT_GOP_MODE_MAX
+    bool "Max"
+    help
+      Maximum supported resolution
+
+    config DEFAULT_GOP_MODE_1080p
+    bool "1080p"
+    help
+       1920x1080
+
+    config DEFAULT_GOP_MODE_800_600
+    bool "800x600"
+    help
+       800x600
+  endchoice
+
   config LOGO
   bool "Boot Logo Support"
   default y
