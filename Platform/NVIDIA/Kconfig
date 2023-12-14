@@ -188,6 +188,13 @@ menu "Boot Options"
   help
     UEFI quick boot supported
 
+  config BOOT_QUICK_BOOT_ENABLED
+  bool "Quick boot default enabled"
+  default n
+  depends on BOOT_QUICK_BOOT
+  help
+    UEFI quick boot supported
+
   config BOOT_DEFAULT_TIMEOUT
   int "Boot timeout"
   depends on SINGLE_BOOT_NONE

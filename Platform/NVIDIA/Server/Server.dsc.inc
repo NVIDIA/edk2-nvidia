@@ -93,7 +93,6 @@
 
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
-  gNVIDIATokenSpaceGuid.PcdQuickBootSupported|FALSE
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|TRUE
   gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|TRUE
 

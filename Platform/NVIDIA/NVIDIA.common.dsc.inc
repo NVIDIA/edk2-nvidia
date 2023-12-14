@@ -510,6 +510,10 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   gIpmiFeaturePkgTokenSpaceGuid.PcdIpmiFeatureEnable|True
 !endif
 
+!ifdef CONFIG_QUICK_BOOT
+  gNVIDIATokenSpaceGuid.PcdQuickBootSupported|FALSE
+!endif
+
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
@@ -869,7 +873,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gNVIDIATokenSpaceGuid.PcdRedfishHostInterface|L"RedfishHostInterface"|gNVIDIATokenSpaceGuid|0x0|0x01|BS,NV
   gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration|L"DoInitialConsoleRegistration"|gNVIDIAPublicVariableGuid|0x0|1|BS,NV
   # NVIDIA Public variables
-!ifdef CONFIG_BOOT_QUICK_BOOT
+!ifdef CONFIG_BOOT_QUICK_BOOT_ENABLED
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIAPublicVariableGuid|0x0|1|BS,NV
 !else
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled|L"QuickBootEnabled"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV
