@@ -424,7 +424,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
 
             The path must be relative to GetWorkspaceRoot().
         '''
-        return "edk2-nvidia/Silicon/NVIDIA/Kconfig"
+        return "edk2-nvidia/Platform/NVIDIA/Kconfig"
 
 class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
                               CiSetupSettingsManager, CiBuildSettingsManager,
