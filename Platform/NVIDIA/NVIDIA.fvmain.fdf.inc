@@ -456,6 +456,11 @@
 !ifdef CONFIG_SMBIOS
   INF MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
 !endif
+!ifdef CONFIG_SMBIOS_ARM
+  INF ArmPkg/Universal/Smbios/SmbiosMiscDxe/SmbiosMiscDxe.inf
+  INF Silicon/NVIDIA/Drivers/SmbiosOemDxe/SmbiosMiscOemDxe/SmbiosMiscOemDxe.inf
+  INF ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
+!endif
 
   #
   # Bds

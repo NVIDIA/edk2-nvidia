@@ -41,15 +41,6 @@
   INF Silicon/NVIDIA/Drivers/MmCommunicationOpteeDxe/MmCommunicationOptee.inf
 
   #
-  # SMBIOS
-  #
-!ifdef CONFIG_SMBIOS
-  INF ArmPkg/Universal/Smbios/SmbiosMiscDxe/SmbiosMiscDxe.inf
-  INF Silicon/NVIDIA/Drivers/SmbiosOemDxe/SmbiosMiscOemDxe/SmbiosMiscOemDxe.inf
-  INF ArmPkg/Universal/Smbios/ProcessorSubClassDxe/ProcessorSubClassDxe.inf
-!endif
-
-  #
   # BasicProfiler Support
   #
   INF Silicon/NVIDIA/Drivers/BasicProfilerDxe/BasicProfilerDxe.inf
