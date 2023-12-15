@@ -553,6 +553,10 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
   gNVIDIATokenSpaceGuid.PcdQuickBootSupported|FALSE
 !endif
 
+!ifdef CONFIG_ACPI_THERMAL_ZONE_SINGLE
+  gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|TRUE
+!endif
+
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"

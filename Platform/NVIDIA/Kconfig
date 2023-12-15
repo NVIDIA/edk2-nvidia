@@ -233,6 +233,13 @@ menu "OS Hardware description"
   depends on SMBIOS
   help
     Non-DynamicTablesPkg based SMBIOS generator
+
+  config ACPI_THERMAL_ZONE_SINGLE
+  bool "Single thermal zone per package"
+  depends on ACPI
+  default y
+  help
+    Force thermal zone generation to a single zone due to some OS limitations.
 endmenu
 
 menu "Boot Options"

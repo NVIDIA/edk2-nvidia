@@ -62,7 +62,6 @@
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|TRUE
-  gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|TRUE
 
 ################################################################################
 #
