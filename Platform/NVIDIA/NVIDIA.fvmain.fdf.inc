@@ -383,6 +383,14 @@
   INF Silicon/NVIDIA/Server/TH500/Drivers/ApeiDxe/Apei.inf
 !endif
 
+!ifdef CONFIG_BOOTLOADER_RAMDISK
+  #
+  # Ramloaded OS
+  #
+  INF Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf
+!endif
+
+
 !ifdef CONFIG_SOC_GRACE
   #
   # GH100 GPU Driver

@@ -1642,6 +1642,13 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   }
 !endif
 
+!ifdef CONFIG_BOOTLOADER_RAMDISK
+  #
+  # Ramloaded OS
+  #
+  Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf
+!endif
+
 !ifdef CONFIG_SOC_GRACE
   #
   # GH100 GPU Driver

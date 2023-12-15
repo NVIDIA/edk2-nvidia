@@ -75,11 +75,6 @@
 ################################################################################
 [Components.common]
   #
-  # Ramloaded OS
-  #
-  Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf
-
-  #
   # MM Communication
   #
   Silicon/NVIDIA/Drivers/MmCommunicateFfaDxe/MmCommunicationFfa.inf {

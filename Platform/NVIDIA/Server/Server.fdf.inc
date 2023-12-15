@@ -5,11 +5,6 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
   #
-  # Ramloaded OS
-  #
-  INF Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf
-
-  #
   # MM Communication
   #
   INF Silicon/NVIDIA/Drivers/MmCommunicateFfaDxe/MmCommunicationFfa.inf

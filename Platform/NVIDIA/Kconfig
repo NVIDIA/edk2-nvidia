@@ -198,6 +198,11 @@ menu "Hardware support"
   config RAS
   bool
   default y if SOC_DATACENTER
+
+  config BOOTLOADER_RAMDISK
+  bool "Early bootloader ramdisk support"
+  help
+    Support for ramdisk loaded prior to UEFI Start
 endmenu
 
 menu "OS Hardware description"
