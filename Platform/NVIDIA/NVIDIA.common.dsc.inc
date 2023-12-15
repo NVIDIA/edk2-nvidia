@@ -26,6 +26,15 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
 !ifndef CONFIG_FIRMWARE_CAPSULE_SIZE
 CONFIG_FIRMWARE_CAPSULE_SIZE=0
 !endif
+!ifndef CONFIG_ARM_WATCHDOG_CONTROL_BASE
+CONFIG_ARM_WATCHDOG_CONTROL_BASE=0
+!endif
+!ifndef CONFIG_ARM_WATCHDOG_REFRESH_BASE
+CONFIG_ARM_WATCHDOG_REFRESH_BASE=0
+!endif
+!ifndef CONFIG_ARM_WATCHDOG_INTERRUPT
+CONFIG_ARM_WATCHDOG_INTERRUPT=0
+!endif
 
   #
   # Define Image Type ID GUIDs for Firmware Management Protocol
@@ -828,6 +837,13 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 
 !ifdef CONFIG_L4T
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|TRUE
+!endif
+
+!ifdef CONFIG_ARM_WATCHDOG
+  # SBSA Watchdog
+  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|$(CONFIG_ARM_WATCHDOG_CONTROL_BASE)
+  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|$(CONFIG_ARM_WATCHDOG_REFRESH_BASE)
+  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|$(CONFIG_ARM_WATCHDOG_INTERRUPT)
 !endif
 
 [PcdsDynamicDefault]

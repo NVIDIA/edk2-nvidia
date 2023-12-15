@@ -49,12 +49,6 @@
   ## TPM
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass|1
 
-  # SBSA Watchdog
-  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|0x000000000c6ab000
-  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|0x000000000c6aa000
-  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|39
-
-
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
 
