@@ -12,12 +12,6 @@
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
 
 !include config.dsc.inc
-
-  #
-  # Define ESRT GUIDs for Firmware Management Protocol instances
-  #
-  DEFINE SYSTEM_FMP_ESRT_GUID    = 92597B71-0ABE-48F3-9F06-93D3E8CD7EDF
-
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
 [LibraryClasses.common]
@@ -25,14 +19,6 @@
   RealTimeClockLib|Silicon/NVIDIA/Library/NuvotonRealTimeClockLib/NuvotonRealTimeClockLib.inf
 
   SsdtPcieSupportLib|Silicon/NVIDIA/Server/TH500/Library/SsdtPcieSupportLib/SsdtPcieSupportLib.inf
-  FmpDeviceLib|Silicon/NVIDIA/Library/FmpErotLib/FmpErotLib.inf
-
-  ErotQspiLib|Silicon/NVIDIA/Library/ErotQspiLib/ErotQspiLib.inf
-  PldmBaseLib|Silicon/NVIDIA/Library/PldmBaseLib/PldmBaseLib.inf
-  PldmFwUpdateLib|Silicon/NVIDIA/Library/PldmFwUpdateLib/PldmFwUpdateLib.inf
-  PldmFwUpdatePkgLib|Silicon/NVIDIA/Library/PldmFwUpdatePkgLib/PldmFwUpdatePkgLib.inf
-  PldmFwUpdateTaskLib|Silicon/NVIDIA/Library/PldmFwUpdateTaskLib/PldmFwUpdateTaskLib.inf
-  ErotLib|Silicon/NVIDIA/Library/ErotLib/ErotLib.inf
 
   # TPM
   Tpm2DeviceLib|SecurityPkg/Library/Tpm2DeviceLibTcg2/Tpm2DeviceLibTcg2.inf
@@ -53,9 +39,6 @@
 # Pcd Section - list of all EDK II PCD Entries defined by this Platform
 #
 ################################################################################
-
-[PcdsPatchableInModule]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxSizeNonPopulateCapsule|0x1400000
 
 [PcdsFixedAtBuild.common]
   gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x07
@@ -140,16 +123,6 @@
   }
   Silicon/NVIDIA/Drivers/Tcg2Config/Tcg2ConfigDxe.inf
   MdeModulePkg/Universal/SmbiosMeasurementDxe/SmbiosMeasurementDxe.inf
-
-  #
-  # NS ERoT
-  #
-  Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiDxe.inf
-
-  #
-  # MM MCTP
-  #
-  Silicon/NVIDIA/Drivers/MctpMmDxe/MctpMmDxe.inf
 
   #
   # User Authentication

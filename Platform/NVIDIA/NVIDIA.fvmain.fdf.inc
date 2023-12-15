@@ -32,6 +32,17 @@
   INF MdeModulePkg/Universal/TimestampDxe/TimestampDxe.inf
   INF MdeModulePkg/Universal/StatusCodeHandler/RuntimeDxe/StatusCodeHandlerRuntimeDxe.inf
 
+!ifdef CONFIG_FIRMWARE_PARTITION_SUPPORT
+  #
+  # FW Partition and FW Image
+  #
+  INF Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
+  INF Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
+  INF Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
+  INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
+!endif
+
+!ifdef CONFIG_FIRMWARE_MANAGEMENT
   #
   # Esrt - EFI System Resource Table
   #
@@ -41,6 +52,7 @@
   # Fmp
   #
   INF FILE_GUID = $(SYSTEM_FMP_ESRT_GUID) FmpDevicePkg/FmpDxe/FmpDxe.inf
+!endif
 
 !ifdef CONFIG_ACPI
   #
@@ -394,6 +406,14 @@
   INF ShellPkg/DynamicCommand/DpDynamicCommand/DpDynamicCommand.inf
 !endif
   INF MdeModulePkg/Application/VariableInfo/VariableInfo.inf
+
+!ifdef CONFIG_FIRMWARE_CAPSULE_SUPPORTED
+  #
+  # Capsule application (EFI Services)
+  #
+  INF MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf
+!endif
+
   #
   # Test Applications
   #
@@ -600,6 +620,18 @@
   # Gpio Power Off Driver
   #
   INF Silicon/NVIDIA/Drivers/GpioPowerOffDxe/GpioPowerOffDxe.inf
+
+!ifdef CONFIG_FIRMWARE_MANAGEMENT_EROT
+  #
+  # NS ERoT
+  #
+  INF Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiDxe.inf
+
+  #
+  # MM MCTP
+  #
+  INF Silicon/NVIDIA/Drivers/MctpMmDxe/MctpMmDxe.inf
+!endif
 
 !ifdef CONFIG_REDFISH
   #

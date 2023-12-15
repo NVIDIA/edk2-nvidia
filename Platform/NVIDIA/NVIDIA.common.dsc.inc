@@ -7,6 +7,7 @@
 !include Platform/NVIDIA/NVIDIA.global.dsc.inc
 
 [Defines]
+# Value defines are parsed even if there is a guarding ifdef, define some defaults
 !ifndef CONFIG_BOOT_DEFAULT_TIMEOUT
 CONFIG_BOOT_DEFAULT_TIMEOUT=0
 !endif
@@ -19,6 +20,12 @@ CONFIG_MEMORY_TEST_BIT_FADE_PATTERN=0xAA55AA55AA55AA55
 !ifndef CONFIG_MEMORY_TEST_BIT_FADE_WAIT
 CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
 !endif
+!ifndef CONFIG_MEMORY_TEST_BIT_FADE_WAIT
+CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
+!endif
+!ifndef CONFIG_FIRMWARE_CAPSULE_SIZE
+CONFIG_FIRMWARE_CAPSULE_SIZE=0
+!endif
 
   #
   # Define Image Type ID GUIDs for Firmware Management Protocol
@@ -27,6 +34,12 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T234 = bf0d4599-20d4-414e-b2c5-3595b1cda402
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA = 8655e5cf-297b-4213-84d5-b6817203a432
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500        = $(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA)
+!ifdef CONFIG_FIRMWARE_MANAGEMENT
+  DEFINE SYSTEM_FMP_ESRT_GUID = $(CONFIG_FIRMWARE_MANAGEMENT_FMP_ESRT_GUID)
+!else
+  # Should never be used only defined to resolve parsing issues.
+  DEFINE SYSTEM_FMP_ESRT_GUID = 004ad128-93d8-43a7-9fad-4ac77a931035
+!endif
 
 [SkuIds]
   0|DEFAULT
@@ -244,6 +257,19 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   FwPackageLib|Silicon/NVIDIA/Library/FwPackageLib/FwPackageLib.inf
   VerPartitionLib|Silicon/NVIDIA/Library/VerPartitionLib/VerPartitionLib.inf
   FmpParamLib|Silicon/NVIDIA/Library/FmpParamLib/FmpParamLib.inf
+!ifdef CONFIG_FIRMWARE_MANAGEMENT_DIRECT
+  FmpDeviceLib|Silicon/NVIDIA/Library/FmpDeviceLib/FmpDeviceLib.inf
+!endif
+!ifdef CONFIG_FIRMWARE_MANAGEMENT_EROT
+  FmpDeviceLib|Silicon/NVIDIA/Library/FmpErotLib/FmpErotLib.inf
+
+  ErotQspiLib|Silicon/NVIDIA/Library/ErotQspiLib/ErotQspiLib.inf
+  PldmBaseLib|Silicon/NVIDIA/Library/PldmBaseLib/PldmBaseLib.inf
+  PldmFwUpdateLib|Silicon/NVIDIA/Library/PldmFwUpdateLib/PldmFwUpdateLib.inf
+  PldmFwUpdatePkgLib|Silicon/NVIDIA/Library/PldmFwUpdatePkgLib/PldmFwUpdatePkgLib.inf
+  PldmFwUpdateTaskLib|Silicon/NVIDIA/Library/PldmFwUpdateTaskLib/PldmFwUpdateTaskLib.inf
+  ErotLib|Silicon/NVIDIA/Library/ErotLib/ErotLib.inf
+!endif
 
   AmlLib|DynamicTablesPkg/Library/Common/AmlLib/AmlLib.inf
   SsdtSerialPortFixupLib|Silicon/NVIDIA/Library/SsdtSerialPortFixupLib/SsdtSerialPortFixupLib.inf
@@ -699,10 +725,12 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
   #
   # FMP PCDs.
   #
+!ifdef CONFIG_FIRMWARE_MANAGEMENT
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageIdName|L"NVIDIA System Firmware"
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion|0x0
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceProgressColor|0x0000FF00   # Green=255
   !include BaseTools/Source/Python/Pkcs7Sign/TestRoot.cer.gFmpDevicePkgTokenSpaceGuid.PcdFmpDevicePkcs7CertBufferXdr.inc
+!endif
 
   #
   # SMBIOS entry point version
@@ -971,9 +999,12 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 
 [PcdsPatchableInModule]
   gArmTokenSpaceGuid.PcdFvBaseAddress|0x0
+!ifdef CONFIG_FIRMWARE_MANAGEMENT
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid|{GUID("$(SYSTEM_FMP_ESRT_GUID)")}
   gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleOnDiskSupport|TRUE
   gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleInRamSupport|TRUE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxSizeNonPopulateCapsule|$(CONFIG_FIRMWARE_CAPSULE_SIZE)
+!endif
 
 !ifdef CONFIG_SOC_XAVIER
 [PcdsDynamicDefault.common.T194]
@@ -1575,6 +1606,14 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   }
 !endif
   MdeModulePkg/Application/VariableInfo/VariableInfo.inf
+
+!ifdef CONFIG_FIRMWARE_CAPSULE_SUPPORTED
+  #
+  # Capsule Application
+  #
+  MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf
+!endif
+
   #
   # Test Applications
   #
@@ -1614,6 +1653,17 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   SecurityPkg/EnrollFromDefaultKeysApp/EnrollFromDefaultKeysApp.inf
 
+!ifdef CONFIG_FIRMWARE_PARTITION_SUPPORT
+  #
+  # FW Partition and FW Image
+  #
+  Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
+  Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
+  Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
+  Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
+!endif
+
+!ifdef CONFIG_FIRMWARE_MANAGEMENT
   #
   # Esrt - EFI System Resource Table
   #
@@ -1629,6 +1679,18 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       #
       FILE_GUID = $(SYSTEM_FMP_ESRT_GUID)
   }
+!endif
+!ifdef CONFIG_FIRMWARE_MANAGEMENT_EROT
+  #
+  # NS ERoT
+  #
+  Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiDxe.inf
+
+  #
+  # MM MCTP
+  #
+  Silicon/NVIDIA/Drivers/MctpMmDxe/MctpMmDxe.inf
+!endif
 
 !ifdef CONFIG_CONFIG_MANAGER
   #

@@ -33,16 +33,6 @@
   INF MdeModulePkg/Universal/SmbiosMeasurementDxe/SmbiosMeasurementDxe.inf
 
   #
-  # NS ERoT
-  #
-  INF Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiDxe.inf
-
-  #
-  # MM MCTP
-  #
-  INF Silicon/NVIDIA/Drivers/MctpMmDxe/MctpMmDxe.inf
-
-  #
   # User Authentication
   #
   INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationDxe.inf

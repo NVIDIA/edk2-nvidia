@@ -46,14 +46,6 @@
   INF Silicon/NVIDIA/Drivers/MmCommunicationOpteeDxe/MmCommunicationOptee.inf
 
   #
-  # FW Partition
-  #
-  INF Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
-  INF Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
-  INF Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
-  INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
-
-  #
   # SMBIOS
   #
 !ifdef CONFIG_SMBIOS
@@ -72,11 +64,6 @@
   #
   INF SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf
   INF SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf
-
-  #
-  # Capsule application (EFI Services)
-  #
-  INF MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf
 
   #
   # Android Fastboot

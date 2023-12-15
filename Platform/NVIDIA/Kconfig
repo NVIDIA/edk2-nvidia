@@ -155,6 +155,10 @@ menu "Hardware support"
     help
       Redfish support for BMC communication
   endif
+
+  config FIRMWARE_PARTITION_SUPPORT
+  bool
+  default y if (SOC_JETSON || FIRMWARE_MANAGEMENT_DIRECT)
 endmenu
 
 menu "OS Hardware description"
@@ -384,6 +388,47 @@ menu "Debug Options"
   endif
 endmenu
 
+menuconfig FIRMWARE_MANAGEMENT
+bool "Firmware Management"
+default y
+help
+  Support for UEFI FMP services
+if FIRMWARE_MANAGEMENT
+  choice FIRMWARE_MANAGEMENT_TYPE
+  prompt "Firmware update type"
+  help
+    Method of performing firmware update operations
+
+  config FIRMWARE_MANAGEMENT_DIRECT
+    bool "Direct access"
+    help
+      Direct modification of the firmware
+
+  config FIRMWARE_MANAGEMENT_EROT
+    bool "eROT access"
+    help
+      Update via eROT
+  endchoice
+
+  config FIRMWARE_MANAGEMENT_FMP_ESRT_GUID
+  string "ESRT System GUID"
+  default "004ad128-93d8-43a7-9fad-4ac77a931035"
+  help
+    GUID used for ESRT table
+
+  config FIRMWARE_CAPSULE_SUPPORTED
+  bool "Support firmware capsule update"
+  default y
+  help
+    Support for firmware update via capsule
+
+  config FIRMWARE_CAPSULE_SIZE
+  hex "Size of firmware capsule supported"
+  default 0xc00000
+  depends on FIRMWARE_CAPSULE_SUPPORTED
+  help
+    Size of the firmware capsule to use
+endif
 menu  "Watchdog settings"
 
   config  BOOT_WATCHDOG_TIMEOUT
