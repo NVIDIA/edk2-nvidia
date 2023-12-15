@@ -357,10 +357,27 @@ menu "Boot Options"
 endmenu
 
 menu "Debug Options"
+  config DEBUG_PRINT_ENABLE_RELEASE
+  bool "Enable debug prints on release builds"
+  help
+    Enable debug prints on release builds.
+
   config HALT_ON_ASSERT
   bool "Halt on assert"
   help
-    Should system halt or reboot on ASSERT
+    Halt system on ASSERT, if disabled system will reboot.
+
+  config DEBUG_PROPERTY_DEBUG
+  hex
+  default 0x2f if HALT_ON_ASSERT
+  default 0x4f if !HALT_ON_ASSERT
+
+  config DEBUG_PROPERTY_RELEASE
+  hex
+  default 0x21 if (HALT_ON_ASSERT && !DEBUG_PRINT_ENABLE_RELEASE)
+  default 0x41 if (!HALT_ON_ASSERT && !DEBUG_PRINT_ENABLE_RELEASE)
+  default 0x23 if (HALT_ON_ASSERT && DEBUG_PRINT_ENABLE_RELEASE)
+  default 0x43 if (!HALT_ON_ASSERT && DEBUG_PRINT_ENABLE_RELEASE)
 
   menuconfig MEMORY_TEST
   bool "Memory Test support"

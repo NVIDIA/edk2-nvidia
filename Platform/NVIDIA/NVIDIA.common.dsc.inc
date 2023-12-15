@@ -580,18 +580,10 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
   # ASSERT_BREAKPOINT_ENABLED  0x10
   # ASSERT_DEADLOOP_ENABLED    0x20
   # ASSERT_RESET_ENABLED       0x40
-!ifdef CONFIG_HALT_ON_ASSERT
-  !if $(TARGET) == RELEASE
-    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x21
-  !else
-    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x2f
-  !endif
+!if $(TARGET) == RELEASE
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|$(CONFIG_DEBUG_PROPERTY_RELEASE)
 !else
-  !if $(TARGET) == RELEASE
-    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x41
-  !else
-    gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x4f
-  !endif
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|$(CONFIG_DEBUG_PROPERTY_DEBUG)
 !endif
   gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|FALSE
 

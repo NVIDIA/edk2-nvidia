@@ -34,10 +34,6 @@
 # Pcd Section - list of all EDK II PCD Entries defined by this Platform
 #
 ################################################################################
-
-[PcdsFixedAtBuild.common]
-  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x43
-
 [PcdsDynamicDefault]
   ## MM Communicate
   gArmTokenSpaceGuid.PcdMmBufferBase|0x8B5FE000
