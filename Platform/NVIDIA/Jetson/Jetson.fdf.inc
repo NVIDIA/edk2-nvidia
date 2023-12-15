@@ -5,11 +5,6 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
   #
-  # Tegra UART driver
-  #
-  INF Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
-
-  #
   # PinMux Support
   #
   INF Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf

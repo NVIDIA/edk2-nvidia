@@ -238,6 +238,16 @@
   INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
 
   #
+  # Serial console driver
+  #
+!ifdef CONFIG_SERIAL_PORT_CONSOLE_MDEMODULE
+  INF MdeModulePkg/Universal/SerialDxe/SerialDxe.inf
+!endif
+!ifdef CONFIG_SERIAL_PORT_CONSOLE_TEGRA
+  INF Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
+!endif
+
+  #
   # PCI Support
   #
 !ifdef CONFIG_PCIE

@@ -5,11 +5,6 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
   #
-  # Serial Console driver
-  #
-  INF MdeModulePkg/Universal/SerialDxe/SerialDxe.inf
-
-  #
   # Ramloaded OS
   #
   INF Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf

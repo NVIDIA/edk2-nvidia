@@ -1431,6 +1431,16 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   MdeModulePkg/Universal/Disk/UdfDxe/UdfDxe.inf
 
   #
+  # Serial console driver
+  #
+!ifdef CONFIG_SERIAL_PORT_CONSOLE_MDEMODULE
+  MdeModulePkg/Universal/SerialDxe/SerialDxe.inf
+!endif
+!ifdef CONFIG_SERIAL_PORT_CONSOLE_TEGRA
+  Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
+!endif
+
+  #
   # PCI Support
   #
 !ifdef CONFIG_PCIE

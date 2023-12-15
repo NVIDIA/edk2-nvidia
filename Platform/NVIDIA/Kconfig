@@ -159,6 +159,24 @@ menu "Hardware support"
   config FIRMWARE_PARTITION_SUPPORT
   bool
   default y if (SOC_JETSON || FIRMWARE_MANAGEMENT_DIRECT)
+
+  choice SERIAL_PORT_CONSOLE
+  prompt "Serial port console"
+    config SERIAL_PORT_CONSOLE_MDEMODULE
+    bool "Single serial console"
+    help
+      Use standard serial port driver that creates a single console
+
+    config SERIAL_PORT_CONSOLE_TEGRA
+    bool "Multiple serial console"
+    help
+      Use serial port driver that creates consoles on all serial ports
+
+    config SERIAL_PORT_CONSOLE_NONE
+    bool "No serial port console"
+    help
+      No serial port console
+  endchoice
 endmenu
 
 menu "OS Hardware description"

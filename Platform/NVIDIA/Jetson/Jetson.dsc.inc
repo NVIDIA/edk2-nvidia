@@ -32,11 +32,6 @@
 ################################################################################
 [Components.common]
   #
-  # Tegra UART driver
-  #
-  Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
-
-  #
   # SE RNG
   #
   Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf

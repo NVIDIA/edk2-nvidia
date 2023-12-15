@@ -82,11 +82,6 @@
 ################################################################################
 [Components.common]
   #
-  # Serial Console driver
-  #
-  MdeModulePkg/Universal/SerialDxe/SerialDxe.inf
-
-  #
   # Ramloaded OS
   #
   Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf
