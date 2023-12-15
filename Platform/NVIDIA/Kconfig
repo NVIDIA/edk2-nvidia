@@ -386,6 +386,18 @@ menu "Debug Options"
   default 0x23 if (HALT_ON_ASSERT && DEBUG_PRINT_ENABLE_RELEASE)
   default 0x43 if (!HALT_ON_ASSERT && DEBUG_PRINT_ENABLE_RELEASE)
 
+  config DEBUG_DYNAMIC_PRINT_LEVEL
+  bool "Settable debug error level"
+  depends on SOC_GRACE
+  help
+    Add support for being able to change the debug print level from early boot
+
+  config DEBUG_LEVEL_MENU_SUPPORT
+  bool "Debug print level menu support"
+  depends on DEBUG_DYNAMIC_PRINT_LEVEL
+  help
+    Support for UI menu to change the debug print level
+
   menuconfig MEMORY_TEST
   bool "Memory Test support"
   help

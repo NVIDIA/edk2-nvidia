@@ -81,7 +81,12 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
 
 [LibraryClasses.common]
   DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
+!ifdef CONFIG_DEBUG_DYNAMIC_PRINT_LEVEL
+  # Configurable DebugLib
+  DebugPrintErrorLevelLib|Silicon/NVIDIA/Library/DebugPrintErrorLevelLib/DebugPrintErrorLevelLib.inf
+!else
   DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
+!endif
 
   BaseLib|MdePkg/Library/BaseLib/BaseLib.inf
   SynchronizationLib|MdePkg/Library/BaseSynchronizationLib/BaseSynchronizationLib.inf
@@ -555,6 +560,10 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
 
 !ifdef CONFIG_ACPI_THERMAL_ZONE_SINGLE
   gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|TRUE
+!endif
+
+!ifdef CONFIG_DEBUG_LEVEL_MENU_SUPPORT
+  gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|TRUE
 !endif
 
 [PcdsFixedAtBuild.common]

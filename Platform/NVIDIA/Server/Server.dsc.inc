@@ -25,10 +25,6 @@
   # User Authentication for BIOS Setup Menu
   PlatformPasswordLib|Silicon/NVIDIA/Library/PlatformPasswordLib/PlatformPasswordLib.inf
 
-  # Configurable DebugLib
-  DebugPrintErrorLevelLib|Silicon/NVIDIA/Library/DebugPrintErrorLevelLib/DebugPrintErrorLevelLib.inf
-
-
 ################################################################################
 #
 # Pcd Section - list of all EDK II PCD Entries defined by this Platform
@@ -61,7 +57,6 @@
 
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
-  gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|TRUE
 
 ################################################################################
 #
