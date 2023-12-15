@@ -174,6 +174,9 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
         ws_dir = Path(self.settings.GetWorkspaceRoot())
         config_out = ws_dir / "nvidia-config" / self.settings.GetName() / ".config"
+        config_out_dsc = (
+            ws_dir / "nvidia-config" / self.settings.GetName() / "config.dsc.inc"
+        )
 
         kconf_file = self.settings.GetKConfigFile()
         if (kconf_file == None):
@@ -212,6 +215,12 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
         # Write the merged configuration
         print(kconf.write_config(config_out))
+
+        # Create version of config that edk2 can consume, strip the file of "
+        with open(config_out, "r") as f, open(config_out_dsc, "w") as fo:
+            for line in f:
+                fo.write(line.replace('"', "").replace("'", ""))
+
         return 0
 
     def SetPlatformEnv(self):

@@ -11,7 +11,7 @@
   SUPPORTED_ARCHITECTURES        = AARCH64
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
 
-!include .config
+!include config.dsc.inc
 
   #
   # Define ESRT GUIDs for Firmware Management Protocol instances
