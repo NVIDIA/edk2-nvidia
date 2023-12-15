@@ -37,7 +37,6 @@
 
 [PcdsFixedAtBuild.common]
   gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x43
-  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x400
 
 [PcdsDynamicDefault]
   ## MM Communicate

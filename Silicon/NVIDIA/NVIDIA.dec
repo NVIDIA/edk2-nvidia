@@ -376,7 +376,7 @@
   gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue|0|UINT32|0x00000040
 
 #Configuration Manager Objects.
-  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x100|UINT32|0x00000042
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x400|UINT32|0x00000042
 
 #Signature of optional signed image header
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSignature|"NVDA"|VOID*|0x00000055
