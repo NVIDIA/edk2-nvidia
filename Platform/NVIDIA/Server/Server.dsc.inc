@@ -4,14 +4,6 @@
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 
-[Defines]
-  SKUID_IDENTIFIER               = ALL
-  PLATFORM_VERSION               = 0.1
-  DSC_SPECIFICATION              = 0x00010005
-  SUPPORTED_ARCHITECTURES        = AARCH64
-  BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
-
-!include config.dsc.inc
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
 [LibraryClasses.common]

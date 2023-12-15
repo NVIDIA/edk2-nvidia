@@ -4,6 +4,72 @@
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 
+################################################################################
+#
+# FV Section
+#
+# [FV] section is used to define what components or modules are placed within a flash
+# device file.  This section also defines order the components and modules are positioned
+# within the image.  The [FV] section consists of define statements, set statements and
+# module statements.
+#
+################################################################################
+
+[FV.FvMain]
+BlockSize          = 0x10000
+NumBlocks          = 0         # This FV gets compressed so make it just big enough
+FvAlignment        = 8
+ERASE_POLARITY     = 1
+MEMORY_MAPPED      = TRUE
+STICKY_WRITE       = TRUE
+LOCK_CAP           = TRUE
+LOCK_STATUS        = TRUE
+WRITE_DISABLED_CAP = TRUE
+WRITE_ENABLED_CAP  = TRUE
+WRITE_STATUS       = TRUE
+WRITE_LOCK_CAP     = TRUE
+WRITE_LOCK_STATUS  = TRUE
+READ_DISABLED_CAP  = TRUE
+READ_ENABLED_CAP   = TRUE
+READ_STATUS        = TRUE
+READ_LOCK_CAP      = TRUE
+READ_LOCK_STATUS   = TRUE
+FvNameGuid         = $(PLATFORM_GUID)
+
+  APRIORI DXE {
+    INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
+    INF Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
+    INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
+    INF ArmPkg/Drivers/CpuDxe/CpuDxe.inf
+    INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
+!ifdef CONFIG_SDHCI
+    INF MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
+!endif
+!ifdef CONFIG_UFS
+    INF MdeModulePkg/Bus/Pci/UfsPciHcDxe/UfsPciHcDxe.inf
+!endif
+!ifdef CONFIG_EMMC
+    INF MdeModulePkg/Bus/Sd/EmmcDxe/EmmcDxe.inf
+!endif
+!ifdef CONFIG_SDCARD
+    INF MdeModulePkg/Bus/Sd/SdDxe/SdDxe.inf
+!endif
+!ifdef CONFIG_UFS
+    INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
+!endif
+    INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
+    INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
+    INF MdeModulePkg/Bus/I2c/I2cDxe/I2cDxe.inf
+!ifdef CONFIG_SCSI
+    INF MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
+    INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
+!endif
+!ifdef CONFIG_FS_FAT
+    INF MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
+    INF FatPkg/EnhancedFatDxe/Fat.inf
+!endif
+    }
+
   INF MdeModulePkg/Core/Dxe/DxeMain.inf
   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
 

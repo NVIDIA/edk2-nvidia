@@ -7,6 +7,15 @@
 !include Platform/NVIDIA/NVIDIA.global.dsc.inc
 
 [Defines]
+  SKUID_IDENTIFIER            = ALL
+  PLATFORM_VERSION            = 0.1
+  DSC_SPECIFICATION           = 0x00010005
+  SUPPORTED_ARCHITECTURES     = AARCH64
+  BUILD_TARGETS               = DEBUG|RELEASE|NOOPT
+  OUTPUT_DIRECTORY            = Build/$(PLATFORM_NAME)
+
+!include config.dsc.inc
+
 # Value defines are parsed even if there is a guarding ifdef, define some defaults
 !ifndef CONFIG_BOOT_DEFAULT_TIMEOUT
 CONFIG_BOOT_DEFAULT_TIMEOUT=0
@@ -576,6 +585,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
 !endif
 
 [PcdsFixedAtBuild.common]
+  gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L"$(PLATFORM_NAME)"
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
 

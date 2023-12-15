@@ -13,16 +13,6 @@
 [Defines]
   PLATFORM_NAME               = Jetson
   PLATFORM_GUID               = b175f7b7-0cb0-446e-b338-0e0d0f688de8
-  OUTPUT_DIRECTORY            = Build/Jetson
   FLASH_DEFINITION            = Platform/NVIDIA/Jetson/Jetson.fdf
 
 !include Platform/NVIDIA/Jetson/Jetson.dsc.inc
-
-################################################################################
-#
-# Pcd Section - list of all EDK II PCD Entries defined by this Platform
-#
-################################################################################
-
-[PcdsFixedAtBuild]
-  gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L"Jetson"
