@@ -14,11 +14,3 @@
   #
   INF SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf
   INF SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf
-
-  #
-  # Android Fastboot
-  #
-  INF Silicon/NVIDIA/Drivers/TegraUsbDeviceControllerDxe/TegraUsbDeviceControllerDxe.inf
-  INF EmbeddedPkg/Application/AndroidFastboot/AndroidFastbootApp.inf
-  INF EmbeddedPkg/Drivers/AndroidFastbootTransportUsbDxe/FastbootTransportUsbDxe.inf
-  INF Silicon/NVIDIA/Drivers/TegraFastBootDxe/TegraFastBootDxe.inf

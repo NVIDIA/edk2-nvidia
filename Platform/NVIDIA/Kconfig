@@ -257,6 +257,11 @@ menu "Boot Options"
   help
     Support for native android boot partition, without EFI system partition
 
+  config BOOT_ANDROID_FASTBOOT
+  bool "Android Fastboot support"
+  help
+    Support for android fast boot
+
   config BOOT_NVIDIA_CUSTOM_OPTION_DESCRIPTION
   bool "NVIDIA Custom boot order description"
   default n

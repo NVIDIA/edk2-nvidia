@@ -702,6 +702,16 @@
 !endif
 
   #
+  # Android Fastboot
+  #
+!ifdef CONFIG_BOOT_ANDROID_FASTBOOT
+  INF Silicon/NVIDIA/Drivers/TegraUsbDeviceControllerDxe/TegraUsbDeviceControllerDxe.inf
+  INF EmbeddedPkg/Application/AndroidFastboot/AndroidFastbootApp.inf
+  INF EmbeddedPkg/Drivers/AndroidFastbootTransportUsbDxe/FastbootTransportUsbDxe.inf
+  INF Silicon/NVIDIA/Drivers/TegraFastBootDxe/TegraFastBootDxe.inf
+!endif
+
+  #
   # Gpio Power Off Driver
   #
   INF Silicon/NVIDIA/Drivers/GpioPowerOffDxe/GpioPowerOffDxe.inf

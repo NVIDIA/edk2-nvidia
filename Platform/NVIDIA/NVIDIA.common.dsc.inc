@@ -1993,6 +1993,16 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !endif
 
   #
+  # Android Fastboot
+  #
+!ifdef CONFIG_BOOT_ANDROID_FASTBOOT
+  Silicon/NVIDIA/Drivers/TegraUsbDeviceControllerDxe/TegraUsbDeviceControllerDxe.inf
+  EmbeddedPkg/Application/AndroidFastboot/AndroidFastbootApp.inf
+  EmbeddedPkg/Drivers/AndroidFastbootTransportUsbDxe/FastbootTransportUsbDxe.inf
+  Silicon/NVIDIA/Drivers/TegraFastBootDxe/TegraFastBootDxe.inf
+!endif
+
+  #
   # Gpio Power Off Driver
   #
   Silicon/NVIDIA/Drivers/GpioPowerOffDxe/GpioPowerOffDxe.inf
