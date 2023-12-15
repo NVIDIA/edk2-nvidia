@@ -177,6 +177,19 @@ menu "Hardware support"
     help
       No serial port console
   endchoice
+
+  choice REAL_TIME_CLOCK
+  prompt "Realtime clock type"
+    config REAL_TIME_CLOCK_MAXIM
+    bool "Maxim"
+    help
+      Use Maxim pmic based clock
+
+    config REAL_TIME_CLOCK_NUVOTON
+    bool "Nuvoton"
+    help
+      Use Nuvoton based clock
+  endchoice
 endmenu
 
 menu "OS Hardware description"
