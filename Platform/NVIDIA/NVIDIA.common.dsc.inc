@@ -1094,6 +1094,9 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !endif
 
 !ifdef CONFIG_SOC_GRACE
+[PcdsDynamicDefault.common.TH500Presil]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSrIovSupport|FALSE
+
 [PcdsDynamicDefault.common.TH500]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TH500   '
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500)")}

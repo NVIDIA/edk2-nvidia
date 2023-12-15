@@ -34,10 +34,6 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
 
 [PcdsFixedAtBuild.common]
-  # HACK: Disable SR-IOV support to workaround a simulator bug
-  # TODO: Remove once the simulator issue is fixed.
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSrIovSupport|FALSE
-
   ## TPM
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass|1
 
