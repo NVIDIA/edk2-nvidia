@@ -26,8 +26,12 @@ menu "SOC Support"
 
   config SOC_GRACE
   bool "Grace"
+  select SOC_DATACENTER
   help
     Support for Grace (TH500)
+
+  config SOC_DATACENTER
+  bool
 endmenu
 
 menu "Hardware support"
@@ -190,6 +194,10 @@ menu "Hardware support"
     help
       Use Nuvoton based clock
   endchoice
+
+  config RAS
+  bool
+  default y if SOC_DATACENTER
 endmenu
 
 menu "OS Hardware description"

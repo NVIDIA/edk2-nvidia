@@ -10,11 +10,6 @@
   INF Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf
 
   #
-  # APEI
-  #
-  INF Silicon/NVIDIA/Server/TH500/Drivers/ApeiDxe/Apei.inf
-
-  #
   # MM Communication
   #
   INF Silicon/NVIDIA/Drivers/MmCommunicateFfaDxe/MmCommunicationFfa.inf
@@ -31,13 +26,3 @@
   # User Authentication
   #
   INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationDxe.inf
-
-  #
-  # GH100 GPU Driver
-  #
-  INF Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.inf
-
-  #
-  # FPGA I2C Support
-  #
-  INF Silicon/NVIDIA/Drivers/FpgaI2c/FpgaI2c.inf

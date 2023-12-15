@@ -5,45 +5,9 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
   #
-  # PinMux Support
-  #
-  INF Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf
-
-  #
-  # SE RNG
-  #
-  INF Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
-  INF Silicon/NVIDIA/Tegra/T234/Drivers/SeRngDxe/SeRngDxe.inf
-
-  #
-  # Tegra PWM clock driver
-  #
-  INF Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
-
-  #
-  # VPR Support
-  #
-  INF Silicon/NVIDIA/Drivers/VPRDxe/VPRDxe.inf
-
-  #
-  # Golden Register Support
-  #
-  INF Silicon/NVIDIA/Drivers/GoldenRegisterDxe/GoldenRegisterDxe.inf
-
-  #
-  # FSI Support
-  #
-  INF Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
-
-  #
   # MM Communication
   #
   INF Silicon/NVIDIA/Drivers/MmCommunicationOpteeDxe/MmCommunicationOptee.inf
-
-  #
-  # BasicProfiler Support
-  #
-  INF Silicon/NVIDIA/Drivers/BasicProfilerDxe/BasicProfilerDxe.inf
 
   #
   # TPM

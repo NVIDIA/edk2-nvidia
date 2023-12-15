@@ -15,8 +15,6 @@
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
 [LibraryClasses.common]
-  SsdtPcieSupportLib|DynamicTablesPkg/Library/Common/SsdtPcieSupportLib/SsdtPcieSupportLib.inf
-
   Tcg2PhysicalPresenceLib|Silicon/NVIDIA/Library/DxeTcg2PhysicalPresenceLibNull/DxeTcg2PhysicalPresenceLibNull.inf
   TpmPlatformHierarchyLib|SecurityPkg/Library/PeiDxeTpmPlatformHierarchyLibNull/PeiDxeTpmPlatformHierarchyLib.inf
   Tpm2DeviceLib|SecurityPkg/Library/Tpm2DeviceLibTcg2/Tpm2DeviceLibTcg2.inf
@@ -30,42 +28,6 @@
 ################################################################################
 [Components.common]
   #
-  # SE RNG
-  #
-  Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
-  Silicon/NVIDIA/Tegra/T234/Drivers/SeRngDxe/SeRngDxe.inf
-
-  #
-  # PinMux Support
-  #
-  Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf
-
-  #
-  # Tegra Pwm clock driver
-  #
-  Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
-
-  #
-  # VPR Support
-  #
-  Silicon/NVIDIA/Drivers/VPRDxe/VPRDxe.inf
-
-  #
-  # Golden Register Support
-  #
-  Silicon/NVIDIA/Drivers/GoldenRegisterDxe/GoldenRegisterDxe.inf
-
-  #
-  # FSI Support
-  #
-  Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
-
-  #
-  # Default Variables Device Tree
-  #
-  Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree.inf
-
-  #
   # MM Communication
   #
   Silicon/NVIDIA/Drivers/MmCommunicationOpteeDxe/MmCommunicationOptee.inf {
@@ -73,11 +35,6 @@
       NULL|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
       NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
   }
-
-  #
-  # BasicProfiler Support
-  #
-  Silicon/NVIDIA/Drivers/BasicProfilerDxe/BasicProfilerDxe.inf
 
   #
   # TPM

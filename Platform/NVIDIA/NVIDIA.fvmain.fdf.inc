@@ -332,6 +332,76 @@
 !endif
 
   #
+  # SE RNG
+  #
+!ifdef CONFIG_SOC_XAVIER
+  INF Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
+!endif
+!ifdef CONFIG_SOC_ORIN
+  INF Silicon/NVIDIA/Tegra/T234/Drivers/SeRngDxe/SeRngDxe.inf
+!endif
+
+  #
+  # Common Jetson devices
+  #
+!ifdef CONFIG_SOC_JETSON
+  #
+  # PinMux Support
+  #
+  INF Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf
+
+  #
+  # Tegra PWM clock driver
+  #
+  INF Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
+
+  #
+  # VPR Support
+  #
+  INF Silicon/NVIDIA/Drivers/VPRDxe/VPRDxe.inf
+
+  #
+  # Golden Register Support
+  #
+  INF Silicon/NVIDIA/Drivers/GoldenRegisterDxe/GoldenRegisterDxe.inf
+
+  #
+  # FSI Support
+  #
+  INF Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
+
+  #
+  # BasicProfiler Support
+  #
+  INF Silicon/NVIDIA/Drivers/BasicProfilerDxe/BasicProfilerDxe.inf
+!endif
+
+!ifdef CONFIG_RAS
+  #
+  # APEI
+  #
+  INF Silicon/NVIDIA/Server/TH500/Drivers/ApeiDxe/Apei.inf
+!endif
+
+!ifdef CONFIG_SOC_GRACE
+  #
+  # GH100 GPU Driver
+  #
+  INF Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.inf
+
+  #
+  # Oem Partition Sample Driver.
+  # Sample driver only not included in firmware image
+  #
+  # INF Silicon/NVIDIA/Server/TH500/Drivers/OemPartitionDxeMm/OemPartitionDxe.inf
+
+  #
+  # FPGA I2C Support
+  #
+  INF Silicon/NVIDIA/Drivers/FpgaI2c/FpgaI2c.inf
+!endif
+
+  #
   # Networking stack
   #
 !ifdef CONFIG_NETWORKING

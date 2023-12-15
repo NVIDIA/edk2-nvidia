@@ -377,6 +377,12 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
   RealTimeClockLib|Silicon/NVIDIA/Library/MaximRealTimeClockLib/MaximRealTimeClockLib.inf
 !endif
 
+!ifdef CONFIG_SOC_DATACENTER
+  SsdtPcieSupportLib|Silicon/NVIDIA/Server/TH500/Library/SsdtPcieSupportLib/SsdtPcieSupportLib.inf
+!else
+  SsdtPcieSupportLib|DynamicTablesPkg/Library/Common/SsdtPcieSupportLib/SsdtPcieSupportLib.inf
+!endif
+
 [LibraryClasses.common.SEC]
   DebugAgentLib|ArmPkg/Library/DebugAgentSymbolsBaseLib/DebugAgentSymbolsBaseLib.inf
   DefaultExceptionHandlerLib|ArmPkg/Library/DefaultExceptionHandlerLib/DefaultExceptionHandlerLib.inf
@@ -1574,6 +1580,83 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
     }
   !endif
+!endif
+
+  #
+  # SE RNG
+  #
+!ifdef CONFIG_SOC_XAVIER
+  Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
+!endif
+!ifdef CONFIG_SOC_ORIN
+  Silicon/NVIDIA/Tegra/T234/Drivers/SeRngDxe/SeRngDxe.inf
+!endif
+
+  #
+  # Common Jetson devices
+  #
+!ifdef CONFIG_SOC_JETSON
+  #
+  # PinMux Support
+  #
+  Silicon/NVIDIA/Drivers/PinMuxDxe/PinMuxDxe.inf
+
+  #
+  # Tegra PWM clock driver
+  #
+  Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
+
+  #
+  # VPR Support
+  #
+  Silicon/NVIDIA/Drivers/VPRDxe/VPRDxe.inf
+
+  #
+  # Golden Register Support
+  #
+  Silicon/NVIDIA/Drivers/GoldenRegisterDxe/GoldenRegisterDxe.inf
+
+  #
+  # FSI Support
+  #
+  Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
+
+  #
+  # BasicProfiler Support
+  #
+  Silicon/NVIDIA/Drivers/BasicProfilerDxe/BasicProfilerDxe.inf
+
+  #
+  # Default Variables Device Tree overlay builds
+  #
+  Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree.inf
+!endif
+
+!ifdef CONFIG_RAS
+  #
+  # APEI
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/ApeiDxe/Apei.inf {
+    <LibraryClasses>
+      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  }
+!endif
+
+!ifdef CONFIG_SOC_GRACE
+  #
+  # GH100 GPU Driver
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.inf
+
+  #
+  # Oem Partition Sample Driver.
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/OemPartitionDxeMm/OemPartitionDxe.inf
+
+  #
+  # FPGA I2C Support
+  #
+  Silicon/NVIDIA/Drivers/FpgaI2c/FpgaI2c.inf
 !endif
 
   #

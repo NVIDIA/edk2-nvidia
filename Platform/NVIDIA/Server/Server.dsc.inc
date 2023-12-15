@@ -15,9 +15,6 @@
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
 [LibraryClasses.common]
-
-  SsdtPcieSupportLib|Silicon/NVIDIA/Server/TH500/Library/SsdtPcieSupportLib/SsdtPcieSupportLib.inf
-
   # TPM
   Tpm2DeviceLib|SecurityPkg/Library/Tpm2DeviceLibTcg2/Tpm2DeviceLibTcg2.inf
   Tpm2CommandLib|SecurityPkg/Library/Tpm2CommandLib/Tpm2CommandLib.inf
@@ -39,7 +36,6 @@
 ################################################################################
 
 [PcdsFixedAtBuild.common]
-  gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x07
   gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x43
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x400
 
@@ -85,14 +81,6 @@
   Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf
 
   #
-  # APEI
-  #
-  Silicon/NVIDIA/Server/TH500/Drivers/ApeiDxe/Apei.inf {
-    <LibraryClasses>
-      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
-  }
-
-  #
   # MM Communication
   #
   Silicon/NVIDIA/Drivers/MmCommunicateFfaDxe/MmCommunicationFfa.inf {
@@ -121,18 +109,3 @@
   # User Authentication
   #
   Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationDxe.inf
-
-  #
-  # GH100 GPU Driver
-  #
-  Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.inf
-
-  #
-  # Oem Partition Sample Driver.
-  #
-  Silicon/NVIDIA/Server/TH500/Drivers/OemPartitionDxeMm/OemPartitionDxe.inf
-
-  #
-  # FPGA I2C Support
-  #
-  Silicon/NVIDIA/Drivers/FpgaI2c/FpgaI2c.inf
