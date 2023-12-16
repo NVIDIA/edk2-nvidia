@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -406,6 +406,47 @@ ReturnResult:
   }
 
   return Result;
+}
+
+/**
+  Gets the class name of the specified device
+
+  Gets the name of the type of device that is passed in
+
+  @param[in]  FilePath            DevicePath of the device.
+  @param[out] DeviceClass         Pointer to a string that describes the device type.
+
+  @retval EFI_SUCCESS             Class name returned.
+  @retval EFI_NOT_FOUND           Device type not found.
+  @retval EFI_INVALID_PARAMETER   FilePath is NULL.
+  @retval EFI_INVALID_PARAMETER   DeviceClass is NULL.
+**/
+EFI_STATUS
+EFIAPI
+GetBootDeviceClass (
+  IN EFI_DEVICE_PATH_PROTOCOL  *FilePath,
+  OUT CONST CHAR8              **DeviceClass
+  )
+{
+  EFI_BOOT_MANAGER_LOAD_OPTION  Option;
+  NVIDIA_BOOT_ORDER_PRIORITY    *BootOrder;
+
+  if ((FilePath == NULL) || (DeviceClass == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Option.Description  = L"Test";
+  Option.OptionalData = NULL;
+  Option.FilePath     = FilePath;
+  Option.OptionNumber = 0;
+
+  BootOrder = GetBootClassOfOption (&Option, mBootPriorityTemplate, ARRAY_SIZE (mBootPriorityTemplate));
+  if (BootOrder == NULL) {
+    return EFI_NOT_FOUND;
+  } else {
+    *DeviceClass = BootOrder->OrderName;
+    return EFI_SUCCESS;
+  }
 }
 
 EFI_STATUS
