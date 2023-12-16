@@ -261,6 +261,7 @@ T234AddBootloaderCarveouts (
       case CARVEOUT_OS:
       case CARVEOUT_GR:
       case CARVEOUT_PROFILING:
+      case CARVEOUT_XUSB:
         // Leave in memory map but marked as used
         if (  (  (Index == CARVEOUT_CCPLEX_INTERWORLD_SHMEM)
               && FixedPcdGetBool (PcdExposeCcplexInterworldShmem)
@@ -759,6 +760,9 @@ T234GetPlatformResourceInformation (
   // Populate ProfilerInfo
   PlatformResourceInfo->ProfilerInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_PROFILING].Base);
   PlatformResourceInfo->ProfilerInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_PROFILING].Size);
+
+  PlatformResourceInfo->ResourceInfo->XusbRegion.MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_XUSB].Base);
+  PlatformResourceInfo->ResourceInfo->XusbRegion.MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_XUSB].Size);
 
   PlatformResourceInfo->BootType = CPUBL_PARAMS (CpuBootloaderParams, BootType);
 

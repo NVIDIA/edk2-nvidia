@@ -166,6 +166,20 @@ UsbFirmwareDxeInitialize (
     }
 
     return Status;
+  } else if (PlatformResourceInfo->ResourceInfo->XusbRegion.MemoryBaseAddress != 0) {
+    mUsbFwData.UsbFwBase = (VOID *)PlatformResourceInfo->ResourceInfo->XusbRegion.MemoryBaseAddress;
+    mUsbFwData.UsbFwSize = PlatformResourceInfo->ResourceInfo->XusbRegion.MemoryLength;
+    Status               = gBS->InstallMultipleProtocolInterfaces (
+                                  &mImageHandle,
+                                  &gNVIDIAUsbFwProtocolGuid,
+                                  (VOID *)&mUsbFwData,
+                                  NULL
+                                  );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install USB firmware protocol - %r\r\n", __FUNCTION__, Status));
+    }
+
+    return Status;
   }
 
   mImageHandle = ImageHandle;
