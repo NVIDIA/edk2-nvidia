@@ -922,6 +922,7 @@ TH500GetPlatformResourceInformation (
   TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
   UINT32              SocketMask;
   UINTN               Index;
+  UINTN               Count;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
@@ -993,6 +994,16 @@ TH500GetPlatformResourceInformation (
     TH500DramDeviceInfo[Index].TotalWidth     = CpuBootloaderParams->DramInfo[Index].TotalWidth;
     TH500DramDeviceInfo[Index].Size           = CpuBootloaderParams->SdramInfo[Index].Size;
     TH500DramDeviceInfo[Index].SpeedKhz       = 0;
+  }
+
+  for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
+    if (!(SocketMask & (1UL << Index))) {
+      continue;
+    }
+
+    for (Count = 0; Count < UID_NUM_DWORDS; Count++) {
+      PlatformResourceInfo->UniqueId[Index][Count] += CpuBootloaderParams->UniqueId[Index][Count];
+    }
   }
 
   BuildGuidDataHob (&gNVIDIATH500MB1DataGuid, &CpuBootloaderParams->EarlyBootVariables, sizeof (CpuBootloaderParams->EarlyBootVariables));

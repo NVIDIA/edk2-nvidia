@@ -36,6 +36,9 @@
 #define DEVICE_CS_MASK                (0xFF00)
 #define DEVICE_CS_SHIFT               (8)
 #define MAX_SUPPORTED_CORES           1024U
+#define MAX_SUPPORTED_SOCKETS         4
+
+#define UID_NUM_DWORDS  4
 
 typedef enum {
   TegrablBootInvalid,
@@ -136,6 +139,7 @@ typedef struct {
   UINT64                      PhysicalDramSize;
   TEGRA_DRAM_DEVICE_INFO      *DramDeviceInfo;
   UINT8                       *C2cMode;
+  UINT32                      UniqueId[MAX_SUPPORTED_SOCKETS][UID_NUM_DWORDS];
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**

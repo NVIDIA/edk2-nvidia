@@ -35,15 +35,7 @@
 #define HZ_TO_MHZ(x)   (x/1000000)
 #define GENMASK_32(n)  (~(0U) >> (32 - n))
 
-#define FUSE_OPT_VENDOR_CODE_0   (0x200)
-#define FUSE_OPT_FAB_CODE_0      (0x204)
-#define FUSE_OPT_LOT_CODE_0_0    (0x208)
-#define FUSE_OPT_LOT_CODE_1_0    (0x20C)
-#define FUSE_OPT_WAFER_ID_0      (0x210)
-#define FUSE_OPT_X_COORDINATE_0  (0x214)
-#define FUSE_OPT_Y_COORDINATE_0  (0x218)
-#define FUSE_OPT_OPS_RESERVED_0  (0x220)
-#define CPUSNMAXSTR              (320)
+#define CPUSNMAXSTR  (320)
 
 STATIC TEGRA_EEPROM_BOARD_INFO  *SmEepromData;
 STATIC SMBIOS_TABLE_TYPE32      *Type32Record;
@@ -630,134 +622,6 @@ OemGetSocketDesignation (
 }
 
 /**
- * Get the EFuse protocol for a given ProcessorIndex.
- *
- * @param[in] ProcessorIdx Socket Num to get Efuse protocol.
- *
- * @return Pointer to Efuse Protocol on Success.
- *         NULL on failure.
- **/
-STATIC
-NVIDIA_EFUSE_PROTOCOL *
-GetEfuseProtocol (
-  IN UINT8  ProcessorIdx
-  )
-{
-  UINTN                  EfuseHandles;
-  EFI_HANDLE             *EfuseHandleBuffer;
-  NVIDIA_EFUSE_PROTOCOL  *EfuseProtocol;
-  NVIDIA_EFUSE_PROTOCOL  *Iter;
-  EFI_STATUS             Status;
-  UINTN                  Index;
-
-  EfuseProtocol = NULL;
-  Status        = gBS->LocateHandleBuffer (
-                         ByProtocol,
-                         &gNVIDIAEFuseProtocolGuid,
-                         NULL,
-                         &EfuseHandles,
-                         &EfuseHandleBuffer
-                         );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_WARN, "Error locating Efuse handles: %r\n", Status));
-    goto ExitGetEfuseProtocol;
-  }
-
-  Iter = NULL;
-
-  for (Index = 0; Index < EfuseHandles; Index++) {
-    Status = gBS->HandleProtocol (
-                    EfuseHandleBuffer[Index],
-                    &gNVIDIAEFuseProtocolGuid,
-                    (VOID **)&Iter
-                    );
-    if (EFI_ERROR (Status) || (Iter == NULL)) {
-      DEBUG ((
-        DEBUG_INFO,
-        "Failed to get EfuseProtocol for handle index %u: %r\n",
-        Index,
-        Status
-        ));
-      continue;
-    }
-
-    if (Iter->Socket == ProcessorIdx) {
-      DEBUG ((DEBUG_ERROR, "Found EFuse Proto %u\n", ProcessorIdx));
-      EfuseProtocol = Iter;
-      break;
-    } else {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a:%d ProcessorIdx %u Socket %u\n",
-        __FUNCTION__,
-        __LINE__,
-        ProcessorIdx,
-        Iter->Socket
-        ));
-    }
-  }
-
-ExitGetEfuseProtocol:
-  return EfuseProtocol;
-}
-
-/**
- * Get the Serial Number for TH500 SOC.
- *
- * @param[in] EfuseProtocol EfuseProtocol to use to query Fuse Registers
- *
- * @return Null terminated Unicode string containing SerialNum on Success.
- *         NULL string on allocation failure.
- **/
-STATIC
-CHAR16 *
-GetCpuSerialNumTh500 (
-  NVIDIA_EFUSE_PROTOCOL  *EfuseProtocol
-  )
-{
-  UINT32  Vendor;
-  UINT32  Fab;
-  UINT32  Lot0;
-  UINT32  Lot1;
-  UINT32  Wafer;
-  UINT32  XValue;
-  UINT32  YValue;
-  UINT32  Reserved;
-  UINTN   CpuBufSize;
-  CHAR16  *Serial    = NULL;
-  UINT64  Ecid128[2] = { 0 };
-
-  CpuBufSize = CPUSNMAXSTR;
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_VENDOR_CODE_0, &Vendor);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_FAB_CODE_0, &Fab);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_LOT_CODE_0_0, &Lot0);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_LOT_CODE_1_0, &Lot1);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_WAFER_ID_0, &Wafer);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_X_COORDINATE_0, &XValue);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_Y_COORDINATE_0, &YValue);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_OPS_RESERVED_0, &Reserved);
-
-  Serial = AllocateZeroPool (CpuBufSize);
-  if (Serial == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate String\n", __FUNCTION__));
-    return NULL;
-  }
-
-  Ecid128[0]  = Reserved | (YValue << 6) | (XValue << 15) | (Wafer << 24) | (Lot1 << 30);
-  Ecid128[0] |= (((UINT64)Lot0 & GENMASK_32 (6)) << 58);
-  Ecid128[1]  = ((Lot0 >> 6) & GENMASK_32 (26)) | (Fab << 26) | ((UINT64)Vendor << 32);
-
-  UnicodeSPrint (
-    Serial,
-    CpuBufSize,
-    L"0x%016lx%016lx",
-    Ecid128[1],
-    Ecid128[0]
-    );
-  return Serial;
-}
-
-/**
  * Get the Serial Number for a given Socket Index
  *
  * @param[in] ProcessorIdx Socket Num to get Serial Num.
@@ -771,27 +635,44 @@ GetCpuSerialNum (
   UINT8  ProcessorIndex
   )
 {
-  UINTN                  ChipId;
-  CHAR16                 *CpuSn;
-  NVIDIA_EFUSE_PROTOCOL  *EfuseProtocol;
+  UINTN   ChipId;
+  UINT32  *EcId;
+  CHAR16  *CpuSn;
+  VOID    *Hob;
 
-  CpuSn         = NULL;
-  ChipId        = TegraGetChipID ();
-  EfuseProtocol = GetEfuseProtocol (ProcessorIndex);
-  if (EfuseProtocol == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get EfuseProtocol\n", __FUNCTION__));
-    goto exitGetCpuSerialNum;
+  CpuSn  = NULL;
+  EcId   = NULL;
+  ChipId = TegraGetChipID ();
+
+  if (ChipId != TH500_CHIP_ID) {
+    return NULL;
   }
 
-  switch (ChipId) {
-    case TH500_CHIP_ID:
-      CpuSn = GetCpuSerialNumTh500 (EfuseProtocol);
-      break;
-    default:
-      break;
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    EcId = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->UniqueId[ProcessorIndex];
+  } else {
+    ASSERT (FALSE);
   }
 
-exitGetCpuSerialNum:
+  CpuSn = AllocateZeroPool (CPUSNMAXSTR);
+  if (CpuSn == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate String\n", __FUNCTION__));
+    return NULL;
+  }
+
+  UnicodeSPrint (
+    CpuSn,
+    CPUSNMAXSTR,
+    L"0x%08x%08x%08x%08x",
+    EcId[3],
+    EcId[2],
+    EcId[1],
+    EcId[0]
+    );
+
   return CpuSn;
 }
 
