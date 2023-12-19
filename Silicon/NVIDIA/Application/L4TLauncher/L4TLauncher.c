@@ -1483,8 +1483,8 @@ ExtLinuxBoot (
                &FdtSize
                );
     if (EFI_ERROR (Status)) {
-      ErrorPrint (L"%a:sds Failed to Authenticate %s (%r)\r\n", __FUNCTION__, EXTLINUX_CONF_PATH, Status);
-      goto Exit;
+      ErrorPrint (L"%a: Failed to authenticate %s (%r)\r\n", __FUNCTION__, EXTLINUX_CONF_PATH, Status);
+      goto LoadKernel;
     }
 
     ExpandedFdtBase = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (NewFdtBase)));
@@ -1555,6 +1555,7 @@ ExtLinuxBoot (
     }
   }
 
+LoadKernel:
   // Load and start the kernel
   if (BootOption->LinuxPath != NULL) {
     if (EncryptionInfo.ImageEncrypted) {
