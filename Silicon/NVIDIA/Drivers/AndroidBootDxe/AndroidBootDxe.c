@@ -17,7 +17,6 @@
 #include <Library/HobLib.h>
 #include <Protocol/LoadedImage.h>
 #include <Library/HandleParsingLib.h>
-#include <Library/BootChainInfoLib.h>
 #include <Library/AndroidBcbLib.h>
 #include <NVIDIAConfiguration.h>
 #include <Library/DeviceTreeHelperLib.h>
@@ -116,6 +115,265 @@ AndroidBootOnReadyToBootHandler (
            Interface,
            NULL
            );
+  }
+}
+
+/**
+  Locate sibling partition's handle
+
+  @param[in]   Handle                 Partition handle whose sibling is needed
+  @param[in]   SiblingPartitionName   Name of sibling partition
+
+**/
+STATIC
+EFI_HANDLE
+EFIAPI
+AndroidBootGetSiblingPartitionHandle (
+  IN EFI_HANDLE  Handle,
+  IN CHAR16      *SiblingPartitionName
+  )
+{
+  EFI_STATUS                   Status;
+  EFI_HANDLE                   *ParentHandles = NULL;
+  UINTN                        ParentCount;
+  UINTN                        ParentIndex;
+  EFI_HANDLE                   *ChildHandles = NULL;
+  UINTN                        ChildCount;
+  UINTN                        ChildIndex;
+  EFI_PARTITION_INFO_PROTOCOL  *PartitionInfo = NULL;
+  EFI_HANDLE                   SiblingHandle  = NULL;
+
+  Status = PARSE_HANDLE_DATABASE_PARENTS (Handle, &ParentCount, &ParentHandles);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find parents - %r\r\n", __FUNCTION__, Status));
+    return NULL;
+  }
+
+  for (ParentIndex = 0; ParentIndex < ParentCount; ParentIndex++) {
+    Status = ParseHandleDatabaseForChildControllers (ParentHandles[ParentIndex], &ChildCount, &ChildHandles);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find child controllers - %r\r\n", __FUNCTION__, Status));
+      goto Exit;
+    }
+
+    for (ChildIndex = 0; ChildIndex < ChildCount; ChildIndex++) {
+      Status = gBS->HandleProtocol (ChildHandles[ChildIndex], &gEfiPartitionInfoProtocolGuid, (VOID **)&PartitionInfo);
+      if (!EFI_ERROR (Status)) {
+        if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
+          goto Exit;
+        }
+
+        if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
+          goto Exit;
+        }
+
+        if (StrCmp (PartitionInfo->Info.Gpt.PartitionName, SiblingPartitionName) == 0) {
+          SiblingHandle = ChildHandles[ChildIndex];
+          goto Exit;
+        }
+      }
+    }
+  }
+
+Exit:
+  if (ParentHandles != NULL) {
+    FreePool (ParentHandles);
+    ParentHandles = NULL;
+  }
+
+  if (ChildHandles != NULL) {
+    FreePool (ChildHandles);
+    ChildHandles = NULL;
+  }
+
+  return SiblingHandle;
+}
+
+/**
+  Check if loadfile is installed for correct config. If not,
+  uninstall it.
+
+  @param[in]   Event                  Event structure
+  @param[in]   Context                Notification context
+
+**/
+STATIC
+VOID
+EFIAPI
+AndroidBootOnEndOfDxeHandler (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  EFI_STATUS                 Status;
+  ANDROID_BOOT_PRIVATE_DATA  *Private;
+  BOOLEAN                    RecoveryMode;
+  EFI_HANDLE                 MscHandle;
+  MiscCmdType                MiscCmd;
+  UINTN                      DataSize;
+  UINT32                     BootMode;
+  CHAR16                     PartitionName[MAX_PARTITION_NAME_LEN];
+
+  gBS->CloseEvent (Event);
+
+  Private      = (ANDROID_BOOT_PRIVATE_DATA *)Context;
+  RecoveryMode = FALSE;
+
+  // Check recovery mode
+  if (PcdGetBool (PcdBootAndroidImage)) {
+    MscHandle = AndroidBootGetSiblingPartitionHandle (
+                  Private->ControllerHandle,
+                  MISC_PARTITION_BASE_NAME
+                  );
+    Status = GetCmdFromMiscPartition (MscHandle, &MiscCmd);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    if ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE)) {
+      RecoveryMode = TRUE;
+    }
+  } else {
+    DataSize = sizeof (BootMode);
+    Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
+    if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
+      RecoveryMode = TRUE;
+    }
+  }
+
+  if (RecoveryMode) {
+    StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, L"recovery");
+  } else {
+    Status = GetActivePartitionName (L"kernel", PartitionName);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+  }
+
+  if (StrCmp (Private->PartitionName, PartitionName) != 0) {
+    gBS->UninstallMultipleProtocolInterfaces (
+           Private->AndroidBootHandle,
+           &gEfiLoadFileProtocolGuid,
+           &Private->LoadFile,
+           &gNVIDIALoadfileKernelArgsGuid,
+           Private->KernelArgs,
+           &gEfiDevicePathProtocolGuid,
+           Private->AndroidBootDevicePath,
+           NULL
+           );
+  }
+}
+
+/**
+  Locate and install associated device tree
+
+  @param[in]   Private       Private driver data for android kernel instance
+                             being loaded
+
+**/
+STATIC
+VOID
+EFIAPI
+AndroidBootDxeLoadDtb (
+  IN ANDROID_BOOT_PRIVATE_DATA  *Private
+  )
+{
+  EFI_STATUS             Status;
+  VOID                   *AcpiBase   = NULL;
+  VOID                   *CurrentDtb = NULL;
+  CHAR16                 DtbPartitionName[MAX_PARTITION_NAME_LEN];
+  EFI_HANDLE             DtbPartitionHandle;
+  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
+  UINT64                 Size;
+  VOID                   *KernelDtb = NULL;
+  VOID                   *Dtb;
+  VOID                   *DtbCopy;
+
+  if (Private == NULL) {
+    return;
+  }
+
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    return;
+  }
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &CurrentDtb);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  if (StrCmp (Private->PartitionName, L"A_kernel") == 0) {
+    StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"A_kernel-dtb");
+  } else if (StrCmp (Private->PartitionName, L"B_kernel") == 0) {
+    StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"B_kernel-dtb");
+  } else if (StrCmp (Private->PartitionName, L"recovery") == 0) {
+    StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"recovery-dtb");
+  } else {
+    ASSERT (FALSE);
+  }
+
+  DtbPartitionHandle = AndroidBootGetSiblingPartitionHandle (
+                         Private->ControllerHandle,
+                         DtbPartitionName
+                         );
+  if (DtbPartitionHandle != NULL) {
+    Status = gBS->HandleProtocol (
+                    DtbPartitionHandle,
+                    &gEfiBlockIoProtocolGuid,
+                    (VOID **)&BlockIo
+                    );
+    if (EFI_ERROR (Status) || (BlockIo == NULL)) {
+      goto Exit;
+    }
+
+    Size = MultU64x32 (BlockIo->Media->LastBlock+1, BlockIo->Media->BlockSize);
+
+    KernelDtb = AllocatePool (Size);
+    if (KernelDtb == NULL) {
+      goto Exit;
+    }
+
+    Status = BlockIo->ReadBlocks (
+                        BlockIo,
+                        BlockIo->Media->MediaId,
+                        0,
+                        Size,
+                        KernelDtb
+                        );
+    if (EFI_ERROR (Status)) {
+      goto Exit;
+    }
+
+    Dtb = KernelDtb;
+    if (fdt_check_header (Dtb) != 0) {
+      Dtb += PcdGet32 (PcdSignedImageHeaderSize);
+      if (fdt_check_header (Dtb) != 0) {
+        DEBUG ((DEBUG_ERROR, "%a: DTB on partition was corrupted, attempt use to UEFI DTB\r\n", __FUNCTION__));
+        goto Exit;
+      }
+    }
+
+    DtbCopy = NULL;
+    DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (Dtb)));
+    if ((DtbCopy != NULL) &&
+        (fdt_open_into (Dtb, DtbCopy, 4 * fdt_totalsize (Dtb)) == 0))
+    {
+      DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB from %s\r\n", __FUNCTION__, DtbPartitionName));
+      Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
+      if (EFI_ERROR (Status)) {
+        gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (fdt_totalsize (DtbCopy)));
+        DtbCopy = NULL;
+      } else {
+        gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (CurrentDtb)));
+      }
+    }
+  }
+
+Exit:
+  if (KernelDtb != NULL) {
+    FreePool (KernelDtb);
+    KernelDtb = NULL;
   }
 }
 
@@ -770,6 +1028,8 @@ AndroidBootDxeLoadFile (
     return EFI_INVALID_PARAMETER;
   }
 
+  DEBUG ((DEBUG_ERROR, "%a: Attempting to boot kernel from %s\n", __FUNCTION__, Private->PartitionName));
+
   // Verify the image header and set the internal data structure ImgData
   Status = AndroidBootGetVerify (Private->BlockIo, Private->DiskIo, &ImgData, NULL);
   if (EFI_ERROR (Status)) {
@@ -786,6 +1046,9 @@ AndroidBootDxeLoadFile (
     *BufferSize = ImgData.KernelSize;
     return EFI_BUFFER_TOO_SMALL;
   }
+
+  // Load kernel dtb
+  AndroidBootDxeLoadDtb (Private);
 
   // Load Android Boot image
   Status = AndroidBootLoadFile (Private->BlockIo, Private->DiskIo, &ImgData, Buffer);
@@ -860,17 +1123,12 @@ AndroidBootDriverBindingSupported (
   EFI_DISK_IO_PROTOCOL         *DiskIo        = NULL;
   EFI_PARTITION_INFO_PROTOCOL  *PartitionInfo = NULL;
   EFI_HANDLE                   *ParentHandles = NULL;
-  CHAR16                       PartitionName[MAX_PARTITION_NAME_LEN];
   UINTN                        ParentCount;
   UINTN                        ParentIndex;
   EFI_HANDLE                   *ChildHandles = NULL;
   UINTN                        ChildCount;
   UINTN                        ChildIndex;
   VOID                         *Protocol;
-  BOOLEAN                      RecoveryMode;
-  UINTN                        DataSize;
-  UINT32                       BootMode;
-  MiscCmdType                  MiscCmd;
 
   // This driver will be accessed while boot manager attempts to connect
   // all drivers to the controllers for each partition entry.
@@ -930,39 +1188,12 @@ AndroidBootDriverBindingSupported (
     goto ErrorExit;
   }
 
-  RecoveryMode = FALSE;
-
-  DataSize = sizeof (BootMode);
-  Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
-  if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
-    RecoveryMode = TRUE;
-  }
-
-  Status = GetCmdFromMiscPartition (&MiscCmd);
-  if (!EFI_ERROR (Status) && ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE))) {
-    RecoveryMode = TRUE;
-  }
-
-  if (RecoveryMode == TRUE) {
-    StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, L"recovery");
-  } else {
-    Status = GetActivePartitionName (L"kernel", PartitionName);
-    if (EFI_ERROR (Status)) {
-      goto ErrorExit;
-    }
-  }
-
   if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
 
   if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
-    Status = EFI_UNSUPPORTED;
-    goto ErrorExit;
-  }
-
-  if (0 != StrCmp (PartitionInfo->Info.Gpt.PartitionName, PartitionName)) {
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -1082,15 +1313,16 @@ AndroidBootDriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS                 Status;
-  EFI_BLOCK_IO_PROTOCOL      *BlockIo = NULL;
-  EFI_DISK_IO_PROTOCOL       *DiskIo  = NULL;
-  EFI_DEVICE_PATH_PROTOCOL   *ParentDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL   *AndroidBootDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL   *Node;
-  ANDROID_BOOT_PRIVATE_DATA  *Private;
-  UINT32                     *Id;
-  CHAR16                     *KernelArgs;
+  EFI_STATUS                   Status;
+  EFI_PARTITION_INFO_PROTOCOL  *PartitionInfo = NULL;
+  EFI_BLOCK_IO_PROTOCOL        *BlockIo       = NULL;
+  EFI_DISK_IO_PROTOCOL         *DiskIo        = NULL;
+  EFI_DEVICE_PATH_PROTOCOL     *ParentDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL     *AndroidBootDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL     *Node;
+  ANDROID_BOOT_PRIVATE_DATA    *Private;
+  UINT32                       *Id;
+  CHAR16                       *KernelArgs;
 
   // BindingSupported() filters out the unsupported attempts and the multiple attempts
   // from a successful ControllerHandle such that BindingStart() runs only once
@@ -1108,6 +1340,20 @@ AndroidBootDriverBindingStart (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: fail to get DevicePath: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  // Open PartitionInfo protocol to obtain the access to the flash partition
+  Status = gBS->OpenProtocol (
+                  ControllerHandle,
+                  &gEfiPartitionInfoProtocolGuid,
+                  (VOID **)&PartitionInfo,
+                  This->DriverBindingHandle,
+                  ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: fail to open PartitionInfo: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -1181,6 +1427,7 @@ AndroidBootDriverBindingStart (
   Private->ControllerHandle      = ControllerHandle;
   Private->ProtocolsInstalled    = FALSE;
   Private->KernelArgs            = KernelArgs;
+  StrCpyS (Private->PartitionName, MAX_PARTITION_NAME_LEN, PartitionInfo->Info.Gpt.PartitionName);
   CopyMem (&Private->LoadFile, &mAndroidBootDxeLoadFile, sizeof (Private->LoadFile));
 
   // Install LoadFile and AndroidBootDevicePath protocols on child, AndroidBootHandle
@@ -1200,6 +1447,19 @@ AndroidBootDriverBindingStart (
   }
 
   Private->ProtocolsInstalled = TRUE;
+
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  AndroidBootOnEndOfDxeHandler,
+                  Private,
+                  &gEfiEndOfDxeEventGroupGuid,
+                  &Private->EndOfDxeEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: fail to create end of dxe event callback: %r\n", __FUNCTION__, Status));
+    goto Exit;
+  }
 
   // Install and open CallerId to link the Private data structure
   Status = gBS->InstallMultipleProtocolInterfaces (
@@ -1266,6 +1526,10 @@ Exit:
                Private->AndroidBootDevicePath,
                NULL
                );
+      }
+
+      if (Private->EndOfDxeEvent != NULL) {
+        gBS->CloseEvent (Private->EndOfDxeEvent);
       }
 
       FreePool (Private);

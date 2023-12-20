@@ -19,6 +19,7 @@ static MiscCmdType  CacheCmdType = MISC_CMD_TYPE_MAX;
 EFI_STATUS
 EFIAPI
 GetCmdFromMiscPartition (
+  EFI_HANDLE   Handle,
   MiscCmdType  *Type
   )
 {
@@ -27,7 +28,7 @@ GetCmdFromMiscPartition (
   EFI_HANDLE                   PartitionHandle;
   UINTN                        Index;
   UINTN                        NumOfHandles;
-  EFI_HANDLE                   *HandleBuffer;
+  EFI_HANDLE                   *HandleBuffer = NULL;
   EFI_BLOCK_IO_PROTOCOL        *BlockIo;
   EFI_DISK_IO_PROTOCOL         *DiskIo;
   BootloaderMessage            Message;
@@ -42,50 +43,54 @@ GetCmdFromMiscPartition (
     goto Exit;
   }
 
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiPartitionInfoProtocolGuid,
-                  NULL,
-                  &NumOfHandles,
-                  &HandleBuffer
-                  );
-
-  if (EFI_ERROR (Status)) {
-    Status = EFI_UNSUPPORTED;
-    goto Exit;
-  }
-
-  for (Index = 0; Index < NumOfHandles; Index++) {
-    // Get partition info protcol from handle and validate
-    Status = gBS->HandleProtocol (
-                    HandleBuffer[Index],
+  if (Handle == NULL) {
+    Status = gBS->LocateHandleBuffer (
+                    ByProtocol,
                     &gEfiPartitionInfoProtocolGuid,
-                    (VOID **)&PartitionInfo
+                    NULL,
+                    &NumOfHandles,
+                    &HandleBuffer
                     );
 
-    if (EFI_ERROR (Status) || (PartitionInfo == NULL)) {
-      Status = EFI_NOT_FOUND;
+    if (EFI_ERROR (Status)) {
+      Status = EFI_UNSUPPORTED;
       goto Exit;
     }
 
-    // Found MISC_PARTITION
-    if (0 == StrCmp (
-               PartitionInfo->Info.Gpt.PartitionName,
-               MISC_PARTITION_BASE_NAME
-               )
-        )
-    {
-      break;
+    for (Index = 0; Index < NumOfHandles; Index++) {
+      // Get partition info protcol from handle and validate
+      Status = gBS->HandleProtocol (
+                      HandleBuffer[Index],
+                      &gEfiPartitionInfoProtocolGuid,
+                      (VOID **)&PartitionInfo
+                      );
+
+      if (EFI_ERROR (Status) || (PartitionInfo == NULL)) {
+        Status = EFI_NOT_FOUND;
+        goto Exit;
+      }
+
+      // Found MISC_PARTITION
+      if (0 == StrCmp (
+                 PartitionInfo->Info.Gpt.PartitionName,
+                 MISC_PARTITION_BASE_NAME
+                 )
+          )
+      {
+        break;
+      }
     }
-  }
 
-  if (Index >= NumOfHandles) {
-    Status = EFI_NOT_FOUND;
-    DEBUG ((DEBUG_INFO, "%a: Unable to locate MSC partition\r\n", __FUNCTION__));
-    goto Exit;
-  }
+    if (Index >= NumOfHandles) {
+      Status = EFI_NOT_FOUND;
+      DEBUG ((DEBUG_INFO, "%a: Unable to locate MSC partition\r\n", __FUNCTION__));
+      goto Exit;
+    }
 
-  PartitionHandle = HandleBuffer[Index];
+    PartitionHandle = HandleBuffer[Index];
+  } else {
+    PartitionHandle = Handle;
+  }
 
   Status = gBS->HandleProtocol (
                   PartitionHandle,
@@ -130,5 +135,9 @@ GetCmdFromMiscPartition (
   CacheCmdType = *Type;
 
 Exit:
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+  }
+
   return Status;
 }

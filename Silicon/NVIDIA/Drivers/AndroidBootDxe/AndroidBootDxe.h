@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver's private data structure and interfaces declaration
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro.
 
@@ -26,6 +26,7 @@
 #include <Library/PrintLib.h>
 #include <AndroidBootImgHeader.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/BootChainInfoLib.h>
 
 #include <Guid/LinuxEfiInitrdMedia.h>
 
@@ -52,12 +53,15 @@ typedef struct {
 typedef struct {
   UINT64                         Signature;
 
+  CHAR16                         PartitionName[MAX_PARTITION_NAME_LEN];
+
   EFI_LOAD_FILE_PROTOCOL         LoadFile;
   EFI_PARTITION_INFO_PROTOCOL    *PartitionInfo;
   EFI_BLOCK_IO_PROTOCOL          *BlockIo;
   EFI_DISK_IO_PROTOCOL           *DiskIo;
   EFI_DEVICE_PATH_PROTOCOL       *ParentDevicePath;
   EFI_DEVICE_PATH_PROTOCOL       *AndroidBootDevicePath;
+  EFI_EVENT                      EndOfDxeEvent;
   CHAR16                         *KernelArgs;
 
   UINT32                         Id;

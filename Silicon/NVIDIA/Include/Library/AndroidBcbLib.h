@@ -16,6 +16,7 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiLib.h>
 #include <Library/NVIDIADebugLib.h>
@@ -66,6 +67,7 @@ typedef enum {
 EFI_STATUS
 EFIAPI
 GetCmdFromMiscPartition (
+  IN  EFI_HANDLE   Handle,
   OUT MiscCmdType  *Type
   );
 

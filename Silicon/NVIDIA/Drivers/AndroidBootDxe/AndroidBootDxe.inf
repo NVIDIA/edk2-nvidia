@@ -62,9 +62,11 @@
   gNVIDIALoadfileKernelArgsGuid
   gEfiPartTypeSystemPartGuid
   gEfiEventReadyToBootGuid
+  gEfiEndOfDxeEventGroupGuid
   gNVIDIAPublicVariableGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
   gNVIDIATokenSpaceGuid.PcdRcmKernelBase
   gNVIDIATokenSpaceGuid.PcdRcmKernelSize
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage

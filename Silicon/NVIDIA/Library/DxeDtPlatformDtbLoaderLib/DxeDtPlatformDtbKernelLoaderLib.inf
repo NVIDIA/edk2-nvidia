@@ -52,7 +52,6 @@
 [Guids]
   gFdtTableGuid
   gEfiAcpiTableGuid
-  gEfiEventReadyToBootGuid
   gEfiEndOfDxeEventGroupGuid
   gNVIDIAPlatformResourceDataGuid
   gNVIDIAPublicVariableGuid
