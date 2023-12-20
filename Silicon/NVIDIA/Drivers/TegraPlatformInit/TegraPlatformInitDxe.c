@@ -711,7 +711,7 @@ TegraPlatformInitialize (
   BOOLEAN                       T234SkuSet;
   UINTN                         EmmcMagic;
   BOOLEAN                       EmulatedVariablesUsed;
-  INTN                          UefiNode;
+  INTN                          NodeOffset;
   VOID                          *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
@@ -781,9 +781,9 @@ TegraPlatformInitialize (
   }
 
   /*TODO: Retaining above logic for backward compatibility. Remove once all DTBs are updated.*/
-  UefiNode = fdt_path_offset (DtbBase, "/firmware/uefi");
-  if (UefiNode >= 0) {
-    if (NULL != fdt_get_property (DtbBase, UefiNode, "use-emulated-variables", NULL)) {
+  NodeOffset = fdt_path_offset (DtbBase, "/firmware/uefi");
+  if (NodeOffset >= 0) {
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "use-emulated-variables", NULL)) {
       DEBUG ((DEBUG_ERROR, "Platform Override To Use Emulated Variable Store\n"));
       EmulatedVariablesUsed = TRUE;
     }
@@ -841,8 +841,11 @@ TegraPlatformInitialize (
   }
 
   // Set PCD to reflect android kernel boot for later stages
-  if (fdt_path_offset (DtbBase, "/firmware/android") >= 0) {
-    PcdSetBoolS (PcdBootAndroidImage, TRUE);
+  NodeOffset = fdt_path_offset (DtbBase, "/chosen");
+  if (NodeOffset >= 0) {
+    if (fdt_getprop (DtbBase, NodeOffset, "use_dts_cmdline", NULL) != NULL) {
+      PcdSetBoolS (PcdBootAndroidImage, TRUE);
+    }
   }
 
   return EFI_SUCCESS;
