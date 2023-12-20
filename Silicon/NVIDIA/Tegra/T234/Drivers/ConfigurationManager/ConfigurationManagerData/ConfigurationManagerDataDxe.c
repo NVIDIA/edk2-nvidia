@@ -528,6 +528,151 @@ ErrorExit:
   return Status;
 }
 
+/** Find HDA data in the DeviceTree and patch dsdt table.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateHdaInfo (
+  )
+{
+  EFI_STATUS                                     Status;
+  UINT32                                         NumberOfHda;
+  UINT32                                         *HdaHandles;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA               RegisterData;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA              InterruptData;
+  UINT32                                         Size;
+  UINT32                                         StaValue;
+  NVIDIA_AML_NODE_INFO                           AcpiNodeInfo;
+  UINT32                                         BaseAddress;
+  EFI_ACPI_32_BIT_FIXED_MEMORY_RANGE_DESCRIPTOR  MemoryDescriptor;
+  EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR         InterruptDescriptor;
+
+  NumberOfHda = 0;
+  Status      = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra234-hda", NULL, &NumberOfHda);
+  if (Status == EFI_NOT_FOUND) {
+    return EFI_SUCCESS;
+  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+    return Status;
+  }
+
+  HdaHandles = NULL;
+  HdaHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfHda);
+  if (HdaHandles == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra234-hda", HdaHandles, &NumberOfHda);
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  // Only use the fist for patching
+  if (NumberOfHda != 1) {
+    DEBUG ((DEBUG_ERROR, "%a: %u HDA devices detected only populating 1\r\n", __func__, NumberOfHda));
+  }
+
+  // Only one register space is expected
+  Size   = 1;
+  Status = GetDeviceTreeRegisters (HdaHandles[0], &RegisterData, &Size);
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  // Only one interrupt is expected
+  Size   = 1;
+  Status = GetDeviceTreeInterrupts (HdaHandles[0], &InterruptData, &Size);
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_HDA0_STA, &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_HDA0_STA));
+    goto ErrorExit;
+  }
+
+  StaValue = 0xF;
+  Status   = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &StaValue, AcpiNodeInfo.Size);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_HDA0_STA));
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_HDA0_BASE, &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_HDA0_BASE));
+    goto ErrorExit;
+  }
+
+  BaseAddress = RegisterData.BaseAddress;
+  Status      = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &BaseAddress, sizeof (BaseAddress));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_HDA0_BASE));
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_HDA0_REG0, &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_HDA0_REG0));
+    goto ErrorExit;
+  }
+
+  if (AcpiNodeInfo.Size != sizeof (MemoryDescriptor)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d\n", __FUNCTION__, ACPI_HDA0_REG0, AcpiNodeInfo.Size));
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->GetNodeData (PatchProtocol, &AcpiNodeInfo, &MemoryDescriptor, sizeof (MemoryDescriptor));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get data for %a\n", __FUNCTION__, ACPI_HDA0_REG0));
+    goto ErrorExit;
+  }
+
+  MemoryDescriptor.BaseAddress = RegisterData.BaseAddress+0x8000;
+  MemoryDescriptor.Length      = RegisterData.Size-0x8000;
+
+  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &MemoryDescriptor, sizeof (MemoryDescriptor));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_HDA0_REG0));
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_HDA0_INT0, &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_HDA0_INT0));
+    goto ErrorExit;
+  }
+
+  if (AcpiNodeInfo.Size != sizeof (InterruptDescriptor)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d expected %u\n", __FUNCTION__, ACPI_HDA0_INT0, AcpiNodeInfo.Size, sizeof (InterruptDescriptor)));
+    goto ErrorExit;
+  }
+
+  Status = PatchProtocol->GetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get data for %a\n", __FUNCTION__, ACPI_HDA0_INT0));
+    goto ErrorExit;
+  }
+
+  InterruptDescriptor.InterruptNumber[0] = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
+  Status                                 = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_HDA0_INT0));
+    goto ErrorExit;
+  }
+
+ErrorExit:
+  if (HdaHandles != NULL) {
+    FreePool (HdaHandles);
+  }
+
+  return Status;
+}
+
 /** Initialize the platform configuration repository.
   @retval EFI_SUCCESS   Success
 **/
@@ -624,6 +769,11 @@ InitializePlatformRepository (
   }
 
   Status = UpdateSdhciInfo ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateHdaInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

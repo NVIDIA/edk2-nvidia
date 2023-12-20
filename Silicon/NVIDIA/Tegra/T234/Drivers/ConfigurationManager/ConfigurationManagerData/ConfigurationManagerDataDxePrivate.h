@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe Private Definitions
 
-  Copyright (c) 2023, NVIDIA Corporation. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA Corporation. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -53,6 +53,11 @@
 #define ACPI_SDCT_UID        "SDCT._UID"
 #define ACPI_SDCT_INT0       "SDCT.INT0"
 #define ACPI_SDCT_RMV        "SDCT._RMV"
+
+#define ACPI_HDA0_BASE  "HDA0.BASE"
+#define ACPI_HDA0_REG0  "HDA0.REG0"
+#define ACPI_HDA0_INT0  "HDA0.INT0"
+#define ACPI_HDA0_STA   "HDA0._STA"
 
 #define IORT_TABLE_GEN  L"IortTableGen"
 

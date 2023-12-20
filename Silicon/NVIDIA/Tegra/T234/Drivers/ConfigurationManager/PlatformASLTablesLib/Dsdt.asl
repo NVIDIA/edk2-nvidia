@@ -1,7 +1,7 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -209,6 +209,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
   //---------------------------------------------------------------------
   Device(HDA0) {
     Name (_HID, "NVDA010F")
+    Name (_STA, 0)
     Name (_UID, 0)
     Name (_CCA, ZERO)
     Name(_CLS, Package (3)
@@ -218,7 +219,9 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
       0x00, // Programming Interface
     })
 
-    OperationRegion (HDAC, SystemMemory, 0x3510000, 0x8000)
+    Name (BASE, 0xFFFFFFFF)
+
+    OperationRegion (HDAC, SystemMemory, BASE, 0x8000)
     Field (HDAC, AnyAcc, NoLock, Preserve) {
       Offset (0x80),
       FPCI, 32,
@@ -236,7 +239,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
       CFB0, 32
     }
 
-    OperationRegion (HDAG, SystemMemory, 0x3518080, 4)
+    OperationRegion (HDAG, SystemMemory, BASE+0x8080, 4)
     Field (HDAG, AnyAcc, NoLock, Preserve) {
       GCTL, 32
     }
@@ -254,9 +257,9 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
       GCTL = HDA_GLOBAL_CONTROL_UNSOL | HDA_GLOBAL_CONTROL_CRST
     }
 
-    Name(_CRS, ResourceTemplate() {
-      Memory32Fixed(ReadWrite, 0x3518000, 0x8000)
-      Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xC1 }
+    Name(_CRS, ResourceTemplate () {
+      Memory32Fixed(ReadWrite, 0xFFFFFFFF, 0xFFFFFFFF, REG0)
+      Interrupt(ResourceConsumer, Level, ActiveHigh, ExclusiveAndWake, , , INT0) { 0xFF }
     })
   }
 }
