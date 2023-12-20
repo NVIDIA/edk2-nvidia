@@ -319,9 +319,11 @@ T234AddBootloaderCarveouts (
 /**
    Builds a list of carveout memory regions.
 
-   @param[in]  CpuBootloaderParams  CPU BL params.
-   @param[out] CarveoutRegions      The list of carveout regions.
-   @param[out] CarveoutRegionCount  Number of carveout regions in the list.
+   @param[in]  CpuBootloaderParams        CPU BL params.
+   @param[out] CarveoutRegions            The list of carveout regions.
+   @param[out] CarveoutRegionCount        Number of carveout regions in the list.
+   @param[out] UsableCarveoutRegions      The list of usable carveout regions.
+   @param[out] UsableCarveoutRegionCount  Number of usable carveout regions in the list.
 
    @retval EFI_SUCCESS    The list was built successfully.
    @retval !=EFI_SUCCESS  Errors occurred.
@@ -446,6 +448,7 @@ T234GetResourceConfig (
   PlatformInfo->DtbLoadAddress             = T234GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
   PlatformInfo->DramRegions                = DramRegions;
   PlatformInfo->DramRegionsCount           = DramRegionCount;
+  PlatformInfo->UefiDramRegionIndex        = 0;
   PlatformInfo->CarveoutRegions            = CarveoutRegions;
   PlatformInfo->CarveoutRegionsCount       = CarveoutRegionCount;
   PlatformInfo->UsableCarveoutRegions      = UsableCarveoutRegions;
