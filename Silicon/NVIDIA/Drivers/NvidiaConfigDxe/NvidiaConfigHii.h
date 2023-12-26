@@ -648,6 +648,7 @@ typedef struct {
   BOOLEAN    UartBaudRateSettingSupported;
   BOOLEAN    PerfVersionSettingSupported;
   BOOLEAN    EInjEnableSupported;
+  BOOLEAN    PCIeASPML1SSConfigSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];
@@ -853,6 +854,7 @@ typedef struct {
            help = STRING_TOKEN(STR_NULL),                                                         \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
            endcheckbox;                                                                           \
+  suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.PCIeASPML1SSConfigSupported == 0;                  \
   grayoutif ideqval NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_##socket[pcie] == 0;                   \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_1_##socket[pcie],                       \
            questionid = KEY_SOCKET##socket##_PCIE##pcie##_ENABLE_ASPML1_1,                        \
@@ -873,6 +875,7 @@ typedef struct {
            help = STRING_TOKEN(STR_NULL),                                                         \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
            endcheckbox;                                                                           \
+  endif;                                                                                          \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.SupportsClkReq##socket[pcie],                        \
            questionid = KEY_SOCKET##socket##_PCIE##pcie##_CLK_REQ,                                \
            prompt = STRING_TOKEN(STR_PCIE_SUPPORTS_CLK_REQ_SOCKET##socket##_PCIE##pcie##_TITLE),  \

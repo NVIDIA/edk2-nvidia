@@ -1545,6 +1545,10 @@ InitializeSettings (
       }
     }
 
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion <= 7) {
+      mHiiControlSettings.PCIeASPML1SSConfigSupported = TRUE;
+    }
+
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 7) {
       mHiiControlSettings.EInjEnableSupported = TRUE;
     }
