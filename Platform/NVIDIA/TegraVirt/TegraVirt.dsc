@@ -34,6 +34,7 @@
 !endif
 
 !include MdePkg/MdeLibs.dsc.inc
+!include Silicon/NVIDIA/TegraVirt/IvcClient.dsc.inc
 
 [BuildOptions.common.EDKII.DXE_CORE,BuildOptions.common.EDKII.DXE_DRIVER,BuildOptions.common.EDKII.UEFI_DRIVER,BuildOptions.common.EDKII.UEFI_APPLICATION]
   GCC:*_*_*_DLINK_FLAGS = -Wl,-z,common-page-size=0x1000
