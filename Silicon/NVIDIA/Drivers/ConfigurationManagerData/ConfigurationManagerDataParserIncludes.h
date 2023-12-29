@@ -25,6 +25,7 @@
 #include "ProcHierarchyInfo/ProcHierarchyInfoParser.h"
 #include "ProtocolBasedObjects/ProtocolBasedObjectsParser.h"
 #include "SdhciInfo/SdhciInfoParser.h"
+#include "HdaInfo/HdaInfoParser.h"
 #include "SerialPortInfo/SerialPortInfoParser.h"
 #include "SsdtTableGenerator/SsdtTableGeneratorParser.h"
 

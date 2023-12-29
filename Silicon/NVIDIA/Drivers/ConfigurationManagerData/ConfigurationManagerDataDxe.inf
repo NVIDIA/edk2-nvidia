@@ -40,6 +40,7 @@
   Gic/LpiParser.c
   Gic/GicMsiFrameParser.c
   Gic/GicRedistributorParser.c
+  HdaInfo/HdaInfoParser.c
   I2cInfo/I2cInfoParser.c
   Iort/IortInfoParser.c
   PowerManagementProfile/PowerManagementProfileParser.c
@@ -59,6 +60,7 @@
   ArmPlatformPkg/ArmPlatformPkg.dec
 
 [LibraryClasses]
+  AmlLib
   BaseLib
   BaseMemoryLib
   ConfigurationManagerLib

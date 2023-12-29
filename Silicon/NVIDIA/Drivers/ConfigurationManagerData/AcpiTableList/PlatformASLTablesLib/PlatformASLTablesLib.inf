@@ -26,6 +26,7 @@
   Dsdt_T194.asl
   Dsdt_T234.asl
   SsdtAhci.asl
+  SsdtHda.asl
 
 [Packages]
   ArmPkg/ArmPkg.dec

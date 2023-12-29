@@ -73,7 +73,8 @@ AddParsers (
     CREATE_PARSER (I2cInfoParser),   // Uses SSDT Table Generator
     CREATE_PARSER (AhciInfoParser),
     CREATE_PARSER (IortInfoParser),
-    CREATE_PARSER (FanInfoParser)
+    CREATE_PARSER (FanInfoParser),
+    CREATE_PARSER (HdaInfoParser)
   };
 
   NV_ASSERT_RETURN (Repo != NULL, return EFI_INVALID_PARAMETER, "%a: Repo pointer can't be NULL\n", __FUNCTION__);
