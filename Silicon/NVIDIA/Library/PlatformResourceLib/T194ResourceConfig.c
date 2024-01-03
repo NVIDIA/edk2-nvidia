@@ -35,6 +35,10 @@ TEGRA_MMIO_INFO  T194MmioInfo[] = {
     SIZE_4KB
   },
   {
+    T194_PMC_MISC_BASE_ADDR,
+    SIZE_64KB
+  },
+  {
     0,
     0
   }

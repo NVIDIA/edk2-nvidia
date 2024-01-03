@@ -82,7 +82,7 @@ EfuseReadRegister (
 
   @param[in]        This                The instance of NVIDIA_EFUSE_PROTOCOL.
   @param[in]        RegisterOffset      Offset from the EFUSE Base address to write.
-  @param[in out]    RegisterValue       Value of the Write Fuse Register.
+  @param[in]        RegisterValue       Value of the Write Fuse Register.
 
   @return EFI_SUCCESS                Fuse Register Value successfully returned.
   @return EFI_INVALID_PARAMETER      Register Offset param not in EFUSE Region
@@ -93,7 +93,7 @@ EFI_STATUS
 EfuseWriteRegister (
   IN     NVIDIA_EFUSE_PROTOCOL  *This,
   IN     UINT32                 RegisterOffset,
-  IN OUT UINT32                 *RegisterValue
+  IN     UINT32                 *RegisterValue
   )
 {
   EFI_STATUS         Status;
@@ -111,8 +111,7 @@ EfuseWriteRegister (
   {
     Status = EFI_INVALID_PARAMETER;
   } else {
-    // TODO: Add fuse write support.
-    Status = EFI_SUCCESS;
+    Status = EFuseWrite (Private->BaseAddress, RegisterOffset, RegisterValue, sizeof (UINT32));
   }
 
   return Status;

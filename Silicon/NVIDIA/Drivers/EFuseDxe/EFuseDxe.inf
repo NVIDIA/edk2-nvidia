@@ -2,7 +2,7 @@
 #
 #  EFuse Driver
 #
-#  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -19,6 +19,7 @@
 
 [Sources.common]
   EFuseDxe.c
+  EFuseWrite.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
