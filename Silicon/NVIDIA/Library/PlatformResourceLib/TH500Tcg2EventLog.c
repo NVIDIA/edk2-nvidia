@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -40,6 +40,9 @@ EVENT_TYPE_ENTRY  mEventTypeTable[] = {
   { 0x4d423142 /* MB1B */, 0, EV_POST_CODE,        "SYS_CTRL_MB1B",    0 },
   { 0x4d424354 /* MBCT */, 0, EV_TABLE_OF_DEVICES, "SYS_CONF_MBCT",    0 },
   { 0x4d454d30 /* MEM0 */, 0, EV_TABLE_OF_DEVICES, "SYS_CONF_MEM0",    0 },
+  { 0x4d454d31 /* MEM1 */, 0, EV_TABLE_OF_DEVICES, "SYS_CONF_MEM1",    0 },
+  { 0x4d454d32 /* MEM2 */, 0, EV_TABLE_OF_DEVICES, "SYS_CONF_MEM2",    0 },
+  { 0x4d454d33 /* MEM3 */, 0, EV_TABLE_OF_DEVICES, "SYS_CONF_MEM3",    0 },
   { 0x4d494e46 /* MINF */, 0, EV_POST_CODE,        "SYS_CTRL_MINF",    0 },
   { 0x5342494e /* SBIN */, 1, EV_POST_CODE,        "SYS_CTRL_SBIN%u1", 0 },
   { 0x53424354 /* SBCT */, 1, EV_TABLE_OF_DEVICES, "SYS_CONF_SBCT%u1", 0 },
