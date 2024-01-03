@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -630,11 +630,6 @@ UpdatePlatformResourceInformation (
       break;
     case TH500_CHIP_ID:
       Status = TH500GetEnabledCoresBitMap (PlatformResourceInfo);
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-
-      Status = Th500CpuC2cMode (PlatformResourceInfo);
       break;
     default:
       return EFI_UNSUPPORTED;
@@ -654,6 +649,24 @@ UpdatePlatformResourceInformation (
   if (PlatformResourceInfo->NumberOfEnabledCores == 0) {
     PlatformResourceInfo->EnabledCoresBitMap[0] = 1;
     PlatformResourceInfo->NumberOfEnabledCores++;
+  }
+
+  switch (ChipID) {
+    case T194_CHIP_ID:
+      Status = T194UpdatePlatformResourceInformation (PlatformResourceInfo);
+      break;
+    case T234_CHIP_ID:
+      Status = T234UpdatePlatformResourceInformation (PlatformResourceInfo);
+      break;
+    case TH500_CHIP_ID:
+      Status = TH500UpdatePlatformResourceInformation (PlatformResourceInfo);
+      break;
+    default:
+      return EFI_UNSUPPORTED;
+  }
+
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   ArmCoreInfo = (ARM_CORE_INFO *)BuildGuidHob (&gArmMpCoreInfoGuid, sizeof (ARM_CORE_INFO) * PlatformResourceInfo->NumberOfEnabledCores);

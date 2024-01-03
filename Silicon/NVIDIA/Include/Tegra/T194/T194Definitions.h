@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -49,5 +49,11 @@
 #define ZONE_TEMP          1
 #define CPU_TEMP_ZONE      2
 #define TEMP_POLL_TIME     50                // 5s
+
+// VPR
+#define T194_MEMORY_CONTROLLER_BASE    0x02c10000ULL
+#define MC_VIDEO_PROTECT_BOM_0         0x648
+#define MC_VIDEO_PROTECT_SIZE_MB_0     0x64c
+#define MC_VIDEO_PROTECT_BOM_ADR_HI_0  0x978
 
 #endif //__T194_DEFINES_H__

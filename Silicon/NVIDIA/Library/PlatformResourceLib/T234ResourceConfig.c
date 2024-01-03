@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -37,7 +37,7 @@ TEGRA_MMIO_INFO  T234MmioInfo[] = {
     SIZE_4KB
   },
   {
-    FixedPcdGet64 (PcdTegraMCBBaseAddress),
+    T234_MEMORY_CONTROLLER_BASE,
     SIZE_4KB
   },
   {
@@ -90,6 +90,8 @@ NVDA_MEMORY_REGION  T234DramPageBlacklistInfoAddress[] = {
     0
   }
 };
+
+STATIC TEGRA_BASE_AND_SIZE_INFO  mVprInfo;
 
 /**
   Retrieve UART Instance Info
@@ -848,4 +850,24 @@ T234SetNextBootRecovery (
     RECOVERY_BOOT_BIT,
     1
     );
+}
+
+EFI_STATUS
+EFIAPI
+T234UpdatePlatformResourceInformation (
+  IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  if (PlatformResourceInfo == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  PlatformResourceInfo->VprInfo = &mVprInfo;
+  mVprInfo.Base                 =
+    ((UINT64)MmioRead32 (T234_MEMORY_CONTROLLER_BASE + MC_VIDEO_PROTECT_BOM_ADR_HI_0) << 32) |
+    MmioRead32 (T234_MEMORY_CONTROLLER_BASE + MC_VIDEO_PROTECT_BOM_0);
+  mVprInfo.Size =
+    (UINT64)MmioRead32 (T234_MEMORY_CONTROLLER_BASE + MC_VIDEO_PROTECT_SIZE_MB_0) << 20;
+
+  return EFI_SUCCESS;
 }

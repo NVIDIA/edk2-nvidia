@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -33,5 +33,11 @@
 #define T234_BL_CARVEOUT_OFFSET_V0  0x588
 #define T234_BL_CARVEOUT_OFFSET_V1  0x10F8
 #define T234_BL_CARVEOUT_OFFSET_V2  0x11B8
+
+// VPR
+#define T234_MEMORY_CONTROLLER_BASE    0x2c10000ULL
+#define MC_VIDEO_PROTECT_BOM_0         0x648
+#define MC_VIDEO_PROTECT_SIZE_MB_0     0x64c
+#define MC_VIDEO_PROTECT_BOM_ADR_HI_0  0x978
 
 #endif //__T234_DEFINES_H__

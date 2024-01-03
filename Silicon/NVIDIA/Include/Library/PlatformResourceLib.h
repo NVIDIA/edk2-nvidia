@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -134,6 +134,7 @@ typedef struct {
   TEGRA_BASE_AND_SIZE_INFO    FrameBufferInfo;
   TEGRA_BASE_AND_SIZE_INFO    ProfilerInfo;
   TEGRA_BASE_AND_SIZE_INFO    CpublCoInfo;
+  TEGRA_BASE_AND_SIZE_INFO    *VprInfo;
   TEGRA_BOOT_TYPE             BootType;
   BOOLEAN                     HypervisorMode;
   TEGRA_BASE_AND_SIZE_INFO    *EgmMemoryInfo;

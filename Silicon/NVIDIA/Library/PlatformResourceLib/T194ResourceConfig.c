@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -33,7 +33,7 @@ TEGRA_MMIO_INFO  T194MmioInfo[] = {
     SIZE_4KB
   },
   {
-    FixedPcdGet64 (PcdTegraMCBBaseAddress),
+    T194_MEMORY_CONTROLLER_BASE,
     SIZE_4KB
   },
   {
@@ -63,6 +63,8 @@ NVDA_MEMORY_REGION  T194DramPageBlacklistInfoAddress[] = {
     0
   }
 };
+
+STATIC TEGRA_BASE_AND_SIZE_INFO  mVprInfo;
 
 /**
    Builds a list of DRAM memory regions.
@@ -719,4 +721,24 @@ T194SetNextBootRecovery (
     RECOVERY_BOOT_BIT,
     1
     );
+}
+
+EFI_STATUS
+EFIAPI
+T194UpdatePlatformResourceInformation (
+  IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  if (PlatformResourceInfo == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  PlatformResourceInfo->VprInfo = &mVprInfo;
+  mVprInfo.Base                 =
+    ((UINT64)MmioRead32 (T194_MEMORY_CONTROLLER_BASE + MC_VIDEO_PROTECT_BOM_ADR_HI_0) << 32) |
+    MmioRead32 (T194_MEMORY_CONTROLLER_BASE + MC_VIDEO_PROTECT_BOM_0);
+  mVprInfo.Size =
+    (UINT64)MmioRead32 (T194_MEMORY_CONTROLLER_BASE + MC_VIDEO_PROTECT_SIZE_MB_0) << 20;
+
+  return EFI_SUCCESS;
 }

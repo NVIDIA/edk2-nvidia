@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -882,6 +882,7 @@ TH500GetEnabledCoresBitMap (
   ArmSetMemoryRegionReadOnly to prevent exception.
 
 **/
+STATIC
 EFI_STATUS
 EFIAPI
 Th500CpuC2cMode (
@@ -1068,4 +1069,17 @@ TH500IsTpmToBeEnabled (
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
   return CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.FeatureData.TpmEnable;
+}
+
+EFI_STATUS
+EFIAPI
+TH500UpdatePlatformResourceInformation (
+  IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  if (PlatformResourceInfo == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  return Th500CpuC2cMode (PlatformResourceInfo);
 }

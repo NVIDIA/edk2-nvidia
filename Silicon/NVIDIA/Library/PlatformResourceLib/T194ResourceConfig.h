@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -112,6 +112,16 @@ VOID
 EFIAPI
 T194SetNextBootRecovery (
   IN  VOID
+  );
+
+/**
+  Update info in Platform Resource Information
+
+**/
+EFI_STATUS
+EFIAPI
+T194UpdatePlatformResourceInformation (
+  IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   );
 
 #endif //__T194_RESOURCE_CONFIG_H__

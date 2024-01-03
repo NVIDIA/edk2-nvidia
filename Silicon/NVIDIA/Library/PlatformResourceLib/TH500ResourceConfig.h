@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -111,13 +111,13 @@ TH500GetEnabledCoresBitMap (
   );
 
 /**
-  Get CPU C2C mode from enabled socket.
+  Update info in Platform Resource Information
 
 **/
 EFI_STATUS
 EFIAPI
-Th500CpuC2cMode (
-  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+TH500UpdatePlatformResourceInformation (
+  IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   );
 
 #endif //__TH500_RESOURCE_CONFIG_H__

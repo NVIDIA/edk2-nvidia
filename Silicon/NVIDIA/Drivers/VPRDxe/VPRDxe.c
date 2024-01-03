@@ -1,20 +1,22 @@
 /** @file
 *  Resource Configuration Dxe
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
 
-#include "VPRDxe.h"
-
 #include <Library/DebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
-#include <Library/PcdLib.h>
-#include <Library/IoLib.h>
+#include <Library/TegraPlatformInfoLib.h>
+#include <Library/PlatformResourceLib.h>
+#include <Library/HobLib.h>
+#include <Library/PrintLib.h>
 #include <libfdt.h>
+
+#define DTB_VPR_CARVEOUT_SOCKET_MAX  100
 
 STATIC
 EFI_EVENT  FdtInstallEvent;
@@ -27,15 +29,23 @@ FdtInstalled (
   IN VOID       *Context
   )
 {
-  EFI_STATUS  Status;
-  VOID        *AcpiBase;
-  VOID        *FdtBase;
-  INTN        NodeOffset;
-  UINT64      VPRBase;
-  UINT64      VPRSize;
-  INT32       AddressCells;
-  INT32       SizeCells;
-  UINT8       *Data;
+  EFI_STATUS                    Status;
+  VOID                          *AcpiBase;
+  VOID                          *FdtBase;
+  INT32                         NodeOffset;
+  UINT64                        VPRBase;
+  UINT64                        VPRSize;
+  INT32                         AddressCells;
+  INT32                         SizeCells;
+  UINT8                         *Data;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  UINTN                         Socket;
+  CONST CHAR8                   *ReservedMemPath = "/reserved-memory";
+  CHAR8                         VprPathStr[]     = "vprXX-carveout";
+  TEGRA_BASE_AND_SIZE_INFO      *VprInfo;
+  INT32                         ParentOffset;
+  CHAR8                         *VprPathFormat;
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
@@ -51,41 +61,67 @@ FdtInstalled (
     return;
   }
 
-  NodeOffset = fdt_node_offset_by_compatible (FdtBase, 0, "nvidia,vpr-carveout");
-  if (NodeOffset < 0) {
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob == NULL) ||
+      (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    DEBUG ((DEBUG_ERROR, "%a: no platform info\n", __FUNCTION__));
     return;
   }
 
-  VPRBase = ((UINT64)MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_BOM_ADR_HI_0) << 32) |
-            MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_BOM_0);
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  VprInfo              = PlatformResourceInfo->VprInfo;
+  if (VprInfo == NULL) {
+    DEBUG ((DEBUG_INFO, "%a: no VPR info\n", __FUNCTION__));
+    return;
+  }
 
-  VPRSize   = MmioRead32 (PcdGet64 (PcdTegraMCBBaseAddress) + MC_VIDEO_PROTECT_SIZE_MB_0);
-  VPRSize <<= 20;
+  ParentOffset = fdt_path_offset (FdtBase, ReservedMemPath);
+  if (ParentOffset < 0) {
+    DEBUG ((DEBUG_INFO, "%a: %a not found err=%d\n", __FUNCTION__, ReservedMemPath, ParentOffset));
+    return;
+  }
 
-  if ((VPRBase == 0) && (VPRSize == 0)) {
-    fdt_del_node (FdtBase, NodeOffset);
-    DEBUG ((DEBUG_INFO, "%a: VPR Node Deleted\n", __FUNCTION__));
-  } else {
-    AddressCells = fdt_address_cells (FdtBase, fdt_parent_offset (FdtBase, NodeOffset));
-    SizeCells    = fdt_size_cells (FdtBase, fdt_parent_offset (FdtBase, NodeOffset));
-    if ((AddressCells > 2) ||
-        (AddressCells == 0) ||
-        (SizeCells > 2) ||
-        (SizeCells == 0))
-    {
-      DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %d, %d\r\n", __FUNCTION__, AddressCells, SizeCells));
-      return;
+  AddressCells = fdt_address_cells (FdtBase, ParentOffset);
+  SizeCells    = fdt_size_cells (FdtBase, ParentOffset);
+  if ((SizeCells <= 0) || (AddressCells <= 0) || (SizeCells > 2) || (AddressCells > 2)) {
+    DEBUG ((DEBUG_ERROR, "%a: %a error addr=%d, size=%d\n", __FUNCTION__, ReservedMemPath, AddressCells, SizeCells));
+    return;
+  }
+
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  (AddressCells + SizeCells) * sizeof (UINT32),
+                  (VOID **)&Data
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: alloc failed\n", __FUNCTION__));
+    return;
+  }
+
+  for (Socket = 0; Socket < DTB_VPR_CARVEOUT_SOCKET_MAX; Socket++) {
+    if (Socket == 0) {
+      VprPathFormat = "vpr-carveout";
+    } else {
+      VprPathFormat = "vpr%u-carveout";
     }
 
-    Data   = NULL;
-    Status = gBS->AllocatePool (
-                    EfiBootServicesData,
-                    (AddressCells + SizeCells) * sizeof (UINT32),
-                    (VOID **)&Data
-                    );
-    if (EFI_ERROR (Status)) {
-      return;
+    AsciiSPrint (VprPathStr, sizeof (VprPathStr), VprPathFormat, Socket);
+    NodeOffset = fdt_subnode_offset (FdtBase, ParentOffset, VprPathStr);
+    if (NodeOffset < 0) {
+      DEBUG ((DEBUG_INFO, "%a: %a node missing\n", __FUNCTION__, VprPathStr));
+      break;
     }
+
+    if (!(PlatformResourceInfo->SocketMask & (1UL << Socket)) || (VprInfo[Socket].Size == 0)) {
+      fdt_del_node (FdtBase, NodeOffset);
+      DEBUG ((DEBUG_INFO, "%a: VPR Node Deleted\n", __FUNCTION__));
+
+      continue;
+    }
+
+    VPRBase = VprInfo[Socket].Base;
+    VPRSize = VprInfo[Socket].Size;
 
     if (AddressCells == 2) {
       *(UINT64 *)Data = SwapBytes64 (VPRBase);
@@ -102,8 +138,10 @@ FdtInstalled (
     fdt_setprop (FdtBase, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
     fdt_setprop (FdtBase, NodeOffset, "status", "okay", sizeof ("okay"));
 
-    gBS->FreePool (Data);
+    DEBUG ((DEBUG_INFO, "%a: updated %a reg 0x%llx 0x%llx\n", __FUNCTION__, VprPathStr, VPRBase, VPRSize));
   }
+
+  gBS->FreePool (Data);
 
   return;
 }
