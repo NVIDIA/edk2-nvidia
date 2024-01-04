@@ -307,9 +307,12 @@ UpdateCpuInfo (
   INT32                           PrevNodeOffset;
   UINT32                          NumCpus;
   UINT32                          ProcHierarchyIndex;
+  UINT32                          Socket;
+  UINT32                          NumSockets;
   CACHE_NODE                      *CacheNode;
   CM_ARM_CACHE_INFO               *CacheInfoStruct;
   CM_ARM_CACHE_INFO               *CacheInfo;
+  CM_OBJECT_TOKEN                 RootToken;
   CM_OBJECT_TOKEN                 *SocketTokenMap;
   CM_OBJECT_TOKEN                 PrivateResources[10];
   CM_OBJECT_TOKEN                 *SocketPrivateResources;
@@ -479,7 +482,7 @@ UpdateCpuInfo (
   // TODO: Get Enabled Sockets and enabled Cluster info
 
   // Space for top level node, sockets, clusters and cores
-  ProcHierarchyInfo = AllocateZeroPool (sizeof (CM_ARM_PROC_HIERARCHY_INFO) * (PLATFORM_MAX_SOCKETS + PLATFORM_MAX_CLUSTERS + NumCpus + 1));
+  ProcHierarchyInfo = AllocateZeroPool (sizeof (CM_ARM_PROC_HIERARCHY_INFO) * (1 + PLATFORM_MAX_SOCKETS + PLATFORM_MAX_CLUSTERS + NumCpus + 1));
   if (ProcHierarchyInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
@@ -498,6 +501,34 @@ UpdateCpuInfo (
 
   // Build top level node
   ProcHierarchyIndex = 0;
+  RootToken          = CM_NULL_TOKEN;
+  NumSockets         = 0;
+
+  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
+    if (IsSocketEnabled (Socket)) {
+      NumSockets++;
+    }
+  }
+
+  if (NumSockets > 1) {
+    // Build Root Node
+    ProcHierarchyInfo[ProcHierarchyIndex].Token = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);
+    ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
+                                                    EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                    EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
+                                                    EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                    EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
+                                                    EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
+                                                    );
+    ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = CM_NULL_TOKEN;
+    ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = CM_NULL_TOKEN;
+    ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = 0;
+    ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CM_NULL_TOKEN;
+
+    RootToken = ProcHierarchyInfo[ProcHierarchyIndex].Token;
+
+    ProcHierarchyIndex++;
+  }
 
   // loop through all sockets and see if there are private resources for socket
   INT32   SocketOffset;
@@ -505,7 +536,7 @@ UpdateCpuInfo (
   CHAR8   SocketNodeStr[] = "/socket@xx";
 
   // This could be different for Tegra vs Server
-  for (UINT32 Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
+  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", Socket);
     SocketOffset              = fdt_path_offset (Dtb, SocketNodeStr);
     SocketPrivateResourceCntr = 0;
@@ -593,7 +624,7 @@ UpdateCpuInfo (
                                                     EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
                                                     EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
                                                     );
-    ProcHierarchyInfo[ProcHierarchyIndex].ParentToken          = CM_NULL_TOKEN;
+    ProcHierarchyInfo[ProcHierarchyIndex].ParentToken          = RootToken;
     ProcHierarchyInfo[ProcHierarchyIndex].GicCToken            = CM_NULL_TOKEN;
     ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources = SocketPrivateResourceCntr;
     if (SocketPrivateResourceCntr > 0) {
