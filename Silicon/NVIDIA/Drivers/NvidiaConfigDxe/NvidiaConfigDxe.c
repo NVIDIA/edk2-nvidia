@@ -1,7 +1,7 @@
 /** @file
 *  NVIDIA Configuration Dxe
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -793,6 +793,7 @@ ReadMb1Variables (
   CHAR16      VariableName[(MAX_VARIABLE_NAME/sizeof (CHAR16))];
   UINTN       Index;
   UINTN       Index2;
+  UINT8       UphyConfig;
 
   Status = GetMb1Variable (
              L"Grace.MB1.FeatureData",
@@ -828,14 +829,38 @@ ReadMb1Variables (
 
     for (Index2 = 0; Index2 < TEGRABL_MAX_UPHY_PER_SOCKET; Index2++) {
       UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.MB1.UphyConfig.%x.%x", Index, Index2);
-      Status = GetMb1Variable (
-                 VariableName,
-                 (VOID *)&(EarlyVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]),
-                 sizeof (UINT8)
-                 );
+      UphyConfig = EarlyVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2];
+      Status     = GetMb1Variable (
+                     VariableName,
+                     (VOID *)&UphyConfig,
+                     sizeof (UINT8)
+                     );
       if (EFI_ERROR (Status)) {
         return Status;
       }
+
+      //
+      // UPHY2 and UPHY3 can be configured as PCIE or NVLINK. Honor the current
+      // setting and avoid changing from NVLINK to PCIE and vice versa.
+      //
+      if ((Index2 == 2) || (Index2 == 3)) {
+        if ((UphyConfig > 4) ||
+            ((EarlyVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2] < 3) && (UphyConfig >= 3)) ||
+            ((EarlyVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2] > 2) && (UphyConfig <= 2)))
+        {
+          DEBUG ((
+            DEBUG_WARN,
+            "%a: Cannot change UPHY%u from %u to %u\n",
+            __FUNCTION__,
+            Index2,
+            EarlyVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2],
+            UphyConfig
+            ));
+          continue;
+        }
+      }
+
+      EarlyVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2] = UphyConfig;
     }
   }
 
