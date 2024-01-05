@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver's private data structure and interfaces declaration
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro.
 
@@ -37,9 +37,57 @@
 #include <Protocol/LoadFile.h>
 #include <Protocol/LoadFile2.h>
 
-#define FDT_ADDITIONAL_ENTRIES_SIZE  0x400
-#define KERNEL_OFFSET                0x80000
-#define ANDROID_BOOT_SIGNATURE       SIGNATURE_64 ('A','N','D','R','O','I','D','!')
+#define FDT_ADDITIONAL_ENTRIES_SIZE               0x400
+#define KERNEL_OFFSET                             0x80000
+#define ANDROID_BOOT_SIGNATURE                    SIGNATURE_64 ('A','N','D','R','O','I','D','!')
+#define VENDOR_BOOT_MAGIC                         "VNDRBOOT"
+#define VENDOR_BOOT_MAGIC_SIZE                    8
+#define VENDOR_BOOT_ARGS_SIZE                     2048
+#define VENDOR_BOOT_NAME_SIZE                     16
+#define VENDOR_RAMDISK_TYPE_NONE                  0
+#define VENDOR_RAMDISK_TYPE_PLATFORM              1
+#define VENDOR_RAMDISK_TYPE_RECOVERY              2
+#define VENDOR_RAMDISK_TYPE_DLKM                  3
+#define VENDOR_RAMDISK_NAME_SIZE                  32
+#define VENDOR_RAMDISK_TABLE_ENTRY_BOARD_ID_SIZE  16
+
+typedef struct {
+  UINT8     Magic[VENDOR_BOOT_MAGIC_SIZE];
+  UINT32    HeaderVersion;
+  UINT32    PageSize;           /* flash page size we assume */
+
+  UINT32    KernelAddr;         /* physical load addr */
+  UINT32    RamdiskAddr;        /* physical load addr */
+
+  UINT32    VendorRamdiskSize; /* size in bytes */
+
+  CHAR8     KernelArgs[VENDOR_BOOT_ARGS_SIZE];
+
+  UINT32    TagsAddr;           /* physical addr for kernel tags */
+
+  CHAR8     Name[VENDOR_BOOT_NAME_SIZE]; /* asciiz product name */
+  UINT32    HeaderSize;                  /* size of vendor boot image header in
+                                   * bytes */
+  UINT32    DtbSize;                     /* size of dtb image */
+  UINT64    DtbAddr;                     /* physical load address */
+
+  UINT32    VendorRamdiskTableSize;      /* size in bytes for the vendor ramdisk table */
+  UINT32    VendorRamdiskTableEntryNum;  /* number of entries in the vendor ramdisk table */
+  UINT32    VendorRamdiskTableEntrySize; /* size in bytes for a vendor ramdisk table entry */
+  UINT32    BootconfigSize;              /* size in bytes for the bootconfig section */
+} VENDOR_BOOTIMG_TYPE4_HEADER;
+
+typedef struct {
+  UINT32    RamdiskSize;   /* size in bytes for the ramdisk image */
+  UINT32    RamdiskOffset; /* offset to the ramdisk image in vendor ramdisk section */
+  UINT32    RamdiskType;   /* type of the ramdisk */
+
+  UINT8     RamdiskName[VENDOR_RAMDISK_NAME_SIZE]; /* asciiz ramdisk name */
+
+  // Hardware identifiers describing the board, soc or platform which this
+  // ramdisk is intended to be loaded on.
+  UINT32    BoardId[VENDOR_RAMDISK_TABLE_ENTRY_BOARD_ID_SIZE];
+} VENDOR_RAMDISK_TABLE_TYPE4_ENTRY;
 
 // Android Boot Data structure
 typedef struct {
@@ -47,7 +95,16 @@ typedef struct {
   UINT32    KernelSize;
   UINT32    RamdiskSize;
   UINT32    PageSize;
+  UINT32    HeaderVersion;
 } ANDROID_BOOT_DATA;
+
+// Android Vendor Boot Data structure
+typedef struct {
+  UINT32    Offset;
+  UINT32    VendorRamdiskSize;
+  UINT32    PageSize;
+  UINT32    HeaderVersion;
+} VENDOR_BOOT_DATA;
 
 // Private data structure
 typedef struct {
