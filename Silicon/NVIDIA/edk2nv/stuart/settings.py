@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation.
-# SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -214,7 +214,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             The return from this method will be used as the prefix when setting
             BUILDID_STRING, unless the FIRMWARE_VERSION_BASE env is set.
         '''
-        return "202312.0"
+        return "202401.0"
 
     def GetFirmwareVersion(self):
         ''' Return the firmware version as a string.
