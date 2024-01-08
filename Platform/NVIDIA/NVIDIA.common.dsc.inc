@@ -2163,7 +2163,10 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   RedfishClientPkg/RedfishConfigLangMapDxe/RedfishConfigLangMapDxe.inf
   RedfishClientPkg/RedfishHttpDxe/RedfishHttpDxe.inf
   RedfishClientPkg/Features/ComputerSystemCollectionDxe/ComputerSystemCollectionDxe.inf
-  RedfishClientPkg/Features/ComputerSystem/v1_17_0/Dxe/ComputerSystemDxe.inf
+  RedfishClientPkg/Features/ComputerSystem/v1_17_0/Dxe/ComputerSystemDxe.inf {
+    <LibraryClasses>
+      RedfishResourceIdentifyLib|Silicon/NVIDIA/Library/RedfishResourceIdentifyLibComputerSystem/v1_17_0/RedfishResourceIdentifyLibComputerSystem.inf
+  }
   RedfishClientPkg/Features/Bios/v1_2_0/Dxe/BiosDxe.inf
   RedfishClientPkg/Features/SecureBoot/v1_1_0/Dxe/SecureBootDxe.inf
   RedfishClientPkg/Converter/ComputerSystem/v1_17_0/RedfishComputerSystem_V1_17_0_Dxe.inf
