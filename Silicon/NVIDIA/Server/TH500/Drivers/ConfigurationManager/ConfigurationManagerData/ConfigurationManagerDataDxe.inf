@@ -1,7 +1,7 @@
 ## @file
 #  Configuration Manager Data Dxe
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2020 - 2023, NVIDIA Corporation. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020 - 2024, NVIDIA Corporation. All rights reserved.
 #  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -115,6 +115,8 @@
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
   gNVIDIATokenSpaceGuid.PcdType3Info
+  gNVIDIATokenSpaceGuid.PcdChassisSerialNumber
+  gNVIDIATokenSpaceGuid.PcdChassisSku
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass
   gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType

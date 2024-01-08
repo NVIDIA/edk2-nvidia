@@ -1,7 +1,7 @@
-/** @file
+/**
   Configuration Manager Data of SMBIOS Type 3 table
 
-  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -99,11 +99,13 @@ InstallSmbiosType3Cm (
   CONTAINED_ELEMENT               *ContainedElements;
   UINT8                           ContainedElementCount;
   UINTN                           ProductInfoSize;
-  CHAR8                           *ManufacturerStr = NULL;
-  CHAR8                           *SkuNumberStr    = NULL;
-  CHAR8                           *SerialNumberStr = NULL;
-  CHAR8                           *AssetTagStr     = NULL;
-  CHAR8                           *VersionStr      = NULL;
+  CHAR8                           *ManufacturerStr    = NULL;
+  CHAR8                           *SkuNumberStr       = NULL;
+  CHAR16                          *SkuNumberUniStr    = NULL;
+  CHAR8                           *SerialNumberStr    = NULL;
+  CHAR16                          *SerialNumberUniStr = NULL;
+  CHAR8                           *AssetTagStr        = NULL;
+  CHAR8                           *VersionStr         = NULL;
   SMBIOS_TABLE_TYPE3              *Type3RecordPcd;
   NVIDIA_PRODUCT_INFO             ProductInfo;
   UINTN                           AssetTagLenWithNullTerminator;
@@ -140,9 +142,36 @@ InstallSmbiosType3Cm (
     Status       = GetFruDataType3 (Private, DtbBase, NodeOffset, "fru-desc", &Type3FruInfo);
 
     if ((Status == EFI_SUCCESS) && (Type3FruInfo != NULL)) {
-      SerialNumberStr = Type3FruInfo->ChassisSerial;
-      SkuNumberStr    = Type3FruInfo->ChassisPartNum;
-      ChassisType     = Type3FruInfo->ChassisType;
+      if (Type3FruInfo->ChassisSerial != NULL) {
+        SerialNumberStr = Type3FruInfo->ChassisSerial;
+      } else {
+        SerialNumberUniStr = (CHAR16 *)PcdGetPtr (PcdChassisSerialNumber);
+        if (StrLen (SerialNumberUniStr) > 0) {
+          SerialNumberStr = (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (StrLen (SerialNumberUniStr) +1));
+          if (SerialNumberStr != NULL) {
+            UnicodeStrToAsciiStrS (SerialNumberUniStr, SerialNumberStr, StrLen (SerialNumberUniStr) +1);
+          }
+        }
+      }
+
+      if (Type3FruInfo->ChassisPartNum != NULL) {
+        SkuNumberStr = Type3FruInfo->ChassisPartNum;
+      } else {
+        SkuNumberUniStr = (CHAR16 *)PcdGetPtr (PcdChassisSku);
+        if (StrLen (SkuNumberUniStr) > 0) {
+          SkuNumberStr = (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (StrLen (SkuNumberUniStr) +1));
+          if (SkuNumberStr != NULL) {
+            UnicodeStrToAsciiStrS (SkuNumberUniStr, SkuNumberStr, StrLen (SkuNumberUniStr) +1);
+          }
+        }
+      }
+
+      if (Type3FruInfo->ChassisType != 0) {
+        ChassisType = Type3FruInfo->ChassisType;
+      } else {
+        ChassisType = Type3RecordPcd->Type;
+      }
+
       ManufacturerStr = Type3FruInfo->ProductManufacturer;
       VersionStr      = Type3FruInfo->ProductVersion;
     } else {
