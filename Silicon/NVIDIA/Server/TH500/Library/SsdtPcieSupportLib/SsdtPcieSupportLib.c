@@ -1,7 +1,7 @@
 /** @file
   SSDT Pcie Table Generator.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2021 - 2022, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -260,6 +260,30 @@ UpdateFSPBootAddr (
   return Status;
 }
 
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateLOC (
+  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT        AML_OBJECT_NODE_HANDLE        Node
+  )
+{
+  EFI_STATUS              Status;
+  AML_OBJECT_NODE_HANDLE  LocNode;
+
+  Status = AmlFindNode (Node, "_LOC", &LocNode);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = AmlNameOpUpdateInteger (LocNode, PciInfo->PciSegmentGroupNumber);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return Status;
+}
+
 /** Generate Pci slots devices.
 
   PCI Firmware Specification - Revision 3.3,
@@ -364,6 +388,11 @@ GeneratePciSlots (
   if (EFI_ERROR (Status)) {
     ASSERT (0);
     return Status;
+  }
+
+  Status = UpdateLOC (PciInfo, RpNode);
+  if (EFI_ERROR (Status)) {
+    goto error_handler;
   }
 
   Status = GeneratePciDSDForExtPort (PciInfo, RpNode, Uid);

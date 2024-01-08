@@ -1,7 +1,7 @@
 /** @file
   SSDT Pci Osc (Operating System Capabilities)
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2021, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -80,9 +80,9 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
     // address of the NS shared memory region of this particular instance.
     Name (ADDR, 0xFFFFFFFFFFFFFFFF)
 
-    // The "_SEG " named object would be added dynamically by UEFI at the
-    // time of generating the PCIe node.
-    External (_SEG)
+    // The "_LOC" named object would be patched by UEFI to have the correct
+    // physical PCIe segment location.
+    Name (_LOC, 0xFFFFFFFFFFFFFFFF)
 
     OperationRegion (SMEM, SystemMemory, ADDR, 0x10)
     Field (SMEM, DWordAcc, NoLock, Preserve) {
@@ -156,7 +156,7 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
         Local0 = (Arg1 >> 16)
 
         /* Embed Segment number also in DAH4 */
-        Store (_SEG, Local1)
+        Store (_LOC, Local1)
         Local0 |= (Local1 << 16)
 
         /* Make sure DAH4 is zero to avoid overwriting the value of
@@ -176,9 +176,8 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
   Device(GPU0) {
     Name (_ADR, 0x0000)
 
-    // The "_SEG " named object would be added dynamically by UEFI at the
-    // time of generating the PCIe node.
-    External (_SEG)
+    // The "_LOC" named object is inherited from the RP00 node
+    External (_LOC)
 
     // The "LICA" named object would be patched by UEFI to have the correct
     // address of the LIC region of this particular instance.
@@ -211,9 +210,9 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
 
     Method(_RST, 0) {
       /* Issue GPU reset request via LIC IO1 interrupt */
-      If ((_SEG & 0xF) == 8) {
+      If ((_LOC & 0xF) == 8) {
         C8RS = 1
-      } ElseIf ((_SEG & 0xF) == 9) {
+      } ElseIf ((_LOC & 0xF) == 9) {
         C9RS = 1
       } Else {
         Return
@@ -223,9 +222,9 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
 
       /* Wait for reset to complete, poll for TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT sec */
       For (Local0 = 0, Local0 < (TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT * 1000), Local0 +=2) {
-        If (((_SEG & 0xF) == 8) && (C8RS == 0)) {
+        If (((_LOC & 0xF) == 8) && (C8RS == 0)) {
           Break
-        } ElseIf (((_SEG & 0xF) == 9) && (C9RS == 0)){
+        } ElseIf (((_LOC & 0xF) == 9) && (C9RS == 0)){
           Break
         }
         Sleep(2)
