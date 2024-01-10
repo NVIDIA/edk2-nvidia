@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,8 +24,10 @@
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PciHostBridgeLib.h>
+#include <Library/SortLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -40,8 +42,6 @@
 #include <TH500/TH500MB1Configuration.h>
 
 #include "PcieControllerPrivate.h"
-
-STATIC BOOLEAN  mPcieAcpiConfigInstalled = FALSE;
 
 /** The platform ACPI table list.
 */
@@ -1393,6 +1393,110 @@ PcieConfigDevices (
 }
 
 /**
+  Compare config space by segment number.
+
+  @param[in] Buffer1                  The pointer to first buffer.
+  @param[in] Buffer2                  The pointer to second buffer.
+
+  @retval 0                           Buffer1 equal to Buffer2.
+  @return <0                          Buffer1 is less than Buffer2.
+  @return >0                          Buffer1 is greater than Buffer2.
+**/
+INTN
+ConfigSpaceCompare (
+  IN CONST VOID  *Buffer1,
+  IN CONST VOID  *Buffer2
+  )
+{
+  CM_ARM_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfo1;
+  CM_ARM_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfo2;
+
+  ConfigSpaceInfo1 = (CM_ARM_PCI_CONFIG_SPACE_INFO *)Buffer1;
+  ConfigSpaceInfo2 = (CM_ARM_PCI_CONFIG_SPACE_INFO *)Buffer2;
+
+  return (INTN)ConfigSpaceInfo1->PciSegmentGroupNumber - (INTN)ConfigSpaceInfo2->PciSegmentGroupNumber;
+}
+
+/**
+ Installs the configuration manager object for PCIe config space
+
+ Installs these in an order that is sorted by segment number
+**/
+VOID
+InstallConfigurationSpaceConfigObjects (
+  VOID
+  )
+{
+  EFI_STATUS                                        Status;
+  UINTN                                             Index;
+  EDKII_PLATFORM_REPOSITORY_INFO                    *RepoInfo;
+  UINTN                                             NumberOfHandles;
+  EFI_HANDLE                                        *HandleBuffer;
+  CM_ARM_PCI_CONFIG_SPACE_INFO                      *ConfigSpaceInfo;
+  UINTN                                             ConfigSpaceInfoSize;
+  PCIE_CONTROLLER_PRIVATE                           *Private;
+  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *PcieRootBridgeConfigurationIo;
+  EFI_HANDLE                                        NewHandle;
+
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                  NULL,
+                  &NumberOfHandles,
+                  &HandleBuffer
+                  );
+
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  ConfigSpaceInfoSize = sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO) * NumberOfHandles;
+  ConfigSpaceInfo     = (CM_ARM_PCI_CONFIG_SPACE_INFO *)AllocatePool (ConfigSpaceInfoSize);
+  NV_ASSERT_RETURN (ConfigSpaceInfo != NULL, return , "Failed to allocate ConfigSpaceInfo\r\n");
+
+  for (Index = 0; Index < NumberOfHandles; Index++) {
+    Status = gBS->HandleProtocol (
+                    HandleBuffer[Index],
+                    &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                    (VOID **)&PcieRootBridgeConfigurationIo
+                    );
+    NV_ASSERT_EFI_ERROR_RETURN (Status, return );
+
+    Private = PCIE_CONTROLLER_PRIVATE_DATA_FROM_THIS (PcieRootBridgeConfigurationIo);
+    CopyMem (&ConfigSpaceInfo[Index], &Private->ConfigSpaceInfo, sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO));
+  }
+
+  PerformQuickSort (ConfigSpaceInfo, NumberOfHandles, sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO), ConfigSpaceCompare);
+
+  RepoInfo = (EDKII_PLATFORM_REPOSITORY_INFO *)AllocateZeroPool (sizeof (EDKII_PLATFORM_REPOSITORY_INFO) * PCIE_COMMON_REPO_OBJECTS);
+  NV_ASSERT_RETURN (RepoInfo != NULL, return , "Failed to allocate RepoInfo\r\n");
+
+  RepoInfo[0].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
+  RepoInfo[0].CmObjectToken = CM_NULL_TOKEN;
+  RepoInfo[0].CmObjectSize  = ConfigSpaceInfoSize;
+  RepoInfo[0].CmObjectCount = NumberOfHandles;
+  RepoInfo[0].CmObjectPtr   = ConfigSpaceInfo;
+
+  RepoInfo[1].CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
+  RepoInfo[1].CmObjectToken = CM_NULL_TOKEN;
+  RepoInfo[1].CmObjectSize  = sizeof (CmAcpiTableList);
+  RepoInfo[1].CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+  RepoInfo[1].CmObjectPtr   = &CmAcpiTableList;
+  for (Index = 0; Index < RepoInfo[1].CmObjectCount; Index++) {
+    CmAcpiTableList[Index].OemTableId =  PcdGet64 (PcdAcpiDefaultOemTableId);
+  }
+
+  NewHandle = 0;
+  Status    = gBS->InstallMultipleProtocolInterfaces (
+                     &NewHandle,
+                     &gNVIDIAConfigurationManagerDataObjectGuid,
+                     RepoInfo,
+                     NULL
+                     );
+  NV_ASSERT_EFI_ERROR_RETURN (Status, return );
+}
+
+/**
   Callback that will be invoked at various phases of the driver initialization
 
   This function allows for modification of system behavior at various points in
@@ -1876,13 +1980,6 @@ DeviceDiscoveryNotify (
       }
 
       Index                                  = 0;
-      Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
-      Private->RepoInfo[Index].CmObjectToken = CM_NULL_TOKEN;
-      Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->ConfigSpaceInfo);
-      Private->RepoInfo[Index].CmObjectCount = 1;
-      Private->RepoInfo[Index].CmObjectPtr   = &Private->ConfigSpaceInfo;
-      Index++;
-
       Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
       Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->InterruptRefInfo);
       Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARM_OBJ_REF) * PCIE_NUMBER_OF_INTERUPT_MAP;
@@ -1915,20 +2012,6 @@ DeviceDiscoveryNotify (
         Index++;
       }
 
-      if (!mPcieAcpiConfigInstalled) {
-        mPcieAcpiConfigInstalled               = TRUE;
-        Private->RepoInfo[Index].CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-        Private->RepoInfo[Index].CmObjectToken = CM_NULL_TOKEN;
-        Private->RepoInfo[Index].CmObjectSize  = sizeof (CmAcpiTableList);
-        Private->RepoInfo[Index].CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-        Private->RepoInfo[Index].CmObjectPtr   = &CmAcpiTableList;
-        for (Index2 = 0; Index2 < Private->RepoInfo[Index].CmObjectCount; Index2++) {
-          CmAcpiTableList[Index2].OemTableId =  PcdGet64 (PcdAcpiDefaultOemTableId);
-        }
-
-        Index++;
-      }
-
       Status = gBS->InstallMultipleProtocolInterfaces (
                       &ControllerHandle,
                       &gNVIDIAPciHostBridgeProtocolGuid,
@@ -1947,6 +2030,8 @@ DeviceDiscoveryNotify (
       break;
 
     case DeviceDiscoveryEnumerationCompleted:
+
+      InstallConfigurationSpaceConfigObjects ();
 
       EfiCreateProtocolNotifyEvent (
         &gNVIDIABdsDeviceConnectCompleteGuid,
