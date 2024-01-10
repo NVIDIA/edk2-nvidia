@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -539,137 +539,188 @@ EFIAPI
 UpdateHdaInfo (
   )
 {
-  EFI_STATUS                                     Status;
-  UINT32                                         NumberOfHda;
-  UINT32                                         *HdaHandles;
-  NVIDIA_DEVICE_TREE_REGISTER_DATA               RegisterData;
-  NVIDIA_DEVICE_TREE_INTERRUPT_DATA              InterruptData;
-  UINT32                                         Size;
-  UINT32                                         StaValue;
-  NVIDIA_AML_NODE_INFO                           AcpiNodeInfo;
-  UINT32                                         BaseAddress;
-  EFI_ACPI_32_BIT_FIXED_MEMORY_RANGE_DESCRIPTOR  MemoryDescriptor;
-  EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR         InterruptDescriptor;
+  EFI_STATUS                         Status;
+  AML_ROOT_NODE_HANDLE               RootNode;
+  AML_NODE_HANDLE                    SbNode;
+  AML_NODE_HANDLE                    HdaNode;
+  AML_NODE_HANDLE                    HdaNewNode;
+  AML_NODE_HANDLE                    BaseNode;
+  AML_NODE_HANDLE                    UidNode;
+  AML_NODE_HANDLE                    ResourceNode;
+  AML_NODE_HANDLE                    MemoryNode;
+  INT32                              NodeOffset;
+  CONST CHAR8                        *CompatibleInfo[] = { "nvidia,tegra234-hda", "nvidia,tegra23x-hda", NULL };
+  CHAR8                              HdaNodeName[]     = "HDAx";
+  UINT32                             InterruptId;
+  UINT32                             NumberOfHda;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA   RegisterData;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA  InterruptData;
+  UINT32                             Size;
+  EFI_ACPI_DESCRIPTION_HEADER        *NewTable;
+  CM_STD_OBJ_ACPI_TABLE_INFO         *NewAcpiTables;
+  UINT32                             Index;
 
-  NumberOfHda = 0;
-  Status      = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra234-hda", NULL, &NumberOfHda);
-  if (Status == EFI_NOT_FOUND) {
-    return EFI_SUCCESS;
-  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+  Status = AmlParseDefinitionBlock ((const EFI_ACPI_DESCRIPTION_HEADER *)ssdthda_aml_code, &RootNode);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to parse hda ssdt - %r\r\n", __func__, Status));
     return Status;
   }
 
-  HdaHandles = NULL;
-  HdaHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfHda);
-  if (HdaHandles == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  Status = GetMatchingEnabledDeviceTreeNodes ("nvidia,tegra234-hda", HdaHandles, &NumberOfHda);
+  Status = AmlFindNode ((AML_NODE_HANDLE)RootNode, "\\_SB_", &SbNode);
   if (EFI_ERROR (Status)) {
-    goto ErrorExit;
+    DEBUG ((DEBUG_ERROR, "%a: Unable to find SB node - %r\r\n", __func__, Status));
+    return Status;
   }
 
-  // Only use the fist for patching
-  if (NumberOfHda != 1) {
-    DEBUG ((DEBUG_ERROR, "%a: %u HDA devices detected only populating 1\r\n", __func__, NumberOfHda));
-  }
-
-  // Only one register space is expected
-  Size   = 1;
-  Status = GetDeviceTreeRegisters (HdaHandles[0], &RegisterData, &Size);
+  Status = AmlFindNode (SbNode, "HDA0", &HdaNode);
   if (EFI_ERROR (Status)) {
-    goto ErrorExit;
+    DEBUG ((DEBUG_ERROR, "%a: Unable to find hda node - %r\r\n", __func__, Status));
+    return Status;
   }
 
-  // Only one interrupt is expected
-  Size   = 1;
-  Status = GetDeviceTreeInterrupts (HdaHandles[0], &InterruptData, &Size);
+  Status = AmlDetachNode (HdaNode);
   if (EFI_ERROR (Status)) {
-    goto ErrorExit;
+    DEBUG ((DEBUG_ERROR, "%a: Unable to detach hda node - %r\r\n", __func__, Status));
+    return Status;
   }
 
-  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_HDA0_STA, &AcpiNodeInfo);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_HDA0_STA));
-    goto ErrorExit;
+  NumberOfHda = 0;
+  NodeOffset  = -1;
+  while (EFI_SUCCESS == DeviceTreeGetNextCompatibleNode (CompatibleInfo, &NodeOffset)) {
+    // Only one register space is expected
+    Size   = 1;
+    Status = DeviceTreeGetRegisters (NodeOffset, &RegisterData, &Size);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to get registers - %r\r\n", __func__, Status));
+      break;
+    }
+
+    // Only one interrupt is expected
+    Size   = 1;
+    Status = DeviceTreeGetInterrupts (NodeOffset, &InterruptData, &Size);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to get interrupts - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlCloneTree (HdaNode, &HdaNewNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to clone node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlAttachNode (SbNode, HdaNewNode);
+    if (EFI_ERROR (Status)) {
+      AmlDeleteTree (HdaNewNode);
+      DEBUG ((DEBUG_ERROR, "%a: Unable to attach hda node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    AsciiSPrint (HdaNodeName, sizeof (HdaNodeName), "HDA%u", NumberOfHda);
+    Status = AmlDeviceOpUpdateName (HdaNewNode, HdaNodeName);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to update node name - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlFindNode (HdaNewNode, "_UID", &UidNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to find Uid node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlNameOpUpdateInteger (UidNode, NumberOfHda);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to update Uid node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlFindNode (HdaNewNode, "BASE", &BaseNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to find base node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlNameOpUpdateInteger (BaseNode, RegisterData.BaseAddress);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to update base node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlCodeGenNameResourceTemplate ("_CRS", HdaNewNode, &ResourceNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to create _CRS node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlCodeGenRdMemory32Fixed (
+               TRUE,
+               RegisterData.BaseAddress + HDA_REG_OFFSET,
+               RegisterData.Size - HDA_REG_OFFSET,
+               ResourceNode,
+               &MemoryNode
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to create memory node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    InterruptId = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
+    Status      = AmlCodeGenRdInterrupt (
+                    TRUE,
+                    FALSE,
+                    FALSE,
+                    FALSE,
+                    &InterruptId,
+                    1,
+                    ResourceNode,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to create memory node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    NumberOfHda++;
   }
 
-  StaValue = 0xF;
-  Status   = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &StaValue, AcpiNodeInfo.Size);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_HDA0_STA));
-    goto ErrorExit;
+  if (!EFI_ERROR (Status) && (NumberOfHda != 0)) {
+    // Install new table
+
+    Status = AmlSerializeDefinitionBlock (RootNode, &NewTable);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to serialize table - %r\r\n", __func__, Status));
+      return Status;
+    }
+
+    for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
+      if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
+        NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (NVIDIAPlatformRepositoryInfo[Index].CmObjectSize + sizeof (CM_STD_OBJ_ACPI_TABLE_INFO), NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr);
+        if (NewAcpiTables == NULL) {
+          return EFI_OUT_OF_RESOURCES;
+        }
+
+        NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
+
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = NewTable->Signature;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision  = NewTable->Revision;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)NewTable;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = NewTable->OemTableId;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = NewTable->OemRevision;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
+        NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
+        NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+        Status                                            = EFI_SUCCESS;
+        break;
+      } else if (NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr == NULL) {
+        Status = EFI_UNSUPPORTED;
+        break;
+      }
+    }
   }
 
-  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_HDA0_BASE, &AcpiNodeInfo);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_HDA0_BASE));
-    goto ErrorExit;
-  }
-
-  BaseAddress = RegisterData.BaseAddress;
-  Status      = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &BaseAddress, sizeof (BaseAddress));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_HDA0_BASE));
-    goto ErrorExit;
-  }
-
-  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_HDA0_REG0, &AcpiNodeInfo);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_HDA0_REG0));
-    goto ErrorExit;
-  }
-
-  if (AcpiNodeInfo.Size != sizeof (MemoryDescriptor)) {
-    DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d\n", __FUNCTION__, ACPI_HDA0_REG0, AcpiNodeInfo.Size));
-    goto ErrorExit;
-  }
-
-  Status = PatchProtocol->GetNodeData (PatchProtocol, &AcpiNodeInfo, &MemoryDescriptor, sizeof (MemoryDescriptor));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get data for %a\n", __FUNCTION__, ACPI_HDA0_REG0));
-    goto ErrorExit;
-  }
-
-  MemoryDescriptor.BaseAddress = RegisterData.BaseAddress+0x8000;
-  MemoryDescriptor.Length      = RegisterData.Size-0x8000;
-
-  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &MemoryDescriptor, sizeof (MemoryDescriptor));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_HDA0_REG0));
-    goto ErrorExit;
-  }
-
-  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_HDA0_INT0, &AcpiNodeInfo);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, ACPI_HDA0_INT0));
-    goto ErrorExit;
-  }
-
-  if (AcpiNodeInfo.Size != sizeof (InterruptDescriptor)) {
-    DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d expected %u\n", __FUNCTION__, ACPI_HDA0_INT0, AcpiNodeInfo.Size, sizeof (InterruptDescriptor)));
-    goto ErrorExit;
-  }
-
-  Status = PatchProtocol->GetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get data for %a\n", __FUNCTION__, ACPI_HDA0_INT0));
-    goto ErrorExit;
-  }
-
-  InterruptDescriptor.InterruptNumber[0] = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
-  Status                                 = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_HDA0_INT0));
-    goto ErrorExit;
-  }
-
-ErrorExit:
-  if (HdaHandles != NULL) {
-    FreePool (HdaHandles);
-  }
-
+  AmlDeleteTree (RootNode);
   return Status;
 }
 

@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe Private Definitions
 
-  SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA Corporation. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA Corporation. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,6 +12,7 @@
 
 #include <ConfigurationManagerObject.h>
 
+#include <Library/AmlLib/AmlLib.h>
 #include <Library/ArmLib.h>
 #include <Library/ArmGicLib.h>
 #include <Library/BaseLib.h>
@@ -47,6 +48,7 @@
 #include "Dsdt.offset.h"
 #include "SdcTemplate.hex"
 #include "SdcTemplate.offset.h"
+#include "SsdtHda.hex"
 
 #define ACPI_PATCH_MAX_PATH  255
 #define ACPI_SDCT_REG0       "SDCT.REG0"
@@ -54,10 +56,7 @@
 #define ACPI_SDCT_INT0       "SDCT.INT0"
 #define ACPI_SDCT_RMV        "SDCT._RMV"
 
-#define ACPI_HDA0_BASE  "HDA0.BASE"
-#define ACPI_HDA0_REG0  "HDA0.REG0"
-#define ACPI_HDA0_INT0  "HDA0.INT0"
-#define ACPI_HDA0_STA   "HDA0._STA"
+#define HDA_REG_OFFSET  0x8000
 
 #define IORT_TABLE_GEN  L"IortTableGen"
 
