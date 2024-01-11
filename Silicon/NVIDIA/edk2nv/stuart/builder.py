@@ -46,8 +46,34 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         # We just need to add a few things to support our build extensions.
         self.settings = self.SettingsManager()
 
-    def MoveConfDir(self):
-        ''' Use a platform-specific Conf directory.
+    def AddToolsDefInclude(self, confdir_path):
+        ''' Include NVIDIA's tools_def.inc in tools_def.txt.
+
+            Silicon/NVIDIA/tools_def.inc will contain NVIDIA overrides to
+            tools_def.txt.  This function will modify the base tools_def.txt,
+            which was copied from edk2's templates, to include this file.
+        '''
+        # Check to see if we've already added the include
+        with open(confdir_path / "tools_def.txt", "r") as tools_def:
+            datafile = tools_def.readlines()
+            for line in datafile:
+                if "!include Silicon/NVIDIA/tools_def.inc" in line:
+                    # Found it.  We're done, so we can return.
+                    return
+
+        # Need to add it.
+        with open(confdir_path / "tools_def.txt", "a") as tools_def:
+            tools_def.write("\r\n# NVIDIA overrides\r\n!include Silicon/NVIDIA/tools_def.inc\r\n")
+
+
+    def HookConfDirCreation(self):
+        ''' Hook the Conf directory creation step.
+
+            This allows NVIDIA-specific changes to how the Conf directory is
+            created.
+            - Use a platform-specific Conf directory.
+            - Allow minor changes to Conf files while still using the upstream
+              templates.
 
             Convince stuart to use `settings.GetConfDirName()` as the Conf
             directory.  If the Conf directory does not exist, it will be
@@ -63,16 +89,23 @@ class NVIDIAPlatformBuilder(UefiBuilder):
             build.py allows the Conf directory to be moved via command line or
             via env.  Since stuart wraps our call to build.py, we'll rely on
             the env.
+
+            Sometimes, we want to make minor changes to the Conf files, e.g.
+            tools_def.txt.  We'll do that in this hook.  Alternatively, we
+            could fork the templates, but then we'd have to maintain the forks
+            and continually reintegrate upstream changes to the templates.
         '''
         ws_dir = Path(self.settings.GetWorkspaceRoot())
         confdir_path = ws_dir / self.settings.GetConfDirName()
         confdir_name = str(confdir_path)
+        platform_builder = self
 
         # Stuart will populate the conf directory with templates.  Since it
         # doesn't ask a SettingsManager for the name of the Conf directory, we
         # need to monkey-patch in an override.
         def hooked_populate_conf_dir(self, conf_folder_path, *args, **kwargs):
             _base_populate_conf_dir(self, confdir_name, *args, **kwargs)
+            platform_builder.AddToolsDefInclude(confdir_path)
 
         ConfMgmt.populate_conf_dir = hooked_populate_conf_dir
 
@@ -209,10 +242,12 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
             Build environment variables eventually find their way into make.
         '''
-        # Move the Conf directory.  This isn't an "env" thing, but this is the
-        # first callback, __init__() is too early, and the next callback is too
-        # late.  Given the options available, this is the right place.
-        self.MoveConfDir()
+        # Hook the Conf directory creation step.
+        # - This allows us to augment the behavior with our own special sauce.
+        # - This isn't an "env" thing, but this is the first callback,
+        # __init__() is too early, and the next callback is too late.  Given
+        # the options available, this is the right place.
+        self.HookConfDirCreation()
 
         logging.debug("Setting env from SettingsManager")
 
