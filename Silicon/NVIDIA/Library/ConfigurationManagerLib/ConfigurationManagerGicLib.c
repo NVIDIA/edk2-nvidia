@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -528,7 +528,8 @@ UpdateGicInfo (
   SpeOverflowInterruptNum = 0;
   Status                  = GetMatchingEnabledDeviceTreeNodes ("arm,statistical-profiling-extension-v1", &SpeOverflowInterruptHandle, &NumberOfSpeHandles);
   if (Status == EFI_NOT_FOUND) {
-    DEBUG ((DEBUG_INFO, "%a: SPE not found in DTB. SpeOverflowInterrupt will be 0\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: SPE not found in DTB. SpeOverflowInterrupt will be 0x%x\n", __FUNCTION__, PcdGet32 (PcdSpeOverflowIntrNum)));
+    SpeOverflowInterruptNum = PcdGet32 (PcdSpeOverflowIntrNum);
   } else if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error checking for SPE nodes in DTB: %r\n", __FUNCTION__, Status));
   } else {

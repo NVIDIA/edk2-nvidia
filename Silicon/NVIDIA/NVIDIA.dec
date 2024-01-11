@@ -479,6 +479,9 @@
 #No Corrected Errors in HEST ACPI
   gNVIDIATokenSpaceGuid.PcdNoCorrectedErrorsInHest|FALSE|BOOLEAN|0x00000116
 
+#SPE Overflow Interrupt
+  gNVIDIATokenSpaceGuid.PcdSpeOverflowIntrNum|0x15|UINT32|0x00000117
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C
