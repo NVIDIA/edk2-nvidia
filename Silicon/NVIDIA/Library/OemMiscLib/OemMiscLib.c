@@ -1,7 +1,7 @@
 /** @file
 *  OemMiscLib.c
 *
-*  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -625,9 +625,6 @@ OemUpdateSmbiosInfo (
       break;
     case ChassisLocationType02:
       HiiString = (CHAR16 *)PcdGetPtr (PcdBoardChassisLocation);
-      break;
-    case BoardManufacturerType02:
-      HiiString = (CHAR16 *)PcdGetPtr (PcdBoardManufacturer);
       break;
     case SerialNumType01:
     case SerialNumberType02:

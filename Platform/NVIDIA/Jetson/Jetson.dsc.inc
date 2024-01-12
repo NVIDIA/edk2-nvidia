@@ -68,10 +68,10 @@
   ## Type 2 Table (Board Information)
   gNVIDIATokenSpaceGuid.PcdBoardChassisLocation|L"Unknown"
   gNVIDIATokenSpaceGuid.PcdBoardVersion|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdBoardManufacturer|L"Unknown"
+
   ## Type 1 Table (System Information)
   gNVIDIATokenSpaceGuid.PcdSystemSerialNum|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdSystemManufacturer|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdSystemManufacturer|L"NVIDIA"
   gNVIDIATokenSpaceGuid.PcdSystemSku|L"Unknown"
   gNVIDIATokenSpaceGuid.PcdSystemFamilyType|L"Unknown"
   ## Type 3 Table (Chassis Information)
@@ -84,7 +84,7 @@
   gNVIDIATokenSpaceGuid.PcdType3Info.NumberofPowerCords|1
   gNVIDIATokenSpaceGuid.PcdType3Info.Type|1
   gNVIDIATokenSpaceGuid.PcdChassisSku|L"Unknown"
-  gNVIDIATokenSpaceGuid.PcdChassisManufacturer|L"Unknown"
+  gNVIDIATokenSpaceGuid.PcdChassisManufacturer|L"NVIDIA"
   gNVIDIATokenSpaceGuid.PcdChassisSerialNumber|L"Unknown"
   gNVIDIATokenSpaceGuid.PcdChassisAssetTag|L"Unknown"
   gNVIDIATokenSpaceGuid.PcdChassisVersion|L"Unknown"
@@ -143,6 +143,8 @@
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|TRUE
   gNVIDIATokenSpaceGuid.PcdFtpmShmSize|4096
   gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|512
+  gArmTokenSpaceGuid.PcdBaseBoardManufacturer|L"NVIDIA"
+  gArmTokenSpaceGuid.PcdBaseBoardProductName|L"Jetson"
 
 ################################################################################
 #
