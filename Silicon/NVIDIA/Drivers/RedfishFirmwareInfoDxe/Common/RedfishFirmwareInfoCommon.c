@@ -3,7 +3,7 @@
 
   (C) Copyright 2020-2022 Hewlett Packard Enterprise Development LP<BR>
   Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -44,9 +44,9 @@ GetFirmwareComponentInfo (
   REDFISH_RESPONSE          Response;
   EDKII_JSON_VALUE          JsonValue;
   REDFISH_FMP_PRIVATE_DATA  *RedfishFmpPrivate;
-  BOOLEAN                   IsInUse;
   UINT64                    ImageAttributes;
   EFI_STRING                ImageIdName;
+  BOOLEAN                   RfUpdatable;
 
   Status = RedfishHttpGetResource (Private->RedfishService, Uri, &Response, TRUE);
   if (EFI_ERROR (Status)) {
@@ -56,7 +56,6 @@ GetFirmwareComponentInfo (
 
   JsonValue = RedfishJsonInPayload (Response.Payload);
 
-  IsInUse         = TRUE;
   ImageAttributes = 0;
 
   RedfishFmpPrivate = (REDFISH_FMP_PRIVATE_DATA *)AllocateZeroPool (sizeof (*RedfishFmpPrivate));
@@ -85,12 +84,22 @@ GetFirmwareComponentInfo (
 
   RedfishFmpPrivate->ImageDescriptor->Size = FMP_SIZE_UNKNOWN;
 
-  if (IsInUse) {
-    ImageAttributes |= IMAGE_ATTRIBUTE_IN_USE;
+  RfUpdatable = JsonValueGetBoolean (
+                  JsonObjectGetValue (JsonValueGetObject (JsonValue), "Updateable")
+                  );
+
+  ImageAttributes |= IMAGE_ATTRIBUTE_IN_USE;
+
+  if (RfUpdatable == TRUE) {
+    ImageAttributes |= IMAGE_ATTRIBUTE_IMAGE_UPDATABLE;
   }
 
-  RedfishFmpPrivate->ImageDescriptor->AttributesSupported = ImageAttributes | IMAGE_ATTRIBUTE_IN_USE;
-  RedfishFmpPrivate->ImageDescriptor->AttributesSetting   = ImageAttributes;
+  RedfishFmpPrivate->ImageDescriptor->AttributesSupported = ImageAttributes;
+
+  //
+  // Mark AttributesSetting as non-updateable.
+  //
+  RedfishFmpPrivate->ImageDescriptor->AttributesSetting = ImageAttributes & (~IMAGE_ATTRIBUTE_IMAGE_UPDATABLE);
   CopyMem (&RedfishFmpPrivate->Fmp, &mRedfishFmpProtocol, sizeof (EFI_FIRMWARE_MANAGEMENT_PROTOCOL));
 
   //
