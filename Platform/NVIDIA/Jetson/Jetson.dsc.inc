@@ -143,7 +143,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
   gNVIDIATokenSpaceGuid.PcdFtpmShmSize|4096
-  gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|200
+  gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|512
 
 ################################################################################
 #
