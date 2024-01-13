@@ -114,8 +114,8 @@ FdtInstalled (
     }
 
     if (!(PlatformResourceInfo->SocketMask & (1UL << Socket)) || (VprInfo[Socket].Size == 0)) {
-      fdt_del_node (FdtBase, NodeOffset);
-      DEBUG ((DEBUG_INFO, "%a: VPR Node Deleted\n", __FUNCTION__));
+      fdt_setprop (FdtBase, NodeOffset, "status", "disabled", sizeof ("disabled"));
+      DEBUG ((DEBUG_INFO, "%a: VPR CO %u disabled\n", __FUNCTION__, Socket));
 
       continue;
     }
