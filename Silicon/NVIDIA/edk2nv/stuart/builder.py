@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation.
-# SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -313,6 +313,13 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         builddirfile = ws_dir / self.settings.GetBuildDirFile()
         builddirfile.parent.mkdir(parents=True, exist_ok=True)
         builddirfile.write_text(str(build_dir))
+
+        # Store the firmware version string.  This will match the string printed
+        # in the image banner.
+        buildid = self.settings.GetFirmwareVersion()
+        buildidfile = ws_dir / self.settings.GetBuildIdFile()
+        buildidfile.parent.mkdir(parents=True, exist_ok=True)
+        buildidfile.write_text(str(buildid))
 
         # Remove the Conf link we added earlier.  It can cause problems for
         # tools, such as find, that want to spider the build directory.  Since

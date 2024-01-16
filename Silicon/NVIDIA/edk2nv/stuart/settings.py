@@ -404,6 +404,18 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         target = self.GetTarget()
         return str(Path("images") / f"builddir_{platform_name}_{target}.txt")
 
+    def GetBuildIdFile(self):
+        ''' Return the file name of the build id file.
+
+            This file will contain the BUILDID_STRING.  This string will
+            also be used in the images boot banner.
+
+            Returns a path relative to the workspace.
+        '''
+        platform_name = self.GetName()
+        target = self.GetTarget()
+        return str(Path("images") / f"buildid_{platform_name}_{target}.txt")
+
     def GetKConfigFile(self):
         ''' Return the file name of the main Kconfig configuration.
 
