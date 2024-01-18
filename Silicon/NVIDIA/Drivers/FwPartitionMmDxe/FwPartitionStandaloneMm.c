@@ -2,7 +2,7 @@
 
   FW partition standalone MM
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -118,6 +118,7 @@ FwPartitionMmHandler (
 
       DeviceInfo = Partition->DeviceInfo;
       Status     = DeviceInfo->DeviceRead (
+                                 Partition->PartitionInfo.Name,
                                  DeviceInfo,
                                  Partition->PartitionInfo.Offset + ReadDataPayload->Offset,
                                  ReadDataPayload->Bytes,
@@ -154,6 +155,7 @@ FwPartitionMmHandler (
 
       DeviceInfo = Partition->DeviceInfo;
       Status     = DeviceInfo->DeviceWrite (
+                                 Partition->PartitionInfo.Name,
                                  DeviceInfo,
                                  Partition->PartitionInfo.Offset + WriteDataPayload->Offset,
                                  WriteDataPayload->Bytes,

@@ -39,6 +39,7 @@ VOID
 /**
   Read data from device.
 
+  @param[in]  PartitionName     Pointer to partition name string
   @param[in]  DeviceInfo        Pointer to device info struct
   @param[in]  Offset            Offset to read from
   @param[in]  Bytes             Number of bytes to read
@@ -51,6 +52,7 @@ VOID
 typedef
 EFI_STATUS
 (EFIAPI *FW_PARTITION_DEVICE_READ)(
+  IN  CONST CHAR16                      *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO          *DeviceInfo,
   IN  UINT64                            Offset,
   IN  UINTN                             Bytes,
@@ -60,7 +62,8 @@ EFI_STATUS
 /**
   Write data to device.
 
-  @param[in]  DeviceInfo        Pointer to device info struct
+  @param[in] PartitionName      Pointer to partition name string
+  @param[in] DeviceInfo         Pointer to device info struct
   @param[in] Offset             Offset to write
   @param[in] Bytes              Number of bytes to write
   @param[in] Buffer             Address of write data
@@ -72,6 +75,7 @@ EFI_STATUS
 typedef
 EFI_STATUS
 (EFIAPI *FW_PARTITION_DEVICE_WRITE)(
+  IN  CONST CHAR16                      *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO          *DeviceInfo,
   IN  UINT64                            Offset,
   IN  UINTN                             Bytes,

@@ -2,7 +2,7 @@
 #
 #  FW Partition Device Library
 #
-#  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -17,7 +17,6 @@
 
 [Sources.common]
   FwPartitionDeviceLib.c
-  FwImageNames.c
 
 [Packages]
   MdePkg/MdePkg.dec

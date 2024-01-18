@@ -25,11 +25,14 @@
 #define FW_PARTITION_MM_INFO_SIGNATURE  SIGNATURE_32 ('F','W','M','M')
 #define FW_PARTITION_MM_TRANSFER_SIZE   (32 * 1024)
 
-// private MM info structure, one per partition
+#define FW_PARTITION_MM_DEVICE_INDEX_NORMAL  0
+#define FW_PARTITION_MM_DEVICE_INDEX_PSEUDO  1
+#define FW_PARTITION_MM_DEVICE_MAX           2
+
+// private MM info structure
 typedef struct {
   UINT32                      Signature;
-  UINT64                      Bytes;
-  CHAR16                      PartitionName[FW_PARTITION_NAME_LENGTH];
+  BOOLEAN                     IsPseudoPartition;
   FW_PARTITION_DEVICE_INFO    DeviceInfo;
 } FW_PARTITION_MM_INFO;
 
@@ -44,46 +47,67 @@ VOID                            *mMmCommBufferPhysical = NULL;
 STATIC
 EFI_STATUS
 EFIAPI
+FPMmInstallProtocols (
+  VOID
+  )
+{
+  EFI_STATUS                 Status;
+  UINTN                      Index;
+  FW_PARTITION_PRIVATE_DATA  *FwPartitionPrivate;
+
+  Status             = EFI_SUCCESS;
+  FwPartitionPrivate = FwPartitionGetPrivateArray ();
+  for (Index = 0; Index < FwPartitionGetCount (); Index++, FwPartitionPrivate++) {
+    if (FwPartitionPrivate->Handle != NULL) {
+      DEBUG ((DEBUG_INFO, "%a: %s protocol already installed\n", __FUNCTION__, FwPartitionPrivate->PartitionInfo.Name));
+      continue;
+    }
+
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &FwPartitionPrivate->Handle,
+                    &gNVIDIAFwPartitionProtocolGuid,
+                    &FwPartitionPrivate->Protocol,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Couldn't install protocol for Index=%u, partition=%s: %r\n",
+        __FUNCTION__,
+        Index,
+        FwPartitionPrivate->PartitionInfo.Name,
+        Status
+        ));
+    }
+  }
+
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
 FPMmRead (
+  IN  CONST CHAR16              *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
   OUT VOID                      *Buffer
   )
 {
-  FW_PARTITION_MM_INFO  *MmInfo;
-  EFI_STATUS            Status;
-  UINTN                 ReadBytes;
+  EFI_STATUS  Status;
+  UINTN       ReadBytes;
 
-  MmInfo = CR (
-             DeviceInfo,
-             FW_PARTITION_MM_INFO,
-             DeviceInfo,
-             FW_PARTITION_MM_INFO_SIGNATURE
-             );
-
-  Status = FwPartitionCheckOffsetAndBytes (MmInfo->Bytes, Offset, Bytes);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: read offset=%llu, bytes=%u error: %r\n",
-      __FUNCTION__,
-      Offset,
-      Bytes,
-      Status
-      ));
-    return Status;
-  }
-
+  Status = EFI_SUCCESS;
   while (Bytes > 0) {
     ReadBytes = MIN (FW_PARTITION_MM_TRANSFER_SIZE, Bytes);
 
-    Status = MmSendReadData (MmInfo->PartitionName, Offset, ReadBytes, Buffer);
+    Status = MmSendReadData (PartitionName, Offset, ReadBytes, Buffer);
     DEBUG ((
       DEBUG_VERBOSE,
       "%a: read %s Offset=%u, Bytes=%u\n",
       __FUNCTION__,
-      MmInfo->PartitionName,
+      PartitionName,
       Offset,
       ReadBytes
       ));
@@ -103,6 +127,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 FPMmWrite (
+  IN  CONST CHAR16              *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
@@ -119,28 +144,19 @@ FPMmWrite (
              FW_PARTITION_MM_INFO_SIGNATURE
              );
 
-  Status = FwPartitionCheckOffsetAndBytes (MmInfo->Bytes, Offset, Bytes);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: write offset=%llu, bytes=%u error: %r\n",
-      __FUNCTION__,
-      Offset,
-      Bytes,
-      Status
-      ));
-    return Status;
-  }
-
-  Status = MmSendWriteData (MmInfo->PartitionName, Offset, Bytes, Buffer);
+  Status = MmSendWriteData (PartitionName, Offset, Bytes, Buffer);
   DEBUG ((
     DEBUG_VERBOSE,
     "%a: write %s Offset=%u, Bytes=%u\n",
     __FUNCTION__,
-    MmInfo->PartitionName,
+    PartitionName,
     Offset,
     Bytes
     ));
+
+  if (!EFI_ERROR (Status) && MmInfo->IsPseudoPartition) {
+    Status = FPMmInstallProtocols ();
+  }
 
   return Status;
 }
@@ -163,6 +179,7 @@ FPMmAddPartitions (
   UINTN                           Index;
   UINTN                           Count;
   FW_PARTITION_MM_PARTITION_INFO  *PartitionInfoBuffer;
+  FW_PARTITION_DEVICE_INFO        *DeviceInfo;
 
   PartitionInfoBuffer = (FW_PARTITION_MM_PARTITION_INFO *)
                         AllocateZeroPool (MAX_FW_PARTITIONS * sizeof (FW_PARTITION_MM_PARTITION_INFO));
@@ -187,29 +204,14 @@ FPMmAddPartitions (
   }
 
   DEBUG ((DEBUG_INFO, "%a: Got %u image names from MM\n", __FUNCTION__, Count));
+  DeviceInfo = &mMmInfo[FW_PARTITION_MM_DEVICE_INDEX_NORMAL].DeviceInfo;
   for (Index = 0; Index < Count; Index++) {
     FW_PARTITION_MM_PARTITION_INFO  *PartitionInfo = &PartitionInfoBuffer[Index];
-    FW_PARTITION_MM_INFO            *MmInfo        = &mMmInfo[Index];
-    FW_PARTITION_DEVICE_INFO        *DeviceInfo    = &MmInfo->DeviceInfo;
 
     DEBUG ((DEBUG_INFO, "Found MM Image name=%s\n", PartitionInfo->Name));
 
-    MmInfo->Signature = FW_PARTITION_MM_INFO_SIGNATURE;
-    MmInfo->Bytes     = PartitionInfo->Bytes;
-    StrnCpyS (
-      MmInfo->PartitionName,
-      FW_PARTITION_NAME_LENGTH,
-      PartitionInfo->Name,
-      StrLen (PartitionInfo->Name)
-      );
-
-    DeviceInfo->DeviceName  = MmInfo->PartitionName;
-    DeviceInfo->DeviceRead  = FPMmRead;
-    DeviceInfo->DeviceWrite = FPMmWrite;
-    DeviceInfo->BlockSize   = 1;
-
     if (StrCmp (PartitionInfo->Name, FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) == 0) {
-      Status = FwPartitionAddPseudoPartition (DeviceInfo);
+      Status = FwPartitionAddPseudoPartition (&mMmInfo[FW_PARTITION_MM_DEVICE_INDEX_PSEUDO].DeviceInfo);
     } else {
       Status = FwPartitionAdd (
                  PartitionInfo->Name,
@@ -273,7 +275,7 @@ FPMmAddressChangeNotify (
   FW_PARTITION_MM_INFO  *MmInfo;
 
   MmInfo = mMmInfo;
-  for (Index = 0; Index < mNumPartitions; Index++, MmInfo++) {
+  for (Index = 0; Index < FW_PARTITION_MM_DEVICE_MAX; Index++, MmInfo++) {
     FW_PARTITION_DEVICE_INFO  *DeviceInfo;
 
     DeviceInfo = &MmInfo->DeviceInfo;
@@ -316,6 +318,7 @@ FwPartitionMmDxeInitialize (
   UINTN                       BrBctEraseBlockSize;
   BOOLEAN                     PcdOverwriteActiveFwPartition;
   UINTN                       ChipId;
+  FW_PARTITION_MM_INFO        *MmInfo;
 
   ChipId                        = TegraGetChipID ();
   PcdOverwriteActiveFwPartition = PcdGetBool (PcdOverwriteActiveFwPartition);
@@ -366,12 +369,28 @@ FwPartitionMmDxeInitialize (
   }
 
   mMmInfo = (FW_PARTITION_MM_INFO *)AllocateRuntimeZeroPool (
-                                      MAX_FW_PARTITIONS * sizeof (FW_PARTITION_MM_INFO)
+                                      FW_PARTITION_MM_DEVICE_MAX * sizeof (FW_PARTITION_MM_INFO)
                                       );
   if (mMmInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "mMmInfo allocation failed\n"));
     Status = EFI_OUT_OF_RESOURCES;
     goto Done;
+  }
+
+  MmInfo = mMmInfo;
+  for (Index = 0; Index < FW_PARTITION_MM_DEVICE_MAX; Index++, MmInfo++) {
+    MmInfo->Signature = FW_PARTITION_MM_INFO_SIGNATURE;
+    if (Index == FW_PARTITION_MM_DEVICE_INDEX_PSEUDO) {
+      MmInfo->IsPseudoPartition     = TRUE;
+      MmInfo->DeviceInfo.DeviceName = L"MMPseudoDevice";
+    } else {
+      MmInfo->IsPseudoPartition     = FALSE;
+      MmInfo->DeviceInfo.DeviceName = L"MMDevice";
+    }
+
+    MmInfo->DeviceInfo.DeviceRead  = FPMmRead;
+    MmInfo->DeviceInfo.DeviceWrite = FPMmWrite;
+    MmInfo->DeviceInfo.BlockSize   = 1;
   }
 
   Status = MmSendInitialize (
@@ -401,25 +420,9 @@ FwPartitionMmDxeInitialize (
   }
 
   // install FwPartition protocols for all partitions
-  FwPartitionPrivate = FwPartitionGetPrivateArray ();
-  for (Index = 0; Index < FwPartitionGetCount (); Index++, FwPartitionPrivate++) {
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &FwPartitionPrivate->Handle,
-                    &gNVIDIAFwPartitionProtocolGuid,
-                    &FwPartitionPrivate->Protocol,
-                    NULL
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Couldn't install protocol for Index=%u, partition=%s: %r\n",
-        __FUNCTION__,
-        Index,
-        FwPartitionPrivate->PartitionInfo.Name,
-        Status
-        ));
-      goto Done;
-    }
+  Status = FPMmInstallProtocols ();
+  if (EFI_ERROR (Status)) {
+    goto Done;
   }
 
   Status = BrBctUpdateDeviceLibInit (

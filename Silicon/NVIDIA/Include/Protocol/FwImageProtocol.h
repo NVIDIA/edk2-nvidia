@@ -16,7 +16,7 @@
 #define NVIDIA_FW_IMAGE_PROTOCOL_GUID  {0xd836a4a8, 0xdb25, 0x44a7, \
   {0x9a, 0x3c, 0x9d, 0xb3, 0xd1, 0xb0, 0x23, 0x04}}
 
-#define FW_IMAGE_MAX_IMAGES  50
+#define FW_IMAGE_MAX_IMAGES  100
 #define FW_IMAGE_NAME_LENGTH                                    \
   (sizeof (((EFI_PARTITION_ENTRY *) 0)->PartitionName) /        \
    sizeof (((EFI_PARTITION_ENTRY *) 0)->PartitionName[0]))

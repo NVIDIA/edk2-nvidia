@@ -137,6 +137,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 FPNorFlashRead (
+  IN  CONST CHAR16              *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
@@ -195,6 +196,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 FPNorFlashWrite (
+  IN  CONST CHAR16              *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
