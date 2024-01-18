@@ -21,6 +21,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/VerPartitionLib.h>
@@ -58,7 +59,7 @@ enum {
   LAS_ERROR_IMAGE_NOT_IN_PACKAGE,
   LAS_ERROR_MB1_INVALIDATE_ERROR,
   LAS_ERROR_SINGLE_IMAGE_NOT_SUPPORTED,
-  LAS_ERROR_IMAGE_INDEX_MISSING,
+  LAS_ERROR_IMAGE_INDEX_MISSING,                        // deprecated
   LAS_ERROR_NO_PROTOCOL_FOR_IMAGE,
   LAS_ERROR_IMAGE_ATTRIBUTES_ERROR,
   LAS_ERROR_BCT_UPDATE_FAILED,
@@ -74,46 +75,11 @@ enum {
   LAS_ERROR_GPT_WRITE_FAILED,
 };
 
-// Package image names to be ignored
-STATIC CONST CHAR16  *IgnoreImageNames[] = {
-  L"BCT",
-  L"BCT_A",
-  L"BCT_B",
-  L"mb1_b",
-  L"mb2-applet",
-  L"secondary_gpt",
-  L"secondary_gpt_backup",
-  NULL
-};
-
 // special images that are not processed in the main loop
 STATIC CONST CHAR16  *SpecialImageNames[] = {
   L"GPT",
   L"mb1",
   FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
-  NULL
-};
-
-// optional images are only updated if present in capsule
-STATIC CONST CHAR16  *OptionalImageNames[] = {
-  L"sce-fw",
-  L"smm-fw",
-  L"tsec-fw",
-  L"xusb-fw",
-  L"BCT-boot-chain_backup",
-  L"ist-ucode",
-  L"ist-bpmp",
-  L"ist-config",
-  FW_PARTITION_UPDATE_INACTIVE_PARTITIONS, // pseudo-partition never in capsule
-  NULL
-};
-
-// optional partitions are only updated if present
-STATIC CONST CHAR16  *OptionalPartitionNames[] = {
-  L"fsi-fw",
-  L"ist-ucode",
-  L"ist-bpmp",
-  L"ist-config",
   NULL
 };
 
@@ -132,26 +98,35 @@ STATIC UINTN  mTotalBytesVerified = 0;
 STATIC UINTN  mCurrentCompletion  = 0;
 
 // module variables
-STATIC EFI_EVENT   mAddressChangeEvent      = NULL;
-STATIC BOOLEAN     mPcdFmpWriteVerifyImage  = FALSE;
-STATIC BOOLEAN     mPcdFmpSingleImageUpdate = FALSE;
-STATIC VOID        *mFmpDataBuffer          = NULL;
-STATIC UINTN       mFmpDataBufferSize       = 0;
-STATIC BOOLEAN     mFmpLibInitialized       = FALSE;
-STATIC BOOLEAN     mFmpLibInitializeFailed  = FALSE;
-STATIC CHAR8       *mPlatformCompatSpec     = NULL;
-STATIC CHAR8       *mPlatformSpec           = NULL;
-STATIC BOOLEAN     mIsProductionFused       = FALSE;
-STATIC UINT32      mActiveBootChain         = MAX_UINT32;
-STATIC UINT32      mTegraVersion            = 0;
-STATIC CHAR16      *mTegraVersionString     = NULL;
-STATIC EFI_STATUS  mTegraVersionStatus      = EFI_UNSUPPORTED;
+STATIC EFI_EVENT     mAddressChangeEvent      = NULL;
+STATIC BOOLEAN       mPcdFmpWriteVerifyImage  = FALSE;
+STATIC BOOLEAN       mPcdFmpSingleImageUpdate = FALSE;
+STATIC VOID          *mFmpDataBuffer          = NULL;
+STATIC UINTN         mFmpDataBufferSize       = 0;
+STATIC BOOLEAN       mFmpLibInitialized       = FALSE;
+STATIC BOOLEAN       mFmpLibInitializeFailed  = FALSE;
+STATIC CHAR8         *mPlatformCompatSpec     = NULL;
+STATIC CHAR8         *mPlatformSpec           = NULL;
+STATIC BOOLEAN       mIsProductionFused       = FALSE;
+STATIC UINT32        mActiveBootChain         = MAX_UINT32;
+STATIC UINT32        mTegraVersion            = 0;
+STATIC CHAR16        *mTegraVersionString     = NULL;
+STATIC EFI_STATUS    mTegraVersionStatus      = EFI_UNSUPPORTED;
+STATIC CONST CHAR16  **mFwImagesRequired      = NULL;
+STATIC UINTN         mFwImagesRequiredCount   = 0;
 
 STATIC NVIDIA_BOOT_CHAIN_PROTOCOL                     *mBootChainProtocol   = NULL;
 STATIC NVIDIA_BR_BCT_UPDATE_PROTOCOL                  *mBrBctUpdateProtocol = NULL;
 STATIC EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  mProgress             = NULL;
 STATIC EFI_HANDLE                                     mImageHandle          = NULL;
 FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER                 mInstaller            = NULL;
+
+CONST CHAR16 **
+EFIAPI
+FwImageGetRequiredList (
+  IN  UINTN  ChipId,
+  OUT UINTN  *ImageCount
+  );
 
 /**
   Get production fuse setting from 5th field in TnSpec.  The field must contain
@@ -828,12 +803,14 @@ WriteRegularImages (
                      &PkgImageIndex
                      );
     if (EFI_ERROR (Status)) {
-      if (NameIsInList (ImageName, OptionalImageNames)) {
-        continue;
+      DEBUG ((DEBUG_INFO, "%a: No image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+
+      if (NameIsInList (ImageName, mFwImagesRequired)) {
+        DEBUG ((DEBUG_ERROR, "%a: Missing required image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+        return Status;
       }
 
-      DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", PkgImageName, Status));
-      return Status;
+      continue;
     }
 
     Status = WriteImage (
@@ -1026,12 +1003,14 @@ VerifyAllImages (
                      &PkgImageIndex
                      );
     if (EFI_ERROR (Status)) {
-      if (NameIsInList (ImageName, OptionalImageNames)) {
-        continue;
+      DEBUG ((DEBUG_INFO, "%a: No image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+
+      if (NameIsInList (ImageName, mFwImagesRequired)) {
+        DEBUG ((DEBUG_ERROR, "%a: Missing required image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+        return Status;
       }
 
-      DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", PkgImageName, Status));
-      return Status;
+      continue;
     }
 
     Status = VerifyImage (
@@ -1287,6 +1266,8 @@ FmpTegraCheckImage (
   CONST FW_PACKAGE_IMAGE_INFO  *PkgImageInfo;
   BOOLEAN                      Canceled;
   CONST CHAR16                 *PkgImageName;
+  CONST CHAR16                 *RequiredImageName;
+  NVIDIA_FW_IMAGE_PROTOCOL     *FwImageProtocol;
 
   DEBUG ((
     DEBUG_INFO,
@@ -1397,10 +1378,9 @@ FmpTegraCheckImage (
 
   FwImageProtocolArray = FwImageGetProtocolArray ();
   for (Index = 0; Index < ImageCount; Index++) {
-    CONST CHAR16              *ImageName;
-    UINTN                     PkgImageIndex;
-    NVIDIA_FW_IMAGE_PROTOCOL  *FwImageProtocol;
-    FW_IMAGE_ATTRIBUTES       ImageAttributes;
+    CONST CHAR16         *ImageName;
+    UINTN                PkgImageIndex;
+    FW_IMAGE_ATTRIBUTES  ImageAttributes;
 
     FwImageProtocol = FwImageProtocolArray[Index];
     ImageName       = FwImageProtocol->ImageName;
@@ -1419,15 +1399,16 @@ FmpTegraCheckImage (
                      &PkgImageIndex
                      );
     if (EFI_ERROR (Status)) {
-      if (NameIsInList (ImageName, OptionalImageNames)) {
-        DEBUG ((DEBUG_INFO, "optional %s not in package: %r\n", ImageName, Status));
-        continue;
+      DEBUG ((DEBUG_INFO, "%a: No image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+
+      if (NameIsInList (ImageName, mFwImagesRequired)) {
+        DEBUG ((DEBUG_ERROR, "%a: Missing required image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+        *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
+        *LastAttemptStatus = LAS_ERROR_IMAGE_NOT_IN_PACKAGE;
+        return EFI_ABORTED;
       }
 
-      DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", PkgImageName, Status));
-      *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
-      *LastAttemptStatus = LAS_ERROR_IMAGE_NOT_IN_PACKAGE;
-      return EFI_ABORTED;
+      continue;
     }
 
     PkgImageInfo = FwPackageImageInfoPtr (Header, PkgImageIndex);
@@ -1472,53 +1453,12 @@ FmpTegraCheckImage (
     }
   }
 
-  // Check that every image in the package has a protocol
-  for (Index = 0; Index < Header->ImageCount; Index++) {
-    CHAR16                    ImageName[FW_IMAGE_NAME_LENGTH];
-    NVIDIA_FW_IMAGE_PROTOCOL  *FwImageProtocol;
-
-    PkgImageInfo = FwPackageImageInfoPtr (Header, Index);
-    if (PkgImageInfo == NULL) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Image %u not found in package with %u images\n",
-        __FUNCTION__,
-        Index,
-        Header->ImageCount
-        ));
-      *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
-      *LastAttemptStatus = LAS_ERROR_IMAGE_INDEX_MISSING;
-      return EFI_ABORTED;
-    }
-
-    FwPackageCopyImageName (ImageName, PkgImageInfo, sizeof (ImageName));
-    DEBUG ((DEBUG_INFO, "%a: Image %u is %s\n", __FUNCTION__, Index, ImageName));
-
-    if (NameIsInList (ImageName, IgnoreImageNames)) {
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: Image %u, skipping %s\n",
-        __FUNCTION__,
-        Index,
-        ImageName
-        ));
-      continue;
-    }
-
-    FwImageProtocol = FwImageFindProtocol (ImageName);
+  // Check that every required image has a protocol
+  for (Index = 0; Index < mFwImagesRequiredCount; Index++) {
+    RequiredImageName = mFwImagesRequired[Index];
+    FwImageProtocol   = FwImageFindProtocol (RequiredImageName);
     if (FwImageProtocol == NULL) {
-      if (NameIsInList (ImageName, OptionalPartitionNames)) {
-        DEBUG ((DEBUG_INFO, "%a: Image %u, optional %s partitions missing\n", __FUNCTION__, Index, ImageName));
-        continue;
-      }
-
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Image %u, no protocol for %s\n",
-        __FUNCTION__,
-        Index,
-        ImageName
-        ));
+      DEBUG ((DEBUG_ERROR, "%a: no protocol for %s\n", __FUNCTION__, RequiredImageName));
       *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
       *LastAttemptStatus = LAS_ERROR_NO_PROTOCOL_FOR_IMAGE;
       return EFI_ABORTED;
@@ -1863,6 +1803,7 @@ FmpDeviceLibConstructor (
     goto Done;
   }
 
+  mFwImagesRequired = FwImageGetRequiredList (TegraGetChipID (), &mFwImagesRequiredCount);
   FwImageRegisterImageAddedCallback (FmpDeviceFwImageCallback);
   Status = EFI_SUCCESS;
 

@@ -15,13 +15,10 @@
 
 STATIC CONST CHAR16  *SystemFwImageNamesCommon[] = {
   L"adsp-fw",
-  L"BCT",
-  L"BCT-boot-chain_backup",
   L"bpmp-fw",
   L"bpmp-fw-dtb",
   L"cpu-bootloader",
   L"eks",
-  L"GPT",
   L"mb1",
   L"MB1_BCT",
   L"mb2",
@@ -32,7 +29,6 @@ STATIC CONST CHAR16  *SystemFwImageNamesCommon[] = {
   L"secure-os",
   L"spe-fw",
   L"VER",
-  L"xusb-fw",
   NULL
 };
 
@@ -40,7 +36,6 @@ STATIC CONST CHAR16  *SystemFwImageNamesT194[] = {
   L"bootloader-dtb",
   L"mts-preboot",
   L"mts-proper",
-  L"sce-fw",
   NULL
 };
 
@@ -52,12 +47,6 @@ STATIC CONST CHAR16  *SystemFwImageNamesT234[] = {
   L"psc-fw",
   L"pscrf",
   L"pva-fw",
-  L"smm-fw",
-  L"tsec-fw",
-  L"fsi-fw",
-  L"ist-ucode",
-  L"ist-bpmp",
-  L"ist-config",
   NULL
 };
 
@@ -129,7 +118,7 @@ CombineLists (
 }
 
 /**
-  Get list of FW image names for the platform.
+  Get list of required FW image names for the platform.
 
   @param[in]   ChipId               Chip ID of list to get
   @param[out]  ImageCount           Number of images in list
@@ -141,7 +130,7 @@ CombineLists (
 **/
 CONST CHAR16 **
 EFIAPI
-FwImageGetList (
+FwImageGetRequiredList (
   IN  UINTN  ChipId,
   OUT UINTN  *ImageCount
   )

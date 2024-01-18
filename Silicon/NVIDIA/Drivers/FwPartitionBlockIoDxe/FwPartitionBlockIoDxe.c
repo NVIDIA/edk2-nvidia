@@ -61,6 +61,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 FPBlockIoRead (
+  IN  CONST CHAR16              *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
@@ -138,6 +139,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 FPBlockIoWrite (
+  IN  CONST CHAR16              *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
@@ -282,6 +284,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 FPBlockIoReadBootPartition (
+  IN  CONST CHAR16              *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
@@ -298,6 +301,7 @@ FPBlockIoReadBootPartition (
   }
 
   return FPBlockIoRead (
+           PartitionName,
            &BlockIoInfo->DeviceInfo,
            Offset,
            Bytes,
@@ -321,6 +325,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 FPBlockIoWriteBootPartition (
+  IN  CONST CHAR16              *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
@@ -337,6 +342,7 @@ FPBlockIoWriteBootPartition (
   }
 
   return FPBlockIoWrite (
+           PartitionName,
            &BlockIoInfo->DeviceInfo,
            Offset,
            Bytes,

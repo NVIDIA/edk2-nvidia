@@ -28,20 +28,11 @@ typedef struct {
   FW_PARTITION_DEVICE_INFO    *MmDeviceInfo;
 } FW_PARTITION_PSEUDO_DEVICE_INFO;
 
-CONST CHAR16 **
-EFIAPI
-FwImageGetList (
-  IN  UINTN  ChipId,
-  OUT UINTN  *ImageCount
-  );
-
 STATIC FW_PARTITION_PRIVATE_DATA  *mPrivate                   = NULL;
 STATIC UINTN                      mNumFwPartitions            = 0;
 STATIC UINTN                      mMaxFwPartitions            = 0;
 STATIC UINT32                     mActiveBootChain            = MAX_UINT32;
 STATIC BOOLEAN                    mOverwriteActiveFwPartition = FALSE;
-STATIC CONST CHAR16               **mFwImageList              = NULL;
-STATIC UINTN                      mFwImageCount               = 0;
 STATIC UINTN                      mChipId                     = MAX_UINTN;
 STATIC UINT32                     mGptBootChain               = MAX_UINT32;
 
@@ -50,11 +41,6 @@ STATIC CONST CHAR16  *NonABPartitionNames[] = {
   L"BCT",
   L"BCT-boot-chain_backup",
   L"mb2-applet",
-  FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
-  NULL
-};
-
-STATIC CONST CHAR16  *mPseudoPartitionNames[] = {
   FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
   NULL
 };
@@ -85,38 +71,6 @@ NameIsInList (
   }
 
   return FALSE;
-}
-
-/**
-  Check if partition is in image list.
-
-  @param[in]  PartitionName             Name of partition to check.
-
-  @retval BOOLEAN                       TRUE if partition is in image list.
-
-**/
-STATIC
-BOOLEAN
-EFIAPI
-FwPartitionIsInImageList (
-  CONST CHAR16  *PartitionName
-  )
-{
-  CHAR16      ImageName[MAX_PARTITION_NAME_LEN];
-  UINTN       BootChain;
-  EFI_STATUS  Status;
-
-  Status = GetPartitionBaseNameAndBootChainAny (PartitionName, ImageName, &BootChain);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to get base name for %s: %r\n", PartitionName, Status));
-    return FALSE;
-  }
-
-  if (NameIsInList (ImageName, mFwImageList)) {
-    return TRUE;
-  }
-
-  return NameIsInList (PartitionName, mPseudoPartitionNames);
 }
 
 /**
@@ -232,6 +186,7 @@ FwPartitionRead (
     ));
 
   Status = DeviceInfo->DeviceRead (
+                         PartitionInfo->Name,
                          DeviceInfo,
                          Offset + PartitionInfo->Offset,
                          Bytes,
@@ -320,6 +275,7 @@ FwPartitionWrite (
     ));
 
   Status = DeviceInfo->DeviceWrite (
+                         PartitionInfo->Name,
                          DeviceInfo,
                          Offset + PartitionInfo->Offset,
                          Bytes,
@@ -344,6 +300,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 FwPartitionWriteToUpdateInactivePartitions (
+  IN  CONST CHAR16              *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
@@ -362,6 +319,7 @@ FwPartitionWriteToUpdateInactivePartitions (
   UINT32                           InactiveBootChain;
   CONST CHAR16                     *Name;
   FW_PARTITION_PRIVATE_DATA        *Private;
+  FW_PARTITION_PRIVATE_DATA        *BctPartition;
   FW_PARTITION_INFO                *PartitionInfo;
   CONST VOID                       *AlignedBuffer;
   FW_PARTITION_PSEUDO_DEVICE_INFO  *PseudoDeviceInfo;
@@ -414,18 +372,35 @@ FwPartitionWriteToUpdateInactivePartitions (
       continue;
     }
 
+    Private = FwPartitionFindByName (Name);
+    if (Private == NULL) {
+      DEBUG ((DEBUG_INFO, "%a: Partition %s is new\n", __FUNCTION__, Name));
+
+      BctPartition = FwPartitionFindByName (L"BCT");
+      if (BctPartition == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: BCT partition not found, can't add %s\n", __FUNCTION__, Name));
+        return EFI_DEVICE_ERROR;
+      }
+
+      Status = FwPartitionAdd (
+                 Name,
+                 BctPartition->DeviceInfo,
+                 (PseudoDeviceInfo->MmDeviceInfo == NULL) ? Partition->StartingLBA * BlockSize : 0,
+                 GptPartitionSizeInBlocks (Partition) * BlockSize
+                 );
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+
+      continue;
+    }
+
     if (PartitionBootChain != InactiveBootChain) {
       DEBUG ((DEBUG_INFO, "%a: skipping %s, chain=%u\n", __FUNCTION__, Name, PartitionBootChain));
       continue;
     }
 
     DEBUG ((DEBUG_INFO, "%a: updating %s\n", __FUNCTION__, Name));
-
-    Private = FwPartitionFindByName (Name);
-    if (Private == NULL) {
-      DEBUG ((DEBUG_INFO, "%a: Partition %s not found\n", __FUNCTION__, Name));
-      continue;
-    }
 
     PartitionInfo = &Private->PartitionInfo;
 
@@ -451,6 +426,7 @@ FwPartitionWriteToUpdateInactivePartitions (
 
   if (PseudoDeviceInfo->MmDeviceInfo != NULL) {
     Status = PseudoDeviceInfo->MmDeviceInfo->DeviceWrite (
+                                               PartitionName,
                                                PseudoDeviceInfo->MmDeviceInfo,
                                                Offset,
                                                Bytes,
@@ -479,11 +455,6 @@ FwPartitionAdd (
 {
   FW_PARTITION_PRIVATE_DATA  *Private;
   FW_PARTITION_INFO          *PartitionInfo;
-
-  if (!FwPartitionIsInImageList (Name)) {
-    DEBUG ((DEBUG_INFO, "%a: %s not in image list\n", __FUNCTION__, Name));
-    return EFI_SUCCESS;
-  }
 
   if (mNumFwPartitions >= mMaxFwPartitions) {
     DEBUG ((
@@ -611,6 +582,7 @@ FwPartitionAddFromDeviceGpt (
     ));
 
   Status = DeviceInfo->DeviceRead (
+                         L"GPT-Header",
                          DeviceInfo,
                          GptHeaderOffset,
                          BlockSize,
@@ -657,6 +629,7 @@ FwPartitionAddFromDeviceGpt (
     ));
 
   Status = DeviceInfo->DeviceRead (
+                         L"GPT-Table",
                          DeviceInfo,
                          PartitionTableOffset,
                          GptPartitionTableSizeInBytes (GptHeader),
@@ -928,8 +901,6 @@ FwPartitionDeviceLibInit (
       ));
     return EFI_OUT_OF_RESOURCES;
   }
-
-  mFwImageList = FwImageGetList (ChipId, &mFwImageCount);
 
   return EFI_SUCCESS;
 }
