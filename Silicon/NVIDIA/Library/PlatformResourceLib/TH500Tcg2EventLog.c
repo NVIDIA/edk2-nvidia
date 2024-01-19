@@ -37,6 +37,7 @@ EVENT_TYPE_ENTRY  mEventTypeTable[] = {
   { 0x46555345 /* FUSE */, 0, EV_TABLE_OF_DEVICES, "SYS_CONF_FUSE",    0 },
   { 0x42435442 /* BCTB */, 0, EV_TABLE_OF_DEVICES, "SYS_CONF_BCTB",    0 },
   { 0x50534342 /* PSCB */, 0, EV_POST_CODE,        "SYS_CTRL_PSCB",    0 },
+  { 0x4352544d /* CRTM */, 0, EV_S_CRTM_VERSION,   "PSCROM xx.yy",     0 },
   { 0x4d423142 /* MB1B */, 0, EV_POST_CODE,        "SYS_CTRL_MB1B",    0 },
   { 0x4d424354 /* MBCT */, 0, EV_TABLE_OF_DEVICES, "SYS_CONF_MBCT",    0 },
   { 0x4d454d30 /* MEM0 */, 0, EV_TABLE_OF_DEVICES, "SYS_CONF_MEM0",    0 },
@@ -157,6 +158,17 @@ TH500GetEventData (
                      EventStrLen +
                      SIZE_OF_BLOB_BASE +
                      SIZE_OF_BLOB_LENGTH;
+      break;
+
+    case EV_S_CRTM_VERSION:
+      EventStrLen = UnicodeSPrint (
+                      (CHAR16 *)DataPtr,
+                      *EventSize,
+                      L"PSCROM %02X.%02X",
+                      TegraGetChipID (),
+                      TegraGetMajorVersion ()
+                      );
+      NewEventSize = (EventStrLen + 1) * sizeof (CHAR16);
       break;
 
     default:
