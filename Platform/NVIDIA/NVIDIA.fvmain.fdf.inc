@@ -93,8 +93,12 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
   INF EmbeddedPkg/RealTimeClockRuntimeDxe/RealTimeClockRuntimeDxe.inf
   INF Silicon/NVIDIA/Drivers/DefaultVariableDxe/DefaultVariableDxe.inf
+!ifdef CONFIG_VARIABLE_NON_SECURE_SUPPORTED
   INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf
+!endif
+!ifdef CONFIG_SECURITY_MM_SUPPORT
   INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
+!endif
   INF MdeModulePkg/Universal/TimestampDxe/TimestampDxe.inf
   INF MdeModulePkg/Universal/StatusCodeHandler/RuntimeDxe/StatusCodeHandlerRuntimeDxe.inf
 
@@ -592,7 +596,9 @@ FvNameGuid         = $(PLATFORM_GUID)
 !endif
 !endif
 
+!ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT
   INF SecurityPkg/EnrollFromDefaultKeysApp/EnrollFromDefaultKeysApp.inf
+!endif
 
   #
   # SMBIOS/DMI
@@ -656,17 +662,21 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   INF Silicon/NVIDIA/Drivers/NvidiaConfigDxe/NvidiaConfigDxe.inf
 
+!ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT
   #
   # Secure Boot Support
   #
   INF SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+!endif
 
   #
   # Security drivers
   #
   INF SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
+!ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT
   INF SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
   INF SecurityPkg/Pkcs7Verify/Pkcs7VerifyDxe/Pkcs7VerifyDxe.inf
+!endif
 
   #
   # RCM Support
@@ -693,12 +703,16 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
 
+!ifdef CONFIG_VARIABLE_NON_SECURE_SUPPORTED
+!ifndef CONFIG_VARIABLE_EMULATED
   #
   # FVB Support
   #
   INF Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
   INF Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashDxe.inf
   INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
+!endif
+!endif
 
   #
   # Capsule Update Policy Protocol
@@ -740,10 +754,12 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   INF Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf
 
+!ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT
   #
   # Secure Boot Provision
   #
   INF Silicon/NVIDIA/Drivers/NvSecureBootProvisionDxe/NvSecureBootProvisionDxe.inf
+!endif
 
   #
   # Memory Tests
@@ -851,4 +867,30 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF RedfishClientPkg/Converter/SecureBootDatabase/v1_0_1/RedfishSecureBootDatabase_V1_0_1_Dxe.inf
   INF RedfishClientPkg/RedfishTaskServiceDxe/RedfishTaskServiceDxe.inf
   INF RedfishClientPkg/RedfishSecureBootKeysDxe/RedfishSecureBootKeysDxe.inf
+!endif
+
+  #
+  # MM Communication
+  #
+!ifdef CONFIG_SECURITY_MM_FFA
+  INF Silicon/NVIDIA/Drivers/MmCommunicateFfaDxe/MmCommunicationFfa.inf
+!endif
+!ifdef CONFIG_SECURITY_MM_OPTEE
+  INF Silicon/NVIDIA/Drivers/MmCommunicationOpteeDxe/MmCommunicationOptee.inf
+!endif
+
+  #
+  # TPM
+  #
+!ifdef CONFIG_SECURITY_TPM_SUPPORT
+!ifdef CONFIG_SECURITY_TPM_DISCRETE
+  INF Silicon/NVIDIA/Drivers/Tpm2Dxe/Tpm2Dxe.inf
+  INF MdeModulePkg/Universal/SmbiosMeasurementDxe/SmbiosMeasurementDxe.inf
+!endif
+  INF SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf
+  INF Silicon/NVIDIA/Drivers/Tcg2Config/Tcg2ConfigDxe.inf
+!endif
+
+!ifdef CONFIG_SECURITY_UEFI_MENU_USER_AUTH
+  INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationDxe.inf
 !endif

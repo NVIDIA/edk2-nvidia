@@ -217,7 +217,11 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   IntrinsicLib|CryptoPkg/Library/IntrinsicLib/IntrinsicLib.inf
   OpensslLib|CryptoPkg/Library/OpensslLib/OpensslLibFull.inf
   TpmMeasurementLib|SecurityPkg/Library/DxeTpmMeasurementLib/DxeTpmMeasurementLib.inf
+!ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT
   AuthVariableLib|SecurityPkg/Library/AuthVariableLib/AuthVariableLib.inf
+!else
+  AuthVariableLib|MdeModulePkg/Library/AuthVariableLibNull/AuthVariableLibNull.inf
+!endif
   BaseCryptLib|CryptoPkg/Library/BaseCryptLib/BaseCryptLib.inf
   RngLib|MdePkg/Library/BaseRngLibTimerLib/BaseRngLibTimerLib.inf
 
@@ -406,6 +410,29 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   SsdtPcieSupportLib|DynamicTablesPkg/Library/Common/SsdtPcieSupportLib/SsdtPcieSupportLib.inf
 !endif
 
+!ifdef CONFIG_SECURITY_TPM_SUPPORT
+  Tpm2DeviceLib|SecurityPkg/Library/Tpm2DeviceLibTcg2/Tpm2DeviceLibTcg2.inf
+  Tpm2CommandLib|SecurityPkg/Library/Tpm2CommandLib/Tpm2CommandLib.inf
+  Tcg2PpVendorLib|SecurityPkg/Library/Tcg2PpVendorLibNull/Tcg2PpVendorLibNull.inf
+!endif
+!ifdef CONFIG_SECURITY_TPM_DISCRETE
+  Tcg2PhysicalPresenceLib|Silicon/NVIDIA/Library/DxeTcg2PhysicalPresenceLib/DxeTcg2PhysicalPresenceLib.inf
+  TpmPlatformHierarchyLib|SecurityPkg/Library/PeiDxeTpmPlatformHierarchyLib/PeiDxeTpmPlatformHierarchyLib.inf
+!endif
+!ifdef CONFIG_SECURITY_TPM_FIRMWARE
+  Tcg2PhysicalPresenceLib|Silicon/NVIDIA/Library/DxeTcg2PhysicalPresenceLibNull/DxeTcg2PhysicalPresenceLibNull.inf
+  TpmPlatformHierarchyLib|SecurityPkg/Library/PeiDxeTpmPlatformHierarchyLibNull/PeiDxeTpmPlatformHierarchyLib.inf
+!endif
+!ifdef CONFIG_SECURITY_TPM_NONE
+  Tcg2PhysicalPresenceLib|Silicon/NVIDIA/Library/DxeTcg2PhysicalPresenceLibNull/DxeTcg2PhysicalPresenceLibNull.inf
+  TpmPlatformHierarchyLib|SecurityPkg/Library/PeiDxeTpmPlatformHierarchyLibNull/PeiDxeTpmPlatformHierarchyLib.inf
+!endif
+
+!ifdef CONFIG_SECURITY_UEFI_MENU_USER_AUTH
+  # User Authentication for BIOS Setup Menu
+  PlatformPasswordLib|Silicon/NVIDIA/Library/PlatformPasswordLib/PlatformPasswordLib.inf
+!endif
+
 [LibraryClasses.common.SEC]
   DebugAgentLib|ArmPkg/Library/DebugAgentSymbolsBaseLib/DebugAgentSymbolsBaseLib.inf
   DefaultExceptionHandlerLib|ArmPkg/Library/DefaultExceptionHandlerLib/DefaultExceptionHandlerLib.inf
@@ -584,6 +611,10 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|TRUE
 !endif
 
+!ifdef CONFIG_SECURITY_MM_FFA
+  gArmTokenSpaceGuid.PcdFfaEnable|TRUE
+!endif
+
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L"$(PLATFORM_NAME)"
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
@@ -753,6 +784,10 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   gEfiRedfishClientPkgTokenSpaceGuid.PcdHttpRetryWaitInSecond|2
 !endif
 
+!ifdef CONFIG_SECURITY_TPM_DISCRETE
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass|1
+!endif
+
 [PcdsFixedAtBuild]
   #
   # Variable Services PCDs.
@@ -860,7 +895,11 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   # Enable emulated variable NV mode in variable driver.
   #
+!ifdef CONFIG_VARIABLE_EMULATED
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|TRUE
+!else
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|FALSE
+!endif
 
   #
   # NV Storage PCDs.
@@ -895,11 +934,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x00000000
   gArmTokenSpaceGuid.PcdGicRedistributorsBase|0x00000000
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x00000000
-
-  #
-  # Allow physical presence activities
-  #
-  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|FALSE
 
   # SMBIOS
   ## Type 2 Table (Board Information)
@@ -947,6 +981,21 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|600
 !endif
 
+!ifdef CONFIG_SECURITY_MM_FFA
+  ## MM Communicate
+  ## Used for FFA boots with part of the boot chain skipped
+  gArmTokenSpaceGuid.PcdMmBufferBase|0x8B5FE000
+  gArmTokenSpaceGuid.PcdMmBufferSize|0x20000
+!endif
+
+!ifdef CONFIG_SECURITY_PHYSICAL_PRESENCE
+  #
+  # Allow physical presence activities
+  #
+  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
+!else
+  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|FALSE
+!endif
 
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables
@@ -1204,9 +1253,15 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
   MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf {
      <LibraryClasses>
+!ifdef CONFIG_SECURITY_UEFI_MENU_USER_AUTH
        NULL|Silicon/NVIDIA/Library/UserAuthenticationLib/UserAuthenticationLib.inf
+!endif
+!ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT
        NULL|SecurityPkg/Library/DxeImageVerificationLib/DxeImageVerificationLib.inf
+!endif
+!ifdef CONFIG_SECURITY_TPM_SUPPORT
        NULL|SecurityPkg/Library/DxeTpm2MeasureBootLib/DxeTpm2MeasureBootLib.inf
+!endif
   }
   MdeModulePkg/Universal/SectionExtractionDxe/SectionExtractionDxe.inf
   MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
@@ -1228,13 +1283,19 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   MdeModulePkg/Universal/PrintDxe/PrintDxe.inf
 
   Silicon/NVIDIA/Drivers/DefaultVariableDxe/DefaultVariableDxe.inf
+!ifdef CONFIG_VARIABLE_NON_SECURE_SUPPORTED
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf {
     <LibraryClasses>
+!ifndef CONFIG_VARIABLE_EMULATED
       NULL|EmbeddedPkg/Library/NvVarStoreFormattedLib/NvVarStoreFormattedLib.inf
       NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+!endif
   }
+!endif
+!ifdef CONFIG_SECURITY_MM_SUPPORT
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
+!endif
 
   #
   # Tegra Platform Configuration
@@ -1794,10 +1855,12 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !endif
 !endif
 
+!ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT
   #
   # Default Security Key Enrollment Application.
   #
   SecurityPkg/EnrollFromDefaultKeysApp/EnrollFromDefaultKeysApp.inf
+!endif
 
 !ifdef CONFIG_FIRMWARE_PARTITION_SUPPORT
   #
@@ -1912,17 +1975,21 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   Silicon/NVIDIA/Drivers/NvidiaConfigDxe/NvidiaConfigDxe.inf
 
+!ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT
   #
   # Secure Boot Support
   #
   SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+!endif
 
   #
   # Security drivers
   #
   SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
+!ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT
   SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
   SecurityPkg/Pkcs7Verify/Pkcs7VerifyDxe/Pkcs7VerifyDxe.inf
+!endif
 
   #
   # RCM Support
@@ -1955,6 +2022,8 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
 
+!ifdef CONFIG_VARIABLE_NON_SECURE_SUPPORTED
+!ifndef CONFIG_VARIABLE_EMULATED
   #
   # FVB Support
   #
@@ -1964,6 +2033,8 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
     <LibraryClasses>
       NULL|EmbeddedPkg/Library/NvVarStoreFormattedLib/NvVarStoreFormattedLib.inf
   }
+!endif
+!endif
 
   #
   # Tegra EEPROM Support
@@ -2000,10 +2071,12 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   Silicon/NVIDIA/Drivers/EFuseDxe/EFuseDxe.inf
 
+!ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT
   #
   # Secure Boot Provision
   #
   Silicon/NVIDIA/Drivers/NvSecureBootProvisionDxe/NvSecureBootProvisionDxe.inf
+!endif
 
   #
   # Memory Tests
@@ -2107,6 +2180,53 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   RedfishClientPkg/Converter/SecureBootDatabase/v1_0_1/RedfishSecureBootDatabase_V1_0_1_Dxe.inf
   RedfishClientPkg/RedfishTaskServiceDxe/RedfishTaskServiceDxe.inf
   RedfishClientPkg/RedfishSecureBootKeysDxe/RedfishSecureBootKeysDxe.inf
+!endif
+
+  #
+  # MM Communication
+  #
+!ifdef CONFIG_SECURITY_MM_FFA
+  Silicon/NVIDIA/Drivers/MmCommunicateFfaDxe/MmCommunicationFfa.inf {
+    <LibraryClasses>
+      NULL|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
+      NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
+      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  }
+!endif
+!ifdef CONFIG_SECURITY_MM_OPTEE
+  Silicon/NVIDIA/Drivers/MmCommunicationOpteeDxe/MmCommunicationOptee.inf {
+    <LibraryClasses>
+      NULL|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
+      NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
+  }
+!endif
+
+  #
+  # TPM
+  #
+!ifdef CONFIG_SECURITY_TPM_SUPPORT
+!ifdef CONFIG_SECURITY_TPM_DISCRETE
+  Silicon/NVIDIA/Drivers/Tpm2Dxe/Tpm2Dxe.inf
+  MdeModulePkg/Universal/SmbiosMeasurementDxe/SmbiosMeasurementDxe.inf
+!endif
+  SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf {
+    <LibraryClasses>
+      HashLib|SecurityPkg/Library/HashLibBaseCryptoRouter/HashLibBaseCryptoRouterDxe.inf
+      NULL|SecurityPkg/Library/HashInstanceLibSha256/HashInstanceLibSha256.inf
+      NULL|SecurityPkg/Library/HashInstanceLibSha384/HashInstanceLibSha384.inf
+!ifdef CONFIG_SECURITY_TPM_DISCRETE
+      Tpm2DeviceLib|SecurityPkg/Library/Tpm2DeviceLibRouter/Tpm2DeviceLibRouterDxe.inf
+      NULL|Silicon/NVIDIA/Library/Tpm2DeviceLib/Tpm2DeviceLib.inf
+!endif
+!ifdef CONFIG_SECURITY_TPM_FIRMWARE
+      Tpm2DeviceLib|Silicon/NVIDIA/Library/OpteeTpmDeviceLib/OpteeTpmDeviceLib.inf
+!endif
+  }
+  Silicon/NVIDIA/Drivers/Tcg2Config/Tcg2ConfigDxe.inf
+!endif
+
+!ifdef CONFIG_SECURITY_UEFI_MENU_USER_AUTH
+  Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationDxe.inf
 !endif
 
 [Components.AARCH64]
