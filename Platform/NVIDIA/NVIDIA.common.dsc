@@ -11,8 +11,8 @@
 #
 ################################################################################
 [Defines]
-  PLATFORM_NAME               = Jetson
-  PLATFORM_GUID               = b175f7b7-0cb0-446e-b338-0e0d0f688de8
+  PLATFORM_NAME               = $(BUILD_NAME)
+  PLATFORM_GUID               = $(BUILD_GUID)
   FLASH_DEFINITION            = Platform/NVIDIA/NVIDIA.common.fdf
 
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc

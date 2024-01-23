@@ -315,6 +315,12 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         if toolchain_tag:
             self.env.SetValue("TOOL_CHAIN_TAG", toolchain_tag, reason_setman)
 
+        # Common build info
+        self.env.SetValue("BLD_*_BUILD_NAME",
+                    self.settings.GetName(), reason_dynamic)
+        self.env.SetValue("BLD_*_BUILD_GUID",
+                    self.settings.GetGuid(), reason_dynamic)
+
         # Set additional build variables
         cur_time = datetime.datetime.now()
         build_ts = cur_time.astimezone().replace(microsecond=0).isoformat()
