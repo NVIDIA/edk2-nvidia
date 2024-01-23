@@ -1,9 +1,0 @@
-#
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
-#
-# SPDX-License-Identifier: BSD-2-Clause-Patent
-
-!include Platform/NVIDIA/NVIDIA.fvmain.fdf.inc
-!include Platform/NVIDIA/Jetson/Jetson.fdf.inc
-!include Platform/NVIDIA/NVIDIA.common.fdf.inc
