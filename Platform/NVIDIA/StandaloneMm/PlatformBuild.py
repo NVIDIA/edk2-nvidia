@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,9 +17,6 @@ class StandaloneMmSettingsManager(NVIDIASettingsManager):
 
     def GetName(self):
         return "StandaloneMm"
-
-    def GetActiveScopes(self):
-        return super().GetActiveScopes() + ["standalonemm"]
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_MM.Fv"

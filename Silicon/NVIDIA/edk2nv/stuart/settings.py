@@ -103,7 +103,7 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
 
     def GetActiveScopes(self):
         ''' List of scopes we need for this platform. '''
-        return ['edk2-build']
+        return ['edk2-build','nvidia']
 
     def AddCommandLineOptions(self, parserObj):
         ''' Add command line options to the argparser '''

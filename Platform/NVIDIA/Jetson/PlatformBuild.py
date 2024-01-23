@@ -19,9 +19,6 @@ class JetsonSettingsManager(NVIDIASettingsManager):
     def GetGuid(self):
         return "b175f7b7-0cb0-446e-b338-0e0d0f688de8"
 
-    def GetActiveScopes(self):
-        return super().GetActiveScopes() + ["jetson"]
-
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"
 

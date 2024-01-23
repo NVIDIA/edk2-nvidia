@@ -19,9 +19,6 @@ class ServerSettingsManager(NVIDIASettingsManager):
     def GetGuid(self):
         return "25cdda40-4cf9-44e9-97f1-b0a0f5fa7b9c"
 
-    def GetActiveScopes(self):
-        return super().GetActiveScopes() + ["server"]
-
     def GetPackagesPath(self):
         return super().GetPackagesPath() + [
             "edk2-nvidia-server-gpu-sdk/", "edk2-redfish-client/"
