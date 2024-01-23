@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -23,4 +23,4 @@ cd ${SCRIPT_DIR}/../../../..
 
 # Prepare and build
 ${HELPER_SCRIPT_DIR}/prepare_stuart.sh ${PLATFORM_BUILD}
-${HELPER_SCRIPT_DIR}/build_stuart.sh ${PLATFORM_BUILD}
+${HELPER_SCRIPT_DIR}/build_stuart.sh ${PLATFORM_BUILD} $@
