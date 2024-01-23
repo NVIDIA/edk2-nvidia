@@ -154,9 +154,13 @@ class NVIDIAPlatformBuilder(UefiBuilder):
                                dest="JOBS", type=int,
                                help="Number of concurrent build jobs to run")
 
+        parserObj.add_argument("--menuconfig", dest="MENUCONFIG",
+                               action='store_true', default=False, help="Show configuration menu before build.")
+
     def RetrievePlatformCommandLineOptions(self, args):
         ''' Retrieve command line options from the argparser namespace '''
         self._jobs = args.JOBS
+        self._menuconfig = args.MENUCONFIG
 
     def GetMaxJobs(self):
         ''' Return the value of the --jobs option.
@@ -215,6 +219,11 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
         # Write the merged configuration
         print(kconf.write_config(config_out))
+
+        if self._menuconfig:
+            from menuconfig import menuconfig
+            os.environ["KCONFIG_CONFIG"] = str(config_out)
+            menuconfig(kconf)
 
         # Create version of config that edk2 can consume, strip the file of "
         with open(config_out, "r") as f, open(config_out_dsc, "w") as fo:
