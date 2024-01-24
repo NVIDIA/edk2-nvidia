@@ -131,6 +131,7 @@ ConfigurationManagerDxeInitialize (
   switch (ChipID) {
     case T194_CHIP_ID:
     case T234_CHIP_ID:
+    case TH500_CHIP_ID:
       // Use the new NVIDIAPlatfocrmGetObject function, which is default
       break;
 

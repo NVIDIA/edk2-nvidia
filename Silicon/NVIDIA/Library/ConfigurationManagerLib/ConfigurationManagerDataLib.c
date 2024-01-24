@@ -374,6 +374,35 @@ CleanupAndReturn:
   return Status;
 }
 
+STATIC
+VOID
+PrintObj (
+  IN CONST CM_OBJ_DESCRIPTOR  *CmObjDesc
+  )
+{
+  UINTN  ObjId;
+  UINTN  NameSpaceId;
+
+  DEBUG_CODE_BEGIN ();
+  if ((CmObjDesc == NULL) || (CmObjDesc->Data == NULL)) {
+    return;
+  }
+
+  NameSpaceId = GET_CM_NAMESPACE_ID (CmObjDesc->ObjectId);
+  ObjId       = GET_CM_OBJECT_ID (CmObjDesc->ObjectId);
+
+  //
+  // Print the received objects.
+  //
+  if (NameSpaceId != EObjNameSpaceOem) {
+    ParseCmObjDesc (CmObjDesc);
+  } else {
+    DEBUG ((DEBUG_ERROR, "NameSpaceId 0x%x, ObjId 0x%x is not supported by the parser\n", NameSpaceId, ObjId));
+  }
+
+  DEBUG_CODE_END ();
+}
+
 /**
   Function called by the parser to extend information and return the token map.
 
@@ -412,12 +441,7 @@ NvHwInfoExtend (
 
   Repo = (EDKII_PLATFORM_REPOSITORY_INFO *)Context;
 
-  DEBUG_CODE_BEGIN ();
-  //
-  // Print the received objects.
-  //
-  ParseCmObjDesc (CmObjDesc);
-  DEBUG_CODE_END ();
+  PrintObj (CmObjDesc);
 
   Status = Repo->ExtendEntry (
                    Repo,
@@ -470,12 +494,7 @@ NvHwInfoAddGetMap (
 
   Repo = (EDKII_PLATFORM_REPOSITORY_INFO *)Context;
 
-  DEBUG_CODE_BEGIN ();
-  //
-  // Print the received objects.
-  //
-  ParseCmObjDesc (CmObjDesc);
-  DEBUG_CODE_END ();
+  PrintObj (CmObjDesc);
 
   Status = Repo->NewEntry (
                    Repo,
@@ -571,12 +590,7 @@ NvHwInfoAddWithTokenMap (
 
   Repo = (EDKII_PLATFORM_REPOSITORY_INFO *)Context;
 
-  DEBUG_CODE_BEGIN ();
-  //
-  // Print the received objects.
-  //
-  ParseCmObjDesc (CmObjDesc);
-  DEBUG_CODE_END ();
+  PrintObj (CmObjDesc);
 
   // Allocate a token if needed
   if (Token == CM_NULL_TOKEN) {
@@ -637,16 +651,17 @@ NvHwInfoParse (
   NV_ASSERT_RETURN ((HwInfoParserTable != NULL) || (TableSize == 0), return EFI_INVALID_PARAMETER, "%a: HwInfoParserTable is NULL while TableSize is not\n", __FUNCTION__);
 
   for (Index = 0; Index < TableSize; Index++) {
+    DEBUG ((DEBUG_ERROR, "%a: Calling %a\n", __FUNCTION__, HwInfoParserTable[Index].ParserName));
     Status = HwInfoParserTable[Index].Parser (
                                         ParserHandle,
                                         FdtBranch
                                         );
     if (Status == EFI_NOT_FOUND) {
-      DEBUG ((DEBUG_WARN, "%a: \"%a\" Parser at index %u in the table (0x%p) returned %r - Ignoring it\n", __FUNCTION__, HwInfoParserTable[Index].ParserName, Index, HwInfoParserTable[Index], Status));
+      DEBUG ((DEBUG_WARN, "%a: \"%a\" Parser at index %u in the table returned %r - Ignoring it\n", __FUNCTION__, HwInfoParserTable[Index].ParserName, Index, Status));
       Status = EFI_SUCCESS; // Don't trigger an error in this case
     }
 
-    NV_ASSERT_RETURN (!EFI_ERROR (Status), return Status, "%a: \"%a\" Parser at index %u in the table (0x%p) returned %r\n", __FUNCTION__, HwInfoParserTable[Index].ParserName, Index, HwInfoParserTable[Index], Status);
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), return Status, "%a: \"%a\" Parser at index %u in the table returned %r\n", __FUNCTION__, HwInfoParserTable[Index].ParserName, Index, Status);
   }
 
   return EFI_SUCCESS;

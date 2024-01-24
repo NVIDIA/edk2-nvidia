@@ -10,9 +10,16 @@
 #include "ProcHierarchyInfoParser.h"
 #include "Gic/GicParser.h"
 #include "CacheInfo/CacheInfoParser.h"
+#include <Library/BaseMemoryLib.h>
 #include <Library/MpCoreInfoLib.h>
-#include <Library/TegraPlatformInfoLib.h>
 #include <Library/NVIDIADebugLib.h>
+#include <Library/TegraPlatformInfoLib.h>
+
+#define GEN_CONTAINER_UID(LEVEL, LVL1, LVL2, LVL3)  ((LEVEL << 28) | (LVL1 << 24) | (LVL2 << 16) | (LVL3))
+// Example usage:
+// Top = GEN_CONTAINER_UID (0, 0, 0, 0)
+// Socket = GEN_CONTAINER_UID (1, SocketId, 0, 0)
+// Cluster = GEN_CONTAINER_UID (2, SocketId, ClusterId, 0)
 
 /** Proc Hierachy info parser function.
 
@@ -70,10 +77,15 @@ ProcHierarchyInfoParser (
   UINT32                       CoreId;
   UINTN                        ChipID;
   UINT32                       MaxSocket;
-  UINT32                       MaxCluster;
   UINT32                       NumSockets;
-  UINT32                       NumClustersPerSocket;
+  UINT32                       MaxClustersPerSocket;
+  UINT32                       MaxCoresPerSocket;
+  UINT32                       MaxCoresPerCluster;
   CM_OBJECT_TOKEN              RootToken;
+  UINT32                       CoresStartIndex;
+  BOOLEAN                      CollapseClusters;
+  UINT32                       SearchIndex;
+  UINT32                       ClusterIndex;
 
   ProcHierarchyInfo       = NULL;
   SocketTokenMap          = NULL;
@@ -81,6 +93,7 @@ ProcHierarchyInfoParser (
   ProcHierarchyInfoTokens = NULL;
   CacheHierarchyInfo      = NULL;
   GicCInfoTokens          = NULL;
+  CollapseClusters        = TRUE;
 
   if (ParserHandle == NULL) {
     ASSERT (0);
@@ -89,14 +102,17 @@ ProcHierarchyInfoParser (
 
   ChipID = TegraGetChipID ();
 
-  Status = MpCoreInfoGetPlatformInfo (&NumCpus, &MaxSocket, &MaxCluster, NULL);
+  Status = MpCoreInfoGetPlatformInfo (&NumCpus, &MaxSocket, NULL, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get PlatformInfo\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
   NumSockets           = MaxSocket + 1;
-  NumClustersPerSocket = MaxCluster + 1;
+  MaxClustersPerSocket = (PcdGet32 (PcdTegraMaxClusters)) / (PcdGet32 (PcdTegraMaxSockets));
+  MaxCoresPerCluster   = PcdGet32 (PcdTegraMaxCoresPerCluster);
+  MaxCoresPerSocket    = MaxCoresPerCluster * MaxClustersPerSocket;
+  DEBUG ((DEBUG_ERROR, "%a: NumSockets = %u, MaxClustersPerSocket = %u, MaxCoresPerSocket = %u, MaxCoresPerCluster = %u\n", __FUNCTION__, NumSockets, MaxClustersPerSocket, MaxCoresPerSocket, MaxCoresPerCluster));
 
   Status = LpiParser (ParserHandle, FdtBranch, &LpiToken);
   if (EFI_ERROR (Status)) {
@@ -126,14 +142,14 @@ ProcHierarchyInfoParser (
     goto CleanupAndReturn;
   }
 
-  ClusterTokenMapSize = sizeof (CM_OBJECT_TOKEN) * (NumClustersPerSocket * NumSockets);
+  ClusterTokenMapSize = sizeof (CM_OBJECT_TOKEN) * (MaxClustersPerSocket * NumSockets);
   ClusterTokenMap     = (CM_OBJECT_TOKEN *)AllocateZeroPool (ClusterTokenMapSize);
   if (ClusterTokenMap == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto CleanupAndReturn;
   }
 
-  MaxProcHierarchyInfoEntries = (NumCpus + (NumClustersPerSocket * NumSockets) + NumSockets + (NumSockets > 1 ? 1 : 0));
+  MaxProcHierarchyInfoEntries = (NumCpus + (MaxClustersPerSocket * NumSockets) + NumSockets + (NumSockets > 1 ? 1 : 0));
   ProcHierarchyInfoSize       = sizeof (CM_ARM_PROC_HIERARCHY_INFO) * MaxProcHierarchyInfoEntries;
   ProcHierarchyInfo           = AllocateZeroPool (ProcHierarchyInfoSize);
   if (ProcHierarchyInfo == NULL) {
@@ -162,6 +178,9 @@ ProcHierarchyInfoParser (
     ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = CM_NULL_TOKEN;
     ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = 0;
     ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CM_NULL_TOKEN;
+    ProcHierarchyInfo[ProcHierarchyIndex].OverrideNameUidEnabled     = TRUE;
+    ProcHierarchyInfo[ProcHierarchyIndex].OverrideUid                = GEN_CONTAINER_UID (0, 0, 0, 0);
+    ProcHierarchyInfo[ProcHierarchyIndex].OverrideName               = 0;
 
     RootToken = ProcHierarchyInfo[ProcHierarchyIndex].Token;
     ProcHierarchyIndex++;
@@ -171,7 +190,7 @@ ProcHierarchyInfoParser (
 
   // Create Sockets & Clusters
   for (SocketId = 0; SocketId < NumSockets; SocketId++) {
-    Status = MpCoreInfoGetSocketInfo (SocketId, NULL, &MaxCluster, NULL, NULL);
+    Status = MpCoreInfoGetSocketInfo (SocketId, NULL, NULL, NULL, NULL);
     if (!EFI_ERROR (Status)) {
       ProcHierarchyInfo[ProcHierarchyIndex].Token = ProcHierarchyInfoTokens[ProcHierarchyIndex];
       SocketTokenMap[SocketId]                    = ProcHierarchyInfo[ProcHierarchyIndex].Token;
@@ -186,10 +205,13 @@ ProcHierarchyInfoParser (
       ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = CM_NULL_TOKEN;
       ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = CacheHierarchyInfo[SocketId].Data.Count;
       ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CacheHierarchyInfo[SocketId].Data.Token;
+      ProcHierarchyInfo[ProcHierarchyIndex].OverrideNameUidEnabled     = TRUE;
+      ProcHierarchyInfo[ProcHierarchyIndex].OverrideUid                = GEN_CONTAINER_UID (1, SocketId, 0, 0);
+      ProcHierarchyInfo[ProcHierarchyIndex].OverrideName               = SocketId;
       ProcHierarchyIndex++;
 
       // Create Clusters for the socket
-      for (ClusterId = 0; ClusterId <= MaxCluster; ClusterId++) {
+      for (ClusterId = 0; ClusterId <= MaxClustersPerSocket; ClusterId++) {
         Status = MpCoreInfoGetSocketClusterInfo (SocketId, ClusterId, NULL, NULL, NULL);
         if (!EFI_ERROR (Status)) {
           ProcHierarchyInfo[ProcHierarchyIndex].Token = ProcHierarchyInfoTokens[ProcHierarchyIndex];
@@ -204,7 +226,15 @@ ProcHierarchyInfoParser (
           ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = CM_NULL_TOKEN;
           ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = CacheHierarchyInfo[SocketId].Cluster[ClusterId].Data.Count;
           ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CacheHierarchyInfo[SocketId].Cluster[ClusterId].Data.Token;
-          ClusterTokenMap[ClusterId + (NumClustersPerSocket*SocketId)]     = ProcHierarchyInfo[ProcHierarchyIndex].Token;
+          if (CollapseClusters && (CacheHierarchyInfo[SocketId].Cluster[ClusterId].Data.Count != 0)) {
+            DEBUG ((DEBUG_ERROR, "%a: Cannot collapse clusters because Socket %u Cluster %u has private resources\n", __FUNCTION__, SocketId, ClusterId));
+            CollapseClusters = FALSE;
+          }
+
+          ProcHierarchyInfo[ProcHierarchyIndex].OverrideNameUidEnabled = TRUE;
+          ProcHierarchyInfo[ProcHierarchyIndex].OverrideUid            = GEN_CONTAINER_UID (2, SocketId, ClusterId, 0);
+          ProcHierarchyInfo[ProcHierarchyIndex].OverrideName           = ClusterId;
+          ClusterTokenMap[ClusterId + (MaxClustersPerSocket*SocketId)] = ProcHierarchyInfo[ProcHierarchyIndex].Token;
           ProcHierarchyIndex++;
         } else if (Status != EFI_NOT_FOUND) {
           DEBUG ((DEBUG_ERROR, "%a: Got %r getting info about Socket %u Cluster %u\n", __FUNCTION__, Status, SocketId, ClusterId));
@@ -216,6 +246,7 @@ ProcHierarchyInfoParser (
     }
   }
 
+  CoresStartIndex = ProcHierarchyIndex;
   for (CoreIndex = 0; CoreIndex < NumCpus; CoreIndex++) {
     UINT64  ProcessorId;
     Status = MpCoreInfoGetProcessorIdFromIndex (CoreIndex, &ProcessorId);
@@ -239,12 +270,59 @@ ProcHierarchyInfoParser (
                                                     EFI_ACPI_6_4_PPTT_NODE_IS_LEAF,
                                                     EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                                                     );
-    ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = ClusterTokenMap[ClusterId + (NumClustersPerSocket*SocketId)];
+    ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = ClusterTokenMap[ClusterId + (MaxClustersPerSocket*SocketId)];
     ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = GicCInfoTokens[CoreIndex];
     ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = CacheHierarchyInfo[SocketId].Cluster[ClusterId].Cpu[CoreId].Data.Count;
     ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CacheHierarchyInfo[SocketId].Cluster[ClusterId].Cpu[CoreId].Data.Token;
     ProcHierarchyInfo[ProcHierarchyIndex].LpiToken                   = LpiToken;
+    ProcHierarchyInfo[ProcHierarchyIndex].OverrideNameUidEnabled     = TRUE;
+    ProcHierarchyInfo[ProcHierarchyIndex].OverrideName               = CoreId;
+    // Note: No need for OverrideUid, since it's not used for processor nodes
     ProcHierarchyIndex++;
+  }
+
+  // Determine if all cores belong to a unique cluster
+  for (CoreIndex = 0; (CoreIndex < NumCpus) && CollapseClusters; CoreIndex++) {
+    for (SearchIndex = CoreIndex + 1; (SearchIndex < NumCpus) && CollapseClusters; SearchIndex++) {
+      if (ProcHierarchyInfo[CoresStartIndex + CoreIndex].ParentToken == ProcHierarchyInfo[CoresStartIndex + SearchIndex].ParentToken) {
+        DEBUG ((DEBUG_ERROR, "%a: Cannot collapse clusters because CoreIndex %u and SearchIndex %u have the same ParentToken 0x%x\n", __FUNCTION__, CoreIndex, SearchIndex, ProcHierarchyInfo[CoresStartIndex + CoreIndex].ParentToken));
+        CollapseClusters = FALSE;
+      }
+    }
+  }
+
+  // If all cores are part of unique clusters and no cluster has private resources, merge the core into its cluster node
+  if (CollapseClusters) {
+    // Pop cores off the list and merge them into their parent clusters
+    while (ProcHierarchyIndex > CoresStartIndex) {
+      ProcHierarchyIndex--;
+      for (ClusterIndex = CoresStartIndex; ClusterIndex > 0; ClusterIndex--) {
+        if (ProcHierarchyInfo[ClusterIndex].Token == ProcHierarchyInfo[ProcHierarchyIndex].ParentToken) {
+          // Copy the ParentToken from the Cluster to the Core
+          ProcHierarchyInfo[ProcHierarchyIndex].ParentToken = ProcHierarchyInfo[ClusterIndex].ParentToken;
+
+          // Combine the Cluster name and Core name
+          ProcHierarchyInfo[ProcHierarchyIndex].OverrideName += (ProcHierarchyInfo[ClusterIndex].OverrideName * MaxCoresPerCluster);
+
+          // Replace the Cluster with the updated core
+          CopyMem (&ProcHierarchyInfo[ClusterIndex], &ProcHierarchyInfo[ProcHierarchyIndex], sizeof (ProcHierarchyInfo[ClusterIndex]));
+
+          // Done with this cluster/core
+          DEBUG ((DEBUG_INFO, "%a: Collapsed core at index %u into cluster at index %u\n", __FUNCTION__, ProcHierarchyIndex, ClusterIndex));
+          break;
+        }
+      }
+
+      NV_ASSERT_RETURN (
+        ClusterIndex > 0,
+        { Status = EFI_DEVICE_ERROR;
+          goto CleanupAndReturn;
+        },
+        "%a: CODE BUG - ClusterIndex reached 0 without finding a parent cluster for CoreIndex %u\n",
+        __FUNCTION__,
+        ProcHierarchyIndex
+        );
+    }
   }
 
   Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjProcHierarchyInfo);

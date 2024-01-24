@@ -2,7 +2,7 @@
 *
 *  AML generation protocol implementation.
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -295,6 +295,7 @@ AppendDevice (
     }
   }
 
+  This->DeviceCount++;
   return EFI_SUCCESS;
 }
 
@@ -494,6 +495,7 @@ AmlGenerationDxeEntryPoint (
   Private->AmlGenerationProtocol.GetTable        = GetTable;
   Private->AmlGenerationProtocol.StartScope      = StartScope;
   Private->AmlGenerationProtocol.EndScope        = EndScope;
+  Private->AmlGenerationProtocol.DeviceCount     = 0;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &ImageHandle,

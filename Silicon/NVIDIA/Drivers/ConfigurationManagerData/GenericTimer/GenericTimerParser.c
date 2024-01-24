@@ -9,6 +9,42 @@
 #include "NvCmObjectDescUtility.h"
 #include "GenericTimerParser.h"
 #include <Library/NVIDIADebugLib.h>
+#include <Library/TegraPlatformInfoLib.h>
+
+// For ARMARCH_TMR_HYPVIRT_PPI
+#include <TH500/TH500Definitions.h>
+
+STATIC
+CM_ARM_GENERIC_TIMER_INFO  GenericTimerInfo_Jetson = {
+  SYSTEM_COUNTER_BASE_ADDRESS,
+  SYSTEM_COUNTER_READ_BASE,
+  FixedPcdGet32 (PcdArmArchTimerSecIntrNum),
+  GTDT_GTIMER_FLAGS,
+  FixedPcdGet32 (PcdArmArchTimerIntrNum),
+  GTDT_GTIMER_FLAGS,
+  FixedPcdGet32 (PcdArmArchTimerVirtIntrNum),
+  GTDT_GTIMER_FLAGS,
+  FixedPcdGet32 (PcdArmArchTimerHypIntrNum),
+  GTDT_GTIMER_FLAGS,
+  0,
+  0
+};
+
+STATIC
+CM_ARM_GENERIC_TIMER_INFO  GenericTimerInfo_Server = {
+  SYSTEM_COUNTER_BASE_ADDRESS,
+  SYSTEM_COUNTER_READ_BASE,
+  FixedPcdGet32 (PcdArmArchTimerSecIntrNum),
+  GTDT_GTIMER_FLAGS_SAVE,
+  FixedPcdGet32 (PcdArmArchTimerIntrNum),
+  GTDT_GTIMER_FLAGS_SAVE,
+  FixedPcdGet32 (PcdArmArchTimerVirtIntrNum),
+  GTDT_GTIMER_FLAGS_SAVE,
+  FixedPcdGet32 (PcdArmArchTimerHypIntrNum),
+  GTDT_GTIMER_FLAGS_SAVE,
+  ARMARCH_TMR_HYPVIRT_PPI,
+  GTDT_GTIMER_FLAGS_SAVE
+};
 
 /** Generic timer parser function
 
@@ -76,30 +112,36 @@ GenericTimerParser (
   )
 {
   EFI_STATUS                 Status;
-  CM_ARM_GENERIC_TIMER_INFO  GenericTimerInfo = {
-    SYSTEM_COUNTER_BASE_ADDRESS,
-    SYSTEM_COUNTER_READ_BASE,
-    FixedPcdGet32 (PcdArmArchTimerSecIntrNum),
-    GTDT_GTIMER_FLAGS,
-    FixedPcdGet32 (PcdArmArchTimerIntrNum),
-    GTDT_GTIMER_FLAGS,
-    FixedPcdGet32 (PcdArmArchTimerVirtIntrNum),
-    GTDT_GTIMER_FLAGS,
-    FixedPcdGet32 (PcdArmArchTimerHypIntrNum),
-    GTDT_GTIMER_FLAGS
-  };
+  CM_ARM_GENERIC_TIMER_INFO  *GenericTimerInfo;
+  UINT32                     ChipID;
 
   if (ParserHandle == NULL) {
     ASSERT (0);
     return EFI_INVALID_PARAMETER;
   }
 
+  ChipID = TegraGetChipID ();
+  switch (ChipID) {
+    case T194_CHIP_ID:
+    case T234_CHIP_ID:
+      GenericTimerInfo = &GenericTimerInfo_Jetson;
+      break;
+
+    case TH500_CHIP_ID:
+      GenericTimerInfo = &GenericTimerInfo_Server;
+      break;
+
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: Unsupported ChipID 0x%x\n", __FUNCTION__, ChipID));
+      return EFI_UNSUPPORTED;
+  }
+
   // Add the CmObj to the Configuration Manager.
   Status = NvAddSingleCmObj (
              ParserHandle,
              CREATE_CM_ARM_OBJECT_ID (EArmObjGenericTimerInfo),
-             &GenericTimerInfo,
-             sizeof (GenericTimerInfo),
+             GenericTimerInfo,
+             sizeof (*GenericTimerInfo),
              NULL
              );
   ASSERT_EFI_ERROR (Status);

@@ -10,6 +10,7 @@
 #include "SerialPortInfoParser.h"
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <NVIDIAConfiguration.h>
 
@@ -63,19 +64,19 @@ SerialPortInfoParser (
 {
   EFI_STATUS                         Status;
   UINT32                             NumberOfSerialPorts;
-  UINT32                             *SerialHandles;
   CM_ARM_SERIAL_PORT_INFO            *SpcrSerialPort;
   NVIDIA_DEVICE_TREE_REGISTER_DATA   RegisterData;
   NVIDIA_DEVICE_TREE_INTERRUPT_DATA  InterruptData;
   UINT32                             Index;
   UINT32                             Size;
   UINT8                              SerialPortConfig;
+  UINT8                              SerialTypeConfig;
   CM_STD_OBJ_ACPI_TABLE_INFO         AcpiTableHeader;
   CONST CHAR8                        **Map;
   CM_OBJ_DESCRIPTOR                  Desc;
   UINTN                              ChipID;
+  INT32                              NodeOffset;
 
-  SerialHandles  = NULL;
   SpcrSerialPort = NULL;
 
   if (ParserHandle == NULL) {
@@ -88,43 +89,45 @@ SerialPortInfoParser (
     return EFI_SUCCESS;
   }
 
-  ChipID = TegraGetChipID ();
-  // JDS TODO - see if I missed porting something over here
+  SerialTypeConfig = PcdGet8 (PcdSerialTypeConfig);
+  ChipID           = TegraGetChipID ();
 
-  if (PcdGet8 (PcdSerialTypeConfig) == NVIDIA_SERIAL_PORT_TYPE_16550) {
-    Map = TegraSerialPortCompatibility;
-  } else {
-    if (ChipID == T194_CHIP_ID) {
-      return EFI_SUCCESS;
-    }
+  switch (ChipID) {
+    case T194_CHIP_ID:
+      if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_16550) {
+        Map = TegraSerialPortCompatibility;
+      } else {
+        return EFI_SUCCESS;
+      }
 
-    Map = ArmSerialPortCompatibility;
-  }
-
-  NumberOfSerialPorts = 0;
-  while (*Map != NULL) {
-    Status = GetMatchingEnabledDeviceTreeNodes (*Map, NULL, &NumberOfSerialPorts);
-    if (Status != EFI_BUFFER_TOO_SMALL) {
-      Map++;
-    } else {
       break;
-    }
+
+    case T234_CHIP_ID: // JDS TODO - confirm that this is correct
+      if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_16550) {
+        Map = TegraSerialPortCompatibility;
+      } else {
+        Map = ArmSerialPortCompatibility;
+      }
+
+      break;
+
+    case TH500_CHIP_ID:
+      if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_SBSA) {
+        Map = ArmSerialPortCompatibility;
+      } else {
+        return EFI_SUCCESS;
+      }
+
+      break;
+
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: Unable to determine how to handle SerialPort for ChipID 0x%x\n", __FUNCTION__, ChipID));
+      return EFI_UNSUPPORTED;
   }
 
-  if (*Map == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: No Matches found \n", __FUNCTION__));
-    Status = EFI_NOT_FOUND;
-    goto CleanupAndReturn;
-  }
-
-  SerialHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfSerialPorts);
-  if (SerialHandles == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto CleanupAndReturn;
-  }
-
-  Status = GetMatchingEnabledDeviceTreeNodes (*Map, SerialHandles, &NumberOfSerialPorts);
+  Status = DeviceTreeGetCompatibleNodeCount (Map, &NumberOfSerialPorts);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get Serial Port info\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
@@ -134,18 +137,22 @@ SerialPortInfoParser (
     goto CleanupAndReturn;
   }
 
-  for (Index = 0; Index < NumberOfSerialPorts; Index++) {
+  NodeOffset = -1;
+  Index      = 0;
+  while (EFI_SUCCESS == DeviceTreeGetNextCompatibleNode (Map, &NodeOffset)) {
     // Only one register space is expected
     Size   = 1;
-    Status = GetDeviceTreeRegisters (SerialHandles[Index], &RegisterData, &Size);
+    Status = DeviceTreeGetRegisters (NodeOffset, &RegisterData, &Size);
     if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to get registers - %r\r\n", __func__, Status));
       goto CleanupAndReturn;
     }
 
     // Only one interrupt is expected
     Size   = 1;
-    Status = GetDeviceTreeInterrupts (SerialHandles[Index], &InterruptData, &Size);
+    Status = DeviceTreeGetInterrupts (NodeOffset, &InterruptData, &Size);
     if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to get interrupts - %r\r\n", __func__, Status));
       goto CleanupAndReturn;
     }
 
@@ -153,7 +160,8 @@ SerialPortInfoParser (
     SpcrSerialPort[Index].BaseAddressLength = RegisterData.Size;
     SpcrSerialPort[Index].Interrupt         = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
     SpcrSerialPort[Index].BaudRate          = FixedPcdGet64 (PcdUartDefaultBaudRate);
-    if (PcdGet8 (PcdSerialTypeConfig) == NVIDIA_SERIAL_PORT_TYPE_SBSA) {
+    SpcrSerialPort[Index].Clock             = FixedPcdGet32 (PL011UartClkInHz);
+    if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_SBSA) {
       SpcrSerialPort[Index].PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_ARM_SBSA_GENERIC_UART;
     } else {
       if (SerialPortConfig == NVIDIA_SERIAL_PORT_SPCR_FULL_16550) {
@@ -163,7 +171,7 @@ SerialPortInfoParser (
       }
     }
 
-    SpcrSerialPort[Index].Clock = FixedPcdGet32 (PL011UartClkInHz);
+    Index++;
   }
 
   // Extend ACPI table list with the new table header
@@ -213,7 +221,6 @@ SerialPortInfoParser (
   }
 
 CleanupAndReturn:
-  FREE_NON_NULL (SerialHandles);
   FREE_NON_NULL (SpcrSerialPort);
   return Status;
 }

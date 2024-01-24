@@ -11,12 +11,30 @@
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DebugLib.h>
+#include <Library/MpCoreInfoLib.h>
 
 #include "Dsdt_T194.hex"
 #include "Dsdt_T194.offset.h"
 
 #include "Dsdt_T234.hex"
 #include "Dsdt_T234.offset.h"
+
+#include "Dsdt_TH500.hex"
+#include "Dsdt_TH500.offset.h"
+#include "SsdtSocket1_TH500.hex"
+#include "SsdtSocket1_TH500.offset.h"
+#include "SsdtSocket2_TH500.hex"
+#include "SsdtSocket2_TH500.offset.h"
+#include "SsdtSocket3_TH500.hex"
+#include "SsdtSocket3_TH500.offset.h"
+#include "BpmpSsdtSocket0_TH500.hex"
+#include "BpmpSsdtSocket0_TH500.offset.h"
+#include "BpmpSsdtSocket1_TH500.hex"
+#include "BpmpSsdtSocket1_TH500.offset.h"
+#include "BpmpSsdtSocket2_TH500.hex"
+#include "BpmpSsdtSocket2_TH500.offset.h"
+#include "BpmpSsdtSocket3_TH500.hex"
+#include "BpmpSsdtSocket3_TH500.offset.h"
 
 #include "SdhciInfo/SdhciInfoParser.h"
 #include "I2cInfo/I2cInfoParser.h"
@@ -35,7 +53,7 @@ STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray_T194[] = {
   SSDT_I2CTEMP_OffsetTable
 };
 
-// CmAcpiTableList is shared between T194 and T234
+// CmAcpiTableList is shared between T194, T234, and TH500
 STATIC
 CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
   // FADT Table
@@ -112,6 +130,37 @@ STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray_T234[] = {
   SSDT_SDCTEMP_OffsetTable
 };
 
+/** The platform ACPI info for TH500.
+*/
+STATIC EFI_ACPI_DESCRIPTION_HEADER  *AcpiTableArray_TH500[] = {
+  (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)ssdtsocket1_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)ssdtsocket2_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)ssdtsocket3_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket0_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket1_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket2_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket3_th500_aml_code
+};
+
+STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray_TH500[] = {
+  DSDT_TH500_OffsetTable,
+  SSDT_TH500_S1_OffsetTable,
+  SSDT_TH500_S2_OffsetTable,
+  SSDT_TH500_S3_OffsetTable,
+  SSDT_BPMP_S0_OffsetTable,
+  SSDT_BPMP_S1_OffsetTable,
+  SSDT_BPMP_S2_OffsetTable,
+  SSDT_BPMP_S3_OffsetTable
+};
+
+EFI_ACPI_DESCRIPTION_HEADER  *AcpiBpmpTableArray[] = {
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket0_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket1_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket2_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket3_th500_aml_code
+};
+
 /** Acpi table list parser function.
 
   The following structures are populated:
@@ -177,6 +226,13 @@ AcpiTableListParser (
       ArraySize        = ARRAY_SIZE (AcpiTableArray_T234);
       break;
 
+    case TH500_CHIP_ID:
+      DsdtTable        = dsdt_th500_aml_code;
+      AcpiTableArray   = AcpiTableArray_TH500;
+      OffsetTableArray = OffsetTableArray_TH500;
+      ArraySize        = ARRAY_SIZE (AcpiTableArray_TH500);
+      break;
+
     default:
       // Not currently supported
       Status = EFI_NOT_FOUND;
@@ -207,6 +263,39 @@ AcpiTableListParser (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add parser at index %lu\n", __FUNCTION__, Status, Index));
       goto CleanupAndReturn;
+    }
+  }
+
+  // Add tables for additional sockets if needed
+  if (ChipID == TH500_CHIP_ID) {
+    UINT32                      MaxSocket;
+    UINT32                      SocketId;
+    CM_STD_OBJ_ACPI_TABLE_INFO  NewAcpiTable;
+
+    Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get PlatformInfo\n", __FUNCTION__, Status));
+      goto CleanupAndReturn;
+    }
+
+    NewAcpiTable.AcpiTableSignature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+    NewAcpiTable.AcpiTableRevision  = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+    NewAcpiTable.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
+    NewAcpiTable.OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
+    NewAcpiTable.OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+    NewAcpiTable.MinorRevision      = 0;
+
+    for (SocketId = 1; SocketId <= MaxSocket; SocketId++) {
+      Status = MpCoreInfoGetSocketInfo (SocketId, NULL, NULL, NULL, NULL);
+      if (!EFI_ERROR (Status)) {
+        NewAcpiTable.AcpiTableData = (EFI_ACPI_DESCRIPTION_HEADER *)AcpiTableArray_TH500[SocketId];
+
+        Status = NvAddAcpiTableGenerator (ParserHandle, &NewAcpiTable);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add the SSDT table for Socket %u\n", __FUNCTION__, Status, SocketId));
+          goto CleanupAndReturn;
+        }
+      }
     }
   }
 

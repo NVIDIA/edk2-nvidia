@@ -36,8 +36,15 @@
 #define GTDT_TIMER_ACTIVE_LOW       \
           EFI_ACPI_6_4_GTDT_TIMER_FLAG_TIMER_INTERRUPT_POLARITY
 #define GTDT_TIMER_ACTIVE_HIGH  0
+#define GTDT_TIMER_SAVE_CONTEXT     \
+          EFI_ACPI_6_4_GTDT_TIMER_FLAG_ALWAYS_ON_CAPABILITY
+#define GTDT_TIMER_LOSE_CONTEXT  0
 
 #define GTDT_GTIMER_FLAGS  (GTDT_TIMER_ACTIVE_LOW |          \
+                                       GTDT_TIMER_LEVEL_TRIGGERED)
+
+#define GTDT_GTIMER_FLAGS_SAVE  (GTDT_TIMER_SAVE_CONTEXT |          \
+                                       GTDT_TIMER_ACTIVE_LOW | \
                                        GTDT_TIMER_LEVEL_TRIGGERED)
 
 /** Generic timer parser function

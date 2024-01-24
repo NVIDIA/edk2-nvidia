@@ -183,7 +183,12 @@ GicCParser (
   UINT32                             SpeOverflowInterruptNum;
   UINTN                              ChipID;
   CM_OBJECT_TOKEN                    *CpcTokens;
-  UINT32                             Socket;
+  UINT32                             SocketId;
+  UINT32                             ClusterId;
+  UINT32                             CoreId;
+  UINT32                             MaxClustersPerSocket;
+  UINT32                             MaxCoresPerSocket;
+  UINT32                             MaxCoresPerCluster;
 
   GicInfo        = NULL;
   GicCInfo       = NULL;
@@ -276,9 +281,8 @@ GicCParser (
 
   // CpcInfo
   Status = GicCpcParser (ParserHandle, FdtBranch, &CpcTokens);
-  if (EFI_ERROR (Status) && (Status != EFI_UNSUPPORTED)) {
+  if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get CpcTokens\n", __FUNCTION__, Status));
-    goto CleanupAndReturn;
   }
 
   // Space for the GicC tokens
@@ -291,6 +295,10 @@ GicCParser (
     }
   }
 
+  MaxClustersPerSocket = (PcdGet32 (PcdTegraMaxClusters)) / (PcdGet32 (PcdTegraMaxSockets));
+  MaxCoresPerCluster   = PcdGet32 (PcdTegraMaxCoresPerCluster);
+  MaxCoresPerSocket    = MaxCoresPerCluster * MaxClustersPerSocket;
+
   // Populate GICC structures for all enabled cores
   for (CoreIndex = 0; CoreIndex < NumCores; CoreIndex++) {
     Status = MpCoreInfoGetProcessorIdFromIndex (CoreIndex, &MpIdr);
@@ -299,14 +307,16 @@ GicCParser (
       goto CleanupAndReturn;
     }
 
-    Status = MpCoreInfoGetProcessorLocation (MpIdr, &Socket, NULL, NULL);
+    Status = MpCoreInfoGetProcessorLocation (MpIdr, &SocketId, &ClusterId, &CoreId);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Got %r getting ProcessorLocation for MpIdr 0x%lx\n", __FUNCTION__, Status, MpIdr));
       goto CleanupAndReturn;
     }
 
-    GicCInfo[CoreIndex].CPUInterfaceNumber     = CoreIndex;
-    GicCInfo[CoreIndex].AcpiProcessorUid       = CoreIndex;
+    // This value must be contiguous from 0-(N-1)
+    GicCInfo[CoreIndex].CPUInterfaceNumber = CoreIndex;
+    // This value must be globally unique, including across sockets
+    GicCInfo[CoreIndex].AcpiProcessorUid       = (SocketId * MaxCoresPerSocket) + (ClusterId * MaxCoresPerCluster) + CoreId;
     GicCInfo[CoreIndex].Flags                  = EFI_ACPI_6_4_GIC_ENABLED;
     GicCInfo[CoreIndex].ParkingProtocolVersion = 0;
     if (ChipID == T194_CHIP_ID) {
@@ -327,7 +337,7 @@ GicCParser (
     GicCInfo[CoreIndex].MPIDR                         = MpIdr;
     GicCInfo[CoreIndex].ProcessorPowerEfficiencyClass = 0;
     GicCInfo[CoreIndex].SpeOverflowInterrupt          = SpeOverflowInterruptNum;
-    GicCInfo[CoreIndex].ProximityDomain               = Socket;
+    GicCInfo[CoreIndex].ProximityDomain               = SocketId;
     GicCInfo[CoreIndex].ClockDomain                   = 0;
     GicCInfo[CoreIndex].AffinityFlags                 = EFI_ACPI_6_4_GICC_ENABLED;
 

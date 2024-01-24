@@ -19,12 +19,14 @@
                 is the next-level. Otherwise next-level is NULL.
     CacheNodes - Cache nodes that are specified with a compatible = "cache" in the DTB
     CpuCacheNodes - Cache nodes that are specified as part of a CPU definition in the DTB
-    CacheTracker - Structure to keep pointers and counts for CacheNodes and CpuCacheNodes
+    CacheTracker - Structure to keep pointers and counts for CacheNodes
 
 **/
 
 #include "NvCmObjectDescUtility.h"
 #include "CacheInfoParser.h"
+#include <Library/BaseMemoryLib.h>
+#include <Library/ConfigurationManagerDataLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/MpCoreInfoLib.h>
@@ -54,25 +56,10 @@
 #define UNUSED_CLUSTER  (UNDEFINED_CLUSTER - 1)
 #define UNUSED_CORE     (UNDEFINED_CORE - 1)
 
-typedef struct _CACHE_NODE CACHE_NODE;
-
-struct _CACHE_NODE {
-  NVIDIA_DEVICE_TREE_CACHE_DATA    CacheData;
-  CM_OBJECT_TOKEN                  Token;
-  CACHE_NODE                       *NextLevel;
-  UINT32                           Socket;
-  UINT32                           Cluster;
-  UINT32                           Core;
-};
-
 typedef struct {
   // Cache Nodes
   CACHE_NODE    *CacheNodes;
   UINT32        CacheNodeCount;
-
-  // Cpu Cache Nodes
-  CACHE_NODE    *CpuCacheNodes;
-  UINT32        CpuCacheNodeCount;
 } CACHE_TRACKER;
 
 // Find the Node with the corresponding cache pHandle
@@ -87,15 +74,12 @@ FindpHandleInTracker (
   CACHE_NODE  *CacheNode;
   UINT32      Index;
 
-  for (Index = 0; Index < Tracker->CacheNodeCount; Index++) {
-    CacheNode = &Tracker->CacheNodes[Index];
-    if (CacheNode->CacheData.CacheId == pHandle) {
-      return CacheNode;
-    }
+  if (pHandle == 0) {
+    return NULL;
   }
 
-  for (Index = 0; Index < Tracker->CpuCacheNodeCount; Index++) {
-    CacheNode = &Tracker->CpuCacheNodes[Index];
+  for (Index = 0; Index < Tracker->CacheNodeCount; Index++) {
+    CacheNode = &Tracker->CacheNodes[Index];
     if (CacheNode->CacheData.CacheId == pHandle) {
       return CacheNode;
     }
@@ -109,10 +93,16 @@ STATIC
 EFI_STATUS
 EFIAPI
 GetCacheInfoFromCacheNode (
+  IN CACHE_TRACKER       *CacheTracker,
   IN CACHE_NODE          *CacheNode,
   OUT CM_ARM_CACHE_INFO  *CacheInfo
   )
 {
+  UINT32      Socket;
+  UINT32      Cluster;
+  UINT32      Core;
+  CACHE_NODE  *NextCacheNode;
+
   if ((CacheNode == NULL) ||
       (CacheInfo == NULL))
   {
@@ -121,12 +111,17 @@ GetCacheInfoFromCacheNode (
 
   CacheInfo->Token = CacheNode->Token;
 
-  if ((CacheNode->NextLevel != NULL) &&
-      ((CacheNode->Socket == CacheNode->NextLevel->Socket) &&
-       (CacheNode->Cluster == CacheNode->NextLevel->Cluster) &&
-       (CacheNode->Core == CacheNode->NextLevel->Core)))
-  {
-    CacheInfo->NextLevelOfCacheToken = CacheNode->NextLevel->Token;
+  // Next level token
+  if (CacheNode->CacheData.NextLevelCache != 0) {
+    NextCacheNode = FindpHandleInTracker (CacheNode->CacheData.NextLevelCache, CacheTracker);
+    if (((CacheNode->Socket == NextCacheNode->Socket) &&
+         (CacheNode->Cluster == NextCacheNode->Cluster) &&
+         (CacheNode->Core == NextCacheNode->Core)))
+    {
+      CacheInfo->NextLevelOfCacheToken = NextCacheNode->Token;
+    } else {
+      CacheInfo->NextLevelOfCacheToken = CM_NULL_TOKEN;
+    }
   } else {
     CacheInfo->NextLevelOfCacheToken = CM_NULL_TOKEN;
   }
@@ -168,7 +163,41 @@ GetCacheInfoFromCacheNode (
       return EFI_INVALID_PARAMETER;
   }
 
-  CacheInfo->CacheId = GET_CACHE_ID (CacheNode->CacheData.CacheLevel, CacheNode->CacheData.Type, CacheNode->Core, CacheNode->Cluster, CacheNode->Socket);
+  // Clean up Socket/Cluster/Core for GET_CACHE_ID
+  // Note: Don't modify the CacheNode's actual values, since we still need them for generating CacheHierarchyInfo
+  Socket = CacheNode->Socket;
+  if ((Socket == UNDEFINED_SOCKET) ||
+      (Socket == UNUSED_SOCKET))
+  {
+    Socket = 0;
+  }
+
+  Cluster = CacheNode->Cluster;
+  if ((Cluster == UNDEFINED_CLUSTER) ||
+      (Cluster == UNUSED_CLUSTER))
+  {
+    Cluster = 0;
+  }
+
+  Core = CacheNode->Core;
+  if ((Core == UNDEFINED_CORE) ||
+      (Core == UNUSED_CORE))
+  {
+    Core = 0;
+  }
+
+  CacheInfo->CacheId = GET_CACHE_ID (CacheNode->CacheData.CacheLevel, CacheNode->CacheData.Type, Core, Cluster, Socket);
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Added CacheId 0x%x (Level %u Type %d Core %u Cluster %u Socket %u\n",
+    __FUNCTION__,
+    CacheInfo->CacheId,
+    CacheNode->CacheData.CacheLevel,
+    CacheNode->CacheData.Type,
+    Core,
+    Cluster,
+    Socket
+    ));
 
   return EFI_SUCCESS;
 }
@@ -301,12 +330,8 @@ GeneratePrivateDataForPosition (
 
   // Count the number of matching nodes
   PrivateCount = 0;
-  for (Index = 0; Index < (CacheTracker->CacheNodeCount + CacheTracker->CpuCacheNodeCount); Index++) {
-    if (Index < CacheTracker->CacheNodeCount) {
-      Node = &CacheTracker->CacheNodes[Index];
-    } else {
-      Node = &CacheTracker->CpuCacheNodes[Index - CacheTracker->CacheNodeCount];
-    }
+  for (Index = 0; Index < CacheTracker->CacheNodeCount; Index++) {
+    Node = &CacheTracker->CacheNodes[Index];
 
     if ((Node->Socket == Socket) &&
         (Node->Cluster == Cluster) &&
@@ -332,12 +357,8 @@ GeneratePrivateDataForPosition (
 
   // Gather the tokens
   PrivateDataIndex = 0;
-  for (Index = 0; (Index < (CacheTracker->CacheNodeCount + CacheTracker->CpuCacheNodeCount)) && (PrivateDataIndex < PrivateCount); Index++) {
-    if (Index < CacheTracker->CacheNodeCount) {
-      Node = &CacheTracker->CacheNodes[Index];
-    } else {
-      Node = &CacheTracker->CpuCacheNodes[Index - CacheTracker->CacheNodeCount];
-    }
+  for (Index = 0; (Index < CacheTracker->CacheNodeCount) && (PrivateDataIndex < PrivateCount); Index++) {
+    Node = &CacheTracker->CacheNodes[Index];
 
     if ((Node->Socket == Socket) &&
         (Node->Cluster == Cluster) &&
@@ -357,6 +378,7 @@ GeneratePrivateDataForPosition (
              Token
              );
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add Private data for Socket %u Cluster %u Core %u\n", __FUNCTION__, Status, Socket, Cluster, Core));
     goto CleanupAndReturn;
   }
 
@@ -423,6 +445,31 @@ GenerateHierarchyInfo (
   return Status;
 }
 
+STATIC
+EFI_STATUS
+EFIAPI
+GenerateCacheMetadata (
+  IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
+  IN  CACHE_TRACKER                *CacheTracker
+  )
+{
+  EFI_STATUS  Status;
+
+  CM_OBJ_DESCRIPTOR  Desc;
+
+  Desc.ObjectId = CREATE_CM_OEM_OBJECT_ID (EOemObjCmCacheMetadata);
+  Desc.Data     = CacheTracker->CacheNodes;
+  Desc.Count    = CacheTracker->CacheNodeCount;
+  Desc.Size     = CacheTracker->CacheNodeCount * sizeof (CACHE_NODE);
+
+  Status = NvAddMultipleCmObjGetTokens (ParserHandle, &Desc, NULL, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r from NvAddMultipleCmObjWithTokens when adding CacheMetadata to ConfigManager\n", __FUNCTION__, Status));
+  }
+
+  return Status;
+}
+
 // Building the Cache info structure
 STATIC
 EFI_STATUS
@@ -443,7 +490,7 @@ BuildCacheInfoStruct (
 
   if ((CacheTracker == NULL) ||
       (CacheInfoStruct == NULL) ||
-      (CacheInfoCount != (CacheTracker->CacheNodeCount + CacheTracker->CpuCacheNodeCount)))
+      (CacheInfoCount != CacheTracker->CacheNodeCount))
   {
     return EFI_INVALID_PARAMETER;
   }
@@ -458,13 +505,9 @@ BuildCacheInfoStruct (
 
   // Get the CacheInfo for each CacheNode
   for (Index = 0; Index < CacheInfoCount; Index++) {
-    if (Index < CacheTracker->CacheNodeCount) {
-      CacheNode = &CacheTracker->CacheNodes[Index];
-    } else {
-      CacheNode = &CacheTracker->CpuCacheNodes[Index - CacheTracker->CacheNodeCount];
-    }
+    CacheNode = &CacheTracker->CacheNodes[Index];
 
-    Status = GetCacheInfoFromCacheNode (CacheNode, &CacheInfoStruct[Index]);
+    Status = GetCacheInfoFromCacheNode (CacheTracker, CacheNode, &CacheInfoStruct[Index]);
     if (EFI_ERROR (Status)) {
       goto CleanupAndReturn;
     }
@@ -491,7 +534,6 @@ STATIC
 EFI_STATUS
 EFIAPI
 CreateCacheNodeFromOffset (
-  CACHE_TRACKER                  *CacheTracker,
   CACHE_NODE                     *Node,
   INT32                          NodeOffset,
   NVIDIA_DEVICE_TREE_CACHE_TYPE  CacheType,
@@ -514,14 +556,7 @@ CreateCacheNodeFromOffset (
     return Status;
   }
 
-  Node->Token = Token;
-
-  if ((CacheTracker != NULL) &&
-      (Node->CacheData.NextLevelCache != 0))
-  {
-    Node->NextLevel = FindpHandleInTracker (Node->CacheData.NextLevelCache, CacheTracker);
-  }
-
+  Node->Token   = Token;
   Node->Socket  = Socket;
   Node->Cluster = Cluster;
   Node->Core    = Core;
@@ -551,7 +586,6 @@ GetCacheNodeData (
   UINT32           NodeIndex;
   INT32            NodeOffset;
   CACHE_NODE       *CacheNodes;
-  CACHE_NODE       *Node;
   CM_OBJECT_TOKEN  *TokenMap;
 
   CacheNodes = NULL;
@@ -591,7 +625,7 @@ GetCacheNodeData (
       goto CleanupAndReturn;
     }
 
-    Status = CreateCacheNodeFromOffset (NULL, &CacheNodes[NodeIndex], NodeOffset, CACHE_TYPE_UNIFIED, TokenMap[NodeIndex], UNDEFINED_SOCKET, UNDEFINED_CLUSTER, UNDEFINED_CORE);
+    Status = CreateCacheNodeFromOffset (&CacheNodes[NodeIndex], NodeOffset, CACHE_TYPE_UNIFIED, TokenMap[NodeIndex], UNDEFINED_SOCKET, UNDEFINED_CLUSTER, UNDEFINED_CORE);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get CacheData for index %u at offset 0x%x\n", __FUNCTION__, Status, NodeIndex, NodeOffset));
       goto CleanupAndReturn;
@@ -601,15 +635,6 @@ GetCacheNodeData (
   // Add the info to the Tracker
   CacheTracker->CacheNodeCount = NodeCount;
   CacheTracker->CacheNodes     = CacheNodes;
-
-  // Update the next pointers now that we have all the non-core cache nodes in the Tracker
-  for (NodeIndex = 0; NodeIndex < NodeCount; NodeIndex++) {
-    Node = &CacheNodes[NodeIndex];
-
-    if (Node->CacheData.NextLevelCache != 0) {
-      Node->NextLevel = FindpHandleInTracker (Node->CacheData.NextLevelCache, CacheTracker);
-    }
-  }
 
 CleanupAndReturn:
   if (EFI_ERROR (Status)) {
@@ -632,6 +657,7 @@ GetCpuCacheNodeData (
   EFI_STATUS       Status;
   UINT32           NodeIndex;
   CACHE_NODE       *CacheNodes;
+  CACHE_NODE       *AllCacheNodes;
   CM_OBJECT_TOKEN  *TokenMap;
   UINT32           NumEnabledCores;
   UINT64           CoreId;
@@ -717,7 +743,7 @@ GetCpuCacheNodeData (
     // Gather the I & D cache info from the CpuCacheOffset
 
     // I CacheData
-    Status = CreateCacheNodeFromOffset (CacheTracker, &CacheNodes[NodeIndex], CpuCacheOffset, CACHE_TYPE_ICACHE, TokenMap[NodeIndex], Socket, Cluster, Core);
+    Status = CreateCacheNodeFromOffset (&CacheNodes[NodeIndex], CpuCacheOffset, CACHE_TYPE_ICACHE, TokenMap[NodeIndex], Socket, Cluster, Core);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get ICacheData for Logical Core %u\n", __FUNCTION__, Status, CoreIndex));
     } else {
@@ -725,7 +751,7 @@ GetCpuCacheNodeData (
     }
 
     // D CacheData
-    Status = CreateCacheNodeFromOffset (CacheTracker, &CacheNodes[NodeIndex], CpuCacheOffset, CACHE_TYPE_DCACHE, TokenMap[NodeIndex], Socket, Cluster, Core);
+    Status = CreateCacheNodeFromOffset (&CacheNodes[NodeIndex], CpuCacheOffset, CACHE_TYPE_DCACHE, TokenMap[NodeIndex], Socket, Cluster, Core);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get DCacheData for Logical Core %u\n", __FUNCTION__, Status, CoreIndex));
     } else {
@@ -733,9 +759,24 @@ GetCpuCacheNodeData (
     }
   }
 
-  // Add the info to the Tracker
-  CacheTracker->CpuCacheNodeCount = NodeIndex;
-  CacheTracker->CpuCacheNodes     = CacheNodes;
+  // Add the info to the CacheTracker
+  AllCacheNodes = ReallocatePool (
+                    CacheTracker->CacheNodeCount * sizeof (CACHE_NODE),
+                    (CacheTracker->CacheNodeCount + NodeIndex) * sizeof (CACHE_NODE),
+                    CacheTracker->CacheNodes
+                    );
+  NV_ASSERT_RETURN (
+    AllCacheNodes != NULL,
+    { Status = EFI_OUT_OF_RESOURCES;
+      goto CleanupAndReturn;
+    },
+    "%a: Failed to allocate space for %u CACHE_NODEs\n",
+    __FUNCTION__,
+    (CacheTracker->CacheNodeCount + NodeIndex)
+    );
+  CopyMem (&AllCacheNodes[CacheTracker->CacheNodeCount], CacheNodes, NodeIndex * sizeof (CACHE_NODE));
+  CacheTracker->CacheNodeCount += NodeIndex;
+  CacheTracker->CacheNodes      = AllCacheNodes;
 
 CleanupAndReturn:
   if (EFI_ERROR (Status)) {
@@ -757,7 +798,6 @@ GenerateCacheInfo (
 {
   EFI_STATUS         Status;
   CM_OBJ_DESCRIPTOR  Desc;
-  UINT32             CacheInfoCount;
   CM_ARM_CACHE_INFO  *CacheInfoStruct;
   CM_OBJECT_TOKEN    *CacheInfoTokens;
 
@@ -768,24 +808,23 @@ GenerateCacheInfo (
     return EFI_INVALID_PARAMETER;
   }
 
-  CacheInfoCount = CacheTracker->CacheNodeCount + CacheTracker->CpuCacheNodeCount;
-  if (CacheInfoCount > 0) {
-    CacheInfoStruct = (CM_ARM_CACHE_INFO *)AllocatePool (sizeof (CM_ARM_CACHE_INFO) * CacheInfoCount);
+  if (CacheTracker->CacheNodeCount > 0) {
+    CacheInfoStruct = (CM_ARM_CACHE_INFO *)AllocatePool (sizeof (CM_ARM_CACHE_INFO) * CacheTracker->CacheNodeCount);
     if (CacheInfoStruct == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheInfoStruct\n", __FUNCTION__));
       Status = EFI_OUT_OF_RESOURCES;
       goto CleanupAndReturn;
     }
 
-    Status = BuildCacheInfoStruct (CacheTracker, CacheInfoStruct, CacheInfoCount, &CacheInfoTokens);
+    Status = BuildCacheInfoStruct (CacheTracker, CacheInfoStruct, CacheTracker->CacheNodeCount, &CacheInfoTokens);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r from BuildCacheINfoStruct (CacheInfoCount = %u)\n", __FUNCTION__, Status, CacheInfoCount));
+      DEBUG ((DEBUG_ERROR, "%a: Got %r from BuildCacheInfoStruct (CacheNodeCount = %u)\n", __FUNCTION__, Status, CacheTracker->CacheNodeCount));
       goto CleanupAndReturn;
     }
 
     Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo);
-    Desc.Size     = sizeof (CM_ARM_CACHE_INFO) * CacheInfoCount;
-    Desc.Count    = CacheInfoCount;
+    Desc.Size     = sizeof (CM_ARM_CACHE_INFO) * CacheTracker->CacheNodeCount;
+    Desc.Count    = CacheTracker->CacheNodeCount;
     Desc.Data     = CacheInfoStruct;
     Status        = NvAddMultipleCmObjWithTokens (ParserHandle, &Desc, CacheInfoTokens, CM_NULL_TOKEN);
     if (EFI_ERROR (Status)) {
@@ -818,7 +857,7 @@ FixupSocketClusterCoreFields (
   IN  CACHE_TRACKER  *CacheTracker
   )
 {
-  UINT32      CpuIndex;
+  UINT32      Index;
   CACHE_NODE  *Node;
   CACHE_NODE  *Next;
 
@@ -826,10 +865,16 @@ FixupSocketClusterCoreFields (
     return EFI_INVALID_PARAMETER;
   }
 
-  // Go through all the CpuCacheInfo entries, and propagate their Socket/Cluster/Core info upward
-  for (CpuIndex = 0; CpuIndex < CacheTracker->CpuCacheNodeCount; CpuIndex++) {
-    Node = &CacheTracker->CpuCacheNodes[CpuIndex];
-    Next = Node->NextLevel;
+  // Go through all the L1 entries, and propagate their Socket/Cluster/Core info upward
+  for (Index = 0; Index < CacheTracker->CacheNodeCount; Index++) {
+    Node = &CacheTracker->CacheNodes[Index];
+    if ((Node->CacheData.Type != CACHE_TYPE_DCACHE) &&
+        (Node->CacheData.Type != CACHE_TYPE_ICACHE))
+    {
+      continue;
+    }
+
+    Next = FindpHandleInTracker (Node->CacheData.NextLevelCache, CacheTracker);
 
     // Trace the chain up from this Node
     while (Next != NULL) {
@@ -844,7 +889,7 @@ FixupSocketClusterCoreFields (
       } else {
         // Otherwise, Socket should be correct and Cluster and/or Core might be unused
         if (Next->Socket != Node->Socket) {
-          DEBUG ((DEBUG_ERROR, "%a: Need a level higher than socket for an L%u cache from CpuIndex %u to flow into\n", __FUNCTION__, Next->CacheData.CacheLevel, CpuIndex));
+          DEBUG ((DEBUG_ERROR, "%a: Need a level higher than socket for an L%u cache from Index %u to flow into\n", __FUNCTION__, Next->CacheData.CacheLevel, Index));
           return EFI_UNSUPPORTED;
         } else {
           // Sockets match
@@ -872,7 +917,7 @@ FixupSocketClusterCoreFields (
 
       // Follow the chain up
       Node = Next;
-      Next = Next->NextLevel;
+      Next = FindpHandleInTracker (Next->CacheData.NextLevelCache, CacheTracker);
     }
   }
 
@@ -972,6 +1017,12 @@ CacheInfoParser (
     goto CleanupAndReturn;
   }
 
+  // Store CacheTracker metadata for other code to use
+  Status = GenerateCacheMetadata (ParserHandle, CacheTracker);
+  if (EFI_ERROR (Status)) {
+    goto CleanupAndReturn;
+  }
+
 CleanupAndReturn:
   if ((HierarchyInfo != NULL) && !EFI_ERROR (Status)) {
     *HierarchyInfo = CacheHierarchyInfo;
@@ -981,7 +1032,6 @@ CleanupAndReturn:
 
   if (CacheTracker != NULL) {
     FREE_NON_NULL (CacheTracker->CacheNodes);
-    FREE_NON_NULL (CacheTracker->CpuCacheNodes);
     FREE_NON_NULL (CacheTracker);
   }
 

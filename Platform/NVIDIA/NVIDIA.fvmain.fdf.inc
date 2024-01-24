@@ -661,12 +661,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   # Platform Configuration Manager Data
   #
 !ifdef CONFIG_CONFIG_MANAGER
-!ifdef CONFIG_SOC_JETSON
   INF Silicon/NVIDIA/Drivers/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
-!endif
-!ifdef CONFIG_SOC_GRACE
-  INF Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
-!endif
 !endif
 
   #

@@ -17,6 +17,23 @@
 #include "SdcTemplate.hex"
 #include "SdcTemplate.offset.h"
 
+STATIC
+CONST CHAR8  *T194Compatibility[] = {
+  "nvidia,tegra194-sdhci",
+  NULL
+};
+
+STATIC
+CONST CHAR8  *T234Compatibility[] = {
+  "nvidia,tegra234-sdhci",
+  NULL
+};
+
+STATIC
+CONST CHAR8  *TH500Compatibility[] = {
+  NULL
+};
+
 /** Sdhci info parser function.
 
   Adds SDHCI information to the SSDT ACPI table being generated
@@ -49,8 +66,6 @@ SdhciInfoParser (
   UINT32                                         Index;
   NVIDIA_AML_GENERATION_PROTOCOL                 *GenerationProtocol;
   NVIDIA_AML_PATCH_PROTOCOL                      *PatchProtocol;
-  UINT32                                         NumberOfSdhciPorts;
-  UINT32                                         *SdhciHandles;
   NVIDIA_DEVICE_TREE_REGISTER_DATA               RegisterData;
   NVIDIA_DEVICE_TREE_INTERRUPT_DATA              InterruptData;
   UINT32                                         Size;
@@ -58,10 +73,9 @@ SdhciInfoParser (
   NVIDIA_AML_NODE_INFO                           AcpiNodeInfo;
   EFI_ACPI_32_BIT_FIXED_MEMORY_RANGE_DESCRIPTOR  MemoryDescriptor;
   EFI_ACPI_EXTENDED_INTERRUPT_DESCRIPTOR         InterruptDescriptor;
-  VOID                                           *DeviceTreeBase;
   INT32                                          NodeOffset;
   UINT32                                         Removable;
-  CHAR8                                          *CompatStr;
+  CONST CHAR8                                    **CompatibleInfo;
   UINTN                                          ChipID;
 
   if (ParserHandle == NULL) {
@@ -79,47 +93,38 @@ SdhciInfoParser (
     return Status;
   }
 
-  NumberOfSdhciPorts = 0;
-  ChipID             = TegraGetChipID ();
-  if (ChipID == T194_CHIP_ID) {
-    CompatStr = "nvidia,tegra194-sdhci";
-  } else if (ChipID == T234_CHIP_ID) {
-    CompatStr = "nvidia,tegra234-sdhci";
-  } else {
-    DEBUG ((DEBUG_ERROR, "Unsupported ChipID for SdhciInfoParser\n"));
-    return EFI_UNSUPPORTED;
+  ChipID = TegraGetChipID ();
+  switch (ChipID) {
+    case T194_CHIP_ID:
+      CompatibleInfo = T194Compatibility;
+      break;
+    case T234_CHIP_ID:
+      CompatibleInfo = T234Compatibility;
+      break;
+    case TH500_CHIP_ID:
+      CompatibleInfo = TH500Compatibility;
+      break;
+    default:
+      DEBUG ((DEBUG_ERROR, "Unsupported ChipID for SdhciInfoParser\n"));
+      return EFI_UNSUPPORTED;
   }
 
-  Status = GetMatchingEnabledDeviceTreeNodes (CompatStr, NULL, &NumberOfSdhciPorts);
-  if (Status == EFI_NOT_FOUND) {
-    return EFI_SUCCESS;
-  } else if (Status != EFI_BUFFER_TOO_SMALL) {
-    return Status;
-  }
-
-  SdhciHandles = NULL;
-  SdhciHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfSdhciPorts);
-  if (SdhciHandles == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  Status = GetMatchingEnabledDeviceTreeNodes (CompatStr, SdhciHandles, &NumberOfSdhciPorts);
-  if (EFI_ERROR (Status)) {
-    goto CleanupAndReturn;
-  }
-
-  for (Index = 0; Index < NumberOfSdhciPorts; Index++) {
+  NodeOffset = -1;
+  Index      = 0;
+  while (EFI_SUCCESS == DeviceTreeGetNextCompatibleNode (CompatibleInfo, &NodeOffset)) {
     // Only one register space is expected
     Size   = 1;
-    Status = GetDeviceTreeRegisters (SdhciHandles[Index], &RegisterData, &Size);
+    Status = DeviceTreeGetRegisters (NodeOffset, &RegisterData, &Size);
     if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to get registers - %r\r\n", __func__, Status));
       goto CleanupAndReturn;
     }
 
     // Only one interrupt is expected
     Size   = 1;
-    Status = GetDeviceTreeInterrupts (SdhciHandles[Index], &InterruptData, &Size);
+    Status = DeviceTreeGetInterrupts (NodeOffset, &InterruptData, &Size);
     if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to get interrupts - %r\r\n", __func__, Status));
       goto CleanupAndReturn;
     }
 
@@ -135,7 +140,6 @@ SdhciInfoParser (
       goto CleanupAndReturn;
     }
 
-    GetDeviceTreeNode (SdhciHandles[Index], &DeviceTreeBase, &NodeOffset);
     Status = DeviceTreeGetNodeProperty (NodeOffset, "non-removable", NULL, NULL);
     if (!EFI_ERROR (Status)) {
       Removable = 0;
@@ -224,9 +228,10 @@ SdhciInfoParser (
       DEBUG ((DEBUG_ERROR, "%a: Failed to append device %a\n", __FUNCTION__, SdcPathString));
       goto CleanupAndReturn;
     }
+
+    Index++;
   }
 
 CleanupAndReturn:
-  FREE_NON_NULL (SdhciHandles);
   return Status;
 }

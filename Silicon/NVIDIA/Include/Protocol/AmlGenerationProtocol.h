@@ -2,7 +2,7 @@
 *
 *  AML generation protocol definition.
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -129,6 +129,7 @@ struct _NVIDIA_AML_GENERATION_PROTOCOL {
   NVIDIA_AML_GENERATION_GET_TABLE           GetTable;
   NVIDIA_AML_GENERATION_START_SCOPE         StartScope;
   NVIDIA_AML_GENERATION_END_SCOPE           EndScope;
+  UINT32                                    DeviceCount;
 };
 
 #endif /* __AML_GENERATION_PROTOCOL_H__ */

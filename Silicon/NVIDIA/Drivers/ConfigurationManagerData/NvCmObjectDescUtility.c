@@ -8,8 +8,8 @@
 
 #include <ConfigurationManagerObject.h>
 #include <Library/ConfigurationManagerDataLib.h>
-#include <ArmNameSpaceObjects.h>
 #include <Library/NVIDIADebugLib.h>
+#include <ArmNameSpaceObjects.h>
 
 #include "NvCmObjectDescUtility.h"
 #include "NvCmObjectDescUtilityPrivate.h"
@@ -623,4 +623,117 @@ NvAddAcpiTableGenerator (
   }
 
   return Status;
+}
+
+/** Find the cache metadata in the configuration manager based on pHandle
+
+  @param  [in]  ParserHandle      A handle to the parser instance.
+  @param  [in]  pHandle           The pHandle of the cache node to find.
+  @param  [in]  ICache            If the pHandle is for a "cpu" node, setting this
+                                  to TRUE will return the ICache info and FALSE will
+                                  return the DCache info. Otherwise, this is ignored.
+  @param  [out] CacheNode         Pointer to where to put the CacheNode information.
+
+  @retval EFI_SUCCESS             The function completed successfully.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           Couldn't find a CacheNode with the given pHandle.
+**/
+EFI_STATUS
+EFIAPI
+NvFindCacheMetadataByPhandle (
+  IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
+  IN        UINT32                 pHandle,
+  IN        BOOLEAN                ICache,
+  OUT CONST CACHE_NODE             **CacheNode
+  )
+{
+  EFI_STATUS         Status;
+  CM_OBJ_DESCRIPTOR  *Desc;
+  CACHE_NODE         *Node;
+  UINT32             Index;
+
+  NV_ASSERT_RETURN (ParserHandle != NULL, return EFI_INVALID_PARAMETER, "%a: ParserHandle pointer is NULL\n", __FUNCTION__);
+  NV_ASSERT_RETURN (CacheNode != NULL, return EFI_INVALID_PARAMETER, "%a: CacheNode pointer is NULL\n", __FUNCTION__);
+
+  Status = NvFindEntry (ParserHandle, CREATE_CM_OEM_OBJECT_ID (EOemObjCmCacheMetadata), CM_NULL_TOKEN, &Desc);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find the CacheNode metadata\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  for (Index = 0; Index < Desc->Count; Index++) {
+    Node = &((CACHE_NODE *)(Desc->Data))[Index];
+
+    if (Node->CacheData.CacheId == pHandle) {
+      // Don't return the DCache node if we requested the ICache node, and vice versa
+      if (((Node->CacheData.Type == CACHE_TYPE_DCACHE) && (ICache)) ||
+          ((Node->CacheData.Type == CACHE_TYPE_ICACHE) && (!ICache)))
+      {
+        continue;
+      }
+
+      *CacheNode = Node;
+      return EFI_SUCCESS;
+    }
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: Unable to find pHandle 0x%x in the CacheNode metadata\n", __FUNCTION__, pHandle));
+  return EFI_NOT_FOUND;
+}
+
+/** Find the CacheId in the configuration manager based on pHandle
+
+  @param  [in]  ParserHandle      A handle to the parser instance.
+  @param  [in]  pHandle           The pHandle of the cache node to find.
+  @param  [in]  ICache            If the pHandle is for a "cpu" node, setting this
+                                  to TRUE will return the ICache Id and FALSE will
+                                  return the DCache Id. Otherwise, this is ignored.
+  @param  [out] CacheId           Pointer to where to put the CacheId.
+
+  @retval EFI_SUCCESS             The function completed successfully.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           Couldn't find a CacheId for the given pHandle.
+**/
+EFI_STATUS
+EFIAPI
+NvFindCacheIdByPhandle (
+  IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
+  IN        UINT32                 pHandle,
+  IN        BOOLEAN                ICache,
+  OUT       UINT32                 *CacheId
+  )
+{
+  EFI_STATUS               Status;
+  CONST CACHE_NODE         *Node;
+  CM_OBJ_DESCRIPTOR        *Desc;
+  CONST CM_ARM_CACHE_INFO  *CacheInfo;
+  UINT32                   Index;
+
+  NV_ASSERT_RETURN (ParserHandle != NULL, return EFI_INVALID_PARAMETER, "%a: ParserHandle pointer is NULL\n", __FUNCTION__);
+  NV_ASSERT_RETURN (CacheId != NULL, return EFI_INVALID_PARAMETER, "%a: CacheId pointer is NULL\n", __FUNCTION__);
+
+  Status = NvFindCacheMetadataByPhandle (ParserHandle, pHandle, ICache, &Node);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find the CacheNode for pHandle 0x%x\n", __FUNCTION__, Status, pHandle));
+    return Status;
+  }
+
+  Status = NvFindEntry (ParserHandle, CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo), Node->Token, &Desc);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find the CacheInfo for pHandle 0x%x (Token 0x%x)\n", __FUNCTION__, Status, pHandle, Node->Token));
+    return Status;
+  }
+
+  // Locate the Element that matches the Node->Token
+  for (Index = 0; Index < Desc->Count; Index++) {
+    CacheInfo = &((CONST CM_ARM_CACHE_INFO *)(Desc->Data))[Index];
+
+    if (CacheInfo->Token == Node->Token) {
+      *CacheId = CacheInfo->CacheId;
+      return EFI_SUCCESS;
+    }
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: Code bug trying to find element with token 0x%x in CacheInfo\n", __FUNCTION__, Node->Token));
+  return EFI_NOT_FOUND;
 }

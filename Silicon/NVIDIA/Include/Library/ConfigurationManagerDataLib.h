@@ -144,6 +144,7 @@ extern EFI_GUID  gNVIDIAConfigurationManagerDataProtocolGuid;
 typedef enum OemObjectID {
   EOemObjReserved,                                             ///<  0 - Reserved
   EOemObjCmParser,                                             ///<  1 - Config Manager Parser
+  EOemObjCmCacheMetadata,                                      ///<  2 - Cache Metadata
   EOemObjMax
 } EOEM_OBJECT_ID;
 

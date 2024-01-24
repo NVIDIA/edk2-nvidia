@@ -55,33 +55,36 @@ SsdtTableGeneratorParser (
     goto CleanupAndReturn;
   }
 
-  Status = GenerationProtocol->EndScope (GenerationProtocol);
-  if (EFI_ERROR (Status)) {
-    goto CleanupAndReturn;
-  }
+  // Only create & install the table if there's relevant data inside
+  if (GenerationProtocol->DeviceCount > 0) {
+    Status = GenerationProtocol->EndScope (GenerationProtocol);
+    if (EFI_ERROR (Status)) {
+      goto CleanupAndReturn;
+    }
 
-  Status = GenerationProtocol->GetTable (GenerationProtocol, &TestTable);
-  if (EFI_ERROR (Status)) {
-    goto CleanupAndReturn;
-  }
+    Status = GenerationProtocol->GetTable (GenerationProtocol, &TestTable);
+    if (EFI_ERROR (Status)) {
+      goto CleanupAndReturn;
+    }
 
-  // Extend ACPI table list with the new table header
-  AcpiTableHeader.AcpiTableSignature = TestTable->Signature;
-  AcpiTableHeader.AcpiTableRevision  = TestTable->Revision;
-  AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
-  AcpiTableHeader.AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)TestTable;
-  AcpiTableHeader.OemTableId         = TestTable->OemTableId;
-  AcpiTableHeader.OemRevision        = TestTable->OemRevision;
-  AcpiTableHeader.MinorRevision      = 0;
+    // Extend ACPI table list with the new table header
+    AcpiTableHeader.AcpiTableSignature = TestTable->Signature;
+    AcpiTableHeader.AcpiTableRevision  = TestTable->Revision;
+    AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
+    AcpiTableHeader.AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)TestTable;
+    AcpiTableHeader.OemTableId         = TestTable->OemTableId;
+    AcpiTableHeader.OemRevision        = TestTable->OemRevision;
+    AcpiTableHeader.MinorRevision      = 0;
 
-  Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-  Desc.Size     = sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-  Desc.Count    = 1;
-  Desc.Data     = &AcpiTableHeader;
+    Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
+    Desc.Size     = sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+    Desc.Count    = 1;
+    Desc.Data     = &AcpiTableHeader;
 
-  Status = NvExtendCmObj (ParserHandle, &Desc, CM_NULL_TOKEN, NULL);
-  if (EFI_ERROR (Status)) {
-    goto CleanupAndReturn;
+    Status = NvExtendCmObj (ParserHandle, &Desc, CM_NULL_TOKEN, NULL);
+    if (EFI_ERROR (Status)) {
+      goto CleanupAndReturn;
+    }
   }
 
 CleanupAndReturn:

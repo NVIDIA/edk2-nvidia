@@ -27,6 +27,16 @@
   Dsdt_T234.asl
   SsdtAhci.asl
   SsdtHda.asl
+  Dsdt_TH500.asl
+  SsdtEth_TH500.asl
+  SsdtSocket1_TH500.asl
+  SsdtSocket2_TH500.asl
+  SsdtSocket3_TH500.asl
+  BpmpSsdtSocket0_TH500.asl
+  BpmpSsdtSocket1_TH500.asl
+  BpmpSsdtSocket2_TH500.asl
+  BpmpSsdtSocket3_TH500.asl
+  SsdtTpm_TH500.asl
 
 [Packages]
   ArmPkg/ArmPkg.dec

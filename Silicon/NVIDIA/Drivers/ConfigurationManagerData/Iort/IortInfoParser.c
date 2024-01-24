@@ -15,6 +15,7 @@
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/NVIDIADebugLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <libfdt.h>
 
 #include <ConfigurationManagerObject.h>
@@ -23,6 +24,7 @@
 #include "NvCmObjectDescUtility.h"
 
 #include <T234/T234Definitions.h>
+#include <TH500/TH500Definitions.h>
 #include "ConfigurationIortPrivate.h"
 
 #define for_each_list_entry(tmp, list)       \
@@ -198,6 +200,8 @@ FindPropNodeByPhandleInstance (
   LIST_ENTRY      *ListEntry;
   UINT32          Instance;
 
+  ASSERT (NodeInstance != 0);
+
   Instance = 1;
   for_each_list_entry (ListEntry, &Private->PropNodeList) {
     PropNode = IORT_PROP_NODE_FROM_LINK (ListEntry);
@@ -234,11 +238,25 @@ GetAddressLimit (
   UINT64        DmaAddr;
   UINT32        AddrLimit;
   INT32         PropSize;
+  UINT32        ChipID;
 
   // TODO: add support for multi 'dma-ranges' entries if needed
   Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "dma-ranges", &PropSize);
   if ((Prop == NULL) || (PropSize != DMARANGE_PROP_LENGTH)) {
-    return T234_PCIE_ADDRESS_BITS;
+    ChipID = TegraGetChipID ();
+    switch (ChipID) {
+      case T234_CHIP_ID:
+        return T234_PCIE_ADDRESS_BITS;
+        break;
+      case TH500_CHIP_ID:
+        return TH500_PCIE_ADDRESS_BITS;
+        break;
+      default:
+        NV_ASSERT_RETURN (FALSE, return 0, "%a: Unsupported ChipID 0x%x\n", __FUNCTION__, ChipID);
+    }
+
+    // Attempting to avoid a false cppcheck error
+    return 0;
   }
 
   IntProp  = Prop + sizeof (UINT32);
@@ -339,6 +357,7 @@ AddIortPropNodes (
   CONST UINT32    *MsiProp;
   CONST UINT32    *IommusProp;
   CONST UINT32    *IommuMapProp;
+  CONST UINT32    *DevicesProp;
   INT32           PropSize;
   INT32           RegPropSize;
   UINT32          ItsNodePresent;
@@ -362,10 +381,11 @@ AddIortPropNodes (
 
     NodeOffset = -1;
     do {
+      // check for aliases in dtb
       if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->Alias != NULL)) {
         AliasName = fdt_get_alias (Private->DtbBase, DevMap->Alias);
         if (AliasName == NULL) {
-          DEBUG ((DEBUG_WARN, "%a: Invalid alias for named component %a \r\n", __FUNCTION__, AliasName));
+          DEBUG ((DEBUG_WARN, "%a: Invalid alias for named component: %a \r\n", __FUNCTION__, DevMap->Alias));
           break;
         }
 
@@ -404,6 +424,7 @@ AddIortPropNodes (
         MsiProp         = NULL;
         IommusProp      = NULL;
         IommuMapProp    = NULL;
+        DevicesProp     = NULL;
 
         // Check DTB status and skip if it's not enabled
         Prop = fdt_getprop (Private->DtbBase, NodeOffset, "status", &PropSize);
@@ -415,6 +436,17 @@ AddIortPropNodes (
           ItsNodePresent = 1;
           Private->IoNodes[ITSIDENT_TYPE_INDEX].NumberOfNodes++;
           goto AllocatePropNode;
+        }
+
+        // Check DTB status and skip if it's not enabled
+        Prop = fdt_getprop (Private->DtbBase, NodeOffset, "status", &PropSize);
+        if ((Prop != NULL) && !((AsciiStrCmp (Prop, "okay") == 0) || (AsciiStrCmp (Prop, "ok") == 0))) {
+          // Alias path would be unique
+          if (DevMap->Alias != NULL) {
+            break;
+          }
+
+          continue;
         }
 
         // Check "msi-map" property for all DTB nodes
@@ -435,8 +467,8 @@ AddIortPropNodes (
           Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes++;
         }
 
-        // Check "iommu-map" property only for non-SMMUv1v2 nodes
-        if (DevMap->ObjectId != EArmObjSmmuV1SmmuV2) {
+        // Check "iommu-map" property only for non-SMMUv1v2, non-SMMUv3, and non-PMCG nodes
+        if ((DevMap->ObjectId != EArmObjSmmuV1SmmuV2) && (DevMap->ObjectId != EArmObjSmmuV3) && (DevMap->ObjectId != EArmObjPmcg)) {
           IommusProp = fdt_getprop (Private->DtbBase, NodeOffset, "iommus", &PropSize);
           if ((IommusProp != NULL) && (PropSize == IOMMUS_PROP_LENGTH)) {
             // Check DTB status and skip if it's not enabled
@@ -484,6 +516,24 @@ AddIortPropNodes (
             }
           }
         } else {
+          // Check "devices" property for all PMCG nodes
+          if (DevMap->ObjectId == EArmObjPmcg) {
+            DevicesProp = fdt_getprop (Private->DtbBase, NodeOffset, "devices", &PropSize);
+            if ((DevicesProp == NULL) || (PropSize != sizeof (UINT32))) {
+              DevicesProp = NULL;
+            } else {
+              // Skip if the target DTB node is not valid
+              if (FindPropNodeByPhandleInstance (Private, SwapBytes32 (*DevicesProp), 1) == NULL) {
+                // Alias path would be unique
+                if (DevMap->Alias != NULL) {
+                  break;
+                }
+
+                continue;
+              }
+            }
+          }
+
           Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes++;
         }
 
@@ -725,6 +775,114 @@ SetupIortIdMappingForSmmuV1V2 (
     IdMapping++;
     Private->IdMapIndex++;
     PropNode->IdMapCount++;
+  }
+
+  IortNode->IdMappingCount = PropNode->IdMapCount;
+  if (PropNode->IdMapCount > 0) {
+    Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjIdMappingArray);
+    Desc.Size     = PropNode->IdMapCount * sizeof (CM_ARM_ID_MAPPING);
+    Desc.Count    = PropNode->IdMapCount;
+    Desc.Data     = PropNode->IdMapArray;
+
+    Status = NvAddMultipleCmObjGetTokens (ParserHandle, &Desc, NULL, &IortNode->IdMappingToken);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to add %u IdMaps due to error code %r\n", __FUNCTION__, PropNode->IdMapCount, Status));
+      return Status;
+    }
+  } else {
+    IortNode->IdMappingToken = CM_NULL_TOKEN;
+    DEBUG ((DEBUG_ERROR, "%a: warning: Didn't find any IdMaps\n", __FUNCTION__));
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Populate IDMAP entries for SMMUv3 from the device tree
+
+  @param[in, out] Private   Pointer to the module private data
+  @param[in, out] PropNode  Pointer to the PropNode
+
+  @return EFI_SUCCESS       SmmuV3 nodes are populated and installed
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+STATIC
+EFI_STATUS
+SetupIortIdMappingForSmmuV3 (
+  IN CONST HW_INFO_PARSER_HANDLE  ParserHandle,
+  IN OUT  IORT_PRIVATE_DATA       *Private,
+  IN OUT  IORT_PROP_NODE          *PropNode
+  )
+{
+  EFI_STATUS          Status;
+  CM_ARM_SMMUV3_NODE  *IortNode;
+  CM_ARM_ID_MAPPING   *IdMapping;
+  LIST_ENTRY          *ListEntry;
+  IORT_PROP_NODE      *TmpPropNode;
+  IORT_PROP_NODE      *IortPropNode;
+  CONST UINT32        *MsiProp;
+  CM_OBJ_DESCRIPTOR   Desc;
+
+  IortNode = PropNode->IortNode;
+  if (IortNode->IdMappingToken != 0) {
+    return EFI_SUCCESS;
+  }
+
+  IdMapping            = Private->IoNodes[IDMAP_TYPE_INDEX].NodeArray;
+  IdMapping           += Private->IdMapIndex;
+  PropNode->IdMapArray = IdMapping;
+
+  for_each_list_entry (ListEntry, &Private->PropNodeList) {
+    TmpPropNode = IORT_PROP_NODE_FROM_LINK (ListEntry);
+    if (TmpPropNode != PropNode) {
+      if (TmpPropNode->IommusProp != NULL) {
+        IortPropNode = FindPropNodeByPhandleInstance (Private, SwapBytes32 (TmpPropNode->IommusProp[0]), 1);
+        if (!IortPropNode || (IortPropNode->IortNode != IortNode)) {
+          continue;
+        }
+      } else if (TmpPropNode->IommuMapProp != NULL) {
+        IortPropNode = FindPropNodeByPhandleInstance (Private, SwapBytes32 (TmpPropNode->IommuMapProp[1]), 1);
+        if (!IortPropNode || (IortPropNode->IortNode != IortNode)) {
+          continue;
+        }
+      } else {
+        continue;
+      }
+    }
+
+    MsiProp = TmpPropNode->MsiProp;
+    if (MsiProp == NULL) {
+      continue;
+    }
+
+    ASSERT (Private->IdMapIndex < Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes);
+    IdMapping->InputBase            = SwapBytes32 (MsiProp[0]);
+    IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (MsiProp[1]), 1);
+    IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
+    IdMapping->OutputBase           = SwapBytes32 (MsiProp[2]);
+    IdMapping->NumIds               = SwapBytes32 (MsiProp[3]) - 1;
+    IdMapping->Flags                = 0;
+
+    if (MsiProp == PropNode->MsiProp) {
+      IortNode->DeviceIdMappingIndex = PropNode->IdMapCount;
+      IdMapping->Flags               = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
+    }
+
+    IdMapping++;
+    Private->IdMapIndex++;
+    PropNode->IdMapCount++;
+  }
+
+  // Validation check for DeviceIdMappingIndex
+  if (((IortNode->PriInterrupt == 0) || (IortNode->GerrInterrupt == 0) || \
+       (IortNode->SyncInterrupt == 0) || (IortNode->EventInterrupt == 0)) && \
+      (PropNode->MsiProp == NULL) && (PropNode->IdMapCount != 0))
+  {
+    // As per the IORT specification, DeviceIdMappingIndex must contain a valid
+    // index if any one of wired interrupt is zero and msi-map is not defined
+    // Retaining this for IORT spec backward compatibility
+    IortNode->DeviceIdMappingIndex = PropNode->IdMapCount;
   }
 
   IortNode->IdMappingCount = PropNode->IdMapCount;
@@ -1078,9 +1236,212 @@ ErrorExit:
 }
 
 /**
+  patch SMMUv3 _UID info in dsdt/ssdt table to SMMUv3 iort identifier
+
+  @param[in] IortNode       Pointer to the CM_ARM_SMMUV3_NODE
+
+  @retval EFI_SUCCESS       Success
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+STATIC
+EFI_STATUS
+UpdateSmmuV3UidInfo (
+  IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
+  IN  CM_ARM_SMMUV3_NODE           *IortNode
+  )
+{
+  EFI_STATUS                 Status;
+  NVIDIA_AML_NODE_INFO       AcpiNodeInfo;
+  UINT32                     Identifier;
+  UINT32                     AcpiSmmuUidPatchNameSize;
+  NVIDIA_AML_PATCH_PROTOCOL  *PatchProtocol;
+  STATIC UINT32              Index = 0;
+
+  STATIC CHAR8 *CONST  AcpiSmmuUidPatchName[] = {
+    "_SB_.SQ00._UID",
+    "_SB_.SQ01._UID",
+    "_SB_.SQ02._UID",
+    "_SB_.GQ00._UID",
+    "_SB_.GQ01._UID",
+    "_SB_.SQ10._UID",
+    "_SB_.SQ11._UID",
+    "_SB_.SQ12._UID",
+    "_SB_.GQ10._UID",
+    "_SB_.GQ11._UID",
+    "_SB_.SQ20._UID",
+    "_SB_.SQ21._UID",
+    "_SB_.SQ22._UID",
+    "_SB_.GQ20._UID",
+    "_SB_.GQ21._UID",
+    "_SB_.SQ30._UID",
+    "_SB_.SQ31._UID",
+    "_SB_.SQ32._UID",
+    "_SB_.GQ30._UID",
+    "_SB_.GQ31._UID",
+  };
+
+  Status = EFI_SUCCESS;
+
+  AcpiSmmuUidPatchNameSize = ARRAY_SIZE (AcpiSmmuUidPatchName);
+  if (Index >= AcpiSmmuUidPatchNameSize) {
+    DEBUG ((DEBUG_ERROR, "%a: Index %u is larger than AcpiSmmuUidPatchNameSize %u\n", __FUNCTION__, Index, AcpiSmmuUidPatchNameSize));
+    goto ErrorExit;
+  }
+
+  Identifier = 0;
+
+  Status = NvGetCmPatchProtocol (ParserHandle, &PatchProtocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = PatchProtocol->FindNode (PatchProtocol, AcpiSmmuUidPatchName[Index], &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, AcpiSmmuUidPatchName[Index]));
+    goto ErrorExit;
+  }
+
+  if (AcpiNodeInfo.Size != sizeof (Identifier)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d\n", __FUNCTION__, AcpiSmmuUidPatchName[Index], AcpiNodeInfo.Size));
+    goto ErrorExit;
+  }
+
+  Identifier = IortNode->Identifier;
+  Status     = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &Identifier, sizeof (Identifier));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, AcpiSmmuUidPatchName[Index]));
+    goto ErrorExit;
+  }
+
+ErrorExit:
+  Index++;
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), return Status, "SMMUv3 UID Patching Failure.\n");
+  return Status;
+}
+
+/**
+  Populate data of SMMUv3 from the device tree and install the IORT nodes of SmmuV3
+
+  @param[in, out] Private   Pointer to the module private data
+  @param[in, out] PropNode  Pointer to the PropNode
+
+  @return EFI_SUCCESS       SmmuV3 nodes are populated and installed
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+STATIC
+EFI_STATUS
+SetupIortNodeForSmmuV3 (
+  IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
+  IN OUT  IORT_PRIVATE_DATA        *Private,
+  IN OUT  IORT_PROP_NODE           *PropNode
+  )
+{
+  EFI_STATUS          Status;
+  CM_ARM_SMMUV3_NODE  *IortNode;
+  CONST VOID          *Prop;
+  CONST UINT32        *IrqProp;
+  INT32               PropSize;
+  INT32               IrqPropSize;
+  INT32               IrqPropCnt;
+  UINT32              InterruptId;
+
+  IortNode = PropNode->IortNode;
+  if (IortNode->Token != CM_NULL_TOKEN) {
+    return EFI_SUCCESS;
+  }
+
+  IortNode->Token        = PropNode->Token;
+  IortNode->VatosAddress = 0;
+  IortNode->BaseAddress  = 0;
+  if (PropNode->RegProp != NULL) {
+    IortNode->BaseAddress = SwapBytes64 (*PropNode->RegProp);
+  }
+
+  IortNode->ProximityDomain = 0;
+  IortNode->Model           = EFI_ACPI_IORT_SMMUv3_MODEL_GENERIC;
+  IortNode->Flags           = EFI_ACPI_IORT_SMMUv3_FLAG_PROXIMITY_DOMAIN;
+  IortNode->Identifier      = UniqueIdentifier++;
+  ASSERT (UniqueIdentifier < 0xFFFFFFFF);
+
+  UpdateSmmuV3UidInfo (ParserHandle, IortNode);
+
+  if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
+    IortNode->Flags |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
+  }
+
+  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "numa-node-id", &PropSize);
+  if (Prop != NULL) {
+    IortNode->ProximityDomain = SwapBytes32 (*(CONST UINT32 *)Prop);
+  }
+
+  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "interrupt-names", &PropSize);
+  if ((Prop == NULL) || (PropSize == 0)) {
+    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find \"interrupt-names\"\r\n", __FUNCTION__));
+    return EFI_NOT_FOUND;
+  }
+
+  IrqProp = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "interrupts", &IrqPropSize);
+  if ((IrqProp == NULL) || (IrqPropSize == 0)) {
+    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find \"interrupts\"\r\n", __FUNCTION__));
+    return EFI_NOT_FOUND;
+  }
+
+  IrqPropCnt = IrqPropSize / IRQ_PROP_LENGTH;
+
+  if (0 == AsciiStrCmp (Prop, "combined")) {
+    InterruptId              = SwapBytes32 (*(IrqProp + IRQ_PROP_OFFSET_TO_INTID)) + SPI_OFFSET;
+    IortNode->EventInterrupt = InterruptId;
+    IortNode->PriInterrupt   = InterruptId;
+    IortNode->GerrInterrupt  = InterruptId;
+    IortNode->SyncInterrupt  = InterruptId;
+  } else if ((IrqPropCnt <= MAX_NUM_IRQS_OF_SMMU_V3) && (IrqPropSize >= MIN_NUM_IRQS_OF_SMMU_V3)) {
+    UINT32       IrqPropIndex;
+    UINT32       StrLength;
+    CONST CHAR8  *IrqPropNames[MAX_NUM_IRQS_OF_SMMU_V3] = {
+      "eventq", "priq", "gerror", "cmdq-sync"
+    };
+    UINT32       *Interrupts = &IortNode->EventInterrupt;
+
+    while (PropSize > 0) {
+      StrLength = AsciiStrSize (Prop);
+      if ((StrLength == 0) || (StrLength > (UINT32)PropSize)) {
+        return EFI_NOT_FOUND;
+      }
+
+      for (IrqPropIndex = 0; IrqPropIndex < MAX_NUM_IRQS_OF_SMMU_V3; IrqPropIndex++) {
+        if (0 == AsciiStrnCmp (Prop, IrqPropNames[IrqPropIndex], StrLength)) {
+          break;
+        }
+      }
+
+      InterruptId              = SwapBytes32 (*(IrqProp + IRQ_PROP_OFFSET_TO_INTID)) + SPI_OFFSET;
+      Interrupts[IrqPropIndex] = InterruptId;
+
+      PropSize -= StrLength;
+      Prop     += StrLength;
+      IrqProp  += IRQ_PROP_CELL_SIZE;
+    }
+  } else {
+    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find interrupts\r\n", __FUNCTION__));
+    return EFI_NOT_FOUND;
+  }
+
+  // Map SMMU base address in MMU to support SBSA-ACS
+  Status = AddIortMemoryRegion (IortNode->BaseAddress, SIZE_4KB);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return SetupIortIdMappingForSmmuV3 (ParserHandle, Private, PropNode);
+}
+
+/**
   Populate data of PCI RC and ID mapping nodes defining SMMU and MSI setup.
-  Mapping PCI nodes to SMMUv1v2 from the device tree.
+  Mapping PCI nodes to SMMUv1v2/SMMUv3 from the device tree.
   Mapping SMMUV1V2 to Gic Msi frame nodes from the device tree.
+  Mapping SMMUV3 to ITS group nodes from the device tree.
   Install the IORT nodes of PCI RC and ID mapping
 
   @param[in, out] Private   Pointer to the module private data
@@ -1170,7 +1531,7 @@ SetupIortNodeForPciRc (
     IdMapping->Flags                = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
     IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[0]), 1);
     IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
-    ASSERT (IdMapping->OutputReferenceToken != 0);
+    ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
 
     if (PropNode->DualSmmuPresent == 1) {
       IdMapping++;
@@ -1180,11 +1541,10 @@ SetupIortNodeForPciRc (
       IdMapping->Flags                = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
       IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[0]), 2);
       IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
-      ASSERT (IdMapping->OutputReferenceToken != 0);
+      ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
     }
   } else {
-    // Prop = (PropNode->IommuMapProp != NULL) ? PropNode->IommuMapProp : PropNode->MsiProp;
-    Prop = PropNode->IommuMapProp;
+    Prop = (PropNode->IommuMapProp != NULL) ? PropNode->IommuMapProp : PropNode->MsiProp;
     ASSERT (Prop != NULL);
 
     // Create Id Mapping Node for iommu-map and bind it to the PCI IORT node
@@ -1200,7 +1560,7 @@ SetupIortNodeForPciRc (
     IdMapping->Flags                = IdMapFlags;
     IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[1]), 1);
     IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
-    ASSERT (IdMapping->OutputReferenceToken != 0);
+    ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
 
     if (PropNode->DualSmmuPresent == 1) {
       IdMapping++;
@@ -1218,7 +1578,7 @@ SetupIortNodeForPciRc (
       IdMapping->Flags                = IdMapFlags;
       IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[1]), 2);
       IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
-      ASSERT (IdMapping->OutputReferenceToken != 0);
+      ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
     }
   }
 
@@ -1243,8 +1603,9 @@ SetupIortNodeForPciRc (
 }
 
 /**
-  Populate data of Named Component and and ID mapping nodes defining SMMU and MSI setup.
-  Mapping Named Component nodes to SMMUv1 v2 from the device tree.
+  Populate data of Named Component and ID mapping nodes defining SMMU and MSI setup.
+  Mapping Named Component nodes to SMMUv1v2/SMMUv3 from the device tree.
+  Mapping SMMUV3 to ITS group nodes from the device tree.
   Install the IORT nodes of Named Component and ID mapping
 
   @param[in, out] Private   Pointer to the module private data
@@ -1287,8 +1648,7 @@ SetupIortNodeForNComp (
     PropNode->IdMapCount = 1;
   }
 
-  IortNode->CacheCoherent = 0;
-  IortNode->Identifier    = UniqueIdentifier++;
+  IortNode->Identifier = UniqueIdentifier++;
   ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
@@ -1313,7 +1673,7 @@ SetupIortNodeForNComp (
     IdMapping->Flags                = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
     IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[0]), 1);
     IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
-    ASSERT (IdMapping->OutputReferenceToken != 0);
+    ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
 
     if (PropNode->DualSmmuPresent == 1) {
       IdMapping++;
@@ -1323,7 +1683,7 @@ SetupIortNodeForNComp (
       IdMapping->Flags                = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
       IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[0]), 2);
       IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
-      ASSERT (IdMapping->OutputReferenceToken != 0);
+      ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
     }
   } else {
     Prop = (PropNode->IommuMapProp != NULL) ? PropNode->IommuMapProp : PropNode->MsiProp;
@@ -1336,7 +1696,7 @@ SetupIortNodeForNComp (
     IdMapping->Flags                = 0;
     IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[1]), 1);
     IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
-    ASSERT (IdMapping->OutputReferenceToken != 0);
+    ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
 
     if (PropNode->DualSmmuPresent == 1) {
       IdMapping++;
@@ -1346,7 +1706,7 @@ SetupIortNodeForNComp (
       IdMapping->Flags                = 0;
       IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[1]), 2);
       IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
-      ASSERT (IdMapping->OutputReferenceToken != 0);
+      ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
     }
   }
 
@@ -1370,18 +1730,132 @@ SetupIortNodeForNComp (
   return EFI_SUCCESS;
 }
 
-// The order must be SMMUv1v2, RootComplex and NamedComponent
+/**
+  Populate data of PMCG from the device tree and install the IORT nodes of PMCG
+
+  @param[in, out] Private   Pointer to the module private data
+  @param[in, out] PropNode  Pointer to the PropNode
+
+  @return EFI_SUCCESS       PMCG nodes are populated and installed
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+STATIC
+EFI_STATUS
+SetupIortNodeForPmcg (
+  IN CONST HW_INFO_PARSER_HANDLE  ParserHandle,
+  IN OUT  IORT_PRIVATE_DATA       *Private,
+  IN OUT  IORT_PROP_NODE          *PropNode
+  )
+{
+  EFI_STATUS           Status;
+  CM_ARM_PMCG_NODE     *IortNode;
+  CM_ARM_ID_MAPPING    *IdMapping;
+  CONST UINT64         *RegProp;
+  CONST UINT32         *Prop;
+  CONST UINT32         *IrqProp;
+  INT32                PropSize;
+  INT32                RegPropSize;
+  INT32                IrqPropSize;
+  UINT32               InterruptId;
+  TEGRA_PLATFORM_TYPE  PlatformType;
+  IORT_PROP_NODE       *IortPropNode;
+  CM_OBJ_DESCRIPTOR    Desc;
+
+  PlatformType = TegraGetPlatform ();
+  if (PlatformType != TEGRA_PLATFORM_SILICON) {
+    return EFI_SUCCESS;
+  }
+
+  IortNode = PropNode->IortNode;
+  if (IortNode->Token != CM_NULL_TOKEN) {
+    return EFI_SUCCESS;
+  }
+
+  IortNode->Token = PropNode->Token;
+  if (PropNode->RegProp != NULL) {
+    IortNode->BaseAddress = SwapBytes64 (*PropNode->RegProp);
+  }
+
+  RegProp = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "reg", &RegPropSize);
+  if ((RegProp != NULL) && ((RegPropSize / REG_PROP_LENGTH) > 1)) {
+    IortNode->Page1BaseAddress = SwapBytes64 (*(RegProp + REG_PROP_CELL_SIZE));
+  }
+
+  IrqProp = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "interrupts", &IrqPropSize);
+  if ((IrqProp == NULL) || (IrqPropSize == 0)) {
+    IortNode->IdMappingCount = 1;
+  } else {
+    IortNode->IdMappingCount    = 0;
+    InterruptId                 = SwapBytes32 (*(IrqProp + IRQ_PROP_OFFSET_TO_INTID)) + SPI_OFFSET;
+    IortNode->OverflowInterrupt = InterruptId;
+  }
+
+  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "devices", &PropSize);
+  if (Prop == NULL) {
+    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find \"devices\"\r\n", __FUNCTION__));
+    return EFI_NOT_FOUND;
+  }
+
+  IortPropNode             = FindPropNodeByPhandleInstance (Private, SwapBytes32 (*Prop), 1);
+  IortNode->ReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
+
+  IortNode->Identifier = UniqueIdentifier++;
+  ASSERT (UniqueIdentifier < 0xFFFFFFFF);
+
+  if (IortNode->IdMappingCount == 1) {
+    ASSERT (Private->IdMapIndex < Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes);
+    PropNode->IdMapCount = 1;
+    IdMapping            = Private->IoNodes[IDMAP_TYPE_INDEX].NodeArray;
+    IdMapping           += Private->IdMapIndex;
+    Private->IdMapIndex += PropNode->IdMapCount;
+    PropNode->IdMapArray = IdMapping;
+
+    Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "msi-parent", &PropSize);
+    ASSERT (Prop != NULL);
+
+    IdMapping->InputBase            = 0;
+    IdMapping->OutputBase           = SwapBytes32 (Prop[1]);
+    IdMapping->NumIds               = 0;
+    IdMapping->Flags                = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
+    IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[0]), 1);
+    IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
+    ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
+    IortNode->IdMappingCount = PropNode->IdMapCount;
+
+    Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjIdMappingArray);
+    Desc.Size     = PropNode->IdMapCount * sizeof (CM_ARM_ID_MAPPING);
+    Desc.Count    = PropNode->IdMapCount;
+    Desc.Data     = PropNode->IdMapArray;
+
+    Status = NvAddMultipleCmObjGetTokens (ParserHandle, &Desc, NULL, &IortNode->IdMappingToken);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to add %u IdMaps due to error code %r\n", __FUNCTION__, PropNode->IdMapCount, Status));
+      return Status;
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+// The order must be ITS, SMMUv1v2/SMMUv3, RootComplex and NamedComponent
 STATIC CONST IORT_DEVICE_NODE_MAP  mIortDevTypeMap[] = {
-  { EArmObjItsGroup,       "arm,gic-v3-its",        SetupIortNodeForItsGroup, NULL,     NULL,         0 },
-  { EArmObjSmmuV1SmmuV2,   "arm,mmu-500",           SetupIortNodeForSmmuV1V2, NULL,     NULL,         0 },
-  { EArmObjSmmuV1SmmuV2,   "nvidia,tegra234-smmu",  SetupIortNodeForSmmuV1V2, NULL,     NULL,         0 },
-  { EArmObjRootComplex,    "nvidia,tegra234-pcie",  SetupIortNodeForPciRc,    NULL,     NULL,         1 },
-  { EArmObjNamedComponent, "nvidia,tegra234-nvdla", SetupIortNodeForNComp,    "nvdla0", "\\_SB.DLA0", 1 },
+  { EArmObjItsGroup,       "arm,gic-v3-its",        SetupIortNodeForItsGroup, NULL,            NULL,          0 },
+  { EArmObjSmmuV1SmmuV2,   "arm,mmu-500",           SetupIortNodeForSmmuV1V2, NULL,            NULL,          0 },
+  { EArmObjSmmuV1SmmuV2,   "nvidia,tegra234-smmu",  SetupIortNodeForSmmuV1V2, NULL,            NULL,          0 },
+  { EArmObjSmmuV3,         "arm,smmu-v3",           SetupIortNodeForSmmuV3,   NULL,            NULL,          0 },
+  { EArmObjRootComplex,    "nvidia,tegra234-pcie",  SetupIortNodeForPciRc,    NULL,            NULL,          1 },
+  { EArmObjRootComplex,    "nvidia,th500-pcie",     SetupIortNodeForPciRc,    NULL,            NULL,          0 },
+  { EArmObjNamedComponent, "nvidia,tegra234-nvdla", SetupIortNodeForNComp,    "nvdla0",        "\\_SB.DLA0",  1 },
+  { EArmObjNamedComponent, "nvidia,tegra186-qspi",  SetupIortNodeForNComp,    "socket0_qspi1", "\\_SB_.QSP1", 0 },
+  { EArmObjNamedComponent, "nvidia,th500-soc-hwpm", SetupIortNodeForNComp,    NULL,            "\\_SB_.HWP0", 0 },
+  { EArmObjNamedComponent, "nvidia,th500-psc",      SetupIortNodeForNComp,    NULL,            "\\_SB_.PSC0", 0 },
+  { EArmObjPmcg,           "arm,smmu-v3-pmcg",      SetupIortNodeForPmcg,     NULL,            NULL,          0 },
   // { EArmObjNamedComponent, "nvidia,tegra194-rce",    SetupIortNodeForNComp,     NULL,          "\\_SB_.RCE0",    0 },
   // { EArmObjNamedComponent, "nvidia,tegra234-vi",     SetupIortNodeForNComp,     "tegra-vi0",   "\\_SB_.VI00",    0 },
   // { EArmObjNamedComponent, "nvidia,tegra234-vi",     SetupIortNodeForNComp,     "tegra-vi1",   "\\_SB_.VI01",    0 },
   // { EArmObjNamedComponent, "nvidia,tegra194-isp",    SetupIortNodeForNComp,     NULL,          "\\_SB_.ISP0",    0 },
-  { EArmObjMax,            NULL,                    NULL,                     NULL,     NULL,         0 }
+  { EArmObjMax,            NULL,                    NULL,                     NULL,            NULL,          0 }
 };
 
 EFI_STATUS
@@ -1402,6 +1876,7 @@ InitializeIoRemappingNodes (
   DevMap  = mIortDevTypeMap;
   InitializeListHead (&Private->PropNodeList);
 
+  // JDS TODO - remove this once its no longer used
   Status = DtPlatformLoadDtb (&Private->DtbBase, &Private->DtbSize);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a failed to get device tree: %r\r\n", __FUNCTION__, Status));
@@ -1462,22 +1937,29 @@ IortInfoParser (
   CM_STD_OBJ_ACPI_TABLE_INFO  AcpiTableHeader;
   UINTN                       DataSize;
   UINT32                      EnableIortTableGen;
+  TEGRA_PLATFORM_TYPE         PlatformType;
+  UINT32                      ChipID;
 
   if (ParserHandle == NULL) {
     ASSERT (0);
     return EFI_INVALID_PARAMETER;
   }
 
-  DataSize = sizeof (EnableIortTableGen);
-  Status   = gRT->GetVariable (IORT_TABLE_GEN, &gNVIDIATokenSpaceGuid, NULL, &DataSize, &EnableIortTableGen);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r querying %s variable\n", __FUNCTION__, Status, IORT_TABLE_GEN));
-    goto CleanupAndReturn;
-  }
+  ChipID = TegraGetChipID ();
 
-  if (EnableIortTableGen == 0) {
-    Status = EFI_SUCCESS;
-    goto CleanupAndReturn;
+  // TH500 doesn't use the enable variable
+  if (ChipID != TH500_CHIP_ID) {
+    DataSize = sizeof (EnableIortTableGen);
+    Status   = gRT->GetVariable (IORT_TABLE_GEN, &gNVIDIATokenSpaceGuid, NULL, &DataSize, &EnableIortTableGen);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r querying %s variable\n", __FUNCTION__, Status, IORT_TABLE_GEN));
+      goto CleanupAndReturn;
+    }
+
+    if (EnableIortTableGen == 0) {
+      Status = EFI_SUCCESS;
+      goto CleanupAndReturn;
+    }
   }
 
   InitializeIoRemappingNodes (ParserHandle);
@@ -1503,7 +1985,15 @@ IortInfoParser (
     goto CleanupAndReturn;
   }
 
+  PlatformType = TegraGetPlatform ();
+
   for (Index = 0; Index < MAX_NUMBER_OF_IORT_TYPE; Index++) {
+    if ((Index == IORT_TYPE_INDEX (EArmObjPmcg)) &&
+        (PlatformType != TEGRA_PLATFORM_SILICON))
+    {
+      continue;
+    }
+
     IoNode = &Private->IoNodes[Index];
     if ((IoNode->NumberOfNodes != 0) && (Index != IDMAP_TYPE_INDEX)) {
       Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (Index + MIN_IORT_OBJID);

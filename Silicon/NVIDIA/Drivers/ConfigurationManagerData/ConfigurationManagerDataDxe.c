@@ -17,6 +17,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include "NvCmObjectDescUtility.h"
 
 #include "ConfigurationManagerDataParserIncludes.h"
@@ -60,24 +61,104 @@ AddParsers (
   )
 {
   EFI_STATUS   Status;
+  BOOLEAN      SkipSlit;
+  BOOLEAN      SkipSrat;
+  BOOLEAN      SkipHmat;
+  BOOLEAN      SkipIort;
+  BOOLEAN      SkipMpam;
+  BOOLEAN      SkipApmt;
+  BOOLEAN      SkipSpmi;
+  BOOLEAN      SkipTpm2;
+  INT32        NodeOffset;
   PARSER_INFO  StandardParsers[] = {
-    CREATE_PARSER (BootArchInfoParser), // ArmBootArchInfoParser,
     CREATE_PARSER (AcpiTableListParser),
+    CREATE_PARSER (BootArchInfoParser), // ArmBootArchInfoParser,
     CREATE_PARSER (FixedFeatureFlagsParser),
-    CREATE_PARSER (PowerManagementProfileParser),
     CREATE_PARSER (GenericTimerParser),      // ArmGenericTimerInfoParser,
-    CREATE_PARSER (ProcHierarchyInfoParser), // also includes LpiInfo, CacheInfo, GicCInfo, EtInfo, and CpcInfo
+    CREATE_PARSER (GenericWatchdogInfoParser),
+    CREATE_PARSER (PowerManagementProfileParser),
     CREATE_PARSER (SerialPortInfoParser),
+    CREATE_PARSER (ProcHierarchyInfoParser), // also includes LpiInfo, CacheInfo, GicCInfo, EtInfo, and CpcInfo
+    CREATE_PARSER (EthernetInfoParser),
+    CREATE_PARSER (DsdtPatcher),
+    CREATE_PARSER (TelemetryInfoParser),
+    CREATE_PARSER (TpmInfoParser),
+    CREATE_PARSER (ThermalZoneInfoParser),
     CREATE_PARSER (ProtocolBasedObjectsParser),
+    CREATE_PARSER (AhciInfoParser),
     CREATE_PARSER (SdhciInfoParser), // Uses SSDT Table Generator
     CREATE_PARSER (I2cInfoParser),   // Uses SSDT Table Generator
-    CREATE_PARSER (AhciInfoParser),
-    CREATE_PARSER (IortInfoParser),
+    CREATE_PARSER (HdaInfoParser),
     CREATE_PARSER (FanInfoParser),
-    CREATE_PARSER (HdaInfoParser)
   };
 
   NV_ASSERT_RETURN (Repo != NULL, return EFI_INVALID_PARAMETER, "%a: Repo pointer can't be NULL\n", __FUNCTION__);
+
+  // Determine if there are parsers we should skip
+  SkipSlit = FALSE;
+  SkipSrat = FALSE;
+  SkipHmat = FALSE;
+  SkipIort = FALSE;
+  SkipMpam = FALSE;
+  SkipApmt = FALSE;
+  SkipSpmi = FALSE;
+  SkipTpm2 = FALSE;
+
+  Status = DeviceTreeGetNodeByPath ("/firmware/uefi", &NodeOffset);
+  if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DEBUG_WARN, "%a: Not using /firmware/uefi to skip ACPI tables\n", __FUNCTION__));
+  } else if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to determine which ACPI table to enable\n", __FUNCTION__, Status));
+    return Status;
+  } else if (NodeOffset >= 0) {
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "skip-slit-table", NULL, NULL);
+    if (Status == EFI_SUCCESS) {
+      SkipSlit = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip SLIT Table\n", __FUNCTION__));
+    }
+
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "skip-srat-table", NULL, NULL);
+    if (Status == EFI_SUCCESS) {
+      SkipSrat = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip SRAT Table\n", __FUNCTION__));
+    }
+
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "skip-hmat-table", NULL, NULL);
+    if (Status == EFI_SUCCESS) {
+      SkipHmat = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip HMAT Table\n", __FUNCTION__));
+    }
+
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "skip-iort-table", NULL, NULL);
+    if (Status == EFI_SUCCESS) {
+      SkipIort = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip IORT Table\n", __FUNCTION__));
+    }
+
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "skip-mpam-table", NULL, NULL);
+    if (Status == EFI_SUCCESS) {
+      SkipMpam = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip MPAM Table\n", __FUNCTION__));
+    }
+
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "skip-apmt-table", NULL, NULL);
+    if (Status == EFI_SUCCESS) {
+      SkipApmt = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip APMT Table\n", __FUNCTION__));
+    }
+
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "skip-spmi-table", NULL, NULL);
+    if (Status == EFI_SUCCESS) {
+      SkipSpmi = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip SPMI Table\n", __FUNCTION__));
+    }
+
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "skip-tpm2-table", NULL, NULL);
+    if (Status == EFI_SUCCESS) {
+      SkipTpm2 = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: Skip TPM2 Table\n", __FUNCTION__));
+    }
+  }
 
   // Init with the standard parsers list
   Status = Repo->NewEntry (
@@ -106,6 +187,10 @@ AddParsers (
     ADD_SINGLE_PARSER (GicMsiFrameParser);
   }
 
+  if (!SkipIort) {
+    ADD_SINGLE_PARSER (IortInfoParser);
+  }
+
   // SSDT table generator - note: should not be run until parsers that add to it are complete!
   ADD_SINGLE_PARSER (SsdtTableGeneratorParser);
 
@@ -128,15 +213,18 @@ InitializePlatformRepository (
   VOID                                  *DtbBase;
   UINTN                                 DtbSize;
   EDKII_PLATFORM_REPOSITORY_INFO_ENTRY  *Entry;
+  UINT32                                Index;
 
   ChipID = TegraGetChipID ();
-  if ((ChipID != T194_CHIP_ID) &&
-      (ChipID != T234_CHIP_ID)
-      )
-  {
-    // JDS TODO - Only chips that have been converted over can use this driver
-    DEBUG ((DEBUG_WARN, "%a: New Config Manager not running because ChipId 0x%x isn't supported yet\n", __FUNCTION__, ChipID));
-    return EFI_UNSUPPORTED;
+  switch (ChipID) {
+    case T194_CHIP_ID:
+    case T234_CHIP_ID:
+    case TH500_CHIP_ID:
+      break;
+
+    default:
+      DEBUG ((DEBUG_WARN, "%a: New Config Manager not running because ChipId 0x%x isn't supported yet\n", __FUNCTION__, ChipID));
+      return EFI_UNSUPPORTED;
   }
 
   // Allocate and initialize the data store
@@ -199,6 +287,31 @@ InitializePlatformRepository (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r from NvHwInfoParse\n", __FUNCTION__, Status));
     return Status;
+  }
+
+  // Server platform require all OemTableIds to reflect the board config, so update them here
+  switch (ChipID) {
+    case T194_CHIP_ID:
+    case T234_CHIP_ID:
+      // Don't modify the OemTableIds
+      break;
+
+    case TH500_CHIP_ID:
+      Status = Repo->FindEntry (Repo, CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList), CM_NULL_TOKEN, &Entry);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get the AcpiTableList\n", __FUNCTION__, Status));
+        return Status;
+      }
+
+      // Fix up the OemTableId
+      for (Index = 0; Index < Entry->CmObjectDesc.Count; Index++) {
+        ((CM_STD_OBJ_ACPI_TABLE_INFO *)Entry->CmObjectDesc.Data)[Index].OemTableId = PcdGet64 (PcdAcpiDefaultOemTableId);
+      }
+
+      break;
+
+    default:
+      NV_ASSERT_RETURN (FALSE, return EFI_UNSUPPORTED, "%a: Don't know if ChipId 0x%x should have OemTableIds modified or not\n", __FUNCTION__, ChipID);
   }
 
   return Status;

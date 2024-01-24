@@ -14,6 +14,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Protocol/AmlPatchProtocol.h>
 #include <Protocol/AmlGenerationProtocol.h>
+#include <CacheInfo/CacheInfoParser.h>
 
 #define FREE_NON_NULL(a) \
   if ((a) != NULL) { \
@@ -274,6 +275,50 @@ EFIAPI
 NvAddAcpiTableGenerator (
   IN  CONST HW_INFO_PARSER_HANDLE       ParserHandle,
   IN        CM_STD_OBJ_ACPI_TABLE_INFO  *NewGenerator
+  );
+
+/** Find the cache metadata in the configuration manager based on pHandle
+
+  @param  [in]  ParserHandle      A handle to the parser instance.
+  @param  [in]  pHandle           The pHandle of the cache node to find.
+  @param  [in]  ICache            If the pHandle is for a "cpu" node, setting this
+                                  to TRUE will return the ICache info and FALSE will
+                                  return the DCache info. Otherwise, this is ignored.
+  @param  [out] CacheNode         Pointer to where to put the CacheNode information.
+
+  @retval EFI_SUCCESS             The function completed successfully.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           Couldn't find a CacheNode with the given pHandle.
+**/
+EFI_STATUS
+EFIAPI
+NvFindCacheMetadataByPhandle (
+  IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
+  IN        UINT32                 pHandle,
+  IN        BOOLEAN                ICache,
+  OUT CONST CACHE_NODE             **CacheNode
+  );
+
+/** Find the CacheId in the configuration manager based on pHandle
+
+@param  [in]  ParserHandle      A handle to the parser instance.
+@param  [in]  pHandle           The pHandle of the cache node to find.
+@param  [in]  ICache            If the pHandle is for a "cpu" node, setting this
+                                to TRUE will return the ICache Id and FALSE will
+                                return the DCache Id. Otherwise, this is ignored.
+@param  [out] CacheId           Pointer to where to put the CacheId.
+
+@retval EFI_SUCCESS             The function completed successfully.
+@retval EFI_INVALID_PARAMETER   Invalid parameter.
+@retval EFI_NOT_FOUND           Couldn't find a CacheId for the given pHandle.
+**/
+EFI_STATUS
+EFIAPI
+NvFindCacheIdByPhandle (
+  IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
+  IN        UINT32                 pHandle,
+  IN        BOOLEAN                ICache,
+  OUT       UINT32                 *CacheId
   );
 
 #endif // NV_CM_OBJECT_DESC_UTILITY_H_

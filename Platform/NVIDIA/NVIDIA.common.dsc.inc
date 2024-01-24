@@ -917,12 +917,10 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|TRUE
 !endif
 
-!ifdef CONFIG_ARM_WATCHDOG
-  # SBSA Watchdog
+  # SBSA Watchdog - always override the ArmPkg.dec values
   gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|$(CONFIG_ARM_WATCHDOG_CONTROL_BASE)
   gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|$(CONFIG_ARM_WATCHDOG_REFRESH_BASE)
   gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|$(CONFIG_ARM_WATCHDOG_INTERRUPT)
-!endif
 
 !ifdef CONFIG_SOC_JETSON
   gArmTokenSpaceGuid.PcdBaseBoardManufacturer|L"NVIDIA"
@@ -1381,23 +1379,12 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # Platform Configuration Manager Data
   #
 !ifdef CONFIG_CONFIG_MANAGER
-!ifdef CONFIG_SOC_JETSON
   Silicon/NVIDIA/Drivers/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
     <LibraryClasses>
       PlatformAslTablesLib|Silicon/NVIDIA/Drivers/ConfigurationManagerData/AcpiTableList/PlatformASLTablesLib/PlatformASLTablesLib.inf
     <BuildOptions>
       *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Drivers/ConfigurationManagerData/AcpiTableList/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT -I$(BIN_DIR)/Silicon/NVIDIA/Library/ASLTemplateTablesLib/ASLTemplateTablesLib/OUTPUT
   }
-!endif
-!ifdef CONFIG_SOC_GRACE
-  Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
-    <LibraryClasses>
-      # Platform ASL Tables
-      PlatformAslTablesLib|Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib.inf
-    <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Server/TH500/Drivers/ConfigurationManager/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT
-  }
-!endif
 !endif
 
   #

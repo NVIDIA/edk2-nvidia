@@ -30,9 +30,12 @@
   BootArchInfo/BootArchInfoParser.c
   CacheInfo/CacheInfoParser.c
   CacheInfo/CacheInfoParserT194.c
+  DsdtPatcher/DsdtPatcher.c
+  EthernetInfo/EthernetInfoParser.c
   FanInfo/FanInfoParser.c
   FixedFeatureFlags/FixedFeatureFlagsParser.c
   GenericTimer/GenericTimerParser.c
+  GenericWatchdog/GenericWatchdogInfoParser.c
   Gic/GicCParser.c
   Gic/GicDParser.c
   Gic/GicDParserT194.c
@@ -49,6 +52,9 @@
   SdhciInfo/SdhciInfoParser.c
   SerialPortInfo/SerialPortInfoParser.c
   SsdtTableGenerator/SsdtTableGeneratorParser.c
+  TelemetryInfo/TelemetryInfoParser.c
+  ThermalZoneInfo/ThermalZoneInfoParser.c
+  TpmInfo/TpmInfoParser.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -58,6 +64,7 @@
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
   ArmPlatformPkg/ArmPlatformPkg.dec
+  SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
   AmlLib
@@ -80,6 +87,8 @@
   HwInfoParserLib
   PlatformResourceLib
   MpCoreInfoLib
+  TpmMeasurementLib
+  Tpm2CommandLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
@@ -91,6 +100,9 @@
   gArmTokenSpaceGuid.PcdArmArchTimerIntrNum
   gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum
   gArmTokenSpaceGuid.PcdArmArchTimerHypIntrNum
+  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase
+  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum
+  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase
   gArmTokenSpaceGuid.PcdGicDistributorBase
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
   gArmTokenSpaceGuid.PcdPciBusMin
@@ -109,10 +121,14 @@
   gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
   gNVIDIATokenSpaceGuid.PcdSpeOverflowIntrNum
+  gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone
+  gNVIDIATokenSpaceGuid.PcdTpmEnable
+  gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
 
 [Guids]
   gNVIDIATokenSpaceGuid
   gEfiEndOfDxeEventGroupGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
@@ -122,6 +138,8 @@
   gEfiPciRootBridgeIoProtocolGuid
   gNVIDIATegraCpuFrequencyProtocolGuid
   gNVIDIAConfigurationManagerTokenProtocolGuid
+  gNVIDIARasNsCommPcieDpcDataProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
 
 [Depex]
   gEfiVariableArchProtocolGuid
@@ -135,3 +153,11 @@
   gNVIDIATegraCpuFrequencyProtocolGuid
   AND
   gNVIDIAConfigurationManagerTokenProtocolGuid
+  AND
+  gEfiFirmwareManagementProtocolGuid
+  AND
+  gNVIDIABdsDeviceConnectCompleteGuid
+  AND
+  gNVIDIABpmpIpcProtocolGuid
+#  AND
+#  gNVIDIARasNsCommPcieDpcDataProtocolGuid

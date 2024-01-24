@@ -114,6 +114,32 @@ GetDeviceTreePointer (
   );
 
 /**
+  Get the named subnode.
+
+  The Device tree is traversed in a depth-first search, starting from Node.
+  The input Node is skipped.
+  The name property and depth from the starting node is checked.
+
+  @param [in]  NodeName         Name of the Subnode to look for.
+  @param [in]  NodeOffset       Node offset to start the search.
+                                This first node is skipped.
+                                Write (-1) to search the top level.
+  @param [out] SubNodeOffset    The offset of the named subnode.
+
+  @retval EFI_SUCCESS             The function completed successfully.
+  @retval EFI_DEVICE_ERROR        Error getting Device Tree.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           No matching node found.
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetNamedSubnode (
+  IN      CONST CHAR8  *NodeName,
+  IN            INT32  NodeOffset,
+  OUT           INT32  *SubNodeOffset
+  );
+
+/**
   Get the next node with at least one compatible property.
 
   The Device tree is traversed in a depth-first search, starting from Node.
