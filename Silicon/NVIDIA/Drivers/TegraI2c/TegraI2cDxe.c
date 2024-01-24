@@ -2,7 +2,7 @@
 
   Tegra I2c Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -402,7 +402,7 @@ TegraI2cSendHeader (
   @param[in] RequestPacket  Pointer to an EFI_I2C_REQUEST_PACKET
                             structure describing the I2C transaction.
   @param[in] Event          Event to signal for asynchronous transactions,
-                            NULL for asynchronous transactions
+                            NULL for synchronous transactions
   @param[out] I2cStatus     Optional buffer to receive the I2C transaction
                             completion status
 
@@ -730,12 +730,14 @@ Exit:
     This->Reset (This);
   }
 
-  if (I2cStatus != NULL) {
-    *I2cStatus = Status;
-    Status     = EFI_SUCCESS;
-  }
-
+  // synchronous transactions just return Status, but
+  // asynchronous transactions update I2cStatus and return success
   if (Event != NULL) {
+    if (I2cStatus != NULL) {
+      *I2cStatus = Status;
+    }
+
+    Status = EFI_SUCCESS;
     gBS->SignalEvent (Event);
   }
 
