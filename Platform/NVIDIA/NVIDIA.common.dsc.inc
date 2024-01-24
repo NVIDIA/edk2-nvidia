@@ -788,6 +788,11 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass|1
 !endif
 
+  #
+  # Disable test key detection
+  #
+  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceTestKeySha256Digest|{0}
+
 [PcdsFixedAtBuild]
   #
   # Variable Services PCDs.
