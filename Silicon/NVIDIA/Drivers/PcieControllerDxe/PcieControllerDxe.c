@@ -857,7 +857,8 @@ PcieEnableErrorReporting (
   UINT16                        Val_16;
   UINT32                        Socket, Ctrl;
   VOID                          *Hob;
-  TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
+  TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config    = NULL;
+  BOOLEAN                       SkipDPCEnable = FALSE;
 
   Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
   if ((Hob != NULL) &&
@@ -982,7 +983,7 @@ PcieEnableErrorReporting (
       if ((Bus == 0) &&
           Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].DisableDPCAtRP)
       {
-        goto SkipDPCEnable;
+        SkipDPCEnable = TRUE;
       }
 
       Offset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID);
@@ -1012,8 +1013,10 @@ PcieEnableErrorReporting (
           return EFI_DEVICE_ERROR;
         }
 
-        Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_INT_EN |
-                   PCIE_DPC_CTL_DPC_ERR_COR_EN);
+        if (!SkipDPCEnable) {
+          Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_INT_EN |
+                     PCIE_DPC_CTL_DPC_ERR_COR_EN);
+        }
 
         DevCapOffset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability);
         Status       = PciIo->Pci.Read (
@@ -1061,7 +1064,6 @@ PcieEnableErrorReporting (
           ));
       }
 
-SkipDPCEnable:
     /* fall through */
 
     case PCIE_DEVICE_PORT_TYPE_UPSTREAM_PORT:
