@@ -1,7 +1,7 @@
 /** @file
   Definition of USB RNDIS driver.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -131,6 +131,7 @@ typedef struct {
   EFI_EVENT                       ReceiverControlTimer;
   BOOLEAN                         ReceiverSlowWaitFlag;
   BOOLEAN                         DeviceLost;
+  VOID                            *TxBuffer;
 } USB_RNDIS_PRIVATE_DATA;
 
 #define USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS(a) \

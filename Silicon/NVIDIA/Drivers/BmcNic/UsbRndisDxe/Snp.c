@@ -1,7 +1,7 @@
 /** @file
   Provides the Simple Network functions.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -33,7 +33,7 @@ UsbRndisSnpStart (
 
   DEBUG ((USB_DEBUG_SNP_TRACE, "%a\n", __FUNCTION__));
 
-  if (This == NULL) {
+  if ((This == NULL) || (This->Mode == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -77,12 +77,12 @@ UsbRndisSnpStop (
 
   DEBUG ((USB_DEBUG_SNP_TRACE, "%a\n", __FUNCTION__));
 
-  if (This == NULL) {
+  if ((This == NULL) || (This->Mode == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (This->Mode->State == EfiSimpleNetworkStopped) {
-    return EFI_ALREADY_STARTED;
+  if (This->Mode->State != EfiSimpleNetworkStarted) {
+    return EFI_NOT_STARTED;
   }
 
   Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
@@ -138,7 +138,7 @@ UsbRndisSnpInitialize (
 
   DEBUG ((USB_DEBUG_SNP_TRACE, "%a, ExtraRxBufferSize: 0x%x ExtraTxBufferSize: 0x%x\n", __FUNCTION__, ExtraRxBufferSize, ExtraTxBufferSize));
 
-  if (This == NULL) {
+  if ((This == NULL) || (This->Mode == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -193,7 +193,7 @@ UsbRndisSnpReset (
 
   DEBUG ((USB_DEBUG_SNP_TRACE, "%a\n", __FUNCTION__));
 
-  if (This == NULL) {
+  if ((This == NULL) || (This->Mode == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -210,7 +210,6 @@ UsbRndisSnpReset (
 
   Status = UsbRndisResetDevice (Private->UsbIoProtocol, USB_INCREASE_REQUEST_ID (Private->UsbData.RequestId));
   USB_RESET_REQUEST_ID (Private->UsbData.RequestId);
-  Private->SnpModeData.State = EfiSimpleNetworkStopped;
 
   gBS->RestoreTPL (TplPrevious);
 
@@ -241,12 +240,14 @@ UsbRndisSnpShutdown (
 
   DEBUG ((USB_DEBUG_SNP_TRACE, "%a\n", __FUNCTION__));
 
-  if (This == NULL) {
+  if ((This == NULL) || (This->Mode == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (This->Mode->State != EfiSimpleNetworkInitialized) {
+  if (This->Mode->State < EfiSimpleNetworkStarted) {
     return EFI_NOT_STARTED;
+  } else if (This->Mode->State < EfiSimpleNetworkInitialized) {
+    return EFI_DEVICE_ERROR;
   }
 
   Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
@@ -257,8 +258,12 @@ UsbRndisSnpShutdown (
   TplPrevious = gBS->RaiseTPL (TPL_CALLBACK);
 
   Status = UsbRndisShutdownDevice (Private->UsbIoProtocol);
-  USB_RESET_REQUEST_ID (Private->UsbData.RequestId);
-  Private->SnpModeData.State = EfiSimpleNetworkStopped;
+  if (!EFI_ERROR (Status)) {
+    USB_RESET_REQUEST_ID (Private->UsbData.RequestId);
+    Private->SnpModeData.State = EfiSimpleNetworkStarted;
+  } else {
+    Private->SnpModeData.State = EfiSimpleNetworkStopped;
+  }
 
   gBS->RestoreTPL (TplPrevious);
 
@@ -305,12 +310,14 @@ UsbRndisSnpReceiveFilters (
 
   DEBUG ((USB_DEBUG_SNP_TRACE, "%a\n", __FUNCTION__));
 
-  if (This == NULL) {
+  if ((This == NULL) || (This->Mode == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (This->Mode->State != EfiSimpleNetworkInitialized) {
+  if (This->Mode->State < EfiSimpleNetworkStarted) {
     return EFI_NOT_STARTED;
+  } else if (This->Mode->State < EfiSimpleNetworkInitialized) {
+    return EFI_DEVICE_ERROR;
   }
 
   Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
@@ -334,6 +341,21 @@ UsbRndisSnpReceiveFilters (
   {
     gBS->RestoreTPL (TplPrevious);
     return EFI_INVALID_PARAMETER;
+  }
+
+  //
+  // Multicast is being enabled.
+  //
+  if (((Enable & EFI_SIMPLE_NETWORK_RECEIVE_MULTICAST) != 0) &&
+      ((Disable & EFI_SIMPLE_NETWORK_RECEIVE_MULTICAST) == 0))
+  {
+    if ((!ResetMCastFilter && (MCastFilterCnt == 0)) ||
+        (MCastFilterCnt > Private->SnpModeData.MaxMCastFilterCount) ||
+        (MCastFilter == NULL))
+    {
+      gBS->RestoreTPL (TplPrevious);
+      return EFI_INVALID_PARAMETER;
+    }
   }
 
   Private->SnpModeData.ReceiveFilterSetting |= Enable;
@@ -451,7 +473,45 @@ UsbRndisSnpMcastIpToMac (
 {
   DEBUG ((USB_DEBUG_SNP_TRACE, "%a\n", __FUNCTION__));
 
-  return EFI_UNSUPPORTED;
+  if ((This == NULL) || (This->Mode == NULL) || (IP == NULL) || (MAC == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (This->Mode->State != EfiSimpleNetworkInitialized) {
+    return EFI_NOT_STARTED;
+  }
+
+  if (IPv6 && !IP6_IS_MULTICAST (&(IP->v6))) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (!IPv6 && !IP4_IS_MULTICAST (EFI_NTOHL (*IP))) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (!IPv6) {
+    //
+    // RFC1112
+    //
+    MAC->Addr[0] = 0x01;
+    MAC->Addr[1] = 0x00;
+    MAC->Addr[2] = 0x5E;
+    MAC->Addr[3] = (UINT8)(IP->v4.Addr[1] & 0x7F);
+    MAC->Addr[4] = IP->v4.Addr[2];
+    MAC->Addr[5] = IP->v4.Addr[3];
+  } else {
+    //
+    // RFC2464
+    //
+    MAC->Addr[0] = 0x33;
+    MAC->Addr[1] = 0x33;
+    MAC->Addr[2] = IP->v6.Addr[12];
+    MAC->Addr[3] = IP->v6.Addr[13];
+    MAC->Addr[4] = IP->v6.Addr[14];
+    MAC->Addr[5] = IP->v6.Addr[15];
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -525,12 +585,14 @@ UsbRndisSnpGetStatus (
 
   DEBUG ((USB_DEBUG_SNP_TRACE, "%a\n", __FUNCTION__));
 
-  if (This == NULL) {
+  if ((This == NULL) || (This->Mode == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (This->Mode->State != EfiSimpleNetworkInitialized) {
+  if (This->Mode->State < EfiSimpleNetworkStarted) {
     return EFI_NOT_STARTED;
+  } else if (This->Mode->State < EfiSimpleNetworkInitialized) {
+    return EFI_DEVICE_ERROR;
   }
 
   Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
@@ -546,6 +608,10 @@ UsbRndisSnpGetStatus (
 
   if (TxBuf != NULL) {
     *TxBuf = NULL;
+    if (Private->TxBuffer != NULL) {
+      *TxBuf            = Private->TxBuffer;
+      Private->TxBuffer = NULL;
+    }
   }
 
   Private->SnpProtocol.Mode->MediaPresent = (Private->UsbData.MediaStatus == RNDIS_MEDIA_STATE_CONNECTED ? TRUE : FALSE);
@@ -612,19 +678,25 @@ UsbRndisSnpTransmit (
 
   DEBUG ((USB_DEBUG_SNP_TRACE, "%a\n", __FUNCTION__));
 
-  if ((This == NULL) || (BufferSize == 0) || (Buffer == NULL)) {
+  if ((This == NULL) || (This->Mode == NULL) || (BufferSize == 0) || (Buffer == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (This->Mode->State != EfiSimpleNetworkInitialized) {
+  if (This->Mode->State < EfiSimpleNetworkStarted) {
     return EFI_NOT_STARTED;
+  } else if (This->Mode->State < EfiSimpleNetworkInitialized) {
+    return EFI_DEVICE_ERROR;
   }
 
   if (BufferSize < This->Mode->MediaHeaderSize) {
     return EFI_BUFFER_TOO_SMALL;
   }
 
-  if (((HeaderSize != 0) && (DestAddr == NULL)) || ((HeaderSize != 0) && (HeaderSize != This->Mode->MediaHeaderSize)) || (BufferSize < HeaderSize)) {
+  if (((HeaderSize != 0) && (DestAddr == NULL)) ||
+      ((HeaderSize != 0) && (Protocol == NULL)) ||
+      ((HeaderSize != 0) && (HeaderSize != This->Mode->MediaHeaderSize)) ||
+      (BufferSize < HeaderSize))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -705,6 +777,7 @@ UsbRndisSnpTransmit (
     DEBUG ((DEBUG_ERROR, "%a, RndisTransmitMessage: %r Length: %u\n", __FUNCTION__, Status, Length));
   }
 
+  Private->TxBuffer = Buffer;
   FreePool (RndisPacketMsg);
 
   if (!EFI_ERROR (Status)) {
@@ -772,12 +845,14 @@ UsbRndisSnpReceive (
 
   DEBUG ((USB_DEBUG_SNP_TRACE, "%a\n", __FUNCTION__));
 
-  if ((This == NULL) || (BufferSize == NULL) || (Buffer == NULL)) {
+  if ((This == NULL) || (This->Mode == NULL) || (BufferSize == NULL) || (Buffer == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (This->Mode->State != EfiSimpleNetworkInitialized) {
+  if (This->Mode->State < EfiSimpleNetworkStarted) {
     return EFI_NOT_STARTED;
+  } else if (This->Mode->State < EfiSimpleNetworkInitialized) {
+    return EFI_DEVICE_ERROR;
   }
 
   Private = USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS (This);
@@ -941,12 +1016,11 @@ UsbRndisInitialSnpService (
   Private->SnpProtocol.Mode->MediaHeaderSize   = sizeof (ETHERNET_HEADER);
   Private->SnpProtocol.Mode->MaxPacketSize     = Private->UsbData.MaxFrameSize;
   Private->SnpProtocol.Mode->ReceiveFilterMask = EFI_SIMPLE_NETWORK_RECEIVE_UNICAST
-                                                 | EFI_SIMPLE_NETWORK_RECEIVE_MULTICAST
                                                  | EFI_SIMPLE_NETWORK_RECEIVE_BROADCAST
                                                  | EFI_SIMPLE_NETWORK_RECEIVE_PROMISCUOUS;
   Private->SnpProtocol.Mode->ReceiveFilterSetting = EFI_SIMPLE_NETWORK_RECEIVE_UNICAST
                                                     | EFI_SIMPLE_NETWORK_RECEIVE_BROADCAST;
-  Private->SnpProtocol.Mode->MaxMCastFilterCount   = MAX_MCAST_FILTER_CNT;
+  Private->SnpProtocol.Mode->MaxMCastFilterCount   = 0;
   Private->SnpProtocol.Mode->MCastFilterCount      = 0;
   Private->SnpProtocol.Mode->NvRamSize             = 0;
   Private->SnpProtocol.Mode->NvRamAccessSize       = 0;
