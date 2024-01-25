@@ -1,7 +1,7 @@
 /**
   Configuration Manager Data of SMBIOS Type 4 and Type 7 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -343,6 +343,7 @@ InstallSmbiosType4Cm (
   FRU_DEVICE_INFO                 *Type4FruInfo;
   CHAR8                           *FruDesc;
   CONST VOID                      *Property;
+  UINTN                           ChipID;
 
   Status  = EFI_SUCCESS;
   Repo    = Private->Repo;
@@ -491,7 +492,12 @@ InstallSmbiosType4Cm (
     ProcessorCharacteristics                       = SmbiosGetProcessorCharacteristics ();
     ProcessorInfo[Index].ProcessorCharacteristics |= *((UINT64 *)&ProcessorCharacteristics);
     ProcessorInfo[Index].ProcessorFamily           = ProcessorFamilyIndicatorFamily2;
-    ProcessorInfo[Index].ProcessorFamily2          = SmbiosGetProcessorFamily2 ();
+    ChipID                                         = TegraGetChipID ();
+    if (ChipID == TH500_CHIP_ID) {
+      ProcessorInfo[Index].ProcessorFamily2 = ProcessorFamilyARMv9;
+    } else {
+      ProcessorInfo[Index].ProcessorFamily2 = SmbiosGetProcessorFamily2 ();
+    }
   }
 
   //
