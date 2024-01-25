@@ -3,8 +3,7 @@
   Provides a driver binding protocol for supported NVIDIA GPUs
   as well as providing the NVIDIA GPU DSD AML Generation Protoocol.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
-
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -126,6 +125,37 @@ IsControllerSupported (
 
   /* SHH */
   if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x2341) && (ui16DeviceId <= 0x237f)) {
+    DEBUG_CODE_BEGIN ();
+    DEBUG ((DEBUG_ERROR, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+    DEBUG_CODE_END ();
+    bResult = TRUE;
+  }
+
+  /* GB180 */
+  /* EH */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId == 0x2900)) {
+    bResult = TRUE;
+  }
+
+  /* EH and VDK(SHH) */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x2901) && (ui16DeviceId <= 0x293f)) {
+    DEBUG_CODE_BEGIN ();
+    DEBUG ((DEBUG_ERROR, "%a: PCI ID [0x%04x, 0x%04x] [EHH/VDK(SHH)]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+    DEBUG_CODE_END ();
+    bResult = TRUE;
+  }
+
+  /* SH */
+  /* TH500+GB100 ranges */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x2941) && (ui16DeviceId <= 0x297f)) {
+    DEBUG_CODE_BEGIN ();
+    DEBUG ((DEBUG_ERROR, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+    DEBUG_CODE_END ();
+    bResult = TRUE;
+  }
+
+  /* TH500+GB102 ranges */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x29C1) && (ui16DeviceId <= 0x29ff)) {
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_ERROR, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     DEBUG_CODE_END ();

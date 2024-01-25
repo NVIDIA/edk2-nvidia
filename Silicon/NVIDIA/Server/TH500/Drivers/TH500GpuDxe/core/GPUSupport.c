@@ -4,7 +4,7 @@
     Placeholder until PCD, post devinit scratch, fsp query
     or CXL information available
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,6 +19,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 ///
 /// Protocol(s)
@@ -68,8 +69,12 @@
 
   0x2300 = recovery mode and pre-silicon/unfused parts
   0x2301 - 0x233f = GH100 products in endpoint mode
-  0x2340 = throwaway
+  0x2340 = reserved
   0x2341 - 0x237f = GH100 products in SH mode
+  0x2900 = recovery mode and pre-silicon/unfused parts
+  0x2901 - 0x293f = GB100 products in endpoint mode
+  0x2940 = reserved
+  0x2941 - 0x297f = GB100 products in SH mode
 */
 #define TH500_GPU_MODE_CHECK_EHH(vid, did) \
     ( ((vid)==0x10de) && ((did)==0x2300) )
@@ -77,6 +82,19 @@
     ( ((vid)==0x10de) && (((did)>=0x2301) && ((did)<=0x233f)) )
 #define TH500_GPU_MODE_CHECK_SHH(vid, did) \
     ( ((vid)==0x10de) && (((did)>=0x2341) && ((did)<=0x237f)) )
+#define TH500_GB180_VDK_GPU_MODE_CHECK_SHH(vid, did) \
+    ( ((vid)==0x10de) && ((did)==0x293f) )
+#define TH500_GB180_GPU_MODE_CHECK_EHH(vid, did) \
+    ( ((vid)==0x10de) && ((did)==0x2900) )
+#define TH500_GB180_GPU_MODE_CHECK_EH(vid, did) \
+    ( ((vid)==0x10de) && (((did)>=0x2901) && ((did)<=0x293f)) )
+#define TH500_GB100_GPU_MODE_CHECK_SHH(vid, did) \
+    ( ((vid)==0x10de) && (((did)>=0x2941) && ((did)<=0x297f)) )
+#define TH500_GB102_GPU_MODE_CHECK_SHH(vid, did) \
+    ( ((vid)==0x10de) && (((did)>=0x29C1) && ((did)<=0x29ff)) )
+#define TH500_GB180_GPU_MODE_CHECK_SHH(vid, did) \
+    ( TH500_GB100_GPU_MODE_CHECK_SHH(vid, did) || \
+      TH500_GB102_GPU_MODE_CHECK_SHH(vid, did) )
 
 ///
 /// GPU Mode check and Firmware complete poll
@@ -120,6 +138,7 @@ CheckGpuMode (
 
   DEBUG ((DEBUG_INFO, "%a: [%p] PciIo read of Pci TYPE00 returned '%r'\n", __FUNCTION__, PciIo, Status));
   if (!EFI_ERROR (Status)) {
+    BOOLEAN  bVDKPlatform = (TegraGetPlatform () != TEGRA_PLATFORM_VDK);
     /* PCI Device ID and Vendor ID for match to determine support status */
     DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] Controller Handle 2-part Id.\n", __FUNCTION__, Pci.Hdr.VendorId, Pci.Hdr.DeviceId));
     if ( TH500_GPU_MODE_CHECK_SHH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId)) {
@@ -128,7 +147,20 @@ CheckGpuMode (
     } else if ( TH500_GPU_MODE_CHECK_EH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId)) {
       DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] GPU Mode: 'EH'.\n", __FUNCTION__, Pci.Hdr.VendorId, Pci.Hdr.DeviceId));
       *GpuMode = GPU_MODE_EH;
-    } else if ( TH500_GPU_MODE_CHECK_EH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId)) {
+    } else if ( TH500_GPU_MODE_CHECK_EHH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId)) {
+      DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] GPU Mode: 'EHH'.\n", __FUNCTION__, Pci.Hdr.VendorId, Pci.Hdr.DeviceId));
+      *GpuMode = GPU_MODE_EHH;
+    } else if ( bVDKPlatform && (TH500_GB180_VDK_GPU_MODE_CHECK_SHH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId))) {
+      /* VDK override to SHH mode from standard Device ID check */
+      DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] [VDK] GPU Mode: 'SHH'.\n", __FUNCTION__, Pci.Hdr.VendorId, Pci.Hdr.DeviceId));
+      *GpuMode = GPU_MODE_SHH;
+    } else if ( TH500_GB180_GPU_MODE_CHECK_SHH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId)) {
+      DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] GPU Mode: 'SHH'.\n", __FUNCTION__, Pci.Hdr.VendorId, Pci.Hdr.DeviceId));
+      *GpuMode = GPU_MODE_SHH;
+    } else if ( TH500_GB180_GPU_MODE_CHECK_EH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId)) {
+      DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] GPU Mode: 'EH'.\n", __FUNCTION__, Pci.Hdr.VendorId, Pci.Hdr.DeviceId));
+      *GpuMode = GPU_MODE_EH;
+    } else if ( TH500_GB180_GPU_MODE_CHECK_EHH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId)) {
       DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] GPU Mode: 'EHH'.\n", __FUNCTION__, Pci.Hdr.VendorId, Pci.Hdr.DeviceId));
       *GpuMode = GPU_MODE_EHH;
     } else {
