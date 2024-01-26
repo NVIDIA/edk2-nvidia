@@ -2,7 +2,7 @@
 
   PLDM FW update task lib
 
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,6 +14,7 @@
 #include <Library/MctpBaseLib.h>
 #include <Library/PldmBaseLib.h>
 #include <Library/PldmFwUpdateLib.h>
+#include <Library/PldmFwUpdateNvLib.h>
 #include <Library/PldmFwUpdatePkgLib.h>
 #include <Library/PldmFwUpdateTaskLib.h>
 #include <Library/TimerLib.h>
@@ -1165,7 +1166,25 @@ PldmFwTaskTransferCompleteHandleReq (
 
   if (Request->TransferResult != 0) {
     DEBUG ((DEBUG_ERROR, "%a: %s transfer failure: 0x%x\n", __FUNCTION__, Task->DeviceName, Request->TransferResult));
-    PldmFwTaskSetError (PLDM_FW_UPDATE_TASK_ERROR_TRANSFER_COMPLETE_RESULT_ERR);
+
+    if ((Request->TransferResult >= PLDM_FW_TRANSFER_RESULT_SPEC_RANGE_MIN) &&
+        (Request->TransferResult <= PLDM_FW_TRANSFER_RESULT_SPEC_RANGE_MAX))
+    {
+      PldmFwTaskSetError (
+        PLDM_FW_UPDATE_TASK_ERROR_TRANSFER_COMPLETE_FAILED_SPEC_RANGE_MIN +
+        (Request->TransferResult - PLDM_FW_TRANSFER_RESULT_SPEC_RANGE_MIN)
+        );
+    } else if ((Request->TransferResult >= PLDM_FW_TRANSFER_RESULT_VENDOR_RANGE_MIN) &&
+               (Request->TransferResult <= PLDM_FW_TRANSFER_RESULT_VENDOR_RANGE_MAX))
+    {
+      PldmFwTaskSetError (
+        PLDM_FW_UPDATE_TASK_ERROR_TRANSFER_COMPLETE_FAILED_VENDOR_RANGE_MIN +
+        (Request->TransferResult - PLDM_FW_TRANSFER_RESULT_VENDOR_RANGE_MIN)
+        );
+    } else {
+      PldmFwTaskSetError (PLDM_FW_UPDATE_TASK_ERROR_TRANSFER_COMPLETE_RESULT_ERR);
+    }
+
     return StateFatalError;
   }
 
@@ -1222,7 +1241,25 @@ PldmFwTaskVerifyCompleteHandleReq (
 
   if (Request->VerifyResult != 0) {
     DEBUG ((DEBUG_ERROR, "%a: %s verify failure: 0x%x\n", __FUNCTION__, Task->DeviceName, Request->VerifyResult));
-    PldmFwTaskSetError (PLDM_FW_UPDATE_TASK_ERROR_VERIFY_COMPLETE_FAILED);
+
+    if ((Request->VerifyResult >= PLDM_FW_VERIFY_RESULT_SPEC_RANGE_MIN) &&
+        (Request->VerifyResult <= PLDM_FW_VERIFY_RESULT_SPEC_RANGE_MAX))
+    {
+      PldmFwTaskSetError (
+        PLDM_FW_UPDATE_TASK_ERROR_VERIFY_COMPLETE_FAILED_SPEC_RANGE_MIN +
+        (Request->VerifyResult - PLDM_FW_VERIFY_RESULT_SPEC_RANGE_MIN)
+        );
+    } else if ((Request->VerifyResult >= PLDM_FW_VERIFY_RESULT_VENDOR_RANGE_MIN) &&
+               (Request->VerifyResult <= PLDM_FW_VERIFY_RESULT_VENDOR_RANGE_MAX))
+    {
+      PldmFwTaskSetError (
+        PLDM_FW_UPDATE_TASK_ERROR_VERIFY_COMPLETE_FAILED_VENDOR_RANGE_MIN +
+        (Request->VerifyResult - PLDM_FW_VERIFY_RESULT_VENDOR_RANGE_MIN)
+        );
+    } else {
+      PldmFwTaskSetError (PLDM_FW_UPDATE_TASK_ERROR_VERIFY_COMPLETE_FAILED);
+    }
+
     return StateFatalError;
   }
 
@@ -1294,7 +1331,25 @@ PldmFwTaskApplyCompleteHandleReq (
 
   if (ApplyFailed) {
     DEBUG ((DEBUG_ERROR, "%a: apply failure: 0x%x\n", __FUNCTION__, Request->ApplyResult));
-    PldmFwTaskSetError (PLDM_FW_UPDATE_TASK_ERROR_APPLY_COMPLETE_FAILED);
+
+    if ((Request->ApplyResult >= PLDM_FW_APPLY_RESULT_SPEC_RANGE_MIN) &&
+        (Request->ApplyResult <= PLDM_FW_APPLY_RESULT_SPEC_RANGE_MAX))
+    {
+      PldmFwTaskSetError (
+        PLDM_FW_UPDATE_TASK_ERROR_APPLY_COMPLETE_FAILED_SPEC_RANGE_MIN +
+        (Request->ApplyResult - PLDM_FW_APPLY_RESULT_SPEC_RANGE_MIN)
+        );
+    } else if ((Request->ApplyResult >= PLDM_FW_APPLY_RESULT_VENDOR_RANGE_MIN) &&
+               (Request->ApplyResult <= PLDM_FW_APPLY_RESULT_VENDOR_RANGE_MAX))
+    {
+      PldmFwTaskSetError (
+        PLDM_FW_UPDATE_TASK_ERROR_APPLY_COMPLETE_FAILED_VENDOR_RANGE_MIN +
+        (Request->ApplyResult - PLDM_FW_APPLY_RESULT_VENDOR_RANGE_MIN)
+        );
+    } else {
+      PldmFwTaskSetError (PLDM_FW_UPDATE_TASK_ERROR_APPLY_COMPLETE_FAILED);
+    }
+
     return StateFatalError;
   }
 

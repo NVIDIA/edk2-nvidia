@@ -2,7 +2,7 @@
 
   PLDM FW update definitions and helper functions
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -120,9 +120,6 @@
 // field values
 #define PLDM_FW_UPDATE_COMPONENT_REQUEST_FORCE_UPDATE  BIT0
 
-#define PLDM_FW_APPLY_RESULT_SUCCESS                 0x0
-#define PLDM_FW_APPLY_RESULT_SUCCESS_NEW_ACTIVATION  0x1
-
 #define PLDM_FW_ACTIVATION_RESERVED               0xffc0
 #define PLDM_FW_ACTIVATION_AC_POWER_CYCLE         0x0020
 #define PLDM_FW_ACTIVATION_DC_POWER_CYCLE         0x0010
@@ -139,6 +136,58 @@
 #define PLDM_FW_TRANSFER_FLAG_START   0x01
 #define PLDM_FW_TRANSFER_FLAG_MIDDLE  0x02
 #define PLDM_FW_TRANSFER_FLAG_END     0x04
+
+// result codes
+// TransferComplete TransferResult field DSP0267 spec-defined error values
+#define PLDM_FW_TRANSFER_RESULT_SPEC_RANGE_MIN           0x00
+#define PLDM_FW_TRANSFER_RESULT_SPEC_RANGE_MAX           0x1f
+#define PLDM_FW_TRANSFER_RESULT_SUCCESS                  0x00
+#define PLDM_FW_TRANSFER_RESULT_IMAGE_CORRUPT            0x01
+#define PLDM_FW_TRANSFER_RESULT_VERSION_MISMATCH         0x02
+#define PLDM_FW_TRANSFER_RESULT_FD_ABORTED               0x03
+#define PLDM_FW_TRANSFER_RESULT_TIMEOUT                  0x09
+#define PLDM_FW_TRANSFER_RESULT_GENERIC_ERROR            0x0a
+#define PLDM_FW_TRANSFER_RESULT_FD_LOW_POWER             0x0b
+#define PLDM_FW_TRANSFER_RESULT_FD_NEEDS_RESET           0x0c
+#define PLDM_FW_TRANSFER_RESULT_FD_STORE_ERROR           0x0d
+#define PLDM_FW_TRANSFER_RESULT_INVALID_OPAQUE_DATA      0x0e
+#define PLDM_FW_TRANSFER_RESULT_DOWNSTREAM_FAILURE       0x0f
+#define PLDM_FW_TRANSFER_RESULT_SECURITY_REVISION_ERROR  0x10
+// TransferComplete TransferResult field vendor-defined error values
+//   for NVIDIA codes, see PLDM_FW_NV_TRANSFER_RESULT enum
+#define PLDM_FW_TRANSFER_RESULT_VENDOR_RANGE_MIN  0x70
+#define PLDM_FW_TRANSFER_RESULT_VENDOR_RANGE_MAX  0x8f
+
+// VerifyComplete VerifyResult field DSP0267 spec-defined error values
+#define PLDM_FW_VERIFY_RESULT_SPEC_RANGE_MIN           0x00
+#define PLDM_FW_VERIFY_RESULT_SPEC_RANGE_MAX           0x1f
+#define PLDM_FW_VERIFY_RESULT_SUCCESS                  0x00
+#define PLDM_FW_VERIFY_RESULT_VERIFY_FAILED            0x01
+#define PLDM_FW_VERIFY_RESULT_VERSION_MISMATCH         0x02
+#define PLDM_FW_VERIFY_RESULT_SECURITY_CHECK_FAILED    0x03
+#define PLDM_FW_VERIFY_RESULT_IMAGE_INCOMPLETE         0x04
+#define PLDM_FW_VERIFY_RESULT_TIMEOUT                  0x09
+#define PLDM_FW_VERIFY_RESULT_GENERIC_ERROR            0x0a
+#define PLDM_FW_VERIFY_RESULT_SECURITY_REVISION_ERROR  0x10
+// VerifyComplete VerifyResult field vendor-defined error values
+//   for NVIDIA codes, see PLDM_FW_NV_VERIFY_RESULT enum
+#define PLDM_FW_VERIFY_RESULT_VENDOR_RANGE_MIN  0x90
+#define PLDM_FW_VERIFY_RESULT_VENDOR_RANGE_MAX  0xaf
+
+// ApplyComplete ApplyResult field DSP0267 spec-defined error values
+#define PLDM_FW_APPLY_RESULT_SPEC_RANGE_MIN                 0x00
+#define PLDM_FW_APPLY_RESULT_SPEC_RANGE_MAX                 0x1f
+#define PLDM_FW_APPLY_RESULT_SUCCESS                        0x00
+#define PLDM_FW_APPLY_RESULT_SUCCESS_NEW_ACTIVATION         0x01
+#define PLDM_FW_APPLY_RESULT_MEMORY_WRITE_ERROR             0x02
+#define PLDM_FW_APPLY_RESULT_TIMEOUT                        0x09
+#define PLDM_FW_APPLY_RESULT_GENERIC_ERROR                  0x0a
+#define PLDM_FW_APPLY_RESULT_FAILED_NEEDS_TRANSFER_RESTART  0x0b
+#define PLDM_FW_APPLY_RESULT_SECURITY_REVISION_ERROR        0x10
+// ApplyComplete ApplyResult field vendor-defined error values
+//   for NVIDIA codes, see PLDM_FW_NV_APPLY_RESULT enum
+#define PLDM_FW_APPLY_RESULT_VENDOR_RANGE_MIN  0xb0
+#define PLDM_FW_APPLY_RESULT_VENDOR_RANGE_MAX  0xcf
 
 #pragma pack(1)
 
