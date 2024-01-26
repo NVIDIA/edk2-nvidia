@@ -2,7 +2,7 @@
   Platform Redfish boot order driver.
 
   (C) Copyright 2022 Hewlett Packard Enterprise Development LP<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -431,7 +431,7 @@ PlatformRedfishBootRouteConfig (
   UINTN                                       BufferSize;
   PLATFORM_REDFISH_BOOT_OPTION_VARSTORE_DATA  BootOptionsVar;
 
-  if (Configuration == NULL) {
+  if ((Configuration == NULL) || (Progress == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
