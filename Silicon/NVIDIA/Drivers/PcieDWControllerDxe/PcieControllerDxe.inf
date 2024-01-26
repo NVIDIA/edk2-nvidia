@@ -37,6 +37,7 @@
   PrintLib
   UefiDriverEntryPoint
   IoLib
+  SortLib
   TimerLib
   FdtLib
   DeviceDiscoveryDriverLib
