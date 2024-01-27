@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -18,7 +18,7 @@
 #define TEGRABL_MAX_PCIE_PER_SOCKET       10
 
 #define TEGRABL_MB1_BCT_MAJOR_VERSION  0
-#define TEGRABL_MB1_BCT_MINOR_VERSION  8
+#define TEGRABL_MB1_BCT_MINOR_VERSION  9
 
 #pragma pack(1)
 
@@ -77,7 +77,8 @@ typedef struct {
   UINT32    MaxSpeed;
   UINT32    MaxWidth;
   UINT8     SlotType;
-  UINT8     Reserved[15];
+  UINT16    SlotNum;
+  UINT8     Reserved[13];
 } TEGRABL_MB1BCT_PCIE_CONFIG;
 
 typedef struct {

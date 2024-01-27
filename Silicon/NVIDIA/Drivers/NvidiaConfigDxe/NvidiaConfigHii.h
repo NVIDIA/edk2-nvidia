@@ -1,7 +1,7 @@
 /** @file
  *  Nvidia Configuration Dxe
  *
- *  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *  Copyright (c) 2017, Linaro Limited. All rights reserved.
  *
  *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -585,6 +585,47 @@
 #define KEY_SOCKET3_PCIE8_DISABLE_DPC_AT_RP  0x1C27
 #define KEY_SOCKET3_PCIE9_DISABLE_DPC_AT_RP  0x1C28
 
+#define KEY_SOCKET0_PCIE0_SLOT_NUM  0x1D01
+#define KEY_SOCKET0_PCIE1_SLOT_NUM  0x1D02
+#define KEY_SOCKET0_PCIE2_SLOT_NUM  0x1D03
+#define KEY_SOCKET0_PCIE3_SLOT_NUM  0x1D04
+#define KEY_SOCKET0_PCIE4_SLOT_NUM  0x1D05
+#define KEY_SOCKET0_PCIE5_SLOT_NUM  0x1D06
+#define KEY_SOCKET0_PCIE6_SLOT_NUM  0x1D07
+#define KEY_SOCKET0_PCIE7_SLOT_NUM  0x1D08
+#define KEY_SOCKET0_PCIE8_SLOT_NUM  0x1D09
+#define KEY_SOCKET0_PCIE9_SLOT_NUM  0x1D0A
+#define KEY_SOCKET1_PCIE0_SLOT_NUM  0x1D0B
+#define KEY_SOCKET1_PCIE1_SLOT_NUM  0x1D0C
+#define KEY_SOCKET1_PCIE2_SLOT_NUM  0x1D0D
+#define KEY_SOCKET1_PCIE3_SLOT_NUM  0x1D0E
+#define KEY_SOCKET1_PCIE4_SLOT_NUM  0x1D0F
+#define KEY_SOCKET1_PCIE5_SLOT_NUM  0x1D10
+#define KEY_SOCKET1_PCIE6_SLOT_NUM  0x1D11
+#define KEY_SOCKET1_PCIE7_SLOT_NUM  0x1D12
+#define KEY_SOCKET1_PCIE8_SLOT_NUM  0x1D13
+#define KEY_SOCKET1_PCIE9_SLOT_NUM  0x1D14
+#define KEY_SOCKET2_PCIE0_SLOT_NUM  0x1D15
+#define KEY_SOCKET2_PCIE1_SLOT_NUM  0x1D16
+#define KEY_SOCKET2_PCIE2_SLOT_NUM  0x1D17
+#define KEY_SOCKET2_PCIE3_SLOT_NUM  0x1D18
+#define KEY_SOCKET2_PCIE4_SLOT_NUM  0x1D19
+#define KEY_SOCKET2_PCIE5_SLOT_NUM  0x1D1A
+#define KEY_SOCKET2_PCIE6_SLOT_NUM  0x1D1B
+#define KEY_SOCKET2_PCIE7_SLOT_NUM  0x1D1C
+#define KEY_SOCKET2_PCIE8_SLOT_NUM  0x1D1D
+#define KEY_SOCKET2_PCIE9_SLOT_NUM  0x1D1E
+#define KEY_SOCKET3_PCIE0_SLOT_NUM  0x1D1F
+#define KEY_SOCKET3_PCIE1_SLOT_NUM  0x1D20
+#define KEY_SOCKET3_PCIE2_SLOT_NUM  0x1D21
+#define KEY_SOCKET3_PCIE3_SLOT_NUM  0x1D22
+#define KEY_SOCKET3_PCIE4_SLOT_NUM  0x1D23
+#define KEY_SOCKET3_PCIE5_SLOT_NUM  0x1D24
+#define KEY_SOCKET3_PCIE6_SLOT_NUM  0x1D25
+#define KEY_SOCKET3_PCIE7_SLOT_NUM  0x1D26
+#define KEY_SOCKET3_PCIE8_SLOT_NUM  0x1D27
+#define KEY_SOCKET3_PCIE9_SLOT_NUM  0x1D28
+
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 
 #define PCIE_IN_OS_DISABLE  0x0
@@ -649,6 +690,7 @@ typedef struct {
   BOOLEAN    PerfVersionSettingSupported;
   BOOLEAN    EInjEnableSupported;
   BOOLEAN    PCIeASPML1SSConfigSupported;
+  BOOLEAN    PCIeSlotNumConfigSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];
@@ -684,6 +726,10 @@ typedef struct {
   UINT8      SlotType1[MAX_PCIE];
   UINT8      SlotType2[MAX_PCIE];
   UINT8      SlotType3[MAX_PCIE];
+  UINT16     SlotNum0[MAX_PCIE];
+  UINT16     SlotNum1[MAX_PCIE];
+  UINT16     SlotNum2[MAX_PCIE];
+  UINT16     SlotNum3[MAX_PCIE];
   BOOLEAN    EnableAspmL1_0[MAX_PCIE];
   BOOLEAN    EnableAspmL1_1[MAX_PCIE];
   BOOLEAN    EnableAspmL1_2[MAX_PCIE];
@@ -848,6 +894,18 @@ typedef struct {
   option text = STRING_TOKEN(STR_PCIE_X2), value = 2, flags = 0;                                  \
   option text = STRING_TOKEN(STR_PCIE_X1), value = 1, flags = 0;                                  \
   endoneof;                                                                                       \
+  suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.PCIeSlotNumConfigSupported == 0;                   \
+  numeric varid = NVIDIA_CONFIG_HII_CONTROL.SlotNum##socket[pcie],                                \
+          questionid = KEY_SOCKET##socket##_PCIE##pcie##_SLOT_NUM,                                \
+          prompt = STRING_TOKEN(STR_PCIE_SLOT_NUM_SOCKET##socket##_PCIE##pcie##_TITLE),           \
+          help = STRING_TOKEN(STR_PCIE_SLOT_NUM_HELP),                                            \
+          flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_HEX,                                \
+          minimum = 0,                                                                            \
+          maximum = 8191,                                                                         \
+          step = 1,                                                                               \
+          default = 0,                                                                            \
+          endnumeric;                                                                             \
+  endif;                                                                                          \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EnableAspmL1_##socket[pcie],                         \
            questionid = KEY_SOCKET##socket##_PCIE##pcie##_ENABLE_ASPML1,                          \
            prompt = STRING_TOKEN(STR_PCIE_ENABLE_ASPM_L1_SOCKET##socket##_PCIE##pcie##_TITLE),    \

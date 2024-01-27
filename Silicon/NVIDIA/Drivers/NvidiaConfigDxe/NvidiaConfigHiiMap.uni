@@ -2,7 +2,7 @@
 *
 *  x-uefi string definitions for the NVIDIA Config.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -603,6 +603,50 @@
 #string STR_PCIE_DISABLE_DPC_AT_RP_SOCKET3_PCIE7_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie7DisableDPCatRP"
 #string STR_PCIE_DISABLE_DPC_AT_RP_SOCKET3_PCIE8_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie8DisableDPCatRP"
 #string STR_PCIE_DISABLE_DPC_AT_RP_SOCKET3_PCIE9_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie9DisableDPCatRP"
+
+#string STR_PCIE_SLOT_NUM_SOCKET0_PCIE0_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie0SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET0_PCIE1_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie1SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET0_PCIE2_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie2SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET0_PCIE3_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie3SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET0_PCIE4_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie4SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET0_PCIE5_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie5SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET0_PCIE6_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie6SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET0_PCIE7_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie7SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET0_PCIE8_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie8SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET0_PCIE9_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie9SlotNum"
+
+#string STR_PCIE_SLOT_NUM_SOCKET1_PCIE0_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie0SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET1_PCIE1_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie1SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET1_PCIE2_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie2SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET1_PCIE3_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie3SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET1_PCIE4_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie4SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET1_PCIE5_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie5SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET1_PCIE6_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie6SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET1_PCIE7_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie7SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET1_PCIE8_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie8SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET1_PCIE9_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie9SlotNum"
+
+#string STR_PCIE_SLOT_NUM_SOCKET2_PCIE0_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2Pcie0SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET2_PCIE1_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2Pcie1SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET2_PCIE2_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2Pcie2SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET2_PCIE3_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2Pcie3SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET2_PCIE4_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2Pcie4SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET2_PCIE5_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2Pcie5SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET2_PCIE6_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2Pcie6SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET2_PCIE7_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2Pcie7SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET2_PCIE8_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2Pcie8SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET2_PCIE9_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2Pcie9SlotNum"
+
+#string STR_PCIE_SLOT_NUM_SOCKET3_PCIE0_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie0SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET3_PCIE1_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie1SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET3_PCIE2_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie2SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET3_PCIE3_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie3SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET3_PCIE4_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie4SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET3_PCIE5_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie5SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET3_PCIE6_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie6SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET3_PCIE7_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie7SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET3_PCIE8_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie8SlotNum"
+#string STR_PCIE_SLOT_NUM_SOCKET3_PCIE9_TITLE       #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3Pcie9SlotNum"
 
 #string STR_MEMORY_TEST_LEVEL_PROMPT                    #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/MemoryTestLevel"
 #string STR_IGNORE                                      #language x-uefi-redfish-Bios.v1_2_0 "Ignore"
