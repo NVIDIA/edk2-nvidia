@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -18,8 +18,11 @@
 #include <Guid/MemoryTypeInformation.h>
 #include <Library/NVIDIADebugLib.h>
 
-// Linux can only handle up to 1024 memory regions
-#define MAX_MEMORY_REGIONS  1024
+// Some OSes can only handle up to 1024 memory regions in memmap total
+#define OS_MAX_REGIONS  1024
+// UEFI creates some extra regions after this code runs, so reserve some space for that
+#define UEFI_RESERVED_REGIONS  32
+#define MAX_USABLE_REGIONS     (OS_MAX_REGIONS - UEFI_RESERVED_REGIONS)
 
 typedef enum {
   ORDER_IS_CORRECT,
@@ -331,7 +334,7 @@ InstallDramWithCarveouts (
   EFI_PHYSICAL_ADDRESS         CarveoutStart;
   EFI_PHYSICAL_ADDRESS         CarveoutEnd;
   EFI_PHYSICAL_ADDRESS         DramEnd;
-  CONST UINTN                  MaxGeneralRegions = (MAX_MEMORY_REGIONS - UsableCarveoutRegionsCount - 1);
+  CONST UINTN                  MaxGeneralRegions = (MAX_USABLE_REGIONS - UsableCarveoutRegionsCount - 1);
   EFI_PHYSICAL_ADDRESS         UefiMemoryBase    = InputDramRegions[UefiDramRegionIndex].MemoryBaseAddress;
   EFI_PHYSICAL_ADDRESS         UefiMemoryEnd     = UefiMemoryBase + InputDramRegions[UefiDramRegionIndex].MemoryLength;
   UINTN                        ListIndex;
@@ -341,8 +344,8 @@ InstallDramWithCarveouts (
   NV_ASSERT_RETURN (DramRegions != NULL, return EFI_DEVICE_ERROR, "%a: Unable to allocate space for %lu DRAM regions\n", __FUNCTION__, DramRegionsCount);
   CopyMem (DramRegions, InputDramRegions, sizeof (NVDA_MEMORY_REGION) * DramRegionsCount);
 
-  LargestRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * MAX_MEMORY_REGIONS);
-  NV_ASSERT_RETURN (LargestRegions != NULL, return EFI_DEVICE_ERROR, "%a: Unable to allocate space for the %d largest regions\n", __FUNCTION__, MAX_MEMORY_REGIONS);
+  LargestRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * MAX_USABLE_REGIONS);
+  NV_ASSERT_RETURN (LargestRegions != NULL, return EFI_DEVICE_ERROR, "%a: Unable to allocate space for the %d largest regions\n", __FUNCTION__, MAX_USABLE_REGIONS);
 
   MemoryRegionSort (DramRegions, DramRegionsCount, CompareRegionAddressLowToHigh);
   for (DramIndex = 0; DramIndex < DramRegionsCount; DramIndex++) {
@@ -454,13 +457,13 @@ InstallDramWithCarveouts (
   // Add the largest UEFI region in the reserved space
   if (LargestUefiRegion.MemoryLength) {
     DEBUG ((DEBUG_VERBOSE, "DRAM Region [UEFI]: %016lx, %016lx\r\n", LargestUefiRegion.MemoryBaseAddress, LargestUefiRegion.MemoryLength));
-    MemoryRegionInsert (LargestRegions, &InstalledRegions, &LargestUefiRegion, MAX_MEMORY_REGIONS, CompareRegionSizeHighToLow);
+    MemoryRegionInsert (LargestRegions, &InstalledRegions, &LargestUefiRegion, MAX_USABLE_REGIONS, CompareRegionSizeHighToLow);
   }
 
   // Add the UsableCarveout regions in the reserved space
   for (UsableCarveoutIndex = 0; UsableCarveoutIndex < UsableCarveoutRegionsCount; UsableCarveoutIndex++) {
     DEBUG ((DEBUG_VERBOSE, "DRAM Region [Usable Carveout]: %016lx, %016lx\r\n", UsableCarveoutRegions[UsableCarveoutIndex].MemoryBaseAddress, UsableCarveoutRegions[UsableCarveoutIndex].MemoryLength));
-    MemoryRegionInsert (LargestRegions, &InstalledRegions, &UsableCarveoutRegions[UsableCarveoutIndex], MAX_MEMORY_REGIONS, CompareRegionSizeHighToLow);
+    MemoryRegionInsert (LargestRegions, &InstalledRegions, &UsableCarveoutRegions[UsableCarveoutIndex], MAX_USABLE_REGIONS, CompareRegionSizeHighToLow);
   }
 
   ResourceAttributes = (
@@ -496,6 +499,7 @@ InstallDramWithCarveouts (
   *MaxRegionStart    = LargestUefiRegion.MemoryBaseAddress;
   *MaxRegionSize     = LargestUefiRegion.MemoryLength;
   *FinalRegionsCount = InstalledRegions;
+  DEBUG ((DEBUG_INFO, "%a: FinalRegionCount = %d\n", __FUNCTION__, *FinalRegionsCount));
 
   FreePool (DramRegions);
   FreePool (LargestRegions);
