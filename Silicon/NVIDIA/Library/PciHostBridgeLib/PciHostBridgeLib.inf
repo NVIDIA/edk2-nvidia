@@ -1,7 +1,7 @@
 ## @file
 #  PCI Host Bridge Library instance for NVIDIA platforms.
 #
-#  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -37,6 +37,7 @@
   DevicePathLib
   IoLib
   MemoryAllocationLib
+  SortLib
   UefiBootServicesTableLib
 
 [Protocols]
@@ -47,4 +48,6 @@
   gNVIDIAPciHostBridgeProtocolGuid
   AND
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+  AND
+  gNVIDIAPcieControllerInitCompleteProtocolGuid
 
