@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -404,6 +404,42 @@ RenameChildNodesSequentially (
 }
 
 /**
+  Detect if given phandle is referenced as next-level-cache by any cpu node
+
+**/
+STATIC
+BOOLEAN
+EFIAPI
+PhandleIsNextLevelCache (
+  IN VOID   *Dtb,
+  IN INT32  CpusOffset,
+  UINT32    Phandle
+  )
+{
+  INT32       NodeOffset;
+  CONST VOID  *Property;
+  UINT32      CachePhandle;
+
+  fdt_for_each_subnode (NodeOffset, Dtb, CpusOffset) {
+    Property = fdt_getprop (Dtb, NodeOffset, "device_type", NULL);
+    if ((Property == NULL) || (AsciiStrCmp (Property, "cpu") != 0)) {
+      continue;
+    }
+
+    Property = fdt_getprop (Dtb, NodeOffset, "next-level-cache", NULL);
+    if (Property != NULL) {
+      CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
+      DEBUG ((DEBUG_VERBOSE, "%a: checking phandle 0x%x for 0x%x\r\n", __FUNCTION__, CachePhandle, Phandle));
+      if (CachePhandle == Phandle) {
+        return TRUE;
+      }
+    }
+  }
+
+  return FALSE;
+}
+
+/**
   Floorsweep CPUs in DTB
 
 **/
@@ -429,6 +465,7 @@ UpdateCpuFloorsweepingConfig (
   INT32        TmpOffset;
   CHAR8        CoreNodeStr[] = "coreXX";
   EFI_STATUS   Status;
+  UINT32       CachePhandle;
 
   AddressCells = fdt_address_cells (Dtb, CpusOffset);
 
@@ -497,6 +534,11 @@ UpdateCpuFloorsweepingConfig (
         ));
       NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
     } else {
+      Property = fdt_getprop (Dtb, NodeOffset, "next-level-cache", NULL);
+      if (Property != NULL) {
+        CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
+      }
+
       TmpOffset  = NodeOffset;
       NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
 
@@ -507,6 +549,27 @@ UpdateCpuFloorsweepingConfig (
       }
 
       DEBUG ((DEBUG_INFO, "Deleted cpu-%u node in FDT\r\n", Cpu));
+
+      if ((Property != NULL) && !PhandleIsNextLevelCache (Dtb, CpusOffset, CachePhandle)) {
+        TmpOffset = fdt_node_offset_by_phandle (Dtb, CachePhandle);
+        // special case if cache node to delete is node after deleted cpu node
+        if (TmpOffset == NodeOffset) {
+          NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+          DEBUG ((DEBUG_INFO, "%a: l2 cache phandle=0x%x followed deleted cpu %u\r\n", __FUNCTION__, CachePhandle, Cpu));
+        }
+
+        if (TmpOffset >= 0) {
+          FdtErr = fdt_nop_node (Dtb, TmpOffset);
+          if (FdtErr < 0) {
+            DEBUG ((DEBUG_ERROR, "Failed to delete l2 cache node 0x%x: %a\r\n", CachePhandle, fdt_strerror (FdtErr)));
+            return EFI_DEVICE_ERROR;
+          }
+
+          DEBUG ((DEBUG_INFO, "Deleted l2 cache node 0x%x\r\n", CachePhandle));
+        } else {
+          DEBUG ((DEBUG_ERROR, "%a: Missing cache phandle=0x%x\r\n", __FUNCTION__, CachePhandle));
+        }
+      }
     }
 
     Cpu++;
