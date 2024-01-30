@@ -18,7 +18,6 @@ STATIC CONST CHAR16  *SystemFwImageNamesCommon[] = {
   L"bpmp-fw",
   L"bpmp-fw-dtb",
   L"cpu-bootloader",
-  L"eks",
   L"mb1",
   L"MB1_BCT",
   L"mb2",
