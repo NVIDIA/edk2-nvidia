@@ -708,6 +708,47 @@
 #define KEY_SOCKET3_PCIE8_MASK_COMPLETER_ABORT  0x1F27
 #define KEY_SOCKET3_PCIE9_MASK_COMPLETER_ABORT  0x1F28
 
+#define KEY_SOCKET0_PCIE0_SUPPORTS_PRSNT  0x2001
+#define KEY_SOCKET0_PCIE1_SUPPORTS_PRSNT  0x2002
+#define KEY_SOCKET0_PCIE2_SUPPORTS_PRSNT  0x2003
+#define KEY_SOCKET0_PCIE3_SUPPORTS_PRSNT  0x2004
+#define KEY_SOCKET0_PCIE4_SUPPORTS_PRSNT  0x2005
+#define KEY_SOCKET0_PCIE5_SUPPORTS_PRSNT  0x2006
+#define KEY_SOCKET0_PCIE6_SUPPORTS_PRSNT  0x2007
+#define KEY_SOCKET0_PCIE7_SUPPORTS_PRSNT  0x2008
+#define KEY_SOCKET0_PCIE8_SUPPORTS_PRSNT  0x2009
+#define KEY_SOCKET0_PCIE9_SUPPORTS_PRSNT  0x200A
+#define KEY_SOCKET1_PCIE0_SUPPORTS_PRSNT  0x200B
+#define KEY_SOCKET1_PCIE1_SUPPORTS_PRSNT  0x200C
+#define KEY_SOCKET1_PCIE2_SUPPORTS_PRSNT  0x200D
+#define KEY_SOCKET1_PCIE3_SUPPORTS_PRSNT  0x200E
+#define KEY_SOCKET1_PCIE4_SUPPORTS_PRSNT  0x200F
+#define KEY_SOCKET1_PCIE5_SUPPORTS_PRSNT  0x2010
+#define KEY_SOCKET1_PCIE6_SUPPORTS_PRSNT  0x2011
+#define KEY_SOCKET1_PCIE7_SUPPORTS_PRSNT  0x2012
+#define KEY_SOCKET1_PCIE8_SUPPORTS_PRSNT  0x2013
+#define KEY_SOCKET1_PCIE9_SUPPORTS_PRSNT  0x2014
+#define KEY_SOCKET2_PCIE0_SUPPORTS_PRSNT  0x2015
+#define KEY_SOCKET2_PCIE1_SUPPORTS_PRSNT  0x2016
+#define KEY_SOCKET2_PCIE2_SUPPORTS_PRSNT  0x2017
+#define KEY_SOCKET2_PCIE3_SUPPORTS_PRSNT  0x2018
+#define KEY_SOCKET2_PCIE4_SUPPORTS_PRSNT  0x2019
+#define KEY_SOCKET2_PCIE5_SUPPORTS_PRSNT  0x201A
+#define KEY_SOCKET2_PCIE6_SUPPORTS_PRSNT  0x201B
+#define KEY_SOCKET2_PCIE7_SUPPORTS_PRSNT  0x201C
+#define KEY_SOCKET2_PCIE8_SUPPORTS_PRSNT  0x201D
+#define KEY_SOCKET2_PCIE9_SUPPORTS_PRSNT  0x201E
+#define KEY_SOCKET3_PCIE0_SUPPORTS_PRSNT  0x201F
+#define KEY_SOCKET3_PCIE1_SUPPORTS_PRSNT  0x2020
+#define KEY_SOCKET3_PCIE2_SUPPORTS_PRSNT  0x2021
+#define KEY_SOCKET3_PCIE3_SUPPORTS_PRSNT  0x2022
+#define KEY_SOCKET3_PCIE4_SUPPORTS_PRSNT  0x2023
+#define KEY_SOCKET3_PCIE5_SUPPORTS_PRSNT  0x2024
+#define KEY_SOCKET3_PCIE6_SUPPORTS_PRSNT  0x2025
+#define KEY_SOCKET3_PCIE7_SUPPORTS_PRSNT  0x2026
+#define KEY_SOCKET3_PCIE8_SUPPORTS_PRSNT  0x2027
+#define KEY_SOCKET3_PCIE9_SUPPORTS_PRSNT  0x2028
+
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 
 #define PCIE_IN_OS_DISABLE  0x0
@@ -774,6 +815,7 @@ typedef struct {
   BOOLEAN    PCIeASPML1SSConfigSupported;
   BOOLEAN    PCIeSlotNumConfigSupported;
   BOOLEAN    PCIeURCAConfigSupported;
+  BOOLEAN    PCIePRSNTConfigSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];
@@ -857,6 +899,10 @@ typedef struct {
   BOOLEAN    MaskCompleterAbort_1[MAX_PCIE];
   BOOLEAN    MaskCompleterAbort_2[MAX_PCIE];
   BOOLEAN    MaskCompleterAbort_3[MAX_PCIE];
+  BOOLEAN    SupportsPRSNT_0[MAX_PCIE];
+  BOOLEAN    SupportsPRSNT_1[MAX_PCIE];
+  BOOLEAN    SupportsPRSNT_2[MAX_PCIE];
+  BOOLEAN    SupportsPRSNT_3[MAX_PCIE];
 } NVIDIA_CONFIG_HII_CONTROL;
 
 #define ADD_GOTO_SOCKET_FORM(socket)                                       \
@@ -1068,6 +1114,14 @@ typedef struct {
            help = STRING_TOKEN(STR_PCIE_MASK_COMPLETER_ABORT_HELP),                                  \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
            endcheckbox;                                                                           \
+  suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.PCIePRSNTConfigSupported == 0;                     \
+  checkbox varid = NVIDIA_CONFIG_HII_CONTROL.SupportsPRSNT_##socket[pcie],                        \
+           questionid = KEY_SOCKET##socket##_PCIE##pcie##_SUPPORTS_PRSNT,                         \
+           prompt = STRING_TOKEN(STR_PCIE_SUPPORTS_PRSNT_SOCKET##socket##_PCIE##pcie##_TITLE),    \
+           help = STRING_TOKEN(STR_PCIE_SUPPORTS_PRSNT_HELP),                                     \
+           flags = INTERACTIVE | RESET_REQUIRED,                                                  \
+           endcheckbox;                                                                           \
+  endif;                                                                                          \
   endif;                                                                                          \
   endif;                                                                                          \
   endform;

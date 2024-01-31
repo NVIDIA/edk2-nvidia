@@ -73,8 +73,10 @@ typedef struct {
       UINT64    MaskUnsupportedRequest : 1;
       /* Mask Completer Abort (CA) */
       UINT64    MaskCompleterAbort     : 1;
+      /* Supports Presence Detect */
+      UINT64    SupportsPRSNT          : 1;
       /* Reserved */
-      UINT64    reserved               : 53;
+      UINT64    reserved               : 52;
     };
   };
 
