@@ -46,6 +46,8 @@
 #include "PcieControllerConfigGPU.h"
 #include "PcieControllerPrivate.h"
 
+#define PCIE_CONTROLLER_MAX_REGISTERS  5
+
 /** The platform ACPI table list.
 */
 STATIC
@@ -1627,6 +1629,9 @@ DeviceDiscoveryNotify (
   TEGRA_PLATFORM_TYPE                          PlatformType;
   VOID                                         *Hob;
   TEGRABL_EARLY_BOOT_VARIABLES                 *Mb1Config = NULL;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA             RegisterData[PCIE_CONTROLLER_MAX_REGISTERS];
+  UINT32                                       RegisterCount;
+  UINT32                                       RegisterIndex;
 
   PlatformType = TegraGetPlatform ();
   Status       = EFI_SUCCESS;
@@ -1663,40 +1668,58 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &Private->XalBase, &Private->XalSize);
+      if (DeviceTreeNode == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: bad DeviceTreeNode\n", __FUNCTION__));
+        Status = EFI_UNSUPPORTED;
+        break;
+      }
+
+      Status = DeviceTreeGetRegisters (DeviceTreeNode->NodeOffset, RegisterData, &RegisterCount);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: GetRegisters failed: %r\n", __FUNCTION__, Status));
+        Status = EFI_UNSUPPORTED;
+        break;
+      }
+
+      Status = DeviceTreeFindRegisterByName ("xal", RegisterData, RegisterCount, &RegisterIndex);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Unable to locate XAL address range\n", __FUNCTION__));
         Status = EFI_UNSUPPORTED;
         break;
       }
 
-      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 1, &Private->XtlBase, &Private->XtlSize);
+      Private->XalBase = RegisterData[RegisterIndex].BaseAddress;
+      Private->XalSize = RegisterData[RegisterIndex].Size;
+
+      Status = DeviceTreeFindRegisterByName ("xtl", RegisterData, RegisterCount, &RegisterIndex);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Unable to locate XTL address range\n", __FUNCTION__));
         Status = EFI_UNSUPPORTED;
         break;
       }
 
-      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 2, &Private->XtlPriBase, &Private->XtlPriSize);
+      Private->XtlBase = RegisterData[RegisterIndex].BaseAddress;
+      Private->XtlSize = RegisterData[RegisterIndex].Size;
+
+      Status = DeviceTreeFindRegisterByName ("xtl-pri", RegisterData, RegisterCount, &RegisterIndex);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Unable to locate XTL-PRI address range\n", __FUNCTION__));
         Status = EFI_UNSUPPORTED;
         break;
       }
 
-      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 3, &Private->XplBase, &Private->XplSize);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to locate XPL address range\n", __FUNCTION__));
-        Status = EFI_UNSUPPORTED;
-        break;
-      }
+      Private->XtlPriBase = RegisterData[RegisterIndex].BaseAddress;
+      Private->XtlPriSize = RegisterData[RegisterIndex].Size;
 
-      Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 4, &Private->EcamBase, &Private->EcamSize);
+      Status = DeviceTreeFindRegisterByName ("ecam", RegisterData, RegisterCount, &RegisterIndex);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Unable to locate ECAM address range\n", __FUNCTION__));
         Status = EFI_UNSUPPORTED;
         break;
       }
+
+      Private->EcamBase = RegisterData[RegisterIndex].BaseAddress;
+      Private->EcamSize = RegisterData[RegisterIndex].Size;
 
       Private->Signature                                   = PCIE_CONTROLLER_SIGNATURE;
       Private->PcieRootBridgeConfigurationIo.Read          = PcieConfigurationRead;

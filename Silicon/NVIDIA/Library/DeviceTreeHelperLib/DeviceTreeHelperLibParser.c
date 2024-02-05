@@ -1053,3 +1053,30 @@ DeviceTreeGetCacheData (
 
   return EFI_SUCCESS;
 }
+
+EFI_STATUS
+EFIAPI
+DeviceTreeFindRegisterByName (
+  IN CONST CHAR8                             *RegisterName,
+  IN CONST NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray,
+  IN UINT32                                  NumberOfRegisters,
+  OUT UINT32                                 *RegisterIndex
+  )
+{
+  UINTN  Index;
+
+  NV_ASSERT_RETURN ((RegisterName != NULL) && (RegisterArray != NULL) && (RegisterIndex != NULL), return EFI_INVALID_PARAMETER, "%a: bad parameter\n", __FUNCTION__);
+
+  for (Index = 0; Index < NumberOfRegisters; Index++, RegisterArray++) {
+    if (AsciiStrCmp (RegisterName, RegisterArray->Name) == 0) {
+      DEBUG ((DEBUG_INFO, "%a: index %u reg %a base 0x%llx size 0x%llx\n", __FUNCTION__, Index, RegisterName, RegisterArray->BaseAddress, RegisterArray->Size));
+
+      *RegisterIndex = Index;
+      return EFI_SUCCESS;
+    }
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: reg %a not found\n", __FUNCTION__, RegisterName));
+
+  return EFI_NOT_FOUND;
+}

@@ -847,4 +847,28 @@ DeviceTreeSetNodeProperty (
   IN  UINT32       PropertySize
   );
 
+/**
+  Finds a register by name in a register array.
+
+  @param[in]  RegisterName      - Name of register to find.
+  @param[in]  NumberOfRegisters - Size of RegisterArray.
+  @param[in]  RegisterArray     - Buffer of size NumberOfRegisters that contains the register information.
+  @param[out] RegisterIndex     - Pointer to save index of register matching RegisterName.
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - RegisterIndex pointer is NULL
+  @retval EFI_INVALID_PARAMETER - RegisterArray is NULL
+  @retval EFI_INVALID_PARAMETER - RegisterName is NULL
+  @retval EFI_NOT_FOUND         - No register matching RegisterName
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeFindRegisterByName (
+  IN CONST CHAR8                             *RegisterName,
+  IN CONST NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray,
+  IN UINT32                                  NumberOfRegisters,
+  OUT UINT32                                 *RegisterIndex
+  );
+
 #endif //__DEVICE_TREE_HELPER_LIB_H__
