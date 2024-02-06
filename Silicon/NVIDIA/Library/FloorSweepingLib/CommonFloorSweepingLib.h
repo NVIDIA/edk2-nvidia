@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -19,18 +19,6 @@
 #define PLATFORM_MAX_CORES_PER_SOCKET   ((PLATFORM_MAX_CLUSTERS /   \
                                           PLATFORM_MAX_SOCKETS) *   \
                                          PLATFORM_MAX_CORES_PER_CLUSTER)
-
-/**
-  Fills in the EnabledCoresBitMap
-
-**/
-EFI_STATUS
-EFIAPI
-CommonGetEnabledCoresBitMap (
-  IN  UINT32  SocketMask,
-  IN  UINTN   MaxSupportedCores,
-  IN  UINT64  *EnabledCoresBitMap
-  );
 
 /**
   Floorsweep PCIe

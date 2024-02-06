@@ -46,50 +46,8 @@ typedef struct {
   UINT64    EnabledCoresBitMap[ALIGN_VALUE (MAX_SUPPORTED_CORES, 64) / 64];
 } PLATFORM_CPU_INFO;
 
-STATIC PLATFORM_CPU_INFO  mCpuInfo = { 0 };
-
-/**
-  Get CPU info for a platform
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-GetCpuInfo (
-  IN  UINT32  SocketMask,
-  IN  UINTN   MaxSupportedCores,
-  OUT UINT64  *EnabledCoresBitMap
-  )
-{
-  EFI_STATUS  Status;
-  UINTN       ChipId;
-
-  Status = EFI_SUCCESS;
-
-  ChipId = TegraGetChipID ();
-
-  switch (ChipId) {
-    case T194_CHIP_ID:
-      Status = NvgGetEnabledCoresBitMap (EnabledCoresBitMap);
-      break;
-    case T234_CHIP_ID:
-      Status = MceAriGetEnabledCoresBitMap (EnabledCoresBitMap);
-      break;
-    case TH500_CHIP_ID:
-      Status = CommonGetEnabledCoresBitMap (
-                 SocketMask,
-                 MaxSupportedCores,
-                 EnabledCoresBitMap
-                 );
-      break;
-    default:
-      ASSERT (FALSE);
-      Status = EFI_UNSUPPORTED;
-      break;
-  }
-
-  return Status;
-}
+STATIC PLATFORM_CPU_INFO                   mCpuInfo       = { 0 };
+STATIC CONST TEGRA_PLATFORM_RESOURCE_INFO  *mResourceInfo = NULL;
 
 /**
   Get floor sweep cpu info
@@ -105,7 +63,6 @@ FloorSweepCpuInfo (
   static BOOLEAN     InfoFilled = FALSE;
   PLATFORM_CPU_INFO  *Info;
   UINTN              Core;
-  EFI_STATUS         Status;
 
   Info = &mCpuInfo;
   if (!InfoFilled) {
@@ -115,38 +72,18 @@ FloorSweepCpuInfo (
     if ((Hob != NULL) &&
         (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
     {
-      Info->SocketMask = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->SocketMask;
-    } else {
-      ASSERT (FALSE);
-      Info->SocketMask = 0x1;
+      mResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
     }
 
-    Info->MaxClusters        = PLATFORM_MAX_CLUSTERS;
-    Info->MaxCoresPerCluster = PLATFORM_MAX_CORES_PER_CLUSTER;
-    Status                   = GetCpuInfo (
-                                 Info->SocketMask,
-                                 MAX_SUPPORTED_CORES,
-                                 Info->EnabledCoresBitMap
-                                 );
-    if (EFI_ERROR (Status)) {
-      ASSERT (FALSE);
+    NV_ASSERT_RETURN ((mResourceInfo != NULL), return NULL, "%a: no resource info!\n", __FUNCTION__);
 
-      Info->MaxClusters           = 1;
-      Info->MaxCoresPerCluster    = 1;
-      Info->EnabledCoresBitMap[0] = 0x1;
-    }
+    Info->MaxClusters        = mResourceInfo->MaxPossibleClusters;
+    Info->MaxCoresPerCluster = mResourceInfo->MaxPossibleCoresPerCluster;
+    Info->MaxCores           = mResourceInfo->MaxPossibleCores;
 
-    Info->MaxCores = Info->MaxCoresPerCluster * Info->MaxClusters;
-
-    Info->EnabledCores = 0;
-    for (Core = 0; Core < Info->MaxCores; Core++) {
-      UINTN  Index = Core / 64;
-      UINTN  Bit   = Core % 64;
-
-      if (Info->EnabledCoresBitMap[Index] & (1ULL << Bit)) {
-        Info->EnabledCores++;
-      }
-    }
+    Info->SocketMask   = mResourceInfo->SocketMask;
+    Info->EnabledCores = mResourceInfo->NumberOfEnabledCores;
+    CopyMem (Info->EnabledCoresBitMap, mResourceInfo->EnabledCoresBitMap, sizeof (Info->EnabledCoresBitMap));
 
     DEBUG ((
       DEBUG_INFO,

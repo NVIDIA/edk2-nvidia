@@ -53,20 +53,6 @@ STATIC UINT64  TH500SocketMssBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_MSS_BASE_SOCKET_3,
 };
 
-STATIC UINT32  *CoreDisableScratchOffset;
-STATIC UINT32  TH500CoreDisableScratchOffset[MAX_CORE_DISABLE_WORDS] = {
-  TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_0,
-  TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_1,
-  TH500_CPU_FLOORSWEEPING_DISABLE_OFFSET_2,
-};
-
-STATIC UINT32  *CoreDisableScratchMask;
-STATIC UINT32  TH500CoreDisableScratchMask[MAX_CORE_DISABLE_WORDS] = {
-  TH500_CPU_FLOORSWEEPING_DISABLE_MASK_0,
-  TH500_CPU_FLOORSWEEPING_DISABLE_MASK_1,
-  TH500_CPU_FLOORSWEEPING_DISABLE_MASK_2,
-};
-
 STATIC UINT32  *ScfCacheDisableScratchOffset;
 STATIC UINT32  TH500ScfCacheDisableScratchOffset[MAX_SCF_CACHE_DISABLE_WORDS] = {
   TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_0,
@@ -80,60 +66,6 @@ STATIC UINT32  TH500ScfCacheDisableScratchMask[MAX_SCF_CACHE_DISABLE_WORDS] = {
   TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_1,
   TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2,
 };
-
-STATIC BOOLEAN  SatMcSupported = FALSE;
-
-/**
-  Add one socket's enabled cores bit map array to the EnabledCoresBitMap
-
-**/
-STATIC
-VOID
-EFIAPI
-AddSocketCoresToEnabledCoresBitMap (
-  IN UINTN   SocketNumber,
-  IN UINT32  *SocketCores,
-  IN UINTN   MaxSupportedCores,
-  IN UINT64  *EnabledCoresBitMap
-  )
-{
-  UINTN  CoresPerSocket;
-  UINTN  SocketStartingCore;
-  UINTN  EnabledCoresBit;
-  UINTN  EnabledCoresIndex;
-  UINTN  SocketCoresBit;
-  UINTN  SocketCoresIndex;
-  UINTN  Core;
-
-  CoresPerSocket     = (PLATFORM_MAX_CLUSTERS * PLATFORM_MAX_CORES_PER_CLUSTER) / PLATFORM_MAX_SOCKETS;
-  SocketStartingCore = CoresPerSocket * SocketNumber;
-
-  ASSERT ((SocketStartingCore + CoresPerSocket) <= MaxSupportedCores);
-  ASSERT ((ALIGN_VALUE (CoresPerSocket, 32) / 32) <= MAX_CORE_DISABLE_WORDS);
-
-  for (Core = 0; Core < CoresPerSocket; Core++) {
-    SocketCoresIndex = Core / 32;
-    SocketCoresBit   = Core % 32;
-
-    EnabledCoresIndex = (Core + SocketStartingCore) / 64;
-    EnabledCoresBit   = (Core + SocketStartingCore) % 64;
-
-    EnabledCoresBitMap[EnabledCoresIndex] |=
-      (SocketCores[SocketCoresIndex] & (1UL << SocketCoresBit)) ? (1ULL << EnabledCoresBit) : 0;
-  }
-
-  DEBUG ((
-    DEBUG_INFO,
-    "%a: Socket %u cores 0x%x 0x%x 0x%x added as EnabledCores bits %u-%u\n",
-    __FUNCTION__,
-    SocketNumber,
-    SocketCores[2],
-    SocketCores[1],
-    SocketCores[0],
-    SocketStartingCore + CoresPerSocket - 1,
-    SocketStartingCore
-    ));
-}
 
 /**
   Initialize global structures
@@ -154,9 +86,6 @@ CommonInitializeGlobalStructures (
   switch (ChipId) {
     case TH500_CHIP_ID:
       SocketScratchBaseAddr        = TH500SocketScratchBaseAddr;
-      CoreDisableScratchOffset     = TH500CoreDisableScratchOffset;
-      SatMcSupported               = TRUE;
-      CoreDisableScratchMask       = TH500CoreDisableScratchMask;
       ScfCacheDisableScratchOffset = TH500ScfCacheDisableScratchOffset;
       ScfCacheDisableScratchMask   = TH500ScfCacheDisableScratchMask;
       SocketMssBaseAddr            = TH500SocketMssBaseAddr;
@@ -171,103 +100,6 @@ CommonInitializeGlobalStructures (
   }
 
   return Status;
-}
-
-/**
-  Fills in the EnabledCoresBitMap
-
-**/
-EFI_STATUS
-EFIAPI
-CommonGetEnabledCoresBitMap (
-  IN  UINT32  SocketMask,
-  IN  UINTN   MaxSupportedCores,
-  IN  UINT64  *EnabledCoresBitMap
-  )
-{
-  EFI_STATUS  Status;
-  UINT32      ScratchDisable0Reg;
-  UINT32      ScratchDisable1Reg;
-  UINT32      ScratchDisable2Reg;
-  UINT32      SatMcCore;
-  UINT32      CoresPerSocket;
-  UINT32      EnaBitMap[MAX_CORE_DISABLE_WORDS];
-  UINTN       Socket;
-
-  Status = CommonInitializeGlobalStructures ();
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  // SatMC core is reserved on socket 0.
-  CoresPerSocket = (PLATFORM_MAX_CLUSTERS * PLATFORM_MAX_CORES_PER_CLUSTER) / PLATFORM_MAX_SOCKETS;
-
-  if (SatMcSupported) {
-    SatMcCore = MmioBitFieldRead32 (
-                  SocketScratchBaseAddr[0] + CoreDisableScratchOffset[2],
-                  TH500_CPU_FLOORSWEEPING_SATMC_CORE_BIT_LO,
-                  TH500_CPU_FLOORSWEEPING_SATMC_CORE_BIT_HI
-                  );
-    if (SatMcCore != TH500_CPU_FLOORSWEEPING_SATMC_CORE_INVALID) {
-      ASSERT (SatMcCore <= CoresPerSocket);
-    }
-  }
-
-  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
-    UINT64  ScratchBase = SocketScratchBaseAddr[Socket];
-
-    if (!(SocketMask & (1UL << Socket))) {
-      continue;
-    }
-
-    if (ScratchBase == 0) {
-      continue;
-    }
-
-    ScratchDisable0Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[0]);
-    if (CoreDisableScratchOffset[1] != MAX_UINT32) {
-      ScratchDisable1Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[1]);
-    }
-
-    if (CoreDisableScratchOffset[2] != MAX_UINT32) {
-      ScratchDisable2Reg = MmioRead32 (ScratchBase + CoreDisableScratchOffset[2]);
-    }
-
-    if (SatMcSupported &&
-        (SatMcCore != TH500_CPU_FLOORSWEEPING_SATMC_CORE_INVALID) &&
-        (Socket == 0))
-    {
-      DEBUG ((DEBUG_ERROR, "%a: Mask core %u on socket 0 for SatMC\n", __FUNCTION__, SatMcCore));
-      if (SatMcCore < 32) {
-        ScratchDisable0Reg |= (1U << SatMcCore);
-      } else if (SatMcCore < 64) {
-        ScratchDisable1Reg |= (1U << (SatMcCore - 32));
-      } else if (SatMcCore < CoresPerSocket) {
-        ScratchDisable2Reg |= (1U << (SatMcCore - 64));
-      }
-    }
-
-    ScratchDisable0Reg |= CoreDisableScratchMask[0];
-    ScratchDisable1Reg |= CoreDisableScratchMask[1];
-    ScratchDisable2Reg |= CoreDisableScratchMask[2];
-
-    ScratchDisable0Reg &= ~CoreDisableScratchMask[0];
-    ScratchDisable1Reg &= ~CoreDisableScratchMask[1];
-    ScratchDisable2Reg &= ~CoreDisableScratchMask[2];
-
-    EnaBitMap[0] = ~ScratchDisable0Reg;
-    EnaBitMap[1] = ~ScratchDisable1Reg;
-    EnaBitMap[2] = ~ScratchDisable2Reg;
-
-    AddSocketCoresToEnabledCoresBitMap (
-      Socket,
-      EnaBitMap,
-      MaxSupportedCores,
-      EnabledCoresBitMap
-      );
-  }
-
-  return EFI_SUCCESS;
 }
 
 /**
@@ -714,11 +546,7 @@ CommonFloorSweepCpus (
   CHAR8       CpusStr[]       = "/cpus";
   EFI_STATUS  Status;
 
-  Status = CommonInitializeGlobalStructures ();
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
+  Status = EFI_UNSUPPORTED;
   for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     INT32  CpusOffset;
 
