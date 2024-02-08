@@ -6,6 +6,7 @@
 import os
 import sys
 import datetime
+import time
 import logging
 import shutil
 from pathlib import Path
@@ -325,6 +326,8 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         cur_time = datetime.datetime.now()
         build_ts = cur_time.astimezone().replace(microsecond=0).isoformat()
         self.env.SetValue("BLD_*_BUILD_DATE_TIME", build_ts, reason_dynamic)
+        epoch_time = int(time.time())
+        self.env.SetValue("BLD_*_BUILD_EPOCH", epoch_time, reason_dynamic)
         self.env.SetValue("BLD_*_BUILD_PROJECT_TYPE", "EDK2", reason_required)
         self.env.SetValue("BLD_*_BUILDID_STRING",
                           self.settings.GetFirmwareVersion(), reason_dynamic)

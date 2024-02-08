@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -628,7 +628,7 @@ LibRtcInitialize (
   if (mVirtualRtc) {
     Status = EfiGetVariable (L"RTC_OFFSET", &gNVIDIATokenSpaceGuid, NULL, &VariableSize, &mRtcOffset);
     if (EFI_ERROR (Status)) {
-      mRtcOffset = BUILD_EPOCH;
+      mRtcOffset = PcdGet64 (PcdBuildEpoch);
     }
   }
 

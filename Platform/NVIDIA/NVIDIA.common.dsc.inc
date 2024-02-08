@@ -626,6 +626,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L"$(PLATFORM_NAME)"
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
+  gNVIDIATokenSpaceGuid.PcdBuildEpoch|$(BUILD_EPOCH)
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdCpuStackGuard|TRUE
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize|0x22000

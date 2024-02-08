@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -110,8 +110,8 @@ LibGetTime (
         // Time isn't initialized kick off by writing build time
         if (RtcEpochSeconds == 0) {
           DEBUG ((DEBUG_INFO, "%a: Reset time to build epoch\r\n", __FUNCTION__));
-          RtcEpochSeconds = BUILD_EPOCH;
-          EpochToEfiTime (BUILD_EPOCH, Time);
+          RtcEpochSeconds = PcdGet64 (PcdBuildEpoch);
+          EpochToEfiTime (RtcEpochSeconds, Time);
           LibSetTime (Time);
           RtcEpochSeconds -= mRtcOffset;
         }
@@ -698,7 +698,7 @@ LibRtcInitialize (
   Status = EfiGetVariable (L"RTC_OFFSET", &gNVIDIATokenSpaceGuid, NULL, &VariableSize, &mRtcOffset);
   if (EFI_ERROR (Status)) {
     if (mVirtualRTC) {
-      mRtcOffset = BUILD_EPOCH;
+      mRtcOffset = PcdGet64 (PcdBuildEpoch);
     } else {
       mRtcOffset = 0;
     }

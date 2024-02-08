@@ -163,3 +163,6 @@
 
 [PcdsFeatureFlag]
   gIpmiFeaturePkgTokenSpaceGuid.PcdIpmiFeatureEnable|TRUE
+
+[PcdsFixedAtBuild.common]
+  gNVIDIATokenSpaceGuid.PcdBuildEpoch|$(BUILD_EPOCH)

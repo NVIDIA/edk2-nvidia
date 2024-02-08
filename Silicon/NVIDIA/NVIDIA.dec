@@ -456,6 +456,9 @@
   #Application to launch if single boot is supported
   gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}|VOID*|0x00010001
 
+  #Build Epoch
+  gNVIDIATokenSpaceGuid.PcdBuildEpoch|0|UINT64|0x00000119
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067

@@ -1,6 +1,6 @@
 #/** @file
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -47,12 +47,9 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdVirtualRTC
+  gNVIDIATokenSpaceGuid.PcdBuildEpoch
 
 [Depex]
   gEfiVariableArchProtocolGuid
   AND
   gEfiVariableWriteArchProtocolGuid
-
-# Current usage of this library expects GCC in a UNIX-like shell environment with the date command
-[BuildOptions]
-  GCC:*_*_*_CC_FLAGS = -DBUILD_EPOCH=`date +%s`

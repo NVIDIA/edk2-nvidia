@@ -5,6 +5,7 @@
 
 import os
 import sys
+import time
 from pathlib import Path
 from edk2toolext.invocables.edk2_update import UpdateSettingsManager
 from edk2toolext.invocables.edk2_setup import SetupSettingsManager
@@ -461,6 +462,9 @@ class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
         env.SetValue("BUILDREPORT_FILE",
                      str(ws_dir / self.GetReportFile()),
                      reason_setman)
+
+        epoch_time = int(time.time())
+        env.SetValue("BLD_*_BUILD_EPOCH", epoch_time, reason_setman)
 
     def GetArchitecturesSupported(self):
         ''' return iterable of edk2 architectures supported by this build '''

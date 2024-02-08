@@ -1,6 +1,6 @@
 #/** @file
 #
-#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -47,13 +47,9 @@
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdVirtualRTC
   gNVIDIATokenSpaceGuid.PcdCpuHasRtcControl
+  gNVIDIATokenSpaceGuid.PcdBuildEpoch
 
 [Depex]
   gEfiVariableArchProtocolGuid
   AND
   gEfiVariableWriteArchProtocolGuid
-
-# Current usage of this library expects GCC in a UNIX-like shell environment with the date command
-# BUILD_EPOCH will be used as the reference date/time needed for Virtual RTC feature.
-[BuildOptions]
-  GCC:*_*_*_CC_FLAGS = -DBUILD_EPOCH=`date +%s`
