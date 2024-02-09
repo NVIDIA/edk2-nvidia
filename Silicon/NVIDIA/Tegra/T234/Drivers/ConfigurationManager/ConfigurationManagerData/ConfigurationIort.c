@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of IO Remapping Table
 
-  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1121,18 +1121,31 @@ SetupIortNodeForPciRc (
     ASSERT (Prop != NULL);
 
     // Create Id Mapping Node for iommu-map and bind it to the PCI IORT node
-    IdMapping->InputBase            = SwapBytes32 (Prop[0]);
-    IdMapping->OutputBase           = SwapBytes32 (Prop[2]);
-    IdMapping->NumIds               = SwapBytes32 (Prop[3]) - 1;
+    IdMapping->InputBase  = SwapBytes32 (Prop[0]);
+    IdMapping->OutputBase = SwapBytes32 (Prop[2]);
+
+    if (IdMapFlags == EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE) {
+      IdMapping->NumIds = 0;
+    } else {
+      IdMapping->NumIds = SwapBytes32 (Prop[3]) - 1;
+    }
+
     IdMapping->Flags                = IdMapFlags;
     IdMapping->OutputReferenceToken = FindIortNodeByPhandle (Private, SwapBytes32 (Prop[1]), 1);
     ASSERT (IdMapping->OutputReferenceToken != 0);
 
     if (PropNode->DualSmmuPresent == 1) {
       IdMapping++;
-      IdMapping->InputBase            = SwapBytes32 (Prop[0]);
-      IdMapping->OutputBase           = SwapBytes32 (Prop[2]);
-      IdMapping->NumIds               = SwapBytes32 (Prop[3]) - 1;
+      IdMapping->OutputBase = SwapBytes32 (Prop[2]);
+
+      if (IdMapFlags == EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE) {
+        IdMapping->InputBase = SwapBytes32 (Prop[0]) + 1;
+        IdMapping->NumIds    = 0;
+      } else {
+        IdMapping->InputBase = SwapBytes32 (Prop[0]);
+        IdMapping->NumIds    = SwapBytes32 (Prop[3]) - 1;
+      }
+
       IdMapping->Flags                = IdMapFlags;
       IdMapping->OutputReferenceToken = FindIortNodeByPhandle (Private, SwapBytes32 (Prop[1]), 2);
       ASSERT (IdMapping->OutputReferenceToken != 0);

@@ -1188,9 +1188,15 @@ SetupIortNodeForPciRc (
     ASSERT (Prop != NULL);
 
     // Create Id Mapping Node for iommu-map and bind it to the PCI IORT node
-    IdMapping->InputBase            = SwapBytes32 (Prop[0]);
-    IdMapping->OutputBase           = SwapBytes32 (Prop[2]);
-    IdMapping->NumIds               = SwapBytes32 (Prop[3]) - 1;
+    IdMapping->InputBase  = SwapBytes32 (Prop[0]);
+    IdMapping->OutputBase = SwapBytes32 (Prop[2]);
+
+    if (IdMapFlags == EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE) {
+      IdMapping->NumIds = 0;
+    } else {
+      IdMapping->NumIds = SwapBytes32 (Prop[3]) - 1;
+    }
+
     IdMapping->Flags                = IdMapFlags;
     IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[1]), 1);
     IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
@@ -1198,9 +1204,17 @@ SetupIortNodeForPciRc (
 
     if (PropNode->DualSmmuPresent == 1) {
       IdMapping++;
-      IdMapping->InputBase            = SwapBytes32 (Prop[0]);
-      IdMapping->OutputBase           = SwapBytes32 (Prop[2]);
-      IdMapping->NumIds               = SwapBytes32 (Prop[3]) - 1;
+      IdMapping->InputBase  = SwapBytes32 (Prop[0]);
+      IdMapping->OutputBase = SwapBytes32 (Prop[2]);
+
+      if (IdMapFlags == EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE) {
+        IdMapping->InputBase = SwapBytes32 (Prop[0]) + 1;
+        IdMapping->NumIds    = 0;
+      } else {
+        IdMapping->InputBase = SwapBytes32 (Prop[0]);
+        IdMapping->NumIds    = SwapBytes32 (Prop[3]) - 1;
+      }
+
       IdMapping->Flags                = IdMapFlags;
       IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[1]), 2);
       IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
