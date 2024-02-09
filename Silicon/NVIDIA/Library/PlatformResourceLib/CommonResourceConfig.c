@@ -1,14 +1,16 @@
 /** @file
 *
-*  Copyright (c) 2023 NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
 
+#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
 #include <Library/NVIDIADebugLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include "CommonResourceConfig.h"
 
 #define MAX_CORE_DISABLE_WORDS  3
@@ -126,6 +128,12 @@ CommonConfigGetEnabledCoresBitMap (
       ScratchDisableReg[Index] |= ConfigInfo->CoreDisableScratchMask[Index];
       ScratchDisableReg[Index] &= ~ConfigInfo->CoreDisableScratchMask[Index];
       EnaBitMap[Index]          = ~ScratchDisableReg[Index];
+    }
+
+    if (TegraGetPlatform () == TEGRA_PLATFORM_VSP) {
+      DEBUG ((DEBUG_ERROR, "%a: VSP detected, forcing single CPU\n", __FUNCTION__));
+      ZeroMem (EnaBitMap, sizeof (EnaBitMap));
+      EnaBitMap[0] = 1;
     }
 
     AddSocketCoresToEnabledCoresBitMap (

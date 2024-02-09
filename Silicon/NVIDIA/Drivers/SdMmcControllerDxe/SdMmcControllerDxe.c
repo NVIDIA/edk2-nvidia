@@ -24,6 +24,7 @@
 #include <Protocol/PlatformToDriverConfiguration.h>
 #include <libfdt.h>
 #include <PlatformToDriverStructures.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 #include "SdMmcControllerPrivate.h"
 
@@ -220,6 +221,11 @@ DeviceDiscoveryNotify (
       }
 
       if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+        return EFI_UNSUPPORTED;
+      }
+
+      if (TegraGetPlatform () == TEGRA_PLATFORM_VSP) {
+        DEBUG ((DEBUG_ERROR, "%a: VSP detected, skipping SdMmc\n", __FUNCTION__));
         return EFI_UNSUPPORTED;
       }
 

@@ -38,6 +38,7 @@
   FdtLib
   DeviceDiscoveryDriverLib
   PlatformResourceLib
+  TegraPlatformInfoLib
 
 [Protocols]
   gEdkiiSdMmcOverrideProtocolGuid

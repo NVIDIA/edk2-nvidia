@@ -23,6 +23,7 @@
 
 [LibraryClasses]
   TegraPlatformInfoLib
+  BaseMemoryLib
   GoldenRegisterLib
   HobLib
   MceAriLib
