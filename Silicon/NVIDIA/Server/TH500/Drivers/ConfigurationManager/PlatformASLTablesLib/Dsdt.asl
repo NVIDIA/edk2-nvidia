@@ -1,7 +1,7 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * SPDX-FileCopyrightText: Copyright (c) 2020 - 2023, NVIDIA Corporation. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -1054,5 +1054,88 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
         Interrupt (ResourceConsumer, Edge, ActiveHigh, Exclusive) { TH500_GSMMU1_CMDQV_INTR_SOCKET_0 }
       })
     }
+
+    //---------------------------------------------------------------------
+    // DRAM Address Translation Device
+    // LIC 7 device for DRAM Address Translation _DSM
+    //---------------------------------------------------------------------
+    Device(DRAT) {
+      Name(_HID, "NVDA2011")
+      Name(_UID, 0)
+
+      OperationRegion (LIC7, SystemMemory, TH500_SW_IO7_BASE, TH500_SW_IO7_SIZE)
+      Field (LIC7, DWordAcc, NoLock, Preserve)
+      {
+        STAT, 32,
+        SET, 32,
+        CLR, 32,
+        RSVD, 32,
+        DALO, 32,
+        DAHI, 32,
+      }
+
+      Method (_DSM, 4, Serialized) {
+        If (LEqual (Arg0, ToUUID ("a5f25fb4-ec52-4e44-9bfa-e0859d888381"))) {
+          // Check for Revision ID
+          If (Arg1 >= 0) {
+            Switch(ToInteger (Arg2)) {
+              //
+              // Function Index:0
+              // Standard query - A bitmask of functions supported
+              //
+              Case (0) {
+                Local0 = Buffer(2) {0, 0}
+                CreateBitField (Local0, 0, FUN0)
+                CreateBitField (Local0, 1, FUN1)
+
+                Store (1, FUN0)
+                Store (1, FUN1)
+                Return (Local0)
+              }
+              //
+              // Function Index: 1
+              // Perform DRAM Address Translation
+              // Arg3: buffer with input DATA_LO, DATA_HI
+              // Returns: buffer with result DATA_LO, DATA_HI
+              //
+              Case(1) {
+                CreateDWordField (Arg3, 0x0, DWD1)
+                CreateDWordField (Arg3, 0x4, DWD2)
+
+                // wait for STAT not busy
+                Local1 = Zero
+                While ((Local1 < (TH500_ACPI_MAX_LOOP_TIMEOUT * 1000)) && (LNotEqual (STAT, 0))) {
+                  Local1 += 2;
+                  Sleep (2)
+                }
+
+                // request address translation
+                Store (DWD1, DALO)
+                Store (DWD2, DAHI)
+                Store (1, SET)
+
+                // wait for STAT not busy
+                Local1 = Zero
+                While ((Local1 < (TH500_ACPI_MAX_LOOP_TIMEOUT * 1000)) && (LNotEqual (STAT, 0))) {
+                  Local1 += 2;
+                  Sleep (2)
+                }
+
+                // return result
+                Store (DALO, DWD1)
+                Store (DAHI, DWD2)
+                return (Arg3)
+              }
+            } // End of switch(Arg2)
+          } // end Check for Revision ID
+        } // end Check UUID
+
+        //
+        // If not one of the UUIDs we recognize, then return a buffer
+        // with bit 0 set to 0 indicating no functions supported.
+        //
+        Return (Buffer () {0})
+      } // end _DSM
+    } // end device DAT0
   }
 }

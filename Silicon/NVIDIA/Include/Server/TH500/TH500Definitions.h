@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -66,6 +66,10 @@
 
 // LIC SW IO6 for ERST
 #define TH500_SW_IO6_BASE  0x03F60000
+
+// LIC SW IO7 for DRAM address translation _DSM()
+#define TH500_SW_IO7_BASE  0x000003F70000ULL
+#define TH500_SW_IO7_SIZE  0x1000
 
 // PCIE
 #define TH500_PCIE_ADDRESS_BITS  49
