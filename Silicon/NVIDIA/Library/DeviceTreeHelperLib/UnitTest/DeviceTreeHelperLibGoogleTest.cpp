@@ -23,6 +23,13 @@ typedef struct {
   UINT32    Tag;
   UINT32    Length;
   UINT32    NameOffset;
+  CHAR8     Data[100];
+} FDT_PROPERTY_LEN_100;
+
+typedef struct {
+  UINT32    Tag;
+  UINT32    Length;
+  UINT32    NameOffset;
   UINT32    ValueBigEndian;
 } FDT_PROPERTY_32;
 
@@ -388,8 +395,8 @@ MATCHER_P (IsCompatibleType, n, "") {
 class DeviceEnumeration : public  DeviceTreeHelperPlatform {
 protected:
 
-  constexpr static FDT_PROPERTY StatusOkayProperty     = { 0, sizeof (STATUS_OKAY_STRING), 0, STATUS_OKAY_STRING };
-  constexpr static FDT_PROPERTY StatusDisabledProperty = { 0, sizeof (STATUS_DISABLED_STRING), 0, STATUS_DISABLED_STRING };
+  constexpr static FDT_PROPERTY_LEN_100 StatusOkayProperty     = { 0, sizeof (STATUS_OKAY_STRING), 0, STATUS_OKAY_STRING };
+  constexpr static FDT_PROPERTY_LEN_100 StatusDisabledProperty = { 0, sizeof (STATUS_DISABLED_STRING), 0, STATUS_DISABLED_STRING };
 
   void
   SetUp (
@@ -426,7 +433,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(StatusDisabledProperty.Length),
-           Return (&StatusDisabledProperty)
+           Return ((FDT_PROPERTY *)&StatusDisabledProperty)
            )
          );
     EXPECT_CALL (
@@ -457,7 +464,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(StatusDisabledProperty.Length),
-           Return (&StatusDisabledProperty)
+           Return ((FDT_PROPERTY *)&StatusDisabledProperty)
            )
          );
     EXPECT_CALL (
@@ -472,7 +479,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(StatusOkayProperty.Length),
-           Return (&StatusOkayProperty)
+           Return ((FDT_PROPERTY *)&StatusOkayProperty)
            )
          );
     EXPECT_CALL (
@@ -487,23 +494,23 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(-1),
-           Return (&StatusOkayProperty)
+           Return ((FDT_PROPERTY *)&StatusOkayProperty)
            )
          );
   }
 };
 
-constexpr FDT_PROPERTY  DeviceEnumeration::StatusOkayProperty;
-constexpr FDT_PROPERTY  DeviceEnumeration::StatusDisabledProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceEnumeration::StatusOkayProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceEnumeration::StatusDisabledProperty;
 
 class DeviceEnumerationCompatible : public  DeviceEnumeration,
   public  testing::WithParamInterface<int> {
 protected:
 
-  constexpr static FDT_PROPERTY SingleCompatibilityProperty  = { 0, sizeof (SINGLE_COMPAT_STRING), 0, SINGLE_COMPAT_STRING };
-  constexpr static FDT_PROPERTY SingleCompatibility2Property = { 0, sizeof (SINGLE_COMPAT_STRING2), 0, SINGLE_COMPAT_STRING2 };
-  constexpr static FDT_PROPERTY DualCompatibilityProperty    = { 0, sizeof (DUAL_COMPAT_STRING), 0, DUAL_COMPAT_STRING };
-  constexpr static FDT_PROPERTY WrongCompatibilityProperty   = { 0, sizeof (WRONG_COMPAT_STRING), 0, WRONG_COMPAT_STRING };
+  constexpr static FDT_PROPERTY_LEN_100 SingleCompatibilityProperty  = { 0, sizeof (SINGLE_COMPAT_STRING), 0, SINGLE_COMPAT_STRING };
+  constexpr static FDT_PROPERTY_LEN_100 SingleCompatibility2Property = { 0, sizeof (SINGLE_COMPAT_STRING2), 0, SINGLE_COMPAT_STRING2 };
+  constexpr static FDT_PROPERTY_LEN_100 DualCompatibilityProperty    = { 0, sizeof (DUAL_COMPAT_STRING), 0, DUAL_COMPAT_STRING };
+  constexpr static FDT_PROPERTY_LEN_100 WrongCompatibilityProperty   = { 0, sizeof (WRONG_COMPAT_STRING), 0, WRONG_COMPAT_STRING };
 
   void
   SetUp (
@@ -522,7 +529,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(SingleCompatibilityProperty.Length),
-           Return (&SingleCompatibilityProperty)
+           Return ((FDT_PROPERTY *)&SingleCompatibilityProperty)
            )
          );
     EXPECT_CALL (
@@ -537,7 +544,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(SingleCompatibility2Property.Length),
-           Return (&SingleCompatibility2Property)
+           Return ((FDT_PROPERTY *)&SingleCompatibility2Property)
            )
          );
     EXPECT_CALL (
@@ -552,7 +559,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(DualCompatibilityProperty.Length),
-           Return (&DualCompatibilityProperty)
+           Return ((FDT_PROPERTY *)&DualCompatibilityProperty)
            )
          );
     EXPECT_CALL (
@@ -567,7 +574,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(WrongCompatibilityProperty.Length),
-           Return (&WrongCompatibilityProperty)
+           Return ((FDT_PROPERTY *)&WrongCompatibilityProperty)
            )
          );
     EXPECT_CALL (
@@ -588,10 +595,10 @@ protected:
   }
 };
 
-constexpr FDT_PROPERTY  DeviceEnumerationCompatible::SingleCompatibilityProperty;
-constexpr FDT_PROPERTY  DeviceEnumerationCompatible::SingleCompatibility2Property;
-constexpr FDT_PROPERTY  DeviceEnumerationCompatible::DualCompatibilityProperty;
-constexpr FDT_PROPERTY  DeviceEnumerationCompatible::WrongCompatibilityProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceEnumerationCompatible::SingleCompatibilityProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceEnumerationCompatible::SingleCompatibility2Property;
+constexpr FDT_PROPERTY_LEN_100  DeviceEnumerationCompatible::DualCompatibilityProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceEnumerationCompatible::WrongCompatibilityProperty;
 
 TEST_P (DeviceEnumerationCompatible, GetNextCompatibleNode) {
   INT32        NodeOffset;
@@ -637,6 +644,7 @@ TEST_P (DeviceEnumerationCompatible, GetNextCompatibleNode) {
       break;
     default:
       ASSERT_LE (GetParam (), 3);
+      return;
   }
 
   EXPECT_EQ (EFI_INVALID_PARAMETER, DeviceTreeGetNextCompatibleNode (NULL, NULL));
@@ -695,6 +703,7 @@ TEST_P (DeviceEnumerationCompatible, GetCompatibleNodeCount) {
       break;
     default:
       ASSERT_LE (GetParam (), 3);
+      return;
   }
 
   EXPECT_EQ (EFI_INVALID_PARAMETER, DeviceTreeGetCompatibleNodeCount (NULL, NULL));
@@ -751,6 +760,7 @@ TEST_P (DeviceEnumerationCompatible, GetMatchingEnabledDeviceTreeNodes) {
       break;
     default:
       ASSERT_LE (GetParam (), 3);
+      return;
   }
 
   HandleArray = NULL;
@@ -807,6 +817,11 @@ TEST_P (DeviceEnumerationCompatible, GetMatchingEnabledDeviceTreeNodes) {
       EXPECT_EQ (TestHandle, HandleArray[Index]);
     }
   }
+
+  if (HandleArray != NULL) {
+    free (HandleArray);
+    HandleArray = NULL;
+  }
 }
 #endif
 
@@ -818,9 +833,9 @@ INSTANTIATE_TEST_SUITE_P (
 
 class DeviceEnumerationType : public  DeviceEnumeration {
 protected:
-  constexpr static FDT_PROPERTY CpuTypeProperty    = { 0, sizeof (CPU_TYPE_STRING), 0, CPU_TYPE_STRING };
-  constexpr static FDT_PROPERTY MemoryTypeProperty = { 0, sizeof (MEMORY_TYPE_STRING), 0, MEMORY_TYPE_STRING };
-  constexpr static FDT_PROPERTY WrongTypeProperty  = { 0, sizeof (WRONG_TYPE_STRING), 0, WRONG_TYPE_STRING };
+  constexpr static FDT_PROPERTY_LEN_100 CpuTypeProperty    = { 0, sizeof (CPU_TYPE_STRING), 0, CPU_TYPE_STRING };
+  constexpr static FDT_PROPERTY_LEN_100 MemoryTypeProperty = { 0, sizeof (MEMORY_TYPE_STRING), 0, MEMORY_TYPE_STRING };
+  constexpr static FDT_PROPERTY_LEN_100 WrongTypeProperty  = { 0, sizeof (WRONG_TYPE_STRING), 0, WRONG_TYPE_STRING };
 
   void
   SetUp (
@@ -839,7 +854,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(CpuTypeProperty.Length),
-           Return (&CpuTypeProperty)
+           Return ((FDT_PROPERTY *)&CpuTypeProperty)
            )
          );
     EXPECT_CALL (
@@ -854,7 +869,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(MemoryTypeProperty.Length),
-           Return (&MemoryTypeProperty)
+           Return ((FDT_PROPERTY *)&MemoryTypeProperty)
            )
          );
     EXPECT_CALL (
@@ -869,7 +884,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(WrongTypeProperty.Length),
-           Return (&WrongTypeProperty)
+           Return ((FDT_PROPERTY *)&WrongTypeProperty)
            )
          );
     EXPECT_CALL (
@@ -890,9 +905,9 @@ protected:
   }
 };
 
-constexpr FDT_PROPERTY  DeviceEnumerationType::CpuTypeProperty;
-constexpr FDT_PROPERTY  DeviceEnumerationType::MemoryTypeProperty;
-constexpr FDT_PROPERTY  DeviceEnumerationType::WrongTypeProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceEnumerationType::CpuTypeProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceEnumerationType::MemoryTypeProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceEnumerationType::WrongTypeProperty;
 
 TEST_F (DeviceEnumerationType, GetNextCpuNode) {
   INT32   NodeOffset;
@@ -982,7 +997,7 @@ TEST_F (DeviceEnumerationType, GetMemoryNodeCount) {
 
 class DeviceEnumerationNoType : public  DeviceEnumeration {
 protected:
-  constexpr static FDT_PROPERTY WrongTypeProperty = { 0, sizeof (WRONG_TYPE_STRING), 0, WRONG_TYPE_STRING };
+  constexpr static FDT_PROPERTY_LEN_100 WrongTypeProperty = { 0, sizeof (WRONG_TYPE_STRING), 0, WRONG_TYPE_STRING };
 
   void
   SetUp (
@@ -1016,13 +1031,13 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(WrongTypeProperty.Length),
-           Return (&WrongTypeProperty)
+           Return ((FDT_PROPERTY *)&WrongTypeProperty)
            )
          );
   }
 };
 
-constexpr FDT_PROPERTY  DeviceEnumerationNoType::WrongTypeProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceEnumerationNoType::WrongTypeProperty;
 
 TEST_F (DeviceEnumerationNoType, GetTypeCountExpect0) {
   UINT32  NodeCount;
@@ -1038,11 +1053,11 @@ TEST_F (DeviceEnumerationNoType, GetTypeCountExpect0) {
 class DevicePHandle : public  DeviceEnumeration {
 protected:
 
-  constexpr static FDT_PROPERTY PHandle1Property = { 0, sizeof (UINT32), 0, { 0x00, 0x00, 0x00, 0x01 }
+  constexpr static FDT_PROPERTY_LEN_100 PHandle1Property = { 0, sizeof (UINT32), 0, { 0x00, 0x00, 0x00, 0x01 }
   };
-  constexpr static FDT_PROPERTY PHandle2Property = { 0, sizeof (UINT32), 0, { 0x00, 0x00, 0x00, 0x02 }
+  constexpr static FDT_PROPERTY_LEN_100 PHandle2Property = { 0, sizeof (UINT32), 0, { 0x00, 0x00, 0x00, 0x02 }
   };
-  constexpr static FDT_PROPERTY PHandle3Property = { 0, sizeof (UINT32), 0, { 0x00, 0x00, 0x00, 0x03 }
+  constexpr static FDT_PROPERTY_LEN_100 PHandle3Property = { 0, sizeof (UINT32), 0, { 0x00, 0x00, 0x00, 0x03 }
   };
 
   void
@@ -1077,7 +1092,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(PHandle1Property.Length),
-           Return (&PHandle1Property)
+           Return ((FDT_PROPERTY *)&PHandle1Property)
            )
          );
     EXPECT_CALL (
@@ -1092,7 +1107,7 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(PHandle2Property.Length),
-           Return (&PHandle2Property)
+           Return ((FDT_PROPERTY *)&PHandle2Property)
            )
          );
     EXPECT_CALL (
@@ -1107,15 +1122,15 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(PHandle3Property.Length),
-           Return (&PHandle3Property)
+           Return ((FDT_PROPERTY *)&PHandle3Property)
            )
          );
   }
 };
 
-constexpr FDT_PROPERTY  DevicePHandle::PHandle1Property;
-constexpr FDT_PROPERTY  DevicePHandle::PHandle2Property;
-constexpr FDT_PROPERTY  DevicePHandle::PHandle3Property;
+constexpr FDT_PROPERTY_LEN_100  DevicePHandle::PHandle1Property;
+constexpr FDT_PROPERTY_LEN_100  DevicePHandle::PHandle2Property;
+constexpr FDT_PROPERTY_LEN_100  DevicePHandle::PHandle3Property;
 
 TEST_F (DevicePHandle, GetNodeByPHandle) {
   INT32  NodeOffset;
@@ -1152,14 +1167,14 @@ TEST_F (DevicePHandle, GetNodePHandle) {
 #define ALIAS3_PATH  "/level0_2"
 class DevicePath : public  DeviceTreeHelperPlatform {
 protected:
-  constexpr static FDT_PROPERTY alias1Property = { 0, sizeof (ALIAS1_PATH), 0, ALIAS1_PATH };
-  constexpr static FDT_PROPERTY alias2Property = { 0, sizeof (ALIAS2_PATH), 0, ALIAS2_PATH };
-  constexpr static FDT_PROPERTY alias3Property = { 0, sizeof (ALIAS3_PATH), 0, ALIAS3_PATH };
+  constexpr static FDT_PROPERTY_LEN_100 alias1Property = { 0, sizeof (ALIAS1_PATH), 0, ALIAS1_PATH };
+  constexpr static FDT_PROPERTY_LEN_100 alias2Property = { 0, sizeof (ALIAS2_PATH), 0, ALIAS2_PATH };
+  constexpr static FDT_PROPERTY_LEN_100 alias3Property = { 0, sizeof (ALIAS3_PATH), 0, ALIAS3_PATH };
 };
 
-constexpr FDT_PROPERTY  DevicePath::alias1Property;
-constexpr FDT_PROPERTY  DevicePath::alias2Property;
-constexpr FDT_PROPERTY  DevicePath::alias3Property;
+constexpr FDT_PROPERTY_LEN_100  DevicePath::alias1Property;
+constexpr FDT_PROPERTY_LEN_100  DevicePath::alias2Property;
+constexpr FDT_PROPERTY_LEN_100  DevicePath::alias3Property;
 
 typedef struct {
   INT32          ParentOffset;
@@ -1197,6 +1212,10 @@ TestSubnodeOffsetNameLen (
   )
 {
   UINT32  Index;
+
+  if (Fdt == NULL) {
+    return -1;
+  }
 
   Index = 0;
   while (SubNodeOffsets[Index].ParentOffset != -1) {
@@ -1254,7 +1273,7 @@ TEST_F (DevicePath, GetNodeByPath) {
     .WillRepeatedly (
        DoAll (
          SetArgPointee<3>(alias1Property.Length),
-         Return (&alias1Property)
+         Return ((FDT_PROPERTY *)&alias1Property)
          )
        );
   EXPECT_CALL (
@@ -1269,7 +1288,7 @@ TEST_F (DevicePath, GetNodeByPath) {
     .WillRepeatedly (
        DoAll (
          SetArgPointee<3>(alias2Property.Length),
-         Return (&alias2Property)
+         Return ((FDT_PROPERTY *)&alias2Property)
          )
        );
   EXPECT_CALL (
@@ -1284,7 +1303,7 @@ TEST_F (DevicePath, GetNodeByPath) {
     .WillRepeatedly (
        DoAll (
          SetArgPointee<3>(alias3Property.Length),
-         Return (&alias3Property)
+         Return ((FDT_PROPERTY *)&alias3Property)
          )
        );
   EXPECT_EQ (EFI_INVALID_PARAMETER, DeviceTreeGetNodeByPath (NULL, NULL));
@@ -1477,18 +1496,18 @@ TEST_F (DevicePath, GetNodePath) {
 #define STRING_LIST  "device0\0device01\0device10\0device1"
 class DeviceProperty : public  DeviceTreeHelperPlatform, public  testing::WithParamInterface<int> {
 protected:
-  constexpr static FDT_PROPERTY GoodProperty = { 0, 4, 0, { 0x11, 0x22, 0x33, 0x44 }
+  constexpr static FDT_PROPERTY_LEN_100 GoodProperty = { 0, 4, 0, { 0x11, 0x22, 0x33, 0x44 }
   };
-  constexpr static FDT_PROPERTY BadProperty = { 0, 4, 0, { 0x55, 0x66, 0x77, 0x00 }
+  constexpr static FDT_PROPERTY_LEN_100 BadProperty = { 0, 4, 0, { 0x55, 0x66, 0x77, 0x00 }
   };
   // Stored in big endian
-  constexpr static FDT_PROPERTY Property64 = { 0, 8, 0, { 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00 }
+  constexpr static FDT_PROPERTY_LEN_100 Property64 = { 0, 8, 0, { 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00 }
   };
-  constexpr static FDT_PROPERTY Property64in32 = { 0, 8, 0, { 0x00, 0x00, 0x00, 0x00, 0x11, 0x22, 0x33, 0x44 }
+  constexpr static FDT_PROPERTY_LEN_100 Property64in32 = { 0, 8, 0, { 0x00, 0x00, 0x00, 0x00, 0x11, 0x22, 0x33, 0x44 }
   };
-  constexpr static FDT_PROPERTY Property32 = { 0, 4, 0, { 0x11, 0x22, 0x33, 0x44 }
+  constexpr static FDT_PROPERTY_LEN_100 Property32 = { 0, 4, 0, { 0x11, 0x22, 0x33, 0x44 }
   };
-  constexpr static FDT_PROPERTY StringListProperty = { 0, sizeof (STRING_LIST), 0, STRING_LIST };
+  constexpr static FDT_PROPERTY_LEN_100 StringListProperty = { 0, sizeof (STRING_LIST), 0, STRING_LIST };
 
   void
   SetUp (
@@ -1498,12 +1517,12 @@ protected:
   }
 };
 
-constexpr FDT_PROPERTY  DeviceProperty::GoodProperty;
-constexpr FDT_PROPERTY  DeviceProperty::BadProperty;
-constexpr FDT_PROPERTY  DeviceProperty::Property64;
-constexpr FDT_PROPERTY  DeviceProperty::Property64in32;
-constexpr FDT_PROPERTY  DeviceProperty::Property32;
-constexpr FDT_PROPERTY  DeviceProperty::StringListProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceProperty::GoodProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceProperty::BadProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceProperty::Property64;
+constexpr FDT_PROPERTY_LEN_100  DeviceProperty::Property64in32;
+constexpr FDT_PROPERTY_LEN_100  DeviceProperty::Property32;
+constexpr FDT_PROPERTY_LEN_100  DeviceProperty::StringListProperty;
 
 TEST_F (DeviceProperty, GetProperty) {
   UINT32      PropertySize;
@@ -1522,7 +1541,7 @@ TEST_F (DeviceProperty, GetProperty) {
     .WillRepeatedly (
        DoAll (
          SetArgPointee<3>(GoodProperty.Length),
-         Return (&GoodProperty)
+         Return ((FDT_PROPERTY *)&GoodProperty)
          )
        );
   EXPECT_CALL (
@@ -1552,7 +1571,7 @@ TEST_F (DeviceProperty, GetProperty) {
     .WillOnce (
        DoAll (
          SetArgPointee<3>(-1),
-         Return (&GoodProperty)
+         Return ((FDT_PROPERTY *)&GoodProperty)
          )
        );
 
@@ -1589,7 +1608,7 @@ TEST_P (DeviceProperty, GetPropertyValue) {
     .WillRepeatedly (
        DoAll (
          SetArgPointee<3>(GetParam ()),
-         Return (&Property64)
+         Return ((FDT_PROPERTY *)&Property64)
          )
        );
   if (GetParam () != 8) {
@@ -1606,7 +1625,7 @@ TEST_P (DeviceProperty, GetPropertyValue) {
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(GetParam ()),
-           Return (&Property32)
+           Return ((FDT_PROPERTY *)&Property32)
            )
          );
   } else {
@@ -1623,7 +1642,7 @@ TEST_P (DeviceProperty, GetPropertyValue) {
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(GetParam ()),
-           Return (&Property64in32)
+           Return ((FDT_PROPERTY *)&Property64in32)
            )
          );
   }
@@ -1705,7 +1724,7 @@ TEST_F (DeviceProperty, LocateStringIndex) {
     .WillRepeatedly (
        DoAll (
          SetArgPointee<3>(StringListProperty.Length),
-         Return (&StringListProperty)
+         Return ((FDT_PROPERTY *)&StringListProperty)
          )
        );
 
@@ -1759,13 +1778,13 @@ INSTANTIATE_TEST_SUITE_P (
 #ifndef DISABLE_DEVICETREE_HELPER_DEPRECATED_APIS
 class KernelAddress : public  DeviceTreeHelperPlatform, public  testing::WithParamInterface<int> {
 protected:
-  constexpr static FDT_PROPERTY KernelStartProperty = { 0, sizeof (UINT64), 0, { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77 }
+  constexpr static FDT_PROPERTY_LEN_100 KernelStartProperty = { 0, sizeof (UINT64), 0, { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77 }
   };
-  constexpr static FDT_PROPERTY KernelStartDtbProperty = { 0, sizeof (UINT64), 0, { 0x01, 0x12, 0x23, 0x34, 0x45, 0x56, 0x67, 0x78 }
+  constexpr static FDT_PROPERTY_LEN_100 KernelStartDtbProperty = { 0, sizeof (UINT64), 0, { 0x01, 0x12, 0x23, 0x34, 0x45, 0x56, 0x67, 0x78 }
   };
 };
-constexpr FDT_PROPERTY  KernelAddress::KernelStartProperty;
-constexpr FDT_PROPERTY  KernelAddress::KernelStartDtbProperty;
+constexpr FDT_PROPERTY_LEN_100  KernelAddress::KernelStartProperty;
+constexpr FDT_PROPERTY_LEN_100  KernelAddress::KernelStartDtbProperty;
 
 TEST_P (KernelAddress, GetKernelAddress) {
   UINT64  KernelStart;
@@ -1789,7 +1808,7 @@ TEST_P (KernelAddress, GetKernelAddress) {
     .WillByDefault (
        DoAll (
          SetArgPointee<3>(KernelStartProperty.Length),
-         Return (&KernelStartProperty)
+         Return ((FDT_PROPERTY *)&KernelStartProperty)
          )
        );
   ON_CALL (
@@ -1804,7 +1823,7 @@ TEST_P (KernelAddress, GetKernelAddress) {
     .WillByDefault (
        DoAll (
          SetArgPointee<3>(KernelStartDtbProperty.Length),
-         Return (&KernelStartDtbProperty)
+         Return ((FDT_PROPERTY *)&KernelStartDtbProperty)
          )
        );
   EXPECT_CALL (
@@ -1855,7 +1874,7 @@ protected:
   FDT_PROPERTY_32 AddressCellsProperty;
   FDT_PROPERTY_32 SizeCellsProperty;
   FDT_PROPERTY_MAX_MEMORY_RANGE RegisterProperty;
-  constexpr static FDT_PROPERTY RegisterNamesProperty = { 0, 0, 0, REGISTER_NAMES_4 };
+  constexpr static FDT_PROPERTY_LEN_100 RegisterNamesProperty = { 0, 0, 0, REGISTER_NAMES_4 };
 
   EFI_STATUS
   GenericMemoryTest (
@@ -2042,7 +2061,7 @@ protected:
   }
 };
 
-constexpr FDT_PROPERTY  DeviceRegisters::RegisterNamesProperty;
+constexpr FDT_PROPERTY_LEN_100  DeviceRegisters::RegisterNamesProperty;
 
 EFI_STATUS
 DeviceRegisters::GenericMemoryTest (
