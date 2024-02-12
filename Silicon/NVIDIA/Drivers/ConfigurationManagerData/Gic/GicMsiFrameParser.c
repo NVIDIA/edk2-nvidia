@@ -110,7 +110,8 @@ GicMsiFrameParser (
     NumberOfRegisters = 2;
     Status            = GetDeviceTreeRegisters (Handles[Index], Registers, &NumberOfRegisters);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get registers - %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get registers - %r. Ignoring MSI support\r\n", __FUNCTION__, Status));
+      Status = EFI_SUCCESS;
       goto CleanupAndReturn;
     }
 
@@ -119,7 +120,8 @@ GicMsiFrameParser (
 
     Status = GetDeviceTreeNode (Handles[Index], &DeviceTreeBase, &NodeOffset);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get device node info - %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get device node info - %r. Ignoring MSI support\r\n", __FUNCTION__, Status));
+      Status = EFI_SUCCESS;
       goto CleanupAndReturn;
     }
 
@@ -128,8 +130,8 @@ GicMsiFrameParser (
       if (Property <= MAX_UINT16) {
         MsiInfo[Index].SPIBase = (UINT16)Property;
       } else {
-        DEBUG ((DEBUG_ERROR, "%a: Got invalid MSI SPI base value %u\n", __FUNCTION__, Property));
-        Status = EFI_DEVICE_ERROR;
+        DEBUG ((DEBUG_ERROR, "%a: Got invalid MSI SPI base value %u. Ignoring MSI support\n", __FUNCTION__, Property));
+        Status = EFI_SUCCESS;
         goto CleanupAndReturn;
       }
 
@@ -138,19 +140,21 @@ GicMsiFrameParser (
         if (Property <= MAX_UINT16) {
           MsiInfo[Index].SPICount = (UINT16)Property;
         } else {
-          DEBUG ((DEBUG_ERROR, "%a: Got invalid MSI SPI count value %u\n", __FUNCTION__, Property));
-          Status = EFI_DEVICE_ERROR;
+          DEBUG ((DEBUG_ERROR, "%a: Got invalid MSI SPI count value %u. Ignoring MSI support\n", __FUNCTION__, Property));
+          Status = EFI_SUCCESS;
           goto CleanupAndReturn;
         }
 
         MsiInfo[Index].Flags = BIT0;
       } else {
-        DEBUG ((DEBUG_ERROR, "%a: Got %r getting \"arm,msi-num-spis\" property for index %u\n", __FUNCTION__, Status, Index));
-        // goto CleanupAndReturn;
+        DEBUG ((DEBUG_ERROR, "%a: Got %r getting \"arm,msi-num-spis\" property for index %u. Ignoring MSI support\n", __FUNCTION__, Status, Index));
+        Status = EFI_SUCCESS;
+        goto CleanupAndReturn;
       }
     } else {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r getting \"arm,msi-base-spi\" property for index %u\n", __FUNCTION__, Status, Index));
-      // goto CleanupAndReturn;
+      DEBUG ((DEBUG_ERROR, "%a: Got %r getting \"arm,msi-base-spi\" property for index %u. Ignoring MSI support\n", __FUNCTION__, Status, Index));
+      Status = EFI_SUCCESS;
+      goto CleanupAndReturn;
     }
   }
 
