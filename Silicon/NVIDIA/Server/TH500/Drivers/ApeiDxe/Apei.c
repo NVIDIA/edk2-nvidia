@@ -1,9 +1,8 @@
 /** @file
-*
-*  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
-*
-*  SPDX-License-Identifier: BSD-2-Clause-Patent
-*
+
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
 **/
 
 #include "Apei.h"
@@ -159,7 +158,7 @@ ApeiDxeInitialize (
 
     Status = SetTimeOfDay (&RasFwBufferInfo);
     if (EFI_ERROR (Status)) {
-      return Status;
+      DEBUG ((DEBUG_ERROR, "%a: Unable to SetTimeOfDay, RTC might not be working: %r\n", __FUNCTION__, Status));
     }
 
     if (!SkipEinj) {
