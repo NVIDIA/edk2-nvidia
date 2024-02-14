@@ -31,6 +31,7 @@
   DebugLib|MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
   QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
   VarSetCallbacksLib|Silicon/NVIDIA/Library/VarSetCallbacksLib/VarSetCallbacksLib.inf
+  PlatformPasswordLibMm|Silicon/NVIDIA/Library/PlatformPasswordLibMm/PlatformPasswordLibMm.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 
@@ -138,6 +139,11 @@
   # MM Dice Driver
   #
   Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmDice.inf
+
+  #
+  # MM User Authentication Driver
+  #
+  Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
 [Components.AARCH64]
 

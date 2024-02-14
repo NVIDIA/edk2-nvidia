@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2022 NVIDIA CORPORATION. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -40,6 +40,11 @@
   INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmDice.inf
 
   !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
+
+  #
+  # MM User Authentication Driver
+  #
+  INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
 ################################################################################
 #
