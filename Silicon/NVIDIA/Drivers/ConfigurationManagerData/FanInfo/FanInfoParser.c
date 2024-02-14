@@ -44,15 +44,13 @@ FanInfoParser (
   NVIDIA_AML_GENERATION_PROTOCOL    *GenerationProtocol;
   NVIDIA_AML_PATCH_PROTOCOL         *PatchProtocol;
   INT32                             FanOffset;
-  UINT32                            FanHandle;
   INT32                             PwmOffset;
   UINT32                            FanPwmHandle;
-  VOID                              *DeviceTreeBase;
-  UINT32                            PwmHandle;
   NVIDIA_DEVICE_TREE_REGISTER_DATA  RegisterData;
   UINT32                            Size;
   NVIDIA_AML_NODE_INFO              AcpiNodeInfo;
   UINT8                             FanStatus;
+  CONST CHAR8                       *CompatibleInfo[] = { "pwm-fan", NULL };
 
   if (ParserHandle == NULL) {
     ASSERT (0);
@@ -69,69 +67,70 @@ FanInfoParser (
     return Status;
   }
 
-  Size   = 1;
-  Status = GetMatchingEnabledDeviceTreeNodes ("pwm-fan", &FanHandle, &Size);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  FanOffset = -1;
+  Status    = DeviceTreeGetNextCompatibleNode (CompatibleInfo, &FanOffset);
+  if (!EFI_ERROR (Status)) {
+    Status = DeviceTreeGetNodePropertyValue32 (FanOffset, "pwms", &FanPwmHandle);
+    if (EFI_ERROR (Status)) {
+      return EFI_SUCCESS;
+    }
+
+    Status = DeviceTreeGetNodeByPHandle (FanPwmHandle, &PwmOffset);
+    if (EFI_ERROR (Status) || (PwmOffset < 0)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find the specified pwms node (phandle 0x%x)\n", __FUNCTION__, Status, FanPwmHandle));
+      return EFI_UNSUPPORTED;
+    }
+
+    // Only one register space is expected
+    Size   = 1;
+    Status = DeviceTreeGetRegisters (PwmOffset, &RegisterData, &Size);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get pwms registers\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    Status = PatchProtocol->FindNode (PatchProtocol, ACPI_FAN_FANR, &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      // If fan node isn't in ACPI return success as there is nothing to patch
+      return EFI_SUCCESS;
+    }
+
+    if (AcpiNodeInfo.Size > sizeof (RegisterData.Size)) {
+      DEBUG ((DEBUG_ERROR, "%a: FANR AcpiNodeInfo.Size = %lu, but expected size of %lu\n", __FUNCTION__, AcpiNodeInfo.Size, sizeof (RegisterData.Size)));
+      return EFI_DEVICE_ERROR;
+    }
+
+    Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &RegisterData.BaseAddress, AcpiNodeInfo.Size);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_FAN_FANR, Status));
+    }
+
+    Status = PatchProtocol->FindNode (PatchProtocol, ACPI_FAN_STA, &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      // If fan node isn't in ACPI return success as there is nothing to patch
+      return EFI_SUCCESS;
+    }
+
+    if (AcpiNodeInfo.Size > sizeof (FanStatus)) {
+      DEBUG ((DEBUG_ERROR, "%a: FAN_STA AcpiNodeInfo.Size = %lu, but expected size of %lu\n", __FUNCTION__, AcpiNodeInfo.Size, sizeof (FanStatus)));
+      return EFI_DEVICE_ERROR;
+    }
+
+    FanStatus = 0xF;
+    Status    = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &FanStatus, sizeof (FanStatus));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_FAN_STA, Status));
+    }
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get %a node - Ignoring\n", __FUNCTION__, Status, CompatibleInfo[0]));
+    return EFI_NOT_FOUND;
   }
 
-  Status = GetDeviceTreeNode (FanHandle, &DeviceTreeBase, &FanOffset);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  // Warn if we find more than one fan node
+  Status = DeviceTreeGetNextCompatibleNode (CompatibleInfo, &FanOffset);
+  if (!EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unexpectedly found more than one %a node. Only the first will be used\n", __FUNCTION__, CompatibleInfo[0]));
   }
 
-  Status = DeviceTreeGetNodePropertyValue32 (FanOffset, "pwms", &FanPwmHandle);
-  if (EFI_ERROR (Status)) {
-    return EFI_SUCCESS;
-  }
-
-  Status = DeviceTreeGetNodeByPHandle (FanPwmHandle, &PwmOffset);
-  if (EFI_ERROR (Status) || (PwmOffset < 0)) {
-    return EFI_UNSUPPORTED;
-  }
-
-  Status = GetDeviceTreeHandle (DeviceTreeBase, PwmOffset, &PwmHandle);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  // Only one register space is expected
-  Size   = 1;
-  Status = GetDeviceTreeRegisters (PwmHandle, &RegisterData, &Size);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_FAN_FANR, &AcpiNodeInfo);
-  if (EFI_ERROR (Status)) {
-    // If fan node isn't in ACPI return success as there is nothing to patch
-    return EFI_SUCCESS;
-  }
-
-  if (AcpiNodeInfo.Size > sizeof (RegisterData.Size)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &RegisterData.BaseAddress, AcpiNodeInfo.Size);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_FAN_FANR, Status));
-  }
-
-  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_FAN_STA, &AcpiNodeInfo);
-  if (EFI_ERROR (Status)) {
-    // If fan node isn't in ACPI return success as there is nothing to patch
-    return EFI_SUCCESS;
-  }
-
-  if (AcpiNodeInfo.Size > sizeof (FanStatus)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  FanStatus = 0xF;
-  Status    = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &FanStatus, sizeof (FanStatus));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_FAN_STA, Status));
-  }
-
-  return Status;
+  return EFI_SUCCESS;
 }
