@@ -216,10 +216,10 @@ PopulateCpuCharData (
   ProcessorCharacteristics->ProcessorReserved1              = 0;
   ProcessorCharacteristics->ProcessorUnknown                = 0;
   ProcessorCharacteristics->Processor64BitCapable           = 1;
-  ProcessorCharacteristics->ProcessorMultiCore              = 0;
+  ProcessorCharacteristics->ProcessorMultiCore              = 1;
   ProcessorCharacteristics->ProcessorHardwareThread         = 0;
   ProcessorCharacteristics->ProcessorExecuteProtection      = 1;
-  ProcessorCharacteristics->ProcessorEnhancedVirtualization = 0;
+  ProcessorCharacteristics->ProcessorEnhancedVirtualization = 1;
   ProcessorCharacteristics->ProcessorPowerPerformanceCtrl   = 0;
   ProcessorCharacteristics->Processor128BitCapable          = 0;
   ProcessorCharacteristics->ProcessorArm64SocId             = 1;
