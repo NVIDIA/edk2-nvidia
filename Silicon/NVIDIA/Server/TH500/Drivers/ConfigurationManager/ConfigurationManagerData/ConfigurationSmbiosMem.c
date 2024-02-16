@@ -1,7 +1,7 @@
 /**
   Configuration Manager Data of SMBIOS Type 16/17/19 tables.
 
-  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -113,7 +113,8 @@ InstallSmbiosType17Type19Cm (
   }
 
   for (Index = 0; Index < DramDevicesCount; Index++) {
-    CmMemDevicesInfo[Index].SerialNum = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
+    CmMemDevicesInfo[Index].ModuleManufacturerId = (UINT16)DramInfo[Index].ManufacturerId;
+    CmMemDevicesInfo[Index].SerialNum            = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
     if (CmMemDevicesInfo[Index].SerialNum != NULL) {
       AsciiSPrint (
         CmMemDevicesInfo[Index].SerialNum,

@@ -304,6 +304,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   TableHelperLib|DynamicTablesPkg/Library/Common/TableHelperLib/TableHelperLib.inf
   AcpiHelperLib|DynamicTablesPkg/Library/Common/AcpiHelperLib/AcpiHelperLib.inf
   SmbiosStringTableLib|DynamicTablesPkg/Library/Common/SmbiosStringTableLib/SmbiosStringTableLib.inf
+  JedecJep106Lib|MdePkg/Library/JedecJep106Lib/JedecJep106Lib.inf
 
   PciLib|MdePkg/Library/BasePciLibPciExpress/BasePciLibPciExpress.inf
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
